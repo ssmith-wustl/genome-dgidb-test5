@@ -95,12 +95,12 @@ sub execute {
         my $transaction = UR::Context::Transaction->begin();
         my $build = eval {
             if (!$self->force && ($model->running_builds or $model->scheduled_builds)) {
-                die $self->error_message("Model (".$model->name.", ID: ".$model->id.") already has running or scheduled builds. Use the '--force' param to override this and start a new build.");
+                die $self->error_message("Model already has running or scheduled builds. Use the '--force' param to override this and start a new build.");
             }
 
             my $build = Genome::Model::Build->create(model_id => $model->id, %create_params);
             unless ($build) {
-                die $self->error_message("Failed to create build for model (".$model->name.", ID: ".$model->id.").");
+                die $self->error_message("Failed to create new build.");
             }
         };
 
