@@ -242,8 +242,10 @@ sub _sort_detector_output {
     for my $detector_file (@detector_files){
         my $detector_unsorted_output = $self->_temp_scratch_directory . "/" . basename($detector_file) . ".unsorted";
 
-        Genome::Sys->copy_file($detector_file,$detector_unsorted_output);
-        unlink($detector_file);
+        unless(rename($detector_file,$detector_unsorted_output)) {
+            $self->error_message('Failed to move ' . $detector_file . ' to ' . $detector_unsorted_output . ' for sorting!');
+            return;
+        }
 
         my $sort_cmd = Genome::Model::Tools::Bed::ChromSort->create(
             input => $detector_unsorted_output,

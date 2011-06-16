@@ -225,27 +225,37 @@ sub valid_abyss_parallel_seq_platforms {
 sub soap_de_novo_assemble_params {
     my ($self, $build) = @_;
 
-    my %params;
+    my %params = $self->assembler_params_as_hash;
 
-    #pp specified assembler params
-    if ( $self->assembler_params_as_hash ) {
-	%params = $self->assembler_params_as_hash;
+    # config params/file
+    my %default_config_params = ( #temp
+        max_rd_len => 120,
+        reverse_seq => 0,
+        asm_flags => 3,
+        pair_num_cutoff => 2,
+        map_len => 60,
+    );
+    my %config_params;
+    for my $param ( keys %default_config_params ) {
+        $config_params{$param} = ( exists $params{$param} )
+        ? delete $params{$param} # rm from assembler params
+        : $default_config_params{$param};
     }
+    my $config_file = $self->write_soap_de_novo_config_file($build, %config_params);
+    return if not $config_file;
+    $params{config_file} = $config_file;
 
     #additional params needed from pp
     $params{version} = $self->assembler_version;
 
     #note if using user defined insert size
     if ( exists $params{insert_size} ) {
-	$self->status_message("Using user defined insert size, will ignore calculated insert size defined in instrument data");
+        $self->status_message("Using user defined insert size, will ignore calculated insert size defined in instrument data");
     }
 
     #params needed to be derived from build
     my $cpus = $self->get_number_of_cpus;
     $params{cpus} = $cpus;
-
-    my $config_file = $build->create_config_file; #make it soap specific
-    $params{config_file} = $config_file;
 
     #insert size param needed for config file creation only
     delete $params{insert_size};
@@ -255,6 +265,58 @@ sub soap_de_novo_assemble_params {
     
     return %params;
 }
+
+sub write_soap_de_novo_config_file {
+    my ($self, $build, %params) = @_;
+
+    $self->status_message("Soap config file");
+
+    Carp::confess('No build to write soap config file') if not $build;
+    Carp::confess('No config params to write soap config file') if not %params;
+
+    $self->status_message('Getting libraries with input files');
+    my @libraries = $build->libraries_with_existing_assembler_input_files;
+    if ( not @libraries ) {
+        $self->error_message("No assembler input files were found for libraries");
+        return;
+    }
+
+    my $config = "max_rd_len=".delete($params{max_rd_len})."\n";
+    my $lib_config = join("\n", '[LIB]', map { $_.'='.$params{$_} } keys %params);
+    $lib_config .= "\n";
+
+    $self->status_message('Add libraries to config');
+    for my $library ( @libraries ) {
+    $self->status_message('Library: '.$library->{library_id});
+        $config .= $lib_config;
+        $config .= 'avg_ins='.$library->{insert_size}."\n";# || 320;# die if no insert size
+        if ( exists $library->{paired_fastq_files} ) { 
+            $config .= 'q1='.$library->{paired_fastq_files}->[0]."\n";
+            $config .= 'q2='.$library->{paired_fastq_files}->[1]."\n";
+        }
+
+        if ( exists $library->{fragment_fastq_file} ) {
+            $config .= 'q='.$library->{fragment_fastq_file}."\n";
+        }
+    }
+    $self->status_message('Add libraries to config...OK');
+
+    my $config_file = $build->soap_config_file;
+    unlink $config_file if -e $config_file;
+    $self->status_message("Soap config file: ".$config_file);
+    my $fh = eval { Genome::Sys->open_file_for_writing( $config_file ); };
+    if ( not $fh ) {
+        $self->error_message("Can not open file ($config_file) for writing $@");
+        return;
+    }
+    $fh->print( $config );
+    $fh->close;
+
+    $self->status_message("Soap config file...OK");
+
+    return $config_file;
+}
+
 
 #soap import params
 sub soap_import_params {

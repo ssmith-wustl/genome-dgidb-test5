@@ -22,7 +22,7 @@ my $expected_data_dir = $data_dir;
 
 my $alignment_file_path = $data_dir .'/test.bam';
 my $regions_file = $data_dir .'/test.bed';
-my $expected_stats_file = $expected_data_dir .'/test_test_STATS.tsv';
+my $expected_stats_file = $expected_data_dir .'/PDL_test_STATS.tsv';
 
 my $ref_cov = Genome::Model::Tools::RefCov::Standard->create(
     output_directory => $tmp_dir,
@@ -35,7 +35,7 @@ ok($ref_cov->execute,'execute Standard command '. $ref_cov->command_name);
 ok(!compare($expected_stats_file,$ref_cov->stats_file),'expected stats file '. $expected_stats_file .' is identical to '. $ref_cov->stats_file);
 unlink($ref_cov->stats_file);
 
-my $expected_q20_stats_file = $expected_data_dir .'/test_test_STATS-q20.tsv';
+my $expected_q20_stats_file = $expected_data_dir .'/PDL_test_STATS-q20.tsv';
 my $q20_ref_cov = Genome::Model::Tools::RefCov::Standard->create(
     output_directory => $tmp_dir,
     alignment_file_path => $alignment_file_path,
@@ -47,7 +47,7 @@ ok($q20_ref_cov->execute,'execute Standard command '. $q20_ref_cov->command_name
 ok(!compare($expected_q20_stats_file,$q20_ref_cov->stats_file),'expected stats file '. $expected_q20_stats_file .' is identical to '. $q20_ref_cov->stats_file);
 unlink($q20_ref_cov->stats_file);
 
-my $expected_q20_q1_stats_file = $expected_data_dir .'/test_test_STATS-q20-q1.tsv';
+my $expected_q20_q1_stats_file = $expected_data_dir .'/PDL_test_STATS-q20-q1.tsv';
 my $q20_q1_ref_cov = Genome::Model::Tools::RefCov::Standard->create(
     output_directory => $tmp_dir,
     alignment_file_path => $alignment_file_path,

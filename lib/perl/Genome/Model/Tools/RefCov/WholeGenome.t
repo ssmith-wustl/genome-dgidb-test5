@@ -24,8 +24,8 @@ my $alignment_file_path = $data_dir .'/NOTCH1_1k.bam';
 my $regions_file = $data_dir .'/NOTCH1.bed';
 
 # Excpected Outputs
-my $expected_stats_file = $expected_data_dir .'/NOTCH1_1k_NOTCH1_STATS_expected.tsv';
-my $expected_merged_stats_file = $expected_data_dir .'/NOTCH1_merged_stats_expected.tsv';
+my $expected_stats_file = $expected_data_dir .'/PDL_NOTCH1_1k_NOTCH1_STATS_expected.tsv';
+my $expected_merged_stats_file = $expected_data_dir .'/PDL_NOTCH1_merged_stats_expected.tsv';
    
 # OUTPUTS
 my $merged_stats_file = $tmp_dir .'/NOTCH1_merged_stats.tsv';
