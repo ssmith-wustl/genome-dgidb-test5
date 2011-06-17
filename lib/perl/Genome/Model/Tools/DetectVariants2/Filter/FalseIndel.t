@@ -20,19 +20,21 @@ use Test::More tests => 6;
 
 use_ok('Genome::Model::Tools::DetectVariants2::Filter::FalseIndel');
 
-my $test_data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants2-Filter-FalseIndel';
+my $test_base_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants2-Filter-FalseIndel';
+my $test_data_dir = $test_base_dir. "/input.v2";
 
 #These aren't very good test files.
 my $bam_file = join('/', $test_data_dir, 'tumor.tiny.bam');
 my $variant_file = join('/', $test_data_dir, 'indels.hq.bed');
 
-my $expected_result_dir = join('/', $test_data_dir, '1');
+my $expected_result_dir = join('/', $test_base_dir, '2');
 my $expected_output_file = join('/', $expected_result_dir, 'indels.hq.bed');
 my $expected_filtered_file = join('/', $expected_result_dir, 'indels.lq.bed');
 
 my $tmpdir = File::Temp::tempdir('DetectVariants2-Filter-FalseIndelXXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites/', CLEANUP => 1);
-my $output_file = join('/', $tmpdir, 'indels.hq.bed');
-my $filtered_file = join('/', $tmpdir, 'indels.lq.bed');
+my $output_directory = $tmpdir . "/filter";
+my $output_file = join('/', $output_directory, 'indels.hq.bed');
+my $filtered_file = join('/', $output_directory, 'indels.lq.bed');
 my $readcount_file = $output_file . '.readcounts';
 
 my $reference = Genome::Model::Build::ImportedReferenceSequence->get_by_name('NCBI-human-build36');
@@ -40,7 +42,7 @@ isa_ok($reference, 'Genome::Model::Build::ImportedReferenceSequence', 'loaded re
 
 my $detector_result = Genome::Model::Tools::DetectVariants2::Result->__define__(
     output_dir => $test_data_dir,
-    detector_name => 'test',
+    detector_name => 'Genome::Model::Tools::DetectVariants2::VarscanSomatic',
     detector_params => '',
     detector_version => 'awesome',
     aligned_reads => $bam_file,
@@ -50,7 +52,7 @@ my $detector_result = Genome::Model::Tools::DetectVariants2::Result->__define__(
 
 my $filter_command = Genome::Model::Tools::DetectVariants2::Filter::FalseIndel->create(
     previous_result_id => $detector_result->id,
-    output_directory => $tmpdir . "/filter",
+    output_directory => $output_directory,
 
     min_strandedness => 0.01,
     min_var_freq => 0.05,
