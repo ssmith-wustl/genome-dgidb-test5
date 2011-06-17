@@ -405,13 +405,14 @@ sub _run_pindel_for_chromosome {
     my $output_basename = $self->_output_basename_for_chrom($chromosome);
     my $window_size = $self->window_size;
     my $cmd = $self->pindel_path . " -f ".$reference_sequence_for_chrom. " -i " . $self->_config_file . " -o ". $output_basename . " -c ".$chromosome . " -w ".$window_size." -b /dev/null";
-    my @inputs = [$self->aligned_reads_input];
     
+    my $result;
     if(defined($self->control_aligned_reads_input)){
-        push @inputs, $self->control_aligned_reads_input;
+        $result = Genome::Sys->shellcmd( cmd=>$cmd, input_files=> [$self->aligned_reads_input, $self->control_aligned_reads_input]);
+    } 
+    else {
+        $result = Genome::Sys->shellcmd( cmd=>$cmd, input_files=>[$self->aligned_reads_input]);
     }
-
-    my $result = Genome::Sys->shellcmd( cmd=>$cmd, input_files=>@inputs);
 
     unless($result) {
         $self->error_message("Running pindel failed with command $cmd");
