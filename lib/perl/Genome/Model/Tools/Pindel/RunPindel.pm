@@ -225,6 +225,7 @@ sub _verify_inputs {
         }
     }
 
+    $self->status_message("Completed verify_inputs step.");
 
     return 1;
 }
@@ -404,7 +405,13 @@ sub _run_pindel_for_chromosome {
     my $output_basename = $self->_output_basename_for_chrom($chromosome);
     my $window_size = $self->window_size;
     my $cmd = $self->pindel_path . " -f ".$reference_sequence_for_chrom. " -i " . $self->_config_file . " -o ". $output_basename . " -c ".$chromosome . " -w ".$window_size." -b /dev/null";
-    my $result = Genome::Sys->shellcmd( cmd=>$cmd, input_files=>[$self->aligned_reads_input,$self->control_aligned_reads_input]);
+    my @inputs = [$self->aligned_reads_input];
+    
+    if(defined($self->control_aligned_reads_input)){
+        push @inputs, $self->control_aligned_reads_input;
+    }
+
+    my $result = Genome::Sys->shellcmd( cmd=>$cmd, input_files=>@inputs);
 
     unless($result) {
         $self->error_message("Running pindel failed with command $cmd");
