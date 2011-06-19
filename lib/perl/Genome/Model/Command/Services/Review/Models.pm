@@ -16,6 +16,11 @@ class Genome::Model::Command::Services::Review::Models {
             is_optional => 1,
             doc => 'Hide build details for statuses listed.',
         },
+        auto => {
+            is => 'Boolean',
+            default => 0,
+            doc => 'auto act based on recommended actions',
+        },
     ],
 };
 
@@ -29,11 +34,11 @@ sub execute {
     my @models = $self->models;
     my @hide_statuses = $self->hide_statuses;
 
+    my @models_to_start;
+    my @models_to_cleanup;
     for my $model (@models) {
         my $latest_build        = ($model        ? $model->latest_build  : undef);
         my $latest_build_status = ($latest_build ? $latest_build->status : '-');
-
-        next if (grep { lc $_ eq lc $latest_build_status } @hide_statuses);
 
         my $fail_count   = ($model ? scalar $model->failed_builds     : undef);
         my $model_id     = ($model ? $model->id                       : '-');
@@ -54,18 +59,33 @@ sub execute {
         }
         elsif ($latest_build && $latest_build->status eq 'Succeeded') {
             $action = 'cleanup';
+            push @models_to_cleanup, $model;
         }
         elsif (should_review_model($model)) {
             $action = 'review';
         }
         else {
             $action = 'rebuild';
+            push @models_to_start, $model;
         }
 
+        next if (grep { lc $_ eq lc $latest_build_status } @hide_statuses);
         $self->print_message(join "\t", $model_id, $action, $latest_build_status, $latest_build_revision, $model_name, $pp_name, $fail_count);
     }
 
-    return 1;
+    my $rv = 1;
+    if ($self->auto and @models_to_start) {
+        my $cmd = Genome::Model::Build::Command::Start->create(models => \@models_to_start);
+        my $cmd_rv = $cmd->execute;
+        $rv = $cmd_rv unless $cmd_rv == 1;
+    }
+    if ($self->auto and @models_to_cleanup) {
+        my $cmd = Genome::Model::Command::Services::Review::CleanupSucceeded->create(models => \@models_to_start);
+        my $cmd_rv = $cmd->execute;
+        $rv = $cmd_rv unless $cmd_rv == 1;
+    }
+
+    return $rv;
 }
 
 
