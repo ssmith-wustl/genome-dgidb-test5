@@ -28,7 +28,7 @@ my $ref_cov = Genome::Model::Tools::RefCov::ExomeCapture->create(
     alignment_file_path => $alignment_file_path,
     roi_file_path => $regions_file,
     evaluate_gc_content => 1,
-    reference_fasta => '/gscmnt/sata420/info/model_data/2741951221/build101947881/all_sequences.fa',
+    reference_fasta => '/gscmnt/gc4096/info/model_data/2741951221/build101947881/all_sequences.fa',
 );
 isa_ok($ref_cov,'Genome::Model::Tools::RefCov::ExomeCapture');
 ok($ref_cov->execute,'execute Standard command '. $ref_cov->command_name);
@@ -42,7 +42,7 @@ my $q20_ref_cov = Genome::Model::Tools::RefCov::ExomeCapture->create(
     alignment_file_path => $alignment_file_path,
     roi_file_path => $regions_file,
     min_base_quality => 20,
-    reference_fasta => '/gscmnt/sata420/info/model_data/2741951221/build101947881/all_sequences.fa',
+    reference_fasta => '/gscmnt/gc4096/info/model_data/2741951221/build101947881/all_sequences.fa',
 );
 isa_ok($q20_ref_cov,'Genome::Model::Tools::RefCov::ExomeCapture');
 ok($q20_ref_cov->execute,'execute Standard command '. $q20_ref_cov->command_name);
@@ -56,7 +56,7 @@ my $q20_q1_ref_cov = Genome::Model::Tools::RefCov::ExomeCapture->create(
     roi_file_path => $regions_file,
     min_base_quality => 20,
     min_mapping_quality => 1,
-    reference_fasta => '/gscmnt/sata420/info/model_data/2741951221/build101947881/all_sequences.fa',
+    reference_fasta => '/gscmnt/gc4096/info/model_data/2741951221/build101947881/all_sequences.fa',
 );
 isa_ok($q20_q1_ref_cov,'Genome::Model::Tools::RefCov::ExomeCapture');
 ok($q20_q1_ref_cov->execute,'execute Standard command '. $q20_q1_ref_cov->command_name);

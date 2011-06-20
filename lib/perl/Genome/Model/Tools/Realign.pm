@@ -61,7 +61,7 @@ sub gatk_path {
 
 sub human_ref_path {
     #TODO: check on tmp otherwise copy it
-    return '/gscmnt/sata420/info/reference_sequences/Homo_sapiens.NCBI36.45.dna.aml/all_sequences.fasta';
+    return '/gscmnt/gc4096/info/reference_sequences/Homo_sapiens.NCBI36.45.dna.aml/all_sequences.fasta';
 }
 
 sub dbsnp_path {
