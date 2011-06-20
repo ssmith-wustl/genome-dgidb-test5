@@ -80,7 +80,7 @@ class Genome::Model::Tools::Vcf::VcfFilter {
         variant_type => {
             is => 'Text',
             is_optional => 1,
-            doc => 'apply filters only to variants of this type (usually \"SNV\" or \"INDEL\")',
+            doc => 'apply filters only to variants of this type (usually "SNP" or "INDEL")',
         },
 
         ],
