@@ -847,7 +847,7 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
             'agilent sureselect exome version 2 broad' => 'agilent sureselect exome version 2 broad hg19 liftover',
             'hg18 nimblegen exome version 2' => 'hg19 nimblegen exome version 2',
             'NCBI-human.combined-annotation-54_36p_v2_CDSome_w_RNA' => 'NCBI-human.combined-annotation-54_36p_v2_CDSome_w_RNA_build36-build37_liftOver',
-            'Freimer Pool of original (4k001L) plus gapfill (4k0026)' => 'Freimer-Boehnke capture-targets.set1_build37',
+            'Freimer Pool of original (4k001L) plus gapfill (4k0026)' => 'Freimer-Boehnke capture-targets.set1_build37-fix1',
         );
 
         my $root_build37_ref_seq = $self->root_build37_ref_seq;
