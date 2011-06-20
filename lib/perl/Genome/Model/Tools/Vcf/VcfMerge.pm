@@ -21,18 +21,29 @@ class Genome::Model::Tools::Vcf::VcfMerge {
 
         vcf_files => {
             is => 'Text',
-            is_output => 1,
             is_optional => 0,
             doc => "comma-seperated list of VCF files containing mutations from the same sample",
         },
 
         source_ids => {
             is => 'Text',
-            is_output => 1,
             is_optional => 1,
             doc => "given a comma-separated list of ids used to identify the source of the input VCF files. (i.e. GATK, samtools, varScan), will label the source in the info field",
         },
 
+        merge_filters => {
+            is => 'Boolean',
+            is_optional => 1,
+            default => 0,
+            doc => "Keep the filter information from all the inputs, (even though we keep most fields only from first file)",
+        },
+
+        keep_passing => {
+            is => 'Boolean',
+            is_optional => 1,
+            default => 0,
+            doc => "Only active if merge-filters is TRUE. If a position is labeled PASS in any file, mark it as passing in the ouput file)",
+        }
 
 	],
 };
@@ -45,13 +56,13 @@ sub help_brief {                            # keep this to just a few words <---
 
 sub help_synopsis {
 <<'HELP';
-Merge multiple VCFs - keep the quality scores from files in desc order
+Merge multiple VCFs - keep the FORMAT lines from files in desc order.
 HELP
 }
 
 sub help_detail {                  # this is what the user will see with the longer version of help. <---
 <<'HELP';
-Merge multiple VCFs. For identical calls made by different algorithms, merge them, keeping the scores from the file that is listed first in the vcf_files string.
+Merge multiple VCFs. For identical calls made by different algorithms, merge them, keeping the FORMAT/scores from the file that is listed first in the vcf_files string.
 HELP
 }
 
@@ -63,6 +74,8 @@ sub execute {                               # replace with real execution logic.
     my $vcf_files = $self->vcf_files;
     my $output_file = $self->output_file;
     my $source_ids = $self->source_ids;
+    my $merge_filters = $self->merge_filters;
+    my $keep_passing = $self->keep_passing;
 
     my @vcffiles = split(",",$vcf_files);
     if (@vcffiles < 1){
@@ -79,6 +92,7 @@ sub execute {                               # replace with real execution logic.
 
     my %varHash;
     my %infoHash;
+    my %filterHash;
     my @header;
     #hash the first file
     my $inFh = IO::File->new( $vcffiles[0] ) || die "can't open file\n";
@@ -88,6 +102,9 @@ sub execute {                               # replace with real execution logic.
         if ($line =~ /^\#/){
             if ($line =~ /##INFO=\<ID\=(\w+),/){
                 $infoHash{$1} = $line
+            }
+            if ($line =~ /##FILTER=\<ID\=(\w+),/){
+                $filterHash{$1} = $line
             }
             push(@header,$line);
             next;
@@ -117,8 +134,9 @@ sub execute {                               # replace with real execution logic.
 
 
     my @newInfo;
+    my @newFilters;
     if(defined($source_ids)){
-        push(@newInfo,"##INFO=<ID=VC,Number=1,Type=String,Description=\"Variant caller\">");
+        push(@newInfo,"##INFO=<ID=VC,Number=.,Type=String,Description=\"Variant caller\">");
     }
 
     #add data from subsequent files if data does not exist in first file
@@ -133,6 +151,11 @@ sub execute {                               # replace with real execution logic.
                 if ($line =~ /##INFO=\<ID\=(\w+),/){
                     unless (exists($infoHash{$1})){
                         push(@newInfo,$line)
+                    }
+                }
+                if ($line =~ /##FILTER=\<ID\=(\w+),/){
+                    unless (exists($filterHash{$1})){
+                        push(@newFilters,$line)
                     }
                 }                    
                 next;
@@ -151,9 +174,30 @@ sub execute {                               # replace with real execution logic.
             my $id = $chr . ":" . $col[1] . ":" . $col[3] . ":" . $col[4];
 
             if(exists($varHash{$id})){
+                #add source id
                 if(defined($source_ids)){
                     @{$varHash{$id}}[7] = @{$varHash{$id}}[7] . "," . $vcfnames[$i];
                 }
+
+                #filter
+                if($merge_filters){
+                    if($keep_passing){
+                        if( ( @{$varHash{$id}}[6] eq "PASS" ) || ($col[6] eq "PASS")){
+                            @{$varHash{$id}}[6] = "PASS"
+                        }
+                    } else {
+
+                        if( @{$varHash{$id}}[6] eq "PASS" ){
+                            @{$varHash{$id}}[6] = $col[6];
+                        } else {
+                            unless( $col[6] eq "PASS" ){
+                                @{$varHash{$id}}[6] = @{$varHash{$id}}[6] . ";" . $col[6];
+                            }
+                        }
+                    }
+                }
+                
+
             } else {
                 #add source id
                 if(defined($source_ids)){
@@ -163,7 +207,7 @@ sub execute {                               # replace with real execution logic.
                         $col[7] = $col[7] . ";VC=" . $vcfnames[$i];
                     }
                 }
-
+                
                 #add to the hash
                 @{$varHash{$id}} = @col;
             }
@@ -188,8 +232,11 @@ sub execute {                               # replace with real execution logic.
     #first the headers
     foreach my $line (@header){        
         if ($line =~ /^#CHROM/){
-            #dump the new info lines just before the column header
+            #dump the info lines just before the column header
             foreach my $line2 (@newInfo){
+                print OUTFILE $line2 . "\n";
+            }
+            foreach my $line2 (@newFilters){
                 print OUTFILE $line2 . "\n";
             }
         }
