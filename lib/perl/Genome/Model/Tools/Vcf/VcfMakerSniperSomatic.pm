@@ -1,4 +1,4 @@
-package Genome::Model::Tools::Vcf::VcfMakerVarscan;
+package Genome::Model::Tools::Vcf::VcfMakerSniperSomatic;
 
 use strict;
 use warnings;
@@ -8,12 +8,11 @@ use IO::File;
 use File::Basename;
 use Getopt::Long;
 use FileHandle;
-use POSIX qw(log10);
-use POSIX qw(strftime);
 use List::MoreUtils qw(firstidx);
 use List::MoreUtils qw(uniq);
 
-class Genome::Model::Tools::Vcf::VcfMakerVarscan {
+
+class Genome::Model::Tools::Vcf::VcfMakerSniperSomatic {
     is => 'Command',
     has => [
         output_file => {
@@ -21,7 +20,7 @@ class Genome::Model::Tools::Vcf::VcfMakerVarscan {
             is_output => 1,
             doc => "List of mutations in Vcf format",
         },
-
+        
         chrom => {
             is => 'Text',
             doc => "do only this chromosome" ,
@@ -36,7 +35,7 @@ class Genome::Model::Tools::Vcf::VcfMakerVarscan {
             default => 0,
             doc => 'enable this to skip header output - useful for doing individual chromosomes. Note that the output will be appended to the output file if this is enabled.',
         },
-
+        
         genome_build => {
             is => 'Text',
             doc => "Reference genome build" ,
@@ -44,26 +43,26 @@ class Genome::Model::Tools::Vcf::VcfMakerVarscan {
             default => "36",
         },
         
-        varscan_file => {
+        sniper_file => {
             is => 'Text',
-            doc => "varscan output file" ,
+            doc => "sniper output file" ,
             is_optional => 0,
             is_input => 1,
         },
-
+        
         type => {
             is => 'Text',
             doc => "type of variant calls - one of \"snv\" or \"indel\"" ,
             is_optional => 0,
             is_input => 1,
-        },
+        },        
 
         sample_id => {
             is => 'Text',
             doc => "unique sample id",
             is_optional => 0,
             is_input => 1,
-        },
+        },        
 
         dbsnp_file => {
             is => 'Text',
@@ -73,24 +72,39 @@ class Genome::Model::Tools::Vcf::VcfMakerVarscan {
             default => "",
         },
 
-	],
+        seq_center => {
+            is => 'Text',
+            doc => "Center that did the sequencing (WUSTL or BROAD)" ,
+            is_optional => 1,
+            default => "WUSTL",
+        },
+
+        cp_score_to_qual => {
+            is => 'Boolean',
+            doc => "copy the somatic score to the qual field for Mutation WG comparisons" ,
+	    is_optional => 1,
+	    default => 0,
+	    is_input => 1
+        },
+
+        ],
 };
 
 
 sub help_brief {                            # keep this to just a few words <---
-    "Generate Vcf File from Varscan output - requires unformatted for SNVs, and formatted for INDELs"
+    "Generate Vcf File from sniper output"
 }
 
 
 sub help_synopsis {
-<<'HELP';
-Generate Vcf File from Varscan output - requires unformatted for SNVs, and formatted for INDELs
+    <<'HELP';
+    Generate a VCF File from sniper output
 HELP
 }
 
 sub help_detail {                  # this is what the user will see with the longer version of help. <---
-<<'HELP';
-Given a varscan output file, this parses the relevant files and creates a VCF containing all the SNVs.
+    <<'HELP';
+    Parses the relevant files and creates a VCF containing all the SNVs. This includes those that fail filters (noted in the FILTER field).
 HELP
 }
 
@@ -98,7 +112,7 @@ HELP
 
 ################################################################################################
 # Execute - the main program logic
-# (continued below functions)
+#
 ################################################################################################
 
 sub execute {                               # replace with real execution logic.
@@ -107,104 +121,88 @@ sub execute {                               # replace with real execution logic.
     my $output_file = $self->output_file;
     my $genome_build = $self->genome_build;
     my $chrom = $self->chrom;
+    my $seq_center = $self->seq_center;
     my $skip_header = $self->skip_header;
-    my $varscan_file = $self->varscan_file;
+    my $sniper_file = $self->sniper_file;
     my $sample_id = $self->sample_id;
     my $type = $self->type;
     my $dbsnp_file = $self->dbsnp_file;
+    my $cp_score_to_qual = $self->cp_score_to_qual;
+
 
     if(($type ne "snv") && ($type ne "indel")){
         die("\"type\" parameter must be one of \"snv\" or \"indel\"");
     }
 
 ###########################################################################
-# functions
+# subs
 
-    #------------------------
-    #convert IUB bases to std bases (acgt)
     sub convertIub{
-	my ($base) = @_;
+        my ($base) = @_;
+        my %iub_codes;
+        $iub_codes{"A"}="A";
+        $iub_codes{"C"}="C";
+        $iub_codes{"G"}="G";
+        $iub_codes{"T"}="T";
+        $iub_codes{"U"}="T";
+        $iub_codes{"M"}="A,C";
+        $iub_codes{"R"}="A,G";
+        $iub_codes{"W"}="A,T";
+        $iub_codes{"S"}="C,G";
+        $iub_codes{"Y"}="C,T";
+        $iub_codes{"K"}="G,T";
+        $iub_codes{"V"}="A,C,G";
+        $iub_codes{"H"}="A,C,T";
+        $iub_codes{"D"}="A,G,T";
+        $iub_codes{"B"}="C,G,T";
+        $iub_codes{"N"}="G,A,T,C";
 
-	#deal with cases like "A/T" or "C/W"
-	if ($base =~/\//){
-	    my @bases=split(/\//,$base);
-	    my %baseHash;
-	    foreach my $b (@bases){
-		my $res = convertIub($b);
-		my @bases2 = split(",",$res);
-		foreach my $b2 (@bases2){
-		    $baseHash{$b2} = 0;
-		}
-	    }
-	    return join(",",keys(%baseHash));
-	}
+        return $iub_codes{$base}
+    };
 
-	# use a lookup table to return the correct base
-	# there's a more efficient way than defining this
-	# every time, but meh.
-	my %iub_codes;
-	$iub_codes{"A"}="A";
-	$iub_codes{"C"}="C";
-	$iub_codes{"G"}="G";
-	$iub_codes{"T"}="T";
-	$iub_codes{"U"}="T";
-	$iub_codes{"M"}="A,C";
-	$iub_codes{"R"}="A,G";
-	$iub_codes{"W"}="A,T";
-	$iub_codes{"S"}="C,G";
-	$iub_codes{"Y"}="C,T";
-	$iub_codes{"K"}="G,T";
-	$iub_codes{"V"}="A,C,G";
-	$iub_codes{"H"}="A,C,T";
-	$iub_codes{"D"}="A,G,T";
-	$iub_codes{"B"}="C,G,T";
-	$iub_codes{"N"}="A,C,G,T";
-
-	return $iub_codes{$base}
-    }
 
     #------------------------
-    # generate a GT line from a base and a list of all alleles at the position
     sub genGT{
-	my ($base, @alleles) = @_;
-        #print "$base -- " . join("|",@alleles) . "\n";
-	my @bases = split(",",convertIub($base));
-	if (@bases > 1){
-	    my @pos;
-	    push(@pos, (firstidx{ $_ eq $bases[0] } @alleles));
-	    push(@pos, (firstidx{ $_ eq $bases[1] } @alleles));
-	    return(join("/", sort(@pos)));
-	} else { #only one base
-	    my @pos;
-	    push(@pos, (firstidx{ $_ eq $bases[0] } @alleles));
-	    push(@pos, (firstidx{ $_ eq $bases[0] } @alleles));
-	    return(join("/", sort(@pos)));
-	}
+        my ($base, @alleles) = @_;
+        my @bases = split(",",convertIub($base));
+        if (@bases > 1){
+            my @pos;
+            push(@pos, (firstidx{ $_ eq $bases[0] } @alleles));
+            push(@pos, (firstidx{ $_ eq $bases[1] } @alleles));
+            return(join("/", sort(@pos)));
+        } else { #only one base
+            my @pos;
+            push(@pos, (firstidx{ $_ eq $bases[0] } @alleles));
+            push(@pos, (firstidx{ $_ eq $bases[0] } @alleles));
+            return(join("/", sort(@pos)));
+        }
     }
 
-
-#-------------------------
-
-#get preceding base using samtools faidx
-sub getPrecedingBase{
-    my ($chr,$pos) = @_;
-    my $base = `samtools faidx /gscmnt/sata921/info/medseq/cmiller/NCBI-human-build36/$chr.fa $chr:$pos-$pos | tail -n 1`;
-    chomp($base);
-    return($base)
-}
-
+    #-------------------------
+    #get preceding base using sniper faidx
+    sub getPrecedingBase{
+        my ($chr,$pos) = @_;
+        my $base = `sniper faidx /gscmnt/sata921/info/medseq/cmiller/NCBI-human-build36/$chr.fa $chr:$pos-$pos | tail -n 1`;
+        chomp($base);
+        return($base)
+    }
 
 
     #-------------------------
-    # print the VCF header
-
     sub print_header{
-        my ($genome_build, $sample_id, $output_file) = @_;
+        my ($genome_build, $sample_id, $output_file, $seq_center) = @_;
 
         open(OUTFILE, ">$output_file") or die "Can't open output file: $!\n";
-        my $seqCenter;
         my $file_date = localtime();
-        my $reference = "ftp://ftp.ncbi.nlm.nih.gov/genomes/H_sapiens/ARCHIVE/BUILD.36.3/special_requests/assembly_variants/NCBI36_BCCAGSC_variant.fa.gz";
+
+        my $reference;
+        if ($seq_center eq "WUSTL"){
+            $reference = "ftp://ftp.ncbi.nlm.nih.gov/genomes/H_sapiens/ARCHIVE/BUILD.36.3/special_requests/assembly_variants/NCBI36_BCCAGSC_variant.fa.gz";
+        } elsif ($seq_center eq "BROAD"){
+	    $reference="ftp://ftp.ncbi.nlm.nih.gov/genomes/H_sapiens/ARCHIVE/BUILD.36.3/special_requests/assembly_variants/NCBI36-HG18_Broad_variant.fa.gz";
+        } else {
+            die ("only have references hardcoded for WUSTL and BROAD");
+        }
 
         print OUTFILE "##fileformat=VCFv4.0" . "\n";
         print OUTFILE "##fileDate=" . $file_date . "\n";
@@ -220,21 +218,21 @@ sub getPrecedingBase{
         print OUTFILE "##FORMAT=<ID=MQ,Number=1,Type=Integer,Description=\"Average Mapping Quality corresponding to alleles 0/1/2/3... after software and quality filtering\">" . "\n";
         print OUTFILE "##FORMAT=<ID=AD,Number=1,Type=Integer,Description=\"Allele Depth corresponding to alleles 0/1/2/3... after software and quality filtering\">" . "\n";
         print OUTFILE "##FORMAT=<ID=FA,Number=1,Type=Float,Description=\"Fraction of reads supporting ALT\">" . "\n";
-        print OUTFILE "##FORMAT=<ID=VAQ,Number=1,Type=Float,Description=\"Variant Quality\">" . "\n";
+        print OUTFILE "##FORMAT=<ID=VAQ,Number=1,Type=Integer,Description=\"Variant Quality\">" . "\n";
 
         #INFO
 	print OUTFILE "##INFO=<ID=VT,Number=1,Type=String,Description=\"Variant type\">" . "\n";
 
-
         #column header:
-        print OUTFILE  "#" . join("\t", ("CHROM","POS","ID","REF","ALT","QUAL","FILTER","INFO","FORMAT","$sample_id")) . "\n";
+        print OUTFILE  "#" . join("\t", ("CHROM","POS","ID","REF","ALT","QUAL","FILTER","INFO","FORMAT","NORMAL","PRIMARY")) . "\n";
         OUTFILE->close();
     }
 
 
+
 #-------------------------------------------
     sub print_body{
-        my ($output_file,$snvHash) = @_;
+        my ($output_file,$snvHash,$cp_score_to_qual) = @_;
 
         open(OUTFILE, ">>$output_file") or die "Can't open output file: $!\n";
         my %snvhash = %{$snvHash};
@@ -269,7 +267,11 @@ sub getPrecedingBase{
             if (exists($snvhash{$key}{"qual"})){
                 push(@outline, $snvhash{$key}{"qual"});
             } else {
-                push(@outline, ".");
+                if ($cp_score_to_qual){
+                    push(@outline,$snvhash{$key}{"tumor"}{"VAQ"});
+                } else {               
+                    push(@outline, ".");
+                }
             }
 
             #FILTER
@@ -280,8 +282,8 @@ sub getPrecedingBase{
             }
 
             #INFO
-            if (exists($snvhash{$key}{"info"})){
-                push(@outline, $snvhash{$key}{"info"});
+            if (exists($snvhash{$key}{"INFO"})){
+                push(@outline, $snvhash{$key}{"INFO"});
             } else {
                 push(@outline, ".");
             }
@@ -289,78 +291,76 @@ sub getPrecedingBase{
             #FORMAT
             push(@outline, "GT:GQ:DP:BQ:MQ:AD:FA:VAQ");
 
-            my @format;
-
             my @fields = ("GT","GQ","DP","BQ","MQ","AD","FA","VAQ");
-            #collect format fields
-            foreach my $field (@fields){
-                if(exists($snvhash{$key}{$field})){
-                    push(@format, $snvhash{$key}{$field});
-                } else {
-                    push(@format,".")
-                }
 
+            #collect format fields
+            foreach my $type ("normal","tumor"){
+                my @format;
+                foreach my $field (@fields){
+                    if(exists($snvhash{$key}{$type}{$field})){
+                        push(@format, $snvhash{$key}{$type}{$field});
+                    } else {
+                        push(@format,".")
+                    }
+
+                }
+                push(@outline, join(":",@format));
             }
-            push(@outline, join(":",@format));
 
             print OUTFILE join("\t",@outline) . "\n";
         }
     }
 
-    #-----------------------------------------
-    # read in the Varscan file
 
-    sub varscanRead{
-	my ($varscan_file, $chrom, $type) = @_;
-	my %varScanSnvs;
+###################################################################
+# actually do the parsing here
+    sub sniperRead{
+        my ($sniper_file, $chrom, $type) = @_;
 
-	my $inFh = IO::File->new( "$varscan_file" ) || die "can't open file\n";
+        #everything is hashed by chr:position, with subhashes corresponding to
+        #samples, then the various VCF fields
+        my %allSnvs;
 
-	while(my $line = $inFh->getline )
-	{
-	    chomp($line);
-	    my @col = split("\t",$line);
+        #First, read in the unfiltered files to get all of the calls
+        #tumor calls from sniper
+        my $inFh = IO::File->new( "$sniper_file" ) || die "can't open file\n";
 
-            #skip header line
-            next if $col[0] eq "Chrom";
+        while( my $line = $inFh->getline ){
 
-	    #if we do this on a per-chrom process (for huge files)
-	    unless ($chrom eq ""){
-		next if($col[0] ne $chrom);
-	    }
+            chomp($line);
+            my @col = split("\t",$line);
 
-            ## skip positions where the alt is N
-            ## todo - figure out why these are in the file in the first place
-            next if(($col[3] eq "N") || ($col[4] eq "N"));
+            #if we do this on a per-chrom process (for huge files)
+            unless ($chrom eq ""){
+                next if($col[0] ne $chrom)
+            }
 
+            my $chr = $col[0];
+            #replace X and Y for sorting
+            $ chr = "23" if $col[0] eq "X";
+            $chr = "24" if $col[0] eq "Y";
+            $chr = "25" if $col[0] eq "MT";
 
-            if ($type eq "snv"){
-                my $chr = $col[0];
-                #replace X and Y for sorting
-                $chr = "23" if $col[0] eq "X";
-                $chr = "24" if $col[0] eq "Y";
-                $chr = "25" if $col[0] eq "MT";
+            #replace ambiguous/IUPAC bases with N in ref
+            $col[2] =~ s/[^ACGTN\-]/N/g;
 
-                #replace ambiguous/IUPAC bases with N in ref
-                $col[2] =~ s/[^ACGTN\-]/N/g;
+            my $id = $chr . ":" . $col[1] . ":" . $col[2] . ":" . $col[3];
 
-                my $id = $chr . ":" . $col[1] . ":" . $col[2] . ":" . $col[3];
-
-                # #skip MT and NT chrs
-                # next if $col[0] =~ /^MT/;
-                # next if $col[0] =~ /^NT/;
-                # next if $col[0] =~ /random/;
-                next unless ($col[0] =~/^[1]?([0-9]|^2[12]|X|Y|MT)$/);
-                
-                $varScanSnvs{$id}{"chrom"} = $col[0];
-                $varScanSnvs{$id}{"pos"} = $col[1];
+            #skip non-normal chrs
+            #next if $col[0] =~ /^NT/;
+            next unless ($col[0] =~/^[1]?([0-9]|^2[12]|X|Y|MT)$/);
+                 
+            $allSnvs{$id}{"chrom"} = $col[0];
+            $allSnvs{$id}{"pos"} = $col[1];
 
 
+            #handle snv genotype calls
+            if ($type eq "snv"){        
                 #get all the alleles together (necessary for the GT field)
                 my @allAlleles = $col[2];
                 my @varAlleles;
                 my @tmp = split(",",convertIub($col[3]));
-
+                
                 #only add non-reference alleles to the alt field
                 foreach my $alt (@tmp){
                     unless ($alt eq $col[2]){
@@ -369,127 +369,83 @@ sub getPrecedingBase{
                     }
                 }
 
-                #add ref and alt alleles
-                $varScanSnvs{$id}{"ref"} = $col[2];
-                $varScanSnvs{$id}{"alt"} = join(",",@varAlleles);
-                $varScanSnvs{$id}{"GT"} = genGT($col[3],@allAlleles);
-
+                $allSnvs{$id}{"ref"} = $col[2];
+                $allSnvs{$id}{"alt"} = join(",",@varAlleles);
 
                 #add the ref and alt alleles' positions in the allele array to the GT field
-                $varScanSnvs{$id}{"info"} = "VT=SNP";
-
-                my $score;
-                #edge case where a score of zero results in "inf"
-                if($col[11] == 0){
-                    $score = 99;
-                } else {
-                    $score = sprintf "%.2f", -10*log10($col[11]);
-                }
-
-                #genotype quality
-                $varScanSnvs{$id}{"GQ"} = ".";
-
-                #total read depth
-                $varScanSnvs{$id}{"DP"} = $col[4]+$col[5];
-
-                #avg base quality ref/var
-                $varScanSnvs{$id}{"BQ"} =  $col[10];
-
-                #avg mapping quality ref/var
-                $varScanSnvs{$id}{"MQ"} =  $col[13];
-
-                #allele depth
-                $varScanSnvs{$id}{"AD"} =  $col[5];
-
-                #fa
-                $col[6] =~ s/\%// ;
-                $varScanSnvs{$id}{"FA"} = $col[6]/100;
-
-                #vaq
-                $varScanSnvs{$id}{"VAQ"} = $score;
+                $allSnvs{$id}{"normal"}{"GT"} = ".";
+                $allSnvs{$id}{"tumor"}{"GT"} = genGT($col[3],@allAlleles);
+                $allSnvs{$id}{"INFO"} = "VT=SNP";
 
 
 
-
+            #handle indel genotype calls
             } elsif ($type eq "indel"){
-
-                my $chr = $col[0];
-                #replace X and Y for sorting
-                $chr = "23" if $col[0] eq "X";
-                $chr = "24" if $col[0] eq "Y";
-                $chr = "25" if $col[0] eq "MT";
-                my $id = $chr . ":" . $col[1] . ":" . $col[3] . ":" . $col[4];
-
-                #skip MT and NT chrs
-                #next if $col[0] =~ /^MT/;
-                next if $col[0] =~ /^NT/;
-                next if $col[0] =~ /random/;
-
-                $varScanSnvs{$id}{"chrom"} = $col[0];
-                $varScanSnvs{$id}{"pos"} = $col[1];
-
                 #add the preceding base as an anchor position
                 my $pbase = getPrecedingBase($col[0],$col[1]);
 
-                #replace ambiguous/IUPAC bases with N in ref
-                $col[3] =~ s/[^ACGTN\-]/N/g;
 
                 #insertion
-                if ($col[3] eq "-"){
-                    $varScanSnvs{$id}{"ref"} = $pbase;
-                    $varScanSnvs{$id}{"alt"} = $pbase . $col[4];
-
+                if ($col[2] eq "-"){
+                    $allSnvs{$id}{"ref"} = $pbase;
+                    $allSnvs{$id}{"alt"} = $pbase . $col[3];
+                    
                     #deletion
-                } elsif ($col[4] eq "-"){
-                    $varScanSnvs{$id}{"ref"} = $pbase . $col[3];
-                    $varScanSnvs{$id}{"alt"} = $pbase;
+                } elsif ($col[3] eq "-"){
+                    $allSnvs{$id}{"ref"} = $pbase . $col[2];
+                    $allSnvs{$id}{"alt"} = $pbase;
                     #confusion
                 } else {
                     die("this isn't an insertion or deletion - what is it?\n$line");
                 }
 
-                $varScanSnvs{$id}{"GT"} = "0/1";
+##???
+                $allSnvs{$id}{"GT"} = "0/1";
 
-                $varScanSnvs{$id}{"info"} = "VT=INDEL";
-
-                my $score;
-                #edge case where a score of zero results in "inf"
-                if($col[12] == 0){
-                    $score = 99;
-                } else {
-                    $score = sprintf "%.2f", -10*log10($col[12]);
+                #we have a second indel at that spot, with no associated
+                #quality information - just print an error for now
+                if (($col[8] ne "*") && ($col[9] ne "*")){
+                    print STDERR "second indel at this pos with no qual information is being skipped:\n$line\n";
                 }
+                $allSnvs{$id}{"INFO"} = "VT=INDEL";
 
-
-                #genotype quality
-                $varScanSnvs{$id}{"GQ"} = ".";
-
-                #total read depth
-                $varScanSnvs{$id}{"DP"} = $col[5]+$col[6];
-
-                #avg base quality ref/var
-                $varScanSnvs{$id}{"BQ"} =  $col[11];
-
-                #avg mapping quality ref/var
-                $varScanSnvs{$id}{"MQ"} =  $col[14];
-
-                #allele depth
-                $varScanSnvs{$id}{"AD"} =  $col[6];
-
-                #fa
-                $col[7] =~ s/\%// ;
-                $varScanSnvs{$id}{"FA"} = $col[7]/100;
-
-                #vaq
-                $varScanSnvs{$id}{"VAQ"} = $score;
             }
-	}
 
-	$inFh->close();
-	return %varScanSnvs;
+
+            #genotype quality (consensus quality)
+            $allSnvs{$id}{"normal"}{"GQ"} = ".";
+            $allSnvs{$id}{"tumor"}{"GQ"} = $col[6];
+
+            #total read depth
+            $allSnvs{$id}{"normal"}{"DP"} = $col[9];
+            $allSnvs{$id}{"tumor"}{"DP"} = $col[8];
+
+            #avg mapping quality ref/var
+            $allSnvs{$id}{"normal"}{"MQ"} = ".";
+            $allSnvs{$id}{"tumor"}{"MQ"} = $col[6];
+
+            #avg mapping quality ref/var
+            $allSnvs{$id}{"normal"}{"BQ"} = ".";
+            $allSnvs{$id}{"tumor"}{"BQ"} = $col[7];
+
+            # #allele depth
+            $allSnvs{$id}{"normal"}{"AD"} =  ".";
+            $allSnvs{$id}{"tumor"}{"AD"} =  ".";
+            
+            #fraction of reads supporting alt
+            $allSnvs{$id}{"normal"}{"FA"} =  ".";
+            $allSnvs{$id}{"tumor"}{"FA"} =  ".";
+
+            #vaq
+            $allSnvs{$id}{"normal"}{"VAQ"} = ".";
+            $allSnvs{$id}{"tumor"}{"VAQ"} = $col[4];
+
+
+        }
+        $inFh->close();
+
+        return %allSnvs;
     }
-
-
 
 #---------------------------------------------
     sub addDbSnp{
@@ -515,14 +471,15 @@ sub getPrecedingBase{
                 my $chr = $fields[1];
                 $chr = "23" if $chr eq "X";
                 $chr = "24" if $chr eq "Y";
-                
+
                 #ucsc is zero-based, so we adjust
-                my $pos = $fields[2] + 1;
-                
+                my $pos = $fields[2]+1;
+
                 my $key = $chr . ":" . $pos . ":" . $fields[7] . ":" . $fields[9];
-                
+
                 #if the line matches this dbsnp position
                 if(exists($allSnvs{$key})){
+                    #and the alleles match
                     # #note the match in the info field
                     # if(exists($allSnvs{$key}{"info"})){
                     #     $allSnvs{$key}{"info"} = $allSnvs{$key}{"info"} . ";";
@@ -546,30 +503,25 @@ sub getPrecedingBase{
 #			} else { #add dbsnp to the list
 #			    $allSnvs{$key}->{FILTER} = $allSnvs{$key}->{FILTER} . ",dbSNP";
 #			}
-                    
                 }
             }
         }
-}
+    }
 
+#----------------------------------
+    my %sniper_hash = sniperRead($sniper_file, $chrom, $type);
 
+    
+    unless ($skip_header){
+        print_header($genome_build, $sample_id, $output_file, $seq_center);
+    }
 
-###############################################################################
-
-    #read in the varscan file
-    my %varscan_hash = varscanRead($varscan_file, $chrom, $type);
- 
     ## add DBsnp labels, if --dbsnp is specified
     if ($dbsnp_file ne ""){
-        addDbSnp($dbsnp_file, $chrom, \%varscan_hash)
+        addDbSnp($dbsnp_file, $chrom, \%sniper_hash)
     }
 
-    # output the headers
-    unless ($skip_header){
-	print_header($genome_build, $sample_id, $output_file);
-    }
+    print_body($output_file, \%sniper_hash, $cp_score_to_qual);
 
-    # output the body of the VCF
-    print_body($output_file, \%varscan_hash);
     return 1;
 }
