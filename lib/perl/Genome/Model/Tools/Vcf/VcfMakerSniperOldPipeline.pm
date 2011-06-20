@@ -327,22 +327,23 @@ sub execute {                               # replace with real execution logic.
         $allSnvs{$id}{"chrom"} = $col[0];
         $allSnvs{$id}{"pos"} = $col[1];
 
+        #replace ambiguous/IUPAC bases with N in ref
+        $col[3] =~ s/[ACGTN]/N/g;
 
         #get all the alleles together (necessary for the GT field)
-        my @refAlleles = split(",", convertIub($col[2]));
-        my @allAlleles = split(",", convertIub($col[2]));
+        my @allAlleles = ($col[2]);
         my @varAlleles;
         my @tmp = split(",",convertIub($col[3]));
 
         #only add non-reference alleles to the alt field
         foreach my $alt (@tmp){
-            unless (grep $_ eq $alt, @allAlleles){
+            unless ($alt eq $col[2]){
                 push(@allAlleles,$alt);
                 push(@varAlleles,$alt);
             }
         }
 
-        $allSnvs{$id}{"ref"} = convertIub($col[2]);
+        $allSnvs{$id}{"ref"} = $col[2];
         $allSnvs{$id}{"alt"} = join(",",@varAlleles);
 
         #add the ref and alt alleles' positions in the allele array to the GT field
@@ -416,14 +417,16 @@ sub execute {                               # replace with real execution logic.
         #next if $col[0] =~ /^MT/;
         next if $col[0] =~ /^NT/;
 
+        #replace ambiguous/IUPAC bases with N in ref
+        $col[3] =~ s/[ACGTN]/N/g;
+        
         #if we didn't also see this pos as a tumor snv
         if (!(exists($allSnvs{$id}))){
             $allSnvs{$id}{"chrom"} = $col[0];
             $allSnvs{$id}{"pos"} = $col[1];
         }
 
-        my @refAlleles = split(",", convertIub($col[2]));
-        my @allAlleles = split(",", convertIub($col[2]));
+        my @allAlleles = ($col[2]);
         my @varAlleles;
         # if exists, we have to consider both tumor and variant alleles for gt positions
         #retrieve the ref/alt from the tumor call
@@ -442,7 +445,7 @@ sub execute {                               # replace with real execution logic.
             }
         }
 
-        $allSnvs{$id}{"ref"} = convertIub($col[2]);
+        $allSnvs{$id}{"ref"} = $col[2];
         #replace alt in case we have added more alleles
         $allSnvs{$id}{"alt"} = join(",",@varAlleles);
 
@@ -524,21 +527,22 @@ sub execute {                               # replace with real execution logic.
             $allSnvs{$id}{"pos"} = $col[1];
         }    
 
-        #just replace anything from samtools with the presumably better sniper call.
+        #replace ambiguous/IUPAC bases with N in ref
+        $col[3] =~ s/[ACGTN]/N/g;
 
-        my @refAlleles = split(",", convertIub($col[2]));
-        my @allAlleles = split(",", convertIub($col[2]));
+        #just replace anything from samtools with the presumably better sniper call.
+        my @allAlleles = $col[2];
         my @varAlleles;
         my @tmp = split(",",convertIub($col[3]));
         #only add non-reference alleles to the alt field
         foreach my $alt (@tmp){
-            unless (grep $_ eq $alt, @allAlleles){
+            unless ($alt eq $col[2]){
                 push(@allAlleles,$alt);
                 push(@varAlleles,$alt);
             }
         }
 
-        $allSnvs{$id}{"ref"} = convertIub($col[2]);
+        $allSnvs{$id}{"ref"} = $col[2];
         $allSnvs{$id}{"alt"} = join(",",@varAlleles);
 
         #add the ref and alt alleles' positions in the allele array to the GT field
