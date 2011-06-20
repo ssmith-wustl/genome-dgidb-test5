@@ -63,10 +63,6 @@ class Genome::Model::Tools::Hgmi::SendToPap (
             is  => 'Integer',
             doc => 'NCBI Taxonomy id',
         },
-        workflow_xml => {
-            is => 'String',
-            doc => 'Workflow xml file',
-        },
         keep_pep => {
             is => 'Boolean',
             doc => 'Keep temporary fasta file of gene proteins',

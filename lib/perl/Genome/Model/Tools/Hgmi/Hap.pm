@@ -340,7 +340,6 @@ sub execute {
         sequence_set_id      => $merge->sequence_set_id,
         sequence_name        => $config->{assembly_name},
         organism_name        => $config->{organism_name},
-        workflow_xml         => $config->{workflowxml},
         gram_stain           => $config->{gram_stain},
         blastp_archive_dir   => $blastp_archive_dir,
         interpro_archive_dir => $interpro_archive_dir,
