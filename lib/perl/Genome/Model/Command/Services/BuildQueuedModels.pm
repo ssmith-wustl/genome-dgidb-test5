@@ -92,7 +92,7 @@ sub execute {
 
             my $build_started = $build->start;
             unless ($build_started) {
-                die $self->error_message("Failed to start build (" . $build->__display_name__ . "): $@.");
+                die $self->error_message("Failed to start build (" . $build->__display_name__ . "): " . $build->error_message);
             }
             return $build;
         };
