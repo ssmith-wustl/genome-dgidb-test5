@@ -1,4 +1,4 @@
-package Genome::Model::Tools::Somatic::VcfMakerTcga;
+package Genome::Model::Tools::Vcf::VcfMakerTcga;
 
 use strict;
 use warnings;
@@ -13,7 +13,7 @@ use POSIX qw(strftime);
 use List::MoreUtils qw(firstidx);
 use List::MoreUtils qw(uniq);
 
-class Genome::Model::Tools::Somatic::VcfMakerTcga {
+class Genome::Model::Tools::Vcf::VcfMakerTcga {
     is => 'Command',
     has => [
         output_file => {
