@@ -16,7 +16,7 @@ class Genome::Model::Tools::TechD::GcFromBed {
             is => 'String',
             doc => 'The FASTA file that has been indexed with faidx and cooresponds to the bed file',
             is_optional => 1,
-            default_value => '/gscmnt/sata420/info/model_data/2741951221/build101947881/all_sequences.fa',
+            default_value => '/gscmnt/gc4096/info/model_data/2741951221/build101947881/all_sequences.fa',
         },
         output_file => {
             is => 'String',

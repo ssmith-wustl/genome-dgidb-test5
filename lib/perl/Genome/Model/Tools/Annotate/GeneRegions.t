@@ -9,7 +9,6 @@ use Test::More tests => 6;
 my $list = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Annotate-GeneRegions/coordinates_list";
 ok(-f $list, "coordinates list file found at $list");
 
-#my $output = "/gscmnt/sata420/info/testsuite_data/Genome-Model-Tools-Annotate-GeneRegions/coordinates_list_output";
 my $output_fh = File::Temp->new(
     TEMPLATE => 'Genome-Model-Tools-Annotate-GeneRegions-XXXXXX',
     DIR => '/gsc/var/cache/testsuite/running_testsuites/',

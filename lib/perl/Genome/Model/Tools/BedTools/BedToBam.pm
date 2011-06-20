@@ -5,7 +5,7 @@ use warnings;
 
 use Genome;
 
-my $DEFAULT_GENOME = '/gscmnt/sata420/info/model_data/2741951221/build101947881/genome.tsv';
+my $DEFAULT_GENOME = '/gscmnt/gc4096/info/model_data/2741951221/build101947881/genome.tsv';
 my $DEFAULT_BED12 = 0;
 
 class Genome::Model::Tools::BedTools::BedToBam {

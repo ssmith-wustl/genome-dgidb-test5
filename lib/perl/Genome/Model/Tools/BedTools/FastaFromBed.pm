@@ -11,7 +11,7 @@ class Genome::Model::Tools::BedTools::FastaFromBed {
         input_fasta => {
             is => 'Text',
             doc => 'Input FASTA file. DEFAULT GENOME: NCBI-human-build36.',
-            default_value => '/gscmnt/sata420/info/model_data/2741951221/build101947881/all_sequences.fa',
+            default_value => '/gscmnt/gc4096/info/model_data/2741951221/build101947881/all_sequences.fa',
         },
         bed_file => {
             is => 'Text',

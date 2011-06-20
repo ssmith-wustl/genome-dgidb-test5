@@ -90,7 +90,7 @@ sub reference_sequence_directory {
 }
 
 sub root_directory {
-    $ENV{GENOME_MODEL_ROOT} || '/gscmnt/sata420/info/symlinks';
+    $ENV{GENOME_MODEL_ROOT} || '/gscmnt/gc4096/info/symlinks';
 }
 
 sub data_directory {

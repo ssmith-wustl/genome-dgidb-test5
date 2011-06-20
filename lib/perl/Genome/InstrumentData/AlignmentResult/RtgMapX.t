@@ -62,7 +62,7 @@ eval "use $alignment_result_class_name";
 #
 ###########################################################
 
-my $reference_model = Genome::Model::ImportedReferenceSequence->get(name => 'NCBI-nr'); #'/gscmnt/sata420/info/model_data/2858801443/build103014646';
+my $reference_model = Genome::Model::ImportedReferenceSequence->get(name => 'NCBI-nr'); #'/gscmnt/gc4096/info/model_data/2858801443/build103014646';
 ok($reference_model, "got reference model");
 
 my $reference_build = $reference_model->build_by_version('1');

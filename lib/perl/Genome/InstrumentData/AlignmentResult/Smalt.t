@@ -84,7 +84,7 @@ sub test_alignment {
 
     my $instrument_data = generate_fake_instrument_data();
 
-    #note: a smalt index (.sma, .smi) should exist here: /gscmnt/sata420/info/model_data/2857679400/build102640309/
+    #note: a smalt index (.sma, .smi) should exist here: /gscmnt/gc4096/info/model_data/2857679400/build102640309/
     # if not, run `smalt index all_sequences.fa all_sequences.fa` to create (should take ~7 seconds)
     my $alignment = Genome::InstrumentData::AlignmentResult->create(
                                                        instrument_data_id => $instrument_data->id,
@@ -97,7 +97,7 @@ sub test_alignment {
                                                    );
 
     ok($alignment, "Created Alignment");
-    my $dir = $alignment->alignment_directory; #/gscmnt/sata420/info/model_data/2741951221/build101947881/
+    my $dir = $alignment->alignment_directory; #/gscmnt/gc4096/info/model_data/2741951221/build101947881/
     ok($dir, "alignments found/generated");
     ok(-d $dir, "result is a real directory");
     ok(-s $dir . "/all_sequences.bam", "result has a bam file");

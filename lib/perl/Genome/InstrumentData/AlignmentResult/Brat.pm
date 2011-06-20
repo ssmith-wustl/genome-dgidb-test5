@@ -119,7 +119,7 @@ sub _run_aligner {
 ##    print "ref_dir: $ref_dir\n";
 
     # for now, we hardcode the directory containing the fastas and such
-    my $ref_dir = "/gscmnt/sata420/info/model_data/2741951221/build101947881";
+    my $ref_dir = "/gscmnt/gc4096/info/model_data/2741951221/build101947881";
     
     #find all the individual fastas
     opendir(DIR, $ref_dir) or die $!;
