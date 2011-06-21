@@ -10,15 +10,6 @@ use Carp 'confess';
 class Genome::Site::WUGC::Synchronize {
     is => 'Genome::Command::Base',
     has_optional => [
-        report_file => {
-            is => 'FilePath',
-            doc => 'If provided, extra information is recorded in this file'
-        },
-        detailed_report => {
-            is => 'Boolean',
-            default => 0,
-            doc => 'If set, a detailed report is printed that lists all the objects that were copied/missing',
-        },
         show_object_cache_summary => {
             is => 'Boolean',
             default => 0,
@@ -163,9 +154,6 @@ sub execute {
     print STDERR "\n";
 
     $self->_report(\%report);
-    my $report_string = $self->generate_report;
-    print $report_string;
-    $self->write_report_file($report_string) if defined $self->report_file;
     return 1;
 }
 
@@ -176,59 +164,6 @@ sub print_object_cache_summary {
         my $count = scalar keys %{$UR::Context::all_objects_loaded->{$type}};
         next unless $count > 0;
         $self->status_message("$type : $count");
-    }
-    return 1;
-}
-
-# Generates a summary report with number of objects missing/copied per type
-sub generate_report {
-    my $self = shift;
-    return $self->generate_detailed_report if $self->detailed_report;
-
-    my %report = %{$self->_report};
-    my $string;
-    for my $type (sort keys %report) {
-        $string .= "Type $type";
-        for my $operation (qw/ copied missing /) {
-            my $num = 0;
-            if (exists $report{$type}{$operation}) {
-                $num = scalar @{$report{$type}{$operation}};
-            }
-            $string .= (', ' . (ucfirst $operation) . " $num");
-        }
-        $string .= "\n";
-    }
-    return $string;
-}
-
-# Generates a string representation of the report hash, which details the objects that were copied from the
-# old tables to the new and also lists those IDs that exist in the new tables but not the old.
-sub generate_detailed_report {
-    my $self = shift;
-    my %report = %{$self->_report};
-
-    my $string;
-    for my $type (sort keys %report) {
-        $string .= "*** Type $type ***\n";
-        for my $operation (qw/ copied missing /) {
-            next unless exists $report{$type}{$operation};
-            $string .= ucfirst $operation . "\n";
-            $string .= join("\n", @{$report{$type}{$operation}}) . "\n";
-        }
-    }
-    
-    return $string;
-}
-
-# Writes report string to a file
-sub write_report_file {
-    my ($self, $report_string) = @_;
-    my $fh = IO::File->new($self->report_file, 'w');
-    if ($fh) {
-        $fh->print($report_string);
-    }
-    else {
-        $self->warning_message("Could not get file handle for " . $self->report_file . ", not writing report");
     }
     return 1;
 }
