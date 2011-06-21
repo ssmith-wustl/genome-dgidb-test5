@@ -20,8 +20,8 @@ use Genome;
 class Genome::InstrumentData::AlignmentResult::Brat {
     is => 'Genome::InstrumentData::AlignmentResult',
     has_constant => [
-        aligner_name => { value => 'brat', is_param=>1 },
-    ],	
+        aligner_name => { value => 'brat', is_param=>1 }
+    ]
 };
 
 sub required_arch_os { 'x86_64' }
@@ -83,7 +83,7 @@ sub _run_aligner {
     my %aligner_params = $self->decomposed_aligner_params;
 
     # get the command path
-    my $brat_cmd_path = dirname(Genome::Model::Tools::Brat->path_for_brat_version($self->aligner_version));
+    my $brat_cmd_path = dirname(Genome::Model::Tools::Brat->path_for_brat_version($self->aligner_version)) . "/";
 
     # Data is single-ended or paired-ended: key off the number of files passed in (1=SE, 2=PE)
     # Under no circumstances should you ever get more than 2 files, if you do then that's bad and
@@ -182,7 +182,7 @@ sub _run_aligner {
     my $trim_prefix = $scratch_directory . "/trimmed";
 
     # output files consist of the following filenames prefixed with $trim_prefix
-    my @trimemd_files = map{sprintf("%s_%s",$trim_prefix,$_)} $paired_end ?
+    my @trimmed_files = map{sprintf("%s_%s",$trim_prefix,$_)} $paired_end ?
         qw(reads1.txt reads2.txt mates1.txt mates2.txt mates1.seq mates2.seq pair1.fastq pair2.fastq err1.seq err2.seq badMate1.seq badMate2.seq) :
         qw(reads1.txt mates1.txt mates1.seq pair1.fastq err1.seq);
 
@@ -199,7 +199,7 @@ sub _run_aligner {
     my $rv = Genome::Sys->shellcmd(
         cmd => $trim_cmd,
         input_files => [@input_pathnames],
-        output_files => [@trimemd_files]
+        output_files => [@trimmed_files]
     );
     unless($rv) { die $self->error_message("Trimming failed."); }
 
@@ -213,11 +213,9 @@ sub _run_aligner {
     $self->status_message("Performing alignment.");
     
     # the file for aligned reads
-    my @aligned_reads = $scratch_directory . "/bratout.dat";
+    my @aligned_reads = ($scratch_directory . "/bratout.dat");
 
-    # TODO verify that this is correct (diff with original)
     # uses precomputed index; alternatively you could do something like -r $refs_file instead of -P $index_dir
-    
     my $align_cmd = sprintf("%s -P %s %s -o %s %s",
         $brat_cmd_path . "brat-large",
         $reference_index_directory,
@@ -273,7 +271,7 @@ sub _run_aligner {
 
     $rv = Genome::Sys->shellcmd(
         cmd => $dedup_cmd,
-        input_files => [@aligned_reads, $aligned_reads_list_file, @all_ref_files, $refs_file, $trimmed_files[2], $trimmed_files[3], $mates1_list_file, $mates2_list_file],
+        input_files => [@all_ref_files, $refs_file, @aligned_reads, $aligned_reads_list_file, $trimmed_files[2], $trimmed_files[3], $mates1_list_file, $mates2_list_file],
         output_files => [@deduped_reads]
     );
     unless($rv) { die $self->error_message("Deduping failed."); }
@@ -468,7 +466,6 @@ sub decomposed_aligner_params {
 sub prepare_reference_sequence_index {
     my $class = shift;
     my $reference_index = shift;
-    $DB::single = 1;
 
     $class->status_message("Creating reference index.");    
 
@@ -485,8 +482,9 @@ sub prepare_reference_sequence_index {
     my %aligner_params = $class->decomposed_aligner_params($reference_index->aligner_params);
 
     # get the command path
-    my $brat_cmd_path = dirname(Genome::Model::Tools::Brat->path_for_brat_version($reference_index->aligner_version));
+    my $brat_cmd_path = dirname(Genome::Model::Tools::Brat->path_for_brat_version($reference_index->aligner_version)) . "/";
 
+    $DB::single = 1;
 
     # find all the individual reference fastas and load them into an array
     print "Ref dir: $reference_directory.";
@@ -497,9 +495,9 @@ sub prepare_reference_sequence_index {
         # should match 1.fa - 22.fa, along with X.fa, x.fa, Y.fa, y.fa
         # XXX will fail on contigs (NT_113956.fa) or other formats (chr22.fa)
         # TODO is it true that we want 1-22.fa, and not all_sequences.fa?
-        if ($filename =~ /^(([1-2]?[0-9])|([XYxy]))\.(fa|fasta)$/) {
+        if ($filename =~ /^([1-2]?[0-9]|[XYxy])\.(fa|fasta)$/) {
             #my $cur_ref_file = $reference_directory . "/" . $filename;
-            push @all_ref_files, "$reference_directory/$filename";
+            push @all_ref_files, "$reference_directory/$filename" unless $#all_ref_files > 2; # TODO for debugging only!!!
             #$ref_fh->print($cur_ref_file . "\n");
         }
     }
@@ -511,29 +509,35 @@ sub prepare_reference_sequence_index {
     $ref_fh->print(join("\n",@all_ref_files)."\n");
     $ref_fh->close;
 
+    # the only aligner parameters that brat-large-build needs to know about are -S and -bs; this filters all the others out
+    my $filtered_params = join(" ", grep(/^-(?:S|bs)/, split(/\s(?=-)/, $aligner_params{'align_options'})));
 
     my $index_cmd = sprintf("%s -r %s -P %s %s",
         $brat_cmd_path . "brat-large-build",
         $refs_file,
         $staging_directory,
-        $aligner_params{'align_options'} # the index creation requires the parameters passed to the aligner
+        $filtered_params # index creation needs to know about certain params passed to the aligner (see above)
     );
 
-    my @index_input_files = (@all_ref_files, $refs_file);
-
     # for every .fa file in $reference_directory, add a .bg, .hs, and .ht file in $staging_directory to our array. also, tack INFO.txt on to the end.
-    my @index_output_files = map{
-            my $filename = basename($_);
+    my @index_files = map{
+            basename($_) =~ /^([1-2]?[0-9]|[XYxy])(?=\.fa|\.fasta)/;
+            my $filename = $1;
             map{ sprintf("%s/%s.%s",$staging_directory,$filename,$_) } qw(bg hs ht);
         } @all_ref_files;
-    push @index_output_files, "INFO.txt";
-    # TODO verify that these are indeed the correct outputs from index creation
+    my $index_info_file = $staging_directory . "/INFO.txt";
+    
+    print Data::Dumper::Dumper([@index_files, $index_info_file]);
+
+    $DB::single=1;
 
     my $rv = Genome::Sys->shellcmd(
         cmd => $index_cmd,
-        input_files => \@index_input_files,
-        output_files => \@index_output_files
+        input_files => [@all_ref_files, $refs_file],
+        output_files => [@index_files, $index_info_file]
     );
+    
+    $DB::single=1;
 
     unless($rv) { die $class->error_message("Index creation failed."); }
 
