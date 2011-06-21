@@ -72,36 +72,41 @@ class Genome::InstrumentData {
     doc => 'Contains information common to all types of instrument data',
 };
 
-# TODO Need to also find and abandon any builds that used this instrument data, remove instrument
-# data assignments, etc
 sub delete {
     my $self = shift;
-
     my $instrument_data_id = $self->id;
-    my @inputs = Genome::Model::Input->get( name => 'instrument_data', value_id => $instrument_data_id );
-    my @models = map( $_->model, @inputs);
-
+    
+    my @model_inputs = Genome::Model::Input->get(
+        name => 'instrument_data', 
+        value_id => $instrument_data_id 
+    );
+    my @models = map( $_->model, @model_inputs);
     for my $model (@models) {
         $model->remove_instrument_data($self);
     }
 
     #There may be builds using this instrument data even though it had previously been unassigned from the model
-    my @other_build_inputs = Genome::Model::Build::Input->get ( name => 'instrument_data', value_id => $instrument_data_id );
-
-    my @other_builds = map($_->build, @other_build_inputs);
-
-    for my $build (@other_builds) {
+    my @build_inputs = Genome::Model::Build::Input->get( 
+        name => 'instrument_data', 
+        value_id => $instrument_data_id 
+    );
+    my @builds = map($_->build, @build_inputs);
+    for my $build (@builds) {
         $build->abandon();
         push @models, $build->model;
     }
 
-    #finally, clean up the instrument data
-    for my $attr ( $self->attributes ) {
-        $attr->delete;
+    # Deallocate any allocations this instrument data owns
+    for my $allocation ($self->allocations) {
+        $allocation->delete;
     }
-    $self->SUPER::delete;
 
-    return $self;
+    # Remove all attributes
+    for my $attribute ($self->attributes) {
+        $attribute->delete;
+    }
+
+    return $self->SUPER::delete;
 }
 
 sub calculate_alignment_estimated_kb_usage {
