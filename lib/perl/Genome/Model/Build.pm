@@ -1878,6 +1878,8 @@ sub snapshot_revision {
         push @inc, grep { $inc eq $_ } @libs;
     }
 
+    @inc = $self->_uniq(@inc);
+
     return join(':', @inc);
 }
 
