@@ -28,14 +28,16 @@ class Genome::Site::WUGC::Synchronize {
 sub execute {
     my $self = shift; 
 
-    my $sync = Genome::Site::WUGC::Synchronize::UpdateApipeClasses->execute();
-    unless ($sync){
-        #TODO: something went horribly wrong
+    my $update = Genome::Site::WUGC::Synchronize::UpdateApipeClasses->execute();
+    unless ($update){
+        $self->error_message("Failed to UpdateApipeClasses: $@");
+        die $self->error_message;
     }
-    my $report = $sync->_report;
+    my $report = $update->_report;
     my $expunge  = Genome::Site::WUGC::Synchronize::Expunge->execute(report => $report);
     unless ($expunge){
-        #TODO: something went horribly wrong
+        $self->error_message("Failed to Expunge: $@");
+        die $self->error_message;
     }
     $self->_report($expunge->report);
 

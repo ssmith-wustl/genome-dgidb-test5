@@ -11,7 +11,7 @@ class Genome::Site::WUGC::Synchronize::Expunge {
             is => 'Hashref',
             is_input => 1,
             is_optional => 0,
-            doc => 'The output from a Genome::Site::WUGC::Synchronze', #TODO: write something better than this
+            doc => 'Hashref containing objects of interest from Genome::Site::WUGC::Synchronze::UpdateApipeClasses',
         }
     ],
 };
