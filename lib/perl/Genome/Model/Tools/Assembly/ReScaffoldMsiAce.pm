@@ -27,6 +27,12 @@ class Genome::Model::Tools::Assembly::ReScaffoldMsiAce {
 	    is => 'Text',
 	    doc => 'Main assembly directory',
 	},
+        min_contig_length => {
+            is => 'Integer',
+            doc => 'Minimum contig length to export to new ace file',
+            default => 0,
+            is_optional => 1,
+        },
     ],
 };
 
@@ -63,8 +69,6 @@ EOS
 sub execute {
     my $self = shift;
 
-    #TODO - needs some clean up
-
     unless (-s $self->acefile) {
 	$self->error_message("Can't find file: ".$self->acefile);
 	return;
@@ -75,13 +79,13 @@ sub execute {
 	return;
     }
 
+    #determine how to get report file
     my $report_file;
     if ($self->auto_report) {
 	unless ($report_file = $self->_run_auto_report()) {
 	    $self->error_message("Failed to get report file by running auto report");
 	    return;
 	}
-	print $report_file."\n";
     }
 
     if ($self->scaffold_file) {
@@ -92,10 +96,13 @@ sub execute {
 	$report_file = $self->scaffold_file;
     }
 
-    #parse report file .. returns aryref .. could be empty if no scaffolds
-    my $old_scaffolds = $self->_get_old_scaffolds($self->acefile);
-    my $new_scaffolds;
+    #returns hash of contig_number => contig_length
+    $self->status_message( "Determining old scaffolds" );
+    my $old_scaffolds = $self->_get_old_scaffolds( $self->acefile );
 
+    #create new scaffold based on auto report or supplied scaffold file
+    $self->status_message( "Determining new scaffolds" );
+    my $new_scaffolds;
     if ($report_file) {
 	my $scaffolds = $self->_parse_report_file($report_file);
 	my $valid_scaffolds = $self->_check_for_contigs_to_complement($scaffolds);
@@ -104,12 +111,24 @@ sub execute {
     else {
 	$new_scaffolds = $self->_create_new_scaffolds($old_scaffolds);
     }
-    my $new_ace = $self->_write_new_ace_file($self->acefile, $new_scaffolds);
 
-    my $final_ace = $self->_update_ds_line($new_ace);
+    #make partial ace of new scaffolds
+    $self->status_message( "Writing new scaffolds" );
+    my $scafs_file = $self->_write_new_scaffolds( $self->acefile, $new_scaffolds );
 
-    #TODO - this update ds line is not needed anymore
-    unlink $new_ace;
+    #write separate file of tags
+    $self->status_message( "Writing new contig tags" );
+    my $tags_file = $self->_write_contig_tags( $self->acefile, $new_scaffolds );
+
+    #merge the two .. get  read and contigs counts;
+    $self->status_message( "Updating contig and read counts" );
+    my ($int_ace, $contig_count, $read_count) = $self->_merge_files_get_contig_read_counts( $scafs_file, $tags_file );
+
+    #update DS line .. needed for older newbler ace files .. and update read and contig counts
+    $self->status_message( "Updating DS line and writing new ace file: ace.msi" );
+    my $final_ace = $self->_update_ds_line_write_wa_tags( $int_ace, $contig_count, $read_count );
+
+    $self->status_message( "Done" );
 
     return 1;
 }
@@ -142,15 +161,14 @@ sub _run_auto_report {
 sub _parse_report_file {
     my ($self, $file) = @_;
     my @scaffolds;
-    my $fh = Genome::Sys->open_file_for_reading($file) ||
-	return;
-
+    my $fh = Genome::Sys->open_file_for_reading($file);
     foreach my $line ($fh->getlines) {
 	next unless ($line =~ /^\d+/ or $line =~ /^E-\d+/);
 	chomp $line;
 	if ($line =~ /,/) {
 	    my @tmp = split (',', $line);
 	    foreach (@tmp) {
+                $_ =~ s/^\s+//;
 		push @scaffolds, $_;
 	    }
 	} else {
@@ -190,7 +208,7 @@ sub _get_old_scaffolds {
     my ($self, $ace) = @_;
 
     my $contig_lengths = {};
-    my $fh = IO::File->new("<$ace") || die "Can not open ace file: $ace";
+    my $fh = Genome::Sys->open_file_for_reading( $ace );
     while (my $line = $fh->getline) {
 	next unless $line =~ /^CO\s+/;
 	my ($contig_name, $length) = $line =~ /^CO\s+(\S+)\s+(\d+)/;
@@ -207,6 +225,7 @@ sub _get_old_scaffolds {
 
 sub _create_new_scaffolds {
     my ($self, $old_contigs, $scaffolds) = @_;
+
     #TODO - needs some clean up
     my $new_scafs = {};
     #hash of scaffolds with array of contigs in scaffold as value
@@ -224,7 +243,8 @@ sub _create_new_scaffolds {
 	    my $scaf_ctg_1;
 	    foreach my $scaf_ctg (@tmp) {
 		next if $scaf_ctg eq 'E'; #eg E-12.1-E
-		$scaf_ctg_1 = $scaf_ctg unless $scaf_ctg_1;
+                delete $old_contigs->{$scaf_ctg} and next if $old_contigs->{$scaf_ctg} <= $self->min_contig_length;
+		$scaf_ctg_1 = $scaf_ctg unless $scaf_ctg_1; #??? why ???
 		push @{$new_scafs->{$scaf_ctg_1}->{scaffold_contigs}}, $scaf_ctg;
 		$scaf_lengths->{$scaf_ctg_1} += $old_contigs->{$scaf_ctg};
 		delete $old_contigs->{$scaf_ctg};
@@ -248,7 +268,8 @@ sub _create_new_scaffolds {
 
     #write a new gap file
     my $gap_file = $self->assembly_directory.'/edit_dir/msi.gap.txt';
-    my $gap_fh = IO::File->new("> $gap_file") || die "Can not write new gap file: msi.gap.txt";
+    unlink $gap_file;
+    my $gap_fh = Genome::Sys->open_file_for_writing( $gap_file ) || die "Can not write new gap file: msi.gap.txt";
     
     foreach my $scaf (sort {$scaf_lengths->{$b} <=> $scaf_lengths->{$a}} keys %{$scaf_lengths}) {
 	foreach my $scaf_ctg ( @{$new_scafs->{$scaf}->{scaffold_contigs}} ) {
@@ -268,19 +289,25 @@ sub _create_new_scaffolds {
 
     $gap_fh->close;
 
+    unless ( $new_scaf_names ) {
+        $self->status_message( "Could not get any new scaffolds .. check scaffolds file to make sure contigs match or set min-contig-length lower because all contigs may have been filtered out" );
+        return;
+    }
+
     return $new_scaf_names;
 }
 
-sub _write_new_ace_file {
-    my ($self, $ace, $scaffold) = @_;
-    my $ace_out = $self->assembly_directory.'/edit_dir/new.msi.ace';
-    my $fh_out = IO::File->new("> $ace_out") ||
-	die "Can not create file handle to write new ace\n";
-    my $fh_in = IO::File->new("< $ace") ||
-	die "Can not create file handle to read $ace\n";
-    my $in_contig_tag = 0;
+sub _write_new_scaffolds {
+    my ( $self, $ace, $scaffold ) = @_;
+    my $ace_out = $self->assembly_directory.'/edit_dir/ace.msi.scaffolds';
+    unlink $ace_out;
+    my $fh_out = Genome::Sys->open_file_for_writing( $ace_out );
+    my $fh_in = Genome::Sys->open_file_for_reading( $ace );
+    my $skip_this_contig = 0;
     while (my $line = $fh_in->getline) {
-	#CHANGE CONTIG NAMES IN CO LINE
+        #stop writing when contig or wa tags are reached
+        #only writing contigs here
+        last if $line =~ /^CT\{$/ or $line =~ /^WA\{$/;
 	if ($line =~ /^CO\s+/) {
 	    chomp $line;
 	    my ($contig_name) = $line =~ /^CO\s+(\S+)/;
@@ -288,51 +315,101 @@ sub _write_new_ace_file {
 	    my ($contig_number) = $contig_name =~ /contig(\S+)/i;
 	    if (exists $scaffold->{$contig_number}) {
 		$fh_out->print('CO '.$scaffold->{$contig_number}." $rest_of_line\n");
+                $skip_this_contig = 0;
 	    }
 	    else {
-		if ($contig_number =~ /^\d+$/) {
-		    $fh_out->print('CO Contig'.$contig_number.'.1'." $rest_of_line\n");
-		}
-		else {
-		    $fh_out->print("$line\n");
-		}
+                #skip any contigs that are not specified in $scaffold
+                $skip_this_contig = 1;
 	    }
 	}
-	#CHANGE CONTIG NAMES IN CONTIG TAGS
-	elsif ($line =~ /^CT\{/) {
-	    $in_contig_tag = 1;
-	    $fh_out->print($line);
-	}
-	elsif ($in_contig_tag == 1 and $line =~ /^contig(\S+)\s+/i) {
-	    chomp $line;
-	    my ($contig_name) = $line =~ /^(\S+)/;
-	    my $rest_of_line = "$'";
-	    my ($contig_number) = $contig_name =~ /contig(\S+)/i;
-	    if (exists $scaffold->{$contig_number}) {
-		$fh_out->print($scaffold->{$contig_number}."$rest_of_line\n");
-	    }
-	    else{
-		$fh_out->print("$line\n");
-	    }
-	    $in_contig_tag = 0;
-	}
-	else {
-	    $fh_out->print($line);
+        else {
+	    $fh_out->print($line) unless $skip_this_contig == 1;
 	}
     }
+
     $fh_in->close;
     $fh_out->close;
 
-    return $self->assembly_directory.'/edit_dir/new.msi.ace';
+    return $ace_out;
 }
 
-sub _update_ds_line {#and write wa_tag
-    my ($self, $ace) = @_;
-    my $fh = IO::File->new("< $ace") || die "can not open file: $ace";
+sub _write_contig_tags {#TODO try to get seekpos
+    my ( $self, $ace, $scaffolds ) = @_;
+    my $tags_out = $self->assembly_directory.'/edit_dir/ace.msi.tags';
+    unlink $tags_out;
+    my $fh_out = Genome::Sys->open_file_for_writing( $tags_out );
+    my $fh = Genome::Sys->open_file_for_reading( $ace );
+    my $in_tag_lines = 0;
+    my $print_tag_lines = 0;
+    while ( my $line = $fh->getline ) {
+        if ( $line =~ /^CT\{/ ) {
+            $in_tag_lines = 1;
+        }
+        elsif ( $line =~ /^WA\{/ ) { #don't print WA tags
+            $in_tag_lines = 0;
+            $print_tag_lines = 0;
+        }
+        elsif ( $in_tag_lines == 1 and $line =~ /^contig(\S+)\s+/i ) {
+            chomp $line;
+	    my ($contig_name) = $line =~ /^(\S+)/;
+	    my $rest_of_line = "$'";
+	    my ($contig_number) = $contig_name =~ /contig(\S+)/i;
+	    if (exists $scaffolds->{$contig_number}) {
+                $fh_out->print( "CT{\n" );
+		$fh_out->print( $scaffolds->{$contig_number}."$rest_of_line\n" );
+                $print_tag_lines = 1;
+	    }
+	    else{
+                $print_tag_lines = 0;
+	    }
+        }
+        elsif ( $in_tag_lines == 1 and $print_tag_lines == 1 ) {
+            $fh_out->print( $line );
+        }
+        #else #do nothing
+    }
+    
+    $fh_out->close;
+    $fh->close;
 
+    return $tags_out;
+}
+
+sub _merge_files_get_contig_read_counts {
+    my ( $self, $scaf_file, $tags_file ) = @_;
+    my $ace_out = $self->assembly_directory.'/edit_dir/ace.msi.int1';
+    unlink $ace_out;
+    my $ace_out_fh = Genome::Sys->open_file_for_writing( $ace_out );
+    my $s_fh = Genome::Sys->open_file_for_reading( $scaf_file );
+    my $read_count = 0;
+    my $contig_count = 0;
+    while ( my $line = $s_fh->getline ) {
+        next if $line =~ /^AS\s+/;
+        $read_count++ if $line =~ /^RD\s+/;
+        $contig_count++ if $line =~ /^CO\s+/;
+        $ace_out_fh->print( $line );
+    }
+    $s_fh->close;
+    my $t_fh = Genome::Sys->open_file_for_reading( $tags_file );
+    while ( my $line = $t_fh->getline ) {
+        $ace_out_fh->print( $line );
+    }
+    $t_fh->close;
+    $ace_out_fh->close;
+
+    unlink $scaf_file, $tags_file;
+
+    return $ace_out, $contig_count, $read_count;
+}
+
+sub _update_ds_line_write_wa_tags {
+    my ($self, $ace, $contig_count, $read_count ) = @_;
+    my $fh = Genome::Sys->open_file_for_reading( $ace );
     my $ace_out = $self->assembly_directory.'/edit_dir/ace.msi';
-
-    my $out_fh = IO::File->new("> $ace_out") || die "Can not write file: new.msi.ace.final";
+    unlink $ace_out;
+    my $out_fh = Genome::Sys->open_file_for_writing( $ace_out );
+    #write as line
+    $out_fh->print( "AS $contig_count $read_count\n\n" );
     while (my $line = $fh->getline) {
 	if ($line =~ /^DS\s+/) {
 	    if ($line =~ /PHD_FILE/) {
@@ -351,7 +428,7 @@ sub _update_ds_line {#and write wa_tag
 
     my $ball_dir = $self->assembly_directory.'/phdball_dir';
     if (-d $ball_dir) {
-	my @phd_ball_file = glob ("$ball_dir/*ball");
+	my @phd_ball_file = glob ("$ball_dir/*");
 	if (scalar @phd_ball_file > 0) {
 	    foreach (@phd_ball_file) {
 		$out_fh->print("\nWA{\n"."phdBall newbler 080416:144002\n".$_."\n}\n\n");
@@ -360,8 +437,9 @@ sub _update_ds_line {#and write wa_tag
     }
 
     $out_fh->close;
+    unlink $ace;
 
-    return 1;
+    return $ace_out;
 }
 
 1
