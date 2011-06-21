@@ -651,7 +651,7 @@ sub get_imported_instrument_data_or_upload_paths {  #TODO not finished, not curr
 }
 
 sub upload_instrument_data_and_unlock {
-    my ($self, $orig_data_paths_to_fastq_files, $locks_ref);
+    my ($self, $orig_data_paths_to_fastq_files, $locks_ref) = @_;
     #TODO: Actually use locks.
     my @locks;# = @$locks_ref;
 
