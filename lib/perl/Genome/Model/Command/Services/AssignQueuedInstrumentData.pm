@@ -611,7 +611,7 @@ sub preload_data {
     $self->status_message("  got " . scalar(@models) . " models");        
 
     if(scalar @models > 0) {
-        $self->status_message("Pre-loading instrument data assignments for " . scalar(@models) . " models");
+        $self->status_message("Pre-loading instrument data inputs for " . scalar(@models) . " models");
         my @instrument_data_inputs = Genome::Model::Input->get(model_id => [ map { $_->id } @models ]);
     }
 

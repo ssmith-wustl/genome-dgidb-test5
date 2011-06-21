@@ -220,7 +220,6 @@ sub get_summary_information
         $self->status_message("dbSNP unfiltered report: $dbsnp_unfiltered_report_file is not available") unless -e $dbsnp_unfiltered_report_file;
     }
 
-    ##the number of instrument data assignments is:
     my @inputs = $build->model->instrument_data_inputs;
     my $total_bases = 0;
     for my $input (@inputs) {

@@ -130,7 +130,7 @@ sub models {
     #  a - get work order seq products 
     #  b - if seq prod is a read get it's prep_group_id else (solexa/454) 
     #       use seq_id
-    #  c - get models via inst data assignments (inputs eventually)
+    #  c - get models via inst data inputs 
     #  
 
     my @instrument_data_ids = $self->instrument_data_ids();
