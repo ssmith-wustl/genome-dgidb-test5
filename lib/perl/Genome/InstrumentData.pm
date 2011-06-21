@@ -75,6 +75,13 @@ class Genome::InstrumentData {
 sub delete {
     my $self = shift;
     my $instrument_data_id = $self->id;
+
+    my @alignment_results = Genome::InstrumentData::AlignmentResult->get(instrument_data_id => $self->id);
+    if (@alignment_results) {
+        $self->error_message("Cannot remove instrument data " . $self->__display_name__ . " because it has " .
+            scalar @alignment_results . " alignment results!");
+        return;
+    }
     
     my @model_inputs = Genome::Model::Input->get(
         name => 'instrument_data', 
@@ -85,7 +92,7 @@ sub delete {
         $model->remove_instrument_data($self);
     }
 
-    #There may be builds using this instrument data even though it had previously been unassigned from the model
+    # There may be builds using this instrument data even though it had previously been unassigned from the model
     my @build_inputs = Genome::Model::Build::Input->get( 
         name => 'instrument_data', 
         value_id => $instrument_data_id 
@@ -96,17 +103,28 @@ sub delete {
         push @models, $build->model;
     }
 
-    # Deallocate any allocations this instrument data owns
-    for my $allocation ($self->allocations) {
-        $allocation->delete;
-    }
+    $self->_create_deallocate_observer;
 
-    # Remove all attributes
     for my $attribute ($self->attributes) {
         $attribute->delete;
     }
 
     return $self->SUPER::delete;
+}
+
+sub _create_deallocate_observer {
+    my $self = shift;
+    my @allocations = $self->allocations;
+    return 1 unless @allocations;
+    UR::Context->create_subscription(
+        method => 'commit',
+        callback => sub {
+            for my $allocation (@allocations) {
+                $allocation->delete;
+            }
+        }
+    );
+    return 1;
 }
 
 sub calculate_alignment_estimated_kb_usage {

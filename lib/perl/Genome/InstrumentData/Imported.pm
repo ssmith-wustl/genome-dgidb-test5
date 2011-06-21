@@ -257,33 +257,6 @@ sub create {
     return $self;
 }
 
-sub delete {
-    my $self = shift;
-
-    my @alignment_results = Genome::InstrumentData::AlignmentResult->get(instrument_data_id => $self->id);
-    if (@alignment_results) {
-        $self->error_message("Cannot remove instrument data (" . $self->id . ") because it has " . scalar @alignment_results . " alignment result(s).");
-        return;
-    }
-
-    my @allocations = Genome::Disk::Allocation->get(owner => $self);
-    if (@allocations) {
-        UR::Context->create_subscription(
-            method => 'commit', 
-            callback => sub {
-                for my $allocation (@allocations) {
-                    my $id = $allocation->id;
-                    print 'Now deleting allocation with owner_id = ' . $id . "\n";
-                    $allocation->deallocate; 
-                    print "Deletion complete.\n";
-                }
-                return 1;
-            }
-        );
-    }
-    return $self->SUPER::delete(@_);
-}
-
 ################## Solexa Only ###################
 # aliasing these methods before loading Genome::InstrumentData::Solexa causes it to 
 # believe Genome::InstrumentData::Solexa is already loaded.  So we load it first...
