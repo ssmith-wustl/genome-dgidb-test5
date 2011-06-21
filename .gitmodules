@@ -55,3 +55,6 @@
 [submodule "graphite"]
     path = graphite
     url = https://github.com/genome/graphite.git
+[submodule "fqgrep"]
+	path = fqgrep
+	url = https://github.com/genome/fqgrep.git

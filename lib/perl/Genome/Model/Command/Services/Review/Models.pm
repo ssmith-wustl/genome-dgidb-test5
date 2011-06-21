@@ -45,13 +45,11 @@ sub execute {
         my $model_name   = ($model ? $model->name                     : '-');
         my $pp_name      = ($model ? $model->processing_profile->name : '-');
 
-        my $latest_build_revision = (($latest_build && $latest_build->software_revision) ? $latest_build->software_revision : '-');
+        my $latest_build_revision = $latest_build->software_revision if $latest_build;
+        ($latest_build_revision) =~ /\/(genome-[^\/])/;
+        $latest_build_revision ||= '-';
 
         $model_name =~ s/\.?$pp_name\.?/.../;
-        
-        $latest_build_revision =~ s/\/gsc\/scripts\/opt\/genome\/snapshots\/[\w\-]+\///;
-        $latest_build_revision =~ s/\/lib\/perl\/?//;
-        $latest_build_revision =~ s/:$//;
 
         my $action;
         if ($latest_build->status eq 'Scheduled' || $latest_build->status eq 'Running') {
