@@ -45,9 +45,22 @@ sub default_version {
     return $DEFAULT_VERSION;
 }
 
+sub base_dir {
+    return '/gscmnt/pacbio/production/git/pacbio';
+}
+
+sub r_lib {
+    my $self = shift;
+    my $r_lib = $self->base_dir .'/lib/R';
+    unless (-d $r_lib) {
+        die('Failed to find R lib: '. $r_lib);
+    }
+    return $r_lib;
+}
+
 sub seymour_home {
     my $self = shift;
-    my $seymour_home = '/gscmnt/pacbio/production/git/pacbio/smrtanalysis-'. $self->use_version;
+    my $seymour_home = $self->base_dir .'/smrtanalysis-'. $self->use_version;
     unless (-d $seymour_home) {
         die('Failed to find seymour home: '. $seymour_home);
     }
