@@ -39,6 +39,7 @@ sub execute {
     for my $model (@models) {
         my $latest_build        = ($model        ? $model->latest_build  : undef);
         my $latest_build_status = ($latest_build ? $latest_build->status : '-');
+        $latest_build_status = 'Requested' if $model->build_requested;
 
         my $fail_count   = ($model ? scalar $model->failed_builds     : undef);
         my $model_id     = ($model ? $model->id                       : '-');
@@ -61,6 +62,9 @@ sub execute {
         }
         elsif (should_review_model($model)) {
             $action = 'review';
+        }
+        elsif ($model->build_requested) {
+            $action = 'none';
         }
         else {
             $action = 'rebuild';
