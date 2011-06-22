@@ -425,60 +425,37 @@ sub calculate_estimated_kb_usage {
 # If the data directory is not set, resolving it requires making an allocation.  A build is unlikely to
 # make a new allocation at any other time, so a separate build instance method for allocating is not
 # provided.
-# TODO This method could really be simplified
-sub resolve_data_directory {
+sub get_or_create_data_directory {
     my $self = shift;
-    my $model = $self->model;
-    my $build_data_directory;
-    my $model_data_directory = $model->data_directory;
-    # TODO This check is site specific... what does it matter if the model path doesn't follow this pattern?
-    my $model_path_is_abnormal = defined($model_data_directory) && $model_data_directory !~ /\/gscmnt\/.*\/info\/(?:medseq\/)?.*/;
+    return $self->data_directory if $self->data_directory;
 
-    if($model->genome_model_id < 0 && $model_path_is_abnormal)
-    {
-        # The build is being created for an automated test; allocating for it would leave stray directories.
-        # Rather than relying on this if statement, tests should specify a build directory.
-        $build_data_directory = $model_data_directory . '/build' . $self->id;
-        warn "Please update this test to set build data_directory. (generated data_directory: \"$build_data_directory\")";
-        unless (Genome::Sys->create_directory($build_data_directory)) {
-            $self->error_message("Failed to create directory '$build_data_directory'");
-            die $self->error_message;
-        }
-    }
-    else
-    {
-        if ($model_path_is_abnormal) {
-            # why should this ever fail?
-            warn "The model data directory \"$model_data_directory\" follows an unexpected pattern!";
-        }
-    
-        my $allocation_path = 'model_data/' . $model->id . '/build'. $self->build_id;
-        my $kb_requested = $self->calculate_estimated_kb_usage;
-        unless ($kb_requested) {
-            die $self->error_message("Could not estimate kb usage for allocation!");
-        }
-    
-        my $disk_group_name = $model->processing_profile->_resolve_disk_group_name_for_build($self);
-        unless ($disk_group_name) {
-            die $self->error_message('Failed to resolve a disk group for a new build!');
-        }
-    
-        my $class = $self->class;
-        my $id = $self->id;
-        my $disk_allocation = Genome::Disk::Allocation->create(
-            disk_group_name => $disk_group_name,
-            allocation_path => $allocation_path,
-            kilobytes_requested => $kb_requested,
-            owner_class_name => $class,
-            owner_id => $id,
-        );
-        Carp::confess "Failed to create allocation for build!" unless $disk_allocation;
-   
-        $build_data_directory = $disk_allocation->absolute_path;
-        Genome::Sys->validate_existing_directory($build_data_directory);
+    my $allocation_path = 'model_data/' . $self->model->id . '/build'. $self->build_id;
+    my $kb_requested = $self->calculate_estimated_kb_usage;
+    unless ($kb_requested) {
+        $self->error_message("Could not estimate kb usage for allocation!");
+        return;
     }
 
-    return $build_data_directory;
+    my $disk_group_name = $self->processing_profile->_resolve_disk_group_name_for_build($self);
+    unless ($disk_group_name) {
+        $self->error_message('Failed to resolve a disk group for a new build!');
+        return;
+    }
+
+    my $disk_allocation = Genome::Disk::Allocation->create(
+        disk_group_name => $disk_group_name,
+        allocation_path => $allocation_path,
+        kilobytes_requested => $kb_requested,
+        owner_class_name => $self->class,
+        owner_id => $self->id,
+    );
+    unless ($disk_allocation) {
+        $self->error_message("Could not create allocation for build " . $self->__display_name__);
+        return;
+    }
+
+    $self->data_directory($disk_allocation->absolute_path);
+    return $self->data_directory;
 }
 
 sub reallocate {
@@ -566,14 +543,9 @@ sub start {
             Carp::croak "Build " . $self->__display_name__ . " could not be validated for start!\n" . join("\n", @msgs);
         }
 
-        # Creates an allocation that'll be used as the build's data directory (unless a data directory has been provided)
-        # TODO This logic should all be contained in resolve_data_directory, which should just return a path
-        unless ($self->data_directory) {
-            my $data_directory = $self->resolve_data_directory;
-            $self->data_directory($data_directory);
-            unless ($self->data_directory) {
-                Carp::croak "Build " . $self->__display_name__ . " could not resolve a data directory!";
-            }
+        # Either returns the already-set data directory or creates an allocation for the data directory
+        unless ($self->get_or_create_data_directory) {
+            Carp::croak "Build " . $self->__display_name__ . " failed to resolve a data directory!";
         }
 
         # Give builds an opportunity to do some initialization after the data directory has been resolved
@@ -1539,7 +1511,6 @@ sub add_from_build { # rename "add an underlying build" or something...
 
 sub delete {
     my $self = shift;
-    my %params = @_;
 
     # Abandon events
     $self->status_message("Abandoning events associated with build");
@@ -1582,13 +1553,6 @@ sub delete {
         unless ($disk_allocation->deallocate) {
             $self->warning_message('Failed to deallocate disk space.');
         }
-    }
-
-    # Remove model link
-    my $model_data_directory = $self->model->data_directory;
-    if ($model_data_directory) {
-        my $model_build_symlink = $model_data_directory . '/build' . $self->build_id;
-        unlink($model_build_symlink) if (-e $model_build_symlink);
     }
     
     # FIXME Don't know if this should go here, but then we would have to call success and abandon through the model
