@@ -146,7 +146,6 @@ class Genome::Model {
     ],    
     has_optional_deprecated => [
         # this is all junk but things really use them right now 
-        data_directory          => { is => 'Text', len => 1000, is_optional => 1 },
         events                  => { is => 'Genome::Model::Event', reverse_as => 'model', is_many => 1,
             doc => 'all events which have occurred for this model' },
         reports                 => { via => 'last_succeeded_build' },
@@ -313,18 +312,6 @@ sub create {
     #  Checking after subject verification to catch that error first.
     $self->_verify_no_other_models_with_same_name_and_type_name_exist
         or return;
-
-    # If data directory has not been supplied, figure it out
-    # TODO Remove model data directories
-    unless ($self->data_directory) {
-        $self->data_directory( $self->resolve_data_directory );
-    }
-
-    unless ( $self->_build_model_filesystem_paths() ) {
-        $self->error_message('Filesystem path creation failed');
-        $self->SUPER::delete;
-        return;
-    }
 
     my $processing_profile= $self->processing_profile;
     unless ($processing_profile->_initialize_model($self)) {
@@ -628,18 +615,6 @@ sub unassigned_instrument_data {
     my %assigned_instrument_data_ids = map { $_->instrument_data_id => 1 } @instrument_data_assignments;
 
     return grep { not $assigned_instrument_data_ids{$_->id} } @compatible_instrument_data;
-}
-
-# These vary based on the current configuration, which could vary over
-# time.  This value is set when the model is created if not specified by the creator.
-sub resolve_data_directory {
-    my $self = shift;
-    return Genome::Config->model_data_directory . '/' . $self->id;
-}
-
-sub resolve_archive_file {
-    my $self = shift;
-    return $self->data_directory . '.tbz';
 }
 
 #< Completed (also Suceeded) Builds >#
@@ -988,9 +963,6 @@ sub copy {
 
 sub delete {
     my $self = shift;
-    my %params = @_;
-    my $keep_model_directory = $params{keep_model_directory};
-    my $keep_build_directories = $params{keep_build_directories};
     my @build_directories;
 
     for my $model_group ($self->model_groups) {
@@ -1008,17 +980,7 @@ sub delete {
 
     my @objects = $self->get_all_objects;
     for my $object (@objects) {
-        my $status;
-        if($object->isa('Genome::Model::Build'))
-        {
-            push @build_directories,$object->data_directory;
-            $status = $object->delete(keep_build_directory => $keep_build_directories);
-        }
-        else
-        {
-             $status = $object->delete;
-        }
-
+        my $status = $object->delete;
         unless ($status) {
             $self->error_message('Failed to remove object '. $object->class .' '. $object->id);
             die $self->error_message();
@@ -1031,38 +993,8 @@ sub delete {
             die $self->error_message();
         }
     }
-    #make sure the model directory doesn't contain any builds if we are saving them
-    if ($keep_build_directories && !$keep_model_directory) {
-        my $model_directory = $self->data_directory;
-        $keep_model_directory = grep { /$model_directory/ } @build_directories;
-    }
-    if (-e $self->data_directory && !$keep_model_directory) {
-        unless (rmtree $self->data_directory) {
-            $self->warning_message('Failed to rmtree model data directory '. $self->data_directory);
-        }
-    }
 
     return $self->SUPER::delete;
-}
-
-sub _build_model_filesystem_paths {
-    my $self = shift;
-
-    # This is actual data directory on the filesystem
-    # Currently the disk is hard coded in Genome::Config->root_directory
-    my $model_data_dir = $self->data_directory;
-    unless (Genome::Sys->create_directory($model_data_dir)) {
-        $self->warning_message("Can't create dir: $model_data_dir");
-        return;
-    }
-
-    # Fix when models are created, ensure the directory is group-writable.
-    my $chmodrv = system(sprintf("chmod g+w %s", $model_data_dir));
-    unless ($chmodrv == 0) {
-        $self->warning_message("Error attempting to set group write permissions on model directory $model_data_dir: rv $chmodrv");
-    }
-
-    return 1;
 }
 
 sub dependent_properties {
