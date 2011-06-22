@@ -164,7 +164,7 @@ sub instrument_data_assigned {
     unless (@instrument_data) {
         push @tags, UR::Object::Tag->create(
             type => 'error',
-            properties => 'instrument_data',
+            properties => ['instrument_data'],
             desc => 'No instrument data assigned to build',
         );
     }
@@ -216,7 +216,7 @@ sub check_genotype_input {
         unless ($self->genotype_microarray_build) {
             push @tags, UR::Object::Tag->create(
                 type => 'error',
-                properties => 'genotype_microarray_build',
+                properties => ['genotype_microarray_build'],
                 desc => 'No genotype microarray build input found',
             );
         }
