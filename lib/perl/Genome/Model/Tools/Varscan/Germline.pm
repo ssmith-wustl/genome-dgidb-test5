@@ -161,7 +161,7 @@ sub execute {                               # replace with real execution logic.
         system($cmd);
 
         print "Parsing Variants into SNP/Indel files...\n";
-        parse_variants_file("$output_snp.variants", $output_snp, $output_indel);
+        $self->parse_variants_file("$output_snp.variants", $output_snp, $output_indel);
 
         ## Filter Indels ##
         my $filtered_indel_file = $self->output_indel_filtered;
@@ -195,6 +195,7 @@ sub execute {                               # replace with real execution logic.
 
 sub parse_variants_file
 {
+    my $self = shift;
     (my $variants_file, my $output_snp, my $output_indel) = @_;
 
     open(SNPS, ">$output_snp") or die "Can't open outfile: $!\n";
@@ -210,10 +211,12 @@ sub parse_variants_file
 
         (my $chrom, my $position, my $ref, my $cns) = split(/\t/, $line);
         if ($lineCounter == 1) {
-            ## Print header to both files ##
+            unless ($self->no_headers) {
+                ## Print header to both files ##
 
-            print SNPS "$line\n";
-            print INDELS "$line\n";
+                print SNPS "$line\n";
+                print INDELS "$line\n";
+            }
         }
         if (length($cns) > 1) {
             ## Indel ##
