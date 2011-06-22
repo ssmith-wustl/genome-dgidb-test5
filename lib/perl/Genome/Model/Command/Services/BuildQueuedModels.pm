@@ -5,6 +5,8 @@ use warnings;
 
 use Genome;
 
+use POSIX qw(ceil);
+
 class Genome::Model::Command::Services::BuildQueuedModels {
     is => 'Genome::Command::Base',
     doc => "Build queued models.",
@@ -136,7 +138,7 @@ sub num_builds_to_start {
         return 0;
     }
     elsif (($scheduled_build_count + $max_per_channel) > $self->max_scheduled_builds) {
-        return $max_per_channel / $self->channels;
+        return ceil($max_per_channel / $self->channels);
     }
     else {
         return $max_per_channel;
