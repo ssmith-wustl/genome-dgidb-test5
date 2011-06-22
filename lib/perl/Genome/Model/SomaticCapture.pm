@@ -111,7 +111,7 @@ sub get_all_objects {
 
     my @objects = $self->SUPER::get_all_objects(@_);
     my @validations = Genome::Model::VariantValidation->get(model_id=>$self->id);
-    push @objects, $_;
+    push @objects, @validations;
     return @objects;
 }
 
