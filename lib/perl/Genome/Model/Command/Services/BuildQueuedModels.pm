@@ -89,20 +89,26 @@ sub execute {
             unless ($build) {
                 die $self->error_message("Failed to create build for model (".$model->name.", ID: ".$model->id.").");
             }
-
-            my $build_started = $build->start;
-            unless ($build_started) {
-                die $self->error_message("Failed to start build (" . $build->__display_name__ . "): " . $build->error_message);
-            }
             return $build;
         };
-        if ($build and $transaction->commit) {
-            $self->status_message("Successfully started build (" . $build->__display_name__ . ").");
-            $builds_started++;
+        if($build and $transaction->commit()) {
+            my $start_transaction = UR::Context::Transaction->begin();
+            my $build_started = eval { $build->start; };
+            if ($build_started) {
+                $builds_started++;
+                $self->status_message("Successfully started build (" . $build->__display_name__ . ").");
+            }
+            else {
+                push @errors, $self->error_message("Failed to start build (" . $build->__display_name__ . "): " . ($@ || $build->error_message));
+            }
+            unless($start_transaction->commit()) {
+                push @errors, $self->error_message("Failed to commit start transaction for build " . $build->__display_name__);
+                $start_transaction->rollback();
+            }
         }
         else {
             push @errors, $model->__display_name__ . ": " . $@;
-            $transaction->rollback;
+            $transaction->rollback();
         }
     }
 

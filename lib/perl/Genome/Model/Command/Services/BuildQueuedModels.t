@@ -83,7 +83,7 @@ my @models = Genome::Model->get(id => \@model_ids);
 ok(@models, 'created models');
 
 # overload models get and locking
-no warnings;
+no warnings qw(redefine once);
 *Genome::Model::get = sub { package Genome::Model; my $self = shift; return $self->SUPER::get(@_, id => \@model_ids) };
 *Genome::Model::create_iterator = sub { package Genome::Model; my $self = shift; return $self->SUPER::create_iterator(@_, id => \@model_ids) };
 *Genome::Sys::lock_resource = sub{ return 1; };
@@ -98,6 +98,27 @@ my $command_1 = Genome::Model::Command::Services::BuildQueuedModels->create();
 isa_ok($command_1, 'Genome::Model::Command::Services::BuildQueuedModels');
 ok($command_1->execute(), 'executed build command');
 is_deeply([ map { $_->build_requested } @models ], [qw/ 0 0 0 /], 'builds no longer requested for models');
+my @b0 = $models[0]->builds;
+my @b1 = $models[1]->builds;
+my @b2 = $models[2]->builds;
+is_deeply([ scalar(@b0), scalar(@b1), scalar(@b0)], [qw/ 1 0 1 /], 'created builds for those models that had builds requested');
+
+
+$models[1]->build_requested(1);
+is_deeply([ map { $_->build_requested } @models ], [qw/ 0 1 0 /], 'builds requested for one model');
+UR::Context->commit();
+is_deeply([ Genome::Model->get(build_requested => 1) ], [ $models[1] ], 'models get overloaded') or die;
+no warnings qw(redefine);
+*Genome::Model::Build::Tester::start = sub { my $self = shift; $self->model->build_requested(0); $self->error_message('testing failure'); $self->status('Unstartable'); return; };
+use warnings;
+
+my $command_2 = Genome::Model::Command::Services::BuildQueuedModels->create();
+isa_ok($command_2, 'Genome::Model::Command::Services::BuildQueuedModels');
+$command_2->dump_status_messages(1);
+ok(!$command_2->execute(), 'executed build command but returned false due to errors');
+is_deeply([ map { $_->build_requested } @models ], [qw/ 0 0 0 /], 'builds no longer requested for models');
+@b1 = $models[1]->builds;
+is(scalar(@b1), 1, 'created build for the model that had build requested');
 
 done_testing();
 exit;
