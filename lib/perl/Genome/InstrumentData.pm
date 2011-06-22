@@ -88,7 +88,7 @@ sub delete {
     return $self;
 }
 
-sub _expunge_assingments{
+sub _expunge_assignments{
     my $self = shift;
     my $instrument_data_id = $self->id;
 
