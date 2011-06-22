@@ -593,7 +593,6 @@ sub extract_reads_from_bam {
             $read_type = "unaligned_reads";
         }
         my $part="/tmp/$read_type/$alignment_result";
-        Genome::Sys->create_temp_directory($part);
         if ($pe_segment){
             my $original_data_path = "$part/s_".$lane."_1_sequence.txt," . "$part/s_".$lane."_2_sequence.txt";
             $original_data_path_to_fastq_files{$original_data_path}->{file}->{$pe_segment} = $file;
@@ -658,9 +657,7 @@ sub upload_instrument_data_and_unlock {
     my @instrument_data;
     for my $original_data_path (keys %$orig_data_paths_to_fastq_files) {
         # If it is paired end
-        $DB::single=1;
-        #if( exists ($orig_data_paths_to_fastq_files->{$original_data_path}->{file}->{1}) && exists ($orig_data_paths_to_fastq_files->{$original_data_path}->{file}->{2})) {
-        if($original_data_path =~ /,/) {
+        if( exists $orig_data_paths_to_fastq_files->{$original_data_path}->{file}->{1} && exists $orig_data_paths_to_fastq_files->{$original_data_path}->{file}->{2}) {
             my ($original_data_path_1, $original_data_path_2) = split ",", $original_data_path;
             Genome::Sys->create_symlink($orig_data_paths_to_fastq_files->{$original_data_path}->{file}->{1}, $original_data_path_1);
             Genome::Sys->create_symlink($orig_data_paths_to_fastq_files->{$original_data_path}->{file}->{2}, $original_data_path_2);

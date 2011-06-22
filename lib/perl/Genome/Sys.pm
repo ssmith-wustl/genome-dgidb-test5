@@ -159,10 +159,7 @@ sub create_temp_file {
 
 sub create_temp_directory {
     my $self = shift;
-    my $path = shift;
-    if(!$path) {
-        $path = $self->create_temp_file_path(@_);
-    }
+    my $path = $self->create_temp_file_path(@_);
     $self->create_directory($path);
     return $path;
 }
