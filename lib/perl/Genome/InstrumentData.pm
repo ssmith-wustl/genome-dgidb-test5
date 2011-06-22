@@ -77,7 +77,21 @@ class Genome::InstrumentData {
 sub delete {
     my $self = shift;
 
+    $self->_expunge_assignments;
+
+    #finally, clean up the instrument data
+    for my $attr ( $self->attributes ) {
+        $attr->delete;
+    }
+    $self->SUPER::delete;
+
+    return $self;
+}
+
+sub _expunge_assingments{
+    my $self = shift;
     my $instrument_data_id = $self->id;
+
     my @inputs = Genome::Model::Input->get( name => 'instrument_data', value_id => $instrument_data_id );
     my @models = map( $_->model, @inputs);
 
@@ -94,14 +108,6 @@ sub delete {
         $build->abandon();
         push @models, $build->model;
     }
-
-    #finally, clean up the instrument data
-    for my $attr ( $self->attributes ) {
-        $attr->delete;
-    }
-    $self->SUPER::delete;
-
-    return $self;
 }
 
 sub calculate_alignment_estimated_kb_usage {
