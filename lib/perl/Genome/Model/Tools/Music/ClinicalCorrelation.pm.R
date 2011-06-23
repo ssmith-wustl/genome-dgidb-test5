@@ -4,6 +4,7 @@ mutation_matrix = as.character(commandArgs()[5]);
 output_file = as.character(commandArgs()[6]);
 method = as.character(commandArgs()[7]);
 
+
 # FUNCTION finds the correlation between two variables
 cor2=function(ty,tx,method)
 {
@@ -150,10 +151,6 @@ tt=tt[order(tt[,"p"]),];
 if (!is.null(outf))
 {
 colnames(tt)=c("x","y","method","n","s","p","fdr","bon");
-tt[,"s"] = sapply(tt[,"s"], sprintf, fmt="%.6f");
-tt[,"p"] = sapply(tt[,"p"], sprintf, fmt="%.6f");
-tt[,"fdr"] = sapply(tt[,"fdr"], sprintf, fmt="%.6f");
-tt[,"bon"] = sapply(tt[,"bon"], sprintf, fmt="%.6f");
 tt=tt[order(tt[,"x"]),];
 tt=tt[order(tt[,"p"]),];
 write.table(tt,file=outf,quote=FALSE,row.names=FALSE,sep=",");}
