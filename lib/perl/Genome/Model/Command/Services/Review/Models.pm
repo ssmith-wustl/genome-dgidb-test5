@@ -53,7 +53,7 @@ sub execute {
         $model_name =~ s/\.?$pp_name\.?/.../;
 
         my $action;
-        if ($latest_build->status eq 'Scheduled' || $latest_build->status eq 'Running') {
+        if ($latest_build->status eq 'Scheduled' || $latest_build->status eq 'Running' || $model->build_requested) {
             $action = 'none';
         }
         elsif ($latest_build && $latest_build->status eq 'Succeeded') {
@@ -62,9 +62,6 @@ sub execute {
         }
         elsif (should_review_model($model)) {
             $action = 'review';
-        }
-        elsif ($model->build_requested) {
-            $action = 'none';
         }
         else {
             $action = 'rebuild';
