@@ -58,6 +58,16 @@ class Genome::Model::GenotypeMicroarray{
 
 sub sequencing_platform { return 'genotype file'; }
 
+sub is_internal { 
+    my $self = shift;
+    my ($instrument_data) = $self->instrument_data;
+    my $source = $instrument_data->import_source_name;
+    if (defined $source and $source =~ /wugc/i) {
+        return 1;
+    }
+    return 0;
+}
+
 sub _additional_parts_for_default_name {
     my ($self, %params) = @_;
     my ($instrument_data) = $self->instrument_data;
