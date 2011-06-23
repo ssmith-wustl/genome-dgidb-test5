@@ -109,11 +109,7 @@ sub _run_samtools {
 ##############################################################
 #find a way to detect the version
 
-if(my $version < samtools-0.1.16){
    my $samtools_cmd = "$sam_pathname pileup -c $parameters -f $ref_seq_file %s $bam_file > %s";
-} else {
-  my $samtools_cmd= "$sam_pathname mpileup-u $parameters -f $ref_seq_file $bam_file | bcftools view -vcg - > $snv_output_file";
-}
     #Originally "-S" was used as SNP calling. In r320wu1 version, "-v" is used to replace "-S" but with 
     #double indel lines embedded, this need sanitized
     #$rv = system "$samtools_cmd -S $bam_file > $snv_output_file"; 
