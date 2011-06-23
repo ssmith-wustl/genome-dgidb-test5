@@ -2,7 +2,7 @@ package Genome::Model::Tools::Bed::Convert::Snv::SamtoolsToBed;
 
 use strict;
 use warnings;
-
+use Data::Dumper;
 use Genome;
 
 class Genome::Model::Tools::Bed::Convert::Snv::SamtoolsToBed {
@@ -20,7 +20,7 @@ sub help_synopsis {
 EOS
 }
 
-sub help_detail {                           
+sub help_detail {
     return <<EOS
     This is a small tool to take SNV calls in samtools format and convert them to a common BED format (using the first five columns).
 EOS
@@ -28,24 +28,37 @@ EOS
 
 sub process_source {
     my $self = shift;
-    
+
     my $input_fh = $self->_input_fh;
-    
+
     while(my $line = <$input_fh>) {
-        my ($chromosome, $position, $reference, $consensus, $quality, @extra) = split("\t", $line);
-        
-        my $depth = $extra[2];
+        my @line_count = split("\t", $line);
+        my ($chromosome, $position, $id, $reference, $consensus, $quality, $depth, @extra); #mpileup/pileup variables
+
+        if($line_count[2] eq '.') {
+
+            #mpileup version
+            ($chromosome, $position, $id,$reference, $consensus , $quality, @extra) = split("\t", $line);
+            $quality = sprintf("%2.f", $quality);
+            $extra[1] =~ /DP=(\d+)/;
+            $depth = $1;
+
+        } else {
+            #pileup regular format
+            ($chromosome, $position, $reference, $consensus, $quality, @extra) = split("\t", $line);
+            $depth = $extra[2];
+        }
+
         #position => 1-based position of the SNV
         #BED uses 0-based position of and after the event
-        $self->write_bed_line($chromosome, $position - 1, $position, $reference, $consensus, $quality, $depth);
+        $self->write_bed_line($chromosome, ($position - 1), $position, $reference, $consensus, $quality, $depth);
     }
-    
     return 1;
 }
 
 sub convert_bed_to_detector {
     my $self = shift;
-    my $detector_file = $self->detector_style_input;    
+    my $detector_file = $self->detector_style_input;
     my $bed_file = $self->source;
     my $output = $self->output;
 
