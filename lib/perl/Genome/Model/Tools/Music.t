@@ -52,7 +52,7 @@ my @cases = (
     },
     {
         run => "music clinical-correlation\n"
-            . " --categorical-clinical-data-file $input_dir/tcga.categ.clin.data \n"
+            . " --categorical-clinical-data-file $input_dir/clinical_data/tcga.categ.clin.data \n"
             . " --bam-list $input_dir/tcga.categ.clin.data.samples \n"
             . " --maf-file $input_dir/maf/tcga.categ.clin.data.maf \n"
             . " --output-file $actual_output_dir/categ_clin/tcga.categ.clin.data.correlation \n"
