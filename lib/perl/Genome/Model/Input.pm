@@ -40,6 +40,14 @@ sub __display_name__ {
 sub delete {
     my $self = shift;
     my $input_name = $self->__display_name__;
+    
+    # TODO I don't care for the instrument data special case. I think that inputs should be completely modifiable
+    # without triggering builds being abandoned
+    unless ($self->name eq 'instrument_data') {
+        my $delete_rv = $self->SUPER::delete;
+        Carp::confess "Could not delete input $input_name" unless $delete_rv;
+        return 1;
+    }
 
     for my $build ($self->builds_with_input) {
         $self->status_message("Abandoning build " . $build->__display_name__ . " that uses input $input_name");
@@ -50,10 +58,7 @@ sub delete {
     }
 
     my $delete_rv = $self->SUPER::delete;
-    unless ($delete_rv) {
-        Carp::confess "Could not delete input $input_name!";
-    } 
-
+    Carp::confess "Could not delete input $input_name!" unless $delete_rv;
     return 1;
 }
 
