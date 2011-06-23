@@ -8,7 +8,7 @@ use Genome;
 class Genome::Model::Tools::BioSamtools::TophatAlignmentStats {
     is  => 'Genome::Model::Tools::BioSamtools',
     has_input => [
-        unaligned_bam_file => {
+        all_reads_bam_file => {
             is => 'String',
             doc => 'An unaligned BAM file querysorted with ALL reads from original FASTQ files.',
         },
@@ -16,7 +16,7 @@ class Genome::Model::Tools::BioSamtools::TophatAlignmentStats {
             is => 'String',
             doc => 'A querysorted BAM file containing Tophat alignments.',
         },
-        merged_bam_file => {
+        unaligned_bam_file => {
             is => 'String',
             doc => 'The path to output the resulting merged, unsorted BAM file.',
         },
@@ -48,27 +48,19 @@ EOS
 sub execute {
     my $self = shift;
 
-    my $unaligned_bam_file = $self->unaligned_bam_file;
+    my $all_reads_bam_file = $self->all_reads_bam_file;
     my $aligned_bam_file = $self->aligned_bam_file;
-    my $merged_bam_file = $self->merged_bam_file;
+    my $unaligned_bam_file = $self->unaligned_bam_file;
 
     my $output_fh = Genome::Sys->open_file_for_writing($self->alignment_stats_file);
 
-    unless ($unaligned_bam_file && $aligned_bam_file && $merged_bam_file) {
-        die('Usage:  tophat_alignment_summary.pl <FASTQ_BAM> <TOPHAT_BAM> <MERGED_BAM>');
-    }
-
-    #my ($basename, $dirname, $suffix) = File::Basename::fileparse($merged_bam_file,qw/\.bam/);
-    #my ($tmp_fh, $tmp_merged_bam_file) = tempfile($basename.'_XXXX',SUFFIX => $suffix, TMPDIR=>1);
-    #$tmp_fh->close;
-
-    my $merged_bam = Bio::DB::Bam->open($merged_bam_file,'w');
-    unless ($merged_bam) {
-        die('Failed to open output BAM file: '. $merged_bam_file);
+    my $unaligned_bam = Bio::DB::Bam->open($unaligned_bam_file,'w');
+    unless ($unaligned_bam) {
+        die('Failed to open output BAM file: '. $unaligned_bam_file);
     }
 
     # Bothe BAMs must be queryname sorted
-    my ($unaligned_bam,$unaligned_header) = validate_sort_order($unaligned_bam_file);
+    my ($all_reads_bam,$all_reads_header) = validate_sort_order($all_reads_bam_file);
     my ($aligned_bam,$aligned_header) = validate_sort_order($aligned_bam_file);
 
     # The aligned BAM file should be output from Tophat
@@ -76,17 +68,15 @@ sub execute {
 
     # The query names can be changed depending on the versions of software used.
     # If the query names do not match an expected format, fail until the exception is handled.
-    my $first_unaligned_query_name;
-    unless ($first_unaligned_query_name = validate_query_name_format($unaligned_bam)) {
-        die('Failed to validate query name format in unaligned BAM file: '. $unaligned_bam_file);
+    unless (validate_query_name_format($all_reads_bam)) {
+        die('Failed to validate query name format in unaligned BAM file: '. $all_reads_bam_file);
     }
-    my $first_aligned_query_name;
-    unless ($first_aligned_query_name = validate_query_name_format($aligned_bam)) {
+    unless (validate_query_name_format($aligned_bam)) {
         die('Failed to validate query name format in aligned BAM file: '. $aligned_bam_file);
     }
 
     # Write the aligned BAM header to the output BAM
-    $merged_bam->header_write($aligned_header);
+    $unaligned_bam->header_write($all_reads_header);
 
     my $target_names = $aligned_header->target_name;
     my %chr_hits;
@@ -144,54 +134,47 @@ sub execute {
             die('Please add support for unaligned read found in Tophat BAM: '. $aligned_bam_file);
         }
 
-        $merged_bam->write1($aligned_read);
-
         # This avoids duplicating an aligned read in the total read counts
         # Also there is no need to get an unaligned read until we hit a new aligned read name
         if ($aligned_read_name eq $previous_aligned_read_name) {
             next;
         }
 
-        my $unaligned_read = $unaligned_bam->read1;
-        my $unaligned_flag = $unaligned_read->flag;
-        my $unaligned_read_end;
-        if ($unaligned_flag & 64 ) {
-            $unaligned_read_end = 1;
-        } elsif ( $unaligned_flag & 128 ) {
-            $unaligned_read_end = 2;
+        my $next_read = $all_reads_bam->read1;
+        my $next_read_flag = $next_read->flag;
+        my $next_read_end;
+        if ($next_read_flag & 64 ) {
+            $next_read_end = 1;
+        } elsif ( $next_read_flag & 128 ) {
+            $next_read_end = 2;
         }
-        my $unaligned_read_name = $unaligned_read->qname .'/'. $unaligned_read_end;
+        my $next_read_name = $next_read->qname .'/'. $next_read_end;
         # If the unaligned read is not the same as the aligned read, we have an unmapped read
         # Loop over the unmapped reads until we get a name match, meaning it is aligned
-        while ($unaligned_read_name ne $aligned_read_name) {
+        while ($next_read_name ne $aligned_read_name) {
             $total_hits{unmapped_count}++;
             $total_hits{reads}++;
-            $merged_bam->write1($unaligned_read);
-            $unaligned_read = $unaligned_bam->read1;
-            $unaligned_flag = $unaligned_read->flag;
-            if ($unaligned_flag & 64 ) {
-                $unaligned_read_end = 1;
-            } elsif ( $unaligned_flag & 128 ) {
-                $unaligned_read_end = 2;
+            $unaligned_bam->write1($next_read);
+            $next_read = $all_reads_bam->read1;
+            $next_read_flag = $next_read->flag;
+            if ($next_read_flag & 64 ) {
+                $next_read_end = 1;
+            } elsif ( $next_read_flag & 128 ) {
+                $next_read_end = 2;
             }
-            $unaligned_read_name = $unaligned_read->qname .'/'. $unaligned_read_end;
+            $next_read_name = $next_read->qname .'/'. $next_read_end;
         }
         $total_hits{reads}++;
         $previous_aligned_read_name = $aligned_read_name;
     }
 
     # Write the remaining unaligned reads
-    while (my $unaligned_read = $unaligned_bam->read1) {
+    while (my $next_read = $all_reads_bam->read1) {
         $total_hits{unmapped_count}++;
         $total_hits{reads}++;
-        $merged_bam->write1($unaligned_read);
+        $unaligned_bam->write1($next_read);
     }
 
-    # sort by chr position putting unmapped reads at end of BAM
-    # A call to samtools or picard may be faster/more efficient
-    #Bio::DB::Bam->sort_core(0,$tmp_merged_bam_file,$dirname.'/'.$basename,4000);
-    #unlink($tmp_merged_bam_file) || die('Failed to remove temp BAM file: '. $tmp_merged_bam_file);
-    
     print $output_fh "chr\ttop\ttop-spliced\tpct_top_spliced\tmulti_reads\tpct_multi_reads\tmulti_spliced_reads\tpct_multi_spliced_reads\tmulti_hits\n";
     my $total_mapped;
     for my $chr (sort keys %chr_hits) {

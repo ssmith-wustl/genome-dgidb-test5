@@ -7,7 +7,7 @@ use Test::More;
 
 BEGIN {
     if (`uname -a` =~ /x86_64/) {
-        plan tests => 9;
+        plan tests => 8;
     } else {
         plan skip_all => 'Must run on a 64 bit machine';
     }
@@ -78,7 +78,7 @@ isa_ok($alignment_result, 'Genome::InstrumentData::AlignmentResult::Tophat', 'pr
 
 my $expected_dir = '/gsc/var/cache/testsuite/data/Genome-InstrumentData-AlignmentResult-Tophat/expected_v1.2.0_1-lane';
 
-for my $file (qw(alignment_stats.txt all_reads_merged.bam.flagstat junctions.bed)) {
+for my $file (qw(alignment_stats.txt junctions.bed)) {
     my $path = join('/', $alignment_result->output_dir, $file);
     my $expected_path = join('/', $expected_dir, $file);
     my $diff = Genome::Sys->diff_file_vs_file($path, $expected_path);
