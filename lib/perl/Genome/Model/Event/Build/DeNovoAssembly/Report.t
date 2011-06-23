@@ -56,7 +56,7 @@ for my $file ( qw/ H_GV-933124G-S.MOCK.collated.fasta.gz H_GV-933124G-S.MOCK.col
     ok( -e $build->edit_dir."/$file", "Linked $file" );
 }
 
-my $report = Genome::Model::Event::Build::DeNovoAssembly::Report->create(build_id => $build->id);
+my $report = Genome::Model::Event::Build::DeNovoAssembly::Report->create(build_id => $build->id, model => $model);
 ok($report, "Created report");
 ok($report->execute, "Executed report");
 

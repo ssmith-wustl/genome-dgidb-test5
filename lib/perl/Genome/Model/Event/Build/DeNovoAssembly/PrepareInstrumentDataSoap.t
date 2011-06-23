@@ -26,7 +26,8 @@ my @assembler_input_files = $build->existing_assembler_input_files;
 ok(!@assembler_input_files, 'assembler input files do not exist');
 
 my $soap = Genome::Model::Event::Build::DeNovoAssembly::PrepareInstrumentData->create(
-    build_id => $build->id
+    build_id => $build->id,
+    model => $model,
 );
 ok($soap, 'Created prepare inst data soap');
 $soap->dump_status_messages(1);

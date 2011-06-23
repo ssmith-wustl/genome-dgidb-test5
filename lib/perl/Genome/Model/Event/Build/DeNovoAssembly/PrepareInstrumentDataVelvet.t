@@ -27,7 +27,8 @@ ok(!@assembler_input_files, 'assembler input files do not exist');
 
 #create
 my $velvet = Genome::Model::Event::Build::DeNovoAssembly::PrepareInstrumentData->create(
-    build_id => $build->id
+    build_id => $build->id,
+    model => $model,
 );
 ok($velvet, 'Created prepare inst data velvet');
 $velvet->dump_status_messages(1);

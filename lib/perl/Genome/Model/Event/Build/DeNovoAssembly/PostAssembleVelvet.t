@@ -39,7 +39,7 @@ my $example_contigs_fasta_file = $example_build->contigs_fasta_file;
 symlink($example_contigs_fasta_file, $build->contigs_fasta_file);
 ok(-s $build->contigs_fasta_file, 'Linked contigs.fa file') or die;
 
-my $velvet = Genome::Model::Event::Build::DeNovoAssembly::PostAssemble->create( build_id => $build->id);
+my $velvet = Genome::Model::Event::Build::DeNovoAssembly::PostAssemble->create( build_id => $build->id, model => $model);
 ok($velvet, 'Created post assemble velvet');
 
 ok($velvet->execute, 'Execute post assemble velvet');
