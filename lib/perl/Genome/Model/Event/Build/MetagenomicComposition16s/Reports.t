@@ -14,10 +14,10 @@ my $model = Genome::Model::MetagenomicComposition16s::Test->model_for_sanger;
 ok($model, 'got mc16s sanger model');
 my $build = Genome::Model::Build->create( 
     id => -3388, 
-    model => $model,
-    data_directory => $model->data_directory,
+    model => $model
 );
 ok($build, 'created build');
+ok($build->get_or_create_data_directory, 'resolved data directory for build');
 $build->create_subdirectories;
 
 my $example_build = Genome::Model::MetagenomicComposition16s::Test->example_build_for_model($model);

@@ -35,7 +35,6 @@ class Genome::FeatureList::View::Status::Xml {
                                 'subject_id',
                                 'subject_class_name',
                                 'is_default',
-                                'data_directory',
                                 {
                                     name => 'processing_profile',
                                     aspects => ['id', 'name'],

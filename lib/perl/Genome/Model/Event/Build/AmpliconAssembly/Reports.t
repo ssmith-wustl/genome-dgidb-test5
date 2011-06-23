@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use above 'Genome';
+use Test::More skip_all => 'amplicon assembly will soon be removed';
 
 use Genome::Model::Event::Build::AmpliconAssembly::Test;
 
