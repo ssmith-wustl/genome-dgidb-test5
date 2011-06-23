@@ -17,13 +17,15 @@ class Genome::Model::Build::MetagenomicCompositionShotgun{
         },
         _contamination_screen_alignment_build => {
             is => 'Genome::Model::Build::ReferenceAlignment',
-            via => 'from_builds',
+            via => 'from_build_links',
+            to => 'from_build',
             where => [role => 'contamination_screen_alignment_build'],
         },
         _metagenomic_alignment_builds => {
             is => 'Genome::Model::Build::ReferenceAlignment',
             is_many => 1,
-            via => 'from_builds',
+            via => 'from_build_links',
+            to => 'from_build',
             where => [role => 'metagenomic_alignment_build'],
         },
     ],

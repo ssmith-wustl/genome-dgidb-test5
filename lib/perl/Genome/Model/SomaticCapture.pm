@@ -106,4 +106,14 @@ sub keep_n_most_recent_builds
     return;
 }
 
+sub get_all_objects {
+    my $self = shift;
+
+    my @objects = $self->SUPER::get_all_objects(@_);
+    my @validations = Genome::Model::VariantValidation->get(model_id=>$self->id);
+    push @objects, @validations;
+    return @objects;
+}
+
+
 1;

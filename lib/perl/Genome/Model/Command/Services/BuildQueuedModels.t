@@ -17,52 +17,80 @@ use Test::More;
 
 use_ok('Genome::Model::Command::Services::BuildQueuedModels') or die;
 
-# mock dem models
-my @models;
-my $builds = 0;
-for my $id (1..3) {
-    my $model = Test::MockObject->new();
-    $model->set_always('id', $id);
-    $model->mock(
-        'build_requested',
-        sub{ 
-            my ($self, $build_requested) = @_;
-            if ( defined $build_requested ) {
-                $self->{build_requested} = $build_requested;
-            }
-            return $self->{build_requested};
-        }
-    );
-    $model->set_always('__display_name__', "Mocked Model $id");
-    $model->build_requested($id % 2); 
-    push @models, $model;
-}
-ok(@models, 'created mock models');
+class Genome::ProcessingProfile::Tester {
+    is => 'Genome::ProcessingProfile',
+};
+sub Genome::ProcessingProfile::Tester::sequencing_platform { return 'solexa'; };
 
-# overload models get, locking and shellcmd during tests
-no warnings;
-*Genome::Model::get = sub{ return grep { $_->build_requested } @models; };
+class Genome::Model::Tester {
+    is => 'Genome::Model',
+    has => [
+        foo => { 
+            is_optional => 1, is_mutable => 1,
+            via => 'inputs', to => 'value_id', where => [name => 'foo', value_class_name => 'UR::Value', ],
+        },
+        baz => { 
+            is_optional => 1, is_mutable => 1, is_many =>1,
+            via => 'inputs', to => 'value_id', 
+            where => [name => 'baz', value_class_name => 'UR::Value'],
+        },
+    ],
+};
+
+class Genome::Model::Build::Tester {
+    is => 'Genome::Model::Build',
+};
+sub Genome::Model::Build::Tester::start { my $self = shift; $self->model->build_requested(0); return 1; };
+
+# PP
+my $pp = Genome::ProcessingProfile->create(
+    name => 'Tester PP',
+    type_name => 'tester',
+);
+ok($pp, 'create processing profile') or die;
+
+# SUBJECT 
+my $sample = Genome::Sample->create(
+    id => -654321,
+    name => 'TEST-00',
+);
+ok($sample, 'create sample') or die;
+my $library = Genome::Library->create(
+    name => $sample->name.'-testlib',
+    sample_id => $sample->id,
+);
+ok($library, 'create library');
+
+# DATA DIR
+my $tmpdir = File::Temp::tempdir(CLEANUP => 1);
+ok(-d $tmpdir, 'create tmpdir');
+
+my @model_ids;
+for my $count (1..3) {
+    my $model = Genome::Model->create(
+        name => 'Tester Model' . $count,
+        processing_profile => $pp,
+        subject_id => $sample->id,
+        subject_class_name => $sample->class,
+        data_directory => $tmpdir,
+    );
+    ok($model, 'create model' . $count);
+    $model->build_requested($count % 2);
+    push @model_ids, $model->id;
+}
+
+my @models = Genome::Model->get(id => \@model_ids);
+ok(@models, 'created models');
+
+# overload models get and locking
+no warnings qw(redefine once);
+*Genome::Model::get = sub { package Genome::Model; my $self = shift; return $self->SUPER::get(@_, id => \@model_ids) };
+*Genome::Model::create_iterator = sub { package Genome::Model; my $self = shift; return $self->SUPER::create_iterator(@_, id => \@model_ids) };
 *Genome::Sys::lock_resource = sub{ return 1; };
 *Genome::Sys::unlock_resource= sub{ return 1; };
-*Genome::Model::Build::Command::Start::create = sub {
-    my $class = shift;
-    my $obj = bless ({}, $class);
-    return $obj;
-};
-*Genome::Model::Build::Command::Start::builds = sub { my @builds; for (1..$builds){ push @builds, 'build'} return @builds};
-*Genome::Model::Build::Command::Start::execute = sub {
-    my $self = shift;
-    my @models = Genome::Model->get();
-    for (@models){
-        $_->build_requested(0);
-        $builds++;
-    }
-    return 1;
-};
-
 use warnings;
 
-is_deeply([ Genome::Model->get ], [ $models[0], $models[2] ], 'models get overloaded') or die;
+is_deeply([ Genome::Model->get(build_requested => 1) ], [ $models[0], $models[2] ], 'models get overloaded') or die;
 ok(Genome::Sys->lock_resource, 'lock_resource overloaded') or die;
 ok(Genome::Sys->unlock_resource, 'unlock_resource overloaded') or die;
 
@@ -70,6 +98,27 @@ my $command_1 = Genome::Model::Command::Services::BuildQueuedModels->create();
 isa_ok($command_1, 'Genome::Model::Command::Services::BuildQueuedModels');
 ok($command_1->execute(), 'executed build command');
 is_deeply([ map { $_->build_requested } @models ], [qw/ 0 0 0 /], 'builds no longer requested for models');
+my @b0 = $models[0]->builds;
+my @b1 = $models[1]->builds;
+my @b2 = $models[2]->builds;
+is_deeply([ scalar(@b0), scalar(@b1), scalar(@b0)], [qw/ 1 0 1 /], 'created builds for those models that had builds requested');
+
+
+$models[1]->build_requested(1);
+is_deeply([ map { $_->build_requested } @models ], [qw/ 0 1 0 /], 'builds requested for one model');
+UR::Context->commit();
+is_deeply([ Genome::Model->get(build_requested => 1) ], [ $models[1] ], 'models get overloaded') or die;
+no warnings qw(redefine);
+*Genome::Model::Build::Tester::start = sub { my $self = shift; $self->model->build_requested(0); $self->error_message('testing failure'); $self->status('Unstartable'); return; };
+use warnings;
+
+my $command_2 = Genome::Model::Command::Services::BuildQueuedModels->create();
+isa_ok($command_2, 'Genome::Model::Command::Services::BuildQueuedModels');
+$command_2->dump_status_messages(1);
+ok(!$command_2->execute(), 'executed build command but returned false due to errors');
+is_deeply([ map { $_->build_requested } @models ], [qw/ 0 0 0 /], 'builds no longer requested for models');
+@b1 = $models[1]->builds;
+is(scalar(@b1), 1, 'created build for the model that had build requested');
 
 done_testing();
 exit;

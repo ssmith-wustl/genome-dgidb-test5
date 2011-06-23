@@ -208,7 +208,7 @@ sub example_build_for_model {
     Carp::confess('No mc16s model to create example build') if not $model;
 
     my $dir = $class->_example_directory_for_model($model) or die;
-    my $build = $model->create_build(
+    my $build = Genome::Model::Build->create( 
         model=> $model,
         data_directory => $dir,
     );
@@ -216,20 +216,9 @@ sub example_build_for_model {
         Carp::confess('Cannot create mc16s build');
     }
 
-    my $event = Genome::Model::Event->create(
-        model => $model,
-        build => $build,
-        event_type => 'genome model build',
-        event_status => 'Succeeded',
-        date_completed => UR::Time->now,
-    );
-    if ( not $event ) {
-        Carp::confess('Cannot create master event for example build');
-    }
-    my $master_event = $build->the_master_event;
-    if ( not $master_event ) {
-        Carp::confess('Cannot get the mster event for the example mc16s build');
-    }
+    $build->status('Succeeded');
+    $build->the_master_event->date_completed(UR::Time->now);
+    $build->create_subdirectories;
 
     return $build;
 }

@@ -24,8 +24,8 @@ my $alignment_file_path = $data_dir .'/NOTCH1_1k.bam';
 my $regions_file = $data_dir .'/NOTCH1.bed';
 
 # Excpected Outputs
-my $expected_stats_file = $expected_data_dir .'/NOTCH1_1k_NOTCH1_STATS_expected.tsv';
-my $expected_merged_stats_file = $expected_data_dir .'/NOTCH1_merged_stats_expected.tsv';
+my $expected_stats_file = $expected_data_dir .'/PDL_NOTCH1_1k_NOTCH1_STATS_expected.tsv';
+my $expected_merged_stats_file = $expected_data_dir .'/PDL_NOTCH1_merged_stats_expected.tsv';
    
 # OUTPUTS
 my $merged_stats_file = $tmp_dir .'/NOTCH1_merged_stats.tsv';
@@ -40,7 +40,7 @@ my $ref_cov = Genome::Model::Tools::RefCov::WholeGenome->create(
     #THIS TAKES TOO LONG FOR THIS TEST
     genome_normalized_coverage => 0,
     min_depth_filter => 1,
-    reference_fasta => '/gscmnt/sata420/info/model_data/2741951221/build101947881/all_sequences.fa',
+    reference_fasta => '/gscmnt/gc4096/info/model_data/2741951221/build101947881/all_sequences.fa',
 );
 isa_ok($ref_cov,'Genome::Model::Tools::RefCov::WholeGenome');
 ok($ref_cov->execute,'execute WholeGenome command '. $ref_cov->command_name);

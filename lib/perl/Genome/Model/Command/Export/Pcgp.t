@@ -29,7 +29,7 @@ my $tmp = Genome::Sys->create_temp_directory();
 my $build_id = $$;
 my $data_directory = "$tmp/build$build_id";
 
-my $b = $m->create_build(id => $build_id, model => $m, data_directory => $data_directory);
+my $b = Genome::Model::Build->create(id => $build_id, model => $m, data_directory => $data_directory);
 ok($b, "created a build");
 
 is($b->data_directory, $data_directory, "data directory is correct");

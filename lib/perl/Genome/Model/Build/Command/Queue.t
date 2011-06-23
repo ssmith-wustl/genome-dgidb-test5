@@ -37,9 +37,11 @@ ok($m, "made a test model");
 my $model_id = $m->id;
 
 # ok
+my $reason = 'testing the queue command';
 my $rv = eval {
     my $model_queue = Genome::Model::Build::Command::Queue->create(
         models => [$m],
+        reason => $reason,
     );
     return $model_queue->execute;
 };
@@ -47,6 +49,10 @@ ok(!$@, "the command did not crash");
 is($rv, 1, "command believes it succeeded");
 
 is($m->build_requested, 1, 'The command requested a build for the model');
+my @n = $m->notes;
+my ($note) = grep($_->header_text eq 'build_requested', @n);
+ok($note, 'found a note about the build being requested');
+is($note->body_text, $reason, 'note has expected reason');
 
 done_testing();
 exit;

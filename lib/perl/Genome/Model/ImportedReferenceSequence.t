@@ -16,13 +16,13 @@ my $model = Genome::Model::ImportedReferenceSequence->get(name => 'NCBI-human');
 isa_ok( $model, 'Genome::Model::ImportedReferenceSequence' );
 
 my $build = $model->build_by_version(36);
-my $expected_dir = '/gscmnt/sata420/info/model_data/2741951221/build101947881';
+my $expected_dir = '/gscmnt/gc4096/info/model_data/2741951221/build101947881';
 
 is( $build->data_directory(), $expected_dir, 'got the right data directory' );
 
 my $bases_file = $build->get_bases_file(1);
 my $expected_bases_file
-    = '/gscmnt/sata420/info/model_data/2741951221/build101947881/1.bases';
+    = '/gscmnt/gc4096/info/model_data/2741951221/build101947881/1.bases';
 is( $bases_file, $expected_bases_file, 'bases file correct' );
 
 my $test_seq0 = $build->sequence( 1, 1, 10 );

@@ -199,9 +199,16 @@ sub create {
     return $build;
 }
 
-sub __errors__ {
+sub validate_for_start_methods {
     my $self = shift;
-    my @tags = $self->SUPER::__errors__();
+    my @methods = $self->SUPER::validate_for_start_methods;
+    push @methods, 'check_derived_from_links';
+    return @methods;
+}
+
+sub check_derived_from_links {
+    my $self = shift;
+    my @tags;
 
     # this will die on circular links
     eval { my $coords = $self->derived_from_root(); };
@@ -212,21 +219,13 @@ sub __errors__ {
             desc => $@);
     }
 
-    #if (defined $self->derived_from and $self->derived_from->model->id != $self->model->id) {
-    #    push @tags, UR::Object::Tag->create(
-    #        type => 'error',
-    #        properties => ['derived_from'],
-    #        desc => "Reference sequence build " . $self->__display_name__ . " of model " . $self->model->__display_name__ .
-    #            " is 'derived_from' build " . $self->derived_from->__display_name__ . " which is a build of a different model, ".
-    #            $self->derived_from->model->__display_name__);
-    #}
-
     if (defined $self->derived_from and $self->derived_from->id == $self->id) {
         push @tags, UR::Object::Tag->create(
             type => 'error',
             properties => ['derived_from'],
             desc => "A build cannot be explicitly derived from itself!");
     }
+
     return @tags;
 }
 
@@ -236,7 +235,7 @@ sub get{
     return $self->SUPER::get(@_) if @results;
 
     my @caller = caller(1);
-    if($caller[3] =~ m/Genome::Model::Build::ImportedReferenceSequence::get/){
+    if($caller[3] && $caller[3] =~ m/Genome::Model::Build::ImportedReferenceSequence::get/){
         return;
     }else{
         return Genome::Model::Build::ImportedReferenceSequence->get(@_);

@@ -23,7 +23,7 @@ class Genome::Model::Tools::Picard::MergeBamAlignment {
         reference_sequence => {
             is => 'Text',
             doc => 'Path to the fasta file for the reference sequence.',
-            default_value => '/gscmnt/sata420/info/model_data/2741951221/build101947881/all_sequences.fa',
+            default_value => '/gscmnt/gc4096/info/model_data/2741951221/build101947881/all_sequences.fa',
             is_optional => 1,
         },
         paired_run => {

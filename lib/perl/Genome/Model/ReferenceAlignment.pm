@@ -246,92 +246,6 @@ sub create {
     return $self;
 }
 
-sub __errors__ {
-    my ($self) = shift;
-
-    my @tags = $self->SUPER::__errors__(@_);
-
-    my $arb = $self->annotation_reference_build;
-    if($arb and $arb->status ne 'Succeeded') {
-        push @tags, UR::Object::Tag->create(
-            type => 'invalid',
-            properties => ['annotation_reference_build'],
-            desc => 'annotation reference build ' . $arb->name . ' is not succeeded and thus cannot be used.',
-        );
-    }
-
-    my $rsb = $self->reference_sequence_build;
-    if ($arb and !$arb->is_compatible_with_reference_sequence_build($rsb)) {
-        push @tags, UR::Object::Tag->create(
-            type => 'invalid',
-            properties => ['reference_sequence_name', 'annotation_reference_build'],
-            desc => "reference sequence: " . $rsb->name . " is incompatible with annotation reference builds: " . $arb->name,
-        );
-    }
-
-    my $dbsnp = $self->dbsnp_build;
-    if (defined $dbsnp) {
-        if (!defined $dbsnp->reference) {
-            push @tags, UR::Object::Tag->create(
-                type => 'invalid',
-                properties => [qw/ dbsnp_build /],
-                desc => "Supplied dbsnp build " . $dbsnp->__display_name__ . " does not specify a reference sequence");
-        }
-
-        if (!$rsb->is_compatible_with($dbsnp->reference)) {
-            push @tags, UR::Object::Tag->create(
-                type => 'invalid',
-                properties => [qw/ dbsnp_build /],
-                desc => "Supplied dbsnp build " . $dbsnp->__display_name__ . " specifies incompatible reference sequence " .
-                $dbsnp->reference->__display_name__);
-        }
-    }
-
-    my $genotype = $self->genotype_microarray_model;
-    if ($genotype) {
-        if (not defined $genotype->reference_sequence_build) {
-            push @tags, UR::Object::Tag->create(
-                type => 'invalid',
-                properties => [qw/ genotype_microarray_model /],
-                desc => "Supplied genotype microarray model " . $genotype->__display_name__ . " does not specify a reference sequence");
-        }
-
-        if (not $rsb->is_compatible_with($genotype->reference_sequence_build)) {
-            push @tags, UR::Object::Tag->create(
-                type => 'invalid',
-                properties => [qw/ genotype_microarray_model /],
-                desc => "Supplied genotype microarray model " . $genotype->__display_name__ . " specifies incompatible reference sequence " .
-                    $genotype->reference_sequence_build->__display_name__);
-        }
-    }
-
-    my $roi_name = $self->region_of_interest_set_name;
-    if ($roi_name) {
-        my $roi_list = eval { $self->region_of_interest_set; };
-        if($roi_list) {
-            my $roi_reference = $roi_list->reference;
-            if(not $rsb->is_compatible_with($roi_reference)) {
-                if(not Genome::Model::Build::ReferenceSequence::Converter->get(source_reference_build => $roi_reference, destination_reference_build => $rsb)) {
-                    push @tags, UR::Object::Tag->create(
-                        type => 'invalid',
-                        properties => [qw/ region_of_interest_set_name /],
-                        desc => "Supplied region_of_interest_set_name " . $roi_name . " specifies incompatible reference sequence " .
-                            $roi_list->reference->__display_name__,
-                    );
-                }
-            }
-        } else {
-            push @tags, UR::Object::Tag->create(
-                type => 'invalid',
-                properties => [qw/ region_of_interest_set_name /],
-                desc => "Supplied region_of_interest_set_name " . $roi_name . " could not be matched to a corresponding feature-list.",
-            );
-        }
-    }
-
-    return @tags;
-}
-
 sub libraries {
     my $self = shift;
     my %libraries = map {$_->library_name => 1} $self->instrument_data;
@@ -445,21 +359,10 @@ sub dependent_properties {
     return;
 }
 
-sub verify_inputs {
+sub check_for_updates {
     my $self = shift;
-    my $good_to_go = 1;
-
     $self->check_and_update_genotype_input;
-
-    if ($self->is_lane_qc) {
-        # Lane QC models MUST have a genotype model input, regular ref align can do without
-        unless ($self->genotype_microarray_model) {
-            $good_to_go = 0;
-            $self->error_message("Could not resolve genotype microarray model for reference alignment model " . $self->id);
-        }
-    }
-
-    return $good_to_go;
+    return 1;
 }
 
 sub check_and_update_genotype_input {

@@ -32,12 +32,6 @@ my $dbsnp_model = Genome::Model::ImportedVariationList->create(
 ok($dbsnp_model, "created dbsnp model");
 my $dbsnp_build = Genome::Model::Build::ImportedVariationList->create(model => $dbsnp_model);
 ok($dbsnp_build, "created dbsnp build");
-my $dbsnp_build_event = Genome::Model::Event::Build->create(
-    model_id => $dbsnp_model->id,
-    build_id => $dbsnp_build->id,
-    event_type => 'genome model build',
-);
-ok($dbsnp_build_event, 'created dbsnp build event');
 $dbsnp_build->_verify_build_is_not_abandoned_and_set_status_to('Succeeded', 1);
 
 my $dbsnp_model2 = Genome::Model::ImportedVariationList->create(
@@ -49,15 +43,7 @@ my $dbsnp_model2 = Genome::Model::ImportedVariationList->create(
 ok($dbsnp_model2, "created dbsnp model");
 my $dbsnp_build2 = Genome::Model::Build::ImportedVariationList->create(model => $dbsnp_model2);
 ok($dbsnp_build2, "created dbsnp build");
-my $dbsnp_build_event2 = Genome::Model::Event::Build->create(
-    model_id => $dbsnp_model2->id,
-    build_id => $dbsnp_build2->id,
-    event_type => 'genome model build',
-);
-ok($dbsnp_build_event2, 'created dbsnp build event');
 $dbsnp_build2->_verify_build_is_not_abandoned_and_set_status_to('Succeeded', 1);
-
-
 
 my $pp = Genome::ProcessingProfile::ReferenceAlignment->create(
     name => 'test_profile',
@@ -307,13 +293,8 @@ sub create_reference_builds {
     ok($abuild, 'created annotation build');
 
     # make sure the annotation build is 'completed' and has status 'Succeeded '
-    my $abuild_event = Genome::Model::Event::Build->create(
-        model_id => $abuild->model->id,
-        build_id => $abuild->id,
-        event_type => 'genome model build',
-        event_status => 'Succeeded',
-        date_completed => UR::Time->now,
-    );
+    $abuild->status('Succeeded');
+    $abuild->the_master_event->date_completed(UR::Time->now);
 
     return ($rbuild, $rbuild2, $abuild);
 }

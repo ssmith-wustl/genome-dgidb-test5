@@ -29,8 +29,6 @@ sub create {
     return $self;
 }
 
-#< Files >#
-
 #general
 sub soap_output_dir_and_file_prefix {
     return $_[0]->data_directory.'/'.$_[0]->file_prefix;
@@ -61,7 +59,7 @@ sub pga_scaffolds_fasta_file {
     return $_[0]->data_directory.'/'.$_[0]->file_prefix.'.scaffolds.fa';
 }
 
-#assembly files
+# assembler
 sub soap_config_file {
     return $_[0]->data_directory.'/config_file';
 }

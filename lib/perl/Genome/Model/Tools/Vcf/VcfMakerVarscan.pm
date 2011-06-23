@@ -340,26 +340,30 @@ sub getPrecedingBase{
                 $chr = "23" if $col[0] eq "X";
                 $chr = "24" if $col[0] eq "Y";
                 $chr = "25" if $col[0] eq "MT";
+
+                #replace ambiguous/IUPAC bases with N in ref
+                $col[2] =~ s/[^ACGTN\-]/N/g;
+
                 my $id = $chr . ":" . $col[1] . ":" . $col[2] . ":" . $col[3];
 
-                #skip MT and NT chrs
-                #next if $col[0] =~ /^MT/;
-                next if $col[0] =~ /^NT/;
-                next if $col[0] =~ /random/;
-
+                # #skip MT and NT chrs
+                # next if $col[0] =~ /^MT/;
+                # next if $col[0] =~ /^NT/;
+                # next if $col[0] =~ /random/;
+                next unless ($col[0] =~/^[1]?([0-9]|^2[12]|X|Y|MT)$/);
+                
                 $varScanSnvs{$id}{"chrom"} = $col[0];
                 $varScanSnvs{$id}{"pos"} = $col[1];
 
 
                 #get all the alleles together (necessary for the GT field)
-                my @refAlleles = split(",", convertIub($col[2]));
-                my @allAlleles = split(",", convertIub($col[2]));
+                my @allAlleles = $col[2];
                 my @varAlleles;
                 my @tmp = split(",",convertIub($col[3]));
 
                 #only add non-reference alleles to the alt field
                 foreach my $alt (@tmp){
-                    unless (grep $_ eq $alt, @allAlleles){
+                    unless ($alt eq $col[2]){
                         push(@allAlleles,$alt);
                         push(@varAlleles,$alt);
                     }
@@ -367,18 +371,8 @@ sub getPrecedingBase{
 
                 #add ref and alt alleles
                 $varScanSnvs{$id}{"ref"} = $col[2];
-
-                # there's an edge case when the ref is not ACGT where no alt will be output,
-                # causing VCFtools to choke. deal with it here
-                if ((@varAlleles == 0) && ($col[2] !~ /[ACTG]/)){
-                    $varScanSnvs{$id}{"ref"} = "N";
-                    $varScanSnvs{$id}{"alt"} = convertIub($col[3]);
-                    my @arr = (("N"),(split(",",convertIub($col[3]))));
-                    $varScanSnvs{$id}{"GT"} = genGT($col[3],@arr);
-                } else {
-                    $varScanSnvs{$id}{"alt"} = join(",",@varAlleles);
-                    $varScanSnvs{$id}{"GT"} = genGT($col[3],@allAlleles);
-                }
+                $varScanSnvs{$id}{"alt"} = join(",",@varAlleles);
+                $varScanSnvs{$id}{"GT"} = genGT($col[3],@allAlleles);
 
 
                 #add the ref and alt alleles' positions in the allele array to the GT field
@@ -434,9 +428,11 @@ sub getPrecedingBase{
                 $varScanSnvs{$id}{"chrom"} = $col[0];
                 $varScanSnvs{$id}{"pos"} = $col[1];
 
-
                 #add the preceding base as an anchor position
                 my $pbase = getPrecedingBase($col[0],$col[1]);
+
+                #replace ambiguous/IUPAC bases with N in ref
+                $col[3] =~ s/[^ACGTN\-]/N/g;
 
                 #insertion
                 if ($col[3] eq "-"){
@@ -519,16 +515,12 @@ sub getPrecedingBase{
                 my $chr = $fields[1];
                 $chr = "23" if $chr eq "X";
                 $chr = "24" if $chr eq "Y";
-
-
+                
                 #ucsc is zero-based, so we adjust
-                my @als = split(/\//,$fields[9]);
-                my $key;
-                if (@als > 1){
-                    $key = $chr . ":" . ($fields[2]+1) . ":" . $als[0] . ":" . $als[1];
-                } else {
-                    $key = $chr . ":" . ($fields[2]+1) . ":" . $als[0];
-                }
+                my $pos = $fields[2] + 1;
+                
+                my $key = $chr . ":" . $pos . ":" . $fields[7] . ":" . $fields[9];
+                
                 #if the line matches this dbsnp position
                 if(exists($allSnvs{$key})){
                     # #note the match in the info field
@@ -538,7 +530,7 @@ sub getPrecedingBase{
                     #     $allSnvs{$key}{"info"} = "";
                     # }
                     # $allSnvs{$key}{"info"} = $allSnvs{$key}{"info"} . "DB";
-                        
+                    
                     #add to id field
                     if(exists($allSnvs{$key}{"id"})){
                         $allSnvs{$key}{"id"} = $allSnvs{$key}{"id"} . ";";

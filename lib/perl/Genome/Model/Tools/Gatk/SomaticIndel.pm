@@ -79,7 +79,7 @@ class Genome::Model::Tools::Gatk::SomaticIndel {
     ],
     has_param => [
         lsf_resource => {
-            default => "-R 'select[model!=Opteron250 && type==LINUX64] span[hosts=1] rusage[mem=6000]' -M 6000000",
+            default => "-R 'select[model!=Opteron250 && type==LINUX64 && tmp>1000] span[hosts=1] rusage[mem=6000, tmp=1000]' -M 6000000",
         }
     ],
 };
@@ -143,7 +143,9 @@ sub execute {
     else {
         system("touch $output_file"); # This will create an empty output file to help prevent GATK from crashing 
         system("touch $bed_output_file"); # This will create an empty output file to help prevent GATK from crashing 
-        system("touch " . $self->somatic_file);
+        if ($self->somatic_file) {
+            system("touch " . $self->somatic_file);
+        }
         $return = Genome::Sys->shellcmd(
                 cmd => "$cmd",
                 output_files => [$output_file],
@@ -197,11 +199,13 @@ sub _infer_whitelist_args {
         next unless /^\@SQ/;
         chomp;
         my @fields = split(/[\t:]/);
-        push(@sequences, $fields[2]);
+        push(@sequences, $fields[2] . ':1-' . $fields[4] . "\n");
     }
     close(FH);
 
-    return "-L '" . join(";", @sequences) . "'" if @sequences;
+    my $whitelist_file = Genome::Sys->create_temp_file_path() . '.interval_list';
+    Genome::Sys->write_file($whitelist_file, @sequences);
+    return "-L $whitelist_file";
 }
 
 

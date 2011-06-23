@@ -138,7 +138,7 @@ sub execute {                               # replace with real execution logic.
         $iub_codes{"H"}="A,C,T";
         $iub_codes{"D"}="A,G,T";
         $iub_codes{"B"}="C,G,T";
-        $iub_codes{"N"}="G,A,T,C";
+        $iub_codes{"N"}="A,C,G,T";
 
         return $iub_codes{$base}
     };
@@ -310,7 +310,13 @@ sub execute {                               # replace with real execution logic.
             $ chr = "23" if $col[0] eq "X";
             $chr = "24" if $col[0] eq "Y";
             $chr = "25" if $col[0] eq "MT";
-            my $id = $chr . ":" . $col[1] . ":" . $col[2] . ":" . $col[3] . ":" . $col[4];
+
+            #replace ambiguous/IUPAC bases with N in ref
+            $col[3] =~ s/[^ACGTN\-]/N/g;
+            
+            #get slash-sep ids for variant
+            my $altvar = join("/", split(",",convertIub($col[4])));
+            my $id = $chr . ":" . $col[1] . ":" . $col[2] . ":" . $col[3] . ":" . $altvar;
 
             #skip MT and NT chrs
             #next if $col[0] =~ /^MT/;
@@ -323,20 +329,19 @@ sub execute {                               # replace with real execution logic.
             #handle snv genotype calls
             if ($type eq "snv"){        
                 #get all the alleles together (necessary for the GT field)
-                my @refAlleles = split(",", convertIub($col[3]));
-                my @allAlleles = split(",", convertIub($col[3]));
+                my @allAlleles = $col[3];
                 my @varAlleles;
                 my @tmp = split(",",convertIub($col[4]));
                 
                 #only add non-reference alleles to the alt field
                 foreach my $alt (@tmp){
-                    unless (grep $_ eq $alt, @allAlleles){
+                    unless ($alt eq $col[3]){
                         push(@allAlleles,$alt);
                         push(@varAlleles,$alt);
                     }
                 }
 
-                $allSnvs{$id}{"ref"} = convertIub($col[3]);
+                $allSnvs{$id}{"ref"} = $col[3];
                 $allSnvs{$id}{"alt"} = join(",",@varAlleles);
 
                 #add the ref and alt alleles' positions in the allele array to the GT field
@@ -432,7 +437,9 @@ sub execute {                               # replace with real execution logic.
                 $chr = "24" if $chr eq "Y";
 
                 #ucsc is zero-based, so we adjust
-                my $key = $chr . ":" . ($fields[2]+1) . ":" . $fields[7] . ":" . $fields[8];
+                my $pos = $fields[2]+1;
+
+                my $key = $chr . ":" . $pos . ":" . $fields[7] . ":" . $fields[9];
                 #if the line matches this dbsnp position
                 if(exists($allSnvs{$key})){
                     #and the alleles match
@@ -442,7 +449,7 @@ sub execute {                               # replace with real execution logic.
                     # } else {
                     #     $allSnvs{$key}{"info"} = "";
                     # }
-                        # $allSnvs{$key}{"info"} = $allSnvs{$key}{"info"} . "DB";
+                    # $allSnvs{$key}{"info"} = $allSnvs{$key}{"info"} . "DB";
                     
                     #add to id field
                     if(exists($allSnvs{$key}{"id"})){
@@ -464,6 +471,7 @@ sub execute {                               # replace with real execution logic.
             }
         }
     }
+    
 
 #----------------------------------
     my %samtools_hash = samtoolsRead($samtools_file, $chrom, $type);

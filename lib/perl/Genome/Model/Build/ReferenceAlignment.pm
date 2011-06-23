@@ -60,6 +60,31 @@ class Genome::Model::Build::ReferenceAlignment {
             is => 'Genome::Model::Build::ImportedReferenceSequence',
             id_by => 'reference_sequence_build_id',
         },
+        annotation_reference_build_id => {
+            is => 'Text',
+            via => 'inputs',
+            to => 'value_id',
+            where => [ name => 'annotation_reference_build', 'value_class_name' => 'Genome::Model::Build::ImportedAnnotation' ],
+            is_mutable => 1,
+            is_optional => 1,
+            doc => 'ID of annotation reference build to use',
+        },
+        annotation_reference_build => {
+            is => 'Genome::Model::Build::ImportedAnnotation',
+            id_by => 'annotation_reference_build_id',
+        },
+        dbsnp_build_id => {
+            is => 'Text',
+            via => 'inputs',
+            to => 'value_id',
+            where => [ name => 'dbsnp_build', value_class_name => 'Genome::Model::Build::ImportedVariationList' ],
+            is_optional => 1,
+            doc => 'ID of dbsnp build that is used to compare variations against',
+        },
+        dbsnp_build => {
+            is => 'Genome::Model::Build::ImportedVariationList',
+            id_by => 'dbsnp_build_id',
+        },
     ],
     has_transient_optional => [
         _unfiltered_snv_file => {
@@ -69,24 +94,135 @@ class Genome::Model::Build::ReferenceAlignment {
     ],
 };
 
-sub create {
-    my $class = shift;
+sub validate_for_start_methods {
+    my $self = shift;
+    my @methods = $self->SUPER::validate_for_start_methods();
+    push @methods, 
+        qw/ 
+            check_genotype_input 
+            check_region_of_interest 
+            instrument_data_assigned 
+            valid_annotation_build
+            dbsnp_build_has_reference
+            genotype_microarray_has_reference
+        /;
+    return @methods;
+}
 
-    my $self = $class->SUPER::create(@_);
-    unless ($self) {
-        return;
+# TODO May not be necessary if all genotype models have a reference
+sub genotype_microarray_has_reference {
+    my $self = shift;
+    my @tags;
+    my $genotype = $self->genotype_microarray_build;
+    if ($genotype) {
+        if (not defined $genotype->reference_sequence_build) {
+            push @tags, UR::Object::Tag->create(
+                type => 'invalid',
+                properties => [qw/ genotype_microarray_build /],
+                desc => "Supplied genotype microarray build " . $genotype->__display_name__ . " does not specify a reference sequence"
+            );
+        }
+    }
+    return @tags;
+}
+
+# TODO This check may not be necessary if all dbsnp builds have a reference, need to investigate
+sub dbsnp_build_has_reference {
+    my $self = shift;
+    my @tags;
+    my $dbsnp = $self->dbsnp_build;
+    if ($dbsnp) {
+        unless ($dbsnp->reference) {
+            push @tags, UR::Object::Tag->create(
+                type => 'invalid',
+                properties => ['dbsnp_build'],
+                desc => "Supplied dbsnp build " . $dbsnp->__display_name__ . " does not specify a reference sequence",
+            );
+        }
+    }
+    return @tags;
+}
+
+sub valid_annotation_build {
+    my $self = shift;
+    my @tags;
+    my $arb = $self->annotation_reference_build;
+    if ($arb and $arb->status ne 'Succeeded') {
+        push @tags, UR::Object::Tag->create(
+            type => 'invalid',
+            properties => ['annotation_reference_build'],
+            desc => 'annotation reference build ' . $arb->name . ' is not succeeded and thus cannot be used.',
+        );
+    }
+    return @tags;
+}
+
+sub instrument_data_assigned {
+    my $self = shift;
+    my @tags;
+    my @instrument_data = $self->instrument_data;
+    unless (@instrument_data) {
+        push @tags, UR::Object::Tag->create(
+            type => 'error',
+            properties => ['instrument_data'],
+            desc => 'No instrument data assigned to build',
+        );
+    }
+    return @tags;
+}
+
+sub check_region_of_interest {
+    my $self = shift;
+    my @tags;
+
+    my $rsb = $self->reference_sequence_build;
+    my $roi_name = $self->model->region_of_interest_set_name;
+    if ($roi_name) {
+        my $roi_list = eval { $self->model->region_of_interest_set; };
+        if($roi_list) {
+            my $roi_reference = $roi_list->reference;
+            unless ($rsb->is_compatible_with($roi_reference)) {
+                my $converter =  Genome::Model::Build::ReferenceSequence::Converter->get(
+                    source_reference_build => $roi_reference, 
+                    destination_reference_build => $rsb,
+                );
+
+                unless ($converter) {
+                    push @tags, UR::Object::Tag->create(
+                        type => 'invalid',
+                        properties => [qw/ region_of_interest_set_name /],
+                        desc => "Supplied region_of_interest_set_name " . $roi_name . " specifies incompatible reference sequence " .
+                            $roi_list->reference->__display_name__,
+                    );
+                }
+            }
+        } else {
+            push @tags, UR::Object::Tag->create(
+                type => 'invalid',
+                properties => [qw/ region_of_interest_set_name /],
+                desc => "Supplied region_of_interest_set_name " . $roi_name . " could not be matched to a corresponding feature-list.",
+            );
+        }
+    }
+    
+    return @tags;
+}
+
+sub check_genotype_input {
+    my $self = shift;
+    my @tags;
+
+    if ($self->model->is_lane_qc) {
+        unless ($self->genotype_microarray_build) {
+            push @tags, UR::Object::Tag->create(
+                type => 'error',
+                properties => ['genotype_microarray_build'],
+                desc => 'No genotype microarray build input found',
+            );
+        }
     }
 
-    my $model = $self->model;
-    my @idas = $model->instrument_data_assignments;
-    unless (scalar(@idas) && ref($idas[0])  &&  $idas[0]->isa('Genome::Model::InstrumentDataAssignment')) {
-        $self->error_message('No instrument data have been added to model! '. $model->name);
-        $self->error_message("The following command will add all available instrument data:\ngenome model instrument-data assign  --model-id=". $model->id .' --all');
-        $self->delete;
-        return;
-    }
-
-    return $self;
+    return @tags;
 }
 
 sub gold_snp_build {

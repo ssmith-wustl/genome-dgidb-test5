@@ -58,24 +58,13 @@ ok(!$add->execute, 'execute');
 
 # BUILD
 my $tmpdir = File::Temp::tempdir(CLEANUP => 1);
-my $build = $model->create_build(
+my $build = Genome::Model::Build->create( 
     model => $model,
     data_directory => $tmpdir,
 );
 ok($build, 'create build');
 is_deeply([$build->instrument_data], [$model->instrument_data], 'copied instrument data');
-my $master_event = Genome::Model::Event->create(
-    event_type => 'genome model build',
-    event_status => 'Succeeded',
-    model => $model,
-    build => $build,
-    user_name => Genome::Sys->username,
-    date_scheduled => UR::Time->now,
-    date_completed => UR::Time->now,
-);
-ok($master_event, 'created master event');
-is_deeply($build->the_master_event, $master_event, 'got master event from build');
-is($build->status, 'Succeeded', 'build is Succeeded');
+$build->status('Succeeded');
 
 note('Fail - input object does exist');
 $add = Genome::Model::Command::Input::Add->create(

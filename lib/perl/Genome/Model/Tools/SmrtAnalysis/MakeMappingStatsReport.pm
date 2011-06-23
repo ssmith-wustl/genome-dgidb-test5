@@ -5,6 +5,8 @@ use warnings;
 
 use Genome;
 
+my $DEFAULT_LSF_RESOURCE = "-g /pacbio/smrtanalysis -M 8000000 -R 'select[type==LINUX64 && mem>=8000 && tmp>=40000] rusage[mem=8000,tmp=20000]'";
+
 class Genome::Model::Tools::SmrtAnalysis::MakeMappingStatsReport {
     is  => 'Genome::Model::Tools::SmrtAnalysis::Base',
     has_input => [
@@ -46,6 +48,9 @@ class Genome::Model::Tools::SmrtAnalysis::MakeMappingStatsReport {
             valid_values => ['internal','external'],
             default_value => 'external',
         },
+    ],
+    has_optional_param => [
+        lsf_resource => { default_value => $DEFAULT_LSF_RESOURCE },
     ],
 };
 

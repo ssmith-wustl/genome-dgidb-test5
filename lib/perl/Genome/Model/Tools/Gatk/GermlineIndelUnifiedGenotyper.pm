@@ -25,7 +25,7 @@ class Genome::Model::Tools::Gatk::GermlineIndelUnifiedGenotyper {
 		bam_file	=> { is => 'Text', doc => "BAM File for Sample", is_optional => 0, is_input => 1 },
 		vcf_output_file     => { is => 'Text', doc => "Output file to receive GATK vcf format lines", is_optional => 0, is_input => 1, is_output => 1 },
 		verbose_output_file     => { is => 'Text', doc => "STDOUT from GATK", is_optional => 1, is_input => 1, is_output => 1 },
-		gatk_params => { is => 'Text', doc => "Parameters for GATK", is_optional => 1, is_input => 1, is_output => 1, default => "-T UnifiedGenotyper -glm DINDEL" },
+		gatk_params => { is => 'Text', doc => "Parameters for GATK", is_optional => 1, is_input => 1, is_output => 1, default => "-T UnifiedGenotyper -et NO_ET" },
 		reference_fasta => { is => 'Text', doc => "Parameters for GATK", is_optional => 1, is_input => 1, is_output => 1, default => "/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa" },
 	        mb_of_ram => {
 	            is => 'Text',
@@ -77,7 +77,18 @@ sub execute {                               # replace with real execution logic.
 	#java -Xms3000m -Xmx3000m -jar /gsc/pkg/bio/gatk/GenomeAnalysisTK-1.0.5336/GenomeAnalysisTK.jar -R /gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa -T UnifiedGenotyper -glm DINDEL -I /gscmnt/ams1132/info/model_data/2869126180/build106555038//alignments/106555038_merged_rmdup.bam -verbose /gscmnt/sata424/info/medseq/Freimer-Boehnke/ExomeComparison/Agilent/H_HY-01154-lib2/testing/GATK.output.indel_manualrun_5336_Unifiedtest -o /gscmnt/sata424/info/medseq/Freimer-Boehnke/ExomeComparison/Agilent/H_HY-01154-lib2/testing/GATK.output.indel_manualrun_5336_Unifiedtest.vcf
 
 	my $path_to_gatk = $self->gatk_path;
-	my $gatk_params = $self->gatk_params;
+	my $version = $self->version;
+	my $gatk_params;
+	if ($version le 5500) {
+		$gatk_params = $self->gatk_params .  " -glm DINDEL";
+	}
+	elsif ($version ge 5500) {
+		$gatk_params = $self->gatk_params .  " -glm INDEL";
+	}
+	else {
+		die "cannot determine gatk version to set proper parameter names";
+	}
+
 	my $reference_fasta = "-R " . $self->reference_fasta;
 	my $output_file = "-o " . $self->vcf_output_file;	
 	my $bam_input = "-I ".$self->bam_file;
@@ -94,7 +105,7 @@ sub execute {                               # replace with real execution logic.
 	## Optionally run in unsafe mode ##
 
 	if($self->run_unsafe_mode) {
-		$cmd .= " -U ALL";
+		$cmd .= " -U ALL --validation_strictness SILENT ";
 	}
 
 	## Run GATK Command ##

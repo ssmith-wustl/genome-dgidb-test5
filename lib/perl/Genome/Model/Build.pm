@@ -15,6 +15,7 @@ use Workflow;
 use YAML;
 
 class Genome::Model::Build {
+    is => 'Genome::Notable',
     type_name => 'genome model build',
     table_name => 'GENOME_MODEL_BUILD',
     is_abstract => 1,
@@ -101,6 +102,7 @@ sub __display_name__ {
     return $self->id . ' of ' . $self->model->name;
 }
 
+# TODO Remove this
 sub _resolve_subclass_name_by_sequencing_platform { # only temporary, subclass will soon be stored
     my $class = shift;
 
@@ -158,18 +160,11 @@ sub __extend_namespace__ {
 sub create {
     my $class = shift;
     if ($class eq __PACKAGE__ or $class->__meta__->is_abstract) {
-        # let the base class re-call the constructor from the correct sub-class
+        # Let the base class re-call the constructor from the correct sub-class
         return $class->SUPER::create(@_);
     }
 
-    my $bx = $class->define_boolexpr(@_);
-    my $model_id = $bx->value_for('model_id');
-
-    # model
-    return unless ($class->_validate_model_id($model_id));
-
-    # create
-    my $self = $class->SUPER::create($bx);
+    my $self = $class->SUPER::create(@_);
     return unless $self;
 
     # instrument data assignments - set first build id
@@ -179,29 +174,31 @@ sub create {
         $ida->first_build_id( $self->id )
     }
     
-    # inputs
-    unless ( $self->_copy_model_inputs ) {
-        $self->delete;
-        return;
-    }
-
-    # data directory
-    unless ($self->data_directory) {
-        my $dir;
-        eval {
-            $dir = $self->resolve_data_directory;
-        };
-        if ($@) {
-            $self->error_message("Failed to resolve a data directory for a new build!: $@");
-            $self->delete;
-            return;
+    eval {
+        # Give the model a chance to update itself prior to copying inputs from it
+        unless ($self->model->check_for_updates) {
+            Carp::confess "Could not update model!";
         }
-        $self->data_directory($dir);
-    }
 
-    my $processing_profile = $self->processing_profile;
-    unless ($processing_profile->_initialize_build($self)) {
-        $class->error_message($processing_profile->error_message);
+        # Now copy (updated) inputs to build
+        unless ($self->_copy_model_inputs) {
+            Carp::confess "Could not copy model inputs from model " . $self->model->__display_name__ . " to new build!";
+        }
+
+        # Allow processing profile to initialize build
+        unless ($self->processing_profile->_initialize_build($self)) {
+            Carp::confess "Processing profile " . $self->processing_profile->__display_name__ .
+                " could not initialize new build of model " . $self->model->__display_name__;
+        }
+
+        # Create master event, which stores status/user/date created, etc
+        unless ($self->_create_master_event) {
+            Carp::confess "Could not create master event for new build of model " . $self->model->__display_name__;
+        }
+    };
+
+    if ($@) {
+        $self->error_message("Could not create new build of model " . $self->__display_name__ . ", reason: $@");
         $self->delete;
         return;
     }
@@ -209,66 +206,57 @@ sub create {
     return $self;
 }
 
-sub _validate_model_id {
-    my ($class, $model_id) = @_;
-
-    unless ( defined $model_id ) {
-        $class->error_message("No model id given to get model of build.");
-        return;
-    }
-
-    unless ( $model_id =~ /^$RE{num}{int}$/ ) {
-        $class->error_message("Model id ($model_id) is not an integer.");
-        return;
-    }
-
-    unless ( Genome::Model->get($model_id) ) {
-        $class->error_message("Can't get model for id ($model_id).");
-        return;
-    }
-    
-    return 1;
-}
-
-sub _select_build_from_input_model {
-    my ($self, $model) = @_;
-    return $model->last_complete_build;
+sub _create_master_event {
+    my $self = shift;
+    my $event = Genome::Model::Event->create(
+        event_type => 'genome model build',
+        event_status => 'New',
+        model_id => $self->model->id,
+        build_id => $self->id,
+    );
+    return $event;
 }
 
 sub _copy_model_inputs {
     my $self = shift;
 
-    for my $input ( $self->model->inputs ) {
-        my %params = map { $_ => $input->$_ } (qw/ name value_class_name value_id /);
+    # Failing to copy an input SHOULD NOT be fatal. If the input is required for the build 
+    # to run, it'll be caught when the build is verified as part of the start method, which
+    # will leave the build in an "unstartable" state that can be reviewed later.
+    for my $input ($self->model->inputs) {
+        eval {
+            my %params = map { $_ => $input->$_ } (qw/ name value_class_name value_id /);
 
-        # We need to turn model inputs into builds.
-        if($params{value_class_name}->isa('Genome::Model')) {
-            # Next if we already have a build defined (e.g., by create params).
-            my $input_name = $input->name;
+            # Resolve inputs pointing to a model to a build. 
+            if($params{value_class_name}->isa('Genome::Model')) {
+                my $input_name = $input->name;
+                my $existing_input = $self->inputs(name => $input_name);
+                if ($existing_input) {
+                    my $existing_input_value = $existing_input->value;
+                    if ($existing_input_value && $existing_input_value->isa('Genome::Model::Build')) {
+                        die "Input with name $input_name already exists for build!";
+                    }
+                }
 
-            my $existing_input = $self->inputs(name => $input_name);
-            if ($existing_input) {
-                my $existing_input_value = $existing_input->value;
-                next if ($existing_input_value && $existing_input_value->isa('Genome::Model::Build'));
+                my $input_model = $input->value;
+                my $input_build = $self->select_build_from_input_model($input_model);
+                unless($input_build) {
+                    die "Could not resolve a build of model " . $input_model->__display_name__; 
+                }
+
+                $params{value_class_name} = $input_build->class;
+                $params{value_id} = $input_build->id;
             }
 
-            my $input_model = $input->value;
-            my $input_build = $self->_select_build_from_input_model($input_model);
-
-            unless($input_build) {
-                $self->error_message('Failed to select a build to copy for input model ' . 
-                    $input->name . '=' . $input_model->__display_name__ . 
-                    '. Try specifying one.');
-                return;
+            unless ($self->add_input(%params)) {
+                die "Could not copy model input " . $params{name} . " with ID " . $params{value_id} .
+                    " and class " . $params{value_class_name} . " to new build"; 
             }
-
-            $params{value_class_name} = $input_build->class;
-            $params{value_id} = $input_build->id;
-        }
-
-        unless ( $self->add_input(%params) ) {
-            $self->error_message("Can't copy model input to build: ".Data::Dumper::Dumper(\%params));
-            return;
+        };
+        if ($@) {
+            $self->warning_message("Could not copy model input " . $input->__display_name__ .
+                " to build " . $self->__display_name__ . " of model " . $self->model->__display_name__);
+            next;
         }
     }
 
@@ -294,6 +282,11 @@ sub _copy_model_inputs {
 
     return 1;
 
+}
+
+sub select_build_from_input_model {
+    my ($self, $model) = @_;
+    return $model->last_complete_build;
 }
 
 sub instrument_data_assignments {
@@ -432,6 +425,7 @@ sub calculate_estimated_kb_usage {
 # If the data directory is not set, resolving it requires making an allocation.  A build is unlikely to
 # make a new allocation at any other time, so a separate build instance method for allocating is not
 # provided.
+# TODO This method could really be simplified
 sub resolve_data_directory {
     my $self = shift;
     my $model = $self->model;
@@ -503,7 +497,9 @@ sub log_directory {
 }
 
 sub reports_directory { 
-    return  $_[0]->data_directory . '/reports/';
+    my $self = shift;
+    return unless $self->data_directory;
+    return $self->data_directory . '/reports/';
 }
 
 sub resolve_reports_directory { return reports_directory(@_); } #????
@@ -512,6 +508,7 @@ sub add_report {
     my ($self, $report) = @_;
 
     my $directory = $self->resolve_reports_directory;
+    die "Could not resolve reports directory" unless $directory;
     if (-d $directory) {
         my $subdir = $directory . '/' . $report->name_to_subdirectory($report->name);
         if (-e $subdir) {
@@ -551,21 +548,133 @@ sub start {
     my $self = shift;
     my %params = @_;
 
-    # TODO make it so we don't need to pass anything to init the workflow.
-    my $workflow = $self->_initialize_workflow($params{job_dispatch} || 'apipe');
-    unless ($workflow) {
-        my $msg = $self->error_message("Failed to initialize a workflow!");
-        croak $msg;
+    # Regardless of how this goes, build requested should be unset. And we also want to know what software was used.
+    $self->model->build_requested(0);
+    $self->software_revision($self->snapshot_revision) unless $self->software_revision;
+
+    eval {
+        # Validate build for start and collect tags that represent problems.
+        # Croak is used here instead of confess to limit error message length. The entire message must fit into the
+        # body text of a note, and can cause commit problems if the length exceeds what the db column can accept.
+        # TODO Delegate to some other method to create the error message
+        my @tags = $self->validate_for_start;
+        if (@tags) {
+            my @msgs;
+            for my $tag (@tags) {
+                push @msgs, $tag->__display_name__; 
+            }
+            Carp::croak "Build " . $self->__display_name__ . " could not be validated for start!\n" . join("\n", @msgs);
+        }
+
+        # Creates an allocation that'll be used as the build's data directory (unless a data directory has been provided)
+        # TODO This logic should all be contained in resolve_data_directory, which should just return a path
+        unless ($self->data_directory) {
+            my $data_directory = $self->resolve_data_directory;
+            $self->data_directory($data_directory);
+            unless ($self->data_directory) {
+                Carp::croak "Build " . $self->__display_name__ . " could not resolve a data directory!";
+            }
+        }
+
+        # Give builds an opportunity to do some initialization after the data directory has been resolved
+        unless ($self->post_allocation_initialization) {
+            Carp::croak "Build " . $self->__display_name__ . " failed to initialize after resolving data directory!";
+        }
+        
+        $self->the_master_event->schedule;
+
+        # Creates a workflow for the build
+        # TODO Initialize workflow shouldn't take arguments
+        unless ($self->_initialize_workflow($params{job_dispatch} || 'apipe')) {
+            Carp::croak "Build " . $self->__display_name__ . " could not initialize workflow!";
+        }
+
+        # Launches the workflow (in a pend state, it's resumed by a commit hook)
+        unless ($self->_launch(%params)) {
+            Carp::croak "Build " . $self->__display_name__ . " could not be launched!";
+        }
+    };
+
+    if ($@) {
+        my $error = $@;
+        $self->add_note(
+            header_text => 'Unstartable',
+            body_text => "Could not start build, reason: $error",
+        );
+        $self->the_master_event->event_status('Unstartable');
+        $self->error_message("Could not start build " . $self->__display_name__ . ", reason: $error");
+        return;
     }
 
-#    $params{workflow} = $workflow;
-
-    return unless $self->_launch(%params);
-
-    #If a build has been requested, this build starting fulfills that request.
-    $self->model->build_requested(0);
     return 1;
 }
+
+sub post_allocation_initialization {
+    return 1;
+}
+
+sub validate_for_start_methods {
+    # Each method should return tags
+    my @methods = (
+        'inputs_have_compatible_reference',
+    );
+    return @methods;
+}
+
+sub validate_for_start {
+    my $self = shift;
+
+    my @tags;
+    my @methods = $self->validate_for_start_methods;
+
+    for my $method (@methods) {
+        unless ($self->can($method)) {
+            $self->warning_message("Validation method $method not found!");
+            next;
+        }
+        my @returned_tags = grep { defined $_ } $self->$method(); # Prevents undef from being pushed to tags list
+        push @tags, @returned_tags if @returned_tags; 
+    }
+
+    return @tags;
+}
+
+sub inputs_have_compatible_reference {
+    my $self = shift;
+
+    # We really should standardize what we call reference sequence...
+    my @reference_sequence_methods = ('reference_sequence', 'reference', 'reference_sequence_build');
+
+    my ($build_reference_method) = grep { $self->can($_) } @reference_sequence_methods;
+    return unless $build_reference_method;
+    my $build_reference_sequence = $self->$build_reference_method;
+
+    my @inputs = $self->inputs;
+    my @incompatible_properties;
+    for my $input (@inputs) {
+        my $object = $input->value;
+        my ($input_reference_method) = grep { $object->can($_) } @reference_sequence_methods;
+        next unless $input_reference_method;
+        my $object_reference_sequence = $object->$input_reference_method;
+        next unless $object_reference_sequence;
+
+        unless($object_reference_sequence->is_compatible_with($build_reference_sequence)) {
+            push @incompatible_properties, $input->name;
+        }
+    }
+
+    my $tag;
+    if (@incompatible_properties) {
+        $tag = UR::Object::Tag->create(
+            type => 'error',
+            properties => \@incompatible_properties,
+            desc => "Not compatible with build's reference sequence '" . $build_reference_sequence->__display_name__ . "'.",
+        );
+    }
+
+    return $tag;
+}
+
 
 sub stop {
     my $self = shift;
@@ -662,6 +771,7 @@ sub _get_job {
     return shift @jobs;
 }
 
+# TODO Can this be removed now that the restart command is gone?
 sub restart {
     my $self = shift;
     my %params = @_;
@@ -704,9 +814,11 @@ sub restart {
     }
 
     my $build_event = $self->build_event;
-    if($build_event->event_status eq 'Abandoned') {
-        $self->error_message("Can't restart a build that was abandoned.  Start a new build instead.");
-        return 0;
+    for my $unrestartable_status ('Abandoned', 'Unstartable') {
+        if($build_event->event_status eq $unrestartable_status) {
+            $self->error_message("Can't restart a build that was " . lc($unrestartable_status) . ".  Start a new build instead.");
+            return 0;
+        }
     }
 
     $build_event->event_status('Scheduled');
@@ -727,8 +839,8 @@ sub _launch {
 
     # right now it is "inline" or the name of an LSF queue.
     # ultimately, it will be the specification for parallelization
-    #  including whether the server is inline, forked, or bsubbed, and the
-    #  jobs are inline, forked or bsubbed from the server
+    # including whether the server is inline, forked, or bsubbed, and the
+    # jobs are inline, forked or bsubbed from the server
     my $server_dispatch;
     my $job_dispatch;
     my $model = $self->model;
@@ -796,72 +908,65 @@ sub _launch {
             $add_args .= ' --restart';
         }
 
-        my $lsf_project = "build" . $self->id;
+        my $lock = $self->_lock_model_for_start;
+        return unless $lock;
 
         # bsub into the queue specified by the dispatch spec
-        my $user = getpwuid($<);
-        my $lsf_command = sprintf(
-            'bsub -P %s -N -H -q %s %s -u %s@genome.wustl.edu -o %s -e %s annotate-log genome model services build run%s --model-id %s --build-id %s',
-            $lsf_project,
-            $server_dispatch, ## lsf queue
+        my $lsf_project = "build" . $self->id;
+        my $user = Genome::Sys->username;
+        my $lsf_command  = join(' ',
+            'bsub -N -H',
+            '-P', $lsf_project,
+            '-q', $server_dispatch,
             $job_group_spec,
-            $user, 
-            $build_event->output_log_file,
-            $build_event->error_log_file,
+            '-u', $user . '@genome.wustl.edu',
+            '-o', $build_event->output_log_file,
+            '-e', $build_event->error_log_file,
+            'annotate-log genome model services build run',
             $add_args,
-            $model->id,
-            $self->id,
+            '--model-id', $model->id,
+            '--build-id', $self->id,
         );
-    
-    
-
-        # lock model
-        my $model_id = $self->model->id;
-        my $lock_id = '/gsc/var/lock/build_start/'.$model_id;
-        my $lock = Genome::Sys->lock_resource(
-            resource_lock => $lock_id, 
-            block_sleep => 3,
-            max_try => 3,
-        );
-        if ($lock) {
-            $self->status_message("Locked model ($model_id) while launching " . $self->__display_name__ . ".");
-        }
-        else {
-            print STDERR "Failed to get build start lock for model $model_id. This means someone|thing else is attempting to build this model. Please wait a moment, and try again. If you think that this model is incorrectly locked, please put a ticket into the apipe support queue.";
-            return;
-        }
-
         my $job_id = $self->_execute_bsub_command($lsf_command);
-        unless ($job_id) {
-            Genome::Sys->lock_resource(resource_lock => $lock) if ($lock);
-            return;
-        }
-        
-        # create a commit observer to resume the job when build is committed to database
-        my $commit_observer = $build_event->add_observer(
-            aspect => 'commit',
-            callback => sub {
-                #$self->status_message("Resuming LSF job ($job_id) for build " . $self->__display_name__ . ".");
-                my $bresume_output = `bresume $job_id`; chomp $bresume_output;
-                unless ( $bresume_output =~ /^Job <$job_id> is being resumed$/ ) {
-                    $self->status_message($bresume_output);
-                }
-                Genome::Sys->unlock_resource(resource_lock => $lock_id);
-            }
-        );
-        if ($commit_observer) {
-            $self->status_message("Added commit observer to resume LSF job ($job_id).");
-        }
-        else {
-            $self->error_message("Failed to add commit observer to resume LSF job ($job_id).");
-        }
+        return unless $job_id;
 
         $build_event->lsf_job_id($job_id);
-
 
         return 1;
     }
 }
+
+
+sub _lock_model_for_start {
+    my $self = shift;
+
+    my $model_id = $self->model->id;
+    my $lock_path = '/gsc/var/lock/build_start/' . $model_id;
+
+    my $lock = Genome::Sys->lock_resource(
+        resource_lock => $lock_path, 
+        block_sleep => 3,
+        max_try => 3,
+    );
+    unless ($lock) {
+        print STDERR "Failed to get build start lock for model $model_id. This means someone|thing else is attempting to build this model. Please wait a moment, and try again. If you think that this model is incorrectly locked, please put a ticket into the apipe support queue.";
+        return;
+    }
+
+    # create a change record so that if it is "undone" it will kill the job
+    # create a commit observer to resume the job when build is committed to database
+    my $process = UR::Context->process;
+    my $unlock_sub = sub { Genome::Sys->unlock_resource(resource_lock => $lock) };
+    my $lock_change = UR::Context::Transaction->log_change($self, 'UR::Value', $lock, 'external_change', $unlock_sub);
+    my $commit_observer = $process->add_observer(aspect => 'commit', callback => $unlock_sub);
+    unless ($commit_observer) {
+        $self->error_message("Failed to add commit observer to unlock $lock.");
+    }
+
+    $self->status_message("Locked model ($model_id) while launching " . $self->__display_name__ . ".");
+    return $lock;
+}
+
 
 sub _initialize_workflow {
     my $self = shift;
@@ -872,32 +977,6 @@ sub _initialize_workflow {
 
     Genome::Sys->create_directory( $self->log_directory )
         or return;
-
-    if ( my $existing_build_event = $self->build_event ) {
-        $self->error_message(
-            "Can't schedule this build (".$self->id."), it a already has a main build event: ".
-            Data::Dumper::Dumper($existing_build_event)
-        );
-        return;
-    }
-
-    $self->software_revision($self->snapshot_revision) unless $self->software_revision;
-
-    my $build_event = Genome::Model::Event::Build->create(
-        model_id => $self->model->id,
-        build_id => $self->id,
-        event_type => 'genome model build',
-    );
-
-    unless ( $build_event ) {
-        $self->error_message( 
-            sprintf("Can't create build for model (%s %s)", $self->model->id, $self->model->name) 
-        );
-        $self->delete;
-        return;
-    }
-
-    $build_event->schedule; # in G:M:Event, sets status, times, etc.
 
     my $model = $self->model;
     my $processing_profile = $self->processing_profile;
@@ -955,6 +1034,22 @@ sub _execute_bsub_command { # here to overload in testing
             die $self->error_message("Failed to record LSF job submission ($job_id).");
         }
 
+        # create a commit observer to resume the job when build is committed to database
+        my $process = UR::Context->process;
+        my $commit_observer = $process->add_observer(
+            aspect => 'commit',
+            callback => sub {
+                my $bresume_output = `bresume $job_id`; chomp $bresume_output;
+                $self->status_message($bresume_output) unless ( $bresume_output =~ /^Job <$job_id> is being resumed$/ );
+            },
+        );
+        if ($commit_observer) {
+            $self->status_message("Added commit observer to resume LSF job ($job_id).");
+        }
+        else {
+            $self->error_message("Failed to add commit observer to resume LSF job ($job_id).");
+        }
+
         return "$job_id";
     } 
     else {
@@ -962,7 +1057,6 @@ sub _execute_bsub_command { # here to overload in testing
         return;
     }
 }
-
 
 sub initialize {
     my $self = shift;
@@ -1771,7 +1865,7 @@ sub snapshot_revision {
 
     # assemble list of "important" libs
     @libs = map { File::Basename::dirname($_) } @libs;
-    push @libs, UR::Util::used_libs_perl5lib_prefix();
+    push @libs, UR::Util->used_libs;
 
     # remove trailing slashes
     map { $_ =~ s/\/+$// } (@libs, @orig_inc);
@@ -1783,6 +1877,8 @@ sub snapshot_revision {
     for my $inc (@orig_inc) {
         push @inc, grep { $inc eq $_ } @libs;
     }
+
+    @inc = $self->_uniq(@inc);
 
     return join(':', @inc);
 }
@@ -1857,69 +1953,6 @@ sub delta_model_input_differences_from_model {
 }
 
 
-sub is_buildable_methods {
-    # each method should return ($ok, $tag)
-    my @methods = (
-        'inputs_have_compatible_reference',
-    );
-    return @methods;
-}
-
-
-sub is_buildable {
-    my $self = shift || die;
-
-    my @tags;
-    my $is_buildable = 1;
-    my @methods = $self->is_buildable_methods;
-    for my $method (@methods) {
-        my ($ok, $tag) = $self->$method;
-        $is_buildable = 0 unless $ok;
-        push @tags, $tag;
-    }
-
-    for my $tag (@tags) {
-        $self->status_message($tag->__display_name__);
-    }
-
-    return $is_buildable;
-}
-
-
-sub inputs_have_compatible_reference {
-    my $self = shift;
-
-    # We really should standardize what we call reference sequence...
-    my @reference_sequence_methods = ('reference_sequence', 'reference', 'reference_sequence_build');
-
-    my ($method) = grep { $self->can($_) } @reference_sequence_methods;
-    return 1 unless $method;
-    my $model_reference_sequence = $self->$method;
-
-    my @inputs = $self->inputs;
-    my @objects = map { $_->value } @inputs;
-    my @incompatible_properties;
-    for my $object (@objects) {
-        my ($method) = grep { $self->can($_) } @reference_sequence_methods;
-        next unless $method;
-        my $object_reference_sequence = $object->$method;
-        unless($object_reference_sequence->is_compatible_with($model_reference_sequence)) {
-            push @incompatible_properties, $object->name;
-        }
-    }
-
-    my $tag;
-    if (@incompatible_properties) {
-        $tag = UR::Object::Tag->create(
-            type => 'error',
-            properties => \@incompatible_properties,
-            desc => "Not compatible with model's reference sequence '" . $model_reference_sequence->__display_name__ . "'.",
-        );
-    }
-
-    my $ok = not $tag;
-    return $ok, (wantarray ? $tag : undef);
-}
 
 
 sub all_allocations {

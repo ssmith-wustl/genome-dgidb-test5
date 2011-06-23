@@ -64,35 +64,26 @@ sub description {
     );
 }
 
-sub create {
-    my $class = shift;
-    $DB::single=1;
+sub validate_for_start_methods {
+    my $self = shift;
+    my @methods = $self->SUPER::validate_for_start_methods;
+    push @methods, 'instrument_data_assigned';
+    return @methods;
+}
 
-    my $self = $class->SUPER::create(@_)
-        or return;
+sub instrument_data_assigned {
+    my $self = shift;
+    my @tags;
 
-    unless ( $self->model->type_name eq 'de novo assembly' ) {
-        $self->error_message( 
-            sprintf(
-                'Incompatible model type (%s) to build as an de novo assembly',
-                $self->model->type_name,
-            )
+    my @instrument_data = $self->instrument_data;
+    unless (@instrument_data or $self->processing_profile->assembler_name =~ /import/) {
+        push @tags, UR::Object::Tag->create(
+            properties => ['instrument_data'],
+            desc => 'No instrument for build',
         );
-        #$self->delete;
-        return;
     }
 
-    my @ins_data = $self->instrument_data;
-    #okay for soap import to not have an instrument data
-    if (not @ins_data and not $self->processing_profile->assembler_name =~ /import/) {
-        $self->error_message("Build does not have any instrument data");
-        #$self->delete;
-        return;
-    }
-
-    mkdir $self->data_directory unless -d $self->data_directory;
-
-    return $self;
+    return @tags;
 }
 
 sub calculate_estimated_kb_usage {
@@ -511,72 +502,6 @@ sub chaff_rate { return $_[0]->reads_not_assembled_pct; }
 sub total_contig_bases { return $_[0]->assembly_length; }
 #<>#
 #< make soap config file >#
-
-sub create_config_file {
-    my $self = shift;
-
-    $self->status_message("Creating soap config file");
-
-    my $config = $self->get_config_for_libraries;
-    if ( not $config ) {
-        $self->error_message("Failed to get config info for build");
-        return;
-    }
-
-    my $config_file = $self->soap_config_file;
-    unlink $config_file if -e $config_file;
-
-    my $fh;
-    eval {
-        $fh = Genome::Sys->open_file_for_writing( $config_file );
-    };
-    if ( not defined $fh ) {
-        $self->error_message("Can not open soap config file ($config_file) for writing $@");
-        return;
-    }
-    $fh->print( $config );
-    $fh->close;
-
-    $self->status_message("Ok created soap config file");
-
-    #return 1;
-    return $config_file;
-}
-
-sub get_config_for_libraries {
-    my $self = shift;
-
-    my @libraries = $self->libraries_with_existing_assembler_input_files;
-    if ( not @libraries ) {
-        $self->error_message("No assembler input files were found for libraries");
-        return;
-    }
-    $self->status_message('OK...fastq files for libraires');
-
-    my $config = "max_rd_len=120\n";
-    for my $library ( @libraries ) {
-        my $insert_size = $library->{insert_size};# || 320;# die if no insert size
-        $config .= <<CONFIG;
-[LIB]
-avg_ins=$insert_size
-reverse_seq=0
-asm_flags=3
-pair_num_cutoff=2
-map_len=60
-CONFIG
-        if ( exists $library->{paired_fastq_files} ) { 
-            $config .= 'q1='.$library->{paired_fastq_files}->[0]."\n";
-            $config .= 'q2='.$library->{paired_fastq_files}->[1]."\n";
-        }
-
-        if ( exists $library->{fragment_fastq_file} ) {
-            $config .= 'q='.$library->{fragment_fastq_file}."\n";
-        }
-    }
-
-    return $config;
-
-}
 
 1;
 

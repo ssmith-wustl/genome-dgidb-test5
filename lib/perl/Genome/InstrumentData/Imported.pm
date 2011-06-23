@@ -302,6 +302,7 @@ no warnings 'once';
 *read1_fastq_name = \&Genome::InstrumentData::Solexa::read1_fastq_name;
 *read2_fastq_name = \&Genome::InstrumentData::Solexa::read2_fastq_name;
 *dump_trimmed_fastq_files = \&Genome::InstrumentData::Solexa::dump_trimmed_fastq_files;
+*_get_trimq2_params = \&Genome::InstrumentData::Solexa::_get_trimq2_params;
 }
 
 sub dump_sanger_fastq_files {
@@ -359,7 +360,7 @@ sub flow_cell_id {
 sub lane {
     my $self = shift;
     my $subset_name = $self->subset_name;
-    if ($subset_name =~ m/DACC/ && $subset_name =~/[-\.]/){
+    if (($subset_name =~ m/DACC/ || $self->sequencing_platform eq 'solexa') && $subset_name =~/[-\.]/){
         my ($lane) = $subset_name =~ /(\d)[-\.]/;
         return $lane;
     }else{

@@ -5,6 +5,8 @@ use warnings;
 
 use Genome;
 
+my $DEFAULT_LSF_RESOURCE = "-g /pacbio/smrtanalysis -M 8000000 -R 'select[type==LINUX64 && mem>=8000 && tmp>=40000] rusage[mem=8000,tmp=20000]'";
+
 class Genome::Model::Tools::SmrtAnalysis::ConsensusStats {
     is => ['Genome::Model::Tools::SmrtAnalysis::Base'],
     has_input => [
@@ -14,6 +16,9 @@ class Genome::Model::Tools::SmrtAnalysis::ConsensusStats {
     ],
     has_optional_input => [
         output_gff_file => { is_output => 1 },
+    ],
+    has_optional_param => [
+        lsf_resource => { default_value => $DEFAULT_LSF_RESOURCE },
     ],
 };
 

@@ -16,6 +16,11 @@ class Genome::Model::Tools::BioSamtools::BamToUnalignedFastq {
             is => 'Text',
             doc => 'A directory to output s_*_*_sequence.txt files.  Two files for unmapped pairs and one file for unmapped fragments or unmapped mates whose mate-pair is mapped.',
         },
+        print_aligned => {
+            is => 'Boolean',
+            default => 0,
+            doc => 'If set, this tool will print only the aligned reads, instead of the unaligned reads.',
+        },
     ],
 };
 
@@ -95,8 +100,8 @@ sub execute {
     my %read_pairs;
     while (my $align = $bam->read1()) {
         my $flag = $align->flag;
-        if ($flag & 1) {
-            my $type;
+        my ($mapped, $type);
+        if ($flag & 1) { # Is this read part of a pair?
             if ($flag & 64)  {
                 $type = 'read_1';
             } elsif ($flag & 128) {
@@ -104,21 +109,31 @@ sub execute {
             } else {
                 die('Read pair info lost for alignment of read '. $align->qname .' from BAM file '. $self->bam_file);
             }
-            if ($flag & 4) {
-                if ($flag & 8) {
-                    # Treat as Paired-End
-                    print_align_to_fh($align,\%fhs,$type);
-                } else {
-                    # Treat as Fragment
-                    print_align_to_fh($align,\%fhs,'fragment');
-                }
+
+            # if both halves of the mate do not have the same mapping status, this is a fragment
+            unless ( ($flag & 4) *2 == ($flag & 8) ){ 
+                $type = 'fragment';
             }
+
+            if ($flag & 4) { # Is this part of the pair unmapped?
+                $mapped = 0;
+            } else {
+                $mapped = 1;
+            }
+        # Else the read is not a part of a pair, and treated as a fragment
         } else {
             # Fragment Read
-            if ($flag & 4) {
-                #Unmapped Fragment Read
-                print_align_to_fh($align,\%fhs,'fragment');
+            $type = 'fragment';
+            if ($flag & 4) { # Is this read unmapped?
+                $mapped = 0;
+            } else {
+                $mapped = 1;
             }
+        }
+
+        # If the read is mapped and we're printing mapped things, or if the read is unmapped and we're printing unaligned things... print it
+        if ( $mapped == $self->print_aligned ) {
+            print_align_to_fh($align,\%fhs,$type);
         }
     }
     return 1;

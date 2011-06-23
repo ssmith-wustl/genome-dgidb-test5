@@ -40,6 +40,14 @@ class Genome::Model::Command::Define::SomaticVariation {
             doc => 'Subject name is derived from normal and tumor models and is not necessary as input to somatic models',
         },
     ],
+    has_optional => [
+        force => {
+            is => 'Boolean',
+            is_input => 1,
+            default => 0,
+            doc => 'Allow creation of somatic variation models where --tumor_model and --normal_model do not have matching Genome::Individuals',
+        },
+    ],
 };
 
 sub help_synopsis {
@@ -88,7 +96,8 @@ sub type_specific_parameters_for_create {
         tumor_model => $self->tumor_model,
         normal_model => $self->normal_model,
         annotation_build => $self->annotation_build,
-        previously_discovered_variations_build => $self->previously_discovered_variations_build
+        previously_discovered_variations_build => $self->previously_discovered_variations_build,
+        force => $self->force,
     );
 
 
@@ -137,7 +146,12 @@ sub execute {
         unless ($tumor_source eq $normal_source) {
             my $tumor_common_name = $tumor_source->common_name || "unknown";
             my $normal_common_name = $normal_source->common_name || "unknown";
-            die $self->error_message("Tumor model and normal model samples do not come from the same individual.  Tumor common name is $tumor_common_name. Normal common name is $normal_common_name.");
+            my $message = "Tumor model and normal model samples do not come from the same individual.  Tumor common name is $tumor_common_name. Normal common name is $normal_common_name.";
+            if($self->force){
+                $self->warning_message($message);
+            }else{
+                die $self->error_message($message . "  Use --force option to override this and allow samples from different individuals anyway");
+            }
         }
         $self->subject_id($tumor_subject->id);
         $self->subject_class_name($tumor_subject->class);

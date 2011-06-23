@@ -1,5 +1,10 @@
 package Genome::Model::Tools::SmrtAnalysis::CmpH5Sort;
 
+use strict;
+use warnings;
+
+use Genome;
+
 class Genome::Model::Tools::SmrtAnalysis::CmpH5Sort {
     is => ['Genome::Model::Tools::SmrtAnalysis::Base'],
     has_input => {
@@ -35,9 +40,6 @@ class Genome::Model::Tools::SmrtAnalysis::CmpH5Sort {
             doc => 'Temporary directory to use when sorting in-place.',
         },
     },
-    has_optional_param => [
-        lsf_resource => { default_value => "-g /pacbio/smrtanalysis -M 32000000 -R 'select[type==LINUX64 && mem>=32000 && tmp>=200000] rusage[mem=32000,tmp=100000]'" },
-    ],
 };
 
 sub help_brief {

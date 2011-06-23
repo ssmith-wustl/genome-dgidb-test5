@@ -9,6 +9,15 @@ use IO::File;
 class Genome::Model::Tools::DetectVariants2::Filter::SnpFilter{
     is => ['Genome::Model::Tools::DetectVariants2::Filter'],
     doc => 'Filters out snvs that are around indels',
+    has => [
+        min_mapping_quality => {
+            type => 'String',
+            default => '40',
+            is_optional => 1,
+            is_input => 1,
+            doc => 'minimum average mapping quality threshold for a high quality call',
+        },
+    ],
     has_constant => [
         _variant_type => {
             type => 'String',
@@ -50,6 +59,7 @@ sub _filter_variants {
             out_file   => $filtered_snv_output_file,
             lq_output  => $fail_filter_snv_output_file,
             indel_file => $filtered_indel_file,
+            min_mapping_quality => $self->min_mapping_quality,
         );
         unless($snp_filter->execute) {
             $self->error_message("Running sam snp-filter failed.");

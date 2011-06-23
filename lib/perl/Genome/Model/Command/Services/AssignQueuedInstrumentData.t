@@ -12,7 +12,7 @@ BEGIN {
 use above 'Genome';
 
 require Genome::InstrumentData::Solexa;
-use Test::More tests => 106;
+use Test::More tests => 110;
 
 use_ok('Genome::Model::Command::Services::AssignQueuedInstrumentData');
 
@@ -586,6 +586,8 @@ ok(@tumor, 'the cron created a tumor model for the first sample');
 ok($normal, 'the cron created a paired normal model');
 ok(grep($_ ==  $somatic_variation->tumor_model, @tumor), 'somatic variation has the correct tumor model');
 is($normal, $somatic_variation->normal_model, 'somatic variation has the correct normal model');
+is(scalar @{[$normal->instrument_data]}, 0, 'no instrument data is assigned to the normal');
+is($normal->build_requested, 0, 'the normal model does not have a build requested since no instrument data is assigned to it');
 
 @models = values %$new_models_4;
 push(@model_groups, $_->model_groups) for (@models);
@@ -742,3 +744,5 @@ ok(@tumor_2, 'the cron created a tumor model for the first sample');
 ok($normal_2, 'the cron created a paired normal model');
 ok(grep($_ ==  $somatic_variation_2->tumor_model, @tumor_2), 'somatic variation has the correct tumor model');
 is($normal_2, $somatic_variation_2->normal_model, 'somatic variation has the correct normal model');
+is(scalar @{[$normal_2->instrument_data]}, 1, 'one instrument data is assigned to the normal');
+is($normal->build_requested, 1, 'the normal model has build requested since there is instrument data is assigned to it');

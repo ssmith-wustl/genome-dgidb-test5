@@ -40,7 +40,10 @@ my $abuild = Genome::Model::Build::ImportedAnnotation->create(
     data_directory      => $data_dir,
     version             => $versions[0],
 );
-ok(!$abuild, "creating annotation build without reference sequence build is an error");
+
+my @tags = $abuild->validate_for_start;
+ok(@tags, 'received errors when validating build, as expected');
+$abuild->delete;
 
 $abuild = Genome::Model::Build::ImportedAnnotation->create(
     model               => $ann_model,
@@ -53,12 +56,8 @@ is($abuild->name, "test_annotation/$versions[0]", 'build name is correct');
 $abuild = Genome::Model::Build::ImportedAnnotation->get(name => $abuild->name);
 ok($abuild, 'got build by name');
 
-my $abuild_event = Genome::Model::Event::Build->create(
-    model_id => $abuild->model->id,
-    build_id => $abuild->id,
-    event_type => 'genome model build',
-    event_status => 'Succeeded',
-);
+$abuild->status('Succeeded');
+my $abuild_event = $abuild->the_master_event;
 
 # now set a (different) reference_sequence_build and make sure we get different answers
 ok($abuild->is_compatible_with_reference_sequence_build($rbuilds{'human'}->[0]), 'reference sequence compatibility');
@@ -72,9 +71,9 @@ for my $invalid (@invalid_status) {
     ok(!$abuild->is_compatible_with_reference_sequence_build($rbuilds{'human'}->[0]), "Build status '$invalid' not allowed as annotation build");
 }
 
-ok(!$abuild->__errors__, "annotation build has no __errors__");
+ok(!$abuild->validate_for_start, "annotation build has no validate_for_start");
 $abuild->reference_sequence($rbuilds{'mouse'}[0]);
-my @errs = $abuild->__errors__;
+my @errs = $abuild->validate_for_start;
 is(scalar @errs, 1, "attempting to specify a reference build from the wrong model is an error");
 like($errs[0]->desc, qr/is not a build of model/, "error string looks correct");
 

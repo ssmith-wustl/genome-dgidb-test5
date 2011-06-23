@@ -8,21 +8,23 @@ use warnings;
 
 use above 'Genome';
 use Test::More;
+use Devel::Size qw/total_size/;
 
 # TODO: May need to turn this on if we introduce a dependency on Bio::DB::Sam
 #if ($] < 5.012) {
 #  plan skip_all => "this test is only runnable on perl 5.12+"
 #}
 
-plan tests => 20;
+plan tests => 22;
 
 use_ok('Genome::RefCov::Stats');
 # TODO: Load a BAM file and use the actual coverage method to get array?
 my @coverage = (0,0,5,5,5,5,5,0,5,5,5,5,5,0,0);
+#my @coverage = (1 .. 10_000_000);
 my $expected_length = scalar(@coverage);
 my $stats = Genome::RefCov::Stats->create(
     name => 'Test',
-   coverage => \@coverage,
+    coverage => \@coverage,
 );
 isa_ok($stats,'Genome::RefCov::Stats');
 isa_ok($stats->coverage, 'ARRAY');
@@ -35,10 +37,10 @@ is($stats->gap_number,3,'gap_number matches expected');
 is($stats->ave_gap_length,1.67,'ave_gap_length matches expected');
 is($stats->sdev_ave_gap_length,0.58,'sdev_ave_gap_length matches expected');
 is($stats->med_gap_length,'2.00','med_gap_length matches expected');
-is($stats->min_depth_filter,0,'min_depth_filter matches expected');
+is($stats->min_depth_filter,1,'min_depth_filter matches expected');
 is($stats->min_depth_discarded_bases,0,'min_depth_discarded_bases matches expected');
 is($stats->percent_min_depth_discarded,'0.00','percent_min_depth_discarded matches expected');
-my $stats_ref = $stats->stats;
+my $stats_ref = $stats->stats_array_ref;
 isa_ok($stats_ref, 'ARRAY');
 is(scalar(@{$stats_ref}),15,'Found expected elements in stats array ref');
 
@@ -54,6 +56,9 @@ is(scalar(@headers),15,'Found expected elements in stats headers');
 
 my @descriptions = $stats->header_descriptions;
 is(scalar(@descriptions),15,'Found expected elements in stats descriptions');
+
+is($stats->minimum_coverage_depth,0,'Minimum depth of coverage is zero.');
+is($stats->maximum_coverage_depth,5,'Maximum depth of coverage is five.');
 
 # TODO: Repeat tests with min_depth filter on and coverage values sufficient for such test
 exit;
