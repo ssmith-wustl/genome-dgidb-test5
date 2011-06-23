@@ -36,7 +36,7 @@ use_ok('Genome::Model::Tools::DetectVariants2::Samtools');
 
 
 my $test_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants2-Samtools/';
-my $test_base_dir = '/gscuser/tdutton/test';#File::Temp::tempdir('DetectVariants2-SamtoolsXXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites/', CLEANUP => 1);
+my $test_base_dir = #File::Temp::tempdir('DetectVariants2-SamtoolsXXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites/', CLEANUP => 1);
 my $test_working_dir_mpileup = "$test_base_dir/output1";
 my $bam_input = $test_dir . '/alignments/102922275_merged_rmdup.bam';
 
