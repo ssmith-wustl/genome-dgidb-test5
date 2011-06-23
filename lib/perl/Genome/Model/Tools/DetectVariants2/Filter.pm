@@ -134,7 +134,7 @@ EOS
 sub _process_params { 
     my $self = shift;
 
-    my @param_list = split(" ", $self->params);
+    my @param_list = split(" ", $self->params); #gives error here.
     my($cmd_class,$params) = $self->class->resolve_class_and_params_for_argv(@param_list);
 
     # For each parameter set in params... use the class properties to assign the values
@@ -208,7 +208,7 @@ sub _generate_result {
         die $self->error_message("Failed to generate standard output");
     }
     unless($self->_validate_output){
-        die $self->error_message("Failed to validate output");
+       die $self->error_message("Failed to validate output");
     }
     return 1;
 }
