@@ -198,7 +198,7 @@ sub _dump_workflow {
 sub _dump_dv_cmd {
     my $self = shift;
     my $cmd = join(" ",@INC)."\n===============================================\n";
-    $cmd .=   "gmt detect-variants2 dispatcher --output-directory ".$self->output_directory
+    $cmd  =      "gmt detect-variants2 dispatcher --output-directory " .$self->output_directory
                 ." --aligned-reads-input ".$self->aligned_reads_input
                 ." --control-aligned-reads-input ".$self->control_aligned_reads_input
                 ." --reference-build-id ".$self->reference_build_id;
@@ -307,7 +307,44 @@ sub build_detector_list {
     
     return $self->walk_tree($detector_tree, $branch_case, $leaf_case, $detector_list, $detector_type);
 }
-
+#adding 
+sub combine_results {
+    my $self = shift;
+    my ($detector_tree, $detector_type, $versions, $params) = @_;
+    
+    #Need to combine by intersection or union
+    my $branch_case = sub {
+        my $self = shift;
+        my ($combination, $subtrees, $branch_case, $leaf_case, $detector_type, $versions, $params) = @_;
+        
+        $self->error_message('Support for unions and intersections is not yet available.');
+        die($self->error_message);
+    };
+    
+    #A single detector--just find the relevant file and pass it back
+    my $leaf_case = sub {
+        my $self = shift;
+        my ($detector_name, $index, $branch_case, $leaf_case, $detector_type, $versions, $params) = @_;
+        
+        #TODO When we enable the boolean expressions, the directory name will need to take into account parameters as well
+        my $command_output_directory = $self->calculate_detector_output_directory($detector_name, $versions->[$index], '');
+        
+        #Somewhere down the line filtering should perhaps be separated from the actual detection?
+        my $output_file_property = $detector_type . '_output';
+        my $filtered_output_file_property = 'filtered_' . $output_file_property;
+        
+        my $_temp_staging_directory = $self->_temp_staging_directory;
+        my $output_file = $self->$output_file_property;
+        my $filtered_output_file = $self->$filtered_output_file_property;
+        
+        $output_file =~ s/$_temp_staging_directory/$command_output_directory/;
+        $filtered_output_file =~ s/$_temp_staging_directory/$command_output_directory/;
+        
+        return [$output_file, $filtered_output_file];
+    };
+    
+    return $self->walk_tree($detector_tree, $branch_case, $leaf_case, $detector_type, $versions, $params);
+}
 #A generic walk of the tree structure produced by the parser--takes two subs $branch_case and $leaf_case to handle the specific logic of the step
 sub walk_tree {
     my $self = shift;
@@ -597,12 +634,12 @@ sub add_detectors_and_filters {
     my $detector_hash = shift;
     my $workflow_model = shift;
     my $workflow_links;
-
-    for my $version (keys %$detector_hash) {
+    my $version; 
+    for  $version (keys %$detector_hash) {
         # Get the hashref that contains all the variant types to be run for a given detector version
         my $version_hash = $detector_hash->{$version};
 
-        my ($class,$name, $version);
+        my ($class,$name);
         for my $variant_type (keys %$version_hash) {
             my @instances_for_variant_type = @{$version_hash->{$variant_type}};
             for my $instance (@instances_for_variant_type) {
@@ -816,7 +853,7 @@ sub _promote_staged_data {
                 (my $v1_output = $unversioned_output) =~ s/\.bed/.v1.bed/;
 
                 # Sometimes the .bed file exists already. Sometimes the v2.bed exists already. Make whatever two links do not exist.
-                for my $link_target ($unversioned_output, $v1_output, $v2_output) {
+                for my  $link_target ($unversioned_output, $v1_output, $v2_output) {
                     unless (-e $link_target) {
                         Genome::Sys->create_symlink($output, $link_target);
                     }

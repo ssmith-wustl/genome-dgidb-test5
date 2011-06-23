@@ -68,12 +68,15 @@ sub execute {
         my ($name, $path) = fileparse $snp_file;
         $out_file = $path.$name.'.sanitize';
     }
-    
+   
+
     my $out_fh = Genome::Sys->open_file_for_writing($out_file) or return;
     my $snp_fh = Genome::Sys->open_file_for_reading($snp_file) or return;
-    
+
     while (my $snp = $snp_fh->getline) {
-        my ($ref_base, $con_base) = $snp =~ /^\S+\s+\S+\s+(\S+)\s+(\S+)\s+/;
+        my @columns = split("\t", $snp);
+        my $ref_base = $columns[2];
+        my $con_base = $columns[3];
         next if $ref_base eq $con_base;
         next if $ref_base eq '*' or $con_base =~ /\//;
         $out_fh->print($snp);
@@ -86,6 +89,8 @@ sub execute {
         unlink $snp_file;
         rename $out_file, $snp_file;
     }
+   
+
 
     return 1;
 }

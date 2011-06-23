@@ -82,19 +82,28 @@ sub execute {
     if($lq_file) {
         $lq_fh = Genome::Sys->open_file_for_writing($lq_file) or return;
     }
-
     while (my $indel = $indel_fh->getline) {
-
-        my @items = split /\s+/, $indel;
-        my ($chr, $pos, $id, $indel_detail, $score, $rd_depth, $indel_seq1, $indel_seq2, $subscore1, $subscore2) = map{$items[$_]}(0..3, 5, 7..11);
         
-        next unless $id eq '*';
+        my @items = split /\s+/, $indel;
+        
+        $id = $items[2];
+                
+        if ($id eq '.') {
+            $m_pileup = 1;
+            next if $indel =~ /^#/;
+            next if $indel =~ /INDEL/;
+        }
+
+        #1 42466824    *   +A/+A   40  0   75  1   +A  *   1   0   0
+
+        my ($chr, $pos, $id, $indel_detail, $score, $rd_depth, $indel_seq1, $indel_seq2, $subscore1, $subscore2) = map{$items[$_]}(0..3, 5, 7..11);
+         next unless $id eq '*';
 
         if($rd_depth > $self->max_read_depth) {
             $lq_fh->print($indel) if $lq_fh;
             next;
         }
-        
+
         #In rare case, indel line will get something like follows (RT#62927):
         #NT_113915	187072	*	-	/-		18	0	33	32	-		*	3	29	0	0	0
         if ($indel_detail eq '-') {
@@ -109,21 +118,23 @@ sub execute {
                 next;
             }
         }
-        
+
+
         $score += $self->scaling_factor * $subscore1 unless $indel_seq1 eq '*';
         $score += $self->scaling_factor * $subscore2 unless $indel_seq2 eq '*';
+
 
         @curr = ($chr, $pos, $score, $indel);
         my $do_swap = 1;
 
         if (defined $last[0]) {
             if ($curr[0] eq $last[0] && $last[1] + $self->min_win_size > $curr[1]) {
-    	           if($last[2] > $curr[2]) {
-    	               $do_swap = 0;
-    	               $lq_fh->print($curr[3]) if $lq_fh;
-    	           } else {
-    	               $lq_fh->print($last[3]) if $lq_fh;
-    	           }
+                if($last[2] > $curr[2]) {
+                    $do_swap = 0;
+                    $lq_fh->print($curr[3]) if $lq_fh;
+                } else {
+                    $lq_fh->print($last[3]) if $lq_fh;
+                }
             } 
             else {
                 $out_fh->print($last[3]);
@@ -139,9 +150,8 @@ sub execute {
     $indel_fh->close;
     $out_fh->close;
     $lq_fh->close if $lq_fh;
-    
+
     return 1;
 }
-
 
 1;

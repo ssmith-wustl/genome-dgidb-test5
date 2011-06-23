@@ -31,7 +31,7 @@ use_ok($dispatcher_class);
 
 my $obj = $dispatcher_class->create(
     snv_detection_strategy => 'samtools r599 [-p 1] intersect samtools r613 [-p 2]',
-    indel_detection_strategy => 'samtools r599 [-p 1]',
+    indel_detection_strategy => 'samtools r963 [-p 1]',
     sv_detection_strategy => 'breakdancer 2010_06_24 [-p 3]',
     );
 
@@ -50,11 +50,11 @@ my $expected_plan = {
         }
     },
     'samtools' => {
-        'r599' => {
+        'r599' => { 
             'indel' => [
                 {
                     'params' => '-p 1',
-                    'version' => 'r599',
+                    'version' => 'r599', 
                     'name' => 'samtools',
                     'filters' => [],
                     'class' => 'Genome::Model::Tools::DetectVariants2::Samtools'
@@ -63,18 +63,18 @@ my $expected_plan = {
             'snv' => [
                 {
                     'params' => '-p 1',
-                    'version' => 'r599',
+                    'version' => 'r963',
                     'name' => 'samtools',
                     'filters' => [],
                     'class' => 'Genome::Model::Tools::DetectVariants2::Samtools'
                 }
             ]
         },
-        'r613' => {
+        'r613' => { #r613
             'snv' => [
                 {
                     'params' => '-p 2',
-                    'version' => 'r613',
+                    'version' => 'r613', #613
                     'name' => 'samtools',
                     'filters' => [],
                     'class' => 'Genome::Model::Tools::DetectVariants2::Samtools',
@@ -98,7 +98,7 @@ my $normal_bam = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariant
 # Test dispatcher for running a complex case -- the intersect is nonsensical, but tests intersections while still keeping the test short
 my $test_working_dir = File::Temp::tempdir('DetectVariants2-Dispatcher-combineXXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites/', CLEANUP => 1);
 my $combine_test = $dispatcher_class->create(
-    snv_detection_strategy => 'samtools r599 filtered by snp-filter v1 union samtools r599 filtered by snp-filter v1',
+    snv_detection_strategy => 'samtools r963 filtered by snp-filter v1 union samtools r963 filtered by snp-filter v1',
     output_directory => $test_working_dir,
     reference_build_id => $refbuild_id,
     aligned_reads_input => $tumor_bam,
@@ -107,5 +107,6 @@ my $combine_test = $dispatcher_class->create(
 ok($combine_test, "Object to test a combine case created");
 ok($combine_test->execute, "Test executed successfully");
 
+#sleep 10000000000;
 done_testing();
 
