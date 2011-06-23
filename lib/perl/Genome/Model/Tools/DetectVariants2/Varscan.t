@@ -54,7 +54,7 @@ my $command = Genome::Model::Tools::DetectVariants2::Varscan->create(
 ok($command, 'Created `gmt detect-variants varscan` command');
 ok($command->execute, 'Executed `gmt detect-variants varscan` command');
 
-my $diff_cmd = sprintf('diff -r -q %s %s', $test_working_dir, $expected_dir);
+my $diff_cmd = sprintf('diff -r %s %s', $test_working_dir, $expected_dir);
 
 my $diff = `$diff_cmd`;
 is($diff, '', 'No differences in output from expected result from running varscan for this version and parameters');
