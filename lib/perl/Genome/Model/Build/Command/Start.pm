@@ -119,11 +119,24 @@ sub execute {
                 $self->status_message("Successfully started build (" . $build->__display_name__ . ").");
             }
             else {
-                push @errors, $model->__display_name__ . ": " . $@;
+                if ($build->status eq 'Unstartable') {
+                    push @errors, $model->__display_name__ . ': Build (' . $build->id . ') created but Unstartable, review build\'s notes.';
+                }
+                elsif ($@) {
+                    push @errors, $model->__display_name__ . ': Build (' . $build->id . ') ' . $@;
+                }
+                else {
+                    push @errors, $model->__display_name__ . ': Build (' . $build->id . ') not started but unable to parse error, review console output.';
+                }
             }
         }
         else {
-            push @errors, $model->__display_name__ . ": " . $@;
+            if ($@) {
+                push @errors, $model->__display_name__ . ": " . $@;
+            }
+            else {
+                push @errors, $model->__display_name__ . ': Build not created but unable to parse error, review console output.';
+            }
             $transaction->rollback;
         }
     }
