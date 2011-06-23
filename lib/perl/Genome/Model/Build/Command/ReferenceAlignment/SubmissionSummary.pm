@@ -30,6 +30,11 @@ class Genome::Model::Build::Command::ReferenceAlignment::SubmissionSummary {
             shell_args_position => 2,
             doc => 'Flow Cell ID to use if searching on a flowcell'
         },
+        flow_cell_subset_name => {
+            is => 'String',
+            shell_args_position => 3,
+            doc=> 'Flow cell subset name to use if searching on a flow cell'
+        },
         reference_sequence_name => {
             is=>'String',
             doc=>'Only include models with this reference sequence name',
@@ -56,8 +61,10 @@ sub execute {
     }
 
     if ($self->flow_cell_id) {
-        $self->status_message(sprintf("Searching for instrument data for %s...  ", $self->flow_cell_id));
-        my @instr_data = Genome::InstrumentData::Solexa->get(flow_cell_id=>$self->flow_cell_id);
+        my @instr_data_params = (flow_cell_id=>$self->flow_cell_id);
+        push @instr_data_params, (subset_name => $self->flow_cell_subset_name) if $self->flow_cell_subset_name;
+        $self->status_message(sprintf("Searching for instrument data for %s/%s...  ", $self->flow_cell_id, defined $self->flow_cell_subset_name ? $self->flow_cell_subset_name : "all" ));
+        my @instr_data = Genome::InstrumentData::Solexa->get(@instr_data_params);
         $self->status_message(sprintf("Found %s instrument data.\n", scalar @instr_data));
 
         my %model_ids = map {$_->model_id, 1} map {Genome::Model::Input->get(name=>'instrument_data', value_id=>$_->id)} @instr_data;
@@ -79,7 +86,7 @@ sub execute {
         my @builds;
         for (@models) {
             my ($latest_build) = sort {$b->id <=> $a->id} grep {$_->status eq 'Succeeded'} $_->builds;
-            push @builds, $latest_build;
+            push @builds, $latest_build if $latest_build;
         }
 
         $self->builds([@builds]);
