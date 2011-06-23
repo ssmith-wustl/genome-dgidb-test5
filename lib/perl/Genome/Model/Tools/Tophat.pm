@@ -47,6 +47,7 @@ my %TOPHAT_VERSIONS = (
     '1.1.2'  => '/gsc/pkg/bio/tophat/tophat-1.1.2/tophat',
     '1.1.4'  => '/gsc/pkg/bio/tophat/tophat-1.1.4/tophat',
     '1.2.0'  => '/gsc/pkg/bio/tophat/tophat-1.2.0/tophat',
+    '1.3.0'  => '/gsc/pkg/bio/tophat/tophat-1.3.0/tophat';
     'tophat' => 'tophat',
 );
 
