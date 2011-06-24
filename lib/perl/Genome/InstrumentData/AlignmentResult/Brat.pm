@@ -51,6 +51,8 @@ sub required_rusage {
 sub _run_aligner {
     my $self = shift;
     my @input_pathnames = @_;
+    
+    $DB::single = 1;
 
     # get refseq info and fasta files
     my $reference_build = $self->reference_build;
@@ -102,9 +104,9 @@ sub _run_aligner {
         my $sd_above_insert_size = $instrument_data->sd_above_insert_size();
         my $sd_below_insert_size = $instrument_data->sd_below_insert_size();
 
-        # TODO first pass... so we're within 2 standard deviations of the median?
-        $min_insert_size = $median_insert_size - (2*$sd_below_insert_size); # TODO or should this also be above???
-        $max_insert_size = $median_insert_size + (2*$sd_above_insert_size);
+        # TODO first pass... is this correct?
+        $min_insert_size = $median_insert_size - (3*$sd_below_insert_size);
+        $max_insert_size = $median_insert_size + (3*$sd_above_insert_size);
 
         #die("paired end data requires insert size params - not implemented yet (talk to Chris M.)");
         #my $min_insert_size = $self->min_insert_size;	
@@ -125,21 +127,6 @@ sub _run_aligner {
     ##    my $ref_dir = dirname($reference_fasta_path);
     ##    print "ref_dir: $ref_dir\n";
 
-    # find all the individual reference fastas and load them into an array
-    # we'll keep a list with all references files for now
-    #opendir(DIR, $reference_directory) or die $!;
-    #while (my $filename = readdir(DIR)) {
-    #    # if the filename matches this regex, output it to the list
-    #    # should match 1.fa - 22.fa, along with X.fa, x.fa, Y.fa, y.fa
-    #    # XXX will fail on contigs (NT_113956.fa) or other formats (chr22.fa)
-    #    if ($filename =~ /^(([1-2]?[0-9])|([XYxy]))\.fa$/) {
-    #        #my $cur_ref_file = $reference_directory . "/" . $filename;
-    #        push @all_ref_files, "$reference_directory/$filename";
-    #        #$ref_fh->print($cur_ref_file . "\n");
-    #    }
-    #}
-    #closedir(DIR) or die $!;
-
     # Brat uses the concept of "list" files. List files are plain text files that contain a list of required input files.
     # For instance, brat's remove-dupl command requests a single plain-text file that lists all files of aligned reads to dedup.
     # If the output of our alignment step is bratout.dat, then the corresponding list file would contain a single line that has
@@ -157,7 +144,7 @@ sub _run_aligner {
 
     ## Note that we use the -P option with a pre-built index for alignment, but we still
     ## need the fastas for the acgt count step.
-    $list_files{'reference_fastas'} = _create_temporary_list_file(@reference_fastas);
+    $list_files{'reference_fastas'} = _create_temporary_list_file(\@reference_fastas);
 
     # Create the list of expected index files, too.
     my @index_files = map{
@@ -196,8 +183,8 @@ sub _run_aligner {
     
     # we need list files of mates for remove-dupl
     if ($paired_end) { # TODO should something happen when not running in paired end mode? look at documentation for remove-dupl i think...
-        $list_files{'mates1'} = _create_temporary_list_file(grep(/.+\/mates1\.txt$/, @trimmed_files));
-        $list_files{'mates2'} = _create_temporary_list_file(grep(/.+\/mates2\.txt$/, @trimmed_files));
+        $list_files{'mates1'} = _create_temporary_list_file([grep(/.+\/mates1\.txt$/, @trimmed_files)]);
+        $list_files{'mates2'} = _create_temporary_list_file([grep(/.+\/mates2\.txt$/, @trimmed_files)]);
     }
 
     # define the trim command and run it
@@ -230,7 +217,7 @@ sub _run_aligner {
     my @aligned_reads = ($scratch_directory . "/bratout.dat");
     
     # we need a list file for remove-dupl
-    $list_files{'aligned_reads'} = _create_temporary_list_file(@aligned_reads);
+    $list_files{'aligned_reads'} = _create_temporary_list_file(\@aligned_reads);
 
     # uses precomputed index; alternatively you could do something like -r $list_files{'reference_fastas'} instead of -P $reference_index_dir
     my $align_cmd = sprintf("%s -P %s %s -o %s %s",
@@ -263,7 +250,7 @@ sub _run_aligner {
     my @deduped_reads = map{$_ . ".nodupl"} @aligned_reads;
     
     # we need a list file for acgt-count
-    $list_files{'deduped_reads'} = _create_temporary_list_file(@deduped_reads);
+    $list_files{'deduped_reads'} = _create_temporary_list_file(\@deduped_reads);
 
     my $dedup_cmd = sprintf("%s -r %s %s",
         $brat_cmd_path . "remove-dupl",
@@ -332,10 +319,6 @@ sub _run_aligner {
     );
     unless($rv) { die $self->error_message("Sorting temporary sam file and appending to all_sequences.sam failed."); }
 
-    ##for testing - copy the output so I can look at it
-    ##system("cp $scratch_directory/* /gscmnt/sata921/info/medseq/cmiller/methylSeq/tmp/scratch1/");
-    ##system("cp $refs_file /gscmnt/sata921/info/medseq/cmiller/methylSeq/tmp/scratch1/");
-
 
 
 
@@ -382,24 +365,12 @@ sub _run_aligner {
     );
     unless($rv) { die $self->error_message("Methylation mapping failed."); }
 
-    ##for testing
-    # system("cp $scratch_directory/* /gscmnt/sata921/info/medseq/cmiller/methylSeq/tmp/scratch2/");
-    # system("cp $list_file /gscmnt/sata921/info/medseq/cmiller/methylSeq/tmp/scratch2/");
-    # system("cp $list2_file /gscmnt/sata921/info/medseq/cmiller/methylSeq/tmp/scratch2/");
-    # system("cp $refs_file /gscmnt/sata921/info/medseq/cmiller/methylSeq/tmp/scratch2/");
-
 
 
 
     ###################################################
     # clean up
     ###################################################
-    # move the methMap output files to the staging dir
-    # this is redundant? just create them in the staging directory...
-    #move("$scratch_directory/map_forw.txt", $staging_directory) or die $self->error_message(
-        #"Failed to move forward methylation map ($scratch_directory/map_forw.txt) to staging directory ($staging_directory).");
-    #move("$scratch_directory/map_rev.txt", $staging_directory) or die $self->error_message(
-        #"Failed to move reverse methylation map ($scratch_directory/map_rev.txt) to staging directory ($staging_directory).");
 
     # confirm that at the end we have a nonzero sam file, this is what'll get turned into a bam and copied out.
     unless (-s $sam_file) { die $self->error_message("The sam output file $sam_file is zero length; something went wrong."); }
@@ -470,8 +441,7 @@ sub decomposed_aligner_params {
 }
 
 sub _create_temporary_list_file {
-    my $self = shift;
-    my @items = shift;
+    my @items = @{(shift)};
 
     my ($temp_fh, $temp_file) = Genome::Sys->create_temp_file();
     $temp_fh->print(join("\n",@items)."\n");
@@ -562,11 +532,11 @@ sub prepare_reference_sequence_index {
     my @reference_fastas = $class->_split_reference_fasta_by_contig($reference_fasta_path, $staging_directory);
 
     # create a file that lists all these reference fastas; this is for convenience and so we only have one regex determing contigs used
+    print Data::Dumper::Dumper([@reference_fastas]);
     my $reference_fasta_list_fh = IO::File->new("> $staging_directory/reference_fasta_list.txt");
-    $reference_fasta_list_fh->print(join("\n",map(basename, @reference_fastas))."\n");
+    $reference_fasta_list_fh->print(join("\n",map({basename($_)} @reference_fastas))."\n");
     $reference_fasta_list_fh->close();
 
-    print Data::Dumper::Dumper([@reference_fastas]);
 
 
 
@@ -589,7 +559,7 @@ sub prepare_reference_sequence_index {
     # the only aligner parameters that brat-large-build needs to know about are -S and -bs; this filters all the others out
     my $filtered_params = join(" ", grep(/^-(?:S|bs)/, split(/\s(?=-)/, $aligner_params{'align_options'})));
     
-    my $reference_fastas_list_file = _create_temporary_list_file(@reference_fastas);
+    my $reference_fastas_list_file = _create_temporary_list_file(\@reference_fastas);
 
     my $index_cmd = sprintf("%s -r %s -P %s %s",
         $brat_cmd_path . "brat-large-build",

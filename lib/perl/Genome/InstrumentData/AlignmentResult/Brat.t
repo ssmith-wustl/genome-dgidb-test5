@@ -79,17 +79,30 @@ my $temp_reference_index = Genome::Model::Build::ReferenceSequence::AlignerIndex
 
 ok($temp_reference_index, "prepared temporary reference index");
 
-my $instrument_data = generate_fake_instrument_data();
-die("End");
+#my $pe_instrument_data = generate_fake_pe_instrument_data();
+## Uncomment this to create the dataset necessary for shorcutting to work
+##test_alignment(generate_shortcut_data => 1, instrument_data => $instrument_data);
+#
+#test_shortcutting(instrument_data => $pe_instrument_data);
+#test_alignment(validate_against_shortcut => 1, instrument_data=>$pe_instrument_data, test_name => 'validate_shortcut_data');
+# cleanup locks after testing alignment
+#$FAKE_INSTRUMENT_DATA_ID--;
+#$pe_instrument_data = generate_fake_pe_instrument_data();
+#test_alignment(force_fragment => 1, instrument_data=>$pe_instrument_data);
+#$FAKE_INSTRUMENT_DATA_ID--;
+#my $se_instrument_data = generate_fake_se_instrument_data();
+#test_alignment(force_fragment => 1, instrument_data=>$se_instrument_data);
+
+my $se_instrument_data = generate_fake_pe_instrument_data();
 # Uncomment this to create the dataset necessary for shorcutting to work
 #test_alignment(generate_shortcut_data => 1, instrument_data => $instrument_data);
 
-test_shortcutting(instrument_data => $instrument_data);
-test_alignment(validate_against_shortcut => 1, instrument_data=>$instrument_data, test_name => 'validate_shortcut_data');
+test_shortcutting(instrument_data => $se_instrument_data);
+test_alignment(validate_against_shortcut => 1, instrument_data=>$se_instrument_data, test_name => 'validate_shortcut_data');
 # cleanup locks after testing alignment
 $FAKE_INSTRUMENT_DATA_ID--;
-$instrument_data = generate_fake_instrument_data();
-test_alignment(force_fragment => 1, instrument_data=>$instrument_data);
+$se_instrument_data = generate_fake_se_instrument_data();
+test_alignment(force_fragment => 1, instrument_data=>$se_instrument_data);
 
 sub test_alignment {
     my %p = @_;
@@ -224,7 +237,7 @@ sub test_shortcutting {
 }
 
 my ($library, $sample);
-sub generate_fake_instrument_data {
+sub generate_fake_se_instrument_data {
     if ( not $library or not $sample ) {
         $sample = Genome::Sample->create(
             name => 'test_sample_name',
@@ -237,18 +250,51 @@ sub generate_fake_instrument_data {
         ok($library, 'create library');
     }
 
-    my $fastq_directory = '/gsc/var/cache/testsuite/data/Genome-InstrumentData-Align-Maq/test_sample_name';
+    my $fastq_directory = '/gsc/var/cache/testsuite/data/Genome-InstrumentData-AlignmentResult-Brat/se/fastq';
     my $instrument_data = Genome::InstrumentData::Solexa->create(
         id => $FAKE_INSTRUMENT_DATA_ID,
         library => $library,
         flow_cell_id => '12345',
         lane => '1',
-        median_insert_size => '22',
+        run_name => '110101_TEST',
+        subset_name => 4,
+        run_type => 'Single', # or would we just remove this key altogether?
+        gerald_directory => $fastq_directory,
+        bam_path => '/gsc/var/cache/testsuite/data/Genome-InstrumentData-AlignmentResult-Brat/se/input.bam'
+    );
+    ok($instrument_data, 'create instrument data: '.$instrument_data->id);
+    ok(!$instrument_data->is_paired_end, 'instrument data is single end');
+
+    return $instrument_data;
+}
+
+sub generate_fake_pe_instrument_data {
+    if ( not $library or not $sample ) {
+        $sample = Genome::Sample->create(
+            name => 'test_sample_name',
+        );
+        ok($sample, 'create sample') or die;
+        $library = Genome::Library->create(
+            name => $sample->name.'-lib1',
+            sample => $sample,
+        );
+        ok($library, 'create library');
+    }
+
+    my $fastq_directory = '/gsc/var/cache/testsuite/data/Genome-InstrumentData-AlignmentResult-Brat/pe/fastq';
+    my $instrument_data = Genome::InstrumentData::Solexa->create(
+        id => $FAKE_INSTRUMENT_DATA_ID,
+        library => $library,
+        flow_cell_id => '12345',
+        lane => '1',
+        median_insert_size => '22', # TODO
+        sd_below_insert_size => '22', # TODO
+        sd_above_insert_size => '22', # TODO
         run_name => '110101_TEST',
         subset_name => 4,
         run_type => 'Paired',
         gerald_directory => $fastq_directory,
-        bam_path => '/gsc/var/cache/testsuite/data/Genome-InstrumentData-AlignmentResult-Bwa/input.bam'
+        bam_path => '/gsc/var/cache/testsuite/data/Genome-InstrumentData-AlignmentResult-Brat/pe/input.bam'
     );
     ok($instrument_data, 'create instrument data: '.$instrument_data->id);
     ok($instrument_data->is_paired_end, 'instrument data is paired end');
