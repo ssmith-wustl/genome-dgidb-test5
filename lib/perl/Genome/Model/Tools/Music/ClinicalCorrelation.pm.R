@@ -153,11 +153,10 @@ if (!is.null(outf))
 colnames(tt)=c("x","y","method","n","s","p","fdr","bon");
 tt=tt[order(tt[,"x"]),];
 tt=tt[order(tt[,"p"]),];
-if (method=="fisher")
-{
 tt[,"s"] = sapply(tt[,"s"], sprintf, fmt="%.4E");
 tt[,"p"] = sapply(tt[,"p"], sprintf, fmt="%.4E");
-}
+tt[,"fdr"] = sapply(tt[,"fdr"], sprintf, fmt="%.2E");
+tt[,"bon"] = sapply(tt[,"bon"], sprintf, fmt="%.2E");
 write.table(tt,file=outf,quote=FALSE,row.names=FALSE,sep=",");}
 invisible(tt);
 }
