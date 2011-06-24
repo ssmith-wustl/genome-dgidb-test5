@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 use File::Basename;
 
-my $DEFAULT = '1.1.2';
+my $DEFAULT = '1.3.0';
 
 class Genome::Model::Tools::Tophat {
     is => 'Command',
