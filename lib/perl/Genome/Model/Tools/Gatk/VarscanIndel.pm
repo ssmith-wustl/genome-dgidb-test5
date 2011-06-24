@@ -161,7 +161,7 @@ sub execute {                               # replace with real execution logic.
 		## Calculate P-value ##
 		my $normal_coverage = $normal_reads1 + $normal_reads2;
 		my $tumor_coverage = $tumor_reads1 + $tumor_reads2;
-		my $variant_p_value = Varscan::FisherTest::calculate_p_value(($normal_coverage + $tumor_coverage), 0, ($normal_reads1 + $tumor_reads1), ($tumor_reads1 + $tumor_reads2));
+		my $variant_p_value = Varscan::FisherTest::calculate_p_value(($normal_coverage + $tumor_coverage), 0, ($normal_reads1 + $tumor_reads1), ($normal_reads2 + $tumor_reads2));
 		if($variant_p_value < 0.001)
 		{
 			$variant_p_value = sprintf("%.3e", $variant_p_value);			

@@ -5,6 +5,7 @@ use warnings;
 
 use Genome;
 use File::Basename;
+use File::Path 'make_path';
 use Sys::Hostname;
 use Data::Dumper;
 
@@ -581,6 +582,8 @@ sub extract_reads_from_bam {
 
     my %original_data_path_to_fastq_files;
 
+    my $dir = Genome::Sys->create_temp_directory();
+
     # Create a hash to map original_data_path -- (to be used when uploading , describing where the reads came from (which alignment result) and what they are, (aligned on unaligned) )
     # -- to the original location of the file, and the original instrument data id it came from
     for my $file (@files) {
@@ -592,7 +595,8 @@ sub extract_reads_from_bam {
         } else {
             $read_type = "unaligned_reads";
         }
-        my $part="/tmp/$read_type/$alignment_result";
+        my $part = "$dir/$read_type/$alignment_result";
+        make_path($part);
         if ($pe_segment){
             my $original_data_path = "$part/s_".$lane."_1_sequence.txt," . "$part/s_".$lane."_2_sequence.txt";
             $original_data_path_to_fastq_files{$original_data_path}->{file}->{$pe_segment} = $file;
@@ -661,8 +665,20 @@ sub upload_instrument_data_and_unlock {
             my ($original_data_path_1, $original_data_path_2) = split ",", $original_data_path;
             Genome::Sys->create_symlink($orig_data_paths_to_fastq_files->{$original_data_path}->{file}->{1}, $original_data_path_1);
             Genome::Sys->create_symlink($orig_data_paths_to_fastq_files->{$original_data_path}->{file}->{2}, $original_data_path_2);
+            if(! -s $original_data_path_1) {
+                $self->warning_message('$original_data_path_1 is empty');
+                next;
+            }
+            if(! -s $original_data_path_2) {
+                $self->warning_message('$original_data_path_2 is empty');
+                next;
+            }
         } else {
             Genome::Sys->create_symlink($orig_data_paths_to_fastq_files->{$original_data_path}->{file}, $original_data_path);
+            if(! -s $original_data_path) {
+                $self->warning_message('$original_data_path is empty');
+                next;
+            }
         }
         # Link the actual file to the descriptive location in original_data_path
         my $orig_inst_data = Genome::InstrumentData->get($orig_data_paths_to_fastq_files->{$original_data_path}->{instrument_data_id});

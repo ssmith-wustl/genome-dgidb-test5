@@ -874,11 +874,6 @@ sub _launch {
     else {
         my $user = getpwuid($<);
         $job_group_spec = ' -g /build2/' . $user;
-        # TODO: Remove the 'genotype microarray' special case. It's just meant to help track the fact that
-        # the models are running with job_dispatch => inline.
-        if ($self->type_name && $self->type_name eq 'genotype microarray') {
-            $job_group_spec = ' -g /build2/' . $user . '/genotype_microarray';
-        }
     }
 
     die "Bad params!  Expected server_dispatch and job_dispatch!" . Data::Dumper::Dumper(\%params) if %params;
@@ -1879,6 +1874,14 @@ sub snapshot_revision {
     }
 
     @inc = $self->_uniq(@inc);
+
+    # if the only path is like /gsc/scripts/opt/genome/snapshots/genome-1213/lib/perl then just call it genome-1213
+    # /gsc/scripts/opt/genome/snapshots/genome-1213/lib/perl -> genome-1213
+    # /gsc/scripts/opt/genome/snapshots/custom/genome-foo/lib/perl -> custom/genome-foo
+    if (@inc == 1 and $inc[0] =~ /^\/gsc\/scripts\/opt\/genome\/snapshots\//) {
+        $inc[0] =~ s/^\/gsc\/scripts\/opt\/genome\/snapshots\///;
+        $inc[0] =~ s/\/lib\/perl$//;
+    }
 
     return join(':', @inc);
 }
