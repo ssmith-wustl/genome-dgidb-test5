@@ -796,7 +796,7 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
     my $pse = shift;
 
     my @new_models;
-    my @whole_genome_ref_align_models;
+    my @ref_align_models;
 
     my %model_params = (
         name                    => 'AQID-PLACE_HOLDER',
@@ -842,7 +842,7 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
     $regular_model->name($name);
     
     if ($regular_model->isa('Genome::Model::ReferenceAlignment')) {
-        push @whole_genome_ref_align_models, $regular_model;
+        push @ref_align_models, $regular_model;
     }
 
     if ( $capture_target ) {
@@ -998,10 +998,7 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
 
     # Now that they've had their instrument data assigned get_or_create_lane_qc_models
     # Based of the ref-align models so that alignment can shortcut
-    for my $model (@whole_genome_ref_align_models) {
-        my $subject = $model->subject;
-        next unless $subject->isa('Genome::Sample'); # usually is sample but default_genotype_data_id is only on sample not population group
-        next unless $subject->default_genotype_data_id; # can't build lane QC without it
+    for my $model (@ref_align_models) {
         my @lane_qc_models = $model->get_or_create_lane_qc_models;
         my @buildless_lane_qc_models = grep { not scalar @{[ $_->builds ]} } @lane_qc_models;
         push @new_models, @buildless_lane_qc_models;
