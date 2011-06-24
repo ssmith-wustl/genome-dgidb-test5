@@ -87,6 +87,7 @@ sub execute {                               # replace with real execution logic.
         $tier1_bases = parse_regions_file($self->tier1_space) if(!$tier1_bases);
         $tier2_bases = parse_regions_file($self->tier2_space) if(!$tier2_bases);
         $tier3_bases = parse_regions_file($self->tier3_space) if(!$tier3_bases);
+        my $non_tier1_bases = $tier2_bases + $tier3_bases;
 
         ## Load the tier 1 mutations and calculate its rate ##
             
@@ -101,9 +102,11 @@ sub execute {                               # replace with real execution logic.
         $total_mutations = $tier1_mutations;        
         $total_bases = $tier1_bases;
 
+        my $tier2_mutations = my $tier3_mutations = 0;
+
         if($self->tier2_file)
         {
-            my $tier2_mutations = parse_mutations_file($self->tier2_file);
+            $tier2_mutations = parse_mutations_file($self->tier2_file);
             $total_bases += $tier2_bases;
             $total_mutations += $tier2_mutations;
             my $tier2_rate = ($tier2_mutations / $coverage_factor) / ($tier2_bases / 1000000);
@@ -115,7 +118,7 @@ sub execute {                               # replace with real execution logic.
 
         if($self->tier3_file)
         {
-            my $tier3_mutations = parse_mutations_file($self->tier3_file);
+            $tier3_mutations = parse_mutations_file($self->tier3_file);
             $total_mutations += $tier3_mutations;
             $total_bases += $tier3_bases;
             my $tier3_rate = ($tier3_mutations / $coverage_factor) / ($tier3_bases / 1000000);
@@ -125,11 +128,19 @@ sub execute {                               # replace with real execution logic.
 
         }
 
+        ## Calculate non-tier1 rate ##
+        
+        my $non_tier1_mutations = $tier2_mutations + $tier3_mutations;
+        my $non_tier1_rate = ($non_tier1_mutations / $coverage_factor) / ($non_tier1_bases / 1000000);
+        $mutation_string .= "\t$non_tier1_mutations";
+        $rate_string .= "\t$non_tier1_rate";
+
         ## Calculate overall mutation rate ##
 
         my $overall_rate = ($total_mutations / $coverage_factor) / ($total_bases / 1000000);
         $mutation_string .= "\t$total_mutations";
         $rate_string .= "\t$overall_rate";
+
 
 #        print join("\t", "ALL", $total_mutations, commify($total_bases), $overall_rate)  . "\n";
         print $self->sample_name . $mutation_string . $rate_string . "\n";
