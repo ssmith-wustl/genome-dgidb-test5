@@ -999,6 +999,10 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
     # Now that they've had their instrument data assigned get_or_create_lane_qc_models
     # Based of the ref-align models so that alignment can shortcut
     for my $model (@ref_align_models) {
+        next unless $model->type_name eq 'reference alignment';
+        next unless $model->processing_profile_name =~ /^\w+\ \d+\ Default\ Reference\ Alignment/; # e.g. Feb 2011 Defaulte Reference Alignment
+        next if $model->target_region_set_name; # the current lane QC does not work for custom capture/exome
+
         my @lane_qc_models = $model->get_or_create_lane_qc_models;
         my @buildless_lane_qc_models = grep { not scalar @{[ $_->builds ]} } @lane_qc_models;
         push @new_models, @buildless_lane_qc_models;
