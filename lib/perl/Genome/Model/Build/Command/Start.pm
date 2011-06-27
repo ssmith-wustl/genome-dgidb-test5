@@ -114,7 +114,7 @@ sub execute {
     }
 
     $self->display_builds_started();
-    $self->display_summary_report($self->_total_count, $self->_errors);
+    $self->display_command_summary_report($self->_total_count, $self->_errors);
 
     return !scalar($self->_errors);
 }

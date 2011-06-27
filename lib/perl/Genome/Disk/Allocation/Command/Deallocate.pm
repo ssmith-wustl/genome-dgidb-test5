@@ -50,7 +50,7 @@ sub execute {
         }
     }
 
-    $self->display_summary_report(scalar(@allocations), @errors);
+    $self->display_command_summary_report(scalar(@allocations), @errors);
 
     return !scalar(@errors);
 }

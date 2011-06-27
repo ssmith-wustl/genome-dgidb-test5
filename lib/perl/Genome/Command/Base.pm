@@ -751,7 +751,7 @@ sub _unique_elements {
     return @unique;
 }
 
-sub display_summary_report {
+sub display_command_summary_report {
     my ($self, $total_count, @errors) = @_;
 
     if (@errors) {

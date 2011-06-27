@@ -48,7 +48,7 @@ sub execute {
         }
     }
 
-    $self->display_summary_report(scalar(@objects), @errors);
+    $self->display_command_summary_report(scalar(@objects), @errors);
 
     return 1; 
 }
