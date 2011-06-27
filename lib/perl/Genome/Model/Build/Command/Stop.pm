@@ -32,7 +32,7 @@ sub execute {
             $self->status_message("Successfully stopped build (" . $build->__display_name__ . ").");
         }
         else {
-            push @errors, "Failed to stop build (" . $build->__display_name__ . "): $@.";
+            $self->append_error($build->__display_name__, "Failed to stop build: $@.");
             $transaction->rollback();
         }
     }
