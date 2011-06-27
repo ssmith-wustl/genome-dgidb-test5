@@ -42,7 +42,7 @@ my @expected_output_files = qw| indels.hq
                                 indels.lq.v1.bed
                                 indels.lq.v2.bed | ;
 
-
+$DB::single=1;
 my $detector_result = Genome::Model::Tools::DetectVariants2::Result->__define__(
     output_dir => $detector_directory,
     detector_name => 'test',

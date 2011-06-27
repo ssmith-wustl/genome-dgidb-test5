@@ -133,9 +133,6 @@ EOS
 # resolve_class_and_params_for_argv will check for us to make sure all the property names are valid
 sub _process_params { 
     my $self = shift;
-
-    my @param_list = split(" ", $self->params); #gives error here.
-    my($cmd_class,$params) = $self->class->resolve_class_and_params_for_argv(@param_list);
     if ($self->params) {
         my @param_list = split(" ", $self->params);
         my($cmd_class,$params) = $self->class->resolve_class_and_params_for_argv(@param_list);
@@ -449,6 +446,7 @@ sub _link_to_result {
 sub detector_directory {
     my $self = shift;
 
+    $DB::single=1;
     my $previous_result = $self->previous_result;
 
     unless($self->_detector_directory) {

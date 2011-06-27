@@ -10,40 +10,40 @@ use IO::File;
 class Genome::Model::Tools::Sam::IndelFilter {
     is  => 'Command',
     has => [
-        indel_file => {
-            is  => 'String',
-            doc => 'The input samtools pileup indel file',
-        },
+    indel_file => {
+        is  => 'String',
+        doc => 'The input samtools pileup indel file',
+    },
     ],
     has_optional => [
-        out_file       => {
-            is  => 'String',
-            doc => 'The filtered output indel file',
-        },
-        lq_file        => {
-            is => 'String',
-            doc => 'Lines from the indel file that failed the filter',
-        },
-        max_read_depth => {
-            is  => 'Integer',
-            doc => 'maximum read depth, default 100',
-            default => 100,
-        },
-        min_win_size   => {
-            is  => 'Integer',
-            doc => 'minimum distance between two adjacent indels, default 10',
-            default => 10,
-        },
-        scaling_factor => {
-            is  => 'Integer',
-            doc => 'scaling factor in score calculation, default 100',
-            default => 100,
-        },
-        is_ref         => {
-            is  => 'Boolean',
-            doc => 'reference flag, default 0',
-            default => 0,
-        },
+    out_file       => {
+        is  => 'String',
+        doc => 'The filtered output indel file',
+    },
+    lq_file        => {
+        is => 'String',
+        doc => 'Lines from the indel file that failed the filter',
+    },
+    max_read_depth => {
+        is  => 'Integer',
+        doc => 'maximum read depth, default 100',
+        default => 100,
+    },
+    min_win_size   => {
+        is  => 'Integer',
+        doc => 'minimum distance between two adjacent indels, default 10',
+        default => 10,
+    },
+    scaling_factor => {
+        is  => 'Integer',
+        doc => 'scaling factor in score calculation, default 100',
+        default => 100,
+    },
+    is_ref         => {
+        is  => 'Boolean',
+        doc => 'reference flag, default 0',
+        default => 0,
+    },
     ],
 };
 
@@ -62,7 +62,7 @@ EOS
 
 sub execute {
     my $self = shift;
-    
+
     my $indel_file = $self->indel_file;
     my $is_ref     = $self->is_ref ? 1 : 0;
 
@@ -70,7 +70,7 @@ sub execute {
         $self->error_message('Can not find valid SAM indel file: '.$indel_file);
         return;
     }
-    
+
     my @curr = ();
     my @last = ();
 
@@ -83,22 +83,19 @@ sub execute {
         $lq_fh = Genome::Sys->open_file_for_writing($lq_file) or return;
     }
     while (my $indel = $indel_fh->getline) {
-        
+
         my @items = split /\s+/, $indel;
-        
-        $id = $items[2];
-                
-        if ($id eq '.') {
-            $m_pileup = 1;
-            next if $indel =~ /^#/;
-            next if $indel =~ /INDEL/;
-        }
 
         #1 42466824    *   +A/+A   40  0   75  1   +A  *   1   0   0
 
         my ($chr, $pos, $id, $indel_detail, $score, $rd_depth, $indel_seq1, $indel_seq2, $subscore1, $subscore2) = map{$items[$_]}(0..3, 5, 7..11);
-         next unless $id eq '*';
+        next unless $id eq '*';
 
+        if ($id eq '.') {
+            my $m_pileup = 1;
+            next if $indel =~ /^#/;
+            next if $indel =~ /INDEL/;
+        }
         if($rd_depth > $self->max_read_depth) {
             $lq_fh->print($indel) if $lq_fh;
             next;

@@ -31,7 +31,7 @@ use_ok($dispatcher_class);
 
 my $obj = $dispatcher_class->create(
     snv_detection_strategy => 'samtools r599 [-p 1] intersect samtools r613 [-p 2]',
-    indel_detection_strategy => 'samtools r963 [-p 1]',
+    indel_detection_strategy => 'samtools r599 [-p 1]',
     sv_detection_strategy => 'breakdancer 2010_06_24 [-p 3]',
     );
 
@@ -63,7 +63,7 @@ my $expected_plan = {
             'snv' => [
                 {
                     'params' => '-p 1',
-                    'version' => 'r963',
+                    'version' => 'r599',
                     'name' => 'samtools',
                     'filters' => [],
                     'class' => 'Genome::Model::Tools::DetectVariants2::Samtools'

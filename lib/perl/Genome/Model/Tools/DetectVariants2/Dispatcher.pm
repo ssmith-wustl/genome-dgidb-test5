@@ -198,7 +198,7 @@ sub _dump_workflow {
 sub _dump_dv_cmd {
     my $self = shift;
     my $cmd = join(" ",@INC)."\n===============================================\n";
-    $cmd  =      "gmt detect-variants2 dispatcher --output-directory " .$self->output_directory
+    $cmd  .=     "gmt detect-variants2 dispatcher --output-directory " .$self->output_directory
                 ." --aligned-reads-input ".$self->aligned_reads_input
                 ." --control-aligned-reads-input ".$self->control_aligned_reads_input
                 ." --reference-build-id ".$self->reference_build_id;
