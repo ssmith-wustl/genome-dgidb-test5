@@ -347,13 +347,21 @@
             <tr>
               <td class="name">build requested:
               </td>
-              <td class="value"><xsl:value-of select="aspect[@name='build_requested']/value"/>
+              <td class="value">
+                  <xsl:choose>
+                      <xsl:when test="aspect[@name='build_requested']/value">yes</xsl:when>
+                      <xsl:otherwise>no</xsl:otherwise>
+                  </xsl:choose>
               </td>
             </tr>
             <tr>
               <td class="name">build needed:
               </td>
-              <td class="value"><xsl:value-of select="aspect[@name='build_needed']/value"/>
+              <td class="value">
+                  <xsl:choose>
+                      <xsl:when test="aspect[@name='build_needed']/value">yes</xsl:when>
+                      <xsl:otherwise>no</xsl:otherwise>
+                  </xsl:choose>
               </td>
             </tr>
           </tbody>
