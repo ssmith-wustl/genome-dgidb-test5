@@ -129,6 +129,7 @@ sub execute {                               # replace with real execution logic.
 			my $size;
 			my $bedstart;
 			my $bedstop;
+			my $type;
 			if ($ref =~ m/\//) {
 				my $split = $ref;
 				($ref, $var) = split(/\//, $split);
@@ -138,11 +139,13 @@ sub execute {                               # replace with real execution logic.
 				$size = length($var);
 				$bedstart = ($start);
 				$bedstop = ($stop - 1);
+				$type = 'INS';
 			}
 			elsif ($var eq '-' || $var eq '0') { #del
 				$size = length($ref);
 				$bedstart = ($start - 1);
 				$bedstop = ($stop);
+				$type = 'DEL';
 			}
 			else {
 				print "Line $line in file $file has wrong insertion or deletion nomenclature. Either ref or var should be 0 or -";
@@ -153,8 +156,8 @@ sub execute {                               # replace with real execution logic.
 				print NOBED_INDELS_OUT "$chr\t$start\t$stop\t$ref\t$var\n";
 			}
 			elsif ( $size > 2) {
-				print LARGE_INDELS_OUT "$chr\t$bedstart\t$bedstop\t$ref\t$var\n";
-				print LARGE_NOBED_INDELS_OUT "$chr\t$start\t$stop\t$ref\t$var\n";
+				print LARGE_INDELS_OUT "$chr\t$bedstart\t$bedstop\t$ref\t$var\t$type\n";
+				print LARGE_NOBED_INDELS_OUT "$chr\t$start\t$stop\t$ref\t$var\t$type\n";
 			}
 		}
 		close($indel_input);
