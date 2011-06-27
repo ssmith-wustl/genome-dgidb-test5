@@ -1875,6 +1875,14 @@ sub snapshot_revision {
 
     @inc = $self->_uniq(@inc);
 
+    # if the only path is like /gsc/scripts/opt/genome/snapshots/genome-1213/lib/perl then just call it genome-1213
+    # /gsc/scripts/opt/genome/snapshots/genome-1213/lib/perl -> genome-1213
+    # /gsc/scripts/opt/genome/snapshots/custom/genome-foo/lib/perl -> custom/genome-foo
+    if (@inc == 1 and $inc[0] =~ /^\/gsc\/scripts\/opt\/genome\/snapshots\//) {
+        $inc[0] =~ s/^\/gsc\/scripts\/opt\/genome\/snapshots\///;
+        $inc[0] =~ s/\/lib\/perl$//;
+    }
+
     return join(':', @inc);
 }
 

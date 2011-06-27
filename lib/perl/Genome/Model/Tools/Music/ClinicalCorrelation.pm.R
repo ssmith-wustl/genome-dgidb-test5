@@ -151,12 +151,17 @@ tt=tt[order(tt[,"p"]),];
 if (!is.null(outf))
 {
 colnames(tt)=c("x","y","method","n","s","p","fdr","bon");
-tt=tt[order(tt[,"x"]),];
-tt=tt[order(tt[,"p"]),];
+
+#The amount of precision that R prints with is somehow machine dependent (or the R version?)
 tt[,"s"] = sapply(tt[,"s"], sprintf, fmt="%.4E");
 tt[,"p"] = sapply(tt[,"p"], sprintf, fmt="%.4E");
 tt[,"fdr"] = sapply(tt[,"fdr"], sprintf, fmt="%.2E");
 tt[,"bon"] = sapply(tt[,"bon"], sprintf, fmt="%.2E");
+
+#The ordering should be done after reformatting the precision (duh)
+tt=tt[order(tt[,"x"]),];
+tt=tt[order(tt[,"p"]),];
+
 write.table(tt,file=outf,quote=FALSE,row.names=FALSE,sep=",");}
 invisible(tt);
 }
