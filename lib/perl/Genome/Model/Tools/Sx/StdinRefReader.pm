@@ -1,4 +1,4 @@
-package Genome::Utility::IO::StdinRefReader;
+package Genome::Model::Tools::Sx::StdinRefReader;
 
 use strict;
 use warnings;
@@ -12,7 +12,7 @@ sub create {
 }
 
 BEGIN {
-    *Genome::Utility::IO::StdinRefReader::next = \&read;
+    *Genome::Model::Tools::Sx::StdinRefReader::next = \&read;
 }
 sub read {
     my $self = shift;
@@ -25,5 +25,3 @@ sub read {
 
 1;
 
-#$HeadURL$
-#$Id$

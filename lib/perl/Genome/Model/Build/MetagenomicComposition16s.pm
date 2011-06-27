@@ -306,7 +306,7 @@ sub get_writer_for_set_name {
     unless ( $self->{$set_name} ) {
         my $fasta_file = $self->processed_fasta_file_for_set_name($set_name);
         unlink $fasta_file if -e $fasta_file;
-        my $writer = Genome::Model::Tools::Sx::PhredWriter->create(files => [ $fasta_file ]);
+        my $writer = Genome::Model::Tools::Sx::PhredWriter->create(file => $fasta_file);
         Carp::confess("Failed to create phred reader for amplicon set ($set_name)") if not $writer;
         $self->{$set_name} = $writer;
     }

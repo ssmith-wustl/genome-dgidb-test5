@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 use File::Basename;
 
-my $DEFAULT = '1.3.0';
+my $DEFAULT = '1.1.2';
 
 class Genome::Model::Tools::Tophat {
     is => 'Command',
@@ -47,7 +47,7 @@ my %TOPHAT_VERSIONS = (
     '1.1.2'  => '/gsc/pkg/bio/tophat/tophat-1.1.2/tophat',
     '1.1.4'  => '/gsc/pkg/bio/tophat/tophat-1.1.4/tophat',
     '1.2.0'  => '/gsc/pkg/bio/tophat/tophat-1.2.0/tophat',
-    '1.3.0'  => '/gsc/pkg/bio/tophat/tophat-1.3.0/tophat',
+    '1.3.0'  => '/gsc/pkg/bio/tophat/tophat-1.3.0/tophat';
     'tophat' => 'tophat',
 );
 

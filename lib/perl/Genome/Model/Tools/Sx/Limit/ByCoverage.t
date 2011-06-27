@@ -11,12 +11,12 @@ use Test::More;
 # use
 use_ok('Genome::Model::Tools::Sx::Limit::ByCoverage') or die;
 
-# create fail
-ok(!Genome::Model::Tools::Sx::Limit::ByCoverage->create(), 'Create failed w/o bases and count');
-ok(!Genome::Model::Tools::Sx::Limit::ByCoverage->create(bases => 'all'), 'Create failed  w/ bases => all');
-ok(!Genome::Model::Tools::Sx::Limit::ByCoverage->create(bases => 0), 'Create failed w/ bases => 0');
-ok(!Genome::Model::Tools::Sx::Limit::ByCoverage->create(count => 'all'), 'Create failed  w/ count => all');
-ok(!Genome::Model::Tools::Sx::Limit::ByCoverage->create(count => 0), 'Create failed w/ count => 0');
+# fail
+ok(!Genome::Model::Tools::Sx::Limit::ByCoverage->execute(), 'failed w/o bases and count');
+ok(!Genome::Model::Tools::Sx::Limit::ByCoverage->execute(bases => 'all'), 'failed  w/ bases => all');
+ok(!Genome::Model::Tools::Sx::Limit::ByCoverage->execute(bases => 0), 'failed w/ bases => 0');
+ok(!Genome::Model::Tools::Sx::Limit::ByCoverage->execute(count => 'all'), 'failed  w/ count => all');
+ok(!Genome::Model::Tools::Sx::Limit::ByCoverage->execute(count => 0), 'failed w/ count => 0');
 
 # Files
 my $dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Sx';
@@ -67,5 +67,3 @@ is(File::Compare::compare($example_fastq, $out_fastq), 0, "fastq limited as expe
 done_testing();
 exit;
 
-#HeadURL$
-#$Id$

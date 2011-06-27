@@ -1,4 +1,4 @@
-package Genome::Utility::IO::StdoutRefWriter;
+package Genome::Model::Tools::Sx::StdoutRefWriter;
 
 use strict;
 use warnings;

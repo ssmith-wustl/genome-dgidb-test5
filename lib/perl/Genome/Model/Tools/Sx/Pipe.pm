@@ -94,7 +94,7 @@ sub _create_first_process {
 
     my @command_parts = (qw/ gmt fast-qual /);
     push @command_parts, split(/\s/, $command);
-    push @command_parts, '--input', join(',', $self->input), '--type-in', $self->type_in;
+    push @command_parts, '--input', join(',', $self->input);
     my $error_string;
     my $error_handle = IO::File->new(\$error_string, 'w');
     no warnings;
@@ -137,7 +137,6 @@ sub _create_last_process {
     my @command_parts = (qw/ gmt fast-qual /);
     push @command_parts, split(/\s/, $command);
     push @command_parts, '--output', join(',', $self->output);
-    push @command_parts, '--type-out', $self->type_out if $self->type_out;
     if ( defined $self->metrics_file_out ) {
         push @command_parts, '--metrics-file', $self->metrics_file_out;
     }
