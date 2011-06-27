@@ -36,7 +36,6 @@ sub process_source {
         my ($id, $reference_bases, $variant_bases, @extra); #mpileup variables that aren't included in pileup variables.
 
         my @line_array = split("\t", $line);
-
         if ($line_array[2] eq '.') { #deciding if it's pileup or mpileup
 
             #seven is how many columns in the vcf file for mpileup
@@ -56,7 +55,6 @@ sub process_source {
         }
 
         for my $indel ($indel_call_1, $indel_call_2) {
-
             next if $indel eq '*'; #Indicates only one indel call...and this isn't it!
             my ($reference, $variant, $start, $stop);
 
