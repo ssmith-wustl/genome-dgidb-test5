@@ -44,10 +44,6 @@ class Genome::Model::Build::Command::Start {
             is => 'Integer',
             default => 0,
         },
-        _total_count => {
-            is => 'Integer',
-            default => 0,
-        },
         _create_params => {
             is => 'Hash',
             default => {},
@@ -55,10 +51,6 @@ class Genome::Model::Build::Command::Start {
         _start_params => {
             is => 'Hash',
             default => {},
-        },
-        _errors => {
-            is => 'Text',
-            is_many => 1,
         },
     ],
 
@@ -105,18 +97,18 @@ sub execute {
             $self->status_message("Already started max builds $self->_builds_started, quitting");
             last; 
         }
-        $self->_total_count($self->_total_count + 1);
+        $self->total_command_count($self->total_command_count + 1);
         if (!$self->force && ($model->running_builds or $model->scheduled_builds)) {
-            $self->add__error($1);
+            $self->append_error($model->__display_name__, "Model already has running or scheduled builds. Use the '--force' option to override this and start a new build.");
             next;
         }
         $self->create_and_start_build($model);
     }
 
     $self->display_builds_started();
-    $self->display_command_summary_report($self->_total_count, $self->_errors);
+    $self->display_command_summary_report();
 
-    return !scalar($self->_errors);
+    return !scalar($self->command_errors);
 }
 
 sub create_and_start_build {
@@ -128,7 +120,7 @@ sub create_and_start_build {
     my $build = eval {
         my $build = Genome::Model::Build->create(model_id => $model->id, %{$self->_create_params});
         unless ($build) {
-            die $self->error_message("Failed to create new build.");
+            die $self->error_message($model->__display_name__, "Failed to create new build.");
         }
         return $build;
     };
@@ -147,33 +139,33 @@ sub create_and_start_build {
             }
             else {
                 if ($build->status eq 'Unstartable') {
-                    $self->add__error($model->__display_name__ . ': Build (' . $build->id . ') created but Unstartable, review build\'s notes.');
+                    $self->append_error($model->__display_name__, 'Build (' . $build->id . ') created but Unstartable, review build\'s notes.');
                 }
                 elsif ($@) {
-                    $self->add__error($model->__display_name__ . ': Build (' . $build->id . ') ' . $@);
+                    $self->append_error($model->__display_name__, 'Build (' . $build->id . ') ' . $@);
                 }
                 else {
-                    $self->add__error($model->__display_name__ . ': Build (' . $build->id . ') not started but unable to parse error, review console output.');
+                    $self->append_error($model->__display_name__, 'Build (' . $build->id . ') not started but unable to parse error, review console output.');
                 }
             }
         }
         else {
             # If we couldn't commit after trying to start then something blocked us from even committing that the build was Unstartable.
-            $self->add__error($model->__display_name__ . ': Failed to commit build, rolling back prior to creation.');
+            $self->append_error($model->__display_name__, 'Failed to commit build start, rolling back to build creation.');
             $start_transaction->rollback;
-            $create_transaction->rollback;
         }
     }
     else {
         if ($@) {
-            $self->add__error($model->__display_name__ . ": " . $@);
+            $self->append_error($model->__display_name__, $@);
         }
         else {
-            $self->add__error($model->__display_name__ . ': Build not created but unable to parse error, review console output.');
+            $self->append_error($model->__display_name__, 'Build not created but unable to parse error, review console output.');
         }
         $create_transaction->rollback;
     }
 }
+
 
 sub display_builds_started {
     my $self = shift;
@@ -183,5 +175,7 @@ sub display_builds_started {
     }
     return 1;
 }
+
+
 1;
 
