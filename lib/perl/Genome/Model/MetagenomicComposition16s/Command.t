@@ -62,8 +62,7 @@ ok(
 
 # build
 my $build = Genome::Model::Build::MetagenomicComposition16s->create(
-    model => $model,
-    data_directory => $model->data_directory,
+    model => $model
 );
 ok($build, 'Added build to model');
 

@@ -67,7 +67,6 @@ sub params_for_test_class {
         name => 'Test Sweetness',
         subject_name => $_[0]->mock_sample_name,
         subject_type => 'sample_name',
-        data_directory => $_[0]->tmp_dir,
         processing_profile_id => $_[0]->_tester_processing_profile->id,
     );
 }
@@ -134,16 +133,6 @@ sub test00_invalid_creates : Tests(4) {
 
     # try to recreate
     ok(!$self->test_class->create(%params), 'Recreate fails');
-
-    return 1;
-}
-
-sub test01_directories_and_links : Tests(4) {
-    my $self = shift;
-
-    my $model = $self->_model;
-    is($model->data_directory, $self->tmp_dir, "Model data directory");
-    ok($model->resolve_data_directory, "Resolve data directory");
 
     return 1;
 }
@@ -297,13 +286,6 @@ sub create_basic_mock_model {
         confess "No processing profile or type name given to create mock model";
     }
 
-    # Dir
-    my $model_data_dir = ( delete $params{use_mock_dir} ) 
-    ? $self->mock_model_dir_for_type_name($type_name)
-    : File::Temp::tempdir(CLEANUP => 1);
-
-    confess "Can't find mock model data directory: $model_data_dir" unless -d $model_data_dir;
-    
     # Model
     my $sample = $self->create_mock_sample;
     my $model = $self->create_mock_object(
@@ -314,7 +296,6 @@ sub create_basic_mock_model {
         subject_name => $sample->name,
         subject_type => 'sample_name',
         processing_profile_id => $pp->id,
-        data_directory => $model_data_dir,
     )
         or confess "Can't create mock $type_name model";
 
@@ -406,22 +387,22 @@ sub add_mock_build_to_model {
 
     confess "No model given to add mock build" unless $model;
 
-    my $data_directory = $model->data_directory.'/build';
     my $build_class = 'Genome::Model::Build::'.Genome::Utility::Text::string_to_camel_case($model->type_name);
     if ( grep { $model->type_name eq $_ } ('metagenomic composition 16s', 'reference alignment') ) { # TODO add ref align too?
         print Dumper([$model, $model->processing_profile]);
         $build_class .= '::'.Genome::Utility::Text::string_to_camel_case($model->processing_profile->sequencing_platform);
     }
     
+    my $data_dir = File::Temp::tempdir(CLEANUP => 1);
+
     # Build
     my $build = $self->create_mock_object(
         class => $build_class,
         model => $model,
         model_id => $model->id,
-        data_directory => $data_directory,
         type_name => $model->type_name,
+        data_directory => $data_dir,
     ) or confess "Can't create mock ".$model->type_name." build";
-    mkdir $data_directory unless -d $data_directory;
 
     $self->mock_methods(
         $build,
@@ -876,7 +857,6 @@ sub get_mock_model {
         subject_name => $subject->name,
         subject_type => 'sample_name',
         processing_profile_id => $pp->id,
-        data_directory => File::Temp::tempdir(CLEANUP => 1),
     )
         or confess "Can't create mock model ($class)";
 
@@ -904,20 +884,14 @@ sub get_mock_build {
     Carp::confess("No class given to get mock build.") unless $class;
     my $model = delete $params{model};
     Carp::confess("No model given to get mock build.") unless $model;
-    my $data_directory = delete $params{data_directory};
-    unless ( $data_directory ) { # TODO use build id??
-        $data_directory = $model->data_directory.'/build';
-    }
 
     # Create
     my $build = $self->create_mock_object(
         class => $class,
         model => $model,
         model_id => $model->id,
-        data_directory => $data_directory,
         type_name => $model->type_name,
     ) or confess "Can't create mock ".$model->type_name." build";
-    mkdir $data_directory unless -d $data_directory;
 
     # Methods
     $self->mock_methods(

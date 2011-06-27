@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use Genome;
+use Genome::Model::Build::Command::Start;
 
 use POSIX qw(ceil);
 
@@ -24,6 +25,31 @@ class Genome::Model::Command::Services::BuildQueuedModels {
             is => 'Integer',
             default => 0,
             doc => 'zero-based channel to use',
+        },
+        builds => {
+            is => 'Genome::Model::Build',
+            is_many => 1,
+            is_output => 1,
+        },
+        _builds_started => {
+            is => 'Integer',
+            default => 0,
+        },
+        _total_count => {
+            is => 'Integer',
+            default => 0,
+        },
+        _create_params => {
+            is => 'Hash',
+            default => {},
+        },
+        _start_params => {
+            is => 'Hash',
+            default => {},
+        },
+        _errors => {
+            is => 'Text',
+            is_many => 1,
         },
     ],
 };
@@ -75,57 +101,29 @@ sub execute {
         {build_requested => '1'},
     );
 
-    my @errors;
-    my $builds_started = 0;
-    my $total_count = 0;
+    ITERATOR:
     while (my $iterator_params = shift @iterator_params) {
         my $models = Genome::Model->create_iterator(%{$iterator_params});
 
+        MODEL:
         while (my $model = $models->next) {
-            next unless ($model->id % $self->channels == $self->channel);
-            if ($builds_started >= $max_builds_to_start){
-                $self->status_message("Already started max builds $builds_started, quitting...");
-                last; 
+            next MODEL unless ($model->id % $self->channels == $self->channel);
+
+            if ($self->_builds_started >= $max_builds_to_start){
+                $self->status_message("Already started max builds (" . $self->_builds_started . "), quitting...");
+                last ITERATOR; 
             }
 
-            $self->status_message("Trying to start #" . ($builds_started + 1) . ': ' . $model->__display_name__ . "...");
-            $total_count++;
-
-            my $transaction = UR::Context::Transaction->begin();
-            my $build = eval {
-                my $build = Genome::Model::Build->create(model_id => $model->id);
-                unless ($build) {
-                    die $self->error_message("Failed to create build for model (".$model->name.", ID: ".$model->id.").");
-                }
-                return $build;
-            };
-            if($build and $transaction->commit()) {
-                my $start_transaction = UR::Context::Transaction->begin();
-                my $build_started = eval { $build->start; };
-                if ($build_started) {
-                    $builds_started++;
-                    $self->status_message("Successfully started build (" . $build->__display_name__ . ").");
-                }
-                else {
-                    push @errors, $self->error_message("Failed to start build (" . $build->__display_name__ . "): " . ($@ || $build->error_message));
-                }
-                unless($start_transaction->commit()) {
-                    push @errors, $self->error_message("Failed to commit start transaction for build " . $build->__display_name__);
-                    $start_transaction->rollback();
-                }
-            }
-            else {
-                push @errors, $model->__display_name__ . ": " . $@;
-                $transaction->rollback();
-            }
+            $self->_total_count($self->_total_count + 1);
+            Genome::Model::Build::Command::Start::create_and_start_build($self, $model);
         }
     }
 
-    my $expected_count = ($max_builds_to_start > $total_count ? $total_count : $max_builds_to_start);
-    $self->display_summary_report($total_count, @errors);
+    my $expected_count = ($max_builds_to_start > $self->_total_count ? $self->_total_count : $max_builds_to_start);
+    $self->display_command_summary_report($self->_total_count, $self->_errors);
     $self->status_message('   Expected: ' . $expected_count);
 
-    return !scalar(@errors);
+    return !scalar($self->_errors);
 }
 
 

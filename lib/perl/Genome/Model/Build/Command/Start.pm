@@ -40,6 +40,26 @@ class Genome::Model::Build::Command::Start {
         max_builds => {
             is => 'Integer',
         },
+        _builds_started => {
+            is => 'Integer',
+            default => 0,
+        },
+        _total_count => {
+            is => 'Integer',
+            default => 0,
+        },
+        _create_params => {
+            is => 'Hash',
+            default => {},
+        },
+        _start_params => {
+            is => 'Hash',
+            default => {},
+        },
+        _errors => {
+            is => 'Text',
+            is_many => 1,
+        },
     ],
 
 };
@@ -75,76 +95,84 @@ EOS
 sub execute {
     my $self = shift;
 
-    my %create_params;
-    $create_params{data_directory} = $self->data_directory if ($self->data_directory);
-    my %start_params;
-    $start_params{job_dispatch} = $self->job_dispatch if ($self->job_dispatch);
-    $start_params{server_dispatch} = $self->server_dispatch if ($self->server_dispatch);
+    $self->_create_params->{data_directory} = $self->data_directory if ($self->data_directory);
+    $self->_start_params->{job_dispatch} = $self->job_dispatch if ($self->job_dispatch);
+    $self->_start_params->{server_dispatch} = $self->server_dispatch if ($self->server_dispatch);
 
     my @models = $self->models;
-    my @errors;
-    my $builds_started = 0;
-    my $total_count = 0;
     for my $model (@models) {
-        if ($self->max_builds && $builds_started >= $self->max_builds){
-            $self->status_message("Already started max builds $builds_started, quitting");
+        if ($self->max_builds && $self->_builds_started >= $self->max_builds){
+            $self->status_message("Already started max builds $self->_builds_started, quitting");
             last; 
         }
-        $total_count++;
-        $self->status_message("Trying to start " . $model->__display_name__ . "...");
-        my $transaction = UR::Context::Transaction->begin();
-        my $build = eval {
-            if (!$self->force && ($model->running_builds or $model->scheduled_builds)) {
-                die $self->error_message("Model already has running or scheduled builds. Use the '--force' param to override this and start a new build.");
-            }
+        $self->_total_count($self->_total_count + 1);
+        if (!$self->force && ($model->running_builds or $model->scheduled_builds)) {
+            $self->add__error($1);
+            next;
+        }
+        $self->create_and_start_build($model);
+    }
 
-            my $build = Genome::Model::Build->create(model_id => $model->id, %create_params);
-            unless ($build) {
-                die $self->error_message("Failed to create new build.");
-            }
-        };
+    $self->display_builds_started();
+    $self->display_command_summary_report($self->_total_count, $self->_errors);
 
-        if ($build and $transaction->commit) {
-            $builds_started++;
+    return !scalar($self->_errors);
+}
 
-            # Record newly created build so other tools can access them.
-            # TODO: should possibly be part of the object class
-            $self->add_build($build);
+sub create_and_start_build {
+    my $self = shift;
+    my $model = shift;
 
-            my $start_transaction = UR::Context::Transaction->begin();
-            my $build_started = eval { $build->start(%start_params) };
-            $start_transaction->commit;
+    $self->status_message("Trying to start #" . ($self->_builds_started + 1) . ': ' . $model->__display_name__ . "...");
+    my $create_transaction = UR::Context::Transaction->begin();
+    my $build = eval {
+        my $build = Genome::Model::Build->create(model_id => $model->id, %{$self->_create_params});
+        unless ($build) {
+            die $self->error_message("Failed to create new build.");
+        }
+        return $build;
+    };
 
+    if ($build and $create_transaction->commit) {
+        # Record newly created build so other tools can access them.
+        # TODO: should possibly be part of the object class
+        $self->add_build($build);
+
+        my $start_transaction = UR::Context::Transaction->begin();
+        my $build_started = eval { $build->start(%{$self->_start_params}) };
+        if ($start_transaction->commit) {
             if ($build_started) {
+                $self->_builds_started($self->_builds_started + 1);
                 $self->status_message("Successfully started build (" . $build->__display_name__ . ").");
             }
             else {
                 if ($build->status eq 'Unstartable') {
-                    push @errors, $model->__display_name__ . ': Build (' . $build->id . ') created but Unstartable, review build\'s notes.';
+                    $self->add__error($model->__display_name__ . ': Build (' . $build->id . ') created but Unstartable, review build\'s notes.');
                 }
                 elsif ($@) {
-                    push @errors, $model->__display_name__ . ': Build (' . $build->id . ') ' . $@;
+                    $self->add__error($model->__display_name__ . ': Build (' . $build->id . ') ' . $@);
                 }
                 else {
-                    push @errors, $model->__display_name__ . ': Build (' . $build->id . ') not started but unable to parse error, review console output.';
+                    $self->add__error($model->__display_name__ . ': Build (' . $build->id . ') not started but unable to parse error, review console output.');
                 }
             }
         }
         else {
-            if ($@) {
-                push @errors, $model->__display_name__ . ": " . $@;
-            }
-            else {
-                push @errors, $model->__display_name__ . ': Build not created but unable to parse error, review console output.';
-            }
-            $transaction->rollback;
+            # If we couldn't commit after trying to start then something blocked us from even committing that the build was Unstartable.
+            $self->add__error($model->__display_name__ . ': Failed to commit build, rolling back prior to creation.');
+            $start_transaction->rollback;
+            $create_transaction->rollback;
         }
     }
-
-    $self->display_builds_started();
-    $self->display_summary_report($total_count, @errors);
-
-    return !scalar(@errors);
+    else {
+        if ($@) {
+            $self->add__error($model->__display_name__ . ": " . $@);
+        }
+        else {
+            $self->add__error($model->__display_name__ . ': Build not created but unable to parse error, review console output.');
+        }
+        $create_transaction->rollback;
+    }
 }
 
 sub display_builds_started {

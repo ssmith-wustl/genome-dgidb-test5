@@ -196,7 +196,7 @@ sub execute {
                 #record that the above code was skipped so we could reattempt it if we decide to do model generation for rna samples later
                 $pse->add_param('no_model_generation_attempted',1);
                 $self->status_message('No model generation attempted for PSE ' . $pse->id . ' representing RNA data');
-            }else{
+            } else{
                 PP:
                 foreach my $processing_profile_id (@processing_profile_ids) {
                     my $processing_profile = Genome::ProcessingProfile->get( $processing_profile_id );
@@ -250,6 +250,8 @@ sub execute {
                             for my $m (@assigned) {
                                 $pse->add_param('genome_model_id', $m->id);
                             }
+                            #find or create default qc models if applicable
+                            $self->create_default_qc_models(@assigned);
                             #find or create somatic models if applicable
                             $self->find_or_create_somatic_variation_models(@assigned);
 
@@ -998,7 +1000,15 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
 
     # Now that they've had their instrument data assigned get_or_create_lane_qc_models
     # Based of the ref-align models so that alignment can shortcut
-    for my $model (@ref_align_models) {
+    push(@new_models , $self->create_default_qc_models(@ref_align_models));
+    return @new_models;
+}
+
+sub create_default_qc_models {
+    my $self = shift;
+    my @models = @_;
+    my @new_models;
+    for my $model (@models){
         next unless $model->type_name eq 'reference alignment';
         next unless $model->processing_profile_name =~ /^\w+\ \d+\ Default\ Reference\ Alignment/; # e.g. Feb 2011 Defaulte Reference Alignment
         next if $model->target_region_set_name; # the current lane QC does not work for custom capture/exome

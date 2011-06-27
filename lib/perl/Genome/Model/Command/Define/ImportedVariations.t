@@ -33,8 +33,4 @@ my $model = Genome::Model->get(name => 'dbSNP-human-666' );
 
 ok($model,"test model retrieved");
 
-my $model_data_dir = $model->data_directory;
-
 $model->delete;
-
-system("rm -rf $model_data_dir");

@@ -284,8 +284,8 @@ sub _brief_calculation_code {
     $self->percent_min_depth_discarded( _round( ($self->min_depth_discarded_bases() / $self->total_ref_bases()) * 100 ) );
 
     # OPTIONAL COLUMNS
-    $self->minimum_coverage_depth($coverage_min);
-    $self->maximum_coverage_depth($coverage_max);
+    $self->minimum_coverage_depth($coverage_min->sclr);
+    $self->maximum_coverage_depth($coverage_max->sclr);
 
     return $self;
 }
@@ -445,8 +445,8 @@ sub _normal_calculation_code {
     $self->percent_min_depth_discarded( _round( ($self->min_depth_discarded_bases() / $self->total_ref_bases()) * 100 ) );
 
     # OPTIONAL COLUMNS
-    $self->minimum_coverage_depth($coverage_min);
-    $self->maximum_coverage_depth($coverage_max);
+    $self->minimum_coverage_depth($coverage_min->sclr);
+    $self->maximum_coverage_depth($coverage_max->sclr);
 
     return $self;
 }
