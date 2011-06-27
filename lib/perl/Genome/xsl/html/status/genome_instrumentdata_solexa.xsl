@@ -140,6 +140,13 @@
               </td>
             </tr>
 
+            <tr>
+              <td class="name">Flow Cell ID:
+              </td>
+              <td class="value"><xsl:value-of select="aspect[@name='flow_cell']/object/aspect[@name='flow_cell_id']/value"/>
+              </td>
+            </tr>
+
           </tbody>
         </table>
       </div>

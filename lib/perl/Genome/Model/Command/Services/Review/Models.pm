@@ -53,7 +53,7 @@ sub execute {
         $model_name =~ s/\.?$pp_name\.?/.../;
 
         my $action;
-        if ($latest_build->status eq 'Scheduled' || $latest_build->status eq 'Running') {
+        if ($latest_build->status eq 'Scheduled' || $latest_build->status eq 'Running' || $model->build_requested) {
             $action = 'none';
         }
         elsif ($latest_build && $latest_build->status eq 'Succeeded') {
@@ -62,9 +62,6 @@ sub execute {
         }
         elsif (should_review_model($model)) {
             $action = 'review';
-        }
-        elsif ($model->build_requested) {
-            $action = 'none';
         }
         else {
             $action = 'rebuild';
@@ -106,7 +103,12 @@ sub should_review_model {
     return if latest_build_succeeded($model);
 
     my @builds = $model->builds;
-    return if @builds <= 1;
+    return if @builds < 1;
+
+    my $latest_status = $model->latest_build->status;
+    return 1 if $latest_status eq 'Unstartable';
+
+    return if @builds == 1;
 
     # If it has failed >3 times in a row then submit for review.
     return 1 if model_has_failed_to_many_times($model);

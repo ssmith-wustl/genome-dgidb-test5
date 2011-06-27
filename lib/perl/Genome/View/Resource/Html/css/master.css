@@ -374,6 +374,21 @@ table.name-value-row td.value {
     padding-left: 5px;
 }
 
+td.inputs_differ {
+    padding: 0 5px;
+}
+
+table.inputs_differ {
+    margin: 0;
+}
+
+table.inputs_differ td {
+    border-bottom: none !important;
+}
+span.input_diff .label {
+    font-weight: bold;
+}
+
 /* lister */
 table.lister {
     margin-bottom: 1em;

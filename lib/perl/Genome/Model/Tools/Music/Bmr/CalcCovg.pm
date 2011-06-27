@@ -230,7 +230,8 @@ sub execute {
   {
     $cmdFh = IO::File->new( $cmd_list_file, ">" );
     print "Creating a list of parallelizable jobs at $cmd_list_file.\n";
-    print "Be sure to run this script a second time (without defining the cmd-list-file argument).\n";
+    print "After successfully running all the jobs in $cmd_list_file,\n",
+          "be sure to run this script a second time (without defining the cmd-list-file argument) to merge results in roi_covgs.\n";
   }
   else
   {
