@@ -52,7 +52,7 @@ sub execute {
     
     my $reader = eval {
         Genome::Model::Tools::Sx::PhredReader->create(
-            files => [ $self->input_file ],
+            file => $self->input_file,
         );
     };
     return if not $reader;

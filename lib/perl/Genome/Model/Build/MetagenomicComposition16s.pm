@@ -551,7 +551,7 @@ sub prepare_instrument_data {
     if ( not -s $orig_fasta ) {
         Carp::confess( "Original fasta file did not get created or is blank" );
     }
-    my $reader =  Genome::Model::Tools::Sx::PhredReader->create(files => [ $orig_fasta ]);
+    my $reader =  Genome::Model::Tools::Sx::PhredReader->create(file => $orig_fasta);
     if ( not $reader ) {
         Carp::confess( "Could not create reader for original fasta file" );
     }
@@ -588,7 +588,7 @@ sub prepare_instrument_data {
     }
     else {
         my $fasta_file = $self->processed_fasta_file_for_set_name('');
-        my $writer = Genome::Model::Tools::Sx::PhredWriter->create(files => [ $fasta_file ]);
+        my $writer = Genome::Model::Tools::Sx::PhredWriter->create(file => $fasta_file);
         while ( my $seqs = $reader->read ) {
             my $seq = $seqs->[0];
             $attempted++;
@@ -667,7 +667,7 @@ sub append_fasta_to_original_fasta_file {
     }
 
     for my $file ( @fasta_files ) { #read in one file at a time .. not likely for paired reads to be in sparate files
-        my $reader =  Genome::Model::Tools::Sx::PhredReader->create(files => [ $file ]);
+        my $reader =  Genome::Model::Tools::Sx::PhredReader->create(file => $file);
         if ( not $reader ) {
             Carp::confess( "Did not get fasta reader for file: $file" );
         }
@@ -690,10 +690,11 @@ sub append_fastq_to_orig_fasta_file {
         Carp::confess( "Failed to get fasta writer to write original fasta file" );
     }
 
-    my $reader = Genome::Model::Tools::Sx::FastqReader->create( files => \@fastq_files );
-
-    while ( my $fastqs = $reader->read ) {
-        $writer->write( $fastqs );
+    for my $fastq_file ( @fastq_files ) {
+        my $reader = Genome::Model::Tools::Sx::FastqReader->create(file => $fastq_file);
+        while ( my $fastqs = $reader->read ) {
+            $writer->write( $fastqs );
+        }
     }
 
     $self->status_message( "Finished writing to original fasta file, files: ".join(' ', @fastq_files) );
@@ -708,7 +709,7 @@ sub original_fasta_writer {
     my $fasta_file = $self->combined_original_fasta_file;
     unlink $fasta_file if -e $fasta_file;
 
-    my $writer = Genome::Model::Tools::Sx::PhredWriter->create(files => [ $fasta_file ]); #make sure this is right
+    my $writer = Genome::Model::Tools::Sx::PhredWriter->create(file => $fasta_file); #make sure this is right
     Carp::confess("Failed to create fasta writer to write original fasta file") if not $writer;
 
     $self->{_fasta_writer} = $writer;
@@ -728,15 +729,17 @@ sub fasta_and_qual_reader_for_type_and_set_name {
     my $method = $type.'_fasta_file_for_set_name';
     my $fasta_file = $self->$method($set_name);
     return unless -e $fasta_file; # ok
-    my @files = $fasta_file;
+    my %params = (
+        file => $fasta_file,
+    );
     if ( $self->sequencing_platform eq 'sanger' ) { # has qual
         $method = $type.'_qual_file_for_set_name';
         my $qual_file = $self->$method($set_name);
-        push @files, $qual_file if -e $qual_file;
+        $params{qual_file} = $qual_file if -e $qual_file;
     }
 
     # Create reader, return
-    my $reader =  Genome::Model::Tools::Sx::PhredReader->create(files => \@files);
+    my $reader =  Genome::Model::Tools::Sx::PhredReader->create(%params);
     if ( not  $reader ) {
         $self->error_message("Failed to create phred reader for $type fasta file and amplicon set name ($set_name) for ".$self->description);
         return;
@@ -757,17 +760,18 @@ sub fasta_and_qual_writer_for_type_and_set_name {
     my $method = $type.'_fasta_file_for_set_name';
     my $fasta_file = $self->$method($set_name);
     unlink $fasta_file if -e $fasta_file;
-    my %params = ( fasta_file => $fasta_file );
-    my @files = $fasta_file;
+    my %params = ( 
+        file => $fasta_file,
+    );
     if ( $self->sequencing_platform eq 'sanger' ) { # has qual
         $method = $type.'_qual_file_for_set_name';
         my $qual_file = $self->$method($set_name);
         unlink $qual_file if -e $qual_file;
-        push @files, $qual_file;
+        $params{qual_file} = $qual_file;
     }
 
     # Create writer, return
-    my $writer =  Genome::Model::Tools::Sx::PhredWriter->create(files => \@files);
+    my $writer =  Genome::Model::Tools::Sx::PhredWriter->create(%params);
     unless ( $writer ) {
         $self->error_message("Can't create phred writer for $type fasta file and amplicon set name ($set_name) for ".$self->description);
         return;
