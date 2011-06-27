@@ -24,7 +24,8 @@ sub results_class {
     my $model = $self->model;
     my $processing_profile = $model->processing_profile;
     my $read_aligner_name = $processing_profile->read_aligner_name;
-    return 'Genome::InstrumentData::AlignmentResult::' . Genome::InstrumentData::AlignmentResult->_resolve_subclass_name_for_aligner_name($read_aligner_name);
+    return 'Genome::InstrumentData::AlignmentResult::' . 
+        Genome::InstrumentData::AlignmentResult->_resolve_subclass_name_for_aligner_name($read_aligner_name);
 }
 
 sub bsub_rusage {
@@ -367,7 +368,7 @@ sub _count_lines_in_bam_file {
     my $self = shift;
     my %options = @_;
     
-    my $alignment = $self->instrument_data_assignment->alignment_set;
+    my $alignment = $self->instrument_data_input->alignment_set;
     
     my $cmd = Genome::Model::Tools::Sam->path_for_samtools_version($alignment->samtools_version);
     $cmd .= ' view ';
@@ -420,13 +421,13 @@ sub _process_and_link_alignments_to_build {
         "Build directory: " . $self->build_directory
     );
 
-    my $instrument_data_assignment = $self->instrument_data_assignment;
+    my $instrument_data_input = $self->instrument_data_input;
    
     my $build = $self->build;
     my $model = $build->model;
     my $processing_profile = $model->processing_profile;
 
-    $self->status_message("Finding or generating alignments for " . $instrument_data_assignment->__display_name__);
+    $self->status_message("Finding or generating alignments for " . $instrument_data_input->__display_name__);
     my @alignments;
     my @errors;
 
@@ -437,13 +438,13 @@ sub _process_and_link_alignments_to_build {
     }
     
     if ($mode eq 'get_or_create') {
-        @alignments = $processing_profile->generate_results_for_instrument_data_assignment($instrument_data_assignment, %segment_info); 
+        @alignments = $processing_profile->generate_results_for_instrument_data_input($instrument_data_input, %segment_info); 
         unless (@alignments) {
-            $self->error_message("Error finding or generating alignments!:\n" .  join("\n",$instrument_data_assignment->error_message));
+            $self->error_message("Error finding or generating alignments!:\n" .  join("\n",$instrument_data_input->error_message));
             push @errors, $self->error_message;
         }
     } elsif ($mode eq 'get') {
-        @alignments = $processing_profile->results_for_instrument_data_assignment_with_lock($instrument_data_assignment, %segment_info);
+        @alignments = $processing_profile->results_for_instrument_data_input_with_lock($instrument_data_input, %segment_info);
         unless (@alignments) {
             return undef; 
         }
@@ -493,13 +494,13 @@ sub verify_successful_completion {
         return 0;
     }
 
-    my $instrument_data_assignment = $self->instrument_data_assignment;
+    my $instrument_data_input = $self->instrument_data_input;
     my %segment_info;
     if (defined $self->instrument_data_segment_id) {
         $segment_info{instrument_data_segment_id} = $self->instrument_data_segment_id;
         $segment_info{instrument_data_segment_type} = $self->instrument_data_segment_type;
     }
-    my @alignments = $self->model->processing_profile->results_for_instrument_data_assignment($instrument_data_assignment,%segment_info);
+    my @alignments = $self->model->processing_profile->results_for_instrument_data_input($instrument_data_input,%segment_info);
     
     my @errors;
     for my $alignment (@alignments) {
@@ -526,8 +527,8 @@ sub contaminated_read_count {
 sub _calculate_contaminated_read_count {
     my $self = shift;
  
-    my $instrument_data_assignment = $self->instrument_data_assignment;
-    my $alignment = $instrument_data_assignment->alignment_set;
+    my $instrument_data_input = $self->instrument_data_input;
+    my ($alignment) = $self->build->alignment_results_for_instrument_data($instrument_data_input->value);
     my @f = $alignment->aligner_output_file_paths;
     @f = grep($_ !~ 'sanitized', @f);
     

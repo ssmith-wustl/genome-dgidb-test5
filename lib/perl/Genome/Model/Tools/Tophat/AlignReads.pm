@@ -70,6 +70,30 @@ class Genome::Model::Tools::Tophat::AlignReads {
                 return $self->alignment_directory .'/junctions.bed';
             |,
         },
+        insertions_file => {
+            calculate_from => ['alignment_directory'],
+            calculate => q|
+                return $self->alignment_directory .'/insertions.bed';
+            |,
+        },
+        deletions_file => {
+            calculate_from => ['alignment_directory'],
+            calculate => q|
+                return $self->alignment_directory .'/deletions.bed';
+            |,
+        },
+        left_kept_reads_info => {
+            calculate_from => ['alignment_directory'],
+            calculate => q|
+                return $self->alignment_directory .'/left_kept_reads.info';
+            |,
+        },
+        right_kept_reads_info => {
+            calculate_from => ['alignment_directory'],
+            calculate => q|
+                return $self->alignment_directory .'/right_kept_reads.info';
+            |,
+        },
         tmp_tophat_directory => {
             calculate_from => ['alignment_directory'],
             calculate => q|
@@ -273,6 +297,13 @@ sub output_files {
     if (version->parse($self->use_version) < version->parse('1.1.0')) {
         push @output_files, $self->sam_file;
         push @output_files, $self->coverage_file;
+    }
+    # NOTE: There may be a gap checking the existence of files between v1.1.0 and v1.3.0
+    if (version->parse($self->use_version) >= version->parse('1.3.0')) {
+        push @output_files, $self->insertions_file;
+        push @output_files, $self->deletions_file;
+        push @output_files, $self->left_kept_reads_info;
+        push @output_files, $self->right_kept_reads_info;
     }
     return @output_files;
 }

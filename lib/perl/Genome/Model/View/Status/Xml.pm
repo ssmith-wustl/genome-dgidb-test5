@@ -23,7 +23,6 @@ class Genome::Model::View::Status::Xml {
                 #     toolkit => 'xml'
                 # },
                 'is_default',
-                'data_directory',
                 'creation_date',
                 'user_name',
                 'build_requested',

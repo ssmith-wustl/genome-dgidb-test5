@@ -45,7 +45,11 @@ sub execute {
     if (version->parse($self->model->expression_version) >= version->parse('0.9.0')) {
         my $reference_build = $self->model->reference_sequence_build;
         my $reference_path = $reference_build->full_consensus_path('fa');
-        $params .= ' -r '. $reference_path;
+        if (version->parse($self->model->expression_version) < version->parse('1.0.0')) {
+            $params .= ' -r '. $reference_path;
+        } else {
+            $params .= ' -b '. $reference_path;
+        }
         my $annotation_reference_transcripts = $self->model->annotation_reference_transcripts;
         if ($annotation_reference_transcripts) {
             my ($annotation_name,$annotation_version) = split(/\//, $annotation_reference_transcripts);

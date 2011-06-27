@@ -19,7 +19,7 @@ sub _base_directory {
     return '/gsc/var/cache/testsuite/data/Genome-Model/DeNovoAssembly';
 }
 
-sub _example_directory_for_model {
+sub _example_directory_for_build {
     my ($self, $model) = @_;
 
     Carp::confess "No model to get example directory" unless $model;
@@ -175,7 +175,6 @@ sub _model_for_assembler {
         subject_name => $taxon->name,
         subject_type => 'species_name',
         center_name => 'WUGC',
-        data_directory => $tmpdir,
     );
     if ( not $model ) {
         Carp::confess('Cannot create de novo assembly model for '.$assembler);
@@ -216,7 +215,7 @@ sub example_build_for_model {
 
     Carp::confess('No de novo assembly model to create example build') if not $model;
 
-    my $dir = $class->_example_directory_for_model($model) or die;
+    my $dir = $class->_example_directory_for_build($model);
     my $build = Genome::Model::Build->create(
         model=> $model,
         data_directory => $dir,

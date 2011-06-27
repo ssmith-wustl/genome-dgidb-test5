@@ -16,11 +16,5 @@ class Genome::Model::ImportedVariations{
     ],
 };
 
-sub imported_variations_directory {
-    my $self = shift;
-    return $self->data_directory."/ImportedVariations";
-}
-
-
 1;
 

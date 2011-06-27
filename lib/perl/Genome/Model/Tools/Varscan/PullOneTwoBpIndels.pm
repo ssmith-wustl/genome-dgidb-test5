@@ -1,7 +1,7 @@
 package Genome::Model::Tools::Varscan::PullOneTwoBpIndels;     # rename this when you give the module file a different name <--
 
 #####################################################################################################################################
-# PullOneTwoBpIndels - Generate list of 1-2 bp indels, run GATK recalibration, and then sort and index bams
+# PullOneTwoBpIndels - Generate lists of 1-2 bp and 3+ indels, run GATK recalibration, and then sort and index bams
 #					
 #	AUTHOR:		Will Schierding (wschierd@genome.wustl.edu)
 #
@@ -26,6 +26,7 @@ class Genome::Model::Tools::Varscan::PullOneTwoBpIndels {
 		project_name	=> { is => 'Text', doc => "Name of the project i.e. ASMS" , is_optional => 1},
 		file_list	=> { is => 'Text', doc => "File of indel files to include, 1 name per line, tab delim, no headers. Should be chr start stop ref var blahhhhhhhhhhhh." , is_optional => 0},
 		small_indel_outfile	=> { is => 'Text', doc => "File of small indels to be realigned" , is_optional => 0},
+		large_indel_outfile	=> { is => 'Text', doc => "File of large indels to be realigned" , is_optional => 1},
 		tumor_bam	=> { is => 'Text', doc => "Tumor Bam File (Validation Bam)" , is_optional => 0},
 		normal_bam	=> { is => 'Text', doc => "Normal Bam File (Validation Bam)" , is_optional => 0},
 		reference_fasta	=> { is => 'Text', doc => "Reference Fasta" , is_optional => 0, default => "/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa"},
@@ -33,21 +34,21 @@ class Genome::Model::Tools::Varscan::PullOneTwoBpIndels {
 		output_snp	=> { is => 'Text', doc => "gmt varscan validate input" , is_optional => 0},
 		final_output_file	=> { is => 'Text', doc => "process-validation-indels output file" , is_optional => 0},
 		skip_if_output_present	=> { is => 'Boolean', doc => "Skip Creating new Bam Files if they exist" , is_optional => 1, default => ""},
-        realigned_bam_file_directory => { is => 'Text', doc => "Where to dump the realigned bam file", is_optional => 0},
-        normal_purity => { is => 'Float', doc => "Normal purity param to pass to varscan", is_optional => 0, default => 1},
-        min_var_frequency => { is => 'Float', doc => "Minimum variant frequency to pass to varscan", is_optional => 0, default => 0.08},
+	        realigned_bam_file_directory => { is => 'Text', doc => "Where to dump the realigned bam file", is_optional => 0},
+        	normal_purity => { is => 'Float', doc => "Normal purity param to pass to varscan", is_optional => 0, default => 1},
+        	min_var_frequency => { is => 'Float', doc => "Minimum variant frequency to pass to varscan", is_optional => 0, default => 0.08},
 	],
 };
 
 sub sub_command_sort_position { 12 }
 
 sub help_brief {                            # keep this to just a few words <---
-    "Generate list of 1-2 bp indels, run GATK recalibration, and then sort and index bams"                 
+    "Generate lists of 1-2 bp and 3+ indels, run GATK recalibration, and then sort and index bams"
 }
 
 sub help_synopsis {
     return <<EOS
-Generate list of 1-2 bp indels, run GATK recalibration, and then sort and index bams
+Generate lists of 1-2 bp and 3+ indels, run GATK recalibration, and then sort and index bams
 EXAMPLE:	gmt varscan pull-one-two-bp-indels
 EOS
 }
@@ -69,6 +70,7 @@ sub execute {                               # replace with real execution logic.
 	my $self = shift;
 	my $project_name = $self->project_name;
 	my $small_indel_list = $self->small_indel_outfile;
+	my $large_indel_list = $self->large_indel_outfile;
 	my $file_list_file = $self->file_list;
 	my $normal_bam = $self->normal_bam;
 	my $tumor_bam = $self->tumor_bam;
@@ -86,7 +88,11 @@ sub execute {                               # replace with real execution logic.
 	$small_indel_list_nobed =~ s/\.bed//;
 	$small_indel_list_nobed = "$small_indel_list_nobed.txt";
 
-    my $realigned_bam_file_directory = $self->realigned_bam_file_directory;
+	my $large_indel_list_nobed = $large_indel_list;
+	$large_indel_list_nobed =~ s/\.bed//;
+	$large_indel_list_nobed = "$large_indel_list_nobed.txt";
+
+        my $realigned_bam_file_directory = $self->realigned_bam_file_directory;
 	my $realigned_normal_bam_file = basename($normal_bam,qr{\.bam});
     
 	$realigned_normal_bam_file = "$realigned_bam_file_directory/$realigned_normal_bam_file.realigned.bam";
@@ -99,8 +105,10 @@ sub execute {                               # replace with real execution logic.
 	my $nobed_indel_outfile = $small_indel_list_nobed;
 	open(INDELS_OUT, ">$bed_indel_outfile") or die "Can't open output file: $!\n";
 	open(NOBED_INDELS_OUT, ">$nobed_indel_outfile") or die "Can't open output file: $!\n";
-
-
+	my $large_bed_indel_outfile = $large_indel_list;
+	my $large_nobed_indel_outfile = $large_indel_list_nobed;
+	open(LARGE_INDELS_OUT, ">$large_bed_indel_outfile") or die "Can't open output file: $!\n";
+	open(LARGE_NOBED_INDELS_OUT, ">$large_nobed_indel_outfile") or die "Can't open output file: $!\n";
 	my $file_input = new FileHandle ($file_list_file);
     unless($file_input) {
         $self->error_message("Unable to open $file_list_file");
@@ -119,6 +127,9 @@ sub execute {                               # replace with real execution logic.
 			chomp($line);
 			my ($chr, $start, $stop, $ref, $var, @everything_else) = split(/\t/, $line);
 			my $size;
+			my $bedstart;
+			my $bedstop;
+			my $type;
 			if ($ref =~ m/\//) {
 				my $split = $ref;
 				($ref, $var) = split(/\//, $split);
@@ -126,18 +137,27 @@ sub execute {                               # replace with real execution logic.
 			if ($ref eq '-' || $ref eq '0') { #ins
 				#count number of bases inserted
 				$size = length($var);
+				$bedstart = ($start);
+				$bedstop = ($stop - 1);
+				$type = 'INS';
 			}
 			elsif ($var eq '-' || $var eq '0') { #del
-				$size = ($stop - $start + 1);
+				$size = length($ref);
+				$bedstart = ($start - 1);
+				$bedstop = ($stop);
+				$type = 'DEL';
 			}
 			else {
 				print "Line $line in file $file has wrong insertion or deletion nomenclature. Either ref or var should be 0 or -";
 				$size = 0;  #this will include this indel despite its wrongness
 			}
 			if ( $size > 0 && $size <= 2) {
-				my $bedstart = ($start - 1);
-				print INDELS_OUT "$chr\t$bedstart\t$stop\t$ref\t$var\n";
+				print INDELS_OUT "$chr\t$bedstart\t$bedstop\t$ref\t$var\n";
 				print NOBED_INDELS_OUT "$chr\t$start\t$stop\t$ref\t$var\n";
+			}
+			elsif ( $size > 2) {
+				print LARGE_INDELS_OUT "$chr\t$bedstart\t$bedstop\t$ref\t$var\t$type\n";
+				print LARGE_NOBED_INDELS_OUT "$chr\t$start\t$stop\t$ref\t$var\t$type\n";
 			}
 		}
 		close($indel_input);

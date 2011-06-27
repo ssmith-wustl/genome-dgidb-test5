@@ -15,10 +15,10 @@ use_ok('Genome::Model::Event::Build::DeNovoAssembly::PostAssemble') or die;
 my $model = Genome::Model::DeNovoAssembly::Test->model_for_velvet;
 ok($model, 'Got de novo assembly model') or die;
 my $build = Genome::Model::Build->create( 
-    model => $model,
-    data_directory => $model->data_directory,
+    model => $model
 );
 ok($build, 'Got de novo assembly build') or die;
+ok($build->get_or_create_data_directory, 'resolved data dir');
 my $example_build = Genome::Model::DeNovoAssembly::Test->example_build_for_model($model);
 ok($example_build, 'got example build') or die;
 
@@ -39,7 +39,7 @@ my $example_contigs_fasta_file = $example_build->contigs_fasta_file;
 symlink($example_contigs_fasta_file, $build->contigs_fasta_file);
 ok(-s $build->contigs_fasta_file, 'Linked contigs.fa file') or die;
 
-my $velvet = Genome::Model::Event::Build::DeNovoAssembly::PostAssemble->create( build_id => $build->id);
+my $velvet = Genome::Model::Event::Build::DeNovoAssembly::PostAssemble->create( build_id => $build->id, model => $model);
 ok($velvet, 'Created post assemble velvet');
 
 ok($velvet->execute, 'Execute post assemble velvet');

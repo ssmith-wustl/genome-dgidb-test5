@@ -62,11 +62,11 @@ sub execute {
     
     my $merged_file = $self->build->merged_alignment_file;
 
-    my @idas = $model->instrument_data_assignments;
+    my @instrument_data = $model->instrument_data;
     my @id_list;
-    for my $ida (@idas) {
-        $self->status_message("Found instrument data id: ".$ida->instrument_data_id);
-        push(@id_list,$ida->instrument_data_id); 
+    for my $instrument_data (@instrument_data) {
+        $self->status_message("Found instrument data id: ".$instrument_data->id);
+        push(@id_list,$instrument_data->id); 
     }
 
     my $id_string = join(',',@id_list);

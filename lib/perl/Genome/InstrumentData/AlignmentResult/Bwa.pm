@@ -33,7 +33,7 @@ sub required_rusage {
 
     my $user = getpwuid($<);
     my $queue = 'alignment';
-    $queue = 'alignment-pd' if (Genome::Sys->username =~ /^apipe-/);
+    $queue = 'alignment-pd' if (Genome::Config->should_use_alignment_pd);
 
     my $host_groups;
     $host_groups = qx(bqueues -l $queue | grep ^HOSTS:);

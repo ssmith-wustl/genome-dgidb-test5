@@ -26,6 +26,7 @@ sub execute {
     my $build_count = scalar(@builds);
     my @errors;
     for my $build (@builds) {
+        $self->total_command_count($self->total_command_count + 1);
         my $transaction = UR::Context::Transaction->begin();
         my $successful = eval { $build->abandon; };
         if ($successful and $transaction->commit) {
@@ -33,12 +34,12 @@ sub execute {
             $self->status_message("Abandoned build (" . $build->__display_name__ . ") and queued model.");
         }
         else {
-            push @errors, "Failed to abandon build (" . $build->__display_name__ . "): $@.";
+            $self->append_error($build->__display_name__, "Failed to abandon build: $@.");
             $transaction->rollback;
         }
     }
 
-    $self->display_summary_report(scalar(@builds), @errors);
+    $self->display_command_summary_report();
 
     return not @errors;
 }

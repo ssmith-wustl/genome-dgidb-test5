@@ -95,7 +95,7 @@ sub execute {                               # replace with real execution logic.
 
   my $snv_tier1_file = $data_dir . "/" . "merged.somatic.snp.filter.novel.tier1";
   my $snv_annotation_file = $data_dir . "/" . "annotation.somatic.snp.transcript";
-  my $indel_tier1_file = $data_dir . "/" . "merged.somatic.indel.tier1";
+  my $indel_tier1_file = $data_dir . "/" . "merged.somatic.indel.filter.tier1";
   my $indel_annotation_file = $data_dir . "/" . "annotation.somatic.indel.transcript";
   my $gatk_indel_tier1_file = $data_dir . "/" . "gatk.output.indel.formatted.Somatic.tier1";
   my $gatk_indel_annotation_file = $data_dir . "/" . "annotation.somatic.gatk-indel.transcript";

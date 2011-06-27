@@ -12,7 +12,7 @@ class Genome::Model::Tools::Validation::AnnotationToAssemblyInput {
     has => [
     annotation_file    => { 
         is => 'String', 
-        doc => 'annotation output or annotator input file',
+        doc => 'annotation output or annotator input file (needs first 6 columns from annotation output)',
     },
     output_file => { 
         is => 'String', 

@@ -15,10 +15,10 @@ use_ok('Genome::Model::Event::Build::DeNovoAssembly::Report');
 my $model = Genome::Model::DeNovoAssembly::Test->model_for_velvet;
 ok($model, 'Got de novo assembly model') or die;
 my $build = Genome::Model::Build->create( 
-    model => $model,
-    data_directory => $model->data_directory,
+    model => $model
 );
 ok($build, 'Got de novo assembly build') or die;
+ok($build->get_or_create_data_directory, 'resolved data dir');
 
 my $example_build = Genome::Model::DeNovoAssembly::Test->example_build_for_model($model);
 ok($example_build, 'got example build') or die;
@@ -56,7 +56,7 @@ for my $file ( qw/ H_GV-933124G-S.MOCK.collated.fasta.gz H_GV-933124G-S.MOCK.col
     ok( -e $build->edit_dir."/$file", "Linked $file" );
 }
 
-my $report = Genome::Model::Event::Build::DeNovoAssembly::Report->create(build_id => $build->id);
+my $report = Genome::Model::Event::Build::DeNovoAssembly::Report->create(build_id => $build->id, model => $model);
 ok($report, "Created report");
 ok($report->execute, "Executed report");
 

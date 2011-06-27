@@ -58,6 +58,16 @@ class Genome::Model::GenotypeMicroarray{
 
 sub sequencing_platform { return 'genotype file'; }
 
+sub is_internal { 
+    my $self = shift;
+    my ($instrument_data) = $self->instrument_data;
+    my $source = $instrument_data->import_source_name;
+    if (defined $source and $source =~ /wugc/i) {
+        return 1;
+    }
+    return 0;
+}
+
 sub _additional_parts_for_default_name {
     my ($self, %params) = @_;
     my ($instrument_data) = $self->instrument_data;
@@ -84,6 +94,8 @@ sub request_builds_for_dependent_cron_ref_align {
     return 1 unless $sample->class eq 'Genome::Sample';
 
     for my $ref_align ($self->dependent_cron_ref_align) {
+        my @lane_qc = $ref_align->get_or_create_lane_qc_models;
+        for (@lane_qc) { $_->build_requested(1) };
         $ref_align->build_requested(1);
     }
     return 1;

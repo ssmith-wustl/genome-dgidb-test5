@@ -12,6 +12,7 @@ use warnings;
 use Genome;
 use Data::Dumper;
 use IO::File;
+use Carp;
 
 #            default  => '/gscmnt/sata835/info/medseq/imported_variations/dbSNP/130/',
 
@@ -50,6 +51,7 @@ class Genome::Model::Tools::Annotate::LookupVariants {
             type     => 'Text',
             is_optional => 1,
             doc      => "path to dbSNP files broken into chromosome",
+            default => '/gscmnt/sata835/info/medseq/model_data/2857166586/ImportedVariations/tmp',
         },
         dbSNP_version => {
             type    => 'Int',
@@ -136,22 +138,12 @@ sub execute {
 
     my ($self) = @_;
 
-    my $dbsnp_dir;
-
-    if(defined($self->dbSNP_path)){
-        $dbsnp_dir = $self->dbSNP_path;
-    } else {
-        # note: this crashes when using v. 131, because the 'get' returns undef
-        my $model = Genome::Model->get( name => "dbSNP-human-".$self->dbSNP_version);
-        $dbsnp_dir = $model->imported_variations_directory . "/tmp"; # TODO: use Model to represent this data set
-    }
-
+    my $dbsnp_dir= $self->dbSNP_path;
     unless($dbsnp_dir) {
-        $self->error_message('Count not locate dbSNP model.');
-        die $self->error_message;
+        $self->error_message('Not given dbsnp path');
+        Carp::confess $self->error_message;
     }
     $self->dbSNP_path($dbsnp_dir);
-
 
     if (($self->skip_if_output_present)&&(-s $self->output_file)) {
         $self->status_message("Skipping execution: Output is already present and skip_if_output_present is set to true");
@@ -273,15 +265,6 @@ sub print_matches {
 
 
 		my $gff_line = qq(Chromosome$chr\tdbsnp_130\t$ds_type\t$ds_start\t$ds_stop\t.\t$strain\t.\t$rs_id \; Alleles \"$allele\" ; validation \"$validation\" ; submitter \"$submitter\");
-
-		if ($self->append_population_allele_frequencies) {
-		    my $freq = &get_frequencies($self,$rs_id);
-		    if ($freq) {
-			chomp $freq;
-			$gff_line = "$gff_line ; $freq";
-		    }
-		}
-		
 		$fh->print("$gff_line\n");
 	    }
 	}
@@ -351,31 +334,14 @@ sub print_matches {
 	    my $match = join ':' , @matchs;
 	    my $validation  = join ':' , @validation;
 	    
-	    my $frequencies;
-	    if ($self->append_population_allele_frequencies) {
-		my @freq;
-		for my $rsid (@rs_ids) {
-		    my $freq = &get_frequencies($self,$rs_id);
-		    if ($freq) {
-			push(@freq,$freq);
-		    }
-		}
-		if (@freq) {
-		    $frequencies = join ':' , @freq;
-		} else {
-		    $frequencies = "-";
-		}
-		$report_line = sprintf("%s\t%s\t%s\n",$line,"$rs_id,$submitter,$match,$validation",$frequencies);
-	    } else {
-		$report_line = sprintf("%s\t%s\n",$line,"$rs_id,$submitter,$match,$validation");
-	    }
+        $report_line = sprintf("%s\t%s\n",$line,"$rs_id,$submitter,$match,$validation");
 
-	} else {
-	    my $match = "no_hit";
-	    $report_line = sprintf("%s\t%s\n",$line,$match); 
-	}
+    } else {
+        my $match = "no_hit";
+        $report_line = sprintf("%s\t%s\n",$line,$match); 
+    }
 
-	$fh->print($report_line);
+    $fh->print($report_line);
     }
 }
 
@@ -399,52 +365,52 @@ sub filter_by_allele {
 
     my $snp = parse_dbsnp_line($line);    
     my $ds_allele = $snp->{'ds_allele'};
-    #my ($dbsnp_allele1,$dbsnp_allele2) = split(/\//,$ds_allele);
+#my ($dbsnp_allele1,$dbsnp_allele2) = split(/\//,$ds_allele);
     my @dbsnp_allele_array = split(/\//,$ds_allele);
     my $array_n = @dbsnp_allele_array;
 
     use Genome::Info::IUB;
-   
-    # if variant is not expanded, include ref in alpha order 
+
+# if variant is not expanded, include ref in alpha order 
     my ($a1, $a2) = Genome::Info::IUB->variant_alleles_for_iub($ref,$variant); ##if $variant eq "N" there would be an a3
 
 #TODO: finish work here
 
-    my @vars;
+        my @vars;
     if ($a1) {push(@vars,$a1);}
     if ($a2) {push(@vars,$a2);}
 
     my ($rm,$vm);
     for my $var (@vars) {
-	for my $n (1..$array_n) {
-	    my $m = $n - 1;
-	    my $dbsnp_allele = $dbsnp_allele_array[$m];
-	    if ($ref eq $dbsnp_allele) {
-		$rm = $dbsnp_allele;
-	    } elsif ($var eq $dbsnp_allele) {
-		$vm = $dbsnp_allele;
-	    }
-	}
-	unless ($rm && $vm) {
-	    undef($rm);
-	    undef($vm);
-	    for my $n (1..$array_n) {
-		my $m = $n - 1;
-		my $dbsnp_allele = $dbsnp_allele_array[$m];
-		my $rev_dbsnp_allele = &reverse_complement ($dbsnp_allele); 
-		if ($ref eq $rev_dbsnp_allele) {
-		    $rm = $rev_dbsnp_allele;
-		} elsif ($var eq $rev_dbsnp_allele) {
-		    $vm = $rev_dbsnp_allele;
-		}
-	    }
-	}
+        for my $n (1..$array_n) {
+            my $m = $n - 1;
+            my $dbsnp_allele = $dbsnp_allele_array[$m];
+            if ($ref eq $dbsnp_allele) {
+                $rm = $dbsnp_allele;
+            } elsif ($var eq $dbsnp_allele) {
+                $vm = $dbsnp_allele;
+            }
+        }
+        unless ($rm && $vm) {
+            undef($rm);
+            undef($vm);
+            for my $n (1..$array_n) {
+                my $m = $n - 1;
+                my $dbsnp_allele = $dbsnp_allele_array[$m];
+                my $rev_dbsnp_allele = &reverse_complement ($dbsnp_allele); 
+                if ($ref eq $rev_dbsnp_allele) {
+                    $rm = $rev_dbsnp_allele;
+                } elsif ($var eq $rev_dbsnp_allele) {
+                    $vm = $rev_dbsnp_allele;
+                }
+            }
+        }
     }
-    
+
     if ($rm && $vm) {
-	return $line;
+        return $line;
     } else {
-	return;
+        return;
     }
 }
 
@@ -455,41 +421,12 @@ sub reverse_complement {
     return $sequence;
 }
 
-sub get_frequencies {
-
-    my ($self,$rs_id) = @_;
-    my $model;
-    unless($model = Genome::Model::ImportedVariations->get( name => 'dbSNP-human-129')) {
-        $self->error_message("Could not locate the Imported Variations model for dbSNP-human-129");
-        die $self->error_message;
-    }
-    #my $RsDir = "/gsc/var/lib/import/dbsnp/129/frequencies";
-    my $RsDir = $model->data_directory."/ImportedVariations/frequencies";
-
-    my $organism = $self->organism;
-    if ($organism eq "mouse") {
-	#$RsDir = "/gsc/var/lib/import/dbsnp/mouse/10090/frequencies";
-        unless($model = Genome::Model::ImportedVariations->get( name => 'dbSNP-mouse-10090')) {
-            $self->error_message("Could not locate the Imported Variations Model for dbSNP-mouse-10090");
-            die $self->error_message;
-        }
-        my $RsDir = $model->data_directory."/ImportedVariations/frequencies";
-    }
-    my $rsdb = Bio::DB::Fasta->new($RsDir);
-    chmod(0666, $RsDir . "/directory.index"); #change the index permissions so the next guy can rebuild it
-    my $freq = $rsdb->seq($rs_id, 1 => 6000);
-
-    return unless $freq;
-    return $freq;
-
-}
-
 sub filter_by_submitters {
 
     my ($self, $line) = @_;
 
-    # NOTE: submitters are 1 per line in dbsnp data source files,
-    # but are comma separated list on command line
+# NOTE: submitters are 1 per line in dbsnp data source files,
+# but are comma separated list on command line
 
     my $snp = parse_dbsnp_line($line);    
     my $ds_submitter = $snp->{'ds_submitter'};
@@ -510,12 +447,12 @@ sub filter_by_submitters {
 sub filter_by_type {
 
     my ($self, $line) = @_;
-    # returns $line if its a SNP
+# returns $line if its a SNP
 
     my $snp = parse_dbsnp_line($line);
 
     if ($snp->{'ds_type'} eq 'SNP'
-        && $snp->{'ds_start'} == $snp->{'ds_stop'}) {
+            && $snp->{'ds_start'} == $snp->{'ds_stop'}) {
         return $line;
     }
 
@@ -524,7 +461,7 @@ sub filter_by_type {
 
 sub find_all_matches {
 
-    # TODO: the problem is we only return position, not chromosome, etc
+# TODO: the problem is we only return position, not chromosome, etc
 
     my ($self, $line) = @_;
     my @matches;
@@ -556,12 +493,12 @@ sub find_matches_around {
     my $start = $ds_start;
 
     push @forward, $original_line;
-   
-    # go forward 
+
+# go forward 
     while ($cur == $pos || $start == $ds_start) {
         $cur++;
         last if ($cur > $self->_last_data_line_number);
-        
+
         my $forward_line = $self->get_line($fh, $index, $cur);
         last if !$forward_line;
 
@@ -572,7 +509,7 @@ sub find_matches_around {
         }
     }
 
-    # reset and go backwards
+# reset and go backwards
     $ds_start = $start;
     $cur = $pos; 
     while ($cur == $pos || $start == $ds_start) {
@@ -633,11 +570,11 @@ sub get_line {
     my ($self, $fh, $index, $line_number) = @_;
     my $fixed_width = $self->index_fixed_width();
 
-    # add fixed width to account for index header
+# add fixed width to account for index header
     my $index_pos = $line_number * $fixed_width + $fixed_width;
     seek($index, $index_pos, 0);
     my $pos = <$index>; chomp($pos);
-   
+
     seek($fh, $pos, 0);
     my $line = <$fh>;
     return $line; 
@@ -652,16 +589,17 @@ sub get_fh_for_chr {
     my $organism = $self->organism;
     my $model;
 
-    #TODO should this simply check to see if organism eq mouse?
+#TODO should this simply check to see if organism eq mouse?
 
-    #if ($dbSNP_path eq "/gsc/var/lib/import/dbsnp/130/tmp/" && $organism eq "mouse") {
+#if ($dbSNP_path eq "/gsc/var/lib/import/dbsnp/130/tmp/" && $organism eq "mouse") {
     if ($organism eq "mouse") {
         unless($model = Genome::Model::ImportedVariations->get(name => 'dbSNP-mouse-10090')){
             $self->error_message("Could not locate ImportedVariations model with dbSNP-mouse-10090 name");
             die $self->error_message;
         }
-	#$dbSNP_path = "/gsc/var/lib/import/dbsnp/mouse/10090/";
-	$dbSNP_path = $model->data_directory."/ImportedVariations/";
+#$dbSNP_path = "/gsc/var/lib/import/dbsnp/mouse/10090/";
+#        $dbSNP_path = $model->data_directory."/ImportedVariations/";
+        die 'Error: please email apipe@genome.wustl.edu -- mouse dbsnp used to be stored in a model data directory';
     }
 
     my ($fh, $index);
@@ -702,22 +640,22 @@ sub parse_dbsnp_line {
     my @parts = split(/\t/,$line);
 
     my @keys = qw(
-        ds_id
-        ds_allele 
-        ds_type
-        ds_chr
-        ds_start
-        ds_stop
-        ds_submitter
-        rs_id
-        strain
-        is_validated
-        is_validated_by_allele
-        is_validated_by_cluster
-        is_validated_by_frequency
-        is_validated_by_hap_map
-        is_validated_by_other_pop
-    );
+            ds_id
+            ds_allele 
+            ds_type
+            ds_chr
+            ds_start
+            ds_stop
+            ds_submitter
+            rs_id
+            strain
+            is_validated
+            is_validated_by_allele
+            is_validated_by_cluster
+            is_validated_by_frequency
+            is_validated_by_hap_map
+            is_validated_by_other_pop
+            );
 
     my $i = 0;
     for my $key (@keys) {
@@ -747,8 +685,8 @@ By default, takes in a file of variants and filters out variants that are alread
 
 =head1 Usage
 
-    $ gmt annotate lookup-variants --variant-file snvs.csv --output-file novel_variants.csv
- 
+$ gmt annotate lookup-variants --variant-file snvs.csv --output-file novel_variants.csv
+
 =cut
 
 

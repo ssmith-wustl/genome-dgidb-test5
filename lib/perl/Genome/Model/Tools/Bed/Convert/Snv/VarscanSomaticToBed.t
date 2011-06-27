@@ -16,7 +16,7 @@ my $output_file = join('/', $tmpdir, 'output');
 my $input_file = __FILE__ . '.input';
 my $expected_file = __FILE__ . '.expected';
 
-my $command = Genome::Model::Tools::Bed::Convert::Snv::VarscanToBed->create( source => $input_file, output => $output_file );
+my $command = Genome::Model::Tools::Bed::Convert::Snv::VarscanSomaticToBed->create( source => $input_file, output => $output_file );
 ok($command, 'Command created');
 my $rv = $command->execute;
 ok($rv, 'Command completed successfully');

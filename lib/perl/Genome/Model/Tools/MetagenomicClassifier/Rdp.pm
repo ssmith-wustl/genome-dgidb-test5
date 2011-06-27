@@ -51,7 +51,7 @@ sub execute {
     my $self = shift;
     
     my $reader = eval {
-        Genome::Model::Tools::FastQual::PhredReader->create(
+        Genome::Model::Tools::Sx::PhredReader->create(
             files => [ $self->input_file ],
         );
     };
