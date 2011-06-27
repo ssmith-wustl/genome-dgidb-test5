@@ -23,9 +23,6 @@ ok($pp, 'created processing profile');
 my $model_group = Genome::ModelGroup->create(
     id => -12345,
     name => 'TestModelGroup',
-    convergence_model_params => {
-        data_directory => $data_dir,
-    },
 );
 ok($model_group, 'created ModelGroup');
 

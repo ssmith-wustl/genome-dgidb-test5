@@ -427,40 +427,6 @@ sub param_summary {
 # This is called by the infrastructure to appropriately classify abstract processing profiles
 # according to their type name because of the "sub_classification_method_name" setting
 # in the class definiton...
-sub _X_resolve_subclass_name {
-    my $class = shift;
-
-    my $type_name;
-    if ( ref($_[0]) and $_[0]->can('type_name') ) {
-        $type_name = $_[0]->type_name;
-    } else {
-        my %params = @_;
-        $type_name = $params{type_name};
-    }
-
-    unless ( $type_name ) {
-        my $rule = $class->get_rule_for_params(@_);
-        $type_name = $rule->specified_value_for_property_name('type_name');
-    }
-
-    if ( defined $type_name ) {
-        my $subclass_name = $class->_resolve_subclass_name_for_type_name($type_name);
-        my $sub_classification_method_name = $class->__meta__->sub_classification_method_name;
-        if ($sub_classification_method_name) {
-            if ( $subclass_name->can($sub_classification_method_name)
-                 eq $class->can($sub_classification_method_name)) {
-                return $subclass_name;
-            } else {
-                return $subclass_name->$sub_classification_method_name(@_);
-            }
-        } else {
-            return $subclass_name;
-        }
-    } else {
-        return undef;
-    }
-}
-
 sub _resolve_subclass_name_for_type_name {
     my ($class,$type_name) = @_;
     confess "No type name givent to resolve subclass name" unless $type_name;
@@ -497,6 +463,7 @@ sub _resolve_log_resource {
     return ' -o '.$event->output_log_file.' -e '.$event->error_log_file;
 }
 
+# TODO This shouldn't go here
 sub _resolve_disk_group_name_for_build {
     return 'info_genome_models';
 }

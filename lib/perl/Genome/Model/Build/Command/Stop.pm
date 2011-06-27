@@ -26,6 +26,7 @@ sub execute {
     my $build_count = scalar(@builds);
     my @errors;
     for my $build (@builds) {
+        $self->total_command_count($self->total_command_count + 1);
         my $transaction = UR::Context::Transaction->begin();
         my $successful = eval {$build->stop};
         if ($successful and $transaction->commit) {
@@ -37,7 +38,7 @@ sub execute {
         }
     }
 
-    $self->display_summary_report(scalar(@builds), @errors);
+    $self->display_command_summary_report();
 
     return !scalar(@errors);
 }

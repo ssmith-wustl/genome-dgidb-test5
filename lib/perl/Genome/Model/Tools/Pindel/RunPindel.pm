@@ -261,7 +261,8 @@ sub _config_file {
     return $self->output_directory . "/pindel.config";
 }
 
-# TODO hardcoded for now, but look at bam headers soon or go back to the old method of calculating via a model id and instrument data assignments as in gmt pindel run-pindel
+# TODO hardcoded for now, but look at bam headers soon or go back to the old method of 
+# calculating via a model id and instrument data as in gmt pindel run-pindel
 sub _calculate_average_insert_size { 
     return "400";
 }

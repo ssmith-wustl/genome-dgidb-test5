@@ -165,7 +165,6 @@ sub _model_for_sequencing_platform {
         processing_profile => $pp,
         subject_name => $sample->name,
         subject_type => 'sample_name',
-        data_directory => $tmpdir,
     );
     if ( not $model ) {
         Carp::confess('Cannot create mc16s model for '.$sequencing_platform);

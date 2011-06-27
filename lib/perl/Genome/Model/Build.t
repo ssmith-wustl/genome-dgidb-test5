@@ -61,7 +61,6 @@ my $model = Genome::Model::Test->create(
 ok($model, 'created test model') or die;
 isa_ok($model, 'Genome::Model::Test', 'model subclass automagically generated');
 $model->add_instrument_data(value => $inst_data);
-
 my @model_inst_data = $model->instrument_data;
 ok(@model_inst_data, 'Added instrument data to model');
 my @model_inputs = $model->inputs;

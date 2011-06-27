@@ -32,7 +32,7 @@ $rdp->dump_status_messages(1);
 ok($rdp->execute, 'Execute rdp classifier');
 
 # compare output
-my $fa_reader = Genome::Model::Tools::FastQual::PhredReader->create(
+my $fa_reader = Genome::Model::Tools::Sx::PhredReader->create(
     files => [ $fasta ],
 );
 ok($fa_reader, 'create fasta reader');

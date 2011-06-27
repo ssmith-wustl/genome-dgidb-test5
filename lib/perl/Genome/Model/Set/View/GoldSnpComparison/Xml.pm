@@ -101,9 +101,8 @@ sub _metrics_for_build {
     
     my $gb_value = $kb_value/1000000;
 
-    my @idas = $build->instrument_data_assignments;
-
-    return {"lanes"=>scalar @idas, "goldsnp_concordance_filtered" => $het_value, "gigabases" => $gb_value};
+    my @instrument_data = $build->instrument_data;
+    return {"lanes"=>scalar @instrument_data, "goldsnp_concordance_filtered" => $het_value, "gigabases" => $gb_value};
 }
 
 sub create_node_with_attribute {

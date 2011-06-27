@@ -36,10 +36,6 @@ my $model = Genome::Model->create_mock(
                                        data_directory => $test_data_directory,
                                    );
 $model->set_always('latest_build_directory', $test_data_directory);
-$model->set_list('instrument_data_assignments',Genome::Model::InstrumentDataAssignment->get(
-                                                                                            instrument_data_id => 2499312867,
-                                                                                            model_id => 2721044485
-                                                                                        ));
 
 my $build = Genome::Model::Build->create_mock(
                                               id => --$bogus_id,

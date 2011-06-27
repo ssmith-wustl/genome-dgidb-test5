@@ -85,9 +85,9 @@ sub _generate_summary {
 
     my $total_reads = 0;
     my $aligned_reads = 0;
-    my @idas = $self->build->instrument_data_assignments;
-    for my $ida (@idas) {
-        my @alignments = $ida->results;
+    my @instrument_data = $self->build->instrument_data;
+    for my $instrument_data (@instrument_data) {
+        my @alignments = $self->build->alignment_results_for_instrument_data($instrument_data);
         for my $alignment (@alignments) {
             $total_reads += $alignment->total_read_count;
             $aligned_reads += $alignment->total_aligned_read_count;

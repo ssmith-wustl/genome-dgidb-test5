@@ -108,7 +108,7 @@ sub type_specific_parameters_for_create {
 }
 
 sub listed_params {
-    return qw/ id name data_directory subject_name subject_type processing_profile_id processing_profile_name reference_sequence_name annotation_reference_name /;
+    return qw/ id name subject_name subject_type processing_profile_id processing_profile_name reference_sequence_name annotation_reference_name /;
 }
 
 sub execute {

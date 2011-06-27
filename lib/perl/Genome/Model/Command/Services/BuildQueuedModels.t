@@ -72,7 +72,6 @@ for my $count (1..3) {
         processing_profile => $pp,
         subject_id => $sample->id,
         subject_class_name => $sample->class,
-        data_directory => $tmpdir,
     );
     ok($model, 'create model' . $count);
     $model->build_requested($count % 2);

@@ -2,7 +2,7 @@ package Genome::Model::Tools::Soap::Stats;
 
 use strict;
 use warnings;
-use Genome::Model::Tools::FastQual::FastqReader;
+use Genome::Model::Tools::Sx::FastqReader;
 
 use Genome;
 use Data::Dumper;
@@ -401,7 +401,7 @@ sub _get_input_read_and_bases_counts {
     my $base_count = 0;
 
     for my $fastq( @{$self->assembly_input_fastq_files} ) {
-	my $io = Genome::Model::Tools::FastQual::FastqReader->create(files => [$fastq]);
+	my $io = Genome::Model::Tools::Sx::FastqReader->create(files => [$fastq]);
 	while (my $seqs = $io->read) { #just getting number of reads
 	    $read_count++;
 	    $base_count += length $seqs->[0]->{seq};

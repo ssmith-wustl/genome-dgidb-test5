@@ -175,7 +175,7 @@ sub _prepare {
     }
 
     # write the 'raw' read fastas
-    my $reader = Genome::Model::Tools::FastQual::PhredReader->create(
+    my $reader = Genome::Model::Tools::Sx::PhredReader->create(
         files => [ $fasta_file, $qual_file ],
     );
     return if not $reader;
@@ -195,7 +195,7 @@ sub _raw_reads_fasta_and_qual_writer {
         unlink $fasta_file if -e $fasta_file;
         my $qual_file = $self->raw_reads_qual_file;
         unlink  $qual_file if -e $qual_file;
-        my $writer = Genome::Model::Tools::FastQual::PhredWriter->create(files => [ $fasta_file, $qual_file, ]);
+        my $writer = Genome::Model::Tools::Sx::PhredWriter->create(files => [ $fasta_file, $qual_file, ]);
         if ( not $writer ) {
             $self->error_message('Failed to create phred reader for raw reads');
             return;
@@ -249,7 +249,7 @@ sub _add_amplicon_reads_fasta_and_qual_to_build_processed_fasta_and_qual {
     my ($self, $fasta_file, $qual_file) = @_;
 
     # Write the 'raw' read fastas
-    my $reader = Genome::Model::Tools::FastQual::PhredReader->create(
+    my $reader = Genome::Model::Tools::Sx::PhredReader->create(
         files => [ $fasta_file, $qual_file ],
     );
     return if not $reader;
@@ -269,7 +269,7 @@ sub _processed_reads_fasta_and_qual_writer {
         unlink $fasta_file if -e $fasta_file;
         my $qual_file = $self->processed_reads_qual_file;
         unlink  $qual_file if -e $qual_file;
-        my $writer = Genome::Model::Tools::FastQual::PhredWriter->create(files => [ $fasta_file, $qual_file ]);
+        my $writer = Genome::Model::Tools::Sx::PhredWriter->create(files => [ $fasta_file, $qual_file ]);
         return if not $writer;
         $self->{_processed_reads_fasta_and_qual_writer} = $writer;
     }

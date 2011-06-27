@@ -260,22 +260,6 @@ sub _generate_events_for_object {
                 }
             } elsif ($command_class =~ /ReferenceAlignment::AlignReads|TrimReadSet|AssignReadSetToModel|AddReadSetToProject|FilterReadSet|RnaSeq::PrepareReads/) {
                 if ($object->isa('Genome::InstrumentData')) {
-                    my $ida = Genome::Model::InstrumentDataAssignment->get(
-                        model_id => $build->model_id,
-                        instrument_data_id => $object->id,
-                    );
-                    unless ($ida) {
-                        #This seems like duplicate logic but works best for the mock models in test case
-                        my $model = $build->model;
-                        ($ida) = grep { $_->instrument_data_id == $object->id} $model->instrument_data_assignments;
-                        unless ($ida) {
-                            $build->error_message('Failed to find InstrumentDataAssignment for instrument data '. $object->id .' and model '. $build->model_id);
-                            die $build->error_message;
-                        }
-                    }
-                    unless ($ida->first_build_id) {
-                        $ida->first_build_id($build->build_id);
-                    }
                     $command = $command_class->create(
                         instrument_data_id => $object->id,
                         model_id => $build->model_id,

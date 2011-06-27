@@ -120,22 +120,20 @@ sub execute {
         $self->error_message(" No Running or Complete Builds Found ");
         return;
     }
-    #Convert events to InstrumentDataAssignment objects
-    my @idas = map { $_->instrument_data_assignment } @events;
 
     my %stats_for;
     my %readset_stats;
 
     #print STDOUT join "\t",("Name","#Reads_Mapped","#Reads_Total","isPaired","#Reads_Mapped_asPaired","Median_Insert_Size","Standard_Deviation_Above_Insert_Size",),"\n";
 #Completely undeprecated loop over the readsets
-    foreach my $ida (@idas) {
-        my $library = $ida->library_name;
+    for my $instrument_data ($last_complete_build->instrument_data) {
+        my $library = $instrument_data->library_name;
         unless(defined($library)) {
-            $self->error_message("No library defined for ".$ida->instrument_data_id);
+            $self->error_message("No library defined for ".$instrument_data->id);
             next;
         }
-        my $lane_name = $ida->short_name."_".$ida->subset_name;
-        my $alignment = $ida->results;
+        my $lane_name = $instrument_data->short_name."_".$instrument_data->subset_name;
+        my ($alignment) = $last_complete_build->alignment_results_for_instrument_data($instrument_data);
         my @aligner_output = $alignment->aligner_output_file_paths;
         if(@aligner_output > 1) {
             $self->error_message("More than one aligner_output_file! WTF!");
@@ -151,8 +149,8 @@ sub execute {
         $stats_for{$library}{$hash->{isPE}}{total} += $hash->{total};
         $stats_for{$library}{$hash->{isPE}}{paired} += $hash->{paired};
         $stats_for{$library}{$hash->{isPE}}{read_sets} += 1;
-        my $median_insert_size = $ida->median_insert_size;
-        my $sd_above_insert_size = $ida->sd_above_insert_size;
+        my $median_insert_size = $instrument_data->median_insert_size;
+        my $sd_above_insert_size = $instrument_data->sd_above_insert_size;
         if(defined($median_insert_size) && $hash->{isPE}) {
             $stats_for{$library}{median_insert_size} += $median_insert_size;
             $stats_for{$library}{median_insert_size_n} +=1;

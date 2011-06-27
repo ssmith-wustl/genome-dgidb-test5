@@ -73,33 +73,30 @@ my $pp = Genome::ProcessingProfile->create(
 );
 ok($pp, 'create sanger pp') or die;
 
-# dirs
-my $tmpdir = File::Temp::tempdir(CLEANUP => 1);
-
 # model
 my $model = Genome::Model::MetagenomicComposition16s->create(
     processing_profile => $pp,
     processing_profile => $pp,
     subject_name => $sample->name,
-    subject_type => 'sample_name',
-    data_directory => $tmpdir,
+    subject_type => 'sample_name'
 );
 ok($model, 'MC16s sanger model') or die;
 ok($model->add_instrument_data($instrument_data), 'add inst data to model');
 
 my $example_build = Genome::Model::Build->create(
     model=> $model,
-    id => -2288,
     data_directory => '/gsc/var/cache/testsuite/data/Genome-Model/MetagenomicComposition16sSanger/build',
+    id => -2288
 );
 ok($example_build, 'example build') or die;
+ok($example_build->get_or_create_data_directory, 'resolved data dir');
 
 my $build = Genome::Model::Build::MetagenomicComposition16s->create(
     id => -1199,
-    model => $model,
-    data_directory => $model->data_directory.'/build',
+    model => $model
 );
 isa_ok($build, 'Genome::Model::Build::MetagenomicComposition16s::Sanger');
+ok($build->get_or_create_data_directory, 'resolved data dir');
 
 # description
 is(

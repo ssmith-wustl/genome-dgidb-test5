@@ -68,7 +68,6 @@ my $model_fail = eval {
         name => 'Tester Model',
         subject_id => $sample->id,
         subject_class_name => $sample->class,
-        data_directory => $tmpdir,
     );
 };
 ok(!$model_fail, 'failed to create model w/o pp');
@@ -80,7 +79,6 @@ $model_fail = eval {
         processing_profile_id => -999999,
         subject_id => $sample->id,
         subject_class_name => $sample->class,
-        data_directory => $tmpdir,
     );
 };
 ok(!$model_fail, 'failed to create model w/ invalid pp');
@@ -90,7 +88,6 @@ $model_fail = eval{
     Genome::Model->create(
         name => 'Tester Model',
         processing_profile => $pp,
-        data_directory => $tmpdir,
     );
 };
 ok(!$model_fail, 'failed to create model w/o subject');
@@ -102,7 +99,6 @@ $model_fail = eval{
         processing_profile => $pp,
         subject_id => -999999,
         subject_class_name => $sample->class,
-        data_directory => $tmpdir,
     );
 };
 ok(!$model_fail, 'failed to create model w/ invalid subject');
@@ -113,7 +109,6 @@ my $model = Genome::Model->create(
     processing_profile => $pp,
     subject_id => $sample->id,
     subject_class_name => $sample->class,
-    data_directory => $tmpdir,
 );
 ok($model, 'create model');
 
@@ -132,14 +127,9 @@ $model_fail = eval {
         processing_profile => $pp,
         subject_id => $sample->id,
         subject_class_name => $sample->class,
-        data_directory => $tmpdir,
     );
 };
 ok(!$model_fail, 'failed to recreate model');
-
-# DATA DIR
-is($model->data_directory, $tmpdir, "data_directory == tmpdir");
-ok($model->resolve_data_directory, "resolve_data_directory == tmpdir");
 
 # INPUT
 $model->foo('bar');
@@ -191,7 +181,7 @@ my @builds;
 for my $i (1..2) {
     unshift @builds, Genome::Model::Build->create( 
         model => $model,
-        data_directory => $model->data_directory.'/build'.$i,
+        data_directory => $tmpdir.'/build'.$i,
     );
 }
 

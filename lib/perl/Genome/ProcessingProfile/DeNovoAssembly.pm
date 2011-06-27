@@ -36,7 +36,7 @@ class Genome::ProcessingProfile::DeNovoAssembly{
 	# Read Coverage, Trimmer and Filter
 	read_processor => {
 	    is_optional => 1,
-	    doc => "String of read trimmers, filters and sorters to use. Find processors in 'gmt fast-qual.' List each porocessor in order of execution as they would be run on the command line. Do not include 'gmt fast-qual', as this is assumed. List params starting w/ a dash (-), followed by the value. Separate processors by a pipe w/ a space on each side ( | ). The read processors will be validated. Ex:\n\ttrimmer bwa-style --trim-qual-length | filter by-length filter-length 70",
+	    doc => "String of read trimmers, filters and sorters to use. Find processors in 'gmt sx.' List each porocessor in order of execution as they would be run on the command line. Do not include 'gmt sx', as this is assumed. List params starting w/ a dash (-), followed by the value. Separate processors by a pipe w/ a space on each side ( | ). The read processors will be validated. Ex:\n\ttrimmer bwa-style --trim-qual-length | filter by-length filter-length 70",
 	},
 	#post assemble tools to run
 	post_assemble => {
@@ -443,7 +443,7 @@ sub _validate_read_processor {
     }
 
     for my $read_processor_part ( @read_processor_parts ) {
-        my $read_processor_is_ok = Genome::Model::Tools::FastQual::Pipe->validate_command($read_processor_part);
+        my $read_processor_is_ok = Genome::Model::Tools::Sx::Pipe->validate_command($read_processor_part);
         if ( not $read_processor_is_ok ) {
             $self->error_message("Cannot validate read processor ($read_processor_part). See above error(s)");
             return;
@@ -647,7 +647,7 @@ sub bsub_usage {
 sub soap_de_novo_assemble_bsub_rusage {
     my $mem = 30000;
     my $queue = 'alignment';
-    $queue = 'alignment-pd' if (Genome::Sys->username =~ /^apipe-/);
+    $queue = 'alignment-pd' if (Genome::Config->should_use_alignment_pd);
     return "-q $queue -n 4 -R 'span[hosts=1] select[type==LINUX64 && mem>$mem] rusage[mem=$mem]' -M $mem".'000';
 }
 
@@ -657,7 +657,7 @@ sub soap_import_bsub_rusage {
 
 sub velvet_one_button_bsub_rusage {
     my $queue = 'alignment';
-    $queue = 'alignment-pd' if (Genome::Sys->username =~ /^apipe-/);
+    $queue = 'alignment-pd' if (Genome::Config->should_use_alignment_pd);
     return "-q $queue -R 'select[type==LINUX64 && mem>30000] rusage[mem=30000] span[hosts=1]' -M 30000000";
 }
 
