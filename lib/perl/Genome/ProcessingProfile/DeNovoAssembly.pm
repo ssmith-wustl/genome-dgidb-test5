@@ -443,7 +443,7 @@ sub _validate_read_processor {
     }
 
     for my $read_processor_part ( @read_processor_parts ) {
-        my $read_processor_is_ok = Genome::Model::Tools::FastQual::Pipe->validate_command($read_processor_part);
+        my $read_processor_is_ok = Genome::Model::Tools::Sx::Pipe->validate_command($read_processor_part);
         if ( not $read_processor_is_ok ) {
             $self->error_message("Cannot validate read processor ($read_processor_part). See above error(s)");
             return;

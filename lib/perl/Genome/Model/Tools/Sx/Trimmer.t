@@ -7,7 +7,7 @@ use above 'Genome';
 
 use Test::More;
 
-use_ok('Genome::Model::Tools::FastQual::Trimmer') or die;
+use_ok('Genome::Model::Tools::Sx::Trimmer') or die;
 
 done_testing();
 exit;

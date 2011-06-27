@@ -7,7 +7,7 @@ use above 'Genome';
 
 use Test::More;
 
-use_ok('Genome::Model::Tools::FastQual::Sorter') or die;
+use_ok('Genome::Model::Tools::Sx::Sorter') or die;
 
 done_testing();
 exit;

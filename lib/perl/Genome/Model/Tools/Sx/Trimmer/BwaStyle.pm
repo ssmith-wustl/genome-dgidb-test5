@@ -1,4 +1,4 @@
-package Genome::Model::Tools::FastQual::Trimmer::BwaStyle;
+package Genome::Model::Tools::Sx::Trimmer::BwaStyle;
 
 use strict;
 use warnings;
@@ -8,8 +8,8 @@ use Genome;
 use Data::Dumper 'Dumper';
 use Regexp::Common;
 
-class Genome::Model::Tools::FastQual::Trimmer::BwaStyle {
-    is  => 'Genome::Model::Tools::FastQual::Trimmer',
+class Genome::Model::Tools::Sx::Trimmer::BwaStyle {
+    is  => 'Genome::Model::Tools::Sx::Trimmer',
     has => [
         trim_qual_level => {
             is  => 'Integer',

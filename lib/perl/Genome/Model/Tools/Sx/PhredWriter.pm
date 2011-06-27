@@ -1,12 +1,12 @@
-package Genome::Model::Tools::FastQual::PhredWriter;
+package Genome::Model::Tools::Sx::PhredWriter;
 
 use strict;
 use warnings;
 
 use Genome;
 
-class Genome::Model::Tools::FastQual::PhredWriter {
-    is => 'Genome::Model::Tools::FastQual::SeqWriter',
+class Genome::Model::Tools::Sx::PhredWriter {
+    is => 'Genome::Model::Tools::Sx::SeqWriter',
 };
 
 sub _write {

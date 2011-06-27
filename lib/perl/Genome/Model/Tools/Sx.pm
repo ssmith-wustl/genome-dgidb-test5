@@ -1,4 +1,4 @@
-package Genome::Model::Tools::FastQual;
+package Genome::Model::Tools::Sx;
 
 use strict;
 use warnings;
@@ -10,7 +10,7 @@ require File::Basename;
 require Genome::Utility::IO::StdinRefReader;
 require Genome::Utility::IO::StdoutRefWriter;
 
-class Genome::Model::Tools::FastQual {
+class Genome::Model::Tools::Sx {
     is  => 'Command',
     has => [
         input => {
@@ -185,7 +185,7 @@ sub _reader_class {
         $self->error_message('Invalid type in: '.$self->type_in);
         return;
     }
-    return 'Genome::Model::Tools::FastQual::'.$supported_types{ $self->type_in }->{reader_subclass};
+    return 'Genome::Model::Tools::Sx::'.$supported_types{ $self->type_in }->{reader_subclass};
 }
 
 sub _writer_class {
@@ -197,7 +197,7 @@ sub _writer_class {
         $self->error_message('Invalid type out: '.$self->type_out);
         return;
     }
-    return 'Genome::Model::Tools::FastQual::'.$supported_types{ $self->type_out }->{writer_subclass};
+    return 'Genome::Model::Tools::Sx::'.$supported_types{ $self->type_out }->{writer_subclass};
 }
 
 sub create {
@@ -345,7 +345,7 @@ sub _open_reader_and_writer {
     }
 
     if ( $self->metrics_file_out ) {
-        $writer->metrics( Genome::Model::Tools::FastQual::Metrics->create() );
+        $writer->metrics( Genome::Model::Tools::Sx::Metrics->create() );
     }
 
     $self->_writer($writer);

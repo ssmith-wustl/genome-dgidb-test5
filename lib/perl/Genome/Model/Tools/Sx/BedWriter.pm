@@ -1,12 +1,12 @@
-package Genome::Model::Tools::FastQual::BedWriter;
+package Genome::Model::Tools::Sx::BedWriter;
 
 use strict;
 use warnings;
 
 use Genome;
 
-class Genome::Model::Tools::FastQual::BedWriter {
-    is => 'Genome::Model::Tools::FastQual::SeqWriter',
+class Genome::Model::Tools::Sx::BedWriter {
+    is => 'Genome::Model::Tools::Sx::SeqWriter',
     has => [
         _max_files => { value => 1, },
     ],

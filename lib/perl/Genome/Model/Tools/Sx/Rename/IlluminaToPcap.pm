@@ -1,4 +1,4 @@
-package Genome::Model::Tools::FastQual::Rename::IlluminaToPcap;
+package Genome::Model::Tools::Sx::Rename::IlluminaToPcap;
 
 use strict;
 use warnings;
@@ -7,8 +7,8 @@ use Genome;
 
 use Data::Dumper 'Dumper';
 
-class Genome::Model::Tools::FastQual::Rename::IlluminaToPcap {
-    is  => 'Genome::Model::Tools::FastQual',
+class Genome::Model::Tools::Sx::Rename::IlluminaToPcap {
+    is  => 'Genome::Model::Tools::Sx',
 };
 
 sub help_brief {

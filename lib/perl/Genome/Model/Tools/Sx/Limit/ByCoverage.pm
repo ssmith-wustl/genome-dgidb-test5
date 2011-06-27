@@ -1,4 +1,4 @@
-package Genome::Model::Tools::FastQual::Limit::ByCoverage;
+package Genome::Model::Tools::Sx::Limit::ByCoverage;
 
 use strict;
 use warnings;
@@ -9,8 +9,8 @@ require Carp;
 use Data::Dumper 'Dumper';
 use Regexp::Common;
 
-class Genome::Model::Tools::FastQual::Limit::ByCoverage {
-    is => 'Genome::Model::Tools::FastQual::Limit',
+class Genome::Model::Tools::Sx::Limit::ByCoverage {
+    is => 'Genome::Model::Tools::Sx::Limit',
     has => [
         bases => {
             is => 'Number',

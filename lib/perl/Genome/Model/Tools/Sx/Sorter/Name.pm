@@ -1,4 +1,4 @@
-package Genome::Model::Tools::FastQual::Sorter::Name;
+package Genome::Model::Tools::Sx::Sorter::Name;
 
 use strict;
 use warnings;
@@ -9,8 +9,8 @@ use Data::Dumper 'Dumper';
 require IO::File;
 require File::Temp;
 
-class Genome::Model::Tools::FastQual::Sorter::Name {
-    is  => 'Genome::Model::Tools::FastQual::Sorter',
+class Genome::Model::Tools::Sx::Sorter::Name {
+    is  => 'Genome::Model::Tools::Sx::Sorter',
 };
 
 sub help_brief {

@@ -10,10 +10,10 @@ require File::Compare;
 require File::Temp;
 use Test::More;
 
-use_ok('Genome::Model::Tools::FastQual') or die;
+use_ok('Genome::Model::Tools::Sx') or die;
 
 # Files
-my $dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-FastQual';
+my $dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Sx';
 my $example_in_file = $dir.'/fast_qual.example.fastq';
 ok(-s $example_in_file, 'example in fastq file exists');
 my $example_out_file = $dir.'/fast_qual.example.fasta';
@@ -26,14 +26,14 @@ my $out_file = $tmpdir.'/out.fasta';
 my $metrics_file = $tmpdir.'/metrics.txt';
 
 # Resolve type from file
-is(Genome::Model::Tools::FastQual->_resolve_type_for_file('a.fastq'), 'sanger', 'resolve type for fastq file');
-is(Genome::Model::Tools::FastQual->_resolve_type_for_file('a.fasta'), 'phred', 'resolve type for fasta file');
-is(Genome::Model::Tools::FastQual->_resolve_type_for_file('a.fna'), 'phred', 'resolve type for fna file');
-is(Genome::Model::Tools::FastQual->_resolve_type_for_file('a.fa'), 'phred', 'resolve type for fa file');
-ok(!Genome::Model::Tools::FastQual->_resolve_type_for_file('a.blah'), 'cannot resolve type for blah file');
+is(Genome::Model::Tools::Sx->_resolve_type_for_file('a.fastq'), 'sanger', 'resolve type for fastq file');
+is(Genome::Model::Tools::Sx->_resolve_type_for_file('a.fasta'), 'phred', 'resolve type for fasta file');
+is(Genome::Model::Tools::Sx->_resolve_type_for_file('a.fna'), 'phred', 'resolve type for fna file');
+is(Genome::Model::Tools::Sx->_resolve_type_for_file('a.fa'), 'phred', 'resolve type for fa file');
+ok(!Genome::Model::Tools::Sx->_resolve_type_for_file('a.blah'), 'cannot resolve type for blah file');
 
 # Fail: read/write to same # of inputs/outputs and same type
-my $fq = Genome::Model::Tools::FastQual->execute(
+my $fq = Genome::Model::Tools::Sx->execute(
     input => [ $example_in_file ],
     output => [ $out_file ],
     type_out => 'sanger',
@@ -41,7 +41,7 @@ my $fq = Genome::Model::Tools::FastQual->execute(
 ok(!$fq->result, 'failed b/c same input/output and same type');
 
 # Success
-$fq = Genome::Model::Tools::FastQual->create(
+$fq = Genome::Model::Tools::Sx->create(
     #input => [ $dir.'/big.fastq' ],
     input => [ $example_in_file ],
     output => [ $out_file ],
@@ -53,15 +53,15 @@ is(File::Compare::compare($out_file, $example_out_file), 0, 'output file ok');
 is(File::Compare::compare($metrics_file, $example_metrics_file), 0, 'metrics file ok');
 
 # Pipes
-my $fq_pipe = Genome::Model::Tools::FastQual->create();
+my $fq_pipe = Genome::Model::Tools::Sx->create();
 ok($fq_pipe, 'create w/ pipes');
-$fq_pipe = Genome::Model::Tools::FastQual->create(type_in => 'sanger');
+$fq_pipe = Genome::Model::Tools::Sx->create(type_in => 'sanger');
 ok(!$fq_pipe, 'pipe failed b/c type_in was set');
-$fq_pipe = Genome::Model::Tools::FastQual->create(type_out => 'sanger');
+$fq_pipe = Genome::Model::Tools::Sx->create(type_out => 'sanger');
 ok(!$fq_pipe, 'pipe failed b/c type_out was set');
-$fq_pipe = Genome::Model::Tools::FastQual->create(paired_input => 1);
+$fq_pipe = Genome::Model::Tools::Sx->create(paired_input => 1);
 ok(!$fq_pipe, 'pipe failed b/c paired_input was set');
-$fq_pipe = Genome::Model::Tools::FastQual->create(paired_output => 1);
+$fq_pipe = Genome::Model::Tools::Sx->create(paired_output => 1);
 ok(!$fq_pipe, 'pipe failed b/c paired_output was set');
 
 #print "$tmpdir\n"; <STDIN>;

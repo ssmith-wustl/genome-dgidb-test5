@@ -1,4 +1,4 @@
-package Genome::Model::Tools::FastQual::Pipe;
+package Genome::Model::Tools::Sx::Pipe;
 
 use strict;
 use warnings;
@@ -10,8 +10,8 @@ use File::Temp;
 use IO::String;
 use IPC::Open3;
 
-class Genome::Model::Tools::FastQual::Pipe { 
-    is => 'Genome::Model::Tools::FastQual',
+class Genome::Model::Tools::Sx::Pipe { 
+    is => 'Genome::Model::Tools::Sx',
     has => [
         commands => {
             is => 'Text',
@@ -205,7 +205,7 @@ sub validate_command {
         return;
     }
 
-    my $class = 'Genome::Model::Tools::FastQual::'.
+    my $class = 'Genome::Model::Tools::Sx::'.
     join(
         '::', 
         map { Genome::Utility::Text::string_to_camel_case($_) }

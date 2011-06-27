@@ -1,12 +1,12 @@
-package Genome::Model::Tools::FastQual::IlluminaFastqWriter;
+package Genome::Model::Tools::Sx::IlluminaFastqWriter;
 
 use strict;
 use warnings;
 
 use Genome;
 
-class Genome::Model::Tools::FastQual::IlluminaFastqWriter {
-    is => 'Genome::Model::Tools::FastQual::FastqWriter',
+class Genome::Model::Tools::Sx::IlluminaFastqWriter {
+    is => 'Genome::Model::Tools::Sx::FastqWriter',
 };
 
 sub _write {

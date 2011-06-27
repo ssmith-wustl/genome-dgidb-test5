@@ -9,22 +9,22 @@ require File::Temp;
 require File::Compare;
 use Test::More;
 
-use_ok('Genome::Model::Tools::FastQual::BedWriter') or die;
+use_ok('Genome::Model::Tools::Sx::BedWriter') or die;
 
 my $tmpdir = File::Temp::tempdir(CLEANUP => 1);
 ok(-d $tmpdir, 'temp dir');
-my $dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-FastQual/';
+my $dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Sx/';
 my $fasta = $dir.'/bed_writer.fasta';
 ok(-s $fasta, 'fasta exists') or die;
 my $example_bed_file = $dir.'/bed_writer.v2.bed';
 ok(-s $example_bed_file, 'example bed file exists');
 
-my $reader = Genome::Model::Tools::FastQual::PhredReader->create(
+my $reader = Genome::Model::Tools::Sx::PhredReader->create(
     files => [ $fasta ],
 );
 ok($reader, 'fasta reader');
 my $bed_file = $tmpdir.'/bed';
-my $writer = Genome::Model::Tools::FastQual::BedWriter->create(
+my $writer = Genome::Model::Tools::Sx::BedWriter->create(
     files => [ $bed_file ],
 );
 ok($writer, 'bed writer');

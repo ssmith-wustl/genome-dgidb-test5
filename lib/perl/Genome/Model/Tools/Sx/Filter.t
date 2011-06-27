@@ -7,17 +7,17 @@ use above 'Genome';
 
 use Test::More;
 
-use_ok('Genome::Model::Tools::FastQual::Filter') or die;
+use_ok('Genome::Model::Tools::Sx::Filter') or die;
 
 # Class for testing
-class Genome::Model::Tools::FastQual::Filter::Tester {
-    is => 'Genome::Model::Tools::FastQual::Filter',
+class Genome::Model::Tools::Sx::Filter::Tester {
+    is => 'Genome::Model::Tools::Sx::Filter',
 };
-sub Genome::Model::Tools::FastQual::Filter::Tester::_filter {
+sub Genome::Model::Tools::Sx::Filter::Tester::_filter {
     return 1;
 }
 
-my $filter = Genome::Model::Tools::FastQual::Filter::Tester->create();
+my $filter = Genome::Model::Tools::Sx::Filter::Tester->create();
 ok($filter, 'create filter');
 can_ok($filter, 'execute'); # test execute?? others under filter already do...
 

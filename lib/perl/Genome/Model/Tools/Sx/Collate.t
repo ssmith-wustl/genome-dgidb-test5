@@ -8,9 +8,9 @@ use above 'Genome';
 require File::Compare;
 use Test::More;
 
-use_ok('Genome::Model::Tools::FastQual::Collate') or die;
+use_ok('Genome::Model::Tools::Sx::Collate') or die;
 
-my $dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-FastQual/';
+my $dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Sx/';
 my $collated_fastq = $dir.'/set_reader_writer.collated.fastq';
 ok(-s $collated_fastq, 'Collated fastq exists') or die;
 my $forward_fastq = $dir.'/set_reader_writer.forward.fastq';
@@ -22,19 +22,19 @@ my $tmp_dir = File::Temp::tempdir(CLEANUP => 1);
 my $out_fastq = $tmp_dir.'/out.fastq';
 
 # fails
-my $failed_collate = Genome::Model::Tools::FastQual::Collate->execute(
+my $failed_collate = Genome::Model::Tools::Sx::Collate->execute(
     input => [ $forward_fastq ],
     output => [ $out_fastq ],
 );
 ok(!$failed_collate, 'execute failed w/ only one input file');
-$failed_collate = Genome::Model::Tools::FastQual::Collate->execute(
+$failed_collate = Genome::Model::Tools::Sx::Collate->execute(
     input => [ $forward_fastq, $reverse_fastq],
     output => [ $out_fastq, $out_fastq ],
 );
 ok(!$failed_collate, 'execute failed w/ 2 output file');
 
 # ok
-my $collate = Genome::Model::Tools::FastQual::Collate->create(
+my $collate = Genome::Model::Tools::Sx::Collate->create(
     input => [ $forward_fastq, $reverse_fastq ],
     output => [ $out_fastq ],
 );

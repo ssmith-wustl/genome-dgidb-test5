@@ -11,13 +11,13 @@ require File::Compare;
 use Test::More;
 
 #< Use >#
-use_ok('Genome::Model::Tools::FastQual::FastqReader') or die;
-use_ok('Genome::Model::Tools::FastQual::FastqWriter') or die;
+use_ok('Genome::Model::Tools::Sx::FastqReader') or die;
+use_ok('Genome::Model::Tools::Sx::FastqWriter') or die;
 
 #< Files >#
 my $tmpdir = File::Temp::tempdir(CLEANUP => 1);
 ok(-d $tmpdir, 'Created temp dir');
-my $dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-FastQual/';
+my $dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Sx/';
 
 my $collated_fastq = $dir.'/reader_writer.collated.fastq';
 ok(-s $collated_fastq, 'Collated fastq exists') or die;
@@ -35,41 +35,41 @@ ok(-s $example4_sing_fastq, 'Reverse fastq example 4 exists') or die;
 
 #< Create Fails >#
 my $failed_create;
-eval{ $failed_create = Genome::Model::Tools::FastQual::FastqReader->create(); };
+eval{ $failed_create = Genome::Model::Tools::Sx::FastqReader->create(); };
 ok(($@ && !$failed_create), 'Failed to create w/ reader w/o fastqs');
 eval{ 
-    $failed_create = Genome::Model::Tools::FastQual::FastqReader->create(files => []); 
+    $failed_create = Genome::Model::Tools::Sx::FastqReader->create(files => []); 
 };
 ok(($@ && !$failed_create), 'Failed to create w/ reader w/ empty fastqs aryref');
 eval{ 
-    $failed_create = Genome::Model::Tools::FastQual::FastqReader->create(files => [qw/ 1 2 3/]); 
+    $failed_create = Genome::Model::Tools::Sx::FastqReader->create(files => [qw/ 1 2 3/]); 
 };
 ok(($@ && !$failed_create), 'Failed to create w/ reader w/ too many fastqs');
-eval{ $failed_create = Genome::Model::Tools::FastQual::FastqWriter->create(); };
+eval{ $failed_create = Genome::Model::Tools::Sx::FastqWriter->create(); };
 ok(($@ && !$failed_create), 'Failed to create w/ writer w/o fastqs');
 eval{ 
-    $failed_create = Genome::Model::Tools::FastQual::FastqWriter->create(files => []); 
+    $failed_create = Genome::Model::Tools::Sx::FastqWriter->create(files => []); 
 };
 ok(($@ && !$failed_create), 'Failed to create w/ writer w/ empty fastqs aryref');
 eval{ 
-    $failed_create = Genome::Model::Tools::FastQual::FastqWriter->create(files => [qw/ 1 2 3 4 /]); 
+    $failed_create = Genome::Model::Tools::Sx::FastqWriter->create(files => [qw/ 1 2 3 4 /]); 
 };
 ok(($@ && !$failed_create), 'Failed to create w/ writer w/ too many fastqs');
 
 #< Write Fails >#
 my $failed_write;
-eval{ $failed_write = Genome::Model::Tools::FastQual::FastqWriter->write(); };
+eval{ $failed_write = Genome::Model::Tools::Sx::FastqWriter->write(); };
 ok(($@ && !$failed_write), 'Failed to write w/o fastqs');
 
 #< Read/write separate >#
 note('Read separate, write separate');
-my $reader = Genome::Model::Tools::FastQual::FastqReader->create(
+my $reader = Genome::Model::Tools::Sx::FastqReader->create(
     files => [ $forward_fastq, $reverse_fastq ],
 );
 ok($reader, 'Create reader');
 my $out_forward_fastq = $tmpdir.'/test1.forward.fastq';
 my $out_reverse_fastq = $tmpdir.'/test1.reverse.fastq';
-my $writer = Genome::Model::Tools::FastQual::FastqWriter->create(
+my $writer = Genome::Model::Tools::Sx::FastqWriter->create(
     files => [ $out_forward_fastq, $out_reverse_fastq ],
 );
 ok($writer, 'Create writer');
@@ -88,13 +88,13 @@ is(File::Compare::compare($reverse_fastq, $out_reverse_fastq), 0, 'Reverse in/ou
 
 #< Read/write collate and test giving fastq file as a string >#
 note('Read collated, write collated');
-$reader = Genome::Model::Tools::FastQual::FastqReader->create(
+$reader = Genome::Model::Tools::Sx::FastqReader->create(
     files => [ $forward_fastq, $reverse_fastq ],
     is_paired => 1,
 );
 ok($reader, 'Create reader');
 my $out_collated_fastq = $tmpdir.'/test2.collated.fastq';
-$writer = Genome::Model::Tools::FastQual::FastqWriter->create(
+$writer = Genome::Model::Tools::Sx::FastqWriter->create(
     files => [ $out_collated_fastq ],
 );
 ok($writer, 'Create writer');
@@ -110,14 +110,14 @@ is(File::Compare::compare($collated_fastq, $out_collated_fastq), 0, 'Reverse in/
 
 #< Read collated, write separate >#
 note('Read collated, write collated');
-$reader = Genome::Model::Tools::FastQual::FastqReader->create(
+$reader = Genome::Model::Tools::Sx::FastqReader->create(
     files => [ $collated_fastq ],
     is_paired => 1,
 );
 ok($reader, 'Create reader');
 $out_forward_fastq = $tmpdir.'/test3.forward.fastq';
 $out_reverse_fastq = $tmpdir.'/test3.reverse.fastq';
-$writer = Genome::Model::Tools::FastQual::FastqWriter->create(
+$writer = Genome::Model::Tools::Sx::FastqWriter->create(
     files => [ $out_forward_fastq, $out_reverse_fastq ],
 );
 ok($writer, 'Create writer');
@@ -134,7 +134,7 @@ is(File::Compare::compare($out_reverse_fastq, $reverse_fastq), 0, 'Reverse in/ou
 
 #< Read collated, write collated w/ singletons >#
 note('Read collated, write collated');
-$reader = Genome::Model::Tools::FastQual::FastqReader->create(
+$reader = Genome::Model::Tools::Sx::FastqReader->create(
     files => [ $collated_fastq ],
     is_paired => 1,
 );
@@ -142,7 +142,7 @@ ok($reader, 'Create reader');
 $out_forward_fastq = $tmpdir.'/test4.forward.fastq';
 $out_reverse_fastq = $tmpdir.'/test4.reverse.fastq';
 my $out_sing_fastq = $tmpdir.'/test4.sing.fastq';
-$writer = Genome::Model::Tools::FastQual::FastqWriter->create(
+$writer = Genome::Model::Tools::Sx::FastqWriter->create(
     files => [ $out_forward_fastq, $out_reverse_fastq, $out_sing_fastq ],
 );
 ok($writer, 'Create writer');

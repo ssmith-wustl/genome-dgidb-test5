@@ -1,12 +1,12 @@
-package Genome::Model::Tools::FastQual::PhredReader;
+package Genome::Model::Tools::Sx::PhredReader;
 
 use strict;
 use warnings;
 
 use Genome;
 
-class Genome::Model::Tools::FastQual::PhredReader {
-    is => 'Genome::Model::Tools::FastQual::SeqReader',
+class Genome::Model::Tools::Sx::PhredReader {
+    is => 'Genome::Model::Tools::Sx::SeqReader',
 };
 
 sub _read {

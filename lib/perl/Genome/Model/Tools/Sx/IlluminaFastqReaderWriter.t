@@ -11,11 +11,11 @@ require File::Compare;
 use Test::More;
 
 #< Use >#
-use_ok('Genome::Model::Tools::FastQual::IlluminaFastqReader') or die;
-use_ok('Genome::Model::Tools::FastQual::IlluminaFastqWriter') or die;
+use_ok('Genome::Model::Tools::Sx::IlluminaFastqReader') or die;
+use_ok('Genome::Model::Tools::Sx::IlluminaFastqWriter') or die;
 
 #< Files >#
-my $dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-FastQual/';
+my $dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Sx/';
 my $example_fastq = $dir.'/reader_writer.fastq';
 ok(-s $example_fastq, 'example fastq exists') or die;
 
@@ -25,11 +25,11 @@ my $out_fastq = $tmpdir.'/out.fastq';
 
 #< Read illumina, write illumina >#
 note('Read illumina, converts to sanger, writer illumina, converts back');
-my $reader = Genome::Model::Tools::FastQual::IlluminaFastqReader->create(
+my $reader = Genome::Model::Tools::Sx::IlluminaFastqReader->create(
     files => [ $example_fastq ],
 );
 ok($reader, 'Create reader');
-my $writer = Genome::Model::Tools::FastQual::IlluminaFastqWriter->create(
+my $writer = Genome::Model::Tools::Sx::IlluminaFastqWriter->create(
     files => [ $out_fastq ],
 );
 ok($writer, 'Create writer');

@@ -7,9 +7,9 @@ use above 'Genome';
 
 use Test::More;
 
-use_ok('Genome::Model::Tools::FastQual::Metrics') or die;
+use_ok('Genome::Model::Tools::Sx::Metrics') or die;
 
-my $metrics = Genome::Model::Tools::FastQual::Metrics->create();
+my $metrics = Genome::Model::Tools::Sx::Metrics->create();
 ok($metrics, 'create');
 ok($metrics->add([{seq => 'AAGGCCTT',}]), 'eval seqs');
 is($metrics->count, 1, 'count');

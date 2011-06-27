@@ -1,4 +1,4 @@
-package Genome::Model::Tools::FastQual::Limit;
+package Genome::Model::Tools::Sx::Limit;
 
 use strict;
 use warnings;
@@ -7,8 +7,8 @@ use Genome;
 
 use Data::Dumper 'Dumper';
 
-class Genome::Model::Tools::FastQual::Limit {
-    is  => 'Genome::Model::Tools::FastQual',
+class Genome::Model::Tools::Sx::Limit {
+    is  => 'Genome::Model::Tools::Sx',
     is_abstract => 1,
 };
 

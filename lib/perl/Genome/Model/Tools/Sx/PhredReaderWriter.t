@@ -11,11 +11,11 @@ require File::Compare;
 use Test::More;
 
 #< Use >#
-use_ok('Genome::Model::Tools::FastQual::PhredReader') or die;
-use_ok('Genome::Model::Tools::FastQual::PhredWriter') or die;
+use_ok('Genome::Model::Tools::Sx::PhredReader') or die;
+use_ok('Genome::Model::Tools::Sx::PhredWriter') or die;
 
 #< Files >#
-my $dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-FastQual';
+my $dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Sx';
 my $input_fasta = $dir.'/reader_writer.fasta';
 ok(-s $input_fasta, 'Input fasta exists') or die;
 my $input_qual = $input_fasta.'.qual';
@@ -26,12 +26,12 @@ my $output_fasta = $tmpdir.'/fasta';
 my $output_qual = $tmpdir.'/qual';
 
 #< Create Reader/Writer >#
-my $reader = Genome::Model::Tools::FastQual::PhredReader->create(
+my $reader = Genome::Model::Tools::Sx::PhredReader->create(
     files => [ $input_fasta, $input_qual ],
 );
 ok($reader, 'Create reader');
 
-my $writer = Genome::Model::Tools::FastQual::PhredWriter->create(
+my $writer = Genome::Model::Tools::Sx::PhredWriter->create(
     files => [ $output_fasta, $output_qual ],
 );
 ok($writer, 'Create writer');
@@ -51,7 +51,7 @@ is(File::Compare::compare($input_qual, $output_qual), 0, 'In/out-put qauls match
 
 #< Reader Fails >#
 my $id_does_not_match = $dir.'/reader_writer.id_does_not_match.fasta.qual';
-$reader = Genome::Model::Tools::FastQual::PhredReader->create(
+$reader = Genome::Model::Tools::Sx::PhredReader->create(
     files => [ $input_fasta, $id_does_not_match ],
 );
 ok($reader, 'Create reader');
@@ -59,7 +59,7 @@ my $rv = eval{ $reader->read; };
 diag($@);
 ok((!$rv && $@ =~ /^Fasta and quality ids do not match:/), 'Failed when base and quals do not match');
 my $quals_do_not_match = $dir.'/reader_writer.quals_do_not_match.fasta.qual';
-$reader = Genome::Model::Tools::FastQual::PhredReader->create(
+$reader = Genome::Model::Tools::Sx::PhredReader->create(
     files => [ $input_fasta, $quals_do_not_match ],
 );
 ok($reader, 'Create reader');

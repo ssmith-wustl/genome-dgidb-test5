@@ -1,4 +1,4 @@
-package Genome::Model::Tools::FastQual::Filter;
+package Genome::Model::Tools::Sx::Filter;
 
 use strict;
 use warnings;
@@ -7,8 +7,8 @@ use Genome;
 
 use Data::Dumper 'Dumper';
 
-class Genome::Model::Tools::FastQual::Filter {
-    is  => 'Genome::Model::Tools::FastQual',
+class Genome::Model::Tools::Sx::Filter {
+    is  => 'Genome::Model::Tools::Sx',
     is_abstract => 1,
 };
 

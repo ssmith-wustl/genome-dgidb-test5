@@ -1,12 +1,12 @@
-package Genome::Model::Tools::FastQual::FastqWriter;
+package Genome::Model::Tools::Sx::FastqWriter;
 
 use strict;
 use warnings;
 
 use Genome;
 
-class Genome::Model::Tools::FastQual::FastqWriter {
-    is => 'Genome::Model::Tools::FastQual::SeqWriter',
+class Genome::Model::Tools::Sx::FastqWriter {
+    is => 'Genome::Model::Tools::Sx::SeqWriter',
     has => [
         is_paired => { is => 'Boolean', is_optional => 1, },
         _fwd_fh => { is_optional => 1, },

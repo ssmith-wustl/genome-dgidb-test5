@@ -1,4 +1,4 @@
-package Genome::Model::Tools::FastQual::Metrics;
+package Genome::Model::Tools::Sx::Metrics;
 
 use strict;
 use warnings;
@@ -7,7 +7,7 @@ use Genome;
 
 use Data::Dumper 'Dumper';
 
-class Genome::Model::Tools::FastQual::Metrics {
+class Genome::Model::Tools::Sx::Metrics {
     has => [
         count => { calculate_from => [qw/ _metrics /], calculate => q| return $_metrics->{count} |, },
         bases => { calculate_from => [qw/ _metrics /], calculate => q| return $_metrics->{bases} |, },

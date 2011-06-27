@@ -11,10 +11,10 @@ require File::Compare;
 use Test::More;
 
 # use
-use_ok('Genome::Model::Tools::FastQual::Pipe') or die;
+use_ok('Genome::Model::Tools::Sx::Pipe') or die;
 
 # Files
-my $dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-FastQual';
+my $dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Sx';
 my $in_fastq = $dir.'/in.fastq';
 ok(-s $in_fastq, 'in fastq');
 my $example_fastq = $dir.'/pipe.example.fastq';
@@ -23,24 +23,24 @@ my $tmp_dir = File::Temp::tempdir(CLEANUP => 1);
 my $out_fastq = $tmp_dir.'/out.bases.fastq';
 
 # execute fail - bad params to command
-my $failed_pipe = Genome::Model::Tools::FastQual::Pipe->execute(
+my $failed_pipe = Genome::Model::Tools::Sx::Pipe->execute(
     input  => [ $in_fastq ],
     output => [ $out_fastq ],
 );
 ok(!$failed_pipe, 'failed w/o commands');
-$failed_pipe = Genome::Model::Tools::FastQual::Pipe->execute(
+$failed_pipe = Genome::Model::Tools::Sx::Pipe->execute(
     input  => [ $in_fastq ],
     output => [ $out_fastq ],
     commands => 'collate'
 );
 ok(($failed_pipe && !$failed_pipe->result), 'failed w/ one command');
-$failed_pipe = Genome::Model::Tools::FastQual::Pipe->execute(
+$failed_pipe = Genome::Model::Tools::Sx::Pipe->execute(
     input  => [ $in_fastq ],
     output => [ $out_fastq ],
     commands => 'limit by-coverage --count YY | sorter name',
 );
 ok(($failed_pipe && !$failed_pipe->result), 'failed in validate command with bad params for limit by coverage');
-$failed_pipe = Genome::Model::Tools::FastQual::Pipe->execute(
+$failed_pipe = Genome::Model::Tools::Sx::Pipe->execute(
     input  => [ $in_fastq ],
     output => [ $out_fastq ],
     commands => 'limit by-coverage --count 10 | collate | sorter name',
@@ -49,14 +49,14 @@ ok(($failed_pipe && !$failed_pipe->result), 'failed in execute of the collate co
 
 # ok
 my $metrics_file = $tmp_dir.'/metrics';
-my $pipe = Genome::Model::Tools::FastQual::Pipe->create(
+my $pipe = Genome::Model::Tools::Sx::Pipe->create(
     input  => [ $in_fastq ],
     output => [ $out_fastq ],
     commands => 'limit by-coverage --count 10 | rename illumina-to-pcap | limit by-coverage --bases 200',
     metrics_file_out => $metrics_file,
 );
 ok($pipe, 'create pipe');
-isa_ok($pipe, 'Genome::Model::Tools::FastQual::Pipe');
+isa_ok($pipe, 'Genome::Model::Tools::Sx::Pipe');
 eval{
     $pipe->execute;
 };

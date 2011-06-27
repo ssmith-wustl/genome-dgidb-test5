@@ -1,4 +1,4 @@
-package Genome::Model::Tools::FastQual::Filter::ByLength;
+package Genome::Model::Tools::Sx::Filter::ByLength;
 
 use strict;
 use warnings;
@@ -9,8 +9,8 @@ require Carp;
 use Data::Dumper 'Dumper';
 use Regexp::Common;
 
-class Genome::Model::Tools::FastQual::Filter::ByLength {
-    is => 'Genome::Model::Tools::FastQual::Filter',
+class Genome::Model::Tools::Sx::Filter::ByLength {
+    is => 'Genome::Model::Tools::Sx::Filter',
     has => [
         filter_length => {
             is => 'Number',

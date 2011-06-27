@@ -1,4 +1,4 @@
-package Genome::Model::Tools::FastQual::Rename;
+package Genome::Model::Tools::Sx::Rename;
 
 use strict;
 use warnings;
@@ -7,8 +7,8 @@ use Genome;
 
 use Data::Dumper 'Dumper';
 
-class Genome::Model::Tools::FastQual::Rename {
-    is  => 'Genome::Model::Tools::FastQual',
+class Genome::Model::Tools::Sx::Rename {
+    is  => 'Genome::Model::Tools::Sx',
     has => [
         matches => {
             is => 'Text',  

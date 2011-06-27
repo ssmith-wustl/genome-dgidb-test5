@@ -1,12 +1,12 @@
-package Genome::Model::Tools::FastQual::IlluminaFastqReader;
+package Genome::Model::Tools::Sx::IlluminaFastqReader;
 
 use strict;
 use warnings;
 
 use Genome;
 
-class Genome::Model::Tools::FastQual::IlluminaFastqReader {
-    is => 'Genome::Model::Tools::FastQual::FastqReader',
+class Genome::Model::Tools::Sx::IlluminaFastqReader {
+    is => 'Genome::Model::Tools::Sx::FastqReader',
 };
 
 sub _read {

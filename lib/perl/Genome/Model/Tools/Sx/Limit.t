@@ -7,7 +7,7 @@ use above 'Genome';
 
 use Test::More;
 
-use_ok('Genome::Model::Tools::FastQual::Limit') or die;
+use_ok('Genome::Model::Tools::Sx::Limit') or die;
 
 done_testing();
 exit;

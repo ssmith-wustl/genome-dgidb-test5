@@ -1,4 +1,4 @@
-package Genome::Model::Tools::FastQual::Collate;
+package Genome::Model::Tools::Sx::Collate;
 
 use strict;
 use warnings;
@@ -7,8 +7,8 @@ use Genome;
 
 use Data::Dumper 'Dumper';
 
-class Genome::Model::Tools::FastQual::Collate {
-    is  => 'Genome::Model::Tools::FastQual',
+class Genome::Model::Tools::Sx::Collate {
+    is  => 'Genome::Model::Tools::Sx',
 };
 
 sub help_brief {

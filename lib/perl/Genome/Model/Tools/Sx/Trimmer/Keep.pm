@@ -1,4 +1,4 @@
-package Genome::Model::Tools::FastQual::Trimmer::Keep;
+package Genome::Model::Tools::Sx::Trimmer::Keep;
 
 use strict;
 use warnings;
@@ -7,8 +7,8 @@ use Genome;
 
 use Regexp::Common;
 
-class Genome::Model::Tools::FastQual::Trimmer::Keep {
-    is => 'Genome::Model::Tools::FastQual::Trimmer',
+class Genome::Model::Tools::Sx::Trimmer::Keep {
+    is => 'Genome::Model::Tools::Sx::Trimmer',
     has => [
         length => {
             is => 'Integer',
