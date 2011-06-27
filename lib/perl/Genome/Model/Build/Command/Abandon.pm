@@ -47,7 +47,7 @@ sub execute {
         }
     }
 
-    $self->display_summary_report( scalar(@builds), @errors );
+    $self->display_command_summary_report( scalar(@builds), @errors );
 
     return !scalar(@errors);
 }

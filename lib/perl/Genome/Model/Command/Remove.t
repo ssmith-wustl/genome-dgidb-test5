@@ -3,24 +3,15 @@
 use strict;
 use warnings;
 use above 'Genome';
-use Test::More tests => 19;
+use Test::More tests => 14;
 
 BEGIN {
     use_ok('Genome::Model::Command::Remove');
 }
 
-my $archive_dir = File::Temp::tempdir(CLEANUP => 1);
 my $data_dir = File::Temp::tempdir(CLEANUP => 1);
 my $template = 'Genome-Model-Command-Remove-'. Genome::Sys->username .'-XXXX';
 my $hostname = Sys::Hostname::hostname;
-
-my (undef,$archive_file) = 
-    File::Temp::tempfile(
-        $template,
-        SUFFIX => '.tgz',
-        UNLINK => 1,
-        DIR => $archive_dir
-    );
 
 #
 # make the test data 
@@ -85,7 +76,6 @@ my $new_delete = sub { return $delete_retval };
 # check defaults
 my $remove_cmd = Genome::Model::Command::Remove->create(models => [$m]);
 ok($remove_cmd,'Model remove command created');
-ok(!$remove_cmd->archive,'Do not archive model');
 ok(!$remove_cmd->force_delete,'Do not force delete model');
 $remove_cmd->force_delete(1);
 ok($remove_cmd->force_delete,'force delete model');
@@ -103,17 +93,6 @@ $remove_cmd = Genome::Model::Command::Remove->create(
                                                      force_delete => 1,
                                                  );
 ok($remove_cmd->execute,'delete model did work');
-
-# now lets try archiving
-$remove_cmd = Genome::Model::Command::Remove->create(
-                                                     models => [$m],
-                                                     force_delete => 1,
-                                                     archive => 1,
-                                                 );
-ok($remove_cmd->archive,'archive model is on');
-ok($remove_cmd->execute,'archive and remove model');
-ok(-e $archive_file,'archive file exists');
-ok(-e $archive_file,'archive file exists with size') or diag($archive_file . "\n" . `ls -l $archive_file`);
 
 # restore the original delete logic
 *Genome::Model::delete = $old_delete;

@@ -35,12 +35,6 @@ class Genome::Model::Tools::Annotate::ReviseMaf {
 	    is_optional => 1,
 	    doc       => "Provide a name for your revised maf."
 	},
-	revise_dbsnp=> {
-	    is => 'Boolean',
-	    default => 0,
-	    is_optional => 1,
-	    doc => 'Will look for a match in dbSnp 130 and record relivent info.'
-	},
 	revise_Entrez_Gene_Id=> {
 	    is => 'Boolean',
 	    is_optional => 1,
@@ -289,34 +283,6 @@ sub parse_maf {
 		}
 	    }
 	}
-    }
-    if ($self->revise_dbsnp) {
-	close TEMP;
-	
-	my $rv = Genome::Model::Tools::Annotate::LookupVariants->execute(
-        variant_file => 'temp_out_file_for_look_up_variants.txt',
-        report_mode => "full",
-        output_file => 'temp_output_file',
-        append_population_allele_frequencies => 1,
-    );  
-    die "Failed to LookupVariants: $!" unless $rv;
-	
-	unless (-f "temp_output_file") {
-	    $self->error_message( "\n\nCouldn't open the temp_output_file\n\n.");
-	    return;
-	}
-	open(DBSNP,"temp_output_file");
-	while (<DBSNP>) {
-	    chomp;
-	    my $line = $_;
-	    my ($Chromosome,$Start_position,$End_position,$Reference_Allele,$Tumor_Seq_uib,$Tumor_Sample_Barcode,$result,$freq) = split(/\t/,$line);
-	    if ($freq) {
-		$dbsnp->{$Chromosome}->{$Start_position}->{$End_position}->{$Tumor_Sample_Barcode}="$result,$freq";
-	    } else {
-		$dbsnp->{$Chromosome}->{$Start_position}->{$End_position}->{$Tumor_Sample_Barcode}="$result";
-	    }
-	}
-	close DBSNP;
     }
     
     return ($maf,$dbsnp,$entrez_gene_ids,$column_n);

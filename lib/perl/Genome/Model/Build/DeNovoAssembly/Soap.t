@@ -34,7 +34,8 @@ is($file_prefix, Genome::Utility::Text::sanitize_string_for_filesystem($model->s
 my $library_file_base = $build->data_directory.'/'.$file_prefix;
 
 # PREPARE INST DATA
-my $prepare = Genome::Model::Event::Build::DeNovoAssembly::PrepareInstrumentData->create(build => $build);
+$DB::single = 1;
+my $prepare = Genome::Model::Event::Build::DeNovoAssembly::PrepareInstrumentData->create(build => $build, model => $model);
 ok($prepare, 'create prepare instrument data');
 $prepare->dump_status_messages(1);
 ok($prepare->execute, 'execute prepare instrument data');

@@ -29,10 +29,12 @@ class Genome::Model::Event {
         instrument_data_id => { is => 'VARCHAR2', len => 100, implied_by => 'instrument_data' },
         instrument_data    => { is => 'Genome::InstrumentData', id_by => 'instrument_data_id',
                                 doc => 'The id of the instrument data on which to operate' },
-        instrument_data_assignment => {
-                                       is => 'Genome::Model::InstrumentDataAssignment',
-                                       id_by => ['model_id','instrument_data_id'],
-                                   },
+        instrument_data_input => {
+            calculate_from => ['instrument_data_id', 'model'],
+            calculate => q{
+                return $model->input_for_instrument_data_id($instrument_data_id);
+            },
+        },
         ref_seq_id         => { is => 'VARCHAR2', len => 64 },
         parent_event       => { is => 'Genome::Model::Event', id_by => 'parent_event_id', constraint_name => 'GME_PAEID_FK' },
         prior_event        => { is => 'Genome::Model::Event', id_by => 'prior_event_id', constraint_name => 'GME_PPEID_FK' },
@@ -201,9 +203,6 @@ sub log_directory {
     my $log_directory = sprintf('%s/logs/',
                                 $self->build_directory,
                             );
-    if (defined $self->instrument_data_assignment) {
-        $log_directory .= $self->instrument_data_assignment->sequencing_platform .'/'. $self->instrument_data_assignment->run_name
-    }
     if (defined $self->ref_seq_id) {
         $log_directory .= $self->ref_seq_id;
     }

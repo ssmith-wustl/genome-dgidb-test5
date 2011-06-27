@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 use File::Basename;
 
-my $DEFAULT = '0.9.2';
+my $DEFAULT = '1.0.3';
 
 class Genome::Model::Tools::Cufflinks {
     is => 'Command',
@@ -43,7 +43,34 @@ my %CUFFLINKS_VERSIONS = (
     '0.9.1'  => '/gsc/pkg/bio/cufflinks/cufflinks-0.9.1.Linux_x86_64',
     '0.9.2'  => '/gsc/pkg/bio/cufflinks/cufflinks-0.9.2.Linux_x86_64',
     '0.9.3'  => '/gsc/pkg/bio/cufflinks/cufflinks-0.9.3.Linux_x86_64',
+    '1.0.0'  => '/gsc/pkg/bio/cufflinks/cufflinks-1.0.0.Linux_x86_64',
+    '1.0.1'  => '/gsc/pkg/bio/cufflinks/cufflinks-1.0.1.Linux_x86_64',
+    '1.0.3'  => '/gsc/pkg/bio/cufflinks/cufflinks-1.0.3.Linux_x86_64',
 );
+
+sub gtf_to_sam_path {
+    my $self = $_[0];
+    unless (version->parse($self->use_version) >= version->parse('1.0.1')) {
+        die('gtf_to_sam command not available with version: '. $self->use_version);
+    }
+    return $self->path_for_cufflinks_version($self->use_version) .'/gtf_to_sam';
+}
+
+sub gffread_path {
+    my $self = $_[0];
+    unless (version->parse($self->use_version) >= version->parse('1.0.1')) {
+        die('gffread command not available with version: '. $self->use_version);
+    }
+    return $self->path_for_cufflinks_version($self->use_version) .'/gffread';
+}
+
+sub cuffmerge_path {
+    my $self = $_[0];
+    unless (version->parse($self->use_version) >= version->parse('1.0.0')) {
+        die('cuffmerge command not available with version: '. $self->use_version);
+    }
+    return $self->path_for_cufflinks_version($self->use_version) .'/cuffmerge';
+}
 
 sub cuffcompare_path {
     my $self = $_[0];

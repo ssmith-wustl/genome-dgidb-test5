@@ -9,8 +9,8 @@ use Cwd;
 class Genome::Model::Tools::Cufflinks::Assemble {
     is => 'Genome::Model::Tools::Cufflinks',
     has_input => [
-        sam_file => {
-            doc => 'The sam file to generate transcripts and expression levels from.',
+        input_file => {
+            doc => 'The sam/bam file to generate transcripts and expression levels from.',
         },
         params => {
             doc => 'Any additional parameters to pass to cufflinks',
@@ -30,7 +30,13 @@ class Genome::Model::Tools::Cufflinks::Assemble {
         },
         assembler_output_file => {
             is_optional => 1,
-        }
+        },
+        gene_fpkm_file => {
+            is_optional => 1,
+        },
+        isoform_fpkm_file => {
+            is_optional => 1,
+        },
     ],
 };
 
@@ -38,31 +44,57 @@ class Genome::Model::Tools::Cufflinks::Assemble {
 sub execute {
     my $self = shift;
 
-    my $cwd = getcwd;
     my $output_directory = $self->output_directory;
-    unless (chdir($output_directory)) {
-        $self->error_message('Failed to change cwd to '. $output_directory);
-        die($self->error_message);
-    }
-    $self->transcripts_file($output_directory .'/transcripts.gtf');
-    $self->transcript_expression_file($output_directory .'/transcripts.expr');
-    $self->gene_expression_file($output_directory .'/genes.expr');
-    $self->assembler_output_file($output_directory .'/cufflinks.out');
-    
+
     my $params = $self->params || '';
+
+    $self->transcripts_file($output_directory .'/transcripts.gtf');
+    $self->assembler_output_file($output_directory .'/cufflinks.out');
+    my @output_files = ($self->transcripts_file, $self->assembler_output_file);
+
+    my $cwd;
+    # Versions prior to 1.0.0 wrote some output files to cwd
+    if ( version->parse($self->use_version) < version->parse('1.0.0') ) {
+        $cwd = getcwd;
+        unless (chdir($output_directory)) {
+            $self->error_message('Failed to change cwd to '. $output_directory);
+            die($self->error_message);
+        }
+
+        $self->transcript_expression_file($output_directory .'/transcripts.expr');
+        $self->gene_expression_file($output_directory .'/genes.expr');
+
+        push @output_files, $self->transcript_expression_file;
+        push @output_files, $self->gene_expression_file;
+    } else {
+        $params .= ' -o '. $output_directory;
+
+        $self->gene_fpkm_file($output_directory .'/genes.fpkm_tracking');
+        $self->isoform_fpkm_file($output_directory .'/isoforms.fpkm_tracking');
+
+        push @output_files, $self->gene_fpkm_file;
+        push @output_files, $self->isoform_fpkm_file;
+    }
+
     if (version->parse($self->use_version) >= version->parse('0.9.0')) {
-        # The progress bar since v0.9.0 is causing massive(50MB) log files 
+        # The progress bar since v0.9.0 is causing massive(50MB) log files
+        # TODO: should we parse the params to see if -q or -v are already defined?
         $params .= ' -q ';
     }
-    my $cmd = $self->cufflinks_path .' '. $params .' '. $self->sam_file .' > '. $self->assembler_output_file .' 2>&1';
+    my $cmd = $self->cufflinks_path .' '. $params .' '. $self->input_file .' > '. $self->assembler_output_file .' 2>&1';
     Genome::Sys->shellcmd(
         cmd => $cmd,
-        input_files => [$self->sam_file],
-        output_files => [$self->transcripts_file,$self->transcript_expression_file,$self->gene_expression_file,$self->assembler_output_file],
+        input_files => [$self->input_file],
+        output_files => \@output_files,
     );
-    unless (chdir($cwd)) {
-        $self->error_message('Failed to change directory to '. $cwd);
-        die($self->error_message);
+    if (defined($cwd)) {
+        unless (chdir($cwd)) {
+            $self->error_message('Failed to cd back to original directory: '. $cwd);
+            die($self->error_message);
+        }
     }
     return 1;
 }
+
+
+1;

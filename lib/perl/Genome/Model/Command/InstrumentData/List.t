@@ -14,8 +14,6 @@ BEGIN {
 
 my $m = Genome::Model::Test->create_basic_mock_model(type_name => 'tester');
 my @id = Genome::Model::Test->create_mock_solexa_instrument_data(2);
-Genome::Model::Test->create_mock_instrument_data_assignments($m, $id[0]);
-$m->set_list('compatible_instrument_data', @id);
 
 #< Successes >#
 # list assigned

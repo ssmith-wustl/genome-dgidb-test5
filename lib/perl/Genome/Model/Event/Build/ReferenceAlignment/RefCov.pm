@@ -22,24 +22,23 @@ sub bsub_rusage {
     return "-R 'select[type==LINUX64]'";
 }
 
-sub sorted_instrument_data_assignments {
+sub sorted_instrument_data {
     my $self = shift;
     my $build = $self->build;
-    my @sorted_idas = sort { $a->instrument_data_id <=> $b->instrument_data_id } $build->instrument_data_assignments;
-    return @sorted_idas;
+    my @sorted_data = sort { $a->id <=> $b->id } $build->instrument_data;
+    return @sorted_data;
 }
 
 sub sorted_instrument_data_ids {
     my $self = shift;
     my @ids;
-    my @sorted_idas = $self->sorted_instrument_data_assignments;
-    
+    my @sorted_instrument_data = $self->sorted_instrument_data;
     my $build = $self->build;
     
-    for my $idas (@sorted_idas) {
-        my @alignments = $idas->results;
+    for my $instrument_data (@sorted_instrument_data) {
+        my @alignments = $build->alignment_results_for_instrument_data($instrument_data);
         unless (@alignments) {
-            $self->error_message('No alignments found for instrument data '. $idas->instrument_data_id);
+            $self->error_message('No alignments found for instrument data '. $instrument_data->id);
             return;
         }
         for my $alignment (@alignments) {
@@ -60,11 +59,11 @@ sub sorted_bam_files {
     my @sorted_bam_files;
     my $build = $self->build;
     unless (defined($self->_sorted_bams)) {
-        my @sorted_idas = $self->sorted_instrument_data_assignments;
-        for my $idas (@sorted_idas) {
-            my @alignments = $idas->results;
+        my @sorted_instrument_data = $self->sorted_instrument_data;
+        for my $instrument_data (@sorted_instrument_data) {
+            my @alignments = $build->alignment_results_for_instrument_data($instrument_data);
             unless (@alignments) {
-                $self->error_message('No alignments found for instrument data '. $idas->instrument_data_id);
+                $self->error_message('No alignments found for instrument data '. $instrument_data->id);
                 return;
             }
             for my $alignment (@alignments) {

@@ -15,9 +15,10 @@ sub execute {
     my $model = $self->model;
     my $build = $self->build;
 
-    my @idas = $build->instrument_data_assignments;
-    if (@idas > 1) {
-        die $self->error_message("Build has many instrument data, __PACKAGE__ is designed to run on a per-lane basis.");
+    my @instrument_data = $build->instrument_data;
+    if (@instrument_data > 1) {
+        my $package = __PACKAGE__;
+        die $self->error_message("Build has many instrument data, $package is designed to run on a per-lane basis.");
     }
 
     if ( !$self->validate_gold_snp_path ) {

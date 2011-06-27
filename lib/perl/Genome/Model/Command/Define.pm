@@ -42,12 +42,6 @@ class Genome::Model::Command::Define {
             is_input => 1,
             doc => 'identifies the processing profile by id'
         },
-        data_directory => {
-            is => 'Text',
-            len => 255,
-            is_input => 1,
-            doc => 'Optional parameter representing the data directory the model should use. Will use a default if none specified.'
-        },
         subject_type => {
             is => 'Text',
             len => 255,
@@ -231,14 +225,6 @@ sub execute {
             $model_params{sample_name}=$sample->name;
         }
     }
-    if ($self->data_directory) {
-        my $model_name = File::Basename::basename($self->data_directory);
-        unless ($model_name eq $self->model_name) {
-            my $new_data_directory = $self->data_directory .'/'. $self->model_name;
-            $self->data_directory($new_data_directory);
-        }
-        $model_params{data_directory} = $self->data_directory;
-    }
 
     my $model = Genome::Model->create(%model_params);
     unless ( $model ) {
@@ -290,7 +276,7 @@ sub execute {
 }
 
 sub listed_params {
-    return qw/ id name data_directory subject_name subject_type processing_profile_id processing_profile_name /;
+    return qw/ id name subject_name subject_type processing_profile_id processing_profile_name /;
 }
 
 sub type_specific_parameters_for_create {

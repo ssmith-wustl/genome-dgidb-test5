@@ -15,10 +15,10 @@ use_ok('Genome::Model::Event::Build::DeNovoAssembly::PrepareInstrumentData') or 
 my $model = Genome::Model::DeNovoAssembly::Test->model_for_velvet;
 ok($model, 'Got de novo assembly model') or die;
 my $build = Genome::Model::Build->create( 
-    model => $model,
-    data_directory => $model->data_directory,
+    model => $model
 );
 ok($build, 'Got de novo assembly build') or die;
+ok($build->get_or_create_data_directory, 'resolved data dir');
 my $example_build = Genome::Model::DeNovoAssembly::Test->example_build_for_model($model);
 ok($example_build, 'got example build') or die;
 
@@ -27,7 +27,8 @@ ok(!@assembler_input_files, 'assembler input files do not exist');
 
 #create
 my $velvet = Genome::Model::Event::Build::DeNovoAssembly::PrepareInstrumentData->create(
-    build_id => $build->id
+    build_id => $build->id,
+    model => $model,
 );
 ok($velvet, 'Created prepare inst data velvet');
 $velvet->dump_status_messages(1);

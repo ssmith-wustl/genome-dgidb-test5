@@ -227,11 +227,11 @@ sub _process_instrument_data {
 
     if ( not defined $read_processor and not defined $self->_base_limit ) {
         # Run through the base fast qual command. This will rm quality headers and get metrics
-        $fast_qual_class = 'Genome::Model::Tools::FastQual';
+        $fast_qual_class = 'Genome::Model::Tools::Sx';
     }
     else {
         # Got multiple commands, use pipe
-        $fast_qual_class = 'Genome::Model::Tools::FastQual::Pipe';
+        $fast_qual_class = 'Genome::Model::Tools::Sx::Pipe';
         my @commands;
         if ( defined $self->_base_limit ) { # coverage limit by bases
             my $metrics = $self->_metrics;

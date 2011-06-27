@@ -11,7 +11,7 @@ my $variant_file = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Annotate-Lo
 ok (-e $variant_file);
 
 my $known_out = "/gsc/var/cache/testsuite/running_testsuites/Genome-Model-Tools-Annotate-LookupVariants-known-only.out";
-if ($known_out && -e $known_out) {`rm $known_out`;}
+if ($known_out && -e $known_out) {`rm -f $known_out`;}
 my $exp_known_out = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Annotate-LookupVariants/expected.known-only.out";
 ok (-e $exp_known_out);
 
@@ -27,7 +27,7 @@ ok($knowndiff eq '', "known output as expected");
 
 
 my $novel_out ="/gsc/var/cache/testsuite/running_testsuites/Genome-Model-Tools-Annotate-LookupVariants-novel-only.out";
-if ($novel_out && -e $novel_out) {`rm $novel_out`;}
+if ($novel_out && -e $novel_out) {`rm -f $novel_out`;}
 my $exp_novel_out = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Annotate-LookupVariants/expected.novel-only.out";
 ok (-e $exp_novel_out);
 

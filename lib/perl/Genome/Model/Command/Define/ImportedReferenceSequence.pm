@@ -307,7 +307,6 @@ sub _create_build {
 
     my @build_parameters = (
         model_id => $model->id,
-        data_directory => $self->data_directory,
         fasta_file => $self->fasta_file,
     );
 

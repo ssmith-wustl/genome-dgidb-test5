@@ -70,12 +70,9 @@ sub execute {
         return;
     }
     $self->status_message(sprintf "Checking %d lanes", scalar(@events));
-    #Convert events to InstrumentDataAssignment objects
-    my @idas = map { $_->instrument_data_assignment } @events;
-
-    foreach my $ida (@idas) {
-        my $lane_name = $ida->short_name."_".$ida->subset_name;
-        my @alignments = $ida->results;
+    for my $instrument_data ($build->instrument_data) {
+        my $lane_name = $instrument_data->__display_name__;
+        my @alignments = $build->alignment_results_for_instrument_data($instrument_data);
         unless(@alignments) {
             $self->error_message("No alignment objects for $lane_name");
             return;

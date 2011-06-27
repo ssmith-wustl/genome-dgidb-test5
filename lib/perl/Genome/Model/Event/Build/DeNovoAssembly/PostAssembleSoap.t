@@ -16,14 +16,15 @@ use_ok('Genome::Model::Event::Build::DeNovoAssembly::PostAssemble') or die;
 my $model = Genome::Model::DeNovoAssembly::Test->model_for_soap;
 ok($model, 'Got de novo assembly model') or die;
 my $build = Genome::Model::Build->create( 
-    model => $model,
-    data_directory => $model->data_directory,
+    model => $model
 );
 ok($build, 'Got de novo assembly build') or die;
+ok($build->get_or_create_data_directory, 'resolved data dir for build');
 my $example_build = Genome::Model::DeNovoAssembly::Test->example_build_for_model($model);
 ok($example_build, 'got example build') or die;
 
 #link assembly.scafSeq file
+$DB::single = 1;
 my $example_scaf_seq_file = $example_build->soap_scaffold_sequence_file;
 print $example_scaf_seq_file."\n";
 ok(-s $example_scaf_seq_file, "Example scaffold sequence file exists") or die;
@@ -44,7 +45,7 @@ mkdir $build->data_directory.'/edit_dir';
 ok(-d $build->data_directory.'/edit_dir', "Create build data dir edit_dir");
 
 #create, execute
-my $soap = Genome::Model::Event::Build::DeNovoAssembly::PostAssemble->create(build_id =>$build->id);
+my $soap = Genome::Model::Event::Build::DeNovoAssembly::PostAssemble->create(build_id =>$build->id, model => $model);
 ok($soap, "Created soap post assemble") or die;
 ok($soap->execute, "Executed soap post assemble") or die;
 
