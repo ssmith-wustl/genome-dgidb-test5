@@ -44,6 +44,7 @@ sub test_01_execute : Test(2) {
     ok($self->_pre_execute, 'Pre Execute')
         or die "Failed method _pre_execute\n";
 
+    $DB::single = 1;
     ok($self->{_object}->execute, "Execute");
 
     return 1;

@@ -618,7 +618,7 @@ sub fasta_from_instrument_data { #dump orig fasta file
 
     for my $inst_data ( $self->instrument_data ) {
         my $temp_dir = Genome::Sys->create_temp_directory;
-        if ( my @fastq_files = eval {$inst_data->dump_fastqs_from_bam( $temp_dir );} ) {
+        if ( my @fastq_files = eval {$inst_data->dump_fastqs_from_bam( directory => $temp_dir );} ) {
             #solexa bam
             if ( not @fastq_files ) {
                 Carp::confess( "Did not get any fastq files from instrument data bam path" );

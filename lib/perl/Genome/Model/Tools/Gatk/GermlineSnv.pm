@@ -79,7 +79,6 @@ sub execute {                               # replace with real execution logic.
 
         # note: this crashes when using v. 131, because the 'get' returns undef
 #        my $model = Genome::Model->get( name => "dbSNP-human-".$self->dbSNP_version);
-#        my $dbsnp_dir = $model->imported_variations_directory . "/tmp"; # TODO: use Model to represent this data set
 	my $dbsnp_rod;
 	if ($self->dbSNP_version == 130) {
 #		$dbsnp_bed = '/gscuser/dkoboldt/SNPseek/SNPseek2/ucsc/snp130.txt';
