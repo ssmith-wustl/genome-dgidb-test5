@@ -15,7 +15,7 @@ class Genome::Model::Tools::Sx::Pipe {
     has => [
         commands => {
             is => 'Text',
-            doc => 'String of fast-qual commands to execute.  Separate commands by a pipe w/ a space on each side ( | ). Do not include the "gmt fast-qual", as it will be automatically added. Any fast-qual command can be used. Ex:\n\ttrimmer bwa-style --trim-qual-length | filter by-length filter-length 70',
+            doc => 'String of sx (sequence transform) commands to execute.  Separate commands by a pipe w/ a space on each side ( | ). Do not include the "gmt sx", as it will be automatically added. Any sx command can be used. Ex:\n\ttrimmer bwa-style --trim-qual-length | filter by-length filter-length 70',
        },
         _fh_count => {
             is => 'Text',
@@ -34,7 +34,7 @@ HELP
 
 sub help_detail {
     return <<HELP;
-    This command pipes fast-qual commands together, checking if each command succeeds. It will only create one set of output files. The advantage to running the commands like this is that an error in one pipe may not be conveyed through the other pipes. This could give inacurate exit codes and confusing error messages. This command hopes to capture and make sense of the errors.
+    This command pipes sx commands together, checking if each command succeeds. It will only create one set of output files. The advantage to running the commands like this is that an error in one pipe may not be conveyed through the other pipes. This could give inacurate exit codes and confusing error messages. This command hopes to capture and make sense of the errors.
 HELP
 }
 #</>#
@@ -92,7 +92,7 @@ sub execute {
 sub _create_first_process {
     my ($self, $command) = @_;
 
-    my @command_parts = (qw/ gmt fast-qual /);
+    my @command_parts = (qw/ gmt sx /);
     push @command_parts, split(/\s/, $command);
     push @command_parts, '--input', join(',', $self->input), '--type-in', $self->type_in;
     my $error_string;
@@ -112,7 +112,7 @@ sub _create_first_process {
 sub _create_middle_process {
     my ($self, $command) = @_;
 
-    my @command_parts = (qw/ gmt fast-qual /);
+    my @command_parts = (qw/ gmt sx /);
     push @command_parts, split(/\s/, $command);
     my $error_string;
     my $error_handle = IO::File->new(\$error_string, 'w');
@@ -134,7 +134,7 @@ sub _create_middle_process {
 sub _create_last_process {
     my ($self, $command) = @_;
 
-    my @command_parts = (qw/ gmt fast-qual /);
+    my @command_parts = (qw/ gmt sx /);
     push @command_parts, split(/\s/, $command);
     push @command_parts, '--output', join(',', $self->output);
     push @command_parts, '--type-out', $self->type_out if $self->type_out;
@@ -185,8 +185,8 @@ sub validate_command {
         return;
     }
 
-    if ( $command =~ /gmt/ or $command =~ /fast-qual/ ) {
-        $self->error_message("Command ($command) cannot have 'gmt' or'fast-qual' in it.");
+    if ( $command =~ /gmt/ or $command =~ /sx/ ) {
+        $self->error_message("Command ($command) cannot have 'gmt' or'sx' in it.");
         return;
     }
 

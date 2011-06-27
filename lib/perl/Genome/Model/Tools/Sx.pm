@@ -17,7 +17,7 @@ class Genome::Model::Tools::Sx {
             is => 'Text',
             is_many => 1,
             is_optional => 1,
-            doc => "Input files, '-' to read from STDIN or undefined if piping between fast-qual commands.\nSANGER/ILLLUMINA: If one input is given, one sequence will be read at a time. Use 'paired_input' to read two sequences from a single input. If multiple inputs are given,  one sequence will be read from each and then handled as a set.\nPHRED: Give fasta first, then optional quality input.\nDo not use this option when piping from fast-qual commands.",
+            doc => "Input files, '-' to read from STDIN or undefined if piping between sx commands.\nSANGER/ILLLUMINA: If one input is given, one sequence will be read at a time. Use 'paired_input' to read two sequences from a single input. If multiple inputs are given,  one sequence will be read from each and then handled as a set.\nPHRED: Give fasta first, then optional quality input.\nDo not use this option when piping from sx commands.",
         }, 
         _input_to_string => {
             calculate => q| 
@@ -31,18 +31,18 @@ class Genome::Model::Tools::Sx {
             is  => 'Text',
             valid_values => [ valid_type_ins() ],
             is_optional => 1,
-            doc => 'The sequence and quality type for the input. Optional for files, and if not given, will be based on the extension of the first file (.fastq => sanger | .fasta .fna .fa => phred). Required for reading from STDIN. Do not use this option when piping from fast-qual commands.',
+            doc => 'The sequence and quality type for the input. Optional for files, and if not given, will be based on the extension of the first file (.fastq => sanger | .fasta .fna .fa => phred). Required for reading from STDIN. Do not use this option when piping from fx commands.',
         },
         paired_input => {
             is => 'Boolean',
             is_optional => 1,
-            doc => "FASTQ: If giving one input, read two sequences at a time. If two inputs are given, this will set to true. A sequence will be read from each input.\nPHRED: NA.\nDo not use this option when piping from fast-qual commands.",
+            doc => "FASTQ: If giving one input, read two sequences at a time. If two inputs are given, this will set to true. A sequence will be read from each input.\nPHRED: NA.\nDo not use this option when piping from sx commands.",
         },
         output => {
             is => 'Text',
             is_many => 1,
             is_optional => 1,
-            doc => "Output files, '-' to write to STDOUT or undefined if piping between fast-qual commands.\nSANGER/ILLLUMINA: If one output is given, sequences will be written to it. To write only pairs, use 'paired_output'. If 2 outputs are given, a sequence will be written to each, and singletons will be disgarded. To write pairs to one output and singletons to the other, use 'paired_output'. If three outputs are given, the first of a pair will be written to the first and and the second of a pair to the second. Singletons will be written to the third.\nPHRED: Give fasta first, then optional quality input.\nDo not use this option when piping to fast-qual commands.",
+            doc => "Output files, '-' to write to STDOUT or undefined if piping between sx commands.\nSANGER/ILLLUMINA: If one output is given, sequences will be written to it. To write only pairs, use 'paired_output'. If 2 outputs are given, a sequence will be written to each, and singletons will be disgarded. To write pairs to one output and singletons to the other, use 'paired_output'. If three outputs are given, the first of a pair will be written to the first and and the second of a pair to the second. Singletons will be written to the third.\nPHRED: Give fasta first, then optional quality input.\nDo not use this option when piping to sx commands.",
         },
         _output_to_string => {
             calculate => q| 
@@ -56,12 +56,12 @@ class Genome::Model::Tools::Sx {
             is  => 'Text',
             valid_values => [ valid_type_outs() ],
             is_optional => 1,
-            doc => 'The sequence and quality type for the output. Optional for files, and if not given, will be based on the extension of the first file (.fastq => sanger | .fasta .fna .fa => phred). Defaults to sanger (fastq) for writing to STDOUT. Do not use this option when piping to fast-qual commands.',
+            doc => 'The sequence and quality type for the output. Optional for files, and if not given, will be based on the extension of the first file (.fastq => sanger | .fasta .fna .fa => phred). Defaults to sanger (fastq) for writing to STDOUT. Do not use this option when piping to sx commands.',
         },
         paired_output => {
             is => 'Boolean',
             is_optional => 1,
-            doc => "FASTQ: Write pairs to the same output file. If giving one output, write pairs to it, discarding singletons. If given two outputs, write pairs to the first, singletons to the second. Do not use for three outputs.\nPHRED: NA\nDo not use this option when piping to fast-qual commands.",
+            doc => "FASTQ: Write pairs to the same output file. If giving one output, write pairs to it, discarding singletons. If given two outputs, write pairs to the first, singletons to the second. Do not use for three outputs.\nPHRED: NA\nDo not use this option when piping to sx commands.",
         },
         metrics_file_out => {
             is => 'Text',
@@ -107,29 +107,29 @@ sub help_detail {
 
     * Convert type
     ** illumina fastq to sanger
-    gmt fast-qual --input illumina.fastq --type-in illumina --output sanger.fastq
+    gmt sx --input illumina.fastq --type-in illumina --output sanger.fastq
     ** sanger fastq to phred fasta
-    gmt fast-qual --input file.fastq --output file.fasta --type-out phred
+    gmt sx --input file.fastq --output file.fasta --type-out phred
     ** sanger fastq to phred fasta w/ quals
-    gmt fast-qual --input file.fastq --output file.fasta file.qual --type-out phred
+    gmt sx --input file.fastq --output file.fasta file.qual --type-out phred
 
     * Collate
     ** from paired fastqs (type-in resolved to sanger, type-out defaults to sanger)
-    gmt fast-qual --input fwd.fastq rev.fastq --output collated.fastq --paired-output
+    gmt sx --input fwd.fastq rev.fastq --output collated.fastq --paired-output
     ** to paired STDOUT (type-in resolved to sanger, type-out defaults to sanger)
-    gmt fast-qual --input fwd.fastq rev.fastq --output - --paired-output
+    gmt sx --input fwd.fastq rev.fastq --output - --paired-output
 
     * Decollate
     ** from illumina to paired fastqs (type-in resolved to sanger, type-out defaults to sanger)
-    gmt fast-qual --input collated.fastq --paired-input --output fwd.fastq rev.fastq
+    gmt sx --input collated.fastq --paired-input --output fwd.fastq rev.fastq
     ** from paired illumina STDIN (type-in req'd = illumina, type-out defaults to sanger)
-    gmt fast-qual --input - --paired-input --type-in illumnia --output fwd.fastq rev.fastq
+    gmt sx --input - --paired-input --type-in illumnia --output fwd.fastq rev.fastq
 
-    * Use in PIPE (cmd represents a fast-qual sub command)
+    * Use in PIPE (cmd represents a sx sub command)
     ** from singleton fastq file
-    gmt fast-qual cmd1 --cmd1-options --input sanger.fastq | gmt fast-qual cmd2 --cmd2-options --output sanger.fastq
+    gmt sx cmd1 --cmd1-options --input sanger.fastq | gmt sx cmd2 --cmd2-options --output sanger.fastq
     ** from paired STDIN to paired fastq and singleton (assuming the sub commands filter singletons)
-    cat collated_fastq | gmt fast-qual cmd1 --cmd1-options --input - --paired-input | gmt fast-qual cmd2 --cmd2-options --output pairs.fastq
+    cat collated_fastq | gmt sx cmd1 --cmd1-options --input - --paired-input | gmt sx cmd2 --cmd2-options --output pairs.fastq
 
 HELP
 }
@@ -237,11 +237,11 @@ sub create {
     }
     else {
         if ( $type_in ) { # PIPE is always sanger
-            $self->error_message('Do not set type in when piping between fast-qual commands');
+            $self->error_message('Do not set type in when piping between sx commands');
             return;
         }
         if ( defined $self->paired_input ) {
-            $self->error_message('Do not set paired_input when piping between fast-qual commands');
+            $self->error_message('Do not set paired_input when piping between sx commands');
             return;
         }
     }
@@ -268,11 +268,11 @@ sub create {
     }
     else {
         if ( $type_out ) { # PIPE is always sanger
-            $self->error_message('Do not set type out when piping between fast-qual commands.');
+            $self->error_message('Do not set type out when piping between sx commands.');
             return;
         }
         if ( $self->paired_output ) {
-            $self->error_message('Do not set paired_output when piping between fast-qual commands.');
+            $self->error_message('Do not set paired_output when piping between sx commands.');
             return;
         }
     }
