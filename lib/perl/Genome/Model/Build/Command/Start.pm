@@ -108,7 +108,7 @@ sub execute {
     $self->display_builds_started();
     $self->display_command_summary_report();
 
-    return !scalar($self->command_errors);
+    return !scalar(keys %{$self->command_errors});
 }
 
 sub create_and_start_build {

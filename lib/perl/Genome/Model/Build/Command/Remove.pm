@@ -41,7 +41,6 @@ sub execute {
 
     my @builds = $self->builds;
     my $build_count = scalar(@builds);
-    my @errors;
     for my $build (@builds) {
         $self->total_command_count($self->total_command_count + 1);
         my $transaction = UR::Context::Transaction->begin();
@@ -65,7 +64,7 @@ sub execute {
 
     $self->display_command_summary_report();
 
-    return !scalar(@errors);
+    return !scalar(keys %{$self->command_errors});
 }
 
 1;

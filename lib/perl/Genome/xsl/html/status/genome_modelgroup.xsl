@@ -3,6 +3,10 @@
                 xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
 
   <xsl:template name="genome_modelgroup" match="object[./types[./isa[@type='Genome::ModelGroup']]]">
+    <xsl:comment>template: status/genome_modelgroup.xsl match: object[./types[./isa[@type='Genome::ModelGroup']]]</xsl:comment>
+
+    <script type='text/javascript' src='/res/js/app/status/genome_model-group.js'></script>
+
     <xsl:call-template name="control_bar_view"/>
 
     <xsl:call-template name="view_header">
