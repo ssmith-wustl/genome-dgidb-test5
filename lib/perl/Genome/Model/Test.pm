@@ -164,12 +164,6 @@ sub test02_instrument_data : Tests() {
         "available_instrument_data"
     );
 
-    ## Can't get instrument_data_assignments to work...so overwrite 
-    my @idas = $self->create_mock_instrument_data_assignments($model, @instrument_data);
-    local *Genome::Model::instrument_data_assignments = sub{ return @idas; };
-    $idas[0]->first_build_id(1);
-    my @model_id = $model->instrument_data;
-    is_deeply(\@model_id, \@instrument_data, 'instrument_data');
     return 1;
 }
 
@@ -480,28 +474,6 @@ sub create_and_add_mock_instrument_data_to_model {
     $model->set_list('instrument_data', @instrument_data);
 
     return 1;
-}
-
-sub create_mock_instrument_data_assignments {
-    my ($self, $model, @instrument_data) = @_;
-
-    confess "No model to assign instrument data" unless $model and $model->isa('Genome::Model');
-    confess "No instrument data to assign to model" unless @instrument_data;
-    
-    my @instrument_data_assignments;
-    for my $instrument_data ( @instrument_data ) {
-        my $instrument_data_assignment = $self->create_mock_object(
-            class => 'Genome::Model::InstrumentDataAssignment',
-            model => $model,
-            model_id => $model->id,
-            instrument_data => $instrument_data,
-            instrument_data_id => $instrument_data->id,
-            first_build_id => undef,
-        ) or confess;
-        push @instrument_data_assignments, $instrument_data_assignment;
-    }
-
-    return @instrument_data_assignments;
 }
 
 sub create_mock_sanger_instrument_data {

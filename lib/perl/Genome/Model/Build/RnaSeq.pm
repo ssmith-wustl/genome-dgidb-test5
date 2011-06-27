@@ -81,9 +81,8 @@ sub _fetch_alignment_result {
     my $self = shift;
     my $mode = shift;
 
-    my @idas = $self->instrument_data_assignments;
-
-    my ($params) = $self->processing_profile->params_for_alignment(@idas);
+    my @instrument_data_inputs = $self->instrument_data_inputs;
+    my ($params) = $self->processing_profile->params_for_alignment(@instrument_data_inputs);
 
     my $alignment_class = Genome::InstrumentData::AlignmentResult->_resolve_subclass_name_for_aligner_name($self->processing_profile->read_aligner_name);
     my $alignment = join('::', 'Genome::InstrumentData::AlignmentResult', $alignment_class)->$mode(

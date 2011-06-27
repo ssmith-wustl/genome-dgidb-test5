@@ -56,31 +56,28 @@ sub get_event_node {
     $event_node->addChild( $self->tnode("output_log_file",$out_log_file));
     $event_node->addChild( $self->tnode("error_log_file",$err_log_file));
 
-    #
     # get alignment director[y|ies] and filter description
-    #
-    # get list of instrument data assignments
-
     if($event->instrument_data_id) {
         my $instrument_data = Genome::InstrumentData->get($event->instrument_data_id);
         $event_node->addChild( $self->get_instrument_data_node($instrument_data));
 
-        my @idas = $event->model->instrument_data_assignments(instrument_data_id => $event->instrument_data_id);
+        my @inputs = $event->model->input_for_instrument_data_id($event->instrument_data_id);
 
-        if (scalar @idas > 0) {
+        if (scalar @inputs > 0) {
             # find the events with matching instrument_data_ids
             my @adirs;
 
             my $processing_profile = $event->model->processing_profile;
-            for my $ida (@idas) {
-                if ((defined $ida->instrument_data_id && $event->instrument_data_id) && $ida->instrument_data_id == $event->instrument_data_id) {
+            for my $input (@inputs) {
+                my $instrument_data = $input->value;
+                if ($instrument_data->id == $event->instrument_data_id) {
                     my $alignment;
                     my %segment_info;
                     if (defined $event->instrument_data_segment_id) {
                         $segment_info{instrument_data_segment_id} = $event->instrument_data_segment_id; 
                         $segment_info{instrument_data_segment_type} = $event->instrument_data_segment_type; 
                     }
-                    eval{ ($alignment) = $processing_profile->results_for_instrument_data_assignment($ida, %segment_info)};
+                    eval{ ($alignment) = $processing_profile->results_for_instrument_data_input($input, %segment_info)};
 
                     if ($@) {
                         chomp($@);
@@ -91,8 +88,8 @@ sub get_event_node {
                         push(@adirs, $alignment->alignment_directory);
 
                         # look for a filter description
-                        if ($ida->filter_desc) {
-                            $event_node->addChild( $self->tnode("filter_desc", $ida->filter_desc));
+                        if ($input->filter_desc) {
+                            $event_node->addChild( $self->tnode("filter_desc", $input->filter_desc));
                         }
                     }
                 }

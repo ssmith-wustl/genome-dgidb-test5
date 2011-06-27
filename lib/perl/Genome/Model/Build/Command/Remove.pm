@@ -35,6 +35,7 @@ sub help_detail {
     "This command will remove a build from the system.  The rest of the model remains the same, as does independent data like alignments.";
 }
 
+# TODO This needs to be cleaned up
 sub execute {
     my $self = shift;
 
@@ -47,9 +48,6 @@ sub execute {
         my $remove_build = Genome::Command::Remove->create(items => [$build], _deletion_params => [keep_build_directory => $self->keep_build_directory]);
         my $successful = eval {
             my @__errors__ = $build->__errors__;
-            unless (@__errors__) {
-                push @__errors__, map { $_->__errors__ } $build->instrument_data_assignments;
-            }
             if (@__errors__) {
                 die "build or instrument data has __errors__, cannot remove: " . join('; ', @__errors__);
             }

@@ -619,8 +619,8 @@ sub preload_data {
     $self->status_message("  got " . scalar(@models) . " models");        
 
     if(scalar @models > 0) {
-        $self->status_message("Pre-loading instrument data assignments for " . scalar(@models) . " models");
-        my @instrument_data_assignments = Genome::Model::InstrumentDataAssignment->get(model_id => [ map { $_->id } @models]);
+        $self->status_message("Pre-loading instrument data inputs for " . scalar(@models) . " models");
+        my @instrument_data_inputs = Genome::Model::Input->get(model_id => [ map { $_->id } @models ]);
     }
 
     return 1;
@@ -750,11 +750,7 @@ sub assign_instrument_data_to_models {
     }
 
     foreach my $model (@models) {
-        my @existing_instrument_data =
-        Genome::Model::InstrumentDataAssignment->get(
-            instrument_data_id => $instrument_data_id,
-            model_id           => $model->id,
-        );
+        my @existing_instrument_data = $model->input_for_instrument_data_id($instrument_data_id);
 
         if (@existing_instrument_data) {
             $self->warning_message(
@@ -967,12 +963,7 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
             return;
         }
 
-        my @existing_instrument_data =
-        Genome::Model::InstrumentDataAssignment->get(
-            instrument_data_id => $genome_instrument_data->id,
-            model_id           => $m->id,
-        );
-
+        my @existing_instrument_data = $m->input_for_instrument_data($genome_instrument_data);
         unless (@existing_instrument_data) {
             $self->error_message(
                 'instrument data ' . $genome_instrument_data->id . ' not assigned to model ????? (' . $m->id . ')'
@@ -1197,8 +1188,8 @@ sub request_builds {
             @last_build_inputs   = grep { $_->name eq 'instrument_data' } @last_build_inputs;
             %last_build_instdata = map  { $_->value_id => 1 }             @last_build_inputs;
 
-            my @assignments = $model->instrument_data_assignments;
-            my @missing_assignments_in_last_build = grep { not $last_build_instdata{$_->instrument_data_id} } @assignments;
+            my @inputs = $model->instrument_data_inputs;
+            my @missing_assignments_in_last_build = grep { not $last_build_instdata{$_->value_id} } @inputs;
 
             if (@missing_assignments_in_last_build) {
                 my $reason = 'it does not have a final build with all assignments';

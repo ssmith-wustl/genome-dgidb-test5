@@ -131,9 +131,11 @@ class Genome::Model {
                                         calculate_from => 'sequencing_platform',
                                         calculate => q| 'Genome::InstrumentData::' . ucfirst($sequencing_platform) |,
                                         doc => 'the class of instrument data assignable to this model' },
-        
-        # refactor to use the inputs entirely
-        instrument_data_assignments => { is => 'Genome::Model::InstrumentDataAssignment', reverse_as => 'model' },
+        instrument_data_inputs => {
+            is => 'Genome::Model::Input',
+            reverse_as => 'model',
+            where => [ name => 'instrument_data' ],
+        },
         instrument_data => {
             is => 'Genome::InstrumentData',
             via => 'inputs',
@@ -548,6 +550,33 @@ sub get_all_possible_samples {
 }
 
 #< Instrument Data >#
+sub input_for_instrument_data_id {
+    my ($self, $id) = @_;
+    return unless $id;
+    for my $input ($self->instrument_data_inputs) {
+        return $input if $input->value_id eq $id;
+    }
+    return;
+}
+
+sub input_for_instrument_data {
+    my ($self, $instrument_data) = @_;
+    return unless $instrument_data;
+    return $self->input_for_instrument_data_id($instrument_data->id);
+}
+
+sub has_instrument_data {
+    my ($self, $instrument_data) = @_;
+    my $input;
+    if (ref $instrument_data) {
+        $input = $self->input_for_instrument_data($instrument_data);
+    }
+    else {
+        $input = $self->input_for_instrument_data_id($instrument_data);
+    }
+    return $input;
+}
+
 sub unbuilt_instrument_data {
     my $self = shift;
     my %model_data;
@@ -610,10 +639,10 @@ sub unassigned_instrument_data {
     my $self = shift;
 
     my @compatible_instrument_data = $self->compatible_instrument_data;
-    my @instrument_data_assignments = $self->instrument_data_assignments
-        or return @compatible_instrument_data;
-    my %assigned_instrument_data_ids = map { $_->instrument_data_id => 1 } @instrument_data_assignments;
+    my @assigned = $self->instrument_data;
+    return @compatible_instrument_data unless @assigned;
 
+    my %assigned_instrument_data_ids = map { $_->id => 1 } @assigned;
     return grep { not $assigned_instrument_data_ids{$_->id} } @compatible_instrument_data;
 }
 
@@ -972,11 +1001,10 @@ sub delete {
     die $self->error_message("Failed to remove model from all model groups.") if ($self->model_groups);
 
     # This may not be the way things are working but here is the order of operations for removing db events
-    # 1.) Remove all instrument data assignment entries for model
-    # 2.) Set model last_complete_build_id and current_running_build_id to null
-    # 3.) Remove all genome_model_build entries
-    # 4.) Remove all genome_model_event entries
-    # 5.) Remove the genome_model entry
+    # 1.) Set model last_complete_build_id and current_running_build_id to null
+    # 2.) Remove all genome_model_build entries
+    # 3.) Remove all genome_model_event entries
+    # 4.) Remove the genome_model entry
 
     my @objects = $self->get_all_objects;
     for my $object (@objects) {

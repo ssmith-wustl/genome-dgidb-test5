@@ -35,7 +35,7 @@ for my $target ( @assembler_input_files ) {
 }
 
 # create
-my $assemble = Genome::Model::Event::Build::DeNovoAssembly::Assemble->create(build_id => $build->id);
+my $assemble = Genome::Model::Event::Build::DeNovoAssembly::Assemble->create(build_id => $build->id, model => $model);
 ok( $assemble, "Created soap assemble");
 $assemble->dump_status_messages(1);
 
