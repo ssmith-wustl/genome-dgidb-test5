@@ -83,6 +83,7 @@ sub execute {                               # replace with real execution logic.
 	if($self->output_file)
 	{
 		open(OUTFILE, ">" . $self->output_file) or die "Can't open outfile: $!\n";		
+		open(EXCLUDEDFILE, ">" . $self->output_file . ".excluded") or die "Can't open outfile: $!\n";		
 	}
 	
 
@@ -128,6 +129,7 @@ sub execute {                               # replace with real execution logic.
 	if($self->output_file)
 	{
 		print OUTFILE "variant\tnum_affected\tnum_unaffected\t$header\n";
+		print EXCLUDEDFILE "variant\tnum_affected\tnum_unaffected\t$header\n";
 	}
 
 
@@ -289,6 +291,7 @@ sub execute {                               # replace with real execution logic.
 				$stats{'multiple_affecteds'}++;
 
 				my $include_variant_flag = 0;
+				my $exclude_reason = "Unknown";
 
 				## Proceed if we found few enough unaffecteds with the variant ##
 				if($self->inheritance_model)
@@ -298,14 +301,17 @@ sub execute {                               # replace with real execution logic.
 						if($unaffecteds_variant > $max_unaffecteds_variant)
 						{
 							$stats{'in_unaffected'}++;
+							$exclude_reason = "PresentInUnaffected";
 						}
 						elsif($affecteds_wildtype > 0)
 						{
 							$stats{'affected_was_wildtype'}++;
+							$exclude_reason = "AffectedWasWildtype";
 						}
 						elsif($affecteds_homozygous == $affecteds_variant)
 						{
 							$stats{'all_affecteds_homozygous'}++;
+							$exclude_reason = "AffectedsHomozygous";
 						}
 						else
 						{
@@ -332,6 +338,10 @@ sub execute {                               # replace with real execution logic.
 					$include_variant_flag = 1;
 					$stats{'included_variants'}++;
 
+				}
+				else
+				{
+					$exclude_reason = "Only-$unaffecteds_variant-Unaffecteds-Variant";
 				}
 				
 				if($include_variant_flag)
@@ -360,6 +370,15 @@ sub execute {                               # replace with real execution logic.
 						print OUTFILE "\n";
 					}					
 				}
+				else
+				{
+					if($self->output_file)
+					{
+						print EXCLUDEDFILE "$line\t";
+						print EXCLUDEDFILE join("\t", $unaffecteds_variant, $affecteds_variant, $affecteds_missing, $affecteds_ambiguous);
+						print EXCLUDEDFILE "\t$sample_genotype_string\t$exclude_reason\n";						
+					}
+				}
 			}
 
 		}		
@@ -371,6 +390,7 @@ sub execute {                               # replace with real execution logic.
 	if($self->output_file)
 	{
 		close(OUTFILE);
+		close(EXCLUDEDFILE);
 	}
 	
 	print $stats{'num_variants'} . " variants\n";

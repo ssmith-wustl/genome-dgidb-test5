@@ -434,10 +434,10 @@ sub _merge_and_calculate_stats {
     my $self = shift;
     my $unaligned_bams = shift;
 
-    my $tmp_unaligned_bam_file = $self->temp_scratch_directory . '/all_fastq_reads.bam';
+    my $tmp_all_reads_bam_file = $self->temp_scratch_directory . '/all_fastq_reads.bam';
     unless (Genome::Model::Tools::Picard::MergeSamFiles->execute(
         input_files => $unaligned_bams,
-        output_file => $tmp_unaligned_bam_file,
+        output_file => $tmp_all_reads_bam_file,
         maximum_memory => 12,
         maximum_permgen_memory => 256,
         sort_order => 'queryname',
@@ -462,50 +462,16 @@ sub _merge_and_calculate_stats {
     }
 
     # Find unaligned reads and merge with aligned while calculating basic alignment metrics
-    my $tmp_merged_bam_file = $self->temp_scratch_directory . '/accepted_hits_all_unsorted.bam';
+    my $unaligned_bam_file = $self->temp_staging_directory . '/unaligned_reads.bam';
     my $alignment_stats_file = $self->temp_staging_directory . '/alignment_stats.txt';
-    my $cmd = "gmt5.12.1 bio-samtools tophat-alignment-stats --aligned-bam-file=$tmp_aligned_bam_file --unaligned-bam-file=$tmp_unaligned_bam_file --merged-bam-file=$tmp_merged_bam_file --alignment-stats-file=$alignment_stats_file";
+    my $cmd = "gmt5.12.1 bio-samtools tophat-alignment-stats --aligned-bam-file=$tmp_aligned_bam_file --all-reads-bam-file=$tmp_all_reads_bam_file --unaligned-bam-file=$unaligned_bam_file --alignment-stats-file=$alignment_stats_file";
     Genome::Sys->shellcmd(
         cmd => $cmd,
-        input_files => [$tmp_aligned_bam_file,$tmp_unaligned_bam_file],
-        output_files => [$tmp_merged_bam_file,$alignment_stats_file],
+        input_files => [$tmp_aligned_bam_file,$tmp_all_reads_bam_file],
+        output_files => [$unaligned_bam_file,$alignment_stats_file],
     );
-    unlink($tmp_unaligned_bam_file);
+    unlink($tmp_all_reads_bam_file);
     unlink($tmp_aligned_bam_file);
-
-    # coordinate sort the merged BAM file
-    my $merged_bam = $self->temp_staging_directory . '/all_reads_merged.bam';
-    unless (Genome::Model::Tools::Picard::SortSam->execute(
-        sort_order => 'coordinate',
-        input_file => $tmp_merged_bam_file,
-        output_file => $merged_bam,
-        max_records_in_ram => 3000000,
-        maximum_memory => 12,
-        maximum_permgen_memory => 256,
-        temp_directory => $self->temp_scratch_directory,
-        use_version => $self->picard_version,
-    )) {
-        die $self->error_message('Failed to coordinate sort the merged BAM file!');
-    }
-
-    # index the merged BAM file(this is probably optional at this point)
-    if ($self->picard_version >= 1.23) {
-        unless (Genome::Model::Tools::Picard::BuildBamIndex->execute(
-            input_file => $merged_bam,
-            output_file => $merged_bam .'.bai',
-            maximum_memory => 12,
-            maximum_permgen_memory => 256,
-            temp_directory => $self->temp_scratch_directory,
-            use_version => $self->picard_version,
-        )) {
-            die $self->error_message('Failed to index the merged BAM file!');
-        }
-    }
-
-    my $flagstat_total = $self->_bam_flagstat_total($merged_bam);
-    unless(defined $flagstat_total) {
-        die $self->error_message;
-    }
 
     return 1;
 }
@@ -538,51 +504,6 @@ sub _promote_validated_data {
 
     return $output_dir;
 }
-
-sub _bam_flagstat_total {
-    my $self      = shift;
-    my $bam_file  = shift;
-    my $flag_file = $bam_file . '.flagstat';
-
-    unless(Genome::Sys->check_for_path_existence($bam_file)) {
-        $self->error_message('BAM file not found: ' . $bam_file);
-        die $self->error_message;
-    }
-
-    unless (-s $flag_file) {
-        my $cmd = Genome::Model::Tools::Sam::Flagstat->create(
-            use_version    => $self->samtools_version,
-            bam_file       => $bam_file,
-            output_file    => $flag_file,
-            include_stderr => 1,
-        );
-
-        unless($cmd and $cmd->execute) {
-            $self->error_message("Fail to create or execute flagstat command on bam file: $bam_file");
-            return;
-        }
-    }
-    my $flagstat_data = Genome::Model::Tools::Sam::Flagstat->parse_file_into_hashref($flag_file);
-
-    unless($flagstat_data) {
-        $self->error_message('No output from samtools flagstat');
-        return;
-    }
-
-    if(exists $flagstat_data->{errors}) {
-        for my $error (@{ $flagstat_data->{errors} }) {
-            if($error =~ m/Truncated file/) {
-                $self->error_message('Flagstat output for ' . $bam_file . ' indicates possible truncation.');
-                return;
-            }
-        }
-    }
-    my $total = $flagstat_data->{total_reads};
-
-    $self->status_message('flagstat for ' . $bam_file . ' reports ' . $total . ' in total');
-    return $total;
-}
-
 
 sub estimated_kb_usage {
     my $self = shift;

@@ -170,6 +170,11 @@ class Genome::Model::Build::ReferenceSequence {
             is => 'Genome::Model::Build::ImportedReferenceSequence',
             id_by => 'append_to_id',
         },
+        _sequence_filehandles => {
+            is => 'Hash',
+            is_optional => 1,
+            doc => 'file handle per chromosome for reading sequences so that it does not need to be constantly closed/opened',
+        }
     ],
     doc => 'a specific version of a reference sequence, with cordinates suitable for annotation',
 };
@@ -313,17 +318,32 @@ sub calculate_estimated_kb_usage {
 sub sequence {
     my ($self, $chromosome, $start, $stop) = @_;
 
-    my $f = IO::File->new();
-    my $basesFileName = $self->get_bases_file($chromosome);
-    if(!$f->open($basesFileName)) {
-        $self->error_message("Failed to open bases file \"$basesFileName\".");
-        return;
-    }
-    my $seq = undef;
-    $f->seek($start - 1,0);
+    my $f = $self->get_or_create_sequence_filehandle($chromosome);
+    return unless ($f);
+
+    my $seq;
+    $f->seek($start - 1, 0);
     $f->read($seq, $stop - $start + 1);
 
     return $seq;
+}
+
+sub get_or_create_sequence_filehandle {
+    my ($self, $chromosome) = @_;
+    my $filehandles = $self->_sequence_filehandles;
+
+    my $basesFileName = $self->get_bases_file($chromosome);
+    return $filehandles->{$chromosome} if ($filehandles->{$chromosome});
+
+    my $fh = IO::File->new($basesFileName);
+    unless ($fh) {
+        $self->error_message("Failed to open bases file \"$basesFileName\".");
+        return;
+    }
+
+    $filehandles->{$chromosome} = $fh;
+    $self->_sequence_filehandles($filehandles);
+    return $fh;
 }
 
 sub get_bases_file {

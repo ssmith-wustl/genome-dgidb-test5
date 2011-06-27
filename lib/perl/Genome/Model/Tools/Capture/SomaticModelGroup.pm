@@ -81,14 +81,15 @@ sub execute {                               # replace with real execution logic.
 
 	if($self->review_database_snvs)
 	{
+		print "Loading SNV review...\n";
 		load_review_database($self->review_database_snvs);
 	}
 	
 	if($self->review_database_indels)
 	{
+		print "Loading indel review...\n";
 		load_review_database($self->review_database_indels);
 	}
-
 
 	
 	## Save model ids by subject name ##
@@ -117,8 +118,40 @@ sub execute {                               # replace with real execution logic.
 		$stats{'models_in_group'}++;
 		
 		my $model_id = $model->genome_model_id;
+		my $model_name = $model->name;
 		my $subject_name = $model->subject_name;
 		$subject_name = "Model" . $model_id if(!$subject_name);
+
+		## Get normal and tumor model ##
+		
+		my $normal_model = $model->normal_model;
+		my $tumor_model = $model->tumor_model;
+		
+		my @normal_builds = $normal_model->builds;
+		my @tumor_builds = $tumor_model->builds;
+
+		## Get normal and tumor builds ##
+		my $normal_build_dir = my $tumor_build_dir = "";
+
+		foreach my $build (@normal_builds)
+		{
+			my $build_status = $build->status;
+			my $build_dir = $build->data_directory;
+			if($build_status eq "Succeeded")
+			{
+				$normal_build_dir = $build_dir;
+			}
+		}
+
+		foreach my $build (@tumor_builds)
+		{
+			my $build_status = $build->status;
+			my $build_dir = $build->data_directory;
+			if($build_status eq "Succeeded")
+			{
+				$tumor_build_dir = $build_dir;
+			}
+		}		
 		
 		my $last_build_dir = "";
 		my $model_status = "New";
@@ -127,6 +160,7 @@ sub execute {                               # replace with real execution logic.
 
 		my $num_builds = 0;		
 		my $num_maf_mutations = 0;
+		my $num_maf_snvs = my $num_maf_indels = 0;
 
 		my $build_ids = my $build_statuses = "";
 		my @builds = $model->builds;
@@ -196,6 +230,14 @@ sub execute {                               # replace with real execution logic.
 						my @sample_results = split(/\n/, $sample_maf_results);
 						$num_maf_mutations = @sample_results;
 						
+						foreach my $maf_line (@sample_results)
+						{
+							my @temp = split(/\t/, $maf_line);
+							my $variant_type = $temp[9];
+							$num_maf_snvs++ if($variant_type eq "SNP" || $variant_type eq "SNV");
+							$num_maf_indels++ if($variant_type eq "INS" || $variant_type eq "DEL");
+						}
+						
 						if($maf_header && !$maf_header_printed)
 						{
 							print MAF "$maf_header\n";
@@ -211,7 +253,9 @@ sub execute {                               # replace with real execution logic.
 
 		}
 
-		print join("\t", $model_id, $subject_name, $model_status, $build_ids, $build_statuses, $final_build_result, $num_maf_mutations . " mutations added to MAF") . "\n";
+#		print join("\t", $model_id, $subject_name, $model_status, $build_ids, $build_statuses, $final_build_result, $num_maf_mutations . " mutations added to MAF", $num_maf_snvs . " SNVs", $num_maf_indels . " Indels") . "\n";
+		print join("\t", $model_name, $model_id, $build_ids, $build_statuses, $final_build_result, $num_maf_mutations, $num_maf_snvs, $num_maf_indels) . "\n";
+		print "$normal_build_dir\n$tumor_build_dir\n";
 
 	}	
 	
@@ -366,9 +410,17 @@ sub get_build_results
 		$results{'tier1_snvs'} = $count;
 	}
 	
-	if(-e $tier1_indels)
+	if(-e $tier1_indels && -e $tier1_gatk)
 	{
 		my $count = `cat $tier1_indels $tier1_gatk | cut --fields=1-3 | sort -u | wc -l`;
+		chomp($count);
+
+		$results{'tier1_indels'} = $count;
+	}
+
+	if(-e $tier1_indels)
+	{
+		my $count = `cat $tier1_indels | cut --fields=1-3 | sort -u | wc -l`;
 		chomp($count);
 
 		$results{'tier1_indels'} = $count;
@@ -418,7 +470,7 @@ sub get_build_progress
 sub load_review_database
 {
 	my $FileName = shift(@_);
-
+	my $num_passed_sites = 0;
 	## Parse the Tier 1 SNVs file ##
 
 	my $input = new FileHandle ($FileName);
@@ -451,11 +503,13 @@ sub load_review_database
 			my $patient_id = join("-", "TCGA", $temp[1], $temp[2]);
 			my $key = join("\t", $patient_id, $chrom, $chr_start, $chr_stop);
 			$passed_sites{$key} = 1;
+			$num_passed_sites++;
 		}
 	}
 	
 	close($input);
 	
+	print "$num_passed_sites sites passed review\n";
 }
 
 
