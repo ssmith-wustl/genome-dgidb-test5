@@ -220,19 +220,12 @@ sub get_summary_information
         $self->status_message("dbSNP unfiltered report: $dbsnp_unfiltered_report_file is not available") unless -e $dbsnp_unfiltered_report_file;
     }
 
-    ##the number of instrument data assignments is:
-    my @inst_data_ass = $build->instrument_data_assignments;
-
-    my @inst_data;
-    eval { @inst_data = $build->instrument_data };
-    @inst_data = Genome::InstrumentData->get(id => [ map { $_->instrument_data_id } @inst_data_ass ]);
-
+    my @inputs = $build->model->instrument_data_inputs;
     my $total_bases = 0;
-    for (@inst_data_ass) {
-        my $inst_data = Genome::InstrumentData->get($_->instrument_data_id);
-
+    for my $input (@inputs) {
+        my $inst_data = $input->value;
         if ($inst_data->can('total_bases_read'))  {
-            $total_bases += $inst_data->total_bases_read($_->filter_desc);
+            $total_bases += $inst_data->total_bases_read($input->filter_desc);
         }
     }
     my $total_gigabases = sprintf("%.03f", $total_bases/1000000000);
@@ -252,6 +245,7 @@ sub get_summary_information
     # summarize the instrument data
     my %library_lane_counts;
 
+    my @inst_data = map { $_->value } @inputs;
     unless ($model->read_aligner_name =~ /Imported$/i) {
         my %library_lanes;
         for my $i (@inst_data) {
@@ -396,7 +390,7 @@ sub get_summary_information
         build_date                                    => $time,
         data_directory                                => $data_directory,
 
-        total_number_of_lanes                         => scalar(@inst_data_ass),
+        total_number_of_lanes                         => scalar(@inst_data),
         total_gigabases                               => $total_gigabases,
         libraries                                     => [ sort keys %library_lane_counts ],
         lanes_by_library                              => \%library_lane_counts,

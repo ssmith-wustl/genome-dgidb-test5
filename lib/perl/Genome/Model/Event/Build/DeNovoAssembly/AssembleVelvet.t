@@ -35,7 +35,7 @@ for my $target ( @assembler_input_files ) {
     ok(-s $dest, "linked $target to $dest");
 }
 
-my $velvet = Genome::Model::Event::Build::DeNovoAssembly::Assemble->create( build_id => $build->id);
+my $velvet = Genome::Model::Event::Build::DeNovoAssembly::Assemble->create( build_id => $build->id, model => $model);
 
 ok($velvet, 'Created assemble velvet');
 ok($velvet->execute, 'Execute assemble velvet');

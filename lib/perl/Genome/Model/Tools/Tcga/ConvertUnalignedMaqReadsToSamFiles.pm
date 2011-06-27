@@ -80,7 +80,7 @@ sub execute {
 
     my $unaligned_log_file = "$working_dir/logs/UNALIGNED_EXCLUDED.txt";
     my $ua_log = Genome::Sys->open_file_for_writing($unaligned_log_file);
-    print $ua_log "This file contains the instrument data assignments which were expected to have unaligned read files, but for some reason could NOT be found.\n";
+    print $ua_log "This file contains the instrument data inputs which were expected to have unaligned read files, but for some reason could NOT be found.\n";
     print $ua_log "If this file is empty, then all the unaligned reads files associated with the expected instrument data were found.\n\n";
     print $ua_log "ALIGNMENT SEQ ID\tFLOW CELL\tLANE\n";
     
@@ -89,7 +89,6 @@ sub execute {
     die "Model $model_id is not defined. Quitting." unless defined($model);
 
     #for paired end maq
-    #my $line1 =~ m/(^\S.*)#.*\t99\t(.*$)/;
     my $readName = $1;
     my $readData = $2;
 
@@ -101,25 +100,26 @@ sub execute {
     my $rg_tag = "\tRG:Z:";
     my $pg_tag = "\tPG:Z:";
 
-    my @idas = $model->instrument_data_assignments;
-    my $alignment_count = scalar(@idas);
+    my @instrument_data = $model->instrument_data;
+    my $alignment_count = scalar(@instrument_data);
     my $build = $model->last_complete_build;
+    unless ($build) {
+        die "No last complete build for model " . $model->__display_name__;
+    }
 
     my $count = 0;
-    for my $ida (@idas) {
-
-        my $alignment = $ida->results;
-        my $idid = $ida->instrument_data->id;
+    for my $instrument_data (@instrument_data) {
+        my $alignment = $build->alignment_results_for_instrument_data($instrument_data);
+        my $idid = $instrument_data->id;
+        my $flow_cell = $instrument_data->flow_cell_id;
+        my $lane = $instrument_data->lane;
         my $unaligned_file = $alignment->unaligned_reads_list_path;
 
         if (!-s $unaligned_file) {
             $self->status_message("* * * WARNING  $unaligned_file does not exist for $idid.");
-            my $flow_cell= $ida->instrument_data->flow_cell_id;  
-            my $lane = $ida->instrument_data->lane;
             print $ua_log "$idid\t$flow_cell\t$lane\n"; 
         }
         next if (!-s $unaligned_file);       
- 
  
         my $unaligned_sam_file = "$unaligned_dir/$idid.sam";
         if (-s $unaligned_sam_file) {
@@ -131,42 +131,40 @@ sub execute {
 
         #calculate all the parameters and header info
         my $insert_size_for_header;
-        if ($ida->instrument_data->median_insert_size) {
-                 $insert_size_for_header= $ida->instrument_data->median_insert_size;
+        if ($instrument_data->median_insert_size) {
+            $insert_size_for_header= $instrument_data->median_insert_size;
         } else {
-                 $insert_size_for_header = 0;
+            $insert_size_for_header = 0;
         }
         
         my $description_for_header;
-        if ($ida->instrument_data->is_paired_end) {
+        if ($instrument_data->is_paired_end) {
             $description_for_header = 'paired end';
         } else {
             $description_for_header = 'fragment';
         }
 
-        my $date_run_field = $ida->instrument_data->run_start_date_formatted();
-        my $sample_name_field = $ida->instrument_data->sample_name;
-        my $library = $ida->instrument_data->library_name;
-        my $platform_unit_field = sprintf("%s.%s",$ida->instrument_data->flow_cell_id,$ida->instrument_data->lane);
+        my $date_run_field = $instrument_data->run_start_date_formatted();
+        my $sample_name_field = $instrument_data->sample_name;
+        my $library = $instrument_data->library_name;
+        my $platform_unit_field = sprintf("%s.%s",$instrument_data->flow_cell_id,$instrument_data->lane);
         
         my $aligner_version = $alignment->aligner_version;
 
         my $aligner_params;
 
-        #my $aligner_params = $ida->instrument_data->flow_cell_id .":". $alignment->instrument_data_id;
         my $seed = 0;
-        for my $c (split(//,$ida->instrument_data->flow_cell_id || $alignment->instrument_data_id)) {
+        for my $c (split(//,$instrument_data->flow_cell_id || $alignment->instrument_data_id)) {
             $seed += ord($c)
         }
         $seed = $seed % 65536;
         $aligner_params .= " -s $seed ";
 
         ##### -a param
-        #$aligner_params .= " -a ".$ida->instrument_data->is_paired_end .":". !$alignment->force_fragment;
         my $upper_bound_on_insert_size;
-        if ($ida->instrument_data->is_paired_end && !$alignment->force_fragment) {
-            my $sd_above = $ida->instrument_data->sd_above_insert_size;
-            my $median_insert = $ida->instrument_data->median_insert_size;
+        if ($instrument_data->is_paired_end && !$alignment->force_fragment) {
+            my $sd_above = $instrument_data->sd_above_insert_size;
+            my $median_insert = $instrument_data->median_insert_size;
             $upper_bound_on_insert_size= ($sd_above * 5) + $median_insert;
             unless($upper_bound_on_insert_size > 0) {
                 #$self->status_message("Unable to calculate a valid insert size to run maq with. Using 600 (hax)");
@@ -176,7 +174,7 @@ sub execute {
         }
       
         #adaptor param 
-        my $adaptor_file = $ida->instrument_data->resolve_adaptor_file;
+        my $adaptor_file = $instrument_data->resolve_adaptor_file;
         if ($adaptor_file) {
             $aligner_params .= ' -d '. $adaptor_file;
         }
@@ -219,7 +217,7 @@ sub execute {
 
 
         my $fh = Genome::Sys->open_file_for_reading("$unaligned_file");
-        if ($ida->instrument_data->is_paired_end) {
+        if ($instrument_data->is_paired_end) {
             while (my $line1 = $fh->getline) {
                 my $line2 = $fh->getline; 
                 $line1 =~ m/(^\S.*)\t99\t(.*$)/;

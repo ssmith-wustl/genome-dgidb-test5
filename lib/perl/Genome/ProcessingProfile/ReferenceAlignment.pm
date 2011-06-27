@@ -224,44 +224,39 @@ sub _initialize_build {
 }
 
 # get alignments (generic name)
-sub results_for_instrument_data_assignment {
+sub results_for_instrument_data_input {
     my $self = shift;
-    my $assignment = shift;
+    my $input = shift;
     my %segment_info = @_;
-
-    #return if $build and $build->id < $assignment->first_build_id;
-    return $self->_fetch_alignment_sets($assignment,\%segment_info,'get');
+    return $self->_fetch_alignment_sets($input,\%segment_info,'get');
 }
 
-sub results_for_instrument_data_assignment_with_lock {
+sub results_for_instrument_data_input_with_lock {
     my $self = shift;
-    my $assignment = shift;
+    my $input = shift;
     my %segment_info = @_;
-
-    #return if $build and $build->id < $assignment->first_build_id;
-    return $self->_fetch_alignment_sets($assignment,\%segment_info,'get_with_lock');
+    return $self->_fetch_alignment_sets($input,\%segment_info,'get_with_lock');
 }
 
-# create alignments (called by Genome::Model::Event::Build::ReferenceAlignment::AlignReads for now...
-sub generate_results_for_instrument_data_assignment {
+# create alignments (called by Genome::Model::Event::Build::ReferenceAlignment::AlignReads for now...)
+sub generate_results_for_instrument_data_input {
     my $self = shift;
-    my $assignment = shift;
+    my $input = shift;
     my %segment_info = @_;
-    #return if $build and $build->id < $assignment->first_build_id;
-    return $self->_fetch_alignment_sets($assignment,\%segment_info, 'get_or_create');
+    return $self->_fetch_alignment_sets($input,\%segment_info, 'get_or_create');
 }
 
 sub _fetch_alignment_sets {
     my $self = shift;
-    my $assignment = shift;
+    my $input = shift;
     my $segment_info = shift;
     my $mode = shift;
 
-    my $model = $assignment->model;
+    my $model = $input->model;
     
-    my @param_sets = $self->params_for_alignment($assignment);
+    my @param_sets = $self->params_for_alignment($input);
     unless (@param_sets) {
-        $self->error_message('Could not get alignment parameters for this instrument data assignment');
+        $self->error_message('Could not get alignment parameters for this instrument data input');
         return;
     }
     my @alignments;    
@@ -303,9 +298,9 @@ sub processing_profile_params_for_alignment {
 
 sub params_for_alignment {
     my $self = shift;
-    my $assignment = shift;
+    my $input = shift;
 
-    my $model = $assignment->model;
+    my $model = $input->model;
     my $reference_build = $model->reference_sequence_build;
     my $reference_build_id = $reference_build->id;
 
@@ -315,7 +310,7 @@ sub params_for_alignment {
     }
 
     my %params = (
-                    instrument_data_id => $assignment->instrument_data_id || undef,
+                    instrument_data_id => $input->value_id || undef,
                     aligner_name => $self->read_aligner_name || undef,
                     reference_build_id => $reference_build_id || undef,
                     aligner_version => $self->read_aligner_version || undef,
@@ -326,13 +321,11 @@ sub params_for_alignment {
                     trimmer_params => $self->read_trimmer_params || undef,
                     picard_version => $self->picard_version || undef,
                     samtools_version => $self->samtools_version || undef,
-                    filter_name => $assignment->filter_desc || undef,
+                    filter_name => $input->filter_desc || undef,
                     test_name => $ENV{GENOME_SOFTWARE_RESULT_TEST_NAME} || undef,
                     instrument_data_segment_type => undef,
                     instrument_data_segment_id => undef,
                 );
-
-    #print Data::Dumper::Dumper(\%params);
 
     my @param_set = (\%params);
     return @param_set;
@@ -341,24 +334,24 @@ sub params_for_alignment {
 sub params_for_merged_alignment {
     my $self = shift;
     my $build = shift; #TODO possibly calculate segment info in _fetch_merged_alignment_result (which calls this)
-    my @assignments = @_;
+    my @inputs = @_;
 
-    my $model = $assignments[0]->model;
+    my $model = $inputs[0]->model;
 
     my $filters = [];
-    for my $i (0..$#assignments) {
-        my $assignment = $assignments[$i];
-        if($assignment->filter_desc) {
-            push @$filters, join(':', $assignment->instrument_data_id, $assignment->filter_desc);
+    for my $i (0..$#inputs) {
+        my $input = $inputs[$i];
+        if($input->filter_desc) {
+            push @$filters, join(':', $input->instrument_data_id, $input->filter_desc);
         }
     }
 
     my $segment_parameters = [];
     if($build) {
         my @align_reads_events = grep {$_->isa('Genome::Model::Event::Build::ReferenceAlignment::AlignReads')} $build->events;
-        for my $i (0..$#assignments) {
-            my $assignment = $assignments[$i];
-            my @alignment_events = grep {$_->instrument_data_id == $assignment->instrument_data_id} @align_reads_events;
+        for my $i (0..$#inputs) {
+            my $input = $inputs[$i];
+            my @alignment_events = grep {$_->instrument_data_id == $input->instrument_data_id} @align_reads_events;
         
             #if multiple events, this is a chunked alignment
             if (@alignment_events > 1) {
@@ -371,8 +364,8 @@ sub params_for_merged_alignment {
 
     my $instrument_data = [];
 
-    for my $i (0..$#assignments) {
-        push @$instrument_data, $assignments[$i]->instrument_data_id;
+    for my $i (0..$#inputs) {
+        push @$instrument_data, $inputs[$i]->instrument_data_id;
     }
 
     my %params = (
@@ -394,8 +387,6 @@ sub params_for_merged_alignment {
         picard_version => $model->picard_version || undef,
         samtools_version => $model->samtools_version || undef,
         test_name => $ENV{GENOME_SOFTWARE_RESULT_TEST_NAME} || undef,
-        #filter_name => undef,
-        #instrument_data_segment => undef,
     );
     if(scalar @$filters) {
         $params{filter_name} = $filters;
@@ -611,37 +602,11 @@ sub reference_preparation_objects {
 }
 
 sub alignment_objects {
-
     my ($self, $model) = @_;
 
-    my @assignments = $model->instrument_data_assignments();
-
-    my @instrument_data_ids = map { $_->instrument_data_id() } @assignments;
-    my @solexa_instrument_data = Genome::InstrumentData->get( \@instrument_data_ids );
-
-    unless (scalar @solexa_instrument_data == scalar @instrument_data_ids) {
-        my %assignments = map { $_->instrument_data_id => $_ } @assignments;
-        for my $found (@solexa_instrument_data) {
-            delete $assignments{$found->id};
-        }
-        my @missing = sort keys %assignments;
-        $self->warning_message(
-            'Failed to find all of the assigned instrument data for model: '
-            . $model->id
-            . ".  Missing @missing.  Now trying imported data..."
-        );
-        my @imported_instrument_data = Genome::InstrumentData::Imported->get( \@instrument_data_ids );
-        
-        push @solexa_instrument_data, @imported_instrument_data;
-        unless (scalar @solexa_instrument_data == scalar @instrument_data_ids) {
-            $self->error_message('Still did not find all of the assigned instrument data for model: '.$model->id.' even after trying imported data.  Bailing out!');
-            die $self->error_message;
-        }
-    }
-    
-    # grab what can be segmented
-    my @instrument_data_output = grep {! $_->can('get_segments')} @solexa_instrument_data;
-    my @segmentable_data = grep {$_->can('get_segments')} @solexa_instrument_data;
+    my @instrument_data = $model->instrument_data;
+    my @instrument_data_output = grep {! $_->can('get_segments')} @instrument_data;
+    my @segmentable_data = grep {$_->can('get_segments')} @instrument_data;
     
     for my $instr (@segmentable_data) {
         my @segments = $instr->get_segments();

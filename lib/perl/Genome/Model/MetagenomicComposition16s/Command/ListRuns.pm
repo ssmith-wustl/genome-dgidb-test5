@@ -19,7 +19,7 @@ sub help_brief {
 sub help_detail {
     return <<HELP;
     List the unique runs in a build's chromat_dir. This differs from listing instrument data
-     assignments which are tracked in the database.
+    which are tracked in the database.
      
     This command is backward compatible for amplicon assembly models/builds.
 HELP

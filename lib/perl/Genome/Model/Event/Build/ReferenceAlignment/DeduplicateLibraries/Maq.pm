@@ -31,22 +31,22 @@ sub execute {
        return;
     }
 
-    #get the instrument data assignments
-    my @idas = $self->model->instrument_data_assignments;
+    #get the instrument data
+    my $build = $self->build;
+    my @instrument_data = $build->instrument_data;
     my %library_alignments;
     my @all_alignments;
-    
-    my $build = $self->build;
 
     #accumulate the maps per library
-    for my $ida (@idas) {
-        my $library = $ida->library_name;
+    for my $instrument_data (@instrument_data) {
+        my $library = $instrument_data->library_name;
         #for RT#51519 library name contains white space, those white-space lib names should be fixed upstream when putting into DB.
         if ($library =~ /\s+/) {
             $self->warning_message("Library name: $library contains space. will replace with _. Note the lib_tag in bam file will be changed too");
             $library =~ s/\s+/\_/g;
         }
-        my @alignments = $ida->results;
+
+        my @alignments = $build->alignment_results_for_instrument_data($instrument_data);
         for my $alignment (@alignments) {
             my @maps = $alignment->alignment_file_paths;
             push @{$library_alignments{$library}}, @maps;  #for the dedup step
@@ -302,10 +302,10 @@ sub calculate_required_disk_allocation_kb {
 
     $self->status_message("calculating how many map files will get incorporated");
     my $build = $self->build;
-    my @idas = $build->instrument_data_assignments;
+    my @instrument_data = $build->instrument_data;
     my @build_maps;
-    for my $ida (@idas) {
-        my @alignments = $ida->results;
+    for my $instrument_data (@instrument_data) {
+        my @alignments = $build->alignment_results_for_instrument_data($instrument_data);
         for my $alignment (@alignments) {
             my @aln_maps = $alignment->alignment_file_paths;
             push @build_maps, @aln_maps;
