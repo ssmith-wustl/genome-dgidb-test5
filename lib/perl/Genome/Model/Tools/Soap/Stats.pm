@@ -401,9 +401,9 @@ sub _get_input_read_and_bases_counts {
 
     for my $fastq( @{$self->assembly_input_fastq_files} ) {
 	my $io = Genome::Model::Tools::Sx::FastqReader->create(file => $fastq);
-	while (my $seqs = $io->read) { #just getting number of reads
+	while (my $seq = $io->read) { #just getting number of reads
 	    $read_count++;
-	    $base_count += length $seqs->[0]->{seq};
+	    $base_count += length $seq->{seq};
 	}
     }
     return $read_count, $base_count;
