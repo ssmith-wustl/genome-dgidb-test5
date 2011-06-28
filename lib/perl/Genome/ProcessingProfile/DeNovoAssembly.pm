@@ -647,7 +647,7 @@ sub bsub_usage {
 sub soap_de_novo_assemble_bsub_rusage {
     my $mem = 30000;
     my $queue = 'alignment';
-    $queue = 'alignment-pd' if (Genome::Sys->username =~ /^apipe-/);
+    $queue = 'alignment-pd' if (Genome::Config->should_use_alignment_pd);
     return "-q $queue -n 4 -R 'span[hosts=1] select[type==LINUX64 && mem>$mem] rusage[mem=$mem]' -M $mem".'000';
 }
 
@@ -657,7 +657,7 @@ sub soap_import_bsub_rusage {
 
 sub velvet_one_button_bsub_rusage {
     my $queue = 'alignment';
-    $queue = 'alignment-pd' if (Genome::Sys->username =~ /^apipe-/);
+    $queue = 'alignment-pd' if (Genome::Config->should_use_alignment_pd);
     return "-q $queue -R 'select[type==LINUX64 && mem>30000] rusage[mem=30000] span[hosts=1]' -M 30000000";
 }
 

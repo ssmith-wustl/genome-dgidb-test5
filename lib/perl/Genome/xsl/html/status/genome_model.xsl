@@ -535,13 +535,18 @@
   <xsl:template name="genome_model_input_rows">
     <xsl:param name="report_missing"/>
     <xsl:param name="input"/>
-    <xsl:variable name="inputs" select="$input/object"/>
 
+    <xsl:comment>template: status/genome_model.xsl name: genome_model_input_rows</xsl:comment>
+
+    <xsl:variable name="inputs" select="$input/object"/>
     <!-- select unique input names -->
     <xsl:for-each select="$input">
       <xsl:for-each select="object[not(preceding-sibling::*/aspect[@name='name']/value = aspect[@name='name']/value)]/aspect[@name='name']/value">
+        <xsl:variable name="name" select="."/>
+        <xsl:variable name="model_id" select="ancestor::object[types/isa[@type='Genome::Model']]/@id"/>
+        <xsl:variable name="model_name" select="ancestor::object[types/isa[@type='Genome::Model']]/aspect[@name='name']/value"/>
+
         <tr>
-          <xsl:variable name="name" select="."/>
           <xsl:choose>
 
             <xsl:when test="count($inputs[aspect[@name='name']/value = $name]) = 1">
@@ -551,14 +556,24 @@
 
             <xsl:otherwise>
               <td>
-                <a href="javascript:return(false)" class="mini btn popup-ajax">
-                  <xsl:attribute name="title">
-                    <xsl:for-each select="$inputs[aspect[@name='name']/value = $name]/aspect[@name='value']/object/display_name">
-                      <xsl:value-of select='.' /><xsl:text> </xsl:text>
-                    </xsl:for-each>
-                  </xsl:attribute>
+                <a href="javascript:return(false)" class="mini btn popup-ajax-instrument-data">
+                  <xsl:attribute name="title"><xsl:value-of select="$model_name"/> (<xsl:value-of select="$model_id"/>) instrument_data</xsl:attribute>
+                  <xsl:attribute name="id"><xsl:value-of select="$model_id"/></xsl:attribute>
                   <span class="sm-icon sm-icon-newwin"><br/></span>instrument data (<xsl:value-of select="count($inputs[aspect[@name='name']/value = $name])"/>)
                 </a>
+                <!-- div for instrument data -->
+                <div style="display: none;">
+                  <xsl:attribute name="id">instrument_data_<xsl:value-of select="$model_id"/></xsl:attribute>
+                  <!-- <xsl:for-each select="$inputs[aspect[@name='name']/value = $name]/aspect[@name='value']/object/display_name"> -->
+                  <!--   <xsl:value-of select='.' /> -->
+                  <!--   <xsl:if test="position() != last()"><xsl:text>, </xsl:text></xsl:if> -->
+                  <!-- </xsl:for-each> -->
+                  <table class="lister">
+                  <xsl:for-each select="$inputs[aspect[@name='name']/value = $name]">
+                    <xsl:call-template name="genome_model_input_table_row"/>
+                  </xsl:for-each>
+                  </table>
+                </div>
               </td>
               <td><xsl:value-of select="$name"/></td>
             </xsl:otherwise>
