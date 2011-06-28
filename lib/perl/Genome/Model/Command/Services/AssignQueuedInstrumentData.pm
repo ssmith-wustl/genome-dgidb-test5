@@ -1347,6 +1347,11 @@ sub add_processing_profiles_to_pses{
                         }
                     }
                 }
+                elsif ($taxon->species_latin_name =~ /mus musculus/i){
+                    my $pp_id = 2580856;
+                    push @processing_profile_ids_to_add, $pp_id;
+                    $reference_sequence_names_for_processing_profile_ids{$pp_id} = 'UCSC-mouse-buildmm9'
+                }
                 elsif ($taxon->domain =~ /bacteria/i) {
                     # updated 2011jun15 RT 72143 ctomlins
                     push @processing_profile_ids_to_add, '2599969';
