@@ -45,7 +45,7 @@ mkdir $build->data_directory.'/edit_dir';
 ok(-d $build->data_directory.'/edit_dir', "Create build data dir edit_dir");
 
 #create, execute
-my $soap = Genome::Model::Event::Build::DeNovoAssembly::PostAssemble->create(build_id =>$build->id);
+my $soap = Genome::Model::Event::Build::DeNovoAssembly::PostAssemble->create(build_id =>$build->id, model => $model);
 ok($soap, "Created soap post assemble") or die;
 ok($soap->execute, "Executed soap post assemble") or die;
 

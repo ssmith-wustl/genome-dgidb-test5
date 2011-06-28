@@ -81,10 +81,10 @@ sub execute {
         $bam_file = $build->whole_rmdup_bam_file;
 
         #calculate average read length of instrument-data
-        my @assignments = $model->instrument_data_assignments;
+        my @instrument_data = $model->instrument_data;
         my $read_lengths = Statistics::Descriptive::Full->new();
-        for my $lane (@assignments) {
-            my $rl = $lane->instrument_data->read_length;
+        for my $lane (@instrument_data) {
+            my $rl = $lane->read_length;
             $read_lengths->add_data($rl);
         }
         $mean_read_length = $read_lengths->mean();

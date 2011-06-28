@@ -35,21 +35,19 @@ sub help_detail {
     "This command will remove a build from the system.  The rest of the model remains the same, as does independent data like alignments.";
 }
 
+# TODO This needs to be cleaned up
 sub execute {
     my $self = shift;
 
     my @builds = $self->builds;
     my $build_count = scalar(@builds);
-    my @errors;
     for my $build (@builds) {
+        $self->total_command_count($self->total_command_count + 1);
         my $transaction = UR::Context::Transaction->begin();
         my $display_name = $build->__display_name__;
         my $remove_build = Genome::Command::Remove->create(items => [$build], _deletion_params => [keep_build_directory => $self->keep_build_directory]);
         my $successful = eval {
             my @__errors__ = $build->__errors__;
-            unless (@__errors__) {
-                push @__errors__, map { $_->__errors__ } $build->instrument_data_assignments;
-            }
             if (@__errors__) {
                 die "build or instrument data has __errors__, cannot remove: " . join('; ', @__errors__);
             }
@@ -59,14 +57,14 @@ sub execute {
             $self->status_message("Successfully removed build (" . $display_name . ").");
         }
         else {
-            push @errors, "Failed to remove build (" . $display_name . "): $@.";
+            $self->append_error($display_name, "Failed to remove build: $@.");
             $transaction->rollback();
         }
     }
 
-    $self->display_command_summary_report(scalar(@builds), @errors);
+    $self->display_command_summary_report();
 
-    return !scalar(@errors);
+    return !scalar(keys %{$self->command_errors});
 }
 
 1;

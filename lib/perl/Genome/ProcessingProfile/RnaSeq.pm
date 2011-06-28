@@ -134,14 +134,14 @@ sub _resolve_sequencing_platform_for_class {
 
 sub params_for_alignment {
     my $self = shift;
-    my @assignments = @_;
+    my @inputs = @_;
 
-    my $model = $assignments[0]->model;
+    my $model = $inputs[0]->model;
     my $reference_build = $model->reference_sequence_build;
     my $reference_build_id = $reference_build->id;
 
     my %params = (
-                    instrument_data_id => [map($_->instrument_data_id, @assignments)],
+                    instrument_data_id => [map($_->value_id, @inputs)],
                     aligner_name => 'tophat',
                     reference_build_id => $reference_build_id || undef,
                     aligner_version => $self->read_aligner_version || undef,

@@ -49,7 +49,6 @@ sub _generate_content {
     #preload data for efficiency
     my @members = $self->members;
     my @model_ids = map($_->id, @members);
-    my @idas = Genome::Model::InstrumentDataAssignment->get(model_id => \@model_ids);
     my @builds = Genome::Model::Build->get(model_id => \@model_ids);
     my @events = Genome::Model::Event->get(build_id => [map($_->id, @builds)]);
 
@@ -120,7 +119,7 @@ sub get_enrichment_factor_node {
             $model_node->addChild( $xml_doc->createAttribute('subject_name', $model->subject_name) );
             $model_node->addChild( $xml_doc->createAttribute('model_name',$model->name));
 
-            my @idata = $model->instrument_data_assignments;
+            my @idata = $model->instrument_data;
 
             $model_node->addChild( $xml_doc->createAttribute('lane_count', scalar(@idata)));
 
@@ -224,7 +223,7 @@ sub get_alignment_summary_node {
             $model_node->addChild( $xml_doc->createAttribute('subject_name',$model->subject_name));
             $model_node->addChild( $xml_doc->createAttribute('model_name',$model->name));
 
-            my @idata = $model->instrument_data_assignments;
+            my @idata = $model->instrument_data;
 
             $model_node->addChild( $xml_doc->createAttribute('lane_count', scalar(@idata)) );
 
@@ -278,7 +277,7 @@ sub get_coverage_summary_node {
             $model_node->addChild( $xml_doc->createAttribute('subject_name',$model->subject_name));
             $model_node->addChild( $xml_doc->createAttribute('model_name',$model->name));
 
-            my @idata = $model->instrument_data_assignments;
+            my @idata = $model->instrument_data;
 
             $model_node->addChild( $xml_doc->createAttribute('lane_count', scalar(@idata)) );
 

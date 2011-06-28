@@ -111,19 +111,16 @@ sub generate_report_detail
 
     my $content;
     my $report_content;
-
-
-    my @idas = $self->build->instrument_data_assignments();
     my $total_kb = 0;
-
     my @lane_data;
 
-    for (@idas) {
-        my $instrument_data = Genome::InstrumentData->get($_->instrument_data_id);
+    my @inputs = $self->build->model->instrument_data_inputs;
+    for my $input (@inputs) {
+        my $instrument_data = $input->value;
         my $lane_kb;
-        if($_->filter_desc)
+        if($input->filter_desc)
         {
-           $lane_kb = sprintf("%d",$instrument_data->total_bases_read($_->filter_desc)/1000);
+           $lane_kb = sprintf("%d",$instrument_data->total_bases_read($input->filter_desc)/1000);
         }
         else
         {

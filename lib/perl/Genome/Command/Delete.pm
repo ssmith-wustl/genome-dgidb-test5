@@ -34,21 +34,22 @@ sub execute {
 
     my $name_for_objects_ub = $self->_name_for_objects_ub;
     my @objects = $self->$name_for_objects_ub;
-    my @errors;
+    my %errors;
     for my $obj ( @objects ) {
+        $self->total_command_count($self->total_command_count + 1);
         my $transaction = UR::Context::Transaction->begin();
         my $name = $obj->__display_name__;
-        my $deleted = eval{ $obj->delete; };
+        my $deleted = eval{ $obj->delete };
         if ($deleted and $transaction->commit) {
             $self->status_message("Deleted $name");
         }
         else {
-            push @errors, "Failed to delete $name";
+            $self->append_error($name, "Failed to delete $name");
             $transaction->rollback;
         }
     }
 
-    $self->display_command_summary_report(scalar(@objects), @errors);
+    $self->display_command_summary_report();
 
     return 1; 
 }

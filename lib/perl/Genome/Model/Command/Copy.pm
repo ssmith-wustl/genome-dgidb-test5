@@ -54,8 +54,8 @@ sub help_detail {
     return <<"EOS"
 This defines a new genome model.
 
-An existing model is used as a template, with its parameters and instrument data assignments
-being used to create the new model.
+An existing model is used as a template, with its parameters and instrument data being used to 
+create the new model.
 
 Individual parameters on the model can be overriden by passing key-value pairs on the command line.
 For example, use

@@ -75,12 +75,10 @@ sub execute {
         return;
     }
     $self->status_message(sprintf "Checking %d lanes", scalar(@events));
-    #Convert events to InstrumentDataAssignment objects
-    my @idas = _dedupe_objects(map { $_->instrument_data_assignment } @events);
 
-    foreach my $ida (@idas) {
-        my $lane_name = $ida->__display_name__;
-        my @alignments = $ida->results($build);
+    for my $instrument_data ($build->instrument_data) {
+        my $lane_name = $instrument_data->__display_name__;
+        my @alignments = $build->alignment_results_for_instrument_data($instrument_data);
         unless(@alignments) {
             $self->error_message("No alignment objects for $lane_name");
             return;
@@ -130,7 +128,6 @@ sub execute {
     return 1;
 
 }
-
 
 sub _dedupe_objects {
     my @objects = @_;

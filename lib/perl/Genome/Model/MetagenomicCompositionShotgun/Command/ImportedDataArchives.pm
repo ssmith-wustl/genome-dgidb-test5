@@ -19,7 +19,7 @@ sub execute {
 
     my $mcs_model = Genome::Model->get($self->model_id);
     my ($meta_model) = $mcs_model->_metagenomic_alignment_models;
-    my @imported_data = map {$_->instrument_data} $meta_model->instrument_data_assignments;
+    my @imported_data = $meta_model->instrument_data;
     print "WARNING: These archives are in an unverified quality format do not assume it is in Sanger quality format.\n";
     for my $imported_data (@imported_data) {
         print $imported_data->archive_path . "\n";

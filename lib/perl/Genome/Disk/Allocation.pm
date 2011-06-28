@@ -213,6 +213,10 @@ sub create {
     my $allocation = $class->get(id => $params{id});
     confess "Could not retrieve created allocation with id " . $params{id} unless $allocation;
     
+    unless (-d $allocation->absolute_path) {
+        Genome::Sys->create_directory($allocation->absolute_path);
+    }
+
     # If the owner gets rolled back, then delete the allocation. Make sure the allocation hasn't already been deleted,
     # which can happen if the owner is coded well and cleans up its own mess during rollback.
     my $remove_sub = sub {

@@ -67,10 +67,24 @@ class Genome::Model::Build {
         software_revision => { is => 'VARCHAR2', len => 1000 },
     ],
     has_many_optional => [
-        inputs           => { is => 'Genome::Model::Build::Input', reverse_as => 'build', 
-                              doc => 'Inputs assigned to the model when the build was created.' },
-        instrument_data  => { is => 'Genome::InstrumentData', via => 'inputs', to => 'value', is_mutable => 1, where => [ name => 'instrument_data' ], 
-                              doc => 'Instrument data assigned to the model when the build was created.' },
+        inputs => { 
+            is => 'Genome::Model::Build::Input', 
+            reverse_as => 'build', 
+            doc => 'Inputs assigned to the model when the build was created.' 
+        },
+        instrument_data_inputs => {
+            is => 'Genome::Model::Build::Input',
+            reverse_as => 'build',
+            where => [ name => 'instrument_data' ],
+        },
+        instrument_data  => { 
+            is => 'Genome::InstrumentData', 
+            via => 'inputs', 
+            to => 'value', 
+            is_mutable => 1, 
+            where => [ name => 'instrument_data' ], 
+            doc => 'Instrument data assigned to the model when the build was created.' 
+        },
         instrument_data_ids => { via => 'instrument_data', to => 'id', is_many => 1, },
         from_build_links => { is => 'Genome::Model::Build::Link', reverse_as => 'to_build', 
                               doc => 'bridge table entries where this is the \"to\" build(used to retrieve builds this build is \"from\")' },
@@ -166,13 +180,6 @@ sub create {
 
     my $self = $class->SUPER::create(@_);
     return unless $self;
-
-    # instrument data assignments - set first build id
-    my @ida = $self->model->instrument_data_assignments;
-    for my $ida ( @ida ) {
-        next if defined $ida->first_build_id;
-        $ida->first_build_id( $self->id )
-    }
     
     eval {
         # Give the model a chance to update itself prior to copying inputs from it
@@ -225,7 +232,7 @@ sub _copy_model_inputs {
     # will leave the build in an "unstartable" state that can be reviewed later.
     for my $input ($self->model->inputs) {
         eval {
-            my %params = map { $_ => $input->$_ } (qw/ name value_class_name value_id /);
+            my %params = map { $_ => $input->$_ } (qw/ name value_class_name value_id filter_desc /);
 
             # Resolve inputs pointing to a model to a build. 
             if($params{value_class_name}->isa('Genome::Model')) {
@@ -260,26 +267,6 @@ sub _copy_model_inputs {
         }
     }
 
-    # FIXME temporary - copy model instrument data as inputs, when all 
-    #  inst_data is an input, this can be removed
-    my @existing_inst_data = $self->instrument_data;
-    my @model_inst_data = $self->model->instrument_data;
-    for my $inst_data ( @model_inst_data ) {
-        # We may have added the inst data when adding the inputs
-        # Adding as input cuz of mock inst data
-        #print Data::Dumper::Dumper($inst_data);
-        next if grep { $inst_data->id eq $_->id } @existing_inst_data;
-        my %params = (
-            name => 'instrument_data',
-            value_class_name => $inst_data->class,
-            value_id => $inst_data->id,
-        );
-        unless ( $self->add_input(%params) ) {
-            $self->error_message("Can't add instrument data (".$inst_data->id.") to build.");
-            return;
-        }
-    }
-
     return 1;
 
 }
@@ -289,29 +276,13 @@ sub select_build_from_input_model {
     return $model->last_complete_build;
 }
 
-sub instrument_data_assignments {
-    my $self = shift;
-    my @idas = Genome::Model::InstrumentDataAssignment->get(
-        model_id => $self->model_id,
-        first_build_id => {
-            operator => '<=',
-            value => $self->build_id,
-        },
-    );
-    return @idas;
-}
-
 sub instrument_data_count {
     my $self = shift;
-
-    # Try inst data from inputs
     my @instrument_data = $self->instrument_data;
-    if ( @instrument_data ) {
+    if (@instrument_data) {
         return scalar(@instrument_data);
     }
-
-    # use first build id on model's ida for older builds
-    return scalar( $self->instrument_data_assignments );
+    return 0;
 }
 
 # why is this not a defined relationship above? -ss
@@ -1521,24 +1492,6 @@ sub delete {
     my @objects = $self->get_all_objects; # TODO this method name should be changed
     for my $object (@objects) {
         $object->delete;
-    }
-
-    # Re-point instrument data assigned first on this build to the next build.
-    $self->status_message("Pointing instrument data first assigned to this build to a subsequent build, if possible");
-    my ($next_build,@subsequent_builds) = Genome::Model::Build->get(
-        model_id => $self->model_id,
-        id => {
-            operator => '>',
-            value => $self->build_id,
-        },  
-    );
-    my $next_build_id = ($next_build ? $next_build->id : undef);
-    my @idas_fix = Genome::Model::InstrumentDataAssignment->get(
-        model_id => $self->model_id,
-        first_build_id => $self->build_id
-    );
-    for my $idas (@idas_fix) {
-        $idas->first_build_id($next_build_id);
     }
 
     # Deallocate build directory, which will also remove it (unless no commit is on)
