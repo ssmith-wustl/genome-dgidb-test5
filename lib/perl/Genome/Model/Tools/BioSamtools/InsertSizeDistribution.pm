@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use Genome;
+use Statistics::Descriptive;
 
 class Genome::Model::Tools::BioSamtools::InsertSizeDistribution {
     is => 'Genome::Model::Tools::BioSamtools',
