@@ -25,10 +25,10 @@ my $refbuild_id = 101947881;
 my $test_data_directory = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants2-Filter-VarscanHighConfidence";
 
 # Updated to .v2 for correcting an error with newlines
-my $expected_directory = $test_data_directory . "/expected.v2";
+my $expected_directory = $test_data_directory . "/expected.v3";
 my $detector_directory = $test_data_directory . "/varscan-somatic-2.2.4-";
-my $tumor_bam_file  = $test_data_directory. '/flank_tumor_sorted.bam';
-my $normal_bam_file  = $test_data_directory. '/flank_normal_sorted.bam';
+my $tumor_bam_file  = $test_data_directory. "/alignments/102922275_merged_rmdup.bam"; #'/flank_tumor_sorted.bam';
+my $normal_bam_file  = $tumor_bam_file;
 my $test_output_base = File::Temp::tempdir('Genome-Model-Tools-DetectVariants2-Filter-VarscanHighConfidence-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
 my $test_output_dir = $test_output_base . '/filter';
 
@@ -70,6 +70,13 @@ my $varscan_high_confidence = Genome::Model::Tools::DetectVariants2::Filter::Var
 
 ok($varscan_high_confidence, "created VarscanHighConfidence object");
 ok($varscan_high_confidence->execute(), "executed VarscanHighConfidence");
+
+my @list = glob($test_output_dir."/*");
+
+#for my $file (@list){
+#    my $base = File::Basename::basename($file);
+#    Genome::Sys->copy_file($file, "/gscmnt/ams1158/info/pindel/vfpf/".$base);
+#}
 
 for my $output_file (@expected_output_files){
     my $expected_file = $expected_directory."/".$output_file;
