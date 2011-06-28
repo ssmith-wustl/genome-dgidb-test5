@@ -19,6 +19,13 @@ class Genome::Model::Build::Input {
         build      => { is => 'Genome::Model::Build', id_by => 'build_id', constraint_name => 'GMBI_GMB_FK' },
         value      => { is => 'UR::Object', id_by => 'value_id', id_class_by => 'value_class_name' },
     ],
+    has_optional => [
+        filter_desc => { 
+            is => 'Text',
+            valid_values => [ 'forward-only', 'reverse-only', undef ],
+            doc => 'Filter to apply on the input value.'
+        },
+    ],
     schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',
 };

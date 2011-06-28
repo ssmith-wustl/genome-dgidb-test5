@@ -31,14 +31,7 @@ class Genome::Model::Tools::Sx::Rename {
 };
 
 sub help_brief {
-    return <<HELP 
-    Rename fastq and fasta/qual sequences
-HELP
-}
-
-sub help_detail {
-    return <<HELP
-HELP
+    return 'Rename sequences';
 }
 
 sub create {
@@ -70,21 +63,15 @@ sub create {
     return $self;
 }
 
-sub execute {
-    my $self = shift;
+sub _eval_seqs {
+    my ($self, $seqs) = @_;
 
-    my ($reader, $writer) = $self->_open_reader_and_writer;
-    return if not $reader or not $writer;
-    
-    while ( my $seqs = $reader->read ) {
-        for my $seq ( @$seqs ) { 
-            MnR: for my $match_and_replace ( @{$self->_match_and_replace} ) {
-                if ( $seq->{id} =~ s/$match_and_replace->[0]/$match_and_replace->[1]/g ) {
-                    last MnR if $self->first_only;
-                }
+    for my $seq ( @$seqs ) { 
+        MnR: for my $match_and_replace ( @{$self->_match_and_replace} ) {
+            if ( $seq->{id} =~ s/$match_and_replace->[0]/$match_and_replace->[1]/g ) {
+                last MnR if $self->first_only;
             }
         }
-        $writer->write($seqs);
     }
 
     return 1;

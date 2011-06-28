@@ -218,10 +218,8 @@ sub _process_instrument_data {
     my $read_processor = $self->processing_profile->read_processor;
     my $fast_qual_class;
     my %fast_qual_params = (
-        input => \@input_files,
-        output => \@output_files,
-        type_in => $qual_type_in,
-        type_out => $qual_type_out, # TODO make sure this is sanger
+        input => [ map { $_.':type='.$qual_type_in } @input_files ],
+        output => [ map { $_.':type=sanger' } @output_files ],
         metrics_file_out => $self->_metrics_file,
     );
 

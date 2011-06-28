@@ -57,7 +57,6 @@ sub execute {
 
     my @allocations = $self->allocations;
     
-    my @errors;
     for my $allocation (@allocations) {
         $self->total_command_count($self->total_command_count + 1);
         my %params;
@@ -80,7 +79,7 @@ sub execute {
 
     $self->display_command_summary_report();
 
-    return !scalar(@errors);
+    return !scalar(keys %{$self->command_errors});
 }
 
 1;

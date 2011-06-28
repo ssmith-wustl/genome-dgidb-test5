@@ -474,6 +474,7 @@ sub other_stats {
 sub original_data_from_imported_id {
     my ($self, $id) = @_;
     my $imported_data = Genome::InstrumentData::Imported->get($id);
+    $DB::single=1;
     (my $alignment_id = $imported_data->original_data_path) =~ s/.*\/([0-9]*)\/.*/$1/;
     return Genome::InstrumentData::AlignmentResult->get($alignment_id)->instrument_data;
 }
@@ -523,10 +524,7 @@ sub bam_stats_per_lane {
 
         # cache the flow_lane -> ID mapping
         unless($flow_lane{$id}) {
-            my $data = Genome::InstrumentData::Solexa->get($id);
-            unless($data) {
-                $data = $self->original_data_from_imported_id($id);
-            }
+            my $data = Genome::InstrumentData->get($id);
             unless($data) {
                 die $self->error_message("Unable to find data (imported nor original) by ID $id.");
             }

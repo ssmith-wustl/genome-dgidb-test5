@@ -8,11 +8,8 @@ use Genome;
 class Genome::Model::Tools::Sx::SeqWriter {
     is_abstract => 1,
     has => [
-        files => { is => 'Text', is_many => 1, },
-        _fhs => { is_optional => 1, is_many => 1, }, 
-        metrics => { is_optional => 1, },
-        is_paired => { is => 'Boolean', is_optional => 1, default_value => 0, }, # only for fastq for now
-        _max_files => { value => 2, },
+        name => { is => 'Text', is_optional => 1, },
+        file => { is => 'Text', },
     ],
 };
 
@@ -22,43 +19,47 @@ sub create {
     my $self = $class->SUPER::create(@_);
     return if not $self;
 
-    my @files = $self->files;
-    if ( not @files ) {
-        Carp::confess("No files given");
-    }
-    elsif ( @files > $self->_max_files ) {
-        Carp::confess('Too many files given. Can only accept up to '.$self->_max_files);
-    }
-    elsif ( grep { $_ eq '-' } @files and @files > 1 ) {
-        $self->error_message('Cannot read from STDIN and a file');
-        return;
-    }
-
-    my  @fhs;
-    for my $file ( @files ) {
+    for my $property ( $self->_file_properties ) {
+        my $property_name = $property->property_name;
+        my $file = $self->$property_name; 
+        if ( not $file ) {
+            next if $property->is_optional;
+            $self->error_message("File ($property_name) is required");
+            return;
+        }
         my $fh = eval{ Genome::Sys->open_file_for_appending($file); };
         if ( not $fh ) {
-            $self->error_message('Failed to open file: '.$@);
+            $self->error_message("Failed to open file ($file) for appending");
             return;
         }
         $fh->autoflush(1);
-        push @fhs, $fh;
+        $self->{'_'.$property_name} = $fh;
     }
-    $self->_fhs(\@fhs);
 
     return $self;
 }
 
-sub write {
-    my ($self, $seqs) = @_;
-    $self->metrics->add($seqs) if $self->metrics;
-    return $self->_write($seqs);
-}
-
 sub flush {
     my $self = shift;
-    for my $fh ( $self->_fhs ) { $fh->flush; }
+
+    for my $property ( $self->_file_properties ) {
+        next if not $self->{'_'.$property->property_name};
+        $self->{'_'.$property->property_name}->flush;
+    }
+
     return 1;
+}
+
+sub _file_properties {
+    my $self = shift;
+
+    my @properties;
+    for my $property ( sort { $a->property_name cmp $b->property_name } $self->__meta__->property_metas ) {
+        next if $property->property_name !~ /file$/;
+        push @properties, $property;
+    }
+
+    return @properties;
 }
 
 1;

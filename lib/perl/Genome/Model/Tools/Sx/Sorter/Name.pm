@@ -10,27 +10,22 @@ require IO::File;
 require File::Temp;
 
 class Genome::Model::Tools::Sx::Sorter::Name {
-    is  => 'Genome::Model::Tools::Sx::Sorter',
+    is  => 'Genome::Model::Tools::Sx',
 };
 
 sub help_brief {
-    return <<HELP 
-    Sort sequences by name
-HELP
-}
-
-sub help_detail {
-    return <<HELP
-    This module quickly sorts sequences by name (id) using unix native sort. It can sort one million sequences per minute. It does not use any intermediate files.
-HELP
+    return 'Sort sequences by name';
 }
 
 sub execute {
     my $self = shift;
 
-    my ($reader, $writer) = $self->_open_reader_and_writer;
-    return if not $reader or not $writer;
-    
+    my $init = $self->_init;
+    return if not $init;
+
+    my $reader = $self->_reader;
+    my $writer = $self->_writer;
+
     my $temp_fh = File::Temp->new() or die;
     no warnings 'uninitialized';
     while ( my $seqs = $reader->read ) {

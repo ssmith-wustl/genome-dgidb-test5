@@ -9,7 +9,7 @@ use Data::Dumper 'Dumper';
 use Regexp::Common;
 
 class Genome::Model::Tools::Sx::Trimmer::BwaStyle {
-    is  => 'Genome::Model::Tools::Sx::Trimmer',
+    is  => 'Genome::Model::Tools::Sx',
     has => [
         trim_qual_level => {
             is  => 'Integer',
@@ -50,7 +50,7 @@ sub __errors__ {
     return @errors;
 }
 
-sub _trim {
+sub _eval_seqs {
     my ($self, $seqs) = @_;
 
     # sanger: qual_str => # qual_thresh 33

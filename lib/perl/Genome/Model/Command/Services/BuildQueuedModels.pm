@@ -47,10 +47,6 @@ class Genome::Model::Command::Services::BuildQueuedModels {
             is => 'Hash',
             default => {},
         },
-        _errors => {
-            is => 'Text',
-            is_many => 1,
-        },
     ],
 };
 
@@ -123,7 +119,7 @@ sub execute {
     $self->display_command_summary_report();
     $self->status_message('   Expected: ' . $expected_count);
 
-    return !scalar($self->_errors);
+    return !scalar(keys %{$self->command_errors});
 }
 
 
