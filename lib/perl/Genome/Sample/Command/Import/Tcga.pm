@@ -9,7 +9,7 @@ require Carp;
 use Data::Dumper 'Dumper';
 
 class Genome::Sample::Command::Import::Tcga { 
-    is => 'Genome::Sample::Command::Import',
+    is => 'Genome::Sample::Command::Import::Base',
     has => [
         name => {
             is => 'Text',
