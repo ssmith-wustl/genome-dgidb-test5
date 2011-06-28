@@ -589,7 +589,7 @@ sub generate_reports_job_classes {
     my @steps = (
         'Genome::Model::Event::Build::ReferenceAlignment::RunReports'
     );
-    if((defined $self->snv_detector_name || defined $self->indel_detector_name) && defined $self->duplication_handler_name) {
+    if((defined $self->snv_detection_strategy || defined $self->indel_detection_strategy) && defined $self->duplication_handler_name) {
         return @steps;
     }
     else {
