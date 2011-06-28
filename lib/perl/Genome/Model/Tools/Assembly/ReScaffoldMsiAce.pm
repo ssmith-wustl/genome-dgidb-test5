@@ -371,7 +371,7 @@ sub _write_contig_tags {#TODO try to get seekpos
             $in_tag_comment_lines = 0;
             $print_tag_lines = 0;
         }
-        elsif ( $in_tag_lines == 1 and $line =~ /^COMMENT{/ ) {
+        elsif ( $in_tag_lines == 1 and $print_tag_lines == 1 and $line =~ /^COMMENT{/ ) {
             $in_tag_comment_lines = 1;
             $fh_out->print( $line );
         }
@@ -379,7 +379,7 @@ sub _write_contig_tags {#TODO try to get seekpos
             $in_tag_comment_lines = 0;
             $fh_out->print( $line );
         }
-        elsif ( $in_tag_comment_lines == 1 ) {
+        elsif ( $in_tag_comment_lines == 1 and $print_tag_lines == 1) {
             $fh_out->print( $line );
         }
         elsif ( $in_tag_lines == 1 and $line =~ /^contig(\S+)\s+/i and $in_tag_comment_lines == 0 ) {

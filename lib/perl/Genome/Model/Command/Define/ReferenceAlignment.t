@@ -50,7 +50,7 @@ my $pp = Genome::ProcessingProfile::ReferenceAlignment->create(
     sequencing_platform => 'solexa',
     dna_type => 'cdna',
     read_aligner_name => 'refalign_define_test',
-    snv_detector_name => 'refalign_define_test',
+    snv_detection_strategy => 'refalign_define_test',
     );
 ok($pp, 'created ReferenceAlignment processing profile');
 
