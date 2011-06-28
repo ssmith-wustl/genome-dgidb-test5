@@ -22,7 +22,6 @@ class Genome::Model::Input {
         value        => { is => 'UR::Object', id_by => 'value_id', id_class_by => 'value_class_name' },
         filter_desc => { 
             is => 'Text',
-            len => 100,
             is_optional => 1, 
             valid_values => [ 'forward-only', 'reverse-only', undef ],
             doc => 'Filter to apply on the input value.'
