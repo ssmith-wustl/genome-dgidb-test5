@@ -87,7 +87,7 @@ $build_test->create_test_pp(
     dna_type => 'genomic dna',
     align_dist_threshold => '0',
     multi_read_fragment_strategy => 'eliminate start site duplicates',
-    snv_detector_name => 'samtools',
+    snv_detection_strategy => 'samtools',
     read_aligner_name => 'bwa',
     read_aligner_version => $bwa_version,
     read_aligner_params => $align_params,
