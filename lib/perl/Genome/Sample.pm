@@ -84,6 +84,14 @@ class Genome::Sample {
             is_mutable => 1,
             doc => 'the name of the organ from which the sample was taken' 
         }, 
+        disease => { 
+            is => 'Text',
+            via => 'attributes',
+            to => 'attribute_value',
+            where => [ attribute_label => 'disease' ],
+            is_mutable => 1,
+            doc => 'The name of the disease if present in the sample.', 
+        }, 
         # Info about sample source (population group and individual)
         # these are optional only b/c our data is not fully back-filled
         source_id => {
