@@ -8,7 +8,7 @@ use Test::More;
 
 use_ok ('Genome::Model::Tools::Assembly::ReScaffoldMsiAce');
 
-my $data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Assembly/ReScaffoldMsiAce_v2';
+my $data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Assembly/ReScaffoldMsiAce_v3';
 ok(-d $data_dir, "Found data dir");
 
 my $temp_dir = Genome::Sys->create_temp_directory();

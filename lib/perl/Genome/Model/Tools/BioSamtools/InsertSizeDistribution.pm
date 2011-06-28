@@ -73,11 +73,13 @@ sub execute {
                 next;
             }
             # TODO: Try to calculate inner distance for Tophat
-            if ($isize < 1) {
-                print $output_fh "#\t". $qname ."\t". $align->pos ."\t". $align->calend ."\t". $align->mate_start ."\t". $align->mate_end ."\t". $align->isize ."\n";
+            if (defined($isize)) {
+                if ( $isize < 1 ) {
+                    print $output_fh "#\t". $qname ."\t". $align->pos ."\t". $align->calend ."\t". $align->mate_start ."\t". $align->mate_end ."\t". $isize ."\n";
+                }
+                $library_metrics{$lib}{all_stats}->add_data($isize);
+                $library_metrics{$lib}{histogram}->{$isize}++;
             }
-            $library_metrics{$lib}{all_stats}->add_data($isize);
-            $library_metrics{$lib}{histogram}->{$isize}++;
             $mate_pairs{$qname} = 1;
         }
     }
@@ -86,7 +88,7 @@ sub execute {
         my $stats = $library_metrics{$lib}{all_stats};
         print $output_fh "#\t". $lib ."\t". $stats->mean ."\t". $stats->standard_deviation ."\n";
         for my $bin ( sort { $a <=> $b } keys %{$library_metrics{$lib}{histogram}}) {
-            print "$output_fh$bin\t". $library_metrics{$lib}{histogram}{$bin} ."\n";
+            print $output_fh $bin ."\t". $library_metrics{$lib}{histogram}{$bin} ."\n";
         }
     }
     $output_fh->close;

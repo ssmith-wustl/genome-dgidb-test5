@@ -8,7 +8,7 @@ use Genome;
 use Regexp::Common;
 
 class Genome::Model::Tools::Sx::Trimmer::ByLength {
-    is => 'Genome::Model::Tools::Sx::Trimmer',
+    is => 'Genome::Model::Tools::Sx',
     has_optional => [
         trim_length => {
             is => 'Integer',
@@ -58,7 +58,7 @@ sub __errors__ {
     return @errors;
 }
 
-sub _trim {
+sub _eval_seqs {
     my ($self, $seqs) = @_;
 
     # if read_length is specified, we'll trim all reads down to that length 
@@ -90,5 +90,3 @@ sub _trim {
 
 1;
 
-#$HeadURL$
-#$Id$

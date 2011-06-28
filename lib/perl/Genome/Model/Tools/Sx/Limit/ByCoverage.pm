@@ -5,8 +5,6 @@ use warnings;
 
 use Genome;            
 
-require Carp;
-use Data::Dumper 'Dumper';
 use Regexp::Common;
 
 class Genome::Model::Tools::Sx::Limit::ByCoverage {
@@ -22,70 +20,58 @@ class Genome::Model::Tools::Sx::Limit::ByCoverage {
             is_optional => 1,
             doc => 'The maximum number of sequences to write. When this amount is exceeded, writing will be concluded.',
         },
-        stats => {
-            is => 'Boolean',
-            is_optional => 1,
-            doc => 'Output stats.',
-        },
     ],
 };
 
 sub help_synopsis {
-    return <<HELP
-    Limit sequences by total base coverage.
-HELP
+    return 'Limit sequences by bases and/or count';
 }
 
-sub create {
-    my $class = shift;
+sub __errors__ {
+    my $self = shift;
 
-    my $self = $class->SUPER::create(@_)
-        or return;
+    my @errors = $self->SUPER::__errors__(@_);
+    return @errors if @errors;
 
     my $bases = $self->bases;
     my $count = $self->count;
-    unless ( defined $bases or defined $count ) {
-        $self->error_message("One coverage param (bases or count) is required");
-        return;
+    if ( not defined $bases and not defined $count ) {
+        push @errors, UR::Object::Tag->create(
+            type => 'invalid',
+            properties => [qw/ bases count /],
+            desc => 'Must specify at least one coverage param: bases or count',
+        );
     }
 
-    if ( defined $bases ) {
-        unless ( $bases =~ /^$RE{num}{int}$/ and $bases > 1 ) {
-            $self->error_message("Invalid value ($bases) given for param 'bases'.");
-            return;
-        }
+    if ( defined $bases and ( $bases !~ /^$RE{num}{int}$/ or $bases < 1 ) ) {
+        push @errors, UR::Object::Tag->create(
+            type => 'invalid',
+            properties => [qw/ bases /],
+            desc => "Bases ($bases) must be a positive integer greater than 1",
+        );
     }
 
-    if ( defined $count ) {
-        unless ( $count =~ /^$RE{num}{int}$/ and $count > 1 ) {
-            $self->error_message("Invalid value ($count) given for param 'count'.");
-            return;
-        }
+    if ( defined $count and ( $count !~ /^$RE{num}{int}$/ or $count < 1 ) ) {
+        push @errors, UR::Object::Tag->create(
+            type => 'invalid',
+            properties => [qw/ count /],
+            desc => "Count ($count) must be a positive integer greater than 1",
+        );
     }
 
-    return $self;
+    return @errors;
 }
 
-sub execute {
+sub _create_limiters { 
     my $self = shift;
-
-    my ($reader, $writer) = $self->_open_reader_and_writer;
-    return if not $reader or not $writer;
 
     my @limiters;
     my $base_limiter = $self->_create_base_limiter;
     push @limiters, $base_limiter if $base_limiter;
     my $count_limiter = $self->_create_count_limiter;
     push @limiters, $count_limiter if $count_limiter;
-    
-    READER: while ( my $seqs = $reader->read ) {
-        $writer->write($seqs);
-        for my $limiter ( @limiters ) {
-            last READER unless $limiter->($seqs); # returns 0 when done
-        }
-    }
 
-    return 1;
+    return @limiters;
 }
 
 sub _create_base_limiter { 

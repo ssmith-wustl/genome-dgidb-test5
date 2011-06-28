@@ -12,9 +12,9 @@ use Test::More;
 use_ok('Genome::Model::Tools::Sx::Filter::ByLength') or die;
 
 # create fail
-ok(!Genome::Model::Tools::Sx::Filter::ByLength->create(), 'Create w/o filter length');
-ok(!Genome::Model::Tools::Sx::Filter::ByLength->create(filter_length => 'all'), 'Create w/ filter length => all');
-ok(!Genome::Model::Tools::Sx::Filter::ByLength->create(filter_length => 0), 'Create w/ filter length => 0');
+ok(!Genome::Model::Tools::Sx::Filter::ByLength->execute(), 'execute w/o filter length');
+ok(!Genome::Model::Tools::Sx::Filter::ByLength->execute(filter_length => 'all'), 'execute w/ filter length => all');
+ok(!Genome::Model::Tools::Sx::Filter::ByLength->execute(filter_length => 0), 'execute w/ filter length => 0');
 
 # Files
 my $dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Sx';
@@ -41,5 +41,3 @@ is(File::Compare::compare($example_fastq, $out_fastq), 0, "fastq filtered as exp
 done_testing();
 exit;
 
-#HeadURL$
-#$Id$

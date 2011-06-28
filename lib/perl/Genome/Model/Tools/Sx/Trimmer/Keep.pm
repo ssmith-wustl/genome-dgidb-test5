@@ -8,7 +8,7 @@ use Genome;
 use Regexp::Common;
 
 class Genome::Model::Tools::Sx::Trimmer::Keep {
-    is => 'Genome::Model::Tools::Sx::Trimmer',
+    is => 'Genome::Model::Tools::Sx',
     has => [
         length => {
             is => 'Integer',
@@ -35,7 +35,7 @@ sub __errors__ {
     return @errors;
 }
 
-sub _trim {
+sub _eval_seqs {
     my ($self, $seqs) = @_;
 
     for my $seq (@$seqs) {

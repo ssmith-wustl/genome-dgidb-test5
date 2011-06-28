@@ -96,6 +96,9 @@ sub annotation_build_for_reference {
     elsif($reference->name eq 'GRCh37-lite-build37' || $reference->name eq 'g1k-human-build37'){
         $build = Genome::Model::Build::ImportedAnnotation->get(106409619);
     }
+    elsif($reference->name eq 'UCSC-mouse-buildmm9'){
+        $build = Genome::Model::Build::ImportedAnnotation->get(106410073);
+    }
     return $build;
 }
 

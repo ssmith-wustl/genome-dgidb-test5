@@ -5,11 +5,6 @@ use warnings;
 
 use Genome;
 
-use Data::Dumper 'Dumper';
-require File::Basename;
-require Genome::Utility::IO::StdinRefReader;
-require Genome::Utility::IO::StdoutRefWriter;
-
 class Genome::Model::Tools::Sx {
     is  => 'Command',
     has => [
@@ -17,59 +12,59 @@ class Genome::Model::Tools::Sx {
             is => 'Text',
             is_many => 1,
             is_optional => 1,
-            doc => "Input files, '-' to read from STDIN or undefined if piping between sx commands.\nSANGER/ILLLUMINA: If one input is given, one sequence will be read at a time. Use 'paired_input' to read two sequences from a single input. If multiple inputs are given,  one sequence will be read from each and then handled as a set.\nPHRED: Give fasta first, then optional quality input.\nDo not use this option when piping from sx commands.",
+            doc => <<DOC
+Input reader configurations. Give 'key=value' pairs, separated by a colon (:). Readers may have additonal options.
+
+Do not use this option when piping from fast-qual commands.
+
+Standard options:
+ file => The file to read. The use of the preceding 'file=' is optional.
+          It is assumed that the bare option is the file. Use '-' to read from STDIN.
+ type => The type of input. Not required if type can be determined from the file.
+          Required when reading from STDIN. Valid types: sanger, illumina, phred.
+ cnt => The number of sequences to read from the input. If the input is paired, use 2.
+DOC
         }, 
-        _input_to_string => {
-            calculate => q| 
-                my @input = $self->input;
-                return 'PIPE' if not @input;
-                return 'STDin' if $input[0] eq '-';
-                return join(',', @input);
-            |,
-        },
-        type_in => {
-            is  => 'Text',
-            valid_values => [ valid_type_ins() ],
-            is_optional => 1,
-            doc => 'The sequence and quality type for the input. Optional for files, and if not given, will be based on the extension of the first file (.fastq => sanger | .fasta .fna .fa => phred). Required for reading from STDIN. Do not use this option when piping from fx commands.',
-        },
-        paired_input => {
-            is => 'Boolean',
-            is_optional => 1,
-            doc => "FASTQ: If giving one input, read two sequences at a time. If two inputs are given, this will set to true. A sequence will be read from each input.\nPHRED: NA.\nDo not use this option when piping from sx commands.",
-        },
+        _reader => { is_optional => 1, },
         output => {
             is => 'Text',
             is_many => 1,
             is_optional => 1,
-            doc => "Output files, '-' to write to STDOUT or undefined if piping between sx commands.\nSANGER/ILLLUMINA: If one output is given, sequences will be written to it. To write only pairs, use 'paired_output'. If 2 outputs are given, a sequence will be written to each, and singletons will be disgarded. To write pairs to one output and singletons to the other, use 'paired_output'. If three outputs are given, the first of a pair will be written to the first and and the second of a pair to the second. Singletons will be written to the third.\nPHRED: Give fasta first, then optional quality input.\nDo not use this option when piping to sx commands.",
+            doc => <<DOC
+Output writer configurations. Give 'key=value' pairs, separated by a colon (:). Writers may have additonal options.
+
+Do not use this option when piping from fast-qual commands.
+
+Standard options:
+ file => The file to write. The use of the preceding 'file=' is optional.
+          It is assumed that the bare option is the file. Use '-' to write to STDOUT.
+ type => The type of output. Not required if type can be determined from the file.
+          Required when writing to STDOUT. Valid types: sanger, illumina, phred, bed.
+ name => The name of the writer.  If using commands that attach a writer name to a sequence,
+          they will be written to the specified writer.
+          
+          Names pair, fwd, rev and sing are reserved. They have special behavior, and don't
+           require the underlying command to tag writer names to sequences.
+          Examples:
+          name=pair:FILE
+           write only pairs
+          name=pair:FILE name=sing:FILE2
+           write pairs to one and singletons to another
+          name=fwd:FILE name=rev:FILE2
+           write first sequence to fwd, second to rev, discard singletons
+          name=fwd:FILE name=rev:FILE2 name=sing:FILE3
+           write first sequence to fwd, second to rev, singletons to sing
+          name=sing:FILE
+           write singletons to sing, discardc pairs
+
+DOC
         },
-        _output_to_string => {
-            calculate => q| 
-                my @output = $self->output;
-                return 'PIPE' if not @output;
-                return 'STDOUT' if $output[0] eq '-';
-                return join(',', @output);
-            |,
-        },
-        type_out => {
-            is  => 'Text',
-            valid_values => [ valid_type_outs() ],
-            is_optional => 1,
-            doc => 'The sequence and quality type for the output. Optional for files, and if not given, will be based on the extension of the first file (.fastq => sanger | .fasta .fna .fa => phred). Defaults to sanger (fastq) for writing to STDOUT. Do not use this option when piping to sx commands.',
-        },
-        paired_output => {
-            is => 'Boolean',
-            is_optional => 1,
-            doc => "FASTQ: Write pairs to the same output file. If giving one output, write pairs to it, discarding singletons. If given two outputs, write pairs to the first, singletons to the second. Do not use for three outputs.\nPHRED: NA\nDo not use this option when piping to sx commands.",
-        },
+        _writer => { is_optional => 1, },
         metrics_file_out => {
             is => 'Text',
             is_optional => 1,
             doc => 'Output sequence metrics for the output to this file. Current metrics include: count, bases',
         },
-        _reader => { is_optional => 1, },
-        _writer => { is_optional => 1, },
     ],
 };
 
@@ -79,12 +74,51 @@ sub help_brief {
 
 sub help_synopsis {
     return <<HELP;
-    Transform sequences. See sub-commands for a variety of functionality.
+
+ * Short, where type can be determined from the file:
+  gmt fast-qual --input file.fastq --output file.fasta # qual file not written
+
+ * Long w/ file and type:
+  gmt fast-qual --input file=file.fastq:type=illumina --output file=file.fasta:qual_file=file.qual:type:phred
+
+ * Convert type
+  ** illumina fastq to sanger
+   gmt fast-qual --input illumina.fastq:type=illumina --output sanger.fastq
+  ** sanger fastq to phred fasta
+   gmt fast-qual --input file.fastq --output file.fasta
+  ** sanger fastq to phred fasta w/ quals
+   gmt fast-qual --input file.fastq --output file.fasta:qual_file=file.qual
+
+ * Collate
+  ** from paired fastqs (type-in resolved to sanger, type-out defaults to sanger)
+   gmt fast-qual --input fwd.fastq rev.fastq --output collated.fastq
+  ** to paired STDOUT (type-in resolved to sanger, type-out defaults to sanger)
+   gmt fast-qual --input fwd.fastq rev.fastq --output -
+
+ * Decollate
+  ** from illumina to individal fastqs, discard singletons
+   gmt fast-qual --input collated.fastq --output fwd.fastq:name=fwd rev.fastq,name=rev
+  ** from paired illumina STDIN (type-in req'd = illumina, type-out defaults to sanger)
+   gmt fast-qual --input -:name=pair:type=illumnia --output fwd.fastq:name=fwd rev.fastq:name=rev
+
+ * Use in PIPE (cmd represents a fast-qual sub command)
+  ** from singleton fastq file
+   gmt fast-qual cmd1 --cmd1-options --input sanger.fastq | gmt fast-qual cmd2 --cmd2-options --output sanger.fastq
+  ** from paired STDIN to paired fastq and singleton (assuming the sub commands filter singletons)
+   cat collated_fastq | gmt fast-qual cmd1 --cmd1-options --input - --paired-input | gmt fast-qual cmd2 --cmd2-options --output pairs.fastq
+
+HELP
+}
+
+sub help_detail {
+    return <<HELP;
+    Transform sequences. See sub-commands for a additional functionality.
 
     Types Handled
-    * sanger (fastq)
-    * phred (fasta/quality)
-    
+    * sanger => fastq w/ snager quality values
+    * illumina => fastq w/ illumina quality values
+    * phred => fasta/quality
+
     Things This Base Command Can Do
     * collate two inputs into one (sanger, illumina only)
     * decollate one input into two (sanger, illumina only)
@@ -98,262 +132,57 @@ sub help_synopsis {
     * count
     * bases
 
-    Contact ebelter\@genome.wustl.edu for help
 HELP
 }
 
-sub help_detail {
-    return <<HELP;
-
-    * Convert type
-    ** illumina fastq to sanger
-    gmt sx --input illumina.fastq --type-in illumina --output sanger.fastq
-    ** sanger fastq to phred fasta
-    gmt sx --input file.fastq --output file.fasta --type-out phred
-    ** sanger fastq to phred fasta w/ quals
-    gmt sx --input file.fastq --output file.fasta file.qual --type-out phred
-
-    * Collate
-    ** from paired fastqs (type-in resolved to sanger, type-out defaults to sanger)
-    gmt sx --input fwd.fastq rev.fastq --output collated.fastq --paired-output
-    ** to paired STDOUT (type-in resolved to sanger, type-out defaults to sanger)
-    gmt sx --input fwd.fastq rev.fastq --output - --paired-output
-
-    * Decollate
-    ** from illumina to paired fastqs (type-in resolved to sanger, type-out defaults to sanger)
-    gmt sx --input collated.fastq --paired-input --output fwd.fastq rev.fastq
-    ** from paired illumina STDIN (type-in req'd = illumina, type-out defaults to sanger)
-    gmt sx --input - --paired-input --type-in illumnia --output fwd.fastq rev.fastq
-
-    * Use in PIPE (cmd represents a sx sub command)
-    ** from singleton fastq file
-    gmt sx cmd1 --cmd1-options --input sanger.fastq | gmt sx cmd2 --cmd2-options --output sanger.fastq
-    ** from paired STDIN to paired fastq and singleton (assuming the sub commands filter singletons)
-    cat collated_fastq | gmt sx cmd1 --cmd1-options --input - --paired-input | gmt sx cmd2 --cmd2-options --output pairs.fastq
-
-HELP
-}
-
-my %supported_types = (
-    sanger => { format => 'fastq', reader_subclass => 'FastqReader', writer_subclass => 'FastqWriter', },
-    illumina => { format => 'fastq', reader_subclass => 'IlluminaFastqReader', writer_subclass => 'IlluminaFastqWriter', },
-    phred => { format => 'fasta', reader_subclass => 'PhredReader', writer_subclass => 'PhredWriter', },
-    bed => { format => 'bed', writer_subclass => 'BedWriter', },
-);
-sub valid_type_ins {
-    return (qw/ sanger illumina phred /);
-}
-
-sub valid_type_outs {
-    return (qw/ sanger illumina phred bed /);
-}
-
-sub _resolve_type_for_file {
-    my ($self, $file) = @_;
-
-    Carp::Confess('No file to resolve type') if not $file;
-
-    $self->status_message('Resolving type for file: '.$file);
-
-    my ($ext) = $file =~ /\.(\w+)$/;
-    if ( not $ext ) {
-        $self->error_message('Failed to get extension for file: '.$file);
-        return;
-    }
-
-    my %file_exts_and_formats = (
-        bed => 'bed',
-        fastq => 'sanger',
-        fasta => 'phred',
-        fna => 'phred',
-        fa => 'phred',
-    );
-    if ( $file_exts_and_formats{$ext} ) {
-        $self->status_message('Type: '.$file_exts_and_formats{$ext});
-        return $file_exts_and_formats{$ext};
-    }
-    $self->error_message('Failed to resolve type for file: '.$file);
-    return;
-}
-
-sub _reader_class {
+sub _init {
     my $self = shift;
-    if ( not $self->input ) {
-        return 'Genome::Utility::IO::StdinRefReader';
-    }
-    if ( not $supported_types{ $self->type_in }->{reader_subclass} ) {
-        $self->error_message('Invalid type in: '.$self->type_in);
-        return;
-    }
-    return 'Genome::Model::Tools::Sx::'.$supported_types{ $self->type_in }->{reader_subclass};
-}
-
-sub _writer_class {
-    my $self = shift;
-    if ( not $self->output ) {
-        return 'Genome::Utility::IO::StdoutRefWriter';
-    }
-    if ( not $supported_types{ $self->type_out }->{writer_subclass} ) {
-        $self->error_message('Invalid type out: '.$self->type_out);
-        return;
-    }
-    return 'Genome::Model::Tools::Sx::'.$supported_types{ $self->type_out }->{writer_subclass};
-}
-
-sub create {
-    my $class = shift;
-
-    my $self = $class->SUPER::create(@_);
-    return if not $self;
 
     my @input = $self->input;
-    my $type_in = $self->type_in;
-    if ( @input ) {
-        if ( @input > 2 ) {
-            $self->error_message('Can only handle 1 or 2 inputs');
-            return;
-        }
-        if ( $input[0] eq '-' ) { # STDIN
-            if ( @input > 1 ) { # Cannot have morethan one STDIN
-                $self->error_message('Multiple STDIN inputs given: '.$self->_input_to_string);
-                return;
-            }
-            if ( not $type_in ) {
-                $self->error_message('Input from STDIN, but no type in given');
-                return;
-            }
-        }
-        else { # FILES
-            if ( defined $self->paired_input and @input > 2 ) {
-                $self->error_message('Cannot use paired_input with more than 2 inputs');
-                return;
-            }
-            if ( not $type_in ) {
-                $type_in = $self->_resolve_type_for_file($input[0]);
-                return if not $type_in;
-                $self->type_in($type_in);
-            }
-        }
-    }
-    else {
-        if ( $type_in ) { # PIPE is always sanger
-            $self->error_message('Do not set type in when piping between sx commands');
-            return;
-        }
-        if ( defined $self->paired_input ) {
-            $self->error_message('Do not set paired_input when piping between sx commands');
-            return;
-        }
-    }
+    @input = (qw/ stdinref /) if not @input;
+    my $reader = Genome::Model::Tools::Sx::Reader->create(config => \@input);
+    return if not $reader;
+    $self->_reader($reader);
 
     my @output = $self->output;
-    my $type_out = $self->type_out;
-    if ( @output ) {
-        if ( $output[0] eq '-' ) { # STDOUT
-            if ( @output > 1 ) { # Cannot have more than one STDOUT
-                $self->error_message('Multiple STDOUT outputs given: '.$self->_output_to_string);
-                return;
-            }
-            if ( not $type_out ) {
-                $self->type_out('sanger');
-            }
-        }
-        else { # FILES
-            if ( not $type_out ) {
-                $type_out = $self->_resolve_type_for_file($output[0]);
-                return if not $type_out;
-                $self->type_out($type_out);
-            }
-        }
+    @output = (qw/ stdoutref /) if not @output;
+    my %writer_params = (
+        config => \@output,
+    );
+    if ( $self->metrics_file_out ) {
+        my $metrics = Genome::Model::Tools::Sx::Metrics->create();
+        return if not $metrics;
+        $writer_params{metrics} = $metrics;
     }
-    else {
-        if ( $type_out ) { # PIPE is always sanger
-            $self->error_message('Do not set type out when piping between sx commands.');
-            return;
-        }
-        if ( $self->paired_output ) {
-            $self->error_message('Do not set paired_output when piping between sx commands.');
-            return;
-        }
-    }
+    my $writer = Genome::Model::Tools::Sx::Writer->create(%writer_params);
+    return if not $writer;
+    $self->_writer($writer);
 
     $self->_add_result_observer;  #confesses on error
 
-    return $self;
+    return 1;
 }
 
 sub execute {
     my $self = shift;
 
-    if ( $self->input == $self->output and $self->type_in eq $self->type_out and !defined $self->metrics_file_out ) {
-        $self->error_message("Cannot read and write the same number of input/outputs and with the same type in/out when metrics_file_out is not defined");
-        return;
-    }
+    my $init = $self->_init;
+    return if not $init;
 
-    my ($reader, $writer) = $self->_open_reader_and_writer
-        or return;
-    if ( $reader->isa('Genome::Utility::IO::StdinRefReader') ) {
-        $self->error_message('Cannot read from a PIPE!');
-        return;
-    }
-    if ( $writer->isa('Genome::Utility::IO::StdoutRefWriter') ) {
-        $self->error_message('Cannot write to a PIPE!');
-        return;
-    }
+    my $reader = $self->_reader;
+    my $writer = $self->_writer;
 
     while ( my $seqs = $reader->read ) {
+        $self->_eval_seqs($seqs) or return;
+        next if not @$seqs;
         $writer->write($seqs);
     }
 
     return 1;
 }
 
-sub _open_reader_and_writer {
-    my $self = shift;
+sub _eval_seqs { return 1; }
 
-    my $reader_class = $self->_reader_class;
-    return if not $reader_class;
-
-    my %reader_params;
-    my @input = $self->input;
-    if ( @input ) { # STDIN/FILES
-        $reader_params{files} = \@input;
-        $reader_params{is_paired} = $self->paired_input;
-    }
-
-    my $reader = eval{ $reader_class->create(%reader_params); };
-    if ( not  $reader ) {
-        $self->error_message("Failed to create reader for input: ".$self->_input_to_string);
-        return;
-    }
-    $self->_reader($reader);
-
-    my $writer_class = $self->_writer_class;
-    return if not $writer_class;
-
-    my %writer_params;
-    my @output = $self->output;
-    if ( @output ) { # STDOUT/FILES
-        $writer_params{files} = \@output;
-        $writer_params{is_paired} = $self->paired_output;
-    }
-
-    my $writer = eval{ $writer_class->create(%writer_params); };
-    if ( not $writer ) {
-        $self->error_message('Failed to create writer for output ('.$self->_output_to_string.'): '.($@ || 'no error'));
-        return;
-    }
-
-    if ( $self->metrics_file_out ) {
-        $writer->metrics( Genome::Model::Tools::Sx::Metrics->create() );
-    }
-
-    $self->_writer($writer);
-
-    return ( $self->_reader, $self->_writer );
-}
-
-#< Observers >#
 sub _add_result_observer { # to write metrics file
     my $self = shift;
 

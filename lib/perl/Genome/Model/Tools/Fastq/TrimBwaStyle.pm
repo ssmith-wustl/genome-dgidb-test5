@@ -109,22 +109,20 @@ sub execute {
     my $rd_ori_ct  = 0;
     my $rd_trim_ct = 0;
 
-    while ( my $seqs = $reader->read ) {
-        for my $seq ( @$seqs ) {
-            my $seq_length = length $seq->{seq};
-            $ori_ct += $seq_length;
-            $rd_ori_ct++;
+    while ( my $seq = $reader->read ) {
+        my $seq_length = length $seq->{seq};
+        $ori_ct += $seq_length;
+        $rd_ori_ct++;
 
-            my $trimmed_length = $self->_trim($seq);
+        my $trimmed_length = $self->_trim($seq);
 
-            if ($trimmed_length) {
-                $trim_ct += $trimmed_length;
-                $rd_trim_ct++;
-                $report_fh->print($seq->{id}."\tT\t".$trimmed_length."\n"); #In report T for trimmed
-            }
-
+        if ($trimmed_length) {
+            $trim_ct += $trimmed_length;
+            $rd_trim_ct++;
+            $report_fh->print($seq->{id}."\tT\t".$trimmed_length."\n"); #In report T for trimmed
         }
-        $writer->write($seqs);
+
+        $writer->write($seq);
     }
 
     my $new_ct  = $ori_ct - $trim_ct;
@@ -144,7 +142,7 @@ sub _open_reader {
     my $reader;
     eval{
         $reader = Genome::Model::Tools::Sx::FastqReader->create(
-            files => [ $fastq_file ],
+            file => $fastq_file,
         );
     };
     unless ( $reader ) {
@@ -173,7 +171,7 @@ sub _open_writer {
     my $writer;
     eval{
         $writer = Genome::Model::Tools::Sx::FastqWriter->create(
-            files => [ $out_file ],
+            file => $out_file,
         );
     };
     unless ( $writer ) {
