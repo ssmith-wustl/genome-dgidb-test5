@@ -226,7 +226,7 @@ sub _get_old_scaffolds {
 sub _create_new_scaffolds {
     my ($self, $old_contigs, $scaffolds) = @_;
 
-    #TODO - needs some clean up
+    #TODO - this is pretty bad .. sorry will clean up
     my $new_scafs = {};
     #hash of scaffolds with array of contigs in scaffold as value
     #$new_scafs->{scaffold?}->{scaffold_contigs} = [
@@ -234,6 +234,7 @@ sub _create_new_scaffolds {
     #                                               contig??
     #                                              ]
     my $scaf_lengths = {};
+    my %valid_contigs_to_export;
     #hash of scaffold name and scaffold size
     if ($scaffolds) {
 	foreach my $scaf (@$scaffolds) {
@@ -243,17 +244,34 @@ sub _create_new_scaffolds {
 	    my $scaf_ctg_1;
 	    foreach my $scaf_ctg (@tmp) {
 		next if $scaf_ctg eq 'E'; #eg E-12.1-E
-                delete $old_contigs->{$scaf_ctg} and next if $old_contigs->{$scaf_ctg} <= $self->min_contig_length;
-		$scaf_ctg_1 = $scaf_ctg unless $scaf_ctg_1; #??? why ???
+                $valid_contigs_to_export{$scaf_ctg} = 1;
+                #old contigs = all contigs in ace file
+                #scaffolds = scaffolds to be exported to new ace file
+                #code below removes from old_contigs any scaffolds that are less than min_contig_length
+                if ( $old_contigs->{$scaf_ctg} <= $self->min_contig_length ) {
+                    print "removing $scaf_ctg with length ".$old_contigs->{$scaf_ctg}."\n";
+                    delete $old_contigs->{$scaf_ctg} and next;
+                }
+		$scaf_ctg_1 = $scaf_ctg unless $scaf_ctg_1; #sets first scaf contig
 		push @{$new_scafs->{$scaf_ctg_1}->{scaffold_contigs}}, $scaf_ctg;
 		$scaf_lengths->{$scaf_ctg_1} += $old_contigs->{$scaf_ctg};
 		delete $old_contigs->{$scaf_ctg};
 	    }
 	}
     }
-	   
+
     #rename the remaining, non-scaffold contigs
     foreach my $contig (keys %$old_contigs) {
+        if ( $old_contigs->{$contig} <= $self->min_contig_length ) {
+            print "Excluding contig"."$contig with length: ".$old_contigs->{$contig}."\n";
+            delete $old_contigs->{$contig};
+            next;
+        }
+        if ( not exists $valid_contigs_to_export{ $contig } ) {
+            print "Excluding contig"."$contig .. not one of contig to export\n";
+            delete $old_contigs->{$contig};
+            next;
+        }
 	push @{$new_scafs->{$contig}->{scaffold_contigs}}, $contig;
 	$scaf_lengths->{$contig} = $old_contigs->{$contig};
 	delete $old_contigs->{$contig};
@@ -269,7 +287,7 @@ sub _create_new_scaffolds {
     #write a new gap file
     my $gap_file = $self->assembly_directory.'/edit_dir/msi.gap.txt';
     unlink $gap_file;
-    my $gap_fh = Genome::Sys->open_file_for_writing( $gap_file ) || die "Can not write new gap file: msi.gap.txt";
+    my $gap_fh = Genome::Sys->open_file_for_writing( $gap_file );
     
     foreach my $scaf (sort {$scaf_lengths->{$b} <=> $scaf_lengths->{$a}} keys %{$scaf_lengths}) {
 	foreach my $scaf_ctg ( @{$new_scafs->{$scaf}->{scaffold_contigs}} ) {
