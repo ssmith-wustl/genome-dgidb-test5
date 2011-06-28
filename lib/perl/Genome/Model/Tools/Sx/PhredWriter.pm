@@ -7,17 +7,17 @@ use Genome;
 
 class Genome::Model::Tools::Sx::PhredWriter {
     is => 'Genome::Model::Tools::Sx::SeqWriter',
+    has => [ qual_file => { is => 'Text', is_optional => 1, }, ],
 };
 
-sub _write {
-    my ($self, $seqs) = @_;
+sub write {
+    my ($self, $seq) = @_;
 
-    my @fhs = $self->_fhs;
-    for my $seq ( @$seqs ) { 
-        $self->_write_seq($fhs[0], $seq) or return;
-        if ( $fhs[1]) {
-            $self->_write_qual($fhs[1], $seq) or return;
-        }
+    Carp::confess('No sequence to write in fasta format!') if not $seq;
+
+    $self->_write_seq($self->{_file}, $seq) or return;
+    if ( $self->{_qual_file} ) {
+        $self->_write_qual($self->{_qual_file}, $seq) or return;
     }
 
     return 1;

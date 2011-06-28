@@ -65,29 +65,31 @@ sub _filter_variants {
             $self->error_message("Running sam snp-filter failed.");
             return;
         }
+        my $convert = Genome::Model::Tools::Bed::Convert::Snv::SamtoolsToBed->create( 
+            source => $filtered_snv_output_file, 
+            output => $self->_temp_staging_directory . "/snvs.hq.bed");
+
+        unless($convert->execute){
+            $self->error_message("Failed to convert filter output to bed.");
+            die $self->error_message;
+        }
+
+        my $convert_lq = Genome::Model::Tools::Bed::Convert::Snv::SamtoolsToBed->create( 
+            source => $fail_filter_snv_output_file, 
+            output => $self->_temp_staging_directory . "/snvs.lq.bed");
+
+        unless($convert_lq->execute){
+            $self->error_message("Failed to convert failed-filter output to bed.");
+            die $self->error_message;
+        }
     }
     else {
         #FIXME use Genome::Sys... might need to add a method there 
-        `touch $filtered_snv_output_file`;
+        system("touch $snv_input_file") unless -e $snv_input_file;
+        system("touch $filtered_snv_output_file");
+        system("touch $fail_filter_snv_output_file");
     }
 
-    my $convert = Genome::Model::Tools::Bed::Convert::Snv::SamtoolsToBed->create( 
-                source => $filtered_snv_output_file, 
-                output => $self->_temp_staging_directory . "/snvs.hq.bed");
-
-    unless($convert->execute){
-        $self->error_message("Failed to convert filter output to bed.");
-        die $self->error_message;
-    }
-
-    my $convert_lq = Genome::Model::Tools::Bed::Convert::Snv::SamtoolsToBed->create( 
-                source => $fail_filter_snv_output_file, 
-                output => $self->_temp_staging_directory . "/snvs.lq.bed");
-
-    unless($convert_lq->execute){
-        $self->error_message("Failed to convert failed-filter output to bed.");
-        die $self->error_message;
-    }
 
     return 1;
 }
@@ -103,7 +105,7 @@ sub _generate_indels_for_filtering {
     my $bam_file = $self->aligned_reads_input;
     my $ref_seq_file = $self->reference_sequence_input;
     my $samtools_cmd = "$sam_pathname pileup -c $parameters -f $ref_seq_file %s $bam_file > %s";
-    
+
     my $indel_output_file = $self->input_directory . "/indels_all_sequences";
     my $filtered_indel_file = $self->_temp_staging_directory . "/indels_all_sequences.filtered";
 

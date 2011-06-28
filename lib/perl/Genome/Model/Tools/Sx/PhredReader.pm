@@ -7,20 +7,20 @@ use Genome;
 
 class Genome::Model::Tools::Sx::PhredReader {
     is => 'Genome::Model::Tools::Sx::SeqReader',
+    has => [ qual_file => { is => 'Text', is_optional => 1, }, ],
 };
 
-sub _read {
+sub read {
     my $self = shift;
 
-    my @fhs = $self->_fhs;
     my %seq;
-    @seq{qw/ id desc seq /} = $self->_parse_io($fhs[0]);
+    @seq{qw/ id desc seq /} = $self->_parse_io($self->{_file});
     return if not $seq{seq};
     $seq{seq} =~ tr/ \t\n\r//d;	# Remove whitespace
 
-    return [\%seq] if not $fhs[1];
+    return \%seq if not $self->{_qual_file};
 
-    my ($id, $desc, $data) = $self->_parse_io($fhs[1]);
+    my ($id, $desc, $data) = $self->_parse_io($self->{_qual_file});
     if ( not defined $id ) {
         Carp::confess("No qualities found for fasta: ".$seq{id});
     }
@@ -40,7 +40,7 @@ sub _read {
         Carp::confess("Number of qualities does not match number of bases for fasta $id. Have ".length($seq{seq}).' bases and '.length($seq{qual})." qualities.\nSeq: ".$seq{seq}."\nQual: '".$data."'");
     }
 
-    return [ \%seq ];
+    return \%seq;
 }
 
 sub _parse_io {

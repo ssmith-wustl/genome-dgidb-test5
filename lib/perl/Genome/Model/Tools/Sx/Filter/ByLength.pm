@@ -5,8 +5,6 @@ use warnings;
 
 use Genome;            
 
-require Carp;
-use Data::Dumper 'Dumper';
 use Regexp::Common;
 
 class Genome::Model::Tools::Sx::Filter::ByLength {
@@ -14,7 +12,7 @@ class Genome::Model::Tools::Sx::Filter::ByLength {
     has => [
         filter_length => {
             is => 'Number',
-            doc => 'the number of bases to filter',
+            doc => 'The number of bases to filter',
         }    
     ],
 };
@@ -25,42 +23,38 @@ sub help_synopsis {
 HELP
 }
 
-sub create {
-    my $class = shift;
+sub __errors__ {
+    my $self = shift;
 
-    my $self = $class->SUPER::create(@_)
-        or return;
-    
-    # Validate filter length
-    my $filter_length = $self->filter_length;
-    unless ( defined $filter_length ) {
-        $self->error_message("No filter length given.");
-        $self->delete;
-        return;
+    my @errors = $self->SUPER::__errors__(@_);
+    return @errors if @errors;
+
+    my $length = $self->filter_length;
+    if ( defined $length and ( $length !~ /^$RE{num}{int}$/ or $length < 1 ) ) {
+        push @errors, UR::Object::Tag->create(
+            type => 'invalid',
+            properties => [qw/ filter_length /],
+            desc => "Filter length ($length) must be a positive integer greater than 1",
+        );
     }
 
-    unless ( $filter_length =~ /^$RE{num}{int}$/ and $filter_length > 1 ) {
-        $self->error_message("Invalid filter length ($filter_length) given.");
-        $self->delete;
-        return;
-    }
-
-    return $self;
+    return @errors;
 }
 
-sub _filter {
-    my ($self, $seqs) = @_;
+sub _create_filters {
+    my $self = shift;
 
-    for my $seq ( @$seqs ) {
-        unless ( length $seq->{seq} > $self->filter_length ) {
-            return;
+    my $length = $self->filter_length;
+    return sub{
+        my $seqs = shift;
+        for my $seq ( @$seqs ) {
+            unless ( length $seq->{seq} > $length ) {
+                return;
+            }
         }
+        return 1;
     }
-
-    return 1;
 }
 
 1;
 
-#$HeadURL$
-#$Id$

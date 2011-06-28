@@ -5,7 +5,6 @@ use warnings;
 
 use above 'Genome';
 
-use Data::Dumper 'Dumper';
 require File::Temp;
 require File::Compare;
 use Test::More;
@@ -13,6 +12,10 @@ use Test::More;
 #< Use >#
 use_ok('Genome::Model::Tools::Sx::IlluminaFastqReader') or die;
 use_ok('Genome::Model::Tools::Sx::IlluminaFastqWriter') or die;
+
+my $failed_write = eval{ Genome::Model::Tools::Sx::IlluminaFastqWriter->write(); };
+diag($@);
+ok(($@ && !$failed_write), 'Failed to write w/o fastqs');
 
 #< Files >#
 my $dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Sx/';
@@ -26,18 +29,17 @@ my $out_fastq = $tmpdir.'/out.fastq';
 #< Read illumina, write illumina >#
 note('Read illumina, converts to sanger, writer illumina, converts back');
 my $reader = Genome::Model::Tools::Sx::IlluminaFastqReader->create(
-    files => [ $example_fastq ],
+    file => $example_fastq,
 );
 ok($reader, 'Create reader');
 my $writer = Genome::Model::Tools::Sx::IlluminaFastqWriter->create(
-    files => [ $out_fastq ],
+    file => $out_fastq,
 );
 ok($writer, 'Create writer');
 my $count = 0;
-while ( my $fastqs = $reader->read ) {
+while ( my $fastq = $reader->read ) {
+    $writer->write($fastq) or next;
     $count++;
-    $writer->write($fastqs)
-        or die;
 }
 is($count, 25, 'Read/write 25 fastq sets');
 ok($writer->flush, 'flush');
