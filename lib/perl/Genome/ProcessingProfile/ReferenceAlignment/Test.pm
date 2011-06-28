@@ -18,7 +18,7 @@ sub _valid_params {
         name => 'New Maq Test',
         sequencing_platform => 'solexa',
         dna_type => 'genomic dna',
-        snv_detector_name => 'maq',
+        snv_detection_strategy => 'maq',
         multi_read_fragment_strategy => undef,
         read_aligner_name => undef,
         read_aligner_version => undef,

@@ -71,30 +71,6 @@ class Genome::ProcessingProfile::ReferenceAlignment {
             is_optional =>1,
             doc => "Strategy to be used to detect cnvs.",
         },
-        snv_detector_name => {
-            doc => 'Name of the snv detector--will be replaced by snv_detection_strategy',
-            is_optional => 1,
-        },
-        snv_detector_version => {
-            doc => 'version of the snv detector--will be replaced by snv_detection_strategy',
-            is_optional => 1,
-        },
-        snv_detector_params => {
-            doc => 'command line args used for the snv detector--will be replaced by snv_detection_strategy',
-            is_optional => 1,
-        },
-        indel_detector_name => {
-            doc => 'Name of the indel detector--will be replaced by indel_detection_strategy',
-            is_optional => 1,
-        },
-        indel_detector_version => {
-            doc => 'version of the indel detector--will be replaced by indel_detection_strategy',
-            is_optional => 1,
-        },
-        indel_detector_params => {
-            doc => 'command line args used for the indel detector--will be replaced by indel_detection_strategy',
-            is_optional => 1,
-        },
         multi_read_fragment_strategy => {
             doc => '',
             is_optional => 1,
