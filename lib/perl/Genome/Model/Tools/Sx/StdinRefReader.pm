@@ -3,22 +3,18 @@ package Genome::Model::Tools::Sx::StdinRefReader;
 use strict;
 use warnings;
 
-use Data::Dumper 'Dumper';
 require Storable;
 
-sub create {
-    my ($class, %params) = @_;
-    return bless \%params, $class;
-}
+class Genome::Model::Tools::Sx::StdinRefReader { 
+    has => [ 
+        name => { is => 'Text', is_optional => 1, },
+    ],
+}; 
 
-BEGIN {
-    *Genome::Model::Tools::Sx::StdinRefReader::next = \&read;
-}
 sub read {
     my $self = shift;
 
-    my $ref;
-    eval { $ref = Storable::fd_retrieve(*STDIN) };
+    my $ref = eval { Storable::fd_retrieve(*STDIN) };
 
     return $ref;
 }

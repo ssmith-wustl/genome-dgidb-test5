@@ -43,7 +43,7 @@ my $w = Genome::Model::Tools::Sx::SeqWriterTest->create(name => 'abe lincoln', f
 ok($w, 'create writer');
 ok($w->write, 'write');
 ok($w->flush, 'flush');
-my $r = Genome::Model::Tools::Sx::SeqReaderTest->create(name => 'george washington', file => $file);
+my $r = Genome::Model::Tools::Sx::SeqReaderTest->create(file => $file);
 ok($r, 'create reader');
 ok($r->read, 'read');
 

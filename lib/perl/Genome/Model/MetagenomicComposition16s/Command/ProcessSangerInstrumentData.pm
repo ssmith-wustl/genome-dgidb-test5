@@ -72,7 +72,7 @@ sub prepare_instrument_data {
 
             $self->load_seq_for_amplicon($amplicon)
                 or next; # ok
-            $writer->write([$amplicon->{seq}]);
+            $writer->write($amplicon->{seq});
             $processed++;
             $reads_processed += @{$amplicon->{reads_processed}};
         }
@@ -254,12 +254,12 @@ sub _add_amplicon_reads_fasta_and_qual_to_build_processed_fasta_and_qual {
 
     # Write the 'raw' read fastas
     my $reader = Genome::Model::Tools::Sx::PhredReader->create(
-        files => $fasta_file,
+        file => $fasta_file,
         qual_file => $qual_file,
     );
     return if not $reader;
-    while ( my $seqs = $reader->read ) {
-        $self->_processed_reads_fasta_and_qual_writer->write($seqs)
+    while ( my $seq = $reader->read ) {
+        $self->_processed_reads_fasta_and_qual_writer->write($seq)
             or return;
     }
  
@@ -275,7 +275,7 @@ sub _processed_reads_fasta_and_qual_writer {
         my $qual_file = $self->processed_reads_qual_file;
         unlink  $qual_file if -e $qual_file;
         my $writer = Genome::Model::Tools::Sx::PhredWriter->create(
-            files => $fasta_file,
+            file => $fasta_file,
             qual_file => $qual_file,
         );
         return if not $writer;

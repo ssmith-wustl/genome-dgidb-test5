@@ -269,9 +269,8 @@ sub _amplicon_iterator_for_name { # 454 and solexa for now
     }
 
     my $amplicon_iterator = sub{
-        my $seqs = $reader->read;
-        return unless $seqs;
-        my $seq = $seqs->[0];
+        my $seq = $reader->read;
+        return unless $seq;
 
         my %amplicon = (
             name => $seq->{id},
@@ -560,8 +559,7 @@ sub prepare_instrument_data {
 
     if ( $self->amplicon_set_names_and_primers ) {
         my %primers = $self->amplicon_set_names_and_primers;
-        while ( my $fastas = $reader->read ) {
-            my $fasta = $fastas->[0];
+        while ( my $fasta = $reader->read ) {
             $attempted++;
             $reads_attempted++;
             # check length here
@@ -581,7 +579,7 @@ sub prepare_instrument_data {
             next unless length $fasta->{seq} >= $min_length;
             $fasta->{desc} = undef; # clear description
             my $writer = $self->get_writer_for_set_name($set_name);
-            $writer->write([$fasta]);
+            $writer->write($fasta);
             $processed++;
             $reads_processed++;
         }
@@ -589,14 +587,13 @@ sub prepare_instrument_data {
     else {
         my $fasta_file = $self->processed_fasta_file_for_set_name('');
         my $writer = Genome::Model::Tools::Sx::PhredWriter->create(file => $fasta_file);
-        while ( my $seqs = $reader->read ) {
-            my $seq = $seqs->[0];
+        while ( my $seq = $reader->read ) {
             $attempted++;
             $reads_attempted++;
             next unless length $seq->{seq} >= $min_length; #seems the read iterator returns array of array of hash
             $processed++;
             $reads_processed++;
-            $writer->write( [$seq] );
+            $writer->write($seq);
         }
     }
 
@@ -671,10 +668,8 @@ sub append_fasta_to_original_fasta_file {
         if ( not $reader ) {
             Carp::confess( "Did not get fasta reader for file: $file" );
         }
-        while ( my @seqs = $reader->read ) {
-            for my $seq ( @seqs ) {
-                $writer->write( $seq );
-            }
+        while ( my $seq = $reader->read ) {
+            $writer->write($seq);
         }
     }
     $self->status_message( "Finished writing to original fasta file, file: ".join(' ', @fasta_files) );
@@ -690,10 +685,10 @@ sub append_fastq_to_orig_fasta_file {
         Carp::confess( "Failed to get fasta writer to write original fasta file" );
     }
 
-    for my $fastq_file ( @fastq_files ) {
-        my $reader = Genome::Model::Tools::Sx::FastqReader->create(file => $fastq_file);
-        while ( my $fastqs = $reader->read ) {
-            $writer->write( $fastqs );
+    my $reader = Genome::Model::Tools::Sx::Reader->create(config => [ map { $_.':type=sanger' } @fastq_files ]);
+    while ( my $fastqs = $reader->read ) {
+        for my $fastq ( @$fastqs ) {
+            $writer->write($fastq);
         }
     }
 
@@ -819,7 +814,7 @@ sub orient_amplicons {
                 $seq->{seq} =~ tr/ATGCatgc/TACGtacg/;
             }
 
-            $writer->write([$seq]);
+            $writer->write($seq);
         }
     }
 

@@ -33,6 +33,7 @@ sub create {
         return if not $writer_class;
         $self->status_message('writer => '.$writer_class);
 
+        delete $params{file} if $params{file} eq 'stdoutref';
         my $writer = $writer_class->create(%params);
         if ( not $writer ) {
             $self->error_message('Failed to create '.$writer_class);
@@ -97,6 +98,10 @@ sub _type_for_file {
 
     Carp::confess('No file to get type') if not $file;
 
+    if ( $file eq 'stdoutref' ) {
+        return 'ref';
+    }
+
     my ($ext) = $file =~ /\.(\w+)$/;
     if ( not $ext ) {
         $self->error_message('Failed to get extension for file: '.$file);
@@ -128,6 +133,7 @@ sub _writer_class_for_type {
         phred => 'PhredWriter',
         sanger => 'FastqWriter',
         illumina => 'IlluminaFastqWriter',
+        'ref' => 'StdoutRefWriter',
     );
 
     if ( exists $types_and_classes{$type} ) {
@@ -153,7 +159,7 @@ sub _resolve_strategy {
     }
 
     if ( @names != @writers ) {
-        $self->error_message('Can not mix writers with names and one without');
+        $self->error_message('Can not mix writers with names and ones without');
         return;
     }
 

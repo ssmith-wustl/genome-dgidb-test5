@@ -18,7 +18,6 @@ use_ok('Genome::Model::Tools::Sx::StdinRefReader') or die;
 my $reader = Genome::Model::Tools::Sx::StdinRefReader->create();
 ok($reader, 'Created reader');
 can_ok($reader, 'read');
-can_ok($reader, 'next');
 
 my $fh = IO::File->new(qq{ perl -Mstrict -M'above "Genome"' -MGenome::Model::Tools::Sx::StdoutRefWriter  -e 'Genome::Model::Tools::Sx::StdoutRefWriter->write(UR::Value->get(100));' |  perl -Mstrict -M'above "Genome"' -MGenome::Model::Tools::Sx::StdinRefReader -e 'my \$ref = Genome::Model::Tools::Sx::StdinRefReader->read or die; print \$ref->id."\n";' | });
 ok($fh, 'Created pipe') or die;

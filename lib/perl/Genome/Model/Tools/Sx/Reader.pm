@@ -7,7 +7,7 @@ use Genome;
 
 class Genome::Model::Tools::Sx::Reader {
     has => [
-        config => { is => 'Text', is_many => 1, is_optional => 1, },
+        config => { is => 'Text', is_many => 1, },
         #metrics => { is_optional => 1, },
     ],
 };
@@ -19,7 +19,8 @@ sub create {
     return if not $self;
 
     if ( not $self->config ) { 
-        return $self->_open_stdin_ref_reader;
+        $self->error_message('No config given to read');
+        return;
     }
 
     my @readers;
@@ -27,6 +28,7 @@ sub create {
         my %params = $self->_parse_reader_config($config);
         return if not %params;
 
+        delete $params{file} if $params{file} eq 'stdinref';
         my $cnt = ( exists $params{cnt} ? delete $params{cnt} : 1 );
 
         my $reader_class = $self->_reader_class_for_type( delete $params{type} );
@@ -96,6 +98,10 @@ sub _type_for_file {
     my ($self, $file) = @_;
 
     Carp::confess('No file to get type') if not $file;
+
+    if ( $file eq 'stdinref' ) {
+        return 'ref';
+    }
 
     my ($ext) = $file =~ /\.(\w+)$/;
     if ( not $ext ) {

@@ -8,7 +8,6 @@ use Genome;
 class Genome::Model::Tools::Sx::SeqReader {
     is_abstract => 1,
     has => [ 
-        name => { is => 'Text', is_optional => 1, },
         file => { is => 'Text', }, 
     ],
 };
