@@ -340,16 +340,31 @@ sub _write_contig_tags {#TODO try to get seekpos
     my $fh_out = Genome::Sys->open_file_for_writing( $tags_out );
     my $fh = Genome::Sys->open_file_for_reading( $ace );
     my $in_tag_lines = 0;
+    my $in_tag_comment_lines = 0;
     my $print_tag_lines = 0;
     while ( my $line = $fh->getline ) {
         if ( $line =~ /^CT\{/ ) {
             $in_tag_lines = 1;
+            $print_tag_lines = 0;
+            $in_tag_comment_lines = 0;
         }
         elsif ( $line =~ /^WA\{/ ) { #don't print WA tags
             $in_tag_lines = 0;
+            $in_tag_comment_lines = 0;
             $print_tag_lines = 0;
         }
-        elsif ( $in_tag_lines == 1 and $line =~ /^contig(\S+)\s+/i ) {
+        elsif ( $in_tag_lines == 1 and $line =~ /^COMMENT{/ ) {
+            $in_tag_comment_lines = 1;
+            $fh_out->print( $line );
+        }
+        elsif ( $in_tag_lines == 1 and $line =~ /^C{/ ) {
+            $in_tag_comment_lines = 0;
+            $fh_out->print( $line );
+        }
+        elsif ( $in_tag_comment_lines == 1 ) {
+            $fh_out->print( $line );
+        }
+        elsif ( $in_tag_lines == 1 and $line =~ /^contig(\S+)\s+/i and $in_tag_comment_lines == 0 ) {
             chomp $line;
 	    my ($contig_name) = $line =~ /^(\S+)/;
 	    my $rest_of_line = "$'";
@@ -363,7 +378,7 @@ sub _write_contig_tags {#TODO try to get seekpos
                 $print_tag_lines = 0;
 	    }
         }
-        elsif ( $in_tag_lines == 1 and $print_tag_lines == 1 ) {
+        elsif ( $in_tag_lines == 1 and $print_tag_lines == 1 ) { #not printing anything
             $fh_out->print( $line );
         }
         #else #do nothing
