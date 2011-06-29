@@ -30,6 +30,7 @@ class Genome::Model::Tools::Analysis::LaneQc::CompareSnps {
 		sample_name	=> { is => 'Text', doc => "Variant calls in SAMtools pileup-consensus format", is_optional => 1, is_input => 1 },
 		min_depth_het	=> { is => 'Text', doc => "Minimum depth to compare a het call", is_optional => 1, is_input => 1, default => 8},
 		min_depth_hom	=> { is => 'Text', doc => "Minimum depth to compare a hom call", is_optional => 1, is_input => 1, default => 4},
+		reference_build	=> { is => 'Text', doc => "36 or 37", is_optional => 1, is_input => 1, default => 36},
 		verbose	=> { is => 'Text', doc => "Turns on verbose output [0]", is_optional => 1, is_input => 1},
 		flip_alleles 	=> { is => 'Text', doc => "If set to 1, try to avoid strand issues by flipping alleles to match", is_optional => 1, is_input => 1},
 		fast 	=> { is => 'Text', doc => "If set to 1, run a quick check on just chromosome 1", is_optional => 1, is_input => 1},
@@ -109,6 +110,18 @@ sub execute {                               # replace with real execution logic.
 	print "Loading genotypes from $genotype_file...\n" if($self->verbose);
 	my %genotypes = load_genotypes($genotype_file, $self);
 
+
+	my $reference_build = $self->reference_build;
+	my $reference_build_fasta;
+	if ($reference_build =~ m/36/) {
+		$reference_build_fasta = '/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa';
+	}
+	elsif ($reference_build =~ m/37/) {
+		$reference_build_fasta = '/gscmnt/sata420/info/model_data/2857786885/build102671028/all_sequences.fa';
+	}
+	else {
+		die "Please specify either build 36 or 37";
+	}
 	
 	if($self->bam_file)
 	{
@@ -140,12 +153,12 @@ sub execute {                               # replace with real execution logic.
 		if($search_string && $key_count < 100)
 		{
 			print "Extracting genotypes for $key_count positions...\n";		
-			$cmd = "samtools view -b $bam_file $search_string | samtools pileup -f /gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa - | java -jar /gsc/scripts/lib/java/VarScan/VarScan.jar pileup2cns >$temp_path";			
+			$cmd = "samtools view -b $bam_file $search_string | samtools pileup -f $reference_build_fasta - | java -jar /gsc/scripts/lib/java/VarScan/VarScan.jar pileup2cns >$temp_path";			
 			print "$cmd\n";
 		}
 		else
 		{
-			$cmd = "samtools pileup -cf /gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa $bam_file | cut --fields=1-8 >$temp_path";			
+			$cmd = "samtools pileup -cf $reference_build_fasta $bam_file | cut --fields=1-8 >$temp_path";			
 		}
 
 		my $return = Genome::Sys->shellcmd(
