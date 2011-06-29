@@ -218,54 +218,36 @@ sub _process_instrument_data {
     my @output_files = $self->build->read_processor_output_files_for_instrument_data($instrument_data)
         or return;
 
-    # Fast qual command
     my $read_processor = $self->processing_profile->read_processor;
-    my $fast_qual_class;
-    my %fast_qual_params = (
-        input => [ map { $_.':type='.$qual_type_in } @input_files ],
-        output => [ map { $_.':type=sanger' } @output_files ],
-        metrics_file_out => $self->_metrics_file,
-    );
+    my @read_processor_parts = split(/\s+\|\s+/, $read_processor);
 
-    if ( not defined $read_processor and not defined $self->_base_limit ) {
-        # Run through the base fast qual command. This will rm quality headers and get metrics
-        $fast_qual_class = 'Genome::Model::Tools::Sx';
-    }
-    else {
-        # Got multiple commands, use pipe
-        $fast_qual_class = 'Genome::Model::Tools::Sx::Pipe';
-        my @commands;
-        if ( defined $self->_base_limit ) { # coverage limit by bases
-            my $metrics = $self->_metrics;
-            my $current_base_limit = $self->_base_limit - $metrics->{bases};
-            unshift @commands, 'limit by-coverage --bases '.$current_base_limit;
-        }
-
-        if ( defined $read_processor ) { # read processor from pp
-            unshift @commands, $read_processor;
-        }
-
-        $fast_qual_params{commands} = join(' | ', @commands);
+    if ( defined $self->_base_limit ) { # coverage limit by bases
+        my $metrics = $self->_metrics;
+        my $current_base_limit = $self->_base_limit - $metrics->{bases};
+        push @read_processor_parts, 'limit by-coverage --bases '.$current_base_limit;
     }
 
-    # Create and execute
-    $self->status_message('Fast qual class: '.$fast_qual_class);
-    $self->status_message('Fast qual params: '.Dumper(\%fast_qual_params));
-    my $fast_qual_command = $fast_qual_class->create(%fast_qual_params);
-    if ( not defined $fast_qual_command ) {
-        $self->error_message("Cannot create fast qual command.");
-        return;
+    if ( not @read_processor_parts ) { # essentially a copy, but w/ metrics
+        @read_processor_parts = ('');
     }
-    my $rv = $fast_qual_command->execute;
+
+    # Fast qual command
+    my @sx_cmd_parts = map { 'gmt sx '.$_ } @read_processor_parts;
+    $sx_cmd_parts[0] .= ' --input '.join(',', map { $_.':type='.$qual_type_in } @input_files);
+    $sx_cmd_parts[$#read_processor_parts] .= ' --output '.join(',', map { $_.':type=sanger' } @output_files);
+    $sx_cmd_parts[$#read_processor_parts] .= ' --metrics-file-out '.$self->_metrics_file;
+
+    my $sx_cmd = join(' | ', @sx_cmd_parts);
+    my $rv = eval{ Genome::Sys->shellcmd(cmd => $sx_cmd); };
     if ( not $rv ) {
-        $self->error_message("Cannot execute fast qual command.");
+        $self->error_message('Failed to execute gmt sx command: '.$@);
         return;
     }
 
-    $self->status_message('Execute OK');
+    my $update_metrics = $self->_update_metrics;
+    return if not $update_metrics;
 
-    $self->_update_metrics
-        or return;
+    $self->status_message('Process Instrument data...OK');
 
     return 1;
 }
