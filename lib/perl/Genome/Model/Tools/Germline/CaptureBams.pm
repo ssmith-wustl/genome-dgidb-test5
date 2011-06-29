@@ -311,12 +311,14 @@ __DATA__
 
   <link fromOperation="input connector" fromProperty="germline_bam_file" toOperation="GATK Germline" toProperty="bam_file" /> 
   <link fromOperation="input connector" fromProperty="GATK_indel_output" toOperation="GATK Germline" toProperty="output_file" />
-  <link fromOperation="input connector" fromProperty="GATK_indel_formatted_output" toOperation="GATK Germline" toProperty="formatted_file" />  
+  <link fromOperation="input connector" fromProperty="GATK_indel_formatted_output" toOperation="GATK Germline" toProperty="formatted_file" />
+  <link fromOperation="input connector" fromProperty="reference_fasta" toOperation="GATK Germline" toProperty="reference" />    
   <link fromOperation="input connector" fromProperty="skip_if_output_present" toOperation="GATK Germline" toProperty="skip_if_output_present" />    
 
 <!-- GATK Unified Genotyper GERMLINE -->
   <link fromOperation="input connector" fromProperty="germline_bam_file" toOperation="GATK Unified Genotyper Germline" toProperty="bam_file" /> 
   <link fromOperation="input connector" fromProperty="GATK_ug_indel_output" toOperation="GATK Unified Genotyper Germline" toProperty="vcf_output_file" />
+  <link fromOperation="input connector" fromProperty="reference_fasta" toOperation="GATK Germline" toProperty="reference_fasta" />    
   <link fromOperation="input connector" fromProperty="skip_if_output_present" toOperation="GATK Unified Genotyper Germline" toProperty="skip_if_output_present" />    
 
 <!-- FORMAT GATK Unified Genotyper INDELS -->
