@@ -43,6 +43,8 @@ sub execute {
     }
 
     $self->_notify_expunged_objects_owners(%expunge_notifications);
+
+    return 1;
 }
 
 sub _remove_expunged_object {

@@ -44,6 +44,8 @@ sub execute {
     my $report_string = $self->generate_report;
     print $report_string;
     $self->write_report_file($report_string) if defined $self->report_file;
+
+    return 1;
 }
 
 # Generates a summary report with number of objects missing/copied per type
