@@ -184,7 +184,7 @@ sub _instrument_data_qual_type_in {
     my ( $self, $instrument_data ) = @_;
     
     if ( $instrument_data->class eq 'Genome::InstrumentData::Solexa' ) {
-        return 'sanger' if -s $instrument_data->bam_path;
+        return 'sanger' if $instrument_data->bam_path and -s $instrument_data->bam_path;
         return 'illumina';
     }
 
@@ -235,7 +235,18 @@ sub _process_instrument_data {
     # Fast qual command
     my @sx_cmd_parts = map { 'gmt sx '.$_ } @read_processor_parts;
     $sx_cmd_parts[0] .= ' --input '.join(',', map { $_.':type='.$qual_type_in } @input_files);
-    $sx_cmd_parts[$#read_processor_parts] .= ' --output '.join(',', map { $_.':type=sanger' } @output_files);
+    my $output;
+    if ( @output_files == 1 ) {
+        $output = $output_files[0].':type=sanger';
+    }
+    elsif ( @output_files == 2 ) {
+        $output = $output_files[0].':name=fwd:type=sanger,'.$output_files[1].':name=rev:type=sanger';
+    }
+    else {
+        $self->error_message('Cannot handle more than 2 output files');
+        return;
+    }
+    $sx_cmd_parts[$#read_processor_parts] .= ' --output '.$output;
     $sx_cmd_parts[$#read_processor_parts] .= ' --metrics-file-out '.$self->_metrics_file;
 
     my $sx_cmd = join(' | ', @sx_cmd_parts);
