@@ -34,6 +34,9 @@ ok($fq->execute, 'execute');
 is(File::Compare::compare($out_file, $example_out_file), 0, 'output file ok');
 is(File::Compare::compare($metrics_file, $example_metrics_file), 0, 'metrics file ok');
 
+#$fq = Genome::Model::Tools::Sx->create();
+#ok($fq, 'create w/o inputs and outputs');
+
 #print "$tmpdir\n"; <STDIN>;
 done_testing();
 exit;

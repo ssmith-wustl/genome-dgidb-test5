@@ -6,9 +6,6 @@ use warnings;
 require Storable;
 
 class Genome::Model::Tools::Sx::StdinRefReader { 
-    has => [ 
-        name => { is => 'Text', is_optional => 1, },
-    ],
 }; 
 
 sub read {

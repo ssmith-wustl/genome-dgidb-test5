@@ -4,7 +4,6 @@ use strict;
 use warnings;
 
 use Genome;
-use Data::Dumper;
 
 class Genome::Model::Tools::Sx::Writer {
     has => [
@@ -19,9 +18,22 @@ sub create {
     my $self = $class->SUPER::create(@_);
     return if not $self;
 
-    if ( not $self->config ) { 
+    my @config = grep { defined } $self->config;
+    if ( not @config ) { 
         $self->error_message('No config given to write');
         return;
+    }
+
+    if ( grep { $_ =~ /stdoutref/ } @config ) {
+        if ( @config > 1 ) {
+            $self->error_message('Cannot write stdout refs and to other writers');
+            return;
+        }
+        my $writer = Genome::Model::Tools::Sx::StdoutRefWriter->create;
+        return if not $writer;
+        $self->{_writer} = $writer;
+        $self->{_strategy} = 'write_stdoutref';
+        return $self;
     }
 
     my @writers;
@@ -33,7 +45,6 @@ sub create {
         return if not $writer_class;
         $self->status_message('writer => '.$writer_class);
 
-        delete $params{file} if $params{file} eq 'stdoutref';
         my $writer = $writer_class->create(%params);
         if ( not $writer ) {
             $self->error_message('Failed to create '.$writer_class);
@@ -98,10 +109,6 @@ sub _type_for_file {
 
     Carp::confess('No file to get type') if not $file;
 
-    if ( $file eq 'stdoutref' ) {
-        return 'ref';
-    }
-
     my ($ext) = $file =~ /\.(\w+)$/;
     if ( not $ext ) {
         $self->error_message('Failed to get extension for file: '.$file);
@@ -133,7 +140,6 @@ sub _writer_class_for_type {
         phred => 'PhredWriter',
         sanger => 'FastqWriter',
         illumina => 'IlluminaFastqWriter',
-        'ref' => 'StdoutRefWriter',
     );
 
     if ( exists $types_and_classes{$type} ) {
@@ -246,6 +252,10 @@ sub write {
     $self->metrics->add($seqs) if $self->metrics;
 
     return 1;
+}
+
+sub write_stdoutref {
+    return $_[0]->{_writer}->write($_[1]);
 }
 
 sub write_to_all {

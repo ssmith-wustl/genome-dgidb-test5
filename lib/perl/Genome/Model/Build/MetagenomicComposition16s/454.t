@@ -67,7 +67,6 @@ ok($pp, 'got 454 pp') or die;
 # model
 my $model = Genome::Model::MetagenomicComposition16s->create(
     processing_profile => $pp,
-    processing_profile => $pp,
     subject_name => $sample->name,
     subject_type => 'sample_name'
 );
