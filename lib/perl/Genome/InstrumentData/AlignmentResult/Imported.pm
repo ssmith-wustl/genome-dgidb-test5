@@ -201,8 +201,3 @@ sub _compute_alignment_metrics {
 sub _check_read_count { 
     return 1; 
 } 
-
-sub prepare_reference_sequence_index {
-    # no-op
-    return 1;
-}
