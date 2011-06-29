@@ -213,7 +213,8 @@ sub _process_instrument_data {
     $self->status_message('Processing: '.join(' ', $instrument_data->class, $instrument_data->id, $qual_type_in) );
 
     # In/out files
-    my @input_files = $self->_fastq_files_from_solexa($instrument_data)
+    my $fastq_method = '_fastq_files_from_'.$self->processing_profile->sequencing_platform;
+    my @input_files = $self->$fastq_method($instrument_data)
         or return;
     my @output_files = $self->build->read_processor_output_files_for_instrument_data($instrument_data)
         or return;
