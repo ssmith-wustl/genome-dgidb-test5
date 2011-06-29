@@ -218,7 +218,7 @@ sub execute {                               # replace with real execution logic.
         my ($position, $ref_base, $cns_call, $depth);
 
 		my $chrom = $lineContents[0];
-        if($self->variant_file =~ m/bed$/) {
+        if($variant_file =~ m/bed$/) {
             $position = $lineContents[2];
             ($ref_base, $cns_call)  = split /\//, $lineContents[3];
             $depth = $lineContents[5];
