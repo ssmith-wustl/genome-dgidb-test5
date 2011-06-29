@@ -661,7 +661,7 @@ sub upload_instrument_data_and_unlock {
     my @instrument_data;
     for my $original_data_path (keys %$orig_data_paths_to_fastq_files) {
         # If it is paired end
-        if( exists $orig_data_paths_to_fastq_files->{$original_data_path}->{file}->{1} && exists $orig_data_paths_to_fastq_files->{$original_data_path}->{file}->{2}) {
+        if ($original_data_path =~ /,/) {
             my ($original_data_path_1, $original_data_path_2) = split ",", $original_data_path;
             Genome::Sys->create_symlink($orig_data_paths_to_fastq_files->{$original_data_path}->{file}->{1}, $original_data_path_1);
             Genome::Sys->create_symlink($orig_data_paths_to_fastq_files->{$original_data_path}->{file}->{2}, $original_data_path_2);
