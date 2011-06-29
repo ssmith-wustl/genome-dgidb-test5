@@ -123,7 +123,7 @@ sub sanitize_string_for_filesystem {
         Carp::cluck('No string to sanitize for filesystem.');
         return;
     }
-    my $OK_CHARS = '-a-zA-Z0-9_./';
+    my $OK_CHARS = '-a-zA-Z0-9_.';
     $string =~ s/[^$OK_CHARS]/_/go;
     return $string;
 }
