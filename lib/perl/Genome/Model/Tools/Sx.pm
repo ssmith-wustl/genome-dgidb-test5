@@ -15,7 +15,7 @@ class Genome::Model::Tools::Sx {
             doc => <<DOC
 Input reader configurations. Give 'key=value' pairs, separated by a colon (:). Readers may have additonal options.
 
-Do not use this option when piping from fast-qual commands.
+Do not use this option when piping from sx commands.
 
 Standard options:
  file => The file to read. The use of the preceding 'file=' is optional.
@@ -23,6 +23,11 @@ Standard options:
  type => The type of input. Not required if type can be determined from the file.
           Required when reading from STDIN. Valid types: sanger, illumina, phred.
  cnt => The number of sequences to read from the input. If the input is paired, use 2.
+
+Additional options, by type:
+ phred
+  qual_file => read qualities from this file.
+
 DOC
         }, 
         _reader => { is_optional => 1, },
@@ -33,7 +38,7 @@ DOC
             doc => <<DOC
 Output writer configurations. Give 'key=value' pairs, separated by a colon (:). Writers may have additonal options.
 
-Do not use this option when piping from fast-qual commands.
+Do not use this option when piping from sx commands.
 
 Standard options:
  file => The file to write. The use of the preceding 'file=' is optional.
@@ -57,6 +62,11 @@ Standard options:
           name=sing:FILE
            write singletons to sing, discardc pairs
 
+
+Additional options, by type:
+ phred
+  qual_file => write qualities to this file
+
 DOC
         },
         _writer => { is_optional => 1, },
@@ -73,44 +83,6 @@ sub help_brief {
 }
 
 sub help_synopsis {
-    return <<HELP;
-
- * Short, where type can be determined from the file:
-  gmt fast-qual --input file.fastq --output file.fasta # qual file not written
-
- * Long w/ file and type:
-  gmt fast-qual --input file=file.fastq:type=illumina --output file=file.fasta:qual_file=file.qual:type:phred
-
- * Convert type
-  ** illumina fastq to sanger
-   gmt fast-qual --input illumina.fastq:type=illumina --output sanger.fastq
-  ** sanger fastq to phred fasta
-   gmt fast-qual --input file.fastq --output file.fasta
-  ** sanger fastq to phred fasta w/ quals
-   gmt fast-qual --input file.fastq --output file.fasta:qual_file=file.qual
-
- * Collate
-  ** from paired fastqs (type-in resolved to sanger, type-out defaults to sanger)
-   gmt fast-qual --input fwd.fastq rev.fastq --output collated.fastq
-  ** to paired STDOUT (type-in resolved to sanger, type-out defaults to sanger)
-   gmt fast-qual --input fwd.fastq rev.fastq --output -
-
- * Decollate
-  ** from illumina to individal fastqs, discard singletons
-   gmt fast-qual --input collated.fastq --output fwd.fastq:name=fwd rev.fastq,name=rev
-  ** from paired illumina STDIN (type-in req'd = illumina, type-out defaults to sanger)
-   gmt fast-qual --input -:name=pair:type=illumnia --output fwd.fastq:name=fwd rev.fastq:name=rev
-
- * Use in PIPE (cmd represents a fast-qual sub command)
-  ** from singleton fastq file
-   gmt fast-qual cmd1 --cmd1-options --input sanger.fastq | gmt fast-qual cmd2 --cmd2-options --output sanger.fastq
-  ** from paired STDIN to paired fastq and singleton (assuming the sub commands filter singletons)
-   cat collated_fastq | gmt fast-qual cmd1 --cmd1-options --input - --paired-input | gmt fast-qual cmd2 --cmd2-options --output pairs.fastq
-
-HELP
-}
-
-sub help_detail {
     return <<HELP;
     Transform sequences. See sub-commands for a additional functionality.
 
@@ -131,6 +103,46 @@ sub help_detail {
     Metrics
     * count
     * bases
+
+HELP
+}
+
+sub help_detail {
+    return <<HELP;
+
+ Input/Ouptut format:
+ * Short, where type can be determined from the file:
+  gmt sx --input file.fastq --output file.fasta # qual file not written
+
+ * Long w/ file and type:
+  gmt sx --input file=file.fastq:type=illumina --output file=file.fasta:qual_file=file.qual:type:phred
+
+ What this base command can do:
+ * Convert type
+  ** illumina fastq to sanger
+   gmt sx --input illumina.fastq:type=illumina --output sanger.fastq
+  ** sanger fastq to phred fasta
+   gmt sx --input file.fastq --output file.fasta
+  ** sanger fastq to phred fasta w/ quals
+   gmt sx --input file.fastq --output file.fasta:qual_file=file.qual
+
+ * Collate
+  ** from paired fastqs (type-in resolved to sanger, type-out defaults to sanger)
+   gmt sx --input fwd.fastq rev.fastq --output collated.fastq
+  ** to paired STDOUT (type-in resolved to sanger, type-out defaults to sanger)
+   gmt sx --input fwd.fastq rev.fastq --output -
+
+ * Decollate
+  ** from illumina to individal fastqs, discard singletons
+   gmt sx --input collated.fastq --output fwd.fastq:name=fwd rev.fastq,name=rev
+  ** from paired illumina STDIN (type-in req'd = illumina, type-out defaults to sanger)
+   gmt sx --input -:name=pair:type=illumnia --output fwd.fastq:name=fwd rev.fastq:name=rev
+
+ * Use in PIPE (cmd represents a sx sub command)
+  ** from singleton fastq file
+   gmt sx cmd1 --cmd1-options --input sanger.fastq | gmt sx cmd2 --cmd2-options --output sanger.fastq
+  ** from paired STDIN to paired fastq and singleton (assuming the sub commands filter singletons)
+   cat collated_fastq | gmt sx cmd1 --cmd1-options --input - --paired-input | gmt sx cmd2 --cmd2-options --output pairs.fastq
 
 HELP
 }
