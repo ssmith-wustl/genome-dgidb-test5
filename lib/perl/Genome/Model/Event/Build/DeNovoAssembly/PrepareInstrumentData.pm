@@ -192,6 +192,10 @@ sub _instrument_data_qual_type_in {
         return 'sanger';
     }
 
+    if ( $instrument_data->class eq 'Genome::InstrumentData::454' ) {
+        return 'sanger';
+    }
+
     return;
 }
 
@@ -324,6 +328,21 @@ sub _fastq_files_from_solexa {
         @fastq_files = $inst_data->dump_fastqs_from_bam( directory => $tempdir );
 
         $self->status_message('Fastq files from bam OK:'.join(", ", @fastq_files));
+    }
+
+    return @fastq_files;
+}
+
+sub _fastq_files_from_454 {
+    my ( $self, $inst_data ) = @_;
+
+    $self->status_message( "Getting fastq files fro 454 inst data: ".$inst_data->id );
+
+    my @fastq_files = $inst_data->dump_sanger_fastq_files; #Dumps to temp dir
+
+    unless ( @fastq_files ) {
+        $self->error_message( "Could not dump fastq files from inst data: ".$inst_data->id );
+        return;
     }
 
     return @fastq_files;

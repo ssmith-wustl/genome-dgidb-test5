@@ -23,7 +23,7 @@ class Genome::ProcessingProfile::DeNovoAssembly{
 	# Assembler
 	assembler_name => {
 	    doc => 'Name of the assembler.',
-	    valid_values => ['abyss parallel', 'velvet one-button', 'soap de-novo-assemble', 'soap import'],
+	    valid_values => ['abyss parallel', 'velvet one-button', 'soap de-novo-assemble', 'soap import', 'newbler de-novo-assemble'],
 	},
 	assembler_version => {
 	    doc => 'Version of assembler.',
@@ -220,6 +220,9 @@ sub valid_abyss_parallel_seq_platforms {
     return ['solexa'];
 }
 
+sub valid_newbler_de_novo_assemble_seq_platforms {
+    return ['454', 'solexa'];
+}
 #< methods to derive assembler params >#
 #soap de-novo-assemble
 sub soap_de_novo_assemble_params {
@@ -404,6 +407,25 @@ sub velvet_one_button_params {
 
     my $output_dir = $build->data_directory;
     $params{output_dir} = $output_dir;
+
+    return %params;
+}
+
+#newbler de-novo-assemble params
+sub newbler_de_novo_assemble_params {
+    my ( $self, $build ) = @_;
+
+    my %params;
+
+    #pp specified assembler params
+    if ( $self->assembler_params_as_hash ) {
+	%params = $self->assembler_params_as_hash;
+    }
+
+    #additional params needed from pp
+    $params{version} = $self->assembler_version;
+    $params{output_directory} = $build->data_directory;
+    $params{input_files} = [ $build->fastq_input_files ];
 
     return %params;
 }
