@@ -93,7 +93,7 @@ ok($temp_reference_index, "prepared temporary reference index");
 #my $se_instrument_data = generate_fake_se_instrument_data();
 #test_alignment(force_fragment => 1, instrument_data=>$se_instrument_data);
 
-my $se_instrument_data = generate_fake_pe_instrument_data();
+my $se_instrument_data = generate_fake_se_instrument_data();
 # Uncomment this to create the dataset necessary for shorcutting to work
 #test_alignment(generate_shortcut_data => 1, instrument_data => $instrument_data);
 
@@ -287,9 +287,9 @@ sub generate_fake_pe_instrument_data {
         library => $library,
         flow_cell_id => '12345',
         lane => '1',
-        median_insert_size => '22', # TODO
-        sd_below_insert_size => '22', # TODO
-        sd_above_insert_size => '22', # TODO
+        median_insert_size => '500', # this data has 500 +/- 100 bp
+        sd_below_insert_size => '34', # TODO
+        sd_above_insert_size => '34', # TODO
         run_name => '110101_TEST',
         subset_name => 4,
         run_type => 'Paired',

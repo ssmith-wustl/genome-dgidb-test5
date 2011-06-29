@@ -61,7 +61,9 @@ sub _run_aligner {
 
     # get the index directory
     my $reference_index = $self->get_reference_sequence_index();
-    my $reference_index_directory = $reference_index->data_dir();
+    my $reference_index_directory = dirname($reference_index->full_consensus_path());
+    #my $reference_index_directory = $reference_index->data_directory(); # better way to do this?
+    print "Ref index dir: $reference_index_directory\n";
     # example dir /gscmnt/sata921/info/medseq/cmiller/methylSeq/bratIndex
 
     # This is your scratch directory.  Whatever you put here will be wiped when the alignment
@@ -75,7 +77,7 @@ sub _run_aligner {
     # This is the SAM file you should be appending to.  Dont forget, no headers!
     my $sam_file = $scratch_directory . "/all_sequences.sam";
     # import format
-    my $import_format = $self->instrument_data->import_format;
+    #my $import_format = $self->instrument_data->import_format; # TODO what is this supposed to be?
 
     # decompose aligner params for each stage of alignment
     my %aligner_params = $self->decomposed_aligner_params;
@@ -200,7 +202,8 @@ sub _run_aligner {
     my $rv = Genome::Sys->shellcmd(
         cmd => $trim_cmd,
         input_files => [@input_pathnames],
-        output_files => [@trimmed_files]
+        output_files => [@trimmed_files],
+        allow_zero_size_output_files => 1
     );
     unless($rv) { die $self->error_message("Trimming failed."); }
 
@@ -462,12 +465,17 @@ sub _split_reference_fasta_by_contig {
     my $file_count = 0;
     my $current_fh;
     my @output_fastas;
+    
+    
+    $DB::single = 1;
+    my $limiter = 2; # TODO TODO TODO this is only for debugging! it speeds things up
 
-    while ($line = $fasta_fh->getline()) {
+    while (($line = $fasta_fh->getline())) {
         $total_count++;
         if (substr($line, 0, 1) eq ">") { # starting new contig
             if ($line =~ /^>([1-2]?[0-9]|[XYxy]|MT|NT_\d+)\s.+/) { # contig regex
                 if (defined $current_fh) { # if we were processing something before
+                    if ($limiter-- == 0) { last; }
                     # reset file counter
                     print "\tProcessed $file_count lines.\n";
                     $file_count=0;
