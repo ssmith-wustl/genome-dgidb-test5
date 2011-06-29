@@ -91,12 +91,14 @@ sub delete {
 sub _expunge_assignments{
     my $self = shift;
     my $instrument_data_id = $self->id;
+    my %affected_users;
 
     my @inputs = Genome::Model::Input->get( name => 'instrument_data', value_id => $instrument_data_id );
     my @models = map( $_->model, @inputs);
 
     for my $model (@models) {
         $model->remove_instrument_data($self);
+        push(@{$affected_users{$model->user_name}->{$instrument_data_id}}, $model->id);
     }
 
     #There may be builds using this instrument data even though it had previously been unassigned from the model
@@ -108,6 +110,8 @@ sub _expunge_assignments{
         $build->abandon();
         push @models, $build->model;
     }
+
+    return %affected_users;
 }
 
 sub calculate_alignment_estimated_kb_usage {
