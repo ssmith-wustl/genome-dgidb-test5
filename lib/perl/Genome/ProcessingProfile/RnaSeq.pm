@@ -72,6 +72,11 @@ class Genome::ProcessingProfile::RnaSeq {
             doc => 'The reference transcript set used for splice junction annotation',
             is_optional => 1,
         },
+        annotation_reference_transcripts_mode => {
+            doc => 'The mode to use annotation_reference_transcripts for expression analysis',
+            is_optional => 1,
+            valid_values => ['de novo','reference guided','reference only',],
+        },
     ],
 };
 
@@ -140,22 +145,53 @@ sub params_for_alignment {
     my $reference_build = $model->reference_sequence_build;
     my $reference_build_id = $reference_build->id;
 
+    my $read_aligner_params = $self->read_aligner_params || undef;
+    my $annotation_reference_transcripts = $self->annotation_reference_transcripts;
+    if ($annotation_reference_transcripts) {
+        my ($annotation_name,$annotation_version) = split(/\//, $annotation_reference_transcripts);
+        my $annotation_model = Genome::Model->get(name => $annotation_name);
+        unless ($annotation_model){
+            $self->error_message('Failed to get annotation model for annotation_reference_transcripts: ' . $annotation_reference_transcripts);
+            return;
+        }
+        unless (defined $annotation_version) {
+            $self->error_message('Failed to get annotation version from annotation_reference_transcripts: '. $annotation_reference_transcripts);
+            return;
+        }
+        my $annotation_build = $annotation_model->build_by_version($annotation_version);
+        unless ($annotation_build){
+            $self->error_message('Failed to get annotation build from annotation_reference_transcripts: '. $annotation_reference_transcripts);
+            return;
+        }
+        my $gtf_path = $annotation_build->annotation_file('gtf');
+        unless (defined($gtf_path)) {
+            die('There is no annotation GTF file defined for annotation_reference_transcripts build: '. $annotation_reference_transcripts);
+        }
+        if ($read_aligner_params =~ /-G/) {
+            die ('This processing_profile is requesting annotation_reference_transcripts \''. $annotation_reference_transcripts .'\', but there seems to be a GTF file already defined in the read_aligner_params: '. $read_aligner_params);
+        }
+        if (defined($read_aligner_params)) {
+            $read_aligner_params .= ' -G '. $gtf_path;
+        } else {
+            $read_aligner_params = ' -G '. $gtf_path;
+        }
+    }
     my %params = (
-                    instrument_data_id => [map($_->value_id, @inputs)],
-                    aligner_name => 'tophat',
-                    reference_build_id => $reference_build_id || undef,
-                    aligner_version => $self->read_aligner_version || undef,
-                    aligner_params => $self->read_aligner_params || undef,
-                    force_fragment => undef, #unused,
-                    trimmer_name => $self->read_trimmer_name || undef,
-                    trimmer_version => $self->read_trimmer_version || undef,
-                    trimmer_params => $self->read_trimmer_params || undef,
-                    picard_version => $self->picard_version || undef,
-                    samtools_version => undef, #unused
-                    filter_name => undef, #unused
-                    test_name => $ENV{GENOME_SOFTWARE_RESULT_TEST_NAME} || undef,
-                );
-
+        instrument_data_id => [map($_->value_id, @inputs)],
+        aligner_name => 'tophat',
+        reference_build_id => $reference_build_id || undef,
+        aligner_version => $self->read_aligner_version || undef,
+        aligner_params => $read_aligner_params,
+        force_fragment => undef, #unused,
+        trimmer_name => $self->read_trimmer_name || undef,
+        trimmer_version => $self->read_trimmer_version || undef,
+        trimmer_params => $self->read_trimmer_params || undef,
+        picard_version => $self->picard_version || undef,
+        samtools_version => undef, #unused
+        filter_name => undef, #unused
+        test_name => $ENV{GENOME_SOFTWARE_RESULT_TEST_NAME} || undef,
+    );
+    #$self->status_message('The AlignmentResult parameters are: '. Data::Dumper::Dumper(%params));
     my @param_set = (\%params);
     return @param_set;
 }

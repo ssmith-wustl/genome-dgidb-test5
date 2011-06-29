@@ -318,7 +318,7 @@ sub params_for_merged_alignment {
     for my $i (0..$#inputs) {
         my $input = $inputs[$i];
         if($input->filter_desc) {
-            push @$filters, join(':', $input->instrument_data_id, $input->filter_desc);
+            push @$filters, join(':', $input->value->id, $input->filter_desc);
         }
     }
 
@@ -327,7 +327,7 @@ sub params_for_merged_alignment {
         my @align_reads_events = grep {$_->isa('Genome::Model::Event::Build::ReferenceAlignment::AlignReads')} $build->events;
         for my $i (0..$#inputs) {
             my $input = $inputs[$i];
-            my @alignment_events = grep {$_->instrument_data_id == $input->instrument_data_id} @align_reads_events;
+            my @alignment_events = grep {$_->instrument_data_id == $input->value->id} @align_reads_events;
         
             #if multiple events, this is a chunked alignment
             if (@alignment_events > 1) {
@@ -341,7 +341,7 @@ sub params_for_merged_alignment {
     my $instrument_data = [];
 
     for my $i (0..$#inputs) {
-        push @$instrument_data, $inputs[$i]->instrument_data_id;
+        push @$instrument_data, $inputs[$i]->value->id;
     }
 
     my %params = (
