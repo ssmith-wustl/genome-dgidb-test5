@@ -128,8 +128,8 @@ else {
     unless (defined $self->append_rs_id) {
         $self->append_rs_id(1);
     }
-    unless (defined $self->dbSNP-version) {
-        $self->dbSNP-version(130);
+    unless (defined $self->dbSNP_version) {
+        $self->dbSNP_version(130);
     }
 
 
@@ -316,7 +316,7 @@ __DATA__
   <link fromOperation="input connector" fromProperty="tier_1_dbsnp_file" toOperation="dbSNP Snp" toProperty="output_file" />
   <link fromOperation="input connector" fromProperty="report_mode" toOperation="dbSNP Snp" toProperty="report_mode" />
   <link fromOperation="input connector" fromProperty="append_rs_id" toOperation="dbSNP Snp" toProperty="append_rs_id" />
-  <link fromOperation="input connector" fromProperty="dbSNP-version" toOperation="dbSNP Snp" toProperty="dbSNP-version" />
+  <link fromOperation="input connector" fromProperty="dbSNP_version" toOperation="dbSNP Snp" toProperty="dbSNP_version" />
 
 <!-- INDELS START HERE -->
 
@@ -331,7 +331,7 @@ __DATA__
 <!-- GATK Unified Genotyper GERMLINE -->
   <link fromOperation="input connector" fromProperty="germline_bam_file" toOperation="GATK Unified Genotyper Germline" toProperty="bam_file" /> 
   <link fromOperation="input connector" fromProperty="GATK_ug_indel_output" toOperation="GATK Unified Genotyper Germline" toProperty="vcf_output_file" />
-  <link fromOperation="input connector" fromProperty="reference_fasta" toOperation="GATK Germline" toProperty="reference_fasta" />    
+  <link fromOperation="input connector" fromProperty="reference_fasta" toOperation="GATK Unified Genotyper Germline" toProperty="reference_fasta" />    
   <link fromOperation="input connector" fromProperty="skip_if_output_present" toOperation="GATK Unified Genotyper Germline" toProperty="skip_if_output_present" />    
 
 <!-- FORMAT GATK Unified Genotyper INDELS -->
@@ -609,7 +609,7 @@ __DATA__
     <inputproperty isOptional="Y">tier_1_dbsnp_file</inputproperty>
     <inputproperty isOptional="Y">report_mode</inputproperty>
     <inputproperty isOptional="Y">append_rs_id</inputproperty>
-    <inputproperty isOptional="Y">dbSNP-version</inputproperty>
+    <inputproperty isOptional="Y">dbSNP_version</inputproperty>
 
     <inputproperty isOptional="Y">tier_1_snpfilter_file</inputproperty>
     <inputproperty isOptional="Y">tier_1_snpfilter_file_filtered</inputproperty>
