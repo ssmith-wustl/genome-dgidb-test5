@@ -315,6 +315,8 @@ sub shellcmd {
     my $allow_failed_exit_code      = delete $params{allow_failed_exit_code};
     my $allow_zero_size_output_files = delete $params{allow_zero_size_output_files};
     my $skip_if_output_is_present   = delete $params{skip_if_output_is_present};
+    my $dont_create_zero_size_files_for_missing_output = delete $params{dont_create_zero_size_files_for_missing_output};
+
     $skip_if_output_is_present = 1 if not defined $skip_if_output_is_present;
     if (%params) {
         my @crap = %params;
@@ -375,15 +377,26 @@ sub shellcmd {
     }
     if (@missing_output_files) {
         if ($allow_zero_size_output_files
-            and @$output_files == @missing_output_files
+            #and @$output_files == @missing_output_files
+            # TODO This causes the command to fail if only a few of many files are empty, despite
+            # that the option 'allow_zero_size_output_files' was given. New behavior is to warn
+            # in either circumstance, and to warn that old behavior is no longer present in cases
+            # where the command would've failed
         ) {
-            for my $output_file (@$output_files) {
-                Carp::carp("ALLOWING zero size output file '$output_file' for command: $cmd");
-                my $fh = $self->open_file_for_writing($output_file);
-                unless ($fh) {
-                    Carp::croak("failed to open $output_file for writing to replace missing output file: $!");
+            if (@$output_files == @missing_output_files) {
+                Carp::carp("ALL output files were empty for command: $cmd");
+            } else {
+                Carp::carp("SOME (but not all) output files were empty for command (PLEASE NOTE that earlier versions of Genome::Sys->shellcmd would fail in this circumstance): $cmd");
+            }
+            unless ($dont_create_zero_size_files_for_missing_output) {
+                for my $output_file (@$output_files) {
+                    Carp::carp("ALLOWING zero size output file '$output_file' for command: $cmd");
+                    my $fh = $self->open_file_for_writing($output_file);
+                    unless ($fh) {
+                        Carp::croak("failed to open $output_file for writing to replace missing output file: $!");
+                    }
+                    $fh->close;
                 }
-                $fh->close;
             }
             @missing_output_files = ();
         }
