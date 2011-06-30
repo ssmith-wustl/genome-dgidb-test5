@@ -121,6 +121,7 @@ sub _type_for_file {
         fna => 'phred',
         fa => 'phred',
         fastq => 'sanger',
+        fq => 'sanger',
     );
     if ( $exts_and_types{$ext} ) {
         return $exts_and_types{$ext}
