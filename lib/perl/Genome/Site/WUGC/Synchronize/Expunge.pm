@@ -14,13 +14,6 @@ class Genome::Site::WUGC::Synchronize::Expunge {
             is_optional => 0,
             doc => 'Hashref containing objects of interest from Genome::Site::WUGC::Synchronze::UpdateApipeClasses',
         },
-        notify_object_owners => {
-            is => 'Boolean',
-            is_input => 1,
-            is_optional => 1,
-            default => 0,
-            doc => 'If set, e-mails the owners of expunged objects a notification that their object has been expunged',
-        },
     ],
 };
 
@@ -88,7 +81,6 @@ sub _notify_expunged_objects_owners{
     
     for my $user_name (keys %expunge_notifications){
         my $msg = $self->_generate_expunged_objects_message_text(%{$expunge_notifications{$user_name}});
-        warn "I'd be emailing $user_name now" and next unless $user_name eq 'apipe-builder'; #TODO: delete me
         my $instrument_data_id_string = join(', ', keys %{$expunge_notifications{$user_name}});
         my $sender = Mail::Sender->new({
                 smtp    => 'gscsmtp.wustl.edu',
