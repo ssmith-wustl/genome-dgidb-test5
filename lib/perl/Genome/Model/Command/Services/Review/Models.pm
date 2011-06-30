@@ -39,22 +39,21 @@ sub execute {
     for my $model (@models) {
         my $latest_build        = ($model        ? $model->latest_build  : undef);
         my $latest_build_status = ($latest_build ? $latest_build->status : '-');
+        $latest_build_status = 'Requested' if $model->build_requested;
 
         my $fail_count   = ($model ? scalar $model->failed_builds     : undef);
         my $model_id     = ($model ? $model->id                       : '-');
         my $model_name   = ($model ? $model->name                     : '-');
         my $pp_name      = ($model ? $model->processing_profile->name : '-');
 
-        my $latest_build_revision = (($latest_build && $latest_build->software_revision) ? $latest_build->software_revision : '-');
+        my $latest_build_revision = $latest_build->software_revision if $latest_build;
+        ($latest_build_revision) =~ /\/(genome-[^\/])/;
+        $latest_build_revision ||= '-';
 
         $model_name =~ s/\.?$pp_name\.?/.../;
-        
-        $latest_build_revision =~ s/\/gsc\/scripts\/opt\/genome\/snapshots\/[\w\-]+\///;
-        $latest_build_revision =~ s/\/lib\/perl\/?//;
-        $latest_build_revision =~ s/:$//;
 
         my $action;
-        if ($latest_build->status eq 'Scheduled' || $latest_build->status eq 'Running') {
+        if ($latest_build->status eq 'Scheduled' || $latest_build->status eq 'Running' || $model->build_requested) {
             $action = 'none';
         }
         elsif ($latest_build && $latest_build->status eq 'Succeeded') {
@@ -104,7 +103,12 @@ sub should_review_model {
     return if latest_build_succeeded($model);
 
     my @builds = $model->builds;
-    return if @builds <= 1;
+    return if @builds < 1;
+
+    my $latest_status = $model->latest_build->status;
+    return 1 if $latest_status eq 'Unstartable';
+
+    return if @builds == 1;
 
     # If it has failed >3 times in a row then submit for review.
     return 1 if model_has_failed_to_many_times($model);

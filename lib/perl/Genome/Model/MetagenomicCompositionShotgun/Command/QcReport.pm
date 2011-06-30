@@ -3,7 +3,6 @@ package Genome::Model::MetagenomicCompositionShotgun::Command::QcReport;
 use strict;
 use warnings;
 use Genome;
-use Genome::Model::InstrumentDataAssignment;
 use File::Path;
 use File::Find;
 
@@ -41,8 +40,8 @@ sub execute {
     my $mcs_build = Genome::Model::Build->get($self->build_id);
     my $mcs_model = $mcs_build->model;
     my @meta_models = $mcs_model->_metagenomic_alignment_models;
-    my @original_data = map { $_->instrument_data } $mcs_build->instrument_data_assignments;
-    my @hcs_data = map { $_->instrument_data } $meta_models[0]->instrument_data_assignments;
+    my @original_data = $mcs_build->instrument_data;
+    my @hcs_data = $meta_models[0]->instrument_data;
     my $dir = $mcs_build->data_directory;
     my ($contamination_bam, $contamination_flagstat, $meta1_bam, $meta1_flagstat, $meta2_bam, $meta2_flagstat) = map{ $dir ."/$_"}(
         "contamination_screen.bam",
@@ -475,6 +474,7 @@ sub other_stats {
 sub original_data_from_imported_id {
     my ($self, $id) = @_;
     my $imported_data = Genome::InstrumentData::Imported->get($id);
+    $DB::single=1;
     (my $alignment_id = $imported_data->original_data_path) =~ s/.*\/([0-9]*)\/.*/$1/;
     return Genome::InstrumentData::AlignmentResult->get($alignment_id)->instrument_data;
 }
@@ -524,10 +524,7 @@ sub bam_stats_per_lane {
 
         # cache the flow_lane -> ID mapping
         unless($flow_lane{$id}) {
-            my $data = Genome::InstrumentData::Solexa->get($id);
-            unless($data) {
-                $data = $self->original_data_from_imported_id($id);
-            }
+            my $data = Genome::InstrumentData->get($id);
             unless($data) {
                 die $self->error_message("Unable to find data (imported nor original) by ID $id.");
             }

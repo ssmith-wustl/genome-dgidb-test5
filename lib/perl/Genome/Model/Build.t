@@ -61,7 +61,6 @@ my $model = Genome::Model::Test->create(
 ok($model, 'created test model') or die;
 isa_ok($model, 'Genome::Model::Test', 'model subclass automagically generated');
 $model->add_instrument_data(value => $inst_data);
-
 my @model_inst_data = $model->instrument_data;
 ok(@model_inst_data, 'Added instrument data to model');
 my @model_inputs = $model->inputs;
@@ -139,7 +138,7 @@ no warnings 'redefine';
 use warnings;
 
 # FAIL
-ok($build->fail([]), 'Fail');
+ok($build->fail(), 'Fail');
 is($build->status, 'Failed', 'Status is Failed');
 ok($model->build_needed, 'This failed build does not satisfy the model');
 
@@ -166,6 +165,65 @@ use warnings;
 # Delete build
 ok($build->delete, 'Deleted build');
 
+test_failure_notes();
+
 done_testing();
 exit;
 
+sub test_failure_notes {
+    #Ensure that when builds fail, they add notes, equivlent to the failure email's stage, step, and error
+
+    my $sample = Genome::Sample->create(name => 'TEST');
+    isa_ok($sample, 'Genome::Sample', 'sample');
+    class Genome::ProcessingProfile::Tester {
+        is => 'Genome::ProcessingProfile'
+    };
+    sub Genome::ProcessingProfile::Tester::sequencing_platform { return 'solexa' };
+    my $pp = Genome::ProcessingProfile->create(
+        name => 'Tester PP',
+        type_name => 'tester',
+    );
+    isa_ok($pp, 'Genome::ProcessingProfile', 'pp');
+
+    my $model = Genome::Model->create(
+        name => 'Test Model',
+        processing_profile => $pp,
+        subject_id => $sample->id,
+        subject_class_name => $sample->class,
+    );
+    isa_ok($model, 'Genome::Model', 'model');
+
+    class Genome::Model::Build::Tester {
+        is => 'Genome::Model::Build'
+    };
+    sub Genome::Model::Build::Tester::generate_send_and_save_report { return 1 };
+
+    my $build = Genome::Model::Build->create(
+        model => $model
+    );
+    isa_ok($build, 'Genome::Model::Build', 'build');
+
+    my $error = Genome::Model::Build::Error->create(
+        build_event_id => $build->build_event->id,
+        stage_event_id => $build->build_event->id,
+        stage => 'all stages',
+        step_event_id => $build->build_event->id,
+        step => 'main',
+        error => 'Testing error',
+    );
+    isa_ok($error, 'Genome::Model::Build::Error', 'error');
+
+    $build->fail($error);
+
+    my $failed_step_note = $build->notes(header_text => 'Failed Step');
+    isa_ok($failed_step_note, 'Genome::MiscNote', 'failed_step_note');
+    is($failed_step_note->body_text, $error->step, 'failed step matches error step');
+
+    my $failed_stage_note = $build->notes(header_text => 'Failed Stage');
+    isa_ok($failed_stage_note, 'Genome::MiscNote', 'failed_stage_note');
+    is($failed_stage_note->body_text, $error->stage, 'failed stage matches error stage');
+
+    my $failed_error_note = $build->notes(header_text => 'Failed Error');
+    isa_ok($failed_error_note, 'Genome::MiscNote', 'failed_error_note');
+    is($failed_error_note->body_text, $error->error, 'failed error matches error error');
+}

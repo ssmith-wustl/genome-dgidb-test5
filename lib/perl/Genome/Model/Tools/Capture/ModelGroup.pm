@@ -271,12 +271,8 @@ sub execute {
 
         if($self->force_files)
         {
-          my $model_dir = $model->data_directory;
-          if($model_dir && -d $model_dir)
-          {
-            my $build_dir = `ls -d $model_dir/build* | tail -1`;
-            chomp($build_dir);
-            $build_dir =~ s/\@// if($build_dir);
+            my $build = $model->latest_build() || die 'cant find build for model: ' . $model->id;
+            my $build_dir = $build->data_directory();
 
             ## Get the BAM file ##
 
@@ -362,7 +358,6 @@ sub execute {
               }
             }
 
-          }
         }
       }
     }

@@ -51,7 +51,6 @@ my $gm = Genome::Model::Command::Define::GenotypeMicroarray->create(
     processing_profile_name => $ppname ,
     subject_name            => $sample->name,
     model_name              => $test_model_name .".test",
-    data_directory          => $tempdir,
 );
 $gm->dump_status_messages(1);
 ok(!$gm->execute(), 'attempt to define command w/o reference is an error');
@@ -62,7 +61,6 @@ $gm = Genome::Model::Command::Define::GenotypeMicroarray->create(
     processing_profile_name => $ppname ,
     subject_name            => $sample->name,
     model_name              => $test_model_name .".test",
-    data_directory          => $tempdir,
     reference               => $rbuild,
 );
 $gm->dump_status_messages(1);
@@ -72,8 +70,6 @@ ok($gm->execute(),'define model');
 my $model = Genome::Model->get(name => $test_model_name.".test");
 is($model->name,$test_model_name.".test", 'expected test model name retrieved');
 
-# let us nuke the build and model...
-system("rm -rf ".$model->data_directory);
 $model->delete;
 
 done_testing(5);

@@ -298,21 +298,21 @@
             </xsl:choose>
 
             <xsl:if test="$model_attributes_type_name = 'benchmark'">
-            <tr>
-              <td class="name">metrics:
-              </td>
-              <td class="value"><a class="mini btn"><xsl:attribute name="href"><xsl:value-of select='$metrics_chart_url'/></xsl:attribute><span class="sm-icon sm-icon-extlink"><br/></span>metrics</a>
-              </td>
-            </tr>
+              <tr>
+                <td class="name">metrics:
+                </td>
+                <td class="value"><a class="mini btn"><xsl:attribute name="href"><xsl:value-of select='$metrics_chart_url'/></xsl:attribute><span class="sm-icon sm-icon-extlink"><br/></span>metrics</a>
+                </td>
+              </tr>
             </xsl:if>
 
-<!--            <tr>
-              <td class="name">subject type:
-              </td>
-              <td class="value"><xsl:value-of select="normalize-space(aspect[@name='subject_class_name']/value)"/>
-              </td>
-            </tr>
--->
+            <!--            <tr>
+                 <td class="name">subject type:
+                 </td>
+                 <td class="value"><xsl:value-of select="normalize-space(aspect[@name='subject_class_name']/value)"/>
+                 </td>
+                 </tr>
+            -->
             <tr>
               <td class="name">subject:
               </td>
@@ -347,13 +347,21 @@
             <tr>
               <td class="name">build requested:
               </td>
-              <td class="value"><xsl:value-of select="aspect[@name='build_requested']/value"/>
+              <td class="value">
+                  <xsl:choose>
+                      <xsl:when test="aspect[@name='build_requested']/value">yes</xsl:when>
+                      <xsl:otherwise>no</xsl:otherwise>
+                  </xsl:choose>
               </td>
             </tr>
             <tr>
               <td class="name">build needed:
               </td>
-              <td class="value"><xsl:value-of select="aspect[@name='build_needed']/value"/>
+              <td class="value">
+                  <xsl:choose>
+                      <xsl:when test="aspect[@name='build_needed']/value">yes</xsl:when>
+                      <xsl:otherwise>no</xsl:otherwise>
+                  </xsl:choose>
               </td>
             </tr>
           </tbody>
@@ -467,12 +475,6 @@
       </div>
       <div class="box_content rounded-bottom span-24 last">
         <table class="lister">
-          <!-- <thead>
-            <tr>
-              <th>name</th>
-              <th>value</th>
-            </tr>
-          </thead> -->
           <tbody>
             <xsl:for-each select="object[aspect[@name='name']/value!='instrument_data']">
               <xsl:sort select="aspect[@name='name']/value" data-type="text" order="ascending"/>
@@ -532,69 +534,148 @@
     </xsl:call-template>
   </xsl:template>
 
-  <xsl:template name="genome_model_input_compact_display">
-    <xsl:param name="header" select="''"/>
-    <xsl:param name="constrain_width" select="'0'"/>
+  <xsl:template name="genome_model_input_rows">
     <xsl:param name="report_missing"/>
     <xsl:param name="input"/>
-    <div class="generic_lister">
-      <xsl:if test="$constrain_width = 1">
-        <xsl:attribute name="style"><xsl:text>overflow-x:auto; overflow-y:hidden; width: 450px;</xsl:text></xsl:attribute>
-      </xsl:if>
-      <xsl:if test="$header != ''">
-        <div class="box_header rounded-top rounded-bottom" style="height: 16px; min-height: 16px;">
-          <strong><xsl:value-of select="$header"/></strong>
-        </div>
-      </xsl:if>
-      <div class="box_content rounded-top rounded-bottom">
-        <ul>
-        <xsl:variable name="inputs" select="$input/object"/>
 
-        <!-- select unique input names -->
-        <xsl:for-each select="$input">
-        <xsl:for-each select="object[not(preceding-sibling::*/aspect[@name='name']/value = aspect[@name='name']/value)]/aspect[@name='name']/value">
-          <li>
-          <xsl:variable name="name" select="."/>
+    <xsl:comment>template: status/genome_model.xsl name: genome_model_input_rows</xsl:comment>
+
+    <xsl:variable name="inputs" select="$input/object"/>
+    <!-- select unique input names -->
+    <xsl:for-each select="$input">
+      <xsl:for-each select="object[not(preceding-sibling::*/aspect[@name='name']/value = aspect[@name='name']/value)]/aspect[@name='name']/value">
+        <xsl:variable name="name" select="."/>
+        <xsl:variable name="model_id" select="ancestor::object[types/isa[@type='Genome::Model']]/@id"/>
+        <xsl:variable name="model_name" select="ancestor::object[types/isa[@type='Genome::Model']]/aspect[@name='name']/value"/>
+
+        <tr>
           <xsl:choose>
+
             <xsl:when test="count($inputs[aspect[@name='name']/value = $name]) = 1">
-              <span class="label"><xsl:value-of select="$name"/></span>: 
-              <span class="value"><xsl:for-each select="$inputs[aspect[@name='name']/value = $name]"><xsl:call-template name="genome_model_input_value_link"/></xsl:for-each></span>
+              <!-- only one instrument data difference, just show the button -->
+              <td><xsl:for-each select="$inputs[aspect[@name='name']/value = $name]"><xsl:call-template name="genome_model_input_value_link"/></xsl:for-each></td>
+              <td><xsl:value-of select="$name"/></td>
             </xsl:when>
+
             <xsl:otherwise>
-              <span class="label"><xsl:value-of select="$name"/></span>:
-              <span class="value"><span style="border-bottom: 1px dotted #000000;"><xsl:attribute name="title">
-                <xsl:for-each select="$inputs[aspect[@name='name']/value = $name]/aspect[@name='value']/object/display_name">
-                  <xsl:value-of select='.' /><xsl:text> </xsl:text>
-                </xsl:for-each>
-              </xsl:attribute> <xsl:value-of select="count($inputs[aspect[@name='name']/value = $name])"/></span></span>
+              <!-- more than one instrument data difference, create button + popup to show all -->
+              <td>
+                <a href="javascript:return(false)" class="mini btn popup-ajax-instrument-data">
+                  <xsl:attribute name="title"><xsl:value-of select="$model_name"/> (<xsl:value-of select="$model_id"/>) instrument_data</xsl:attribute>
+                  <xsl:attribute name="id"><xsl:value-of select="$model_id"/></xsl:attribute>
+                  <span class="sm-icon sm-icon-newwin"><br/></span>instrument data (<xsl:value-of select="count($inputs[aspect[@name='name']/value = $name])"/>)
+                </a>
+                <!-- div for instrument data -->
+                <div style="display: none;">
+                  <xsl:attribute name="id">instrument_data_<xsl:value-of select="$model_id"/></xsl:attribute>
+                  <table class="lister">
+                  <xsl:for-each select="$inputs[aspect[@name='name']/value = $name]">
+                    <xsl:call-template name="genome_model_input_table_row"/>
+                  </xsl:for-each>
+                  </table>
+                </div>
+              </td>
+              <td><xsl:value-of select="$name"/></td>
             </xsl:otherwise>
           </xsl:choose>
-          </li>
-        </xsl:for-each>
-        </xsl:for-each>
+        </tr>
+      </xsl:for-each>
+    </xsl:for-each>
 
-        <!-- select unique input names (again)-->
-        <xsl:if test="$report_missing">
-        <xsl:variable name="missing_inputs" select="$report_missing/object"/>
-        <xsl:for-each select="$missing_inputs[not(preceding-sibling::*/aspect[@name='name']/value = aspect[@name='name']/value)]/aspect[@name='name']/value">
-          <li>
+    <!-- select unique input names (again)-->
+    <xsl:if test="$report_missing">
+      <xsl:variable name="missing_inputs" select="$report_missing/object"/>
+      <xsl:for-each select="$missing_inputs[not(preceding-sibling::*/aspect[@name='name']/value = aspect[@name='name']/value)]/aspect[@name='name']/value">
+        <tr>
+          <td>
+            <xsl:variable name="name" select="."/>
+            <xsl:choose>
+              <xsl:when test="count($missing_inputs[aspect[@name='name']/value = $name]) = 1">
+                <span class="label"><xsl:value-of select="$name"/></span>:
+                <span class="value"><em><xsl:text>missing</xsl:text></em></span>
+              </xsl:when>
+              <xsl:otherwise>
+                <span class="label"><xsl:value-of select="$name"/></span>:
+                <span class="value"><em><xsl:text>missing </xsl:text><xsl:value-of select="count($missing_inputs[aspect[@name='name']/value = $name])"/></em></span>
+              </xsl:otherwise>
+            </xsl:choose>
+          </td>
+        </tr>
+      </xsl:for-each>
+    </xsl:if>
+
+  </xsl:template>
+
+
+  <xsl:template name="genome_model_input_compact_list">
+    <xsl:param name="input"/>
+    <xsl:param name="report_missing"/>
+
+    <xsl:variable name="inputs" select="$input/object"/>
+
+    <!-- select unique input names -->
+    <xsl:for-each select="$input">
+      <xsl:variable name="build_id" select="ancestor::object[types/isa[@type='Genome::Model::Build']]/@id"/>
+      <xsl:variable name="build_name" select="ancestor::object[types/isa[@type='Genome::Model::Build']]/aspect[@name='name']/value"/>
+
+      <xsl:for-each select="object[not(preceding-sibling::*/aspect[@name='name']/value = aspect[@name='name']/value)]/aspect[@name='name']/value">
+        <xsl:variable name="name" select="."/>
+
+        <span class="input_diff">
+          <xsl:choose>
+            <!-- only one instrument data difference, just show the button -->
+            <xsl:when test="count($inputs[aspect[@name='name']/value = $name]) = 1">
+              <span class="label"><xsl:value-of select="$name"/></span>:
+              <span class="value"><xsl:for-each select="$inputs[aspect[@name='name']/value = $name]"><xsl:call-template name="genome_model_input_value_link"/></xsl:for-each></span>;
+            </xsl:when>
+
+            <xsl:otherwise>
+              <!-- more than one instrument data difference, create button + popup to show all -->
+              <a href="javascript:return(false)" class="mini btn popup-ajax-instrument-data">
+                <xsl:attribute name="title"><xsl:value-of select="$build_name"/> (<xsl:value-of select="$build_id"/>) instrument_data</xsl:attribute>
+                <xsl:attribute name="id"><xsl:value-of select="$build_id"/></xsl:attribute>
+                <span class="sm-icon sm-icon-newwin"><br/></span>instrument data (<xsl:value-of select="count($inputs[aspect[@name='name']/value = $name])"/>)
+              </a>
+
+              <!-- div for instrument data -->
+              <div style="display: none;">
+                <xsl:attribute name="id">instrument_data_<xsl:value-of select="$build_id"/></xsl:attribute>
+                <table class="lister">
+                  <xsl:for-each select="$inputs[aspect[@name='name']/value = $name]">
+                    <xsl:call-template name="genome_model_input_table_row"/>
+                  </xsl:for-each>
+                </table>
+              </div>
+
+            </xsl:otherwise>
+
+          </xsl:choose>
+        </span>
+      </xsl:for-each>
+    </xsl:for-each>
+
+    <!-- select unique input names (again)-->
+    <xsl:if test="$report_missing">
+      <xsl:variable name="missing_inputs" select="$report_missing/object"/>
+      <xsl:for-each select="$missing_inputs[not(preceding-sibling::*/aspect[@name='name']/value = aspect[@name='name']/value)]/aspect[@name='name']/value">
+        <span class="input_diff">
           <xsl:variable name="name" select="."/>
           <xsl:choose>
+
             <xsl:when test="count($missing_inputs[aspect[@name='name']/value = $name]) = 1">
-              <span class="label"><xsl:value-of select="$name"/></span>: 
-              <span class="value"><em><xsl:text>missing</xsl:text></em></span>
+              <span class="label"><xsl:value-of select="$name"/></span>:
+              <span class="value"><xsl:text>missing</xsl:text></span>
             </xsl:when>
+
             <xsl:otherwise>
               <span class="label"><xsl:value-of select="$name"/></span>:
-              <span class="value"><em><xsl:text>missing </xsl:text><xsl:value-of select="count($missing_inputs[aspect[@name='name']/value = $name])"/></em></span>
+              <span class="value"><xsl:text>missing </xsl:text><xsl:value-of select="count($missing_inputs[aspect[@name='name']/value = $name])"/></span>
             </xsl:otherwise>
-          </xsl:choose>
-          </li>
-        </xsl:for-each>
-        </xsl:if>
-        </ul>
-      </div>
-    </div>
+
+          </xsl:choose>;
+        </span>
+      </xsl:for-each>
+    </xsl:if>
   </xsl:template>
 
   <xsl:template name="genome_model_link_table">
@@ -698,8 +779,8 @@
       <xsl:variable name="num_builds" select="count(aspect[@name='builds']/object)"/>
 
       <div class="box_header_details rounded-bottom-left">
-        <table class="name-value-row" cellpadding="0" cellspacing="0" border="0" style="margin-left: 27px;">
-          <tr><td><table>
+        <div class="rounded" style="float: left; width: 29%;">
+          <table class="name-value" cellpadding="0" cellspacing="0" border="0" style="margin-left: 27px;">
             <tr>
               <td class="name">
                 model id:
@@ -707,48 +788,72 @@
               <td class="value">
                 <xsl:value-of select="@id"/>
               </td>
+            </tr>
+            <tr>
               <td class="name">
                 username:
               </td>
               <td class="value">
                 <xsl:value-of select="aspect[@name='user_name']/value"/>
               </td>
+            </tr>
+            <tr>
+
               <td class="name">
                 scheduled:
               </td>
               <td class="value">
                 <xsl:value-of select="aspect[@name='creation_date']/value"/>
               </td>
-              <xsl:if test="normalize-space(aspect[@name='build_requested']/value) != '' and normalize-space(aspect[@name='build_requested']/value) != '0'">
+            </tr>
+            <xsl:if test="normalize-space(aspect[@name='build_requested']/value) != '' and normalize-space(aspect[@name='build_requested']/value) != '0'">
+              <tr>
+
                 <td class="name">
                   build requested:
                 </td>
                 <td class="value">
                   <xsl:value-of select="aspect[@name='build_requested']/value"/>
                 </td>
-              </xsl:if>
-              <xsl:if test="normalize-space(aspect[@name='build_needed']/value) != ''">
-                <td class="name">
-                  build needed:
+              </tr>
+            </xsl:if>
+          </table>
+        </div>
+
+        <div style="float: right; width: 67%; margin-right: 27px;">
+          <table class="name-value" cellpadding="0" cellspacing="0" border="0">
+            <tbody>
+              <colgroup>
+                <col />
+                <col width="100%"/>
+              </colgroup>
+              <tr>
+                <td colspan="2" style="border-bottom: 1px solid #acaca3; padding-top: -1px;">
+                  <span style="font-weight: bold;">
+                    inputs
+                    <xsl:if test="normalize-space(aspect[@name='build_needed']/value) != ''">
+                      <span style="color: #a40014;">(build needed)</span>
+                    </xsl:if>
+                  </span>
                 </td>
-                <td class="value">
-                  <xsl:value-of select="aspect[@name='build_needed']/value"/>
-                </td>
-              </xsl:if>
-            </tr>
-          </table></td></tr>
-          <tr class="model_row_subheader">
-            <td colspan="4">
-              <xsl:if test="count(aspect[@name='inputs']) > 0 ">
-                <xsl:for-each select="aspect[@name='inputs']">
-                  <xsl:call-template name="genome_model_input_compact_display">
-                    <xsl:with-param name="input" select="."/>
-                  </xsl:call-template>
-                </xsl:for-each>
-              </xsl:if>
-            </td>
-          </tr>
-        </table>
+              </tr>
+              <xsl:choose>
+                <xsl:when test="count(aspect[@name='inputs']) > 0 ">
+                  <xsl:for-each select="aspect[@name='inputs']">
+                    <xsl:call-template name="genome_model_input_rows">
+                      <xsl:with-param name="input" select="."/>
+                    </xsl:call-template>
+                  </xsl:for-each>
+                </xsl:when>
+                <xsl:otherwise>
+                  <tr><td><p>No model inputs found.</p></td></tr>
+                </xsl:otherwise>
+              </xsl:choose>
+            </tbody>
+          </table>
+
+        </div>
+
       </div>
 
       <div class="span-23 prepend-1 last">
@@ -827,10 +932,7 @@
           <xsl:with-param name="linktext" select="@id" />
           <xsl:with-param name="icon" select="'sm-icon-extlink'" />
         </xsl:call-template>
-        <xsl:variable name="model_id" select="aspect[@name='model_id']/value"/>
-        <xsl:call-template name="genome_model_build_inputs_differ_table">
-          <xsl:with-param name="build" select="."/>
-        </xsl:call-template>
+
       </td>
       <td>
         <xsl:attribute name="class"><xsl:text>status </xsl:text><xsl:value-of select="$lc_b_status"/></xsl:attribute><xsl:value-of select="$lc_b_status"/>
@@ -846,6 +948,27 @@
       </td>
     </tr>
 
+    <!-- show input deltas row if found -->
+    <xsl:if test="count(aspect[@name='build_input_differences_from_model']/object) + count(aspect[@name='delta_model_input_differences_from_model']/object) > 0">
+      <tr>
+        <td></td>
+        <td style="background-color: #ffeff1; text-align: center; "><span style="color: #a40014; font-weight: bold;">inputs differ:</span></td>
+        <td colspan="3" class="inputs_differ">
+          <table class="name-value inputs_differ" cellpadding="0" cellspacing="0" border="0">
+            <tr>
+              <td class="value">
+
+                <xsl:call-template name="genome_model_input_compact_list">
+                  <xsl:with-param name="input" select="./aspect[@name='build_input_differences_from_model']"/>
+                  <xsl:with-param name="report_missing" select="./aspect[@name='delta_model_input_differences_from_model']"/>
+                </xsl:call-template>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+
+    </xsl:if>
   </xsl:template>
 
   <!-- DEPRECATED TEMPLATES -->
@@ -980,49 +1103,36 @@
     <xsl:comment>template: genome_model.xsl:genome_model_flagstats</xsl:comment>
     <!-- creates flagstat table in a jQueryUI popup. See G/M/V/Resource/Html/js/app/genome_model.js -->
 
-      <div id="flagstat_table">
-        <table class="name-value" width="100%">
-          <colgroup>
-            <col width="60%"/>
-            <col width="40%"/>
-          </colgroup>
-          <tbody>
-            <xsl:for-each select="item">
-              <xsl:variable name="value" select="."/>
-              <xsl:variable name="name" select="@key"/>
-              <tr>
-                <td class="name" style="white-space: normal;"><xsl:value-of select="translate($name, '_', ' ')"/>
-                </td>
-                <td class="value">
-                  <xsl:choose>
-                    <xsl:when test="contains($name, 'percent')">
-                      <xsl:value-of select="$value"/>%
-                    </xsl:when>
-                    <xsl:otherwise>
-                      <xsl:value-of select="format-number($value, '#,##0')"/>
-                    </xsl:otherwise>
-                  </xsl:choose>
-                </td>
-              </tr>
-            </xsl:for-each>
-          </tbody>
-        </table>
-      </div>
+    <div id="flagstat_table">
+      <table class="name-value" width="100%">
+        <colgroup>
+          <col width="60%"/>
+          <col width="40%"/>
+        </colgroup>
+        <tbody>
+          <xsl:for-each select="item">
+            <xsl:variable name="value" select="."/>
+            <xsl:variable name="name" select="@key"/>
+            <tr>
+              <td class="name" style="white-space: normal;"><xsl:value-of select="translate($name, '_', ' ')"/>
+              </td>
+              <td class="value">
+                <xsl:choose>
+                  <xsl:when test="contains($name, 'percent')">
+                    <xsl:value-of select="$value"/>%
+                  </xsl:when>
+                  <xsl:otherwise>
+                    <xsl:value-of select="format-number($value, '#,##0')"/>
+                  </xsl:otherwise>
+                </xsl:choose>
+              </td>
+            </tr>
+          </xsl:for-each>
+        </tbody>
+      </table>
+    </div>
 
 
-  </xsl:template>
-
-  <xsl:template name="genome_model_build_inputs_differ_table">
-    <xsl:param name="build"/>
-
-    <xsl:if test="count($build/aspect[@name='build_input_differences_from_model']/object) + count($build/aspect[@name='delta_model_input_differences_from_model']/object) > 0">
-      <xsl:call-template name="genome_model_input_compact_display">
-        <xsl:with-param name="header" select="'input differences:'"/>
-        <xsl:with-param name="constrain_width" select="'1'"/>
-        <xsl:with-param name="input" select="$build/aspect[@name='build_input_differences_from_model']"/>
-        <xsl:with-param name="report_missing" select="$build/aspect[@name='delta_model_input_differences_from_model']"/>
-      </xsl:call-template>
-    </xsl:if>	
   </xsl:template>
 
 </xsl:stylesheet>

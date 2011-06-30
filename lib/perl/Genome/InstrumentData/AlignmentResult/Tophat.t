@@ -7,7 +7,7 @@ use Test::More;
 
 BEGIN {
     if (`uname -a` =~ /x86_64/) {
-        plan tests => 9;
+        plan tests => 8;
     } else {
         plan skip_all => 'Must run on a 64 bit machine';
     }
@@ -39,7 +39,7 @@ my $alignment_result_class_name = "Genome::InstrumentData::AlignmentResult::" . 
 
 my $samtools_version = Genome::Model::Tools::Sam->default_samtools_version;
 my $picard_version = Genome::Model::Tools::Picard->default_picard_version;
-my $aligner_version = '1.2.0';
+my $aligner_version = '1.3.0';
 
 my $FAKE_INSTRUMENT_DATA_ID=-123456;
 
@@ -76,9 +76,9 @@ my $alignment_result = Genome::InstrumentData::AlignmentResult::Tophat->create(@
 
 isa_ok($alignment_result, 'Genome::InstrumentData::AlignmentResult::Tophat', 'produced merged alignment result');
 
-my $expected_dir = '/gsc/var/cache/testsuite/data/Genome-InstrumentData-AlignmentResult-Tophat/expected_v1.2.0_1-lane';
+my $expected_dir = '/gsc/var/cache/testsuite/data/Genome-InstrumentData-AlignmentResult-Tophat/expected_v1.3.0_1-lane';
 
-for my $file (qw(alignment_stats.txt all_reads_merged.bam.flagstat junctions.bed)) {
+for my $file (qw(alignment_stats.txt junctions.bed)) {
     my $path = join('/', $alignment_result->output_dir, $file);
     my $expected_path = join('/', $expected_dir, $file);
     my $diff = Genome::Sys->diff_file_vs_file($path, $expected_path);

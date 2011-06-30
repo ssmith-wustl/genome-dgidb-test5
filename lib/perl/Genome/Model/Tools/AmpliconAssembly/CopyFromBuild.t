@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use above 'Genome';
+use Test::More skip_all => 'amplicon assembly is no longer used';
 
 use Genome::AmpliconAssembly::Test;
 

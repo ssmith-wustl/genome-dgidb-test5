@@ -26,9 +26,9 @@ class Genome::Model::Command::Define::ReferenceAlignment {
             is_optional => 1,
             is_input => 1,
         },
-        genotype_microarray_build => {
-            is => 'Genome::Model::Build::GenotypeMicroarray',
-            doc => 'ID or name of the genotype microarray build which will be used to obtain the gold snp and genotype files',
+        genotype_microarray_model => {
+            is => 'Genome::Model::GenotypeMicroarray',
+            doc => 'ID or name of the genotype microarray model which will be used to obtain the gold snp and genotype files',
             is_optional => 1,
             is_input => 1,
         },
@@ -92,6 +92,7 @@ sub type_specific_parameters_for_create {
     my $self = shift;
     my $rsb = $self->_resolve_param('reference_sequence_build');
     my $arb = $self->_resolve_param('annotation_reference_build');
+    my $gmm = $self->_resolve_param('genotype_microarray_model');
     my $dbsnp = $self->resolve_dbsnp($rsb);
     if ($dbsnp && !$rsb->is_compatible_with($dbsnp->model->reference)) {
         die $self->error_message("dbSNP build " . $dbsnp->__display_name__ . " has reference " . $dbsnp->reference->__display_name__ .
@@ -102,11 +103,12 @@ sub type_specific_parameters_for_create {
     push(@params, reference_sequence_build => $rsb) if $rsb;
     push(@params, annotation_reference_build => $arb) if $arb;
     push(@params, dbsnp_build => $dbsnp) if $dbsnp;
+    push(@params, genotype_microarray_model => $gmm) if $gmm;
     return @params;
 }
 
 sub listed_params {
-    return qw/ id name data_directory subject_name subject_type processing_profile_id processing_profile_name reference_sequence_name annotation_reference_name /;
+    return qw/ id name subject_name subject_type processing_profile_id processing_profile_name reference_sequence_name annotation_reference_name /;
 }
 
 sub execute {

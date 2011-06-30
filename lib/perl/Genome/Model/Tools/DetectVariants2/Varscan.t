@@ -36,7 +36,7 @@ my $bam_input = $test_dir . '/alignments/102922275_merged_rmdup.bam';
 # Updated to .v6 due to the addition of quality and natural sort order to bed file output 
 # Updated to .v7 due to the addition of read depth
 # Updated to .v8 due to directory structure changes
-my $expected_dir = $test_dir . '/expected.v10/';
+my $expected_dir = $test_dir . '/expected.v11/';
 ok(-d $expected_dir, "expected results directory exists");
 
 
@@ -54,7 +54,7 @@ my $command = Genome::Model::Tools::DetectVariants2::Varscan->create(
 ok($command, 'Created `gmt detect-variants varscan` command');
 ok($command->execute, 'Executed `gmt detect-variants varscan` command');
 
-my $diff_cmd = sprintf('diff -r -q %s %s', $test_working_dir, $expected_dir);
+my $diff_cmd = sprintf('diff -r %s %s', $test_working_dir, $expected_dir);
 
 my $diff = `$diff_cmd`;
 is($diff, '', 'No differences in output from expected result from running varscan for this version and parameters');

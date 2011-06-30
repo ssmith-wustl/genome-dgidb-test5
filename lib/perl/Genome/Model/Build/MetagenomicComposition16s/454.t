@@ -64,16 +64,11 @@ ok(-s $instrument_data->dump_fasta_file, 'fasta file');
 my $pp = Genome::ProcessingProfile->get(2278045);
 ok($pp, 'got 454 pp') or die;
 
-# dirs
-my $tmpdir = File::Temp::tempdir(CLEANUP => 1);
-
 # model
 my $model = Genome::Model::MetagenomicComposition16s->create(
     processing_profile => $pp,
-    processing_profile => $pp,
     subject_name => $sample->name,
-    subject_type => 'sample_name',
-    data_directory => $tmpdir,
+    subject_type => 'sample_name'
 );
 ok($model, 'MC16s 454 model') or die;
 ok($model->add_instrument_data($instrument_data), 'add inst data to model');
@@ -81,9 +76,9 @@ ok($model->add_instrument_data($instrument_data), 'add inst data to model');
 my $build = Genome::Model::Build::MetagenomicComposition16s->create(
     id => -1199,
     model => $model,
-    data_directory => $model->data_directory.'/build',
 );
 isa_ok($build, 'Genome::Model::Build::MetagenomicComposition16s::454');
+ok($build->get_or_create_data_directory, 'resolved data dir');
 
 my $example_build = Genome::Model::Build->create(
     model=> $model,

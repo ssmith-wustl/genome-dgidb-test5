@@ -67,10 +67,24 @@ class Genome::Model::Build {
         software_revision => { is => 'VARCHAR2', len => 1000 },
     ],
     has_many_optional => [
-        inputs           => { is => 'Genome::Model::Build::Input', reverse_as => 'build', 
-                              doc => 'Inputs assigned to the model when the build was created.' },
-        instrument_data  => { is => 'Genome::InstrumentData', via => 'inputs', to => 'value', is_mutable => 1, where => [ name => 'instrument_data' ], 
-                              doc => 'Instrument data assigned to the model when the build was created.' },
+        inputs => { 
+            is => 'Genome::Model::Build::Input', 
+            reverse_as => 'build', 
+            doc => 'Inputs assigned to the model when the build was created.' 
+        },
+        instrument_data_inputs => {
+            is => 'Genome::Model::Build::Input',
+            reverse_as => 'build',
+            where => [ name => 'instrument_data' ],
+        },
+        instrument_data  => { 
+            is => 'Genome::InstrumentData', 
+            via => 'inputs', 
+            to => 'value', 
+            is_mutable => 1, 
+            where => [ name => 'instrument_data' ], 
+            doc => 'Instrument data assigned to the model when the build was created.' 
+        },
         instrument_data_ids => { via => 'instrument_data', to => 'id', is_many => 1, },
         from_build_links => { is => 'Genome::Model::Build::Link', reverse_as => 'to_build', 
                               doc => 'bridge table entries where this is the \"to\" build(used to retrieve builds this build is \"from\")' },
@@ -166,13 +180,6 @@ sub create {
 
     my $self = $class->SUPER::create(@_);
     return unless $self;
-
-    # instrument data assignments - set first build id
-    my @ida = $self->model->instrument_data_assignments;
-    for my $ida ( @ida ) {
-        next if defined $ida->first_build_id;
-        $ida->first_build_id( $self->id )
-    }
     
     eval {
         # Give the model a chance to update itself prior to copying inputs from it
@@ -225,7 +232,7 @@ sub _copy_model_inputs {
     # will leave the build in an "unstartable" state that can be reviewed later.
     for my $input ($self->model->inputs) {
         eval {
-            my %params = map { $_ => $input->$_ } (qw/ name value_class_name value_id /);
+            my %params = map { $_ => $input->$_ } (qw/ name value_class_name value_id filter_desc /);
 
             # Resolve inputs pointing to a model to a build. 
             if($params{value_class_name}->isa('Genome::Model')) {
@@ -260,26 +267,6 @@ sub _copy_model_inputs {
         }
     }
 
-    # FIXME temporary - copy model instrument data as inputs, when all 
-    #  inst_data is an input, this can be removed
-    my @existing_inst_data = $self->instrument_data;
-    my @model_inst_data = $self->model->instrument_data;
-    for my $inst_data ( @model_inst_data ) {
-        # We may have added the inst data when adding the inputs
-        # Adding as input cuz of mock inst data
-        #print Data::Dumper::Dumper($inst_data);
-        next if grep { $inst_data->id eq $_->id } @existing_inst_data;
-        my %params = (
-            name => 'instrument_data',
-            value_class_name => $inst_data->class,
-            value_id => $inst_data->id,
-        );
-        unless ( $self->add_input(%params) ) {
-            $self->error_message("Can't add instrument data (".$inst_data->id.") to build.");
-            return;
-        }
-    }
-
     return 1;
 
 }
@@ -289,29 +276,13 @@ sub select_build_from_input_model {
     return $model->last_complete_build;
 }
 
-sub instrument_data_assignments {
-    my $self = shift;
-    my @idas = Genome::Model::InstrumentDataAssignment->get(
-        model_id => $self->model_id,
-        first_build_id => {
-            operator => '<=',
-            value => $self->build_id,
-        },
-    );
-    return @idas;
-}
-
 sub instrument_data_count {
     my $self = shift;
-
-    # Try inst data from inputs
     my @instrument_data = $self->instrument_data;
-    if ( @instrument_data ) {
+    if (@instrument_data) {
         return scalar(@instrument_data);
     }
-
-    # use first build id on model's ida for older builds
-    return scalar( $self->instrument_data_assignments );
+    return 0;
 }
 
 # why is this not a defined relationship above? -ss
@@ -425,60 +396,37 @@ sub calculate_estimated_kb_usage {
 # If the data directory is not set, resolving it requires making an allocation.  A build is unlikely to
 # make a new allocation at any other time, so a separate build instance method for allocating is not
 # provided.
-# TODO This method could really be simplified
-sub resolve_data_directory {
+sub get_or_create_data_directory {
     my $self = shift;
-    my $model = $self->model;
-    my $build_data_directory;
-    my $model_data_directory = $model->data_directory;
-    # TODO This check is site specific... what does it matter if the model path doesn't follow this pattern?
-    my $model_path_is_abnormal = defined($model_data_directory) && $model_data_directory !~ /\/gscmnt\/.*\/info\/(?:medseq\/)?.*/;
+    return $self->data_directory if $self->data_directory;
 
-    if($model->genome_model_id < 0 && $model_path_is_abnormal)
-    {
-        # The build is being created for an automated test; allocating for it would leave stray directories.
-        # Rather than relying on this if statement, tests should specify a build directory.
-        $build_data_directory = $model_data_directory . '/build' . $self->id;
-        warn "Please update this test to set build data_directory. (generated data_directory: \"$build_data_directory\")";
-        unless (Genome::Sys->create_directory($build_data_directory)) {
-            $self->error_message("Failed to create directory '$build_data_directory'");
-            die $self->error_message;
-        }
-    }
-    else
-    {
-        if ($model_path_is_abnormal) {
-            # why should this ever fail?
-            warn "The model data directory \"$model_data_directory\" follows an unexpected pattern!";
-        }
-    
-        my $allocation_path = 'model_data/' . $model->id . '/build'. $self->build_id;
-        my $kb_requested = $self->calculate_estimated_kb_usage;
-        unless ($kb_requested) {
-            die $self->error_message("Could not estimate kb usage for allocation!");
-        }
-    
-        my $disk_group_name = $model->processing_profile->_resolve_disk_group_name_for_build($self);
-        unless ($disk_group_name) {
-            die $self->error_message('Failed to resolve a disk group for a new build!');
-        }
-    
-        my $class = $self->class;
-        my $id = $self->id;
-        my $disk_allocation = Genome::Disk::Allocation->create(
-            disk_group_name => $disk_group_name,
-            allocation_path => $allocation_path,
-            kilobytes_requested => $kb_requested,
-            owner_class_name => $class,
-            owner_id => $id,
-        );
-        Carp::confess "Failed to create allocation for build!" unless $disk_allocation;
-   
-        $build_data_directory = $disk_allocation->absolute_path;
-        Genome::Sys->validate_existing_directory($build_data_directory);
+    my $allocation_path = 'model_data/' . $self->model->id . '/build'. $self->build_id;
+    my $kb_requested = $self->calculate_estimated_kb_usage;
+    unless ($kb_requested) {
+        $self->error_message("Could not estimate kb usage for allocation!");
+        return;
     }
 
-    return $build_data_directory;
+    my $disk_group_name = $self->processing_profile->_resolve_disk_group_name_for_build($self);
+    unless ($disk_group_name) {
+        $self->error_message('Failed to resolve a disk group for a new build!');
+        return;
+    }
+
+    my $disk_allocation = Genome::Disk::Allocation->create(
+        disk_group_name => $disk_group_name,
+        allocation_path => $allocation_path,
+        kilobytes_requested => $kb_requested,
+        owner_class_name => $self->class,
+        owner_id => $self->id,
+    );
+    unless ($disk_allocation) {
+        $self->error_message("Could not create allocation for build " . $self->__display_name__);
+        return;
+    }
+
+    $self->data_directory($disk_allocation->absolute_path);
+    return $self->data_directory;
 }
 
 sub reallocate {
@@ -566,14 +514,9 @@ sub start {
             Carp::croak "Build " . $self->__display_name__ . " could not be validated for start!\n" . join("\n", @msgs);
         }
 
-        # Creates an allocation that'll be used as the build's data directory (unless a data directory has been provided)
-        # TODO This logic should all be contained in resolve_data_directory, which should just return a path
-        unless ($self->data_directory) {
-            my $data_directory = $self->resolve_data_directory;
-            $self->data_directory($data_directory);
-            unless ($self->data_directory) {
-                Carp::croak "Build " . $self->__display_name__ . " could not resolve a data directory!";
-            }
+        # Either returns the already-set data directory or creates an allocation for the data directory
+        unless ($self->get_or_create_data_directory) {
+            Carp::croak "Build " . $self->__display_name__ . " failed to resolve a data directory!";
         }
 
         # Give builds an opportunity to do some initialization after the data directory has been resolved
@@ -874,11 +817,6 @@ sub _launch {
     else {
         my $user = getpwuid($<);
         $job_group_spec = ' -g /build2/' . $user;
-        # TODO: Remove the 'genotype microarray' special case. It's just meant to help track the fact that
-        # the models are running with job_dispatch => inline.
-        if ($self->type_name && $self->type_name eq 'genotype microarray') {
-            $job_group_spec = ' -g /build2/' . $user . '/genotype_microarray';
-        }
     }
 
     die "Bad params!  Expected server_dispatch and job_dispatch!" . Data::Dumper::Dumper(\%params) if %params;
@@ -1097,6 +1035,21 @@ sub fail {
         $self->error_message("Tried to resolve last complete build for model (".$self->model_id."), which should not return this build (".$self->id."), but did.");
         # FIXME soon - return here
         # return;
+    }
+
+    for my $error (@errors) {
+        $self->add_note(
+            header_text => 'Failed Stage',
+            body_text => $error->stage,
+        );
+        $self->add_note(
+            header_text => 'Failed Step',
+            body_text => $error->step,
+        );
+        $self->add_note(
+            header_text => 'Failed Error',
+            body_text => $error->error,
+        );
     }
     
     return 1;
@@ -1539,7 +1492,6 @@ sub add_from_build { # rename "add an underlying build" or something...
 
 sub delete {
     my $self = shift;
-    my %params = @_;
 
     # Abandon events
     $self->status_message("Abandoning events associated with build");
@@ -1557,24 +1509,6 @@ sub delete {
         $object->delete;
     }
 
-    # Re-point instrument data assigned first on this build to the next build.
-    $self->status_message("Pointing instrument data first assigned to this build to a subsequent build, if possible");
-    my ($next_build,@subsequent_builds) = Genome::Model::Build->get(
-        model_id => $self->model_id,
-        id => {
-            operator => '>',
-            value => $self->build_id,
-        },  
-    );
-    my $next_build_id = ($next_build ? $next_build->id : undef);
-    my @idas_fix = Genome::Model::InstrumentDataAssignment->get(
-        model_id => $self->model_id,
-        first_build_id => $self->build_id
-    );
-    for my $idas (@idas_fix) {
-        $idas->first_build_id($next_build_id);
-    }
-
     # Deallocate build directory, which will also remove it (unless no commit is on)
     my $disk_allocation = $self->disk_allocation;
     if ($disk_allocation) {
@@ -1582,13 +1516,6 @@ sub delete {
         unless ($disk_allocation->deallocate) {
             $self->warning_message('Failed to deallocate disk space.');
         }
-    }
-
-    # Remove model link
-    my $model_data_directory = $self->model->data_directory;
-    if ($model_data_directory) {
-        my $model_build_symlink = $model_data_directory . '/build' . $self->build_id;
-        unlink($model_build_symlink) if (-e $model_build_symlink);
     }
     
     # FIXME Don't know if this should go here, but then we would have to call success and abandon through the model
@@ -1876,6 +1803,16 @@ sub snapshot_revision {
     my @inc;
     for my $inc (@orig_inc) {
         push @inc, grep { $inc eq $_ } @libs;
+    }
+
+    @inc = $self->_uniq(@inc);
+
+    # if the only path is like /gsc/scripts/opt/genome/snapshots/genome-1213/lib/perl then just call it genome-1213
+    # /gsc/scripts/opt/genome/snapshots/genome-1213/lib/perl -> genome-1213
+    # /gsc/scripts/opt/genome/snapshots/custom/genome-foo/lib/perl -> custom/genome-foo
+    if (@inc == 1 and $inc[0] =~ /^\/gsc\/scripts\/opt\/genome\/snapshots\//) {
+        $inc[0] =~ s/^\/gsc\/scripts\/opt\/genome\/snapshots\///;
+        $inc[0] =~ s/\/lib\/perl$//;
     }
 
     return join(':', @inc);

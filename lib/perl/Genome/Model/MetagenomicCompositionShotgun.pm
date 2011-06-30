@@ -55,6 +55,8 @@ class Genome::Model::MetagenomicCompositionShotgun {
         contamination_screen_reference => {
             is => 'Genome::Model::Build::ImportedReferenceSequence',
             is_mutable => 1,
+            is_optional => 1,
+            is_many => 1,
             via => 'inputs',
             to => 'value',
             where => [name => 'contamination_screen_reference', value_class_name => 'Genome::Model::Build::ImportedReferenceSequence'],
@@ -69,6 +71,7 @@ class Genome::Model::MetagenomicCompositionShotgun {
         first_viral_verification_alignment_reference => {
             is => 'Genome::Model::Build::ImportedReferenceSequence',
             is_mutable => 1,
+            is_optional => 1,
             via => 'inputs',
             to => 'value',
             where => [name => 'first_viral_verification_alignment_reference ', value_class_name => 'Genome::Model::Build::ImportedReferenceSequence'],
@@ -76,6 +79,7 @@ class Genome::Model::MetagenomicCompositionShotgun {
         second_viral_verification_alignment_reference => {
             is => 'Genome::Model::Build::ImportedReferenceSequence',
             is_mutable => 1,
+            is_optional => 1,
             via => 'inputs',
             to => 'value',
             where => [name => 'second_viral_verification_alignment_reference ', value_class_name => 'Genome::Model::Build::ImportedReferenceSequence'],
@@ -90,6 +94,7 @@ class Genome::Model::MetagenomicCompositionShotgun {
         },
         _contamination_screen_alignment_model => {
             is => 'Genome::Model::ReferenceAlignment',
+            is_optional => 1,
             via => 'from_model_links',
             to => 'from_model',
             where => [role => 'contamination_screen_alignment_model'],
@@ -103,18 +108,21 @@ class Genome::Model::MetagenomicCompositionShotgun {
         },
         _unaligned_metagenomic_alignment_model => {
             is => 'Genome::Model::ReferenceAlignment',
+            is_optional => 1,
             via => 'from_model_links',
             to => 'from_model',
             where => [role => 'unaligned_metagenomic_alignment_model'],
         },
         _first_viral_verification_alignment_model => {
             is => 'Genome::Model::ReferenceAlignment',
+            is_optional => 1, 
             via => 'from_model_links',
             to => 'from_model',
             where => [role => 'first_viral_verification_alignment_model'],
         },
         _second_viral_verification_alignment_model => {
             is => 'Genome::Model::ReferenceAlignment',
+            is_optional => 1, 
             via => 'from_model_links',
             to => 'from_model',
             where => [role => 'second_viral_verification_alignment_model'],
@@ -138,24 +146,11 @@ sub delete {
 sub create{
     my $class = shift;
 
-    $class->status_message("Beginning creation of metagenomic-composition-shotgun model");
-
     my %params = @_;
-    my $contamination_screen_reference = delete $params{contamination_screen_reference};
-    my $metagenomic_references = delete $params{metagenomic_references};
-    my $unaligned_metagenomic_alignment_reference = delete $params{unaligned_metagenomic_alignment_reference};
-    my $first_viral_verification_alignment_reference = delete $params{first_viral_verification_alignment_reference};
-    my $second_viral_verification_alignment_reference = delete $params{second_viral_verification_alignment_reference};
-
     my $self = $class->SUPER::create(%params);
     return unless $self;
 
-    $self->contamination_screen_reference($contamination_screen_reference);
-    for my $metagenomic_reference (@$metagenomic_references) {
-        $self->add_metagenomic_reference($metagenomic_reference);
-    }
-    if($self->contamination_screen_pp)
-    {
+    if($self->contamination_screen_pp) {
         my $contamination_screen_model = $self->_create_underlying_contamination_screen_model();
         unless ($contamination_screen_model) {
             $self->error_message("Error creating contamination screening model!");
@@ -173,7 +168,6 @@ sub create{
     }
 
     if ($self->unaligned_metagenomic_alignment_pp) {
-        $self->unaligned_metagenomic_alignment_reference($unaligned_metagenomic_alignment_reference); 
         my $unaligned_metagenomic_alignment_model = $self->_create_unaligned_metagenomic_alignment_model();
         unless ($unaligned_metagenomic_alignment_model) {
             $self->error_message("Error creating unaligned metagenomic alignment model!");
@@ -183,7 +177,6 @@ sub create{
     }
 
     if ($self->first_viral_verification_alignment_pp) {
-        $self->first_viral_verification_alignment_reference($first_viral_verification_alignment_reference); 
         my $first_viral_verification_alignment_model = $self->_create_first_viral_verification_alignment_model();
         unless ($first_viral_verification_alignment_model) {
             $self->error_message("Error creating first viral verification alignment model!");
@@ -193,7 +186,6 @@ sub create{
     }
 
     if ($self->second_viral_verification_alignment_pp) {
-        $self->second_viral_verification_alignment_reference($second_viral_verification_alignment_reference); 
         my $second_viral_verification_alignment_model = $self->_create_second_viral_verification_alignment_model();
         unless ($second_viral_verification_alignment_model) {
             $self->error_message("Error creating second viral verification alignment model!");
@@ -202,7 +194,6 @@ sub create{
         }
     }
 
-    $self->status_message("Metagenomic composition shotgun model ".$self->name." created successfully");
     return $self;
 }
 
@@ -247,7 +238,7 @@ sub _create_underlying_metagenomic_models {
 
         push @new_objects, $metagenomic_alignment_model;
         $self->add_from_model(from_model=>$metagenomic_alignment_model, role=>'metagenomic_alignment_model');
-        $self->status_message("Created metagenomic alignment model ".$metagenomic_alignment_model->name);
+        $self->status_message("Created metagenomic alignment model ".$metagenomic_alignment_model->__display_name__);
     }
 
     return @new_objects;
@@ -296,7 +287,7 @@ sub _create_model_for_type {
     }
 
     $self->add_from_model(from_model=> $model, role=>$type.'_alignment_model');
-    $self->status_message("Created $type model ".$model->name);
+    $self->status_message("Created $type model ".$model->__display_name__);
 
     return $model;
 }

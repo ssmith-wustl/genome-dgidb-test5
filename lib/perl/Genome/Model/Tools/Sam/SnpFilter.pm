@@ -20,9 +20,9 @@ class Genome::Model::Tools::Sam::SnpFilter {
             is => 'String',
             doc => 'This is an optional place to stick sn(p|v)s which have failed to pass this filter.',
         },
-        max_map_qual => {
+        min_mapping_quality => {
             is  => 'Integer',
-            doc => 'max mapping quality of the reads covering the SNP, default 40',
+            doc => 'min mapping quality of the reads covering the SNP, default 40',
             default => 40,
         },
         min_cns_qual => {
@@ -143,7 +143,7 @@ sub execute {
         }
         #next if $indel_filter{$chr,$pos};
         
-        my $pass = 1 if $map_qual >= $self->max_map_qual and $rd_depth >= $self->min_read_depth and $rd_depth <= $self->max_read_depth;
+        my $pass = 1 if $map_qual >= $self->min_mapping_quality and $rd_depth >= $self->min_read_depth and $rd_depth <= $self->max_read_depth;
         $pass = 0 unless $cns_qual >= $self->min_cns_qual || $snp_qual >= $self->min_snp_qual;
 
         unless( $pass ) {

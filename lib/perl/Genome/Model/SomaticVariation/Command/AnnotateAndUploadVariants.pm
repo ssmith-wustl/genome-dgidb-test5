@@ -140,9 +140,51 @@ sub execute{
             File::Copy::copy($variant_file, $uploaded_file);
         }
     }
-
+    
     #upload variants
 
+    ##upload metrics
+    eval{
+        my ($tier3_snvs, $tier4_snvs, $tier3_indels, $tier4_indels, $svs);
+        $tier3_snvs = $build->data_set_path("effects/snvs.hq.novel.tier3",$version,'bed');
+        $tier4_snvs = $build->data_set_path("effects/snvs.hq.novel.tier4",$version,'bed');
+        $tier3_indels = $build->data_set_path("effects/indels.hq.novel.tier3",$version,'bed');
+        $tier4_indels = $build->data_set_path("effects/indels.hq.novel.tier4",$version,'bed');
+
+        $svs = $build->data_set_path("variants/svs.hq",$version,'bed');
+
+        my ($number_of_tier1_snvs, $number_of_tier2_snvs, $number_of_tier3_snvs, $number_of_tier4_snvs, $number_of_tier1_indels, $number_of_tier2_indels, $number_of_tier3_indels, $number_of_tier4_indels, $number_of_svs);
+        if($build->snv_detection_strategy) {
+            chomp($number_of_tier1_snvs = `wc -l $tier1_snvs | cut -f 1 -d' '`);
+            chomp($number_of_tier2_snvs = `wc -l $tier2_snvs | cut -f 1 -d' '`);
+            chomp($number_of_tier3_snvs = `wc -l $tier3_snvs | cut -f 1 -d' '`);
+            chomp($number_of_tier4_snvs = `wc -l $tier4_snvs | cut -f 1 -d' '`);
+            $build->set_metric("tier1_snv_count", $number_of_tier1_snvs);
+            $build->set_metric("tier2_snv_count", $number_of_tier2_snvs);
+            $build->set_metric("tier3_snv_count", $number_of_tier3_snvs);
+            $build->set_metric("tier4_snv_count", $number_of_tier4_snvs);
+        }
+
+
+        if($build->indel_detection_strategy) {
+            chomp($number_of_tier1_indels = `wc -l $tier1_indels | cut -f 1 -d' '`);
+            chomp($number_of_tier2_indels = `wc -l $tier2_indels | cut -f 1 -d' '`);
+            chomp($number_of_tier3_indels = `wc -l $tier3_indels | cut -f 1 -d' '`);
+            chomp($number_of_tier4_indels = `wc -l $tier4_indels | cut -f 1 -d' '`);
+            $build->set_metric("tier1_indel_count", $number_of_tier1_indels);
+            $build->set_metric("tier2_indel_count", $number_of_tier2_indels);
+            $build->set_metric("tier3_indel_count", $number_of_tier3_indels);
+            $build->set_metric("tier4_indel_count", $number_of_tier4_indels);
+        }
+
+        if($build->sv_detection_strategy) {
+            chomp($number_of_svs = `wc -l $svs | cut -f 1 -d' '`); 
+            $build->set_metric("sv_count", $number_of_svs);
+        }
+    }; 
+    $self->status_message("Metric setting problem: $@") if $@;
+
+     
     return 1;
 }
 

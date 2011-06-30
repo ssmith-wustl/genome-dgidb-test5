@@ -67,8 +67,8 @@ sub setup_test_builds {
         sequencing_platform => 'solexa',
         dna_type => 'cdna',
         read_aligner_name => 'bwa',
-        snv_detector_name => 'samtools',
-        indel_detector_params => '-test Genome/Model/Convergence.t',
+        snv_detection_strategy => 'samtools',
+        indel_detection_strategy => '-test Genome/Model/Convergence.t',
     ); 
     ok($test_profile, 'created test processing profile');
     
@@ -89,7 +89,6 @@ sub setup_test_builds {
         subject_name => 'test_subject',
         subject_type => 'sample_name',
         processing_profile_id => $test_profile->id,
-        data_directory => $tmpdir,
         reference_sequence_build => $reference_sequence_build,
     );
     ok($test_model, 'created test model');

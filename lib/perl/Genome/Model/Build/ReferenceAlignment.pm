@@ -164,7 +164,7 @@ sub instrument_data_assigned {
     unless (@instrument_data) {
         push @tags, UR::Object::Tag->create(
             type => 'error',
-            properties => 'instrument_data',
+            properties => ['instrument_data'],
             desc => 'No instrument data assigned to build',
         );
     }
@@ -216,13 +216,53 @@ sub check_genotype_input {
         unless ($self->genotype_microarray_build) {
             push @tags, UR::Object::Tag->create(
                 type => 'error',
-                properties => 'genotype_microarray_build',
+                properties => ['genotype_microarray_build'],
                 desc => 'No genotype microarray build input found',
             );
         }
     }
 
     return @tags;
+}
+
+sub alignment_results_for_instrument_data {
+    my $self = shift;
+    my $instrument_data = shift;
+    my $model = $self->model;
+    my $processing_profile = $model->processing_profile;
+    my $input = $model->input_for_instrument_data($instrument_data);
+
+    if ($processing_profile->can('results_for_instrument_data_input')) {
+        my @results;
+        # TODO There's gotta be a better way to get segment info
+        my @align_reads_events = Genome::Model::Event::Build::ReferenceAlignment::AlignReads->get(
+            instrument_data_id => $instrument_data->id,
+            build_id => $self->id,
+        );
+
+        if (@align_reads_events) {
+            for my $align_reads_event (@align_reads_events) {
+                my %segment_info = ();
+                if ($align_reads_event->instrument_data_segment_type) {
+                    $segment_info{instrument_data_segment_type} = $align_reads_event->instrument_data_segment_type;
+                    $segment_info{instrument_data_segment_id} = $align_reads_event->instrument_data_segment_id;
+                };
+                push @results, $processing_profile->results_for_instrument_data_input($input, %segment_info);
+            }
+            return @results;
+        } else {
+            return $processing_profile->results_for_instrument_data_input($input);
+        }
+    }
+
+    return;
+}
+
+sub alignment_directory_for_instrument_data {
+    my ($self, $instrument_data) = @_;
+    my ($result) = $self->alignment_results_for_instrument_data($instrument_data);
+    return unless $result;
+    return $result->output_dir;
 }
 
 sub gold_snp_build {
@@ -337,8 +377,8 @@ sub compare_snps_file {
 
 sub get_alignments {
     my $self = shift;
-    return map { $self->model->processing_profile->results_for_instrument_data_assignment($_) }
-        $self->instrument_data_assignments;
+    return map { $self->model->processing_profile->results_for_instrument_data_inputs($_) }
+        $self->instrument_data_inputs;
 }
 
 sub get_alignment_bams {
@@ -375,11 +415,11 @@ sub calculate_estimated_kb_usage {
 
 sub calculate_input_base_counts_after_trimq2 {
     my $self = shift;
-    my @idas = $self->instrument_data_assignments;
+    my @instrument_data = $self->instrument_data;
     my ($total_ct, $total_trim_ct) = (0, 0);
     
-    for my $ida (@idas) {
-        for my $res ($ida->results) {
+    for my $data (@instrument_data) {
+        for my $res ($self->alignment_results_for_instrument_data($data)) {
             my ($ct, $trim_ct) = $res->calculate_base_counts_after_trimq2;
             return unless $ct and $trim_ct;
             $total_ct += $ct;
@@ -651,9 +691,8 @@ sub _fetch_merged_alignment_result {
     my $self = shift;
     my $mode = shift;
 
-    my @idas = $self->instrument_data_assignments;
-
-    my ($params) = $self->processing_profile->params_for_merged_alignment($self, @idas);
+    my @instrument_data_inputs = $self->instrument_data_inputs;
+    my ($params) = $self->processing_profile->params_for_merged_alignment($self, @instrument_data_inputs);
     my $alignment = Genome::InstrumentData::AlignmentResult::Merged->$mode(
         %$params,
     );

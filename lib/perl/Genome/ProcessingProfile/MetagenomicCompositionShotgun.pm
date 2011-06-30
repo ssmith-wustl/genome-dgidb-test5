@@ -5,6 +5,7 @@ use warnings;
 
 use Genome;
 use File::Basename;
+use File::Path 'make_path';
 use Sys::Hostname;
 use Data::Dumper;
 
@@ -31,12 +32,12 @@ class Genome::ProcessingProfile::MetagenomicCompositionShotgun {
             is => 'Integer',
             doc => 'processing profile id to use for first viral verification alignment',
             is_optional => 1,
-        }, 
+        },
         second_viral_verification_alignment_pp_id => {
             is => 'Integer',
             doc => 'processing profile id to use for first viral verification alignment',
             is_optional => 1,
-        }, 
+        },
         merging_strategy => {
             is => 'Text',
             valid_values => [qw/ best_hit bwa /],
@@ -44,7 +45,7 @@ class Genome::ProcessingProfile::MetagenomicCompositionShotgun {
         },
         dust_unaligned_reads => {
             is => 'Boolean',
-            default_value => 1, 
+            default_value => 1,
             doc => 'flag determining if dusting is performed on unaligned reads from contamination screen step',
         },
         n_removal_threshold => {
@@ -96,16 +97,16 @@ class Genome::ProcessingProfile::MetagenomicCompositionShotgun {
             id_by => 'first_viral_verification_alignment_pp_id',
             doc => 'processing profile to use for first viral verification alignment',
             is_optional => 1,
-        }, 
+        },
         _second_viral_verification_alignment_pp=> {
             is => 'Genome::ProcessingProfile::ReferenceAlignment',
             id_by => 'second_viral_verification_alignment_pp_id',
             doc => 'processing profile to use for first viral verification alignment',
             is_optional => 1,
-        }, 
+        },
         sequencing_platform => {
             doc => 'The sequencing platform from whence the model data was generated',
-            calculate_from => ['_contamination_screen_pp'], 
+            calculate_from => ['_contamination_screen_pp'],
             calculate => q|
                         $_contamination_screen_pp->sequencing_platform;                        |,
         },
@@ -139,22 +140,22 @@ sub _execute_build {
         }
 
         # ENSURE WE HAVE INSTRUMENT DATA
-        my @assignments = $model->instrument_data_assignments;
+        my @assignments = $model->instrument_data_inputs;
         if (@assignments == 0) {
             die $self->error_message("NO INSTRUMENT DATA ASSIGNED!");
         }
 
         # ASSIGN ANY NEW INSTRUMENT DATA TO THE CONTAMINATION SCREENING MODEL
         for my $assignment (@assignments) {
-            my $instrument_data = $assignment->instrument_data;
-            my $screen_assignment = $screen_model->instrument_data_assignment(
-                instrument_data_id => $instrument_data->id
+            my $instrument_data = $assignment->value;
+            my $screen_assignment = $screen_model->instrument_data_input(
+                value_id => $instrument_data->id #TODO inst data switch
             );
             if ($screen_assignment) {
                 $self->status_message("Instrument data " . $instrument_data->__display_name__ . " is already assigned to the screening model");
             }
             else {
-                $screen_assignment = 
+                $screen_assignment =
                 $screen_model->add_instrument_data(
                     value => $instrument_data,
                     filter_desc => $assignment->filter_desc,
@@ -174,7 +175,7 @@ sub _execute_build {
         ($screen_build) = $self->build_if_necessary_and_wait($screen_model);
         my ($prev_from_build) = grep {$_->id eq $screen_build->id} $build->from_builds();
         $build->add_from_build(from_build=>$screen_build, role=>'contamination_screen_alignment_build') unless $prev_from_build;;
-    
+
     }else{
         $self->status_message("Skipping contamination screen for instrument data");
     }
@@ -183,13 +184,13 @@ sub _execute_build {
 
     my @imported_instrument_data_for_metagenomic_models;
     if ($self->_contamination_screen_pp){
-   
+
         #if we contamination screened, we'll use the alignment results, extract unaligned reads to a fastq and then post-process, create new imported instrument data
         $self->status_message("Processing and importing instrument data for any new unaligned reads");
-        @screened_assignments = $screen_model->instrument_data_assignments;
+        @screened_assignments = $screen_model->instrument_data_inputs;
         my @post_processed_unaligned_reads;
         for my $assignment (@screened_assignments) {
-            my @alignment_results = $assignment->results($screen_build);
+            my @alignment_results = $screen_build->alignment_results_for_instrument_data($assignment->value);
             if (@alignment_results > 1) {
                 $self->error_message( "Multiple alignment_results found for instrument data assignment: " . $assignment->__display_name__);
                 return;
@@ -209,13 +210,13 @@ sub _execute_build {
             Carp::confess("The count of post-processed unaligned reads does not match the count of screened instrument data assignments.");
         }
         @imported_instrument_data_for_metagenomic_models = @post_processed_unaligned_reads;
-    
+
     }else{
         #if skipping contamination_screen, we need to extract the originally assigned imported instrument data and process and reimport it for the metagenomic screen.
         #sra data is stored in fastq/sangerqual format, so these just need to be extracted, dusted, n-removed
-        my @sra_assignments = $build->instrument_data_assignments; 
+        my @sra_assignments = $build->instrument_data_inputs;
         for my $assignment(@sra_assignments){
-            my @post_processed_reads = $self->_process_sra_instrument_data($assignment->instrument_data);
+            my @post_processed_reads = $self->_process_sra_instrument_data($assignment->value);
             #TODO, this doesn't need to be an array of array refs, since we should get a 1 to 1 sra inst_data to post-processed imported inst_data, but this is how it's done in the original pipeline, where the 1 to 1 convention doesn't hold.  We're sticking to this standard for now.
             push @imported_instrument_data_for_metagenomic_models, \@post_processed_reads;
         }
@@ -225,22 +226,20 @@ sub _execute_build {
 
     # ASSIGN THE POST-PROCESSED READS TO THE METAGENOMIC MODELS
     my @metagenomic_models = $model->_metagenomic_alignment_models;
-    $DB::single = 1;
     for my $metagenomic_model (@metagenomic_models) {
         my %assignments_expected;
         for my $n (0..$#imported_instrument_data_for_metagenomic_models) {
             my $prev_assignment = $screened_assignments[$n];
             my $post_processed_instdata_for_prev_assignment = $imported_instrument_data_for_metagenomic_models[$n];
             for my $instrument_data (@$post_processed_instdata_for_prev_assignment) {
-                my $metagenomic_assignment = $metagenomic_model->instrument_data_assignment(
-                    instrument_data_id => $instrument_data->id
+                my $metagenomic_assignment = $metagenomic_model->instrument_data_input(
+                    value_id => $instrument_data->id #TODO inst data switch
                 );
                 if ($metagenomic_assignment) {
                     $self->status_message("Instrument data " . $instrument_data->__display_name__ . " is already assigned to model " . $metagenomic_model->__display_name__);
                 }
                 else {
-                    $DB::single = 1;
-                    $metagenomic_assignment = 
+                    $metagenomic_assignment =
                     $metagenomic_model->add_instrument_data(
                         value => $instrument_data,
                         filter_desc => $prev_assignment->filter_desc,
@@ -262,10 +261,9 @@ sub _execute_build {
 
         # ensure there are no other odd assignments on the model besides those expected
         # this can happen if instrument-data is re-processed (deleted)
-        $DB::single=1;
-        for my $assignment ($metagenomic_model->instrument_data_assignments) {
+        for my $assignment ($metagenomic_model->instrument_data_inputs) {
             unless ($assignments_expected{$assignment->id}) {
-                my $instrument_data = $assignment->instrument_data;
+                my $instrument_data = $assignment->instrument_data; #TODO inst data switch to value
                 if ($instrument_data) {
                     my ($derived_from) = $instrument_data->original_data_path =~ m{^/tmp/(?:unaligned_reads/)?(\d+)}; 
                     #if unaligned reads is in the data path, the id may be an instrument data id(deprecated way of storing original data path), or an alignment result id, here we will figure out which and return the derived from instrument data id
@@ -279,9 +277,9 @@ sub _execute_build {
                     }
                     unless (grep {$derived_from eq $_} @mcs_instrument_data_ids){
                         $self->error_message(
-                            "Odd assignment found on model " 
-                            . $metagenomic_model->__display_name__ 
-                            . " for instrument data " 
+                            "Odd assignment found on model "
+                            . $metagenomic_model->__display_name__
+                            . " for instrument data "
                             . $instrument_data->__display_name__
                         );
                         Carp::confess($self->error_message);
@@ -289,8 +287,8 @@ sub _execute_build {
                 }
                 else {
                     $self->warning_message(
-                        "Odd assignment found on model " 
-                        . $model->__display_name__ 
+                        "Odd assignment found on model "
+                        . $model->__display_name__
                         . " for MISSING instrument data.  Deleting the assignment."
                     );
                     $assignment->delete;
@@ -311,7 +309,7 @@ sub _execute_build {
     if ($self->contamination_screen_pp_id){
         my ($screen_bam, $screen_flagstat) = $self->get_bam_and_flagstat_from_build($screen_build);
 
-        unless ($screen_bam and $screen_flagstat){ 
+        unless ($screen_bam and $screen_flagstat){
             die $self->error_message("Bam or flagstat undefined for contamination screen build(screen bam: $screen_bam, screen flagstat: $screen_flagstat) ");
         }
         unless (-e $screen_bam and -e $screen_flagstat){
@@ -369,16 +367,16 @@ sub _execute_build {
     my @realigned_instrument_data;
     my %metagenomic_instrument_data_to_alignment;
     if ($self->_unaligned_metagenomic_alignment_pp) {
+        $DB::single = 1;
         for my $metagenomic_alignment_build ($build->_metagenomic_alignment_builds){
             for my $alignment_result ($metagenomic_alignment_build->get_alignments){
                 my $instrument_data_id = $alignment_result->instrument_data->id;
-                $metagenomic_instrument_data_to_alignment{$instrument_data_id} ||= [];
-                push @{$metagenomic_instrument_data_to_alignment{$instrument_data_id}}, $alignment_result->id;
+                $metagenomic_instrument_data_to_alignment{$instrument_data_id} = $alignment_result->id;
             }
         }
 
         #EXTRACT UNALIGNED READS FROM METAGENOMIC ALIGNMENT AND IMPORT NEW INSTRUMENT DATA(1)
-        my ($orig_data_paths_to_unaligned_fastq_files) = $self->extract_unaligned_reads_from_bam($final_metagenomic_bam, \%metagenomic_instrument_data_to_alignment); 
+        my ($orig_data_paths_to_unaligned_fastq_files) = $self->extract_unaligned_reads_from_bam($final_metagenomic_bam, \%metagenomic_instrument_data_to_alignment);
         # $original_data_path_to_fastq_files{$original_data_path}->{file} = $file;_
         # $original_data_path_to_fastq_files{$original_data_path}->{instrument_data_id} = $instrument_data_id;
         my @unaligned_instrument_data = $self->upload_instrument_data_and_unlock($orig_data_paths_to_unaligned_fastq_files, $locks_ref);
@@ -466,7 +464,7 @@ sub _execute_build {
     );
 
     unless ($self->contamination_screen_pp_id){
-        $meta_report_properties{include_fragments} = 1; 
+        $meta_report_properties{include_fragments} = 1;
     }
 
     if ($self->include_taxonomy_report){
@@ -494,7 +492,7 @@ sub _execute_build {
 
 sub merge_metagenomic_bams{
     my ($self, $meta_bams, $sorted_bam) = @_;
-    if (-e $sorted_bam and -e $sorted_bam.".OK"){  
+    if (-e $sorted_bam and -e $sorted_bam.".OK"){
         $self->status_message("sorted metagenomic merged bam already produced, skipping");
     }else{
         my $merged_bam = $sorted_bam.".name_sorted.bam";
@@ -580,9 +578,11 @@ sub extract_reads_from_bam {
     }
 
     my @files = glob("$output_dir/*/*_sequence.txt");
-    
+
 
     my %original_data_path_to_fastq_files;
+
+    my $dir = Genome::Sys->create_temp_directory();
 
     # Create a hash to map original_data_path -- (to be used when uploading , describing where the reads came from (which alignment result) and what they are, (aligned on unaligned) )
     # -- to the original location of the file, and the original instrument data id it came from
@@ -595,7 +595,8 @@ sub extract_reads_from_bam {
         } else {
             $read_type = "unaligned_reads";
         }
-        my $part="/tmp/$read_type/$alignment_result";
+        my $part = "$dir/$read_type/$alignment_result";
+        make_path($part);
         if ($pe_segment){
             my $original_data_path = "$part/s_".$lane."_1_sequence.txt," . "$part/s_".$lane."_2_sequence.txt";
             $original_data_path_to_fastq_files{$original_data_path}->{file}->{$pe_segment} = $file;
@@ -651,6 +652,7 @@ sub get_imported_instrument_data_or_upload_paths {  #TODO not finished, not curr
 }
 
 sub upload_instrument_data_and_unlock {
+    $DB::single=1;
     my ($self, $orig_data_paths_to_fastq_files, $locks_ref) = @_;
     #TODO: Actually use locks.
     my @locks;# = @$locks_ref;
@@ -659,17 +661,29 @@ sub upload_instrument_data_and_unlock {
     my @instrument_data;
     for my $original_data_path (keys %$orig_data_paths_to_fastq_files) {
         # If it is paired end
-        if( exists $orig_data_paths_to_fastq_files->{$original_data_path}->{file}->{1} && exists $orig_data_paths_to_fastq_files->{$original_data_path}->{file}->{2}) {
+        if ($original_data_path =~ /,/) {
             my ($original_data_path_1, $original_data_path_2) = split ",", $original_data_path;
             Genome::Sys->create_symlink($orig_data_paths_to_fastq_files->{$original_data_path}->{file}->{1}, $original_data_path_1);
             Genome::Sys->create_symlink($orig_data_paths_to_fastq_files->{$original_data_path}->{file}->{2}, $original_data_path_2);
+            if(! -s $original_data_path_1) {
+                $self->warning_message('$original_data_path_1 is empty');
+                next;
+            }
+            if(! -s $original_data_path_2) {
+                $self->warning_message('$original_data_path_2 is empty');
+                next;
+            }
         } else {
             Genome::Sys->create_symlink($orig_data_paths_to_fastq_files->{$original_data_path}->{file}, $original_data_path);
+            if(! -s $original_data_path) {
+                $self->warning_message('$original_data_path is empty');
+                next;
+            }
         }
         # Link the actual file to the descriptive location in original_data_path
         my $orig_inst_data = Genome::InstrumentData->get($orig_data_paths_to_fastq_files->{$original_data_path}->{instrument_data_id});
 
-        $self->status_message("uploading new instrument data ..."); 
+        $self->status_message("uploading new instrument data ...");
         my @errors;
         my %properties_from_prior;
         for my $property_name (@properties_from_prior) {
@@ -699,9 +713,8 @@ sub upload_instrument_data_and_unlock {
         my $result = $command->execute();
         unless ($result) {
             die $self->error_message( "Error importing data from $original_data_path! " . Genome::InstrumentData::Command::Import::Fastq->error_message() );
-        }            
+        }
         $self->status_message("committing newly created imported instrument data");
-        $DB::single = 1;
         $self->status_message("UR_DBI_NO_COMMIT: ".$ENV{UR_DBI_NO_COMMIT});
         UR::Context->commit(); # warning: most code should NEVER do this in a pipeline
 
@@ -922,23 +935,18 @@ sub need_to_build {
         return 1;
     }
     $self->status_message("Found build: ".$build->__display_name__);
-    my @build_assignments = sort {$a cmp $b} $build->instrument_data_assignments;
-    my @model_assignments = sort {$a cmp $b} $model->instrument_data_assignments;
+    my @build_assignments = sort {$a->value->id cmp $b->value->id} $build->instrument_data_inputs;
+    my @model_assignments = sort {$a->value->id cmp $b->value->id} $model->instrument_data_inputs;
 
     if (@build_assignments ne @model_assignments) {
         $self->status_message("Assignment count does not match, build has ".scalar(@build_assignments)." but model has ".scalar(@model_assignments)."; need to build.");
         return 1;
     }
-    # Check for missing_first_build_id due to bug in UR caching
     for (my $i = 0; $i < @model_assignments; $i++) {
         my $build_assignment = $build_assignments[$i];
         my $model_assignment = $model_assignments[$i];
 
-        if (!$model_assignment->first_build_id) {
-            $self->status_message("Model has assignments without corresponding build; need to build.");
-            return 1;
-        }
-        if ($build_assignment->id ne $model_assignment->id) {
+        if ($build_assignment->value->id ne $model_assignment->value->id) {
             $self->status_message("Missing instrument data assignment; need to build.");
             return 1;
         }
@@ -1133,11 +1141,11 @@ sub _process_unaligned_reads {
         }
 
         # upload
-        $self->status_message("uploading new instrument data from the post-processed unaligned reads...");    
+        $self->status_message("uploading new instrument data from the post-processed unaligned reads...");
         my @properties_from_prior = qw/
-        run_name 
-        sequencing_platform 
-        median_insert_size 
+        run_name
+        sequencing_platform
+        median_insert_size
         sd_above_insert_size
         library_name
         sample_name
@@ -1185,9 +1193,8 @@ sub _process_unaligned_reads {
             my $result = $command->execute();
             unless ($result) {
                 die $self->error_message( "Error importing data from $original_data_path! " . Genome::InstrumentData::Command::Import::Fastq->error_message() );
-            }            
+            }
             $self->status_message("committing newly created imported instrument data");
-            $DB::single = 1;
             $self->status_message("UR_DBI_NO_COMMIT: ".$ENV{UR_DBI_NO_COMMIT});
             UR::Context->commit(); # warning: most code should NEVER do this in a pipeline
 
@@ -1213,7 +1220,7 @@ sub _process_unaligned_reads {
                 undef($pe_lock);
             }
             push @instrument_data, $new_instrument_data;
-        }        
+        }
         #return @instrument_data;
     };
 
@@ -1327,7 +1334,7 @@ sub _process_unaligned_fastq {
             fastq_file => $dusted_fastq,
             n_removed_file => $output_path,
             n_removal_threshold => $self->n_removal_threshold,
-        ); 
+        );
         unless ($cmd){
             die $self->error_message("couldn't create remove-n command for $dusted_fastq");
         }

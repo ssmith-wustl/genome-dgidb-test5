@@ -13,6 +13,39 @@ class Genome::Model::Build::DeNovoAssembly::Newbler {
     is => 'Genome::Model::Build::DeNovoAssembly',
 };
 
+#< Methods for new fastq processing pipeline >#
+sub read_processor_output_files_for_instrument_data {
+    my ( $self, $inst_data ) = @_;
+    my $file_name = $inst_data->id.'-input.fastq';
+    return $self->data_directory."/$file_name";
+}
+
+sub fastq_input_files {
+    my $self = shift;
+    my @fastq_files = glob( $self->data_directory."/*input.fastq" );
+    unless ( @fastq_files ) {
+        $self->error_message( "Did not find any input fastq files in build data directory" );
+        return;
+    }
+    #return join (',', map{$_} @fastq_files );
+    return @fastq_files;
+}
+
+sub existing_assembler_input_files {
+    my $self = shift;
+    return grep { -s $_ } $self->fastq_input_files;
+}
+
+sub stats_file {
+    return $_[0]->data_directory.'/consed/edit_dir/stats.txt';
+}
+
+sub set_metrics {
+    my $self = shift;
+    $self->status_message( "Metrics not yet set for newbler assemblies" );
+    return;
+}
+
 #< Files / Dirs >#
 sub assembly_directory {
     return $_[0]->data_directory.'/assembly';

@@ -41,25 +41,24 @@ else {
 my @cases = (
     {
         run => "music clinical-correlation \n"
-            . " --numeric-clinical-data-file $input_dir/clinical_data/tcga_OV_clinical_clean.csv.maf_samples.numeric.withNA.csv \n"
-            . " --bam-list $input_dir/316_sample_list \n"
-            . " --maf-file $input_dir/maf/tcga_ov_maf.csv.sample_name_shortened.somatic.nonsilent \n"
-            . " --output-file $actual_output_dir/num_clin/tcga_ov_maf.csv.sample_name_shortened.somatic.nonsilent.num_cor \n"
+            . " --numeric-clinical-data-file $input_dir/clinical_data/tcga.numer.clin.data \n"
+            . " --bam-list $input_dir/tcga.numer.clin.data.samples \n"
+            . " --maf-file $input_dir/maf/tcga.numer.clin.data.maf \n"
+            . " --output-file $actual_output_dir/num_clin/tcga.numer.clin.data.correlation \n"
             . " --genetic-data-type gene",
         expect => [
-            'num_clin/tcga_ov_maf.csv.sample_name_shortened.somatic.nonsilent.num_cor.numeric' 
+            'num_clin/tcga.numer.clin.data.correlation.numeric'
         ],
     },
     {
         run => "music clinical-correlation\n"
-          # . " --clinical-data-file $input_dir/clinical_data/tcga_OV_clinical_clean.csv.maf_samples.categorical.withNA.csv \n"
-            . " --categorical-clinical-data-file $input_dir/clinical_data/tcga.categ.clin.data.vital.status \n"
-            . " --bam-list $input_dir/50_sample_list \n"
-            . " --maf-file $input_dir/maf/tcga.categ.clin.data.vital.status.maf \n"
-            . " --output-file $actual_output_dir/categ_clin/tcga.categ.clin.data.vital.status.class_correlation \n"
+            . " --categorical-clinical-data-file $input_dir/clinical_data/tcga.categ.clin.data \n"
+            . " --bam-list $input_dir/tcga.categ.clin.data.samples \n"
+            . " --maf-file $input_dir/maf/tcga.categ.clin.data.maf \n"
+            . " --output-file $actual_output_dir/categ_clin/tcga.categ.clin.data.correlation \n"
             . " --genetic-data-type gene",
         expect => [
-            'categ_clin/tcga.categ.clin.data.vital.status.class_correlation.categorical'
+            'categ_clin/tcga.categ.clin.data.correlation.categorical'
         ],
     },
     {
@@ -70,11 +69,11 @@ my @cases = (
         expect => [
             'short_maf.cosmic_omim'
         ],
-    }, 
+    },
 );
 
 # pre-determine how many tests will run so the test harness knows if we exit early
-my $tests = 0; 
+my $tests = 0;
 for my $case (@cases) {
     next if $case->{skip};
     my $expect = $case->{expect};
@@ -91,7 +90,7 @@ my $n = 0;
 for my $case (@cases) {
     my $cmd = $case->{run};
     my $expect = $case->{expect};
-    
+
     $n++;
     note("use case $n: $cmd");
     if (my $msg = $case->{skip}) {
@@ -121,9 +120,9 @@ for my $case (@cases) {
     for my $expect_file (@$expect) {
         my $expect_full_path = $expected_output_dir . '/'. $expect_file;
         my $actual_full_path = $actual_output_dir . '/' . $expect_file;
-        
+
         ok(-e $actual_full_path, " case $n has expected output file $expect_file") or next;
-        
+
         my @diff = `diff -u $expect_full_path $actual_full_path`;
         my $diff_output;
         if (@diff > 20) {
@@ -136,5 +135,3 @@ for my $case (@cases) {
             or diag("\$ diff $expect_full_path $actual_full_path\n" . $diff_output . "\n");
     }
 }
-
-

@@ -174,6 +174,17 @@ sub _use_model_subclasses {
     return 1;
 }
 
+
+sub should_use_alignment_pd {
+    my $self = shift;
+    my $model = shift;
+    my $username = Genome::Sys->username;
+    my $model_username = ($model ? $model->user_name : '');
+
+    return ($username =~ /^apipe/ or $model_username =~ /^apipe/);
+}
+
+
 1;
 
 =pod

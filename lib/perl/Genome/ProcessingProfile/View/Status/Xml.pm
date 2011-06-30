@@ -33,7 +33,6 @@ class Genome::ProcessingProfile::View::Status::Xml {
                         'subject_id',
                         'subject_class_name',
                         'is_default',
-                        'data_directory',
                         'creation_date',
                         'user_name',
                     ],

@@ -24,22 +24,22 @@ sub execute {
 
     my @builds = $self->builds;
     my $build_count = scalar(@builds);
-    my @errors;
     for my $build (@builds) {
+        $self->total_command_count($self->total_command_count + 1);
         my $transaction = UR::Context::Transaction->begin();
         my $successful = eval {$build->stop};
         if ($successful and $transaction->commit) {
             $self->status_message("Successfully stopped build (" . $build->__display_name__ . ").");
         }
         else {
-            push @errors, "Failed to stop build (" . $build->__display_name__ . "): $@.";
+            $self->append_error($build->__display_name__, "Failed to stop build: $@.");
             $transaction->rollback();
         }
     }
 
-    $self->display_summary_report(scalar(@builds), @errors);
+    $self->display_command_summary_report();
 
-    return !scalar(@errors);
+    return !scalar(keys %{$self->command_errors});
 }
 
 1;

@@ -72,8 +72,6 @@ class Genome::InstrumentData {
     doc => 'Contains information common to all types of instrument data',
 };
 
-# TODO Need to also find and abandon any builds that used this instrument data, remove instrument
-# data assignments, etc
 sub delete {
     my $self = shift;
 
@@ -83,9 +81,14 @@ sub delete {
     for my $attr ( $self->attributes ) {
         $attr->delete;
     }
-    $self->SUPER::delete;
 
-    return $self;
+    $self->_create_deallocate_observer;
+
+    for my $attribute ($self->attributes) {
+        $attribute->delete;
+    }
+
+    return $self->SUPER::delete;
 }
 
 sub _expunge_assignments{
@@ -93,25 +96,51 @@ sub _expunge_assignments{
     my $instrument_data_id = $self->id;
     my %affected_users;
 
-    my @inputs = Genome::Model::Input->get( name => 'instrument_data', value_id => $instrument_data_id );
+    my @inputs = Genome::Model::Input->get( 
+        name => 'instrument_data', 
+        value_id => $instrument_data_id
+    );
     my @models = map( $_->model, @inputs);
 
+    my @alignment_results = Genome::InstrumentData::AlignmentResult->get(instrument_data_id => $self->id);
+    if (@alignment_results) {
+        $self->error_message("Cannot remove instrument data " . $self->__display_name__ . " because it has " .
+            scalar @alignment_results . " alignment results!");
+        return;
+    }
+    
     for my $model (@models) {
         $model->remove_instrument_data($self);
         push(@{$affected_users{$model->user_name}->{$instrument_data_id}}, $model->id);
     }
 
-    #There may be builds using this instrument data even though it had previously been unassigned from the model
-    my @other_build_inputs = Genome::Model::Build::Input->get ( name => 'instrument_data', value_id => $instrument_data_id );
-
-    my @other_builds = map($_->build, @other_build_inputs);
-
-    for my $build (@other_builds) {
+    # There may be builds using this instrument data even though it had previously been unassigned from the model
+    my @build_inputs = Genome::Model::Build::Input->get( 
+        name => 'instrument_data', 
+        value_id => $instrument_data_id 
+    );
+    my @builds = map($_->build, @build_inputs);
+    for my $build (@builds) {
         $build->abandon();
         push @models, $build->model;
     }
 
     return %affected_users;
+}
+
+sub _create_deallocate_observer {
+    my $self = shift;
+    my @allocations = $self->allocations;
+    return 1 unless @allocations;
+    UR::Context->create_subscription(
+        method => 'commit',
+        callback => sub {
+            for my $allocation (@allocations) {
+                $allocation->delete;
+            }
+        }
+    );
+    return 1;
 }
 
 sub calculate_alignment_estimated_kb_usage {

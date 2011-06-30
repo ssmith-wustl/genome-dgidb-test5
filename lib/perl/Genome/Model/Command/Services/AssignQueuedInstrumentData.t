@@ -12,7 +12,7 @@ BEGIN {
 use above 'Genome';
 
 require Genome::InstrumentData::Solexa;
-use Test::More tests => 110;
+use Test::More tests => 125;
 
 use_ok('Genome::Model::Command::Services::AssignQueuedInstrumentData');
 
@@ -235,6 +235,127 @@ ok($command_ignored->execute(), 'assign-queued-instrument-data executed successf
 my $new_models = $command_ignored->_newly_created_models;
 is(scalar(keys %$new_models), 0, 'the cron created no models from ignores.');
 
+my $mouse_taxon = Genome::Taxon->get( species_name => 'mouse' );
+my $mouse_individual = Genome::Individual->create(
+    id => '-111',
+    name => 'AQID-mouse_test-individual',
+    common_name => 'AQID_MOUSE_10',
+    taxon_id => $mouse_taxon->id,
+);
+
+my $mouse_sample = Genome::Sample->create(
+    id => '-1111',
+    name => 'AQID-mouse_test-sample',
+    common_name => 'normal',
+    taxon_id => $mouse_taxon->id,
+    source_id => $mouse_individual->id,
+);
+
+my $mouse_library = Genome::Library->create(
+    id => '-222',
+    sample_id => $mouse_sample->id,
+);
+
+isa_ok($mouse_library, 'Genome::Library');
+isa_ok($mouse_sample, 'Genome::Sample');
+
+my $mouse_instrument_data = Genome::InstrumentData::Solexa->create(
+    id => '-111111',
+    library_id => $mouse_library->id,
+    flow_cell_id => 'TM-021',
+    lane => '1',
+    run_type => 'Paired',
+    fwd_read_length => 100,
+    rev_read_length => 100,
+    fwd_clusters => 65535,
+    rev_clusters => 65536,
+);
+ok($mouse_instrument_data, 'Created an instrument data');
+
+my $mouse_pse = GSC::PSE::QueueInstrumentDataForGenomeModeling->create(
+    pse_status => 'inprogress',
+    pse_id => '-765431',
+    ps_id => $ps->ps_id,
+    ei_id => '464681',
+);
+
+$mouse_pse->add_param('instrument_data_type', 'solexa');
+$mouse_pse->add_param('instrument_data_id', $mouse_instrument_data->id);
+$mouse_pse->add_param('subject_class_name', 'Genome::Sample');
+$mouse_pse->add_param('subject_id', $mouse_sample->id);
+$mouse_pse->add_reference_sequence_build_param_for_processing_profile( $processing_profile, $ref_seq_build);
+
+my $mouse_command = Genome::Model::Command::Services::AssignQueuedInstrumentData->create(
+    test => 1,
+);
+
+ok($mouse_command->execute(), 'assign-queued-instrument-data executed successfully.');
+
+my %mouse_new_models = %{$mouse_command->_newly_created_models};
+
+is(scalar(keys %mouse_new_models), 1, 'the cron created one model from mouse sample.');
+for my $mouse_model_id (keys %mouse_new_models){
+    my $mouse_model = $mouse_new_models{$mouse_model_id};
+    is($mouse_model->processing_profile_id, '2580856', 'mouse model has the correct procesing profile');
+    is($mouse_model->annotation_reference_build_id, '106410073', 'mouse model has the correct annotation build');
+    my @mouse_instrument_data = scalar($mouse_model->instrument_data);
+    is(scalar(@mouse_instrument_data), 1, "mouse model has the expected 1 instrument data");
+}
+is($mouse_pse->pse_status, 'completed', 'mouse pse completed');
+
+my $rna_sample = Genome::Sample->create(
+    id => '-1001',
+    name => 'AQID-rna-test-sample',
+    common_name => 'normal',
+    taxon_id => $taxon->id,
+    source_id => $individual->id,
+    extraction_type => 'rna',
+);
+
+my $rna_library = Genome::Library->create(
+    id => '-2002',
+    sample_id => $rna_sample->id,
+);
+
+isa_ok($rna_library, 'Genome::Library');
+isa_ok($rna_sample, 'Genome::Sample');
+
+my $rna_instrument_data = Genome::InstrumentData::Solexa->create(
+    id => '-100001',
+    library_id => $rna_library->id,
+    flow_cell_id => 'TM-021',
+    lane => '1',
+    run_type => 'Paired',
+    fwd_read_length => 100,
+    rev_read_length => 100,
+    fwd_clusters => 65535,
+    rev_clusters => 65536,
+);
+ok($rna_instrument_data, 'Created an instrument data');
+
+my $rna_pse = GSC::PSE::QueueInstrumentDataForGenomeModeling->create(
+    pse_status => 'inprogress',
+    pse_id => '-765432',
+    ps_id => $ps->ps_id,
+    ei_id => '464681',
+);
+
+$rna_pse->add_param('instrument_data_type', 'solexa');
+$rna_pse->add_param('instrument_data_id', $rna_instrument_data->id);
+$rna_pse->add_param('subject_class_name', 'Genome::Sample');
+$rna_pse->add_param('subject_id', $rna_sample->id);
+$rna_pse->add_param('processing_profile_id', $processing_profile->id);
+$rna_pse->add_reference_sequence_build_param_for_processing_profile( $processing_profile, $ref_seq_build);
+
+my $rna_command = Genome::Model::Command::Services::AssignQueuedInstrumentData->create(
+    test => 1,
+);
+
+ok($rna_command->execute(), 'assign-queued-instrument-data executed successfully.');
+
+my $rna_new_models = $rna_command->_newly_created_models;
+is(scalar(keys %$rna_new_models), 0, 'the cron created no models from rna sample.');
+is($rna_pse->pse_status, 'completed', 'rna pse completed');
 
 my $instrument_data_3 = Genome::InstrumentData::Solexa->create(
     id => '-102',

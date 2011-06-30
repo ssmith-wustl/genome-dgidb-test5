@@ -11,6 +11,17 @@ require File::Basename;
 class Genome::Command::Base {
     is => 'Command',
     is_abstract => 1,
+    has_optional => [
+        total_command_count => {
+            is => 'Integer',
+            default => 0,
+        },
+        command_errors => {
+            is => 'HASH',
+            doc => 'values can be an array ref if multiple errors for on command',
+            default => {},
+        },
+    ],
     attributes_have => [
         require_user_verify => {
             is => 'Boolean',
@@ -751,20 +762,27 @@ sub _unique_elements {
     return @unique;
 }
 
-sub display_summary_report {
-    my ($self, $total_count, @errors) = @_;
+sub display_command_summary_report {
+    my $self = shift;
+    my $total_count = $self->total_command_count;
+    my %command_errors = %{$self->command_errors};
 
-    if (@errors) {
-        $self->status_message("\n\nError Summary:");
-        for my $error (@errors) {
-            ($error) = split("\n", $error);
-            $error =~ s/\ at\ \/.*//;
-            $self->status_message("* ".$error);
+    if (keys %command_errors) {
+        $self->status_message("\n\nErrors Summary:");
+        for my $key (keys %command_errors) {
+            my $errors = $command_errors{$key};
+            $errors = [$errors] unless (ref($errors) and ref($errors) eq 'ARRAY');
+            my @errors = @{$errors};
+            print "$key: \n";
+            for my $error (@errors) {
+                $error = $self->truncate_error_message($error);
+                print "\t- $error\n";
+            }
         }
     }
 
     if ($total_count > 1) {
-        my $error_count = scalar(@errors);
+        my $error_count = scalar(keys %command_errors);
         $self->status_message("\n\nCommand Summary:");
         $self->status_message(" Successful: " . ($total_count - $error_count));
         $self->status_message("     Errors: " . $error_count);
@@ -772,8 +790,29 @@ sub display_summary_report {
     }
 }
 
+sub append_error {
+    my $self = shift;
+    my $key = shift || die;
+    my $error = shift || die;
+
+    my $command_errors = $self->command_errors;
+    push @{$command_errors->{$key}}, $error;
+    $self->command_errors($command_errors);
+
+    return 1;
+}
+
+sub truncate_error_message {
+    my $self = shift;
+    my $error = shift || die;
+
+    # truncate errors so they are actually a summary
+    ($error) = split("\n", $error);
+
+    # meant to truncate a callstack as this is meant for user/high-level
+    $error =~ s/\ at\ \/.*//;
+
+    return $error;
+}
+
 1;
-
-#$HeadURL$
-#$Id$
-
