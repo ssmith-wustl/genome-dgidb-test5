@@ -214,11 +214,20 @@ sub check_genotype_input {
 
     if ($self->model->is_lane_qc) {
         unless ($self->genotype_microarray_build) {
-            push @tags, UR::Object::Tag->create(
-                type => 'error',
-                properties => ['genotype_microarray_build'],
-                desc => 'No genotype microarray build input found',
-            );
+            if ($self->model->genotype_microarray_model) {
+                push @tags, UR::Object::Tag->create(
+                    type => 'error',
+                    properties => ['genotype_microarray_build'],
+                    desc => 'Model has genotype_microarray_model but build is missing genotype_microarray_build',
+                );
+            }
+            else {
+                push @tags, UR::Object::Tag->create(
+                    type => 'error',
+                    properties => ['genotype_microarray_build'],
+                    desc => 'No genotype microarray build input found',
+                );
+            }
         }
     }
 
