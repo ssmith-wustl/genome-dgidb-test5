@@ -388,7 +388,10 @@ sub shellcmd {
             } else {
                 Carp::carp("SOME (but not all) output files were empty for command (PLEASE NOTE that earlier versions of Genome::Sys->shellcmd would fail in this circumstance): $cmd");
             }
-            unless ($dont_create_zero_size_files_for_missing_output) {
+            if ($dont_create_zero_size_files_for_missing_output) {
+                @missing_output_files = (); # reset the list of missing output files
+                @missing_output_files = grep { not -p $_ } @$output_files; # rescan for only missing files
+            } else {
                 for my $output_file (@$output_files) {
                     Carp::carp("ALLOWING zero size output file '$output_file' for command: $cmd");
                     my $fh = $self->open_file_for_writing($output_file);
@@ -397,8 +400,8 @@ sub shellcmd {
                     }
                     $fh->close;
                 }
+                @missing_output_files = ();
             }
-            @missing_output_files = ();
         }
     }
     
