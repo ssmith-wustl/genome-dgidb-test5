@@ -35,8 +35,8 @@ sub execute {
     my $self = shift;
 
     my @allocations = $self->allocations;
-    my @errors;
     for my $allocation (@allocations) {
+        $self->total_command_count($self->total_command_count + 1);
         my $display_name = $allocation->__display_name__;
         my $transaction = UR::Context::Transaction->begin();
         my $successful = Genome::Disk::Allocation->delete(allocation_id => $allocation->id);
@@ -45,14 +45,14 @@ sub execute {
             $self->status_message("Successfully deallocated ($display_name).");
         }
         else {
-            push @errors, "Failed to deallocate ($display_name): $@.";  
+            $self->append_error($display_name, "Failed to deallocate ($display_name): $@.");
             $transaction->rollback;
         }
     }
 
-    $self->display_summary_report(scalar(@allocations), @errors);
+    $self->display_command_summary_report();
 
-    return !scalar(@errors);
+    return !scalar(keys %{$self->command_errors});
 }
 
     

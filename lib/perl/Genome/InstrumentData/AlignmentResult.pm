@@ -1286,15 +1286,15 @@ sub _extract_input_fastq_filenames {
     } else {
         # FIXME - getting a warning about undefined string with 'eq'
         if (! defined($self->filter_name)) {
-            $self->status_message('No special filter for this assignment');
+            $self->status_message('No special filter for this input');
         }
         elsif ($self->filter_name eq 'forward-only') {
             # forward reads only
-            $self->status_message('forward-only filter applied for this assignment');
+            $self->status_message('forward-only filter applied for this input');
         }
         elsif ($self->filter_name eq 'reverse-only') {
             # reverse reads only
-            $self->status_message('reverse-only filter applied for this assignment');
+            $self->status_message('reverse-only filter applied for this input');
         }
         else {
             die 'Unsupported filter: "' . $self->filter_name . '"!';

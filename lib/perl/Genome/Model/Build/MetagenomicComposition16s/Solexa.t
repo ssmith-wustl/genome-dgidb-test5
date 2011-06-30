@@ -61,9 +61,6 @@ my $instrument_data = Genome::InstrumentData::Solexa->create(
 );
 ok($instrument_data, 'create inst data');
 
-# temp test dir
-my $tmpdir = Genome::Sys->create_temp_directory;
-
 # pp
 my $pp = Genome::ProcessingProfile->get(2591278); # exists and cannot recreate w/ same params
 ok($pp, 'got solexa pp') or die;
@@ -72,26 +69,26 @@ ok($pp, 'got solexa pp') or die;
 my $model = Genome::Model::MetagenomicComposition16s->create(
     processing_profile => $pp,
     subject_name => $sample->name,
-    subject_type => 'sample_name',
-    data_directory => $tmpdir,
+    subject_type => 'sample_name'
 );
 ok($model, 'MC16s solexa model') or die;
 ok($model->add_instrument_data($instrument_data), 'add inst data to model');
 
 my $example_build = Genome::Model::Build->create( 
-    model=> $model,
-    id => -2288,
     data_directory => '/gsc/var/cache/testsuite/data/Genome-Model/MetagenomicComposition16sSolexa/build',
+    model=> $model,
+    id => -2288
 );
 ok($example_build, 'example build') or die;
+ok($example_build->get_or_create_data_directory, 'resolved data dir');
 
 my $build = Genome::Model::Build::MetagenomicComposition16s->create(
     id => -1199,
-    model => $model,
-    data_directory => $model->data_directory.'/build',
+    model => $model
 );
 isa_ok($build, 'Genome::Model::Build::MetagenomicComposition16s::Solexa');
 
+ok($build->get_or_create_data_directory, 'resolved data dir');
 ok($build->create_subdirectories, 'created subdirectories');
 
 # calculated kb

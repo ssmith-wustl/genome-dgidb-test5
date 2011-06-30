@@ -3,7 +3,6 @@ package Genome::Model::MetagenomicCompositionShotgun::Command::MetagenomicReport
 use strict;
 use warnings;
 use Genome;
-use Genome::Model::InstrumentDataAssignment;
 use File::Path;
 use File::Find;
 

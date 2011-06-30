@@ -196,7 +196,7 @@ sub execute {
                 #record that the above code was skipped so we could reattempt it if we decide to do model generation for rna samples later
                 $pse->add_param('no_model_generation_attempted',1);
                 $self->status_message('No model generation attempted for PSE ' . $pse->id . ' representing RNA data');
-            }else{
+            } else{
                 PP:
                 foreach my $processing_profile_id (@processing_profile_ids) {
                     my $processing_profile = Genome::ProcessingProfile->get( $processing_profile_id );
@@ -250,6 +250,8 @@ sub execute {
                             for my $m (@assigned) {
                                 $pse->add_param('genome_model_id', $m->id);
                             }
+                            #find or create default qc models if applicable
+                            $self->create_default_qc_models(@assigned);
                             #find or create somatic models if applicable
                             $self->find_or_create_somatic_variation_models(@assigned);
 
@@ -617,8 +619,8 @@ sub preload_data {
     $self->status_message("  got " . scalar(@models) . " models");        
 
     if(scalar @models > 0) {
-        $self->status_message("Pre-loading instrument data assignments for " . scalar(@models) . " models");
-        my @instrument_data_assignments = Genome::Model::InstrumentDataAssignment->get(model_id => [ map { $_->id } @models]);
+        $self->status_message("Pre-loading instrument data inputs for " . scalar(@models) . " models");
+        my @instrument_data_inputs = Genome::Model::Input->get(model_id => [ map { $_->id } @models ]);
     }
 
     return 1;
@@ -748,11 +750,7 @@ sub assign_instrument_data_to_models {
     }
 
     foreach my $model (@models) {
-        my @existing_instrument_data =
-        Genome::Model::InstrumentDataAssignment->get(
-            instrument_data_id => $instrument_data_id,
-            model_id           => $model->id,
-        );
+        my @existing_instrument_data = $model->input_for_instrument_data_id($instrument_data_id);
 
         if (@existing_instrument_data) {
             $self->warning_message(
@@ -965,12 +963,7 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
             return;
         }
 
-        my @existing_instrument_data =
-        Genome::Model::InstrumentDataAssignment->get(
-            instrument_data_id => $genome_instrument_data->id,
-            model_id           => $m->id,
-        );
-
+        my @existing_instrument_data = $m->input_for_instrument_data($genome_instrument_data);
         unless (@existing_instrument_data) {
             $self->error_message(
                 'instrument data ' . $genome_instrument_data->id . ' not assigned to model ????? (' . $m->id . ')'
@@ -998,7 +991,15 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
 
     # Now that they've had their instrument data assigned get_or_create_lane_qc_models
     # Based of the ref-align models so that alignment can shortcut
-    for my $model (@ref_align_models) {
+    push(@new_models , $self->create_default_qc_models(@ref_align_models));
+    return @new_models;
+}
+
+sub create_default_qc_models {
+    my $self = shift;
+    my @models = @_;
+    my @new_models;
+    for my $model (@models){
         next unless $model->type_name eq 'reference alignment';
         next unless $model->processing_profile_name =~ /^\w+\ \d+\ Default\ Reference\ Alignment/; # e.g. Feb 2011 Defaulte Reference Alignment
         next if $model->target_region_set_name; # the current lane QC does not work for custom capture/exome
@@ -1187,8 +1188,8 @@ sub request_builds {
             @last_build_inputs   = grep { $_->name eq 'instrument_data' } @last_build_inputs;
             %last_build_instdata = map  { $_->value_id => 1 }             @last_build_inputs;
 
-            my @assignments = $model->instrument_data_assignments;
-            my @missing_assignments_in_last_build = grep { not $last_build_instdata{$_->instrument_data_id} } @assignments;
+            my @inputs = $model->instrument_data_inputs;
+            my @missing_assignments_in_last_build = grep { not $last_build_instdata{$_->value_id} } @inputs;
 
             if (@missing_assignments_in_last_build) {
                 my $reason = 'it does not have a final build with all assignments';
@@ -1336,6 +1337,11 @@ sub add_processing_profiles_to_pses{
                             $reference_sequence_names_for_processing_profile_ids{$pp_id} = 'GRCh37-lite-build37';
                         }
                     }
+                }
+                elsif ($taxon->species_latin_name =~ /mus musculus/i){
+                    my $pp_id = 2580856;
+                    push @processing_profile_ids_to_add, $pp_id;
+                    $reference_sequence_names_for_processing_profile_ids{$pp_id} = 'UCSC-mouse-buildmm9'
                 }
                 elsif ($taxon->domain =~ /bacteria/i) {
                     # updated 2011jun15 RT 72143 ctomlins

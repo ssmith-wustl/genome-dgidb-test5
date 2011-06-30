@@ -25,7 +25,6 @@ my $create_command = Genome::Model::Command::Define::Somatic->create(
     tumor_model_id => $test_models->{tumor}->id,
     normal_model_id => $test_models->{normal}->id,
     subject_name => 'test_subject',
-    data_directory => $temp_model_data_dir,
     processing_profile_name => 'default',
 );
 
@@ -44,7 +43,7 @@ sub setup_test_models {
         sequencing_platform => 'solexa',
         dna_type => 'cdna',
         read_aligner_name => 'bwa',
-        snv_detector_name => 'samtools',
+        snv_detection_strategy => 'samtools',
     ); 
     ok($test_profile, 'created test processing profile');
     
@@ -72,7 +71,6 @@ sub setup_test_models {
         subject_name => 'test_subject',
         subject_type => 'sample_name',
         processing_profile_id => $test_profile->id,
-        data_directory => $temp_model_data_dir,
         reference_sequence_build => $imported_reference_sequence_build,
     );
     ok($test_model, 'created test model');
@@ -94,7 +92,6 @@ sub setup_test_models {
         subject_name => 'test_subject',
         subject_type => 'sample_name',
         processing_profile_id => $test_profile->id,
-        data_directory => $temp_model_data_dir,
         reference_sequence_build => $imported_reference_sequence_build,
     );
     ok($test_model_two, 'created second test model');

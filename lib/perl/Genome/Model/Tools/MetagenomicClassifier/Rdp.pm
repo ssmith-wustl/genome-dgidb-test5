@@ -51,8 +51,8 @@ sub execute {
     my $self = shift;
     
     my $reader = eval {
-        Genome::Model::Tools::FastQual::PhredReader->create(
-            files => [ $self->input_file ],
+        Genome::Model::Tools::Sx::PhredReader->create(
+            file => $self->input_file,
         );
     };
     return if not $reader;
@@ -70,9 +70,9 @@ sub execute {
     while ( 1 ) {
         my @seqs;
         while ( @seqs < $batch_sz ) {
-            my $seqs = $reader->read;
-            last if not $seqs;
-            push @seqs, $seqs;
+            my $seq = $reader->read;
+            last if not $seq;
+            push @seqs, $seq;
         }
         last if not @seqs;
         my $batch_pos = $batch_cnt * $batch_sz;
@@ -92,10 +92,10 @@ sub execute {
             die $self->error_message('Failed to create classifier') if not $classifier;
             my $metrics = $self->_load_metrics;
             die $self->error_message('Failed to load metrics') if not $metrics;
-            for my $seqs ( @seqs ) {
-                #print $seqs->[0]->{id}."\n";
+            for my $seq ( @seqs ) {
+                #print $seq->{id}."\n";
                 $metrics->{total}++;
-                my $classification = $classifier->classify($seqs->[0]);
+                my $classification = $classifier->classify($seq);
                 if ( not $classification ) {
                     $metrics->{error}++;
                     next;

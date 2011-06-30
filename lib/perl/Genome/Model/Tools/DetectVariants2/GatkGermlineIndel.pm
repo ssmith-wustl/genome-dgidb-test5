@@ -40,7 +40,8 @@ sub _detect_variants {
         output_file => $self->_temp_staging_directory."/gatk_output_file",
         bed_output_file => $self->_temp_staging_directory."/indels.hq",
         mb_of_ram => $self->mb_of_ram,
-        gatk_params => '-R ' . $refseq . ' -T IndelGenotyperV2 --window_size 300 -et NO_ET',
+        reference => $refseq,
+        gatk_params => ' -T IndelGenotyperV2 --window_size 300 -et NO_ET',
         version => $self->version,
     );
     unless($gatk_cmd->execute){

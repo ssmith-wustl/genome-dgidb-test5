@@ -18,10 +18,10 @@ use_ok('Genome::Model::Event::Build::DeNovoAssembly::Assemble') or die;
 my $model = Genome::Model::DeNovoAssembly::Test->model_for_soap;
 ok($model, "Got de novo assembly model") or die;
 my $build = Genome::Model::Build->create(
-    model => $model,
-    data_directory => $model->data_directory,
+    model => $model
 );
 ok($build, "Got de novo assembly build") or die;
+ok($build->get_or_create_data_directory, 'resolved data dir');
 my $example_build = Genome::Model::DeNovoAssembly::Test->example_build_for_model($model);
 ok($example_build, 'got example build') or die;
 
@@ -35,7 +35,7 @@ for my $target ( @assembler_input_files ) {
 }
 
 # create
-my $assemble = Genome::Model::Event::Build::DeNovoAssembly::Assemble->create(build_id => $build->id);
+my $assemble = Genome::Model::Event::Build::DeNovoAssembly::Assemble->create(build_id => $build->id, model => $model);
 ok( $assemble, "Created soap assemble");
 $assemble->dump_status_messages(1);
 
@@ -58,7 +58,7 @@ my @libraries = ( { fragment_fastq_file => 'fragment.fastq' } );
 my $lsf_params = $assemble->bsub_rusage;
 diag($lsf_params);
 my $queue = 'alignment';
-$queue = 'alignment-pd' if (Genome::Sys->username =~ /^apipe-/);
+$queue = 'alignment-pd' if (Genome::Config->should_use_alignment_pd);
 is($lsf_params, "-q $queue -n 4 -R 'span[hosts=1] select[type==LINUX64 && mem>30000] rusage[mem=30000]' -M 30000000", 'lsf params'); 
 ok( $assemble->execute, "Executed soap assemble");
 

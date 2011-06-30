@@ -130,22 +130,20 @@ sub models {
     #  a - get work order seq products 
     #  b - if seq prod is a read get it's prep_group_id else (solexa/454) 
     #       use seq_id
-    #  c - get models via inst data assignments (inputs eventually)
+    #  c - get models via inst data inputs 
     #  
 
     my @instrument_data_ids = $self->instrument_data_ids();
-
     if (@instrument_data_ids) {
-    
-        my @instrument_data_assignments = 
-            Genome::Model::InstrumentDataAssignment->get(instrument_data_id => \@instrument_data_ids);
-        return unless @instrument_data_assignments;
-
-        my %model_ids = map { $_->model_id => 1 } @instrument_data_assignments;
+        my @instrument_data_inputs = Genome::Model::Input->get(
+            name => 'instrument_data',
+            value_id => \@instrument_data_ids,
+            value_class_name => 'Genome::InstrumentData',
+        );
+        return unless @instrument_data_inputs;
+        my %model_ids = map { $_->model_id => 1 } @instrument_data_inputs;
         return unless %model_ids;
-
         return Genome::Model->get(genome_model_id => [ keys %model_ids ]);
-
     } else {
         $self->warning_message("No sequence products (instrument data) found for work order item (".$self->id.").  Attempting to get models via dna_id.");
     }

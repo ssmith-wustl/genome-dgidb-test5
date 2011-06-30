@@ -32,8 +32,8 @@ $rdp->dump_status_messages(1);
 ok($rdp->execute, 'Execute rdp classifier');
 
 # compare output
-my $fa_reader = Genome::Model::Tools::FastQual::PhredReader->create(
-    files => [ $fasta ],
+my $fa_reader = Genome::Model::Tools::Sx::PhredReader->create(
+    file => $fasta,
 );
 ok($fa_reader, 'create fasta reader');
 my $cl_reader = Genome::Model::Tools::MetagenomicClassifier::ClassificationReader->create(
@@ -41,9 +41,9 @@ my $cl_reader = Genome::Model::Tools::MetagenomicClassifier::ClassificationReade
 );
 ok($cl_reader, 'create reader') or die;
 my @classifications;
-while ( my $fastas = $fa_reader->read ) {
+while ( my $fasta = $fa_reader->read ) {
     my $classification = $cl_reader->read;
-    is($fastas->[0]->{id}, $classification->{id}, 'id matches');
+    is($fasta->{id}, $classification->{id}, 'id matches');
     push @classifications, join('-', map { $classification->{$_}->{id} } (qw/ domain phylum order class /));
 }
 is_deeply(

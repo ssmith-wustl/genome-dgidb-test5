@@ -91,13 +91,6 @@ class Genome::Model::Tools::Annotate::TranscriptVariants {
                     "gene" -- This returns the top transcript annotation per gene. This is the default behavior.
                     "top" -- This returns the top priority annotation for all genes. One variant in, one annotation out.',
         },
-        flank_range => {
-            is => 'Integer', 
-            is_input => 1,
-            is_optional => 1,
-            default => 50000,
-            doc => 'Range to look around for flanking regions of transcripts',
-        },
         reference_transcripts => {
             is => 'String',
             is_input => 1,
@@ -322,7 +315,6 @@ sub _create_old_annotator {
                         get_frame_shift_sequence => $self->get_frame_shift_sequence,
                         ucsc_conservation_directory => $ucsc_versions{$version},
                         annotation_build_version => $self->build->version,
-                        flank_range => $self->flank_range,
                         build => $self->build,
                      );
     return $annotator;
@@ -763,7 +755,6 @@ Goes through each variant in a file, retrieving annotation information from Geno
      $success = Genome::Model::Tools::Annotate::TranscriptVariants->execute(
          variant_file => 'myoutput.csv',
          output_file => 'myoutput.csv',
-         flank_range => 10000, # default 50000
      );
 
 =head1 Methods

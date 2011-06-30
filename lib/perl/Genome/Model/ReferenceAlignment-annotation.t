@@ -30,7 +30,7 @@ sub make_profile {
         sequencing_platform => 'solexa',
         dna_type => 'cdna',
         read_aligner_name => 'bwa',
-        snv_detector_name => 'samtools',
+        snv_detection_strategy => 'samtools',
     );
 }
 

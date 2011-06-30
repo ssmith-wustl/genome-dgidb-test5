@@ -25,12 +25,6 @@ sub execute {
     my $self  = shift;
     my $model = $self->model;
     my $build = $self->build;
-    
-    #my $gt = $build->model->snv_detector_name;
-    #unless ($gt =~ /maq/i) {
-    #    $self->status_message('For now turn off mapcheck for non-maq based pipeline');
-    #    delete $REPORT_TYPES{Mapcheck};
-    #}
 
     if ($model->read_aligner_name =~ /^Imported$/i) {
         $self->status_message("This build uses Imported as alinger so skip InputBaseCounts");

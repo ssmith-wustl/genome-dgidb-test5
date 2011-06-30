@@ -16,9 +16,6 @@ use_ok('Genome::ModelGroup');
 my $model_group = Genome::ModelGroup->create(
   id => -12345,
   name => 'Testsuite_ModelGroup',
-  convergence_model_params => {
-      data_directory => $test_data_dir,
-  },
 );
 
 ok($model_group, 'Got a model_group');
@@ -64,8 +61,7 @@ sub setup_test_models {
         sequencing_platform => 'solexa',
         dna_type => 'cdna',
         read_aligner_name => 'bwa',
-        snv_detector_name => 'samtools',
-        snv_detector_params => '-test Genome/ModelGroup.t',
+        snv_detection_strategy => 'samtools -test Genome/ModelGroup.t',
     ); 
     ok($test_profile, 'created test processing profile');
     
@@ -86,7 +82,6 @@ sub setup_test_models {
         subject_name => 'test_subject',
         subject_type => 'sample_name',
         processing_profile_id => $test_profile->id,
-        data_directory => $test_data_dir,
         reference_sequence_build => $reference_sequence_build,
     );
     ok($test_model, 'created test model');
@@ -96,7 +91,6 @@ sub setup_test_models {
         subject_name => 'test_subject',
         subject_type => 'sample_name',
         processing_profile_id => $test_profile->id,
-        data_directory => $test_data_dir,
         reference_sequence_build => $reference_sequence_build,
     );
     ok($test_model_two, 'created second test model');

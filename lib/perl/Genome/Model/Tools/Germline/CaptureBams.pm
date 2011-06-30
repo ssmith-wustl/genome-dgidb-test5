@@ -58,11 +58,30 @@ sub pre_execute {
         }
     }
 
+    unless (defined $self->skip_if_output_present) {
+        $self->skip_if_output_present(1);
+    }
+
+    # Dummy regions_file
+    unless (defined $self->regions_file) {
+        $self->regions_file('/gscmnt/sata424/info/medseq/Freimer-Boehnke/ExomeComparison/WuSpace_2514360.bed');
+    }
+
+    # Default ref seq
+    unless (defined $self->reference_fasta) {
+        $self->reference_fasta(Genome::Config::reference_sequence_directory() . '/NCBI-human-build36/all_sequences.fa');
+    }
+
     ## Set a default reference transcript annotator version ##
 #    my $build_id = $self->build_id;
 #    my $build = Genome::Model::Build->get(build_id => $build_id);
-
-    my $annotation_reference_transcripts = "NCBI-human.combined-annotation/54_36p_v2";
+my $annotation_reference_transcripts;
+if ($self->reference_fasta =~ m/build36/) {
+    $annotation_reference_transcripts = "NCBI-human.combined-annotation/54_36p_v3";
+}
+else {
+    $annotation_reference_transcripts = "NCBI-human.combined-annotation/58_37c_v2";
+}
 #    my $ref_id = $build->model->reference_sequence_build->id;
 
 #    ## Human build 37 ##    
@@ -75,20 +94,8 @@ sub pre_execute {
 #        $annotation_reference_transcripts = "NCBI-mouse.combined-annotation/54_37g_v2";
 #    }
 
-    # Dummy regions_file
-    unless (defined $self->regions_file) {
-        $self->regions_file('/gscmnt/sata424/info/medseq/Freimer-Boehnke/ExomeComparison/WuSpace_2514360.bed');
-    }
-
-    # Default ref seq
-    unless (defined $self->reference_fasta) {
-        $self->reference_fasta(Genome::Config::reference_sequence_directory() . '/NCBI-human-build36/all_sequences.fa');
-    }
 
     # Set (hardcoded) defaults for tools that have defaults that do not agree with somatic pipeline
-    unless (defined $self->skip_if_output_present) {
-        $self->skip_if_output_present(1);
-    }
 #annotation options
     unless (defined $self->annotate_no_headers) {
         $self->annotate_no_headers(1);
@@ -121,6 +128,11 @@ sub pre_execute {
     unless (defined $self->append_rs_id) {
         $self->append_rs_id(1);
     }
+    unless (defined $self->dbSNP_version) {
+        $self->dbSNP_version(130);
+    }
+
+
 
 #filter false positives
     unless (defined $self->analysis_type) {
@@ -304,6 +316,7 @@ __DATA__
   <link fromOperation="input connector" fromProperty="tier_1_dbsnp_file" toOperation="dbSNP Snp" toProperty="output_file" />
   <link fromOperation="input connector" fromProperty="report_mode" toOperation="dbSNP Snp" toProperty="report_mode" />
   <link fromOperation="input connector" fromProperty="append_rs_id" toOperation="dbSNP Snp" toProperty="append_rs_id" />
+  <link fromOperation="input connector" fromProperty="dbSNP_version" toOperation="dbSNP Snp" toProperty="dbSNP_version" />
 
 <!-- INDELS START HERE -->
 
@@ -311,12 +324,14 @@ __DATA__
 
   <link fromOperation="input connector" fromProperty="germline_bam_file" toOperation="GATK Germline" toProperty="bam_file" /> 
   <link fromOperation="input connector" fromProperty="GATK_indel_output" toOperation="GATK Germline" toProperty="output_file" />
-  <link fromOperation="input connector" fromProperty="GATK_indel_formatted_output" toOperation="GATK Germline" toProperty="formatted_file" />  
+  <link fromOperation="input connector" fromProperty="GATK_indel_formatted_output" toOperation="GATK Germline" toProperty="formatted_file" />
+  <link fromOperation="input connector" fromProperty="reference_fasta" toOperation="GATK Germline" toProperty="reference" />    
   <link fromOperation="input connector" fromProperty="skip_if_output_present" toOperation="GATK Germline" toProperty="skip_if_output_present" />    
 
 <!-- GATK Unified Genotyper GERMLINE -->
   <link fromOperation="input connector" fromProperty="germline_bam_file" toOperation="GATK Unified Genotyper Germline" toProperty="bam_file" /> 
   <link fromOperation="input connector" fromProperty="GATK_ug_indel_output" toOperation="GATK Unified Genotyper Germline" toProperty="vcf_output_file" />
+  <link fromOperation="input connector" fromProperty="reference_fasta" toOperation="GATK Unified Genotyper Germline" toProperty="reference_fasta" />    
   <link fromOperation="input connector" fromProperty="skip_if_output_present" toOperation="GATK Unified Genotyper Germline" toProperty="skip_if_output_present" />    
 
 <!-- FORMAT GATK Unified Genotyper INDELS -->
@@ -594,6 +609,7 @@ __DATA__
     <inputproperty isOptional="Y">tier_1_dbsnp_file</inputproperty>
     <inputproperty isOptional="Y">report_mode</inputproperty>
     <inputproperty isOptional="Y">append_rs_id</inputproperty>
+    <inputproperty isOptional="Y">dbSNP_version</inputproperty>
 
     <inputproperty isOptional="Y">tier_1_snpfilter_file</inputproperty>
     <inputproperty isOptional="Y">tier_1_snpfilter_file_filtered</inputproperty>
