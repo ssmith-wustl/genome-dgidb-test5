@@ -18,9 +18,22 @@ sub create {
     my $self = $class->SUPER::create(@_);
     return if not $self;
 
-    if ( not $self->config ) { 
+    my @config = grep { defined } $self->config;
+    if ( not @config ) { 
         $self->error_message('No config given to read');
         return;
+    }
+
+    if ( grep { $_ =~ /stdinref/ } @config ) {
+        if ( @config > 1 ) {
+            $self->error_message('Cannot read stdin refs and from other readers');
+            return;
+        }
+        my $reader = Genome::Model::Tools::Sx::StdinRefReader->create;
+        return if not $reader;
+        $self->{_reader} = $reader;
+        $self->{_strategy} = 'read_stdinref';
+        return $self;
     }
 
     my @readers;
@@ -28,7 +41,9 @@ sub create {
         my %params = $self->_parse_reader_config($config);
         return if not %params;
 
-        delete $params{file} if $params{file} eq 'stdinref';
+        if ( $params{file} eq 'stdinref' ) {
+            delete $params{file};
+        };
         my $cnt = ( exists $params{cnt} ? delete $params{cnt} : 1 );
 
         my $reader_class = $self->_reader_class_for_type( delete $params{type} );
@@ -46,6 +61,7 @@ sub create {
     }
 
     $self->{_readers} = \@readers;
+    $self->{_strategy} = 'read_one_from_each';
 
     return $self;
 }
@@ -110,6 +126,7 @@ sub _type_for_file {
     }
 
     my %file_exts_and_formats = (
+        fq => 'sanger',
         fastq => 'sanger',
         fasta => 'phred',
         fna => 'phred',
@@ -146,6 +163,14 @@ sub _reader_class_for_type {
 }
 
 sub read {
+    my $strategy = $_[0]->{_strategy};
+    my $seqs = $_[0]->$strategy;
+    return if not $seqs or not @$seqs;
+    #$self->metrics->add($seqs) if $self->metrics;
+    return $seqs;
+}
+
+sub read_one_from_each {
     my $self = shift;
 
     my @seqs;
@@ -154,12 +179,11 @@ sub read {
         next if not $seq;
         push @seqs, $seq;
     }
-    return if not @seqs;
-
-    #$self->metrics->add(\@seqs) if $self->metrics and @seqs;
-    
     return \@seqs;
 }
 
+sub read_stdinref {
+    return $_[0]->{_reader}->read;
+}
 1;
 

@@ -55,7 +55,7 @@ class Genome::Model::MetagenomicCompositionShotgun {
         contamination_screen_reference => {
             is => 'Genome::Model::Build::ImportedReferenceSequence',
             is_mutable => 1,
-            is_many => 1,
+            is_optional => 1,
             via => 'inputs',
             to => 'value',
             where => [name => 'contamination_screen_reference', value_class_name => 'Genome::Model::Build::ImportedReferenceSequence'],
@@ -70,6 +70,7 @@ class Genome::Model::MetagenomicCompositionShotgun {
         first_viral_verification_alignment_reference => {
             is => 'Genome::Model::Build::ImportedReferenceSequence',
             is_mutable => 1,
+            is_optional => 1,
             via => 'inputs',
             to => 'value',
             where => [name => 'first_viral_verification_alignment_reference ', value_class_name => 'Genome::Model::Build::ImportedReferenceSequence'],
@@ -77,6 +78,7 @@ class Genome::Model::MetagenomicCompositionShotgun {
         second_viral_verification_alignment_reference => {
             is => 'Genome::Model::Build::ImportedReferenceSequence',
             is_mutable => 1,
+            is_optional => 1,
             via => 'inputs',
             to => 'value',
             where => [name => 'second_viral_verification_alignment_reference ', value_class_name => 'Genome::Model::Build::ImportedReferenceSequence'],
@@ -91,6 +93,7 @@ class Genome::Model::MetagenomicCompositionShotgun {
         },
         _contamination_screen_alignment_model => {
             is => 'Genome::Model::ReferenceAlignment',
+            is_optional => 1,
             via => 'from_model_links',
             to => 'from_model',
             where => [role => 'contamination_screen_alignment_model'],
@@ -104,18 +107,21 @@ class Genome::Model::MetagenomicCompositionShotgun {
         },
         _unaligned_metagenomic_alignment_model => {
             is => 'Genome::Model::ReferenceAlignment',
+            is_optional => 1,
             via => 'from_model_links',
             to => 'from_model',
             where => [role => 'unaligned_metagenomic_alignment_model'],
         },
         _first_viral_verification_alignment_model => {
             is => 'Genome::Model::ReferenceAlignment',
+            is_optional => 1, 
             via => 'from_model_links',
             to => 'from_model',
             where => [role => 'first_viral_verification_alignment_model'],
         },
         _second_viral_verification_alignment_model => {
             is => 'Genome::Model::ReferenceAlignment',
+            is_optional => 1, 
             via => 'from_model_links',
             to => 'from_model',
             where => [role => 'second_viral_verification_alignment_model'],

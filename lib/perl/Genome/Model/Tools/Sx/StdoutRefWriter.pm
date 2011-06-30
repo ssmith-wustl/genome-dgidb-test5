@@ -6,9 +6,6 @@ use warnings;
 require Storable;
 
 class Genome::Model::Tools::Sx::StdoutRefWriter { 
-    has => [ 
-        name => { is => 'Text', is_optional => 1, },
-    ],
 };
 
 sub write {

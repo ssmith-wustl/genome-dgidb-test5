@@ -198,7 +198,12 @@ sub execute {
         my @errors;
         my %properties_from_prior;
         for my $property_name (@properties_from_prior) {
-            my $value = $instrument_data->$property_name;
+            my $value;
+            if ($property_name eq 'subset_name'){
+                $value = $instrument_data->lane;  #subset name can include import source, we just want lane
+            }else{
+                $value = $instrument_data->$property_name;
+            }
             no warnings;
             $self->status_message("Value for $property_name is $value");
             $properties_from_prior{$property_name} = $value;
@@ -263,7 +268,7 @@ sub execute {
         push @return_inst_data, $new_instrument_data;
 
         if ($expected_path_fragment and -s $expected_path_fragment){
-            my $new_instrument_data = Genome::InstrumentData::Imported->get(
+            my $new_instrument_data = UR::Context->current->reload("Genome::InstrumentData::Imported",
                 original_data_path => $expected_path_fragment,
             );
             unless ($new_instrument_data) {

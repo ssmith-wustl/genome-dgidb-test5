@@ -180,6 +180,7 @@ sub gather_details
 	                   './anno-sqlite.bash',
 			   $locus_tag,
 			   $datecode,
+			   '-nointerpolate',
 		          );
 
       my $sqlitedata = qq{sqlite-$locus_tag-$datecode.dat};
