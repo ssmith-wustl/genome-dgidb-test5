@@ -813,7 +813,7 @@
                   build requested:
                 </td>
                 <td class="value">
-                  <xsl:value-of select="aspect[@name='build_requested']/value"/>
+                  yes
                 </td>
               </tr>
             </xsl:if>
