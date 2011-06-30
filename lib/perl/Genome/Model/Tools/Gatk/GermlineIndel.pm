@@ -39,6 +39,7 @@ class Genome::Model::Tools::Gatk::GermlineIndel {
             doc => "Parameters for GATK", 
             is_optional => 1, 
             is_input => 1, 
+            is_output => 1, 
             default => "/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa", 
         },
 	        mb_of_ram => {
@@ -93,7 +94,7 @@ sub execute {                               # replace with real execution logic.
 	my $gatk_params = $self->gatk_params;
 	my $reference = $self->reference;
 	## Add reference to GATK params ##
-	$gatk_params = "-R $reference " . $gatk_params;
+	$gatk_params = " -R $reference " . $gatk_params;
 	#-I /gscmnt/sata905/info/model_data/2858219475/build103084961/alignments/103084961_merged_rmdup.bam
 	#-I /gscmnt/sata871/info/model_data/2858334303/build103084933/alignments/103084933_merged_rmdup.bam
 	#-O gatk_testing/indels.GATK.H_GP-13-0890-01A-01-1.tsv -o gatk_testing/indels.GATK.H_GP-13-0890-01A-01-1.out 
