@@ -126,6 +126,7 @@ sub _type_for_file {
     }
 
     my %file_exts_and_formats = (
+        fq => 'sanger',
         fastq => 'sanger',
         fasta => 'phred',
         fna => 'phred',

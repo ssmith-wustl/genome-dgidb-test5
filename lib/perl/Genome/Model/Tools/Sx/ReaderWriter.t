@@ -69,6 +69,38 @@ $fail = Genome::Model::Tools::Sx::Writer->create(
 );
 ok(!$fail, 'Failed to create writer w/ rev and not fwd');
 
+# types for files
+ok(!eval{ Genome::Model::Tools::Sx::Reader->_type_for_file() }, 'type for undef file failed: '.$@);
+ok(!Genome::Model::Tools::Sx::Reader->_type_for_file('file.unknown'), 'type for unknown file failed');
+is(Genome::Model::Tools::Sx::Reader->_type_for_file('file.fastq'), 'sanger', 'type for fastq');
+is(Genome::Model::Tools::Sx::Reader->_type_for_file('file.fq'), 'sanger', 'type for fq');
+is(Genome::Model::Tools::Sx::Reader->_type_for_file('file.fasta'), 'phred', 'type for fasta');
+is(Genome::Model::Tools::Sx::Reader->_type_for_file('file.fa'), 'phred', 'type for fa');
+is(Genome::Model::Tools::Sx::Reader->_type_for_file('file.fna'), 'phred', 'type for fna');
+
+ok(!eval{ Genome::Model::Tools::Sx::Writer->_type_for_file() }, 'type for undef file failed: '.$@);
+ok(!Genome::Model::Tools::Sx::Writer->_type_for_file('file.unknown'), 'type for unknown file failed');
+is(Genome::Model::Tools::Sx::Writer->_type_for_file('file.fastq'), 'sanger', 'type for fastq');
+is(Genome::Model::Tools::Sx::Writer->_type_for_file('file.fq'), 'sanger', 'type for fq');
+is(Genome::Model::Tools::Sx::Writer->_type_for_file('file.fasta'), 'phred', 'type for fasta');
+is(Genome::Model::Tools::Sx::Writer->_type_for_file('file.fa'), 'phred', 'type for fa');
+is(Genome::Model::Tools::Sx::Writer->_type_for_file('file.fna'), 'phred', 'type for fna');
+is(Genome::Model::Tools::Sx::Writer->_type_for_file('file.bed'), 'bed', 'type for bed');
+
+# class for type
+ok(!eval{ Genome::Model::Tools::Sx::Reader->_reader_class_for_type() }, 'class for undef file failed: '.$@);
+ok(!Genome::Model::Tools::Sx::Reader->_reader_class_for_type('unknown'), 'class for unknown file failed');
+is(Genome::Model::Tools::Sx::Reader->_reader_class_for_type('sanger'), 'Genome::Model::Tools::Sx::FastqReader', 'class for sanger');
+is(Genome::Model::Tools::Sx::Reader->_reader_class_for_type('illumina'), 'Genome::Model::Tools::Sx::IlluminaFastqReader', 'class for illumina');
+is(Genome::Model::Tools::Sx::Reader->_reader_class_for_type('phred'), 'Genome::Model::Tools::Sx::PhredReader', 'class for phred');
+
+ok(!eval{ Genome::Model::Tools::Sx::Writer->_writer_class_for_type() }, 'class for undef file failed: '.$@);
+ok(!Genome::Model::Tools::Sx::Writer->_writer_class_for_type('unknown'), 'class for unknown file failed');
+is(Genome::Model::Tools::Sx::Writer->_writer_class_for_type('sanger'), 'Genome::Model::Tools::Sx::FastqWriter', 'class for sanger');
+is(Genome::Model::Tools::Sx::Writer->_writer_class_for_type('illumina'), 'Genome::Model::Tools::Sx::IlluminaFastqWriter', 'class for illumina');
+is(Genome::Model::Tools::Sx::Writer->_writer_class_for_type('phred'), 'Genome::Model::Tools::Sx::PhredWriter', 'class for phred');
+is(Genome::Model::Tools::Sx::Writer->_writer_class_for_type('bed'), 'Genome::Model::Tools::Sx::BedWriter', 'class for bed');
+
 # read paired, write paired
 my $reader = Genome::Model::Tools::Sx::Reader->create(
     config => [ $forward_fastq, $reverse_fastq ],
