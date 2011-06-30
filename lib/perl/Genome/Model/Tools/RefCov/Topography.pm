@@ -1,4 +1,4 @@
-package Genome::Model::Tools::RefCov::Topology;
+package Genome::Model::Tools::RefCov::Topography;
 
 use strict;
 use warnings;
@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 use GD::Graph::lines;
 
-class Genome::Model::Tools::RefCov::Topology {
+class Genome::Model::Tools::RefCov::Topography {
     is => ['Command'],
     has => [
         bam_file => {
@@ -34,6 +34,26 @@ class Genome::Model::Tools::RefCov::Topology {
         }
     ],
 };
+
+sub help_brief {
+    "Generate a topography of coverage or a graph using GD.",
+}
+
+sub help_synopsis {
+my $self = shift;
+    return <<"EOS"
+gmt ref-cov topography...
+EOS
+
+};
+
+sub help_detail {
+    '
+Given a BAM file and a list of ROI in a BED file, this command will generate
+either a text topography of coverage depth per position or a GD graph of
+the topography of each ROI.
+'
+}
 
 sub execute {
     my $self = shift;

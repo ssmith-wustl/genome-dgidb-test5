@@ -66,7 +66,7 @@ sub next_with_attributes_hash_ref {
     my %attributes;
     for my $attribute (@attributes) {
         unless ($attribute =~ /^\s*(\S+)\s*=?\"?(\S[^\"]+)\"?$/) {
-            die(Data::Dumper::Dumper($data));
+            die('Unknown attributes format: '. $attribute ."\n". Data::Dumper::Dumper($data));
         }
         $attributes{$1} = $2;
     }

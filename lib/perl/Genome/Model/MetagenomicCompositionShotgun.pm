@@ -56,6 +56,7 @@ class Genome::Model::MetagenomicCompositionShotgun {
             is => 'Genome::Model::Build::ImportedReferenceSequence',
             is_mutable => 1,
             is_optional => 1,
+            is_many => 1,
             via => 'inputs',
             to => 'value',
             where => [name => 'contamination_screen_reference', value_class_name => 'Genome::Model::Build::ImportedReferenceSequence'],

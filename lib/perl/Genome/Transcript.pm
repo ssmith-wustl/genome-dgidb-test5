@@ -864,7 +864,11 @@ sub gtf_string {
                 next;
             } elsif ($type eq 'cds_exon') {
                 $type = 'CDS';
-                push @cds_strings, $ss->chrom_name ."\t". $ss->source .'_'. $ss->version ."\t". $type ."\t". $ss->structure_start ."\t". $ss->structure_stop ."\t.\t". $ss->strand ."\t". $ss->frame ."\t".' gene_id "'. $ss->gene_name .'"; transcript_id "'. $ss->transcript_name .'"; exon_number "'. $ordinal .'";';
+                # These are just ignored by cufflinks and are duplicates, only useful if exon was comprised of utr_exon and cds_exon
+                my $gene_name = $self->gene->name;
+                my $gene_id = $self->gene_name;
+                unless ($gene_id) { $gene_id = $gene_name }
+                push @cds_strings, $ss->chrom_name ."\t". $ss->source .'_'. $ss->version ."\t". $type ."\t". $ss->structure_start ."\t". $ss->structure_stop ."\t.\t". $ss->strand ."\t". $ss->frame ."\t" .' gene_name "'. $gene_name .'"; gene_id "'. $gene_id .'"; transcript_id "'. $self->transcript_name .'"; exon_number "'. $ordinal .'";';
             } elsif ($type eq 'rna') {
                 # Should RNA even be included as if it's coding, just as an exon or included at all...
                 $type = 'RNA';
@@ -873,7 +877,8 @@ sub gtf_string {
                     # No frame attribute for rna
                     $frame = '.';
                 }
-                push @cds_strings, $ss->chrom_name ."\t". $ss->source .'_'. $ss->version ."\t". $type ."\t". $ss->structure_start ."\t". $ss->structure_stop ."\t.\t". $ss->strand ."\t". $frame ."\t".' gene_id "'. $ss->gene_name .'"; transcript_id "'. $ss->transcript_name .'"; exon_number "'. $ordinal .'";';
+                #It seems cufflinks now fails if multiple annotations (ie. RNA and exon) exist in the GTF file for a single transcript_id
+                #push @cds_strings, $ss->chrom_name ."\t". $ss->source .'_'. $ss->version ."\t". $type ."\t". $ss->structure_start ."\t". $ss->structure_stop ."\t.\t". $ss->strand ."\t". $frame ."\t".' gene_id "'. $ss->gene_name .'"; transcript_id "'. $ss->transcript_name .'"; exon_number "'. $ordinal .'";';
             }
             unless ($exon_start && $exon_stop) {
                 $exon_start = $ss->structure_start;
@@ -896,7 +901,10 @@ sub gtf_string {
         unless ($exon_start && $exon_stop) {
             die(Data::Dumper::Dumper($self));
         }
-        $string .= $self->chrom_name ."\t". $self->source .'_'. $self->version ."\texon\t". $exon_start ."\t". $exon_stop ."\t.\t". $exon_strand ."\t.\t".' gene_id "'. $self->gene->name .'"; transcript_id "'. $self->transcript_name .'"; exon_number "'. $ordinal .'";' ."\n";
+        my $gene_name = $self->gene->name;
+        my $gene_id = $self->gene_name;
+        unless ($gene_id) { $gene_id = $gene_name }
+        $string .= $self->chrom_name ."\t". $self->source .'_'. $self->version ."\texon\t". $exon_start ."\t". $exon_stop ."\t.\t". $exon_strand ."\t.\t".' gene_name "'. $gene_name .'"; gene_id "'. $gene_id .'"; transcript_id "'. $self->transcript_name .'"; exon_number "'. $ordinal .'";' ."\n";
         if (scalar(@cds_strings)) {
             $string .= join("\n", @cds_strings) ."\n";
         }
