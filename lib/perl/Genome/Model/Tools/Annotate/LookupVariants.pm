@@ -55,6 +55,7 @@ class Genome::Model::Tools::Annotate::LookupVariants {
         },
         dbSNP_version => {
             type    => 'Int',
+            is_input => 1,
             is_optional => 1,
             default => 130,
             doc     => 'Version of dbSNP to use. Defaults to 130.',
