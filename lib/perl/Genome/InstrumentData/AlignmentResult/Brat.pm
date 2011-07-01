@@ -141,9 +141,6 @@ sub _run_aligner {
     my @reference_fastas = map{sprintf("%s/%s",$reference_index_directory,$_)} grep(!/^$/, split("\n", <$reference_fasta_list_fh>));
     $reference_fasta_list_fh->close();
 
-    $DB::single = 1;
-    print Data::Dumper::Dumper(@reference_fastas); # TODO verify that this whole thing is correct
-
     ## Note that we use the -P option with a pre-built index for alignment, but we still
     ## need the fastas for the acgt count step.
     $list_files{'reference_fastas'} = _create_temporary_list_file(\@reference_fastas);
@@ -155,6 +152,10 @@ sub _run_aligner {
         } @reference_fastas;
     push @index_files, "INFO.txt";
 
+
+    $DB::single = 1;
+    print Data::Dumper::Dumper(@reference_fastas); # TODO verify that this whole thing is correct
+    print Data::Dumper::Dumper(@index_files); # TODO verify that this whole thing is correct
 
 
     ###################################################
@@ -203,7 +204,8 @@ sub _run_aligner {
         cmd => $trim_cmd,
         input_files => [@input_pathnames],
         output_files => [@trimmed_files],
-        allow_zero_size_output_files => 1
+        allow_zero_size_output_files => 1,
+        dont_create_zero_size_files_for_missing_output => 1
     );
     unless($rv) { die $self->error_message("Trimming failed."); }
 
@@ -236,7 +238,8 @@ sub _run_aligner {
     $rv = Genome::Sys->shellcmd(
         cmd => $align_cmd,
         input_files => [@trimmed_files, @index_files],
-        output_files => [@aligned_reads]
+        output_files => [@aligned_reads],
+        allow_zero_size_input_files => 1
     );
     unless($rv) { die $self->error_message("Alignment failed."); }
 
@@ -468,7 +471,7 @@ sub _split_reference_fasta_by_contig {
     
     
     $DB::single = 1;
-    my $limiter = 2; # TODO TODO TODO this is only for debugging! it speeds things up
+    my $limiter = 1; # TODO TODO TODO this is only for debugging! it speeds things up
 
     while (($line = $fasta_fh->getline())) {
         $total_count++;
