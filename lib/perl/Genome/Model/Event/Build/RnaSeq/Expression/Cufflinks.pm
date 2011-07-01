@@ -73,7 +73,7 @@ sub execute {
                 return;
             }
         
-            my $rRNA_MT_path = $annotation_build->rRNA_MT_file('gtf');
+            my $rRNA_MT_path = $annotation_build->rRNA_MT_file('gtf',$reference_build->id);
             if ($rRNA_MT_path) {
                 $params .= ' -M '. $rRNA_MT_path;
             }
