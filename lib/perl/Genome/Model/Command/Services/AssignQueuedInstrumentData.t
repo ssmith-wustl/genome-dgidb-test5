@@ -271,7 +271,6 @@ my $aml_command = Genome::Model::Command::Services::AssignQueuedInstrumentData->
 
 ok($aml_command->execute(), 'assign-queued-instrument-data executed successfully.');
 my %aml_new_models = %{$aml_command->_newly_created_models};
-print scalar(values(%aml_new_models));
 for my $model (values(%aml_new_models)) {
     is($model->reference_sequence_build_id, 101947881, 'aml model uses correct reference sequence');
 }
