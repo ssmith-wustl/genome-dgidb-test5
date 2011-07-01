@@ -163,7 +163,7 @@ sub params_for_alignment {
             $self->error_message('Failed to get annotation build from annotation_reference_transcripts: '. $annotation_reference_transcripts);
             return;
         }
-        my $gtf_path = $annotation_build->annotation_file('gtf');
+        my $gtf_path = $annotation_build->annotation_file('gtf',$reference_build_id);
         unless (defined($gtf_path)) {
             die('There is no annotation GTF file defined for annotation_reference_transcripts build: '. $annotation_reference_transcripts);
         }

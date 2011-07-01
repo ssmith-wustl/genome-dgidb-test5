@@ -59,7 +59,7 @@ for my $file ( '/consed/edit_dir/454Contigs.ace.1', '/consed/phdball_dir/phd.bal
     ok ( File::Compare::compare( $temp_dir."$file", $test_suite_dir."$file" ) == 0, "$file files match" );
 }
 
-<STDIN>;
+#<STDIN>;
 
 done_testing();
 
