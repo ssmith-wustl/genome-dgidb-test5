@@ -279,6 +279,12 @@ sub _resolve_annotation_file_name {
     my $file_type = shift;
     my $suffix = shift;
     my $reference_sequence_id = shift;
+    unless (defined($reference_sequence_id)) {
+        unless ($self->reference_sequence_id) {
+            die('There is no reference sequence build associated with imported annotation build: '. $self->id);
+        }
+        $reference_sequence_id = $self->reference_sequence_id;
+    }
     my $file_name = $self->_annotation_data_directory .'/'. $reference_sequence_id .'-'. $file_type .'.'. $suffix;
     return $file_name;
 }
@@ -290,12 +296,6 @@ sub annotation_file {
 
     unless ($suffix) {
         die('Must provide file suffix as parameter to annotation_file method in '.  __PACKAGE__);
-    }
-    unless (defined($reference_sequence_id)) {
-        unless ($self->reference_sequence_id) {
-            die('There is no reference sequence build associated with imported annotation build: '. $self->id);
-        }
-        $reference_sequence_id = $self->reference_sequence_id;
     }
 
     my $file_name = $self->_resolve_annotation_file_name('all_sequences',$suffix,$reference_sequence_id);
