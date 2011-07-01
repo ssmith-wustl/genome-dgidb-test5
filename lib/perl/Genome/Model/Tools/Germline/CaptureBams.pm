@@ -279,6 +279,7 @@ __DATA__
   <link fromOperation="input connector" fromProperty="germline_bam_file" toOperation="Filter Snp" toProperty="bam_file" />
   <link fromOperation="input connector" fromProperty="tier_1_snpfilter_file" toOperation="Filter Snp" toProperty="output_file" />
   <link fromOperation="input connector" fromProperty="tier_1_snpfilter_file_filtered" toOperation="Filter Snp" toProperty="filtered_file" />
+  <link fromOperation="input connector" fromProperty="reference_fasta" toOperation="Filter Snp" toProperty="reference" />
 
 <!-- RUN TRANSCRIPT ANNOTATION FOR SNPS --> 
 
@@ -370,6 +371,7 @@ __DATA__
   <link fromOperation="input connector" fromProperty="germline_bam_file" toOperation="Filter Indel" toProperty="bam_file" />
   <link fromOperation="input connector" fromProperty="tier_1_indelfilter_file" toOperation="Filter Indel" toProperty="output_file" />
   <link fromOperation="input connector" fromProperty="tier_1_indelfilter_file_filtered" toOperation="Filter Indel" toProperty="filtered_file" />
+  <link fromOperation="input connector" fromProperty="reference_fasta" toOperation="Filter Indel" toProperty="reference" />
 
 <!-- RUN TRANSCRIPT ANNOTATION FOR INDELS -->
 
