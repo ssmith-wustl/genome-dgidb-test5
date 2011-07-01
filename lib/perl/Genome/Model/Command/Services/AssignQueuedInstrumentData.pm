@@ -1585,7 +1585,31 @@ sub _is_build36_project {
     my $sample_prefix = substr($name,0,4);
 
     return $legacy_project_mapping{$sample_prefix} if $legacy_project_mapping{$sample_prefix};
-    return 0;
+    return $self->_is_aml_build_36($pse, $sample);
+}
+
+sub _is_aml_build_36 {
+    my $self = shift;
+    my $pse = shift;
+    my $sample = shift;
+
+    # Check if in work order from RT #72713
+    my @work_orders = $pse->get_inherited_assigned_directed_setups_filter_on('setup work order');
+
+    unless (@work_orders > 0) {
+        $self->error_message('solexa instrument_data ' . $pse->added_param('instrument_data_id') . ' has no work order(s)');
+        die $self->error_message;
+    }
+
+    foreach my $work_order (@work_orders) {
+        if ( $work_order->project_id == 2589194 ) {
+            return 1;
+        }
+    }
+
+    # Is it one of these samples from RT #72713
+    my @sample_names = qw(H_KA-758168-0912815 H_KA-758168-1003495 H_KA-758168-S.22139 H_KA-400220-0814727 H_KA-400220-0912813 H_KA-400220-0802127 H_KA-426980-091280 H_KA-426980-1002510 H_KA-426980-S.14770 H_KA-452198-0912806 H_KA-452198-0814719 H_KA-452198-S.22477 H_KA-573988-0814941 H_KA-573988-0926957 H_KA-573988-0815176 H_KA-804168-0814948 H_KA-804168-0802136 H_KA-804168-0912812 H_KA-817156-0912808 H_KA-817156-0814950 H_KA-817156-0802138 H_KA-869586G-0926998 H_KA-869586G-S.16427 H_KA-869586G-S.16508);
+    return grep( $sample->name eq $_, @sample_names );
 }
 
 1;
