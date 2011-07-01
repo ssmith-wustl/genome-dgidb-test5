@@ -12,11 +12,11 @@ class Genome::Command::Base {
     is => 'Command',
     is_abstract => 1,
     has_optional => [
-        total_command_count => {
+        _total_command_count => {
             is => 'Integer',
             default => 0,
         },
-        command_errors => {
+        _command_errors => {
             is => 'HASH',
             doc => 'values can be an array ref if multiple errors for on command',
             default => {},
@@ -764,8 +764,8 @@ sub _unique_elements {
 
 sub display_command_summary_report {
     my $self = shift;
-    my $total_count = $self->total_command_count;
-    my %command_errors = %{$self->command_errors};
+    my $total_count = $self->_total_command_count;
+    my %command_errors = %{$self->_command_errors};
 
     if (keys %command_errors) {
         $self->status_message("\n\nErrors Summary:");
@@ -795,9 +795,9 @@ sub append_error {
     my $key = shift || die;
     my $error = shift || die;
 
-    my $command_errors = $self->command_errors;
+    my $command_errors = $self->_command_errors;
     push @{$command_errors->{$key}}, $error;
-    $self->command_errors($command_errors);
+    $self->_command_errors($command_errors);
 
     return 1;
 }

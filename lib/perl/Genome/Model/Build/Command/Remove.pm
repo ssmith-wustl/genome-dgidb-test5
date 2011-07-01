@@ -42,7 +42,7 @@ sub execute {
     my @builds = $self->builds;
     my $build_count = scalar(@builds);
     for my $build (@builds) {
-        $self->total_command_count($self->total_command_count + 1);
+        $self->_total_command_count($self->_total_command_count + 1);
         my $transaction = UR::Context::Transaction->begin();
         my $display_name = $build->__display_name__;
         my $remove_build = Genome::Command::Remove->create(items => [$build], _deletion_params => [keep_build_directory => $self->keep_build_directory]);
@@ -64,7 +64,7 @@ sub execute {
 
     $self->display_command_summary_report();
 
-    return !scalar(keys %{$self->command_errors});
+    return !scalar(keys %{$self->_command_errors});
 }
 
 1;
