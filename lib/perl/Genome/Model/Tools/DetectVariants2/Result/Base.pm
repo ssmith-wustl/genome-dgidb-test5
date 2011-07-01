@@ -112,7 +112,7 @@ sub create {
             }
         }
 
-        Genome::Sys->create_symlink($self->output_dir, $instance_output);
+        Genome::Sys->create_symlink_and_log_change($self, $self->output_dir, $instance_output);
 
         $instance->_generate_result;
         $self->_set_result_file_permissions;
