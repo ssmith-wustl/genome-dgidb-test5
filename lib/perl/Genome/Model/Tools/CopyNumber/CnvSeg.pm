@@ -45,12 +45,12 @@ class Genome::Model::Tools::CopyNumber::CnvSeg {
         },
         centromere_file => {
             is => 'String',
-            doc => 'Path to a UCSC centromere table',
-            default => "/gscmnt/sata186/info/medseq/kchen/work/SolexaCNV/scripts/centromere.csv",
+            doc => 'Path to a UCSC centromere table (replace hg18 w/ hg19 for build 37)',
+            default => "/gscmnt/sata186/info/medseq/kchen/work/SolexaCNV/scripts/centromere.hg18.csv",
         },
         gap_file => {
             is => 'String',
-            doc => 'Path to a UCSC gap table',
+            doc => 'Path to a UCSC gap table (replace hg18 w/ hg19 for build 37)',
             default => "/gscmnt/sata186/info/medseq/kchen/work/SolexaCNV/scripts/hg18gaps.csv",
         },
         purity => {

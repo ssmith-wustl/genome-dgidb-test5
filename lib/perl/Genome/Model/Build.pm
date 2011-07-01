@@ -1036,6 +1036,21 @@ sub fail {
         # FIXME soon - return here
         # return;
     }
+
+    for my $error (@errors) {
+        $self->add_note(
+            header_text => 'Failed Stage',
+            body_text => $error->stage,
+        );
+        $self->add_note(
+            header_text => 'Failed Step',
+            body_text => $error->step,
+        );
+        $self->add_note(
+            header_text => 'Failed Error',
+            body_text => $error->error,
+        );
+    }
     
     return 1;
 }

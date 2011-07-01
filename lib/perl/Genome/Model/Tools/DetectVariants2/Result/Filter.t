@@ -9,7 +9,7 @@ BEGIN{
 };
 
 use above "Genome";
-use Test::More tests => 24;
+use Test::More tests => 26;
 
 use_ok('Genome::Model::Tools::DetectVariants2::Result::Filter');
 
@@ -99,6 +99,13 @@ my $filter_result4 = $filter_command4->_result;
 isnt($filter_result4, $filter_result3, 'got back another new result that differs only in previous filters');
 isnt($filter_result4, $filter_result, 'got back another new result that differs only in previous filters');
 is($filter_result4->previous_filter_strategy, 'Genome::Model::Tools::DetectVariants2::Filter::SnpFilter v1 then Genome::Model::Tools::DetectVariants2::Filter::SnpFilter v1', 'previous_filter_strategy has expected value');
+
+
+my $delete_ok3 = eval { $filter_result3->delete };
+ok(!$delete_ok3, 'prevented from deleting a filter result that is used by another result');
+my $delete_ok4 = eval { $filter_result4->delete };
+my $error = $@;
+ok($delete_ok4, 'can delete a filter result not subsequently used') or diag('error: ' . $error);
 
 my %result_params = (
         detector_name => $filter_result->detector_name,

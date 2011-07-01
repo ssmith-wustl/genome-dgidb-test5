@@ -108,9 +108,10 @@ sub execute {
 
     $self->status_message("Running SOAPdenovo with command: $cmd");
 
-    if (system("$cmd")) {
-	$self->error_message("Failed to run soap denovo with command: $cmd");
-	return;
+    my $rv = eval{ Genome::Sys->shellcmd(cmd => $cmd); };
+    if ( not $rv ) {
+        $self->error_message("Failed to run soap denovo: $@");
+        return;
     }
 
     return 1;

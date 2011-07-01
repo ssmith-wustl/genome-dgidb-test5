@@ -15,6 +15,11 @@ class Genome::Model::Tools::DetectVariants2::Filter::VarscanHighConfidence{
             doc => 'variant type that this module operates on, overload this in submodules accordingly',
         },
     ],
+    has_optional_input => [
+        p_value_for_hc  => { is => 'Number', doc => "P-value threshold for high confidence", is_input => 1, default_value => '0.07'},
+        max_normal_freq => { is => 'Number', doc => "Maximum normal frequency for HC Somatic", is_input => 1, default_value => '5'},
+        min_tumor_freq  => { is => 'Number', doc => "Minimum tumor freq for HC Somatic", is_input => 1, default_value => '10'},
+    ],
 };
 
 sub _filter_variants {
@@ -25,6 +30,9 @@ sub _filter_variants {
     my $vshc = Genome::Model::Tools::Varscan::ProcessSomatic->create(
         status_file => $varscan_status_file,
         output_basename => $base_name,
+        p_value_for_hc => $self->p_value_for_hc,
+        max_normal_freq => $self->max_normal_freq,
+        min_tumor_freq => $self->min_tumor_freq,
     );
 
     unless( $vshc->execute ){

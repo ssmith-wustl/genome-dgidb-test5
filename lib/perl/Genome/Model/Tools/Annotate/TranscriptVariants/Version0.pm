@@ -56,8 +56,6 @@ UR::Object::Type->define(
 
         build => { is => 'Genome::Model::Build', id_by => 'build_id', is_optional => 1 },
         data_directory => { is => 'PATHNAME', is_optional => 1 },
-        flank_range => { is => 'Integer', is_optional => 1, default_value => 50000,
-                         doc => 'Range to look around for flanking regions of transcripts' },
     ],
     doc => 'The original, transcript-centric annotator code used through October 2010, adapted to run in the versioned annotator framework',
 );
@@ -238,7 +236,7 @@ sub _create_new_transcript_window {
 
     my $transcript_window = Genome::Utility::Window::Transcript->create (
                                 iterator => $transcript_iterator,
-                                range => $self->flank_range
+                                range => 50000,
                             );
     unless ($transcript_window) {
         $self->error_message("Couldn't create a transcript window from iterator for chromosome $chromosome_name!");

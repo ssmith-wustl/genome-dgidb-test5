@@ -10,27 +10,20 @@ use Cwd;
 class Genome::Model::Command::Remove {
     is => 'Genome::Command::Base',
     has => [
-    models => {
-        is => 'Genome::Model',
-        shell_args_position => 1,
-        is_many => 1,
-        doc => 'The model to remove, specified by id, name or expression',
-    },
-    force_delete => {
-        is => 'Boolean',
-        default_value => 0,
-        doc => 'A boolean flag to force model delete.(default_value=0)',
-    },
-    keep_build_directories => {
-        is => 'Boolean',
-        default_value => 0,
-        doc => 'A boolean flag to allow the retention of the model directory after the model is purged from the database.(default_value=0)',
-    }
+        models => {
+            is => 'Genome::Model',
+            shell_args_position => 1,
+            is_many => 1,
+            doc => 'The model to remove, specified by id, name or expression',
+        },
+        force_delete => {
+            is => 'Boolean',
+            default_value => 0,
+            doc => 'A boolean flag to force model delete.(default_value=0)',
+        },
     ],
     doc => "delete a genome model, all of its builds, and logs",
 };
-
-sub sub_command_sort_position { 4 }
 
 sub help_synopsis {
     return <<"EOS"
@@ -42,8 +35,6 @@ EOS
 
 sub execute {
     my $self = shift;
-
-    my $keep_build_directories = $self->keep_build_directories;
 
     my @models =  $self->models;
     my @names = map { $_->__display_name__ } @models;
@@ -66,7 +57,7 @@ sub execute {
         $self->status_message("Removing model " . $model->__display_name__);
         my $model_id = $model->id;
         unless ($model->delete) {
-            $self->error_message('Failed to delete model id '. $model->id);
+            $self->error_message('Failed to delete model id '. $model_id);
             return;
         }
         $self->status_message('Succesfully removed model id '. $model_id);

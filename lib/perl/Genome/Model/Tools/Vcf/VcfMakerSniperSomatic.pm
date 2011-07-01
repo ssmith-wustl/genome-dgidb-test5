@@ -348,7 +348,7 @@ sub execute {                               # replace with real execution logic.
 
             #skip non-normal chrs
             #next if $col[0] =~ /^NT/;
-            next unless ($col[0] =~/^[1]?([0-9]|^2[12]|X|Y|MT)$/);
+            next unless ($col[0] =~/^[1]?([0-9]|^2[012]|X|Y|MT)$/);
                  
             $allSnvs{$id}{"chrom"} = $col[0];
             $allSnvs{$id}{"pos"} = $col[1];

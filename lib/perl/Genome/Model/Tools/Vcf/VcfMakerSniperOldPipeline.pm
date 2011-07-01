@@ -328,7 +328,7 @@ sub execute {                               # replace with real execution logic.
         $allSnvs{$id}{"pos"} = $col[1];
 
         #replace ambiguous/IUPAC bases with N in ref
-        $col[3] =~ s/[ACGTN]/N/g;
+        $col[2] =~ s/[^ACGTN]/N/g;
 
         #get all the alleles together (necessary for the GT field)
         my @allAlleles = ($col[2]);
@@ -418,7 +418,7 @@ sub execute {                               # replace with real execution logic.
         next if $col[0] =~ /^NT/;
 
         #replace ambiguous/IUPAC bases with N in ref
-        $col[3] =~ s/[ACGTN]/N/g;
+        $col[2] =~ s/[^ACGTN]/N/g;
         
         #if we didn't also see this pos as a tumor snv
         if (!(exists($allSnvs{$id}))){
@@ -528,7 +528,7 @@ sub execute {                               # replace with real execution logic.
         }    
 
         #replace ambiguous/IUPAC bases with N in ref
-        $col[3] =~ s/[ACGTN]/N/g;
+        $col[2] =~ s/[^ACGTN]/N/g;
 
         #just replace anything from samtools with the presumably better sniper call.
         my @allAlleles = $col[2];
