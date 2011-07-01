@@ -196,7 +196,7 @@ sub create_directory {
 }
 
 sub create_symlink {
-    my ($self, $target, $link) = @_;
+    my ($class, $target, $link) = @_;
 
     unless ( defined $target ) {
         Carp::croak("Can't create_symlink: no target given");
@@ -222,6 +222,27 @@ sub create_symlink {
         Carp::croak("Can't create link ($link) to $target\: $!");
     }
     
+    return 1;
+}
+
+sub create_symlink_and_log_change {
+    my $class  = shift || die;
+    my $owner  = shift || die;
+    my $target = shift || die;
+    my $link   = shift || die;
+
+    $class->create_symlink($target, $link);
+
+    # create a change record so that if the databse change is undone this symlink will be removed
+    my $symlink_undo = sub {
+        $owner->status_message("Removing symlink ($link) due to database rollback.");
+        unlink $link;
+    };
+    my $symlink_change = UR::Context::Transaction->log_change($owner, 'UR::Value', $link, 'external_change', $symlink_undo);
+    unless ($symlink_change) {
+        die $owner->error_message("Failed to log symlink change.");
+    }
+
     return 1;
 }
 
