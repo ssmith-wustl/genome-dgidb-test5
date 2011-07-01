@@ -77,7 +77,7 @@ sub execute {
             if ($rRNA_MT_path) {
                 $params .= ' -M '. $rRNA_MT_path;
             }
-            my $gtf_path = $annotation_build->annotation_file('gtf');
+            my $gtf_path = $annotation_build->annotation_file('gtf',$reference_build->id);
             my $mode = $self->model->annotation_reference_transcripts_mode;
             unless (defined($mode)) {
                 $mode = 'de novo';
