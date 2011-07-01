@@ -111,7 +111,8 @@ sub _expunge_assignments{
     
     for my $model (@models) {
         $model->remove_instrument_data($self);
-        push(@{$affected_users{$model->user_name}->{$instrument_data_id}}, $model->id);
+        my $display_name = $self->__display_name__;
+        push(@{$affected_users{$model->user_name}->{$display_name}}, $model->id);
     }
 
     # There may be builds using this instrument data even though it had previously been unassigned from the model

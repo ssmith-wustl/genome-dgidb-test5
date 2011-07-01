@@ -89,7 +89,7 @@ sub _notify_expunged_objects_owners{
         if($user_name eq 'apipe-builder'){
             $sender->MailMsg( { 
                     to      => 'Analysis Pipeline <apipebulk@genome.wustl.edu>, ' . "$user_name".'@genome.wustl.edu', 
-                    cc      => 'Jim Weible <jweible@genome.wustl.edu>, Thomas Mooney <tmooney@genome.wustl.edu>', 
+                    cc      => 'Jim Weible <jweible@genome.wustl.edu>, Thomas Mooney <tmooney@genome.wustl.edu>, Scott Smith <ssmith@genome.wustl.edu>',
                     subject => "Expunged Instrument Data: $instrument_data_id_string", 
                     msg     => "LIMS has expunged instrument data used in some of your models.  Existing builds using this data will be abandoned and the model will be rebuilt.  Please contact APipe if you have any questions regarding this process.\n\n$msg", 
                     });
@@ -103,9 +103,9 @@ sub _generate_expunged_objects_message_text{
     my %expunge_notifications_for_user = @_;
     
     my $output = "";
-    for my $instrument_data_id (keys %expunge_notifications_for_user){
-        $output .= "Instrument Data: $instrument_data_id\n";
-        $output .= join("", map("\tModel Id: $_\n", @{$expunge_notifications_for_user{$instrument_data_id}})); 
+    for my $instrument_data_display_name (keys %expunge_notifications_for_user){
+        $output .= "Instrument Data: $instrument_data_display_name\n";
+        $output .= join("", map("\tModel Id: $_\n", @{$expunge_notifications_for_user{$instrument_data_display_name}}));
         $output .= "\n";
     }
     return $output;
