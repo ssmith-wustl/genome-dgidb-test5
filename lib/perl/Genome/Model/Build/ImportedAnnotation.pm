@@ -274,7 +274,7 @@ sub _annotation_data_directory{
     return $self->data_directory . "/annotation_data";
 }
 
-my _resolve_annotation_file_name {
+sub _resolve_annotation_file_name {
     my $self = shift;
     my $file_type = shift;
     my $suffix = shift;
