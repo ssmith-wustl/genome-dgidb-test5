@@ -22,7 +22,7 @@ my $base_dir = '/gsc/var/cache/testsuite/data/Genome-Model/DeNovoAssembly';
 my $archive_path = $base_dir.'/inst_data/-7777/archive.tgz';
 ok(-s $archive_path, 'inst data archive path') or die;
 my $example_version = '4';
-my $example_dir = $base_dir.'/velvet_solexa_build_v'.$example_version;
+my $example_dir = $base_dir.'/velvet_v'.$example_version;
 ok(-d $example_dir, 'example dir') or die;
 my $tmpdir = File::Temp::tempdir(CLEANUP => 1);
 
@@ -75,7 +75,6 @@ my $pp = Genome::ProcessingProfile::DeNovoAssembly->create(
     assembler_version => '0.7.57-64',
     assembler_params => '-hash_sizes 31 33 35 -min_contig_length 100',
     read_processor => 'trimmer by-length -trim-length 10 | rename illumina-to-pcap',
-    post_assemble => 'standard-outputs',
 );
 ok($pp, 'pp') or die;
 
@@ -119,7 +118,9 @@ is(
 );
 
 # ASSEMBLE
-my %assembler_params = $model->processing_profile->velvet_one_button_params($build);
+my $assembler_rusage = $build->assembler_rusage;
+is($assembler_rusage, "-q alignment -R 'select[type==LINUX64 && mem>30000] rusage[mem=30000] span[hosts=1]' -M 30000000", 'assembler rusage');
+my %assembler_params = $build->assembler_params;
 #print Data::Dumper::Dumper(\%assembler_params);
 is_deeply(
     \%assembler_params,

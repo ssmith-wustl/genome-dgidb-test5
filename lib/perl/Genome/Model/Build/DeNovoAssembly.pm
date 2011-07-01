@@ -360,6 +360,11 @@ sub center_name {
     return $_[0]->model->center_name || 'WUGC';
 }
 
+#< Assemble >#
+sub assembler_rusage { return; }
+sub before_assemble { return 1; }
+sub after_assemble { return 1; }
+
 #< Metrics >#
 sub calculate_metrics {
     my  $self = shift;

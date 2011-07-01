@@ -32,4 +32,20 @@ sub contigs_fasta_file {
     return $_[0]->data_directory.'/all-contigs.fa';
 }
 
+# assemble
+sub assembler_params {
+    my $self = shift;
+
+    my %params = $self->processing_profile->assembler_params_as_hash;
+    $params{version} = $self->processing_profile->assembler_version;
+
+    ($params{fastq_a}, $params{fastq_b}) = $self->fastq_input_files;
+
+    my $output_dir = $self->data_directory;
+    $params{output_directory} = $output_dir;
+
+    return %params;
+}
+
 1;
+
