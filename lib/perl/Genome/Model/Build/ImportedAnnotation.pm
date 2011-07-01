@@ -274,6 +274,15 @@ sub _annotation_data_directory{
     return $self->data_directory . "/annotation_data";
 }
 
+sub _resolve_annotation_file_name {
+    my $self = shift;
+    my $file_type = shift;
+    my $suffix = shift;
+    my $reference_sequence_id = shift;
+    my $file_name = $self->_annotation_data_directory .'/'. $reference_sequence_id .'-'. $file_type .'.'. $suffix;
+    return $file_name;
+}
+
 sub annotation_file {
     my $self = shift;
     my $suffix = shift;
@@ -289,7 +298,7 @@ sub annotation_file {
         $reference_sequence_id = $self->reference_sequence_id;
     }
 
-    my $file_name = $self->_annotation_data_directory .'/'. $reference_sequence_id .'-all_sequences.'. $suffix;
+    my $file_name = $self->_resolve_annotation_file_name('all_sequences',$suffix,$reference_sequence_id);
     if (-f $file_name) {
         return $file_name;
     }
@@ -316,16 +325,80 @@ sub annotation_file {
     }
 }
 
-sub rRNA_MT_file {
+sub rRNA_MT_pseudogene_file {
     my $self = shift;
     my $suffix = shift;
+    my $reference_sequence_id = shift;
     unless ($suffix) {
-        die('Must provide file suffix as parameter to rRNA_MT_file method in '.  __PACKAGE__);
+        die('Must provide file suffix as parameter to rRNA_MT_pseudogene_file method in '.  __PACKAGE__);
     }
-    my $file_name = $self->_annotation_data_directory .'/rRNA_MT.'. $suffix;
+    my $file_name = $self->_resolve_annotation_file_name('rRNA_MT_pseudogene',$suffix,$reference_sequence_id);
     if (-f $file_name) {
         return $file_name;
     }
+    #TODO: Need a method or tool to generate the rRNA_MT_pseudogene file on the fly
+    #Or just generate the rRNA, MT, and pseudogene files below and merge...
+    return;
+}
+
+sub rRNA_MT_file {
+    my $self = shift;
+    my $suffix = shift;
+    my $reference_sequence_id = shift;
+    unless ($suffix) {
+        die('Must provide file suffix as parameter to rRNA_MT_file method in '.  __PACKAGE__);
+    }
+    my $file_name = $self->_resolve_annotation_file_name('rRNA_MT',$suffix,$reference_sequence_id);
+    if (-f $file_name) {
+        return $file_name;
+    }
+    #TODO: Need a method or tool to generate the rRNA_MT file on the fly
+    #Or just generate the rRNA and MT files below and merge...
+    return;
+}
+
+sub rRNA_file {
+    my $self = shift;
+    my $suffix = shift;
+    my $reference_sequence_id = shift;
+    unless ($suffix) {
+        die('Must provide file suffix as parameter to rRNA_file method in '.  __PACKAGE__);
+    }
+    my $file_name = $self->_resolve_annotation_file_name('rRNA',$suffix,$reference_sequence_id);
+    if (-f $file_name) {
+        return $file_name;
+    }
+    #TODO: Need a method or tool to generate the rRNA file on the fly
+    return;
+}
+
+sub MT_file {
+    my $self = shift;
+    my $suffix = shift;
+    my $reference_sequence_id = shift;
+    unless ($suffix) {
+        die('Must provide file suffix as parameter to rRNA_file method in '.  __PACKAGE__);
+    }
+    my $file_name = $self->_resolve_annotation_file_name('rRNA',$suffix,$reference_sequence_id);
+    if (-f $file_name) {
+        return $file_name;
+    }
+    #TODO: Need a method or tool to generate the rRNA file on the fly
+    return;
+}
+
+sub pseudogene_file {
+    my $self = shift;
+    my $suffix = shift;
+    my $reference_sequence_id = shift;
+    unless ($suffix) {
+        die('Must provide file suffix as parameter to pseudogene_file method in '.  __PACKAGE__);
+    }
+    my $file_name = $self->_resolve_annotation_file_name('pseudogene',$suffix,$reference_sequence_id);
+    if (-f $file_name) {
+        return $file_name;
+    }
+    #TODO: Need a method or tool to generate the pseudogene file on the fly
     return;
 }
 
