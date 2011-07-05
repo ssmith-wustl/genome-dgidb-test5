@@ -617,7 +617,6 @@ my $de_novo_processing_profile = Genome::ProcessingProfile::DeNovoAssembly->crea
     name => 'AQID-test-de-novo-pp',
     assembler_name => 'velvet one-button',
     assembler_version => '0.7.57-64',
-    sequencing_platform => 'solexa',
     read_processor => 'trimmer bwa-style --trim-qual-level 9000',
 );
 
