@@ -69,7 +69,6 @@ sub module_to_class {
 #< Params as String and Hash >#
 sub param_string_to_hash {
     my ($param_string, $value_split) = @_;
-    #my $param_string = shift;
 
     unless ( $param_string ) {
         Carp::cluck('No param string to convert to hash');
@@ -90,8 +89,8 @@ sub param_string_to_hash {
         Carp::cluck("Malformed param string ($param_string).  Found empty dash (-).") if $key eq '';
         my $value = $params[$i + 1];
         #$params{$key} = ( $value ne '' ? $value : 1 );
-        $value =~ s/\s*$//;
-        if ( $value eq '' ) {
+        $value =~ s/\s*$// if defined $value;
+        if ( not defined $value or $value eq '' ) {
             $params{$key} = 1;
         }
         elsif ( defined $value_split ) { 
@@ -143,45 +142,4 @@ sub capitalize_words {
 }
 
 1;
-
-=pod
-
-=head1 Name
-
-ModuleTemplate
-
-=head1 Synopsis
-
-=head1 Usage
-
-=head1 Methods
-
-=head2 
-
-=over
-
-=item I<Synopsis>
-
-=item I<Arguments>
-
-=item I<Returns>
-
-=back
-
-=head1 See Also
-
-=head1 Disclaimer
-
-Copyright (C) 2005 - 2009 Genome Center at Washington University in St. Louis
-
-This module is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY or the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
-
-=head1 Author(s)
-
-B<Eddie Belter> I<ebelter@genome.wustl.edu>
-
-=cut
-
-#$HeadURL$
-#$Id$
 

@@ -69,7 +69,6 @@ ok(-s $instrument_data->archive_path, 'inst data archive path');
 
 my $pp = Genome::ProcessingProfile::DeNovoAssembly->create(
     name => 'De Novo Assembly Abyss Test',
-    sequencing_platform => 'solexa',
     assembler_name => 'abyss parallel',
     assembler_version => '1.2.7',
     assembler_params => '-kmer_size 25,31..35 step 2,50 -num_jobs 4',

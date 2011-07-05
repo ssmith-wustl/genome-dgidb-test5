@@ -25,12 +25,12 @@ sub _example_directory_for_build {
     Carp::confess "No model to get example directory" unless $model;
     
     my %dirs_versions = (
-        soap_solexa => '9',
-        velvet_solexa => '0.3',
-        abyss_solexa => '1'
+        soap => '9',
+        velvet => '0.3',
+        abyss => '1'
     );
 
-    my $assembler_platform = $model->processing_profile->assembler_base_name.'_'.$model->sequencing_platform;
+    my $assembler_platform = $model->processing_profile->assembler_base_name;
     my $dir = $self->_base_directory.'/'.$assembler_platform.'_build_v'.$dirs_versions{$assembler_platform};
 
     Carp::confess("Example directory ($dir) for de novo assembly model does not exist.") unless -d $dir;
@@ -107,7 +107,6 @@ sub processing_profile_for_soap {
 
     my $pp = Genome::ProcessingProfile::DeNovoAssembly->create(
         name => 'De Novo Assembly Soap Test',
-        sequencing_platform => 'solexa',
         assembler_name => 'soap de-novo-assemble',
         assembler_version => '1.04',
         assembler_params => '-kmer_size 31 -resolve_repeats -kmer_frequency_cutoff 1',
@@ -127,7 +126,6 @@ sub processing_profile_for_velvet {
 
     my $pp = Genome::ProcessingProfile::DeNovoAssembly->create(
         name => 'De Novo Assembly Velvet Test',
-        sequencing_platform => 'solexa',
         coverage => 0.5,#25000,
         assembler_name => 'velvet one-button',
         assembler_version => '0.7.57-64',
@@ -148,7 +146,6 @@ sub processing_profile_for_abyss {
 
     my $pp = Genome::ProcessingProfile::DeNovoAssembly->create(
         name => 'De Novo Assembly Abyss Test',
-        sequencing_platform => 'solexa',
         assembler_name => 'abyss parallel',
         assembler_version => '1.2.7',
         assembler_params => '-kmer_size 25,31..35 step 2,50 -num_jobs 4',
