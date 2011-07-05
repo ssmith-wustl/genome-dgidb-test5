@@ -44,12 +44,13 @@ sub _remove_expunged_object {
     my $self = shift;
     my $class = shift;
     my $id = shift;
+    my $expunge_success;
     my %affected_users;
 
     my $object = $class->get($id);
     if ($class =~ m/Genome::InstrumentData/){
         #TODO: this should nuke alignment results for instrument data
-        %affected_users = $object->_expunge_assignments
+        ($expunge_success, %affected_users) = $object->_expunge_assignments
     }
 
     $object->delete;
