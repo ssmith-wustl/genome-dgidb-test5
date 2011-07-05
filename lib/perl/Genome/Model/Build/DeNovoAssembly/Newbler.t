@@ -108,7 +108,7 @@ ok($prepare->execute, 'execute prepare instrument data');
 is(@existing_assembler_input_files, 1, 'assembler input files exist');
 
 my @example_existing_assembler_input_files = $example_build->existing_assembler_input_files;
-is(@existing_assembler_input_files, 1, 'example assembler input files do not exist');
+is(@example_existing_assembler_input_files, 1, 'example assembler input files exist');
 is(
     File::Compare::compare($existing_assembler_input_files[0], $example_existing_assembler_input_files[0]),
     0, 
