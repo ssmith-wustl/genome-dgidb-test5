@@ -32,8 +32,8 @@ my $taxon = Genome::Taxon->create(
     current_default_org_prefix => undef,
     estimated_genome_size => 4500000,
     current_genome_refseq_id => undef,
-        ncbi_taxon_id => undef,
-        ncbi_taxon_species_name => undef,
+    ncbi_taxon_id => undef,
+    ncbi_taxon_species_name => undef,
     species_latin_name => 'Escherichia coli',
     strain_name => 'TEST',
 );
@@ -70,10 +70,11 @@ ok(-s $instrument_data->archive_path, 'inst data archive path');
 my $pp = Genome::ProcessingProfile::DeNovoAssembly->create(
     name => 'De Novo Assembly Velvet Test',
     coverage => 0.5,#25000,
+    read_processor => 'trimmer by-length -trim-length 10 | rename illumina-to-pcap',
     assembler_name => 'velvet one-button',
     assembler_version => '0.7.57-64',
     assembler_params => '-hash_sizes 31 33 35 -min_contig_length 100',
-    read_processor => 'trimmer by-length -trim-length 10 | rename illumina-to-pcap',
+    post_assemble => 'standard-outputs',
 );
 ok($pp, 'pp') or die;
 
@@ -164,11 +165,39 @@ for my $file_name (qw/ contigs_fasta_file sequences_file assembly_afg_file /) {
     ok(-s $file, "Build $file_name exists");
     my $example_file = $example_build->$file_name;
     ok(-s $example_file, "Example $file_name exists");
-    is( File::Compare::compare($file, $example_file), 0, "Generated $file_name matches example file");
+    is(File::Compare::compare($file, $example_file), 0, "Generated $file_name matches example file");
 }
 
+# POST ASSEMBLE
+my $post_assemble = Genome::Model::Event::Build::DeNovoAssembly::PostAssemble->create(build => $build, model => $model);
+ok($post_assemble, 'Created post assemble velvet');
+$post_assemble->dump_status_messages(1);
+ok($post_assemble->execute, 'Execute post assemble velvet');
 
-# TODO metrics
+foreach my $file_name (qw/ 
+    reads.placed readinfo.txt
+    gap.txt contigs.quals contigs.bases
+    reads.unplaced reads.unplaced.fasta
+    supercontigs.fasta supercontigs.agp
+    /) {
+    my $example_file = $example_dir.'/edit_dir/'.$file_name;
+    ok(-e $example_file, "$file_name example file exists");
+    my $file = $build->data_directory.'/edit_dir/'.$file_name;
+    ok(-e $file, "$file_name file exists");
+    is(File::Compare::compare($file, $example_file), 0, "$file_name files match");
+}
+
+foreach my $file_name ('collated.fasta.gz') {#, 'collated.fasta.qual.gz') {
+    my $example_file = $example_dir."/edit_dir/$file_name";
+    ok(-s $example_file, "$file_name example file exists");
+    my $file = $build->data_directory."/edit_dir/$file_name";
+    ok(-s $file, "$file_name file exists");
+    
+    my @diff = `zdiff $file $example_file`;
+    is(scalar(@diff), 0, "$file_name file matches");
+}
+
+# METRICS TODO
 
 #print $build->data_directory."\n"; <STDIN>;
 done_testing();

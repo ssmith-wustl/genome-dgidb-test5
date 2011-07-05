@@ -69,5 +69,8 @@ sub _get_name_part_from_tissue_desc {
     return Genome::Utility::Text::capitalize_words($tissue_desc);
 }
 
+sub sequencing_platform { return; }
+sub instrument_data_class_name { return 'Genome::InstrumentData'; }
+
 1;
 
