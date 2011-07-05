@@ -9,11 +9,6 @@ class Genome::Model::Event::Build::DeNovoAssembly::PostAssemble {
     is => 'Genome::Model::Event::Build::DeNovoAssembly',
 };
 
-sub bsub_rusage {
-    my $self = shift;
-    return $self->processing_profile->bsub_usage;
-}
-
 sub execute {
     my $self = shift;
 
