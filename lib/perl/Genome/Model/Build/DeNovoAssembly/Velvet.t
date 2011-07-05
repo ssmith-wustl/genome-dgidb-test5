@@ -69,7 +69,6 @@ ok(-s $instrument_data->archive_path, 'inst data archive path');
 
 my $pp = Genome::ProcessingProfile::DeNovoAssembly->create(
     name => 'De Novo Assembly Velvet Test',
-    sequencing_platform => 'solexa',
     coverage => 0.5,#25000,
     assembler_name => 'velvet one-button',
     assembler_version => '0.7.57-64',
@@ -97,6 +96,20 @@ my $example_build = Genome::Model::Build->create(
     data_directory => $example_dir,
 );
 ok($example_build, 'create example build');
+
+# MISC 
+is($build->center_name, $build->model->center_name, 'center name');
+is($build->genome_size, 4500000, 'Genome size');
+is($build->calculate_average_insert_size, 260, 'average insert size');
+
+# COVERAGE/KB USAGE
+is($build->calculate_base_limit_from_coverage, 2_250_000, 'Calculated base limit');
+is($build->calculate_estimated_kb_usage, (5_056_250), 'Kb usage based on coverage');
+is($build->calculate_reads_attempted, (30000), 'Calculate reads attempted');
+my $coverage = $model->processing_profile->coverage;
+$pp->coverage(undef); #undef this to allow calc by proc reads coverage
+is($build->calculate_estimated_kb_usage, (5_060_000), 'Kb usage w/o coverage');
+$pp->coverage($coverage);
 
 # PREPARE INST DATA
 my @existing_assembler_input_files = $build->existing_assembler_input_files;
