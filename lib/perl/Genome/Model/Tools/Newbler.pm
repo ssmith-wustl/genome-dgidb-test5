@@ -49,47 +49,75 @@ sub scaffolds_agp_file {
     return $_[0]->assembly_directory.'/454Scaffolds.txt';
 }
 
-#< post assemble output files >#
-sub pcap_scaffold_ace_file {
-    return $_[0]->assembly_directory.'/consed/edit_dir/Pcap.454Contigs.ace';
+sub all_contigs_fasta_file {
+    return $_[0]->assembly_directory.'/454AllContigs.fna';
 }
 
-sub contig_bases_file {
-    return $_[0]->assembly_directory.'/consed/edit_dir/contigs.bases';
+sub all_contigs_qual_file {
+    return $_[0]->assembly_directory.'/454AllContigs.qual';
+}
+
+#< post assemble output files/dirs >#
+sub consed_edit_dir {
+    return $_[0]->assembly_directory.'/consed/edit_dir';
+}
+
+sub pcap_scaffold_ace_file {
+    return $_[0]->consed_edit_dir.'/Pcap.454Contigs.ace';
+}
+
+sub contigs_bases_file {
+    return $_[0]->consed_edit_dir.'/contigs.bases';
 }
 
 sub contigs_quals_file {
-    return $_[0]->assembly_directory.'/consed/edit_dir/contigs.quals';
+    return $_[0]->consed_edit_dir.'/contigs.quals';
 }
 
 sub gap_file {
-    return $_[0]->assembly_directory.'/consed/edit_dir/gap.txt';
+    return $_[0]->consed_edit_dir.'/gap.txt';
 }
 
 sub read_info_file {
-    return $_[0]->assembly_directory.'/consed/edit_dir/readinfo.txt';
+    return $_[0]->consed_edit_dir.'/readinfo.txt';
 }
 
 sub reads_placed_file {
-    return $_[0]->assembly_directory.'/consed/edit_dir/reads.placed';
+    return $_[0]->consed_edit_dir.'/reads.placed';
 }
 
 sub reads_unplaced_file {
-    return $_[0]->assembly_directory.'/consed/edit_dir/reads.unplaced';
+    return $_[0]->consed_edit_dir.'/reads.unplaced';
 }
 
 sub supercontigs_bases_file {
-    return $_[0]->assembly_directory.'/consed/edit_dir/supercontigs.fa';
+    return $_[0]->consed_edit_dir.'/supercontigs.fa';
 }
 
 sub supercontigs_agp_file {
-    return $_[0]->assembly_directory.'/consed/edit_dir/supercontigs.agp';
+    return $_[0]->consed_edit_dir.'/supercontigs.agp';
 }
 
 sub stats_file {
-    return $_[0]->assembly_directory.'/consed/edit_dir/stats.txt';
+    return $_[0]->consed_edit_dir.'/stats.txt';
 }
 
+#< create assembly sub dirs >#
+sub create_consed_dir {
+    my $self = shift;
+
+    unless ( -d $self->assembly_directory.'/consed' ) {
+        Genome::Sys->create_directory( $self->assembly_directory.'/consed' );
+    }
+    for my $subdir ( qw/ edit_dir phd_dir chromat_dir phdball_dir / ) {
+        unless ( -d $self->assembly_directory."/consed/$subdir" ) {
+            Genome::Sys->create_directory( $self->assembly_directory."/consed/$subdir" );
+        }
+    }
+    return 1;
+}
+
+#< create scaffolds info >#
 sub parse_newbler_scaffold_file {
     my $self = shift;
 
@@ -100,7 +128,7 @@ sub parse_newbler_scaffold_file {
 
     #create hash of contig info
     my $scaffolds = {};
-    my $fh = Genome::Sys->open_file_for_reading( $self->newbler_scaffold_file );
+    my $fh = Genome::Sys->open_file_for_reading( $self->scaffolds_agp_file );
     while ( my $line = $fh->getline ) {
         my @tmp = split( /\s+/, $line );
         #contig describing line
@@ -119,8 +147,9 @@ sub parse_newbler_scaffold_file {
     $fh->close;
 
     #fill in missing gap sizes with default where gap describing line was missing
+    my $default_gap_size = ( $self->can('default_gap_size') ) ? $self->default_gap_size : 1;
     for my $contig ( keys %$scaffolds ) {
-        $scaffolds->{$contig}->{gap_length} = $self->default_gap_size
+        $scaffolds->{$contig}->{gap_length} = $default_gap_size
             unless exists $scaffolds->{$contig}->{gap_length};
     }
 
@@ -132,7 +161,7 @@ sub parse_newbler_scaffold_file {
 
         $self->{PREV_SCAFFOLD} = $scaffolds->{$contig} unless defined $self->{PREV_SCAFFOLD};
 
-        if ( $contig_length < $self->min_contig_length ) { #TODO - change to input param
+        if ( $contig_length < $self->min_contig_length ) {
             my $add_to_prev_gap_size = $contig_length + $gap_length;
             $self->{PREV_SCAFFOLD}->{gap_length} += $add_to_prev_gap_size;
             delete $scaffolds->{$contig};            

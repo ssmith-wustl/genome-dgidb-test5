@@ -13,6 +13,14 @@ class Genome::Model::Tools::Newbler::ToPcapAce {
             is => 'Text',
             doc => 'Newbler assembly directory',
         },   
+        default_gap_size => { #TODO - change to min_contig_length
+            is => 'Number',
+            doc => 'Gap size to assign to gaps of unknown sizes',
+        },
+        min_contig_length => { #TODO .. 
+            is => 'Number',
+            doc => 'Minimum gap size to include in post assembly process',
+        },
     ],
     has_optional => [
         newbler_scaffold_file => {
@@ -29,16 +37,6 @@ class Genome::Model::Tools::Newbler::ToPcapAce {
             is => 'Text',
             doc => 'Output ace file',
             is_mutable => 1,
-        },
-        default_gap_size => { #TODO - change to min_contig_length
-            is => 'Number',
-            doc => 'Gap size to assign to gaps of unknown sizes',
-            default => 10,
-        },
-        min_contig_length => { #TODO .. 
-            is => 'Number',
-            doc => 'Minimum gap size to include in post assembly process',
-            default => 1, #TODO - no default
         },
     ],
 };
