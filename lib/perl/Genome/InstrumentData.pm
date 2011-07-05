@@ -74,7 +74,33 @@ class Genome::InstrumentData {
 
 sub delete {
     my $self = shift;
+
+    $self->_expunge_assignments;
+
+    #finally, clean up the instrument data
+    for my $attr ( $self->attributes ) {
+        $attr->delete;
+    }
+
+    $self->_create_deallocate_observer;
+
+    for my $attribute ($self->attributes) {
+        $attribute->delete;
+    }
+
+    return $self->SUPER::delete;
+}
+
+sub _expunge_assignments{
+    my $self = shift;
     my $instrument_data_id = $self->id;
+    my %affected_users;
+
+    my @inputs = Genome::Model::Input->get( 
+        name => 'instrument_data', 
+        value_id => $instrument_data_id
+    );
+    my @models = map( $_->model, @inputs);
 
     my @alignment_results = Genome::InstrumentData::AlignmentResult->get(instrument_data_id => $self->id);
     if (@alignment_results) {
@@ -83,13 +109,10 @@ sub delete {
         return;
     }
     
-    my @model_inputs = Genome::Model::Input->get(
-        name => 'instrument_data', 
-        value_id => $instrument_data_id 
-    );
-    my @models = map( $_->model, @model_inputs);
     for my $model (@models) {
         $model->remove_instrument_data($self);
+        my $display_name = $self->__display_name__;
+        push(@{$affected_users{$model->user_name}->{$display_name}}, $model->id);
     }
 
     # There may be builds using this instrument data even though it had previously been unassigned from the model
@@ -103,13 +126,7 @@ sub delete {
         push @models, $build->model;
     }
 
-    $self->_create_deallocate_observer;
-
-    for my $attribute ($self->attributes) {
-        $attribute->delete;
-    }
-
-    return $self->SUPER::delete;
+    return %affected_users;
 }
 
 sub _create_deallocate_observer {
