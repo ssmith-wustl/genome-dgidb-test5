@@ -102,7 +102,7 @@ class Genome::Model::MetagenomicCompositionShotgun {
         _metagenomic_alignment_models => {
             is => 'Genome::Model::ReferenceAlignment',
             is_many => 1,
-            via => 'from_model_links',
+            via => 'from_model_links', 
             to => 'from_model',
             where => [role => 'metagenomic_alignment_model'],
         },
@@ -246,17 +246,17 @@ sub _create_underlying_metagenomic_models {
 
 sub _create_unaligned_metagenomic_alignment_model {
     my $self = shift;
-    return $self->_create_model_for_type("unaligned_metagenomic");
+    return $self->_create_model_for_type("unaligned_metagenomic_alignment");
 }
 
 sub _create_first_viral_verification_alignment_model {
     my $self = shift;
-    return $self->_create_model_for_type("first_viral_verification");
+    return $self->_create_model_for_type("first_viral_verification_alignment");
 }
 
 sub _create_second_viral_verification_alignment_model {
     my $self = shift;
-    return $self->_create_model_for_type("second_viral_verification");
+    return $self->_create_model_for_type("second_viral_verification_alignment");
 }
 
 sub _create_model_for_type {
