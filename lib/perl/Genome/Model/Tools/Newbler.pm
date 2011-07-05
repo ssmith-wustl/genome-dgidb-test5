@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use Genome;
+use Data::Dumper;
 use Carp 'confess';
 
 class Genome::Model::Tools::Newbler {
@@ -87,6 +88,83 @@ sub supercontigs_agp_file {
 
 sub stats_file {
     return $_[0]->assembly_directory.'/consed/edit_dir/stats.txt';
+}
+
+sub parse_newbler_scaffold_file {
+    my $self = shift;
+
+    unless ( $self->scaffolds_agp_file and -s $self->scaffolds_agp_file ) {
+        $self->error_message("Need newbler scaffolds file to convert to pcap scaffolds");
+        return;
+    }
+
+    #create hash of contig info
+    my $scaffolds = {};
+    my $fh = Genome::Sys->open_file_for_reading( $self->newbler_scaffold_file );
+    while ( my $line = $fh->getline ) {
+        my @tmp = split( /\s+/, $line );
+        #contig describing line
+        if ( $tmp[5] =~ /contig\d+/ ) {
+            $scaffolds->{$tmp[5]}->{contig_length} = $tmp[7];
+            $scaffolds->{$tmp[5]}->{supercontig} = $tmp[0];
+            $scaffolds->{$tmp[5]}->{contig_name} = $tmp[5];
+            $self->{prev_contig} = $tmp[5];
+        }
+        #gap describing line .. does not always exist
+        if ( $tmp[6] =~ /fragment/ ) { #gap describing line
+            my $prev_contig = $self->{prev_contig};
+            $scaffolds->{$prev_contig}->{gap_length} = $tmp[5];
+        }
+    }
+    $fh->close;
+
+    #fill in missing gap sizes with default where gap describing line was missing
+    for my $contig ( keys %$scaffolds ) {
+        $scaffolds->{$contig}->{gap_length} = $self->default_gap_size
+            unless exists $scaffolds->{$contig}->{gap_length};
+    }
+
+    #remove contigs less than min_contig_length & update gap size
+    for my $contig ( sort keys %$scaffolds ) {
+        my $current_scaffold = $scaffolds->{$contig}->{supercontig};
+        my $gap_length = $scaffolds->{$contig}->{gap_length};
+        my $contig_length = $scaffolds->{$contig}->{contig_length};
+
+        $self->{PREV_SCAFFOLD} = $scaffolds->{$contig} unless defined $self->{PREV_SCAFFOLD};
+
+        if ( $contig_length < $self->min_contig_length ) { #TODO - change to input param
+            my $add_to_prev_gap_size = $contig_length + $gap_length;
+            $self->{PREV_SCAFFOLD}->{gap_length} += $add_to_prev_gap_size;
+            delete $scaffolds->{$contig};            
+        }
+        else {
+            $self->{PREV_SCAFFOLD} = $scaffolds->{$contig};
+        }
+    }
+
+    #rename remaining contigs to pcap format
+    my $pcap_contig = 1;
+    my $pcap_supercontig = 0;
+    for my $contig ( sort keys %$scaffolds ) {
+        my $scaffold_name = $scaffolds->{$contig}->{supercontig};
+        $self->{CURR_SCAFFOLD_NAME} = $scaffold_name unless $self->{CURR_SCAFFOLD_NAME};
+        if ( not $self->{CURR_SCAFFOLD_NAME} eq $scaffold_name ) {
+            $pcap_supercontig++;
+            $pcap_contig = 1;
+        }
+        my $pcap_name = 'Contig'.$pcap_supercontig.'.'.$pcap_contig;
+        $scaffolds->{$contig}->{pcap_name} = $pcap_name;
+        $pcap_contig++;
+        $self->{CURR_SCAFFOLD_NAME} = $scaffold_name;
+    }
+
+    #clean up
+    delete $self->{CURR_SCAFFOLD_NAME};
+    delete $self->{supercontig};
+    delete $self->{pcap_name};
+    delete $self->{PREV_SCAFFOLD};
+
+    return $scaffolds;
 }
 
 1;
