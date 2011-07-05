@@ -75,7 +75,8 @@ class Genome::InstrumentData {
 sub delete {
     my $self = shift;
 
-    $self->_expunge_assignments;
+    my ($expunge_status) = $self->_expunge_assignments;
+    return unless $expunge_status;
 
     #finally, clean up the instrument data
     for my $attr ( $self->attributes ) {
@@ -126,7 +127,7 @@ sub _expunge_assignments{
         push @models, $build->model;
     }
 
-    return %affected_users;
+    return 1, %affected_users;
 }
 
 sub _create_deallocate_observer {

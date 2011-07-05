@@ -5,10 +5,7 @@ use warnings;
 
 use Genome;
 
-require Carp;
-use Data::Dumper 'Dumper';
 require File::Temp;
-require IPC::Run;
 
 class Genome::Model::Event::Build::DeNovoAssembly::PrepareInstrumentData {
     is => 'Genome::Model::Event::Build::DeNovoAssembly',
@@ -49,18 +46,15 @@ sub _metrics_file {
 sub execute {
     my $self = shift;
 
-    my $processing_profile = $self->processing_profile;
-    $self->status_message('Preparing instrument data for '.$processing_profile->assembler_base_name.' '.$processing_profile->sequencing_platform);
+    $self->status_message('Prepare instrument data for '.$self->build->description);
 
-    $self->status_message('Verifying instrument data...');
-
+    $self->status_message('Verify instrument data...');
     my @instrument_data = $self->build->instrument_data;
-
     unless ( @instrument_data ) {
-        $self->error_message("No instrument data found for ".$self->build->description);
+        $self->error_message("Failed to prepare instrument data. Build does not have any.");
         return;
     }
-    $self->status_message('OK...instrument data');
+    $self->status_message('Verify instrument data...OK');
 
     $self->status_message('Setup base limit');
     $self->_setup_base_limit;
@@ -79,27 +73,25 @@ sub execute {
     }
 
     $self->status_message('Processing instrument data');
-    my $sequencing_platform = $processing_profile->sequencing_platform;
-    my $file_method = '_fastq_files_from_'.$sequencing_platform;
     INST_DATA: for my $instrument_data ( @instrument_data ) {
-        $self->_process_instrument_data($instrument_data)
-            or return;
+        my $process_ok = $self->_process_instrument_data($instrument_data);
+        return if not $process_ok;
         if ( $self->_is_there_a_base_limit_and_has_it_been_exceeded ) {
             $self->status_message('Reached base limit: '.$self->_base_limit);
             last INST_DATA;
         }
     }
-    $self->status_message('OK...processing instrument data');
+    $self->status_message('Processing instrument data...OK');
 
-    $self->status_message('Verifying assembler input files');
+    $self->status_message('Verify assembler input files');
     @existing_assembler_input_files = $self->build->existing_assembler_input_files;
     if ( not @existing_assembler_input_files ) {
         $self->error_message('No assembler input files were created!');
         return;
     }
-    $self->status_message('OK...assembler input files');
+    $self->status_message('Verify assembler input files...OK');
 
-    $self->status_message('OK...prepare instrument data');
+    $self->status_message('Prepare instrument data...OK');
 
     return 1;
 }
@@ -213,7 +205,7 @@ sub _process_instrument_data {
     $self->status_message('Processing: '.join(' ', $instrument_data->class, $instrument_data->id, $qual_type_in) );
 
     # In/out files
-    my $fastq_method = '_fastq_files_from_'.$self->processing_profile->sequencing_platform;
+    my $fastq_method = '_fastq_files_from_'.$instrument_data->sequencing_platform;
     my @input_files = $self->$fastq_method($instrument_data)
         or return;
     my @output_files = $self->build->read_processor_output_files_for_instrument_data($instrument_data)

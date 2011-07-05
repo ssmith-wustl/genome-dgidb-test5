@@ -69,7 +69,6 @@ ok(-s $instrument_data->archive_path, 'inst data archive path');
 
 my $pp = Genome::ProcessingProfile::DeNovoAssembly->create(
     name => 'De Novo Assembly Newbler Test',
-    sequencing_platform => 'solexa',
     assembler_name => 'newbler de-novo-assemble',
     assembler_version => 'mapasm454_source_03152011',
     assembler_params => '-rip',
