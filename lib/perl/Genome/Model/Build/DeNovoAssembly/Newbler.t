@@ -16,13 +16,13 @@ use Test::More;
 my $machine_hardware = `uname -m`;
 like($machine_hardware, qr/x86_64/, 'on 64 bit machine') or die;
 
-use_ok('Genome::Model::Build::DeNovoAssembly::Velvet') or die;
+use_ok('Genome::Model::Build::DeNovoAssembly::Newbler') or die;
 
 my $base_dir = '/gsc/var/cache/testsuite/data/Genome-Model/DeNovoAssembly';
 my $archive_path = $base_dir.'/inst_data/-7777/archive.tgz';
 ok(-s $archive_path, 'inst data archive path') or die;
-my $example_version = '4';
-my $example_dir = $base_dir.'/velvet_v'.$example_version;
+my $example_version = '1';
+my $example_dir = $base_dir.'/newbler_v'.$example_version;
 ok(-d $example_dir, 'example dir') or die;
 my $tmpdir = File::Temp::tempdir(CLEANUP => 1);
 
@@ -68,13 +68,11 @@ ok($instrument_data->is_paired_end, 'inst data is paired');
 ok(-s $instrument_data->archive_path, 'inst data archive path');
 
 my $pp = Genome::ProcessingProfile::DeNovoAssembly->create(
-    name => 'De Novo Assembly Velvet Test',
+    name => 'De Novo Assembly Newbler Test',
     sequencing_platform => 'solexa',
-    coverage => 0.5,#25000,
-    assembler_name => 'velvet one-button',
-    assembler_version => '0.7.57-64',
-    assembler_params => '-hash_sizes 31 33 35 -min_contig_length 100',
-    read_processor => 'trimmer by-length -trim-length 10 | rename illumina-to-pcap',
+    assembler_name => 'newbler de-novo-assemble',
+    assembler_version => 'mapasm454_source_03152011',
+    assembler_params => '-rip',
 );
 ok($pp, 'pp') or die;
 
@@ -109,6 +107,7 @@ ok($prepare->execute, 'execute prepare instrument data');
 
 @existing_assembler_input_files = $build->existing_assembler_input_files;
 is(@existing_assembler_input_files, 1, 'assembler input files exist');
+
 my @example_existing_assembler_input_files = $example_build->existing_assembler_input_files;
 is(@existing_assembler_input_files, 1, 'example assembler input files do not exist');
 is(
@@ -119,24 +118,16 @@ is(
 
 # ASSEMBLE
 my $assembler_rusage = $build->assembler_rusage;
-my $queue = ( Genome::Config->should_use_alignment_pd ) ? 'alignment-pd' : 'alignment';
-# FIXME is($assembler_rusage, "-q $queue -R 'select[type==LINUX64 && mem>30000] rusage[mem=30000] span[hosts=1]' -M 30000000", 'assembler rusage');
+#is($assembler_rusage, "", 'assembler rusage');
 my %assembler_params = $build->assembler_params;
-#print Data::Dumper::Dumper(\%assembler_params);
+print Data::Dumper::Dumper(\%assembler_params);
 is_deeply(
     \%assembler_params,
     {
-        'version' => '0.7.57-64',
-        'min_contig_length' => '100',
-        'file' => $existing_assembler_input_files[0],
-        'ins_length' => '260',
-        'hash_sizes' => [
-        '31',
-        '33',
-        '35'
-        ],
-        'output_dir' => $build->data_directory,
-        'genome_len' => '4500000'
+        'version' => 'mapasm454_source_03152011',
+        'input_files' => [ $build->data_directory.'/-7777-input.fastq' ],
+        'rip' => 1,
+        'output_directory' => $build->data_directory,
     },
     'assembler params',
 );
@@ -146,14 +137,7 @@ ok($assemble, 'create assemble');
 $assemble->dump_status_messages(1);
 ok($assemble->execute, 'execute assemble');
 
-for my $file_name (qw/ contigs_fasta_file sequences_file assembly_afg_file /) {
-    my $file = $build->$file_name;
-    ok(-s $file, "Build $file_name exists");
-    my $example_file = $example_build->$file_name;
-    ok(-s $example_file, "Example $file_name exists");
-    is( File::Compare::compare($file, $example_file), 0, "Generated $file_name matches example file");
-}
-
+# TODO check example files
 
 # TODO metrics
 

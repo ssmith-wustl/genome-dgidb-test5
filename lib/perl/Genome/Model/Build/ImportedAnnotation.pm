@@ -274,29 +274,131 @@ sub _annotation_data_directory{
     return $self->data_directory . "/annotation_data";
 }
 
+sub _resolve_annotation_file_name {
+    my $self = shift;
+    my $file_type = shift;
+    my $suffix = shift;
+    my $reference_sequence_id = shift;
+    my $file_name = $self->_annotation_data_directory .'/'. $reference_sequence_id .'-'. $file_type .'.'. $suffix;
+    return $file_name;
+}
+
 sub annotation_file {
     my $self = shift;
     my $suffix = shift;
+    my $reference_sequence_id = shift;
+
     unless ($suffix) {
         die('Must provide file suffix as parameter to annotation_file method in '.  __PACKAGE__);
     }
-    my $file_name = $self->_annotation_data_directory .'/all_sequences.'. $suffix;
+    unless (defined($reference_sequence_id)) {
+        unless ($self->reference_sequence_id) {
+            die('There is no reference sequence build associated with imported annotation build: '. $self->id);
+        }
+        $reference_sequence_id = $self->reference_sequence_id;
+    }
+
+    my $file_name = $self->_resolve_annotation_file_name('all_sequences',$suffix,$reference_sequence_id);
     if (-f $file_name) {
         return $file_name;
     }
+    # TODO: Once we have perl5.12.1 or perl5.10.1 working, this command can be removed and replaced with in-line code to generate the file
+    my %params = (
+        anno_db => $self->model_name,
+        version => $self->version,
+        output_file => $file_name,
+        reference_build_id => $reference_sequence_id,
+        # TODO: Can this be determined by the default in G:M:T:Picard?
+        picard_version => '1.36',
+        species => $self->species_name,
+        output_format => $suffix,
+    );
+    my $dump = Genome::Model::Tools::Annotate::ReferenceGenome->create(%params);
+    unless ($dump) {
+        die('Failed to create command for generating the annotation file with params: '. Data::Dumper::Dumper(%params));
+    }
+    unless ($dump->execute) {
+        die('Failed to execute command for generating the annotation file with params: '. Data::Dumper::Dumper(%params));
+    }
+    unless (-f $file_name) {
+        die('Failed to find annotation file: '. $file_name);
+    }
+}
+
+sub rRNA_MT_pseudogene_file {
+    my $self = shift;
+    my $suffix = shift;
+    my $reference_sequence_id = shift;
+    unless ($suffix) {
+        die('Must provide file suffix as parameter to rRNA_MT_pseudogene_file method in '.  __PACKAGE__);
+    }
+    my $file_name = $self->_resolve_annotation_file_name('rRNA_MT_pseudogene',$suffix,$reference_sequence_id);
+    if (-f $file_name) {
+        return $file_name;
+    }
+    #TODO: Need a method or tool to generate the rRNA_MT_pseudogene file on the fly
+    #Or just generate the rRNA, MT, and pseudogene files below and merge...
     return;
 }
 
 sub rRNA_MT_file {
     my $self = shift;
     my $suffix = shift;
+    my $reference_sequence_id = shift;
     unless ($suffix) {
         die('Must provide file suffix as parameter to rRNA_MT_file method in '.  __PACKAGE__);
     }
-    my $file_name = $self->_annotation_data_directory .'/rRNA_MT.'. $suffix;
+    my $file_name = $self->_resolve_annotation_file_name('rRNA_MT',$suffix,$reference_sequence_id);
     if (-f $file_name) {
         return $file_name;
     }
+    #TODO: Need a method or tool to generate the rRNA_MT file on the fly
+    #Or just generate the rRNA and MT files below and merge...
+    return;
+}
+
+sub rRNA_file {
+    my $self = shift;
+    my $suffix = shift;
+    my $reference_sequence_id = shift;
+    unless ($suffix) {
+        die('Must provide file suffix as parameter to rRNA_file method in '.  __PACKAGE__);
+    }
+    my $file_name = $self->_resolve_annotation_file_name('rRNA',$suffix,$reference_sequence_id);
+    if (-f $file_name) {
+        return $file_name;
+    }
+    #TODO: Need a method or tool to generate the rRNA file on the fly
+    return;
+}
+
+sub MT_file {
+    my $self = shift;
+    my $suffix = shift;
+    my $reference_sequence_id = shift;
+    unless ($suffix) {
+        die('Must provide file suffix as parameter to rRNA_file method in '.  __PACKAGE__);
+    }
+    my $file_name = $self->_resolve_annotation_file_name('rRNA',$suffix,$reference_sequence_id);
+    if (-f $file_name) {
+        return $file_name;
+    }
+    #TODO: Need a method or tool to generate the rRNA file on the fly
+    return;
+}
+
+sub pseudogene_file {
+    my $self = shift;
+    my $suffix = shift;
+    my $reference_sequence_id = shift;
+    unless ($suffix) {
+        die('Must provide file suffix as parameter to pseudogene_file method in '.  __PACKAGE__);
+    }
+    my $file_name = $self->_resolve_annotation_file_name('pseudogene',$suffix,$reference_sequence_id);
+    if (-f $file_name) {
+        return $file_name;
+    }
+    #TODO: Need a method or tool to generate the pseudogene file on the fly
     return;
 }
 

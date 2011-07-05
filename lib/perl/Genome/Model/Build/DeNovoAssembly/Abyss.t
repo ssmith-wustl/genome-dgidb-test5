@@ -122,7 +122,7 @@ is(
 );
 
 # ASSEMBLE
-my %assembler_params = $model->processing_profile->abyss_parallel_params($build);
+my %assembler_params = $build->assembler_params;
 #print Data::Dumper::Dumper(\%assembler_params);
 is_deeply(
     \%assembler_params,
