@@ -10,10 +10,6 @@ use Regexp::Common;
 class Genome::ProcessingProfile::DeNovoAssembly{
     is => 'Genome::ProcessingProfile::Staged',
     has_param => [
-	sequencing_platform => {
-	    doc => 'The sequencing platform used to produce the reads.',
-	    valid_values => [qw/ 454 solexa /],
-	},
 	coverage => {
 	    is => 'Number',
 	    is_optional => 1,
