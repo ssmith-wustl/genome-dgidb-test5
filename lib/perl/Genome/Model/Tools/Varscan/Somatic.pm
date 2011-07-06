@@ -136,7 +136,7 @@ sub execute {                               # replace with real execution logic.
 		}
 
 		print "Running $cmd\n";
-		system($cmd);
+		system($cmd); # TODO this should be a shellcmd like below and fixed to retry in a better way
 
 		## Count the output. If it's truncated or empty, let's try again ##
 		my $num_snvs = 0;
@@ -149,7 +149,9 @@ sub execute {                               # replace with real execution logic.
 		if($num_snvs < 2)
 		{
 			print "That attempt seemed to fail, so re-running $cmd\n";
-			system($cmd);
+            unless ( Genome::Sys->shellcmd(cmd => $cmd) == 1 ) {
+                die $self->error_message("Running Varscan failed with command: $cmd");
+            }
 		}
 
 
