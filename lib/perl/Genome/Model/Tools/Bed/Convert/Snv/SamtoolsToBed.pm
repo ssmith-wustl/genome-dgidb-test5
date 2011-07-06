@@ -43,33 +43,4 @@ sub process_source {
     return 1;
 }
 
-sub convert_bed_to_detector {
-    my $self = shift;
-    my $detector_file = $self->detector_style_input;    
-    my $bed_file = $self->source;
-    my $output = $self->output;
-
-    my $ofh = Genome::Sys->open_file_for_writing($output);
-    my $detector_fh = Genome::Sys->open_file_for_reading($detector_file);
-    my $bed_fh = Genome::Sys->open_file_for_reading($bed_file);
-    OUTER: while(my $line = $bed_fh->getline){
-        chomp $line;
-        my ($chr,$start,$stop,$refvar,@data) = split "\t", $line;
-        my ($ref,$var) = split "/", $refvar;
-        my $scan=undef;
-        while(my $dline = $detector_fh->getline){
-            chomp $dline;
-            my ($dchr,$dpos,$dref,$dvar) = split "\t", $dline;
-            if(($chr eq $dchr)&&($stop == $dpos)&&($ref eq $dref)&&($var eq $dvar)){
-                print $ofh $dline."\n";
-                next OUTER;
-            }
-        }
-    }
-    $bed_fh->close;
-    $ofh->close;
-    $detector_fh->close;
-    return 1;
-}
-
 1;
