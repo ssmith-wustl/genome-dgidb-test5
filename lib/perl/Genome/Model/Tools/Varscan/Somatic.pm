@@ -135,25 +135,13 @@ sub execute {                               # replace with real execution logic.
 #			system("java -Xms" . $self->heap_space . "m -Xmx" . $self->heap_space . "m -classpath ~dkoboldt/Software/Varscan net.sf.varscan.Varscan somatic <($normal_pileup) <($tumor_pileup) $output $varscan_params");						
 		}
 
-		print "Running $cmd\n";
-		system($cmd); # TODO this should be a shellcmd like below and fixed to retry in a better way
-
-		## Count the output. If it's truncated or empty, let's try again ##
-		my $num_snvs = 0;
-		if(-e $output_snp)
-		{
-			$num_snvs = `cat $output_snp | wc -l`;
-			chomp($num_snvs);
-		}
-		
-		if($num_snvs < 2)
-		{
-			print "That attempt seemed to fail, so re-running $cmd\n";
+        $self->status_message("Running $cmd\n");
+        unless ( Genome::Sys->shellcmd(cmd => $cmd) == 1 ) {
+            $self->warning_message("The first attempt at running varscan failed. Trying again...");
             unless ( Genome::Sys->shellcmd(cmd => $cmd) == 1 ) {
                 die $self->error_message("Running Varscan failed with command: $cmd");
             }
-		}
-
+        }
 
 		## Run the filter command ##
 		
