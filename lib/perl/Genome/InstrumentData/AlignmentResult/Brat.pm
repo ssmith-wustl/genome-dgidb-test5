@@ -759,7 +759,7 @@ sub _convert_reads_to_sam {
             } elsif ($count > $prevNum) {
                 chomp($line);
                 my @splitline = split("\t",$line);
-                printUnmappedReadToSam($line, ("n_" . $count . "/1"), $samfile);
+                printUnmappedReadToSam($splitline[0], ("n_" . $count . "/1"), $samfile);
             }
             $count++;
         }
