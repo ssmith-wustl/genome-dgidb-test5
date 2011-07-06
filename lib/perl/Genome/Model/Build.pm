@@ -637,6 +637,10 @@ sub stop {
         $self = Genome::Model::Build->load($self->id);
     }
 
+    $self->add_note(
+        header_text => 'Build Stopped',
+    );
+
     my $self_event = $self->build_event;
     my $error = Genome::Model::Build::Error->create(
         build_event_id => $self_event->id,

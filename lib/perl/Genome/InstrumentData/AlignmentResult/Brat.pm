@@ -4,6 +4,7 @@ use strict;
 use warnings;
 use IO::File;
 use File::Basename;
+use File::Copy;
 use Genome;
 
 #  So, you want to build an aligner?  Follow these steps.
@@ -19,17 +20,14 @@ use Genome;
 class Genome::InstrumentData::AlignmentResult::Brat {
     is => 'Genome::InstrumentData::AlignmentResult',
     has_constant => [
-        aligner_name => { value => 'brat', is_param=>1 },
-    ],	
+        aligner_name => { value => 'brat', is_param=>1 }
+    ]
 };
 
 sub required_arch_os { 'x86_64' }
 
-#TODO: Put the LSF resources required to run the alignment here.
-#sub required_rusage {
-#    "-R 'select[model!=Opteron250 && type==LINUX64 && mem>16000 ** tmp > 150000] span[hosts=1] rusage[tmp=150000, mem=16000]' -M 16000000 -n 1";
-#}
-
+# LSF resources required to run the alignment.
+#"-R 'select[model!=Opteron250 && type==LINUX64 && mem>16000 ** tmp > 150000] span[hosts=1] rusage[tmp=150000, mem=16000]' -M 16000000 -n 1";
 sub required_rusage {
     "-R 'select[type==LINUX64 && mem>16000 && tmp > 100000] span[hosts=1] rusage[tmp=100000, mem=16000]' -M 16000000 -n 1";
 }
@@ -53,10 +51,18 @@ sub required_rusage {
 sub _run_aligner {
     my $self = shift;
     my @input_pathnames = @_;
-
+    
     # get refseq info and fasta files
     my $reference_build = $self->reference_build;
     my $reference_fasta_path = $reference_build->full_consensus_path('fa');
+    # example dir /gscmnt/gc4096/info/model_data/2741951221/build101947881
+
+    # get the index directory
+    my $reference_index = $self->get_reference_sequence_index();
+    my $reference_index_directory = dirname($reference_index->full_consensus_path());
+    #my $reference_index_directory = $reference_index->data_directory(); # better way to do this?
+    print "Ref index dir: $reference_index_directory\n";
+    # example dir /gscmnt/sata921/info/medseq/cmiller/methylSeq/bratIndex
 
     # This is your scratch directory.  Whatever you put here will be wiped when the alignment
     # job exits.
@@ -69,487 +75,335 @@ sub _run_aligner {
     # This is the SAM file you should be appending to.  Dont forget, no headers!
     my $sam_file = $scratch_directory . "/all_sequences.sam";
     # import format
-    my $import_format = $self->instrument_data->import_format;
+    #my $import_format = $self->instrument_data->import_format; # TODO what is this supposed to be?
 
+    # decompose aligner params for each stage of alignment
+    my %aligner_params = $self->decomposed_aligner_params;
 
+    # get the command path
+    my $brat_cmd_path = dirname(Genome::Model::Tools::Brat->path_for_brat_version($self->aligner_version)) . "/";
 
-    # TODO: implement your aligner logic here.  If you need to condition on whether the
-    # data is single-ended or paired-ended, key off the number of files passed in (1=SE, 2=PE)
+    # Data is single-ended or paired-ended: key off the number of files passed in (1=SE, 2=PE)
     # Under no circumstances should you ever get more than 2 files, if you do then that's bad and
     # you should die.
-    my $paired_end=0;
+    my $paired_end = 0;
+
     my $min_insert_size = -1;
     my $max_insert_size = -1;
 
-    print "number of ends: " . @input_pathnames . "\n";
     if (@input_pathnames == 1) {
         $self->status_message("_run_aligner called in single-ended mode.");
     } elsif (@input_pathnames == 2) {
         $self->status_message("_run_aligner called in paired-end mode.");
-	$paired_end=1;
+        $paired_end = 1;
 
-        ## TODO - Here's where we need the min/max insert size params
-        ## I'm not sure where to get those at the moment.
-	die("paired end data requires insert size params - not implemented yet (talk to Chris M.)");
-	my $min_insert_size = $self->min_insert_size;	
-	my $max_insert_size = $self->max_insert_size;
-	if ($max_insert_size == -1){
-	    die("maximum insert size required for paired end data")
-	}
+        # get the instrument-data so we can calculate the minimum and maximum insert size
+        my $instrument_data = $self->instrument_data();
+        my $median_insert_size = $instrument_data->median_insert_size();
+        my $sd_above_insert_size = $instrument_data->sd_above_insert_size();
+        my $sd_below_insert_size = $instrument_data->sd_below_insert_size();
+
+        # TODO this may be an area for improvement
+        $min_insert_size = $median_insert_size - (3*$sd_below_insert_size);
+        $max_insert_size = $median_insert_size + (3*$sd_above_insert_size);
+
+        if ($max_insert_size == -1) {
+            die $self->error_message("Maximum insert size required for paired end data");
+        }
     } else {
-        $self->error_message("_run_aligner called with " . scalar @input_pathnames . " files.  It should only get 1 or 2!");
-        die $self->error_message;
+        die $self->error_message("_run_aligner called with " . scalar @input_pathnames . " files.  It should only get 1 or 2!");
     }
 
 
+    ## Something like this goes back in once we get caching of individual fasta
+    ## files set up on the blades
+    ##
+    ##    #get the reference directory path
+    ##    print "ref_fasta_path: $reference_fasta_path\n";
+    ##    my $ref_dir = dirname($reference_fasta_path);
+    ##    print "ref_dir: $ref_dir\n";
 
-    #create a refs file with paths to all the fastas
-    my ($ref_fh, $refs_file) = Genome::Sys->create_temp_file();
-
-
-## We use the -P option with a pre-built index for alignment, but we still
-## need the fastas for the acgt count step.
-
-## Something like this goes back in once we get caching of individual fasta
-## files set up on the blades
-##
-##    #get the reference directory path
-##    print "ref_fasta_path: $reference_fasta_path\n";
-##    my $ref_dir = dirname($reference_fasta_path);
-##    print "ref_dir: $ref_dir\n";
-
-    # for now, we hardcode the directory containing the fastas and such
-    my $ref_dir = "/gscmnt/gc4096/info/model_data/2741951221/build101947881";
+    # Brat uses the concept of "list" files. List files are plain text files that contain a list of required input files.
+    # For instance, brat's remove-dupl command requests a single plain-text file that lists all files of aligned reads to dedup.
+    # If the output of our alignment step is bratout.dat, then the corresponding list file would contain a single line that has
+    # the full path to bratout.dat. Yes, this is really redundant, especially when we only have a single output file.
+    my %list_files;
     
-    #find all the individual fastas
-    opendir(DIR, $ref_dir) or die $!;
-    while (my $filename = readdir(DIR)){
-	# if the filename matches this regex, output it to the list
-	# should match 1.fa - 22.fa, along with X.fa, x.fa, Y.fa, y.fa
-	# will fail on contigs (NT_113956.fa) or other formats (chr22.fa)
-	if ($filename =~ /^(([1-2]?[0-9])|([XYxy]))\.fa$/)
-	{
-	    $ref_fh->print($ref_dir . "/" . $filename . "\n");
-	}
-    }
-    $ref_fh->close;
+    # When creating reference fastas split by contig, we also created a file listing each fasta file.
+    # We load this file, get out the filenames, and prefix the correct directory.
+    my $reference_fasta_list_fh = IO::File->new("< $reference_index_directory/reference_fasta_list.txt");
+    my @reference_fastas = map{$_ =~ /(.+)\n$/; sprintf("%s/%s",$reference_index_directory,$1)} grep(!/^$/, <$reference_fasta_list_fh>);
+    $reference_fasta_list_fh->close();
 
+    ## Note that we use the -P option with a pre-built index for alignment, but we still
+    ## need the fastas for the acgt count step.
+    $list_files{'reference_fastas'} = _create_temporary_list_file(\@reference_fastas);
 
+    # Create the list of expected index files, too.
+    my @index_files = map{
+            basename($_) =~ /^(.+)(?=\.fa|\.fasta)/;
+            my $reference_name = $1;
+            map{ sprintf("%s/%s.%s",$reference_index_directory,$reference_name,$_) } qw(bg hs ht);
+        } @reference_fastas;
+    push @index_files, "$reference_index_directory/INFO.txt";
+
+    print Data::Dumper::Dumper(@reference_fastas); # TODO verify that this whole thing is correct
+    print Data::Dumper::Dumper(@index_files); # TODO verify that this whole thing is correct
 
 
     ###################################################
-    #reads have to be trimmed first. This handles it
+    # Trim reads. This must be done first. The command follows this syntax:
+    #   /gscmnt/sata921/info/medseq/cmiller/methylSeq/bratMod/trim -q 20 -m 2 -P $scratch_directory/trimmed
+    ###################################################
+    ###-------
+    ### This shouldn't be necessary right now - defaults work fine
+    ##
+    ##    #determine which type of quality score we're using:
+    ##    if ($import_format eq "solexa fastq") {
+    ##	#older format - starts at ASCII 33
+    ##	$trim_cmd = $trim_cmd . " -L 33";
+    ##    } elsif ($import_format eq "illumina fastq") {
+    ##	#newer format - starts at ASCII 64
+    ##	$trim_cmd = $trim_cmd . " -L 64";
+    ##    }
+    ###----------
+    $self->status_message("Trimming reads.");
 
-    my $trim_cmd = "/gscmnt/sata921/info/medseq/cmiller/methylSeq/bratMod/trim -q 20 -m 2 -P $scratch_directory/trimmed";
-    $self->status_message("trimming reads");
-    #single vs paired end
-    if ($paired_end)
-    {
-	$trim_cmd = $trim_cmd . " -1 $input_pathnames[0] -2 $input_pathnames[1]";
-    } else {
-    	$trim_cmd = $trim_cmd . " -s $input_pathnames[0]";
+    # make a prefix for trim files
+    my $trim_prefix = $scratch_directory . "/trimmed";
+
+    # output files consist of the following filenames prefixed with $trim_prefix
+    my @trimmed_files = map{sprintf("%s_%s",$trim_prefix,$_)} $paired_end ?
+        qw(reads1.txt reads2.txt mates1.txt mates2.txt mates1.seq mates2.seq pair1.fastq pair2.fastq err1.seq err2.seq badMate1.seq badMate2.seq) :
+        qw(reads1.txt mates1.txt mates1.seq pair1.fastq err1.seq);
+    
+    # we need list files of mates for remove-dupl
+    if ($paired_end) { # TODO should something happen when not running in paired end mode? look at documentation for remove-dupl i think...
+        $list_files{'mates1'} = _create_temporary_list_file([grep(/.+\/mates1\.txt$/, @trimmed_files)]);
+        $list_files{'mates2'} = _create_temporary_list_file([grep(/.+\/mates2\.txt$/, @trimmed_files)]);
     }
 
-###-------
-### This shouldn't be necessary right now - defaults work fine
-##
-##    #determine which type of quality score we're using:
-##    if ($import_format eq "solexa fastq") {
-##	#older format - starts at ASCII 33
-##	$trim_cmd = $trim_cmd . " -L 33";
-##    } elsif ($import_format eq "illumina fastq") {
-##	#newer format - starts at ASCII 64
-##	$trim_cmd = $trim_cmd . " -L 64";
-##    }
-###----------
+    # define the trim command and run it
+    my $trim_cmd = sprintf("%s %s -P %s %s",
+        $brat_cmd_path . "trim",
+        $aligner_params{'trim_options'}, # -q 20 and -m 2
+        $trim_prefix,
+        $paired_end ?
+            "-1 $input_pathnames[0] -2 $input_pathnames[1]" : 
+            "-s $input_pathnames[0]"
+    );
 
-    system($trim_cmd);
+    my $rv = Genome::Sys->shellcmd(
+        cmd => $trim_cmd,
+        input_files => [@input_pathnames],
+        output_files => [@trimmed_files],
+        allow_zero_size_output_files => 1,
+        dont_create_zero_size_files_for_missing_output => 1
+    );
+    unless($rv) { die $self->error_message("Trimming failed."); }
+
 
 
 
     ###################################################
     # run the read mapping
-    my $align_cmd = "/gscmnt/sata921/info/medseq/cmiller/methylSeq/bratMod/brat-large";
-
-    #use pre-computed index instead
-    #$align_cmd = $align_cmd . " -r $refs_file";
-    $align_cmd = $align_cmd . " -P /gscmnt/sata921/info/medseq/cmiller/methylSeq/bratIndex";
-
-    if ($paired_end)
-    {
-	$align_cmd = $align_cmd . " -1 $scratch_directory/trimmed_reads1.txt";
-	$align_cmd = $align_cmd . " -2 $scratch_directory/trimmed_reads2.txt";
-	$align_cmd = $align_cmd . " -pe";
-	$align_cmd = $align_cmd . " -i $min_insert_size";
-	$align_cmd = $align_cmd . " -a $max_insert_size";
-    } else {
-	$align_cmd = $align_cmd . " -s $scratch_directory/trimmed_reads1.txt";
-    }
-    $align_cmd = $align_cmd . " -o $scratch_directory/bratout.dat";
-    $align_cmd = $align_cmd . " -m 10"; #number of mismatches
-    $align_cmd = $align_cmd . " -bs";   #bisulfite option
-    $align_cmd = $align_cmd . " -S";    #faster, at the expense of more mem
-
-    $self->status_message("doing alignment");
-    $self->status_message("$align_cmd");
-    system($align_cmd);
-
+    # XXX everything after this point assumes that we work with a single output from the aligner
+    ###################################################
+    $self->status_message("Performing alignment.");
     
+    # the file for aligned reads
+    my @aligned_reads = ($scratch_directory . "/bratout.dat");
+    
+    # we need a list file for remove-dupl
+    $list_files{'aligned_reads'} = _create_temporary_list_file(\@aligned_reads);
+
+    # uses precomputed index; alternatively you could do something like -r $list_files{'reference_fastas'} instead of -P $reference_index_dir
+    my $align_cmd = sprintf("%s -P %s %s -o %s %s",
+        $brat_cmd_path . "brat-large",
+        $reference_index_directory,
+        $paired_end ?
+            "-1 $trimmed_files[0] -2 $trimmed_files[1] -pe -i $min_insert_size -a $max_insert_size" :
+            "-s $trimmed_files[0]",
+        $aligned_reads[0],
+        $aligner_params{'align_options'} # -m 10 (number of mismatches) -bs (bisulfite option) -S (faster, at the expense of more mem)
+    );
+
+    $rv = Genome::Sys->shellcmd(
+        cmd => $align_cmd,
+        input_files => [@trimmed_files, @index_files],
+        output_files => [@aligned_reads],
+        allow_zero_size_input_files => 1
+    );
+    unless($rv) { die $self->error_message("Alignment failed."); }
+
+
+
 
     ###################################################
-    # deduplicate reads,
+    # deduplicate reads
+    ###################################################
+    $self->status_message("Deduplicating reads.");    
 
-    $self->status_message("deduplicating reads");    
-    my $dup_cmd = "/gscmnt/sata921/info/medseq/cmiller/methylSeq/bratMod/remove-dupl";
-    $dup_cmd = $dup_cmd . " -r $refs_file"; #reference fastas
-
-    # create a list file with paths to the aligned reads
-    # for the record, it's stupid that we have to do this, 
-    # since there's only one file
-    my ($list_fh, $list_file) = Genome::Sys->create_temp_file();
-    $list_fh->print("$scratch_directory/bratout.dat\n");
-    $list_fh->close;
+    # for every file of aligned reads, have one that is deduped
+    # once again, we must create a file that lists these .nodupl files
+    my @deduped_reads = map{$_ . ".nodupl"} @aligned_reads;
     
+    # we need a list file for acgt-count
+    $list_files{'deduped_reads'} = _create_temporary_list_file(\@deduped_reads);
 
-    if ($paired_end)
-    {
-    	$dup_cmd = $dup_cmd . " -p $list_file";
-    } else {
-    	$dup_cmd = $dup_cmd . " -s $list_file";
-    }
-    $self->status_message("RUN: $dup_cmd");    
-    system($dup_cmd);
+    my $dedup_cmd = sprintf("%s -r %s %s",
+        $brat_cmd_path . "remove-dupl",
+        $list_files{'reference_fastas'}, # reference fastas.
+        $paired_end ?
+            # we specify -1 and -2 with files from trim; this is brat's way of dealing with "overlapping mates"
+            "-p $list_files{'aligned_reads'} -1 $list_files{'mates1'} -2 $list_files{'mates2'}" :
+            "-s $list_files{'aligned_reads'}"
+    );
+
+    $rv = Genome::Sys->shellcmd(
+        cmd => $dedup_cmd,
+        input_files =>
+            $paired_end ? [
+                @reference_fastas, $list_files{'reference_fastas'},
+                @aligned_reads, $list_files{'aligned_reads'},
+                $trimmed_files[2], $list_files{'mates1'},
+                $trimmed_files[3], $list_files{'mates2'}
+            ] : [
+                @reference_fastas, $list_files{'reference_fastas'},
+                @aligned_reads, $list_files{'aligned_reads'}
+            ],
+        output_files => [@deduped_reads],
+        allow_zero_size_input_files => 1
+    );
+    unless($rv) { die $self->error_message("Deduping failed."); }
 
 
 
-    #sort the reads prior to sam conversion
-    system("sort -nk1 $scratch_directory/bratout.dat.nodupl >$scratch_directory/bratout.dat.nodupl.sorted");
+
+    ###################################################
+    # sort reads
+    ###################################################
+    $self->status_message("Sorting reads.");
+
+    my @sorted_deduped_reads = map{$_ . ".sorted"} @deduped_reads;
+
+    my $sort_cmd = "sort -nk1 $deduped_reads[0] >$sorted_deduped_reads[0]";
+
+    $rv = Genome::Sys->shellcmd(
+        cmd => $sort_cmd,
+        input_files => [@deduped_reads],
+        output_files => [@sorted_deduped_reads]
+    );
+    unless($rv) { die $self->error_message("Sorting deduped files failed."); }
+
+
 
 
     ###################################################
     # convert to sam format
-    # this is harder than it should be because we have to convert
-    # the mapped reads, then go back to the fastqs to retrieve
-    # the unmapped reads.
+    ###################################################
+    $self->status_message("Converting output to SAM format.");
 
-    $self->status_message("converting output to SAM format");
-
-    #first do the aligned reads
-    my $prevNum = -1;
-    my %missing = ();
-    my $inFh = IO::File->new( "$scratch_directory/bratout.dat.nodupl.sorted" ) || die "can't open bratout.dat.nodupl\n";
-    my $outFh = open (my $samfile, ">$scratch_directory/mapped_reads.sam") || die "Can't open output file.\n";
-    while( my $line = $inFh->getline )
-    {
-	chomp($line);
-	my @fields = split("\t" ,$line);
-	my @samline = ();
-
-	#---Paired End---------------------------
-	if ($paired_end)
-	{
-
-	    #name = id
-	    push(@samline,$fields[0] . "/1");
-
-	    #strand info goes in flag
-	    if ($fields[4] eq "+")
-	    {
-		push(@samline,"99");
-	    } else {
-		push(@samline,"83");
-	    }
-
-	    # "chr" gets added
-	    # $fields[3] = "chr" . $fields[3] unless ($fields[3] =~ /chr/);
-	    push(@samline,$fields[3]);
-
-	    #pos
-	    push(@samline,$fields[5]);
-	    #mapq
-	    push(@samline,255);
-
-	    #cigar - includes length
-	    push(@samline,length($fields[1]) . "M");
-
-	    #other end of pair
-	    push(@samline,$fields[3]);
-	    push(@samline,$fields[6]);
-
-	    #default vals for the rest
-	    push(@samline,"0");
-	    push(@samline,"*");
-	    push(@samline,"*");
-
-	    print $samfile join("\t",@samline) . "\n";
-
-	    #now second read - flip positions, etc
-	    $samline[0] = $fields[0] . "/2";
-	    if ($fields[4] eq "+")
-	    {
-		$samline[1] = "147";
-	    } else {
-		$samline[1] = "163";
-	    }
-	    $samline[3] = $fields[6];
-	    $samline[5] = length($fields[2]) . "M"; #cigar
-	    $samline[7] = $fields[5];
-	    print $samfile join("\t",@samline) . "\n";
-
-	    #---Single End---------------------------
-	} else {
-
-	    #name = id
-	    push(@samline,$fields[0]);
-
-	    #strand info goes in flag
-	    if ($fields[3] eq "+")
-	    {
-		push(@samline,"0");
-	    } else {
-		push(@samline,"16");
-	    }
-
-	    #"chr" gets added
-	    #$fields[2] = "chr" . $fields[2] unless ($fields[2] =~ /chr/);
-	    push(@samline,$fields[2]);
-
-	    push(@samline,$fields[4]); #pos
-	    push(@samline,255);        #mapq
-	    push(@samline,length($fields[1]) . "M"); #cigar
-	    #other end of pair
-	    push(@samline,$fields[3]);
-	    push(@samline,$fields[5]);
-	    push(@samline,"0");
-	    push(@samline,"*");
-	    push(@samline,"*");
-
-	    print $samfile join("\t",@samline) . "\n";
-	}
-
-	#also keep track of which sequences didn't get mapped
-	$prevNum++;
-	while($prevNum < $fields[0])
-	{
-	    # $self->status_message("missing $prevNum");
-	    $missing{$prevNum} = 0;
-	    $prevNum++;
-	}
-
-	$prevNum = $fields[0];
-    }
-    $inFh->close;
+    my $temp_sam_output = "$scratch_directory/mapped_reads.sam";
+    # TODO not all files that this is using are passed in as parameters
+    $self->_convert_reads_to_sam($paired_end, $sorted_deduped_reads[0], $temp_sam_output, $trim_prefix);
 
 
 
-    ##############################################################################
-    # now, add reads that weren't mapped back to sam file. this is a little ugly, 
-    # but necessary for the standard pipeline
-    $self->status_message("adding unmapped reads to SAM");    
 
-    #---Paired End---------------------------
-    if ($paired_end)
-    {
-        #from first trimmed fastq - unmapped reads
-	my $count = 0;
-	my $fastqF = IO::File->new( "$scratch_directory/trimmed_reads1.txt" ) || die "can't open $scratch_directory/trimmed_reads1.txt\n";
-	while( my $line = $fastqF->getline )
-	{   
-	    #and if this is one of the sequences that's missing
-	    if (exists $missing{$count})
-	    {
-		chomp($line);
-		my @splitline = split("\t",$line);		    
-		printUnmappedReadToSam($splitline[0], ("n_" . $count . "/1"), $samfile);
-		# also have to handle lines at the end of the fastq that are missing
-		# with ids > the highest one output above
-		#prevNum will still be equal to the last read output above
-	    } elsif ($count > $prevNum) {
-		chomp($line);
-		my @splitline = split("\t",$line);
-		printUnmappedReadToSam($line, ("n_" . $count . "/1"), $samfile);		
-	    }
-	    $count++;
-	}
-	$fastqF->close;
+    ###################################################
+    # sort sam file and append to all_sequences.sam
+    ###################################################
+    $self->status_message("Sorting SAM file and appending to all_sequences.sam.");
 
-	#now from second trimmed fastq - unmapped reads
-	$count = 0;
-	$fastqF = IO::File->new( "$scratch_directory/trimmed_reads2.txt" ) || die "can't open $scratch_directory/trimmed_reads2.txt\n";
-	while( my $line = $fastqF->getline )
-	{
-	    #if we're on a sequence line
-#	    if ($count % 4 == 2)
-#	    {
-		#and if this is one of the sequences that's missing
-		if (exists $missing{$count})
-		{
-		    chomp($line);
-		    my @splitline = split("\t",$line);		    
-		    printUnmappedReadToSam($splitline[0], ("n_" .  $count . "/2"), $samfile);
+    my $append_cmd = "sort -nk 1 $temp_sam_output >> $sam_file";
 
-		# also have to handle lines at the end of the fastq that are missing
-		# with ids > the highest one output above
-		#prevNum will still be equal to the last read output above
-		} elsif ($count > $prevNum) {
-		    chomp($line);
-		    my @splitline = split("\t",$line);		    
-		    printUnmappedReadToSam($splitline[0], ("n_" .  $count . "/2"), $samfile);
-		}	    
-#	    }
-	    $count++;
-	}
-	$fastqF->close;
-	
-	
-	#finally, add the reads where one or more ends was trimmed and set quality scores to 0
-	my @files = ("$scratch_directory/trimmed_mates1.seq", "$scratch_directory/trimmed_badMate1.seq",
-		     "$scratch_directory/trimmed_mates2.seq", "$scratch_directory/trimmed_badMate2.seq",
-		     "$scratch_directory/trimmed_err1.seq", "$scratch_directory/trimmed_err2.seq");
-	
-	$count = 0;
-	foreach my $file (@files)
-	{
-	    if ( -e $file ){
-		$fastqF = IO::File->new( $file ) || die "can't open fastq - $file\n";
-		while( my $line = $fastqF->getline )
-		{
-		    printUnmappedReadToSam($line, ("n_" . $count . "/1"), $samfile);	    
-		    $count++;
-		}
-		$fastqF->close;
-	    } else {
-		$self->status_message("couldn't open $file - skipped\n");
-	    }
-	}
-	
-	
+    $rv = Genome::Sys->shellcmd(
+        cmd => $append_cmd,
+        input_files => [$temp_sam_output],
+        output_files => [$sam_file]
+    );
+    unless($rv) { die $self->error_message("Sorting temporary sam file and appending to all_sequences.sam failed."); }
 
-    #---Single End---------------------------
-    } else {
-	my $count = 0;
-
-	my $fastqF = IO::File->new( "$scratch_directory/trimmed_reads1.txt" ) || die "can't open file: $scratch_directory/trimmed_pair1.fastq\n";
-	while( my $line = $fastqF->getline )
-	{
-
-	    #if we're on a sequence line
-#	    if ($count % 4 == 2)
-#	    {
-		#and if this is one of the sequences that's missing
-		if (exists $missing{$count})
-		{
-		    chomp($line);
-		    my @splitline = split("\t",$line);		    	
-		    printUnmappedReadToSam($line, "n_" . $count, $samfile);
-		    
-		# also have to handle lines at the end of the fastq that are missing
-                # with ids > the highest one output above
-	        #prevNum will still be equal to the last read output above
-		} elsif ($count > $prevNum) {
-		    chomp($line);
-		    my @splitline = split("\t",$line);		    
-		    printUnmappedReadToSam($line, "pn_" . $count, $samfile);
-		}
- #	    }
-
-	    $count++;
-	}
-	$fastqF->close;
-
-
-	#next,add the reads where one or more ends couldn't be mapped and set quality scores to 0
-	my @files = ("$scratch_directory/trimmed_mates1.seq", "$scratch_directory/trimmed_err1.seq");
-
-	foreach my $file (@files)
-	{
-	    if ( -e $file ){
-		$fastqF = IO::File->new( $file ) || die "can't open fastq $file\n";
-		while( my $line = $fastqF->getline )
-		{
-		    printUnmappedReadToSam($line, ("n_" . $count), $samfile);		    
-		    $count++;
-		}
-		$fastqF->close;
-	    } else {
-		$self->status_message("couldn't open $file - skipped\n");
-	    }
-	}
-
-    } ##end if paired_end
-
-    $samfile->close;
-
-
-    #finally, sort that temporary samfile and append it to the output one
-    system("sort -nk 1 $scratch_directory/mapped_reads.sam >> $scratch_directory/all_sequences.sam");
-
-    ##for testing - copy the output so I can look at it
-    ##system("cp $scratch_directory/* /gscmnt/sata921/info/medseq/cmiller/methylSeq/tmp/scratch1/");
-    ##system("cp $refs_file /gscmnt/sata921/info/medseq/cmiller/methylSeq/tmp/scratch1/");
 
 
 
     ###################################################
     # create the methylation map
-    my $count_cmd = "/gscmnt/sata921/info/medseq/cmiller/methylSeq/bratMod/acgt-count";
-    $count_cmd = $count_cmd . " -r $refs_file"; #reference fastas
-    $count_cmd = $count_cmd . " -P $scratch_directory/map"; #output prefix
+    ###################################################
+    $self->status_message("Creating methylation map.");
 
-    # create a list file with paths to the aligned reads
-    # for the record, this is stupid, since there's only one file
-    my ($list2_fh, $list2_file) = Genome::Sys->create_temp_file();
-    $list2_fh->print("$scratch_directory/bratout.dat.nodupl\n");
-    $list2_fh->close;
+    my $count_prefix = $staging_directory . "/map";
+    
+    my @counted_reads = ();
 
-    if ($paired_end)
-    {
-	$count_cmd = $count_cmd . " -p $list_file";
+    if ($aligner_params{'count_options'} =~ /-B/) {
+        #@counted_reads = map{sprintf("%s_%s.txt",$count_prefix,$_)} qw(forw rev);
+        @counted_reads = map{
+                basename($_) =~ /^(.+)(?=\.fa|\.fasta)/;
+                my $reference_name = $1;
+                map{ sprintf("%s_%s_%s.txt",$count_prefix,$_,$reference_name) } qw(forw rev);
+            } @reference_fastas;
     } else {
-	$count_cmd = $count_cmd . " -s $list_file";
-    }
-    $count_cmd = $count_cmd . " -B"; #get a map of methylation events, not a
-                                     #a count of every base
-    $self->status_message("running acgt count to create methylation map:");
-    $self->status_message($count_cmd);
-    system($count_cmd);
-
-    $self->status_message("RUN: $count_cmd");    
-
-
-    ##for testing
-    # system("cp $scratch_directory/* /gscmnt/sata921/info/medseq/cmiller/methylSeq/tmp/scratch2/");
-    # system("cp $list_file /gscmnt/sata921/info/medseq/cmiller/methylSeq/tmp/scratch2/");
-    # system("cp $list2_file /gscmnt/sata921/info/medseq/cmiller/methylSeq/tmp/scratch2/");
-    # system("cp $refs_file /gscmnt/sata921/info/medseq/cmiller/methylSeq/tmp/scratch2/");
-
-
-    #move the methMap output files to the staging dir
-    my $mv_cmd = "mv $scratch_directory/map_forw.txt $staging_directory";
-    system($mv_cmd);
-    $mv_cmd = "mv $scratch_directory/map_rev.txt $staging_directory";
-    system($mv_cmd);
-
-
-    # confirm that at the end we have a nonzero sam file, this is what'll get turned into a bam and
-    # copied out.
-    unless (-s $sam_file) {
-        die "The sam output file $sam_file is zero length; something went wrong.";
+        die $self->error_message("Unimplemented: acgt-count should be run with the -B option.");
+        # possible TODO
+        # if the user doesn't use the -B switch, acgt-count creates a count of every base instead of a methylation map
+        # in this case, acgt-count outputs $prefix_forw_refname and $prefix_rev_refname for every reference file
+        # the following code creates this list of output files:
+        #@counted_reads = map{
+        #        my $filename = basename($_);
+        #        # confirm that the following is the actual output filename format; move code below suggests otherwise
+        #        map{ sprintf("%s_%s_%s",$count_prefix,$_,$filename) } qw(forw rev);
+        #    } @reference_fastas;
     }
 
+    my $count_cmd = sprintf("%s -r %s -P %s %s",
+        $brat_cmd_path . "acgt-count",
+        $list_files{'reference_fastas'},
+        $count_prefix,
+        $paired_end ?
+            # From BRAT manual:
+            # Please note that if a user has paired-end reads (files with mates 1 and mates 2)
+            # and wishes to map the mates as single-end reads, then the user must provide names
+            # of the files with results for mates 1 and mates 2 separately using options -1 and
+            # -2. This will ensure unbiased ACGT-counting when reads are sequenced from two
+            # original genomic strands.
+            "-p $list_files{'deduped_reads'} -1 $list_files{'mates1'} -2 $list_files{'mates2'}" : # TODO might be very wrong; manual says we might need to use -1 -2 instead of -p
+            "-s $list_files{'deduped_reads'}",
+        $aligner_params{'count_options'} # -B (get a map of methylation events, not a count of every base)
+    );
 
-    #x TODO:
+    $rv = Genome::Sys->shellcmd(
+        cmd => $count_cmd,
+        input_files => [
+            @deduped_reads, $list_files{'deduped_reads'},
+            @reference_fastas, $list_files{'reference_fastas'}],
+        output_files => [@counted_reads]
+    );
+    unless($rv) { die $self->error_message("Methylation mapping failed."); }
+
+
+
+
+    ###################################################
+    # clean up
+    ###################################################
+    
+    #$self->status_message("Copying '$sam_file' to '/gscuser/iferguso/brat_all_sequences.sam'.");
+    #copy($sam_file, "/gscuser/iferguso/brat_all_sequences.sam") or die $self->error_message("Debug copy of all_sequences.sam failed");
+
+    # confirm that at the end we have a nonzero sam file, this is what'll get turned into a bam and copied out.
+    unless (-s $sam_file) { die $self->error_message("The sam output file $sam_file is zero length; something went wrong."); }
+
+    # TODO:
     # If you have any log files from the aligner you're wrapping that you'd like to keep,
     # copy them out into the staging directory here.
-
 
     # TODO:
     # Do any last minute checks on the staged data and die if they fail.
 
-
     # If we got to here, everything must be A-OK.  AlignmentResult will take over from here
     # to convert the sam file to a BAM and copy everything out.
-
     return 1;
 }
 
@@ -557,17 +411,452 @@ sub _run_aligner {
 # sorry for the mis-named method name, it'll get fixed soon.
 #
 # This will end up in our re-composed sam/bam header.
-
 sub aligner_params_for_sam_header {
     my $self = shift;
-    return "brat" . $self->aligner_params;
+
+    my %aligner_params = $self->decomposed_aligner_params;
+    
+    return sprintf("trim %s ; brat-large %s ; acgt-count %s",
+        $aligner_params{'trim_options'},
+        $aligner_params{'align_options'},
+        $aligner_params{'count_options'}
+    );
+}
+
+sub decomposed_aligner_params {
+    my $self = shift;
+    
+    my $full_params;
+
+    if (ref($self)) { # if this is an instance of AlignmentResult
+        $full_params = $self->aligner_params;
+    } else {
+        $full_params = shift;
+    }
+
+    # split a colon-delimited list of arguments
+    my @params = split(":", $full_params || "::");
+
+    my @defaults = ("-q 20 -m 2", "-m 10 -bs -S", "-B");
+    # trim_options: default to -q 20 and -m 2
+    # align_options: default to -m 10 (number of mismatches) -bs (bisulfite option) -S (faster, at the expense of more mem)
+    # count_options: default to -B (get a map of methylation events, not a count of every base)
+    
+    # create our params hash, using default arguments if none were supplied
+    my %aligner_params = (
+        'trim_options' => $params[0] || $defaults[0],
+        'align_options' => $params[1] || $defaults[1],
+        'count_options' => $params[2] || $defaults[2]
+    );
+
+    # attemp to compact and sort command-line arguments for consistency
+    for my $step (keys %aligner_params) {
+        # compacts strings of whitespace down to a single character; strips all white space from beginning and end of string
+        $aligner_params{$step} =~ s/(^)?(?(1)\s+|\s+(?=\s|$))//g;
+        # split by each argument, sort, rejoin
+        $aligner_params{$step} = join(" ",sort(split(/\s(?=-)/, $aligner_params{$step})));
+    }
+    
+    return %aligner_params;
+}
+
+sub _create_temporary_list_file {
+    my @items = @{(shift)};
+
+    my ($temp_fh, $temp_file) = Genome::Sys->create_temp_file();
+    $temp_fh->print(join("\n",@items)."\n");
+    $temp_fh->close;
+
+    return $temp_file;
+}
+
+sub _split_reference_fasta_by_contig {
+    my $class = shift;
+    my $reference_fasta_path = shift; # fasta file to read from
+    my $staging_directory = shift; # destination directory for split fastas
+
+    my $fasta_fh = IO::File->new("< $reference_fasta_path"); # open all_sequences.fa
+
+    my $line;
+    my $total_count = 0;
+    my $file_count = 0;
+    my $current_fh;
+    my @output_fastas;
+    
+    
+    #my $limiter = 1; # debugging purposes only
+
+    while (($line = $fasta_fh->getline())) {
+        $total_count++;
+        if (substr($line, 0, 1) eq ">") { # starting new contig
+            if ($line =~ /^>([1-2]?[0-9]|[XYxy]|MT|NT_\d+)\s.+/) { # contig regex
+                if (defined $current_fh) { # if we were processing something before
+                    #if ($limiter-- == 0) { last; } # debugging purposes only
+                    # reset file counter
+                    print "\tProcessed $file_count lines.\n";
+                    $file_count=0;
+                    # close fh
+                    $current_fh->close();
+                    undef $current_fh;
+                }
+                # begin a new file
+                print "[$total_count] $line";
+                print "\tGrabbed '$1'\n";
+                my $new_filename = "$staging_directory/$1.fa";
+                push @output_fastas, $new_filename;
+                $current_fh = IO::File->new("> $new_filename") or die $!;
+            } else {
+                die $class->error_message("\tCouldn't interpret contig name on line $total_count: $line".
+                    "If this happens, review and modify the contig regex in _split_reference_fasta_by_contig in Brat.pm\n");
+            }
+        }
+        $current_fh->print($line);
+        $file_count++;
+    }
+
+    if (defined $current_fh) { # cleanup
+        # print number of lines printed in last file
+        print "\tProcessed $file_count lines.\n";
+        # close fh
+        $current_fh->close();
+        undef $current_fh;
+    }
+    
+    $fasta_fh->close();
+    undef $fasta_fh;
+
+    return @output_fastas;
+}
+
+sub prepare_reference_sequence_index {
+    my $class = shift;
+    my $reference_index = shift;
+
+    $class->status_message("Creating reference index.");    
+
+    # get refseq info and fasta files
+    my $reference_build = $reference_index->reference_build;
+    my $reference_fasta_path = $reference_build->full_consensus_path('fa');
+
+    # this is the directory where the index files will be created
+    my $staging_directory = $reference_index->temp_staging_directory;
+
+    # decompose aligner params for each stage of alignment
+    my %aligner_params = $class->decomposed_aligner_params($reference_index->aligner_params);
+
+    # get the command path
+    my $brat_cmd_path = dirname(Genome::Model::Tools::Brat->path_for_brat_version($reference_index->aligner_version)) . "/";
+
+    print "Reference fasta path: $reference_fasta_path.\n";
+    print "Staging directory: $staging_directory.\n";
+
+    # create reference fastas split by contig
+    my @reference_fastas = $class->_split_reference_fasta_by_contig($reference_fasta_path, $staging_directory);
+
+    # create a file that lists all these reference fastas; this is for convenience and so we only have one regex determing contigs used
+    print Data::Dumper::Dumper([@reference_fastas]);
+    my $reference_fasta_list_fh = IO::File->new("> $staging_directory/reference_fasta_list.txt");
+    $reference_fasta_list_fh->print(join("\n",map({basename($_)} @reference_fastas))."\n");
+    $reference_fasta_list_fh->close();
+
+
+    # the following should no longer be necessary because we get the list back from _split_reference_fasta_by_contig
+    #opendir(DIR, $reference_directory) or die $!;
+    #opendir(DIR, $staging_directory) or die $!; # we now split up all_sequences.fa by contig into .fa in our staging directory
+    #while (my $filename = readdir(DIR)) {
+    #    # should match 1.fa - 22.fa, along with X.fa, x.fa, Y.fa, y.fa and contigs MT.fa or NT_######.fa
+    #    # XXX will fail on other formats (chr22.fa)
+    #    if ($filename =~ /^([1-2]?[0-9]|[XYxy]|MT|NT_\d+)\.(fa|fasta)$/) {
+    #        push @reference_fastas, "$staging_directory/$filename";
+    #    }
+    #}
+    #closedir(DIR) or die $!;
+    
+    ## We use the -P option with a pre-built index for alignment
+    ## Index creation requires a file that lists reference fastas.
+
+    # the only aligner parameters that brat-large-build needs to know about are -S and -bs; this filters all the others out
+    my $filtered_params = join(" ", grep(/^-(?:S|bs)/, split(/\s(?=-)/, $aligner_params{'align_options'})));
+    
+    my $reference_fastas_list_file = _create_temporary_list_file(\@reference_fastas);
+
+    my $index_cmd = sprintf("%s -r %s -P %s %s",
+        $brat_cmd_path . "brat-large-build",
+        $reference_fastas_list_file,
+        $staging_directory,
+        $filtered_params # index creation needs to know about certain params passed to the aligner (see above)
+    );
+
+    # index filenames are based off of the fasta filenames:
+    # for every .fa file in $reference_directory, add a .bg, .hs, and .ht file in $staging_directory to our array. also, tack INFO.txt on to the end.
+    my @index_files = map{
+            basename($_) =~ /^([1-2]?[0-9]|[XYxy]|MT|NT_\d+)(?=\.fa|\.fasta)/;
+            my $filename = $1;
+            map{ sprintf("%s/%s.%s",$staging_directory,$filename,$_) } qw(bg hs ht);
+        } @reference_fastas;
+    my $index_info_file = $staging_directory . "/INFO.txt";
+
+    print Data::Dumper::Dumper([@index_files, $index_info_file]);
+    
+    my $rv = Genome::Sys->shellcmd(
+        cmd => $index_cmd,
+        input_files => [@reference_fastas, $reference_fastas_list_file],
+        output_files => [@index_files, $index_info_file]
+    );
+    
+    unless($rv) { die $class->error_message("Index creation failed."); }
+
+    return 1;
 }
 
 sub fillmd_for_sam {
     return 0;
 }
 
+sub requires_read_group_addition {
+    return 1;
+}
 
+sub accepts_bam_input {
+    return 0;
+}
+
+# TODO investigate this further:
+sub supports_streaming_to_bam {
+    return 0;
+}
+
+sub _convert_reads_to_sam {
+    my ($self, $paired_end, $brat_input_file, $sam_output_file, $trimmed_prefix) = @_;
+    ###################################################
+    # subroutine for converting to sam format
+    # this is harder than it should be because we have to convert
+    # the mapped reads, then go back to the fastqs to retrieve
+    # the unmapped reads.
+    ###################################################
+
+    ###################################################
+    # first do the aligned reads
+    ###################################################
+    $self->status_message("Adding mapped reads to SAM.");
+
+    my $prevNum = -1;
+    my %missing = ();
+
+    my $inFh = IO::File->new($brat_input_file) || die "Can't open '$brat_input_file' for sam conversion input.\n";
+    my $outFh = open (my $samfile, ">$sam_output_file") || die "Can't open '$sam_output_file' for sam conversion output.\n";
+
+    while( my $line = $inFh->getline ) {
+        chomp($line);
+        my @fields = split("\t" ,$line);
+        my @samline = ();
+
+        if ($paired_end) { #---Paired End---------------------------
+            #name = id
+            push(@samline,$fields[0] . "/1");
+
+            #strand info goes in flag
+            if ($fields[4] eq "+") {
+                push(@samline,"99");
+            } else {
+                push(@samline,"83");
+            }
+
+            # "chr" gets added
+            # $fields[3] = "chr" . $fields[3] unless ($fields[3] =~ /chr/);
+            push(@samline,$fields[3]);
+
+            #pos
+            push(@samline,$fields[5]);
+            #mapq
+            push(@samline,255);
+
+            #cigar - includes length
+            push(@samline,length($fields[1]) . "M");
+
+            #other end of pair
+            push(@samline,$fields[3]);
+            push(@samline,$fields[6]);
+
+            #default vals for the rest
+            push(@samline,"0");
+            push(@samline,"*");
+            push(@samline,"*");
+
+            print $samfile join("\t",@samline) . "\n";
+
+            #now second read - flip positions, etc
+            $samline[0] = $fields[0] . "/2";
+            if ($fields[4] eq "+") {
+                $samline[1] = "147";
+            } else {
+                $samline[1] = "163";
+            }
+            $samline[3] = $fields[6];
+            $samline[5] = length($fields[2]) . "M"; #cigar
+            $samline[7] = $fields[5];
+            print $samfile join("\t",@samline) . "\n";
+        } else { #---Single End---------------------------
+            #name = id
+            push(@samline,$fields[0]);
+
+            #strand info goes in flag
+            if ($fields[3] eq "+") {
+                push(@samline,"0");
+            } else {
+                push(@samline,"16");
+            }
+
+            #"chr" gets added
+            #$fields[2] = "chr" . $fields[2] unless ($fields[2] =~ /chr/);
+            push(@samline,$fields[2]);
+
+            push(@samline,$fields[4]); #pos
+            push(@samline,255);        #mapq
+            push(@samline,length($fields[1]) . "M"); #cigar
+            #other end of pair
+            push(@samline,$fields[3]);
+            push(@samline,$fields[5]);
+            push(@samline,"0");
+            push(@samline,"*");
+            push(@samline,"*");
+
+            print $samfile join("\t",@samline) . "\n";
+        }
+
+        #also keep track of which sequences didn't get mapped
+        $prevNum++;
+        while($prevNum < $fields[0]) {
+            # $self->status_message("missing $prevNum");
+            $missing{$prevNum} = 0;
+            $prevNum++;
+        }
+
+        $prevNum = $fields[0];
+    }
+    $inFh->close;
+
+    ###################################################
+    # now, add reads that weren't mapped back to sam file. this is a little ugly, 
+    # but necessary for the standard pipeline
+    ###################################################
+    $self->status_message("Adding unmapped reads to SAM.");    
+
+    if ($paired_end) { #---Paired End---------------------------
+        #from first trimmed fastq - unmapped reads
+        my $count = 0;
+        my $fastqF = IO::File->new( $trimmed_prefix."_reads1.txt" ) || die "can't open ".$trimmed_prefix."_reads1.txt\n";
+
+        while( my $line = $fastqF->getline ) {   
+            #and if this is one of the sequences that's missing
+            if (exists $missing{$count}) {
+                chomp($line);
+                my @splitline = split("\t",$line);		    
+                printUnmappedReadToSam($splitline[0], ("n_" . $count . "/1"), $samfile);
+                # also have to handle lines at the end of the fastq that are missing
+                # with ids > the highest one output above
+                #prevNum will still be equal to the last read output above
+            } elsif ($count > $prevNum) {
+                chomp($line);
+                my @splitline = split("\t",$line);
+                printUnmappedReadToSam($splitline[0], ("n_" . $count . "/1"), $samfile);
+            }
+            $count++;
+        }
+        $fastqF->close;
+
+        #now from second trimmed fastq - unmapped reads
+        $count = 0;
+        $fastqF = IO::File->new( $trimmed_prefix."_reads2.txt" ) || die "can't open ".$trimmed_prefix."_reads2.txt\n";
+        while( my $line = $fastqF->getline ) {
+            #if we're on a sequence line
+#	    if ($count % 4 == 2)
+#	    {
+            #and if this is one of the sequences that's missing
+            if (exists $missing{$count}) {
+                chomp($line);
+                my @splitline = split("\t",$line);		    
+                printUnmappedReadToSam($splitline[0], ("n_" .  $count . "/2"), $samfile);
+
+            # also have to handle lines at the end of the fastq that are missing
+            # with ids > the highest one output above
+            #prevNum will still be equal to the last read output above
+            } elsif ($count > $prevNum) {
+                chomp($line);
+                my @splitline = split("\t",$line);		    
+                printUnmappedReadToSam($splitline[0], ("n_" .  $count . "/2"), $samfile);
+            }	    
+#	    }
+            $count++;
+        }
+        $fastqF->close;
+        
+        
+        #finally, add the reads where one or more ends was trimmed and set quality scores to 0
+        my @files = ($trimmed_prefix."_mates1.seq", $trimmed_prefix."_badMate1.seq",
+                 $trimmed_prefix."_mates2.seq", $trimmed_prefix."_badMate2.seq",
+                 $trimmed_prefix."_err1.seq", $trimmed_prefix."_err2.seq");
+        
+        $count = 0;
+        foreach my $file (@files) {
+            if ( -e $file ){
+                $fastqF = IO::File->new( $file ) || die "can't open fastq - $file\n";
+                while( my $line = $fastqF->getline ) {
+                    printUnmappedReadToSam($line, ("n_" . $count . "/1"), $samfile);	    
+                    $count++;
+                }
+                $fastqF->close;
+            } else {
+                $self->status_message("couldn't open $file - skipped\n");
+            }
+        }
+    } else { #---Single End---------------------------
+        my $count = 0;
+
+        my $fastqF = IO::File->new( $trimmed_prefix."_reads1.txt" ) || die "can't open file: ".$trimmed_prefix."_pair1.fastq\n";
+        while( my $line = $fastqF->getline ) {
+            #if we're on a sequence line
+#	    if ($count % 4 == 2)
+#	    {
+            #and if this is one of the sequences that's missing
+            if (exists $missing{$count}) {
+                chomp($line);
+                my @splitline = split("\t",$line);		    	
+                printUnmappedReadToSam($line, "n_" . $count, $samfile);
+                
+            # also have to handle lines at the end of the fastq that are missing
+                    # with ids > the highest one output above
+                #prevNum will still be equal to the last read output above
+            } elsif ($count > $prevNum) {
+                chomp($line);
+                my @splitline = split("\t",$line);		    
+                printUnmappedReadToSam($line, "pn_" . $count, $samfile);
+            }
+     #	    }
+
+            $count++;
+        }
+        $fastqF->close;
+
+        #next,add the reads where one or more ends couldn't be mapped and set quality scores to 0
+        my @files = ($trimmed_prefix."_mates1.seq", $trimmed_prefix."_err1.seq");
+
+        foreach my $file (@files) {
+            if ( -e $file ){
+                $fastqF = IO::File->new( $file ) || die "can't open fastq $file\n";
+                while( my $line = $fastqF->getline ) {
+                    printUnmappedReadToSam($line, ("n_" . $count), $samfile);		    
+                    $count++;
+                }
+                $fastqF->close;
+            } else {
+                $self->status_message("couldn't open $file - skipped\n");
+            }
+        }
+    } ##end if paired_end
+
+    $samfile->close;
+}
 
 sub printUnmappedReadToSam {
     my ($line, $name, $samfile) = @_;
@@ -590,3 +879,14 @@ sub printUnmappedReadToSam {
 
     print $samfile join("\t",@samline) . "\n";
 }
+
+    ### TODO
+    # step into the convert reads subroutine and continue to clean it up; it looks like there might be bug (see dubious comment)
+    # additional output files:
+    #     my @files = ("$scratch_directory/trimmed_mates1.seq", "$scratch_directory/trimmed_badMate1.seq",
+    #         "$scratch_directory/trimmed_mates2.seq", "$scratch_directory/trimmed_badMate2.seq",
+    #         "$scratch_directory/trimmed_err1.seq", "$scratch_directory/trimmed_err2.seq");
+    # clean up conver_mapped_reads_to_sam
+    ### LATER: 
+    # check gmt: install package and review other todo
+

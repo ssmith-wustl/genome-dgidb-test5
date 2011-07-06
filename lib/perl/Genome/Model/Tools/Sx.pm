@@ -30,7 +30,11 @@ Additional options, by type:
 
 DOC
         }, 
-        _reader => { is_optional => 1, },
+        input_metrics => {
+            is => 'Text',
+            is_optional => 1,
+            doc => 'Capoture input sequence metrics to this file.',
+        },
         output => {
             is => 'Text',
             is_many => 1,
@@ -69,12 +73,13 @@ Additional options, by type:
 
 DOC
         },
-        _writer => { is_optional => 1, },
-        metrics_file_out => {
+        output_metrics => {
             is => 'Text',
             is_optional => 1,
             doc => 'Output sequence metrics for the output to this file. Current metrics include: count, bases',
         },
+        _input => { is_optional => 1, },
+        _output => { is_optional => 1, },
     ],
 };
 
@@ -147,28 +152,41 @@ sub help_detail {
 HELP
 }
 
+# FIXME rm - should have named these this way!
+sub _reader { return $_[0]->_input; }
+sub _writer { return $_[0]->_output; }
+
 sub _init {
     my $self = shift;
 
+    # TODO check that the input and output are not the same
     my @input = $self->input;
     @input = (qw/ stdinref /) if not @input;
-    my $reader = Genome::Model::Tools::Sx::Reader->create(config => \@input);
+    my %reader_params = (
+        config => \@input,
+    );
+    if ( $self->input_metrics ) { 
+        my $metrics = Genome::Model::Tools::Sx::Metrics->create();
+        return if not $metrics;
+        $reader_params{metrics} = $metrics;
+    }
+    my $reader = Genome::Model::Tools::Sx::Reader->create(%reader_params);
     return if not $reader;
-    $self->_reader($reader);
+    $self->_input($reader);
 
     my @output = $self->output;
     @output = (qw/ stdoutref /) if not @output;
     my %writer_params = (
         config => \@output,
     );
-    if ( $self->metrics_file_out ) {
+    if ( $self->output_metrics ) {
         my $metrics = Genome::Model::Tools::Sx::Metrics->create();
         return if not $metrics;
         $writer_params{metrics} = $metrics;
     }
     my $writer = Genome::Model::Tools::Sx::Writer->create(%writer_params);
     return if not $writer;
-    $self->_writer($writer);
+    $self->_output($writer);
 
     $self->_add_result_observer;  #confesses on error
 
@@ -181,8 +199,8 @@ sub execute {
     my $init = $self->_init;
     return if not $init;
 
-    my $reader = $self->_reader;
-    my $writer = $self->_writer;
+    my $reader = $self->_input;
+    my $writer = $self->_output;
 
     while ( my $seqs = $reader->read ) {
         $self->_eval_seqs($seqs) or return;
@@ -208,28 +226,27 @@ sub _add_result_observer { # to write metrics file
                 return 1;
             }
 
-            if ( not $self->_writer ) {
-                Carp::confess('No writer found!');
+            for my $io (qw/ input output /) {
+                my $method = '_'.$io;
+                my $obj = $self->$method;
+                if ( not $obj ) {
+                    Carp::confess("No $io found!");
+                }
+
+                my $metrics_method = $io.'_metrics';
+                my $metrics_file = $self->$metrics_method;
+                next if not $metrics_file;
+
+                my $metrics = $obj->metrics;
+                if ( not $metrics ) { # very bad
+                    Carp::confess("Requested to write metrics for $io, but none were found");
+                }
+
+                unlink $metrics_file if -e $metrics_file;
+                my $write = $metrics->write_to_file($metrics_file);
+                return if not $write;
             }
 
-            # Skip if we don't have a metrics file
-            my $metrics_file = $self->metrics_file_out;
-            return 1 if not $self->metrics_file_out;
-
-            # Problem if the writer or writer metric object does not exist
-            if ( not $self->_writer->metrics ) { # very bad
-                Carp::confess('Requested to output metrics, but none were found for writer:'.$self->_writer->class);
-            }
-
-            unlink $metrics_file if -e $metrics_file;
-            my $fh = eval{ Genome::Sys->open_file_for_writing($metrics_file); };
-            if ( not $fh ) {
-                Carp::confess("Cannot open metrics file ($metrics_file) for writing: $@");
-            }
-
-            my $metrics_as_string = $self->_writer->metrics->to_string;
-            $fh->print($metrics_as_string);
-            $fh->close;
             return 1;
         }
     );
