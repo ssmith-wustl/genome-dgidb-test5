@@ -13,6 +13,14 @@ class Genome::Model::Tools::Newbler::ToPcapAce {
             is => 'Text',
             doc => 'Newbler assembly directory',
         },   
+        default_gap_size => { #TODO - change to min_contig_length
+            is => 'Number',
+            doc => 'Gap size to assign to gaps of unknown sizes',
+        },
+        min_contig_length => { #TODO .. 
+            is => 'Number',
+            doc => 'Minimum gap size to include in post assembly process',
+        },
     ],
     has_optional => [
         newbler_scaffold_file => {
@@ -30,19 +38,17 @@ class Genome::Model::Tools::Newbler::ToPcapAce {
             doc => 'Output ace file',
             is_mutable => 1,
         },
-        default_gap_size => {
-            is => 'Number',
-            doc => 'Gap size to assign to gaps of unknown sizes',
-            default => 10,
-        },
     ],
 };
 
 sub help_brief {
+    'Tool to convert newber generated ace file to pcap scaffolded ace file';
 }
 
 sub help_detail {
     return <<"EOS"
+gmt newbler to-pcap-ace --assembly-directory /gscmnt/111/assembly/newbler_e_coli
+gmt newbler to-pcap-ace --assembly-directory /gscmnt/111/assembly/newbler_e_coli --newbler-scaffolds-file assembly-directory /gscmnt/111/assembly/newbler_e_coli/454Scaffolds.txt --newbler-ace-file --assembly-directory /gscmnt/111/assembly/newbler_e_coli/consed/edit_dir/454Contigs.ace --default-gap-size 20
 EOS
 }
 
@@ -56,10 +62,11 @@ sub execute {
     if ( $self->newbler_scaffold_file ) {
         #create scaffold pcap format ace file
         my $scaffolds;
-        unless ( ($scaffolds) = $self->_parse_newbler_scaffold_file ) {
+        unless ( ($scaffolds) = $self->parse_newbler_scaffold_file ) {
             $self->error_message( "Failed to parse newbler scaffold file" );
             return;
         }
+
         unless( $self->_write_scaffolded_ace( $scaffolds ) ) {
             $self->error_message( "Failed to write new scaffolded pcap ace file" );
             return;
@@ -89,58 +96,6 @@ sub _write_gap_txt_file {
     $fh->close;
 
     return 1;
-}
-
-sub _parse_newbler_scaffold_file {
-    my $self = shift;
-
-    my $scaffolds = {};
-
-    my $fh = Genome::Sys->open_file_for_reading( $self->newbler_scaffold_file );
-
-    my $pcap_contig = 1;
-    my $pcap_supercontig = 0;
-
-    my $newb_contig;
-    my $newb_supercontig;
-
-    while ( my $line = $fh->getline ) {
-        my @tmp = split( /\s+/, $line );
-        $newb_supercontig = $tmp[0];
-        $self->{current_scaffold} = $newb_supercontig unless defined $self->{current_scaffold};
-        #contig describing line
-        if ( $tmp[5] =~ /contig\d+/ ) { # and prev line was contig desc write default gap
-            my $newb_contig_name = $tmp[5];
-            if ( not $self->{current_scaffold} eq $newb_supercontig ) {
-                #reached next scaffold in agp file increment supercontig number, reset contig number to 1
-                $pcap_supercontig++;
-                $pcap_contig = 1;
-                $self->{current_scaffold} = $newb_supercontig;
-            }
-            $scaffolds->{$newb_contig_name}->{pcap_name} = 'Contig'.$pcap_supercontig.'.'.$pcap_contig;
-            $pcap_contig++;
-            #newbler scaffold agp file does not report gaps less than 20 so need to make it up
-            #will have 2 contig desc lines in a row rather than alternating contigs and frags
-            if ( defined $self->{prev_line_desc} and $self->{prev_line_desc} eq 'contig' ) {
-                #set default gap size
-                my $prev_pcap_contig_name = $self->{prev_newb_contig_name};
-                $scaffolds->{$prev_pcap_contig_name}->{gap_size} = $self->default_gap_size;
-            }
-            $self->{prev_newb_contig_name} = $newb_contig_name;
-            $self->{prev_line_desc} = 'contig';
-        }
-        #gap size defining line followed by contig describing line but not always there
-        if ( $tmp[6] =~ /fragment/i ) { #and prev line was contig write gap described here
-            my $gap_size = $tmp[5];
-            my $prev_newb_contig = $self->{prev_newb_contig_name};
-            $scaffolds->{$prev_newb_contig}->{gap_size} = $gap_size;
-            $self->{prev_line_desc} = 'fragment';
-        }
-    }
-
-    $fh->close;
-
-    return $scaffolds;
 }
 
 sub _validate_inputs {
@@ -183,27 +138,47 @@ sub _write_scaffolded_ace {
     $self->status_message( "Found scaffold agp file or file was supplied, generating scaffolded pcap ace file" );
 
     my $fh = Genome::Sys->open_file_for_reading( $self->newbler_ace_file );
-    unlink $self->ace_out;
-    my $fh_out = Genome::Sys->open_file_for_writing( $self->ace_out );
+    unlink $self->ace_out.'.int';
+    my $fh_int = Genome::Sys->open_file_for_writing( $self->ace_out.'.int' );
+    my $print_setting = 0;
+    my $contig_count = 0;
+    my $read_count = 0;
     while ( my $line = $fh->getline ) {
         if ( $line =~ /^CO\s+/ ) {
             my ( $newb_ctg_name ) = $line =~ /^CO\s+(\S+)/;
             my $rest_of_line = "$'";
-
-            my $pcap_name = $scaffolds->{$newb_ctg_name}->{pcap_name};
-            unless ( $pcap_name ) {
-                $self->error_message( "Failed to get pcap name for newbler contig: $newb_ctg_name" );
-                return;
+            
+            if ( exists $scaffolds->{$newb_ctg_name} ) {
+                my $pcap_name = $scaffolds->{$newb_ctg_name}->{pcap_name};
+                $fh_int->print( "CO $pcap_name $rest_of_line" );
+                $contig_count++;
+                $print_setting = 1;
+                next;
             }
-            $fh_out->print( "CO $pcap_name $rest_of_line" );
+            else {
+                $print_setting = 0;
+            }
         }
-        else {
-            $fh_out->print( $line );
-        }
+        $fh_int->print( $line ) if $print_setting == 1;
+        $read_count++ if $line =~ /^RD\s+/;
     }
     $fh->close;
-    $fh_out->close;
+    $fh_int->close;
     
+    #append AS line that describes number of contigs and reads to new ace
+    my $as_line =  "AS  $contig_count $read_count\n\n";
+
+    my $fh_out = Genome::Sys->open_file_for_writing( $self->ace_out );
+    $fh_out->print( $as_line );
+    my $fh_in = Genome::Sys->open_file_for_reading( $self->ace_out.'.int' );
+    while ( my $line = $fh_in->getline ) {
+        $fh_out->print( $line );
+    }
+    $fh_out->close;
+    $fh_in->close;
+
+    unlink $self->ace_out.'.int';
+
     return 1;
 }
 

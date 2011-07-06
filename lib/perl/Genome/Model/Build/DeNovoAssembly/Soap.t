@@ -22,7 +22,7 @@ use_ok('Genome::Model::Build::DeNovoAssembly::Soap') or die;
 my $base_dir = '/gsc/var/cache/testsuite/data/Genome-Model/DeNovoAssembly';
 my $archive_path = $base_dir.'/inst_data/-7777/archive.tgz';
 ok(-s $archive_path, 'inst data archive path') or die;
-my $example_dir = $base_dir.'/soap_solexa_build_v9';
+my $example_dir = $base_dir.'/soap_v9';
 ok(-d $example_dir, 'example dir') or die;
 my $tmpdir = File::Temp::tempdir(CLEANUP => 1);
 
@@ -69,12 +69,10 @@ ok(-s $instrument_data->archive_path, 'inst data archive path');
 
 my $pp = Genome::ProcessingProfile::DeNovoAssembly->create(
     name => 'De Novo Assembly Soap Test',
-    sequencing_platform => 'solexa',
     assembler_name => 'soap de-novo-assemble',
     assembler_version => '1.04',
     assembler_params => '-kmer_size 31 -resolve_repeats -kmer_frequency_cutoff 1',
     read_processor => 'trimmer bwa-style -trim-qual-level 10 | filter by-length -filter-length 35 | rename illumina-to-pcap',
-    post_assemble => 'standard-outputs',
 );
 ok($pp, 'pp') or die;
 
@@ -149,8 +147,20 @@ is_deeply(
     'existing assembler input files',
 );
 
+# ASSEMBLE - IMPORT RUSAGE/PARAMS
+my $assembler_name = $pp->assembler_name;
+$pp->assembler_name('soap import');
+my $assembler_rusage = $build->assembler_rusage;
+is($assembler_rusage, "-R 'select[type==LINUX64] rusage[internet_download_mbps=100] span[hosts=1]'", 'assembler rusage');
+my %assembler_params = $build->assembler_params;
+is($assembler_params{import_location}, '/WholeMetagenomic/03-Assembly/PGA/Escherichia coli TEST_WUGC', 'import location');
+$pp->assembler_name($assembler_name); # reset
+
 # ASSEMBLE
-my %assembler_params = $model->processing_profile->soap_de_novo_assemble_params($build);
+$assembler_rusage = $build->assembler_rusage;
+my $queue = ( Genome::Config->should_use_alignment_pd ) ? 'alignment-pd' : 'alignment';
+is($assembler_rusage, "-q $queue -n 4 -R 'span[hosts=1] select[type==LINUX64 && mem>30000] rusage[mem=30000]' -M 30000000", 'assembler rusage');
+%assembler_params = $build->assembler_params;
 #print Data::Dumper::Dumper(\%assembler_params);
 is_deeply(
     \%assembler_params,
@@ -165,6 +175,13 @@ is_deeply(
     },
     'assembler params',
 );
+
+# ASSEMBLE
+my $assemble = Genome::Model::Event::Build::DeNovoAssembly::Assemble->create(build => $build, model => $model);
+ok($assemble, 'create assemble');
+$assemble->dump_status_messages(1);
+ok($assemble->execute, 'execute assemble');
+
 ok(-s $assembler_params{config_file}, 'created config file');
 my $config_fh = eval{ Genome::Sys->open_file_for_reading($assembler_params{config_file}); };
 my $config = join('', $config_fh->getlines);
@@ -174,19 +191,13 @@ max_rd_len=120
 [LIB]
 map_len=60
 asm_flags=3
-pair_num_cutoff=2
 reverse_seq=0
+pair_num_cutoff=2
 avg_ins=260
 CONFIG
 $expected_config .= 'q1='.$build->data_directory.'/'.$build->file_prefix.".$library_id.forward.fastq\n";
 $expected_config .= 'q2='.$build->data_directory.'/'.$build->file_prefix.".$library_id.reverse.fastq\n";
 is($config, $expected_config, 'config matches');
-
-# ASSEMBLE
-my $assemble = Genome::Model::Event::Build::DeNovoAssembly::Assemble->create(build => $build, model => $model);
-ok($assemble, 'create assemble');
-$assemble->dump_status_messages(1);
-ok($assemble->execute, 'execute assemble');
 
 my @file_exts = qw/ contig         gapSeq        links     peGrads
                     preGraphBasic  readOnContig  scafSeq   updated.edge
@@ -205,8 +216,6 @@ foreach my $ext ( @file_exts ) {
 }
 
 # METRICS TODO metrics use real build after doing stuff
-my %metrics = $example_build->set_metrics;
-ok(%metrics, 'set metrics');
 
 #print $build->data_directory."\n"; <STDIN>;
 done_testing();

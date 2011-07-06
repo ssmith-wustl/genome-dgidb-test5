@@ -93,13 +93,26 @@ sub input_data_directory {
 }
 #<>#
 
+#<ASSEMBLE>#
+sub assembler_params {
+    my $self = shift;
+
+    my %params = $self->processing_profile->assembler_params_as_hash;
+    $params{version} = $self->processing_profile->assembler_version;
+    $params{output_directory} = $self->data_directory;
+    $params{input_files} = [ $self->fastq_input_files ];
+
+    return %params;
+}
+#</ASSEMBLE>#
+
 #< Metrics >#
 sub calculate_metrics {
     my  $self = shift;
 
     # FIXME
     Carp::Confess("FIXME - Not set metrics implemented for newbler assemblies!!");
-    
+
     return 1;
 }
 #<>#

@@ -36,7 +36,7 @@ sub execute {
     my @objects = $self->$name_for_objects_ub;
     my %errors;
     for my $obj ( @objects ) {
-        $self->total_command_count($self->total_command_count + 1);
+        $self->_total_command_count($self->_total_command_count + 1);
         my $transaction = UR::Context::Transaction->begin();
         my $name = $obj->__display_name__;
         my $deleted = eval{ $obj->delete };

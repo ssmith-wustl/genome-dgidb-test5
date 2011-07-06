@@ -44,6 +44,18 @@ sub sra_sample_id {
     return $sra_sample_id;
 }
 
+sub files_ignored_by_diff {
+    return qw(
+        reports/Build_Initialized/report.xml
+        reports/Build_Succeeded/report.xml
+        build.xml
+    );
+}
 
+sub dirs_ignored_by_diff {
+    return qw(
+        logs/
+    );
+}
 1;
 

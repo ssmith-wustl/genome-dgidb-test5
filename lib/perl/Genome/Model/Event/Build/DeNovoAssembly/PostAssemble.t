@@ -7,7 +7,7 @@ use above 'Genome';
 
 use Test::More;
 
-use_ok('Genome::Model::Event::Build::DeNovoAssembly::Report') or die;
+use_ok('Genome::Model::Event::Build::DeNovoAssembly::PostAssemble') or die;
 
 done_testing();
 exit;

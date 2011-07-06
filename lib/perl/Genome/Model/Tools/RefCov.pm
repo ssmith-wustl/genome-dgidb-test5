@@ -368,9 +368,6 @@ sub create {
     my $self = $class->SUPER::create(@_);
     unless ($self) { return; }
 
-    unless ($] > 5.012) {
-        die "Bio::DB::Sam requires perl 5.12!";
-    }
     require Bio::DB::Sam;
 
     if ($self->evaluate_gc_content) {

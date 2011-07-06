@@ -41,6 +41,8 @@ ok( -l $temp_test_dir.'/consed/edit_dir/'.$ace_in, "Linked $ace_in file" ) or di
 
 my $create = Genome::Model::Tools::Newbler::ToPcapAce->create(
     assembly_directory => $temp_test_dir,
+    min_contig_length => 1,
+    default_gap_size => 10,
 );
 ok( $create, "Created tool" ) or die;
 ok( $create->execute, "Successfully executed tool" ) or die;

@@ -26,21 +26,10 @@ ok(
     ),
     'Failed as expected - create w/o seq platform',
 );
-# Create fail - invalid seq platform
-ok(
-    !Genome::ProcessingProfile::DeNovoAssembly->create(
-        name => 'DNA Test',
-        sequencing_platform => '3730',
-        assembler_name => 'velvet one-button',
-        assembler_version => '7.0.57-64',
-    ),
-    'Failed as expected - create w/ invalid seq platform',
-);
 # Create fail - no assembler
 ok(
     !Genome::ProcessingProfile::DeNovoAssembly->create(
         name => 'DNA Test',
-        sequencing_platform => 'solexa',
         assembler_version => '7.0.57-64',
     ),
     'Failed as expected - create w/o assembler',
@@ -49,7 +38,6 @@ ok(
 ok(
     !Genome::ProcessingProfile::DeNovoAssembly->create(
         name => 'DNA Test',
-        sequencing_platform => 'solexa',
         assembler_name => 'consed',
         assembler_version => '7.0.57-64',
     ),
@@ -59,7 +47,6 @@ ok(
 ok(
     !Genome::ProcessingProfile::DeNovoAssembly->create(
         name => 'DNA Test',
-        sequencing_platform => 'solexa',
         assembler_name => 'velvet one-button',
         assembler_version => '7.0.57-64',
         coverage => -1,
@@ -70,7 +57,6 @@ ok(
 ok(
     !Genome::ProcessingProfile::DeNovoAssembly->create(
         name => 'DNA Test',
-        sequencing_platform => 'solexa',
         assembler_name => 'newbler',
         assembler_version => '7.0.57-64',
     ),
@@ -80,7 +66,6 @@ ok(
 ok(
     !Genome::ProcessingProfile::DeNovoAssembly->create(
         name => 'DNA Test',
-        sequencing_platform => 'solexa',
         assembler_name => 'velvet one-button',
     ),
     'Failed as expected - create w/o assembler version',
@@ -89,7 +74,6 @@ ok(
 ok(
     !Genome::ProcessingProfile::DeNovoAssembly->create(
         name => 'DNA Test',
-        sequencing_platform => 'solexa',
         assembler_name => 'velvet one-button',
         assembler_version => '7.0.57-64',
         assembler_params => '-wrong params',
@@ -100,7 +84,6 @@ ok(
 ok(
     !Genome::ProcessingProfile::DeNovoAssembly->create(
         name => 'DNA Test',
-        sequencing_platform => 'solexa',
         assembler_name => 'velvet one-button',
         assembler_version => '7.0.57-64',
         assembler_params => '-ins_length 260',

@@ -16,13 +16,13 @@ use Test::More;
 my $machine_hardware = `uname -m`;
 like($machine_hardware, qr/x86_64/, 'on 64 bit machine') or die;
 
-use_ok('Genome::Model::Build::DeNovoAssembly::Abyss') or die;
+use_ok('Genome::Model::Build::DeNovoAssembly::Newbler') or die;
 
 my $base_dir = '/gsc/var/cache/testsuite/data/Genome-Model/DeNovoAssembly';
 my $archive_path = $base_dir.'/inst_data/-7777/archive.tgz';
 ok(-s $archive_path, 'inst data archive path') or die;
 my $example_version = '1';
-my $example_dir = $base_dir.'/abyss_v'.$example_version;
+my $example_dir = $base_dir.'/newbler_v'.$example_version;
 ok(-d $example_dir, 'example dir') or die;
 my $tmpdir = File::Temp::tempdir(CLEANUP => 1);
 
@@ -68,10 +68,10 @@ ok($instrument_data->is_paired_end, 'inst data is paired');
 ok(-s $instrument_data->archive_path, 'inst data archive path');
 
 my $pp = Genome::ProcessingProfile::DeNovoAssembly->create(
-    name => 'De Novo Assembly Abyss Test',
-    assembler_name => 'abyss parallel',
-    assembler_version => '1.2.7',
-    assembler_params => '-kmer_size 25,31..35 step 2,50 -num_jobs 4',
+    name => 'De Novo Assembly Newbler Test',
+    assembler_name => 'newbler de-novo-assemble',
+    assembler_version => 'mapasm454_source_03152011',
+    assembler_params => '-rip',
 );
 ok($pp, 'pp') or die;
 
@@ -96,66 +96,47 @@ my $example_build = Genome::Model::Build->create(
 ok($example_build, 'create example build');
 
 # PREPARE INST DATA
-my @assembler_input_files = $build->existing_assembler_input_files;
-ok(!@assembler_input_files, 'assembler input files do not exist');
+my @existing_assembler_input_files = $build->existing_assembler_input_files;
+ok(!@existing_assembler_input_files, 'assembler input files do not exist');
 
 my $prepare = Genome::Model::Event::Build::DeNovoAssembly::PrepareInstrumentData->create(build => $build, model => $model);
 ok($prepare, 'create prepare instrument data');
 $prepare->dump_status_messages(1);
 ok($prepare->execute, 'execute prepare instrument data');
 
-@assembler_input_files = $build->existing_assembler_input_files;
-is(@assembler_input_files, 2, 'assembler input files exist');
-my @example_assembler_input_files = $example_build->existing_assembler_input_files;
-is(@example_assembler_input_files, 2, 'example assembler input files do not exist');
-is_deeply(\@assembler_input_files, [ map { $tmpdir.'/'.$_ } (qw/ fwd.fq rev.fq /) ], 'existing assembler file names');
+@existing_assembler_input_files = $build->existing_assembler_input_files;
+is(@existing_assembler_input_files, 1, 'assembler input files exist');
+
+my @example_existing_assembler_input_files = $example_build->existing_assembler_input_files;
+is(@example_existing_assembler_input_files, 1, 'example assembler input files exist');
 is(
-    File::Compare::compare($assembler_input_files[0], $example_assembler_input_files[0]),
+    File::Compare::compare($existing_assembler_input_files[0], $example_existing_assembler_input_files[0]),
     0, 
-    'assembler fwd file matches',
-);
-is(
-    File::Compare::compare($assembler_input_files[1], $example_assembler_input_files[1]),
-    0, 
-    'assembler rev file matches',
+    'assembler input file matches',
 );
 
 # ASSEMBLE
+my $assembler_rusage = $build->assembler_rusage;
+#is($assembler_rusage, "", 'assembler rusage');
 my %assembler_params = $build->assembler_params;
-#print Data::Dumper::Dumper(\%assembler_params);
+print Data::Dumper::Dumper(\%assembler_params);
 is_deeply(
     \%assembler_params,
     {
-        'version' => '1.2.7',
-        'fastq_a' => $assembler_input_files[0],
-        'fastq_b' => $assembler_input_files[1],
-        'num_jobs' => '4',
-        'kmer_size' => '25,31..35 step 2,50',
+        'version' => 'mapasm454_source_03152011',
+        'input_files' => [ $build->data_directory.'/-7777-input.fastq' ],
+        'rip' => 1,
         'output_directory' => $build->data_directory,
     },
     'assembler params',
 );
 
-
-#print $build->data_directory."\n"; <STDIN>;
-done_testing();
-exit;
-
-# TODO assemble fails b/c of trying to rm tmp dir when in said tmp dir
 my $assemble = Genome::Model::Event::Build::DeNovoAssembly::Assemble->create(build => $build, model => $model);
 ok($assemble, 'create assemble');
 $assemble->dump_status_messages(1);
 ok($assemble->execute, 'execute assemble');
 
-# TODO add files...
-for my $file_name (qw/ ADD FILES /) {
-    my $file = $build->$file_name;
-    ok(-s $file, "Build $file_name exists");
-    my $example_file = $example_build->$file_name;
-    ok(-s $example_file, "Example $file_name exists");
-    is( File::Compare::compare($file, $example_file), 0, "Generated $file_name matches example file");
-}
-
+# TODO check example files
 
 # TODO metrics
 

@@ -97,7 +97,7 @@ sub execute {
             $self->status_message("Already started max builds $self->_builds_started, quitting");
             last; 
         }
-        $self->total_command_count($self->total_command_count + 1);
+        $self->_total_command_count($self->_total_command_count + 1);
         if (!$self->force && ($model->running_builds or $model->scheduled_builds)) {
             $self->append_error($model->__display_name__, "Model already has running or scheduled builds. Use the '--force' option to override this and start a new build.");
             next;
@@ -108,7 +108,7 @@ sub execute {
     $self->display_builds_started();
     $self->display_command_summary_report();
 
-    return !scalar(keys %{$self->command_errors});
+    return !scalar(keys %{$self->_command_errors});
 }
 
 sub create_and_start_build {

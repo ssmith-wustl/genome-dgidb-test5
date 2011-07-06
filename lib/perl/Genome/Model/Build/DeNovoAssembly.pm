@@ -57,7 +57,7 @@ sub description {
 
     return sprintf(
         'de novo assembly %s build (%s) for model (%s %s)',
-        $self->processing_profile->sequencing_platform,
+        $self->processing_profile->assembler_name,
         $self->id,
         $self->model->name,
         $self->model->id,
@@ -236,7 +236,7 @@ sub calculate_reads_attempted {
             $reads_attempted += $inst_data->total_reads;
         } else {
             Carp::confess( 
-                $self->error_message("Unsupported sequencing platform or inst_data class (".$self->sequencing_platform." ".$inst_data->class."). Can't calculate reads attempted.")
+                $self->error_message("Unsupported sequencing platform or inst_data class (".$inst_data->class."). Can't calculate reads attempted.")
             );
         }
     }
@@ -285,7 +285,7 @@ sub calculate_average_insert_size {
         }
         else {
             Carp::confess( 
-                $self->error_message("Unsupported sequencing platform (".$self->sequencing_platform."). Can't calculate insert size and standard deviation.")
+                $self->error_message("Unsupported sequencing platform (".$inst_data->sequencing_platform."). Can't calculate insert size and standard deviation.")
             );
         }
     }
@@ -359,6 +359,11 @@ sub assembly_fasta_file {
 sub center_name {
     return $_[0]->model->center_name || 'WUGC';
 }
+
+#< Assemble >#
+sub assembler_rusage { return; }
+sub before_assemble { return 1; }
+sub after_assemble { return 1; }
 
 #< Metrics >#
 sub calculate_metrics {

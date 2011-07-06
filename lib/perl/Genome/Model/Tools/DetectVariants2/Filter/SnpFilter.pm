@@ -47,6 +47,11 @@ sub _filter_variants {
     my $filtered_snv_output_file = $self->_temp_staging_directory . "/snvs.hq";
     my $fail_filter_snv_output_file = $self->_temp_staging_directory . "/snvs.lq";
 
+    unless (-e $snv_input_file) {
+        $self->error_message("snv input file $snv_input_file does not exist.");
+        die $self->error_message;
+    }
+
     # This is where samtools would have put an indel file if one was generated
     my $filtered_indel_file = $self->detector_directory . "/indels_all_sequences.filtered";
     unless (-e $filtered_indel_file ) {
@@ -84,10 +89,13 @@ sub _filter_variants {
         }
     }
     else {
-        #FIXME use Genome::Sys... might need to add a method there 
-        system("touch $snv_input_file") unless -e $snv_input_file;
-        system("touch $filtered_snv_output_file");
-        system("touch $fail_filter_snv_output_file");
+        #FIXME use Genome::Sys... might need to add a method there
+        my $hq_bed = $self->_temp_staging_directory . "/snvs.hq.bed";
+        my $lq_bed = $self->_temp_staging_directory . "/snvs.lq.bed";
+        my $cmd = "touch \"$hq_bed\" \"$lq_bed\" \"$filtered_snv_output_file\" \"$fail_filter_snv_output_file\"";
+        Genome::Sys->shellcmd(
+            cmd => $cmd
+        );
     }
 
 

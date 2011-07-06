@@ -386,7 +386,7 @@ sub compare_snps_file {
 
 sub get_alignments {
     my $self = shift;
-    return map { $self->model->processing_profile->results_for_instrument_data_inputs($_) }
+    return map { $self->model->processing_profile->results_for_instrument_data_input($_) }
         $self->instrument_data_inputs;
 }
 
