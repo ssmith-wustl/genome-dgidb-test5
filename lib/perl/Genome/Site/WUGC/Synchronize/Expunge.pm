@@ -4,6 +4,7 @@ use strict;
 use warnings;
 use Genome;
 use Mail::Sender;
+use Carp 'confess';
 
 class Genome::Site::WUGC::Synchronize::Expunge {
     is => 'Genome::Command::Base',
