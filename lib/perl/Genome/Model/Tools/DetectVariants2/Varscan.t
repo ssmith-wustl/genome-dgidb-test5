@@ -42,7 +42,7 @@ ok(-d $expected_dir, "expected results directory exists");
 
 my $refbuild_id = 101947881;
 
-my $version = ''; #Currently only one version of varscan
+my $version = '2.2.4';
 
 my $command = Genome::Model::Tools::DetectVariants2::Varscan->create(
     reference_build_id => $refbuild_id,
