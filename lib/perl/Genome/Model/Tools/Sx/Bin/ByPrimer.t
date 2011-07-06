@@ -52,7 +52,7 @@ ok($binner->execute, 'execute binner');
 is(File::Compare::compare($acgt_fastq, $dir.'/bin_by_primer.acgt.rm.fastq'), 0, 'ACGT file mathces');
 is(File::Compare::compare($tgca_fastq, $dir.'/bin_by_primer.tgca.rm.fastq'), 0, 'TGCA file mathces');
 
-print "$tmp_dir\n"; <STDIN>;
+#print "$tmp_dir\n"; <STDIN>;
 done_testing();
 exit;
 
