@@ -332,9 +332,8 @@ sub write_to_named_writers {
     my ($self, $seqs) = @_;
 
     for my $seq ( @$seqs ) {
-        if ( not $seq->{writer_name} ) { # does the seq have a writer name?
-            $self->error_message('Attempting to write sequences to named writers, but there is not a writer name for sequence: '.$seq->{id});
-            return;
+        if ( not $seq->{writer_name} ) { # OK
+            next;
         }
         if ( not $self->{ $seq->{writer_name} } ) { # is theree a writer with this name?
             $self->error_message('Attempting to write sequences to named writers, but there is not a writer for name: '.$seq->{writer_name});
