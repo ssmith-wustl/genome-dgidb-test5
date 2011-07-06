@@ -191,10 +191,4 @@ sub process_source {
     return;
 }
 
-sub convert_bed_to_detector {
-    my $self = shift;
-
-    die $self->error_message("This should be overloaded by the detector-specific classes");
-}
-
 1;
