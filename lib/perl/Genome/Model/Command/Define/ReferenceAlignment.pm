@@ -9,10 +9,7 @@ require Carp;
 use Regexp::Common;
 
 class Genome::Model::Command::Define::ReferenceAlignment {
-    is => [
-        'Genome::Model::Command::Define',
-        'Genome::Command::Base',
-        ],
+    is => 'Genome::Model::Command::Define',
     has => [
         reference_sequence_build => {
             is => 'Genome::Model::Build::ImportedReferenceSequence',
@@ -20,42 +17,38 @@ class Genome::Model::Command::Define::ReferenceAlignment {
             default_value => 'NCBI-human-build36',
             is_input => 1,
         },
+    ],
+    has_optional => [
         annotation_reference_build => {
             is => 'Genome::Model::Build::ImportedAnnotation',
             doc => 'ID or name of the the build containing the reference transcript set used for variant annotation',
-            is_optional => 1,
             is_input => 1,
         },
         genotype_microarray_model => {
             is => 'Genome::Model::GenotypeMicroarray',
             doc => 'ID or name of the genotype microarray model which will be used to obtain the gold snp and genotype files',
             is_optional => 1,
-            is_input => 1,
         },
         dbsnp_model => {
             is => 'Genome::Model::ImportedVariationList',
             doc => 'ID or name of the dbSNP model to compare against (the latest build will be selected)',
-            is_optional => 1,
             is_input => 1,
         },
         dbsnp_build => {
             is => 'Genome::Model::Build::ImportedVariationList',
             doc => 'ID or name of the dbSNP build to compare against',
-            is_optional => 1,
             is_input => 1,
         },
         target_region_set_names => {
             is => 'Text',
-            is_optional => 1,
             is_many => 1,
             doc => 'limit the model to take specific capture or PCR instrument data',
         },
         region_of_interest_set_name => {
             is => 'Text',
-            is_optional => 1,
             doc => 'limit coverage and variant detection to within these regions of interest',
         }
-    ]
+    ],
 };
 
 sub _shell_args_property_meta {
@@ -114,6 +107,7 @@ sub listed_params {
 sub execute {
     my $self = shift;
 
+    $DB::single = 1;
     if ($self->dbsnp_build and $self->dbsnp_model and $self->dbsnp_build->model->id != $self->dbsnp_model->id) {
         $self->error_message("Specify one of --dbsnp-build or --dbsnp-model, not both");
         return;
