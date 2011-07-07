@@ -35,7 +35,7 @@ sub process_source {
         my ($chromosome, $position, $star,$_calls, $consensus_quality, $_ref_quality, $_mapping_quality, $read_depth, $indel_call_1, $indel_call_2); #pileup variables
         my ($id, $reference_bases, $variant_bases, @extra); #mpileup variables that aren't included in pileup variables.
 
-        my @line_array = split("\t", $line);
+        my @line_array = $line =~ /^(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+\S+\s+(\S+)\s+/;
         if ($line_array[2] eq '.') { #deciding if it's pileup or mpileup
 
             #seven is how many columns in the vcf file for mpileup
@@ -46,11 +46,13 @@ sub process_source {
             $indel_call_2='*';
             $extra[1] =~ /DP=(\d+)/;
             $read_depth = $1;
+            $extra[1] =~/MQ=(\d+)/;
+            $_mapping_quality = $1;
         }else {
 
             #pileup output file that has ten columns in the vcf file 
             ($chromosome, $position, $star, $_calls, $consensus_quality, $_ref_quality, $_mapping_quality, $read_depth, $indel_call_1, $indel_call_2, 
-            ) = split("\t", $line);
+            ) = $line =~ /^(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+\S+\s+(\S+)\s+/;
             next unless $star eq '*'; #samtools indel format includes reference lines as wel
         }
 
@@ -74,7 +76,7 @@ sub process_source {
                 next;
             }
 
-            $self->write_bed_line($chromosome, $start, $stop, $reference, $variant, $consensus_quality, $read_depth); #took out position between stop and reference 
+            $self->write_bed_line($chromosome, $start, $stop, $reference, $variant, $consensus_quality, $read_depth, $_mapping_quality); #took out position between stop and reference 
         }
     }
     return 1;

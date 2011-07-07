@@ -98,14 +98,13 @@ sub execute {
         elsif ($snp_format eq 'VCF') { #mpileup edits for the VCF file.
             next if $snp_line=~ /^#/;
             next if $snp_line=~/INDEL/;
-            ($chr, $pos, $ref, $cns, $cns_qual)= map{$columns[$_]}(0,1,3,4,5);
+            $DB::single=1;
+            ($chr, $pos, $ref, $cns, $cns_qual)= map{$columns[$_]}(0..3,6);
             $read_bases = '';
-            $cns_qual = sprintf("%2.f", $cns_qual);
         }
 
         else {
             ($chr, $pos, $ref, $cns, $cns_qual) = map{$columns[$_]}(0..4);
-            $cns_qual = sprintf("%2.f", $cns_qual);
             my $pileup_line = $maq_pileup_fh->getline;
             my ($pu_chr, $pu_pos, $pu_ref, $pu_read_bases) =  split("\t", $pileup_line);
             $read_bases = $pu_read_bases;
@@ -135,15 +134,18 @@ sub execute {
         }
         $alleles[1] = 'X' if @alleles > 2; #Maq called more than 2 possible alleles? The original code specified that we should report the variation as 'X'
 
+
         for my $i (0..1) {
             my $base = $alleles[$i];
             next if $base eq $ref;
-            ###CHANGE::::
+            $DB::single=1;
+            $ref_base_ct ||= 0;
+            $base_ct{$base} ||= 0;
             $out_fh->print(join("\t", $chr, $pos, $pos, $ref, $base, 'ref', 'SNP', $ref_base_ct, $base_ct{$base}, $cns_qual), "\n");
-            $cns_qual = sprintf("%2.f", $cns_qual);
 
             last if $alleles[0] eq $alleles[1];
         }
+
     }
     map{$_->close}($snp_fh, $out_fh);
     $maq_pileup_fh->close if $maq_pileup_fh;

@@ -152,6 +152,9 @@ sub execute {                               # replace with real execution logic.
 				$size = 0;  #this will include this indel despite its wrongness
 			}
 			if ( $size > 0 && $size <= 2) {
+				#Add 1 bp padding to bed because we just want to look at regions
+				$bedstart--;
+				$bedstop++;
 				print INDELS_OUT "$chr\t$bedstart\t$bedstop\t$ref\t$var\n";
 				print NOBED_INDELS_OUT "$chr\t$start\t$stop\t$ref\t$var\n";
 			}

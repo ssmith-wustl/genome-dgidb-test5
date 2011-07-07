@@ -20,6 +20,11 @@ sub username {
     return $username;
 }
 
+sub sudo_username {
+    my $sudo_username = $ENV{'SUDO_USER'} || '';
+    return $sudo_username;
+}
+
 sub user_is_member_of_group {
     my ($class, $group_name) = @_;
     my $user = Genome::Sys->username;
@@ -196,7 +201,7 @@ sub create_directory {
 }
 
 sub create_symlink {
-    my ($self, $target, $link) = @_;
+    my ($class, $target, $link) = @_;
 
     unless ( defined $target ) {
         Carp::croak("Can't create_symlink: no target given");
@@ -222,6 +227,27 @@ sub create_symlink {
         Carp::croak("Can't create link ($link) to $target\: $!");
     }
     
+    return 1;
+}
+
+sub create_symlink_and_log_change {
+    my $class  = shift || die;
+    my $owner  = shift || die;
+    my $target = shift || die;
+    my $link   = shift || die;
+
+    $class->create_symlink($target, $link);
+
+    # create a change record so that if the databse change is undone this symlink will be removed
+    my $symlink_undo = sub {
+        $owner->status_message("Removing symlink ($link) due to database rollback.");
+        unlink $link;
+    };
+    my $symlink_change = UR::Context::Transaction->log_change($owner, 'UR::Value', $link, 'external_change', $symlink_undo);
+    unless ($symlink_change) {
+        die $owner->error_message("Failed to log symlink change.");
+    }
+
     return 1;
 }
 
@@ -286,14 +312,17 @@ sub shellcmd {
     # TODO: add IPC::Run's w/ timeout but w/o the io redirection...
 
     my ($self,%params) = @_;
-    my $cmd                         = delete $params{cmd};
-    my $output_files                = delete $params{output_files} ;
+    my $cmd                          = delete $params{cmd};
+    my $output_files                 = delete $params{output_files} ;
     my $input_files                  = delete $params{input_files};
-    my $output_directories          = delete $params{output_directories} ;
-    my $input_directories           = delete $params{input_directories};
-    my $allow_failed_exit_code      = delete $params{allow_failed_exit_code};
+    my $output_directories           = delete $params{output_directories} ;
+    my $input_directories            = delete $params{input_directories};
+    my $allow_failed_exit_code       = delete $params{allow_failed_exit_code};
     my $allow_zero_size_output_files = delete $params{allow_zero_size_output_files};
-    my $skip_if_output_is_present   = delete $params{skip_if_output_is_present};
+    my $allow_zero_size_input_files  = delete $params{allow_zero_size_input_files};
+    my $skip_if_output_is_present    = delete $params{skip_if_output_is_present};
+    my $dont_create_zero_size_files_for_missing_output = delete $params{dont_create_zero_size_files_for_missing_output};
+
     $skip_if_output_is_present = 1 if not defined $skip_if_output_is_present;
     if (%params) {
         my @crap = %params;
@@ -314,7 +343,12 @@ sub shellcmd {
     }
 
     if ($input_files and @$input_files) {
-        my @missing_inputs = grep { not -s $_ } grep { not -p $_ } @$input_files;
+        my @missing_inputs;
+        if ($allow_zero_size_input_files) {
+            @missing_inputs = grep { not -e $_ } grep { not -p $_ } @$input_files;
+        } else {
+            @missing_inputs = grep { not -s $_ } grep { not -p $_ } @$input_files;
+        }
         if (@missing_inputs) {
             Carp::croak("CANNOT RUN (missing input files):     $cmd\n\t"
                          . join("\n\t", map { -e $_ ? "(empty) $_" : $_ } @missing_inputs));
@@ -354,17 +388,31 @@ sub shellcmd {
     }
     if (@missing_output_files) {
         if ($allow_zero_size_output_files
-            and @$output_files == @missing_output_files
+            #and @$output_files == @missing_output_files
+            # TODO This causes the command to fail if only a few of many files are empty, despite
+            # that the option 'allow_zero_size_output_files' was given. New behavior is to warn
+            # in either circumstance, and to warn that old behavior is no longer present in cases
+            # where the command would've failed
         ) {
-            for my $output_file (@$output_files) {
-                Carp::carp("ALLOWING zero size output file '$output_file' for command: $cmd");
-                my $fh = $self->open_file_for_writing($output_file);
-                unless ($fh) {
-                    Carp::croak("failed to open $output_file for writing to replace missing output file: $!");
-                }
-                $fh->close;
+            if (@$output_files == @missing_output_files) {
+                Carp::carp("ALL output files were empty for command: $cmd");
+            } else {
+                Carp::carp("SOME (but not all) output files were empty for command (PLEASE NOTE that earlier versions of Genome::Sys->shellcmd would fail in this circumstance): $cmd");
             }
-            @missing_output_files = ();
+            if ($dont_create_zero_size_files_for_missing_output) {
+                @missing_output_files = (); # reset the list of missing output files
+                @missing_output_files = grep { not -e $_ }  grep { not -p $_ } @$output_files; # rescan for only missing files
+            } else {
+                for my $output_file (@$output_files) {
+                    Carp::carp("ALLOWING zero size output file '$output_file' for command: $cmd");
+                    my $fh = $self->open_file_for_writing($output_file);
+                    unless ($fh) {
+                        Carp::croak("failed to open $output_file for writing to replace missing output file: $!");
+                    }
+                    $fh->close;
+                }
+                @missing_output_files = ();
+            }
         }
     }
     

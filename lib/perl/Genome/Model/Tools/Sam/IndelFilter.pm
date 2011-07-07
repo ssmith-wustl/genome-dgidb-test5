@@ -62,7 +62,7 @@ EOS
 
 sub execute {
     my $self = shift;
-
+    $DB::single = 1;
     my $indel_file = $self->indel_file;
     my $is_ref     = $self->is_ref ? 1 : 0;
 
@@ -73,7 +73,7 @@ sub execute {
 
     my @curr = ();
     my @last = ();
-
+    $DB::single =1;
     my $out_file = $self->out_file || $self->indel_file . '.filtered';
     my $lq_file = $self->lq_file;
     my $out_fh   = Genome::Sys->open_file_for_writing($out_file)   or return;
@@ -83,44 +83,49 @@ sub execute {
         $lq_fh = Genome::Sys->open_file_for_writing($lq_file) or return;
     }
     while (my $indel = $indel_fh->getline) {
-
-        my @items = split /\s+/, $indel;
-
-        #1 42466824    *   +A/+A   40  0   75  1   +A  *   1   0   0
-
-        my ($chr, $pos, $id, $indel_detail, $score, $rd_depth, $indel_seq1, $indel_seq2, $subscore1, $subscore2) = map{$items[$_]}(0..3, 5, 7..11);
-        next unless $id eq '*';
-
-        if ($id eq '.') {
-            my $m_pileup = 1;
+        my @items = split /\t/, $indel;
+        my $m_pileup_check = $items[2];
+        #pileup bed line: Y   11927813    *   -T/-T   40  0   23  1   -T  *   1   0   0   0   0
+        #mpileup bed line: Y    57442674    .   GTTTTT  GTTTT   51.5    .   INDEL;DP=22;AF1=1;CI95=1,1;DP4=0,0,0,17;MQ=42;FQ=-85.5  GT:PL:GQ    1/1:92,51,0:96
+        my ($chr, $pos, $id, $ref, $var, $filter, @extra,  $indel_detail, $score, $rd_depth, $indel_seq1, $indel_seq2, $subscore1, $subscore2);
+        my $m_pileup;
+        if ($m_pileup_check eq '.') {
             next if $indel =~ /^#/;
-            next if $indel =~ /INDEL/;
-        }
-        if($rd_depth > $self->max_read_depth) {
-            $lq_fh->print($indel) if $lq_fh;
-            next;
+            next unless $indel =~ /INDEL/;
+            ($chr, $pos, $id, $ref, $var, $rd_depth, $filter, @extra) = map{$items[$_]}(0..7);
+            if($extra[0] =~ /DP=(\d+)/) {
+                $rd_depth = $1;
+            } else {
+                $self->warning_message("read depth not found on line $indel");
+
+            }
+
+        } else {
+            ($chr, $pos, $id, $indel_detail, $score, $rd_depth, $indel_seq1, $indel_seq2, $subscore1, $subscore2) = map{$items[$_]}(0..3,5,7..11);
+            next unless $id eq '*';
         }
 
-        #In rare case, indel line will get something like follows (RT#62927):
-        #NT_113915	187072	*	-	/-		18	0	33	32	-		*	3	29	0	0	0
-        if ($indel_detail eq '-') {
-            $self->warning_message("Indel line: $indel gets invalid format. Skip");
-            $lq_fh->print($indel) if $lq_fh;
-            next;
-        }
-
-        unless ($is_ref) {
-            if($indel_detail eq '*/*' or $score == 0) {
+        if(!($m_pileup_check eq '.')) {
+            if($rd_depth > $self->max_read_depth) {
                 $lq_fh->print($indel) if $lq_fh;
                 next;
             }
+            #In rare case, indel line will get something like follows (RT#62927):
+            #NT_113915	187072	*	-	/-		18	0	33	32	-		*	3	29	0	0	0
+            if ($indel_detail eq '-') {
+                $self->warning_message("Indel line: $indel gets invalid format. Skip");
+                $lq_fh->print($indel) if $lq_fh;
+                next;
+            }
+            unless ($is_ref) {
+                if($indel_detail eq '*/*' or $score == 0) {
+                    $lq_fh->print($indel) if $lq_fh;
+                    next;
+                }
+            }
+            $score += $self->scaling_factor * $subscore1 unless $indel_seq1 eq '*';
+            $score += $self->scaling_factor * $subscore2 unless $indel_seq2 eq '*';
         }
-
-
-        $score += $self->scaling_factor * $subscore1 unless $indel_seq1 eq '*';
-        $score += $self->scaling_factor * $subscore2 unless $indel_seq2 eq '*';
-
-
         @curr = ($chr, $pos, $score, $indel);
         my $do_swap = 1;
 

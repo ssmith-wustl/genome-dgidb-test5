@@ -55,6 +55,7 @@ class Genome::Model::MetagenomicCompositionShotgun {
         contamination_screen_reference => {
             is => 'Genome::Model::Build::ImportedReferenceSequence',
             is_mutable => 1,
+            is_optional => 1,
             is_many => 1,
             via => 'inputs',
             to => 'value',
@@ -70,6 +71,7 @@ class Genome::Model::MetagenomicCompositionShotgun {
         first_viral_verification_alignment_reference => {
             is => 'Genome::Model::Build::ImportedReferenceSequence',
             is_mutable => 1,
+            is_optional => 1,
             via => 'inputs',
             to => 'value',
             where => [name => 'first_viral_verification_alignment_reference ', value_class_name => 'Genome::Model::Build::ImportedReferenceSequence'],
@@ -77,6 +79,7 @@ class Genome::Model::MetagenomicCompositionShotgun {
         second_viral_verification_alignment_reference => {
             is => 'Genome::Model::Build::ImportedReferenceSequence',
             is_mutable => 1,
+            is_optional => 1,
             via => 'inputs',
             to => 'value',
             where => [name => 'second_viral_verification_alignment_reference ', value_class_name => 'Genome::Model::Build::ImportedReferenceSequence'],
@@ -91,6 +94,7 @@ class Genome::Model::MetagenomicCompositionShotgun {
         },
         _contamination_screen_alignment_model => {
             is => 'Genome::Model::ReferenceAlignment',
+            is_optional => 1,
             via => 'from_model_links',
             to => 'from_model',
             where => [role => 'contamination_screen_alignment_model'],
@@ -98,24 +102,27 @@ class Genome::Model::MetagenomicCompositionShotgun {
         _metagenomic_alignment_models => {
             is => 'Genome::Model::ReferenceAlignment',
             is_many => 1,
-            via => 'from_model_links',
+            via => 'from_model_links', 
             to => 'from_model',
             where => [role => 'metagenomic_alignment_model'],
         },
         _unaligned_metagenomic_alignment_model => {
             is => 'Genome::Model::ReferenceAlignment',
+            is_optional => 1,
             via => 'from_model_links',
             to => 'from_model',
             where => [role => 'unaligned_metagenomic_alignment_model'],
         },
         _first_viral_verification_alignment_model => {
             is => 'Genome::Model::ReferenceAlignment',
+            is_optional => 1, 
             via => 'from_model_links',
             to => 'from_model',
             where => [role => 'first_viral_verification_alignment_model'],
         },
         _second_viral_verification_alignment_model => {
             is => 'Genome::Model::ReferenceAlignment',
+            is_optional => 1, 
             via => 'from_model_links',
             to => 'from_model',
             where => [role => 'second_viral_verification_alignment_model'],
@@ -239,17 +246,17 @@ sub _create_underlying_metagenomic_models {
 
 sub _create_unaligned_metagenomic_alignment_model {
     my $self = shift;
-    return $self->_create_model_for_type("unaligned_metagenomic");
+    return $self->_create_model_for_type("unaligned_metagenomic_alignment");
 }
 
 sub _create_first_viral_verification_alignment_model {
     my $self = shift;
-    return $self->_create_model_for_type("first_viral_verification");
+    return $self->_create_model_for_type("first_viral_verification_alignment");
 }
 
 sub _create_second_viral_verification_alignment_model {
     my $self = shift;
-    return $self->_create_model_for_type("second_viral_verification");
+    return $self->_create_model_for_type("second_viral_verification_alignment");
 }
 
 sub _create_model_for_type {

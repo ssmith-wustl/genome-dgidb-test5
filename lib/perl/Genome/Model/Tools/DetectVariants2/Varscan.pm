@@ -45,6 +45,10 @@ sub _detect_variants {
     my $output_snp = $self->_temp_staging_directory."/snvs.hq";
     my $output_indel = $self->_temp_staging_directory."/indels.hq";
 
+    unless ($self->version) {
+        die $self->error_message("A version of Varscan must be specified");
+    }
+
     my $varscan = Genome::Model::Tools::Varscan::Germline->create(
         bam_file => $self->aligned_reads_input,
         reference => $self->reference_sequence_input,
@@ -52,6 +56,7 @@ sub _detect_variants {
         output_indel => $output_indel,
         varscan_params => $self->params,
         no_headers => 1,
+        version => $self->version,
     );
 
     unless($varscan->execute()) {

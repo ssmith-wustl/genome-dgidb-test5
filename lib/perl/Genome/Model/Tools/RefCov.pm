@@ -250,6 +250,116 @@ OPTIONAL ALIGNMENT COUNT FIELD:
 OPTIONAL MIN/MAX FIELD:
 [1] Minimum Coverage Depth
 [2] Maximum Coverage Depth
+
+
+------------------
+Useful Definitions
+------------------
+
+Target ID or Name:
+ID for the target reference space (region of interest) being
+evaluated, as determined by a corresponding BED file of target
+regions.
+Example Value:  NOTCH1.23
+
+Percent of Reference Bases Covered:
+Breadth-of-coverage as a percent of total target length (total covered
+bases divided by target length).
+Example Value:  78.57%
+
+Total Number of Reference Bases:
+Total nt bases in the target reference space.
+Example Value:  112
+
+Total Number of Covered Bases:
+Total covered bases in the target reference space.
+Example Value:  88
+
+Number of Missing Bases:
+Total uncovered bases in the target reference space (non-contiguous).
+Example Value:  24
+
+Average Coverage Depth:
+Mean depth-of-coverage for the target reference space; calculated
+across all positions in the target reference space whether covered or
+uncovered.
+Example Value:  2.36x
+
+Standard Deviation Average Coverage Depth:
+Standard deviation for mean depth-of-coverage; calculated across all
+positions in the target reference space whether covered or uncovered.
+Example Value:  1.62x
+
+Median Coverage Depth:
+Median depth-of-coverage for the target reference space, non-contiguous in nature.
+Example Value:  3x
+
+Number of Gaps:
+Number of gapped (uncovered) areas in the target reference space.
+Example Value:  1
+
+Average Gap Length:
+Mean gap length for areas uncovered in the target reference space.
+Example Value:  24
+
+Standard Deviation Average Gap Length:
+Standard deviation for mean gap length in the target reference space.
+Example Value:  0
+
+Median Gap Length:
+Median gap length in context of all gap lengths in the target reference space.
+Example Value:  24
+
+Min. Depth Filter:
+Minimum depth filter is a value passed to the coverage evaluation
+software which will limit the target reference postions contributing
+to coverage calculations--default is 0 (no filtering) or >= 1x
+requirement. A min. depth filter of 10 would require any position
+included in coverage calculations to be of depth >= 10x at all
+reference positions; any position < 10x would be considered 0x
+coverage.
+Example Value:  0
+
+Discarded Bases (Min. Depth Filter):
+Number of target reference space positions affected by the minimum
+depth filter--i.e., the positions set to 0x coverage in subsequent
+calculations.
+Example Value:  0
+
+Percent Discarded Bases (Min. Depth Filter):
+Percent of target reference space positions affected by the minimum
+depth filter.
+Example Value:  0
+
+GC bp (reference length):
+A hard, non-contiguous value associated with the number of G and C
+nucleotides in the target reference space.
+Example Value:  69
+
+GC percent (reference length):
+Percent of the target reference space comprised of G and C
+nucleotides.
+Example Value:  61.61%
+
+GC bp (coverage length):
+Number of covered G and C nucleotides in the target reference space.
+Example Value:  55
+
+GC percent (coverage length):
+Percent of all covered positions in the reference target space that
+are G and C nucleotides. Describes how much of covered sequence is G
+or C in nature.
+Example Value:  62.50%
+
+GC bp (uncovered length):
+Number of uncovered G and C nucleotides in the target reference space.
+Example Value:  14
+
+GC percent (uncovered length):
+Percent of all uncovered positions in the reference target space that
+are G and C nucleotides. Describes how much of uncovered sequence is G
+or C in nature.
+Example Value:  58.33%
 ';
 }
 
@@ -258,9 +368,6 @@ sub create {
     my $self = $class->SUPER::create(@_);
     unless ($self) { return; }
 
-    unless ($] > 5.012) {
-        die "Bio::DB::Sam requires perl 5.12!";
-    }
     require Bio::DB::Sam;
 
     if ($self->evaluate_gc_content) {

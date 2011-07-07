@@ -2,7 +2,7 @@
 use strict;
 use warnings;
 use above 'Genome';
-use Test::More tests => 14;
+use Test::More;
 
 use Genome::Sys;
 
@@ -43,5 +43,41 @@ ok(! -d $tmp1 . '/db1/2.1', "removed the first database dir $tmp1/db1/2.1") or d
 $ret = Genome::Sys->dbpath('db1','2.1');
 is($ret, $tmp2 . '/db1/2.1', "path is the second db because the new db was removed") or diag $ret;
 
+change_rollback_removes_symlink_for_create_symlink_and_log_change();
+username_detects_sudo_user();
 
+done_testing();
 
+sub change_rollback_removes_symlink_for_create_symlink_and_log_change {
+    my $transaction = UR::Context::Transaction->begin();
+    isa_ok($transaction, 'UR::Context::Transaction', 'transaction');
+
+    my $object = UR::Value->get('foo');
+    isa_ok($object, 'UR::Value', 'object');
+
+    my $source = Genome::Sys->create_temp_directory();
+    ok(-d $source, "source ($source) is a directory");
+
+    my $destination_dir = Genome::Sys->create_temp_directory();
+    ok(-d $destination_dir, "destination_dir ($destination_dir) is a directory");
+
+    my $destination = $destination_dir . '/' . $object->id;
+
+    Genome::Sys->create_symlink_and_log_change($object, $source, $destination);
+
+    ok(-l $destination, "symlink created ($destination)");
+
+    $transaction->rollback();
+
+    ok(! -e $destination, "symlink destroyed in rollback");
+
+    return 1;
+}
+
+sub username_detects_sudo_user {
+    local $ENV{'SUDO_USER'} = 'foo';
+    ok($ENV{'SUDO_USER'}, 'sudo user is set');
+
+    my $sudo_username = Genome::Sys->sudo_username;
+    is($sudo_username, 'foo', 'sudo_username detected as specified');
+}

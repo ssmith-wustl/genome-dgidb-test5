@@ -59,3 +59,5 @@ my $diff_cmd = sprintf('diff -r -q %s %s', $test_working_dir, $expected_dir);
 
 my $diff = `$diff_cmd`;
 is($diff, '', 'No differences in output from expected result from running samtools for this version and parameters');
+
+sleep 100000000;

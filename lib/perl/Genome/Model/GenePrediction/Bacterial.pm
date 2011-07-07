@@ -30,6 +30,10 @@ class Genome::Model::GenePrediction::Bacterial {
             where => [ name => 'dev' ],
             doc => 'If set, dev databases are used instead of production databases',
         },
+        locus_id => {
+            via => 'subject',
+            to => 'locus_tag',
+        },
         run_type => {
             is => 'String', # TODO Does this affect processing? Why do we need to note it?
             via => 'inputs',

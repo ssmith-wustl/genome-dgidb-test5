@@ -550,54 +550,70 @@ sub prepare_instrument_data {
     if ( not -s $orig_fasta ) {
         Carp::confess( "Original fasta file did not get created or is blank" );
     }
-    my $reader =  Genome::Model::Tools::Sx::PhredReader->create(file => $orig_fasta);
-    if ( not $reader ) {
-        Carp::confess( "Could not create reader for original fasta file" );
-    }
-    my $min_length = $self->processing_profile->amplicon_size;
-    my ($attempted, $processed, $reads_attempted, $reads_processed) = (qw/ 0 0 0 0 /);
 
-    if ( $self->amplicon_set_names_and_primers ) {
-        my %primers = $self->amplicon_set_names_and_primers;
-        while ( my $fasta = $reader->read ) {
-            $attempted++;
-            $reads_attempted++;
-            # check length here
-            next unless length $fasta->{seq} >= $min_length;
-            my $set_name = 'none';
-            my $seq = $fasta->{seq};
-            REGION: for my $region ( keys %primers ) {
-                for my $primer ( @{$primers{$region}} ) {
-                    if ( $seq =~ s/^$primer// ) {
-                        # check length again
-                        $fasta->{seq} = $seq; # set new seq w/o primer
-                        $set_name = $region;
-                        last REGION; # go on to write 
-                    }
-                }
+    my @cmd_parts = ( 'gmt sx rm-desc' );
+    my @output;
+    if ( my %primers = $self->amplicon_set_names_and_primers ) {
+        my @primers;
+        for my $set_name ( keys %primers ) {
+            for my $primer ( @{$primers{$set_name}} ) {
+                push @primers, $set_name.'='.$primer;
             }
-            next unless length $fasta->{seq} >= $min_length;
-            $fasta->{desc} = undef; # clear description
-            my $writer = $self->get_writer_for_set_name($set_name);
-            $writer->write($fasta);
-            $processed++;
-            $reads_processed++;
+            my $fasta_file = $self->processed_fasta_file_for_set_name($set_name);
+            unlink $fasta_file if -e $fasta_file;
+            push @output, 'name='.$set_name.':file='.$fasta_file.':type=phred';
         }
+        my $none_fasta_file = $self->processed_fasta_file_for_set_name('none');
+        unlink $none_fasta_file if -e $none_fasta_file;
+        push @output, 'name=discard:file='.$none_fasta_file.':type=phred';
+        push @cmd_parts, 'gmt sx bin by-primer --remove --primers '.join(',', @primers);
     }
     else {
-        my $fasta_file = $self->processed_fasta_file_for_set_name('');
-        my $writer = Genome::Model::Tools::Sx::PhredWriter->create(file => $fasta_file);
-        while ( my $seq = $reader->read ) {
-            $attempted++;
-            $reads_attempted++;
-            next unless length $seq->{seq} >= $min_length; #seems the read iterator returns array of array of hash
-            $processed++;
-            $reads_processed++;
-            $writer->write($seq);
-        }
+        my $processed_fasta = $self->processed_fasta_file_for_set_name('');
+        unlink $processed_fasta;
+        push @output, 'file='.$processed_fasta.':type=phred'; 
     }
 
-    $self->status_message( 'DONE processing original fasta file' );
+    if ( my $min_length = $self->processing_profile->amplicon_size ) {
+        push @cmd_parts, "gmt sx filter by-min-length --length $min_length";
+    }
+
+    # Add input and metrics to first cmd
+    $cmd_parts[0] .= ' --input file='.$orig_fasta.':type=phred';
+    my $input_metrics_file = $self->fasta_dir.'/metrics.processed.in.txt';
+    $cmd_parts[0] .= ' --input-metrics '.$input_metrics_file;
+
+    # Add output and metrics to last cmd
+    $cmd_parts[$#cmd_parts] .= ' --output '.join(',', @output);
+    my $output_metrics_file = $self->fasta_dir.'/metrics.processed.out.txt';
+    $cmd_parts[$#cmd_parts] .= ' --output-metrics '.$output_metrics_file;
+
+    # Create, execute, check return
+    my $cmd = join(' | ', @cmd_parts);
+    my $rv = eval{ Genome::Sys->shellcmd(cmd => $cmd); };
+    if ( not $rv ) {
+        $self->error_message('Failed to run sx command to create amplicon files.');
+        return;
+    }
+
+    $self->status_message('DONE processing original fasta file');
+
+    # Set metrics
+    my $input_metrics = Genome::Model::Tools::Sx::Metrics->read_from_file($input_metrics_file);
+    if ( not $input_metrics ) {
+        $self->error_message('Failed to get metrcis from file: '.$input_metrics_file);
+        return;
+    }
+    my $attempted = $input_metrics->count;
+    my $reads_attempted = $attempted;
+
+    my $output_metrics = Genome::Model::Tools::Sx::Metrics->read_from_file($output_metrics_file);
+    if ( not $output_metrics ) {
+        $self->error_message('Failed to get metrcis from file: '.$output_metrics_file);
+        return;
+    }
+    my $processed = $output_metrics->count;
+    my $reads_processed = $processed;
 
     $self->amplicons_attempted($attempted);
     $self->amplicons_processed($processed);

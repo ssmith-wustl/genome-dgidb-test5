@@ -8,7 +8,7 @@ use IO::File;
 
 class Genome::Model::Tools::DetectVariants2::Filter::IndelFilter{
     is => ['Genome::Model::Tools::DetectVariants2::Filter'],
-    doc => 'Filters out snvs that are around indels',
+    doc => 'Filters out indels that are around indels',
     has_constant => [
         _variant_type => {
             type => 'String',
@@ -54,6 +54,11 @@ sub _filter_variants {
     my $indel_input_file = $self->input_directory . "/indels.hq";
     my $filtered_indel_output_file = $self->_temp_staging_directory . "/indels.hq";
     my $fail_filter_indel_output_file = $self->_temp_staging_directory . "/indels.lq";
+
+    unless (-e $indel_input_file) {
+        $self->error_message("indel input file $indel_input_file does not exist.");
+        die $self->error_message;
+    }
 
     my @params;
 
@@ -144,9 +149,12 @@ sub _filter_variants {
         }
     } else {
         #FIXME use Genome::Sys... might need to add a method there 
-        system("touch $indel_input_file") unless -e $indel_input_file;
-        system("touch $filtered_indel_output_file");
-        system("touch $fail_filter_indel_output_file");
+        my $hq_bed = $self->_temp_staging_directory . "/indels.hq.bed";
+        my $lq_bed = $self->_temp_staging_directory . "/indels.lq.bed";
+        my $cmd = "touch \"$hq_bed\" \"$lq_bed\" \"$filtered_indel_output_file\" \"$fail_filter_indel_output_file\"";
+        Genome::Sys->shellcmd(
+            cmd => $cmd
+        );
     }
 
 

@@ -5,10 +5,7 @@ use warnings;
 
 use Genome;
 
-require Carp;
-use Data::Dumper 'Dumper';
 require File::Temp;
-require IPC::Run;
 
 class Genome::Model::Event::Build::DeNovoAssembly::PrepareInstrumentData {
     is => 'Genome::Model::Event::Build::DeNovoAssembly',
@@ -49,18 +46,15 @@ sub _metrics_file {
 sub execute {
     my $self = shift;
 
-    my $processing_profile = $self->processing_profile;
-    $self->status_message('Preparing instrument data for '.$processing_profile->assembler_base_name.' '.$processing_profile->sequencing_platform);
+    $self->status_message('Prepare instrument data for '.$self->build->description);
 
-    $self->status_message('Verifying instrument data...');
-
+    $self->status_message('Verify instrument data...');
     my @instrument_data = $self->build->instrument_data;
-
     unless ( @instrument_data ) {
-        $self->error_message("No instrument data found for ".$self->build->description);
+        $self->error_message("Failed to prepare instrument data. Build does not have any.");
         return;
     }
-    $self->status_message('OK...instrument data');
+    $self->status_message('Verify instrument data...OK');
 
     $self->status_message('Setup base limit');
     $self->_setup_base_limit;
@@ -79,27 +73,25 @@ sub execute {
     }
 
     $self->status_message('Processing instrument data');
-    my $sequencing_platform = $processing_profile->sequencing_platform;
-    my $file_method = '_fastq_files_from_'.$sequencing_platform;
     INST_DATA: for my $instrument_data ( @instrument_data ) {
-        $self->_process_instrument_data($instrument_data)
-            or return;
+        my $process_ok = $self->_process_instrument_data($instrument_data);
+        return if not $process_ok;
         if ( $self->_is_there_a_base_limit_and_has_it_been_exceeded ) {
             $self->status_message('Reached base limit: '.$self->_base_limit);
             last INST_DATA;
         }
     }
-    $self->status_message('OK...processing instrument data');
+    $self->status_message('Processing instrument data...OK');
 
-    $self->status_message('Verifying assembler input files');
+    $self->status_message('Verify assembler input files');
     @existing_assembler_input_files = $self->build->existing_assembler_input_files;
     if ( not @existing_assembler_input_files ) {
         $self->error_message('No assembler input files were created!');
         return;
     }
-    $self->status_message('OK...assembler input files');
+    $self->status_message('Verify assembler input files...OK');
 
-    $self->status_message('OK...prepare instrument data');
+    $self->status_message('Prepare instrument data...OK');
 
     return 1;
 }
@@ -184,11 +176,15 @@ sub _instrument_data_qual_type_in {
     my ( $self, $instrument_data ) = @_;
     
     if ( $instrument_data->class eq 'Genome::InstrumentData::Solexa' ) {
-        return 'sanger' if -s $instrument_data->bam_path;
+        return 'sanger' if $instrument_data->bam_path and -s $instrument_data->bam_path;
         return 'illumina';
     }
 
     if ( $instrument_data->class eq 'Genome::InstrumentData::Imported' ) {
+        return 'sanger';
+    }
+
+    if ( $instrument_data->class eq 'Genome::InstrumentData::454' ) {
         return 'sanger';
     }
 
@@ -209,59 +205,53 @@ sub _process_instrument_data {
     $self->status_message('Processing: '.join(' ', $instrument_data->class, $instrument_data->id, $qual_type_in) );
 
     # In/out files
-    my @input_files = $self->_fastq_files_from_solexa($instrument_data)
+    my $fastq_method = '_fastq_files_from_'.$instrument_data->sequencing_platform;
+    my @input_files = $self->$fastq_method($instrument_data)
         or return;
     my @output_files = $self->build->read_processor_output_files_for_instrument_data($instrument_data)
         or return;
 
-    # Fast qual command
     my $read_processor = $self->processing_profile->read_processor;
-    my $fast_qual_class;
-    my %fast_qual_params = (
-        input => [ map { $_.':type='.$qual_type_in } @input_files ],
-        output => [ map { $_.':type=sanger' } @output_files ],
-        metrics_file_out => $self->_metrics_file,
-    );
+    my @read_processor_parts = split(/\s+\|\s+/, $read_processor);
 
-    if ( not defined $read_processor and not defined $self->_base_limit ) {
-        # Run through the base fast qual command. This will rm quality headers and get metrics
-        $fast_qual_class = 'Genome::Model::Tools::Sx';
+    if ( defined $self->_base_limit ) { # coverage limit by bases
+        my $metrics = $self->_metrics;
+        my $current_base_limit = $self->_base_limit - $metrics->{bases};
+        push @read_processor_parts, 'limit by-coverage --bases '.$current_base_limit;
+    }
+
+    if ( not @read_processor_parts ) { # essentially a copy, but w/ metrics
+        @read_processor_parts = ('');
+    }
+
+    # Fast qual command
+    my @sx_cmd_parts = map { 'gmt sx '.$_ } @read_processor_parts;
+    $sx_cmd_parts[0] .= ' --input '.join(',', map { $_.':type='.$qual_type_in } @input_files);
+    my $output;
+    if ( @output_files == 1 ) {
+        $output = $output_files[0].':type=sanger';
+    }
+    elsif ( @output_files == 2 ) {
+        $output = $output_files[0].':name=fwd:type=sanger,'.$output_files[1].':name=rev:type=sanger';
     }
     else {
-        # Got multiple commands, use pipe
-        $fast_qual_class = 'Genome::Model::Tools::Sx::Pipe';
-        my @commands;
-        if ( defined $self->_base_limit ) { # coverage limit by bases
-            my $metrics = $self->_metrics;
-            my $current_base_limit = $self->_base_limit - $metrics->{bases};
-            unshift @commands, 'limit by-coverage --bases '.$current_base_limit;
-        }
-
-        if ( defined $read_processor ) { # read processor from pp
-            unshift @commands, $read_processor;
-        }
-
-        $fast_qual_params{commands} = join(' | ', @commands);
-    }
-
-    # Create and execute
-    $self->status_message('Fast qual class: '.$fast_qual_class);
-    $self->status_message('Fast qual params: '.Dumper(\%fast_qual_params));
-    my $fast_qual_command = $fast_qual_class->create(%fast_qual_params);
-    if ( not defined $fast_qual_command ) {
-        $self->error_message("Cannot create fast qual command.");
+        $self->error_message('Cannot handle more than 2 output files');
         return;
     }
-    my $rv = $fast_qual_command->execute;
+    $sx_cmd_parts[$#read_processor_parts] .= ' --output '.$output;
+    $sx_cmd_parts[$#read_processor_parts] .= ' --output-metrics '.$self->_metrics_file;
+
+    my $sx_cmd = join(' | ', @sx_cmd_parts);
+    my $rv = eval{ Genome::Sys->shellcmd(cmd => $sx_cmd); };
     if ( not $rv ) {
-        $self->error_message("Cannot execute fast qual command.");
+        $self->error_message('Failed to execute gmt sx command: '.$@);
         return;
     }
 
-    $self->status_message('Execute OK');
+    my $update_metrics = $self->_update_metrics;
+    return if not $update_metrics;
 
-    $self->_update_metrics
-        or return;
+    $self->status_message('Process Instrument data...OK');
 
     return 1;
 }
@@ -324,6 +314,21 @@ sub _fastq_files_from_solexa {
         @fastq_files = $inst_data->dump_fastqs_from_bam( directory => $tempdir );
 
         $self->status_message('Fastq files from bam OK:'.join(", ", @fastq_files));
+    }
+
+    return @fastq_files;
+}
+
+sub _fastq_files_from_454 {
+    my ( $self, $inst_data ) = @_;
+
+    $self->status_message( "Getting fastq files fro 454 inst data: ".$inst_data->id );
+
+    my @fastq_files = $inst_data->dump_sanger_fastq_files; #Dumps to temp dir
+
+    unless ( @fastq_files ) {
+        $self->error_message( "Could not dump fastq files from inst data: ".$inst_data->id );
+        return;
     }
 
     return @fastq_files;

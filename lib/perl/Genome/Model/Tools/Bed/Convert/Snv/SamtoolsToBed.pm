@@ -32,27 +32,32 @@ sub process_source {
     my $input_fh = $self->_input_fh;
 
     while(my $line = <$input_fh>) {
-        my @line_count = split("\t", $line);
-        my ($chromosome, $position, $id, $reference, $consensus, $quality, $depth, @extra); #mpileup/pileup variables
+        my @mpileup = split("\t", $line);
+        my ($chromosome, $position, $id, $reference, $consensus, $quality, $depth, $map_qual, @extra); #mpileup/pileup variables
 
-        if($line_count[2] eq '.') {
+        if($mpileup[2] eq '.') {
 
             #mpileup version
-            ($chromosome, $position, $id,$reference, $consensus , $quality, @extra) = split("\t", $line);
+            ($chromosome, $position, $id,$reference, $consensus , $quality, @extra) = split("\t", $line) ;
             $quality = sprintf("%2.f", $quality);
-            $extra[1] =~ /DP=(\d+)/;
-            $depth = $1;
-
+            if($extra[1] =~ /DP=(\d+)/) {
+                $depth = $1;
+            } else { 
+                $self->warning_message("read depth not found on line $line");
+            }
+            if (   $extra[1] =~ /MQ=(\d+)/) {
+                $map_qual = $1;
+            } else {
+                $self->warning_message("mapping quality cannot be found on line $line");
+            }
         } else {
             #pileup regular format
-            ($chromosome, $position, $reference, $consensus, $quality, @extra) = split("\t", $line);
-            $depth = $extra[2];
+            ($chromosome, $position, $reference, $consensus, $quality, $map_qual, @extra)=split("\t", $line) ;
+            $depth = $extra[1];
         }
         #position => 1-based position of the SNV
         #BED uses 0-based position of and after the event
-        my $start  = $position -1;
-        print"$chromosome, $start , $position, $reference, $consensus, $quality, $depth\n";
-        $self->write_bed_line($chromosome, ($position - 1), $position, $reference, $consensus, $quality, $depth);
+        $self->write_bed_line($chromosome, ($position - 1), $position, $reference, $consensus, $quality, $depth, $map_qual);
     }
     return 1;
 }

@@ -358,6 +358,9 @@ sub delete {
 
     my @to_nuke = ($self->params, $self->inputs, $self->metrics); 
 
+    #If we use any other results, unregister ourselves as users
+    push @to_nuke, Genome::SoftwareResult::User->get(user_class_name => $class_name, user_id => $self->id);
+
     for (@to_nuke) {
         unless($_->delete) {
             die "Failed to delete: " . Data::Dumper::Dumper($_);
