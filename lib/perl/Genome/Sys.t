@@ -75,12 +75,9 @@ sub change_rollback_removes_symlink_for_create_symlink_and_log_change {
 }
 
 sub username_detects_sudo_user {
-    my $bare_username = Genome::Sys->username;
-    unlike($bare_username, qr/\(\)$/, 'bare user name does not have empty parens');
-
     local $ENV{'SUDO_USER'} = 'foo';
     ok($ENV{'SUDO_USER'}, 'sudo user is set');
 
-    my $username = Genome::Sys->username;
-    is($username, $bare_username . '(' . $ENV{'SUDO_USER'} . ')');
+    my $sudo_username = Genome::Sys->sudo_username;
+    is($sudo_username, 'foo', 'sudo_username detected as specified');
 }

@@ -17,11 +17,12 @@ sub user_id {
 
 sub username {
     my $username = getpwuid($<);
-    my $real_username = $ENV{'SUDO_USER'} || '';
-    if ($real_username && $real_username ne $username) {
-        return $username . '(' . $real_username . ')';
-    }
     return $username;
+}
+
+sub sudo_username {
+    my $sudo_username = $ENV{'SUDO_USER'} || '';
+    return $sudo_username;
 }
 
 sub user_is_member_of_group {
