@@ -349,7 +349,8 @@
               </td>
               <td class="value">
                   <xsl:choose>
-                      <xsl:when test="aspect[@name='build_requested']/value">yes</xsl:when>
+                      <xsl:when test="normalize-space(aspect[@name='build_requested']/value) != '' and normalize-space(aspect[@name='build_requested']/value) != '0'">
+                      yes</xsl:when>
                       <xsl:otherwise>no</xsl:otherwise>
                   </xsl:choose>
               </td>
