@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use Genome;
+use Genome::Info::IUB;
 
 class Genome::Model::Tools::Bed::Convert::Snv::RtgSnpToBed {
     is => ['Genome::Model::Tools::Bed::Convert::Snv'],
