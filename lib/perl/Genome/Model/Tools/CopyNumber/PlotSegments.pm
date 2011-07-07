@@ -639,6 +639,12 @@ sub execute {
 
     #draw the plots for each set of segments
     foreach my $infile (@infiles){
+        
+        #sanity check - the infile exists and is not empty
+        unless (-s $infile){
+            die("input file contains no segments to plot");
+        }
+
 	print R_COMMANDS "plotSegments(";
 
 	#first the core stuff
