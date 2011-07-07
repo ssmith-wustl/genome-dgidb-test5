@@ -9,7 +9,7 @@ use Bio::SeqIO;
 use Storable;
 use File::Slurp qw/ write_file /;
 use File::Basename qw/ fileparse /;
-use Storable qw/ dclone /;
+use Storable qw/ nstore dclone /;
 use Devel::StackTrace;
 
 class Genome::Model::Tools::ImportAnnotation::Genbank {
@@ -817,7 +817,7 @@ sub cache_transcript_status
     }
 
     #store this file so we don't have to do it every time
-    store \%ts_status_hash, $storable_file;
+    nstore \%ts_status_hash, $storable_file;
 
     return
     \%ts_status_hash;   # should this just be stored in part of the class?

@@ -8,7 +8,7 @@ use base 'Test::Class';
 use Carp 'confess';
 use Data::Dumper 'Dumper';
 use File::Temp 'tempdir';
-use Storable qw/ store retrieve /;
+use Storable qw/ nstore retrieve /;
 use Test::More;
 
 #< UR No Commit and Dummy Ids >#
@@ -270,7 +270,7 @@ sub store_file  {
     Genome::Sys->validate_file_for_writing($file)
         or die;
     
-    return store($ref, $file);
+    return nstore($ref, $file);
 }
 
 sub retrieve_file {
