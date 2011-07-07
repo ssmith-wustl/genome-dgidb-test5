@@ -27,7 +27,27 @@ class Genome::Model::Set::View::Status::Xml {
                        {
                             name => 'builds',
                             aspects => [
-                                'id', 'data_directory', 'status', 'date_scheduled', 'date_completed',
+                                'id',
+                                'data_directory',
+                                'status',
+                                'date_scheduled',
+                                'date_completed',
+                                {
+                                    name => 'notes',
+                                    aspects => [
+                                        'editor_id',
+                                        'entry_date',
+                                        'header_text',
+                                        'body_text',
+                                        {
+                                            name => 'subject',
+                                            perspective => 'default',
+                                            toolkit => 'xml'
+                                        },
+                                    ],
+                                    perspective => 'default',
+                                    toolkit => 'xml',
+                                }
                             ],
                             perspective => 'default',
                             toolkit => 'xml',
