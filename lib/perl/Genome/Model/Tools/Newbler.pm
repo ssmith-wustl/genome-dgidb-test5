@@ -57,6 +57,10 @@ sub all_contigs_qual_file {
     return $_[0]->assembly_directory.'/454AllContigs.qual';
 }
 
+sub newb_read_status_file {
+    return $_[0]->assembly_directory.'/454ReadStatus.txt';
+}
+
 #< post assemble output files/dirs >#
 sub consed_edit_dir {
     return $_[0]->assembly_directory.'/consed/edit_dir';
