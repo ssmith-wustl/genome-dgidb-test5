@@ -33,8 +33,9 @@ class Genome::Model::Tools::Capture::GermlineModelGroupQc {
 	has => [                                # specify the command's single-value properties (parameters) <--- 
 		group_id		=> { is => 'Text', doc => "ID of model group" , is_optional => 0},
 		output_dir	=> { is => 'Text', doc => "Outputs qc into directory for each sample" , is_optional => 0},
+		summary_file	=> { is => 'Text', doc => "Outputs qc summary into this file, must be run with already finished output (turns skip-if-output-present on)" , is_optional => 1},
 		dbsnp_build	=> { is => 'Text', doc => "dbsnp build to use: 130 for b36, 132 for b37" , is_optional => 0, default => 132},
-		limit_snps_file	=> { is => 'Text', doc => "File of snps to limit qc to, for example the 56 ASMS snps in ROI -- 1 rs_id per line" , is_optional => 1},
+		limit_snps_file	=> { is => 'Text', doc => "File of snps to limit qc to, for example the 55 ASMS snps in ROI -- 1 rs_id per line" , is_optional => 1},
 		data_source	=> { is => 'Text', doc => "'internal', 'iscan', or 'external'" , is_optional => 0},
 		skip_if_output_present	=> { is => 'Boolean', doc => "Skip Creating new qc Files if they exist" , is_optional => 1, default => ""},
 	],
@@ -73,6 +74,15 @@ sub execute {                               # replace with real execution logic.
 	my $limit_snps_file = $self->limit_snps_file;
 	my $data_source = $self->data_source;
 	my $skip_if_output_present = $self->skip_if_output_present;
+	my $summary_file;
+	if ($self->summary_file) {
+		$summary_file = $self->summary_file;
+		$skip_if_output_present = 1;
+		unless (open(ALL_MODELS,">$summary_file")) {
+		    die "Could not open input file '$summary_file' for reading";
+		}
+		print ALL_MODELS "Dbsnp_Build\tSample_id\tSNPsCalled\tWithGenotype\tMetMinDepth\tReference\tRefMatch\tRefWasHet\tRefWasHom\tVariant\tVarMatch\tHomWasHet\tHetWasHom\tVarMismatch\tVarConcord\tRareHomConcord\tOverallConcord\n";
+	}
 
 	# Correct the reference build name to what the database recognizes
 	my $reference;
@@ -125,6 +135,9 @@ sub execute {                               # replace with real execution logic.
 				my $qcfile = "$qc_dir/$subject_name.dbsnp$db_snp_build.qc";
 	
 				if ($skip_if_output_present && -s $genofile &&1&&1) { #&&1&&1 to make gedit show colors correctly after a -s check
+				}
+				elsif ($self->summary_file) {
+					die "You specified summary file but the script thinks there are unfinished qc files, please run this script to finish making qc files first\nReason: file $genofile does not exist as a non-zero file\n";
 				}
 				else {
 					open(GENOFILE, ">" . $genofile) or die "Can't open outfile: $!\n";
@@ -185,7 +198,10 @@ sub execute {                               # replace with real execution logic.
 
 				my $bsub = "bsub -N -M 4000000 -J $subject_name.dbsnp$db_snp_build.qc -o $qc_dir/$subject_name.dbsnp$db_snp_build.qc.out -e $qc_dir/$subject_name.dbsnp$db_snp_build.qc.err -R \"select[model!=Opteron250 && type==LINUX64 && mem>4000 && tmp>1000] rusage[mem=4000, tmp=1000]\"";
 				my $cmd = $bsub." \'"."gmt analysis lane-qc compare-snps --genotype-file $genofile --bam-file $bam_file --output-file $qcfile --sample-name $subject_name --min-depth-het 20 --min-depth-hom 20 --flip-alleles 1 --verbose 1 --reference-build $build_number"."\'";
-				if ($skip_if_output_present && -s $qcfile) {
+				if ($skip_if_output_present && -s $qcfile &&1&&1) { #&&1&&1 to make gedit show colors correctly after a -s check
+				}
+				elsif ($self->summary_file) {
+					die "You specified summary file but the script thinks there are unfinished qc files, please run this script to finish making qc files first\nReason: file $qcfile does not exist as a non-zero file\n";
 				}
 				else {
 					system("$cmd");
@@ -200,13 +216,23 @@ sub execute {                               # replace with real execution logic.
 #		die $self->error_message;
 #		die "Failed to execute QC: QC Returned $return";
 #	}
+
+				if ($self->summary_file) {
+					my $qc_input = new FileHandle ($qcfile);
+					my $qc_header = <$qc_input>;
+					my $qc_line = <$qc_input>;
+					chomp($qc_line);
+					print ALL_MODELS "$db_snp_build\t$qc_line\n";
+				}
 			}
 		}
 
           UR::Context->commit() or die 'commit failed';
           UR::Context->clear_cache(dont_unload => ['Genome::ModelGroup', 'Genome::ModelGroupBridge']);
 	}
-
+	if ($self->summary_file) {
+		close(ALL_MODELS);
+	}
 	return 1;
 }
 

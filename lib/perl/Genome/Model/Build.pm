@@ -202,6 +202,10 @@ sub create {
         unless ($self->_create_master_event) {
             Carp::confess "Could not create master event for new build of model " . $self->model->__display_name__;
         }
+
+        $self->add_note(
+            header_text => 'Build Created',
+        );
     };
 
     if ($@) {
@@ -536,6 +540,10 @@ sub start {
         unless ($self->_launch(%params)) {
             Carp::croak "Build " . $self->__display_name__ . " could not be launched!";
         }
+
+        $self->add_note(
+            header_text => 'Build Started',
+        );
     };
 
     if ($@) {
@@ -636,6 +644,10 @@ sub stop {
         $self->_kill_job($job);
         $self = Genome::Model::Build->load($self->id);
     }
+
+    $self->add_note(
+        header_text => 'Build Stopped',
+    );
 
     my $self_event = $self->build_event;
     my $error = Genome::Model::Build::Error->create(
@@ -1202,6 +1214,10 @@ sub abandon {
         # FIXME soon - return here
         # return;
     }
+
+    $self->add_note(
+        header_text => 'Build Abandoned',
+    );
 
     return 1;
 }

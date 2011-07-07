@@ -244,18 +244,13 @@ sub _resolve_strategy_for_pair_fwd_rev_and_singleton {
 
 sub write {
     my ($self, $seqs) = @_;
-
     Carp::confess('No sequences to write!') if not $seqs or not @$seqs;
-
     my $strategy = $self->{_strategy};
-    $self->$strategy($seqs) or return;
-
-    $self->metrics->add($seqs) if $self->metrics;
-
-    return 1;
+    return $self->$strategy($seqs);
 }
 
 sub write_stdoutref {
+    $_[0]->metrics->add_sequences($_[1]) if $_[0]->metrics;
     return $_[0]->{_writer}->write($_[1]);
 }
 
@@ -267,6 +262,8 @@ sub write_to_all {
             $writer->write($seq) or return;
         }
     }
+
+    $self->metrics->add_sequences($seqs) if $self->metrics;
 
     return 1;
 }
@@ -294,9 +291,10 @@ sub write_singletons_only {
         $writer->write($seqs->[0]) or return;
     }
 
+    $self->metrics->add_sequences($seqs) if $self->metrics;
+
     return 1;
 }
-
 
 sub write_forward_reverse_and_singletons_separately {
     my ($self, $seqs) = @_;
@@ -325,6 +323,8 @@ sub write_forward_and_reverse_separately {
         $writer->write($seqs->[1]) or return;
     }
 
+    $self->metrics->add_sequences($seqs) if $self->metrics;
+
     return 1;
 }
 
@@ -332,15 +332,18 @@ sub write_to_named_writers {
     my ($self, $seqs) = @_;
 
     for my $seq ( @$seqs ) {
-        if ( not $seq->{writer_name} ) { # does the seq have a writer name?
-            $self->error_message('Attempting to write sequences to named writers, but there is not a writer name for sequence: '.$seq->{id});
-            return;
+        if ( not $seq->{writer_name} ) { # OK, write to discard or nothing
+            if ( $self->{'discard'}  ) {
+                $self->{discard} ->write($seq);
+            }
+            next;
         }
-        if ( not $self->{ $seq->{writer_name} } ) { # is theree a writer with this name?
+        if ( not $self->{ $seq->{writer_name} } ) { # is there a writer with this name?
             $self->error_message('Attempting to write sequences to named writers, but there is not a writer for name: '.$seq->{writer_name});
             return;
         }
         $self->{ $seq->{writer_name} }->write($seq) or return;
+        $self->metrics->add_sequence($seq) if $self->metrics;
     }
 
     return 1;

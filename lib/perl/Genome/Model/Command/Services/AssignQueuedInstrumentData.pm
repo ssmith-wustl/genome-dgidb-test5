@@ -63,6 +63,11 @@ class Genome::Model::Command::Services::AssignQueuedInstrumentData {
     ],
 };
 
+#FIXME: This should be refactored so that %known_454_pipelines and 
+#%known_454_16s_pipelines are merged into a single hash.  Key shoud be the 
+#pipeline name and value should be what to do with it (if anything).  Maybe
+#processing_profile if if we do something with it and empty string if we ignore
+#it.
 our %known_454_pipelines =
     map { $_ => 1}
     (
@@ -104,6 +109,7 @@ our %known_454_pipelines =
         'Transcript Mutation Validation - 3730 PCR Pipeline',
         'Transcript Mutation Validation - 454 Titanium Fragment Pipeline',
         'Transcript Mutation Validation - Illumina Sequencing Pipeline',
+        'Technology Development Library Construction Illumina',
         'WUCAP Custom Capture Illumina',
     );
 

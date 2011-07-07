@@ -247,7 +247,14 @@ sub execute {
             $self->error_message('Error converting SAM file: '. $self->sam_file .' to BAM file '. $self->bam_file);
             die($self->error_message);
         }
+    } else {
+        unless (Genome::Model::Tools::Sam::IndexBam->execute(
+                bam_file => $self->bam_file,
+            )) {
+            die $self->error_message('Failed to index BAM file '. $self->bam_file);
+        }
     }
+
     unless ($self->verify_aligner_successful_completion) {
         $self->error_message('Failed to verify Tophat successful completion!');
         die($self->error_message);

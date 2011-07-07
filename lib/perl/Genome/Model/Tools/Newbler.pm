@@ -44,7 +44,7 @@ sub input_fastq_files {
 sub newb_ace_file {
     return $_[0]->assembly_directory.'/consed/edit_dir/454Contigs.ace.1';
 }
-
+#TODO - rename these wit newb*
 sub scaffolds_agp_file {
     return $_[0]->assembly_directory.'/454Scaffolds.txt';
 }
@@ -90,8 +90,8 @@ sub reads_unplaced_file {
     return $_[0]->consed_edit_dir.'/reads.unplaced';
 }
 
-sub supercontigs_bases_file {
-    return $_[0]->consed_edit_dir.'/supercontigs.fa';
+sub supercontigs_fasta_file {
+    return $_[0]->consed_edit_dir.'/supercontigs.fasta';
 }
 
 sub supercontigs_agp_file {

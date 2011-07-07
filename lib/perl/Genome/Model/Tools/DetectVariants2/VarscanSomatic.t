@@ -45,7 +45,7 @@ ok(-d $expected_dir, "expected results directory exists");
 
 my $refbuild_id = 101947881;
 
-my $version = ''; #Currently only one version of varscan
+my $version = '2.2.4'; 
 
 my $command = Genome::Model::Tools::DetectVariants2::VarscanSomatic->create(
     reference_build_id => $refbuild_id,
@@ -55,7 +55,7 @@ my $command = Genome::Model::Tools::DetectVariants2::VarscanSomatic->create(
     params => "",
     output_directory => $test_working_dir,
 );
-ok($command, 'Created `gmt detect-variants varscan-somtic` command');
+ok($command, 'Created `gmt detect-variants varscan-somatic` command');
 ok($command->execute, 'Executed `gmt detect-variants varscan-somatic` command');
 
 my @file_names = qw|    indels.hq

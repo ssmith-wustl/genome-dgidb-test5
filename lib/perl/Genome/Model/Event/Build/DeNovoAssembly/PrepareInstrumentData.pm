@@ -239,7 +239,7 @@ sub _process_instrument_data {
         return;
     }
     $sx_cmd_parts[$#read_processor_parts] .= ' --output '.$output;
-    $sx_cmd_parts[$#read_processor_parts] .= ' --metrics-file-out '.$self->_metrics_file;
+    $sx_cmd_parts[$#read_processor_parts] .= ' --output-metrics '.$self->_metrics_file;
 
     my $sx_cmd = join(' | ', @sx_cmd_parts);
     my $rv = eval{ Genome::Sys->shellcmd(cmd => $sx_cmd); };
