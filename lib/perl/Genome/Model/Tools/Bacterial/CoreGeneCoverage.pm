@@ -210,7 +210,7 @@ sub execute {
     # TODO This can be replaced with Genome::Sys->cat I think
     my $covdata = read_file("Cov_30_PID_30");
     my $cgtest_result = read_file($self->output_file);
-    write_file("Cov_30_PID_30.out",$covdata,$cgtest_result);
+    write_file("Cov_30_PID_30.out",$covdata,"\n",$cgtest_result,"\n");
 
     # unlink temp files. these really should be absolute path
     # and should go to a writable directory....
