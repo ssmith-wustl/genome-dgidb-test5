@@ -16,7 +16,8 @@ sub user_id {
 }
 
 sub username {
-    my $username = getpwuid($<);
+    my $class = shift;
+    my $username = getpwuid($class->user_id);
     return $username;
 }
 
