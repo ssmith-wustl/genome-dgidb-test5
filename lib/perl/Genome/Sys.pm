@@ -22,7 +22,9 @@ sub username {
 }
 
 sub sudo_username {
-    my $sudo_username = $ENV{'SUDO_USER'} || '';
+    my $who_output = `who -m` || '';
+    my $sudo_username = (split(/\s/,$who_output))[0];
+    $sudo_username = ($ENV{'SUDO_USER'} || '') unless $sudo_username;
     return $sudo_username;
 }
 
