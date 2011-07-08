@@ -29,17 +29,27 @@ EOS
 
 sub process_source {
     my $self = shift;
-    
     my $input_fh = $self->_input_fh;
-    
+
+    #dump header lines
+    for (1..5){
+        $input_fh->getline;
+    }
+
     while(my $line = <$input_fh>) {
         my ($chromosome, $position, undef, $reference, $consensus, $quality, $depth, @extra) = split("\t", $line);
-        my @cons = split /\:/, $consensus;
-        my $IUB_cons = Genome::Info::IUB->iub_for_alleles(@cons);
-        if(defined($IUB_cons)){
-            $self->write_bed_line($chromosome, $position - 1, $position, $reference, $IUB_cons, $quality, $depth);
+        next if $consensus =~ m/^x$/;
+        my $cons;
+        my @cons = split ":", $consensus;
+        $cons = (scalar(@cons)>1) ? Genome::Info::IUB->iub_for_alleles(@cons) : $consensus ;
+
+        if((length $cons)> 1){
+            next;
         }
-        else {
+        
+        if(defined($cons)){
+            $self->write_bed_line($chromosome, $position - 1, $position, $reference, $cons, $quality, $depth);
+        } else {
             $self->error_message("Could not get an IUB code for ". $line);
         }
     }
