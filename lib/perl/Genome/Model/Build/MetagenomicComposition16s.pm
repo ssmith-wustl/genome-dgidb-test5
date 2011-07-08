@@ -598,6 +598,15 @@ sub prepare_instrument_data {
 
     $self->status_message('DONE processing original fasta file');
 
+    # Rm empty output files
+    if ( my %primers = $self->amplicon_set_names_and_primers ) {
+        for my $set_name ( keys %primers ) {
+            my $fasta_file = $self->processed_fasta_file_for_set_name($set_name);
+            my $sz = -s $fasta_file;
+            unlink $fasta_file if not $sz or $sz == 0;
+        }
+    }
+
     # Set metrics
     my $input_metrics = Genome::Model::Tools::Sx::Metrics->read_from_file($input_metrics_file);
     if ( not $input_metrics ) {
