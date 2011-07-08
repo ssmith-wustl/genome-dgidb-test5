@@ -183,12 +183,12 @@ sub execute {
     }
     confess 'Could not get file handle for output file ' . $self->output_file unless $output_fh;
 
-    $output_fh->print("Perc of core genes present in this assembly: $coregene_pct \%\n");
+    $output_fh->print("Perc of Coregenes present in this assembly: $coregene_pct \%\n");
     $output_fh->print("Number of Core Groups present in this assembly: $core_groups\n");    
     #$output_fh->print("Core gene count: $core_gene_count\n");
     #$output_fh->print("Query count: $query_count\n");
     
-    $self->status_message("Perc of core genes present in this assembly: $coregene_pct \%");
+    $self->status_message("Perc of Coregenes present in this assembly: $coregene_pct \%");
     $self->status_message("Number of Core Groups present in this assembly: $core_groups");
     #$self->status_message("Core gene count: $core_gene_count");
     #$self->status_message("Query count: $query_count");
