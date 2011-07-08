@@ -7,7 +7,7 @@ use Statistics::Descriptive;
 #use FindBin qw($Bin);
 #use lib "$FindBin::Bin";
 use Genome::Model::Tools::Sv::AssemblyPipeline::ReadRemap;
-use BreakDancerLine;
+use Genome::Model::Tools::Sv::AssemblyPipeline::BreakDancerLine;
 
 class Genome::Model::Tools::Sv::AssemblyPipeline::CaptureValidation {
   is => 'Command',
