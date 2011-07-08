@@ -46,6 +46,9 @@ sub process_source {
         if((length $cons)> 1){
             next;
         }
+        if((length $reference) > 1){
+            next;
+        }
         
         if(defined($cons)){
             $self->write_bed_line($chromosome, $position - 1, $position, $reference, $cons, $quality, $depth);
