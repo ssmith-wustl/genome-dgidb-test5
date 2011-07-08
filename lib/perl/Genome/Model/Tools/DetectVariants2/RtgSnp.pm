@@ -60,13 +60,15 @@ sub _detect_variants {
 
     Genome::Sys->shellcmd( cmd => $rtg_cmd);
 
-    #Genome::Sys->copy_file($self->_temp_staging_directory."/rtg/snps.txt", $self->output_directory."/snvs.hq"); 
-    my @files = glob($self->_temp_staging_directory."/*");
+    Genome::Sys->copy_file($self->_temp_staging_directory."/rtg/snps.txt", $self->_temp_staging_directory."/rtg/snvs.hq"); 
+    my @files = glob($self->_temp_staging_directory."/rtg/*");
     for my $file (@files) {
+        if(-d $file){
+            next;
+        }
         my $basename = basename($file);
         Genome::Sys->copy_file($file, $self->_temp_staging_directory."/".$basename);
     }
-    #Genome::Sys->copy_file($self->_temp_staging_directory."/rtg/snps.txt", "/gscmnt/ams1158/info/pindel/rtg/snps.txt"); 
 
     return 1;
 }
@@ -74,18 +76,6 @@ sub has_version {
     my $self = shift;
     my $version = shift;
     return 1;
-=cut
-    unless(defined($version)){
-        $version = $self->version;
-    }
-    my @versions = Genome::Model::Tools::Sam->available_samtools_versions;
-    for my $v (@versions){
-        if($v eq $version){
-            return 1;
-        }
-    }
-    return 0;
-=cut
 }
 
 
