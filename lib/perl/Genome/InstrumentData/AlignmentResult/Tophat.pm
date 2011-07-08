@@ -384,8 +384,11 @@ sub _run_aligner {
         die $self->error_message('Failed to calculate the sum of read lengths across all lanes');
     }
     my $avg_read_length = int($sum_read_length / $reads);
+
     # The inner-insert size should be the predicted external-insert size(300) minus the read lengths(2x100=200). Example: 300-200=100
-    my $insert_size = int( $sum_insert_sizes / $reads ) - $avg_read_length;
+    # If there is an insert size, it's paired-end mutliply read_length by 2
+    my $insert_size = int( $sum_insert_sizes / $reads ) - ($avg_read_length * 2);
+
     unless ($insert_size) {
         die $self->error_message('Failed to get insert size with '. $reads .' reads and a sum insert size of '. $sum_insert_sizes);
     }
