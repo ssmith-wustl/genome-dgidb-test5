@@ -60,6 +60,8 @@ sub execute {
     unless ($dirname) {
         die('Failed to determine output directory from output file: '. $output_file);
     }
+    my $tmp_dir = File::Temp::tempdir('Annotate-ReferenceGenome-'.Genome::Sys->username.'-XXXX',DIR => $dirname,CLEANUP => 1);
+
     my $reference_build = Genome::Model::Build->get($self->reference_build_id);
     unless ($reference_build) {
         die('Failed to get reference build for id: '. $self->reference_build_id);
@@ -89,7 +91,7 @@ sub execute {
         chromosomes => \@chromosomes,
         output_format => $self->output_format,
         output_file => $output_file,
-        output_directory => $dirname,
+        output_directory => $tmp_dir,
     );
     my $module_path = $self->get_class_object->module_path;
     my $xml_path = $module_path;

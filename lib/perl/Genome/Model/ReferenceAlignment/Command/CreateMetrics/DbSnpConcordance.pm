@@ -84,12 +84,12 @@ sub _verify_build_and_set_paths {
 sub _gen_concordance {
     my ($self, $bed_file, $dbsnp_file, $output_path) = @_;
 
-    my $snvcmp_cmd = Genome::Model::Tools::SnvCmp::Concordance->create(
+    my $joinx_cmd = Genome::Model::Tools::Joinx::SnvConcordanceByQuality->create(
         input_file_a => $bed_file,
         input_file_b => $dbsnp_file,
         output_file  => $output_path,
     );
-    $snvcmp_cmd->execute() or die "snvcmp failed!";
+    $joinx_cmd->execute() or die "joinx failed!";
 }
 
 sub execute {
