@@ -1,13 +1,8 @@
 $Genome::Model::Tools::OPTS_SPEC = [
   '>solexa',
   [
-    '>get-unmapped-reads',
-    [
-      'model-id=s',
-      'files',
-      'help!',
-      undef
-    ],
+    'version=s',
+    undef,
     'help!',
     undef
   ],
@@ -844,6 +839,33 @@ $Genome::Model::Tools::OPTS_SPEC = [
       'help!',
       undef
     ],
+    '>simulate-reads',
+    [
+      'chr=s',
+      'files',
+      'output-file=s',
+      'files',
+      'readlength=s',
+      undef,
+      'alt-cn=s',
+      undef,
+      'alt-file=s',
+      'files',
+      'alt-size=s',
+      undef,
+      'coverage=s',
+      undef,
+      'entrypoints-file=s',
+      'files',
+      'nreads=s',
+      undef,
+      'overdispersion=s',
+      undef,
+      'window-size=s',
+      undef,
+      'help!',
+      undef
+    ],
     '>u-test',
     [
       'T-test-threshold=s',
@@ -1320,13 +1342,17 @@ $Genome::Model::Tools::OPTS_SPEC = [
   [
     '>assemble',
     [
-      'output-directory=s',
+      'input-file=s',
       'files',
-      'sam-file=s',
+      'output-directory=s',
       'files',
       'assembler-output-file=s',
       'files',
       'gene-expression-file=s',
+      'files',
+      'gene-fpkm-file=s',
+      'files',
+      'isoform-fpkm-file=s',
       'files',
       'params=s',
       'files',
@@ -3023,6 +3049,12 @@ $Genome::Model::Tools::OPTS_SPEC = [
         'files',
         'detector-params=s',
         'files',
+        'max-normal-freq=s',
+        undef,
+        'min-tumor-freq=s',
+        undef,
+        'p-value-for-hc=s',
+        undef,
         'params=s',
         'files',
         'reference-build-id=s',
@@ -3191,6 +3223,27 @@ $Genome::Model::Tools::OPTS_SPEC = [
       undef,
       'chromosome-list=s',
       undef,
+      'params=s',
+      'files',
+      'region-of-interest=s',
+      undef,
+      'version=s',
+      'files',
+      'aligned-reads-input=s',
+      'files',
+      'control-aligned-reads-input=s',
+      'files',
+      'help!',
+      undef
+    ],
+    '>rtg-snp',
+    [
+      'lsf-resource=s',
+      'files',
+      'output-directory=s',
+      'files',
+      'reference-build-id=s',
+      'files',
       'params=s',
       'files',
       'region-of-interest=s',
@@ -4654,6 +4707,8 @@ $Genome::Model::Tools::OPTS_SPEC = [
         'files',
         'output-file=s',
         'files',
+        'reference-build=s',
+        'files',
         'sample-name=s',
         'files',
         'variant-file=s',
@@ -4898,6 +4953,42 @@ $Genome::Model::Tools::OPTS_SPEC = [
     ],
     '>mendelian',
     [
+      '>genotype-table',
+      [
+        'consensus-files=s',
+        'files',
+        'variant-file=s',
+        'files',
+        'output-file=s',
+        'files',
+        'help!',
+        undef
+      ],
+      '>identity-by-descent',
+      [
+        'affected-files=s',
+        'files',
+        'ucsc-cytoband=s',
+        'files',
+        'variant-file=s',
+        'files',
+        'inheritance-model=s',
+        'files',
+        'max-frequency-to-refute=s',
+        'files',
+        'max-unaffected-variant=s',
+        'files',
+        'min-affected-variant=s',
+        'files',
+        'min-coverage-to-refute=s',
+        'files',
+        'output-file=s',
+        'files',
+        'unaffected-files=s',
+        'files',
+        'help!',
+        undef
+      ],
       '>report-variants',
       [
         'affected-files=s',
@@ -5887,6 +5978,30 @@ $Genome::Model::Tools::OPTS_SPEC = [
       'help!',
       undef
     ],
+    '>reference-genome',
+    [
+      'output-file=s',
+      'files',
+      'anno-db=s',
+      'files',
+      'output-format=s',
+      [
+        'gtf',
+        'gff',
+        'bed',
+        'gff3'
+      ],
+      'picard-version=s',
+      'files',
+      'reference-build-id=s',
+      undef,
+      'species=s',
+      'files',
+      'version=s',
+      'files',
+      'help!',
+      undef
+    ],
     '>region-proteins',
     [
       'anno-db=s',
@@ -5911,8 +6026,6 @@ $Genome::Model::Tools::OPTS_SPEC = [
       'output-file=s',
       'files',
       'revise-Entrez-Gene-Id!',
-      undef,
-      'revise-dbsnp!',
       undef,
       'help!',
       undef
@@ -6002,8 +6115,6 @@ $Genome::Model::Tools::OPTS_SPEC = [
       'files',
       'extra-details!',
       undef,
-      'flank-range=s',
-      undef,
       'get-frame-shift-sequence!',
       undef,
       'no-headers!',
@@ -6049,8 +6160,6 @@ $Genome::Model::Tools::OPTS_SPEC = [
       'extra-columns=s',
       'files',
       'extra-details=s',
-      'files',
-      'flank-range=s',
       'files',
       'get-frame-shift-sequence!',
       undef,
@@ -6944,6 +7053,103 @@ $Genome::Model::Tools::OPTS_SPEC = [
     'help!',
     undef
   ],
+  '>newbler',
+  [
+    '>create-contigs-files',
+    [
+      'assembly-directory=s',
+      'files',
+      'min-contig-length=s',
+      undef,
+      'help!',
+      undef
+    ],
+    '>create-supercontigs-files',
+    [
+      'assembly-directory=s',
+      'files',
+      'default-gap-size=s',
+      undef,
+      'min-contig-length=s',
+      undef,
+      'help!',
+      undef
+    ],
+    '>de-novo-assemble',
+    [
+      'input-files=s@',
+      'files',
+      'output-directory=s',
+      'files',
+      'version=s',
+      [
+        'mapasm454_source_03152011',
+        'mapasm454_source_04282011'
+      ],
+      'ace!',
+      undef,
+      'consed!',
+      undef,
+      'rip!',
+      undef,
+      'help!',
+      undef
+    ],
+    '>inputs-from-fastq',
+    [
+      'assembly-directory=s',
+      'files',
+      'help!',
+      undef
+    ],
+    '>standard-outputs',
+    [
+      'assembly-directory=s',
+      'files',
+      'default-gap-size=s',
+      undef,
+      'min-contig-length=s',
+      undef,
+      'help!',
+      undef
+    ],
+    '>stats',
+    [
+      'assembly-directory=s',
+      'files',
+      'first-tier=s',
+      undef,
+      'major-contig-length=s',
+      undef,
+      'output-file=s',
+      'files',
+      'remove-output-files!',
+      undef,
+      'second-tier=s',
+      undef,
+      'help!',
+      undef
+    ],
+    '>to-pcap-ace',
+    [
+      'assembly-directory=s',
+      'files',
+      'default-gap-size=s',
+      undef,
+      'min-contig-length=s',
+      undef,
+      'ace-out=s',
+      'files',
+      'newbler-ace-file=s',
+      'files',
+      'newbler-scaffold-file=s',
+      'files',
+      'help!',
+      undef
+    ],
+    'help!',
+    undef
+  ],
   '>fast-tier',
   [
     '>bitmask-to-bed',
@@ -6976,6 +7182,8 @@ $Genome::Model::Tools::OPTS_SPEC = [
     ],
     '>make-tier-bitmasks',
     [
+      'annotation-model=s',
+      'files',
       'output-directory=s',
       'files',
       'reference-sequence=s',
@@ -7736,6 +7944,15 @@ $Genome::Model::Tools::OPTS_SPEC = [
       'help!',
       undef
     ],
+    '>gtf-to-bed',
+    [
+      'bed-file=s',
+      'files',
+      'gff-file=s',
+      'files',
+      'help!',
+      undef
+    ],
     '>rna-seq',
     [
       'alignment-file-path=s',
@@ -7854,7 +8071,7 @@ $Genome::Model::Tools::OPTS_SPEC = [
       'help!',
       undef
     ],
-    '>topology',
+    '>topography',
     [
       'bam-file=s',
       'files',
@@ -7925,336 +8142,6 @@ $Genome::Model::Tools::OPTS_SPEC = [
       undef,
       'wingspan=s',
       undef,
-      'help!',
-      undef
-    ],
-    'help!',
-    undef
-  ],
-  '>fast-qual',
-  [
-    '>collate',
-    [
-      'input=s@',
-      'files',
-      'metrics-file-out=s',
-      'files',
-      'output=s@',
-      'files',
-      'paired-input!',
-      undef,
-      'paired-output!',
-      undef,
-      'type-in=s',
-      [
-        'sanger',
-        'illumina',
-        'phred'
-      ],
-      'type-out=s',
-      [
-        'sanger',
-        'illumina',
-        'phred',
-        'bed'
-      ],
-      'help!',
-      undef
-    ],
-    '>filter',
-    [
-      '>by-length',
-      [
-        'filter-length=s',
-        undef,
-        'input=s@',
-        'files',
-        'metrics-file-out=s',
-        'files',
-        'output=s@',
-        'files',
-        'paired-input!',
-        undef,
-        'paired-output!',
-        undef,
-        'type-in=s',
-        [
-          'sanger',
-          'illumina',
-          'phred'
-        ],
-        'type-out=s',
-        [
-          'sanger',
-          'illumina',
-          'phred',
-          'bed'
-        ],
-        'help!',
-        undef
-      ],
-      'help!',
-      undef
-    ],
-    '>limit',
-    [
-      '>by-coverage',
-      [
-        'bases=s',
-        undef,
-        'count=s',
-        undef,
-        'input=s@',
-        'files',
-        'metrics-file-out=s',
-        'files',
-        'output=s@',
-        'files',
-        'paired-input!',
-        undef,
-        'paired-output!',
-        undef,
-        'stats!',
-        undef,
-        'type-in=s',
-        [
-          'sanger',
-          'illumina',
-          'phred'
-        ],
-        'type-out=s',
-        [
-          'sanger',
-          'illumina',
-          'phred',
-          'bed'
-        ],
-        'help!',
-        undef
-      ],
-      'help!',
-      undef
-    ],
-    '>pipe',
-    [
-      'commands=s',
-      'files',
-      'input=s@',
-      'files',
-      'metrics-file-out=s',
-      'files',
-      'output=s@',
-      'files',
-      'paired-input!',
-      undef,
-      'paired-output!',
-      undef,
-      'type-in=s',
-      [
-        'sanger',
-        'illumina',
-        'phred'
-      ],
-      'type-out=s',
-      [
-        'sanger',
-        'illumina',
-        'phred',
-        'bed'
-      ],
-      'help!',
-      undef
-    ],
-    '>rename',
-    [
-      '>illumina-to-pcap',
-      [
-        'input=s@',
-        'files',
-        'metrics-file-out=s',
-        'files',
-        'output=s@',
-        'files',
-        'paired-input!',
-        undef,
-        'paired-output!',
-        undef,
-        'type-in=s',
-        [
-          'sanger',
-          'illumina',
-          'phred'
-        ],
-        'type-out=s',
-        [
-          'sanger',
-          'illumina',
-          'phred',
-          'bed'
-        ],
-        'help!',
-        undef
-      ],
-      'help!',
-      undef
-    ],
-    '>sorter',
-    [
-      '>name',
-      [
-        'input=s@',
-        'files',
-        'metrics-file-out=s',
-        'files',
-        'output=s@',
-        'files',
-        'paired-input!',
-        undef,
-        'paired-output!',
-        undef,
-        'type-in=s',
-        [
-          'sanger',
-          'illumina',
-          'phred'
-        ],
-        'type-out=s',
-        [
-          'sanger',
-          'illumina',
-          'phred',
-          'bed'
-        ],
-        'help!',
-        undef
-      ],
-      'help!',
-      undef
-    ],
-    '>trimmer',
-    [
-      '>bwa-style',
-      [
-        'trim-qual-level=s',
-        undef,
-        'input=s@',
-        'files',
-        'metrics-file-out=s',
-        'files',
-        'output=s@',
-        'files',
-        'paired-input!',
-        undef,
-        'paired-output!',
-        undef,
-        'type-in=s',
-        [
-          'sanger',
-          'illumina',
-          'phred'
-        ],
-        'type-out=s',
-        [
-          'sanger',
-          'illumina',
-          'phred',
-          'bed'
-        ],
-        'help!',
-        undef
-      ],
-      '>by-length',
-      [
-        'input=s@',
-        'files',
-        'metrics-file-out=s',
-        'files',
-        'output=s@',
-        'files',
-        'paired-input!',
-        undef,
-        'paired-output!',
-        undef,
-        'read-length=s',
-        undef,
-        'trim-length=s',
-        undef,
-        'type-in=s',
-        [
-          'sanger',
-          'illumina',
-          'phred'
-        ],
-        'type-out=s',
-        [
-          'sanger',
-          'illumina',
-          'phred',
-          'bed'
-        ],
-        'help!',
-        undef
-      ],
-      '>keep',
-      [
-        'length=s',
-        undef,
-        'input=s@',
-        'files',
-        'metrics-file-out=s',
-        'files',
-        'output=s@',
-        'files',
-        'paired-input!',
-        undef,
-        'paired-output!',
-        undef,
-        'type-in=s',
-        [
-          'sanger',
-          'illumina',
-          'phred'
-        ],
-        'type-out=s',
-        [
-          'sanger',
-          'illumina',
-          'phred',
-          'bed'
-        ],
-        'help!',
-        undef
-      ],
-      '>remove',
-      [
-        'length=s',
-        undef,
-        'input=s@',
-        'files',
-        'metrics-file-out=s',
-        'files',
-        'output=s@',
-        'files',
-        'paired-input!',
-        undef,
-        'paired-output!',
-        undef,
-        'type-in=s',
-        [
-          'sanger',
-          'illumina',
-          'phred'
-        ],
-        'type-out=s',
-        [
-          'sanger',
-          'illumina',
-          'phred',
-          'bed'
-        ],
-        'help!',
-        undef
-      ],
       'help!',
       undef
     ],
@@ -8387,13 +8274,6 @@ $Genome::Model::Tools::OPTS_SPEC = [
       'help!',
       undef
     ],
-    '>import-unaligned-reads',
-    [
-      'build-id=s',
-      'files',
-      'help!',
-      undef
-    ],
     'help!',
     undef
   ],
@@ -8447,27 +8327,6 @@ $Genome::Model::Tools::OPTS_SPEC = [
     'help!',
     undef
   ],
-  '>realign',
-  [
-    'bam=s',
-    'files',
-    'lines-per-job=s',
-    undef,
-    'output-dir=s',
-    'files',
-    'regions-file=s',
-    'files',
-    'first-line=s',
-    undef,
-    'last-line=s',
-    undef,
-    'whole-file!',
-    undef,
-    'worker-id=s',
-    undef,
-    'help!',
-    undef
-  ],
   '>fastqc',
   [
     '>generate-reports',
@@ -8503,17 +8362,6 @@ $Genome::Model::Tools::OPTS_SPEC = [
   ],
   '>snp',
   [
-    '>create-dbsnp-file-from-snp-file',
-    [
-      'output-file=s',
-      'files',
-      'snp-file=s',
-      'files',
-      'release=s',
-      undef,
-      'help!',
-      undef
-    ],
     '>db-snp-concordance',
     [
       'dbsnp-file=s',
@@ -9677,6 +9525,19 @@ $Genome::Model::Tools::OPTS_SPEC = [
           'help!',
           undef
         ],
+        '>rtg-snp-to-bed',
+        [
+          'detector-style-input=s',
+          'files',
+          'reference-build-id=s',
+          'files',
+          'source=s',
+          'files',
+          'output=s',
+          'files',
+          'help!',
+          undef
+        ],
         '>samtools-to-bed',
         [
           'detector-style-input=s',
@@ -10709,21 +10570,6 @@ $Genome::Model::Tools::OPTS_SPEC = [
       'acenav=s',
       'files',
       'nav=s',
-      'files',
-      'help!',
-      undef
-    ],
-    '>tag-manual-poly-site',
-    [
-      'ace-file=s',
-      'files',
-      'refseq-fasta=s',
-      'files',
-      'force-genotype-coords=s',
-      'files',
-      'polyscan-snp=s',
-      'files',
-      'snp-gff=s',
       'files',
       'help!',
       undef
@@ -12328,6 +12174,25 @@ $Genome::Model::Tools::OPTS_SPEC = [
       'help!',
       undef
     ],
+    '>germline-model-group-qc',
+    [
+      'data-source=s',
+      'files',
+      'dbsnp-build=s',
+      'files',
+      'group-id=s',
+      'files',
+      'output-dir=s',
+      'files',
+      'limit-snps-file=s',
+      'files',
+      'skip-if-output-present!',
+      undef,
+      'summary-file=s',
+      'files',
+      'help!',
+      undef
+    ],
     '>germline-pipeline-finisher',
     [
       'data-dir=s',
@@ -13245,6 +13110,8 @@ $Genome::Model::Tools::OPTS_SPEC = [
       'center=s',
       'files',
       'data-directory=s',
+      'files',
+      'dbSNP-version=s',
       'files',
       'germline-bam-file=s',
       'files',
@@ -14634,6 +14501,13 @@ $Genome::Model::Tools::OPTS_SPEC = [
     'help!',
     undef
   ],
+  '>brat',
+  [
+    'use-version=s',
+    undef,
+    'help!',
+    undef
+  ],
   '>galaxy',
   [
     '>generate-tool-xml',
@@ -14925,13 +14799,6 @@ $Genome::Model::Tools::OPTS_SPEC = [
       'help!',
       undef
     ],
-    '>create-library-map-files',
-    [
-      'model-id=s',
-      'files',
-      'help!',
-      undef
-    ],
     '>gather-build-metrics',
     [
       'build-id=s',
@@ -15162,11 +15029,33 @@ $Genome::Model::Tools::OPTS_SPEC = [
       'files',
       'vcf-files=s',
       'files',
-      'keep-passing!',
+      'keep-all-passing!',
       undef,
       'merge-filters!',
       undef,
+      'require-all-passing!',
+      undef,
       'source-ids=s',
+      'files',
+      'help!',
+      undef
+    ],
+    '>vcf-merge-chrom',
+    [
+      'output-file=s',
+      'files',
+      'vcf-files=s',
+      'files',
+      'help!',
+      undef
+    ],
+    '>vcf-split-samples',
+    [
+      'output-dir=s',
+      'files',
+      'vcf-input=s',
+      'files',
+      'supplement-filename=s',
       'files',
       'help!',
       undef
@@ -15241,6 +15130,236 @@ $Genome::Model::Tools::OPTS_SPEC = [
         'training-path=s',
         'files',
         'training-set=s',
+        'files',
+        'help!',
+        undef
+      ],
+      'help!',
+      undef
+    ],
+    'help!',
+    undef
+  ],
+  '>sx',
+  [
+    '>bin',
+    [
+      '>by-primer',
+      [
+        'primers=s@',
+        'files',
+        'remove!',
+        undef,
+        'input=s@',
+        'files',
+        'input-metrics=s',
+        'files',
+        'output=s@',
+        'files',
+        'output-metrics=s',
+        'files',
+        'help!',
+        undef
+      ],
+      'help!',
+      undef
+    ],
+    '>filter',
+    [
+      '>by-length',
+      [
+        'filter-length=s',
+        undef,
+        'input=s@',
+        'files',
+        'input-metrics=s',
+        'files',
+        'output=s@',
+        'files',
+        'output-metrics=s',
+        'files',
+        'help!',
+        undef
+      ],
+      '>by-min-length',
+      [
+        'length=s',
+        undef,
+        'input=s@',
+        'files',
+        'input-metrics=s',
+        'files',
+        'output=s@',
+        'files',
+        'output-metrics=s',
+        'files',
+        'help!',
+        undef
+      ],
+      'help!',
+      undef
+    ],
+    '>limit',
+    [
+      '>by-bases',
+      [
+        'bases=s',
+        undef,
+        'input=s@',
+        'files',
+        'input-metrics=s',
+        'files',
+        'output=s@',
+        'files',
+        'output-metrics=s',
+        'files',
+        'help!',
+        undef
+      ],
+      '>by-count',
+      [
+        'count=s',
+        undef,
+        'input=s@',
+        'files',
+        'input-metrics=s',
+        'files',
+        'output=s@',
+        'files',
+        'output-metrics=s',
+        'files',
+        'help!',
+        undef
+      ],
+      '>by-coverage',
+      [
+        'bases=s',
+        undef,
+        'count=s',
+        undef,
+        'input=s@',
+        'files',
+        'input-metrics=s',
+        'files',
+        'output=s@',
+        'files',
+        'output-metrics=s',
+        'files',
+        'help!',
+        undef
+      ],
+      'help!',
+      undef
+    ],
+    '>rename',
+    [
+      '>illumina-to-pcap',
+      [
+        'input=s@',
+        'files',
+        'input-metrics=s',
+        'files',
+        'output=s@',
+        'files',
+        'output-metrics=s',
+        'files',
+        'help!',
+        undef
+      ],
+      'help!',
+      undef
+    ],
+    '>rm-desc',
+    [
+      'input=s@',
+      'files',
+      'input-metrics=s',
+      'files',
+      'output=s@',
+      'files',
+      'output-metrics=s',
+      'files',
+      'help!',
+      undef
+    ],
+    '>sorter',
+    [
+      '>name',
+      [
+        'input=s@',
+        'files',
+        'input-metrics=s',
+        'files',
+        'output=s@',
+        'files',
+        'output-metrics=s',
+        'files',
+        'help!',
+        undef
+      ],
+      'help!',
+      undef
+    ],
+    '>trimmer',
+    [
+      '>bwa-style',
+      [
+        'trim-qual-level=s',
+        undef,
+        'input=s@',
+        'files',
+        'input-metrics=s',
+        'files',
+        'output=s@',
+        'files',
+        'output-metrics=s',
+        'files',
+        'help!',
+        undef
+      ],
+      '>by-length',
+      [
+        'input=s@',
+        'files',
+        'input-metrics=s',
+        'files',
+        'output=s@',
+        'files',
+        'output-metrics=s',
+        'files',
+        'read-length=s',
+        undef,
+        'trim-length=s',
+        undef,
+        'help!',
+        undef
+      ],
+      '>keep',
+      [
+        'length=s',
+        undef,
+        'input=s@',
+        'files',
+        'input-metrics=s',
+        'files',
+        'output=s@',
+        'files',
+        'output-metrics=s',
+        'files',
+        'help!',
+        undef
+      ],
+      '>remove',
+      [
+        'length=s',
+        undef,
+        'input=s@',
+        'files',
+        'input-metrics=s',
+        'files',
+        'output=s@',
+        'files',
+        'output-metrics=s',
         'files',
         'help!',
         undef
@@ -15749,6 +15868,8 @@ $Genome::Model::Tools::OPTS_SPEC = [
       'files',
       'gatk-params=s',
       'files',
+      'reference=s',
+      'files',
       'run-unsafe-mode=s',
       'files',
       'skip-if-output-present=s',
@@ -16088,6 +16209,8 @@ $Genome::Model::Tools::OPTS_SPEC = [
       'small-indel-outfile=s',
       'files',
       'tumor-bam=s',
+      'files',
+      'large-indel-outfile=s',
       'files',
       'project-name=s',
       'files',
@@ -17500,6 +17623,38 @@ $Genome::Model::Tools::OPTS_SPEC = [
   [
     'use-version=s',
     undef,
+    'help!',
+    undef
+  ],
+  '>gtf',
+  [
+    '>cat',
+    [
+      'input-files=s',
+      'files',
+      'output-file=s',
+      'files',
+      'remove-originals=s',
+      'files',
+      'help!',
+      undef
+    ],
+    '>limit',
+    [
+      'ids=s',
+      'files',
+      'input-gtf-file=s',
+      'files',
+      'output-gtf-file=s',
+      'files',
+      'id-type=s',
+      [
+        'gene_id',
+        'transcript_id'
+      ],
+      'help!',
+      undef
+    ],
     'help!',
     undef
   ],
