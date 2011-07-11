@@ -49,6 +49,7 @@ for my $test_type (qw/ scaffolded unscaffolded / ) {
     my $create = Genome::Model::Tools::Newbler::CreateContigsFiles->create(
         assembly_directory => $temp_test_dir,
         min_contig_length => 5000,
+        default_gap_size => 10,
         );
     ok ($create, "Successfully created tool" ) or die;
     ok ($create->execute, "Successfully executed tool" ) or die;
