@@ -138,6 +138,10 @@ plotSegments <- function(chr="ALL", filename, entrypoints, ymax=NULL, ymin=NULL,
         mid2 = leftEdge
       }
       
+      if(is.null(annos[i,5])){
+        annos[i,5] = 0
+      }
+      
       text(mid2,(ypos+annos[i,5]),annos[i,4],cex=0.5,font=3)
       lines(c(mid,mid2),c(ptop,(ypos+annos[i,5])*.90))
     }
