@@ -61,22 +61,30 @@ sub execute {
                 $self->error_message('Failed to get annotation model for annotation_reference_transcripts: ' . $annotation_reference_transcripts);
                 return;
             }
-            
+
             unless (defined $annotation_version) {
                 $self->error_message('Failed to get annotation version from annotation_reference_transcripts: '. $annotation_reference_transcripts);
                 return;
             }
-            
+
             my $annotation_build = $annotation_model->build_by_version($annotation_version);
             unless ($annotation_build){
                 $self->error_message('Failed to get annotation build from annotation_reference_transcripts: '. $annotation_reference_transcripts);
                 return;
             }
-        
-            my $rRNA_MT_path = $annotation_build->rRNA_MT_file('gtf',$reference_build->id);
-            if ($rRNA_MT_path) {
-                $params .= ' -M '. $rRNA_MT_path;
+
+            # Determine the type of masking to use with Cufflinks
+            my $mask_transcripts = $self->model->mask_reference_transcripts;
+            if ($mask_transcripts) {
+                my $mask_file_method = $mask_transcripts .'_file';
+                my $mask_gtf_path = $annotation_build->$mask_file_method('gtf',$reference_build->id);
+                unless ($mask_gtf_path) {
+                    die('Failed to find GTF annotation used to mask transcripts with type: '. $mask_transcripts);
+                }
+                $params .= ' -M '. $mask_gtf_path;
             }
+
+            # Determine both the annotation file and mode to use it with Currlinks
             my $gtf_path = $annotation_build->annotation_file('gtf',$reference_build->id);
             my $mode = $self->model->annotation_reference_transcripts_mode;
             unless (defined($mode)) {

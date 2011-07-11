@@ -77,6 +77,11 @@ class Genome::ProcessingProfile::RnaSeq {
             is_optional => 1,
             valid_values => ['de novo','reference guided','reference only',],
         },
+        mask_reference_transcripts => {
+            doc => 'The mask level to ignore transcripts located in these annotation features',
+            is_optional => 1,
+            valid_values => ['rRNA','MT','pseudogene','rRNA_MT','rRNA_MT_pseudogene'],
+        },
     ],
 };
 

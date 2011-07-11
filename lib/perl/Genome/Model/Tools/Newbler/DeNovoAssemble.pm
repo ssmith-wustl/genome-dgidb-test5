@@ -39,15 +39,14 @@ class Genome::Model::Tools::Newbler::DeNovoAssemble {
             is => 'Boolean',
             doc => 'Creates ace file',
         },
-        #force .. make default 1  suppressable
-#        vt => {
-#            is => 'Text',
-#            doc => 'To trim primers,adapters, polyA tails',
-#        },
-#        vs => {
-#            is => 'Text',
-#            doc => 'To remove reads that match cloning vectors',
-#        },
+        vt => {
+            is => 'Text',
+            doc => 'To trim primers,adapters, polyA tails',
+        },
+        vs => {
+            is => 'Text',
+            doc => 'To remove reads that match cloning vectors',
+        },
     ],
 };
 
@@ -66,7 +65,11 @@ EOS
 sub execute {
     my $self = shift;
 
-    my $command = $self->_build_assemble_command;
+    my $command;
+    if ( not $command = $self->_build_assemble_command ) {
+        $self->error_message( "Failed to build assemble command" );
+        return;
+    }
 
     if ( system( "$command" ) ) {
         $self->error_message( "Failed to run de-novo-assemble command: $command" );
@@ -85,12 +88,28 @@ sub _build_assemble_command {
         $self->error_message( "--ace and --consed are mutually execlusive in number, please specify one of the two" );
         return;
     }
+
+    if ( $self->vt ) {
+        unless ( -s $self->vt ) {
+            $self->error_message( "Failed to find trim file specified in --vt option: ".$self->vt );
+            return;
+        }
+    }
+
+    if( $self->vs ) {
+        unless( -s $self->vs ) {
+            $self->error_message( "Failed to find filter reads file specified in --vs option: ".$self->vs );
+            return;
+        }
+    }
     
     my $cmd = $assembler.' -o '.$self->output_directory.' -force'; #force is needed for newbler to put files is existing directories .. it does not remove any existing files is that dir
     $cmd .= ' -consed' if $self->consed;
     $cmd .= ' -rip' if $self->rip;
     $cmd .= ' -ace' if $self->ace;
-    
+    $cmd .= ' -vt '.$self->vt if $self->vt;
+    $cmd .= ' -vs '.$self->vs if $self->vs;
+
     my $input_fastqs;
     for my $input_fastq ( $self->input_files ) {
         $input_fastqs .= " $input_fastq";

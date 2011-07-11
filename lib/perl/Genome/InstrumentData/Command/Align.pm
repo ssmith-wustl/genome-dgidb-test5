@@ -36,6 +36,10 @@ class Genome::InstrumentData::Command::Align {
                                         },
     ],
     has_optional_param => [
+        instrument_data_segment_id      =>  { is=> 'String',
+                                              doc => 'Instrument Data Segment ID to use if aligning only a subset of reads'},
+        instrument_data_segment_type      =>  { is=> 'String',
+                                              doc => 'Instrument Data Segment type to use if aligning only a subset of reads (read_group is the only valid type currently)'},
         reference_name                  => {
                                             doc => 'the reference to use by EXACT name, defaults to NCBI-human-build36',
                                             default_value => 'NCBI-human-build36'
@@ -125,6 +129,8 @@ sub execute {
     my $alignment;
     my %alignment_params = (
         instrument_data_id => $self->instrument_data_id,
+        instrument_data_segment_id => $self->instrument_data_segment_id,
+        instrument_data_segment_type => $self->instrument_data_segment_type,
         aligner_name       => $self->aligner_name,
         aligner_version    => $self->version,
         aligner_params     => $self->params,

@@ -44,6 +44,7 @@ sub input_fastq_files {
 sub newb_ace_file {
     return $_[0]->assembly_directory.'/consed/edit_dir/454Contigs.ace.1';
 }
+
 #TODO - rename these wit newb*
 sub scaffolds_agp_file {
     return $_[0]->assembly_directory.'/454Scaffolds.txt';
@@ -55,6 +56,14 @@ sub all_contigs_fasta_file {
 
 sub all_contigs_qual_file {
     return $_[0]->assembly_directory.'/454AllContigs.qual';
+}
+
+sub newb_read_status_file {
+    return $_[0]->assembly_directory.'/454ReadStatus.txt';
+}
+
+sub newb_metrics_file {
+    return $_[0]->assembly_directory.'/454NewblerMetrics.txt';
 }
 
 #< post assemble output files/dirs >#
@@ -88,6 +97,10 @@ sub reads_placed_file {
 
 sub reads_unplaced_file {
     return $_[0]->consed_edit_dir.'/reads.unplaced';
+}
+
+sub reads_unplaced_fasta {
+    return $_[0]->consed_edit_dir.'/reads.unplaced.fasta';
 }
 
 sub supercontigs_fasta_file {

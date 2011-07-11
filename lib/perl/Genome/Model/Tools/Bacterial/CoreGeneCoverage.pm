@@ -183,15 +183,15 @@ sub execute {
     }
     confess 'Could not get file handle for output file ' . $self->output_file unless $output_fh;
 
-    $output_fh->print("Percentage of core genes present in this assembly: $coregene_pct \%\n");
-    $output_fh->print("Core gene count: $core_gene_count\n");
-    $output_fh->print("Query count: $query_count\n");
+    $output_fh->print("Perc of Coregenes present in this assembly: $coregene_pct \%\n");
     $output_fh->print("Number of Core Groups present in this assembly: $core_groups\n");    
+    #$output_fh->print("Core gene count: $core_gene_count\n");
+    #$output_fh->print("Query count: $query_count\n");
     
-    $self->status_message("Percentage of core genes present in this assembly: $coregene_pct \%");
-    $self->status_message("Core gene count: $core_gene_count");
-    $self->status_message("Query count: $query_count");
+    $self->status_message("Perc of Coregenes present in this assembly: $coregene_pct \%");
     $self->status_message("Number of Core Groups present in this assembly: $core_groups");
+    #$self->status_message("Core gene count: $core_gene_count");
+    #$self->status_message("Query count: $query_count");
 
     if($core_pct <= $self->minimum_percent_coverage) {
         $output_fh->print("Core gene test FAILED!\n");
@@ -204,21 +204,36 @@ sub execute {
         $self->_passed(1);
     }
 
+    $output_fh->close;
+
     # the below replicates 'cat Cov_30_PID_30 CoregeneTest_result >Cov_30_PID_30.out
     # TODO This can be replaced with Genome::Sys->cat I think
     my $covdata = read_file("Cov_30_PID_30");
     my $cgtest_result = read_file($self->output_file);
-    write_file("Cov_30_PID_30.out",$covdata.$cgtest_result);
+    write_file("Cov_30_PID_30.out",$covdata,"\n",$cgtest_result,"\n");
 
     # unlink temp files. these really should be absolute path
     # and should go to a writable directory....
     unlink($blastresults);
     unlink($bsubout);
     unlink($bsuberr);
-    unlink($self->fasta_file."xpd");
-    unlink($self->fasta_file."xpi");
-    unlink($self->fasta_file."xps");
-    unlink($self->fasta_file."xpt");
+    unlink("Cov_30_PID_30");
+    unlink($self->fasta_file); 
+    unlink($self->fasta_file.".xpd");
+    unlink($self->fasta_file.".xpi");
+    unlink($self->fasta_file.".xps");
+    unlink($self->fasta_file.".xpt");
+	unlink($self->output_file);
+
+	## Gzip Cov_30_PID_30.out
+	my $gzip_rv = IPC::Run::run (
+			'gzip',
+			'Cov_30_PID_30.out',
+			); 
+	unless($gzip_rv) {
+		$self->error_message("failed to gzip Cov_30_PID_30.out\n");
+		return 0;
+	}
 
     return 1;
 }
