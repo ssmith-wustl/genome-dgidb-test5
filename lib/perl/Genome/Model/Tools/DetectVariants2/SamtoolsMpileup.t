@@ -61,7 +61,3 @@ ok($mpileup_command, 'Created `gmt detect-variants2 samtools` command');
 $mpileup_command->dump_status_messages(1);
 
 ok($mpileup_command->execute, 'Executed `gmt detect-variants2 samtools` command');
-
-sleep 10000000000; #turn the sleep on when you want to look at the results of the test
-
-
