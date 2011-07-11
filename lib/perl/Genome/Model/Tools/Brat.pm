@@ -54,7 +54,10 @@ sub available_brat_versions {
 sub path_for_brat_version {
     my $class = shift;
     my $version = shift;
-
+    unless (defined($version)) {
+        $class->status_message("No version specified! Using default version '$DEFAULT'.");
+        $version = $DEFAULT;
+    }
     if (defined $BRAT_VERSIONS{$version}) {
         return $BRAT_VERSIONS{$version};
     }
