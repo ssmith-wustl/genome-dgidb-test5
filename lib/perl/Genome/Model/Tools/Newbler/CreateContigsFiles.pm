@@ -38,7 +38,7 @@ sub execute {
         $self->create_consed_dir;
     }
 
-    unless( $self->_write_unscaffolded_file ) {
+    unless( $self->_write_unscaffolded_file ) { #TODO - rename this .. works for both scaffolded and unscaffolded
         $self->error_message( "Failed to write unscaffolded fasta and qual files from newbler files" );
         return;
     }
