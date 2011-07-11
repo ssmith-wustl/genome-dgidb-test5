@@ -13,6 +13,7 @@ use DateTime;
 use Sys::Hostname;
 use Cwd;
 use File::Basename;
+use File::Copy;
 use Genome::Info::IUB;
 use Genome::Info::UCSCConservation;
 
@@ -629,8 +630,7 @@ sub execute {
 
     $output_fh->close unless $output_fh eq 'STDOUT';
     if ($temp_output_file){
-        my $mv_return_value = Genome::Sys->shellcmd(cmd => "mv $temp_output_file $output_file");
-        unless($mv_return_value){
+        unless (move($temp_output_file, $output_file)) {
             $self->error_message("Failed to mv results at $temp_output_file to final location at $output_file: $!");
             return 0;
         }
