@@ -53,7 +53,10 @@ sub execute {
         IO::File->new($self->output_file, "w") or die "Failed to create file " . $self->output_file;
         return 1;
     }
-    my $cmd = $self->joinx_path . ' snv-concordance-by-quality ' . $self->input_file_a . ' ' . $self->input_file_b . ' > ' . $self->output_file;
+    # TODO: switch this back to joinx as soon as EOF bug is fixed
+    my $joinx_path = "/usr/bin/snvcmp";
+
+    my $cmd = "$joinx_path " . $self->input_file_a . ' ' . $self->input_file_b . ' > ' . $self->output_file;
     Genome::Sys->shellcmd(
         cmd => $cmd,
         input_files => [$self->input_file_a, $self->input_file_b],
