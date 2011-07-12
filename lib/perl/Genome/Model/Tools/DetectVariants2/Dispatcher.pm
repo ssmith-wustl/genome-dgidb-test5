@@ -143,6 +143,7 @@ sub plan {
 # Detect variants using all input detection strategies. Generates a workflow to do all of the work and executes it, storing the result in $self->_workflow_result
 sub _detect_variants {
     my $self = shift;
+
     unless ($self->snv_detection_strategy || $self->indel_detection_strategy || $self->sv_detection_strategy || $self->cnv_detection_strategy) {
         $self->error_message("Please provide one or more of: snv_detection_strategy, indel_detection_strategy, sv_detection_strategy, or cnv_detection_strategy");
         die $self->error_message;
@@ -171,6 +172,7 @@ sub _detect_variants {
     $self->status_message("Now launching the dispatcher workflow.");
     ## Worklow launches here
     my $result = Workflow::Simple::run_workflow_lsf( $workflow, %{$input});
+
     unless($result){
         $self->error_message( join("\n", map($_->name . ': ' . $_->error, @Workflow::Simple::ERROR)) );
         die $self->error_message("Workflow did not return correctly.");
@@ -196,7 +198,7 @@ sub _dump_workflow {
 sub _dump_dv_cmd {
     my $self = shift;
     my $cmd = join(" ",@INC)."\n===============================================\n";
-    $cmd  .=     "gmt detect-variants2 dispatcher --output-directory " .$self->output_directory
+    $cmd .=   "gmt detect-variants2 dispatcher --output-directory ".$self->output_directory
                 ." --aligned-reads-input ".$self->aligned_reads_input
                 ." --control-aligned-reads-input ".$self->control_aligned_reads_input
                 ." --reference-build-id ".$self->reference_build_id;
@@ -229,7 +231,7 @@ sub calculate_operation_output_directory {
     my $self = shift;
     my ($base_directory, $name, $version, $param_list) = @_;
     my $subdirectory = join('-', $name, $version, $param_list);
-
+    
     return $base_directory . '/' . Genome::Utility::Text::sanitize_string_for_filesystem($subdirectory);
 }
 
@@ -238,16 +240,16 @@ sub parse_detection_strategy {
     my $string = shift;
 
     return unless $string;
-
+    
     my $parser = $self->parser;
-
+    
     my $result = $parser->startrule($string);
-
+    
     unless($result) {
         $self->error_message('Failed to interpret detector string from ' . $string);
         die($self->error_message);
     }
-
+    
     return $result;
 }
 
@@ -260,19 +262,19 @@ sub merge_filters {
 sub build_detector_list {
     my $self = shift;
     my ($detector_tree, $detector_list, $detector_type) = @_;
-
+    
     #Just recursively keep looking for detectors
     my $branch_case = sub {
         my $self = shift;
         my ($combination, $subtrees, $branch_case, $leaf_case, $detector_list, $detector_type) = @_;
-
+        
         for my $subtree (@$subtrees) {
             $self->walk_tree($subtree, $branch_case, $leaf_case, $detector_list, $detector_type);
         }
-
+        
         return $detector_list;
     };
-
+    
     #We found the detector we're looking for
     my $leaf_case = sub {
         my $self = shift;
@@ -282,7 +284,7 @@ sub build_detector_list {
         my $version = $detector->{version};
         my $params = $detector->{params};
         my $d = clone($detector);
-
+        
         #Do not push duplicate entries
         if (exists($detector_list->{$name}{$version}{$detector_type})) {
             my @matching_params = grep {$_->{params} eq $params} @{$detector_list->{$name}{$version}{$detector_type}};
@@ -299,79 +301,42 @@ sub build_detector_list {
         } else {
             $detector_list->{$name}{$version}{$detector_type} = [$d];
         }
-
+        
         return $detector_list;
     };
-
+    
     return $self->walk_tree($detector_tree, $branch_case, $leaf_case, $detector_list, $detector_type);
 }
-#adding
-sub combine_results {
-    my $self = shift;
-    my ($detector_tree, $detector_type, $versions, $params) = @_;
 
-    #Need to combine by intersection or union
-    my $branch_case = sub {
-        my $self = shift;
-        my ($combination, $subtrees, $branch_case, $leaf_case, $detector_type, $versions, $params) = @_;
-
-        $self->error_message('Support for unions and intersections is not yet available.');
-        die($self->error_message);
-    };
-
-    #A single detector--just find the relevant file and pass it back
-    my $leaf_case = sub {
-        my $self = shift;
-        my ($detector_name, $index, $branch_case, $leaf_case, $detector_type, $versions, $params) = @_;
-
-        #TODO When we enable the boolean expressions, the directory name will need to take into account parameters as well
-        my $command_output_directory = $self->calculate_detector_output_directory($detector_name, $versions->[$index], '');
-
-        #Somewhere down the line filtering should perhaps be separated from the actual detection?
-        my $output_file_property = $detector_type . '_output';
-        my $filtered_output_file_property = 'filtered_' . $output_file_property;
-
-        my $_temp_staging_directory = $self->_temp_staging_directory;
-        my $output_file = $self->$output_file_property;
-        my $filtered_output_file = $self->$filtered_output_file_property;
-
-        $output_file =~ s/$_temp_staging_directory/$command_output_directory/;
-        $filtered_output_file =~ s/$_temp_staging_directory/$command_output_directory/;
-
-        return [$output_file, $filtered_output_file];
-    };
-
-    return $self->walk_tree($detector_tree, $branch_case, $leaf_case, $detector_type, $versions, $params);
-}
 #A generic walk of the tree structure produced by the parser--takes two subs $branch_case and $leaf_case to handle the specific logic of the step
 sub walk_tree {
     my $self = shift;
     my ($detector_tree, $branch_case, $leaf_case, @params) = @_;
-
+    
     unless($detector_tree) {
         $self->error_message('No parsed detector tree provided.');
         die($self->error_message);
     }
-
+    
     my @keys = keys %$detector_tree;
-
+    
     #There should always be exactly one outer rule (or detector)
     unless(scalar @keys eq 1) {
         $self->error_message('Unexpected data structure encountered!  There were ' . scalar(@keys) . ' keys');
         die($self->error_message . "\nTree: " . Dumper($detector_tree));
     }
-
+    
     my $key = $keys[0];
-
+    
     #Case One:  We're somewhere in the middle of the data-structure--we need to combine some results
     if($key eq 'intersect' or $key eq 'union') {
         my $value = $detector_tree->{$key};
-
+        
         unless(ref $value eq 'ARRAY') {
             $self->error_message('Unexpected data structure encountered! I really wanted an ARRAY, not ' . (ref($value)||$value) );
             die($self->error_message);
         }
-
+        
         return $branch_case->($self, $key, $value, $branch_case, $leaf_case, @params);
     } elsif($key eq 'detector') {
         my $value = $detector_tree->{$key};
@@ -465,7 +430,7 @@ sub link_operations {
     my ($key) = keys( %{$tree} );
     my @incoming_links;
     my $unique_combine_name;
-
+    
     # This is a leaf node, cease recursion and return the unique detector name
     # If the detector has no filters, tack on "unfiltered" to the name. This is 
     # a hack in order to allow smarter shortcutting for strategies which have 
@@ -632,12 +597,12 @@ sub add_detectors_and_filters {
     my $detector_hash = shift;
     my $workflow_model = shift;
     my $workflow_links;
-    my $version; 
-    for  $version (keys %$detector_hash) {
+
+    for my $version (keys %$detector_hash) {
         # Get the hashref that contains all the variant types to be run for a given detector version
         my $version_hash = $detector_hash->{$version};
 
-        my ($class,$name);
+        my ($class,$name, $version);
         for my $variant_type (keys %$version_hash) {
             my @instances_for_variant_type = @{$version_hash->{$variant_type}};
             for my $instance (@instances_for_variant_type) {
@@ -678,12 +643,12 @@ sub add_detectors_and_filters {
                         right_property => $property,
                     );
                 }
-
+                
                 # compose a hash containing input_connector outputs and the operations to which they connect, then connect them
 
                 # first add links from input_connector to detector
                 my $detector_output_directory = $self->calculate_operation_output_directory($self->_temp_staging_directory."/".$variant_type, $name, $version, $params);
-
+                
                 my $inputs_to_store;
                 $inputs_to_store->{$unique_detector_base_name."_version"}->{value} = $version;
                 $inputs_to_store->{$unique_detector_base_name."_version"}->{right_property_name} = 'version';
@@ -723,7 +688,7 @@ sub add_detectors_and_filters {
 
                     $inputs_to_store->{$unique_detector_base_name."_output_directory"}->{last_operation} = $unique_filter_name;
                 }
-
+                
                 # use the hash keys, which are input_connector property names, to add the links to the workflow
                 for my $property (keys %$inputs_to_store) {
                     $workflow_model->add_link(
@@ -750,7 +715,7 @@ sub add_detectors_and_filters {
                     %workflow_inputs = %{$inputs_to_store};
                 }
                 $self->_workflow_inputs(\%workflow_inputs); 
-
+            
                 # connect the output to the input between all operations in this detector's branch
                 for my $index (0..(scalar(@filters)-1)){
                     my ($right_op,$left_op);
@@ -767,7 +732,7 @@ sub add_detectors_and_filters {
                         right_operation => $right_op,
                         right_property => 'previous_result_id',
                     );
-
+                    
                 }
                 $workflow_links = $self->_workflow_links;
                 if($workflow_links){
@@ -804,7 +769,7 @@ sub _create_directories {
             eval {
                 Genome::Sys->create_directory($output_directory);
             };
-
+            
             if($@) {
                 $self->error_message($@);
                 return;
@@ -851,7 +816,7 @@ sub _promote_staged_data {
                 (my $v1_output = $unversioned_output) =~ s/\.bed/.v1.bed/;
 
                 # Sometimes the .bed file exists already. Sometimes the v2.bed exists already. Make whatever two links do not exist.
-                for my  $link_target ($unversioned_output, $v1_output, $v2_output) {
+                for my $link_target ($unversioned_output, $v1_output, $v2_output) {
                     unless (-e $link_target) {
                         Genome::Sys->create_symlink($output, $link_target);
                     }

@@ -133,6 +133,7 @@ EOS
 # resolve_class_and_params_for_argv will check for us to make sure all the property names are valid
 sub _process_params { 
     my $self = shift;
+
     if ($self->params) {
         my @param_list = split(" ", $self->params);
         my($cmd_class,$params) = $self->class->resolve_class_and_params_for_argv(@param_list);
@@ -192,6 +193,7 @@ sub execute {
 
 sub _generate_result {
     my $self = shift;
+
     unless($self->_validate_input) {
         die $self->error_message('Failed to validate input.');
     }
@@ -208,7 +210,7 @@ sub _generate_result {
         die $self->error_message("Failed to generate standard output");
     }
     unless($self->_validate_output){
-       die $self->error_message("Failed to validate output");
+        die $self->error_message("Failed to validate output");
     }
     return 1;
 }
@@ -258,6 +260,7 @@ sub _validate_output {
 sub _check_bed_file_counts {
     my $self = shift;
     my $total_input = shift;
+
     my $hq_output_file = $self->output_directory."/".$self->_variant_type.".hq.bed";
     my $lq_output_file = $self->output_directory."/".$self->_variant_type.".lq.bed";
 
@@ -265,7 +268,6 @@ sub _check_bed_file_counts {
 
     my $offset = $self->_validate_output_offset;
     $total_input += $offset;
-    
     unless(($total_input - $total_output) == 0){
         die $self->error_message("Total lines of bed-formatted output did not match total input lines. Input lines (including an offset of $offset): $total_input \t output lines: $total_output");
     }
@@ -301,7 +303,7 @@ sub _check_file_counts {
 }
 
 sub has_version {
-
+   
     ## No Filter version checking is currently done.
     ## Overloading this in an individual filter module
     ## will enable version checking for that module.
@@ -327,14 +329,14 @@ sub _generate_standard_output {
         unless($lq_detector_file){
             $self->_convert_bed_to_detector($original_detector_file,$lq_bed_output,$lq_detector_output);
         }
-    }
+    } 
     # If there is an hq_detector_file and not an hq_bed_file, generate an hq_bed_file
     elsif ($hq_detector_file && not $hq_bed_file) {
         $self->_create_bed_file($hq_detector_output,$hq_bed_output);
         unless($lq_bed_file){
             $self->_create_bed_file($lq_detector_output,$lq_bed_output);
         }
-    }
+    } 
     # If there is neither an hq_detector_file nor an hq_bed_file, explode
     elsif ((not $hq_detector_file) &&( not $hq_bed_file)) {
         die $self->error_message("Could not locate output file of any type for this filter.");
