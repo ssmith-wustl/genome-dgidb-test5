@@ -57,7 +57,7 @@ sub process_source {
         }
         #position => 1-based position of the SNV
         #BED uses 0-based position of and after the event
-        $self->write_bed_line($chromosome, ($position - 1), $position, $reference, $consensus, $quality, $depth, $map_qual);
+	$self->write_bed_line($chromosome, ($position - 1), $position, $reference, $consensus, $quality, $depth);
     }
     return 1;
 }

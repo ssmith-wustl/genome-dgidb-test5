@@ -69,7 +69,6 @@ sub help_detail {
 This is just an abstract base class for variant detector modules.
 EOS
 }
-$ENV{GENOME_SOFTWARE_RESULT_TEST_NAME}='49819818919818918919819'; #TODO: change when running different tests
 sub execute {
 
     my $self = shift;

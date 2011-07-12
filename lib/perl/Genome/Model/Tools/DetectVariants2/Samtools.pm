@@ -74,24 +74,18 @@ sub _detect_variants {
     my $indel_output_file = $self->_indel_staging_output;
     my $filtered_indel_file = $self->_filtered_indel_staging_output;
     #two %s are switch to indicate snvs or indels and output file name
-    #############################
 
     my $samtools_cmd;
     if($self->is_mpileup_compatible) { 
-
         #mpileup is the new version of pileup, this is the first change that was made in creating it.
         $samtools_cmd = "$sam_pathname mpileup -u $parameters -f $ref_seq_file $bam_file | bcftools view -vcg - > $snv_output_file";
-
-
     } else {
         #origional samtools command that will be depricated after the 0.1.16  version
         $samtools_cmd = "$sam_pathname pileup -c $parameters -f $ref_seq_file %s $bam_file > %s";
     }
 
     my $snv_cmd = sprintf($samtools_cmd, '-v', $snv_output_file);
-
     my $rv = Genome::Sys->shellcmd(
-
         cmd => $snv_cmd,
         input_files => [$bam_file, $ref_seq_file],
         output_files => [$snv_output_file],
@@ -146,7 +140,6 @@ sub _detect_variants {
             my $tmp_limited_file = $var_file .'_limited';
             my $no_limit_file = $var_file .'.no_bed_limit';
             unless (Genome::Model::Tools::Sam::LimitVariants->execute(
-
                     variants_file => $var_file,
                     bed_file => $bed_file,
                     output_file => $tmp_limited_file,
@@ -173,7 +166,6 @@ sub _detect_variants {
             $indel_filter_params{max_read_depth} = 1000000;
         }
         my $indel_filter = Genome::Model::Tools::Sam::IndelFilter->create(%indel_filter_params);
-
         unless($indel_filter->execute) {
             $self->error_message("Running sam indel-filter failed.");
             return;
@@ -198,7 +190,6 @@ sub _detect_variants {
         $self->strip_extra_lines_from_output_file($indel_output_file, remove_snv=>1);
 
     }
-
     return $self->verify_successful_completion($snv_output_file, $indel_output_file);
 }
 
@@ -226,8 +217,6 @@ sub strip_extra_lines_from_output_file{
     $ofh->close;
     move("$file.tmp",$file);
 }
-
-
 sub verify_successful_completion {
     my $self = shift;
 
@@ -237,7 +226,6 @@ sub verify_successful_completion {
             return;
         }
     }
-
     return 1;
 }
 
@@ -251,7 +239,6 @@ sub is_mpileup_compatible {
 sub generate_genotype_detail_file {
     my $self = shift; 
     my $snv_output_file = shift;
-
     unless(-f $snv_output_file) { # and -s $snv_output_file) {
         $self->error_message("SNV output File: $snv_output_file is invalid.");
         die($self->error_message);
@@ -333,4 +320,3 @@ sub params_for_result {
 }
 
 1;
-
