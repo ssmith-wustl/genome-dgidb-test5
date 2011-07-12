@@ -54,6 +54,12 @@ class Genome::Model::Tools::CopyNumber::Cbs {
             default => 0,
         },
 
+        sample_name => {
+            is => 'String',
+            is_optional => 1,
+            doc => 'If specified, output becomes 6-column with sample name in first column, followed by chr, st, sp, bins, cn',
+        },
+        
     ]
 };
 
@@ -87,6 +93,7 @@ sub execute {
     my $output_R_object = $self->output_R_object;
     my $output_file = $self->output_file;
     my $convert_names = $self->convert_names;
+    my $sample_name = $self->sample_name;
     
     #sanity checks
     unless( (defined($output_R_object)) || (defined($output_file))){
@@ -110,33 +117,56 @@ sub execute {
     open(R_COMMANDS,">$tfile") || die "can't open $tfile for writing\n";
 
     print R_COMMANDS "library(DNAcopy)" . "\n";
+    
+    #get input file
     if(defined($bamwindow_file)){
         print R_COMMANDS "cn <- read.table(\"" . $bamwindow_file . "\",header=F,sep=\"\t\")" . "\n";        
-        if($convert_names){            
-            print R_COMMANDS name_convert();
-        } 
-        print R_COMMANDS "CNA.object <-CNA( genomdat = log2(cn[,3]/median(cn[3],na.rm=T)), chrom = cn[,1], maploc = cn[,2], data.type = 'logratio')" . "\n";
-
     } else {
         print R_COMMANDS 'cn <- read.table("' . $bam2cna_file . '", header=T, sep="\t", comment.char="#")' . "\n";
-        if($convert_names){            
-            print R_COMMANDS name_convert();
-        } 
-        print R_COMMANDS "CNA.object <-CNA( genomdat = log2(cn[,3]/cn[,4]), chrom = cn[,1], maploc = cn[,2], data.type = 'logratio')" . "\n";
+    }
+
+    if($convert_names){            
+        print R_COMMANDS name_convert();
+    } 
+
+
+    #create cna object
+    print R_COMMANDS "CNA.object <-CNA( genomdat = ";
+    if(defined($bamwindow_file)){        
+        print R_COMMANDS "log2(cn[,3]/median(cn[3],na.rm=T))";
+    } else {
+        print R_COMMANDS "log2(cn[,3]/cn[,4])";
     }
     
+    print R_COMMANDS ", chrom = cn[,1], maploc = cn[,2], data.type = 'logratio'";
+    
+    if(defined($sample_name)){
+        print R_COMMANDS ", sampleid=\"" . $sample_name . "\"";
+    }
+    print R_COMMANDS ")" . "\n";
+
+
+    #segment the data
     print R_COMMANDS "d <- segment(CNA.object, verbose=0, min.width=2) " . "\n";
-    print R_COMMANDS 'segs = d$output' . "\n";
+
     
     if(defined($output_file)){
-        print R_COMMANDS 'write.table(segs[,2:6], file="' . $output_file . '", row.names=F, col.names=F, quote=F, sep="\t")' . "\n";
+        #extract the segs, output
+        print R_COMMANDS 'segs = d$output' . "\n";
+        if(defined($sample_name)){        
+            print R_COMMANDS 'write.table(segs, file="' . $output_file . '", row.names=F, col.names=F, quote=F, sep="\t")' . "\n";
+        } else {
+            print R_COMMANDS 'write.table(segs[,2:6], file="' . $output_file . '", row.names=F, col.names=F, quote=F, sep="\t")' . "\n";
+        }
+
     } elsif(defined($output_R_object)){        
+        #output the data structure as an Rdata file
         print R_COMMANDS "save(d,file=\"" . $output_R_object . "\")" . "\n";
     }
     print R_COMMANDS "q()\n";
     close R_COMMANDS;
 
-    `cp $tfile /tmp/tmp.R`;
+#    `cp $tfile /tmp/tmp.R`;
 
     #now run the R command
     my $cmd = "R --vanilla --slave \< $tfile";
