@@ -1067,12 +1067,6 @@ sub _calculate_sam_record {
 
 
     ### TODO
-    # step into the convert reads subroutine and continue to clean it up; it looks like there might be bug (see dubious comment)
-    # additional output files:
-    #     my @files = ("$scratch_directory/trimmed_mates1.seq", "$scratch_directory/trimmed_badMate1.seq",
-    #         "$scratch_directory/trimmed_mates2.seq", "$scratch_directory/trimmed_badMate2.seq",
-    #         "$scratch_directory/trimmed_err1.seq", "$scratch_directory/trimmed_err2.seq");
-    # clean up conver_mapped_reads_to_sam
     ### LATER: 
     # check gmt: install package and review other todo
 
