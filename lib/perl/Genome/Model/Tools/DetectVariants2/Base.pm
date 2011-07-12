@@ -259,7 +259,6 @@ sub _promote_staged_data {
 sub has_version {
     die "This should be overloaded by the detector/filter";
 }
-$DB::single=1;
 sub line_count {
     my $self = shift;
     my $input = shift;
