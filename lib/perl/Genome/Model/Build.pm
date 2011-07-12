@@ -202,6 +202,10 @@ sub create {
         unless ($self->_create_master_event) {
             Carp::confess "Could not create master event for new build of model " . $self->model->__display_name__;
         }
+
+        $self->add_note(
+            header_text => 'Build Created',
+        );
     };
 
     if ($@) {
@@ -232,7 +236,7 @@ sub _copy_model_inputs {
     # will leave the build in an "unstartable" state that can be reviewed later.
     for my $input ($self->model->inputs) {
         eval {
-            my %params = map { $_ => $input->$_ } (qw/ name value_class_name value_id /);
+            my %params = map { $_ => $input->$_ } (qw/ name value_class_name value_id filter_desc /);
 
             # Resolve inputs pointing to a model to a build. 
             if($params{value_class_name}->isa('Genome::Model')) {
@@ -264,26 +268,6 @@ sub _copy_model_inputs {
             $self->warning_message("Could not copy model input " . $input->__display_name__ .
                 " to build " . $self->__display_name__ . " of model " . $self->model->__display_name__);
             next;
-        }
-    }
-
-    # FIXME temporary - copy model instrument data as inputs, when all 
-    #  inst_data is an input, this can be removed
-    my @existing_inst_data = $self->instrument_data;
-    my @model_inst_data = $self->model->instrument_data;
-    for my $inst_data ( @model_inst_data ) {
-        # We may have added the inst data when adding the inputs
-        # Adding as input cuz of mock inst data
-        #print Data::Dumper::Dumper($inst_data);
-        next if grep { $inst_data->id eq $_->id } @existing_inst_data;
-        my %params = (
-            name => 'instrument_data',
-            value_class_name => $inst_data->class,
-            value_id => $inst_data->id,
-        );
-        unless ( $self->add_input(%params) ) {
-            $self->error_message("Can't add instrument data (".$inst_data->id.") to build.");
-            return;
         }
     }
 
@@ -556,6 +540,10 @@ sub start {
         unless ($self->_launch(%params)) {
             Carp::croak "Build " . $self->__display_name__ . " could not be launched!";
         }
+
+        $self->add_note(
+            header_text => 'Build Started',
+        );
     };
 
     if ($@) {
@@ -656,6 +644,10 @@ sub stop {
         $self->_kill_job($job);
         $self = Genome::Model::Build->load($self->id);
     }
+
+    $self->add_note(
+        header_text => 'Build Stopped',
+    );
 
     my $self_event = $self->build_event;
     my $error = Genome::Model::Build::Error->create(
@@ -1056,6 +1048,21 @@ sub fail {
         # FIXME soon - return here
         # return;
     }
+
+    for my $error (@errors) {
+        $self->add_note(
+            header_text => 'Failed Stage',
+            body_text => $error->stage,
+        );
+        $self->add_note(
+            header_text => 'Failed Step',
+            body_text => $error->step,
+        );
+        $self->add_note(
+            header_text => 'Failed Error',
+            body_text => $error->error,
+        );
+    }
     
     return 1;
 }
@@ -1207,6 +1214,10 @@ sub abandon {
         # FIXME soon - return here
         # return;
     }
+
+    $self->add_note(
+        header_text => 'Build Abandoned',
+    );
 
     return 1;
 }

@@ -854,6 +854,12 @@ sub postprocess_bam_file {
         $self->error_message('Fail to create bam md5');
         die $self->error_message;
     }
+
+    $self->status_message("Indexing BAM file ...");
+    unless($self->_create_bam_index) {
+        $self->error_message('Fail to create bam md5');
+        die $self->error_message;
+    }
     return 1;
 }
 
@@ -909,6 +915,25 @@ sub alignment_directory {
     return $self->output_dir;
 }
 
+
+sub _create_bam_index {
+    my $self = shift;
+    my $bam_file    = $self->temp_staging_directory . '/all_sequences.bam'; 
+
+    unless (-s $bam_file) {
+        $self->error_message('BAM file ' . $bam_file . ' does not exist or is empty');
+        return;
+    }
+
+    my $cmd = Genome::Model::Tools::Sam::IndexBam->create(bam_file=>$bam_file);
+
+    unless ($cmd->execute) {
+        $self->error_message("Failed to index bam file $bam_file !");
+        return;
+    }
+
+    return 1;
+}
 
 sub _create_bam_flagstat {
     my $self = shift;

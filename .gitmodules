@@ -24,7 +24,7 @@
 	url = ssh://git/srv/git/tigra-sv.git
 [submodule "breakdancer"]
 	path = breakdancer
-	url = ssh://git/srv/git/breakdancer.git
+	url = git://github.com/genome/breakdancer.git
 [submodule "genome-db-cosmic"]
 	path = genome-db-cosmic
 	url = ssh://git//srv/git/genome-db-cosmic.git

@@ -8,7 +8,7 @@ use IO::File;
 
 class Genome::Model::Tools::DetectVariants2::Filter::IndelFilter{
     is => ['Genome::Model::Tools::DetectVariants2::Filter'],
-    doc => 'Filters out snvs that are around indels',
+    doc => 'Filters out indels that are around indels',
     has_constant => [
         _variant_type => {
             type => 'String',
@@ -55,6 +55,11 @@ sub _filter_variants {
     my $filtered_indel_output_file = $self->_temp_staging_directory . "/indels.hq";
     my $fail_filter_indel_output_file = $self->_temp_staging_directory . "/indels.lq";
 
+    unless (-e $indel_input_file) {
+        $self->error_message("indel input file $indel_input_file does not exist.");
+        die $self->error_message;
+    }
+
     my @params;
 
     for my $param (qw(max_read_depth min_win_size scaling_factor)) {
@@ -75,79 +80,83 @@ sub _filter_variants {
             $self->error_message("Running sam snp-filter failed.");
             return;
         }
-    }
-    else {
-        #FIXME use Genome::Sys... might need to add a method there 
-        `touch $filtered_indel_output_file`;
-    }
+        my $convert = Genome::Model::Tools::Bed::Convert::Indel::SamtoolsToBed->create( 
+            source => $filtered_indel_output_file, 
+            output => $self->_temp_staging_directory . "/indels.hq.bed");
 
-    my $convert = Genome::Model::Tools::Bed::Convert::Indel::SamtoolsToBed->create( 
-                source => $filtered_indel_output_file, 
-                output => $self->_temp_staging_directory . "/indels.hq.bed");
-
-    unless($convert->execute){
-        $self->error_message("Failed to convert filter output to bed.");
-        die $self->error_message;
-    }
-
-    my $scratch_lq_bed = $self->_temp_scratch_directory . "/indels.lq.bed";
-    my $convert_lq = Genome::Model::Tools::Bed::Convert::Indel::SamtoolsToBed->create( 
-        source => $fail_filter_indel_output_file, 
-        output => $scratch_lq_bed,
-    );
-
-    unless($convert_lq->execute){
-        $self->error_message("Failed to convert failed-filter output to bed.");
-        die $self->error_message;
-    }
-
-    my $v = 1; #sort all different versions of lq file
-    while(-e (my $scratch_bed = $self->_temp_scratch_directory . '/indels.lq.v' . $v . '.bed')) {
-        my $to_sort = $scratch_bed;
-        my $target;
-        if($target = readlink($scratch_bed)) {
-            $to_sort = $self->_temp_scratch_directory . '/' . $target;
+        unless($convert->execute){
+            $self->error_message("Failed to convert filter output to bed.");
+            die $self->error_message;
         }
 
-        my $scratch_dir = $self->_temp_scratch_directory;
-        my $staging_dir = $self->_temp_staging_directory;
+        my $scratch_lq_bed = $self->_temp_scratch_directory . "/indels.lq.bed";
+        my $convert_lq = Genome::Model::Tools::Bed::Convert::Indel::SamtoolsToBed->create( 
+            source => $fail_filter_indel_output_file, 
+            output => $scratch_lq_bed,
+        );
 
-        my $output_bed = $to_sort;
-        $output_bed =~ s/$scratch_dir/$staging_dir/;
-        unless(-e $output_bed) {
+        unless($convert_lq->execute){
+            $self->error_message("Failed to convert failed-filter output to bed.");
+            die $self->error_message;
+        }
+
+        my $v = 1; #sort all different versions of lq file
+        while(-e (my $scratch_bed = $self->_temp_scratch_directory . '/indels.lq.v' . $v . '.bed')) { #is this retarded?
+            my $to_sort = $scratch_bed;
+            my $target;
+            if($target = readlink($scratch_bed)) {
+                $to_sort = $self->_temp_scratch_directory . '/' . $target;
+            }
+
+            my $scratch_dir = $self->_temp_scratch_directory;
+            my $staging_dir = $self->_temp_staging_directory;
+
+            my $output_bed = $to_sort;
+            $output_bed =~ s/$scratch_dir/$staging_dir/;
+            unless(-e $output_bed) {
+                my $sort_lq_bed = Genome::Model::Tools::Joinx::Sort->create(
+                    input_files => [$to_sort],
+                    output_file => $output_bed,
+                );
+
+                unless($sort_lq_bed->execute){
+                    $self->error_message("Failed to sort failed-filter output bed.");
+                    die $self->error_message;
+                }
+            }
+
+            if($target) {
+                my $link_output = $scratch_bed;
+                $link_output =~ s/$scratch_dir/$staging_dir/;
+                symlink($target, $link_output);
+            }
+
+            $v++;
+        }
+
+        if(my $target = readlink($scratch_lq_bed)) {
+            symlink($target, $self->_temp_staging_directory . '/indels.lq.bed');
+        } else {
             my $sort_lq_bed = Genome::Model::Tools::Joinx::Sort->create(
-                input_files => [$to_sort],
-                output_file => $output_bed,
+                input_files => [$scratch_lq_bed],
+                output_file => $self->_temp_staging_directory . '/indels.lq.bed',
             );
-        
+
             unless($sort_lq_bed->execute){
                 $self->error_message("Failed to sort failed-filter output bed.");
                 die $self->error_message;
             }
         }
-
-        if($target) {
-            my $link_output = $scratch_bed;
-            $link_output =~ s/$scratch_dir/$staging_dir/;
-            symlink($target, $link_output);
-        }
-
-        $v++;
-    }
-
-    if(my $target = readlink($scratch_lq_bed)) {
-        symlink($target, $self->_temp_staging_directory . '/indels.lq.bed');
     } else {
-        my $sort_lq_bed = Genome::Model::Tools::Joinx::Sort->create(
-            input_files => [$scratch_lq_bed],
-            output_file => $self->_temp_staging_directory . '/indels.lq.bed',
+        #FIXME use Genome::Sys... might need to add a method there 
+        my $hq_bed = $self->_temp_staging_directory . "/indels.hq.bed";
+        my $lq_bed = $self->_temp_staging_directory . "/indels.lq.bed";
+        my $cmd = "touch \"$hq_bed\" \"$lq_bed\" \"$filtered_indel_output_file\" \"$fail_filter_indel_output_file\"";
+        Genome::Sys->shellcmd(
+            cmd => $cmd
         );
-
-        unless($sort_lq_bed->execute){
-            $self->error_message("Failed to sort failed-filter output bed.");
-            die $self->error_message;
-        }
     }
+
 
     return 1;
 }

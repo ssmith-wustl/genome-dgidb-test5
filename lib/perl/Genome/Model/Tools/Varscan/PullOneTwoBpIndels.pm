@@ -127,6 +127,9 @@ sub execute {                               # replace with real execution logic.
 			chomp($line);
 			my ($chr, $start, $stop, $ref, $var, @everything_else) = split(/\t/, $line);
 			my $size;
+			my $bedstart;
+			my $bedstop;
+			my $type;
 			if ($ref =~ m/\//) {
 				my $split = $ref;
 				($ref, $var) = split(/\//, $split);
@@ -134,23 +137,30 @@ sub execute {                               # replace with real execution logic.
 			if ($ref eq '-' || $ref eq '0') { #ins
 				#count number of bases inserted
 				$size = length($var);
+				$bedstart = ($start);
+				$bedstop = ($stop - 1);
+				$type = 'INS';
 			}
 			elsif ($var eq '-' || $var eq '0') { #del
 				$size = length($ref);
+				$bedstart = ($start - 1);
+				$bedstop = ($stop);
+				$type = 'DEL';
 			}
 			else {
 				print "Line $line in file $file has wrong insertion or deletion nomenclature. Either ref or var should be 0 or -";
 				$size = 0;  #this will include this indel despite its wrongness
 			}
 			if ( $size > 0 && $size <= 2) {
-				my $bedstart = ($start - 1);
-				print INDELS_OUT "$chr\t$bedstart\t$stop\t$ref\t$var\n";
+				#Add 1 bp padding to bed because we just want to look at regions
+				$bedstart--;
+				$bedstop++;
+				print INDELS_OUT "$chr\t$bedstart\t$bedstop\t$ref\t$var\n";
 				print NOBED_INDELS_OUT "$chr\t$start\t$stop\t$ref\t$var\n";
 			}
 			elsif ( $size > 2) {
-				my $bedstart = ($start - 1);
-				print LARGE_INDELS_OUT "$chr\t$bedstart\t$stop\t$ref\t$var\n";
-				print LARGE_NOBED_INDELS_OUT "$chr\t$start\t$stop\t$ref\t$var\n";
+				print LARGE_INDELS_OUT "$chr\t$bedstart\t$bedstop\t$ref\t$var\t$type\n";
+				print LARGE_NOBED_INDELS_OUT "$chr\t$start\t$stop\t$ref\t$var\t$type\n";
 			}
 		}
 		close($indel_input);

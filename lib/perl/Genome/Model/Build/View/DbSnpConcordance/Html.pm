@@ -37,8 +37,8 @@ sub _generate_content {
             }
         }
                                  
-        my $unfiltered_results = Genome::Model::Tools::SnvCmp::Concordance::parse_results_file($unfiltered_file);
-        my $filtered_results = Genome::Model::Tools::SnvCmp::Concordance::parse_results_file($filtered_file);
+        my $unfiltered_results = Genome::Model::Tools::Joinx::SnvConcordanceByQuality::parse_results_file($unfiltered_file);
+        my $filtered_results = Genome::Model::Tools::Joinx::SnvConcordanceByQuality::parse_results_file($filtered_file);
 
         $content = $self->_render_view($unfiltered_results, $filtered_results);
     };

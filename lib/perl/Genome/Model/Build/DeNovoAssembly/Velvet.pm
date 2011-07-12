@@ -65,6 +65,83 @@ sub _additional_metrics {
     return 1;
 }
 
+#<ASSEMBLE>#
+sub assembler_rusage {
+    my $queue = 'alignment';
+    $queue = 'alignment-pd' if (Genome::Config->should_use_alignment_pd);
+    return "-q $queue -R 'select[type==LINUX64 && mem>30000] rusage[mem=30000] span[hosts=1]' -M 30000000";
+}
+
+sub assembler_params {
+    my $self = shift;
+
+    my %params = $self->processing_profile->assembler_params_as_hash;
+    $params{version} = $self->processing_profile->assembler_version;
+
+    # die if these params are specified
+    for my $calculated_param (qw/genome_len ins_length/) {
+        if ( exists $params{$calculated_param} ) {
+            Carp::confess (
+                $self->error_message("Can't specify $calculated_param as assembler_param .. it will be derived from input data")
+            );
+        }
+    }
+
+    # params that need to be cleaned up
+    if ( defined $params{hash_sizes} ) { 
+        $params{hash_sizes} = [ split(/\s+/, $params{hash_sizes}) ],
+    }
+
+    #params that need to be derived
+    my $collated_fastq_file = $self->collated_fastq_file;
+    $params{file} = $collated_fastq_file;
+
+    my $genome_len = $self->genome_size;
+    $params{genome_len} = $genome_len;
+
+    my $ins_length = $self->calculate_average_insert_size;
+    $params{ins_length} = $ins_length if defined $ins_length;
+
+    my $output_dir = $self->data_directory;
+    $params{output_dir} = $output_dir;
+
+    return %params;
+}
+
+sub after_assemble {
+    my $self = shift;
+
+    # contigs fasta files
+    my @contigs_fastas_to_remove = glob($self->data_directory.'/*contigs.fa');
+    unless ( @contigs_fastas_to_remove ) { # error here??
+        $self->error_message("No contigs fasta files produced from running one button velvet.");
+        return;
+    }
+
+    my $final_contigs_fasta = $self->contigs_fasta_file;
+    for my $contigs_fasta_to_remove ( @contigs_fastas_to_remove ) {
+        next if $contigs_fasta_to_remove eq $final_contigs_fasta;
+        unless ( unlink $contigs_fasta_to_remove ) {
+            $self->error_message(
+                "Can't remove unnecessary contigs fasta ($contigs_fasta_to_remove): $!"
+            );
+            return;
+        }
+    }
+
+    for my $glob (qw/ logfile timing /) {
+        for my $file ( glob($self->data_directory.'/*-'.$glob) ) {
+            unless ( unlink $file ) {
+                $self->error_message("Can't remove unnecessary file ($glob => $file): $!");
+                return;
+            }
+        }
+    }
+
+    return 1;
+}
+#</ASSEMBLE>#
+
 #< Kmer Used in Assembly >#
 sub assembler_kmer_used {
     my $self = shift;
@@ -104,5 +181,3 @@ sub regex_files_for_diff {
 
 1;
 
-#$HeadURL: svn+ssh://svn/srv/svn/gscpan/perl_modules/trunk/Genome/Model/Build/DeNovoAssembly/Velvet.pm $
-#$Id: Velvet.pm 61146 2010-07-20 21:19:56Z kkyung $

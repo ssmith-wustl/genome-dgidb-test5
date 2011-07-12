@@ -40,7 +40,8 @@ sub _detect_variants {
         output_file => $self->_temp_staging_directory."/gatk_output_file",
         bed_output_file => $self->_temp_staging_directory."/indels.hq",
         mb_of_ram => $self->mb_of_ram,
-        gatk_params => '-R ' . $refseq . ' -T IndelGenotyperV2 --window_size 300 -et NO_ET',
+        reference => $refseq,
+        gatk_params => ' -T IndelGenotyperV2 --window_size 300 -et NO_ET',
         version => $self->version,
     );
     unless($gatk_cmd->execute){
@@ -64,4 +65,38 @@ sub has_version {
     return Genome::Model::Tools::Gatk->has_version(@_);
 }
 
+sub parse_line_for_bed_intersection {
+    my $class = shift;
+    my $line = shift;
+
+    unless ($line) {
+        die $class->error_message("No line provided to parse_line_for_bed_intersection");
+    }
+
+    my ($chromosome, $start, $stop, $refvar) = split "\t",  $line;
+
+    my ($reference, $variant, $type);
+    ($refvar) = split ":", $refvar;
+    if ($refvar =~ m/\-/) {
+        $type = '-';
+    }
+    else {
+        $type = '+';
+    }
+    $refvar =~ s/[\+,\-]//;
+    if ($type eq '+') {
+        $reference = '0';
+        $variant = $refvar;
+    }
+    else {
+        $variant = '0';
+        $reference = $refvar;
+    }
+
+    unless (defined $chromosome && defined $stop && defined $reference && defined $variant) {
+        die $class->error_message("Could not get chromosome, position, reference, or variant for line: $line");
+    }
+
+    return [$chromosome, $stop, $reference, $variant];
+}
 1;

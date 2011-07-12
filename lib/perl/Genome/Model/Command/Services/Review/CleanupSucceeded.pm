@@ -24,7 +24,7 @@ sub help_detail {
 sub execute {
     my $self = shift;
 
-    my $user = getpwuid($<);
+    my $user = Genome::Sys->username;
     my @builds_to_abandon;
     for my $model ($self->models) {
         my $latest_build = $model->latest_build;
@@ -32,10 +32,10 @@ sub execute {
         next unless ($latest_build->status eq 'Succeeded');
         my @builds = $model->builds;
         for my $build (@builds) {
-            next if ($build->id     eq $latest_build->id);
-            next if ($build->status ne 'Failed');
+            next if ($build->id eq $latest_build->id);
+            next unless ($build->status eq 'Failed' or $build->status eq 'Unstartable');
             next if ($build->run_by ne $user);
-            push @builds_to_abandon, $build if ($latest_build->status eq 'Succeeded');
+            push @builds_to_abandon, $build;
         }
     }
 

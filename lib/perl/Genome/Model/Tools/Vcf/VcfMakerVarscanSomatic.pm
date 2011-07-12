@@ -379,7 +379,7 @@ sub getPrecedingBase{
                 # next if $col[0] =~ /^MT/;
                 # next if $col[0] =~ /^NT/;
                 # next if $col[0] =~ /random/;
-                next unless ($col[0] =~/^[1]?([0-9]|^2[12]|X|Y|MT)$/);
+                next unless ($col[0] =~/^[1]?([0-9]|^2[012]|X|Y|MT)$/);
                 
                 $varScanSnvs{$id}{"chrom"} = $col[0];
                 $varScanSnvs{$id}{"pos"} = $col[1];

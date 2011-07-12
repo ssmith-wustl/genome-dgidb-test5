@@ -293,4 +293,27 @@ sub _link_output_directory_to_result {
     return 1;
 }
 
+# Given a line of output from this detector, parse and return the chromosome, position, reference, and variant
+# The position must be converted to the same position that a bed would consider the STOP position
+# This is used for intersecting the detector specific file with the bed version
+# Override this method in each detector if the format varies from this
+#TODO clean all of this up. It is usually/should be based on logic from Genome::Model::Tools::Bed::Convert logic in process_source... 
+# this should be smarter about using that work ... perhaps process_source should call a method that just parses one line, and this method can be replaced by a call to that instead
+sub parse_line_for_bed_intersection {
+    my $class = shift;
+    my $line = shift;
+
+    unless ($line) {
+        die $class->error_message("No line provided to parse_line_for_bed_intersection");
+    }
+
+    my ($chromosome, $position, $reference, $variant) = split "\t",  $line;
+
+    unless (defined $chromosome && defined $position && defined $reference && defined $variant) {
+        die $class->error_message("Could not get chromosome, position, reference, or variant for line: $line");
+    }
+
+    return [$chromosome, $position, $reference, $variant];
+}
+
 1;

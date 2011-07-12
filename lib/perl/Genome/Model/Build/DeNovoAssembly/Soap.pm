@@ -13,20 +13,29 @@ class Genome::Model::Build::DeNovoAssembly::Soap {
 
 sub create {
     my $class = shift;
-    my $self = $class->SUPER::create(@_)
-	or return;
 
-    if ( $self->processing_profile->assembler_name !~ /import/ ) {
-	my $paired_ins_data_count = grep { $_->is_paired_end } $self->instrument_data;
+    my $self = $class->SUPER::create(@_);
+    return if not $self;
 
-	if ( $paired_ins_data_count == 0 ) {
-	    $self->error_message("No paired instrument data found");
-	    $self->delete;
-	    return;
-	}
+    if ( not $self->is_imported ) {
+        my $paired_ins_data_count = grep { $_->is_paired_end } $self->instrument_data;
+
+        if ( $paired_ins_data_count == 0 ) {
+            $self->error_message("No paired instrument data found");
+            $self->delete;
+            return;
+        }
     }
 
     return $self;
+}
+
+sub is_imported {
+    my $self = shift;
+    if ( $self->processing_profile->assembler_name =~ /import/ ) {
+        return 1;
+    }
+    return;
 }
 
 #general
@@ -235,8 +244,122 @@ sub sra_sample_id_for_pga_imported_instrument_data {
     return $sra_ids[0];
 }
 
-#for build diff testing
+#<ASSEMBLE>#
+sub assembler_rusage {
+    my $self = shift;
 
+    if ( $self->is_imported ) {
+        return "-R 'select[type==LINUX64] rusage[internet_download_mbps=100] span[hosts=1]'";
+    }
+
+    my $mem = 30000;
+    my $queue = 'alignment';
+    $queue = 'alignment-pd' if (Genome::Config->should_use_alignment_pd);
+    return "-q $queue -n 4 -R 'span[hosts=1] select[type==LINUX64 && mem>$mem] rusage[mem=$mem]' -M $mem".'000';
+}
+
+sub assembler_params {
+    my $self = shift;
+
+    my %params = $self->processing_profile->assembler_params_as_hash;
+    $params{version} = $self->processing_profile->assembler_version;
+    $params{output_dir_and_file_prefix} = $self->soap_output_dir_and_file_prefix;
+
+    if ( $self->is_imported ) {
+        my $location = '/WholeMetagenomic/03-Assembly/PGA/'. $self->model->subject_name.'_'.$self->model->center_name;
+        $params{import_location} = $location;
+    }
+    else {
+        # config params
+        $params{config_file} = $self->soap_config_file;
+        my %default_config_params = $self->_assembler_config_params_and_defaults;
+        for my $param ( keys %default_config_params ) {
+            delete $params{$param};
+        }
+        my $cpus = $self->processing_profile->get_number_of_cpus;
+        $params{cpus} = $cpus;
+    }
+
+    return %params;
+}
+
+sub _assembler_config_params_and_defaults {
+    return (
+        max_rd_len => 120,
+        reverse_seq => 0,
+        asm_flags => 3,
+        pair_num_cutoff => 2,
+        map_len => 60,
+        insert_size => undef, # avg_ins
+    );
+}
+
+sub before_assemble {
+    my $self = shift;
+
+    $self->status_message("Soap config file");
+
+    my %params = $self->processing_profile->assembler_params_as_hash;
+    my %default_config_params = $self->_assembler_config_params_and_defaults;
+    my %config_params;
+    for my $param ( keys %default_config_params ) {
+        $config_params{$param} = ( defined $params{$param} )
+        ? $params{$param} 
+        : $default_config_params{$param};
+    }
+
+    my $avg_ins = delete $config_params{insert_size};
+    if ( defined $avg_ins ) {  
+        $self->status_message("Using user defined insert size, will ignore calculated insert size defined in instrument data");
+    }
+
+    $self->status_message('Getting libraries with input files');
+    my @libraries = $self->libraries_with_existing_assembler_input_files;
+    if ( not @libraries ) {
+        $self->error_message("No assembler input files were found for libraries");
+        return;
+    }
+
+    my $config = "max_rd_len=".delete($config_params{max_rd_len})."\n";
+    my $lib_config = join("\n", '[LIB]', map { $_.'='.$config_params{$_} } keys %config_params);
+    $lib_config .= "\n";
+
+    $self->status_message('Add libraries to config');
+    for my $library ( @libraries ) {
+    $self->status_message('Library: '.$library->{library_id});
+        $config .= $lib_config;
+        $config .= 'avg_ins=';
+        $config .= ( defined $avg_ins ) ? $avg_ins : $library->{insert_size}; # use given avg_ins or from lib
+        $config .= "\n";
+        if ( exists $library->{paired_fastq_files} ) { 
+            $config .= 'q1='.$library->{paired_fastq_files}->[0]."\n";
+            $config .= 'q2='.$library->{paired_fastq_files}->[1]."\n";
+        }
+
+        if ( exists $library->{fragment_fastq_file} ) {
+            $config .= 'q='.$library->{fragment_fastq_file}."\n";
+        }
+    }
+    $self->status_message('Add libraries to config...OK');
+
+    my $config_file = $self->soap_config_file;
+    unlink $config_file if -e $config_file;
+    $self->status_message("Soap config file: ".$config_file);
+    my $fh = eval { Genome::Sys->open_file_for_writing( $config_file ); };
+    if ( not $fh ) {
+        $self->error_message("Can not open file ($config_file) for writing $@");
+        return;
+    }
+    $fh->print( $config );
+    $fh->close;
+
+    $self->status_message("Soap config file...OK");
+
+    return $config_file;
+}
+#</ASSEMBLE>#
+
+#for build diff testing
 sub files_ignored_by_diff { #all output files .. will differ slightly each time .. this is okay
     return qw/ build.xml Log config_file
     H_KT-185-1-0089515594_WUGC.Arc

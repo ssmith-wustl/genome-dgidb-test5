@@ -82,9 +82,11 @@ my $example_build = Genome::Model::Build->create(
 ok($example_build, 'example build') or die;
 ok($example_build->get_or_create_data_directory, 'resolved data dir');
 
+my $tmpdir = File::Temp::tempdir(CLEANUP => 1);
 my $build = Genome::Model::Build::MetagenomicComposition16s->create(
     id => -1199,
-    model => $model
+    model => $model,
+    data_directory => $tmpdir,
 );
 isa_ok($build, 'Genome::Model::Build::MetagenomicComposition16s::Solexa');
 

@@ -47,10 +47,6 @@ class Genome::Model::Command::Services::BuildQueuedModels {
             is => 'Hash',
             default => {},
         },
-        _errors => {
-            is => 'Text',
-            is_many => 1,
-        },
     ],
 };
 
@@ -114,16 +110,16 @@ sub execute {
                 last ITERATOR; 
             }
 
-            $self->_total_count($self->_total_count + 1);
+            $self->_total_command_count($self->_total_command_count + 1);
             Genome::Model::Build::Command::Start::create_and_start_build($self, $model);
         }
     }
 
     my $expected_count = ($max_builds_to_start > $self->_total_count ? $self->_total_count : $max_builds_to_start);
-    $self->display_command_summary_report($self->_total_count, $self->_errors);
+    $self->display_command_summary_report();
     $self->status_message('   Expected: ' . $expected_count);
 
-    return !scalar($self->_errors);
+    return !scalar(keys %{$self->_command_errors});
 }
 
 

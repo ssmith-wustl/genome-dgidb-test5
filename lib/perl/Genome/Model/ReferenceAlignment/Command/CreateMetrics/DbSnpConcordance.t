@@ -40,7 +40,7 @@ ok($cmd->execute, "executed command");
 
 my $unfiltered_file= "$tmpdir/dbsnp_concordance.txt";
 ok(-s $unfiltered_file, "unfiltered results exist");
-my $results = Genome::Model::Tools::SnvCmp::Concordance::parse_results_file($unfiltered_file);
+my $results = Genome::Model::Tools::Joinx::SnvConcordanceByQuality::parse_results_file($unfiltered_file);
 is(ref $results->{hit}, 'HASH', '$results->{hit} array exists');
 is(ref $results->{all}, 'HASH', '$results->{all} array exists');
 is(ref $results->{concordance}, 'HASH', '$results->{concordance} array exists');
@@ -50,7 +50,7 @@ is(80, $results->{total_concordance}, '80% concordance');
 
 my $filtered_file = "$tmpdir/dbsnp_concordance.filtered.txt";
 ok(-s $filtered_file, "filtered results exist");
-$results = Genome::Model::Tools::SnvCmp::Concordance::parse_results_file($filtered_file);
+$results = Genome::Model::Tools::Joinx::SnvConcordanceByQuality::parse_results_file($filtered_file);
 is(ref $results->{hit}, 'HASH', '$results->{hit} array exists');
 is(ref $results->{all}, 'HASH', '$results->{all} array exists');
 is(ref $results->{concordance}, 'HASH', '$results->{concordance} array exists');
@@ -67,8 +67,8 @@ sub setup_test_builds {
         sequencing_platform => 'solexa',
         dna_type => 'cdna',
         read_aligner_name => 'bwa',
-        snv_detector_name => 'samtools',
-        indel_detector_params => '-test Genome/Model/Convergence.t',
+        snv_detection_strategy => 'samtools',
+        indel_detection_strategy => '-test Genome/Model/Convergence.t',
     ); 
     ok($test_profile, 'created test processing profile');
     

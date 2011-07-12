@@ -9,6 +9,7 @@ use above 'Genome';
 $ENV{'TEST_MODE'} = 1;
 
 BEGIN {
+    plan skip_all => 'the license for the default version of RTG has expired and the new version requires code changes';
     if (`uname -a` =~ /x86_64/) {
         plan tests => 25;
     } else {

@@ -140,16 +140,16 @@ sub _execute_build {
         }
 
         # ENSURE WE HAVE INSTRUMENT DATA
-        my @assignments = $model->instrument_data_assignments;
+        my @assignments = $model->instrument_data_inputs;
         if (@assignments == 0) {
             die $self->error_message("NO INSTRUMENT DATA ASSIGNED!");
         }
 
         # ASSIGN ANY NEW INSTRUMENT DATA TO THE CONTAMINATION SCREENING MODEL
         for my $assignment (@assignments) {
-            my $instrument_data = $assignment->instrument_data;
-            my $screen_assignment = $screen_model->instrument_data_assignment(
-                instrument_data_id => $instrument_data->id
+            my $instrument_data = $assignment->value;
+            my $screen_assignment = $screen_model->instrument_data_input(
+                value_id => $instrument_data->id #TODO inst data switch
             );
             if ($screen_assignment) {
                 $self->status_message("Instrument data " . $instrument_data->__display_name__ . " is already assigned to the screening model");
@@ -187,10 +187,10 @@ sub _execute_build {
 
         #if we contamination screened, we'll use the alignment results, extract unaligned reads to a fastq and then post-process, create new imported instrument data
         $self->status_message("Processing and importing instrument data for any new unaligned reads");
-        @screened_assignments = $screen_model->instrument_data_assignments;
+        @screened_assignments = $screen_model->instrument_data_inputs;
         my @post_processed_unaligned_reads;
         for my $assignment (@screened_assignments) {
-            my @alignment_results = $assignment->results($screen_build);
+            my @alignment_results = $screen_build->alignment_results_for_instrument_data($assignment->value);
             if (@alignment_results > 1) {
                 $self->error_message( "Multiple alignment_results found for instrument data assignment: " . $assignment->__display_name__);
                 return;
@@ -214,9 +214,9 @@ sub _execute_build {
     }else{
         #if skipping contamination_screen, we need to extract the originally assigned imported instrument data and process and reimport it for the metagenomic screen.
         #sra data is stored in fastq/sangerqual format, so these just need to be extracted, dusted, n-removed
-        my @sra_assignments = $build->instrument_data_assignments;
+        my @sra_assignments = $build->instrument_data_inputs;
         for my $assignment(@sra_assignments){
-            my @post_processed_reads = $self->_process_sra_instrument_data($assignment->instrument_data);
+            my @post_processed_reads = $self->_process_sra_instrument_data($assignment->value);
             #TODO, this doesn't need to be an array of array refs, since we should get a 1 to 1 sra inst_data to post-processed imported inst_data, but this is how it's done in the original pipeline, where the 1 to 1 convention doesn't hold.  We're sticking to this standard for now.
             push @imported_instrument_data_for_metagenomic_models, \@post_processed_reads;
         }
@@ -232,8 +232,8 @@ sub _execute_build {
             my $prev_assignment = $screened_assignments[$n];
             my $post_processed_instdata_for_prev_assignment = $imported_instrument_data_for_metagenomic_models[$n];
             for my $instrument_data (@$post_processed_instdata_for_prev_assignment) {
-                my $metagenomic_assignment = $metagenomic_model->instrument_data_assignment(
-                    instrument_data_id => $instrument_data->id
+                my $metagenomic_assignment = $metagenomic_model->instrument_data_input(
+                    value_id => $instrument_data->id #TODO inst data switch
                 );
                 if ($metagenomic_assignment) {
                     $self->status_message("Instrument data " . $instrument_data->__display_name__ . " is already assigned to model " . $metagenomic_model->__display_name__);
@@ -261,9 +261,9 @@ sub _execute_build {
 
         # ensure there are no other odd assignments on the model besides those expected
         # this can happen if instrument-data is re-processed (deleted)
-        for my $assignment ($metagenomic_model->instrument_data_assignments) {
+        for my $assignment ($metagenomic_model->instrument_data_inputs) {
             unless ($assignments_expected{$assignment->id}) {
-                my $instrument_data = $assignment->instrument_data;
+                my $instrument_data = $assignment->instrument_data; #TODO inst data switch to value
                 if ($instrument_data) {
                     my ($derived_from) = $instrument_data->original_data_path =~ m{^/tmp/(?:unaligned_reads/)?(\d+)}; 
                     #if unaligned reads is in the data path, the id may be an instrument data id(deprecated way of storing original data path), or an alignment result id, here we will figure out which and return the derived from instrument data id
@@ -661,7 +661,7 @@ sub upload_instrument_data_and_unlock {
     my @instrument_data;
     for my $original_data_path (keys %$orig_data_paths_to_fastq_files) {
         # If it is paired end
-        if( exists $orig_data_paths_to_fastq_files->{$original_data_path}->{file}->{1} && exists $orig_data_paths_to_fastq_files->{$original_data_path}->{file}->{2}) {
+        if ($original_data_path =~ /,/) {
             my ($original_data_path_1, $original_data_path_2) = split ",", $original_data_path;
             Genome::Sys->create_symlink($orig_data_paths_to_fastq_files->{$original_data_path}->{file}->{1}, $original_data_path_1);
             Genome::Sys->create_symlink($orig_data_paths_to_fastq_files->{$original_data_path}->{file}->{2}, $original_data_path_2);
@@ -935,23 +935,18 @@ sub need_to_build {
         return 1;
     }
     $self->status_message("Found build: ".$build->__display_name__);
-    my @build_assignments = sort {$a cmp $b} $build->instrument_data_assignments;
-    my @model_assignments = sort {$a cmp $b} $model->instrument_data_assignments;
+    my @build_assignments = sort {$a->value->id cmp $b->value->id} $build->instrument_data_inputs;
+    my @model_assignments = sort {$a->value->id cmp $b->value->id} $model->instrument_data_inputs;
 
     if (@build_assignments ne @model_assignments) {
         $self->status_message("Assignment count does not match, build has ".scalar(@build_assignments)." but model has ".scalar(@model_assignments)."; need to build.");
         return 1;
     }
-    # Check for missing_first_build_id due to bug in UR caching
     for (my $i = 0; $i < @model_assignments; $i++) {
         my $build_assignment = $build_assignments[$i];
         my $model_assignment = $model_assignments[$i];
 
-        if (!$model_assignment->first_build_id) {
-            $self->status_message("Model has assignments without corresponding build; need to build.");
-            return 1;
-        }
-        if ($build_assignment->id ne $model_assignment->id) {
+        if ($build_assignment->value->id ne $model_assignment->value->id) {
             $self->status_message("Missing instrument data assignment; need to build.");
             return 1;
         }

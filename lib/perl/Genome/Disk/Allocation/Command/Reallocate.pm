@@ -57,8 +57,8 @@ sub execute {
 
     my @allocations = $self->allocations;
     
-    my @errors;
     for my $allocation (@allocations) {
+        $self->_total_command_count($self->_total_command_count + 1);
         my %params;
         $params{allocation_id} = $allocation->id;
         $params{kilobytes_requested} = $self->kilobytes_requested if defined $self->kilobytes_requested;
@@ -72,14 +72,14 @@ sub execute {
             $self->status_message("Successfully reallocated (" . $allocation->__display_name__ . ").");
         }
         else {
-            push @errors, "Failed to reallocate (" . $allocation->__display_name__ . "): $@.";
+            $self->append_error($allocation->__display_name__, "Failed to reallocate: $@.");
             $transaction->rollback();
         }
     }
 
-    $self->display_command_summary_report(scalar(@allocations), @errors);
+    $self->display_command_summary_report();
 
-    return !scalar(@errors);
+    return !scalar(keys %{$self->_command_errors});
 }
 
 1;

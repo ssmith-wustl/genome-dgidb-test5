@@ -10,7 +10,7 @@ use Data::Dumper 'Dumper';
 require XML::LibXML;
 
 class Genome::Sample::Command::Import::Dacc {
-    is  => 'Genome::Sample::Command::Import',
+    is  => 'Genome::Sample::Command::Import::Base',
     has => [
         sra_sample_id => {
             is => 'Text',

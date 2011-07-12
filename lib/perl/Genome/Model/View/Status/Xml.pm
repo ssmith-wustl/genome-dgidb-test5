@@ -40,7 +40,28 @@ class Genome::Model::View::Status::Xml {
                 {
                     name => 'builds',
                     aspects => [
-                        'id', 'data_directory', 'status', 'date_scheduled', 'date_completed', 'model_id',
+                        'id',
+                        'data_directory',
+                        'status',
+                        'date_scheduled',
+                        'date_completed',
+                        'model_id',
+                        {
+                            name => 'notes',
+                            aspects => [
+                                'editor_id',
+                                'entry_date',
+                                'header_text',
+                                'body_text',
+                                {
+                                    name => 'subject',
+                                    perspective => 'default',
+                                    toolkit => 'xml'
+                                },
+                            ],
+                            perspective => 'default',
+                            toolkit => 'xml',
+                        },
                         {
                             name => 'delta_model_input_differences_from_model',
                             aspects => ['value_id', 'name', 'value', 'value_class_name'],

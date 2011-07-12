@@ -21,12 +21,53 @@ class Genome::Model::Build::MetagenomicCompositionShotgun{
             to => 'from_build',
             where => [role => 'contamination_screen_alignment_build'],
         },
+        contamination_screen_reference=>{
+            is => 'Genome::Model::Build::ReferenceAlignment',
+            via => 'model',
+        },
         _metagenomic_alignment_builds => {
             is => 'Genome::Model::Build::ReferenceAlignment',
             is_many => 1,
             via => 'from_build_links',
             to => 'from_build',
             where => [role => 'metagenomic_alignment_build'],
+        },
+        metagenomic_references =>{
+            is =>'Genome::Model::Build::ReferenceAlignment',
+            via => 'model',
+        },
+        _unaligned_metagenomic_alignment_build => {
+            is => 'Genome::Model::Build::ReferenceAlignment',
+            is_many=> 1,
+            via => 'from_build_links',
+            to => 'from_build',
+            where => [role => 'unaligned_metagenomic_alignment_build'],
+        },
+        unaligned_metagenomic_alignment_reference => {
+            is => 'Genome::Model::Build::ImportedReferenceSequence',
+            via => 'model',
+        },
+        _first_viral_verification_alignment_build => {
+            is => 'Genome::Model::Build::ReferenceAlignment',
+            is_many=> 1,
+            via => 'from_build_links',
+            to => 'from_build',
+            where => [role => 'first_viral_verification_alignment_build'],
+        },
+        first_viral_verification_alignment_reference => {
+            is => 'Genome::Model::Build::ImportedReferenceSequence',
+            via => 'model',
+        },
+        _second_viral_verification_alignment_build => {
+            is => 'Genome::Model::Build::ReferenceAlignment',
+            is_many=> 1,
+            via => 'from_build_links',
+            to => 'from_build',
+            where => [role => 'second_viral_verification_alignment_build'],
+        },
+        second_viral_verification_alignment_reference => {
+            is => 'Genome::Model::Build::ImportedReferenceSequence',
+            via => 'model',
         },
     ],
 };
@@ -44,6 +85,18 @@ sub sra_sample_id {
     return $sra_sample_id;
 }
 
+sub files_ignored_by_diff {
+    return qw(
+        reports/Build_Initialized/report.xml
+        reports/Build_Succeeded/report.xml
+        build.xml
+    );
+}
 
+sub dirs_ignored_by_diff {
+    return qw(
+        logs/
+    );
+}
 1;
 

@@ -87,13 +87,13 @@ sub _verify_build_and_set_paths {
 sub _gen_concordance {
     my ($self, $f1, $f2, $output_path) = @_;
 
-    my $snvcmp_cmd = Genome::Model::Tools::Joinx::SnvConcordance->create(
+    my $joinx_cmd = Genome::Model::Tools::Joinx::SnvConcordance->create(
         depth => 1,
         input_file_a => $f1,
         input_file_b => $f2,
         output_file  => $output_path,
     );
-    $snvcmp_cmd->execute() or die "joinx failed!";
+    $joinx_cmd->execute() or die "joinx failed!";
 }
 
 sub _flatten_hash {

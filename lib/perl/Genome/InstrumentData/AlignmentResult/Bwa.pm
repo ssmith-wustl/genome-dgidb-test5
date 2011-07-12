@@ -33,7 +33,7 @@ sub required_rusage {
 
     my $user = getpwuid($<);
     my $queue = 'alignment';
-    $queue = 'alignment-pd' if (Genome::Sys->username =~ /^apipe-/);
+    $queue = 'alignment-pd' if (Genome::Config->should_use_alignment_pd);
 
     my $host_groups;
     $host_groups = qx(bqueues -l $queue | grep ^HOSTS:);
@@ -418,8 +418,8 @@ sub _derive_bwa_sampe_parameters {
     } else {
         # come up with an upper bound on insert size.
         my $instrument_data = $self->instrument_data;
-        my $sd_above = $instrument_data->sd_above_insert_size;
-        my $median_insert = $instrument_data->median_insert_size;
+        my $sd_above = $instrument_data->sd_above_insert_size || 0;
+        my $median_insert = $instrument_data->median_insert_size || 0;
         my $upper_bound_on_insert_size= ($sd_above * 5) + $median_insert;
         if($upper_bound_on_insert_size > 0) {
             $self->status_message("Calculated a valid insert size as $upper_bound_on_insert_size.  This will be used when BWA's internal algorithm can't determine an insert size");

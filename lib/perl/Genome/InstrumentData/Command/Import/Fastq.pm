@@ -341,7 +341,7 @@ sub execute {
             #TODO the tar command defined below requires tar version 1.21 or greater for the --transform portion to work. This will die on the wrong filenames until we have version 1.21 or greater installed.
             $self->error_message("There are problems with the fastq file names which cannot currently be solved. Please change the names to match the proper format, as output above.");
             die $self->error_message;
-            $tar_cmd = sprintf("tar cvzf %s -C %s %s %s --transform=s/%s/%s/g --transform=s/%s/%s/g",$tmp_tar_filename,$basename, $file1,$file2,$file1,$filenames{$file1},$file2,$filenames{$file2});
+            $tar_cmd = sprintf("tar cvzfh %s -C %s %s %s --transform=s/%s/%s/g --transform=s/%s/%s/g",$tmp_tar_filename,$basename, $file1,$file2,$file1,$filenames{$file1},$file2,$filenames{$file2});
         } elsif ($change_names==1) {
             # if only one needs changing, find which one and apply the single transform in the tar command. This will work with our current 1.19 tar install.
             my ($file1,$file2) = keys(%filenames);
@@ -353,7 +353,7 @@ sub execute {
                 $changed_name = $file1;
                 $same_name = $file2;
             }
-            $tar_cmd = sprintf("tar cvzf %s -C %s %s %s --transform=s/%s/%s/g",$tmp_tar_filename,$basename, $file1,$file2,$changed_name,$filenames{$changed_name});
+            $tar_cmd = sprintf("tar cvzfh %s -C %s %s %s --transform=s/%s/%s/g",$tmp_tar_filename,$basename, $file1,$file2,$changed_name,$filenames{$changed_name});
         } else {
             $self->error_message("Found more than 2 file names to change, which should not be possible, since there should never be more than 2 files.");
             die $self->error_message;
@@ -361,9 +361,9 @@ sub execute {
     } else {
         if($change_names == 1){
             my ($file1) = keys(%filenames);
-            $tar_cmd = sprintf("tar cvzf %s -C %s %s --transform=s/%s/%s/g",$tmp_tar_filename,$basename, $file1,$file1,$filenames{$file1});
+            $tar_cmd = sprintf("tar cvzfh %s -C %s %s --transform=s/%s/%s/g",$tmp_tar_filename,$basename, $file1,$file1,$filenames{$file1});
         } else {
-            $tar_cmd = sprintf("tar cvzf %s -C %s %s",$tmp_tar_filename,$basename, join " ", keys(%filenames));
+            $tar_cmd = sprintf("tar cvzfh %s -C %s %s",$tmp_tar_filename,$basename, join " ", keys(%filenames));
         }
     }
     $self->status_message("About to execute tar command, this could take a long time, depending upon the location (across the network?) and size (MB or GB?) of your fastq's.");
@@ -442,10 +442,6 @@ sub check_fastq_integritude {
     for my $path (@filepaths){
         unless(-s $path){
             $self->error_message("The file at ".$path." was not found.");
-            die $self->error_message;
-        }
-        if(-l $path){
-            $self->error_message("The path ".$path." is a symbolic link. Please provide the original files as inputs.");
             die $self->error_message;
         }
     }

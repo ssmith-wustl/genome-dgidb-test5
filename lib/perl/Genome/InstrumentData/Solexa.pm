@@ -615,7 +615,7 @@ sub dump_trimmed_fastq_files {
                 die "error in params: $@\n$trimmer_params\n";
             }
 
-            my $class_name = 'Genome::Model::Tools::Sx::Trimmer';
+            my $class_name = 'Genome::Model::Tools::Sx::Trim';
             my @words = split(' ',$trimmer_name);
             for my $word (@words) {
                 my @parts = map { ucfirst($_) } split('-',$word);

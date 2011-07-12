@@ -103,7 +103,7 @@ sub setup_test_data {
         sequencing_platform => 'solexa',
         dna_type => 'genomic dna',
         read_aligner_name => 'bwa',
-        snv_detector_name => 'test for somatic-validation define-models',
+        snv_detection_strategy => 'test for somatic-validation define-models',
         name => 'test ref. align. pp for somatic-validation define-models',
     );
 

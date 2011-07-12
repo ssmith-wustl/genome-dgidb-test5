@@ -22,26 +22,19 @@ sub help_detail {
 HELP
 }
 
-sub execute {
-    my $self = shift;
+my @match_and_replace = (
+    # use qr{} for speed boost
+    [ qr{#.*/1$}, '.b1' ],
+    [ qr{#.*/2$}, '.g1' ],
+);
+sub _eval_seqs {
+    my ($self, $seqs) = @_;
 
-    my ($reader, $writer) = $self->_open_reader_and_writer;
-    return if not $reader or not $writer;
-    
-    my @match_and_replace = (
-        # use qr{} for speed boost
-        [ qr{#.*/1$}, '.b1' ],
-        [ qr{#.*/2$}, '.g1' ],
-    );
-
-    while ( my $seqs = $reader->read ) {
-        for my $seq ( @$seqs ) { 
-            MnR: for my $match_and_replace ( @match_and_replace ) {
-                $seq->{id} =~ s/$match_and_replace->[0]/$match_and_replace->[1]/g 
-                    and last MnR;
-            }
+    for my $seq ( @$seqs ) { 
+        MnR: for my $match_and_replace ( @match_and_replace ) {
+            $seq->{id} =~ s/$match_and_replace->[0]/$match_and_replace->[1]/g 
+                and last MnR;
         }
-        $writer->write($seqs);
     }
 
     return 1;

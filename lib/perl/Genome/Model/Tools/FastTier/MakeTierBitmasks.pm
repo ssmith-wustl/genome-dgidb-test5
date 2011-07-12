@@ -28,6 +28,12 @@ class Genome::Model::Tools::FastTier::MakeTierBitmasks {
             default => '54_36p_v2',
             doc => 'which version of the transcript to use',
         },
+        annotation_model => {
+            type => 'Text',
+            is_input => 1,
+            default => '2771411739',
+            doc => 'which annotation model to look in for the particular build that contains the \"transcript version\" specified as input',
+        },
         tier1_output => {
             calculate_from => ['output_directory'],
             calculate => q{ "$output_directory/tier1.bitmask"; },
@@ -144,13 +150,19 @@ sub execute {
     #Tier 1 contains all coding alterations and alterations to rna genes. To calculate its coverage we will scan through the transcript table and add coding exon bases and rna transcript bases to the set. RNA are tracked separately because Tier2 also contains the bases in coding transcripts.
 
     #Get annotation model from genome model
-    my $model = Genome::Model->get(name => 'NCBI-human.combined-annotation');
-    my $build = $model->build_by_version($self->transcript_version);
-
-    unless ($build){
-        warn("couldn't get build $self->transcript_version from 'NCBI-human.combined-annotation'");
-        return;
+    my $annotation_model = $self->annotation_model;
+    my $model = Genome::Model->get($annotation_model);
+    unless(defined($model)){
+        die $self->error_message("Could not locate annotation model with id: ".$annotation_model);
     }
+    my $xscript_version = $self->transcript_version;
+    my $build = $model->build_by_version($xscript_version);
+    unless(defined($build)){
+        die $self->error_message("Could not locate annotation build id: ".$xscript_version);
+    }
+
+    $self->status_message("Using Annotation Build ID: ".$build->id." with the name: ".$build->name."\n");
+
     printf "Calculated genome size is %u\n", $genome_size;
     printf "Masked genome size is %u\n", $masked_genome_size;
 

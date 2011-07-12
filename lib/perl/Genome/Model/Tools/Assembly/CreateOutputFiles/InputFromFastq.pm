@@ -5,8 +5,6 @@ use warnings;
 
 use Genome;
 
-use Genome::Model::Tools::Sx::FastqReader;
-
 use IO::File;
 use Bio::SeqIO;
 
@@ -42,9 +40,7 @@ sub execute {
     my $qual_file = $self->directory.'/edit_dir/'.$root_name.'.fasta.qual';
     my $fq = Genome::Model::Tools::Sx->create(
         input => [ $self->fastq_file ],
-        type_in => 'sanger',
-        output => [ $fasta_file, $qual_file ],
-        type_out => 'phred',
+        output => [ $fasta_file.':qual_file='.$qual_file ],
     );
     if ( not $fq ) {
         $self->error_message('Failed to create fastq to fasta converter');
