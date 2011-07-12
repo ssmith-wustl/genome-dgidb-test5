@@ -128,7 +128,7 @@ sub _write_scaffolded_ace {
     
     #append AS line that describes number of contigs and reads to new ace
     my $as_line =  "AS  $contig_count $read_count\n\n";
-
+    unlink $self->pcap_scaffold_ace_file;
     my $fh_out = Genome::Sys->open_file_for_writing( $self->pcap_scaffold_ace_file );
     $fh_out->print( $as_line );
     my $fh_in = Genome::Sys->open_file_for_reading( $self->pcap_scaffold_ace_file.'.int' );
