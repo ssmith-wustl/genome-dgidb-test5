@@ -171,13 +171,15 @@ sub _run_aligner {
     # output files consist of the following filenames prefixed with $trim_prefix
     my @trimmed_files = map{sprintf("%s_%s",$trim_prefix,$_)} $paired_end ?
         qw(reads1.txt reads2.txt mates1.txt mates2.txt pair1.fastq pair2.fastq mates1.fastq mates2.fastq badMate1.fastq badMate2.fastq err1.fastq err2.fastq) :
-        qw(reads1.txt mates1.txt mates1.seq pair1.fastq err1.fastq);
+        qw(reads1.txt mates1.txt mates1.fastq pair1.fastq err1.fastq);
     
     # we need list files of mates for remove-dupl
     if ($paired_end) { # TODO should something happen when not running in paired end mode? look at documentation for remove-dupl i think...
         $list_files{'mates1'} = _create_temporary_list_file([grep(/.+\/mates1\.txt$/, @trimmed_files)]);
         $list_files{'mates2'} = _create_temporary_list_file([grep(/.+\/mates2\.txt$/, @trimmed_files)]);
     }
+
+$DB::single=1;
 
     # define the trim command and run it
     my $trim_cmd = sprintf("%s %s -P %s %s",
@@ -188,7 +190,7 @@ sub _run_aligner {
             "-1 $input_pathnames[0] -2 $input_pathnames[1]" : 
             "-s $input_pathnames[0]"
     );
-
+    
     my $rv = Genome::Sys->shellcmd(
         cmd => $trim_cmd,
         input_files => [@input_pathnames],
@@ -301,7 +303,6 @@ sub _run_aligner {
     $self->status_message("Converting output to SAM format.");
 
     my $temp_sam_output = "$scratch_directory/mapped_reads.sam";
-    # TODO not all files that this is using are passed in as parameters
     $self->_convert_reads_to_sam($paired_end, $sorted_deduped_reads[0], $temp_sam_output, $trim_prefix);
 
 
@@ -530,7 +531,6 @@ sub prepare_reference_sequence_index {
     my $class = shift;
     my $reference_index = shift;
 
-$DB::single=1;
     $class->status_message("Creating reference index.");    
 
     # get refseq info and fasta files
@@ -606,7 +606,7 @@ $DB::single=1;
 }
 
 sub fillmd_for_sam {
-    return 0;
+    return 1;
 }
 
 sub requires_read_group_addition {
@@ -622,276 +622,449 @@ sub supports_streaming_to_bam {
     return 0;
 }
 
+#############################
+# everything that follows is for converting brats output into sam
+#############################
+
 sub _convert_reads_to_sam {
     my ($self, $paired_end, $brat_input_file, $sam_output_file, $trimmed_prefix) = @_;
-    ###################################################
-    # subroutine for converting to sam format
-    # this is harder than it should be because we have to convert
-    # the mapped reads, then go back to the fastqs to retrieve
-    # the unmapped reads.
-    ###################################################
-    my $debug_counter = 0;
-    my $debug_missing = 0;
+    
+    if (!$paired_end) {$DB::single = 1;}
+    # TODO if read is unmapped, include softclip in cigar string anyways? (currently not)
+    # TODO need some way to warn if we're not parsing files from an unmodified version of brat
 
-    ###################################################
-    # first do the aligned reads
-    ###################################################
-    $self->status_message("Adding mapped reads to SAM.");
+    #my $paired_end = 1;
+    #my $brat_input_file = "bratout.dat.nodupl.sorted";
+    #my $sam_output_file = "all_reads.sam";
+    #my $trimmed_prefix = "trimmed";
 
-    my $prevNum = -1;
-    my %missing = ();
+    my $outFh = IO::File->new(">$sam_output_file") || die $self->error_message("Can't open '$sam_output_file' for sam conversion output.\n");
+    my $bratoutFh = IO::File->new($brat_input_file) || die $self->error_message("Can't open '$brat_input_file' for sam conversion input.\n");
 
-    my $inFh = IO::File->new($brat_input_file) || die "Can't open '$brat_input_file' for sam conversion input.\n";
-    #my $outFh = open (my $samfile, ">$sam_output_file") || die "Can't open '$sam_output_file' for sam conversion output.\n";
-    my $outFh = IO::File->new(">$sam_output_file") || die "Can't open '$sam_output_file' for sam conversion output.\n";
+    my @sam_keys = qw(qname flag rname pos mapq cigar rnext pnext tlen seq qual);
 
-    while( my $line = $inFh->getline ) {
-        chomp($line);
-        my @fields = split("\t" ,$line);
-        my @samline = ();
+    my @aligned_file_pairs;
+    my @unaligned_file_pairs;
 
-        if ($paired_end) { #---Paired End---------------------------
-            #name = id
-            push(@samline,$fields[0] . "/1");
-
-            #strand info goes in flag
-            if ($fields[4] eq "+") {
-                push(@samline,"99");
-            } else {
-                push(@samline,"83");
-            }
-
-            # "chr" gets added
-            # $fields[3] = "chr" . $fields[3] unless ($fields[3] =~ /chr/);
-            push(@samline,$fields[3]);
-
-            #pos
-            push(@samline,$fields[5]);
-            #mapq
-            push(@samline,255);
-
-            #cigar - includes length
-            push(@samline,length($fields[1]) . "M");
-
-            #other end of pair
-            push(@samline,$fields[3]);
-            push(@samline,$fields[6]);
-
-            #default vals for the rest
-            push(@samline,"0");
-            push(@samline,"*");
-            push(@samline,"*");
-
-            print $outFh join("\t",@samline) . "\n";
-            print ++$debug_counter." (paired 1)\n";
-
-            #now second read - flip positions, etc
-            $samline[0] = $fields[0] . "/2";
-            if ($fields[4] eq "+") {
-                $samline[1] = "147";
-            } else {
-                $samline[1] = "163";
-            }
-            $samline[3] = $fields[6];
-            $samline[5] = length($fields[2]) . "M"; #cigar
-            $samline[7] = $fields[5];
-            print $outFh join("\t",@samline) . "\n";
-            print ++$debug_counter." (paired 2)\n";
-        } else { #---Single End---------------------------
-            #name = id
-            push(@samline,$fields[0]);
-
-            #strand info goes in flag
-            if ($fields[3] eq "+") {
-                push(@samline,"0");
-            } else {
-                push(@samline,"16");
-            }
-
-            #"chr" gets added
-            #$fields[2] = "chr" . $fields[2] unless ($fields[2] =~ /chr/);
-            push(@samline,$fields[2]);
-
-            push(@samline,$fields[4]); #pos
-            push(@samline,255);        #mapq
-            push(@samline,length($fields[1]) . "M"); #cigar
-            #other end of pair
-            push(@samline,$fields[3]);
-            push(@samline,$fields[5]);
-            push(@samline,"0");
-            push(@samline,"*");
-            push(@samline,"*");
-
-            print $outFh join("\t",@samline) . "\n";
-            print ++$debug_counter." (single)\n";
-        }
-
-        #also keep track of which sequences didn't get mapped
-        $prevNum++;
-        while($prevNum < $fields[0]) {
-            # $self->status_message("missing $prevNum");
-            $missing{$prevNum} = 0;
-            $prevNum++;
-            print ++$debug_missing . " was FOUND MISSING\n";
-        }
-
-        $prevNum = $fields[0];
+    if ($paired_end) {
+        @aligned_file_pairs = (
+            {fastq => 'pair1.fastq', txt => 'reads1.txt'},
+            {fastq => 'pair2.fastq', txt => 'reads2.txt'}
+        );
+        @unaligned_file_pairs = (
+            {fastq => 'err1.fastq', txt => undef},
+            {fastq => 'err2.fastq', txt => undef},
+            {fastq => 'badMate1.fastq', txt => undef},
+            {fastq => 'badMate2.fastq', txt => undef},
+            {fastq => 'mates1.fastq', txt => 'mates1.txt'},
+            {fastq => 'mates2.fastq', txt => 'mates2.txt'}
+        );
+    } else {
+        @aligned_file_pairs = (
+            {fastq => 'pair1.fastq', txt => 'reads1.txt'}
+        );
+        @unaligned_file_pairs = (
+            {fastq => 'err1.fastq', txt => undef},
+            {fastq => 'mates1.fastq', txt => 'mates1.txt'}
+        );
     }
-    $inFh->close;
 
-    ###################################################
-    # now, add reads that weren't mapped back to sam file. this is a little ugly, 
-    # but necessary for the standard pipeline
-    ###################################################
-    $self->status_message("Adding unmapped reads to SAM.");    
+    for my $pair (@aligned_file_pairs, @unaligned_file_pairs) {
+        for (keys %{$pair}) {
+            $pair->{$_} = sprintf("%s_%s", $trimmed_prefix, $pair->{$_}) if defined($pair->{$_});
+        }
+    }
 
-    if ($paired_end) { #---Paired End---------------------------
-        #from first trimmed fastq - unmapped reads
-        my $count = 0;
-        my $fastqF = IO::File->new( $trimmed_prefix."_reads1.txt" ) || die "can't open ".$trimmed_prefix."_reads1.txt\n";
+    # First, process reads that were handed to the aligner, handling both mapped and unmapped reads.
+    # This is a bit complicated: in the case of paired-end reads, we have to read both pairs at once
+    # from both the .fastq and .txt file, in addition to keeping track of the next aligned read from
+    # bratout.dat
+    my @fastq_fhs;
+    my @txt_fhs;
 
-        while( my $line = $fastqF->getline ) {   
-            #and if this is one of the sequences that's missing
-            if (exists $missing{$count}) {
-                chomp($line);
-                my @splitline = split("\t",$line);		    
-                printUnmappedReadToSam($splitline[0], ("n_" . $count . "/1"), $outFh);
-                print ++$debug_counter." (unmapped paired 1a)\n";
-                # also have to handle lines at the end of the fastq that are missing
-                # with ids > the highest one output above
-                #prevNum will still be equal to the last read output above
-            } elsif ($count > $prevNum) {
-                chomp($line);
-                my @splitline = split("\t",$line);
-                printUnmappedReadToSam($splitline[0], ("n_" . $count . "/1"), $outFh);
-                print ++$debug_counter." (unmapped paired 1b)\n";
+    while (my $pair = shift @aligned_file_pairs) {
+        push @fastq_fhs, IO::File->new($pair->{'fastq'}) || die $self->error_message("Can't open '$pair->{'fastq'}' for sam conversion input.\n");
+        push @txt_fhs, IO::File->new($pair->{'txt'}) || die $self->error_message("Can't open '$pair->{'txt'}' for sam conversion input.\n");
+    }
+
+    my $record_count = 0;
+    my $bratout_record = undef;
+
+    my $count = $paired_end ? 1 : 0;
+
+    while (1) {
+        # load a record from each file handle
+        my @fastq_records = map $self->_pull_fq_record_from_fh($_), @fastq_fhs;
+        my @txt_records = map $self->_pull_trim_record_from_fh($_), @txt_fhs;
+        
+        # determine if we're at the end or if one file finished prematurely
+        # (a pair of files should end at same time since they're the same reads in a different formats)
+        my @empty_records = grep {$_ == 0} (@fastq_records, @txt_records);
+        if (scalar(@empty_records)) {
+            die $self->error_message("The fastq and trim txt files did not end at the same time") unless (
+                scalar(@empty_records) == scalar(@fastq_records) + scalar(@txt_records)
+            );
+            last;
+        }
+
+        # if there are still aligned reads left, load one into bratout_record if there isn't one there already
+        if (defined($bratoutFh) && !defined($bratout_record)) {
+            $bratout_record = $self->_pull_bratout_record_from_fh($bratoutFh);
+            if ($bratout_record == 0) {
+                $bratoutFh->close();
+                $bratoutFh = undef;
+                $bratout_record = undef;
             }
-            $count++;
         }
-        $fastqF->close;
 
-        #now from second trimmed fastq - unmapped reads
-        $count = 0;
-        $fastqF = IO::File->new( $trimmed_prefix."_reads2.txt" ) || die "can't open ".$trimmed_prefix."_reads2.txt\n";
-        while( my $line = $fastqF->getline ) {
-            #if we're on a sequence line
-#	    if ($count % 4 == 2)
-#	    {
-            #and if this is one of the sequences that's missing
-            if (exists $missing{$count}) {
-                chomp($line);
-                my @splitline = split("\t",$line);		    
-                printUnmappedReadToSam($splitline[0], ("n_" .  $count . "/2"), $outFh);
-                print ++$debug_counter." (unmapped paired 2a)\n";
+        my @reads; 
 
-            # also have to handle lines at the end of the fastq that are missing
-            # with ids > the highest one output above
-            #prevNum will still be equal to the last read output above
-            } elsif ($count > $prevNum) {
-                chomp($line);
-                my @splitline = split("\t",$line);		    
-                printUnmappedReadToSam($splitline[0], ("n_" .  $count . "/2"), $outFh);
-                print ++$debug_counter." (unmapped paired 2b)\n";
-            }	    
-#	    }
-            $count++;
+        # create our read structures
+        for (0..$count) {
+            # make sure that both the .fastq and .txt are refering to the same read
+            die $self->error_message("Trimmed read from .txt was not a substring of the read from .fastq") unless (
+                index($fastq_records[$_]->{'sequence'}, $txt_records[$_]->{'clipped_seq'}) != -1
+            );
+            push @reads, {
+                qname => $fastq_records[$_]->{'id'},
+                sequence => $fastq_records[$_]->{'sequence'},
+                qual => $fastq_records[$_]->{'qual'},
+                mapped => 0,
+                pair => $fastq_records[$_]->{'pair'},
+                clipped_seq => $txt_records[$_]->{'clipped_seq'},
+                reads_clipped_from_front => $txt_records[$_]->{'reads_clipped_from_front'},
+                reads_clipped_from_end => $txt_records[$_]->{'reads_clipped_from_end'}
+            };
         }
-        $fastqF->close;
-        
-        
-        #finally, add the reads where one or more ends was trimmed and set quality scores to 0
-        my @files = ($trimmed_prefix."_mates1.seq", $trimmed_prefix."_badMate1.seq",
-                 $trimmed_prefix."_mates2.seq", $trimmed_prefix."_badMate2.seq",
-                 $trimmed_prefix."_err1.seq", $trimmed_prefix."_err2.seq");
-        
-        $count = 0;
-        foreach my $file (@files) {
-            print "Currently $file ";
-            if ( -e $file ){
-                print "exists and processing\n";
-                $fastqF = IO::File->new( $file ) || die "can't open fastq - $file\n";
-                while( my $line = $fastqF->getline ) {
-                    printUnmappedReadToSam($line, ("n_" . $count . "/1"), $outFh);	    
-                print ++$debug_counter." (unmapped paired etc)\n";
-                    $count++;
-                }
-                $fastqF->close;
+
+        # If this happens to be an aligned read (the indices of the reads match), then load in that data too.
+        # Otherwise, the next aligned read must be later in the file, so keep going.
+        if (defined($bratout_record) and $record_count == $bratout_record->{'brat_index'}) {
+            if ($paired_end) {
+                # make sure the reads are the same
+                die $self->error_message("Trimmed read from .txt was not the same as aligned read in bratout.dat") unless (
+                    $reads[0]->{'clipped_seq'} eq $bratout_record->{'sequence_1'} and
+                    $reads[1]->{'clipped_seq'} eq $bratout_record->{'sequence_2'}
+                );
+
+                $reads[0]->{'reference_name'} = $bratout_record->{'reference_name'}; # ie, chr
+                $reads[0]->{'strand'} = $bratout_record->{'strand'};
+                $reads[0]->{'trimmed_pos'} = $bratout_record->{'pos_1'} + 1; # 0-based pos, so we add 1
+                $reads[0]->{'orig_pos'} = $bratout_record->{'orig_pos_1'} + 1; # 0-based pos, so we add 1
+                $reads[0]->{'mismatches'} = $bratout_record->{'mismatches_1'};
+                $reads[0]->{'mapped'} = 1;
+
+                $reads[1]->{'reference_name'} = $bratout_record->{'reference_name'}; # ie, chr
+                $reads[1]->{'strand'} = $bratout_record->{'strand'};
+                $reads[1]->{'trimmed_pos'} = $bratout_record->{'pos_2'} + 1; # 0-based pos, so we add 1
+                $reads[1]->{'orig_pos'} = $bratout_record->{'orig_pos_2'} + 1; # 0-based pos, so we add 1
+                $reads[1]->{'mismatches'} = $bratout_record->{'mismatches_2'};
+                $reads[1]->{'mapped'} = 1;
             } else {
-                $self->status_message("couldn't open $file - skipped\n");
+                # make sure the reads are the same
+                die $self->error_message("Trimmed read from .txt was not the same as aligned read in bratout.dat") unless (
+                    $reads[0]->{'clipped_seq'} eq $bratout_record->{'sequence'}
+                );
+
+                $reads[0]->{'reference_name'} = $bratout_record->{'reference_name'}; # ie, chr
+                $reads[0]->{'strand'} = $bratout_record->{'strand'};
+                $reads[0]->{'trimmed_pos'} = $bratout_record->{'pos'} + 1; # 0-based pos, so we add 1
+                $reads[0]->{'orig_pos'} = $bratout_record->{'orig_pos'} + 1; # 0-based pos, so we add 1
+                $reads[0]->{'mismatches'} = $bratout_record->{'mismatches'} + 1;
+                $reads[0]->{'mapped'} = 1;
             }
-        }
-    } else { #---Single End---------------------------
-        my $count = 0;
 
-        my $fastqF = IO::File->new( $trimmed_prefix."_reads1.txt" ) || die "can't open file: ".$trimmed_prefix."_pair1.fastq\n";
-        while( my $line = $fastqF->getline ) {
-            #if we're on a sequence line
-#	    if ($count % 4 == 2)
-#	    {
-            #and if this is one of the sequences that's missing
-            if (exists $missing{$count}) {
-                chomp($line);
-                my @splitline = split("\t",$line);		    	
-                printUnmappedReadToSam($line, "n_" . $count, $outFh);
-                print ++$debug_counter." (unmapped single a)\n";
-                
-            # also have to handle lines at the end of the fastq that are missing
-                    # with ids > the highest one output above
-                #prevNum will still be equal to the last read output above
-            } elsif ($count > $prevNum) {
-                chomp($line);
-                my @splitline = split("\t",$line);		    
-                printUnmappedReadToSam($line, "pn_" . $count, $outFh);
-                print ++$debug_counter." (unmapped single b)\n";
+            # reset $bratout_record to undef so we load in a new one during the next loop
+            $bratout_record = undef;
+        }
+        
+        my @sam_records;
+        if ($paired_end) {
+            push @sam_records, $self->_calculate_sam_record($reads[0], $reads[1]);
+            push @sam_records, $self->_calculate_sam_record($reads[1], $reads[0]);
+        } else {
+            push @sam_records, $self->_calculate_sam_record($reads[0]);
+        }
+        
+        for my $sam_record (@sam_records) {
+            my @sam_line;
+            for (@sam_keys) {
+                push @sam_line, $sam_record->{$_};
             }
-     #	    }
-
-            $count++;
+            print $outFh join("\t", @sam_line) . "\n";
         }
-        $fastqF->close;
 
-        #next,add the reads where one or more ends couldn't be mapped and set quality scores to 0
-        my @files = ($trimmed_prefix."_mates1.seq", $trimmed_prefix."_err1.seq");
+        $record_count++;
+    }
 
-        foreach my $file (@files) {
-            if ( -e $file ){
-                $fastqF = IO::File->new( $file ) || die "can't open fastq $file\n";
-                while( my $line = $fastqF->getline ) {
-                    printUnmappedReadToSam($line, ("n_" . $count), $outFh);		    
-                    print ++$debug_counter." (unmapped single etc)\n";
-                    $count++;
+    for (@fastq_fhs, @txt_fhs) {
+        $_->close();
+    }
+    # if bratout.dat is still open, make sure there are no reads left in it and close it
+    # normally it would be closed before this, unless the very last read in the pair.fastq and read.txt files was ALSO aligned
+    if (defined($bratoutFh)) {
+        if (defined($bratoutFh->getline())) {
+            die $self->error_message("There were still reads in bratout.dat even though we were supposedly finished with it");
+        } else {
+            $bratoutFh->close();
+        }
+    }
+
+    # Last, we process pairs of files that were not run through the aligner.
+    # Some are trimmed and have both a .fastq and .txt, some were not trimmed and are just a .fastq.
+    for my $file_pair (@unaligned_file_pairs) {
+        my $fastq_fh = IO::File->new($file_pair->{'fastq'}) || die $self->error_message("Can't open '$file_pair->{'fastq'}' for sam conversion input.\n");
+        my $txt_fh = undef;
+        if (defined($file_pair->{'txt'})) {
+            $txt_fh = IO::File->new($file_pair->{'txt'}) || die $self->error_message("Can't open '$file_pair->{'txt'}' for sam conversion input.\n");
+        }
+        
+        while (1) {
+            my $fastq_record = $self->_pull_fq_record_from_fh($fastq_fh);
+            my $txt_record = $self->_pull_trim_record_from_fh($txt_fh) if defined($txt_fh);;
+            
+            # determine if we're at the end or if one file finished prematurely
+            # (a pair of files should end at same time since they're the same reads in a different formats)
+            if ($fastq_record == 0 || (defined($txt_fh) && $txt_record == 0) ) {
+                if ( ($fastq_record == 0) && (!defined($txt_fh) || (defined($txt_fh) && ($txt_record == 0)) ) ) {
+                    last;
+                } else {
+                    die $self->error_message("The fastq and trim txt files did not end at the same time");
                 }
-                $fastqF->close;
-            } else {
-                $self->status_message("couldn't open $file - skipped\n");
             }
-        }
-    } ##end if paired_end
+            
+            # make our read
+            my $read = {
+                qname => $fastq_record->{'id'},
+                sequence => $fastq_record->{'sequence'},
+                qual => $fastq_record->{'qual'},
+                mapped => 0,
+                pair => $fastq_record->{'pair'},
+                clipped_seq => defined($txt_record) ? $txt_record->{'clipped_seq'} : $fastq_record->{'sequence'},
+                reads_clipped_from_front => defined($txt_record) ? $txt_record->{'reads_clipped_from_front'} : 0,
+                reads_clipped_from_end => defined($txt_record) ? $txt_record->{'reads_clipped_from_end'} : 0,
+            };
 
-    $outFh->close;
+            # make our sam
+            my $sam_record = $self->_calculate_sam_record($read);
+            
+            my @sam_line;
+            for (@sam_keys) {
+                push @sam_line, $sam_record->{$_};
+            }
+            
+            print $outFh join("\t", @sam_line) . "\n";
+        }
+        
+        $fastq_fh->close();
+        $txt_fh->close() if defined($txt_fh);
+    }
+
+    $outFh->close();
 }
 
-sub printUnmappedReadToSam {
-    my ($line, $name, $samfile) = @_;
-    my @samline = ();
-    #name = id
-    push(@samline,$name);
+sub _pull_bratout_record_from_fh {
+    my $self = shift;
+    my $bratout_fh = shift;
 
-    #strand info goes in flag
-    push(@samline,"4");
+    my $line = $bratout_fh->getline();
+    
+    if (!defined($line)) {
+        return 0;
+    } else {
+        chomp($line);
+    }
 
-    push(@samline,"*");
-    push(@samline,0); #pos
-    push(@samline,0);        #mapq
-    push(@samline,length($line) . "X"); #cigar
-    push(@samline,"*");
-    push(@samline,"0");
-    push(@samline,"0");
-    push(@samline,"*");
-    push(@samline,"*");
-
-    print $samfile join("\t",@samline) . "\n";
+    my @fields = split("\t", $line);
+    
+    if (scalar(@fields) == 11) {
+        return {
+            brat_index => $fields[0],
+            sequence_1 => $fields[1],
+            sequence_2 => $fields[2],
+            reference_name => $fields[3], # ie, chr
+            strand => $fields[4],
+            pos_1 => $fields[5], # 0-based pos
+            pos_2 => $fields[6], # 0-based pos
+            mismatches_1 => $fields[7], # unused
+            mismatches_2 => $fields[8], # unused
+            orig_pos_1 => $fields[9],
+            orig_pos_2 => $fields[10]
+        };
+    } elsif (scalar(@fields) == 7) {
+        return {
+            brat_index => $fields[0],
+            sequence => $fields[1],
+            reference_name => $fields[2], # ie, chr
+            strand => $fields[3],
+            pos => $fields[4], # 0-based pos
+            mismatches => $fields[5], # unused
+            orig_pos => $fields[6],
+        };
+    } else {
+        die $self->error_message("Error when pulling record from bratout.dat file (appears to be malformed)");
+    }
 }
+
+sub _pull_fq_record_from_fh {
+    my $self = shift;
+    my $fq_fh = shift;
+
+    my $fastq_id = $fq_fh->getline();
+    my $fastq_sequence = $fq_fh->getline();
+    $fq_fh->getline(); # skip the +
+    my $fastq_qual = $fq_fh->getline();
+    
+    if (!defined($fastq_id) || !defined($fastq_sequence) || !defined($fastq_qual)) {
+        return 0;
+    } else {
+        chomp($fastq_id);
+        chomp($fastq_sequence);
+        chomp($fastq_qual);
+    }
+
+    # chop the /1 or /2 from the end of the read id
+    $fastq_id =~ /^@(.+?)(?:\/([12]))?$/; # this is probably unnecessary in non pe reads
+    $fastq_id = $1;
+    my $pair = $2;
+    
+    return {
+        id => $fastq_id,
+        sequence => $fastq_sequence,
+        qual => $fastq_qual,
+        pair => defined($pair) ? $pair : '0'
+    };
+}
+
+sub _pull_trim_record_from_fh {
+    my $self = shift;
+    my $txt_fh = shift;
+
+    my $line = $txt_fh->getline();
+    
+    if (!defined($line)) {
+        return 0;
+    } else {
+        chomp($line);
+    }
+    
+    my @fields = split("\t", $line);
+
+    return {
+        clipped_seq => $fields[0],
+        reads_clipped_from_front => $fields[1],
+        reads_clipped_from_end => $fields[2]
+    };
+}
+
+sub _calculate_sam_flag {
+    my $self = shift;
+    my $read = shift;
+    
+    # about $read->{'strand'}
+    # in paired-end context:
+    # + if 5' mate is mapped to forw strand and 3' mate is mapped to rev strand
+    # - if 3' mate is mapped to forw strand and 5' mate is mapped to rev strand
+    # in single-end context:
+    # + if read is mapped to forw strand and - if read is mapped to rev strand
+
+    if ($read->{'mapped'}) {
+        if ($read->{'pair'} eq "1") {
+            if ($read->{'strand'} eq "+") {
+                return 99; # 0110 0011 - first frag in paired template, pair is reverse complemented
+            } elsif ($read->{'strand'} eq "-") {
+                return 83; # 0101 0011 - first frag in paired template, this is reverse complemented
+            }
+        } elsif ($read->{'pair'} eq "2") {
+            if ($read->{'strand'} eq "+") {
+                return 147; # 1001 0011 - last frag in paired template, this is reverse complemented
+            } elsif ($read->{'strand'} eq "-") {
+                return 163; # 1010 0011 - last frag in paired template, pair is reverse complemented
+            }
+        } elsif ($read->{'pair'} eq "0") {
+            if ($read->{'strand'} eq "+") {
+                return 0; # 0000 0000 - single frag
+            } elsif ($read->{'strand'} eq "-") {
+                return 16; # 0001 0000 - single frag, reverse complemented
+            }
+        }
+    } else {
+        if ($read->{'pair'} eq "1") {
+            return 69; # 0100 0101 - first fragment unmapped
+        } elsif ($read->{'pair'} eq "2") {
+            return 133; # 1000 0101 - last fragment unmapped
+        } elsif ($read->{'pair'} eq "0") {
+            return 4; # 0000 0100 - unpaired fragment unmapped
+        }
+    }
+    die $self->error_message("Couldn't calculate sam flag");
+}
+
+sub _calculate_cigar_string {
+    my $self = shift;
+    my $read = shift;
+    
+    #my $length = length($read->{'sequence'});
+    #my $clipped_length = defined($read->{'clipped_seq'}) ? length($read->{'clipped_seq'}) : $length;
+    if ($read->{'mapped'}) {
+        my $front_clipped = $read->{'reads_clipped_from_front'};
+        my $end_clipped = $read->{'reads_clipped_from_end'};
+        my $front = $front_clipped > 0 ? $front_clipped . 'S' : '';
+        my $end = $end_clipped > 0 ? $end_clipped . 'S' : '';
+        return sprintf("%s%s%s%s", $front, length($read->{'clipped_seq'}), 'M', $end);
+    } else {
+        return sprintf("%s%s", length($read->{'sequence'}), 'X');
+    }
+}
+
+sub _calculate_sam_record {
+    my $self = shift;
+    my $read = shift;
+    my $paired_read = shift;
+    
+    my $rnext = "*";
+    my $pnext = 0;
+    if ($read->{'mapped'}) {
+        my @required_keys = qw(qname pair strand reference_name orig_pos clipped_seq reads_clipped_from_front reads_clipped_from_end sequence qual);
+        die $self->error_message("Read was missing required key(s) in _calculate_sam_record") if (grep !defined($read->{$_}), @required_keys);
+        if (defined($paired_read)) {
+            die $self->error_message("Paired read was missing required key(s) in _calculate_sam_record") if (grep !defined($read->{$_}), @required_keys);
+            $rnext = ($paired_read->{'reference_name'} eq $read->{'reference_name'}) ?
+                "=" : $paired_read->{'reference_name'};
+            $pnext = $paired_read->{'orig_pos'};
+        }
+        return {
+            qname => $read->{'qname'},
+            flag => $self->_calculate_sam_flag($read),
+            rname => $read->{'reference_name'},
+            pos => $read->{'orig_pos'}, # 1-based pos is already given
+            mapq => 255, # 255 = qual unavailable
+            cigar => $self->_calculate_cigar_string($read),
+            rnext => $rnext,
+            pnext => $pnext,
+            tlen => 0,
+            seq => $read->{'sequence'},
+            qual => $read->{'qual'}
+        };
+    } else {
+        my @required_keys = qw(qname pair clipped_seq reads_clipped_from_front reads_clipped_from_end sequence qual);
+        die $self->error_message("Read was missing required key(s) in _calculate_sam_record") if (grep !defined($read->{$_}), @required_keys);
+        return {
+            qname => $read->{'qname'},
+            flag => $self->_calculate_sam_flag($read),
+            rname => "*",
+            pos => 0,
+            mapq => 0, # 255 = qual unavailable
+            cigar => $self->_calculate_cigar_string($read),
+            rnext => $rnext,
+            pnext => $pnext,
+            tlen => 0,
+            seq => $read->{'sequence'},
+            qual => $read->{'qual'}
+        };
+    }
+}
+
 
     ### TODO
     # step into the convert reads subroutine and continue to clean it up; it looks like there might be bug (see dubious comment)

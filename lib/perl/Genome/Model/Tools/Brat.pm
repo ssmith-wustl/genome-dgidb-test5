@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 use File::Basename;
 
-my $DEFAULT = '1.2.1-mod';
+my $DEFAULT = '1.2.1-mod-iferguso';
 
 class Genome::Model::Tools::Brat {
     is => 'Command',
@@ -36,7 +36,8 @@ EOS
 
 # TODO install this to /gsc/pkg/bio/brat/brat-1.2.1-mod/
 my %BRAT_VERSIONS = (
-    '1.2.1-mod' => '/gscmnt/sata921/info/medseq/cmiller/methylSeq/bratMod/brat',
+    '1.2.1-mod-cmiller' => '/gscmnt/sata921/info/medseq/cmiller/methylSeq/bratMod/brat',
+    '1.2.1-mod-iferguso' => '/gscuser/iferguso/bratMod_iferguso/brat',
     'brat'   => 'brat',
 );
 
