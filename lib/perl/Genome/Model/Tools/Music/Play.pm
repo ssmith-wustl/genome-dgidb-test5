@@ -141,7 +141,7 @@ sub help_detail {
     return <<EOS
 This command can be used to run all of the MuSiC analysis tools on a set of data. Please see the individual tools for further description of the parameters.
 
-This command does not presently run B<genome-music-mutation-relation>(1) as that command requires far longer to run than the other analysis, delaying results.
+B<genome-music-play>(1) does not presently run B<genome-music-mutation-relation>(1), as that command incurs far longer run times than any of the other MuSiC analyses, thus delaying results. We are currently working on a long-term solution that will allow B<genome-music-mutation-relation>(1) to be included in the B<genome-music-play>(1) algorithm.
 EOS
 }
 
