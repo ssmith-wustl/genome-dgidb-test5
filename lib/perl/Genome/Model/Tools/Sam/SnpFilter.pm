@@ -117,20 +117,39 @@ sub execute {
 
     my @snps = ();
     my $last_chr = '';
-    
+
     my $out_file = $self->out_file || $self->snp_file . '.sam_SNPfilter';
     my $out_fh = Genome::Sys->open_file_for_writing($out_file) or return;
     my $lq_out_fh = undef;
+    $DB::single=1;
     if(defined($self->lq_output)) {
         $lq_out_fh = Genome::Sys->open_file_for_writing($self->lq_output) or return;
     }
     my $snp_fh = Genome::Sys->open_file_for_reading($snp_file) or return;
-    
+
     while (my $snp = $snp_fh->getline) {
-        my ($chr, $pos, $cns_qual, $snp_qual, $map_qual, $rd_depth) = $snp =~ /^(\S+)\s+(\S+)\s+\S+\s+\S+\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+/;
+        my @snp_array = $snp =~ /^(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+\S+\s+(\S+)\s+/;
+        my $mpileup_check = $snp_array[2];
+        my ($chr, $pos, $id, $ref, $var, $cns_qual, $rd_depth, $map_qual, $snp_qual, @extra);
+        if ($mpileup_check eq '.') {
+            ($chr, $pos, $id, $ref, $var, $cns_qual, @extra) =split("\t", $snp);
+
+            if ($extra[1] =~ /DP=(\d+)/) {
+                $rd_depth = $1;
+            } else  {
+                $self->warning_message("read depth not found in line $snp");
+            }
+            if($extra[1] =~ /MQ=(\d+)/) {
+                $map_qual = $1;
+            } else {
+                $self->warning_message("map quality not found in line $snp");
+            }
+        } else {
+            ($chr, $pos, $ref, $var, $cns_qual, $snp_qual, $map_qual, $rd_depth) = split("\t", $snp);
+        }
         my $test = 0;
         for my $range_pos ($pos - $self->indel_win_size .. $pos + $self->indel_win_size) {
-            if ($indel_filter{$chr, $range_pos}) {
+            if ($indel_filter{$chr, $range_pos}) {  #
                 $test++;
                 last;
             }
@@ -141,10 +160,19 @@ sub execute {
             }
             next;
         }
-        #next if $indel_filter{$chr,$pos};
-        
-        my $pass = 1 if $map_qual >= $self->min_mapping_quality and $rd_depth >= $self->min_read_depth and $rd_depth <= $self->max_read_depth;
-        $pass = 0 unless $cns_qual >= $self->min_cns_qual || $snp_qual >= $self->min_snp_qual;
+        next if $indel_filter{$chr,$pos};
+        my $pass;
+        $DB::single=1;
+        if (!($mpileup_check eq '.')) { 
+            $pass = 0 unless $cns_qual >= $self->min_cns_qual || $snp_qual >= $self->min_snp_qual;
+            $pass = 1 if $map_qual >= $self->min_mapping_quality and $rd_depth >= $self->min_read_depth and $rd_depth <= $self->max_read_depth;
+        } else {
+            if ($map_qual >= $self->min_mapping_quality and $rd_depth >= $self->min_read_depth and $rd_depth <= $self->max_read_depth) {
+                $pass =1;
+            } else { 
+                $pass =0;
+            }
+        }
 
         unless( $pass ) {
             if($self->lq_output){
@@ -152,7 +180,7 @@ sub execute {
             }
             next;
         }
-        
+
         if ($chr ne $last_chr) {
             map{$out_fh->print($_->{line}) if $_->{pass}}@snps;
             if(defined($self->lq_output)){
@@ -193,7 +221,7 @@ sub execute {
     if(defined($self->lq_output)){
         $lq_out_fh->close;
     }
-    
+
     return 1;
 }
 

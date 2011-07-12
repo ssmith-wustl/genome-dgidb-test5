@@ -11,8 +11,8 @@ use lib "$FindBin::Bin";
 
 my $log2=log(2);
 my $floor=1e-3;
-my $version="SquareDancer-0.1r176";
-my %opts = (q=>35,r=>2,k=>25,n=>1,c=>1,m=>3,e=>0.5);
+my $version="SquareDancer-0.1r177";
+my %opts = (q=>25,r=>2,k=>25,n=>1,c=>1,m=>3,e=>0.5);
 my %opts1;
 getopts('o:q:r:k:n:c:l:m:ubdg:e:', \%opts1);
 die("

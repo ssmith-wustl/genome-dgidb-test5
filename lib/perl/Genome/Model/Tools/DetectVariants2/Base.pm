@@ -69,37 +69,36 @@ sub help_detail {
 This is just an abstract base class for variant detector modules.
 EOS
 }
-
 sub execute {
-    
+
     my $self = shift;
 
     unless($self->_verify_inputs) {
         die $self->error_message('Failed to verify inputs.');
     }
-    
+
     unless($self->_create_directories) {
         die $self->error_message('Failed to create directories.');
     }
-    
+
     unless($self->_detect_variants) {
         die $self->error_message('Failed in main execution logic.');
     }
-    
+
     unless($self->_generate_standard_files) {
         die $self->error_message('Failed to generate standard files from detector-specific files');
     }
-    
+
     unless($self->_promote_staged_data) {
         die $self->error_message('Failed to promote staged data.');
     }
-    
+
     return 1;
 }
 
 sub _verify_inputs {
     my $self = shift;
-    
+
     my $ref_seq_file = $self->reference_sequence_input;
 
     unless(Genome::Sys->validate_file_for_reading($ref_seq_file)) {
@@ -116,7 +115,7 @@ sub _verify_inputs {
         $self->error_message("aligned reads input index ".$aligned_reads_file.".bai was not found.");
         return;
     }
-    
+
     if(defined($self->control_aligned_reads_input)){
         my $control_aligned_reads_file = $self->control_aligned_reads_input;
         unless(Genome::Sys->validate_file_for_reading($control_aligned_reads_file)) {
@@ -133,13 +132,13 @@ sub _verify_inputs {
 
 sub _create_directories {
     my $self = shift;
-    
+
     my $output_directory = $self->output_directory;
     unless (-d $output_directory) {
         eval {
             Genome::Sys->create_directory($output_directory);
         };
-        
+
         if($@) {
             $self->error_message($@);
             return;
@@ -159,13 +158,13 @@ sub _create_temp_directories {
 
     $self->_temp_staging_directory(Genome::Sys->create_temp_directory);
     $self->_temp_scratch_directory(Genome::Sys->create_temp_directory);
-    
+
     return 1;
 }
 
 sub _detect_variants {
     my $self = shift;
-    
+
     die('To implement a variant detector to this API, the _detect_variants method needs to be implemented.');
 }
 
@@ -173,38 +172,38 @@ sub _generate_standard_files {
     my $self = shift;
     my $class = ref $self || $self;
     my @words = split('::', $class);
-    
+
     my $retval = 1;
-    
+
     unless(scalar(@words) > 2 and $words[0] eq 'Genome') {
         die('Could not determine detector class automatically.  Please implement _generate_standard_files in the subclass.');
     }
-    
+
     my $detector = $words[-1];
     my $module_base = 'Genome::Model::Tools::Bed::Convert';
-    
+
     if($self->detect_snvs) {
         my $snv_module = join('::', $module_base, 'Snv', $detector . 'ToBed'); 
-        
+
         for my $variant_file ($self->_snv_staging_output) {
             if(Genome::Sys->check_for_path_existence($variant_file)) {
                 $self->status_message("executing $snv_module on file $variant_file");
                 $retval &&= $self->_run_converter($snv_module, $variant_file);
-            }  
+            }
         }
     }
-    
+
     if($self->detect_indels) {
-        my $indel_module = join('::', $module_base, 'Indel', $detector . 'ToBed'); 
-        
+        my $indel_module = join('::', $module_base, 'Indel', $detector . 'ToBed');
+
         for my $variant_file ($self->_indel_staging_output) {
             if(Genome::Sys->check_for_path_existence($variant_file)) {
                 $self->status_message("executing $indel_module on file $variant_file");
                 $retval &&= $self->_run_converter($indel_module, $variant_file);
-            }  
+            }
         }
     }
-    
+
     return $retval;
 }
 
@@ -212,15 +211,15 @@ sub _run_converter {
     my $self = shift;
     my $converter = shift;
     my $source = shift;
-    
+
     my $output = $source . '.bed'; #shift; #TODO Possibly create accessors for the bed files instead of hard-coding this
-    
+
     my $command = $converter->create(
         source => $source,
         output => $output, 
         reference_build_id => $self->reference_build_id,
     );
-    
+
     unless($command->execute) {
         $self->error_message('Failed to convert ' . $source . ' to the standard format.');
         return;
@@ -260,7 +259,7 @@ sub _promote_staged_data {
 sub has_version {
     die "This should be overloaded by the detector/filter";
 }
-
+$DB::single=1;
 sub line_count {
     my $self = shift;
     my $input = shift;
@@ -269,5 +268,5 @@ sub line_count {
     }
     my $result = `wc -l $input`; 
     my ($answer)  = split /\s/,$result;
-    return $answer
+    return $answer;
 }

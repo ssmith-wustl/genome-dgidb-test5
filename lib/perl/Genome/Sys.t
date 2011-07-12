@@ -44,6 +44,7 @@ $ret = Genome::Sys->dbpath('db1','2.1');
 is($ret, $tmp2 . '/db1/2.1', "path is the second db because the new db was removed") or diag $ret;
 
 change_rollback_removes_symlink_for_create_symlink_and_log_change();
+username_detects_sudo_user();
 
 done_testing();
 
@@ -71,4 +72,12 @@ sub change_rollback_removes_symlink_for_create_symlink_and_log_change {
     ok(! -e $destination, "symlink destroyed in rollback");
 
     return 1;
+}
+
+sub username_detects_sudo_user {
+    local $ENV{'SUDO_USER'} = 'foo';
+    ok($ENV{'SUDO_USER'}, 'sudo user is set');
+
+    my $sudo_username = Genome::Sys->sudo_username;
+    is($sudo_username, 'foo', 'sudo_username detected as specified');
 }

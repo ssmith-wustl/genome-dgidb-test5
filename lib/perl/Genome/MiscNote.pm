@@ -29,13 +29,18 @@ sub create {
     my $class = shift;
     my $self = $class->SUPER::create(@_);
     return unless $self;
-        
+
     unless ($self->entry_date) {
         $self->entry_date(UR::Time->now);
     }
 
     unless ($self->editor_id) {
         $self->editor_id(Genome::Sys->username);
+    }
+
+    my $sudo_username = Genome::Sys->sudo_username;
+    if ($sudo_username) {
+        $self->body_text($sudo_username . ' is running as ' . $self->editor_id . '. ' . $self->body_text);
     }
 
     return $self;

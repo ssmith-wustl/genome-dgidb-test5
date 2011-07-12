@@ -2,6 +2,10 @@ package Genome::Site::WUGC;
 use strict;
 use warnings;
 
+# this conflicts with all sorts of Finishing/Finfo stuff
+# ironicall it is used by Pcap stuff
+BEGIN { $INC{"UNIVERSAL/can.pm"} = 'no' };
+
 # this keeps available parts of the UR pre-0.01 API we still use
 use UR::ObjectV001removed;
 
@@ -38,9 +42,6 @@ Class::Autouse->autouse(qr/Finishing.*/);
 Class::Autouse->autouse(qr/Finfo.*/);
 Class::Autouse->autouse(qr/Bio.*/);
 
-# this conflicts with all sorts of Finishing/Finfo stuff
-# ironicall it is used by Pcap stuff
-$INC{"UNIVERSAL/can.pm"} = 'no';
 
 # TODO: move these into tools which need them
 use Bio::Seq;

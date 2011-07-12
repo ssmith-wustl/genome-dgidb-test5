@@ -158,7 +158,9 @@ sub execute {                               # replace with real execution logic.
         ## Call SNPs ##
         $cmd = "bash -c \"$path_to_varscan pileup2cns <\($normal_pileup\) --variants 1 $varscan_params >$output_snp.variants $headers\"";
         print "RUN: $cmd\n";
-        system($cmd);
+        unless ( Genome::Sys->shellcmd(cmd => $cmd) == 1 ) {
+            die $self->error_message("Running Varscan failed with command: $cmd");
+        }
 
         print "Parsing Variants into SNP/Indel files...\n";
         $self->parse_variants_file("$output_snp.variants", $output_snp, $output_indel);

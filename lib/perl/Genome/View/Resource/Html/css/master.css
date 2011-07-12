@@ -425,6 +425,12 @@ table.lister td.buttons a.button {
     margin: 0 !important;
 }
 
+table.lister td.text {
+    background: #FFF !important;
+    border-bottom: 2px solid #CDCDCD;
+    padding: 10px;
+}
+
 td.status {
     font-weight: bold;
     text-align: center;
@@ -446,7 +452,8 @@ td.new, td.scheduled {
 }
 
 td.failed,
-td.crashed {
+td.crashed,
+td.unstartable {
     color: #451616;
     background-color: #ff9292 !important;
 }

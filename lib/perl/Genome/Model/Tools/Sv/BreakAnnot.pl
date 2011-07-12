@@ -21,7 +21,7 @@ my %opts = (
 	    k=>5,
 	    m=>100
 	   );
-getopts('g:l:Ma:b:c:d:o:r:AL:w:m:k:p:',\%opts);
+getopts('g:l:Ma:b:c:d:o:r:AL:w:m:k:p:v:s:',\%opts);
 die("
 Add annotation (UCSC gene, dbSNP and others) to a text file
 Usage:   BreakAnnot.pl <a BreakDancer output file>\n

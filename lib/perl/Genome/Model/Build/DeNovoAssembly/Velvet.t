@@ -70,7 +70,7 @@ ok(-s $instrument_data->archive_path, 'inst data archive path');
 my $pp = Genome::ProcessingProfile::DeNovoAssembly->create(
     name => 'De Novo Assembly Velvet Test',
     coverage => 0.5,#25000,
-    read_processor => 'trimmer by-length -trim-length 10 | rename illumina-to-pcap',
+    read_processor => 'trim remove -length 10 | rename illumina-to-pcap',
     assembler_name => 'velvet one-button',
     assembler_version => '0.7.57-64',
     assembler_params => '-hash_sizes 31 33 35 -min_contig_length 100',

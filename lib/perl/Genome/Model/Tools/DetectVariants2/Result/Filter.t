@@ -26,7 +26,7 @@ my $bam_input = $test_dir . '/alignments/102922275_merged_rmdup.bam';
 
 my $refbuild_id = 101947881;
 
-my $version = 'r613';
+my $version = 'r613'; #changed for update
 
 my $detector_parameters = '';
 

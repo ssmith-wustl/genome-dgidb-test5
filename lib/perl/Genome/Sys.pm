@@ -20,6 +20,11 @@ sub username {
     return $username;
 }
 
+sub sudo_username {
+    my $sudo_username = $ENV{'SUDO_USER'} || '';
+    return $sudo_username;
+}
+
 sub user_is_member_of_group {
     my ($class, $group_name) = @_;
     my $user = Genome::Sys->username;
