@@ -140,6 +140,8 @@ EOS
 sub help_detail {
     return <<EOS
 This command can be used to run all of the MuSiC analysis tools on a set of data. Please see the individual tools for further description of the parameters.
+
+This command does not presently run B<genome-music-mutation-relation>(1) as that command requires far longer to run than the other analysis, delaying results.
 EOS
 }
 
@@ -167,7 +169,8 @@ EOS
 sub execute {
     my $self = shift;
 
-    my @no_dependencies = ('Proximity', 'ClinicalCorrelation', 'CosmicOmim', 'MutationRelation', 'Pfam');
+    #'MutationRelation' removed for now--runs too long (several weeks) compared with other tools
+    my @no_dependencies = ('Proximity', 'ClinicalCorrelation', 'CosmicOmim', 'Pfam');
     my @bmr = ('Bmr::CalcCovg', 'Bmr::CalcBmr');
     my @depend_on_bmr = ('PathScan', 'Smg');
     for my $command_name (@no_dependencies, @bmr, @depend_on_bmr) {
