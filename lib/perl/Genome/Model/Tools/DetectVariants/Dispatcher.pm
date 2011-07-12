@@ -220,7 +220,7 @@ sub calculate_detector_output_directory {
 sub parse_detector_string {
     my $self = shift;
     my $string = shift;
-
+    
     return unless $string;
     
     my $parser = $self->parser;
@@ -228,7 +228,7 @@ sub parse_detector_string {
     my $result = $parser->startrule($string);
     
     unless($result) {
-        $self->error_message('Failed to interpret detector string from ' . $string);
+        $self->error_messsage('Failed to interpret detector string from ' . $string);
         die($self->error_message);
     }
     
@@ -371,6 +371,8 @@ sub combine_results {
     
     return $self->walk_tree($detector_tree, $branch_case, $leaf_case, $detector_type, $versions, $params);
 }
+
+
 #A generic walk of the tree structure produced by the parser--takes two subs $branch_case and $leaf_case to handle the specific logic of the step
 sub walk_tree {
     my $self = shift;
