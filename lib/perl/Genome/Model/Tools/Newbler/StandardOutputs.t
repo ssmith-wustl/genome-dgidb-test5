@@ -10,7 +10,7 @@ require File::Compare;
 use_ok( 'Genome::Model::Tools::Newbler::StandardOutputs' ) or die;
 
 #test suite
-my $version = 'v1';
+my $version = 'v2';
 my $test_suite = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Newbler/StandardOutputs-'.$version;
 ok( -d $test_suite, "Test suite dir exists" );
 
@@ -75,6 +75,8 @@ for my $file ( glob( "$temp_dir/consed/edit_dir/*" ) ) {
     next if $base_name =~ /^454Contigs.ace.1$/; #an input file
     ok ( grep (/^$base_name$/, @files_to_compare), "Got file $base_name as expected" );
 }
+
+#<STDIN>;
 
 done_testing();
 

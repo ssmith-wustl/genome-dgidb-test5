@@ -65,6 +65,7 @@ sub execute {
     my $ec_contigs = Genome::Model::Tools::Newbler::CreateContigsFiles->create(
         assembly_directory => $self->assembly_directory,
         min_contig_length => $self->min_contig_length,
+        default_gap_size => $self->default_gap_size,
     );
     if ( not $ec_contigs->execute ) {
         $self->error_message("Failed to execute newbler create-contigs-files");

@@ -130,14 +130,21 @@ sub create_consed_dir {
     return 1;
 }
 
-#< create scaffolds info >#
-sub parse_newbler_scaffold_file {
+sub get_scaffolding_info {
     my $self = shift;
 
-    unless ( $self->scaffolds_agp_file and -s $self->scaffolds_agp_file ) {
-        $self->error_message("Need newbler scaffolds file to convert to pcap scaffolds");
-        return;
+    if ( -s $self->scaffolds_agp_file ) {
+        return $self->create_scaffolded_contig_info;
     }
+    else {
+        return $self->create_unscaffolded_contig_info;
+    }
+    return;
+}
+
+#< create scaffolds info >#
+sub create_scaffolded_contig_info {
+    my $self = shift;
 
     #create hash of contig info
     my $scaffolds = {};
@@ -207,6 +214,50 @@ sub parse_newbler_scaffold_file {
     delete $self->{PREV_SCAFFOLD};
 
     return $scaffolds;
+}
+
+sub create_unscaffolded_contig_info {
+    my $self = shift;
+
+    my $contigs = {};
+
+    unless( -s $self->all_contigs_fasta_file ) {
+        $self->error_message("Failed to find newbler all contigs file: ".$self->all_contigs_fasta_file);
+        return;
+    }
+
+    my $newb_supercontig = 0;
+    my $pcap_supercontig = 0;
+    my $io = Bio::SeqIO->new( -format => 'fasta', -file => $self->all_contigs_fasta_file );
+    while ( my $seq = $io->next_seq ) {
+        next unless length $seq->seq >= $self->min_contig_length;
+        my $length = length $seq->seq;
+        my $newbler_supercontig_name = $self->_derive_newbler_supercontig_name( ++$newb_supercontig );
+        $contigs->{$seq->primary_id}->{supercontig} = $newbler_supercontig_name;
+        $contigs->{$seq->primary_id}->{contig_length} = length $seq->seq;
+        $contigs->{$seq->primary_id}->{pcap_name} = 'Contig'.$pcap_supercontig++.'.1';
+        $contigs->{$seq->primary_id}->{contig_name} = $seq->primary_id;
+        $contigs->{$seq->primary_id}->{gap_length} = $self->default_gap_size;
+    }
+
+    return $contigs;
+}
+
+sub _derive_newbler_supercontig_name {
+    my ( $self, $number ) = @_;
+
+    if ( length $number == 1 ) {
+        return 'scaffold0000'.$number;
+    } elsif ( length $number == 2 ) {
+        return 'scaffold000'.$number;
+    } elsif ( length $number == 3 ) {
+        return 'scaffold00'.$number;
+    } elsif ( length $number == 4 ) {
+        return 'scaffold0'.$number;
+    } else {
+        return 'scaffold'.$number;
+    }
+    return;
 }
 
 1;
