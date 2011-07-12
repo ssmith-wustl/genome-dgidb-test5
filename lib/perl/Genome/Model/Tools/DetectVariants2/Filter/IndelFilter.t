@@ -27,7 +27,7 @@ my $test_data_directory = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Dete
 
 # Updated to .v2 for correcting an error with newlines
 my $expected_directory = $test_data_directory . "/expected";
-my $detector_directory = $test_data_directory . "/samtools-r599-";  
+my $detector_directory = $test_data_directory . "/samtools-r599-";
 my $tumor_bam_file  = $test_data_directory. '/flank_tumor_sorted.bam';
 my $normal_bam_file  = $test_data_directory. '/flank_normal_sorted.bam';
 my $test_output_base = File::Temp::tempdir('Genome-Model-Tools-DetectVariants2-Filter-IndelFilter-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
@@ -42,7 +42,7 @@ my @expected_output_files = qw| indels.hq
                                 indels.lq.v1.bed
                                 indels.lq.v2.bed | ;
 
-$DB::single=1;
+
 my $detector_result = Genome::Model::Tools::DetectVariants2::Result->__define__(
     output_dir => $detector_directory,
     detector_name => 'test',
