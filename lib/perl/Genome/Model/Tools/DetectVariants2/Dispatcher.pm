@@ -143,7 +143,6 @@ sub plan {
 # Detect variants using all input detection strategies. Generates a workflow to do all of the work and executes it, storing the result in $self->_workflow_result
 sub _detect_variants {
     my $self = shift;
-    $DB::single=1;
     unless ($self->snv_detection_strategy || $self->indel_detection_strategy || $self->sv_detection_strategy || $self->cnv_detection_strategy) {
         $self->error_message("Please provide one or more of: snv_detection_strategy, indel_detection_strategy, sv_detection_strategy, or cnv_detection_strategy");
         die $self->error_message;
@@ -172,7 +171,6 @@ sub _detect_variants {
     $self->status_message("Now launching the dispatcher workflow.");
     ## Worklow launches here
     my $result = Workflow::Simple::run_workflow_lsf( $workflow, %{$input});
-    $DB::single=1;
     unless($result){
         $self->error_message( join("\n", map($_->name . ': ' . $_->error, @Workflow::Simple::ERROR)) );
         die $self->error_message("Workflow did not return correctly.");
@@ -198,7 +196,6 @@ sub _dump_workflow {
 sub _dump_dv_cmd {
     my $self = shift;
     my $cmd = join(" ",@INC)."\n===============================================\n";
-    $DB::single =1;
     $cmd  .=     "gmt detect-variants2 dispatcher --output-directory " .$self->output_directory
                 ." --aligned-reads-input ".$self->aligned_reads_input
                 ." --control-aligned-reads-input ".$self->control_aligned_reads_input

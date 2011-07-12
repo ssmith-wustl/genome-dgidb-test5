@@ -192,14 +192,12 @@ sub execute {
 
 sub _generate_result {
     my $self = shift;
-    $DB::single=1;
     unless($self->_validate_input) {
         die $self->error_message('Failed to validate input.');
     }
     unless($self->_create_directories) {
         die $self->error_message('Failed to create directories.');
     }
-    $DB::singl=1;
     unless($self->_filter_variants){
         die $self->error_message("Failed to run _filter_variants");
     }
@@ -260,7 +258,6 @@ sub _validate_output {
 sub _check_bed_file_counts {
     my $self = shift;
     my $total_input = shift;
-    $DB::single=1;
     my $hq_output_file = $self->output_directory."/".$self->_variant_type.".hq.bed";
     my $lq_output_file = $self->output_directory."/".$self->_variant_type.".lq.bed";
 
