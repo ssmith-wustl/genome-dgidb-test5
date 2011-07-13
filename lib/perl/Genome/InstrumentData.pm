@@ -103,13 +103,6 @@ sub _expunge_assignments{
     );
     my @models = map( $_->model, @inputs);
 
-    my @alignment_results = Genome::InstrumentData::AlignmentResult->get(instrument_data_id => $self->id);
-    if (@alignment_results) {
-        $self->error_message("Cannot remove instrument data " . $self->__display_name__ . " because it has " .
-            scalar @alignment_results . " alignment results!");
-        return;
-    }
-    
     for my $model (@models) {
         $model->remove_instrument_data($self);
         my $display_name = $self->__display_name__;
@@ -127,6 +120,23 @@ sub _expunge_assignments{
         push @models, $build->model;
     }
 
+    my @alignment_results = Genome::InstrumentData::AlignmentResult->get(instrument_data_id => $self->id);
+    for my $alignment_result (@alignment_results) {
+        my @users = Genome::SoftwareResult::User->get(software_result => $alignment_result);
+        if(@users){
+            $self->error_message("Cannot remove instrument data " . $self->__display_name__ . " because it has " .
+                " an alignment result (" . $alignment_result->__display_name__ . ") with " . scalar(@users) . 
+                " registered users!");
+            return;
+        }else {
+            unless($alignment_result->delete){
+                $self->error_message("Could not remove instrument data " . $self->__display_name__ . " because it has " .
+                " an alignment result (" . $alignment_result->__display_name__ . ") that could not be deleted!");
+                return;
+            }
+        }
+    }
+    
     return 1, %affected_users;
 }
 
