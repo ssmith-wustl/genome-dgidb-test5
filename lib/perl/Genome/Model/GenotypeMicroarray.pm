@@ -82,10 +82,27 @@ sub _additional_parts_for_default_name {
 
 sub dependent_cron_ref_align {
     my $self = shift;
-    return Genome::Model::ReferenceAlignment->get(
+
+    my @ref_align_models = Genome::Model::ReferenceAlignment->get(
         subject_id => $self->subject_id,
-        auto_assign_inst_data => 1,
+        reference_sequence_build => $self->reference_sequence_build,
+        auto_assign_inst_data => 1, # our current way of saying auto-build, later to be a project relationship
     );
+
+    # limit to models with a compatible reference sequence build
+    my $gm_rsb = $self->reference_sequence_build;
+    my @compatible_ref_align_models = grep {
+        my $ra_rsb = $_->reference_sequence_build;
+        $ra_rsb->is_compatible_with($gm_rsb);
+    } @ref_align_models;
+
+    # limit to models that either don't have a genotype_microarray_model yet or have the same genotype_microarray_model
+    my @dependent_models = grep {
+        my $gmm = $_->genotype_microarray_model;
+        (not $gmm || ($gmm && $gmm->id == $self->id));
+    } @compatible_ref_align_models;
+
+    return @dependent_models;
 }
 
 sub request_builds_for_dependent_cron_ref_align {
