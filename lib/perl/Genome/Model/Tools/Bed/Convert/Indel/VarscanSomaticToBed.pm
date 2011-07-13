@@ -33,8 +33,7 @@ sub process_source {
     my $input_fh = $self->_input_fh;
     
     while(my $line = <$input_fh>) {
-        my ($chromosome, $position, $_reference, $consensus, @extra) = split("\t", $line);
-        my $quality = $extra[5];
+        my ($chromosome, $position, $_reference, undef,$depth1, $depth2, undef, undef, undef, $quality , undef,$consensus, @extra) = split("\t", $line);
         
         no warnings qw(numeric);
         next unless $position eq int($position); #Skip header line(s)
@@ -75,7 +74,7 @@ sub process_source {
             # we take depth to mean total depth. varscan reports this in 2 fields, depth of reads
             # supporting the reference, and depth of reads supporting the called variant, so
             # we output the sum.
-            my $depth = $extra[0] + $extra[1];
+            my $depth = $depth1 + $depth2;
             $self->write_bed_line($chromosome, $start, $stop, $reference, $variant, $quality, $depth);
         }
     }

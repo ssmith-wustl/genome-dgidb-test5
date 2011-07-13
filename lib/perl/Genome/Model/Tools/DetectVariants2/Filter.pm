@@ -99,6 +99,9 @@ class Genome::Model::Tools::DetectVariants2::Filter {
             default => 0,
             doc => 'The offset added to the number of lines in input  when compared to the number of lines in output',
         },
+        _bed_to_detector_offset => {
+            doc => 'The offset added to the number of lines in the bed file when compared to the number of lines in the raw detector output. This is a hashref that contains offsets for HQ and LQ.',
+        },
         _result => {
             is => 'Genome::Model::Tools::DetectVariants2::Result::Filter',
             doc => 'SoftwareResult for the run of this filter',
@@ -281,12 +284,29 @@ sub _check_native_file_counts {
     my $total_input = shift;
 
     my $hq_output_file = $self->output_directory."/".$self->_variant_type.".hq.bed";
-    my $detector_style_file = $self->output_directory."/".$self->_variant_type.".hq";
+    my $hq_detector_style_file = $self->output_directory."/".$self->_variant_type.".hq";
+    my $lq_output_file = $self->output_directory."/".$self->_variant_type.".lq.bed";
+    my $lq_detector_style_file = $self->output_directory."/".$self->_variant_type.".lq";
 
-    my $total_output = $self->line_count($hq_output_file);
-    my $detector_style_output = $self->line_count($detector_style_file);
-    unless(($total_output - $detector_style_output) == 0){
-        die $self->error_message("Total lines of detector-style output did not match total output lines. Output lines: $total_output \t Detector-style output lines: $detector_style_output");
+    my $total_hq_output = $self->line_count($hq_output_file);
+    my $hq_detector_style_output = $self->line_count($hq_detector_style_file);
+    my $total_lq_output = $self->line_count($lq_output_file);
+    my $lq_detector_style_output = $self->line_count($lq_detector_style_file);
+
+    my $hq_offset = 0;
+    if ($self->_bed_to_detector_offset && exists $self->_bed_to_detector_offset->{$hq_detector_style_file}) {
+        $hq_offset += $self->_bed_to_detector_offset->{$hq_detector_style_file};
+    }
+    my $lq_offset = 0;
+    if ($self->_bed_to_detector_offset && exists $self->_bed_to_detector_offset->{$lq_detector_style_file}) {
+        $lq_offset += $self->_bed_to_detector_offset->{$lq_detector_style_file};
+    }
+
+    unless($total_hq_output - $hq_detector_style_output - $hq_offset == 0){
+        die $self->error_message("Total lines of HQ detector-style output did not match total output lines. Output lines: $total_hq_output \t Detector-style output lines: $hq_detector_style_output plus an offset of $hq_offset");
+    }
+    unless($total_lq_output - $lq_detector_style_output - $lq_offset == 0){
+        die $self->error_message("Total lines of LQ detector-style output did not match total output lines. Output lines: $total_lq_output \t Detector-style output lines: $lq_detector_style_output plus an offset of $lq_offset");
     }
 
     return 1;
@@ -364,17 +384,57 @@ sub _convert_bed_to_detector {
     #This cycles through the bed and original detector file, looking for intersecting lines 
     # to dump into the detector style output
 
+    my $detector_class = $self->detector_name;
+    unless ($detector_class and $detector_class->isa("Genome::Model::Tools::DetectVariants2::Detector")) {
+        die $self->error_message("Could not get a detector class or detector class is not a detector: $detector_class");
+    }
+
+    my @parsed_variants;
     OUTER: while(my $line = $bed_fh->getline){
         chomp $line;
         my ($chr,$start,$stop,$refvar,@data) = split "\t", $line;
         my ($ref,$var) = split "/", $refvar;
-        my $scan=undef;
-        while(my $dline = $detector_fh->getline){
+
+        INNER: while(my $dline = $detector_fh->getline){ 
             chomp $dline;
-            my ($dchr,$dpos,$dref,$dvar) = split "\t", $dline;
-            if(($chr eq $dchr)&&($stop == $dpos)&&($ref eq $dref)&&($var eq $dvar)){
-                print $ofh $dline."\n";
-                next OUTER;
+
+            # some detectors (samtools, sniper) can have more than one indel call per line
+            my @parsed_variants = $detector_class->parse_line_for_bed_intersection($dline);
+            unless (@parsed_variants) {
+                next;
+            }
+
+            while (my $parsed_variant = shift @parsed_variants ) {
+                my ($dchr,$dpos,$dref,$dvar) = @{$parsed_variant};
+                if(($chr eq $dchr)&&($stop == $dpos)&&($ref eq $dref)&&($var eq $dvar)){
+                    print $ofh $dline."\n"; 
+
+                    # If we got more than one bed line back for one raw detector line, we only want to print the detector line once. So skip the next bed line and account for this line count difference when we verify output.
+                    if (@parsed_variants) {
+                        # FIXME This is awfully hacky ... make a better way... This also assumes there are only 2 calls from the detector line which is hopefully always true but we should not assume this.
+                        # There are 2 cases here:
+                        # 1) Both bed lines representing the raw detector output passed the filter. But we don't want to count them twice so we skip the next bed line.
+                        # 2) One bed line passed and one failed the filter. Therefore we cannot throw away the next bed line because it represents a new variant
+                        $line = $bed_fh->getline; 
+                        chomp $line;
+                        ($chr,$start,$stop,$refvar,@data) = split "\t", $line;
+                        ($ref,$var) = split "/", $refvar;
+
+                        my ($second_dchr, $second_dpos, $second_dref, $second_dvar) = @{ shift @parsed_variants };
+
+                        # This is case 1 from above. We skip the bed line and account for this in the offset
+                        if(($chr eq $second_dchr)&&($stop == $second_dpos)&&($ref eq $second_dref)&&($var eq $second_dvar)){
+                            my $bed_to_detector_offset = $self->_bed_to_detector_offset;
+                            $bed_to_detector_offset->{$output}++;
+                            $self->_bed_to_detector_offset($bed_to_detector_offset);
+                        }  else {
+                            # This is case 2 from above. Keep this bed line by skipping the outer loop.
+                            next INNER;
+                        }
+                    }
+
+                    next OUTER;
+                }
             }
         }
     }

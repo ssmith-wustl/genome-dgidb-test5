@@ -10,7 +10,7 @@ require File::Compare;
 
 use_ok( 'Genome::Model::Tools::Newbler::Stats' ) or die;
 
-my $version = 'v1';
+my $version = 'v3';
 my $test_suite = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Newbler/Stats-'.$version;
 ok( -d $test_suite, "Test suite dir exists" ) or die;
 
@@ -23,6 +23,7 @@ ok( -d $temp_dir.'/consed/edit_dir', "Temp dir edit_dir created" );
 my @files_to_copy = (
 'consed/edit_dir/contigs.bases',
 'consed/edit_dir/contigs.quals',
+'consed/edit_dir/readinfo.txt',
 '2869511846-input.fastq',
 '454NewblerMetrics.txt',
 '454ReadStatus.txt'

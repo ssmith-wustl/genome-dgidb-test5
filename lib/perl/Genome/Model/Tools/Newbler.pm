@@ -99,7 +99,7 @@ sub reads_unplaced_file {
     return $_[0]->consed_edit_dir.'/reads.unplaced';
 }
 
-sub reads_unplaced_fasta {
+sub reads_unplaced_fasta_file {
     return $_[0]->consed_edit_dir.'/reads.unplaced.fasta';
 }
 
@@ -130,7 +130,8 @@ sub create_consed_dir {
     return 1;
 }
 
-sub get_scaffolding_info {
+#filter out min_contig length
+sub get_scaffolding_info { #TODO - reaname this get_valid_scaffolds
     my $self = shift;
 
     if ( -s $self->scaffolds_agp_file ) {

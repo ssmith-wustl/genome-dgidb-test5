@@ -62,10 +62,13 @@ for my $test_type ( qw/ scaffolded unscaffolded / ) {
     ok( $create->execute, "Executed tool" );
 
     #compare output files
-    my $ace_out = '/consed/edit_dir/Pcap.454Contigs.ace';
-    ok( -s $suite_type_dir."/$ace_out", "Test suite pcap ace file exists" );
-    ok( -s $temp_type_dir."/$ace_out", "Created pcap ace file" );
-    ok( File::Compare::compare( $suite_type_dir."/$ace_out",$temp_type_dir."/$ace_out" ) == 0, "Ace files match" );
+    for my $file ('/consed/edit_dir/Pcap.454Contigs.ace', '/consed/edit_dir/gap.txt' ) {
+        ok( -s $suite_type_dir."/$file", "Test suite $file file exists" );
+        ok( -s $temp_type_dir."/$file", "Test created $file file" );
+        ok( File::Compare::compare( $suite_type_dir."/$file",$temp_type_dir."/$file") == 0, "$file files match" );
+    }
+
+
 }
 
 #<STDIN>;
