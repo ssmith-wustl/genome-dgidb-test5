@@ -268,4 +268,61 @@ sub params_for_result {
     return \%params;
 }
 
+#TODO clean all of this up. It is usually/should be based on logic from Genome::Model::Tools::Bed::Convert logic in process_source... 
+# this should be smarter about using that work ... perhaps process_source should call a method that just parses one line, and this method can be replaced by a call to that instead
+sub parse_line_for_bed_intersection {
+    my $class = shift;
+    my $line = shift;
+
+    unless ($line) {
+        die $class->error_message("No line provided to parse_line_for_bed_intersection");
+    }
+
+    # If this is a snv line, we can just rely on the default behavior in the super class to return the right answer
+    my ($chr, $pos, $ref, $var) = split "\t",  $line;
+    if ( ($ref ne $var) && ($ref ne "*") ) {
+        return $class->SUPER::parse_line_for_bed_intersection($line);
+    }
+
+    # Otherwise, must be parsing an indel file. Use logic from the bed converter
+
+    my ($chromosome, $position, $star,
+        $_calls, $consensus_quality, $_ref_quality, $_mapping_quality, $read_depth,
+        $indel_call_1, $indel_call_2, @extra) = split("\t", $line);
+
+    return unless $star eq '*'; #samtools indel format includes reference lines as well
+
+    my @parsed_variants;
+    for my $indel ($indel_call_1, $indel_call_2) {
+        my ($reference, $variant, $start, $stop);
+        next if $indel eq '*'; #Indicates only one indel call...and this isn't it!
+
+        $start = $position - 1; #Convert to 0-based coordinate
+        if(substr($indel,0,1) eq '+') {
+            $reference = '*';
+            $variant = substr($indel,1);
+            $stop = $start; #Two positions are included-- but an insertion has no "length" so stop and start are the same
+        } elsif(substr($indel,0,1) eq '-') {
+            $start += 1; #samtools reports the position before the first deleted base
+            $reference = substr($indel,1);
+            $variant = '*';
+            $stop = $start + length($reference);
+        } else {
+            $class->warning_message("Unexpected indel format encountered ($indel) on line:\n$line");
+            #return; skip wrong indel format line instead of failing for now
+            next;
+        }
+        if (defined $chromosome && defined $stop && defined $reference && defined $variant) {
+            push @parsed_variants, [$chromosome, $stop, $reference, $variant];
+        }
+    }
+
+    unless (@parsed_variants) {
+        die $class->error_message("Could not get chromosome, position, reference, or variant for line: $line");
+    }
+
+    return @parsed_variants;
+}
+
+
 1;

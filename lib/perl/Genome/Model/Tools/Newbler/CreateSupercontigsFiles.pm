@@ -42,24 +42,18 @@ sub execute {
         $self->create_consed_dir;
     }
 
-    if ( -s $self->scaffolds_agp_file ) {
-        #454Scaffolds.txt file is present if
-        #assembly has scaffolds
-        $self->_create_scaffolded_supercontigs;
-    }
-    else {
-        #no 454Scaffolds.txt file so
-        #assembly not scaffolded
-        $self->_create_unscaffolded_supercontigs;
+    unless ( $self->_write_supercontigs_files ) {
+        $self->error_message("Failed to create supercontigs files");
+        return;
     }
 
     return 1;
 }
 
-sub _create_scaffolded_supercontigs {
+sub _write_supercontigs_files {
     my $self = shift;
 
-    my $scaffolds = $self->parse_newbler_scaffold_file;
+    my $scaffolds = $self->get_scaffolding_info;
     # returns .. while filtering out min_contig contigs
     # and re-adjust gap size when contigs are removed
     #'contig00009 => {
@@ -69,7 +63,7 @@ sub _create_scaffolded_supercontigs {
     #      'contig_name' => 'contig00009',
     #      'gap_length' => '894'
     #    };
-    #print Dumper $scaffolds;
+
     unless( $scaffolds ) {
         $self->error_message( "Failed to parse newbler scaffolds file" );
         return;
@@ -77,10 +71,10 @@ sub _create_scaffolded_supercontigs {
 
     #hash of array of contig names for each scaffold
     my %scaffold_contigs;
-    #print Dumper \%scaffold_contigs;
+
     for my $contig ( sort keys %$scaffolds ) {
         my $pcap_contig_name = $scaffolds->{ $contig }->{pcap_name};
-        my ($pcap_supercontig_name) = $pcap_contig_name =~ /(Contig\d+)\.\d+/;
+        my ($pcap_supercontig_name) = $pcap_contig_name =~ /Contig(\d+)\.\d+/;
         push @{$scaffold_contigs{$pcap_supercontig_name}}, $contig;
     }
 
@@ -91,31 +85,39 @@ sub _create_scaffolded_supercontigs {
     #supercontiga agp file
     unlink $self->supercontigs_agp_file;
     my $agp_out = Genome::Sys->open_file_for_writing( $self->supercontigs_agp_file );
-
-    for my $scaffold ( sort keys %scaffold_contigs ) {
+    for my $scaffold ( sort {$a <=> $b} keys %scaffold_contigs ) {
         my $c = 0;
         my $supercontig_fasta;
         my $agp_position = 0;
         my $contig_start_pos = 0;
         my $contig_end_pos = 0;
         foreach my $contig ( @{$scaffold_contigs{$scaffold}} ) {
-            $c++;
+            #print "$contig expected\n";
             my $seq = $f_i->next_seq;
+            #skip until we get the contig we want
+            if ( not $seq->primary_id eq $contig ) {
+                until ( $seq->primary_id eq $contig ) {
+                    $seq = $f_i->next_seq;
+                }
+            }
+            unless ( $seq ) {
+                $self->error_message( "Did not get fasta seq object .. newbler 454AllContigs.fna may be out of sync with 454Scaffolds.txt file or file may have changed after assembling" );
+                return;
+            }
+            #print $seq->primary_id." got\n";
+            $c++;
             #append seq fasta to super contig fasta
             $supercontig_fasta .= uc $seq->seq;
-
             #contig name/seq length for agp contig line
             my $seq_length = length $seq->seq;
             my $pcap_contig_name = $scaffolds->{ $contig }->{pcap_name};
             #agp start/stop positions
             $contig_start_pos = $contig_end_pos + 1;
             $contig_end_pos = $contig_start_pos + $seq_length - 1;
-
             #print contig line to agp file
             $agp_out->print(
-                "$scaffold\t$contig_start_pos\t$contig_end_pos\t".++$agp_position."\tW\t$pcap_contig_name\t1\t$seq_length\t+\n"
+                'Contig'."$scaffold\t$contig_start_pos\t$contig_end_pos\t".++$agp_position."\tW\t$pcap_contig_name\t1\t$seq_length\t+\n"
             );
-
             unless ( $c == scalar @{$scaffold_contigs{$scaffold}} ) {
                 #append Xs of gap lengths to fasta unless it's the last
                 #contig in scaffold which is assigned default gap size
@@ -132,38 +134,12 @@ sub _create_scaffolded_supercontigs {
 
                 #print fragment line to agp file
                 $agp_out->print(
-                    "$scaffold\t$contig_start_pos\t$contig_end_pos\t".++$agp_position."\tN\t$gap_length\tfragment\tyes\n"
+                    'Contig'."$scaffold\t$contig_start_pos\t$contig_end_pos\t".++$agp_position."\tN\t$gap_length\tfragment\tyes\n"
                 );
             }
         }
-        my $seq_obj = Bio::Seq->new( -seq => $supercontig_fasta, id => '>'.$scaffold );
+        my $seq_obj = Bio::Seq->new( -seq => $supercontig_fasta, id => 'Contig'.$scaffold );
         $f_o->write_seq( $seq_obj );
-    }
-
-    $agp_out->close;
-
-    return 1;
-}
-
-sub _create_unscaffolded_supercontigs {
-    my $self = shift;
-
-    my $f_i = Bio::SeqIO->new( -format => 'fasta', -file => $self->all_contigs_fasta_file );
-    my $f_o = Bio::SeqIO->new( -format => 'fasta', -file => '>'.$self->supercontigs_fasta_file );
-
-    unlink $self->supercontigs_agp_file;
-    my $agp_out = Genome::Sys->open_file_for_writing( $self->supercontigs_agp_file );
-
-    my $supercontig_number = 0;
-    while ( my $seq = $f_i->next_seq ) {
-        my $contig_length = length $seq->seq;
-        next if $contig_length < $self->min_contig_length;
-        my $scaffold_name = 'Contig'.$supercontig_number++;
-        my $contig_name = $scaffold_name.'.1';
-        my $new_seq = Bio::Seq->new( -seq => $seq->seq, -id => $scaffold_name );
-        $f_o->write_seq( $new_seq );
-        my $agp_string = "$scaffold_name\t1\t$contig_length\t1\tW\t$contig_name\t1\t$contig_length\t+\n";
-        $agp_out->print( $agp_string );
     }
 
     $agp_out->close;

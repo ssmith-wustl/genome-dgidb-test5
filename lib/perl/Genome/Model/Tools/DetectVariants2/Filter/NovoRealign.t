@@ -50,7 +50,7 @@ my $refbuild_id = 109104543;   #human36_chr16_17_for_novo_test ref_seq_build I m
 
 my $detector_result = Genome::Model::Tools::DetectVariants2::Result->__define__(
     output_dir => $test_input_dir,
-    detector_name => 'test',
+    detector_name => 'Genome::Model::Tools::DetectVariants2::Breakdancer',
     detector_params => '',
     detector_version => '1.1',
     aligned_reads => $tumor_bam,

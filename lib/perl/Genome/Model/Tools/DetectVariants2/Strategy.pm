@@ -47,7 +47,7 @@ my $grammar = q{
     | program_spec
                 { $return = [$item[1]]; }
 
-    word: /([\w\.-]|\\\\)+/ { $return = $item[1]; }
+    word: /([\w\.:-]|\\\\)+/ { $return = $item[1]; }
 
     valid_subpackage: "somatic "
                 { $return = $item[1]; }

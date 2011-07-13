@@ -38,7 +38,7 @@ my $test_output_dir = $test_output_base . '/filter';
 
 my $detector_result = Genome::Model::Tools::DetectVariants2::Result->__define__(
     output_dir => $detector_directory,
-    detector_name => 'test',
+    detector_name => 'Genome::Model::Tools::DetectVariants2::Sniper',
     detector_params => '',
     detector_version => 'awesome',
     aligned_reads => $tumor_bam_file,
