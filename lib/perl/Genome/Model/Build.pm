@@ -1215,9 +1215,25 @@ sub abandon {
         # return;
     }
 
+    $self->_unregister_software_results
+        or return;
+
     $self->add_note(
         header_text => 'Build Abandoned',
     );
+
+    return 1;
+}
+
+sub _unregister_software_results {
+    my $self = shift;
+    my @registrations = Genome::SoftwareResult::User->get(user_class_name => $self->subclass_name, user_id => $self->id); 
+    for my $registration (@registrations){
+        unless($registration->delete){
+            $self->error_message("Failed to delete registration: " . Data::Dumper::Dumper($registration)); 
+            return;
+        }    
+    }
 
     return 1;
 }
