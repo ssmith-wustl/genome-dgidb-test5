@@ -50,11 +50,11 @@ my $expected_plan = {
         }
     },
     'samtools' => {
-        'r599' => {
+        'r599' => { 
             'indel' => [
                 {
                     'params' => '-p 1',
-                    'version' => 'r599',
+                    'version' => 'r599', 
                     'name' => 'samtools',
                     'filters' => [],
                     'class' => 'Genome::Model::Tools::DetectVariants2::Samtools'
@@ -70,11 +70,11 @@ my $expected_plan = {
                 }
             ]
         },
-        'r613' => {
+        'r613' => { #r613
             'snv' => [
                 {
                     'params' => '-p 2',
-                    'version' => 'r613',
+                    'version' => 'r613', #613
                     'name' => 'samtools',
                     'filters' => [],
                     'class' => 'Genome::Model::Tools::DetectVariants2::Samtools',
@@ -107,5 +107,6 @@ my $combine_test = $dispatcher_class->create(
 ok($combine_test, "Object to test a combine case created");
 ok($combine_test->execute, "Test executed successfully");
 
+#sleep 10000000000;
 done_testing();
 

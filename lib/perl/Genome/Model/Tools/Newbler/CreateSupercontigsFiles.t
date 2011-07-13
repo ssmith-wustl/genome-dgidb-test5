@@ -11,7 +11,7 @@ require File::Compare;
 use_ok( 'Genome::Model::Tools::Newbler::CreateSupercontigsFiles' ) or die;
 
 #test suite dir
-my $version = 'v1';
+my $version = 'v2';
 my $test_suite = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Newbler/CreateSupercontigsFiles-'.$version;
 ok( -d $test_suite, "Test suite dir exists" ) or die;
 
@@ -33,9 +33,11 @@ for my $test_type ( qw/ scaffolded unscaffolded / ) {
     my @input_files;
     if ( $test_type eq 'scaffolded' ) {
         @input_files = &scaffolded_input_files;
+        ok( @input_files == 3, "Got 3 input files for $test_type test" );
     }
     elsif ( $test_type eq 'unscaffolded' ) {
         @input_files = &unscaffolded_input_files;
+        ok( @input_files == 2, "Got 2 input files for $test_type test" );
     }
 
     #link input files;

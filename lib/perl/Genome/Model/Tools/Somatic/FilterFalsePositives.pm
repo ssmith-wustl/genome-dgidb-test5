@@ -464,7 +464,7 @@ sub run_filter {
 
                             ## FAILURE 1: READ POSITION ##
                             if(($var_pos < $min_read_pos)) { # || $var_pos > $max_read_pos)) {
-                                print $ffh "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tReadPos<$min_read_pos\n"if ($self->filtered_file);
+                                print $ffh "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tReadPos<$min_read_pos\n";
                                 print "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tReadPos<$min_read_pos\n"if ($self->verbose);
                                 $stats{'num_fail_pos'}++;
                             }
@@ -656,7 +656,7 @@ sub wgs_filter {
 sub readcount_program {
     my $self = shift;
     my $reference = $self->reference;
-    return "/gscuser/dlarson/src/bamsey/readcount/trunk/bam-readcount-test3 -f $reference";
+    return "bam-readcount0.3 -f $reference";
 }
 
 
