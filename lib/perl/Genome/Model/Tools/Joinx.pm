@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 use Carp qw/confess/;
 
-my $DEFAULT_VER = '';
+my $DEFAULT_VER = '1.2';
 
 class Genome::Model::Tools::Joinx {
     is  => 'Command',
