@@ -67,6 +67,7 @@ sub _write_placed_reads_files {
 
     my $in_fh = Genome::Sys->open_file_for_reading( $self->newb_read_status_file );
     unlink $self->read_info_file;
+    $in_fh->getline; #header
     my $ri_fh = Genome::Sys->open_file_for_writing( $self->read_info_file );
     unlink $self->reads_placed_file;
     my $rp_fh = Genome::Sys->open_file_for_writing( $self->reads_placed_file );
