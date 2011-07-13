@@ -10,7 +10,7 @@ require File::Compare;
 
 use_ok( 'Genome::Model::Tools::Newbler::CreatePlacedReadsFiles' );
 
-my $version = 'v2';
+my $version = 'v3';
 my $test_suite = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Newbler/CreatePlacedReadsFiles-'.$version;
 ok( -d $test_suite, "Test suite dir exists" );
 

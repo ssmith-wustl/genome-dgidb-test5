@@ -81,13 +81,14 @@ sub _write_placed_reads_files {
         #$tmp[5] = contig name
         #$tmp[6] = 5' position
         #$tmp[7] = 5' complimented or uncomp
-        next unless $tmp[1] eq 'Assembled'; #otherwise reads has not been assembled
+        next unless $tmp[1] eq 'Assembled' or $tmp[1] eq 'PartiallyAssembled'; #otherwise reads has not been assembled
         next unless exists $positions->{$tmp[2]}; #otherwise contig was filtered out
+        next unless $tmp[2] eq $tmp[5]; #read is split shouldn't happen
 
         #print readinfo.txt file info
         my $u_or_c = ( $tmp[4] eq '+' ) ? 'U' : 'C';
-        my $read_contig_start_pos = $tmp[3];
-        my $read_length = abs( $tmp[3] - $tmp[6]);
+        my $read_contig_start_pos = ( $tmp[3] > $tmp[6] ) ? $tmp[6] : $tmp[3];
+        my $read_length = abs( $tmp[3] - $tmp[6]) + 1;
         my $pcap_contig_name = $positions->{$tmp[2]}->{pcap_contig_name};
 
         my $ri_string = "$tmp[0] $pcap_contig_name $u_or_c $read_contig_start_pos $read_length\n";
@@ -96,9 +97,8 @@ sub _write_placed_reads_files {
         #print reads.placed file info
         $u_or_c = ( $u_or_c eq 'U' ) ? 1 : 0;
         my $contig_supercontig_start_pos = $positions->{$tmp[2]}->{supercontig_start_position};
-        my $read_supercontig_start_pos = $contig_supercontig_start_pos + $read_contig_start_pos;
+        my $read_supercontig_start_pos = $contig_supercontig_start_pos + $read_contig_start_pos - 1;
         my ($pcap_supercontig_name) = $pcap_contig_name =~ /(Contig\d+)\.\d+/;
-
 
         my $rp_string = "$tmp[0] 1 $read_length $u_or_c $pcap_contig_name $pcap_supercontig_name $read_contig_start_pos $read_supercontig_start_pos\n";
         $rp_fh->print( $rp_string );

@@ -10,7 +10,7 @@ require File::Compare;
 use_ok( 'Genome::Model::Tools::Newbler::StandardOutputs' ) or die;
 
 #test suite
-my $version = 'v4';
+my $version = 'v5';
 my $test_suite = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Newbler/StandardOutputs-'.$version;
 ok( -d $test_suite, "Test suite dir exists" );
 
