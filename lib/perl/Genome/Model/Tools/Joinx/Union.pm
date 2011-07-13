@@ -53,7 +53,7 @@ sub help_brief {
 
 sub help_synopsis {
     my $self = shift;
-    "gmt joinx intersect a.bed b.bed [--output-file=n.bed]"
+    "gmt joinx union a.bed b.bed [--output-file=n.bed]"
 }
 
 sub flags {
