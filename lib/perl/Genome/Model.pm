@@ -1067,7 +1067,7 @@ sub copy { # TODO use the above
 
     $params{subject_class_name} = $params{subject}->class; # set here incase subject is overridden
 
-    my $copy = eval{ Genome::Model->create(%params) };
+    my $copy = eval{ $self->class->create(%params) };
     if ( not $copy ) {
         $self->error_message('Failed to copy model: '.$@);
         return;
