@@ -119,7 +119,7 @@ sub execute {                               # replace with real execution logic.
 	{
 		print "Aligning $fq_file to $reference\n";
 #		system("bsub -q apipe -R\"select[type==LINUX64 && model != Opteron250 && mem>8000] rusage[mem=8000]\" -M 8000000 -oo $output_file.log ssaha2 $ssaha2_params -outfile $output_file -save $reference $fq_file");		
-		system("bsub -q apipe -R\"select[type==LINUX64 && model != Opteron250 && mem>8000] rusage[mem=8000]\" -M 8000000 -oo $output_file.log ssaha2 $ssaha2_params -outfile $output_file $reference $fq_file");		
+		system("bsub -q apipe -R\"select[type==LINUX64 && model != Opteron250 && mem>8000] rusage[mem=8000]\" -M 8000000 -oo $output_file.log ssaha2 $ssaha2_params -outfile $output_file $reference_fasta $fq_file");		
 	}
 
 
