@@ -79,6 +79,7 @@ sub execute {                               # replace with real execution logic.
 	## Define Ssaha Reference (default to Hs36)
 
 	my $reference = Genome::Config::reference_sequence_directory() . '/NCBI-human-build36/all_sequences.ssaha2';
+#	my $reference = Genome::Config::reference_sequence_directory() . '/NCBI-human-build36/all_sequences.ssaha2';	
 	my $reference_fasta = Genome::Config::reference_sequence_directory() . '/NCBI-human-build36/all_sequences.fa';
 
         if(defined($self->reference))
@@ -86,6 +87,7 @@ sub execute {                               # replace with real execution logic.
 #		if(-e $self->reference)
 #		{
 			$reference = $self->reference;
+			$reference_fasta = $self->reference;
 #		}
 #		else
 #		{
@@ -116,7 +118,8 @@ sub execute {                               # replace with real execution logic.
 	else
 	{
 		print "Aligning $fq_file to $reference\n";
-		system("bsub -q apipe -R\"select[type==LINUX64 && model != Opteron250 && mem>8000] rusage[mem=8000]\" -M 8000000 -oo $output_file.log ssaha2 $ssaha2_params -outfile $output_file -save $reference $fq_file");		
+#		system("bsub -q apipe -R\"select[type==LINUX64 && model != Opteron250 && mem>8000] rusage[mem=8000]\" -M 8000000 -oo $output_file.log ssaha2 $ssaha2_params -outfile $output_file -save $reference $fq_file");		
+		system("bsub -q apipe -R\"select[type==LINUX64 && model != Opteron250 && mem>8000] rusage[mem=8000]\" -M 8000000 -oo $output_file.log ssaha2 $ssaha2_params -outfile $output_file $reference $fq_file");		
 	}
 
 
