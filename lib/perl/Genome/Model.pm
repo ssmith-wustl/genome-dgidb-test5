@@ -934,30 +934,87 @@ sub time_of_last_build_request {
     return $note->entry_date;
 }
 
+sub params_from_param_strings {
+    my ($class, @param_strings) = @_;
+
+    Carp::confess('No param strings to convert to params') if not @param_strings;
+
+    my %params;
+    my $meta = $class->__meta__;
+    for my $param_string ( @param_strings ) {
+        my ($key, $value) = split('=', $param_string, 2);
+        my $property = $meta->property_meta_for_name($key);
+        if ( not $property ) {
+            $class->error_message("Failed to find model property: $key");
+            return;
+        }
+
+        if ( my ($unallowed) = grep { $property->$_ } (qw/ is_calculated is_constant is_transient /) ){
+            $class->error_message("Property ($key) cannot be given on the command line because it is '$unallowed'");
+            return;
+        }
+
+        if ( not defined $value or $value eq '' ) {
+            $params{$key} = undef;
+            next;
+        }
+
+        my @values = $value;
+        my $data_type = $property->data_type;
+        if ( not grep { $data_type =~ /^$_$/i } (qw/ boolean integer number string text ur::value /) ) { # hacky...if u kno a better way...
+            my $filter = ( $value =~ /^$RE{num}{int}$/ ) ? 'id='.$value : $value;
+            my $data_type = $property->data_type;
+            my $bx = eval { UR::BoolExpr->resolve_for_string($data_type, $filter); };
+            if ( not $bx ) {
+                $class->error_message("Failed to create expression for $key ($data_type) from '$value'");
+                return;
+            }
+            @values = $data_type->get($bx);
+            if ( not @values ) {
+                $class->error_message("Failed to get $key ($data_type) for $value");
+                return;
+            }
+        }
+
+        if ( $property->is_many ) {
+            push @{$params{$key}}, @values;
+        }
+        elsif ( @values > 1 or exists $params{$key} ) {
+            $class->error_message(
+                "Singular property ($key) cannot have more than one value (".join(', ', grep { defined } (@values, $params{$key})).')'
+            );
+            return;
+        }
+        else {
+            $params{$key} = $values[0];
+        }
+    }
+
+    return %params;
+}
+
 sub copy {
     my ($self, %overrides) = @_;
 
-    my $do_not_copy_instrument_data = delete $overrides{do_not_copy_instrument_data};
-    my %new_params = (
-        subject_id => $self->subject_id,
-        subject_class_name => $self->subject_class_name,
+    my %params = (
+        subject => $self->subject,
         subclass_name => $self->subclass_name,
-        processing_profile => ( defined $overrides{processing_profile} ? delete $overrides{processing_profile} : $self->processing_profile ),
-        auto_assign_inst_data => ( 
-            defined $overrides{auto_assign_inst_data} ? delete $overrides{auto_assign_inst_data} : $self->auto_assign_inst_data
-        ),
-        auto_build_alignments => (
-            defined $overrides{auto_build_alignments} ? delete $overrides{auto_build_alignments} : $self->auto_build_alignments
-        ),
-    );
-    $new_params{name} = delete $overrides{name} if $overrides{name};
+        processing_profile => $self->processing_profile,
+        auto_assign_inst_data => $self->auto_assign_inst_data,
+        auto_build_alignments =>  $self->auto_build_alignments,
+    ),
 
-    my %input_properties = map { $_->property_name => $_ } grep { defined $_->via and $_->via eq 'inputs' } $self->__meta__->property_metas;
-    delete $input_properties{instrument_data} if $do_not_copy_instrument_data;
+    # Input properties
+    my %input_properties = map { 
+        $_->property_name => $_ 
+    } grep { 
+        defined $_->via and $_->via eq 'inputs'
+    } $self->__meta__->property_metas;
     for my $input_property ( values %input_properties ) {
         my $input_name = $input_property->property_name;
         my @values = $self->$input_name; # current values
-        if ( defined $overrides{$input_name} ) { # override
+        if ( exists $overrides{$input_name} ) { # override
+            #next if not defined $overrides{$input_name};
             my $values = delete $overrides{$input_name};
             @values = ref $values ? @$values : $values;
         }
@@ -965,29 +1022,36 @@ sub copy {
         next if not @values;
 
         if ( $input_property->is_many ) {
-            $new_params{$input_name} = \@values;
+            $params{$input_name} = \@values;
+        }
+        elsif ( @values > 1 ) {
+            $self->error_message("Trying to get params for copy, but '$input_name' is not many but was given multiple values (@values).");
+            return;
         }
         else {
-            if ( @values > 1 ) {
-                $self->error_message("Requested to copy '$input_name' with multiple values (@values), but it can only take one.");
-                return;
-            }
-            $new_params{$input_name} = $values[0];
+            $params{$input_name} = $values[0];
         }
     }
 
-    if ( %overrides ) {
-        $self->error_message('Unrecognized overrides sent to Genome::Model::copy '.Data::Dumper::Dumper(\%overrides));
+    # Go though overrides for normal properties
+    for my $property ( keys %overrides ) {
+        if ( defined $overrides{$property} ) {
+            $params{$property} = delete $overrides{$property};
+        }
+        else {
+            delete $params{$property};
+        }
+    }
+
+    $params{subject_class_name} = $params{subject}->class; # set here incase subject is overridden
+
+    my $copy = eval{ Genome::Model->create(%params) };
+    if ( not $copy ) {
+        $self->error_message('Failed to copy model: '.$@);
         return;
     }
 
-    my $new_model = $self->subclass_name->create(%new_params);
-    if ( not $new_model ) {
-        $self->error_message('Failed to copy model');
-        return;
-    }
-
-    return $new_model;
+    return $copy;
 }
 
 sub delete {

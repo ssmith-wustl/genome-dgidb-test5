@@ -400,7 +400,7 @@ sub find_or_create_somatic_variation_models{
             unless ($mate){
                 $mate = $model->copy(
                     name => 'AQID-PLACE_HOLDER',
-                    do_not_copy_instrument_data => 1,
+                    instrument_data => undef,
                 );
                 $self->error_message("Failed to find copied mate with subject name: $mate_name") and next unless $mate;
                 

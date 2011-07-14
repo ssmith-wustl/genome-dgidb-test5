@@ -11,31 +11,18 @@ class Genome::Model::Command::Copy {
     class_name => __PACKAGE__,    
     is => 'Genome::Command::Base',
     has => [
-        from => {
+        model => {
             is => 'Genome::Model',
             shell_args_position => 1,
             doc => 'The source model to copy.'
-        },
-        to => {
-            is => 'Text',
-            len => 255,
-            shell_args_position => 2,
-            doc => 'The name of the new model that will be created'
         },
         overrides => {
             is_many => 1,
             is_optional => 1,
             shell_args_position => 3,
-            doc => 'Properties to override in the new model.'
+            doc => 'Properties to override in the new model. Properties include name, subject, processing_profile, instrument_data, auto_build_alignments, auto_assign_inst_data and all model inputs.'
         },
-        do_not_copy_instrument_data => {
-            is => 'Boolean',
-            is_input => 1,
-            is_optional => 1,     
-            default_value => 0,
-            doc => 'Do not copy instrument to the new model.'
-        },
-        _copied_model => { is_optional => 1, }
+        _new_model => { is_optional => 1, }
     ],
     doc => 'create a new genome model based on an existing one'
 };
@@ -44,28 +31,69 @@ sub sub_command_sort_position { 2 }
 
 sub help_synopsis {
     return <<"EOS"
- genome model copy --from 123456789 --to "copy_of_my_model" --overrides processing_profile="use this processing profile instead" --overrides auto_build_alignments=0
-    
- genome model copy 123456789 copy_of_my_model processing_profile="use this processing profile instead" auto_build_alignments=0
+Copy model 123456789 to new model using default name and overriding the subject
+
+ genome model copy 123456789 subject=name=H_SAMPLE
+
+Copy model 123456789 to new model with name "Copy of my Awesome Model", overriding processing profile and auto build alignments:
+
+ genome model copy 123456789 "name=Copy of my Awesome Model" processing_profile="use this processing profile instead" auto_build_alignments=0
+
 EOS
 }
 
 sub help_detail {
     return <<"EOS"
-This defines a new genome model.
+* Copy a model to a new model overriding some of the original model's properties. This will copy the model's definition only, and not any builds.
+ 
+* Override properties are actual model properties. If you want to override reference_sequence_build, you use that, and not reference_sequence_build_id. Give override as space separated bare arguments. Use the format: property=value. The value can be an id or filter string.  If the property can have many values, use a filter string, or multiple key=value pairs. To set something to undefined, use 'property='.
 
-An existing model is used as a template, with its parameters and instrument data being used to 
-create the new model.
+Model properties that can be overridden:
 
-Individual parameters on the model can be overriden by passing key-value pairs on the command line.
-For example, use
+auto_build_alignments
+auto_assign_inst_data
+instrument_data (or use do_not_copy_instrument_data to not add any)
+name
+processing_profile
+subject
 
-   processing_profile="example profile" # id or name
+All other model inputs can be overriden. See model input names and values with:
+ genome model input list --f model_id=\$FROM_MODEL_ID
 
-to have the resulting model be defined using <example profile> instead of the processing profile
-assigned to the source model.  (See the corresponding lister for a list of properties that can be overridden in this way.) If named (rather than positional) arguments are used, "--overrides" must precede each key-value pair.
+* Examples
 
-The copy command only copies the definitions.  It does not copy any underlying model data.
+processing_profile=\$ID
+processing_profile=name=\$NAME
+instrument_data=library_id=\$LIB_ID
+db_dnp_build=id=\$DB_SNP_ID
+
+Unfortunately, there cannot be commas in the filter string:
+
+db_snp_build=model_id=\$MODEL_ID,status=Succeeded
+
+To set any property to undefined:
+
+'property='
+
+* Name of the new model is an override. You no longer need to specify a name. If no name is given, the default name will be used. If a model with the same name and type exist, you will need to provide a name. To specify a new name:
+
+name=\$NEW_NAME
+
+* Subject can be overriden:
+
+subject=\$ID
+subject=name=\$NAME
+subject=common_name=\$NAME
+
+* Instrument data is an override. Instrument data is a many property, so you can use a filter or multiple instrument data overrides. To specify the instrument data for the model:
+
+instrument_data=\$ID1
+instrument_data=\$ID1 instrument_data=\$ID2
+instrument_data=library_id=\$LIB_ID
+
+To not copy/assign any instrument data, set it to undef. The do_not_copy_inst_data option has been removed.
+
+'instrument_data='
 
 EOS
 }
@@ -73,69 +101,24 @@ EOS
 sub execute {
     my $self = shift;
 
-    my $model = $self->from;
+    my $model = $self->model;
     if ( not $model ) {
         $self->error_message('No model to copy');
         return;
     }
+    $self->status_message('Copy model: '.$model->__display_name__);
 
-    my $new_name = $self->to;
-    if ( not $new_name ) {
-        $self->error_message('No new for new model');
-        return;
-    }
-
-    my %overrides = (
-        name => $new_name,
-        do_not_copy_instrument_data => $self->do_not_copy_instrument_data,
-    );
-    for my $override ( $self->overrides ) {
-        my ($key, $value_str) = split('=', $override, 2);
-        my @values = split(',', $value_str);
-        if ($model->__meta__->property($key)->is_many) {
-            $overrides{$key} = \@values;
-        } else {
-            if (scalar(@values) > 1) {
-                $self->error_message('Multiple values passed for single property: '.$key);
-                return;
-            } else {
-                $overrides{$key} = $values[0];
-            }
-        }
-    }
-
-    if ( $overrides{processing_profile} ) {
-        my $override_pp = $self->_get_override_processing_profile($model->processing_profile->class, $overrides{processing_profile});
-        return if not $override_pp;
-        $overrides{processing_profile} = $override_pp;
-    }
+    my %overrides = $model->class->params_from_param_strings($self->overrides); 
+    return if not %overrides;
 
     my $new_model = $model->copy(%overrides);
-    if ( not $new_model ) {
-        $self->error_message('Failed to copy model');
-        return;
-    }
-    $self->_copied_model($new_model);
+    return if not $new_model;
+    $self->_new_model($new_model);
 
-    $self->status_message('Copy was successful. New model: '.$new_model->__display_name__);
+    $self->status_message("Success!\nNew model: ".$new_model->__display_name__);
 
     return 1;
 }
 
-sub _get_override_processing_profile {
-    my ($self, $pp_class, $override_id) = @_;
-
-    my %get_params = ( $override_id =~ /^$RE{num}{int}$/ )
-    ? ( id => $override_id )
-    : ( name => $override_id );
-
-    my $override_pp = $pp_class->get(%get_params);
-    if ( not $override_pp ) {
-        $self->error_message("Failed to get processing profile for $override_id");
-        return;
-    }
-
-    return $override_pp;
-}
-
 1;
+
