@@ -122,11 +122,9 @@ sub _write_supercontigs_files {
                 #append Xs of gap lengths to fasta unless it's the last
                 #contig in scaffold which is assigned default gap size
                 my $gap_length = $scaffolds->{$contig}->{gap_length};
-                my $xs;
+
                 #append Xs to supercontig fasta for gaps
-                for ( 1 .. $gap_length ) {
-                    $supercontig_fasta .= 'X';
-                }
+                $supercontig_fasta .= ('X' x $gap_length );
 
                 #agp start/stop positions for agp fragment line
                 $contig_start_pos = $contig_end_pos + 1;
