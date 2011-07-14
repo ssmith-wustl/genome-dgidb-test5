@@ -993,7 +993,29 @@ sub params_from_param_strings {
     return %params;
 }
 
-sub copy {
+sub property_names_for_copy {
+    my $class = shift;
+
+    my $meta = eval{ $class->__meta__; };
+    if ( not $meta ) {
+        $class->error_message('Failed to get class meta for '.$class);
+        return;
+    }
+
+    my @base_properties = (qw/
+        auto_assign_inst_data auto_build_alignments processing_profile subject 
+        /);
+
+    my @input_properties = map { 
+        $_->property_name
+    } grep { 
+        defined $_->via and $_->via eq 'inputs'
+    } $meta->property_metas;
+
+    return sort { $a cmp $b } ( @base_properties, @input_properties );
+}
+
+sub copy { # TODO use the above
     my ($self, %overrides) = @_;
 
     my %params = (
