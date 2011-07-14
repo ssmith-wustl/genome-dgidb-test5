@@ -16,7 +16,7 @@ class Genome::Model::Tools::DetectVariants2::Varscan {
     ],
     has_param => [
         lsf_resource => {
-            default => "-R 'select[model!=Opteron250 && type==LINUX64] span[hosts=1] rusage[mem=16000]' -M 1610612736",
+            default => "-R 'select[ncpus>=3] span[hosts=1] rusage[mem=16000]' -M 1610612736 -n 3",
         }
     ],
 };
