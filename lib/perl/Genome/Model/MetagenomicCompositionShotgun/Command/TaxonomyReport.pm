@@ -1,215 +1,233 @@
-package Genome::Model::MetagenomicCompositionShotgun::Command::MetagenomicReport;
+package Genome::Model::MetagenomicCompositionShotgun::Command::TaxonomyReport;
 
 use strict;
 use warnings;
+
 use Genome;
+
 use File::Path;
 use File::Find;
 
-$|=1;
-
-class Genome::Model::MetagenomicCompositionShotgun::Command::MetagenomicReport{
-    is => 'Genome::Model::MetagenomicCompositionShotgun::Command',
+class Genome::Model::MetagenomicCompositionShotgun::Command::TaxonomyReport{
+    is => 'Genome::Command::Base',
     doc => 'Generate metagenomic reports for a MetagenomicCompositionShotgun build.',
     has => [
-        build_id => {
-            is => 'Int',
-        },
-        taxonomy_file => {
-            is => 'Parh',
-            is_optional=>1,
-        },
-        viral_taxonomy_file => {
-            is => 'FilePath',
-            is_optional=>1,
-        },
-        viral_headers_file => {
-            is => 'FilePath',
-            is_optional => 1,
-        },
-        regions_file => {
-            is => 'FilePath',
-            is_optional => 1,
-        },
-        overwrite => {
-            is => 'Boolean',
-            is_optional => 1,
-            default => 0,
-        },
-        report_dir => {
-            is => 'Text',
-            is_optional => 1,
-        },
-        include_fragments => {
-            is => 'Boolean',
-            is_optional => 1,
-            default => 0,
-            doc => 'enabling this flag counts fragment reads in the metagenomic report and the refcov report, default behaviour is to exclude orphaned reads',
-        },
-        include_taxonomy_report => {
-            is => 'Boolean',
-            is_optional => 1, 
-            default => 0, 
-            doc => 'enabling this flag creates an additional set of reports for taxonomical classification and a summary taxonomy/refcov report if taxonomy_file, viral_taxonomy_file, and viral_headers_file are provided, or if they exist in the hmp subdirectory of the metagenomic references data directory', 
+        build => {
+            is => 'Genome::Model::Build::MetagenomicCompositionShotgun',
+            doc => 'MCS build',
         },
     ],
 };
 
-
 sub execute {
-    my ($self) = @_;
+    my $self = shift;
 
-    $self->dump_status_messages(1);
-    $self->dump_warning_messages(1);
-    $self->dump_error_messages(1);
+    my $build = $self->build;
+    $self->status_message('Metagenomic report for '.$build->__display_name__);
 
-    my $build = Genome::Model::Build->get($self->build_id);
-    my $model = $build->model;
-
-    unless ($self->report_dir){
-        $self->report_dir($build->data_directory . "/reports");
+    if ( not -d $self->build->reports_directory ) {
+        $self->error_message("Build report directory does not exist");
+        return;
     }
-    $self->status_message("Report path: " . $self->report_dir);
+    $self->status_message("Report dir: " . $self->build->reports_directory);
 
-    my $metagenomic_ref_hmp_dir;
-    #TODO, don't derive this shit in the report, pass it in to the command
-    for my $ref_build ($model->metagenomic_references){
-        $metagenomic_ref_hmp_dir = $ref_build->data_directory."/hmp";
-        last if -d $metagenomic_ref_hmp_dir;
-        $metagenomic_ref_hmp_dir = undef;
+    my $refcov_output = $build->refcov_output;
+    if ( not -s $refcov_output ) {
+        $self->error_message("Refcov output ($refcov_output) does not exist");
+        return;
     }
 
-    #TODO these names are bad and should be improved as this pipeline becomes more generic, don't know if taxonomy files will always be available when this is done again.
-
-    unless ($self->regions_file){
-        unless (-d $metagenomic_ref_hmp_dir){
-            die $self->error_message("regions profile not defined and no derived directory from reference to look in!");
-        }
-        $self->regions_file("$metagenomic_ref_hmp_dir/combined_refcov_regions_file.regions.bed");
-        unless (-s $self->regions_file){
-            die $self->error_message("refcov regions file doesn't exist or have size: ".$self->regions_file);
-        }
-    }
-    if ($self->include_taxonomy_report) {
-        unless ($self->viral_headers_file){
-            $self->viral_headers_file("$metagenomic_ref_hmp_dir/viruses_nuc.fasta.headers");
-            unless (-s $self->viral_headers_file){
-                $self->error_message("viral headers file doesn't exist or have size: ".$self->viral_headers_file);
-            }
-        }
-        unless ($self->taxonomy_file){
-            $self->taxonomy_file("$metagenomic_ref_hmp_dir/Bact_Arch_Euky.taxonomy.txt");
-            unless (-s $self->taxonomy_file){
-                $self->error_message("taxonomy file doesn't exist or have size: ".$self->taxonomy_file);
-            }
-        }
-        unless ($self->viral_taxonomy_file){
-            $self->viral_taxonomy_file("$metagenomic_ref_hmp_dir/viruses_taxonomy_feb_25_2010.txt");
-            unless (-s $self->viral_taxonomy_file){
-                $self->error_message("viral_taxonomy file doesn't exist or have size: ".$self->viral_taxonomy_file);
-            }
-        }
+    my $taxonomy_file = $self->build->metagenomic_reference_taxonomy_file;
+    if ( not -s $taxonomy_file ) {
+        $self->error_message("Taxonomy file ($taxonomy_file) does not exist");
+        return;
     }
 
-    my $sorted_bam = $build->_final_metagenomic_bam;
+    my $taxonomy_report = $self->_generate_taxonomy_report;
+    return if not $taxonomy_report;
 
-    $self->status_message("compiling metagenomic reports");
-
-    $self->status_message("running refcov on combined metagenomic alignment bam");
-
-    my $refcov_output = $self->report_dir.'/report_combined_refcov_regions_file.regions.txt';
-    if (-e $refcov_output and -e "$refcov_output.ok"){
-        $self->status_message("Refcov already complete, shortcutting");
-    }else{
-        my $command = "gmt5.12.1 ref-cov standard";
-        $command .= " --alignment-file-path ".$sorted_bam;
-        $command .= " --roi-file-path ".$self->regions_file;
-        $command .= " --stats-file ".$refcov_output;
-        $command .= " --min-depth-filter 0";
-
-        my $rv = eval{Genome::Sys->shellcmd(cmd=>$command, output_files=>[$refcov_output], input_files=>[$sorted_bam, $self->regions_file])};
-        if (!$rv){
-            die $self->error_message("refcov command died with error code $rv, $@");
-        }
-        unless ( -e $refcov_output ){
-            die $self->error_message("expected refcov output file $refcov_output does not exist");
-        }
-       
-#######OLD METHOD#######
-#        $self->status_message("refcov completed successfully, stats file: $refcov_output");
-#        my $refcov = Genome::Model::Tools::MetagenomicCompositionShotgun::RefCovTool->create(
-#            working_directory => $self->report_dir,
-#            aligned_bam_file => $sorted_bam,
-#            regions_file => $self->regions_file,
-#        );
-#
-#        $self->status_message("Executing RefCov command ". $refcov->command_name);
-#        my $rv;
-#        eval{$rv=$refcov->execute};
-#        if($@ or !$rv){
-#            die $self->error_message("failed to execute refcov: $@");
-#        }
-#        unless ($refcov_output eq $refcov->report_file){
-#            die $self->error_message("refcov report file and expected output path differ, dying!");
-#        }
-#        $refcov_output = $refcov->report_file;
-#        unless (-s $refcov_output){
-#            die $self->error_message("refcov output doesn't exist or has zero size: $refcov_output");
-#        }
-#        $self->status_message("refcov completed successfully, stats file: $refcov_output");
-########################        
-    }
-
-    $self->status_message("Combining refcov results with taxonomy reports for final summary file");
-
-
-    if ($self->include_taxonomy_report) {
-        $self->_generate_taxonomy_report($sorted_bam, $refcov_output);
-    }
+    my $refcov_summary = $self->_generate_refcov_summary;
+    return if not $refcov_summary;
 
     return 1;
 }
 
 sub _generate_taxonomy_report {
-    my ($self, $sorted_bam, $refcov_output) = @_;
+    my $self = shift;
 
-    ## Taxonomy Count 
+    $self->status_message("Generate taxonomy report");
 
-    $self->status_message("Starting taxonomy count...\n");
+    $self->status_message('Load reference hits');
+    my $ref_counts = $self->_load_reference_hits;
+    return if not $ref_counts;
+    $self->status_message('Load reference hits...OK');
 
-    # Load Taxonomy From Taxonomy Files
-    my $taxonomy;
-    my %taxon_map = (
-        species => '1',
-        phyla   => '2',
-        genus   => '3',
-        order   => '4',
-        hmp     => '5',
+    $self->status_message('Load taxonomy');
+    my $taxonomy = $self->_load_basic_taxonomy;
+    return if not $taxonomy;
+    $self->status_message('Load taxonomy...OK');
+
+    my $viral_taxonomy = {};
+    if ( -s $self->build->metagenomic_reference_viral_taxonomy_file ) {
+        $self->status_message('Load viral taxonomy');
+        $viral_taxonomy = $self->_load_viral_taxonomy;
+        return if not $viral_taxonomy;
+        $self->status_message('Load viral taxonomy...OK');
+    }
+
+    my %species_counts_hash;
+    my %phyla_counts_hash;
+    my %genus_counts_hash;
+    my %viral_family_counts_hash;
+    my %viral_subfamily_counts_hash;
+    my %viral_genus_counts_hash;
+    my %viral_species_counts_hash;
+
+    $self->status_message('Open read count file: '.$self->build->read_count_file);
+    unlink $self->build->read_count_file if -e $self->build->read_count_file;
+    my $read_cnt_o = eval{ Genome::Sys->open_file_for_writing($self->build->read_count_file); };
+    if ( not $read_cnt_o ) {
+        $self->error_message('Failed to open read count file: '.$@);
+        return;
+    }
+
+    print $read_cnt_o "Reference Name\t#Reads with hits\tSpecies\tPhyla\tHMP genome\n";
+    $self->status_message('Going through references');
+    for my $ref_id (sort keys %$ref_counts){
+        if (($ref_id =~ /^BACT/) or ($ref_id =~ /^ARCH/) or ($ref_id =~ /^EUKY/)){
+            my $species= $taxonomy->{$ref_id}->{species} || '';
+            $species_counts_hash{$species}+=$ref_counts->{$ref_id};
+            my $phyla=$taxonomy->{$ref_id}->{phyla} || '';
+            $phyla_counts_hash{$phyla}+=$ref_counts->{$ref_id};
+            my $genus=$taxonomy->{$ref_id}->{genus} || '';
+            $genus_counts_hash{$genus}+=$ref_counts->{$ref_id};
+            my $hmp_flag=$taxonomy->{$ref_id}->{hmp}|| '';	
+            my $order=$taxonomy->{$ref_id}->{order} || '';
+            print $read_cnt_o "$ref_id\t$ref_counts->{$ref_id}\t$species\t$phyla\t$genus\t$order\t$hmp_flag\n";
+        }elsif ($ref_id =~ /^VIRL/){ #produce reports for viral taxonomy if available
+            my ($gi) = $ref_id =~/^VIRL_(\d+)$/;
+            if ($viral_taxonomy->{$gi}){
+                my $species = $viral_taxonomy->{$gi}->{species} || '';
+                $viral_species_counts_hash{$species}+=$ref_counts->{$ref_id};
+                my $genus = $viral_taxonomy->{$gi}->{genus} || '';
+                $viral_genus_counts_hash{$genus}+=$ref_counts->{$ref_id};
+                my $family = $viral_taxonomy->{$gi}->{family} || '';
+                $viral_family_counts_hash{$family}+=$ref_counts->{$ref_id};
+                my $subfamily = $viral_taxonomy->{$gi}->{subfamily} || '';
+                $viral_subfamily_counts_hash{$subfamily}+=$ref_counts->{$ref_id};
+                print $read_cnt_o "$ref_id\t$ref_counts->{$ref_id}\t$species\t\t\t\t\n";
+            }else{
+                print $read_cnt_o "$ref_id\t$ref_counts->{$ref_id}\t\t\t\t\t\n";
+            }
+        }else{
+            print $read_cnt_o "$ref_id\t$ref_counts->{$ref_id}\t\t\t\t\t\n";
+        }
+    }
+    $read_cnt_o->close;
+    $self->status_message('Going through references...OK');
+
+    $self->status_message("Write taxonomy counts");
+    my $species_output_file = $self->build->reports_directory . '/species_count';
+    $self->_write_count_and_close($species_output_file, "Species", \%species_counts_hash);
+    my $phyla_output_file = $self->build->reports_directory . '/phyla_count';
+    $self->_write_count_and_close($phyla_output_file, "Phyla", \%phyla_counts_hash);
+    my $genus_output_file = $self->build->reports_directory . '/genus_count';
+    $self->_write_count_and_close($genus_output_file, "Genus", \%genus_counts_hash);
+    my $viral_species_output_file = $self->build->reports_directory . '/viral_species_count';
+    $self->_write_count_and_close($viral_species_output_file, "Viral Species", \%viral_species_counts_hash);
+    my $viral_genus_output_file = $self->build->reports_directory . '/viral_genus_count';
+    $self->_write_count_and_close($viral_genus_output_file, "Viral Genus", \%viral_genus_counts_hash);
+    my $viral_family_output_file = $self->build->reports_directory . '/viral_family_count';
+    $self->_write_count_and_close($viral_family_output_file, "Viral Family", \%viral_family_counts_hash);
+    my $viral_subfamily_output_file = $self->build->reports_directory . '/viral_subfamily_count';
+    $self->_write_count_and_close($viral_subfamily_output_file, "Viral Subfamily", \%viral_subfamily_counts_hash);
+    $self->status_message("Write taxonomy counts...OK");
+
+    $self->status_message("Generate taxonomy report...OK");
+
+    return 1;
+}
+
+sub _load_taxonomy {
+    my ($self, $filename, $header_ignore_str, $taxon_map_ref) = @_;
+
+    my $fh = Genome::Sys->open_file_for_reading($filename);
+    my $taxonomy = {};
+    my $header = <$fh>;
+    unless ($header =~ /^$header_ignore_str/) {
+        die "unexpected header $header!  expected =~ $header_ignore_str";
+    }
+    while (<$fh>) {
+        chomp;
+        if (/^$header_ignore_str/) {
+            die "duplicated header?!?!: $_\n";
+        }
+        my @fields = split(/\t/, $_);
+        for (@fields) {
+            s/^\s+//; 
+            s/\s+$//;
+        }
+        # todo: this is a one-line hash slice -ss
+        my $ref_id = $fields[0]; 
+        for my $taxon (keys %$taxon_map_ref) {
+            $taxonomy->{$ref_id}{$taxon} = $fields[$taxon_map_ref->{$taxon}];
+        }
+    }
+    return $taxonomy;
+}
+
+sub _load_basic_taxonomy {
+    my $self = shift;
+
+    my $taxonomy = $self->_load_taxonomy($self->build->metagenomic_reference_taxonomy_file, 'Species', {
+            species => '1',
+            phyla   => '2',
+            genus   => '3',
+            order   => '4',
+            hmp     => '5',
+        }
     );
-    $taxonomy = $self->_load_taxonomy($self->taxonomy_file, 'Species', \%taxon_map);
+
     unless(%$taxonomy) {
-        die $self->error_message("No taxonomy data loaded from " . $self->taxonomy_file . "!");
+        $self->error_message("No taxonomy data loaded from " . $self->build->metagenomic_reference_taxonomy_file . "!");
+        return;
     }
 
-    my $viral_taxonomy;
-    my %viral_taxon_map = (
-        species    => '1',
-        genus      => '2',
-        subfamily  => '3',
-        family     => '4',
-        infraorder => '5',
-        suborder   => '6',
-        superorder => '7',
+    return $taxonomy;
+}
+
+sub _load_viral_taxonomy {
+    my $self = shift;
+
+    my $viral_taxonomy = $self->_load_taxonomy(
+        $self->build->metagenomic_reference_viral_taxonomy_file, 
+        'gi', 
+        {
+            species    => '1',
+            genus      => '2',
+            subfamily  => '3',
+            family     => '4',
+            infraorder => '5',
+            suborder   => '6',
+            superorder => '7',
+        },
     );
-    $viral_taxonomy = $self->_load_taxonomy($self->viral_taxonomy_file, 'gi', \%viral_taxon_map);
+
     unless(%$viral_taxonomy) {
-        die $self->error_message("No viral taxonomy data loaded from " . $self->viral_taxonomy_file . "!");
+        $self->error_message("No viral taxonomy data loaded from " . $self->build->metagenomic_reference_viral_taxonomy_file . "!");
+        return;
     }
+
+    return $viral_taxonomy;
+}
+
+sub _load_reference_hits {
+    my $self = shift;
 
     # Count Reference Hits
     my %ref_counts_hash;
     my $ignore_unmapped;
-    my $ignore_singleton;
+    my $sorted_bam = $self->build->_final_metagenomic_bam;
     my $fh = IO::File->new("samtools view $sorted_bam |");
     while (<$fh>){
         my @fields = split(/\t/, $_);
@@ -226,91 +244,22 @@ sub _generate_taxonomy_report {
         $ref_counts_hash{$ref_name}++;
     }
 
-    $self->status_message("skipping $ignore_unmapped reads without a metagenomic mapping");
+    $self->status_message("Skipped $ignore_unmapped reads without a metagenomic mapping");
 
-    # Count And Record Taxonomy Hits
-    my $read_count_output_file = $self->report_dir . '/read_count_output';
-    unlink $read_count_output_file if -e $read_count_output_file;
-    my $read_cnt_o = Genome::Sys->open_file_for_writing($read_count_output_file);
+    return \%ref_counts_hash;
+}
 
-    my %species_counts_hash;
-    my %phyla_counts_hash;
-    my %genus_counts_hash;
-    my %viral_family_counts_hash;
-    my %viral_subfamily_counts_hash;
-    my %viral_genus_counts_hash;
-    my %viral_species_counts_hash;
+sub _generate_refcov_summary {
+    my $self = shift;
 
+    $self->status_message('Generate ref cov summary');
 
-    $self->status_message('creating metagenomic count files');
-
-    print $read_cnt_o "Reference Name\t#Reads with hits\tSpecies\tPhyla\tHMP genome\n";
-    do {
-        use warnings FATAL => 'all';
-        for my $ref_id (sort keys %ref_counts_hash){
-            if (($ref_id =~ /^BACT/) or ($ref_id =~ /^ARCH/) or ($ref_id =~ /^EUKY/)){
-                my $species= $taxonomy->{$ref_id}->{species} || '';
-                $species_counts_hash{$species}+=$ref_counts_hash{$ref_id};
-                my $phyla=$taxonomy->{$ref_id}->{phyla} || '';
-                $phyla_counts_hash{$phyla}+=$ref_counts_hash{$ref_id};
-                my $genus=$taxonomy->{$ref_id}->{genus} || '';
-                $genus_counts_hash{$genus}+=$ref_counts_hash{$ref_id};
-                my $hmp_flag=$taxonomy->{$ref_id}->{hmp}|| '';	
-                my $order=$taxonomy->{$ref_id}->{order} || '';
-                print $read_cnt_o "$ref_id\t$ref_counts_hash{$ref_id}\t$species\t$phyla\t$genus\t$order\t$hmp_flag\n";
-            }elsif ($ref_id =~ /^VIRL/){ #produce reports for viral taxonomy if available
-                my ($gi) = $ref_id =~/^VIRL_(\d+)$/;
-                if ($viral_taxonomy->{$gi}){
-                    my $species = $viral_taxonomy->{$gi}->{species} || '';
-                    $viral_species_counts_hash{$species}+=$ref_counts_hash{$ref_id};
-                    my $genus = $viral_taxonomy->{$gi}->{genus} || '';
-                    $viral_genus_counts_hash{$genus}+=$ref_counts_hash{$ref_id};
-                    my $family = $viral_taxonomy->{$gi}->{family} || '';
-                    $viral_family_counts_hash{$family}+=$ref_counts_hash{$ref_id};
-                    my $subfamily = $viral_taxonomy->{$gi}->{subfamily} || '';
-                    $viral_subfamily_counts_hash{$subfamily}+=$ref_counts_hash{$ref_id};
-                    print $read_cnt_o "$ref_id\t$ref_counts_hash{$ref_id}\t$species\t\t\t\t\n";
-                }else{
-                    print $read_cnt_o "$ref_id\t$ref_counts_hash{$ref_id}\t\t\t\t\t\n";
-                }
-            }else{
-                print $read_cnt_o "$ref_id\t$ref_counts_hash{$ref_id}\t\t\t\t\t\n";
-            }
-        }
-    };
-    $read_cnt_o->close;
-
-    my $species_output_file = $self->report_dir . '/species_count';
-    my $phyla_output_file = $self->report_dir . '/phyla_count';
-    my $genus_output_file = $self->report_dir . '/genus_count';
-    my $viral_family_output_file = $self->report_dir . '/viral_family_count';
-    my $viral_subfamily_output_file = $self->report_dir . '/viral_subfamily_count';
-    my $viral_genus_output_file = $self->report_dir . '/viral_genus_count';
-    my $viral_species_output_file = $self->report_dir . '/viral_species_count';
-    $self->_write_count_and_close($species_output_file, "Species", \%species_counts_hash);
-    $self->_write_count_and_close($phyla_output_file, "Phyla", \%phyla_counts_hash);
-    $self->_write_count_and_close($genus_output_file, "Genus", \%genus_counts_hash);
-    $self->_write_count_and_close($viral_species_output_file, "Viral Species", \%viral_species_counts_hash);
-    $self->_write_count_and_close($viral_genus_output_file, "Viral Genus", \%viral_genus_counts_hash);
-    $self->_write_count_and_close($viral_family_output_file, "Viral Family", \%viral_family_counts_hash);
-    $self->_write_count_and_close($viral_subfamily_output_file, "Viral Subfamily", \%viral_subfamily_counts_hash);
-
-    $self->status_message("classification summary reports and reference hit report finished");
-
-
-    ## RefCov Summary
-
-    my $refcov_fh           =IO::File->new($refcov_output);
-    my $taxonomy_fh         =IO::File->new($self->taxonomy_file);
-    my $viral_taxonomy_fh   =IO::File->new($self->viral_headers_file);
-    my $read_counts_fh      =IO::File->new($read_count_output_file);
-    my $summary_report_fh   =IO::File->new("> ".$self->report_dir."/metagenomic_refcov_summary.txt");
-
-    my $data;
-    my %print_hash;
-    my %header_hash;
+    my $read_counts_fh = eval{ Genome::Sys->open_file_for_reading($self->build->read_count_file); };
+    if ( not $read_counts_fh ) {
+        $self->error_message('Failed to open read count file ('.$self->build->read_count_file.'): '.$@);
+        return;
+    }
     my $ref_data;
-
     while (my $line = $read_counts_fh->getline) {
         chomp $line;
         next if ($line =~ /^Reference/);
@@ -330,8 +279,13 @@ sub _generate_taxonomy_report {
     }
     $read_counts_fh->close;
 
-    while (my $line = $taxonomy_fh->getline)
-    {
+    my $taxonomy_fh = eval{ Genome::Sys->open_file_for_reading($self->build->metagenomic_reference_taxonomy_file); };
+    if ( not $taxonomy_fh ) {
+        $self->error_message('Failed to open taxonomy file ('.$self->build->metagenomic_reference_taxonomy_file.'): '.$@);
+        return;
+    }
+    my %header_hash;
+    while (my $line = $taxonomy_fh->getline) {
         chomp $line;
         my ($ref, $species) = split(/\t/,$line);
         my ($gi) = split(/\|/, $ref);
@@ -340,18 +294,25 @@ sub _generate_taxonomy_report {
     }
     $taxonomy_fh->close;
 
-    while (my $line = $viral_taxonomy_fh->getline)
-    {
-        chomp $line;
-        my ($gi, @species) = split(/\s+/,$line);
-        my $species = "@species";
-        $gi = "VIRL_$gi";
-        $header_hash{$gi}=$species;
+    if ( -s $self->build->metagenomic_reference_viral_headers_file ) {
+        my $viral_taxonomy_fh = Genome::Sys->open_file_for_reading($self->build->metagenomic_reference_viral_headers_file);
+        while (my $line = $viral_taxonomy_fh->getline) {
+            chomp $line;
+            my ($gi, @species) = split(/\s+/,$line);
+            my $species = "@species";
+            $gi = "VIRL_$gi";
+            $header_hash{$gi}=$species;
+        }
+        $viral_taxonomy_fh->close;
     }
-    $viral_taxonomy_fh->close;
 
-    while(my $line = $refcov_fh->getline)
-    {
+    my $refcov_fh = eval{ Genome::Sys->open_file_for_reading($self->build->refcov_output); };
+    if ( not $refcov_fh ) {
+        $self->error_message('Failed to open refcov output ('.$self->build->refcov_output.'): '.$@);
+        return;
+    }
+    my $data;
+    while(my $line = $refcov_fh->getline) {
         chomp $line;
         my (@array)=split(/\t/,$line);
         my ($ref)  =split(/\|/, $array[0]);
@@ -369,6 +330,12 @@ sub _generate_taxonomy_report {
     }
     $refcov_fh->close;
 
+    my $summary_report = $self->build->reports_directory."/metagenomic_refcov_summary.txt";
+    my $summary_report_fh = eval{ Genome::Sys->open_file_for_writing($summary_report); };
+    if ( not $summary_report_fh ) {
+        $self->error_message("Failed to open summary report ($summary_report): $@");
+        return;
+    }
     print $summary_report_fh "Reference Name\tPhyla\tGenus\tOrder\tHMP flag\tDepth\tBreadth\tTotal reference bases\tBases not covered\t#Reads\n";
 #foreach my $s (keys%{$data}){
     for my $s (sort {$a cmp $b} keys%{$data}){
@@ -398,34 +365,9 @@ sub _generate_taxonomy_report {
 
     $self->status_message("metagenomic report successfully completed");
 
-    system("touch ".$self->report_dir."/FINISHED");
-}
+    system("touch ".$self->build->reports_directory."/FINISHED");
 
-sub _load_taxonomy {
-    my ($self, $filename, $header_ignore_str, $taxon_map_ref) = @_;
-    my $fh = Genome::Sys->open_file_for_reading($filename);
-    my $taxonomy = {};
-    my $header = <$fh>;
-    unless ($header =~ /^$header_ignore_str/) {
-        die "unexpected header $header!  expected =~ $header_ignore_str";
-    }
-    while (<$fh>) {
-        chomp;
-        if (/^$header_ignore_str/) {
-            die "duplicated header?!?!: $_\n";
-        }
-        my @fields = split(/\t/, $_);
-        for (@fields) {
-            s/^\s+//; 
-            s/\s+$//;
-        }
-        # todo: this is a one-line hash slice -ss
-        my $ref_id = $fields[0]; 
-        for my $taxon (keys %$taxon_map_ref) {
-            $taxonomy->{$ref_id}{$taxon} = $fields[$taxon_map_ref->{$taxon}];
-        }
-    }
-    return $taxonomy;
+    return 1;
 }
 
 sub _write_count_and_close {
@@ -441,3 +383,5 @@ sub _write_count_and_close {
 }
 
 1;
+
+

@@ -457,35 +457,105 @@ sub _execute_build {
         }
     }
 
-    #TODO, these taxonomic files need to be retrieved from to one or all metagenomic references
-
-    my %meta_report_properties = (
-        build_id => $build->id,
-    );
-
-    unless ($self->contamination_screen_pp_id){
-        $meta_report_properties{include_fragments} = 1;
+    # REFCOV
+    my $refcov = $self->_run_refcov($build);
+    if ( not $refcov ) {
+        $self->error_message('Failed to run refcov');
+        return;
     }
 
-    if ($self->include_taxonomy_report){
-        $meta_report_properties{include_taxonomy_report} = 1;
-        $meta_report_properties{taxonomy_file} = '/gscmnt/sata409/research/mmitreva/databases/Bact_Arch_Euky.taxonomy.txt';
-        $meta_report_properties{viral_taxonomy_file} = '/gscmnt/sata409/research/mmitreva/databases/viruses_taxonomy_feb_25_2010.txt';
+    # TAXONOMY REPORT
+    if ( $self->include_taxonomy_report ){
+        my $taxonomy = $self->_run_taxonomy_report($build);
+        if ( not $taxonomy ) {
+            $self->error_message('Failed to run taxonomy report');
+            return;
+        }
     }
 
-    my $meta_report = Genome::Model::MetagenomicCompositionShotgun::Command::MetagenomicReport->create(
-        %meta_report_properties,
-    );
-    unless($meta_report->execute()) {
-        die $self->error_message("metagenomic report execution died or did not return 1:$@");
-    }
-
+    # VALIDATE
     unless($self->_contamination_screen_pp){ #TODO: update validate to deal with this arg
         my $validate_build = Genome::Model::MetagenomicCompositionShotgun::Command::Validate->create(build_id => $build->id);
+        $validate_build->dump_status_messages(1);
         unless($validate_build->execute()) {
             die $self->error_message("Failed to validate build!");
         }
     }
+
+    return 1;
+}
+
+sub _run_refcov {
+    my ($self, $build) = @_;
+
+    $self->status_message('Run Refcov');
+
+    my $refcov_output = $build->refcov_output;
+    $self->status_message('Refcov output: '.$refcov_output);
+    if (-e $refcov_output and -e "$refcov_output.ok"){
+        $self->status_message("Refcov already complete, shortcutting");
+        return 1;
+    }
+
+    my $sorted_bam = $build->_final_metagenomic_bam;
+    $self->status_message('Metagenoic BAM: '.$sorted_bam);
+    if ( not -s $sorted_bam ) {
+        $self->error_message('Sorted BAM does not exist!');
+        return;
+    }
+
+    my $regions_file = $build->metagenomic_reference_regions_file; 
+    $self->status_message('Regions file: '.$regions_file);
+    if ( not -s $regions_file ) {
+        $self->error_message("No regions file ($regions_file) does not exist");
+        return;
+    }
+
+    my $command = "gmt5.12.1 ref-cov standard";
+    $command .= " --alignment-file-path ".$sorted_bam;
+    $command .= " --roi-file-path ".$regions_file;
+    $command .= " --stats-file ".$refcov_output;
+    $command .= " --min-depth-filter 0";
+
+    $self->status_message($command);
+    my $rv = eval{
+        Genome::Sys->shellcmd(
+            cmd=>$command,
+            #output_files=>[$refcov_output],
+            #input_files => [$sorted_bam, $regions_file],
+        );
+    };
+    if ( not $rv ) {
+        $self->error_message("Failed to run refcov command: $@");
+        return;
+    }
+    if ( not -e $refcov_output ) {
+        $self->error_message("Refcov command succeeded, but output file ($refcov_output) does not exist");
+        return;
+    }
+
+    $self->status_message('Run Refcov...OK');
+
+    return 1;
+}
+
+sub _run_taxonomy_report {
+    my ($self, $build) = @_;
+
+    $self->status_message('Run taxonomy report');
+
+    my $report = Genome::Model::MetagenomicCompositionShotgun::Command::TaxonomyReport->create(build => $build);
+    if ( not $report ) {
+        $self->error_message('Failed to create taxnomy report command');
+        return;
+    }
+    $report->dump_status_messages(1);
+    unless( $report->execute ) {
+        $self->error_message('Failed to exectue taxonomy report command');
+        return;
+    }
+
+    $self->status_message('Run taxonomy report...OK');
 
     return 1;
 }
@@ -832,76 +902,81 @@ sub get_bam_and_flagstat_from_build{
 }
 
 # todo move to the model class
-sub build_if_necessary_and_wait{
+sub build_if_necessary_and_wait {
     my ($self, @models) = @_;
 
-    my @builds;
-    for my $model (@models) {
-        my $build;
-        if ($self->need_to_build($model)) {
-            $self->status_message("Running build for model ".$model->name);
-            $build = $self->run_ref_align_build($model);
-            unless ($build) {
-                $self->error_message("Couldn't create build for model ".$model->name);
-                Carp::confess($self->error_message);
-            }
+    my (@succeeded_builds, @watched_builds);
+    for my $model ( @models ) {
+        my $need_to_build = $self->need_to_build($model);
+        if ( not $need_to_build ) {
+            my $succeeded_build = $model->last_succeeded_build;
+            $self->status_message('Found succeeded build '.$succeeded_build->__display_name__);
+            push @succeeded_builds, $succeeded_build;
+            next;
         }
-        else {
-            $self->status_message("Skipping redundant build for model ".$model->name);
-            $build = $model->last_succeeded_build;
-        }
-        push @builds, $build;
+        my $watched_build = $self->run_ref_align_build($model);
+        $self->status_message('Watching build '.$watched_build->__display_name__);
+        push @watched_builds, $watched_build;
     }
 
-    for my $build (@builds) {
+    if ( @models != @succeeded_builds + @watched_builds ) {
+        Carp::confess('Failed to get a build for each model');
+    }
+
+    if ( not @watched_builds ) {
+        return @succeeded_builds;
+    }
+
+    if ( not UR::Context->commit ) {
+        Carp::confess('Failed to commit');
+    }
+
+    for my $build ( @watched_builds ) {
         $self->wait_for_build($build);
         unless ($build->status eq 'Succeeded') {
-            $self->error_message("Failed to execute build (status: ".$build->status.") for model ". $build->model_name);
-            Carp::confess($self->error_message);
+            Carp::confess("Failed to execute build (status: ".$build->status.") for model ". $build->model_name);
         }
     }
 
-    return @builds;
+    return (@succeeded_builds, @watched_builds);
 }
 
 sub run_ref_align_build {
     my ($self, $model) = @_;
-    unless ($model and $model->isa("Genome::Model::ReferenceAlignment")){
-        $self->error_message("No ImportedReferenceSequence model passed to run_ref_align_build()");
-        return;
+
+    Carp::confess('No model sent to run build') if not $model;
+    
+    my $build = $model->latest_build;
+    if ( $build ) {
+        $self->status_message("Found build for ".$model->__display_name__);
+        $self->status_message("Build status is ".$build->status);
+        if ( grep { $build->status eq $_ } (qw/ Scheduled Running /) ) {
+            return $build;
+        }
+    }
+    else {
+        $self->status_message("Create build for ".$model->__display_name__);
+        $build = Genome::Model::Build->create(
+            model_id => $model->id
+        );
+        if ( not $build ) {
+            Carp::confess("Failed to create build for ".$model->__display_name__);
+        }
+        $self->status_message("Create build OK");
     }
 
-    $self->status_message("...creating build");
-    my $sub_build = Genome::Model::Build->create(
-        model_id => $model->id
-    );
-    unless ($sub_build){
-        $self->error_message("Couldn't create build for underlying ref-align model " . $model->name. ": " . Genome::Model::Build->error_message);
-        return;
-    }
-
-    $self->status_message("...starting build (w/o job group)");
-    UR::Context->commit();
-    #TODO update these params to use pp values or wahtevers passes in off command line
-    my $rv = $sub_build->start(
+    $self->status_message("Start build ".$build->__display_name__);
+    my $start = $build->start(
         job_dispatch    => 'apipe',
         server_dispatch => 'workflow',
         job_group => undef, # this will not take up one of the 50 slots available to a user
     );
-
-    if ($rv) {
-        $self->status_message("Created and started build for underlying ref-align model " .  $model->name ." w/ build id ".$sub_build->id);
+    if ( not $start ) {
+        Carp::confess("Failed to start build");
     }
-    else {
-        $self->error_message("Failed to start build for underlying ref-align model " .  $model->name ." w/ build id ".$sub_build->id);
-    }
+    $self->status_message("Start build OK");
 
-    # NOTE: this should really never be done in regular "business logic", but
-    # is necessary because we don't have multi-process context stacks working -ss
-    $self->status_message("Committing after starting build");
-    UR::Context->commit();
-
-    return $sub_build;
+    return $build;
 }
 
 # TODO: move this to the build class itself

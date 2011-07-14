@@ -69,6 +69,14 @@ class Genome::Model::Build::MetagenomicCompositionShotgun{
             is => 'Genome::Model::Build::ImportedReferenceSequence',
             via => 'model',
         },
+        refcov_output => {
+            calculate_from => [qw/ reports_directory /],
+            calculate => q| return $reports_directory.'/report_combined_refcov_regions_file.regions.txt'; |,
+        },
+        read_count_file => {
+            calculate_from => [qw/ reports_directory /],
+            calculate => q| return $reports_directory.'/read_count_output'; |,
+        }
     ],
 };
 
@@ -85,6 +93,57 @@ sub sra_sample_id {
     return $sra_sample_id;
 }
 
+# META REFS
+sub metagenomic_reference_hmp_dir {
+    my $self = shift;
+
+    my @metagenomic_references = $self->model->metagenomic_references;
+    my ($hmp_dir) = grep { -d $_ } map { $_->data_directory.'/hmp' } @metagenomic_references;
+    if ( not $hmp_dir ) {
+        $self->error_message('No hmp directory found in reference builds: '.join(' ', map { $_->__display_name__ } @metagenomic_references));
+        return;
+    }
+
+    return $hmp_dir;
+}
+
+sub metagenomic_reference_regions_file {
+    my $self = shift;
+
+    my $hmp_dir = $self->metagenomic_reference_hmp_dir;
+    return if not $hmp_dir;
+
+    return $hmp_dir.'/combined_refcov_regions_file.regions.bed';
+}
+
+sub metagenomic_reference_taxonomy_file {
+    my $self = shift;
+
+    my $hmp_dir = $self->metagenomic_reference_hmp_dir;
+    return if not $hmp_dir;
+
+    return $hmp_dir.'/Bact_Arch_Euky.taxonomy.txt';
+}
+
+sub metagenomic_reference_viral_headers_file {
+    my $self = shift;
+
+    my $hmp_dir = $self->metagenomic_reference_hmp_dir;
+    return if not $hmp_dir;
+
+    return $hmp_dir.'/viruses_nuc.fasta.headers';
+}
+
+sub metagenomic_reference_viral_taxonomy_file {
+    my $self = shift;
+
+    my $hmp_dir = $self->metagenomic_reference_hmp_dir;
+    return if not $hmp_dir;
+
+    return $hmp_dir.'/viruses_taxonomy_feb_25_2010.txt';
+}
+
+# BUILD DIFF
 sub files_ignored_by_diff {
     return qw(
         reports/Build_Initialized/report.xml
@@ -98,5 +157,6 @@ sub dirs_ignored_by_diff {
         logs/
     );
 }
+
 1;
 
