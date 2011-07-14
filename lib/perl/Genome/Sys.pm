@@ -22,10 +22,12 @@ sub username {
 }
 
 sub sudo_username {
+    my $class = shift;
     my $who_output = `who -m` || '';
-    my $sudo_username = (split(/\s/,$who_output))[0];
-    $sudo_username = ($ENV{'SUDO_USER'} || '') unless $sudo_username;
-    return $sudo_username;
+    my $who_username = (split(/\s/,$who_output))[0];
+    my $sudo_username = $who_username eq $class->username ? '' : $who_username;
+    $sudo_username ||= $ENV{'SUDO_USER'};
+    return ($sudo_username || '');
 }
 
 sub user_is_member_of_group {
