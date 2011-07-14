@@ -59,10 +59,8 @@ sub execute {
     my $flags = join(" ", $self->flags);
     my $cmd = $self->joinx_path . " snv-concordance $flags " .
         $self->input_file_a . ' ' .
-        $self->input_file_b;
-    if ($output ne "-") {
-        $cmd .= " > $output";
-    }
+        $self->input_file_b
+        . " -o $output";
 
     my %params = (
         cmd => $cmd,

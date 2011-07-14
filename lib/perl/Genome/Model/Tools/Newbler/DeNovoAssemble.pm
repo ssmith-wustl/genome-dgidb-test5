@@ -47,6 +47,10 @@ class Genome::Model::Tools::Newbler::DeNovoAssemble {
             is => 'Text',
             doc => 'To remove reads that match cloning vectors',
         },
+        fe => {
+            is => 'Text',
+            doc => 'Text file of contaminant read names',
+        },
     ],
 };
 
@@ -83,6 +87,10 @@ sub _build_assemble_command {
     my $self = shift;
 
     my $assembler = $self->path_to_version_run_assembly;
+    unless( $assembler ) {
+        $self->error_message( "Failed to get path to newbler assembler for version: ".$self->version );
+        return;
+    }
 
     if ( $self->ace and $self->consed ) {
         $self->error_message( "--ace and --consed are mutually execlusive in number, please specify one of the two" );
@@ -95,20 +103,26 @@ sub _build_assemble_command {
             return;
         }
     }
-
     if( $self->vs ) {
         unless( -s $self->vs ) {
             $self->error_message( "Failed to find filter reads file specified in --vs option: ".$self->vs );
             return;
         }
     }
-    
+    if ( $self->fe ) {
+        unless( -s $self->fe ) {
+            $self->error_message( "Failed to find contaminant reads file specified in --fe option: ".$self->fe );
+            return;
+        }
+    }
+
     my $cmd = $assembler.' -o '.$self->output_directory.' -force'; #force is needed for newbler to put files is existing directories .. it does not remove any existing files is that dir
     $cmd .= ' -consed' if $self->consed;
     $cmd .= ' -rip' if $self->rip;
     $cmd .= ' -ace' if $self->ace;
     $cmd .= ' -vt '.$self->vt if $self->vt;
     $cmd .= ' -vs '.$self->vs if $self->vs;
+    $cmd .= ' -fe '.$self->fe if $self->fe;
 
     my $input_fastqs;
     for my $input_fastq ( $self->input_files ) {
