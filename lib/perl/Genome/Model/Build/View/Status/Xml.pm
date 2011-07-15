@@ -511,8 +511,6 @@ sub get_notes_node {
     my $doc = $self->_doc;
     my $parser = XML::LibXML->new();
 
-    $DB::single = 1;
-
     my $notes_node = $doc->createElement('aspect');
     $notes_node->addChild( $doc->createAttribute("name", "notes") );
 
@@ -524,6 +522,7 @@ sub get_notes_node {
         my $note_root = $note_node->getDocumentElement;
         $notes_node->addChild($note_root);
     }
+
     return $notes_node;
 }
 
