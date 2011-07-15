@@ -38,6 +38,10 @@ sub create {
         $self->editor_id(Genome::Sys->username);
     }
 
+    unless ($self->body_text) {
+        $self->body_text = '';
+    }
+
     my $sudo_username = Genome::Sys->sudo_username;
     if ($sudo_username) {
         $self->body_text($sudo_username . ' is running as ' . $self->editor_id . '. ' . $self->body_text);

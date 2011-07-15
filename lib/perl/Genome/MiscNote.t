@@ -15,7 +15,9 @@ sub miscnote_body_text {
     my $sudo_username = shift;
     my $body_text = shift;
 
+    no warnings qw(redefine);
     *Genome::Sys::sudo_username = sub { return $sudo_username };
+    use warnings qw(redefine);
 
     my $subject = UR::Value->get('subject');
     isa_ok($subject, 'UR::Value', 'subject');
