@@ -15,9 +15,6 @@ class Genome::Model::Tools::DetectVariants2::Sniper {
 # TODO ... make sure this works without old default snv and indel params default => '-q 1 -Q 15',
     # Make workflow choose 64 bit blades
     has_param => [
-        lsf_queue => {
-            default_value => 'long'
-        }, 
         lsf_resource => {
             default_value => 'rusage[mem=4000] select[type==LINUX64 && maxtmp>100000] span[hosts=1]',
         },

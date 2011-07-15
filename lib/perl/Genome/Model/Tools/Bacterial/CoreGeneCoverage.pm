@@ -226,6 +226,11 @@ sub execute {
 	unlink($self->output_file);
 
 	## Gzip Cov_30_PID_30.out
+	## We will remove the existing Cov_30_PID_30.out.gz from earlier run before gzip'ing the Cov_30_PID_30.out file
+	if (-e "Cov_30_PID_30.out.gz") {
+		unlink "Cov_30_PID_30.out.gz";
+		$self->status_message('Removed existing Cov_30_PID_30.out.gz file');
+	}
 	my $gzip_rv = IPC::Run::run (
 			'gzip',
 			'Cov_30_PID_30.out',

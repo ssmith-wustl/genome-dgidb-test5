@@ -28,7 +28,8 @@ foreach ( @files ) {
 
 my $tool = Genome::Model::Tools::Soap::StandardOutputs->create(
     assembly_directory => $temp_dir,
-    );
+    min_contig_length => 50,
+);
 ok ($tool, "Created soap post assemble default tool") or die;
 ok ($tool->execute, "Successfully executed soap default post assemble tool") or die;
 
