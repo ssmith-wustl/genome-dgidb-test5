@@ -14,15 +14,9 @@ class Genome::Model::Tools::Soap::CreateSupercontigsAgpFile {
             is => 'Text',
             doc => 'Soap assembly directory',
         },
-	output_file => {
-	    is => 'Text',
-	    doc => 'User supplied output file name',
-	    is_optional => 1,
-	},
-        scaffold_sequence_file => {
-            is => 'Text',
-	    is_optional => 1,
-            doc => 'Soap created scaffolds fasta file',
+        min_contig_length => {
+            is => 'Number',
+            doc => 'Minimum contig length to process',
         },	
     ],
 };
@@ -33,7 +27,7 @@ sub help_brief {
 
 sub help_detail {
     return <<"EOS"
-gmt soap create-supercontigs-agp-file --scaffold-sequence-file /gscmnt/111/soap_assembly/61EFS.cafSeq --assembly-directory /gscmnt/111/soap_assembly
+gmt soap create-supercontigs-agp-file --assembly-directory /gscmnt/111/soap_assembly --min-contig-length 200
 EOS
 }
 
@@ -49,23 +43,31 @@ sub execute {
         $self->error_message("Failed to find assembly directory: ".$self->assembly_directory);
         return;
     }
+    
+    unless( -s $self->assembly_scaffold_sequence_file ) {
+        $self->error_message("Failed to find soap scaffold sequence file: ".$self->assembly_scaffold_sequence_file);
+        return;
+    }
 
-    my $scaf_seq_file = ( $self->scaffold_sequence_file ) ? $self->scaffold_sequence_file : $self->assembly_scaffold_sequence_file;
+    unlink $self->supercontigs_agp_file;
+    my $fh = Genome::Sys->open_file_for_writing( $self->supercontigs_agp_file );
 
-    my $out_file = ($self->output_file) ? $self->output_file : $self->supercontigs_agp_file;
-
-    unlink $out_file;
-    my $fh = Genome::Sys->open_file_for_writing($out_file);
-
-    my $io = Bio::SeqIO->new(-format => 'fasta', -file => $scaf_seq_file);
+    my $io = Bio::SeqIO->new( -format => 'fasta', -file => $self->assembly_scaffold_sequence_file );
 
     my $scaffold_number = 0;
 
     while (my $seq = $io->next_seq) {
+        #remove lead/trail-ing Ns
+        my $supercontig = $seq->seq;
+        $supercontig =~ s/^N+//;
+        $supercontig =~ s/N+$//;
+
+        #skip if less than min contig length
+        next unless length $supercontig >= $self->min_contig_length;
 
 	my $scaffold_name = 'Contig'.$scaffold_number++;
-	my @bases = split (/N+/i, $seq->seq);
-	my @gaps = split (/[ACTG]+/i, $seq->seq);
+	my @bases = split (/N+/i, $supercontig);
+	my @gaps = split (/[ACTG]+/i, $supercontig);
 
 	shift @gaps; #empty string from split .. unless seq starts with Ns in which case it's just thrown out
 
@@ -76,6 +78,9 @@ sub execute {
 	my $prev_start = 0;
 
 	for (my $i = 0; $i < scalar @bases; $i++) {
+            #if first or last string and < min length skip .. no need process gap info
+            next if $i == 0 and length $bases[$i] < $self->min_contig_length;
+            next if $i == $#bases and length $bases[$i] < $self->min_contig_length;
 
 	    my $contig_name = $scaffold_name.'.'.++$contig_order;
 

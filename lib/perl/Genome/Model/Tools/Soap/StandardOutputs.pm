@@ -60,9 +60,7 @@ sub execute {
 
     #create supercontigs agp file
     $self->status_message("Creating supercontigs agp file");
-    my $agp = Genome::Model::Tools::Soap::CreateSupercontigsAgpFile->create(
-        assembly_directory => $self->assembly_directory,
-    );
+    my $agp = Genome::Model::Tools::Soap::CreateSupercontigsAgpFile->create( %params );
     unless ($agp->execute) {
         $self->error_message("Failed to successfully execute creating agp file");
         return;
