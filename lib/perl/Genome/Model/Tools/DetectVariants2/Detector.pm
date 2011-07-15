@@ -125,6 +125,11 @@ class Genome::Model::Tools::DetectVariants2::Detector {
         detect_indels => { value => 1 },
         detect_svs => { value => 1 },
     ],
+    has_param => [
+        lsf_queue => {
+            default => 'apipe',
+        },
+    ],
     doc => 'This is the base class for all detector classes',
 };
 
