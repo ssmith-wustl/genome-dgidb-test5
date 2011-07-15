@@ -329,7 +329,7 @@ sub walk_tree {
     my $key = $keys[0];
     
     #Case One:  We're somewhere in the middle of the data-structure--we need to combine some results
-    if($key eq 'intersect' or $key eq 'union') {
+    if($key eq 'intersect' or $key eq 'union' or $key eq 'unionunique') {
         my $value = $detector_tree->{$key};
         
         unless(ref $value eq 'ARRAY') {
