@@ -59,7 +59,7 @@ sub help_synopsis {
 sub flags {
     my $self = shift;
 
-    my @flags;
+    my %flags;
     my @bool_flags = (
         'exact_pos',
         'exact_allele',
@@ -68,12 +68,10 @@ sub flags {
     );
     for my $bf (@bool_flags) {
         if ($self->$bf) {
-            my $tmp = "--$bf";
-            $tmp =~ tr/_/-/;
-            push(@flags, $tmp);
+            $flags{$bf} = 1;
         }
     }
-    return @flags;
+    return %flags;
 }
 
 sub execute {
