@@ -16,13 +16,22 @@ sub user_id {
 }
 
 sub username {
-    my $username = getpwuid($<);
+    my $class = shift;
+    my $username = getpwuid($class->user_id);
     return $username;
 }
 
 sub sudo_username {
-    my $sudo_username = $ENV{'SUDO_USER'} || '';
-    return $sudo_username;
+    my $class = shift;
+    my $who_output = $class->cmd_output_who_dash_m || '';
+    my $who_username = (split(/\s/,$who_output))[0] || '';
+    my $sudo_username = $who_username eq $class->username ? '' : $who_username;
+    $sudo_username ||= $ENV{'SUDO_USER'};
+    return ($sudo_username || '');
+}
+
+sub cmd_output_who_dash_m {
+    return `who -m`;
 }
 
 sub user_is_member_of_group {

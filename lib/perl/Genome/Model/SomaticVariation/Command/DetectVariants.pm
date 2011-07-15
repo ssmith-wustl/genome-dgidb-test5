@@ -18,6 +18,11 @@ class Genome::Model::SomaticVariation::Command::DetectVariants{
             id_by => 'build_id',
         },
     ],
+    has_param => [
+        lsf_queue => {
+            default => 'apipe',
+        },
+    ],
 };
 
 sub execute{

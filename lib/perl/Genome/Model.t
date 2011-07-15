@@ -23,7 +23,7 @@ class Genome::Model::Tester {
     is => 'Genome::Model',
     has => [
         foo => { 
-            is_optional => 1, is_mutable => 1,
+            is_optional => 1, is_mutable => 1, is_many => 0,
             via => 'inputs', to => 'value_id', where => [name => 'foo', value_class_name => 'UR::Value', ],
         },
         baz => { 
@@ -233,7 +233,7 @@ ok(!$model2->auto_assign_inst_data, 'auto_assign_inst_data');
 ok($model2->auto_build_alignments, 'auto_build_alignments');
 
 $model->auto_assign_inst_data(1);
-my $model3 = $model->copy(do_not_copy_instrument_data => 1);
+my $model3 = $model->copy(instrument_data => undef);
 ok($model3, 'copy w/o inst data');
 is_deeply(
     [map { $_->value_id } $model3->inputs], 
@@ -250,7 +250,7 @@ is($model4->foo, 'BAR', 'override foo');
 
 my $model5 = $model->copy(
     name => 'BLAH!',
-    do_not_copy_instrument_data => 1,
+    instrument_data => undef,
     baz => [qw/ pdq /],
 );
 ok($model5, 'copy w/ override multi input baz');

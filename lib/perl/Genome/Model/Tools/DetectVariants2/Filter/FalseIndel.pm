@@ -112,9 +112,6 @@ class Genome::Model::Tools::DetectVariants2::Filter::FalseIndel {
        lsf_resource => {
            default_value => "-M 12000000 -R 'select[type==LINUX64 && mem>12000] rusage[mem=12000]'",
        },
-       lsf_queue => {
-           default_value => 'long',
-       },
     ]
 };
 

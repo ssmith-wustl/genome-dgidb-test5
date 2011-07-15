@@ -48,8 +48,13 @@ sub execute {
         return;
     }
 
-    unless( $self->_write_scaffolded_ace( $scaffolds ) ) {
+    unless( $self->_write_pcap_style_ace( $scaffolds ) ) {
         $self->error_message( "Failed to write new scaffolded pcap ace file" );
+        return;
+    }
+
+    unless ( $self->_write_gap_txt_file( $scaffolds ) ) {
+        $self->error_message( "Failed to create gap.txt file" );
         return;
     }
 
@@ -93,7 +98,7 @@ sub _validate_inputs {
     return 1;
 }
 
-sub _write_scaffolded_ace {
+sub _write_pcap_style_ace {
     my ( $self, $scaffolds ) = @_;
 
     $self->status_message( "Found scaffold agp file or file was supplied, generating scaffolded pcap ace file" );

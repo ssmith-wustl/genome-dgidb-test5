@@ -7,13 +7,15 @@ use Bio::SeqIO;
 use Bio::Seq;
 use DBI;
 
-my $mousetable='/gscuser/kchen/1000genomes/analysis/scripts/Mouse.July2007.RefSeqgene.tab';
-my $flist_cancergene='/gscuser/kchen/1000genomes/analysis/scripts/Cancer_genes.csv';
+my $dir = '/gsc/scripts/share/BreakAnnot_file';
+my $build_dir = $dir . '/human_build36';
+my $mousetable       = $dir . '/Mouse.July2007.RefSeqgene.tab';
+my $flist_cancergene = $dir . '/Cancer_genes.csv';
 my %opts = (
-	    g=>'/gscuser/kchen/1000genomes/analysis/scripts/Human.Mar2006.RefSeqGenes.tab',
-	    s=>'/gscuser/kchen/1000genomes/analysis/scripts/Human.Mar2006.SegDups.tab',
-	    p=>'/gscuser/kchen/databases/dbSNP/dbsnp130.indel.named.csv',
-	    v=>'/gscuser/kchen/databases/dbVar/ncbi36_submitted.gff',
+	    g=> $build_dir.'/Human.Mar2006.RefSeqGenes.tab',
+	    s=> $build_dir.'/Human.Mar2006.SegDups.tab',
+	    p=> $build_dir.'/dbsnp130.indel.named.csv',
+	    v=> $build_dir.'/ncbi36_submitted.gff',
 	    L=>50,
 	    l=>200,
 	    w=>200,

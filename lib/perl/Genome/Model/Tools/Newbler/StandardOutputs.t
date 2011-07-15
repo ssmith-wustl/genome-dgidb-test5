@@ -10,7 +10,7 @@ require File::Compare;
 use_ok( 'Genome::Model::Tools::Newbler::StandardOutputs' ) or die;
 
 #test suite
-my $version = 'v3';
+my $version = 'v5';
 my $test_suite = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Newbler/StandardOutputs-'.$version;
 ok( -d $test_suite, "Test suite dir exists" );
 
@@ -55,6 +55,7 @@ ok( $create->execute, "Successfully executed tool" );
 #compare output files
 my @files_to_compare = qw/
 Pcap.454Contigs.ace
+gap.txt
 supercontigs.fasta
 supercontigs.agp
 contigs.quals

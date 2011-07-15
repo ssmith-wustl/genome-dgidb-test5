@@ -1,16 +1,16 @@
-package Genome::Model::Tools::Joinx::Intersect;
+package Genome::Model::Tools::Joinx::Union;
 
 use strict;
 use warnings;
 
 use Genome;
 
-class Genome::Model::Tools::Joinx::Intersect {
+class Genome::Model::Tools::Joinx::Union {
     is => 'Genome::Model::Tools::Joinx',
     has_input => [
         input_file_a => {
             is => 'Text',
-            doc => 'Sorted bed file "A"',
+            doc => 'Sorted bed "A"',
             shell_args_position => 1,
         },
         input_file_b => {
@@ -23,24 +23,6 @@ class Genome::Model::Tools::Joinx::Intersect {
         output_file => {
             is => 'Text',
             doc => 'The output file (defaults to stdout)',
-        },
-        miss_a_file => {
-            is => 'Text',
-            doc => 'Write misses from input "a" to this file',
-        },
-        miss_b_file => {
-            is => 'Text',
-            doc => 'Write misses from input "b" to this file',
-        },
-        first_only => {
-            is => 'Boolean',
-            default => 0,
-            doc => 'Notice only the first thing to hit in b, not the full intersection',
-        },
-        output_both => {
-            is => 'Boolean',
-            default => 0,
-            doc => 'concatenate intersecting lines in output',
         },
         exact_pos => {
             is => 'Boolean',
@@ -66,12 +48,12 @@ class Genome::Model::Tools::Joinx::Intersect {
 };
 
 sub help_brief {
-    "Compute intersection (and optionally difference) of 2 bed files."
+    "Compute union of 2 bed files."
 }
 
 sub help_synopsis {
     my $self = shift;
-    "gmt joinx intersect a.bed b.bed [--output-file=n.bed]"
+    "gmt joinx union a.bed b.bed [--output-file=n.bed]"
 }
 
 sub flags {
@@ -79,8 +61,6 @@ sub flags {
 
     my @flags;
     my @bool_flags = (
-        'first_only',
-        'output_both',
         'exact_pos',
         'exact_allele',
         'iub_match',
@@ -93,33 +73,29 @@ sub flags {
             push(@flags, $tmp);
         }
     }
-        
-    push(@flags, "--miss-a " . $self->miss_a_file) if defined $self->miss_a_file;
-    push(@flags, "--miss-b " . $self->miss_b_file) if defined $self->miss_b_file;
-
     return @flags;
 }
 
 sub execute {
     my $self = shift;
     my $output = "-";
-    $output = $self->output_file if (defined $self->output_file);
-    my $flags = join(" ", $self->flags);
-    my $cmd = $self->joinx_path . " intersect $flags " .
-        $self->input_file_a . ' ' . 
-        $self->input_file_b .
-        " -o $output";
-
+    # Implemented by using itersect with miss-a and miss-b set to the
+    # main output stream
+    my $output_file = $self->output_file || '-';
     my %params = (
-        cmd => $cmd,
-        #adukes-sometimes files are empty in pipelines, and shellcommand chokes on existing but empty input files
-        #input_files => [$self->input_file_a, $self->input_file_b],
-        allow_zero_size_output_files=>1,
+        $self->flags,
+        use_version => $self->use_version || '',
+        input_file_a => $self->input_file_a,
+        input_file_b => $self->input_file_b,
+        output_file => $output_file,
+        miss_a_file => $output_file,
+        miss_b_file => $output_file,
     );
-    $params{output_files} = [$output] if $output ne "-";
-    Genome::Sys->shellcmd(%params);
 
-    return 1;
+    my $cmd = Genome::Model::Tools::Joinx::Intersect->create(
+        \%params
+    );
+    return $cmd->execute();
 }
 
 1;
