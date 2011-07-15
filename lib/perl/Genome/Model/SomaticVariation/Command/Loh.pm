@@ -31,6 +31,11 @@ class Genome::Model::SomaticVariation::Command::Loh {
             doc => 'use this to send the output of LOH to an alternate directory',
         },
     ],
+    has_param => [
+        lsf_queue => {
+            default => 'apipe',
+        },
+    ],
 };
 
 sub execute {
