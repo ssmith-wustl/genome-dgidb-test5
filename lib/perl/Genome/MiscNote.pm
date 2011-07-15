@@ -39,7 +39,7 @@ sub create {
     }
 
     unless ($self->body_text) {
-        $self->body_text = '';
+        $self->body_text('');
     }
 
     my $sudo_username = Genome::Sys->sudo_username;
