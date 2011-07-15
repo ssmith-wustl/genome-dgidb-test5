@@ -17,9 +17,6 @@ class Genome::Model::Tools::DetectVariants2::GatkSomaticIndel{
         },
     ],
     has_param => [
-         lsf_queue => {
-             default_value => 'long',
-         },
          lsf_resource => {
              default_value => "-M 8000000 -R 'select[type==LINUX64 && mem>8000] rusage[mem=8000]'",
          },

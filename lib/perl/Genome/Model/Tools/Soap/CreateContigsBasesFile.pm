@@ -14,16 +14,10 @@ class Genome::Model::Tools::Soap::CreateContigsBasesFile {
 	    is => 'Text',
 	    doc => 'Soap assembly directory',
 	},
-	scaffold_sequence_file => {
-	    is => 'Text',
-	    is_optional => 1,
-	    doc => 'Soap created scaffolds fasta file',
-	},
-	output_file => {
-	    is => 'Text',
-	    doc => 'User supplied output file name',
-	    is_optional => 1,
-	}
+        min_contig_length => {
+            is => 'Integer',
+            doc => 'Minimum contig length',
+        },
     ],
 };
 
@@ -50,20 +44,21 @@ sub execute {
 	return;
     }
 
-    my $scaf_seq_file = ($self->scaffold_sequence_file) ? $self->scaffold_sequence_file : $self->assembly_scaffold_sequence_file;
-
-    my $out_file = ($self->output_file) ? $self->output_file : $self->contigs_bases_file;
-
-    my $in = Bio::SeqIO->new(-format => 'fasta', -file => $scaf_seq_file);
-    my $out = Bio::SeqIO->new(-format => 'fasta', -file => '>'.$out_file);
+    my $in = Bio::SeqIO->new(-format => 'fasta', -file => $self->assembly_scaffold_sequence_file);
+    my $out = Bio::SeqIO->new(-format => 'fasta', -file => '>'.$self->contigs_bases_file);
 
     my $supercontig_number = 0;
     while (my $seq = $in->next_seq) {
+        #filter out scaffolds less than min_contig_length
+        next unless length $seq->seq >= $self->min_contig_length;
 	my $contig_number = 0;
 	my @seqs = split (/N+/, $seq->seq);
 	foreach my $bases (@seqs) {
-	    my $seq_obj = Bio::Seq->new(-seq => $bases, -id => 'Contig'.$supercontig_number.'.'.++$contig_number);
-	    $out->write_seq($seq_obj);
+            #filter out contigs less than min contig length
+            next unless length $bases >= $self->min_contig_length;
+            my $id = 'Contig'.$supercontig_number.'.'.++$contig_number;
+	    my $seq_obj = Bio::Seq->new(-seq => $bases, -id => $id );
+            $out->write_seq($seq_obj);
 	}
 	$supercontig_number++;
     }

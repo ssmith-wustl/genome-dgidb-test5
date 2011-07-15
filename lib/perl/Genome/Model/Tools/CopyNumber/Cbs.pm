@@ -77,7 +77,7 @@ sub name_convert{
     my $cmd = 'x=which(cn[,1] == "X")' . "\n";
     $cmd = $cmd . 'y=which(cn[,1] == "Y")' . "\n";
     $cmd = $cmd . 'm=which(cn[,1] == "MT")' . "\n";
-    $cmd = $cmd . 'names=as.numeric(cn[,1])' . "\n";
+    $cmd = $cmd . 'names=cn[,1]' . "\n";
     $cmd = $cmd . 'names[x]=23' . "\n";
     $cmd = $cmd . 'names[y]=24' . "\n";
     $cmd = $cmd . 'names[m]=25' . "\n";
@@ -117,12 +117,15 @@ sub execute {
     open(R_COMMANDS,">$tfile") || die "can't open $tfile for writing\n";
 
     print R_COMMANDS "library(DNAcopy)" . "\n";
-    
+
+    #suppress scientific notation in output
+    print R_COMMANDS "options(scipen=999)\n";
+
     #get input file
     if(defined($bamwindow_file)){
-        print R_COMMANDS "cn <- read.table(\"" . $bamwindow_file . "\",header=F,sep=\"\t\")" . "\n";        
+        print R_COMMANDS "cn <- read.table(\"" . $bamwindow_file . '",header=F,sep="\t", colClasses=c("character","numeric","numeric"))' . "\n";        
     } else {
-        print R_COMMANDS 'cn <- read.table("' . $bam2cna_file . '", header=T, sep="\t", comment.char="#")' . "\n";
+        print R_COMMANDS 'cn <- read.table("' . $bam2cna_file . '", header=T, sep="\t", comment.char="#", colClasses=c("character","numeric","numeric","numeric","numeric"))' . "\n";
     }
 
     if($convert_names){            

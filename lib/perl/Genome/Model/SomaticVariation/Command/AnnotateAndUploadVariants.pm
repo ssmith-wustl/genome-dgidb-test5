@@ -18,6 +18,11 @@ class Genome::Model::SomaticVariation::Command::AnnotateAndUploadVariants{
             id_by => 'build_id',
         }
     ],
+    has_param => [
+        lsf_queue => {
+            default => 'apipe',
+        },
+    ],
 };
 
 sub execute{

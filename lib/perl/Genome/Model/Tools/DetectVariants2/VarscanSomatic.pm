@@ -13,7 +13,11 @@ class Genome::Model::Tools::DetectVariants2::VarscanSomatic {
             default => "--min-coverage 3 --min-var-freq 0.08 --p-value 0.10 --somatic-p-value 0.05 --strand-filter 1",
         },
     ],
-    doc => 'This tool is a wrapper around `gmt varscan somatic` to make it meet the API for variant detection in the reference alignment pipeline'
+    has_param => [
+        lsf_resource => {
+            default => "-R 'select[ncpus>=3] span[hosts=1] rusage[mem=16000]' -M 1610612736 -n 3",
+        },
+    ],
 };
 
 
