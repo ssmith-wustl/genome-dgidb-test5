@@ -124,6 +124,7 @@ sub _execute_build {
     my ($self, $build) = @_;
 
     my $model = $build->model;
+    $self->status_message('Build '.$model->__display_name__);
 
     # temp hack for debugging
     my $log_model_name = $model->name;
@@ -172,7 +173,9 @@ sub _execute_build {
 
         # BUILD HUMAN CONTAMINATION SCREEN MODEL
         $self->status_message("Building contamination screen model if necessary");
-        ($screen_build) = $self->build_if_necessary_and_wait($screen_model);
+        $screen_build = $self->build_if_necessary_and_wait($screen_model);
+        return if not $screen_build;
+
         my ($prev_from_build) = grep {$_->id eq $screen_build->id} $build->from_builds();
         $build->add_from_build(from_build=>$screen_build, role=>'contamination_screen_alignment_build') unless $prev_from_build;;
 
@@ -300,6 +303,8 @@ sub _execute_build {
 
     # BUILD THE METAGENOMIC REFERENCE ALIGNMENT MODELS
     my @metagenomic_builds = $self->build_if_necessary_and_wait(@metagenomic_models);
+    return if not @metagenomic_builds;
+
     for my $meta_build (@metagenomic_builds){
         my ($prev_meta_from_build) = grep {$_->id eq $meta_build->id} $build->from_builds();
         $build->add_from_build(from_build=>$meta_build, role=>'metagenomic_alignment_build') unless $prev_meta_from_build;
@@ -393,7 +398,10 @@ sub _execute_build {
                 #filter_desc => "What do we put here?",  FIXME
             );
         }
+
         my $unaligned_metagenomic_alignment_build = $self->build_if_necessary_and_wait($unaligned_metagenomic_alignment_model);
+        return if not $unaligned_metagenomic_alignment_build;
+
         my $realigned_bam = $unaligned_metagenomic_alignment_build->whole_rmdup_bam_file;
 
         Genome::Sys->create_symlink($realigned_bam, $build->data_directory . "/realigned.bam");
@@ -434,6 +442,7 @@ sub _execute_build {
                 );
             }
             my $virus_alignment_build_1 = $self->build_if_necessary_and_wait($virus_alignment_model_1);
+            return if not $virus_alignment_build_1;
             my $virus_1_bam = $virus_alignment_build_1->whole_rmdup_bam_file;
             Genome::Sys->create_symlink($virus_1_bam, $build->data_directory . "/virus_1.bam");
             Genome::Sys->create_symlink($virus_1_bam.".flagstat", $build->data_directory . "/virus_1.bam.flagstat");
@@ -451,6 +460,7 @@ sub _execute_build {
                 );
             }
             my $virus_alignment_build_2 = $self->build_if_necessary_and_wait($virus_alignment_model_2);
+            return if not $virus_alignment_build_2;
             my $virus_2_bam = $virus_alignment_build_2->whole_rmdup_bam_file;
             Genome::Sys->create_symlink($virus_2_bam, $build->data_directory . "/virus_2.bam");
             Genome::Sys->create_symlink($virus_2_bam.".flagstat", $build->data_directory . "/virus_2.bam.flagstat");
@@ -481,6 +491,8 @@ sub _execute_build {
             die $self->error_message("Failed to validate build!");
         }
     }
+
+    $self->status_message('Build success!');
 
     return 1;
 }
@@ -907,74 +919,119 @@ sub build_if_necessary_and_wait {
 
     my (@succeeded_builds, @watched_builds);
     for my $model ( @models ) {
-        my $need_to_build = $self->need_to_build($model);
-        if ( not $need_to_build ) {
-            my $succeeded_build = $model->last_succeeded_build;
-            $self->status_message('Found succeeded build '.$succeeded_build->__display_name__);
+        $self->status_message('Model: '. $model->__display_name__);
+        $self->status_message('Search for succeeded build');
+        my $succeeded_build = $model->last_succeeded_build;
+        if ( $succeeded_build and $self->_verify_model_and_build_instrument_data_match($model, $succeeded_build) ) {
+            $self->status_message('Found succeeded build: '.$succeeded_build->__display_name__);
             push @succeeded_builds, $succeeded_build;
             next;
         }
-        my $watched_build = $self->run_ref_align_build($model);
-        $self->status_message('Watching build '.$watched_build->__display_name__);
+        $self->status_message('No succeeded build');
+        $self->status_message('Search for scheduled or running build');
+        my $watched_build = $self->_find_scheduled_or_running_build_for_model($model);
+        if ( not $watched_build ) {
+            $self->status_message('No scheduled or running build');
+            $self->status_message('Start build');
+            $watched_build = $self->_start_build_for_model($model);
+            return if not $watched_build;
+        }
+        $self->status_message('Watching build: '.$watched_build->__display_name__);
         push @watched_builds, $watched_build;
     }
 
-    if ( @models != @succeeded_builds + @watched_builds ) {
-        Carp::confess('Failed to get a build for each model');
+    my @builds = (@succeeded_builds, @watched_builds);
+    if ( not @builds ) {
+        $self->error_message('Failed to find or start any builds');
+        return;
     }
 
-    if ( not @watched_builds ) {
-        return @succeeded_builds;
+    if ( @models != @builds ) {
+        $self->error_message('Failed to find or start a build for each model');
+        return;
     }
 
-    if ( not UR::Context->commit ) {
-        Carp::confess('Failed to commit');
-    }
-
-    for my $build ( @watched_builds ) {
-        $self->wait_for_build($build);
-        unless ($build->status eq 'Succeeded') {
-            Carp::confess("Failed to execute build (status: ".$build->status.") for model ". $build->model_name);
+    if ( @watched_builds ) {
+        for my $build ( @watched_builds ) {
+            $self->status_message('Watching build: '.$build->__display_name__);
+            $self->wait_for_build($build);
+            unless ($build->status eq 'Succeeded') {
+                $self->error_message("Failed to execute build (".$build->__display_name__."). Status: ".$build->status);
+                return;
+            }
         }
     }
 
-    return (@succeeded_builds, @watched_builds);
+    return ( @builds > 1 ? @builds : $builds[0] );
 }
 
-sub run_ref_align_build {
+sub _verify_model_and_build_instrument_data_match {
+    my ($self, $model, $build) = @_;
+
+    Carp::confess('No model to verify instrument data') if not $model;
+    Carp::confess('No build to verify instrument data') if not $build;
+
+    my @build_instrument_data = sort {$a->id <=> $b->id} $build->instrument_data;
+    my @model_instrument_data = sort {$a->id <=> $b->id} $model->instrument_data;
+
+    $self->status_message('Model: '.$model->__display_name__);
+    $self->status_message('Model instrument data: '.join(' ', map { $_->id } @model_instrument_data));
+    $self->status_message('Build: '.$build->__display_name__);
+    $self->status_message('Build instrument data: '.join(' ', map { $_->id } @build_instrument_data));
+
+    if ( @build_instrument_data != @model_instrument_data ) {
+        $self->status_message('Model and build instrument data count does not match');
+        return;
+    }
+
+    for ( my $i = 0; $i < @model_instrument_data; $i++ ) {
+        my $build_instrument_data = $build_instrument_data[$i];
+        my $model_instrument_data = $model_instrument_data[$i];
+
+        if ($build_instrument_data->id ne $model_instrument_data->id) {
+            $self->status_message("Missing instrument data.");
+            return;
+        }
+    }
+
+    return 1;
+}
+
+sub _find_scheduled_or_running_build_for_model {
     my ($self, $model) = @_;
 
-    Carp::confess('No model sent to run build') if not $model;
+    Carp::confess('No model sent to find running or scheduled build') if not $model;
     
+    $self->status_message('Find running or scheduled build for model: '.$model->__display_name__);
+
+    UR::Context->reload('Genome::Model::Build', model_id => $model->id);
+
     my $build = $model->latest_build;
-    if ( $build ) {
-        $self->status_message("Found build for ".$model->__display_name__);
-        $self->status_message("Build status is ".$build->status);
-        if ( grep { $build->status eq $_ } (qw/ Scheduled Running /) ) {
-            return $build;
-        }
-    }
-    else {
-        $self->status_message("Create build for ".$model->__display_name__);
-        $build = Genome::Model::Build->create(
-            model_id => $model->id
-        );
-        if ( not $build ) {
-            Carp::confess("Failed to create build for ".$model->__display_name__);
-        }
-        $self->status_message("Create build OK");
+    if ( $build and grep { $build->status eq $_ } (qw/ Scheduled Running /) ) {
+        return $build;
     }
 
-    $self->status_message("Start build ".$build->__display_name__);
-    my $start = $build->start(
-        job_dispatch    => 'apipe',
-        server_dispatch => 'workflow',
-        job_group => undef, # this will not take up one of the 50 slots available to a user
-    );
-    if ( not $start ) {
-        Carp::confess("Failed to start build");
+    return;
+}
+
+sub _start_build_for_model {
+    my ($self, $model) = @_;
+
+    Carp::confess('No model sent to start build') if not $model;
+    
+    my $cmd = 'genome model build start '.$model->id.' --job-dispatch apipe --server-dispatch workflow'; # these are defaults
+    $self->status_message('Cmd: '.$cmd);
+    my $rv = eval{ Genome::Sys->shellcmd(cmd => $cmd); };
+    if ( not $rv ) {
+        $self->error_message('Failed to execute build start command');
+        return;
     }
-    $self->status_message("Start build OK");
+
+    my $build = $self->_find_scheduled_or_running_build_for_model($model);
+    if ( not $build ) {
+        $self->error_message('Executed build start command, but cannot find build.');
+        return;
+    }
 
     return $build;
 }
@@ -1002,35 +1059,6 @@ sub wait_for_build {
 }
 
 # TODO: move this to the model class itself
-sub need_to_build {
-    my ($self, $model) = @_;
-    my $build = $model->last_succeeded_build;
-    unless ($build) {
-        $self->status_message("No build found for ".$model->name."; need to build.");
-        return 1;
-    }
-    $self->status_message("Found build: ".$build->__display_name__);
-    my @build_assignments = sort {$a->value->id cmp $b->value->id} $build->instrument_data_inputs;
-    my @model_assignments = sort {$a->value->id cmp $b->value->id} $model->instrument_data_inputs;
-
-    if (@build_assignments ne @model_assignments) {
-        $self->status_message("Assignment count does not match, build has ".scalar(@build_assignments)." but model has ".scalar(@model_assignments)."; need to build.");
-        return 1;
-    }
-    for (my $i = 0; $i < @model_assignments; $i++) {
-        my $build_assignment = $build_assignments[$i];
-        my $model_assignment = $model_assignments[$i];
-
-        if ($build_assignment->value->id ne $model_assignment->value->id) {
-            $self->status_message("Missing instrument data assignment; need to build.");
-            return 1;
-        }
-    }
-
-    $self->status_message("Build for ".$model->name." exists and all (".scalar(@model_assignments).") instrument data assignments match; no need to build.");
-    return 0;
-}
-
 #this name is maybe not the best
 sub _process_sra_instrument_data {
     my ($self, $instrument_data) = @_;
@@ -1078,7 +1106,7 @@ sub _process_unaligned_reads {
     $tmp_dir .= "/".$alignment->id;
     my @instrument_data;
     {
-        my $subdir = 'n-remove_'.$self->n_removal_threshold;
+        my $subdir = 'n-remove_'.$self->n_removal_threshold; # FIXME uninit warnings
         if ($self->dust_unaligned_reads){
             $subdir.='/dusted';
         }

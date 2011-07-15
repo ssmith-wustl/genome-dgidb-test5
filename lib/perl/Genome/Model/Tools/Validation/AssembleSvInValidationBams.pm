@@ -32,6 +32,11 @@ class Genome::Model::Tools::Validation::AssembleSvInValidationBams {
         is => 'String',
         doc => 'Comma-delimited list of SquareDancer files to assemble',
     },
+    ref_seq => {
+        is => 'String',
+        doc => 'Optional reference sequence path (default: NCBI-human-build36)',
+        default => '/gscmnt/gc4096/info/model_data/2741951221/build101947881/all_sequences.fa'
+    },
     ],
     doc => 'Assemble SV predictions in validation .bam files.',
 };
@@ -50,6 +55,7 @@ sub execute {
     #parse input params
     my @assembled_call_files = split(",",$self->assembled_call_files) if $self->assembled_call_files;
     my @sd_files = split(",",$self->squaredancer_files) if $self->squaredancer_files;
+    my $ref_seq = $self->ref_seq;
     my $file_prefix = $self->output_filename_prefix;
     my $assembly_input = $file_prefix . ".assembly_input";
 
@@ -109,6 +115,9 @@ sub execute {
     my $assembly_output_file = $file_prefix . ".assembly_output"; 
     my $assembly_fasta_file = $assembly_output_file . ".fasta";
     my $assembly_cm_file = $assembly_output_file . ".cm";
+
+#Intermediate read directories take a lot of space and are probably only needed for special applications.    
+=cut
     my $assembly_intermediate_read_dir = $file_prefix . "_intermediate_read_dir/";
     #if read_dir exists, check to see that it's empty; otherwise, create it
     if (-e $assembly_intermediate_read_dir && -d $assembly_intermediate_read_dir) {
@@ -121,6 +130,8 @@ sub execute {
     else {
         mkdir $assembly_intermediate_read_dir or die "Unable to make assembly_intermediate_read_dir $assembly_intermediate_read_dir.\n";
     }
+=cut
+
     my $bams = $self->bam_files;
     my $assembly_cmd = Genome::Model::Tools::Sv::AssemblyValidation->create(
         bam_files => $bams,
@@ -130,7 +141,8 @@ sub execute {
         min_size_of_confirm_asm_sv => 10,
         breakpoint_seq_file => $assembly_fasta_file,
         cm_aln_file => $assembly_cm_file,
-        intermediate_read_dir => $assembly_intermediate_read_dir,
+        reference_file => $ref_seq,
+        #intermediate_read_dir => $assembly_intermediate_read_dir,
     );
     $assembly_cmd->execute;
 
