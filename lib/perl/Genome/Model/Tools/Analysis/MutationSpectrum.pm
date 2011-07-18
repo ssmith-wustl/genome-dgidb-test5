@@ -27,7 +27,7 @@ use Genome::Info::IUB;
 use DBI;
 use Cwd qw( abs_path );
 class Genome::Model::Tools::Analysis::MutationSpectrum {
-    is => ['Command','Genome::Software'],
+    is => ['Command'],
     has => [
     fasta_file => { 
         is  => 'String',

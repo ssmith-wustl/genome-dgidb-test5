@@ -29,7 +29,7 @@ class Genome::Model::Tools::Capture::BuildSomaticModels {
 	
 	has => [                                # specify the command's single-value properties (parameters) <--- 
 		processing_profile	=> { is => 'Text', doc => "Processing profile to use [Somatic-Capture-NoSV-Tier1only-Map40-Score40]", is_optional => 1 },
-		data_dir	=> { is => 'Text', doc => "Output directory for comparison files" , is_optional => 0},
+		data_dir	=> { is => 'Text', doc => "Data directory for somatic capture model subfolders [deprecated]" , is_optional => 1},
 		sample_list	=> { is => 'Text', doc => "Text file of sample, normal-model-id, tumor-model-id" , is_optional => 0},
 		subject_type	=> { is => 'Text', doc => "Subject type, e.g. sample_name, library_name [library_name]" , is_optional => 1},
 		model_basename	=> { is => 'Text', doc => "String to use for naming models; sample will be appended" , is_optional => 0},
@@ -117,7 +117,7 @@ sub execute {                               # replace with real execution logic.
 		## Build the somatic model ##
 		if(!$model_id)
 		{
-			my $cmd = "genome model define somatic-capture --processing-profile-name \"$processing_profile\" --subject-name \"$tumor_sample_name\" --subject-type \"$subject_type\" --data-directory $data_dir --model-name \"$model_name\" --normal-model-id $normal_model_id --tumor-model-id $tumor_model_id";
+			my $cmd = "genome model define somatic-capture --processing-profile-name \"$processing_profile\" --subject-name \"$tumor_sample_name\" --subject-type \"$subject_type\" --model-name \"$model_name\" --normal-model-id $normal_model_id --tumor-model-id $tumor_model_id";
 			if($self->use_bsub)
 			{
 				system("bsub -q short $cmd") if(!$self->report_only);				

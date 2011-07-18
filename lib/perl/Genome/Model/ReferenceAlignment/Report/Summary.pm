@@ -182,8 +182,8 @@ sub get_summary_information
     }
 
     if (-e $dbsnp_filtered_report_file and -e $dbsnp_unfiltered_report_file) {
-        my $dbsnp_filtered_data = Genome::Model::Tools::SnvCmp::Concordance::parse_results_file($dbsnp_filtered_report_file);
-        my $dbsnp_unfiltered_data = Genome::Model::Tools::SnvCmp::Concordance::parse_results_file($dbsnp_unfiltered_report_file);
+        my $dbsnp_filtered_data = Genome::Model::Tools::Joinx::SnvConcordanceByQuality::parse_results_file($dbsnp_filtered_report_file);
+        my $dbsnp_unfiltered_data = Genome::Model::Tools::Joinx::SnvConcordanceByQuality::parse_results_file($dbsnp_unfiltered_report_file);
 
         # get unfiltered data
         if (exists $dbsnp_unfiltered_data->{total_snvs}) {

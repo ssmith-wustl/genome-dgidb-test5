@@ -2,7 +2,7 @@ package Hits;
 
 use strict;
 use Carp;
-use SvConstants;
+use Genome::Model::Tools::Sv::SV_assembly_pipeline::SvConstants;
 
 
 ########

@@ -115,25 +115,34 @@ sub _promote_data {
 
     $self->status_message("Now de-staging data from $staging_dir into $output_dir"); 
 
-    my $rsync_params = "-avz";
-    $rsync_params .= "L" if ($self->_needs_symlinks_followed_when_syncing);
+    my $cp_params = 'r';
+    $cp_params .= 'L' if ($self->_needs_symlinks_followed_when_syncing);
+    my $copy_cmd = sprintf("cp -$cp_params %s/* %s/", $staging_dir, $output_dir);
+    $self->status_message("Running cp: $copy_cmd");
+    my $copy_exit_code = system($copy_cmd);
 
-    my $call = sprintf("rsync %s %s/* %s", $rsync_params, $staging_dir, $output_dir);
+    if ($copy_exit_code != 0) {
 
-    my $rv = system($call);
-    $self->status_message("Running Rsync: $call");
+        my $rsync_params = "-avz";
+        $rsync_params .= "L" if ($self->_needs_symlinks_followed_when_syncing);
 
-    unless ($rv == 0) {
-        $self->error_message("Did not get a valid return from rsync, rv was $rv for call $call.  Cleaning up and bailing out");
-        rmtree($output_dir);
-        die $self->error_message;
+        my $rsync_cmd = sprintf("rsync %s %s/* %s/", $rsync_params, $staging_dir, $output_dir);
+
+        my $rsync_exit_code = system($rsync_cmd);
+        $self->status_message("Running Rsync: $rsync_cmd");
+
+        unless ($rsync_exit_code == 0) {
+            $self->error_message("Did not get a valid return from rsync, exit code was $rsync_exit_code for call $rsync_cmd.  Cleaning up and bailing out");
+            rmtree($output_dir);
+            die $self->error_message;
+        }
     }
 
     chmod 02775, $output_dir;
     for my $subdir (grep { -d $_  } glob("$output_dir/*")) {
         chmod 02775, $subdir;
     }
-   
+
     # Make everything in here read-only 
     for my $file (grep { -f $_  } glob("$output_dir/*")) {
         chmod 0444, $file;
