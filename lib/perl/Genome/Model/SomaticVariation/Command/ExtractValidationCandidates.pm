@@ -26,6 +26,11 @@ class Genome::Model::SomaticVariation::Command::ExtractValidationCandidates {
             doc => 'This bed will be intersected with LOH results',
         },
     ],
+    has_param => [
+        lsf_queue => {
+            default => 'apipe',
+        },
+    ],
 };
 
 

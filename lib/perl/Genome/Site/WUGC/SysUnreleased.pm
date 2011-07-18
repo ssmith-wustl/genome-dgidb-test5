@@ -99,7 +99,7 @@ sub diff_file_vs_text {
 sub diff_file_vs_file {
     my ($self,$f1,$f2) = @_;
     
-    my $diff_fh = IO::File->new("sdiff -s $f1 $f2 |");
+    my $diff_fh = IO::File->new("sdiff -s $f1 $f2 2>&1 |");
     unless ($diff_fh) {
         Carp::croak("Can't run 'sdiff -s $f1 $f2' for diff_file_vs_file(): $!");
     }

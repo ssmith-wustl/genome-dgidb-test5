@@ -124,11 +124,17 @@ sub {
         my $resp;
         if ($class->lock($url)) {
 
-            ## override HTTP_ACCEPT to tell it we want html
+            # Looks like this URL isnt in cache yet- cache it
 
+            ## override HTTP_ACCEPT to tell it we want html
             $env->{HTTP_ACCEPT} = "application/xml,application/xhtml+xml,text/html";
 
             $resp = Plack::Util::run_app $rest_app, $env;
+
+            if ($resp->[0] == 500) {
+                $class->unlock($url);
+                return $resp;
+            }
             if ( ref($resp->[2]) eq 'ARRAY') {
                 my $found = 0;
                 for (my $i=0; $i < scalar(@{ $resp->[1] }); $i += 2) {
@@ -155,6 +161,9 @@ sub {
             }
             $class->unlock($url);
         } else {
+
+            # Looks like this URL is already in cache
+
             my $v;
             do {
                 $v = $class->getlock($url);
@@ -171,7 +180,11 @@ sub {
     };
 
     if (defined $ajax_refresh && $ajax_refresh == 1) {
-        $gen->();
+
+        my $resp = $gen->();
+        if ($resp->[0] == 500) {
+            return $resp; 
+        }
 
         # don't send back the content because we don't care, just want to tell the caller it's ready to ask for
         return [
@@ -278,7 +291,7 @@ sub {
             $(this).removeClass('loading').addClass('success').html('Success').hide('slow');
         })
         .bind("ajaxError", function(){
-            $(this).removeClass('loading').addClass('error').html('Error');
+            $(this).removeClass('loading').addClass('error').html('Error loading page. Please email apipe@genome.wustl.edu.');
         })
         .hide();
 

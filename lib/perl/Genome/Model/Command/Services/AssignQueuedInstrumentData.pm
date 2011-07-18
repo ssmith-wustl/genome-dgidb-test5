@@ -400,7 +400,7 @@ sub find_or_create_somatic_variation_models{
             unless ($mate){
                 $mate = $model->copy(
                     name => 'AQID-PLACE_HOLDER',
-                    do_not_copy_instrument_data => 1,
+                    instrument_data => undef,
                 );
                 $self->error_message("Failed to find copied mate with subject name: $mate_name") and next unless $mate;
                 
@@ -533,7 +533,7 @@ sub is_tcga_reference_alignment {
 
     #otherwise, check the nomenclature
     my @nomenclature = map { $_->nomenclature } ($sample, $sample->attributes);
-    return grep { /^TCGA/i } @nomenclature;
+    return grep { $_ && $_ =~ /^TCGA/i } @nomenclature;
 }
 
 sub load_pses {
@@ -909,34 +909,33 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
         }
 
         #In addition, make a third model for TCGA against another standard ROI
-        if($self->needs_tcga_reference_alignment($regular_model, %model_params)){ 
-            my $tcga_cds_model = Genome::Model->create(%model_params);
-            unless ( $tcga_cds_model ) {
-                $self->error_message('Failed to create tcga-cds model: ' . Dumper(\%model_params));
-                for my $model (@new_models) { $model->delete; }
-                return;
-            }
-            push @new_models, $tcga_cds_model;
-
-            my $tcga_cds_name = $tcga_cds_model->default_model_name(
-                    instrument_data => $genome_instrument_data,
-                    capture_target => $capture_target,
-                    roi => 'tcga-cds',
-                    );
-            if ( not $tcga_cds_name ) {
-                $self->error_message('Failed to get tcga-cds model name for params: ' . Dumper(\%model_params));
-                for my $model (@new_models) { $model->delete; }
-                return;
-            }
-            $tcga_cds_model->name($tcga_cds_name);
-
-            my $tcga_cds_roi_list = $self->tcga_roi_for_model($tcga_cds_model);
-
-            unless($self->assign_capture_inputs($tcga_cds_model, $capture_target, $tcga_cds_roi_list)) {
-                for my $model (@new_models) { $model->delete; }
-                return;
-            }
+        my $tcga_cds_model = Genome::Model->create(%model_params);
+        unless ( $tcga_cds_model ) {
+            $self->error_message('Failed to create tcga-cds model: ' . Dumper(\%model_params));
+            for my $model (@new_models) { $model->delete; }
+            return;
         }
+        push @new_models, $tcga_cds_model;
+
+        my $tcga_cds_name = $tcga_cds_model->default_model_name(
+            instrument_data => $genome_instrument_data,
+            capture_target => $capture_target,
+            roi => 'tcga-cds',
+        );
+        if ( not $tcga_cds_name ) {
+            $self->error_message('Failed to get tcga-cds model name for params: ' . Dumper(\%model_params));
+            for my $model (@new_models) { $model->delete; }
+            return;
+        }
+        $tcga_cds_model->name($tcga_cds_name);
+
+        my $tcga_cds_roi_list = $self->tcga_roi_for_model($tcga_cds_model);
+
+        unless($self->assign_capture_inputs($tcga_cds_model, $capture_target, $tcga_cds_roi_list)) {
+            for my $model (@new_models) { $model->delete; }
+            return;
+        }
+
     }
 
     for my $m (@new_models) {
@@ -1114,10 +1113,10 @@ sub _resolve_project_and_work_order_names {
 
     if(@work_orders and $work_orders[0]->isa("Genome::WorkOrder")){
         push @names,
-            map((($_->can("name") ? $_->name : $_->setup_name )), @work_orders);
+        map((($_->can("name") ? $_->name : $_->setup_name )), @work_orders);
     }else{
         push @names,
-            map(($_->setup_name), @work_orders);
+        map(($_->setup_name), @work_orders);
     }
 
     my @projects = $pse->get_inherited_assigned_directed_setups_filter_on('setup project');
@@ -1125,7 +1124,7 @@ sub _resolve_project_and_work_order_names {
         $self->warning_message('No project found for PSE ' . $pse->id);
     }
     push @names,
-        map( ($_->can('name') ? $_->name : $_->setup_name), @projects);
+    map( ($_->can('name') ? $_->name : $_->setup_name), @projects);
 
     return @names;
 }
@@ -1269,7 +1268,7 @@ sub add_processing_profiles_to_pses{
                             cc      => 'Scott Smith <ssmith@genome.wustl.edu>, Jim Eldred <jeldred@genome.wustl.edu>, Justin Lolofie <jlolofie@genome.wustl.edu>, Thomas Mooney <tmooney@genome.wustl.edu>',
                             subject => "ecountered unknown workorder pipeline '$pipeline_string' in QIDFGM PSE",
                             msg     => 'no PP assigned to 454 data ' . $instrument_data_id . ' please check out it (see AQID)' . "\n\nWork Order Information:\n$workorder_string",
-                    });
+                        });
 
                     $self->error_message("unknown 454 workorder pipeline '$pipeline_string' encountered");
                     die $self->error_message;
@@ -1294,9 +1293,9 @@ sub add_processing_profiles_to_pses{
                 # 2575175   infinium/wugc     wugc           infinium
                 my $sequencing_platform = $instrument_data->sequencing_platform;
                 my $pp = Genome::ProcessingProfile::GenotypeMicroarray->get(
-                        instrument_type => $sequencing_platform,
-                        input_format => 'wugc',
-                        );
+                    instrument_type => $sequencing_platform,
+                    input_format => 'wugc',
+                );
                 if ( not $pp ) {
                     my $msg = "Unknown platform ($sequencing_platform) for genotyper result ($instrument_data_id)";
 
@@ -1310,7 +1309,7 @@ sub add_processing_profiles_to_pses{
                             cc      => 'Scott Smith <ssmith@genome.wustl.edu>, Jim Eldred <jeldred@genome.wustl.edu>, Eddie Belter <ebelter@genome.wustl.edu>, Thomas Mooney <tmooney@genome.wustl.edu>',
                             subject => "QIDFGM PSE ERROR: $msg",
                             msg     => "Could not find a genotype microarray processing profile for genotyper results instrument data ($instrument_data_id) sequencing platform ($sequencing_platform) in QIDFGM PSE (see AQID)".$self->id
-                    });
+                        });
 
                     die $self->error_message($msg);
                 }
@@ -1365,7 +1364,7 @@ sub add_processing_profiles_to_pses{
             $pse->add_param('subject_id', $subject_id);        
 
             # ask each if they work with this type of instrument data?
-PP:         for my $pp_id (@processing_profile_ids_to_add) {
+            PP:         for my $pp_id (@processing_profile_ids_to_add) {
                 my $pp = Genome::ProcessingProfile->get($pp_id);
                 if ($instrument_data_type =~ /454/) {
                     if ($pp->can('instrument_data_is_applicable')) {
@@ -1464,7 +1463,7 @@ sub _is_454_16s {
     my $pse = shift;
 
     my @work_orders = $pse->get_inherited_assigned_directed_setups_filter_on('setup work order');
-    
+
     foreach my $work_order (@work_orders) {
         my $pipeline_string = $work_order->pipeline();
         unless (defined($pipeline_string)) { next; }
@@ -1557,28 +1556,28 @@ sub _is_build36_project {
     my $pse = shift;
 
     my %legacy_project_mapping = (
-            H_GP => 'OVC/GBM',
-            H_LK => 'COAD',
-            H_LN => 'READ',
-            H_LE => 'tAML',
-            H_LB => 'MDS sAML',
-            H_KU => 'BRC',
-            H_JG => 'LUC',
-            H_KZ => 'PRC',
-            H_LF => 'PNC',
-            H_KX => 'MMY',
-            H_LJ => 'ALS',
-            H_LY => 'ESC',
-            );
+        H_GP => 'OVC/GBM',
+        H_LK => 'COAD',
+        H_LN => 'READ',
+        H_LE => 'tAML',
+        H_LB => 'MDS sAML',
+        H_KU => 'BRC',
+        H_JG => 'LUC',
+        H_KZ => 'PRC',
+        H_LF => 'PNC',
+        H_KX => 'MMY',
+        H_LJ => 'ALS',
+        H_LY => 'ESC',
+    );
 
     #these are build 37 until further notice
     my %ambiguous_legacy_project_mapping = (
-            H_LX => 'MEL', 
-            H_KA => 'AML',  
-            H_GV => 'AML1', 
-            H_JM => 'AML2', 
-            H_LC => 'PCGP', 
-            );  
+        H_LX => 'MEL', 
+        H_KA => 'AML',  
+        H_GV => 'AML1', 
+        H_JM => 'AML2', 
+        H_LC => 'PCGP', 
+    );  
 
     my $instrument_data = $self->_instrument_data($pse);
     my $sample = $instrument_data->sample;

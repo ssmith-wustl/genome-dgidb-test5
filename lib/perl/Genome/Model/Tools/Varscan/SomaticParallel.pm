@@ -26,6 +26,7 @@ class Genome::Model::Tools::Varscan::SomaticParallel {
 	has => [                                # specify the command's single-value properties (parameters) <--- 
 		normal_bam	=> { is => 'Text', doc => "Path to Normal BAM file", is_optional => 0, is_input => 1 },
 		tumor_bam	=> { is => 'Text', doc => "Path to Tumor BAM file", is_optional => 0, is_input => 1 },
+		samtools_path	=> { is => 'Text', doc => "Path to SAMtools executable", is_optional => 0, is_input => 1, default => "samtools" },
 		output	=> { is => 'Text', doc => "Path to Tumor BAM file", is_optional => 1, is_input => 1, is_output => 1 },
 		output_snp	=> { is => 'Text', doc => "Basename for SNP output, eg. varscan_out/varscan.status.snp" , is_optional => 1, is_input => 1, is_output => 1},
 		output_indel	=> { is => 'Text', doc => "Basename for indel output, eg. varscan_out/varscan.status.snp" , is_optional => 1, is_input => 1, is_output => 1},
@@ -139,8 +140,10 @@ sub execute {                               # replace with real execution logic.
 				$output_indel = $output . ".$chrom.indel";
 				print "$output_snp\t$output_indel\n";
                 
-                                my $normal_pileup = "samtools view -b -u -q 10 $normal_bam $chrom:1 | samtools pileup -f $reference -";
-                                my $tumor_pileup = "samtools view -b -u -q 10 $tumor_bam $chrom:1 | samtools pileup -f $reference -";
+#                                my $normal_pileup = "samtools view -b -u -q 10 $normal_bam $chrom:1 | samtools pileup -f $reference -";
+ #                               my $tumor_pileup = "samtools view -b -u -q 10 $tumor_bam $chrom:1 | samtools pileup -f $reference -";
+                                my $normal_pileup = $self->samtools_path . " mpileup -f $reference -q 10 -r $chrom:1 $normal_bam";
+                                my $tumor_pileup = $self->samtools_path . " mpileup -f $reference -q 10 -r $chrom:1 $tumor_bam";
                                                 
                                 my $cmd = $self->java_command_line(" somatic <\($normal_pileup\) <\($tumor_pileup\) --output-snp $output_snp --output-indel $output_indel $varscan_params");
 

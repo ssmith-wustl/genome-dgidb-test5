@@ -36,11 +36,20 @@ foreach my $link (@installed_links) {
 	}
     }
     if ( $link =~ /newbler/ ) {
-        like( $tool_454->version, '/\d{8}/', 'found a version like 00000000' );
-        $app_bin_name = '/applicationsBin';
+        if ( $installed_path =~ /mapasm454_source/ ) {
+            like( $tool_454->version, '/\d{8}/', 'found a version like 00000000' );
+            $app_bin_name = '/applicationsBin';
+        }
+        if ( $installed_path =~ /gsMapAsm/ ) {
+            like( $tool_454->version, '/\d+\.\d+-\d+/', "found version like 0.0-0000" );
+            $app_bin_name = '/bin';
+        }
     }
+
     ok( -d $tool_454->bin_path, 'bin directory exists' );
+
     my $installed_bin = $tool_454->resolve_454_path . $installed_path . $app_bin_name;
+
     is( $tool_454->bin_path, $installed_bin,'expected path found for bin directory' );
 }
 

@@ -120,7 +120,7 @@ sub execute {                               # replace with real execution logic.
 			close($input);
 
 			## Run Pileup Command ##
-			my $cmd = "samtools view -b -u -q 1 $bam_file $query_string | samtools pileup -f $reference - >>$output_file.pileup";# - | $self->java_command_line("pileup2snp --min-coverage $min_coverage");
+			my $cmd = "samtools view -b -u -q 1 $bam_file $query_string | samtools mpileup -f $reference - >>$output_file.pileup";# - | $self->java_command_line("pileup2snp --min-coverage $min_coverage");
 			print "RUN $cmd\n";
 			system("$cmd");
 

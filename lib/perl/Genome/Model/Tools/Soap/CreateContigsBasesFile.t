@@ -25,6 +25,7 @@ ok( -s $temp_dir.'/TEST.scafSeq', "Linked Test.scafSeq file");
 
 my $create = Genome::Model::Tools::Soap::CreateContigsBasesFile->create(
     assembly_directory => $temp_dir,
+    min_contig_length => 50,
     );
 ok($create, "Created gmt soap create-contigs-fasta-file");
 ok( ($create->execute) == 1, "Create executed successfully");

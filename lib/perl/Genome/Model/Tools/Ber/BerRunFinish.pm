@@ -27,6 +27,7 @@ use File::Slurp;    # to replace IO::File access...
 use File::Copy;
 use File::Basename;
 use File::stat;
+use File::Find::Rule;
 
 use Cwd;
 
@@ -148,10 +149,17 @@ sub execute
     ## get the latest filename
     (my $sqlitedatafilename, $outdirpath) = fileparse($sqlitedatafile);
 
-    ## Copy sqlite.dat file Annotated_submission directory
     ## Before copying sqlite file we will need to delete sqlite*.dat && *.dat.dat file in the Annotated_submission directory if already exists
- 	unlink($anno_submission.$sqlitedatafilename) || croak qq{\n\n Cannot delete $anno_submission.$sqlitedatafilename ... from BerRunFinish.pm: $OS_ERROR\n\n} if -e $anno_submission.$sqlitedatafile;
- 	unlink($anno_submission.$sqlitedatafilename.".dat") || croak qq{\n\n Cannot delete $anno_submission.$sqlitedatafilename ... from BerRunFinish.pm: $OS_ERROR\n\n} if -e $anno_submission.$sqlitedatafilename.".dat";
+	my @sqliteDataFiles = find (
+							file =>
+							name => [ qw/ *.dat *.dat.dat / ],
+							in	 => $anno_submission
+						  );
+
+    ## Copy sqlite.dat file Annotated_submission directory
+	unlink $_ or croak qq{ \n\n Error removing file $_: $! \n\n }
+		for (@sqliteDataFiles);
+
     copy($sqlitedatafile, $anno_submission.$sqlitedatafilename) || croak qq{\n\n Copying of $sqlitedatafile failed ...  from BerRunFinish.pm: $OS_ERROR\n\n };
 
     my $sqliteoutfile  = qq{$outdirpath/$sqliteout};

@@ -62,13 +62,13 @@ my $first_fasta_diff = Genome::Sys->diff_file_vs_file($first_fasta, $first_build
 ok(!$first_fasta_diff, 'FASTA copied to build')
     or diag("  diff:\n" . $first_fasta_diff);
 
-my $first_build_1_bases = $first_data_directory . '/1.bases';
+my $first_build_1_bases = $first_data_directory . '/bases/1.bases';
 my $first_1_bases = $first_test_dir . '/1.bases';
 my $first_1_bases_diff = Genome::Sys->diff_file_vs_file($first_1_bases, $first_build_1_bases);
 ok(!$first_1_bases_diff, '1.bases generated as expected')
     or diag("  diff\n" . $first_1_bases_diff);
 
-my $first_build_2_bases = $first_data_directory . '/2.bases';
+my $first_build_2_bases = $first_data_directory . '/bases/2.bases';
 my $first_2_bases = $first_test_dir . '/2.bases';
 my $first_2_bases_diff = Genome::Sys->diff_file_vs_file($first_2_bases, $first_build_2_bases);
 ok(!$first_2_bases_diff, '2.bases generated as expected')

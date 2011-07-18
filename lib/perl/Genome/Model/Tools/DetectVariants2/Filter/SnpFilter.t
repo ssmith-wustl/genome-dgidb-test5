@@ -44,7 +44,7 @@ my @expected_output_files = qw| snvs.hq
 
 my $detector_result = Genome::Model::Tools::DetectVariants2::Result->__define__(
     output_dir => $detector_directory,
-    detector_name => 'test',
+    detector_name => 'Genome::Model::Tools::DetectVariants2::Samtools',
     detector_params => '',
     detector_version => 'awesome',
     aligned_reads => $tumor_bam_file,

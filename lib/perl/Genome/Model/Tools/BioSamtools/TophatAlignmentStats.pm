@@ -274,7 +274,7 @@ sub validate_query_name_format {
     my $align = $bam->read1;
     Bio::DB::Bam::seek($bam,$start_position,0);
     my $query_name = $align->qname;
-    unless ($query_name =~ /^\S+:\d+:\d+:\d+:\d+[#ACTG]*$/) {
+    unless ($query_name =~ /^\S+:\d+:\d+:\d+:\d+[#ACTG0]*$/) {
         warn('Query name '. $query_name .' is invalid!');
         return;
     }

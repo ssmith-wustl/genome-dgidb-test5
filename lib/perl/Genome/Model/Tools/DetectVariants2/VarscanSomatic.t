@@ -40,7 +40,7 @@ my $normal_bam = $test_dir . '/alignments/102922275_merged_rmdup.bam';
 # Updated to .v7 due to the addition of read depth
 # Updated to .v8 due to directory structure changes
 # Updated to .v9 due to DetVar2 module
-my $expected_dir = $test_dir . '/expected.v11/';
+my $expected_dir = $test_dir . '/expected.v12/';
 ok(-d $expected_dir, "expected results directory exists");
 
 my $refbuild_id = 101947881;

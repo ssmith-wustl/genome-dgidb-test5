@@ -70,26 +70,34 @@ sub execute {
         
         my $temp = Genome::Sys->base_temp_directory;
         my $temp_bam_file = $temp . "/temp_rg." . $$ . ".bam";
-        
-        my $samtools_strip_cmd = sprintf("%s view -h -r%s %s | samtools view -S -b -o %s -",
-                                          $samtools_path, $self->read_group_id, $input_file, $temp_bam_file);
-    
-        Genome::Sys->shellcmd(cmd=>$samtools_strip_cmd, 
-                                              output_files=>[$temp_bam_file],
-                                              skip_if_output_is_present=>0);
+	my $samtools_check_cmd = sprintf("%s view -r%s %s | head -1",
+                                          $samtools_path, $self->read_group_id, $input_file);
+        my  $samtools_check_output = `$samtools_check_cmd`;
+
+	if (length($samtools_check_output) == 0) {
+		$self->error_message ("Read Group X identified in the imported BAM header seems to have zero reads in the BAM file.  The BAM file header should be repaired in-place.  Subsequent re-runs of this pipeline will then not fail, and will shortcut past the alignments for other read groups.");
+		die $self->error_message;
+	} 
+
+	my $samtools_strip_cmd = sprintf("%s view -h -r%s %s | samtools view -S -b -o %s -",
+			$samtools_path, $self->read_group_id, $input_file, $temp_bam_file);
+
+	Genome::Sys->shellcmd(cmd=>$samtools_strip_cmd, 
+			output_files=>[$temp_bam_file],
+			skip_if_output_is_present=>0);
 
 
-        my $sorted_temp_bam_file = $temp . "/temp_rg.sorted." . $$ . ".bam";
-        
-        my $sort_cmd = Genome::Model::Tools::Sam::SortBam->create(file_name=>$temp_bam_file, name_sort=>1, output_file=>$sorted_temp_bam_file);
+	my $sorted_temp_bam_file = $temp . "/temp_rg.sorted." . $$ . ".bam";
 
-        unless ($sort_cmd->execute) {
-            $self->error_message("Failed sorting reads into name order for iterating");
-            return;
-        }
-        
-        unlink($temp_bam_file);        
-        $input_file = $sorted_temp_bam_file;
+	my $sort_cmd = Genome::Model::Tools::Sam::SortBam->create(file_name=>$temp_bam_file, name_sort=>1, output_file=>$sorted_temp_bam_file);
+
+	unless ($sort_cmd->execute) {
+		$self->error_message("Failed sorting reads into name order for iterating");
+		return;
+	}
+
+	unlink($temp_bam_file);        
+	$input_file = $sorted_temp_bam_file;
     }
 
     my $picard_dir = $self->picard_path;
@@ -101,7 +109,7 @@ sub execute {
 
     my $jvm_options = $self->additional_jvm_options || '';
     my $java_vm_cmd = 'java -Xmx'. $self->maximum_memory .'g -XX:MaxPermSize=' . $self->maximum_permgen_memory . 'm ' . $jvm_options . ' -cp '. $cp . ' edu.wustl.genome.samtools.GCSamToFastq ';
-    
+
 
     my $args = '';
 
@@ -120,11 +128,11 @@ sub execute {
 #    push @output_files, $self->fragment_fastq if $self->fragment_fastq;
 
     $self->run_java_vm(
-        cmd          => $java_vm_cmd,
-        input_files  => [ $input_file ],
+		    cmd          => $java_vm_cmd,
+		    input_files  => [ $input_file ],
 #        output_files => \@output_files,
-        skip_if_output_is_present => 0,
-    );
+		    skip_if_output_is_present => 0,
+		    );
 
     unlink $input_file if ($unlink_input_bam_on_end && $self->input ne $input_file);
     return 1;

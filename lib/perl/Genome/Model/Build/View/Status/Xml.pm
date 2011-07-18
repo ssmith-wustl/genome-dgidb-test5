@@ -254,6 +254,7 @@ sub get_build_node {
 
     $buildnode->addChild($self->get_inputs_node);
     $buildnode->addChild($self->get_links_node);
+    $buildnode->addChild($self->get_notes_node);
 
     return $buildnode;
 }
@@ -502,6 +503,27 @@ sub get_links_node {
     }
 
     return $links_node;
+}
+
+sub get_notes_node {
+    my $self = shift;
+    my $build = $self->subject;
+    my $doc = $self->_doc;
+    my $parser = XML::LibXML->new();
+
+    my $notes_node = $doc->createElement('aspect');
+    $notes_node->addChild( $doc->createAttribute("name", "notes") );
+
+    my @notes = $build->notes;
+    for my $note ( @notes ) {
+        my $v         = Genome::MiscNote::View::Status::Xml->create(subject => $note);
+        my $xml       = $v->content;
+        my $note_node = $parser->parse_string($xml);
+        my $note_root = $note_node->getDocumentElement;
+        $notes_node->addChild($note_root);
+    }
+
+    return $notes_node;
 }
 
 sub get_event_node {

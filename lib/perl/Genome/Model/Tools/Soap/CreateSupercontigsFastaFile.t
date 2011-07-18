@@ -24,8 +24,8 @@ ok( -s $temp_dir.'/TEST.scafSeq', "Linked TEST.scafSeq file");
 #ok(-d $temp_dir.'/edit_dir', "Created temp test dir edit_dir");
 
 my $create = Genome::Model::Tools::Soap::CreateSupercontigsFastaFile->create(
-#    scaffold_sequence_file => $data_dir.'/TEST.scafSeq',
     assembly_directory => $temp_dir,
+    min_contig_length => 50,
     );
 ok($create, "Created gmt soap create-supercontigs-fasta-file") or die;
 ok(($create->execute) == 1, "Executed command") or die;

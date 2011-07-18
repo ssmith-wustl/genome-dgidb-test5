@@ -14,15 +14,9 @@ class Genome::Model::Tools::Soap::CreateSupercontigsAgpFile {
             is => 'Text',
             doc => 'Soap assembly directory',
         },
-	output_file => {
-	    is => 'Text',
-	    doc => 'User supplied output file name',
-	    is_optional => 1,
-	},
-        scaffold_sequence_file => {
-            is => 'Text',
-	    is_optional => 1,
-            doc => 'Soap created scaffolds fasta file',
+        min_contig_length => {
+            is => 'Number',
+            doc => 'Minimum contig length to process',
         },	
     ],
 };
@@ -33,7 +27,7 @@ sub help_brief {
 
 sub help_detail {
     return <<"EOS"
-gmt soap create-supercontigs-agp-file --scaffold-sequence-file /gscmnt/111/soap_assembly/61EFS.cafSeq --assembly-directory /gscmnt/111/soap_assembly
+gmt soap create-supercontigs-agp-file --assembly-directory /gscmnt/111/soap_assembly --min-contig-length 200
 EOS
 }
 
@@ -49,23 +43,31 @@ sub execute {
         $self->error_message("Failed to find assembly directory: ".$self->assembly_directory);
         return;
     }
+    
+    unless( -s $self->assembly_scaffold_sequence_file ) {
+        $self->error_message("Failed to find soap scaffold sequence file: ".$self->assembly_scaffold_sequence_file);
+        return;
+    }
 
-    my $scaf_seq_file = ( $self->scaffold_sequence_file ) ? $self->scaffold_sequence_file : $self->assembly_scaffold_sequence_file;
+    unlink $self->supercontigs_agp_file;
+    my $fh = Genome::Sys->open_file_for_writing( $self->supercontigs_agp_file );
 
-    my $out_file = ($self->output_file) ? $self->output_file : $self->supercontigs_agp_file;
-
-    unlink $out_file;
-    my $fh = Genome::Sys->open_file_for_writing($out_file);
-
-    my $io = Bio::SeqIO->new(-format => 'fasta', -file => $scaf_seq_file);
+    my $io = Bio::SeqIO->new( -format => 'fasta', -file => $self->assembly_scaffold_sequence_file );
 
     my $scaffold_number = 0;
 
     while (my $seq = $io->next_seq) {
+        #remove lead/trail-ing Ns
+        my $supercontig = $seq->seq;
+        $supercontig =~ s/^N+//;
+        $supercontig =~ s/N+$//;
+
+        #skip if less than min contig length .. need to move this if all contigs in scaffold is < min contig length .. will skip an iteration
+        next unless length $supercontig >= $self->min_contig_length;
 
 	my $scaffold_name = 'Contig'.$scaffold_number++;
-	my @bases = split (/N+/i, $seq->seq);
-	my @gaps = split (/[ACTG]+/i, $seq->seq);
+	my @bases = split (/N+/i, $supercontig);
+	my @gaps = split (/[ACTG]+/i, $supercontig);
 
 	shift @gaps; #empty string from split .. unless seq starts with Ns in which case it's just thrown out
 
@@ -73,26 +75,37 @@ sub execute {
 	my $stop_pos = 0;
 	my $fragment_order = 0;
 	my $contig_order = 0;
-	my $prev_start = 0;
+        my $gap_length = 0;
+
+        my $is_leading_contig = 1;
 
 	for (my $i = 0; $i < scalar @bases; $i++) {
-
-	    my $contig_name = $scaffold_name.'.'.++$contig_order;
-
-	    #for sequences print:
-	    #sctg    start   stop    order   W       contig name     1       length  +
-	    #Contig1 1       380     1       W       Contig1.1       1       380     +
-	    $start_pos = ($i > 0) ? $start_pos + (length $gaps[$i - 1]) : 1;
-	    $stop_pos = $stop_pos + (length $bases[$i]);
-	    $fh->print($scaffold_name."\t".$start_pos."\t".$stop_pos."\t".++$fragment_order."\tW\t".$contig_name."\t1\t".(length $bases[$i])."\t+"."\n");
-
-	    #for gaps print:
-	    #sctg    start   stop    order   N       length  fragment        yes
-	    #Contig1 381     453     2       N       73      fragment        yes
-	    last if $i == scalar @bases - 1; #just got last seq on scaf .. so should be no more gap ..ignore trailing NNNs if any
-	    $start_pos = $start_pos + (length $bases[$i]);
-	    $stop_pos = $stop_pos + (length $gaps[$i]);
-	    $fh->print($scaffold_name."\t".$start_pos."\t".$stop_pos."\t".++$fragment_order."\tN\t".(length $gaps[$i])."\tfragment\tyes"."\n");
+            #add contig length to gap when contig < min length
+            $gap_length += length $gaps[$i - 1] unless $is_leading_contig;
+            if ( length $bases[$i] < $self->min_contig_length ) {
+                $gap_length += length $bases[$i];
+                next;
+            }
+            #fragment info
+            {
+                #no frag info needed for first contig in scaffold
+                next if $is_leading_contig;
+                $start_pos = $stop_pos + 1;
+                $stop_pos = $start_pos + $gap_length - 1;
+                $fh->print( $scaffold_name."\t".$start_pos."\t".$stop_pos."\t".++$fragment_order."\tN\t".$gap_length."\tfragment\tyes\n" );
+                #reset gap length after printing a gap info
+                $gap_length = 0;
+            }
+            #contig info
+            {
+                $start_pos = $stop_pos + 1;
+                $stop_pos = $start_pos + ( length $bases[$i] ) - 1;
+                my $contig_name = $scaffold_name.'.'.++$contig_order;
+                my $contig_length = length $bases[$i];
+                $fh->print( $scaffold_name."\t".$start_pos."\t".$stop_pos."\t".++$fragment_order."\tW\t".$contig_name."\t1\t".$contig_length."\t+\n" );
+                #scaffold started .. no longer leading contig from this point
+                $is_leading_contig = 0;
+            }
 	}
     }
 
