@@ -112,6 +112,7 @@ sub _run_varscan {
     my $bam_file = $self->aligned_reads_input;
 
     my $varscan = Genome::Model::Tools::Varscan::Germline->create(
+        version => $self->version,
         bam_file => $bam_file,
         reference => $reference,
         output_snp => $output_snp,

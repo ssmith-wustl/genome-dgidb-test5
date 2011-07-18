@@ -117,13 +117,8 @@ sub execute {                               # replace with real execution logic.
 	if(-e $normal_bam && -e $tumor_bam)
 	{
 		## Prepare pileup commands ##
-		
-#		my $normal_pileup = "samtools pileup -f $reference $normal_bam";
-#		my $tumor_pileup = "samtools pileup -f $reference $tumor_bam";
-#		my $normal_pileup = "samtools view -b -u -q 10 $normal_bam | samtools pileup -f $reference -";
-#		my $tumor_pileup = "samtools view -b -u -q 10 $tumor_bam | samtools pileup -f $reference -";
-		my $normal_pileup = "samtools mpileup -f $reference -q 10 $normal_bam";
-		my $tumor_pileup = "samtools mpileup -f $reference -q 10 $tumor_bam";
+        my $normal_pileup = $self->pileup_command_for_reference_and_bam($reference, $normal_bam);
+        my $tumor_pileup = $self->pileup_command_for_reference_and_bam($reference, $tumor_bam);
 
 		## First, head the pileup files to get SAMtools warmed up ##
 #		print "Heading pileup files to get SAMtools warmed up...\n";
