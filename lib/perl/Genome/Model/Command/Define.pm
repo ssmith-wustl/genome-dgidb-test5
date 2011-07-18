@@ -6,10 +6,6 @@ use warnings;
 use Genome;
 use Carp 'confess';
 use File::Path;
-use Data::Dumper;
-require Genome::Sys;
-
-###################################################
 
 class Genome::Model::Command::Define {
     is => 'Command::DynamicTree', 
@@ -123,13 +119,13 @@ sub execute {
 
     my $processing_profile = $self->validate_processing_profile;
     unless ($processing_profile) {
-        Carp::confess "Could not validate processing profile!";
+        confess "Could not validate processing profile!";
     }
 
     unless ($self->subject) {
         my $subject = $self->deduce_subject_from_instrument_data;
         unless ($subject) {
-            Carp::confess "Not given subject and could not derive subject from instrument data!";
+            confess "Not given subject and could not derive subject from instrument data!";
         }
         $self->subject($subject);
     }
@@ -145,21 +141,15 @@ sub execute {
         $self->type_specific_parameters_for_create,
     );
     unless ($model) {
-        Carp::confess "Could not create a model!";
+        confess "Could not create a model!";
     }
     $self->result_model_id($model->id);
 
     unless ($self->assign_model_to_groups($model)) {
-        Carp::confess "Encountered problems when trying to assign model to groups!";
+        confess "Encountered problems when trying to assign model to groups!";
     }
 
-    #if (my $rule = $model->create_rule_limiting_instrument_data) {
-    #    $model->limit_inputs_to_id($rule);
-    #}
-
     $self->display_model_information($model);
-    $self->result_model_id($model->id);
-
     return 1;
 }
 
@@ -168,7 +158,7 @@ sub deduce_subject_from_instrument_data {
 
     my @instrument_data = $self->instrument_data;
     unless (@instrument_data) {
-        Carp::confess "No instrument data provided, cannot deduce subject!";
+        confess "No instrument data provided, cannot deduce subject!";
     }
 
     my @samples = map { $_->sample } @instrument_data;
@@ -186,7 +176,9 @@ sub deduce_subject_from_instrument_data {
         return $taxons[0];
     }
 
-    Carp::confess "Could not deduce model subject from provided instrument data!";
+    # TODO Could possibly create a population group here similar to convergence models instead of failing
+
+    confess "Could not deduce model subject from provided instrument data!";
 }
 
 sub assign_model_to_groups {
@@ -196,7 +188,7 @@ sub assign_model_to_groups {
     for my $group ($self->groups) {
         my $rv = $group->assign_models($model);
         unless ($rv) {
-            Carp::confess "Could not assign model " . $model->__display_name__ . " to group " . $group->__display_name__;
+            confess "Could not assign model " . $model->__display_name__ . " to group " . $group->__display_name__;
         }
     }
 
@@ -223,16 +215,17 @@ sub validate_processing_profile {
     my $self = shift;
     
     unless ($self->processing_profile) {
-        Carp::confess 'Could not resolve a processing profile from provided parameters!';
+        confess 'Could not resolve a processing profile from provided parameters!';
     }
 
     unless ($self->compare_pp_and_model_type) {
-        Carp::confess 'Model and processing profile types do not match!';
+        confess 'Model and processing profile types do not match!';
     }
     
     return 1;
 }
 
+# TODO This may not be necessary. Even if it is, there's probably a better way to do it.
 sub compare_pp_and_model_type {
     my $self = shift;
 
