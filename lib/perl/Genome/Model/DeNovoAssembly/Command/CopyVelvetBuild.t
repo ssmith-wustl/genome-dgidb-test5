@@ -73,7 +73,7 @@ my $model = Genome::Model::DeNovoAssembly->create(
     subject_type => 'species_name',
     center_name => 'WUGC',
 );
-ok($model, 'soap de novo model') or die;
+ok($model, 'de novo model') or die;
 ok($model->add_instrument_data($instrument_data), 'add inst data to model');
 
 my $build = Genome::Model::Build->create(
