@@ -65,7 +65,7 @@ my $pp = Genome::ProcessingProfile::DeNovoAssembly->create(
     assembler_name => 'soap de-novo-assemble',
     assembler_version => '1.04',
     assembler_params => '-kmer_size 31 -resolve_repeats -kmer_frequency_cutoff 1',
-    read_processor => 'trimmer bwa-style -trim-qual-level 10 | filter by-length -filter-length 35 | rename illumina-to-pcap',
+    read_processor => 'trim bwa-style -trim-qual-level 10 | filter by-length -filter-length 35 | rename illumina-to-pcap',
 );
 ok($pp, 'pp') or die;
 
