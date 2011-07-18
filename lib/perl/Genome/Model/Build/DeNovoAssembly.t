@@ -8,7 +8,6 @@ use warnings;
 
 use above 'Genome';
 
-use Genome::Model::DeNovoAssembly::Test;
 use Test::More;
 
 use_ok('Genome::Model::Build::DeNovoAssembly') or die;
