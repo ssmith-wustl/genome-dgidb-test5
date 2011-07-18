@@ -29,6 +29,13 @@ class Genome::Model::Tools::Varscan::Germline {
             is_optional => 0, 
             is_input => 1 
             },
+        samtools_path	=> {
+            is => 'Text',
+            doc => "Path to SAMtools executable",
+            is_optional => 0,
+            is_input => 1,
+            default => "samtools"
+        },
         output_snp => { 
             is => 'Text', 
             doc => "Basename for SNP output, eg. varscan.snp" , 
@@ -148,7 +155,8 @@ sub execute {                               # replace with real execution logic.
     if (-e $bam_file) {
         ## Prepare pileup commands ##
 
-        my $normal_pileup = "samtools view -b -u -q 10 $bam_file | samtools pileup -f $reference -";
+#        my $normal_pileup = "samtools view -b -u -q 10 $bam_file | samtools pileup -f $reference -";
+        my $normal_pileup = "samtools mpileup -q 10 -f $reference $bam_file";
 
         ## Run Varscan ##
 

@@ -128,18 +128,19 @@ sub execute {                               # replace with real execution logic.
 
 			## Step 5: Generate Pileup ##
 			print SCRIPT "echo Building the pileup file...\n";	
-			$cmd = "samtools pileup -f $ref_seq $bam_file >$bam_file.pileup";
+			$cmd = "samtools mpileup -f $ref_seq $bam_file >$bam_file.pileup";
 			print SCRIPT "$cmd\n";
 
+			## Update July 2011: Skip variant calling because pileup no longer supported ##
 			## Step 6: Call SAMtools variants ##
-			print SCRIPT "echo Building the pileup file...\n";	
-			$cmd = "samtools pileup -c -v -f $ref_seq $bam_file >$bam_file.variants";
-			print SCRIPT "$cmd\n";
+#			print SCRIPT "echo Building the variants file...\n";	
+#			$cmd = "samtools mpileup -c -v -f $ref_seq $bam_file >$bam_file.variants";
+#			print SCRIPT "$cmd\n";
 
 			## Step 7: Filter SAMtools variants ##
-			print SCRIPT "echo Building the pileup file...\n";	
-			$cmd = "samtools.pl varFilter -D 10000 $bam_file.variants >$bam_file.variants.filter";
-			print SCRIPT "$cmd\n";
+#			print SCRIPT "echo Building the pileup file...\n";	
+#			$cmd = "samtools.pl varFilter -D 10000 $bam_file.variants >$bam_file.variants.filter";
+#			print SCRIPT "$cmd\n";
 			
 			close(SCRIPT);
 			

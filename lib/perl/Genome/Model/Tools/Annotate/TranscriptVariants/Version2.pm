@@ -262,6 +262,7 @@ sub _create_iterator_for_variant_intersection {
             $loaded_substructures = [];
             $structure_iterator = undef;
 
+            $structure_class->unload();
             $structure_iterator = $structure_class->create_iterator(
                                       chrom_name => $chrom_name,
                                       data_directory => $self->data_directory,

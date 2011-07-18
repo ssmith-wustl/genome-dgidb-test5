@@ -26,6 +26,7 @@ class Genome::Model::Tools::Varscan::Somatic {
 	has => [                                # specify the command's single-value properties (parameters) <--- 
 		normal_bam	=> { is => 'Text', doc => "Path to Normal BAM file", is_optional => 0, is_input => 1 },
 		tumor_bam	=> { is => 'Text', doc => "Path to Tumor BAM file", is_optional => 0, is_input => 1 },
+		samtools_path	=> { is => 'Text', doc => "Path to SAMtools executable", is_optional => 0, is_input => 1, default => "samtools" },
 		output	=> { is => 'Text', doc => "Path to Tumor BAM file", is_optional => 1, is_input => 1, is_output => 1 },
 		output_snp	=> { is => 'Text', doc => "Basename for SNP output, eg. varscan_out/varscan.status.snp" , is_optional => 1, is_input => 1, is_output => 1},
 		output_indel	=> { is => 'Text', doc => "Basename for indel output, eg. varscan_out/varscan.status.snp" , is_optional => 1, is_input => 1, is_output => 1},
@@ -119,8 +120,10 @@ sub execute {                               # replace with real execution logic.
 		
 #		my $normal_pileup = "samtools pileup -f $reference $normal_bam";
 #		my $tumor_pileup = "samtools pileup -f $reference $tumor_bam";
-		my $normal_pileup = "samtools view -b -u -q 10 $normal_bam | samtools pileup -f $reference -";
-		my $tumor_pileup = "samtools view -b -u -q 10 $tumor_bam | samtools pileup -f $reference -";
+#		my $normal_pileup = "samtools view -b -u -q 10 $normal_bam | samtools pileup -f $reference -";
+#		my $tumor_pileup = "samtools view -b -u -q 10 $tumor_bam | samtools pileup -f $reference -";
+		my $normal_pileup = "samtools mpileup -f $reference -q 10 $normal_bam";
+		my $tumor_pileup = "samtools mpileup -f $reference -q 10 $tumor_bam";
 
 		## First, head the pileup files to get SAMtools warmed up ##
 #		print "Heading pileup files to get SAMtools warmed up...\n";
