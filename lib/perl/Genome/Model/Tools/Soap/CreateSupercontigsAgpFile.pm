@@ -79,7 +79,7 @@ sub execute {
 
         my $is_leading_contig = 1;
 
-	for (my $i = 0; $i < scalar @bases; $i++) {
+        for my $i ( 0 .. $#bases ) {
             #add contig length to gap when contig < min length
             $gap_length += length $gaps[$i - 1] unless $is_leading_contig;
             if ( length $bases[$i] < $self->min_contig_length ) {
