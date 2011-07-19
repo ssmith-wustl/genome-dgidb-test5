@@ -57,8 +57,12 @@ sub validate_gold_snp_path {
     my $self = shift;
 
     my $gold_snp_path = $self->build->gold_snp_path;
-    unless ($gold_snp_path and -s $gold_snp_path) {
-        $self->status_message('No gold_snp_path provided for the build or it is empty');
+    unless ($gold_snp_path) {
+        $self->status_message('No gold_snp_path provided for the build');
+        return;
+    }
+    unless (-s $gold_snp_path) {
+        $self->status_message('gold_snp_path is empty ' . $gold_snp_path);
         return;
     }
 
