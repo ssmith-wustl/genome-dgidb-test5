@@ -16,18 +16,18 @@ my $DEFAULT_MEMORY = 402653184;
 class Genome::Model::Tools::Sam {
     is  => 'Command',
     has => [
-        use_version => { 
-            is  => 'Version', 
-            doc => "samtools version to be used, default is $DEFAULT. ", 
-            is_optional   => 1, 
-            default_value => $DEFAULT,   
-        },
-        maximum_memory => {
-            is => 'Integer',
-            doc => "the maximum memory available, default is $DEFAULT_MEMORY",
-            is_optional => 1,
-            default_value => $DEFAULT_MEMORY,
-        },
+    use_version => { 
+        is  => 'Version', 
+        doc => "samtools version to be used, default is $DEFAULT. ", 
+        is_optional   => 1, 
+        default_value => $DEFAULT,   
+    },
+    maximum_memory => {
+        is => 'Integer',
+        doc => "the maximum memory available, default is $DEFAULT_MEMORY",
+        is_optional => 1,
+        default_value => $DEFAULT_MEMORY,
+    },
     ],
 };
 
@@ -54,6 +54,7 @@ EOS
 
 
 my %SAMTOOLS_VERSIONS = (
+    'r963:277' => '/gsc/pkg/bio/samtools/samtools-0.1.17/samtools', #newest version 0.1.17 
     r963    => '/gsc/pkg/bio/samtools/samtools-0.1.16/samtools',
     r868    => '/gsc/pkg/bio/samtools/samtools-0.1.12a/samtools',
     r783    => '/gsc/pkg/bio/samtools/samtools-0.1.9/samtools',
@@ -86,7 +87,7 @@ sub default_samtools_version {
     die "default samtools version: $DEFAULT is not valid" unless $SAMTOOLS_VERSIONS{$DEFAULT};
     return $DEFAULT;
 }    
-    
+
 sub samtools_path {
     my $self = shift;
     return $self->path_for_samtools_version($self->use_version);
@@ -96,7 +97,7 @@ sub samtools_pl_path {
     my $self = shift;
     my $dir  = dirname $self->samtools_path;
     my $path = "$dir/misc/samtools.pl";
-    
+
     unless (-x $path) {
         $self->error_message("samtools.pl: $path is not executable");
         return;
@@ -107,12 +108,12 @@ sub samtools_pl_path {
 sub c_linkage_class {
     my $self = shift;
 
-$DB::single = $DB::stopper;
+    $DB::single = $DB::stopper;
     my $version = $self->use_version;
     $version =~ s/\./_/g;
 
     my $class_to_use = __PACKAGE__ . "::CLinkage$version";
-  
+
     #eval "use above '$class_to_use';";
     eval "use $class_to_use;";
     if ($@) {
@@ -191,7 +192,7 @@ sub read_count {
         $self->error_message("Unknown type ($type) from filename ($filename).");
         return;
     }
-    
+
     chomp(my $read_count = qx($count_cmd));
     ($read_count) = split(' ', $read_count);
     return $read_count;
