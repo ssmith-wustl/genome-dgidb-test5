@@ -486,7 +486,7 @@ sub _merge_and_calculate_stats {
         input_file => $tmp_unaligned_bam_file,
         output_file => $unaligned_bam_file,
         use_version => $self->picard_version,
-        attribute_to_remove => \@eland_attributes,
+        attribute_to_clear => \@eland_attributes,
     );
 
     unless ($reset_command->execute == 1) {
