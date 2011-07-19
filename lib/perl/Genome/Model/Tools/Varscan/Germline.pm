@@ -78,7 +78,7 @@ class Genome::Model::Tools::Varscan::Germline {
         },
         varscan_params => { 
             is => 'Text', 
-            doc => "Parameters to pass to Varscan [--min-coverage 8 --min-var-freq 0.10 --p-value 0.05]" , 
+            doc => "Parameters to pass to Varscan [--min-coverage 8 --min-var-freq 0.10 --p-value 0.05 --strand-filter 1]" , 
             is_optional => 1, 
             is_input => 1
         },
