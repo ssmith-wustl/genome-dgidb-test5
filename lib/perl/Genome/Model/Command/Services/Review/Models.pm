@@ -46,6 +46,13 @@ sub execute {
         my $model_name   = ($model ? $model->name                     : '-');
         my $pp_name      = ($model ? $model->processing_profile->name : '-');
 
+        my $workflow = $latest_build->newest_workflow_instance;
+        my @workflow_steps = ($workflow ? $workflow->ordered_child_instances : ());
+        my @crashed_steps = grep { $_->status ne 'done' } @workflow_steps;
+        my $crashed_workflow_step = (@crashed_steps ? $crashed_steps[0]->name : '-');
+
+        $crashed_workflow_step =~ s/^\d+\s+//;
+
         my $latest_build_revision = $latest_build->software_revision if $latest_build;
         ($latest_build_revision) =~ /\/(genome-[^\/])/;
         $latest_build_revision ||= '-';
@@ -69,7 +76,7 @@ sub execute {
         }
 
         next if (grep { lc $_ eq lc $latest_build_status } @hide_statuses);
-        $self->print_message(join "\t", $model_id, $action, $latest_build_status, $latest_build_revision, $model_name, $pp_name, $fail_count);
+        $self->print_message(join "\t", $model_id, $action, $latest_build_status, $crashed_workflow_step, $latest_build_revision, $model_name, $pp_name, $fail_count);
     }
 
     my $rv = 1;
