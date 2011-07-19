@@ -62,7 +62,7 @@ sub execute {
         $supercontig =~ s/^N+//;
         $supercontig =~ s/N+$//;
 
-        #skip if less than min contig length
+        #skip if less than min contig length .. need to move this if all contigs in scaffold is < min contig length .. will skip an iteration
         next unless length $supercontig >= $self->min_contig_length;
 
 	my $scaffold_name = 'Contig'.$scaffold_number++;
@@ -75,29 +75,37 @@ sub execute {
 	my $stop_pos = 0;
 	my $fragment_order = 0;
 	my $contig_order = 0;
-	my $prev_start = 0;
+        my $gap_length = 0;
+
+        my $is_leading_contig = 1;
 
 	for (my $i = 0; $i < scalar @bases; $i++) {
-            #if first or last string and < min length skip .. no need process gap info
-            next if $i == 0 and length $bases[$i] < $self->min_contig_length;
-            next if $i == $#bases and length $bases[$i] < $self->min_contig_length;
-
-	    my $contig_name = $scaffold_name.'.'.++$contig_order;
-
-	    #for sequences print:
-	    #sctg    start   stop    order   W       contig name     1       length  +
-	    #Contig1 1       380     1       W       Contig1.1       1       380     +
-	    $start_pos = ($i > 0) ? $start_pos + (length $gaps[$i - 1]) : 1;
-	    $stop_pos = $stop_pos + (length $bases[$i]);
-	    $fh->print($scaffold_name."\t".$start_pos."\t".$stop_pos."\t".++$fragment_order."\tW\t".$contig_name."\t1\t".(length $bases[$i])."\t+"."\n");
-
-	    #for gaps print:
-	    #sctg    start   stop    order   N       length  fragment        yes
-	    #Contig1 381     453     2       N       73      fragment        yes
-	    last if $i == scalar @bases - 1; #just got last seq on scaf .. so should be no more gap ..ignore trailing NNNs if any
-	    $start_pos = $start_pos + (length $bases[$i]);
-	    $stop_pos = $stop_pos + (length $gaps[$i]);
-	    $fh->print($scaffold_name."\t".$start_pos."\t".$stop_pos."\t".++$fragment_order."\tN\t".(length $gaps[$i])."\tfragment\tyes"."\n");
+            #add contig length to gap when contig < min length
+            $gap_length += length $gaps[$i - 1] unless $is_leading_contig;
+            if ( length $bases[$i] < $self->min_contig_length ) {
+                $gap_length += length $bases[$i];
+                next;
+            }
+            #fragment info
+            {
+                #no frag info needed for first contig in scaffold
+                next if $is_leading_contig;
+                $start_pos = $stop_pos + 1;
+                $stop_pos = $start_pos + $gap_length - 1;
+                $fh->print( $scaffold_name."\t".$start_pos."\t".$stop_pos."\t".++$fragment_order."\tN\t".$gap_length."\tfragment\tyes\n" );
+                #reset gap length after printing a gap info
+                $gap_length = 0;
+            }
+            #contig info
+            {
+                $start_pos = $stop_pos + 1;
+                $stop_pos = $start_pos + ( length $bases[$i] ) - 1;
+                my $contig_name = $scaffold_name.'.'.++$contig_order;
+                my $contig_length = length $bases[$i];
+                $fh->print( $scaffold_name."\t".$start_pos."\t".$stop_pos."\t".++$fragment_order."\tW\t".$contig_name."\t1\t".$contig_length."\t+\n" );
+                #scaffold started .. no longer leading contig from this point
+                $is_leading_contig = 0;
+            }
 	}
     }
 

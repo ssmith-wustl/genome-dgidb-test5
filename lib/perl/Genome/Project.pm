@@ -52,10 +52,10 @@ sub create {
 
     my $self = $class->SUPER::create(%p);
 
-    my $username = Genome::Config::auth_user();
-    my $user = Genome::Sys::User->get( email => $username);
+    my $user_email = Genome::Config->user_email();
+    my $user = Genome::Sys::User->get( email => $user_email);
 
-    die "Didnt create project because couldnt find user with username '$username' " if !$user;
+    die "Didnt create project because couldnt find user with user_email '$user_email' " if !$user;
 
     my $part = Genome::ProjectPart->create(
         entity_class_name => 'Genome::Sys::User',

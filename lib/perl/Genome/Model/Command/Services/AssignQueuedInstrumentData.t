@@ -613,12 +613,7 @@ my $instrument_data_6 = Genome::InstrumentData::Solexa->create(
     rev_clusters => 65536,
 );
 
-my $de_novo_processing_profile = Genome::ProcessingProfile::DeNovoAssembly->create(
-    name => 'AQID-test-de-novo-pp',
-    assembler_name => 'velvet one-button',
-    assembler_version => '0.7.57-64',
-    read_processor => 'trimmer bwa-style --trim-qual-level 9000',
-);
+my $de_novo_processing_profile = Genome::ProcessingProfile::DeNovoAssembly->get(2354215); #apipe-test-de_novo_velvet_solexa
 
 my $pse_6 = GSC::PSE::QueueInstrumentDataForGenomeModeling->create(
     pse_status => 'inprogress',

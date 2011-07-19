@@ -60,13 +60,7 @@ my $instrument_data = Genome::InstrumentData::Imported->create(
 );
 ok($instrument_data, 'instrument data');
 
-my $pp = Genome::ProcessingProfile::DeNovoAssembly->create(
-    name => 'De Novo Assembly Soap Test',
-    assembler_name => 'soap de-novo-assemble',
-    assembler_version => '1.04',
-    assembler_params => '-kmer_size 31 -resolve_repeats -kmer_frequency_cutoff 1',
-    read_processor => 'trimmer bwa-style -trim-qual-level 10 | filter by-length -filter-length 35 | rename illumina-to-pcap',
-);
+my $pp = Genome::ProcessingProfile::DeNovoAssembly->get(2510961);#apipe soap test
 ok($pp, 'pp') or die;
 
 my $model = Genome::Model::DeNovoAssembly->create(
@@ -75,7 +69,7 @@ my $model = Genome::Model::DeNovoAssembly->create(
     subject_type => 'species_name',
     center_name => 'WUGC',
 );
-ok($model, 'soap de novo model') or die;
+ok($model, 'de novo model') or die;
 ok($model->add_instrument_data($instrument_data), 'add inst data to model');
 
 my $build = Genome::Model::Build->create(

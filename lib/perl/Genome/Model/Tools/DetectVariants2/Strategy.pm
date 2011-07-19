@@ -18,6 +18,8 @@ my $grammar = q{
                 { $item[1]; }
     | union
                 { $item[1]; }
+    | unique_union 
+                { $item[1]; }
     | single
                 { $item[1]; }
     | <error>
@@ -30,6 +32,9 @@ my $grammar = q{
     
     union: single "union" combination
                 { $return = { union => [ $item[1], $item[3] ] }; }
+
+    unique_union: single "unique union" combination
+                { $return = { unionunique => [ $item[1], $item[3] ] }; }
     
     single: parenthetical
                 { $item[1]; }

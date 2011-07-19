@@ -25,9 +25,9 @@ class Genome::Model::Tools::Analysis::LaneQc::CompareSnps {
 	
 	has => [                                # specify the command's single-value properties (parameters) <--- 
 		genotype_file	=> { is => 'Text', doc => "Three-column file of genotype calls chrom, pos, genotype", is_optional => 0, is_input => 1 },
-		variant_file	=> { is => 'Text', doc => "Variant calls in SAMtools pileup-consensus format", is_optional => 1, is_input => 1 },
+		variant_file	=> { is => 'Text', doc => "Variant calls in SAMtools mpileup-consensus format", is_optional => 1, is_input => 1 },
 		bam_file	=> { is => 'Text', doc => "Alternatively, provide a BAM file", is_optional => 1, is_input => 1 },		
-		sample_name	=> { is => 'Text', doc => "Variant calls in SAMtools pileup-consensus format", is_optional => 1, is_input => 1 },
+		sample_name	=> { is => 'Text', doc => "Sample Name Used in QC", is_optional => 1, is_input => 1 },
 		min_depth_het	=> { is => 'Text', doc => "Minimum depth to compare a het call", is_optional => 1, is_input => 1, default => 8},
 		min_depth_hom	=> { is => 'Text', doc => "Minimum depth to compare a hom call", is_optional => 1, is_input => 1, default => 4},
 		reference_build	=> { is => 'Text', doc => "36 or 37", is_optional => 1, is_input => 1, default => 36},
@@ -147,18 +147,18 @@ sub execute {                               # replace with real execution logic.
 			}
 
 		## Build consensus ##
-		print "Building pileup to $temp_path\n";
+		print "Building mpileup to $temp_path\n";
 		my $cmd = "";
 		
 		if($search_string && $key_count < 100)
 		{
 			print "Extracting genotypes for $key_count positions...\n";		
-			$cmd = "samtools view -b $bam_file $search_string | samtools pileup -f $reference_build_fasta - | java -jar /gsc/scripts/lib/java/VarScan/VarScan.jar pileup2cns >$temp_path";			
+			$cmd = "samtools view -b $bam_file $search_string | samtools mpileup -f $reference_build_fasta - | java -jar /gsc/scripts/lib/java/VarScan/VarScan.jar pileup2cns >$temp_path";			
 			print "$cmd\n";
 		}
 		else
 		{
-			$cmd = "samtools pileup -cf $reference_build_fasta $bam_file | cut --fields=1-8 >$temp_path";			
+			$cmd = "samtools mpileup -cf $reference_build_fasta $bam_file | cut --fields=1-8 >$temp_path";			
 		}
 
 		my $return = Genome::Sys->shellcmd(
@@ -167,7 +167,7 @@ sub execute {                               # replace with real execution logic.
                            skip_if_output_is_present => 0,
                        );
 		unless($return) { 
-			$self->error_message("Failed to execute samtools pileup: Pileup Returned $return");
+			$self->error_message("Failed to execute samtools mpileup: mPileup Returned $return");
 			die $self->error_message;
 		}
 		
