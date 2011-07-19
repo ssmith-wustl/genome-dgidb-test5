@@ -32,9 +32,9 @@ binit=function(x,hmax,bin,dropbin=T)
 
 convolute_b=function(a,b)
 {
-tt=NULL
-for (j in b) tt=c(tt,(a+j))
-tt
+  tt=NULL
+  for (j in b) tt=c(tt,(a+j))
+  tt
 }
 
 mut_class_test=function(x,xmax=100,hmax=25,bin=0.001)
@@ -76,7 +76,7 @@ mut_class_test=function(x,xmax=100,hmax=25,bin=0.001)
   (p.convol=sum(exp(-hist0[hist0>=bx])))
   (qc=sum(exp(-hist0)))
 
-if (tx==0) {p.fisher=1;p.lr=1;p.convol=1}
+  if (tx==0) {p.fisher=1;p.lr=1;p.convol=1}
 
   # Return results
   rst=list(hists=hist0,x=cbind(x,tn,tx,p.fisher,p.lr,p.convol,qc))
@@ -85,24 +85,24 @@ if (tx==0) {p.fisher=1;p.lr=1;p.convol=1}
 
 smg_test=function(gene_mr_file,pval_file)
 {
-  pval_file_full=paste(pval_file,"_detailed",sep="")
+  #pval_file_full=paste(pval_file,"_detailed",sep="")
   read.table(gene_mr_file,header=T,sep="\t")->mut
   colnames(mut)=c("Gene","Class","Bases_Covered","Non_Syn_Mutations","BMR")
   mut$BMR=as.numeric(as.character(mut$BMR))
 
   #select the rows with BMR data
-  mut=mut[mut$BMR>0 & !is.na(mut$BMR) & mut$Bases>0,]
+  mut=mut[(mut$BMR>0) & (!is.na(mut$BMR)) & (mut$Bases>0),]
   tt=NULL
-  tt_full=NULL
+  #tt_full=NULL
   for (Gene in unique(as.character(mut$Gene)))
   {
     mutgi=mut[mut$Gene==Gene,]
     mut_class_test(mutgi[,3:5],hmax=25,bin=0.001)->z
-    tt_full=rbind(tt_full,cbind(mutgi,z$x[,-(1:3)]))
+    #tt_full=rbind(tt_full,cbind(mutgi,z$x[,-(1:3)]))
     tt=rbind(tt,cbind(Gene,unique(z$x[,(9:11)])))
   }
   write.table(tt,file=pval_file,quote=FALSE,row.names=F,sep="\t")
-  write.table(tt_full,file=pval_file_full,quote=FALSE,row.names=F,sep="\t")
+  #write.table(tt_full,file=pval_file_full,quote=FALSE,row.names=F,sep="\t")
 }
 
 smg_fdr=function(pval_file,fdr_file)

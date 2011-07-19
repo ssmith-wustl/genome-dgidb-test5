@@ -26,7 +26,8 @@ class Genome::Model::Tools::Varscan::CopyNumber {
 	has => [                                # specify the command's single-value properties (parameters) <--- 
 		normal_bam	=> { is => 'Text', doc => "Path to Normal BAM file", is_optional => 0, is_input => 1 },
 		tumor_bam	=> { is => 'Text', doc => "Path to Tumor BAM file", is_optional => 0, is_input => 1 },
-		output	=> { is => 'Text', doc => "Path to Tumor BAM file", is_optional => 1, is_input => 1, is_output => 1 },
+		samtools_path	=> { is => 'Text', doc => "Path to SAMtools executable", is_optional => 0, is_input => 1, default => "samtools" },
+		output	=> { is => 'Text', doc => "Output file for copy number results", is_optional => 0, is_input => 1, is_output => 1 },
 		target_regions	=> { is => 'Text', doc => "Optional target region(s) for limiting the BAM (e.g 5:1 or 6:11134-11158)", is_optional => 1, is_input => 1 },
 		reference	=> { is => 'Text', doc => "Reference FASTA file for BAMs (default= genome model)" , is_optional => 1, is_input => 1},
 		heap_space	=> { is => 'Text', doc => "Megabytes to reserve for java heap [1000]" , is_optional => 1, is_input => 1},
@@ -36,20 +37,20 @@ class Genome::Model::Tools::Varscan::CopyNumber {
 	],	
 
 	has_param => [
-		lsf_resource => { default_value => 'select[model!=Opteron250 && type==LINUX64] rusage[mem=4000]'},
+		lsf_resource => { default_value => 'select[model!=Opteron250 && type==LINUX64 && tmp>1000] rusage[mem=4000]'},
        ],
 };
 
 sub sub_command_sort_position { 12 }
 
 sub help_brief {                            # keep this to just a few words <---
-    "Run the Varscan somatic variant detection"                 
+    "Run the Varscan2-CopyNumber on a tumor-normal pair"                 
 }
 
 sub help_synopsis {
     return <<EOS
-Runs Varscan from BAM files
-EXAMPLE:	gmt varscan copy-number --normal-bam [Normal.bam] --tumor-bam [Tumor.bam] --output varscan_out/Patient.status ...
+This command runs the Varscan2-CopyNumber analysis on a tumor-normal pair. 
+EXAMPLE:	gmt varscan copy-number --normal-bam [Normal.bam] --tumor-bam [Tumor.bam] --output varscan_out/varScan.output.copynumber ...
 EOS
 }
 
@@ -101,10 +102,11 @@ sub execute {                               # replace with real execution logic.
 	if(-e $normal_bam && -e $tumor_bam)
 	{
 		## Get the flagstat ##
-		
+		print "Getting Flagstat...\n";	
 		my %normal_flagstat = get_flagstat($normal_bam);
 		my %tumor_flagstat = get_flagstat($tumor_bam);
 
+		print "Computing Average Read Length...\n";
 		my $normal_readlen = avg_read_len($normal_bam);
 		my $tumor_readlen = avg_read_len($tumor_bam);
 		
@@ -127,13 +129,13 @@ sub execute {                               # replace with real execution logic.
 
 		if($self->target_regions)
 		{
-			$normal_pileup = "samtools view -b -u -q 10 $normal_bam " . $self->target_regions . " | samtools pileup -f $reference -";
-			$tumor_pileup = "samtools view -b -u -q 10 $tumor_bam " . $self->target_regions . " | samtools pileup -f $reference -";			
+			$normal_pileup = $self->samtools_path . " view -b -u -q 10 $normal_bam " . $self->target_regions . " | samtools mpileup -f $reference -";
+			$tumor_pileup = $self->samtools_path . " view -b -u -q 10 $tumor_bam " . $self->target_regions . " | samtools mpileup -f $reference -";			
 		}
 		else
 		{
-			$normal_pileup = "samtools view -b -u -q 10 $normal_bam | samtools pileup -f $reference -";
-			$tumor_pileup = "samtools view -b -u -q 10 $tumor_bam | samtools pileup -f $reference -";			
+			$normal_pileup = $self->samtools_path . " mpileup -f $reference -q 10 $normal_bam";
+			$tumor_pileup = $self->samtools_path . " mpileup -f $reference -q 10 $tumor_bam";			
 		}
 		
 #		my $cmd = $self->java_command_line("copynumber <\($normal_pileup\) <\($tumor_pileup\) $output --data-ratio $normal_tumor_ratio $varscan_params");
@@ -193,6 +195,10 @@ sub get_flagstat
 		
 		foreach my $line (@lines)
 		{
+			## Erase the plus zero ##
+			
+			$line =~ s/\s\+\s0//;
+			
 			(my $num_reads) = split(/\s+/, $line);
 			my $category = $line;
 			$category =~ s/$num_reads\s//;

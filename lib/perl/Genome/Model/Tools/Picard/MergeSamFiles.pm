@@ -59,8 +59,13 @@ EOS
 
 sub execute {
     my $self = shift;
-
-    my @input_files = @{$self->input_files};
+    my $input_files = $self->input_files;
+    my @input_files;
+    if (ref($input_files) eq 'ARRAY') {
+        @input_files = @{$input_files};
+    } else {
+        @input_files = split(',',$input_files);
+    }
     my $output_file = $self->output_file;
 
      my $merge_cmd = $self->picard_path .'/MergeSamFiles.jar net.sf.picard.sam.MergeSamFiles';

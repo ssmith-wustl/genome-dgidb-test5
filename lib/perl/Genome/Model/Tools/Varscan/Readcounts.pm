@@ -25,6 +25,7 @@ class Genome::Model::Tools::Varscan::Readcounts {
 	
 	has => [                                # specify the command's single-value properties (parameters) <--- 
 		bam_file	=> { is => 'Text', doc => "Path to BAM file", is_optional => 0 },
+		samtools_path	=> { is => 'Text', doc => "Path to SAMtools executable", is_optional => 0, is_input => 1, default => "samtools" },
 		variants_file	=> { is => 'Text', doc => "Path to variant positions file", is_optional => 0 },
 		output_file	=> { is => 'Text', doc => "Path to output file" , is_optional => 0},
 		reference	=> { is => 'Text', doc => "Reference FASTA file for BAMs (default= genome model)" , is_optional => 1, is_input => 1},
@@ -72,7 +73,8 @@ sub execute {                               # replace with real execution logic.
 	{
 		## Prepare pileup commands ##
 		
-		my $pileup = "samtools view -b -u -q 10 $bam_file | samtools pileup -f $reference -";
+#		my $pileup = "samtools view -b -u -q 10 $bam_file | samtools pileup -f $reference -";
+		my $pileup = $self->samtools_path . " mpileup -q 10 -f $reference $bam_file";
 		my $cmd = $self->java_command_line("readcounts <\($pileup\) --variants-file $variants_file --output-file $output_file");
 		print "RUN: $cmd\n";
 		system($cmd);

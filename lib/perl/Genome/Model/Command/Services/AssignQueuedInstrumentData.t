@@ -12,7 +12,7 @@ BEGIN {
 use above 'Genome';
 
 require Genome::InstrumentData::Solexa;
-use Test::More tests => 130;
+use Test::More tests => 134;
 
 use_ok('Genome::Model::Command::Services::AssignQueuedInstrumentData');
 
@@ -489,7 +489,7 @@ isa_ok($command_2, 'Genome::Model::Command::Services::AssignQueuedInstrumentData
 ok($command_2->execute(), 'assign-queued-instrument-data executed successfully.');
 
 my $new_models_2 = $command_2->_newly_created_models;
-is(scalar(keys %$new_models_2), 2, 'the cron created four new models (capture data causes two models to be created)');
+is(scalar(keys %$new_models_2), 3, 'the cron created three new models (default, .wu-space, and .tcga-cds)');
 
 my @models = values %$new_models_2;
 my @model_groups;
@@ -516,7 +516,7 @@ for my $m (@new_models_2, $model_changed_2) {
 }
 
 my @new_refalign_models = grep($_->name !~ /prod-qc$/, @new_models_2);
-is(scalar(@new_refalign_models), 2, 'created two refalign capture models');
+is(scalar(@new_refalign_models), 3, 'created three refalign capture models (default, .wu-space, and .tcga-cds)');
 
 for my $m (@new_refalign_models) {
 
@@ -532,7 +532,7 @@ for my $m (@new_refalign_models) {
     subject_id => $sample->id,
 );
 
-is(scalar(@models_for_sample), 3, 'found 3 models created for the subject');
+is(scalar(@models_for_sample), 4, 'found 4 models created for the subject');
 
 @instrument_data = $new_model->instrument_data;
 is(scalar(@instrument_data), 3, 'the new model has three instrument data assigned');
@@ -549,7 +549,7 @@ is($pse_3_genome_model_ids[0], $new_model->id, 'genome_model_id parameter set co
 is_deeply([sort @pse_4_genome_model_ids], [sort map($_->id, @new_refalign_models)], 'genome_model_id parameter set correctly to match builds created for fourth pse');
 
 my @members_2 = $group->models;
-is(scalar(@members_2) - scalar(@members), 2, 'two subsequent models added to the group');
+is(scalar(@members_2) - scalar(@members), 3, 'two subsequent models added to the group');
 
 
 my $instrument_data_5 = Genome::InstrumentData::Solexa->create(
@@ -613,12 +613,7 @@ my $instrument_data_6 = Genome::InstrumentData::Solexa->create(
     rev_clusters => 65536,
 );
 
-my $de_novo_processing_profile = Genome::ProcessingProfile::DeNovoAssembly->create(
-    name => 'AQID-test-de-novo-pp',
-    assembler_name => 'velvet one-button',
-    assembler_version => '0.7.57-64',
-    read_processor => 'trimmer bwa-style --trim-qual-level 9000',
-);
+my $de_novo_processing_profile = Genome::ProcessingProfile::DeNovoAssembly->get(2354215); #apipe-test-de_novo_velvet_solexa
 
 my $pse_6 = GSC::PSE::QueueInstrumentDataForGenomeModeling->create(
     pse_status => 'inprogress',

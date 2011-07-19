@@ -64,14 +64,7 @@ ok($instrument_data, 'instrument data');
 ok($instrument_data->is_paired_end, 'inst data is paired');
 ok(-s $instrument_data->archive_path, 'inst data archive path');
 
-my $pp = Genome::ProcessingProfile::DeNovoAssembly->create(
-    name => 'De Novo Assembly Velvet Test',
-    coverage => 0.5,#25000,
-    assembler_name => 'velvet one-button',
-    assembler_version => '0.7.57-64',
-    assembler_params => '-hash_sizes 31 33 35 -min_contig_length 100',
-    read_processor => 'trimmer by-length -trim-length 10 | rename illumina-to-pcap',
-);
+my $pp = Genome::ProcessingProfile::DeNovoAssembly->get(2354215); #apipe-test-de_novo_velvet_solexa
 ok($pp, 'pp') or die;
 
 my $model = Genome::Model::DeNovoAssembly->create(
@@ -80,7 +73,7 @@ my $model = Genome::Model::DeNovoAssembly->create(
     subject_type => 'species_name',
     center_name => 'WUGC',
 );
-ok($model, 'soap de novo model') or die;
+ok($model, 'de novo model') or die;
 ok($model->add_instrument_data($instrument_data), 'add inst data to model');
 
 my $build = Genome::Model::Build->create(

@@ -3,6 +3,7 @@ package Genome::Model::SomaticVariation::Command::AnnotateAndUploadVariants;
 use strict;
 use warnings;
 use Genome;
+use Data::Dumper;
 
 class Genome::Model::SomaticVariation::Command::AnnotateAndUploadVariants{
     is => 'Genome::Command::Base',
@@ -113,6 +114,7 @@ sub execute{
                     $annotation_params{output_file} = "$annotated_file.$annotation_filter";
                 }
 
+                $self->status_message("Creating TranscriptVariants object with parameters: " . Dumper \%annotation_params);
                 my $annotation_command = Genome::Model::Tools::Annotate::TranscriptVariants->create(%annotation_params);
                 unless ($annotation_command){
                     die $self->error_message("Failed to create annotate command for $key. Params:\n".Data::Dumper::Dumper(\%annotation_params));
