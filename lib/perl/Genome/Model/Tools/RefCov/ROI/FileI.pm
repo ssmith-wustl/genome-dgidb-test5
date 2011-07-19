@@ -1,4 +1,4 @@
-package Genome::RefCov::ROI::FileI;
+package Genome::Model::Tools::RefCov::ROI::FileI;
 
 use strict;
 use warnings;
@@ -9,7 +9,7 @@ my $DEFAULT_REGION_INDEX_SUBSTRING = 0;
 my $DEFAULT_MAKE_OBJECTS = 0;
 my $DEFAULT_LOAD_ALL = 0;
 
-class Genome::RefCov::ROI::FileI {
+class Genome::Model::Tools::RefCov::ROI::FileI {
     has => [
         file => {
             is => 'String',
@@ -66,7 +66,7 @@ sub next_region {
         my $region = $self->_parse_line($line);
         unless ($region) { next; }
         if ($self->make_objects) {
-            $region = Genome::RefCov::ROI::Region->create(%{$region});
+            $region = Genome::Model::Tools::RefCov::ROI::Region->create(%{$region});
             return $region;
         } else {
             $region->{length} = (($region->{end} - $region->{start}) + 1);
@@ -143,7 +143,7 @@ sub _add_region {
     }
     if ($self->make_objects) {
         # This is only necessary to perform arithmetic operations
-        $region = Genome::RefCov::ROI::Region->create(%{$region});
+        $region = Genome::Model::Tools::RefCov::ROI::Region->create(%{$region});
     }
     push @{$self->{chrom_regions}->{$chrom}}, $region;
     return 1;

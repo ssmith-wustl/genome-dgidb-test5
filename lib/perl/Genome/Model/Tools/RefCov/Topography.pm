@@ -58,11 +58,11 @@ the topography of each ROI.
 sub execute {
     my $self = shift;
 
-    my $alignments  = Genome::RefCov::Bam->create(bam_file => $self->bam_file );
+    my $alignments  = Genome::Model::Tools::RefCov::Bam->create(bam_file => $self->bam_file );
     unless ($alignments) {
         die('Failed to load alignment file '. $self->bam_file);
     }
-    my $regions = Genome::RefCov::ROI::Bed->create(
+    my $regions = Genome::Model::Tools::RefCov::ROI::Bed->create(
         file => $self->bed_file,
         wingspan => $self->wingspan,
     );
@@ -79,7 +79,7 @@ sub execute {
             die('The length of region '. $region->{name} .' '. $region->{id}
                     .'('. $region->{length} .') does not match the coverage array length '. scalar( @{ $coverage }));
         }
-        my $topology = Genome::RefCov::Topology->create(
+        my $topology = Genome::Model::Tools::RefCov::Topology->create(
             coverage => $coverage,
             min_depth => $self->min_depth_filter,
         );

@@ -32,7 +32,7 @@ sub execute {
             die('Failed to create output directory '. $self->output_directory);
         }
     }
-    my $refcov_bam = Genome::RefCov::Bam->create(bam_file => $self->bam_file );
+    my $refcov_bam = Genome::Model::Tools::RefCov::Bam->create(bam_file => $self->bam_file );
 
     # create low level bam object
     my $bam  = $refcov_bam->bio_db_bam;
