@@ -392,7 +392,7 @@ sub _load_alignments {
     my $self = shift;
     my $alignments;
     if ($self->alignment_file_format eq 'bam') {
-        $alignments  = Genome::RefCov::Bam->create(bam_file => $self->alignment_file_path );
+        $alignments  = Genome::Model::Tools::RefCov::Bam->create(bam_file => $self->alignment_file_path );
         unless ($alignments) {
             die('Failed to load alignment file '. $self->alignment_file_path);
         }
@@ -413,10 +413,10 @@ sub alignments {
 
 sub _load_roi {
     my $self = shift;
-    # TODO: Can the class Genome::RefCov::ROI or a new class Genome::RefCov::ROI::File resolve the appropriate adaptor based on the file type?
+    # TODO: Can the class Genome::Model::Tools::RefCov::ROI or a new class Genome::Model::Tools::RefCov::ROI::File resolve the appropriate adaptor based on the file type?
     my $format = $self->roi_file_format;
     my $subclass = ucfirst($format);
-    my $class = 'Genome::RefCov::ROI::'. $subclass;
+    my $class = 'Genome::Model::Tools::RefCov::ROI::'. $subclass;
     my $regions = $class->create(
         file => $self->roi_file_path,
         wingspan => $self->wingspan,
@@ -439,7 +439,7 @@ sub roi {
 sub nucleotide_coverage {
     my $self = shift;
     unless ($self->_nuc_cov) {
-        my $gc = Genome::RefCov::Reference::GC->create();
+        my $gc = Genome::Model::Tools::RefCov::Reference::GC->create();
         $self->_nuc_cov($gc);
     }
     return $self->_nuc_cov;
@@ -448,7 +448,7 @@ sub nucleotide_coverage {
 sub region_coverage_stat {
     my $self = shift;
     unless ($self->_roi_cov) {
-        my $stat = Genome::RefCov::Stats->create();
+        my $stat = Genome::Model::Tools::RefCov::Stats->create();
         $self->_roi_cov($stat);
     }
     return $self->_roi_cov;
@@ -457,7 +457,7 @@ sub region_coverage_stat {
 sub brief_region_coverage_stat {
     my $self = shift;
     unless ($self->_brief_roi_cov) {
-        my $stat = Genome::RefCov::Stats->create( stats_mode => 'brief' );
+        my $stat = Genome::Model::Tools::RefCov::Stats->create( stats_mode => 'brief' );
         $self->_brief_roi_cov($stat);
     }
     return $self->_brief_roi_cov;
@@ -491,7 +491,7 @@ sub _load_roi_stats {
     my $self = shift;
     my $alignments = $self->alignments;
     $self->status_message('Loading ROI Reference Stats...');
-    my $roi_stats = Genome::RefCov::Reference::Stats->create(
+    my $roi_stats = Genome::Model::Tools::RefCov::Reference::Stats->create(
         bam => $alignments->bio_db_bam,
         bam_index => $alignments->bio_db_index,
         bed_file => $self->roi_file_path,
@@ -513,7 +513,7 @@ sub _load_genome_stats {
     my $self = shift;
     my $alignments = $self->alignments;
     $self->status_message('Loading Genome Reference Stats...');
-    my $genome_stats = Genome::RefCov::Reference::Stats->create(
+    my $genome_stats = Genome::Model::Tools::RefCov::Reference::Stats->create(
         bam => $alignments->bio_db_bam,
         bam_index => $alignments->bio_db_index,
     );
@@ -677,14 +677,14 @@ sub region_coverage_with_quality_filter {
 #    #TODO: this is suboptimal there is a better way to do this through delegation, inheritance, factory... something
 #    if ($self->evaluate_gc_content) {
 #        if ($self->roi_normalized_coverage) {
-#            return Genome::RefCov::ExomeCaptureStats;
+#            return Genome::Model::Tools::RefCov::ExomeCaptureStats;
 #        }
 #        if ($self->genome_normalized_coverage) {
-#            return Genome::RefCov::WholeGenomeStats;
+#            return Genome::Model::Tools::RefCov::WholeGenomeStats;
 #        }
 #    } else {
 #        if (!$self->roi_normalized_coverage && !$self->genome_normalized_coverage) {
-#            return Genome::RefCov::Stats;
+#            return Genome::Model::Tools::RefCov::Stats;
 #        }
 #    }
 #    die('No class implemented for combination of parameters!');
@@ -832,7 +832,7 @@ sub merge_stats_by {
 
 sub resolve_stats_file_headers {
     my $self = shift;
-    my @headers = Genome::RefCov::Stats->headers;
+    my @headers = Genome::Model::Tools::RefCov::Stats->headers;
     if ($self->evaluate_gc_content) {
         push @headers, $self->gc_headers;
     }

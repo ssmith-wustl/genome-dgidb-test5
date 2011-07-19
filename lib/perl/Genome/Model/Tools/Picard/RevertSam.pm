@@ -43,9 +43,8 @@ class Genome::Model::Tools::Picard::RevertSam {
         },
         attribute_to_clear => {
             is => 'String',
-            # TODO: Should this be a list, array, array_ref, comma delmitied??
+            is_many => 1,
             doc => 'When removing alignment information, the set of optional tags to remove. This option may be specified 0 or more times.',
-            default_value => 'null',
             is_optional => 1,
         },
         sample_alias => {
@@ -97,9 +96,8 @@ sub execute {
     if (defined($self->library_name)) {
         $cmd .= ' LIBRARY_NAME='. $self->library_name;
     }
-    # TODO: There can be multiple attributes.  use an array at some point
-    if (defined($self->attribute_to_clear)) {
-        $cmd .= ' ATTRIBUTE_TO_CLEAR='. $self->attribute_to_clear;
+    for my $attribute ($self->attribute_to_clear) {
+        $cmd .= ' ATTRIBUTE_TO_CLEAR='. $attribute;
     }
     $self->run_java_vm(
         cmd          => $cmd,

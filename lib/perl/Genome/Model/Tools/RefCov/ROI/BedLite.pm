@@ -1,11 +1,11 @@
-package Genome::RefCov::ROI::BedLite;
+package Genome::Model::Tools::RefCov::ROI::BedLite;
 
 use strict;
 use warnings;
 
 use Genome;
 
-class Genome::RefCov::ROI::BedLite {
+class Genome::Model::Tools::RefCov::ROI::BedLite {
 };
 
 sub create {
