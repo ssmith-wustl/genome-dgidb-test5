@@ -61,7 +61,7 @@ sub execute {
     unless ($bed_fh) {
         die('Failed to open file for writing: '. $self->bed_file);
     }
-    my $refcov_bam  = Genome::RefCov::Bam->create(bam_file => $self->bam_file );
+    my $refcov_bam  = Genome::Model::Tools::RefCov::Bam->create(bam_file => $self->bam_file );
     unless ($refcov_bam) {
         die('Failed to load bam file '. $self->bam_file);
     }

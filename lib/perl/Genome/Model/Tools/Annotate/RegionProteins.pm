@@ -5,7 +5,7 @@ use warnings;
 
 use Genome;
 
-use Genome::RefCov::ROI::Bed;
+use Genome::Model::Tools::RefCov::ROI::Bed;
 
 class Genome::Model::Tools::Annotate::RegionProteins {
     is => ['Command'],
@@ -27,7 +27,7 @@ class Genome::Model::Tools::Annotate::RegionProteins {
 
 sub execute {
     my $self = shift;
-    my $bed = Genome::RefCov::ROI::Bed->create(
+    my $bed = Genome::Model::Tools::RefCov::ROI::Bed->create(
         file => $self->bed_file,
         make_objects => 1,
         load_all => 1,

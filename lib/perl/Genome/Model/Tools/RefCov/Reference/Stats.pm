@@ -1,4 +1,4 @@
-package Genome::RefCov::Reference::Stats;
+package Genome::Model::Tools::RefCov::Reference::Stats;
 
 use strict;
 use warnings;
@@ -8,7 +8,7 @@ use Statistics::Descriptive;
 
 my $DEFAULT_WINDOW_SIZE = 10_000_000;
 
-class Genome::RefCov::Reference::Stats {
+class Genome::Model::Tools::RefCov::Reference::Stats {
     has => [
         bam => {
             is => 'Bio::DB::Bam',
@@ -98,7 +98,7 @@ sub _load_stats {
             }
         }
     } else {
-        my $regions = Genome::RefCov::ROI::Bed->create(
+        my $regions = Genome::Model::Tools::RefCov::ROI::Bed->create(
             file => $self->bed_file,
         );
         unless ($regions) {

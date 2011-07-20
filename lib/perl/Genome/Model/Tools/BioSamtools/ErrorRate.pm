@@ -22,7 +22,7 @@ class Genome::Model::Tools::BioSamtools::ErrorRate {
 sub execute {
     my $self = shift;
 
-    my $refcov_bam  = Genome::RefCov::Bam->new(bam_file => $self->bam_file );
+    my $refcov_bam  = Genome::Model::Tools::RefCov::Bam->new(bam_file => $self->bam_file );
     unless ($refcov_bam) {
         die('Failed to load bam file '. $self->bam_file);
     }

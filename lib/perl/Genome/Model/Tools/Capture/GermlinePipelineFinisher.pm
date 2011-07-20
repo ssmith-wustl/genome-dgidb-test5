@@ -186,6 +186,11 @@ sub execute {                               # replace with real execution logic.
 			my $gatk_indel_file = $sample_output_dir.'/GATK.output.indel.vcf';
 			my $gatk_dindel_indel_file = $sample_output_dir.'/GATK.ug.output.indel';
 
+			my $pre_roi_file = $sample_output_dir.'/merged.germline.snp';
+			my $roi_file = $sample_output_dir.'/merged.germline.snp.ROI';
+			my $pre_roi_file_indel = $sample_output_dir.'/merged.germline.indel';
+			my $roi_file_indel = $sample_output_dir.'/merged.germline.indel.ROI';
+
 			my $snv_filter_fail;
 			my $indel_filter;
 			my $indel_filter_fail;
@@ -203,8 +208,13 @@ sub execute {                               # replace with real execution logic.
 				$indel_filter_fail = $sample_output_dir.'/merged.germline.indel.ROI.tier1.out.strandfilter_filtered';
 				$indel_annotation = $sample_output_dir.'/annotation.germline.indel.transcript';
 				$snv_annotation = $sample_output_dir.'/annotation.germline.snp.transcript';
-				$indel = $sample_output_dir.'/merged.germline.indel.ROI.tier1.out';
-				$varfile = $sample_output_dir.'/merged.germline.snp.ROI.tier1.out';
+				if (-e $indel_filter) {
+					$indel = $indel_filter;
+				}
+				else {
+					$indel = $sample_output_dir.'/merged.germline.indel.ROI.tier1.out';
+				}
+				$varfile = $snv_filter;#$sample_output_dir.'/merged.germline.snp.ROI.tier1.out';
 			}
 			else {
 				$snv_filter = $sample_output_dir.'/merged.germline.snp.ROI.strandfilter';
@@ -235,9 +245,28 @@ sub execute {                               # replace with real execution logic.
 			#merge the two
 			my $cmd_sammerge = "perl -I ~cmiller/gscCode/genome/lib/perl `which gmt` vcf vcf-merge --output-file $sample_output_dir/samtools.snp.indel.vcf --vcf-files $samtools_snv_file.vcf,$samtools_indel_file.vcf";
 
+			my $filelist;
+			my $source_ids;
 			#now, do a three-way merge and label the sources
-			my $cmd_allthree = "perl -I ~cmiller/gscCode/genome/lib/perl `which gmt` vcf vcf-merge --output-file $raw_merged_vcf --vcf-files $sample_output_dir/varScan.snp.indel.vcf,$sample_output_dir/samtools.snp.indel.vcf,$gatk_indel_file,$gatk_dindel_indel_file --source-ids \"varscan,samtools,GATK_igv2,GATK_ug\"";
-
+			if (-e "$sample_output_dir/varScan.snp.indel.vcf") {
+				$filelist .= "$sample_output_dir/varScan.snp.indel.vcf,";
+				$source_ids .= "varscan,";
+			}
+			if (-e "$sample_output_dir/samtools.snp.indel.vcf") {
+				$filelist .= "$sample_output_dir/samtools.snp.indel.vcf,";
+				$source_ids .= "samtools,";
+			}
+			if (-e "$gatk_indel_file") {
+				$filelist .= "$gatk_indel_file,";
+				$source_ids .= "GATK_igv2,";
+			}
+			if (-e "$gatk_dindel_indel_file") {
+				$filelist .= "$gatk_dindel_indel_file,";
+				$source_ids .= "GATK_ug,";
+			}
+			$filelist =~ s/,$//;
+			$source_ids =~ s/,$//;
+			my $cmd_allthree = "perl -I ~cmiller/gscCode/genome/lib/perl `which gmt` vcf vcf-merge --output-file $raw_merged_vcf --vcf-files $filelist --source-ids \"$source_ids\"";
 
 #			my $cmd = "bsub -q apipe -o /gscuser/wschierd/Deleteme/$sample_name.out -e /gscuser/wschierd/Deleteme/$sample_name.err -R\"select[type==LINUX64 && model != Opteron250 && mem>4000] rusage[mem=4000]\" -M 4000000 \"$base_cmd\"";
 
@@ -275,7 +304,7 @@ sub execute {                               # replace with real execution logic.
 				   print "$jobid7\n";
 			}
 			if (-s $raw_merged_vcf && "1" && "1") {
-				unless ($skipifoutputpresent && -s $outfile  && "1" && "1") { #extra &&&& so that coloring works in gedit
+				unless ($skipifoutputpresent && -s $outfile  && 1 && 1) { #extra &&&& so that coloring works in gedit
 					open(OUTFILE, ">$outfile") or die "Can't open output file: $!\n";
 					my %final_snvs;
 					my $snv_input = new FileHandle ($varfile);
@@ -293,6 +322,64 @@ sub execute {                               # replace with real execution logic.
 						my $matcher = "$chr\t$start";
 						$final_indels{$matcher}++;
 					}
+
+					my %filter_reason_snvs;
+					if (-s ($snv_filter_fail) && 1) {
+						$snv_input = new FileHandle ($snv_filter_fail);
+						while (my $line = <$snv_input>) {
+							chomp($line);
+							my ($chr, $start, $stop, $ref, $var, @everything_else) = split(/\t/, $line);
+							my $length = @everything_else;
+							my $filter_reason = $everything_else[$length-1];
+							my $matcher = "$chr\t$start";
+							$filter_reason_snvs{$matcher} = $filter_reason;
+						}
+					}
+					my %filter_reason_indels;
+					if (-s ($indel_filter_fail) && 1) {
+						$indel_input = new FileHandle ($indel_filter_fail);
+						while (my $line = <$indel_input>) {
+							chomp($line);
+							my ($chr, $start, $stop, $ref, $var, @everything_else) = split(/\t/, $line);
+							my $length = @everything_else;
+							my $filter_reason = $everything_else[$length-1];
+							my $matcher = "$chr\t$start";
+							$filter_reason_indels{$matcher} = $filter_reason;
+						}
+					}
+
+					my %roi_filter;
+					$snv_input = new FileHandle ($pre_roi_file);
+					while (my $line = <$snv_input>) {
+						chomp($line);
+						my ($chr, $start, $stop, $ref, $var, @everything_else) = split(/\t/, $line);
+						my $matcher = "$chr\t$start";
+						$roi_filter{$matcher}++;
+					}
+					$snv_input = new FileHandle ($roi_file);
+					while (my $line = <$snv_input>) {
+						chomp($line);
+						my ($chr, $start, $stop, $ref, $var, @everything_else) = split(/\t/, $line);
+						my $matcher = "$chr\t$start";
+						delete $roi_filter{$matcher};
+					}
+
+					my %roi_filter_indel;
+					$indel_input = new FileHandle ($pre_roi_file_indel);
+					while (my $line = <$indel_input>) {
+						chomp($line);
+						my ($chr, $start, $stop, $ref, $var, @everything_else) = split(/\t/, $line);
+						my $matcher = "$chr\t$start";
+						$roi_filter_indel{$matcher}++;
+					}
+					$indel_input = new FileHandle ($roi_file_indel);
+					while (my $line = <$indel_input>) {
+						chomp($line);
+						my ($chr, $start, $stop, $ref, $var, @everything_else) = split(/\t/, $line);
+						my $matcher = "$chr\t$start";
+						delete $roi_filter_indel{$matcher};
+					}
+
 					my $raw_vcf_input = new FileHandle ($raw_merged_vcf);
 					while (my $line = <$raw_vcf_input>) {
 						if ($line =~ m/#/) {
@@ -304,40 +391,57 @@ sub execute {                               # replace with real execution logic.
 #						my ($chr, $pos, $dbsnp, $ref, $var, $score, $filter, $info, @everything_else) = split(/\t/, $line);
 						my $matcher = $vcf_line[0]."\t".$vcf_line[1];
 						if ($vcf_line[7] =~ m/SNP/i || $vcf_line[7] =~ m/SNV/i) {
-							if (defined $final_snvs{$matcher}) {
+							my $newline;
+							if (defined $filter_reason_snvs{$matcher}) {
+								$vcf_line[6] = $filter_reason_snvs{$matcher};
+								$newline = join("\t",@vcf_line);
+							}
+							elsif (defined $roi_filter{$matcher}) {
+								$vcf_line[6] = "OUTSIDE_ROI";
+								$newline = join("\t",@vcf_line);
+							}
+							elsif (defined $final_snvs{$matcher}) {
 								$vcf_line[6] = "PASS";
-								my $newline = join("\t",@vcf_line);
-								print OUTFILE "$newline\n";
+								$newline = join("\t",@vcf_line);
 							}
 							else {
-								$vcf_line[6] = "FILTER";
-								my $newline = join("\t",@vcf_line);
-#								print OUTFILE "$newline\n";
+								$vcf_line[6] = "FILTER_LIKELY_OUTSIDE_TIER1";
+								$newline = join("\t",@vcf_line);
 							}
+							print OUTFILE "$newline\n";
 						}
 						elsif ($vcf_line[7] =~ m/INDEL/i) {
-							if (defined $final_indels{$matcher}) {
+							my $newline;
+							if (defined $filter_reason_indels{$matcher}) {
+								$vcf_line[6] = $filter_reason_indels{$matcher};
+								$newline = join("\t",@vcf_line);
+							}
+							elsif (defined $roi_filter_indel{$matcher}) {
+								$vcf_line[6] = "OUTSIDE_ROI";
+								$newline = join("\t",@vcf_line);
+							}
+							elsif (defined $final_indels{$matcher}) {
 								$vcf_line[6] = "PASS";
-								my $newline = join("\t",@vcf_line);
-								print OUTFILE "$newline\n";
+								$newline = join("\t",@vcf_line);
 							}
 							else {
-								$vcf_line[6] = "FILTER";
-								my $newline = join("\t",@vcf_line);
-#								print OUTFILE "$newline\n";
+								$vcf_line[6] = "FILTER_LIKELY_OUTSIDE_TIER1";
+								$newline = join("\t",@vcf_line);
 							}
+							print OUTFILE "$newline\n";
 						}
 					}
 				}
 			}
 			if (-s $outfile && "1" && "1") {
-				unless ($skipifoutputpresent && -s $annotation_outfile  && "1" && "1") { #extra &&&& so that coloring works in gedit
+				unless ($skipifoutputpresent && -s $annotation_outfile  && "1" && "0") { #extra &&&& so that coloring works in gedit
 					open(ANNOT, ">$annotation_infile") or die "Can't open output file: $!\n";
 					my $vcf_input = new FileHandle ($outfile);
 					while (my $line = <$vcf_input>) {
 						if ($line =~ m/^#/) {next;}
 						chomp($line);
 						my ($chrom, $position, $dbsnp, $ref, $var, $confidence, $filter, @stuff) = split(/\t/, $line);
+						unless ($filter) { print "This line will fail to have a filter status:\nsample:$sample_name\nline:$line\n";}
 						if ($filter eq 'PASS') {
 							if ($line =~ m/SNP/) {
 								my (@snps) = split(/,/, $var);
@@ -345,6 +449,7 @@ sub execute {                               # replace with real execution logic.
 									print ANNOT "$chrom\t$position\t$position\t$ref\t$variant\n";
 								}
 							}
+###INDELS ARENT ANNOTATED CORRECTLY BECAUSE OF BAD POSITION
 							elsif ($line =~ m/INDEL/) {
 								$ref =~ s/^.//;
 								$var =~ s/^.//;
