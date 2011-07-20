@@ -349,8 +349,8 @@ $DB::single=1;
     basename($input_pathnames[0]) =~ /(.+)\..+$/;
     my $sequence_basename = $1;
     my $count_prefix = $paired_end ? 
-        sprintf("%s/map_%s_", $staging_directory, $sequence_basename) : 
-        sprintf("%s/map_", $staging_directory);
+        sprintf("%s/map_%s", $staging_directory, $sequence_basename) : 
+        sprintf("%s/map", $staging_directory);
 
     
     my @counted_reads = ();
@@ -1140,8 +1140,6 @@ sub _shell_cmd_wrapper {
     my $rv = Genome::Sys->shellcmd(
         cmd => $cmd,
         skip_if_output_is_present => $skip_if_output_is_present,
-        input_files => $input_files,
-        output_files => $output_files
     );
 
     my @missing_outputs;
