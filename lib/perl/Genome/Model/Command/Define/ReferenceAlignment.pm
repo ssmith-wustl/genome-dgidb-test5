@@ -51,11 +51,6 @@ class Genome::Model::Command::Define::ReferenceAlignment {
     ],
 };
 
-sub _shell_args_property_meta {
-    my $self = shift;
-    return $self->Genome::Command::Base::_shell_args_property_meta(@_);
-}
-
 sub resolve_dbsnp {
     my ($self, $rsb) = @_;
     return $self->_resolve_param('dbsnp_build') if $self->dbsnp_build;
@@ -107,7 +102,6 @@ sub listed_params {
 sub execute {
     my $self = shift;
 
-    $DB::single = 1;
     if ($self->dbsnp_build and $self->dbsnp_model and $self->dbsnp_build->model->id != $self->dbsnp_model->id) {
         $self->error_message("Specify one of --dbsnp-build or --dbsnp-model, not both");
         return;
