@@ -105,7 +105,7 @@ sub execute {
         if (defined($self->wingspan)) {
             $resolved_output_file .= '-wingspan_'. $self->wingspan;
         }
-        $regions = Genome::RefCov::ROI::Bed->create(
+        $regions = Genome::Model::Tools::RefCov::ROI::Bed->create(
             file => $bed_file,
             #Used for fast lookups at the cost of memory, the higher the number the more memory
             region_index_substring => 5,
@@ -121,7 +121,7 @@ sub execute {
     }
     my $out_fh = Genome::Sys->open_file_for_writing($self->output_file);
 
-    my $refcov_bam  = Genome::RefCov::Bam->create(bam_file => $bam_file );
+    my $refcov_bam  = Genome::Model::Tools::RefCov::Bam->create(bam_file => $bam_file );
     unless ($refcov_bam) {
         die('Failed to load bam file '. $bam_file);
     }

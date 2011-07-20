@@ -1,11 +1,11 @@
-package Genome::RefCov::Bam;
+package Genome::Model::Tools::RefCov::Bam;
 
 use strict;
 use warnings;
 
 use Genome;
 
-class Genome::RefCov::Bam {
+class Genome::Model::Tools::RefCov::Bam {
     has => [
         bam_file => {
             is => 'String',

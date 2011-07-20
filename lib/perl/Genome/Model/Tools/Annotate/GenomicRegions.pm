@@ -20,7 +20,7 @@ class Genome::Model::Tools::Annotate::GenomicRegions {
 
 sub pre_execute {
     my $self = shift;
-    my $bed = Genome::RefCov::ROI::Bed->create(
+    my $bed = Genome::Model::Tools::RefCov::ROI::Bed->create(
         file => $self->bed_file
     );
     my @chromosomes = $bed->chromosomes;
