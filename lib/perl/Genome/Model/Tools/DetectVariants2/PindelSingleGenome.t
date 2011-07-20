@@ -38,7 +38,7 @@ use_ok('Genome::Model::Tools::DetectVariants2::PindelSingleGenome');
 my $tumor =  "/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants2-Pindel/flank_tumor_sorted.bam";
 my $normal = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants2-Pindel/flank_normal_sorted.bam";
 
-my $tmpbase = "/gscuser/rlong/disp";#File::Temp::tempdir('PindelSingleGenomeXXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites/', CLEANUP => 1);
+my $tmpbase = File::Temp::tempdir('PindelSingleGenomeXXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites/', CLEANUP => 1);
 my $tmpdir = "$tmpbase/output";
 my $refbuild_id = 101947881;
 

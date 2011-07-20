@@ -298,7 +298,6 @@ sub execute
     my %fetched_sequences = ();
 
     {
-        $DB::single = 1;
         my $sequence_set
             = BAP::DB::SequenceSet->retrieve( $self->sequence_set_id );
 
@@ -736,18 +735,14 @@ sub phase3
     return 1;
 }
 
-sub phase4
-{
+sub phase4 {
     my $self = shift;
-    if ( defined( $self->skip_blastx ) )
-    {
-        $self->best_per_locus( 'phase_4', 'phase_2' );
+    if ($self->skip_blastx) {
+        $self->best_per_locus('phase_4', 'phase_2');
     }
-    else
-    {
-        $self->best_per_locus( 'phase_4', 'phase_3' );
+    else {
+        $self->best_per_locus('phase_4', 'phase_3');
     }
-
 }
 
 sub phase5

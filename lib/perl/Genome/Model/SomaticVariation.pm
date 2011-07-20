@@ -112,7 +112,7 @@ class Genome::Model::SomaticVariation {
             where => [ name => 'previously_discovered_variations', value_class_name => "Genome::Model::Build::ImportedVariationList"],
             is_many => 0,
             is_mutable => 1,
-            is_optional => 0,
+            is_optional => 1,
             doc => 'previous variants genome feature set to screen somatic mutations against',
         },
         previously_discovered_variations_build => {
@@ -130,15 +130,18 @@ class Genome::Model::SomaticVariation {
 };
 
 sub create {
-    my $class = shift;
+    my $class  = shift;
     my %params = @_;
 
     $DB::single = 1;
 
-    my $tumor_model = $params{tumor_model} || Genome::Model->get($params{tumor_model_id});
+    my $dbsnp_flag = 1 if $params{previously_discovered_variations_build} or $params{previously_discovered_variations_build_id};
+
+    my $tumor_model  = $params{tumor_model} || Genome::Model->get($params{tumor_model_id});
     my $normal_model =  $params{normal_model}  || Genome::Model->get($params{normal_model_id});;
     my $annotation_build = $params{annotation_build} || Genome::Model::Build->get($params{annotation_build_id});
-    my $previously_discovered_variations_build = $params{previously_discovered_variations_build} || Genome::Model::Build->get($params{previously_discovered_variations_build_id});
+    my $previously_discovered_variations_build = $params{previously_discovered_variations_build} || Genome::Model::Build->get($params{previously_discovered_variations_build_id})
+        if $dbsnp_flag;
 
     unless($tumor_model) {
         $class->error_message('No tumor model provided.' );
@@ -155,24 +158,26 @@ sub create {
         return;
     }
 
-    unless($previously_discovered_variations_build) {
-        $class->error_message('No previous variants build provided.');
-        return;
+    if ($dbsnp_flag) {
+        unless($previously_discovered_variations_build) {
+            $class->error_message('No previous variants build provided.');
+            return;
+        }
     }
 
-    my $tumor_subject = $tumor_model->subject;
+    my $tumor_subject  = $tumor_model->subject;
     my $normal_subject = $normal_model->subject;
 
-    if($tumor_subject->can('source') and $normal_subject->can('source')) {
+    if ($tumor_subject->can('source') and $normal_subject->can('source')) {
 
-        my $tumor_source = $tumor_subject->source;
+        my $tumor_source  = $tumor_subject->source;
         my $normal_source = $normal_subject->source;
 
         unless ($tumor_source eq $normal_source) {
-            my $tumor_common_name = $tumor_source->common_name || "unknown";
+            my $tumor_common_name  = $tumor_source->common_name  || "unknown";
             my $normal_common_name = $normal_source->common_name || "unknown";
             my $message = "Tumor model and normal model samples do not come from the same individual.  Tumor common name is $tumor_common_name. Normal common name is $normal_common_name.";
-            if (defined $params{force} and $params{force} == 1){
+            if (defined $params{force} and $params{force} == 1) {
                 $class->warning_message($message);
             }
             else{
@@ -183,7 +188,8 @@ sub create {
         $params{subject_class_name} = $tumor_subject->class;
         $params{subject_name} = $tumor_subject->common_name || $tumor_subject->name;
 
-    } else {
+    } 
+    else {
         $class->error_message('Unexpected subject for tumor or normal model!');
         return;
     }
@@ -209,10 +215,12 @@ sub create {
         $self->error_message('No annotation build on model!' );
         return;
     }
-
-    unless($self->previously_discovered_variations_build) {
-        $self->error_message('No previous variants build on model!');
-        return;
+    
+    if ($dbsnp_flag) {
+        unless($self->previously_discovered_variations_build) {
+            $self->error_message('No previous variants build on model!');
+            return;
+        }
     }
 
     return $self;

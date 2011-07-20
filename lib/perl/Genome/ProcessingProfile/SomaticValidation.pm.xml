@@ -2,42 +2,14 @@
 
 <workflow name="Somatic Variant Validation Pipeline" logDir="/gsc/var/log/genome/somatic_variant_validation">
 
-  <link fromOperation="input connector" fromProperty="normal_bam_file" toOperation="Varscan Validation" toProperty="normal_bam" />
-  <link fromOperation="input connector" fromProperty="tumor_bam_file" toOperation="Varscan Validation" toProperty="tumor_bam" />
-  <link fromOperation="input connector" fromProperty="varscan_validation_snv" toOperation="Varscan Validation" toProperty="output_snp" />
-  <link fromOperation="input connector" fromProperty="varscan_validation_indel" toOperation="Varscan Validation" toProperty="output_indel" />
-  <link fromOperation="input connector" fromProperty="reference_fasta" toOperation="Varscan Validation" toProperty="reference" />
-  <link fromOperation="input connector" fromProperty="samtools_version" toOperation="Varscan Validation" toProperty="samtools_version" />
-  <link fromOperation="input connector" fromProperty="varscan_params" toOperation="Varscan Validation" toProperty="varscan_params" />
-  <link fromOperation="input connector" fromProperty="varscan_version" toOperation="Varscan Validation" toProperty="version" />
-
-  <link fromOperation="Varscan Validation" fromProperty="output_snp" toOperation="Varscan Process-Somatic" toProperty="status_file" />
-  <link fromOperation="input connector" fromProperty="high_confidence_p_value" toOperation="Varscan Process-Somatic" toProperty="p_value_for_hc" />
-  <link fromOperation="input connector" fromProperty="high_confidence_maximum_normal_frequency" toOperation="Varscan Process-Somatic" toProperty="max_normal_freq" />
-  <link fromOperation="input connector" fromProperty="high_confidence_minimum_tumor_frequency" toOperation="Varscan Process-Somatic" toProperty="min_tumor_freq" />
-
-  <link fromOperation="Varscan Process-Somatic" fromProperty="output_somatic" toOperation="Strand Filter" toProperty="variant_file" />
-  <link fromOperation="input connector" fromProperty="tumor_bam_file" toOperation="Strand Filter" toProperty="bam_file" />
-  <link fromOperation="input connector" fromProperty="filtered_varscan_validation_snv_somatic" toOperation="Strand Filter" toProperty="output_file" />
-  <link fromOperation="input connector" fromProperty="strand_filter_min_strandedness" toOperation="Strand Filter" toProperty="min_strandedness" />
-  <link fromOperation="input connector" fromProperty="strand_filter_min_var_freq" toOperation="Strand Filter" toProperty="min_var_freq" />
-  <link fromOperation="input connector" fromProperty="strand_filter_min_var_count" toOperation="Strand Filter" toProperty="min_var_count" />
-  <link fromOperation="input connector" fromProperty="strand_filter_min_read_pos" toOperation="Strand Filter" toProperty="min_read_pos" />
-  <link fromOperation="input connector" fromProperty="strand_filter_max_mm_qualsum_diff" toOperation="Strand Filter" toProperty="max_mm_qualsum_diff" />
-  <link fromOperation="input connector" fromProperty="strand_filter_max_var_mm_qualsum" toOperation="Strand Filter" toProperty="max_var_mm_qualsum" />
-  <link fromOperation="input connector" fromProperty="strand_filter_max_mapqual_diff" toOperation="Strand Filter" toProperty="max_mapqual_diff" />
-  <link fromOperation="input connector" fromProperty="strand_filter_max_readlen_diff" toOperation="Strand Filter" toProperty="max_readlen_diff" />
-  <link fromOperation="input connector" fromProperty="strand_filter_min_var_dist_3" toOperation="Strand Filter" toProperty="min_var_dist_3" />
-  <link fromOperation="input connector" fromProperty="strand_filter_min_homopolymer" toOperation="Strand Filter" toProperty="min_homopolymer" />
-  <link fromOperation="input connector" fromProperty="strand_filter_prepend_chr" toOperation="Strand Filter" toProperty="prepend_chr" />
-  <link fromOperation="input connector" fromProperty="reference_fasta" toOperation="Strand Filter" toProperty="reference" />
-  <link fromOperation="input connector" fromProperty="samtools_version" toOperation="Strand Filter" toProperty="samtools_version" />
+  <link fromOperation="input connector" fromProperty="build_id" toOperation="Detect Variants" toProperty="build_id" />
 
   <link fromOperation="input connector" fromProperty="variant_list" toOperation="Bed to Annotation" toProperty="snv_file" />
   <link fromOperation="input connector" fromProperty="snv_list_file" toOperation="Bed to Annotation" toProperty="output" />
 
-  <link fromOperation="Strand Filter" fromProperty="output_file" toOperation="Varscan Process-Validation" toProperty="filtered_validation_file" />
-  <link fromOperation="Varscan Validation" fromProperty="output_snp" toOperation="Varscan Process-Validation" toProperty="validation_file" />
+  <link fromOperation="Detect Variants" fromProperty="hq_snv_file" toOperation="Varscan Process-Validation" toProperty="filtered_validation_file"/>
+  <link fromOperation="Detect Variants" fromProperty="build_id" toOperation="Varscan Process-Validation" toProperty="build_id" />
+
   <link fromOperation="Bed to Annotation" fromProperty="output" toOperation="Varscan Process-Validation" toProperty="variants_file" />
   <link fromOperation="input connector" fromProperty="targeted_snv_validation" toOperation="Varscan Process-Validation" toProperty="output_file" />
   <link fromOperation="input connector" fromProperty="minimum_coverage" toOperation="Varscan Process-Validation" toProperty="min_coverage" />
@@ -45,16 +17,8 @@
 
   <link fromOperation="Varscan Process-Validation" fromProperty="output_file" toOperation="output connector" toProperty="targeted_snv_validation_output" />
 
-  <operation name="Varscan Validation">
-    <operationtype commandClass="Genome::Model::Tools::Varscan::Validation" typeClass="Workflow::OperationType::Command" />
-  </operation>
-
-  <operation name="Varscan Process-Somatic">
-    <operationtype commandClass="Genome::Model::Tools::Varscan::ProcessSomatic" typeClass="Workflow::OperationType::Command" />
-  </operation>
-
-  <operation name="Strand Filter">
-    <operationtype commandClass="Genome::Model::Tools::Somatic::FilterFalsePositives" typeClass="Workflow::OperationType::Command" />
+  <operation name="Detect Variants">
+    <operationtype commandClass="Genome::Model::SomaticValidation::Command::DetectVariants" typeClass="Workflow::OperationType::Command" />
   </operation>
 
   <operation name="Bed to Annotation">
@@ -62,43 +26,15 @@
   </operation>
 
   <operation name="Varscan Process-Validation">
-    <operationtype commandClass="Genome::Model::Tools::Varscan::ProcessValidation" typeClass="Workflow::OperationType::Command" />
+    <operationtype commandClass="Genome::Model::SomaticValidation::Command::ProcessValidation" typeClass="Workflow::OperationType::Command" />
   </operation>
 
   <operationtype typeClass="Workflow::OperationType::Model">
-    <inputproperty>normal_bam_file</inputproperty>
-    <inputproperty>tumor_bam_file</inputproperty>
     <inputproperty>variant_list</inputproperty>
     <inputproperty>snv_list_file</inputproperty>
     <inputproperty>build_id</inputproperty>
-    <inputproperty>data_directory</inputproperty>
-    <inputproperty>reference_fasta</inputproperty>
-    <inputproperty>samtools_version</inputproperty>
-    <inputproperty>varscan_params</inputproperty>
-    <inputproperty>varscan_version</inputproperty>
     <inputproperty>output_plot</inputproperty>
-
-    <inputproperty>varscan_validation_indel</inputproperty>
-    <inputproperty>varscan_validation_snv</inputproperty>
-    <inputproperty>filtered_varscan_validation_snv_somatic</inputproperty>
     <inputproperty>targeted_snv_validation</inputproperty>
-
-    <inputproperty>high_confidence_p_value</inputproperty>
-    <inputproperty>high_confidence_maximum_normal_frequency</inputproperty>
-    <inputproperty>high_confidence_minimum_tumor_frequency</inputproperty>
-
-    <inputproperty>strand_filter_min_strandedness</inputproperty>
-    <inputproperty>strand_filter_min_var_freq</inputproperty>
-    <inputproperty>strand_filter_min_var_count</inputproperty>
-    <inputproperty>strand_filter_min_read_pos</inputproperty>
-    <inputproperty>strand_filter_max_mm_qualsum_diff</inputproperty>
-    <inputproperty>strand_filter_max_var_mm_qualsum</inputproperty>
-    <inputproperty>strand_filter_max_mapqual_diff</inputproperty>
-    <inputproperty>strand_filter_max_readlen_diff</inputproperty>
-    <inputproperty>strand_filter_min_var_dist_3</inputproperty>
-    <inputproperty>strand_filter_min_homopolymer</inputproperty>
-    <inputproperty>strand_filter_prepend_chr</inputproperty>
-
     <inputproperty>minimum_coverage</inputproperty>
 
     <outputproperty>targeted_snv_validation_output</outputproperty>
