@@ -13,16 +13,36 @@ class Genome::Model::Command::Define {
     has => [
         processing_profile => {
             is => 'Genome::ProcessingProfile',
+            id_by => 'processing_profile_id',
             is_input => 1,
             doc => 'Processing profile to be used by model, can provide either a name or an id',
+        },
+        processing_profile_name => {
+            is => 'Text',
+            via => 'processing_profile',
+            to => 'name',
+            is_input => 1,
         },
     ],
     has_optional => [
         subject => {
             is => 'Genome::Subject',
+            id_by => 'subject_id',
             is_input => 1,
             doc => 'Subject for the model, can provide either a name or an id. If instrument data is provided and this is not, ' .
                 'an attempt will be made to resolve it based on the provided instrument data'
+        },
+        subject_name => {
+            is => 'Text',
+            via => 'subject',
+            to => 'name',
+            is_input => 1,
+        },
+        subject_class_name => {
+            is => 'Text',
+            via => 'subject',
+            to => 'subclass_name',
+            is_input => 1,
         },
         model_name => {
             is => 'Text',
@@ -113,6 +133,7 @@ sub execute {
 
     if (my @args = $self->bare_args) {
         $self->error_message("Extra arguments: @args");
+        $DB::single = 1;
         $self->usage_message($self->help_usage_complete_text);
         return;
     }
@@ -138,17 +159,14 @@ sub execute {
         auto_assign_inst_data => $self->auto_assign_inst_data,
         auto_build_alignments => $self->auto_build_alignments,
         instrument_data => [$self->instrument_data],
+        model_groups => [$self->groups],
         $self->type_specific_parameters_for_create,
     );
     unless ($model) {
         confess "Could not create a model!";
     }
+
     $self->result_model_id($model->id);
-
-    unless ($self->assign_model_to_groups($model)) {
-        confess "Encountered problems when trying to assign model to groups!";
-    }
-
     $self->display_model_information($model);
     return 1;
 }
@@ -177,22 +195,7 @@ sub deduce_subject_from_instrument_data {
     }
 
     # TODO Could possibly create a population group here similar to convergence models instead of failing
-
     confess "Could not deduce model subject from provided instrument data!";
-}
-
-sub assign_model_to_groups {
-    my ($self, $model) = @_;
-    return 1 unless $self->groups;
-
-    for my $group ($self->groups) {
-        my $rv = $group->assign_models($model);
-        unless ($rv) {
-            confess "Could not assign model " . $model->__display_name__ . " to group " . $group->__display_name__;
-        }
-    }
-
-    return 1;
 }
 
 sub display_model_information {
@@ -213,15 +216,9 @@ sub listed_params {
 
 sub validate_processing_profile {
     my $self = shift;
-    
-    unless ($self->processing_profile) {
-        confess 'Could not resolve a processing profile from provided parameters!';
-    }
-
     unless ($self->compare_pp_and_model_type) {
         confess 'Model and processing profile types do not match!';
     }
-    
     return 1;
 }
 
