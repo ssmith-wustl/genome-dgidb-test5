@@ -67,9 +67,7 @@ sub create {
     }
 
     my $subject = $self->_model_group->infer_group_subject;
-    $self->subject_id($subject->id);
-    $self->subject_class_name($subject->class);
-    $self->subject_name($subject->name);
+    $self->subject($subject);
 
     return $self;
 }
