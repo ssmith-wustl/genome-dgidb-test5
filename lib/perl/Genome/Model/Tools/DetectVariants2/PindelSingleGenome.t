@@ -55,6 +55,6 @@ $ENV{NO_LSF}=1;
 my $rv = $pindel_sg->execute;
 is($rv, 1, 'Testing for successful execution.  Expecting 1.  Got: '.$rv);
 
-my $output_indel_file = $pindel_sg->output_directory . "/indels.hq.bed";
+my $output_indel_file = $tmpdir . "/indels.hq.bed";
 
 ok(-s $output_indel_file,'Testing success: Expecting a indel output file exists');
