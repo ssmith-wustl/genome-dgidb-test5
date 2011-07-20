@@ -106,10 +106,10 @@ sub execute {
     #intersect with previously discovered snvs
     unless(-e $novel_file && -e $previously_detected_file){
         my $dbsnp_intersection = Genome::Model::Tools::Joinx::Intersect->create(
-            input_file_a => $snv_bed_file,
+            input_file_a => $not_in_dbsnp_file,
             input_file_b => $dbsnp_file,
             miss_a_file => $novel_file,
-            output_file => $in_dbsnp_file,
+            output_file => $previously_detected_file,
             dbsnp_match => 1,
         );
         unless ($dbsnp_intersection){
@@ -124,7 +124,6 @@ sub execute {
 
     #compose snv and indel tiering output file names
     my @snv_tiers = map{ "snvs.hq.novel.tier".$_.".v".$version.".bed"} (1..4);
-    #my @indel_tiers = map{ "indels.hq.novel.tier".$_.".v".$version.".bed"} (1..4);
     my $snv_files_present=1;
     for (1..4) {
         my $f = -e $output_dir."/".$snv_tiers[$_];   
@@ -152,15 +151,9 @@ sub execute {
     #prepare annotation output file names
     my $snv_tier1_anno_output = $output_dir."/snvs.hq.novel.tier1.annotated";
     my $snv_tier2_anno_output = $output_dir."/snvs.hq.novel.tier2.annotated";
-    #my $indel_tier1_anno_output = $output_dir."/indels.hq.novel.tier1.annotated";
-    #my $indel_tier2_anno_output = $output_dir."/indels.hq.novel.tier2.annotated";
 
-    # Annotate Variants
-
+    #Annotate Snvs
     unless(-e $snv_tier1_anno_output && -e $snv_tier2_anno_output){ 
-           #(-e $indel_tier1_anno_output && -e $indel_tier2_anno_output)){
-
-        #Annotate Snvs
         my $snv_tier1_anno_cmd = Genome::Model::Tools::Annotate::TranscriptVariants->create(
             variant_bed_file => $output_dir."/".$snv_tiers[0],
             output_file => $snv_tier1_anno_output,
