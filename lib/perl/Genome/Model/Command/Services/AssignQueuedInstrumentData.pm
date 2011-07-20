@@ -499,26 +499,6 @@ sub tcga_roi_for_model {
     return $tcga_cds_roi_list;
 }
 
-
-sub needs_tcga_reference_alignment {
-    my $self = shift;
-    my $model = shift;
-    my %model_params = @_;
-
-    return unless $self->is_tcga_reference_alignment($model);
-
-    my %tcga_model_params = %model_params;
-    delete $tcga_model_params{name};
-    delete $tcga_model_params{region_of_interest_set_name};
-
-    my $tcga_cds_roi_list = $self->tcga_roi_for_model($model);
-
-    my @existing_tcga_models = Genome::Model::ReferenceAlignment->get(%tcga_model_params, region_of_interest_set_name => $tcga_cds_roi_list);
-
-    return not @existing_tcga_models;
-}
-
-
 sub is_tcga_reference_alignment {
     my $self = shift;
     my $model = shift;
