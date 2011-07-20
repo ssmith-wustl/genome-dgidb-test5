@@ -108,7 +108,12 @@ class Genome::Model {
         project_assignments => { is => 'Genome::Model::ProjectAssignment', reverse_as => 'model' },
         project_names => { is => 'Text', via => 'projects', to => 'name' },
         # TODO: the new projects will suck in all of the model groups as a special case of a named project containing only models
-        model_groups => { is => 'Genome::ModelGroup', via => 'model_bridges', to => 'model_group' },
+        model_groups => { 
+            is => 'Genome::ModelGroup', 
+            via => 'model_bridges', 
+            to => 'model_group',
+            is_mutable => 1
+        },
         model_bridges => { is => 'Genome::ModelGroupBridge', reverse_as => 'model' },
         # TODO: replace the internals of these with a specific case of model inputs
         from_model_links => { 
