@@ -9,8 +9,7 @@ use above 'Genome';
 
 BEGIN {
     if (`uname -a` =~ /x86_64/) {
-        #plan tests => 31;
-        plan tests => 26;
+        plan tests => 31;
     } else {
         plan skip_all => 'Must run on a 64 bit machine';
     }
@@ -83,7 +82,7 @@ test_alignment(validate_against_shortcut => 1, instrument_data=>$instrument_data
 # cleanup locks after testing alignment
 $FAKE_INSTRUMENT_DATA_ID--;
 $instrument_data = generate_fake_instrument_data();
-#test_alignment(force_fragment => 1, instrument_data=>$instrument_data); # TODO this is so very very broken
+test_alignment(force_fragment => 1, instrument_data=>$instrument_data);
 
 sub test_alignment {
     my %p = @_;

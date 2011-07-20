@@ -5,6 +5,7 @@ use warnings;
 use IO::File;
 use File::Basename;
 use File::Copy;
+use File::Temp;
 use Genome;
 
 #  So, you want to build an aligner?  Follow these steps.
@@ -67,6 +68,11 @@ sub _run_aligner {
     # This is your scratch directory.  Whatever you put here will be wiped when the alignment
     # job exits.
     my $scratch_directory = $self->temp_scratch_directory;
+    
+    # This is a temporary directory. The difference between this and the scratch directory is that
+    # this is blown away between calls of _run_aligner when running in force_fragment mode, while
+    # the scratch directory will stick around.
+    my $temporary_directory = File::Temp->tempdir("_run_aligner_XXXXX", DIR => $scratch_directory);
 
     # This is the alignment output directory.  Whatever you put here will be synced up to the
     # final alignment directory that gets a disk allocation.
@@ -166,7 +172,7 @@ sub _run_aligner {
     $self->status_message("Trimming reads.");
 
     # make a prefix for trim files
-    my $trim_prefix = $scratch_directory . "/trimmed";
+    my $trim_prefix = $temporary_directory . "/trimmed";
 
     # output files consist of the following filenames prefixed with $trim_prefix
     my @trimmed_files = map{sprintf("%s_%s",$trim_prefix,$_)} $paired_end ?
@@ -209,7 +215,7 @@ $DB::single=1;
     $self->status_message("Performing alignment.");
     
     # the file for aligned reads
-    my @aligned_reads = ($scratch_directory . "/bratout.dat");
+    my @aligned_reads = ($temporary_directory . "/bratout.dat");
     
     # we need a list file for remove-dupl
     $list_files{'aligned_reads'} = _create_temporary_list_file(\@aligned_reads);
@@ -303,7 +309,7 @@ $DB::single=1;
     ###################################################
     $self->status_message("Converting output to SAM format.");
 
-    my $temp_sam_output = "$scratch_directory/mapped_reads.sam";
+    my $temp_sam_output = "$temporary_directory/mapped_reads.sam";
     $self->_convert_reads_to_sam($paired_end, $sorted_deduped_reads[0], $temp_sam_output, $trim_prefix);
 
 
@@ -333,7 +339,19 @@ $DB::single=1;
     ###################################################
     $self->status_message("Creating methylation map.");
 
-    my $count_prefix = $staging_directory . "/map";
+    # We do this because of force_fragment mode. If we're running in paired-end mode _run_aligner
+    # will only be called once, so acgt-count will only be called once, and only one set of map files
+    # will be created. However, if we're running in force_fragment mode, _run_aligner will be called
+    # twice. Since the map files from acgt-count must be placed into the staging directory so they are
+    # copied out, an existing set of map files will already exist when _run_aligner is called the second
+    # time. In order to differentiate these files, we prepend the input filename (sans extension) when
+    # running in single end mode. TODO hax
+    basename($input_pathnames[0]) =~ /(.+)\..+$/;
+    my $sequence_basename = $1;
+    my $count_prefix = $paired_end ? 
+        sprintf("%s/map_%s_", $staging_directory, $sequence_basename) : 
+        sprintf("%s/map_", $staging_directory);
+
     
     my @counted_reads = ();
 
@@ -382,6 +400,7 @@ print Data::Dumper::Dumper(\@counted_reads) . "\n";
 print Data::Dumper::Dumper(\@index_files) . "\n";
 print $count_cmd . "\n";
 print `ls -lR $scratch_directory`."\n";
+print `ls -lR $temporary_directory`."\n";
 print `ls -lR $staging_directory`."\n";
 for my $lf (keys %list_files) {
     print "$lf: $list_files{$lf}\n";
