@@ -181,7 +181,7 @@ sub setup_test_data {
 
     my $somatic_validation_pp = Genome::ProcessingProfile::SomaticValidation->create(
         name => 'test s.v. pp for somatic-validation define-models',
-        samtools_version => 'test for somatic-validation define-models',
+        snv_detection_strategy => 'test for somatic-validation define-models',
     );
 
     isa_ok($feature_list, 'Genome::FeatureList', 'created test feature-list');
