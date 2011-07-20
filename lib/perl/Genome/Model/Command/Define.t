@@ -39,7 +39,7 @@ test_model_from_params(
         model_name              => "test_model_" . Genome::Sys->username,
         subject_name            => $default_subject_name,
         processing_profile_name => $default_pp_name,
-        reference_sequence_build => 'TechD_hs36_plus_contaminants_Wylie'
+        reference_sequence_build => '102835775'
     },
 );
 
@@ -69,8 +69,7 @@ test_model_from_params(
 my $group1 = Genome::ModelGroup->create(name => "test 1");
 my $group2 = Genome::ModelGroup->create(name => "test 2");
 
-# test both id and name
-my $groups = join ",", ($group1->name, $group2->id);
+my $groups = join ",", ($group1->name, $group2->name);
 test_model_from_params_with_group($groups);
 
 done_testing();
@@ -80,12 +79,14 @@ exit;
 
 my $cnt = 0;
 sub test_model_from_params_with_group {
-    my $model_group_id_string = shift;
+    my $model_group_name_string = shift;
     # Get all convergence models associated with each model group we are testing and turn off their automatic building 
     # so nothing happens when we add to a model group in the next test
-    my @model_group_ids = split ",", $model_group_id_string;
-    for my $model_group_id (@model_group_ids) {
-        my @convergence_models = Genome::Model::Convergence->get(group_id => $model_group_id);
+    my @model_group_names = split ",", $model_group_name_string;
+    my @groups;
+    for my $model_group_name (@model_group_names) {
+        push @groups, Genome::ModelGroup->get(name => $model_group_name); 
+        my @convergence_models = Genome::Model::Convergence->get(name => $model_group_name);
         for my $convergence_model (@convergence_models) {
             $convergence_model->auto_build_alignments(0);
         }
@@ -98,7 +99,7 @@ sub test_model_from_params_with_group {
             subject_name            => $default_subject_name,
             processing_profile_name => $default_pp_name,
             reference_sequence_build => '93636924', #NCBI-human build 36
-            groups => $model_group_id_string,
+            groups => \@groups,
         },
     );
 }
@@ -206,7 +207,7 @@ sub successful_create_model {
     # test that model group membership is as expected
     SKIP: {
         skip 'only test group membership if one is expected', 1 unless $params{groups};
-        my @groups_expected = split ",", $params{groups};
+        my @groups_expected = @{$params{groups}};
         my @groups_actual = $model->model_groups;
         is(scalar(@groups_actual), scalar(@groups_expected), "Model is a member of the correct number of groups");
     }
