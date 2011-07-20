@@ -79,19 +79,23 @@ sub execute {
         $self->print_message(join "\t", $model_id, $action, $latest_build_status, $crashed_workflow_step, $latest_build_revision, $model_name, $pp_name, $fail_count);
     }
 
-    my $rv = 1;
+    my %cmd_rvs;
     if ($self->auto and @models_to_start) {
-        my $cmd = Genome::Model::Build::Command::Start->create(models => \@models_to_start);
-        my $cmd_rv = $cmd->execute;
-        $rv = $cmd_rv unless $cmd_rv == 1;
+        for my $model (@models_to_start) {
+            my $cmd = Genome::Model::Build::Command::Start->create(models => [$model]);
+            $cmd_rvs{$cmd->execute}++;
+        }
     }
     if ($self->auto and @models_to_cleanup) {
-        my $cmd = Genome::Model::Command::Services::Review::CleanupSucceeded->create(models => \@models_to_start);
-        my $cmd_rv = $cmd->execute;
-        $rv = $cmd_rv unless $cmd_rv == 1;
+        for my $model (@models_to_cleanup) {
+            my $cmd = Genome::Model::Command::Services::Review::CleanupSucceeded->create(models => [$model]);
+            $cmd_rvs{$cmd->execute}++;
+        }
     }
 
-    return $rv;
+    $self->print_message("Succeeded " . $cmd_rvs{1}) if $cmd_rvs{1};
+    $self->print_message("Failed " . $cmd_rvs{0}) if $cmd_rvs{0};
+    return 1;
 }
 
 
