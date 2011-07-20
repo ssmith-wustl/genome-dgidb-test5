@@ -1,11 +1,11 @@
-package Genome::RefCov::RelativeCoverage;
+package Genome::Model::Tools::RefCov::RelativeCoverage;
 
 use strict;
 use warnings;
 
 use Genome;
 
-class Genome::RefCov::RelativeCoverage {
+class Genome::Model::Tools::RefCov::RelativeCoverage {
     has => [
         coverage => {
             is => 'ArrayRef',

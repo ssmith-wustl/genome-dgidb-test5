@@ -1,11 +1,11 @@
-package Genome::RefCov::Reference;
+package Genome::Model::Tools::RefCov::Reference;
 
 use strict;
 use warnings;
 
 use Genome;
 
-class Genome::RefCov::Reference {
+class Genome::Model::Tools::RefCov::Reference {
     has => [
         coverage => {},
         id => {},

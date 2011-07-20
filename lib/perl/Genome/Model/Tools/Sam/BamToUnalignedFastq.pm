@@ -1,12 +1,12 @@
-package Genome::Model::Tools::BioSamtools::BamToUnalignedFastq;
+package Genome::Model::Tools::Sam::BamToUnalignedFastq;
 
 use strict;
 use warnings;
 
 use Genome;
 
-class Genome::Model::Tools::BioSamtools::BamToUnalignedFastq {
-    is => ['Genome::Model::Tools::BioSamtools'],
+class Genome::Model::Tools::Sam::BamToUnalignedFastq {
+    is => ['Genome::Model::Tools::Sam'],
     has_input => [
         bam_file => {
             is => 'Text',
@@ -32,40 +32,11 @@ sub execute {
             die('Failed to create output directory '. $self->output_directory);
         }
     }
-    my $refcov_bam = Genome::Model::Tools::RefCov::Bam->create(bam_file => $self->bam_file );
-
-    # create low level bam object
-    my $bam  = $refcov_bam->bio_db_bam;
-    my $header = $bam->header();
-
-    # Number of reference sequences
-    my $targets = $header->n_targets();
-
-    # The reference sequence names in an array ref with indexed positions
-    my $target_names = $header->target_name();
-
-    # at the low level API the seq_id/target_name is meaningless
-    # cache the target_names in a hash by actual reference sequence name
-    # then we can look up the target index on the fly
-    my %target_name_index;
-    my $i = 0;
-    for my $target_name (@{ $target_names }) {
-        $target_name_index{$target_name} = $i++;
-    }
-
-    # Make sure our index is not off
-    unless ($targets == $i) {
-        die 'Expected '. $targets .' targets but counted '. $i .' indices';
-    }
-
-    #We don't want the index since the BAM is sorted by name
-    #my $index = $refcov_bam->bio_db_index;
 
     #Parse through header and create filehandles for all lanes
-    my $text = $header->text;
-    my @lines = split("\n",$text);
+    my $header_fh = IO::File->new('samtools view -H '.$self->bam_file.'|');
     my %fhs;
-    for my $line (@lines) {
+    while (my $line =$header_fh->getline) {
         if ($line =~ /^\@RG/){
             unless ($line =~ /^\@RG\s+ID:(\d+).+PU:\S+\.(\d+).+DS:(paired end|fragment)/) {
                 die('Failed to match line '. $line .' with regex!');
@@ -98,8 +69,10 @@ sub execute {
     }
 
     my %read_pairs;
-    while (my $align = $bam->read1()) {
-        my $flag = $align->flag;
+    my $bam_fh = IO::File->new('samtools view '.$self->bam_file.'|');
+    while (my $align = $bam_fh->getline) {
+        my @cols = split(/\s+/, $align);
+        my $flag = $cols[1];
         my ($mapped, $type);
         if ($flag & 1) { # Is this read part of a pair?
             if ($flag & 64)  {
@@ -145,16 +118,20 @@ sub print_align_to_fh {
     my $fhs = shift;
     my $type = shift;
     
-    my $instrument_data_id = $align->aux_get('RG');
+    my @cols = split(/\s+/,$align);
+
+    #print $align."\n";
+    my ($instrument_data_id) = $align =~/RG:Z:(\d+)/;
+    #print $instrument_data_id."\n";
     my $fh = $fhs->{$instrument_data_id}->{$type};
     unless ($fh) {
         die('Failed to get back fragment filehandle using instrument data id '. $instrument_data_id .' and read type '. $type);
     }
-    my $name = $align->qname;
+    my $name = $cols[0];
     # TODO: verify orientation with original fastq
-    my $seq = $align->qseq;
+    my $seq = $cols[9];
     # TODO: verify orientation and quality conversion with original fastq
-    my @quals = $align->qscore;
+    my @quals = map{ord($_)}split('',$cols[10]);
     my $qual = '';
     for my $phred_value (@quals) {
         my $ill_value = chr($phred_value + 64);

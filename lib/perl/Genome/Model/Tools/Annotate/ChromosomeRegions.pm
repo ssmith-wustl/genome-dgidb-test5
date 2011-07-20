@@ -5,7 +5,7 @@ use warnings;
 
 use Genome;
 
-use Genome::RefCov::ROI::Bed;
+use Genome::Model::Tools::RefCov::ROI::Bed;
 
 my $low  = 20000;
 my $high = 250000;
@@ -43,7 +43,7 @@ sub execute {
     my ($basename,$dirname,$suffix) = File::Basename::fileparse($self->bed_file,qw/.bed/);
 
     Genome::Sys->create_directory($self->output_directory);
-    my $bed = Genome::RefCov::ROI::Bed->create(
+    my $bed = Genome::Model::Tools::RefCov::ROI::Bed->create(
         file => $self->bed_file,
         make_objects => 1,
         load_all => 1,
@@ -73,7 +73,7 @@ sub execute {
                 }
                 my @sub_structure = $t->ordered_sub_structures;
                 for my $ss (@sub_structure){
-                    my $ss_region = Genome::RefCov::ROI::Region->create(
+                    my $ss_region = Genome::Model::Tools::RefCov::ROI::Region->create(
                         start => $ss->structure_start,
                         end => $ss->structure_stop,
                         strand => $t->strand,
