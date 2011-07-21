@@ -567,6 +567,8 @@ sub post_allocation_initialization {
 sub validate_for_start_methods {
     # Each method should return tags
     my @methods = (
+        #validate_inputs_have_values should be checked first
+        'validate_inputs_have_values',
         'inputs_have_compatible_reference',
     );
     return @methods;
@@ -590,6 +592,29 @@ sub validate_for_start {
     return @tags;
 }
 
+sub validate_inputs_have_values {
+    my $self = shift;
+    my @inputs = $self->inputs;
+
+    my @inputs_without_values = grep { not defined $_->value } @inputs;
+    my $valueless_error_message = '';
+    my %input_names_to_ids;
+    for my $input (@inputs_without_values){
+        $input_names_to_ids{$input->name} .= $input->value_id . ',';
+    }
+
+    my @tags;
+    for my $input_name (keys %input_names_to_ids) {
+        push @tags, UR::Object::Tag->create(
+            type => 'error',
+            properties => [$input_name],
+            desc => "Value no longer exists for value id: " . $input_names_to_ids{$input_name},
+        );
+    }
+
+    return @tags;
+}
+
 sub inputs_have_compatible_reference {
     my $self = shift;
 
@@ -604,6 +629,7 @@ sub inputs_have_compatible_reference {
     my @incompatible_properties;
     for my $input (@inputs) {
         my $object = $input->value;
+        next unless $object; #this is reported in validate_inputs_have_values
         my ($input_reference_method) = grep { $object->can($_) } @reference_sequence_methods;
         next unless $input_reference_method;
         my $object_reference_sequence = $object->$input_reference_method;
