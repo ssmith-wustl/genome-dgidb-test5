@@ -56,7 +56,27 @@ sub swpath {
         die "Genome::Sys swpath must be called with a database name and a version.  Use 'latest' for the latest installed version.";
     }
     my $base = $ENV{"GENOME_SW"} ||= '/var/lib/genome/sw';
-    return join("/",$base,$name,$version);
+    my $path = join("/",$base,$name,$version);
+    if (-e $path) {
+        return $path;
+    }
+    if ($path = `which $name$version`) {
+        return $path;
+    }
+    if ($path = `which $name`) {
+        chomp $path;
+        $path = readlink($path) while -l $path;
+        if ($version eq 'latest') {
+            return $path;
+        }
+        else {
+            $class->error_message("Failed to find $name at version $version.  The default version is at $path.");
+        }
+    }
+    else {
+        $class->error_message("Failed to find $name at version $version!");
+    }
+    return;
 }
 
 sub _find_in_path {
