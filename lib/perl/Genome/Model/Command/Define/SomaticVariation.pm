@@ -8,10 +8,7 @@ use warnings;
 use Genome;
 
 class Genome::Model::Command::Define::SomaticVariation {
-    is => [
-    'Genome::Model::Command::Define',
-    'Genome::Command::Base',
-    ],
+    is => 'Genome::Model::Command::Define::Helper',
     has => [
         tumor_model => {
             is => 'Genome::Model::ReferenceAlignment',

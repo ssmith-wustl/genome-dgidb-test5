@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 
 class Genome::Model::Command::Define::SomaticValidation {
-    is => 'Genome::Model::Command::Define',
+    is => 'Genome::Model::Command::Define::Helper',
     has => [
         variant_list => {
             is => 'Genome::FeatureList', id_by => 'variant_list_id',

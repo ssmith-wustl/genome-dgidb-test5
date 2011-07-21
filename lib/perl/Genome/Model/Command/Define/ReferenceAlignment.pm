@@ -9,7 +9,7 @@ require Carp;
 use Regexp::Common;
 
 class Genome::Model::Command::Define::ReferenceAlignment {
-    is => 'Genome::Model::Command::Define',
+    is => 'Genome::Model::Command::Define::Helper',
     has => [
         reference_sequence_build => {
             is => 'Genome::Model::Build::ImportedReferenceSequence',

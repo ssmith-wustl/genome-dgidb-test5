@@ -7,7 +7,7 @@ use Genome;
 use Carp;
 
 class Genome::Model::Command::Define::GenotypeMicroarray {
-    is => 'Genome::Model::Command::Define',
+    is => 'Genome::Model::Command::Define::Helper',
     has => [
         reference => {
             is => 'Genome::Model::Build::ImportedReferenceSequence',
