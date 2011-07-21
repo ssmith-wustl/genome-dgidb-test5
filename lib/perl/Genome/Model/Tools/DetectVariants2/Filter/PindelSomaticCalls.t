@@ -26,7 +26,7 @@ my $input_directory = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVa
 my $detector_directory = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants2-Filter-PindelSomaticCalls/pindel-0.5-";
 
 # Updated to .v2 for correcting an error with newlines
-my $expected_dir = $input_directory . "/expected_4/";
+my $expected_dir = $input_directory . "/expected_5/";
 my $tumor_bam_file  = $input_directory. '/true_positive_tumor_validation.bam';
 my $test_output_base = File::Temp::tempdir('Genome-Model-Tools-DetectVariants2-Filter-PindelSomaticCalls-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
 my $test_output_dir = $test_output_base . '/filter';
@@ -52,7 +52,6 @@ my $pindel_somatic_calls = Genome::Model::Tools::DetectVariants2::Filter::Pindel
     previous_result_id => $detector_result->id,
     output_directory => $test_output_dir,
 );
-
 ok($pindel_somatic_calls, "created PindelSomaticCalls object");
 ok($pindel_somatic_calls->execute(), "executed PindelSomaticCalls");
 

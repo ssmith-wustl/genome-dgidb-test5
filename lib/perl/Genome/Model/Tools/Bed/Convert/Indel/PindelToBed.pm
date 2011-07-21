@@ -90,7 +90,7 @@ sub close_filehandles {
 sub process_source { 
     my $self = shift;
     $self->_input_fh->close;
-    my (undef,$temp_bed) = Genome::Sys->create_temp_file;
+    my $temp_bed = Genome::Sys->create_temp_file_path;
     my $ppr_cmd = Genome::Model::Tools::Pindel::ProcessPindelReads->create(
                     input_file => $self->source,
                     output_file => $temp_bed,

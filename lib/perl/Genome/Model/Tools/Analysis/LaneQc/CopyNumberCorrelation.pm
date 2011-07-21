@@ -126,6 +126,10 @@ sub execute {
     #Load a hash with the values from all of the files
     my %data;
     for my $file (@cnfiles) {
+        unless (-s $file) {
+            $self->error_message("File has no size! ($file)");
+            return;
+        }
         my $fh = new IO::File $file,"r";
         while (my $line = $fh->getline) {
             next if $line =~ m/(^#|CHR)/;
@@ -149,6 +153,14 @@ sub execute {
             my $f1_common = \@f1_common;
             my $f2_common = \@f2_common;
             ($f1_common,$f2_common) = $self->find_common_probes(\%data,$f1,$f2,$f1_common,$f2_common);
+            unless (@f1_common) {
+                $self->error_message('Empty @f1_common.');
+                return;
+            }
+            unless (@f2_common) {
+                $self->error_message('Empty @f2_common.');
+                return;
+            }
             if ($#f1_common ne $#f2_common) {
                 $self->error_message("Common probe numbers don't match for $f1 and $f2.");
                 return;

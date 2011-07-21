@@ -18,15 +18,16 @@ BEGIN {
 }
 
 my $tempdir = File::Temp::tempdir(
-                                  'PAP_InterPro_test_XXXXXXXX',
-                                  DIR     => '/tmp',
-                                  CLEANUP => 1,
-                                 );
+		'PAP_InterPro_test_XXXXXXXX',
+		DIR     => '/tmp',
+		CLEANUP => 1,
+		);
 
 my $command = PAP::Command::InterProScan->create(
-                                                 'fasta_file'      => File::Basename::dirname(__FILE__).'/data/B_coprocola.chunk.fasta',
-                                                 'report_save_dir' => $tempdir,
-                                                );
+		'fasta_file'      => File::Basename::dirname(__FILE__).'/data/B_coprocola.chunk.fasta',
+		'report_save_dir' => $tempdir,
+		'locus_tag'	=> 'TEST',
+		);
 isa_ok($command, 'PAP::Command::InterProScan');
 
 ok($command->execute());
