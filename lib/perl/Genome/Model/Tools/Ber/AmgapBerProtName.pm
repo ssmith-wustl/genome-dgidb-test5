@@ -268,20 +268,21 @@ sub execute
 
     warn qq{Running Finish...\n\n};
 
-    my $brfin = Genome::Model::Tools::Ber::BerRunFinish->create(
-	                                                        'locus_tag'       => $config->{locus_tag},
-								'outdirpath'      => $outdir,
-								'sqlitedatafile'  => $bras->sqlitedatafile,
-								'sqliteoutfile'   => $bras->sqliteoutfile,
-								'acedb_version'   => $config->{acedb_version},
-								'amgap_path'      => $config->{path},
-								'pipe_version'    => $config->{pipe_version},
-								'project_type'    => $config->{project_type},
-								'org_dirname'     => $config->{org_dirname},
-								'assembly_name'   => $config->{assembly_name},
-								'sequence_set_id' => $self->sequence_set_id,
-								'locustagdir'	  => $locustagdir,
-							       );
+	my $brfin = Genome::Model::Tools::Ber::BerRunFinish->create(
+			'locus_tag'       => $config->{locus_tag},
+			'outdirpath'      => $outdir,
+			'sqlitedatafile'  => $bras->sqlitedatafile,
+			'sqliteoutfile'   => $bras->sqliteoutfile,
+			'acedb_version'   => $config->{acedb_version},
+			'amgap_path'      => $config->{path},
+			'pipe_version'    => $config->{pipe_version},
+			'project_type'    => $config->{project_type},
+			'org_dirname'     => $config->{org_dirname},
+			'assembly_name'   => $config->{assembly_name},
+			'assembly_version'   => $config->{assembly_version},
+			'sequence_set_id' => $self->sequence_set_id,
+			'locustagdir'	  => $locustagdir,
+			);
 
     if ($brfin) {
 	$brfin->execute() or croak "\nCan't run BerRunFinish.pm ... from AmgapBerProtName.pm: $OS_ERROR\n\n";
