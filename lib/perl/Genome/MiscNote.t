@@ -6,16 +6,18 @@ use warnings;
 use above 'Genome';
 use Test::More;
 
-sudo_user_is_detected();
+sudo_username_is_detected();
+sudo_username_isnt_detected();
 
 done_testing();
 
-sub sudo_user_is_detected {
-    my $username = 'thomas';
-    my $body_text = 'This is a test message.';
+sub miscnote_body_text {
+    my $sudo_username = shift;
+    my $body_text = shift;
 
-    local $ENV{SUDO_USER} = $username;
-    is($ENV{SUDO_USER}, $username, 'set SUDO_USER to ' . $username);
+    no warnings qw(redefine);
+    *Genome::Sys::sudo_username = sub { return $sudo_username };
+    use warnings qw(redefine);
 
     my $subject = UR::Value->get('subject');
     isa_ok($subject, 'UR::Value', 'subject');
@@ -27,6 +29,18 @@ sub sudo_user_is_detected {
     );
     isa_ok($note, 'Genome::MiscNote', 'note');
 
-    like($note->body_text, qr/^$username\ is\ running\ as/, 'note prepended with sudo_username');
+    return $note->body_text;
 }
 
+sub sudo_username_isnt_detected {
+    my $message = 'Sample note message.';
+    my $body_text = miscnote_body_text('', $message);
+    is($body_text, $message, 'note didnt prepend sudo_username');
+}
+
+sub sudo_username_is_detected {
+    my $message = 'Sample note message.';
+    my $sudo_username = 'sample-sudo-username';
+    my $body_text = miscnote_body_text($sudo_username, $message);
+    is($body_text, $sudo_username . ' is running as ' . Genome::Sys->username . ". $message", 'note prepended with sudo_username');
+}

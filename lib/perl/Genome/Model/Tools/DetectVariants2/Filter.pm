@@ -117,6 +117,11 @@ class Genome::Model::Tools::DetectVariants2::Filter {
             doc => 'Directory of the original detector run that is being filtered',
         },
     ],
+    has_param => [
+        lsf_queue => {
+            default => 'apipe',
+        },
+    ],
 };
 
 sub help_synopsis {

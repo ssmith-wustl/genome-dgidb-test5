@@ -114,7 +114,38 @@ sub execute {                               # replace with real execution logic.
 				$metMinDepth++;
 				$current_chrom = $chrom;		
 				$current_chrom_results .= "\n" if($current_chrom_results);
-				$current_chrom_results .= $line;							
+
+# Current pipeline prior to 7/13/11: uses only start of region ##
+#$current_chrom_results .= $line;
+
+				## Determine region size. ##
+				
+				my $region_size = $chr_stop - $chr_start + 1;
+
+				## If region size is less than 200 bp, report just the midpoint ##
+				
+				if($region_size <= 1000)
+				{
+					my $midpoint = sprintf("%d", ($chr_start + $chr_stop) / 2);
+
+					if($midpoint > $chr_start && $midpoint < $chr_stop)
+					{
+						$current_chrom_results .= join("\t", $chrom, $chr_stop, $num_positions, $normal, $tumor, $log_value);
+					}					
+				}
+				
+				## Otherwise, report both start and stop ##
+				
+				else
+				{
+					$current_chrom_results .= join("\t", $chrom, $chr_start, $num_positions, $normal, $tumor, $log_value) . "\n";
+					## Add the stop position ##
+					$current_chrom_results .= join("\t", $chrom, $chr_stop, $num_positions, $normal, $tumor, $log_value);					
+				}
+
+
+
+
 			}
 
 		}

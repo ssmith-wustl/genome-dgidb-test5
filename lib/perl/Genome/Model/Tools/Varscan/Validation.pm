@@ -24,6 +24,7 @@ class Genome::Model::Tools::Varscan::Validation {
     has_input => [                                # specify the command's single-value properties (parameters) <---
         normal_bam       => { is => 'Text', doc => "Path to Normal BAM file", is_optional => 0, },
         tumor_bam        => { is => 'Text', doc => "Path to Tumor BAM file", is_optional => 0, },
+        samtools_path	=> { is => 'Text', doc => "Path to SAMtools executable", is_optional => 0, is_input => 1, default => "samtools" },
         output           => { is => 'Text', doc => "Path to Tumor BAM file", is_optional => 1, is_output => 1 },
         output_snp       => { is => 'Text', doc => "Basename for SNP output, eg. varscan_out/varscan.status.snp" , is_optional => 1, is_output => 1},
         output_indel     => { is => 'Text', doc => "Basename for indel output, eg. varscan_out/varscan.status.indel" , is_optional => 1, is_output => 1},
@@ -112,11 +113,12 @@ sub execute {                               # replace with real execution logic.
     if(-e $normal_bam && -e $tumor_bam) {
         ## Prepare pileup commands ##
 
-        my $sam_pathname = Genome::Model::Tools::Sam->path_for_samtools_version($self->samtools_version);
-
-        my $normal_pileup = "$sam_pathname pileup -f $reference $normal_bam";
-        my $tumor_pileup = "$sam_pathname pileup -f $reference $tumor_bam";
-
+#        my $sam_pathname = Genome::Model::Tools::Sam->path_for_samtools_version($self->samtools_version);
+#       my $normal_pileup = "$sam_pathname pileup -f $reference $normal_bam";
+#        my $tumor_pileup = "$sam_pathname pileup -f $reference $tumor_bam";
+        
+        my $normal_pileup = $self->samtools_path . " mpileup -f $reference $normal_bam";
+        my $tumor_pileup = $self->samtools_path . " mpileup -f $reference $tumor_bam";
         my $varscan_path = Genome::Model::Tools::Varscan->path_for_version($self->version);
 
         my $cmd = $self->java_command_line("somatic <\($normal_pileup\) <\($tumor_pileup\) $temp_output --output-snp $temp_snp --output-indel $temp_indel $varscan_params");

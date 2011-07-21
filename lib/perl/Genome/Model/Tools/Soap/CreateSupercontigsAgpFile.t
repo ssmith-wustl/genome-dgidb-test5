@@ -27,6 +27,7 @@ ok( -s $temp_dir.'/TEST.scafSeq', "Linked TEST.scafSeq file" );
 #create, execute command
 my $create = Genome::Model::Tools::Soap::CreateSupercontigsAgpFile->create(
     assembly_directory => $temp_dir,
+    min_contig_length => 50,
     );
 ok($create, "Created gmt soap create-supercontigs-agp-file") or die;
 ok(($create->execute) == 1, "Executed command") or die;

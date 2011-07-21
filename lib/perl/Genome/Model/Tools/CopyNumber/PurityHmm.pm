@@ -137,7 +137,7 @@ sub Fit {
 
 sub SegPloidy {
   #Compute ploidy
-  my ($self,$data,$minsize,$Chr_Median_Readcount,$cmStart,$cmEnd)=@_;
+  my ($self,$ofh,$data,$minsize,$Chr_Median_Readcount,$cmStart,$cmEnd)=@_;
   my ($LScore,$state)=$self->Viterbi($data);
   my $T=$#{$data->{x}} || 1;
   my $adjusted_meanreadcount=$self->purity*$self->mean2x;
@@ -184,7 +184,7 @@ sub SegPloidy {
     }
     $self->ploidy_p(($interval_p>$minsize)?$ploidy_stat_p/$count_p:-1);
     $self->ploidy_q(($interval_q>$minsize)?$ploidy_stat_q/$count_q:-1);
-    printf "p_interval: %d\tq_interval: %d\n",$interval_p,$interval_q;
+    printf $ofh "p_interval: %d\tq_interval: %d\n",$interval_p,$interval_q;
   }
   else{
     my $ploidy_stat=0;
@@ -234,7 +234,7 @@ sub ViterbiUpdate {
 
   if($PurityUpdate){
     if($nmarkers<10){
-      print STDOUT "Insufficient somatic alteration for purity estimation!\n";
+      $self->error_message("Insufficient somatic alteration for purity estimation!\n");
     }
     else{
       $self->purity(($nmarkers>10)?$purity_stat/$nmarkers:$self->purity);
@@ -498,7 +498,7 @@ sub ForwardBackword {
 
   #update purity
   if($nsample<10){
-    print STDERR "Insufficient data for purity estimation!\n";
+    $self->error_message("Insufficient data for purity estimation!\n");
   }
   else{
     $self->purity($purity_stat/$nsample);

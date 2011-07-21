@@ -12,16 +12,16 @@ use File::Basename;
 class Genome::Model::Tools::Sam::SnpSanitizer {
     is  => 'Command',
     has => [
-        snp_file => {
-            is  => 'String',
-            doc => 'The input sam/bam snp file',
-        },
+    snp_file => {
+        is  => 'String',
+        doc => 'The input sam/bam snp file',
+    },
     ],
     has_optional => [
-        out_file => {
-            is  => 'String',
-            doc => 'snp output file after sanitizing, default is using the same snp_file name',
-        },
+    out_file => {
+        is  => 'String',
+        doc => 'snp output file after sanitizing, default is using the same snp_file name',
+    },
     ],
 };
 
@@ -45,7 +45,7 @@ sub help_detail {
     1       1019668 A       G       16      16      60      1       G       1
     1       1019673 A       G       7       7       60      1       G       (
     1       1019689 G       T       4       4       60      1       T       # 
-     
+
 EOS
 }
 
@@ -53,14 +53,14 @@ EOS
 sub execute {
     my $self = shift;
     my $snp_file = $self->snp_file;
-    
+
     unless (-s $snp_file) {
         $self->error_message('Can not find valid SAM snp file: '.$snp_file);
         return;
     }
-    
+
     my $out_file;
-    
+
     if ($self->out_file) {
         $out_file = $self->out_file;
     }
@@ -68,17 +68,20 @@ sub execute {
         my ($name, $path) = fileparse $snp_file;
         $out_file = $path.$name.'.sanitize';
     }
-    
+
+
     my $out_fh = Genome::Sys->open_file_for_writing($out_file) or return;
     my $snp_fh = Genome::Sys->open_file_for_reading($snp_file) or return;
-    
+
     while (my $snp = $snp_fh->getline) {
-        my ($ref_base, $con_base) = $snp =~ /^\S+\s+\S+\s+(\S+)\s+(\S+)\s+/;
+        my @columns = split("\t", $snp);
+        my $ref_base = $columns[2];
+        my $con_base = $columns[3];
         next if $ref_base eq $con_base;
         next if $ref_base eq '*' or $con_base =~ /\//;
         $out_fh->print($snp);
     }
-    
+
     $snp_fh->close;
     $out_fh->close;
 
@@ -86,6 +89,8 @@ sub execute {
         unlink $snp_file;
         rename $out_file, $snp_file;
     }
+
+
 
     return 1;
 }

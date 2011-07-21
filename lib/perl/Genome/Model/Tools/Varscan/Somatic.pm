@@ -26,10 +26,11 @@ class Genome::Model::Tools::Varscan::Somatic {
 	has => [                                # specify the command's single-value properties (parameters) <--- 
 		normal_bam	=> { is => 'Text', doc => "Path to Normal BAM file", is_optional => 0, is_input => 1 },
 		tumor_bam	=> { is => 'Text', doc => "Path to Tumor BAM file", is_optional => 0, is_input => 1 },
+		samtools_path	=> { is => 'Text', doc => "Path to SAMtools executable", is_optional => 0, is_input => 1, default => "samtools" },
 		output	=> { is => 'Text', doc => "Path to Tumor BAM file", is_optional => 1, is_input => 1, is_output => 1 },
 		output_snp	=> { is => 'Text', doc => "Basename for SNP output, eg. varscan_out/varscan.status.snp" , is_optional => 1, is_input => 1, is_output => 1},
 		output_indel	=> { is => 'Text', doc => "Basename for indel output, eg. varscan_out/varscan.status.snp" , is_optional => 1, is_input => 1, is_output => 1},
-		reference	=> { is => 'Text', doc => "Reference FASTA file for BAMs (default= genome model)" , is_optional => 1, is_input => 1},
+		reference        => { is => 'Text', doc => "Reference FASTA file for BAMs" , is_optional => 1, default_value => (Genome::Config::reference_sequence_directory() . '/NCBI-human-build36/all_sequences.fa')},
 		heap_space	=> { is => 'Text', doc => "Megabytes to reserve for java heap [1000]" , is_optional => 1, is_input => 1},
 		skip_if_output_present	=> { is => 'Text', doc => "If set to 1, skip execution if output files exist", is_optional => 1, is_input => 1 },
 		varscan_params	=> { is => 'Text', doc => "Parameters to pass to Varscan [--min-coverage 3 --min-var-freq 0.08 --p-value 0.10 --somatic-p-value 0.05 --strand-filter 1]" , is_optional => 1, is_input => 1},
@@ -92,9 +93,7 @@ sub execute {                               # replace with real execution logic.
 		die "Please provide an output basename (--output) or output files for SNPs (--output-snp) and indels (--output-indels)\n";
 	}
 
-
-	my $reference = '/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa';
-	$reference = $self->reference if($self->reference);
+	my $reference = $self->reference;
 	my $varscan_params = "--min-coverage 3 --min-var-freq 0.08 --p-value 0.10 --somatic-p-value 0.05 --strand-filter 1"; #--min-coverage 8 --verbose 1
 	$varscan_params = $self->varscan_params if($self->varscan_params);
 
@@ -116,11 +115,8 @@ sub execute {                               # replace with real execution logic.
 	if(-e $normal_bam && -e $tumor_bam)
 	{
 		## Prepare pileup commands ##
-		
-#		my $normal_pileup = "samtools pileup -f $reference $normal_bam";
-#		my $tumor_pileup = "samtools pileup -f $reference $tumor_bam";
-		my $normal_pileup = "samtools view -b -u -q 10 $normal_bam | samtools pileup -f $reference -";
-		my $tumor_pileup = "samtools view -b -u -q 10 $tumor_bam | samtools pileup -f $reference -";
+        my $normal_pileup = $self->pileup_command_for_reference_and_bam($reference, $normal_bam);
+        my $tumor_pileup = $self->pileup_command_for_reference_and_bam($reference, $tumor_bam);
 
 		## First, head the pileup files to get SAMtools warmed up ##
 #		print "Heading pileup files to get SAMtools warmed up...\n";

@@ -44,7 +44,8 @@ $ret = Genome::Sys->dbpath('db1','2.1');
 is($ret, $tmp2 . '/db1/2.1', "path is the second db because the new db was removed") or diag $ret;
 
 change_rollback_removes_symlink_for_create_symlink_and_log_change();
-username_detects_sudo_user();
+
+test_sudo_username();
 
 done_testing();
 
@@ -74,10 +75,34 @@ sub change_rollback_removes_symlink_for_create_symlink_and_log_change {
     return 1;
 }
 
-sub username_detects_sudo_user {
-    local $ENV{'SUDO_USER'} = 'foo';
-    ok($ENV{'SUDO_USER'}, 'sudo user is set');
+sub test_sudo_username {
+    no warnings qw(redefine);
+    #Genome::Sys autoloaded here so it can be overridden
+    my $username = Genome::Sys->username;
 
-    my $sudo_username = Genome::Sys->sudo_username;
-    is($sudo_username, 'foo', 'sudo_username detected as specified');
+    {
+        *Genome::Sys::cmd_output_who_dash_m = sub { return '' };
+        local $ENV{SUDO_USER} = '';
+        is(Genome::Sys->sudo_username, '', 'sudo_username empty when not sudoed');
+    }
+
+    {
+        *Genome::Sys::cmd_output_who_dash_m = sub { return '' };
+        local $ENV{SUDO_USER} = "$username";
+        is(Genome::Sys->sudo_username, "$username", 'sudo_username detects based on SUDO_USER env var');
+    }
+
+    {
+        *Genome::Sys::cmd_output_who_dash_m = sub { return "$username pt" };
+        *Genome::Sys::username = sub { return "$username" };
+        is(Genome::Sys->sudo_username, '', 'sudo_username empty when not sudoed');
+    }
+
+    {
+        *Genome::Sys::cmd_output_who_dash_m = sub { return "$username pt" };
+        *Genome::Sys::username = sub { return 'not-user-name' };
+        is(Genome::Sys->sudo_username, "$username", 'sudo_username detects based on who -m');
+    }
+
+    use warnings qw(redefine);
 }

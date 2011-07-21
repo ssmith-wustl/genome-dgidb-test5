@@ -26,7 +26,7 @@ class Genome::Model::Tools::Newbler::Stats {
 	major_contig_length => {
 	    is => 'Number',
 	    is_optional => 1,
-	    default_value => 300,
+	    default_value => 500,
 	    doc => 'Cutoff value for major contig length',
 	},
     ],
@@ -80,6 +80,11 @@ sub execute {
 
     unless( $stats .= $self->_genome_contents_stats ) {
         $self->error_message( "Failed to generate genome contents stats" );
+        return;
+    }
+
+    unless( $stats .= $self->_read_depth_coverage_stats ) {
+        $self->error_message( "Failed to generate read depth coverage stats" );
         return;
     }
 
@@ -503,6 +508,56 @@ sub _genome_contents_stats {
               "Total lengths of all contigs: $total_contig_length\n".
               "Total lengths of contigs 5 Kb and greater: $five_kb_contigs_lengths\n".
               "Percentage of genome: ".$five_kb_ratio."%\n\n";
+
+    return $stats;
+}
+
+sub _read_depth_coverage_stats {
+    my $self = shift;
+
+    my %coverage;
+
+    my $total_covered_pos = 0;
+    my $five_x_cov = 0;
+    my $four_x_cov = 0;
+    my $three_x_cov = 0;
+    my $two_x_cov = 0;
+    my $one_x_cov = 0;
+
+    my $fh = Genome::Sys->open_file_for_reading( $self->read_info_file );
+    while ( my $line = $fh->getline ) {
+        my @tmp = split( /\s+/, $line );
+        #$tmp[0] = read name
+        #$tmp[1] = contig name
+        #$tmp[3] = read start position
+        #$tmp[4] = read length
+        my $from = $tmp[3];               #coverage start
+        my $to = $tmp[3] + $tmp[4] - 1;   #coverage end
+        for my $pos ( $from .. $to ) {
+            $pos -= 1;
+            @{ $coverage{$tmp[1]} }[$pos]++;
+        }
+    }
+    $fh->close;
+    
+    for my $contig ( keys %coverage ) {
+        $total_covered_pos += scalar @{$coverage{$contig}};
+        for my $pos ( @{$coverage{$contig}} ) {
+            $one_x_cov++ if $pos > 0;
+            $two_x_cov++ if $pos > 1;
+            $three_x_cov++ if $pos > 2;
+            $four_x_cov++ if $pos > 3;
+            $five_x_cov++ if $pos > 4;
+        }
+    }
+
+    my $stats = "\n*** Read Depth Info ***\n".
+	"Total covered bases: $total_covered_pos\n".
+        "Depth >= 5: $five_x_cov\t". $five_x_cov/$total_covered_pos."\n".
+        "Depth >= 4: $four_x_cov\t". $four_x_cov/$total_covered_pos."\n".
+        "Depth >= 3: $three_x_cov\t". $three_x_cov/$total_covered_pos."\n".
+        "Depth >= 2: $two_x_cov\t". $two_x_cov/$total_covered_pos."\n".
+	"Depth >= 1: $one_x_cov\t". $one_x_cov/$total_covered_pos."\n\n";
 
     return $stats;
 }

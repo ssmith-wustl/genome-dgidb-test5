@@ -6,7 +6,7 @@ use warnings;
 use GAP::Job;
 use Bio::SeqIO;
 use Bio::Tools::GFF;
-use Carp;
+use Carp 'confess';
 use English;
 use File::Temp qw/tempdir/;
 use IO::File;
@@ -16,55 +16,46 @@ use base qw(GAP::Job);
 
 
 sub new {
+    my ($class, $seq, $domain, $job_id, $version) = @_;
 
-    my ($class, $seq, $domain, $job_id) = @_;
-
-    
-    my $self = { };
+    my $self = {};
     bless $self, $class;
     
     unless (defined($seq)) {
-        croak 'missing seq object!';
+        confess 'missing seq object!';
     }
     
     unless ($seq->isa('Bio::PrimarySeqI')) {
-        croak 'seq object is not a Bio::PrimaySeqI!';
+        confess 'seq object is not a Bio::PrimaySeqI!';
     }
-    
     $self->{_seq} = $seq;
 
     unless (defined($domain)) {
-        croak 'missing domain';
+        confess 'missing domain';
     }
-
-    unless (
-            ($domain eq 'archaea'  )
-            ||
-            ($domain eq 'bacteria' )
-            ||
-            ($domain eq 'eukaryota')
-        ) {
-        croak "invalid domain '$domain'";
+    unless (($domain eq 'archaea') || ($domain eq 'bacteria') || ($domain eq 'eukaryota')) {
+        confess "invalid domain '$domain'";
     }
-
     $self->{_domain} = $domain;
     
     unless (defined($job_id)) {
-        croak 'missing job id';
+        confess 'missing job id';
     }
-
     $self->job_id($job_id);
     
+    unless (defined $version) {
+        $version = '1.2.1';
+    }
+    $self->{_version} = $version;
+
     return $self;
     
 }
 
 sub execute {
-    
     my ($self) = @_;
 
     $self->SUPER::execute(@_);
-   
    
     my $seq    = $self->{_seq};
     my $domain = $self->{_domain};
@@ -74,48 +65,60 @@ sub execute {
 
     my $temp_fh       = File::Temp->new();
     my $temp_filename = $temp_fh->filename();
-    
     close($temp_fh);
     
     my $tempdir = tempdir(CLEANUP => 1);
+
+    my $rnammer_path = $self->get_rnammer_path;
+    confess "Could not determine rnammer path for version " . $self->{_version} unless defined $rnammer_path;
 
     ## For RNAmmer 1.2 at least, the default
     ## behaviour when -m is not specified
     ## is the same as -m tsu,lsu,ssu.
     my @cmd = (
-               'rnammer',
-               '-S',
-               substr($domain, 0, 3),
-               '-T',
-               $tempdir,
-               '-gff',
-               $temp_filename,
-           );
-    eval {
-        
-        IPC::Run::run(
-                      \@cmd,
-                      IO::File->new($seq_fh->filename()),
-                      '>',
-                      \$rnammer_stdout,
-                      '2>',
-                      \$rnammer_stderr, 
-                  ) || die $CHILD_ERROR;
-        
-    };
+        $rnammer_path,
+        '-S',
+        substr($domain, 0, 3),
+        '-T',
+        $tempdir,
+        '-gff',
+        $temp_filename,
+    );
 
+    eval {
+        IPC::Run::run(
+            \@cmd,
+            IO::File->new($seq_fh->filename()),
+            '>',
+            \$rnammer_stdout,
+            '2>',
+            \$rnammer_stderr, 
+      ) || die $CHILD_ERROR;
+    };
     if ($EVAL_ERROR) {
         die "Failed to exec rnammer: $EVAL_ERROR";
     }
 
     my $gff = Bio::Tools::GFF->new(-file => $temp_filename, -gff_version => 1);
-
     while (my $feature = $gff->next_feature()) {
-    
         $seq->add_SeqFeature($feature);
-
     }
         
+}
+
+sub get_rnammer_path {
+    my $self = shift;
+    my $version = $self->{_version};
+    confess "No rnammer version provided!" unless defined $version;
+
+    my $base_path = '/gsc/pkg/bio/rnammer/';
+    my $rnammer_path = $base_path . "rnammer-$version/rnammer";
+
+    unless (-e $rnammer_path) {
+        confess "No rnammer executable found at expected location $rnammer_path";
+    }
+
+    return $rnammer_path;
 }
 
 sub genes {

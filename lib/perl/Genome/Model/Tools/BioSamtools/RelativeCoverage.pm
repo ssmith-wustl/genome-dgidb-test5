@@ -54,7 +54,7 @@ sub execute {
     unless (Genome::Config->arch_os =~ /64/) {
         die('Failed to run on 64-bit architecture');
     }
-    my $regions = Genome::RefCov::ROI::Bed->create(
+    my $regions = Genome::Model::Tools::RefCov::ROI::Bed->create(
         file => $self->bed_file,
     );
     unless ($regions) {
@@ -63,7 +63,7 @@ sub execute {
 
     open( my $stats_fh, '>'. $self->stats_file ) || die 'Failed to open stats file for writing '. $self->stats_file;
 
-    my $refcov_bam = Genome::RefCov::Bam->create(
+    my $refcov_bam = Genome::Model::Tools::RefCov::Bam->create(
         bam_file => $self->bam_file
     );
     # create low level bam object
@@ -111,7 +111,7 @@ sub execute {
         unless (scalar( @{ $coverage } ) == $length) {
             die('The length of the ref '. $length .' does not match the depth span '. scalar( @{ $coverage }));
         }
-        my $myCoverageStat = Genome::RefCov::Stats->create( coverage => $coverage);
+        my $myCoverageStat = Genome::Model::Tools::RefCov::Stats->create( coverage => $coverage);
         print $stats_fh join ("\t", $id, @{ $myCoverageStat->stats() }) . "\n";
         if ($self->bias_file) {
             my $size_bin = undef;
@@ -124,7 +124,7 @@ sub execute {
             elsif (($length >= 7_000)) {
                 $size_bin = 'LARGE';
             }
-            my $relative_coverage = Genome::RefCov::RelativeCoverage->create( coverage => $coverage );
+            my $relative_coverage = Genome::Model::Tools::RefCov::RelativeCoverage->create( coverage => $coverage );
             if (defined($size_bin)) {
                 my $hash_ref = $relative_coverage->relative_coverage;
                 for my $relative_position (keys %{$hash_ref}) {

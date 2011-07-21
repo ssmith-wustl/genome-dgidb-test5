@@ -75,6 +75,10 @@ UR::Object::Type->define(
             is  => 'String',
             doc => "Current assembly name",
         },
+        'assembly_version' => {
+            is  => 'String',
+            doc => "Current assembly version",
+        },
         'sequence_set_id' => {
             is  => 'String',
             doc => "Current sequence set id",
@@ -118,14 +122,16 @@ sub execute
     my $project_type  = $self->project_type;
     my $org_dirname   = $self->org_dirname;
     my $assembly_name = $self->assembly_name;
+    my $assembly_version = $self->assembly_version;
     my $ssid          = $self->sequence_set_id;
     my $locustagdir   = $self->locustagdir;
 
-    my $anno_submission = $amgap_path . "/"
-        . $org_dirname . "/"
-        . $assembly_name . "/"
-        . $pipe_version . "/"
-	. "Genbank_submission/Version_1.0/Annotated_submission/";
+	my $anno_submission = $amgap_path . "/"
+		. $org_dirname . "/"
+		. $assembly_name . "/"
+		. $assembly_version . "/"
+		. "Genbank_submission/"
+		. $pipe_version . "/Annotated_submission/";
 
     my $program = "/gsc/scripts/bin/tace";
     my $cwd     = getcwd();
@@ -160,7 +166,7 @@ sub execute
 	unlink $_ or croak qq{ \n\n Error removing file $_: $! \n\n }
 		for (@sqliteDataFiles);
 
-    copy($sqlitedatafile, $anno_submission.$sqlitedatafilename) || croak qq{\n\n Copying of $sqlitedatafile failed ...  from BerRunFinish.pm: $OS_ERROR\n\n };
+    copy($sqlitedatafile, $anno_submission.$sqlitedatafilename) || croak qq{\n\n Copying of $sqlitedatafile to $anno_submission.$sqlitedatafilename failed ...  from BerRunFinish.pm: $OS_ERROR\n\n };
 
     my $sqliteoutfile  = qq{$outdirpath/$sqliteout};
     unless ( ( -e $sqlitedatafile ) and ( !-z $sqlitedatafile ) )
@@ -648,7 +654,7 @@ sub execute
     print $rtfile_fh qq{Glimmer3 count =\t $glimmer3_counter}, "\n\n";
     print $rtfile_fh
         qq{Protein analysis by the following programs has been run via PAP workflow:\n\n};
-    print $rtfile_fh qq{Interpro v4.7 (database v29.0)\n};
+    print $rtfile_fh qq{Interpro v4.8 (database v29.0)\n};
     print $rtfile_fh qq{Keggscan v56\n};
     print $rtfile_fh qq{psortB v3.0.3\n};
     print $rtfile_fh qq{BER v2.5\n};

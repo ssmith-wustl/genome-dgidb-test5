@@ -27,7 +27,7 @@ class Genome::Search {
         },
         _dev_solr_server_location => {
             is => 'Text',
-            default_value => 'http://solr-dev:8080/solr',
+            default_value => 'http://solr:8080/solr',
             doc => 'Location of the Solr development server',
         },
         _solr_server => {
@@ -163,11 +163,16 @@ sub add {
     my @objects = @_;
     
     my $self = $class->_singleton_object;
-    
     my @docs = $class->generate_document(@objects);
 
     unless($self->solr_server->add(\@docs)) {
-        $self->error_message('Failed to send ' . (scalar @docs) . ' document(s) to Solr.');
+        $self->error_message('Failed to send ' . (scalar @docs) . ' document(s) to solr-dev.');
+        return;
+    }
+
+    my $solr_dev = $self->_solr_server(WebService::Solr->new($self->_dev_solr_server_location()));
+    unless($solr_dev->add(\@docs)) {
+        $self->error_message('Failed to send ' . (scalar @docs) . ' document(s) to other solr instance (solr)');
         return;
     }
     

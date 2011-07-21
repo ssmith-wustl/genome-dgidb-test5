@@ -5,6 +5,7 @@ use warnings;
 use IO::File;
 use File::Basename;
 use File::Copy;
+use File::Temp;
 use Genome;
 
 #  So, you want to build an aligner?  Follow these steps.
@@ -67,6 +68,11 @@ sub _run_aligner {
     # This is your scratch directory.  Whatever you put here will be wiped when the alignment
     # job exits.
     my $scratch_directory = $self->temp_scratch_directory;
+    
+    # This is a temporary directory. The difference between this and the scratch directory is that
+    # this is blown away between calls of _run_aligner when running in force_fragment mode, while
+    # the scratch directory will stick around.
+    my $temporary_directory = File::Temp->tempdir("_run_aligner_XXXXX", DIR => $scratch_directory);
 
     # This is the alignment output directory.  Whatever you put here will be synced up to the
     # final alignment directory that gets a disk allocation.
@@ -166,17 +172,17 @@ sub _run_aligner {
     $self->status_message("Trimming reads.");
 
     # make a prefix for trim files
-    my $trim_prefix = $scratch_directory . "/trimmed";
+    my $trim_prefix = $temporary_directory . "/trimmed";
 
     # output files consist of the following filenames prefixed with $trim_prefix
     my @trimmed_files = map{sprintf("%s_%s",$trim_prefix,$_)} $paired_end ?
-        qw(reads1.txt reads2.txt mates1.txt mates2.txt pair1.fastq pair2.fastq mates1.fastq mates2.fastq badMate1.fastq badMate2.fastq err1.fastq err2.fastq) :
-        qw(reads1.txt mates1.txt mates1.fastq pair1.fastq err1.fastq);
+        qw(reads1.txt reads2.txt mates1.txt mates2.txt reads1.fastq reads2.fastq mates1.fastq mates2.fastq badMate1.fastq badMate2.fastq err1.fastq err2.fastq) :
+        qw(reads1.txt reads1.fastq err1.fastq);
     
     # we need list files of mates for remove-dupl
     if ($paired_end) { # TODO should something happen when not running in paired end mode? look at documentation for remove-dupl i think...
-        $list_files{'mates1'} = _create_temporary_list_file([grep(/.+\/mates1\.txt$/, @trimmed_files)]);
-        $list_files{'mates2'} = _create_temporary_list_file([grep(/.+\/mates2\.txt$/, @trimmed_files)]);
+        $list_files{'mates1'} = _create_temporary_list_file([grep(/.+mates1\.txt$/, @trimmed_files)]);
+        $list_files{'mates2'} = _create_temporary_list_file([grep(/.+mates2\.txt$/, @trimmed_files)]);
     }
 
 $DB::single=1;
@@ -191,12 +197,11 @@ $DB::single=1;
             "-s $input_pathnames[0]"
     );
     
-    my $rv = Genome::Sys->shellcmd(
+    my $rv = $self->_shell_cmd_wrapper(
         cmd => $trim_cmd,
         input_files => [@input_pathnames],
         output_files => [@trimmed_files],
-        allow_zero_size_output_files => 1,
-        dont_create_zero_size_files_for_missing_output => 1
+        files_that_may_be_empty => [@trimmed_files]
     );
     unless($rv) { die $self->error_message("Trimming failed."); }
 
@@ -210,7 +215,7 @@ $DB::single=1;
     $self->status_message("Performing alignment.");
     
     # the file for aligned reads
-    my @aligned_reads = ($scratch_directory . "/bratout.dat");
+    my @aligned_reads = ($temporary_directory . "/bratout.dat");
     
     # we need a list file for remove-dupl
     $list_files{'aligned_reads'} = _create_temporary_list_file(\@aligned_reads);
@@ -226,11 +231,11 @@ $DB::single=1;
         $aligner_params{'align_options'} # -m 10 (number of mismatches) -bs (bisulfite option) -S (faster, at the expense of more mem)
     );
 
-    $rv = Genome::Sys->shellcmd(
+    $rv = $self->_shell_cmd_wrapper(
         cmd => $align_cmd,
         input_files => [@trimmed_files, @index_files],
         output_files => [@aligned_reads],
-        allow_zero_size_input_files => 1
+        files_that_may_be_empty => [@trimmed_files, @aligned_reads]
     );
     unless($rv) { die $self->error_message("Alignment failed."); }
 
@@ -254,24 +259,25 @@ $DB::single=1;
         $list_files{'reference_fastas'}, # reference fastas.
         $paired_end ?
             # we specify -1 and -2 with files from trim; this is brat's way of dealing with "overlapping mates"
-            "-p $list_files{'aligned_reads'} -1 $list_files{'mates1'} -2 $list_files{'mates2'}" :
+            #"-p $list_files{'aligned_reads'} -1 $list_files{'mates1'} -2 $list_files{'mates2'}" :
+            "-p $list_files{'aligned_reads'}" :
             "-s $list_files{'aligned_reads'}"
     );
 
-    $rv = Genome::Sys->shellcmd(
+    $rv = $self->_shell_cmd_wrapper(
         cmd => $dedup_cmd,
         input_files =>
             $paired_end ? [
                 @reference_fastas, $list_files{'reference_fastas'},
                 @aligned_reads, $list_files{'aligned_reads'},
-                $trimmed_files[2], $list_files{'mates1'},
-                $trimmed_files[3], $list_files{'mates2'}
+                #$trimmed_files[2], $list_files{'mates1'},
+                #$trimmed_files[3], $list_files{'mates2'}
             ] : [
                 @reference_fastas, $list_files{'reference_fastas'},
                 @aligned_reads, $list_files{'aligned_reads'}
             ],
         output_files => [@deduped_reads],
-        allow_zero_size_input_files => 1
+        files_that_may_be_empty => [@aligned_reads, @deduped_reads]
     );
     unless($rv) { die $self->error_message("Deduping failed."); }
 
@@ -287,10 +293,11 @@ $DB::single=1;
 
     my $sort_cmd = "sort -nk1 $deduped_reads[0] >$sorted_deduped_reads[0]";
 
-    $rv = Genome::Sys->shellcmd(
+    $rv = $self->_shell_cmd_wrapper(
         cmd => $sort_cmd,
         input_files => [@deduped_reads],
-        output_files => [@sorted_deduped_reads]
+        output_files => [@sorted_deduped_reads],
+        files_that_may_be_empty => [@deduped_reads, @sorted_deduped_reads]
     );
     unless($rv) { die $self->error_message("Sorting deduped files failed."); }
 
@@ -302,7 +309,7 @@ $DB::single=1;
     ###################################################
     $self->status_message("Converting output to SAM format.");
 
-    my $temp_sam_output = "$scratch_directory/mapped_reads.sam";
+    my $temp_sam_output = "$temporary_directory/mapped_reads.sam";
     $self->_convert_reads_to_sam($paired_end, $sorted_deduped_reads[0], $temp_sam_output, $trim_prefix);
 
 
@@ -316,7 +323,7 @@ $DB::single=1;
 
     my $append_cmd = "sort -nk 1 $temp_sam_output >> $sam_file";
 
-    $rv = Genome::Sys->shellcmd(
+    $rv = $self->_shell_cmd_wrapper(
         cmd => $append_cmd,
         input_files => [$temp_sam_output],
         output_files => [$sam_file],
@@ -332,7 +339,19 @@ $DB::single=1;
     ###################################################
     $self->status_message("Creating methylation map.");
 
-    my $count_prefix = $staging_directory . "/map";
+    # We do this because of force_fragment mode. If we're running in paired-end mode _run_aligner
+    # will only be called once, so acgt-count will only be called once, and only one set of map files
+    # will be created. However, if we're running in force_fragment mode, _run_aligner will be called
+    # twice. Since the map files from acgt-count must be placed into the staging directory so they are
+    # copied out, an existing set of map files will already exist when _run_aligner is called the second
+    # time. In order to differentiate these files, we prepend the input filename (sans extension) when
+    # running in single end mode. TODO hax
+    basename($input_pathnames[0]) =~ /(.+)\..+$/;
+    my $sequence_basename = $1;
+    my $count_prefix = $paired_end ? 
+        sprintf("%s/map_%s", $staging_directory, $sequence_basename) : 
+        sprintf("%s/map", $staging_directory);
+
     
     my @counted_reads = ();
 
@@ -367,18 +386,41 @@ $DB::single=1;
             # of the files with results for mates 1 and mates 2 separately using options -1 and
             # -2. This will ensure unbiased ACGT-counting when reads are sequenced from two
             # original genomic strands.
-            "-p $list_files{'deduped_reads'} -1 $list_files{'mates1'} -2 $list_files{'mates2'}" : # TODO might be very wrong; manual says we might need to use -1 -2 instead of -p
+            #"-p $list_files{'deduped_reads'} -1 $list_files{'mates1'} -2 $list_files{'mates2'}" : # TODO might be very wrong; manual says we might need to use -1 -2 instead of -p
+            "-p $list_files{'deduped_reads'}" :
             "-s $list_files{'deduped_reads'}",
         $aligner_params{'count_options'} # -B (get a map of methylation events, not a count of every base)
     );
 
-    $rv = Genome::Sys->shellcmd(
+print "\n\nDEBUG INFO\n\n\n";
+print Data::Dumper::Dumper(\%list_files) . "\n";
+print Data::Dumper::Dumper(\@deduped_reads) . "\n";
+print Data::Dumper::Dumper(\@reference_fastas) . "\n";
+print Data::Dumper::Dumper(\@counted_reads) . "\n";
+print Data::Dumper::Dumper(\@index_files) . "\n";
+print $count_cmd . "\n";
+print `ls -lR $scratch_directory`."\n";
+print `ls -lR $temporary_directory`."\n";
+print `ls -lR $staging_directory`."\n";
+for my $lf (keys %list_files) {
+    print "$lf: $list_files{$lf}\n";
+    print `cat $list_files{$lf}`."\n";
+}
+print `ls -lR $staging_directory`."\n";
+system("touch /gscuser/iferguso/brat_lock");
+print "\n\nEND DEBUG INFO\n\n\n";
+
+    $rv = $self->_shell_cmd_wrapper(
         cmd => $count_cmd,
         input_files => [
             @deduped_reads, $list_files{'deduped_reads'},
             @reference_fastas, $list_files{'reference_fastas'}],
-        output_files => [@counted_reads]
+            #$trimmed_files[2], $list_files{'mates1'},
+            #$trimmed_files[3], $list_files{'mates2'}
+        output_files => [@counted_reads],
+        files_that_may_be_empty => [@deduped_reads]
     );
+
     unless($rv) { die $self->error_message("Methylation mapping failed."); }
 
 
@@ -648,8 +690,8 @@ sub _convert_reads_to_sam {
 
     if ($paired_end) {
         @aligned_file_pairs = (
-            {fastq => 'pair1.fastq', txt => 'reads1.txt'},
-            {fastq => 'pair2.fastq', txt => 'reads2.txt'}
+            {fastq => 'reads1.fastq', txt => 'reads1.txt'},
+            {fastq => 'reads2.fastq', txt => 'reads2.txt'}
         );
         @unaligned_file_pairs = (
             {fastq => 'err1.fastq', txt => undef},
@@ -661,11 +703,10 @@ sub _convert_reads_to_sam {
         );
     } else {
         @aligned_file_pairs = (
-            {fastq => 'pair1.fastq', txt => 'reads1.txt'}
+            {fastq => 'reads1.fastq', txt => 'reads1.txt'}
         );
         @unaligned_file_pairs = (
             {fastq => 'err1.fastq', txt => undef},
-            {fastq => 'mates1.fastq', txt => 'mates1.txt'}
         );
     }
 
@@ -1065,6 +1106,63 @@ sub _calculate_sam_record {
     }
 }
 
+# because Genome::Sys::shellcmd is not doing what I expect it to when checking inputs and outputs
+sub _shell_cmd_wrapper {
+    my ($self,%params) = @_;
+    my $cmd                        = delete $params{cmd};
+    my $input_files                = delete $params{input_files};
+    my $output_files               = delete $params{output_files} ;
+    my $files_that_may_be_empty    = delete $params{files_that_may_be_empty};
+    my $skip_if_output_is_present  = delete $params{skip_if_output_is_present};
+
+    $skip_if_output_is_present = 1 if not defined $skip_if_output_is_present;
+    
+    my @missing_inputs;
+    if ($input_files and @$input_files) {
+        for my $input_file (@$input_files) { # for all inputs
+            if (not -p $input_file) { # add the file to the list if it is not a pipe and either one of the following is true:
+                if ($files_that_may_be_empty and @$files_that_may_be_empty and (grep {$_ eq $input_file} @$files_that_may_be_empty) ) {
+                    if (not -e $input_file) { # the file is non-existent (but it is allowed to be empty)
+                        push @missing_inputs, $input_file;
+                        $self->status_message("Allowing zero-sized input $input_file");
+                    }
+                } else {
+                    push @missing_inputs, $input_file unless -s $input_file; # the file is non-existent or empty
+                }
+            }
+        }
+    }
+    if (scalar(@missing_inputs)) {
+        die $self->error_message("Input files were missing when attempting to run $cmd:\n".Data::Dumper::Dumper(\@missing_inputs));
+    }
+    
+
+    my $rv = Genome::Sys->shellcmd(
+        cmd => $cmd,
+        skip_if_output_is_present => $skip_if_output_is_present,
+    );
+
+    my @missing_outputs;
+    if ($output_files and @$output_files) {
+        for my $output_file (@$output_files) {
+            if (not -p $output_file) { # add the file to the list if it is not a pipe and either one of the following is true:
+                if ($files_that_may_be_empty and @$files_that_may_be_empty and (grep {$_ eq $output_file} @$files_that_may_be_empty) ) {
+                    if (not -e $output_file) { # the file is non-existent (but it is allowed to be empty)
+                        push @missing_outputs, $output_file;
+                        $self->status_message("Allowing zero-sized output $output_file");
+                    }
+                } else {
+                    push @missing_outputs, $output_file unless -s $output_file; # the file is non-existent or empty
+                }
+            }
+        }
+    }
+    if (scalar(@missing_outputs)) {
+        die $self->error_message("Output files were missing when attempting to run $cmd:\n".Data::Dumper::Dumper(\@missing_outputs));
+    }
+
+    return $rv;
+}
 
     ### TODO
     ### LATER: 

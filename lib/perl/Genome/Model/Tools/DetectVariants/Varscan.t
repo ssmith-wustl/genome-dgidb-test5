@@ -32,7 +32,7 @@ is($ref_seq_build->name, 'NCBI-human-build36', 'Got expected reference for test 
 my $ref_seq_input = $ref_seq_build->full_consensus_path('fa');
 ok(Genome::Sys->check_for_path_existence($ref_seq_input), 'Got a reference FASTA') or die('Test cannot continue without a reference FASTA');
 
-my $version = ''; #Currently only one version of var-scan
+my $version = '2.2.4'; #Currently only one version of var-scan
 my $snv_parameters = my $indel_parameters = '';
 
 my $command = Genome::Model::Tools::DetectVariants::Varscan->create(

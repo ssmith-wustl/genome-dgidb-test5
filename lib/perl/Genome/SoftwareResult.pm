@@ -250,11 +250,6 @@ sub resolve_module_version {
         die('Failed to find expected perl module '. $path);
     }
 
-    # TODO: move to central place
-    my $commit = `git --no-pager log --max-count=1 $path | head -1 | cut -f2 -d' '`;
-    chomp($commit);
-    return $commit if $commit;
-    
     if ($path =~ /\/gsc\/scripts\/opt\/genome-(\d+)\//) {
         return $1;
     }
