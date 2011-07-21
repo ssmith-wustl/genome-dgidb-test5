@@ -30,6 +30,7 @@ class Genome::Model::Tools::Varscan::Consensus {
 		min_coverage	=> { is => 'Text', doc => "Minimum base coverage to report readcounts [4]" , is_optional => 1},
 		min_avg_qual	=> { is => 'Text', doc => "Minimum base quality to count a read [20]" , is_optional => 1},
 		min_var_freq	=> { is => 'Text', doc => "Minimum variant allele frequency to call a variant [0.20]" , is_optional => 1},
+		reference        => { is => 'Text', doc => "Reference FASTA file for BAMs" , is_optional => 1, default_value => (Genome::Config::reference_sequence_directory() . '/NCBI-human-build36/all_sequences.fa')},		
 	],
 };
 
@@ -63,7 +64,7 @@ sub execute {                               # replace with real execution logic.
 
 	## Get required parameters ##
 	my $bam_file = $self->bam_file;
-	my $reference = "/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa";
+	my $reference = $self->reference;
 	my $positions_file = $self->positions_file;
 	my $output_file = $self->output_file;
 	

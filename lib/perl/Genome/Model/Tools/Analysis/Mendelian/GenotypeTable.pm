@@ -202,11 +202,11 @@ sub load_consensus
 		my $line = $_;
 		$lineCounter++;
 
-		(my $chrom, my $position, my $ref, my $cns, my $reads1, my $reads2, my $var_freq) = split(/\t/, $line);
+		(my $chrom, my $position, my $ref, my $cns, my $reads1, my $reads2, my $var_freq, my $strands1, my $strands2, my $qual1, my $qual2, my $p_value) = split(/\t/, $line);
 
 		if($ref =~ /[0-9]/)
 		{
-			($chrom, $position, my $stop, $ref, $cns, $reads1, $reads2, $var_freq) = split(/\t/, $line);			
+			($chrom, $position, my $stop, $ref, $cns, $reads1, $reads2, $var_freq, $strands1, $strands2, $qual1, $qual2, $p_value) = split(/\t/, $line);			
 		}
 
 		if(length($ref) > 1 || length($cns) > 1 || $ref eq "-" || $cns eq "-")
@@ -223,7 +223,7 @@ sub load_consensus
 		my $key = "$genotype_file\t$chrom\t$position";
 		if($cns ne "N")
 		{
-			$genotypes{$key} = "$cns\t$reads1\t$reads2\t$var_freq";				
+			$genotypes{$key} = "$cns\t$reads1\t$reads2\t$var_freq";								
 		}
 
 	}
