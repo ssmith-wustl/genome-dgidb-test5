@@ -7,6 +7,12 @@ use Genome;
 class Genome::Model::Event::Build::ImportedAnnotation::CopyRibosomalGeneNames {
     is => 'Command::V2',
     has => [
+        species_name => {
+            is => 'Text',
+            is_input => 1,
+            valid_values => ['human', 'mouse'],
+            default => 'human',
+        },
         output_file => {
             is => 'FilePath',
             doc => 'Path to output the RibosomalGeneNames to',
@@ -17,12 +23,20 @@ class Genome::Model::Event::Build::ImportedAnnotation::CopyRibosomalGeneNames {
 sub execute {
     my $self = shift;
     my $output_fh = Genome::Sys->open_file_for_writing($self->output_file);
-    $output_fh->print($self->get_ribosomal_gene_names);
+    my $species_name = $self->species_name;
+    my $method_name = join('_', 'get', $species_name, 'ribosomal_gene_names');
+    $output_fh->print($self->$method_name);
     $output_fh->close;
     return 1;
 }
 
-sub get_ribosomal_gene_names { 
+sub get_mouse_ribosomal_gene_names {
+    my $self = shift;
+    $self->error_message('No ribosomal gene names exist for mouse, exiting');
+    die($self->error_message);
+}
+
+sub get_human_ribosomal_gene_names {
     my $self = shift;
     my $ribosomal_gene_names = <<EOS;
 RN5-8S1	ENSG00000241335

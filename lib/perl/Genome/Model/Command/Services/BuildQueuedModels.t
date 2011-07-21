@@ -83,8 +83,20 @@ ok(@models, 'created models');
 
 # overload models get and locking
 no warnings qw(redefine once);
-*Genome::Model::get = sub { package Genome::Model; my $self = shift; return $self->SUPER::get(@_, id => \@model_ids) };
-*Genome::Model::create_iterator = sub { package Genome::Model; my $self = shift; return $self->SUPER::create_iterator(@_, id => \@model_ids) };
+*Genome::Model::get = sub {
+    package Genome::Model; 
+    my $self = shift;
+    my @params = @_;
+
+    #this order matters
+    unshift @params, (id => \@model_ids) if @_ != 1;
+    return $self->SUPER::get(@params);
+};
+*Genome::Model::create_iterator = sub { 
+    package Genome::Model;
+    my $self = shift;
+    return $self->SUPER::create_iterator(id => \@model_ids, @_);
+};
 *Genome::Sys::lock_resource = sub{ return 1; };
 *Genome::Sys::unlock_resource= sub{ return 1; };
 use warnings;
