@@ -99,6 +99,16 @@ sub execute {
         return;
     }
 
+    my @filtered_builds;
+    for my $b ($self->builds) {
+        if ($b->status ne "Succeeded") {
+            warn sprintf("Filtering out build %s (model %s) because its status is %s, not succeeded.", $b->id, $b->model->name, $b->status);
+        } else {
+            push @filtered_builds, $b; 
+        }
+    }
+    $self->builds([@filtered_builds]);
+
     my $samp_map = IO::File->new(">".$self->sample_mapping_file);
     unless ($samp_map) {
         $self->error_message("Failed to open sample mapping file for writing ". $self->sample_mapping_file);
