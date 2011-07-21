@@ -57,7 +57,7 @@ class Genome::Model::GenePrediction::Command::Bacterial::Merge {
 		 ipr_version => {
 			is => 'String',
             valid_values => ['4.5', '4.7', '4.8'],
-            default => '4.7',
+            default => '4.8',
             },
         runner_count => {
             is  => 'Integer',
