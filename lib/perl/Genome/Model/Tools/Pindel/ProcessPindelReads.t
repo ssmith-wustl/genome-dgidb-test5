@@ -27,25 +27,27 @@ my $input_05 = "$test_data/indels_all_sequences.0.5";
 my $output_02 = "$tmpdir/indels.hq.v02.bed";
 my $output_04 = "$tmpdir/indels.hq.v04.bed";
 my $output_05 = "$tmpdir/indels.hq.v05.bed";
+my $output_06 = "$tmpdir/indels.hq.v06.bed";
 my $big_output_05 = "$tmpdir/indels.hq.v05.bed.big_insertions";
 my $expected_output_02 = "$test_data/expected/indels.hq.v02.bed";
 my $expected_output_04 = "$test_data/expected/indels.hq.v04.bed";
 my $expected_output_05 = "$test_data/expected/indels.hq.v05.bed";
+my $expected_output_06 = "$test_data/expected/indels.hq.v06.bed";
 
 my $refbuild_id = 101947881; 
 
 # Test Pindel v0.5 output
 
-my $ppr_cmd_05 = Genome::Model::Tools::Pindel::ProcessPindelReads->create(
+my $ppr_cmd_06 = Genome::Model::Tools::Pindel::ProcessPindelReads->create(
                 input_file => $input_05,
-                output_file => $output_05,
+                output_file => $output_06,
                 big_output_file => $big_output_05,
                 reference_build_id => $refbuild_id,
                 mode => 'to_bed', );
 
-ok($ppr_cmd_05, 'process-pindel-reads command created');
+ok($ppr_cmd_06, 'process-pindel-reads command created');
 
-my $result = $ppr_cmd_05->execute;
+my $result = $ppr_cmd_06->execute;
 is($result, 1, 'Testing for execution.  Expecting 1.  Got: '.$result);
 
-is(compare($output_05,$expected_output_05),0,'Output for v0.5 is identical to expected output');
+is(compare($output_06,$expected_output_06),0,'Output for v0.5 is identical to expected output');

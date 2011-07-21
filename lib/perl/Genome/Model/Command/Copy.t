@@ -27,7 +27,7 @@ my $copy = Genome::Model::Command::Copy->create( # use 37 instead of 36
         'processing_profile=name=Feb 2011 Default Reference Alignment', 
         'reference_sequence_build=102671028',
         'dbsnp_build=id=106375969',
-        'annotation_reference_build=105407461',  
+        'annotation_reference_build=',  
         'target_region_set_name=',
         'instrument_data=',
     ],
@@ -38,11 +38,12 @@ ok($copy->execute, 'execute');
 my $new_model = Genome::Model->get(name => '__COPY_TEST1__');
 ok($new_model, 'copied model');
 is_deeply($new_model->subject, $sample, 'override subject');
-is($new_model->processing_profile_id, 2580856, 'override pp id');
-is($new_model->reference_sequence_build_id, 102671028, 'override ref seq build');
-is($new_model->annotation_reference_build_id, 105407461, 'override annotation build');
-is($new_model->dbsnp_build_id, 106375969, 'override dbsnp build');
-ok(!$new_model->target_region_set_name, 'override target region set name ro undef');
+is($new_model->processing_profile->id, 2580856, 'override pp id');
+is($new_model->reference_sequence_build->id, 102671028, 'override ref seq build');
+ok(!$new_model->annotation_reference_build, 'undef annotation build');
+ok(!$new_model->annotation_reference_build_id, 'undef annotation build id');
+is($new_model->dbsnp_build->id, 106375969, 'override dbsnp build');
+ok(!$new_model->target_region_set_name, 'undef target region set name');
 is_deeply([$new_model->instrument_data], [], 'did not copy inst data');
 
 my $rv = system("genome model copy 2862809551 name=__COPY_TEST2__ processing_profile='name=Feb 2011 Default Reference Alignment' target_region_set_name='CAMBRIDGE'");

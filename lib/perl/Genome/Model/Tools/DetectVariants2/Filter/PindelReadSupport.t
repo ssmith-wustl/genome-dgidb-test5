@@ -26,7 +26,7 @@ my $refbuild_id = 101947881;
 my $input_directory = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants2-Filter-PindelReadSupport";
 
 # Updated to v2 to allow for new columns 
-my $expected_dir = $input_directory . "/expected_v4/";
+my $expected_dir = $input_directory . "/expected_v5/";
 my $tumor_bam_file  = $input_directory. '/true_positive_tumor_validation.bam';
 my $normal_bam_file  = $input_directory. '/true_positive_normal_validation.bam';
 my $test_output_base = File::Temp::tempdir('Genome-Model-Tools-DetectVariants2-Filter-PindelReadSupport-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
@@ -58,11 +58,9 @@ my $pindel_read_support = Genome::Model::Tools::DetectVariants2::Filter::PindelR
 
 ok($pindel_read_support, "created PindelReadSupport object");
 ok($pindel_read_support->execute(), "executed PindelReadSupport");
-
 ok(-s $hq_output_bed ,'HQ bed output exists and has size');
 ok(-e $lq_output_bed,'LQ bed output exists'); 
 ok(-s $read_support_output_bed,'Read Support bed output exists and has size'); 
-
 is(compare($hq_output_bed, $expected_hq_bed_output), 0, 'hq bed output matched expected output');
 is(compare($read_support_output_bed, $expected_read_support_output), 0, 'Read Support bed output matched expected output');
 is(compare($lq_output_bed, $expected_lq_bed_output), 0, 'lq bed output matched expected output');
