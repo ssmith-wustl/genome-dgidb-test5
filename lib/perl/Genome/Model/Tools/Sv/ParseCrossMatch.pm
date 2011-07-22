@@ -38,7 +38,6 @@ class Genome::Model::Tools::Sv::ParseCrossMatch {
     ],
 };
 
-           
 sub create{
     my $class = shift;
     my $self  = $class->SUPER::create(@_) or return;

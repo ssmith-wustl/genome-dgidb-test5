@@ -46,10 +46,13 @@ sub execute {
         my $model_name   = ($model ? $model->name                     : '-');
         my $pp_name      = ($model ? $model->processing_profile->name : '-');
 
-        my $workflow = $latest_build->newest_workflow_instance;
-        my @workflow_steps = ($workflow ? $workflow->ordered_child_instances : ());
-        my @crashed_steps = grep { $_->status ne 'done' } @workflow_steps;
-        my $crashed_workflow_step = (@crashed_steps ? $crashed_steps[0]->name : '-');
+        my $crashed_workflow_step = '-';
+        eval {
+            my $workflow = $latest_build->newest_workflow_instance;
+            my @workflow_steps = ($workflow ? $workflow->ordered_child_instances : ());
+            my @crashed_steps = grep { $_->status ne 'done' } @workflow_steps;
+            $crashed_workflow_step = (@crashed_steps ? $crashed_steps[0]->name : '-');
+        };
 
         $crashed_workflow_step =~ s/^\d+\s+//;
 

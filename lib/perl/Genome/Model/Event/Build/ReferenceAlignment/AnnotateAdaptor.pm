@@ -44,7 +44,7 @@ class Genome::Model::Event::Build::ReferenceAlignment::AnnotateAdaptor{
     ],
 };
 
-sub execute{
+sub execute {
     my $self = shift;
 
     my $model = $self->model;
@@ -52,11 +52,15 @@ sub execute{
     
     my $annotator_version = $pp->transcript_variant_annotator_version;
     my $adaptor_version = "Genome::Model::Tools::Annotate::TranscriptVariants::Version" . $annotator_version . "::BedToAnnotation";
+    
+    my %adaptor_params;
+    $adaptor_params{snv_file} = $self->filtered_snp_output_file if defined $pp->snv_detection_strategy;
+    $adaptor_params{indel_file} = $self->filtered_indel_output_file if defined $pp->indel_detection_strategy;
+
 
     my $adaptor = $adaptor_version->create(
-        snv_file => $self->filtered_snp_output_file,
-        indel_file => $self->filtered_indel_output_file,
         output => $self->pre_annotation_filtered_variant_file,
+        %adaptor_params,
     );
     unless ($adaptor) {
         confess "Could not create annotation adaptor object!";
