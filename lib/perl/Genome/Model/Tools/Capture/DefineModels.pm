@@ -20,12 +20,6 @@ class Genome::Model::Tools::Capture::DefineModels {
   doc => "Defines SomaticVariation models, given a model-group of tumor-normal ref-alignment pairs",
 };
 
-sub help_synopsis {
-  return <<HELP
-gmt capture define-models
-HELP
-}
-
 sub help_detail {
   return <<HELP;
 Given a model-group containing reference-alignments of tumor and normal samples (usually sequenced
