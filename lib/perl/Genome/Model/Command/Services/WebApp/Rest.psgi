@@ -26,7 +26,7 @@ sub load_modules {
     Genome::Search->unregister_callbacks('UR::Object');
 }
 
-dispatch {
+sub dispatch_request {
 
     # Matcher for Static content related to a view
     # **/ = class name
@@ -38,7 +38,10 @@ dispatch {
     sub (GET + /**/*/* + .*) {
         # these get passed in from the matcher as documented above!
         my ( $self, $class, $perspective_toolkit, $filename, $extension ) = @_;
-        
+        $DB::single = 1;
+
+        $filename = $filename . "." . $extension;
+
         load_modules();
 
         if ( $class =~ /\./ ) {
@@ -157,13 +160,29 @@ dispatch {
         }
 
         my @matches;
+
         if ($class->isa("UR::Object::Set")) {
             $class =~ s/::Set$//;
-            @matches = $class->define_set(%$args);
+            eval {
+                @matches = $class->define_set(%$args);
+            };
+            if ($@) {
+                my $arg_str = join(' ', %$args);
+                return [ 500, [ 'Content-type', 'text/plain' ],
+                    ["Failed to define_set() for $class with args: $arg_str"] ];
+            }
         }
         else {
-            @matches = $class->get(%$args);
+            eval {
+                @matches = $class->get(%$args);
+            };
+            if ($@) {
+                my $arg_str = join(' ', %$args);
+                return [ 500, [ 'Content-type', 'text/plain' ],
+                    ["Failed to get() for $class with args: $arg_str"] ];
+            }
         }
+
         unless (@matches) {
             return [ 404, [ 'Content-type', 'text/plain' ],
                 ['No object found'] ];

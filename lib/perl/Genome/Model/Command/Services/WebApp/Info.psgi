@@ -8,8 +8,7 @@ package Genome::Model::Command::Services::WebApp::Info;
 use English;
 use Data::Dumper;
 
-dispatch {
-
+sub dispatch_request {
     sub (/**) {
         [
             200,
