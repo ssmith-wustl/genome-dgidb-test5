@@ -138,8 +138,7 @@ sub execute {
 sub module_dir {
     my $path = __FILE__;
     my ($dir) = $path =~ /(.*)\//;
-    print $dir . "\n";
-    return 1;
+    return $dir;
 }
 
 1;

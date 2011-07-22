@@ -44,6 +44,7 @@ sub _execute_tool {
         %params = Genome::Utility::Text::param_string_to_hash( $params_string );
     }
     $params{assembly_directory} = $self->build->data_directory;
+    $params{min_contig_length} = 50,
 
     $self->status_message('Params: '.Data::Dumper::Dumper(\%params));
 

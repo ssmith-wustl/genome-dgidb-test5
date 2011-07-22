@@ -1,7 +1,9 @@
+#!/usr/bin/env perl
 package Genome::Model::Command::Services::WebApp::Cache;
 
 use strict;
 use warnings;
+use Data::Dumper;
 
 # don't cache static things.
 # every url gets matched against this, so it shouldn't be a long list
@@ -9,10 +11,8 @@ use warnings;
 our @never_cache = (
     qr{(?<!html)$},
     qr{Genome::Search::Query}i,
-    qr{genome/search/query}i
+    qr{genome/search}i
 );
-
-use Data::Dumper;
 
 use Plack::Util;
 use Digest::MD5;

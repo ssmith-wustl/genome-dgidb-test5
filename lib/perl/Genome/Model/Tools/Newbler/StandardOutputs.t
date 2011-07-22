@@ -47,7 +47,6 @@ for my $file ( @files_to_link ) {
 my $create = Genome::Model::Tools::Newbler::StandardOutputs->create(
     assembly_directory => $temp_dir,
     min_contig_length => 20,
-    default_gap_size => 10,
 );
 ok( $create, "Created tool" );
 ok( $create->execute, "Successfully executed tool" );
