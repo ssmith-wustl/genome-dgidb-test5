@@ -393,6 +393,9 @@ sub _verify_no_other_models_with_same_name_and_type_name_exist {
 sub default_model_name {
     my ($self, %params) = @_;
 
+    my $auto_increment = delete $params{auto_increment};
+    $auto_increment = 1 unless defined $auto_increment;
+
     my $name_template = ($self->subject_name).'.';
     $name_template .= 'prod-' if ($self->user_name eq 'apipe-builder' || $params{prod});
 
@@ -422,7 +425,7 @@ sub default_model_name {
 
     my $name = sprintf($name_template, '', '');
     my $cnt = 0;
-    while ( Genome::Model->get(name => $name) ) {
+    while ( $auto_increment && Genome::Model->get(name => $name) ) {
         $name = sprintf($name_template, '-', ++$cnt);
     }
 
