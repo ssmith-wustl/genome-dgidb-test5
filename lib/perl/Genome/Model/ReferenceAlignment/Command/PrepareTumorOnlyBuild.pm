@@ -19,7 +19,7 @@ class Genome::Model::ReferenceAlignment::Command::PrepareTumorOnlyBuild {
             doc => 'Version of bed file to require.',
             default => '2',
         },
-        previously_discovered_snvs => {
+        previously_detected_snvs => {
             is => 'Text',
             doc => 'Intersect snvs with this list to filter out previously detected snvs',
         },
@@ -64,6 +64,8 @@ sub execute {
     }
 
     my $output_dir = $build_dir."/effects";
+    my $in_roi = $output_dir."/snvs.hq.in_roi.v".$version.".bed";
+    my $not_in_roi = $output_dir."/snvs.hq.not_in_roi.v".$version.".bed";
     my $in_dbsnp_file = $output_dir."/snvs.hq.in_dbsnp.v".$version.".bed";
     my $not_in_dbsnp_file = $output_dir."/snvs.hq.not_in_dbsnp.v".$version.".bed";
     my $previously_detected_file = $output_dir."/snvs.hq.previously_detected.v".$version.".bed";
@@ -73,7 +75,7 @@ sub execute {
     my $tier_file_location = $annotation_build->tiering_bed_files_by_version(2);
     unless(defined($tier_file_location)){
         die $self->error_message("Could not locate tiering files!");
-    }
+    }    
 
     #create the output directory 
     unless(-d $output_dir){
@@ -84,10 +86,34 @@ sub execute {
         Genome::Sys->create_directory($output_dir);
     }
 
+    #my $roi_file = $output_dir."/target_region_bid_".$build->id.".bed";
+    unless(-e $in_roi && -e $not_in_roi){
+        my $roi_name = $build->model->region_of_interest_set_name;
+        my $roi = Genome::FeatureList->get( name => $roi_name);
+        my @roi = split /\n/, $roi->processed_bed_file_content;
+        my $roi_temp = Genome::Sys->create_temp_file_path;
+        my $rtfh = Genome::Sys->open_file_for_writing($roi_temp);
+        for my $line (@roi){
+            my @line = split /\s/, $line;
+            print $rtfh join("\t",($line[0],$line[1],$line[2]))."\n";
+        }
+        $rtfh->close;
+
+        my $roi_intersection_cmd = Genome::Model::Tools::Joinx::Intersect->create(
+            input_file_a => $snv_bed_file,
+            input_file_b => $roi_temp,
+            miss_a_file => $not_in_roi,
+            output_file => $in_roi, 
+        );
+        unless($roi_intersection_cmd->execute){
+            die $self->error_message("Could not complete ROI intersection.");
+        }
+        $self->status_message("Completed ROI intersection: ".$not_in_roi."\n");
+    }
     #run dbSNP intersection
     unless(-e $not_in_dbsnp_file && -e $in_dbsnp_file){
         my $dbsnp_intersection = Genome::Model::Tools::Joinx::Intersect->create(
-            input_file_a => $snv_bed_file,
+            input_file_a => $in_roi,
             input_file_b => $dbsnp_file,
             miss_a_file => $not_in_dbsnp_file,
             output_file => $in_dbsnp_file,
@@ -103,11 +129,12 @@ sub execute {
         }
     }
 
-    #intersect with previously discovered snvs
+    #intersect with previously detected snvs
     unless(-e $novel_file && -e $previously_detected_file){
+        my $previously_detected_snvs = $self->previously_detected_snvs;
         my $dbsnp_intersection = Genome::Model::Tools::Joinx::Intersect->create(
             input_file_a => $not_in_dbsnp_file,
-            input_file_b => $dbsnp_file,
+            input_file_b => $previously_detected_snvs,
             miss_a_file => $novel_file,
             output_file => $previously_detected_file,
             dbsnp_match => 1,

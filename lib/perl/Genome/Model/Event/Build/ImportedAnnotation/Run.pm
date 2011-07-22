@@ -180,9 +180,7 @@ sub generate_rna_seq_files {
     my $self = shift;
     my $build = shift;
 
-    $DB::single = 1; #TODO: remove me
-
-    unless(Genome::Model::Event::Build::ImportedAnnotation::CopyRibosomalGeneNames->execute(output_file => $build->_annotation_data_directory .'/RibosomalGeneNames.txt')){
+    unless(Genome::Model::Event::Build::ImportedAnnotation::CopyRibosomalGeneNames->execute(output_file => $build->_annotation_data_directory .'/RibosomalGeneNames.txt', species_name => $build->species_name)){
         confess "Failed to generate the ribosomal gene name file!";
     }
 

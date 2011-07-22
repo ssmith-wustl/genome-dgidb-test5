@@ -19,7 +19,7 @@ class Genome::MiscNote {
         entry_date         => { is => 'DateTime' },
     ],
     has_optional => [
-        body_text          => { is => 'VARCHAR2' },
+        body_text          => { is => 'VARCHAR2', len => 4000 },
     ],
     schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',

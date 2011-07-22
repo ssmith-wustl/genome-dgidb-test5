@@ -478,6 +478,11 @@ sub _cross_match_validation {
     );
     my $result = $cm_indel->execute;
 
+    # unless explicitly deleted, this rather large object will stay in the UR
+    # cache forever
+    $cm_indel->delete;
+    $cm_indel = undef;
+
     if ($result && $result =~ /\S+/) {
 	    $self->_UpdateSVs($result,$makeup_size,$regionsize,$tigra_sv_fa,$ctg_type, $cm_out);
     }

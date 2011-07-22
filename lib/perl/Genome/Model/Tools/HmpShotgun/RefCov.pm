@@ -92,7 +92,7 @@ sub execute {
     	$self->status_message("Expected output files exist.  Skipping generation of ref cov stats file.");
     } else {
   
-    	my $cmd = "/gscuser/jwalker/svn/TechD/RefCov/bin/refcov-64.pl ".$self->aligned_bam_file." ".$self->regions_file." ".$stats_file;    
+    	my $cmd = "gmt5.12.1 ref-cov standard ".$self->aligned_bam_file." ".$self->regions_file." ".$stats_file;    
      														
     	$self->status_message("Running ref cov report at ".UR::Time->now);
     	my $rv = Genome::Sys->shellcmd(cmd=>$cmd);
