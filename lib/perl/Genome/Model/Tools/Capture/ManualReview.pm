@@ -127,6 +127,10 @@ sub execute {
     }
   }
 
+  # Unless they already exist, create subdirectories to keep aside cases that won't be reviewed
+  mkdir "$output_dir/dnu_qc_fail" unless( -e "$output_dir/dnu_qc_fail" );
+  mkdir "$output_dir/dnu_hypermutated" unless( -e "$output_dir/dnu_hypermutated" );
+
   return 1;
 }
 
