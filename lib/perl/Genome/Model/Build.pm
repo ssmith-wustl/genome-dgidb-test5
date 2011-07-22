@@ -1061,6 +1061,7 @@ sub fail {
         $self->add_note(
             header_text => 'Failed Error',
             body_text => $error->error,
+            auto_truncate_body_text => 1,
         );
     }
     
