@@ -21,6 +21,8 @@ class Genome::Model::Tools::Newbler::CreatePlacedReadsFiles {
         default_gap_size => {
             is => 'Number',
             doc => 'Gap size to assign when newbler does not assign one',
+            is_optional => 1,
+            default_value => 10,
         }
     ],
 };
@@ -31,7 +33,8 @@ sub help_brief {
 
 sub help_detail {
     return <<"EOS"
-gmt newbler create-placed-reads-files --assembly-directory /gscmnt/111/newbler_assembly --min-contig-length 200 --default-gap-size
+gmt newbler create-placed-reads-files --assembly-directory /gscmnt/111/newbler_assembly --min-contig-length 200
+gmt newbler create-placed-reads-files --assembly-directory /gscmnt/111/newbler_assembly --min-contig-length 200 --default-gap-size 25
 EOS
 }
 
