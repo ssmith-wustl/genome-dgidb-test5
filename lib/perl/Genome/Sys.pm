@@ -32,6 +32,7 @@ sub swpath {
         return $path;
     }
     if ($path = `which $name$version`) {
+        chomp $path;
         return $path;
     }
     if ($path = `which $name`) {
