@@ -6,78 +6,55 @@ use warnings;
 use Genome;
 use Bio::SeqIO;
 use AMOS::AmosLib;
+use Data::Dumper 'Dumper';
 
 class Genome::Model::Tools::Velvet::CreateReadsFiles {
     is => 'Genome::Model::Tools::Velvet',
     has => [
-	sequences_file => {
-	    is => 'Text',
-	    is_optional => 1,
-	    doc => 'Velvet created sequences file: Sequences',
-	},
-	afg_file => {
-	    is => 'Text',
-	    is_optional => 1,
-	    doc => 'Velvet created afg file: velvet_asm.afg',
-	},
 	assembly_directory => {
 	    is => 'Text',
 	    doc => 'Assembly directory',
 	},
+        min_contig_length => {
+            is => 'Number',
+            doc => 'Minimum contig length to export reads for',
+        },
     ],
 };
 
 sub help_brief {
-    'Tool to create velvet readinfo.txt file'
-}
-
-sub help_synopsis {
-    return <<EOS
-EOS
+    'Tool to create pcap style readinfo.txt and reads.placed files'
 }
 
 sub help_detail {
     return <<EOS
-gmt velvet create-reads-files --sequences-file /gscmnt/111/velvet_assembly/Sequences --contigs-fasta-file /gscmnt/111/velvet_assembly/contigs.fa --assembly_directory /gscmnt/111/velvet_assembly
+gmt velvet create-reads-files --assembly_directory /gscmnt/111/velvet_assembly --min-contig-length 200
 EOS
 }
 
 sub execute {
     my $self = shift;
 
-    #validate assembly directory
-    unless(-d $self->assembly_directory) {
-	$self->error_message("Can't find or invalid assembly directory: ".$self->assembly_directory);
-	return;
-    }
-
     #make edit_dir
     unless ( $self->create_edit_dir ) {
-	$self->error_message("Failed to creat edit_dir");
+	$self->error_message("Assembly edit_dir does not exist and could not create one");
 	return;
     }
 
     #readinfo.txt
     unlink $self->read_info_file;
-    my $ri_fh = Genome::Sys->open_file_for_writing($self->read_info_file) ||
-	return;
+    my $ri_fh = Genome::Sys->open_file_for_writing( $self->read_info_file );
 
     #reads.placed file
     unlink $self->reads_placed_file;
-    my $rp_fh = Genome::Sys->open_file_for_writing($self->reads_placed_file) ||
-	return;
+    my $rp_fh = Genome::Sys->open_file_for_writing( $self->reads_placed_file );
 
     #velvet output Sequences file
-    my $sequences_file = ( $self->sequences_file ) ? $self->sequences_file : $self->velvet_sequences_file;
-    my $seq_fh = Genome::Sys->open_file_for_reading( $sequences_file ) or return;
-    my $bio_seqio_fh = Bio::SeqIO->new(-fh => $seq_fh, -format => 'fasta', -noclose => 1);
-
-    #velvet output afg file
-    my $afg_file = ($self->afg_file ) ? $self->afg_file : $self->velvet_afg_file;
+    my $seq_fh = Genome::Sys->open_file_for_reading( $self->velvet_sequences_file );
+    my $bio_seqio_fh = Bio::SeqIO->new(-file => $self->velvet_sequences_file, -format => 'fasta', -noclose => 1);
 
     #velvet output afg file handle
-    my $afg_fh = Genome::Sys->open_file_for_reading($afg_file)
-        or return;
+    my $afg_fh = Genome::Sys->open_file_for_reading( $self->velvet_afg_file );
 
     #load gap sizes
     my $gap_sizes = $self->get_gap_sizes;
@@ -87,19 +64,27 @@ sub execute {
     }
 
     #load contigs lengths
-    my $contig_lengths = $self->get_contig_lengths($afg_file);
+    my $contig_lengths = $self->get_contig_lengths( $self->velvet_afg_file );
     unless ($contig_lengths) {
 	$self->error_message("Failed to get contigs lengths");
 	return;
     }
 
     #stores read names and seek pos in hash or array indexed by read index
-    my $names_and_positions = $self->load_read_names_and_seek_pos( $sequences_file );
+    my $names_and_positions = $self->load_read_names_and_seek_pos( $self->velvet_sequences_file );
     unless ($names_and_positions) {
 	$self->error_message("Failed to load read names and seek pos from Sequences file");
 	return;
     }
 
+    my $scaffolds_info;
+    unless( $scaffolds_info = $self->get_scaffold_info_from_afg_file ) {
+        $self->error_message("Failed to get scaffold info from contigs.fa file");
+        return;
+    }
+
+    my $supercontig_number = 0;
+    my $contig_number = 0;
     while (my $record = getRecord($afg_fh)) {
 	my ($rec, $fields, $recs) = parseRecord($record);
 	#iterating through contigs
@@ -110,9 +95,22 @@ sub execute {
 		$self->error_message("Failed get contig length for seq: ");
 		return;
 	    }
+
+            #filter contigs less than min length
+            my $look_up_name = $fields->{eid};
+            $look_up_name =~ s/\-/\./;
+            next if $scaffolds_info->{$look_up_name}->{filtered_supercontig_length} < $self->min_contig_length;
+            next if $scaffolds_info->{$look_up_name}->{contig_length} < $self->min_contig_length;
+
 	    #convert afg contig format to pcap format
 	    my ($sctg_num, $ctg_num) = split('-', $fields->{eid});
-	    my $contig_name = 'Contig'.--$sctg_num.'.'.++$ctg_num;
+            $self->{SUPERCONTIG_NUMBER} = $sctg_num unless exists $self->{SUPERCONTIG_NUMBER};
+            if( not $self->{SUPERCONTIG_NUMBER} eq $sctg_num ) {
+                $self->{SUPERCONTIG_NUMBER} = $sctg_num;
+                $supercontig_number++;
+                $contig_number = 0; #re-set to 0
+            }
+            my $contig_name = 'Contig'.$supercontig_number.'.'.++$contig_number;
 	    #iterating through reads
 	    for my $r (0 .. $#$recs) {
 		my ($srec, $sfields, $srecs) = parseRecord($recs->[$r]);
@@ -131,23 +129,11 @@ sub execute {
 
 		    #get read contig start, stop and orientaion
 		    my ($ctg_start, $ctg_stop, $c_or_u) = $self->_read_start_stop_positions($sfields); 
-
-		    #look up read name from read_names sqlite db
-		    #this won't work for assemblies with > 2.5M assembled reads
-		    #my ($read_name, $seek_pos) = $read_names_db->get_read_name_from_afg_index($sfields->{src});
-
-		    #unless (exists $names_and_positionis->{$fields->{src}}) {
+                    
 		    unless ( ${$names_and_positions}[$sfields->{src}] ) {
 			$self->error_message("Failed get read name and seek pos for reads index number ".$sfields->{src});
 			return;
 		    }
-
-#		    my $seek_pos = @{$names_and_positions[$sfields->{src}]}[0];
-#		    my $read_name = @{$names_and_positions[$sfields->{src}]}[
-		    #TODO - make this happen if RAM is not overloaded by it
-#		    my $read_length = @{$names_and_postions->{$sfields->{src}}}[3];
-		    #delete $names_and_positionis->{$fields->{src}};
-
 		    my $seek_pos = ${$names_and_positions}[$sfields->{src}][0];
 		    my $read_name = ${$names_and_positions}[$sfields->{src}][1];
 
@@ -169,7 +155,7 @@ sub execute {
 		    my $sctg_start = $self->_get_supercontig_position($contig_lengths, $gap_sizes, $contig_name);
 		    $sctg_start += $ctg_start;
 
-		    $rp_fh->print("* $read_name 1 $read_length $c_or_u $contig_name Supercontig$sctg_num $ctg_start $sctg_start\n");
+		    $rp_fh->print("* $read_name 1 $read_length $c_or_u $contig_name Supercontig$supercontig_number $ctg_start $sctg_start\n");
 		}
 	    }
 	}

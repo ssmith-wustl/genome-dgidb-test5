@@ -16,6 +16,8 @@ class Genome::Model::Tools::Newbler::ToPcapAce {
         default_gap_size => {
             is => 'Number',
             doc => 'Gap size to assign when newbler does not assign one',
+            is_optional => 1,
+            default_value => 10,
         },
         min_contig_length => {
             is => 'Number',
@@ -31,7 +33,7 @@ sub help_brief {
 sub help_detail {
     return <<"EOS"
 gmt newbler to-pcap-ace --assembly-directory /gscmnt/111/assembly/newbler_e_coli
-gmt newbler to-pcap-ace --assembly-directory /gscmnt/111/assembly/newbler_e_coli --newbler-scaffolds-file assembly-directory /gscmnt/111/assembly/newbler_e_coli/454Scaffolds.txt --newbler-ace-file --assembly-directory /gscmnt/111/assembly/newbler_e_coli/consed/edit_dir/454Contigs.ace --default-gap-size 20
+gmt newbler to-pcap-ace --assembly-directory /gscmnt/111/assembly/newbler_e_coli --min-contig-length 200
 EOS
 }
 

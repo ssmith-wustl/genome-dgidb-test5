@@ -21,7 +21,7 @@ use_ok('Genome::Model::Build::DeNovoAssembly::Velvet') or die;
 my $base_dir = '/gsc/var/cache/testsuite/data/Genome-Model/DeNovoAssembly';
 my $archive_path = $base_dir.'/inst_data/-7777/archive.tgz';
 ok(-s $archive_path, 'inst data archive path') or die;
-my $example_version = '4';
+my $example_version = '5';
 my $example_dir = $base_dir.'/velvet_v'.$example_version;
 ok(-d $example_dir, 'example dir') or die;
 my $tmpdir = File::Temp::tempdir(CLEANUP => 1);
@@ -74,7 +74,7 @@ my $pp = Genome::ProcessingProfile::DeNovoAssembly->create(
     assembler_name => 'velvet one-button',
     assembler_version => '0.7.57-64',
     assembler_params => '-hash_sizes 31 33 35 -min_contig_length 100',
-    post_assemble => 'standard-outputs',
+    post_assemble => 'standard-outputs -min_contig_length 50',
 );
 ok($pp, 'pp') or die;
 
@@ -187,19 +187,10 @@ foreach my $file_name (qw/
     is(File::Compare::compare($file, $example_file), 0, "$file_name files match");
 }
 
-foreach my $file_name ('collated.fasta.gz') {#, 'collated.fasta.qual.gz') {
-    my $example_file = $example_dir."/edit_dir/$file_name";
-    ok(-s $example_file, "$file_name example file exists");
-    my $file = $build->data_directory."/edit_dir/$file_name";
-    ok(-s $file, "$file_name file exists");
-    
-    my @diff = `zdiff $file $example_file`;
-    is(scalar(@diff), 0, "$file_name file matches");
-}
-
 # METRICS TODO
 
 #print $build->data_directory."\n"; <STDIN>;
+
 done_testing();
 exit;
 
