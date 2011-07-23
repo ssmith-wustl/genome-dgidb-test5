@@ -73,8 +73,8 @@ sub execute {
     }
 
     # create low level bam object
-    my $refcov_bam_a  = Genome::Model::Tools::RefCov::Bam->new(bam_file => $self->bam_file_a );
-    my $refcov_bam_b  = Genome::Model::Tools::RefCov::Bam->new(bam_file => $self->bam_file_b );
+    my $refcov_bam_a  = Genome::Model::Tools::RefCov::Bam->create(bam_file => $self->bam_file_a );
+    my $refcov_bam_b  = Genome::Model::Tools::RefCov::Bam->create(bam_file => $self->bam_file_b );
 
     my $bam_a = $refcov_bam_a->bio_db_bam;
     my $bam_b = $refcov_bam_b->bio_db_bam;
@@ -140,8 +140,8 @@ sub execute {
         unless (scalar( @{ $coverage_b } ) == $length) {
             die('The length of the locus '. $length .' does not match the coverage length '. scalar( @{ $coverage_b }));
         }
-        my $refcov_stats_a = Genome::Model::Tools::RefCov::Stats->new( coverage => $coverage_a , min_depth => $min_depth);
-        my $refcov_stats_b = Genome::Model::Tools::RefCov::Stats->new( coverage => $coverage_b , min_depth => $min_depth);
+        my $refcov_stats_a = Genome::Model::Tools::RefCov::Stats->create( coverage => $coverage_a , min_depth => $min_depth);
+        my $refcov_stats_b = Genome::Model::Tools::RefCov::Stats->create( coverage => $coverage_b , min_depth => $min_depth);
         #my ($uncovered, $a_unique, $shared, $b_unique) = &compare_coverage_arrays($coverage_a, $coverage_b);
         my $overlap_results = &overlap_results($coverage_a,$coverage_b);
         #unless ($overlap_results->{no_set_coverage} eq $uncovered) {

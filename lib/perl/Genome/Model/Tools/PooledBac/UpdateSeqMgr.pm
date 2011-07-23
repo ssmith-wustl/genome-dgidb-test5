@@ -75,9 +75,13 @@ sub execute {
 	unless (-d "$seqmgr_link/edit_dir" ) {
 	    Genome::Sys->create_directory("$seqmgr_link/edit_dir");
 	}
-        foreach my $ace_file (glob('edit_dir/*'))
+        foreach my $file (glob('edit_dir/*'))
         {
-            system "/bin/cp -rfP $ace_file $seqmgr_link/edit_dir/.";
+            my $new_file_name = File::Basename::basename($file);
+            if ( $new_file_name =~ /$clone_name\.ace$/ ) {
+                $new_file_name =~ s/\.ace$/\.fasta\.screen\.ace/;
+            }
+            system "/bin/cp -rfP $file $seqmgr_link/edit_dir/$new_file_name";
         }
 
 	unless (-d "$seqmgr_link/phd_dir" ) {

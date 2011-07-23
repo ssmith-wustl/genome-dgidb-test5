@@ -17,8 +17,29 @@ sub process_source {
     while(my $line = $input_fh->getline) {
         chomp $line;
         next if $line =~ /^#/;
-        my ($chr,$start,undef, $ref,$var) = split("\t", $line);
+        # VCF format
+        my ($chr,$start,$id, $ref,$var,$qual, $filter, $info, $genotype_keys, $genotype_values) = split("\t", $line);
         my $stop;
+        my @keys = split ":", $genotype_keys;
+        my @values = split ":", $genotype_values;
+
+        unless (scalar @keys == scalar @values) {
+            die $self->error_message("Number of keys and values in the genotype fields did not match");
+        }
+        my %genotype_hash;
+        for my $key (@keys) {
+            $genotype_hash{$key} = shift @values;
+        }
+        # Score will sometimes be floating point and we don't want that
+        my $score = int($genotype_hash{GQ});
+        my $depth = $genotype_hash{DP};
+        if (!defined $score) {
+            $score = "-";
+        }
+        if (!defined $depth) {
+            $depth = "-";
+        }
+
         if(length($ref) == 1 and length($var) == 1) {
             #SNV case
             $stop = $start;
@@ -37,7 +58,7 @@ sub process_source {
             die $self->error_message('Unhandled variant type encountered');
         }
         
-        $self->write_bed_line($chr, $start, $stop, $ref, $var);
+        $self->write_bed_line($chr, $start, $stop, $ref, $var, $score, $depth);
     }
     $input_fh->close;
     return 1;

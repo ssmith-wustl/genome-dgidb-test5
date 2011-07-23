@@ -5,20 +5,20 @@ use warnings;
 
 use Genome;
 use Bio::SeqIO;
-use IO::File;
+use Data::Dumper 'Dumper';
+
 
 class Genome::Model::Tools::Velvet::CreateGapFile {
     is => 'Genome::Model::Tools::Velvet',
     has => [
-	contigs_fasta_file => {
-	    is => 'Text',
-	    is_optional => 1,
-	    doc => 'Velvet created contigs.fa file',
-	},
         assembly_directory => {
             is => 'Text',
             doc => 'Assembly build directory',
         },
+        min_contig_length => {
+            is => 'Number',
+            doc => 'Minimum contig length to process',
+        }
     ],
 };
 
@@ -26,14 +26,9 @@ sub help_brief {
     'Tool to create gap.txt file from velvet created contigs.fa file';
 }
 
-sub help_synopsis {
-    return <<EOS
-gmt velvet create-gap-file --contigs-fasta-file /gscmnt/111/velvet_assembly/contigs.fa --assembly-directory /gscmnt/111/velvet_assembly
-EOS
-}
-
 sub help_detail {
     return <<EOS
+gmt velvet create-gap-file --assembly-directory /gscmnt/111/assembly/e_coli_velvet_assembly --min-contig-length 200
 EOS
 }
 
@@ -41,60 +36,87 @@ sub execute {
     my $self = shift;
 
     unless ( $self->create_edit_dir ) {
-	$self->error_message("Failed to create edit_dir");
+	$self->error_message("assembly edit_dir does not exist and could not create one");
 	return;
     }
 
-    my $contigs_fa_file = ( $self->contigs_fasta_file ) ? $self->contigs_fasta_file : $self->velvet_contigs_fa_file;
-
-    unless ( -s $contigs_fa_file ) {
-	$self->error_message("Failed to find file: $contigs_fa_file");
-	return;
+    my $scaf_info;
+    unless( $scaf_info = $self->get_scaffold_info_from_afg_file ) {
+        $self->error_message( "Failed to get scaf info from afg file" );
+        return;
     }
 
     unlink $self->gap_sizes_file;
-    my $fh = Genome::Sys->open_file_for_writing($self->gap_sizes_file) ||
-	return;
+    my $fh = Genome::Sys->open_file_for_writing( $self->gap_sizes_file );
+    
+    for my $contig ( sort {$a<=>$b} keys %$scaf_info ) {
+        my ( $supercontig, $contig ) = $contig =~ /(\d+)\.(\d+)/;
+        my $next_contig_number = $contig + 1;
+        my $next_contig_in_scaf = $supercontig.'.'.$next_contig_number;
 
-    my $io = Bio::SeqIO->new(-format => 'fasta', -file => $contigs_fa_file);
-
-    while (my $seq = $io->next_seq) {
-	my @bases = split (/N+/i, $seq->seq);
-	my @n_s = split (/[ACGT]+/i, $seq->seq);
-        #SINGLE CONTIG SCAFFOLD .. OR ALL NS .. NO GAP INFO NEEDED
-	next if scalar @bases le 1;
-	#RESOLVE BLANK ELEMENT IN SHIFTED ARRAY
-	if ($seq->seq =~ /^N/i) {
-	    shift @bases; #BLANK
-	    shift @n_s;   #LEADING NS .. NOT NEEDED
-	}
-	else {
-	    shift @n_s;   #BLANK
-	}
-	#GET RID OF TAILING NS .. NOT NEEDED
-	pop @n_s if $seq->seq =~ /N$/i;
-	#DOUBLE CHECK BASES AND GAP COUNTS
-	unless (scalar @n_s == scalar @bases - 1) {
-	    $self->error_message("Error: Unable to match sequences and gaps properly \n");
-	    return;
-	}
-	#DECIPER SUPERCONTIG/CONTIG NAMES
-	my ($node_num) = $seq->primary_id =~ /NODE_(\d+)_/;
-	unless ($node_num) {
-	    $self->error_message("Can not determine node number, expecting NODE_#?_ but got ".$seq->primary_id);
-	    return;
-	}
-	my $supercontig_number = $node_num - 1;
-	my $contig_number = 1;
-	#ITERATE THROUGH BASES ARRAY AND ASSIGN GAP SIZE
-	while (my $base_string = shift @bases) {
-	    next if scalar @bases == 1; #LAST CONTIG OF SCAF .. NO GAP INFO
-	    my $gap_size = length (shift @n_s);
-	    #PRINT CONTIG NAME AND GAP SIZE: eg Contig855.26 91
-	    $fh->print ('Contig'.$supercontig_number.'.'.$contig_number.' '.$gap_size."\n");
-	    $contig_number++;
-	}
+        if ( exists $scaf_info->{$next_contig_in_scaf} ) {
+            my $pcap_name = 'Contig'.--$supercontig.'.'.++$contig;
+            $fh->print( "$pcap_name 20\n" ); #default gap size for unknown gaps
+        }
     }
+
+    $fh->close;
+    return 1;
+}
+
+#not used by maybe used when/if contigs.fa file reports reliable gap info
+sub gap_sizes_from_contigs_fa_file {
+    my $self = shift;
+    
+    unlink $self->gap_sizes_file;
+    my $fh = Genome::Sys->open_file_for_writing($self->gap_sizes_file);
+
+    my $io = Bio::SeqIO->new(-format => 'fasta', -file => $self->velvet_contigs_fa_file );
+
+    my $supercontig_number = 0;
+    my %gap_sizes;
+    while (my $seq = $io->next_seq) {
+        #remove lead/tail-ing Ns .. shouldn't be any but could be bad if there
+        $seq =~ s/^N+//;
+        $seq =~ s/N+$//;
+        #skip if less than min length
+        next unless length $seq->seq >= $self->min_contig_length;
+        #split into array of bases and gaps
+	my @bases = split (/N+/i, $seq->seq);
+	my @gaps = split (/[ACGT]+/i, $seq->seq);
+        #remove undefined first @gaps element
+        shift @gaps;
+
+	my $contig_number = 0;
+        my $is_leading_contig = 1;
+        my $contig_name;
+        my $significant_contig_exists = 0;
+
+        for my $i ( 0 .. $#bases ) {
+            $significant_contig_exists = 1 if length $bases[$i] >= $self->min_contig_length;
+
+            next if $is_leading_contig and length $bases[$i] < $self->min_contig_length;
+            next if not $gaps[$i]; #no gap info for last contig in scaffold
+            next if $i == $#bases; #no gap info for last contig in scaffold
+
+            if ( length $bases[$i] >= $self->min_contig_length ) {
+                $contig_name = $supercontig_number.'.'.++$contig_number;
+                $gap_sizes{$contig_name} += length $gaps[$i];
+                $is_leading_contig = 0;
+                $significant_contig_exists = 1;
+            }
+            else {
+                $gap_sizes{$contig_name} += length $bases[$i];
+                $gap_sizes{$contig_name} += length $gaps[$i];
+            }
+        }
+        $supercontig_number++ if $significant_contig_exists == 1;
+    }
+    #write gap file
+    for my $contig ( sort {$a<=>$b} keys %gap_sizes ) {
+        $fh->print( 'Contig'.$contig.' '.$gap_sizes{$contig}."\n" );
+    }
+
     $fh->close;
     return 1;
 }

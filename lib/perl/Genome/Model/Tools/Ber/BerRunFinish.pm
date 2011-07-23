@@ -513,6 +513,10 @@ sub execute
         = scalar(@rfam_all) + scalar(@rnammer_all) + scalar(@trna_all);
     $Totals_with_dead_orfs = scalar(@orfs);
 
+	my @p5_blastx = $db->fetch( -query => "Find Sequence $locus_tag\_C*.blastx.p5*" );
+    my $p5_blastx_genes = scalar(@p5_blastx);
+    my $rnammer_all = scalar(@rnammer_all);
+
     print "\n\n" . $locus_tag . "\n\n";
     print $acefilecount
         . "\tSubsequence counts from acefile $shortph5file\n\n";
@@ -543,6 +547,13 @@ sub execute
             "HOUSTON, WE HAVE A PROBLEM, p5_hybrid ace file counts DO NOT MATCH p5_hybrid counts in ACEDB (Totals_with_dead)... BAD :(\n\n";
 
     }
+
+    print qq{\n\nOther information from AceDB:\n};
+    print qq{-----------------------------\n};
+
+	print qq{blastx p5_hybrid gene count:\t$p5_blastx_genes\n};
+	print qq{genes with rnammer hits:\t $rnammer_all\n\n};
+
 #
     ## We will dump gff for this genome
     unless ( $cwd eq $acedb_data_path )
@@ -707,6 +718,14 @@ sub execute
             qq{HOUSTON, WE HAVE A PROBLEM, p5_hybrid ace file counts DO NOT MATCH p5_hybrid counts in ACEDB (Totals_with_dead)... BAD :\(  },
             "\n\n";
     }
+
+    print $rtfile_fh qq{Other information from AceDB:\n};
+    print $rtfile_fh qq{-----------------------------\n};
+
+	print $rtfile_fh qq{blastx p5_hybrid gene count:\t$p5_blastx_genes\n};
+
+	print $rtfile_fh qq{genes with rnammer hits:\t $rnammer_all\n\n};
+
     print $rtfile_fh qq{GFF dump for thus genome can be downloaded from: $acedb_data_path/$gff_dump_file\n\n};
     
     ## Dead gene stuff

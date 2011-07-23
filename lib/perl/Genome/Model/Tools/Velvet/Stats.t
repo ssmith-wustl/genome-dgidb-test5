@@ -9,7 +9,8 @@ use Test::More;
 
 use_ok( 'Genome::Model::Tools::Velvet::Stats' ) or die;
 
-my $data_dir = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Assembly-Stats/Velvet_v3";
+my $version = 'v1';
+my $data_dir = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Velvet/Stats-".$version;
 ok(-d $data_dir, "Found data directory: $data_dir") or die;
 
 #create temp test dir
@@ -20,7 +21,11 @@ mkdir $temp_dir.'/edit_dir';
 ok(-d $temp_dir.'/edit_dir', "Made edit_dir in temp test_dir");
 
 #link assembly dir files needed to run stats
-my @files_to_link = qw/ velvet_asm.afg Sequences contigs.fa /;
+my @files_to_link = qw/
+    velvet_asm.afg
+    Sequences contigs.fa
+    input-collated.fastq
+    /;
 foreach (@files_to_link) {
     ok(-s $data_dir."/$_", "Test data file $_ exists");
     symlink($data_dir."/$_", $temp_dir."/$_");
@@ -28,8 +33,14 @@ foreach (@files_to_link) {
 }
 
 #link assembly/edit_dir files needed to run stats
-@files_to_link = qw/ velvet_asm.ace test.fasta.gz test.fasta.qual.gz
-                        contigs.bases contigs.quals reads.placed readinfo.txt /;
+@files_to_link = qw/
+    velvet_asm.ace
+    gap.txt
+    contigs.bases
+    contigs.quals
+    reads.placed
+    readinfo.txt
+    /;
 foreach my $file (@files_to_link) {
     ok(-s $data_dir."/edit_dir/$file", "Test data file $file file exists");
     symlink($data_dir."/edit_dir/$file", $temp_dir."/edit_dir/$file");
@@ -39,8 +50,6 @@ foreach my $file (@files_to_link) {
 #create stats
 my $create = Genome::Model::Tools::Velvet::Stats->create(
     assembly_directory => $temp_dir,
-    out_file => $temp_dir.'/edit_dir/stats.txt',
-    no_print_to_screen => 0,
     );
 ok( $create, "Created tool" );
 ok( $create->execute, "Successfully created stats" );
@@ -55,6 +64,8 @@ ok(-s $data_stats,, "Test data dir stats.txt file exists");
 #compare files
 my @diff = `sdiff -s $data_stats $temp_stats`;
 is(scalar @diff, 0, "Stats files match") or diag(@diff);
+
+#<STDIN>;
 
 done_testing();
 
