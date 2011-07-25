@@ -65,11 +65,6 @@ class Genome::Model::Command::Define::ImportedReferenceSequence {
             is_optional => 1,            
             doc => 'Copied from species_name.'
         },
-        subject_class_name => {
-            is_constant => 1,
-            value => 'Genome::Taxon',
-            doc => 'All imported reference sequence model subjects are represented by the Genome::Taxon class.'
-        },
         on_warning => {
             valid_values => ['prompt', 'exit', 'continue'],
             default_value => 'prompt',
@@ -85,14 +80,6 @@ class Genome::Model::Command::Define::ImportedReferenceSequence {
         },
    ],
 };
-
-sub _shell_args_property_meta {
-    return shift->Genome::Command::Base::_shell_args_property_meta(@_);
-}
-
-sub resolve_class_and_params_for_argv {
-    return shift->Genome::Command::Base::resolve_class_and_params_for_argv(@_);
-}
 
 sub help_synopsis {
     return "genome model define imported-reference-sequence --species-name=human --prefix=NCBI --fasta-file=/gscuser/person/fastafile.fasta\n"
