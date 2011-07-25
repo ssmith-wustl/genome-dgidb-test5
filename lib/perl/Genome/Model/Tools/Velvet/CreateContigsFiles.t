@@ -8,11 +8,9 @@ use Test::More;
 
 require File::Compare;
 
-use_ok( 'Genome::Model::Tools::Velvet::CreateContigsFiles' );
+use_ok( 'Genome::Model::Tools::Velvet::CreateContigsFiles' ) or die;
 
-#TODO - move to correct test suite module dir when all tests are configured
-my $module = 'Genome-Model-Tools-Assembly-CreateOutputFiles2';
-my $data_dir = "/gsc/var/cache/testsuite/data/$module";
+my $data_dir = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Velvet/CreateContigsFiles";
 
 ok(-d $data_dir, "Found data directory: $data_dir");
 
@@ -25,6 +23,7 @@ ok (-s $temp_dir.'/velvet_asm.afg', "Linked afg file in tmp dir");
 
 my $create = Genome::Model::Tools::Velvet::CreateContigsFiles->create(
     assembly_directory => $temp_dir,
+    min_contig_length => 50,
     );
 ok( $create, "Created tool");
 ok( $create->execute, "Successfully executed tool");
@@ -36,6 +35,8 @@ foreach ('contigs.bases', 'contigs.quals') {
     ok(-s $temp_file, "Temp $_ file exists");
     ok(File::Compare::compare($test_file, $temp_file) == 0, "$_ files match");
 }
+
+#<STDIN>;
 
 done_testing();
 

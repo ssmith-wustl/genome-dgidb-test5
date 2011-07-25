@@ -223,7 +223,7 @@ sub execute {
     unlink($self->fasta_file.".xpi");
     unlink($self->fasta_file.".xps");
     unlink($self->fasta_file.".xpt");
-	unlink($self->output_file);
+	#unlink($self->output_file);
 
 	## Gzip Cov_30_PID_30.out
 	## We will remove the existing Cov_30_PID_30.out.gz from earlier run before gzip'ing the Cov_30_PID_30.out file

@@ -19,6 +19,8 @@ class Genome::Model::Tools::Newbler::StandardOutputs {
         default_gap_size => {
             is => 'Number',
             doc => 'Gap size to assign when newbler does not assign one',
+            is_optional => 1,
+            default_value => 10,
         },
     ],
 };
@@ -39,8 +41,8 @@ sub execute {
     my %params = (
         assembly_directory => $self->assembly_directory,
         min_contig_length  => $self->min_contig_length,
-        default_gap_size   => $self->default_gap_size,
     );
+    $params{default_gap_size} = $self->default_gap_size if $self->default_gap_size;
 
     #create consed/edit_dir if not there
     unless ( -d $self->consed_edit_dir ) {

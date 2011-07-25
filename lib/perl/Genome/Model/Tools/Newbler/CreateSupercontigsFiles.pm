@@ -21,16 +21,19 @@ class Genome::Model::Tools::Newbler::CreateSupercontigsFiles {
         default_gap_size => {
             is => 'Number',
             doc => 'Gap size to assign when newbler does not assign one',
+            is_optional => 1,
+            default_value => 10,
         }
     ],
 };
 
 sub help_brief {
+    'Tool to make pcap style supercontigs.fasta and supercontigs.agp files';
 }
 
 sub help_detail {
     return <<"EOS"
-gmt newbler create-supercontigs-files --assembly-directory /gscmnt/111/newbler_ecoli_assembly
+gmt newbler create-supercontigs-files --assembly-directory /gscmnt/111/newbler_ecoli_assembly --min-contig-length 200
 EOS
 }
 

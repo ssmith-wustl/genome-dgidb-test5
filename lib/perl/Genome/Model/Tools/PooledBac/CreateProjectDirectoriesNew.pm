@@ -104,8 +104,7 @@ sub execute {
         $self->error_message("Error creating directory $bac_dir") and die unless Genome::Sys->create_directory($bac_dir);
         my $old_dir = `pwd`;
         chdir($bac_dir);
-        $ut->create_project_from_contig_names($ao,$bac_dir."/edit_dir/$bac_name.ace", \@contig_names, $pooled_bac_dir);    
-#        $ut->write_fasta_from_contig_names($ao,$bac_dir."/pooledreads.fasta",$bac_dir."/pooledreads.fasta.qual",$po, \@contig_names);    
+        $ut->create_project_from_contig_names($ao,$bac_dir."/edit_dir/$bac_name.fasta.screen.ace", \@contig_names, $pooled_bac_dir);    
         chdir($old_dir);
     }
 }

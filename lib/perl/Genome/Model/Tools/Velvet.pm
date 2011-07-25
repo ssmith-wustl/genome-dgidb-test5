@@ -148,6 +148,77 @@ sub create_edit_dir {
     return 1;
 }
 
+sub get_scaffold_info_from_afg_file { #TODO - write this to file
+    my $self = shift;
+    my %scaf_info ;
+    my $fh = Genome::Sys->open_file_for_reading( $self->velvet_afg_file );
+    while ( my $record = getRecord($fh) ) {
+        my ( $rec, $fields, $recs ) = parseRecord( $record );
+        if ( $rec eq 'CTG' ) {
+            my $seq = $fields->{seq};
+            $seq =~ s/\n//g;
+            my $contig_name = $fields->{eid};
+            $contig_name =~ s/\-/\./; #to make numerically sortable
+            $scaf_info{$contig_name}{contig_length} = length $seq;
+        }
+    }
+    $fh->close;
+    #calculate supercontig length
+    my %lengths;
+    for my $contig ( keys %scaf_info ) {
+        my ( $supercontig_number ) = $contig =~ /(\d+)\.\d+/;
+        #add up all bases
+        $lengths{$supercontig_number}{none_filtered} += $scaf_info{$contig}{contig_length};
+        #add up bases of contigs > min length
+        $lengths{$supercontig_number}{filtered} += $scaf_info{$contig}{contig_length} if
+            $scaf_info{$contig}{contig_length} >= $self->min_contig_length;
+    }
+    #add supercontig length to scaf info
+    for my $contig ( keys %scaf_info ) {
+        my ( $supercontig_number ) = $contig =~ /(\d+)\.\d+/;
+        $scaf_info{$contig}{filtered_supercontig_length} = $lengths{$supercontig_number}{filtered};
+        my $second_contig = $supercontig_number.'.1';
+    }
+
+    return \%scaf_info;
+}
+
+sub get_scaffold_info_from_contigs_fa_file { #not used remove
+    my $self = shift;
+    my $scaffolds_info = {};
+    my $io = Bio::SeqIO->new( -file => $self->velvet_contigs_fa_file, -format => 'fasta' );
+    my $scaffold_number;
+    #get contig lengths
+    while ( my $seq = $io->next_seq ) {
+        my @bases = split (/N+/i, $seq->seq);
+	my @gaps = split (/[ACGT]+/i, $seq->seq);
+        ++$scaffold_number;
+        my $contig_number = 0;
+        for my $i ( 0 .. $#bases ) {
+            #velvet name is like 2-1 but s/\./-/ to make it sortable
+            my $velvet_name = $scaffold_number.'.'.$contig_number++;
+            my $gap_length = ( defined $gaps[$i] ) ? length $gaps[$i] : 0; #or NA?
+            my $contig_length = length $bases[$i];
+            $scaffolds_info->{$velvet_name}->{contig_length} = $contig_length;
+            $scaffolds_info->{$velvet_name}->{gap_length} = $gap_length;
+        }
+    }
+    #figure out supercontig length
+    my %supercontig_lengths;
+    for my $contig ( keys %$scaffolds_info ) {
+        my ( $supercontig_number ) = $contig =~ /(\d+)\.\d+/;
+        #add up all the bases but not gaps
+        $supercontig_lengths{$supercontig_number} += $scaffolds_info->{$contig}->{contig_length};
+    }
+    #add supercontig lengths to info
+    for my $contig ( keys %$scaffolds_info ) {
+        my ( $supercontig_number ) = $contig =~ /(\d+)\.\d+/;
+        $scaffolds_info->{$contig}->{supercontig_length} = $supercontig_lengths{$supercontig_number};
+    }
+
+    return $scaffolds_info;
+}
+
 #post assemble standard output files
 sub contigs_bases_file {
     return $_[0]->assembly_directory.'/edit_dir/contigs.bases';
@@ -196,6 +267,7 @@ sub read_names_sqlite {
 
 sub input_collated_fastq_file {
     my $self = shift;
+
     my @files = glob( $self->assembly_directory."/*collated.fastq" );
 
     unless ( @files == 1 ) {

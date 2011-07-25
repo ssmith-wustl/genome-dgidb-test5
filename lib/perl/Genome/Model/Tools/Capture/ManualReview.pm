@@ -94,6 +94,14 @@ sub execute {
     # Create a review file for manual reviewers to record comments, and a bed file for use with IGV
     my $review_file = "$output_dir/$case.review.csv";
     my $bed_file = "$output_dir/$case.bed";
+
+    # Check if the review file exists. We don't want to overwrite reviewed variants
+    if( -e $review_file )
+    {
+      print STDERR "WARNING: Will not overwrite existing review file at $review_file\n";
+      next;
+    }
+
     my $review_fh = IO::File->new( $review_file, ">" ) or die "Cannot open $review_file. $!";
     my $bed_fh = IO::File->new( $bed_file, ">" ) or die "Cannot open $bed_file. $!";
     $review_fh->print( join( "\t", qw{Chr Start Stop Ref Var Call Notes} ), "\n" );
@@ -118,6 +126,10 @@ sub execute {
       print STDERR "WARNING: Unable to generate IGV XML for $case\n";
     }
   }
+
+  # Unless they already exist, create subdirectories to keep aside cases that won't be reviewed
+  mkdir "$output_dir/dnu_qc_fail" unless( -e "$output_dir/dnu_qc_fail" );
+  mkdir "$output_dir/dnu_hypermutated" unless( -e "$output_dir/dnu_hypermutated" );
 
   return 1;
 }

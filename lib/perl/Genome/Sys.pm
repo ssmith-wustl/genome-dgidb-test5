@@ -42,11 +42,11 @@ sub swpath {
             return $path;
         }
         else {
-            $class->error_message("Failed to find $name at version $version.  The default version is at $path.");
+            die $class->error_message("Failed to find $name at version $version.  The default version is at $path.");
         }
     }
     else {
-        $class->error_message("Failed to find $name at version $version!");
+        die $class->error_message("Failed to find $name at version $version!");
     }
     return;
 }
@@ -323,13 +323,15 @@ sub shellcmd {
     my $allow_zero_size_input_files  = delete $params{allow_zero_size_input_files};
     my $skip_if_output_is_present    = delete $params{skip_if_output_is_present};
     my $dont_create_zero_size_files_for_missing_output = delete $params{dont_create_zero_size_files_for_missing_output};
+    my $print_status_to_stderr       = delete $params{print_status_to_stderr};
 
+    $print_status_to_stderr = 1 if not defined $print_status_to_stderr;
     $skip_if_output_is_present = 1 if not defined $skip_if_output_is_present;
     if (%params) {
         my @crap = %params;
         Carp::confess("Unknown params passed to shellcmd: @crap");
     }
-
+    # Go ahead and print the status message if the cmd is shortcutting
     if ($output_files and @$output_files) {
         my @found_outputs = grep { -e $_ } grep { not -p $_ } @$output_files;
         if ($skip_if_output_is_present
@@ -341,6 +343,13 @@ sub shellcmd {
             );
             return 1;
         }
+    }
+    my $old_status_cb = undef;
+    unless  ($print_status_to_stderr) {
+        $old_status_cb = Genome::Sys->message_callback('status');
+        # This will avoid setting the callback to print to stderr
+        # NOTE: we must set the callback to undef for the default behaviour(see below)
+        Genome::Sys->message_callback('status',sub{});
     }
 
     if ($input_files and @$input_files) {
@@ -430,7 +439,10 @@ sub shellcmd {
                     . " "
                     . join(', ', @missing_output_directories));
     } 
-
+    unless  ($print_status_to_stderr) {
+        # Setting to the original behaviour (or default)
+        Genome::Sys->message_callback('status',$old_status_cb);
+    }
     return 1;    
 
 }

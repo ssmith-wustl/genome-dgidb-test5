@@ -26,7 +26,6 @@ for my $file ( qw/ 454AllContigs.fna 454ReadStatus.txt 454Scaffolds.txt / ) {
 my $tool = Genome::Model::Tools::Newbler::CreatePlacedReadsFiles->create(
     assembly_directory => $temp_dir,
     min_contig_length => 200,
-    default_gap_size => 10,
 );
 ok( $tool, "Created tool" );
 ok( $tool->execute, "Executed tool" );
