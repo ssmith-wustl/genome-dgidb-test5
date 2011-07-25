@@ -16,20 +16,21 @@ use Test::More tests => 134;
 
 use_ok('Genome::Model::Command::Services::AssignQueuedInstrumentData');
 
-my $project = Genome::Site::WUGC::Project->create(
-    setup_project_id => '-4',
-    name             => 'AQID-test-project',
-);
-
-isa_ok($project, 'Genome::Site::WUGC::Project');
-
-my $work_order = Genome::WorkOrder->create(
-    id => '-1000',
-    pipeline => 'Illumina',
+my $gsc_workorder = GSC::Setup::WorkOrder->create(
+    setup_name => 'fake_workorder',
     project_id => '-4',
+    pse_id => '-10000000',
 );
 
-isa_ok($work_order, 'Genome::WorkOrder');
+isa_ok($gsc_workorder, 'GSC::Setup::WorkOrder');
+
+my $gsc_project = GSC::Setup::Project::Research->create(
+    id => -4,
+    setup_name => 'AQID-test-project',
+    pse_id => '-10000001',
+);
+print $gsc_workorder, "\n";
+isa_ok($gsc_project, 'GSC::Setup::Project::Research');
 
 my $taxon = Genome::Taxon->get( species_name => 'human' );
 my $individual = Genome::Individual->create(
@@ -133,8 +134,8 @@ sub GSC::PSE::QueueInstrumentDataForGenomeModeling::get_inherited_assigned_direc
     my $self = shift;
     my $filter = shift;
     my @a;
-    push @a, $work_order if $filter eq 'setup work order';
-    push @a, $project if $filter eq 'setup project';
+    push @a, $gsc_workorder if $filter eq 'setup work order';
+    push @a, $gsc_project if $filter eq 'setup project';
     return @a;
 }
 use warnings;
@@ -497,8 +498,9 @@ push(@model_groups, $_->model_groups) for (@models);
 
 ok((grep {$_->name eq 'apipe-auto ' . $sample_pool->name} @model_groups) > 0, "found model_group for sample_pool");
 ok((grep {$_->name eq 'apipe-auto ' . $sample_pool->name . '.wu-space'} @model_groups) > 0, "found wu-space model_group for sample_pool");
-ok((grep {$_->name eq 'apipe-auto ' . $project->name} @model_groups) > 0, "found model_group for project");
-ok((grep {$_->name eq 'apipe-auto ' . $project->name . '.wu-space'} @model_groups) > 0, "found wu-space model_group for project");
+ok((grep {$_->name eq 'apipe-auto ' . $gsc_project->setup_name} @model_groups) > 0, "found model_group for project");
+$DB::single = 1;
+ok((grep {$_->name eq 'apipe-auto ' . $gsc_project->setup_name . '.wu-space'} @model_groups) > 0, "found wu-space model_group for project");
 
 my $models_changed_2 = $command_2->_existing_models_assigned_to;
 is(scalar(keys %$models_changed_2), 1, 'data was assigned to an existing model');

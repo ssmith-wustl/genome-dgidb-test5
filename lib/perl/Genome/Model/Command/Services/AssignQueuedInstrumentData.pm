@@ -1091,21 +1091,13 @@ sub _resolve_project_and_work_order_names {
     unless(scalar @work_orders) {
         $self->warning_message('No work order found for PSE ' . $pse->id);
     }
-
-    if(@work_orders and $work_orders[0]->isa("Genome::WorkOrder")){
-        push @names,
-        map((($_->can("name") ? $_->name : $_->setup_name )), @work_orders);
-    }else{
-        push @names,
-        map(($_->setup_name), @work_orders);
-    }
+    push @names, map($_->setup_name, @work_orders);
 
     my @projects = $pse->get_inherited_assigned_directed_setups_filter_on('setup project');
     unless(scalar @projects) {
         $self->warning_message('No project found for PSE ' . $pse->id);
     }
-    push @names,
-    map( ($_->can('name') ? $_->name : $_->setup_name), @projects);
+    push @names, map($_->setup_name, @projects);
 
     return @names;
 }
