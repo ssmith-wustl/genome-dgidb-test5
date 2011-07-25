@@ -142,7 +142,7 @@ sub execute {
     $DB::single = $DB::stopper;
     my $self = shift;
     
-    my $lock;
+    my $lock
     unless($self->test) {
         my $lock_resource = '/gsc/var/lock/genome_model_command_services_assign-queued-instrument-data/loader';
 
