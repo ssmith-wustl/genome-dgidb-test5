@@ -64,7 +64,7 @@ class Genome::Model::Tools::Sv::AssemblyPipeline::ClassifyEvents {
         max_normal_sv_reads => { 
 	    is => 'Integer',    
 	    doc => "Maximum number of SV-supporting reads in normal sample to call somatic.",
-	    default => 10 
+	    default => 5 
 	},
         min_germline_sv_reads => { 
 	    is => 'Integer',    
