@@ -801,7 +801,7 @@
             <tr>
 
               <td class="name">
-                scheduled:
+                created:
               </td>
               <td class="value">
                 <xsl:value-of select="aspect[@name='creation_date']/value"/>
