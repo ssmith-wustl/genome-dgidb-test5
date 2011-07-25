@@ -42,11 +42,11 @@ sub swpath {
             return $path;
         }
         else {
-            $class->error_message("Failed to find $name at version $version.  The default version is at $path.");
+            die $class->error_message("Failed to find $name at version $version.  The default version is at $path.");
         }
     }
     else {
-        $class->error_message("Failed to find $name at version $version!");
+        die $class->error_message("Failed to find $name at version $version!");
     }
     return;
 }
