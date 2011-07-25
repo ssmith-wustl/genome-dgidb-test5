@@ -18,26 +18,39 @@ sub process_source {
         chomp $line;
         next if $line =~ /^#/;
         # VCF format
-        my ($chr,$start,$id, $ref,$var,$qual, $filter, $info, $genotype_keys, $genotype_values) = split("\t", $line);
+        my ($chr,$start,$id, $ref,$var,$qual, $filter, $info, $genotype_keys, @genotype_values) = split("\t", $line);
         my $stop;
         my @keys = split ":", $genotype_keys;
-        my @values = split ":", $genotype_values;
 
-        unless (scalar @keys == scalar @values) {
-            die $self->error_message("Number of keys and values in the genotype fields did not match");
-        }
-        my %genotype_hash;
-        for my $key (@keys) {
-            $genotype_hash{$key} = shift @values;
-        }
-        # Score will sometimes be floating point and we don't want that
-        my $score = int($genotype_hash{GQ});
-        my $depth = $genotype_hash{DP};
-        if (!defined $score) {
-            $score = "-";
+        # There will be one set of values per sample. Add up the total depth and average the total score.
+        my $depth;
+        my $running_score;
+        my $samples_with_data;
+        for my $genotype_value (@genotype_values) {
+            my @values = split ":", $genotype_value;
+            if (scalar @keys == scalar @values) {
+                $samples_with_data++;
+            } else {
+                next;
+            }
+            
+
+            my %genotype_hash;
+            for my $key (@keys) {
+                $genotype_hash{$key} = shift @values;
+            }
+            # Score will sometimes be floating point and we don't want that
+            $running_score += $genotype_hash{GQ};
+            $depth += $genotype_hash{DP};
         }
         if (!defined $depth) {
-            $depth = "-";
+            $depth = 0;
+        }
+        my $score;
+        if (defined $running_score) {
+            $score = int( $running_score / $samples_with_data );
+        } else {
+            $score = 0;
         }
 
         if(length($ref) == 1 and length($var) == 1) {
