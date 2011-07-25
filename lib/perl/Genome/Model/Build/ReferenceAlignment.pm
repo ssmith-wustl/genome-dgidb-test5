@@ -1469,25 +1469,5 @@ sub regex_files_for_diff {
     );
 }
 
-sub is_used_as_model_or_build_input {
-    # Both models and builds have this method and as such it is currently duplicated.
-    # We don't seem to have any place to put things that are common between Models and Builds.
-    my $self = shift;
-
-    my @model_inputs = Genome::Model::Input->get(
-        value_id => $self->id,
-        value_class_name => $self->class,
-    );
-
-    my @build_inputs = Genome::Model::Build::Input->get(
-        value_id => $self->id,
-        value_class_name => $self->class,
-    );
-
-    my @inputs = (@model_inputs, @build_inputs);
-
-    return (scalar @inputs) ? 1 : 0;
-}
-
 1;
 
