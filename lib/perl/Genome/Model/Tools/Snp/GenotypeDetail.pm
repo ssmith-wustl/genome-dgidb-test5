@@ -97,7 +97,6 @@ sub execute {
 
         elsif ($snp_format eq 'VCF') { #mpileup.
             next if $snp_line=~ /^#/;
-            next if $snp_line=~/INDEL/;
             ($chr, $pos, $ref, $cns, $cns_qual)= map{$columns[$_]}(0..3,6);
             $read_bases = '';
         }
