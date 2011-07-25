@@ -10,34 +10,24 @@ use AMOS::AmosLib;
 class Genome::Model::Tools::Velvet::CreateUnplacedReadsFiles {
     is => 'Genome::Model::Tools::Velvet',
     has => [
-	sequences_file => {
-	    is => 'Text',
-	    is_optional => 1,
-	    doc => 'Velvet create Sequences file',
-	},
-	afg_file => {
-	    is => 'Text',
-	    is_optional => 1,
-	    doc => 'Velvet created velvet_asm.afg file',
-	},
 	assembly_directory => {
 	    is => 'Text',
 	    doc => 'Assembly directory',
 	},
+        min_contig_length => {
+            is => 'Number',
+            doc => 'Minimum contig length to process',
+        }
     ],
 };
 
 sub help_brief {
-    'Tool to create velvet reads.unplaced file'
-}
-
-sub help_synopsis {
-    return <<EOS
-EOS
+    'Tool to create pcap style reads.unplaced and reads.unplaced.fasta files'
 }
 
 sub help_detail {
     return <<EOS
+gmt velvet create-unplaced-reads-files --assembly-directory /gscmnt/111/e_coli_velvet_asm --min-contig-length 200
 EOS
 }
 
@@ -46,33 +36,30 @@ sub execute {
 
     #make edit_dir
     unless ( $self->create_edit_dir ) {
-	$self->error_message("Failed to create edit_dir");
+	$self->error_message("Assembly edit_dir does not exist and could not create one");
 	return;
     }
 
-    unless (-d $self->assembly_directory) {
-	$self->error_message("Can't find or invalid directory: ".$self->assembly_directory);
-	return;
-    }
-
-    #validate sequences file
-    my $sequences_file = ( $self->sequences_file ) ? $self->sequences_file : $self->velvet_sequences_file;
-
-    #TODO - move this to velvet base class - used multiple times
-    my $read_names_and_pos = $self->load_read_names_and_seek_pos( $sequences_file );
+    my $read_names_and_pos = $self->load_read_names_and_seek_pos( $self->velvet_sequences_file );
     unless ($read_names_and_pos) { #arrayref
 	$self->error_message("Failed to get read names and seek_pos from Sequences file");
 	return;
     }
 
-    my $unplaced_reads = $self->_remove_placed_reads($read_names_and_pos);
+    my $scaffold_info;
+    unless( $scaffold_info = $self->get_scaffold_info_from_afg_file ) {
+        $self->error_message( "Failed to get scaffolding info from afg file" );
+        return;
+    }
+
+    my $unplaced_reads = $self->_remove_placed_reads( $read_names_and_pos, $scaffold_info );
     unless ($unplaced_reads) {
 	#TODO - make sure this works for empty array ref too
 	$self->error_message("Failed to remove placed reads from input reads");
 	return;
     }
 
-    unless ($self->_print_unplaced_reads($unplaced_reads, $sequences_file)) {
+    unless ($self->_print_unplaced_reads($unplaced_reads, $self->velvet_sequences_file)) {
 	$self->error_message("Failed to print unplaced reads");
 	return;
     }
@@ -84,12 +71,9 @@ sub _print_unplaced_reads {
     my ($self, $unplaced_reads, $sequences_file) = @_;
 
     unlink $self->reads_unplaced_file;
-    my $unplaced_fh = Genome::Sys->open_file_for_writing($self->reads_unplaced_file) ||
-        return;
-    my $fasta_out = Bio::SeqIO->new(-format => 'fasta', -file => '>'.$self->reads_unplaced_fasta_file) ||
-        die;
-    my $seq_fh = Genome::Sys->open_file_for_reading( $sequences_file ) || 
-        return;
+    my $unplaced_fh = Genome::Sys->open_file_for_writing($self->reads_unplaced_file);
+    my $fasta_out = Bio::SeqIO->new(-format => 'fasta', -file => '>'.$self->reads_unplaced_fasta_file);
+    my $seq_fh = Genome::Sys->open_file_for_reading( $sequences_file );
     my $bio_seqio_fh = Bio::SeqIO->new(-fh => $seq_fh, -format => 'fasta', -noclose => 1);
     for (0 .. $#$unplaced_reads) {
         next unless defined @$unplaced_reads[$_];
@@ -116,15 +100,23 @@ sub _print_unplaced_reads {
 }
 
 sub _remove_placed_reads {
-    my ($self, $input_reads) = @_;
+    my ($self, $input_reads, $scaffold_info) = @_;
 
-    my $afg_file = ($self->afg_file) ? $self->afg_file : $self->velvet_afg_file;
+    my $afg_fh = Genome::Sys->open_file_for_reading($self->velvet_afg_file);
 
-    my $afg_fh = Genome::Sys->open_file_for_reading($afg_file) ||
-	return;
     while (my $record = getRecord($afg_fh)) {
 	my ($rec, $fields, $recs) = parseRecord($record);
 	if ($rec eq 'CTG') {
+
+            my $contig_seq = $fields->{seq};
+            $contig_seq =~ s/\n//g;
+
+            my $contig_name = $fields->{eid};
+            $contig_name =~ s/\-/\./;
+
+            next if $scaffold_info->{$contig_name}->{filtered_supercontig_length} < $self->min_contig_length;
+            next if $scaffold_info->{$contig_name}->{contig_length} < $self->min_contig_length;
+            
 	    for my $r (0 .. $#$recs) {
 		my ($srec, $sfields, $srecs) = parseRecord($recs->[$r]);
 		if ($srec eq 'TLE') {

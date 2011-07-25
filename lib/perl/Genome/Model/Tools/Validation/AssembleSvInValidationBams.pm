@@ -178,7 +178,7 @@ sub execute {
     for my $i (0..$#bam_files) {
         $jw_cmd .= " -bamFiles " . $bam_names[$i] . "=" . $bam_files[$i];
     }
-    $jw_cmd .= " > $jw_rc_output; /gscuser/jwallis/genome/lib/perl/Genome/Model/Tools/Sv/SV_assembly_pipeline/processSvReadRemapOutFiles.pl $jw_rc_output > $jw_anno_output\"";
+    $jw_cmd .= " > $jw_rc_output; /gscuser/jwallis/genome//lib/perl/Genome/Model/Tools/Sv/AssemblyPipeline/processSvReadRemapOutFiles.pl $jw_rc_output > $jw_anno_output\"";
     my $bsub = "bsub -q long -N -u $user\@genome.wustl.edu -J $job_name -M 8000000 -R 'select[mem>8000] rusage[mem=8000]' -oo $stdout -eo $stderr $jw_cmd";
     print "$bsub\n";
     print `$bsub`;

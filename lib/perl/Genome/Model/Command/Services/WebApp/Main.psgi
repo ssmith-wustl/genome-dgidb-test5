@@ -32,7 +32,7 @@ our %app = map { $_ => load_app($_) } qw/
   Rest.psgi
   Redirect.psgi
   404Handler.psgi
-  Dump.psgi
+  Dump.psgi 
   Cache.psgi
   Info.psgi
   /;
@@ -43,41 +43,50 @@ sub load_app {
 }
 
 sub redispatch_psgi {
-    my ( $psgi_app, @args ) = @_;
-    __PACKAGE__->_build_dispatcher(
-        {
-            call => sub {
-                shift;
-                my ( $self, $env ) = @_;
-                $psgi_app->( $env, @args );
-              }
-        }
-    );
+    my ( $psgi_app, $env, @args ) = @_;
+    return sub  {
+            $psgi_app->( $env, @args );
+        };
 }
 
 sub redirect_to {
-    redispatch_psgi( $app{'Redirect.psgi'}, shift );
+    my ($path, $request) = @_;
+    redispatch_psgi( $app{'Redirect.psgi'}, $request, $path);
 }
 
 ## Web::Simple dispatcher for all apps
-dispatch {
+sub dispatch_request {
     ## make 404's pretty by sending them to 404Handler.psgi
-    response_filter {
-        my $resp = $_[1];
 
-        if ( ref($resp) eq 'ARRAY' && $resp->[0] == 404 ) {
-            return redispatch_psgi( $app{'404Handler.psgi'}, $resp->[2] );
-        } elsif ( ref($resp) eq 'ARRAY' && $resp->[0] == 500 ) {
-            return redispatch_psgi( $app{'404Handler.psgi'}, $resp->[2] );
-        }
+    my ($self, $request) = @_;
 
-        return $resp;
+    if (defined $request->{SCRIPT_NAME} && $request->{SCRIPT_NAME} ne ''  && ($request->{PATH_INFO} ne "/" && $request->{PATH_INFO} ne ""))  {
+        $request->{PATH_INFO} = $request->{SCRIPT_NAME} . $request->{PATH_INFO};
+    }
+    if ($request->{PATH_INFO} eq "") {
+        $request->{PATH_INFO} = "/";
+    }
+
+    sub (GET) {
+        response_filter {
+            my $resp = $_[0];
+            if ( ref($resp) eq 'ARRAY' && $resp->[0] == 404 ) {
+                return redispatch_psgi( $app{'404Handler.psgi'}, $resp->[2] );
+            } elsif ( ref($resp) eq 'ARRAY' && $resp->[0] == 500 ) {
+                return redispatch_psgi( $app{'404Handler.psgi'}, $resp->[2] );
+            }
+            return $resp;
+        };
+
     },
     sub (/view/debug) {
-        redispatch_psgi($app{'Info.psgi'});
+        redispatch_psgi($app{'Info.psgi'}, $request);
     },
-    sub (/res/**) {
-      redispatch_to "/view/genome/resource.html/$_[1]";
+    sub (/res/** + .*) {
+        my $new_path = "/genome/resource.html/$_[1].$_[2]";
+        my %new_params = ( %{$_[3]}, PATH_INFO => $new_path, REQUEST_URI => $new_path );
+        $DB::single = 1;
+        redispatch_psgi($app{'Rest.psgi'}, \%new_params);
     },
       ## send /view without a trailing slash to /view/
       ## although thats probably a 404
@@ -89,48 +98,49 @@ dispatch {
       #  because we want generate the view synchronously to the request
       #  and fill in memcached after its generated
       sub (/cachefill/...) {
-        redispatch_psgi($app{'Cache.psgi'}, 2);
+        redispatch_psgi($app{'Cache.psgi'}, $_[1], 2);
       },
 
       ## This is triggered as an ajax request from the cache-miss page
       sub (/cachetrigger/...) {
-        redispatch_psgi($app{'Cache.psgi'}, 1);
+        redispatch_psgi($app{'Cache.psgi'}, $_[1], 1);
       },
 
       ## In apache /view maps to /cache which will show the cache-miss
       #  page if necessary.
       sub (/cache/...) {
-        redispatch_psgi $app{'Cache.psgi'};
+        redispatch_psgi ($app{'Cache.psgi'}, $_[1]);
       },
 
       ($always_memcache ? (
       sub (/viewajax/...) {
-        redispatch_psgi($app{'Cache.psgi'}, 2);
+        redispatch_psgi($app{'Cache.psgi'}, $_[1], 2);
       },
       sub (/view/...) {
-        redispatch_psgi $app{'Cache.psgi'};
+        redispatch_psgi($app{'Cache.psgi'}, $_[1]);
       },
       ) : (
       ## this exists so the embedded web server can run without caching
       sub (/viewajax/...) {
-        redispatch_psgi $app{'Rest.psgi'};
+        redispatch_psgi($app{'Rest.psgi'}, $_[1]);
       },
 
       ## this exists so the embedded web server can run without caching
       sub (/view/...) {
-        redispatch_psgi $app{'Rest.psgi'};
+        redispatch_psgi ($app{'Rest.psgi'}, $_[1], 2);
       },
       )),
 
       ## dump the psgi environment, for testing
       sub (/dump/...) {
-        redispatch_psgi $app{'Dump.psgi'};
+        redispatch_psgi ($app{'Dump.psgi'}, $_[1]);
       },
 
       ## send the browser to the finder view of Genome
       sub (/) {
-        redirect_to "/view/genome/search/status.html";
+        redirect_to("/view/genome/search/status.html", $_[1]);
       }
 };
+
 
 Genome::Model::Command::Services::WebApp::Main->run_if_script;

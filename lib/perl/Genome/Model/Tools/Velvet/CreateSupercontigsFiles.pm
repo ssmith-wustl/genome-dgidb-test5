@@ -4,35 +4,31 @@ use strict;
 use warnings;
 
 use Genome;
+use Data::Dumper 'Dumper';
 use Bio::SeqIO;
+use AMOS::AmosLib;
 
 class Genome::Model::Tools::Velvet::CreateSupercontigsFiles {
     is => 'Genome::Model::Tools::Velvet',
     has => [
-        contigs_fasta_file => {
-            is => 'Text',
-	    is_optional => 1,
-            doc => 'Velvet contigs.fa file',
-        },
         assembly_directory => {
             is => 'Text',
             doc => 'Assembly directory',
         },
+        min_contig_length => {
+            is => 'Text',
+            doc => 'Min contig length to process',
+        }
     ],
 };
 
 sub help_brief {
-    'Tool to create velvet supercontigs.agp and supercontigs.fasta files from velvet contigs.fa file'
-}
-
-sub help_synopsis {
-    return <<EOS
-EOS
+    'Tool to create pcap style supercontigs.agp and supercontigs.fasta files from velvet contigs.fa file'
 }
 
 sub help_detail {
     return <<EOS
-gmt velvet create-supercontigs-files --contigs-fasta-file /gscmnt/111/velvet_asm/contigs.fa --assembly-directory /gscmnt/111/velvet_asm
+gmt velvet create-supercontigs-files --assembly-directory /gscmnt/111/velvet_asm --min-contig-length 200
 EOS
 }
 
@@ -41,61 +37,75 @@ sub execute {
 
     #create edit_dir
     unless ( $self->create_edit_dir ) {
-	$self->error_message("Failed to create edit_dir");
+	$self->error_message("Assembly edit_dir does not exist and could not create one");
 	return;
     }
 
-    #need contigs.fa file
-    my $contigs_fa_file = ($self->contigs_fasta_file) ? $self->contigs_fasta_file : $self->velvet_contigs_fa_file;
-
     #filehandle to print supercontigs.agp file
     unlink $self->supercontigs_agp_file;
-    my $agp_fh = Genome::Sys->open_file_for_writing($self->supercontigs_agp_file) ||
-	return;
+    my $agp_fh = Genome::Sys->open_file_for_writing($self->supercontigs_agp_file);
 
     #IO to output supercontigs.fasta
     my $fa_out = Bio::SeqIO->new(-format => 'fasta', -file => ">".$self->supercontigs_fasta_file);
 
-    #read in input contigs.fa file
-    my $io = Bio::SeqIO->new(-format => 'fasta', -file => $contigs_fa_file);
-    while (my $seq = $io->next_seq) {
-
-	#write seq to supercontigs.fasta
-	unless ($self->_write_fasta ($seq, $fa_out)) {
-	    $self->error_message("Failed to write sequence to supercontigs fasta");
-	    return;
-	}
-
-	#write seq description to agp file
-	unless ($self->_write_agp($seq, $agp_fh)) {
-	    $self->error_message("Failed to write sequence description to agp file");
-	    return;
-	}
+    #contig/supercontig lengths and gap sizes
+    my $scaf_info;
+    unless( $scaf_info = $self->get_scaffold_info_from_afg_file ) {
+        $self->error_message( "Failed to get scaffolding info from afg file" );
+        return;
     }
 
+    my $supercontig_fasta;
+    my $supercontig_number = 0;
+
+    #read in contigs from afg file
+    my $afg_fh = Genome::Sys->open_file_for_reading($self->velvet_afg_file);
+    while (my $record = getRecord($afg_fh)) {
+	my ($rec, $fields, $recs) = parseRecord($record);
+	if ($rec eq 'CTG') {
+
+            my $contig_seq = $fields->{seq};
+            $contig_seq =~ s/\n//g;
+
+            my $contig_name = $fields->{eid};
+            $contig_name =~ s/\-/\./;
+
+            #append default gap
+            $supercontig_fasta .= ( 'N' x 20 );
+
+            #convert contig seq to gap seq if < min length
+            $contig_seq = ( 'N' x (length $contig_seq) ) if length $contig_seq < $self->min_contig_length;
+            $supercontig_fasta .= $contig_seq;
+
+            my ( $sctg_num, $ctg_num ) = split ('-', $fields->{eid});
+            my $next_contig = $sctg_num.'.'.++$ctg_num;
+            
+            #append gap/seq and go to next contig if exists
+            next if exists $scaf_info->{$next_contig};
+
+            #check that all bases add up to > min length
+            my $new = $supercontig_fasta;
+            $new =~ s/N//g;
+            next unless length $new >= $self->min_contig_length;
+
+            #remove leading gap
+            $supercontig_fasta =~ s/^N+//;
+
+            #write seq
+            my $pcap_name = 'Contig'.$supercontig_number++;
+            my $seq = Bio::Seq->new( -seq => $supercontig_fasta, -id => $pcap_name );
+            $fa_out->write_seq( $seq );
+
+            #write agp
+            unless( $self->_write_agp($seq, $agp_fh) ){
+                $self->error_message( "Failed to write agp for $pcap_name" );
+                return;
+            }
+            $supercontig_fasta = ''; #reset for next scaffold
+        }
+    }
     $agp_fh->close;
 
-    return 1;
-}
-
-sub _write_fasta {
-    my ($self, $seq, $fa_out) = @_;
-    #convert id to pcap format supercontig name
-    my $pcap_sctg = $self->_convert_to_pcap_name($seq->id);
-    unless ($pcap_sctg) {
-	$self->error_message("Failed to convert newbler supercontig to pcap name");
-	return;
-    }
-    #totol length inc gap
-    my $total_length = length $seq->seq;
-    #length w/o gaps
-    my $sequence = $seq->seq;
-    $sequence =~ s/N//g; #remove gaps
-    my $bases_length = length $sequence;
-    #rename id and add desc .. (base_length total_length)
-    $seq->id($pcap_sctg);
-    $seq->desc($bases_length.' '.$total_length);
-    $fa_out->write_seq($seq);
     return 1;
 }
 
@@ -142,17 +152,6 @@ sub _write_agp {
     }
     
     return 1;
-}
-
-sub _convert_to_pcap_name {
-    my ($self, $id) = @_;
-    #convert velvet NODE_2_ to pcap Contig1
-    my ($num) = $id =~ /NODE_(\d+)_/;
-    unless (defined $num) {
-	$self->error_message("Expecting id like: NODE_2_ but got: $id");
-	return;
-    }
-    return 'Contig'.--$num;
 }
 
 sub _separate_bases_and_gaps {

@@ -28,6 +28,7 @@ foreach ('velvet_asm.afg', 'Sequences') {
 #create/execute tool
 my $create = Genome::Model::Tools::Velvet::CreateUnplacedReadsFiles->create(
     assembly_directory => $temp_dir,
+    min_contig_length => 50,
     );
 ok( $create, "Created tool");
 ok( $create->execute, "Successfully executed tool");

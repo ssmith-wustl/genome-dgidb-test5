@@ -21,6 +21,8 @@ class Genome::Model::Tools::Newbler::CreateContigsFiles {
         default_gap_size => {
             is => 'Number',
             doc => 'Gap size to assign when newbler does not assign one',
+            is_optional => 1,
+            default_value => 10,
         }
     ],
 };

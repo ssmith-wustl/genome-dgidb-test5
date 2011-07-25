@@ -86,6 +86,12 @@ sub execute {                               # replace with real execution logic.
         return;
     }
 
+    my $vcf_ofh = IO::File->new($self->output_file,"w");
+    unless($vcf_ofh) {
+        $self->error_message("Unable to open vcf file for writing: ". $self->output_file);
+        return;
+    }
+
     while(my $vcf_line = $vcf_fh->getline) {
         chomp $vcf_line;
         if($vcf_line =~ /^##/) {
@@ -93,8 +99,8 @@ sub execute {                               # replace with real execution logic.
             print $vcf_line,"\n";
         }
         elsif($vcf_line =~ /^#CHROM/) {
-            print $validation_format_header_line,"\n";
-            print $vcf_line,"\n";
+            print $vcf_ofh $validation_format_header_line,"\n";
+            print $vcf_ofh $vcf_line,"\n";
         }
         else {
             my ($chr, $pos, $id, $ref, $alt, $qual, $filter, $info, $format, $normal, $tumor) = split /\t/, $vcf_line;
@@ -139,7 +145,7 @@ sub execute {                               # replace with real execution logic.
             else {
                 $tumor .= ":5";
             }
-            print join("\t",$chr, $pos, $id, $ref, $alt, $qual, $filter, $info, $format, $normal, $tumor),"\n";
+            print $vcf_ofh join("\t",$chr, $pos, $id, $ref, $alt, $qual, $filter, $info, $format, $normal, $tumor),"\n";
         }
     }
     return 1;

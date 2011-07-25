@@ -10,36 +10,7 @@ class Genome::Sys {
     #is => 'UR::Singleton', 
 };
 
-
-sub user_id {
-    return $<;
-}
-
-sub username {
-    my $class = shift;
-    my $username = getpwuid($class->user_id);
-    return $username;
-}
-
-sub sudo_username {
-    my $class = shift;
-    my $who_output = $class->cmd_output_who_dash_m || '';
-    my $who_username = (split(/\s/,$who_output))[0] || '';
-    my $sudo_username = $who_username eq $class->username ? '' : $who_username;
-    $sudo_username ||= $ENV{'SUDO_USER'};
-    return ($sudo_username || '');
-}
-
-sub cmd_output_who_dash_m {
-    return `who -m`;
-}
-
-sub user_is_member_of_group {
-    my ($class, $group_name) = @_;
-    my $user = Genome::Sys->username;
-    my $members = (getgrnam($group_name))[3];
-    return ($members && $user && $members =~ /\b$user\b/);
-}
+# API for accessing software and data by version
 
 sub dbpath {
     my ($class, $name, $version) = @_;
@@ -56,7 +27,28 @@ sub swpath {
         die "Genome::Sys swpath must be called with a database name and a version.  Use 'latest' for the latest installed version.";
     }
     my $base = $ENV{"GENOME_SW"} ||= '/var/lib/genome/sw';
-    return join("/",$base,$name,$version);
+    my $path = join("/",$base,$name,$version);
+    if (-e $path) {
+        return $path;
+    }
+    if ($path = `which $name$version`) {
+        chomp $path;
+        return $path;
+    }
+    if ($path = `which $name`) {
+        chomp $path;
+        $path = readlink($path) while -l $path;
+        if ($version eq 'latest') {
+            return $path;
+        }
+        else {
+            die $class->error_message("Failed to find $name at version $version.  The default version is at $path.");
+        }
+    }
+    else {
+        die $class->error_message("Failed to find $name at version $version!");
+    }
+    return;
 }
 
 sub _find_in_path {
@@ -331,13 +323,15 @@ sub shellcmd {
     my $allow_zero_size_input_files  = delete $params{allow_zero_size_input_files};
     my $skip_if_output_is_present    = delete $params{skip_if_output_is_present};
     my $dont_create_zero_size_files_for_missing_output = delete $params{dont_create_zero_size_files_for_missing_output};
+    my $print_status_to_stderr       = delete $params{print_status_to_stderr};
 
+    $print_status_to_stderr = 1 if not defined $print_status_to_stderr;
     $skip_if_output_is_present = 1 if not defined $skip_if_output_is_present;
     if (%params) {
         my @crap = %params;
         Carp::confess("Unknown params passed to shellcmd: @crap");
     }
-
+    # Go ahead and print the status message if the cmd is shortcutting
     if ($output_files and @$output_files) {
         my @found_outputs = grep { -e $_ } grep { not -p $_ } @$output_files;
         if ($skip_if_output_is_present
@@ -349,6 +343,13 @@ sub shellcmd {
             );
             return 1;
         }
+    }
+    my $old_status_cb = undef;
+    unless  ($print_status_to_stderr) {
+        $old_status_cb = Genome::Sys->message_callback('status');
+        # This will avoid setting the callback to print to stderr
+        # NOTE: we must set the callback to undef for the default behaviour(see below)
+        Genome::Sys->message_callback('status',sub{});
     }
 
     if ($input_files and @$input_files) {
@@ -438,7 +439,10 @@ sub shellcmd {
                     . " "
                     . join(', ', @missing_output_directories));
     } 
-
+    unless  ($print_status_to_stderr) {
+        # Setting to the original behaviour (or default)
+        Genome::Sys->message_callback('status',$old_status_cb);
+    }
     return 1;    
 
 }

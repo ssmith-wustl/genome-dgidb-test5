@@ -16,7 +16,7 @@ use Getopt::Long;
 use Statistics::Descriptive;
 use FindBin qw($Bin);
 use lib "$FindBin::Bin";
-use ReadRemap;
+use Genome::Model::Tools::Sv::AssemblyPipeline::ReadRemap;
 use BreakDancerLine;
 
 my $Debug = 0;
