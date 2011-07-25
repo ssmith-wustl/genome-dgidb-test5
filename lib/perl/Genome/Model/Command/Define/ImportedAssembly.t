@@ -20,7 +20,7 @@ use_ok($model_class);
 # set up required test data
 my $data_dir = File::Temp::tempdir('DefineImportedAssemblyModelTest-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
 my $individual = Genome::Individual->create(name => 'test-patient', common_name => 'testpatient');
-my $sample = Genome::Sample->create(name => 'test-patient', species_name => 'human', common_name => 'normal', source => $individual);
+my $sample = Genome::Sample->create(name => 'test-patient-sample', species_name => 'human', common_name => 'normal', source => $individual);
 
 my $pp = Genome::ProcessingProfile::ImportedAssembly->create(
     name => 'test-imported-assembly-pp',
@@ -30,7 +30,7 @@ ok($pp, 'created processing profile');
 
 # begin testing
 my $model = create_cmdline(
-    "--processing-profile-id=" . $pp->id,
+    "--processing-profile=" . $pp->id,
     "--subject-name=" . $sample->name,
 
 );
