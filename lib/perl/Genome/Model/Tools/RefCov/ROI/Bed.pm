@@ -32,6 +32,9 @@ sub _parse_line {
         $start -= $wingspan;
         $end += $wingspan;
     }
+    if ( !defined($name) || $name eq '') {
+        $name = $chr .':'. $start .'-'. $end;
+    }
     my %region = (
         name => $name,
         chrom => $chr,
