@@ -159,9 +159,7 @@ sub execute {
                 die $self->error_message($message . "  Use --force option to override this and allow samples from different individuals anyway");
             }
         }
-        $self->subject_id($tumor_subject->id);
-        $self->subject_class_name($tumor_subject->class);
-        $self->subject_name($tumor_subject->name);
+        $self->subject($tumor_subject);
     
     } 
     else {
