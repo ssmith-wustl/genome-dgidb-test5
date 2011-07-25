@@ -9,7 +9,7 @@ use above 'Genome';
 
 BEGIN {
     if (`uname -a` =~ /x86_64/) {
-        plan tests => 25; # will be 31 if new shortcut data is generated
+        plan tests => 26; # will be 31 if new shortcut data is generated
     } else {
         plan skip_all => 'Must run on a 64 bit machine';
     }
@@ -67,6 +67,10 @@ ok($reference_model, "got reference model");
 $DB::single = 1;
 my $reference_build = $reference_model->build_by_version('1');
 ok($reference_build, "got reference build");
+
+my $temp_reference_index = Genome::Model::Build::ReferenceSequence::AlignerIndex->create(reference_build=>$reference_build, aligner_version=>$aligner_version, aligner_name=>'smalt', aligner_params=>'');
+
+ok($temp_reference_index, "prepared temporary reference index");
 
 # Uncomment this to create the dataset necessary for shorcutting to work
 # note: successfully generating the shortcut data will run 31 tests
