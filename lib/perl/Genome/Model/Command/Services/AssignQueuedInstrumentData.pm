@@ -142,7 +142,7 @@ sub execute {
     $DB::single = $DB::stopper;
     my $self = shift;
     
-    my $lock
+    my $lock;
     unless($self->test) {
         my $lock_resource = '/gsc/var/lock/genome_model_command_services_assign-queued-instrument-data/loader';
 
@@ -1087,7 +1087,6 @@ sub _resolve_project_and_work_order_names {
 
     my @names = ();
 
-    #TODO: LIMS will be deprecating/removing the code behind get_inherited_assigned_directed_setups_filter_on.  Switch off of it
     my @work_orders = $pse->get_inherited_assigned_directed_setups_filter_on('setup work order');
     unless(scalar @work_orders) {
         $self->warning_message('No work order found for PSE ' . $pse->id);
@@ -1444,7 +1443,6 @@ sub _is_454_16s {
     my $self = shift;
     my $pse = shift;
 
-    #TODO: LIMS will be deprecating/removing the code behind get_inherited_assigned_directed_setups_filter_on.  Switch off of it
     my @work_orders = $pse->get_inherited_assigned_directed_setups_filter_on('setup work order');
 
     foreach my $work_order (@work_orders) {
@@ -1466,7 +1464,6 @@ sub _is_unknown_454_pipeline {
     my $self = shift;
     my $pse = shift;
 
-    #TODO: LIMS will be deprecating/removing the code behind get_inherited_assigned_directed_setups_filter_on.  Switch off of it
     my @work_orders = $pse->get_inherited_assigned_directed_setups_filter_on('setup work order');
 
     unless (@work_orders > 0) {
@@ -1517,17 +1514,13 @@ sub _is_pcgp {
     my $self = shift;
     my $pse = shift;
 
-    my ($instrument_data_id) = $pse->added_param('instrument_data_id');
-    my $index_illumina = GSC::IndexIllumina->get($instrument_data_id);
-    my @work_orders = $index_illumina->get_work_orders;
-
+    my @work_orders = $pse->get_inherited_assigned_directed_setups_filter_on('setup work order');
 
     unless (@work_orders > 0) {
         $self->error_message('solexa instrument_data ' . $pse->added_param('instrument_data_id') . ' has no work order(s)');
         die $self->error_message;
     }
 
-    $DB::single = 1; #TODO: remove me
     foreach my $work_order (@work_orders) {
         my $project_id = $work_order->project_id;
 
@@ -1587,9 +1580,7 @@ sub _is_aml_build_36 {
     my $sample = shift;
 
     # Check if in work order from RT #72713
-    my ($instrument_data_id) = $pse->added_param('instrument_data_id');
-    my $index_illumina = GSC::IndexIllumina->get($instrument_data_id);
-    my @work_orders = $index_illumina->get_work_orders;
+    my @work_orders = $pse->get_inherited_assigned_directed_setups_filter_on('setup work order');
 
     unless (@work_orders > 0) {
         $self->error_message('solexa instrument_data ' . $pse->added_param('instrument_data_id') . ' has no work order(s)');
