@@ -1080,7 +1080,9 @@ sub copy {
                 $params{$name} = [ $self->$name ];
             }
             else {
-                $params{$name} = $self->$name;
+                if( defined $self->$name ) {
+                    $params{$name} = $self->$name;
+                }
             }
         }
     }
