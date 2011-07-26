@@ -1921,8 +1921,6 @@ sub delta_model_input_differences_from_model {
 }
 
 
-
-
 sub all_allocations {
     my $self = shift;
     my @input_values = map { $_->value } $self->inputs;
@@ -1931,6 +1929,27 @@ sub all_allocations {
         push @allocations, Genome::Disk::Allocation->get(owner_id => $object->id, owner_class_name => $object->class);
     }
     return @allocations;
+}
+
+
+sub is_used_as_model_or_build_input {
+    # Both models and builds have this method and as such it is currently duplicated.
+    # We don't seem to have any place to put things that are common between Models and Builds.
+    my $self = shift;
+
+    my @model_inputs = Genome::Model::Input->get(
+        value_id => $self->id,
+        value_class_name => $self->class,
+    );
+
+    my @build_inputs = Genome::Model::Build::Input->get(
+        value_id => $self->id,
+        value_class_name => $self->class,
+    );
+
+    my @inputs = (@model_inputs, @build_inputs);
+
+    return (scalar @inputs) ? 1 : 0;
 }
 
 

@@ -1249,5 +1249,34 @@ sub duplicates {
 
     return @duplicates;
 }
+
+sub is_used_as_model_or_build_input {
+    # Both models and builds have this method and as such it is currently duplicated.
+    # We don't seem to have any place to put things that are common between Models and Builds.
+    my $self = shift;
+
+    my @model_inputs = Genome::Model::Input->get(
+        value_id => $self->id,
+        value_class_name => $self->class,
+    );
+
+    my @build_inputs = Genome::Model::Build::Input->get(
+        value_id => $self->id,
+        value_class_name => $self->class,
+    );
+
+    my @inputs = (@model_inputs, @build_inputs);
+
+    return (scalar @inputs) ? 1 : 0;
+}
+
+sub builds_are_used_as_model_or_build_input {
+    my $self = shift;
+
+    my @builds = $self->builds;
+
+    return grep { $_->is_used_as_model_or_build_input } @builds;
+}
+
 1;
 

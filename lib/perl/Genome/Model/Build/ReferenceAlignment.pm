@@ -1468,5 +1468,6 @@ sub regex_files_for_diff {
         alignments/\d+(?:_merged_rmdup)?.bam.flagstat$
     );
 }
+
 1;
 

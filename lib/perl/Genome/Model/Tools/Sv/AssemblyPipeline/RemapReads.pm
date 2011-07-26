@@ -156,7 +156,7 @@ sub execute {
 					  $refSequenceFile, $crossMatchParameters, $noDuplicateReadSequence );
     
 	# If there are no capture reads from the region, can't do any more
-	if ( $readCount == 0 ) { print OUT "\t$patientId.$tissue.totalReads:0\t$tissue.SvReadCount:0"; next; }
+	if ( $readCount == 0 ) { print OUT "\t$patientId.$tissue.totalReads:0\t$patientId.$tissue.SvReadCount:0"; next; }
 	
 	# Get SV-specific read alignments based on cross_match realignment
 	my ( undef, $crossesSvBreakpointRef ) =
