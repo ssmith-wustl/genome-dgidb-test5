@@ -184,6 +184,13 @@ class Genome::Model {
                 return sort map {$_->name()} @s;
             },
         },
+        sample_names_for_view => {
+            is => 'Array',
+            calculate => q{
+                my @s = $self->get_samples_for_view();
+                return sort map {$_->name()} @s;
+            },
+        },
     ],
     has_deprecated_optional => [
         # TODO: add an is_in_latest_build flag to the input and make these a parameter
@@ -525,6 +532,21 @@ sub _verify_subject {
         return 0;
     }
     return 1;
+}
+
+sub get_samples_for_view {
+
+    my ($self) = shift;
+
+    my $subject = $self->subject();
+    my @samples;
+
+    if ($self->subject_class_name eq 'Genome::Sample') {
+       @samples = ($subject);
+    } elsif ( $self->subject_class_name eq 'Genome::Individual') {
+       @samples = $subject->samples();
+    }
+return @samples;
 }
 
 sub get_all_possible_samples {
