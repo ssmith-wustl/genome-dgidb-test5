@@ -20,7 +20,7 @@ use Cache::Memcached;
 use Storable qw/freeze thaw/;
 use Sys::Hostname qw/hostname/;
 
-our $environment = (hostname eq 'vm44' || hostname eq 'vm62') ? 'prod' : 'dev';
+our $environment = (hostname eq 'vm44' || hostname eq 'vm62.gsc.wustl.edu') ? 'prod' : 'dev';
 our %servers = ('prod' => 'imp:11211', 'dev' => 'aims-dev:11211', 'local' => 'localhost:11211');
 our $cache_timeout = 0;
 our $lock_timeout = 600;
