@@ -16,20 +16,21 @@ use Test::More tests => 134;
 
 use_ok('Genome::Model::Command::Services::AssignQueuedInstrumentData');
 
-my $project = Genome::Site::WUGC::Project->create(
-    setup_project_id => '-4',
-    name             => 'AQID-test-project',
-);
-
-isa_ok($project, 'Genome::Site::WUGC::Project');
-
-my $work_order = Genome::WorkOrder->create(
-    id => '-1000',
-    pipeline => 'Illumina',
+my $gsc_workorder = GSC::Setup::WorkOrder->create(
+    setup_name => 'AQID-Test-Workorder',
     project_id => '-4',
+    pse_id => '-10000000',
 );
 
-isa_ok($work_order, 'Genome::WorkOrder');
+isa_ok($gsc_workorder, 'GSC::Setup::WorkOrder');
+
+my $gsc_project = GSC::Setup::Project::Research->create(
+    id => -4,
+    setup_name => 'AQID-test-project',
+    pse_id => '-10000001',
+);
+print $gsc_workorder, "\n";
+isa_ok($gsc_project, 'GSC::Setup::Project::Research');
 
 my $taxon = Genome::Taxon->get( species_name => 'human' );
 my $individual = Genome::Individual->create(
@@ -56,7 +57,9 @@ isa_ok($library, 'Genome::Library');
 isa_ok($sample, 'Genome::Sample');
 
 my $ii = Test::MockObject->new();
+
 $ii->set_always('copy_sequence_files_confirmed_successfully', 1);
+$ii->set_always('get_work_orders', ($gsc_workorder));
 no warnings;
 *Genome::InstrumentData::Solexa::index_illumina = sub{ return $ii };
 use warnings;
@@ -133,9 +136,19 @@ sub GSC::PSE::QueueInstrumentDataForGenomeModeling::get_inherited_assigned_direc
     my $self = shift;
     my $filter = shift;
     my @a;
-    push @a, $work_order if $filter eq 'setup work order';
-    push @a, $project if $filter eq 'setup project';
+    push @a, $gsc_workorder if $filter eq 'setup work order';
+    push @a, $gsc_project if $filter eq 'setup project';
     return @a;
+}
+
+sub GSC::IndexIllumina::get {
+    my $self = shift;
+    return $ii;
+}
+
+sub GSC::Setup::WorkOrder::get_project {
+    my $self = shift;
+    return $gsc_project;
 }
 use warnings;
 
@@ -326,7 +339,6 @@ $mouse_pse->add_param('instrument_data_id', $mouse_instrument_data->id);
 $mouse_pse->add_param('subject_class_name', 'Genome::Sample');
 $mouse_pse->add_param('subject_id', $mouse_sample->id);
 $mouse_pse->add_reference_sequence_build_param_for_processing_profile( $processing_profile, $ref_seq_build);
-$DB::single=1;
 my $mouse_command = Genome::Model::Command::Services::AssignQueuedInstrumentData->create(
     test => 1,
 );
@@ -497,8 +509,8 @@ push(@model_groups, $_->model_groups) for (@models);
 
 ok((grep {$_->name eq 'apipe-auto ' . $sample_pool->name} @model_groups) > 0, "found model_group for sample_pool");
 ok((grep {$_->name eq 'apipe-auto ' . $sample_pool->name . '.wu-space'} @model_groups) > 0, "found wu-space model_group for sample_pool");
-ok((grep {$_->name eq 'apipe-auto ' . $project->name} @model_groups) > 0, "found model_group for project");
-ok((grep {$_->name eq 'apipe-auto ' . $project->name . '.wu-space'} @model_groups) > 0, "found wu-space model_group for project");
+ok((grep {$_->name eq 'apipe-auto ' . $gsc_project->setup_name} @model_groups) > 0, "found model_group for project");
+ok((grep {$_->name eq 'apipe-auto ' . $gsc_project->setup_name . '.wu-space'} @model_groups) > 0, "found wu-space model_group for project");
 
 my $models_changed_2 = $command_2->_existing_models_assigned_to;
 is(scalar(keys %$models_changed_2), 1, 'data was assigned to an existing model');
