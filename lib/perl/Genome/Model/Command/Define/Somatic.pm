@@ -98,9 +98,7 @@ sub execute {
             my $subject = $tumor_source;
             
             #Set up other parameters for call to parent execute()
-            $self->subject_id($subject->id);
-            $self->subject_class_name($subject->class);
-            $self->subject_name($subject->common_name || $subject->name);
+            $self->subject($subject);
         } else {
             $self->error_message('Tumor and normal samples are not from same source!');
             return;
