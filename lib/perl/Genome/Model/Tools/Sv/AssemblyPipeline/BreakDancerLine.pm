@@ -1,4 +1,10 @@
-package BreakDancerLine;
+
+package Genome::Model::Tools::Sv::AssemblyPipeline::BreakDancerLine;
+
+class Genome::Model::Tools::Sv::AssemblyPipeline::BreakDancerLine {
+    is => 'Genome::Model::Tools::Sv::AssemblyPipeline'
+};
+
 use strict;
 use Carp;
 
