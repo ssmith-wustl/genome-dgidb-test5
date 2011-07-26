@@ -7,7 +7,7 @@ use Genome;
 use Genome::Model::Command::Define::Helper;
 
 class Genome::Model::Command::Define {
-    is => 'Command::DynamicTree', 
+    is => 'Command::SubCommandFactory', 
     is_abstract => 1,
 };
 
