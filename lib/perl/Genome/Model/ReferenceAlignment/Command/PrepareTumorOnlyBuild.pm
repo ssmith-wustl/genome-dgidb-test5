@@ -19,6 +19,15 @@ class Genome::Model::ReferenceAlignment::Command::PrepareTumorOnlyBuild {
             doc => 'Version of bed file to require.',
             default => '2',
         },
+        previously_detected_snvs => {
+            is => 'Text',
+            doc => 'Intersect snvs with this list to filter out previously detected snvs',
+        },
+        move_existing => {
+            is => 'Boolean',
+            doc => 'Set this to move existing ./effects directories out of the way before proceding.',
+            default => 0,
+        },
     ],
 };
 
@@ -55,28 +64,58 @@ sub execute {
     }
 
     my $output_dir = $build_dir."/effects";
-    my $in_dbsnp_file = $output_dir."/snvs.hq.previously_detected.v".$version.".bed";
+    my $in_roi = $output_dir."/snvs.hq.in_roi.v".$version.".bed";
+    my $not_in_roi = $output_dir."/snvs.hq.not_in_roi.v".$version.".bed";
+    my $in_dbsnp_file = $output_dir."/snvs.hq.in_dbsnp.v".$version.".bed";
+    my $not_in_dbsnp_file = $output_dir."/snvs.hq.not_in_dbsnp.v".$version.".bed";
+    my $previously_detected_file = $output_dir."/snvs.hq.previously_detected.v".$version.".bed";
     my $novel_file = $output_dir."/snvs.hq.novel.v".$version.".bed";
-    my $indel_file = $build_dir."/variants/indels.hq.v".$version.".bed";
 
     my $annotation_build = $build->annotation_reference_build;
     my $tier_file_location = $annotation_build->tiering_bed_files_by_version(2);
     unless(defined($tier_file_location)){
         die $self->error_message("Could not locate tiering files!");
-    }
-    my $indel_input = $output_dir."/indels.hq.novel.v".$version.".bed";
+    }    
 
     #create the output directory 
     unless(-d $output_dir){
         Genome::Sys->create_directory($output_dir);
     }
+    elsif ($self->move_existing) {
+        File::Copy::move($output_dir, $output_dir."_previous");
+        Genome::Sys->create_directory($output_dir);
+    }
 
-    #run dbSNP intersection
-    unless(-e $novel_file && -e $in_dbsnp_file){
-        my $dbsnp_intersection = Genome::Model::Tools::Joinx::Intersect->create(
+    #my $roi_file = $output_dir."/target_region_bid_".$build->id.".bed";
+    unless(-e $in_roi && -e $not_in_roi){
+        my $roi_name = $build->model->region_of_interest_set_name;
+        my $roi = Genome::FeatureList->get( name => $roi_name);
+        my @roi = split /\n/, $roi->processed_bed_file_content;
+        my $roi_temp = Genome::Sys->create_temp_file_path;
+        my $rtfh = Genome::Sys->open_file_for_writing($roi_temp);
+        for my $line (@roi){
+            my @line = split /\s/, $line;
+            print $rtfh join("\t",($line[0],$line[1],$line[2]))."\n";
+        }
+        $rtfh->close;
+
+        my $roi_intersection_cmd = Genome::Model::Tools::Joinx::Intersect->create(
             input_file_a => $snv_bed_file,
+            input_file_b => $roi_temp,
+            miss_a_file => $not_in_roi,
+            output_file => $in_roi, 
+        );
+        unless($roi_intersection_cmd->execute){
+            die $self->error_message("Could not complete ROI intersection.");
+        }
+        $self->status_message("Completed ROI intersection: ".$not_in_roi."\n");
+    }
+    #run dbSNP intersection
+    unless(-e $not_in_dbsnp_file && -e $in_dbsnp_file){
+        my $dbsnp_intersection = Genome::Model::Tools::Joinx::Intersect->create(
+            input_file_a => $in_roi,
             input_file_b => $dbsnp_file,
-            miss_a_file => $novel_file,
+            miss_a_file => $not_in_dbsnp_file,
             output_file => $in_dbsnp_file,
             dbsnp_match => 1,
         );
@@ -90,14 +129,27 @@ sub execute {
         }
     }
 
-    #copy indels from ./variants to ./effects, novel, since there are as yet no dbSNP indel intersections
-    unless(-e $indel_input){
-        Genome::Sys->copy_file($indel_file,$indel_input);
-    }    
+    #intersect with previously detected snvs
+    unless(-e $novel_file && -e $previously_detected_file){
+        my $previously_detected_snvs = $self->previously_detected_snvs;
+        my $dbsnp_intersection = Genome::Model::Tools::Joinx::Intersect->create(
+            input_file_a => $not_in_dbsnp_file,
+            input_file_b => $previously_detected_snvs,
+            miss_a_file => $novel_file,
+            output_file => $previously_detected_file,
+        );
+        unless ($dbsnp_intersection){
+            die $self->error_message("Couldn't create joinx intersection tool!");
+        }
+        my $snv_rv = $dbsnp_intersection->execute();
+        my $snv_err = $@;
+        unless ($snv_rv){
+            die $self->error_message("Failed to execute joinx intersection (err: $snv_err )");
+        }
+    }
 
     #compose snv and indel tiering output file names
     my @snv_tiers = map{ "snvs.hq.novel.tier".$_.".v".$version.".bed"} (1..4);
-    my @indel_tiers = map{ "indels.hq.novel.tier".$_.".v".$version.".bed"} (1..4);
     my $snv_files_present=1;
     for (1..4) {
         my $f = -e $output_dir."/".$snv_tiers[$_];   
@@ -121,42 +173,13 @@ sub execute {
             die $self->error_message("Tiering Snvs did not succeed!");
         }
     }
-    my $indel_files_present=1;
-    for (1..4) {
-        my $f = -e $output_dir."/".$indel_tiers[$_];   
-        $indel_files_present = $indel_files_present && $f;
-    }
-
-    #tier indels
-    unless( $indel_files_present ){
-        my $indel_tier_cmd = Genome::Model::Tools::FastTier::FastTier->create(
-            variant_bed_file => $indel_input,
-            tier_file_location => $tier_file_location,
-            tier1_output => $output_dir."/".$indel_tiers[0],
-            tier2_output => $output_dir."/".$indel_tiers[1],
-            tier3_output => $output_dir."/".$indel_tiers[2],
-            tier4_output => $output_dir."/".$indel_tiers[3],
-        );
-        unless($indel_tier_cmd){
-            die $self->error_message("Could not create tiering command for indels!");
-        }
-        unless($indel_tier_cmd->execute){
-            die $self->error_message("Tiering Indels did not succeed!");
-        }
-    }
 
     #prepare annotation output file names
     my $snv_tier1_anno_output = $output_dir."/snvs.hq.novel.tier1.annotated";
     my $snv_tier2_anno_output = $output_dir."/snvs.hq.novel.tier2.annotated";
-    my $indel_tier1_anno_output = $output_dir."/indels.hq.novel.tier1.annotated";
-    my $indel_tier2_anno_output = $output_dir."/indels.hq.novel.tier2.annotated";
 
-    # Annotate Variants
-
-    unless((-e $snv_tier1_anno_output && -e $snv_tier2_anno_output) &&
-           (-e $indel_tier1_anno_output && -e $indel_tier2_anno_output)){
-
-        #Annotate Snvs
+    #Annotate Snvs
+    unless(-e $snv_tier1_anno_output && -e $snv_tier2_anno_output){ 
         my $snv_tier1_anno_cmd = Genome::Model::Tools::Annotate::TranscriptVariants->create(
             variant_bed_file => $output_dir."/".$snv_tiers[0],
             output_file => $snv_tier1_anno_output,
@@ -182,34 +205,6 @@ sub execute {
         }
         unless($snv_tier2_anno_cmd->execute){
             die $self->error_message("Could not complete snv_tier1_anno_cmd");
-        }
-
-        #Annotate Indels
-        my $indel_tier1_anno_cmd = Genome::Model::Tools::Annotate::TranscriptVariants->create(
-            variant_bed_file => $output_dir."/".$indel_tiers[0],
-            output_file => $indel_tier1_anno_output,
-            annotation_filter => "top",
-            build_id => $annotation_build->id,
-            use_version => 2,
-        );
-        unless($indel_tier1_anno_cmd){
-            die $self->error_message("Could not create indel_tier1_anno_cmd!");
-        }
-        unless($indel_tier1_anno_cmd->execute){
-            die $self->error_message("Could not complete indel_tier1_anno_cmd");
-        }
-        my $indel_tier2_anno_cmd = Genome::Model::Tools::Annotate::TranscriptVariants->create(
-            variant_bed_file => $output_dir."/".$indel_tiers[1],
-            output_file => $indel_tier2_anno_output,
-            annotation_filter => "top",
-            build_id => $annotation_build->id,
-            use_version => 2,
-        );
-        unless($indel_tier2_anno_cmd){
-            die $self->error_message("Could not create indel_tier1_anno_cmd!");
-        }
-        unless($indel_tier2_anno_cmd->execute){
-            die $self->error_message("Could not complete indel_tier1_anno_cmd");
         }
     }
 

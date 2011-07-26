@@ -20,6 +20,14 @@ class Genome::Model::Tools::DetectVariants2::Filter::VarscanHighConfidence{
         max_normal_freq => { is => 'Number', doc => "Maximum normal frequency for HC Somatic", is_input => 1, default_value => '5'},
         min_tumor_freq  => { is => 'Number', doc => "Minimum tumor freq for HC Somatic", is_input => 1, default_value => '10'},
     ],
+    has_param => [
+         lsf_queue => {
+             default_value => 'long',
+         },
+         lsf_resource => {
+             default_value => "-M 6000000 -R 'select[type==LINUX64 && mem>6000] rusage[mem=6000]'",
+         },
+     ],
 };
 
 sub _filter_variants {
@@ -103,5 +111,29 @@ sub prepare_output {
     }
     return 1; 
 }
+
+#check that the natively formatted file matches expectation
+sub _check_native_file_counts {
+    my $self = shift;
+    my $total_input = shift;
+
+    my $hq_output_file = $self->output_directory."/".$self->_variant_type.".hq.bed";
+    my $detector_style_file = $self->output_directory."/".$self->_variant_type.".hq";
+
+    my $total_output = $self->line_count($hq_output_file);
+    my $detector_style_output = $self->line_count($detector_style_file);
+    my $detector_fh = Genome::Sys->open_file_for_reading($detector_style_file);
+    my $first_line = $detector_fh->getline;
+    my @fields = split("\t", $first_line);
+    if($fields[1] && $fields[1] !~ /\d+/) { #if second column doesn't hold a position
+        $detector_style_output--; #header line present
+    }
+    unless(($total_output - $detector_style_output) == 0){
+        die $self->error_message("Total lines of detector-style output did not match total output lines. Output lines: $total_output \t Detector-style output lines: $detector_style_output");
+    }
+
+    return 1;
+}
+
 
 1;

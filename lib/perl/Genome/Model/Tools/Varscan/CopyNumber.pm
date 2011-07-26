@@ -29,7 +29,7 @@ class Genome::Model::Tools::Varscan::CopyNumber {
 		samtools_path	=> { is => 'Text', doc => "Path to SAMtools executable", is_optional => 0, is_input => 1, default => "samtools" },
 		output	=> { is => 'Text', doc => "Output file for copy number results", is_optional => 0, is_input => 1, is_output => 1 },
 		target_regions	=> { is => 'Text', doc => "Optional target region(s) for limiting the BAM (e.g 5:1 or 6:11134-11158)", is_optional => 1, is_input => 1 },
-		reference	=> { is => 'Text', doc => "Reference FASTA file for BAMs (default= genome model)" , is_optional => 1, is_input => 1},
+		reference        => { is => 'Text', doc => "Reference FASTA file for BAMs" , is_optional => 1, default_value => (Genome::Config::reference_sequence_directory() . '/NCBI-human-build36/all_sequences.fa')},
 		heap_space	=> { is => 'Text', doc => "Megabytes to reserve for java heap [1000]" , is_optional => 1, is_input => 1},
 		mapping_quality	=> { is => 'Text', doc => "Default minimum mapping quality" , is_optional => 1, is_input => 1, default => 10},
 		skip_if_output_present	=> { is => 'Text', doc => "If set to 1, skip execution if output files exist", is_optional => 1, is_input => 1 },
@@ -87,8 +87,7 @@ sub execute {                               # replace with real execution logic.
 	}
 
 
-	my $reference = '/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa';
-	$reference = $self->reference if($self->reference);
+	my $reference = $self->reference;
 	my $varscan_params = "--min-coverage 10"; #--min-coverage 8 --verbose 1
 	$varscan_params = $self->varscan_params if($self->varscan_params);
 

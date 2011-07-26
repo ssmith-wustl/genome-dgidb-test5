@@ -184,6 +184,13 @@ class Genome::Model {
                 return sort map {$_->name()} @s;
             },
         },
+        sample_names_for_view => {
+            is => 'Array',
+            calculate => q{
+                my @s = $self->get_samples_for_view();
+                return sort map {$_->name()} @s;
+            },
+        },
     ],
     has_deprecated_optional => [
         # TODO: add an is_in_latest_build flag to the input and make these a parameter
@@ -393,6 +400,9 @@ sub _verify_no_other_models_with_same_name_and_type_name_exist {
 sub default_model_name {
     my ($self, %params) = @_;
 
+    my $auto_increment = delete $params{auto_increment};
+    $auto_increment = 1 unless defined $auto_increment;
+
     my $name_template = ($self->subject_name).'.';
     $name_template .= 'prod-' if ($self->user_name eq 'apipe-builder' || $params{prod});
 
@@ -422,7 +432,7 @@ sub default_model_name {
 
     my $name = sprintf($name_template, '', '');
     my $cnt = 0;
-    while ( Genome::Model->get(name => $name) ) {
+    while ( $auto_increment && Genome::Model->get(name => $name) ) {
         $name = sprintf($name_template, '-', ++$cnt);
     }
 
@@ -522,6 +532,21 @@ sub _verify_subject {
         return 0;
     }
     return 1;
+}
+
+sub get_samples_for_view {
+
+    my ($self) = shift;
+
+    my $subject = $self->subject();
+    my @samples;
+
+    if ($self->subject_class_name eq 'Genome::Sample') {
+       @samples = ($subject);
+    } elsif ( $self->subject_class_name eq 'Genome::Individual') {
+       @samples = $subject->samples();
+    }
+return @samples;
 }
 
 sub get_all_possible_samples {
@@ -1015,57 +1040,82 @@ sub property_names_for_copy {
     return sort { $a cmp $b } ( @base_properties, @input_properties );
 }
 
-sub copy { # TODO use the above
+sub real_input_properties {
+    my $self = shift;
+
+    my $meta = $self->__meta__;
+    my @properties;
+    for my $input_property ( sort { $a->property_name cmp $b->property_name } grep { $_->via and $_->via eq 'inputs' } $meta->property_metas ) {
+        my $property_name = $input_property->property_name;
+        my %property = (
+            name => $property_name,
+            is_optional => $input_property->is_optional,
+            is_many => $input_property->is_many,
+            data_type => $input_property->data_type,
+        );
+        push @properties, \%property;
+        next if not $property_name =~ s/_id$//;
+        my $object_property = $meta->property_meta_for_name($property_name);
+        next if not $object_property;
+        $property{name} = $object_property->property_name;
+        $property{data_type} = $object_property->data_type;
+    }
+
+    return @properties;
+}
+
+sub copy {
     my ($self, %overrides) = @_;
 
-    my %params = (
-        subject => $self->subject,
-        subclass_name => $self->subclass_name,
-        processing_profile => $self->processing_profile,
-        auto_assign_inst_data => $self->auto_assign_inst_data,
-        auto_build_alignments =>  $self->auto_build_alignments,
-    ),
-
-    # Input properties
-    my %input_properties = map { 
-        $_->property_name => $_ 
-    } grep { 
-        defined $_->via and $_->via eq 'inputs'
-    } $self->__meta__->property_metas;
-    for my $input_property ( values %input_properties ) {
-        my $input_name = $input_property->property_name;
-        my @values = $self->$input_name; # current values
-        if ( exists $overrides{$input_name} ) { # override
-            #next if not defined $overrides{$input_name};
-            my $values = delete $overrides{$input_name};
-            @values = ref $values ? @$values : $values;
+    # standard properties
+    my %params = ( subclass_name => $self->subclass_name );
+    $params{name} = delete $overrides{name} if defined $overrides{name};
+    my @standard_properties = (qw/ subject processing_profile auto_assign_inst_data auto_build_alignments /);
+    for my $name ( @standard_properties ) {
+        if ( defined $overrides{$name} ) { # override
+            $params{$name} = delete $overrides{$name};
         }
-        @values = grep { defined } @values; # copy only defined
-        next if not @values;
-
-        if ( $input_property->is_many ) {
-            $params{$input_name} = \@values;
-        }
-        elsif ( @values > 1 ) {
-            $self->error_message("Trying to get params for copy, but '$input_name' is not many but was given multiple values (@values).");
-            return;
+        elsif ( exists $overrides{$name} ) { # rm undef
+            delete $overrides{$name};
         }
         else {
-            $params{$input_name} = $values[0];
+            $params{$name} = $self->$name;
         }
     }
 
-    # Go though overrides for normal properties
-    for my $property ( keys %overrides ) {
-        if ( defined $overrides{$property} ) {
-            $params{$property} = delete $overrides{$property};
+    # input properties
+    for my $property ( $self->real_input_properties ) {
+        my $name = $property->{name};
+        if ( defined $overrides{$name} ) { # override
+            my $ref = ref $overrides{$name};
+            if ( $ref and $ref eq  'ARRAY' and not $property->{is_many} ) {
+                $self->error_message('Cannot override singular input with multiple values: '.Data::Dumper::Dumper({$name => $overrides{$name}}));
+                return;
+            }
+            $params{$name} = delete $overrides{$name};
+        }
+        elsif ( exists $overrides{$name} ) { # rm undef
+            delete $overrides{$name};
         }
         else {
-            delete $params{$property};
+            if ( $property->{is_many} ) {
+                $params{$name} = [ $self->$name ];
+            }
+            else {
+                if( defined $self->$name ) {
+                    $params{$name} = $self->$name;
+                }
+            }
         }
     }
 
-    $params{subject_class_name} = $params{subject}->class; # set here incase subject is overridden
+    # make we covered all overrides
+    if ( %overrides ) {
+        $self->error_message('Unrecognized overrides sent to model copy: '.Data::Dumper::Dumper(\%overrides));
+        return;
+    }
+
+    $params{subject_class_name} = $params{subject}->class; # set here in case subject is overridden
 
     my $copy = eval{ $self->class->create(%params) };
     if ( not $copy ) {
@@ -1221,5 +1271,34 @@ sub duplicates {
 
     return @duplicates;
 }
+
+sub is_used_as_model_or_build_input {
+    # Both models and builds have this method and as such it is currently duplicated.
+    # We don't seem to have any place to put things that are common between Models and Builds.
+    my $self = shift;
+
+    my @model_inputs = Genome::Model::Input->get(
+        value_id => $self->id,
+        value_class_name => $self->class,
+    );
+
+    my @build_inputs = Genome::Model::Build::Input->get(
+        value_id => $self->id,
+        value_class_name => $self->class,
+    );
+
+    my @inputs = (@model_inputs, @build_inputs);
+
+    return (scalar @inputs) ? 1 : 0;
+}
+
+sub builds_are_used_as_model_or_build_input {
+    my $self = shift;
+
+    my @builds = $self->builds;
+
+    return grep { $_->is_used_as_model_or_build_input } @builds;
+}
+
 1;
 

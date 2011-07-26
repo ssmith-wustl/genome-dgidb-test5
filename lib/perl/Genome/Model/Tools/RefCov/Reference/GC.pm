@@ -1,4 +1,4 @@
-package Genome::RefCov::Reference::GC;
+package Genome::Model::Tools::RefCov::Reference::GC;
 
 use strict;
 use warnings;
@@ -10,7 +10,7 @@ my @PAIRINGS = qw/at gc/;
 my @METRIC_CATEGORIES = qw/reflen covlen uncovlen/;
 my @METRIC_TYPES = qw/bp percent/;
 
-class Genome::RefCov::Reference::GC {
+class Genome::Model::Tools::RefCov::Reference::GC {
     has => [
         coverage => {
             is => 'ArrayRef',

@@ -1,4 +1,4 @@
-package Genome::RefCov::Stats;
+package Genome::Model::Tools::RefCov::Stats;
 
 use strict;
 use warnings;
@@ -44,7 +44,7 @@ my %HEADER_DESCRIPTIONS = (
 
 );
 
-class Genome::RefCov::Stats {
+class Genome::Model::Tools::RefCov::Stats {
     has => [
         #coverage => {
         #    is => 'ArrayRef',

@@ -1,4 +1,8 @@
-package Hits;
+package Genome::Model::Tool::Sv::AssemblyPipeline::Hits;
+
+class Genome::Model::Tool::Sv::AssemblyPipeline::Hits {
+    is => 'Genome::Model::Tools::Sv::AssemblyPipeline'
+};
 
 use strict;
 use Carp;

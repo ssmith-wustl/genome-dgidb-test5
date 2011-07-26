@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use Genome;
-use Genome::RefCov::ROI::Bed;
+use Genome::Model::Tools::RefCov::ROI::Bed;
 
 class Genome::Model::Tools::Sam::LimitVariants {
     is => ['Command'],
@@ -39,7 +39,7 @@ class Genome::Model::Tools::Sam::LimitVariants {
 sub execute {
     my $self = shift;
 
-    my $regions = Genome::RefCov::ROI::Bed->create(
+    my $regions = Genome::Model::Tools::RefCov::ROI::Bed->create(
         file => $self->bed_file,
         region_index_substring => 5,
         wingspan => $self->wingspan,

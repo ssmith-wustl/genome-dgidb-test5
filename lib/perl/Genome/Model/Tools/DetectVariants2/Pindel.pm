@@ -138,10 +138,28 @@ sub _generate_standard_files {
         die $self->error_message("Cat command failed to execute.");
     }
     $self->SUPER::_generate_standard_files(@_);
+=cut 
+    my @beds = glob($output_dir."/indels.hq.v?.bed");
+    my @good_beds;
+    map{ push @good_beds, $_ if -l $_} @beds;
+
+    for my $bed (@good_beds){
+        my $sort_cmd = Genome::Model::Tools::Joinx::Sort->create(input_files => $bed, output_file => $bed.".sorted");
+        unless($sort_cmd->execute){
+            die $self->error_message("Could not complete sort operation on :".$bed);
+        }
+        File::Copy::move($bed.".sorted",$bed);
+    }
+=cut
     return 1;
 }
 
 sub _promote_staged_data {
+    my $self = shift;
+    return 1;
+}
+
+sub _sort_detector_output {
     my $self = shift;
     return 1;
 }

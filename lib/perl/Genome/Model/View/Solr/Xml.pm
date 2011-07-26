@@ -80,11 +80,11 @@ class Genome::Model::View::Solr::Xml {
                     position => 'content',
                 },
                 {
-                    name => 'user_name',
+                    name => 'sample_names_for_view',
                     position => 'content',
                 },
                 {
-                    name => 'sample_names',
+                    name => 'user_name',
                     position => 'content',
                 },
                 {

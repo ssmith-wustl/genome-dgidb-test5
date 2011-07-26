@@ -56,7 +56,6 @@ for my $test_type ( qw/ scaffolded unscaffolded / ) {
     my $create = Genome::Model::Tools::Newbler::ToPcapAce->create(
         assembly_directory => $temp_type_dir,
         min_contig_length => 200,
-        default_gap_size => 10,
     );
     ok( $create, "Created tool" );
     ok( $create->execute, "Executed tool" );

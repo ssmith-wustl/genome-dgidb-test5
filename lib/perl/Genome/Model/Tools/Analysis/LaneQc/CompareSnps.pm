@@ -110,14 +110,15 @@ sub execute {                               # replace with real execution logic.
 	print "Loading genotypes from $genotype_file...\n" if($self->verbose);
 	my %genotypes = load_genotypes($genotype_file, $self);
 
-
 	my $reference_build = $self->reference_build;
 	my $reference_build_fasta;
 	if ($reference_build =~ m/36/) {
-		$reference_build_fasta = '/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa';
+		my $reference_build_fasta_object= Genome::Model::Build::ReferenceSequence->get(name => "NCBI-human-build36");
+		$reference_build_fasta = $reference_build_fasta_object->data_directory . "/all_sequences.fa";
 	}
 	elsif ($reference_build =~ m/37/) {
-		$reference_build_fasta = '/gscmnt/sata420/info/model_data/2857786885/build102671028/all_sequences.fa';
+		my $reference_build_fasta_object = Genome::Model::Build::ReferenceSequence->get(name => "GRCh37-lite-build37");
+		$reference_build_fasta = $reference_build_fasta_object->data_directory . "/all_sequences.fa";
 	}
 	else {
 		die "Please specify either build 36 or 37";

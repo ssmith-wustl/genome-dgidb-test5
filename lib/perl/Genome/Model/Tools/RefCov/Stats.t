@@ -17,16 +17,16 @@ use Devel::Size qw/total_size/;
 
 plan tests => 22;
 
-use_ok('Genome::RefCov::Stats');
+use_ok('Genome::Model::Tools::RefCov::Stats');
 # TODO: Load a BAM file and use the actual coverage method to get array?
 my @coverage = (0,0,5,5,5,5,5,0,5,5,5,5,5,0,0);
 #my @coverage = (1 .. 10_000_000);
 my $expected_length = scalar(@coverage);
-my $stats = Genome::RefCov::Stats->create(
+my $stats = Genome::Model::Tools::RefCov::Stats->create(
     name => 'Test',
     coverage => \@coverage,
 );
-isa_ok($stats,'Genome::RefCov::Stats');
+isa_ok($stats,'Genome::Model::Tools::RefCov::Stats');
 isa_ok($stats->coverage, 'ARRAY');
 is($stats->ref_length,$expected_length,'ref_length is '.$expected_length);
 is($stats->percent_ref_bases_covered,66.67,'percent_ref_bases_covered matches expected');

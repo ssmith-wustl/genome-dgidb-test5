@@ -117,8 +117,8 @@ sub execute {                               # replace with real execution logic.
 #       my $normal_pileup = "$sam_pathname pileup -f $reference $normal_bam";
 #        my $tumor_pileup = "$sam_pathname pileup -f $reference $tumor_bam";
         
-        my $normal_pileup = $self->samtools_path . " pileup -f $reference $normal_bam";
-        my $tumor_pileup = $self->samtools_path . " pileup -f $reference $tumor_bam";
+        my $normal_pileup = $self->samtools_path . " mpileup -f $reference $normal_bam";
+        my $tumor_pileup = $self->samtools_path . " mpileup -f $reference $tumor_bam";
         my $varscan_path = Genome::Model::Tools::Varscan->path_for_version($self->version);
 
         my $cmd = $self->java_command_line("somatic <\($normal_pileup\) <\($tumor_pileup\) $temp_output --output-snp $temp_snp --output-indel $temp_indel $varscan_params");

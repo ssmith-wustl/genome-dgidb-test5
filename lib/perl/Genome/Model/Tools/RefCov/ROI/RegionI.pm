@@ -1,4 +1,4 @@
-package Genome::RefCov::ROI::RegionI;
+package Genome::Model::Tools::RefCov::ROI::RegionI;
 
 use strict;
 use warnings;
@@ -17,7 +17,7 @@ BEGIN {
      );
 }
 
-class Genome::RefCov::ROI::RegionI {
+class Genome::Model::Tools::RefCov::ROI::RegionI {
     has => [
         start => {},
         end => {},
@@ -90,8 +90,8 @@ sub overlaps {
 
     $self->throw("start is undefined") unless defined $self->start;
     $self->throw("end is undefined") unless defined $self->end;
-    $self->throw("not a Genome::RefCov::ROI::RegionI object") unless defined $other &&
-        $other->isa('Genome::RefCov::ROI::RegionI');
+    $self->throw("not a Genome::Model::Tools::RefCov::ROI::RegionI object") unless defined $other &&
+        $other->isa('Genome::Model::Tools::RefCov::ROI::RegionI');
     $other->throw("start is undefined") unless defined $other->start;
     $other->throw("end is undefined") unless defined $other->end;
     return
@@ -119,7 +119,7 @@ sub contains {
     $self->throw("start is undefined") unless defined $self->start;
     $self->throw("end is undefined") unless defined $self->end;
     if(defined $other && ref $other) { # a region object?
-        $other->throw("Not a Genome::RefCov::ROI::RegionI object: $other") unless  $other->isa('Genome::RefCov::ROI::RegionI');
+        $other->throw("Not a Genome::Model::Tools::RefCov::ROI::RegionI object: $other") unless  $other->isa('Genome::Model::Tools::RefCov::ROI::RegionI');
         $other->throw("start is undefined") unless defined $other->start;
         $other->throw("end is undefined") unless defined $other->end;
         return ($self->_testStrand($other, $so)      and
@@ -147,7 +147,7 @@ sub equals {
 
     $self->throw("start is undefined") unless defined $self->start;
     $self->throw("end is undefined") unless defined $self->end;
-    $other->throw("Not a Genome::RefCov::ROI::RegionI object") unless  $other->isa('Genome::RefCov::ROI::RegionI');
+    $other->throw("Not a Genome::Model::Tools::RefCov::ROI::RegionI object") unless  $other->isa('Genome::Model::Tools::RefCov::ROI::RegionI');
     $other->throw("start is undefined") unless defined $other->start;
     $other->throw("end is undefined") unless defined $other->end;
 
@@ -159,16 +159,16 @@ sub equals {
 =head1 Geometrical methods
 
 These methods do things to the geometry of regions, and return
-Genome::RefCov::ROI::RegionI compliant objects or triplets (start, stop, strand) from
+Genome::Model::Tools::RefCov::ROI::RegionI compliant objects or triplets (start, stop, strand) from
 which new regions could be built.
 
 =head2 intersection
 
  Title   : intersection
  Usage   : ($start, $stop, $strand) = $r1->intersection($r2); OR
-           ($start, $stop, $strand) = Genome::RefCov::Region->intersection(\@regions); OR
+           ($start, $stop, $strand) = Genome::Model::Tools::RefCov::Region->intersection(\@regions); OR
            my $containing_region = $r1->intersection($r2); OR
-           my $containing_region = Genome::RefCov::Region->intersection(\@regions);
+           my $containing_region = Genome::Model::Tools::RefCov::Region->intersection(\@regions);
  Function: gives the region that is contained by all regions
  Returns : undef if they do not overlap, or
            the region that they do overlap (in the form of an object
@@ -184,8 +184,8 @@ sub intersection {
     $self->throw("missing arg: you need to pass in another feature") unless $given;
 
     my @regions;
-    if ($self eq "Genome::RefCov::ROI::RegionI") {
-        $self = "Genome::RefCov::Region";
+    if ($self eq "Genome::Model::Tools::RefCov::ROI::RegionI") {
+        $self = "Genome::Model::Tools::RefCov::Region";
         $self->warn("calling static methods of an interface is deprecated; use $self instead");
     }
     if (ref $self) {
@@ -199,14 +199,14 @@ sub intersection {
         unless ($intersect) {
             $intersect = shift(@regions);
             $self->throw("Not an object: $intersect") unless ref($intersect);
-            $self->throw("Not a Genome::RefCov::ROI::RegionI object: $intersect") unless $intersect->isa('Genome::RefCov::ROI::RegionI');
+            $self->throw("Not a Genome::Model::Tools::RefCov::ROI::RegionI object: $intersect") unless $intersect->isa('Genome::Model::Tools::RefCov::ROI::RegionI');
             $self->throw("start is undefined") unless defined $intersect->start;
             $self->throw("end is undefined") unless defined $intersect->end;
         }
 
         my $compare = shift(@regions);
         $self->throw("Not an object: $compare") unless ref($compare);
-        $self->throw("Not a Genome::RefCov::ROI::RegionI object: $compare") unless $compare->isa('Genome::RefCov::ROI::RegionI');
+        $self->throw("Not a Genome::Model::Tools::RefCov::ROI::RegionI object: $compare") unless $compare->isa('Genome::Model::Tools::RefCov::ROI::RegionI');
         $self->throw("start is undefined") unless defined $compare->start;
         $self->throw("end is undefined") unless defined $compare->end;
         return unless $compare->_testStrand($intersect, $so);
@@ -249,8 +249,8 @@ sub intersection {
 
    Title   : union
     Usage   : ($start, $stop, $strand) = $r1->union($r2);
-            : ($start, $stop, $strand) = Genome::RefCov::Region->union(@regions);
-              my $newregion = Genome::RefCov::Region->union(@regions);
+            : ($start, $stop, $strand) = Genome::Model::Tools::RefCov::Region->union(@regions);
+              my $newregion = Genome::Model::Tools::RefCov::Region->union(@regions);
     Function: finds the minimal Region that contains all of the Regions
     Args    : a Region or list of Region objects
     Returns : the region containing all of the region
@@ -262,8 +262,8 @@ sub intersection {
 sub union {
 	my $self = shift;
 	my @regions = @_;
-	if ($self eq "Genome::RefCov::ROI::RegionI") {
-		$self = "Genome::RefCov::Region";
+	if ($self eq "Genome::Model::Tools::RefCov::ROI::RegionI") {
+		$self = "Genome::Model::Tools::RefCov::Region";
 		$self->warn("calling static methods of an interface is deprecated; use $self instead");
 	}
 	if(ref $self) {
@@ -326,7 +326,7 @@ sub overlap_extent{
 
 	$a->throw("start is undefined") unless defined $a->start;
 	$a->throw("end is undefined") unless defined $a->end;
-	$b->throw("Not a Genome::RefCov::ROI::RegionI object") unless  $b->isa('Genome::RefCov::ROI::RegionI');
+	$b->throw("Not a Genome::Model::Tools::RefCov::ROI::RegionI object") unless  $b->isa('Genome::Model::Tools::RefCov::ROI::RegionI');
 	$b->throw("start is undefined") unless defined $b->start;
 	$b->throw("end is undefined") unless defined $b->end;
 
@@ -357,7 +357,7 @@ sub overlap_extent{
 =head2 disconnected_regions
 
     Title   : disconnected_regions
-    Usage   : my @disc_regions = Genome::RefCov::Region->disconnected_regions(@regions);
+    Usage   : my @disc_regions = Genome::Model::Tools::RefCov::Region->disconnected_regions(@regions);
     Function: finds the minimal set of regions such that each input region
               is fully contained by at least one output region, and none of
               the output regions overlap
@@ -369,8 +369,8 @@ sub overlap_extent{
 
 sub disconnected_regions {
     my $self = shift;
-    if ($self eq "Genome::RefCov::ROI::RegionI") {
-	$self = "Genome::RefCov::Region";
+    if ($self eq "Genome::Model::Tools::RefCov::ROI::RegionI") {
+	$self = "Genome::Model::Tools::RefCov::Region";
 	$self->warn("calling static methods of an interface is deprecated; use $self instead");
     }
     my @inregions = @_;
@@ -477,13 +477,13 @@ sub subtract() {
       unless $region;
     return unless $self->_testStrand($region, $so);
 
-    if ($self eq "Genome::RefCov::ROI::RegionI") {
-	$self = "Genome::RefCov::Region";
+    if ($self eq "Genome::Model::Tools::RefCov::ROI::RegionI") {
+	$self = "Genome::Model::Tools::RefCov::Region";
 	$self->warn("calling static methods of an interface is
 deprecated; use $self instead");
     }
-    $region->throw("Input a Genome::RefCov::ROI::RegionI object") unless
-$region->isa('Genome::RefCov::ROI::RegionI');
+    $region->throw("Input a Genome::Model::Tools::RefCov::ROI::RegionI object") unless
+$region->isa('Genome::Model::Tools::RefCov::ROI::RegionI');
 
     if (!$self->overlaps($region)) {
         return undef;
@@ -534,7 +534,7 @@ $region->isa('Genome::RefCov::ROI::RegionI');
 
 sub unions {
   my ($class,@i) = @_;
-  die('You probably wanted the method disconnected_regions in Genome::RefCov::ROI::RegionI');
+  die('You probably wanted the method disconnected_regions in Genome::Model::Tools::RefCov::ROI::RegionI');
   if (ref($class)) {
       $class = ref($class);
   }

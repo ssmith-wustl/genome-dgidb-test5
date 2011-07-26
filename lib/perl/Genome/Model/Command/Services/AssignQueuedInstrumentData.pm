@@ -499,26 +499,6 @@ sub tcga_roi_for_model {
     return $tcga_cds_roi_list;
 }
 
-
-sub needs_tcga_reference_alignment {
-    my $self = shift;
-    my $model = shift;
-    my %model_params = @_;
-
-    return unless $self->is_tcga_reference_alignment($model);
-
-    my %tcga_model_params = %model_params;
-    delete $tcga_model_params{name};
-    delete $tcga_model_params{region_of_interest_set_name};
-
-    my $tcga_cds_roi_list = $self->tcga_roi_for_model($model);
-
-    my @existing_tcga_models = Genome::Model::ReferenceAlignment->get(%tcga_model_params, region_of_interest_set_name => $tcga_cds_roi_list);
-
-    return not @existing_tcga_models;
-}
-
-
 sub is_tcga_reference_alignment {
     my $self = shift;
     my $model = shift;
@@ -1012,6 +992,7 @@ sub create_default_qc_models {
 
         my @lane_qc_models = $model->get_or_create_lane_qc_models;
         my @buildless_lane_qc_models = grep { not scalar @{[ $_->builds ]} } @lane_qc_models;
+        for (@buildless_lane_qc_models) { $_->build_requested(1) };
         push @new_models, @buildless_lane_qc_models;
     }
 
@@ -1105,26 +1086,24 @@ sub _resolve_project_and_work_order_names {
     my $pse = shift;
 
     my @names = ();
-
-    my @work_orders = $pse->get_inherited_assigned_directed_setups_filter_on('setup work order');
+    my @work_orders;
+    my ($instrument_data_id) = $pse->added_param('instrument_data_id');
+    my $index_illumina = GSC::IndexIllumina->get($instrument_data_id);
+    if($index_illumina){
+        @work_orders = $index_illumina->get_work_orders;
+    } else{
+        @work_orders = $pse->get_inherited_assigned_directed_setups_filter_on('setup work order');
+    }
     unless(scalar @work_orders) {
         $self->warning_message('No work order found for PSE ' . $pse->id);
     }
+    push @names, map($_->setup_name, @work_orders);
 
-    if(@work_orders and $work_orders[0]->isa("Genome::WorkOrder")){
-        push @names,
-        map((($_->can("name") ? $_->name : $_->setup_name )), @work_orders);
-    }else{
-        push @names,
-        map(($_->setup_name), @work_orders);
-    }
-
-    my @projects = $pse->get_inherited_assigned_directed_setups_filter_on('setup project');
+    my @projects = map($_->get_project, @work_orders); 
     unless(scalar @projects) {
         $self->warning_message('No project found for PSE ' . $pse->id);
     }
-    push @names,
-    map( ($_->can('name') ? $_->name : $_->setup_name), @projects);
+    push @names, map($_->setup_name, @projects);
 
     return @names;
 }
@@ -1462,7 +1441,15 @@ sub _is_454_16s {
     my $self = shift;
     my $pse = shift;
 
-    my @work_orders = $pse->get_inherited_assigned_directed_setups_filter_on('setup work order');
+    my @work_orders;
+
+    my ($instrument_data_id) = $pse->added_param('instrument_data_id');
+    my $index_illumina = GSC::IndexIllumina->get($instrument_data_id);
+    if($index_illumina){
+        @work_orders = $index_illumina->get_work_orders;
+    } else{
+        @work_orders = $pse->get_inherited_assigned_directed_setups_filter_on('setup work order');
+    }
 
     foreach my $work_order (@work_orders) {
         my $pipeline_string = $work_order->pipeline();
@@ -1483,7 +1470,15 @@ sub _is_unknown_454_pipeline {
     my $self = shift;
     my $pse = shift;
 
-    my @work_orders = $pse->get_inherited_assigned_directed_setups_filter_on('setup work order');
+    my @work_orders;
+
+    my ($instrument_data_id) = $pse->added_param('instrument_data_id');
+    my $index_illumina = GSC::IndexIllumina->get($instrument_data_id);
+    if($index_illumina){
+        @work_orders = $index_illumina->get_work_orders;
+    } else{
+        @work_orders = $pse->get_inherited_assigned_directed_setups_filter_on('setup work order');
+    }
 
     unless (@work_orders > 0) {
         $self->error_message('454 instrument_data ' . $pse->added_param('instrument_data_id') . ' has no work order(s)');
@@ -1533,12 +1528,9 @@ sub _is_pcgp {
     my $self = shift;
     my $pse = shift;
 
-    my @work_orders = $pse->get_inherited_assigned_directed_setups_filter_on('setup work order');
-
-    unless (@work_orders > 0) {
-        $self->error_message('solexa instrument_data ' . $pse->added_param('instrument_data_id') . ' has no work order(s)');
-        die $self->error_message;
-    }
+    my ($instrument_data_id) = $pse->added_param('instrument_data_id');
+    my $index_illumina = GSC::IndexIllumina->get($instrument_data_id);
+    my @work_orders = $index_illumina->get_work_orders;
 
     foreach my $work_order (@work_orders) {
         my $project_id = $work_order->project_id;
@@ -1599,12 +1591,9 @@ sub _is_aml_build_36 {
     my $sample = shift;
 
     # Check if in work order from RT #72713
-    my @work_orders = $pse->get_inherited_assigned_directed_setups_filter_on('setup work order');
-
-    unless (@work_orders > 0) {
-        $self->error_message('solexa instrument_data ' . $pse->added_param('instrument_data_id') . ' has no work order(s)');
-        die $self->error_message;
-    }
+    my ($instrument_data_id) = $pse->added_param('instrument_data_id');
+    my $index_illumina = GSC::IndexIllumina->get($instrument_data_id);
+    my @work_orders = $index_illumina->get_work_orders;
 
     foreach my $work_order (@work_orders) {
         if ( $work_order->project_id == 2589194 ) {

@@ -1,12 +1,12 @@
-package Genome::RefCov::ROI::Bed;
+package Genome::Model::Tools::RefCov::ROI::Bed;
 
 use strict;
 use warnings;
 
 use Genome;
 
-class Genome::RefCov::ROI::Bed {
-    is => ['Genome::RefCov::ROI::FileI'],
+class Genome::Model::Tools::RefCov::ROI::Bed {
+    is => ['Genome::Model::Tools::RefCov::ROI::FileI'],
 };
 
 sub _load_chromosomes {
@@ -31,6 +31,9 @@ sub _parse_line {
     if ($wingspan) {
         $start -= $wingspan;
         $end += $wingspan;
+    }
+    if ( !defined($name) || $name eq '') {
+        $name = $chr .':'. $start .'-'. $end;
     }
     my %region = (
         name => $name,

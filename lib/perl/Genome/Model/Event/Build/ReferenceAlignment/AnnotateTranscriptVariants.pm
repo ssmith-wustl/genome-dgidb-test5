@@ -67,6 +67,11 @@ sub execute {
     my $abuild = $self->model->annotation_reference_build;
     $params{build_id} = $abuild->id if $abuild;
 
+    use Data::Dumper;
+    $self->status_message("Annotator params are:\n"
+      . Dumper(\%params)
+    );
+
     my $annotator = Genome::Model::Tools::Annotate::TranscriptVariants->create(%params);
 
     my $rv = $annotator->execute;

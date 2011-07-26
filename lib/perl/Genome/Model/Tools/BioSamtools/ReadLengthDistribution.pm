@@ -31,7 +31,7 @@ sub execute {
     my $output_fh = Genome::Sys->open_file_for_writing($self->output_file);
     my $sizes_fh = Genome::Sys->open_file_for_writing($self->sizes_file);
     $self->_output_fh($output_fh);
-    my $refcov_bam  = Genome::RefCov::Bam->create(bam_file => $self->bam_file );
+    my $refcov_bam  = Genome::Model::Tools::RefCov::Bam->create(bam_file => $self->bam_file );
     unless ($refcov_bam) {
         die('Failed to load bam file '. $self->bam_file);
     }

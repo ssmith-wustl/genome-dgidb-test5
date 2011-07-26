@@ -318,6 +318,9 @@ sub transcript_info_file {
             die('The gmt command ran but the file does not exist: '. $file_name);
         }
     }
+    unless (-s $file_name){
+        die('The transcript_info file exists, but has no size: ' . $file_name);
+    }
     return $file_name;
 }
 
@@ -331,7 +334,7 @@ sub annotation_file {
     }
 
     my $file_name = $self->_resolve_annotation_file_name('all_sequences',$suffix,$reference_sequence_id);
-    if (-f $file_name) {
+    if (-s $file_name) {
         return $file_name;
     }
     # TODO: Once we have perl5.12.1 or perl5.10.1 working, this command can be removed and replaced with in-line code to generate the file
@@ -354,6 +357,9 @@ sub annotation_file {
     }
     unless (-f $file_name) {
         die('Failed to find annotation file: '. $file_name);
+    }
+    unless (-s $file_name){
+        die('Annotation file exists but has no size: ' . $file_name);
     }
     return $file_name;
 }
@@ -440,7 +446,7 @@ sub rRNA_file {
     # Currently this only exists for Human Ensemble version 58_37c_v2 annotation build
     my $ribosomal_file = $self->_annotation_data_directory .'/RibosomalGeneNames.txt';
     unless (-e $ribosomal_file) {
-        die('This is the last step requiring automation.  You must provide a list of gene_names(column1) and ensembl_gene_ids(column2) in this location: '. $ribosomal_file);
+        die('This is the last step requiring automation.  You must provide a list of gene_names(column1) and ensembl_gene_ids(column2) in this location (see Genome::Model::Event::Build::ImportedAnnotation::CopyRibosomalGeneNames): '. $ribosomal_file);
     }
     my %ribo_names;
     my %ribo_ids;
