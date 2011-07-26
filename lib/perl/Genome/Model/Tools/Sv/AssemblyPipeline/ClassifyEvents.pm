@@ -46,7 +46,8 @@ class Genome::Model::Tools::Sv::AssemblyPipeline::ClassifyEvents {
 	},
 	tumor_purity_file => { 
 	    is => 'Text',
-	    doc => "File with two columns; patientId and fraction of tumor cells in tumor sample (1 is pure tumor).",
+	    #doc => "File with two columns; patientId and fraction of tumor cells in tumor sample (1 is pure tumor).",
+	    doc => "Used only when there is tumor contamination in normal sample. File with two columns; patientId and tumor purity expressed as fraction of tumor cells in tumor sample (1 is pure tumor).",
 	    is_optional => 1 
 	},
     ],
@@ -54,7 +55,8 @@ class Genome::Model::Tools::Sv::AssemblyPipeline::ClassifyEvents {
     has_optional => [
         tumor_in_normal_file => { 
 	    is => 'Text',
-	    doc => "File with two columns; patientId and fraction of normal contamination in tumor (0 is no contamination)."
+	    #doc => "File with two columns; patientId and fraction of normal contamination in tumor (0 is no contamination)."
+	    doc => "Used only when there is tumor contamination in normal sample. File with two columns; patientId and amount of tumor contamination in normal (0 is no contamination)."
 	},
         min_tumor_sv_reads => { 
 	    is => 'Integer',    
@@ -141,6 +143,7 @@ sub execute {
 	chomp $line;
 	if ( $line =~ /\#/ ) { next; }
 	if ( $line =~ /no\s+fasta\s+sequence/ ) { print NON "$line\n"; next; }
+	$normalTotal = $patientId = $tumorTotal = $normalSv = $tumorSv  = undef;
 	if ( $line =~ /(\S+).normal\.totalReads\:(\d+)/i ) { $patientId = $1; $normalTotal = $2; }
 	if ( $line =~ /$patientId.tumor\.totalReads\:(\d+)/i ) { $tumorTotal = $1; }
 	if ( $line =~ /$patientId.normal.svReadCount\:(\d+)/i ) { $normalSv = $1; }
