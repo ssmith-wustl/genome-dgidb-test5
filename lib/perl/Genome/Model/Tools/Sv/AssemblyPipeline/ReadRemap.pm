@@ -1,4 +1,9 @@
-package ReadRemap;
+
+package Genome::Model::Tools::Sv::AssemblyPipeline::ReadRemap;
+
+class Genome::Model::Tools::Sv::AssemblyPipeline::ReadRemap {
+        is => 'Genome::Model::Tools::Sv::AssemblyPipeline'
+};
 
 #
 #   Run on 64-bit machine
@@ -8,15 +13,15 @@ package ReadRemap;
 #
 #
 
-
-
 use strict;
+use warnings;
+
 use Carp;
 use FindBin qw($Bin);
 use lib "$FindBin::Bin";
 use PostData;
 #use lib "/gscuser/jwallis/svn/perl_modules/test_project/jwallis";
-use Genome::Model::Tools::Sv::AssemblyPipeline::Hits;
+#use Genome::Model::Tools::Sv::AssemblyPipeline::Hits;
 
 # This is used to parse the cross_match hits
 my $number = "\\d+\\.?\\d*";
@@ -63,11 +68,11 @@ sub getAssemblySequences {
     @entireFile = <IN>;
     open(OUT, "> $outputFile") || confess "Could not open '$outputFile' for output: $!";
     foreach $line (@entireFile) {
-	chomp $line;
-	if ( $line =~ />(\w+\.\d+)\,/ ) {
-	    if ( defined $$idRef{$1} ) { $reading = 1; $$idRef{$1} = $line; } else { $reading = 0; }
-	}
-	if ( $reading ) { print OUT "$line\n"; }
+        chomp $line;
+        if ( $line =~ />(\w+\.\d+)\,/ ) {
+            if ( defined $$idRef{$1} ) { $reading = 1; $$idRef{$1} = $line; } else { $reading = 0; }
+        }
+        if ( $reading ) { print OUT "$line\n"; }
     }
     return $idRef;
 }
@@ -77,11 +82,11 @@ sub getBuild36ReferenceSequences {
     # Use 'expiece' to write region +/- $buffer of each position
     # Chromosome-specific reference sequences are at:
     # /gscmnt/sata180/info/medseq/biodb/shared/Hs_build36/Homo_sapiens.NCBI36.45.dna.chromosome.$chr.fa
-    
+
     my ($positionRef, $outputFile, $buffer) = @_;
     my ( $position, $remove, $chrA, $bpA, $chrB, $bpB, $start, $stop, @output, $seq, );
     if (!defined $buffer) { $buffer = 500; }
-    
+
     open(OUT, "> $outputFile") || confess "Could not open '$outputFile' for output: $!";
 
     # This is what the fasta header looks like when using 'expiece'.
@@ -89,43 +94,43 @@ sub getBuild36ReferenceSequences {
     $remove = "\/gscmnt\/sata180\/info\/medseq\/biodb\/shared\/Hs_build36\/Homo_sapiens.NCBI36.45.dna.chromosome.";
 
     foreach $position ( sort keys %{$positionRef} ) {
-	if ( $position =~ /(\w+)\.(\d+)\.(\w+)\.(\d+)/ ) {
-	    $chrA = $1; $bpA = $2; $chrB = $3; $bpB = $4;
-	} else {
-	    confess "Unexpected format for position: '$position'";
-	}
+        if ( $position =~ /(\w+)\.(\d+)\.(\w+)\.(\d+)/ ) {
+            $chrA = $1; $bpA = $2; $chrB = $3; $bpB = $4;
+        } else {
+            confess "Unexpected format for position: '$position'";
+        }
 
-	# Do first coordinate
-	$start = $bpA - $buffer;
-	$stop = $bpA + $buffer;
-	my $chrFile = "/gscmnt/sata180/info/medseq/biodb/shared/Hs_build36/Homo_sapiens.NCBI36.45.dna.chromosome.$chrA.fa";
-	open(EXP, "expiece $start $stop $chrFile |") || confess "Could not open pipe for 'expiece $start $stop $chrFile'";
-	@output = <EXP>;
-	close EXP;
-	foreach my $seq (@output) {
-	    chomp $seq;
-	    if ( $seq =~ />/ ) { 
-		$seq =~ s/$remove//;
-		$seq =~ s/fa from $start to $stop/$start.$stop/;
-	    }
-	    print OUT "$seq\n";
-	}
+        # Do first coordinate
+        $start = $bpA - $buffer;
+        $stop = $bpA + $buffer;
+        my $chrFile = "/gscmnt/sata180/info/medseq/biodb/shared/Hs_build36/Homo_sapiens.NCBI36.45.dna.chromosome.$chrA.fa";
+        open(EXP, "expiece $start $stop $chrFile |") || confess "Could not open pipe for 'expiece $start $stop $chrFile'";
+        @output = <EXP>;
+        close EXP;
+        foreach my $seq (@output) {
+            chomp $seq;
+            if ( $seq =~ />/ ) { 
+                $seq =~ s/$remove//;
+                $seq =~ s/fa from $start to $stop/$start.$stop/;
+            }
+            print OUT "$seq\n";
+        }
 
-	# Do second coordinate
-	$start = $bpB - $buffer;
-	$stop = $bpB + $buffer;
-	$chrFile = "/gscmnt/sata180/info/medseq/biodb/shared/Hs_build36/Homo_sapiens.NCBI36.45.dna.chromosome.$chrB.fa";
-	open(EXP, "expiece $start $stop $chrFile |") || confess "Could not open pipe for 'expiece $start $stop $chrFile'";
-	@output = <EXP>;
-	close EXP;
-	foreach my $seq (@output) {
-	    chomp $seq;
-	    if ( $seq =~ />/ ) { 
-		$seq =~ s/$remove//;
-		$seq =~ s/fa from $start to $stop/$start.$stop/;
-	    }
-	    print OUT "$seq\n";
-	}
+        # Do second coordinate
+        $start = $bpB - $buffer;
+        $stop = $bpB + $buffer;
+        $chrFile = "/gscmnt/sata180/info/medseq/biodb/shared/Hs_build36/Homo_sapiens.NCBI36.45.dna.chromosome.$chrB.fa";
+        open(EXP, "expiece $start $stop $chrFile |") || confess "Could not open pipe for 'expiece $start $stop $chrFile'";
+        @output = <EXP>;
+        close EXP;
+        foreach my $seq (@output) {
+            chomp $seq;
+            if ( $seq =~ />/ ) { 
+                $seq =~ s/$remove//;
+                $seq =~ s/fa from $start to $stop/$start.$stop/;
+            }
+            print OUT "$seq\n";
+        }
 
 
     } # matches 'foreach $position'
@@ -140,7 +145,7 @@ sub samReadPassesFilter {
 
     my ($read, $maxMismatch, $maxSoftClip) = @_;
     (defined $read && defined $maxMismatch && defined $maxSoftClip) || carp
-	"Input parameter(s) not defined: '$read',  '$maxMismatch', '$maxSoftClip'";
+        "Input parameter(s) not defined: '$read',  '$maxMismatch', '$maxSoftClip'";
 
     my $passesFilter = 1;
 
@@ -159,17 +164,17 @@ sub samReadCrossesBreakpoints {
     #        $start, $stop  -- region the read should cover (expressed in coordinates of $chr to which the read was aligned)
     # Return: 1 if read covers both coordinates.  It can't stop at a coordinate; it must extend by at least one base
     # The read must be mapped, not just it's mate
-    
+
     my ($read, $start, $stop) = @_;
     (defined $read && defined $start && defined $stop) || carp
-	"Input parameter(s) not defined: '$read', '$start', '$stop'";
+        "Input parameter(s) not defined: '$read', '$start', '$stop'";
 
     my ( $flag, $readStart, $readStop, $cigar, $seq );
     (undef, $flag, undef, $readStart, undef, $cigar, undef, undef, undef, $seq) = split /\s+/, $read;
 
     # Read should be mapped  0x0004 => the query sequence itself is unmapped
     if ( $flag & 0x0004) { return 0; }
-    
+
     $readStop = $readStart + length($seq) - 1;
 
     return ( $readStart < $start && $readStop > $stop )
@@ -182,29 +187,29 @@ sub convertSamToFasta {
     # Output: Fasta sequence where read names are "$name.$cigar.$flag"
     #         Quality file if flag set to 1
     # Return: number of sequences written
-    
+
 
     my ( $readRef, $outFile, $writeQualityFile ) = @_;
     if ( !defined $writeQualityFile ) { $writeQualityFile = 0; }
-    
+
     my ( $line, $name, $flag, $cigar, $seq, %allReadNames, $qualityString,  );
     %allReadNames = ();
     open(FASTA, "> $outFile") || confess "Could not open '$outFile': $!";
     if ( $writeQualityFile ) { open(QUAL, "> $outFile.qual") || confess "Could not open '$outFile.qual': $!"; }
     foreach $line ( @{$readRef} ) {
-	chomp $line;
-	($name, $flag, undef, undef, undef, $cigar, undef, undef, undef, $seq, $qualityString) = split /\s+/, $line;
+        chomp $line;
+        ($name, $flag, undef, undef, undef, $cigar, undef, undef, undef, $seq, $qualityString) = split /\s+/, $line;
 
-	# Make $name unique 
-	$name = "$name.$cigar.$flag";
-	( !defined $allReadNames{$name} ) ||
-	    confess "Duplicate read name '$name'";
-	$allReadNames{$name} = 1;
-	print FASTA ">$name\n$seq\n";
-	if ( $writeQualityFile ) {
-	    $qualityString = fastqToPhred($qualityString);
-	    print QUAL ">$name\n$qualityString\n";
-	}
+        # Make $name unique 
+        $name = "$name.$cigar.$flag";
+        ( !defined $allReadNames{$name} ) ||
+            confess "Duplicate read name '$name'";
+        $allReadNames{$name} = 1;
+        print FASTA ">$name\n$seq\n";
+        if ( $writeQualityFile ) {
+            $qualityString = fastqToPhred($qualityString);
+            print QUAL ">$name\n$qualityString\n";
+        }
     }
 
     return ( scalar(keys %allReadNames) );
@@ -215,8 +220,8 @@ sub fastqToPhred {
     my $qualityLine = $_[0];
     my $phredLine = "";
     foreach my $q (split //, $qualityLine) {
-	my $quality = ord($q) - 33;
-	$phredLine .= "$quality ";
+        my $quality = ord($q) - 33;
+        $phredLine .= "$quality ";
     }
     return $phredLine;
 }
@@ -230,10 +235,10 @@ sub runCrossMatch {
     (-e $subject) || confess "'$subject' does not exist";
     (defined $parameters) || confess "cross_match parameters are not defined";
     if ( !defined $outFile ) { $outFile = "/dev/null"; }
-    
-    
+
+
     open(CROSS, "cross_match $parameters $query $subject |") || 
-	confess "Not able to start 'cross_match $parameters $query $subject'";
+        confess "Not able to start 'cross_match $parameters $query $subject'";
     my @output = <CROSS>;
     close CROSS;
     open(OUT, "> $outFile") || confess "Cold not open '$outFile': $!";
@@ -248,47 +253,47 @@ sub createHitObjects {
     # Input: either a file with cross_match results or ref to array of cross_match results
     # Return: ref to hash with key = query name; value = Hits object
     #   NOTE: only one hit is returned for each query.  It is the hit with the best score.
-    
+
     my $input = $_[0];
     my ( @allCrossMatch, $line, $hit, $query, %hitList, );
 
     # Get array with all cross_match output
     if ( -e $input ) {
-	open(IN, "< $input") || confess "Could not open '$input': $!";
-	@allCrossMatch = <IN>;
-	close IN;
+        open(IN, "< $input") || confess "Could not open '$input': $!";
+        @allCrossMatch = <IN>;
+        close IN;
     } else {
-	@allCrossMatch = @{$input};
+        @allCrossMatch = @{$input};
     }
 
     foreach $line ( @allCrossMatch ) {
-	chomp $line;
-	if ( $line =~ /$AlignmentLine/ ) {
-	    $hit = new Hits;
-	    $hit->addCrossMatchLine($line);
-	    $query = $hit->queryName();
-	    # It this query already has a hit, choose the one with the highest score
-	    if ( !defined $hitList{$query} || $hit->score() > $hitList{$query}->score() ) {
-		$hitList{$query} = $hit;
-	    }
-	}
+        chomp $line;
+        if ( $line =~ /$AlignmentLine/ ) {
+            $hit = new Hits;
+            $hit->addCrossMatchLine($line);
+            $query = $hit->queryName();
+            # It this query already has a hit, choose the one with the highest score
+            if ( !defined $hitList{$query} || $hit->score() > $hitList{$query}->score() ) {
+                $hitList{$query} = $hit;
+            }
+        }
 
-	# Output from -discrep_lists follows the alignment line for a given hit
-	# I     847  T(40)   1260  cctcagTcctggg
+        # Output from -discrep_lists follows the alignment line for a given hit
+        # I     847  T(40)   1260  cctcagTcctggg
         # I-5   913  CATCC(40)   1290  ccatccCATCCacccac
         # D-24   586  T(40)   1040  tgatttTtatata  
         # D-60   651  T(40)   1107  gatggaTagatgg
         # D-$size  $queryStart T(40)  $subjectStart
-	my ( $indel, $length, $queryStart, $targetStart );
+        my ( $indel, $length, $queryStart, $targetStart );
         if ( $line =~ /\s*(I|D)\-?(\d*)\s+(\d+)\s+\S+\s+(\d+)/ ) {
             $indel = $1; $length = $2; $queryStart = $3; $targetStart = $4;
             if ( !defined $length || $length eq "" ) { $length = 1; } 
             if ( $indel eq "I" ) {
                 $hitList{$query}->addInsertion($queryStart, $targetStart, $length);
             } elsif ( $indel eq "D" ) {
-		$hitList{$query} ->addDeletion($queryStart, $targetStart, $length);
-            } 
-        }	
+                $hitList{$query} ->addDeletion($queryStart, $targetStart, $length);
+            }
+        }
     }
 
     return \%hitList;
@@ -300,7 +305,7 @@ sub crossMatchHitPassesFilter {
 
     my ($hitObj, $maxUnalignedEndBases, $maxPercentSubs, $maxPercentIndels, $minScore) = @_;
     (defined  $maxUnalignedEndBases && defined $maxPercentSubs && defined $maxPercentIndels && defined $minScore) ||
-	confess "input parameters not defined";
+        confess "input parameters not defined";
     if ( $hitObj->pastQueryEnd() > $maxUnalignedEndBases || 
          $hitObj->queryStart() > $maxUnalignedEndBases ||
          $hitObj->percentSubs() > $maxPercentSubs || 
@@ -310,7 +315,7 @@ sub crossMatchHitPassesFilter {
         ) { return 0; }
 
     return 1;
-}   
+}
 
 sub crossMatchHitCrossesBreakpoints {
     # Input: Hits.pm object, $start, $stop
@@ -325,7 +330,7 @@ sub crossMatchHitCrossesBreakpoints {
     # Make sure $start < $stop
     if ( $start > $stop ) { ($start, $stop) = ($stop, $start); }
     (defined $start && defined $stop && $start =~ /^\-?\d+$/ && $stop =~ /^\d+$/) ||
-	confess "Expected integer start and stop";
+        confess "Expected integer start and stop";
 
     my $subjectStart = $hitObj->subjectStart();
     my $subjectEnd = $hitObj->subjectEnd();
@@ -349,15 +354,15 @@ sub removeMarginalSvHits {
     my ( $hitsToSvRef, $hitsToReferenceRef, $minFractionDifference ) = @_;
     my ( %filteredHits, $readName, );
     foreach $readName (keys %{$hitsToSvRef}) {
-	if ( defined $$hitsToReferenceRef{$readName} && 
-	     ReadRemap::crossMatchHitsSimilar( $$hitsToSvRef{$readName},$$hitsToReferenceRef{$readName},$minFractionDifference)
-	    ) {
-	    # Don't use this read, it's alignment to the SV contig is too close to alignment to reference
-	    next;
-	}
+        if ( defined $$hitsToReferenceRef{$readName} && 
+             ReadRemap::crossMatchHitsSimilar( $$hitsToSvRef{$readName},$$hitsToReferenceRef{$readName},$minFractionDifference)
+            ) {
+            # Don't use this read, it's alignment to the SV contig is too close to alignment to reference
+            next;
+        }
 
-	# This read is OK.
-	$filteredHits{$readName} = $$hitsToSvRef{$readName};
+        # This read is OK.
+        $filteredHits{$readName} = $$hitsToSvRef{$readName};
     }
 
     return \%filteredHits;
@@ -371,8 +376,8 @@ sub crossMatchHitsSimilar {
     #         differ by more than max fraction difference
     # Used to compare alignment of read to reference and assembly contig
     #    
-    my ( $hit_1, $hit_2, $fractionDiff ) = @_;   
-    
+    my ( $hit_1, $hit_2, $fractionDiff ) = @_;
+
     return ( fractionDifference($hit_1->pastQueryEnd(), $hit_2->pastQueryEnd()) < $fractionDiff  &&
              fractionDifference($hit_1->queryStart(), $hit_2->queryStart()) < $fractionDiff &&
              fractionDifference($hit_1->percentSubs(),  $hit_2->percentSubs()) < $fractionDiff &&
@@ -384,7 +389,7 @@ sub crossMatchHitsSimilar {
 sub fractionDifference {
     # Return fraction difference between two numbers
     # If one of the numbers is 0, add 0.1 so fraction difference isn't huge
-    
+
     my ( $num1, $num2 ) = @_;
     if ($num1 == $num2) { return 0; }
 
@@ -394,7 +399,7 @@ sub fractionDifference {
     return ( ($num2 - $num1)/$num2 );
 }
 
-    
+
 sub uniqueCrossMatchAlignments {
     # Input: Ref to hash of Hits objects
     # Return: Ref to hash of Hits objects that have unique alignments.  If alignments are the
@@ -408,26 +413,26 @@ sub uniqueCrossMatchAlignments {
 
     # This makes hash with key = alignment line without read name
     foreach my $id (keys %{$hitObjRef}) {
-	$hashKey = "";
-	$line = $$hitObjRef{$id}->alignmentLine();
-	$line =~ s/^\s*//; $line =~ s/\s*$//;
-	@cols = split /\s+/, $line;
-	
-	# The query name is in the 5th column ($i = 4)
-	for (my $i = 0; $i <= $#cols; $i++ ) {
-	    if ( $i != 4 ) { $hashKey .= "$cols[$i]"; }
-	}
-	$uniqueAlignments{$hashKey} = $line;
+        $hashKey = "";
+        $line = $$hitObjRef{$id}->alignmentLine();
+        $line =~ s/^\s*//; $line =~ s/\s*$//;
+        @cols = split /\s+/, $line;
+
+        # The query name is in the 5th column ($i = 4)
+        for (my $i = 0; $i <= $#cols; $i++ ) {
+            if ( $i != 4 ) { $hashKey .= "$cols[$i]"; }
+        }
+        $uniqueAlignments{$hashKey} = $line;
     }
-			     
+
     # Now make a new hash of Hits objects
     foreach my $id ( keys %uniqueAlignments ) {
-	$line = $uniqueAlignments{$id};
-	($line =~ /$AlignmentLine/ ) || confess "'$line' is not an alignment line";
-	$hit = new Hits;
-	$hit->addCrossMatchLine($line);
-	my $query = $hit->queryName();
-	$newHitObjects{$query} = $hit;
+        $line = $uniqueAlignments{$id};
+        ($line =~ /$AlignmentLine/ ) || confess "'$line' is not an alignment line";
+        $hit = new Hits;
+        $hit->addCrossMatchLine($line);
+        my $query = $hit->queryName();
+        $newHitObjects{$query} = $hit;
     }
 
     return \%newHitObjects;
@@ -442,13 +447,13 @@ sub uniqueSamSequenceReads {
     #    if aligner takes into account paired reads
     #    Essentially turns reads into fragment reads.  Just uses hash to 
     #    choose the last one of the unique sequences
-    
+
     my $readRef = $_[0];
     my ( $line, %uniqueReads, @unique, $seq );
     foreach $line ( @{$readRef} ) {
-	chomp $line;
-	(undef, undef, undef, undef, undef, undef, undef, undef, undef, $seq) = split /\s+/, $line;
-	$uniqueReads{$seq} = $line;
+        chomp $line;
+        (undef, undef, undef, undef, undef, undef, undef, undef, undef, $seq) = split /\s+/, $line;
+        $uniqueReads{$seq} = $line;
     }
     @unique = keys %uniqueReads;
     return \@unique;
@@ -480,7 +485,7 @@ sub  remapByCrossMatch {
     my $bdRef = BreakDancerLine->new($line);
     my ($chrA, $bpA, $chrB, $bpB) = $bdRef->chromosomesAndBreakpoints();
     defined ( $bpA && $bpA =~ /^\d+$/ && defined $bpB && $bpB =~ /^\d+$/ ) ||
-	confess "Did not get chr and breakpoints from '$line'";
+        confess "Did not get chr and breakpoints from '$line'";
 
     my ( $readCount, $uniqueReadCount, $crossMatchResults, $hitsToAssemblyRef, $hitsToNormalRef );
 
@@ -492,30 +497,30 @@ sub  remapByCrossMatch {
     foreach ( @{$readRef} ) { $uniqueEntries{$_} = 1; }
     my @reads = keys %uniqueEntries;
     $readCount = scalar(@reads);
-    
+
     # Count number of above reads that have unique sequence
     $readRef = ReadRemap::uniqueSamSequenceReads(\@reads);
     $uniqueReadCount = scalar(@{$readRef});
-    
+
     # Align reads to assembly contigs using cross_match
     # Need to convert the reads to fasta format and write to a file
     my $tempFile = "/tmp/tempReads.fasta.$chrA.$bpA.$chrB.$bpB".rand();
     my $writeQualityFile = 0;
-    
+
     # This returns the number of sequences written to file. It there were none
     # then can't do anything
     if ( ReadRemap::convertSamToFasta(\@reads, $tempFile, $writeQualityFile) == 0 ) {
-	return ($readCount, $uniqueReadCount, undef, undef);
+        return ($readCount, $uniqueReadCount, undef, undef);
     }
-    
+
     # Align reads to assembly contigs
     $crossMatchResults = ReadRemap::runCrossMatch($tempFile, $contigSequenceFile, $crossMatchParameters);
     $hitsToAssemblyRef = ReadRemap::createHitObjects($crossMatchResults);
-    
+
     # Align reads to normal
     $crossMatchResults = ReadRemap::runCrossMatch($tempFile, $referenceSequenceFile, $crossMatchParameters);
     $hitsToNormalRef = ReadRemap::createHitObjects($crossMatchResults);
-    
+
     # Remove the files used/created by cross_match
     unlink $tempFile;
     unlink "$tempFile.log";
@@ -541,40 +546,40 @@ sub svSpecificHits {
 
     # See how many reads uniquely hit assembly contig and how many also cross breakpoint
     foreach my $hitName (keys %{$hitsToAssemblyRef}) {
-	
-	# Skip if this read is not aligned to the assembly contig of interest
-	# The subject should equal the fasta header
-	if ( $$hitsToAssemblyRef{$hitName}->subjectName() ne $fastaHeader ) { next; }
 
-	# Skip if read does not pass the filter
-	if ( !ReadRemap::crossMatchHitPassesFilter($$hitsToAssemblyRef{$hitName}, $maxUnalignedEndBases, $maxPercentSubs, $maxPercentIndels, $minScore ) ) { next; }
-	
-	# Skip if this read hits reference and the alignment passes filter. 
-	if ( defined $$hitsToNormalRef{$hitName} && ReadRemap::crossMatchHitPassesFilter($$hitsToNormalRef{$hitName}, $maxUnalignedEndBases, $maxPercentSubs, $maxPercentIndels, $minScore ) ) {
-	    next; 
-	}
-	
-	# This read uniquely hits assembly contig; it does not hit reference
-	$specificToSv{$hitName} = $$hitsToAssemblyRef{$hitName};
-	
-	# Now see if hit crosses breakpoints. 
-	# If the event is an insertion, only require reads to cross one of the breakpoints
-	# All other events, read has to cross both breakpoints
-	# The file format should probably be improved so it gives a range for both breakpoints
-	if ( $fastaHeader =~ /\.INS\./ ) {
-	    if ( ReadRemap::crossMatchHitCrossesBreakpoints($$hitsToAssemblyRef{$hitName}, $contigStart-$extend, $contigStart+$extend) ||
-		 ReadRemap::crossMatchHitCrossesBreakpoints($$hitsToAssemblyRef{$hitName}, $contigStop-$extend, $contigStop+$extend)
-		) { $crossesBreakpoints{$hitName} = $$hitsToAssemblyRef{$hitName}; }
-	    
-	} else  {
-	    # Event is not an insertion; reads have to cross both breakpoints
-	    # For inversions, only one of two breakpoints is reported so the two values represents the range for the given breakpoint
-	    if ( ReadRemap::crossMatchHitCrossesBreakpoints($$hitsToAssemblyRef{$hitName}, $contigStart-$extend, $contigStop+$extend) ) {
-		$crossesBreakpoints{$hitName} = $$hitsToAssemblyRef{$hitName};
-	    }
-	}
+        # Skip if this read is not aligned to the assembly contig of interest
+        # The subject should equal the fasta header
+        if ( $$hitsToAssemblyRef{$hitName}->subjectName() ne $fastaHeader ) { next; }
+
+        # Skip if read does not pass the filter
+        if ( !ReadRemap::crossMatchHitPassesFilter($$hitsToAssemblyRef{$hitName}, $maxUnalignedEndBases, $maxPercentSubs, $maxPercentIndels, $minScore ) ) { next; }
+
+        # Skip if this read hits reference and the alignment passes filter. 
+        if ( defined $$hitsToNormalRef{$hitName} && ReadRemap::crossMatchHitPassesFilter($$hitsToNormalRef{$hitName}, $maxUnalignedEndBases, $maxPercentSubs, $maxPercentIndels, $minScore ) ) {
+            next; 
+        }
+
+        # This read uniquely hits assembly contig; it does not hit reference
+        $specificToSv{$hitName} = $$hitsToAssemblyRef{$hitName};
+
+        # Now see if hit crosses breakpoints. 
+        # If the event is an insertion, only require reads to cross one of the breakpoints
+        # All other events, read has to cross both breakpoints
+        # The file format should probably be improved so it gives a range for both breakpoints
+        if ( $fastaHeader =~ /\.INS\./ ) {
+            if ( ReadRemap::crossMatchHitCrossesBreakpoints($$hitsToAssemblyRef{$hitName}, $contigStart-$extend, $contigStart+$extend) ||
+                 ReadRemap::crossMatchHitCrossesBreakpoints($$hitsToAssemblyRef{$hitName}, $contigStop-$extend, $contigStop+$extend)
+                ) { $crossesBreakpoints{$hitName} = $$hitsToAssemblyRef{$hitName}; }
+
+        } else  {
+            # Event is not an insertion; reads have to cross both breakpoints
+            # For inversions, only one of two breakpoints is reported so the two values represents the range for the given breakpoint
+            if ( ReadRemap::crossMatchHitCrossesBreakpoints($$hitsToAssemblyRef{$hitName}, $contigStart-$extend, $contigStop+$extend) ) {
+                $crossesBreakpoints{$hitName} = $$hitsToAssemblyRef{$hitName};
+            }
+        }
     } # matches 'foreach my $hitName'.  Finished all hits to assembly contig '$id'
-  
+
     return ( \%specificToSv, \%crossesBreakpoints);
 
 } # end of sub
@@ -592,7 +597,7 @@ sub normalizedReadCount {
     if ( $totalNormalReads == 0 || $normalSvReads == 0 ) { return 0; }
 
     if ( !defined $percentTumorInNormal ) { $percentTumorInNormal = 0; }
-    
+
     my $adjustedNormalSvReads = $normalSvReads - ($percentTumorInNormal * $normalSvReads)/100;
     my $normalizedNormalSvReads = $adjustedNormalSvReads * $totalTumorReads/$totalNormalReads;
 
@@ -613,10 +618,10 @@ sub displayAlignments {
     if ( !defined $hits2Ref ) { $hits2Ref = (); }
 
     foreach my $name (keys %{$hits1Ref}) {
-	print $$hits1Ref{$name}->alignmentLine(), "\n";
-	if ( defined $$hits2Ref{$name} ) {
-	    print $$hits2Ref{$name}->alignmentLine(), "\n";
-	}
+        print $$hits1Ref{$name}->alignmentLine(), "\n";
+        if ( defined $$hits2Ref{$name} ) {
+            print $$hits2Ref{$name}->alignmentLine(), "\n";
+        }
     }
 }
 
@@ -632,10 +637,10 @@ sub normalAlleleCount {
     my ($fastaHeader, $hitsToAssemblyRef, $bamFile) = @_;
 
     my ($contigStart, $contigStop, $ambiguity, $chrA, $bpA, $chrB, $bpB, $event, $subjectStart,
-	$subjectStop, $noDuplicates, $readRef, $read, $leftTotalReads, $leftCrossingBreakpoint, 
-	$rightTotalReads, $rightCrossingBreakpoint, $name, $flag, $cigar, );
+        $subjectStop, $noDuplicates, $readRef, $read, $leftTotalReads, $leftCrossingBreakpoint, 
+        $rightTotalReads, $rightCrossingBreakpoint, $name, $flag, $cigar, );
 
-    $noDuplicates = 1;      
+    $noDuplicates = 1;
     my $maxMismatch = 3;
     my $maxSoftmask = 3;
 
@@ -643,9 +648,9 @@ sub normalAlleleCount {
 
     # Get SV breakpoints in reference from fasta header.
     if ( $fastaHeader =~ /Var\:(\w+)\.(\d+)\.(\w+)\.(\d+)\.(\w+)\./ ) {
-	$chrA = $1; $bpA = $2; $chrB = $3; $bpB = $4; $event = $5;
+        $chrA = $1; $bpA = $2; $chrB = $3; $bpB = $4; $event = $5;
     } else {
-	confess "Unexpected format for fasta header '$fastaHeader'";
+        confess "Unexpected format for fasta header '$fastaHeader'";
     }
 
     # Get breakpoint(s) in SV contig encoded in the fasta header.  The ambiguity in the SV breakpoint position is 
@@ -660,47 +665,47 @@ sub normalAlleleCount {
     $readRef = ReadRemap::getReads($chrA, $bpA, $bpA, $bamFile, $noDuplicates);
     $leftTotalReads = scalar( @{$readRef} );
     foreach $read ( @{$readRef}  ) {
-	chomp $read;
+        chomp $read;
 
-	# Get name that was used for this read as a fasta sequence in cross_match
-	($name, $flag, undef, undef, undef, $cigar) = split /\s+/, $read;
-	$name = "$name.$cigar.$flag";
-	
-	# Don't count this read if it has an alignment to SV contig that passes filters
-	if ( defined $$hitsToAssemblyRef{$name} && ReadRemap::crossMatchHitPassesFilter($$hitsToAssemblyRef{$name}) ) {
-	    next;
-	}
+        # Get name that was used for this read as a fasta sequence in cross_match
+        ($name, $flag, undef, undef, undef, $cigar) = split /\s+/, $read;
+        $name = "$name.$cigar.$flag";
 
-	# If it passes the filters for BWA-aligned reads and it crosses breakpoint + ambiguity, count it as supporting reference allele
-	if ( samReadPassesFilter($read, $maxMismatch, $maxSoftmask) && 
+        # Don't count this read if it has an alignment to SV contig that passes filters
+        if ( defined $$hitsToAssemblyRef{$name} && ReadRemap::crossMatchHitPassesFilter($$hitsToAssemblyRef{$name}) ) {
+            next;
+        }
+
+        # If it passes the filters for BWA-aligned reads and it crosses breakpoint + ambiguity, count it as supporting reference allele
+        if ( samReadPassesFilter($read, $maxMismatch, $maxSoftmask) && 
              ReadRemap::samReadCrossesBreakpoints($read, $bpA, $bpA+$ambiguity) ) { 
-	    $leftCrossingBreakpoint++; 
-	}
+            $leftCrossingBreakpoint++; 
+        }
     }
 
     $readRef = ReadRemap::getReads($chrB, $bpB, $bpB, $bamFile, $noDuplicates);
     $rightTotalReads = scalar( @{$readRef} );
     foreach $read ( @{$readRef}  ) {
-	chomp $read;
+        chomp $read;
 
-	# Get name that was used for this read as a fasta sequence in cross_match
-	($name, $flag, undef, undef, undef, $cigar) = split /\s+/, $read;
-	$name = "$name.$cigar.$flag";
-	
-	# Don't count this read if it has an alignment to SV contig that passes filters
-	if ( defined $$hitsToAssemblyRef{$name} && ReadRemap::crossMatchHitPassesFilter($$hitsToAssemblyRef{$name}) ) {
-	    next;
-	}
+        # Get name that was used for this read as a fasta sequence in cross_match
+        ($name, $flag, undef, undef, undef, $cigar) = split /\s+/, $read;
+        $name = "$name.$cigar.$flag";
 
-	# If it passes the filters for BWA-aligned reads and it crosses breakpoint - ambiguity, count it as supporting reference allele
-	if ( samReadPassesFilter($read, $maxMismatch, $maxSoftmask) && 
+        # Don't count this read if it has an alignment to SV contig that passes filters
+        if ( defined $$hitsToAssemblyRef{$name} && ReadRemap::crossMatchHitPassesFilter($$hitsToAssemblyRef{$name}) ) {
+            next;
+        }
+
+        # If it passes the filters for BWA-aligned reads and it crosses breakpoint - ambiguity, count it as supporting reference allele
+        if ( samReadPassesFilter($read, $maxMismatch, $maxSoftmask) && 
              ReadRemap::samReadCrossesBreakpoints($read, $bpB-$ambiguity, $bpB) ) { 
-	    $rightCrossingBreakpoint++; 
-	}
+            $rightCrossingBreakpoint++; 
+        }
     }
-    
+
     return ($leftCrossingBreakpoint, $leftTotalReads, $rightCrossingBreakpoint, $rightTotalReads);
-    
+
 }
 
 
@@ -718,8 +723,7 @@ sub sequenceSpecificHits {
 }
 
 
-    
-   
+
 
 sub alleleCount  {
     # testing
@@ -730,7 +734,7 @@ sub alleleCount  {
     my ($fastaHeader, $hitsToAssemblyRef, $hitsToNormalRef, $extend, $crossMatchResults) = @_;
 
     my ($contigStart, $contigStop, $ambiguity, $chrA, $bpA, $chrB, $bpB, $event, $svBreakPointReadsRef,
-	$subjectName, $subjectChr, $subjectStart, $subjectStop, %crossesRight, %crossesLeft, );
+        $subjectName, $subjectChr, $subjectStart, $subjectStop, %crossesRight, %crossesLeft, );
 
     # Get strict list of reads that cross SV breakpoint
     ## should make  ReadRemap::svSpecificHits generic so can use for both reference hits and
@@ -744,64 +748,64 @@ sub alleleCount  {
 
     # Get SV breakpoints in reference from fasta header.
     if ( $fastaHeader =~ /Var\:(\w+)\.(\d+)\.(\w+)\.(\d+)\.(\w+)\./ ) {
-	$chrA = $1; $bpA = $2; $chrB = $3; $bpB = $4; $event = $5;
+        $chrA = $1; $bpA = $2; $chrB = $3; $bpB = $4; $event = $5;
     } else {
-	confess "Unexpected format for fasta header '$fastaHeader'";
+        confess "Unexpected format for fasta header '$fastaHeader'";
     }
 
     foreach my $line ( @{$crossMatchResults} ) {
-	chomp $line;
-	
-	if ( $line !~ /$AlignmentLine/ ) { next; }
+        chomp $line;
+
+        if ( $line !~ /$AlignmentLine/ ) { next; }
 
 
-	my $hit = new Hits;
-	$hit->addCrossMatchLine($line);
-	my $query = $hit->queryName();
-	
-	# Skip if read does not pass the filter
-	# Skip if this read hits SV contig and the alignment to SV contig passes filter. 
-	if ( !ReadRemap::crossMatchHitPassesFilter($hit) ||
-	     ( defined $$hitsToAssemblyRef{$query} && ReadRemap::crossMatchHitPassesFilter($$hitsToAssemblyRef{$query}) )
-	    ) {
-	    next; 
-	}
-	# See if the read crosses one of the breakpoints.  Skip if the breakpoint is not within subject
-	# boundaries encoded in the subject name (fasta header of reference sequence)
-	$subjectName = $hit->subjectName();
-	if ( $subjectName =~ /(\w+)\.(\d+)\.(\d+)/ ) {
-	    $subjectChr = $1; $subjectStart = $2; $subjectStop = $3;
-	} else {
-	    confess "Unexpected format for reference contig fasta header (i.e. subject of Hits object): '$subjectName'";
-	}
-	# Look at left breakpoint
-	if ( $subjectChr eq $chrA && $bpA > $subjectStart && $bpA < $subjectStop ) {
-	    # Range the read must cover is $bpA, $bpA+$ambiguity
-	    # Need to convert genomic coordinates to coordinates used in alignment to reference
-	    # (subtract $subjectStart and add 1)
-	    if ( ReadRemap::crossMatchHitCrossesBreakpoints($hit, $bpA-$subjectStart+1, $bpA+$ambiguity-$subjectStart+1) ) {
-		$crossesLeft{$query} = $hit;
-	    }
-	    
-	} 
+        my $hit = new Hits;
+        $hit->addCrossMatchLine($line);
+        my $query = $hit->queryName();
 
-	# Look at right breakpoint
-	if ( $subjectChr eq $chrB && $bpB > $subjectStart && $bpB < $subjectStop ) {
-	    # Range the read must cover is $bpB-$ambiguity, $bpB
-	    # Need to convert genomic coordinates to coordinates used in alignment to reference
-	    # (subtract $subjectStart and add 1)
-	    if ( ReadRemap::crossMatchHitCrossesBreakpoints($hit, $bpB-$ambiguity-$subjectStart+1, $bpB-$subjectStart+1) ) {
-		$crossesRight{$query} = $hit;
-	    }
-	}
-    } # matches 'foreach $line'  
+        # Skip if read does not pass the filter
+        # Skip if this read hits SV contig and the alignment to SV contig passes filter. 
+        if ( !ReadRemap::crossMatchHitPassesFilter($hit) ||
+             ( defined $$hitsToAssemblyRef{$query} && ReadRemap::crossMatchHitPassesFilter($$hitsToAssemblyRef{$query}) )
+            ) {
+            next; 
+        }
+        # See if the read crosses one of the breakpoints.  Skip if the breakpoint is not within subject
+        # boundaries encoded in the subject name (fasta header of reference sequence)
+        $subjectName = $hit->subjectName();
+        if ( $subjectName =~ /(\w+)\.(\d+)\.(\d+)/ ) {
+            $subjectChr = $1; $subjectStart = $2; $subjectStop = $3;
+        } else {
+            confess "Unexpected format for reference contig fasta header (i.e. subject of Hits object): '$subjectName'";
+        }
+        # Look at left breakpoint
+        if ( $subjectChr eq $chrA && $bpA > $subjectStart && $bpA < $subjectStop ) {
+            # Range the read must cover is $bpA, $bpA+$ambiguity
+            # Need to convert genomic coordinates to coordinates used in alignment to reference
+            # (subtract $subjectStart and add 1)
+            if ( ReadRemap::crossMatchHitCrossesBreakpoints($hit, $bpA-$subjectStart+1, $bpA+$ambiguity-$subjectStart+1) ) {
+                $crossesLeft{$query} = $hit;
+            }
+
+        }
+
+        # Look at right breakpoint
+        if ( $subjectChr eq $chrB && $bpB > $subjectStart && $bpB < $subjectStop ) {
+            # Range the read must cover is $bpB-$ambiguity, $bpB
+            # Need to convert genomic coordinates to coordinates used in alignment to reference
+            # (subtract $subjectStart and add 1)
+            if ( ReadRemap::crossMatchHitCrossesBreakpoints($hit, $bpB-$ambiguity-$subjectStart+1, $bpB-$subjectStart+1) ) {
+                $crossesRight{$query} = $hit;
+            }
+        }
+    } # matches 'foreach $line'
 
     return($svBreakPointReadsRef, \%crossesLeft, \%crossesRight);
-    
+
 } # end of sub
 
-    
-	
+
+
 
 sub BAK_alleleCount {
     # INPUT: $fastaHeader, $hitsToAssemblyRef, $hitsToNormalRef, $extend 
@@ -837,7 +841,7 @@ sub BAK_alleleCount {
     my ($fastaHeader, $hitsToAssemblyRef, $hitsToNormalRef, $extend) = @_;
 
     my ($contigStart, $contigStop, $ambiguity, $chrA, $bpA, $chrB, $bpB, $event, $svBreakPointReadsRef,
-	$subjectName, $subjectChr, $subjectStart, $subjectStop, %crossesRight, %crossesLeft, );
+        $subjectName, $subjectChr, $subjectStart, $subjectStop, %crossesRight, %crossesLeft, );
 
     # Get strict list of reads that cross SV breakpoint
     ## should make  ReadRemap::svSpecificHits generic so can use for both reference hits and
@@ -852,57 +856,57 @@ sub BAK_alleleCount {
 
     # Get SV breakpoints in reference from fasta header.
     if ( $fastaHeader =~ /Var\:(\w+)\.(\d+)\.(\w+)\.(\d+)\.(\w+)\./ ) {
-	$chrA = $1; $bpA = $2; $chrB = $3; $bpB = $4; $event = $5;
+        $chrA = $1; $bpA = $2; $chrB = $3; $bpB = $4; $event = $5;
     } else {
-	confess "Unexpected format for fasta header '$fastaHeader'";
+        confess "Unexpected format for fasta header '$fastaHeader'";
     }
 
-    
+
     # See how many reads uniquely hit reference and also cross breakpoint
     foreach my $hitName (keys %{$hitsToNormalRef}) {
 
-	# Skip if read does not pass the filter
-	# Skip if this read hits SV contig and the alignment to SV contig passes filter. 
-	if ( !ReadRemap::crossMatchHitPassesFilter($$hitsToNormalRef{$hitName}) ||
-	     ( defined $$hitsToAssemblyRef{$hitName} && ReadRemap::crossMatchHitPassesFilter($$hitsToAssemblyRef{$hitName}) )
-	    ) {
-	    next; 
-	}
+        # Skip if read does not pass the filter
+        # Skip if this read hits SV contig and the alignment to SV contig passes filter. 
+        if ( !ReadRemap::crossMatchHitPassesFilter($$hitsToNormalRef{$hitName}) ||
+             ( defined $$hitsToAssemblyRef{$hitName} && ReadRemap::crossMatchHitPassesFilter($$hitsToAssemblyRef{$hitName}) )
+            ) {
+            next; 
+        }
 
-	# See if the read crosses one of the breakpoints.  Skip if the breakpoint is not within subject
-	# boundaries encoded in the subject name (fasta header of reference sequence)
-	$subjectName = $$hitsToNormalRef{$hitName}->subjectName();
-	if ( $subjectName =~ /(\w+)\.(\d+)\.(\d+)/ ) {
-	    $subjectChr = $1; $subjectStart = $2; $subjectStop = $3;
-	} else {
-	    confess "Unexpected format for reference contig fasta header (i.e. subject of Hits object): '$subjectName'";
-	}
+        # See if the read crosses one of the breakpoints.  Skip if the breakpoint is not within subject
+        # boundaries encoded in the subject name (fasta header of reference sequence)
+        $subjectName = $$hitsToNormalRef{$hitName}->subjectName();
+        if ( $subjectName =~ /(\w+)\.(\d+)\.(\d+)/ ) {
+            $subjectChr = $1; $subjectStart = $2; $subjectStop = $3;
+        } else {
+            confess "Unexpected format for reference contig fasta header (i.e. subject of Hits object): '$subjectName'";
+        }
 
-	# Look at left breakpoint
-	if ( $subjectChr eq $chrA && $bpA > $subjectStart && $bpA < $subjectStop ) {
-	    # Range the read must cover is $bpA, $bpA+$ambiguity
-	    # Need to convert genomic coordinates to coordinates used in alignment to reference
-	    # (subtract $subjectStart and add 1)
-	    if ( ReadRemap::crossMatchHitCrossesBreakpoints($$hitsToNormalRef{$hitName}, $bpA-$subjectStart+1, $bpA+$ambiguity-$subjectStart+1) ) {
-		$crossesLeft{$hitName} = $$hitsToNormalRef{$hitName};
-	    }
-	    
-	} 
+        # Look at left breakpoint
+        if ( $subjectChr eq $chrA && $bpA > $subjectStart && $bpA < $subjectStop ) {
+            # Range the read must cover is $bpA, $bpA+$ambiguity
+            # Need to convert genomic coordinates to coordinates used in alignment to reference
+            # (subtract $subjectStart and add 1)
+            if ( ReadRemap::crossMatchHitCrossesBreakpoints($$hitsToNormalRef{$hitName}, $bpA-$subjectStart+1, $bpA+$ambiguity-$subjectStart+1) ) {
+                $crossesLeft{$hitName} = $$hitsToNormalRef{$hitName};
+            }
 
-	# Look at right breakpoint
-	if ( $subjectChr eq $chrB && $bpB > $subjectStart && $bpB < $subjectStop ) {
-	    # Range the read must cover is $bpB-$ambiguity, $bpB
-	    # Need to convert genomic coordinates to coordinates used in alignment to reference
-	    # (subtract $subjectStart and add 1)
-	    if ( ReadRemap::crossMatchHitCrossesBreakpoints($$hitsToNormalRef{$hitName}, $bpB-$ambiguity-$subjectStart+1, $bpB-$subjectStart+1) ) {
-		$crossesRight{$hitName} = $$hitsToNormalRef{$hitName};
-	    }
-	}
-	
+        }
+
+        # Look at right breakpoint
+        if ( $subjectChr eq $chrB && $bpB > $subjectStart && $bpB < $subjectStop ) {
+            # Range the read must cover is $bpB-$ambiguity, $bpB
+            # Need to convert genomic coordinates to coordinates used in alignment to reference
+            # (subtract $subjectStart and add 1)
+            if ( ReadRemap::crossMatchHitCrossesBreakpoints($$hitsToNormalRef{$hitName}, $bpB-$ambiguity-$subjectStart+1, $bpB-$subjectStart+1) ) {
+                $crossesRight{$hitName} = $$hitsToNormalRef{$hitName};
+            }
+        }
+
     } # matches 'foreach my $hitName'   
 
     return($svBreakPointReadsRef, \%crossesLeft, \%crossesRight);
-    
+
 } # end of sub
 
 
@@ -915,17 +919,17 @@ sub fractionComplemented {
     my $hitsRef = $_[0];
     my ( $total, $complemented, $fraction, $flag, $readToReferenceReversed, );
     foreach my $hit ( keys %{$hitsRef} ) {
-	$readToReferenceReversed = 0;
-	# Get flag that is appended to read name in sub convertSamToFasta
-	if ( $$hitsRef{$hit}->queryName() =~ /\.(\d+)$/ ) { $flag = $1; } else { confess "Did not get flag for Hit object '", $$hitsRef{$hit}->queryName(), "'"; }
-	if ( $flag & 0x0010 ) { $readToReferenceReversed = 1; }
-	if ( $$hitsRef{$hit}->isComplemented() != $readToReferenceReversed ) { $complemented++; }
-	$total++;
+        $readToReferenceReversed = 0;
+        # Get flag that is appended to read name in sub convertSamToFasta
+        if ( $$hitsRef{$hit}->queryName() =~ /\.(\d+)$/ ) { $flag = $1; } else { confess "Did not get flag for Hit object '", $$hitsRef{$hit}->queryName(), "'"; }
+        if ( $flag & 0x0010 ) { $readToReferenceReversed = 1; }
+        if ( $$hitsRef{$hit}->isComplemented() != $readToReferenceReversed ) { $complemented++; }
+        $total++;
     }
-    
+
     if ( $total == 0 ) { return 0; }
     $fraction = $complemented/$total;
-    
+
     # Round off fraction to nearest 0.001
     $fraction += 0.0005;
     if ( $fraction =~ /(\d+\.\d{3})/ ) { $fraction = $1; }
@@ -936,22 +940,22 @@ sub fractionComplemented {
 sub svBreakpoints {
     # INPUT: fasta header
     # RETURN: SV breakpoints start and stop
-    
+
     my $fastaHeader = $_[0];
     my ($contigStart, $contigStop);
- 
+
     # The breakpoints on the SV contig are encoded in the fasta header
     if ( $fastaHeader =~ /Ins\:(\d+)\-(\-|\d+)/ ) {
-	$contigStart = $1; $contigStop = $2;
+        $contigStart = $1; $contigStop = $2;
     } else {
-	confess "Unexpected format for fasta header.  Did not get breakpoints on SV contig: '$fastaHeader'";
-    }   
+        confess "Unexpected format for fasta header.  Did not get breakpoints on SV contig: '$fastaHeader'";
+    }
     ( defined $contigStart && defined $contigStop ) ||
-	confess "Did not get breakpoints on SV contig from '$fastaHeader'";
+        confess "Did not get breakpoints on SV contig from '$fastaHeader'";
     if ( $contigStop eq "-" ) { $contigStop = $contigStart; }
-    
+
     return ($contigStart, $contigStop);
 }
 
 
-return 1;
+1;
