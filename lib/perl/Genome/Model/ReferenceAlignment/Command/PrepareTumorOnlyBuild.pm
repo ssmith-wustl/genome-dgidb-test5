@@ -137,7 +137,6 @@ sub execute {
             input_file_b => $previously_detected_snvs,
             miss_a_file => $novel_file,
             output_file => $previously_detected_file,
-            dbsnp_match => 1,
         );
         unless ($dbsnp_intersection){
             die $self->error_message("Couldn't create joinx intersection tool!");
