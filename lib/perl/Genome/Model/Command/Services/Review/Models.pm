@@ -202,14 +202,17 @@ sub previous_build {
 sub workflow_status {
     my $build = shift;
 
-    my $build_instance = $build->newest_workflow_instance;
-    my @child_instances = $build_instance->sorted_child_instances if $build_instance;
+    my %status = eval {
+        my $build_instance = $build->newest_workflow_instance;
+        my @child_instances = $build_instance->sorted_child_instances if $build_instance;
 
-    my %status;
-    for my $child_instance (@child_instances) {
-        (my $name = $child_instance->name) =~ s/^[0-9]+\s+//;
-        $status{$name} = $child_instance->status;
-    }
+        my %status;
+        for my $child_instance (@child_instances) {
+            (my $name = $child_instance->name) =~ s/^[0-9]+\s+//;
+            $status{$name} = $child_instance->status;
+        }
+        return %status;
+    };
 
     return %status;
 }
