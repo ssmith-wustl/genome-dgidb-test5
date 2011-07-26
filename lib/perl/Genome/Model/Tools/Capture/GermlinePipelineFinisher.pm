@@ -218,25 +218,25 @@ sub execute {                               # replace with real execution logic.
 			}
 
 			#create VCF file from varscan snps (unformatted file)
-			my $cmd_varsnp = "perl -I ~cmiller/gscCode/genome/lib/perl `which gmt` vcf vcf-maker-varscan --output-file $varscan_snv_file.vcf --varscan-file $varscan_snv_file --type snv --sample-id $sample_name --dbsnp-file ~cmiller/annotations/snp130.txt";
+			my $cmd_varsnp = "gmt vcf vcf-maker-varscan --output-file $varscan_snv_file.vcf --varscan-file $varscan_snv_file --type snv --sample-id $sample_name --dbsnp-file ~/gscmnt/sata921/info/medseq/cmiller/annotations/snp130.txt";
 
 			#create VCF file from varscan indels (formatted file)
-			my $cmd_varindel = "perl -I ~cmiller/gscCode/genome/lib/perl `which gmt` vcf vcf-maker-varscan --output-file $varscan_indel_file.vcf --varscan-file $varscan_indel_file --type indel --sample-id $sample_name --dbsnp-file ~cmiller/annotations/snp130.txt";
+			my $cmd_varindel = "gmt vcf vcf-maker-varscan --output-file $varscan_indel_file.vcf --varscan-file $varscan_indel_file --type indel --sample-id $sample_name --dbsnp-file /gscmnt/sata921/info/medseq/cmiller/annotations/snp130.txt";
 
 			#merge the two
-			my $cmd_varmerge = "perl -I ~cmiller/gscCode/genome/lib/perl `which gmt` vcf vcf-merge --output-file $sample_output_dir/varScan.snp.indel.vcf --vcf-files $varscan_snv_file.vcf,$varscan_indel_file.vcf";
+			my $cmd_varmerge = "gmt vcf vcf-merge --output-file $sample_output_dir/varScan.snp.indel.vcf --vcf-files $varscan_snv_file.vcf,$varscan_indel_file.vcf";
 
 			#create VCF file from samtools snps
-			my $cmd_samsnp = "perl -I ~cmiller/gscCode/genome/lib/perl `which gmt` vcf vcf-maker-samtools --output-file $samtools_snv_file.vcf --samtools-file $samtools_snv_file --type snv --sample-id $sample_name --dbsnp-file ~cmiller/annotations/snp130.txt";
+			my $cmd_samsnp = "gmt vcf vcf-maker-samtools --output-file $samtools_snv_file.vcf --samtools-file $samtools_snv_file --type snv --sample-id $sample_name --dbsnp-file /gscmnt/sata921/info/medseq/cmiller/annotations/snp130.txt";
 
 			#create VCF file from samtools indels
-			my $cmd_samindel = "perl -I ~cmiller/gscCode/genome/lib/perl `which gmt` vcf vcf-maker-samtools --output-file $samtools_indel_file.vcf --samtools-file $samtools_indel_file --type indel --sample-id $sample_name --dbsnp-file ~cmiller/annotations/snp130.txt";
+			my $cmd_samindel = "gmt vcf vcf-maker-samtools --output-file $samtools_indel_file.vcf --samtools-file $samtools_indel_file --type indel --sample-id $sample_name --dbsnp-file /gscmnt/sata921/info/medseq/cmiller/annotations/snp130.txt";
 
 			#merge the two
-			my $cmd_sammerge = "perl -I ~cmiller/gscCode/genome/lib/perl `which gmt` vcf vcf-merge --output-file $sample_output_dir/samtools.snp.indel.vcf --vcf-files $samtools_snv_file.vcf,$samtools_indel_file.vcf";
+			my $cmd_sammerge = "gmt vcf vcf-merge --output-file $sample_output_dir/samtools.snp.indel.vcf --vcf-files $samtools_snv_file.vcf,$samtools_indel_file.vcf";
 
 			#now, do a three-way merge and label the sources
-			my $cmd_allthree = "perl -I ~cmiller/gscCode/genome/lib/perl `which gmt` vcf vcf-merge --output-file $raw_merged_vcf --vcf-files $sample_output_dir/varScan.snp.indel.vcf,$sample_output_dir/samtools.snp.indel.vcf,$gatk_indel_file,$gatk_dindel_indel_file --source-ids \"varscan,samtools,GATK_igv2,GATK_ug\"";
+			my $cmd_allthree = "gmt vcf vcf-merge --output-file $raw_merged_vcf --vcf-files $sample_output_dir/varScan.snp.indel.vcf,$sample_output_dir/samtools.snp.indel.vcf,$gatk_indel_file,$gatk_dindel_indel_file --source-ids \"varscan,samtools,GATK_igv2,GATK_ug\"";
 
 
 #			my $cmd = "bsub -q apipe -o /gscuser/wschierd/Deleteme/$sample_name.out -e /gscuser/wschierd/Deleteme/$sample_name.err -R\"select[type==LINUX64 && model != Opteron250 && mem>4000] rusage[mem=4000]\" -M 4000000 \"$base_cmd\"";
