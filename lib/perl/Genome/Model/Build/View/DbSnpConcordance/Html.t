@@ -24,4 +24,5 @@ print F $html;
 close(F);
 ok($html, "view returns HTML") or die "test cannot continue...";
 
+unlink "foo.html";
 done_testing;
