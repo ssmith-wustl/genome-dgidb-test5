@@ -10,7 +10,10 @@ class Genome::Model::Command::Define::ImportedReferenceSequence {
             is => 'Text',
             len => 1000,
             doc => "The full path and filename of the reference sequence fasta file to import."
-        }
+        },
+        processing_profile_id => {
+            default_value => '1990904',
+        },
     ],
     has_optional_input => [
         append_to => {
@@ -54,12 +57,6 @@ class Genome::Model::Command::Define::ImportedReferenceSequence {
             is => 'Text',
             len => 255,
             doc => '$PREFIX-$SPECIES_NAME unless otherwise specified.'
-        },
-        processing_profile_name => {
-            is_constant => 1,
-            # valid_values => ['import fasta','expand','reduce','mask','hypothesize variations']
-            value => 'chromosome-fastas',
-            doc => 'The processing profile takes no parameters, so all imported reference sequence models share the same processing profile instance.'
         },
         subject_name => {
             is_optional => 1,            

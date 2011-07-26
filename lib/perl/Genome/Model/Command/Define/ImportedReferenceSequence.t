@@ -42,8 +42,6 @@ my @params = (
     "--sequence-uri=".$sequence_uri,
     );
 
-use Data::Dumper;
-print Data::Dumper::Dumper(\@params) and die;
 my $rv = $cmd_class->_execute_with_shell_params_and_return_exit_code(@params);
 is($rv, 0, 'executed command');
 my $model = Genome::Model::ImportedReferenceSequence->get(name => 'test-ref-seq-1');
