@@ -57,8 +57,8 @@ sub execute {
         $crashed_workflow_step =~ s/^\d+\s+//;
 
         my $latest_build_revision = $latest_build->software_revision if $latest_build;
-        ($latest_build_revision) =~ /\/(genome-[^\/])/;
         $latest_build_revision ||= '-';
+        ($latest_build_revision) =~ /\/(genome-[^\/])/ if $latest_build_revision =~ /\/genome-[^\/]/;
 
         $model_name =~ s/\.?$pp_name\.?/.../;
 
