@@ -1,13 +1,13 @@
-
 package Genome::Model::Tools::Sv::AssemblyPipeline::BreakDancerLine;
+
+use warnings;
+use strict;
+use Genome;
+use Carp;
 
 class Genome::Model::Tools::Sv::AssemblyPipeline::BreakDancerLine {
     is => 'Genome::Model::Tools::Sv::AssemblyPipeline'
 };
-
-use strict;
-use Carp;
-
 
 # This can accept any of the following formats:
 
