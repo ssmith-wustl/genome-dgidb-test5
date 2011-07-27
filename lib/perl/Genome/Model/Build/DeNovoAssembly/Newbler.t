@@ -21,7 +21,7 @@ use_ok('Genome::Model::Build::DeNovoAssembly::Newbler') or die;
 my $base_dir = '/gsc/var/cache/testsuite/data/Genome-Model/DeNovoAssembly';
 my $archive_path = $base_dir.'/inst_data/-7777/archive.tgz';
 ok(-s $archive_path, 'inst data archive path') or die;
-my $example_version = '1';
+my $example_version = '2';
 my $example_dir = $base_dir.'/newbler_v'.$example_version;
 ok(-d $example_dir, 'example dir') or die;
 my $tmpdir = File::Temp::tempdir(CLEANUP => 1);
@@ -32,8 +32,8 @@ my $taxon = Genome::Taxon->create(
     current_default_org_prefix => undef,
     estimated_genome_size => 4500000,
     current_genome_refseq_id => undef,
-        ncbi_taxon_id => undef,
-        ncbi_taxon_species_name => undef,
+    ncbi_taxon_id => undef,
+    ncbi_taxon_species_name => undef,
     species_latin_name => 'Escherichia coli',
     strain_name => 'TEST',
 );
@@ -71,7 +71,8 @@ my $pp = Genome::ProcessingProfile::DeNovoAssembly->create(
     name => 'De Novo Assembly Newbler Test',
     assembler_name => 'newbler de-novo-assemble',
     assembler_version => 'mapasm454_source_03152011',
-    assembler_params => '-rip',
+    assembler_params => '-consed -rip',
+    post_assemble => 'standard-outputs --min_contig_length 50',
 );
 ok($pp, 'pp') or die;
 
@@ -126,6 +127,7 @@ is_deeply(
         'version' => 'mapasm454_source_03152011',
         'input_files' => [ $build->data_directory.'/-7777-input.fastq' ],
         'rip' => 1,
+        'consed' => 1,
         'output_directory' => $build->data_directory,
     },
     'assembler params',
@@ -135,12 +137,36 @@ my $assemble = Genome::Model::Event::Build::DeNovoAssembly::Assemble->create(bui
 ok($assemble, 'create assemble');
 $assemble->dump_status_messages(1);
 ok($assemble->execute, 'execute assemble');
+# check build output files
+for my $file_name (qw/ all_contigs_fasta_file all_contigs_qual_file all_contigs_ace_file / ) {
+    my $file = $build->$file_name;
+    ok(-s $file, "Build $file_name exists");
+    my $example_file = $example_build->$file_name;
+    ok(-s $example_file, "Example $file_name exists");
+    is(File::Compare::compare($file, $example_file), 0, "Generated $file_name matches example file");
+}
 
-# TODO check example files
-
+#POST ASSEMBLE
+my $post_assemble = Genome::Model::Event::Build::DeNovoAssembly::PostAssemble->create( build => $build, model => $model );
+ok( $post_assemble, 'Created post assemble newbler' );
+ok( $post_assemble->execute, 'Executed post assemble newble' );
+foreach my $file_name (qw/
+    454Contigs.ace.1 Pcap.454Contigs.ace
+    gap.txt contigs.quals contigs.bases
+    reads.placed readinfo.txt
+    reads.unplaced reads.unplaced.fasta
+    supercontigs.fasta supercontigs.agp
+    /) {
+    my $example_file = $example_dir.'/consed/edit_dir/'.$file_name;
+    ok(-e $example_file, "$file_name example file exists");
+    my $file = $build->data_directory.'/consed/edit_dir/'.$file_name;
+    ok(-e $file, "$file_name file exists");
+    is(File::Compare::compare($file, $example_file), 0, "$file_name files match");
+}
 # TODO metrics
 
 #print $build->data_directory."\n"; <STDIN>;
+
 done_testing();
 exit;
 

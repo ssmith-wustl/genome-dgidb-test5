@@ -31,15 +31,6 @@ sub fastq_input_files {
     return @fastq_files;
 }
 
-sub existing_assembler_input_files {
-    my $self = shift;
-    return grep { -s $_ } $self->fastq_input_files;
-}
-
-sub stats_file {
-    return $_[0]->data_directory.'/consed/edit_dir/stats.txt';
-}
-
 sub set_metrics {
     my $self = shift;
     $self->status_message( "Metrics not yet set for newbler assemblies" );
@@ -54,6 +45,44 @@ sub assembly_directory {
 sub sff_directory {
     return $_[0]->data_directory.'/sff';
 }
+
+sub existing_assembler_input_files {
+    my $self = shift;
+    return grep { -s $_ } $self->fastq_input_files;
+}
+
+sub stats_file {
+    return $_[0]->data_directory.'/consed/edit_dir/stats.txt';
+}
+
+sub all_contigs_fasta_file {
+    return $_[0]->data_directory.'/454AllContigs.fna';
+}
+
+sub all_contigs_qual_file {
+    return $_[0]->data_directory.'/454AllContigs.qual';
+}
+
+sub all_contigs_ace_file {
+    return $_[0]->data_directory.'/consed/edit_dir/454Contigs.ace.1';
+}
+
+sub scaffolds_fasta_file {
+    return $_[0]->data_directory.'/454Scaffolds.fna';
+}
+
+sub scaffolds_qual_file {
+    return $_[0]->data_directory.'/454Scaffolds.qual';
+}
+
+sub scaffolds_agp_file {
+    return $_[0]->data_directory.'/454Scaffolds.txt';
+}
+
+sub newbler_metrics_file {
+    return $_[0]->data_directory.'/454NewblerMetrics.txt';
+}
+
 
 sub input_fastas {
     my $self = shift;
@@ -104,7 +133,6 @@ sub assembler_params {
 
     return %params;
 }
-#</ASSEMBLE>#
 
 #< Metrics >#
 sub calculate_metrics {
