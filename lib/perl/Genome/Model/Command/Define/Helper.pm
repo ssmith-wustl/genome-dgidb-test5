@@ -35,17 +35,6 @@ class Genome::Model::Command::Define::Helper {
             to => 'name',
             doc => 'The name of the subject of the model',
         },
-        subject_class_name => {
-            is => 'Text',
-            via => 'subject',
-            to => 'subclass_name',
-            doc => 'The subclass of the subject',
-        },
-        subject_type => {
-            is => 'Text',
-            via => 'subject',
-            doc => 'Type of subject (for example, species_name or sample_name)',
-        },
         model_name => {
             is => 'Text',
             doc => 'User meaningful name for this model, a default is used if none is provided',
