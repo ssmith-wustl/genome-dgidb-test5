@@ -62,7 +62,7 @@ sub _generate_content {
     $object->addChild( $xml_doc->createAttribute('generated-at',$time) );
 
     my $name;
-    if($subject->can('name')) {
+    if($subject->can('name') and not $subject->isa('UR::Object::Set')) {
         $name = $subject->name;
     } elsif($subject->can('rule_display')) {
         $name = $subject->rule_display;

@@ -89,9 +89,8 @@ sub execute {
     chomp( @{$bams{$tcga_patient_id}{lines}} );
     if( $exclude_pindel )
     {
-      @{$bams{$tcga_patient_id}{gatk}} = `cut -f 1-4 $gatk_calls`;
-      @{$bams{$tcga_patient_id}{pindel}} = `cut -f 1-4 $pindel_calls`;
-      chomp( @{$bams{$tcga_patient_id}{gatk}}, @{$bams{$tcga_patient_id}{pindel}} );
+      ${$bams{$tcga_patient_id}{gatk}} = $gatk_calls;
+      ${$bams{$tcga_patient_id}{pindel}} = $pindel_calls;
     }
   }
 
@@ -102,7 +101,7 @@ sub execute {
     my $review_file = "$output_dir/$case.review.csv";
     my $bed_file = "$output_dir/$case.bed";
     # If user wants to exclude calls unique to pindel create a separate file
-    my $pindel_file = "$output_dir/$case.review_pindel.csv";
+    my $review_pindel_file = "$output_dir/$case.review_pindel.csv";
 
     # Check if the review file exists. We don't want to overwrite reviewed variants
     if( -e $review_file )
@@ -115,8 +114,13 @@ sub execute {
     my %uniq_to_pindel = ();
     if( $exclude_pindel )
     {
-      %uniq_to_pindel = map { $_ => 1 } @{$bams{$case}{pindel}};
-      foreach my $gatk_call ( @{$bams{$case}{gatk}} )
+      my ( $gatk_calls, $pindel_calls ) = ( ${$bams{$case}{gatk}}, ${$bams{$case}{pindel}} );
+      my @gatk_lines = `cut -f 1-4 $gatk_calls`;
+      my @pindel_lines = `cut -f 1-4 $pindel_calls`;
+      chomp( @gatk_lines, @pindel_lines );
+
+      %uniq_to_pindel = map { $_ => 1 } @pindel_lines;
+      foreach my $gatk_call ( @gatk_lines )
       {
         delete $uniq_to_pindel{$gatk_call} if( defined $uniq_to_pindel{$gatk_call} );
       }
@@ -134,7 +138,7 @@ sub execute {
     my $review_fh = IO::File->new( $review_file, ">" ) or die "Cannot open $review_file. $!";
     my $bed_fh = IO::File->new( $bed_file, ">" ) or die "Cannot open $bed_file. $!";
     $review_fh->print( "Chr\tStart\tStop\tRef\tVar\tCall\tNotes\n" );
-    my $pindel_fh = IO::File->new( $pindel_file, ">" ) or die "Cannot open $pindel_file. $!" if( $exclude_pindel );
+    my $pindel_fh = IO::File->new( $review_pindel_file, ">" ) or die "Cannot open $review_pindel_file. $!" if( $exclude_pindel );
     $pindel_fh->print( "Chr\tStart\tStop\tRef\tVar\tCall\tNotes\n" ) if( $exclude_pindel );
     for my $chr ( nsort keys %review_lines )
     {

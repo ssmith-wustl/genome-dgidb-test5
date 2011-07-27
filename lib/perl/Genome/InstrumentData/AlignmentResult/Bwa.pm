@@ -25,7 +25,7 @@ sub required_rusage {
     my $instrument_data = delete $p{instrument_data};
 
     my $tmp_mb = $class->tmp_megabytes_estimated($instrument_data);
-    my $mem_mb = 10240;
+    my $mem_mb = 1024 * 14; # increased b/c we have about 16 GB available when 6 jobs run on a 96 Gb server
     my $cpus = 4;
     
     my $mem_kb = $mem_mb*1024;
@@ -186,7 +186,7 @@ sub _samxe_cmdline {
         # fastq/bam input files come after the first set of "ref.fa seq1.sai seq2.sai"
         # insert them where they need to go
         splice(@cmdline_inputs, 3, 0, @input_pathnames);
-        $cmdline = "sampe $params " . join(' ', @cmdline_inputs);
+        $cmdline = "sampe $params -P " . join(' ', @cmdline_inputs);
     } else {
         $self->error_message("Input pathnames should have 2 elements... contents: " . Dumper(\@input_pathnames) );
     }
