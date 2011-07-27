@@ -9,9 +9,9 @@ class Genome::PopulationGroup {
     is => 'Genome::Subject',
     has => [
         subject_type => { 
-            is => 'Text', 
             is_constant => 1, 
-            value => 'population group',
+            is_classwide => 1,
+            value => 'sample_group',
         },
         member_hash => {
             is => 'Text',
