@@ -52,9 +52,10 @@ sub _remove_expunged_object {
     my $object = $class->get($id);
     if ($class =~ m/Genome::InstrumentData/){
         #TODO: this should nuke alignment results for instrument data
-        ($expunge_success, %affected_users) = $object->_expunge_assignments
+        # ($expunge_success, %affected_users) = $object->_expunge_assignments
     }
 
+    $DB::single = 1;
     $object->delete;
 
     return ($id, %affected_users);
