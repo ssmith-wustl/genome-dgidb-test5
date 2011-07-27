@@ -69,7 +69,7 @@ sub _unplaced_reads_fasta {
         my $reader = Genome::Model::Tools::Sx::FastqReader->create( file => $file );
         while ( my $seq = $reader->read ) {
             my $read_name = $seq->{id};
-            if ( grep (/^$read_name$/, @$unplaced_reads) ) {
+            if( exists $unplaced_reads->{$read_name} ) {
                 my $fasta = Bio::Seq->new( -seq => $seq->{seq}, -id => $seq->{id} );
                 $fasta_writer->write_seq( $fasta );
             }
@@ -82,7 +82,9 @@ sub _unplaced_reads_fasta {
 sub _unplaced_reads {
     my ( $self, $valid_scaffolds) = @_;
 
-    my @unplaced_reads;
+    #store unplaced reads for later look up .. could be memory hog if there
+    #are lots of reads but using array takes really long time
+    my %unplaced_reads; 
 
     my $fh = Genome::Sys->open_file_for_reading( $self->newb_read_status_file );
     unlink $self->reads_unplaced_file;
@@ -96,17 +98,17 @@ sub _unplaced_reads {
         if ( $tmp[1] eq 'Assembled' or $tmp[1] eq 'PartiallyAssembled' ) {
             if ( not exists $valid_scaffolds->{$tmp[2]} ) {
                 $ru_fh->print( "* $tmp[0] Filtered\n" );
-                push @unplaced_reads, $tmp[0];
-            }
-            next SEQ;
+                $unplaced_reads{$tmp[0]} = 1;
+           }
+           next SEQ;
         }
-        push @unplaced_reads, $tmp[0];
+        $unplaced_reads{$tmp[0]} = 1;
         $ru_fh->print( " * $tmp[0] $tmp[1]\n" );
     }
     $ru_fh->close;
     $fh->close;
 
-    return \@unplaced_reads;
+    return \%unplaced_reads;
 }
 
 1;
