@@ -184,31 +184,31 @@ sub generate_rna_seq_files {
         confess "Failed to generate the ribosomal gene name file!";
     }
 
-    unless(-s $build->transcript_info_file($build->reference_sequence_id)){
+    unless(-s $build->generate_transcript_info_file($build->reference_sequence_id)){
         confess "Failed to generate the transcript_info file!";
     }
 
-    unless (-s $build->annotation_file('gtf', $build->reference_sequence_id)){
+    unless (-s $build->generate_annotation_file('gtf', $build->reference_sequence_id)){
         confess "Failed to generate the annotation file!";
     }
     
-    unless (-s $build->rRNA_file('gtf', $build->reference_sequence_id)){
+    unless (-s $build->generate_rRNA_file('gtf', $build->reference_sequence_id)){
         confess "Failed to generate the rRNA file!";
     }
 
-    unless (-s $build->MT_file('gtf', $build->reference_sequence_id)){
+    unless (-s $build->generate_MT_file('gtf', $build->reference_sequence_id)){
         confess "Failed to generate the MT file!";
     }
 
-    unless (-s $build->pseudogene_file('gtf', $build->reference_sequence_id)){
+    unless (-s $build->generate_pseudogene_file('gtf', $build->reference_sequence_id)){
         confess "Failed to generate the pseudogene file!";
     }
 
-    unless (-s $build->rRNA_MT_file('gtf', $build->reference_sequence_id)){
+    unless (-s $build->generate_rRNA_MT_file('gtf', $build->reference_sequence_id)){
         confess "Failed to generate the rRNA_MT file!";
     }
 
-    unless (-s $build->rRNA_MT_pseudogene_file('gtf', $build->reference_sequence_id)){
+    unless (-s $build->generate_rRNA_MT_pseudogene_file('gtf', $build->reference_sequence_id)){
         confess "Failed to generate the rRNA_MT_pseudogene file!";
     }
 
