@@ -61,12 +61,12 @@ class Genome::Model::Tools::Validation::AssembleSvInValidationBams {
         doc => "Used only when there is tumor contamination in normal sample. File with two columns; patientId and amount of tumor contamination in normal (0 is no contamination)."
     },
     ],
-    doc => 'Assemble SV predictions in validation .bam files.',
+    doc => 'Validate SV predictions. Period.',
 };
 
 sub help_detail {
     return <<EOS
-    This tool combines SquareDancer and BreakDancer (assembled) predictions into one file and then feeds the calls into the 'gmt sv assembly-validation' script for producing assemblies based on validation .bam files. For BreakDancer files, which have an inner- and outer-start and stop position, all four combinations of these starts and stopsare used to fabricate 4 separate calls in the combined file. This usually leads to duplicate assembly contings, so all assemblies are then merged to produce final output csv and fasta files. These output files are fed into John Wallis' svCaptureValidation.pl for final evaluation of readcounts of support for the calls in each .bam file, and then into his processSvReadRemapOutFiles.pl, which will make a call regarding the somatic status. One note - JW is updating this last step, and it will be improved in the future.
+    This tool combines SquareDancer and BreakDancer (assembled) predictions into one file and then feeds the calls into the 'gmt sv assembly-validation' script for producing assemblies based on validation .bam files. For BreakDancer files, which have an inner- and outer-start and stop position, all four combinations of these starts and stops are used to fabricate 4 separate combinatoric calls in the combined file. This usually leads to duplicate assembly contings, so all assemblies are then merged to produce final merged csv and fasta files. These output files are fed into 'gmt sv assembly-pipeline remap-reads' for evaluation of readcounts of support for the calls in each .bam file, and then subsequently fed into 'gmt sv assembly-pipeline classify-events', which will look at the readcounts in tumor and normal, and divide the events into four files which represent four call categories: 'somatic', 'germline', 'ambiguous', and 'no event'. Then, if WGS BAM files are provided, the somatic events from the validation BAMs are fed BACK through 'remap-reads' to obtain readcounts from the WGS BAMs. These readcounts are produced in a separate output file named '<readcounts-file>.somatic.wgs_readcounts'. This file is parsed and a new somatic file is created ('<readcounts-file>.somatic.wgs_readcounts.somatic'), which contains only those events that had 0 coverage in the normal WGS BAM file (because this is the greatest source of false positives). For more help, see Nathan Dees.
 EOS
 }
 
