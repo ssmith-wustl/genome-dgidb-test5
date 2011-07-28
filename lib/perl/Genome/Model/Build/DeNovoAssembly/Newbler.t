@@ -150,6 +150,7 @@ for my $file_name (qw/ all_contigs_fasta_file all_contigs_qual_file all_contigs_
 my $post_assemble = Genome::Model::Event::Build::DeNovoAssembly::PostAssemble->create( build => $build, model => $model );
 ok( $post_assemble, 'Created post assemble newbler' );
 ok( $post_assemble->execute, 'Executed post assemble newble' );
+#check post asm output files
 foreach my $file_name (qw/
     454Contigs.ace.1 Pcap.454Contigs.ace
     gap.txt contigs.quals contigs.bases
@@ -163,7 +164,16 @@ foreach my $file_name (qw/
     ok(-e $file, "$file_name file exists");
     is(File::Compare::compare($file, $example_file), 0, "$file_name files match");
 }
-# TODO metrics
+
+#METRICS/REPORT
+my $metrics = Genome::Model::Event::Build::DeNovoAssembly::Report->create( build => $build, model => $model );
+ok( $metrics, 'Created report' );
+ok( $metrics->execute, 'Executed report' );
+#check stats file
+ok( -s $example_build->stats_file, 'Example build stats file exists' );
+ok( -s $build->stats_file, 'Test created stats file' );
+is(File::Compare::compare($example_build->stats_file,$build->stats_file), 0, 'Stats files match' );
+#TODO check build metrics
 
 #print $build->data_directory."\n"; <STDIN>;
 

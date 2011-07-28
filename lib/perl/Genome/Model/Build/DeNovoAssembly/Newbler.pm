@@ -31,12 +31,6 @@ sub fastq_input_files {
     return @fastq_files;
 }
 
-sub set_metrics {
-    my $self = shift;
-    $self->status_message( "Metrics not yet set for newbler assemblies" );
-    return;
-}
-
 #< Files / Dirs >#
 sub assembly_directory {
     return $_[0]->data_directory.'/assembly';
@@ -135,14 +129,7 @@ sub assembler_params {
 }
 
 #< Metrics >#
-sub calculate_metrics {
-    my  $self = shift;
-
-    # FIXME
-    Carp::Confess("FIXME - Not set metrics implemented for newbler assemblies!!");
-
-    return 1;
-}
+#run base methods
 #<>#
 
 1;
