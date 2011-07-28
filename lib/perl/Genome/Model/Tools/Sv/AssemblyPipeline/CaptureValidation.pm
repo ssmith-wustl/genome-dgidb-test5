@@ -3,11 +3,8 @@ package Genome::Model::Tools::Sv::AssemblyPipeline::CaptureValidation;
 use strict;
 use warnings;
 use Carp;
+use Genome;
 use Statistics::Descriptive;
-#use FindBin qw($Bin);
-#use lib "$FindBin::Bin";
-use Genome::Model::Tools::Sv::AssemblyPipeline::ReadRemap;
-use Genome::Model::Tools::Sv::AssemblyPipeline::BreakDancerLine;
 
 class Genome::Model::Tools::Sv::AssemblyPipeline::CaptureValidation {
   is => 'Command',
@@ -99,11 +96,17 @@ sub execute {
   foreach $line( @entireSvFile ) {
     next if( $line =~ /^#/ );
 
-    my $bdRef = BreakDancerLine->new( $line );
-    ( $chrA, $bpA, $chrB, $bpB ) = $bdRef->chromosomesAndBreakpoints();
+    #ID     CHR1    OUTER_START     INNER_START     CHR2    INNER_END       OUTER_END       TYPE    ORIENTATION     MINSIZE MAXSIZE SOURCE  SCORES  Copy_Number
+    #9.1     9       21911178        21911178        9       21971899        21971899        DEL     +-      60720   60720   TEST    402     NA      NA      NA
+
+    #parse merged bd file line
+    my ($id,$chrA,$bpA,undef,$chrB,$bpB,undef,$type,$orientation,$minsize,$maxsize,$source,$score) = split /\t/,$line;
+
+#    my $bdRef = Genome::Model::Tools::Sv::AssemblyPipeline::BreakDancerLine::newline( $self,$line );
+#    ( $chrA, $bpA, $chrB, $bpB ) = $bdRef->chromosomesAndBreakpoints();
     ( defined $bpA && $bpA =~ /^\d+$/ && defined $bpB && $bpB =~ /^\d+$/ ) or
       confess "Did not get chr and breakpoints from '$line'";
-    $id = $bdRef->Id();
+#    $id = $bdRef->Id();
     $regions{"$chrA.$bpA.$chrB.$bpB"} = 1;
     $ids{$id} = 0;
   }
@@ -117,10 +120,10 @@ sub execute {
   # This just goes through and pulls out the contigs that are listed in SV file.  It should be a
   # subset of the total contigs found in $assemblyFastaFile.  The point is to only compare reads
   # to the assembly contigs of interest. At the same time, the fasta header to ID look-up hash is made
-  $idRef = ReadRemap::getAssemblySequences( $idRef, $assemblyFastaFile, $contigSequenceFile );
+  $idRef = Genome::Model::Tools::Sv::AssemblyPipeline::ReadRemap::getAssemblySequences( $idRef, $assemblyFastaFile, $contigSequenceFile );
 
   # Get regions surrounding each SV breakpoint from Build36 reference and put into a fasta file
-  ReadRemap::getBuild36ReferenceSequences( $regionsRef, $refSequenceFile, 2*$buffer );
+  Genome::Model::Tools::Sv::AssemblyPipeline::ReadRemap::getBuild36ReferenceSequences( $regionsRef, $refSequenceFile, 2*$buffer );
 
   # Make sure the sequences files exist with non-zero size
   ( -s $contigSequenceFile && -s $refSequenceFile ) or die "Did not get contig sequence and/or reference sequence file";
@@ -134,8 +137,9 @@ sub execute {
       next;
     }
 
-    my $bdRef = BreakDancerLine->new( $line );
-    my $id = $bdRef->Id();
+    my ($id,$chrA,$bpA,undef,$chrB,$bpB,undef,$type,$orientation,$minsize,$maxsize,$source,$score) = split /\t/,$line;
+    #my $bdRef = Genome::Model::Tools::Sv::AssemblyPipeline::BreakDancerLine::newline($self,$line );
+    #my $id = $bdRef->Id();
     my $fastaHeader = $$idRef{$id};
     $fastaHeader =~ s/\>//;
     print OUT "\t$fastaHeader";
@@ -150,7 +154,7 @@ sub execute {
 
       # All reads aligned to assembly contigs and reference sequence
       my ( $readCount, $uniqueReadCount, $hitsToAssemblyRef, $hitsToNormalRef ) =
-        ReadRemap::remapByCrossMatch( $line, $buffer, $fastaHeader, $bamFile, $contigSequenceFile,
+        Genome::Model::Tools::Sv::AssemblyPipeline::ReadRemap::remapByCrossMatch( $line, $buffer, $fastaHeader, $bamFile, $contigSequenceFile,
                                       $refSequenceFile, $crossMatchParameters, $noDuplicateReadSequence );
 
       # If there are no capture reads from the region, can't do any more
@@ -158,21 +162,21 @@ sub execute {
 
       # Get SV-specific read alignments based on cross_match realignment
       my ( undef, $crossesSvBreakpointRef ) =
-        ReadRemap::svSpecificHits( $fastaHeader, $hitsToAssemblyRef, $hitsToNormalRef, $extend,
+        Genome::Model::Tools::Sv::AssemblyPipeline::ReadRemap::svSpecificHits( $fastaHeader, $hitsToAssemblyRef, $hitsToNormalRef, $extend,
                                    $maxUnalignedEndBps, $maxPercentSubs, $maxPercentIndels, $minScore );
       my $filteredSvReadRef =
-        ReadRemap::removeMarginalSvHits( $crossesSvBreakpointRef, $hitsToNormalRef, $minFractionDiff );
+        Genome::Model::Tools::Sv::AssemblyPipeline::ReadRemap::removeMarginalSvHits( $crossesSvBreakpointRef, $hitsToNormalRef, $minFractionDiff );
       print OUT "\t$tissue.totalReads:$readCount\t$tissue.SvReadCount:", scalar( keys %{$filteredSvReadRef} );
 
       # For read alignment dump
       if( $dumpReadAlignments ) {
         print OUT "\n$tissue\n";
-        ReadRemap::displayAlignments( $filteredSvReadRef, $hitsToNormalRef );
+        Genome::Model::Tools::Sv::AssemblyPipeline::ReadRemap::displayAlignments( $filteredSvReadRef, $hitsToNormalRef );
       }
 
       # When the SAM reads are converted to *.fasta, they are not complemented based on flag
       # so this is bogus.....
-      my $fractionComplemented = ReadRemap::fractionComplemented( $filteredSvReadRef );
+      my $fractionComplemented = Genome::Model::Tools::Sv::AssemblyPipeline::ReadRemap::fractionComplemented( $filteredSvReadRef );
       print OUT "\t$tissue.Complemented.$fractionComplemented";
     }
     print OUT "\n";
