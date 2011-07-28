@@ -162,6 +162,8 @@ sub execute {
         #intermediate_read_dir => $assembly_intermediate_read_dir,
     );
     $assembly_cmd->execute;
+    $assembly_cmd->delete;
+
 
     #create index file
     my $index_file = $assembly_output_file . ".index";
@@ -186,7 +188,7 @@ sub execute {
     #perl -I ~/git/genome/lib/perl/ `which gmt` sv assembly-pipeline remap-reads --assembly-file TEST.assembly_output.fasta.merged --normal-bam mel2n.9.bam --tumor-bam mel2t.9.bam --sv-file TEST.assembly_output.merged --output-file new.tool.test.REMAP --patient-id TEST
     my $val_patient_id = "VAL." . $patient_id;
     my $rc_output = $merged_output_csv . ".readcounts";
-    my $remap_cmd = Genome::Model::Tools::Sv::AssemblyPipeline::RemapReads->create(
+    my $val_remap_cmd = Genome::Model::Tools::Sv::AssemblyPipeline::RemapReads->create(
         assembly_file => $merged_output_fasta,
         sv_file => $merged_output_csv,
         tumor_bam => $tumor_val_bam,
@@ -194,7 +196,8 @@ sub execute {
         patient_id => $val_patient_id,
         output_file => $rc_output,
     );
-    $remap_cmd->execute;
+    $val_remap_cmd->execute;
+    $val_remap_cmd->delete;
 
     #run JW's ClassifyEvents to make calls for events using the readcounts output
     #perl -I ~/git/genome/lib/perl/ `which gmt` sv assembly-pipeline classify-events --readcount-file new.tool.test.RE
@@ -206,12 +209,13 @@ sub execute {
     #Somatic events in this case will end up in the following file:
     my $somatics = $rc_output . ".somatic";
 
-    #OPTIONAL STEP
-    #Create readcounts in the WGS BAMs to see if a germline event might have sneaked through (look for coverage in normal wgs .bam)
-    #This is currently implemented without regard to tumor purity.
+    #OPTIONAL STEPS if WGS BAMS are present
     if (defined $tumor_wgs_bam && defined $normal_wgs_bam) {
-        my $wgs_patient_id = "WGS." . $patient_id;
-        my $wgs_rc_output = $somatics . ".wgs_readcounts";
+
+        #Create readcounts in the WGS BAMs to see if a germline event might have sneaked through (look for coverage in normal wgs .bam)
+        my ($wgs_patient_id, $wgs_rc_output);
+        $wgs_patient_id = "WGS." . $patient_id;
+        $wgs_rc_output = $somatics . ".wgs_readcounts";
         my $wgs_remap_cmd = Genome::Model::Tools::Sv::AssemblyPipeline::RemapReads->create(
             assembly_file => $merged_output_fasta,
             sv_file => $somatics,
@@ -221,28 +225,26 @@ sub execute {
             output_file => $wgs_rc_output,
         );
         $wgs_remap_cmd->execute;
+        $wgs_remap_cmd->delete;
+
+        #Use the WGS readcounts to re-determine somatic status
+        my $new_somatics = $wgs_rc_output . ".somatic";
+        my $new_somatics_fh = new IO::File $new_somatics,"w";
+        my $wgs_rc_fh = new IO::File $wgs_rc_output,"r";
+        while (my $line = $wgs_rc_fh->getline) {
+            if ( $line =~ /^#/ ) { print $new_somatics_fh $line; next; }
+            if ( $line =~ /no\s+fasta\s+sequence/ ) { next; }
+            if ( $line =~ /$wgs_patient_id.normal.svReadCount\:(\d+)/i ) {
+                my ($normal_sv_readcount) = $line =~ /$wgs_patient_id.normal.svReadCount\:(\d+)/i;
+                if ($normal_sv_readcount > 0) { next; }
+                else { print $new_somatics_fh $line; next; }
+            }
+        }
+        $wgs_rc_fh->close;
+        $new_somatics_fh->close;
     }
 
-=cut
-    my $user = $ENV{USER};
-    my $job_name = $file_prefix . "-jw-capture-val";
-    my $stdout = $job_name . ".stdout";
-    my $stderr = $job_name . ".stderr";
-    my @bam_names = split(",",$self->bam_names);
-    my @bam_files = split(",",$self->bam_files);
-    my $jw_rc_output = $merged_output_csv . ".readcounts";
-    my $jw_anno_output = $jw_rc_output . ".anno";
-    my $jw_cmd = "\"/gscuser/jwallis/genome/lib/perl/Genome/Model/Tools/Sv/SV_assembly_pipeline/svCaptureValidation.pl -svFile $merged_output_csv -assemblyFile $merged_output_fasta";
-    for my $i (0..$#bam_files) {
-        $jw_cmd .= " -bamFiles " . $bam_names[$i] . "=" . $bam_files[$i];
-    }
-    $jw_cmd .= " > $jw_rc_output; /gscuser/jwallis/genome//lib/perl/Genome/Model/Tools/Sv/AssemblyPipeline/processSvReadRemapOutFiles.pl $jw_rc_output > $jw_anno_output\"";
-    my $bsub = "bsub -q long -N -u $user\@genome.wustl.edu -J $job_name -M 8000000 -R 'select[mem>8000] rusage[mem=8000]' -oo $stdout -eo $stderr $jw_cmd";
-    print "$bsub\n";
-    print `$bsub`;
-=cut
-
-return 1;
+    return 1;
 }
 
 1;
