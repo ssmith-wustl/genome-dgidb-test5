@@ -1,4 +1,3 @@
-
 package Genome::Model::Tools::Sv::AssemblyPipeline::ReadRemap;
 
 class Genome::Model::Tools::Sv::AssemblyPipeline::ReadRemap {
@@ -269,7 +268,7 @@ sub createHitObjects {
     foreach $line ( @allCrossMatch ) {
         chomp $line;
         if ( $line =~ /$AlignmentLine/ ) {
-            $hit = new Hits;
+            $hit = Genome::Model::Tools::Sv::AssemblyPipeline::Hits->new;
             $hit->addCrossMatchLine($line);
             $query = $hit->queryName();
             # It this query already has a hit, choose the one with the highest score
@@ -355,7 +354,7 @@ sub removeMarginalSvHits {
     my ( %filteredHits, $readName, );
     foreach $readName (keys %{$hitsToSvRef}) {
         if ( defined $$hitsToReferenceRef{$readName} && 
-             ReadRemap::crossMatchHitsSimilar( $$hitsToSvRef{$readName},$$hitsToReferenceRef{$readName},$minFractionDifference)
+             &crossMatchHitsSimilar( $$hitsToSvRef{$readName},$$hitsToReferenceRef{$readName},$minFractionDifference)
             ) {
             # Don't use this read, it's alignment to the SV contig is too close to alignment to reference
             next;
@@ -429,7 +428,7 @@ sub uniqueCrossMatchAlignments {
     foreach my $id ( keys %uniqueAlignments ) {
         $line = $uniqueAlignments{$id};
         ($line =~ /$AlignmentLine/ ) || confess "'$line' is not an alignment line";
-        $hit = new Hits;
+        $hit = Genome::Model::Tools::Sv::AssemblyPipeline::Hits->new;
         $hit->addCrossMatchLine($line);
         my $query = $hit->queryName();
         $newHitObjects{$query} = $hit;
@@ -482,24 +481,26 @@ sub  remapByCrossMatch {
     #
 
     my ( $line, $buffer,  $fastaHeader, $bamFile, $contigSequenceFile, $referenceSequenceFile, $crossMatchParameters, $noDuplicates ) = @_;
-    my $bdRef = BreakDancerLine->new($line);
-    my ($chrA, $bpA, $chrB, $bpB) = $bdRef->chromosomesAndBreakpoints();
+
+    my ($id,$chrA,$bpA,undef,$chrB,$bpB,undef,$type,$orientation,$minsize,$maxsize,$source,$score) = split /\t/,$line;
+    #my $bdRef = BreakDancerLine->new($line);
+    #my ($chrA, $bpA, $chrB, $bpB) = $bdRef->chromosomesAndBreakpoints();
     defined ( $bpA && $bpA =~ /^\d+$/ && defined $bpB && $bpB =~ /^\d+$/ ) ||
         confess "Did not get chr and breakpoints from '$line'";
 
     my ( $readCount, $uniqueReadCount, $crossMatchResults, $hitsToAssemblyRef, $hitsToNormalRef );
 
     # Get all reads surrounding each breakpoint. The regions may overlap with buffer so make sure reads are unique
-    my $readRef = ReadRemap::getReads($chrA, $bpA-$buffer, $bpA+$buffer, $bamFile, $noDuplicates);
+    my $readRef = &getReads($chrA, $bpA-$buffer, $bpA+$buffer, $bamFile, $noDuplicates);
     my %uniqueEntries = ();
     foreach ( @{$readRef} ) { $uniqueEntries{$_} = 1; }
-    $readRef = ReadRemap::getReads($chrB, $bpB-$buffer, $bpB+$buffer, $bamFile, $noDuplicates);
+    $readRef = &getReads($chrB, $bpB-$buffer, $bpB+$buffer, $bamFile, $noDuplicates);
     foreach ( @{$readRef} ) { $uniqueEntries{$_} = 1; }
     my @reads = keys %uniqueEntries;
     $readCount = scalar(@reads);
 
     # Count number of above reads that have unique sequence
-    $readRef = ReadRemap::uniqueSamSequenceReads(\@reads);
+    $readRef = &uniqueSamSequenceReads(\@reads);
     $uniqueReadCount = scalar(@{$readRef});
 
     # Align reads to assembly contigs using cross_match
@@ -509,17 +510,17 @@ sub  remapByCrossMatch {
 
     # This returns the number of sequences written to file. It there were none
     # then can't do anything
-    if ( ReadRemap::convertSamToFasta(\@reads, $tempFile, $writeQualityFile) == 0 ) {
+    if ( &convertSamToFasta(\@reads, $tempFile, $writeQualityFile) == 0 ) {
         return ($readCount, $uniqueReadCount, undef, undef);
     }
 
     # Align reads to assembly contigs
-    $crossMatchResults = ReadRemap::runCrossMatch($tempFile, $contigSequenceFile, $crossMatchParameters);
-    $hitsToAssemblyRef = ReadRemap::createHitObjects($crossMatchResults);
+    $crossMatchResults = &runCrossMatch($tempFile, $contigSequenceFile, $crossMatchParameters);
+    $hitsToAssemblyRef = &createHitObjects($crossMatchResults);
 
     # Align reads to normal
-    $crossMatchResults = ReadRemap::runCrossMatch($tempFile, $referenceSequenceFile, $crossMatchParameters);
-    $hitsToNormalRef = ReadRemap::createHitObjects($crossMatchResults);
+    $crossMatchResults = &runCrossMatch($tempFile, $referenceSequenceFile, $crossMatchParameters);
+    $hitsToNormalRef = &createHitObjects($crossMatchResults);
 
     # Remove the files used/created by cross_match
     unlink $tempFile;
@@ -542,7 +543,7 @@ sub svSpecificHits {
     my ( %specificToSv, %crossesBreakpoints, $contigStart, $contigStop );
 
     # The breakpoints on the SV contig are encoded in the fasta header
-    ($contigStart, $contigStop) = ReadRemap::svBreakpoints($fastaHeader);
+    ($contigStart, $contigStop) = &svBreakpoints($fastaHeader);
 
     # See how many reads uniquely hit assembly contig and how many also cross breakpoint
     foreach my $hitName (keys %{$hitsToAssemblyRef}) {
@@ -552,10 +553,10 @@ sub svSpecificHits {
         if ( $$hitsToAssemblyRef{$hitName}->subjectName() ne $fastaHeader ) { next; }
 
         # Skip if read does not pass the filter
-        if ( !ReadRemap::crossMatchHitPassesFilter($$hitsToAssemblyRef{$hitName}, $maxUnalignedEndBases, $maxPercentSubs, $maxPercentIndels, $minScore ) ) { next; }
+        if ( !&crossMatchHitPassesFilter($$hitsToAssemblyRef{$hitName}, $maxUnalignedEndBases, $maxPercentSubs, $maxPercentIndels, $minScore ) ) { next; }
 
         # Skip if this read hits reference and the alignment passes filter. 
-        if ( defined $$hitsToNormalRef{$hitName} && ReadRemap::crossMatchHitPassesFilter($$hitsToNormalRef{$hitName}, $maxUnalignedEndBases, $maxPercentSubs, $maxPercentIndels, $minScore ) ) {
+        if ( defined $$hitsToNormalRef{$hitName} && &crossMatchHitPassesFilter($$hitsToNormalRef{$hitName}, $maxUnalignedEndBases, $maxPercentSubs, $maxPercentIndels, $minScore ) ) {
             next; 
         }
 
@@ -567,14 +568,14 @@ sub svSpecificHits {
         # All other events, read has to cross both breakpoints
         # The file format should probably be improved so it gives a range for both breakpoints
         if ( $fastaHeader =~ /\.INS\./ ) {
-            if ( ReadRemap::crossMatchHitCrossesBreakpoints($$hitsToAssemblyRef{$hitName}, $contigStart-$extend, $contigStart+$extend) ||
-                 ReadRemap::crossMatchHitCrossesBreakpoints($$hitsToAssemblyRef{$hitName}, $contigStop-$extend, $contigStop+$extend)
+            if ( &crossMatchHitCrossesBreakpoints($$hitsToAssemblyRef{$hitName}, $contigStart-$extend, $contigStart+$extend) ||
+                 &crossMatchHitCrossesBreakpoints($$hitsToAssemblyRef{$hitName}, $contigStop-$extend, $contigStop+$extend)
                 ) { $crossesBreakpoints{$hitName} = $$hitsToAssemblyRef{$hitName}; }
 
         } else  {
             # Event is not an insertion; reads have to cross both breakpoints
             # For inversions, only one of two breakpoints is reported so the two values represents the range for the given breakpoint
-            if ( ReadRemap::crossMatchHitCrossesBreakpoints($$hitsToAssemblyRef{$hitName}, $contigStart-$extend, $contigStop+$extend) ) {
+            if ( &crossMatchHitCrossesBreakpoints($$hitsToAssemblyRef{$hitName}, $contigStart-$extend, $contigStop+$extend) ) {
                 $crossesBreakpoints{$hitName} = $$hitsToAssemblyRef{$hitName};
             }
         }
@@ -662,7 +663,7 @@ sub normalAlleleCount {
     # Get non-duplicated reads around breakpoints
     # Then see which of them span the reference breakpoint regions
 
-    $readRef = ReadRemap::getReads($chrA, $bpA, $bpA, $bamFile, $noDuplicates);
+    $readRef = &getReads($chrA, $bpA, $bpA, $bamFile, $noDuplicates);
     $leftTotalReads = scalar( @{$readRef} );
     foreach $read ( @{$readRef}  ) {
         chomp $read;
@@ -672,18 +673,18 @@ sub normalAlleleCount {
         $name = "$name.$cigar.$flag";
 
         # Don't count this read if it has an alignment to SV contig that passes filters
-        if ( defined $$hitsToAssemblyRef{$name} && ReadRemap::crossMatchHitPassesFilter($$hitsToAssemblyRef{$name}) ) {
+        if ( defined $$hitsToAssemblyRef{$name} && &crossMatchHitPassesFilter($$hitsToAssemblyRef{$name}) ) {
             next;
         }
 
         # If it passes the filters for BWA-aligned reads and it crosses breakpoint + ambiguity, count it as supporting reference allele
         if ( samReadPassesFilter($read, $maxMismatch, $maxSoftmask) && 
-             ReadRemap::samReadCrossesBreakpoints($read, $bpA, $bpA+$ambiguity) ) { 
+             &samReadCrossesBreakpoints($read, $bpA, $bpA+$ambiguity) ) { 
             $leftCrossingBreakpoint++; 
         }
     }
 
-    $readRef = ReadRemap::getReads($chrB, $bpB, $bpB, $bamFile, $noDuplicates);
+    $readRef = &getReads($chrB, $bpB, $bpB, $bamFile, $noDuplicates);
     $rightTotalReads = scalar( @{$readRef} );
     foreach $read ( @{$readRef}  ) {
         chomp $read;
@@ -693,13 +694,13 @@ sub normalAlleleCount {
         $name = "$name.$cigar.$flag";
 
         # Don't count this read if it has an alignment to SV contig that passes filters
-        if ( defined $$hitsToAssemblyRef{$name} && ReadRemap::crossMatchHitPassesFilter($$hitsToAssemblyRef{$name}) ) {
+        if ( defined $$hitsToAssemblyRef{$name} && &crossMatchHitPassesFilter($$hitsToAssemblyRef{$name}) ) {
             next;
         }
 
         # If it passes the filters for BWA-aligned reads and it crosses breakpoint - ambiguity, count it as supporting reference allele
         if ( samReadPassesFilter($read, $maxMismatch, $maxSoftmask) && 
-             ReadRemap::samReadCrossesBreakpoints($read, $bpB-$ambiguity, $bpB) ) { 
+             &samReadCrossesBreakpoints($read, $bpB-$ambiguity, $bpB) ) { 
             $rightCrossingBreakpoint++; 
         }
     }
@@ -737,9 +738,9 @@ sub alleleCount  {
         $subjectName, $subjectChr, $subjectStart, $subjectStop, %crossesRight, %crossesLeft, );
 
     # Get strict list of reads that cross SV breakpoint
-    ## should make  ReadRemap::svSpecificHits generic so can use for both reference hits and
+    ## should make  &svSpecificHits generic so can use for both reference hits and
     #  SV hits
-    (undef, $svBreakPointReadsRef) = ReadRemap::svSpecificHits($fastaHeader, $hitsToAssemblyRef, $hitsToNormalRef, $extend);
+    (undef, $svBreakPointReadsRef) = &svSpecificHits($fastaHeader, $hitsToAssemblyRef, $hitsToNormalRef, $extend);
 
     # Get breakpoint(s) in SV contig encoded in the fasta header.  The ambiguity in the SV breakpoint position is 
     # the difference between $contigStart and $contigStop.
@@ -765,8 +766,8 @@ sub alleleCount  {
 
         # Skip if read does not pass the filter
         # Skip if this read hits SV contig and the alignment to SV contig passes filter. 
-        if ( !ReadRemap::crossMatchHitPassesFilter($hit) ||
-             ( defined $$hitsToAssemblyRef{$query} && ReadRemap::crossMatchHitPassesFilter($$hitsToAssemblyRef{$query}) )
+        if ( !&crossMatchHitPassesFilter($hit) ||
+             ( defined $$hitsToAssemblyRef{$query} && &crossMatchHitPassesFilter($$hitsToAssemblyRef{$query}) )
             ) {
             next; 
         }
@@ -783,7 +784,7 @@ sub alleleCount  {
             # Range the read must cover is $bpA, $bpA+$ambiguity
             # Need to convert genomic coordinates to coordinates used in alignment to reference
             # (subtract $subjectStart and add 1)
-            if ( ReadRemap::crossMatchHitCrossesBreakpoints($hit, $bpA-$subjectStart+1, $bpA+$ambiguity-$subjectStart+1) ) {
+            if ( &crossMatchHitCrossesBreakpoints($hit, $bpA-$subjectStart+1, $bpA+$ambiguity-$subjectStart+1) ) {
                 $crossesLeft{$query} = $hit;
             }
 
@@ -794,7 +795,7 @@ sub alleleCount  {
             # Range the read must cover is $bpB-$ambiguity, $bpB
             # Need to convert genomic coordinates to coordinates used in alignment to reference
             # (subtract $subjectStart and add 1)
-            if ( ReadRemap::crossMatchHitCrossesBreakpoints($hit, $bpB-$ambiguity-$subjectStart+1, $bpB-$subjectStart+1) ) {
+            if ( &crossMatchHitCrossesBreakpoints($hit, $bpB-$ambiguity-$subjectStart+1, $bpB-$subjectStart+1) ) {
                 $crossesRight{$query} = $hit;
             }
         }
@@ -815,7 +816,7 @@ sub BAK_alleleCount {
     #         Hits that support right Reference breakpoint: ref to hash with key = read name; value = Hits object
     # return ( \%svReads, \%leftBreakpoint, \%rightBreakpoint )
     # 
-    # Assume the alignments are to reference made by ReadRemap::getBuild36ReferenceSequences 
+    # Assume the alignments are to reference made by &getBuild36ReferenceSequences 
     # In the Hits objects, the subject name will be '$chr.$start.$stop' so can convert to genomic
     # coordinates from subject coordinates by adding '$start'  (and add 1 or subtract 1 ???)
 
@@ -844,9 +845,9 @@ sub BAK_alleleCount {
         $subjectName, $subjectChr, $subjectStart, $subjectStop, %crossesRight, %crossesLeft, );
 
     # Get strict list of reads that cross SV breakpoint
-    ## should make  ReadRemap::svSpecificHits generic so can use for both reference hits and
+    ## should make  &svSpecificHits generic so can use for both reference hits and
     #  SV hits
-    (undef, $svBreakPointReadsRef) = ReadRemap::svSpecificHits($fastaHeader, $hitsToAssemblyRef, $hitsToNormalRef, $extend);
+    (undef, $svBreakPointReadsRef) = &svSpecificHits($fastaHeader, $hitsToAssemblyRef, $hitsToNormalRef, $extend);
 
 
     # Get breakpoint(s) in SV contig encoded in the fasta header.  The ambiguity in the SV breakpoint position is 
@@ -867,8 +868,8 @@ sub BAK_alleleCount {
 
         # Skip if read does not pass the filter
         # Skip if this read hits SV contig and the alignment to SV contig passes filter. 
-        if ( !ReadRemap::crossMatchHitPassesFilter($$hitsToNormalRef{$hitName}) ||
-             ( defined $$hitsToAssemblyRef{$hitName} && ReadRemap::crossMatchHitPassesFilter($$hitsToAssemblyRef{$hitName}) )
+        if ( !&crossMatchHitPassesFilter($$hitsToNormalRef{$hitName}) ||
+             ( defined $$hitsToAssemblyRef{$hitName} && &crossMatchHitPassesFilter($$hitsToAssemblyRef{$hitName}) )
             ) {
             next; 
         }
@@ -887,7 +888,7 @@ sub BAK_alleleCount {
             # Range the read must cover is $bpA, $bpA+$ambiguity
             # Need to convert genomic coordinates to coordinates used in alignment to reference
             # (subtract $subjectStart and add 1)
-            if ( ReadRemap::crossMatchHitCrossesBreakpoints($$hitsToNormalRef{$hitName}, $bpA-$subjectStart+1, $bpA+$ambiguity-$subjectStart+1) ) {
+            if ( &crossMatchHitCrossesBreakpoints($$hitsToNormalRef{$hitName}, $bpA-$subjectStart+1, $bpA+$ambiguity-$subjectStart+1) ) {
                 $crossesLeft{$hitName} = $$hitsToNormalRef{$hitName};
             }
 
@@ -898,7 +899,7 @@ sub BAK_alleleCount {
             # Range the read must cover is $bpB-$ambiguity, $bpB
             # Need to convert genomic coordinates to coordinates used in alignment to reference
             # (subtract $subjectStart and add 1)
-            if ( ReadRemap::crossMatchHitCrossesBreakpoints($$hitsToNormalRef{$hitName}, $bpB-$ambiguity-$subjectStart+1, $bpB-$subjectStart+1) ) {
+            if ( &crossMatchHitCrossesBreakpoints($$hitsToNormalRef{$hitName}, $bpB-$ambiguity-$subjectStart+1, $bpB-$subjectStart+1) ) {
                 $crossesRight{$hitName} = $$hitsToNormalRef{$hitName};
             }
         }
