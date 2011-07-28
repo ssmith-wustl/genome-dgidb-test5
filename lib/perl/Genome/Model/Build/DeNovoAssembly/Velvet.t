@@ -188,6 +188,13 @@ foreach my $file_name (qw/
 }
 
 # METRICS TODO
+my $metrics = Genome::Model::Event::Build::DeNovoAssembly::Report->create( build => $build, model => $model );
+ok( $metrics, 'Created report' );
+ok( $metrics->execute, 'Executed report' );
+#check stats file
+ok( -s $example_build->stats_file, 'Example build stats file exists' );
+ok( -s $build->stats_file, 'Test created stats file' );
+is(File::Compare::compare($example_build->stats_file,$build->stats_file), 0, 'Stats files match' );
 
 #print $build->data_directory."\n"; <STDIN>;
 

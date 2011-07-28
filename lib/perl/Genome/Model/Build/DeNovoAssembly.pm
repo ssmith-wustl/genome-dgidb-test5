@@ -415,6 +415,7 @@ sub calculate_metrics {
         if ($line =~ /^Major\s+Contig\s+\(/) {
             ($major_contig_length) = $line =~ /^Major\s+Contig\s+\(>\s+(\d+)\s+/;
             $metrics{'major_contig_length'} = $major_contig_length; #300 for soap, 500 for velvet
+            delete $stat_to_metric_names{'major contig length'};
             next;
         }
 
@@ -454,7 +455,7 @@ sub calculate_metrics {
         $self->status_message(
             'Missing these metrics ('.join(', ', keys %stat_to_metric_names).') in stats file ($stats_file)'
         );
-        #return;
+        #return; okay .. could vary by assembler
     }
 
     #further processing of metric values
