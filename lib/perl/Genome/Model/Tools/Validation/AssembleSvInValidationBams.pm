@@ -14,16 +14,28 @@ class Genome::Model::Tools::Validation::AssembleSvInValidationBams {
         is => 'String',
         doc => 'path and prefix to specify output files (which will include *.csv, *.fasta, etc.)',
     },
-    bam_files => {
+    tumor_val_bam => {
         is => 'String',
-        doc => 'Comma-delimited list of BAM files to assemble calls in',
+        doc => 'path to tumor validation .bam file',
     },
-    bam_names => {
+    normal_val_bam => {
         is => 'String',
-        doc => 'Comma-delimited list of labels for BAM files. MUST BE IN SAME ORDER AS BAM_FILES. Also, one of the names MUST have /normal/i in the name.',
+        doc => 'path to normal validation .bam file',
+    },
+    patient_id => {
+        is => 'String',
+        doc => 'string to describe patient, such as LUC5',
     },
     ],
     has_optional_input => [
+    tumor_wgs_bam => {
+        is => 'String',
+        doc => 'path to tumor WGS .bam file',
+    },
+    normal_wgs_bam => {
+        is => 'String',
+        doc => 'path to normal WGS .bam file',
+    },
     assembled_call_files => {
         is => 'String',
         doc => 'Comma-delimited list of assembled BreakDancer and/or SquareDancer callset filenames to assemble',
@@ -58,6 +70,11 @@ sub execute {
     my $ref_seq = $self->ref_seq;
     my $file_prefix = $self->output_filename_prefix;
     my $assembly_input = $file_prefix . ".assembly_input";
+    my $patient_id = $self->patient_id;
+    my $tumor_val_bam = $self->tumor_val_bam;
+    my $normal_val_bam = $self->normal_val_bam;
+    my $tumor_wgs_bam = $self->tumor_val_bam;
+    my $normal_wgs_bam = $self->normal_val_bam;
 
     #concatenate calls for assembly input
     #my $ass_in_fh = Genome::Sys->open_file_for_writing($assembly_input);
@@ -132,7 +149,7 @@ sub execute {
     }
 =cut
 
-    my $bams = $self->bam_files;
+    my $bams = join(",",$tumor_val_bam,$normal_val_bam);
     my $assembly_cmd = Genome::Model::Tools::Sv::AssemblyValidation->create(
         bam_files => $bams,
         output_file => $assembly_output_file,
@@ -165,7 +182,48 @@ sub execute {
         return;
     }
 
-    #run JW's tool on the assembly files
+    #run JW's RemapReads on validation .bam files to obtain readcounts for tumor and normal
+    #perl -I ~/git/genome/lib/perl/ `which gmt` sv assembly-pipeline remap-reads --assembly-file TEST.assembly_output.fasta.merged --normal-bam mel2n.9.bam --tumor-bam mel2t.9.bam --sv-file TEST.assembly_output.merged --output-file new.tool.test.REMAP --patient-id TEST
+    my $val_patient_id = "VAL." . $patient_id;
+    my $rc_output = $merged_output_csv . ".readcounts";
+    my $remap_cmd = Genome::Model::Tools::Sv::AssemblyPipeline::RemapReads->create(
+        assembly_file => $merged_output_fasta,
+        sv_file => $merged_output_csv,
+        tumor_bam => $tumor_val_bam,
+        normal_bam => $normal_val_bam,
+        patient_id => $val_patient_id,
+        output_file => $rc_output,
+    );
+    $remap_cmd->execute;
+
+    #run JW's ClassifyEvents to make calls for events using the readcounts output
+    #perl -I ~/git/genome/lib/perl/ `which gmt` sv assembly-pipeline classify-events --readcount-file new.tool.test.RE
+    my $classify_cmd = Genome::Model::Tools::Sv::AssemblyPipeline::ClassifyEvents->create(
+        readcount_file => $rc_output,
+    );
+    $classify_cmd->execute;
+
+    #Somatic events in this case will end up in the following file:
+    my $somatics = $rc_output . ".somatic";
+
+    #OPTIONAL STEP
+    #Create readcounts in the WGS BAMs to see if a germline event might have sneaked through (look for coverage in normal wgs .bam)
+    #This is currently implemented without regard to tumor purity.
+    if (defined $tumor_wgs_bam && defined $normal_wgs_bam) {
+        my $wgs_patient_id = "WGS." . $patient_id;
+        my $wgs_rc_output = $somatics . ".wgs_readcounts";
+        my $wgs_remap_cmd = Genome::Model::Tools::Sv::AssemblyPipeline::RemapReads->create(
+            assembly_file => $merged_output_fasta,
+            sv_file => $somatics,
+            tumor_bam => $tumor_wgs_bam,
+            normal_bam => $normal_wgs_bam,
+            patient_id => $wgs_patient_id,
+            output_file => $wgs_rc_output,
+        );
+        $wgs_remap_cmd->execute;
+    }
+
+=cut
     my $user = $ENV{USER};
     my $job_name = $file_prefix . "-jw-capture-val";
     my $stdout = $job_name . ".stdout";
@@ -182,8 +240,9 @@ sub execute {
     my $bsub = "bsub -q long -N -u $user\@genome.wustl.edu -J $job_name -M 8000000 -R 'select[mem>8000] rusage[mem=8000]' -oo $stdout -eo $stderr $jw_cmd";
     print "$bsub\n";
     print `$bsub`;
+=cut
 
-    return 1;
+return 1;
 }
 
 1;
