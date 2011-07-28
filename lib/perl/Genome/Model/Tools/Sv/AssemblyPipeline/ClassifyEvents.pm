@@ -31,7 +31,6 @@ use warnings;
 use Carp;
 use FindBin qw($Bin);
 use lib "$FindBin::Bin";
-
 use Genome;    
 
 # can also include optional parameters is 'has => [ ]'
@@ -39,45 +38,48 @@ use Genome;
 class Genome::Model::Tools::Sv::AssemblyPipeline::ClassifyEvents {
     is => 'Command',                       
     has => [           
-	readcount_file => { is => 'Text',  doc => "Output file from 'gmt sv assembly-pipeline remap-reads'.  Output from all patients can be catenated together into one file." },
-        output_dir => { 
-	    is => 'Text',    
-	    doc => "Directory where three output files are written"
-	},
-	tumor_purity_file => { 
-	    is => 'Text',
-	    #doc => "File with two columns; patientId and fraction of tumor cells in tumor sample (1 is pure tumor).",
-	    doc => "Used only when there is tumor contamination in normal sample. File with two columns; patientId and tumor purity expressed as fraction of tumor cells in tumor sample (1 is pure tumor).",
-	    is_optional => 1 
-	},
+    readcount_file => { is => 'Text',  doc => "Output file from 'gmt sv assembly-pipeline remap-reads'.  Output from all patients can be catenated together into one file." },
     ],
 
     has_optional => [
-        tumor_in_normal_file => { 
-	    is => 'Text',
-	    #doc => "File with two columns; patientId and fraction of normal contamination in tumor (0 is no contamination)."
-	    doc => "Used only when there is tumor contamination in normal sample. File with two columns; patientId and amount of tumor contamination in normal (0 is no contamination)."
-	},
-        min_tumor_sv_reads => { 
-	    is => 'Integer',    
-	    doc => "Minimum number of SV-supporting reads in tumor sample to call somatic.",
-	    default => 5 
-	},
-        max_normal_sv_reads => { 
-	    is => 'Integer',    
-	    doc => "Maximum number of SV-supporting reads in normal sample to call somatic.",
-	    default => 5 
-	},
-        min_germline_sv_reads => { 
-	    is => 'Integer',    
-	    doc => "Minimum number of SV-supporting reads in tumor and normal to call germline.",
-	    default => 20 
-	},
-        max_pvalue => { 
-	    is => 'Number',    
-	    doc => "Maximum p-value from Fisher's exact comparing tumor/normal SV-supporting reads required before calling event somatic.",
-	    default => 0.05  
-	},
+    output_file_prefix => { 
+        is => 'Text',    
+        doc => "'.somatic', '.germline', '.ambiguous', and '.noevent' will be appended to this prefix to produce output files. Default will be the input to '--readcount-file'.",
+        #calculate_from => 'readcount_file',
+        #calculate => q|$readcount_file|,
+        is_optional => 1,
+    },
+    tumor_purity_file => { 
+        is => 'Text',
+        #doc => "File with two columns; patientId and fraction of tumor cells in tumor sample (1 is pure tumor).",
+        doc => "Used only when there is tumor contamination in normal sample. File with two columns; patientId and tumor purity expressed as fraction of tumor cells in tumor sample (1 is pure tumor).",
+        is_optional => 1 
+    },
+    tumor_in_normal_file => { 
+        is => 'Text',
+        #doc => "File with two columns; patientId and fraction of normal contamination in tumor (0 is no contamination)."
+        doc => "Used only when there is tumor contamination in normal sample. File with two columns; patientId and amount of tumor contamination in normal (0 is no contamination)."
+    },
+    min_tumor_sv_reads => { 
+        is => 'Integer',    
+        doc => "Minimum number of SV-supporting reads in tumor sample to call somatic.",
+        default => 5 
+    },
+    max_normal_sv_reads => { 
+        is => 'Integer',    
+        doc => "Maximum number of SV-supporting reads in normal sample to call somatic.",
+        default => 5 
+    },
+    min_germline_sv_reads => { 
+        is => 'Integer',    
+        doc => "Minimum number of SV-supporting reads in tumor and normal to call germline.",
+        default => 20 
+    },
+    max_pvalue => { 
+        is => 'Number',    
+        doc => "Maximum p-value from Fisher's exact comparing tumor/normal SV-supporting reads required before calling event somatic.",
+        default => 0.05  
+    },
     ], 
 };
 
@@ -92,47 +94,56 @@ sub help_brief {
 
 sub help_detail {                           # this is what the user will see with the longer version of help. <---
     return <<EOS 
-Requires output file from 'gmt sv assembly-pipeline remap-reads', listing number of SV-supporting reads in tumor and normal samples.  Creates three files:
- outputDir/allPatientsSomatic.YYMMDD.csv -- somatic events
- outputDir/allPatientsGermline.YYMMDD.csv -- germline events
- outputDir/allPatientsAmbiguousAndPresumedGermline.YYMMDD.csv -- events that do not meet criteria for either somatic or germline.  Also includes events with breakpoints that are identical to those of a germline event from a different patient (these are presumed to be germline)
-
-
-
+Requires output file from 'gmt sv assembly-pipeline remap-reads', listing number of SV-supporting reads in tumor and normal samples.  Creates four files:
+ ..output_file_prefix.somatic -- somatic events
+ ..output_file_prefix.germline --germline events
+ ..output_file_prefix.ambiguous --events that are neither somatic or germline (or which has breakpoints identical to those of a germline event in a different patient)
+ ..output_file_prefix.noevent --Ask John Wallis
 EOS
 }
 
 sub execute {                              
     my $self = shift;
+
+    #parse input parameters
     my $ReadCountFile = $self->readcount_file;
-    my $Dir = $self->output_dir;
     my $MinTumorSvReads = $self->min_tumor_sv_reads;
     my $MaxNormalSvReads = $self->max_normal_sv_reads;
     my $MinGermlineSvReads = $self->min_germline_sv_reads;
     my $Max_pValue = $self->max_pvalue;
 
-    my $date = `date +%F`; chomp $date; $date =~ s/\-//g; if ( $date =~ /20(\d{6})/ ) { $date = $1; }
+    #set up output files and temp dir
+    #my $Dir = $self->output_dir;
+    my $prefix = $self->output_file_prefix;
+    unless (defined $prefix) { $prefix = $ReadCountFile; }
+    #my $date = `date +%F`; chomp $date; $date =~ s/\-//g; if ( $date =~ /20(\d{6})/ ) { $date = $1; }
+    my $tempAmbiguousFile = Genome::Sys->create_temp_file_path();
+    my $tempSomaticFile = Genome::Sys->create_temp_file_path();
+    my $noEventFile = $prefix . ".noevents";
+    my $ambiguousFile = $prefix . ".ambiguous";
+    my $finalSomaticFile = $prefix . ".somatic";
+    my $germlineFile = $prefix . ".germline";
 
-    my $noEventFile = "$Dir/allPatientsNoEvent.$date.csv";
-    my $ambiguousFile = "$Dir/allPatientsAmbiguousAndPresumedGermline.$date.csv";
-    my $tempAmbiguousFile = "$Dir/tempAmbiguousFile.$date.csv";
-    my $tempSomaticFile = "$Dir/tempSomaticFile.$date.csv";
-    my $finalSomaticFile = "$Dir/allPatientsSomatic.$date.csv";
-    my $germlineFile = "$Dir/allPatientsGermline.$date.csv";
-    
+    #my $noEventFile = "$Dir/allPatientsNoEvent.$date.csv";
+    #my $ambiguousFile = "$Dir/allPatientsAmbiguousAndPresumedGermline.$date.csv";
+    #my $tempAmbiguousFile = "$Dir/tempAmbiguousFile.$date.csv";
+    #my $tempSomaticFile = "$Dir/tempSomaticFile.$date.csv";
+    #my $finalSomaticFile = "$Dir/allPatientsSomatic.$date.csv";
+    #my $germlineFile = "$Dir/allPatientsGermline.$date.csv";
+
     open(NON, "> $noEventFile");
     open(AMB, "> $tempAmbiguousFile");
     open(SOM, "> $tempSomaticFile");
     open(GERM, "> $germlineFile");
-    
+
     my ( @entireFile, $line, $normalTotal, $tumorTotal, $normalSv, $tumorSv, $chrA, $bpA, $chrB, $bpB, $event, 
-	 $pvalue, %germline, $patientId );
-    
+        $pvalue, %germline, $patientId );
+
     # Get a ref to hash that has patient ID and fraction of tumor contamination in normal
     my ( $FractionTumorInNormal, $TumorPurity );
     if ( defined $self->tumor_purity_file && defined $self->tumor_in_normal_file ) {
-	$FractionTumorInNormal = getContamination($self->tumor_in_normal_file);
-	$TumorPurity = getContamination($self->tumor_purity_file);
+        $FractionTumorInNormal = getContamination($self->tumor_in_normal_file);
+        $TumorPurity = getContamination($self->tumor_purity_file);
     }
 
 
@@ -140,52 +151,52 @@ sub execute {
     @entireFile = <IN>;
     close IN;
     foreach $line (@entireFile) {
-	chomp $line;
-	if ( $line =~ /\#/ ) { next; }
-	if ( $line =~ /no\s+fasta\s+sequence/ ) { print NON "$line\n"; next; }
-	$normalTotal = $patientId = $tumorTotal = $normalSv = $tumorSv  = undef;
-	if ( $line =~ /(\S+).normal\.totalReads\:(\d+)/i ) { $patientId = $1; $normalTotal = $2; }
-	if ( $line =~ /$patientId.tumor\.totalReads\:(\d+)/i ) { $tumorTotal = $1; }
-	if ( $line =~ /$patientId.normal.svReadCount\:(\d+)/i ) { $normalSv = $1; }
-	if ( $line =~ /$patientId.tumor.svReadCount\:(\d+)/i ) { $tumorSv = $1; }
-	( $normalTotal =~ /\d+/ && $tumorTotal =~ /\d+/ && $normalSv =~ /\d+/ && $tumorSv  =~ /\d+/ ) ||
-	    die "Did not get tumor and/or normal total reads and SV read count: '$line'";
-	
-	# if there are no SV-supporting reads, it is a non-event
-	if ( $normalSv == 0 &&  $tumorSv == 0 ) { 
-	    print NON "$line\t$patientId\n";
-	    next;
-	}
-	
-	# Correct normal SV read count for the number that is due to contamination of normal sample with tumor cells
-	my ( $correctedNormalSv, );
-	if ( defined $FractionTumorInNormal && defined $TumorPurity ) {
-	    (defined $$FractionTumorInNormal{$patientId}) || die "Did not get amount of tumor contamination in normal for '$patientId'";
-	    $correctedNormalSv = adjustReadCount($tumorTotal, $tumorSv, $normalTotal, $normalSv, $$FractionTumorInNormal{$patientId}, $$TumorPurity{$patientId});
-	} else {
-	    $correctedNormalSv = $normalSv;
-	}
-	
-	# if neither tissue has minimum number of SV reads, it is "can't tell"
-	if ( $correctedNormalSv < $MinTumorSvReads &&  $tumorSv < $MinTumorSvReads  ) { 
-	    print AMB "$line\t$patientId\tNormalCorrectedSvReadCount:$correctedNormalSv\t-\n";
-	    next;
-	}
-	
-	$pvalue = pValue($normalTotal, $correctedNormalSv, $tumorTotal, $tumorSv);
+        chomp $line;
+        if ( $line =~ /\#/ ) { next; }
+        if ( $line =~ /no\s+fasta\s+sequence/ ) { print NON "$line\n"; next; }
+        $normalTotal = $patientId = $tumorTotal = $normalSv = $tumorSv  = undef;
+        if ( $line =~ /(\S+).normal\.totalReads\:(\d+)/i ) { $patientId = $1; $normalTotal = $2; }
+        if ( $line =~ /$patientId.tumor\.totalReads\:(\d+)/i ) { $tumorTotal = $1; }
+        if ( $line =~ /$patientId.normal.svReadCount\:(\d+)/i ) { $normalSv = $1; }
+        if ( $line =~ /$patientId.tumor.svReadCount\:(\d+)/i ) { $tumorSv = $1; }
+        ( $normalTotal =~ /\d+/ && $tumorTotal =~ /\d+/ && $normalSv =~ /\d+/ && $tumorSv  =~ /\d+/ ) ||
+        die "Did not get tumor and/or normal total reads and SV read count: '$line'";
 
-	# Somatic: 
-	if ( $tumorSv >= $MinTumorSvReads && $tumorSv > $correctedNormalSv && $correctedNormalSv <= $MaxNormalSvReads && $pvalue <= $Max_pValue  ) {
-	    print SOM "$line\t$patientId\tNormalCorrectedSvReadCount:$correctedNormalSv\tTumor_normal:$pvalue\n";
-	    
-	    # Germline
-	} elsif ( $tumorSv >= $MinGermlineSvReads && $correctedNormalSv >= $MinGermlineSvReads ) {
-	    print GERM "$line\t$patientId\tNormalCorrectedSvReadCount:$correctedNormalSv\tTumor_normal:$pvalue\n";
-	    
-	    # Ambiguous.  Not clearly germline and not clearly somatic
-	} else {
-	    print AMB "$line\t$patientId\tNormalCorrectedSvReadCount:$correctedNormalSv\tTumor_normal:$pvalue\n";
-	}
+        # if there are no SV-supporting reads, it is a non-event
+        if ( $normalSv == 0 &&  $tumorSv == 0 ) { 
+            print NON "$line\t$patientId\n";
+            next;
+        }
+
+        # Correct normal SV read count for the number that is due to contamination of normal sample with tumor cells
+        my ( $correctedNormalSv, );
+        if ( defined $FractionTumorInNormal && defined $TumorPurity ) {
+            (defined $$FractionTumorInNormal{$patientId}) || die "Did not get amount of tumor contamination in normal for '$patientId'";
+            $correctedNormalSv = adjustReadCount($tumorTotal, $tumorSv, $normalTotal, $normalSv, $$FractionTumorInNormal{$patientId}, $$TumorPurity{$patientId});
+        } else {
+            $correctedNormalSv = $normalSv;
+        }
+
+        # if neither tissue has minimum number of SV reads, it is "can't tell"
+        if ( $correctedNormalSv < $MinTumorSvReads &&  $tumorSv < $MinTumorSvReads  ) { 
+            print AMB "$line\t$patientId\tNormalCorrectedSvReadCount:$correctedNormalSv\t-\n";
+            next;
+        }
+
+        $pvalue = pValue($normalTotal, $correctedNormalSv, $tumorTotal, $tumorSv);
+
+        # Somatic: 
+        if ( $tumorSv >= $MinTumorSvReads && $tumorSv > $correctedNormalSv && $correctedNormalSv <= $MaxNormalSvReads && $pvalue <= $Max_pValue  ) {
+            print SOM "$line\t$patientId\tNormalCorrectedSvReadCount:$correctedNormalSv\tTumor_normal:$pvalue\n";
+
+            # Germline
+        } elsif ( $tumorSv >= $MinGermlineSvReads && $correctedNormalSv >= $MinGermlineSvReads ) {
+            print GERM "$line\t$patientId\tNormalCorrectedSvReadCount:$correctedNormalSv\tTumor_normal:$pvalue\n";
+
+            # Ambiguous.  Not clearly germline and not clearly somatic
+        } else {
+            print AMB "$line\t$patientId\tNormalCorrectedSvReadCount:$correctedNormalSv\tTumor_normal:$pvalue\n";
+        }
     }
 
     close NON; close GERM; close SOM;
@@ -197,46 +208,46 @@ sub execute {
     @entireFile = <GERM>;
     close GERM;
     foreach $line (@entireFile) {
-	chomp $line;
-	# 2.28	2	99234794	99234794	2	99235019	99235019	DEL
-    (undef, $chrA, $bpA, undef, $chrB, $bpB, undef, $event) = split /\s+/, $line;
-	$germline{$chrA}{$bpA}{$chrB}{$bpB}{$event} = 1;
+        chomp $line;
+        # 2.28	2	99234794	99234794	2	99235019	99235019	DEL
+        (undef, $chrA, $bpA, undef, $chrB, $bpB, undef, $event) = split /\s+/, $line;
+        $germline{$chrA}{$bpA}{$chrB}{$bpB}{$event} = 1;
     }
     open(SOM, "< $tempSomaticFile");
     open(NEW_SOM, "> $finalSomaticFile");
     @entireFile = <SOM>;
     close SOM;
     foreach $line (@entireFile) {
-	chomp $line;
-	# 2.28	2	99234794	99234794	2	99235019	99235019	DEL
-	(undef, $chrA, $bpA, undef, $chrB, $bpB, undef, $event) = split /\s+/, $line;
-	if ( defined $germline{$chrA}{$bpA}{$chrB}{$bpB}{$event} ) {
-	    print AMB "$line\tsomatic_germline\n";
-	} else {
-	    print NEW_SOM "$line\n";
-	}
+        chomp $line;
+        # 2.28	2	99234794	99234794	2	99235019	99235019	DEL
+        (undef, $chrA, $bpA, undef, $chrB, $bpB, undef, $event) = split /\s+/, $line;
+        if ( defined $germline{$chrA}{$bpA}{$chrB}{$bpB}{$event} ) {
+            print AMB "$line\tsomatic_germline\n";
+        } else {
+            print NEW_SOM "$line\n";
+        }
     }
     close NEW_SOM; close AMB; 
-    
+
     # Now see which of the ambiguous could be called germline and annotate them as such
     open(AMB, "< $tempAmbiguousFile") || die "Could not open '$tempAmbiguousFile' for input: $!";
     @entireFile = <AMB>;
     close AMB;
     open(NEW_AMB, "> $ambiguousFile") || die "Could not open '$ambiguousFile' for output: $!";
     foreach $line (@entireFile) {
-	chomp $line;
-	# 2.28	2	99234794	99234794	2	99235019	99235019	DEL
-	(undef, $chrA, $bpA, undef, $chrB, $bpB, undef, $event) = split /\s+/, $line;
-	print NEW_AMB "$line";
-	if ( defined $germline{$chrA}{$bpA}{$chrB}{$bpB}{$event} && $line !~ /somatic_germline/ ) {
-	    print NEW_AMB "\tgermline";
-	} else {
-	    print NEW_AMB "\t-";
-	}
-	print NEW_AMB "\n";
+        chomp $line;
+        # 2.28	2	99234794	99234794	2	99235019	99235019	DEL
+        (undef, $chrA, $bpA, undef, $chrB, $bpB, undef, $event) = split /\s+/, $line;
+        print NEW_AMB "$line";
+        if ( defined $germline{$chrA}{$bpA}{$chrB}{$bpB}{$event} && $line !~ /somatic_germline/ ) {
+            print NEW_AMB "\tgermline";
+        } else {
+            print NEW_AMB "\t-";
+        }
+        print NEW_AMB "\n";
     }
     close NEW_AMB;
-    
+
     return 1;                              
 }
 
@@ -250,7 +261,7 @@ sub pValue {
     #         reads from each
 
     my ($normalTotal, $normalSv, $tumorTotal, $tumorSv) = @_;
-    
+
     my $pvalue;
     my $rFile = "/tmp/rFile".rand();
     open(OUT, "> $rFile") || die "Could not open '$rFile': $!";
@@ -260,7 +271,7 @@ sub pValue {
     my @rOutput = <ROUT>;
     close ROUT;
     foreach (@rOutput) { 
-	if ( $_ =~ /p-value\s+[=<]\s+(\S+)/ ) { $pvalue = $1; }
+        if ( $_ =~ /p-value\s+[=<]\s+(\S+)/ ) { $pvalue = $1; }
     }
     unlink $rFile;
 
@@ -275,9 +286,9 @@ sub adjustReadCount {
 
     my ( $svReadsInNormalDueToTumor, $adjustedNormalSvReadCount  );
     if ( $tumorPurity == 0 || $tumorTotal == 0 ) {
-	$svReadsInNormalDueToTumor = 0;
+        $svReadsInNormalDueToTumor = 0;
     } else {
-	$svReadsInNormalDueToTumor = $fractionTumorInNormal/$tumorPurity * $tumorSv/$tumorTotal * $normalTotal;
+        $svReadsInNormalDueToTumor = $fractionTumorInNormal/$tumorPurity * $tumorSv/$tumorTotal * $normalTotal;
     }
     $adjustedNormalSvReadCount = $normalSv - $svReadsInNormalDueToTumor; 
     if ( $adjustedNormalSvReadCount < 0 ) { $adjustedNormalSvReadCount = 0; }
@@ -285,7 +296,7 @@ sub adjustReadCount {
     # Round off to nearest integer
     $adjustedNormalSvReadCount += 0.5;
     $adjustedNormalSvReadCount = int($adjustedNormalSvReadCount );
-    
+
     return $adjustedNormalSvReadCount;
 =head
 I would do:
@@ -314,16 +325,16 @@ sub getContamination {
     @entireFile = <IN>;
     close IN;
     foreach $line ( @entireFile ) {
-	chomp $line;
-	if ( $line =~ /^\s*$/ ) { next; }
-	($sampleName, $fraction) = split /\s+/, $line;
-	#if ( $sampleName =~ /AML0(\d)/ ) { $sampleName = "AML$1"; }
-	($fraction =~ /0?\.\d+/ || $fraction == 0 || $fraction == 1 ) 
-	    || confess "Unexpected format for fraction in '$contaminationFile': \$fraction = '$fraction' in '$line'";
-	if ( defined $sampleToFraction{$sampleName} && $sampleToFraction{$sampleName} != $fraction ) {
-	    confess "Two values for '$sampleName' in '$contaminationFile' '$fraction' and '$sampleToFraction{$sampleName}'";
-	}
-	$sampleToFraction{$sampleName} = $fraction;
+        chomp $line;
+        if ( $line =~ /^\s*$/ ) { next; }
+        ($sampleName, $fraction) = split /\s+/, $line;
+        #if ( $sampleName =~ /AML0(\d)/ ) { $sampleName = "AML$1"; }
+        ($fraction =~ /0?\.\d+/ || $fraction == 0 || $fraction == 1 ) 
+        || confess "Unexpected format for fraction in '$contaminationFile': \$fraction = '$fraction' in '$line'";
+        if ( defined $sampleToFraction{$sampleName} && $sampleToFraction{$sampleName} != $fraction ) {
+            confess "Two values for '$sampleName' in '$contaminationFile' '$fraction' and '$sampleToFraction{$sampleName}'";
+        }
+        $sampleToFraction{$sampleName} = $fraction;
     }
     return \%sampleToFraction;
 }
