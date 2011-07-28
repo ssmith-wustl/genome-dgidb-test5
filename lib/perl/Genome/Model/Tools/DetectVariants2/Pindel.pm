@@ -79,9 +79,11 @@ sub _detect_variants {
         $self->error_message(@errors);
         die "Errors validating workflow\n";
     }
+    my $refbuild = Genome::Model::Build::ReferenceSequence->get($self->reference_build_id);
+    my $chrom_list = $refbuild->chromosome_array_ref;
 
     # Collect and set input parameters
-    $input{chromosome_list}=$self->chromosome_list;
+    $input{chromosome_list}=$chrom_list;
     $input{reference_build_id}=$refbuild_id;
     $input{tumor_bam}=$self->aligned_reads_input;
     $input{normal_bam}=$self->control_aligned_reads_input if defined $self->control_aligned_reads_input;
