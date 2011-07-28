@@ -49,6 +49,17 @@ class Genome::Model::Tools::Validation::AssembleSvInValidationBams {
         doc => 'Optional reference sequence path (default: NCBI-human-build36)',
         default => '/gscmnt/gc4096/info/model_data/2741951221/build101947881/all_sequences.fa'
     },
+    tumor_purity_file => { 
+        is => 'Text',
+        #doc => "File with two columns; patientId and fraction of tumor cells in tumor sample (1 is pure tumor).",
+        doc => "Used only when there is tumor contamination in normal sample. File with two columns; patientId and tumor purity expressed as fraction of tumor cells in tumor sample (1 is pure tumor).",
+        is_optional => 1 
+    },
+    tumor_in_normal_file => { 
+        is => 'Text',
+        #doc => "File with two columns; patientId and fraction of normal contamination in tumor (0 is no contamination)."
+        doc => "Used only when there is tumor contamination in normal sample. File with two columns; patientId and amount of tumor contamination in normal (0 is no contamination)."
+    },
     ],
     doc => 'Assemble SV predictions in validation .bam files.',
 };
@@ -203,6 +214,8 @@ sub execute {
     #perl -I ~/git/genome/lib/perl/ `which gmt` sv assembly-pipeline classify-events --readcount-file new.tool.test.RE
     my $classify_cmd = Genome::Model::Tools::Sv::AssemblyPipeline::ClassifyEvents->create(
         readcount_file => $rc_output,
+        tumor_purity_file => $self->tumor_purity_file,
+        tumor_in_normal_file => $self->tumor_in_normal_file,        
     );
     $classify_cmd->execute;
 
