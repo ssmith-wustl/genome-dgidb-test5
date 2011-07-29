@@ -46,15 +46,14 @@ sub execute {
         my $model_name   = ($model ? $model->name                     : '-');
         my $pp_name      = ($model ? $model->processing_profile->name : '-');
 
-        my $crashed_workflow_step = '-';
+        my $first_nondone_step = '-';
         eval {
-            my $workflow = $latest_build->newest_workflow_instance;
-            my @workflow_steps = ($workflow ? $workflow->ordered_child_instances : ());
-            my @crashed_steps = grep { $_->status ne 'done' } @workflow_steps;
-            $crashed_workflow_step = (@crashed_steps ? $crashed_steps[0]->name : '-');
+            my $parent_workflow_instance = $latest_build->newest_workflow_instance;
+            $first_nondone_step = find_first_nondone_step($parent_workflow_instance);
         };
 
-        $crashed_workflow_step =~ s/^\d+\s+//;
+        $first_nondone_step =~ s/^\d+\s+//;
+        $first_nondone_step =~ s/\s+\d+$//;
 
         my $latest_build_revision = $latest_build->software_revision if $latest_build;
         $latest_build_revision ||= '-';
@@ -79,7 +78,7 @@ sub execute {
         }
 
         next if (grep { lc $_ eq lc $latest_build_status } @hide_statuses);
-        $self->print_message(join "\t", $model_id, $action, $latest_build_status, $crashed_workflow_step, $latest_build_revision, $model_name, $pp_name, $fail_count);
+        $self->print_message(join "\t", $model_id, $action, $latest_build_status, $first_nondone_step, $latest_build_revision, $model_name, $pp_name, $fail_count);
     }
 
     my %cmd_rvs;
@@ -228,4 +227,21 @@ sub status_compare { # http://stackoverflow.com/q/540229
     }
     return 1 if keys %b;
     return 0;
+}
+
+
+sub find_first_nondone_step {
+    my $parent_workflow_instance = shift;
+    my @child_workflow_instances = $parent_workflow_instance->ordered_child_instances;
+
+    my $failed_step;
+    for my $child_workflow_instance (@child_workflow_instances) {
+        $failed_step = find_first_nondone_step($child_workflow_instance);
+        last if $failed_step;
+    }
+    if ($parent_workflow_instance->status ne 'done' and not $failed_step) {
+        $failed_step = $parent_workflow_instance->name;
+    }
+
+    return $failed_step;
 }
