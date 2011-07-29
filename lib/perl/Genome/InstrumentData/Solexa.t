@@ -26,8 +26,6 @@ is($pe2->total_bases_read('forward-only') + $pe2->total_bases_read('reverse-only
 
 my $ii = $pe2->index_illumina;
 ok($ii, 'index illumina');
-my $csp_pse = $ii->get_copy_sequence_files_pse;
-ok($csp_pse, 'copy seq files pse');
 
 done_testing();
 exit;
