@@ -35,6 +35,8 @@ class Genome::Model::RnaSeq {
         },
         reference_sequence_name      => { via => 'reference_sequence_build', to => 'name' },
         annotation_reference_transcripts => { via => 'processing_profile'},
+        annotation_reference_transcripts_mode => { via => 'processing_profile'},
+        mask_reference_transcripts => { via => 'processing_profile'},
         alignment_events             => { is => 'Genome::Model::Event::Build::RnaSeq::AlignReads',
                                           is_many => 1,
                                           reverse_id_by => 'model',

@@ -32,7 +32,9 @@ use_ok('Genome::Model::Tools::DetectVariants2::GatkGermlineSnv');
 
 
 my $test_data = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants2-GatkGermlineSnv";
-my $expected_data = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants2-GatkGermlineSnv/expected";
+my $expected_base = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants2-GatkGermlineSnv/";
+# V2 adds the actual score and depth values to the bed
+my $expected_data = "$expected_base/expected.v2";
 my $tumor =  $test_data."/flank_tumor_sorted.13_only.bam";
 
 my $tmpbase = File::Temp::tempdir('GatkGermlineSnvXXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites/', CLEANUP => 1);
@@ -61,5 +63,6 @@ my @files = qw|     gatk_output_file
 for my $file (@files){
     my $expected_file = "$expected_data/$file";
     my $actual_file = "$tmpdir/$file";
-    is(compare($actual_file,$expected_file),0,"Actual file is the same as the expected file: $file");
+    
+    is(compare($actual_file,$expected_file),0,"Actual file $actual_file is the same as the expected file: $expected_file");
 }

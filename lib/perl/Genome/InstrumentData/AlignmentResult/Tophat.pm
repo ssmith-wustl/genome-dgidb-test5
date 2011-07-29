@@ -384,8 +384,11 @@ sub _run_aligner {
         die $self->error_message('Failed to calculate the sum of read lengths across all lanes');
     }
     my $avg_read_length = int($sum_read_length / $reads);
+
     # The inner-insert size should be the predicted external-insert size(300) minus the read lengths(2x100=200). Example: 300-200=100
-    my $insert_size = int( $sum_insert_sizes / $reads ) - $avg_read_length;
+    # If there is an insert size, it's paired-end mutliply read_length by 2
+    my $insert_size = int( $sum_insert_sizes / $reads ) - ($avg_read_length * 2);
+
     unless ($insert_size) {
         die $self->error_message('Failed to get insert size with '. $reads .' reads and a sum insert size of '. $sum_insert_sizes);
     }
@@ -462,16 +465,33 @@ sub _merge_and_calculate_stats {
     }
 
     # Find unaligned reads and merge with aligned while calculating basic alignment metrics
+    my $tmp_unaligned_bam_file = $self->temp_scratch_directory . '/unaligned_reads.bam';
     my $unaligned_bam_file = $self->temp_staging_directory . '/unaligned_reads.bam';
     my $alignment_stats_file = $self->temp_staging_directory . '/alignment_stats.txt';
-    my $cmd = "gmt5.12.1 bio-samtools tophat-alignment-stats --aligned-bam-file=$tmp_aligned_bam_file --all-reads-bam-file=$tmp_all_reads_bam_file --unaligned-bam-file=$unaligned_bam_file --alignment-stats-file=$alignment_stats_file";
+    my $cmd = "gmt5.12.1 bio-samtools tophat-alignment-stats --aligned-bam-file=$tmp_aligned_bam_file --all-reads-bam-file=$tmp_all_reads_bam_file --unaligned-bam-file=$tmp_unaligned_bam_file --alignment-stats-file=$alignment_stats_file";
     Genome::Sys->shellcmd(
         cmd => $cmd,
         input_files => [$tmp_aligned_bam_file,$tmp_all_reads_bam_file],
-        output_files => [$unaligned_bam_file,$alignment_stats_file],
+        output_files => [$tmp_unaligned_bam_file,$alignment_stats_file],
     );
     unlink($tmp_all_reads_bam_file);
     unlink($tmp_aligned_bam_file);
+
+    # Scrub the eland alignment information from the unaligned reads bam
+    my @eland_attributes = qw(H0 H1 H2 XD SM AS);
+    my $reset_command = Genome::Model::Tools::Picard::RevertSam->create(
+        remove_alignment_information => 1,
+        remove_duplicate_information => 1,
+        restore_original_qualities => 1,
+        input_file => $tmp_unaligned_bam_file,
+        output_file => $unaligned_bam_file,
+        use_version => $self->picard_version,
+        attribute_to_clear => \@eland_attributes,
+    );
+
+    unless ($reset_command->execute == 1) {
+        die $self->error_message("Failed to execute gmt picard revert-sam on the unaligned bam file");
+    }
 
     return 1;
 }

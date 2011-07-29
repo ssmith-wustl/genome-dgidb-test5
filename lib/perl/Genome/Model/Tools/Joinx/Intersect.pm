@@ -10,12 +10,12 @@ class Genome::Model::Tools::Joinx::Intersect {
     has_input => [
         input_file_a => {
             is => 'Text',
-            doc => 'A sorted bed file containing snvs',
+            doc => 'Sorted bed file "A"',
             shell_args_position => 1,
         },
         input_file_b => {
             is => 'Text',
-            doc => 'A sorted bed file used to compute concordance (% of input_file_a in input_file_b)',
+            doc => 'Sorted bed file "B"',
             shell_args_position => 2,
         },
     ],

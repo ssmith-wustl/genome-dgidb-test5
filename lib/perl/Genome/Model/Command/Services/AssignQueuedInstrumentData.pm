@@ -63,6 +63,11 @@ class Genome::Model::Command::Services::AssignQueuedInstrumentData {
     ],
 };
 
+#FIXME: This should be refactored so that %known_454_pipelines and 
+#%known_454_16s_pipelines are merged into a single hash.  Key shoud be the 
+#pipeline name and value should be what to do with it (if anything).  Maybe
+#processing_profile if if we do something with it and empty string if we ignore
+#it.
 our %known_454_pipelines =
     map { $_ => 1}
     (
@@ -104,6 +109,7 @@ our %known_454_pipelines =
         'Transcript Mutation Validation - 3730 PCR Pipeline',
         'Transcript Mutation Validation - 454 Titanium Fragment Pipeline',
         'Transcript Mutation Validation - Illumina Sequencing Pipeline',
+        'Technology Development Library Construction Illumina',
         'WUCAP Custom Capture Illumina',
     );
 
@@ -394,7 +400,7 @@ sub find_or_create_somatic_variation_models{
             unless ($mate){
                 $mate = $model->copy(
                     name => 'AQID-PLACE_HOLDER',
-                    do_not_copy_instrument_data => 1,
+                    instrument_data => undef,
                 );
                 $self->error_message("Failed to find copied mate with subject name: $mate_name") and next unless $mate;
                 
@@ -493,26 +499,6 @@ sub tcga_roi_for_model {
     return $tcga_cds_roi_list;
 }
 
-
-sub needs_tcga_reference_alignment {
-    my $self = shift;
-    my $model = shift;
-    my %model_params = @_;
-
-    return unless $self->is_tcga_reference_alignment($model);
-
-    my %tcga_model_params = %model_params;
-    delete $tcga_model_params{name};
-    delete $tcga_model_params{region_of_interest_set_name};
-
-    my $tcga_cds_roi_list = $self->tcga_roi_for_model($model);
-
-    my @existing_tcga_models = Genome::Model::ReferenceAlignment->get(%tcga_model_params, region_of_interest_set_name => $tcga_cds_roi_list);
-
-    return not @existing_tcga_models;
-}
-
-
 sub is_tcga_reference_alignment {
     my $self = shift;
     my $model = shift;
@@ -527,7 +513,7 @@ sub is_tcga_reference_alignment {
 
     #otherwise, check the nomenclature
     my @nomenclature = map { $_->nomenclature } ($sample, $sample->attributes);
-    return grep { /^TCGA/i } @nomenclature;
+    return grep { $_ && $_ =~ /^TCGA/i } @nomenclature;
 }
 
 sub load_pses {
@@ -852,6 +838,7 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
             'hg18 nimblegen exome version 2' => 'hg19 nimblegen exome version 2',
             'NCBI-human.combined-annotation-54_36p_v2_CDSome_w_RNA' => 'NCBI-human.combined-annotation-54_36p_v2_CDSome_w_RNA_build36-build37_liftOver',
             'Freimer Pool of original (4k001L) plus gapfill (4k0026)' => 'Freimer-Boehnke capture-targets.set1_build37-fix1',
+             '04110401 PoP32 EZ capture chip set'   => '04110401 PoP32 EZ capture chip set build37',
         );
 
         my $root_build37_ref_seq = $self->root_build37_ref_seq;
@@ -902,34 +889,33 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
         }
 
         #In addition, make a third model for TCGA against another standard ROI
-        if($self->needs_tcga_reference_alignment($regular_model, %model_params)){ 
-            my $tcga_cds_model = Genome::Model->create(%model_params);
-            unless ( $tcga_cds_model ) {
-                $self->error_message('Failed to create tcga-cds model: ' . Dumper(\%model_params));
-                for my $model (@new_models) { $model->delete; }
-                return;
-            }
-            push @new_models, $tcga_cds_model;
-
-            my $tcga_cds_name = $tcga_cds_model->default_model_name(
-                    instrument_data => $genome_instrument_data,
-                    capture_target => $capture_target,
-                    roi => 'tcga-cds',
-                    );
-            if ( not $tcga_cds_name ) {
-                $self->error_message('Failed to get tcga-cds model name for params: ' . Dumper(\%model_params));
-                for my $model (@new_models) { $model->delete; }
-                return;
-            }
-            $tcga_cds_model->name($tcga_cds_name);
-
-            my $tcga_cds_roi_list = $self->tcga_roi_for_model($tcga_cds_model);
-
-            unless($self->assign_capture_inputs($tcga_cds_model, $capture_target, $tcga_cds_roi_list)) {
-                for my $model (@new_models) { $model->delete; }
-                return;
-            }
+        my $tcga_cds_model = Genome::Model->create(%model_params);
+        unless ( $tcga_cds_model ) {
+            $self->error_message('Failed to create tcga-cds model: ' . Dumper(\%model_params));
+            for my $model (@new_models) { $model->delete; }
+            return;
         }
+        push @new_models, $tcga_cds_model;
+
+        my $tcga_cds_name = $tcga_cds_model->default_model_name(
+            instrument_data => $genome_instrument_data,
+            capture_target => $capture_target,
+            roi => 'tcga-cds',
+        );
+        if ( not $tcga_cds_name ) {
+            $self->error_message('Failed to get tcga-cds model name for params: ' . Dumper(\%model_params));
+            for my $model (@new_models) { $model->delete; }
+            return;
+        }
+        $tcga_cds_model->name($tcga_cds_name);
+
+        my $tcga_cds_roi_list = $self->tcga_roi_for_model($tcga_cds_model);
+
+        unless($self->assign_capture_inputs($tcga_cds_model, $capture_target, $tcga_cds_roi_list)) {
+            for my $model (@new_models) { $model->delete; }
+            return;
+        }
+
     }
 
     for my $m (@new_models) {
@@ -1006,6 +992,7 @@ sub create_default_qc_models {
 
         my @lane_qc_models = $model->get_or_create_lane_qc_models;
         my @buildless_lane_qc_models = grep { not scalar @{[ $_->builds ]} } @lane_qc_models;
+        for (@buildless_lane_qc_models) { $_->build_requested(1) };
         push @new_models, @buildless_lane_qc_models;
     }
 
@@ -1099,26 +1086,24 @@ sub _resolve_project_and_work_order_names {
     my $pse = shift;
 
     my @names = ();
-
-    my @work_orders = $pse->get_inherited_assigned_directed_setups_filter_on('setup work order');
+    my @work_orders;
+    my ($instrument_data_id) = $pse->added_param('instrument_data_id');
+    my $index_illumina = GSC::IndexIllumina->get($instrument_data_id);
+    if($index_illumina){
+        @work_orders = $index_illumina->get_work_orders;
+    } else{
+        @work_orders = $pse->get_inherited_assigned_directed_setups_filter_on('setup work order');
+    }
     unless(scalar @work_orders) {
         $self->warning_message('No work order found for PSE ' . $pse->id);
     }
+    push @names, map($_->setup_name, @work_orders);
 
-    if(@work_orders and $work_orders[0]->isa("Genome::WorkOrder")){
-        push @names,
-            map((($_->can("name") ? $_->name : $_->setup_name )), @work_orders);
-    }else{
-        push @names,
-            map(($_->setup_name), @work_orders);
-    }
-
-    my @projects = $pse->get_inherited_assigned_directed_setups_filter_on('setup project');
+    my @projects = map($_->get_project, @work_orders); 
     unless(scalar @projects) {
         $self->warning_message('No project found for PSE ' . $pse->id);
     }
-    push @names,
-        map( ($_->can('name') ? $_->name : $_->setup_name), @projects);
+    push @names, map($_->setup_name, @projects);
 
     return @names;
 }
@@ -1262,7 +1247,7 @@ sub add_processing_profiles_to_pses{
                             cc      => 'Scott Smith <ssmith@genome.wustl.edu>, Jim Eldred <jeldred@genome.wustl.edu>, Justin Lolofie <jlolofie@genome.wustl.edu>, Thomas Mooney <tmooney@genome.wustl.edu>',
                             subject => "ecountered unknown workorder pipeline '$pipeline_string' in QIDFGM PSE",
                             msg     => 'no PP assigned to 454 data ' . $instrument_data_id . ' please check out it (see AQID)' . "\n\nWork Order Information:\n$workorder_string",
-                    });
+                        });
 
                     $self->error_message("unknown 454 workorder pipeline '$pipeline_string' encountered");
                     die $self->error_message;
@@ -1287,9 +1272,9 @@ sub add_processing_profiles_to_pses{
                 # 2575175   infinium/wugc     wugc           infinium
                 my $sequencing_platform = $instrument_data->sequencing_platform;
                 my $pp = Genome::ProcessingProfile::GenotypeMicroarray->get(
-                        instrument_type => $sequencing_platform,
-                        input_format => 'wugc',
-                        );
+                    instrument_type => $sequencing_platform,
+                    input_format => 'wugc',
+                );
                 if ( not $pp ) {
                     my $msg = "Unknown platform ($sequencing_platform) for genotyper result ($instrument_data_id)";
 
@@ -1303,7 +1288,7 @@ sub add_processing_profiles_to_pses{
                             cc      => 'Scott Smith <ssmith@genome.wustl.edu>, Jim Eldred <jeldred@genome.wustl.edu>, Eddie Belter <ebelter@genome.wustl.edu>, Thomas Mooney <tmooney@genome.wustl.edu>',
                             subject => "QIDFGM PSE ERROR: $msg",
                             msg     => "Could not find a genotype microarray processing profile for genotyper results instrument data ($instrument_data_id) sequencing platform ($sequencing_platform) in QIDFGM PSE (see AQID)".$self->id
-                    });
+                        });
 
                     die $self->error_message($msg);
                 }
@@ -1338,6 +1323,11 @@ sub add_processing_profiles_to_pses{
                         }
                     }
                 }
+                elsif ($taxon->species_latin_name =~ /mus musculus/i){
+                    my $pp_id = 2580856;
+                    push @processing_profile_ids_to_add, $pp_id;
+                    $reference_sequence_names_for_processing_profile_ids{$pp_id} = 'UCSC-mouse-buildmm9'
+                }
                 elsif ($taxon->domain =~ /bacteria/i) {
                     # updated 2011jun15 RT 72143 ctomlins
                     push @processing_profile_ids_to_add, '2599969';
@@ -1353,7 +1343,7 @@ sub add_processing_profiles_to_pses{
             $pse->add_param('subject_id', $subject_id);        
 
             # ask each if they work with this type of instrument data?
-PP:         for my $pp_id (@processing_profile_ids_to_add) {
+            PP:         for my $pp_id (@processing_profile_ids_to_add) {
                 my $pp = Genome::ProcessingProfile->get($pp_id);
                 if ($instrument_data_type =~ /454/) {
                     if ($pp->can('instrument_data_is_applicable')) {
@@ -1451,8 +1441,16 @@ sub _is_454_16s {
     my $self = shift;
     my $pse = shift;
 
-    my @work_orders = $pse->get_inherited_assigned_directed_setups_filter_on('setup work order');
-    
+    my @work_orders;
+
+    my ($instrument_data_id) = $pse->added_param('instrument_data_id');
+    my $index_illumina = GSC::IndexIllumina->get($instrument_data_id);
+    if($index_illumina){
+        @work_orders = $index_illumina->get_work_orders;
+    } else{
+        @work_orders = $pse->get_inherited_assigned_directed_setups_filter_on('setup work order');
+    }
+
     foreach my $work_order (@work_orders) {
         my $pipeline_string = $work_order->pipeline();
         unless (defined($pipeline_string)) { next; }
@@ -1472,7 +1470,15 @@ sub _is_unknown_454_pipeline {
     my $self = shift;
     my $pse = shift;
 
-    my @work_orders = $pse->get_inherited_assigned_directed_setups_filter_on('setup work order');
+    my @work_orders;
+
+    my ($instrument_data_id) = $pse->added_param('instrument_data_id');
+    my $index_illumina = GSC::IndexIllumina->get($instrument_data_id);
+    if($index_illumina){
+        @work_orders = $index_illumina->get_work_orders;
+    } else{
+        @work_orders = $pse->get_inherited_assigned_directed_setups_filter_on('setup work order');
+    }
 
     unless (@work_orders > 0) {
         $self->error_message('454 instrument_data ' . $pse->added_param('instrument_data_id') . ' has no work order(s)');
@@ -1522,12 +1528,9 @@ sub _is_pcgp {
     my $self = shift;
     my $pse = shift;
 
-    my @work_orders = $pse->get_inherited_assigned_directed_setups_filter_on('setup work order');
-
-    unless (@work_orders > 0) {
-        $self->error_message('solexa instrument_data ' . $pse->added_param('instrument_data_id') . ' has no work order(s)');
-        die $self->error_message;
-    }
+    my ($instrument_data_id) = $pse->added_param('instrument_data_id');
+    my $index_illumina = GSC::IndexIllumina->get($instrument_data_id);
+    my @work_orders = $index_illumina->get_work_orders;
 
     foreach my $work_order (@work_orders) {
         my $project_id = $work_order->project_id;
@@ -1545,28 +1548,28 @@ sub _is_build36_project {
     my $pse = shift;
 
     my %legacy_project_mapping = (
-            H_GP => 'OVC/GBM',
-            H_LK => 'COAD',
-            H_LN => 'READ',
-            H_LE => 'tAML',
-            H_LB => 'MDS sAML',
-            H_KU => 'BRC',
-            H_JG => 'LUC',
-            H_KZ => 'PRC',
-            H_LF => 'PNC',
-            H_KX => 'MMY',
-            H_LJ => 'ALS',
-            H_LY => 'ESC',
-            );
+        H_GP => 'OVC/GBM',
+        H_LK => 'COAD',
+        H_LN => 'READ',
+        H_LE => 'tAML',
+        H_LB => 'MDS sAML',
+        H_KU => 'BRC',
+        H_JG => 'LUC',
+        H_KZ => 'PRC',
+        H_LF => 'PNC',
+        H_KX => 'MMY',
+        H_LJ => 'ALS',
+        H_LY => 'ESC',
+    );
 
     #these are build 37 until further notice
     my %ambiguous_legacy_project_mapping = (
-            H_LX => 'MEL', 
-            H_KA => 'AML',  
-            H_GV => 'AML1', 
-            H_JM => 'AML2', 
-            H_LC => 'PCGP', 
-            );  
+        H_LX => 'MEL', 
+        H_KA => 'AML',  
+        H_GV => 'AML1', 
+        H_JM => 'AML2', 
+        H_LC => 'PCGP', 
+    );  
 
     my $instrument_data = $self->_instrument_data($pse);
     my $sample = $instrument_data->sample;
@@ -1579,7 +1582,28 @@ sub _is_build36_project {
     my $sample_prefix = substr($name,0,4);
 
     return $legacy_project_mapping{$sample_prefix} if $legacy_project_mapping{$sample_prefix};
-    return 0;
+    return $self->_is_aml_build_36($pse, $sample);
+}
+
+sub _is_aml_build_36 {
+    my $self = shift;
+    my $pse = shift;
+    my $sample = shift;
+
+    # Check if in work order from RT #72713
+    my ($instrument_data_id) = $pse->added_param('instrument_data_id');
+    my $index_illumina = GSC::IndexIllumina->get($instrument_data_id);
+    my @work_orders = $index_illumina->get_work_orders;
+
+    foreach my $work_order (@work_orders) {
+        if ( $work_order->project_id == 2589194 ) {
+            return 1;
+        }
+    }
+
+    # Is it one of these samples from RT #72713
+    my @sample_names = qw(H_KA-758168-0912815 H_KA-758168-1003495 H_KA-758168-S.22139 H_KA-400220-0814727 H_KA-400220-0912813 H_KA-400220-0802127 H_KA-426980-091280 H_KA-426980-1002510 H_KA-426980-S.14770 H_KA-452198-0912806 H_KA-452198-0814719 H_KA-452198-S.22477 H_KA-573988-0814941 H_KA-573988-0926957 H_KA-573988-0815176 H_KA-804168-0814948 H_KA-804168-0802136 H_KA-804168-0912812 H_KA-817156-0912808 H_KA-817156-0814950 H_KA-817156-0802138 H_KA-869586G-0926998 H_KA-869586G-S.16427 H_KA-869586G-S.16508);
+    return grep( $sample->name eq $_, @sample_names );
 }
 
 1;

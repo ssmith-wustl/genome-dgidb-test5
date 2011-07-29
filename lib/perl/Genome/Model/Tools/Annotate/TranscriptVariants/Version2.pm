@@ -107,7 +107,7 @@ sub variant_priorities  {
         #consensus_error                 => 17,
     );
 }
-    
+
 sub transcript_error_priorities {
     return (
         no_errors                               => 1,
@@ -122,7 +122,13 @@ sub transcript_error_priorities {
         no_start_codon                          => 10,
     );
 }
-    
+
+sub _resolve_intersector_sub_name {
+    my ($self) = @_;
+
+    my $structure_class = $self->transcript_structure_class_name;
+    return $structure_class->__meta__->data_source_id . '::intersector_sub';
+}
 
 # Given a nucleotide sequence, translate to amino acid sequence and return
 # The translator->translate method can take 1-3 bp of sequence. If given
@@ -227,7 +233,7 @@ sub _create_iterator_for_variant_intersection {
     my $variant;   # needs to be visible in both closures below
 
     my $structure_class = $self->transcript_structure_class_name;
-    my $intersect_sub_name = $structure_class->__meta__->data_source . '::intersector_sub';
+    my $intersect_sub_name = $self->_resolve_intersector_sub_name();
 
     # This sub plugs into a hook in the Genome::DataSource::TranscriptStructures loader
     # to reject data that does not intersect the given variation to avoid passing the
@@ -832,7 +838,9 @@ sub _apply_indel_and_translate{
     # that extra filtering.  So, to temporarily turn off the hook, set that subref to undef
     #
 
-    local($Genome::DataSource::TranscriptStructures::intersector_sub);
+    no strict 'refs';
+    my $intersect_sub_name = $self->_resolve_intersector_sub_name();
+    local($$intersect_sub_name);
     my $structures_class = $self->transcript_structure_class_name;
     my @sibling_structures = $structures_class->get(transcript_transcript_id => $structure->transcript_transcript_id,
                                                     chrom_name => $chrom_name,

@@ -13,6 +13,12 @@ class Genome::Model::Tools::Soap::StandardOutputs {
 	    is => 'Text',
 	    doc => 'Input assembly directory',
 	},
+        min_contig_length => {
+            is => 'Number',
+            doc => 'Minimum contig size to output',
+            is_optional => 1,
+            default_value => 50,
+        }
     ],
 };
 
@@ -22,42 +28,39 @@ sub help_brief {
 
 sub help_detail {
     return <<"EOS"
-gmt soap standard-outputs --assembly-directory /gscmnt/111/soap_assembly
+gmt soap standard-outputs --assembly-directory /gscmnt/111/soap_assembly --min-contig-length 200
 EOS
 }
 
 sub execute {
     my $self = shift;
 
+    my %params = (
+        assembly_directory => $self->assembly_directory,
+        min_contig_length => $self->min_contig_length,
+    );
+
     #create contigs.bases files
     $self->status_message("Creating contigs fasta file");
-    my $contigs = Genome::Model::Tools::Soap::CreateContigsBasesFile->create(
-        assembly_directory => $self->assembly_directory,
-    );
+    my $contigs = Genome::Model::Tools::Soap::CreateContigsBasesFile->create( %params );
     unless ($contigs->execute) {
         $self->error_message("Failed to successfully execute creating contigs fasta file");
         return;
     }
     $self->status_message("Finished creating contigs fasta file");
-    
 
     #create supercontigs fasta file
     $self->status_message("Creating supercontigs fasta file");
-    my $supercontigs = Genome::Model::Tools::Soap::CreateSupercontigsFastaFile->create(
-        assembly_directory => $self->assembly_directory,
-    );
+    my $supercontigs = Genome::Model::Tools::Soap::CreateSupercontigsFastaFile->create( %params );
     unless ($supercontigs->execute) {
         $self->error_message("Failed to successfully execute creating scaffolds fasta file");
         return;
     }
     $self->status_message("Finished creating scaffolds fasta file");
 
-
     #create supercontigs agp file
     $self->status_message("Creating supercontigs agp file");
-    my $agp = Genome::Model::Tools::Soap::CreateSupercontigsAgpFile->create(
-        assembly_directory => $self->assembly_directory,
-    );
+    my $agp = Genome::Model::Tools::Soap::CreateSupercontigsAgpFile->create( %params );
     unless ($agp->execute) {
         $self->error_message("Failed to successfully execute creating agp file");
         return;

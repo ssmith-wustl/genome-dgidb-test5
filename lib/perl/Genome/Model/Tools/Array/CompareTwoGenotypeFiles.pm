@@ -86,16 +86,16 @@ sub execute {
 
         my ($chr,$pos,$alleles) = split /\t/,$line;
 
+        $alleles = sort_alleles($alleles);
+        my $rev_comp_alleles = rev_comp($alleles);
+        $rev_comp_alleles = sort_alleles($rev_comp_alleles);
+
         #proceed with comparison if this chr and pos exists in geno1
         if (exists($geno1{$chr}{$pos})) {
 
-            $alleles = sort_alleles($alleles);
-            my $rev_comp_alleles = rev_comp($alleles);
-            $rev_comp_alleles = sort_alleles($rev_comp_alleles);
-
             if ($print_details) {
-                my $file_line = $chr . "\t" . $pos . "\t" . $geno1{$chr}{$pos} . "\t" . $alleles;
-                print $det_rep_fh $file_line;
+                my $file_line = join("\t",$chr,$pos,$geno1{$chr}{$pos},$alleles);
+                print $det_rep_fh "$file_line\t";
             }
 
             if ($geno1{$chr}{$pos} eq $alleles) {
@@ -129,8 +129,14 @@ sub execute {
                 next;
             }
             else {
-                print $det_rep_fh "different\n" if $print_details;
+                print $det_rep_fh "alleles different\n" if $print_details;
                 log_results($results,"did not match");
+            }
+        }
+        else {
+            if ($print_details) {
+                my $file_line = join("\t",$chr,$pos,"Not_Found",$alleles,"site not found in $geno1");
+                print $det_rep_fh "$file_line\n";
             }
         }
     }

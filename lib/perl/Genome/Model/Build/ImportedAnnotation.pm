@@ -274,30 +274,436 @@ sub _annotation_data_directory{
     return $self->data_directory . "/annotation_data";
 }
 
-sub annotation_file {
+sub _resolve_annotation_file_name {
+    my $self = shift;
+    my $file_type = shift;
+    my $suffix = shift;
+    my $reference_sequence_id = shift;
+    unless (defined($reference_sequence_id)) {
+        unless ($self->reference_sequence_id) {
+            die('There is no reference sequence build associated with imported annotation build: '. $self->id);
+        }
+        $reference_sequence_id = $self->reference_sequence_id;
+    }
+    my $file_name = $self->_annotation_data_directory .'/'. $reference_sequence_id .'-'. $file_type .'.'. $suffix;
+    return $file_name;
+}
+
+sub generate_transcript_info_file {
+    my $self = shift;
+    my $reference_sequence_id = shift;
+
+    my $file_name = $self->_resolve_annotation_file_name('transcript_info','tsv',$reference_sequence_id);
+    unless (-e $file_name) {
+        my $version = $self->version;
+        $version =~ s/(_v\d+)$//;
+        my $species_name;
+        if ($self->species_name eq 'human') {
+            $species_name = 'homo_sapiens';
+        }
+        my %params = (
+            reference_build_id => $reference_sequence_id,
+            transcript_info_file => $file_name,
+            species => $species_name,
+            use_version => $version,
+        );
+        my $transcript_info = Genome::Model::Tools::Ensembl::TranscriptInfo->create(%params);
+        unless ($transcript_info) {
+            die('Failed to load transcript info gmt command with params: '. Data::Dumper::Dumper(%params));
+        }
+        unless ($transcript_info->execute) {
+            die('Failed to execute gmt command: '. $transcript_info->command_name);
+        }
+        unless (-e $file_name) {
+            die('The gmt command ran but the file does not exist: '. $file_name);
+        }
+    }
+    unless (-s $file_name){
+        die('The transcript_info file exists, but has no size: ' . $file_name);
+    }
+    return $file_name;
+}
+
+sub transcript_info_file {
+    my $self = shift;
+    my $reference_sequence_id = shift;
+    my $file_name = $self->_resolve_annotation_file_name('transcript_info','tsv',$reference_sequence_id);
+    if (-s $file_name){
+        return $file_name;
+    }
+    return undef;
+}
+
+sub generate_annotation_file {
     my $self = shift;
     my $suffix = shift;
+    my $reference_sequence_id = shift;
+
     unless ($suffix) {
         die('Must provide file suffix as parameter to annotation_file method in '.  __PACKAGE__);
     }
-    my $file_name = $self->_annotation_data_directory .'/all_sequences.'. $suffix;
-    if (-f $file_name) {
+
+    my $file_name = $self->_resolve_annotation_file_name('all_sequences',$suffix,$reference_sequence_id);
+    if (-s $file_name) {
         return $file_name;
     }
-    return;
+    # TODO: Once we have perl5.12.1 or perl5.10.1 working, this command can be removed and replaced with in-line code to generate the file
+    my %params = (
+        anno_db => $self->model_name,
+        version => $self->version,
+        output_file => $file_name,
+        reference_build_id => $reference_sequence_id,
+        # TODO: Can this be determined by the default in G:M:T:Picard?
+        picard_version => '1.36',
+        species => $self->species_name,
+        output_format => $suffix,
+    );
+    my $dump = Genome::Model::Tools::Annotate::ReferenceGenome->create(%params);
+    unless ($dump) {
+        die('Failed to create command for generating the annotation file with params: '. Data::Dumper::Dumper(%params));
+    }
+    unless ($dump->execute) {
+        die('Failed to execute command for generating the annotation file with params: '. Data::Dumper::Dumper(%params));
+    }
+    unless (-f $file_name) {
+        die('Failed to find annotation file: '. $file_name);
+    }
+    unless (-s $file_name){
+        die('Annotation file exists but has no size: ' . $file_name);
+    }
+    return $file_name;
+}
+
+sub annotation_file {
+    my $self = shift;
+    my $suffix = shift;
+    my $reference_sequence_id = shift;
+
+    unless ($suffix) {
+        die('Must provide file suffix as parameter to annotation_file method in '.  __PACKAGE__);
+    }
+
+    my $file_name = $self->_resolve_annotation_file_name('all_sequences',$suffix,$reference_sequence_id);
+    if (-s $file_name) {
+        return $file_name;
+    }
+    return undef;
+}
+
+sub generate_rRNA_MT_pseudogene_file {
+    my $self = shift;
+    my $suffix = shift;
+    my $reference_sequence_id = shift;
+    unless ($suffix) {
+        die('Must provide file suffix as parameter to rRNA_MT_pseudogene_file method in '.  __PACKAGE__);
+    }
+    my $file_name = $self->_resolve_annotation_file_name('rRNA_MT_pseudogene',$suffix,$reference_sequence_id);
+    if (-s $file_name) {
+        return $file_name;
+    }
+    my $rRNA_file = $self->rRNA_file($suffix,$reference_sequence_id);
+    my $MT_file = $self->MT_file($suffix,$reference_sequence_id);
+    my $pseudo_file = $self->pseudogene_file($suffix,$reference_sequence_id);
+
+    my @input_files = ($rRNA_file,$MT_file,$pseudo_file);
+    unless (Genome::Model::Tools::Gtf::Cat->execute(
+        input_files => \@input_files,
+        output_file => $file_name,
+        remove_originals => 0,
+    )) {
+        die('Failed to merge GTF files: '. Data::Dumper::Dumper(@input_files));
+    }
+
+    unless (Genome::Model::Tools::BedTools::Sort->execute(
+        input_file => $file_name,
+    )) {
+        die('Failed to sort file: '. $file_name);
+    }
+    unless (-s $file_name){
+        die('rRNA_MT_pseudogene file exists but has no size: ' . $file_name);
+    }
+    return $file_name;
+}
+
+sub rRNA_MT_pseudogene_file {
+    my $self = shift;
+    my $suffix = shift;
+    my $reference_sequence_id = shift;
+    unless ($suffix) {
+        die('Must provide file suffix as parameter to rRNA_MT_pseudogene_file method in '.  __PACKAGE__);
+    }
+    my $file_name = $self->_resolve_annotation_file_name('rRNA_MT_pseudogene',$suffix,$reference_sequence_id);
+    if (-s $file_name) {
+        return $file_name;
+    }
+    return undef;
+}
+
+sub generate_rRNA_MT_file {
+    my $self = shift;
+    my $suffix = shift;
+    my $reference_sequence_id = shift;
+    unless ($suffix) {
+        die('Must provide file suffix as parameter to rRNA_MT_file method in '.  __PACKAGE__);
+    }
+    my $file_name = $self->_resolve_annotation_file_name('rRNA_MT',$suffix,$reference_sequence_id);
+    if (-s $file_name) {
+        return $file_name;
+    }
+
+    my $rRNA_file = $self->rRNA_file($suffix,$reference_sequence_id);
+    my $MT_file = $self->MT_file($suffix,$reference_sequence_id);
+
+    my @input_files = ($rRNA_file,$MT_file);
+    unless (Genome::Model::Tools::Gtf::Cat->execute(
+        input_files => \@input_files,
+        output_file => $file_name,
+        remove_originals => 0,
+    )) {
+        die('Failed to merge GTF files: '. Data::Dumper::Dumper(@input_files));
+    }
+
+    unless (Genome::Model::Tools::BedTools::Sort->execute(
+        input_file => $file_name,
+    )) {
+        die('Failed to sort file: '. $file_name);
+    }
+    unless (-s $file_name){
+        die('rRNA_MT file exists but has no size: ' . $file_name);
+    }
+    return $file_name;
 }
 
 sub rRNA_MT_file {
     my $self = shift;
     my $suffix = shift;
+    my $reference_sequence_id = shift;
     unless ($suffix) {
         die('Must provide file suffix as parameter to rRNA_MT_file method in '.  __PACKAGE__);
     }
-    my $file_name = $self->_annotation_data_directory .'/rRNA_MT.'. $suffix;
+    my $file_name = $self->_resolve_annotation_file_name('rRNA_MT',$suffix,$reference_sequence_id);
+    if (-s $file_name) {
+        return $file_name;
+    }
+    return undef;
+}
+
+sub generate_rRNA_file {
+    my $self = shift;
+    my $suffix = shift;
+    my $reference_sequence_id = shift;
+    unless ($suffix) {
+        die('Must provide file suffix as parameter to rRNA_file method in '.  __PACKAGE__);
+    }
+    my $file_name = $self->_resolve_annotation_file_name('rRNA',$suffix,$reference_sequence_id);
     if (-f $file_name) {
         return $file_name;
     }
-    return;
+    #Generate the file on the fly then
+
+    # Load a list of ribosomal gene names and ids
+    # This is a manually curated list developed my Malachi Griffith
+    # Currently this only exists for Human Ensemble version 58_37c_v2 annotation build
+    my $ribosomal_file = $self->_annotation_data_directory .'/RibosomalGeneNames.txt';
+    unless (-e $ribosomal_file) {
+        die('This is the last step requiring automation.  You must provide a list of gene_names(column1) and ensembl_gene_ids(column2) in this location (see Genome::Model::Event::Build::ImportedAnnotation::CopyRibosomalGeneNames): '. $ribosomal_file);
+    }
+    my %ribo_names;
+    my %ribo_ids;
+    open (RIBO, $ribosomal_file) || die "\n\nCould not load ribosomal gene ids: $ribosomal_file\n\n";
+    while(<RIBO>){
+        chomp($_);
+        my @line=split("\t", $_);
+        $ribo_names{$line[0]}=1;
+        $ribo_ids{$line[1]}=1;
+    }
+    close(RIBO);
+    my $transcript_info_file = $self->transcript_info_file($reference_sequence_id);
+    my $transcript_info_reader = Genome::Utility::IO::SeparatedValueReader->create(
+        separator => "\t",
+        input => $transcript_info_file,
+    );
+    unless ($transcript_info_reader) {
+        die('Failed to load transcript info file: '. $transcript_info_file);
+    }
+    my %rRNA_transcripts;
+    while (my $transcript_data = $transcript_info_reader->next) {
+        if ( ($transcript_data->{gene_biotype} =~ /rRNA/) ||
+                 ($transcript_data->{transcript_biotype} =~ /rRNA/) ||
+                     ($ribo_names{$transcript_data->{gene_name}}) ||
+                         ($ribo_ids{$transcript_data->{ensembl_gene_id}}) ) {
+            $rRNA_transcripts{$transcript_data->{ensembl_transcript_id}} = $transcript_data;
+        }
+    }
+    my @ids = keys %rRNA_transcripts;
+    my $annotation_file = $self->annotation_file($suffix,$reference_sequence_id);
+    my $limit = Genome::Model::Tools::Gtf::Limit->create(
+        input_gtf_file => $annotation_file,
+        output_gtf_file => $file_name,
+        ids => \@ids,
+        id_type => 'transcript_id',
+    );
+    unless ($limit) {
+        die('Failed to create GTF limit tool!');
+    }
+    unless ($limit->execute) {
+        die('Failed to execute GTF limit tool!');
+    }
+    unless (Genome::Model::Tools::BedTools::Sort->execute(
+        input_file => $file_name,
+    )) {
+        die('Failed to sort file: '. $file_name);
+    }
+    unless (-s $file_name){
+        die('rRNA file exists but has no size: ' . $file_name);
+    }
+    return $file_name;
+}
+
+sub rRNA_file {
+    my $self = shift;
+    my $suffix = shift;
+    my $reference_sequence_id = shift;
+    unless ($suffix) {
+        die('Must provide file suffix as parameter to rRNA_file method in '.  __PACKAGE__);
+    }
+    my $file_name = $self->_resolve_annotation_file_name('rRNA',$suffix,$reference_sequence_id);
+    if (-s $file_name) {
+        return $file_name;
+    }
+    return undef;
+}
+
+sub generate_MT_file {
+    my $self = shift;
+    my $suffix = shift;
+    my $reference_sequence_id = shift;
+    unless ($suffix) {
+        die('Must provide file suffix as parameter to rRNA_file method in '.  __PACKAGE__);
+    }
+    my $file_name = $self->_resolve_annotation_file_name('MT',$suffix,$reference_sequence_id);
+    if (-f $file_name) {
+        return $file_name;
+    }
+    my $transcript_info_file = $self->transcript_info_file($reference_sequence_id);
+    my $transcript_info_reader = Genome::Utility::IO::SeparatedValueReader->create(
+        separator => "\t",
+        input => $transcript_info_file,
+    );
+    unless ($transcript_info_reader) {
+        die('Failed to load transcript info file: '. $transcript_info_file);
+    }
+    my %MT_transcripts;
+    while (my $transcript_data = $transcript_info_reader->next) {
+        if ( ($transcript_data->{gene_biotype} =~ /MT/i) ||
+                 ($transcript_data->{transcript_biotype} =~ /MT/i) ||
+                     ($transcript_data->{seq_region_name} =~ /^MT$/i)  ) {
+            $MT_transcripts{$transcript_data->{ensembl_transcript_id}} = $transcript_data;
+        }
+    }
+    my @ids = keys %MT_transcripts;
+    my $annotation_file = $self->annotation_file($suffix,$reference_sequence_id);
+    my $limit = Genome::Model::Tools::Gtf::Limit->create(
+        input_gtf_file => $annotation_file,
+        output_gtf_file => $file_name,
+        ids => \@ids,
+        id_type => 'transcript_id',
+    );
+    unless ($limit) {
+        die('Failed to create GTF limit tool!');
+    }
+    unless ($limit->execute) {
+        die('Failed to execute GTF limit tool!');
+    }
+    unless (Genome::Model::Tools::BedTools::Sort->execute(
+        input_file => $file_name,
+    )) {
+        die('Failed to sort file: '. $file_name);
+    }
+    unless (-s $file_name){
+        die('MT file exists but has no size: ' . $file_name);
+    }
+    return $file_name;
+}
+
+sub MT_file {
+    my $self = shift;
+    my $suffix = shift;
+    my $reference_sequence_id = shift;
+    unless ($suffix) {
+        die('Must provide file suffix as parameter to rRNA_file method in '.  __PACKAGE__);
+    }
+    my $file_name = $self->_resolve_annotation_file_name('MT',$suffix,$reference_sequence_id);
+    if (-s $file_name) {
+        return $file_name;
+    }
+    return undef;
+}
+
+sub generate_pseudogene_file {
+    my $self = shift;
+    my $suffix = shift;
+    my $reference_sequence_id = shift;
+    unless ($suffix) {
+        die('Must provide file suffix as parameter to pseudogene_file method in '.  __PACKAGE__);
+    }
+    my $file_name = $self->_resolve_annotation_file_name('pseudogene',$suffix,$reference_sequence_id);
+    if (-f $file_name) {
+        return $file_name;
+    }
+    #TODO: Need a method or tool to generate the pseudogene file on the fly
+    my $transcript_info_file = $self->transcript_info_file($reference_sequence_id);
+    my $transcript_info_reader = Genome::Utility::IO::SeparatedValueReader->create(
+        separator => "\t",
+        input => $transcript_info_file,
+    );
+    unless ($transcript_info_reader) {
+        die('Failed to load transcript info file: '. $transcript_info_file);
+    }
+    my %pseudo_transcripts;
+    while (my $transcript_data = $transcript_info_reader->next) {
+        if ( ($transcript_data->{gene_biotype} =~ /pseudogene/) ||
+                 ($transcript_data->{transcript_biotype} =~ /pseudogene/)  ) {
+            $pseudo_transcripts{$transcript_data->{ensembl_transcript_id}} = $transcript_data;
+        }
+    }
+    my @ids = keys %pseudo_transcripts;
+    my $annotation_file = $self->annotation_file($suffix,$reference_sequence_id);
+    my $limit = Genome::Model::Tools::Gtf::Limit->create(
+        input_gtf_file => $annotation_file,
+        output_gtf_file => $file_name,
+        ids => \@ids,
+        id_type => 'transcript_id',
+    );
+    unless ($limit) {
+        die('Failed to create GTF limit tool!');
+    }
+    unless ($limit->execute) {
+        die('Failed to execute GTF limit tool!');
+    }
+    unless (Genome::Model::Tools::BedTools::Sort->execute(
+        input_file => $file_name,
+    )) {
+        die('Failed to sort file: '. $file_name);
+    }
+    unless (-s $file_name){
+        die('pseudogene file exists but has no size: ' . $file_name);
+    }
+    return $file_name;
+}
+
+sub pseudogene_file {
+    my $self = shift;
+    my $suffix = shift;
+    my $reference_sequence_id = shift;
+    unless ($suffix) {
+        die('Must provide file suffix as parameter to pseudogene_file method in '.  __PACKAGE__);
+    }
+    my $file_name = $self->_resolve_annotation_file_name('pseudogene',$suffix,$reference_sequence_id);
+    if (-s $file_name) {
+        return $file_name;
+    }
+    return undef;
 }
 
 sub tiering_bed_files_by_version {

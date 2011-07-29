@@ -202,6 +202,10 @@ sub create {
         unless ($self->_create_master_event) {
             Carp::confess "Could not create master event for new build of model " . $self->model->__display_name__;
         }
+
+        $self->add_note(
+            header_text => 'Build Created',
+        );
     };
 
     if ($@) {
@@ -536,6 +540,10 @@ sub start {
         unless ($self->_launch(%params)) {
             Carp::croak "Build " . $self->__display_name__ . " could not be launched!";
         }
+
+        $self->add_note(
+            header_text => 'Build Started',
+        );
     };
 
     if ($@) {
@@ -559,6 +567,8 @@ sub post_allocation_initialization {
 sub validate_for_start_methods {
     # Each method should return tags
     my @methods = (
+        #validate_inputs_have_values should be checked first
+        'validate_inputs_have_values',
         'inputs_have_compatible_reference',
     );
     return @methods;
@@ -582,6 +592,29 @@ sub validate_for_start {
     return @tags;
 }
 
+sub validate_inputs_have_values {
+    my $self = shift;
+    my @inputs = $self->inputs;
+
+    my @inputs_without_values = grep { not defined $_->value } @inputs;
+    my $valueless_error_message = '';
+    my %input_names_to_ids;
+    for my $input (@inputs_without_values){
+        $input_names_to_ids{$input->name} .= $input->value_id . ',';
+    }
+
+    my @tags;
+    for my $input_name (keys %input_names_to_ids) {
+        push @tags, UR::Object::Tag->create(
+            type => 'error',
+            properties => [$input_name],
+            desc => "Value no longer exists for value id: " . $input_names_to_ids{$input_name},
+        );
+    }
+
+    return @tags;
+}
+
 sub inputs_have_compatible_reference {
     my $self = shift;
 
@@ -596,6 +629,7 @@ sub inputs_have_compatible_reference {
     my @incompatible_properties;
     for my $input (@inputs) {
         my $object = $input->value;
+        next unless $object; #this is reported in validate_inputs_have_values
         my ($input_reference_method) = grep { $object->can($_) } @reference_sequence_methods;
         next unless $input_reference_method;
         my $object_reference_sequence = $object->$input_reference_method;
@@ -636,6 +670,10 @@ sub stop {
         $self->_kill_job($job);
         $self = Genome::Model::Build->load($self->id);
     }
+
+    $self->add_note(
+        header_text => 'Build Stopped',
+    );
 
     my $self_event = $self->build_event;
     my $error = Genome::Model::Build::Error->create(
@@ -1036,6 +1074,22 @@ sub fail {
         # FIXME soon - return here
         # return;
     }
+
+    for my $error (@errors) {
+        $self->add_note(
+            header_text => 'Failed Stage',
+            body_text => $error->stage,
+        );
+        $self->add_note(
+            header_text => 'Failed Step',
+            body_text => $error->step,
+        );
+        $self->add_note(
+            header_text => 'Failed Error',
+            body_text => $error->error,
+            auto_truncate_body_text => 1,
+        );
+    }
     
     return 1;
 }
@@ -1186,6 +1240,26 @@ sub abandon {
         $self->error_message("Tried to resolve last complete build for model (".$self->model_id."), which should not return this build (".$self->id."), but did.");
         # FIXME soon - return here
         # return;
+    }
+
+    $self->_unregister_software_results
+        or return;
+
+    $self->add_note(
+        header_text => 'Build Abandoned',
+    );
+
+    return 1;
+}
+
+sub _unregister_software_results {
+    my $self = shift;
+    my @registrations = Genome::SoftwareResult::User->get(user_class_name => $self->subclass_name, user_id => $self->id); 
+    for my $registration (@registrations){
+        unless($registration->delete){
+            $self->error_message("Failed to delete registration: " . Data::Dumper::Dumper($registration)); 
+            return;
+        }    
     }
 
     return 1;
@@ -1873,8 +1947,6 @@ sub delta_model_input_differences_from_model {
 }
 
 
-
-
 sub all_allocations {
     my $self = shift;
     my @input_values = map { $_->value } $self->inputs;
@@ -1883,6 +1955,27 @@ sub all_allocations {
         push @allocations, Genome::Disk::Allocation->get(owner_id => $object->id, owner_class_name => $object->class);
     }
     return @allocations;
+}
+
+
+sub is_used_as_model_or_build_input {
+    # Both models and builds have this method and as such it is currently duplicated.
+    # We don't seem to have any place to put things that are common between Models and Builds.
+    my $self = shift;
+
+    my @model_inputs = Genome::Model::Input->get(
+        value_id => $self->id,
+        value_class_name => $self->class,
+    );
+
+    my @build_inputs = Genome::Model::Build::Input->get(
+        value_id => $self->id,
+        value_class_name => $self->class,
+    );
+
+    my @inputs = (@model_inputs, @build_inputs);
+
+    return (scalar @inputs) ? 1 : 0;
 }
 
 

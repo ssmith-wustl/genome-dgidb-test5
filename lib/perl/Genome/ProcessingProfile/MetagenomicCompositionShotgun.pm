@@ -124,6 +124,7 @@ sub _execute_build {
     my ($self, $build) = @_;
 
     my $model = $build->model;
+    $self->status_message('Build '.$model->__display_name__);
 
     # temp hack for debugging
     my $log_model_name = $model->name;
@@ -140,16 +141,16 @@ sub _execute_build {
         }
 
         # ENSURE WE HAVE INSTRUMENT DATA
-        my @assignments = $model->instrument_data_assignments;
+        my @assignments = $model->instrument_data_inputs;
         if (@assignments == 0) {
             die $self->error_message("NO INSTRUMENT DATA ASSIGNED!");
         }
 
         # ASSIGN ANY NEW INSTRUMENT DATA TO THE CONTAMINATION SCREENING MODEL
         for my $assignment (@assignments) {
-            my $instrument_data = $assignment->instrument_data;
-            my $screen_assignment = $screen_model->instrument_data_assignment(
-                instrument_data_id => $instrument_data->id
+            my $instrument_data = $assignment->value;
+            my $screen_assignment = $screen_model->instrument_data_input(
+                value_id => $instrument_data->id #TODO inst data switch
             );
             if ($screen_assignment) {
                 $self->status_message("Instrument data " . $instrument_data->__display_name__ . " is already assigned to the screening model");
@@ -172,7 +173,9 @@ sub _execute_build {
 
         # BUILD HUMAN CONTAMINATION SCREEN MODEL
         $self->status_message("Building contamination screen model if necessary");
-        ($screen_build) = $self->build_if_necessary_and_wait($screen_model);
+        $screen_build = $self->build_if_necessary_and_wait($screen_model);
+        return if not $screen_build;
+
         my ($prev_from_build) = grep {$_->id eq $screen_build->id} $build->from_builds();
         $build->add_from_build(from_build=>$screen_build, role=>'contamination_screen_alignment_build') unless $prev_from_build;;
 
@@ -187,10 +190,10 @@ sub _execute_build {
 
         #if we contamination screened, we'll use the alignment results, extract unaligned reads to a fastq and then post-process, create new imported instrument data
         $self->status_message("Processing and importing instrument data for any new unaligned reads");
-        @screened_assignments = $screen_model->instrument_data_assignments;
+        @screened_assignments = $screen_model->instrument_data_inputs;
         my @post_processed_unaligned_reads;
         for my $assignment (@screened_assignments) {
-            my @alignment_results = $assignment->results($screen_build);
+            my @alignment_results = $screen_build->alignment_results_for_instrument_data($assignment->value);
             if (@alignment_results > 1) {
                 $self->error_message( "Multiple alignment_results found for instrument data assignment: " . $assignment->__display_name__);
                 return;
@@ -214,9 +217,9 @@ sub _execute_build {
     }else{
         #if skipping contamination_screen, we need to extract the originally assigned imported instrument data and process and reimport it for the metagenomic screen.
         #sra data is stored in fastq/sangerqual format, so these just need to be extracted, dusted, n-removed
-        my @sra_assignments = $build->instrument_data_assignments;
+        my @sra_assignments = $build->instrument_data_inputs;
         for my $assignment(@sra_assignments){
-            my @post_processed_reads = $self->_process_sra_instrument_data($assignment->instrument_data);
+            my @post_processed_reads = $self->_process_sra_instrument_data($assignment->value);
             #TODO, this doesn't need to be an array of array refs, since we should get a 1 to 1 sra inst_data to post-processed imported inst_data, but this is how it's done in the original pipeline, where the 1 to 1 convention doesn't hold.  We're sticking to this standard for now.
             push @imported_instrument_data_for_metagenomic_models, \@post_processed_reads;
         }
@@ -232,8 +235,8 @@ sub _execute_build {
             my $prev_assignment = $screened_assignments[$n];
             my $post_processed_instdata_for_prev_assignment = $imported_instrument_data_for_metagenomic_models[$n];
             for my $instrument_data (@$post_processed_instdata_for_prev_assignment) {
-                my $metagenomic_assignment = $metagenomic_model->instrument_data_assignment(
-                    instrument_data_id => $instrument_data->id
+                my $metagenomic_assignment = $metagenomic_model->instrument_data_input(
+                    value_id => $instrument_data->id #TODO inst data switch
                 );
                 if ($metagenomic_assignment) {
                     $self->status_message("Instrument data " . $instrument_data->__display_name__ . " is already assigned to model " . $metagenomic_model->__display_name__);
@@ -261,9 +264,9 @@ sub _execute_build {
 
         # ensure there are no other odd assignments on the model besides those expected
         # this can happen if instrument-data is re-processed (deleted)
-        for my $assignment ($metagenomic_model->instrument_data_assignments) {
+        for my $assignment ($metagenomic_model->instrument_data_inputs) {
             unless ($assignments_expected{$assignment->id}) {
-                my $instrument_data = $assignment->instrument_data;
+                my $instrument_data = $assignment->instrument_data; #TODO inst data switch to value
                 if ($instrument_data) {
                     my ($derived_from) = $instrument_data->original_data_path =~ m{^/tmp/(?:unaligned_reads/)?(\d+)}; 
                     #if unaligned reads is in the data path, the id may be an instrument data id(deprecated way of storing original data path), or an alignment result id, here we will figure out which and return the derived from instrument data id
@@ -300,6 +303,8 @@ sub _execute_build {
 
     # BUILD THE METAGENOMIC REFERENCE ALIGNMENT MODELS
     my @metagenomic_builds = $self->build_if_necessary_and_wait(@metagenomic_models);
+    return if not @metagenomic_builds;
+
     for my $meta_build (@metagenomic_builds){
         my ($prev_meta_from_build) = grep {$_->id eq $meta_build->id} $build->from_builds();
         $build->add_from_build(from_build=>$meta_build, role=>'metagenomic_alignment_build') unless $prev_meta_from_build;
@@ -393,7 +398,10 @@ sub _execute_build {
                 #filter_desc => "What do we put here?",  FIXME
             );
         }
+
         my $unaligned_metagenomic_alignment_build = $self->build_if_necessary_and_wait($unaligned_metagenomic_alignment_model);
+        return if not $unaligned_metagenomic_alignment_build;
+
         my $realigned_bam = $unaligned_metagenomic_alignment_build->whole_rmdup_bam_file;
 
         Genome::Sys->create_symlink($realigned_bam, $build->data_directory . "/realigned.bam");
@@ -434,6 +442,7 @@ sub _execute_build {
                 );
             }
             my $virus_alignment_build_1 = $self->build_if_necessary_and_wait($virus_alignment_model_1);
+            return if not $virus_alignment_build_1;
             my $virus_1_bam = $virus_alignment_build_1->whole_rmdup_bam_file;
             Genome::Sys->create_symlink($virus_1_bam, $build->data_directory . "/virus_1.bam");
             Genome::Sys->create_symlink($virus_1_bam.".flagstat", $build->data_directory . "/virus_1.bam.flagstat");
@@ -451,41 +460,114 @@ sub _execute_build {
                 );
             }
             my $virus_alignment_build_2 = $self->build_if_necessary_and_wait($virus_alignment_model_2);
+            return if not $virus_alignment_build_2;
             my $virus_2_bam = $virus_alignment_build_2->whole_rmdup_bam_file;
             Genome::Sys->create_symlink($virus_2_bam, $build->data_directory . "/virus_2.bam");
             Genome::Sys->create_symlink($virus_2_bam.".flagstat", $build->data_directory . "/virus_2.bam.flagstat");
         }
     }
 
-    #TODO, these taxonomic files need to be retrieved from to one or all metagenomic references
-
-    my %meta_report_properties = (
-        build_id => $build->id,
-    );
-
-    unless ($self->contamination_screen_pp_id){
-        $meta_report_properties{include_fragments} = 1;
+    # REFCOV
+    my $refcov = $self->_run_refcov($build);
+    if ( not $refcov ) {
+        $self->error_message('Failed to run refcov');
+        return;
     }
 
-    if ($self->include_taxonomy_report){
-        $meta_report_properties{include_taxonomy_report} = 1;
-        $meta_report_properties{taxonomy_file} = '/gscmnt/sata409/research/mmitreva/databases/Bact_Arch_Euky.taxonomy.txt';
-        $meta_report_properties{viral_taxonomy_file} = '/gscmnt/sata409/research/mmitreva/databases/viruses_taxonomy_feb_25_2010.txt';
+    # TAXONOMY REPORT
+    if ( $self->include_taxonomy_report ){
+        my $taxonomy = $self->_run_taxonomy_report($build);
+        if ( not $taxonomy ) {
+            $self->error_message('Failed to run taxonomy report');
+            return;
+        }
     }
 
-    my $meta_report = Genome::Model::MetagenomicCompositionShotgun::Command::MetagenomicReport->create(
-        %meta_report_properties,
-    );
-    unless($meta_report->execute()) {
-        die $self->error_message("metagenomic report execution died or did not return 1:$@");
-    }
-
+    # VALIDATE
     unless($self->_contamination_screen_pp){ #TODO: update validate to deal with this arg
         my $validate_build = Genome::Model::MetagenomicCompositionShotgun::Command::Validate->create(build_id => $build->id);
+        $validate_build->dump_status_messages(1);
         unless($validate_build->execute()) {
             die $self->error_message("Failed to validate build!");
         }
     }
+
+    $self->status_message('Build success!');
+
+    return 1;
+}
+
+sub _run_refcov {
+    my ($self, $build) = @_;
+
+    $self->status_message('Run Refcov');
+
+    my $refcov_output = $build->refcov_output;
+    $self->status_message('Refcov output: '.$refcov_output);
+    if (-e $refcov_output and -e "$refcov_output.ok"){
+        $self->status_message("Refcov already complete, shortcutting");
+        return 1;
+    }
+
+    my $sorted_bam = $build->_final_metagenomic_bam;
+    $self->status_message('Metagenoic BAM: '.$sorted_bam);
+    if ( not -s $sorted_bam ) {
+        $self->error_message('Sorted BAM does not exist!');
+        return;
+    }
+
+    my $regions_file = $build->metagenomic_reference_regions_file; 
+    $self->status_message('Regions file: '.$regions_file);
+    if ( not -s $regions_file ) {
+        $self->error_message("No regions file ($regions_file) does not exist");
+        return;
+    }
+
+    my $command = "gmt5.12.1 ref-cov standard";
+    $command .= " --alignment-file-path ".$sorted_bam;
+    $command .= " --roi-file-path ".$regions_file;
+    $command .= " --stats-file ".$refcov_output;
+    $command .= " --min-depth-filter 0";
+
+    $self->status_message($command);
+    my $rv = eval{
+        Genome::Sys->shellcmd(
+            cmd=>$command,
+            #output_files=>[$refcov_output],
+            #input_files => [$sorted_bam, $regions_file],
+        );
+    };
+    if ( not $rv ) {
+        $self->error_message("Failed to run refcov command: $@");
+        return;
+    }
+    if ( not -e $refcov_output ) {
+        $self->error_message("Refcov command succeeded, but output file ($refcov_output) does not exist");
+        return;
+    }
+
+    $self->status_message('Run Refcov...OK');
+
+    return 1;
+}
+
+sub _run_taxonomy_report {
+    my ($self, $build) = @_;
+
+    $self->status_message('Run taxonomy report');
+
+    my $report = Genome::Model::MetagenomicCompositionShotgun::Command::TaxonomyReport->create(build => $build);
+    if ( not $report ) {
+        $self->error_message('Failed to create taxnomy report command');
+        return;
+    }
+    $report->dump_status_messages(1);
+    unless( $report->execute ) {
+        $self->error_message('Failed to exectue taxonomy report command');
+        return;
+    }
+
+    $self->status_message('Run taxonomy report...OK');
 
     return 1;
 }
@@ -661,7 +743,7 @@ sub upload_instrument_data_and_unlock {
     my @instrument_data;
     for my $original_data_path (keys %$orig_data_paths_to_fastq_files) {
         # If it is paired end
-        if( exists $orig_data_paths_to_fastq_files->{$original_data_path}->{file}->{1} && exists $orig_data_paths_to_fastq_files->{$original_data_path}->{file}->{2}) {
+        if ($original_data_path =~ /,/) {
             my ($original_data_path_1, $original_data_path_2) = split ",", $original_data_path;
             Genome::Sys->create_symlink($orig_data_paths_to_fastq_files->{$original_data_path}->{file}->{1}, $original_data_path_1);
             Genome::Sys->create_symlink($orig_data_paths_to_fastq_files->{$original_data_path}->{file}->{2}, $original_data_path_2);
@@ -832,76 +914,126 @@ sub get_bam_and_flagstat_from_build{
 }
 
 # todo move to the model class
-sub build_if_necessary_and_wait{
+sub build_if_necessary_and_wait {
     my ($self, @models) = @_;
 
-    my @builds;
-    for my $model (@models) {
-        my $build;
-        if ($self->need_to_build($model)) {
-            $self->status_message("Running build for model ".$model->name);
-            $build = $self->run_ref_align_build($model);
-            unless ($build) {
-                $self->error_message("Couldn't create build for model ".$model->name);
-                Carp::confess($self->error_message);
+    my (@succeeded_builds, @watched_builds);
+    for my $model ( @models ) {
+        $self->status_message('Model: '. $model->__display_name__);
+        $self->status_message('Search for succeeded build');
+        my $succeeded_build = $model->last_succeeded_build;
+        if ( $succeeded_build and $self->_verify_model_and_build_instrument_data_match($model, $succeeded_build) ) {
+            $self->status_message('Found succeeded build: '.$succeeded_build->__display_name__);
+            push @succeeded_builds, $succeeded_build;
+            next;
+        }
+        $self->status_message('No succeeded build');
+        $self->status_message('Search for scheduled or running build');
+        my $watched_build = $self->_find_scheduled_or_running_build_for_model($model);
+        if ( not $watched_build ) {
+            $self->status_message('No scheduled or running build');
+            $self->status_message('Start build');
+            $watched_build = $self->_start_build_for_model($model);
+            return if not $watched_build;
+        }
+        $self->status_message('Watching build: '.$watched_build->__display_name__);
+        push @watched_builds, $watched_build;
+    }
+
+    my @builds = (@succeeded_builds, @watched_builds);
+    if ( not @builds ) {
+        $self->error_message('Failed to find or start any builds');
+        return;
+    }
+
+    if ( @models != @builds ) {
+        $self->error_message('Failed to find or start a build for each model');
+        return;
+    }
+
+    if ( @watched_builds ) {
+        for my $build ( @watched_builds ) {
+            $self->status_message('Watching build: '.$build->__display_name__);
+            $self->wait_for_build($build);
+            unless ($build->status eq 'Succeeded') {
+                $self->error_message("Failed to execute build (".$build->__display_name__."). Status: ".$build->status);
+                return;
             }
         }
-        else {
-            $self->status_message("Skipping redundant build for model ".$model->name);
-            $build = $model->last_succeeded_build;
-        }
-        push @builds, $build;
     }
 
-    for my $build (@builds) {
-        $self->wait_for_build($build);
-        unless ($build->status eq 'Succeeded') {
-            $self->error_message("Failed to execute build (status: ".$build->status.") for model ". $build->model_name);
-            Carp::confess($self->error_message);
-        }
-    }
-
-    return @builds;
+    return ( @builds > 1 ? @builds : $builds[0] );
 }
 
-sub run_ref_align_build {
+sub _verify_model_and_build_instrument_data_match {
+    my ($self, $model, $build) = @_;
+
+    Carp::confess('No model to verify instrument data') if not $model;
+    Carp::confess('No build to verify instrument data') if not $build;
+
+    my @build_instrument_data = sort {$a->id <=> $b->id} $build->instrument_data;
+    my @model_instrument_data = sort {$a->id <=> $b->id} $model->instrument_data;
+
+    $self->status_message('Model: '.$model->__display_name__);
+    $self->status_message('Model instrument data: '.join(' ', map { $_->id } @model_instrument_data));
+    $self->status_message('Build: '.$build->__display_name__);
+    $self->status_message('Build instrument data: '.join(' ', map { $_->id } @build_instrument_data));
+
+    if ( @build_instrument_data != @model_instrument_data ) {
+        $self->status_message('Model and build instrument data count does not match');
+        return;
+    }
+
+    for ( my $i = 0; $i < @model_instrument_data; $i++ ) {
+        my $build_instrument_data = $build_instrument_data[$i];
+        my $model_instrument_data = $model_instrument_data[$i];
+
+        if ($build_instrument_data->id ne $model_instrument_data->id) {
+            $self->status_message("Missing instrument data.");
+            return;
+        }
+    }
+
+    return 1;
+}
+
+sub _find_scheduled_or_running_build_for_model {
     my ($self, $model) = @_;
-    unless ($model and $model->isa("Genome::Model::ReferenceAlignment")){
-        $self->error_message("No ImportedReferenceSequence model passed to run_ref_align_build()");
+
+    Carp::confess('No model sent to find running or scheduled build') if not $model;
+    
+    $self->status_message('Find running or scheduled build for model: '.$model->__display_name__);
+
+    UR::Context->reload('Genome::Model::Build', model_id => $model->id);
+
+    my $build = $model->latest_build;
+    if ( $build and grep { $build->status eq $_ } (qw/ Scheduled Running /) ) {
+        return $build;
+    }
+
+    return;
+}
+
+sub _start_build_for_model {
+    my ($self, $model) = @_;
+
+    Carp::confess('No model sent to start build') if not $model;
+    
+    my $cmd = 'genome model build start '.$model->id.' --job-dispatch apipe --server-dispatch workflow'; # these are defaults
+    $self->status_message('Cmd: '.$cmd);
+    my $rv = eval{ Genome::Sys->shellcmd(cmd => $cmd); };
+    if ( not $rv ) {
+        $self->error_message('Failed to execute build start command');
         return;
     }
 
-    $self->status_message("...creating build");
-    my $sub_build = Genome::Model::Build->create(
-        model_id => $model->id
-    );
-    unless ($sub_build){
-        $self->error_message("Couldn't create build for underlying ref-align model " . $model->name. ": " . Genome::Model::Build->error_message);
+    my $build = $self->_find_scheduled_or_running_build_for_model($model);
+    if ( not $build ) {
+        $self->error_message('Executed build start command, but cannot find build.');
         return;
     }
 
-    $self->status_message("...starting build (w/o job group)");
-    UR::Context->commit();
-    #TODO update these params to use pp values or wahtevers passes in off command line
-    my $rv = $sub_build->start(
-        job_dispatch    => 'apipe',
-        server_dispatch => 'workflow',
-        job_group => undef, # this will not take up one of the 50 slots available to a user
-    );
-
-    if ($rv) {
-        $self->status_message("Created and started build for underlying ref-align model " .  $model->name ." w/ build id ".$sub_build->id);
-    }
-    else {
-        $self->error_message("Failed to start build for underlying ref-align model " .  $model->name ." w/ build id ".$sub_build->id);
-    }
-
-    # NOTE: this should really never be done in regular "business logic", but
-    # is necessary because we don't have multi-process context stacks working -ss
-    $self->status_message("Committing after starting build");
-    UR::Context->commit();
-
-    return $sub_build;
+    return $build;
 }
 
 # TODO: move this to the build class itself
@@ -927,40 +1059,6 @@ sub wait_for_build {
 }
 
 # TODO: move this to the model class itself
-sub need_to_build {
-    my ($self, $model) = @_;
-    my $build = $model->last_succeeded_build;
-    unless ($build) {
-        $self->status_message("No build found for ".$model->name."; need to build.");
-        return 1;
-    }
-    $self->status_message("Found build: ".$build->__display_name__);
-    my @build_assignments = sort {$a cmp $b} $build->instrument_data_assignments;
-    my @model_assignments = sort {$a cmp $b} $model->instrument_data_assignments;
-
-    if (@build_assignments ne @model_assignments) {
-        $self->status_message("Assignment count does not match, build has ".scalar(@build_assignments)." but model has ".scalar(@model_assignments)."; need to build.");
-        return 1;
-    }
-    # Check for missing_first_build_id due to bug in UR caching
-    for (my $i = 0; $i < @model_assignments; $i++) {
-        my $build_assignment = $build_assignments[$i];
-        my $model_assignment = $model_assignments[$i];
-
-        if (!$model_assignment->first_build_id) {
-            $self->status_message("Model has assignments without corresponding build; need to build.");
-            return 1;
-        }
-        if ($build_assignment->id ne $model_assignment->id) {
-            $self->status_message("Missing instrument data assignment; need to build.");
-            return 1;
-        }
-    }
-
-    $self->status_message("Build for ".$model->name." exists and all (".scalar(@model_assignments).") instrument data assignments match; no need to build.");
-    return 0;
-}
-
 #this name is maybe not the best
 sub _process_sra_instrument_data {
     my ($self, $instrument_data) = @_;
@@ -1008,7 +1106,7 @@ sub _process_unaligned_reads {
     $tmp_dir .= "/".$alignment->id;
     my @instrument_data;
     {
-        my $subdir = 'n-remove_'.$self->n_removal_threshold;
+        my $subdir = 'n-remove_'.$self->n_removal_threshold; # FIXME uninit warnings
         if ($self->dust_unaligned_reads){
             $subdir.='/dusted';
         }

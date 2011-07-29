@@ -58,7 +58,7 @@ sub execute {
     my @allocations = $self->allocations;
     
     for my $allocation (@allocations) {
-        $self->total_command_count($self->total_command_count + 1);
+        $self->_total_command_count($self->_total_command_count + 1);
         my %params;
         $params{allocation_id} = $allocation->id;
         $params{kilobytes_requested} = $self->kilobytes_requested if defined $self->kilobytes_requested;
@@ -79,7 +79,7 @@ sub execute {
 
     $self->display_command_summary_report();
 
-    return !scalar(keys %{$self->command_errors});
+    return !scalar(keys %{$self->_command_errors});
 }
 
 1;

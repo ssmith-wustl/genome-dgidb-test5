@@ -1,6 +1,13 @@
-package Hits;
+package Genome::Model::Tools::Sv::AssemblyPipeline::Hits;
+
+use Genome;
+
+class Genome::Model::Tools::Sv::AssemblyPipeline::Hits {
+    is => 'Genome::Model::Tools::Sv::AssemblyPipeline'
+};
 
 use strict;
+use warnings;
 use Carp;
 
 
@@ -489,4 +496,4 @@ sub insertionContigBoundaries {
 
 
 
-return 1;
+1;

@@ -41,11 +41,6 @@ class Genome::Model::Tools::DetectVariants2::BamToCna{
             },
         }
     ],
-    has_param => [
-         lsf_queue => {
-             default_value => 'long',
-         },
-     ],
 };
 
 sub _detect_variants {

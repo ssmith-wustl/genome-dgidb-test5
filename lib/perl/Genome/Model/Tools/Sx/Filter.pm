@@ -13,35 +13,29 @@ class Genome::Model::Tools::Sx::Filter {
 };
 
 sub help_brief {
-    return <<HELP
-    Filter fastq and fasta/quality sequences
-HELP
+    return 'Filter sequences';
 }
 
 sub execute {
     my $self = shift;
 
-    my ($reader, $writer) = $self->_open_reader_and_writer;
-    return if not $reader or not $writer;
+    my $init = $self->_init;
+    return if not $init;
 
-    while ( my $seqs = $reader->read ) {
-        $self->_filter($seqs) or next;
+    my $reader = $self->_reader;
+    my $writer = $self->_writer;
+
+    my @filters = $self->_create_filters;
+    return if not @filters;
+
+    SEQS: while ( my $seqs = $reader->read ) {
+        for my $filter ( @filters ) {
+            next SEQS if not $filter->($seqs);
+        }
         $writer->write($seqs);
     }
 
     return 1;
-}
-
-sub filter {
-    my ($self, $sequences) = @_;
-
-    unless ( $sequences and ref($sequences) eq 'ARRAY' and @$sequences ) {
-        Carp::confess(
-            $self->error_message("Expecting array ref of sequences, but got ".Dumper($sequences))
-        );
-    }
-
-    return $self->_filter($sequences);
 }
 
 1;

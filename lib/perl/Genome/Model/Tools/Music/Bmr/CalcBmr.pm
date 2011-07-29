@@ -20,7 +20,7 @@ class Genome::Model::Tools::Music::Bmr::CalcBmr {
     skip_non_coding => { is => 'Boolean', doc => "Skip non-coding mutations from the provided MAF file", is_optional => 1, default => 1 },
     skip_silent => { is => 'Boolean', doc => "Skip silent mutations from the provided MAF file", is_optional => 1, default => 1 },
   ],
-  doc => "Calculates background mutation rates using output files of calc-covg and a mutation list.",
+  doc => "Calculates mutation rates given per-gene coverage (from \"music bmr calc-covg\"), and a mutation list",
 };
 
 sub help_synopsis {
@@ -44,8 +44,10 @@ HELP
 
 sub help_detail {
   return <<HELP;
-This script calculates overall Background Mutation Rate (BMR) and BMRs in the categories of
-AT/CG/CpG Transitions, AT/CG/CpG Transversions, and Indels. It also generates a file with per-gene mutation rates that can be used for significantly mutated gene tests (music smg).
+Given a mutation list (MAF), and per-gene coverage data calculated using \"music bmr calc-covg\"),
+this script calculates overall Background Mutation Rate (BMR) and BMRs in the categories of
+AT/CG/CpG Transitions, AT/CG/CpG Transversions, and Indels. It also generates a file with per-gene
+mutation rates that can be used for significantly mutated gene tests (music smg).
 HELP
 }
 

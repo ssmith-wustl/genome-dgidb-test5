@@ -74,22 +74,39 @@ class Genome::InstrumentData {
 
 sub delete {
     my $self = shift;
-    my $instrument_data_id = $self->id;
 
-    my @alignment_results = Genome::InstrumentData::AlignmentResult->get(instrument_data_id => $self->id);
-    if (@alignment_results) {
-        $self->error_message("Cannot remove instrument data " . $self->__display_name__ . " because it has " .
-            scalar @alignment_results . " alignment results!");
-        return;
+    my ($expunge_status) = $self->_expunge_assignments;
+    return unless $expunge_status;
+
+    #finally, clean up the instrument data
+    for my $attr ( $self->attributes ) {
+        $attr->delete;
     }
-    
-    my @model_inputs = Genome::Model::Input->get(
+
+    $self->_create_deallocate_observer;
+
+    for my $attribute ($self->attributes) {
+        $attribute->delete;
+    }
+
+    return $self->SUPER::delete;
+}
+
+sub _expunge_assignments{
+    my $self = shift;
+    my $instrument_data_id = $self->id;
+    my %affected_users;
+
+    my @inputs = Genome::Model::Input->get( 
         name => 'instrument_data', 
-        value_id => $instrument_data_id 
+        value_id => $instrument_data_id
     );
-    my @models = map( $_->model, @model_inputs);
+    my @models = map( $_->model, @inputs);
+
     for my $model (@models) {
         $model->remove_instrument_data($self);
+        my $display_name = $self->__display_name__;
+        push(@{$affected_users{$model->user_name}->{join(" ", $display_name, $self->id)}}, $model->id);
     }
 
     # There may be builds using this instrument data even though it had previously been unassigned from the model
@@ -103,13 +120,24 @@ sub delete {
         push @models, $build->model;
     }
 
-    $self->_create_deallocate_observer;
-
-    for my $attribute ($self->attributes) {
-        $attribute->delete;
+    my @alignment_results = Genome::InstrumentData::AlignmentResult->get(instrument_data_id => $self->id);
+    for my $alignment_result (@alignment_results) {
+        my @users = Genome::SoftwareResult::User->get(software_result => $alignment_result);
+        if(@users){
+            $self->error_message("Cannot remove instrument data " . $self->__display_name__ . " because it has " .
+                " an alignment result (" . $alignment_result->__display_name__ . ") with " . scalar(@users) . 
+                " registered users!");
+            return;
+        }else {
+            unless($alignment_result->delete){
+                $self->error_message("Could not remove instrument data " . $self->__display_name__ . " because it has " .
+                " an alignment result (" . $alignment_result->__display_name__ . ") that could not be deleted!");
+                return;
+            }
+        }
     }
-
-    return $self->SUPER::delete;
+    
+    return 1, %affected_users;
 }
 
 sub _create_deallocate_observer {

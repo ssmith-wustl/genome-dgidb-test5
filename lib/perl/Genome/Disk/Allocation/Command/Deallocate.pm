@@ -36,7 +36,7 @@ sub execute {
 
     my @allocations = $self->allocations;
     for my $allocation (@allocations) {
-        $self->total_command_count($self->total_command_count + 1);
+        $self->_total_command_count($self->_total_command_count + 1);
         my $display_name = $allocation->__display_name__;
         my $transaction = UR::Context::Transaction->begin();
         my $successful = Genome::Disk::Allocation->delete(allocation_id => $allocation->id);
@@ -52,7 +52,7 @@ sub execute {
 
     $self->display_command_summary_report();
 
-    return !scalar(keys %{$self->command_errors});
+    return !scalar(keys %{$self->_command_errors});
 }
 
     

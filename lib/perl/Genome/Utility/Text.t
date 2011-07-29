@@ -30,9 +30,9 @@ is(Genome::Utility::Text::module_to_class($module), $class, 'module_to_class');
 ok(!Genome::Utility::Text::module_to_class(undef), 'module_to_class failed w/o module');
 
 # params
-my $param_string = '-aa fasta -b1b -1 qual --c22 phred phrap  -ddd -11 -eee -f -g22g text -1111 --h_h 44 --i-i -5 -j-----j -5 -6 hello     -k    -l_l-l g  a   p   ';
+my $param_string = '-aa fasta -b1b -1 qual --c22 phred phrap  -ddd -11 -eee -f -g22g text -1111 --h_h 44 --i-i -5 -j-----j -5 -6 hello     -k    -l_l-l g  a   p   -m';
 my $params = {
-    aa => 'fasta', b1b => '-1 qual', c22 => 'phred phrap', ddd => -11, eee => 1, f => 1, g22g => 'text -1111', h_h => 44, 'i-i' => -5, 'j-----j' => '-5 -6 hello', k => 1, 'l_l-l' => 'g  a   p', };
+    aa => 'fasta', b1b => '-1 qual', c22 => 'phred phrap', ddd => -11, eee => 1, f => 1, g22g => 'text -1111', h_h => 44, 'i-i' => -5, 'j-----j' => '-5 -6 hello', k => 1, 'l_l-l' => 'g  a   p', m => 1, };
 my %hash = Genome::Utility::Text::param_string_to_hash($param_string);
 is_deeply(\%hash, $params, 'params string to hash');
 print Dumper(\%hash);
@@ -56,26 +56,4 @@ is(Genome::Utility::Text::capitalize_words($uncap_string2, '-'), $cap_string, 'c
 ok(!eval{Genome::Utility::Text::capitalize_words(undef)}, 'failed as expected - capitalize w/o string words');
 
 exit;
-
-=pod
-
-=head1 Tests
-
-=head1 Disclaimer
-
- Copyright (C) 2006 Washington University Genome Sequencing Center
-
- This script is distributed in the hope that it will be useful,
- but WITHOUT ANY WARRANTY or the implied warranty of MERCHANTABILITY
- or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public
- License for more details.
-
-=head1 Author(s)
-
- Eddie Belter <ebelter@watson.wustl.edu>
-
-=cut
-
-#$HeadURL$
-#$Id$
 

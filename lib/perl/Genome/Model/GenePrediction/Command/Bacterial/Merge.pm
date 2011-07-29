@@ -57,7 +57,7 @@ class Genome::Model::GenePrediction::Command::Bacterial::Merge {
 		 ipr_version => {
 			is => 'String',
             valid_values => ['4.5', '4.7', '4.8'],
-            default => '4.7',
+            default => '4.8',
             },
         runner_count => {
             is  => 'Integer',
@@ -298,7 +298,6 @@ sub execute
     my %fetched_sequences = ();
 
     {
-        $DB::single = 1;
         my $sequence_set
             = BAP::DB::SequenceSet->retrieve( $self->sequence_set_id );
 
@@ -736,18 +735,14 @@ sub phase3
     return 1;
 }
 
-sub phase4
-{
+sub phase4 {
     my $self = shift;
-    if ( defined( $self->skip_blastx ) )
-    {
-        $self->best_per_locus( 'phase_4', 'phase_2' );
+    if ($self->skip_blastx) {
+        $self->best_per_locus('phase_4', 'phase_2');
     }
-    else
-    {
-        $self->best_per_locus( 'phase_4', 'phase_3' );
+    else {
+        $self->best_per_locus('phase_4', 'phase_3');
     }
-
 }
 
 sub phase5

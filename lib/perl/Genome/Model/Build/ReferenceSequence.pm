@@ -596,4 +596,38 @@ sub get_by_name {
     }
 }
 
+sub chromosome_array_ref {
+    my $self = shift;
+    my %params = @_;
+
+    my $format = delete($params{format});
+    unless ($format) { $format = 'sam'; }
+
+    my $species = delete($params{species});
+    unless ($species) { $species = $self->species_name; }
+
+    my $picard_version = delete($params{picard_version});
+    unless ($picard_version) { $picard_version = '1.36'; }
+
+    my $seq_dict = $self->get_sequence_dictionary($format,$species,$picard_version);
+    my $tmp_file = Genome::Sys->create_temp_file_path;
+    # This is only required to run perl5.10.1 or greater required by Bio-SamTools
+    my $cmd = 'gmt5.12.1 bio-samtools list-chromosomes --input-file='. $seq_dict .' --output-file='. $tmp_file;
+    Genome::Sys->shellcmd(
+        cmd => $cmd,
+        input_files => [$seq_dict],
+        output_files => [$tmp_file],
+    );
+
+    my @chromosomes;
+    my $fh = Genome::Sys->open_file_for_reading($tmp_file);
+    while (my $line = $fh->getline) {
+        chomp($line);
+        push @chromosomes, $line;
+    }
+    $fh->close;
+    return \@chromosomes;
+}
+
+
 1;

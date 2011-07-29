@@ -55,6 +55,7 @@ class Genome::Model::Tools::Annotate::LookupVariants {
         },
         dbSNP_version => {
             type    => 'Int',
+            is_input => 1,
             is_optional => 1,
             default => 130,
             doc     => 'Version of dbSNP to use. Defaults to 130.',
@@ -104,13 +105,19 @@ class Genome::Model::Tools::Annotate::LookupVariants {
             default => 0,
             doc => 'use in junction with report-mode full or gff, to append population allele frequencies to end of output'
         },
-	organism => {
-	    type  =>  'String',
-	    doc   =>  "provide the organism if annotating mouse",
-	    valid_values => ['human', 'mouse'],
-	    is_optional  => 1,
-	    default => 'human',
-	},
+        frequency_path => {
+            type     => 'Text',
+            is_optional => 1,
+            doc      => "path to allele frequency directory... this defaults to human from dbsnp 129 data. Mouse is available at /gscmnt/sata835/info/medseq/model_data/2857225771/ImportedVariations/frequencies",
+            default => '/gscmnt/sata835/info/medseq/model_data/2857282699/ImportedVariations/frequencies',
+        },
+        organism => {
+            type  =>  'String',
+            doc   =>  "provide the organism if annotating mouse",
+            valid_values => ['human', 'mouse'],
+            is_optional  => 1,
+            default => 'human',
+        },
         require_allele_match => {
             is => 'Boolean',
             is_optional => 1,
@@ -157,10 +164,9 @@ sub execute {
     $self->_output_filehandle($fh);
 
     while (my $line = <$in>) {
-	if(substr($line, 0, 5) ne "chrom")
-	{
+        if(substr($line, 0, 5) ne "chrom") {
             $self->print_matches($line);
-	}
+        }
     }
 
     close($in);
@@ -186,7 +192,7 @@ sub print_matches {
     }
 
     if ($self->require_allele_match()) {
-	chomp($allele2);
+        chomp($allele2);
         @matches = map { $self->filter_by_allele($_, $allele1, $allele2) } @matches;
     }
 
@@ -194,8 +200,7 @@ sub print_matches {
     my $report_mode = $self->report_mode();
     if (($report_mode eq 'known-only')&&(@matches)) {
 
-	if ($self->append_rs_id()
-            || $self->append_allele() ) {
+        if ($self->append_rs_id() || $self->append_allele() ) {
 
             my ($dbsnp_fh, $index) = $self->get_fh_for_chr($chr);
             my $snp = parse_dbsnp_line($matches[0]);
@@ -218,130 +223,158 @@ sub print_matches {
         $fh->print($line);
 
     } elsif ($report_mode eq 'gff') {
-	
-	my @matches;
-	for my $n ($start..$stop) {
-	    my $new_line = qq($chr\t$n\t$n);
-	    @matches = $self->find_all_matches($new_line);
-	    for my $snp_line (@matches) {
-		
-		my (@rs_ids,@submitters,@matchs);
-		my $snp = parse_dbsnp_line($snp_line);
-		
-		my $rs_id = $snp->{'rs_id'};
-		my $allele = $snp->{'ds_allele'};
-		my $submitter = $snp->{'ds_submitter'};
-		
-		my $ds_type = $snp->{'ds_type'};
-		my $ds_start = $snp->{'ds_start'};
-		my $ds_stop = $snp->{'ds_stop'};
-		my $strain = $snp->{'strain'};
-		my $is_validated = $snp->{'is_validated'};
-		my $is_validated_by_allele = $snp->{'is_validated_by_allele'};
-		my $is_validated_by_cluster = $snp->{'is_validated_by_cluster'};
-		my $is_validated_by_frequency = $snp->{'is_validated_by_frequency'};
-		my $is_validated_by_hap_map = $snp->{'is_validated_by_hap_map'};
-		my $is_validated_by_other_pop = $snp->{'is_validated_by_other_pop'};
 
-		my @validated;
-		if ($is_validated_by_allele == 1) {
-		    push(@validated,"by2Hit2Allele");
-		}
-		if ($is_validated_by_cluster == 1) {
-		    push(@validated,"byCluster");
-		}
-		if ($is_validated_by_frequency == 1) {
-		    push(@validated,"byFrequency");
-		}
-		if ($is_validated_by_hap_map == 1) {
-		    push(@validated,"byHapMap");
-		}
-		if ($is_validated_by_other_pop == 1) {
-		    push(@validated,"byOtherPop");
-		}
-		unless (@validated) {@validated = "not_validated";}
-		my $validation = join ':' , @validated;
+        my @matches;
+        for my $n ($start..$stop) {
+            my $new_line = qq($chr\t$n\t$n);
+            @matches = $self->find_all_matches($new_line);
+            for my $snp_line (@matches) {
+
+                my (@rs_ids,@submitters,@matchs);
+                my $snp = parse_dbsnp_line($snp_line);
+
+                my $rs_id = $snp->{'rs_id'};
+                my $allele = $snp->{'ds_allele'};
+                my $submitter = $snp->{'ds_submitter'};
+
+                my $ds_type = $snp->{'ds_type'};
+                my $ds_start = $snp->{'ds_start'};
+                my $ds_stop = $snp->{'ds_stop'};
+                my $strain = $snp->{'strain'};
+                my $is_validated = $snp->{'is_validated'};
+                my $is_validated_by_allele = $snp->{'is_validated_by_allele'};
+                my $is_validated_by_cluster = $snp->{'is_validated_by_cluster'};
+                my $is_validated_by_frequency = $snp->{'is_validated_by_frequency'};
+                my $is_validated_by_hap_map = $snp->{'is_validated_by_hap_map'};
+                my $is_validated_by_other_pop = $snp->{'is_validated_by_other_pop'};
+
+                my @validated;
+                if ($is_validated_by_allele == 1) {
+                    push(@validated,"by2Hit2Allele");
+                }
+                if ($is_validated_by_cluster == 1) {
+                    push(@validated,"byCluster");
+                }
+                if ($is_validated_by_frequency == 1) {
+                    push(@validated,"byFrequency");
+                }
+                if ($is_validated_by_hap_map == 1) {
+                    push(@validated,"byHapMap");
+                }
+                if ($is_validated_by_other_pop == 1) {
+                    push(@validated,"byOtherPop");
+                }
+                unless (@validated) {@validated = "not_validated";}
+                my $validation = join ':' , @validated;
 
 
 
-		my $gff_line = qq(Chromosome$chr\tdbsnp_130\t$ds_type\t$ds_start\t$ds_stop\t.\t$strain\t.\t$rs_id \; Alleles \"$allele\" ; validation \"$validation\" ; submitter \"$submitter\");
-		$fh->print("$gff_line\n");
-	    }
-	}
-	
+                my $gff_line = qq(Chromosome$chr\tdbsnp_130\t$ds_type\t$ds_start\t$ds_stop\t.\t$strain\t.\t$rs_id \; Alleles \"$allele\" ; validation \"$validation\" ; submitter \"$submitter\");
+
+
+
+                if ($self->append_population_allele_frequencies) {
+                    my $freq = &get_frequencies($self,$rs_id);
+                    if ($freq) {
+                        chomp $freq;
+                        $gff_line = "$gff_line ; $freq";
+                    }
+                }
+
+                $fh->print("$gff_line\n");
+            }
+        }
+
     } elsif ($report_mode eq 'full') {
-	my $report_line;
-	chomp($line);
+        my $report_line;
+        chomp($line);
 
-	if (@matches) {
-	    my (@rs_ids,@submitters,@matchs,@validation);
-	    for my $snp_line (@matches) {
-		my $snp = parse_dbsnp_line($snp_line);
-		my $rs_id = $snp->{'rs_id'};
-		my $allele = $snp->{'ds_allele'};
-		my $submitter = $snp->{'ds_submitter'};
-		my $is_validated = $snp->{'is_validated'};
-		my $is_validated_by_allele = $snp->{'is_validated_by_allele'};
-		my $is_validated_by_cluster = $snp->{'is_validated_by_cluster'};
-		my $is_validated_by_frequency = $snp->{'is_validated_by_frequency'};
-		my $is_validated_by_hap_map = $snp->{'is_validated_by_hap_map'};
-		my $is_validated_by_other_pop = $snp->{'is_validated_by_other_pop'};
-		
-		#my $validation = "$is_validated\-$is_validated_by_allele\-$is_validated_by_cluster\-$is_validated_by_frequency\-$is_validated_by_hap_map\-$is_validated_by_other_pop";
-		#chomp $validation;
+        if (@matches) {
+            my (@rs_ids,@submitters,@matchs,@validation);
+            for my $snp_line (@matches) {
+                my $snp = parse_dbsnp_line($snp_line);
+                my $rs_id = $snp->{'rs_id'};
+                my $allele = $snp->{'ds_allele'};
+                my $submitter = $snp->{'ds_submitter'};
+                my $is_validated = $snp->{'is_validated'};
+                my $is_validated_by_allele = $snp->{'is_validated_by_allele'};
+                my $is_validated_by_cluster = $snp->{'is_validated_by_cluster'};
+                my $is_validated_by_frequency = $snp->{'is_validated_by_frequency'};
+                my $is_validated_by_hap_map = $snp->{'is_validated_by_hap_map'};
+                my $is_validated_by_other_pop = $snp->{'is_validated_by_other_pop'};
 
-		my @validated;
-		if ($is_validated_by_allele == 1) {
-		    push(@validated,"by2Hit2Allele");
-		}
-		if ($is_validated_by_cluster == 1) {
-		    push(@validated,"byCluster");
-		}
-		if ($is_validated_by_frequency == 1) {
-		    push(@validated,"byFrequency");
-		}
-		if ($is_validated_by_hap_map == 1) {
-		    push(@validated,"byHapMap");
-		}
-		if ($is_validated_by_other_pop == 1) {
-		    push(@validated,"byOtherPop");
-		}
-		unless (@validated) {@validated = "not_validated";}
+                #my $validation = "$is_validated\-$is_validated_by_allele\-$is_validated_by_cluster\-$is_validated_by_frequency\-$is_validated_by_hap_map\-$is_validated_by_other_pop";
+                #chomp $validation;
 
-		#my $validation = join ';' , @validated;
-		#push(@validation,$validation) unless grep (/$validation/ , @validation);
+                my @validated;
+                if ($is_validated_by_allele == 1) {
+                    push(@validated,"by2Hit2Allele");
+                }
+                if ($is_validated_by_cluster == 1) {
+                    push(@validated,"byCluster");
+                }
+                if ($is_validated_by_frequency == 1) {
+                    push(@validated,"byFrequency");
+                }
+                if ($is_validated_by_hap_map == 1) {
+                    push(@validated,"byHapMap");
+                }
+                if ($is_validated_by_other_pop == 1) {
+                    push(@validated,"byOtherPop");
+                }
+                unless (@validated) {@validated = "not_validated";}
 
-		push(@rs_ids,$rs_id) unless grep (/$rs_id/ , @rs_ids);
-		push(@submitters,$submitter) unless grep (/$submitter/ , @submitters);
-		
-		my $match;
-		if ($allele1 && $allele2) {
-		    chomp($allele2);
-		    $match = $self->filter_by_allele($snp_line, $allele1, $allele2);
-		    if ($match) {$match = "$allele:allele_match";} else {$match = "$allele:no_match";}
-		} else {
-		    $match = $allele;
-		}
-		push(@matchs,$match) unless grep (/$match/ , @matchs);
+                #my $validation = join ';' , @validated;
+                #push(@validation,$validation) unless grep (/$validation/ , @validation);
 
-		if ($match =~ /no_match/) {push(@validated,"alternate_allele");}
-		my $validation = join ';' , @validated;
-		push(@validation,$validation) unless grep (/$validation/ , @validation);
+                push(@rs_ids,$rs_id) unless grep (/$rs_id/ , @rs_ids);
+                push(@submitters,$submitter) unless grep (/$submitter/ , @submitters);
 
-	    }
-	    my $rs_id = join ':' , @rs_ids;
-	    my $submitter = join ':' , @submitters;
-	    my $match = join ':' , @matchs;
-	    my $validation  = join ':' , @validation;
-	    
-        $report_line = sprintf("%s\t%s\n",$line,"$rs_id,$submitter,$match,$validation");
+                my $match;
+                if ($allele1 && $allele2) {
+                    chomp($allele2);
+                    $match = $self->filter_by_allele($snp_line, $allele1, $allele2);
+                    if ($match) {$match = "$allele:allele_match";} else {$match = "$allele:no_match";}
+                } else {
+                    $match = $allele;
+                }
+                push(@matchs,$match) unless grep (/$match/ , @matchs);
 
-    } else {
-        my $match = "no_hit";
-        $report_line = sprintf("%s\t%s\n",$line,$match); 
-    }
+                if ($match =~ /no_match/) {push(@validated,"alternate_allele");}
+                my $validation = join ';' , @validated;
+                push(@validation,$validation) unless grep (/$validation/ , @validation);
 
-    $fh->print($report_line);
+            }
+            my $rs_id = join ':' , @rs_ids;
+            my $submitter = join ':' , @submitters;
+            my $match = join ':' , @matchs;
+            my $validation  = join ':' , @validation;
+
+            my $frequencies;
+            if ($self->append_population_allele_frequencies) {
+                my @freq;
+                for my $rsid (@rs_ids) {
+                    my $freq = &get_frequencies($self,$rs_id);
+                    if ($freq) {
+                        push(@freq,$freq);
+                    }
+                }
+                if (@freq) {
+                    $frequencies = join ':' , @freq;
+                } else {
+                    $frequencies = "-";
+                }
+                $report_line = sprintf("%s\t%s\t%s\n",$line,"$rs_id,$submitter,$match,$validation",$frequencies);
+            } else {
+                $report_line = sprintf("%s\t%s\n",$line,"$rs_id,$submitter,$match,$validation");
+            }
+
+        } else {
+            my $match = "no_hit";
+            $report_line = sprintf("%s\t%s\n",$line,$match); 
+        }
+
+        $fh->print($report_line);
     }
 }
 
@@ -365,18 +398,18 @@ sub filter_by_allele {
 
     my $snp = parse_dbsnp_line($line);    
     my $ds_allele = $snp->{'ds_allele'};
-#my ($dbsnp_allele1,$dbsnp_allele2) = split(/\//,$ds_allele);
+    #my ($dbsnp_allele1,$dbsnp_allele2) = split(/\//,$ds_allele);
     my @dbsnp_allele_array = split(/\//,$ds_allele);
     my $array_n = @dbsnp_allele_array;
 
     use Genome::Info::IUB;
-
-# if variant is not expanded, include ref in alpha order 
+   
+    # if variant is not expanded, include ref in alpha order 
     my ($a1, $a2) = Genome::Info::IUB->variant_alleles_for_iub($ref,$variant); ##if $variant eq "N" there would be an a3
 
 #TODO: finish work here
 
-        my @vars;
+    my @vars;
     if ($a1) {push(@vars,$a1);}
     if ($a2) {push(@vars,$a2);}
 
@@ -421,12 +454,29 @@ sub reverse_complement {
     return $sequence;
 }
 
+sub get_frequencies {
+
+    my ($self,$rs_id) = @_;
+
+    # Temporary fix for an immediate need... these files should be moved to a build directory for the models that used to hold them in model directories
+    # These models were ImportedVariation models with the names dbSNP-human-129 and dbSNP-mouse-10090 and resided in $model->data_directory."/ImportedVariations/frequencies";
+    my $RsDir = $self->frequency_path;
+
+    my $rsdb = Bio::DB::Fasta->new($RsDir);
+    chmod(0666, $RsDir . "/directory.index"); #change the index permissions so the next guy can rebuild it
+    my $freq = $rsdb->seq($rs_id, 1 => 6000);
+
+    return unless $freq;
+    return $freq;
+
+}
+
 sub filter_by_submitters {
 
     my ($self, $line) = @_;
 
-# NOTE: submitters are 1 per line in dbsnp data source files,
-# but are comma separated list on command line
+    # NOTE: submitters are 1 per line in dbsnp data source files,
+    # but are comma separated list on command line
 
     my $snp = parse_dbsnp_line($line);    
     my $ds_submitter = $snp->{'ds_submitter'};
@@ -447,12 +497,12 @@ sub filter_by_submitters {
 sub filter_by_type {
 
     my ($self, $line) = @_;
-# returns $line if its a SNP
+    # returns $line if its a SNP
 
     my $snp = parse_dbsnp_line($line);
 
     if ($snp->{'ds_type'} eq 'SNP'
-            && $snp->{'ds_start'} == $snp->{'ds_stop'}) {
+        && $snp->{'ds_start'} == $snp->{'ds_stop'}) {
         return $line;
     }
 
@@ -461,7 +511,7 @@ sub filter_by_type {
 
 sub find_all_matches {
 
-# TODO: the problem is we only return position, not chromosome, etc
+    # TODO: the problem is we only return position, not chromosome, etc
 
     my ($self, $line) = @_;
     my @matches;
@@ -493,12 +543,12 @@ sub find_matches_around {
     my $start = $ds_start;
 
     push @forward, $original_line;
-
-# go forward 
+   
+    # go forward 
     while ($cur == $pos || $start == $ds_start) {
         $cur++;
         last if ($cur > $self->_last_data_line_number);
-
+        
         my $forward_line = $self->get_line($fh, $index, $cur);
         last if !$forward_line;
 
@@ -509,7 +559,7 @@ sub find_matches_around {
         }
     }
 
-# reset and go backwards
+    # reset and go backwards
     $ds_start = $start;
     $cur = $pos; 
     while ($cur == $pos || $start == $ds_start) {
@@ -570,11 +620,11 @@ sub get_line {
     my ($self, $fh, $index, $line_number) = @_;
     my $fixed_width = $self->index_fixed_width();
 
-# add fixed width to account for index header
+    # add fixed width to account for index header
     my $index_pos = $line_number * $fixed_width + $fixed_width;
     seek($index, $index_pos, 0);
     my $pos = <$index>; chomp($pos);
-
+   
     seek($fh, $pos, 0);
     my $line = <$fh>;
     return $line; 
@@ -589,9 +639,9 @@ sub get_fh_for_chr {
     my $organism = $self->organism;
     my $model;
 
-#TODO should this simply check to see if organism eq mouse?
+    #TODO should this simply check to see if organism eq mouse?
 
-#if ($dbSNP_path eq "/gsc/var/lib/import/dbsnp/130/tmp/" && $organism eq "mouse") {
+    #if ($dbSNP_path eq "/gsc/var/lib/import/dbsnp/130/tmp/" && $organism eq "mouse") {
     if ($organism eq "mouse") {
         unless($model = Genome::Model::ImportedVariations->get(name => 'dbSNP-mouse-10090')){
             $self->error_message("Could not locate ImportedVariations model with dbSNP-mouse-10090 name");
@@ -600,6 +650,7 @@ sub get_fh_for_chr {
 #$dbSNP_path = "/gsc/var/lib/import/dbsnp/mouse/10090/";
 #        $dbSNP_path = $model->data_directory."/ImportedVariations/";
         die 'Error: please email apipe@genome.wustl.edu -- mouse dbsnp used to be stored in a model data directory';
+        # This will probably work if you just change the dbsnp path? Would have to test it, the files look different
     }
 
     my ($fh, $index);
@@ -640,22 +691,22 @@ sub parse_dbsnp_line {
     my @parts = split(/\t/,$line);
 
     my @keys = qw(
-            ds_id
-            ds_allele 
-            ds_type
-            ds_chr
-            ds_start
-            ds_stop
-            ds_submitter
-            rs_id
-            strain
-            is_validated
-            is_validated_by_allele
-            is_validated_by_cluster
-            is_validated_by_frequency
-            is_validated_by_hap_map
-            is_validated_by_other_pop
-            );
+        ds_id
+        ds_allele 
+        ds_type
+        ds_chr
+        ds_start
+        ds_stop
+        ds_submitter
+        rs_id
+        strain
+        is_validated
+        is_validated_by_allele
+        is_validated_by_cluster
+        is_validated_by_frequency
+        is_validated_by_hap_map
+        is_validated_by_other_pop
+    );
 
     my $i = 0;
     for my $key (@keys) {
@@ -685,8 +736,8 @@ By default, takes in a file of variants and filters out variants that are alread
 
 =head1 Usage
 
-$ gmt annotate lookup-variants --variant-file snvs.csv --output-file novel_variants.csv
-
+    $ gmt annotate lookup-variants --variant-file snvs.csv --output-file novel_variants.csv
+ 
 =cut
 
 

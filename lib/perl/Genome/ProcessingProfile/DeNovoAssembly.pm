@@ -5,16 +5,11 @@ use warnings;
 
 use Genome;
 
-use Data::Dumper 'Dumper';
 use Regexp::Common;
 
 class Genome::ProcessingProfile::DeNovoAssembly{
     is => 'Genome::ProcessingProfile::Staged',
     has_param => [
-	sequencing_platform => {
-	    doc => 'The sequencing platform used to produce the reads.',
-	    valid_values => [qw/ 454 solexa /],
-	},
 	coverage => {
 	    is => 'Number',
 	    is_optional => 1,
@@ -23,7 +18,7 @@ class Genome::ProcessingProfile::DeNovoAssembly{
 	# Assembler
 	assembler_name => {
 	    doc => 'Name of the assembler.',
-	    valid_values => ['abyss parallel', 'velvet one-button', 'soap de-novo-assemble', 'soap import'],
+	    valid_values => ['abyss parallel', 'velvet one-button', 'soap de-novo-assemble', 'soap import', 'newbler de-novo-assemble'],
 	},
 	assembler_version => {
 	    doc => 'Version of assembler.',
@@ -33,10 +28,10 @@ class Genome::ProcessingProfile::DeNovoAssembly{
 	    is_optional => 1,
 	    doc => 'A string of parameters to pass to the assembler.',
 	},
-	# Read Coverage, Trimmer and Filter
+	# Read Coverage, Trim and Filter
 	read_processor => {
 	    is_optional => 1,
-	    doc => "String of read trimmers, filters and sorters to use. Find processors in 'gmt sx.' List each porocessor in order of execution as they would be run on the command line. Do not include 'gmt sx', as this is assumed. List params starting w/ a dash (-), followed by the value. Separate processors by a pipe w/ a space on each side ( | ). The read processors will be validated. Ex:\n\ttrimmer bwa-style --trim-qual-length | filter by-length filter-length 70",
+	    doc => "String of read trimmers, filters and sorters to use. Find processors in 'gmt sx.' List each porocessor in order of execution as they would be run on the command line. Do not include 'gmt sx', as this is assumed. List params starting w/ a dash (-), followed by the value. Separate processors by a pipe w/ a space on each side ( | ). The read processors will be validated. Ex:\n\ttrim bwa-style --trim-qual-length | filter by-length filter-length 70",
 	},
 	#post assemble tools to run
 	post_assemble => {
@@ -155,14 +150,6 @@ sub _validate_assembler_and_params {
 
     my $assembler_accessor_name = $self->assembler_accessor_name;
 
-    #validate instrument data platform - returns arryref of valid platforms
-    my $valid_platform_method = 'valid_'.$assembler_accessor_name.'_seq_platforms';
-    my $valid_platforms = $self->$valid_platform_method;
-    unless ( grep {$self->sequencing_platform eq $_ } @$valid_platforms ) {
-	$self->error_message("Sequencing platform: ".$self->sequencing_platform." is not supported for assembler: ".$self->assembler_name);
-	return;
-    }
-    
     my $assembler_class = $self->assembler_class;
     
     my %assembler_params;
@@ -185,11 +172,7 @@ sub _validate_assembler_and_params {
 	%assembler_params = $self->$clean_up_param_method( %assembler_params );
     }
 
-    my $assembler;
-    eval{
-        $assembler = $assembler_class->create( %assembler_params, );
-    };
-
+    my $assembler = eval{ $assembler_class->create(%assembler_params); };
     unless ( $assembler ) { 
         $self->error_message("$@\n\nCould not validate assembler params: ".$self->assembler_params);
         return;
@@ -200,212 +183,6 @@ sub _validate_assembler_and_params {
     $self->status_message("Assembler and params OK");
 
     return 1;
-}
-
-#< methods to determine supported instrument data for assembler >#
-
-sub valid_soap_de_novo_assemble_seq_platforms {
-    return ['solexa'];
-}
-
-sub valid_soap_import_seq_platforms {
-    return ['solexa'];
-}
-
-sub valid_velvet_one_button_seq_platforms {
-    return ['solexa'];
-}
-
-sub valid_abyss_parallel_seq_platforms {
-    return ['solexa'];
-}
-
-#< methods to derive assembler params >#
-#soap de-novo-assemble
-sub soap_de_novo_assemble_params {
-    my ($self, $build) = @_;
-
-    my %params = $self->assembler_params_as_hash;
-
-    # config params/file
-    my %default_config_params = ( #temp
-        max_rd_len => 120,
-        reverse_seq => 0,
-        asm_flags => 3,
-        pair_num_cutoff => 2,
-        map_len => 60,
-    );
-    my %config_params;
-    for my $param ( keys %default_config_params ) {
-        $config_params{$param} = ( exists $params{$param} )
-        ? delete $params{$param} # rm from assembler params
-        : $default_config_params{$param};
-    }
-    my $config_file = $self->write_soap_de_novo_config_file($build, %config_params);
-    return if not $config_file;
-    $params{config_file} = $config_file;
-
-    #additional params needed from pp
-    $params{version} = $self->assembler_version;
-
-    #note if using user defined insert size
-    if ( exists $params{insert_size} ) {
-        $self->status_message("Using user defined insert size, will ignore calculated insert size defined in instrument data");
-    }
-
-    #params needed to be derived from build
-    my $cpus = $self->get_number_of_cpus;
-    $params{cpus} = $cpus;
-
-    #insert size param needed for config file creation only
-    delete $params{insert_size};
-
-    my $output_dir_and_file_prefix = $build->soap_output_dir_and_file_prefix;
-    $params{output_dir_and_file_prefix} = $output_dir_and_file_prefix;
-    
-    return %params;
-}
-
-sub write_soap_de_novo_config_file {
-    my ($self, $build, %params) = @_;
-
-    $self->status_message("Soap config file");
-
-    Carp::confess('No build to write soap config file') if not $build;
-    Carp::confess('No config params to write soap config file') if not %params;
-
-    $self->status_message('Getting libraries with input files');
-    my @libraries = $build->libraries_with_existing_assembler_input_files;
-    if ( not @libraries ) {
-        $self->error_message("No assembler input files were found for libraries");
-        return;
-    }
-
-    my $config = "max_rd_len=".delete($params{max_rd_len})."\n";
-    my $lib_config = join("\n", '[LIB]', map { $_.'='.$params{$_} } keys %params);
-    $lib_config .= "\n";
-
-    $self->status_message('Add libraries to config');
-    for my $library ( @libraries ) {
-    $self->status_message('Library: '.$library->{library_id});
-        $config .= $lib_config;
-        $config .= 'avg_ins='.$library->{insert_size}."\n";# || 320;# die if no insert size
-        if ( exists $library->{paired_fastq_files} ) { 
-            $config .= 'q1='.$library->{paired_fastq_files}->[0]."\n";
-            $config .= 'q2='.$library->{paired_fastq_files}->[1]."\n";
-        }
-
-        if ( exists $library->{fragment_fastq_file} ) {
-            $config .= 'q='.$library->{fragment_fastq_file}."\n";
-        }
-    }
-    $self->status_message('Add libraries to config...OK');
-
-    my $config_file = $build->soap_config_file;
-    unlink $config_file if -e $config_file;
-    $self->status_message("Soap config file: ".$config_file);
-    my $fh = eval { Genome::Sys->open_file_for_writing( $config_file ); };
-    if ( not $fh ) {
-        $self->error_message("Can not open file ($config_file) for writing $@");
-        return;
-    }
-    $fh->print( $config );
-    $fh->close;
-
-    $self->status_message("Soap config file...OK");
-
-    return $config_file;
-}
-
-
-#soap import params
-sub soap_import_params {
-    my ($self, $build) = @_;
-
-    my %params;
-
-    #pp specified assembler params
-    if ( $self->assembler_params_as_hash ) {
-	%params = $self->assembler_params_as_hash;
-    }
-
-    #additional params needed from pp
-    $params{version} = $self->assembler_version;
-
-    my $output_dir_and_file_prefix = $build->soap_output_dir_and_file_prefix;
-    $params{output_dir_and_file_prefix} = $output_dir_and_file_prefix;
-
-    my $location = '/WholeMetagenomic/03-Assembly/PGA/'. $build->model->subject_name.'_'.$build->model->center_name;
-    $params{import_location} = $location;
-
-    return %params;
-}
-
-sub abyss_parallel_params {
-    my ($self, $build) = @_;
-
-    my %params;
-    
-    #pp specified assembler params
-    if ( $self->assembler_params_as_hash ) {
-	%params = $self->assembler_params_as_hash;
-    }
-
-    #additional params needed from pp
-    $params{version} = $self->assembler_version;
-
-    #params that need to be derived
-    
-    ($params{fastq_a}, $params{fastq_b}) = $build->fastq_input_files;
-
-    my $output_dir = $build->data_directory;
-    $params{output_directory} = $output_dir;
-
-    return %params;
-}
-
-#velvet one-button params
-sub velvet_one_button_params {
-    my ($self, $build) = @_;
-
-    my %params;
-    
-    #pp specified assembler params
-    if ( $self->assembler_params_as_hash ) {
-	%params = $self->assembler_params_as_hash;
-    }
-    
-    #params that need to be cleaned up
-    if ( defined $params{hash_sizes} ) { 
-        $params{hash_sizes} = [ split(/\s+/, $params{hash_sizes}) ],
-    }
-
-    #additional params needed from pp
-    $params{version} = $self->assembler_version;
-
-    #die if these params are specified
-    for my $calculated_param (qw/genome_len ins_length/) {
-	if ( exists $params{$calculated_param} ) {
-	    Carp::confess (
-		$self->error_message("Can't specify $calculated_param as assembler_param .. it will be derived from input data")
-	    );
-	}
-    }
-
-    #params that need to be derived
-    my $collated_fastq_file = $build->collated_fastq_file;
-    $params{file} = $collated_fastq_file;
-
-    my $genome_len = $build->genome_size;
-    $params{genome_len} = $genome_len;
-
-    my $ins_length = $build->calculate_average_insert_size;
-    $params{ins_length} = $ins_length if defined $ins_length;
-
-    my $output_dir = $build->data_directory;
-    $params{output_dir} = $output_dir;
-
-    return %params;
 }
 
 #< temp params updates needed for successful eval of assembler class >#
@@ -425,7 +202,6 @@ sub soap_de_novo_assemble_clean_up_params_for_eval {
 }
 
 #< Read Processor >#
-
 sub _validate_read_processor {
     my $self = shift;
 
@@ -443,7 +219,7 @@ sub _validate_read_processor {
     }
 
     for my $read_processor_part ( @read_processor_parts ) {
-        my $read_processor_is_ok = Genome::Model::Tools::Sx::Pipe->validate_command($read_processor_part);
+        my $read_processor_is_ok = Genome::Model::Tools::Sx::Validate->validate_command('gmt sx '.$read_processor_part);
         if ( not $read_processor_is_ok ) {
             $self->error_message("Cannot validate read processor ($read_processor_part). See above error(s)");
             return;
@@ -608,61 +384,7 @@ sub post_assemble_parts {
     return @post_assemble_parts;
 }
 
-sub after_assemble_methods_to_run {
-    my ($self, $build) = @_;
-
-    my $method = $self->assembler_accessor_name.'_after_assemble_methods_to_run';
-    if ( $self->can( $method ) ) {
-	$self->$method( $build );
-    }
-
-    return 1;
-}
-
-#sub velvet_after_assemble_methods_to_run {
-sub velvet_one_button_after_assemble_methods_to_run {
-    my ($self, $build) = @_;
-
-    if ( not $self->remove_unnecessary_velvet_files( $build ) ) {
-	$self->error_message("Failed to remove unnecessary velvet files");
-	return;
-    }
-
-    return 1;
-}
-
-#< bsub usage >#
-
-sub bsub_usage {
-    my $self = shift;
-    my $method = $self->assembler_accessor_name.'_bsub_rusage';
-    if ( $self->can( $method ) ) {
-        my $usage = $self->$method;
-        return $usage;
-    }
-    $self->status_message( "bsub rusage not set for ".$self->assembler_name );
-    return;
-}
-
-sub soap_de_novo_assemble_bsub_rusage {
-    my $mem = 30000;
-    my $queue = 'alignment';
-    $queue = 'alignment-pd' if (Genome::Config->should_use_alignment_pd);
-    return "-q $queue -n 4 -R 'span[hosts=1] select[type==LINUX64 && mem>$mem] rusage[mem=$mem]' -M $mem".'000';
-}
-
-sub soap_import_bsub_rusage {
-    return "-R 'select[type==LINUX64] rusage[internet_download_mbps=100] span[hosts=1]'";
-}
-
-sub velvet_one_button_bsub_rusage {
-    my $queue = 'alignment';
-    $queue = 'alignment-pd' if (Genome::Config->should_use_alignment_pd);
-    return "-q $queue -R 'select[type==LINUX64 && mem>30000] rusage[mem=30000] span[hosts=1]' -M 30000000";
-}
-
-#< soap specific methods to run during build >#
-
+# Number of cpus we are allowed to use
 sub get_number_of_cpus {
     my $self = shift;
 
@@ -689,91 +411,6 @@ sub get_number_of_cpus {
     }
 
     return $cpus;
-}
-
-#< velvet specific methods to run during build >#
-
-sub remove_unnecessary_velvet_files {
-    my ($self, $build) = @_;
-
-    # contigs fasta files
-    my @contigs_fastas_to_remove = glob($build->data_directory.'/*contigs.fa');
-    unless ( @contigs_fastas_to_remove ) { # error here??
-        $self->error_message("No contigs fasta files produced from running one button velvet.");
-        return;
-    }
-    my $final_contigs_fasta = $build->contigs_fasta_file;
-    for my $contigs_fasta_to_remove ( @contigs_fastas_to_remove ) {
-        next if $contigs_fasta_to_remove eq $final_contigs_fasta;
-        unless ( unlink $contigs_fasta_to_remove ) {
-            $self->error_message(
-                "Can't remove unnecessary contigs fasta ($contigs_fasta_to_remove): $!"
-            );
-            return;
-        }
-    }
-
-    # log and timing files
-    for my $glob (qw/ logfile timing /) {
-        for my $file ( glob($build->data_directory.'/*-'.$glob) ) {
-            unless ( unlink $file ) {
-                $self->error_message("Can't remove unnecessary file ($glob => $file): $!");
-                return;
-            }
-        }
-    }
-
-    return 1;
-}
-
-#< ASSEMBLE >#
-
-sub assemble_build {
-    my ($self, $build) = @_;
-
-    my $assembler_name = $self->assembler_name;
-    my $assembler_accessor_name = $self->assembler_accessor_name;
-    
-    #validate instrument data - returns arryref of ins data types
-    my $ins_data_method = 'valid_'.$assembler_accessor_name.'_seq_platforms';
-    my $ins_data = $self->$ins_data_method;
-    unless ( grep {$self->sequencing_platform eq $_ } @$ins_data ) {
-	$self->error_message("Sequencing platform: ".$self->sequencing_platform." is not supported for assembler: ".$self->assembler_name);
-	return;
-    }
-
-    my %assembler_params;
-
-    #TODO: there must be 'assembler_name'.'_params' for each assembler
-    my $param_method = $assembler_accessor_name.'_params';
-
-    if ( %assembler_params = $self->$param_method( $build ) ) {
-	$self->status_message("Got params for assembler: $assembler_name");
-    }
-    else { #no params needed?
-	$self->status_message("No params found for $assembler_name, that's okay if no params are needed");
-    }
-   
-    #run assemble
-    $self->status_message("Running $assembler_name");
-    
-    my $assemble_tool = $self->assembler_class;
-    my $assemble = $assemble_tool->create( %assembler_params );
-
-    unless ($assemble) {
-        $self->error_message("Failed to create de-novo-assemble");
-        return;
-    }
-    unless ($assemble->execute) {
-        $self->error_message("Failed to execute de-novo-assemble execute");
-        return;
-    }
-    $self->status_message("$assembler_name finished successfully");
-    
-    #methods to run after assembling .. not post assemble stage
-    $self->after_assemble_methods_to_run( $build );
-    
-    return 1;
 }
 
 #< STATS FROM REPORT >#

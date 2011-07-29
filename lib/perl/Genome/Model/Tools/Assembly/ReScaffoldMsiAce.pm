@@ -69,17 +69,96 @@ EOS
 sub execute {
     my $self = shift;
 
-    unless (-s $self->acefile) {
-	$self->error_message("Can't find file: ".$self->acefile);
-	return;
+    #make sure inputs are correct
+    if ( not $self->_validate_inputs ) {
+        $self->error_message( "Failed to validate tool inputs" );
+        return;
     }
 
+    #get contig lengths from input ace file
+    $self->status_message( "Determining old scaffolds" );
+    my $contig_lengths;
+    if ( not $contig_lengths = $self->_get_unpadded_contig_lengths( $self->acefile ) ) {
+        $self->error_message( "Failed to get contig lengths from input ace file" );
+        return;
+    }
+ 
+    #determine new scaffolds
+    $self->status_message( "Determining new scaffolds" );
+    my $new_scaffolds;
+    if ( not $new_scaffolds = $self->_determine_new_scaffolds( $contig_lengths ) ) {
+        $self->error_message( "Failed to determine new scaffolds" );
+        return;
+    }
+    
+    #make partial ace of new scaffolds
+    $self->status_message( "Writing new scaffolds" );
+    my ($partial_ace, $contigs, $reads ) = $self->_write_new_scaffolds( $self->acefile, $new_scaffolds );
+
+    #update DS line .. needed for older newbler ace files .. and update read and contig counts
+    $self->status_message( "Updating DS line and writing new ace file: ace.msi" );
+    my $final_ace = $self->_update_ds_line_write_wa_tags( $partial_ace, $contigs, $reads );
+
+    $self->status_message( "Done" );
+
+    return 1;
+}
+
+sub _determine_new_scaffolds {
+    my ( $self, $contig_lengths ) = @_;
+    
+    my $scaffolds_file;
+    if ( not $scaffolds_file = $self->_set_new_scaffolds_file ) {
+        $self->error_message( "Failed to set scaffolds file from either supplied or autoreport" );
+        return;
+    }
+
+    #create new scaffolds
+    $self->status_message( "Determining new scaffolds" );
+    my $new_scaffolds;
+    if ( $scaffolds_file ) {
+	my $scaffolds;
+        unless ( $scaffolds = $self->_parse_scaffolds_file( $scaffolds_file ) ) {
+            $self->error_message( "Failed to parse scaffolds file" );
+            return;
+        }
+	my $valid_scaffolds;
+        unless( $valid_scaffolds = $self->_check_for_contigs_to_complement($scaffolds) ) {
+            $self->error_message( "Failed to check contigs to complement" );
+            return;
+        }
+	unless( $new_scaffolds = $self->_create_new_scaffolds($contig_lengths, $valid_scaffolds) ) {
+            $self->error_message( "Failed to create new scaffolds" );
+            return;
+        }
+    }
+    else {
+        unless ( $new_scaffolds = $self->_create_new_scaffolds($contig_lengths) ) {
+            $self->error_message( "FAILED to create new scaffolds" );
+        }
+    }
+
+    return $new_scaffolds;
+}
+
+
+sub _validate_inputs {
+    my $self = shift;
+
+    unless ( $self->acefile and -s $self->acefile ) {
+        $self->error_message( "Can't find ace file or file is zero size or file was not supplied" );
+        return;
+    }
     if ($self->scaffold_file and $self->auto_report) {
 	$self->error_message("You can't select to run auto report and supply scaffold file");
 	return;
     }
+    return 1;
+}
 
-    #determine how to get report file
+sub _set_new_scaffolds_file {
+    my $self = shift;
+
     my $report_file;
     if ($self->auto_report) {
 	unless ($report_file = $self->_run_auto_report()) {
@@ -96,41 +175,7 @@ sub execute {
 	$report_file = $self->scaffold_file;
     }
 
-    #returns hash of contig_number => contig_length
-    $self->status_message( "Determining old scaffolds" );
-    my $old_scaffolds = $self->_get_old_scaffolds( $self->acefile );
-
-    #create new scaffold based on auto report or supplied scaffold file
-    $self->status_message( "Determining new scaffolds" );
-    my $new_scaffolds;
-    if ($report_file) {
-	my $scaffolds = $self->_parse_report_file($report_file);
-	my $valid_scaffolds = $self->_check_for_contigs_to_complement($scaffolds);
-	$new_scaffolds = $self->_create_new_scaffolds($old_scaffolds, $valid_scaffolds);
-    }
-    else {
-	$new_scaffolds = $self->_create_new_scaffolds($old_scaffolds);
-    }
-
-    #make partial ace of new scaffolds
-    $self->status_message( "Writing new scaffolds" );
-    my $scafs_file = $self->_write_new_scaffolds( $self->acefile, $new_scaffolds );
-
-    #write separate file of tags
-    $self->status_message( "Writing new contig tags" );
-    my $tags_file = $self->_write_contig_tags( $self->acefile, $new_scaffolds );
-
-    #merge the two .. get  read and contigs counts;
-    $self->status_message( "Updating contig and read counts" );
-    my ($int_ace, $contig_count, $read_count) = $self->_merge_files_get_contig_read_counts( $scafs_file, $tags_file );
-
-    #update DS line .. needed for older newbler ace files .. and update read and contig counts
-    $self->status_message( "Updating DS line and writing new ace file: ace.msi" );
-    my $final_ace = $self->_update_ds_line_write_wa_tags( $int_ace, $contig_count, $read_count );
-
-    $self->status_message( "Done" );
-
-    return 1;
+    return $report_file;
 }
 
 sub _run_auto_report {
@@ -158,7 +203,7 @@ sub _run_auto_report {
     return shift @out_files;
 }
 
-sub _parse_report_file {
+sub _parse_scaffolds_file {
     my ($self, $file) = @_;
     my @scaffolds;
     my $fh = Genome::Sys->open_file_for_reading($file);
@@ -204,29 +249,41 @@ sub _check_for_contigs_to_complement {
     return $scaffolds;
 }
 
-sub _get_old_scaffolds {
-    my ($self, $ace) = @_;
-
-    my $contig_lengths = {};
+#need to get unpadded contig lengths w/o using
+#ace object .. ace files can get too big to load
+sub _get_unpadded_contig_lengths {
+    my ( $self, $ace ) = @_;
+    my %contig_lengths;
     my $fh = Genome::Sys->open_file_for_reading( $ace );
-    while (my $line = $fh->getline) {
-	next unless $line =~ /^CO\s+/;
-	my ($contig_name, $length) = $line =~ /^CO\s+(\S+)\s+(\d+)/;
-	unless ($contig_name and $length) {
-	    $self->error_message("Incorrect line format in $line");
-	    return;
-	}	
-	$contig_name =~ s/contig//i;
-	$contig_lengths->{$contig_name} = $length;
+    my $contig_name;
+    my $is_sequence = 0;
+    while ( my $line = $fh->getline ) {
+        if ( $line =~ /^CO\s+/ ) {
+            ( $contig_name ) = $line =~ /^CO\s+(\S+)/;
+            $contig_name =~ s/contig//i;
+            $is_sequence = 1;
+            next;
+        }
+        if ( $line =~ /^BQ\s+/ ) {
+            $is_sequence = 0;
+            next;
+        }
+        if ( $is_sequence == 1 ) {
+            next if $line =~ /^\s+$/;
+            chomp $line;
+            $line =~ s/[nx*]//ig;
+            $contig_lengths{$contig_name} += length $line;
+        }
     }
     $fh->close;
-    return $contig_lengths;
+
+    return \%contig_lengths;
 }
 
 sub _create_new_scaffolds {
     my ($self, $old_contigs, $scaffolds) = @_;
 
-    #TODO - needs some clean up
+    #TODO - this is pretty bad .. sorry will clean up
     my $new_scafs = {};
     #hash of scaffolds with array of contigs in scaffold as value
     #$new_scafs->{scaffold?}->{scaffold_contigs} = [
@@ -234,6 +291,7 @@ sub _create_new_scaffolds {
     #                                               contig??
     #                                              ]
     my $scaf_lengths = {};
+    my %valid_contigs_to_export;
     #hash of scaffold name and scaffold size
     if ($scaffolds) {
 	foreach my $scaf (@$scaffolds) {
@@ -243,17 +301,34 @@ sub _create_new_scaffolds {
 	    my $scaf_ctg_1;
 	    foreach my $scaf_ctg (@tmp) {
 		next if $scaf_ctg eq 'E'; #eg E-12.1-E
-                delete $old_contigs->{$scaf_ctg} and next if $old_contigs->{$scaf_ctg} <= $self->min_contig_length;
-		$scaf_ctg_1 = $scaf_ctg unless $scaf_ctg_1; #??? why ???
+                $valid_contigs_to_export{$scaf_ctg} = 1;
+                #old contigs = all contigs in ace file
+                #scaffolds = scaffolds to be exported to new ace file
+                #code below removes from old_contigs any scaffolds that are less than min_contig_length
+                if ( $old_contigs->{$scaf_ctg} <= $self->min_contig_length ) {
+                    print "removing $scaf_ctg with length ".$old_contigs->{$scaf_ctg}."\n";
+                    delete $old_contigs->{$scaf_ctg} and next;
+                }
+		$scaf_ctg_1 = $scaf_ctg unless $scaf_ctg_1; #sets first scaf contig
 		push @{$new_scafs->{$scaf_ctg_1}->{scaffold_contigs}}, $scaf_ctg;
 		$scaf_lengths->{$scaf_ctg_1} += $old_contigs->{$scaf_ctg};
 		delete $old_contigs->{$scaf_ctg};
 	    }
 	}
     }
-	   
+
     #rename the remaining, non-scaffold contigs
     foreach my $contig (keys %$old_contigs) {
+        if ( $old_contigs->{$contig} <= $self->min_contig_length ) {
+            print "Excluding contig"."$contig with length: ".$old_contigs->{$contig}."\n";
+            delete $old_contigs->{$contig};
+            next;
+        }
+        if ( not exists $valid_contigs_to_export{ $contig } ) {
+            print "Excluding contig"."$contig .. not one of contig to export\n";
+            delete $old_contigs->{$contig};
+            next;
+        }
 	push @{$new_scafs->{$contig}->{scaffold_contigs}}, $contig;
 	$scaf_lengths->{$contig} = $old_contigs->{$contig};
 	delete $old_contigs->{$contig};
@@ -269,7 +344,7 @@ sub _create_new_scaffolds {
     #write a new gap file
     my $gap_file = $self->assembly_directory.'/edit_dir/msi.gap.txt';
     unlink $gap_file;
-    my $gap_fh = Genome::Sys->open_file_for_writing( $gap_file ) || die "Can not write new gap file: msi.gap.txt";
+    my $gap_fh = Genome::Sys->open_file_for_writing( $gap_file );
     
     foreach my $scaf (sort {$scaf_lengths->{$b} <=> $scaf_lengths->{$a}} keys %{$scaf_lengths}) {
 	foreach my $scaf_ctg ( @{$new_scafs->{$scaf}->{scaffold_contigs}} ) {
@@ -304,6 +379,9 @@ sub _write_new_scaffolds {
     my $fh_out = Genome::Sys->open_file_for_writing( $ace_out );
     my $fh_in = Genome::Sys->open_file_for_reading( $ace );
     my $skip_this_contig = 0;
+
+    my ( $contig_count, $read_count ) = 0;
+
     while (my $line = $fh_in->getline) {
         #stop writing when contig or wa tags are reached
         #only writing contigs here
@@ -315,6 +393,7 @@ sub _write_new_scaffolds {
 	    my ($contig_number) = $contig_name =~ /contig(\S+)/i;
 	    if (exists $scaffold->{$contig_number}) {
 		$fh_out->print('CO '.$scaffold->{$contig_number}." $rest_of_line\n");
+                $contig_count++;
                 $skip_this_contig = 0;
 	    }
 	    else {
@@ -324,32 +403,49 @@ sub _write_new_scaffolds {
 	}
         else {
 	    $fh_out->print($line) unless $skip_this_contig == 1;
+            $read_count++ if $line =~ /^RD\s+/;
 	}
     }
 
     $fh_in->close;
     $fh_out->close;
 
-    return $ace_out;
+    return $ace_out, $contig_count, $read_count;
 }
 
-sub _write_contig_tags {#TODO try to get seekpos
+#Transfer tags not used as of 7/1/11
+sub _write_contig_tags {
     my ( $self, $ace, $scaffolds ) = @_;
     my $tags_out = $self->assembly_directory.'/edit_dir/ace.msi.tags';
     unlink $tags_out;
     my $fh_out = Genome::Sys->open_file_for_writing( $tags_out );
     my $fh = Genome::Sys->open_file_for_reading( $ace );
     my $in_tag_lines = 0;
+    my $in_tag_comment_lines = 0;
     my $print_tag_lines = 0;
     while ( my $line = $fh->getline ) {
         if ( $line =~ /^CT\{/ ) {
             $in_tag_lines = 1;
+            $print_tag_lines = 0;
+            $in_tag_comment_lines = 0;
         }
         elsif ( $line =~ /^WA\{/ ) { #don't print WA tags
             $in_tag_lines = 0;
+            $in_tag_comment_lines = 0;
             $print_tag_lines = 0;
         }
-        elsif ( $in_tag_lines == 1 and $line =~ /^contig(\S+)\s+/i ) {
+        elsif ( $in_tag_lines == 1 and $print_tag_lines == 1 and $line =~ /^COMMENT{/ ) {
+            $in_tag_comment_lines = 1;
+            $fh_out->print( $line );
+        }
+        elsif ( $in_tag_lines == 1 and $line =~ /^C{/ ) {
+            $in_tag_comment_lines = 0;
+            $fh_out->print( $line );
+        }
+        elsif ( $in_tag_comment_lines == 1 and $print_tag_lines == 1) {
+            $fh_out->print( $line );
+        }
+        elsif ( $in_tag_lines == 1 and $line =~ /^contig(\S+)\s+/i and $in_tag_comment_lines == 0 ) {
             chomp $line;
 	    my ($contig_name) = $line =~ /^(\S+)/;
 	    my $rest_of_line = "$'";
@@ -363,7 +459,7 @@ sub _write_contig_tags {#TODO try to get seekpos
                 $print_tag_lines = 0;
 	    }
         }
-        elsif ( $in_tag_lines == 1 and $print_tag_lines == 1 ) {
+        elsif ( $in_tag_lines == 1 and $print_tag_lines == 1 ) { #not printing anything
             $fh_out->print( $line );
         }
         #else #do nothing
@@ -375,6 +471,7 @@ sub _write_contig_tags {#TODO try to get seekpos
     return $tags_out;
 }
 
+#not used
 sub _merge_files_get_contig_read_counts {
     my ( $self, $scaf_file, $tags_file ) = @_;
     my $ace_out = $self->assembly_directory.'/edit_dir/ace.msi.int1';

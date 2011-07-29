@@ -214,10 +214,20 @@ sub check_genotype_input {
 
     if ($self->model->is_lane_qc) {
         unless ($self->genotype_microarray_build) {
+            my $desc;
+            if ($self->model->genotype_microarray_model) {
+                $desc = 'model has genotype_microarray input but build is missing it';
+            }
+            elsif ($self->subject->default_genotype_data_id) {
+                $desc = 'subject has default_genotype_data but build and model are missing genotype_microarray input';
+            }
+            else {
+                $desc = 'no genotype_microarray input found';
+            }
             push @tags, UR::Object::Tag->create(
                 type => 'error',
                 properties => ['genotype_microarray_build'],
-                desc => 'No genotype microarray build input found',
+                desc => $desc,
             );
         }
     }
@@ -377,7 +387,7 @@ sub compare_snps_file {
 
 sub get_alignments {
     my $self = shift;
-    return map { $self->model->processing_profile->results_for_instrument_data_inputs($_) }
+    return map { $self->model->processing_profile->results_for_instrument_data_input($_) }
         $self->instrument_data_inputs;
 }
 
@@ -1458,5 +1468,6 @@ sub regex_files_for_diff {
         alignments/\d+(?:_merged_rmdup)?.bam.flagstat$
     );
 }
+
 1;
 

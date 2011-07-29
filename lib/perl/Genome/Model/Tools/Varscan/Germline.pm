@@ -29,6 +29,13 @@ class Genome::Model::Tools::Varscan::Germline {
             is_optional => 0, 
             is_input => 1 
             },
+        samtools_path	=> {
+            is => 'Text',
+            doc => "Path to SAMtools executable",
+            is_optional => 0,
+            is_input => 1,
+            default => "samtools"
+        },
         output_snp => { 
             is => 'Text', 
             doc => "Basename for SNP output, eg. varscan.snp" , 
@@ -71,7 +78,7 @@ class Genome::Model::Tools::Varscan::Germline {
         },
         varscan_params => { 
             is => 'Text', 
-            doc => "Parameters to pass to Varscan [--min-coverage 8 --min-var-freq 0.10 --p-value 0.05]" , 
+            doc => "Parameters to pass to Varscan [--min-coverage 8 --min-var-freq 0.10 --p-value 0.05 --strand-filter 1]" , 
             is_optional => 1, 
             is_input => 1
         },
@@ -147,8 +154,7 @@ sub execute {                               # replace with real execution logic.
 
     if (-e $bam_file) {
         ## Prepare pileup commands ##
-
-        my $normal_pileup = "samtools view -b -u -q 10 $bam_file | samtools pileup -f $reference -";
+        my $normal_pileup = $self->pileup_command_for_reference_and_bam($reference, $bam_file);
 
         ## Run Varscan ##
 
@@ -158,7 +164,9 @@ sub execute {                               # replace with real execution logic.
         ## Call SNPs ##
         $cmd = "bash -c \"$path_to_varscan pileup2cns <\($normal_pileup\) --variants 1 $varscan_params >$output_snp.variants $headers\"";
         print "RUN: $cmd\n";
-        system($cmd);
+        unless ( Genome::Sys->shellcmd(cmd => $cmd) == 1 ) {
+            die $self->error_message("Running Varscan failed with command: $cmd");
+        }
 
         print "Parsing Variants into SNP/Indel files...\n";
         $self->parse_variants_file("$output_snp.variants", $output_snp, $output_indel);

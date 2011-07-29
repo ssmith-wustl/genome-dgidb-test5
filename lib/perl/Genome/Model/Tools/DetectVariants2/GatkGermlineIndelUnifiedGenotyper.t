@@ -24,7 +24,8 @@ else {
 }
 
 my $test_data = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants2-GatkGermlineIndelUnifiedGenotyper";
-my $expected_data = "$test_data/expected.v2";
+# V3 adds the actual score and depth values to the bed
+my $expected_data = "$test_data/expected.v3";
 my $tumor =  $test_data."/flank_tumor_sorted.13.tiny.bam";
 
 my $tmpbase = File::Temp::tempdir('GatkGermlineIndelUnifiedGenotyperXXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites/', CLEANUP => 1);

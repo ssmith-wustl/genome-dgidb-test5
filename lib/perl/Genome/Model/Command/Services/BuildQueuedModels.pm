@@ -93,8 +93,8 @@ sub execute {
     my @iterator_params = (
         # prioritize genotype microarray over other builds because their
         # runtime is so short and are frequently prerequisite for other builds
-        {build_requested => '1', type_name => 'genotype microarray'}, 
-        {build_requested => '1'},
+        {build_requested => '1', type_name => 'genotype microarray', -order_by => 'subject_id'}, 
+        {build_requested => '1', -order_by => 'subject_id'},
     );
 
     ITERATOR:
@@ -110,7 +110,7 @@ sub execute {
                 last ITERATOR; 
             }
 
-            $self->total_command_count($self->total_command_count + 1);
+            $self->_total_command_count($self->_total_command_count + 1);
             Genome::Model::Build::Command::Start::create_and_start_build($self, $model);
         }
     }
@@ -119,7 +119,7 @@ sub execute {
     $self->display_command_summary_report();
     $self->status_message('   Expected: ' . $expected_count);
 
-    return !scalar(keys %{$self->command_errors});
+    return !scalar(keys %{$self->_command_errors});
 }
 
 

@@ -25,9 +25,8 @@ my $test_data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVari
 my $expected_dir = join('/', $test_data_dir, 'expected.v3');
 
 my $bam_file = join('/', $test_data_dir, 'tumor.tiny.bam');
+my $detector_directory = join('/', $test_data_dir, 'varscan-somatic-2.2.4-.v2');
 my $input_directory = join('/', $test_data_dir, "input");
-my $varscan_input = join('/', $test_data_dir, 'varscan_input');
-my $detector_directory = join('/', $test_data_dir, 'varscan-somatic-2.2.4-');
 
 my $expected_hq_file = join('/', $expected_dir, 'snvs.hq');
 my $expected_lq_file = join('/', $expected_dir, 'snvs.lq');
@@ -47,7 +46,7 @@ is($reference->id,101947881, 'Found correct reference sequence');
 
 my $detector_result = Genome::Model::Tools::DetectVariants2::Result->__define__(
     output_dir => $detector_directory,
-    detector_name => 'test',
+    detector_name => 'Genome::Model::Tools::DetectVariants2::VarscanSomatic',
     detector_params => '',
     detector_version => 'awesome',
     aligned_reads => $bam_file,

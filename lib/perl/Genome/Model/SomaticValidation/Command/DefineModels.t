@@ -103,7 +103,7 @@ sub setup_test_data {
         sequencing_platform => 'solexa',
         dna_type => 'genomic dna',
         read_aligner_name => 'bwa',
-        snv_detector_name => 'test for somatic-validation define-models',
+        snv_detection_strategy => 'test for somatic-validation define-models',
         name => 'test ref. align. pp for somatic-validation define-models',
     );
 
@@ -181,7 +181,7 @@ sub setup_test_data {
 
     my $somatic_validation_pp = Genome::ProcessingProfile::SomaticValidation->create(
         name => 'test s.v. pp for somatic-validation define-models',
-        samtools_version => 'test for somatic-validation define-models',
+        snv_detection_strategy => 'test for somatic-validation define-models',
     );
 
     isa_ok($feature_list, 'Genome::FeatureList', 'created test feature-list');

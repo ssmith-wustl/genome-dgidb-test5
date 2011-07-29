@@ -45,12 +45,12 @@ class Genome::Model::Tools::CopyNumber::CnvSeg {
         },
         centromere_file => {
             is => 'String',
-            doc => 'Path to a UCSC centromere table',
-            default => "/gscmnt/sata186/info/medseq/kchen/work/SolexaCNV/scripts/centromere.csv",
+            doc => 'Path to a UCSC centromere table (replace hg18 w/ hg19 for build 37)',
+            default => "/gscmnt/sata186/info/medseq/kchen/work/SolexaCNV/scripts/centromere.hg18.csv",
         },
         gap_file => {
             is => 'String',
-            doc => 'Path to a UCSC gap table',
+            doc => 'Path to a UCSC gap table (replace hg18 w/ hg19 for build 37)',
             default => "/gscmnt/sata186/info/medseq/kchen/work/SolexaCNV/scripts/hg18gaps.csv",
         },
         purity => {
@@ -215,10 +215,10 @@ sub execute {
         printf $output_fh "--- Chromosome %s\t%d probes\n",$chr,$#x+1;
         my ($label,$cn_adjusted);
         if(defined $opts{a}){
-            ($label,$cn_adjusted)=$cnv->SegPloidy($D,$opts{s},$median_readcount{$chr},$Centromere{$chr}->{start},$Centromere{$chr}->{end});
+            ($label,$cn_adjusted)=$cnv->SegPloidy($output_fh,$D,$opts{s},$median_readcount{$chr},$Centromere{$chr}->{start},$Centromere{$chr}->{end});
         }
         else{
-            ($label,$cn_adjusted)=$cnv->SegPloidy($D,$opts{s},$median_readcount{$chr});
+            ($label,$cn_adjusted)=$cnv->SegPloidy($output_fh,$D,$opts{s},$median_readcount{$chr});
         }
 
         $cnv->printParm($output_fh);
@@ -229,7 +229,7 @@ sub execute {
         $pidx=$idx+1;
     }
 
-    $cnv->SegPloidy($Dall,$opts{s});
+    $cnv->SegPloidy($output_fh,$Dall,$opts{s});
     printf $output_fh "--- Whole Genome %d probes\n",$#{$Dall->{x}}+1;
     $cnv->printParm($output_fh,1);
     return 1;

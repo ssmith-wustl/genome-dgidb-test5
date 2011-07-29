@@ -57,7 +57,7 @@ sub description {
 
     return sprintf(
         'de novo assembly %s build (%s) for model (%s %s)',
-        $self->processing_profile->sequencing_platform,
+        $self->processing_profile->assembler_name,
         $self->id,
         $self->model->name,
         $self->model->id,
@@ -232,9 +232,11 @@ sub calculate_reads_attempted {
             $reads_attempted += $inst_data->rev_clusters;
         }elsif($inst_data->class =~ /Imported/){
             $reads_attempted += $inst_data->read_count;
+        } elsif ( $inst_data->class =~ /454/ ) {
+            $reads_attempted += $inst_data->total_reads;
         } else {
             Carp::confess( 
-                $self->error_message("Unsupported sequencing platform or inst_data class (".$self->sequencing_platform." ".$inst_data->class."). Can't calculate reads attempted.")
+                $self->error_message("Unsupported sequencing platform or inst_data class (".$inst_data->class."). Can't calculate reads attempted.")
             );
         }
     }
@@ -283,7 +285,7 @@ sub calculate_average_insert_size {
         }
         else {
             Carp::confess( 
-                $self->error_message("Unsupported sequencing platform (".$self->sequencing_platform."). Can't calculate insert size and standard deviation.")
+                $self->error_message("Unsupported sequencing platform (".$inst_data->sequencing_platform."). Can't calculate insert size and standard deviation.")
             );
         }
     }
@@ -358,6 +360,11 @@ sub center_name {
     return $_[0]->model->center_name || 'WUGC';
 }
 
+#< Assemble >#
+sub assembler_rusage { return; }
+sub before_assemble { return 1; }
+sub after_assemble { return 1; }
+
 #< Metrics >#
 sub calculate_metrics {
     my  $self = shift;
@@ -408,6 +415,7 @@ sub calculate_metrics {
         if ($line =~ /^Major\s+Contig\s+\(/) {
             ($major_contig_length) = $line =~ /^Major\s+Contig\s+\(>\s+(\d+)\s+/;
             $metrics{'major_contig_length'} = $major_contig_length; #300 for soap, 500 for velvet
+            delete $stat_to_metric_names{'major contig length'};
             next;
         }
 
@@ -447,7 +455,7 @@ sub calculate_metrics {
         $self->status_message(
             'Missing these metrics ('.join(', ', keys %stat_to_metric_names).') in stats file ($stats_file)'
         );
-        #return;
+        #return; okay .. could vary by assembler
     }
 
     #further processing of metric values

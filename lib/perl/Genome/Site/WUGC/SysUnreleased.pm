@@ -8,6 +8,7 @@ use strict;
 use warnings;
 
 use Genome;
+use Genome::Sys;  # ensure our overrides take precedence
 
 use Data::Dumper;
 require Carp;
@@ -23,6 +24,35 @@ use File::Find;
 
 require MIME::Lite;
 
+sub user_id {
+    return $<;
+}
+
+sub username {
+    my $class = shift;
+    my $username = getpwuid($class->user_id);
+    return $username;
+}
+
+sub sudo_username {
+    my $class = shift;
+    my $who_output = $class->cmd_output_who_dash_m || '';
+    my $who_username = (split(/\s/,$who_output))[0] || '';
+    my $sudo_username = $who_username eq $class->username ? '' : $who_username;
+    $sudo_username ||= $ENV{'SUDO_USER'};
+    return ($sudo_username || '');
+}
+
+sub cmd_output_who_dash_m {
+    return `who -m`;
+}
+
+sub user_is_member_of_group {
+    my ($class, $group_name) = @_;
+    my $user = Genome::Sys->username;
+    my $members = (getgrnam($group_name))[3];
+    return ($members && $user && $members =~ /\b$user\b/);
+}
 # this helps us clean-up locks
 
 my %SYMLINKS_TO_REMOVE;
@@ -99,7 +129,7 @@ sub diff_file_vs_text {
 sub diff_file_vs_file {
     my ($self,$f1,$f2) = @_;
     
-    my $diff_fh = IO::File->new("sdiff -s $f1 $f2 |");
+    my $diff_fh = IO::File->new("sdiff -s $f1 $f2 2>&1 |");
     unless ($diff_fh) {
         Carp::croak("Can't run 'sdiff -s $f1 $f2' for diff_file_vs_file(): $!");
     }
@@ -614,11 +644,18 @@ sub cleanup_handler_check {
     if ($symlink_count > 0) {
         $SIG{'INT'} = \&INT_cleanup;
         $SIG{'TERM'} = \&INT_cleanup;
+        $SIG{'HUP'} = \&INT_cleanup;
+        $SIG{'ABRT'} = \&INT_cleanup;
+        $SIG{'QUIT'} = \&INT_cleanup;
+        $SIG{'SEGV'} = \&INT_cleanup;
     } else {
         delete $SIG{'INT'};
         delete $SIG{'TERM'};
+        delete $SIG{'HUP'};
+        delete $SIG{'ABRT'};
+        delete $SIG{'QUIT'};
+        delete $SIG{'SEGV'};
     }
-
 }
 
 END {

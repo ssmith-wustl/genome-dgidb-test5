@@ -27,7 +27,7 @@ class Genome::Model::Tools::SnpArray::RegionsToBands {
 	
 	has => [                                # specify the command's single-value properties (parameters) <--- 
 		regions_file	=> { is => 'Text', doc => "Regions file in chromosome start stop format", is_optional => 0, is_input => 1 },
-		ucsc_cytoband	=> { is => 'Text', doc => "Path to the UCSC refGene.txt file", is_optional => 0, is_input => 1, default => '/gscuser/dkoboldt/SNPseek/SNPseek2/ucsc/cytoBand.txt'},
+		ucsc_cytoband	=> { is => 'Text', doc => "Path to the UCSC refGene.txt file", is_optional => 0, is_input => 1, default => '/gscmnt/sata809/info/medseq/dkoboldt/SNPseek2/ucsc/cytoBand.txt'},
 		output_file	=> { is => 'Text', doc => "Output file", is_optional => 1, is_input => 1},
 		output_gene_counts	=> { is => 'Text', doc => "Output file for the counts of affected regions by gene", is_optional => 1, is_input => 1},
 	],

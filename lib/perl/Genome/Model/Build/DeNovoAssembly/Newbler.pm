@@ -13,6 +13,24 @@ class Genome::Model::Build::DeNovoAssembly::Newbler {
     is => 'Genome::Model::Build::DeNovoAssembly',
 };
 
+#< Methods for new fastq processing pipeline >#
+sub read_processor_output_files_for_instrument_data {
+    my ( $self, $inst_data ) = @_;
+    my $file_name = $inst_data->id.'-input.fastq';
+    return $self->data_directory."/$file_name";
+}
+
+sub fastq_input_files {
+    my $self = shift;
+    my @fastq_files = glob( $self->data_directory."/*input.fastq" );
+    unless ( @fastq_files ) {
+        $self->error_message( "Did not find any input fastq files in build data directory" );
+        return;
+    }
+    #return join (',', map{$_} @fastq_files );
+    return @fastq_files;
+}
+
 #< Files / Dirs >#
 sub assembly_directory {
     return $_[0]->data_directory.'/assembly';
@@ -21,6 +39,44 @@ sub assembly_directory {
 sub sff_directory {
     return $_[0]->data_directory.'/sff';
 }
+
+sub existing_assembler_input_files {
+    my $self = shift;
+    return grep { -s $_ } $self->fastq_input_files;
+}
+
+sub stats_file {
+    return $_[0]->data_directory.'/consed/edit_dir/stats.txt';
+}
+
+sub all_contigs_fasta_file {
+    return $_[0]->data_directory.'/454AllContigs.fna';
+}
+
+sub all_contigs_qual_file {
+    return $_[0]->data_directory.'/454AllContigs.qual';
+}
+
+sub all_contigs_ace_file {
+    return $_[0]->data_directory.'/consed/edit_dir/454Contigs.ace.1';
+}
+
+sub scaffolds_fasta_file {
+    return $_[0]->data_directory.'/454Scaffolds.fna';
+}
+
+sub scaffolds_qual_file {
+    return $_[0]->data_directory.'/454Scaffolds.qual';
+}
+
+sub scaffolds_agp_file {
+    return $_[0]->data_directory.'/454Scaffolds.txt';
+}
+
+sub newbler_metrics_file {
+    return $_[0]->data_directory.'/454NewblerMetrics.txt';
+}
+
 
 sub input_fastas {
     my $self = shift;
@@ -60,15 +116,20 @@ sub input_data_directory {
 }
 #<>#
 
-#< Metrics >#
-sub calculate_metrics {
-    my  $self = shift;
+#<ASSEMBLE>#
+sub assembler_params {
+    my $self = shift;
 
-    # FIXME
-    Carp::Confess("FIXME - Not set metrics implemented for newbler assemblies!!");
-    
-    return 1;
+    my %params = $self->processing_profile->assembler_params_as_hash;
+    $params{version} = $self->processing_profile->assembler_version;
+    $params{output_directory} = $self->data_directory;
+    $params{input_files} = [ $self->fastq_input_files ];
+
+    return %params;
 }
+
+#< Metrics >#
+#run base methods
 #<>#
 
 1;

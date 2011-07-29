@@ -71,30 +71,6 @@ class Genome::ProcessingProfile::ReferenceAlignment {
             is_optional =>1,
             doc => "Strategy to be used to detect cnvs.",
         },
-        snv_detector_name => {
-            doc => 'Name of the snv detector--will be replaced by snv_detection_strategy',
-            is_optional => 1,
-        },
-        snv_detector_version => {
-            doc => 'version of the snv detector--will be replaced by snv_detection_strategy',
-            is_optional => 1,
-        },
-        snv_detector_params => {
-            doc => 'command line args used for the snv detector--will be replaced by snv_detection_strategy',
-            is_optional => 1,
-        },
-        indel_detector_name => {
-            doc => 'Name of the indel detector--will be replaced by indel_detection_strategy',
-            is_optional => 1,
-        },
-        indel_detector_version => {
-            doc => 'version of the indel detector--will be replaced by indel_detection_strategy',
-            is_optional => 1,
-        },
-        indel_detector_params => {
-            doc => 'command line args used for the indel detector--will be replaced by indel_detection_strategy',
-            is_optional => 1,
-        },
         multi_read_fragment_strategy => {
             doc => '',
             is_optional => 1,
@@ -342,7 +318,7 @@ sub params_for_merged_alignment {
     for my $i (0..$#inputs) {
         my $input = $inputs[$i];
         if($input->filter_desc) {
-            push @$filters, join(':', $input->instrument_data_id, $input->filter_desc);
+            push @$filters, join(':', $input->value->id, $input->filter_desc);
         }
     }
 
@@ -351,7 +327,7 @@ sub params_for_merged_alignment {
         my @align_reads_events = grep {$_->isa('Genome::Model::Event::Build::ReferenceAlignment::AlignReads')} $build->events;
         for my $i (0..$#inputs) {
             my $input = $inputs[$i];
-            my @alignment_events = grep {$_->instrument_data_id == $input->instrument_data_id} @align_reads_events;
+            my @alignment_events = grep {$_->instrument_data_id == $input->value->id} @align_reads_events;
         
             #if multiple events, this is a chunked alignment
             if (@alignment_events > 1) {
@@ -365,7 +341,7 @@ sub params_for_merged_alignment {
     my $instrument_data = [];
 
     for my $i (0..$#inputs) {
-        push @$instrument_data, $inputs[$i]->instrument_data_id;
+        push @$instrument_data, $inputs[$i]->value->id;
     }
 
     my %params = (
@@ -589,7 +565,7 @@ sub generate_reports_job_classes {
     my @steps = (
         'Genome::Model::Event::Build::ReferenceAlignment::RunReports'
     );
-    if((defined $self->snv_detector_name || defined $self->indel_detector_name) && defined $self->duplication_handler_name) {
+    if((defined $self->snv_detection_strategy || defined $self->indel_detection_strategy) && defined $self->duplication_handler_name) {
         return @steps;
     }
     else {

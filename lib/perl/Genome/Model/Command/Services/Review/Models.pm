@@ -46,9 +46,19 @@ sub execute {
         my $model_name   = ($model ? $model->name                     : '-');
         my $pp_name      = ($model ? $model->processing_profile->name : '-');
 
+        my $crashed_workflow_step = '-';
+        eval {
+            my $workflow = $latest_build->newest_workflow_instance;
+            my @workflow_steps = ($workflow ? $workflow->ordered_child_instances : ());
+            my @crashed_steps = grep { $_->status ne 'done' } @workflow_steps;
+            $crashed_workflow_step = (@crashed_steps ? $crashed_steps[0]->name : '-');
+        };
+
+        $crashed_workflow_step =~ s/^\d+\s+//;
+
         my $latest_build_revision = $latest_build->software_revision if $latest_build;
-        ($latest_build_revision) =~ /\/(genome-[^\/])/;
         $latest_build_revision ||= '-';
+        ($latest_build_revision) =~ /\/(genome-[^\/])/ if $latest_build_revision =~ /\/genome-[^\/]/;
 
         $model_name =~ s/\.?$pp_name\.?/.../;
 
@@ -69,22 +79,26 @@ sub execute {
         }
 
         next if (grep { lc $_ eq lc $latest_build_status } @hide_statuses);
-        $self->print_message(join "\t", $model_id, $action, $latest_build_status, $latest_build_revision, $model_name, $pp_name, $fail_count);
+        $self->print_message(join "\t", $model_id, $action, $latest_build_status, $crashed_workflow_step, $latest_build_revision, $model_name, $pp_name, $fail_count);
     }
 
-    my $rv = 1;
+    my %cmd_rvs;
     if ($self->auto and @models_to_start) {
-        my $cmd = Genome::Model::Build::Command::Start->create(models => \@models_to_start);
-        my $cmd_rv = $cmd->execute;
-        $rv = $cmd_rv unless $cmd_rv == 1;
+        for my $model (@models_to_start) {
+            my $cmd = Genome::Model::Build::Command::Start->create(models => [$model]);
+            $cmd_rvs{$cmd->execute}++;
+        }
     }
     if ($self->auto and @models_to_cleanup) {
-        my $cmd = Genome::Model::Command::Services::Review::CleanupSucceeded->create(models => \@models_to_start);
-        my $cmd_rv = $cmd->execute;
-        $rv = $cmd_rv unless $cmd_rv == 1;
+        for my $model (@models_to_cleanup) {
+            my $cmd = Genome::Model::Command::Services::Review::CleanupSucceeded->create(models => [$model]);
+            $cmd_rvs{$cmd->execute}++;
+        }
     }
 
-    return $rv;
+    $self->print_message("Succeeded " . $cmd_rvs{1}) if $cmd_rvs{1};
+    $self->print_message("Failed " . $cmd_rvs{0}) if $cmd_rvs{0};
+    return 1;
 }
 
 
@@ -188,14 +202,17 @@ sub previous_build {
 sub workflow_status {
     my $build = shift;
 
-    my $build_instance = $build->newest_workflow_instance;
-    my @child_instances = $build_instance->sorted_child_instances if $build_instance;
+    my %status = eval {
+        my $build_instance = $build->newest_workflow_instance;
+        my @child_instances = $build_instance->sorted_child_instances if $build_instance;
 
-    my %status;
-    for my $child_instance (@child_instances) {
-        (my $name = $child_instance->name) =~ s/^[0-9]+\s+//;
-        $status{$name} = $child_instance->status;
-    }
+        my %status;
+        for my $child_instance (@child_instances) {
+            (my $name = $child_instance->name) =~ s/^[0-9]+\s+//;
+            $status{$name} = $child_instance->status;
+        }
+        return %status;
+    };
 
     return %status;
 }

@@ -854,6 +854,12 @@ sub postprocess_bam_file {
         $self->error_message('Fail to create bam md5');
         die $self->error_message;
     }
+
+    $self->status_message("Indexing BAM file ...");
+    unless($self->_create_bam_index) {
+        $self->error_message('Fail to create bam md5');
+        die $self->error_message;
+    }
     return 1;
 }
 
@@ -909,6 +915,25 @@ sub alignment_directory {
     return $self->output_dir;
 }
 
+
+sub _create_bam_index {
+    my $self = shift;
+    my $bam_file    = $self->temp_staging_directory . '/all_sequences.bam'; 
+
+    unless (-s $bam_file) {
+        $self->error_message('BAM file ' . $bam_file . ' does not exist or is empty');
+        return;
+    }
+
+    my $cmd = Genome::Model::Tools::Sam::IndexBam->create(bam_file=>$bam_file);
+
+    unless ($cmd->execute) {
+        $self->error_message("Failed to index bam file $bam_file !");
+        return;
+    }
+
+    return 1;
+}
 
 sub _create_bam_flagstat {
     my $self = shift;
@@ -1020,22 +1045,31 @@ sub _promote_validated_data {
 
     $self->status_message("Now de-staging data from $staging_dir into $output_dir"); 
 
-    my $call = sprintf("rsync -avzL %s/* %s", $staging_dir, $output_dir);
+    my $copy_cmd = sprintf("cp -rL %s/* %s/", $staging_dir, $output_dir);
+    $self->status_message("Running cp: $copy_cmd");
+    my $copy_exit_code = system($copy_cmd);
 
-    my $rv = system($call);
-    $self->status_message("Running Rsync: $call");
+    if ($copy_exit_code != 0) {
 
-    unless ($rv == 0) {
-        $self->error_message("Did not get a valid return from rsync, rv was $rv for call $call.  Cleaning up and bailing out");
-        rmtree($output_dir);
-        die $self->error_message;
+        $self->status_message("Copy failed, attempting rsync");
+
+        my $rsync_cmd = sprintf("rsync -avzL %s/* %s/", $staging_dir, $output_dir);
+
+        $self->status_message("Running Rsync: $rsync_cmd");
+        my $rsync_exit_code = system($rsync_cmd);
+
+        unless ($rsync_exit_code == 0) {
+            $self->error_message("Did not get a valid return from rsync, exit code was $rsync_exit_code for call $rsync_cmd.  Cleaning up and bailing out.");
+            rmtree($output_dir);
+            die $self->error_message;
+        }
     }
 
     chmod 02775, $output_dir;
     for my $subdir (grep { -d $_  } glob("$output_dir/*")) {
         chmod 02775, $subdir;
     }
-   
+
     # Make everything in here read-only 
     for my $file (grep { -f $_  } glob("$output_dir/*")) {
         chmod 0444, $file;
@@ -1055,14 +1089,14 @@ sub _process_sam_files {
     if (-e $self->temp_staging_directory . "/all_sequences.bam") {
         return 1;
     }
-    
+
     my $sam_input_file = $self->temp_scratch_directory . "/all_sequences.sam";
 
     unless (-e $sam_input_file) {
         $self->error_message("$sam_input_file is nonexistent.  Can't convert!");
         die $self->error_message;
     }
-        
+
     # things which don't produce sam natively must provide an unaligned reads file.
     my $unaligned_input_file = $self->temp_scratch_directory . "/all_sequences_unaligned.sam";
 
@@ -1077,12 +1111,12 @@ sub _process_sam_files {
         } else {
             $self->status_message("Cat of sam files successful.");
         }      
-        
+
         unlink($unaligned_input_file);
     }
 
     my $per_lane_sam_file_rg = $sam_input_file;
-   
+
     if ($self->requires_read_group_addition) {
         $per_lane_sam_file_rg = $self->temp_scratch_directory . "/all_sequences_rg.sam";
         my $add_rg_cmd = Genome::Model::Tools::Sam::AddReadGroupTag->create(
@@ -1104,12 +1138,12 @@ sub _process_sam_files {
     #For the sake of new bam flagstat that need MD tags added. Some
     #aligner like maq doesn't output MD tag in sam file, now add it
     my $final_sam_file;
-    
+
     if ($self->fillmd_for_sam) {
         my $sam_path = Genome::Model::Tools::Sam->path_for_samtools_version($self->samtools_version);
         my $ref_seq  = $self->reference_build->full_consensus_path('fa');
         $final_sam_file = $self->temp_scratch_directory . '/all_sequences.fillmd.sam';
-       
+
         my $cmd = "$sam_path fillmd -S $per_lane_sam_file_rg $ref_seq 1> $final_sam_file 2>/dev/null";
 
         my $rv  = Genome::Sys->shellcmd(
@@ -1124,7 +1158,7 @@ sub _process_sam_files {
     else {
         $final_sam_file = $per_lane_sam_file_rg;
     }
-    
+
     my $ref_list  = $self->reference_build->full_consensus_sam_index_path($self->samtools_version);
     unless ($ref_list) {
         $self->error_message("Failed to get MapToBam ref list: $ref_list");
@@ -1174,25 +1208,25 @@ sub _gather_params_for_get_or_create {
         }
 
     }
-    
+
     my $inputs_bx = UR::BoolExpr->resolve_normalized_rule_for_class_and_params($subclass, %is_input);
     my $params_bx = UR::BoolExpr->resolve_normalized_rule_for_class_and_params($subclass, %is_param);
 
     my %software_result_params = (#software_version=>$params_bx->value_for('aligner_version'),
-                                  params_id=>$params_bx->id,
-                                  inputs_id=>$inputs_bx->id,
-                                  subclass_name=>$subclass);
-    
+        params_id=>$params_bx->id,
+        inputs_id=>$inputs_bx->id,
+        subclass_name=>$subclass);
+
     return {
         software_result_params => \%software_result_params,
         subclass => $subclass,
         inputs=>\%is_input,
         params=>\%is_param,
     };
-    
+
 }
 
-   
+
 sub _prepare_working_and_staging_directories {
     my $self = shift;
 
@@ -1249,27 +1283,27 @@ sub _extract_input_fastq_filenames {
     my $self = shift;
 
     my $instrument_data = $self->instrument_data;
-    
+
     my %segment_params;
-    
+
     if (defined $self->instrument_data_segment_type) {
         # sanity check this can be segmented
         if (! $instrument_data->can('get_segments') && $instrument_data->get_segments > 0) {
             $self->error_message("requested to align a given segment, but this instrument data either can't be segmented or has no segments.");
             die $self->error_message;
         }
-        
+
         # only read groups for now
         if ($self->instrument_data_segment_type ne 'read_group') {
             $self->error_message("specified a segment type we don't support, " . $self->instrument_data_segment_type . ". we only support read group at present.");
             die $self->error_message;
         }
-        
+
         if (defined $self->filter_name) {
             $self->error_message("filtering reads is currently not supported with segmented inputs, FIXME.");
             die $self->error_message;
         }
-        
+
         $segment_params{read_group_id} = $self->instrument_data_segment_id;
     }
 
@@ -1325,7 +1359,7 @@ sub _extract_input_fastq_filenames {
 
         # this previously happened at the beginning of _run_aligner
         @input_fastq_pathnames = $self->run_trimq2_filter_style(@input_fastq_pathnames) 
-            if $self->trimmer_name and $self->trimmer_name eq 'trimq2_shortfilter';
+        if $self->trimmer_name and $self->trimmer_name eq 'trimq2_shortfilter';
 
         $self->_input_fastq_pathnames(\@input_fastq_pathnames);
     }
@@ -1353,9 +1387,9 @@ sub input_bfq_filenames {
             my $input_bfq_pathname = Genome::Sys->create_temp_file_path('sanger-bfq-'. $counter++);
             #Do we need remove sanger fastq here ?
             unless (Genome::Model::Tools::Maq::Fastq2bfq->execute(
-                fastq_file => $input_fastq_pathname,
-                bfq_file   => $input_bfq_pathname,
-            )) {
+                    fastq_file => $input_fastq_pathname,
+                    bfq_file   => $input_bfq_pathname,
+                )) {
                 $self->error_message('Failed to execute fastq2bfq quality conversion.');
                 die $self->error_message;
             }
@@ -1383,13 +1417,13 @@ sub qualify_trimq2 {
         $self->error_message("unrecognized trimq2 trimmer name: $trimmer_name");
         return;
     }
-    
+
     my $ver = $self->instrument_data->analysis_software_version;
     unless ($ver) {
         $self->error_message("Unknown analysis software version for instrument data: ".$self->instrument_data->id);
         return;
     }
-    
+
     if ($ver =~ /SolexaPipeline\-0\.2\.2\.|GAPipeline\-0\.3\.|GAPipeline\-1\.[01]/) {#hardcoded Illumina piepline version for now see G::I::Solexa
         $self->error_message ('Instrument data : '.$self->instrument_data->id.' not from newer Illumina analysis software version.');
         return;
@@ -1397,7 +1431,7 @@ sub qualify_trimq2 {
     return 1;
 }
 
-    
+
 sub _get_trimq2_params {
     my $self = shift;
 
@@ -1410,7 +1444,7 @@ sub _get_trimq2_params {
     return ($first_param, $string);
 }
 
-    
+
 sub get_trimq2_reports {
     return glob(shift->alignment_directory."/*trimq2.report*");
 }
@@ -1421,7 +1455,7 @@ sub _get_base_counts_from_trimq2_report {
     my ($ct, $trim_ct);
 
     my ($style) = $self->trimmer_name =~ /trimq2_(\S+)/;
-    
+
     if ($style =~ /^(smart1|hard)$/) {#Simple, no_filter style
         ($ct, $trim_ct) = $last_line =~ /^\s+(\d+)\s+\d+\s+(\d+)\s+/;
     }
@@ -1432,12 +1466,12 @@ sub _get_base_counts_from_trimq2_report {
         $self->error_message("unrecognized trimq2 style: $style");
         return;
     }
-    
+
     return ($ct, $trim_ct) if $ct and $trim_ct;
     $self->error_message("Failed to get base counts after trim for report: $report");
     return;
 }
-    
+
 
 sub calculate_base_counts_after_trimq2 {
     my $self    = shift;
@@ -1449,7 +1483,7 @@ sub calculate_base_counts_after_trimq2 {
         $self->error_message("Incorrect trimq2 report count: ".@reports);
         return;
     }
-    
+
     #Trimq2::Simple,  trimq2_smart1, get two report
     #Trimq2::PairEnd/Fragment, trimq2_shortfilter, get one report
 
@@ -1476,12 +1510,12 @@ sub run_trimq2_filter_style {
         output_dir  => $tmp_dir,
         report_file => $self->temp_staging_directory.'/trimq2.report',
     );
-    
+
     $params{length_limit} = $length if $length; #gmt trimq2 takes 32 as default length_limit
     $params{trim_string}  = $string if $string; #gmt trimq2 takes #  as default trim_string
-    
+
     my @trimq2_files = ();
-    
+
     if ($self->instrument_data->is_paired_end) {
         unless (@fq_files == 2) {
             $self->error_message('Need 2 fastq files for pair-end trimq2. But get :',join ',',@fq_files);
@@ -1511,10 +1545,10 @@ sub run_trimq2_filter_style {
             pair1_fastq_file => $p1,
             pair2_fastq_file => $p2,
         );
-        
+
         my $trimmer = Genome::Model::Tools::Fastq::Trimq2::PairEnd->create(%params);        
         my $rv = $trimmer->execute;
-        
+
         unless ($rv == 1) {
             $self->error_message("Running Trimq2 PairEnd failed");
             return;
@@ -1526,7 +1560,7 @@ sub run_trimq2_filter_style {
             $self->error_message('Need 1 fastq file for fragment trimq2. But get:', join ',', @fq_files);
             return;
         }
-        
+
         %params = (
             %params,
             fastq_file => $fq_files[0],
@@ -1553,7 +1587,7 @@ sub trimq2_filtered_to_unaligned_sam {
         $self->error_message('trimq2_filtered_to_unaligned method only applies to trimq2_shortfilter as trimmer');
         return;
     }
-    
+
     my @filtered = glob($alignment_directory."/*.filtered.fastq");
 
     unless (@filtered) {
@@ -1566,18 +1600,18 @@ sub trimq2_filtered_to_unaligned_sam {
         DIR      => $alignment_directory, 
         SUFFIX   => '.sam',
     );
-    
+
     my $filler = "\t*\t0\t0\t*\t*\t0\t0\t";
     my $seq_id = $self->instrument_data->id;
     my ($pair1, $pair2, $frag) = ("\t69", "\t133", "\t4");
     my ($rg_tag, $pg_tag)      = ("\tRG:Z:", "\tPG:Z:");
-    
+
     FILTER: for my $file (@filtered) {#for now there are 3 types: pair_end, fragment, pair_as_fragment    
         unless (-s $file) {
             $self->warning_message("trimq2 filtered file: $file is empty");
             next;
         }
-        
+
         my $fh = Genome::Sys->open_file_for_reading($file);
 
         if ($file =~ /\.pair_end\./) { #filtered output from G::M::T::F::Trimq2::PairEnd
@@ -1595,12 +1629,12 @@ sub trimq2_filtered_to_unaligned_sam {
 
                 my ($name1) = $head1 =~ /^@(\S+)\/[12]\s/; # read name in sam file doesn't contain /1, /2
                 my ($name2) = $head2 =~ /^@(\S+)\/[12]\s/;
-            
+
                 unless ($name1 eq $name2) {
                     $self->error_message("Pair-end names conflict : $name1 , $name2");
                     return;
                 }
-                
+
                 $out_fh->print($name1.$pair1.$filler.$seq1."\t".$qual1.$rg_tag.$seq_id.$pg_tag.$seq_id."\n");
                 $out_fh->print($name2.$pair2.$filler.$seq2."\t".$qual2.$rg_tag.$seq_id.$pg_tag.$seq_id."\n");
             }
@@ -1618,9 +1652,9 @@ sub trimq2_filtered_to_unaligned_sam {
                     ($name) = $head =~ /^@(\S+?)(\/[12])?\s/;
                 }
                 elsif ($file =~ /\.pair_as_fragment\./) {
-                #filtered output from G::M::T::F::Trimq2::PairEnd, since these are filtered pair_as_frag, their
-                #mates are used for alignment as fragment. For now, keep their original name with /1, /2 to
-                #differentiate
+                    #filtered output from G::M::T::F::Trimq2::PairEnd, since these are filtered pair_as_frag, their
+                    #mates are used for alignment as fragment. For now, keep their original name with /1, /2 to
+                    #differentiate
                     ($name) = $head =~ /^@(\S+)\s/;
                 }
                 else {
@@ -1635,7 +1669,7 @@ sub trimq2_filtered_to_unaligned_sam {
         $fh->close;
     }
     $out_fh->close;
-    
+
     return $out_fh->filename;
 }
 
@@ -1653,7 +1687,7 @@ sub _prepare_reference_sequences {
     }
 
     #my $reference_fasta_index_path = $reference_fasta_path . ".fai";
-    
+
     #unless(-e $reference_fasta_index_path) {
     #    $self->error_message("Alignment reference index path $reference_fasta_index_path does not exist. Use 'samtools faidx' to create this");
     #    die $self->error_message;
@@ -1691,8 +1725,8 @@ sub construct_groups_file {
 
     my $self = shift;
     my $output_file = shift || $self->temp_scratch_directory . "/groups.sam";
-    
-    
+
+
     my $aligner_command_line = $self->aligner_params_for_sam_header;
 
     my $insert_size_for_header;
@@ -1724,14 +1758,14 @@ sub construct_groups_file {
     my $platform = $self->instrument_data->sequencing_platform;
     $platform = ($platform eq 'solexa' ? 'illumina' : $platform);
 
-                 #@RG     ID:2723755796   PL:illumina     PU:30945.1      LB:H_GP-0124n-lib1      PI:0    DS:paired end   DT:2008-10-03   SM:H_GP-0124n   CN:WUGSC
-                 #@PG     ID:0    VN:0.4.9        CL:bwa aln -t4
+    #@RG     ID:2723755796   PL:illumina     PU:30945.1      LB:H_GP-0124n-lib1      PI:0    DS:paired end   DT:2008-10-03   SM:H_GP-0124n   CN:WUGSC
+    #@PG     ID:0    VN:0.4.9        CL:bwa aln -t4
     my $rg_tag = "\@RG\tID:$id_tag\tPL:$platform\tPU:$pu_tag\tLB:$lib_tag\tPI:$insert_size_for_header\tDS:$description_for_header\tDT:$date_run_tag\tSM:$sample_tag\tCN:WUGSC\n";
     my $pg_tag = "\@PG\tID:$id_tag\tVN:$aligner_version_tag\tCL:$aligner_cmd\n";
 
     $self->status_message("RG: $rg_tag");
     $self->status_message("PG: $pg_tag");
-    
+
     my $header_groups_fh = IO::File->new(">>".$output_file) || die "failed opening groups file for writing";
     print $header_groups_fh $rg_tag;
     print $header_groups_fh $pg_tag;

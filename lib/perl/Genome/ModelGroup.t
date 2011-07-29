@@ -61,8 +61,7 @@ sub setup_test_models {
         sequencing_platform => 'solexa',
         dna_type => 'cdna',
         read_aligner_name => 'bwa',
-        snv_detector_name => 'samtools',
-        snv_detector_params => '-test Genome/ModelGroup.t',
+        snv_detection_strategy => 'samtools -test Genome/ModelGroup.t',
     ); 
     ok($test_profile, 'created test processing profile');
     

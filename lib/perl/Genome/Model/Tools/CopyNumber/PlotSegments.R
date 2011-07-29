@@ -118,7 +118,7 @@ plotSegments <- function(chr="ALL", filename, entrypoints, ymax=NULL, ymin=NULL,
       }
       
       ##get the height of the peak at this position (if it exists)
-      ptop = 0
+      ptop = baseline
       peakNum=which((segs[,1] == as.character(annos[i,1])) &
         (segs[,2] <= midNoOffset) & (segs[,3] >= midNoOffset))
 
@@ -136,6 +136,10 @@ plotSegments <- function(chr="ALL", filename, entrypoints, ymax=NULL, ymin=NULL,
       mid2 = mid
       if(mid < leftEdge){
         mid2 = leftEdge
+      }
+      
+      if(is.null(annos[i,5])){
+        annos[i,5] = 0
       }
       
       text(mid2,(ypos+annos[i,5]),annos[i,4],cex=0.5,font=3)

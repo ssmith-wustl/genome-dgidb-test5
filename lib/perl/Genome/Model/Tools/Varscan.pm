@@ -7,7 +7,7 @@ use Genome;
 use Data::Dumper;
 use File::Temp;
 
-my $DEFAULT_VERSION = '2.2.4';
+my $DEFAULT_VERSION = '2.2.6';
 
 class Genome::Model::Tools::Varscan {
     is => ['Command'],
@@ -36,6 +36,7 @@ EOS
 }
 
 my %VARSCAN_VERSIONS = (
+    '2.2.6' => '/gsc/scripts/lib/java/VarScan/VarScan.v2.2.6.jar',
     '2.2.4' => '/gsc/scripts/lib/java/VarScan/VarScan.v2.2.4.jar',
 );
 
@@ -64,6 +65,24 @@ sub path_for_version {
     }
 
     return $VARSCAN_VERSIONS{$version};
+}
+
+sub pileup_command_for_reference_and_bam {
+    my $self = shift;
+    my $reference = shift;
+    my $bam = shift;
+
+    my $command;
+    # TODO this should be made a little cleaner, but it works for now.
+    if ($self->version eq "2.2.4") {
+        my $samtools_path = Genome::Model::Tools::Sam->path_for_samtools_version("r963"); # The last version of samtools that supports pileup
+        $command = "$samtools_path view -b -u -q 10 $bam | $samtools_path pileup -f $reference -";
+    } else {
+        my $samtools_path = Genome::Model::Tools::Sam->path_for_samtools_version("r963"); # The latest version of samtools installed should go here
+        $command = "$samtools_path mpileup -f $reference -q 10 $bam";
+    }
+
+    return $command;
 }
 
 sub path_for_latest_version {

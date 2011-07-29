@@ -22,6 +22,11 @@ class Genome::Model::SomaticVariation::Command::TierVariants{
             is_optional => 1,
         },
     ],
+    has_param => [
+        lsf_queue => {
+            default => 'apipe',
+        },
+    ],
 };
 
 sub execute {

@@ -36,13 +36,14 @@ my $bam_input = $test_dir . '/alignments/102922275_merged_rmdup.bam';
 # Updated to .v6 due to the addition of quality and natural sort order to bed file output 
 # Updated to .v7 due to the addition of read depth
 # Updated to .v8 due to directory structure changes
-my $expected_dir = $test_dir . '/expected.v11/';
+# Updated to .v12 due to a score changing from using mpileup instad of pileup
+my $expected_dir = $test_dir . '/expected.v12/';
 ok(-d $expected_dir, "expected results directory exists");
 
 
 my $refbuild_id = 101947881;
 
-my $version = ''; #Currently only one version of varscan
+my $version = '2.2.6';
 
 my $command = Genome::Model::Tools::DetectVariants2::Varscan->create(
     reference_build_id => $refbuild_id,
