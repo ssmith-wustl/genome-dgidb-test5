@@ -127,7 +127,7 @@ ok(Genome::Command::Crud->init_sub_commands(%config), 'init crud commands') or d
 # meta 
 my $create_meta = Person::Command::Create->__meta__;
 ok($create_meta, 'CREATE meta');
-print Person::Command::Create->help_usage_complete_text;
+
 is(Person::Command::Create->_name_for_objects, 'persons', 'CREATE: _name_for_objects');
 is(Person::Command::Create->_target_class, 'Person', 'CREATE: _target_class');
 
@@ -204,7 +204,7 @@ ok($list_meta, 'LIST meta');
 # meta
 my $update_meta = Person::Command::Update->__meta__;
 ok($update_meta, 'update meta');
-print Person::Command::Update->help_usage_complete_text;
+
 is(Person::Command::Update->_name_for_objects, 'persons', 'UPDATE: _name_for_objects');
 is(Person::Command::Update->_name_for_objects_ub, 'persons', 'UPDATE: _name_for_objects_ub');
 is_deeply(Person::Command::Update->_only_if_null, [qw/ job title mom /], 'UPDATE: _only_if_null');

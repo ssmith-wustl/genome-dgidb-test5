@@ -197,7 +197,7 @@ sub _save_properties {
     my $properties_file = $self->_properties_file;
     unlink $properties_file if -e $properties_file;
     eval {
-        Storable::store(\%properties, $properties_file);
+        Storable::nstore(\%properties, $properties_file);
     };
     
     if ( $@ ) {
