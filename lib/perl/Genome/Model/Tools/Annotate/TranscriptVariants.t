@@ -22,7 +22,10 @@ ok(-e $ref_transcript, 'ref transcript exists');
 my $iub_input = "$test_dir/iub_input";
 ok(-e $iub_input, 'iub input exists');
 
-my $output_base = "/gsc/var/cache/testsuite/running_testsuites/transcript_variants_output";
+my $output_base = File::Temp::tempdir(
+                'TranscripVariantOutput-XXXXXX',
+                DIR => '/gsc/var/cache/testsuite/running_testsuites',
+                CLEANUP => 1);
 my $command = Genome::Model::Tools::Annotate::TranscriptVariants->create(
     variant_file => $input,
     output_file => "$output_base.transcript",
