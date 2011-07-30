@@ -9,8 +9,7 @@ use Cwd;
 use Bio::Seq;
 use Bio::Tools::dpAlign;
 use Finishing::Assembly::Utility;
-use Gtk;
-use Gtk::ButtonCrate::Radio;
+use Gtk2;
 use GSC::IO::Assembly::Ace::Writer;
 #use Finishing::Assembly::Ace::Reader;
 #use Finishing::Assembly::Ace;
@@ -898,31 +897,31 @@ sub _calculate_split_region
 sub get_user_selected_reads
 {
 	my ($ref_reads) = @_;
-	Gtk->set_locale; 
-	Gtk->init;
+	Gtk2->set_locale; 
+	Gtk2->init;
 
 	my %reads = %{$ref_reads};
 
-	my $d = Gtk::Dialog->new();
+	my $d = Gtk2::Dialog->new();
 	$d->set_usize(300,300);
 	$d->show;
 
-	my $sw = Gtk::ScrolledWindow->new();
+	my $sw = Gtk2::ScrolledWindow->new();
 	$sw->set_policy("automatic", "automatic");
 	#$sw->set_policy("always", "always");
 	$sw->show;
 	$d->vbox->pack_start_defaults($sw);
 
-	my $vbox = Gtk::VBox->new();
+	my $vbox = Gtk2::VBox->new();
 	$vbox->show;
 	$sw->add_with_viewport($vbox);
 
 	foreach my $read_name (keys %reads)
 	{
-    	my $bc = Gtk::ButtonCrate::Radio->new('h');
+    	my $bc = Gtk2::ButtonCrate::Radio->new('h');
     	$vbox->pack_start($bc->bbox, 0, 0, 0);
 
-    	my $label = Gtk::Label->new($read_name);
+    	my $label = Gtk2::Label->new($read_name);
     	$label->show;
     	$bc->bbox->pack_start($label, 0, 0, 0);
 
@@ -935,7 +934,7 @@ sub get_user_selected_reads
     	$reads{$read_name} = $bc;
 	}
 
-	my $b = Gtk::Button->new("Done");
+	my $b = Gtk2::Button->new("Done");
 	$b->signal_connect
 	(
     	"clicked",
@@ -957,7 +956,7 @@ sub get_user_selected_reads
 				}				
         	}
 			$d->hide;
-        	Gtk->main_quit;
+        	Gtk2->main_quit;
     	},
 		\%reads,
 		$ref_reads,
@@ -966,12 +965,12 @@ sub get_user_selected_reads
 	$b->show;
 	$d->action_area->pack_start_defaults($b);
 
-	$b = Gtk::Button->new("Cancel");
-	$b->signal_connect("clicked", sub{ Gtk->exit(0) });
+	$b = Gtk2::Button->new("Cancel");
+	$b->signal_connect("clicked", sub{ Gtk2->exit(0) });
 	$b->show;
 	$d->action_area->pack_start_defaults($b);
 
-	Gtk->main;
+	Gtk2->main;
 
 }
 sub split

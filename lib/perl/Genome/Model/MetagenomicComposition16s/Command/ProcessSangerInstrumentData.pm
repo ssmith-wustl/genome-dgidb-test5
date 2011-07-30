@@ -404,11 +404,10 @@ sub _amplicon_iterator_for_name {
         $self->error_message("Can't open chromat dir to get reads. See above error.");
         return;
     }
-    # skip . and ..
-    $dh->read; $dh->read;
     # collect the read names
     my @all_read_names;
     while ( my $read_name = $dh->read ) {
+        next if $read_name eq '.' or $read_name eq '..';
         $read_name =~ s/\.gz$//;
         push @all_read_names, $read_name;
     }

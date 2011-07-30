@@ -435,10 +435,15 @@ sub get_or_create_data_directory {
 
 sub reallocate {
     my $self = shift;
-    my $disk_allocation = $self->disk_allocation or return 1; # ok - may not have an allocation
+    my $disk_allocation = $self->disk_allocation;
+    unless ($disk_allocation) {
+        $self->warning_message("No disk allocation found for build " . $self->__display_name__ . ", cannot reallocate!");
+        return 1;
+    }
 
-    unless ($disk_allocation->reallocate) {
-        $self->warning_message('Failed to reallocate disk space.');
+    my $rv = eval { $disk_allocation->reallocate };
+    unless ($rv) {
+        $self->warning_message("Failed to reallocate disk space!");
     }
 
     return 1;
