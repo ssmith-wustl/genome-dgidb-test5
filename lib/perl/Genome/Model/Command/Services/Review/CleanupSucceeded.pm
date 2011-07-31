@@ -8,6 +8,7 @@ class Genome::Model::Command::Services::Review::CleanupSucceeded {
             is => 'Genome::Model',
             is_many => 1,
             is_optional => 1,
+            shell_args_position => 1,
             doc => 'Models to check; resolved by Genome::Command::Base',
         },
     ],
