@@ -41,7 +41,7 @@ sub _detect_variants {
     my $rtg_cmd = "/gscmnt/gc2146/info/medseq/rtg_software/rtg-BETA-2011-04-29-34609/rtg snp";
     
     #add path to reference
-    $rtg_cmd .= " -t /gscmnt/gc2146/info/medseq/rtg_software/rtg-BETA-2011-04-29-34609/build_36.sdf";
+    $rtg_cmd .= " -t /gscmnt/gc2146/info/medseq/rtg_software/rtg-BETA-2011-04-29-34609/101947881_build36";
 
     #add path to output
     $rtg_cmd .= " -o ".$self->_temp_staging_directory."/rtg";

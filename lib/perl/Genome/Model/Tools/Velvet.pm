@@ -127,11 +127,9 @@ sub get_contig_lengths {
         if ($rec eq 'CTG') {
             my $seq = $fields->{seq};
             $seq =~ s/\n//g;
-
-            my ($sctg_num, $ctg_num) = split('-', $fields->{eid});
-            my $contig_name = 'Contig'.--$sctg_num.'.'.++$ctg_num;
-
-            $contig_lengths{$contig_name} = length $seq;
+            my $look_up_name = $fields->{eid};
+            $look_up_name =~ s/\-/\./;
+            $contig_lengths{$look_up_name} = length $seq;
         }
     }
     $fh->close;
