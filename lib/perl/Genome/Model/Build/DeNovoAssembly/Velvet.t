@@ -195,6 +195,34 @@ ok( $metrics->execute, 'Executed report' );
 ok( -s $example_build->stats_file, 'Example build stats file exists' );
 ok( -s $build->stats_file, 'Test created stats file' );
 is(File::Compare::compare($example_build->stats_file,$build->stats_file), 0, 'Stats files match' );
+#check build metrics
+my %expected_metrics = (
+    'n50_supercontig_length' => '141',
+    'reads_processed_success' => '0.833',
+    'reads_assembled_success' => '0.298',
+    'reads_assembled' => '7459',
+    'average_read_length' => '90',
+    'reads_attempted' => 30000,
+    'average_insert_size_used' => '260',
+    'n50_contig_length' => '141',
+    'genome_size_used' => '4500000',
+    'reads_not_assembled_pct' => '0.702',
+    'supercontigs' => '2424',
+    'average_supercontig_length' => '146',
+    'contigs' => '2424',
+    'n50_supercontig_length_gt_500' => '0',
+    'n50_contig_length_gt_500' => '0',
+    'major_contig_length' => '500',
+    'average_contig_length' => '146',
+    'average_supercontig_length_gt_500' => '0',
+    'average_contig_length_gt_500' => '0',
+    'reads_processed' => '25000',
+    'assembly_length' => '354779',
+    'read_depths_ge_5x' => '1.1'
+);
+for my $metric_name ( keys %expected_metrics ) {
+    ok( $expected_metrics{$metric_name} eq $build->$metric_name, "$metric_name metrics match" );
+}
 
 #print $build->data_directory."\n"; <STDIN>;
 

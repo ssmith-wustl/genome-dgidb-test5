@@ -86,6 +86,14 @@ class Genome::Model::Build {
             doc => 'Instrument data assigned to the model when the build was created.' 
         },
         instrument_data_ids => { via => 'instrument_data', to => 'id', is_many => 1, },
+        region_of_interest_set_name => { 
+            is => 'Text',
+            is_many => 1, 
+            is_mutable => 1,
+            via => 'inputs', 
+            to => 'value_id',
+            where => [ name => 'region_of_interest_set_name', value_class_name => 'UR::Value' ], 
+        },
         from_build_links => { is => 'Genome::Model::Build::Link', reverse_as => 'to_build', 
                               doc => 'bridge table entries where this is the \"to\" build(used to retrieve builds this build is \"from\")' },
         from_builds      => { is => 'Genome::Model::Build', via => 'from_build_links', to => 'from_build', 
@@ -435,12 +443,22 @@ sub get_or_create_data_directory {
 
 sub reallocate {
     my $self = shift;
-    my $disk_allocation = $self->disk_allocation or return 1; # ok - may not have an allocation
 
-    unless ($disk_allocation->reallocate) {
-        $self->warning_message('Failed to reallocate disk space.');
+    my $status = $self->status;
+    my $disk_allocation = $self->disk_allocation;
+
+    if ($disk_allocation) {
+        my $reallocated = eval { $disk_allocation->reallocate };
+        $self->warning_message("Failed to reallocate disk space!") unless $reallocated;
+    }
+    elsif ( grep { $status eq $_ } ('New', 'Unstartable') ) {
+        # New and Unstartable builds are not expected to have disk allocations.
+    }
+    else {
+        $self->warning_message("Reallocate called for build (" . $self->__display_name__ . ") but it does not have a disk allocation.");
     }
 
+    # Always returns 1 due to legacy behavior.
     return 1;
 }
 

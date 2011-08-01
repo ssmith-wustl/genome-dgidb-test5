@@ -1,4 +1,4 @@
-package Genome::Model::Tools::Validation::AssembleSvInValidationBams;
+package Genome::Model::Tools::Validation::SvCalls;
 
 use strict;
 use warnings;
@@ -7,7 +7,7 @@ use Cwd;
 use Genome;
 use List::Util qw(sum);
 
-class Genome::Model::Tools::Validation::AssembleSvInValidationBams {
+class Genome::Model::Tools::Validation::SvCalls {
     is => 'Command',
     has_input => [
     output_filename_prefix => {

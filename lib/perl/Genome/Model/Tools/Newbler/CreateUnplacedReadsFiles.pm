@@ -40,14 +40,8 @@ EOS
 sub execute {
     my $self = shift;
 
-    my $valid_scaffolds;
-    unless( $valid_scaffolds = $self->get_scaffolding_info ) {
-        $self->error_message("Failed to get valid scaffolds");
-        return;
-    }
-
     my $unplaced_reads;
-    unless( $unplaced_reads = $self->_unplaced_reads( $valid_scaffolds ) ) {
+    unless( $unplaced_reads = $self->_unplaced_reads ) {
         $self->error_message( "Failed to create reads.unplaced file" );
         return;
     }
@@ -80,7 +74,14 @@ sub _unplaced_reads_fasta {
 }
 
 sub _unplaced_reads {
-    my ( $self, $valid_scaffolds) = @_;
+    my $self = shift;
+
+    #filter contigs by min length
+    my $valid_scaffolds;
+    unless( $valid_scaffolds = $self->get_scaffolding_info ) {
+        $self->error_message("Failed to get valid scaffolds");
+        return;
+    }
 
     #store unplaced reads for later look up .. could be memory hog if there
     #are lots of reads but using array takes really long time

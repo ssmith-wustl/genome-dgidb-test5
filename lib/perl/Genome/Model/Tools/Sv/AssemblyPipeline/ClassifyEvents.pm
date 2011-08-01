@@ -146,13 +146,13 @@ sub execute {
         $TumorPurity = getContamination($self->tumor_purity_file);
     }
 
-
+    my $header;
     open(IN, "< $ReadCountFile") || die "Could not open '$ReadCountFile': $!";
     @entireFile = <IN>;
     close IN;
     foreach $line (@entireFile) {
+        if ( $line =~ /^#/ ) { $header = $line; print NON $header; print GERM $header; next; }
         chomp $line;
-        if ( $line =~ /\#/ ) { next; }
         if ( $line =~ /no\s+fasta\s+sequence/ ) { print NON "$line\n"; next; }
         $normalTotal = $patientId = $tumorTotal = $normalSv = $tumorSv  = undef;
         if ( $line =~ /(\S+).normal\.totalReads\:(\d+)/i ) { $patientId = $1; $normalTotal = $2; }
@@ -215,6 +215,7 @@ sub execute {
     }
     open(SOM, "< $tempSomaticFile");
     open(NEW_SOM, "> $finalSomaticFile");
+    print NEW_SOM $header;
     @entireFile = <SOM>;
     close SOM;
     foreach $line (@entireFile) {
@@ -234,6 +235,7 @@ sub execute {
     @entireFile = <AMB>;
     close AMB;
     open(NEW_AMB, "> $ambiguousFile") || die "Could not open '$ambiguousFile' for output: $!";
+    print NEW_AMB $header;
     foreach $line (@entireFile) {
         chomp $line;
         # 2.28	2	99234794	99234794	2	99235019	99235019	DEL

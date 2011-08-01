@@ -365,6 +365,52 @@ sub read_in_breakpoints {
                 $current_contig_sequence .= $line;
             }
         }
+        #resolve last indel of file
+        if(%$current_contig) {
+            $current_contig->{'sequence'} = $current_contig_sequence;
+            if(defined $source) {
+                $current_contig->{'source'} = $source;
+            }
+            #adjust strand
+            if($current_contig->{'strand'} ne '+') {
+                #print STDERR "> original contig\n$current_contig_sequence\n";
+                $current_contig->{'sequence'} =~ tr/ACGTacgt/TGCAtgca/;
+                $current_contig->{'sequence'} = reverse $current_contig->{'sequence'};
+                $current_contig->{'strand'} = '+';
+
+                #also need to swap the genomic coordinates
+                ($current_contig->{'contig_start'},$current_contig->{'contig_stop'}) = ($current_contig->{'contig_stop'},$current_contig->{'contig_start'});
+
+                #lastly need to adjust the position of the indel
+                #roughly this is: the length of the contig - (the old position - 1) equals the new position in the reversed contig. The last base of the indel is: contig_location + size - 1 if an insertion and contig_location - 1 if deletion
+                my $type_size_toggle_var = $current_contig->{'assem_type'} eq 'DEL' ? 0 : 1;
+                my $temp_var_location = $current_contig->{'contig_location_of_variant'};
+                $current_contig->{'contig_location_of_variant'} = $current_contig->{'length'} - $current_contig->{'microhomology_contig_endpoint'} + 1;
+                $current_contig->{'microhomology_contig_endpoint'} = $current_contig->{'length'} - $temp_var_location + 1;
+                #print STDERR "> reverse complemented contig\n",$current_contig->{'sequence'},"\n";
+            }
+
+            #check to make sure we didn't get back something crazy
+            if($current_contig->{'assem_type'} !~ /INS|DEL|ITX/i) {
+                $self->error_message("Skipping contig that assembled as a type other than insertion, tandem duplication (ITX) or deletion with variant starting at " . $current_contig->{'pred_pos1'});
+            }
+            else {
+                #check that Ins field makes sense
+                unless($current_contig->{'contig_location_of_variant'} <= $current_contig->{'microhomology_contig_endpoint'}) {
+                    $self->error_message("Microhomology makes no sense for variant starting at " . $current_contig->{'pred_pos1'} . "\n");
+                }
+
+                #check that coordinates make sense
+                unless($current_contig->{'contig_start'} < $current_contig->{'contig_stop'}) {
+                    #we will skip those until they are fixed
+                    $self->error_message("Genomic coordinates make no sense for variant starting at " . $current_contig->{'pred_pos1'} . "\n");
+                }
+                else {
+                    push @contigs, $current_contig;
+                }
+            }
+
+        }
         return \@contigs;
     }
     else {
