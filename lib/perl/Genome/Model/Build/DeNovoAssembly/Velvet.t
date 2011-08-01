@@ -133,8 +133,8 @@ is(
 
 # ASSEMBLE
 my $assembler_rusage = $build->assembler_rusage;
-my $queue = ( Genome::Config->should_use_alignment_pd ) ? 'alignment-pd' : 'alignment';
-# FIXME is($assembler_rusage, "-q $queue -R 'select[type==LINUX64 && mem>30000] rusage[mem=30000] span[hosts=1]' -M 30000000", 'assembler rusage');
+my $queue = ( $build->run_by eq 'apipe-tester' ) ? 'alignment-pd' : 'apipe';
+is($assembler_rusage, "-q $queue -R 'select[type==LINUX64 && mem>30000] rusage[mem=30000] span[hosts=1]' -M 30000000", 'assembler rusage');
 my %assembler_params = $build->assembler_params;
 #print Data::Dumper::Dumper(\%assembler_params);
 is_deeply(

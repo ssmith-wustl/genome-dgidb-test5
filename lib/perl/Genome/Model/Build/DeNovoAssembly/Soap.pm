@@ -253,8 +253,8 @@ sub assembler_rusage {
     }
 
     my $mem = 30000;
-    my $queue = 'alignment';
-    $queue = 'alignment-pd' if (Genome::Config->should_use_alignment_pd);
+    my $queue = 'apipe';
+    $queue = 'alignment-pd' if $self->run_by eq 'apipe-tester';
     return "-q $queue -n 4 -R 'span[hosts=1] select[type==LINUX64 && mem>$mem] rusage[mem=$mem]' -M $mem".'000';
 }
 
