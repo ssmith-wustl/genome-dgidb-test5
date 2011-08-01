@@ -154,20 +154,9 @@ sub _run_aligner {
     ###################################################
     # append temp sam file to all_sequences.sam
     ###################################################
-    $self->status_message("Appending temporary mapped_reads.sam to all_sequences.sam.");
-    
+    $self->status_message("Adjusting and appending mapped_reads.sam to all_sequences.sam.");
     
     $self->_fix_sam_output($reference_build, $temp_sam_output, $sam_file, @input_pathnames);
-    
-    #my $append_cmd = "cat $temp_sam_output >> $sam_file";
-
-    #$rv = Genome::Sys->shellcmd(
-    #    cmd => $append_cmd,
-    #    input_files => [$temp_sam_output, $sam_file],
-    #    output_files => [$sam_file],
-    #    skip_if_output_is_present => 0 # because there will already be an all_sequences.sam we're appending to
-    #);
-    #unless($rv) { die $self->error_message("Appending temporary mapped_reads.sam to all_sequences.sam failed."); }
     
     ###################################################
     # clean up
@@ -176,12 +165,8 @@ sub _run_aligner {
     # confirm that at the end we have a nonzero sam file, this is what'll get turned into a bam and copied out.
     unless (-s $sam_file) { die $self->error_message("The sam output file $sam_file is zero length; something went wrong."); }
 
-    # TODO
-    # If you have any log files from the aligner you're wrapping that you'd like to keep,
-    # copy them out into the staging directory here.
-
-    # TODO
-    # Do any last minute checks on the staged data and die if they fail.
+    # TODO Any log files for staging directory?
+    # TODO Any last minute checks?
 
     # If we got to here, everything must be A-OK.  AlignmentResult will take over from here
     # to convert the sam file to a BAM and copy everything out.
@@ -293,7 +278,9 @@ sub _fix_sam_output {
             $sam_records[$_]->{qual} = $fq_records[$_]->{qual};
         }
         
-        # not running in PE mode (may still be in force fragment mode)
+        # if we're not running in PE mode, we may still be in force fragment mode
+        # in this case we need to update the read names so they don't contain the /1 and /2
+        # and also update the sam flags (see TODO below)
         if ($fq_count == 1) {
             if ($sam_records[0]->{qname} =~ /^(.+)\/([12])$/) {
                 my $new_qname = $1;
@@ -317,10 +304,6 @@ sub _fix_sam_output {
                 # 0x8, not clear whether next fragment is unmapped 
                 # 0x20, not clear whether SEQ of next fragment is reverse complemented
             }
-        }
-        
-        for(0..($fq_count-1)) {
-            my $sam_string
         }
         
         for my $sam_record (@sam_records) {
@@ -428,7 +411,6 @@ sub _calculate_new_cigar_string_and_pos {
             $post_clip > 0 ? $post_clip . "S" : ""
         ))
     };
-        
 }
 
 sub _pull_sam_record_from_fh {
@@ -454,7 +436,6 @@ sub _pull_sam_record_from_fh {
         return $record;
     }
 }
-
 
 sub _pull_fq_record_from_fh {
     my $self = shift;
@@ -490,7 +471,6 @@ sub _pull_fq_record_from_fh {
     };
 }
 
-
 # TODO need this?
 sub fillmd_for_sam {
     return 1;
@@ -511,9 +491,9 @@ sub supports_streaming_to_bam {
     return 0;
 }
 
-
 # TODO
-# verify above getters
+# verify above flags (fillmd, rg addition, bam i/o)
 # sam flags may be wrong in force fragment
 # cigar string with =/X doesnt work
 # insert sizes
+# log files and last minute checks
