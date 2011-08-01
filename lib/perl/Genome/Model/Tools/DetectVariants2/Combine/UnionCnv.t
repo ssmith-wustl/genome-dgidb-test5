@@ -15,7 +15,7 @@ BEGIN {
     if ($archos !~ /64/) {
         plan skip_all => "Must run from 64-bit machine";
     } else {
-        plan tests => 5;
+        plan tests => 3;
     }
 };
 
