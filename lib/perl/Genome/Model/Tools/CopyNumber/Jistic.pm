@@ -19,9 +19,6 @@ require Genome::Sys;
 use FileHandle;
 use Cwd;
 
-#java -Xmx1500m -classpath ../JISTIC.jar JISTIC.Distribution spec=specs copynumber=brc.cnaCalls locations=../hg18_Gene_Info.txt mirna=../hg18_miRNA_Info.txt bands=../Human_cytoBand.txt
-#perl ../addNamesToMatrix.pl ../hg18_Gene_Info.txt gene.matrix >gene.name.matrix
-
 
 class Genome::Model::Tools::CopyNumber::Jistic {
     is => 'Command',
@@ -246,8 +243,8 @@ sub execute {
     chdir($output_dir);
 
 
-    if(defined($segment_file)){
-        my $cmd = "java -Xmx1500m -classpath /gscuser/cmiller/usr/src/JISTIC/JISTIC.jar JISTIC.convertSEG $segment_file /gscuser/cmiller/annotations/probes.10k.hg18.dat excludedregions=/gscuser/cmiller/annotations/dgvExclude.reg >cnaMatrix.dat";        
+    if(defined($segment_file)){+
+        my $cmd = "java -Xmx1500m -classpath /gscuser/cmiller/usr/src/JISTIC/JISTIC.jar JISTIC.convertSEG $segment_file /gscuser/cmiller/annotations/jistic/probes.10k.hg18.dat excludedregions=/gscuser/cmiller/annotations/jistic/dgvExclude.reg >cnaMatrix.dat";        
         my $return = Genome::Sys->shellcmd(
             cmd => "$cmd",
             );
