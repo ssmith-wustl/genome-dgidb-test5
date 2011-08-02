@@ -77,7 +77,7 @@ sub _detect_variants {
 
     my $samtools_cmd;
     if($self->is_mpileup_compatible) { 
-        $samtools_cmd = "$sam_pathname mpileup -u $parameters -f $ref_seq_file $bam_file | bcftools view -Avcg - > $snv_output_file";
+        $samtools_cmd = "$sam_pathname mpileup -u $parameters -f $ref_seq_file $bam_file | bcftools view -Acg - > $snv_output_file";
     } else {
         $samtools_cmd = "$sam_pathname pileup -c $parameters -f $ref_seq_file %s $bam_file > %s";
     }
