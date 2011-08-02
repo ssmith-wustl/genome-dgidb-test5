@@ -2,13 +2,14 @@
 package Genome::InlineConfig;
 use strict;
 use warnings;
+use Config;
 
 our $DIRECTORY;
 sub DIRECTORY {
     unless(defined $DIRECTORY) {
         $DIRECTORY = $INC{"Genome/InlineConfig.pm"};
         $DIRECTORY =~ s/\.pm(\/|)//;
-        $DIRECTORY .= 32;
+        $DIRECTORY .= ($Config{use64bitall}) ? "64" : "32";
         unless (-d $DIRECTORY) {
             unless(mkdir $DIRECTORY) {
                 die "failed to create directory $DIRECTORY: $!";

@@ -662,7 +662,7 @@ sub save_classification {
     
     my $classification_file = $self->classification_file;
     unlink $classification_file if -e $classification_file;
-    store($classification, $classification_file);
+    Storable::nstore($classification, $classification_file);
     
     return 1;
 }

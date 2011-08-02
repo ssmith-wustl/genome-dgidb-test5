@@ -134,7 +134,8 @@ sub execute {
         locus_tag        => $config->{locus_tag},
         fasta            => $collect_sequence->new_ctgs_out,
         analysis_version => $config->{pipe_version},
-        acedb_version    => $config->{acedb_version},
+        #acedb_version    => $config->{acedb_version},
+        acedb_version    => $self->acedb_version_lookup( $config->{acedb_version} ),
         project_type     => $config->{project_type},
         path             => $config->{path},
     );
@@ -522,6 +523,7 @@ sub acedb_version_lookup
     my $acedb_lookup = undef;
 
     my %acedb_version_lookup = (
+        'DEV'  => 'Development',
         'V1'  => 'Version_1.0',
         'V2'  => 'Version_2.0',
         'V3'  => 'Version_3.0',

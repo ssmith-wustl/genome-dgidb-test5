@@ -644,11 +644,18 @@ sub cleanup_handler_check {
     if ($symlink_count > 0) {
         $SIG{'INT'} = \&INT_cleanup;
         $SIG{'TERM'} = \&INT_cleanup;
+        $SIG{'HUP'} = \&INT_cleanup;
+        $SIG{'ABRT'} = \&INT_cleanup;
+        $SIG{'QUIT'} = \&INT_cleanup;
+        $SIG{'SEGV'} = \&INT_cleanup;
     } else {
         delete $SIG{'INT'};
         delete $SIG{'TERM'};
+        delete $SIG{'HUP'};
+        delete $SIG{'ABRT'};
+        delete $SIG{'QUIT'};
+        delete $SIG{'SEGV'};
     }
-
 }
 
 END {

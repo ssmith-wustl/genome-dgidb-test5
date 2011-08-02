@@ -19,6 +19,12 @@ class Genome::Model::Tools::Velvet::CreateReadsFiles {
             is => 'Number',
             doc => 'Minimum contig length to export reads for',
         },
+        default_gap_size => {
+            is => 'Number',
+            doc => 'Gap size to assign',
+            is_optional => 1,
+            default_value => 20,
+        }
     ],
 };
 
@@ -56,14 +62,7 @@ sub execute {
     #velvet output afg file handle
     my $afg_fh = Genome::Sys->open_file_for_reading( $self->velvet_afg_file );
 
-    #load gap sizes
-    my $gap_sizes = $self->get_gap_sizes;
-    unless ($gap_sizes) {
-	$self->error_message("Failed to get gap sizes");
-	return;
-    }
-
-    #load contigs lengths
+    #load contigs lengths - gets pcap name contig lengths w/o min length filtering
     my $contig_lengths = $self->get_contig_lengths( $self->velvet_afg_file );
     unless ($contig_lengths) {
 	$self->error_message("Failed to get contigs lengths");
@@ -78,11 +77,11 @@ sub execute {
     }
 
     my $scaffolds_info;
+    #gets velvet named contigs names .. w/o min length filtering
     unless( $scaffolds_info = $self->get_scaffold_info_from_afg_file ) {
         $self->error_message("Failed to get scaffold info from contigs.fa file");
         return;
     }
-
     my $supercontig_number = 0;
     my $contig_number = 0;
     while (my $record = getRecord($afg_fh)) {
@@ -95,10 +94,10 @@ sub execute {
 		$self->error_message("Failed get contig length for seq: ");
 		return;
 	    }
-
             #filter contigs less than min length
             my $look_up_name = $fields->{eid};
             $look_up_name =~ s/\-/\./;
+
             next if $scaffolds_info->{$look_up_name}->{filtered_supercontig_length} < $self->min_contig_length;
             next if $scaffolds_info->{$look_up_name}->{contig_length} < $self->min_contig_length;
 
@@ -152,7 +151,7 @@ sub execute {
 		    $c_or_u = ($c_or_u eq 'U') ? 0 : 1;
 
 		    #calculate contig start pos in supercontig
-		    my $sctg_start = $self->_get_supercontig_position($contig_lengths, $gap_sizes, $contig_name);
+                    my $sctg_start = $self->_get_supercontig_position($contig_lengths, $look_up_name);
 		    $sctg_start += $ctg_start;
 
 		    $rp_fh->print("* $read_name 1 $read_length $c_or_u $contig_name Supercontig$supercontig_number $ctg_start $sctg_start\n");
@@ -230,36 +229,27 @@ sub _read_start_stop_positions {
 }
 
 sub _get_supercontig_position {
-    my ($self, $contig_lengths, $gap_sizes, $contig_name) = @_;
+    my ($self, $contig_lengths, $contig_name) = @_;
 
-    my ($supercontig_number, $contig_number) = $contig_name =~ /Contig(\d+)\.(\d+)/;
+    my ($supercontig_number, $contig_number) = $contig_name =~ /(\d+)\.(\d+)/;
     unless (defined $contig_number and defined $supercontig_number) {
 	$self->error_message("Failed to get contig number from contig_name: $contig_name");
 	return;
     }
+    #0 contig number is first contig in scaffold so start is zero;
+    return $contig_number if $contig_number == 0;
     my $supercontig_position;
     #add up contig length and gap sizes 
     while ($contig_number > 0) {
-	$contig_number--;
-	
-	if ($contig_number == 0) {
-	    $supercontig_position += 0;
-	}
-	else {
-	    my $name = 'Contig'.$supercontig_number.'.'.$contig_number;
-	    #total up contig lengths
-	    unless (exists $contig_lengths->{$name}) {
-		$self->error_message("Failed to get contig length for contig: $name");
-		return;
-	    }
-	    $supercontig_position += $contig_lengths->{$name};
-	    #total up gap lengths
-	    unless (exists $gap_sizes->{$name}) {
-		$self->error_message("Failed to get gap size for contig: $name");
-		return;
-	    }
-	    $supercontig_position += $gap_sizes->{$name};
-	}
+        $contig_number--;
+        my $prev_contig_name = $supercontig_number.'.'.$contig_number;
+        #total up contig lengths
+        unless (exists $contig_lengths->{$prev_contig_name}) {
+            $self->error_message("Failed to get contig length for contig: $prev_contig_name");
+            return;
+        }
+        $supercontig_position += $contig_lengths->{$prev_contig_name};
+        $supercontig_position += $self->default_gap_size;
     }
     return $supercontig_position;
 }

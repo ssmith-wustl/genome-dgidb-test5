@@ -40,21 +40,12 @@ EOS
 sub execute {
     my $self = shift;
 
+    #make edit_dir in assembly dir
     unless ( -d $self->consed_edit_dir ) {
         $self->create_consed_dir;
     }
 
-    unless( $self->_write_contigs_files ) {
-        $self->error_message( "Failed to write unscaffolded fasta and qual files from newbler files" );
-        return;
-    }
-
-    return 1;
-}
-
-sub _write_contigs_files {
-    my $self = shift;
-
+    #filter contigs by min length
     my $scaffolds = $self->get_scaffolding_info;
     if ( not $scaffolds ) {
         $self->error_message( "Failed to get scaffolding info" );

@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use Genome;
+use File::Basename;
 
 class Genome::Model::Build::Command::ReferenceAlignment::SubmissionSummary {
     is => 'Genome::Command::Base',
@@ -122,10 +123,12 @@ sub execute {
 
     my @builds = $self->builds;
     for my $build (@builds) {
-        my $roi_name = $build->model->region_of_interest_set_name ? $build->model->region_of_interest_set_name : 'N/A';
-        my $refbuild_name = $build->model->reference_sequence_build->name ? $build->model->reference_sequence_build->name : 'N/A';
-        print $samp_map join ("\t", $build->model->subject_name, $refbuild_name, $roi_name, $build->whole_rmdup_bam_file);
-        print $samp_map "\n";
+        if ($build == $build->model->last_succeeded_build) {
+            my $roi_name = $build->model->region_of_interest_set_name ? $build->model->region_of_interest_set_name : 'N/A';
+            my $refbuild_name = $build->model->reference_sequence_build->name ? $build->model->reference_sequence_build->name : 'N/A';
+            print $samp_map join ("\t", $build->model->subject_name, $refbuild_name, $roi_name, $build->whole_rmdup_bam_file, basename($build->whole_rmdup_bam_file));
+            print $samp_map "\n";
+        }
     }
     
     print $bam_list join (" ", map {$_->whole_rmdup_bam_file} @builds);
