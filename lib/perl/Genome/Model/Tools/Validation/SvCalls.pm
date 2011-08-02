@@ -140,27 +140,11 @@ sub execute {
     $ass_in_fh->close;
 
     #execute assembly command
-    my $assembly_output_file = $file_prefix . ".assembly_output"; 
-    my $assembly_fasta_file = $assembly_output_file . ".fasta";
-    my $assembly_cm_file = $assembly_output_file . ".cm";
-
-#Intermediate read directories take a lot of space and are probably only needed for special applications.    
-=cut
-    my $assembly_intermediate_read_dir = $file_prefix . "_intermediate_read_dir/";
-    #if read_dir exists, check to see that it's empty; otherwise, create it
-    if (-e $assembly_intermediate_read_dir && -d $assembly_intermediate_read_dir) {
-        my $glob = glob($assembly_intermediate_read_dir.'/*');
-        if ($glob) {
-            $self->error_message("Assembly intermediate read dir is not empty! Will not proceed.");
-            return;
-        }
-    }
-    else {
-        mkdir $assembly_intermediate_read_dir or die "Unable to make assembly_intermediate_read_dir $assembly_intermediate_read_dir.\n";
-    }
-=cut
-
+    my $assembly_output_file = $file_prefix . ".assembly_output.csv"; 
+    my $assembly_fasta_file = $file_prefix . ".assembly_output.fasta";
+    my $assembly_cm_file = $file_prefix . ".assembly_output.cm";
     my $bams = join(",",$tumor_val_bam,$normal_val_bam);
+
     my $assembly_cmd = Genome::Model::Tools::Sv::AssemblyValidation->create(
         bam_files => $bams,
         output_file => $assembly_output_file,
@@ -174,7 +158,6 @@ sub execute {
     );
     $assembly_cmd->execute;
     $assembly_cmd->delete;
-
 
     #create index file
     my $index_file = $assembly_output_file . ".index";
