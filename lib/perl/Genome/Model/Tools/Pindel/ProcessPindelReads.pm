@@ -26,7 +26,7 @@ class Genome::Model::Tools::Pindel::ProcessPindelReads {
         },
         reference_sequence_input => {
             calculate_from => ['reference_build_id'],
-            calculate => q{ Genome::Model::Build->get($reference_build_id)->full_consensus_path('fa') },
+            calculate => q{ Genome::Model::Build->get($reference_build_id)->cached_full_consensus_path('fa') },
             doc => 'Location of the reference sequence file',
         },
         mode => {
