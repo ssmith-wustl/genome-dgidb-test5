@@ -205,12 +205,12 @@ sub decomposed_aligner_params {
     # split a colon-delimited list of arguments
     #my @params = split(":", $full_params || "::");
 
-    my $defaults = ("-p 4 -q 20 -v 4 -z !");
+    my $defaults = ("-p 4 -q 20 -v 4 -z ! -R");
     # -p is the number of processors to give it
     # -z ! is required to get the correct quality score output
     # -v is the number of mismatches to allow
     # -q is the minimum quality score used in trimming
-    
+    # -R appends refseq information to the bam, allowing us to use a bsmap script to calc methylation ratios
     
     # create our params hash, using default arguments if none were supplied
     my $aligner_params = $full_params || $defaults;
