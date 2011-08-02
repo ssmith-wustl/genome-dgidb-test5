@@ -2,6 +2,8 @@ package Genome::Model::Build::ReferenceSequence;
 use strict;
 use warnings;
 use Genome;
+use File::Path;
+use File::Copy;
 
 require Carp;
 use Regexp::Common;
@@ -174,7 +176,8 @@ class Genome::Model::Build::ReferenceSequence {
             is => 'Hash',
             is_optional => 1,
             doc => 'file handle per chromosome for reading sequences so that it does not need to be constantly closed/opened',
-        }
+        },
+        _local_cache_dir_is_verified => { is => 'Boolean', default_value => 0, },
     ],
     doc => 'a specific version of a reference sequence, with cordinates suitable for annotation',
 };
@@ -629,5 +632,209 @@ sub chromosome_array_ref {
     return \@chromosomes;
 }
 
+sub cached_full_consensus_path {
+    my ($self, $format) = @_;
+
+    $self->status_message('Using cached full consensus path');
+
+    if ( not $format or $format ne 'fa' ) {
+        $self->error_message('Unsupported format ('.($format ? $format : 'none').') to get cached full consensus path');
+        return;
+    }
+
+    my $cache_dir = $self->verify_or_create_local_cache;
+    return if not $cache_dir;
+
+    my $file = $cache_dir.'/all_sequences.fa';
+    unless (-e $file){
+        $self->error_message("Failed to find " . $file);
+        return;
+    }
+
+    $self->status_message('Cached directory: '.$cache_dir);
+    $self->status_message('Cached full consensus path: '.$file);
+
+    return $file;
+}
+
+sub local_cache_basedir {
+    return "/var/cache/tgisan";
+}
+
+sub local_cache_dir {
+    my $self = shift;
+    return $self->local_cache_basedir."/".$self->data_directory;
+}
+
+sub local_cache_lock {
+    my $self = shift;
+    return $self->local_cache_basedir."/LOCK-".$self->id;
+}
+
+#MOVE TO GENOME::SYS#
+sub available_kb {
+    my ($self, $directory) = @_;
+
+    Carp::confess('No directory to get available kb!') if not $directory;
+    Carp::confess("Directory ($directory) does not exist! Cannot get available kb!") if not -d $directory;
+
+    $self->status_message('Get availble kb for '.$directory);
+
+    my $cmd = "df -k $directory |";
+    $self->status_message('DF command: '.$cmd);
+    my $fh = IO::File->new($cmd);
+    if ( not $fh ) {
+        $self->error_message('Failed to create df command: '.$!);
+        return;
+    }
+    $fh->getline; # Filesystem           1K-blocks      Used Available Use% Mounted on
+    my $line = $fh->getline;
+    my @tokens = split(/\s+/, $line);
+    $fh->close;
+
+    if ( not defined $tokens[3] ) {
+        $self->error_message('Failed to get kb available from df command');
+        return;
+    }
+
+    $self->status_message('KB available: '.$tokens[3]);
+
+    return $tokens[3];
+}
+
+sub copy_file {
+    my ($self, $file, $dest) = @_;
+
+    Carp::confess('No file to copy!') if not $file;
+    $self->status_message('File: '.$file);
+    my $sz = -s $file;
+    Carp::confess("File ($file) does not exist!") if not $file;
+    $self->status_message('Size: '.$sz);
+
+    Carp::confess('No destination file!') if not $dest;
+    $self->status_message('Destination file: '.$dest);
+    my $dest_sz = -s $dest;
+    Carp::confess("Destination file ($dest) already exists!") if defined $dest_sz;
+    $self->status_message('Destination size: '.( $dest_sz || 0));
+
+    $self->status_message("Copy $file to $dest");
+    my $cp = File::Copy::copy($file, $dest);
+    if ( not $cp ) {
+        $self->error_message('Copy failed! '.$@);
+        return;
+    }
+    $dest_sz = -s $dest;
+    $self->status_message('Destination size: '.( $dest_sz || 0));
+    if ( $dest_sz != $sz ) {
+        $self->error_message('Copy returned ok, but source/destination files are not the same size!');
+        return;
+    }
+
+    return 1;
+}
+#
+
+sub verify_or_create_local_cache {
+    my $self = shift;
+
+    $self->status_message('Verify or create local cache');
+
+    my $local_cache_dir = $self->local_cache_dir;
+    $self->status_message('Local cache directory: '.$local_cache_dir);
+    if(  $self->_local_cache_dir_is_verified ) {
+        $self->status_message('Local cache directory has already been verified!');
+        return $local_cache_dir;
+    }
+
+    # lock
+    $self->status_message('Lock local cache directory');
+    my $lock_name = $self->local_cache_lock;
+    $self->status_message('Lock name: '.$lock_name);
+    my $lock = Genome::Sys->lock_resource(
+        resource_lock => $lock_name,
+        max_try => 20, # 20 x 180 sec each = 1hr
+        block_sleep => 180,
+    );
+    unless ($lock) {
+        $self->error_message("Failed to get lock for $lock_name!");
+        return;
+    }
+    $self->status_message('Lock obtained');
+
+    # create the cache dir, if necessary
+    if ( not -d $local_cache_dir ) {
+        $self->status_message('Create local cache directory');
+        my $mk_path = File::Path::make_path($local_cache_dir);
+        if ( not $mk_path or not -d $local_cache_dir ) {
+            $self->error_message("Failed to make local cache directory ($local_cache_dir)");
+            return;
+        }
+    }
+
+    # verify files
+    $self->status_message('Verify files in local cache directory');
+    my %files_to_copy_to_local_cache = (
+        # file_base_name => is_requried
+        'all_sequences.fa' => 1,
+        'all_sequences.fa.fai' => 1, 
+        'all_sequences.dict' => 0,
+    );
+    my $dir = $self->data_directory;
+    my @files_to_copy;
+    my $kb_required = 0;
+    for my $base_name ( keys %files_to_copy_to_local_cache ) { 
+        my $file = $dir.'/'.$base_name;
+        $self->status_message('File: '.$file);
+        my $sz = -s $file;
+        if ( not $sz ) {
+            next if not $files_to_copy_to_local_cache{$base_name}; # not required
+            $self->error_message("File ($file) to copy to cache directory does not exist!");
+            return;
+        }
+        $self->status_message('Size: '.$sz);
+        my $cache_file = $local_cache_dir.'/'.$base_name;
+        my $cache_sz = -s $cache_file;
+        $cache_sz ||= 0;
+        $self->status_message('Cache file: '.$cache_file);
+        $self->status_message('Cache size: '.$cache_sz);
+        next if $cache_sz and $cache_sz == $sz;
+        $self->status_message('Need to copy file: '.$cache_file);
+        unlink $cache_file if $cache_sz > 0; # partial???
+        push @files_to_copy, $base_name;
+        $kb_required += sprintf('%.0d', $sz / 1024);
+    }
+    $self->status_message('Verify...OK');
+
+    # copy
+    if ( @files_to_copy ) {
+        $self->status_message('Copy '.@files_to_copy.' to local cache directory');
+        my $kb_available = $self->available_kb($local_cache_dir);
+        $self->status_message('KB required: '.$kb_required);
+        if ( $kb_required and $kb_required > $kb_available ) {
+            $self->error_message("Cannot copy files to cache directory ($local_cache_dir). The kb required ($kb_required) is greater than the kb available ($kb_available).");
+            return;
+        }
+        for my $base_name ( @files_to_copy ) { 
+            my $file = $dir.'/'.$base_name;
+            my $cache_file = $local_cache_dir.'/'.$base_name;
+            return if not $self->copy_file($file, $cache_file);
+        }
+        $self->status_message('Copy...OK');
+    }
+
+    $self->_local_cache_dir_is_verified(1);
+
+    # rm lock
+    $self->status_message('Remove lock');
+    my $rv = eval { Genome::Sys->unlock_resource(resource_lock=>$lock); };
+    if ( not $rv ) {
+        $self->error_message("Failed to unlock ($lock): $@. But we don't care.");
+    }
+
+    $self->status_message('Verify or create local cache...OK');
+    
+    return $local_cache_dir;
+}
 
 1;
+

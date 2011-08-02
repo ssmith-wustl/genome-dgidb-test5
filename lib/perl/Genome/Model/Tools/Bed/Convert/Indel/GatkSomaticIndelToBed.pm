@@ -7,13 +7,6 @@ use Genome;
 
 class Genome::Model::Tools::Bed::Convert::Indel::GatkSomaticIndelToBed {
     is => ['Genome::Model::Tools::Bed::Convert::Indel'],
-    has => [
-        reference_sequence_input => {
-            is => 'String',
-            default=> Genome::Config::reference_sequence_directory() . '/NCBI-human-build36/all_sequences.fa',
-            doc => "The reference fasta file used to look up the reference sequence with samtools faidx. This is necessary because pindel will truncate long reference sequences.",
-        },
-    ],
 };
 
 

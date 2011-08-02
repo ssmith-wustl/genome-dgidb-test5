@@ -11,19 +11,30 @@ BEGIN {
 
 use above 'Genome';
 use Genome::SoftwareResult;
-use Test::More tests => 2;
+use Test::More;
 
+# Caching refseq in /var/cache/tgi-san. We gotta link these files to a tmp dir for tests so they don't get copied
+my $refbuild_id = 101947881;
+my $ref_seq_build = Genome::Model::Build::ImportedReferenceSequence->get($refbuild_id);
+ok($ref_seq_build, 'human36 reference sequence build') or die;
+my $refseq_tmp_dir = File::Temp::tempdir(CLEANUP => 1);
+no warnings;
+*Genome::Model::Build::ReferenceSequence::local_cache_basedir = sub { return $refseq_tmp_dir; };
+*Genome::Model::Build::ReferenceSequence::copy_file = sub { 
+    my ($build, $file, $dest) = @_;
+    symlink($file, $dest);
+    is(-s $file, -s $dest, 'linked '.$dest) or die;
+    return 1; 
+};
 # Override lock name because if people cancel tests locks don't get cleaned up.
 *Genome::SoftwareResult::_resolve_lock_name = sub {
     return Genome::Sys->create_temp_file_path;
 };
-
+use warnings;
 
 #Parsing tests
 my $det_class_base = 'Genome::Model::Tools::DetectVariants2';
 my $dispatcher_class = "${det_class_base}::Dispatcher";
-
-my $refbuild_id = 101947881;
 
 my $tumor_bam = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants2-Dispatcher/flank_tumor_sorted.bam";
 my $normal_bam = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants2-Dispatcher/flank_normal_sorted.bam";
@@ -38,7 +49,9 @@ my $detector_test = $dispatcher_class->create(
     control_aligned_reads_input => $normal_bam,
 );
 ok($detector_test, "Object to test a detector case created");
+$detector_test->dump_status_messages(1);
+like($detector_test->reference_sequence_input, qr|^$refseq_tmp_dir|, "reference sequence path is in /tmp");
 ok($detector_test->execute, "Execution completed successfully.");
 
 done_testing();
-
+exit;
