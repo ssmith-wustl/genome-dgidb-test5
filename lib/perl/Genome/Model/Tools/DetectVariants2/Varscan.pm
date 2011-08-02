@@ -122,7 +122,7 @@ sub parse_line_for_bed_intersection {
 
     my ($chromosome, $position, $_reference, $consensus) = split "\t",  $line;
 
-    if ($consensus =~ /\*/) {
+    if ($consensus =~ /\-|\+/) {
         return $class->_parse_indel_for_bed_intersection($line);
     } else {
         return $class->_parse_snv_for_bed_intersection($line);
