@@ -36,7 +36,7 @@ EOS
 
 # TODO install this to /gsc/pkg/bio/bsmap/bsmap-2.1/
 my %BSMAP_VERSIONS = (
-    '2.1' => '/gsc/bin/bsmap'
+    '2.1' => '/gsc/bin/bsmap',
     'bsmap'   => 'bsmap',
 );
 
