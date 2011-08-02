@@ -123,7 +123,7 @@ sub execute {
     print RFILE "writeAlts(segs,rdo)\n";
     print RFILE "writeThresholds(rdo)\n";
     print RFILE "writeBins(rdo)\n";
-    print RFILE "write(estimateOd(rdo),paste(rdo@params$annotationDirectory,\"/overdispersion\"sep=""))\n";
+    print RFILE 'write(estimateOd(rdo),paste(rdo@params$annotationDirectory,"/overdispersion",sep=""))\n';
 
     close(RFILE);
  
