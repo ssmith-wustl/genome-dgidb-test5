@@ -4,7 +4,7 @@ use strict;
 use warnings;
 use above 'Genome';
 use File::Compare;
-use Test::More;
+use Test::More tests=>31;
 use Cwd;
 
 #test that module is use-able
