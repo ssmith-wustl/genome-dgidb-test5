@@ -43,10 +43,20 @@ sub process_source {
             $consensus_quality = sprintf("%2.f", $consensus_quality); 
             $indel_call_1 = $self->reduce_strings($reference_bases, $variant_bases);
             $indel_call_2='*';
-            $extra[1] =~ /DP=(\d+)/;
-            $read_depth = $1;
-            $extra[1] =~/MQ=(\d+)/;
-            $_mapping_quality = $1;
+            if($extra[1] =~ /DP=(\d+)/) {
+                $read_depth = $1;
+            } else { 
+                $self->warning_message("read depth not found on line $line");
+                next;
+            }
+            if ($extra[1] =~ /MQ=(\d+)/) {
+                $_mapping_quality = $1;
+            } else {
+                $self->warning_message("mapping quality cannot be found on line $line");
+                next;
+            }
+            ($consensus_quality) = split("," , $consensus_quality);
+            
         }else {
             ($chromosome, $position, $star, $_calls, $consensus_quality, $_ref_quality, $_mapping_quality, $read_depth, $indel_call_1, $indel_call_2, 
             ) = split("\t", $line);

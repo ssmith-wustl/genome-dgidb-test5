@@ -42,10 +42,10 @@ class Genome::Model::Tools::Vcf::VcfAnnotateDbsnp {
             is_optional => 0,
         },
 
-        dbsnp_file => {
-            is => 'Text',
-            doc => "files containing dbsnp annotations",
-            is_optional => 0,
+        genome_build => {
+            is => 'Integer',
+            doc => "genome build to use (36 or 37)",
+            is_optional => 0,            
         },
 
         ],
@@ -59,14 +59,14 @@ sub help_brief {                            # keep this to just a few words <---
 
 sub help_synopsis {
 <<'HELP';
-    apply filter labels to a VCF file
+    Takes a VCF and adds dbsnp annotations
 HELP
 }
 
 sub help_detail {                  # this is what the user will see with the longer version of help. <---
 <<'HELP';
 
-    Takes a VCF and a file containing filtered output, then annotates the VCF with the filter names, and adds the filter info  to the header
+    Takes a VCF and adds dbsnp annotations
 HELP
 }
 
@@ -81,7 +81,17 @@ sub execute {
     my $self = shift;
     my $output_file = $self->output_file;
     my $vcf_file = $self->vcf_file;
-    my $dbsnp_file = $self->dbsnp_file;
+    my $genome_build = $self->genome_build;
+
+        
+    my $dbsnp_file;
+    if($genome_build == 36){
+        $dbsnp_file = "/gscmnt/sata921/info/medseq/cmiller/annotations/snp130.txt";
+    } elsif ($genome_build == 37){
+        $dbsnp_file = "/gscmnt/sata921/info/medseq/cmiller/annotations/snp132.txt";
+    } else {
+        die("genome build must be either 36 or 37")
+    }
 
 
 
