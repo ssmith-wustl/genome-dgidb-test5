@@ -170,7 +170,7 @@ sub add {
         return;
     }
 
-    my $solr_dev = $self->_solr_server(WebService::Solr->new($self->_dev_solr_server_location()));
+    my $solr_dev = WebService::Solr->new($self->_dev_solr_server_location());
     unless($solr_dev->add(\@docs)) {
         $self->error_message('Failed to send ' . (scalar @docs) . ' document(s) to other solr instance (solr)');
         return;
