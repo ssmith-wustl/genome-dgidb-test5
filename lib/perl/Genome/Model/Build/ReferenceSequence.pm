@@ -717,12 +717,35 @@ sub copy_file {
     Carp::confess("Destination file ($dest) already exists!") if defined $dest_sz;
     $self->status_message('Destination size: '.( $dest_sz || 0));
 
-    $self->status_message("Copy $file to $dest");
-    my $cp = File::Copy::copy($file, $dest);
-    if ( not $cp ) {
-        $self->error_message('Copy failed! '.$@);
-        return;
+    #Look for a gzipped version of the file. If it is present, use zcat to xfer the compressed file,
+    # rather than the uncompressed.
+    my $gzipped_file = $file.".gz";
+    if(-s $gzipped_file){
+        $self->status_message("Found a gzipped version of: $file, preparing to zcat this file into place.");        
+
+        #zcat command line
+        my $zcat_cmd = "zcat ".$gzipped_file." > ".$dest;
+        $self->status_message("Begin zcat of ".$file." at ".localtime()."\n");
+        my $cmd = Genome::Sys->shellcmd( 
+            cmd => $zcat_cmd,
+        );
+        $self->status_message("Completed zcat of ".$file." at ".localtime()."\n");
+
+        unless($cmd){
+            die $self->error_message("Could not complete shellcmd to zcat: $gzipped_file into $dest.");
+        }
     }
+    #No gzipped version was found, use File::Copy::copy
+    else {
+        $self->status_message("Copy $file to $dest");
+        my $cp = File::Copy::copy($file, $dest);
+        if ( not $cp ) {
+            $self->error_message('Copy failed! '.$@);
+            return;
+        }
+        $self->status_message("Completed copy of $file.");
+    }
+
     $dest_sz = -s $dest;
     $self->status_message('Destination size: '.( $dest_sz || 0));
     if ( $dest_sz != $sz ) {
