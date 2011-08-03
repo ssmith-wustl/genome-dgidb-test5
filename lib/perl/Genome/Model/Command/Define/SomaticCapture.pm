@@ -8,7 +8,7 @@ use warnings;
 use Genome;
 
 class Genome::Model::Command::Define::SomaticCapture {
-    is => 'Genome::Model::Command::Define',
+    is => 'Genome::Model::Command::Define::Helper',
     has => [
         tumor_model => { 
             is => 'Genome::Model',

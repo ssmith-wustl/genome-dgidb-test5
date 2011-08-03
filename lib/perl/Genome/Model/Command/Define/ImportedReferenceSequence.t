@@ -35,9 +35,9 @@ $fasta_fh->close();
 my @params = (
     "--fasta-file=$fasta_file1",
     "--model-name=test-ref-seq-1",
-    "--processing-profile-id=".$pp->id,
+    "--processing-profile=".$pp->id,
     "--species-name=human",
-    "--subject-id=".$sample->id,
+    "--subject=".$sample->id,
     "--version=42",
     "--sequence-uri=".$sequence_uri,
     );
@@ -56,9 +56,9 @@ is($build->sequence_uri, $sequence_uri, "sequence uri matches");
     "--derived-from=".$build->name,
     "--fasta-file=$fasta_file1",
     "--model-name=test-ref-seq-2",
-    "--processing-profile-id=".$pp->id,
+    "--processing-profile=".$pp->id,
     "--species-name=human",
-    "--subject-id=".$sample->id,
+    "--subject=".$sample->id,
     "--version=26",
     "--sequence-uri=".$sequence_uri,
     );
@@ -80,9 +80,9 @@ ok($build->is_compatible_with($d1_build), 'parent build is_compatible_with coord
     "--derived-from=".$d1_build->id,
     "--fasta-file=$fasta_file1",
     "--model-name=test-ref-seq-3",
-    "--processing-profile-id=".$pp->id,
+    "--processing-profile=".$pp->id,
     "--species-name=human",
-    "--subject-id=".$sample->id,
+    "--subject=".$sample->id,
     "--version=96",
     "--sequence-uri=".$sequence_uri,
     );
@@ -105,9 +105,9 @@ ok($build->is_compatible_with($d2_build), 'parent build is_compatible_with deriv
     "--append-to=".$d1_build->id,
     "--fasta-file=$fasta_file2",
     "--model-name=test-ref-seq-4",
-    "--processing-profile-id=".$pp->id,
+    "--processing-profile=".$pp->id,
     "--species-name=human",
-    "--subject-id=".$sample->id,
+    "--subject=".$sample->id,
     "--version=append",
     "--sequence-uri=".$sequence_uri,
     );

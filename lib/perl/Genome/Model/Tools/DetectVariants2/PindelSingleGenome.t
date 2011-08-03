@@ -19,30 +19,37 @@ my $archos = `uname -a`;
 if ($archos !~ /64/) {
     plan skip_all => "Must run from 64-bit machine";
 } else {
-    if($ENV{GSCAPP_RUN_LONG_TESTS}) {
-        plan tests => 4;
-    } else {
+    if(not $ENV{GSCAPP_RUN_LONG_TESTS}) {
         plan skip_all => 'This test takes up to 10 minutes to run and thus is skipped.  Use `ur test run --long` to enable.';
     }
 }
 
 use_ok('Genome::Model::Tools::DetectVariants2::PindelSingleGenome');
 
+# Caching refseq in /var/cache/tgi-san. We gotta link these files to a tmp dir for tests so they don't get copied
+my $refbuild_id = 101947881;
+my $ref_seq_build = Genome::Model::Build::ImportedReferenceSequence->get($refbuild_id);
+ok($ref_seq_build, 'human36 reference sequence build') or die;
+my $refseq_tmp_dir = File::Temp::tempdir(CLEANUP => 1);
+no warnings;
+*Genome::Model::Build::ReferenceSequence::local_cache_basedir = sub { return $refseq_tmp_dir; };
+*Genome::Model::Build::ReferenceSequence::copy_file = sub { 
+    my ($build, $file, $dest) = @_;
+    symlink($file, $dest);
+    is(-s $file, -s $dest, 'linked '.$dest) or die;
+    return 1; 
+};
 # Override lock name because if people cancel tests locks don't get cleaned up.
 *Genome::SoftwareResult::_resolve_lock_name = sub {
     return Genome::Sys->create_temp_file_path;
 };
-
-
+use warnings;
 
 my $tumor =  "/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants2-Pindel/flank_tumor_sorted.bam";
 my $normal = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants2-Pindel/flank_normal_sorted.bam";
 
 my $tmpbase = File::Temp::tempdir('PindelSingleGenomeXXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites/', CLEANUP => 1);
 my $tmpdir = "$tmpbase/output";
-my $refbuild_id = 101947881;
-
-#$ref_seq_input =~ s/\/opt\/fscache//;
 
 my $pindel_sg = Genome::Model::Tools::DetectVariants2::PindelSingleGenome->create(aligned_reads_input=>$tumor, 
                                                                    reference_build_id => $refbuild_id,
@@ -52,9 +59,14 @@ ok($pindel_sg, 'pindel command created');
 
 $ENV{NO_LSF}=1;
 
+$pindel_sg->dump_status_messages(1);
+like($pindel_sg->reference_sequence_input, qr|^$refseq_tmp_dir|, "reference sequence path is in /tmp");
 my $rv = $pindel_sg->execute;
 is($rv, 1, 'Testing for successful execution.  Expecting 1.  Got: '.$rv);
 
 my $output_indel_file = $tmpdir . "/indels.hq.bed";
 
 ok(-s $output_indel_file,'Testing success: Expecting a indel output file exists');
+
+done_testing();
+exit;

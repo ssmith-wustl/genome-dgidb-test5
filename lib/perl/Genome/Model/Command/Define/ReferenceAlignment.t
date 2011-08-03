@@ -19,7 +19,7 @@ use_ok($model_class);
 
 # set up required test data
 my $individual = Genome::Individual->create(name => 'test-patient', common_name => 'testpatient');
-my $sample = Genome::Sample->create(name => 'test-patient', species_name => 'human', common_name => 'normal', source => $individual);
+my $sample = Genome::Sample->create(name => 'test-patient-sample', species_name => 'human', common_name => 'normal', source => $individual);
 my ($rbuild, $rbuild2, $abuild) = create_reference_builds(); # (reference_build, annotation_build)
 
 my $dbsnp_pp = Genome::ProcessingProfile->get(name => "imported-variation-list");
@@ -62,7 +62,7 @@ ok($cmd && $cmd->__errors__, 'insufficient parameters generate errors');
 # use default reference sequence
 my %params = (
     subject_name => $sample->name,
-    processing_profile_id => $pp->id,
+    processing_profile => $pp,
 );
 for my $model (create_direct_and_cmdline(%params)) {
     ok($model->reference_sequence_build, 'some default exists for reference sequence');
@@ -85,7 +85,7 @@ for my $model (create_direct_and_cmdline(%params)) {
 # specify reference sequence by name
 %params = (
     subject_name => $sample->name,
-    processing_profile_id => $pp->id,
+    processing_profile => $pp,
     reference_sequence_build => $rbuild->name,
 );
 for my $model (create_direct_and_cmdline(%params)) {
@@ -109,7 +109,7 @@ for my $model (create_direct_and_cmdline(%params)) {
 # specify annotation build by id
 %params = (
     subject_name => $sample->name,
-    processing_profile_id => $pp->id,
+    processing_profile => $pp,
     reference_sequence_build => $rbuild->name,
     annotation_reference_build => $abuild->id,
 );
@@ -122,7 +122,7 @@ for my $model (create_direct_and_cmdline(%params)) {
 # specify annotation build by name
 %params = (
     subject_name => $sample->name,
-    processing_profile_id => $pp->id,
+    processing_profile => $pp,
     reference_sequence_build => $rbuild->name,
     annotation_reference_build => $abuild->name,
 );
@@ -135,7 +135,7 @@ for my $model (create_direct_and_cmdline(%params)) {
 # specify annotation build by object
 %params = (
     subject_name => $sample->name,
-    processing_profile_id => $pp->id,
+    processing_profile => $pp,
     reference_sequence_build => $rbuild->name,
     annotation_reference_build => $abuild,
 );
@@ -148,7 +148,7 @@ for my $model (create_direct_and_cmdline(%params)) {
 # specify dbsnp build by id
 %params = (
     subject_name => $sample->name,
-    processing_profile_id => $pp->id,
+    processing_profile => $pp,
     reference_sequence_build => $rbuild->name,
     dbsnp_build => $dbsnp_build->id,
 );
@@ -161,7 +161,7 @@ for my $model (create_direct_and_cmdline(%params)) {
 # specify dbsnp build by object
 %params = (
     subject_name => $sample->name,
-    processing_profile_id => $pp->id,
+    processing_profile => $pp,
     reference_sequence_build => $rbuild->name,
     dbsnp_build => $dbsnp_build,
 );
@@ -174,7 +174,7 @@ for my $model (create_direct_and_cmdline(%params)) {
 # specify dbsnp build by model name, expect last_complete_build
 %params = (
     subject_name => $sample->name,
-    processing_profile_id => $pp->id,
+    processing_profile => $pp,
     reference_sequence_build => $rbuild->name,
     dbsnp_model => $dbsnp_model->name,
 );
@@ -187,7 +187,7 @@ for my $model (create_direct_and_cmdline(%params)) {
 # specify dbsnp build with mismatched reference and verify that an error happens
 %params = (
     subject_name => $sample->name,
-    processing_profile_id => $pp->id,
+    processing_profile => $pp,
     reference_sequence_build => $rbuild->name,
     dbsnp_model => $dbsnp_model2->name,
 );
@@ -200,7 +200,7 @@ ok($@, "command failed to execute with bad dbsnp data");
 
 my $model = create_direct(
     subject_name => $sample->name,
-    processing_profile_id => $pp->id,
+    processing_profile => $pp,
     reference_sequence_build => $rbuild->id,
     annotation_reference_build => $abuild->id,
 );

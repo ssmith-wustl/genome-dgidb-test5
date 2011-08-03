@@ -98,35 +98,34 @@ sub execute {
       @genotypes = $organism_sample->get_external_genotype;
     }
 
-    my $file_cnt = 0;
-    foreach my $genotype ( @genotypes )
-    {
-      # Get the data adapter (DataAdapter::GSGMFinalReport class object)
-      my $filter = DataAdapter::Result::Filter::Nathan->new();
-      my $data_adapter = $genotype->get_genotype_data_adapter(
-        genome_build => $dbsnp_info->genome_build,
-        snp_db_build => $dbsnp_info->snp_db_build,
-        filter       => $filter,
-        ( $reference ? ( type => $reference ) : () ),
-      );
+    my $genotype = (grep {$_->status eq "pass"} @genotypes)[-1];
+    if ($genotype) {
+        # Get the data adapter (DataAdapter::GSGMFinalReport class object)
+        my $filter = DataAdapter::Result::Filter::Nathan->new();
+        my $data_adapter = $genotype->get_genotype_data_adapter(
+            genome_build => $dbsnp_info->genome_build,
+            snp_db_build => $dbsnp_info->snp_db_build,
+            filter       => $filter,
+            ( $reference ? ( type => $reference ) : () ),
+        );
 
-      # Next if there is no genotype data.
-      next unless( $data_adapter );
+        # Next if there is no genotype data.
+        next unless( $data_adapter );
 
-      ++$file_cnt;
-      my $genotype_file = "$data_directory/$sample.genotype";
-      my $genFh = IO::File->new( ">$genotype_file" ) or die "Cannot open $genotype_file. $!\n";
+        my $genotype_file = "$data_directory/$sample.genotype";
+        my $genFh = IO::File->new( ">$genotype_file" ) or die "Cannot open $genotype_file. $!\n";
 
-      # Loop through the result row (DataAdapter::Result::GSGMFinalReport class object)
-      while ( my $result = $data_adapter->next_result )
-      {
-        $genFh->print( join( "\t", ( $result->chromosome, $result->position, $result->alleles )), "\n" );
-      }
-      $genFh->close;
+        # Loop through the result row (DataAdapter::Result::GSGMFinalReport class object)
+        while ( my $result = $data_adapter->next_result )
+        {
+            $genFh->print( join( "\t", ( $result->chromosome, $result->position, $result->alleles )), "\n" );
+        }
+        $genFh->close;
+
+        print "Done\n";
+    } else {
+        print "No genotypes found\n";
     }
-    print "Done\n" if( $file_cnt == 1 );
-    print "No genotypes found\n" if( $file_cnt == 0 );
-    print "Multiple genotypes found. Fetched only one.\n" if( $file_cnt > 1 );
   }
 
   $inFh->close;
