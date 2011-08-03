@@ -787,7 +787,7 @@ sub verify_or_create_local_cache {
     # create the cache dir, if necessary
     if ( not -d $local_cache_dir ) {
         $self->status_message('Create local cache directory');
-        my $mk_path = File::Path::make_path($local_cache_dir);
+        my $mk_path = File::Path::make_path($local_cache_dir,  { mode => 02775, });
         if ( not $mk_path or not -d $local_cache_dir ) {
             $self->error_message("Failed to make local cache directory ($local_cache_dir)");
             return;
