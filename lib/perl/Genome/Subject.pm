@@ -17,6 +17,10 @@ class Genome::Subject {
         subclass_name => {
             is => 'Text',
         },
+        subject_type => {
+            column_name => '',
+            is_abstract => 1,
+        },
     ],
     has_many_optional => [
         attributes => {

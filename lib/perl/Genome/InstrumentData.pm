@@ -20,7 +20,6 @@ class Genome::InstrumentData {
         library => { is => 'Genome::Library', id_by => 'library_id' },
         library_name => { via => 'library', to => 'name' },
         sample_id => { is => 'Number', via => 'library' }, 
-        #sample => { is => 'Genome::Sample', id_by => 'sample_id' }, # id_by that's delegated is inefficient
         sample => { is => 'Genome::Sample', via => 'library' },
         sample_name => { via => 'sample', to => 'name' },
     ],

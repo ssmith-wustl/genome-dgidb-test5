@@ -34,7 +34,7 @@ $sample = Genome::Sample->create(
 ok($sample, "created a new genome sample");
 isa_ok($sample, 'Genome::Sample');
 is($sample->id, $id, "id is set");
-is($sample->subject_type, 'organism sample', 'subject type is organism sample');
+is($sample->subject_type, 'sample_name', 'subject type is organism sample');
 
 print Data::Dumper::Dumper($sample);
 

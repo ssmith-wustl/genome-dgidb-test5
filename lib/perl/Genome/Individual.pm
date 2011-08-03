@@ -4,7 +4,6 @@ use strict;
 use warnings;
 
 use Genome;
-
 use Carp;
 
 class Genome::Individual {
@@ -21,17 +20,17 @@ class Genome::Individual {
             where => [ attribute_label => 'taxon_id' ],
             is_mutable => 1,
         },
+        subject_type => {
+            is_constant => 1,
+            is_classwide => 1,
+            value => 'sample_group',
+        },
         taxon => { 
             is => 'Genome::Taxon', 
             id_by => 'taxon_id', 
         },
         species_name => { 
             via => 'taxon' 
-        },
-        subject_type => { 
-            is => 'Text', 
-            is_constant => 1, 
-            value => 'organism individual'
         },
     ],
     has_optional => [

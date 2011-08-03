@@ -4,9 +4,10 @@ use strict;
 use warnings;
 
 use Genome;
+use Carp;
 
 class Genome::Model::Command::Define::GenotypeMicroarray {
-    is => 'Genome::Model::Command::Define',
+    is => 'Genome::Model::Command::Define::Helper',
     has => [
         reference => {
             is => 'Genome::Model::Build::ImportedReferenceSequence',
@@ -37,6 +38,21 @@ sub help_detail {
 sub type_specific_parameters_for_create {
     my $self = shift;
     return (reference_sequence_build => $self->reference);
+}
+
+sub execute {
+    my $self = shift;
+
+    my $processing_profile = $self->processing_profile;
+    unless ($processing_profile) {
+        Carp::confess "Could not resolve processing profile!";
+    }
+
+    unless ($self->processing_profile->name =~ /wugc/) {
+        Carp:confess "GenotypeMicroarray Models must use one of the [microarray-type]/wugc processing-profiles.";
+    }
+
+    return $self->SUPER::_execute_body(@_);
 }
 
 1;
