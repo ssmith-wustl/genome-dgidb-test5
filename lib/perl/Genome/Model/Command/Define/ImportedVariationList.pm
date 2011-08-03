@@ -244,7 +244,6 @@ sub _create_build {
     my %build_parameters = (
         model_id => $model->id,
         version => $self->version,
-        data_directory => $self->data_directory,
     );
     $build_parameters{snv_feature_list} = $self->snv_feature_list if $self->snv_feature_list;
     $build_parameters{indel_feature_list} = $self->indel_feature_list if $self->indel_feature_list;
