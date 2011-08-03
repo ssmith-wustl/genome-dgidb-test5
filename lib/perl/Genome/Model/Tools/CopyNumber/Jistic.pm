@@ -179,6 +179,25 @@ class Genome::Model::Tools::CopyNumber::Jistic {
             doc => 'output directory',
         },
 
+        probe_sites => {
+            is => 'String',
+            is_optional => 0,
+            doc => '3-column file containing location of probes (microarray), targeted regions (exome), or tiled windows (WGS). For WGS hg18 female, you can use /gscmnt/sata921/info/medseq/cmiller/annotations/jistic/probes.10k.hg18.female.dat. File format: ProbeName\tChr\tPosition (1-based)',
+        },
+
+        filter_dgv_sites => {
+            is => 'Boolean',
+            is_optional => 1,
+            doc => 'Filter input to remove sites that intersect with a high-resolution set of CNVs from the Database of Genomic Variants',
+            default => 0,
+        },
+
+        numchrom => {
+            is => 'Integer',
+            is_optional => 1,
+            doc => 'The number of chromosomes in your file. For female-only sample sets, this will be 23, for sets including males, the default of 24 will work',
+            default => 24,
+        }
     ]
 };
 
@@ -224,6 +243,10 @@ sub execute {
     my $mirna_annotations_file = $self->mirna_annotations_file;
     my $cytoband_file = $self->cytoband_file;
     my $output_dir = $self->output_dir;
+    my $filter_dgv_sites  = $self->filter_dgv_sites;
+    my $probe_sites = $self->probe_sites;
+    my $numchrom = $self->numchrom;
+
 
     #sanity checks
     if($focal || $arm_peeloff){
@@ -242,9 +265,16 @@ sub execute {
     print STDERR "current dir: " . $dir . "\n";
     chdir($output_dir);
 
+    print STDERR "now in " . cwd() . "\n";
 
-    if(defined($segment_file)){+
-        my $cmd = "java -Xmx1500m -classpath /gscuser/cmiller/usr/src/JISTIC/JISTIC.jar JISTIC.convertSEG $segment_file /gscuser/cmiller/annotations/jistic/probes.10k.hg18.dat excludedregions=/gscuser/cmiller/annotations/jistic/dgvExclude.reg >cnaMatrix.dat";        
+    if(defined($segment_file)){
+        my $cmd = "java -Xmx1500m -classpath /gscuser/cmiller/usr/src/JISTIC/JISTIC.jar JISTIC.convertSEG $segment_file $probe_sites";
+        if ($filter_dgv_sites){
+            $cmd = $cmd . " excludedregions=/gscuser/cmiller/annotations/jistic/dgvExclude.reg";
+        }
+        $cmd = $cmd . " numchrom=$numchrom";
+        $cmd = $cmd . " >cnaMatrix.dat";
+
         my $return = Genome::Sys->shellcmd(
             cmd => "$cmd",
             );
