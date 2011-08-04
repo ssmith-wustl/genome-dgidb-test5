@@ -58,8 +58,10 @@ sub process_source {
         } else {
             die $self->error_message('Unhandled variant type encountered');
         }
-        
-        $self->write_bed_line($chr, $start, $stop, $ref, $var, $qual, $depth);
+
+        # We need an integer score value for joinx
+        my $score = int($qual);
+        $self->write_bed_line($chr, $start, $stop, $ref, $var, $score, $depth);
     }
     $input_fh->close;
     return 1;
