@@ -69,10 +69,10 @@ sub execute {
         $self->status_message(sprintf("Found %s instrument data.\n", scalar @instr_data));
 
         my %model_ids = map {$_->model_id, 1} map {Genome::Model::Input->get(name=>'instrument_data', value_id=>$_->id)} @instr_data;
-        
+
         my @raw_models = Genome::Model->get(id=>[keys %model_ids]);
         my @models;
-       
+
         # filter out Lane QC models, Pooled_Library models, and only the ROI/refseq requested if there was one
         for (@raw_models) {
             push @models, $_ unless (($_->subject_name =~ m/^Pooled_Library/) ||
@@ -94,7 +94,7 @@ sub execute {
 
     } elsif ($self->builds) {
         $self->status_message("Using user-supplied set of builds...");
-       
+
     } else {
         $self->error_message("You must provide either a flow cell id or a set of builds.  ");
         return;
@@ -105,7 +105,7 @@ sub execute {
         if ($b->status ne "Succeeded") {
             warn sprintf("Filtering out build %s (model %s) because its status is %s, not succeeded.", $b->id, $b->model->name, $b->status);
         } else {
-            push @filtered_builds, $b; 
+            push @filtered_builds, $b;
         }
     }
     $self->builds([@filtered_builds]);
@@ -121,16 +121,14 @@ sub execute {
         return;
     }
 
-    my @builds = $self->builds;
+    my @builds = grep {$_ == $_->model->last_succeeded_build} $self->builds;
     for my $build (@builds) {
-        if ($build == $build->model->last_succeeded_build) {
-            my $roi_name = $build->model->region_of_interest_set_name ? $build->model->region_of_interest_set_name : 'N/A';
-            my $refbuild_name = $build->model->reference_sequence_build->name ? $build->model->reference_sequence_build->name : 'N/A';
-            print $samp_map join ("\t", $build->model->subject_name, $refbuild_name, $roi_name, $build->whole_rmdup_bam_file, basename($build->whole_rmdup_bam_file));
-            print $samp_map "\n";
-        }
+        my $roi_name = $build->model->region_of_interest_set_name ? $build->model->region_of_interest_set_name : 'N/A';
+        my $refbuild_name = $build->model->reference_sequence_build->name ? $build->model->reference_sequence_build->name : 'N/A';
+        print $samp_map join ("\t", $build->model->subject_name, $refbuild_name, $roi_name, $build->whole_rmdup_bam_file, basename($build->whole_rmdup_bam_file));
+        print $samp_map "\n";
     }
-    
+
     print $bam_list join (" ", map {$_->whole_rmdup_bam_file} @builds);
 
     $samp_map->close;

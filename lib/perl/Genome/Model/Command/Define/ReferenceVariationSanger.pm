@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 
 class Genome::Model::Command::Define::ReferenceVariationSanger {
-    is => 'Genome::Model::Command::Define',
+    is => 'Genome::Model::Command::Define::Helper',
     has => [
         ace_fof =>
         {

@@ -6,13 +6,13 @@ use warnings;
 use Genome;
 
 class Genome::Model::Command::Define::Convergence {
-    is => 'Genome::Model::Command::Define',
+    is => 'Genome::Model::Command::Define::Helper',
     has => [
         model_group_id => {
             is => 'Text',
             doc => 'The id of the model group for which to create a convergence model'
         },
-        _model_group => {
+        model_group => {
             is => 'Genome::ModelGroup',
             id_by => 'model_group_id',
         },
@@ -32,8 +32,7 @@ class Genome::Model::Command::Define::Convergence {
             is => 'Boolean',
             doc => 'If true, new builds will automatically be launched when the underlying model group changes.',
             default_value => 1,
-        }
-        
+        },
    ],
 };
 
@@ -57,19 +56,17 @@ sub create {
     my $self = $class->SUPER::create(@_)
         or return;
 
-    unless(defined $self->_model_group) {
+    unless(defined $self->model_group) {
         $self->error_message('No ModelGroup found for id: ' . $self->model_group_id);
         return;
     }
 
     unless($self->model_name) {
-        $self->model_name($self->_model_group->name . '_convergence');
+        $self->model_name($self->model_group->name . '_convergence');
     }
 
-    my $subject = $self->_model_group->infer_group_subject;
-    $self->subject_id($subject->id);
-    $self->subject_class_name($subject->class);
-    $self->subject_name($subject->name);
+    my $subject = $self->model_group->infer_group_subject;
+    $self->subject($subject);
 
     return $self;
 }
@@ -91,7 +88,7 @@ sub execute {
     my $set_group_cmd = Genome::Model::Command::Input::Update->create(
         model => $model,
         name => 'group_id',
-        value => $self->_model_group->id,
+        value => $self->model_group->id,
     );
     
     unless($set_group_cmd->execute) { 

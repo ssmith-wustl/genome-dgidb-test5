@@ -14,9 +14,9 @@ class Genome::Sample {
             calculate => q{ return $subject_id },
         },
         subject_type => { 
-            is => 'Text', 
             is_constant => 1, 
-            value => 'organism sample'
+            is_classwide => 1,
+            value => 'sample_name'
         },
     ],
     has_optional => [	

@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 
 class Genome::Model::Command::Define::SomaticValidation {
-    is => 'Genome::Model::Command::Define',
+    is => 'Genome::Model::Command::Define::Helper',
     has => [
         variant_list => {
             is => 'Genome::FeatureList', id_by => 'variant_list_id',
@@ -86,9 +86,7 @@ sub execute {
             my $subject = $tumor_source;
             
             #Set up other parameters for call to parent execute()
-            $self->subject_id($subject->id);
-            $self->subject_class_name($subject->class);
-            $self->subject_name($subject->common_name || $subject->name);
+            $self->subject($subject);
         } else {
             $self->error_message('Tumor and normal samples are not from same source!');
             return;

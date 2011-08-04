@@ -34,7 +34,7 @@ isa_ok($individual, 'Genome::Individual');
 isa_ok($individual, 'Genome::Notable');
 is($individual->id, $id, "id");
 is($individual->__display_name__, "George Bush ($id)", "display name");
-is($individual->subject_type, 'organism individual', 'subject type is organism individual');
+is($individual->subject_type, 'sample_group', 'subject type is sample_group');
 print Data::Dumper::Dumper($individual);
 
 my $commit = eval{ UR::Context->commit; };
