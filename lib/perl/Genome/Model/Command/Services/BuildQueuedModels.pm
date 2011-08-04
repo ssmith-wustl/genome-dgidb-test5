@@ -115,9 +115,8 @@ sub execute {
         }
     }
 
-    my $expected_count = ($max_builds_to_start > $self->_total_count ? $self->_total_count : $max_builds_to_start);
     $self->display_command_summary_report();
-    $self->status_message('   Expected: ' . $expected_count);
+    $self->status_message("Tried to start up to $max_builds_to_start builds.");
 
     return !scalar(keys %{$self->_command_errors});
 }
