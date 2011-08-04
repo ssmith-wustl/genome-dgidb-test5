@@ -157,20 +157,6 @@ sub valid_annotation_build {
     return @tags;
 }
 
-sub instrument_data_assigned {
-    my $self = shift;
-    my @tags;
-    my @instrument_data = $self->instrument_data;
-    unless (@instrument_data) {
-        push @tags, UR::Object::Tag->create(
-            type => 'error',
-            properties => ['instrument_data'],
-            desc => 'No instrument data assigned to build',
-        );
-    }
-    return @tags;
-}
-
 sub check_region_of_interest {
     my $self = shift;
     my @tags;

@@ -610,6 +610,22 @@ sub validate_for_start {
     return @tags;
 }
 
+sub instrument_data_assigned {
+    # since this could be used by several build subclasses I moved it up to this class but it is not a default validate_for_start_method for all builds
+    my $self = shift;
+    my @tags;
+    my @instrument_data = $self->instrument_data;
+    unless (@instrument_data) {
+        push @tags, UR::Object::Tag->create(
+            type => 'error',
+            properties => ['instrument_data'],
+            desc => 'no instrument data assigned to build',
+        );
+    }
+    return @tags;
+}
+
+
 sub validate_inputs_have_values {
     my $self = shift;
     my @inputs = $self->inputs;
