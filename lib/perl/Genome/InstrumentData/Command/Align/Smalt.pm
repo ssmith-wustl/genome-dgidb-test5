@@ -11,7 +11,7 @@ class Genome::InstrumentData::Command::Align::Smalt {
         aligner_name => { value => 'smalt' },
     ],
     has_param => [
-        version => { default_value => '0.2.8'},
+        version => { default_value => '0.5.5'},
     ],
     doc => 'align instrument data using smalt'
 };
