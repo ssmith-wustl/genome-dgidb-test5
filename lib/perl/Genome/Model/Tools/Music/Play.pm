@@ -117,6 +117,10 @@ class Genome::Model::Tools::Music::Play {
             is => 'Number',
             doc => 'Pathways with fewer mutated genes than this will be ignored',
         },
+        processors => {
+            is => 'Integer',
+            doc => "number of processors to use in SMG (requires 'foreach' and 'doMC' R packages)",
+        },
     ],
     has_calculated_optional => [
         gene_covg_dir => {
