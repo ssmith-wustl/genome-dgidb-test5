@@ -172,6 +172,8 @@ sub create {
 sub shortcut {
     my $self = shift;
 
+    $self->_resolve_output_directory;
+
     #try to get using the lock in order to wait here in shortcut if another process is creating this alignment result
     my ($params) = $self->params_for_result;
     my $result = Genome::Model::Tools::DetectVariants2::Result->get_with_lock(%$params);
@@ -187,9 +189,17 @@ sub shortcut {
     return 1;
 }
 
+sub _resolve_output_directory {
+    my $self = shift;
+    #Subclasses override this
+    return 1;
+}
+
 
 sub execute {
     my $self = shift;
+
+    $self->_resolve_output_directory;
 
     if(-e $self->output_directory) {
         die $self->error_message('Output directory already exists!');
