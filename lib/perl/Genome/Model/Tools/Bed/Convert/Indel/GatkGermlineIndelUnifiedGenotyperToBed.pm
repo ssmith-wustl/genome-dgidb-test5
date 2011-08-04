@@ -22,35 +22,23 @@ sub process_source {
         my $stop;
         my @keys = split ":", $genotype_keys;
 
-        # There will be one set of values per sample. Add up the total depth and average the total score.
+        # There will be one set of values per sample. Add up the total depth for all samples
         my $depth;
-        my $running_score;
-        my $samples_with_data;
         for my $genotype_value (@genotype_values) {
             my @values = split ":", $genotype_value;
-            if (scalar @keys == scalar @values) {
-                $samples_with_data++;
-            } else {
+            unless (scalar @keys == scalar @values) {
                 next;
             }
-            
 
             my %genotype_hash;
             for my $key (@keys) {
                 $genotype_hash{$key} = shift @values;
             }
             # Score will sometimes be floating point and we don't want that
-            $running_score += $genotype_hash{GQ};
             $depth += $genotype_hash{DP};
         }
         if (!defined $depth) {
             $depth = 0;
-        }
-        my $score;
-        if (defined $running_score) {
-            $score = int( $running_score / $samples_with_data );
-        } else {
-            $score = 0;
         }
 
         if(length($ref) == 1 and length($var) == 1) {
@@ -71,7 +59,7 @@ sub process_source {
             die $self->error_message('Unhandled variant type encountered');
         }
         
-        $self->write_bed_line($chr, $start, $stop, $ref, $var, $score, $depth);
+        $self->write_bed_line($chr, $start, $stop, $ref, $var, $qual, $depth);
     }
     $input_fh->close;
     return 1;
