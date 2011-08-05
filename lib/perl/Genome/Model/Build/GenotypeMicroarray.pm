@@ -54,29 +54,30 @@ class Genome::Model::Build::GenotypeMicroarray {
     ],
 };
 
-sub create {
-    my $class = shift;
-
-    my $self = $class->SUPER::create(@_);
-    return if not $self;
-
-    # Gotta have a reference build
+sub validate_has_reference_alignment {
+    my $self = shift;
+    my @tags;
     my $reference_sequence_build = $self->model->reference_sequence_build;
-    if ( not $reference_sequence_build ) {
-        $self->error_message('No reference_sequence build for genotype model '.$self->model->__display_name__);
-        $self->delete;
-        return;
+    unless ($reference_sequence_build) {
+        push @tags, UR::Object::Tag->create(
+            type => 'error',
+            properties => ['reference_sequence_build'],
+            desc => 'no reference_sequence_build specified for build',
+        );
     }
+    return @tags;
 
-    # Cannot handle multiple inst data, none is ok
-    my @instrument_data = $self->instrument_data;
-    if ( @instrument_data > 1 ) {
-        $self->error_message('Cannot have more than one intrument data for a genotype microarray build '.$self->__display_name__);
-        $self->delete;
-        return;
-    }
+}
 
-    return $self;
+sub validate_for_start_methods {
+    my $self = shift;
+    my @methods = $self->SUPER::validate_for_start_methods();
+    push @methods,
+        qw/
+            instrument_data_assigned
+            validate_has_reference_alignment
+        /;
+    return @methods;
 }
 
 sub perform_post_success_actions {

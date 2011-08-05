@@ -82,7 +82,7 @@ sub execute {
         $self->error_message("Failed to get scaffold info from contigs.fa file");
         return;
     }
-    my $supercontig_number = 0;
+
     my $contig_number = 0;
     while (my $record = getRecord($afg_fh)) {
 	my ($rec, $fields, $recs) = parseRecord($record);
@@ -106,10 +106,10 @@ sub execute {
             $self->{SUPERCONTIG_NUMBER} = $sctg_num unless exists $self->{SUPERCONTIG_NUMBER};
             if( not $self->{SUPERCONTIG_NUMBER} eq $sctg_num ) {
                 $self->{SUPERCONTIG_NUMBER} = $sctg_num;
-                $supercontig_number++;
                 $contig_number = 0; #re-set to 0
             }
-            my $contig_name = 'Contig'.$supercontig_number.'.'.++$contig_number;
+            my $pcap_supercontig_number = $sctg_num - 1;
+            my $contig_name = 'Contig'.$pcap_supercontig_number.'.'.( $ctg_num + 1 );
 	    #iterating through reads
 	    for my $r (0 .. $#$recs) {
 		my ($srec, $sfields, $srecs) = parseRecord($recs->[$r]);
@@ -121,10 +121,10 @@ sub execute {
 		    #'off' => '75'      #read off set .. contig start position
 
 		    #this may to too time comsuming and not necessary
-		    unless ($self->_validate_read_field($sfields)) {
-			$self->error_message("Failed to validate read field");
-			return;
-		    }
+		    #unless ($self->_validate_read_field($sfields)) {
+			#$self->error_message("Failed to validate read field");
+			#return;
+		    #}
 
 		    #get read contig start, stop and orientaion
 		    my ($ctg_start, $ctg_stop, $c_or_u) = $self->_read_start_stop_positions($sfields); 
@@ -154,7 +154,7 @@ sub execute {
                     my $sctg_start = $self->_get_supercontig_position($contig_lengths, $look_up_name);
 		    $sctg_start += $ctg_start;
 
-		    $rp_fh->print("* $read_name 1 $read_length $c_or_u $contig_name Supercontig$supercontig_number $ctg_start $sctg_start\n");
+		    $rp_fh->print("* $read_name 1 $read_length $c_or_u $contig_name Supercontig$pcap_supercontig_number $ctg_start $sctg_start\n");
 		}
 	    }
 	}

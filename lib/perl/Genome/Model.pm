@@ -59,6 +59,14 @@ class Genome::Model {
         type_name => { via => 'processing_profile' },
     ],
     has_optional => [
+        limit_inputs_id => {
+            is => 'Text',
+            column_name => 'LIMIT_INPUTS_TO_ID',
+        },
+        limit_inputs_rule => {
+            is => 'UR::BoolExpr',
+            id_by => 'limit_inputs_id',
+        },
         user_name => { is => 'Text' },
         creation_date  => { is => 'Timestamp' },
         is_default => { 
@@ -100,7 +108,12 @@ class Genome::Model {
         project_assignments => { is => 'Genome::Model::ProjectAssignment', reverse_as => 'model' },
         project_names => { is => 'Text', via => 'projects', to => 'name' },
         # TODO: the new projects will suck in all of the model groups as a special case of a named project containing only models
-        model_groups => { is => 'Genome::ModelGroup', via => 'model_bridges', to => 'model_group' },
+        model_groups => { 
+            is => 'Genome::ModelGroup', 
+            via => 'model_bridges', 
+            to => 'model_group',
+            is_mutable => 1
+        },
         model_bridges => { is => 'Genome::ModelGroupBridge', reverse_as => 'model' },
         # TODO: replace the internals of these with a specific case of model inputs
         from_model_links => { 
@@ -928,6 +941,25 @@ sub notify_input_build_success {
     return 1;
 }
 
+sub create_rule_limiting_instrument_data {
+    my ($self, @instrument_data) = @_;
+    @instrument_data = $self->instrument_data unless @instrument_data;
+    return unless @instrument_data;
+
+    # Find the smallest scale domain object that encompasses all the instrument data
+    # and create a boolean expression for it.
+    for my $accessor (qw/ library_id sample_id sample_source_id taxon_id /) {
+        my @ids = map { $_->$accessor } @instrument_data;
+        next unless @ids;
+        next if grep { $_ ne $ids[0] } @ids;
+
+        my $rule = $instrument_data[0]->define_boolexpr($accessor => $ids[0]);
+        return $rule;
+    }
+
+    return;
+}
+    
 sub build_requested {
     my ($self, $value, $reason) = @_; 
     # Writing the if like this allows someone to do build_requested(undef)

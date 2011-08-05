@@ -10,6 +10,7 @@ use Genome;
 my %VERSIONS = (
     '09242010' => "/gscmnt/sata895/research/mmitreva/SOFTWARE/MCW_09242010",
     '12072010' => "/gscmnt/sata895/research/mmitreva/SOFTWARE/MCW_12072010",
+    '04272011' => "/gscmnt/sata895/research/mmitreva/SOFTWARE/MCW_04272011",
 );
 
 class Genome::InstrumentData::AlignmentResult::Mblastx {

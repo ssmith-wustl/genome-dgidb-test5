@@ -5,7 +5,7 @@ use warnings;
 use Genome;
 
 class Genome::Model::Command::Define::Germline {
-    is => ['Genome::Model::Command::Define', 'Genome::Command::Base'],
+    is => 'Genome::Model::Command::Define::Helper', 
     has => [
         source_model_id => {
             is => 'Text',

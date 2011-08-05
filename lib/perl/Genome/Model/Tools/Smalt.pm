@@ -5,7 +5,7 @@ use warnings;
 
 use Genome;
 
-my $DEFAULT = '0.2.8';
+my $DEFAULT = '0.5.5';
 
 class Genome::Model::Tools::Smalt {
     is => 'Command',
@@ -33,6 +33,7 @@ EOS
 }
 
 my %VERSIONS = (
+    '0.5.5'    => '/gsc/bin/smalt_x86_64',
     '0.2.8'    => '/gscmnt/sata820/info/medseq/alignment-test/smalt/smalt-0.2.8/smalt_x86-64',
     'smalt' => 'smalt',
 );

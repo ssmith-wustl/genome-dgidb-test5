@@ -41,7 +41,7 @@ sub _detect_variants {
     my $rtg_cmd = "/gscmnt/gc2146/info/medseq/rtg_software/rtg-BETA-2011-04-29-34609/rtg snp";
     
     #add path to reference
-    $rtg_cmd .= " -t /gscmnt/gc2146/info/medseq/rtg_software/rtg-BETA-2011-04-29-34609/build_36.sdf";
+    $rtg_cmd .= " -t /gscmnt/gc2146/info/medseq/rtg_software/rtg-BETA-2011-04-29-34609/101947881_build36";
 
     #add path to output
     $rtg_cmd .= " -o ".$self->_temp_staging_directory."/rtg";
@@ -77,27 +77,5 @@ sub has_version {
     my $version = shift;
     return 1;
 }
-
-
-=cut
-# Override the base method so we can skip using control_aligned_reads...  this was we can shortcut between somatic-variation and ref-align runs 
-sub params_for_result {
-    my $self = shift;
-
-    my %params = (
-        detector_name => $self->class,
-        detector_params => $self->params,
-        detector_version => $self->version,
-        aligned_reads => $self->aligned_reads_input,
-        control_aligned_reads => undef,
-        reference_build_id => $self->reference_build_id,
-        region_of_interest_id => $self->region_of_interest_id,
-        test_name => $ENV{GENOME_SOFTWARE_RESULT_TEST_NAME} || undef,
-        chromosome_list => undef,
-    );
-
-    return \%params;
-}
-=cut
 
 1;

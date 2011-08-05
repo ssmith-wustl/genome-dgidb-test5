@@ -14,6 +14,7 @@ class Genome::Model::Tools::Music::Smg {
   has_input => [
     gene_mr_file => { is => 'Text', doc => "File with per-gene mutation rates (Created using \"music bmr calc-bmr\")" },
     output_file => { is => 'Text', doc => "Output file that will list significantly mutated genes and their p-values" },
+    processors => { is => 'Integer', doc => "number of processors to use (requires 'foreach' and 'doMC' R packages)", default => 1 },
     max_fdr => { is => 'Number', doc => "The maximum allowed false discovery rate for a gene to be considered an SMG", is_optional => 1, default => 0.20 },
   ],
   doc => "Identify significantly mutated genes."
@@ -36,7 +37,7 @@ given per-gene mutation rates categorized by mutation type, and the overall back
 rates for each of those categories (gene_mr_file, created using "music bmr calc-bmr").
 
 P-values and false discovery rates (FDRs) for each gene in gene_mr_file is calculated using three
-tests: Fisher's Combined P-value test (FCPT), Likelihood Ratio test (LRT), and the Convolution
+tests: Fisher\'s Combined P-value test (FCPT), Likelihood Ratio test (LRT), and the Convolution
 test (CT). For a gene, if its FDR for at least 2 of these tests is <= max_fdr, it will be output
 as an SMG. Another output file with prefix "_detailed" will have p-values and FDRs for all genes.
 HELP
@@ -58,17 +59,18 @@ sub execute {
   my $output_file_detailed = $output_file . "_detailed";
   my $pval_file = $output_file . "_pvals";
   my $max_fdr = $self->max_fdr;
+  my $processors = $self->processors;
 
   # Check on all the input data before starting work
   print STDERR "Gene mutation rate file not found or is empty: $gene_mr_file\n" unless( -s $gene_mr_file );
   return undef unless( -s $gene_mr_file );
 
   # Call R for Fisher combined test, Likelihood ratio test, and convolution test on each gene
-  my $smg_cmd = "R --slave --args < " . __FILE__ . ".R $gene_mr_file $pval_file smg_test";
+  my $smg_cmd = "R --slave --args < " . __FILE__ . ".R $gene_mr_file $pval_file smg_test $processors";
   WIFEXITED( system $smg_cmd ) or croak "Couldn't run: $smg_cmd ($?)";
 
   # Call R for calculating FDR on the p-values calculated in the SMG test
-  my $fdr_cmd = "R --slave --args < " . __FILE__ . ".R $pval_file $output_file_detailed calc_fdr";
+  my $fdr_cmd = "R --slave --args < " . __FILE__ . ".R $pval_file $output_file_detailed calc_fdr $processors";
   WIFEXITED( system $fdr_cmd ) or croak "Couldn't run: $fdr_cmd ($?)";
 
   # Remove the temporary intermediate file containing only pvalues

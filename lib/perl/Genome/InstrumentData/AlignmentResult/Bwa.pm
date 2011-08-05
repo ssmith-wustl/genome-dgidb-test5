@@ -46,12 +46,16 @@ sub required_rusage {
 
     my $required_usage = "-R '$select $rusage' $options";
 
-    my @selected_blades = `bhosts -R '$select' $host_groups | grep ^blade`;
+    #check to see if our resource requests are feasible (This uses "maxmem" to check theoretical availability)
+    #factor of four is based on current six jobs per host policy this should be revisited later
+    my $select_check = "select[ncpus >= $cpus && maxmem >= " . ($mem_mb * 4) . " && gtmp >= $tmp_gb] span[hosts=1]";
+
+    my @selected_blades = `bhosts -R '$select_check' $host_groups | grep ^blade`;
 
     if (@selected_blades) {
         return $required_usage;
     } else {
-        die $class->error_message("Failed to find hosts that meet resource requirements ($required_usage).");
+        die $class->error_message("Failed to find hosts that meet resource requirements ($required_usage). [Looked with $select_check]");
     }
 }
 

@@ -335,9 +335,9 @@ sub execute {
         my $cmd = "mv -f $datadir " . $self->intermediate_save_dir;
         system $cmd;
     }
-    elsif (!defined $self->intermediate_read_dir){
-        File::Temp::cleanup();
-    }
+    #elsif (!defined $self->intermediate_read_dir){
+    #    File::Temp::cleanup();
+    #}
 
     $out_fh->close;
     $cm_aln_fh->close if $cm_aln_fh;

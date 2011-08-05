@@ -617,11 +617,10 @@
     <!-- select unique input names -->
     <xsl:for-each select="$input">
       <xsl:variable name="build_id" select="ancestor::object[types/isa[@type='Genome::Model::Build']]/@id"/>
-      <xsl:variable name="build_name" select="ancestor::object[types/isa[@type='Genome::Model::Build']]/aspect[@name='name']/value"/>
+      <xsl:variable name="build_name" select="ancestor::object[types/isa[@type='Genome::Model::Build']]/aspect[@name='display_name']/value"/>
 
       <xsl:for-each select="object[not(preceding-sibling::*/aspect[@name='name']/value = aspect[@name='name']/value)]/aspect[@name='name']/value">
         <xsl:variable name="name" select="."/>
-
         <span class="input_diff">
           <xsl:choose>
             <!-- only one instrument data difference, just show the button -->
@@ -632,15 +631,15 @@
 
             <xsl:otherwise>
               <!-- more than one instrument data difference, create button + popup to show all -->
-              <a href="javascript:return(false)" class="mini btn popup-ajax-instrument-data">
-                <xsl:attribute name="title"><xsl:value-of select="$build_name"/> (<xsl:value-of select="$build_id"/>) instrument_data</xsl:attribute>
+              <a href="javascript:return(false)" class="mini btn popup-ajax-input-diff">
+                <xsl:attribute name="title">(<xsl:value-of select="$build_id"/>) input differences</xsl:attribute>
                 <xsl:attribute name="id"><xsl:value-of select="$build_id"/></xsl:attribute>
-                <span class="sm-icon sm-icon-newwin"><br/></span>instrument data (<xsl:value-of select="count($inputs[aspect[@name='name']/value = $name])"/>)
+                <span class="sm-icon sm-icon-newwin"><br/></span><xsl:value-of select="$name"/> (<xsl:value-of select="count($inputs[aspect[@name='name']/value = $name])"/>)
               </a>
 
               <!-- div for instrument data -->
               <div style="display: none;">
-                <xsl:attribute name="id">instrument_data_<xsl:value-of select="$build_id"/></xsl:attribute>
+                <xsl:attribute name="id">input_diff_<xsl:value-of select="$build_id"/></xsl:attribute>
                 <table class="lister">
                   <xsl:for-each select="$inputs[aspect[@name='name']/value = $name]">
                     <xsl:call-template name="genome_model_input_table_row"/>
@@ -950,7 +949,7 @@
         <xsl:variable name="build_id" select="@id"/>
         <xsl:choose>
           <xsl:when test="$note_count &gt; 0">
-            <xsl:message>build id: <xsl:value-of select="$build_id"/></xsl:message>
+
             <a class="mini btn notes-popup">
               <xsl:attribute name="title">Build <xsl:value-of select="$build_id"/> Notes</xsl:attribute>
               <xsl:attribute name="id"><xsl:value-of select="$build_id"/></xsl:attribute>
