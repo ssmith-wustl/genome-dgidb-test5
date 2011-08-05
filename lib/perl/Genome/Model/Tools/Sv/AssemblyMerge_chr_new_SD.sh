@@ -2,6 +2,7 @@
 
 ID=$1;
 DIR=$2;
+SCRIPT_DIR="$( cd "$( dirname "$0" )" && pwd )"
 #scripts/fixCTXswapXY_chr.pl $ID
 cd ${DIR};
 if [ -s merge.index ]; then
@@ -27,6 +28,6 @@ for file in tumor normal; do
     #    done
 done
 
-/gscuser/kchen/1000genomes/analysis/scripts/MergeAssembledCallsets.pl -c -f $ID.HQfiltered.fasta -d 200 -h merge.index 1> $ID.HQfiltered.csv 2>$ID.HQfiltered_out.csv
-/gscuser/kchen/1000genomes/analysis/scripts/BreakAnnot.pl -A $ID.HQfiltered.csv > $ID.HQfiltered.csv.annot
+${SCRIPT_DIR}/MergeAssembledCallsets.pl -c -f $ID.HQfiltered.fasta -d 200 -h merge.index 1> $ID.HQfiltered.csv 2>$ID.HQfiltered_out.csv
+${SCRIPT_DIR}/BreakAnnot.pl -A $ID.HQfiltered.csv > $ID.HQfiltered.csv.annot
 cd ..
