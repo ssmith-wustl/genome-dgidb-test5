@@ -85,7 +85,7 @@ test_alignment(validate_against_shortcut => 1, instrument_data=>$instrument_data
 $FAKE_INSTRUMENT_DATA_ID--;
 $instrument_data = generate_fake_instrument_data();
 $DB::single=1;
-test_alignment(force_fragment => 1, instrument_data=>$instrument_data);
+#test_alignment(force_fragment => 1, instrument_data=>$instrument_data); # TODO not implemented
 
 sub test_alignment {
     my %p = @_;
@@ -99,7 +99,7 @@ sub test_alignment {
                                                        samtools_version => $samtools_version,
                                                        picard_version => $picard_version,
                                                        aligner_version => $aligner_version,
-                                                       aligner_params => '-S 1',
+                                                       aligner_params => '-R -S 1',
                                                        aligner_name => $aligner_name,
                                                        reference_build => $reference_build, 
                                                        %p,
@@ -247,14 +247,18 @@ sub generate_fake_instrument_data {
         library => $library,
         flow_cell_id => '12345',
         lane => '1',
-        median_insert_size => '22',
-        sd_below_insert_size => '7',
-        sd_above_insert_size => '34',
+        #median_insert_size => '22', # XXX
+        #sd_below_insert_size => '7', # XXX
+        #sd_above_insert_size => '34', # XXX
+        median_insert_size => '196',
+        sd_below_insert_size => '22',
+        sd_above_insert_size => '78',
         run_name => '110101_TEST',
         subset_name => 4,
         run_type => 'Paired',
         gerald_directory => $fastq_directory,
-        bam_path => '/gsc/var/cache/testsuite/data/Genome-InstrumentData-AlignmentResult-Bwa/input.bam'
+        #bam_path => '/gsc/var/cache/testsuite/data/Genome-InstrumentData-AlignmentResult-Bwa/input.bam' # XXX
+        bam_path => '/gscuser/iferguso/bsmap/crashingtestdata.bam'
     );
     ok($instrument_data, 'create instrument data: '.$instrument_data->id);
     ok($instrument_data->is_paired_end, 'instrument data is paired end');
