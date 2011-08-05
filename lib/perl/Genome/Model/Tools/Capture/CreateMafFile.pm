@@ -339,7 +339,7 @@ sub trv_to_mutation_type
   return( "3'Flank" ) if( $trv_type eq "3_prime_flanking_region" );
   return( "5'Flank" ) if( $trv_type eq "5_prime_flanking_region" );
 
-  return( "Intron" ) if( $trv_type eq "intronic" || $trv_type eq "splice_region" );
+  return( "Intron" ) if( $trv_type eq "intronic" || $trv_type =~ /^splice_region/ );
   return( "Targeted_Region" ) if( $trv_type eq "-" );
 
   warn( "Unknown mutation type $trv_type\n" );

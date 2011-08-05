@@ -44,7 +44,8 @@ use warnings;
 my $test_data = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants2-GatkGermlineSnv";
 my $expected_base = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants2-GatkGermlineSnv/";
 # V2 adds the actual score and depth values to the bed
-my $expected_data = "$expected_base/expected.v2";
+# V3 adjusts the column used for score -- QUAL instead of GQ
+my $expected_data = "$expected_base/expected.v3";
 my $tumor =  $test_data."/flank_tumor_sorted.13_only.bam";
 
 my $tmpbase = File::Temp::tempdir('GatkGermlineSnvXXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites/', CLEANUP => 1);
@@ -67,7 +68,6 @@ is($rv, 1, 'Testing for successful execution.  Expecting 1.  Got: '.$rv);
 # snvs.hq - ref seq path will be different, so do this to compare the file
 my ($expected_snvs_hq_params, $expected_snvs_hq_data) = _load_snvs_hq("$expected_data/snvs.hq");
 my ($got_snvs_hq_params, $got_snvs_hq_data) = _load_snvs_hq("$tmpdir/snvs.hq");
-$got_snvs_hq_params->{reference_sequence} =~ s/^$refseq_tmp_dir//;
 is_deeply($got_snvs_hq_params, $expected_snvs_hq_params, 'snvs.hq params match');
 is_deeply($got_snvs_hq_data, $expected_snvs_hq_data, 'snvs.hq data matches');
 
@@ -104,6 +104,9 @@ sub _load_snvs_hq {
         chomp $line;
         %params = map { split('=') } split(/\s/, $line);
     }
+
+    # Don't check reference sequence because it is cached locally and the path will vary
+    delete $params{reference_sequence};
 
     return (\%params, \@data);
 }
