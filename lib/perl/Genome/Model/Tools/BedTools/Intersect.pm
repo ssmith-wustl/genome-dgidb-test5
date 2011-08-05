@@ -106,6 +106,7 @@ sub execute {
         cmd => $cmd,
         input_files => [$self->input_file_a,$self->input_file_b],
         output_files => [$self->output_file],
+	skip_if_output_is_present => 0,
     );
     return 1;
 }
