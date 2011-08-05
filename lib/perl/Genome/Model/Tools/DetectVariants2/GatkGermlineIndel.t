@@ -42,7 +42,9 @@ no warnings;
 use warnings;
 
 my $test_data = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants2-GatkGermlineIndel";
-my $expected_data = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants2-GatkGermlineIndel/expected";
+my $base_expected_dir = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants2-GatkGermlineIndel/";
+my $expected_version = "expected.v2";
+my $expected_data = $base_expected_dir . $expected_version;
 my $tumor =  $test_data."/flank_tumor_sorted.bam";
 
 my $tmpbase = File::Temp::tempdir('GatkGermlineIndelXXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites/', CLEANUP => 1);
