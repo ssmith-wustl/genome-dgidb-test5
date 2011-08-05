@@ -156,8 +156,17 @@ sub _process_params {
 }
 
 
+sub _resolve_output_directory {
+    my $self = shift;
+    #Subclasses override this
+    return 1;
+}
+
+
 sub shortcut {
     my $self = shift;
+
+    $self->_resolve_output_directory;
 
     #try to get using the lock in order to wait here in shortcut if another process is creating this alignment result
     my ($params) = $self->params_for_result;
@@ -176,6 +185,8 @@ sub shortcut {
 
 sub execute {
     my $self = shift;
+
+    $self->_resolve_output_directory;
 
     $self->_process_params;
 

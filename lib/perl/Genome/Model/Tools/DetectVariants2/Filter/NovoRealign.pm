@@ -28,7 +28,7 @@ class Genome::Model::Tools::DetectVariants2::Filter::NovoRealign {
         novoalign_version => {
             type => 'String',
             doc  => 'novoalign version to use in this process',
-            default_value =>  '2.05.13',  #originally used in kchen's perl script, other version not tested
+            default_value =>  '2.05.13',
             valid_values  => [Genome::Model::Tools::Novocraft->available_novocraft_versions],
         },
         novoalign_path => {

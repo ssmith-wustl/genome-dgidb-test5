@@ -4,16 +4,16 @@ use warnings;
 use Genome;
 
 class Genome::Model::Command::Define::ImportedReferenceSequence {
-    is => [
-        'Genome::Model::Command::Define',
-        'Genome::Command::Base',
-        ],
+    is => 'Genome::Model::Command::Define::Helper',
     has_input => [
         fasta_file => {
             is => 'Text',
             len => 1000,
             doc => "The full path and filename of the reference sequence fasta file to import."
-        }
+        },
+        processing_profile_id => {
+            default_value => '1990904',
+        },
     ],
     has_optional_input => [
         append_to => {
@@ -58,20 +58,9 @@ class Genome::Model::Command::Define::ImportedReferenceSequence {
             len => 255,
             doc => '$PREFIX-$SPECIES_NAME unless otherwise specified.'
         },
-        processing_profile_name => {
-            is_constant => 1,
-            # valid_values => ['import fasta','expand','reduce','mask','hypothesize variations']
-            value => 'chromosome-fastas',
-            doc => 'The processing profile takes no parameters, so all imported reference sequence models share the same processing profile instance.'
-        },
         subject_name => {
             is_optional => 1,            
             doc => 'Copied from species_name.'
-        },
-        subject_class_name => {
-            is_constant => 1,
-            value => 'Genome::Taxon',
-            doc => 'All imported reference sequence model subjects are represented by the Genome::Taxon class.'
         },
         on_warning => {
             valid_values => ['prompt', 'exit', 'continue'],
@@ -88,14 +77,6 @@ class Genome::Model::Command::Define::ImportedReferenceSequence {
         },
    ],
 };
-
-sub _shell_args_property_meta {
-    return shift->Genome::Command::Base::_shell_args_property_meta(@_);
-}
-
-sub resolve_class_and_params_for_argv {
-    return shift->Genome::Command::Base::resolve_class_and_params_for_argv(@_);
-}
 
 sub help_synopsis {
     return "genome model define imported-reference-sequence --species-name=human --prefix=NCBI --fasta-file=/gscuser/person/fastafile.fasta\n"

@@ -34,6 +34,7 @@ sub init_sub_commands {
     my $target_name = ( defined $incoming_config{target_name} )
     ? delete $incoming_config{target_name}
     : join(' ', map { Genome::Utility::Text::camel_case_to_string($_) } split('::', $config{target_class}));
+    Lingua::EN::Inflect::classical(persons => 1);
     $config{name_for_objects} = Lingua::EN::Inflect::PL($target_name);
     $config{name_for_objects_ub} = $config{name_for_objects};
     $config{name_for_objects_ub} =~ s/ /_/;

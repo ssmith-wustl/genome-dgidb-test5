@@ -19,7 +19,7 @@ class Genome::Model::Tools::Analysis::LaneQc::CopyNumber {
             type => 'Number',
             is_optional => 1,
             default => 50000,
-            doc => "Window (in bp) for looking at read-depth window-based copy number. See ~kchen/SNPHMM/SolexaCNV/scripts/BAM2CN.pl for more information.",
+            doc => "Window (in bp) for looking at read-depth window-based copy number.",
         },
         output_file_prefix => {
             type => 'String',

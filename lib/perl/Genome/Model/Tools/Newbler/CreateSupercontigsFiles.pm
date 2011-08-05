@@ -45,17 +45,7 @@ sub execute {
         $self->create_consed_dir;
     }
 
-    unless ( $self->_write_supercontigs_files ) {
-        $self->error_message("Failed to create supercontigs files");
-        return;
-    }
-
-    return 1;
-}
-
-sub _write_supercontigs_files {
-    my $self = shift;
-
+    #filter contigs my min length
     my $scaffolds = $self->get_scaffolding_info;
     # returns .. while filtering out min_contig contigs
     # and re-adjust gap size when contigs are removed
@@ -66,7 +56,6 @@ sub _write_supercontigs_files {
     #      'contig_name' => 'contig00009',
     #      'gap_length' => '894'
     #    };
-
     unless( $scaffolds ) {
         $self->error_message( "Failed to parse newbler scaffolds file" );
         return;

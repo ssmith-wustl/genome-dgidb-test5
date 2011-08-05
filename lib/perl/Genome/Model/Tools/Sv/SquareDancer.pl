@@ -32,7 +32,6 @@ Options:
          -b       report read count by library
          -d       print out debug information
 Version: $version
-Contact: kchen\@genome.wustl.edu or xfan\@genome.wustl.edu\n
 ") unless (@ARGV);
 
 my $options='';

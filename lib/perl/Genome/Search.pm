@@ -161,7 +161,7 @@ sub _resolve_result_xml_view {
 sub add {
     my $class = shift;
     my @objects = @_;
-    
+
     my $self = $class->_singleton_object;
     my @docs = $class->generate_document(@objects);
 
@@ -170,7 +170,7 @@ sub add {
         return;
     }
 
-    my $solr_dev = $self->_solr_server(WebService::Solr->new($self->_dev_solr_server_location()));
+    my $solr_dev = WebService::Solr->new($self->_dev_solr_server_location());
     unless($solr_dev->add(\@docs)) {
         $self->error_message('Failed to send ' . (scalar @docs) . ' document(s) to other solr instance (solr)');
         return;
@@ -201,15 +201,12 @@ sub delete {
     my @objects = grep { exists $_->{db_committed} } @_;   
  
     my $self = $class->_singleton_object;
-    
-    my @docs = $class->generate_document(@objects);
-    
-    my $error_count = $class->_delete_by_doc(@docs);
-    
-    my $deleted_count = scalar(@docs) - $error_count;
-#    if($deleted_count) {
-#        $self->status_message('Removed ' . $deleted_count . ' document(s) from Solr.');
-#    }
+   
+    my @ids = map { join('---', $_->class, $_->id()) } @objects;
+
+    my $error_count = $class->_delete_by_id(@ids);
+    my $deleted_count = scalar(@ids) - $error_count;
+
     if($error_count) {
         $self->error_message('Failed to remove ' . $error_count . ' document(s) from Solr.');
         return;
@@ -218,13 +215,34 @@ sub delete {
     return $deleted_count || 1;
 }
 
+sub _delete_by_id {
+    my ($class, @ids) = @_;
+
+    my $self = $class->_singleton_object;
+
+    my $solr = $self->solr_server();
+
+    my $memcached = Genome::Memcache->server;
+
+    my $error_count = 0;
+    for my $id (@ids) {
+        if($solr->delete_by_id($id)) {
+            my $cache_key = "genome_search:$id";
+            $memcached->delete($cache_key);
+        } else {
+            $error_count++;
+        }
+    }
+    
+    return $error_count;
+}
+
 sub _delete_by_doc {
     my $class = shift;
     my @docs = @_;
     
     my $self = $class->_singleton_object;
     my $solr = $self->solr_server;
-    my $memcached = Genome::Memcache->server;
     
     my $error_count = 0;
     for my $doc (@docs) {
@@ -506,7 +524,7 @@ sub _commit_callback {
 sub _delete_callback {
     my $class = shift;
     my $object = shift;
-    
+
     return unless $object;
 
     return 1 if UR::DBI->no_commit && $class->environment eq 'prod'; 

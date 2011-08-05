@@ -199,9 +199,9 @@ sub _dump_dv_cmd {
     my $self = shift;
     my $cmd = join(" ",@INC)."\n===============================================\n";
     $cmd .=   "gmt detect-variants2 dispatcher --output-directory ".$self->output_directory
-                ." --aligned-reads-input ".$self->aligned_reads_input
-                ." --control-aligned-reads-input ".$self->control_aligned_reads_input
-                ." --reference-build-id ".$self->reference_build_id;
+                ." --aligned-reads-input ".$self->aligned_reads_input;
+    $cmd .=     " --control-aligned-reads-input ".$self->control_aligned_reads_input if $self->control_aligned_reads_input;
+    $cmd .=     " --reference-build-id ".$self->reference_build_id;
     for my $var ('snv','sv','indel'){
         my $strat = $var."_detection_strategy";
         if(defined($self->$strat)){

@@ -159,7 +159,7 @@ $pp->assembler_name($assembler_name); # reset
 
 # ASSEMBLE
 $assembler_rusage = $build->assembler_rusage;
-my $queue = ( Genome::Config->should_use_alignment_pd ) ? 'alignment-pd' : 'alignment';
+my $queue = ( $build->run_by eq 'apipe-tester' ) ? 'alignment-pd' : 'apipe';
 is($assembler_rusage, "-q $queue -n 4 -R 'span[hosts=1] select[type==LINUX64 && mem>30000] rusage[mem=30000]' -M 30000000", 'assembler rusage');
 %assembler_params = $build->assembler_params;
 #print Data::Dumper::Dumper(\%assembler_params);

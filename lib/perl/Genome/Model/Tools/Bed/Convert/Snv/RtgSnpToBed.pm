@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use Genome;
+use POSIX;
 use Genome::Info::IUB;
 
 class Genome::Model::Tools::Bed::Convert::Snv::RtgSnpToBed {
@@ -49,7 +50,7 @@ sub process_source {
         if((length $reference) > 1){
             next;
         }
-        
+        $quality = floor($quality);
         if(defined($cons)){
             $self->write_bed_line($chromosome, $position - 1, $position, $reference, $cons, $quality, $depth);
         } else {

@@ -12,7 +12,7 @@ class Genome::Model::Tools::Analysis::LaneQc::CompareCnvBuildLanes {
     has => [
     model_id => { type => 'String', is_optional => 0, doc => "tumor/normal model_id to get the last suceed build to gather per lane bam files",},
     outfile_prefix => { type => 'String', is_optional => 0, doc => "Directory to use for keep outputs",},
-    bam2cn_window => { type => 'Number', is_optional => 1, default => 50000, doc => "Window (in bp) for looking at read-depth window-based copy number. See ~kchen/SNPHMM/SolexaCNV/scripts/BAM2CN.pl for more information.",},
+    bam2cn_window => { type => 'Number', is_optional => 1, default => 50000, doc => "Window (in bp) for looking at read-depth window-based copy number.",},
     ]
 };
 

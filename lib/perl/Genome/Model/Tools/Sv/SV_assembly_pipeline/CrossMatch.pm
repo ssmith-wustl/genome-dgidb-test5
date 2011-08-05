@@ -16,7 +16,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ########################################################################################
-# Author: Ken Chen (kchen@genome.wustl.edu)
+# Author: Ken Chen
 # Date: July, 2008
 # This module can used to detect SNP and indels based on the cross-match alignment
 # of 454 reads to the reference sequences using Fisher Exact Test

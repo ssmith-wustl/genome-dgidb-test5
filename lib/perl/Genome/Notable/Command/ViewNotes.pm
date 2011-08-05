@@ -40,9 +40,16 @@ sub execute {
         print "\n" . 'Notes for ' . $notable->__display_name__ . "\n";
         my @notes = $notable->notes(%note_params);
         for my $note (@notes) {
-            print $note->header_text . ' by ' . $note->editor_id . ' on ' . $note->entry_date . ":\n";
-            my @body_lines = split("\n", $note->body_text);
-            print '> ' . join("\n> ", @body_lines) . "\n";
+            print $note->header_text . ' by ' . $note->editor_id . ' on ' . $note->entry_date;
+            my $body_text = $note->body_text;
+            if ($body_text) {
+                print ":\n";
+                my @body_lines = split("\n", $body_text);
+                print '> ' . join("\n> ", @body_lines) . "\n";
+            }
+            else {
+                print ".\n";
+            }
         }
         print "\n";
     }

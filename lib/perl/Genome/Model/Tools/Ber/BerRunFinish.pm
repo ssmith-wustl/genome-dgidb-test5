@@ -618,7 +618,7 @@ sub execute
     my $location = $amgap_path . "/"
         . $org_dirname . "/"
         . $assembly_name . "/"
-        . $pipe_version;
+        . $assembly_version;
 
     print $rtfile_fh qq{$location\n\n};
     print $rtfile_fh

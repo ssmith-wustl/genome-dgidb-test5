@@ -66,7 +66,7 @@ $SampleToReadFile{"xenograft"} = "/gscmnt/sata835/info/medseq/model_data/2821006
 # This is where the reads are kept. This is needed for David's program
 #$PathToMapFiles = "/gscmnt/sata180/info/medseq/dlarson/YRI_Analysis";
 #$PathToMapFiles = "/gscmnt/sata146/info/medseq/dlarson/GBM";
-#$PathToMapFiles = "/gscmnt/sata194/info/sralign/kchen/1000genomes/simulation/proj/Venter_chr17/experiments";
+#$PathToMapFiles = "/gscmnt/sata194/info/sralign/xxx/1000genomes/simulation/proj/Venter_chr17/experiments";
 #$PathToMapFiles = "/gscmnt/sata135/info/medseq/dlarson/AML2";
 #$PathToMapFiles = "/gscmnt/sata194/info/sralign/1000genomes/data/ftp.1000genomes.ebi.ac.uk/analysis";
 #$PathToMapFiles = "/gscmnt/sata821/info/model_data";

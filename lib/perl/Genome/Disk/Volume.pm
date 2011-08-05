@@ -36,7 +36,7 @@ class Genome::Disk::Volume {
             calculate_from => ['mount_path'],
             calculate => q{ 
                 return 0 unless -e $mount_path;
-                my ($used_kb) = qx(df -k $mount_path | grep $mount_path | awk '{print \$3}') =~ /(\d+)/; 
+                my ($used_kb) = qx(df -Pk $mount_path | grep $mount_path | awk '{print \$3}') =~ /(\d+)/; 
                 return $used_kb
             },
         },

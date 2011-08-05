@@ -65,6 +65,11 @@ class Genome::Model::Tools::DetectVariants2::Breakdancer{
             is_optional => 1,
             doc => 'This is the property used internally by the tool for breakdancer parameters. It splits params.',
         },
+        _base_output_directory => {
+            is => 'Text',
+            is_optional => 1,
+            doc => 'Store the base output directory when using per-chromosome output dirs',
+        },
     ],
     has_param => [ 
         lsf_resource => {
@@ -101,8 +106,14 @@ sub _create_temp_directories {
     return $self->SUPER::_create_temp_directories(@_);
 }
 
-sub execute {
+sub _resolve_output_directory {
     my $self = shift;
+
+    if ($self->_base_output_directory and $self->_base_output_directory ne $self->output_directory) {
+        return 1;
+    }
+
+    $self->_base_output_directory($self->output_directory);
 
     if($self->chromosome and $self->chromosome ne 'all') {
         my $output_dir = $self->output_directory;
@@ -114,9 +125,8 @@ sub execute {
         $self->output_directory($output_dir . '/' . $self->chromosome);
     }
 
-    return $self->SUPER::_execute_body;
+    return 1;
 }
-
 
 sub _detect_variants {
     my $self = shift;
