@@ -1602,6 +1602,10 @@ sub delete {
         $object->delete;
     }
 
+    # Remove the build as a Software Result User
+    $self->status_message("Unregistering software results associated with build");
+    $self->_unregister_software_results;
+
     # Deallocate build directory, which will also remove it (unless no commit is on)
     my $disk_allocation = $self->disk_allocation;
     if ($disk_allocation) {
