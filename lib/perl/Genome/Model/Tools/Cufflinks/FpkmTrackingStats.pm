@@ -1,12 +1,16 @@
-package Genome::Model::Tools::Cufflinks::FpkmTracking;
+package Genome::Model::Tools::Cufflinks::FpkmTrackingStats;
 
 use strict;
 use warnings;
 
 use Genome;
-use Math::Round;
+use Statistics::Descriptive;
 
-class Genome::Model::Tools::Cufflinks::FpkmTracking {
+
+
+my @HEADERS = qw/total OK LOWDATA FAIL touched min_coverage max_coverage mean_coverage stdev_coverage min_fpkm max_fpkm mean_fpkm stdev_fpkm/;
+
+class Genome::Model::Tools::Cufflinks::FpkmTrackingStats {
     is => ['Command'],
     has => [
         fpkm_tracking_file => {
@@ -18,8 +22,15 @@ class Genome::Model::Tools::Cufflinks::FpkmTracking {
             doc => 'An output summary file with tab-separated values.',
             is_optional => 1,
         },
+        _stats_hash_ref => {
+            is_optional => 1,
+        }
     ],
 };
+
+sub headers {
+    return @HEADERS;
+}
 
 sub execute {
     my $self = shift;
@@ -28,8 +39,8 @@ sub execute {
         input => $self->fpkm_tracking_file,
         separator => "\t",
     );
-    my %coverage;
-    my %fpkm;
+    my $coverage_stats = Statistics::Descriptive::Sparse->new();
+    my $fpkm_stats = Statistics::Descriptive::Sparse->new();
     my %stats;
     while (my $data = $reader->next) {
         # Example data structure for isoforms.fpkm_tracking
@@ -49,32 +60,48 @@ sub execute {
         #  'FPKM_conf_hi' => '0'
         #};
         $stats{total}++;
-        $stats{$data->{status}}++;
-        my $coverage = $data->{coverage};
-        if ($coverage =~ /\d+/) {
-            if ($coverage > 0) {
-                $stats{touched}++;
+        my $status = $data->{status};
+        $stats{$status}++;
+        if ($status eq 'OK') {
+            my $coverage = $data->{coverage};
+            my $length = $data->{length};
+            # I don't think this will actually work given the normalization and bias correction performed during cufflinks
+            # my $reads = int($coverage * $length);
+            if ($coverage =~ /\d+/) {
+                if ($coverage > 0) {
+                    $stats{touched}++;
+                    # The coverage metrics are now weighted by length
+                    my @data;
+                    for (1 .. $length) {
+                        push @data, $coverage;
+                    }
+                    $coverage_stats->add_data(@data);
+                }
             }
-            $coverage = round($coverage);
+            my $fpkm = $data->{FPKM};
+            if ($fpkm > 0) {
+                $fpkm_stats->add_data($fpkm);
+            }
         }
-        $coverage{ $coverage }++;
-        my $fpkm = $data->{FPKM};
-        $fpkm = sprintf("%.01f", $fpkm);
-        $fpkm{ $fpkm }++;
     }
-    my @headers = sort { $a cmp $b } keys %stats;
+    $stats{min_coverage} = $coverage_stats->min;
+    $stats{max_coverage} = $coverage_stats->max;
+    $stats{mean_coverage} = $coverage_stats->mean;
+    $stats{stdev_coverage} = $coverage_stats->standard_deviation;
+
+    $stats{min_fpkm} = $fpkm_stats->min;
+    $stats{max_fpkm} = $fpkm_stats->max;
+    $stats{mean_fpkm} = $fpkm_stats->mean;
+    $stats{stdev_fpkm} = $fpkm_stats->standard_deviation;
+
+    my @headers = $self->headers;
     my $writer = Genome::Utility::IO::SeparatedValueWriter->create(
         output => $self->output_summary_tsv,
         separator => "\t",
         headers => \@headers,
     );
     $writer->write_one(\%stats);
-    #for my $bin (sort {$a <=> $b} keys %fpkm) {
-    #    print $bin ."\t". $fpkm{$bin} ."\n";
-    #}
-    #for my $key (sort keys %stats) {
-    #    print $key ."\t". $stats{$key} ."\n";
-    #}
+    $self->_stats_hash_ref(\%stats);
     return 1;
 };
 
