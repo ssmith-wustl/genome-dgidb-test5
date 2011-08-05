@@ -161,24 +161,24 @@ sub _run_aligner {
     ###################################################
     # run methylation mapping
     ###################################################
-    # TODO XXX reactivate
-    #$self->status_message("Running methratio.py.");
+    $self->status_message("Running methratio.py.");
 
-    ## TODO this may have issues in force fragment mode?
-    #my $methylation_output = $staging_directory . "/output.meth.dat";
-    #
-    #my $meth_cmd = sprintf("python %s/%s %s %s",
-    #    dirname($bsmap_cmd_path),
-    #    "methratio.py",
-    #    $temp_sam_output,
-    #    $methylation_output
-    #);
-    #
-    #$rv = Genome::Sys->shellcmd(
-    #    cmd => $meth_cmd,
-    #    input_files => [$temp_sam_output],
-    #    output_files => [$methylation_output]
-    #);
+    # TODO this may have issues in force fragment mode?
+    my $methylation_output = $staging_directory . "/output.meth.dat";
+    
+    my $meth_cmd = sprintf("/usr/bin/python %s/%s %s > %s",
+        #dirname($bsmap_cmd_path), #TODO fix this
+        dirname("/gscuser/cmiller/usr/src/bsmap-2.1/methratio.py"),
+        "methratio.py",
+        $temp_sam_output,
+        $methylation_output
+    );
+    
+    $rv = Genome::Sys->shellcmd(
+        cmd => $meth_cmd,
+        input_files => [$temp_sam_output],
+        output_files => [$methylation_output]
+    );
     
     ###################################################
     # append temp sam file to all_sequences.sam
@@ -221,6 +221,7 @@ sub aligner_params_for_sam_header {
 }
 
 sub decomposed_aligner_params {
+    # TODO this is not forcing things that should be forced when not provided...
     my $self = shift;
     
     my $full_params;
@@ -239,7 +240,7 @@ sub decomposed_aligner_params {
     # -z ! is required to get the correct quality score output
     # -v is the number of mismatches to allow
     # -q is the minimum quality score used in trimming
-    # -R appends refseq information to the bam, allowing us to use a bsmap script to calc methylation ratios
+    
     
     # create our params hash, using default arguments if none were supplied
     my $aligner_params = $full_params || $defaults;
@@ -310,6 +311,10 @@ sub _process_record_pair {
                 my $tag = $_;
                 if ($tag =~ /$regex/) {
                     my $trimmed_ref_seq = $1;
+                    
+                    if ($trimmed_ref_seq =~ /TGTGTGTGTGTGTGTGTGTGTGTG/) {
+                        $DB::single = 1;
+                    }
 
                     my $full_ref_seq = $reference_build->sequence(
                         $aligned_record->{rname},
@@ -317,10 +322,14 @@ sub _process_record_pair {
                         $full_pos + length($full_seq) - 1
                     );
                     
-                    my $refpreclip = index($full_ref_seq, $trimmed_ref_seq);
+                    my $refpreclip = -1;
                     
-                    die $self->error_message("Trimmed and full reference sequences did not line up ($refpreclip):\n$trimmed_ref_seq\n$full_ref_seq")
-                        if $refpreclip != $preclip;
+                    do {
+                        $refpreclip = index($full_ref_seq, $trimmed_ref_seq, $refpreclip+1);
+                    } while ($refpreclip != -1 and $refpreclip < $preclip);
+                    
+                    die $self->error_message("Trimmed ref seq was not found at expected position of $preclip in full ref seq ($refpreclip):\n$trimmed_ref_seq\n$full_ref_seq")
+                        if $refpreclip == -1;
                     
                     $tag = "XR:Z:" . $full_ref_seq;
                 }
@@ -430,8 +439,8 @@ sub _fix_sam_output {
         }
 
         while (1) {
-            my @input_records = map{$is_bam ? $self->_pull_sam_record_from_fh_skip_headers($_, "[35m") : $self->_pull_fq_record_from_fh($_)} @inFhs;
-            my @aligned_records = map{$self->_pull_sam_record_from_fh_skip_headers($alignedFh, "[33m")} (1..2);
+            my @input_records = map{$is_bam ? $self->_pull_sam_record_from_fh_skip_headers($_) : $self->_pull_fq_record_from_fh($_)} @inFhs;
+            my @aligned_records = map{$self->_pull_sam_record_from_fh_skip_headers($alignedFh)} (1..2);
 
             if ((grep{not defined($_)} @input_records) or (grep{not defined($_)} @aligned_records)) {
                 if ( (grep{not defined($_)} (@input_records, @aligned_records)) == (@input_records + @aligned_records) ) {
@@ -456,7 +465,7 @@ sub _fix_sam_output {
                 my @keys = qw(qname flag rname pos mapq cigar rnext pnext tlen seq qual);
                 chomp (my $line = join("\t", ( (map {$new_record->{$_}} @keys), @{$new_record->{'tags'}} ) ));
                 print $outFh $line."\n";
-                print "[31m" . $line . "[0m\n";
+                #print "[31m" . $line . "[0m\n";
             }
         }
         
@@ -472,8 +481,8 @@ sub _fix_sam_output {
         }
 
         while (1) {
-            my $input_record = $is_bam ? $self->_pull_sam_record_from_fh_skip_headers($inFh, "[35m") : $self->_pull_fq_record_from_fh($inFh);
-            my $aligned_record = $self->_pull_sam_record_from_fh_skip_headers($alignedFh, "[33m");
+            my $input_record = $is_bam ? $self->_pull_sam_record_from_fh_skip_headers($inFh) : $self->_pull_fq_record_from_fh($inFh);
+            my $aligned_record = $self->_pull_sam_record_from_fh_skip_headers($alignedFh);
 
             if (not defined($input_record) or not defined($aligned_record)) {
                 if (not defined($input_record) and not defined($aligned_record)) {
@@ -497,7 +506,7 @@ sub _fix_sam_output {
             my @keys = qw(qname flag rname pos mapq cigar rnext pnext tlen seq qual);
             chomp (my $line = join("\t", ( (map {$new_record->{$_}} @keys), @{$new_record->{'tags'}} ) ));
             print $outFh $line."\n";
-            print "[31m" . $line . "[0m\n";
+            #print "[31m" . $line . "[0m\n";
         }
         $inFh->close();
         $alignedFh->close();
@@ -507,10 +516,9 @@ sub _fix_sam_output {
 sub _pull_sam_record_from_fh_skip_headers {
     my $self = shift;
     my $samFh = shift;
-    my $color = shift;
     
     while(1) {
-        my $record = $self->_pull_sam_record_from_fh($samFh, $color);
+        my $record = $self->_pull_sam_record_from_fh($samFh);
         
         # return unless we pulled a header
         return $record unless defined($record) and exists($record->{header});
@@ -520,7 +528,7 @@ sub _pull_sam_record_from_fh_skip_headers {
 sub _pull_sam_record_from_fh {
     my $self = shift;
     my $sam_fh = shift;
-    my $color = shift;
+    #my $color = shift;
     
     my $line = $sam_fh->getline();
     
@@ -528,7 +536,7 @@ sub _pull_sam_record_from_fh {
         return undef;
     } elsif ($line =~ /^@(?:HD|SQ|RG|PG).+?\n/) {
         chomp($line);
-    print "$color$line[0m";
+        #print "$color$line[0m";
         return {header => $line}
     } else {
         my @fields = split("\t", $line);
@@ -538,7 +546,7 @@ sub _pull_sam_record_from_fh {
             $record->{$_} = shift @fields;
         }
         $record->{tags} = \@fields; # the remaing fields should be tags
-    print "$color$line[0m";
+        #print "$color$line[0m";
         return $record;
     }
 }
@@ -555,9 +563,9 @@ sub _pull_fq_record_from_fh {
     if (!defined($fastq_id) || !defined($fastq_sequence) || !defined($fastq_qual)) {
         return undef;
     } else {
-        print "[35m$fastq_id[0m";
-        print "[35m$fastq_sequence[0m";
-        print "[35m$fastq_qual[0m";
+        #print "[35m$fastq_id[0m";
+        #print "[35m$fastq_sequence[0m";
+        #print "[35m$fastq_qual[0m";
         chomp($fastq_id);
         chomp($fastq_sequence);
         chomp($fastq_qual);
