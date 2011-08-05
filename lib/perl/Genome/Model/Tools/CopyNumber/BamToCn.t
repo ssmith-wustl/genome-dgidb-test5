@@ -29,7 +29,7 @@ my $tmpbase = File::Temp::tempdir('BamToCnXXXXX', DIR => '/gsc/var/cache/testsui
 my $output_file = "$tmpbase/bam-to-cn.bam2cn";
 my $refbuild_id = 101947881;
 my $bam = $test_data."/tumor.bam";
-my $expected_output = $test_data."/expected_v1/chr22.luc1t.bam.bam2cn.kchen";
+my $expected_output = $test_data."/expected_v1/chr22.luc1t.bam.bam2cn";
 
 my $bam_to_cn = Genome::Model::Tools::CopyNumber::BamToCn->create(
                     aligned_reads_input => $bam,
