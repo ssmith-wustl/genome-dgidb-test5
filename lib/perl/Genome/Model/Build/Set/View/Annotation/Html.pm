@@ -89,165 +89,50 @@ sub check_build {
 #    }
 }
 
-sub get_specific_lines {
-    my $self = shift;
-    my $file = shift;
-    my $offset = shift;
-    my $limit = shift;
-
-    my $fh = IO::File->new("$file") || die $self->error_message("Can't open file '$file'.");
-    
-    my @lines;
-
-    my $count = 0;
-    if ($limit == -1) { $limit = 500; }
-    
-    # TODO more robust interface
-    # TODO test limits and offsets
-    while (my $line = <$fh>) {
-        if ( ($count >= $offset) && (scalar(@lines) < $limit) ) {
-            push @lines, [split("\t", $line)];
-        }
-        $count++;
-    }
-
-    $fh->close();
-    
-    my %rv = (
-        lines_read => $count,
-        lines => \@lines
-    );
-     
-    return \%rv;
-}
-
-sub get_lines {
-    my $self   = shift;
-    my $file   = shift;
-    my $offset = shift;
-    my $limit  = shift;
-    my $p      = shift;
-    
-    my $index  = delete $params{index};  # use an index to limit to certain lines
-    my $query  = delete $params{query};  # what to query
-    my $sort   = delete $params{sort};   # what columns to sort by, + for asc, - for desc
-    my $filter = delete $params{filter}; # what columns to filter by
-    
-    if (defined($index)) {
-        if (defined($index->{$query})) {
-
-        }
-    }
-
-}
-
-### START TODO
-
 # maybe when running a sort build a line-based index, use perls sort to do a "slow" but memory efficient sort
 # have a function that pulls a given field(s) from a line starting at a given fpos
 
 
-sub get_lines_via_cmd {
-    my $self = shift;
-    my $file = shift;
-    my $grep = shift;
-    my $offset = shift;
-    my $limit = shift;
-    my $cmd = shift;
-    print "[32m$file, $grep, $offset, $limit[0m\n";
+sub get_lines {
+    my ($self, %params) = @_;
 
-    #my $cmd = "grep $grep $file";
-    my $fh = IO::File->new("$cmd | ") || die $self->error_message("Can't pipe command '$cmd'.");
+    print "[32m".Data::Dumper::Dumper(\%params)."[0m\n";
+
+    my %defaults = (
+        offset => 0,
+        limit => 500
+    );
+    
+    for (keys %defaults) {
+        # fill in defaults in params unless property is already specified
+        $params{$_} = $defaults{$_} unless defined $params{$_};
+    }
+
+    my $file      = delete $params{file};
+    my $offset    = delete $params{offset};
+    my $limit     = delete $params{limit};
+    my $delimiter = delete $params{delimiter};
+    #my $index  = delete $params{index};  # use an index to limit to certain lines
+    #my $query  = delete $params{query};  # what to query
+    #my $sort   = delete $params{sort};   # what columns to sort by, + for asc, - for desc
+    #my $filter = delete $params{filter}; # what columns to filter by
+
+    die $self->error_message("No file or command specified to get lines from") unless defined $file;
+    my $fh = IO::File->new("$file") || die $self->error_message("Can't pipe command '$file'.");
     
     my @lines;
 
     my $count = 0;
-    if ($limit == -1) { $limit = 500; }
     
     # TODO more robust interface
     # TODO test limits and offsets
     while (my $line = <$fh>) {
         if ( ($count >= $offset) && (scalar(@lines) < $limit) ) {
-            push @lines, [split("\t", $line)];
-        }
-        $count++;
-    }
-
-    $fh->close();
-    
-    my %rv = (
-        lines_read => $count,
-        lines => \@lines
-    );
-     
-    return \%rv;
-}
-
-sub build_line_index {
-    my $self = shift;
-    my $file = shift;
-    my $column = shift;
-    my $delim = shift;
-
-    my $fh = IO::File->new($file) || die $self->error_message("Can't open file '$file'.");
-    
-    
-
-    if (defined($column) and defined($delim)) { # a bit slower
-        my @index;
-        my $pos = 0;
-
-        while (my $line = <$fh>) {
-            my $offset = 0;
-            for (my $i = 0; $i < $column; $i++) {
-                $offset = 1+index($line, $delim, $offset);
+            if (defined ($delimiter)) {
+                push @lines, [split($delimiter, $line)];
+            } else {
+                push @lines, [$line];
             }
-            my $end = index($line, $delim, $offset);
-            
-            $end += $end == -1 ? tell($fh) : $pos;
-            push @index, [$pos+$offset, $end];
-            
-            $pos = tell($fh);
-        }
-        
-        return \@index;
-    } else { # go fast
-        my @index;
-
-        do {
-            push @index, tell($fh);
-        } while (<$fh>);
-        
-        pop @index; # the last value will be bogus
-
-        return \@index;
-    }
-}
-
-
-### END TODO
-
-sub get_lines_via_grep {
-    my $self = shift;
-    my $file = shift;
-    my $grep = shift;
-    my $offset = shift;
-    my $limit = shift;
-    print "[32m$file, $grep, $offset, $limit[0m\n";
-
-    my $cmd = "grep $grep $file";
-    my $fh = IO::File->new("$cmd | ") || die $self->error_message("Can't pipe command '$cmd'.");
-    
-    my @lines;
-
-    my $count = 0;
-    if ($limit == -1) { $limit = 500; }
-    
-    # TODO more robust interface
-    # TODO test limits and offsets
-    while (my $line = <$fh>) {
-        if ( ($count >= $offset) && (scalar(@lines) < $limit) ) {
-            push @lines, [split("\t", $line)];
         }
         $count++;
     }
@@ -262,88 +147,48 @@ sub get_lines_via_grep {
     return \%rv;
 }
 
-sub get_lines_via_awk {
-    my $self = shift;
-    my $file = shift;
-    my $search = shift;
-    my $offset = shift;
-    my $limit = shift;
-    print "[32m$file, $search, $offset, $limit[0m\n";
+# not currently used; could merge with build_gene_index to make something more general-purpose
+# TODO the index could then be used to sort a given field of a huge file in a memory efficient way
+#sub build_line_index {
+#    my $self = shift;
+#    my $file = shift;
+#    my $column = shift;
+#    my $delim = shift;
+#
+#    my $fh = IO::File->new($file) || die $self->error_message("Can't open file '$file'.");
+#
+#    if (defined($column) and defined($delim)) { # a bit slower
+#        my @index;
+#        my $pos = 0;
+#
+#        while (my $line = <$fh>) {
+#            my $offset = 0;
+#            for (my $i = 0; $i < $column; $i++) {
+#                $offset = 1+index($line, $delim, $offset);
+#            }
+#            my $end = index($line, $delim, $offset);
+#            
+#            $end += $end == -1 ? tell($fh) : $pos;
+#            push @index, [$pos+$offset, $end];
+#            
+#            $pos = tell($fh);
+#        }
+#        
+#        return \@index;
+#    } else { # go fast
+#        my @index;
+#
+#        do {
+#            push @index, tell($fh);
+#        } while (<$fh>);
+#        
+#        pop @index; # the last value will be bogus
+#
+#        return \@index;
+#    }
+#}
 
-    #my $cmd = "grep $grep $file";
-    my $cmd = "awk -F \"\\t\" '{ if (\$7 == \"$search\") print \$0 }' $file";
-    my $fh = IO::File->new("$cmd | ") || die $self->error_message("Can't pipe command '$cmd'.");
-    
-    my @lines;
-
-    my $count = 0;
-    if ($limit == -1) { $limit = 500; }
-    
-    # TODO more robust interface
-    # TODO test limits and offsets
-    while (my $line = <$fh>) {
-        if ( ($count >= $offset) && (scalar(@lines) < $limit) ) {
-            push @lines, [split("\t", $line)];
-        }
-        $count++;
-    }
-
-    $fh->close();
-    
-    my %rv = (
-        lines_read => $count,
-        lines => \@lines
-    );
-    
-    print Data::Dumper::Dumper(\@lines)."\n";
-     
-    return \%rv;
-}
-
-sub get_lines_via_index {
-    my $self = shift;
-    my $file = shift;
-    my $bands = shift;
-    my $offset = shift;
-    my $limit = shift;
-
-    print "[36m;".Data::Dumper::Dumper($bands)."[0m\n";
-
-    my $fh = IO::File->new($file) || die $self->error_message("Can't open $file.");
-    
-    my @lines;
-    
-    my $count = 0;
-    if ($limit == -1) { $limit = 500; }
-    
-    # TODO more robust interface
-    # TODO test limits and offsets
-    # TODO may want to explicitly sort bands, but they should be in the order of earlier first...
-    for my $band (@{$bands}) {
-        my $start = $band->[0];
-        my $end = $band->[1];
-        seek($fh, $start, 0);
-        while (tell($fh) != $end) {
-            my $line = $fh->getline();
-            if ( ($count >= $offset) && (scalar(@lines) < $limit) ) {
-                push @lines, [split("\t", $line)];
-            }
-            $count++;
-            die $self->error_message("Seeked too far.") if (tell($fh) > $end);
-        }
-    }
-
-    $fh->close();
-    
-    my %rv = (
-        lines_read => $count,
-        lines => \@lines
-    );
-     
-    return \%rv;
-}
-
-sub create_index {
+sub build_gene_index {
     my $self = shift;
     my $file = shift;
 
@@ -397,6 +242,51 @@ sub create_index {
     $fh->close();
     
     return \%hash;
+}
+
+### END TODO
+
+sub get_lines_via_gene_index {
+    my $self = shift;
+    my $file = shift;
+    my $bands = shift;
+    my $offset = shift;
+    my $limit = shift;
+
+    print "[36m;".Data::Dumper::Dumper($bands)."[0m\n";
+
+    my $fh = IO::File->new($file) || die $self->error_message("Can't open $file.");
+    
+    my @lines;
+    
+    my $count = 0;
+    if ($limit == -1) { $limit = 500; }
+    
+    # TODO more robust interface
+    # TODO test limits and offsets
+    # TODO may want to explicitly sort bands, but they should be in the order of earlier first...
+    for my $band (@{$bands}) {
+        my $start = $band->[0];
+        my $end = $band->[1];
+        seek($fh, $start, 0);
+        while (tell($fh) != $end) {
+            my $line = $fh->getline();
+            if ( ($count >= $offset) && (scalar(@lines) < $limit) ) {
+                push @lines, [split("\t", $line)];
+            }
+            $count++;
+            die $self->error_message("Seeked too far.") if (tell($fh) > $end);
+        }
+    }
+
+    $fh->close();
+    
+    my %rv = (
+        lines_read => $count,
+        lines => \@lines
+    );
+     
+    return \%rv;
 }
 
 sub _generate_content {
@@ -479,28 +369,53 @@ sub _generate_content {
         my $limit = $dtparams->{'iDisplayLength'};
         my $sEcho = $dtparams->{'sEcho'};
         my $sSearch = $dtparams->{'sSearch'};
+        my $sSearchType = $dtparams->{'sSearchType'};
         
         my $key = sprintf("%s-%s-%s", "Genome::Model::Build::Set::View::Annotation::Html", "build-id", $subject_build->id());
 
         if (!$sSearch) {
             # TODO should return the default view
-            my $lines = $self->get_specific_lines($annotations_file, $offset, $limit);
-            return $self->lines_as_json($lines->{lines}, $lines->{lines_read}, $lines->{lines_read}, $sEcho);
-        } elsif ($cache && (my $compressed_str = $cache->get($key))) {
-            my $value = from_json(Compress::Bzip2::decompress($compressed_str), {ascii => 1});
+            my $lines = $self->get_lines(
+                file => $annotations_file,
+                offset => $offset,
+                limit => $limit,
+                delimiter => "\t"
+            );
+            return $self->datatables_response($lines->{lines}, $lines->{lines_read}, $lines->{lines_read}, $sEcho);
 
-            my $index = $value->{'index'};
-            
-            if (defined($index->{$sSearch})) {
-                my $lines = $self->get_lines_via_index($annotations_file, $index->{$sSearch}, $offset, $limit);
-                print "[23m".$value->{'line_count'}."[0m\n";
-                return $self->lines_as_json($lines->{lines}, $lines->{lines_read}, $value->{'line_count'}, $sEcho);
+        } elsif ($sSearchType eq 'gene') {
+            if ($cache && (my $compressed_str = $cache->get($key))) {
+                my $value = from_json(Compress::Bzip2::decompress($compressed_str), {ascii => 1});
+
+                my $index = $value->{'index'};
+                
+                if (defined($index->{$sSearch})) {
+                    my $lines = $self->get_lines_via_index($annotations_file, $index->{$sSearch}, $offset, $limit);
+                    print "[23m".$value->{'line_count'}."[0m\n";
+                    return $self->datatables_response($lines->{lines}, $lines->{lines_read}, $value->{'line_count'}, $sEcho);
+                } else {
+                    return $self->datatables_response([], 0, $value->{'line_count'}, $sEcho);
+                }
             } else {
-                return $self->lines_as_json([], 0, $value->{'line_count'}, $sEcho);
+                my $lines = $self->get_lines(
+                    file => "awk -F \"\\t\" '{ if (\$7 == '$sSearch') print \$0 }' $annotations_file",
+                    offset => $offset,
+                    limit => $limit,
+                    delimiter => "\t"
+                );
+                return $self->datatables_response($lines->{lines}, $lines->{lines_read}, 0, $sEcho);
             }
-        } else {
-            my $lines = $self->get_lines_via_awk($annotations_file, $sSearch, $offset, $limit);
-            return $self->lines_as_json($lines->{lines}, $lines->{lines_read}, 0, $sEcho);
+        } else { # full text grep
+            my $escaped_search = $sSearch;
+            $escaped_search =~ s/'/'"'"'/g; # disgusting
+            $escaped_search = "'$escaped_search'";
+            my $lines = $self->get_lines(
+                file => "grep $escaped_search $annotations_file",
+                offset => $offset,
+                limit => $limit,
+                delimiter => "\t"
+            );
+            return $self->datatables_response($lines->{lines}, $lines->{lines_read}, 0, $sEcho);
         }
     } elsif (defined($self->request_index())) {
         my $key = sprintf("%s-%s-%s", "Genome::Model::Build::Set::View::Annotation::Html", "build-id", $subject_build->id());
@@ -514,7 +429,7 @@ sub _generate_content {
             print "[32mBuilding cache with key '$key'[0m\n";
 
             my @wc = split(/\s+/,`wc -l $annotations_file`);
-            my $index = $self->create_index($annotations_file);
+            my $index = $self->build_gene_index($annotations_file);
 
             my $data = {
                 index => $index,
@@ -607,7 +522,7 @@ sub _hashref_to_json_array {
     return to_json(\@arr, {ascii => 1});
 }
 
-sub lines_as_json {
+sub datatables_response {
     my ($self, $lines, $filtered_lines, $total_lines, $sEcho) = @_;
 
     my $rv = {
