@@ -166,9 +166,63 @@ use warnings;
 ok($build->delete, 'Deleted build');
 
 test_failure_notes();
+test_reallocate();
 
 done_testing();
 exit;
+
+
+sub test_reallocate {
+    my $transaction = UR::Context::Transaction->begin;
+
+    my $sample = Genome::Sample->create(name => 'TEST');
+    isa_ok($sample, 'Genome::Sample', 'sample');
+    class Genome::ProcessingProfile::Tester {
+        is => 'Genome::ProcessingProfile'
+    };
+    sub Genome::ProcessingProfile::Tester::sequencing_platform { return 'solexa' };
+    my $pp = Genome::ProcessingProfile->create(
+        name => 'Tester PP',
+        type_name => 'tester',
+    );
+    isa_ok($pp, 'Genome::ProcessingProfile', 'pp');
+
+    my $model = Genome::Model->create(
+        name => 'Test Model',
+        processing_profile => $pp,
+        subject_id => $sample->id,
+        subject_class_name => $sample->class,
+    );
+    isa_ok($model, 'Genome::Model', 'model');
+
+    class Genome::Model::Build::Tester {
+        is => 'Genome::Model::Build'
+    };
+
+    my $build = Genome::Model::Build->create(
+        model => $model
+    );
+    isa_ok($build, 'Genome::Model::Build', 'build');
+
+    is($build->status, 'New', 'build status is New');
+
+    ok(!$build->warning_message, 'build has no warning message to start');
+    ok(!$build->disk_allocation, 'build has no allocation');
+    is($build->status, 'New', 'build has status of New');
+    $build->reallocate;
+    ok(!$build->warning_message, 'New build (without allocation) has no warning message after reallocating');
+
+    $build->status('Unstartable');
+    $build->reallocate;
+    ok(!$build->warning_message, 'Unstartable build (without allocation) has no warning message after reallocating');
+
+    $build->status('Succeeded');
+    $build->reallocate;
+    ok($build->warning_message, 'Succeeded build has warning message after reallocating');
+
+    $transaction->rollback;
+}
+
 
 sub test_failure_notes {
     #Ensure that when builds fail, they add notes, equivlent to the failure email's stage, step, and error
