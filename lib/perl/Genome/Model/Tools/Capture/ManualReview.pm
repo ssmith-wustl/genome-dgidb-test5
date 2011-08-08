@@ -90,7 +90,6 @@ sub execute {
     # I know I shouldn't use backticks like this, but think of all the lines of code we save
     @{$bams{$tcga_patient_id}{snvs}} = `cat $snv_anno`;
     @{$bams{$tcga_patient_id}{indels}} = `cat $indel_anno`;
-    chomp( @{$bams{$tcga_patient_id}{lines}} );
     if( $exclude_pindel )
     {
       ${$bams{$tcga_patient_id}{gatk}} = $gatk_calls;
@@ -227,9 +226,9 @@ sub execute {
 
     # Dump IGV XML files to make it easy on the manual reviewers
     unless( Genome::Model::Tools::Analysis::DumpIgvXml->execute( tumor_bam => $bams{$case}{tumor}, normal_bam => $bams{$case}{normal},
-            review_bed_file => $indel_bed_file, review_description => "High-confidence Tier1 Indels", genome_name => "$case.indels", output_dir => $output_dir_new ) and
+            review_bed_file => $indel_bed_file, review_description => "High-confidence Tier1 Indels", genome_name => "$case.indel", output_dir => $output_dir_new ) and
             Genome::Model::Tools::Analysis::DumpIgvXml->execute( tumor_bam => $bams{$case}{tumor}, normal_bam => $bams{$case}{normal},
-            review_bed_file => $snv_bed_file, review_description => "High-confidence Tier1 SNVs", genome_name => "$case.snvs", output_dir => $output_dir_new ))
+            review_bed_file => $snv_bed_file, review_description => "High-confidence Tier1 SNVs", genome_name => "$case.snv", output_dir => $output_dir_new ))
     {
       print STDERR "WARNING: Unable to generate IGV XMLs for $case\n";
     }
