@@ -173,6 +173,8 @@ exit;
 sub test_failure_notes {
     #Ensure that when builds fail, they add notes, equivlent to the failure email's stage, step, and error
 
+    my $transaction = UR::Context::Transaction->begin;
+
     my $sample = Genome::Sample->create(name => 'TEST');
     isa_ok($sample, 'Genome::Sample', 'sample');
     class Genome::ProcessingProfile::Tester {
@@ -226,4 +228,6 @@ sub test_failure_notes {
     my $failed_error_note = $build->notes(header_text => 'Failed Error');
     isa_ok($failed_error_note, 'Genome::MiscNote', 'failed_error_note');
     is($failed_error_note->body_text, $error->error, 'failed error matches error error');
+
+    $transaction->rollback;
 }
