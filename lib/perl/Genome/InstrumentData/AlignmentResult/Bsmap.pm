@@ -6,6 +6,7 @@ use IO::File;
 use File::Basename;
 use File::Copy;
 use File::Temp;
+use Sort::Naturally;
 use Genome;
 
 #  So, you want to build an aligner?  Follow these steps.
@@ -149,7 +150,7 @@ sub _run_aligner {
         $aligner_params, # example: -p 4 (4 cores) -z ! (initial qual char) -v 4 (max mismatches) -q 20 (qual trimming)
         $temp_sam_output
     );
-
+    
     #my $rv = $self->_shell_cmd_wrapper(
     my $rv = Genome::Sys->shellcmd(
         cmd => $align_cmd,
@@ -159,34 +160,44 @@ sub _run_aligner {
     unless($rv) { die $self->error_message("Alignment failed."); }
     
     ###################################################
+    # append temp sam file to all_sequences.sam
+    ###################################################
+    $DB::single = 1;
+
+    $self->status_message("Adjusting and appending mapped_reads.sam to all_sequences.sam.");
+    
+    my $chrFiles = $self->_fix_sam_output($temp_sam_output, $sam_file, @input_pathnames);
+    
+    ###################################################
     # run methylation mapping
     ###################################################
     $self->status_message("Running methratio.py.");
+    if ($self->decomposed_aligner_params =~ /-R/) {
+        # TODO this may have issues in force fragment mode?
+        my $methylation_output = $staging_directory . "/output.meth.dat";
 
-    # TODO this may have issues in force fragment mode?
-    my $methylation_output = $staging_directory . "/output.meth.dat";
-    
-    my $meth_cmd = sprintf("/usr/bin/python %s/%s %s > %s",
-        #dirname($bsmap_cmd_path), #TODO fix this
-        dirname("/gscuser/cmiller/usr/src/bsmap-2.1/methratio.py"),
-        "methratio.py",
-        $temp_sam_output,
-        $methylation_output
-    );
-    
-    $rv = Genome::Sys->shellcmd(
-        cmd => $meth_cmd,
-        input_files => [$temp_sam_output],
-        output_files => [$methylation_output]
-    );
-    
-    ###################################################
-    # append temp sam file to all_sequences.sam
-    ###################################################
-    $self->status_message("Adjusting and appending mapped_reads.sam to all_sequences.sam.");
-    
-    $self->_fix_sam_output($temp_sam_output, $sam_file, @input_pathnames);
-    
+        for my $file (@{$chrFiles}) {
+            
+            my $meth_cmd = sprintf("/usr/bin/python %s/%s %s >> %s",
+                #dirname($bsmap_cmd_path), #TODO fix this
+                dirname("/gscuser/cmiller/usr/src/bsmap-2.1/methratio.py"),
+                "methratio.py",
+                $file,
+                $methylation_output
+            );
+            
+            $rv = Genome::Sys->shellcmd(
+                cmd => $meth_cmd,
+                input_files => [$file],
+                output_files => [$methylation_output],
+                skip_if_output_is_present => 0 # because there will already be an all_sequences.sam we're appending to
+            );
+            unless($rv) { die $self->error_message("methratio.py failed for file '$file'."); }
+        }
+    } else {
+        $self->status_message("Skipping methratio.py because -R was not specified as an aligner param.");
+    }
+
     ###################################################
     # clean up
     ###################################################
@@ -264,12 +275,137 @@ sub prepare_reference_sequence_index {
 
     return 0;
 }
+#
+sub _fix_sam_output {
+    my $self = shift;
+    my $temp_sam_output = shift;
+    my $sam_file = shift;
+    my @in_files = @_;
+    
+    my $reference_build = $self->reference_build;
+
+    my $paired_end = scalar(@in_files) == 2 ? 1 : 0;
+    my $is_bam = $self->accepts_bam_input();
+
+    my $alignedFh = IO::File->new("$temp_sam_output") || die $self->error_message("Can't open '$temp_sam_output' for reading.\n");
+    my $outFh = IO::File->new(">>$sam_file") || die $self->error_message("Can't open '$sam_file' for appending.\n");
+
+    my $methylation_mapping = $self->decomposed_aligner_params() =~ /-R/ ? 1 : 0;
+    my $chrFhs = {
+        basename => dirname($temp_sam_output),
+        handles => {},
+        headers => []
+    };
+    
+    while (my $line = <$alignedFh>) {
+        last unless $line =~ /^@.+$/;
+        push @{$chrFhs->{headers}}, $line;
+    }
+    
+    seek($alignedFh, 0, 0);
+    
+    # check that our inputs are really bams if we're running with accepts_bam_input
+    if ($self->accepts_bam_input) {
+        die $self->error_message("Expecting a bam file but that's not what we got")
+            unless $in_files[0] =~ /^.+\.bam$/;
+        if ($paired_end) {
+            die $self->error_message("Expecting the same two bam files, but our paths were different")
+                unless $in_files[0] eq $in_files[1];
+        }
+    }
+
+    if ($paired_end) {
+        my @inFhs;
+        if ($is_bam) {
+            my $fh = IO::File->new("samtools view $in_files[0] | ") || die $self->error_message("Can't pipe 'samtools view $in_files[0] | ' for reading.\n");
+            @inFhs = ($fh, $fh); # because both reads are in the same file
+        } else {
+            @inFhs = map{IO::File->new("$_") || die $self->error_message("Can't open '$_ ' for reading.\n");} @in_files;
+        }
+
+        while (1) {
+            my @input_records = map{$is_bam ? $self->_pull_sam_record_from_fh_skip_headers($_) : $self->_pull_fq_record_from_fh($_)} @inFhs;
+            my @aligned_records = map{$self->_pull_sam_record_from_fh_skip_headers($alignedFh)} (1..2);
+
+            if ((grep{not defined($_)} @input_records) or (grep{not defined($_)} @aligned_records)) {
+                if ( (grep{not defined($_)} (@input_records, @aligned_records)) == (@input_records + @aligned_records) ) {
+                    last;
+                } else {
+                    die $self->error_message("A file ended prematurely\n" . Data::Dumper::Dumper([@input_records, @aligned_records]));
+                }
+            }
+            
+            my @new_records = (
+                $self->_process_record_pair($input_records[0], $aligned_records[0], $reference_build, $methylation_mapping, $chrFhs),
+                $self->_process_record_pair($input_records[1], $aligned_records[1], $reference_build, $methylation_mapping, $chrFhs)
+            );
+            
+            # we need to update the positions of the pair
+            $new_records[0]->{pnext} = $new_records[1]->{pos};
+            $new_records[1]->{pnext} = $new_records[0]->{pos};
+            
+            # TODO need to fix flags?
+
+            for my $new_record (@new_records) {
+                $self->_print_record_to_fh($outFh, $new_record);
+            }
+        }
+        
+        map{$_->close()} @inFhs;
+        $alignedFh->close();
+    } else {
+        my $inFh;
+        if ($is_bam) {
+            # TODO this will fail in force fragment mode, because both records will be present in the one sam file...
+            $inFh = IO::File->new("samtools view $in_files[0] | ") || die $self->error_message("Can't pipe 'samtools view $in_files[0] | ' for reading.\n");
+        } else {
+            $inFh = IO::File->new("$in_files[0]") || die $self->error_message("Can't open '$in_files[0]' for reading.\n");
+        }
+
+        while (1) {
+            my $input_record = $is_bam ? $self->_pull_sam_record_from_fh_skip_headers($inFh) : $self->_pull_fq_record_from_fh($inFh);
+            my $aligned_record = $self->_pull_sam_record_from_fh_skip_headers($alignedFh);
+
+            if (not defined($input_record) or not defined($aligned_record)) {
+                if (not defined($input_record) and not defined($aligned_record)) {
+                    last;
+                } elsif (not defined($input_record)) {
+                    die $self->error_message("Input file ended prematurely")
+                } elsif (not defined($aligned_record)) {
+                    die $self->error_message("Aligned sam file ended prematurely");
+                } else {
+                    die $self->error_message("Something logically impossible just happened");
+                }
+            }
+            
+            my $new_record = $self->_process_record_pair($input_record, $aligned_record, $reference_build, $methylation_mapping, $chrFhs);
+            
+            # TODO need to fix flags?
+            # in force fragment mode, you could figure out flags 0x1, 0x40, and 0x80
+            # but could not figure out flags 0x2, 0x8, and 0x20
+            # either way i don't think you'd want to set these, since it's assumed they won't be set running in se mode?
+
+            $self->_print_record_to_fh($outFh, $new_record);
+        }
+        $inFh->close();
+        $alignedFh->close();
+    }
+    
+    my @chrFiles = map {
+        $chrFhs->{handles}{$_}->close();
+        sprintf("%s/%s.sam", $chrFhs->{basename}, $_);
+    } sort {ncmp($a, $b)} keys %{$chrFhs->{handles}};
+    
+    return \@chrFiles;
+}
 
 sub _process_record_pair {
     my $self = shift;
     my $input_record = shift;
     my $aligned_record = shift;
     my $reference_build = shift;
+    my $methylation_mapping = shift;
+    my $chrFhs = shift;
     
     my $trimmed_seq = $aligned_record->{seq};
     my $trimmed_pos = $aligned_record->{pos};
@@ -282,6 +418,20 @@ sub _process_record_pair {
     # if the sequence was mapped as reverse complemented, complement our INPUT sequence
     if ($self->_query_flag($aligned_record, 'seq_reverse_complemented')) {
         $full_seq = $self->_seq_reverse_complement($full_seq);
+    }
+    
+    # if the read was mapped, and we're running methratio.py, put the unfixed aligned read into a separate sam file
+    if ($methylation_mapping and not $self->_query_flag($aligned_record, 'fragment_unmapped')) {
+        my $rname = $aligned_record->{rname};
+        unless (exists $chrFhs->{handles}{$rname}) {
+            my $filename = sprintf("%s/%s.sam", $chrFhs->{basename}, $rname);
+            my $fh = IO::File->new(">$filename") || die $self->error_message("Can't open '$filename' for writing.\n");
+            for (@{$chrFhs->{headers}}) {
+                print $fh $_;
+            }
+            $chrFhs->{handles}{$rname} = $fh;
+        }
+        $self->_print_record_to_fh($chrFhs->{handles}{$rname}, $aligned_record);
     }
 
     # find out how much was clipped
@@ -296,7 +446,7 @@ sub _process_record_pair {
     if (($preclip > 0 or $postclip > 0) and not $self->_query_flag($aligned_record, 'fragment_unmapped')) {
         my $full_pos = $trimmed_pos - $preclip;
         
-        if($self->decomposed_aligner_params =~ /-R/) {
+        if($methylation_mapping) {
             # the tag to pull
             my $regex = '^XR:Z:([ACTG]+)';
             
@@ -402,115 +552,15 @@ sub _seq_reverse_complement {
 
     return join("", @newchars);
 }
-#
-sub _fix_sam_output {
+sub _print_record_to_fh {
     my $self = shift;
-    my $temp_sam_output = shift;
-    my $sam_file = shift;
-    my @in_files = @_;
-    
-    my $reference_build = $self->reference_build;
+    my $samFh = shift;
+    my $record = shift;
 
-    my $reference_tar_present = $self->decomposed_aligner_params =~ /-R/ ? 1 : 0;
-    my $paired_end = scalar(@in_files) == 2 ? 1 : 0;
-    my $is_bam = $self->accepts_bam_input();
-
-    my $alignedFh = IO::File->new("$temp_sam_output") || die $self->error_message("Can't open '$temp_sam_output' for reading.\n");
-    my $outFh = IO::File->new(">>$sam_file") || die $self->error_message("Can't open '$sam_file' for appending.\n");
-
-    
-    # check that our inputs are really bams if we're running with accepts_bam_input
-    if ($self->accepts_bam_input) {
-        die $self->error_message("Expecting a bam file but that's not what we got")
-            unless $in_files[0] =~ /^.+\.bam$/;
-        if ($paired_end) {
-            die $self->error_message("Expecting the same two bam files, but our paths were different")
-                unless $in_files[0] eq $in_files[1];
-        }
-    }
-
-    if ($paired_end) {
-        my @inFhs;
-        if ($is_bam) {
-            my $fh = IO::File->new("samtools view $in_files[0] | ") || die $self->error_message("Can't pipe 'samtools view $in_files[0] | ' for reading.\n");
-            @inFhs = ($fh, $fh); # because both reads are in the same file
-        } else {
-            @inFhs = map{IO::File->new("$_") || die $self->error_message("Can't open '$_ ' for reading.\n");} @in_files;
-        }
-
-        while (1) {
-            my @input_records = map{$is_bam ? $self->_pull_sam_record_from_fh_skip_headers($_) : $self->_pull_fq_record_from_fh($_)} @inFhs;
-            my @aligned_records = map{$self->_pull_sam_record_from_fh_skip_headers($alignedFh)} (1..2);
-
-            if ((grep{not defined($_)} @input_records) or (grep{not defined($_)} @aligned_records)) {
-                if ( (grep{not defined($_)} (@input_records, @aligned_records)) == (@input_records + @aligned_records) ) {
-                    last;
-                } else {
-                    die $self->error_message("A file ended prematurely\n" . Data::Dumper::Dumper([@input_records, @aligned_records]));
-                }
-            }
-            
-            my @new_records = (
-                $self->_process_record_pair($input_records[0], $aligned_records[0], $reference_build),
-                $self->_process_record_pair($input_records[1], $aligned_records[1], $reference_build)
-            );
-            
-            # we need to update the positions of the pair
-            $new_records[0]->{pnext} = $new_records[1]->{pos};
-            $new_records[1]->{pnext} = $new_records[0]->{pos};
-            
-            # TODO need to fix flags?
-
-            for my $new_record (@new_records) {
-                my @keys = qw(qname flag rname pos mapq cigar rnext pnext tlen seq qual);
-                chomp (my $line = join("\t", ( (map {$new_record->{$_}} @keys), @{$new_record->{'tags'}} ) ));
-                print $outFh $line."\n";
-                #print "[31m" . $line . "[0m\n";
-            }
-        }
-        
-        map{$_->close()} @inFhs;
-        $alignedFh->close();
-    } else {
-        my $inFh;
-        if ($is_bam) {
-            # TODO this will fail in force fragment mode, because both records will be present in the one sam file...
-            $inFh = IO::File->new("samtools view $in_files[0] | ") || die $self->error_message("Can't pipe 'samtools view $in_files[0] | ' for reading.\n");
-        } else {
-            $inFh = IO::File->new("$in_files[0]") || die $self->error_message("Can't open '$in_files[0]' for reading.\n");
-        }
-
-        while (1) {
-            my $input_record = $is_bam ? $self->_pull_sam_record_from_fh_skip_headers($inFh) : $self->_pull_fq_record_from_fh($inFh);
-            my $aligned_record = $self->_pull_sam_record_from_fh_skip_headers($alignedFh);
-
-            if (not defined($input_record) or not defined($aligned_record)) {
-                if (not defined($input_record) and not defined($aligned_record)) {
-                    last;
-                } elsif (not defined($input_record)) {
-                    die $self->error_message("Input file ended prematurely")
-                } elsif (not defined($aligned_record)) {
-                    die $self->error_message("Aligned sam file ended prematurely");
-                } else {
-                    die $self->error_message("Something logically impossible just happened");
-                }
-            }
-            
-            my $new_record = $self->_process_record_pair($input_record, $aligned_record, $reference_build);
-            
-            # TODO need to fix flags?
-            # in force fragment mode, you could figure out flags 0x1, 0x40, and 0x80
-            # but could not figure out flags 0x2, 0x8, and 0x20
-            # either way i don't think you'd want to set these, since it's assumed they won't be set running in se mode?
-
-            my @keys = qw(qname flag rname pos mapq cigar rnext pnext tlen seq qual);
-            chomp (my $line = join("\t", ( (map {$new_record->{$_}} @keys), @{$new_record->{'tags'}} ) ));
-            print $outFh $line."\n";
-            #print "[31m" . $line . "[0m\n";
-        }
-        $inFh->close();
-        $alignedFh->close();
-    }
+    my @keys = qw(qname flag rname pos mapq cigar rnext pnext tlen seq qual);
+    chomp (my $line = join("\t", ( (map {$record->{$_}} @keys), @{$record->{'tags'}} ) ));
+    #print "[31m" . $line . "[0m\n";
+    print $samFh $line."\n";
 }
 
 sub _pull_sam_record_from_fh_skip_headers {
@@ -759,7 +809,9 @@ sub supports_streaming_to_bam {
 
 # TODO
 # verify above flags (fillmd, rg addition, bam i/o)
-# sam flags may be wrong in force fragment
+# sam flags are probably correct, probably don't need to change anything for ff
+# however ff mode would probably crash when running with input bams; ask ben
 # cigar string with =/X doesnt work
 # insert sizes
 # log files and last minute checks
+# methratio.py is not installed
