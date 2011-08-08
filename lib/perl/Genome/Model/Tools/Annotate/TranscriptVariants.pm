@@ -201,7 +201,7 @@ sub help_detail {
     foreach my $model (@currently_available_models) {
         next unless $model;
         foreach my $build ($model->builds) {
-            if($build) {  #probably implicit in the loops, but in case we get undefs in our list
+            if($build and $build->status eq 'Succeeded') {  #probably implicit in the loops, but in case we get undefs in our list
                  $currently_available_builds .= "\t" . $model->name . "/" . $build->version . "\n" if $build->version !~ /old/ and $model->name and $build->version;
             }
         }
