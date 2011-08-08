@@ -194,6 +194,8 @@ sub execute {
     my $read_pos_writer = GSC::IO::Assembly::Ace::Writer->new($read_pos_fh)
         or return;
 
+    my $sequences_fh = Genome::Sys->open_file_for_reading( $self->seq_file );
+
     while (my $record = getRecord($afg_fh)){
         my ($rec, $fields, $recs) = parseRecord($record);
         my $nseqs = 0;
@@ -266,7 +268,7 @@ sub execute {
 		    }
                     $dbh->commit if $self->sqlite_yes;
 
-                    my $sequence = $self->get_seq($pos, $read_id, $ori_read_id);
+                    my $sequence = $self->get_seq($pos, $read_id, $ori_read_id, $sequences_fh);
 
                     return unless $sequence;
 
@@ -396,7 +398,7 @@ sub execute {
         }#if 'CTG'
     }#While loop
     $afg_fh->close;
-    #$seq_fh->close;
+    $sequences_fh->close;
     $self->status_message("There are total $nContigs contigs and $nReads reads processed");
 
     $writer->write_object({
@@ -459,15 +461,14 @@ sub get_sqlite_dbh {
 
 
 sub get_seq {
-    my ($self, $seekpos, $name, $id) = @_;
+    my ( $self, $seekpos, $name, $id, $fh ) = @_;
 
     #TODO - temp patch .. Bio::seqio seek pos seems to be off by 1
     $seekpos = ( $seekpos == 0 ) ? $seekpos : $seekpos - 1;
-
-    my $fh = Genome::Sys->open_file_for_reading($self->seq_file) or return;
+    #my $fh = Genome::Sys->open_file_for_reading($self->seq_file) or return;
     $fh->seek($seekpos, 0);
 
-    my $fa_bio = Bio::SeqIO->new(-fh => $fh, -format => 'fasta');
+    my $fa_bio = Bio::SeqIO->new(-fh => $fh, -format => 'fasta', -noclose => 1);
     my $fasta  = $fa_bio->next_seq;
 
     return $self->error_handle("Failed to get fasta bio obj from $name, $seekpos, $id")

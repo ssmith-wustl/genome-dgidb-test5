@@ -12,7 +12,7 @@ BEGIN {
 use above 'Genome';
 
 require Genome::InstrumentData::Solexa;
-use Test::More tests => 134;
+use Test::More tests => 138;
 
 use_ok('Genome::Model::Command::Services::AssignQueuedInstrumentData');
 
@@ -250,6 +250,7 @@ is(scalar(keys %$new_models), 0, 'the cron created no models from ignores.');
 
 
 
+# Test AML build 36
 my $aml_sample = Genome::Sample->get(name => "H_KA-758168-0912815");
 my $aml_library = Genome::Library->create(id => '-1234', sample_id => $aml_sample->id);
 isa_ok($aml_sample, 'Genome::Sample');
@@ -269,6 +270,47 @@ ok($aml_instrument_data, 'Created instrument data');
 my $aml_pse = GSC::PSE::QueueInstrumentDataForGenomeModeling->create(
     pse_status => 'inprogress',
     pse_id => '-765431235235',
+    ps_id => $ps->ps_id,
+    ei_id => '464681',
+);
+$aml_pse->add_param('instrument_data_type', 'solexa');
+$aml_pse->add_param('instrument_data_id', $aml_instrument_data->id);
+$aml_pse->add_param('subject_class_name', 'Genome::Sample');
+$aml_pse->add_param('subject_id', $aml_sample->id);
+$aml_pse->add_param('processing_profile_id', $processing_profile->id);
+$aml_pse->add_reference_sequence_build_param_for_processing_profile( $processing_profile, $ref_seq_build);
+my $aml_command = Genome::Model::Command::Services::AssignQueuedInstrumentData->create(
+    test => 1,
+);
+
+ok($aml_command->execute(), 'assign-queued-instrument-data executed successfully.');
+my %aml_new_models = %{$aml_command->_newly_created_models};
+for my $model (values(%aml_new_models)) {
+    is($model->reference_sequence_build_id, 101947881, 'aml model uses correct reference sequence');
+}
+
+
+
+# Test MEL build 36
+my $aml_sample = Genome::Sample->get(name => "H_KA-758168-0912815");
+my $aml_library = Genome::Library->create(id => '-12345', sample_id => $aml_sample->id);
+isa_ok($aml_sample, 'Genome::Sample');
+isa_ok($aml_library, 'Genome::Library');
+my $aml_instrument_data = Genome::InstrumentData::Solexa->create(
+    id => '-113242342355',
+    library_id => $aml_library->id,
+    flow_cell_id => 'TM-021',
+    lane => '1',
+    run_type => 'Paired',
+    fwd_read_length => 100,
+    rev_read_length => 100,
+    fwd_clusters => 65535,
+    rev_clusters => 65536,
+);
+ok($aml_instrument_data, 'Created instrument data');
+my $aml_pse = GSC::PSE::QueueInstrumentDataForGenomeModeling->create(
+    pse_status => 'inprogress',
+    pse_id => '-7654312352355',
     ps_id => $ps->ps_id,
     ei_id => '464681',
 );
