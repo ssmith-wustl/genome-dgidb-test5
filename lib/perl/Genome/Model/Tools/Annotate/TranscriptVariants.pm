@@ -201,7 +201,7 @@ sub help_detail {
     foreach my $model (@currently_available_models) {
         next unless $model;
         foreach my $build ($model->builds) {
-            if($build and $build->status eq 'Succeeded') {  #probably implicit in the loops, but in case we get undefs in our list
+            if($build and $build->status eq 'Succeeded' and $build->name =~ /combined-annotation/) {  #probably implicit in the loops, but in case we get undefs in our list
                  $currently_available_builds .= "\t" . $model->name . "/" . $build->version . "\n" if $build->version !~ /old/ and $model->name and $build->version;
             }
         }
@@ -233,7 +233,7 @@ chromosome_name start stop reference variant type gene_name transcript_name tran
 The --use-version parameter is used to choose which version of the trasncript variant annotator to run.  The available versions are: $available_versions
 $version_docs
 
-CURRENTLY AVAILABLE REFERENCE TRANSCRIPTS WITH VERSIONS
+COMMONLY USED REFERENCE TRANSCRIPTS WITH VERSIONS
 $currently_available_builds
 EOS
 }
@@ -427,6 +427,11 @@ sub execute {
         return;
     }
 
+    if(!$self->build and !$self->reference_transcripts){
+        $self->error_message("Please provide EITHER a build id OR a reference transcript set name, but not both");
+        return;
+    }
+
     if ($self->build) {
         my $version = $self->build->version;
         my $name = $self->build->model->name;
@@ -443,7 +448,6 @@ sub execute {
     }
     else {
         my $ref = $self->reference_transcripts;
-        $ref = "NCBI-human.combined-annotation/54_36p_v2" unless defined $ref;
         my ($name, $version) = split(/\//, $ref); # For now, version is ignored since only v2 is usable
                                         # This will need to be changed when other versions are available
 
