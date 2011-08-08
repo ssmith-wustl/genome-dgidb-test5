@@ -18,6 +18,12 @@ class Genome::Model::Tools::Newbler::CreateContigsFiles {
             is => 'Number',
             doc => 'Minimum contig length to export',
         },
+        default_gap_size => {
+            is => 'Number',
+            doc => 'Gap size to assign when newbler does not assign one',
+            is_optional => 1,
+            default_value => 10,
+        }
     ],
 };
 
@@ -34,24 +40,16 @@ EOS
 sub execute {
     my $self = shift;
 
+    #make edit_dir in assembly dir
     unless ( -d $self->consed_edit_dir ) {
         $self->create_consed_dir;
     }
 
-    unless( $self->_write_unscaffolded_file ) {
-        $self->error_message( "Failed to write unscaffolded fasta and qual files from newbler files" );
+    #filter contigs by min length
+    my $scaffolds = $self->get_scaffolding_info;
+    if ( not $scaffolds ) {
+        $self->error_message( "Failed to get scaffolding info" );
         return;
-    }
-
-    return 1;
-}
-
-sub _write_unscaffolded_file {
-    my $self = shift;
-
-    my $scaffolds;
-    if ( -s $self->scaffolds_agp_file ) {
-        $scaffolds = $self->parse_newbler_scaffold_file;
     }
 
     #read in
@@ -70,16 +68,7 @@ sub _write_unscaffolded_file {
                 return;
             }
 
-            #new contig name
-            my $new_name;
-            if ( $scaffolds ) {
-                #contigs less than min_length removed while parsing
-                next SEQ unless $new_name = $scaffolds->{ $seq->primary_id }->{pcap_name};
-            } else {
-                #exclude contigs less than min_length
-                next SEQ if length $seq->seq < $self->min_contig_length;
-                $new_name = 'Contig'.$supercontig_number++.'.1';
-            }
+            next SEQ unless my $new_name = $scaffolds->{ $seq->primary_id }->{pcap_name};
 
             #write fasta
             my %fasta_params = (

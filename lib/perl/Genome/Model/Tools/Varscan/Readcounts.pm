@@ -25,9 +25,10 @@ class Genome::Model::Tools::Varscan::Readcounts {
 	
 	has => [                                # specify the command's single-value properties (parameters) <--- 
 		bam_file	=> { is => 'Text', doc => "Path to BAM file", is_optional => 0 },
+		samtools_path	=> { is => 'Text', doc => "Path to SAMtools executable", is_optional => 0, is_input => 1, default => "samtools" },
 		variants_file	=> { is => 'Text', doc => "Path to variant positions file", is_optional => 0 },
 		output_file	=> { is => 'Text', doc => "Path to output file" , is_optional => 0},
-		reference	=> { is => 'Text', doc => "Reference FASTA file for BAMs (default= genome model)" , is_optional => 1, is_input => 1},
+		reference        => { is => 'Text', doc => "Reference FASTA file for BAMs" , is_optional => 1, default_value => (Genome::Config::reference_sequence_directory() . '/NCBI-human-build36/all_sequences.fa')},
 		min_coverage	=> { is => 'Text', doc => "Minimum base coverage to report readcounts [8]" , is_optional => 1},
 		min_base_qual	=> { is => 'Text', doc => "Minimum base quality to count a read [30]" , is_optional => 1},
 	],
@@ -63,8 +64,7 @@ sub execute {                               # replace with real execution logic.
 
 	## Get required parameters ##
 	my $bam_file = $self->bam_file;
-	my $reference = Genome::Config::reference_sequence_directory() . '/NCBI-human-build36/all_sequences.fa';
-	$reference = $self->reference if($self->reference);
+	my $reference = $self->reference;
 	my $variants_file = $self->variants_file;
 	my $output_file = $self->output_file;
 
@@ -72,7 +72,8 @@ sub execute {                               # replace with real execution logic.
 	{
 		## Prepare pileup commands ##
 		
-		my $pileup = "samtools view -b -u -q 10 $bam_file | samtools pileup -f $reference -";
+#		my $pileup = "samtools view -b -u -q 10 $bam_file | samtools pileup -f $reference -";
+		my $pileup = $self->samtools_path . " mpileup -q 10 -f $reference $bam_file";
 		my $cmd = $self->java_command_line("readcounts <\($pileup\) --variants-file $variants_file --output-file $output_file");
 		print "RUN: $cmd\n";
 		system($cmd);

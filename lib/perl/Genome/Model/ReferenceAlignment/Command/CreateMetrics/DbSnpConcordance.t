@@ -40,7 +40,7 @@ ok($cmd->execute, "executed command");
 
 my $unfiltered_file= "$tmpdir/dbsnp_concordance.txt";
 ok(-s $unfiltered_file, "unfiltered results exist");
-my $results = Genome::Model::Tools::SnvCmp::Concordance::parse_results_file($unfiltered_file);
+my $results = Genome::Model::Tools::Joinx::SnvConcordanceByQuality::parse_results_file($unfiltered_file);
 is(ref $results->{hit}, 'HASH', '$results->{hit} array exists');
 is(ref $results->{all}, 'HASH', '$results->{all} array exists');
 is(ref $results->{concordance}, 'HASH', '$results->{concordance} array exists');
@@ -50,7 +50,7 @@ is(80, $results->{total_concordance}, '80% concordance');
 
 my $filtered_file = "$tmpdir/dbsnp_concordance.filtered.txt";
 ok(-s $filtered_file, "filtered results exist");
-$results = Genome::Model::Tools::SnvCmp::Concordance::parse_results_file($filtered_file);
+$results = Genome::Model::Tools::Joinx::SnvConcordanceByQuality::parse_results_file($filtered_file);
 is(ref $results->{hit}, 'HASH', '$results->{hit} array exists');
 is(ref $results->{all}, 'HASH', '$results->{all} array exists');
 is(ref $results->{concordance}, 'HASH', '$results->{concordance} array exists');

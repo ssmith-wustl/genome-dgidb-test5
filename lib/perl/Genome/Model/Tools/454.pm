@@ -99,6 +99,14 @@ sub create {
                 $self->version($2);
                 $self->version_subdirectory($1);
             }
+            elsif ( $link_path =~ /^gsMapAsm/ ) {
+                unless ( $link_path =~ /(gsMapAsm)-(\d+\.\d+\-\d+_\d+)_(forWashU_patch\d+|forWashU)/ ) {
+                    $self->error_message( "Link to 454 tools was malformed: ".$link_path );
+                    return;
+                }
+                $self->version($2.'_'.$3);
+                $self->version_subdirectory($1);
+            }
             else {
                 $self->error_message("Cannot resolve version!; Link path (from $base_path) does not match expected offInstrumentApps or mapasm454_source patterns!!: $link_path");
                 return;
@@ -130,13 +138,14 @@ sub resolve_app_bin_name {
       if $self->version_subdirectory eq 'mapasm454_source';
     $app_bin_name = 'bin' if
 	$self->version_subdirectory eq 'DataAnalysis';
+    $app_bin_name = 'bin' if
+        $self->version_subdirectory eq 'gsMapAsm';
     return $app_bin_name;
 }
 
 sub bin_path {
     my $self = shift;
     my $bin_path;
-
     #difference is - vs _;
     if ( $self->version_subdirectory eq 'offInstrumentApps' ) {
         $bin_path =
@@ -159,10 +168,18 @@ sub bin_path {
 	  . $self->version . '/'
           . $self->resolve_app_bin_name;
     }
+    elsif ( $self->version_subdirectory eq 'gsMapAsm' ) {
+        $bin_path =
+            $self->resolve_454_path
+          . $self->version_subdirectory . '-'
+          . $self->version .'/'
+          . $self->resolve_app_bin_name;
+    }
     else {
 	$self->error_message("Can not resolve bin path .. expected offInstrumentApps or mapasm454_source or DataAnalysis but got ".$self->version_subdirectory);
 	return;
     }
+
     return $bin_path;
 }
 

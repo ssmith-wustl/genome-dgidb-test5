@@ -20,8 +20,6 @@ use IO::File;
 use File::Basename;
 use Getopt::Long;
 use FileHandle;
-use POSIX qw(log10);
-use POSIX qw(strftime);
 use List::MoreUtils qw(firstidx);
 use List::MoreUtils qw(uniq);
 

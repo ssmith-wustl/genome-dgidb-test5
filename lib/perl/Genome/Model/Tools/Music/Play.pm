@@ -95,6 +95,32 @@ class Genome::Model::Tools::Music::Play {
             is => 'Text',
             doc => 'Maximum AA distance between 2 mutations',
         },
+        max_fdr => {
+            is => 'Number',
+            doc => 'The maximum allowed false discovery rate for a gene to be considered an SMG',
+        },
+        wu_annotation_headers => {
+            is => 'Boolean',
+            doc => 'Use this to default to wustl annotation format headers',
+        },
+        skip_non_coding => {
+            is => 'Boolean',
+            doc => 'Skip non-coding mutations from the provided MAF file',
+            default_value => 1,
+        },
+        skip_silent => {
+            is => 'Boolean',
+            doc => 'Skip silent mutations from the provided MAF file',
+            default_value => 1,
+        },
+        min_mut_genes_per_path => {
+            is => 'Number',
+            doc => 'Pathways with fewer mutated genes than this will be ignored',
+        },
+        processors => {
+            is => 'Integer',
+            doc => "number of processors to use in SMG (requires 'foreach' and 'doMC' R packages)",
+        },
     ],
     has_calculated_optional => [
         gene_covg_dir => {
@@ -104,6 +130,12 @@ class Genome::Model::Tools::Music::Play {
         gene_mr_file => {
             calculate_from => ['output_dir'],
             calculate => q{ $output_dir . '/gene_mrs'; },
+        },
+        gene_list => {
+            is => 'Text',
+            doc => "List of genes to test in B<genome-music-mutation-relation>(1), typically SMGs. (Uses output from running B<genome-music-smg>(1).)",
+            calculate_from => ['output_dir'],
+            calculate => q{ $output_dir . '/smg'; },
         },
     ],
     has_constant => [
@@ -167,10 +199,11 @@ EOS
 sub execute {
     my $self = shift;
 
-    my @no_dependencies = ('Proximity', 'ClinicalCorrelation', 'CosmicOmim', 'MutationRelation', 'Pfam');
+    my @no_dependencies = ('Proximity', 'ClinicalCorrelation', 'CosmicOmim', 'Pfam');
     my @bmr = ('Bmr::CalcCovg', 'Bmr::CalcBmr');
     my @depend_on_bmr = ('PathScan', 'Smg');
-    for my $command_name (@no_dependencies, @bmr, @depend_on_bmr) {
+    my @depend_on_smg = ('MutationRelation');
+    for my $command_name (@no_dependencies, @bmr, @depend_on_bmr, @depend_on_smg) {
         my $command = $self->_create_command($command_name)
             or return;
 

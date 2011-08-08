@@ -33,16 +33,11 @@ sub execute{
         unless($volume->can_allocate){
             next;
         }
-        $DB::single = 1;
-        #my $cmd = Genome::Disk::Allocation::Command::FindUnallocatedPaths->create(
-        #    disk_volume => $volume,
-        #);
-        #$cmd->execute;
-        #my @paths = $self->_unallocated_paths(), $cmd->_unallocated_paths();
-        #$self->_unallocated_paths(\@paths);
-        my $cmd = "genome disk allocation find-unallocated-paths --disk-volume mount_path=" . $volume->mount_path;
-        my $path = $volume->mount_path;
-        $path =~ s/\/gscmnt\///;
-        system("bsub -u swallace\@genome.wustl.edu -J find-unallocated-$path -eo /gscuser/swallace/unallocated-paths/$path.err -oo /gscuser/swallace/unallocated-paths/$path.out $cmd\n");
+        my $cmd = Genome::Disk::Allocation::Command::FindUnallocatedPaths->create(
+            disk_volume => $volume,
+        );
+        $cmd->execute;
+        my @paths = $self->_unallocated_paths(), $cmd->_unallocated_paths();
+        $self->_unallocated_paths(\@paths);
     }
 }

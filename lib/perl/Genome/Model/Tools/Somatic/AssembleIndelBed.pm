@@ -178,14 +178,6 @@ sub execute {
 
             print `/gsc/scripts/pkg/bio/tigra/installed/local_var_asm_wrapper.sh $read_file`; #assemble the reads
             `cross_match $read_file.contigs.fa $ref_file -bandwidth 20 -minmatch 20 -minscore 25 -penalty -4 -discrep_lists -tags -gap_init -4 -gap_ext -1 > $prefix.stat`;
-            #`~kchen/1000genomes/analysis/scripts/hetAtlas.pl -n 100 $read_file.contigs.fa > $read_file.contigs.fa.het`;
-            #`cross_match $read_file.contigs.fa.het $ref_file -bandwidth 20 -minmatch 20 -minscore 25 -penalty -4 -discrep_lists -tags -gap_init -4 -gap_ext -1 > $prefix.het.stat`;
-            #my ($result) = `~kchen/1000genomes/analysis/scripts/getCrossMatchIndel_ctx.pl -i -s 1 -x ${chr}_${region_start} $prefix.het.stat`; #this should return the crossmatch discrepancy with the highest score
-            #if(defined $result && $result =~ /\S+/) {
-            #     print $result;
-            #}
-            #else {
-            #print "No assembled indel\n";
             my $cmd = "gmt parse crossmatch --chr-pos ${chr}_${region_start} --crossmatch=$prefix.stat --min-indel-size=1";
             print "$cmd\n";
             my ($stupid_header1, $stupid_header2, $result) = `$cmd`;

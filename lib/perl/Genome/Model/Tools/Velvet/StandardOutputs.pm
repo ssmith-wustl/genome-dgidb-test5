@@ -13,6 +13,10 @@ class Genome::Model::Tools::Velvet::StandardOutputs {
 	    is => 'Text',
 	    doc => 'Directory where the assembly is located',
 	},
+        min_contig_length => {
+            is => 'Number',
+            doc => 'Minimum contig length to consider for post assembly files',
+        }
     ],
 };
 
@@ -36,39 +40,28 @@ sub execute {
     }
 
     unless ( $self->create_edit_dir ) {
-	$self->error_message("Failed to create edit_dir");
+	$self->error_message("Assembly edit_dir does not exist and could not create one");
 	return;
     }
 
+    my %params = (
+        assembly_directory => $self->assembly_directory,
+        min_contig_length => $self->min_contig_length,
+    );
+
     #create gap.txt file
     $self->status_message("Creating gap.txt file");
-    my $gap = Genome::Model::Tools::Velvet::CreateGapFile->create(
-        assembly_directory => $self->assembly_directory,
-        );
+    my $gap = Genome::Model::Tools::Velvet::CreateGapFile->create( %params );
     unless ($gap->execute) {
         $self->error_message("Execute failed to to create gap.txt file");
         return;
     }
     $self->status_message("Completed creating gap.txt file");
 
-    #create input fasta and qual files #TODO - move this to tools/velvet
-    $self->status_message("Creating fasta and qual files from input fastq");
-    my $inputs = Genome::Model::Tools::Assembly::CreateOutputFiles::InputFromFastq->create(
-	fastq_file => $self->input_collated_fastq_file,
-        directory => $self->assembly_directory,
-        );
-    unless ($inputs->execute) {
-        $self->error_message("Execute failed to create input files");
-        return;
-    }
-    $self->status_message("Completed creating fasta/qual from input fastq");
-
 
     #create contigs.bases and contigs.quals files
     $self->status_message("Creating contigs.bases and contigs.quals files");
-    my $contigs = Genome::Model::Tools::Velvet::CreateContigsFiles->create (
-	assembly_directory => $self->assembly_directory,
-	);
+    my $contigs = Genome::Model::Tools::Velvet::CreateContigsFiles->create ( %params );
     unless ($contigs->execute) {
 	$self->error_message("Failed to execute creating contigs.bases and quals files");
 	return;
@@ -78,9 +71,7 @@ sub execute {
 
     #create reads.placed and readinfo.txt files
     $self->status_message("Creating reads.placed and readinfo files");
-    my $reads = Genome::Model::Tools::Velvet::CreateReadsFiles->create (
-	assembly_directory => $self->assembly_directory,
-	);
+    my $reads = Genome::Model::Tools::Velvet::CreateReadsFiles->create( %params );
     unless ($reads->execute) {
 	$self->error_message("Failed to execute creating reads files");
 	return;
@@ -90,9 +81,7 @@ sub execute {
 
     #create reads.unplaced and reads.unplaced.fasta files
     $self->status_message("Creating reads.unplaced and reads.unplaced.fasta files");
-    my $unplaced = Genome::Model::Tools::Velvet::CreateUnplacedReadsFiles->create (
-	assembly_directory => $self->assembly_directory,
-	);
+    my $unplaced = Genome::Model::Tools::Velvet::CreateUnplacedReadsFiles->create( %params );
     unless ($unplaced->execute) {
 	$self->error_message("Failed to execute creating reads.unplaced files");
 	return;
@@ -102,9 +91,7 @@ sub execute {
 
     #create supercontigs.fasta and supercontigs.agp file
     $self->status_message("Creating supercontigs fasta and agp files");
-    my $supercontigs = Genome::Model::Tools::Velvet::CreateSupercontigsFiles->create (
-	assembly_directory => $self->assembly_directory,
-	);
+    my $supercontigs = Genome::Model::Tools::Velvet::CreateSupercontigsFiles->create( %params );
     unless ($supercontigs->execute) {
 	$self->error_message("Failed execute creating of supercontigs files");
 	return;

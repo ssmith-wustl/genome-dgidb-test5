@@ -19,6 +19,10 @@ ok($view_obj, "created a view") or die "test cannot continue...";
 isa_ok($view_obj, 'Genome::Model::Build::View::DbSnpConcordance::Html');
 
 my $html = $view_obj->_generate_content();
+open(F, ">foo.html");
+print F $html;
+close(F);
 ok($html, "view returns HTML") or die "test cannot continue...";
 
+unlink "foo.html";
 done_testing;

@@ -18,12 +18,17 @@ class Genome::Model::SomaticVariation::Command::IdentifyPreviouslyDiscoveredVari
             id_by => 'build_id',
         }
     ],
+    has_param => [
+        lsf_queue => {
+            default => 'apipe',
+        },
+    ],
 };
 
 sub execute{
-    my $self = shift;
+    my $self  = shift;
     my $build = $self->build;
-    unless ($build){
+    unless ($build) {
         die $self->error_message("no build provided!");
     }
 
@@ -31,19 +36,23 @@ sub execute{
 
     $self->status_message("Comparing detected variants to previously discovered variations");
 
+    my ($snv_feature_list, $indel_feature_list, $skip_flag);
+
     my $prev_variations_build = $build->previously_discovered_variations_build;
-    unless ($prev_variations_build){
-        die $self->error_message("No previous variations build found on somatic build!");
+    unless ($prev_variations_build) {
+        $self->warning_message('No previously_discovered_variations_build provided !');
+        $skip_flag = 1;
     }
 
     $DB::single=1;
 
-    my $snv_feature_list = $prev_variations_build->snv_feature_list;
+    unless ($skip_flag) {
+        $snv_feature_list   = $prev_variations_build->snv_feature_list;
+        $indel_feature_list = $prev_variations_build->indel_feature_list;
 
-    my $indel_feature_list = $prev_variations_build->indel_feature_list;
-
-    unless ($indel_feature_list or $snv_feature_list){
-        die $self->error_message("No indel or snv feature list found on previously discovered variations build. This is unsupported!  Failing.");
+        unless ($indel_feature_list or $snv_feature_list) {
+            die $self->error_message("No indel or snv feature list found on previously discovered variations build. This is unsupported!  Failing.");
+        }
     }
 
     my $version = 2;
@@ -54,7 +63,7 @@ sub execute{
         my $novel_detected_snv_path = $build->data_set_path("novel/snvs.hq.novel",$version,'bed');
         my $previously_detected_snv_path = $build->data_set_path("novel/snvs.hq.previously_detected",$version,'bed');
 
-        if ($snv_feature_list){
+        if ($snv_feature_list) {
             my $snv_feature_list_path = $snv_feature_list->file_path;
 
             unless (-e $snv_feature_list_path){
@@ -86,27 +95,27 @@ sub execute{
                 $self->status_message("Intersection against previously discovered snv feature list complete");
                 File::Copy::copy($snv_output_tmp_file, $novel_detected_snv_path);
                 File::Copy::copy($previously_detected_output_tmp_file, $previously_detected_snv_path);
-            }else{
+            }
+            else{
                 $self->status_message("high confidence snv output is empty, skipping intersection");
                 Genome::Sys->create_directory($build->data_directory."/novel");
                 File::Copy::copy($detected_snv_path, $novel_detected_snv_path);
                 File::Copy::copy($detected_snv_path, $previously_detected_snv_path);
             }
-
-        }else{
+        }
+        else{
             $self->status_message("No snv feature list found on previously discovered variations build, skipping snv intersection");
             File::Copy::copy($detected_snv_path, $novel_detected_snv_path);
             system("touch $previously_detected_snv_path");
         }
-
     }
 
-    if ($build->indel_detection_strategy){
-        my $detected_indel_path =$build->data_set_path("variants/indels.hq",$version,"bed"); 
-        my $novel_detected_indel_path = $build->data_set_path("novel/indels.hq.novel",$version,"bed");
+    if ($build->indel_detection_strategy) {
+        my $detected_indel_path            = $build->data_set_path("variants/indels.hq",$version,"bed"); 
+        my $novel_detected_indel_path      = $build->data_set_path("novel/indels.hq.novel",$version,"bed");
         my $previously_detected_indel_path = $build->data_set_path("novel/indels.hq.previously_detected", $version, "bed");
 
-        if ($indel_feature_list){
+        if ($indel_feature_list) {
             my $indel_feature_list_path = $indel_feature_list->file_path;
 
             unless (-e $indel_feature_list_path){
@@ -138,14 +147,15 @@ sub execute{
                 $self->status_message("intersection against previously discovered indel feature list complete");
                 File::Copy::copy($indel_output_tmp_file, $novel_detected_indel_path);
                 File::Copy::copy($previously_detected_output_tmp_file, $previously_detected_indel_path);
-            }else{
+            }
+            else{
                 $self->status_message("high confidence indel output is empty, skipping intersection");
                 Genome::Sys->create_directory($build->data_directory."/novel");
                 File::Copy::copy($detected_indel_path, $novel_detected_indel_path);
                 File::Copy::copy($detected_indel_path, $previously_detected_indel_path);
             }
-
-        }else{
+        }
+        else{
             $self->status_message("No indel feature list found on previously discovered variations build, skipping indel intersection");
             File::Copy::copy($detected_indel_path, $novel_detected_indel_path);
             system("touch $previously_detected_indel_path");

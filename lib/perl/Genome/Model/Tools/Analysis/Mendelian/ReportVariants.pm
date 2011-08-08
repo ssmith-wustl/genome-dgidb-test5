@@ -380,6 +380,12 @@ sub execute {                               # replace with real execution logic.
 					}
 				}
 			}
+			else
+			{				
+				print EXCLUDEDFILE "$line\t";
+				print EXCLUDEDFILE join("\t", $unaffecteds_variant, $affecteds_variant, $affecteds_missing, $affecteds_ambiguous);
+				print EXCLUDEDFILE "\t$sample_genotype_string\t$affecteds_variant-AffectedsVariant\n";										
+			}
 
 		}		
 		

@@ -3,6 +3,7 @@
 ID=$1;
 #scripts/fixCTXswapXY_chr.pl $ID
 DIR=$2;
+SCRIPT_DIR="$( cd "$( dirname "$0" )" && pwd )"
 cd ${DIR};
 if [ -s merge.NEW.index ]; then
     rm -f merge.NEW.index;
@@ -22,8 +23,8 @@ for s in tumor normal; do
     done
 done
 
-/gscuser/kchen/1000genomes/analysis/scripts/MergeAssembledCallsets.pl -c -f $ID.allchr.Q40.somatic.assembled.HQfiltered.NEW.fasta -d 200 -h merge.NEW.index 1> $ID.allchr.Q40.somatic.assembled.HQfiltered.NEW.csv 2>$ID.allchr.Q40.somatic.assembled.HQfiltered_out.NEW.csv
-/gscuser/kchen/1000genomes/analysis/scripts/BreakAnnot.pl -A $ID.allchr.Q40.somatic.assembled.HQfiltered.NEW.csv > $ID.allchr.Q40.somatic.assembled.HQfiltered.NEW.csv.annot
-/gscuser/kchen/1000genomes/analysis/scripts/MergeAssembledCallsets.pl -c -f $ID.ctx.Q40.somatic.assembled.HQfiltered.NEW.fasta -d 500 -h merge_ctx.NEW.index 1> $ID.ctx.Q40.somatic.assembled.HQfiltered.NEW.csv 2> $ID.ctx.Q40.somatic.assembled.HQfiltered_out.NEW.csv
-/gscuser/kchen/1000genomes/analysis/scripts/BreakAnnot.pl -A $ID.ctx.Q40.somatic.assembled.HQfiltered.NEW.csv > $ID.ctx.Q40.somatic.assembled.HQfiltered.NEW.csv.annot
+${SCRIPT_DIR}/MergeAssembledCallsets.pl -c -f $ID.allchr.Q40.somatic.assembled.HQfiltered.NEW.fasta -d 200 -h merge.NEW.index 1> $ID.allchr.Q40.somatic.assembled.HQfiltered.NEW.csv 2>$ID.allchr.Q40.somatic.assembled.HQfiltered_out.NEW.csv
+${SCRIPT_DIR}/BreakAnnot.pl -A $ID.allchr.Q40.somatic.assembled.HQfiltered.NEW.csv > $ID.allchr.Q40.somatic.assembled.HQfiltered.NEW.csv.annot
+${SCRIPT_DIR}/MergeAssembledCallsets.pl -c -f $ID.ctx.Q40.somatic.assembled.HQfiltered.NEW.fasta -d 500 -h merge_ctx.NEW.index 1> $ID.ctx.Q40.somatic.assembled.HQfiltered.NEW.csv 2> $ID.ctx.Q40.somatic.assembled.HQfiltered_out.NEW.csv
+${SCRIPT_DIR}/BreakAnnot.pl -A $ID.ctx.Q40.somatic.assembled.HQfiltered.NEW.csv > $ID.ctx.Q40.somatic.assembled.HQfiltered.NEW.csv.annot
 cd ..

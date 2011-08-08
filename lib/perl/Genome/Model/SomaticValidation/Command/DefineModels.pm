@@ -121,9 +121,7 @@ sub _create_reference_alignment_model {
     my $reference_sequence_build = $region_of_interest_set->reference;
 
     my $define_cmd = Genome::Model::Command::Define::ReferenceAlignment->create(
-        subject_name => $subject->name,
-        subject_id => $subject->id,
-        subject_class_name => $subject->class,
+        subject => $subject,
         target_region_set_names => [$target_region_set->name],
         region_of_interest_set_name => $region_of_interest_set->name,
         auto_assign_inst_data => $self->auto_assign_instrument_data,

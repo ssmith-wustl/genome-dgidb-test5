@@ -27,6 +27,11 @@ class Genome::Model::Tools::DetectVariants2::Combine {
             doc => 'variant type that this module operates on, overload this in submodules accordingly',
         },
     ],
+    has_param => [
+        lsf_queue => {
+            default => 'apipe',
+        },
+    ],
 };
 
 sub help_brief {

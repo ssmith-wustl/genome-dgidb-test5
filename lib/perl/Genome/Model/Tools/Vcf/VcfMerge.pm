@@ -38,12 +38,20 @@ class Genome::Model::Tools::Vcf::VcfMerge {
             doc => "Keep the filter information from all the inputs, (even though we keep most fields only from first file)",
         },
 
-        keep_passing => {
+        keep_all_passing => {
             is => 'Boolean',
             is_optional => 1,
             default => 0,
-            doc => "Only active if merge-filters is TRUE. If a position is labeled PASS in any file, mark it as passing in the ouput file)",
-        }
+            doc => "Only active if merge-filters is TRUE. If a position is labeled PASS in any file, mark it as passing in the ouput file (union). Default is to let filtering from any input source override PASS.",
+        },
+
+        require_all_passing => {
+            is => 'Boolean',
+            is_optional => 1, 
+            default => 0,
+            doc => "require that variants be called and passing in all input files to be labeled PASS (intersect) Default is to let filtering from any input source override PASS.",
+        },
+
 
 	],
 };
@@ -75,7 +83,8 @@ sub execute {                               # replace with real execution logic.
     my $output_file = $self->output_file;
     my $source_ids = $self->source_ids;
     my $merge_filters = $self->merge_filters;
-    my $keep_passing = $self->keep_passing;
+    my $keep_all_passing = $self->keep_all_passing;
+    my $require_all_passing = $self->require_all_passing;
 
     my @vcffiles = split(",",$vcf_files);
     if (@vcffiles < 1){
@@ -93,6 +102,7 @@ sub execute {                               # replace with real execution logic.
     my %varHash;
     my %infoHash;
     my %filterHash;
+    my %passHash;
     my @header;
     #hash the first file
     my $inFh = IO::File->new( $vcffiles[0] ) || die "can't open file\n";
@@ -129,6 +139,13 @@ sub execute {                               # replace with real execution logic.
         }
         
         @{$varHash{$id}} = @col;
+
+        if ($require_all_passing){
+            if ($col[6] eq "PASS"){
+                $passHash{$id} = 1;
+            }
+        }
+
     }
     close($inFh);
 
@@ -137,6 +154,9 @@ sub execute {                               # replace with real execution logic.
     my @newFilters;
     if(defined($source_ids)){
         push(@newInfo,"##INFO=<ID=VC,Number=.,Type=String,Description=\"Variant caller\">");
+    }
+    if ($require_all_passing){
+        push(@newFilters,"##FILTER=<ID=intersect,Description=\"Removed during intersection\">");
     }
 
     #add data from subsequent files if data does not exist in first file
@@ -181,24 +201,35 @@ sub execute {                               # replace with real execution logic.
 
                 #filter
                 if($merge_filters){
-                    if($keep_passing){
-                        if( ( @{$varHash{$id}}[6] eq "PASS" ) || ($col[6] eq "PASS")){
-                            @{$varHash{$id}}[6] = "PASS"
-                        }
-                    } else {
 
+                    #union
+                    if($keep_all_passing){ 
+                        if( ( @{$varHash{$id}}[6] eq "PASS" ) || ($col[6] eq "PASS")){
+                            @{$varHash{$id}}[6] = "PASS";
+                        }
+
+
+                    #overlap
+                    } else { 
                         if( @{$varHash{$id}}[6] eq "PASS" ){
                             @{$varHash{$id}}[6] = $col[6];
+
+                            if ($require_all_passing){
+                                if ($col[6] eq "PASS"){
+                                    $passHash{$id} = $passHash{$id} + 1;
+                                }
+                            }
+                            
                         } else {
-                            unless( $col[6] eq "PASS" ){
+                            unless ( $col[6] eq "PASS" ){
                                 @{$varHash{$id}}[6] = @{$varHash{$id}}[6] . ";" . $col[6];
                             }
                         }
                     }
                 }
-                
 
             } else {
+
                 #add source id
                 if(defined($source_ids)){
                     if($col[7] eq "."){
@@ -206,10 +237,9 @@ sub execute {                               # replace with real execution logic.
                     } else {
                         $col[7] = $col[7] . ";VC=" . $vcfnames[$i];
                     }
-                }
-                
+                }                
                 #add to the hash
-                @{$varHash{$id}} = @col;
+                @{$varHash{$id}} = @col;                           
             }
         }
     }
@@ -248,6 +278,19 @@ sub execute {                               # replace with real execution logic.
     
     #then the body
     foreach my $key (@sortedKeys){
+
+        if($require_all_passing){
+            #remove lines that aren't passing in all files
+            if (@{$varHash{$key}}[6] eq "PASS"){
+                if(!(exists($passHash{$key}))){
+                    @{$varHash{$key}}[6] = "intersect";
+                } else {
+                    if ($passHash{$key} < @vcffiles){
+                        @{$varHash{$key}}[6] = "intersect";
+                    }
+                }
+            }
+        }        
         print OUTFILE join("\t",@{$varHash{$key}}) . "\n";
     }
 

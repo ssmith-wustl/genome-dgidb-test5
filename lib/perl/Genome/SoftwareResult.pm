@@ -250,11 +250,6 @@ sub resolve_module_version {
         die('Failed to find expected perl module '. $path);
     }
 
-    # TODO: move to central place
-    my $commit = `git --no-pager log --max-count=1 $path | head -1 | cut -f2 -d' '`;
-    chomp($commit);
-    return $commit if $commit;
-    
     if ($path =~ /\/gsc\/scripts\/opt\/genome-(\d+)\//) {
         return $1;
     }
@@ -313,7 +308,6 @@ sub _expand_param_and_input_properties {
                         $md5_prop->{'is_optional'} = 1;
 
                         $md5_prop->{'property_name'} = $md5_name;
-                        $md5_prop->{'type_name'} = $desc->{type_name};
                         $md5_prop->{'class_name'} = $desc->{class_name};
                         $desc->{has}{$md5_name} = $md5_prop;
                     }
@@ -334,7 +328,6 @@ sub _expand_param_and_input_properties {
                         $count_prop->{'is_optional'} = 1;
 
                         $count_prop->{'property_name'} = $count_name;
-                        $count_prop->{'type_name'} = $desc->{type_name};
                         $count_prop->{'class_name'} = $desc->{class_name};
                         $desc->{has}{$count_name} = $count_prop;
                     }

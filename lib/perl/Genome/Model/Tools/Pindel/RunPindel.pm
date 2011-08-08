@@ -50,7 +50,7 @@ class Genome::Model::Tools::Pindel::RunPindel {
         },
         reference_sequence_input => {
             calculate_from => ['reference_build_id'],
-            calculate => q{ Genome::Model::Build->get($reference_build_id)->full_consensus_path('fa') },
+            calculate => q{ Genome::Model::Build->get($reference_build_id)->cached_full_consensus_path('fa') },
             doc => 'Location of the reference sequence file',
         },
         chromosome => {
@@ -131,7 +131,7 @@ class Genome::Model::Tools::Pindel::RunPindel {
     # Make workflow choose 64 bit blades
     has_param => [
         lsf_queue => {
-            default_value => 'long'
+            default_value => 'apipe'
         }, 
         lsf_resource => {
             default_value => "-M 8000000 -R 'select[type==LINUX64 && mem>8000] rusage[mem=8000]'",

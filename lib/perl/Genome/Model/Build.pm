@@ -86,6 +86,14 @@ class Genome::Model::Build {
             doc => 'Instrument data assigned to the model when the build was created.' 
         },
         instrument_data_ids => { via => 'instrument_data', to => 'id', is_many => 1, },
+        region_of_interest_set_name => { 
+            is => 'Text',
+            is_many => 1, 
+            is_mutable => 1,
+            via => 'inputs', 
+            to => 'value_id',
+            where => [ name => 'region_of_interest_set_name', value_class_name => 'UR::Value' ], 
+        },
         from_build_links => { is => 'Genome::Model::Build::Link', reverse_as => 'to_build', 
                               doc => 'bridge table entries where this is the \"to\" build(used to retrieve builds this build is \"from\")' },
         from_builds      => { is => 'Genome::Model::Build', via => 'from_build_links', to => 'from_build', 
@@ -202,6 +210,10 @@ sub create {
         unless ($self->_create_master_event) {
             Carp::confess "Could not create master event for new build of model " . $self->model->__display_name__;
         }
+
+        $self->add_note(
+            header_text => 'Build Created',
+        );
     };
 
     if ($@) {
@@ -431,12 +443,22 @@ sub get_or_create_data_directory {
 
 sub reallocate {
     my $self = shift;
-    my $disk_allocation = $self->disk_allocation or return 1; # ok - may not have an allocation
 
-    unless ($disk_allocation->reallocate) {
-        $self->warning_message('Failed to reallocate disk space.');
+    my $status = $self->status;
+    my $disk_allocation = $self->disk_allocation;
+
+    if ($disk_allocation) {
+        my $reallocated = eval { $disk_allocation->reallocate };
+        $self->warning_message("Failed to reallocate disk space!") unless $reallocated;
+    }
+    elsif ( grep { $status eq $_ } ('New', 'Unstartable') ) {
+        # New and Unstartable builds are not expected to have disk allocations.
+    }
+    else {
+        $self->warning_message("Reallocate called for build (" . $self->__display_name__ . ") but it does not have a disk allocation.");
     }
 
+    # Always returns 1 due to legacy behavior.
     return 1;
 }
 
@@ -536,6 +558,10 @@ sub start {
         unless ($self->_launch(%params)) {
             Carp::croak "Build " . $self->__display_name__ . " could not be launched!";
         }
+
+        $self->add_note(
+            header_text => 'Build Started',
+        );
     };
 
     if ($@) {
@@ -559,6 +585,8 @@ sub post_allocation_initialization {
 sub validate_for_start_methods {
     # Each method should return tags
     my @methods = (
+        #validate_inputs_have_values should be checked first
+        'validate_inputs_have_values',
         'inputs_have_compatible_reference',
     );
     return @methods;
@@ -582,6 +610,45 @@ sub validate_for_start {
     return @tags;
 }
 
+sub instrument_data_assigned {
+    # since this could be used by several build subclasses I moved it up to this class but it is not a default validate_for_start_method for all builds
+    my $self = shift;
+    my @tags;
+    my @instrument_data = $self->instrument_data;
+    unless (@instrument_data) {
+        push @tags, UR::Object::Tag->create(
+            type => 'error',
+            properties => ['instrument_data'],
+            desc => 'no instrument data assigned to build',
+        );
+    }
+    return @tags;
+}
+
+
+sub validate_inputs_have_values {
+    my $self = shift;
+    my @inputs = $self->inputs;
+
+    my @inputs_without_values = grep { not defined $_->value } @inputs;
+    my $valueless_error_message = '';
+    my %input_names_to_ids;
+    for my $input (@inputs_without_values){
+        $input_names_to_ids{$input->name} .= $input->value_id . ',';
+    }
+
+    my @tags;
+    for my $input_name (keys %input_names_to_ids) {
+        push @tags, UR::Object::Tag->create(
+            type => 'error',
+            properties => [$input_name],
+            desc => "Value no longer exists for value id: " . $input_names_to_ids{$input_name},
+        );
+    }
+
+    return @tags;
+}
+
 sub inputs_have_compatible_reference {
     my $self = shift;
 
@@ -596,6 +663,7 @@ sub inputs_have_compatible_reference {
     my @incompatible_properties;
     for my $input (@inputs) {
         my $object = $input->value;
+        next unless $object; #this is reported in validate_inputs_have_values
         my ($input_reference_method) = grep { $object->can($_) } @reference_sequence_methods;
         next unless $input_reference_method;
         my $object_reference_sequence = $object->$input_reference_method;
@@ -636,6 +704,10 @@ sub stop {
         $self->_kill_job($job);
         $self = Genome::Model::Build->load($self->id);
     }
+
+    $self->add_note(
+        header_text => 'Build Stopped',
+    );
 
     my $self_event = $self->build_event;
     my $error = Genome::Model::Build::Error->create(
@@ -1049,6 +1121,7 @@ sub fail {
         $self->add_note(
             header_text => 'Failed Error',
             body_text => $error->error,
+            auto_truncate_body_text => 1,
         );
     }
     
@@ -1201,6 +1274,26 @@ sub abandon {
         $self->error_message("Tried to resolve last complete build for model (".$self->model_id."), which should not return this build (".$self->id."), but did.");
         # FIXME soon - return here
         # return;
+    }
+
+    $self->_unregister_software_results
+        or return;
+
+    $self->add_note(
+        header_text => 'Build Abandoned',
+    );
+
+    return 1;
+}
+
+sub _unregister_software_results {
+    my $self = shift;
+    my @registrations = Genome::SoftwareResult::User->get(user_class_name => $self->subclass_name, user_id => $self->id); 
+    for my $registration (@registrations){
+        unless($registration->delete){
+            $self->error_message("Failed to delete registration: " . Data::Dumper::Dumper($registration)); 
+            return;
+        }    
     }
 
     return 1;
@@ -1508,6 +1601,10 @@ sub delete {
     for my $object (@objects) {
         $object->delete;
     }
+
+    # Remove the build as a Software Result User
+    $self->status_message("Unregistering software results associated with build");
+    $self->_unregister_software_results;
 
     # Deallocate build directory, which will also remove it (unless no commit is on)
     my $disk_allocation = $self->disk_allocation;
@@ -1888,8 +1985,6 @@ sub delta_model_input_differences_from_model {
 }
 
 
-
-
 sub all_allocations {
     my $self = shift;
     my @input_values = map { $_->value } $self->inputs;
@@ -1898,6 +1993,27 @@ sub all_allocations {
         push @allocations, Genome::Disk::Allocation->get(owner_id => $object->id, owner_class_name => $object->class);
     }
     return @allocations;
+}
+
+
+sub is_used_as_model_or_build_input {
+    # Both models and builds have this method and as such it is currently duplicated.
+    # We don't seem to have any place to put things that are common between Models and Builds.
+    my $self = shift;
+
+    my @model_inputs = Genome::Model::Input->get(
+        value_id => $self->id,
+        value_class_name => $self->class,
+    );
+
+    my @build_inputs = Genome::Model::Build::Input->get(
+        value_id => $self->id,
+        value_class_name => $self->class,
+    );
+
+    my @inputs = (@model_inputs, @build_inputs);
+
+    return (scalar @inputs) ? 1 : 0;
 }
 
 

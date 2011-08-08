@@ -54,6 +54,12 @@ class PAP::Command::InterProScan {
                                     doc         => 'directory to save a copy of the raw output to',
                                     is_input => 1,
                                 },
+				version => {
+									is => 'String',
+									valid_values => ['4.5', '4.7', '4.8'],
+									default => '4.8',
+								},
+
 				lsf_queue => { is_param => 1, 
                                default_value => 'long',},
                 lsf_resource => { is_param => 1,
@@ -95,6 +101,8 @@ sub execute {
 
     my $self = shift;
 
+	my $iprscan_path = "/gsc/scripts/pkg/bio/iprscan/iprscan-". $self->version ."/bin/iprscan";
+
 
     my $fasta_file  = $self->fasta_file();
 
@@ -108,7 +116,8 @@ sub execute {
     $self->iprscan_output($tmp_fh);
     
     my @iprscan_command = (
-                           '/gsc/scripts/pkg/bio/iprscan/iprscan-4.7/bin/iprscan',
+                           # '/gsc/scripts/pkg/bio/iprscan/iprscan-4.7/bin/iprscan',
+						   $iprscan_path,
                            '-cli',
                            '-appl', 'hmmpfam',
                            '-appl', 'hmmtigr',

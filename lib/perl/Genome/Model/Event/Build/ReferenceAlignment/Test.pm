@@ -9,8 +9,6 @@ use warnings;
 use Carp;
 
 use Genome;
-use Genome::Model::Tools::Maq::CLinkage0_6_5;
-use Genome::Model::Tools::Maq::MapSplit;
 
 use File::Path;
 use File::Copy;

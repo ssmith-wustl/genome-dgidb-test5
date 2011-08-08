@@ -251,8 +251,7 @@ sub execute {
     $self->status_message("Data directory: $datadir");
     $self->_data_dir($datadir);
 
-#    my $tigra_sv_cmd = '/gscmnt/sata872/info/medseq/xfan/assembly_testdata/AML52/tigra_sv';
-    my $tigra_sv_cmd = '/gscuser/xfan/kdevelop/TIGRA_SV/src/tigra_sv';
+    my $tigra_sv_cmd = Genome::Sys->swpath('tigra-sv', '0.1');
     my $tigra_sv_options = $self->_get_tigra_options;
     my $bam_files = $self->_check_bam;
     $tigra_sv_cmd .= ' '. $tigra_sv_options . $sv_file . $bam_files . " > " . $out_file;
@@ -336,9 +335,9 @@ sub execute {
         my $cmd = "mv -f $datadir " . $self->intermediate_save_dir;
         system $cmd;
     }
-    elsif (!defined $self->intermediate_read_dir){
-        File::Temp::cleanup();
-    }
+    #elsif (!defined $self->intermediate_read_dir){
+    #    File::Temp::cleanup();
+    #}
 
     $out_fh->close;
     $cm_aln_fh->close if $cm_aln_fh;
@@ -478,6 +477,11 @@ sub _cross_match_validation {
         variant_size         => $makeup_size,
     );
     my $result = $cm_indel->execute;
+
+    # unless explicitly deleted, this rather large object will stay in the UR
+    # cache forever
+    $cm_indel->delete;
+    $cm_indel = undef;
 
     if ($result && $result =~ /\S+/) {
 	    $self->_UpdateSVs($result,$makeup_size,$regionsize,$tigra_sv_fa,$ctg_type, $cm_out);

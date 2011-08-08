@@ -26,7 +26,7 @@ class Genome::Model::Tools::Pindel::ProcessPindelReads {
         },
         reference_sequence_input => {
             calculate_from => ['reference_build_id'],
-            calculate => q{ Genome::Model::Build->get($reference_build_id)->full_consensus_path('fa') },
+            calculate => q{ Genome::Model::Build->get($reference_build_id)->cached_full_consensus_path('fa') },
             doc => 'Location of the reference sequence file',
         },
         mode => {
@@ -38,6 +38,11 @@ class Genome::Model::Tools::Pindel::ProcessPindelReads {
                 'read_support',
             ],
             doc => 'What to do with raw pindel reads',
+        },
+        sort_output => {
+            is => 'Boolean',
+            doc => 'This flag is set by default, unset to prevent sorting of the output bed file.',
+            default => 0,
         },
     ],
     has_optional => [
@@ -125,22 +130,56 @@ EOS
 
 sub execute {
     my $self = shift;
+
+    my $big_output_file = $self->big_output_file;
+    my $hq_raw_output_file = $self->hq_raw_output_file;
+    my $lq_raw_output_file = $self->lq_raw_output_file;
+    my $read_support_output_file = $self->read_support_output_file;
+
+    #open the big_output file-handle unless running "somatic_filter"
     if($self->mode ne 'somatic_filter'){
-        $self->_big_output_fh(Genome::Sys->open_file_for_writing($self->big_output_file));
+        $self->_big_output_fh(Genome::Sys->open_file_for_writing($big_output_file));
     }
+
+    #open the raw reads file handles
     if($self->create_hq_raw_reads){
-        $self->_hq_raw_output_fh(Genome::Sys->open_file_for_writing($self->hq_raw_output_file));
-        $self->_lq_raw_output_fh(Genome::Sys->open_file_for_writing($self->lq_raw_output_file));
+        $self->_hq_raw_output_fh(Genome::Sys->open_file_for_writing($hq_raw_output_file));
+        $self->_lq_raw_output_fh(Genome::Sys->open_file_for_writing($lq_raw_output_file));
     }
-    if(defined($self->read_support_output_file)){
-        $self->_read_support_fh(Genome::Sys->open_file_for_writing($self->read_support_output_file));
+
+    #open read-support file handle if needed
+    if(defined($read_support_output_file)){
+        $self->_read_support_fh(Genome::Sys->open_file_for_writing($read_support_output_file));
     }
-    unless($self->process_source($self->input_file,$self->output_file,$self->reference_sequence_input)){
+    
+    #set output to a temp file if sorting output, otherwise dump it right into the final destination
+    my $sort_output_flag = $self->sort_output;
+    my $bed_mode =  $self->mode eq 'to_bed';
+    my $sort_output = ($sort_output_flag || $bed_mode);
+    my $output = $sort_output ? $self->output_file.".temp" : $self->output_file;
+
+    #process the raw pindel reads, calling $self->$mode once each read has been read into memory
+    unless($self->process_source($self->input_file,$output,$self->reference_sequence_input)){
         die $self->error_message("Failed to get a return value from process_source.");
     }
+
+    #close the main file handles
     $self->_input_fh->close;
     $self->_output_fh->close;
-    
+
+    print $output . "\n";
+
+    #sort bed output if sort_output flag is set
+    if($sort_output){
+        my $real_output = $self->output_file;
+        my @output_list = ($output);
+        my $sort_cmd = Genome::Model::Tools::Joinx::Sort->create(input_files => \@output_list, output_file => $real_output);
+        unless($sort_cmd->execute){
+            die $self->error_message("Could not complete sort of output file.");
+        };
+        unlink($output);
+    }
+    #shut everything down as needed
     if($self->mode ne 'somatic_filter'){
         $self->_big_output_fh->close;
     }
@@ -148,7 +187,7 @@ sub execute {
         $self->_hq_raw_output_fh->close;
         $self->_lq_raw_output_fh->close;
     }
-    if(defined($self->read_support_output_file)){
+    if(defined($read_support_output_file)){
         $self->_read_support_fh->close;
     }
     return 1;
@@ -161,7 +200,6 @@ sub process_source {
     my $mode = $self->mode;
     my $input_fh = Genome::Sys->open_file_for_reading($input);
     my $output_fh = Genome::Sys->open_file_for_writing($output);
-
     $self->_input_fh($input_fh);
     $self->_output_fh($output_fh);
 

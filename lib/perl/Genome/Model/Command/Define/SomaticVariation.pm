@@ -8,10 +8,7 @@ use warnings;
 use Genome;
 
 class Genome::Model::Command::Define::SomaticVariation {
-    is => [
-    'Genome::Model::Command::Define',
-    'Genome::Command::Base',
-    ],
+    is => 'Genome::Model::Command::Define::Helper',
     has => [
         tumor_model => {
             is => 'Genome::Model::ReferenceAlignment',
@@ -26,6 +23,7 @@ class Genome::Model::Command::Define::SomaticVariation {
         previously_discovered_variations_build => {
             is => 'Genome::Model::Build::ImportedVariationList',
             is_input => 1, 
+            is_optional => 1,
             doc => 'Id of imported variants build to screen somatic variants against',
         },
         annotation_build => {
@@ -88,19 +86,20 @@ sub _resolve_param {
 }
 
 sub type_specific_parameters_for_create {
-    my $self = shift;
-
+    my $self   = shift;
     my @params = ();
 
-    push @params,(
-        tumor_model => $self->tumor_model,
-        normal_model => $self->normal_model,
+    my %param = (
+        tumor_model      => $self->tumor_model,
+        normal_model     => $self->normal_model,
         annotation_build => $self->annotation_build,
-        previously_discovered_variations_build => $self->previously_discovered_variations_build,
-        force => $self->force,
+        force            => $self->force,
     );
 
+    $param{previously_discovered_variations_build} = $self->previously_discovered_variations_build 
+        if $self->previously_discovered_variations_build;
 
+    push @params, %param;
     return @params;
 }
 
@@ -123,18 +122,24 @@ sub execute {
         $self->error_message("Could not get a build for annotation build id: " . $self->annotation_build_id);
         return;
     }
-    $self->previously_discovered_variations_build($self->_resolve_param('previously_discovered_variations_build'));
-    unless(defined $self->previously_discovered_variations_build) {
-        $self->error_message("Could not get a build for previous variants build id: " . $self->previously_discovered_variations_build_id);
-        return;
+
+    if ($self->previously_discovered_variations_build) {
+        $self->previously_discovered_variations_build($self->_resolve_param('previously_discovered_variations_build'));
+        unless(defined $self->previously_discovered_variations_build) {
+            $self->error_message("Could not get a build for previous variants build id: " . $self->previously_discovered_variations_build_id);
+            return;
+        }
+    }
+    else {
+        $self->warning_message('No previously_discovered_variations_build_id provided for this model. Skip that step');
     }
 
-    my $tumor_subject = $self->tumor_model->subject;
+    my $tumor_subject  = $self->tumor_model->subject;
     my $normal_subject = $self->normal_model->subject;
 
-    if($tumor_subject->can('source') and $normal_subject->can('source')) {
+    if ($tumor_subject->can('source') and $normal_subject->can('source')) {
 
-        my $tumor_source = $tumor_subject->source;
+        my $tumor_source  = $tumor_subject->source;
         my $normal_source = $normal_subject->source;
         unless($tumor_source) {
             die $self->error_message("Could not get a source for the tumor subject: " . Data::Dumper::Dumper $tumor_subject);
@@ -144,20 +149,20 @@ sub execute {
         }
         
         unless ($tumor_source eq $normal_source) {
-            my $tumor_common_name = $tumor_source->common_name || "unknown";
+            my $tumor_common_name  = $tumor_source->common_name  || "unknown";
             my $normal_common_name = $normal_source->common_name || "unknown";
             my $message = "Tumor model and normal model samples do not come from the same individual.  Tumor common name is $tumor_common_name. Normal common name is $normal_common_name.";
-            if($self->force){
+            if ($self->force){
                 $self->warning_message($message);
-            }else{
+            }
+            else{
                 die $self->error_message($message . "  Use --force option to override this and allow samples from different individuals anyway");
             }
         }
-        $self->subject_id($tumor_subject->id);
-        $self->subject_class_name($tumor_subject->class);
-        $self->subject_name($tumor_subject->name);
+        $self->subject($tumor_subject);
     
-    } else {
+    } 
+    else {
         $self->error_message('Unexpected subject for tumor or normal model!');
         return;
     }

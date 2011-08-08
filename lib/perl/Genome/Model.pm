@@ -59,6 +59,14 @@ class Genome::Model {
         type_name => { via => 'processing_profile' },
     ],
     has_optional => [
+        limit_inputs_id => {
+            is => 'Text',
+            column_name => 'LIMIT_INPUTS_TO_ID',
+        },
+        limit_inputs_rule => {
+            is => 'UR::BoolExpr',
+            id_by => 'limit_inputs_id',
+        },
         user_name => { is => 'Text' },
         creation_date  => { is => 'Timestamp' },
         is_default => { 
@@ -100,7 +108,12 @@ class Genome::Model {
         project_assignments => { is => 'Genome::Model::ProjectAssignment', reverse_as => 'model' },
         project_names => { is => 'Text', via => 'projects', to => 'name' },
         # TODO: the new projects will suck in all of the model groups as a special case of a named project containing only models
-        model_groups => { is => 'Genome::ModelGroup', via => 'model_bridges', to => 'model_group' },
+        model_groups => { 
+            is => 'Genome::ModelGroup', 
+            via => 'model_bridges', 
+            to => 'model_group',
+            is_mutable => 1
+        },
         model_bridges => { is => 'Genome::ModelGroupBridge', reverse_as => 'model' },
         # TODO: replace the internals of these with a specific case of model inputs
         from_model_links => { 
@@ -181,6 +194,13 @@ class Genome::Model {
             is => 'Array',
             calculate => q{
                 my @s = $self->get_all_possible_samples();
+                return sort map {$_->name()} @s;
+            },
+        },
+        sample_names_for_view => {
+            is => 'Array',
+            calculate => q{
+                my @s = $self->get_samples_for_view();
                 return sort map {$_->name()} @s;
             },
         },
@@ -393,6 +413,9 @@ sub _verify_no_other_models_with_same_name_and_type_name_exist {
 sub default_model_name {
     my ($self, %params) = @_;
 
+    my $auto_increment = delete $params{auto_increment};
+    $auto_increment = 1 unless defined $auto_increment;
+
     my $name_template = ($self->subject_name).'.';
     $name_template .= 'prod-' if ($self->user_name eq 'apipe-builder' || $params{prod});
 
@@ -422,7 +445,7 @@ sub default_model_name {
 
     my $name = sprintf($name_template, '', '');
     my $cnt = 0;
-    while ( Genome::Model->get(name => $name) ) {
+    while ( $auto_increment && Genome::Model->get(name => $name) ) {
         $name = sprintf($name_template, '-', ++$cnt);
     }
 
@@ -522,6 +545,21 @@ sub _verify_subject {
         return 0;
     }
     return 1;
+}
+
+sub get_samples_for_view {
+
+    my ($self) = shift;
+
+    my $subject = $self->subject();
+    my @samples;
+
+    if ($self->subject_class_name eq 'Genome::Sample') {
+       @samples = ($subject);
+    } elsif ( $self->subject_class_name eq 'Genome::Individual') {
+       @samples = $subject->samples();
+    }
+return @samples;
 }
 
 sub get_all_possible_samples {
@@ -903,13 +941,32 @@ sub notify_input_build_success {
     return 1;
 }
 
+sub create_rule_limiting_instrument_data {
+    my ($self, @instrument_data) = @_;
+    @instrument_data = $self->instrument_data unless @instrument_data;
+    return unless @instrument_data;
+
+    # Find the smallest scale domain object that encompasses all the instrument data
+    # and create a boolean expression for it.
+    for my $accessor (qw/ library_id sample_id sample_source_id taxon_id /) {
+        my @ids = map { $_->$accessor } @instrument_data;
+        next unless @ids;
+        next if grep { $_ ne $ids[0] } @ids;
+
+        my $rule = $instrument_data[0]->define_boolexpr($accessor => $ids[0]);
+        return $rule;
+    }
+
+    return;
+}
+    
 sub build_requested {
     my ($self, $value, $reason) = @_; 
     # Writing the if like this allows someone to do build_requested(undef)
     if (@_ > 1) {
         my ($calling_package, $calling_subroutine) = (caller(1))[0,3];
         my $default_reason = 'no reason given';
-        $default_reason .= 'called by ' . $calling_package . '::' . $calling_subroutine if $calling_package;
+        $default_reason .= ' called by ' . $calling_package . '::' . $calling_subroutine if $calling_package;
         $self->add_note(
             header_text => $value ? 'build_requested' : 'build_unrequested',
             body_text => defined $reason ? $reason : $default_reason,
@@ -934,60 +991,171 @@ sub time_of_last_build_request {
     return $note->entry_date;
 }
 
+sub params_from_param_strings {
+    my ($class, @param_strings) = @_;
+
+    Carp::confess('No param strings to convert to params') if not @param_strings;
+
+    my %params;
+    my $meta = $class->__meta__;
+    for my $param_string ( @param_strings ) {
+        my ($key, $value) = split('=', $param_string, 2);
+        my $property = $meta->property_meta_for_name($key);
+        if ( not $property ) {
+            $class->error_message("Failed to find model property: $key");
+            return;
+        }
+
+        if ( my ($unallowed) = grep { $property->$_ } (qw/ is_calculated is_constant is_transient /) ){
+            $class->error_message("Property ($key) cannot be given on the command line because it is '$unallowed'");
+            return;
+        }
+
+        if ( not defined $value or $value eq '' ) {
+            $params{$key} = undef;
+            next;
+        }
+
+        my @values = $value;
+        my $data_type = $property->data_type;
+        if ( not grep { $data_type =~ /^$_$/i } (qw/ boolean integer number string text ur::value /) ) { # hacky...if u kno a better way...
+            my $filter = ( $value =~ /^$RE{num}{int}$/ ) ? 'id='.$value : $value;
+            my $data_type = $property->data_type;
+            my $bx = eval { UR::BoolExpr->resolve_for_string($data_type, $filter); };
+            if ( not $bx ) {
+                $class->error_message("Failed to create expression for $key ($data_type) from '$value'");
+                return;
+            }
+            @values = $data_type->get($bx);
+            if ( not @values ) {
+                $class->error_message("Failed to get $key ($data_type) for $value");
+                return;
+            }
+        }
+
+        if ( $property->is_many ) {
+            push @{$params{$key}}, @values;
+        }
+        elsif ( @values > 1 or exists $params{$key} ) {
+            $class->error_message(
+                "Singular property ($key) cannot have more than one value (".join(', ', grep { defined } (@values, $params{$key})).')'
+            );
+            return;
+        }
+        else {
+            $params{$key} = $values[0];
+        }
+    }
+
+    return %params;
+}
+
+sub property_names_for_copy {
+    my $class = shift;
+
+    my $meta = eval{ $class->__meta__; };
+    if ( not $meta ) {
+        $class->error_message('Failed to get class meta for '.$class);
+        return;
+    }
+
+    my @base_properties = (qw/
+        auto_assign_inst_data auto_build_alignments processing_profile subject 
+        /);
+
+    my @input_properties = map { 
+        $_->property_name
+    } grep { 
+        defined $_->via and $_->via eq 'inputs'
+    } $meta->property_metas;
+
+    return sort { $a cmp $b } ( @base_properties, @input_properties );
+}
+
+sub real_input_properties {
+    my $self = shift;
+
+    my $meta = $self->__meta__;
+    my @properties;
+    for my $input_property ( sort { $a->property_name cmp $b->property_name } grep { $_->via and $_->via eq 'inputs' } $meta->property_metas ) {
+        my $property_name = $input_property->property_name;
+        my %property = (
+            name => $property_name,
+            is_optional => $input_property->is_optional,
+            is_many => $input_property->is_many,
+            data_type => $input_property->data_type,
+        );
+        push @properties, \%property;
+        next if not $property_name =~ s/_id$//;
+        my $object_property = $meta->property_meta_for_name($property_name);
+        next if not $object_property;
+        $property{name} = $object_property->property_name;
+        $property{data_type} = $object_property->data_type;
+    }
+
+    return @properties;
+}
+
 sub copy {
     my ($self, %overrides) = @_;
 
-    my $do_not_copy_instrument_data = delete $overrides{do_not_copy_instrument_data};
-    my %new_params = (
-        subject_id => $self->subject_id,
-        subject_class_name => $self->subject_class_name,
-        subclass_name => $self->subclass_name,
-        processing_profile => ( defined $overrides{processing_profile} ? delete $overrides{processing_profile} : $self->processing_profile ),
-        auto_assign_inst_data => ( 
-            defined $overrides{auto_assign_inst_data} ? delete $overrides{auto_assign_inst_data} : $self->auto_assign_inst_data
-        ),
-        auto_build_alignments => (
-            defined $overrides{auto_build_alignments} ? delete $overrides{auto_build_alignments} : $self->auto_build_alignments
-        ),
-    );
-    $new_params{name} = delete $overrides{name} if $overrides{name};
-
-    my %input_properties = map { $_->property_name => $_ } grep { defined $_->via and $_->via eq 'inputs' } $self->__meta__->property_metas;
-    delete $input_properties{instrument_data} if $do_not_copy_instrument_data;
-    for my $input_property ( values %input_properties ) {
-        my $input_name = $input_property->property_name;
-        my @values = $self->$input_name; # current values
-        if ( defined $overrides{$input_name} ) { # override
-            my $values = delete $overrides{$input_name};
-            @values = ref $values ? @$values : $values;
+    # standard properties
+    my %params = ( subclass_name => $self->subclass_name );
+    $params{name} = delete $overrides{name} if defined $overrides{name};
+    my @standard_properties = (qw/ subject processing_profile auto_assign_inst_data auto_build_alignments /);
+    for my $name ( @standard_properties ) {
+        if ( defined $overrides{$name} ) { # override
+            $params{$name} = delete $overrides{$name};
         }
-        @values = grep { defined } @values; # copy only defined
-        next if not @values;
-
-        if ( $input_property->is_many ) {
-            $new_params{$input_name} = \@values;
+        elsif ( exists $overrides{$name} ) { # rm undef
+            delete $overrides{$name};
         }
         else {
-            if ( @values > 1 ) {
-                $self->error_message("Requested to copy '$input_name' with multiple values (@values), but it can only take one.");
-                return;
-            }
-            $new_params{$input_name} = $values[0];
+            $params{$name} = $self->$name;
         }
     }
 
+    # input properties
+    for my $property ( $self->real_input_properties ) {
+        my $name = $property->{name};
+        if ( defined $overrides{$name} ) { # override
+            my $ref = ref $overrides{$name};
+            if ( $ref and $ref eq  'ARRAY' and not $property->{is_many} ) {
+                $self->error_message('Cannot override singular input with multiple values: '.Data::Dumper::Dumper({$name => $overrides{$name}}));
+                return;
+            }
+            $params{$name} = delete $overrides{$name};
+        }
+        elsif ( exists $overrides{$name} ) { # rm undef
+            delete $overrides{$name};
+        }
+        else {
+            if ( $property->{is_many} ) {
+                $params{$name} = [ $self->$name ];
+            }
+            else {
+                if( defined $self->$name ) {
+                    $params{$name} = $self->$name;
+                }
+            }
+        }
+    }
+
+    # make we covered all overrides
     if ( %overrides ) {
-        $self->error_message('Unrecognized overrides sent to Genome::Model::copy '.Data::Dumper::Dumper(\%overrides));
+        $self->error_message('Unrecognized overrides sent to model copy: '.Data::Dumper::Dumper(\%overrides));
         return;
     }
 
-    my $new_model = $self->subclass_name->create(%new_params);
-    if ( not $new_model ) {
-        $self->error_message('Failed to copy model');
+    $params{subject_class_name} = $params{subject}->class; # set here in case subject is overridden
+
+    my $copy = eval{ $self->class->create(%params) };
+    if ( not $copy ) {
+        $self->error_message('Failed to copy model: '.$@);
         return;
     }
 
-    return $new_model;
+    return $copy;
 }
 
 sub delete {
@@ -1135,5 +1303,34 @@ sub duplicates {
 
     return @duplicates;
 }
+
+sub is_used_as_model_or_build_input {
+    # Both models and builds have this method and as such it is currently duplicated.
+    # We don't seem to have any place to put things that are common between Models and Builds.
+    my $self = shift;
+
+    my @model_inputs = Genome::Model::Input->get(
+        value_id => $self->id,
+        value_class_name => $self->class,
+    );
+
+    my @build_inputs = Genome::Model::Build::Input->get(
+        value_id => $self->id,
+        value_class_name => $self->class,
+    );
+
+    my @inputs = (@model_inputs, @build_inputs);
+
+    return (scalar @inputs) ? 1 : 0;
+}
+
+sub builds_are_used_as_model_or_build_input {
+    my $self = shift;
+
+    my @builds = $self->builds;
+
+    return grep { $_->is_used_as_model_or_build_input } @builds;
+}
+
 1;
 

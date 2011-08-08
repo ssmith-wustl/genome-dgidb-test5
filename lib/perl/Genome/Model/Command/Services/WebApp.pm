@@ -3,6 +3,9 @@ package Genome::Model::Command::Services::WebApp;
 use strict;
 use warnings;
 
+# use the Web::Simple we want, not what's in the global app server bin
+use lib qw(/gsc/scripts/opt/genome/vendor/lib/perl5);
+
 use Genome::Model::Command::Services::WebApp::Loader;
 use Genome::Model::Command::Services::WebApp::Runner;
 
@@ -33,6 +36,12 @@ class Genome::Model::Command::Services::WebApp {
             doc   => 'tcp port for internal server to listen'
         }
     ],
+    has_optional => [
+        open_browser => {
+            is    => 'Boolean',
+            doc   => 'open a browser when server starts up'
+        }
+    ]
 };
 
 sub execute {
@@ -43,8 +52,12 @@ sub execute {
     $self->status_message( sprintf( "Using browser: %s", $self->browser ) );
     $self->status_message( sprintf( "Local server accessible at %s", $self->url ) );
 
-    $self->fork_and_call_browser
-      if ( $ENV{DISPLAY} && !( $ENV{SSH_CLIENT} || $ENV{SSH_CONNECTION} ) );
+    if ($ENV{DISPLAY} 
+        && !( $ENV{SSH_CLIENT} || $ENV{SSH_CONNECTION} )
+        && $self->open_browser() ) {
+
+        $self->fork_and_call_browser
+    }
     
     $self->run_starman;
 

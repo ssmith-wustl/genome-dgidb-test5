@@ -9,7 +9,7 @@ use Genome;
 my $pp_name = "imported-variation-list";
 
 class Genome::Model::Command::Define::ImportedVariationList {
-    is => ['Genome::Model::Command::Define', 'Genome::Command::Base'],
+    is => 'Genome::Model::Command::Define::Helper', 
     has_input => [
         version => {
             is => 'Text',
@@ -244,7 +244,6 @@ sub _create_build {
     my %build_parameters = (
         model_id => $model->id,
         version => $self->version,
-        data_directory => $self->data_directory,
     );
     $build_parameters{snv_feature_list} = $self->snv_feature_list if $self->snv_feature_list;
     $build_parameters{indel_feature_list} = $self->indel_feature_list if $self->indel_feature_list;

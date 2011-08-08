@@ -21,7 +21,7 @@ use_ok('Genome::Model::Build::DeNovoAssembly::Velvet') or die;
 my $base_dir = '/gsc/var/cache/testsuite/data/Genome-Model/DeNovoAssembly';
 my $archive_path = $base_dir.'/inst_data/-7777/archive.tgz';
 ok(-s $archive_path, 'inst data archive path') or die;
-my $example_version = '4';
+my $example_version = '6';
 my $example_dir = $base_dir.'/velvet_v'.$example_version;
 ok(-d $example_dir, 'example dir') or die;
 my $tmpdir = File::Temp::tempdir(CLEANUP => 1);
@@ -70,11 +70,11 @@ ok(-s $instrument_data->archive_path, 'inst data archive path');
 my $pp = Genome::ProcessingProfile::DeNovoAssembly->create(
     name => 'De Novo Assembly Velvet Test',
     coverage => 0.5,#25000,
-    read_processor => 'trimmer by-length -trim-length 10 | rename illumina-to-pcap',
+    read_processor => 'trim remove -length 10 | rename illumina-to-pcap',
     assembler_name => 'velvet one-button',
     assembler_version => '0.7.57-64',
     assembler_params => '-hash_sizes 31 33 35 -min_contig_length 100',
-    post_assemble => 'standard-outputs',
+    post_assemble => 'standard-outputs -min_contig_length 50',
 );
 ok($pp, 'pp') or die;
 
@@ -133,8 +133,8 @@ is(
 
 # ASSEMBLE
 my $assembler_rusage = $build->assembler_rusage;
-my $queue = ( Genome::Config->should_use_alignment_pd ) ? 'alignment-pd' : 'alignment';
-# FIXME is($assembler_rusage, "-q $queue -R 'select[type==LINUX64 && mem>30000] rusage[mem=30000] span[hosts=1]' -M 30000000", 'assembler rusage');
+my $queue = ( $build->run_by eq 'apipe-tester' ) ? 'alignment-pd' : 'apipe';
+is($assembler_rusage, "-q $queue -R 'select[type==LINUX64 && mem>30000] rusage[mem=30000] span[hosts=1]' -M 30000000", 'assembler rusage');
 my %assembler_params = $build->assembler_params;
 #print Data::Dumper::Dumper(\%assembler_params);
 is_deeply(
@@ -187,19 +187,45 @@ foreach my $file_name (qw/
     is(File::Compare::compare($file, $example_file), 0, "$file_name files match");
 }
 
-foreach my $file_name ('collated.fasta.gz') {#, 'collated.fasta.qual.gz') {
-    my $example_file = $example_dir."/edit_dir/$file_name";
-    ok(-s $example_file, "$file_name example file exists");
-    my $file = $build->data_directory."/edit_dir/$file_name";
-    ok(-s $file, "$file_name file exists");
-    
-    my @diff = `zdiff $file $example_file`;
-    is(scalar(@diff), 0, "$file_name file matches");
+# METRICS TODO
+my $metrics = Genome::Model::Event::Build::DeNovoAssembly::Report->create( build => $build, model => $model );
+ok( $metrics, 'Created report' );
+ok( $metrics->execute, 'Executed report' );
+#check stats file
+ok( -s $example_build->stats_file, 'Example build stats file exists' );
+ok( -s $build->stats_file, 'Test created stats file' );
+is(File::Compare::compare($example_build->stats_file,$build->stats_file), 0, 'Stats files match' );
+#check build metrics
+my %expected_metrics = (
+    'n50_supercontig_length' => '141',
+    'reads_processed_success' => '0.833',
+    'reads_assembled_success' => '0.298',
+    'reads_assembled' => '7459',
+    'average_read_length' => '90',
+    'reads_attempted' => 30000,
+    'average_insert_size_used' => '260',
+    'n50_contig_length' => '141',
+    'genome_size_used' => '4500000',
+    'reads_not_assembled_pct' => '0.702',
+    'supercontigs' => '2424',
+    'average_supercontig_length' => '146',
+    'contigs' => '2424',
+    'n50_supercontig_length_gt_500' => '0',
+    'n50_contig_length_gt_500' => '0',
+    'major_contig_length' => '500',
+    'average_contig_length' => '146',
+    'average_supercontig_length_gt_500' => '0',
+    'average_contig_length_gt_500' => '0',
+    'reads_processed' => '25000',
+    'assembly_length' => '354779',
+    'read_depths_ge_5x' => '1.1'
+);
+for my $metric_name ( keys %expected_metrics ) {
+    ok( $expected_metrics{$metric_name} eq $build->$metric_name, "$metric_name metrics match" );
 }
 
-# METRICS TODO
-
 #print $build->data_directory."\n"; <STDIN>;
+
 done_testing();
 exit;
 

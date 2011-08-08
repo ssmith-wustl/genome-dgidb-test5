@@ -157,20 +157,6 @@ sub valid_annotation_build {
     return @tags;
 }
 
-sub instrument_data_assigned {
-    my $self = shift;
-    my @tags;
-    my @instrument_data = $self->instrument_data;
-    unless (@instrument_data) {
-        push @tags, UR::Object::Tag->create(
-            type => 'error',
-            properties => ['instrument_data'],
-            desc => 'No instrument data assigned to build',
-        );
-    }
-    return @tags;
-}
-
 sub check_region_of_interest {
     my $self = shift;
     my @tags;
@@ -214,20 +200,21 @@ sub check_genotype_input {
 
     if ($self->model->is_lane_qc) {
         unless ($self->genotype_microarray_build) {
+            my $desc;
             if ($self->model->genotype_microarray_model) {
-                push @tags, UR::Object::Tag->create(
-                    type => 'error',
-                    properties => ['genotype_microarray_build'],
-                    desc => 'Model has genotype_microarray_model but build is missing genotype_microarray_build',
-                );
+                $desc = 'model has genotype_microarray input but build is missing it';
+            }
+            elsif ($self->subject->default_genotype_data_id) {
+                $desc = 'subject has default_genotype_data but build and model are missing genotype_microarray input';
             }
             else {
-                push @tags, UR::Object::Tag->create(
-                    type => 'error',
-                    properties => ['genotype_microarray_build'],
-                    desc => 'No genotype microarray build input found',
-                );
+                $desc = 'no genotype_microarray input found';
             }
+            push @tags, UR::Object::Tag->create(
+                type => 'error',
+                properties => ['genotype_microarray_build'],
+                desc => $desc,
+            );
         }
     }
 
@@ -494,6 +481,7 @@ sub get_variant_bed_file {
 
 sub snvs_bed {
     my ($self, $ver) = @_;
+    $DB::single=1;
 
     my $dir = $self->variants_directory;
     if($dir =~ /snp_related_metrics/) {
@@ -503,17 +491,19 @@ sub snvs_bed {
         unless($snv_files->{$ver}) {
             my $hq_file = $self->get_variant_bed_file("snvs.hq", $ver);
             my $lq_file = $self->get_variant_bed_file("snvs.lq", $ver);
-
             my $combined_file_path = Genome::Sys->create_temp_file_path;
-            my $union_command = Genome::Model::Tools::Joinx::Sort->create(
-                input_files => [$hq_file, $lq_file],
-                merge_only => 1,
-                output_file => $combined_file_path,
-            );
-            unless($union_command->execute()) {
-                die $self->error_message('Failed to produce snvs_bed file!' . ($ver? ' for version ' . $ver : ''));
+            if(-e $lq_file){
+                my $union_command = Genome::Model::Tools::Joinx::Sort->create(
+                    input_files => [$hq_file,$lq_file],
+                    merge_only => 1,
+                    output_file => $combined_file_path,
+                );
+                unless($union_command->execute()) {
+                    die $self->error_message('Failed to produce snvs_bed file!' . ($ver? ' for version ' . $ver : ''));
+                }
+            } else {
+                $combined_file_path = $hq_file;
             }
-
             $snv_files->{$ver} = $combined_file_path;
             $self->_unfiltered_snv_file($snv_files);
         }
@@ -1467,5 +1457,6 @@ sub regex_files_for_diff {
         alignments/\d+(?:_merged_rmdup)?.bam.flagstat$
     );
 }
+
 1;
 

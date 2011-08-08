@@ -8,7 +8,7 @@ use Genome;
 class Genome::Model::Tools::Sx::Reader {
     has => [
         config => { is => 'Text', is_many => 1, },
-        #metrics => { is_optional => 1, },
+        metrics => { is => 'Genome::Model::Tools::Sx::Metrics', is_optional => 1, },
     ],
 };
 
@@ -166,7 +166,7 @@ sub read {
     my $strategy = $_[0]->{_strategy};
     my $seqs = $_[0]->$strategy;
     return if not $seqs or not @$seqs;
-    #$self->metrics->add($seqs) if $self->metrics;
+    $_[0]->metrics->add_sequences($seqs) if $_[0]->metrics;
     return $seqs;
 }
 

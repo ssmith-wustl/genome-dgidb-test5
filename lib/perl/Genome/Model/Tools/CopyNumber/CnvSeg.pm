@@ -215,10 +215,10 @@ sub execute {
         printf $output_fh "--- Chromosome %s\t%d probes\n",$chr,$#x+1;
         my ($label,$cn_adjusted);
         if(defined $opts{a}){
-            ($label,$cn_adjusted)=$cnv->SegPloidy($D,$opts{s},$median_readcount{$chr},$Centromere{$chr}->{start},$Centromere{$chr}->{end});
+            ($label,$cn_adjusted)=$cnv->SegPloidy($output_fh,$D,$opts{s},$median_readcount{$chr},$Centromere{$chr}->{start},$Centromere{$chr}->{end});
         }
         else{
-            ($label,$cn_adjusted)=$cnv->SegPloidy($D,$opts{s},$median_readcount{$chr});
+            ($label,$cn_adjusted)=$cnv->SegPloidy($output_fh,$D,$opts{s},$median_readcount{$chr});
         }
 
         $cnv->printParm($output_fh);
@@ -229,7 +229,7 @@ sub execute {
         $pidx=$idx+1;
     }
 
-    $cnv->SegPloidy($Dall,$opts{s});
+    $cnv->SegPloidy($output_fh,$Dall,$opts{s});
     printf $output_fh "--- Whole Genome %d probes\n",$#{$Dall->{x}}+1;
     $cnv->printParm($output_fh,1);
     return 1;

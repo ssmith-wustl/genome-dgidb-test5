@@ -22,7 +22,8 @@ my $bam_input = $test_dir . '/alignments/102922275_merged_rmdup.bam';
 # Updated to .v5 due to additional column in Varscan
 # Updated to .v6 due to the addition of quality and natural sort order to bed file output 
 # Updated to .v7 due to the addition of read depth
-my $expected_dir = $test_dir . '/expected.v7/';
+# Updated to .v8 due to a score changing because of using mpileup instead of pileup
+my $expected_dir = $test_dir . '/expected.v8/';
 ok(-d $expected_dir, "expected results directory exists");
 
 my $ref_seq_build = Genome::Model::Build::ImportedReferenceSequence->get(type_name => 'imported reference sequence', name => 'NCBI-human-build36');
@@ -32,7 +33,7 @@ is($ref_seq_build->name, 'NCBI-human-build36', 'Got expected reference for test 
 my $ref_seq_input = $ref_seq_build->full_consensus_path('fa');
 ok(Genome::Sys->check_for_path_existence($ref_seq_input), 'Got a reference FASTA') or die('Test cannot continue without a reference FASTA');
 
-my $version = ''; #Currently only one version of var-scan
+my $version = '2.2.6';
 my $snv_parameters = my $indel_parameters = '';
 
 my $command = Genome::Model::Tools::DetectVariants::Varscan->create(

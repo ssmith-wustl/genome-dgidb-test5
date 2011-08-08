@@ -6,7 +6,7 @@ use warnings;
 use base 'Genome::Utility::TestBase';
 
 use File::Temp 'tempdir';
-use Storable qw/ store retrieve /;
+use Storable qw/ nstore retrieve /;
 use Test::More;
 
 sub dir { 
@@ -37,7 +37,7 @@ sub retrieve_classifications {
 
 sub store_classifications {
     my ($self, $classifications) = @_;
-    return store($classifications, $self->classifications_stor);
+    return nstore($classifications, $self->classifications_stor);
 }
 
 #####################################################################################################

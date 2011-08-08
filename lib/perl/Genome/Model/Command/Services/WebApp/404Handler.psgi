@@ -5,7 +5,7 @@ use strict;
 use warnings;
 
 sub {
-    my ( $env, $content ) = @_;
+    my ( $content ) = @_;
 
     my $string = join( "\n", @$content );
     my $doc = <<"    HTML";
@@ -40,7 +40,8 @@ sub {
         <div class="span-24 last">
           <div class="rounded" style="background: #FFF; margin-bottom: 10px;">
             <div class="padding10">
-              <p><strong>Error:</strong> $string</p>
+              <p><strong>Error:</strong> $string<br>
+                Please email apipe\@genome.wustl.edu</p>
             </div>
           </div>
         </div>

@@ -27,6 +27,7 @@ use File::Slurp;    # to replace IO::File access...
 use File::Copy;
 use File::Basename;
 use File::stat;
+use File::Find::Rule;
 
 use Cwd;
 
@@ -74,6 +75,10 @@ UR::Object::Type->define(
             is  => 'String',
             doc => "Current assembly name",
         },
+        'assembly_version' => {
+            is  => 'String',
+            doc => "Current assembly version",
+        },
         'sequence_set_id' => {
             is  => 'String',
             doc => "Current sequence set id",
@@ -117,14 +122,16 @@ sub execute
     my $project_type  = $self->project_type;
     my $org_dirname   = $self->org_dirname;
     my $assembly_name = $self->assembly_name;
+    my $assembly_version = $self->assembly_version;
     my $ssid          = $self->sequence_set_id;
     my $locustagdir   = $self->locustagdir;
 
-    my $anno_submission = $amgap_path . "/"
-        . $org_dirname . "/"
-        . $assembly_name . "/"
-        . $pipe_version . "/"
-	. "Genbank_submission/Version_1.0/Annotated_submission/";
+	my $anno_submission = $amgap_path . "/"
+		. $org_dirname . "/"
+		. $assembly_name . "/"
+		. $assembly_version . "/"
+		. "Genbank_submission/"
+		. $pipe_version . "/Annotated_submission/";
 
     my $program = "/gsc/scripts/bin/tace";
     my $cwd     = getcwd();
@@ -148,11 +155,18 @@ sub execute
     ## get the latest filename
     (my $sqlitedatafilename, $outdirpath) = fileparse($sqlitedatafile);
 
-    ## Copy sqlite.dat file Annotated_submission directory
     ## Before copying sqlite file we will need to delete sqlite*.dat && *.dat.dat file in the Annotated_submission directory if already exists
- 	unlink($anno_submission.$sqlitedatafilename) || croak qq{\n\n Cannot delete $anno_submission.$sqlitedatafilename ... from BerRunFinish.pm: $OS_ERROR\n\n} if -e $anno_submission.$sqlitedatafile;
- 	unlink($anno_submission.$sqlitedatafilename.".dat") || croak qq{\n\n Cannot delete $anno_submission.$sqlitedatafilename ... from BerRunFinish.pm: $OS_ERROR\n\n} if -e $anno_submission.$sqlitedatafilename.".dat";
-    copy($sqlitedatafile, $anno_submission.$sqlitedatafilename) || croak qq{\n\n Copying of $sqlitedatafile failed ...  from BerRunFinish.pm: $OS_ERROR\n\n };
+	my @sqliteDataFiles = find (
+							file =>
+							name => [ qw/ *.dat *.dat.dat / ],
+							in	 => $anno_submission
+						  );
+
+    ## Copy sqlite.dat file Annotated_submission directory
+	unlink $_ or croak qq{ \n\n Error removing file $_: $! \n\n }
+		for (@sqliteDataFiles);
+
+    copy($sqlitedatafile, $anno_submission.$sqlitedatafilename) || croak qq{\n\n Copying of $sqlitedatafile to $anno_submission.$sqlitedatafilename failed ...  from BerRunFinish.pm: $OS_ERROR\n\n };
 
     my $sqliteoutfile  = qq{$outdirpath/$sqliteout};
     unless ( ( -e $sqlitedatafile ) and ( !-z $sqlitedatafile ) )
@@ -499,6 +513,10 @@ sub execute
         = scalar(@rfam_all) + scalar(@rnammer_all) + scalar(@trna_all);
     $Totals_with_dead_orfs = scalar(@orfs);
 
+	my @p5_blastx = $db->fetch( -query => "Find Sequence $locus_tag\_C*.blastx.p5*" );
+    my $p5_blastx_genes = scalar(@p5_blastx);
+    my $rnammer_all = scalar(@rnammer_all);
+
     print "\n\n" . $locus_tag . "\n\n";
     print $acefilecount
         . "\tSubsequence counts from acefile $shortph5file\n\n";
@@ -529,6 +547,13 @@ sub execute
             "HOUSTON, WE HAVE A PROBLEM, p5_hybrid ace file counts DO NOT MATCH p5_hybrid counts in ACEDB (Totals_with_dead)... BAD :(\n\n";
 
     }
+
+    print qq{\n\nOther information from AceDB:\n};
+    print qq{-----------------------------\n};
+
+	print qq{blastx p5_hybrid gene count:\t$p5_blastx_genes\n};
+	print qq{genes with rnammer hits:\t $rnammer_all\n\n};
+
 #
     ## We will dump gff for this genome
     unless ( $cwd eq $acedb_data_path )
@@ -593,7 +618,7 @@ sub execute
     my $location = $amgap_path . "/"
         . $org_dirname . "/"
         . $assembly_name . "/"
-        . $pipe_version;
+        . $assembly_version;
 
     print $rtfile_fh qq{$location\n\n};
     print $rtfile_fh
@@ -640,7 +665,7 @@ sub execute
     print $rtfile_fh qq{Glimmer3 count =\t $glimmer3_counter}, "\n\n";
     print $rtfile_fh
         qq{Protein analysis by the following programs has been run via PAP workflow:\n\n};
-    print $rtfile_fh qq{Interpro v4.7 (database v29.0)\n};
+    print $rtfile_fh qq{Interpro v4.8 (database v29.0)\n};
     print $rtfile_fh qq{Keggscan v56\n};
     print $rtfile_fh qq{psortB v3.0.3\n};
     print $rtfile_fh qq{BER v2.5\n};
@@ -693,6 +718,14 @@ sub execute
             qq{HOUSTON, WE HAVE A PROBLEM, p5_hybrid ace file counts DO NOT MATCH p5_hybrid counts in ACEDB (Totals_with_dead)... BAD :\(  },
             "\n\n";
     }
+
+    print $rtfile_fh qq{Other information from AceDB:\n};
+    print $rtfile_fh qq{-----------------------------\n};
+
+	print $rtfile_fh qq{blastx p5_hybrid gene count:\t$p5_blastx_genes\n};
+
+	print $rtfile_fh qq{genes with rnammer hits:\t $rnammer_all\n\n};
+
     print $rtfile_fh qq{GFF dump for thus genome can be downloaded from: $acedb_data_path/$gff_dump_file\n\n};
     
     ## Dead gene stuff
@@ -724,6 +757,7 @@ sub version_lookup
     my $v              = shift;
     my $lookup         = undef;
     my %version_lookup = (
+        'DEV'  => 'Development',
         'V1' => 'Version_1.0',
         'V2' => 'Version_2.0',
         'V3' => 'Version_3.0',

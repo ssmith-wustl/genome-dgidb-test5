@@ -12,7 +12,7 @@ class Genome::Model::Tools::Analysis::LaneQc::CompareCnvBuildLanes {
     has => [
     model_id => { type => 'String', is_optional => 0, doc => "tumor/normal model_id to get the last suceed build to gather per lane bam files",},
     outfile_prefix => { type => 'String', is_optional => 0, doc => "Directory to use for keep outputs",},
-    bam2cn_window => { type => 'Number', is_optional => 1, default => 50000, doc => "Window (in bp) for looking at read-depth window-based copy number. See ~kchen/SNPHMM/SolexaCNV/scripts/BAM2CN.pl for more information.",},
+    bam2cn_window => { type => 'Number', is_optional => 1, default => 50000, doc => "Window (in bp) for looking at read-depth window-based copy number.",},
     ]
 };
 
@@ -114,8 +114,15 @@ sub execute {
                 my $job2_name = $job1_name . "-plot";
                 my $dependency = "ended($job1_name)";
 
-                my $cmd1 = "perl /gscuser/kchen/SNPHMM/SolexaCNV/scripts/BAM2CN.pl -w $window $alignment_file > $lane_outfile";
-                my $cmd2 = "R --no-save < /gscuser/kchen/bin/plot_wholegenome_cn.R $lane_outfile";
+                my $module_dir = $self->module_dir;
+
+                my $bam2cn_pl = "$module_dir/BAM2CN.pl";
+                die $self->error_message("Missing Perl script ($bam2cn_pl)") unless (-s "$bam2cn_pl");
+                my $cmd1 = "perl $bam2cn_pl -w $window $alignment_file > $lane_outfile";
+
+                my $plot_wholegenome_cn_R = "$module_dir/plot_wholegenome_cn.R";
+                die $self->error_message("Missing R script ($plot_wholegenome_cn_R)") unless (-s "$plot_wholegenome_cn_R");
+                my $cmd2 = "R --no-save < $plot_wholegenome_cn_R $lane_outfile";
 
                 print `bsub -N -u $user\@genome.wustl.edu -J $job1_name -R 'select[type==LINUX64]' "$cmd1"`;
                 print `bsub -N -u $user\@genome.wustl.edu -J $job2_name -w "$dependency" "$cmd2"`;
@@ -126,6 +133,12 @@ sub execute {
         }	
     }
     return 1;
+}
+
+sub module_dir {
+    my $path = __FILE__;
+    my ($dir) = $path =~ /(.*)\//;
+    return $dir;
 }
 
 1;

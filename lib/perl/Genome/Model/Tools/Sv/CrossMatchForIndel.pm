@@ -86,9 +86,6 @@ class Genome::Model::Tools::Sv::CrossMatchForIndel {
             type => 'String',
             doc  => 'Output microhomology debugging information',
         },
-        _cm => {
-            type => 'HASH',
-        },
         _refseq => {
             type => 'SCALAR',
         },
@@ -105,7 +102,6 @@ sub execute {
     my $cm = Genome::Model::Tools::Sv::ParseCrossMatch->create(
         input_file => $self->cross_match_file
     );
-    $self->_cm($cm);
     
     my @DCposes = keys %{$cm->dcpos}; #discrepant position
     my $swap_chrom = 0;
@@ -146,7 +142,7 @@ sub execute {
         for my $dc (@dcs){
             my ($type, $size) = $dc->{type} =~ /([DI])\-*(\d*)/;
             if (defined $size && $size =~ /\S+/) {
-                my ($read_len,$trimmed_readlen,$nbp_aligned,$n_seg,$n_sub,$n_indel,$nbp_indel,$strand) = $self->_ReadStats($dc->{read});
+                my ($read_len,$trimmed_readlen,$nbp_aligned,$n_seg,$n_sub,$n_indel,$nbp_indel,$strand) = $self->_ReadStats($dc->{read}, $cm);
                 my $var;
                 my $altseq     = $self->_GetContig($dc->{read});
                 my @altbases   = split //, $altseq;
@@ -293,7 +289,7 @@ sub execute {
     for my $read (keys %{$cm->_align}) {
         my @alns = @{$cm->_align->{$read}->{aln}};
         my @alnstrs;
-        my ($read_len,$trimmed_readlen,$nbp_aligned,$n_seg,$n_sub,$n_indel,$nbp_indel,$strand) = $self->_ReadStats($read);
+        my ($read_len,$trimmed_readlen,$nbp_aligned,$n_seg,$n_sub,$n_indel,$nbp_indel,$strand) = $self->_ReadStats($read, $cm);
         
         for (my $i=0;$i<$#alns;$i++) {
             my $aln1 = $alns[$i];
@@ -614,6 +610,11 @@ sub execute {
     }
     $log_fh->close if $log_fh;
 
+    # unless explicitly deleted, this rather large object will stay in the UR
+    # cache forever
+    $cm->delete;
+    $cm = undef;
+
     return $out_str;
 }
 
@@ -648,8 +649,7 @@ sub AlnStrand{
 
 
 sub _ReadStats {
-    my ($self, $read) = @_;
-    my $cm   = $self->_cm;
+    my ($self, $read, $cm) = @_;
     
     my @alns = @{$cm->_align->{$read}->{aln}};
     my $readlen = $alns[$#alns]->{r_end} + $alns[$#alns]->{r_rest} || 0;

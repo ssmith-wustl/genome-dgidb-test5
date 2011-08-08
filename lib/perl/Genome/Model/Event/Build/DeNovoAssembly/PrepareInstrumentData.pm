@@ -114,61 +114,45 @@ sub _is_there_a_base_limit_and_has_it_been_exceeded {
 
     return if not defined $self->_base_limit; # ok
 
-    my $metrics = $self->_metrics;
-    if ( not defined $metrics->{bases} ) {
-        $self->error_message("No bases metric found in read processor metric when trying to determine if the base limit has been exceeded.");
-        return;
-    }
+    $self->status_message('Current base limit: '.$self->_base_limit);
 
-    if ( ($self->_base_limit - $metrics->{bases}) <= 0 ) {
-        return 1;
-    }
-
-    return;
-}
-
-sub _update_metrics {
-    my $self = shift;
-
-    $self->status_message("Updating metrics...");
-
+    $self->status_message('Updating metrics...');
     my $metrics_file = $self->_metrics_file;
-    $self->status_message("Getting metrics from file: $metrics_file");
+    $self->status_message("Metrics file: $metrics_file");
     if ( not -s $metrics_file ) {
         $self->error_message("No metrics file ($metrics_file) from read processor command.");
         return;
     }
 
-    my  $fh = eval {
-        Genome::Sys->open_file_for_reading($metrics_file);
-    };
+    my  $fh = eval { Genome::Sys->open_file_for_reading($metrics_file); };
     if ( not $fh ) {
-        $self->error_message("Cannot open coverage metrics file ($metrics_file): $@");
+        $self->error_message("Failed to open metrics file ($metrics_file): $@");
         return;
     }
 
+    my $metrics = $self->_metrics;
     my %metrics_from_file;
     while ( my $line = $fh->getline ) {
         chomp $line;
         my ($metric, $val) = split('=', $line);
         $self->status_message($metric.' from metrics file is '.$val);
         $metrics_from_file{$metric} = $val;
-    }
-
-    my $metrics = $self->_metrics;
-    for my $metric (qw/ bases count /) { # these are reauired. There may be more...
-        if ( not defined $metrics_from_file{$metric} ) {
-            $self->error_message("Metric ($metric) not found in metrics file");
-            return;
-        }
         $metrics->{$metric} += $metrics_from_file{$metric};
         $self->status_message("Updated $metric to ".$metrics->{$metric});
     }
-    $self->_metrics($metrics);
 
+    if ( not defined $metrics->{bases} ) {
+        Carp::confess('No bases found in metrics');
+    }
+
+    $self->_metrics($metrics);
     $self->status_message('OK...Updated metrics');
 
-    return 1;
+    if ( ($self->_base_limit - $metrics->{bases}) <= 0 ) {
+        return 1;
+    }
+
+    return;
 }
 #<>#
 
@@ -216,8 +200,11 @@ sub _process_instrument_data {
 
     if ( defined $self->_base_limit ) { # coverage limit by bases
         my $metrics = $self->_metrics;
-        my $current_base_limit = $self->_base_limit - $metrics->{bases};
-        push @read_processor_parts, 'limit by-coverage --bases '.$current_base_limit;
+        #my $current_base_limit = $self->_base_limit - $metrics->{bases};
+        my $current_base_limit = $self->_base_limit;
+        $current_base_limit -= $metrics->{bases} if exists $metrics->{bases};
+        $self->status_message("Limiting bases by base count of $current_base_limit");
+        push @read_processor_parts, 'limit by-bases --bases '.$current_base_limit;
     }
 
     if ( not @read_processor_parts ) { # essentially a copy, but w/ metrics
@@ -239,7 +226,7 @@ sub _process_instrument_data {
         return;
     }
     $sx_cmd_parts[$#read_processor_parts] .= ' --output '.$output;
-    $sx_cmd_parts[$#read_processor_parts] .= ' --metrics-file-out '.$self->_metrics_file;
+    $sx_cmd_parts[$#read_processor_parts] .= ' --output-metrics '.$self->_metrics_file;
 
     my $sx_cmd = join(' | ', @sx_cmd_parts);
     my $rv = eval{ Genome::Sys->shellcmd(cmd => $sx_cmd); };
@@ -247,9 +234,6 @@ sub _process_instrument_data {
         $self->error_message('Failed to execute gmt sx command: '.$@);
         return;
     }
-
-    my $update_metrics = $self->_update_metrics;
-    return if not $update_metrics;
 
     $self->status_message('Process Instrument data...OK');
 

@@ -308,7 +308,7 @@ sub _add_to_report_xml {
 
         $sv_node->addChild( $doc->createAttribute('id', $structural_variant->id) );
         $sv_node->addChild( $doc->createAttribute('size', $structural_variant->sv_size) )
-            if $variant_type ne CTX; #Value meaningless according to /gscuser/kchen/1000genomes/analysis/scripts/BreakDancer_Readme.txt
+            if $variant_type ne CTX; #Value meaningless
         $sv_node->addChild( $doc->createAttribute('from-build-id', $build_variant_sv->build_id) );
         $sv_node->addChild( $doc->createAttribute('validation-status', $validation_status) );
 

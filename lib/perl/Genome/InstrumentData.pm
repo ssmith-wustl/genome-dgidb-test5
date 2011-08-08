@@ -20,7 +20,6 @@ class Genome::InstrumentData {
         library => { is => 'Genome::Library', id_by => 'library_id' },
         library_name => { via => 'library', to => 'name' },
         sample_id => { is => 'Number', via => 'library' }, 
-        #sample => { is => 'Genome::Sample', id_by => 'sample_id' }, # id_by that's delegated is inefficient
         sample => { is => 'Genome::Sample', via => 'library' },
         sample_name => { via => 'sample', to => 'name' },
     ],
@@ -103,17 +102,10 @@ sub _expunge_assignments{
     );
     my @models = map( $_->model, @inputs);
 
-    my @alignment_results = Genome::InstrumentData::AlignmentResult->get(instrument_data_id => $self->id);
-    if (@alignment_results) {
-        $self->error_message("Cannot remove instrument data " . $self->__display_name__ . " because it has " .
-            scalar @alignment_results . " alignment results!");
-        return;
-    }
-    
     for my $model (@models) {
         $model->remove_instrument_data($self);
         my $display_name = $self->__display_name__;
-        push(@{$affected_users{$model->user_name}->{$display_name}}, $model->id);
+        push(@{$affected_users{$model->user_name}->{join(" ", $display_name, $self->id)}}, $model->id);
     }
 
     # There may be builds using this instrument data even though it had previously been unassigned from the model
@@ -127,6 +119,23 @@ sub _expunge_assignments{
         push @models, $build->model;
     }
 
+    my @alignment_results = Genome::InstrumentData::AlignmentResult->get(instrument_data_id => $self->id);
+    for my $alignment_result (@alignment_results) {
+        my @users = Genome::SoftwareResult::User->get(software_result => $alignment_result);
+        if(@users){
+            $self->error_message("Cannot remove instrument data " . $self->__display_name__ . " because it has " .
+                " an alignment result (" . $alignment_result->__display_name__ . ") with " . scalar(@users) . 
+                " registered users!");
+            return;
+        }else {
+            unless($alignment_result->delete){
+                $self->error_message("Could not remove instrument data " . $self->__display_name__ . " because it has " .
+                " an alignment result (" . $alignment_result->__display_name__ . ") that could not be deleted!");
+                return;
+            }
+        }
+    }
+                            
     return 1, %affected_users;
 }
 
@@ -134,13 +143,18 @@ sub _create_deallocate_observer {
     my $self = shift;
     my @allocations = $self->allocations;
     return 1 unless @allocations;
+    my $deallocator;
+    $deallocator = sub {
+        for my $allocation (@allocations) {
+            $allocation->delete;
+        }
+        UR::Context->cancel_change_subscription(
+            'commit', $deallocator
+        );
+    };
     UR::Context->create_subscription(
         method => 'commit',
-        callback => sub {
-            for my $allocation (@allocations) {
-                $allocation->delete;
-            }
-        }
+        callback => $deallocator
     );
     return 1;
 }

@@ -31,7 +31,11 @@ class Genome::Model::ReferenceSequence {
         _expected_name => {
             calculate_from => ['prefix','subject_name','desc'],
             calculate => 'no warnings; my $v = ($desc ? "$prefix-$subject_name-$desc" : "$prefix-$subject_name"); $v =~ s/ /_/g; $v'
-        },        
+        },
+        sample_names => {
+            is => 'ARRAY',
+            calculate => q{ return; }
+        },
     ],
     doc => 'a versioned reference sequence, with cordinates suitable for annotation',
 };

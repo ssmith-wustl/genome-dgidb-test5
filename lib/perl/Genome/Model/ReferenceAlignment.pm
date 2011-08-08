@@ -336,11 +336,24 @@ sub default_genotype_model {
     @genotype_models = grep { $_->reference_sequence_build->is_compatible_with($self->reference_sequence_build) } @genotype_models;
     return unless @genotype_models;
 
+
+    my $chosen_genotype_model;
     if (@genotype_models > 1) {
-        $self->warning_message("Found multiple compatible genotype models for sample " . $sample->id .
-            " and reference alignment model " . $self->id . ", choosing most recent.");
+        my $message = "Found multiple compatible genotype models for sample " . $sample->id . " and reference alignment model " . $self->id;
+        my @used_genotype_models = grep { $_->is_used_as_model_or_build_input or $_->builds_are_used_as_model_or_build_input } @genotype_models;
+        if (@used_genotype_models) {
+            $self->warning_message($message . ", choosing the most recent previously-used model.");
+            $chosen_genotype_model = $used_genotype_models[-1];
+        } else {
+            $self->warning_message($message . ", choosing most recent model.");
+            $chosen_genotype_model = $genotype_models[-1];
+        }
     }
-    return $genotype_models[-1];
+    else {
+        $chosen_genotype_model = $genotype_models[0];
+    }
+
+    return $chosen_genotype_model;
 }
 
 sub build_subclass_name {

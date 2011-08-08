@@ -67,9 +67,11 @@ sub _additional_metrics {
 
 #<ASSEMBLE>#
 sub assembler_rusage {
-    my $queue = 'alignment';
-    $queue = 'alignment-pd' if (Genome::Config->should_use_alignment_pd);
-    return "-q $queue -R 'select[type==LINUX64 && mem>30000] rusage[mem=30000] span[hosts=1]' -M 30000000";
+    my $self = shift;
+    my $mem = 30000;
+    my $queue = 'apipe';
+    $queue = 'alignment-pd' if $self->run_by eq 'apipe-tester';
+    return "-q $queue -R 'select[type==LINUX64 && mem>$mem] rusage[mem=$mem] span[hosts=1]' -M $mem".'000';
 }
 
 sub assembler_params {

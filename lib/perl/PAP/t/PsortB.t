@@ -19,6 +19,7 @@ BEGIN {
 my $command = PAP::Command::PsortB->create(
                                            'fasta_file' => File::Basename::dirname(__FILE__).'/data/B_coprocola.chunk.fasta',
                                            'gram_stain' => 'negative',
+										   'psortb_archive_dir'	=> '/tmp',
                                           );
 isa_ok($command, 'PAP::Command::PsortB');
 

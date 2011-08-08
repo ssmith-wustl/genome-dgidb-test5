@@ -32,8 +32,8 @@ my $taxon = Genome::Taxon->create(
     current_default_org_prefix => undef,
     estimated_genome_size => 4500000,
     current_genome_refseq_id => undef,
-        ncbi_taxon_id => undef,
-        ncbi_taxon_species_name => undef,
+    ncbi_taxon_id => undef,
+    ncbi_taxon_species_name => undef,
     species_latin_name => 'Escherichia coli',
     strain_name => 'TEST',
 );
@@ -72,7 +72,8 @@ my $pp = Genome::ProcessingProfile::DeNovoAssembly->create(
     assembler_name => 'soap de-novo-assemble',
     assembler_version => '1.04',
     assembler_params => '-kmer_size 31 -resolve_repeats -kmer_frequency_cutoff 1',
-    read_processor => 'trimmer bwa-style -trim-qual-level 10 | filter by-length -filter-length 35 | rename illumina-to-pcap',
+    read_processor => 'trim bwa-style -trim-qual-level 10 | filter by-length -filter-length 35 | rename illumina-to-pcap',
+    post_assemble => 'standard-outputs -min_contig_length 10',
 );
 ok($pp, 'pp') or die;
 
@@ -158,7 +159,7 @@ $pp->assembler_name($assembler_name); # reset
 
 # ASSEMBLE
 $assembler_rusage = $build->assembler_rusage;
-my $queue = ( Genome::Config->should_use_alignment_pd ) ? 'alignment-pd' : 'alignment';
+my $queue = ( $build->run_by eq 'apipe-tester' ) ? 'alignment-pd' : 'apipe';
 is($assembler_rusage, "-q $queue -n 4 -R 'span[hosts=1] select[type==LINUX64 && mem>30000] rusage[mem=30000]' -M 30000000", 'assembler rusage');
 %assembler_params = $build->assembler_params;
 #print Data::Dumper::Dumper(\%assembler_params);
@@ -215,8 +216,57 @@ foreach my $ext ( @file_exts ) {
     #print 'file: '.$file."\n\n";
 }
 
-# METRICS TODO metrics use real build after doing stuff
+# POST ASSEMBLE
+my $post_assemble = Genome::Model::Event::Build::DeNovoAssembly::PostAssemble->create( build => $build, model => $model );
+ok( $post_assemble, 'Created post assemble soap' );
+ok( $post_assemble->execute, 'Executed post assemble soap' );
+#check post asm output files
+for my $file_name ( qw/ contigs.bases supercontigs.fasta supercontigs.agp / ) {
+    my $example_file = $example_dir.'/edit_dir/'.$file_name;
+    ok(-e $example_file, "$file_name example file exists");
+    my $file = $build->data_directory.'/edit_dir/'.$file_name;
+    ok(-e $file, "$file_name file exists");
+    is(File::Compare::compare($file, $example_file), 0, "$file_name files match");
+}
+
+#METRICS/REPORT
+my $metrics = Genome::Model::Event::Build::DeNovoAssembly::Report->create( build => $build, model => $model );
+ok( $metrics, 'Created report' );
+ok( $metrics->execute, 'Executed report' );
+#check stats file
+ok( -s $example_build->stats_file, 'Example build stats file exists' );
+ok( -s $build->stats_file, 'Test created stats file' );
+is(File::Compare::compare($example_build->stats_file,$build->stats_file), 0, 'Stats files match' );
+#check build metrics
+my %expected_metrics = (
+    'n50_supercontig_length' => '101',
+    'average_contig_length_gt_300' => '412',
+    'reads_processed_success' => '0.934',
+    'n50_contig_length_gt_300' => '439',
+    'reads_assembled_success' => 'NA',
+    'reads_assembled' => 'NA',
+    'average_read_length' => '94',
+    'reads_attempted' => 30000,
+    'average_insert_size_used' => '260',
+    'n50_contig_length' => '101',
+    'genome_size_used' => '4500000',
+    'reads_not_assembled_pct' => 'NA',
+    'supercontigs' => '1407',
+    'average_supercontig_length' => '115',
+    'contigs' => '1411',
+    'average_supercontig_length_gt_300' => '412',
+    'average_contig_length' => '115',
+    'major_contig_length' => '300',
+    'n50_supercontig_length_gt_300' => '439',
+    'reads_processed' => '28028',
+    'assembly_length' => '162049',
+    'read_depths_ge_5x' => 'NA'
+);
+for my $metric_name ( keys %expected_metrics ) {
+    ok( $expected_metrics{$metric_name} eq $build->$metric_name, "$metric_name matches" );
+}
 
 #print $build->data_directory."\n"; <STDIN>;
+
 done_testing();
 exit;

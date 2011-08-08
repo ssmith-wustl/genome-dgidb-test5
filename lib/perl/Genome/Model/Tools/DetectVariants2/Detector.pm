@@ -125,6 +125,11 @@ class Genome::Model::Tools::DetectVariants2::Detector {
         detect_indels => { value => 1 },
         detect_svs => { value => 1 },
     ],
+    has_param => [
+        lsf_queue => {
+            default => 'apipe',
+        },
+    ],
     doc => 'This is the base class for all detector classes',
 };
 
@@ -167,6 +172,8 @@ sub create {
 sub shortcut {
     my $self = shift;
 
+    $self->_resolve_output_directory;
+
     #try to get using the lock in order to wait here in shortcut if another process is creating this alignment result
     my ($params) = $self->params_for_result;
     my $result = Genome::Model::Tools::DetectVariants2::Result->get_with_lock(%$params);
@@ -182,9 +189,17 @@ sub shortcut {
     return 1;
 }
 
+sub _resolve_output_directory {
+    my $self = shift;
+    #Subclasses override this
+    return 1;
+}
+
 
 sub execute {
     my $self = shift;
+
+    $self->_resolve_output_directory;
 
     if(-e $self->output_directory) {
         die $self->error_message('Output directory already exists!');
@@ -291,6 +306,29 @@ sub _link_output_directory_to_result {
     }
 
     return 1;
+}
+
+# Given a line of output from this detector, parse and return the chromosome, position, reference, and variant
+# The position must be converted to the same position that a bed would consider the STOP position
+# This is used for intersecting the detector specific file with the bed version
+# Override this method in each detector if the format varies from this
+#TODO clean all of this up. It is usually/should be based on logic from Genome::Model::Tools::Bed::Convert logic in process_source... 
+# this should be smarter about using that work ... perhaps process_source should call a method that just parses one line, and this method can be replaced by a call to that instead
+sub parse_line_for_bed_intersection {
+    my $class = shift;
+    my $line = shift;
+
+    unless ($line) {
+        die $class->error_message("No line provided to parse_line_for_bed_intersection");
+    }
+
+    my ($chromosome, $position, $reference, $variant) = split "\t",  $line;
+
+    unless (defined $chromosome && defined $position && defined $reference && defined $variant) {
+        die $class->error_message("Could not get chromosome, position, reference, or variant for line: $line");
+    }
+
+    return [$chromosome, $position, $reference, $variant];
 }
 
 1;

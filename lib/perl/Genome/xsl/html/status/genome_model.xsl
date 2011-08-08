@@ -349,7 +349,8 @@
               </td>
               <td class="value">
                   <xsl:choose>
-                      <xsl:when test="aspect[@name='build_requested']/value">yes</xsl:when>
+                      <xsl:when test="normalize-space(aspect[@name='build_requested']/value) != '' and normalize-space(aspect[@name='build_requested']/value) != '0'">
+                      yes</xsl:when>
                       <xsl:otherwise>no</xsl:otherwise>
                   </xsl:choose>
               </td>
@@ -616,11 +617,10 @@
     <!-- select unique input names -->
     <xsl:for-each select="$input">
       <xsl:variable name="build_id" select="ancestor::object[types/isa[@type='Genome::Model::Build']]/@id"/>
-      <xsl:variable name="build_name" select="ancestor::object[types/isa[@type='Genome::Model::Build']]/aspect[@name='name']/value"/>
+      <xsl:variable name="build_name" select="ancestor::object[types/isa[@type='Genome::Model::Build']]/aspect[@name='display_name']/value"/>
 
       <xsl:for-each select="object[not(preceding-sibling::*/aspect[@name='name']/value = aspect[@name='name']/value)]/aspect[@name='name']/value">
         <xsl:variable name="name" select="."/>
-
         <span class="input_diff">
           <xsl:choose>
             <!-- only one instrument data difference, just show the button -->
@@ -631,15 +631,15 @@
 
             <xsl:otherwise>
               <!-- more than one instrument data difference, create button + popup to show all -->
-              <a href="javascript:return(false)" class="mini btn popup-ajax-instrument-data">
-                <xsl:attribute name="title"><xsl:value-of select="$build_name"/> (<xsl:value-of select="$build_id"/>) instrument_data</xsl:attribute>
+              <a href="javascript:return(false)" class="mini btn popup-ajax-input-diff">
+                <xsl:attribute name="title">(<xsl:value-of select="$build_id"/>) input differences</xsl:attribute>
                 <xsl:attribute name="id"><xsl:value-of select="$build_id"/></xsl:attribute>
-                <span class="sm-icon sm-icon-newwin"><br/></span>instrument data (<xsl:value-of select="count($inputs[aspect[@name='name']/value = $name])"/>)
+                <span class="sm-icon sm-icon-newwin"><br/></span><xsl:value-of select="$name"/> (<xsl:value-of select="count($inputs[aspect[@name='name']/value = $name])"/>)
               </a>
 
               <!-- div for instrument data -->
               <div style="display: none;">
-                <xsl:attribute name="id">instrument_data_<xsl:value-of select="$build_id"/></xsl:attribute>
+                <xsl:attribute name="id">input_diff_<xsl:value-of select="$build_id"/></xsl:attribute>
                 <table class="lister">
                   <xsl:for-each select="$inputs[aspect[@name='name']/value = $name]">
                     <xsl:call-template name="genome_model_input_table_row"/>
@@ -800,7 +800,7 @@
             <tr>
 
               <td class="name">
-                scheduled:
+                created:
               </td>
               <td class="value">
                 <xsl:value-of select="aspect[@name='creation_date']/value"/>
@@ -944,7 +944,68 @@
         <xsl:value-of select="aspect[@name='date_completed']/value"/>
       </td>
       <td class="buttons">
-        <a class="mini btn"><xsl:attribute name="href"><xsl:value-of select='$build_directory_url'/></xsl:attribute><span class="sm-icon sm-icon-extlink"><br/></span>data directory</a>
+        <!-- notes button -->
+        <xsl:variable name="note_count" select="count(aspect[@name='notes']/object)"/>
+        <xsl:variable name="build_id" select="@id"/>
+        <xsl:choose>
+          <xsl:when test="$note_count &gt; 0">
+
+            <a class="mini btn notes-popup">
+              <xsl:attribute name="title">Build <xsl:value-of select="$build_id"/> Notes</xsl:attribute>
+              <xsl:attribute name="id"><xsl:value-of select="$build_id"/></xsl:attribute>
+              <span class="sm-icon sm-icon-newwin"><br/></span>notes (<xsl:value-of select="$note_count"/>)
+            </a>
+            <!-- div for instrument data -->
+            <div style="display: none;">
+              <xsl:attribute name="id">notes_subject_<xsl:value-of select="$build_id"/></xsl:attribute>
+              <table class="lister" border="0" width="100%" cellspacing="0" cellpadding="0">
+                <colgroup>
+
+                </colgroup>
+                <thead>
+                  <th>
+                    header
+                  </th>
+                  <th>
+                    date
+                  </th>
+                  <th>
+                    editor id
+                  </th>
+                  <th>
+                    <xsl:text> </xsl:text>
+                  </th>
+
+                </thead>
+                <tbody>
+                  <xsl:for-each select="aspect[@name='notes']/object">
+                    <tr>
+                      <td><strong><xsl:value-of select="aspect[@name='header_text']/value"/></strong></td>
+                      <td><xsl:value-of select="aspect[@name='entry_date']/value"/></td>
+                      <td><xsl:value-of select="aspect[@name='editor_id']/value"/></td>
+                      <td class="buttons">
+                        <xsl:for-each select="aspect[@name='subject']/object">
+                          <xsl:call-template name="object_link_button">
+                            <xsl:with-param name="linktext" select="'subject'"/>
+                            <xsl:with-param name="icon" select="'sm-icon-extlink'"/>
+                          </xsl:call-template>
+                        </xsl:for-each>
+                      </td>
+
+                    </tr>
+                    <tr>
+                      <td colspan="4" class="text"><xsl:value-of select="aspect[@name='body_text']/value"/></td>
+                    </tr>
+
+                  </xsl:for-each>
+                </tbody>
+              </table>
+
+            </div>
+          </xsl:when>
+        </xsl:choose>
+
+        <a class="mini btn"><xsl:attribute name="href"><xsl:value-of select='$build_directory_url'/></xsl:attribute>data directory</a>
       </td>
     </tr>
 

@@ -240,6 +240,11 @@ class Genome::Model::Tools::DetectVariants2::Filter::TigraValidation {
             is_input => 1,
             default => 0,
         },
+        _base_output_directory => {
+            is => 'Text',
+            is_optional => 1,
+            doc => 'Store the base output directory when using per-chromosome output dirs',
+        },
     ],
     has_param => [
         lsf_resource => {
@@ -303,8 +308,14 @@ sub _create_temp_directories {
     return $self->SUPER::_create_temp_directories(@_);
 }
 
-sub execute {
+sub _resolve_output_directory {
     my $self = shift;
+
+    if ($self->_base_output_directory and $self->_base_output_directory ne $self->output_directory) {
+        return 1;
+    }
+
+    $self->_base_output_directory($self->output_directory);
 
     if ($self->_run_by_workflow) {
         my $output_dir = $self->output_directory;
@@ -316,7 +327,7 @@ sub execute {
         $self->output_directory($output_dir . '/' . $self->specify_chr);
     }
 
-    return $self->SUPER::_execute_body;
+    return 1;
 }
 
 
@@ -394,14 +405,20 @@ sub _filter_variants {
         # Now merge together all the pass/fail files produced for each chromosome
         $self->status_message("Merging output files together");
 
+        # use outputs in software-result output_dir to generate final outputs
+        my $sr_dirs = $self->_get_sr_dirs(@use_chr_list);
+        my @sr_dirs;
+        map{push @sr_dirs, $sr_dirs->{$_}}@use_chr_list; # make the same order as before
+                
         for my $file ($self->pass_output, $self->fail_output) {
             my $merge_obj = Genome::Model::Tools::Breakdancer::MergeFiles->create(
-                input_files => join(',', map { $self->_temp_staging_directory . '/' . $_ . '/' . basename($file) } @use_chr_list),
+                input_files => join(',', map { $_ . '/' . basename($file) } @sr_dirs),
                 output_file => $file,
             );
             my $merge_rv = $merge_obj->execute;
             Carp::confess 'Could not execute breakdancer merge command!' unless defined $merge_rv and $merge_rv == 1;
         }
+
         $self->status_message("Running MergeCallSet");
 
         my ($merge_index, $merge_file, $merge_annot, $merge_out, $merge_fa) = 
@@ -410,22 +427,18 @@ sub _filter_variants {
         my $idx_fh = IO::File->new(">$merge_index") or die "Failed to open $merge_index for writing\n";
 
         for my $chr (@use_chr_list) {
-            my $chr_dir = $self->_temp_staging_directory . '/' . $chr;
-            if (-d $chr_dir) {
-                for my $type qw(normal tumor) {
-                    my $name   = $type.$chr;
-                    my $sv_fa  = $chr_dir .'/'. basename($self->breakpoint_seq_file) .".$type.fa";
-                    my $sv_out = $chr_dir .'/'. $self->sv_output_name .'.'. $type;
-                    if (-e $sv_fa and -e $sv_out) {
-                        $idx_fh->print($name.' '.$sv_out.' '.$sv_fa."\n");
-                    }
-                    else {
-                        $self->warning_message("$name: $sv_fa and $sv_out are not both valid");
-                    }
+            my $chr_dir = $sr_dirs->{$chr};
+            for my $type qw(normal tumor) {
+                my $name   = $type.$chr;
+                my $sv_fa  = $chr_dir .'/'. basename($self->breakpoint_seq_file) .".$type.fa";
+                my $sv_out = $chr_dir .'/'. $self->sv_output_name .'.'. $type;
+
+                if (-e $sv_fa and -e $sv_out) {
+                    $idx_fh->print($name.' '.$sv_out.' '.$sv_fa."\n");
                 }
-            }
-            else {
-                $self->warning_message("chromosome subdir $chr_dir is not available");
+                else {
+                    $self->warning_message("$name: $sv_fa and $sv_out are not both valid");
+                }
             }
         }
         $idx_fh->close;
@@ -690,6 +703,44 @@ sub _use_chr_list {
 }
 
 
+sub _get_sr_dirs {
+    my ($self, @use_chr_list) = @_;
+    my %sr_dirs;
+
+    for my $chr_name (@use_chr_list) {
+        my $sr_params = $self->params_for_result;
+        $sr_params->{chromosome_list} = $chr_name;
+        my $sr = Genome::Model::Tools::DetectVariants2::Result::Filter->get(%$sr_params);
+        unless ($sr) {
+            $self->error_message('Failed to find software result for chromosome '.$chr_name);
+            die;
+        }
+        my $sr_dir = $sr->output_dir;
+        unless ($sr_dir and -d $sr_dir) {
+            $self->error_message("Software result output_dir for chromsome $chr_name does not exist");
+            die;
+        }
+        $self->status_message("Chromosome $chr_name gets software_result output_dir: $sr_dir");
+
+        #Just check whether software_result output dir is linked to
+        #local or not, shortcut or exceute
+        my $link_dir = $self->_temp_staging_directory . '/' . $chr_name;
+        my $real_dir = readlink($link_dir);
+        unless (-d $link_dir) {
+            $self->error_message("SoftwareResult output dir for chromosome $chr_name is not linked to local temp_staging_dir as $link_dir");
+            die;
+        }
+        unless ($real_dir eq $sr_dir) {
+            $self->error_message("Target link dir for Chr $chr_name : $real_dir is not software_result output dir $sr_dir");
+            die;
+        }
+        $self->status_message("Software_result output dir is correctly linked for Chr $chr_name");
+        $sr_dirs{$chr_name} = $sr_dir;
+    }
+    return \%sr_dirs;
+}
+
+
 sub _get_skip_libs {
     my $self   = shift;
     my $bd_cfg = $self->input_directory . '/breakdancer_config';
@@ -825,6 +876,11 @@ sub _cross_match_validation {
         variant_size         => $makeup_size,
     );
     my $result = $cm_indel->execute;
+
+    # unless explicitly deleted, this rather large object will stay in the UR
+    # cache forever
+    $cm_indel->delete;
+    $cm_indel = undef;
 
     if ($result && $result =~ /\S+/) {
 	    $self->_UpdateSVs($result,$makeup_size,$regionsize,$tigra_sv_fa,$ctg_type, $cm_out);

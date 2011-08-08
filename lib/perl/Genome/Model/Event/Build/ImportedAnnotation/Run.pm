@@ -102,6 +102,10 @@ sub execute {
         confess "Could not get annotation data directory for build" unless $annotation_data_directory;
         my $sym_rv = symlink $annotation_data_source_directory, $annotation_data_directory;
         confess "Could not create symlink from $annotation_data_source_directory to $annotation_data_directory" unless $sym_rv;
+        
+        #TODO: get the RibosomalGeneNames.txt into the annotation_data_directory
+        #generate the rna seq files
+        $self->generate_rna_seq_files($build);
 
     }
     elsif ($source =~ /^combined-annotation$/) {
@@ -170,6 +174,45 @@ sub get_ensembl_info {
     }
 
     return ("mysql1","mse",undef); # no pass word needed here. all else const
+}
+
+sub generate_rna_seq_files {
+    my $self = shift;
+    my $build = shift;
+
+    unless(Genome::Model::Event::Build::ImportedAnnotation::CopyRibosomalGeneNames->execute(output_file => $build->_annotation_data_directory .'/RibosomalGeneNames.txt', species_name => $build->species_name)){
+        confess "Failed to generate the ribosomal gene name file!";
+    }
+
+    unless(-s $build->generate_transcript_info_file($build->reference_sequence_id)){
+        confess "Failed to generate the transcript_info file!";
+    }
+
+    unless (-s $build->generate_annotation_file('gtf', $build->reference_sequence_id)){
+        confess "Failed to generate the annotation file!";
+    }
+    
+    unless (-s $build->generate_rRNA_file('gtf', $build->reference_sequence_id)){
+        confess "Failed to generate the rRNA file!";
+    }
+
+    unless (-s $build->generate_MT_file('gtf', $build->reference_sequence_id)){
+        confess "Failed to generate the MT file!";
+    }
+
+    unless (-s $build->generate_pseudogene_file('gtf', $build->reference_sequence_id)){
+        confess "Failed to generate the pseudogene file!";
+    }
+
+    unless (-s $build->generate_rRNA_MT_file('gtf', $build->reference_sequence_id)){
+        confess "Failed to generate the rRNA_MT file!";
+    }
+
+    unless (-s $build->generate_rRNA_MT_pseudogene_file('gtf', $build->reference_sequence_id)){
+        confess "Failed to generate the rRNA_MT_pseudogene file!";
+    }
+
+    return 1;
 }
 
 1;

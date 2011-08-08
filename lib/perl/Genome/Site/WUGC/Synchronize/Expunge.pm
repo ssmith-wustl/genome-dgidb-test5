@@ -51,8 +51,7 @@ sub _remove_expunged_object {
 
     my $object = $class->get($id);
     if ($class =~ m/Genome::InstrumentData/){
-        #TODO: this should nuke alignment results for instrument data
-        ($expunge_success, %affected_users) = $object->_expunge_assignments
+        ($expunge_success, %affected_users) = $object->_expunge_assignments;
     }
 
     $object->delete;
@@ -83,34 +82,39 @@ sub _notify_expunged_objects_owners{
     my %expunge_notifications = @_;
     
     for my $user_name (keys %expunge_notifications){
-        my $msg = $self->_generate_expunged_objects_message_text(%{$expunge_notifications{$user_name}});
-        my $instrument_data_id_string = join(', ', keys %{$expunge_notifications{$user_name}});
+        my ($subject, $msg) = $self->_generate_expunged_objects_email_text(%{$expunge_notifications{$user_name}});
         my $sender = Mail::Sender->new({
                 smtp    => 'gscsmtp.wustl.edu',
                 from    => 'Apipe <apipe-builder@genome.wustl.edu>'
                 });
-        if($user_name eq 'apipe-builder'){
-            $sender->MailMsg( { 
-                    to      => 'Analysis Pipeline <apipebulk@genome.wustl.edu>, ' . "$user_name".'@genome.wustl.edu', 
-                    cc      => 'Jim Weible <jweible@genome.wustl.edu>, Thomas Mooney <tmooney@genome.wustl.edu>, Scott Smith <ssmith@genome.wustl.edu>',
-                    subject => "Expunged Instrument Data: $instrument_data_id_string", 
-                    msg     => "LIMS has expunged instrument data used in some of your models.  Existing builds using this data will be abandoned and the model will be rebuilt.  Please contact APipe if you have any questions regarding this process.\n\n$msg", 
-                    });
-        }
+        $sender->MailMsg( { 
+                to      => 'Analysis Pipeline <apipebulk@genome.wustl.edu>, ' . "$user_name".'@genome.wustl.edu', 
+                cc      => 'Jim Weible <jweible@genome.wustl.edu>, Thomas Mooney <tmooney@genome.wustl.edu>, Scott Smith <ssmith@genome.wustl.edu>',
+                subject => "Expunged Instrument Data: $subject", 
+                msg     => "LIMS has expunged instrument data used in some of your models.  Existing builds using this data will be abandoned and the model will be rebuilt.  Please contact APipe if you have any questions regarding this process.\n\n$msg", 
+                });
     }
 }
 
-
-sub _generate_expunged_objects_message_text{
+sub _generate_expunged_objects_email_text {
     my $self = shift;
     my %expunge_notifications_for_user = @_;
+    my @display_names;
     
-    my $output = "";
-    for my $instrument_data_display_name (keys %expunge_notifications_for_user){
-        $output .= "Instrument Data: $instrument_data_display_name\n";
-        $output .= join("", map("\tModel Id: $_\n", @{$expunge_notifications_for_user{$instrument_data_display_name}}));
-        $output .= "\n";
+    my $message_text = "";
+    for my $instrument_data_info (keys %expunge_notifications_for_user){
+        my ($display_name, $instrument_data_id) = split(" ", $instrument_data_info);
+        push @display_names, $display_name;
+
+        $message_text .= "Instrument Data: $display_name ($instrument_data_id)\n";
+        my @model_ids = map($_, @{$expunge_notifications_for_user{$instrument_data_info}});
+        for my $model_id (@model_ids){
+            my $model = Genome::Model->get($model_id);
+            $message_text .= join(" ", "\tModel:", $model->name, "($model_id)\n");
+        }
+        $message_text .= "\n";
     }
-    return $output;
+    my $subject_text = join(", ", @display_names);
+    return ($subject_text, $message_text);
 }
 1;

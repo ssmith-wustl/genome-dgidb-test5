@@ -28,7 +28,7 @@ class Genome::Model::Tools::DetectVariants2::Filter::NovoRealign {
         novoalign_version => {
             type => 'String',
             doc  => 'novoalign version to use in this process',
-            default_value =>  '2.05.13',  #originally used in kchen's perl script, other version not tested
+            default_value =>  '2.05.13',
             valid_values  => [Genome::Model::Tools::Novocraft->available_novocraft_versions],
         },
         novoalign_path => {
@@ -70,7 +70,6 @@ class Genome::Model::Tools::DetectVariants2::Filter::NovoRealign {
     ],
     has_param => [
         lsf_resource => {
-            #default_value => "-R 'select[mem>8000] rusage[mem=8000]' -M 8000000", #novoalign needs this memory usage 8G to run
             default_value => "-R 'select[mem>10000] rusage[mem=10000]' -M 10000000",
         },
     ],
@@ -115,17 +114,31 @@ sub _filter_variants {
     $fh->close;
 
     my %fastqs;
-    my $dir = $self->detector_directory;
-
-    opendir (DIR, $dir) or die "Failed to open directory $dir\n";
     my $prefix;
+    my %conv_libs;
+
+    my $dir = $self->detector_directory;
+    opendir (DIR, $dir) or die "Failed to open directory $dir\n";
+
     for my $fastq (grep{/\.fastq/} readdir(DIR)){
         for my $lib (keys %mean_insertsize) {
-            #if ($fastq =~/^(\S+)\.\S+${lib}\.\S*([12])\.fastq/) {
-            if ($fastq =~/^(\S+)\.${lib}\.\S*([12])\.fastq/) {
+            my $conv_lib = $lib;
+
+            if ($lib =~ /[\(\)]/) {  #sometimes the library name is like H_KU-15901-D108132(2)-lib2
+                $self->warning_message("$conv_lib contains parentesis");
+                $conv_lib =~ s{\(}{\\(}g;
+                $conv_lib =~ s{\)}{\\)}g;
+            }
+
+            $conv_libs{$lib} = $conv_lib;
+
+            if ($fastq =~/^(\S+)\.${conv_lib}\.\S*([12])\.fastq/) {
                 $prefix = $1;
                 my $id  = $2;
-                #push @{$fastqs{$lib}{$id}}, $fastq if defined $id;
+                if ($lib =~ /[\(\)]/) {
+                    $fastq =~ s{\(}{\\(}g;
+                    $fastq =~ s{\)}{\\)}g;
+                }
                 push @{$fastqs{$lib}{$id}}, $dir.'/'.$fastq if defined $id;
                 last;
             }
@@ -133,6 +146,9 @@ sub _filter_variants {
     }
     closedir(DIR);
 
+    unless (scalar keys %mean_insertsize == scalar keys %fastqs) {
+        $self->warning_message("library list does not match in mean_insertsize and fastqs");
+    }
     #Move breakdancer_config to output_directory so TigraValidation
     #can use it to parse out skip_libraries
     if (-s $cfg_file) {
@@ -183,18 +199,21 @@ sub _filter_variants {
         my @read1s = @{$fastqs{$lib}{1}};
         my @read2s = @{$fastqs{$lib}{2}};
         my $line   = sprintf "\@RG\tID:%s\tPU:%s\tLB:%s", $lib, $self->platform, $lib;
+
+        my $conv_lib = $conv_libs{$lib};
         $headerline{$line} = 1;
+
         my @bams;
         my $cmd;
         for (my $i=0; $i<=$#read1s; $i++) {
-            my $fout_novo = "$prefix.$lib.$i.novo";
+            my $fout_novo = "$prefix.$conv_lib.$i.novo";
             $cmd = $novo_path . ' -d '. $novo_idx . " -f $read1s[$i] $read2s[$i] -i $mean_insertsize{$lib} $std_insertsize{$lib} > $fout_novo";
 
             $self->_run_cmd($cmd);
             push @novoaligns,$fout_novo;
             
-            my $sort_prefix = "$prefix.$lib.$i";
-            $cmd = $novosam_path . " -g $lib -f ".$self->platform." -l $lib $fout_novo | ". $samtools_path. " view -b -S - -t ". $ref_seq_idx .' | ' . $samtools_path." sort - $sort_prefix";
+            my $sort_prefix = "$prefix.$conv_lib.$i";
+            $cmd = $novosam_path . " -g $conv_lib -f ".$self->platform." -l $conv_lib $fout_novo | ". $samtools_path. " view -b -S - -t ". $ref_seq_idx .' | ' . $samtools_path." sort - $sort_prefix";
             $self->_run_cmd($cmd);
             push @bams, $sort_prefix.'.bam';
             push @bams2remove, $sort_prefix.'.bam';
@@ -202,18 +221,23 @@ sub _filter_variants {
     
         if ($#bams>0) {
             #TODO using gmt command modules
-            $cmd = $samtools_path ." merge $prefix.$lib.bam ". join(' ', @bams);
+            $cmd = $samtools_path ." merge $prefix.$conv_lib.bam ". join(' ', @bams);
             $self->_run_cmd($cmd);
-            push @bams2remove, "$prefix.$lib.bam";
+            push @bams2remove, "$prefix.$conv_lib.bam";
         }
         else {
-            #`mv $bams[0] $prefix.$lib.bam`;
-            rename $bams[0], "$prefix.$lib.bam";
+            `mv $bams[0] $prefix.$conv_lib.bam`;  #rename behaves strange to interpolate/escape, use mv for now.
+            #rename $bams[0], "$prefix.$lib.bam"; #using $conv_lib here will give extra \ to file name containing ()
         }
 
-        $cmd = $samtools_path." rmdup $prefix.$lib.bam $prefix.$lib.rmdup.bam";
+        $cmd = $samtools_path." rmdup $prefix.$conv_lib.bam $prefix.$conv_lib.rmdup.bam"; #using $conv_lib here will properly parse ()
         $self->_run_cmd($cmd);
-        push @librmdupbams, "$prefix.$lib.rmdup.bam";
+        push @librmdupbams, "$prefix.$conv_lib.rmdup.bam";
+    }
+
+    unless (@librmdupbams > 1) {
+        $self->error_message("The number of rmdup library bams is less than 2. Failed for now");
+        die;
     }
 
     my $header_file = $prefix . '.header';

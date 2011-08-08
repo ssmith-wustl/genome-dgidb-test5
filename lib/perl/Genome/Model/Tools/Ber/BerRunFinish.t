@@ -20,6 +20,7 @@ my $tool_db = Genome::Model::Tools::Ber::BerRunFinish->create(
 		    'sqliteoutfile'  => "sqlite-PRABACTJOHNDFTBMGTEST-090417f.out",
 		    'acedb_version'  => "V3",
 		    'amgap_path'     => "/gscmnt/278/analysis/HGMI",
+		    'assembly_version'     => "Version_1.0",
 		    'pipe_version'   => "Version_1.0",
 		    'project_type'   => "HGMI",
 		    'org_dirname'     => "P_johnsonii",

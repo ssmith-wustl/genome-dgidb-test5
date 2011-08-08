@@ -17,8 +17,30 @@ sub process_source {
     while(my $line = $input_fh->getline) {
         chomp $line;
         next if $line =~ /^#/;
-        my ($chr,$start,undef, $ref,$var) = split("\t", $line);
+        # VCF format
+        my ($chr,$start,$id, $ref,$var,$qual, $filter, $info, $genotype_keys, @genotype_values) = split("\t", $line);
         my $stop;
+        my @keys = split ":", $genotype_keys;
+
+        # There will be one set of values per sample. Add up the total depth for all samples
+        my $depth;
+        for my $genotype_value (@genotype_values) {
+            my @values = split ":", $genotype_value;
+            unless (scalar @keys == scalar @values) {
+                next;
+            }
+
+            my %genotype_hash;
+            for my $key (@keys) {
+                $genotype_hash{$key} = shift @values;
+            }
+            # Score will sometimes be floating point and we don't want that
+            $depth += $genotype_hash{DP};
+        }
+        if (!defined $depth) {
+            $depth = 0;
+        }
+
         if(length($ref) == 1 and length($var) == 1) {
             #SNV case
             $stop = $start;
@@ -36,8 +58,10 @@ sub process_source {
         } else {
             die $self->error_message('Unhandled variant type encountered');
         }
-        
-        $self->write_bed_line($chr, $start, $stop, $ref, $var);
+
+        # We need an integer score value for joinx
+        my $score = int($qual);
+        $self->write_bed_line($chr, $start, $stop, $ref, $var, $score, $depth);
     }
     $input_fh->close;
     return 1;

@@ -110,10 +110,7 @@ class Genome::Model::Tools::DetectVariants2::Filter::FalseIndel {
     ],
     has_param => [
        lsf_resource => {
-           default_value => "-M 8000000 -R 'select[type==LINUX64 && mem>8000] rusage[mem=8000]'",
-       },
-       lsf_queue => {
-           default_value => 'long',
+           default_value => "-M 32000000 -R 'select[type==LINUX64 && mem>32000] rusage[mem=32000]'",
        },
     ]
 };
@@ -480,6 +477,11 @@ sub read_counts_for_indel {
 
     my @matching_results = ();
     my $num_matching_results = 0;
+
+    unless ($readcount_lines) {
+        return 0;
+    }
+
     my @lines = split(/\n/, $readcount_lines);
 
     my %readcounts_by_position = ();

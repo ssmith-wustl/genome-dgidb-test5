@@ -30,7 +30,7 @@ sub _run_aligner {
     
     # collect filepaths
     my $smalt_path = Genome::Model::Tools::Smalt->path_for_smalt_version($self->aligner_version);
-    my $ref_index_base = substr($self->reference_build->full_consensus_path('fa.smi'),0,-4);
+    my $ref_index_base = substr($self->get_reference_sequence_index->full_consensus_path('fa.smi'),0,-4);
     
     unless (defined $ref_index_base && -s "$ref_index_base.smi" && -s "$ref_index_base.sma") {
       $self->error_message("Smalt index files either don't exist or are empty at $ref_index_base or " . $self->reference_build->data_directory);  
@@ -96,3 +96,33 @@ sub fillmd_for_sam { return 1; }
 
 sub _check_read_count {return 1;}
 
+sub prepare_reference_sequence_index {
+    my $class = shift;
+    my $refindex = shift;
+
+    my $staging_dir = $refindex->temp_staging_directory;
+    my $staged_fasta_file = sprintf("%s/all_sequences.fa", $staging_dir);
+
+    my $actual_fasta_file = $staged_fasta_file;
+
+    if (-l $staged_fasta_file) {
+        $class->status_message(sprintf("Following symlink for fasta file %s", $staged_fasta_file));
+        $actual_fasta_file = readlink($staged_fasta_file);
+        unless($actual_fasta_file) {
+            $class->error_message("Can't read target of symlink $staged_fasta_file");
+            return;
+        } 
+    }
+    my $smalt_path = Genome::Model::Tools::Smalt->path_for_smalt_version($refindex->aligner_version);
+
+    my $index_cmd = sprintf("%s index -k 13 -s 6 %s/all_sequences.fa %s", $smalt_path, $staging_dir, $staged_fasta_file);
+
+    Genome::Sys->shellcmd(cmd=>$index_cmd, output_files => [$staging_dir.'/all_sequences.fa.sma', $staging_dir.'/all_sequences.fa.smi']);
+
+    # if it got to here then we have valid files 
+
+    $class->status_message("Successfully ran smalt index");
+
+    return 1;
+
+}

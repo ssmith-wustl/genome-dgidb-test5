@@ -338,6 +338,68 @@
               </td>
               <td class="value">
                 <xsl:value-of select="$status" />
+                <xsl:text> </xsl:text>
+                <!-- notes button -->
+                <xsl:variable name="note_count" select="count(build/aspect[@name='notes']/object)"/>
+                <xsl:variable name="build_id" select="build/@build-id"/>
+
+                <xsl:choose>
+                  <xsl:when test="$note_count &gt; 0">
+                    <xsl:message>build id: <xsl:value-of select="$build_id"/></xsl:message>
+                    <a class="mini btn notes-popup">
+                      <xsl:attribute name="title">Build <xsl:value-of select="$build_id"/> Notes</xsl:attribute>
+                      <xsl:attribute name="id"><xsl:value-of select="$build_id"/></xsl:attribute>
+                      <span class="sm-icon sm-icon-newwin"><br/></span>notes (<xsl:value-of select="$note_count"/>)
+                    </a>
+                    <!-- div for instrument data -->
+                    <div style="display: none;">
+                      <xsl:attribute name="id">notes_subject_<xsl:value-of select="$build_id"/></xsl:attribute>
+                      <table class="lister" border="0" width="100%" cellspacing="0" cellpadding="0">
+                        <colgroup>
+
+                        </colgroup>
+                        <thead>
+                          <th>
+                            header
+                          </th>
+                          <th>
+                            date
+                          </th>
+                          <th>
+                            editor id
+                          </th>
+                          <th>
+                            <xsl:text> </xsl:text>
+                          </th>
+
+                        </thead>
+                        <tbody>
+                          <xsl:for-each select="build/aspect[@name='notes']/object">
+                            <tr>
+                              <td><strong><xsl:value-of select="aspect[@name='header_text']/value"/></strong></td>
+                              <td><xsl:value-of select="aspect[@name='entry_date']/value"/></td>
+                              <td><xsl:value-of select="aspect[@name='editor_id']/value"/></td>
+                              <td class="buttons">
+                                <xsl:for-each select="aspect[@name='subject']/object">
+                                  <xsl:call-template name="object_link_button">
+                                    <xsl:with-param name="linktext" select="'subject'"/>
+                                    <xsl:with-param name="icon" select="'sm-icon-extlink'"/>
+                                  </xsl:call-template>
+                                </xsl:for-each>
+                              </td>
+
+                            </tr>
+                            <tr>
+                              <td colspan="4" class="text"><xsl:value-of select="aspect[@name='body_text']/value"/></td>
+                            </tr>
+
+                          </xsl:for-each>
+                        </tbody>
+                      </table>
+
+                    </div>
+                  </xsl:when>
+                </xsl:choose>
               </td>
             </tr>
 
@@ -373,7 +435,7 @@
               </td>
               <td class="value">
                 <a class="mini btn"><xsl:attribute name="href">
-                  <xsl:text>https://gscweb.gsc.wustl.edu/</xsl:text><xsl:value-of select="build/@data-directory"/></xsl:attribute><span class="sm-icon sm-icon-extlink"><br/></span><xsl:text>data directory</xsl:text>
+                  <xsl:text>https://gscweb.gsc.wustl.edu/</xsl:text><xsl:value-of select="build/@data-directory"/></xsl:attribute><xsl:text>data directory</xsl:text>
                 </a>
               </td>
             </tr>
@@ -383,10 +445,10 @@
               </td>
               <td class="value">
                 <a class="mini btn"><xsl:attribute name="href"><xsl:text>https://gscweb.gsc.wustl.edu/</xsl:text><xsl:value-of select="build/@error-log"/></xsl:attribute>
-                <span class="sm-icon sm-icon-extlink"><br/></span><xsl:text>error log</xsl:text>
+                <xsl:text>error log</xsl:text>
                 </a>
                 <a class="mini btn"><xsl:attribute name="href"><xsl:text>https://gscweb.gsc.wustl.edu/</xsl:text><xsl:value-of select="build/@output-log"/></xsl:attribute>
-                <span class="sm-icon sm-icon-extlink"><br/></span><xsl:text>output log</xsl:text>
+                <xsl:text>output log</xsl:text>
                 </a>
               </td>
             </tr>

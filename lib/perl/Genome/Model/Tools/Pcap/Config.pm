@@ -55,7 +55,7 @@ sub _init
 sub save
 {
 	my ($self) = @_;
-	Storable::store($self->{config},"$ENV{HOME}/.acerc");
+	Storable::nstore($self->{config},"$ENV{HOME}/.acerc");
 }
 
 sub load
