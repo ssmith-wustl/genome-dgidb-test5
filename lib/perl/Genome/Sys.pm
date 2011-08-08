@@ -399,7 +399,7 @@ sub shellcmd {
     if (@missing_output_files) {
         if ($allow_zero_size_output_files
             #and @$output_files == @missing_output_files
-            # TODO This causes the command to fail if only a few of many files are empty, despite
+            # XXX This causes the command to fail if only a few of many files are empty, despite
             # that the option 'allow_zero_size_output_files' was given. New behavior is to warn
             # in either circumstance, and to warn that old behavior is no longer present in cases
             # where the command would've failed
@@ -433,7 +433,11 @@ sub shellcmd {
 
 
     if (@missing_output_files or @missing_output_directories) {
-        for (@$output_files) { unlink $_ or Carp::croak("Can't unlink $_: $!"); }
+        for (@$output_files) { 
+            if (-e $_) {
+                unlink $_ or Carp::croak("Can't unlink $_: $!");
+            }
+        }
         Carp::croak("MISSING OUTPUTS! "
                     . join(', ', @missing_output_files)
                     . " "
