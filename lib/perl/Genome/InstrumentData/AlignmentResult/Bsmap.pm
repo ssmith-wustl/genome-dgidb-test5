@@ -461,10 +461,6 @@ sub _process_record_pair {
                 my $tag = $_;
                 if ($tag =~ /$regex/) {
                     my $trimmed_ref_seq = $1;
-                    
-                    if ($trimmed_ref_seq =~ /TGTGTGTGTGTGTGTGTGTGTGTG/) {
-                        $DB::single = 1;
-                    }
 
                     my $full_ref_seq = $reference_build->sequence(
                         $aligned_record->{rname},
