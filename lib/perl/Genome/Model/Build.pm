@@ -588,6 +588,7 @@ sub validate_for_start_methods {
         #validate_inputs_have_values should be checked first
         'validate_inputs_have_values',
         'inputs_have_compatible_reference',
+        'validate_instrument_data',
     );
     return @methods;
 }
@@ -625,6 +626,22 @@ sub instrument_data_assigned {
     return @tags;
 }
 
+sub validate_instrument_data{
+    my $self = shift;
+    my @tags;
+    my @instrument_data = $self->instrument_data;
+    @instrument_data = grep{$_->isa('Genome::InstrumentData::Solexa')} @instrument_data;
+    for my $instrument_data (@instrument_data){
+        unless($instrument_data->clusters){
+            push @tags, UR::Object::Tag->create(
+                type => 'error',
+                properties => ['instrument_data'],
+                desc => 'no clusters for instrument data (' . $instrument_data->id  . ') assigned to build',
+            );
+        }
+    }
+    return @tags;
+}
 
 sub validate_inputs_have_values {
     my $self = shift;
