@@ -109,6 +109,10 @@ sub _type_for_file {
 
     Carp::confess('No file to get type') if not $file;
 
+    if ( $file eq '-' ) {
+        return 'sanger';
+    }
+
     my ($ext) = $file =~ /\.(\w+)$/;
     if ( not $ext ) {
         $self->error_message('Failed to get extension for file: '.$file);

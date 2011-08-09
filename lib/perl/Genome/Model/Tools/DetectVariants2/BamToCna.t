@@ -23,19 +23,11 @@ BEGIN {
 
 use_ok( 'Genome::Model::Tools::DetectVariants2::BamToCna');
 
-# Caching refseq in /var/cache/tgi-san. We gotta link these files to a tmp dir for tests so they don't get copied
 my $refbuild_id = 101947881;
 my $ref_seq_build = Genome::Model::Build::ImportedReferenceSequence->get($refbuild_id);
 ok($ref_seq_build, 'human36 reference sequence build') or die;
-my $refseq_tmp_dir = File::Temp::tempdir(CLEANUP => 1);
+
 no warnings;
-*Genome::Model::Build::ReferenceSequence::local_cache_basedir = sub { return $refseq_tmp_dir; };
-*Genome::Model::Build::ReferenceSequence::copy_file = sub { 
-    my ($build, $file, $dest) = @_;
-    symlink($file, $dest);
-    is(-s $file, -s $dest, 'linked '.$dest) or die;
-    return 1; 
-};
 # Override lock name because if people cancel tests locks don't get cleaned up.
 *Genome::SoftwareResult::_resolve_lock_name = sub {
     return Genome::Sys->create_temp_file_path;
@@ -76,7 +68,6 @@ my $bam_to_cna_1 = Genome::Model::Tools::DetectVariants2::BamToCna->create(
 
 ok($bam_to_cna_1, 'created BamToCna object with ratio of 4.0');
 $bam_to_cna_1->dump_status_messages(1);
-like($bam_to_cna_1->reference_sequence_input, qr|^$refseq_tmp_dir|, "reference sequence path is in /tmp");
 ok($bam_to_cna_1->execute(), 'executed BamToCna object with ratio of 4.0');
 
 ok(-s $output_file_1, 'generated output for ratio of 4.0');
