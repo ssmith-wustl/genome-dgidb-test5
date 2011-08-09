@@ -24,7 +24,7 @@ class Genome::Model::Tools::Analysis::NormalizeIndelLocation {
         type => 'String',
         is_optional => 0,
         doc => 'File from which to grab reference sequence',
-    }
+    },
     output_file => {
         is => 'Text',
         is_output => 1,
