@@ -427,11 +427,6 @@ sub execute {
         return;
     }
 
-    if(!$self->build and !$self->reference_transcripts){
-        $self->error_message("Please provide EITHER a build id OR a reference transcript set name, but not both");
-        return;
-    }
-
     if ($self->build) {
         my $version = $self->build->version;
         my $name = $self->build->model->name;
@@ -448,6 +443,7 @@ sub execute {
     }
     else {
         my $ref = $self->reference_transcripts;
+        $ref = "NCBI-human.combined-annotation/54_36p_v2" unless defined $ref;
         my ($name, $version) = split(/\//, $ref); # For now, version is ignored since only v2 is usable
                                         # This will need to be changed when other versions are available
 
