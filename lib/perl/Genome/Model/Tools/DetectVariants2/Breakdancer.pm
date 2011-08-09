@@ -309,11 +309,11 @@ sub _get_chr_list {
         die;
     }
 
-    my $unmap_chr_list = $idxstats->unmap_ref_list($tmp_idx_file);
+    my $map_chr_list = $idxstats->map_ref_list($tmp_idx_file);
     my @chr_list; 
 
     for my $chr (@FULL_CHR_LIST) {
-        push @chr_list, $chr unless grep{$chr eq $_}@$unmap_chr_list;
+        push @chr_list, $chr if grep{$chr eq $_}@$map_chr_list;
     }
 
     return @chr_list;

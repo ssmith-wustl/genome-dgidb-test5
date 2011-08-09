@@ -24,7 +24,12 @@ class Genome::Model::Tools::Analysis::NormalizeIndelLocation {
         type => 'String',
         is_optional => 0,
         doc => 'File from which to grab reference sequence',
-    }
+    },
+    output_file => {
+        is => 'Text',
+        is_output => 1,
+        doc => "Output of left-shifted indels",
+    },
 
     ]
 };
@@ -37,6 +42,7 @@ class Genome::Model::Tools::Analysis::NormalizeIndelLocation {
 sub execute {
     my $self=shift;
     $DB::single = 1;
+    my $output_file = $self->output_file;
 
     # Check that we're on a 64-bit system and can run with the deployed samtools
     unless (POSIX::uname =~ /64/) {
@@ -55,6 +61,7 @@ sub execute {
     my $current_chr = undef;
     my $fasta = $self->reference_fasta;
 
+    open(OUTFILE, ">" . $output_file) or die "Can't open outfile: $!\n";
     while(my $line = $fh->getline) {
         chomp $line;
         my ($chr, $start, $stop, $ref, $var, @rest) = split /\t/, $line;   #not checking type directly here
@@ -117,7 +124,7 @@ sub execute {
         else {
             $self->error_message("This line was not an indel: $line");
         }
-        print join("\t",$chr,$start,$stop,$ref,$var,@rest),"\n";
+        print OUTFILE join("\t",$chr,$start,$stop,$ref,$var,@rest),"\n";
     }
     return 1;
 }
