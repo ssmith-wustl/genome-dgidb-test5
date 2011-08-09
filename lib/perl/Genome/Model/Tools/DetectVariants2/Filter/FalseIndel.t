@@ -64,6 +64,8 @@ my $filter_command = Genome::Model::Tools::DetectVariants2::Filter::FalseIndel->
     max_readlen_diff => 15,
     min_var_dist_3 => 0.20,
     min_homopolymer => 4,
+    bam_readcount_version => 0.3,
+    bam_readcount_min_base_quality => 1, 
 );
 $filter_command->dump_status_messages(1);
 isa_ok($filter_command, 'Genome::Model::Tools::DetectVariants2::Filter::FalseIndel', 'created filter command');

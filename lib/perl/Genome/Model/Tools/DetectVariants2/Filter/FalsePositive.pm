@@ -94,6 +94,17 @@ class Genome::Model::Tools::DetectVariants2::Filter::FalsePositive {
             is_input => 1,
             doc => 'version of samtools to use',
         },
+        bam_readcount_version => {
+            is => 'Text',
+            is_input => 1,
+            doc => 'version of bam-readcount to use',
+        },
+       bam_readcount_min_base_quality => {
+           is => 'Integer',
+           is_input => 1,
+           default => 15,
+           doc => 'The minimum base quality to require for bam-readcount',
+       },
     ],
     has_constant => [
         _variant_type => {
@@ -192,13 +203,18 @@ sub _filter_variants {
     close($input);
 
     $readcount_file = $self->_temp_staging_directory . "/readcounts";
-    my $cmd = $self->readcount_program() . " -b 15 " . $self->aligned_reads_input . " -l $temp_path";
-    Genome::Sys->shellcmd(
-        cmd => "$cmd > $readcount_file 2> /dev/null",
-        input_files => [$self->aligned_reads_input],
-        output_files => [$readcount_file],
+    my $readcount_command = Genome::Model::Tools::Readcount::Bam->create(
+        minimum_base_quality => $self->bam_readcount_min_base_quality,
+        bam_file => $self->aligned_reads_input,
+        reference_fasta => $self->reference_sequence_input,
+        region_list => $temp_path,
+        output_file => $readcount_file,
+        use_version => $self->bam_readcount_version,
     );
-    $self->status_message('Done running BAM Readcounts.');
+    unless ($readcount_command->execute) {
+        die $self->error_message("Failed to execute readcount command");
+    }
+
     my $readcount_fh = Genome::Sys->open_file_for_reading($readcount_file);
 
     ## Open the filtered output file ##
@@ -493,19 +509,6 @@ sub wgs_filter {
     
     
 }
-
-
-#############################################################
-# Readcount_Program - the path to BAM-readcounts
-#
-#############################################################
-
-sub readcount_program {
-    my $self = shift;
-    my $reference = $self->reference_sequence_input;
-    return "/usr/bin/bam-readcount0.3 -f $reference";
-}
-
 
 #############################################################
 # Read_Counts_By_Allele - parse out readcount info for an allele
