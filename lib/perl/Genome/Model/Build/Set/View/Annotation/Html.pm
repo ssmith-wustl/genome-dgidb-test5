@@ -390,7 +390,7 @@ sub _generate_content {
                 my $index = $value->{'index'};
                 
                 if (defined($index->{$sSearch})) {
-                    my $lines = $self->get_lines_via_index($annotations_file, $index->{$sSearch}, $offset, $limit);
+                    my $lines = $self->get_lines_via_gene_index($annotations_file, $index->{$sSearch}, $offset, $limit);
                     print "[23m".$value->{'line_count'}."[0m\n";
                     return $self->datatables_response($lines->{lines}, $lines->{lines_read}, $value->{'line_count'}, $sEcho);
                 } else {
@@ -398,24 +398,32 @@ sub _generate_content {
                 }
             } else {
                 my $lines = $self->get_lines(
-                    file => "awk -F \"\\t\" '{ if (\$7 == '$sSearch') print \$0 }' $annotations_file",
+                    file => "awk -F \"\\t\" '{ if (\$7 == '$sSearch') print \$0 }' $annotations_file | ",
                     offset => $offset,
                     limit => $limit,
                     delimiter => "\t"
                 );
                 return $self->datatables_response($lines->{lines}, $lines->{lines_read}, 0, $sEcho);
             }
-        } else { # full text grep
+        } elsif ($sSearchType eq 'grep') { # full text grep
             my $escaped_search = $sSearch;
             $escaped_search =~ s/'/'"'"'/g; # disgusting
             $escaped_search = "'$escaped_search'";
             my $lines = $self->get_lines(
-                file => "grep $escaped_search $annotations_file",
+                file => "grep $escaped_search $annotations_file | ",
                 offset => $offset,
                 limit => $limit,
                 delimiter => "\t"
             );
-            return $self->datatables_response($lines->{lines}, $lines->{lines_read}, 0, $sEcho);
+
+            my $lines_count = 0;
+            # get lines read from memcache if we can
+            if ($cache && (my $compressed_str = $cache->get($key))) {
+                my $value = from_json(Compress::Bzip2::decompress($compressed_str), {ascii => 1});
+                $lines_count = $value->{line_count};
+            }
+
+            return $self->datatables_response($lines->{lines}, $lines->{lines_read}, $lines_count, $sEcho);
         }
     } elsif (defined($self->request_index())) {
         my $key = sprintf("%s-%s-%s", "Genome::Model::Build::Set::View::Annotation::Html", "build-id", $subject_build->id());
