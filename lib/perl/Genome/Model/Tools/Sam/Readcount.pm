@@ -1,4 +1,4 @@
-package Genome::Model::Tools::Readcount::Bam;
+package Genome::Model::Tools::Sam::Readcount;
 
 use strict;
 use warnings;
@@ -7,11 +7,11 @@ use Genome;
 
 my $DEFAULT_VER = '0.4';
 
-class Genome::Model::Tools::Readcount::Bam {
+class Genome::Model::Tools::Sam::Readcount{
     is  => 'Command',
     has_input => [
         use_version => {
-            is  => 'Version', 
+            is  => 'Version',
             doc => "bam-readcount version to be used.",
             default_value => $DEFAULT_VER,
         },
@@ -42,7 +42,7 @@ class Genome::Model::Tools::Readcount::Bam {
             doc => "don't include reads where the base quality is less than this. This is the -b parameter. This is only available in versions 0.3 and later.",
         },
         comma_separated_format => {
-            is  => 'Boolean', 
+            is  => 'Boolean',
             default => 0,
             doc => "report the mapping qualities as a comma separated list. This is the -d paremeter. This is only available in versions 0.3 and later.",
         },
@@ -54,7 +54,7 @@ sub help_synopsis {
     "gmt readcount bam --minimum-base-quality 15 --use-version 0.4 --reference-fasta /path/to/fasta.fa --region-list /path/to/regions --bam-file /path/to/file.bam";
 }
 
-sub help_detail {                           
+sub help_detail {
     "used to get readcount information from a bam";
 }
 

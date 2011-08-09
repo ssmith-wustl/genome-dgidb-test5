@@ -203,7 +203,7 @@ sub _filter_variants {
     close($input);
 
     $readcount_file = $self->_temp_staging_directory . "/readcounts";
-    my $readcount_command = Genome::Model::Tools::Readcount::Bam->create(
+    my $readcount_command = Genome::Model::Tools::Sam::Readcount->create(
         minimum_base_quality => $self->bam_readcount_min_base_quality,
         bam_file => $self->aligned_reads_input,
         reference_fasta => $self->reference_sequence_input,
