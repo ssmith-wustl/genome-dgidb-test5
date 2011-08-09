@@ -437,7 +437,7 @@ sub lock_resource {
     my $max_try = delete $args{max_try};
     $max_try = 7200 unless defined $max_try;
 
-    my ($my_host, $my_pid, $my_lsf_id, $my_user) = (hostname, $$, ($ENV{'LSB_JOBID'} || 'NONE'), $ENV{'USER'});
+    my ($my_host, $my_pid, $my_lsf_id, $my_user) = (hostname, $$, ($ENV{'LSB_JOBID'} || 'NONE'), Genome::Sys->username);
     my $job_id = (defined $ENV{'LSB_JOBID'} ? $ENV{'LSB_JOBID'} : "NONE");
     my $lock_dir_template = sprintf("lock-%s--%s_%s_%s_%s_XXXX",$basename,$my_host,$ENV{'USER'},$$,$job_id);
     my $tempdir =  File::Temp::tempdir($lock_dir_template, DIR=>$parent_dir, CLEANUP=>1);
