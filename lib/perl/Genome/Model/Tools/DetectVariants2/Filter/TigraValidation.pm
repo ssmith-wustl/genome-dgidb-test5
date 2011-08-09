@@ -764,6 +764,11 @@ sub _get_skip_libs {
         if ($line =~ /$normal_bam/) {
             my @columns = split /\s+/, $line;
             my ($lib) = $columns[4] =~ /lib\:(\S+)/;
+            if ($lib =~ /[\(\)]/) {  #sometimes the library name is like H_KU-15901-D108132(2)-lib2
+                $self->warning_message("$lib contains parentesis");
+                $lib =~ s{\(}{\\(}g;
+                $lib =~ s{\)}{\\)}g;
+            }
             $libs{$lib} = 1;
         }
     }
