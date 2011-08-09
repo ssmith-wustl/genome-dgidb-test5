@@ -6,20 +6,20 @@ use warnings;
 use Genome;
       
 class Genome::Model::Command::Input::Add {
-    is => 'Genome::Model::Command::Input',
+    is => 'Genome::Model::Command::Input::Base',
     english_name => 'genome model input command add',
-    doc => 'Add inputs to a model.',
+    doc => 'Add inputs to a model',
     has => [
         name => {
             is => 'Text',
             shell_args_position => 2,
-            doc => 'The name of the input to add. Use the plural property name - friends to add a friend',
+            doc => 'The name of the input property to add.',
         },
         'values' => {
             is => 'Text',
             is_many => 1,
             shell_args_position => 3,
-            doc => 'The ids of the values of the inputs.'
+            doc => 'The values of the inputs. Id or resolved via filter string. Ex: library_id=$ID'
         },
     ],
 };
@@ -33,82 +33,81 @@ EOS
 sub execute {
     my $self = shift;
 
-    unless ( $self->name ) {
-        $self->error_message('No input name given to add to model.');
+    $self->status_message('Add inputs');
+
+    my $model = $self->model;
+    if ( not $model ) {
+        $self->error_message('No model to update input');
         return;
     }
 
-    my $property = $self->_get_is_many_input_property_for_name( $self->name )
-        or return;
+    my $name = $self->name;
+    if ( not $name ) {
+        $self->error_message('No name given to update model input.');
+        return;
+    }
+
+    my @properties = $model->real_input_properties;
+    return if not @properties;
+    my ($property) = grep { $name eq $_->{name} } @properties;
+    if ( not $property ) {
+        $self->error_message("Failed to find input property for $name. Here are the valid input names:");
+        $self->show_inputs_and_values_for_model($model);
+        return;
+    }
+
+    if ( not $property->{is_many} ) {
+        $self->error_message("Cannot use this add command for a property ($name) with many values. Use the update command.");
+        return;
+    }
 
     my @values = $self->values;
-    unless ( @values ) {
-        $self->error_message('No input value ids given to add to model.');
-        $self->delete;
+    if ( not @values ) {
+        $self->error_message('No values to add');
         return;
     }
 
-    my $sub = $self->_get_add_sub_for_property($property)
-        or return;
+    $self->status_message('Model: '.$model->__display_name__);
+    $self->status_message('Property: '.$name);
+    $self->status_message('Value filters: '.join(' ', @values));
 
-    for my $value_id ( @values ) {
-        unless ( $sub->($value_id) ) {
-            $self->error_message("Can't add input ".$self->name." ($value_id) to model.");
-            return;
-        }
+    # get values for filters
+    my %values = $self->unique_values_from_property_for_filter($property, @values);
+    return if not %values;
+
+    # get existing values
+    my %existing_values;
+    for my $value ( $model->$name ) {
+        my $id = $self->display_name_for_value($value);
+        $existing_values{$id} = $value;
     }
 
-    printf(
-        "Added %s (%s) to model.\n",
-        ( @values > 1 ? $property->property_name : $property->singular_name ),
-        join(', ', @values),
-    );
+    # add
+    my $add_method = $property->{add_method};
+    for my $value_id ( keys %values ) {
+        if ( exists $existing_values{$value_id} ) {
+            $self->status_message('Value exists on model, skipping: '.$value_id);
+            next;
+        }
+        $self->status_message('Add: '.$value_id);
+        $model->$add_method($values{$value_id});
+        $existing_values{$value_id} = $values{$value_id};
+    }
+
+    # verify
+    for my $value ( $model->$name ) { 
+        my $id = $self->display_name_for_value($value);
+        delete $values{$id};
+    }
+    if ( %values ) {
+        $self->error_message('Failed to add these values: '.join(' ', keys %values));
+        return;
+    }
+
+    $self->status_message('Add successful!');
 
     return 1; 
 }
 
-sub _get_add_sub_for_property {
-    my ($self, $property) = @_;
-
-    my $property_name = $property->property_name;
-    
-    my $method = $self->_determine_and_validate_add_or_remove_method_name($property, 'add')
-        or return;
-    
-    #< Get the value class name or data type and createthe sub >#
-    my ($value_class_name, $data_type);
-    $self->_validate_where_and_resolve_value_class_name_or_data_type_for_property(
-        $property, \$value_class_name, \$data_type
-    ) or return;
-
-    if ( $value_class_name ) {
-        return sub{
-            my $value = shift;
-            
-            my ($existing_input) = grep { $value eq $_ } $self->model->$property_name;
-            if ( $existing_input ) {
-                $self->error_message("Value ($value) already exists for model property ($property_name).");
-                return;
-            }
-
-            return $self->model->$method($value);
-        };
-    }
-
-    return sub{
-        my $value = shift;
-
-        my $obj = $data_type->get($value);
-        unless ( $obj ) {
-            $self->error_message("Can't get $property_name ($data_type) for id: $value to add to model.");
-            return;
-        }
-
-        return $self->model->$method($obj);
-    };
-}
-
 1;
 
-#$HeadURL$
-#$Id$
