@@ -9,7 +9,7 @@ class Genome::Model::Tools::Far::Trimmer {
     is => ['Genome::Model::Tools::Far::Base'],
     has_input => [
         source => {
-        	is => 'Text',
+            is => 'Text',
             doc => 'Input file containing reads to be trimmed',
         },
         target => {
@@ -18,6 +18,10 @@ class Genome::Model::Tools::Far::Trimmer {
         },
     ],
     has_optional_input => [
+        source2 => {
+            is => 'Text',
+            doc => 'Second input file containing reads to be trimmed',
+        },
         params => {
             is => 'Text',
             doc => 'A list of params to be APPENDED to the command line.',
@@ -64,6 +68,9 @@ class Genome::Model::Tools::Far::Trimmer {
 sub execute {
     my $self = shift;
     my $far_cmd = $self->far_path .' --source '. $self->source .' --target ' . $self->target;
+    if (defined($self->source2)) {
+        $far_cmd .= ' --source2 '. $self->source2;
+    }
     if (defined($self->adaptor_sequence)) {
         $far_cmd .= ' --adapter '. $self->adaptor_sequence;
     }
