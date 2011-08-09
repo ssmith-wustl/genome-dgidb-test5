@@ -180,7 +180,8 @@ sub _map_workflow_inputs {
         tumor_bam_file => $tumor_bam,
         normal_filtered_snp_file => $normal_snp_file,
         tumor_filtered_snp_file => $tumor_snp_file,
-        data_directory => $data_directory;
+        data_directory => $data_directory,
+        annotation_reference_transcripts => 'NCBI-human.combined-annotation/54_36p_v2';
 
 
     my %default_filenames = $self->default_filenames;
