@@ -79,7 +79,9 @@ sub execute {
 
     unless (-d $self->raw_output_directory) {
         my $mk_rv = make_path($self->raw_output_directory);
-        confess "Could not make raw ouput directory at " . $self->raw_output_directory unless defined $mk_rv and $mk_rv;
+        unless ($mk_rv or -d $self->raw_output_directory) {
+            confess "Could not make raw ouput directory at " . $self->raw_output_directory;
+        }
     }
     $self->status_message("Raw output being placed in " . $self->raw_output_directory);
 
