@@ -201,7 +201,7 @@ sub help_detail {
     foreach my $model (@currently_available_models) {
         next unless $model;
         foreach my $build ($model->builds) {
-            if($build and $build->status eq 'Succeeded') {  #probably implicit in the loops, but in case we get undefs in our list
+            if($build and $build->status eq 'Succeeded' and $build->name =~ /combined-annotation/) {  #probably implicit in the loops, but in case we get undefs in our list
                  $currently_available_builds .= "\t" . $model->name . "/" . $build->version . "\n" if $build->version !~ /old/ and $model->name and $build->version;
             }
         }
@@ -233,7 +233,7 @@ chromosome_name start stop reference variant type gene_name transcript_name tran
 The --use-version parameter is used to choose which version of the trasncript variant annotator to run.  The available versions are: $available_versions
 $version_docs
 
-CURRENTLY AVAILABLE REFERENCE TRANSCRIPTS WITH VERSIONS
+COMMONLY USED REFERENCE TRANSCRIPTS WITH VERSIONS
 $currently_available_builds
 EOS
 }
