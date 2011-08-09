@@ -35,7 +35,7 @@ sub execute {
     }
 
     my $expunge = eval { Genome::Site::WUGC::Synchronize::Expunge->execute(report => $update->_report) };
-    unless ($expunge->result) {
+    unless ($expunge) {
         $self->error_message("Failed to Expunge: $@");
         die $self->error_message;
     }

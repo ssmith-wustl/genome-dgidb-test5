@@ -4,6 +4,7 @@ set sddir=$1;
 set sdfile=$2;
 set libfile=$3;
 set bamfile=$4;
+set scriptpath=`dirname $0`;
 
 # do with bamfile: dir/tumor.bam,normal.bam..., separated by comma, will create dirctory $sddir/assembly_tumor; $sddir/assembly_tumor_old; $sddir/assembly_normal; $sddir/assembly_normal_old
 
@@ -32,7 +33,7 @@ foreach directory (`ls -d $sddir/assembly_*`)
 
 # annotation
 	if(! -e ${sdfile}.annot) then
-	    /gscuser/xfan/git/genome/lib/perl/Genome/Model/Tools/Sv/SV_assembly_pipeline/BreakAnnot.pl $sdfile > ${sdfile}.annot
+	    ${scriptpath}/BreakAnnot.pl $sdfile > ${sdfile}.annot
 	endif
 
 	set bam_complete=`echo $directory $bamfile | perl -ane '($x)=($F[0]=~/assembly_([^\_]+)/); ($y)=($F[1]=~/^(.+)\/[^\/]+$/); print $y . "/". $x.".bam"'`;
@@ -46,19 +47,13 @@ foreach directory (`ls -d $sddir/assembly_*`)
 	set R1='"select[type==LINUX64 && mem>8000]';
 	set R2='rusage[mem=8000]"';
 	
-#	if(`echo $directory | perl -ane 'print $F[0]=~/old/'`) then
-		# old
-#		set old="bsub -q apipe -N -u xfan@genome.wustl.edu -M 8000000 -R ${R1} ${R2} -o $directory/$bam.csv -e $directory/$bam.log -J ${project}_${job}_SD_AS_O '/gscuser/xfan/git/genome/lib/perl/Genome/Model/Tools/Sv/SV_assembly_pipeline/AssemblyValidationTest.pl -f $directory/$bam.fasta -r $directory/$bam.cm -Q 40 -L $g -d $directory $sdfile $bam_complete'";
-#		echo $old;
-#	endif
-
 	if(! `echo $directory | perl -ane 'print $F[0]=~/old/'`) then
 		# new
-		set new="bsub -q apipe -N -u xfan@genome.wustl.edu -M 8000000 -R ${R1} ${R2} -e $directory/$bam.log -J ${project}_${job}_SD_AS 'perl -I /gscuser/xfan/git/genome/lib/perl/Genome/Model/Tools/Sv $gmt sv assembly-validation --bam-files $bam_complete --sv-file ${sdfile} --breakpoint-seq-file $directory/$bam.fasta --cm-aln-file $directory/$bam.cm --min-breakdancer-score 40 --intermediate-read-dir $directory --output-file $directory/$bam.csv --skip-libraries $g --min-size-of-confirm-asm-sv 10'";
+		set new="bsub -q apipe -N -u someone@genome.wustl.edu -M 8000000 -R ${R1} ${R2} -e $directory/$bam.log -J ${project}_${job}_SD_AS 'perl -I ${scriptpath} $gmt sv assembly-validation --bam-files $bam_complete --sv-file ${sdfile} --breakpoint-seq-file $directory/$bam.fasta --cm-aln-file $directory/$bam.cm --min-breakdancer-score 40 --intermediate-read-dir $directory --output-file $directory/$bam.csv --skip-libraries $g --min-size-of-confirm-asm-sv 10'";
 		if(-e ${directory}/${bam}.csv) then
 			rm -f ${directory}/${bam}.csv;
 		endif
-		bsub -q apipe -N -u xfan@genome.wustl.edu -M 8000000 -R "select[type==LINUX64 && mem>8000] rusage[mem=8000]" -e $directory/$bam.log -J ${project}_${job}_SD_AS "perl -I /gscuser/xfan/git/genome/lib/perl/Genome/Model/Tools/Sv $gmt sv assembly-validation --bam-files $bam_complete --sv-file $sdfile --breakpoint-seq-file $directory/$bam.fasta --cm-aln-file $directory/$bam.cm --min-breakdancer-score 40 --intermediate-read-dir $directory --output-file $directory/$bam.csv --skip-libraries $g --min-size-of-confirm-asm-sv 10";
+		bsub -q apipe -N -u someone@genome.wustl.edu -M 8000000 -R "select[type==LINUX64 && mem>8000] rusage[mem=8000]" -e $directory/$bam.log -J ${project}_${job}_SD_AS "perl -I ${scriptpath} $gmt sv assembly-validation --bam-files $bam_complete --sv-file $sdfile --breakpoint-seq-file $directory/$bam.fasta --cm-aln-file $directory/$bam.cm --min-breakdancer-score 40 --intermediate-read-dir $directory --output-file $directory/$bam.csv --skip-libraries $g --min-size-of-confirm-asm-sv 10";
 	endif
 	
 end	

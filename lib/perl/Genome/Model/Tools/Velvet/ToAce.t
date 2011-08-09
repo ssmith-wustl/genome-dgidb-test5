@@ -27,6 +27,7 @@ for my $file (qw/  Sequences velvet_asm.afg / ) {
 my $ta = Genome::Model::Tools::Velvet::ToAce->create(
     assembly_directory => $run_dir,
     time        => 'Wed Jul 29 10:59:26 2009',
+    #sqlite_yes => 1,
 );
 
 ok($ta, 'to-ace creates ok');
@@ -47,6 +48,8 @@ for my $diff (@diff) {
 }
 
 is(scalar @lines, 2, 'Ace file converted from velvet output is OK');
+
+#<STDIN>;
 
 done_testing();
 

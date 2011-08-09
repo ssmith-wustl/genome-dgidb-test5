@@ -392,24 +392,6 @@ $DB::single=1;
         $aligner_params{'count_options'} # -B (get a map of methylation events, not a count of every base)
     );
 
-print "\n\nDEBUG INFO\n\n\n";
-print Data::Dumper::Dumper(\%list_files) . "\n";
-print Data::Dumper::Dumper(\@deduped_reads) . "\n";
-print Data::Dumper::Dumper(\@reference_fastas) . "\n";
-print Data::Dumper::Dumper(\@counted_reads) . "\n";
-print Data::Dumper::Dumper(\@index_files) . "\n";
-print $count_cmd . "\n";
-print `ls -lR $scratch_directory`."\n";
-print `ls -lR $temporary_directory`."\n";
-print `ls -lR $staging_directory`."\n";
-for my $lf (keys %list_files) {
-    print "$lf: $list_files{$lf}\n";
-    print `cat $list_files{$lf}`."\n";
-}
-print `ls -lR $staging_directory`."\n";
-system("touch /gscuser/iferguso/brat_lock");
-print "\n\nEND DEBUG INFO\n\n\n";
-
     $rv = $self->_shell_cmd_wrapper(
         cmd => $count_cmd,
         input_files => [

@@ -62,7 +62,9 @@ sub execute {
 
     unless (-d $self->raw_output_directory) {
         my $mkdir_rv = make_path($self->raw_output_directory);
-        confess 'Could not make directory ' . $self->raw_output_directory unless $mkdir_rv;
+        unless ($mkdir_rv or -d $self->raw_output_directory) {
+            confess 'Could not make directory ' . $self->raw_output_directory;
+        }
     }
         
     my $raw_output_fh = File::Temp->new(
