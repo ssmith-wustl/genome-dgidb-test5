@@ -40,8 +40,8 @@ sub execute {
 	return;
     }
 
-    my $read_names_and_pos = $self->load_read_names_and_seek_pos( $self->velvet_sequences_file );
-    unless ($read_names_and_pos) { #arrayref
+    my $seek_positions = $self->load_sequence_seek_positions( $self->velvet_sequences_file );
+    unless ($seek_positions) { #arrayref
 	$self->error_message("Failed to get read names and seek_pos from Sequences file");
 	return;
     }
@@ -52,7 +52,7 @@ sub execute {
         return;
     }
 
-    my $unplaced_reads = $self->_remove_placed_reads( $read_names_and_pos, $scaffold_info );
+    my $unplaced_reads = $self->_remove_placed_reads( $seek_positions, $scaffold_info );
     unless ($unplaced_reads) {
 	#TODO - make sure this works for empty array ref too
 	$self->error_message("Failed to remove placed reads from input reads");
@@ -74,22 +74,17 @@ sub _print_unplaced_reads {
     my $unplaced_fh = Genome::Sys->open_file_for_writing($self->reads_unplaced_file);
     my $fasta_out = Bio::SeqIO->new(-format => 'fasta', -file => '>'.$self->reads_unplaced_fasta_file);
     my $seq_fh = Genome::Sys->open_file_for_reading( $sequences_file );
-    my $bio_seqio_fh = Bio::SeqIO->new(-fh => $seq_fh, -format => 'fasta', -noclose => 1);
+    my $bio_seqio = Bio::SeqIO->new(-fh => $seq_fh, -format => 'fasta', -noclose => 1);
     for (0 .. $#$unplaced_reads) {
         next unless defined @$unplaced_reads[$_];
-        my $read_name = ${$unplaced_reads}[$_][1];
-        unless ($read_name) {
-            $self->error_message("Failed to get read name for afg read index $_");
-            return;
-        }
-        $unplaced_fh->print("$read_name unused\n");
-        my $seek_pos = ${$unplaced_reads}[$_][0];
+        my $seek_pos = ${$unplaced_reads}[$_];
         unless (defined $seek_pos) {
             $self->error_message("Failed to get read seek position for afg read index $_");
             return;
         }
         $seq_fh->seek($seek_pos, 0);
-        my $seq = $bio_seqio_fh->next_seq;
+        my $seq = $bio_seqio->next_seq;
+        $unplaced_fh->print( $seq->primary_id." unused\n" );
         my $seq_obj = Bio::Seq->new(-display_id => $seq->primary_id, -seq => $seq->seq);
         $fasta_out->write_seq($seq_obj);
     }
@@ -100,7 +95,7 @@ sub _print_unplaced_reads {
 }
 
 sub _remove_placed_reads {
-    my ($self, $input_reads, $scaffold_info) = @_;
+    my ($self, $seek_pos, $scaffold_info) = @_;
 
     my $afg_fh = Genome::Sys->open_file_for_reading($self->velvet_afg_file);
 
@@ -124,14 +119,14 @@ sub _remove_placed_reads {
 		    #'src' => '19534',  #read id number
 		    #'clr' => '0,90',   #read start, stop 0,90 = uncomp 90,0 = comp
 		    #'off' => '75'      #read off set .. contig start position
-		    @$input_reads[$sfields->{src}] = undef;
+		    @$seek_pos[$sfields->{src}] = undef;
 		}
 	    }
 	}
     }
 
     $afg_fh->close;
-    return $input_reads;
+    return $seek_pos;
 }
 
 1;
