@@ -36,6 +36,11 @@ class Genome::Model::Tools::Validation::SvCalls {
         is => 'String',
         doc => 'path to normal WGS .bam file',
     },
+    normal_wgs_reads_cutoff => {
+        is => 'Number',
+        doc => 'Somatic sites are allowed to have this many reads in the normal wgs BAM',
+        default => '0',
+    },
     assembled_call_files => {
         is => 'String',
         doc => 'Comma-delimited list of assembled BreakDancer and/or SquareDancer callset filenames to assemble',
@@ -86,6 +91,7 @@ sub execute {
     my $normal_val_bam = $self->normal_val_bam;
     my $tumor_wgs_bam = $self->tumor_wgs_bam;
     my $normal_wgs_bam = $self->normal_wgs_bam;
+    my $normal_wgs_reads_cutoff = $self->normal_wgs_reads_cutoff;
 
     #concatenate calls for assembly input
     #my $ass_in_fh = Genome::Sys->open_file_for_writing($assembly_input);
@@ -232,7 +238,7 @@ sub execute {
             if ( $line =~ /no\s+fasta\s+sequence/ ) { next; }
             if ( $line =~ /$wgs_patient_id.normal.svReadCount\:(\d+)/i ) {
                 my ($normal_sv_readcount) = $line =~ /$wgs_patient_id.normal.svReadCount\:(\d+)/i;
-                if ($normal_sv_readcount > 0) { next; }
+                if ($normal_sv_readcount > $normal_wgs_reads_cutoff) { next; }
                 else { print $new_somatics_fh $line; next; }
             }
         }
