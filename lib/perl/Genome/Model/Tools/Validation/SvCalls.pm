@@ -84,8 +84,8 @@ sub execute {
     my $patient_id = $self->patient_id;
     my $tumor_val_bam = $self->tumor_val_bam;
     my $normal_val_bam = $self->normal_val_bam;
-    my $tumor_wgs_bam = $self->tumor_val_bam;
-    my $normal_wgs_bam = $self->normal_val_bam;
+    my $tumor_wgs_bam = $self->tumor_wgs_bam;
+    my $normal_wgs_bam = $self->normal_wgs_bam;
 
     #concatenate calls for assembly input
     #my $ass_in_fh = Genome::Sys->open_file_for_writing($assembly_input);

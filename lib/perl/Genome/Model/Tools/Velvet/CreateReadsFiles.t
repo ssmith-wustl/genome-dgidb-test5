@@ -10,7 +10,7 @@ use Test::More;
 use_ok( 'Genome::Model::Tools::Velvet::CreateContigsFiles' );
 
 #TODO - move to correct test suite module dir when all tests are configured
-my $version = 'v1';
+my $version = 'v2';
 my $data_dir = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Velvet/CreateReadsFiles-".$version;
 
 ok(-d $data_dir, "Found data directory: $data_dir") or die;
