@@ -151,52 +151,75 @@ sub _run_aligner {
         $temp_sam_output
     );
     
-    #my $rv = $self->_shell_cmd_wrapper(
     my $rv = Genome::Sys->shellcmd(
         cmd => $align_cmd,
         input_files => [@input_pathnames, $reference_fasta_path],
         output_files => [$temp_sam_output]
     );
     unless($rv) { die $self->error_message("Alignment failed."); }
-    
-    ###################################################
-    # append temp sam file to all_sequences.sam
-    ###################################################
-    $DB::single = 1;
 
-    $self->status_message("Adjusting and appending mapped_reads.sam to all_sequences.sam.");
-    
-    my $chrFiles = $self->_fix_sam_output($temp_sam_output, $sam_file, @input_pathnames);
-    
     ###################################################
-    # run methylation mapping
+    # post process the temp sam file:
     ###################################################
-    $self->status_message("Running methratio.py.");
-    if ($self->decomposed_aligner_params =~ /-R/) {
-        # TODO this may have issues in force fragment mode?
-        my $methylation_output = $staging_directory . "/output.meth.dat";
+    my $fix_clipping_and_run_methratio = 0; # force hard clip fixing and methylation mapping to OFF
 
-        for my $file (@{$chrFiles}) {
-            
-            my $meth_cmd = sprintf("/usr/bin/python %s/%s %s >> %s",
-                #dirname($bsmap_cmd_path), #TODO fix this
-                dirname("/gscuser/cmiller/usr/src/bsmap-2.1/methratio.py"),
-                "methratio.py",
-                $file,
-                $methylation_output
-            );
-            
-            $rv = Genome::Sys->shellcmd(
-                cmd => $meth_cmd,
-                input_files => [$file],
-                output_files => [$methylation_output],
-                skip_if_output_is_present => 0 # because there will already be an all_sequences.sam we're appending to
-            );
-            unless($rv) { die $self->error_message("methratio.py failed for file '$file'."); }
+    if ($fix_clipping_and_run_methratio) {
+        ###################################################
+        # fix hard clipped reads and append temp sam file to all_sequences.sam
+        ###################################################
+        $self->status_message("Adjusting and appending mapped_reads.sam to all_sequences.sam.");
+        my $chrFiles = $self->_fix_sam_output($temp_sam_output, $sam_file, @input_pathnames);
+
+        ###################################################
+        # run methylation mapping
+        ###################################################
+        $self->status_message("Running methratio.py.");
+        if ($self->decomposed_aligner_params =~ /-R/) {
+            # TODO this may have issues in force fragment mode?
+            my $methylation_output = $staging_directory . "/output.meth.dat";
+
+            for my $file (@{$chrFiles}) {
+                
+                my $meth_cmd = sprintf("/usr/bin/python %s/%s %s >> %s",
+                    #dirname($bsmap_cmd_path), #TODO fix this
+                    dirname("/gscuser/cmiller/usr/src/bsmap-2.1/methratio.py"),
+                    "methratio.py",
+                    $file,
+                    $methylation_output
+                );
+                
+                $rv = Genome::Sys->shellcmd(
+                    cmd => $meth_cmd,
+                    input_files => [$file],
+                    output_files => [$methylation_output],
+                    skip_if_output_is_present => 0 # because there will already be an all_sequences.sam we're appending to
+                );
+                unless($rv) { die $self->error_message("methratio.py failed for file '$file'."); }
+            }
+        } else {
+            $self->status_message("Skipping methratio.py because -R was not specified as an aligner param.");
         }
     } else {
-        $self->status_message("Skipping methratio.py because -R was not specified as an aligner param.");
+        ###################################################
+        # append temp sam file to all_sequences.sam
+        ###################################################
+        $self->status_message("Appending mapped_reads.sam to all_sequences.sam.");
+        
+        my $append_cmd = sprintf("cat %s >> %s",
+            $temp_sam_output,
+            $sam_file
+        );
+
+        $rv = Genome::Sys->shellcmd(
+            cmd => $append_cmd,
+            input_files => [$temp_sam_output],
+            output_files => [$sam_file],
+            skip_if_output_is_present => 0 # because there will already be an all_sequences.sam we're appending to
+        );
+
+        unless($rv) { die $self->error_message("Appending failed."); }
     }
+    
 
     ###################################################
     # clean up
@@ -232,7 +255,8 @@ sub aligner_params_for_sam_header {
 }
 
 sub decomposed_aligner_params {
-    # TODO this is not forcing things that should be forced when not provided...
+    # TODO if the user specifies params in the processing profile but neglects to require a necessary param
+    #       this will not automatically fill it in
     my $self = shift;
     
     my $full_params;
@@ -275,7 +299,32 @@ sub prepare_reference_sequence_index {
 
     return 0;
 }
-#
+
+# TODO assume yes?
+sub fillmd_for_sam {
+    return 1;
+}
+
+# TODO assume yes?
+sub requires_read_group_addition {
+    return 1;
+}
+
+# only accept bam input if we're not running in force fragment mode
+sub accepts_bam_input {
+    my $self = shift;
+    return $self->force_fragment ? 0 : 1;
+}
+
+# TODO this might be something to turn on...
+sub supports_streaming_to_bam {
+    return 0;
+}
+
+#####
+# The following subroutines are for the disabled soft clip fixing
+#####
+
 sub _fix_sam_output {
     my $self = shift;
     my $temp_sam_output = shift;
@@ -304,6 +353,13 @@ sub _fix_sam_output {
     
     seek($alignedFh, 0, 0);
     
+    # We build an index against the aligned sam file.
+    # For any read we get in the input(s), we can seek to the
+    # proper place in the aligned sam file to pull that read.
+    # We use the aligned sam because the inputs may not always
+    # be sam format and may be piped through samtools.
+    my $index = $self->_build_sam_index($temp_sam_output);
+    
     # check that our inputs are really bams if we're running with accepts_bam_input
     if ($self->accepts_bam_input) {
         die $self->error_message("Expecting a bam file but that's not what we got")
@@ -325,14 +381,26 @@ sub _fix_sam_output {
 
         while (1) {
             my @input_records = map{$is_bam ? $self->_pull_sam_record_from_fh_skip_headers($_) : $self->_pull_fq_record_from_fh($_)} @inFhs;
-            my @aligned_records = map{$self->_pull_sam_record_from_fh_skip_headers($alignedFh)} (1..2);
 
-            if ((grep{not defined($_)} @input_records) or (grep{not defined($_)} @aligned_records)) {
-                if ( (grep{not defined($_)} (@input_records, @aligned_records)) == (@input_records + @aligned_records) ) {
+
+            if (grep{not defined($_)} @input_records) {
+                if (scalar(grep{not defined($_)} @input_records) == scalar(@input_records) ) {
                     last;
                 } else {
-                    die $self->error_message("A file ended prematurely\n" . Data::Dumper::Dumper([@input_records, @aligned_records]));
+                    die $self->error_message("Input file ended prematurely\n" . Data::Dumper::Dumper([@input_records]));
                 }
+            }
+
+            # go to the correct position in the aligned sam file
+            die $self->error_message("Pulled record pair not sam seq:\n$input_records[0]->{qname}\n$input_records[1]->{qname}")
+                unless ($input_records[0]->{qname} eq $input_records[1]->{qname});
+            my $seq_to_grab = $input_records[0]->{qname};
+            seek($alignedFh, $self->_pull_id_pos_from_index($index, $input_records[0]->{qname}), 0);
+
+            my @aligned_records = map{$self->_pull_sam_record_from_fh_skip_headers($alignedFh)} (1..2);
+            
+            if (grep{not defined($_)} @aligned_records) {
+                die $self->error_message("Unable to pull record(s) from aligned sam file\n" . Data::Dumper::Dumper([@aligned_records]));
             }
             
             my @new_records = (
@@ -364,18 +432,19 @@ sub _fix_sam_output {
 
         while (1) {
             my $input_record = $is_bam ? $self->_pull_sam_record_from_fh_skip_headers($inFh) : $self->_pull_fq_record_from_fh($inFh);
+
+            if (not defined($input_record)) {
+                last;
+            }
+            
+            # go to the correct position in the aligned sam file
+            my $seq_to_grab = $input_record->{qname};
+            seek($alignedFh, $self->_pull_id_pos_from_index($index, $input_record->{qname}), 0);
+
             my $aligned_record = $self->_pull_sam_record_from_fh_skip_headers($alignedFh);
 
-            if (not defined($input_record) or not defined($aligned_record)) {
-                if (not defined($input_record) and not defined($aligned_record)) {
-                    last;
-                } elsif (not defined($input_record)) {
-                    die $self->error_message("Input file ended prematurely")
-                } elsif (not defined($aligned_record)) {
-                    die $self->error_message("Aligned sam file ended prematurely");
-                } else {
-                    die $self->error_message("Something logically impossible just happened");
-                }
+            if (not defined($aligned_record)) {
+                die $self->error_message("Unable to pull record from aligned sam file\n" . Data::Dumper::Dumper($aligned_record));
             }
             
             my $new_record = $self->_process_record_pair($input_record, $aligned_record, $reference_build, $methylation_mapping, $chrFhs);
@@ -474,8 +543,20 @@ sub _process_record_pair {
                         $refpreclip = index($full_ref_seq, $trimmed_ref_seq, $refpreclip+1);
                     } while ($refpreclip != -1 and $refpreclip < $preclip);
                     
-                    die $self->error_message("Trimmed ref seq was not found at expected position of $preclip in full ref seq ($refpreclip):\n$trimmed_ref_seq\n$full_ref_seq")
-                        if $refpreclip == -1;
+                    if ($refpreclip == -1) { # we did not find trimmed ref seq in full ref seq, but this does not account for N in full ref seq
+                        my $trimmed_full_ref_seq = substr($full_ref_seq, $preclip, length($trimmed_ref_seq));
+                        print "Found an odd thing, let's hope it doesn't fail:\n$trimmed_full_ref_seq\n$trimmed_ref_seq\n";
+                        
+                        my @trimmed_full_ref_seq = split("", $trimmed_full_ref_seq);
+                        my @trimmed_ref_seq = split("", $trimmed_ref_seq);
+                        
+                        for (0..$#trimmed_ref_seq) {
+                            if (($trimmed_full_ref_seq[$_] ne 'N') and ($trimmed_full_ref_seq[$_] ne $trimmed_ref_seq[$_])) {
+                                die $self->error_message("Trimmed ref seq was not found at expected position of $preclip in full ref seq ($refpreclip):\n$trimmed_ref_seq\n$full_ref_seq");
+                            }
+                        }
+                        
+                    }
                     
                     $tag = "XR:Z:" . $full_ref_seq;
                 }
@@ -631,176 +712,83 @@ sub _pull_fq_record_from_fh {
     };
 }
 
+sub _build_sam_index {
+    my $self = shift;
+    my $samfile = shift;
 
-#        
-#        
-#
-#        my @aligned_records;
-#
-#        while (scalar(@aligned_records) < $in_count) {
-#            my $record = $self->_pull_sam_record_from_fh($alignedFh);
-#            if ($record == -1) {
-#                # die if we have no more lines to read but we believe there to be another record
-#                die $self->error_message("Prematurely reached end of temp sam file") if scalar(@aligned_records) < $in_count;
-#                last LINE;
-#            }
-#            push @aligned_records, $record unless grep {$_ eq 'header'} keys(%{$record});
-#        }
-#        
-#        my @in_records = $self->accepts_bam_input()
-#            ? map{$self->_pull_sam_record_from_fh($_)} @inFhs
-#            : map{$self->_pull_fq_record_from_fh($_)} @inFhs;
-#        
-#        for my $i (0..($in_count-1)) {
-#            if (($aligned_records[$i]->{flag} & 0x10) > 0) {
-#                $in_records[$i]->{seq} = $self->_seq_reverse_complement($in_records[$i]->{seq});
-#            }
-#            my $rv = $self->_calculate_new_cigar_string_and_pos(
-#                $reference_build,
-#                $aligned_records[$i]->{cigar},
-#                $aligned_records[$i]->{rname},
-#                $aligned_records[$i]->{pos},
-#                $aligned_records[$i]->{seq},
-#                $in_records[$i]->{seq},
-#                0
-#            );
-#            
-#            $DB::single=1;
-#            
-#            # we need to fix our tags if there was trimming action
-#            if ($reference_tag_present and (length($aligned_records[$i]->{seq}) != length($in_records[$i]->{seq}))) {
-#                my $modified_tag_count = 0;
-#                map {
-#                    my $tag = $_;
-#                    if ($tag =~ /^XR:Z:([ACTG]+)/) {
-#                        $modified_tag_count++;
-#                        die $self->error_message("Modified too many XR:Z tags for this aligned sam line") if $modified_tag_count > 1;
-#
-#                        my $trimmed_ref_seq = $1;
-#                        my $ref_seq = $reference_build->sequence(
-#                            $aligned_records[$i]->{rname},
-#                            $rv->{pos},
-#                            $rv->{pos} + length($in_records[$i]->{seq}) - 1
-#                        );
-#                        
-#                        die $self->error_message("Trimmed reference sequence did not line up with full reference sequence")
-#                            if ($aligned_records[$i]->{pos} - index($ref_seq, $trimmed_ref_seq) != $rv->{pos});
-#                        
-#                        $tag = "XR:Z:" . $ref_seq;
-#                    }
-#                    $_ = $tag;
-#                } @{$aligned_records[$i]->{tags}};
-#            }
-#
-#            $aligned_records[$i]->{cigar} = $rv->{cigar};
-#            $aligned_records[$i]->{pos} = $rv->{pos};
-#            $aligned_records[$i]->{seq} = $in_records[$i]->{seq};
-#            $aligned_records[$i]->{qual} = $in_records[$i]->{qual};
-#        }
-#        
-#        # fix shifted positions on modified paired-end records
-#        if ($in_count == 2) {
-#            $aligned_records[0]->{pnext} = $aligned_records[1]->{pos};
-#            $aligned_records[1]->{pnext} = $aligned_records[0]->{pos};
-#        }
-#        
-#        # if we're not running in PE mode, we may still be in force fragment mode
-#        # in this case we need to update the read names so they don't contain the /1 and /2
-#        # and also update the sam flags (see TODO below)
-#        if ($in_count == 1) {
-#            if ($aligned_records[0]->{qname} =~ /^(.+)\/([12])$/) {
-#                my $new_qname = $1;
-#                my $strand = $2;
-#                
-#                my $new_flag = $aligned_records[0]->{flag};
-#                
-#                my %strand_flag_map = (
-#                    1 => 0x40,
-#                    2 => 0x80
-#                );
-#
-#                $new_flag |= 0x1; # template has multiple fragments
-#                $new_flag |= $strand_flag_map{$strand}; # set whether first or last fragment in sequence
-#                
-#                $aligned_records[0]->{qname} = $new_qname;
-#                $aligned_records[0]->{flag} = $new_flag;
-#                
-#                # TODO flags that may have problems:
-#                # 0x2, not clear whether each fragment is properly aligned
-#                # 0x8, not clear whether next fragment is unmapped 
-#                # 0x20, not clear whether SEQ of next fragment is reverse complemented
-#            }
-#        }
-#        
-#        for my $aligned_record (@aligned_records) {
-#            my @keys = qw(qname flag rname pos mapq cigar rnext pnext tlen seq qual);
-#            chomp (my $line = join("\t", ( (map {$aligned_record->{$_}} @keys), @{$aligned_record->{'tags'}} ) ));
-#            print $outFh $line."\n";
-#            #if ($in_count == 1) {
-#            #    print "[34m" . $line . "[0m\n";
-#            #} else {
-#            #    print "[31m" . $line . "[0m\n";
-#            #}
-#        }
-#    }
-#    
-#    die $self->error_message("Sam file ended before input file(s)") if (grep {defined($_->getline())} @inFhs);
-#    
-#    map{$_->close() || die $self->error_message("Could not close file handle")} (@inFhs, $alignedFh, $outFh);
-#}
+    my $fh = IO::File->new($samfile) || die $self->error_message("Could not open $samfile to build index of ids");
+    
+    my %hash;
 
+    my $pos = tell($fh);
+    my $last_id = "";
 
-#sub _calculate_new_cigar_string_and_pos {
-#    } elsif ($explicit_mismatch_in_cigar) { # mapped read, convert from 10M to 4=1X5= # TODO this fails in samtools
-#        # get the length of our trimmed read
-#        my $trimmed_length = length($trimmed_seq);
-#
-#        # get the reference seq at the mapping location
-#        my $reference_seq = $reference_build->sequence($trimmed_seq_rname, $trimmed_seq_pos, $trimmed_seq_pos + $trimmed_length - 1);
-#        
-#        # go through the trimmed seq and reference seq 1 bp at a time to determine what differs
-#        my @trimmed_bps = split("",$trimmed_seq);
-#        my @reference_bps = split("",$reference_seq);
-#        die "Trimmed and reference sequences had different length during cigar clean up" if (scalar(@trimmed_bps) != scalar(@reference_bps));
-#        
-#        my @comparison_bps;
-#        for (0..($trimmed_length-1)) {
-#            push @comparison_bps, $trimmed_bps[$_] eq $reference_bps[$_] ? '=' : 'X';
-#        }
-#        
-#        # now create a cigar string using this info
-#        my @cur_bps;
-#        
-#        while (scalar(@comparison_bps)) {
-#            my $cur_bp = shift(@comparison_bps);
-#            if (scalar(@cur_bps) > 0 && $cur_bps[$#cur_bps] ne $cur_bp ) {
-#                $updated_cigar .= scalar(@cur_bps) . $cur_bps[0];
-#                undef(@cur_bps);
-#            }
-#            push(@cur_bps, $cur_bp);
-#        }
-#        $updated_cigar .= scalar(@cur_bps) . $cur_bps[0];
-#    }
-#}
+    my $count = 0;
 
-# TODO need this?
-sub fillmd_for_sam {
-    return 1;
+    while(my $line = <$fh>) {
+        if (substr($line, 0, 1) eq '@') {
+            $pos = tell($fh);
+            next;
+        }
+
+        my $id = substr $line, 0, index($line, "\t");
+        
+        if ($id eq $last_id) {
+            $pos = tell($fh);
+            next;
+        } else {
+            $last_id = $id;
+        }
+        
+        my @id_parts = split(":", $id);
+        my $last_part = pop @id_parts;
+
+        #print Data::Dumper::Dumper(\@id_parts)."\n";
+        
+        my $cur_hash = \%hash;
+        for (@id_parts) {
+            if (defined $cur_hash->{$_}) {
+                $cur_hash = $cur_hash->{$_};
+            } else {
+                $cur_hash->{$_} = {};
+                $cur_hash = $cur_hash->{$_};
+            }
+        }
+        $count++;
+        die if exists($cur_hash->{$last_part});
+        $cur_hash->{$last_part} = $pos;
+        if ($count % 100000 == 0) {
+            print "Indexed $count ids.\n";
+        }
+        
+        $pos = tell($fh);
+    }
+    
+    print "Done! Indexed $count total ids.\n";
+    
+    $fh->close();
+    
+    return \%hash;
 }
 
-# TODO assume yes?
-sub requires_read_group_addition {
-    return 1;
-}
+sub _pull_id_pos_from_index {
+    my $self = shift;
+    my $index = shift;
+    my $id = shift;
 
-# TODO i'm guessing yes!
-sub accepts_bam_input {
-    return 1;
-}
+    my @id_parts = split(":", $id);
 
-# TODO it writes to sam but we want to much with the sam before returning so no
-sub supports_streaming_to_bam {
-    return 0;
+    my $last_part = pop @id_parts;
+
+    my $cur_hash = $index;
+    for (@id_parts) {
+        if (defined $cur_hash->{$_}) {
+            $cur_hash = $cur_hash->{$_};
+        } else {
+            die $self->error_message("Index error pulling $id.");
+        }
+    }
+    return $cur_hash->{$last_part};
 }
 
 # TODO

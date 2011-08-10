@@ -66,6 +66,8 @@ my $filter_command = Genome::Model::Tools::DetectVariants2::Filter::FalsePositiv
     max_readlen_diff => 25,
     min_var_dist_3 => 0.20,
     min_homopolymer => 5,
+    bam_readcount_version => 0.3,
+    bam_readcount_min_base_quality => 15, 
 );
 $filter_command->dump_status_messages(1);
 isa_ok($filter_command, 'Genome::Model::Tools::DetectVariants2::Filter::FalsePositive', 'created filter command');
@@ -100,7 +102,8 @@ my $filter_command2 = Genome::Model::Tools::DetectVariants2::Filter::FalsePositi
     max_readlen_diff => 25,
     min_var_dist_3 => 0.20,
     min_homopolymer => 5,
-    # use_readcounts => $expected_readcount_file, #FIXME this might change results
+    bam_readcount_version => 0.3,
+    bam_readcount_min_base_quality => 15, 
 );
 $filter_command2->dump_status_messages(1);
 isa_ok($filter_command2, 'Genome::Model::Tools::DetectVariants2::Filter::FalsePositive', 'created second filter command');
@@ -136,6 +139,8 @@ my $filter_command3 = Genome::Model::Tools::DetectVariants2::Filter::FalsePositi
     max_readlen_diff => 25,
     min_var_dist_3 => 0.20,
     min_homopolymer => 5,
+    bam_readcount_version => 0.3,
+    bam_readcount_min_base_quality => 15, 
 );
 $filter_command3->dump_status_messages(1);
 isa_ok($filter_command3, 'Genome::Model::Tools::DetectVariants2::Filter::FalsePositive', 'created second filter command');
