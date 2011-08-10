@@ -96,11 +96,11 @@ sub execute {
 		return;
 	    }
             #filter contigs less than min length
-            my $look_up_name = $fields->{eid};
-            $look_up_name =~ s/\-/\./;
+            my $velvet_contig_name = $fields->{eid};
+            $velvet_contig_name =~ s/\-/\./;
 
-            next if $scaffolds_info->{$look_up_name}->{filtered_supercontig_length} < $self->min_contig_length;
-            next if $scaffolds_info->{$look_up_name}->{contig_length} < $self->min_contig_length;
+            next if $scaffolds_info->{$velvet_contig_name}->{filtered_supercontig_length} < $self->min_contig_length;
+            next if $scaffolds_info->{$velvet_contig_name}->{contig_length} < $self->min_contig_length;
 
 	    #convert afg contig format to pcap format
 	    my ($sctg_num, $ctg_num) = split('-', $fields->{eid});
@@ -121,33 +121,30 @@ sub execute {
 		    #'clr' => '0,90',   #read start, stop 0,90 = uncomp 90,0 = comp
 		    #'off' => '75'      #read off set .. contig start position
 
-		    #this may to too time comsuming and not necessary
-		    #unless ($self->_validate_read_field($sfields)) {
-			#$self->error_message("Failed to validate read field");
-			#return;
-		    #}
-
-		    #get read contig start, stop and orientaion
+		    # read start, stop pos and orientaion
 		    my ($ctg_start, $ctg_stop, $c_or_u) = $self->_read_start_stop_positions($sfields); 
-                    #get read seek position in velvet Sequences file
+
+                    #read seek position in velvet Sequences file
                     my $seek_pos = ${$seek_positions}[$sfields->{src}];
-                    unless ( defined $seek_pos ) {
-                        $self->error_message( "Failed to get sequences file seek position for read index: ".$sfields->{src} );
-                        return;
-                    }
                     unless ( defined $seek_pos ) {
                         $self->error_message("Failed to get read name and/or seek position for read id: ".$sfields->{src});
 			return;
 		    }
-                    #read name and length from Sequences file
+
+                    # read name and length from Sequences file
 		    my ($read_length, $read_name) = $self->_read_length_and_name_from_sequences_file( $seek_pos, $seq_fh );
-		    #print to readinfo.txt file
+
+		    # print to readinfo.txt file
 		    $ri_fh->print("$read_name $contig_name $c_or_u $ctg_start $read_length\n");
-		    #convert C U to 1 0 for reads.placed file
+
+		    # convert C U to 1 0 for reads.placed file
 		    $c_or_u = ($c_or_u eq 'U') ? 0 : 1;
-		    #calculate contig start pos in supercontig
-                    my $sctg_start = $self->_get_supercontig_position($contig_lengths, $look_up_name);
+
+		    # calculate contig start pos in supercontig
+                    my $sctg_start = $self->_get_supercontig_position( $contig_lengths, $velvet_contig_name );
 		    $sctg_start += $ctg_start;
+
+                    # print to reads.placed file
 		    $rp_fh->print("* $read_name 1 $read_length $c_or_u $contig_name Supercontig$pcap_supercontig_number $ctg_start $sctg_start\n");
 		}
 	    }
@@ -161,40 +158,6 @@ sub execute {
 
     return 1;
 }
-
-sub _validate_read_field { #too much??
-    my ($self, $fields) = @_;
-    #sfields:
-    #'src' => '19534',  #read id number
-    #'clr' => '0,90',   #read start, stop 0,90 = uncomp 90,0 = comp
-    #'off' => '75'      #read off set .. contig start position
-    foreach ('src', 'clr', 'off') {
-	unless (exists $fields->{$_}) {
-	    $self->error_message("Failed to find $_ element in read fields");
-	    return;
-	}
-	if ($_ eq 'clr') {
-	    unless ($fields->{$_} =~ /^\d+\,\d+$/) {
-		$self->error_message("Value for $_ read field key should be two comma separated numbers and not ".$fields->{clr});
-		return;
-	    }
-	}
-	elsif ($_ eq 'src') { #should be integers
-	    unless ($fields->{$_} =~ /^\d+$/) {
-		$self->error_message("Value for $_ read field key should be a number and not ".$fields->{$_});
-		return;
-	    }
-	}
-	elsif ($_ eq 'off') {
-	    unless ($fields->{$_} =~ /-?\d+$/) {
-		$self->error_message("value for $_ read field key should be an + or - integer not ".$fields->{$_});
-		return;
-	    }
-	}
-    }
-    return 1;
-}
-
 sub _contig_length_from_fields {
     my ($self, $seq) = @_;
 
