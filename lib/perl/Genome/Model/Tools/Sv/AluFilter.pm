@@ -103,6 +103,7 @@ sub is_alu_polymorphism {
     return $is_alu;
 }
 
+1;
 =cut
 #Legacy JW Code
     if ( $bpB-$bpA > 10000 ) { next; }
