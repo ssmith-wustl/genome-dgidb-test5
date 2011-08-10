@@ -62,6 +62,7 @@
   <link fromOperation="input connector" fromProperty="annotate_output_snp" toOperation="Annotate Transcript Variants Snp" toProperty="output_file" />
   <link fromOperation="input connector" fromProperty="annotate_no_headers" toOperation="Annotate Transcript Variants Snp" toProperty="no_headers" />
   <link fromOperation="input connector" fromProperty="transcript_annotation_filter" toOperation="Annotate Transcript Variants Snp" toProperty="annotation_filter" />
+  <link fromOperation="input connector" fromProperty="annotation_reference_transcripts" toOperation="Annotate Transcript Variants Snp" toProperty="reference_transcripts" />
 
   <link fromOperation="input connector" fromProperty="skip_if_output_present" toOperation="Annotate UCSC Snp" toProperty="skip_if_output_present" />
   <link fromOperation="Lookup Variants" fromProperty="output_file" toOperation="Annotate UCSC Snp" toProperty="input_file" />
@@ -155,6 +156,7 @@
   <link fromOperation="input connector" fromProperty="annotate_no_headers" toOperation="Annotate Transcript Variants Indel" toProperty="no_headers" />
   <link fromOperation="input connector" fromProperty="transcript_annotation_filter" toOperation="Annotate Transcript Variants Indel" toProperty="annotation_filter" />
   <link fromOperation="input connector" fromProperty="transcript_variant_annotator_version" toOperation="Annotate Transcript Variants Indel" toProperty="use_version" />
+  <link fromOperation="input connector" fromProperty="annotation_reference_transcripts" toOperation="Annotate Transcript Variants Indel" toProperty="reference_transcripts" />
 
   <link fromOperation="input connector" fromProperty="skip_if_output_present" toOperation="Annotate UCSC Indel" toProperty="skip_if_output_present" />
   <link fromOperation="Sniper Adaptor Indel" fromProperty="output_file" toOperation="Annotate UCSC Indel" toProperty="input_file" />
@@ -349,6 +351,8 @@
     <inputproperty isOptional="Y">annotate_no_headers</inputproperty>
     <inputproperty isOptional="Y">transcript_annotation_filter</inputproperty>
     <inputproperty isOptional="Y">transcript_variant_annotator_version</inputproperty>
+    <inputproperty isOptional="Y">annotation_reference_transcripts</inputproperty>
+
     
     <inputproperty isOptional="Y">ucsc_output_snp</inputproperty>
     <inputproperty isOptional="Y">ucsc_unannotated_output_snp</inputproperty>

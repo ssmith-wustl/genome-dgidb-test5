@@ -275,7 +275,7 @@ sub _amplicon_iterator_for_name { # 454 and solexa for now
         my %amplicon = (
             name => $seq->{id},
             reads => [ $seq->{id} ],
-            reads_processed => [ $seq->{id} ],
+            reads_processed => 1,
             seq => $seq,
         );
 
@@ -622,14 +622,13 @@ sub prepare_instrument_data {
         return;
     }
     my $processed = $output_metrics->count;
-    my $reads_processed = $processed;
 
     $self->amplicons_attempted($attempted);
     $self->amplicons_processed($processed);
     $self->amplicons_processed_success( $attempted > 0 ?  sprintf('%.2f', $processed / $attempted) : 0 );
     $self->reads_attempted($reads_attempted);
-    $self->reads_processed($reads_processed);
-    $self->reads_processed_success( $reads_attempted > 0 ?  sprintf('%.2f', $reads_processed / $reads_attempted) : 0 );
+    $self->reads_processed($processed);
+    $self->reads_processed_success( $reads_attempted > 0 ?  sprintf('%.2f', $processed / $reads_attempted) : 0 );
 
     return 1;
 }

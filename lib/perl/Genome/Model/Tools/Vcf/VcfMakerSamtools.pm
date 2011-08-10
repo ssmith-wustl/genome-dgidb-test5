@@ -117,6 +117,19 @@ sub execute {                               # replace with real execution logic.
         die("\"type\" parameter must be one of \"snv\" or \"indel\"");
     }
 
+    my $genome_build_fasta;
+    if ($genome_build =~ m/36/) {
+        my $genome_build_fasta_object= Genome::Model::Build::ReferenceSequence->get(name => "NCBI-human-build36");
+        $genome_build_fasta = $genome_build_fasta_object->data_directory . "/all_sequences.fa";
+    }
+    elsif ($genome_build =~ m/37/) {
+        my $genome_build_fasta_object = Genome::Model::Build::ReferenceSequence->get(name => "GRCh37-lite-build37");
+        $genome_build_fasta = $genome_build_fasta_object->data_directory . "/all_sequences.fa";
+    }
+    else {
+        die "Please specify either build 36 or 37";
+    }
+
 ###########################################################################
 # subs
 
@@ -164,8 +177,8 @@ sub execute {                               # replace with real execution logic.
     #-------------------------
     #get preceding base using samtools faidx
     sub getPrecedingBase{
-        my ($chr,$pos) = @_;
-        my $base = `samtools faidx /gscmnt/sata921/info/medseq/cmiller/NCBI-human-build36/$chr.fa $chr:$pos-$pos | tail -n 1`;
+        my ($chr,$pos,$genome_build_fasta) = @_;
+        my $base = `samtools faidx $genome_build_fasta $chr:$pos-$pos | tail -n 1`;
         chomp($base);
         return($base)
     }
@@ -240,7 +253,7 @@ sub execute {                               # replace with real execution logic.
             push(@outline, $snvhash{$key}{"alt"});
 
             #QUAL
-            if (exists($snvhash{$key}{"qual"})){
+           if (exists($snvhash{$key}{"qual"})){
                 push(@outline, $snvhash{$key}{"qual"});
             } else {
                 push(@outline, ".");
@@ -285,7 +298,7 @@ sub execute {                               # replace with real execution logic.
 ###################################################################
 # actually do the parsing here
     sub samtoolsRead{
-        my ($samtools_file, $chrom, $type) = @_;
+        my ($samtools_file, $chrom, $type, $genome_build_fasta) = @_;
 
         #everything is hashed by chr:position, with subhashes corresponding to
         #samples, then the various VCF fields
@@ -354,7 +367,7 @@ sub execute {                               # replace with real execution logic.
                 #handle indel genotype calls
             } elsif ($type eq "indel"){
                 #add the preceding base as an anchor position
-                my $pbase = getPrecedingBase($col[0],$col[1]);
+                my $pbase = getPrecedingBase($col[0],$col[1],$genome_build_fasta);
 
 
 
@@ -474,7 +487,7 @@ sub execute {                               # replace with real execution logic.
     
 
 #----------------------------------
-    my %samtools_hash = samtoolsRead($samtools_file, $chrom, $type);
+    my %samtools_hash = samtoolsRead($samtools_file, $chrom, $type, $genome_build_fasta);
 
     
     unless ($skip_header){

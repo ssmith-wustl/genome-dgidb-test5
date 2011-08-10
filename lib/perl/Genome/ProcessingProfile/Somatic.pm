@@ -205,6 +205,7 @@ sub _map_workflow_inputs {
         lookup_variants_filter_out_submitters => "SNP500CANCER,OMIMSNP,CANCER-GENOME,CGAP-GAI,LCEISEN,ICRCG,DEVINE_LAB",
         annotate_no_headers => 1,
         transcript_annotation_filter => "top",
+        annotation_reference_transcripts => 'NCBI-human.combined-annotation/54_36p_v2',
         #FIXME Get the reference from the constituent builds instead of hard-coding
         reference_fasta => (Genome::Config::reference_sequence_directory() . '/NCBI-human-build36/all_sequences.fa');
 

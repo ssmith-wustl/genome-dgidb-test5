@@ -25,6 +25,14 @@ class Genome::Model::GenePrediction {
         domain => {
             via => 'processing_profile',
         },
+        processing_profile => {
+            is => 'Genome::ProcessingProfile::GenePrediction',
+            id_by => 'processing_profile_id',
+        },
+        subject => {
+            is => 'Genome::Taxon',
+            id_by => 'subject_id',
+        },
     ],
     has_many_optional => [
         inputs => {
