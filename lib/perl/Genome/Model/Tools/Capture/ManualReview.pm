@@ -19,8 +19,8 @@ class Genome::Model::Tools::Capture::ManualReview {
 
 sub help_detail {
   return <<HELP;
-Given a model-group containing SomaticVariation models, this tool will collect the resulting tier1
-variants and prepare them for manual review.
+Given a model-group containing SomaticVariation models, this tool will gather the resulting tier1
+variants and prepare them for manual review. Existing review files will not be overwritten.
 
 NOTE: If exclude-pindel is used, then calls unique to Pindel are stored in a separate review file.
 Pindel calls that are also found by GATK are stored in the main review file.
@@ -105,7 +105,8 @@ sub execute {
     print "Preparing review files for $case... ";
 
     # Check if any review files exist. We don't want to overwrite reviewed variants
-    if( -e "$output_dir/$case.snv.review.csv" or -e "$output_dir/$case.indel.review.csv" )
+    if( -e "$output_dir/$case.snv.review.csv" or -e "$output_dir/$case.indel.review.csv" or
+        -e "$output_dir/$case.snv.reviewed.csv" or -e "$output_dir/$case.indel.reviewed.csv" )
     {
       print "files exist. Will not overwrite.\n";
       next;

@@ -97,6 +97,7 @@ class Genome::Model::Tools::DetectVariants2::Filter::FalsePositive {
         bam_readcount_version => {
             is => 'Text',
             is_input => 1,
+            default => "0.3",
             doc => 'version of bam-readcount to use',
         },
        bam_readcount_min_base_quality => {
