@@ -15,6 +15,9 @@ class Genome::Model {
     id_by => [
         genome_model_id => { is => 'Number', },
     ],
+    attributes_have => [
+        is_input => { is => 'Boolean', is_optional => 1, },
+    ],
     has => [
         name => { is => 'Text' },
         subclass_name => { 
@@ -1077,7 +1080,7 @@ sub real_input_properties {
 
     my $meta = $self->__meta__;
     my @properties;
-    for my $input_property ( sort { $a->property_name cmp $b->property_name } grep { $_->via and $_->via eq 'inputs' } $meta->property_metas ) {
+    for my $input_property ( sort { $a->property_name cmp $b->property_name } grep { $_->{is_input} or ( $_->via and $_->via eq 'inputs' ) } $meta->property_metas ) {
         my $property_name = $input_property->property_name;
         my %property = (
             name => $property_name,
