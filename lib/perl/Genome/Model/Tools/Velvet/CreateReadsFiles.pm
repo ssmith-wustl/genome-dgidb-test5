@@ -4,6 +4,8 @@ use strict;
 use warnings;
 
 use Genome;
+use IO::File;
+use IO::Seekable;
 use Bio::SeqIO;
 use AMOS::AmosLib;
 use Data::Dumper 'Dumper';
@@ -57,7 +59,6 @@ sub execute {
 
     #velvet output Sequences file
     my $seq_fh = Genome::Sys->open_file_for_reading( $self->velvet_sequences_file );
-    my $bio_seqio_fh = Bio::SeqIO->new(-file => $self->velvet_sequences_file, -format => 'fasta', -noclose => 1);
 
     #velvet output afg file handle
     my $afg_fh = Genome::Sys->open_file_for_reading( $self->velvet_afg_file );
@@ -70,8 +71,8 @@ sub execute {
     }
 
     #stores read names and seek pos in hash or array indexed by read index
-    my $names_and_positions = $self->load_read_names_and_seek_pos( $self->velvet_sequences_file );
-    unless ($names_and_positions) {
+    my $seek_positions = $self->load_sequence_seek_positions( $self->velvet_sequences_file );
+    unless ($seek_positions) {
 	$self->error_message("Failed to load read names and seek pos from Sequences file");
 	return;
     }
@@ -110,11 +111,11 @@ sub execute {
             }
             my $pcap_supercontig_number = $sctg_num - 1;
             my $contig_name = 'Contig'.$pcap_supercontig_number.'.'.( $ctg_num + 1 );
+
 	    #iterating through reads
 	    for my $r (0 .. $#$recs) {
 		my ($srec, $sfields, $srecs) = parseRecord($recs->[$r]);
 		if ($srec eq 'TLE') {
-
 		    #sfields:
 		    #'src' => '19534',  #read id number
 		    #'clr' => '0,90',   #read start, stop 0,90 = uncomp 90,0 = comp
@@ -128,32 +129,25 @@ sub execute {
 
 		    #get read contig start, stop and orientaion
 		    my ($ctg_start, $ctg_stop, $c_or_u) = $self->_read_start_stop_positions($sfields); 
-                    
-		    unless ( ${$names_and_positions}[$sfields->{src}] ) {
-			$self->error_message("Failed get read name and seek pos for reads index number ".$sfields->{src});
+                    #get read seek position in velvet Sequences file
+                    my $seek_pos = ${$seek_positions}[$sfields->{src}];
+                    unless ( defined $seek_pos ) {
+                        $self->error_message( "Failed to get sequences file seek position for read index: ".$sfields->{src} );
+                        return;
+                    }
+                    unless ( defined $seek_pos ) {
+                        $self->error_message("Failed to get read name and/or seek position for read id: ".$sfields->{src});
 			return;
 		    }
-		    my $seek_pos = ${$names_and_positions}[$sfields->{src}][0];
-		    my $read_name = ${$names_and_positions}[$sfields->{src}][1];
-
-		    unless (defined $read_name and defined $seek_pos) {
-			$self->error_message("Failed to get read name and/or seek position for read id: ".$sfields->{src});
-			return;
-		    }
-
-		    #TODO - look into storing read length too so this can be avoided
-		    my $read_length = $self->_read_length_from_sequences_file($seek_pos, $seq_fh, $bio_seqio_fh);
-
+                    #read name and length from Sequences file
+		    my ($read_length, $read_name) = $self->_read_length_and_name_from_sequences_file( $seek_pos, $seq_fh );
 		    #print to readinfo.txt file
 		    $ri_fh->print("$read_name $contig_name $c_or_u $ctg_start $read_length\n");
-
 		    #convert C U to 1 0 for reads.placed file
 		    $c_or_u = ($c_or_u eq 'U') ? 0 : 1;
-
 		    #calculate contig start pos in supercontig
                     my $sctg_start = $self->_get_supercontig_position($contig_lengths, $look_up_name);
 		    $sctg_start += $ctg_start;
-
 		    $rp_fh->print("* $read_name 1 $read_length $c_or_u $contig_name Supercontig$pcap_supercontig_number $ctg_start $sctg_start\n");
 		}
 	    }
@@ -254,18 +248,18 @@ sub _get_supercontig_position {
     return $supercontig_position;
 }
 
-sub _read_length_from_sequences_file {
-    my ($self, $seek_pos, $seq_fh, $bio_seqio_fh) = @_;
+sub _read_length_and_name_from_sequences_file {
+    my ($self, $seek_pos, $fh ) = @_;
 
-    $seq_fh->seek($seek_pos, 0);
-    my $read_length = length ($bio_seqio_fh->next_seq->seq);
-
-    unless ($read_length > 0) {
-        $self->error_message("Read length must be a number greater than zero and not ".$read_length);
+    $fh->seek( $seek_pos, 0 );
+    my $io = Bio::SeqIO->new( -fh => $fh, -format => 'fasta', -noclose => 1 );
+    my $seq = $io->next_seq;
+    unless ( $seq ) {
+        $self->error_message("Failed to get seq object at seek position $seek_pos");
         return;
     }
 
-    return $read_length;
+    return length $seq->seq, $seq->primary_id;
 }
 
 1;

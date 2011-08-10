@@ -9,6 +9,12 @@ class Genome::Model::Event::Build::DeNovoAssembly::PostAssemble {
     is => 'Genome::Model::Event::Build::DeNovoAssembly',
 };
 
+sub bsub_rusage {
+    my $self = shift;
+    my $queue = ( $self->build->run_by eq 'apipe-tester' ) ? 'alignment-pd' : 'apipe';
+    return "-q $queue -R 'select[type==LINUX64 && mem>30000] rusage[mem=30000] span[hosts=1]' -M 30000000";
+}
+
 sub execute {
     my $self = shift;
 
@@ -64,4 +70,3 @@ sub _execute_tool {
 }
 
 1;
-

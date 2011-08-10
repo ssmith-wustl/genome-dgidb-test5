@@ -91,16 +91,16 @@ sub get_gap_sizes {
     return \%gap_sizes;
 }
 
-sub load_read_names_and_seek_pos {
+sub load_sequence_seek_positions {
     my ($self, $seq_file) = @_;
 
     my @seek_positions;
-    my $fh = Genome::Sys->open_file_for_reading( $seq_file ) ||
-	return;
+    my $fh = Genome::Sys->open_file_for_reading( $seq_file );
+
     my $seek_pos = $fh->tell;
     my $io = Bio::SeqIO->new(-format => 'fasta', -fh => $fh);
     while (my $seq = $io->next_seq) {
-	my ($read_index) = $seq->desc =~ /(\d+)\s+\d+$/;
+	my ($read_index) = $seq->desc =~ /(\d+)\s+\d+$/; #numerically ordered .. could just do $c++;
 	unless ($read_index) {
             $self->error_message("Failed to get read index number from seq->desc: ".$seq->desc);
             return;
@@ -108,12 +108,11 @@ sub load_read_names_and_seek_pos {
 	
 	$seek_pos = ( $seek_pos == 0 ) ? $seek_pos : $seek_pos - 1;
 
-        push @{$seek_positions[$read_index]}, $seek_pos;
-        push @{$seek_positions[$read_index]}, $seq->primary_id;
-
+        $seek_positions[$read_index] = $seek_pos;
         $seek_pos = $fh->tell;
     }
     $fh->close;
+
     return \@seek_positions;
 }
 
