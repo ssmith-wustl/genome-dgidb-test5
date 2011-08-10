@@ -17,16 +17,18 @@ class Genome::Model::Tools::DetectVariants2::Base {
             doc => 'The build-id of a reference sequence build',
             is_input => 1,
         },
-        use_cached_reference => {
-            is => 'Boolean',
-            is_optional => 1,
-            default_value => 1,
-            doc => 'Locally cache the reference sequence.',
-        },
         reference_sequence_input => {
             calculate_from => ['reference_build_id'],
-            #calculate => q{ Genome::Model::Build->get($reference_build_id)->full_consensus_path('fa') },
-            calculate => q{ Genome::Model::Build->get($reference_build_id)->cached_full_consensus_path('fa') },
+            calculate => q| 
+                my $build = Genome::Model::Build->get($reference_build_id);
+                my $cache_base_dir = $build->local_cache_basedir;
+                if ( -d $cache_base_dir ) { # WE ARE ON A MACHINE THAT SUPPORTS CACHING
+                    return $build->cached_full_consensus_path('fa');
+                }
+                else { # USE NETWORK REFERENCE
+                    return $build->full_consensus_path('fa');
+                }
+                |,
             doc => 'Location of the reference sequence file',
         },
         aligned_reads_input => {

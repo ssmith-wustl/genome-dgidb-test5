@@ -41,7 +41,7 @@ my $sv_calls = Genome::Model::Tools::Validation::SvCalls->create(
     normal_val_bam => 'test.n.9.bam',
     normal_wgs_bam => 'test.n.9.bam',
     tumor_val_bam => 'test.t.9.bam',
-    tumor_wgs_bam => 'test.n.9.bam',
+    tumor_wgs_bam => 'test.t.9.bam',
     output_filename_prefix => "test",
     patient_id => 'TEST',
 );

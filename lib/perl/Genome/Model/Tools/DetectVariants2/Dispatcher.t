@@ -15,7 +15,7 @@ use Test::More;
 use above 'Genome';
 use Genome::SoftwareResult;
 
-# Caching refseq in /var/cache/tgi-san. We gotta link these files to a tmp dir for tests so they don't get copied
+# THIS TESTS THE CACHING. Caching refseq in /var/cache/tgi-san. We gotta link these files to a tmp dir for tests so they don't get copied
 my $refbuild_id = 101947881;
 my $ref_seq_build = Genome::Model::Build::ImportedReferenceSequence->get($refbuild_id);
 ok($ref_seq_build, 'human36 reference sequence build') or die;

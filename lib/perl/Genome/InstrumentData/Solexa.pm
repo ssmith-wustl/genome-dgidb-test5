@@ -221,7 +221,7 @@ class Genome::InstrumentData::Solexa {
             where => [ attribute_label => 'fastqc_path' ],
             is_mutable => 1,
         },
-        
+
         #TODO These three columns will point to "read_length" or whatever name is decided
         #(see also https://gscweb.gsc.wustl.edu/wiki/Software_Development:Illumina_Indexed_Runs_Warehouse_Schema)
         _sls_read_length => { calculate => q| return $self->read_length + 1| },
@@ -290,7 +290,7 @@ sub _calculate_paired_end_kb_usage {
         $self->error_message("Instrument data rev_clusters is either undefined or less than 0.");
         die;
     }
-    
+
     my $fwd = (($self->fwd_read_length + $HEADER_LENGTH) * $self->fwd_clusters)*2;
     my $rev = (($self->rev_read_length + $HEADER_LENGTH) * $self->rev_clusters)*2;
     my $total = ($fwd + $rev) / 1024.0;
@@ -339,7 +339,7 @@ sub _calculate_non_paired_end_kb_usage {
         $self->error_message("No valid number of clusters value found in instrument data");
         die;
     }
-    
+
     my $total_b = (($max_read_length + $HEADER_LENGTH) * $max_clusters)*2;
     my $total = $total_b / 1024.0;
     return $total;
@@ -352,10 +352,10 @@ sub calculate_alignment_estimated_kb_usage {
     # In a FQ file, every read means 4 lines, 2 of length $self->read_length,
     # and 2 of read identifier data. Therefore we can expect the total file size to be 
     # about (($self->read_length + header_size) * $self->fwd_clusters)*2 / 1024
-    
+
     # This is length of the id tag in the FQ file, it looks something like: @HWUSI-EAS712_6171L:2:1:1817:12676#TGACCC/1
     my $HEADER_LENGTH = 45;
-    
+
     if ($self->is_paired_end) {
         return int $self->_calculate_paired_end_kb_usage($HEADER_LENGTH);
     } else {
@@ -512,156 +512,178 @@ sub dump_trimmed_fastq_files {
 
     my @fastq_pathnames = $self->dump_sanger_fastq_files(%$segment_params);
     my @trimmed_fastq_pathnames;
-    my $counter = 0;
-    for my $input_fastq_pathname (@fastq_pathnames) {
-        if($trimmer_name eq 'trimq2_shortfilter') {
-            $self->error_message('Trimmer ' . $trimmer_name . ' is not currently supported by this module.');
-            die $self->error_message;
-        }
-
-        my $trimmed_input_fastq_pathname = $data_directory . '/trimmed-sanger-fastq-' . $counter;
-        my $trimmer;
-        if ($trimmer_name eq 'fastx_clipper') {
-            #THIS DOES NOT EXIST YET
-            $trimmer = Genome::Model::Tools::Fastq::Clipper->create(
-                params => $trimmer_params,
-                version => $trimmer_version,
-                input => $input_fastq_pathname,
-                output => $trimmed_input_fastq_pathname,
-            );
-        } elsif ($trimmer_name eq 'far') {
-            $trimmer = Genome::Model::Tools::Far::Trimmer->create(
-                params => $trimmer_params,
-                use_version => $trimmer_version,
-                source => $input_fastq_pathname,
-                target => $trimmed_input_fastq_pathname,
-                far_output => $data_directory .'/far_output_report.txt',
-            )
-        }
-        elsif ($trimmer_name eq 'trim5') {
-            $trimmer = Genome::Model::Tools::Fastq::Trim5->create(
-                length => $trimmer_params,
-                input => $input_fastq_pathname,
-                output => $trimmed_input_fastq_pathname,
-            );
-        }
-        elsif ($trimmer_name eq 'bwa_style') {
-            my ($trim_qual) = $trimmer_params =~ /--trim-qual-level\s*=?\s*(\S+)/;
-            $trimmer = Genome::Model::Tools::Fastq::TrimBwaStyle->create(
-                trim_qual_level => $trim_qual,
-                fastq_file      => $input_fastq_pathname,
-                out_file        => $trimmed_input_fastq_pathname,
-                qual_type       => 'sanger',  #hardcoded for now
-                report_file     => $data_directory.'/trim_bwa_style.report.'.$counter,
-            );
-        }
-        elsif ($trimmer_name =~ /trimq2_(\S+)/) {
-            #This is for trimq2 no_filter style
-            #move trimq2.report to alignment directory
-
-            my %trimq2_params = (
-                fastq_file  => $input_fastq_pathname,
-                out_file    => $trimmed_input_fastq_pathname,
-                report_file => $data_directory.'/trimq2.report.'.$counter,
-                trim_style  => $1,
-            );
-            my ($qual_level, $string) = $self->_get_trimq2_params($trimmer_params);
-
-            my ($primer_sequence) = $trimmer_params =~ /--primer-sequence\s*=?\s*(\S+)/;
-            $trimq2_params{trim_qual_level} = $qual_level if $qual_level;
-            $trimq2_params{trim_string}     = $string if $string;
-            $trimq2_params{primer_sequence} = $primer_sequence if $primer_sequence;
-            $trimq2_params{primer_report_file} = $data_directory.'/trim_primer.report.'.$counter if $primer_sequence;
-
-            $trimmer = Genome::Model::Tools::Fastq::Trimq2::Simple->create(%trimq2_params);
-        }
-        elsif ($trimmer_name eq 'random_subset') {
-            my $seed_phrase = $self->run_name .'_'. $self->id;
-            $trimmer = Genome::Model::Tools::Fastq::RandomSubset->create(
-                input_read_1_fastq_files => [$input_fastq_pathname],
-                output_read_1_fastq_file => $trimmed_input_fastq_pathname,
-                limit_type => 'reads',
-                limit_value => $trimmer_params,
-                seed_phrase => $seed_phrase,
-            );
-        }
-        elsif ($trimmer_name eq 'normalize') {
-            my ($read_length,$reads) = split(':',$trimmer_params);
-            my $trim = Genome::Model::Tools::Fastq::Trim->execute(
-                read_length => $read_length,
-                orientation => 3,
-                input => $input_fastq_pathname,
-                output => $trimmed_input_fastq_pathname,
-            );
-            unless ($trim) {
-                die('Failed to trim reads using test_trim_and_random_subset');
-            }
-            my $random_input_fastq_pathname = $data_directory . '/random-sanger-fastq-' . $counter;
-            $trimmer = Genome::Model::Tools::Fastq::RandomSubset->create(
-                input_read_1_fastq_files => [$trimmed_input_fastq_pathname],
-                output_read_1_fastq_file => $random_input_fastq_pathname,
-                limit_type  => 'reads',
-                limit_value => $reads,
-                seed_phrase => $self->run_name .'_'. $self->id,
-            );
-            $trimmed_input_fastq_pathname = $random_input_fastq_pathname;
-        }
-        else {
-            # TODO: modularize the above and refactor until they work in this logic:
-            # Then ensure that the trimmer gets to work on paired files, and is
-            # a more generic "preprocess_reads = 'foo | bar | baz' & "[1,2],[],[3,4,5]"
-            my @params = eval("no strict; no warnings; $trimmer_params");
-            if ($@) {
-                die "error in params: $@\n$trimmer_params\n";
-            }
-
-            my $class_name = 'Genome::Model::Tools::Sx::Trim';
-            my @words = split(' ',$trimmer_name);
-            for my $word (@words) {
-                my @parts = map { ucfirst($_) } split('-',$word);
-                $class_name .= "::" . join('',@parts);
-            }
-            eval {
-                $trimmer = $class_name->create(
-                    input => [$input_fastq_pathname],
-                    output => [$trimmed_input_fastq_pathname],
-                    @params,
-                );
-            };
-            unless ($trimmer) {
-                $self->error_message(
-                    sprintf(
-                        "Unknown read trimmer_name %s.  Class $class_name params @params. $@",
-                        $trimmer_name,
-                        $class_name
-                    )
-                );
-                die($self->error_message);
-            }
-        }
+    #if the trimmer supports paired end, we just run it once, otherwise we need to loop over the fastqs
+    if(@fastq_pathnames == 2 && $trimmer_name eq 'far' && $self->trimmer_version >= '2.0') {
+        my $trimmed_input_fastq_path = $data_directory . '/trimmeed-sanger-fastq-';
+        my $trimmer = Genome::Model::Tools::Far::Trimmer->create(
+            params => $trimmer_params,
+            use_version => $trimmer_version,
+            source => $fastq_pathnames[0],
+            source2 => $fastq_pathnames[1],
+            target => $trimmed_input_fastq_path,
+            far_output => $data_directory .'/far_output_report.txt',
+        );
         unless ($trimmer) {
             $self->error_message('Failed to create fastq trim command');
             die($self->error_message);
-        }
+         }
         unless ($trimmer->execute) {
             $self->error_message('Failed to execute fastq trim command '. $trimmer->command_name);
             die($self->error_message);
-        }
-
-        if ($trimmer_name eq 'normalize') {
-            my @empty = ();
-            $trimmer->_index(\@empty);
-        }
-
-        if ($input_fastq_pathname =~ m/^\/tmp/) {
-            $self->status_message("Removing original file before trimming to save space: $input_fastq_pathname");
-            unlink($input_fastq_pathname);
-        }
-
-        push @trimmed_fastq_pathnames, $trimmed_input_fastq_pathname;
-        $counter++;
+         }
+        push @trimmed_fastq_pathnames, glob "$trimmed_input_fastq_path*";
     }
+    else {
+        my $counter = 0;
+        for my $input_fastq_pathname (@fastq_pathnames) {
+            if($trimmer_name eq 'trimq2_shortfilter') {
+                $self->error_message('Trimmer ' . $trimmer_name . ' is not currently supported by this module.');
+                die $self->error_message;
+             }
 
+            my $trimmed_input_fastq_pathname = $data_directory . '/trimmed-sanger-fastq-' . $counter;
+            my $trimmer;
+            if ($trimmer_name eq 'fastx_clipper') {
+                #THIS DOES NOT EXIST YET
+                $trimmer = Genome::Model::Tools::Fastq::Clipper->create(
+                    params => $trimmer_params,
+                    version => $trimmer_version,
+                    input => $input_fastq_pathname,
+                    output => $trimmed_input_fastq_pathname,
+                );
+            } elsif ($trimmer_name eq 'far') {
+                $trimmer = Genome::Model::Tools::Far::Trimmer->create(
+                    params => $trimmer_params,
+                    use_version => $trimmer_version,
+                    source => $input_fastq_pathname,
+                    target => $trimmed_input_fastq_pathname,
+                    far_output => $data_directory .'/far_output_report.txt',
+                )
+            }
+            elsif ($trimmer_name eq 'trim5') {
+                $trimmer = Genome::Model::Tools::Fastq::Trim5->create(
+                    length => $trimmer_params,
+                    input => $input_fastq_pathname,
+                    output => $trimmed_input_fastq_pathname,
+                );
+            }
+            elsif ($trimmer_name eq 'bwa_style') {
+                my ($trim_qual) = $trimmer_params =~ /--trim-qual-level\s*=?\s*(\S+)/;
+                $trimmer = Genome::Model::Tools::Fastq::TrimBwaStyle->create(
+                    trim_qual_level => $trim_qual,
+                    fastq_file      => $input_fastq_pathname,
+                    out_file        => $trimmed_input_fastq_pathname,
+                    qual_type       => 'sanger',  #hardcoded for now
+                    report_file     => $data_directory.'/trim_bwa_style.report.'.$counter,
+                );
+            }
+            elsif ($trimmer_name =~ /trimq2_(\S+)/) {
+                #This is for trimq2 no_filter style
+                #move trimq2.report to alignment directory
+
+                my %trimq2_params = (
+                    fastq_file  => $input_fastq_pathname,
+                    out_file    => $trimmed_input_fastq_pathname,
+                    report_file => $data_directory.'/trimq2.report.'.$counter,
+                    trim_style  => $1,
+                );
+                my ($qual_level, $string) = $self->_get_trimq2_params($trimmer_params);
+
+                my ($primer_sequence) = $trimmer_params =~ /--primer-sequence\s*=?\s*(\S+)/;
+                $trimq2_params{trim_qual_level} = $qual_level if $qual_level;
+                $trimq2_params{trim_string}     = $string if $string;
+                $trimq2_params{primer_sequence} = $primer_sequence if $primer_sequence;
+                $trimq2_params{primer_report_file} = $data_directory.'/trim_primer.report.'.$counter if $primer_sequence;
+
+                $trimmer = Genome::Model::Tools::Fastq::Trimq2::Simple->create(%trimq2_params);
+            }
+            elsif ($trimmer_name eq 'random_subset') {
+                my $seed_phrase = $self->run_name .'_'. $self->id;
+                $trimmer = Genome::Model::Tools::Fastq::RandomSubset->create(
+                    input_read_1_fastq_files => [$input_fastq_pathname],
+                    output_read_1_fastq_file => $trimmed_input_fastq_pathname,
+                    limit_type => 'reads',
+                    limit_value => $trimmer_params,
+                    seed_phrase => $seed_phrase,
+                );
+            }
+            elsif ($trimmer_name eq 'normalize') {
+                my ($read_length,$reads) = split(':',$trimmer_params);
+                my $trim = Genome::Model::Tools::Fastq::Trim->execute(
+                    read_length => $read_length,
+                    orientation => 3,
+                    input => $input_fastq_pathname,
+                    output => $trimmed_input_fastq_pathname,
+                );
+                unless ($trim) {
+                    die('Failed to trim reads using test_trim_and_random_subset');
+                }
+                my $random_input_fastq_pathname = $data_directory . '/random-sanger-fastq-' . $counter;
+                $trimmer = Genome::Model::Tools::Fastq::RandomSubset->create(
+                    input_read_1_fastq_files => [$trimmed_input_fastq_pathname],
+                    output_read_1_fastq_file => $random_input_fastq_pathname,
+                    limit_type  => 'reads',
+                    limit_value => $reads,
+                    seed_phrase => $self->run_name .'_'. $self->id,
+                );
+                $trimmed_input_fastq_pathname = $random_input_fastq_pathname;
+            }
+            else {
+                # TODO: modularize the above and refactor until they work in this logic:
+                # Then ensure that the trimmer gets to work on paired files, and is
+                # a more generic "preprocess_reads = 'foo | bar | baz' & "[1,2],[],[3,4,5]"
+                my @params = eval("no strict; no warnings; $trimmer_params");
+                if ($@) {
+                    die "error in params: $@\n$trimmer_params\n";
+                }
+
+                my $class_name = 'Genome::Model::Tools::Sx::Trim';
+                my @words = split(' ',$trimmer_name);
+                for my $word (@words) {
+                    my @parts = map { ucfirst($_) } split('-',$word);
+                    $class_name .= "::" . join('',@parts);
+                }
+                eval {
+                    $trimmer = $class_name->create(
+                        input => [$input_fastq_pathname],
+                        output => [$trimmed_input_fastq_pathname],
+                        @params,
+                    );
+                };
+                unless ($trimmer) {
+                    $self->error_message(
+                        sprintf(
+                            "Unknown read trimmer_name %s.  Class $class_name params @params. $@",
+                            $trimmer_name,
+                            $class_name
+                        )
+                    );
+                    die($self->error_message);
+                }
+            }
+            unless ($trimmer) {
+                $self->error_message('Failed to create fastq trim command');
+                die($self->error_message);
+            }
+            unless ($trimmer->execute) {
+                $self->error_message('Failed to execute fastq trim command '. $trimmer->command_name);
+                die($self->error_message);
+            }
+
+            if ($trimmer_name eq 'normalize') {
+                my @empty = ();
+                $trimmer->_index(\@empty);
+            }
+
+            if ($input_fastq_pathname =~ m/^\/tmp/) {
+                $self->status_message("Removing original file before trimming to save space: $input_fastq_pathname");
+                unlink($input_fastq_pathname);
+            }
+
+            push @trimmed_fastq_pathnames, $trimmed_input_fastq_pathname;
+            $counter++;
+        }
+    }
     return @trimmed_fastq_pathnames;
 }
 

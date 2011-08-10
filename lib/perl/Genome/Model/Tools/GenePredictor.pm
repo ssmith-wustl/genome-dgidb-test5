@@ -110,6 +110,7 @@ sub get_sequence_by_name {
 # For the given type, determine if its valid, resolve the file that needs to be locked, and lock it.
 sub lock_files_for_predictions {
     my ($self, @types) = @_;
+    @types = sort @types; # Prevent nasty deadlocks, precious
     my @locks;
     for my $type (@types) {
         unless ($self->is_valid_prediction_type($type)) {
@@ -119,8 +120,11 @@ sub lock_files_for_predictions {
         my $ds = $type->__meta__->data_source;
         my $file_resolver = $ds->can('file_resolver');
         my $file = $file_resolver->($self->prediction_directory);
+        
+        my $lock_name = $file;
+        $lock_name =~ s/\//_/g;
+        my $resource_lock = "/gsc/var/lock/gene_prediction/eukaryotic/$lock_name";
 
-        my $resource_lock = "/gsc/var/lock/gene_prediction/eukaryotic/$file";
         my $lock = Genome::Sys->lock_resource(
             resource_lock => $resource_lock,
             block_sleep => 60,
