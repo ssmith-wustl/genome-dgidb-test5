@@ -14,69 +14,59 @@ class Genome::Model::Tools::DetectVariants2::Filter::FalsePositive {
             type => 'String',
             default => '0.01',
             is_optional => 1,
-            is_input => 1,
             doc => 'Minimum representation of variant allele on each strand',
         },
         'min_var_freq' => {
             type => 'String',
             default => '0.05',
             is_optional => 1,
-            is_input => 1,
             doc => 'Minimum variant allele frequency',
         },
         'min_var_count' => {
             type => 'String',
             default => '4',
             is_optional => 1,
-            is_input => 1,
             doc => 'Minimum number of variant-supporting reads',
         },
         'min_read_pos' => {
             type => 'String',
             default => '0.10',
             is_optional => 1,
-            is_input => 1,
             doc => 'Minimum average relative distance from start/end of read',
         },
         'max_mm_qualsum_diff' => {
             type => 'String',
             default => '50',
             is_optional => 1,
-            is_input => 1,
             doc => 'Maximum difference of mismatch quality sum between variant and reference reads (paralog filter)',
         },
         'max_var_mm_qualsum' => {
             type => 'String',
             is_optional => 1,
-            is_input => 1,
             doc => 'Maximum mismatch quality sum of reference-supporting reads [try 60]',
         },
         'max_mapqual_diff' => {
             type => 'String',
             default => '30',
             is_optional => 1,
-            is_input => 1,
             doc => 'Maximum difference of mapping quality between variant and reference reads',
         },
         'max_readlen_diff' => {
             type => 'String',
             default => '25',
             is_optional => 1,
-            is_input => 1,
             doc => 'Maximum difference of average supporting read length between variant and reference reads (paralog filter)',
         },
         'min_var_dist_3' => {
             type => 'String',
             default => '0.20',
             is_optional => 1,
-            is_input => 1,
             doc => 'Minimum average distance to effective 3prime end of read (real end or Q2) for variant-supporting reads',
         },
         'min_homopolymer' => {
             type => 'String',
             default => '5',
             is_optional => 1,
-            is_input => 1,
             doc => 'Minimum length of a flanking homopolymer of same base to remove a variant',
         },
         ## WGS FILTER OPTIONS ##
@@ -85,24 +75,20 @@ class Genome::Model::Tools::DetectVariants2::Filter::FalsePositive {
             is => 'Boolean',
             default => '0',
             is_optional => 1,
-            is_input => 1,
             doc => 'Print the filtering result for each site.',
         },
         samtools_version => {
             is => 'Text',
             is_optional => 1,
-            is_input => 1,
             doc => 'version of samtools to use',
         },
         bam_readcount_version => {
             is => 'Text',
-            is_input => 1,
-            default => "0.3",
+            is_optional => 1,
             doc => 'version of bam-readcount to use',
         },
        bam_readcount_min_base_quality => {
            is => 'Integer',
-           is_input => 1,
            default => 15,
            doc => 'The minimum base quality to require for bam-readcount',
        },
@@ -146,6 +132,10 @@ EOS
 
 sub _filter_variants {
     my $self = shift(@_);
+
+    unless ($self->bam_readcount_version) {
+        die $self->error_message("Bam readcount version is not specified");
+    }
 
     ## Determine the strandedness and read position thresholds ##
 
