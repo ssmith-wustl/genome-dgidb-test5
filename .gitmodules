@@ -61,3 +61,6 @@
 [submodule "sff2fastq"]
 	path = sff2fastq
 	url = https://github.com/genome/sff2fastq.git
+[submodule "cron"]
+	path = cron
+	url = ssh://git/srv/git/genome_cron.git

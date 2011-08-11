@@ -123,6 +123,9 @@ is($to, $user.'@genome.wustl.edu', 'succeeded report goes to user');
 $to = $build->_get_to_addressees_for_report_generator_class('Genome::Model::Report::BuildFailed');
 is($to, $user.'@genome.wustl.edu', 'failed report goes to user');
 
+$build_event->user_name('unknown'); # change to none existing person
+ok(!$build->_get_to_addressees_for_report_generator_class('Genome::Model::Report::BuildSucceeded'), 'report does not get sent to unknown user');
+
 $build_event->user_name('apipe-builder'); # changing to apipe-builder
 $to = $build->_get_to_addressees_for_report_generator_class('Genome::Model::Report::BuildInitialized');
 ok(!$to, 'initialized report for apipe-builder does not get sent');

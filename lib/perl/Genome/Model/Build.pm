@@ -1419,14 +1419,16 @@ sub _get_to_addressees_for_report_generator_class {
     confess "No report generator class given to get 'to' addressees" unless $generator_class;
 
     my $user = $self->build_event->user_name;
-    my $to = $user.'@genome.wustl.edu';
 
     # Do not send init and succ reports to apipe-builder
     if ( $user eq 'apipe-builder' and $generator_class ne 'Genome::Model::Report::BuildFailed' ) {
         return;
     }
 
-    return $to;
+    # Check if this user still exists in the known universe
+    return if not getpwnam($user);
+
+    return $user.'@genome.wustl.edu';
 }
 
 sub report_generator_class_for_success { # in subclass replace w/ summary or the like?

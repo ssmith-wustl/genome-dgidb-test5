@@ -49,7 +49,7 @@ sub execute {
         my $first_nondone_step = '-';
         eval {
             my $parent_workflow_instance = $latest_build->newest_workflow_instance;
-            $first_nondone_step = find_first_nondone_step($parent_workflow_instance);
+            $first_nondone_step = find_first_nondone_step($parent_workflow_instance) || '-';
         };
 
         $first_nondone_step =~ s/^\d+\s+//;
