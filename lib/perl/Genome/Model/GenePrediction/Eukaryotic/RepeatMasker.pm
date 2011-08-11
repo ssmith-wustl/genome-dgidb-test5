@@ -281,7 +281,7 @@ sub _generate_ace_file {
 		$line_count = 0;
 		while (my $line = $ace_fh->getline) {
 			$ace_file_fh->print("Sequence $contig_name\n") if ($line_count == 0);
-			$line =~ s/\+|\-//;
+            $line = ~s/\s+(\+|\-)\s+/ /;
 			$ace_file_fh->print($line);
 			$line_count++;
 		}

@@ -7,7 +7,7 @@ use Genome;
 use Carp;
 
 class Genome::Model::Command::Define::GenePrediction::Bacterial {
-    is => 'Genome::Model::Command::Define::GenePrediction',
+    is => 'Genome::Model::Command::Define::GenePrediction::Helper',
     has_optional => [
         dev => {
             is => 'Boolean',
