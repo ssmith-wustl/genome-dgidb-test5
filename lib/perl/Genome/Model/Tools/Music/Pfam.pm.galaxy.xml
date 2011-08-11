@@ -7,11 +7,9 @@
   </command>
   <inputs>
     <param name="maf_file" format="maf" type="data" help="" />
-
   </inputs>
   <outputs>
     <data name="output_file" format="pfam" label="" help="" />
-
   </outputs>
   <help>
     
