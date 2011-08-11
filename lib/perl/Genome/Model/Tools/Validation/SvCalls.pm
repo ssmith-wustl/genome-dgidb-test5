@@ -102,7 +102,7 @@ sub execute {
     }
 
     #print header
-    print $ass_in_fh join("\t",qw(#Chr1 Pos1 Orientation1 Chr2 Pos2 Orientation2 Type Size Score)),"\n";
+    print $ass_in_fh join("\t", '#Chr1', 'Pos1', 'Orientation1', 'Chr2', 'Pos2', 'Orientation2', 'Type', 'Size', 'Score'),"\n";
 
     #add in SD calls
     if (@sd_files) {
