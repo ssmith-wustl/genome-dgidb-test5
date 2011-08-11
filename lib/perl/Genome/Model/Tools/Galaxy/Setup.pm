@@ -7,14 +7,16 @@ use Genome;
 use File::Copy;
 
 class Genome::Model::Tools::Galaxy::Setup {
-    is  => 'Command',
+    is  => 'Command::V2',
     has => [
         path => {
-            is  => 'String',
+            is  => 'Text',
             is_optional => 1,
-            doc => 'Galaxy setup path'
+            shell_args_position => 1,
+            doc => 'Galaxy setup path.  Defaults to "galaxy" in your home directory.',
         }
-    ]
+    ],
+    doc => 'setup the galaxy software on your system',
 };
 
 sub execute {
@@ -31,14 +33,20 @@ sub execute {
         $self->warning_message("Encountered non zero exit. Error encountered in cloning Galaxy");
         die();
     }
+
     $self->status_message("Galaxy has been copied to $path. Installing Genome commands.");
     copy($path . "/tool_conf.xml.sample", $path . "/tool_conf.xml");
 
-    my $update_command = Genome::Model::Tools::Galaxy::Update->create(
+    $self->status_message("Updating to the latest revision...");
+    my $result = Genome::Model::Tools::Galaxy::Update->execute(
         path => $path,
         pull => 0
     );
-    $update_command->execute();
-    system($path . "/run.sh");
+    unless ($result) {
+        $self->error_message("error updating Galaxy!: " . Genome::Model::Tools::Galaxy::Update->error_message());
+    }
+
+    $self->status_message("Start galaxy by running: $path/run.sh...");
+    return 1;
 }
 
