@@ -5,7 +5,7 @@ package Genome::Model::Tools::Pcap::Proxy;
 
 sub new
 {
-	croak("$pkg:new:no class given, quitting") if @_ < 1;
+	croak("new:no class given, quitting") if @_ < 1;
     my ($caller, %args) = @_;
     my $caller_is_obj = ref($caller);
     my $class = $caller_is_obj || $caller;
@@ -149,7 +149,7 @@ sub freeze {
 	my @callbacks = ($self->{callbacks});
 	foreach(@callbacks)
 	{
-		can($_,freeze)&&$_->freeze;
+		can($_,'freeze')&&$_->freeze;
 	}
 }
 
@@ -158,7 +158,7 @@ sub thaw {
 	my @callbacks = ($self->{callbacks});
 	foreach(@callbacks)
 	{
-		can($_,thaw)&&$_->thaw;
+		can($_,'thaw')&&$_->thaw;
 	}
 }
 
