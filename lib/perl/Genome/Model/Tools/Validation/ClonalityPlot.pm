@@ -266,7 +266,7 @@ if(dim(cn1minus100x)[1] < 2) {cn1peaks100 = cn1peakpos100 = cn1peakheight100 = 0
 if(dim(cn2100x)[1] < 2) {cn2peaks100 = cn2peakpos100 = cn2peakheight100 = 0;} else {cn2peaks100 = peaks(den2factor100); cn2peaks100 = append(cn2peaks100,c("FALSE","FALSE"),after=length(cn2peaks100)); cn2peakpos100 = subset(den2100x\$x,cn2peaks100==TRUE & den2100x\$y > 0.001); cn2peakheight100 = subset(den2factor100,cn2peaks100==TRUE & den2100x\$y > 0.001);}
 if(dim(cn3100x)[1] < 2) {cn3peaks100 = cn3peakpos100 = cn3peakheight100 = 0;} else {cn3peaks100 = peaks(den3factor100); cn3peaks100 = append(cn3peaks100,c("FALSE","FALSE"),after=length(cn3peaks100)); cn3peakpos100 = subset(den3100x\$x,cn3peaks100==TRUE & den3100x\$y > 0.001); cn3peakheight100 = subset(den3factor100,cn3peaks100==TRUE & den3100x\$y > 0.001);}
 if(dim(cn4plus100x)[1] < 2) {cn4peaks100 = cn4peakpos100 = cn4peakheight100 = 0;} else {cn4peaks100 = peaks(den4factor100); cn4peaks100 = append(cn4peaks100,c("FALSE","FALSE"),after=length(cn4peaks100)); cn4peakpos100 = subset(den4100x\$x,cn4peaks100==TRUE & den4100x\$y > 0.001); cn4peakheight100 = subset(den4factor100,cn4peaks100==TRUE & den4100x\$y > 0.001);}
-
+maxden = max(c(den1factor,den2factor,den3factor,den4factor));
 maxden100 = max(c(den1factor100,den2factor100,den3factor100,den4factor100));
 _END_OF_R_
 
