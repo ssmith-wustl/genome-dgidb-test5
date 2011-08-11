@@ -25,8 +25,8 @@ BEGIN {
 my $refbuild_id = 101947881;
 my $test_data_directory = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants2-Filter-SnpFilter";
 
-# Updated to .v2 for correcting an error with newlines
-my $expected_directory = $test_data_directory . "/expected";
+# Updated to .v2 for adding 1 to insertion start and stop values
+my $expected_directory = $test_data_directory . "/expected.v2";
 my $detector_directory = $test_data_directory . "/samtools-r599-";
 my $tumor_bam_file  = $test_data_directory. '/flank_tumor_sorted.bam';
 my $normal_bam_file  = $test_data_directory. '/flank_normal_sorted.bam';

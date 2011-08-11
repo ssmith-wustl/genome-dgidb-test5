@@ -16,6 +16,7 @@ my $output_file = join('/', $tmpdir, 'output');
 my $input_file = __FILE__ . '.input';
 my $expected_file = __FILE__ . '.expected';
 
+# TODO FIX THIS to actually test VarscanSomatic instead of Varscan. Requires fixing up test data as well
 my $command = Genome::Model::Tools::Bed::Convert::Indel::VarscanToBed->create( source => $input_file, output => $output_file );
 ok($command, 'Command created');
 my $rv = $command->execute;
