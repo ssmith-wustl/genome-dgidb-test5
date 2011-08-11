@@ -318,7 +318,7 @@ sub execute {                               # replace with real execution logic.
 ###################################################################
 # actually do the parsing here
     sub sniperRead{
-        my ($sniper_file, $chrom, $type) = @_;
+        my ($sniper_file, $chrom, $type, $standard_chroms) = @_;
 
         #everything is hashed by chr:position, with subhashes corresponding to
         #samples, then the various VCF fields
@@ -352,7 +352,7 @@ sub execute {                               # replace with real execution logic.
             #skip non-normal chrs
             #next if $col[0] =~ /^NT/;
             
-            next if ($self->standard_chroms && !($col[0] =~/^[1]?([0-9]|^2[012]|X|Y|MT)$/));
+            next if ($standard_chroms && !($col[0] =~/^[1]?([0-9]|^2[012]|X|Y|MT)$/));
 
             $allSnvs{$id}{"chrom"} = $col[0];
             $allSnvs{$id}{"pos"} = $col[1];
@@ -517,7 +517,7 @@ sub execute {                               # replace with real execution logic.
         print_header($genome_build, $sample_id, $output_file, $seq_center);
     }
     if($chrom) {
-        my %sniper_hash = sniperRead($sniper_file, $chrom, $type);
+        my %sniper_hash = sniperRead($sniper_file, $chrom, $type, $self->standard_chroms);
         ## add DBsnp labels, if --dbsnp is specified
         if ($dbsnp_file ne ""){
             addDbSnp($dbsnp_file, $chrom, \%sniper_hash)
@@ -531,7 +531,7 @@ sub execute {                               # replace with real execution logic.
         my @complete_chrom_list = $self->order_chroms(@chroms);
         for my $chrom (@complete_chrom_list) {
             $self->status_message("processing $chrom...");
-            my %sniper_hash = sniperRead($sniper_file, $chrom, $type);
+            my %sniper_hash = sniperRead($sniper_file, $chrom, $type, $self->standard_chroms);
 
 
 
