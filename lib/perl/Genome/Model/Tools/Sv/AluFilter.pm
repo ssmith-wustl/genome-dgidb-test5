@@ -63,17 +63,17 @@ sub execute {
 
         #only checking DEL events smaller than 10kbp
         unless ($type eq "DEL") {
-            print $out_fh "$line\n";
+            print $out_fh "$line";
             next;
         }
         if ($bpB-$bpA > 10000) {
-            print $out_fh "$line\n";
+            print $out_fh "$line";
             next;
         }
 
         #check appropriately sized DEL event for ALU region  
         my $is_alu = $self->is_alu_polymorphism($chr1, $bpA, $bpB);
-        print $out_fh "$line\n" unless $is_alu;
+        print $out_fh "$line" unless $is_alu;
 
     }
 
