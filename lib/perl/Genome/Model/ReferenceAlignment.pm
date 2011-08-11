@@ -349,6 +349,9 @@ sub default_genotype_model {
             $chosen_genotype_model = $genotype_models[-1];
         }
     }
+    else {
+        $chosen_genotype_model = $genotype_models[0];
+    }
 
     return $chosen_genotype_model;
 }

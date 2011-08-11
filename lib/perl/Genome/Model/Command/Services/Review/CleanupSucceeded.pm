@@ -8,6 +8,7 @@ class Genome::Model::Command::Services::Review::CleanupSucceeded {
             is => 'Genome::Model',
             is_many => 1,
             is_optional => 1,
+            shell_args_position => 1,
             doc => 'Models to check; resolved by Genome::Command::Base',
         },
     ],
@@ -33,7 +34,8 @@ sub execute {
         my @builds = $model->builds;
         for my $build (@builds) {
             next if ($build->id eq $latest_build->id);
-            next unless ($build->status eq 'Failed' or $build->status eq 'Unstartable');
+            my $status = $build->status;
+            next unless ($status eq 'Failed' or $status eq 'Unstartable' or $status eq 'New');
             next if ($build->run_by ne $user);
             push @builds_to_abandon, $build;
         }

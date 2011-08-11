@@ -275,7 +275,7 @@ sub _amplicon_iterator_for_name { # 454 and solexa for now
         my %amplicon = (
             name => $seq->{id},
             reads => [ $seq->{id} ],
-            reads_processed => [ $seq->{id} ],
+            reads_processed => 1,
             seq => $seq,
         );
 
@@ -559,9 +559,11 @@ sub prepare_instrument_data {
             for my $primer ( @{$primers{$set_name}} ) {
                 push @primers, $set_name.'='.$primer;
             }
-            my $fasta_file = $self->processed_fasta_file_for_set_name($set_name);
+            my $root_set_name = $set_name;
+            $root_set_name =~ s/\.[FR]$//; #strip off .F/.R for paired sets
+            my $fasta_file = $self->processed_fasta_file_for_set_name($root_set_name);
             unlink $fasta_file if -e $fasta_file;
-            push @output, 'name='.$set_name.':file='.$fasta_file.':type=phred';
+            push @output, 'name='.$root_set_name.':file='.$fasta_file.':type=phred';
         }
         my $none_fasta_file = $self->processed_fasta_file_for_set_name('none');
         unlink $none_fasta_file if -e $none_fasta_file;
@@ -622,14 +624,13 @@ sub prepare_instrument_data {
         return;
     }
     my $processed = $output_metrics->count;
-    my $reads_processed = $processed;
 
     $self->amplicons_attempted($attempted);
     $self->amplicons_processed($processed);
     $self->amplicons_processed_success( $attempted > 0 ?  sprintf('%.2f', $processed / $attempted) : 0 );
     $self->reads_attempted($reads_attempted);
-    $self->reads_processed($reads_processed);
-    $self->reads_processed_success( $reads_attempted > 0 ?  sprintf('%.2f', $reads_processed / $reads_attempted) : 0 );
+    $self->reads_processed($processed);
+    $self->reads_processed_success( $reads_attempted > 0 ?  sprintf('%.2f', $processed / $reads_attempted) : 0 );
 
     return 1;
 }

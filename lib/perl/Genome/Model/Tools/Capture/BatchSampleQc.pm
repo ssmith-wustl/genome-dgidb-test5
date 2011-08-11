@@ -27,6 +27,7 @@ class Genome::Model::Tools::Capture::BatchSampleQc {
 		genotype_files	=> { is => 'Text', doc => "Tab-delimited list of samples and paths to array genotype data", is_optional => 0, is_input => 1 },		
 		output_dir     => { is => 'Text', doc => "Output directory to store QC files", is_optional => 1, is_input => 1, is_output => 1 },
 		output_file     => { is => 'Text', doc => "Output file to receive QC results", is_optional => 1, is_input => 1, is_output => 1 },
+        flip_alleles => { is => 'Boolean', doc => "Whether or not to reverse complement the genotype alleles if the first try does not match", is_optional => 1, is_input => 1, is_output => 1, default => 0},
 	],
 };
 
@@ -146,7 +147,7 @@ sub execute {                               # replace with real execution logic.
 				$label = $sample_name;
 				$label .= "," . $genotype_source if($genotype_source);
 #				$label .= ",$genotype_file,$snp_file";
-				run_genotype_qc($label, $genotype_file, $snp_file, $sample_output_file);				
+				run_genotype_qc($label, $genotype_file, $snp_file, $sample_output_file, $self->flip_alleles);				
 			}
 
 			## Print a sample with both SNP and QC files ##
@@ -219,10 +220,14 @@ sub execute {                               # replace with real execution logic.
 
 sub run_genotype_qc
 {
-	my ($sample_name, $genotype_file, $snp_file, $output_file) = @_;
+	my ($sample_name, $genotype_file, $snp_file, $output_file, $flip_alleles) = @_;
 
 
 	my $cmd = "gmt analysis lane-qc compare-snps --sample-name '$sample_name' --genotype '$genotype_file' --variant '$snp_file' --output-file '$output_file'";
+    if($flip_alleles) 
+    {
+        $cmd .= " --flip-alleles 1";
+    }
 #	print "RUN: $cmd\n";
 	
 	system("bsub -q short -R\"select[model != Opteron250 && mem>1000] rusage[mem=1000]\" \"$cmd\"");

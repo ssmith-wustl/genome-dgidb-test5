@@ -838,7 +838,8 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
             'hg18 nimblegen exome version 2' => 'hg19 nimblegen exome version 2',
             'NCBI-human.combined-annotation-54_36p_v2_CDSome_w_RNA' => 'NCBI-human.combined-annotation-54_36p_v2_CDSome_w_RNA_build36-build37_liftOver',
             'Freimer Pool of original (4k001L) plus gapfill (4k0026)' => 'Freimer-Boehnke capture-targets.set1_build37-fix1',
-             '04110401 PoP32 EZ capture chip set'   => '04110401 PoP32 EZ capture chip set build37',
+            '04110401 PoP32 EZ capture chip set'   => '04110401 PoP32 EZ capture chip set build37',
+            'RT 49315 - AMD -- pool 1' => 'AMD-pool1-build37',
         );
 
         my $root_build37_ref_seq = $self->root_build37_ref_seq;
@@ -1582,7 +1583,9 @@ sub _is_build36_project {
     my $sample_prefix = substr($name,0,4);
 
     return $legacy_project_mapping{$sample_prefix} if $legacy_project_mapping{$sample_prefix};
-    return $self->_is_aml_build_36($pse, $sample);
+    my $aml_build36 = $self->_is_aml_build_36($pse, $sample);
+    return $aml_build36 if $aml_build36;
+    return $self->_is_mel_build_36($sample);
 }
 
 sub _is_aml_build_36 {
@@ -1604,6 +1607,14 @@ sub _is_aml_build_36 {
     # Is it one of these samples from RT #72713
     my @sample_names = qw(H_KA-758168-0912815 H_KA-758168-1003495 H_KA-758168-S.22139 H_KA-400220-0814727 H_KA-400220-0912813 H_KA-400220-0802127 H_KA-426980-091280 H_KA-426980-1002510 H_KA-426980-S.14770 H_KA-452198-0912806 H_KA-452198-0814719 H_KA-452198-S.22477 H_KA-573988-0814941 H_KA-573988-0926957 H_KA-573988-0815176 H_KA-804168-0814948 H_KA-804168-0802136 H_KA-804168-0912812 H_KA-817156-0912808 H_KA-817156-0814950 H_KA-817156-0802138 H_KA-869586G-0926998 H_KA-869586G-S.16427 H_KA-869586G-S.16508);
     return grep( $sample->name eq $_, @sample_names );
+}
+
+sub _is_mel_build_36 {
+    my $self = shift;
+    my $sample = shift;
+
+    my @sample_names = qw(H_LX-001922-06S11008354 H_LX-003286-06S10352280 H_LX-003286-06S11008366 H_LX-004608-06S11008352 H_LX-004608-06S11008368 H_LX-005621-06S11008357 H_LX-005621-06S11008369 H_LX-011221-06S10352279 H_LX-011221-06S11008359 H_LX-011221-06S11008362 H_LX-000779-06S11008355 H_LX-002441-06S11008346 H_LX-002455-06S11008356 H_LX-003154-06S11008358 H_LX-003611-06S11008349 H_LX-003611-06S11008372 H_LX-003791-06S11008344 H_LX-003791-06S11008364 H_LX-004192-06S11008345 H_LX-004192-06S11008365);
+    return grep( $sample->name eq $_, @sample_names);
 }
 
 1;

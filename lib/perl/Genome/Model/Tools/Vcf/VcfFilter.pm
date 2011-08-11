@@ -74,7 +74,9 @@ class Genome::Model::Tools::Vcf::VcfFilter {
             default => 0 ,
             doc => 'remove the filtered lines, as opposed to marking them as non-passing in the VCF',
         },
-
+        bed_input => {
+            default=>0,
+        },
         variant_type => {
             is => 'Text',
             is_optional => 1,
@@ -133,6 +135,11 @@ sub execute {
         next if ($line =~ /^#/);
 
         my @fields = split("\t",$line);
+        if($self->bed_input) {
+            unless($fields[1]==$fields[2]) { #in bed, this would be an insertion and we should not naively ++ the start
+                $fields[1]+=1;
+            }
+        }
         my $key = $fields[0] . ":" . $fields[1];
 
         #add this filter to the hash

@@ -15,16 +15,20 @@ use Test::More;
 my $archos = `uname -a`;
 if ($archos !~ /64/) {
     plan skip_all => "Must run from 64-bit machine";
-} else {
-    plan tests => 5;
-}
+} 
 
 use_ok('Genome::Model::Tools::DetectVariants2::Varscan');
 
+my $refbuild_id = 101947881;
+my $ref_seq_build = Genome::Model::Build::ImportedReferenceSequence->get($refbuild_id);
+ok($ref_seq_build, 'human36 reference sequence build') or die;
+
+no warnings;
 # Override lock name because if people cancel tests locks don't get cleaned up.
 *Genome::SoftwareResult::_resolve_lock_name = sub {
     return Genome::Sys->create_temp_file_path;
 };
+use warnings;
 
 my $test_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants2-Varscan/';
 my $test_base_dir = File::Temp::tempdir('DetectVariants2-VarscanXXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites/', CLEANUP => 1);
@@ -41,7 +45,6 @@ my $expected_dir = $test_dir . '/expected.v12/';
 ok(-d $expected_dir, "expected results directory exists");
 
 
-my $refbuild_id = 101947881;
 
 my $version = '2.2.6';
 
@@ -53,9 +56,13 @@ my $command = Genome::Model::Tools::DetectVariants2::Varscan->create(
     output_directory => $test_working_dir,
 );
 ok($command, 'Created `gmt detect-variants varscan` command');
+$command->dump_status_messages(1);
 ok($command->execute, 'Executed `gmt detect-variants varscan` command');
 
 my $diff_cmd = sprintf('diff -r %s %s', $test_working_dir, $expected_dir);
 
 my $diff = `$diff_cmd`;
 is($diff, '', 'No differences in output from expected result from running varscan for this version and parameters');
+
+done_testing();
+exit;

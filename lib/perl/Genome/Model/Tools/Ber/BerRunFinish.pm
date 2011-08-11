@@ -618,7 +618,7 @@ sub execute
     my $location = $amgap_path . "/"
         . $org_dirname . "/"
         . $assembly_name . "/"
-        . $pipe_version;
+        . $assembly_version;
 
     print $rtfile_fh qq{$location\n\n};
     print $rtfile_fh
@@ -757,6 +757,7 @@ sub version_lookup
     my $v              = shift;
     my $lookup         = undef;
     my %version_lookup = (
+        'DEV'  => 'Development',
         'V1' => 'Version_1.0',
         'V2' => 'Version_2.0',
         'V3' => 'Version_3.0',

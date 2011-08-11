@@ -18,16 +18,20 @@ use File::Compare;
 my $archos = `uname -a`;
 if ($archos !~ /64/) {
     plan skip_all => "Must run from 64-bit machine";
-} else {
-    plan tests => 4;
 }
 
 use_ok('Genome::Model::Tools::DetectVariants2::Breakdancer');
 
+my $refbuild_id = 101947881;
+my $ref_seq_build = Genome::Model::Build::ImportedReferenceSequence->get($refbuild_id);
+ok($ref_seq_build, 'human36 reference sequence build') or die;
+
+no warnings;
 # Override lock name because if people cancel tests locks don't get cleaned up.
 *Genome::SoftwareResult::_resolve_lock_name = sub {
     return Genome::Sys->create_temp_file_path;
 };
+use warnings;
 
 my $test_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants2-Breakdancer';
 my $test_base_dir = File::Temp::tempdir('DetectVariants2-Breakdancer-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites/', CLEANUP => 1);
@@ -40,8 +44,6 @@ my $cfg_file   = $test_dir . '/breakdancer_config';
 my $chromosome = 22;
 my $expected_output = join "/", ($test_dir, "svs.hq.$chromosome".'_current');
 my $test_out   = $test_working_dir . '/' . $chromosome . '/svs.hq.'.$chromosome;
-
-my $refbuild_id = 101947881;
 
 my $version = '1.2';
 note("use breakdancer version: $version");
@@ -57,6 +59,10 @@ my $command = Genome::Model::Tools::DetectVariants2::Breakdancer->create(
     config_file => $cfg_file,
 );
 ok($command, 'Created `gmt detect-variants2 breakdancer` command');
+$command->dump_status_messages(1);
 ok($command->execute, 'Executed `gmt detect-variants2 breakdancer` command');
 
 is(compare($expected_output, $test_out), 0, "svs.hq output as expected");
+
+done_testing();
+exit;

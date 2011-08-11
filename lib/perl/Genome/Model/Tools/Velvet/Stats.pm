@@ -205,7 +205,7 @@ sub _get_simple_read_stats {
     my $ge_5k_ratio = ($ge_5k_contig_length > 0) ?
 	int ($ge_5k_contig_length / $total_contig_length * 100) : 0 ;
 
-    my $five_k_stats = "\n*** 5 Kb and Greater Contigs Info ***\n".
+    my $five_k_stats = "\n\n*** 5 Kb and Greater Contigs Info ***\n".
 	               "Total lengths of all contigs: $total_contig_length\n".
 		       "Total lengths of contigs 5 Kb and greater: $ge_5k_contig_length\n".
 		       "Percentage of genome: ".$ge_5k_ratio."%\n\n";
@@ -580,7 +580,7 @@ sub _get_read_depth_stats_from_afg { #for velvet assemblies
     my $afg_fh = Genome::Sys->open_file_for_reading($self->velvet_afg_file)
 	or return;
 
-    my ($one_x_cov, $two_x_cov, $three_x_cov, $four_x_cov, $five_x_cov, $total_covered_pos) = 0;
+    my ($one_x_cov, $two_x_cov, $three_x_cov, $four_x_cov, $five_x_cov, $uncovered_pos, $total_consensus_pos) = 0;
 
     while (my $record = getRecord($afg_fh)) {
 	my ($rec, $fields, $recs) = parseRecord($record);
@@ -613,11 +613,14 @@ sub _get_read_depth_stats_from_afg { #for velvet assemblies
 		    $consensus_positions[$_]++;
 		}
 	    }
-	    $total_covered_pos += $#consensus_positions;
+	    $total_consensus_pos += $#consensus_positions;
 	    shift @consensus_positions; #remove [0] position 
-	    unless (scalar @consensus_positions == $contig_length) {
+            #
+	    if (scalar @consensus_positions < $contig_length) {
 		$self->warning_message ("Covered consensus bases does not equal contig length\n\t".
 		    "got ".scalar (@consensus_positions)." covered bases but contig length is $contig_length\n");
+                $uncovered_pos += ( $contig_length - scalar @consensus_positions );
+                $total_consensus_pos += ( $contig_length - scalar @consensus_positions );
 	    }
 	    foreach (@consensus_positions) {
 		next unless $_; #could be undef if not covered
@@ -632,13 +635,15 @@ sub _get_read_depth_stats_from_afg { #for velvet assemblies
     $afg_fh->close;
 
     my $text = "\n*** Read Depth Info ***\n".
-	"Total consensus bases: $total_covered_pos\n".
-	"Depth >= 5: $five_x_cov\t". $five_x_cov/$total_covered_pos."\n".
-	"Depth >= 4: $four_x_cov\t". $four_x_cov/$total_covered_pos."\n".
-	"Depth >= 3: $three_x_cov\t". $three_x_cov/$total_covered_pos."\n".
-	"Depth >= 2: $two_x_cov\t". $two_x_cov/$total_covered_pos."\n".
-	"Depth >= 1: $one_x_cov\t". $one_x_cov/$total_covered_pos."\n\n";
-
+	"Total consensus bases: $total_consensus_pos\n".
+	"Depth >= 5: $five_x_cov\t". $five_x_cov/$total_consensus_pos."\n".
+	"Depth >= 4: $four_x_cov\t". $four_x_cov/$total_consensus_pos."\n".
+	"Depth >= 3: $three_x_cov\t". $three_x_cov/$total_consensus_pos."\n".
+	"Depth >= 2: $two_x_cov\t". $two_x_cov/$total_consensus_pos."\n".
+	"Depth >= 1: $one_x_cov\t". $one_x_cov/$total_consensus_pos."\n";
+    if ( $uncovered_pos > 0 ) {
+        $text .= "Uncovered:  $uncovered_pos\n";
+    }
     return $text;
 }
 

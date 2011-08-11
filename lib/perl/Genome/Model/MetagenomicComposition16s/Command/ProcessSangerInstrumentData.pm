@@ -6,9 +6,6 @@ use warnings;
 use Genome;
 
 use Carp 'confess';
-use Data::Dumper;
-require File::Copy;
-use Finishing::Assembly::Factory;
 
 class Genome::Model::MetagenomicComposition16s::Command::ProcessSangerInstrumentData {
     is => 'Command',
@@ -74,7 +71,7 @@ sub prepare_instrument_data {
                 or next; # ok
             $writer->write($amplicon->{seq});
             $processed++;
-            $reads_processed += @{$amplicon->{reads_processed}};
+            $reads_processed += $amplicon->{reads_processed};
         }
     }
 
@@ -404,11 +401,10 @@ sub _amplicon_iterator_for_name {
         $self->error_message("Can't open chromat dir to get reads. See above error.");
         return;
     }
-    # skip . and ..
-    $dh->read; $dh->read;
     # collect the read names
     my @all_read_names;
     while ( my $read_name = $dh->read ) {
+        next if $read_name eq '.' or $read_name eq '..';
         $read_name =~ s/\.gz$//;
         push @all_read_names, $read_name;
     }
@@ -538,28 +534,26 @@ sub load_seq_for_amplicon {
     # get contig from acefile
     my $acefile = $self->ace_file_for_amplicon($amplicon);
     return unless -s $acefile; # ok
-    my $ace = Finishing::Assembly::Factory->connect('ace', $acefile);
-    my $assembly = $ace->get_assembly;
-    my $contigs = $assembly->contigs;
-    my ($contig, $reads);
-    while ( $contig = $contigs->next ) {
-        # check the length
-        next unless $contig->unpadded_length >= $self->_build->amplicon_size;
-        # read count
-        my $read_iterator = $contig->reads;
-        $reads = [ sort { $a cmp $b } map { $_->name } $read_iterator->all ];
-        next unless @$reads > 1;
+    my $ace = Genome::Model::Tools::Consed::AceReader->create(file => $acefile);
+    my $contig;
+    while ( my $obj = $ace->next ) {
+        next if $obj->{type} ne 'contig';
+        next unless $obj->{read_count} > 1;
+        $obj->{unpadded_consensus} = $obj->{consensus};
+        $obj->{unpadded_consensus} =~ s/\*//g;
+        next if length $obj->{unpadded_consensus} < $self->_build->amplicon_size;
+        $contig = $obj;
         last;
     }
     return unless $contig; # ok
 
     my $seq = {
         id => $amplicon->{name},
-        seq => $contig->unpadded_base_string,
-        qual => join('', map { chr($_ + 33) } @{$contig->qualities}),
+        seq => $contig->{unpadded_consensus},
+        qual => join('', map { chr($_ + 33) } @{$contig->{base_qualities}}),
     };
     if ( $seq->{seq} !~ /^[ATGCNX]+$/i ) {
-        Carp::confess('Illegal caharcters in sequence for amplicon: '.$amplicon->{name}."\n".$seq->{seq}); 
+        Carp::confess('Illegal characters in sequence for amplicon: '.$amplicon->{name}."\n".$seq->{seq}); 
     }
 
     if ( length $seq->{seq} !=  length $seq->{qual} ) {
@@ -567,10 +561,8 @@ sub load_seq_for_amplicon {
     }
 
     $amplicon->{seq} = $seq;
-    $amplicon->{reads_processed} = $reads;
+    $amplicon->{reads_processed} = $contig->{read_count};
 
-    $ace->disconnect;
-    
     return $seq;
 }
 

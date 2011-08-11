@@ -20,7 +20,6 @@ class Genome::InstrumentData {
         library => { is => 'Genome::Library', id_by => 'library_id' },
         library_name => { via => 'library', to => 'name' },
         sample_id => { is => 'Number', via => 'library' }, 
-        #sample => { is => 'Genome::Sample', id_by => 'sample_id' }, # id_by that's delegated is inefficient
         sample => { is => 'Genome::Sample', via => 'library' },
         sample_name => { via => 'sample', to => 'name' },
     ],
@@ -136,7 +135,7 @@ sub _expunge_assignments{
             }
         }
     }
-    
+                            
     return 1, %affected_users;
 }
 
@@ -144,13 +143,18 @@ sub _create_deallocate_observer {
     my $self = shift;
     my @allocations = $self->allocations;
     return 1 unless @allocations;
+    my $deallocator;
+    $deallocator = sub {
+        for my $allocation (@allocations) {
+            $allocation->delete;
+        }
+        UR::Context->cancel_change_subscription(
+            'commit', $deallocator
+        );
+    };
     UR::Context->create_subscription(
         method => 'commit',
-        callback => sub {
-            for my $allocation (@allocations) {
-                $allocation->delete;
-            }
-        }
+        callback => $deallocator
     );
     return 1;
 }

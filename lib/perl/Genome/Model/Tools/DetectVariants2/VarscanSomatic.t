@@ -16,17 +16,20 @@ use File::Compare;
 my $archos = `uname -a`;
 if ($archos !~ /64/) {
     plan skip_all => "Must run from 64-bit machine";
-} else {
-    plan tests => 20;
 }
 
 use_ok('Genome::Model::Tools::DetectVariants2::VarscanSomatic');
 
+my $refbuild_id = 101947881;
+my $ref_seq_build = Genome::Model::Build::ImportedReferenceSequence->get($refbuild_id);
+ok($ref_seq_build, 'human36 reference sequence build') or die;
+
+no warnings;
 # Override lock name because if people cancel tests locks don't get cleaned up.
 *Genome::SoftwareResult::_resolve_lock_name = sub {
     return Genome::Sys->create_temp_file_path;
 };
-
+use warnings;
 
 my $test_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants2-VarscanSomatic/';
 my $test_base_dir = File::Temp::tempdir('DetectVariants2-VarscanSomaticXXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites/', CLEANUP => 1);
@@ -43,8 +46,6 @@ my $normal_bam = $test_dir . '/alignments/102922275_merged_rmdup.bam';
 my $expected_dir = $test_dir . '/expected.v13/';
 ok(-d $expected_dir, "expected results directory exists");
 
-my $refbuild_id = 101947881;
-
 my $version = '2.2.6'; 
 
 my $command = Genome::Model::Tools::DetectVariants2::VarscanSomatic->create(
@@ -56,6 +57,7 @@ my $command = Genome::Model::Tools::DetectVariants2::VarscanSomatic->create(
     output_directory => $test_working_dir,
 );
 ok($command, 'Created `gmt detect-variants varscan-somatic` command');
+$command->dump_status_messages(1);
 ok($command->execute, 'Executed `gmt detect-variants varscan-somatic` command');
 
 my @file_names = qw|    indels.hq
@@ -77,3 +79,6 @@ for my $file_name (@file_names){
     my $expected_file = $expected_dir."/".$file_name;
     is(compare($output_file, $expected_file), 0, "$output_file output matched expected output");
 }
+
+done_testing();
+exit;

@@ -34,7 +34,7 @@ sub process_source {
     while(my $line = <$input_fh>) {
         my @mpileup = split("\t", $line);
         my ($chromosome, $position, $id, $reference, $consensus, $quality, $depth, $map_qual, @extra);
-
+        $DB::single=1;
         if($mpileup[2] eq '.') {
             ($chromosome, $position, $id,$reference, $consensus , $quality, @extra) = split("\t", $line) ;
             $quality = sprintf("%2.f", $quality);
@@ -42,12 +42,15 @@ sub process_source {
                 $depth = $1;
             } else { 
                 $self->warning_message("read depth not found on line $line");
+                next;
             }
             if ($extra[1] =~ /MQ=(\d+)/) {
                 $map_qual = $1;
             } else {
                 $self->warning_message("mapping quality cannot be found on line $line");
+                next;
             }
+           ($consensus) = split("," , $consensus);
         } else {
             ($chromosome, $position, $reference, $consensus, $quality, $map_qual, @extra)=split("\t", $line) ;
             $depth = $extra[1];

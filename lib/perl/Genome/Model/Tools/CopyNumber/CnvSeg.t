@@ -28,8 +28,8 @@ my $test_data =  "/gsc/var/cache/testsuite/data/Genome-Model-Tools-CopyNumber-Cn
 my $tmpbase = File::Temp::tempdir('CnvSegXXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites/', CLEANUP => 1);
 my $output_file = "$tmpbase/cnv-seg-output.cnvseg";
 my $refbuild_id = 101947881;
-my $expected_output = $test_data."/expected_v1/chr22.luc1t.bam.bam2cn.kchen.cnvseg";
-my $cn_file = $test_data."/chr22.luc1t.bam.bam2cn.kchen";
+my $expected_output = $test_data."/expected_v1/chr22.luc1t.bam.bam2cn.cnvseg";
+my $cn_file = $test_data."/chr22.luc1t.bam.bam2cn";
 my $min_markers = 3;
 
 my $cnv_seg = Genome::Model::Tools::CopyNumber::CnvSeg->create(

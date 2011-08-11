@@ -40,7 +40,7 @@ my $idx=0;
 if($opts{d}){
   $seltag="BreakDancer";
   $selset=&ReadRegions($ARGV[0],1,'\t',0,1,4,7,8);
-  $f_cfg='/gscuser/kchen/1000genomes/analysis/scripts/compareLargeIndel.cmg';
+  $f_cfg='/gscmnt/sata194/info/sralign/kchen/1000genomes/analysis/scripts/compareLargeIndel.cmg';
   $idx++;
 }
 

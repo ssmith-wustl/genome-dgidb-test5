@@ -45,14 +45,8 @@ sub execute {
         $self->create_consed_dir;
     }
 
-    my $scaffolds;
-    unless ( $scaffolds = $self->get_scaffolding_info ) {
-        $self->error_message("Failed to get scaffolding info");
-        return;
-    }
-
     my $positions;
-    unless( $positions = $self->_contigs_supercontig_positions( $scaffolds ) ) {
+    unless( $positions = $self->_contigs_supercontig_positions ) {
         $self->error_message("Failed to determine contig supercontig positions");
         return;
     }
@@ -112,7 +106,13 @@ sub _write_placed_reads_files {
 }
 
 sub _contigs_supercontig_positions {
-    my ( $self, $scafs ) = @_;
+    my $self = shift;
+    #filter contigs my min length
+    my $scafs;
+    unless ( $scafs = $self->get_scaffolding_info ) {
+        $self->error_message("Failed to get scaffolding info");
+        return;
+    }
     my $pos = {};
     my $current_supercontig;
     my $supercontig_position = 1;

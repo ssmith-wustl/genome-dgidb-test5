@@ -16,7 +16,7 @@ my $pg = make_test_pop_group();
 ok($pg, 'created pg');
 isa_ok($pg, 'Genome::PopulationGroup');
 isa_ok($pg, 'Genome::Subject');
-is($pg->subject_type, 'population group', 'subject type is population group');
+is($pg->subject_type, 'sample_group', 'subject type is sample_group');
 
 my $indiv = make_test_individual();
 ok($indiv, 'made test indiv');

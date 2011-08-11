@@ -24,9 +24,9 @@ class Genome::Taxon {
             calculate => q{ return $name; }, 
         },
         subject_type => { 
-            is => 'Text', 
             is_constant => 1, 
-            value => 'organism taxon',
+            is_classwide => 1,
+            value => 'species_name',
         },
     ],
     has_optional => [

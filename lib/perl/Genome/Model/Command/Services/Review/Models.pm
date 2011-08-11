@@ -46,15 +46,14 @@ sub execute {
         my $model_name   = ($model ? $model->name                     : '-');
         my $pp_name      = ($model ? $model->processing_profile->name : '-');
 
-        my $crashed_workflow_step = '-';
+        my $first_nondone_step = '-';
         eval {
-            my $workflow = $latest_build->newest_workflow_instance;
-            my @workflow_steps = ($workflow ? $workflow->ordered_child_instances : ());
-            my @crashed_steps = grep { $_->status ne 'done' } @workflow_steps;
-            $crashed_workflow_step = (@crashed_steps ? $crashed_steps[0]->name : '-');
+            my $parent_workflow_instance = $latest_build->newest_workflow_instance;
+            $first_nondone_step = find_first_nondone_step($parent_workflow_instance);
         };
 
-        $crashed_workflow_step =~ s/^\d+\s+//;
+        $first_nondone_step =~ s/^\d+\s+//;
+        $first_nondone_step =~ s/\s+\d+$//;
 
         my $latest_build_revision = $latest_build->software_revision if $latest_build;
         $latest_build_revision ||= '-';
@@ -79,25 +78,28 @@ sub execute {
         }
 
         next if (grep { lc $_ eq lc $latest_build_status } @hide_statuses);
-        $self->print_message(join "\t", $model_id, $action, $latest_build_status, $crashed_workflow_step, $latest_build_revision, $model_name, $pp_name, $fail_count);
+        $self->print_message(join "\t", $model_id, $action, $latest_build_status, $first_nondone_step, $latest_build_revision, $model_name, $pp_name, $fail_count);
     }
 
-    my %cmd_rvs;
+    my %start_rv;
     if ($self->auto and @models_to_start) {
         for my $model (@models_to_start) {
             my $cmd = Genome::Model::Build::Command::Start->create(models => [$model]);
-            $cmd_rvs{$cmd->execute}++;
+            $start_rv{$cmd->execute}++;
         }
     }
+    my %cleanup_rv;
     if ($self->auto and @models_to_cleanup) {
         for my $model (@models_to_cleanup) {
             my $cmd = Genome::Model::Command::Services::Review::CleanupSucceeded->create(models => [$model]);
-            $cmd_rvs{$cmd->execute}++;
+            $cleanup_rv{$cmd->execute}++;
         }
     }
 
-    $self->print_message("Succeeded " . $cmd_rvs{1}) if $cmd_rvs{1};
-    $self->print_message("Failed " . $cmd_rvs{0}) if $cmd_rvs{0};
+    $self->print_message("Started " . $start_rv{1}) if $start_rv{1};
+    $self->print_message("Failed to start " . $start_rv{0}) if $start_rv{0};
+    $self->print_message("Cleaned up " . $cleanup_rv{1}) if $cleanup_rv{1};
+    $self->print_message("Failed to cleanup " . $cleanup_rv{0}) if $cleanup_rv{0};
     return 1;
 }
 
@@ -228,4 +230,21 @@ sub status_compare { # http://stackoverflow.com/q/540229
     }
     return 1 if keys %b;
     return 0;
+}
+
+
+sub find_first_nondone_step {
+    my $parent_workflow_instance = shift;
+    my @child_workflow_instances = $parent_workflow_instance->ordered_child_instances;
+
+    my $failed_step;
+    for my $child_workflow_instance (@child_workflow_instances) {
+        $failed_step = find_first_nondone_step($child_workflow_instance);
+        last if $failed_step;
+    }
+    if ($parent_workflow_instance->status ne 'done' and not $failed_step) {
+        $failed_step = $parent_workflow_instance->name;
+    }
+
+    return $failed_step;
 }

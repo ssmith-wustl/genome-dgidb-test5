@@ -19,7 +19,16 @@ class Genome::Model::Tools::DetectVariants2::Base {
         },
         reference_sequence_input => {
             calculate_from => ['reference_build_id'],
-            calculate => q{ Genome::Model::Build->get($reference_build_id)->full_consensus_path('fa') },
+            calculate => q| 
+                my $build = Genome::Model::Build->get($reference_build_id);
+                my $cache_base_dir = $build->local_cache_basedir;
+                if ( -d $cache_base_dir ) { # WE ARE ON A MACHINE THAT SUPPORTS CACHING
+                    return $build->cached_full_consensus_path('fa');
+                }
+                else { # USE NETWORK REFERENCE
+                    return $build->full_consensus_path('fa');
+                }
+                |,
             doc => 'Location of the reference sequence file',
         },
         aligned_reads_input => {
@@ -100,8 +109,18 @@ sub execute {
 sub _verify_inputs {
     my $self = shift;
     
-    my $ref_seq_file = $self->reference_sequence_input;
+    my $reference_build_id = $self->reference_build_id;
+    if ( not $reference_build_id ) {
+        $self->error_message('No reference sequence build id');
+        return;
+    }
+    my $reference_build = Genome::Model::Build->get($reference_build_id);
+    if ( not $reference_build ) {
+        $self->error_message('Failed to get reference sequence build for id: '.$reference_build_id);
+        return;
+    }
 
+    my $ref_seq_file = $reference_build->full_consensus_path('fa'); # verify the network one exists
     unless(Genome::Sys->validate_file_for_reading($ref_seq_file)) {
         $self->error_message("reference sequence input $ref_seq_file does not exist");
         return;

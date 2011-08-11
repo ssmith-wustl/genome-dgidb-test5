@@ -23,9 +23,9 @@ sub _execute_build {
     $self->status_message('Execute genotype microarray build '.$build->__display_name__);
 
     my $instrument_data = $build->instrument_data;
-    if ( not $instrument_data ) { # ok for now
-        $self->status_message('OK: No instrument data for genotype microarray build '.$build->__display_name__);
-        return 1;
+    if ( not $instrument_data ) {
+        $self->error_message('No instrument data for genotype microarray build '.$build->__display_name__);
+        return;
     }
 
     $self->status_message('Instrument data: '.$instrument_data->id.' '.$instrument_data->sequencing_platform);

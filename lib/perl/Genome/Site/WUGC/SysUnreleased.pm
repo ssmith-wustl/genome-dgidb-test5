@@ -437,7 +437,7 @@ sub lock_resource {
     my $max_try = delete $args{max_try};
     $max_try = 7200 unless defined $max_try;
 
-    my ($my_host, $my_pid, $my_lsf_id, $my_user) = (hostname, $$, ($ENV{'LSB_JOBID'} || 'NONE'), $ENV{'USER'});
+    my ($my_host, $my_pid, $my_lsf_id, $my_user) = (hostname, $$, ($ENV{'LSB_JOBID'} || 'NONE'), Genome::Sys->username);
     my $job_id = (defined $ENV{'LSB_JOBID'} ? $ENV{'LSB_JOBID'} : "NONE");
     my $lock_dir_template = sprintf("lock-%s--%s_%s_%s_%s_XXXX",$basename,$my_host,$ENV{'USER'},$$,$job_id);
     my $tempdir =  File::Temp::tempdir($lock_dir_template, DIR=>$parent_dir, CLEANUP=>1);
@@ -466,29 +466,30 @@ sub lock_resource {
     while(!($ret = symlink($tempdir,$resource_lock))) {
         # TONY: The only allowable failure is EEXIST, right?
         # If any other error comes through, we end up in bigger trouble.
-         use Errno qw(EEXIST ENOENT :POSIX);
-         if ($! != EEXIST) {
-             $self->error_message("Can't create symlink from $tempdir to lock resource $resource_lock because: $!");
-             Carp::croak($self->error_message());
-         }
+        use Errno qw(EEXIST ENOENT :POSIX);
+        if ($! != EEXIST) {
+            $self->error_message("Can't create symlink from $tempdir to lock resource $resource_lock because: $!");
+            Carp::croak($self->error_message());
+        }
         my $symlink_error = $!;
         chomp $symlink_error;
         return undef unless $max_try--;
-    
-        my $target = readlink($resource_lock);
-        # TONY: symlink could have disappeared between the top of the while loop and now
-        # Is this the same as the very next case?
-         if ($! == ENOENT) {
-            sleep $block_sleep;
-            next;
-         }
 
-         if (!$target and $! == EINVAL and -d $resource_lock) {
-            $self->warning_message("Looks like $resource_lock is locked by the old scheme (not a symlink, but a directory).  Sleeping rather than doing anything scary.");
+        my $target = readlink($resource_lock);
+
+        #If symlink no longer exists
+        if ($! == ENOENT || !$target) {
             sleep $block_sleep;
             next;
         }
-        elsif (!$target || !-e $target) {
+
+        #symlink could have disappeared between the top of the while loop and now, so we check to see if it's changed
+        my $target_exists = (-e $target);
+        unless($target eq readlink($resource_lock)){
+            next;
+        }
+   
+        if (!$target_exists) {
             # TONY: This means the lock symlink points to something that's been deleted
             # That's _really_ bad news and should probably get an email like below.
             $self->error_message("Lock target $target does not exist.  Dying off rather than doing anything scary.");
@@ -644,11 +645,18 @@ sub cleanup_handler_check {
     if ($symlink_count > 0) {
         $SIG{'INT'} = \&INT_cleanup;
         $SIG{'TERM'} = \&INT_cleanup;
+        $SIG{'HUP'} = \&INT_cleanup;
+        $SIG{'ABRT'} = \&INT_cleanup;
+        $SIG{'QUIT'} = \&INT_cleanup;
+        $SIG{'SEGV'} = \&INT_cleanup;
     } else {
         delete $SIG{'INT'};
         delete $SIG{'TERM'};
+        delete $SIG{'HUP'};
+        delete $SIG{'ABRT'};
+        delete $SIG{'QUIT'};
+        delete $SIG{'SEGV'};
     }
-
 }
 
 END {

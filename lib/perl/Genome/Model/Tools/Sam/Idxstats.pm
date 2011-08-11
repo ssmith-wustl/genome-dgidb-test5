@@ -36,7 +36,7 @@ sub execute {
 }
 
 sub parse_file_into_hashref {
-    my ($class, $stat_file) = @_;
+    my ($proto, $stat_file) = @_;
 
     unless ($stat_file and -s $stat_file) {
         warn "Bam idxstats file: $stat_file is not valid";
@@ -67,10 +67,17 @@ sub parse_file_into_hashref {
 }
 
 sub unmap_ref_list {
-    my ($class, $stat_file) = @_;
-    my $data = $class->parse_file_into_hashref($stat_file);
+    my ($proto, $stat_file) = @_;
+    my $data = $proto->parse_file_into_hashref($stat_file);
 
     return [grep{$data->{$_}->{map_read_ct} == 0}keys%$data];
+}
+
+sub map_ref_list {
+    my ($proto, $stat_file) = @_;
+    my $data = $proto->parse_file_into_hashref($stat_file);
+
+    return [grep{$data->{$_}->{map_read_ct} != 0}keys%$data];
 }
 
 1;

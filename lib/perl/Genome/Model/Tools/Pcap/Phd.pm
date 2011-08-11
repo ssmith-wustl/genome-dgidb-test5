@@ -81,7 +81,7 @@ sub new
 		$self->_build_index();
         if($self->using_db && !-e $self->_input_file.".index")
         {
-            Storable::store $self->_index, $self->_input_file.".index";
+            Storable::nstore $self->_index, $self->_input_file.".index";
         }
 	}
 

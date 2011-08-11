@@ -19,26 +19,28 @@ my $archos = `uname -a`;
 if ($archos !~ /64/) {
     plan skip_all => "Must run from a 64-bit machine";
 }
-else {
-    plan tests => 8;
-}
 
 use_ok('Genome::Model::Tools::DetectVariants2::GatkGermlineIndel');
 
+my $refbuild_id = 101947881;
+my $ref_seq_build = Genome::Model::Build::ImportedReferenceSequence->get($refbuild_id);
+ok($ref_seq_build, 'human36 reference sequence build') or die;
+
+no warnings;
 # Override lock name because if people cancel tests locks don't get cleaned up.
 *Genome::SoftwareResult::_resolve_lock_name = sub {
     return Genome::Sys->create_temp_file_path;
 };
-
+use warnings;
 
 my $test_data = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants2-GatkGermlineIndel";
-my $expected_data = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants2-GatkGermlineIndel/expected";
+my $base_expected_dir = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants2-GatkGermlineIndel/";
+my $expected_version = "expected.v2";
+my $expected_data = $base_expected_dir . $expected_version;
 my $tumor =  $test_data."/flank_tumor_sorted.bam";
 
 my $tmpbase = File::Temp::tempdir('GatkGermlineIndelXXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites/', CLEANUP => 1);
 my $tmpdir = "$tmpbase/output";
-
-my $refbuild_id = 101947881;
 
 my $gatk_somatic_indel = Genome::Model::Tools::DetectVariants2::GatkGermlineIndel->create(
         aligned_reads_input=>$tumor, 
@@ -49,6 +51,7 @@ my $gatk_somatic_indel = Genome::Model::Tools::DetectVariants2::GatkGermlineInde
 );
 
 ok($gatk_somatic_indel, 'gatk_germline_indel command created');
+$gatk_somatic_indel->dump_status_messages(1);
 my $rv = $gatk_somatic_indel->execute;
 is($rv, 1, 'Testing for successful execution.  Expecting 1.  Got: '.$rv);
 
@@ -63,3 +66,6 @@ for my $file (@files){
     my $actual_file = "$tmpdir/$file";
     is(compare($actual_file,$expected_file),0,"Actual file is the same as the expected file: $file");
 }
+
+done_testing();
+exit;

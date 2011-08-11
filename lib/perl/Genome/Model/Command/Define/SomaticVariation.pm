@@ -8,10 +8,7 @@ use warnings;
 use Genome;
 
 class Genome::Model::Command::Define::SomaticVariation {
-    is => [
-    'Genome::Model::Command::Define',
-    'Genome::Command::Base',
-    ],
+    is => 'Genome::Model::Command::Define::Helper',
     has => [
         tumor_model => {
             is => 'Genome::Model::ReferenceAlignment',
@@ -162,9 +159,7 @@ sub execute {
                 die $self->error_message($message . "  Use --force option to override this and allow samples from different individuals anyway");
             }
         }
-        $self->subject_id($tumor_subject->id);
-        $self->subject_class_name($tumor_subject->class);
-        $self->subject_name($tumor_subject->name);
+        $self->subject($tumor_subject);
     
     } 
     else {

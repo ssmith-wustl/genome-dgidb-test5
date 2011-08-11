@@ -56,8 +56,6 @@ sub execute {
     }
 
     my $supercontig_fasta;
-    my $supercontig_number = 0;
-
     #read in contigs from afg file
     my $afg_fh = Genome::Sys->open_file_for_reading($self->velvet_afg_file);
     while (my $record = getRecord($afg_fh)) {
@@ -92,7 +90,7 @@ sub execute {
             $supercontig_fasta =~ s/^N+//;
 
             #write seq
-            my $pcap_name = 'Contig'.$supercontig_number++;
+            my $pcap_name = 'Contig'. ( $sctg_num - 1 );
             my $seq = Bio::Seq->new( -seq => $supercontig_fasta, -id => $pcap_name );
             $fa_out->write_seq( $seq );
 

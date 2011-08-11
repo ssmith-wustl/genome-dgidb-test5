@@ -27,7 +27,7 @@ my $tempdir = File::Temp::tempdir(CLEANUP => 1);
 my $temp_wugc = $tempdir."/genotype-microarray-test.wugc";
 
 my $individual = Genome::Individual->create(name => 'test-patient', common_name => 'testpatient');
-my $sample = Genome::Sample->create(name => 'test-patient', species_name => 'human', common_name => 'normal', source => $individual);
+my $sample = Genome::Sample->create(name => 'test-patient-sample', species_name => 'human', common_name => 'normal', source => $individual);
 
 my $ref_pp = Genome::ProcessingProfile::ImportedReferenceSequence->create(name => 'test_ref_pp');
 my $ref_model = Genome::Model::ImportedReferenceSequence->create(

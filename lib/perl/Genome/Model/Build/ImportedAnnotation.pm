@@ -289,7 +289,7 @@ sub _resolve_annotation_file_name {
     return $file_name;
 }
 
-sub transcript_info_file {
+sub generate_transcript_info_file {
     my $self = shift;
     my $reference_sequence_id = shift;
 
@@ -324,7 +324,17 @@ sub transcript_info_file {
     return $file_name;
 }
 
-sub annotation_file {
+sub transcript_info_file {
+    my $self = shift;
+    my $reference_sequence_id = shift;
+    my $file_name = $self->_resolve_annotation_file_name('transcript_info','tsv',$reference_sequence_id);
+    if (-s $file_name){
+        return $file_name;
+    }
+    return undef;
+}
+
+sub generate_annotation_file {
     my $self = shift;
     my $suffix = shift;
     my $reference_sequence_id = shift;
@@ -364,7 +374,23 @@ sub annotation_file {
     return $file_name;
 }
 
-sub rRNA_MT_pseudogene_file {
+sub annotation_file {
+    my $self = shift;
+    my $suffix = shift;
+    my $reference_sequence_id = shift;
+
+    unless ($suffix) {
+        die('Must provide file suffix as parameter to annotation_file method in '.  __PACKAGE__);
+    }
+
+    my $file_name = $self->_resolve_annotation_file_name('all_sequences',$suffix,$reference_sequence_id);
+    if (-s $file_name) {
+        return $file_name;
+    }
+    return undef;
+}
+
+sub generate_rRNA_MT_pseudogene_file {
     my $self = shift;
     my $suffix = shift;
     my $reference_sequence_id = shift;
@@ -372,7 +398,7 @@ sub rRNA_MT_pseudogene_file {
         die('Must provide file suffix as parameter to rRNA_MT_pseudogene_file method in '.  __PACKAGE__);
     }
     my $file_name = $self->_resolve_annotation_file_name('rRNA_MT_pseudogene',$suffix,$reference_sequence_id);
-    if (-f $file_name) {
+    if (-s $file_name) {
         return $file_name;
     }
     my $rRNA_file = $self->rRNA_file($suffix,$reference_sequence_id);
@@ -393,10 +419,27 @@ sub rRNA_MT_pseudogene_file {
     )) {
         die('Failed to sort file: '. $file_name);
     }
+    unless (-s $file_name){
+        die('rRNA_MT_pseudogene file exists but has no size: ' . $file_name);
+    }
     return $file_name;
 }
 
-sub rRNA_MT_file {
+sub rRNA_MT_pseudogene_file {
+    my $self = shift;
+    my $suffix = shift;
+    my $reference_sequence_id = shift;
+    unless ($suffix) {
+        die('Must provide file suffix as parameter to rRNA_MT_pseudogene_file method in '.  __PACKAGE__);
+    }
+    my $file_name = $self->_resolve_annotation_file_name('rRNA_MT_pseudogene',$suffix,$reference_sequence_id);
+    if (-s $file_name) {
+        return $file_name;
+    }
+    return undef;
+}
+
+sub generate_rRNA_MT_file {
     my $self = shift;
     my $suffix = shift;
     my $reference_sequence_id = shift;
@@ -404,7 +447,7 @@ sub rRNA_MT_file {
         die('Must provide file suffix as parameter to rRNA_MT_file method in '.  __PACKAGE__);
     }
     my $file_name = $self->_resolve_annotation_file_name('rRNA_MT',$suffix,$reference_sequence_id);
-    if (-f $file_name) {
+    if (-s $file_name) {
         return $file_name;
     }
 
@@ -425,10 +468,27 @@ sub rRNA_MT_file {
     )) {
         die('Failed to sort file: '. $file_name);
     }
+    unless (-s $file_name){
+        die('rRNA_MT file exists but has no size: ' . $file_name);
+    }
     return $file_name;
 }
 
-sub rRNA_file {
+sub rRNA_MT_file {
+    my $self = shift;
+    my $suffix = shift;
+    my $reference_sequence_id = shift;
+    unless ($suffix) {
+        die('Must provide file suffix as parameter to rRNA_MT_file method in '.  __PACKAGE__);
+    }
+    my $file_name = $self->_resolve_annotation_file_name('rRNA_MT',$suffix,$reference_sequence_id);
+    if (-s $file_name) {
+        return $file_name;
+    }
+    return undef;
+}
+
+sub generate_rRNA_file {
     my $self = shift;
     my $suffix = shift;
     my $reference_sequence_id = shift;
@@ -494,10 +554,27 @@ sub rRNA_file {
     )) {
         die('Failed to sort file: '. $file_name);
     }
+    unless (-s $file_name){
+        die('rRNA file exists but has no size: ' . $file_name);
+    }
     return $file_name;
 }
 
-sub MT_file {
+sub rRNA_file {
+    my $self = shift;
+    my $suffix = shift;
+    my $reference_sequence_id = shift;
+    unless ($suffix) {
+        die('Must provide file suffix as parameter to rRNA_file method in '.  __PACKAGE__);
+    }
+    my $file_name = $self->_resolve_annotation_file_name('rRNA',$suffix,$reference_sequence_id);
+    if (-s $file_name) {
+        return $file_name;
+    }
+    return undef;
+}
+
+sub generate_MT_file {
     my $self = shift;
     my $suffix = shift;
     my $reference_sequence_id = shift;
@@ -543,10 +620,27 @@ sub MT_file {
     )) {
         die('Failed to sort file: '. $file_name);
     }
+    unless (-s $file_name){
+        die('MT file exists but has no size: ' . $file_name);
+    }
     return $file_name;
 }
 
-sub pseudogene_file {
+sub MT_file {
+    my $self = shift;
+    my $suffix = shift;
+    my $reference_sequence_id = shift;
+    unless ($suffix) {
+        die('Must provide file suffix as parameter to rRNA_file method in '.  __PACKAGE__);
+    }
+    my $file_name = $self->_resolve_annotation_file_name('MT',$suffix,$reference_sequence_id);
+    if (-s $file_name) {
+        return $file_name;
+    }
+    return undef;
+}
+
+sub generate_pseudogene_file {
     my $self = shift;
     my $suffix = shift;
     my $reference_sequence_id = shift;
@@ -592,7 +686,24 @@ sub pseudogene_file {
     )) {
         die('Failed to sort file: '. $file_name);
     }
+    unless (-s $file_name){
+        die('pseudogene file exists but has no size: ' . $file_name);
+    }
     return $file_name;
+}
+
+sub pseudogene_file {
+    my $self = shift;
+    my $suffix = shift;
+    my $reference_sequence_id = shift;
+    unless ($suffix) {
+        die('Must provide file suffix as parameter to pseudogene_file method in '.  __PACKAGE__);
+    }
+    my $file_name = $self->_resolve_annotation_file_name('pseudogene',$suffix,$reference_sequence_id);
+    if (-s $file_name) {
+        return $file_name;
+    }
+    return undef;
 }
 
 sub tiering_bed_files_by_version {

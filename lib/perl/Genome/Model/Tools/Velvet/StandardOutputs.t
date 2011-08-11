@@ -9,7 +9,7 @@ require File::Compare;
 
 use_ok ('Genome::Model::Tools::Velvet::StandardOutputs') or die;
 
-my $version = 'v1';
+my $version = 'v3';
 my $data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Velvet/StandardOutputs-'.$version;
 ok (-d $data_dir, "Test suite data dir exists") or die;
 

@@ -159,7 +159,6 @@ sub execute {
             $sth->execute or return $self->error_handle("Failed to insert for $name : ".$DBI::errstr);
         }
         else {
-	    push @{$seqinfo[$ct]}, $name;
 	    push @{$seqinfo[$ct]}, $seekpos;
         }
         $seekpos = $seq_fh->tell;
@@ -193,6 +192,8 @@ sub execute {
         or return;
     my $read_pos_writer = GSC::IO::Assembly::Ace::Writer->new($read_pos_fh)
         or return;
+
+    my $sequences_fh = Genome::Sys->open_file_for_reading( $self->seq_file );
 
     while (my $record = getRecord($afg_fh)){
         my ($rec, $fields, $recs) = parseRecord($record);
@@ -238,7 +239,7 @@ sub execute {
                     return $self->error_handle('TLE record contains no src: field')
                     unless defined $ori_read_id;
 
-                    my ($read_id, $pos, $itr);
+                    my ($read_id, $pos, $itr, $sequence);
 
                     if ($self->sqlite_yes) { #<--------------------
                         my $sth = $dbh->prepare(
@@ -253,22 +254,28 @@ sub execute {
                         return $self->error_handle("Got nothing from sqlite select for read: $ori_read_id") unless @out;
 
                         ($read_id, $pos) = @out;
+                        
+                        my $seq_obj = $self->get_seq( $pos, $ori_read_id, $sequences_fh );
+                        $sequence = $seq_obj->seq;
+                        
+                        $read_id = $seq_obj->primary_id;
+
                         $read_id .= '-'.$read_dup{$ori_read_id} if exists $read_dup{$ori_read_id};
                         $read_dup{$ori_read_id}++;
                     }
                     else {
 			return $self->error_handle("Sequence of $ori_read_id (iid) not found") unless
 			    defined $seqinfo[$ori_read_id];
-			$read_id = ${$seqinfo[$ori_read_id]}[0];
-			$pos = ${$seqinfo[$ori_read_id]}[1];
+			$pos = ${$seqinfo[$ori_read_id]}[0];
+
+                        my $seq_obj = $self->get_seq( $pos, $ori_read_id, $sequences_fh );
+                        $sequence = $seq_obj->seq;
+                        $read_id = $seq_obj->primary_id;
+
 			$read_id .= '-' . ${$seqinfo[$ori_read_id]}[2] if defined ${$seqinfo[$ori_read_id]}[2];
 			${$seqinfo[$ori_read_id]}[2]++;
 		    }
                     $dbh->commit if $self->sqlite_yes;
-
-                    my $sequence = $self->get_seq($pos, $read_id, $ori_read_id);
-
-                    return unless $sequence;
 
                     my ($asml, $asmr) = split (/\,/, $sfields->{clr});
 
@@ -396,7 +403,7 @@ sub execute {
         }#if 'CTG'
     }#While loop
     $afg_fh->close;
-    #$seq_fh->close;
+    $sequences_fh->close;
     $self->status_message("There are total $nContigs contigs and $nReads reads processed");
 
     $writer->write_object({
@@ -459,29 +466,19 @@ sub get_sqlite_dbh {
 
 
 sub get_seq {
-    my ($self, $seekpos, $name, $id) = @_;
+    my ( $self, $seekpos, $id, $fh ) = @_;
 
     #TODO - temp patch .. Bio::seqio seek pos seems to be off by 1
     $seekpos = ( $seekpos == 0 ) ? $seekpos : $seekpos - 1;
-
-    my $fh = Genome::Sys->open_file_for_reading($self->seq_file) or return;
     $fh->seek($seekpos, 0);
 
-    my $fa_bio = Bio::SeqIO->new(-fh => $fh, -format => 'fasta');
+    my $fa_bio = Bio::SeqIO->new(-fh => $fh, -format => 'fasta', -noclose => 1);
     my $fasta  = $fa_bio->next_seq;
 
-    return $self->error_handle("Failed to get fasta bio obj from $name, $seekpos, $id")
-    unless $fasta;
+    return $self->error_handle("Failed to get fasta bio obj from seek_pos: $seekpos, id: $id")
+        unless $fasta;
 
-    my $sequence = $fasta->seq;
-    my $seq_name = $fasta->display_id;
-
-    return $self->error_handle("Failed to get fasta seq for read $name, $id") 
-    unless $sequence;
-    return $self->error_handle("Failed to match seq name: $name => $seq_name")
-    unless $name =~ /$seq_name/;
-
-    return $sequence;
+    return $fasta;
 }
 
 

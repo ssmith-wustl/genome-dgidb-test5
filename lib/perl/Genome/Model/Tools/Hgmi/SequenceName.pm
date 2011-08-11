@@ -113,7 +113,7 @@ sub execute
     my $hgmi_acedb_patha;
 
     my $acedb_version = $self->acedb_version;
-    $acedb_version =~ s/V(\d)/Version_$1\.0/;
+    #$acedb_version =~ s/V(\d)/Version_$1\.0/;
     #$hgmi_acedb_patha = $self->path. "/".$self->project_type ."/Acedb/". $acedb_version .
     $hgmi_acedb_patha = $self->path. "/Acedb/". $acedb_version .
                         "/ace_files/". $self->locus_tag;

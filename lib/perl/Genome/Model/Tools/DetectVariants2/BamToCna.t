@@ -17,18 +17,22 @@ BEGIN {
     my $archos = `uname -a`;
     if ($archos !~ /64/) {
         plan skip_all => "Must run from 64-bit machine";
-    } else {
-        plan tests => 23;
     }
 };
 
 
 use_ok( 'Genome::Model::Tools::DetectVariants2::BamToCna');
 
+my $refbuild_id = 101947881;
+my $ref_seq_build = Genome::Model::Build::ImportedReferenceSequence->get($refbuild_id);
+ok($ref_seq_build, 'human36 reference sequence build') or die;
+
+no warnings;
 # Override lock name because if people cancel tests locks don't get cleaned up.
 *Genome::SoftwareResult::_resolve_lock_name = sub {
     return Genome::Sys->create_temp_file_path;
 };
+use warnings;
 
 my $test_input_dir  = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants2-BamToCna/'; #Switched to whole genome normalization right around rev 61005
 
@@ -51,12 +55,6 @@ my $output_file_2 = "$output_directory_2/cnvs.hq";
 my $output_file_3 = "$output_directory_3/cnvs.hq";
 my $output_file_4 = "$output_directory_4/cnvs.hq";
 
-my $ref_seq_build = Genome::Model::Build::ImportedReferenceSequence->get(type_name => 'imported reference sequence', name => 'NCBI-human-build36');
-ok($ref_seq_build, 'Got a reference sequence build') or die('Test cannot continue without a reference sequence build');
-is($ref_seq_build->name, 'NCBI-human-build36', 'Got expected reference for test case');
-
-my $refbuild_id = 101947881;
-
 #This window size and ratio are atypical, but allow the test to generate all data given a sparse BAM file.
 my $bam_to_cna_1 = Genome::Model::Tools::DetectVariants2::BamToCna->create(
     aligned_reads_input  => $tumor_bam_file,
@@ -69,6 +67,7 @@ my $bam_to_cna_1 = Genome::Model::Tools::DetectVariants2::BamToCna->create(
 );
 
 ok($bam_to_cna_1, 'created BamToCna object with ratio of 4.0');
+$bam_to_cna_1->dump_status_messages(1);
 ok($bam_to_cna_1->execute(), 'executed BamToCna object with ratio of 4.0');
 
 ok(-s $output_file_1, 'generated output for ratio of 4.0');
@@ -131,3 +130,6 @@ ok(-s $output_file_4, 'generated output for ratio of 0.25 and whole genome norma
 is(compare($output_file_4, $expected_output_file_4), 0, 'output for ratio of 0.25 matched expected results and whole genome normalization');
 
 ok(-s $output_file_4 . ".png", 'generated copy number graphs for ratio of 0.25 and whole genome normalization');
+
+done_testing();
+exit;
