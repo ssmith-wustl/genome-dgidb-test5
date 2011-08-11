@@ -1556,7 +1556,7 @@ sub _is_build36_project {
         H_LB => 'MDS sAML',
         H_KU => 'BRC',
         H_JG => 'LUC',
-        H_KZ => 'PRC',
+#        H_KZ => 'PRC', #moved to separate method per RT #74107
         H_LF => 'PNC',
         H_KX => 'MMY',
         H_LJ => 'ALS',
@@ -1585,7 +1585,9 @@ sub _is_build36_project {
     return $legacy_project_mapping{$sample_prefix} if $legacy_project_mapping{$sample_prefix};
     my $aml_build36 = $self->_is_aml_build_36($pse, $sample);
     return $aml_build36 if $aml_build36;
-    return $self->_is_mel_build_36($sample);
+    my $mel_build36 = $self->_is_mel_build_36($sample);
+    return $mel_build36 if $mel_build36;
+    return $self->_is_prc_build_36($sample_prefix, $instrument_data);
 }
 
 sub _is_aml_build_36 {
@@ -1615,6 +1617,16 @@ sub _is_mel_build_36 {
 
     my @sample_names = qw(H_LX-001922-06S11008354 H_LX-003286-06S10352280 H_LX-003286-06S11008366 H_LX-004608-06S11008352 H_LX-004608-06S11008368 H_LX-005621-06S11008357 H_LX-005621-06S11008369 H_LX-011221-06S10352279 H_LX-011221-06S11008359 H_LX-011221-06S11008362 H_LX-000779-06S11008355 H_LX-002441-06S11008346 H_LX-002455-06S11008356 H_LX-003154-06S11008358 H_LX-003611-06S11008349 H_LX-003611-06S11008372 H_LX-003791-06S11008344 H_LX-003791-06S11008364 H_LX-004192-06S11008345 H_LX-004192-06S11008365);
     return grep( $sample->name eq $_, @sample_names);
+}
+
+sub _is_prc_build_36 {
+    my $self = shift;
+    my $sample_prefix = shift;
+    my $instrument_data = shift;
+
+    #PRC WGS should stay on build36 (ndees) and exome capture should move to build37 (dlarson).  This is the current hacky way to decide something is exome capture.
+    return unless $sample_prefix eq 'H_KZ';
+    return !($instrument_data->target_region_set_name and ($instrument_data->target_region_set_name =~ /exome/));
 }
 
 1;
