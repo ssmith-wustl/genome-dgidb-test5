@@ -72,7 +72,7 @@ sub execute {
         }
 
         #check appropriately sized DEL event for ALU region  
-        my $is_alu = is_alu_polymorphism($chr1, $bpA, $bpB);
+        my $is_alu = $self->is_alu_polymorphism($chr1, $bpA, $bpB);
         print $out_fh "$line\n" unless $is_alu;
 
     }
