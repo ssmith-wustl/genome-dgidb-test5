@@ -32,7 +32,7 @@ class Genome::Model::Build::ReferenceSequence {
             via => 'inputs',
             to => 'value_id',
             where => [ name => 'desc', value_class_name => 'UR::Value' ],
-            doc => 'The source of the sequence (such as NCBI).  May not contain spaces.',
+            doc => 'Any additional qualifier besides the prefix/source and data set name, like "lite" in "GRC-human-lite".',
             is_mutable => 1,
             is_many => 0,
             is_optional => 1,

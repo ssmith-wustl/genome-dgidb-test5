@@ -223,6 +223,71 @@
               <td class="value"><xsl:value-of select="@id"/>
               </td>
             </tr>
+            <!-- notes button -->
+            <xsl:variable name="note_count" select="count(aspect[@name='notes']/object)"/>
+            <xsl:variable name="model_id" select="@id"/>
+            <xsl:choose>
+              <xsl:when test="$note_count &gt; 0">
+
+                <tr>
+                  <td class="name"></td>
+                  <td class="value">
+                    <a class="mini btn notes-popup">
+                      <xsl:attribute name="title">Model <xsl:value-of select="$model_id"/> Notes</xsl:attribute>
+                      <xsl:attribute name="id"><xsl:value-of select="model_id"/></xsl:attribute>
+                      <span class="sm-icon sm-icon-newwin"><br/></span>notes (<xsl:value-of select="$note_count"/>)
+                    </a>
+                    <!-- div for instrument data -->
+                    <div style="display: none;">
+                      <xsl:attribute name="id">notes_subject_<xsl:value-of select="model_id"/></xsl:attribute>
+                      <table class="lister" border="0" width="100%" cellspacing="0" cellpadding="0">
+                        <colgroup>
+
+                        </colgroup>
+                        <thead>
+                          <th>
+                            header
+                          </th>
+                          <th>
+                            date
+                          </th>
+                          <th>
+                            editor id
+                          </th>
+                          <th>
+                            <xsl:text> </xsl:text>
+                          </th>
+
+                        </thead>
+                        <tbody>
+                          <xsl:for-each select="aspect[@name='notes']/object">
+                            <tr>
+                              <td><strong><xsl:value-of select="aspect[@name='header_text']/value"/></strong></td>
+                              <td><xsl:value-of select="aspect[@name='entry_date']/value"/></td>
+                              <td><xsl:value-of select="aspect[@name='editor_id']/value"/></td>
+                              <td class="buttons">
+                                <xsl:for-each select="aspect[@name='subject']/object">
+                                  <xsl:call-template name="object_link_button">
+                                    <xsl:with-param name="linktext" select="'subject'"/>
+                                    <xsl:with-param name="icon" select="'sm-icon-extlink'"/>
+                                  </xsl:call-template>
+                                </xsl:for-each>
+                              </td>
+
+                            </tr>
+                            <tr>
+                              <td colspan="4" class="text"><xsl:value-of select="aspect[@name='body_text']/value"/></td>
+                            </tr>
+
+                          </xsl:for-each>
+                        </tbody>
+                      </table>
+
+                    </div>
+                  </td>
+                </tr>
+              </xsl:when>
+            </xsl:choose>
 
             <tr>
               <td class="name">creation date:
@@ -348,21 +413,21 @@
               <td class="name">build requested:
               </td>
               <td class="value">
-                  <xsl:choose>
-                      <xsl:when test="normalize-space(aspect[@name='build_requested']/value) != '' and normalize-space(aspect[@name='build_requested']/value) != '0'">
-                      yes</xsl:when>
-                      <xsl:otherwise>no</xsl:otherwise>
-                  </xsl:choose>
+                <xsl:choose>
+                  <xsl:when test="normalize-space(aspect[@name='build_requested']/value) != '' and normalize-space(aspect[@name='build_requested']/value) != '0'">
+                  yes</xsl:when>
+                  <xsl:otherwise>no</xsl:otherwise>
+                </xsl:choose>
               </td>
             </tr>
             <tr>
               <td class="name">build needed:
               </td>
               <td class="value">
-                  <xsl:choose>
-                      <xsl:when test="aspect[@name='build_needed']/value">yes</xsl:when>
-                      <xsl:otherwise>no</xsl:otherwise>
-                  </xsl:choose>
+                <xsl:choose>
+                  <xsl:when test="aspect[@name='build_needed']/value">yes</xsl:when>
+                  <xsl:otherwise>no</xsl:otherwise>
+                </xsl:choose>
               </td>
             </tr>
           </tbody>
@@ -570,9 +635,9 @@
                 <div style="display: none;">
                   <xsl:attribute name="id">instrument_data_<xsl:value-of select="$model_id"/></xsl:attribute>
                   <table class="lister">
-                  <xsl:for-each select="$inputs[aspect[@name='name']/value = $name]">
-                    <xsl:call-template name="genome_model_input_table_row"/>
-                  </xsl:for-each>
+                    <xsl:for-each select="$inputs[aspect[@name='name']/value = $name]">
+                      <xsl:call-template name="genome_model_input_table_row"/>
+                    </xsl:for-each>
                   </table>
                 </div>
               </td>
@@ -672,7 +737,7 @@
               <span class="value"><xsl:text>missing </xsl:text><xsl:value-of select="count($missing_inputs[aspect[@name='name']/value = $name])"/></span>
             </xsl:otherwise>
 
-          </xsl:choose>;
+            </xsl:choose>;
         </span>
       </xsl:for-each>
     </xsl:if>

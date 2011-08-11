@@ -24,9 +24,11 @@ use Storable;
 
 use File::Basename;
 use Cwd 'abs_path';
-$Storable::Deparse = 1;
-$Storable::Eval = 1;
-#$Storable::forgive_me = 1;
+
+no warnings 'once';
+local $Storable::Deparse = 1;
+local $Storable::Eval = 1;
+#local $Storable::forgive_me = 1;
 
 Genome::Model::Tools::Pcap::Ace->mk_accessors(qw(_reader _writer _input_files _show_progress _cache_dir _output _output_file)); #_input removed, ability to parse stream to a index/db will be a future feature, as needed
 
@@ -127,7 +129,7 @@ sub _build_ace_index
 		if($first_three eq "CO ")
 		{
 			$contig = $self->_build_contig_index($file_name,$line);
-            nstore $contig, "$index_dir/$contig->{name}.ci";
+            Storable::nstore $contig, "$index_dir/$contig->{name}.ci";
 		}
 		elsif($first_three eq "WA ")
 		{
@@ -162,7 +164,7 @@ sub _build_ace_index
         my $ci = retrieve "$index_dir/$contig_name.ci";
         push @{$ci->{tags}},@{$tag_hash{$contig_name}};
         delete $tag_hash{$contig_name};
-        nstore $ci, "$index_dir/$contig_name.ci";
+        Storable::nstore $ci, "$index_dir/$contig_name.ci";
     }
     
     #write assembly tags to file
@@ -478,7 +480,7 @@ sub add_contig
 #TODO: the cache should store frozen contig objects, not their indices alone
     $contig_index = { offset => -1, contig_loaded => 1, name => $contig->name, contig_object => $contig->copy($contig) };
     unlink $contig_file if(-e $contig_file);
-    nstore $contig_index, $contig_file;
+    Storable::nstore $contig_index, $contig_file;
 
     $contig->thaw($self);
 }

@@ -74,7 +74,7 @@ sub execute {                               # replace with real execution logic
          return 0;
     }
     my $build_dir = $build->data_directory;
-    my $sample = $build->subject_id;
+    my $sample = $build->subject_name;
 
     ### for each detector, create the vcf then grab the results of each filter and apply them to that file
     for my $detector (keys %{$plan}) {
@@ -90,7 +90,7 @@ sub execute {                               # replace with real execution logic
         if($self->annotate_dbsnp) {
             my $dbsnp_file = "$sample.$detector.dbsnp.vcf";
             Genome::Sys->shellcmd(cmd => "gmt vcf vcf-annotate-dbsnp --vcf-file=$output_file --output-file=$dbsnp_file --dbsnp_file = /gscuser/cmiller/snp130.txt");
-            Genome::Sys->shellcmd(cmd => "cp $dbsnp_file $output_file");
+            Genome::Sys->shellcmd(cmd => "mv $dbsnp_file $output_file");
         }
         my $filter_dir = "$dir/";
         for my $filter (@{$detector_hash->{filters}}) {
@@ -100,26 +100,26 @@ sub execute {                               # replace with real execution logic
             my $filter_description = $filter->{class};
             my $filter_file = "$output_file.$filter_name";
             Genome::Sys->shellcmd(cmd => "gmt vcf vcf-filter --vcf-file=$output_file --output-file=$filter_file --filter-name=$filter_name --filter-description=$filter_description --filter-file=$filter_dir/snvs.hq --filter-keep --variant-type 'SNP'");
-        Genome::Sys->shellcmd(cmd => "cp $filter_file $output_file");
+        Genome::Sys->shellcmd(cmd => "mv $filter_file $output_file");
         }
     }
         ###need to make a hash of result files
         $detector_vcf{$detector}=$output_file;
     }
     ###at this point we should have <number of detectors> vcf files laying around fully filtered and possibly dbsnp annotated. now merge them.
-    my($merged_vcf, $complete_detector_list) =$self->depth_first_merge($tree->{'snv'});
+    my($merged_vcf, $complete_detector_list) =$self->depth_first_merge($tree->{'snv'}, $sample);
     my $output_file;
 
     ###now, apply LOH and DBSNP 
     if($build->loh_version) {
          $output_file = $self->output_dir . "/$sample.$complete_detector_list.merged.loh.vcf";
         Genome::Sys->shellcmd(cmd => "gmt vcf vcf-filter --vcf-file $merged_vcf --output-file $output_file --filter-name \"LOHfilter\" --filter-description \"LOH filter\" --filter-file $build_dir/loh/snvs.somatic.v2.bed --filter-keep --variant-type \"SNP\" --bed-input=1");
-        Genome::Sys->shellcmd(cmd => "cp $output_file $merged_vcf");
+        Genome::Sys->shellcmd(cmd => "mv $output_file $merged_vcf");
     }
     if($build->previously_discovered_variations_build) {
          $output_file = $self->output_dir . "/$sample.$complete_detector_list.merged.dbsnp.vcf";
         Genome::Sys->shellcmd(cmd=> "gmt vcf vcf-filter --vcf-file $merged_vcf --output-file $output_file --filter-name \"novel\" --filter-description \"Novel Variant Filter\" --filter-file $build_dir/novel/snvs.hq.novel.v2.bed --filter-keep --variant-type \"SNP\" --bed-input=1");
-        Genome::Sys->shellcmd(cmd => "cp $output_file $merged_vcf");
+        Genome::Sys->shellcmd(cmd => "mv $output_file $merged_vcf");
     }
     $dv2->delete();
 
@@ -146,13 +146,13 @@ sub execute {                               # replace with real execution logic
                 delete $should_pass_hash{$chr}{$pos};
             }
             else {
-                $self->error_message("$line should be passing according to DV2 but is not\n");
+                $self->error_message("$line should be passing according to DV2 but is not");
             }
         }
     }
     for my $chr (keys %should_pass_hash) {
         for my $pos (keys %{$should_pass_hash{$chr}}) {
-            print "$chr, $pos expected in $merged_vcf according to DV2 but not found\n";
+            $self->error_messagE("$chr, $pos expected in $merged_vcf according to DV2 but not found");
         }
     }
 
@@ -178,6 +178,7 @@ sub check_for_conversion_ability {
 sub depth_first_merge {
     my $self = shift;
     my $tree_part = shift;
+    my $sample_name=shift;
     my @keys = keys %$tree_part;  
     #There should always be exactly one outer rule (or detector)
     unless(scalar @keys eq 1) {
@@ -199,10 +200,10 @@ sub depth_first_merge {
         my ($keys_1, undef) = keys %{$value->[1]};
         my ($file1, $file2, $merged_list1, $merged_list2);
         if($keys_0 ne 'detector') {
-            ($file1, $merged_list1) =  $self->depth_first_merge($value->[0]);
+            ($file1, $merged_list1) =  $self->depth_first_merge($value->[0], $sample_name);
         }
         if($keys_1 ne 'detector') {
-            ($file2, $merged_list2)  = $self->depth_first_merge($value->[1]);
+            ($file2, $merged_list2)  = $self->depth_first_merge($value->[1], $sample_name);
         }
         unless($file1) {
             $file1 = $detector_vcf{$value->[0]->{'detector'}->{'name'}};
@@ -224,14 +225,14 @@ sub depth_first_merge {
 
         
 
-        my $output_file=$self->output_dir . "/$detector1.$detector2.merged.vcf";
+        my $output_file=$self->output_dir . "/$sample_name.$detector1.$detector2.merged.vcf";
         ###ok time to do an intersect, union, or union-unique
         $self->status_message("Merging $detector1 & $detector2-- $key");
         if($key eq 'intersect') {
             Genome::Sys->shellcmd(cmd => "gmt vcf vcf-merge --output-file=$output_file --vcf-files=$file1,$file2 --merge-filters --source-ids '$detector1, $detector2' --require-all-passing");
             return ($output_file, "$detector1.$detector2");
         }
-        elsif($key eq 'union' || $key eq 'uniqueunion') {
+        elsif($key eq 'union' || $key eq 'unionunique') {
             Genome::Sys->shellcmd(cmd=> "gmt vcf vcf-merge --output-file=$output_file --vcf-files=$file1,$file2 --merge-filters --source-ids '$detector1, $detector2' --keep-all-passing");
             return ($output_file, "$detector1.$detector2");
         }

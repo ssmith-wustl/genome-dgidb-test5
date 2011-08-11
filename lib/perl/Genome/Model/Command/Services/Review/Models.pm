@@ -49,7 +49,7 @@ sub execute {
         my $first_nondone_step = '-';
         eval {
             my $parent_workflow_instance = $latest_build->newest_workflow_instance;
-            $first_nondone_step = find_first_nondone_step($parent_workflow_instance);
+            $first_nondone_step = find_first_nondone_step($parent_workflow_instance) || '-';
         };
 
         $first_nondone_step =~ s/^\d+\s+//;
@@ -81,22 +81,25 @@ sub execute {
         $self->print_message(join "\t", $model_id, $action, $latest_build_status, $first_nondone_step, $latest_build_revision, $model_name, $pp_name, $fail_count);
     }
 
-    my %cmd_rvs;
+    my %start_rv;
     if ($self->auto and @models_to_start) {
         for my $model (@models_to_start) {
             my $cmd = Genome::Model::Build::Command::Start->create(models => [$model]);
-            $cmd_rvs{$cmd->execute}++;
+            $start_rv{$cmd->execute}++;
         }
     }
+    my %cleanup_rv;
     if ($self->auto and @models_to_cleanup) {
         for my $model (@models_to_cleanup) {
             my $cmd = Genome::Model::Command::Services::Review::CleanupSucceeded->create(models => [$model]);
-            $cmd_rvs{$cmd->execute}++;
+            $cleanup_rv{$cmd->execute}++;
         }
     }
 
-    $self->print_message("Succeeded " . $cmd_rvs{1}) if $cmd_rvs{1};
-    $self->print_message("Failed " . $cmd_rvs{0}) if $cmd_rvs{0};
+    $self->print_message("Started " . $start_rv{1}) if $start_rv{1};
+    $self->print_message("Failed to start " . $start_rv{0}) if $start_rv{0};
+    $self->print_message("Cleaned up " . $cleanup_rv{1}) if $cleanup_rv{1};
+    $self->print_message("Failed to cleanup " . $cleanup_rv{0}) if $cleanup_rv{0};
     return 1;
 }
 

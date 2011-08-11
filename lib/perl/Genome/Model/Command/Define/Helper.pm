@@ -129,18 +129,20 @@ sub execute {
         }
         $self->subject($subject);
     }
-            
-    my $model = Genome::Model->create(
+
+    my %params = (
         subject_id => $self->subject->id,
         subject_class_name => $self->subject->class,
         processing_profile_id => $self->processing_profile->id,
         name => $self->model_name,
         auto_assign_inst_data => $self->auto_assign_inst_data,
         auto_build_alignments => $self->auto_build_alignments,
-        instrument_data => [$self->instrument_data],
-        model_groups => [$self->groups],
         $self->type_specific_parameters_for_create,
     );
+    $params{instrument_data} = [$self->instrument_data] if $self->instrument_data;
+    $params{model_groups} = [$self->groups] if $self->groups;
+            
+    my $model = Genome::Model->create(%params);
     unless ($model) {
         confess "Could not create a model!";
     }
