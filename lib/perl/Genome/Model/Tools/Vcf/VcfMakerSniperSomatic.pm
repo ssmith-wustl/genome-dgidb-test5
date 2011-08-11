@@ -15,79 +15,82 @@ use List::MoreUtils qw(uniq);
 class Genome::Model::Tools::Vcf::VcfMakerSniperSomatic {
     is => 'Command',
     has => [
-        output_file => {
-            is => 'Text',
-            is_output => 1,
-            doc => "List of mutations in Vcf format",
-        },
-        
-        chrom => {
-            is => 'Text',
-            doc => "do only this chromosome" ,
-            is_optional => 1,
-            default => "",
-        },
+    output_file => {
+        is => 'Text',
+        is_output => 1,
+        doc => "List of mutations in Vcf format",
+    },
 
-        skip_header => {
-            is => 'Boolean',
-            is_optional => 1,
-            is_input => 1,
-            default => 0,
-            doc => 'enable this to skip header output - useful for doing individual chromosomes. Note that the output will be appended to the output file if this is enabled.',
-        },
-        
-        genome_build => {
-            is => 'Text',
-            doc => "Reference genome build" ,
-            is_optional => 1,
-            default => "36",
-        },
-        
-        sniper_file => {
-            is => 'Text',
-            doc => "sniper output file" ,
-            is_optional => 0,
-            is_input => 1,
-        },
-        
-        type => {
-            is => 'Text',
-            doc => "type of variant calls - one of \"snv\" or \"indel\"" ,
-            is_optional => 0,
-            is_input => 1,
-        },        
+    chrom => {
+        is => 'Text',
+        doc => "do only this chromosome" ,
+        is_optional => 1,
+        default => "",
+    },
 
-        sample_id => {
-            is => 'Text',
-            doc => "unique sample id",
-            is_optional => 0,
-            is_input => 1,
-        },        
+    skip_header => {
+        is => 'Boolean',
+        is_optional => 1,
+        is_input => 1,
+        default => 0,
+        doc => 'enable this to skip header output - useful for doing individual chromosomes. Note that the output will be appended to the output file if this is enabled.',
+    },
 
-        dbsnp_file => {
-            is => 'Text',
-            doc => "dbsnp File - if specified, will label dbSNP sites",
-            is_optional => 1,
-            is_input => 1,
-            default => "",
-        },
+    genome_build => {
+        is => 'Text',
+        doc => "Reference genome build" ,
+        is_optional => 1,
+        default => "36",
+    },
 
-        seq_center => {
-            is => 'Text',
-            doc => "Center that did the sequencing (WUSTL or BROAD)" ,
-            is_optional => 1,
-            default => "WUSTL",
-        },
+    input_file => {
+        is => 'Text',
+        doc => "sniper output file" ,
+        is_optional => 0,
+        is_input => 1,
+    },
 
-        cp_score_to_qual => {
-            is => 'Boolean',
-            doc => "copy the somatic score to the qual field for Mutation WG comparisons" ,
-	    is_optional => 1,
-	    default => 0,
-	    is_input => 1
-        },
+    type => {
+        is => 'Text',
+        doc => "type of variant calls - one of \"snv\" or \"indel\"" ,
+        is_optional => 0,
+        is_input => 1,
+    },        
 
-        ],
+    sample_id => {
+        is => 'Text',
+        doc => "unique sample id",
+        is_optional => 0,
+        is_input => 1,
+    },        
+    standard_chroms => {
+        default=>0,
+        doc=> "set to 1 if you only want 1..2,X,Y,MT"
+    },
+    dbsnp_file => {
+        is => 'Text',
+        doc => "dbsnp File - if specified, will label dbSNP sites",
+        is_optional => 1,
+        is_input => 1,
+        default => "",
+    },
+
+    seq_center => {
+        is => 'Text',
+        doc => "Center that did the sequencing (WUSTL or BROAD)" ,
+        is_optional => 1,
+        default => "WUSTL",
+    },
+
+    cp_score_to_qual => {
+        is => 'Boolean',
+        doc => "copy the somatic score to the qual field for Mutation WG comparisons" ,
+        is_optional => 1,
+        default => 0,
+        is_input => 1
+    },
+
+    ],
 };
 
 
@@ -123,7 +126,7 @@ sub execute {                               # replace with real execution logic.
     my $chrom = $self->chrom;
     my $seq_center = $self->seq_center;
     my $skip_header = $self->skip_header;
-    my $sniper_file = $self->sniper_file;
+    my $sniper_file = $self->input_file;
     my $sample_id = $self->sample_id;
     my $type = $self->type;
     my $dbsnp_file = $self->dbsnp_file;
@@ -199,7 +202,7 @@ sub execute {                               # replace with real execution logic.
         if ($seq_center eq "WUSTL"){
             $reference = "ftp://ftp.ncbi.nlm.nih.gov/genomes/H_sapiens/ARCHIVE/BUILD.36.3/special_requests/assembly_variants/NCBI36_BCCAGSC_variant.fa.gz";
         } elsif ($seq_center eq "BROAD"){
-	    $reference="ftp://ftp.ncbi.nlm.nih.gov/genomes/H_sapiens/ARCHIVE/BUILD.36.3/special_requests/assembly_variants/NCBI36-HG18_Broad_variant.fa.gz";
+            $reference="ftp://ftp.ncbi.nlm.nih.gov/genomes/H_sapiens/ARCHIVE/BUILD.36.3/special_requests/assembly_variants/NCBI36-HG18_Broad_variant.fa.gz";
         } else {
             die ("only have references hardcoded for WUSTL and BROAD");
         }
@@ -221,7 +224,7 @@ sub execute {                               # replace with real execution logic.
         print OUTFILE "##FORMAT=<ID=VAQ,Number=1,Type=Integer,Description=\"Variant Quality\">" . "\n";
 
         #INFO
-	print OUTFILE "##INFO=<ID=VT,Number=1,Type=String,Description=\"Variant type\">" . "\n";
+        print OUTFILE "##INFO=<ID=VT,Number=1,Type=String,Description=\"Variant type\">" . "\n";
 
         #column header:
         print OUTFILE  "#" . join("\t", ("CHROM","POS","ID","REF","ALT","QUAL","FILTER","INFO","FORMAT","NORMAL","PRIMARY")) . "\n";
@@ -242,7 +245,7 @@ sub execute {                               # replace with real execution logic.
             my($x,$y) = @_;
             my @x1 = split(":",$x);
             my @y1 = split(":",$y);
-            return($x1[0] <=> $y1[0] || $x1[1] <=> $y1[1])
+            return($x1[0] cmp $y1[0] || $x1[1] <=> $y1[1])
         }
         my @sortedKeys = sort { keySort($a,$b) } keys %snvhash;
 
@@ -315,7 +318,7 @@ sub execute {                               # replace with real execution logic.
 ###################################################################
 # actually do the parsing here
     sub sniperRead{
-        my ($sniper_file, $chrom, $type) = @_;
+        my ($sniper_file, $chrom, $type, $standard_chroms) = @_;
 
         #everything is hashed by chr:position, with subhashes corresponding to
         #samples, then the various VCF fields
@@ -337,7 +340,7 @@ sub execute {                               # replace with real execution logic.
 
             my $chr = $col[0];
             #replace X and Y for sorting
-            $ chr = "23" if $col[0] eq "X";
+            $chr = "23" if $col[0] eq "X";
             $chr = "24" if $col[0] eq "Y";
             $chr = "25" if $col[0] eq "MT";
 
@@ -348,8 +351,9 @@ sub execute {                               # replace with real execution logic.
 
             #skip non-normal chrs
             #next if $col[0] =~ /^NT/;
-            next unless ($col[0] =~/^[1]?([0-9]|^2[012]|X|Y|MT)$/);
-                 
+            
+            next if ($standard_chroms && !($col[0] =~/^[1]?([0-9]|^2[012]|X|Y|MT)$/));
+
             $allSnvs{$id}{"chrom"} = $col[0];
             $allSnvs{$id}{"pos"} = $col[1];
 
@@ -360,7 +364,7 @@ sub execute {                               # replace with real execution logic.
                 my @allAlleles = $col[2];
                 my @varAlleles;
                 my @tmp = split(",",convertIub($col[3]));
-                
+
                 #only add non-reference alleles to the alt field
                 foreach my $alt (@tmp){
                     unless ($alt eq $col[2]){
@@ -379,7 +383,7 @@ sub execute {                               # replace with real execution logic.
 
 
 
-            #handle indel genotype calls
+                #handle indel genotype calls
             } elsif ($type eq "indel"){
                 #add the preceding base as an anchor position
                 my $pbase = getPrecedingBase($col[0],$col[1]);
@@ -389,7 +393,7 @@ sub execute {                               # replace with real execution logic.
                 if ($col[2] eq "-"){
                     $allSnvs{$id}{"ref"} = $pbase;
                     $allSnvs{$id}{"alt"} = $pbase . $col[3];
-                    
+
                     #deletion
                 } elsif ($col[3] eq "-"){
                     $allSnvs{$id}{"ref"} = $pbase . $col[2];
@@ -431,7 +435,7 @@ sub execute {                               # replace with real execution logic.
             # #allele depth
             $allSnvs{$id}{"normal"}{"AD"} =  ".";
             $allSnvs{$id}{"tumor"}{"AD"} =  ".";
-            
+
             #fraction of reads supporting alt
             $allSnvs{$id}{"normal"}{"FA"} =  ".";
             $allSnvs{$id}{"tumor"}{"FA"} =  ".";
@@ -459,7 +463,7 @@ sub execute {                               # replace with real execution logic.
             unless($line =~ /^#/){
                 chomp($line);
                 my @fields = split("\t",$line);
-                
+
                 $fields[1] =~ s/chr//;
 
                 #skip snps on chrs we're not considering
@@ -487,7 +491,7 @@ sub execute {                               # replace with real execution logic.
                     #     $allSnvs{$key}{"info"} = "";
                     # }
                     # $allSnvs{$key}{"info"} = $allSnvs{$key}{"info"} . "DB";
-                    
+
                     #add to id field
                     if(exists($allSnvs{$key}{"id"})){
                         $allSnvs{$key}{"id"} = $allSnvs{$key}{"id"} . ";";
@@ -495,8 +499,8 @@ sub execute {                               # replace with real execution logic.
                         $allSnvs{$key}{"id"} = "";
                     }
                     $allSnvs{$key}{"id"} = $allSnvs{$key}{"id"} . $fields[4];
-                    
-                    
+
+
 #			#if the filter shows a pass, remove it and add dbsnp
 #			if($allSnvs{$key}->{FILTER} eq "PASS"){
 #			    $allSnvs{$key}->{FILTER} = "dbSNP";
@@ -509,19 +513,54 @@ sub execute {                               # replace with real execution logic.
     }
 
 #----------------------------------
-    my %sniper_hash = sniperRead($sniper_file, $chrom, $type);
-
-    
     unless ($skip_header){
         print_header($genome_build, $sample_id, $output_file, $seq_center);
     }
-
-    ## add DBsnp labels, if --dbsnp is specified
-    if ($dbsnp_file ne ""){
-        addDbSnp($dbsnp_file, $chrom, \%sniper_hash)
+    if($chrom) {
+        my %sniper_hash = sniperRead($sniper_file, $chrom, $type, $self->standard_chroms);
+        ## add DBsnp labels, if --dbsnp is specified
+        if ($dbsnp_file ne ""){
+            addDbSnp($dbsnp_file, $chrom, \%sniper_hash)
+        }
+        print_body($output_file, \%sniper_hash, $cp_score_to_qual);
     }
+    else {
+        chomp(my @chroms = `cut -f 1 $sniper_file | sort -n | uniq`);
 
-    print_body($output_file, \%sniper_hash, $cp_score_to_qual);
+        $DB::single=1;
+        my @complete_chrom_list = $self->order_chroms(@chroms);
+        for my $chrom (@complete_chrom_list) {
+            $self->status_message("processing $chrom...");
+            my %sniper_hash = sniperRead($sniper_file, $chrom, $type, $self->standard_chroms);
 
+
+
+            ## add DBsnp labels, if --dbsnp is specified
+            if ($dbsnp_file ne ""){
+                addDbSnp($dbsnp_file, $chrom, \%sniper_hash)
+            }
+
+            print_body($output_file, \%sniper_hash, $cp_score_to_qual);
+        }
+    }
     return 1;
 }
+
+sub order_chroms {
+    my $self = shift;
+    my @chroms = @_;
+    my @default_chroms = ( 1..22, "X", "Y", "MT");
+    my @duplicates; 
+    for (my $i=@chroms-1; $i >= 0; $i--) {
+        my $chr = $chroms[$i];
+        if (grep {$chr eq $_} @default_chroms) {
+           push @duplicates, $i;
+        }
+    }
+    for my $dup (@duplicates) {
+        splice(@chroms,$dup,1);
+    }
+
+    return (1..22, "X", "Y", "MT", @chroms);
+}
+

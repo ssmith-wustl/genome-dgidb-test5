@@ -559,9 +559,11 @@ sub prepare_instrument_data {
             for my $primer ( @{$primers{$set_name}} ) {
                 push @primers, $set_name.'='.$primer;
             }
-            my $fasta_file = $self->processed_fasta_file_for_set_name($set_name);
+            my $root_set_name = $set_name;
+            $root_set_name =~ s/\.[FR]$//; #strip off .F/.R for paired sets
+            my $fasta_file = $self->processed_fasta_file_for_set_name($root_set_name);
             unlink $fasta_file if -e $fasta_file;
-            push @output, 'name='.$set_name.':file='.$fasta_file.':type=phred';
+            push @output, 'name='.$root_set_name.':file='.$fasta_file.':type=phred';
         }
         my $none_fasta_file = $self->processed_fasta_file_for_set_name('none');
         unlink $none_fasta_file if -e $none_fasta_file;

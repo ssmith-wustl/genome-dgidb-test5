@@ -85,10 +85,32 @@ sub execute {
         for my $seq ( @$seqs ) {
             $binner->($seq);
         }
+        $seqs = $self->_update_writer_for_paired_reads( $seqs );
         $writer->write($seqs);
     }
 
     return 1;
+}
+
+sub _update_writer_for_paired_reads {
+    my ( $self, $seqs ) = @_;
+
+    return $seqs unless scalar @$seqs == 2;
+
+    #discard paired reads w/ only 1 hit or 2 hits from diff primer sets
+    unless( exists @$seqs[0]->{writer_name} and exists @$seqs[1]->{writer_name} and @$seqs[0]->{writer_name} eq @$seqs[1]->{writer_name} ) {
+        delete @$seqs[0]->{writer_name};
+        delete @$seqs[1]->{writer_name};
+        return $seqs;
+    }
+    #discard paired reads where fwd/rev hits are from same fwd or rev primer set
+    if( @$seqs[0]->{primer_name} eq @$seqs[1]->{primer_name} ) {
+        delete @$seqs[0]->{writer_name};
+        delete @$seqs[1]->{writer_name};
+        return $seqs;
+    }
+
+    return $seqs;
 }
 
 sub _create_bin_by_primer {
@@ -98,10 +120,13 @@ sub _create_bin_by_primer {
 
     return sub{
         my $seq = shift;
-        for my $name ( keys %$primers ) {
-            for my $primer ( @{$primers->{$name}} ) {
+        for my $primer_name ( keys %$primers ) {
+            my $writer_name = $primer_name;
+            $writer_name =~ s/\.[FR]$//;
+            for my $primer ( @{$primers->{$primer_name}} ) {
                 if ( $seq->{seq} =~ /^$primer/ ) {
-                    $seq->{writer_name} = $name;
+                    $seq->{primer_name} = $primer_name;
+                    $seq->{writer_name} = $writer_name;
                     return 1;
                 }
             }
@@ -116,11 +141,14 @@ sub _create_bin_by_primer_and_remove {
 
     return sub{
         my $seq = shift;
-        for my $name ( keys %$primers ) {
-            for my $primer ( @{$primers->{$name}} ) {
+        for my $primer_name ( keys %$primers ) {
+            my $writer_name = $primer_name;
+            $writer_name =~ s/\.[FR]$//;
+            for my $primer ( @{$primers->{$primer_name}} ) {
                 if ( $seq->{seq} =~ s/^$primer// ) {
                     substr($seq->{qual}, 0, length($primer), '') if $seq->{qual}; # rm qual
-                    $seq->{writer_name} = $name;
+                    $seq->{primer_name} = $primer_name;
+                    $seq->{writer_name} = $writer_name;
                     return 1;
                 }
             }

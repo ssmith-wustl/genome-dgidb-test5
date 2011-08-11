@@ -6,7 +6,7 @@ use Genome;
 use Carp 'confess';
 
 class Genome::Model::Command::Define::GenePrediction::Eukaryotic {
-    is => 'Genome::Model::Command::Define::GenePrediction',
+    is => 'Genome::Model::Command::Define::GenePrediction::Helper',
     has => [
         repeat_library => {
             is => 'Text',
