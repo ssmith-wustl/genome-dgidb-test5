@@ -232,7 +232,7 @@ sub depth_first_merge {
             Genome::Sys->shellcmd(cmd => "gmt vcf vcf-merge --output-file=$output_file --vcf-files=$file1,$file2 --merge-filters --source-ids '$detector1, $detector2' --require-all-passing");
             return ($output_file, "$detector1.$detector2");
         }
-        elsif($key eq 'union' || $key eq 'uniqueunion') {
+        elsif($key eq 'union' || $key eq 'unionunique') {
             Genome::Sys->shellcmd(cmd=> "gmt vcf vcf-merge --output-file=$output_file --vcf-files=$file1,$file2 --merge-filters --source-ids '$detector1, $detector2' --keep-all-passing");
             return ($output_file, "$detector1.$detector2");
         }
