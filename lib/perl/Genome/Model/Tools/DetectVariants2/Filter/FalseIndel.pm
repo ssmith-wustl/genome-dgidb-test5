@@ -10,18 +10,10 @@ class Genome::Model::Tools::DetectVariants2::Filter::FalseIndel {
     is => 'Genome::Model::Tools::DetectVariants2::Filter',
     has => [
      ## INPUT/OUTPUT OPTIONS ##
-       'reference' => {
-            type => 'String',
-            default => '/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa',
-            is_optional => 1,
-            is_input => 1,
-            doc => 'Reference sequence to use',
-       },       
-       'min_homopolymer' => {
+      'min_homopolymer' => {
             type => 'String',
             default => '4',
             is_optional => 1,
-            is_input => 1,
             doc => 'Minimum length of a homopolymer to auto-filter small (1-2 bp) indels',
        },       
        ## CAPTURE FILTER OPTIONS ##
@@ -29,74 +21,63 @@ class Genome::Model::Tools::DetectVariants2::Filter::FalseIndel {
             type => 'String',
             default => '0.01',
             is_optional => 1,
-            is_input => 1,
             doc => 'Minimum representation of variant allele on each strand',
        },
        'min_good_coverage' => {
             type => 'String',
             default => '20',
             is_optional => 1,
-            is_input => 1,
             doc => 'Minimum site coverage to apply var_freq, var_count, and strandedness filters',
        },
        'min_var_freq' => {
             type => 'String',
             default => '0.05',
             is_optional => 1,
-            is_input => 1,
             doc => 'Minimum variant allele frequency',
        },
        'min_var_count' => {
             type => 'String',
             default => '2',
             is_optional => 1,
-            is_input => 1,
             doc => 'Minimum number of variant-supporting reads [2]',
        },
        'min_read_pos' => {
             type => 'String',
             default => '0.10',
             is_optional => 1,
-            is_input => 1,
             doc => 'Minimum average relative distance from start/end of read (start/end of read filter) [0.10]',
        },
        'max_mm_qualsum_diff' => {
             type => 'String',
             default => '50',
             is_optional => 1,
-            is_input => 1,
             doc => 'Maximum difference of mismatch quality sum between variant and reference reads (paralog filter)',
        },
        'max_mapqual_diff' => {
             type => 'String',
             default => '30',
             is_optional => 1,
-            is_input => 1,
             doc => 'Maximum difference of mapping quality between variant and reference reads [30]',
        },
        'max_readlen_diff' => {
             type => 'String',
             default => '15',
             is_optional => 1,
-            is_input => 1,
             doc => 'Maximum difference of average supporting read length between variant and reference reads [15]',
        },
        'min_var_dist_3' => {
             type => 'String',
             default => '0.20',
             is_optional => 1,
-            is_input => 1,
             doc => 'Minimum average distance to effective 3prime end of read (real end or Q2) for variant-supporting reads',
        },
        bam_readcount_version => {
            is => 'Text',
-           is_input => 1,
-           default => "0.3",
+           is_optional => 1,
            doc => 'version of bam-readcount to use',
        },
        bam_readcount_min_base_quality => {
            is => 'Integer',
-           is_input => 1,
            default => 15,
            doc => 'The minimum base quality to require for bam-readcount',
        },
@@ -109,7 +90,6 @@ class Genome::Model::Tools::DetectVariants2::Filter::FalseIndel {
            is => 'Boolean',
            default => '0',
            is_optional => 1,
-           is_input => 1,
            doc => 'Print the filtering result for each site.',
        },
     ],
@@ -147,6 +127,10 @@ EOS
 
 sub _filter_variants {
     my $self = shift;
+
+    unless ($self->bam_readcount_version) {
+        die $self->error_message("Bam readcount version is not specified");
+    }
 
     my $min_homopolymer = $self->min_homopolymer;
 

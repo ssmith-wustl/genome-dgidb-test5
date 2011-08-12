@@ -46,10 +46,10 @@ class Genome::Model::Tools::BioSamtools::ClusterCoverage {
             is => 'Text',
             doc => 'The output BED format file of clusters.',
         },
-        print_mean_coverage => {
-            is => 'Boolean',
-            doc => 'Calculate the mean depth across cluster.',
-            default_value => 0,
+        stats_file => {
+            is => 'Text',
+            doc => 'Calculate statistics across clusters and print to file.',
+            is_optional => 1,
         },
     ],
 };
@@ -60,6 +60,14 @@ sub execute {
     my $bed_fh = Genome::Sys->open_file_for_writing($self->bed_file);
     unless ($bed_fh) {
         die('Failed to open file for writing: '. $self->bed_file);
+    }
+    my $stats_fh;
+    if ($self->stats_file) {
+        $stats_fh = Genome::Sys->open_file_for_writing($self->stats_file);
+        unless ($stats_fh) {
+            die('Failed to open file for writing: '. $self->stats_file);
+        }
+        print $stats_fh "name\tmean\tprms\tmed\tmin\tmax\tadev\trms\n";
     }
     my $refcov_bam  = Genome::Model::Tools::RefCov::Bam->create(bam_file => $self->bam_file );
     unless ($refcov_bam) {
@@ -163,12 +171,16 @@ sub execute {
                         my $start = $cluster->[0];
                         my $end = $cluster->[1];
                         my $pdl = $cluster->[2];
-                        print $bed_fh $chr ."\t". $start ."\t". $end ."\t". $chr .':'. $start .'-'. $end;
-                        if (defined($pdl)) {
-                            my ($mean,$prms,$med,$min,$max,$adev,$rms) = $pdl->stats;
-                            print $bed_fh "\t". $mean;
+                        my $name = $chr .':'. $start .'-'. $end;
+                        print $bed_fh $chr ."\t". $start ."\t". $end ."\t". $name ."\n";
+                        if ($stats_fh) {
+                            if (defined($pdl)) {
+                                my ($mean,$prms,$med,$min,$max,$adev,$rms) = $pdl->stats;
+                                print $stats_fh $name ."\t". $mean ."\t". $prms ."\t". $med ."\t". $min ."\t". $max ."\t". $adev ."\t". $rms ."\n";
+                            } else {
+                                print $stats_fh $name ."\t0\t0\t0\t0\t0\t0\t0\n";
+                            }
                         }
-                        print $bed_fh "\n";
                     }
                 }
                 @previous_clusters = @clusters;
