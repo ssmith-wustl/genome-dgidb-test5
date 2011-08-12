@@ -24,7 +24,11 @@ class Genome::Project {
             is => 'Genome::ProjectPart',
             reverse_as => 'project',
         },
-        parts_count => { via => 'part_set', to => 'count' },
+        part_set => {
+            is => 'Genome::ProjectPart::Set',
+            is_calculated => 1,
+        },
+        parts_count => { is => 'Number', via => 'part_set', to => 'count' },
         entities => {
             via => 'parts',
             to => 'entity',
@@ -81,6 +85,17 @@ sub get_parts_of_class {
     }
 
     return @desired_parts;
+}
+
+sub delete {
+
+    my ($self) = @_;
+
+    for my $part ($self->parts) {
+        $part->delete();
+    }    
+
+    return $self->SUPER::delete();
 }
 
 
