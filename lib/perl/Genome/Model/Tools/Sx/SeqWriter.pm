@@ -27,7 +27,8 @@ sub create {
             $self->error_message("File ($property_name) is required");
             return;
         }
-        my $fh = eval{ Genome::Sys->open_file_for_appending($file); };
+        my $method = ( $file eq '-' ? 'open_file_for_writing' : 'open_file_for_appending' ); # STDOUT
+        my $fh = eval{ Genome::Sys->$method($file); };
         if ( not $fh ) {
             $self->error_message("Failed to open file ($file) for appending");
             return;

@@ -17,7 +17,11 @@ class Genome::Model::Build::Command::ReferenceAlignment::SubmissionSummary {
         bam_list_file => {
             is=> 'String',
             doc => 'this command will generate this list of bam file names, space separated suitable for gxfer to submit bams',
-        } 
+        },
+        md5_list_file => {
+            is=> 'String',
+            doc => 'this will generate a list of bam md5 file names, space separated',
+        }
     ],
     has_optional => [
         builds => {
@@ -43,6 +47,10 @@ class Genome::Model::Build::Command::ReferenceAlignment::SubmissionSummary {
         region_of_interest_set_name => {
             is=>'String',
             doc=>'Only include models with this region of interest set name',
+        },
+        exclude => {
+            is=>'String',
+            doc=>'Don\'t include models that contain this string in the name (ie. "Pooled_Library")',
         }
     ],
 };
@@ -121,18 +129,33 @@ sub execute {
         return;
     }
 
+    my $md5_list = IO::File->new(">".$self->md5_list_file);
+    unless ($md5_list) {
+        $self->error_message("Failed to open md5 list file for writing ". $self->md5_list_file);
+        return;
+    }
+
+
     my @builds = grep {$_ == $_->model->last_succeeded_build} $self->builds;
+
+    # If we have models to exclude by name, do so now...in 5...4...3...2...1
+    my $exclude = $self->exclude;
+    @builds = grep {not $_->model->name =~ /$exclude/} @builds if $exclude;
+
     for my $build (@builds) {
         my $roi_name = $build->model->region_of_interest_set_name ? $build->model->region_of_interest_set_name : 'N/A';
         my $refbuild_name = $build->model->reference_sequence_build->name ? $build->model->reference_sequence_build->name : 'N/A';
+
         print $samp_map join ("\t", $build->model->subject_name, $refbuild_name, $roi_name, $build->whole_rmdup_bam_file, basename($build->whole_rmdup_bam_file));
         print $samp_map "\n";
     }
 
     print $bam_list join (" ", map {$_->whole_rmdup_bam_file} @builds);
+    print $md5_list join (" ", map {$_->whole_rmdup_bam_file.".md5"} @builds);
 
     $samp_map->close;
     $bam_list->close;
+    $md5_list->close;
 
     return 1;
 }

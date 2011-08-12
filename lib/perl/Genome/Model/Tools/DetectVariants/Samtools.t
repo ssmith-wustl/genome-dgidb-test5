@@ -24,7 +24,8 @@ my $bam_input = $test_dir . '/alignments/102922275_merged_rmdup.bam';
 # Updated to .v6 for later and faster samtools version r613
 # Updated to .v7 for addition of read depth field
 # Updated to .v8 for changing insertion bed stop coordinates to stop=start instead of stop=start+2
-my $expected_dir = $test_dir . '/expected.v8/';
+# Updated to .v9 for adding 1 to insertion start and stop position
+my $expected_dir = $test_dir . '/expected.v9/';
 ok(-d $expected_dir, "expected results directory exists");
 
 my $ref_seq_build = Genome::Model::Build::ImportedReferenceSequence->get(type_name => 'imported reference sequence', name => 'NCBI-human-build36');

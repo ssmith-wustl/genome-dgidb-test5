@@ -103,6 +103,7 @@ sub execute {
                 next if( $line =~ m/^(#|chromosome_name|Chr\t|readgroup)/ ); #Skip headers
                 chomp( $line );
 
+               # print STDERR $line . "\n";
                 #This section and the next can be expanded to support new annotation formats
                 if( $muttype eq 'snvs' && $line =~ m/^\w+\t\d+\t\d+\t\S\t\S\tSNP/ )
                 {
@@ -110,7 +111,19 @@ sub execute {
                     $chr =~ s/chr//i;
                     ++$var_cnt{snvs} if( defined $valid_chrs{$chr} );
                 }
+                elsif( $muttype eq 'snvs' && $line =~ m/^\w+\t\d+\t\d+/ ) #support bed file of snp locations
+                {
+                    my ( $chr ) = split( /\t/, $line );
+                    $chr =~ s/chr//i;
+                    ++$var_cnt{snvs} if( defined $valid_chrs{$chr} );
+                }
                 elsif( $muttype eq 'indels' && ( $line =~ m/^\w+\t\d+\t\d+\t[0-]\t\w+/ || $line =~ m/^\w+\t\d+\t\d+\t\w+\t[0-]/) )  #WU and StJude formatting```
+                {
+                    my ( $chr ) = split( /\t/, $line );
+                    $chr =~ s/chr//i;
+                    ++$var_cnt{indels} if( defined $valid_chrs{$chr} );
+                }
+                elsif( $muttype eq 'indels' && ( $line =~ m/^\w+\t\d+\t\d+/) )  #support bed file of indel locations
                 {
                     my ( $chr ) = split( /\t/, $line );
                     $chr =~ s/chr//i;

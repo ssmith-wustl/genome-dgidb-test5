@@ -48,7 +48,7 @@ Standard options:
  file => The file to write. The use of the preceding 'file=' is optional.
           It is assumed that the bare option is the file. Use '-' to write to STDOUT.
  type => The type of output. Not required if type can be determined from the file.
-          Required when writing to STDOUT. Valid types: sanger, illumina, phred, bed.
+          Type when writing to STDOUT defaults to sanger. Valid types: sanger, illumina, phred, bed.
  name => The name of the writer.  If using commands that attach a writer name to a sequence,
           they will be written to the specified writer.
           
@@ -115,37 +115,46 @@ HELP
 sub help_detail {
     return <<HELP;
 
- Input/Ouptut format:
+ / INPUT & OUPTUT FORMAT /
+
  * Short, where type can be determined from the file:
   gmt sx --input file.fastq --output file.fasta # qual file not written
 
  * Long w/ file and type:
   gmt sx --input file=file.fastq:type=illumina --output file=file.fasta:qual_file=file.qual:type:phred
 
- What this base command can do:
- * Convert type
-  ** illumina fastq to sanger
+ / CONVERT TYPE /
+
+  * illumina fastq to sanger
    gmt sx --input illumina.fastq:type=illumina --output sanger.fastq
-  ** sanger fastq to phred fasta
+
+  * sanger fastq to phred fasta
    gmt sx --input file.fastq --output file.fasta
-  ** sanger fastq to phred fasta w/ quals
+
+  * sanger fastq to phred fasta w/ quals
    gmt sx --input file.fastq --output file.fasta:qual_file=file.qual
 
- * Collate
-  ** from paired fastqs (type-in resolved to sanger, type-out defaults to sanger)
+ / COLLATE /
+
+  * from paired fastqs (type-in resolved to sanger, type-out defaults to sanger)
    gmt sx --input fwd.fastq rev.fastq --output collated.fastq
-  ** to paired STDOUT (type-in resolved to sanger, type-out defaults to sanger)
+
+  * to paired STDOUT (type-in resolved to sanger, type-out defaults to sanger)
    gmt sx --input fwd.fastq rev.fastq --output -
 
- * Decollate
-  ** from illumina to individal fastqs, discard singletons
+ / DECOLLATE /
+
+  * from illumina to individal fastqs, discard singletons
    gmt sx --input collated.fastq --output fwd.fastq:name=fwd rev.fastq,name=rev
-  ** from paired illumina STDIN (type-in req'd = illumina, type-out defaults to sanger)
+
+  * from paired illumina STDIN (type-in req'd = illumina, type-out defaults to sanger)
    gmt sx --input -:name=pair:type=illumnia --output fwd.fastq:name=fwd rev.fastq:name=rev
 
- * Use in PIPE (cmd represents a sx sub command)
-  ** from singleton fastq file
+ / USE IN PIPE / (cmd represents an sx sub command)
+
+  **from singleton fastq file
    gmt sx cmd1 --cmd1-options --input sanger.fastq | gmt sx cmd2 --cmd2-options --output sanger.fastq
+
   ** from paired STDIN to paired fastq and singleton (assuming the sub commands filter singletons)
    cat collated_fastq | gmt sx cmd1 --cmd1-options --input - --paired-input | gmt sx cmd2 --cmd2-options --output pairs.fastq
 

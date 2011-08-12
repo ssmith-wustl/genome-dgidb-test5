@@ -88,6 +88,18 @@ class Genome::Model::Tools::DetectVariants2::Filter::FalseIndel {
             is_input => 1,
             doc => 'Minimum average distance to effective 3prime end of read (real end or Q2) for variant-supporting reads',
        },
+       bam_readcount_version => {
+           is => 'Text',
+           is_input => 1,
+           default => "0.3",
+           doc => 'version of bam-readcount to use',
+       },
+       bam_readcount_min_base_quality => {
+           is => 'Integer',
+           is_input => 1,
+           default => 15,
+           doc => 'The minimum base quality to require for bam-readcount',
+       },
        
        ## WGS FILTER OPTIONS ##
        
@@ -193,15 +205,18 @@ sub _filter_variants {
     close($tfh);
     close($input_fh);
 
-    my $cmd = $self->readcount_program . " -b 1 " . $self->aligned_reads_input . " -l $temp_path";
     my $readcount_file = $self->_temp_staging_directory . "/readcounts";
-
-    $cmd .= "> $readcount_file 2> /dev/null";
-    Genome::Sys->shellcmd(
-        cmd => $cmd,
-        input_files => [$self->aligned_reads_input],
-        output_files => [$readcount_file],
-    );    
+    my $readcount_command = Genome::Model::Tools::Sam::Readcount->create(
+        minimum_base_quality => $self->bam_readcount_min_base_quality,
+        bam_file => $self->aligned_reads_input,
+        reference_fasta => $self->reference_sequence_input,
+        region_list => $temp_path,
+        output_file => $readcount_file,
+        use_version => $self->bam_readcount_version,
+    );
+    unless ($readcount_command->execute) {
+        die $self->error_message("Failed to execute readcount command");
+    }
 
     ## Open the output file ##
     my $hq_output_file = $self->_temp_staging_directory . "/indels.hq.raw_filter";
@@ -657,17 +672,6 @@ sub read_counts_for_reference
     }
 
     return("");
-}
-
-#############################################################
-# Readcount_Program - the path to BAM-readcounts
-#
-#############################################################
-
-sub readcount_program {
-    my $self = shift;
-    my $reference = $self->reference_sequence_input;
-    return "/usr/bin/bam-readcount0.3 -f " . $reference;
 }
 
 # This method scans the lines of the readcount file until the matching lines are found

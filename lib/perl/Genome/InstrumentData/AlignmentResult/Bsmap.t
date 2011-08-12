@@ -69,6 +69,7 @@ my $reference_model = Genome::Model::ImportedReferenceSequence->get(name => 'TES
 ok($reference_model, "got reference model");
 
 my $reference_build = $reference_model->build_by_version('1');
+#$reference_build = Genome::Model::Build->get(101947881); # XXX temporary reference override to full reference
 ok($reference_build, "got reference build");
 
 my $temp_reference_index = Genome::Model::Build::ReferenceSequence::AlignerIndex->create(reference_build=>$reference_build, aligner_version=>$aligner_version, aligner_name=>'bsmap', aligner_params=>'');
@@ -251,15 +252,19 @@ sub generate_fake_instrument_data {
         median_insert_size => '22',
         sd_below_insert_size => '7',
         sd_above_insert_size => '34',
-        #median_insert_size => '196', # XXX
-        #sd_below_insert_size => '22', # XXX
-        #sd_above_insert_size => '78', # XXX
+        #median_insert_size => '195', # XXX huge datasets
+        #sd_below_insert_size => '38',
+        #sd_above_insert_size => '32',
+        #median_insert_size => '196', # XXX more huge datasets
+        #sd_below_insert_size => '22',
+        #sd_above_insert_size => '78',
         run_name => '110101_TEST',
         subset_name => 4,
         run_type => 'Paired',
         gerald_directory => $fastq_directory,
         bam_path => '/gsc/var/cache/testsuite/data/Genome-InstrumentData-AlignmentResult-Bwa/input.bam'
-        #bam_path => '/gscuser/iferguso/bsmap/crashing.bam' # XXX
+        #bam_path => '/gscuser/iferguso/bsmap_scratch/newcrashing.bam' # huge datasets
+        #bam_path => '/gscuser/iferguso/bsmap_scratch/crashing.bam' # more huge datasets
     );
     ok($instrument_data, 'create instrument data: '.$instrument_data->id);
     ok($instrument_data->is_paired_end, 'instrument data is paired end');

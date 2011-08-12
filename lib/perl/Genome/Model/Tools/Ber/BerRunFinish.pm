@@ -343,23 +343,20 @@ sub execute
     #				   -filltag => 'Visible',
     #			          );
 
-	if ( defined(@ace_objects) )
-	{
-		foreach my $ace_stuff (@ace_objects)
-		{
-			my $aceseq_obj = $db->fetch( 'Sequence' => $ace_stuff );
-			my $BER_product = $aceseq_obj->BER_product();
-			if ( defined($BER_product) )
-			{
-				my $result_code = $aceseq_obj->kill();
-			}
-			else
-			{
-				next;
-			}
-		}
-	}
-		print qq{\n Done checking/removing previous data from ACeDB\n\n};
+    foreach my $ace_stuff (@ace_objects)
+    {
+        my $aceseq_obj = $db->fetch( 'Sequence' => $ace_stuff );
+        my $BER_product = $aceseq_obj->BER_product();
+        if ( defined($BER_product) )
+        {
+            my $result_code = $aceseq_obj->kill();
+        }
+        else
+        {
+            next;
+        }
+    }
+    print qq{\n Done checking/removing previous data from ACeDB\n\n};
 
     ########################################################
     # write new parse script and parse into acedb via tace

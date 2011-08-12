@@ -7,20 +7,22 @@ use Genome;
 use File::Copy;
 
 class Genome::Model::Tools::Galaxy::Update {
-    is  => 'Command',
+    is  => 'Command::V2',
     has => [
         path => {
-            is  => 'String',
+            is  => 'Text',
             is_optional => 1,
-            doc => 'Galaxy setup path'
+            shell_args_position => 1,
+            doc => 'Galaxy installation directory to use.  Defaults to $HOME/galaxy.'
         },
         pull => {
             is => 'Boolean',
             is_optional => 1,
-            doc => 'Update Galaxy software',
+            doc => 'Update the Galaxy software itself, not just gmt tool configuration.',
             default => 0
         }
-    ]
+    ],
+    doc => 'update the Galaxy configuration for all Genome Modeling Tools (and optionally the Galaxy software itself)',
 };
 
 sub execute {
@@ -36,40 +38,50 @@ sub execute {
     foreach my $k (@key_files) {
         my $file_path = $path . "/" . $k;
         unless (-e $file_path) {
-            $self->warning_message("Does not appear to be valid galaxy folder");
+            $self->error_message("Does not appear to be valid galaxy folder");
             die();
         }
     }
 
     if ($self->pull) {
+        $self->status_message("updating the Galaxy software itself...");
         chdir($path);
-        system('hg pull -u');
-        # check pull -u had 0 exit code
-        unless ($? == 0) {
-            $self->warning_message("Error occured in pulling updated Galaxy from mercurial source.");
-            die();
-        }
+        Genome::Sys->shellcmd(cmd => 'hg pull -u');
     }
 
-    # FIXME Because of ur test use fails, only searching Genome::Model::Tools::Music subcommands 
+    # TODO: hit the whole GMT tree
     my @xml_files = ();
-    my @gmt_tools = Genome::Model::Tools::Music->sorted_sub_command_classes;
-    foreach my $c (@gmt_tools) {
-        push(@gmt_tools, $c->sorted_sub_command_classes);
+    for my $ns ('Genome::Model::Tools::Music') {
+        eval "use $ns";
+        if ($@) {
+            die $self->error_message("Failed to use $ns: $@");
+        }
+        my $c = $ns;
         $c =~ s/::/\//g;
         $c .= '.pm';
-        require $c;
-        my $galaxy_xml_path = $INC{$c} . ".galaxy.xml";
-        # if Module.pm.galaxy.xml file exists we will move it into tools directory
-        if (-e $galaxy_xml_path) {
-            push(@xml_files, $galaxy_xml_path);
-        }
+        my $path = $INC{$c};
+        $path =~ s/.pm//;        
+        $self->status_message("Checking $path for galaxy configuration...");
+        push @xml_files, `find $path | grep .galaxy.xml`;
+        chomp @xml_files;
+        $self->status_message("Found " . scalar(@xml_files) . " tools with galaxy configuration.");
+        $self->status_message("Found galaxy configuration for: @xml_files\n");
     }
-    mkdir("$path/tools/genome");
+
+    Genome::Sys->create_directory("$path/tools/gmt");
+    
+    my @tool_names;
     foreach my $xml_file (@xml_files) {
-        (my $fn) = ($xml_file =~ /\/(\w+).pm.galaxy.xml/);
-        copy($xml_file, "$path/tools/genome/$fn.xml");
+        my $fn = $xml_file;
+        $fn =~ s|^.*Genome/Model/Tools/||;
+        $fn =~ s|/|-|g;
+        $fn = lc($fn);
+        $fn =~ s/.pm.galaxy.xml$/.xml/;
+        push @tool_names,$fn;
+        $self->status_message("copying to $path/tools/gmt/$fn from $xml_file");
+        copy($xml_file, "$path/tools/gmt/$fn");
     }
+
     # handle tool_conf.xml rewrite
     # read tool_conf.xml
     open(tool_conf_ifh, '<', "$path/tool_conf.xml");
@@ -79,20 +91,26 @@ sub execute {
         $tool_xml .= $_;
     }
     close(tool_conf_ifh);
+    
     # Either replace existing Genome section or put it right after toolbox tag
-    my $new_genome_section = '<section name="Genome" id="genome">' . "\n";
-    foreach my $tool (@xml_files) {
-        (my $fn) = ($tool =~ /\/(\w+).pm.galaxy.xml/);
-        $new_genome_section .= '    <tool file="genome/' . $fn . '.xml" />' . "\n"; 
+    my $new_genome_section = '<section name="GMT" id="gmt">' . "\n";
+    foreach my $tool (@tool_names) {
+        $new_genome_section .= '    <tool file="gmt/' . $tool . '" />' . "\n"; 
     }
     $new_genome_section .= "</section>\n";
-    print $new_genome_section . "\n";
-    unless ($tool_xml =~ s/^\s+<section name="Genome" id="genome">.*?<\/section>\n/$new_genome_section/ms) {
+    unless ($tool_xml =~ s/^\s+<section name="GMT" id="gmt">.*?<\/section>\n/$new_genome_section/ms) {
         $tool_xml =~ s/^<toolbox>\n/<toolbox>\n$new_genome_section/ms;
     }
-    print $tool_xml;
+     
     # write tool_conf.xml
+    $self->status_message("replacing $path/tool_conf.xml...");
+    copy("$path/tool_conf.xml","$path/tool_conf.xml.bak");
     open(tool_conf_ofh, '>', "$path/tool_conf.xml");
     print tool_conf_ofh $tool_xml;
     close(tool_conf_ofh);
+
+    $self->status_message("galaxy can now be restarted!\n");
+    return 1;
 }
+
+

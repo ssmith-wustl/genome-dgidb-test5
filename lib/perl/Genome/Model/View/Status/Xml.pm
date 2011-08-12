@@ -38,6 +38,22 @@ class Genome::Model::View::Status::Xml {
                     subject_class_name => 'Genome::ProcessingProfile',
                 },
                 {
+                    name => 'notes',
+                    aspects => [
+                        'editor_id',
+                        'entry_date',
+                        'header_text',
+                        'body_text',
+                        {
+                            name => 'subject',
+                            perspective => 'default',
+                            toolkit => 'xml'
+                        },
+                    ],
+                    perspective => 'default',
+                    toolkit => 'xml',
+                },
+                {
                     name => 'builds',
                     aspects => [
                         'id',

@@ -51,7 +51,7 @@ class Genome::Model::Tools::Vcf::VcfMakerVarscanSomatic {
             default => "WUSTL",
         },
         
-        varscan_file => {
+        input_file => {
             is => 'Text',
             doc => "varscan output file" ,
             is_optional => 0,
@@ -123,7 +123,7 @@ sub execute {                               # replace with real execution logic.
     my $seq_center = $self->seq_center;
     my $chrom = $self->chrom;
     my $skip_header = $self->skip_header;
-    my $varscan_file = $self->varscan_file;
+    my $varscan_file = $self->input_file;
     my $sample_id = $self->sample_id;
     my $type = $self->type;
     my $dbsnp_file = $self->dbsnp_file;

@@ -42,9 +42,10 @@ sub process_source {
         } else {
             next;
         }
-        my $depth = 0;
-        my $qual = 0;
-        $self->write_bed_line($chromosome, $start, $stop, $reference, $consensus, $depth, $qual);
+        #my $depth = 0;
+        #my $qual = 0;
+        #$self->write_bed_line($chromosome, $start, $stop, $reference, $consensus, $depth, $qual);
+        $self->write_bed_line($chromosome, $start, $stop, $reference, $consensus);
     }
 
     return 1;

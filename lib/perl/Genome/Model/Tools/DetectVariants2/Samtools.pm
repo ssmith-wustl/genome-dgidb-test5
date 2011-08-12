@@ -234,7 +234,7 @@ sub verify_successful_completion {
 #making sure that the version is an mpileup or pileup 
 sub is_mpileup_compatible {
     my $self = shift;
-    return $self->version gt 'r963';
+    return $self->version ge 'r973';
 }
 
 
