@@ -79,6 +79,9 @@ ok($model, 'create model') or die;
 is($model->color, 'red', 'set color on create');
 is($model->purpose, 'fun', 'set purpose on create');
 is_deeply($model->shape, $square, 'set shape on create');
+my @input_value_ids = sort map { $_->value_id } $model->inputs;
+is_deeply(\@input_value_ids, [qw/ fun red square /], 'inputs match');
+ok(!eval{ $model->shape('yellow'); }, 'failed to set shape to a string');
 
 my $update = Genome::Model::Command::Input::Update->create(
     model => $model,
@@ -111,12 +114,21 @@ is_deeply([$model->shape], [$circle], 'execute - update shape to circle');
 # fails
 $update = Genome::Model::Command::Input::Update->create(
     model => $model,
+    name => 'shape',
+    value => 'name=yellow',
+);
+ok($update, 'create');
+$update->dump_status_messages(1);
+ok(!$update->execute, 'execute failed to update where the value object does not exist');
+
+$update = Genome::Model::Command::Input::Update->create(
+    model => $model,
     name => 'shape_id',
     value => 'name=circle',
 );
 ok($update, 'create');
 $update->dump_status_messages(1);
-ok(!$update->execute, 'execute failed trying to update non input');
+ok(!$update->execute, 'execute failed to update non input');
 
 $update = Genome::Model::Command::Input::Update->create(
     model => $model,
@@ -124,7 +136,7 @@ $update = Genome::Model::Command::Input::Update->create(
 );
 ok($update, 'create');
 $update->dump_status_messages(1);
-ok(!$update->execute, 'execute failed trying to update non property');
+ok(!$update->execute, 'execute failed to update non property');
 
 $update = Genome::Model::Command::Input::Update->create(
     model => $model,
@@ -132,7 +144,7 @@ $update = Genome::Model::Command::Input::Update->create(
 );
 ok($update, 'create');
 $update->dump_status_messages(1);
-ok(!$update->execute, 'execute failed trying to update required property to NULL');
+ok(!$update->execute, 'execute failed to update required property to NULL');
 
 $update = Genome::Model::Command::Input::Update->create(
     model => $model,
