@@ -51,7 +51,7 @@ sub values_from_property_for_filter {
     my $data_type = $property->{data_type};
     my $name = $property->{name};
     my @values;
-    if ( $data_type->can('get') ) {
+    if ( $data_type and $data_type->can('get') ) {
         $filter = ( $filter !~ /\=/ ) ? 'id='.$filter : $filter;
         my $bx = eval { UR::BoolExpr->resolve_for_string($data_type, $filter); };
         if ( not $bx ) {
