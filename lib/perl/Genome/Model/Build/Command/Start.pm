@@ -151,8 +151,15 @@ sub create_and_start_build {
         }
         else {
             # If we couldn't commit after trying to start then something blocked us from even committing that the build was Unstartable.
-            $self->append_error($model->__display_name__, 'Failed to commit build start, rolling back to build creation.');
             $start_transaction->rollback;
+            my $error_message = 'Failed to commit build start, rolling back to build creation.';
+            $self->append_error($model->__display_name__, $error_message);
+            $build->status('Unstartable');
+            $build->add_note(
+                header_text => 'apipe_cron_status',
+                body_text => $error_message,
+            );
+            $build->model->build_requested(0);
         }
     }
     else {

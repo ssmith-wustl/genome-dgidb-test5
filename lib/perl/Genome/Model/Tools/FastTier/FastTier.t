@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use above "Genome";
-use Test::More tests => 13;
+use Test::More tests => 25;
 use File::Compare;
 
 $ENV{UR_DBI_NO_COMMIT} = 1;
@@ -14,15 +14,18 @@ BEGIN {
     use_ok( 'Genome::Model::Tools::FastTier::FastTier');
 };
 
-$DB::single=1;
+# General setup for v3 test
 
 my $test_data_dir  = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-FastTier-FastTier';
 my $test_input_dir = $test_data_dir."/inputs";
-my $test_expected_data_dir = $test_data_dir."/expected_v1";
+my $test_expected_data_dir = $test_data_dir."/expected_v2";
 my $snvs_bed_file_name = "snvs.hq.novel.v2.bed";
 my $snvs_bed_input = $test_input_dir."/".$snvs_bed_file_name;
 my $indels_bed_file_name = "indels.hq.novel.v2.bed";
 my $indels_bed_input = $test_input_dir."/".$indels_bed_file_name;
+my $annotation_build_id = 102550711;
+my $ab = Genome::Model::Build->get($annotation_build_id);
+my $tier_file_location = $ab->tiering_bed_files_by_version(3);
 
 my $test_output_dir = File::Temp::tempdir('Genome-Model-Tools-FastTier-FastTier-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
 
@@ -38,13 +41,17 @@ my %snv_output_files = (
     tier4_output => $test_output_dir."/".$snv_file_names[3],    
 );
 
+# Test v3 SNVs
+
 my $fast_tier_snvs = Genome::Model::Tools::FastTier::FastTier->create(
     variant_bed_file => $snvs_bed_input,
+    tiering_version => 3,
+    tier_file_location => $tier_file_location,
     %snv_output_files,
 );
 
-ok($fast_tier_snvs, 'created FastTier Snvs object');
-ok($fast_tier_snvs->execute(), 'executed FastTier Snvs command');
+ok($fast_tier_snvs, 'created FastTier v3 Snvs object');
+ok($fast_tier_snvs->execute(), 'executed FastTier v3 Snvs command');
 
 my @snv_outputs;
 map { push @snv_outputs, $snv_output_files{$_}} sort(keys(%snv_output_files));
@@ -66,15 +73,78 @@ my %indel_output_files = (
     tier4_output => $test_output_dir."/".$indel_file_names[3],    
 );
 
+# Test v3 INDELs
+
 my $fast_tier_indels = Genome::Model::Tools::FastTier::FastTier->create(
     variant_bed_file => $indels_bed_input,
+    tiering_version => 3,
+    tier_file_location => $tier_file_location,
     %indel_output_files,
 );
 
-ok($fast_tier_indels, 'created FastTier Snvs object');
-ok($fast_tier_indels->execute(), 'executed FastTier Snvs command');
+ok($fast_tier_indels, 'created FastTier v3 Indels object');
+ok($fast_tier_indels->execute(), 'executed FastTier v3 Indels command');
 
 my @indel_outputs;
+map { push @indel_outputs, $indel_output_files{$_}} sort(keys(%indel_output_files));
+for my $expected (@indel_file_names) {
+    my $expected_file = $test_expected_data_dir."/".$expected;
+    my $result = shift @indel_outputs;
+    is(compare($result, $expected_file), 0, "$result output matched expected output");
+}
+
+# Set things up for v2 testing
+
+$test_expected_data_dir = $test_data_dir."/expected_v1";
+$tier_file_location = $ab->tiering_bed_files_by_version(2);
+
+$test_output_dir = File::Temp::tempdir('Genome-Model-Tools-FastTier-FastTier-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
+
+%snv_output_files = (
+    tier1_output => $test_output_dir."/".$snv_file_names[0],    
+    tier2_output => $test_output_dir."/".$snv_file_names[1],    
+    tier3_output => $test_output_dir."/".$snv_file_names[2],    
+    tier4_output => $test_output_dir."/".$snv_file_names[3],    
+);
+
+# Test v2 SNVs
+
+$fast_tier_snvs = Genome::Model::Tools::FastTier::FastTier->create(
+    variant_bed_file => $snvs_bed_input,
+    tiering_version => 2,
+    tier_file_location => $tier_file_location,
+    %snv_output_files,
+);
+
+ok($fast_tier_snvs, 'created FastTier v2 Snvs object');
+ok($fast_tier_snvs->execute(), 'executed FastTier v2 Snvs command');
+
+map { push @snv_outputs, $snv_output_files{$_}} sort(keys(%snv_output_files));
+for my $expected (@snv_file_names) {
+    my $expected_file = $test_expected_data_dir."/".$expected;
+    my $result = shift @snv_outputs;
+    is(compare($result, $expected_file), 0, "$result output matched expected output");
+}
+
+%indel_output_files = (
+    tier1_output => $test_output_dir."/".$indel_file_names[0],    
+    tier2_output => $test_output_dir."/".$indel_file_names[1],    
+    tier3_output => $test_output_dir."/".$indel_file_names[2],    
+    tier4_output => $test_output_dir."/".$indel_file_names[3],    
+);
+
+# Test v2 INDELs
+
+$fast_tier_indels = Genome::Model::Tools::FastTier::FastTier->create(
+    variant_bed_file => $indels_bed_input,
+    tiering_version => 2,
+    tier_file_location => $tier_file_location,
+    %indel_output_files,
+);
+
+ok($fast_tier_indels, 'created FastTier v2 Indels object');
+ok($fast_tier_indels->execute(), 'executed FastTier v2 Indels command');
+
 map { push @indel_outputs, $indel_output_files{$_}} sort(keys(%indel_output_files));
 for my $expected (@indel_file_names) {
     my $expected_file = $test_expected_data_dir."/".$expected;

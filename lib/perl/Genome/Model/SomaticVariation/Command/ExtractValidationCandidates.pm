@@ -86,6 +86,7 @@ sub execute {
     my $tier_cmd = Genome::Model::Tools::FastTier::FastTier->create(
                     variant_bed_file => $lq_tiers."/snvs.lq.bed",
                     tier_file_location => $tier_file_location,
+                    tiering_version => $tiering_version,
     );
     unless($tier_cmd->execute){
         die $self->error_message("Failed to run fast-tier on snvs.lq.bed!");

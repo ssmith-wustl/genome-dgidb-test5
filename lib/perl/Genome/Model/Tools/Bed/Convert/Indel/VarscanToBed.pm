@@ -55,14 +55,13 @@ sub process_source {
         
             my ($reference, $variant, $start, $stop);
             
-            $start = $position - 1; #Convert to 0-based coordinate
-            
+            #samtools pileup reports the position before the first deleted base or the inserted base ... so the start position is already correct for bed format
+            $start = $position;
             if(substr($indel,0,1) eq '+') {
                 $reference = '*';
                 $variant = substr($indel,1);
                 $stop = $start; #Two positions are included-- but an insertion has no "length" so stop and start are the same
             } elsif(substr($indel,0,1) eq '-') {
-                $start += 1; #varscan reports the position before the first deleted base
                 $reference = substr($indel,1);
                 $variant = '*';
                 $stop = $start + length($reference);

@@ -99,6 +99,7 @@ sub run_fast_tier {
         %params = (
             variant_bed_file => $path_to_tier,
             tier_file_location => $self->_tier_file_location,
+            tiering_version => $version,
             tier1_output => $tier1_path,
             tier2_output => $tier2_path,
             tier3_output => $tier3_path,

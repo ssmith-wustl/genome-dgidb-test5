@@ -43,7 +43,8 @@ my $normal_bam = $test_dir . '/alignments/102922275_merged_rmdup.bam';
 # Updated to .v7 due to the addition of read depth
 # Updated to .v8 due to directory structure changes
 # Updated to .v9 due to DetVar2 module
-my $expected_dir = $test_dir . '/expected.v13/';
+# Updated to .v14 due to increasing insertion start/stop positions by 1
+my $expected_dir = $test_dir . '/expected.v14/';
 ok(-d $expected_dir, "expected results directory exists");
 
 my $version = '2.2.6'; 

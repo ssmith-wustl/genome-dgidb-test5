@@ -41,7 +41,8 @@ my $bam_input = $test_dir . '/alignments/102922275_merged_rmdup.bam';
 # Updated to .v2 for changing the structure of the files in the output dir from 1) no more filtering snvs -- this was moved to the  filter module 2) output file names changed
 # Updated to .v3 for correcting the output of insertions in the bed file
 # Updated to .v4 for correcting the sort order of snvs.hq and indels.hq
-my $expected_dir = $test_dir . '/expected.v4/';
+# Updated to .v5 for adding 1 to the start and stop positions of insertions
+my $expected_dir = $test_dir . '/expected.v5/';
 ok(-d $expected_dir, "expected results directory exists");
 
 my $version = 'r613';
