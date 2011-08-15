@@ -238,7 +238,7 @@ sub _cleanup {
 
     $self->status_message('Now deleting allocation with owner_id = ' . $self->id);
     my $allocation = $self->_disk_allocation;
-    $allocation->deallocate if $allocation;
+    $allocation->delete if $allocation;
 }
 
 sub _resolve_subclass_name {

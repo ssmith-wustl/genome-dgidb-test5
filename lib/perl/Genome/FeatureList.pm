@@ -116,24 +116,9 @@ sub delete {
     my $self = shift;
 
     #If we commit the delete, need to get rid of the allocation.
-    my $upon_delete_callback = $self->_cleanup_allocation_sub;
-    $self->ghost_class->add_observer(aspect=>'commit', callback=>$upon_delete_callback);
+    $self->disk_allocation->deallocate_on_commit;
 
     return $self->SUPER::delete(@_);
-}
-
-sub _cleanup_allocation_sub {
-    my $self = shift;
-
-    my $id = $self->id;
-    my $class_name = $self->class;
-    return sub {
-        print "Now deleting allocation with owner_id = $id\n";
-        my $allocation = Genome::Disk::Allocation->get(owner_id => $id, owner_class_name => $class_name);
-        if ($allocation) {
-            $allocation->deallocate; 
-        }
-    };
 }
 
 sub verify_file_md5 {

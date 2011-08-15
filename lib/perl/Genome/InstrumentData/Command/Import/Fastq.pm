@@ -414,7 +414,7 @@ sub execute {
     unless(copy($tmp_tar_filename, $real_filename)) {
         $self->error_message("Failed to copy to allocated space (copy returned bad value).  Unlinking and deallocating.");
         unlink($real_filename);
-        $disk_alloc->deallocate;
+        $disk_alloc->delete;
         return;
     }
     $self->status_message("About to calculate the md5sum of the tar'd fastq's in their new habitat on the allocation. This may take a long time.");
@@ -426,7 +426,7 @@ sub execute {
     unless($copy_md5 eq $md5) {
         $self->error_message("Failed to copy to allocated space (md5 mismatch).  Unlinking and deallocating.");
         unlink($real_filename);
-        $disk_alloc->deallocate;
+        $disk_alloc->delete;
         return;
     }
     $self->status_message("The md5sum for the copied tar file is: ".$copy_md5);

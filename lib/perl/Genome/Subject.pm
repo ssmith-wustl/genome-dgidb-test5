@@ -129,7 +129,7 @@ sub delete {
     }
 
     my $allocation = $self->disk_allocation;
-    $allocation->deallocate if $allocation;
+    $allocation->deallocate_on_commit if $allocation;
 
     return $self->SUPER::delete;
 }

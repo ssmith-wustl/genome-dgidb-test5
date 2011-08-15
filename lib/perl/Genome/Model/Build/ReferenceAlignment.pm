@@ -1063,8 +1063,8 @@ sub eviscerate {
         }
 
         if ($alignment_alloc) {
-            unless ($alignment_alloc->deallocate) {
-                $self->error_message("could not deallocate the alignment allocation.");
+            unless ($alignment_alloc->delete) {
+                $self->error_message("could not delete the alignment allocation.");
                 return;
             }
         }
@@ -1072,7 +1072,7 @@ sub eviscerate {
         if (-l $self->accumulated_alignments_directory && readlink($self->accumulated_alignments_directory) eq $alignment_path ) {
             $self->status_message("Unlinking symlink: " . $self->accumulated_alignments_directory);
             unless(unlink($self->accumulated_alignments_directory)) {
-                $self->error_message("could not remove symlink to deallocated accumulated alignments path");
+                $self->error_message("could not remove symlink to deleted accumulated alignments path");
                 return;
             }
         }

@@ -227,7 +227,7 @@ sub execute {
         unless($md5 eq $md5_from_file){
             $self->status_message("calcmd5 = ".$md5." and file md5 = ".$md5_from_file);
             $self->error_message("Calculated md5 sum and sum read from file did not match, aborting.");
-            $disk_alloc->deallocate;
+            $disk_alloc->delete;
             $self->error_message("Now removing instrument-data record from the database.");
             $import_instrument_data->delete;
             die "Import Failed";
@@ -240,7 +240,7 @@ sub execute {
     unless(copy($bam_path, $bam_destination)) {
         $self->error_message("Failed to copy to allocated space (copy returned bad value).  Unlinking and deallocating.");
         unlink($bam_destination);
-        $disk_alloc->deallocate;
+        $disk_alloc->delete;
         $self->error_message("Now removing instrument-data record from the database.");
         $import_instrument_data->delete;
         die "Import Failed.";
@@ -258,7 +258,7 @@ sub execute {
     unless(Genome::Sys->md5sum($bam_destination) eq $md5) {
         $self->error_message("Failed to copy to allocated space (md5 mismatch).  Unlinking and deallocating.");
         unlink($bam_destination);
-        $disk_alloc->deallocate;
+        $disk_alloc->delete;
         $self->error_message("Now removing instrument-data record from the database.");
         $import_instrument_data->delete;
         die "Import Failed.";

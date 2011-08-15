@@ -41,7 +41,7 @@ my $tmp_allocation = Genome::Disk::Allocation->__define__(
 no warnings;
 *Genome::Disk::Allocation::absolute_path = sub { return $tmp_dir };
 *Genome::Disk::Allocation::reallocate = sub { 1 };
-*Genome::Disk::Allocation::deallocate = sub { 1 };
+*Genome::Disk::Allocation::deallocate_on_commit = sub { 1 };
 use warnings;
 
 isa_ok($tmp_allocation,'Genome::Disk::Allocation'); 

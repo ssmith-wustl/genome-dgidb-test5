@@ -439,7 +439,7 @@ sub _deallocate {
     return if not $allocation;
 
     $self->status_message('Deallocate');
-    my $dealloc = eval{ $allocation->deallocate; };
+    my $dealloc = eval{ $allocation->delete; };
     if ( $dealloc ) {
         $self->status_message('Deallocate...OK');
     }
