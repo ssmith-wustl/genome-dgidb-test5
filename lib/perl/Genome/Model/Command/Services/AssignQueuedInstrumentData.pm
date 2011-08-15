@@ -992,9 +992,13 @@ sub create_default_qc_models {
         next if $model->target_region_set_name; # the current lane QC does not work for custom capture/exome
 
         my @lane_qc_models = $model->get_or_create_lane_qc_models;
-        my @buildless_lane_qc_models = grep { not scalar @{[ $_->builds ]} } @lane_qc_models;
-        for (@buildless_lane_qc_models) { $_->build_requested(1) };
-        push @new_models, @buildless_lane_qc_models;
+
+        for my $lane_qc (@lane_qc_models) {
+            next if $lane_qc->completed_builds;
+            next if $lane_qc->build_requested;
+            $lane_qc->build_requested(1, 'first build');
+            push @new_models, $lane_qc;
+        }
     }
 
     return @new_models;
