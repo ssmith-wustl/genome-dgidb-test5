@@ -39,8 +39,9 @@ sub execute {
     my $self = shift;
 
     my $output = $self->output_file;
+    my $temp_output = Genome::Sys->create_temp_file_path;
     my $bitmask = $self->bitmask;
-    my $out_fh = Genome::Sys->open_file_for_writing($output);
+    my $out_fh = Genome::Sys->open_file_for_writing($temp_output);
 
 
 
@@ -104,6 +105,19 @@ sub execute {
         }
     }
     $in_fh->close;
+    $out_fh->close;
+
+    if(-s $temp_output){
+        my @input = ($temp_output);
+        my $sort_cmd = Genome::Model::Tools::Joinx::Sort->create(input_files => @input, output_file => $output);
+        unless($sort_cmd->execute){
+            die $self->error_message("Could not complete sorting operation on bed output!");
+        }
+    }
+    else {
+        my $cmd = "touch $output";
+        Genome::Sys->shellcmd(cmd => $cmd);
+    }
 
     return 1;
 }
