@@ -24,7 +24,8 @@ class Genome::Sys::User {
     ]
 };
 
-sub get {
+sub fix_params_and_get {
+
     my ($class, @p) = @_;
     my %p;
     if (scalar(@p) == 1) {
