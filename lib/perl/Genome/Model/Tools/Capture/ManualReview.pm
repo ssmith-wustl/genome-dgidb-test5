@@ -11,8 +11,10 @@ class Genome::Model::Tools::Capture::ManualReview {
   has_input => [
     som_var_model_group_id => { is => 'Text', doc => "ID of model-group containing SomaticVariation models with variants to manually review" },
     output_dir => { is => 'Text', doc => "Analysis where files for manual review will be organized" },
-    exclude_pindel => { is => 'Boolean', doc => "Separate calls unique to Pindel, since many cannot be reviewed on a BWA aligned BAM", is_optional => 1, default => 1 },
-    hypermutation_minimum => { is => 'Number', doc => "If number of SNVs+Indels exceeds this, write output to a subdirectory named hypermutated", is_optional => 1, default => 500 },
+    exclude_pindel => { is => 'Boolean', doc => "Keep aside calls unique to Pindel, since many cannot be reviewed on a BWA aligned BAM", is_optional => 1, default => 1 },
+    exclude_uhc_snvs => { is => 'Boolean', doc => "Keep aside SNV calls that pass the ultra-high-confidence SNV filter", is_optional => 1, default => 1 },
+    min_hypermut_cnt => { is => 'Number', doc => "If number of SNVs+Indels exceeds this, write output to a subdirectory named hypermutated", is_optional => 1, default => 500 },
+    refseq_version => { is => 'Text', doc => "Reference Sequence (GRCh37-lite-build37 or NCBI-human-build36)", is_optional => 1, default => "GRCh37-lite-build37" },
   ],
   doc => "Prepares variants for manual review in IGV, given a model-group of SomaticVariation models",
 };
@@ -39,7 +41,9 @@ sub execute {
   my $som_var_model_group_id = $self->som_var_model_group_id;
   my $output_dir = $self->output_dir;
   my $exclude_pindel = $self->exclude_pindel;
-  my $hypermutation_minimum = $self->hypermutation_minimum;
+  my $exclude_uhc_snvs = $self->exclude_uhc_snvs;
+  my $min_hypermut_cnt = $self->min_hypermut_cnt;
+  my $refseq_version = $self->refseq_version;
   $output_dir =~ s/(\/)+$//; # Remove trailing forward-slashes if any
 
   # Check on all the input data before starting work
@@ -88,12 +92,12 @@ sub execute {
     return undef unless( -e $snv_anno && -e $indel_anno && -e $gatk_calls && -e $pindel_calls );
 
     # I know I shouldn't use backticks like this, but think of all the lines of code we save
-    @{$bams{$tcga_patient_id}{snvs}} = `cat $snv_anno`;
-    @{$bams{$tcga_patient_id}{indels}} = `cat $indel_anno`;
+    $bams{$tcga_patient_id}{snvs} = $snv_anno;
+    $bams{$tcga_patient_id}{indels} = $indel_anno;
     if( $exclude_pindel )
     {
-      ${$bams{$tcga_patient_id}{gatk}} = $gatk_calls;
-      ${$bams{$tcga_patient_id}{pindel}} = $pindel_calls;
+      $bams{$tcga_patient_id}{gatk} = $gatk_calls;
+      $bams{$tcga_patient_id}{pindel} = $pindel_calls;
     }
   }
 
@@ -106,7 +110,9 @@ sub execute {
 
     # Check if any review files exist. We don't want to overwrite reviewed variants
     if( -e "$output_dir/$case.snv.review.csv" or -e "$output_dir/$case.indel.review.csv" or
-        -e "$output_dir/$case.snv.reviewed.csv" or -e "$output_dir/$case.indel.reviewed.csv" )
+        -e "$output_dir/$case.snv.reviewed.csv" or -e "$output_dir/$case.indel.reviewed.csv" or
+        -e "$output_dir/hypermutated/$case.snv.review.csv" or -e "$output_dir/hypermutated/$case.indel.review.csv" or
+        -e "$output_dir/hypermutated/$case.snv.reviewed.csv" or -e "$output_dir/hypermutated/$case.indel.reviewed.csv" )
     {
       print "files exist. Will not overwrite.\n";
       next;
@@ -116,7 +122,7 @@ sub execute {
     my %uniq_to_pindel = ();
     if( $exclude_pindel )
     {
-      my ( $gatk_calls, $pindel_calls ) = ( ${$bams{$case}{gatk}}, ${$bams{$case}{pindel}} );
+      my ( $gatk_calls, $pindel_calls ) = ( $bams{$case}{gatk}, $bams{$case}{pindel} );
       my @gatk_lines = `cut -f 1-4 $gatk_calls`;
       my @pindel_lines = `cut -f 1-4 $pindel_calls`;
       chomp( @gatk_lines, @pindel_lines );
@@ -127,16 +133,22 @@ sub execute {
       }
     }
 
+    # Grab the high confidence calls from their respective files
+    my ( $snv_anno, $indel_anno ) = ( $bams{$case}{snvs}, $bams{$case}{indels} );
+    my @snv_lines = `cat $snv_anno`;
+    my @indel_lines = `cat $indel_anno`;
+    chomp( @snv_lines, @indel_lines );
+
     # Store the variants into a hash to help sort variants by loci, and to remove duplicates
     my %review_lines = ();
     my %var_cnt = ( snvs => 0, indels => 0 );
-    for my $line ( @{$bams{$case}{snvs}} )
+    for my $line ( @snv_lines )
     {
       my ( $chr, $start, $stop, $ref, $var ) = split( /\t/, $line );
       ++$var_cnt{snvs} unless( defined $review_lines{snvs}{$chr}{$start}{$stop} );
-      $review_lines{snvs}{$chr}{$start}{$stop} = join( "\t", $chr, $start, $stop, $ref, $var );
+      $review_lines{snvs}{$chr}{$start}{$stop} = $line; # Save annotation here for uhc filtering
     }
-    for my $line ( @{$bams{$case}{indels}} )
+    for my $line ( @indel_lines )
     {
       my ( $chr, $start, $stop, $ref, $var ) = split( /\t/, $line );
       my ( $base0_start, $base0_stop ) = ( $start - 1, $stop - 1 );
@@ -156,18 +168,20 @@ sub execute {
     # If there are more variants than our hypermutation threshold, store them separately
     my $tot_var_cnt = $var_cnt{snvs} + $var_cnt{indels};
     my $output_dir_new = $output_dir;
-    if( $tot_var_cnt >= $hypermutation_minimum )
+    if( $tot_var_cnt >= $min_hypermut_cnt )
     {
       $output_dir_new = "$output_dir/hypermutated";
     }
 
-    # Create a review file for manual reviewers to record comments, and a bed file for use with IGV
+    # Create review files for manual reviewers to record comments, and bed files for use with IGV
     my $snv_review_file = "$output_dir_new/$case.snv.review.csv";
     my $indel_review_file = "$output_dir_new/$case.indel.review.csv";
     my $snv_bed_file = "$output_dir_new/$case.snv.bed";
     my $indel_bed_file = "$output_dir_new/$case.indel.bed";
     # If user wants to exclude calls unique to pindel, create a separate file (no need for a .bed)
     my $pindel_review_file = "$output_dir_new/$case.pindel.review.csv";
+    # If user wants to exclude ultra-high-confidence calls from review, create separate files
+    my $uhc_snv_file = "$output_dir_new/$case.snv.uhc.anno";
 
     # Write indel review files
     my $indel_review_fh = IO::File->new( $indel_review_file, ">" ) or die "Cannot open $indel_review_file. $!";
@@ -206,6 +220,47 @@ sub execute {
       $pindel_review_fh->close if( $exclude_pindel );
     }
 
+    my ( $tumor_bam, $normal_bam ) = ( $bams{$case}{tumor}, $bams{$case}{normal} );
+
+    # If user wants, filter out the ultra-high-confidence SNVs
+    if( $exclude_uhc_snvs )
+    {
+      print "Running ultra-high-confidence filter. This could take a while...\n";
+      # Print out a de-duplicated snv annotation file for use with the UHC filter
+      my $snv_anno_file = Genome::Sys->create_temp_file_path();
+      my $snv_anno_fh = IO::File->new( $snv_anno_file, ">" ) or die "Cannot open $snv_anno_file. $!";
+      for my $chr ( nsort keys %{$review_lines{snvs}} )
+      {
+        for my $start ( sort {$a <=> $b} keys %{$review_lines{snvs}{$chr}} )
+        {
+          for my $stop ( sort {$a <=> $b} keys %{$review_lines{snvs}{$chr}{$start}} )
+          {
+            $snv_anno_fh->print( $review_lines{snvs}{$chr}{$start}{$stop}, "\n" );
+          }
+        }
+      }
+      $snv_anno_fh->close;
+      my $snv_filtered_file = Genome::Sys->create_temp_file_path();
+
+      # Fetch the path to the reference sequence FASTA file to use with the UHC filter
+      my $refseq_build = Genome::Model::Build::ReferenceSequence->get( name => $refseq_version );
+      my $reference_fasta = $refseq_build->data_directory . "/all_sequences.fa";
+
+      # Run the UHC filter
+      `gmt somatic ultra-high-confidence --variant-file $snv_anno_file --normal-bam-file $normal_bam --tumor-bam-file $tumor_bam --reference $reference_fasta --output-file $uhc_snv_file --filtered-file $snv_filtered_file &> /dev/null`;
+      `rm -f $uhc_snv_file.readcounts.normal $uhc_snv_file.readcounts.tumor`; # Remove intermediate files
+
+      # Only the variants that didn't pass the uhc filter will need to be reviewed
+      undef %{$review_lines{snvs}}; # Reset the review line hash
+      my @snv_filtered_lines = `cat $snv_filtered_file`;
+      chomp( @snv_filtered_lines );
+      for my $line ( @snv_filtered_lines )
+      {
+        my ( $chr, $start, $stop, $ref, $var ) = split( /\t/, $line );
+        $review_lines{snvs}{$chr}{$start}{$stop} = $line;
+      }
+    }
+
     # Write SNV review files
     my $snv_review_fh = IO::File->new( $snv_review_file, ">" ) or die "Cannot open $snv_review_file. $!";
     my $snv_bed_fh = IO::File->new( $snv_bed_file, ">" ) or die "Cannot open $snv_bed_file. $!";
@@ -217,7 +272,7 @@ sub execute {
         for my $stop ( sort {$a <=> $b} keys %{$review_lines{snvs}{$chr}{$start}} )
         {
           my ( undef, undef, undef, $ref, $var ) = split( /\t/, $review_lines{snvs}{$chr}{$start}{$stop} );
-          $snv_review_fh->print( $review_lines{snvs}{$chr}{$start}{$stop}, "\n" );
+          $snv_review_fh->print( join( "\t", $chr, $start, $stop, $ref, $var ), "\n" );
           $snv_bed_fh->printf( "%s\t%d\t%d\t%s\t%s\n", $chr, $start-1, $stop, $ref, $var );
         }
       }
@@ -226,9 +281,9 @@ sub execute {
     $snv_review_fh->close;
 
     # Dump IGV XML files to make it easy on the manual reviewers
-    unless( Genome::Model::Tools::Analysis::DumpIgvXml->execute( tumor_bam => $bams{$case}{tumor}, normal_bam => $bams{$case}{normal},
+    unless( Genome::Model::Tools::Analysis::DumpIgvXml->execute( tumor_bam => $tumor_bam, normal_bam => $normal_bam,
             review_bed_file => $indel_bed_file, review_description => "High-confidence Tier1 Indels", genome_name => "$case.indel", output_dir => $output_dir_new ) and
-            Genome::Model::Tools::Analysis::DumpIgvXml->execute( tumor_bam => $bams{$case}{tumor}, normal_bam => $bams{$case}{normal},
+            Genome::Model::Tools::Analysis::DumpIgvXml->execute( tumor_bam => $tumor_bam, normal_bam => $normal_bam,
             review_bed_file => $snv_bed_file, review_description => "High-confidence Tier1 SNVs", genome_name => "$case.snv", output_dir => $output_dir_new ))
     {
       print STDERR "WARNING: Unable to generate IGV XMLs for $case\n";
