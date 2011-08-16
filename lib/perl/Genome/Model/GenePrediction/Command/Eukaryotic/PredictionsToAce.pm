@@ -22,6 +22,12 @@ class Genome::Model::GenePrediction::Command::Eukaryotic::PredictionsToAce {
             default => 0,
             doc => 'If set, only genes that produce proteins are placed in ace file',
         },
+        rna_only => {
+            is => 'Boolean',
+            is_input => 1,
+            default => 0,
+            doc => 'If set, only rna genes are placed in the ace file',
+        },
         build_id => {
             is => 'Number',
             is_input => 1,
@@ -80,6 +86,10 @@ sub execute {
     confess "No sequence file found at $sequence_file!" unless -e $sequence_file;
     confess "No directory found at $prediction_directory!" unless -d $prediction_directory;
 
+    if ($self->protein_coding_only and $self->rna_only) {
+        confess "Both protein only and rna only are set. Only set one (or none)!";
+    }
+
     # Now either use the supplied ace file or create a temp one in the predictions directory for output
     my $ace_fh;
     if (defined $self->ace_file) {
@@ -108,18 +118,20 @@ sub execute {
     # Pre-fetching all genes now so only one file read is necessary
     my @coding_genes = Genome::Prediction::CodingGene->get(
         directory => $prediction_directory,
-    );
+    ) unless $self->rna_only;
     my @rna_genes = Genome::Prediction::RNAGene->get(
         directory => $prediction_directory,
-    );
+    ) unless $self->protein_coding_only;
 
     # Get list of sequences
     my @sequences = $self->_get_sequences_from_file($sequence_file);
     for my $sequence (nsort @sequences) { 
-        my @seq_coding_genes = Genome::Prediction::CodingGene->get(
+        my @seq_coding_genes;
+        @seq_coding_genes = Genome::Prediction::CodingGene->get(
             directory => $prediction_directory,
             sequence_name => $sequence,
-        );
+        ) unless $self->rna_only;
+
         my @seq_rna_genes;
         @seq_rna_genes = Genome::Prediction::RNAGene->get(
             directory => $prediction_directory,
