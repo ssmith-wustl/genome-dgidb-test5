@@ -119,6 +119,10 @@ sub _type_for_file {
         return 'ref';
     }
 
+    if ( $file eq '-' ) { # STDIN defaults to sanger
+        return 'sanger';
+    }
+
     my ($ext) = $file =~ /\.(\w+)$/;
     if ( not $ext ) {
         $self->error_message('Failed to get extension for file: '.$file);
@@ -131,12 +135,13 @@ sub _type_for_file {
         fasta => 'phred',
         fna => 'phred',
         fa => 'phred',
+        sam => 'sam',
+        bam => 'bam',
     );
     if ( $file_exts_and_formats{$ext} ) {
         return $file_exts_and_formats{$ext}
     }
 
-    $self->error_message('Failed to get type for file: '.$file);
     return;
 }
 
@@ -147,9 +152,12 @@ sub _reader_class_for_type {
     Carp::confess('No type to get reader class') if not $type;
 
     my %types_and_classes = (
+        fasta => 'PhredReader',
         phred => 'PhredReader',
         sanger => 'FastqReader',
         illumina => 'IlluminaFastqReader',
+        sam => 'SamReader',
+        bam => 'BamReader',
         'ref' => 'StdinRefReader',
     );
 
