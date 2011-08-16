@@ -247,7 +247,7 @@ sub execute {
       my $reference_fasta = $refseq_build->data_directory . "/all_sequences.fa";
 
       # Run the UHC filter
-      `gmt somatic ultra-high-confidence --variant-file $snv_anno_file --normal-bam-file $normal_bam --tumor-bam-file $tumor_bam --reference $reference_fasta --output-file $uhc_snv_file --filtered-file $snv_filtered_file &> /dev/null`;
+      `gmt somatic ultra-high-confidence --variant-file $snv_anno_file --normal-bam-file $normal_bam --tumor-bam-file $tumor_bam --reference $reference_fasta --output-file $uhc_snv_file --filtered-file $snv_filtered_file`;
       `rm -f $uhc_snv_file.readcounts.normal $uhc_snv_file.readcounts.tumor`; # Remove intermediate files
 
       # Only the variants that didn't pass the uhc filter will need to be reviewed
