@@ -9,7 +9,6 @@ use Carp 'confess';
 use Data::Dumper 'Dumper';
 use File::Grep 'fgrep';
 require Genome::Utility::MetagenomicClassifier::SequenceClassification;
-require Finishing::Assembly::Factory;
 use Storable;
 
 class Genome::AmpliconAssembly::Amplicon {
@@ -409,50 +408,45 @@ sub _get_bioseq_info_from_oriented_fasta {
     );
 }
 
-sub get_ace_factory {
-    my $self = shift;
-
-    unless ( $self->{_ace_factory} ) {
-        my $acefile = $self->ace_file;
-        return unless -s $acefile; # ok
-        $self->{_ace_factory} = Finishing::Assembly::Factory->connect('ace', $acefile);
-    }
-
-    return $self->{_ace_factory};
-}
-
 sub get_successfully_assembled_contig_from_assembly {
     my $self = shift;
 
-    my $ace = $self->get_ace_factory
-        or return;
-    my $assembly = $ace->get_assembly;
-    my $contigs = $assembly->contigs;
+    my $acefile = $self->ace_file;
+    return unless -s $acefile; # ok
+    my $ace_reader = Genome::Model::Tools::Consed::AceReader->create(
+        file => $acefile,
+    );
+    return if not $ace_reader;
+
     my $contig;
-    while ( $contig = $contigs->next ) {
-        next unless $contig->unpadded_length >= $self->successfully_assembled_length;
-        next unless $contig->reads->count > 1;
+    while ( my $obj = $ace_reader->next ) {
+        next if $obj->{type} ne 'contig';
+        next unless $obj->{read_count} > 1;
+        $obj->{unpadded_consensus} = $obj->{consensus};
+        $obj->{unpadded_consensus} =~ s/\*//g;
+        next if length $obj->{unpadded_consensus} < $self->successfully_assembled_length;
+        $contig = $obj;
         last;
     }
- 
+
+    return if not $contig;
+
+    while ( my $obj = $ace_reader->next ) {
+        last if $obj->{type} eq 'contig';
+        next if $obj->{type} ne 'read';
+        push @{$contig->{read_names}}, $obj->{name};
+    }
+
     return $contig;
 }
 
 sub get_reads_from_successfully_assembled_contig {
     my $self = shift;
 
-    my $ace = $self->get_ace_factory
-        or return;
-    my $assembly = $ace->get_assembly;
-    my $contigs = $assembly->contigs;
-    my $contig;
-    while ( $contig = $contigs->next ) {
-        next unless $contig->unpadded_length >= $self->successfully_assembled_length;
-        next unless $contig->reads->count > 1;
-        last;
-    }
- 
-    return $contig->reads;
+    my $contig = $self->get_successfully_assembled_contig_from_assembly;
+    return if not $contig;
+
+    return $contig->{read_count};
 }
 
 sub _get_bioseq_info_from_assembly { # was _get_bioseq_info_from_longest_contig
@@ -461,18 +455,16 @@ sub _get_bioseq_info_from_assembly { # was _get_bioseq_info_from_longest_contig
     my $contig = $self->get_successfully_assembled_contig_from_assembly
         or return;
 
-    # Reads
-    my $reads = $contig->reads;
-    my $read_names = [ sort { $a cmp $b } map { $_->name } $reads->all ];
+    my @read_names = sort { $a cmp $b } @{$contig->{read_names}};
 
     # Bioseq
     my $bioseq = Bio::Seq::Quality->new(
         '-id' => $self->get_name,
-        '-desc' => 'source=assembly reads='.join(',', @$read_names),
+        '-desc' => 'source=assembly reads='.join(',', @read_names),
         '-alphabet' => 'dna',
         '-force_flush' => 1,
-        '-seq' => $contig->unpadded_base_string,
-        '-qual' => join(' ', @{$contig->qualities}),
+        '-seq' => $contig->{unpadded_consensus},
+        '-qual' => join(' ', @{$contig->{base_qualities}}),
     );
 
     $self->_validate_fasta_and_qual_bioseq($bioseq, $bioseq)
@@ -480,7 +472,7 @@ sub _get_bioseq_info_from_assembly { # was _get_bioseq_info_from_longest_contig
 
     return (
         bioseq => $bioseq,
-        assembled_reads => $read_names,
+        assembled_reads => \@read_names,
         source => 'assembly',
         oriented => 0,
     );
