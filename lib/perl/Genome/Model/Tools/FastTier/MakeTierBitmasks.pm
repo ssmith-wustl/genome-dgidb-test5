@@ -174,7 +174,6 @@ sub execute {
     #now iterate over all transcripts
     for my $chromosome_name(@chromosomes) {
         $transcript_iterator = $build->transcript_iterator(chrom_name => $chromosome_name);
-        print STDERR "Parsing $chromosome_name\n";
         $self->status_message("Parsing $chromosome_name\n");
         unless($transcript_iterator) {
             warn "No iterator because ", Genome::Transcript->error_message, " Skipping to next\n";
@@ -198,12 +197,12 @@ sub execute {
                     }
                     $type = undef;
                 }
+                map{ $_->unload } @exons;
             }
+            $transcript->unload;
         }
     }
-    #attempt to free up some mem 
-    UR::Context->object_cache_size_lowwater(0);
-    UR::Context->object_cache_size_highwater(0);
+
     my $tier1 = $self->union_genomes($tier1_coding, $tier1_rna); 
     $tier1 = $self->difference_genomes($tier1, \%genome);
     undef($tier1_rna); #no longer needed

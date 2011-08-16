@@ -21,7 +21,7 @@ Standard options:
  file => The file to read. The use of the preceding 'file=' is optional.
           It is assumed that the bare option is the file. Use '-' to read from STDIN.
  type => The type of input. Not required if type can be determined from the file.
-          Required when reading from STDIN. Valid types: sanger, illumina, phred.
+          Required when reading from STDIN. Valid types: sanger, sam, illumina, phred (fasta), fasta.
  cnt => The number of sequences to read from the input. If the input is paired, use 2.
 
 Additional options, by type:
@@ -48,7 +48,7 @@ Standard options:
  file => The file to write. The use of the preceding 'file=' is optional.
           It is assumed that the bare option is the file. Use '-' to write to STDOUT.
  type => The type of output. Not required if type can be determined from the file.
-          Type when writing to STDOUT defaults to sanger. Valid types: sanger, illumina, phred, bed.
+          Type when writing to STDOUT defaults to sanger. Valid types: sanger, illumina, phred (fasta), fasta, bed.
  name => The name of the writer.  If using commands that attach a writer name to a sequence,
           they will be written to the specified writer.
           

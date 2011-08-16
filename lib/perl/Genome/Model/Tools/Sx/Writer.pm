@@ -131,7 +131,6 @@ sub _type_for_file {
         return $exts_and_types{$ext}
     }
 
-    $self->error_message('Failed to get type for file: '.$file);
     return;
 }
 
