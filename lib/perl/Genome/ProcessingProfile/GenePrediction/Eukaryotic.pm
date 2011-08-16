@@ -99,7 +99,13 @@ sub _map_workflow_inputs {
         prediction_directory => $build->prediction_directory,
         skip_repeat_masker => $self->skip_repeat_masker,
         repeat_masker_ace_file => $build->repeat_masker_ace_file,
-        predictions_ace_file => $build->predictions_ace_file;
+        predictions_ace_file => $build->predictions_ace_file
+        rna_predictions_ace_file => $build->rna_predictions_ace_file
+        rna_predictions_only_flag => 1, # This is just used to tell the step makes the rna predictions ace
+                                        # file to only look at rna. There's unfortunately no other way I'm
+                                        # aware of that'll do this, and since this same module is used to
+                                        # create the coding gene predictions ace file too, I can't change
+                                        # the default value of the module itself.
 
     my $params;
     for (my $i = 0; $i < (scalar @inputs); $i += 2) {

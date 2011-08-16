@@ -30,6 +30,11 @@ sub predictions_ace_file {
     return $self->data_directory . "/predictions.ace";
 }
 
+sub rna_predictions_ace_file {
+    my $self = shift;
+    return $self->data_directory . "/rna_predictions.ace";
+}
+
 sub log_directory {
     my $self = shift;
     return $self->data_directory . '/logs/';
