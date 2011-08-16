@@ -109,7 +109,7 @@ sub execute {
 
     if(-s $temp_output){
         my @input = ($temp_output);
-        my $sort_cmd = Genome::Model::Tools::Joinx::Sort->create(input_files => @input, output_file => $output);
+        my $sort_cmd = Genome::Model::Tools::Joinx::Sort->create(input_files => \@input, output_file => $output);
         unless($sort_cmd->execute){
             die $self->error_message("Could not complete sorting operation on bed output!");
         }
