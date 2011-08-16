@@ -160,7 +160,12 @@ sub _cleanup {
     $self->status_message('Now deleting allocation with owner_id = ' . $self->id);
     my $allocation = $self->_disk_allocation;
     if ($allocation) {
-       $allocation->delete;
+        my $path = $allocation->absolute_path;
+        unless (rmtree($path)) {
+            $self->error_message("could not rmtree $path");
+            return;
+       }
+       $allocation->deallocate;
     }
 }
 

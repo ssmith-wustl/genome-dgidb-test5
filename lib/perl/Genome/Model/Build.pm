@@ -1629,7 +1629,7 @@ sub delete {
     my $disk_allocation = $self->disk_allocation;
     if ($disk_allocation) {
         $self->status_message("Deallocating build directory");
-        unless ($disk_allocation->deallocate_on_commit) {
+        unless ($disk_allocation->deallocate) {
             $self->warning_message('Failed to deallocate disk space.');
         }
     }

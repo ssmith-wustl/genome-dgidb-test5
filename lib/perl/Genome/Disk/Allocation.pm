@@ -236,21 +236,7 @@ sub create {
     return $allocation;    
 }
 
-sub deallocate_on_commit {
-    my ($class, %params) = @_;
-    if (ref($class)) {
-        $params{allocation_id} = $class->id;
-        $class = ref($class);
-    }
-    confess "Require allocation ID" unless exists $params{allocation_id};
-    $class->_create_observer(
-        sub {
-            $class->_delete(%params);
-            UR::Context->commit();
-        }
-    );
-}
-
+sub deallocate { return shift->delete(@_); }
 sub delete {
     my ($class, %params) = @_;
     if (ref($class)) {
@@ -684,10 +670,10 @@ sub _create_observer {
     my ($class, @closures) = @_;
     my $observer;
     my $callback = sub {
+        $observer->delete if $observer;
         for my $closure (@closures) {
             &$closure;
         }
-        $observer->delete if $observer;
     };
 
     if ($ENV{UR_DBI_NO_COMMIT}) {
