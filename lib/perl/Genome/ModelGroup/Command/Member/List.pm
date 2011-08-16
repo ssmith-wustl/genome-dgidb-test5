@@ -50,8 +50,12 @@ sub _resolve_boolexpr {
     my @models = $self->model_group->models;
 
     my @model_ids = map($_->id, @models);
-    
-    return Genome::Model->define_boolexpr(id => \@model_ids);
+
+    if ($self->order_by) {
+        return Genome::Model->define_boolexpr(id => \@model_ids, -order => $self->order_by);
+    } else {
+        return Genome::Model->define_boolexpr(id => \@model_ids);
+    }
 }
 
 1;
