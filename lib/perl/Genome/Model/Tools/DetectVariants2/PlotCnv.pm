@@ -77,7 +77,10 @@ sub _detect_variants {
         $self->error_message("Failed to run PlotCnv command.");
         die $self->error_message;
     }
-
+    my $cnvs = $self->_temp_staging_directory."/cnvs.hq";
+    unless(-e $cnvs){
+        system("touch $cnvs");
+    }
     return 1;
 }
 
