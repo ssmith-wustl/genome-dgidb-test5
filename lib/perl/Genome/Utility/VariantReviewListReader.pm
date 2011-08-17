@@ -188,7 +188,7 @@ Processes a variant review list line by line, splits on the given separator, and
 
 =head1 See Also
 
-I<Finfo::SeparatedValueReader>
+I<Genome::Utility::IO::SeparatedValueReader>
 
 =head1 Disclaimer
 
