@@ -130,7 +130,7 @@ sub execute {
    $self->status_message("Using $cosmic_dir as cosmic db folder");
 
    my $aa_range = $self->aa_range;
-   my $nuc_range = $self->nucleotide_range;
+   my $nuc_range = $self->nuc_range;
 
 #####################
 #  MAIN PROCESSING  #
@@ -518,7 +518,7 @@ if ($verbose) {print ".";}   #report that we are starting a sample
 	my $omim_find_type;
 	my $omim = \%omimaa;
 	if (exists($omim->{$hugo})) {
-		$omim_find_type = FindOMIM(\%omimaa,$hugo,$res_start,$res_stop,$residue1,$residue2);
+		$omim_find_type = FindOMIM(\%omimaa,$hugo,$res_start,$res_stop,$residue1,$residue2,$aa_range);
 	}
 	#Add OMIM result to the results hash
 	if(defined($omim_find_type)) {
@@ -606,7 +606,7 @@ return 1;
 
 
 sub FindOMIM {
-	my ($omim, $hugo,$res_start, $res_stop, $residue1, $residue2) = @_;
+	my ($omim, $hugo,$res_start, $res_stop, $residue1, $residue2, $aa_range) = @_;
 
 	my $return_value = 'no_match';
 	unless (exists($omim->{$hugo})) {
