@@ -29,7 +29,7 @@ my $instrument_data = Genome::InstrumentData::Solexa->create_mock(
                                                                   run_type => 'Paired End Read 2',
                                                                   is_paired_end => 1,
                                                                   #gerald_directory => $gerald_directory,
-                                                                  bam_path => $base_dir.'/test_run_name.bam',
+                                                                  bam_path => $base_dir.'/test_run_name.sanger.bam',
                                                               );
 isa_ok($instrument_data,'Genome::InstrumentData::Solexa');
 
