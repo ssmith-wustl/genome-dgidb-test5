@@ -1,17 +1,44 @@
+package Genome::Model::Build::View::Annotation::Html;
+
+class Genome::Model::Build::View::Annotation::Html {
+    is => 'Genome::View::Status::Html',
+    has_constant => [
+        perspective => {
+            value => 'annotation',
+        },
+    ],
+};
+
+warn 'Hi';
+
+sub _generate_content {
+    my $self = shift;
+warn 'Hello';
+    my $build = $self->subject;
+
+    my $return_value = <<'HTML'
+
 <!doctype html>
 <html>
   <head>
     <meta charset="utf-8">
     <title>Annotation Search</title>
-    <script src="http://www.modernizr.com/downloads/modernizr-2.0.6.js"></script>
-    <script src="http://code.jquery.com/jquery-1.6.2.js"></script>
-    <!--<script src="http://www.datatables.net/download/build/jquery.dataTables.js"></script>-->
-    <script src="jquery.dataTables.js"></script>
-    <script src="http://jashkenas.github.com/coffee-script/extras/coffee-script.js"></script>
-    <style type="text/css" media="screen">
-		@import "demo_table_jui.css";
-        @import "jquery-ui-1.7.2.custom.css";
-        @import "details.css";
+      <script src="/res/js/pkg/jquery.js"></script>
+      <script src="/res/js/pkg/jquery-ui.js"></script>
+
+      <script src="/res/js/pkg/dataTables/media/js/jquery.dataTables.min.js"></script>
+    <link href="/res/css/jquery-ui-overrides.css" type="text/css" rel="stylesheet" media="screen, projection" />
+    <link rel="stylesheet" href="/res/css/dataTables.css" type="text/css" media="screen, projection" />
+    <link rel="shortcut icon" href="/res/img/gc_favicon.png" type="image/png" />
+    <link rel="stylesheet" href="/res/css/blueprint/screen.css" type="text/css" media="screen, projection" />
+    <link rel="stylesheet" href="/res/css/blueprint/print.css" type="text/css" media="print" />
+    <link rel="stylesheet" href="/res/css/master.css" type="text/css" media="screen, projection" />
+    <link rel="stylesheet" href="/res/css/buttons.css" type="text/css" media="screen, projection" />
+    <link rel="stylesheet" href="/res/css/icons.css" type="text/css" media="screen, projection" />
+    <link rel="stylesheet" href="/res/css/forms.css" type="text/css" media="screen, projection" />
+    <link type="text/css" href="/res/js/pkg/jquery-ui-1.8.1.custom/css/gsc-theme/jquery-ui-1.8.1.custom.css" rel="stylesheet" />
+    <link rel="stylesheet" href="/res/css/genome_model_build_annotation.css" type="text/css" media="screen, projection" />
+<!--    <style type="text/css" media="screen">
 		
 		/*
 		 * Override styles needed due to the mix of three different CSS sources! For proper examples
@@ -22,9 +49,49 @@
         .css_right { float: right; }
         #example_wrapper .fg-toolbar { font-size: 0.8em }
         #theme_links span { float: left; padding: 2px 10px; }
-*/	</style>
+*/	</style> -->
   </head>
   <body>
+  <div class="page">
+<!--template: /html/common_includes/components.xsl name:control_bar_view-->
+      <div xmlns:rest="urn:rest" xmlns:str="http://xsltsl.org/string" class="control_bar view shadow">
+        <div class="control_bar_menu" id="bar_menu">
+<!--template: /html/common_includes/components.xsl name:control_bar_cache_info-->
+          <div class="cache_info">
+            <div class="cache_time">
+              <p>
+          View generated<br /><strong><span id="updatedOn"></span></strong></p>
+            </div>
+            <div class="cache_refresh">
+              <a class="btn_cache_refresh rounded" id="refreshCache" title="Refresh Cache"></a>
+            </div>
+          </div>
+<!--template: /html/common_includes/components.xsl name:control_bar_menu-->
+          <ul class="app_menu">
+            <li>
+              <a href="/view/genome/status.html" class="app btn shadow"><div class="icon"><img src="/res/img/icons/app_deprecated_search_16.png" width="16" height="16" /></div>
+          Deprecated Search
+        </a>
+            </li>
+            <li>
+              <a href="/view/genome/search/status.html" class="app btn shadow"><div class="icon"><img src="/res/img/icons/app_analysis_search_16.png" width="16" height="16" /></div>
+          Analysis Search
+        </a>
+            </li>
+          </ul>
+        </div>
+        <div class="control_bar_base" id="bar_base"> </div>
+      </div>
+<!--template: /html/common_includes/components.xsl:view_header-->
+      <div xmlns:rest="urn:rest" xmlns:str="http://xsltsl.org/string" class="header rounded-bottom gradient-grey shadow">
+        <div class="container">
+          <div class="title span-24 last">
+            <h1 class="no_icon" style="margin-left: 0;">Query Results</h1>
+          </div>
+        </div>
+      </div>
+      <div class="content rounded shadow">
+        <div class="container">
     <div class="search">
         <form action="javascript:return false;" id="searchForm">
             <input type="text" id="geneName"/>
@@ -45,7 +112,7 @@
         <table cellpadding="0" cellspacing="0" border="0" class="display" id="annotationTable">
             <thead>
                 <tr>
-                    <th rowspan="2"></th>
+                    <th rowspan="2">&nbsp;</th>
                     <th rowspan="2">Location</th>
                     <th rowspan="2">Chr</th>
                     <th rowspan="2">Start</th>
@@ -106,16 +173,10 @@
             </tfoot> -->
         </table>
     </div>
-    <script type="text/coffeescript">
-        
-    </script>
     <script>
     
         function fnFormatDetails(oTable, nTr) {
             var aData = oTable.fnGetData(nTr);
-            // var sOut = '<div>'+aData[2]+'</div>';
-            // sOut += '<div>'+aData[3]+'-'+aData[4]+'</div>';
-            
             var sOut = '';
             
             sOut += '<div class="details_chr_title">chr</div>';
@@ -224,7 +285,7 @@
         }
         
         function processAnnotationLine(row) {            
-            var expand = '<img src="images/details_open.png">';
+            var expand = '<img src="/res/img/build_annotation/details_open.png">';
             var loc = row[0] + ":" + row[1] + "-" + row[2]; // chr:start-stop
             var newrow = new Array();
             newrow.push(expand);
@@ -267,14 +328,12 @@
         $(document).ready(function(){
             $.ajaxSetup ({ cache: false });
             
-            var standard_build_id = 109483321;
-            var build_id = 112819528;
-            var total_lines = 20000;
+            var build_id =
+HTML
+ . $build->id . <<'HTML'
+;            var base_url = "/view/genome/model/build/annotation.json"
             
-            var base_url = "http://linus263:8090/view/genome/model/build/set/annotation.html"
-            
-            var build_type = 2; // force            
-            // var total_lines = 5321894;
+            var build_type = 1; 
             
             var ajax_load = "<em>loading</em>";
             var ajax_grep = "<em>grepping</em>";
@@ -287,7 +346,6 @@
             $.getJSON(
                 base_url,
                 {
-                    "-standard_build_id": standard_build_id,
                     "build_id": build_id,
                     "-request_index": build_type
                 },  
@@ -307,6 +365,7 @@
                 "bProcessing": true,
                 "bServerSide": true,
                 "sAjaxSource": base_url,
+                "sPaginationType": "full_numbers",
                 "bJQueryUI": true,
                 "aaSorting": [[1, "asc" ]],
                 "aoColumnDefs": [
@@ -337,13 +396,10 @@
                         "name": "-datatables_params",
                         "value": aoDataString 
                     }, {
-                        "name": "-standard_build_id",
-                        "value": standard_build_id
-                    } , {
                         "name": "build_id",
                         "value": build_id
                     } );
-                    
+                   // alert(""+sSource+" "+aoDataNew); 
                     $.getJSON( sSource, aoDataNew, function (json) {
                         if ($("#progressSearch").html() == ajax_grab || $("#progressSearch").html() == ajax_grep) {
                             $("#progressSearch").html(ajax_done);
@@ -372,15 +428,22 @@
         		var nTr = this.parentNode.parentNode;
         		if ( this.src.match('details_close') ) {
         			/* This row is already open - close it */
-        			this.src = "images/details_open.png";
+        			this.src = this.src.replace("details_close","details_open");
         			theTable.fnClose( nTr );
         		} else {
         			/* Open this row */
-        			this.src = "images/details_close.png";
+        			this.src = this.src.replace("details_open","details_close");
         			theTable.fnOpen( nTr, fnFormatDetails(theTable, nTr), 'details' );
         		}
         	} );
         });
     </script>
+    </div>
+    </div>
   </body>
 </html>
+
+HTML
+;
+    return $return_value;
+}

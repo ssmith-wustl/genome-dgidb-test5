@@ -30,6 +30,13 @@ my $rv = eval{ Genome::Sys->shellcmd(cmd => $cmd); };
 is(File::Compare::compare($example_fasta, $fasta), 0, 'fasta files match');
 is(File::Compare::compare($example_qual, $qual), 0, 'qual files match');
 
+# fail
+my $bad1 = $dir.'/reader_writer.BAD1.sam';
+my $r1 = Genome::Model::Tools::Sx::SamReader->create(file => $bad1);
+ok($r1, 'create sam reader for BAD1');
+ok(!eval{$r1->read;}, 'read bad sam failed');
+like($@, qr|^Length of sequence|, 'correct error');
+
 #print "$tmpdir\n"; <STDIN>;
 done_testing();
 exit;
