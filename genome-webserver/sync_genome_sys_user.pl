@@ -1,4 +1,6 @@
 
+# sync genome_sys_user from ldap
+
 #UR_DBI_NO_COMMIT=1
 
 use Genome;
@@ -33,20 +35,24 @@ for my $u (@users) {
     $ldap_user->{$u->{'mail'}} = $u;
 }
 
-my @db_users = Genome::Sys::User->get();
+my @db_users = Genome::Sys::User->fix_params_and_get();
+
+print scalar(@db_users);
+print 
 
 my @changes;
 
-
 my $db_user = {};
 for my $u (@db_users) {
-    if (!$ldap_user->{$u->email}) {
-        $u->delete();
-        push @changes, '- ' . $u->email();        
-    }
-    $db_user->{'email'} = $u;
-}
 
+    my $email = $u->email();
+    if (!$ldap_user->{$email}) {
+        push @changes, '- ' . $email;        
+        $u->delete();
+    } else {
+        $db_user->{$email} = $u;
+    }
+}
 
 for my $mail (keys %$ldap_user) {
     my $u = $ldap_user->{$mail};
@@ -63,7 +69,6 @@ for my $mail (keys %$ldap_user) {
 print Dumper \@changes;
 
 UR::Context->commit();
-
 
 
 

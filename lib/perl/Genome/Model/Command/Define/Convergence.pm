@@ -87,10 +87,10 @@ sub execute {
     
     my $set_group_cmd = Genome::Model::Command::Input::Update->create(
         model => $model,
-        name => 'group_id',
+        name => 'group',
         value => $self->model_group->id,
     );
-    
+    $set_group_cmd->dump_status_messages(1);
     unless($set_group_cmd->execute) { 
         $self->error_message('Could not set group for model.');
         return;

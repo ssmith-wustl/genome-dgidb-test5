@@ -454,7 +454,9 @@ sub supports_streaming_to_bam {
 
 sub multiple_reference_mode {
     my $self = shift;
-    return $self->reference_build->append_to and Genome::Model::Tools::Bwa->multiple_reference($self->aligner_version);
+    return defined $self->reference_build->append_to
+        && Genome::Model::Tools::Bwa->supports_multiple_reference($self->aligner_version)
+        && $self->instrument_data->is_paired_end;
 }
 
 sub accepts_bam_input {

@@ -398,6 +398,8 @@ sub _get_tigra_options {
     $tigra_opts .= '-c ' . $self->specify_chr . ' ' if($self->specify_chr);
     $tigra_opts .= '-M ' . $self->min_size_of_confirm_asm_sv . ' ' if($self->min_size_of_confirm_asm_sv);
     $tigra_opts .= '-R ' . $self->reference_file . ' ' if($self->reference_file);
+    $tigra_opts .= '-k ' . '15,25,39' . ' ' if($self->asm_high_coverage);
+
     for my $opt (keys %tigra_sv_options) {
         if ($self->$opt) {
             $tigra_opts .= '-'.$tigra_sv_options{$opt}.' '.$self->$opt . ' ';

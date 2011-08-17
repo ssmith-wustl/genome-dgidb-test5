@@ -670,10 +670,10 @@ sub _create_observer {
     my ($class, @closures) = @_;
     my $observer;
     my $callback = sub {
+        $observer->delete if $observer;
         for my $closure (@closures) {
             &$closure;
         }
-        $observer->delete if $observer;
     };
 
     if ($ENV{UR_DBI_NO_COMMIT}) {

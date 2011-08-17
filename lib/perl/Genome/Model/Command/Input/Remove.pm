@@ -6,20 +6,20 @@ use warnings;
 use Genome;
       
 class Genome::Model::Command::Input::Remove {
-    is => 'Genome::Model::Command::Input',
+    is => 'Genome::Model::Command::Input::Base',
     english_name => 'genome model input command remove',
     doc => 'Remove inputs to a model.',
     has => [
         name => {
             is => 'Text',
             shell_args_position => 2,
-            doc => 'The name of the input to remove. Use the plural property name - friends to remove a friend',
+            doc => 'The name of the input property to remove.',
         },
         'values' => {
             is => 'Text',
             is_many => 1,
             shell_args_position => 3,
-            doc => 'The ids of the values of the inputs.'
+            doc => 'The values of the inputs. Id or resolved via filter string. Ex: library_id=$ID'
         },
     ],
     has_optional => [
@@ -38,150 +38,134 @@ sub help_detail {
     Optionally, builds associated with these inputs may be abandoned.  Note that the builds are not removed, only abandoned.
 EOS
 }
-
 sub execute {
     my $self = shift;
 
-    unless ( $self->name ) {
-        $self->error_message('No input name given to remove from model.');
+    $self->status_message('Remove inputs');
+
+    my $model = $self->model;
+    if ( not $model ) {
+        $self->error_message('No model to update input');
         return;
     }
 
-    my $property = $self->_get_is_many_input_property_for_name( $self->name )
-        or return;
+    my $name = $self->name;
+    if ( not $name ) {
+        $self->error_message('No name given to update model input.');
+        return;
+    }
+
+    my @properties = $model->real_input_properties;
+    return if not @properties;
+    my ($property) = grep { $name eq $_->{name} } @properties;
+    if ( not $property ) {
+        $self->error_message("Failed to find input property for $name. Here are the valid input names:");
+        $self->show_inputs_and_values_for_model($model);
+        return;
+    }
+
+    if ( not $property->{is_many} ) {
+        $self->error_message("Cannot use this remove command for a property ($name) with many values. Use the update command.");
+        return;
+    }
 
     my @values = $self->values;
     if ( not @values ) {
-        $self->error_message('No input ids given to remove  from model.');
+        $self->error_message('No values to add');
         return;
     }
 
-    my $builds = $self->_get_builds
-        or return;
-    
-    my $sub = $self->_get_remove_sub_for_property($property)
-        or return;
-    for my $value_id ( @values ) {
-        unless ( $sub->($value_id) ) {
-            $self->error_message("Can't remove input '".$self->name." ($value_id) from model.");
-            return;
-        }
+    $self->status_message('Model: '.$model->__display_name__);
+    $self->status_message('Property: '.$name);
+    $self->status_message('Value filters: '.join(' ', @values));
+
+    # get values for filters
+    my %values = $self->unique_values_from_property_for_filter($property, @values);
+    return if not %values;
+
+    # get existing values
+    my %existing_values;
+    for my $value ( $model->$name ) {
+        my $id = ( $value->can('id') ? $value->id : $value );
+        $existing_values{$id} = $value;
     }
 
-    $self->_abandon_builds($builds)
-        or return;
+    # remove
+    my $transaction = UR::Context::Transaction->begin;
+    my $remove_method = $property->{remove_method};
+    for my $value_id ( keys %values ) {
+        if ( not defined $existing_values{$value_id} ) {
+            $self->status_message('Value does not exist on model, skipping: '.$value_id);
+            next;
+        }
+        $self->status_message('Remove: '.$value_id);
+        $model->$remove_method($values{$value_id});
+        $existing_values{$value_id} = $values{$value_id};
+    }
 
-    printf(
-        "Removed %s (%s) from model.\n",
-        ( @values > 1 ? $property->property_name : $property->singular_name ),
-        join(', ', @values),
-    );
+    # verify
+    my @existing_values = $model->$name;
+    if ( not $property->{is_optional} and not @existing_values ) {
+        $transaction->rollback;
+        $self->error_message('Cannot remove all values for required property!');
+        return;
+    }
+    my @failed_to_remove;
+    for my $value ( @existing_values ) { 
+        my $id = ( $value->can('id') ? $value->id : $value );
+        push @failed_to_remove, $id if defined $values{$id};
+    }
+    if ( @failed_to_remove ) {
+        $self->error_message('Failed to remove these values: '.join(' ', @failed_to_remove));
+        return;
+    }
+    $transaction->commit;
+
+    # abandon
+    if ( $self->abandon_builds ) {
+        $self->_abandon_builds( keys %values );
+    }
+
+    $self->status_message('Remove successful!');
 
     return 1; 
 }
 
-sub _get_remove_sub_for_property {
-    my ($self, $property) = @_;
-
-    my $property_name = $property->property_name;
-    
-    my $method = $self->_determine_and_validate_add_or_remove_method_name($property, 'remove')
-        or return;
-    
-    #< Get the value class name or data type and createthe sub >#
-    my ($value_class_name, $data_type);
-    $self->_validate_where_and_resolve_value_class_name_or_data_type_for_property(
-        $property, \$value_class_name, \$data_type
-    ) or return;
-
-    if ( $value_class_name ) {
-        return sub{
-            my $value = shift;
-            
-            my ($existing_value) = grep { $value eq $_ } $self->model->$property_name;
-            unless ( $existing_value ) {
-                $self->error_message("Can't find existing value ($value) for model property ($property_name).");
-                return;
-            }
-
-            return $self->model->$method($value);
-        };
-    }
-
-    return sub{
-        my $value = shift;
-
-        my ($existing_obj) = grep { $value eq $_->id } $self->model->$property_name;
-        unless ( $existing_obj ) {
-            $self->error_message("Can't find existing $property_name ($data_type) for id ($value) to remove from model.");
-            return;
-        }
-
-        return $self->model->$method($existing_obj);
-    };
-}
-
-sub _get_builds { # return \@builds for ok, undef for not
-    my $self = shift;
-
-    $DB::single = 1;
-    my @builds;
-    return \@builds unless $self->abandon_builds;
-    
-    #FIXME using inst_data in models, but instrument_data in builds
-    # This needs to go away when we back fill
-    my $name = $self->name;
-    if ( $name eq 'inst_data' ) {
-        $name = 'instrument_data';
-    }
-    my @build_inputs = Genome::Model::Build::Input->get( # go thru inputs to find builds
-        #name => $self->name,
-        name => $name,
-        value_id => [ $self->values ],
-    );
-
-    return \@builds unless @build_inputs; # ok
-    
-    for my $input ( @build_inputs ) {
-        my $build = $input->build;
-        unless ( $build ) {
-            $self->error_message("No build found for input build id: ".$input->build_id);
-            return;
-        }
-        push @builds, $build;
-    }
-
-    return \@builds;
-}
-
 sub _abandon_builds {
-    my ($self, $builds) = @_;
+    my ($self, @value_ids) = @_;
 
-    return 1 unless $self->abandon_builds and @$builds;
-    
-    for my $build ( @$builds ) {
-        eval{
-            $build->abandon; # this can die
-        };
-        if ( $@ ) {
-            $self->status_message(
-                sprintf(
-                    'Can\'t abandon build (%d) for model %s (%d): %s',
-                    $build->id,
-                    $build->model->name,
-                    $build->model->id
-                )
-            );
-            return;
+    my @builds = $self->model->builds;
+    if ( not @builds ) {
+        $self->status_message('No builds to abandon. Model does not have any');
+        return 1;
+    }
+
+    my $name = $self->name;
+    my @builds_to_abandon;
+    BUILD: for my $build ( @builds ) {
+        my @values = $build->$name;
+        next if not @values;
+        VALUE: for my $value ( @values ) {
+            my $id = $self->display_name_for_value($value);
+            next VALUE if not grep { $id eq $_ } @value_ids;
+            push @builds_to_abandon, $build;
+            next BUILD;
         }
-        $self->status_message(
-            sprintf(
-                'Abandoned build (%d) for model %s (%d)\n',
-                $build->id,
-                $build->model->name,
-                $build->model->id
-            )
-        );
+    }
+
+    if ( not @builds_to_abandon ) {
+        $self->status_message('No builds to abandon. There are no builds with the removed inputs');
+        return 1;
+    }
+
+    for my $build ( @builds ) {
+        my $rv = eval{ $build->abandon; }; # this can die
+        if ( $rv ) {
+            $self->status_message('Abandon build: '.$build->__display_name__);
+        }
+        else {
+            $self->status_message('Failed to abandon build: '.$build->__display_name__);
+        }
     }
 
     return 1;

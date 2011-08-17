@@ -1,5 +1,5 @@
-body {
-	font-family: Helvetica;
+.content {
+    width: 1525px !important;
 }
 
 div.details_chr_title {
@@ -123,20 +123,7 @@ ul.details_list {
 	list-style-type: square;
 }
 
-/*span.details_gene {
-	background-color: #6a6a60;
-	color: #fffeff;
-	-moz-border-radius: 5px;
-	border-radius: 5px;
-	padding-left: 4pt;
-	padding-right: 4pt;
-	-moz-box-shadow: 0 0 0px #000000;
-	-webkit-box-shadow: 0 0 0 #000000;
-	box-shadow: 0 1px 0 #000000;
-	text-shadow: #000000 0 -1px 0;
-}*/
-
-
 div.unstyled {
 	clear: both;
 }
+
