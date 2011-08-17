@@ -994,9 +994,9 @@ sub create_default_qc_models {
         my @lane_qc_models = $model->get_or_create_lane_qc_models;
 
         for my $lane_qc (@lane_qc_models) {
-            next if $lane_qc->completed_builds;
             next if $lane_qc->build_requested;
-            $lane_qc->build_requested(1, 'first build');
+            next unless $lane_qc->build_needed;
+            $lane_qc->build_requested(1);
             push @new_models, $lane_qc;
         }
     }
