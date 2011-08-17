@@ -75,7 +75,7 @@ sub next_contig {
             $contig->{reads}->{ $obj->{name} } = $obj;
             $contig->{reads}->{ $obj->{name} }->{position} = $read_positions{ $obj->{name} };
             $contig->{reads}->{ $obj->{name} }->{start} = $read_positions{ $obj->{name} };
-            $contig->{reads}->{ $obj->{name} }->{stop} = $read_positions{$obj->name} + length($read->{sequence}) - 1;
+            $contig->{reads}->{ $obj->{name} }->{stop} = $read_positions{$obj->{name}} + length($obj->{sequence}) - 1;
         }
     }
 
