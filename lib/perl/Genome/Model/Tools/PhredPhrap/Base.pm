@@ -7,7 +7,6 @@ use above 'Genome';
 
 require Cwd;
 use Data::Dumper;
-use Finfo::ClassUtils 'use_class';
 require Genome::Model::Tools::Consed::Directory;
 require IO::File;
 
