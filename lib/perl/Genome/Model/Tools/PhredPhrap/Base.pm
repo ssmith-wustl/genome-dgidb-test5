@@ -33,7 +33,7 @@ my %properties = (
 #- PROCESSOR CLASSES - ADD PROPS TO THIS CLASS -#
 for my $processor ( pre_assembly_processors(), post_assembly_processors() ) {
     my $class = class_for_pre_assembly_processor($processor);
-    use_class($class);
+    eval{ $class->class; };
 
     $properties{"no_$processor"} = {
         type => 'Boolean',
@@ -41,7 +41,7 @@ for my $processor ( pre_assembly_processors(), post_assembly_processors() ) {
         doc => "Do not run $processor",
     };
 
-    my $acc_class_meta = $class->get_class_object;
+    my $acc_class_meta = $class->__meta__;
     for my $property ( $acc_class_meta->direct_property_metas ) {
         next if $property->property_name eq 'fasta_file'
             or exists $properties{ $property->property_name };
