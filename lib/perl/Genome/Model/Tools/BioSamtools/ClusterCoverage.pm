@@ -4,12 +4,13 @@ use strict;
 use warnings;
 
 use Genome;
-use Statistics::Descriptive;
 use PDL;
 use PDL::NiceSlice;
 
+my $DEFAULT_MINIMUM_ZENITH = '1';
 my $DEFAULT_MINIMUM_DEPTH = '1';
 my $DEFAULT_OFFSET = 50_000_000;
+my $DEFAULT_MAXIMUM_DEPTH = 100_000_000;
 
 class Genome::Model::Tools::BioSamtools::ClusterCoverage {
     is => 'Genome::Model::Tools::BioSamtools',
@@ -18,10 +19,22 @@ class Genome::Model::Tools::BioSamtools::ClusterCoverage {
             is => 'Text',
             doc => 'A path to a BAM format file of aligned capture reads',
         },
+        minimum_zenith => {
+            is => 'Text',
+            doc => 'A minimum zenith(maximum depth) size to retain a cluster',
+            default_value => $DEFAULT_MINIMUM_ZENITH,
+            is_optional => 1,
+        },
         minimum_depth => {
             is => 'Text',
-            doc => 'A comma separated list of minimum depths to evaluate coverage',
+            doc => 'A comma separated list of minimum depths to filter coverage',
             default_value => $DEFAULT_MINIMUM_DEPTH,
+            is_optional => 1,
+        },
+        maximum_depth => {
+            is => 'Text',
+            doc => 'The maximum depth at one position for samtools to iterate through a pileup.',
+            default_value => $DEFAULT_MAXIMUM_DEPTH,
             is_optional => 1,
         },
         offset => {
@@ -56,7 +69,7 @@ class Genome::Model::Tools::BioSamtools::ClusterCoverage {
 
 sub execute {
     my $self = shift;
-    
+
     my $bed_fh = Genome::Sys->open_file_for_writing($self->bed_file);
     unless ($bed_fh) {
         die('Failed to open file for writing: '. $self->bed_file);
@@ -120,11 +133,11 @@ sub execute {
         }
     };
     my $offset = $self->offset;
-    my $genome_coverage_stats = Statistics::Descriptive::Sparse->new();
     my $min_depth = $self->minimum_depth;
     for (my $tid = 0; $tid < $targets; $tid++) {
         my @previous_clusters;
         my $chr = $header->target_name->[$tid];
+        #unless ($chr eq 'MT') { next; }
         #print 'Starting: '. $chr ."\n";
         my $chr_length = $header->target_len->[$tid];
         for (my $start = 0; $start <= $chr_length; $start += $offset) {
@@ -145,14 +158,15 @@ sub execute {
                 # the pileup callback will add each base gt or eq to the quality_filter to the index position in the array ref
                 $index->pileup($bam,$tid,$start,$end,$quality_coverage_callback,[$start,$end,$coverage])
             } else {
-                $coverage = $index->coverage( $bam, $tid, $start, $end);
+                # The bin size is set to zero to return each position
+                $coverage = $index->coverage( $bam, $tid, $start, $end,0,$self->maximum_depth);
                 #print $start ."\t". $end ."\n";
             }
             #my @clusters = $self->cluster_coverage($coverage,$min_depth,$start);
-            #print $chr ."\t". $start ."\t". scalar(@{$coverage}) ."\n";
+            #print 'Starting: '. $chr ."\t". $start ."\t". scalar(@{$coverage}) ."\n";
             my @clusters = $self->pdl_clusters($coverage,$min_depth,$start);
-            if (@clusters) {
-                if (@previous_clusters) {
+            if (scalar(@clusters)) {
+                if (scalar(@previous_clusters)) {
                     my $last_cluster = $previous_clusters[-1];
                     my $first_cluster = $clusters[0];
                     #print Data::Dumper::Dumper($last_cluster, $first_cluster);
@@ -160,7 +174,7 @@ sub execute {
                         #Blunt end clusters: merge
                         $last_cluster->[1] = $first_cluster->[1];
                         #Merge the stats
-                        if ($self->print_mean_coverage) {
+                        if ($stats_fh) {
                             my $last_pdl = $last_cluster->[2];
                             my $first_pdl = $first_cluster->[2];
                             $last_pdl->append($first_pdl);
@@ -172,102 +186,49 @@ sub execute {
                         my $end = $cluster->[1];
                         my $pdl = $cluster->[2];
                         my $name = $chr .':'. $start .'-'. $end;
-                        print $bed_fh $chr ."\t". $start ."\t". $end ."\t". $name ."\n";
-                        if ($stats_fh) {
-                            if (defined($pdl)) {
-                                my ($mean,$prms,$med,$min,$max,$adev,$rms) = $pdl->stats;
+                        unless (defined($pdl)) {
+                            die('A cluster is defined with no coverage PDL object: '. Data::Dumper::Dumper($cluster));
+                        }
+                        my ($mean,$prms,$med,$min,$max,$adev,$rms) = $pdl->stats;
+                        if ($max >= $self->minimum_zenith) {
+                            print $bed_fh $chr ."\t". $start ."\t". $end ."\t". $name ."\n";
+                            if ($stats_fh) {
+                                #if (defined($pdl)) {
                                 print $stats_fh $name ."\t". $mean ."\t". $prms ."\t". $med ."\t". $min ."\t". $max ."\t". $adev ."\t". $rms ."\n";
-                            } else {
-                                print $stats_fh $name ."\t0\t0\t0\t0\t0\t0\t0\n";
+                                #} else {
+                                #    print $stats_fh $name ."\t0\t0\t0\t0\t0\t0\t0\n";
+                                #}
                             }
                         }
                     }
                 }
                 @previous_clusters = @clusters;
             }
+            #print 'Finished: '. $chr ."\t". $start ."\t". scalar(@{$coverage}) ."\n";
         }
+        #print 'Printing remaining clusters: '. scalar(@previous_clusters) ."\n";
         for my $cluster (@previous_clusters) {
             my $start = $cluster->[0];
             my $end = $cluster->[1];
             my $pdl = $cluster->[2];
-            print $bed_fh $chr ."\t". $start ."\t". $end ."\t". $chr .':'. $start .'-'. $end;
-            if (defined($pdl)) {
-                my ($mean,$prms,$med,$min,$max,$adev,$rms) = $pdl->stats;
-            print $bed_fh "\t". $mean;
+            my $name = $chr .':'. $start .'-'. $end;
+            print $bed_fh $chr ."\t". $start ."\t". $end ."\t". $name ."\n";
+            if ($stats_fh) {
+                if (defined($pdl)) {
+                    my ($mean,$prms,$med,$min,$max,$adev,$rms) = $pdl->stats;
+                    print $stats_fh $name ."\t". $self->_round($mean) ."\t". $self->_round($prms) ."\t". $med ."\t". $min ."\t". $max ."\t". $self->_round($adev) ."\t". $self->_round($rms) ."\n";
+                } else {
+                    print $stats_fh $name ."\t0\t0\t0\t0\t0\t0\t0\n";
+                }
             }
-            print $bed_fh "\n";
         }
-        #print 'Finished: '. $chr ."\n";
+        print 'Finished: '. $chr ."\n";
     }
     $bed_fh->close;
+    $stats_fh->close;
     return 1;
 }
 
-sub cluster_coverage {
-    my ($self, $coverage, $min_depth, $offset) = @_;
-
-    my @clusters;
-    # Populate the cluster data structure based on the coverage depth array.
-    map {$_ = undef} my ($is_cluster, $start, $stop);
-
-    my $last = scalar(@{ $coverage });
-    unless ($last) { return };
-
-    my $stat;
-    if ($self->print_mean_coverage) {
-        $stat = Statistics::Descriptive::Full->new();
-    }
-    for (my $i = 0; $i < $last; $i++) {
-        my $depth = $coverage->[$i];
-        if ($depth >= $min_depth) {
-            if ($is_cluster) {
-                if ($stat) {
-                    $stat->add_data($depth);
-                }
-                # continue extending existing cluster
-                if ($i == ($last - 1)) {
-                    # end of coverage array, so end cluster and finish
-                    $stop = ($i + 1) + $offset;
-                } else {
-                    #reading through coverage
-                    next;
-                }
-            } else {
-                # start new cluster
-                unless ($offset) {
-                    $start = 1;
-                }
-                $start = $i + $offset;
-                $is_cluster = 1;
-                if ($self->print_mean_coverage) {
-                    $stat = Statistics::Descriptive::Full->new();
-                    $stat->add_data($depth);
-                }
-            }
-        } else {
-            if ($is_cluster) {
-                # end of cluster, start of gap
-                $stop = $i + $offset;
-                $is_cluster = undef;
-            } else {
-                # reading through a gap
-                next;
-            }
-        }
-        # Update collection hash:
-        if (defined($start) && defined($stop)) {
-            push @clusters, [$start,$stop,$stat];
-            $start = undef;
-            $stop = undef;
-        } elsif ($i == ($last - 1)) {
-            # one base long cluster on end of coverage array
-            push @clusters, [$start,$start,$stat];
-            $start = undef;
-            $stop = undef;
-        }
-    }
-    return @clusters;
-}
 
 sub pdl_clusters {
     my $self = shift;
@@ -277,35 +238,56 @@ sub pdl_clusters {
     my $offset = shift;
 
     unless (scalar(@{$coverage})) { return };
-
+    #print Data::Dumper::Dumper($coverage) ."\n";
     my $chr_pdl = pdl $coverage;
     my ($quantity,$value) = rle($chr_pdl >= $min_depth);
+    #print 'Quantity: '. $quantity->info ."\n";
+    #print 'Value: '. $value->info ."\n";
     my ($padded_quantity,$padded_value) = $quantity->where($value,$quantity!=0);
+    #print 'Padded Quantity: '. $padded_quantity ."\n";
+    #print 'Padded Value: '. $padded_value ."\n";
     my $padded_quantity_cumsum = $padded_quantity->cumusumover;
-
+    #print 'Padded Quantity cumsum: '. $padded_quantity_cumsum ."\n";
     my ($chr_gt_min_depth_idx,$chr_lt_min_depth_idx) = which_both($padded_value);
+    # NO CLUSTERS
     unless ($chr_gt_min_depth_idx->nelem) {
         return;
     }
-    my $gt_first = $chr_gt_min_depth_idx(0)->sclr;
-    my $lt_first = $chr_lt_min_depth_idx(0)->sclr;
 
-    my $gt_last = $chr_gt_min_depth_idx(-1)->sclr;
-    my $lt_last = $chr_lt_min_depth_idx(-1)->sclr;
+    my $start;
+    my $end;
+    # NO GAPS - CONTIGUOUS CLUSTER
+    unless ($chr_lt_min_depth_idx->nelem) {
+        # The start position is index zero
+        $start = zeroes(1);
+        # The end position is the cumsum
+        $end = $padded_quantity_cumsum->index($chr_gt_min_depth_idx);
+        #print 'Start: '. $start ."\n";
+        #print 'End: '. $end ."\n";
+    } else {
+        my $gt_first = $chr_gt_min_depth_idx(0)->sclr;
+        #print 'Gt_first: '. $gt_first ."\n";
+        my $lt_first = $chr_lt_min_depth_idx(0)->sclr;
+        #print 'Lt_first: '. $gt_first ."\n";
 
-    my $start = $padded_quantity_cumsum->index($chr_lt_min_depth_idx);
-    my $end = $padded_quantity_cumsum->index($chr_gt_min_depth_idx);
-
-    if ($gt_first < $lt_first) {
-        # Coverage first because the first index is zero
-        # Add the initial start position(ie. zero)
-        $start = append(zeroes(1),$start);
-    }
-    if ($gt_last < $lt_last) {
-        # Gap on the end, remove the last value
-        $start = $start(0:-2);
+        my $gt_last = $chr_gt_min_depth_idx(-1)->sclr;
+        #print 'Gt_last: '. $gt_last ."\n";
+        my $lt_last = $chr_lt_min_depth_idx(-1)->sclr;
+        #print 'Lt_last: '. $lt_last ."\n";
+        $start = $padded_quantity_cumsum->index($chr_lt_min_depth_idx);
+        $end = $padded_quantity_cumsum->index($chr_gt_min_depth_idx);
+        if ($gt_first < $lt_first) {
+            # Coverage first because the first index is zero
+            # Add the initial start position(ie. zero)
+            $start = append(zeroes(1),$start);
+        }
+        if ($gt_last < $lt_last) {
+            # Gap on the end, remove the last value
+            $start = $start(0:-2);
+        }
     }
     my @clusters;
+    # Iterate over each start position
     for (my $i = 0; $i < $start->getdim(0); $i++) {
         # Start is zero-based and End is one-based, just like BED format
         my $start_coordinate = $start($i)->sclr;
@@ -324,5 +306,10 @@ sub pdl_clusters {
     return @clusters;
 }
 
+sub _round {
+    my $self = shift;
+    my $value = shift;
+    return sprintf( "%.2f", $value );
+}
 
 1;
