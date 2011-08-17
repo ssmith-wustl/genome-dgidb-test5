@@ -22,7 +22,7 @@ class Genome::Model::Tools::Galaxy::Update {
             default => 0
         }
     ],
-    doc => 'update the Galaxy configuration for all Genome Modeling Tools (and optionally the Galaxy software itself)',
+    doc => 'update the Galaxy configuration for all of GMT',
 };
 
 sub sub_command_sort_position { 2 } 
