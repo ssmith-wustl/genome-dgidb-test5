@@ -10,6 +10,7 @@ class Genome::Model::Tools::Consed::AceReader {
             doc => 'Ace file',
         },
         _fh => { is_optional => 1, },
+        _previous_contig => { is_optional => 1, },
     ],
 };
 
@@ -48,10 +49,35 @@ sub next {
 
 sub next_contig {
     my $self = shift;
-    while (my $obj = $self->next_object) {
-        return $obj if $obj->{type} eq 'contig';
+
+    my $contig = $self->_previous_contig;
+    $self->_previous_contig(undef);
+    if ( not $contig ) {
+        while ( $contig = $self->next ) {
+            last if $contig->{type} eq 'contig';
+        }
     }
-    return;
+    return if not $contig;
+
+    $contig->{unpadded_consensus} = $contig->{consensus};
+    $contig->{unpadded_consensus} =~ s/\*//g;
+
+    my %read_positions;
+    READ: while ( my $obj = $self->next ) {
+        if ( $obj->{type} eq 'contig' ) {
+            $self->_previous_contig($obj);
+            last READ;
+        }
+        elsif ( $obj->{type} eq 'read_position' ) {
+            $read_positions{$obj->{read_name}} = $obj->{position}
+        }
+        elsif ( $obj->{type} eq 'read' ) {
+            $contig->{reads}->{ $obj->{name} } = $obj;
+            $contig->{reads}->{ $obj->{name} }->{position} = $read_positions{ $obj->{name} };
+        }
+    }
+
+    return $contig;
 }
 
 sub _build_AS {

@@ -327,31 +327,6 @@ sub owner_for_ace {
     return (getpwuid( (stat($acefile))[4] ))[0];
 }
 
-sub aceobject {
-    my ($self, $acefile) = @_;
-
-     if ( not $acefile ) {
-        $self->error_message('No ace file to get ace object');
-        return;
-    }
-
-    my $ao = Finishing::Assembly::Ace::Ext->new(input_file => $acefile);
-
-    $self->fatal_msg("Could not create ace for acefile ($acefile)") unless $ao;
-
-    return $ao;
-}
-
-sub recent_aceobject
-{
-    my $self = shift;
-    
-    my $acefile = $self->recent_acefile
-        or return;
-
-    return $self->aceobject($acefile);
-}
-
 sub touch_singlets_file_for_acefile
 {
     my ($self, $acefile) = @_;
