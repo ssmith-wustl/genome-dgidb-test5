@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use Genome;
+use Data::Dumper 'Dumper';
 
 class Genome::InstrumentData::Solexa::Report::Quality {
     is => 'Genome::InstrumentData::Report',
@@ -38,21 +39,48 @@ sub _add_to_report_xml {
 sub _generate_quality_stats {
     my $self = shift;
 
-    my @fastq_suffix = qw/fastq fq txt/;
-    my @fastq_filenames = @{$self->instrument_data->resolve_fastq_filenames};
+    my @fastq_suffix = qw/fastq fq txt bam/;
     my $tmp_directory = File::Temp::tempdir( CLEANUP => 1 );
 
+    #fastq files from bam or archive
+    my @input_filenames;
+    if ( $self->instrument_data->bam_path ) {
+        @input_filenames = $self->instrument_data->dump_fastqs_from_bam;
+        unless( @input_filenames ) {
+            $self->error_message("No fastq files dumped from bam");
+            return;
+        }
+    }
+    elsif ( $self->instrument_data->archive_path ){
+        my $archive_path = $self->instrument_data->archive_path;
+        my $tar_cmd = "tar zxf $archive_path -C $tmp_directory";
+        $self->status_message("Running tar: $tar_cmd");
+        unless ( Genome::Sys->shellcmd(cmd => $tar_cmd) ){
+            $self->error_message("Failed to get fastq files from tarred archive path: $archive_path using command: $tar_cmd");
+            return;
+        }
+        @input_filenames = glob $tmp_directory."/*";
+        unless( @input_filenames ) {
+            $self->error_message("No fastq file found in extracted archive path: $tmp_directory");
+            return;
+        }
+    }
+    else {
+        die ( $self->error_message("Found neither bam nor archive path for inst data id: ".$self->instrument_data->id) );
+    }
+
     my %stats_files;
-    for my $fastq_filename (@fastq_filenames) {
-        my ($basename,$dirname,$suffix) = File::Basename::fileparse($fastq_filename,@fastq_suffix);
+    for my $input_filename (@input_filenames) {
+        my ($basename,$dirname,$suffix) = File::Basename::fileparse($input_filename,@fastq_suffix);
         $basename =~ s/\.$//;
         my $stats_file = $tmp_directory .'/'. $basename .'.stats';
-        my $quality_stats = Genome::Model::Tools::Fastx::QualityStats->create(
-            fastq_file => $fastq_filename,
+        my %params = (
+            fastq_file => $input_filename,
             stats_file => $stats_file,
         );
+        my $quality_stats = Genome::Model::Tools::Fastx::QualityStats->create( %params );
         unless ($quality_stats->execute) {
-            $self->error_message('Failed to generate quality stats file for: '. $fastq_filename);
+            $self->error_message('Failed to generate quality stats file for: '. $input_filename);
             die($self->error_message);
         }
         $stats_files{$basename} = $stats_file;

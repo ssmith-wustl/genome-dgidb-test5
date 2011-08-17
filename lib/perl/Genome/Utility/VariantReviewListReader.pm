@@ -8,14 +8,13 @@ package Genome::Utility::VariantReviewListReader;
 use strict;
 use warnings;
 
-use IO::File;
-use Finfo::SeparatedValueReader;
+use Genome;
 
 sub new{
     my ($class, $list, $separation_character) = @_;
     $separation_character ||= "|";
-    my $separated_value_reader = Finfo::SeparatedValueReader->new(
-        io => $list,
+    my $separated_value_reader = Genome::Utility::IO::SeparatedValueReader->new(
+        input => $list,
         separator => $separation_character,
     );
     die "Can't get SeparatedValueReader for $list!" unless $separated_value_reader;
@@ -189,7 +188,7 @@ Processes a variant review list line by line, splits on the given separator, and
 
 =head1 See Also
 
-I<Finfo::SeparatedValueReader>
+I<Genome::Utility::IO::SeparatedValueReader>
 
 =head1 Disclaimer
 
