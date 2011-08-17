@@ -40,16 +40,6 @@ class Genome::Model::Tools::Music::CosmicOmim {
            is => 'Boolean',
            doc => 'Use this to default to wustl annotation format headers',
        },
-       aa_range => {
-           is => 'Text',
-           doc => "Set how close a 'near' match is when searching for amino acid near hits",
-           default => '2',
-       },
-       nuc_range => {
-           is => 'Text',
-           doc => "Set how close a 'near' match is when searching for nucleotide position near hits",
-           default => '5',
-       },
     ],
     doc => 'Compare the amino acid changes of supplied mutations to COSMIC and OMIM databases.'
 };
@@ -129,8 +119,6 @@ sub execute {
    $self->status_message("Using $omimaa as omima db file");
    $self->status_message("Using $cosmic_dir as cosmic db folder");
 
-   my $aa_range = $self->aa_range;
-   my $nuc_range = $self->nucleotide_range;
 
 #####################
 #  MAIN PROCESSING  #
@@ -460,12 +448,12 @@ if ($verbose) {print ".";}   #report that we are starting a sample
 								}
 							}
 						}
-						elsif ($diff_stop <= $nuc_range && $diff_stop >= -$nuc_range) {
+						elsif ($diff_stop <= 5 && $diff_stop >= -5) {
 							$results_hash{NT}{ALMOST}{COSMIC}{$transcript}=": Nucleotide";
 						}
 					}
 				}
-				elsif ($diff_start <= $nuc_range && $diff_start >= -$nuc_range) {
+				elsif ($diff_start <= 5 && $diff_start >= -5) {
 					$results_hash{NT}{ALMOST}{COSMIC}{$transcript}=": Nucleotide";
 				}
 			}
@@ -503,8 +491,8 @@ if ($verbose) {print ".";}   #report that we are starting a sample
 		}
 		if($cosmic_find_type && $cosmic_find_type eq 'no_match') {
 			$results_hash{AA}{NOVEL}{COSMIC}{$transcript}=": Amino Acid -> Known AA = @aa_holder";
-			my $iter_start = $res_start - $aa_range;
-			my $iter_stop = $res_stop + $aa_range;
+			my $iter_start = $res_start - 2;
+			my $iter_stop = $res_stop + 2;
 			my $iter;
 			for($iter = $iter_start; $iter <= $iter_stop; $iter++) {
 				if ($res_start && $res_stop && exists($residue_match{$cosmic_hugo}) && exists($residue_match{$cosmic_hugo}{$iter})) {
@@ -628,8 +616,8 @@ sub FindOMIM {
 			}
 		}
 		elsif ($return_value eq 'no_match') {
-			my $iter_start = $res_start - $aa_range;
-			my $iter_stop = $res_stop + $aa_range;
+			my $iter_start = $res_start - 2;
+			my $iter_stop = $res_stop + 2;
 			my $iter;
 			for($iter = $iter_start; $iter <= $iter_stop; $iter++) {
 				if (exists($omim->{$hugo}{$sample}{$iter})) {
