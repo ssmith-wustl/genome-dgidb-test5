@@ -127,15 +127,14 @@ sub _parse_tag
     }
     my @pos = split(/\s/, $tag_data{UNPADDED_READ_POS});
     
-    my $tag = Finishing::Assembly::Source::ReadTag->new
-    (
+    my $tag = {
         parent => $phd->{name},
         type   => $tag_data{TYPE},
         source => $tag_data{SOURCE},
         date   => $self->_convert_from_phd_tag_date( $tag_data{DATE} ),
         unpad_start  => $pos[0],
         unpad_stop   => $pos[1],
-    );
+    };
 
     $tag->text($text) if $text;
     
@@ -162,26 +161,26 @@ This package is a phd file reader.  Given an IO object, an assemled read object 
 
 =head1 Usage
 
- use Finishing::Assembly::Phd::FileReader;
+ use Genome::Model::Tools::Consed::PhdReader;
  use IO::File;
 
  my $fh = IO::File->new("< read.phd.1")
     or die "$!\n";
- my $reader = Finishing::Assembly::Phd::FileReader->instance;
- my $phd = $reader->execute($fh);
+ my $reader = Genome::Model::Tools::Consed::PhdReader->create(io => $fh);
+ my $phd = $reader->read($fh);
  $fh->close;
 
- print $phd->name,"\n";
+ print $phd->{name},"\n";
 
 =head1 Methods
 
- my $phd = Finishing::Assembly::Phd::FileReader->instance->execute($file_handle);
+ my $phd = Genome::Model::Tools::Consed::PhdReader->read;
  
 =over
 
 =item I<Synopsis>   Parses the phd info in the file handle
 
-=item I<Params>     file handle (IO::File or related object)
+=item I<Params>     None
 
 =item I<Returns>    Phd hashref
 
