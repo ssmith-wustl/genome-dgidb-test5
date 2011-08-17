@@ -109,6 +109,7 @@ sub _run_aligner {
        #   $cmd .=" --format=fastq";
        #  $cmd .=" --quality-format=sanger";
        $cmd .=" -n 1";
+       $cmd .=" -T 4";
        $cmd .=" -i $sdf_dir";
   
     my $finished_unmated_sam = $output_dir . "/unmated.sam.gz";
