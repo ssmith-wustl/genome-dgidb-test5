@@ -25,6 +25,8 @@ class Genome::Model::Tools::Galaxy::Update {
     doc => 'update the Galaxy configuration for all Genome Modeling Tools (and optionally the Galaxy software itself)',
 };
 
+sub sub_command_sort_position { 2 } 
+
 sub execute {
     my $self = shift;
 
