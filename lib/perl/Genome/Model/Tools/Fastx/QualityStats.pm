@@ -33,7 +33,7 @@ sub execute {
         $self->error_message('Failed to validate fastq file for read access '. $self->fastq_file .":  $!");
         die($self->error_message);
     }
-    my @suffix = qw/fq fastq txt/;
+    my @suffix = qw/fq fastq txt bam/;
     my ($basename,$dirname,$suffix) = File::Basename::fileparse($self->fastq_file,@suffix);
     $basename =~ s/\.$//;
     unless ($self->stats_file) {
