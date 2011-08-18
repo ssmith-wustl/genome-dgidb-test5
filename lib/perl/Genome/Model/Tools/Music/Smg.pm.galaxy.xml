@@ -1,0 +1,70 @@
+<tool id="gmt_music_smg" name="gmt_music_smg">
+    <description>
+        Identify significantly mutated genes.
+    </description>
+    <command>
+        gmt music smg --gene-mr-file=$gene_mr_file --id=$id --is-executed=$is_executed --max-fdr=$max_fdr --output-file=$output_file --processors=$processors --result=$result
+    </command>
+    <inputs>
+        <param name="gene_mr_file" format="text" type="data" help="" />
+<param name="max_fdr" format="text" type="data" help="" />
+<param name="output_file" format="text" type="data" help="" />
+<param name="processors" format="text" type="data" help="" />
+
+    </inputs>
+    <outputs>
+        <data name="result" format="text" label="" help="" />
+
+    </outputs>
+    <help>
+        
+
+**USAGE**
+
+ gmt music smg --gene-mr-file=? --output-file=? --processors=? [--max-fdr=?]
+
+
+**SYNOPSIS**
+
+ ... music smg \
+        --gene-mr-file output_dir/gene_mrs \
+        --output-file output_dir/smgs
+
+("gene_mrs" can be generated using the tool "music bmr calc-bmr".)
+
+
+**REQUIRED ARGUMENTS**
+
+  gene-mr-file   Text
+    File with per-gene mutation rates (Created using "music bmr calc-bmr") 
+  output-file   Text
+    Output file that will list significantly mutated genes and their p-values 
+  processors   Integer
+    number of processors to use (requires 'foreach' and 'doMC' R packages) 
+    Default value '1' if not specified
+
+
+**OPTIONAL ARGUMENTS**
+
+  max-fdr   Number
+    The maximum allowed false discovery rate for a gene to be considered an SMG 
+    Default value '0.2' if not specified
+
+
+**DESCRIPTION**
+
+    This script runs R-based statistical tools to identify Significantly Mutated Genes (SMGs), when
+    given per-gene mutation rates categorized by mutation type, and the overall background mutation
+    rates for each of those categories (gene_mr_file, created using "music bmr calc-bmr").
+
+    P-values and false discovery rates (FDRs) for each gene in gene_mr_file is calculated using
+    three tests: Fisher's Combined P-value test (FCPT), Likelihood Ratio test (LRT), and the
+    Convolution test (CT). For a gene, if its FDR for at least 2 of these tests is <= max_fdr, it
+    will be output as an SMG. Another output file with prefix "_detailed" will have p-values and
+    FDRs for all genes.
+
+
+
+
+    </help>
+</tool>
