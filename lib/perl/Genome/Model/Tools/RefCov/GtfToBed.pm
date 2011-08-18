@@ -49,7 +49,15 @@ sub execute {
     );
     while (my $data = $gff_reader->next_with_attributes_hash_ref) {
         my $attributes = delete($data->{attributes_hash_ref});
-        $data->{name} = $attributes->{gene_id} .':'. $attributes->{transcript_id} .':'. $data->{type} .':na:'. $data->{strand};
+        my $ordinal = 'na';
+        if ($attributes->{exon_number}) {
+            $ordinal = $attributes->{exon_number};
+            # This seems like a bug with the parser...
+            $ordinal =~ s/\"//g;
+        }
+        # BED uses zero-based start position;
+        $data->{start}--;
+        $data->{name} = $attributes->{gene_id} .':'. $attributes->{transcript_id} .':'. $data->{type} .':'. $ordinal .':'. $data->{strand};
         $bed_writer->write_one($data);
     }
     return 1;
