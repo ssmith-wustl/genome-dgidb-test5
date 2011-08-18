@@ -35,7 +35,7 @@ sub execute {
     my $bed_file = $self->build->region_of_interest_set_bed_file;
     my $log_file = $self->build->log_directory;
     my $bam_file = $self->build->whole_rmdup_bam_file;
-    my $cmd = 'gmt5.12.1 bio-samtools coverage-stats --output-directory='. $coverage_dir .' --log-directory='. $log_file
+    my $cmd = '/usr/bin/perl `which gmt` bio-samtools coverage-stats --output-directory='. $coverage_dir .' --log-directory='. $log_file
         .' --bed-file='. $bed_file .' --bam-file='. $bam_file .' --minimum-depths='. $self->build->minimum_depths
             .' --wingspan-values='. $self->build->wingspan_values;
     #my %coverage_stats_params = (
