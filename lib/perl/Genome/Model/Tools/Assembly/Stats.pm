@@ -10,8 +10,6 @@ use AMOS::AmosLib;
 use Bio::SeqIO;
 use Bio::Seq::Quality;
 use Bio::Seq::SequenceTrace;
-use Finishing::Assembly::Factory;
-use Finishing::Assembly::ContigTools;
 use Data::Dumper;
 
 class Genome::Model::Tools::Assembly::Stats {
@@ -772,81 +770,6 @@ sub get_read_depth_stats_from_readinfo {
     
     undef %contig_coverages;
     return $text;
-}
-
-#this can go away
-sub get_read_depth_stats_from_ace {
-    my $self = shift;
-    my $acefile = $self->assembly_directory.'/edit_dir/ace.msi';
-    my $text;
-    if (-s $acefile > 500000000) {
-	$text .= "Ace file size exceeds 500Mb and is too large to determine read depth info \n\n";
-	return $text;
-    }
-
-    my $fo = Finishing::Assembly::Factory->connect('ace', $acefile);
-    my $assembly_obj = $fo->get_assembly;
-    my $contigs= $assembly_obj->contigs;
-
-    my ($one_x_cov, $two_x_cov, $three_x_cov, $four_x_cov, $five_x_cov, $total_covered_pos) = 0;
-
-    while (my $contig = $contigs->next) {
-	my @coverage_depths; #consensus positions covered by reads
-	my $reads = $contig->assembled_reads;
-
-	while (my $read = $reads->next) {
-	    #error unless read start and stop positions are defined
-	    unless (defined $read->start and defined $read->stop) {
-		$self->error_message("Reads start and/or stop position not defined\n\t".
-				     "start was: ".$read->start." stop was: ".$read->stop);
-		return;
-	    }
-	    #start postion can be < 0 due to low qual areas that don't allign
-	    my $start = ($read->start <= 0) ? 1 : $read->start;
-	    $start = $contig->pad_position_to_unpad_position($read->start) unless
-		$start == 1;
-	    #stop position can exceed contig length due to unaligned or low qual regions
-	    my $stop = ($read->stop > $contig->unpadded_length) ? $contig->unpadded_length : $read->stop;
-	    $stop = $contig->pad_position_to_unpad_position($read->stop) unless
-		$stop == $contig->unpadded_length;
-	    #increment each read position
-
-	    my $length = $stop - $start;
-	    print $contig->unpadded_length.' '.$stop.' '.$start.' '.$length."\n";
-
-	    for ($start .. $stop) {
-		$coverage_depths[$_]++;
-	    }
-	}
-	#check to see if # of covered bases == contig length
-	shift @coverage_depths; #remove $coverage_depths[0] which is never incremented
-	unless (scalar (@coverage_depths) == $contig->unpadded_length) {
-	    $self->warning_message("Contig region covered by reads is not the same as contig length for contig: ".$contig->name."\n\t".
-				   "covered consensus bases are: ".scalar (@coverage_depths)." contig length is: ".$contig->unpadded_length);
-	    #this sometimes happens with velvet assemblies where not all consensus positions are covered by reads .. this is an error
-	    #with velvet not assigned proper base segments to reads
-	}
-	#total up positions of up to 5x coverages
-	$total_covered_pos += scalar (@coverage_depths);
-	foreach my $depth_num (@coverage_depths) {
-	    next unless $depth_num; #can be undef if read base segments are off .. see two comments above
-	    $one_x_cov++ if $depth_num >= 1;
-	    $two_x_cov++ if $depth_num >= 2;
-	    $three_x_cov++ if $depth_num >= 3;
-	    $four_x_cov++ if $depth_num >= 4;
-	    $five_x_cov++ if $depth_num >= 5;
-	}
-    }
-
-    $text = "\n*** Read Depth Info ***\n".
-	"Total consensus bases: $total_covered_pos\n".
-	"Depth >= 5: $five_x_cov\t". $five_x_cov/$total_covered_pos."\n".
-	"Depth >= 4: $four_x_cov\t". $four_x_cov/$total_covered_pos."\n".
-	"Depth >= 3: $three_x_cov\t". $three_x_cov/$total_covered_pos."\n".
-	"Depth >= 2: $two_x_cov\t". $two_x_cov/$total_covered_pos."\n".
-	"Depth >= 1: $one_x_cov\t". $one_x_cov/$total_covered_pos."\n\n";
-  
-    return $text; 
 }
 
 sub get_core_gene_survey_results {
