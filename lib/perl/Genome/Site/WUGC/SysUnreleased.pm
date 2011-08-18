@@ -83,31 +83,6 @@ sub disk_usage_for_path {
 
 #< Files >#
 
-sub read_file {
-    my ($self, $fname) = @_;
-    my $fh = $self->open_file_for_reading($fname);
-    Carp::croak "Failed to open file $fname! " . $self->error_message() . ": $!" unless $fh;
-    if (wantarray) {
-        my @lines = $fh->getlines;
-        return @lines;
-    }
-    else { 
-        my $text = do { local( $/ ) ; <$fh> } ;  # slurp mode
-        return $text;
-    }
-}
-
-sub write_file {
-    my ($self, $fname, @content) = @_;
-    my $fh = $self->open_file_for_writing($fname);
-    Carp::croak "Failed to open file $fname! " . $self->error_message() . ": $!" unless $fh;
-    for (@content) {
-        $fh->print($_) or Carp::croak "Failed to write to file $fname! $!";
-    }
-    $fh->close or Carp::croak "Failed to close file $fname! $!";
-    return $fname;
-}
-
 sub diff_text_vs_text {
     my ($self,$t1,$t2) = @_;
     my $p1 = $self->create_temp_file_path();
@@ -158,6 +133,23 @@ sub open_file_for_appending {
     }
 
     return $self->_open_file($file, 'a');
+}
+
+sub validate_file_for_execution {
+    my ($self, $file) = @_;
+
+    my $rv = eval { $self->validate_file_for_reading($file) };
+    if ($@ or not $rv) {
+        my $msg = "Cannot read file $file and therefore cannot execute it";
+        $msg .= ", reason: $@" if $@;
+        Carp::croak $msg;
+    }
+
+    unless (-x $file) {
+        Carp::croak "File $file cannot be executed!";
+    }
+
+    return 1;
 }
 
 sub validate_file_for_writing {

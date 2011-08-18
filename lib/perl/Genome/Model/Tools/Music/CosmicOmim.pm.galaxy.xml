@@ -1,0 +1,107 @@
+<tool id="gmt_music_cosmic-omim" name="gmt_music_cosmic-omim">
+    <description>
+        Compare the amino acid changes of supplied mutations to COSMIC and OMIM databases.
+    </description>
+    <command>
+        gmt music cosmic-omim --aa-range=$aa_range --cosmic-dir=$cosmic_dir --id=$id --is-executed=$is_executed --maf-file=$maf_file --nuc-range=$nuc_range --omimaa-dir=$omimaa_dir --output-file=$output_file --result=$result --verbose=$verbose --wu-annotation-headers=$wu_annotation_headers
+    </command>
+    <inputs>
+        <param name="aa_range" format="text" type="data" help="" />
+<param name="cosmic_dir" format="text" type="data" help="" />
+<param name="maf_file" format="maf" type="data" help="" />
+<param name="nuc_range" format="text" type="data" help="" />
+<param name="omimaa_dir" format="text" type="data" help="" />
+<param name="output_file" format="text" type="data" help="" />
+<param name="verbose" format="text" type="data" help="" />
+<param name="wu_annotation_headers" format="text" type="data" help="" />
+
+    </inputs>
+    <outputs>
+        <data name="result" format="text" label="" help="" />
+
+    </outputs>
+    <help>
+        
+
+**USAGE**
+
+ gmt music cosmic-omim --maf-file=? --output-file=? [--aa-range=?] [--cosmic-dir=?] [--nuc-range=?]
+    [--omimaa-dir=?] [--verbose] [--wu-annotation-headers]
+
+
+**SYNOPSIS**
+
+... music cosmic-omim --maf-file input_dir/myMAF.tsv --output-file output_dir/myMAF_output.tsv --no-verbose
+
+... music cosmic-omim --maf-file input_dir/myMAF.tsv --output-file output_dir/myMAF_output.tsv --omimaa-dir omim_dir/ --cosmic-dir cosmic_dir/ --no-verbose
+
+
+**REQUIRED ARGUMENTS**
+
+  maf-file   Path
+    list of annotated mutations in MAF format (or any file with MAF+annotation headers) 
+  output-file   Path
+    Output file contains the input file with two columns appended to the end, corresponding to
+    cosmic and omim mutation comparisons, respectively 
+
+
+**OPTIONAL ARGUMENTS**
+
+  aa-range   Text
+    Set how close a 'near' match is when searching for amino acid near hits 
+    Default value '2' if not specified
+  cosmic-dir   Path
+    cosmic amino acid mutation database folder 
+    Default value '/gsc/scripts/opt/genome/db/cosmic/54' if not specified
+  nuc-range   Text
+    Set how close a 'near' match is when searching for nucleotide position near hits 
+    Default value '5' if not specified
+  omimaa-dir   Path
+    omim amino acid mutation database folder 
+    Default value '/gsc/scripts/opt/genome/db/omim/20110721' if not specified
+  verbose   Boolean
+    Use this to display the larger working output 
+  noverbose   Boolean
+    Make verbose 'false' 
+  wu-annotation-headers   Boolean
+    Use this to default to wustl annotation format headers 
+  nowu-annotation-headers   Boolean
+    Make wu-annotation-headers 'false' 
+
+
+**DESCRIPTION**
+
+    This tool looks at the amino acid changes for the given set of mutations and compares the
+    genomic coordinates as well as the affected amino acid to the coordinates and amino acids of
+    all cancer-specific mutations listed in the Cosmic and OMIM databases. The database files are
+    specially prepared for this task and provided with the MuSiC suite. The tool reports various
+    types of matches, including matches within "near proximity", where "near proximity" is
+    currently defined as a linear DNA distance of 5 bases or 2 amino acids. (This type of matching
+    helps to account for the possibility of subtle differences in reported positions for variants
+    due to differences in transcript definitions or other things of this nature.) Any site without
+    a match in a particular databases is reported as "novel" with respect to that database.
+
+    The output of this script returns each row the original input MAF file with two columns
+    appended to the end of each, one column for each of the databases. Also included is a STDOUT
+    printout of a summary of what was found in the input MAF. Neither output can be suppressed in
+    the current version. The --verbose option is used to display working notes that are useful for
+    various purposes in debugging potential MAF problems. The Omim and Cosmic directories must
+    point to the output of the downloader, named appropriately, as they don't recognize the OMIM
+    database in the raw download format.
+
+    Also please note that this tool only compares to Build36 coordinates in the Cosmic database.
+    Support for build 37 is coming, but as of this update the Cosmic database only has sparse
+    entries in build 37 coordinates.
+
+    In addition to the standard version 2.2 MAF headers, there needs to be two columns appended.
+    These column headers in the MAF must be exactly these names in header line in order for the
+    tool to find them:
+
+       transcript_name - the transcript name, such as NM_000028
+     amino_acid_change - the amino acid change, such as p.E290V
+
+
+
+
+    </help>
+</tool>

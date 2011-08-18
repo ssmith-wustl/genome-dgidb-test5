@@ -1,0 +1,161 @@
+<tool id="gmt_music_play" name="gmt_music_play">
+    <description>
+        Run the full suite of MuSiC tools sequentially.
+    </description>
+    <command>
+        gmt music play --aa-range=$aa_range --bam-list=$bam_list --bmr=$bmr --categorical-clinical-data-file=$categorical_clinical_data_file --cmd-list-file=$cmd_list_file --cmd-prefix=$cmd_prefix --cosmic-dir=$cosmic_dir --gene-covg-dir=$gene_covg_dir --gene-list=$gene_list --gene-mr-file=$gene_mr_file --genes-to-ignore=$genes_to_ignore --genetic-data-type=$genetic_data_type --id=$id --is-executed=$is_executed --maf-file=$maf_file --max-fdr=$max_fdr --max-proximity=$max_proximity --min-mapq=$min_mapq --min-mut-genes-per-path=$min_mut_genes_per_path --normal-min-depth=$normal_min_depth --nuc-range=$nuc_range --numeric-clinical-data-file=$numeric_clinical_data_file --omimaa-dir=$omimaa_dir --output-dir=$output_dir --pathway-file=$pathway_file --permutations=$permutations --processors=$processors --reference-sequence=$reference_sequence --result=$result --roi-file=$roi_file --show-skipped=$show_skipped --skip-non-coding=$skip_non_coding --skip-silent=$skip_silent --tumor-min-depth=$tumor_min_depth --verbose=$verbose --wu-annotation-headers=$wu_annotation_headers
+    </command>
+    <inputs>
+        <param name="aa_range" format="text" type="data" help="" />
+<param name="bam_list" format="text" type="data" help="" />
+<param name="bmr" format="text" type="data" help="" />
+<param name="categorical_clinical_data_file" format="text" type="data" help="" />
+<param name="cosmic_dir" format="text" type="data" help="" />
+<param name="genes_to_ignore" format="text" type="data" help="" />
+<param name="genetic_data_type" format="text" type="data" help="" />
+<param name="maf_file" format="text" type="data" help="" />
+<param name="max_fdr" format="text" type="data" help="" />
+<param name="max_proximity" format="text" type="data" help="" />
+<param name="min_mapq" format="text" type="data" help="" />
+<param name="min_mut_genes_per_path" format="text" type="data" help="" />
+<param name="normal_min_depth" format="text" type="data" help="" />
+<param name="nuc_range" format="text" type="data" help="" />
+<param name="numeric_clinical_data_file" format="text" type="data" help="" />
+<param name="omimaa_dir" format="text" type="data" help="" />
+<param name="output_dir" format="text" type="data" help="" />
+<param name="pathway_file" format="text" type="data" help="" />
+<param name="permutations" format="text" type="data" help="" />
+<param name="processors" format="text" type="data" help="" />
+<param name="reference_sequence" format="text" type="data" help="" />
+<param name="roi_file" format="text" type="data" help="" />
+<param name="show_skipped" format="text" type="data" help="" />
+<param name="skip_non_coding" format="text" type="data" help="" />
+<param name="skip_silent" format="text" type="data" help="" />
+<param name="tumor_min_depth" format="text" type="data" help="" />
+<param name="verbose" format="text" type="data" help="" />
+<param name="wu_annotation_headers" format="text" type="data" help="" />
+
+    </inputs>
+    <outputs>
+        <data name="result" format="text" label="" help="" />
+
+    </outputs>
+    <help>
+        
+
+**USAGE**
+
+ gmt music play --bam-list=? --genetic-data-type=? --maf-file=? --output-dir=? --pathway-file=?
+    --reference-sequence=? --roi-file=? [--aa-range=?] [--bmr=?]
+    [--categorical-clinical-data-file=?] [--cosmic-dir=?] [--genes-to-ignore=?] [--max-fdr=?]
+    [--max-proximity=?] [--min-mapq=?] [--min-mut-genes-per-path=?] [--normal-min-depth=?]
+    [--nuc-range=?] [--numeric-clinical-data-file=?] [--omimaa-dir=?] [--permutations=?]
+    [--processors=?] [--show-skipped] [--skip-non-coding] [--skip-silent] [--tumor-min-depth=?]
+    [--verbose] [--wu-annotation-headers]
+
+
+**SYNOPSIS**
+
+This tool takes as parameters all the information required to run the individual tools. An example usage is:
+
+ ... music play \
+        --bam-list input/bams_to_analyze.txt \
+        --numeric-clinical-data-file input/numeric_clinical_data.csv \
+        --maf-file input/myMAF.tsv \
+        --output-dir play_output_dir \
+        --pathway-file input/pathway_db \
+        --reference-sequence input/refseq/all_sequences.fa \
+        --roi-file input/all_coding_regions.bed \
+        --genetic-data-type gene
+
+
+**REQUIRED ARGUMENTS**
+
+  bam-list   Text
+    Tab delimited list of BAM files [sample_name normal_bam tumor_bam] 
+  genetic-data-type   Text
+    Data in matrix file must be either "gene" or "variant" type data 
+  maf-file   Text
+    List of mutations using TCGA MAF specifications v2.2 
+  output-dir   Text
+    Directory where output files and subdirectories will be written 
+  pathway-file   Text
+    Tab-delimited file of pathway information 
+  reference-sequence   Text
+    Path to reference sequence in FASTA format 
+  roi-file   Text
+    Tab delimited list of ROIs [chr start stop gene_name] 
+
+
+**OPTIONAL ARGUMENTS**
+
+  aa-range   Text
+    Set how close a 'near' match is when searching for amino acid near hits 
+    Default value '2' if not specified
+  bmr   Number
+    Background mutation rate in the targeted regions 
+  categorical-clinical-data-file   Text
+    Table of samples (y) vs. categorical clinical data category (x) 
+  cosmic-dir   Path
+    cosmic amino acid mutation database folder 
+  genes-to-ignore   Text
+    Comma-delimited list of genes to ignore for background mutation rates 
+  max-fdr   Number
+    The maximum allowed false discovery rate for a gene to be considered an SMG 
+  max-proximity   Text
+    Maximum AA distance between 2 mutations 
+  min-mapq   Integer
+    The minimum mapping quality of reads to consider towards read depth counts 
+  min-mut-genes-per-path   Number
+    Pathways with fewer mutated genes than this will be ignored 
+  normal-min-depth   Integer
+    The minimum read depth to consider a Normal BAM base as covered 
+  nuc-range   Text
+    Set how close a 'near' match is when searching for nucleotide position near hits 
+    Default value '5' if not specified
+  numeric-clinical-data-file   Text
+    Table of samples (y) vs. numeric clinical data category (x) 
+  omimaa-dir   Path
+    omim amino acid mutation database folder 
+  permutations   Number
+    Number of permutations used to determine P-values 
+  processors   Integer
+    number of processors to use in SMG (requires 'foreach' and 'doMC' R packages) 
+  show-skipped   Boolean
+    Report each skipped mutation, not just how many 
+    Default value 'false' (--noshow-skipped) if not specified
+  noshow-skipped   Boolean
+    Make show-skipped 'false' 
+  skip-non-coding   Boolean
+    Skip non-coding mutations from the provided MAF file 
+    Default value 'true' if not specified
+  noskip-non-coding   Boolean
+    Make skip-non-coding 'false' 
+  skip-silent   Boolean
+    Skip silent mutations from the provided MAF file 
+    Default value 'true' if not specified
+  noskip-silent   Boolean
+    Make skip-silent 'false' 
+  tumor-min-depth   Integer
+    The minimum read depth to consider a Tumor BAM base as covered 
+  verbose   Boolean
+    turn on to display larger working output 
+    Default value 'true' if not specified
+  noverbose   Boolean
+    Make verbose 'false' 
+  wu-annotation-headers   Boolean
+    Use this to default to wustl annotation format headers 
+  nowu-annotation-headers   Boolean
+    Make wu-annotation-headers 'false' 
+
+
+**DESCRIPTION**
+
+    This command can be used to run all of the MuSiC analysis tools on a set of data. Please see
+    the individual tools for further description of the parameters.
+
+
+
+
+    </help>
+</tool>

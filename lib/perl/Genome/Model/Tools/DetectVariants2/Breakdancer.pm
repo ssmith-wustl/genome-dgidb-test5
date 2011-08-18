@@ -151,14 +151,18 @@ sub run_config {
     else {
         $self->status_message("Run bam2cfg to make breakdancer_config file");
 
-        my $bam2cfg = Genome::Model::Tools::Breakdancer::BamToConfig->create(
-            normal_bam  => $self->control_aligned_reads_input,
+        my %params = (
             tumor_bam   => $self->aligned_reads_input,
             output_file => $self->_config_staging_output,
             params      => $self->_bam2cfg_params,
             use_version => $self->version,
         );
 
+        $params{normal_bam} = $self->control_aligned_reads_input 
+            if $self->control_aligned_reads_input;
+
+        my $bam2cfg = Genome::Model::Tools::Breakdancer::BamToConfig->create(%params);
+       
         unless ($bam2cfg->execute) {
             $self->error_message("Failed to run bam2cfg");
             die;
@@ -222,17 +226,20 @@ sub run_breakdancer {
 
             $self->status_message('chromosome list is '.join ',', @chr_list);
 
-            my $output = Workflow::Simple::run_workflow_lsf(
-                $op,
+            my %params = (
                 aligned_reads_input         => $self->aligned_reads_input, 
-                control_aligned_reads_input => $self->control_aligned_reads_input,
                 reference_build_id          => $self->reference_build_id,
                 output_directory            => $self->_temp_staging_directory,
                 config_file => $cfg_file,
-                params   => $self->params,
+                params      => $self->params,
                 version     => $self->version,
                 chromosome  => \@chr_list,
             );
+            $params{control_aligned_reads_input} = $self->control_aligned_reads_input
+                if $self->control_aligned_reads_input;
+
+            my $output = Workflow::Simple::run_workflow_lsf($op, %params);
+
             unless (defined $output) {
                 my @error;
                 for (@Workflow::Simple::ERROR) {
@@ -301,7 +308,7 @@ sub _get_chr_list {
     my $tmp_idx_file = $tmp_idx_dir . '/normal_bam.idxstats';
 
     my $idxstats = Genome::Model::Tools::Sam::Idxstats->create(
-        bam_file    => $self->control_aligned_reads_input,
+        bam_file    => $self->aligned_reads_input,
         output_file => $tmp_idx_file,
     );
     unless ($idxstats->execute) {

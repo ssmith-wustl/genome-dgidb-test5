@@ -12,12 +12,13 @@ class Genome::Model::Tools::Breakdancer::BamToConfig {
         normal_bam => {
             is  => 'String',
             doc => 'input normal bam file',
-            is_input => 1,
+            is_input    => 1,
+            is_optional => 1,
         },
         tumor_bam  => {
             is  => 'String',
-            is_input => 1,
             doc => 'input tumor bam file',
+            is_input => 1,
         },
         params     => {
             is  => 'String',
@@ -71,15 +72,23 @@ sub execute {
         die "output file $out_file can not be written\n";
     }
 
+    my @bam_list;
+    for my $type ('tumor', 'normal') {
+        my $property = $type . '_bam';
+        push @bam_list, $self->$property if $self->$property;
+    }
+    
+    my $bam_string = join ' ', @bam_list;
+
     my $cfg_cmd = $self->breakdancer_config_command; 
-    $cfg_cmd .= ' ' . $self->params . ' ' . $self->tumor_bam . ' ' . $self->normal_bam . ' > '. $out_file;
+    $cfg_cmd .= ' ' . $self->params . ' ' . $bam_string . ' > '. $out_file;
     $self->status_message("Breakdancer command: $cfg_cmd");
 
     {
         local $CWD = $out_dir;  #change current work dir to out_dir so *.insert.histogram can be written there
         my $rv = Genome::Sys->shellcmd(
             cmd => $cfg_cmd,
-            input_files  => [$self->tumor_bam, $self->normal_bam],
+            input_files  => \@bam_list,
             output_files => [$self->output_file],
             allow_zero_size_output_files => 1,
         );
