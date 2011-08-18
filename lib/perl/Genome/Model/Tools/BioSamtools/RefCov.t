@@ -32,7 +32,7 @@ my $ref_cov = Genome::Model::Tools::BioSamtools::RefCov->create(
 isa_ok($ref_cov,'Genome::Model::Tools::BioSamtools::RefCov');
 ok($ref_cov->execute,'execute RefCov command '. $ref_cov->command_name);
 
-ok(compare($expected_stats_file,$ref_cov->stats_file),'expected stats file '. $expected_stats_file .' is identical to '. $ref_cov->stats_file);
+ok(compare($expected_stats_file,$ref_cov->stats_file) == 0,'expected stats file '. $expected_stats_file .' is identical to '. $ref_cov->stats_file);
 unlink($ref_cov->stats_file);
 
 my $expected_q20_stats_file = $data_dir .'/test_test_regions_STATS-q20-2.tsv';
@@ -44,7 +44,7 @@ my $q20_ref_cov = Genome::Model::Tools::BioSamtools::RefCov->create(
 );
 isa_ok($q20_ref_cov,'Genome::Model::Tools::BioSamtools::RefCov');
 ok($q20_ref_cov->execute,'execute RefCov command '. $q20_ref_cov->command_name);
-ok(compare($expected_q20_stats_file,$q20_ref_cov->stats_file),'expected stats file '. $expected_q20_stats_file .' is identical to '. $q20_ref_cov->stats_file);
+ok(compare($expected_q20_stats_file,$q20_ref_cov->stats_file) == 0,'expected stats file '. $expected_q20_stats_file .' is identical to '. $q20_ref_cov->stats_file);
 unlink($q20_ref_cov->stats_file);
 
 my $expected_q20_q1_stats_file = $data_dir .'/test_test_regions_STATS-q20-q1-2.tsv';
@@ -57,7 +57,7 @@ my $q20_q1_ref_cov = Genome::Model::Tools::BioSamtools::RefCov->create(
 );
 isa_ok($q20_q1_ref_cov,'Genome::Model::Tools::BioSamtools::RefCov');
 ok($q20_q1_ref_cov->execute,'execute RefCov command '. $q20_q1_ref_cov->command_name);
-ok(compare($expected_q20_q1_stats_file,$q20_q1_ref_cov->stats_file),'expected stats file '. $expected_q20_q1_stats_file .' is identical to '. $q20_q1_ref_cov->stats_file);
+ok(compare($expected_q20_q1_stats_file,$q20_q1_ref_cov->stats_file) == 0,'expected stats file '. $expected_q20_q1_stats_file .' is identical to '. $q20_q1_ref_cov->stats_file);
 
 
 exit;
