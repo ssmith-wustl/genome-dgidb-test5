@@ -25,6 +25,7 @@ class Genome::Model::Tools::RefCov::Bam {
         bio_db_index => { },
         header => { },
         _chr_to_tid_hash_ref => {},
+        _chr_to_length_hash_ref => {},
     },
 };
 
@@ -118,5 +119,24 @@ sub chr_to_tid_hash_ref {
     }
     return $self->_chr_to_tid_hash_ref;
 }
+
+sub chr_to_length_hash_ref {
+    my $self = shift;
+
+    unless  ($self->_chr_to_length_hash_ref) {
+        my $chr_to_tid = $self->chr_to_tid_hash_ref;
+        my $header = $self->header;
+        my $target_len = $header->target_len;
+        my %chr_to_length;
+        for my $chr (keys %{$chr_to_tid}) {
+            my $tid = $chr_to_tid->{$chr};
+            my $length = $target_len->[$tid];
+            $chr_to_length{$chr} = $length;
+            $self->_chr_to_length_hash_ref(\%chr_to_length);
+        }
+    }
+    return $self->_chr_to_length_hash_ref;
+}
+
 
 1;
