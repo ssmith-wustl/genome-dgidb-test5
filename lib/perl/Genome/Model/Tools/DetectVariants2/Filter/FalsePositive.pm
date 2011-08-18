@@ -176,6 +176,7 @@ sub _filter_variants {
 
     #First, need to create a variant list file to use for generating the readcounts.
     my $input_file = $self->input_directory . "/snvs.hq.bed";
+    die $self->error_message("Input file ($input_file) is empty") unless (-s $input_file);
     my $input = Genome::Sys->open_file_for_reading($input_file);
 
     ## Build temp file for positions where readcounts are needed ##
@@ -183,7 +184,7 @@ sub _filter_variants {
     my $tfh = Genome::Sys->open_file_for_writing($temp_path);#Genome::Sys->create_temp_file;
 
     ## Print each line to file in order to get readcounts
-    $self->status_message('Printing variants to temp file...');
+    $self->status_message('Printing variants to temporary region_list file...');
     while(my $line = $input->getline) {
         my ($chr, $start, $stop) = split /\t/, $line;
         # Since we read in bed input (0-based start position) and the bed will be 1-based... adjust the start.
