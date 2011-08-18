@@ -8,15 +8,9 @@ use warnings;
 
 use Genome;
 use Carp 'confess';
-use Bio::SeqIO;
 use File::Temp 'tempdir';
 use File::chdir;
-use File::Path 'rmtree';
-use File::Basename;
-
-# TODO: Probably shouldn't be using this patched version of bioperl
-require '/gsc/scripts/opt/bacterial-bioperl/Bio/Tools/Run/RepeatMasker.pm';
-require '/gsc/scripts/opt/bacterial-bioperl/Bio/Tools/RepeatMasker.pm';
+use File::Basename 'fileparse';
 
 class Genome::Model::GenePrediction::Eukaryotic::RepeatMasker {
     is => 'Command',
@@ -28,6 +22,28 @@ class Genome::Model::GenePrediction::Eukaryotic::RepeatMasker {
         },
     ],
     has_optional => [
+        raw_output_directory => {
+            is => 'DirectoryPath',
+            doc => 'Directory in which raw output from this tool should be placed',
+        },
+        version => {
+            is => 'Text',
+            doc => 'Version of repeat masker to use',
+            default => '3.2.9',
+            valid_values => [
+                '3.0.5',
+                '3.0.8',
+                '3.1.0',
+                '3.1.5',
+                '3.1.8',
+                '3.2.7',
+                '3.2.9',
+                '12122000',
+                '20020505',
+                '20030921',
+                '2004March6',
+            ],
+        },
         masked_fasta => { 
             is => 'FilePath',
             is_input => 1,
@@ -76,169 +92,261 @@ class Genome::Model::GenePrediction::Eukaryotic::RepeatMasker {
     ], 
 };
 
-sub help_brief {
-    return "RepeatMask the contents of the input file and write the result to the output file";
-}
-
-sub help_synopsis {
-    return <<"EOS"
-EOS
-}
-
+sub help_brief { return "RepeatMask the contents of the input file and write the result to the output file" };
+sub help_synopsis { return help_brief() };
 sub help_detail {
-    return <<"EOS"
-Need documenation here.
-EOS
+    return "Masks out repetitive regions of sequences from input fasta and places results in output fasta. " .
+        "Can optionally create an ace file detailing masked regions";
+}
+
+sub version_to_path_mapping {
+    return (
+        '3.0.5' => '/gsc/scripts/pkg/bio/repeatmasker/RepeatMasker-open-3-0-5/RepeatMasker',
+        '3.0.8' => '/gsc/scripts/pkg/bio/repeatmasker/RepeatMasker-open-3-0-8/RepeatMasker',
+        '3.1.0' => '/gsc/scripts/pkg/bio/repeatmasker/RepeatMasker-open-3-1-0/RepeatMasker',
+        '3.1.5' => '/gsc/scripts/pkg/bio/repeatmasker/RepeatMasker-open-3-1-5/RepeatMasker',
+        '3.1.8' => '/gsc/scripts/pkg/bio/repeatmasker/RepeatMasker-open-3-1-8/RepeatMasker',
+        '3.2.7' => '/gsc/scripts/pkg/bio/repeatmasker/RepeatMasker-3.2.7/RepeatMasker',
+        '3.2.9' => '/gsc/scripts/pkg/bio/repeatmasker/RepeatMasker-open-3.2.9/RepeatMasker',
+        '12122000' => '/gsc/scripts/pkg/bio/repeatmasker/RepeatMasker12122000/RepeatMasker',
+        '20020505' => '/gsc/scripts/pkg/bio/repeatmasker/RepeatMasker20020505/RepeatMasker',
+        '20030921' => '/gsc/scripts/pkg/bio/repeatmasker/RepeatMasker20030921/RepeatMasker',
+        '2004March6' => '/gsc/scripts/pkg/bio/repeatmasker/RepeatMasker2004March6/RepeatMasker',
+    );
+}
+
+sub path_for_version {
+    my ($self, $version) = @_;
+    my %mapping = $self->version_to_path_mapping;
+    return $mapping{$version};
+}
+
+# TODO For now, just allowing use of the params/flags I care about. This will
+# need to be expanded if other groups are to use this wrapper.
+sub flags {
+    return qw/
+        xsmall
+        ace
+    /;
+}
+
+sub is_flag {
+    my ($self, $option) = @_;
+    for my $flag ($self->flags) {
+        return 1 if $flag eq $option;
+    }
+    return 0;
+}
+
+sub _generate_params {
+    my $self = shift;
+    my %params;
+
+    $params{'dir'} = $self->temp_working_directory;
+
+    if ($self->repeat_library) {
+        $params{'lib'} = $self->repeat_library;
+    }
+    if ($self->species) {
+        $params{'species'} = $self->species;
+    }
+    if ($self->make_ace) {
+        $params{'ace'} = 1;
+    }
+    if ($self->xsmall) {
+        $params{'xsmall'} = 1;
+    }
+
+    return %params;
 }
 
 sub execute {
     my $self = shift;
 
-    unless (-e $self->fasta_file and -s $self->fasta_file) {
-        confess "File does not exist or has no size at " . $self->fasta_file;
+    $self->status_message("Preparing to execute repeat masker.");
+
+    $self->_check_input_fasta;
+    $self->_validate_species_and_library;
+    $self->_set_temp_working_directory unless defined $self->temp_working_directory;
+    $self->_set_ace_file_location unless defined $self->ace_file_location;
+    $self->_set_masked_fasta unless defined $self->masked_fasta;
+
+    if ($self->skip_masking) {
+        $self->_prepare_for_skip;
+        return 1;
     }
 
-    unless (defined $self->repeat_library or defined $self->species) {
+    my $executable = $self->path_for_version($self->version);
+    $self->_validate_executable($executable);
+
+    my %params = $self->_generate_params;
+    my $cmd_string = join(' ', $executable, $self->_params_to_string(%params));
+
+    $self->_execute_repeat_masker($cmd_string);
+    $self->status_message("Successfully executed repeat masker!");
+    return 1;
+}
+
+sub _execute_repeat_masker {
+    my ($self, $cmd_string) = @_;
+    
+    # Repeat masker dumps files next to the input fasta file, which may not be
+    # writable. Instead use the temp working directory and copy files to where
+    # you want them.
+    my $rv;
+    {
+        local $CWD = $self->temp_working_directory;
+        $self->status_message("Executing repeat masker command $cmd_string from " . 
+            "working directory " . $self->temp_working_directory);
+        $rv = system($cmd_string);
+    }
+
+    unless ($rv == 0) {
+        confess "Could not execute repeat masker command: $cmd_string";
+    }
+
+    $self->_move_files_from_working_directory;
+    return 1;
+}
+
+sub _move_files_from_working_directory {
+    my $self = shift;
+    my $working_dir = $self->temp_working_directory;
+
+    # All of the output files use the base name of the input fasta file
+    # and then append a suffix.
+    my ($fasta_name) = fileparse($self->fasta_file);
+
+    my %suffix_to_property_mapping = (
+        'out' => 'raw_output_directory',
+        'masked' => 'masked_fasta',
+        'ace' => 'ace_file_location',
+    );
+
+    my @output_files = glob("$working_dir/*");
+    for my $output_file (@output_files) {
+        my (undef, undef, $suffix) = fileparse($output_file, keys %suffix_to_property_mapping);
+        next unless $suffix;
+        next unless exists $suffix_to_property_mapping{$suffix};
+        
+        my $property = delete $suffix_to_property_mapping{$suffix};
+        my $target = $self->$property;
+        next unless defined $target;
+        Genome::Sys->copy_file($output_file, $self->$property);
+    }
+
+    if (%suffix_to_property_mapping) {
+        my @missing = sort keys %suffix_to_property_mapping;
+        $self->warning_message("Found no output files in working directory $working_dir " .
+            "with suffixes: " . join(" ", @missing));
+    }
+
+    return 1;
+}
+
+sub _params_to_string {
+    my ($self, %params) = @_;
+    
+    my @words;
+    for my $param (sort keys %params) {
+        if ($self->is_flag($param)) {
+            push @words, '-' . $param;
+        }
+        else {
+            push @words, '-' . $param, $params{$param};
+        }
+    }
+
+    push @words, $self->fasta_file;
+    
+    if ($self->raw_output_directory) {
+        my $file = $self->raw_output_directory . '/repeat_masker.output';
+        push @words, ">$file 2>&1";
+    }
+    else {
+        push @words, ">/dev/null 2>&1";
+    }
+
+    return join(' ', @words);
+}
+
+sub _check_input_fasta {
+    my $self = shift;
+    my $rv = eval { Genome::Sys->validate_file_for_reading($self->fasta_file) };
+    if ($@ or not $rv) {
+        my $msg = "Cannot read from file " . $self->fasta_file;
+        $msg .= ", reason: $@" if $@;
+        confess $msg;
+    }
+    return 1;
+}
+
+sub _validate_species_and_library {
+    my $self = shift;
+    if (not defined $self->repeat_library and not defined $self->species) {
         confess "Either repeat library or species must be defined!";
     }
     elsif (defined $self->repeat_library and defined $self->species) {
         $self->warning_message("Both repeat library and species are specified, choosing repeat library!");
     }
 
-    # Make sure the fasta file isn't tarred, and untar it if necessary
-    # TODO Is this necessary?
-    if ($self->fasta_file =~ /\.bz2$/) {
-        my $unzipped_file = Genome::Sys->bunzip($self->fasta_file);
-        confess "Could not unzip fasta file at " . $self->fasta_file unless defined $unzipped_file;
-        $self->fasta_file($unzipped_file);
-    }
-    
-    # Set defaults for masked fasta and ace file to input fasta path
-    my $fasta_path = File::Spec->rel2abs($self->fasta_file);
-    if (not defined $self->ace_file_location) {
-        my $default_ace_file = "$fasta_path.repeat_masker.ace";
-        $self->ace_file_location($default_ace_file);
-        $self->status_message("Ace files being generated and location not given, default to $default_ace_file");
-    }
-    if (not defined $self->masked_fasta) {
-        my ($fasta_name, $fasta_dir) = fileparse($self->fasta_file);
-        my $masked_fh = File::Temp->new(
-            TEMPLATE => "$fasta_name.repeat_masker_XXXXXX",
-            DIR => $fasta_dir,
-            CLEANUP => 0,
-            UNLINK => 0,
-        );
-        chmod(0666, $masked_fh->filename);
-        $self->masked_fasta($masked_fh->filename);
-        $masked_fh->close;
-        $self->status_message("Masked fasta file path not given, defaulting to " . $self->masked_fasta);
-    }
-
-    # Removing existing masked fasta output file
-    if (-e $self->masked_fasta) {
-        $self->warning_message("Removing existing file at " . $self->masked_fasta);
-        unlink $self->masked_fasta;
-    }
-
-    # Even if this is being skipped, some sort of output is necessary... 
-    if ($self->skip_masking) {
-        $self->status_message("skip_masking flag is set, copying input fasta to masked fasta location");
-        my $rv = Genome::Sys->copy_file($self->fasta_file, $self->masked_fasta);
-        confess "Trouble executing copy of " . $self->fasta_file . " to " . $self->masked_fasta unless defined $rv and $rv;
-        $self->status_message("Copy of input fasta at " . $self->fasta_file . " to masked fasta path at " .
-            $self->masked_fasta . " successful, exiting!");
-        return 1;
-    }
-
-    # Create a new temporary working directory, if necessary
-    if (not defined $self->temp_working_directory) {
-        my $temp_dir = tempdir(
-            'RepeatMasker-XXXXXX',
-            DIR => '/tmp/',
-            CLEANUP => 0,
-            UNLINK => 0,
-        );
-        chmod(0775, $temp_dir);
-        $self->temp_working_directory($temp_dir);
-        $self->status_message("Not given temp working directory, using $temp_dir");
-    }
-
-    my $input_fasta = Bio::SeqIO->new(
-        -file => $self->fasta_file,
-        -format => 'Fasta',
-    );
-    my $masked_fasta = Bio::SeqIO->new(
-        -file => '>' . $self->masked_fasta,
-        -format => 'Fasta',
-    );
-
-    # FIXME I (bdericks) had to patch this bioperl module to not fail if there is no repetitive sequence
-    # in a sequence we pass in. This patch either needs to be submitted to BioPerl or a new wrapper for 
-    # RepeatMasker be made for in house. I don't like relying on patched version of bioperl that isn't
-    # tracked in any repo...
-    my $masker;
     if (defined $self->repeat_library) {
-    	$masker = Bio::Tools::Run::RepeatMasker->new(
-            lib => $self->repeat_library, 
-            xsmall => $self->xsmall, 
-            verbose => 0,
-            dir => $self->temp_working_directory,
-            ace => $self->make_ace,
-        );
-    }
-    elsif (defined $self->species) {
-    	$masker = Bio::Tools::Run::RepeatMasker->new(
-            species => $self->species, 
-            xsmall => $self->xsmall, 
-            verbose => 0,
-            dir => $self->temp_working_directory,
-            ace => $self->make_ace,
-        );
-    } 
-
-    # FIXME This is the only way I know of to force this bioperl object to use the temp directory I want. If
-    # this is not specified, the tool fails when it can't open an output file in the temp directory (because
-    # the default temp directory doesn't have the permissions set appropriately...). If some bioperl guru
-    # knows how to specify this during object creation and not have to violate class privacy like I am here,
-    # please do.
-    $masker->{_tmpdir} = $self->temp_working_directory;
-
-    # FIXME RepeatMasker emits a warning when no repetitive sequence is found. I'd prefer to not have
-    # this displayed, as this situation is expected and the warning message just clutters the logs.
-    while (my $seq = $input_fasta->next_seq()) {
-        local $CWD = $self->temp_working_directory; # More shenanigans to get repeat masker to not put temp dir in cwd,
-                                                    # which could be a snapshot and cause problems
-        $self->status_message("Working on sequence " . $seq->display_id);
-        $masker->run($seq);
-        my $masked_seq = $masker->masked_seq();
-        $masked_seq = $seq unless defined $masked_seq; # If no masked sequence found, write original seq to file
-        $masked_fasta->write_seq($masked_seq);
-
-        # Repeat masker makes an ungodly number of files in the working directory, especially if checking a large
-        # number of sequences. To prevent this from getting unwieldy, remove these files after each sequence
-        $self->_cleanup_files;
-    }   
-
-    # Ace files generated by repeat masker are concatenated together
-    if ($self->make_ace) {
-        $self->status_message("Concatenating ace files generated by repeat masker in " . $self->temp_working_directory .
-            " into ace file at " . $self->ace_file_location);
-        unless ($self->_generate_ace_file) {
-            $self->error_message("Could not create ace file!");
-            confess $self->error_message;
+        my $rv = eval { Genome::Sys->validate_file_for_reading($self->repeat_library) };
+        if ($@ or not $rv) {
+            confess "Could not validate repeat library " . $self->repeat_library . " for reading!";
         }
     }
 
     return 1;
 }
 
-sub _cleanup_files {
+sub _set_masked_fasta {
     my $self = shift;
-    my $dir = $self->temp_working_directory;
-    my @suffixes_to_axe = qw/ cat log out ref tbl /;
-    for my $suffix (@suffixes_to_axe) {
-        my @files = glob($dir . "/*.$suffix");
-        unlink @files;
+    my $masked_fasta = $self->fasta_file . ".repeat_masked";
+    $self->masked_fasta($masked_fasta);
+    $self->status_message("Masked fasta file path not given, defaulting to " . $self->masked_fasta);
+    return 1;
+}
+
+sub _set_ace_file_location {
+    my $self = shift;
+    my $default_ace_file = $self->fasta_file. ".repeat_masker.ace";
+    $self->ace_file_location($default_ace_file);
+    $self->status_message("Ace files are being generated and location not given, defaulting to $default_ace_file");
+    return 1;
+}
+
+sub _prepare_for_skip {
+    my $self = shift;
+    $self->status_message("skip_masking flag is set, copying input fasta to masked fasta location");
+    my $rv = Genome::Sys->copy_file($self->fasta_file, $self->masked_fasta);
+    confess "Trouble executing copy of " . $self->fasta_file . " to " . $self->masked_fasta unless defined $rv and $rv;
+    $self->status_message("Copy of input fasta at " . $self->fasta_file . " to masked fasta path at " .
+        $self->masked_fasta . " successful, exiting!");
+    return 1;
+}
+
+sub _set_temp_working_directory {
+    my $self = shift;
+    my $temp_dir = tempdir(
+        'RepeatMasker-XXXXXX',
+        DIR => '/tmp/',
+        CLEANUP => 0,
+        UNLINK => 0,
+    );
+    chmod(0775, $temp_dir);
+    $self->temp_working_directory($temp_dir);
+    $self->status_message("Not given temp working directory, using $temp_dir");
+    return 1;
+}
+
+sub _validate_executable {
+    my ($self, $exe) = @_;
+    my $rv = eval { Genome::Sys->validate_file_for_execution($exe) };
+    if ($@ or not $rv) {
+        my $msg = "Cannot execute file $exe";
+        $msg .= ", reason: $@" if $@;
+        confess $msg;
     }
     return 1;
 }
