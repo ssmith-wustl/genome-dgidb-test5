@@ -261,8 +261,6 @@ sub open_file_for_writing {
 sub copy_file {
     my ($self, $file, $dest) = @_;
 
-    $self->status_message("copying $file to $dest...\n");
-
     $self->validate_file_for_reading($file)
         or Carp::croak("Cannot open input file ($file) for reading!");
 
