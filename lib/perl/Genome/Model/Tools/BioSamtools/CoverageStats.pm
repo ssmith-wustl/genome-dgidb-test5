@@ -66,8 +66,8 @@ sub create {
     my $self = $class->SUPER::create(@_);
     unless ($self) { return; }
 
-    unless ($] > 5.012) {
-        die 'Subcommands run by '. __PACKAGE__ .' require perl 5.12! Consider using gmt5.12.1 instead of gmt.';
+    unless ($] > 5.010) {
+        die 'Subcommands run by '. __PACKAGE__ .' require perl 5.10 or greater! Consider using \'/usr/bin/perl `which gmt`\' instead of \'gmt\'.';
     }
     return $self;
 }

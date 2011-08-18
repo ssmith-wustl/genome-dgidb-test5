@@ -34,7 +34,7 @@ my %sort_order = (
 );
 
 class Genome::Model::Tools::BioSamtools::StatsSummary {
-    is => ['Genome::Model::Tools::BioSamtools'],
+    is => ['Command'],
     has_input => [
         stats_file => {
             is => 'Text',
@@ -88,6 +88,10 @@ sub execute {
         my @entry = split("\t",$line);
         my $id = $entry[0];
         my $min_depth = $entry[12];
+        unless ($min_depth =~ /^\d+$/) {
+            #SKIP TEXT HEADER
+            next;
+        }
         unless (defined($depth_stats{$min_depth}{minimum_depth})) {
             $depth_stats{$min_depth}{minimum_depth} = $min_depth;
         }
@@ -129,7 +133,7 @@ sub execute {
         unless (defined($depth_stats{$min_depth}{covered_base_pair_eighty_pc_breadth})) {
             $depth_stats{$min_depth}{covered_base_pair_eighty_pc_breadth} = 0;
         }
-        $depth_stats{$min_depth}{pc_touched} = sprintf("%.03f",(($depth_stats{$min_depth}{touched}/$depth_stats{$min_depth}{targets})*100));
+        $depth_stats{$min_depth}{pc_touched} = sprintf( "%.03f", ( ( $depth_stats{$min_depth}{touched} / $depth_stats{$min_depth}{targets} ) * 100 ) );
         $depth_stats{$min_depth}{pc_target_space_covered} = sprintf("%.03f",(($depth_stats{$min_depth}{covered_base_pair}/$depth_stats{$min_depth}{target_base_pair})*100));
         $depth_stats{$min_depth}{pc_targets_eighty_pc_breadth} = sprintf("%.03f",(( ($depth_stats{$min_depth}{targets_eighty_pc_breadth} || 0) /$depth_stats{$min_depth}{targets})*100));
         $depth_stats{$min_depth}{pc_target_space_covered_eighty_pc_breadth} = sprintf("%.03f",(( ($depth_stats{$min_depth}{covered_base_pair_eighty_pc_breadth} || 0) /$depth_stats{$min_depth}{target_base_pair})*100));

@@ -73,13 +73,23 @@ sub execute {
     my @data;
     my $i = 0;
     my @labels;
-    if ($self->labels) {
-        @labels = @{$self->labels};
+    if (defined($self->labels)) {
+        if (ref($self->labels) eq 'ARRAY') {
+            @labels = @{$self->labels};
+        } else {
+            @labels = split(',',$self->labels);
+        }
     }
     my @headers;
-    for my $input_file (@{$self->input_files}) {
+    my @input_files;
+    if (ref($self->input_files) eq 'ARRAY') {
+        @input_files = @{$self->input_files};
+    } else {
+        @input_files = split(',',$self->input_files);
+    }
+    for my $input_file (@input_files) {
         my $label;
-        if ($self->labels) {
+        if (@labels) {
             $label = $labels[$i++];
         }
         my $reader = Genome::Utility::IO::SeparatedValueReader->create(
@@ -92,7 +102,7 @@ sub execute {
             return;
         }
         while (my $data = $reader->next) {
-            if ($label) {
+            if (defined($label)) {
                 $data->{label} = $label;
             }
             push @data, $data;

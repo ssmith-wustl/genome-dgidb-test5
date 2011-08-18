@@ -34,6 +34,12 @@ sub execute {
     my @read_group_lines = grep { $_ =~ /^\@RG/ } @lines;
     my %read_groups;
     my %library_metrics;
+    my $default_library = 'library';
+    my $default_rg = 'read_group';
+    unless (@read_group_lines) {
+        $read_groups{$default_rg} = $default_library;
+        $library_metrics{$default_library} = {};
+    }
     for my $read_group_line (@read_group_lines) {
         unless ($read_group_line =~ /ID:(\d+)/) {
             die('Failed to parse read group line for ID:  '. $read_group_line);
@@ -59,6 +65,9 @@ sub execute {
     my %mate_pairs;
     while (my $align = $bam->read1()) {
         my $rg = $align->aux_get('RG');
+        unless ($rg) {
+            $rg = $default_rg;
+        }
         my $lib = $read_groups{$rg};
         my $flag = $align->flag;
         # paired in sequencing and proper pair

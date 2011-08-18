@@ -1,4 +1,4 @@
-#!/usr/bin/env perl5.12.1
+#!/usr/bin/env perl
 
 use strict;
 use warnings;
@@ -8,8 +8,8 @@ use File::Compare;
 
 use above 'Genome';
 
-if ($] < 5.012) {
-  plan skip_all => "this test is only runnable on perl 5.12+"
+if ($] < 5.010) {
+  plan skip_all => "this test is only runnable on perl 5.10+"
 }
 plan tests => 10;
 

@@ -7,6 +7,26 @@ use Genome;
 
 use Devel::Size qw/size total_size/;
 
+# Input Parameters
+my $DEFAULT_ALIGNMENT_FILE_FORMAT = 'bam';
+my $DEFAULT_ROI_FILE_FORMAT = 'bed';
+
+# Output Parameters
+my $DEFAULT_EVALUATE_GC_CONTENT = 0;
+my $DEFAULT_GENOME_NORMALIZED_COVERAGE = 0;
+my $DEFAULT_ROI_NORMALIZED_COVERAGE = 0;
+my $DEFAULT_ALIGNMENT_COUNT = 0;
+my $DEFAULT_PRINT_MIN_MAX = 0;
+my $DEFAULT_PRINT_HEADERS = 0;
+
+# Coverage Parameters
+my $DEFAULT_MINIMUM_MAPPING_QUALITY = 0;
+my $DEFAULT_MINIMUM_BASE_QUALITY = 0;
+my $DEFAULT_MINIMUM_DEPTH = 1;
+my $DEFAULT_WINGSPAN = 0;
+
+# Memory/CPU Parameters
+my $DEFAULT_MAXIMUM_DEPTH = 100_000_000;
 my $DEFAULT_MAXIMUM_ROI_LENGTH = 10_000_000;
 my $DEFAULT_WINDOW_SIZE = 10_000_000;
 
@@ -46,6 +66,8 @@ my %MERGE_STATS_OPERATION = (
     genome_normalized_depth => 'weighted_mean',
     intervals => 'intervals',
     alignment_count => '+',
+    minimum_coverage_depth => '<',
+    maximum_coverage_depth => '>',
 );
 
 
@@ -56,75 +78,82 @@ class Genome::Model::Tools::RefCov {
             is => 'String',
             doc => 'The path to the alignment file path.',
         },
-        alignment_file_format => {
-            is => 'String',
-            doc => 'The format of the alignment file.',
-            default_value => 'bam',
-            valid_values => ['bam'],
-            is_optional => 1,
-        },
         roi_file_path => {
             is => 'String',
             doc => 'The format of the region-of-interest file.',
         },
+        alignment_file_format => {
+            is => 'String',
+            doc => 'The format of the alignment file.',
+            default_value => $DEFAULT_ALIGNMENT_FILE_FORMAT,
+            valid_values => ['bam'],
+            is_optional => 1,
+        },
         roi_file_format => {
             is => 'String',
             doc => 'The format of the region-of-interest file.',
-            default_value => 'bed',
+            default_value => $DEFAULT_ROI_FILE_FORMAT,
             valid_values => ['bed'],
             is_optional => 1,
         },
         min_depth_filter => {
             is => 'String',
             doc => 'The minimum depth at each position to consider coverage.  For more than one, supply a comma delimited list(ie. 1,5,10,15,20)',
-            default_value => 1,
+            default_value => $DEFAULT_MINIMUM_DEPTH,
+            is_optional => 1,
+        },
+        maximum_depth => {
+            is => 'Integer',
+            doc => 'The maximum depth to evaluate by samtools pileup.',
+            default_value => $DEFAULT_MAXIMUM_DEPTH,
+            is_optional => 1,
         },
         wingspan => {
             is => 'Integer',
             doc => 'A base pair wingspan value to add +/- of the input regions',
-            default_value => 0,
+            default_value => $DEFAULT_WINGSPAN,
             is_optional => 1,
         },
         min_base_quality => {
             is => 'Integer',
             doc => 'only consider bases with a minimum phred quality',
-            default_value => 0,
+            default_value => $DEFAULT_MINIMUM_BASE_QUALITY,
             is_optional => 1,
         },
         min_mapping_quality => {
             is => 'Integer',
             doc => 'only consider alignments with minimum mapping quality',
-            default_value => 0,
+            default_value => $DEFAULT_MINIMUM_MAPPING_QUALITY,
             is_optional => 1,
         },
         genome_normalized_coverage => {
             is => 'Boolean',
             doc => 'Normalized coverage based on average depth across entire reference genome.',
-            default_value => 0,
+            default_value => $DEFAULT_GENOME_NORMALIZED_COVERAGE,
             is_optional => 1,
         },
         roi_normalized_coverage => {
             is => 'Boolean',
             doc => 'Normalized coverage based on average depth across supplied regions-of-interest.',
-            default_value => 0,
+            default_value => $DEFAULT_ROI_NORMALIZED_COVERAGE,
             is_optional => 1,
         },
         evaluate_gc_content => {
             is => 'Boolean',
             doc => 'Evaluate G+C content of the defined regions-of-interest.',
-            default_value => 0,
+            default_value => $DEFAULT_EVALUATE_GC_CONTENT,
             is_optional => 1,
         },
         alignment_count => {
             is => 'Boolean',
             doc => 'Calculate the number of alignments that overlap region.',
-            default_value => 0,
+            default_value => $DEFAULT_ALIGNMENT_COUNT,
             is_optional => 1,
         },
         print_min_max => {
             is => 'Boolean',
             doc => 'Print the minimum and maximum depth of coverage.',
-            default_value => 0,
+            default_value => $DEFAULT_PRINT_MIN_MAX,
             is_optional => 1,
         },
         reference_fasta => {
@@ -140,7 +169,7 @@ class Genome::Model::Tools::RefCov {
             is => 'Boolean',
             doc => 'Print a header describing the output including column headers.',
             is_optional => 1,
-            default_value => 0,
+            default_value => $DEFAULT_PRINT_HEADERS,
         },
         merged_stats_file => {
             is => 'Text',
@@ -582,10 +611,10 @@ sub region_sequence_array_ref {
     my $id = $region->{id};
     #$self->status_message('Fetching sequence for region '. $id);
     my $dna_string = $fai->fetch($id);
-    my @dna = split('',$dna_string);
-    unless (scalar(@dna) == $region->{length}) {
-        die('Failed to fetch the proper length ('. $region->{length} .') dna.  Fetched '. scalar(@dna) .' bases for region: '. $region->{id});
+    if ( !defined($dna_string) || ( length($dna_string) != $region->{length} )  ) {
+        die('Failed to fetch the proper length ('. $region->{length} .') dna.  Fetched '. length($dna_string) .' bases for region: '. $region->{id});
     }
+    my @dna = split('',$dna_string);
     return \@dna;
 }
 
@@ -623,7 +652,8 @@ sub region_coverage_array_ref {
         # all regions should be zero based, but for some reason the correct length is never returned
         # the API must be expecting BED like inputs where the start is zero based and the end is 1-based
         # you can see in the docs for the low-level Bio::DB::BAM::Alignment class that start 'pos' is 0-based,but calend really returns 1-based
-        $coverage = $index->coverage( $bam, $tid, ($region->{start} - 1), $region->{end});
+        # zero bins returns each position, and the max depth is required to avoid samtools 8000 read depth max
+        $coverage = $index->coverage( $bam, $tid, ($region->{start} - 1), $region->{end},0,$self->maximum_depth);
     }
     unless (scalar( @{ $coverage } ) == $region->{length}) {
         die('The length of region '. $region->{name} .' '. $region->{id}
@@ -722,8 +752,18 @@ sub merge_stats_by {
             die('Failed to find name for stats region: '. Data::Dumper::Dumper($data));
         }
         my ($gene,$transcript,$type,$ordinal,$strand) = split(':',$name);
-        unless ($gene && $transcript && $type) {
-            die('Failed to parse ROI name:  '. $name);
+        if (!defined($gene) || $gene eq '') {
+            die('Failed to parse gene from ROI name:  '. $name);
+        }
+        unless ($merge_by eq 'gene') {
+            if (!defined($transcript) || $transcript eq '') {
+                die('Failed to parse transcript from ROI name:  '. $name);
+            }
+            unless ($merge_by eq 'transcript') {
+                if (!defined($type) || $type eq '') {
+                    die('Failed to parse type from ROI name:  '. $name);
+                }
+            }
         }
         my $merge_key = $merge_by;
         if ($merge_by eq 'gene') {
@@ -755,6 +795,18 @@ sub merge_stats_by {
                     $merge_by_stats{$merge_key}{$data_key} += ($data_value * $data->{total_ref_bases});
                 } elsif ($operation) {
                     $merge_by_stats{$merge_key}{$data_key} = $data_value;
+                } elsif ($operation eq '<') {
+                    unless (defined($merge_by_stats{$merge_key}{$data_key})) {
+                        $merge_by_stats{$merge_key}{$data_key} = $data_value;
+                    } elsif ($data_value < $merge_by_stats{$merge_key}{$data_key}) {
+                        $merge_by_stats{$merge_key}{$data_key} = $data_value;
+                    }
+                } elsif ($operation eq '>') {
+                    unless (defined($merge_by_stats{$merge_key}{$data_key})) {
+                        $merge_by_stats{$merge_key}{$data_key} = $data_value;
+                    } elsif ($data_value > $merge_by_stats{$merge_key}{$data_key}) {
+                        $merge_by_stats{$merge_key}{$data_key} = $data_value;
+                    }
                 }
             }
         }
@@ -1009,7 +1061,7 @@ sub generate_coverage_stats {
 
 sub print_roi_coverage {
     my $self = shift;
-    $self->status_message('Print ROI Coverage...');
+    $self->status_message('Printing ROI Coverage...');
 
     $self->validate_chromosomes;
 
@@ -1026,7 +1078,11 @@ sub print_roi_coverage {
     }
     my $roi = $self->roi;
     my @min_depths = split(',',$self->min_depth_filter);
+    my $region_count;
     while (my $region = $roi->next_region) {
+        unless ($region_count++ % 10000) {
+            $self->status_message('Printed '. $region_count .' ROI Coverage...');
+        }
         my $sequence_array_ref;
         # TODO: Add a windowing method for gc content, G+C evaluation will fail at ~50Mb regions..
         if ($self->evaluate_gc_content) {
@@ -1049,12 +1105,24 @@ sub print_roi_coverage {
             }
             if ($self->roi_normalized_coverage) {
                 my $roi_stats = $self->roi_stats;
-                my $roi_normalized_depth = $self->_round( ($stat->ave_cov_depth / $roi_stats->mean_coverage) );
+                my $roi_normalized_depth;
+                if ($roi_stats->mean_coverage) {
+                    $roi_normalized_depth = $self->_round( ($stat->ave_cov_depth / $roi_stats->mean_coverage) );
+                } else {
+                    # The ROI coverage was zero for all probes
+                    $roi_normalized_depth = 0;
+                }
                 $data->{'roi_normalized_depth'} = $roi_normalized_depth;
             }
             if ($self->genome_normalized_coverage) {
                 my $genome_stats = $self->genome_stats;
-                my $genome_normalized_depth = $self->_round( ($stat->ave_cov_depth / $genome_stats->mean_coverage) );
+                my $genome_normalized_depth;
+                if ($genome_stats->mean_coverage) {
+                    $genome_normalized_depth = $self->_round( ($stat->ave_cov_depth / $genome_stats->mean_coverage) );
+                } else {
+                    # The genome coverage was zero... I hope this doesn't happen very often.
+                    $genome_normalized_depth = 0;
+                }
                 $data->{'genome_normalized_depth'} = $genome_normalized_depth;
             }
             if ($self->alignment_count) {
@@ -1070,7 +1138,7 @@ sub print_roi_coverage {
         }
     }
     $writer->output->close;
-
+    $self->status_message('Copying Temporary Coverage File...');
     Genome::Sys->copy_file($temp_stats_file, $self->stats_file);
     if ($self->merge_by && $self->merged_stats_file) {
         $self->merge_stats_by($self->merge_by,$self->merged_stats_file);

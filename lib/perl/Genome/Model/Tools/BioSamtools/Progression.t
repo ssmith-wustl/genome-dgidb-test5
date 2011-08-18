@@ -10,8 +10,8 @@ use above 'Genome';
 
 BEGIN {
     # In a begin block so we can skip the use_ok below if necessary
-    if ($] < 5.012) {
-        plan skip_all => "this test is only runnable on perl 5.12+"
+    if ($] < 5.010) {
+        plan skip_all => "this test is only runnable on perl 5.10+"
     } else {
        plan tests => 5;
     }

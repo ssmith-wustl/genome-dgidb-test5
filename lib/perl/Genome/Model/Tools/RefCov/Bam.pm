@@ -32,8 +32,8 @@ class Genome::Model::Tools::RefCov::Bam {
 sub create {
     my $class = shift;
     my %params = @_;
-    unless ($] > 5.012) {
-        die "Bio::DB::Sam requires perl 5.12!";
+    unless ($] > 5.010) {
+        die "Bio::DB::Sam requires perl 5.10!";
     }
     require Bio::DB::Sam;
     my $self = $class->SUPER::create(@_);

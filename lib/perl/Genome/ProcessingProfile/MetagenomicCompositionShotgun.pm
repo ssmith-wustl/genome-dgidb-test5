@@ -523,7 +523,7 @@ sub _run_refcov {
         return;
     }
 
-    my $command = "gmt5.12.1 ref-cov standard";
+    my $command = "/usr/bin/perl `which gmt` ref-cov standard";
     $command .= " --alignment-file-path ".$sorted_bam;
     $command .= " --roi-file-path ".$regions_file;
     $command .= " --stats-file ".$refcov_output;
@@ -651,7 +651,7 @@ sub extract_reads_from_bam {
 #        );
 #    $self->execute_or_die($extract_unaligned);
 
-    my $cmd = "gmt5.12.1 bio-samtools bam-to-unaligned-fastq --bam-file $bam --output-directory $output_dir";
+    my $cmd = "/usr/bin/perl `which gmt` bio-samtools bam-to-unaligned-fastq --bam-file $bam --output-directory $output_dir";
     if($extract_aligned_reads) {
         $cmd .= " --print-aligned";
     }
@@ -1194,7 +1194,7 @@ sub _process_unaligned_reads {
         }
         $self->status_message("Preparing imported instrument data for import path $tmp_dir/$subdir");
         $self->status_message("Extracting unaligned reads from $bam");
-        my $cmd = "gmt5.12.1 bio-samtools bam-to-unaligned-fastq --bam-file $bam --output-directory $tmp_dir";
+        my $cmd = "/usr/bin/perl `which gmt` bio-samtools bam-to-unaligned-fastq --bam-file $bam --output-directory $tmp_dir";
         my $rv = eval{ Genome::Sys->shellcmd(cmd => $cmd); };
         if ( not $rv ) {
             die "Failed to extract unaligned reads: $@";

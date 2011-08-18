@@ -8,8 +8,8 @@ use above 'Genome';
 use Test::More;
 use File::Compare;
 
-if ($] < 5.012) {
-    plan skip_all => "this test is only runnable on perl 5.12+"
+if ($] < 5.010) {
+    plan skip_all => "this test is only runnable on perl 5.10+"
 }
 plan tests => 8;
 

@@ -44,8 +44,8 @@ class Genome::Model::Tools::RefCov::Reference {
 sub create {
     my $class = shift;
     my %params = @_;
-    unless ($] > 5.012) {
-        die "Bio::DB::Sam requires perl 5.12!";
+    unless ($] > 5.010) {
+        die "Bio::DB::Sam requires perl 5.10 or greater!";
     }
     require Bio::DB::Sam;
     my $coverage = delete($params{coverage});
