@@ -160,6 +160,23 @@ sub open_file_for_appending {
     return $self->_open_file($file, 'a');
 }
 
+sub validate_file_for_execution {
+    my ($self, $file) = @_;
+
+    my $rv = eval { $self->validate_file_for_reading($file) };
+    if ($@ or not $rv) {
+        my $msg = "Cannot read file $file and therefore cannot execute it";
+        $msg .= ", reason: $@" if $@;
+        Carp::croak $msg;
+    }
+
+    unless (-x $file) {
+        Carp::croak "File $file cannot be executed!";
+    }
+
+    return 1;
+}
+
 sub validate_file_for_writing {
     my ($self, $file) = @_;
 
