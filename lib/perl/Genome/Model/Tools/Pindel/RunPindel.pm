@@ -134,7 +134,7 @@ class Genome::Model::Tools::Pindel::RunPindel {
             default_value => 'apipe'
         }, 
         lsf_resource => {
-            default_value => "-M 8000000 -R 'select[type==LINUX64 && mem>8000] rusage[mem=8000]'",
+            default_value => "-M 12000000 -R 'select[type==LINUX64 && mem>12000] rusage[mem=12000]'",
         },
     ],
     # These are params from the superclass' standard API that we do not require for this class (dont show in the help)
