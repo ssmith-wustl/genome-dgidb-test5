@@ -484,7 +484,7 @@ sub lock_resource {
         if (!$target_exists) {
             # TONY: This means the lock symlink points to something that's been deleted
             # That's _really_ bad news and should probably get an email like below.
-            $self->error_message("Lock target $target does not exist.  Dying off rather than doing anything scary.");
+            $self->error_message("Lock ($resource_lock) exists but target ($target) does not exist.");
             Carp::croak($self->error_message);
         } 
         my $target_basename = File::Basename::basename($target);
