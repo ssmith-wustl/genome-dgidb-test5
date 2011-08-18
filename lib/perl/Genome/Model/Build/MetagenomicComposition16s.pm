@@ -1077,12 +1077,13 @@ sub files_ignored_by_diff {
     return (qw/ build.xml /);
 }
 
-sub special_suffixes {
-    return (qw/ gz rdp2-1 rdp2-2 /);
+sub regex_for_custom_diff {
+    return (
+        gz => '\.gz$',
+        rdp => '\.rdp1-[12]$',
+    );
 }
 
-sub diff_rdp2_1 { return diff_rdp(@_); }
-sub diff_rdp2_2 { return diff_rdp(@_); }
 sub diff_rdp {
     my ($self, $file1, $file2) = @_;
 
