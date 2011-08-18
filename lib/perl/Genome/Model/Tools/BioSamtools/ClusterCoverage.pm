@@ -181,48 +181,15 @@ sub execute {
                         }
                         shift(@clusters);
                     }
-                    for my $cluster (@previous_clusters) {
-                        my $start = $cluster->[0];
-                        my $end = $cluster->[1];
-                        my $pdl = $cluster->[2];
-                        my $name = $chr .':'. $start .'-'. $end;
-                        unless (defined($pdl)) {
-                            die('A cluster is defined with no coverage PDL object: '. Data::Dumper::Dumper($cluster));
-                        }
-                        my ($mean,$prms,$med,$min,$max,$adev,$rms) = $pdl->stats;
-                        if ($max >= $self->minimum_zenith) {
-                            print $bed_fh $chr ."\t". $start ."\t". $end ."\t". $name ."\n";
-                            if ($stats_fh) {
-                                #if (defined($pdl)) {
-                                print $stats_fh $name ."\t". $mean ."\t". $prms ."\t". $med ."\t". $min ."\t". $max ."\t". $adev ."\t". $rms ."\n";
-                                #} else {
-                                #    print $stats_fh $name ."\t0\t0\t0\t0\t0\t0\t0\n";
-                                #}
-                            }
-                        }
-                    }
+                    $self->print_clusters($chr,\@previous_clusters,$bed_fh,$stats_fh);
                 }
                 @previous_clusters = @clusters;
             }
             #print 'Finished: '. $chr ."\t". $start ."\t". scalar(@{$coverage}) ."\n";
         }
         #print 'Printing remaining clusters: '. scalar(@previous_clusters) ."\n";
-        for my $cluster (@previous_clusters) {
-            my $start = $cluster->[0];
-            my $end = $cluster->[1];
-            my $pdl = $cluster->[2];
-            my $name = $chr .':'. $start .'-'. $end;
-            print $bed_fh $chr ."\t". $start ."\t". $end ."\t". $name ."\n";
-            if ($stats_fh) {
-                if (defined($pdl)) {
-                    my ($mean,$prms,$med,$min,$max,$adev,$rms) = $pdl->stats;
-                    print $stats_fh $name ."\t". $self->_round($mean) ."\t". $self->_round($prms) ."\t". $med ."\t". $min ."\t". $max ."\t". $self->_round($adev) ."\t". $self->_round($rms) ."\n";
-                } else {
-                    print $stats_fh $name ."\t0\t0\t0\t0\t0\t0\t0\n";
-                }
-            }
-        }
-        print 'Finished: '. $chr ."\n";
+        $self->print_clusters($chr,\@previous_clusters,$bed_fh,$stats_fh);
+        #print 'Finished: '. $chr ."\n";
     }
     $bed_fh->close;
     $stats_fh->close;
@@ -310,6 +277,36 @@ sub _round {
     my $self = shift;
     my $value = shift;
     return sprintf( "%.2f", $value );
+}
+
+sub print_clusters {
+    my $self = shift;
+    my $chr = shift;
+    my $clusters = shift;
+    my $bed_fh = shift;
+    my $stats_fh = shift;
+
+    for my $cluster (@{$clusters}) {
+        my $start = $cluster->[0];
+        my $end = $cluster->[1];
+        my $pdl = $cluster->[2];
+        my $name = $chr .':'. $start .'-'. $end;
+        unless (defined($pdl)) {
+            die('A cluster is defined with no coverage PDL object: '. Data::Dumper::Dumper($cluster));
+        }
+        my ($mean,$prms,$med,$min,$max,$adev,$rms) = $pdl->stats;
+        if ($max >= $self->minimum_zenith) {
+            print $bed_fh $chr ."\t". $start ."\t". $end ."\t". $name ."\n";
+            if ($stats_fh) {
+                #if (defined($pdl)) {
+                print $stats_fh $name ."\t". $self->_round($mean) ."\t". $self->_round($prms) ."\t". $med ."\t". $min ."\t". $max ."\t". $self->_round($adev) ."\t". $self->_round($rms) ."\n";
+                #} else {
+                #    print $stats_fh $name ."\t0\t0\t0\t0\t0\t0\t0\n";
+                #}
+            }
+        }
+    }
+    return 1;
 }
 
 1;
