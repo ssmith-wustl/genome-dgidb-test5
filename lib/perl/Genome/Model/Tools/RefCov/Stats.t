@@ -1,19 +1,11 @@
 #!/usr/bin/env perl
 
-# TODO: May need to switch if we introduce a dependency on Bio::DB::Sam
-#/usr/bin/env perl5.12.1
-
 use strict;
 use warnings;
 
 use above 'Genome';
 use Test::More;
 use Devel::Size qw/total_size/;
-
-# TODO: May need to turn this on if we introduce a dependency on Bio::DB::Sam
-#if ($] < 5.012) {
-#  plan skip_all => "this test is only runnable on perl 5.12+"
-#}
 
 plan tests => 22;
 

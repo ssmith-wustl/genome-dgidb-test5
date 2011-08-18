@@ -38,6 +38,11 @@ class Genome::Model::Tools::SmrtAnalysis::Resequencing {
             doc => 'Minimum Read Quality',
             default_value => 0.75,
         },
+        use_ccs => {
+            is => 'Text',
+            doc => 'Map the ccsSequence to the genome first, then align subreads to the interval that the CCS read mapped to.  fullpass only aligns subreads that span the length of the template.  Specifying allpass maps all subreads.',
+            valid_values => ['fullpass','allpass','denovo'],
+        },
     ],
 };
 
@@ -52,6 +57,9 @@ sub execute {
         reference_directory => $self->reference_directory,
         control_reference_directory => $self->control_reference_directory,
     );
+    if ($self->use_ccs) {
+        $params{'use_ccs'} = $self->use_ccs;
+    }
     my $module_path = $self->get_class_object->module_path;
     my $xml_path = $module_path;
     $xml_path =~ s/\.pm/\.xml/;

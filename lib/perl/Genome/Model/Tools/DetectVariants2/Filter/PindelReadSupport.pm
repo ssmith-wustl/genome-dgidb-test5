@@ -48,6 +48,11 @@ class Genome::Model::Tools::DetectVariants2::Filter::PindelReadSupport{
             doc => 'variant type that this module operates on, overload this in submodules accordingly',
         },
     ],
+    has_param => [
+        lsf_resource => {
+            default => "-R 'span[hosts=1] rusage[mem=16000]' -M 1600000000",
+        },
+    ],
 
 };
 

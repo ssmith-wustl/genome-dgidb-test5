@@ -15,6 +15,11 @@ class Genome::Model::Tools::SmrtAnalysis::LoadPulses {
         input_fofn => {
             doc => 'The input fofn of pls.h5 of bas.h5 files.',
         },
+        skip => {
+            is => 'Text',
+            doc => 'This flag(any value other than zero is considered true) is used to skip this step.  Mainly a hack for CCS.',
+            is_optional => 1,
+        },
     ],
     has_optional_input => {
         metrics => {
@@ -49,6 +54,11 @@ EOS
 
 sub execute {
     my $self = shift;
+
+    if ($self->skip) {
+        $self->status_message('Skipping LoadPulses!');
+        return 1;
+    }
 
     my $cmd = $self->analysis_bin .'/loadPulses '. $self->input_fofn .' '. $self->cmp_hdf5_file;
     if (defined($self->metrics)) {

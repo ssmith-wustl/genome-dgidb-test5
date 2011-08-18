@@ -8,8 +8,8 @@ use File::Compare;
 
 use above 'Genome';
 
-if ($] < 5.012) {
-    plan skip_all => "this test is only runnable on perl 5.12+"
+if ($] < 5.010) {
+    plan skip_all => "this test is only runnable on perl 5.10+"
 }
 plan tests => 6;
 
@@ -23,7 +23,7 @@ my $data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-BioSamtools/Ref
 
 my $bam_file = $data_dir .'/test.bam';
 my $bed_file = $data_dir .'/test_regions_zero_based_start.bed';
-my $expected_stats_file = $data_dir .'/test_test_regions_STATS-2.tsv';
+my $expected_stats_file = $data_dir .'/test_test_regions_STATS-3.tsv';
 
 my $ref_cov = Genome::Model::Tools::BioSamtools::ParallelRefCov->create(
     output_directory => $tmp_dir,

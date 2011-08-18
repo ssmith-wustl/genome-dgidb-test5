@@ -1,4 +1,4 @@
-#!/usr/bin/env perl5.12.1
+#!/usr/bin/env perl
 
 use strict;
 use warnings;
@@ -8,8 +8,8 @@ use File::Compare;
 
 use above 'Genome';
 
-if ($] < 5.012) {
-    plan skip_all => "this test is only runnable on perl 5.12+"
+if ($] < 5.010) {
+    plan skip_all => "this test is only runnable on perl 5.10+"
 }
 plan tests => 11;
 
@@ -22,7 +22,7 @@ my $data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-BioSamtools/Ref
 
 my $bam_file = $data_dir .'/test.bam';
 my $regions_file = $data_dir .'/test_regions_zero_based_start.bed';
-my $expected_stats_file = $data_dir .'/test_test_regions_STATS-2.tsv';
+my $expected_stats_file = $data_dir .'/test_test_regions_STATS-3.tsv';
 
 my $ref_cov = Genome::Model::Tools::BioSamtools::RefCov->create(
     output_directory => $tmp_dir,
@@ -32,10 +32,10 @@ my $ref_cov = Genome::Model::Tools::BioSamtools::RefCov->create(
 isa_ok($ref_cov,'Genome::Model::Tools::BioSamtools::RefCov');
 ok($ref_cov->execute,'execute RefCov command '. $ref_cov->command_name);
 
-ok(!compare($expected_stats_file,$ref_cov->stats_file),'expected stats file '. $expected_stats_file .' is identical to '. $ref_cov->stats_file);
+ok(compare($expected_stats_file,$ref_cov->stats_file) == 0,'expected stats file '. $expected_stats_file .' is identical to '. $ref_cov->stats_file);
 unlink($ref_cov->stats_file);
 
-my $expected_q20_stats_file = $data_dir .'/test_test_regions_STATS-q20.tsv';
+my $expected_q20_stats_file = $data_dir .'/test_test_regions_STATS-q20-2.tsv';
 my $q20_ref_cov = Genome::Model::Tools::BioSamtools::RefCov->create(
     output_directory => $tmp_dir,
     bam_file => $bam_file,
@@ -44,10 +44,10 @@ my $q20_ref_cov = Genome::Model::Tools::BioSamtools::RefCov->create(
 );
 isa_ok($q20_ref_cov,'Genome::Model::Tools::BioSamtools::RefCov');
 ok($q20_ref_cov->execute,'execute RefCov command '. $q20_ref_cov->command_name);
-ok(!compare($expected_q20_stats_file,$q20_ref_cov->stats_file),'expected stats file '. $expected_q20_stats_file .' is identical to '. $q20_ref_cov->stats_file);
+ok(compare($expected_q20_stats_file,$q20_ref_cov->stats_file) == 0,'expected stats file '. $expected_q20_stats_file .' is identical to '. $q20_ref_cov->stats_file);
 unlink($q20_ref_cov->stats_file);
 
-my $expected_q20_q1_stats_file = $data_dir .'/test_test_regions_STATS-q20-q1.tsv';
+my $expected_q20_q1_stats_file = $data_dir .'/test_test_regions_STATS-q20-q1-2.tsv';
 my $q20_q1_ref_cov = Genome::Model::Tools::BioSamtools::RefCov->create(
     output_directory => $tmp_dir,
     bam_file => $bam_file,
@@ -57,7 +57,7 @@ my $q20_q1_ref_cov = Genome::Model::Tools::BioSamtools::RefCov->create(
 );
 isa_ok($q20_q1_ref_cov,'Genome::Model::Tools::BioSamtools::RefCov');
 ok($q20_q1_ref_cov->execute,'execute RefCov command '. $q20_q1_ref_cov->command_name);
-ok(!compare($expected_q20_q1_stats_file,$q20_q1_ref_cov->stats_file),'expected stats file '. $expected_q20_q1_stats_file .' is identical to '. $q20_q1_ref_cov->stats_file);
+ok(compare($expected_q20_q1_stats_file,$q20_q1_ref_cov->stats_file) == 0,'expected stats file '. $expected_q20_q1_stats_file .' is identical to '. $q20_q1_ref_cov->stats_file);
 
 
 exit;

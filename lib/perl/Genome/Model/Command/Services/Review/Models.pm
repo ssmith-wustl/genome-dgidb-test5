@@ -235,14 +235,17 @@ sub status_compare { # http://stackoverflow.com/q/540229
 
 sub find_first_nondone_step {
     my $parent_workflow_instance = shift;
-    my @child_workflow_instances = $parent_workflow_instance->ordered_child_instances;
+    my @child_workflow_instances = $parent_workflow_instance->related_instances;
 
     my $failed_step;
     for my $child_workflow_instance (@child_workflow_instances) {
         $failed_step = find_first_nondone_step($child_workflow_instance);
         last if $failed_step;
     }
-    if ($parent_workflow_instance->status ne 'done' and not $failed_step) {
+    # detect-variants is skipped because of the way the DV2 dispatcher works, not sure if this will work in general though
+    my $name = $parent_workflow_instance->name;
+    my $is_detect_variants = ($name =~ /^detect-variants/ || $name =~/^Detect\ Variants/);
+    if ($parent_workflow_instance->status ne 'done' and not $failed_step and !$is_detect_variants) {
         $failed_step = $parent_workflow_instance->name;
     }
 

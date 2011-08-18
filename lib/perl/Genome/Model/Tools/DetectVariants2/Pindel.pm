@@ -79,9 +79,11 @@ sub _detect_variants {
         $self->error_message(@errors);
         die "Errors validating workflow\n";
     }
+    my $refbuild = Genome::Model::Build::ReferenceSequence->get($self->reference_build_id);
+    my $chrom_list = $refbuild->chromosome_array_ref;
 
     # Collect and set input parameters
-    $input{chromosome_list}=$self->chromosome_list;
+    $input{chromosome_list}=$chrom_list;
     $input{reference_build_id}=$refbuild_id;
     $input{tumor_bam}=$self->aligned_reads_input;
     $input{normal_bam}=$self->control_aligned_reads_input if defined $self->control_aligned_reads_input;
@@ -127,9 +129,11 @@ sub _create_temp_directories {
 
 sub _generate_standard_files {
     my $self = shift;
+    my $refbuild = Genome::Model::Build::ReferenceSequence->get($self->reference_build_id);
+    my $chrom_list = $refbuild->chromosome_array_ref;
     my $staging_dir = $self->_temp_staging_directory;
     my $output_dir  = $self->output_directory;
-    my @chrom_list = @{$self->chromosome_list};
+    my @chrom_list = @{$chrom_list};
     my $test_chrom = $chrom_list[0];
     my $raw_output_file = $output_dir."/indels.hq";
     my @raw_inputs = map { $output_dir."/".$_."/indels.hq" } @chrom_list;
@@ -138,19 +142,6 @@ sub _generate_standard_files {
         die $self->error_message("Cat command failed to execute.");
     }
     $self->SUPER::_generate_standard_files(@_);
-=cut 
-    my @beds = glob($output_dir."/indels.hq.v?.bed");
-    my @good_beds;
-    map{ push @good_beds, $_ if -l $_} @beds;
-
-    for my $bed (@good_beds){
-        my $sort_cmd = Genome::Model::Tools::Joinx::Sort->create(input_files => $bed, output_file => $bed.".sorted");
-        unless($sort_cmd->execute){
-            die $self->error_message("Could not complete sort operation on :".$bed);
-        }
-        File::Copy::move($bed.".sorted",$bed);
-    }
-=cut
     return 1;
 }
 
