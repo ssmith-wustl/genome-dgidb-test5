@@ -165,24 +165,6 @@ sub _ui_start {
                 item_type => '<StockItem>',
                 extra_data => 'gtk-info',
             },
-            'Wiki Module Documentation' => {
-                callback => sub {
-                    $self->gtk2_dialogs->info_dialog("Launching firefox, please wait");
-                    my $pid = fork();
-                    if ($pid) { 
-                        # parent falls thru
-                    }
-                    elsif (defined($pid)) {
-                        exec("firefox http://gscweb.gsc.wustl.edu/wiki/SoftwareDevelopment:Perl_Modules/Finishing::Assembly::Consed::Navigator::External")
-                            or $self->error_msg("Could not launch firefox: $!");
-                    }
-                    else {
-                        $self->gtk2_error_dialog("Could not fork firefox process, bummer");
-                    }
-                },
-                item_type => '<StockItem>',
-                extra_data => 'gtk-info',
-            },
             ],
         },
         ],

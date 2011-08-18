@@ -10,11 +10,11 @@ class Genome::Model::Tools::Capture::ManualReview {
   is => 'Command',
   has_input => [
     som_var_model_group_id => { is => 'Text', doc => "ID of model-group containing SomaticVariation models with variants to manually review" },
-    output_dir => { is => 'Text', doc => "Analysis where files for manual review will be organized" },
-    exclude_pindel => { is => 'Boolean', doc => "Keep aside calls unique to Pindel, since many cannot be reviewed on a BWA aligned BAM", is_optional => 1, default => 1 },
-    exclude_uhc_snvs => { is => 'Boolean', doc => "Keep aside SNV calls that pass the ultra-high-confidence SNV filter", is_optional => 1, default => 1 },
-    min_hypermut_cnt => { is => 'Number', doc => "If number of SNVs+Indels exceeds this, write output to a subdirectory named hypermutated", is_optional => 1, default => 500 },
-    refseq_version => { is => 'Text', doc => "Reference Sequence (GRCh37-lite-build37 or NCBI-human-build36)", is_optional => 1, default => "GRCh37-lite-build37" },
+    output_dir => { is => 'Text', doc => "Directory where manual review files will be written to" },
+    exclude_pindel => { is => 'Boolean', doc => "Keep aside indels unique to Pindel, since many cannot be reviewed on a BWA aligned BAM", is_optional => 1, default => 1 },
+    exclude_uhf_snvs => { is => 'Boolean', doc => "Keep aside SNV calls that pass the ultra-high-confidence filter", is_optional => 1, default => 1 },
+    min_hypermut_cnt => { is => 'Number', doc => "Minimum SNV+Indel count (before pindel/uhf exclusions) to treat a case as hypermutated", is_optional => 1, default => 500 },
+    refseq_version => { is => 'Text', doc => "Reference sequence to use with the UHF (GRCh37-lite-build37 or NCBI-human-build36)", is_optional => 1, default => "GRCh37-lite-build37" },
   ],
   doc => "Prepares variants for manual review in IGV, given a model-group of SomaticVariation models",
 };
@@ -22,10 +22,16 @@ class Genome::Model::Tools::Capture::ManualReview {
 sub help_detail {
   return <<HELP;
 Given a model-group containing SomaticVariation models, this tool will gather the resulting tier1
-variants and prepare them for manual review. Existing review files will not be overwritten.
+variants and prepare them for manual review. Existing review files will not be overwritten. Review
+files for hypermutated cases will be written output to a subdirectory named hypermutated'.
 
-NOTE: If exclude-pindel is used, then calls unique to Pindel are stored in a separate review file.
-Pindel calls that are also found by GATK are stored in the main review file.
+--exclude-pindel
+  If set, calls unique to Pindel are stored in a separate review file. Pindel calls that are also
+  found by GATK are stored in the Indel review file (along with calls unique to GATK).
+
+--exclude-uhc-snvs
+  If set, the Ultra High-confidence Filter (UHF) is invoked. Calls that pass the filter are stored
+  separately in annotation format, and the remaining SNVs are written to the SNV review file.
 HELP
 }
 

@@ -425,10 +425,11 @@ sub _filter_variants {
             map{$self->_temp_staging_directory .'/'.$self->_variant_type.'.merge.'.$_}qw(index file file.annot out fasta);
 
         my $idx_fh = IO::File->new(">$merge_index") or die "Failed to open $merge_index for writing\n";
+        my %valid_bams = $self->_check_bam; #normal bam, tumor bam
 
         for my $chr (@use_chr_list) {
             my $chr_dir = $sr_dirs->{$chr};
-            for my $type qw(normal tumor) {
+            for my $type (sort keys %valid_bams) {
                 my $name   = $type.$chr;
                 my $sv_fa  = $chr_dir .'/'. basename($self->breakpoint_seq_file) .".$type.fa";
                 my $sv_out = $chr_dir .'/'. $self->sv_output_name .'.'. $type;
@@ -640,37 +641,42 @@ sub _breakdancer_input {
 
 sub _check_bam {
     my $self = shift;
-    my $bam_files = join(',', $self->aligned_reads_input, $self->control_aligned_reads_input);
-    my (@bam_files, %valid_bams);
+    my %valid_bams;
 
-    if ($bam_files =~ /\,/) {
-        @bam_files = split /\,/, $bam_files; #TODO validation check each file
-    }
-    else {
-        @bam_files = ($bam_files);
+    my ($tumor_bam, $normal_bam) = ($self->aligned_reads_input, $self->control_aligned_reads_input);
+
+    if ($tumor_bam) {
+        if ($self->_validate_bam('tumor', $tumor_bam)) {
+            $valid_bams{tumor} = $tumor_bam;
+        }
     }
 
-    for my $bam (@bam_files) {
-        unless (-s $bam) {
-            $self->error_message("Bam file: $bam is not valid");
-            die $self->error_message;
-        }
-        unless (-s $bam.'.bai') {
-            $self->error_message("bam index file: $bam.bai is not valid");
-            die $self->error_message;
-        }
-        if ($bam eq $self->aligned_reads_input) {
-            $valid_bams{tumor}  = $bam;
-        }
-        elsif ($bam eq $self->control_aligned_reads_input) {
-            $valid_bams{normal} = $bam;
-        }
-        else {
-            die $self->error_message("Can not figure out the type of $bam");
+    if ($normal_bam) {
+        if ($self->_validate_bam('normal', $normal_bam)) {
+            $valid_bams{normal} = $normal_bam;
         }
     }
+
+    unless (%valid_bams and $valid_bams{tumor}) {
+        die $self->error_message('There is no valid bam files for tigra validation');
+    }
+
     return %valid_bams;
 }
+
+
+sub _validate_bam {
+    my ($self, $type, $bam) = @_;
+
+    unless (-s $bam) {
+        die $self->error_message("$type bam file: $bam is not valid");
+    }
+    unless (-s $bam.'.bai') {
+        die $self->error_message("$type bam index file: $bam.bai is not valid");
+    }
+    return 1;
+}
+
 
 sub parse_params {
     my $self = shift;
@@ -757,26 +763,32 @@ sub _get_skip_libs {
     $self->status_message("Find breakdancer config: $bd_cfg to get skip libraries");
 
     my $normal_bam = $self->control_aligned_reads_input;
-    my %libs = ();
-
-    my $fh = Genome::Sys->open_file_for_reading($bd_cfg) or die "Failed to open $bd_cfg\n";
-    while (my $line = $fh->getline) {
-        if ($line =~ /$normal_bam/) {
-            my @columns = split /\s+/, $line;
-            my ($lib) = $columns[4] =~ /lib\:(\S+)/;
-            if ($lib =~ /[\(\)]/) {  #sometimes the library name is like H_KU-15901-D108132(2)-lib2
-                $self->warning_message("$lib contains parentesis");
-                $lib =~ s{\(}{\\(}g;
-                $lib =~ s{\)}{\\)}g;
+    
+    if ($normal_bam) {
+        my %libs = ();
+        my $fh = Genome::Sys->open_file_for_reading($bd_cfg) or die "Failed to open $bd_cfg\n";
+        while (my $line = $fh->getline) {
+            if ($line =~ /$normal_bam/) {
+                my @columns = split /\s+/, $line;
+                my ($lib) = $columns[4] =~ /lib\:(\S+)/;
+                if ($lib =~ /[\(\)]/) {  #sometimes the library name is like H_KU-15901-D108132(2)-lib2
+                    $self->warning_message("$lib contains parentesis");
+                    $lib =~ s{\(}{\\(}g;
+                    $lib =~ s{\)}{\\)}g;
+                }
+                $libs{$lib} = 1;
             }
-            $libs{$lib} = 1;
         }
-    }
-    $fh->close;
+        $fh->close;
 
-    my $libs = join ",", keys %libs;
-    $self->status_message("Skip libraries : $libs for tigra validation");
-    return $libs;
+        my $libs = join ",", keys %libs;
+        $self->status_message("Skip libraries : $libs for tigra validation");
+        return $libs;
+    }
+    else {
+        $self->warning_message('No normal bam given. Run tigra-sv without skip_libraries');
+        return;
+    }
 }
 
 

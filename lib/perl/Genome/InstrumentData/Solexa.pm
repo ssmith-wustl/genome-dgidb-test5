@@ -834,7 +834,6 @@ sub dump_illumina_fastq_archive {
             $already_dumped = 1;
         }
     }
-
     unless($already_dumped) {
         my $cmd = "tar -xzf $archive --directory=$dir";
         unless (Genome::Sys->shellcmd(
@@ -963,6 +962,7 @@ sub create_mock {
         _calculate_total_read_count
         resolve_adaptor_file
         run_identifier
+        dump_fastqs_from_bam
     /) {
         my $ref = $class->can($method);
         die "Unknown method $method on " . $class . ".  Cannot make a pass-through for mock object!" unless $ref;

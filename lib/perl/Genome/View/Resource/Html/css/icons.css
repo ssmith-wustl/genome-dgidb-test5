@@ -312,3 +312,21 @@
     background-repeat: no-repeat;
     background-position: left center;
 }
+
+.genome_sys_user_48 {
+    background-image: url("../img/icons/genome_sys_user_48.png");
+    background-repeat: no-repeat;
+    background-position: left center;
+}
+
+.genome_sys_user_32 {
+    background-image: url("../img/icons/genome_sys_user_32.png");
+    background-repeat: no-repeat;
+    background-position: left center;
+}
+
+.genome_sys_user_16 {
+    background-image: url("../img/icons/genome_sys_user_16.png");
+    background-repeat: no-repeat;
+    background-position: left center;
+}

@@ -47,7 +47,7 @@ sub next_with_attributes {
     my @attributes = split(';',$attributes);
     my %attributes;
     for my $attribute (@attributes) {
-        unless ($attribute =~ /^\s*(\S+)\s*=?\"?(\S[^\"]+)\"?$/) {
+        unless ($attribute =~ /^\s*(\S+)[\s=]*\s*\"?([^\s\"]+)\"?$/) {
             die(Data::Dumper::Dumper($data));
         }
         $data->{$1} = $2;
@@ -65,7 +65,7 @@ sub next_with_attributes_hash_ref {
     my @attributes = split(';',$attributes);
     my %attributes;
     for my $attribute (@attributes) {
-        unless ($attribute =~ /^\s*(\S+)\s*=?\"?(\S[^\"]+)\"?$/) {
+        unless ($attribute =~ /^\s*(\S+)[\s=]*\s*\"?([^\s\"]+)\"?$/) {
             die('Unknown attributes format: '. $attribute ."\n". Data::Dumper::Dumper($data));
         }
         $attributes{$1} = $2;

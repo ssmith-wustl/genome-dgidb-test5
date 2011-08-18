@@ -51,6 +51,29 @@ sub swpath {
     return;
 }
 
+sub open_browser {
+    my ($class, @urls) = @_;
+    for my $url (@urls) {
+        if ($url !~ /:\/\//) {
+            $url = 'http://' . $url; 
+        }
+    }
+    my $browser;
+    if ($^O eq 'darwin') {
+        $browser = "open";
+    }
+    elsif ($browser = `which firefox`) {
+        
+    }
+    elsif ($browser = `which opera`) {
+
+    }
+    for my $url (@urls) {
+        Genome::Sys->shellcmd(cmd => "$browser $url");
+    }
+    return 1;
+}
+
 sub _find_in_path {
     my ($class, $base_dirs, $subdir) = @_;
     my @base_dirs = split(':',$base_dirs);
@@ -250,6 +273,31 @@ sub create_symlink_and_log_change {
     }
 
     return 1;
+}
+
+sub read_file {
+    my ($self, $fname) = @_;
+    my $fh = $self->open_file_for_reading($fname);
+    Carp::croak "Failed to open file $fname! " . $self->error_message() . ": $!" unless $fh;
+    if (wantarray) {
+        my @lines = $fh->getlines;
+        return @lines;
+    }
+    else { 
+        my $text = do { local( $/ ) ; <$fh> } ;  # slurp mode
+        return $text;
+    }
+}
+
+sub write_file {
+    my ($self, $fname, @content) = @_;
+    my $fh = $self->open_file_for_writing($fname);
+    Carp::croak "Failed to open file $fname! " . $self->error_message() . ": $!" unless $fh;
+    for (@content) {
+        $fh->print($_) or Carp::croak "Failed to write to file $fname! $!";
+    }
+    $fh->close or Carp::croak "Failed to close file $fname! $!";
+    return $fname;
 }
 
 sub _open_file {
