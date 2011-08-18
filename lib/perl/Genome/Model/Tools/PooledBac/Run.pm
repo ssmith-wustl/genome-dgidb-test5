@@ -5,7 +5,6 @@ use warnings;
 
 use DateTime;
 use Genome;
-use Genome::Model::Tools::Pcap::Assemble;
 use Bio::SeqIO;
 use PP::LSF;
 use Data::Dumper;

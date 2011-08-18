@@ -76,6 +76,27 @@ sub formats {
 sub execute {
     my $self = shift;
 
+    $self->_validate_params
+        or return;
+    
+    my $ace = Genome::Model::Tools::Consed::AceReader->create(file => $self->acefile)
+        or return;
+
+    my $filter_method = $self->{_filter_method};
+    my $print_method = $self->{_print_method};
+    while ( my $contig = $ace->next_contig ) {
+        $self->$print_method($contig) if $self->$filter_method($contig);
+    }
+
+    $self->{_fh}->close;
+
+    return 1;
+}
+
+
+sub Xexecute {
+    my $self = shift;
+
     # Validate params
     $self->_validate_params
         or return;

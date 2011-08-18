@@ -5,46 +5,42 @@ use warnings;
   
 use Genome;
 
-use Carp;
-use Data::Dumper;
-use Finishing::Assembly::Phd::Directory;
-use IO::Dir;
-
 class Genome::Model::Tools::PhredPhrap::ScfToPhd {
     is => 'Command',
     has => [
-    scf_file => {
-        is => 'String', #file_r
-        doc => 'File of SCF',
-        is_optional => 0,
-    }, 
-    chromat_dir => { 
-        is => 'String', #dir_r
-        doc => 'Directory where the SCFs are located',
-        is_optional => 0,
-    },
-    phd_file => { 
-        is => 'String', #file_w
-        doc => 'File to write the most recent phd for each SCF',
-        is_optional => 0,
-    },
-    phd_dir => {
-        is => 'String', #dir_rw,
-        is_optional => 0,
-        doc => 'Directory to put PHDs.',
-    },
-    rmphd => {
-        is => 'Boolean',
-        is_optional => 1,
-        default => 0,
-        doc => 'Remove all phds in phd_dir, then run phred on each SCF.',
-    },
-    recall => {
-        is => 'Boolean',
-        is_optional => 1,
-        default => 0,
-        doc => 'Run phred on the SCF, naming it to a new version.',
-    },
+        scf_file => {
+            is => 'String', #file_r
+            doc => 'File of SCF',
+            is_optional => 0,
+        }, 
+        chromat_dir => { 
+            is => 'String', #dir_r
+            doc => 'Directory where the SCFs are located',
+            is_optional => 0,
+        },
+        phd_file => { 
+            is => 'String', #file_w
+            doc => 'File to write the most recent phd for each SCF',
+            is_optional => 0,
+        },
+        phd_dir => {
+            is => 'String', #dir_rw,
+            is_optional => 0,
+            doc => 'Directory to put PHDs.',
+        },
+        rmphd => {
+            is => 'Boolean',
+            is_optional => 1,
+            default => 0,
+            doc => 'Remove all phds in phd_dir, then run phred on each SCF.',
+        },
+        recall => {
+            is => 'Boolean',
+            is_optional => 1,
+            default => 0,
+            doc => 'Run phred on the SCF, naming it to a new version.',
+        },
+        _phd_dir => { is_optional => 1, },
     ],
 };
 
@@ -52,19 +48,10 @@ sub help_brief {
     return 'Runs phred on SCFs to create PHDs.';
 }
 
-sub _phd_schema {
-    my ($self, $schema) = @_;
-
-    $self->{_phd_schema} = $schema if defined $schema;
-
-    return $self->{_phd_schema};
-}
-
 sub execute {
     my $self = shift;
 
-    $DB::single = 1;
-    $self->_phd_schema( Finishing::Assembly::Phd::Directory->connect($self->phd_dir) );
+    $self->_phd_dir( Genome::Model::Tools::Consed::PhdDirectory->create(directory => $self->phd_dir) );
 
     $self->_remove_phds if $self->rmphd;
     
@@ -81,7 +68,7 @@ sub execute {
             $phd_name = $self->_run_phred($scf_name);
         }
         else {
-            $phd_name = $self->_phd_schema->latest_phd_name($scf_name);
+            $phd_name = $self->_phd_dir->latest_phd_name($scf_name);
             $phd_name = $self->_run_phred($scf_name) unless $phd_name; 
         }
 
@@ -94,8 +81,6 @@ sub execute {
 
     $scf_fh->close;
     $phd_fh->close;
-
-    $self->_phd_schema->disconnect;
 
     ($self->error_message("No phds found") and return) unless -s $self->phd_file;
 
@@ -117,12 +102,6 @@ sub _remove_phds
 }
 
 
-sub _recall_phds
-{
-    #stub
-    return 1;
-}
-
 sub _run_phred {
     my ($self, $scf_name) = @_;
 
@@ -130,8 +109,8 @@ sub _run_phred {
     $self->error_message("Can't find scf ($scf_file\[.gz\])")
         and return unless -s $scf_file or -s "$scf_file.gz";
     
-    my $phd_name = $self->_phd_schema->next_phd_name($scf_name);
-    my $phd_file = $self->_phd_schema->phd_file($phd_name);
+    my $phd_name = $self->_phd_dir->next_phd_name($scf_name);
+    my $phd_file = $self->_phd_dir->phd_file($phd_name);
     my $command = "phred $scf_file -zt /tmp -nocall -p $phd_file";
     system "$command";
 
@@ -149,8 +128,9 @@ sub _run_phred {
 sub _check_and_add_read_type { # This will only work for GSC traces
     my ($self, $scf_name) = @_;
 
-    my $phd = $self->_phd_schema->latest_phd($scf_name);
-    return 1 if @{$phd->wr};
+    my $phd = $self->_phd_dir->latest_phd($scf_name);
+    return if not $phd;
+    return 1 if $phd->{wr} and @{$phd->{wr}};
 
     my $read_name = $scf_name;
     $read_name =~ s/\.gz//;
@@ -191,7 +171,7 @@ type: $primer_type
 
 WR_TAG
 
-    my $phd_file = $self->_phd_schema->latest_phd_file($scf_name);
+    my $phd_file = $self->_phd_dir->latest_phd_file($scf_name);
     my $fh = eval{ Genome::Sys->open_file_for_appending($phd_file); };
     if ( not defined $fh ) {
         Carp::confess(
