@@ -663,7 +663,10 @@ sub local_cache_basedir {
 
 sub local_cache_dir {
     my $self = shift;
-    return $self->local_cache_basedir."/".$self->data_directory;
+    # data_directory is usually (always?) an absolute path so remove leading / if it exists before cating with /
+    my $data_directory = $self->data_directory;
+    $data_directory =~ s/^\///;
+    return $self->local_cache_basedir . "/" . $data_directory;
 }
 
 sub local_cache_lock {

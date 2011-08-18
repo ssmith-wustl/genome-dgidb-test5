@@ -33,7 +33,8 @@
   <link fromOperation="input connector" fromProperty="reference_directory" toOperation="Mapping" toProperty="reference_directory" />
   <link fromOperation="input connector" fromProperty="min_length" toOperation="Mapping" toProperty="min_length" />
   <link fromOperation="input connector" fromProperty="read_score" toOperation="Mapping" toProperty="min_accuracy" />
-
+  <link fromOperation="input connector" fromProperty="use_ccs" toOperation="Mapping" toProperty="use_ccs" />
+  
   <link fromOperation="Mapping" fromProperty="cmp_hdf5_file" toOperation="MappingReports" toProperty="cmp_hdf5_file" />
   <link fromOperation="Mapping" fromProperty="alignment_summary_gff" toOperation="MappingReports" toProperty="alignment_summary_gff" />
   
@@ -114,6 +115,7 @@
     <inputproperty>job_directory</inputproperty>
     <inputproperty>control_reference_directory</inputproperty>
     <inputproperty>reference_directory</inputproperty>
+    <inputproperty isOptional="Y">use_ccs</inputproperty>
     
     <outputproperty>filtered_summary_file</outputproperty>
     <outputproperty>filtered_fofn_file</outputproperty>

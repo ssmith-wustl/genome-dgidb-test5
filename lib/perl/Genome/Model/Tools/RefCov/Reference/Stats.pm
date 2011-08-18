@@ -37,8 +37,8 @@ class Genome::Model::Tools::RefCov::Reference::Stats {
 sub create {
     my $class = shift;
     my %params = @_;
-    unless ($] > 5.012) {
-        die "Bio::DB::Sam requires perl 5.12!";
+    unless ($] > 5.010) {
+        die "Bio::DB::Sam requires perl 5.10 or greater!";
     }
     require Bio::DB::Sam;
     # There seems to be a problem creating the UR object with these wrapped C classes

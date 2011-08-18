@@ -18,6 +18,7 @@ class Genome::Model::Tools::DetectVariants2::Base {
             is_input => 1,
         },
         reference_sequence_input => {
+            is_constant => 1,
             calculate_from => ['reference_build_id'],
             calculate => q| 
                 my $build = Genome::Model::Build->get($reference_build_id);
