@@ -148,14 +148,12 @@ sub _parse_indel_for_bed_intersection {
         next unless defined $indel;
         next if $indel eq '*'; #Indicates only one indel call...and this isn't it!
 
-        $start = $position - 1; #Convert to 0-based coordinate
-
+        $start = $position;
         if(substr($indel,0,1) eq '+') {
             $reference = '*';
             $variant = substr($indel,1);
             $stop = $start; #Two positions are included-- but an insertion has no "length" so stop and start are the same
         } elsif(substr($indel,0,1) eq '-') {
-            $start += 1; #varscan reports the position before the first deleted base
             $reference = substr($indel,1);
             $variant = '*';
             $stop = $start + length($reference);
