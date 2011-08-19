@@ -14,8 +14,9 @@ use Test::More;
 use_ok('Genome::Model::GenePrediction::Command::Eukaryotic::List') or die;
 
 my $test_pp = Genome::ProcessingProfile::GenePrediction::Eukaryotic->create(
-    name => 'test pp',
+    name => 'test eukaryotic list',
     domain => 'eukaryotic',
+    rnammer_version => 12.23.34, # set this to nonsense to make the pp params unique
 );
 ok($test_pp, 'created test processing profile successfully') or die;
 
