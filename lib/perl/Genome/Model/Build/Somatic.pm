@@ -323,4 +323,26 @@ sub dirs_ignored_by_diff {
     );
 }
 
+sub regex_for_custom_diff {
+    return (
+        gz => '\.gz$',
+        ucsc_annotated => 'ucsc_annotated_(snp|indel)\.csv$'
+    );
+}
+
+sub diff_ucsc_annotated {
+    my ($self, $file1, $file2) = @_;
+    # We ignore this column because it contains the name of the variant and it changes frequently.
+    my $ignore_column = '51';
+    my $cmd = "bash -c 'diff -u <(cat $file1 | cut --complement -f $ignore_column) <(cat $file2 | cut --complement -f $ignore_column)'";
+    my $diff = qx($cmd);
+    if ($diff) {
+        $self->status_message("Files differ even after ignoring column $ignore_column.");
+        return;
+    }
+    else {
+        return 1;
+    }
+}
+
 1;

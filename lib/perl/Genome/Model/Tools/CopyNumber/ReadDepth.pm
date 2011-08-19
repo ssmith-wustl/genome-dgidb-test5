@@ -96,7 +96,13 @@ class Genome::Model::Tools::CopyNumber::ReadDepth {
             doc =>'path to the annotation directory',
         },
 
-        
+        cnvseg_output => {
+            is => 'Boolean',
+            is_optional => 1,
+            default => 0,
+            doc =>'tweak the output to be compatible with cnvSeg (cnvHMM)',
+        },
+
         
         ]
 };
@@ -123,6 +129,7 @@ sub execute {
     my $output_directory = $self->output_directory;
     my $annotation_directory = $self->annotation_directory;
     my $bed_directory = $self->bed_directory;
+    my $cnvseg_output = $self->cnvseg_output;
 #    `mkdir $sample_name`;
 #    `ln -s /gscuser/cmiller/cna/annotations/annotations.$read_length $sample_name/annotations`;
 
@@ -179,7 +186,11 @@ sub execute {
     print RFILE "rdo = readDepth(rdo)\n";
     print RFILE "rdo = rd.mapCorrect(rdo, minMapability=0.60)\n";
     if ($output_map_corrected_bins){
-        print RFILE 'writeBins(rdo,filename="bins.map")' . "\n";
+        if($cnvseg_output){
+            print RFILE 'writeBins(rdo,filename="bins.map", cnvHmmFormat=TRUE)' . "\n";
+        } else {
+            print RFILE 'writeBins(rdo,filename="bins.map")' . "\n";
+        }
     }    
     print RFILE "rdo = rd.gcCorrect(rdo)\n";    
 
@@ -191,11 +202,24 @@ sub execute {
         print RFILE "writeThresholds(rdo)\n";
     }
 
-    print RFILE "writeBins(rdo)\n";
-    print RFILE 'write(estimateOd(rdo),paste(rdo@params$annotationDirectory,"/overdispersion",sep=""))' . "\n";
+    if($cnvseg_output){
+        print RFILE "writeBins(rdo,cnvHmmFormat=TRUE)\n";
+    } else {
+        print RFILE "writeBins(rdo)\n";
+    }
+#    print RFILE 'write(estimateOd(rdo),paste(rdo@params$annotationDirectory,"/overdispersion",sep=""))' . "\n";
 
     close(RFILE);
- 
-    `Rscript run.R`
+
+#    my $cmd = "R --vanilla --slave \< run.R";
+    my $cmd = "Rscript run.R";
+    my $return = Genome::Sys->shellcmd(
+	cmd => "$cmd",
+        );
+    unless($return) {
+	$self->error_message("Failed to execute: Returned $return");
+	die $self->error_message;
+    }
+    return $return; 
 }
 1;
