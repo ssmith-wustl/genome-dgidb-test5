@@ -83,6 +83,5 @@ for my $input_seq_name (sort keys %input_seqs) {
     ok($output_count == 1, "$input_seq_name only appears once in output ($output_count)");
 }
 
-system("cp $masked_fasta ~");
 done_testing();
 
