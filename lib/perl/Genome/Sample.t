@@ -27,6 +27,7 @@ $sample = Genome::Sample->create(
     extraction_type  => 'test sample',
     extraction_desc  => 'This is a test',
     tissue_desc      => 'normal',
+    is_control       => 0,
     taxon_id         => $taxon->taxon_id,
     age => 99,
     body_mass_index => 22.4,
