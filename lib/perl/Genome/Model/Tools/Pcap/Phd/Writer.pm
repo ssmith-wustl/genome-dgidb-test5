@@ -29,12 +29,12 @@ PhdWriter - Phd file writer
 
 =head1 SYNOPSIS
 
-    my $writer = new GSC::IO::Phd::Writer();
+    my $writer = new Genome::Model::Tools::Pcap::Phd::Writer();
     $writer->write(\*STDOUT,$phd);
 
 =head1 DESCRIPTION
 
-GSC::IO::Phd::Writer takes a handle to a phd object and writes it to the given file handle
+Genome::Model::Tools::Pcap::Phd::Writer takes a handle to a phd object and writes it to the given file handle
 
 =head1 METHODS
 
@@ -53,7 +53,7 @@ my $pkg = 'Genome::Model::Tools::Pcap::Phd::Writer';
 
 =item new 
 
-    my $writer = new GSC::IO::Phd::Writer;
+    my $writer = new Genome::Model::Tools::Pcap::Phd::Writer;
 
 =cut
 sub new {
@@ -69,7 +69,7 @@ sub new {
 
 =pod
 
-=item GSC::IO::Phd::Reader::write 
+=item Genome::Model::Tools::Pcap::Phd::Reader::write 
 
     $writer->read(\*STDOUT,$phd);
 
