@@ -24,16 +24,6 @@ use File::Find;
 
 require MIME::Lite;
 
-sub user_id {
-    return $<;
-}
-
-sub username {
-    my $class = shift;
-    my $username = getpwuid($class->user_id);
-    return $username;
-}
-
 sub sudo_username {
     my $class = shift;
     my $who_output = $class->cmd_output_who_dash_m || '';

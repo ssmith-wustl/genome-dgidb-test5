@@ -498,6 +498,17 @@ sub shellcmd {
     return 1;    
 
 }
+
+sub user_id {
+    return $<;
+}
+
+sub username {
+    my $class = shift;
+    my $username = getpwuid($class->user_id);
+    return $username;
+}
+
 1;
 
 __END__
