@@ -615,7 +615,7 @@ sub chromosome_array_ref {
     my $seq_dict = $self->get_sequence_dictionary($format,$species,$picard_version);
     my $tmp_file = Genome::Sys->create_temp_file_path;
     # This is only required to run perl5.10.1 or greater required by Bio-SamTools
-    my $cmd = 'gmt5.12.1 bio-samtools list-chromosomes --input-file='. $seq_dict .' --output-file='. $tmp_file;
+    my $cmd = '/usr/bin/perl `which gmt` bio-samtools list-chromosomes --input-file='. $seq_dict .' --output-file='. $tmp_file;
     Genome::Sys->shellcmd(
         cmd => $cmd,
         input_files => [$seq_dict],
