@@ -84,7 +84,7 @@ sub execute {
         my $squashed_stats_file = $coverage_directory .'/'. $annotation_basename .'_squashed_by_gene_STATS.tsv';
         my $genes_stats_file = $coverage_directory .'/'. $annotation_basename .'_gene_STATS.tsv';
 
-        my $gene_cmd = '/usr/bin/perl `which gmt` ref-cov standard --alignment-file-path='. $bam_file .' --roi-file-path='. $squashed_bed_file .' --reference-fasta='. $reference_path .' --stats-file='. $squashed_stats_file .' --alignment-count --merge-by=gene --merged-stats-file='. $genes_stats_file;
+        my $gene_cmd = '/usr/bin/perl `which gmt` ref-cov rna-seq --alignment-file-path='. $bam_file .' --roi-file-path='. $squashed_bed_file .' --reference-fasta='. $reference_path .' --stats-file='. $squashed_stats_file .' --merged-stats-file='. $genes_stats_file;
 
         my @squashed_output_files = ($squashed_stats_file, $genes_stats_file);
         Genome::Sys->shellcmd(
