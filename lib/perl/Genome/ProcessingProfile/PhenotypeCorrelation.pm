@@ -12,7 +12,7 @@ class Genome::ProcessingProfile::PhenotypeCorrelation {
             is => "Text",
             is_many => 0,
             is_optional =>1,
-            doc => "Strategy to be used to detect snvs.",
+            doc => "Strategy align sequence reads.",
         },
         snv_detection_strategy => {
             is => "Text",
@@ -53,23 +53,25 @@ sub help_synopsis_for_create {
     return <<"EOS"
 
     genome processing-profile create phenotype-correlation \
-      --name 'September 2011 Trio Genotyping and Phenotype Correlation' \
+      --name 'September 2011 Mix-Race Genotyping and Phenotype Correlation' \
       --alignment-strategy          'bwa 0.5.9 [-q 5] merged by picard 1.29' \
       --snv-detection-strategy      'samtools r599 filtered by snp-filter v1' \
       --indel-detection-strategy    'samtools r599 filtered by indel-filter v1' \
-      --genotype-in-groups-by       'sample.patient.some_nomenclature.trio' # or race, or family, or whatever 
+      --genotype-in-groups-by       'sample.patient.some_nomenclature.race' # or "trio"
 
     genome propulation-group define 'ASMS-cohort-WUTGI-2011' ASMS1 ASMS2 ASMS3 ASMS4 
 
     genome model define phenotype-correlation \
-        --name                  'ASMS v1' 
+        --name                  'ASMS-v1' 
         --subject               'ASMS-cohort-WUTGI-2011'
         --processing-profile    'September 2011 Trio Genotyping and Phenotype Correlation'       
         --identify-cases-by     'sample.patient.some_nomenclature.has_asms = 1'
         --identify-controls-by  'sample.patient.some_nomenclature.has_asms = 0'
 
     # ASMS is not really trios, but just as an example...
-
+    
+    # If you leave off the subject, it would find all patients matching the case/control logic
+    # and make a population group called ASMS-v1-cohort automatically???
 EOS
 }
 
@@ -86,7 +88,7 @@ EOS
 
 sub help_manual_for_create {
     return <<EOS
-  
+  Manual page content for this pipeline goes here.
 EOS
 }
 
@@ -131,9 +133,26 @@ sub _execute_build {
     # TODO: remove this and replace with the workflow logic at the bottom when we have one.
     warn "The logic for building this is not yet in place!  Cannot run " . $self->__display_name__ . ':' .  $build->__display_name__ . "\n";
 
+    my $pop = $build->model->subject;
     my @inputs = $build->inputs();
-
     my $dir = $build->data_directory;
+
+    # get the population group, the individuals and samples
+    # make a model per sample
+    # make a model-group named after the population group (try to override the convergence model's subject population group to this one)
+    
+    # let the models run and finish
+    # if the alignment API updates are ready, drop it in here, but only remove the smaller models when we don't need them anymore
+    #  (they duplicate the standard cron-based sample models)
+
+    # run the DV2 API to do variant detection as we do in somatic, but let it take in N BAMs
+    # internally it will:
+    #  make VCF
+    #  when running in cross-BAM mode, and not using a variant caller which does that automatically, dig up wildtype metrics for the VCF
+
+    # dump pedigree data into a file
+
+    # dump clinical data into a file
 
     return 1;
 }
