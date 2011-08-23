@@ -73,8 +73,6 @@ sub help_synopsis_for_create {
     my $self = shift;
     return <<"EOS"
 
-  possibility 1: the one profile per study:
-
     genome processing-profile create phenotype-correlation \
       --name 'September 2011 Trio Genotyping and Phenotype Correlation' \
       --alignment-strategy          'bwa 0.5.9 [-q 5] merged by picard 1.29' \
@@ -82,9 +80,7 @@ sub help_synopsis_for_create {
       --indel-detection-strategy    'samtools r599 filtered by indel-filter v1' \
       --genotype-in-groups-by       'sample.patient.some_nomenclature.trio' # or race, or family, or whatever 
 
-    genome propulation-group define 'ASMS-cohort-WUTGI-2011' ASMS1 ASMS2 ASMS3 ASMS4 ...
-
-    # ASMS is not really trios, but just as an example...
+    genome propulation-group define 'ASMS-cohort-WUTGI-2011' ASMS1 ASMS2 ASMS3 ASMS4 
 
     genome model define phenotype-correlation \
         --name                  'ASMS v1' 
@@ -92,6 +88,8 @@ sub help_synopsis_for_create {
         --processing-profile    'September 2011 Trio Genotyping and Phenotype Correlation'       
         --identify-cases-by     'sample.patient.some_nomenclature.has_asms = 1'
         --identify-controls-by  'sample.patient.some_nomenclature.has_asms = 0'
+
+    # ASMS is not really trios, but just as an example...
 
 EOS
 }
