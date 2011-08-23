@@ -12,8 +12,7 @@ use AMOS::AmosLib;
 use File::Basename;
 require File::Temp;
 
-use GSC::IO::Assembly::Ace::Writer;
-
+use Genome::Model::Tools::Pcap::Ace::Writer;
 use Data::Dumper;
 
 #Notes from Feiyu (Mar 2009):
@@ -178,19 +177,19 @@ sub execute {
     my $afg_fh   = Genome::Sys->open_file_for_reading($afg_file) or return;
     my $out_ace  = $self->out_acefile;
     my $out      = Genome::Sys->open_file_for_writing($out_ace) or return;
-    my $writer   = GSC::IO::Assembly::Ace::Writer->new($out);
+    my $writer   = Genome::Model::Tools::Pcap::Ace::Writer->new($out);
 
     # Tmp writer for reads and read positions
     my $tmpdir = File::Temp::tempdir(CLEANUP => 1);
     my $reads_file = $tmpdir.'/reads';
     my $reads_fh = Genome::Sys->open_file_for_writing($reads_file)
         or return;
-    my $read_writer = GSC::IO::Assembly::Ace::Writer->new($reads_fh)
+    my $read_writer = Genome::Model::Tools::Pcap::Ace::Writer->new($reads_fh)
         or return;
     my $read_pos_file = $tmpdir.'/read_positions';
     my $read_pos_fh = Genome::Sys->open_file_for_writing($read_pos_file)
         or return;
-    my $read_pos_writer = GSC::IO::Assembly::Ace::Writer->new($read_pos_fh)
+    my $read_pos_writer = Genome::Model::Tools::Pcap::Ace::Writer->new($read_pos_fh)
         or return;
 
     my $sequences_fh = Genome::Sys->open_file_for_reading( $self->seq_file );
@@ -375,7 +374,7 @@ sub execute {
             $read_pos_fh = Genome::Sys->open_file_for_writing(
                 $read_pos_file
             ) or return;
-            $read_pos_writer = GSC::IO::Assembly::Ace::Writer->new($read_pos_fh)
+            $read_pos_writer = Genome::Model::Tools::Pcap::Ace::Writer->new($read_pos_fh)
                 or return;
 
             # Base segments - use ace writer
@@ -396,7 +395,7 @@ sub execute {
             $reads_fh = Genome::Sys->open_file_for_writing(
                 $reads_file
             ) or return;
-            $read_writer = GSC::IO::Assembly::Ace::Writer->new($reads_fh)
+            $read_writer = Genome::Model::Tools::Pcap::Ace::Writer->new($reads_fh)
                 or return;
 
             $self->status_message("$nContigs contigs are done") if $nContigs % 100 == 0;

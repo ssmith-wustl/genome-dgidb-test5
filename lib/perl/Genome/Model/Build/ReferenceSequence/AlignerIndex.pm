@@ -278,6 +278,10 @@ sub resolve_allocation_subdirectory {
 
     my @path_components = ('model_data','ref_build_aligner_index_data',$self->reference_build->model->id,'build'.$self->reference_build->id);
 
+    if ($self->test_name) {
+        push @path_components, "test_".$self->test_name;
+    }
+
     push @path_components, $aligner_name_tag;
 
     my $aligner_version_tag = $self->aligner_version;

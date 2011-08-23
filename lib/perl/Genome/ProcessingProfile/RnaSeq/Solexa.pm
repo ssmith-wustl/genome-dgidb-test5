@@ -12,6 +12,7 @@ class Genome::ProcessingProfile::RnaSeq::Solexa {
 sub stages {
     my @stages = qw/
         alignment
+        coverage
         expression
     /;
     return @stages;
@@ -20,6 +21,13 @@ sub stages {
 sub alignment_job_classes {
     my @sub_command_classes = qw/
         Genome::Model::Event::Build::RnaSeq::AlignReads
+    /;
+    return @sub_command_classes;
+}
+
+sub coverage_job_classes {
+    my @sub_command_classes = qw/
+        Genome::Model::Event::Build::RnaSeq::Coverage
     /;
     return @sub_command_classes;
 }
@@ -33,6 +41,12 @@ sub expression_job_classes{
 }
 
 sub alignment_objects {
+    my $self = shift;
+    my $model = shift;
+    return 'all_sequences';
+}
+
+sub coverage_objects {
     my $self = shift;
     my $model = shift;
     return 'all_sequences';

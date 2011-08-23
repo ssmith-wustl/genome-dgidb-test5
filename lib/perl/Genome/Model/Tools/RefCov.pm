@@ -1081,7 +1081,7 @@ sub print_roi_coverage {
     my $region_count;
     while (my $region = $roi->next_region) {
         unless ($region_count++ % 10000) {
-            $self->status_message('Printed '. $region_count .' ROI Coverage...');
+            $self->status_message('Processed '. $region_count .' ROI...');
         }
         my $sequence_array_ref;
         # TODO: Add a windowing method for gc content, G+C evaluation will fail at ~50Mb regions..

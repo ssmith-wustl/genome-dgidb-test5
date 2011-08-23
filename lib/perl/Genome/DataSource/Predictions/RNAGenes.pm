@@ -27,7 +27,7 @@ sub column_order {
 }
 
 sub sort_order {
-    return ['sequence_name'];
+    return ['gene_name'];
 }
 
 sub delimiter {

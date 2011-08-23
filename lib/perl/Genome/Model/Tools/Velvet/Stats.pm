@@ -623,16 +623,24 @@ sub _get_read_depth_stats_from_afg { #for velvet assemblies
                 $total_consensus_pos += ( $contig_length - scalar @consensus_positions );
 	    }
 	    foreach (@consensus_positions) {
-		next unless $_; #could be undef if not covered
-		$one_x_cov++ if $_ >= 1;
-		$two_x_cov++ if $_ >= 2;
-		$three_x_cov++ if $_ >= 3;
-		$four_x_cov++ if $_ >= 4;
-		$five_x_cov++ if $_ >= 5;
+                if ( not defined $_ ) { #not covered consensus .. probably an error in velvet afg file
+                    $uncovered_pos++;
+                    next;
+                }
+                $five_x_cov++  and next if $_ >= 5;
+                $four_x_cov++  and next if $_ == 4;
+                $three_x_cov++ and next if $_ == 3;
+                $two_x_cov++   and next if $_ == 2;
+                $one_x_cov++   if $_ == 1;
 	    }
 	}
     }
     $afg_fh->close;
+
+    $one_x_cov   += $five_x_cov + $four_x_cov + $three_x_cov + $two_x_cov;
+    $two_x_cov   += $five_x_cov + $four_x_cov + $three_x_cov;
+    $three_x_cov += $five_x_cov + $four_x_cov;
+    $four_x_cov  += $five_x_cov;
 
     my $text = "\n*** Read Depth Info ***\n".
 	"Total consensus bases: $total_consensus_pos\n".

@@ -199,6 +199,213 @@ sub amplicon_set_names_and_primers_454 {
     );
 }
 
+sub amplicon_set_names_and_primers_solexa_new { #not yet implemented
+    return (
+        #GA[AG]TTTGATC[ACT]TGGCTCAG
+        'V1.F' => [qw/
+            GAATTTGATCATGGCTCAG
+            GAATTTGATCCTGGCTCAG
+            GAATTTGATCTTGGCTCAG
+            GAGTTTGATCATGGCTCAG
+            GAGTTTGATCCTGGCTCAG
+            GAGTTTGATCTTGGCTCAG
+        /],
+        #TTACT[AC]ACCC[GT]T[CGT]CGCC
+        'V1.R' => [qw/
+            TTACTAACCCGTCCGCC
+            TTACTCACCCGTCCGCC
+            TTACTAACCCTTCCGCC
+            TTACTCACCCTTCCGCC
+            TTACTAACCCGTGCGCC
+            TTACTCACCCGTGCGCC
+            TTACTAACCCTTGCGCC
+            TTACTCACCCTTGCGCC
+            TTACTAACCCGTTCGCC
+            TTACTCACCCGTTCGCC
+            TTACTAACCCTTTCGCC
+            TTACTCACCCTTTCGCC
+        /],
+        #GGCG[GAC]A[CA]GGGT[TG]AGTAA
+        'V2.F' => [qw/
+            GGCGGACGGGTTAGTAA
+            GGCGAACGGGTTAGTAA
+            GGCGCACGGGTTAGTAA
+            GGCGGAAGGGTTAGTAA
+            GGCGAAAGGGTTAGTAA
+            GGCGCAAGGGTTAGTAA
+            GGCGGACGGGTGAGTAA
+            GGCGAACGGGTGAGTAA
+            GGCGCACGGGTGAGTAA
+            GGCGGAAGGGTGAGTAA
+            GGCGAAAGGGTGAGTAA
+            GGCGCAAGGGTGAGTAA
+        /],
+        #CC[AGT]TTACC[CT]CACC[AT]ACTA
+        'V2.R' => [qw/
+            CCATTACCCCACCAACTA
+            CCGTTACCCCACCAACTA
+            CCTTTACCCCACCAACTA
+            CCATTACCTCACCAACTA
+            CCGTTACCTCACCAACTA
+            CCTTTACCTCACCAACTA
+            CCATTACCCCACCTACTA
+            CCGTTACCCCACCTACTA
+            CCTTTACCCCACCTACTA
+            CCATTACCTCACCTACTA
+            CCGTTACCTCACCTACTA
+            CCTTTACCTCACCTACTA
+        /],
+        #CCTACGG[AG][AGT]GGC[ACT]GCAG
+        'V3.F' => [qw/
+            CCTACGGAAGGCAGCAG
+            CCTACGGGAGGCAGCAG
+            CCTACGGAGGGCAGCAG
+            CCTACGGGGGGCAGCAG
+            CCTACGGATGGCAGCAG
+            CCTACGGGTGGCAGCAG
+            CCTACGGAAGGCCGCAG
+            CCTACGGGAGGCCGCAG
+            CCTACGGAGGGCCGCAG
+            CCTACGGGGGGCCGCAG
+            CCTACGGATGGCCGCAG
+            CCTACGGGTGGCCGCAG
+            CCTACGGAAGGCTGCAG
+            CCTACGGGAGGCTGCAG
+            CCTACGGAGGGCTGCAG
+            CCTACGGGGGGCTGCAG
+            CCTACGGATGGCTGCAG
+            CCTACGGGTGGCTGCAG
+        /],
+        #T[GT]ACCGC[AG]GCTGCTGGCAC
+        'V3.R' => [qw/
+            TGACCGCAGCTGCTGGCAC
+            TTACCGCAGCTGCTGGCAC
+            TGACCGCGGCTGCTGGCAC
+            TTACCGCGGCTGCTGGCAC
+        /],
+        #GTGCCAGCAGC[CT]GCGGT[AC]A
+        'V4.F' => [qw/
+            GTGCCAGCAGCCGCGGTAA
+            GTGCCAGCAGCTGCGGTAA
+            GTGCCAGCAGCCGCGGTTA
+            GTGCCAGCAGCTGCGGTTA
+        /],
+        #CG[GC]ATTTCAC[CT][GC]CTAC
+        'V4.R' => [qw/
+            CGGATTTCACCGCTAC
+            CGCATTTCACCGCTAC
+            CGGATTTCACTGCTAC
+            CGCATTTCACTGCTAC
+            CGGATTTCACCCCTAC
+            CGCATTTCACCCCTAC
+            CGGATTTCACTCCTAC
+            CGCATTTCACTCCTAC
+        /],
+        #C[AG]AAC[ACG]GGATTAGATACCC
+        'V5.F' => [qw/
+            CAAACAGGATTAGATACCC
+            CGAACAGGATTAGATACCC
+            CAAACCGGATTAGATACCC
+            CGAACCGGATTAGATACCC
+            CAAACGGGATTAGATACCC
+            CGAACGGGATTAGATACCC
+        /],
+        #CCCGTCAATT[CT][ACT]TTT[AG]AGT
+        'V5.R' => [qw/
+            CCCGTCAATTCATTTAAGT
+            CCCGTCAATTTATTTAAGT
+            CCCGTCAATTCCTTTAAGT
+            CCCGTCAATTTCTTTAAGT
+            CCCGTCAATTCTTTTAAGT
+            CCCGTCAATTTTTTTAAGT
+            CCCGTCAATTCATTTGAGT
+            CCCGTCAATTTATTTGAGT
+            CCCGTCAATTCCTTTGAGT
+            CCCGTCAATTTCTTTGAGT
+            CCCGTCAATTCTTTTGAGT
+            CCCGTCAATTTTTTTGAGT
+        /],
+        #A[CA][GA]CGA[AG]GAACCTTACC
+        'V6.F' => [qw/
+            ACGCGAAGAACCTTACC
+            AAGCGAAGAACCTTACC
+            ACACGAAGAACCTTACC
+            AAACGAAGAACCTTACC
+            ACGCGAGGAACCTTACC
+            AAGCGAGGAACCTTACC
+            ACACGAGGAACCTTACC
+            AAACGAGGAACCTTACC
+        /],
+        #AC[AG][AG]CACGAGCTG[AT]CGAC
+        'V6.R' => [qw/
+            ACAACACGAGCTGACGAC
+            ACGACACGAGCTGACGAC
+            ACAGCACGAGCTGACGAC
+            ACGGCACGAGCTGACGAC
+            ACAACACGAGCTGGCGAC
+            ACGACACGAGCTGGCGAC
+            ACAGCACGAGCTGGCGAC
+            ACGGCACGAGCTGGCGAC
+        /],
+        #[GT][CT]AACGAGCGCAACCCTT
+        'V7.F' => [qw/
+            GCAACGAGCGCAACCCTT
+            TCAACGAGCGCAACCCTT
+            GTAACGAGCGCAACCCTT
+            TTAACGAGCGCAACCCTT
+        /],
+        #CGTC[AG]TCC[CT]C[AT]CCTTCC
+        'V7.R' => [qw/
+            CGTCATCCCCACCTTCC
+            CGTCGTCCCCACCTTCC
+            CGTCATCCTCACCTTCC
+            CGTCGTCCTCACCTTCC
+            CGTCATCCCCTCCTTCC
+            CGTCGTCCCCTCCTTCC
+            CGTCATCCTCTCCTTCC
+            CGTCGTCCTCTCCTTCC
+        /],
+        #CTA[Cg]A[Ca]ACG[Tc]GCTACAATG
+        'V8.F' => [qw/
+            CTACACACGTGCTACAATG
+            CTAGACACGTGCTACAATG
+            CTACAAACGTGCTACAATG
+            CTAGAAACGTGCTACAATG
+            CTACACACGCGCTACAATG
+            CTAGACACGCGCTACAATG
+            CTACAAACGCGCTACAATG
+            CTAGAAACGCGCTACAATG
+        /],
+        #CCG[AG]GAACGTATTCAC[GC]
+        'V8.R' => [qw/
+            CCGAGAACGTATTCACG
+            CCGGGAACGTATTCACG
+            CCGAGAACGTATTCACC
+            CCGGGAACGTATTCACC
+        /],
+        #CGTTC[CT]CGGG[CT]CTTGTAC
+        #[GC]GTGAATACGTTC[CT]CGG
+        'V9.F' => [qw/
+            CGTTCCCGGGCCTTGTAC
+            CGTTCTCGGGCCTTGTAC
+            CGTTCCCGGGTCTTGTAC
+            CGTTCTCGGGTCTTGTAC
+
+            GGTGAATACGTTCCCGG
+            CGTGAATACGTTCCCGG
+            GGTGAATACGTTCTCGG
+            CGTGAATACGTTCTCGG
+        /],
+        #CGG[CT]TACCTTGTTA[CT]GACTT
+        'V9.R' => [qw/
+            CGGCTACCTTGTTACGACTT
+            CGGTTACCTTGTTACGACTT
+            CGGCTACCTTGTTATGACTT
+            CGGTTACCTTGTTATGACTT
+        /],
+    );
+}
+
 sub amplicon_sets {
     my $self = shift;
 
@@ -1077,12 +1284,13 @@ sub files_ignored_by_diff {
     return (qw/ build.xml /);
 }
 
-sub special_suffixes {
-    return (qw/ gz rdp2-1 rdp2-2 /);
+sub regex_for_custom_diff {
+    return (
+        gz => '\.gz$',
+        rdp => '\.rdp1-[12]$',
+    );
 }
 
-sub diff_rdp2_1 { return diff_rdp(@_); }
-sub diff_rdp2_2 { return diff_rdp(@_); }
 sub diff_rdp {
     my ($self, $file1, $file2) = @_;
 

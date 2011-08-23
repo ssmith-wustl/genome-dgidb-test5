@@ -24,7 +24,7 @@ sub column_order {
 }
 
 sub sort_order {
-    return ['transcript_name'];
+    return ['protein_name'];
 }
 
 sub delimiter {

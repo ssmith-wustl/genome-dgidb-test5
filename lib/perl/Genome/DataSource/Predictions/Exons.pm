@@ -25,7 +25,7 @@ sub column_order {
 }
 
 sub sort_order {
-    return ['transcript_name'];
+    return ['exon_name'];
 }
 
 sub delimiter {

@@ -177,9 +177,6 @@ sub copy_tag
     return Storable::dclone($tag);
 }
 
-# a couple of extra functions that will mimic functionality in GSC::Sequence::Item
-#
-
 =pod
 
 =head1 start_position
@@ -216,7 +213,7 @@ sub end_position
     
     return $self->position+$self->length;    
 }
-#HACK HACK HACK - GSC standard "HACK HACK HACK" header
+
 sub freeze
 {
 	my ($self) = @_;

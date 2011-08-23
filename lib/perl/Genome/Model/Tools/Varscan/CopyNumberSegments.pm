@@ -284,26 +284,46 @@ sub process_results
 
 		## Begin R Script ##
 	
-		open(SCRIPT, ">$script_filename") or die "Can't open script $script_filename: $!\n";
-	
+		open(SCRIPT, ">$script_filename") or die "Can't open script $script_filename: $!\n";	
 		print SCRIPT "library(DNAcopy)\n";
-
 		print SCRIPT "regions <- read.table(\"$chrom_filename\")\n";
 		print SCRIPT "png(\"$image_filename\", height=600, width=800)\n";
-
 		print SCRIPT qq{
 CNA.object <- CNA(regions\$V$num_columns, regions\$V1, regions\$V2, data.type="logratio", sampleid=c("Chromosome $chrom"))\n
 smoothed.CNA.object <- smooth.CNA(CNA.object)\n
+};
+
+		print SCRIPT qq{
 segment.smoothed.CNA.object <- segment(smoothed.CNA.object, undo.splits="sdundo", undo.SD=$undo_sd, verbose=1)
 p.segment.smoothed.CNA.object <- segments.p(segment.smoothed.CNA.object)
+};
+
+## Allow multiple runs for multiple SDs ##
+my $this_undo_sd = $undo_sd;
+while($this_undo_sd >= 0)
+{
+	$this_undo_sd -= 0.5;
+	print SCRIPT qq|
+if(length(p.segment.smoothed.CNA.object\$pval) < 50)
+{
+segment.smoothed.CNA.object <- segment(smoothed.CNA.object, undo.splits="sdundo", undo.SD=$this_undo_sd, verbose=1)
+p.segment.smoothed.CNA.object <- segments.p(segment.smoothed.CNA.object)	
+}
+|;	
+}
+
+
+
+
+		print SCRIPT qq{
 plot(segment.smoothed.CNA.object, type="w", cex=0.5, cex.axis=1.5, cex.lab=1.5)
 write.table(p.segment.smoothed.CNA.object, file="$chrom_filename.segments.p_value")
 };
 		print SCRIPT "dev.off()\n";
 		close(SCRIPT);
-		
 		print "Running $script_filename\n";
-		system("R --no-save < $script_filename");		
+		system("R --no-save < $script_filename");
+		
 
 	}
 

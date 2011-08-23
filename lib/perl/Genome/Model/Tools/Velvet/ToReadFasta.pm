@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 use IO::File;
 use Bio::SeqIO;
-use GSC::IO::Assembly::Ace::Reader;
+use Genome::Model::Tools::Pcap::Ace::Reader;
 
 class Genome::Model::Tools::Velvet::ToReadFasta {
     is           => 'Command',
@@ -50,7 +50,8 @@ sub execute {
     my $io = Bio::SeqIO->new(-format => 'fasta', -file => '>'.$self->out_file);
     my $fh = IO::File->new($acefile) or die "can't open $acefile\n";
 
-    my $reader = GSC::IO::Assembly::Ace::Reader->new($fh);
+    my $reader = Genome::Model::Tools::Pcap::Ace::Reader->new($fh);
+
     my %orient;
 
     while (my $obj = $reader->next_object) {

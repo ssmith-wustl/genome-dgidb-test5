@@ -113,6 +113,10 @@ class Genome::Model::Tools::Pindel::ProcessPindelReads {
             is => 'IO::File',
             doc => 'Indels over size 100 go here',
         },
+        _refseq => {
+            is => 'Text',
+            doc => 'This is used to store the cached location of the reference, to avoid containtly using the accessor on the refseq build.',
+        },
     ],
 };
 
@@ -130,6 +134,7 @@ EOS
 
 sub execute {
     my $self = shift;
+    $self->_refseq($self->reference_sequence_input);
 
     my $big_output_file = $self->big_output_file;
     my $hq_raw_output_file = $self->hq_raw_output_file;
@@ -159,7 +164,7 @@ sub execute {
     my $output = $sort_output ? $self->output_file.".temp" : $self->output_file;
 
     #process the raw pindel reads, calling $self->$mode once each read has been read into memory
-    unless($self->process_source($self->input_file,$output,$self->reference_sequence_input)){
+    unless($self->process_source($self->input_file,$output,$self->_refseq)){
         die $self->error_message("Failed to get a return value from process_source.");
     }
 
@@ -231,6 +236,7 @@ sub process_source {
             }
 
             $self->$mode(\@event);
+            undef @event;
         }
     }
     return 1;
@@ -291,7 +297,7 @@ sub read_support {
         die $self->error_message("Could not locate normal_bam at: ".$tumor_bam);
     }
 
-     my @call_fields = split /\s/, $call;
+    my @call_fields = split /\s/, $call;
 
     my $type = $call_fields[1];
     my $size = $call_fields[2];
@@ -415,7 +421,7 @@ sub get_bed_line {
 sub parse {
     my $self=shift;
     my ($call, $reference, $first_read) = @_;
-    my $refseq = $self->reference_sequence_input;
+    my $refseq = $self->_refseq;
     my @call_fields = split /\s+/, $call;
     my $type = $call_fields[1];
     my $size = $call_fields[2];
@@ -434,7 +440,7 @@ sub parse {
         my $allele_string;
         my $start_for_faidx = $start+1; 
         my $sam_default = Genome::Model::Tools::Sam->path_for_samtools_version;
-        my $faidx_cmd = "$sam_default faidx " . $self->reference_sequence_input . " $chr:$start_for_faidx-$stop"; 
+        my $faidx_cmd = "$sam_default faidx " . $self->_refseq . " $chr:$start_for_faidx-$stop"; 
         my @faidx_return= `$faidx_cmd`;
         shift(@faidx_return);
         chomp @faidx_return;

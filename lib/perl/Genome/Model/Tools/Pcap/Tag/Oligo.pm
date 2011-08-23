@@ -22,7 +22,7 @@ our $VERSION = 0.01;
 
 =head1 Name
 
- Genome::Model::Tools::Pcap::Tag::Oligo - Represents an oligo tag on a GSC::IO::Assembly::Item
+ Genome::Model::Tools::Pcap::Tag::Oligo
 
   > Inherits from Genome::Model::Tools::Pcap::Tag;
  
