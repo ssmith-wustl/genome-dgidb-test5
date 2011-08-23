@@ -46,19 +46,19 @@ class Genome::Model::Tools::Somatic::UltraHighConfidence {
             doc => 'Reference sequence to use',
         },
         ## CAPTURE FILTER OPTIONS ##
-        'min_strandedness' => {
-            type => 'String',
-            default => '0.01',
-            is_optional => 1,
-            is_input => 1,
-            doc => 'Minimum representation of variant allele on each strand',
-        },
         'min_tumor_var_freq' => {
             type => 'String',
             default => '0.20',
             is_optional => 1,
             is_input => 1,
             doc => 'Minimum variant allele frequency',
+        },
+        'max_tumor_var_freq' => {
+            type => 'String',
+            default => '1.00',
+            is_optional => 1,
+            is_input => 1,
+            doc => 'Maximum variant allele frequency',
         },
         'max_normal_var_freq' => {
             type => 'String',
@@ -67,12 +67,12 @@ class Genome::Model::Tools::Somatic::UltraHighConfidence {
             is_input => 1,
             doc => 'Maximum variant allele frequency in normal',
         },
-        'min_var_count' => {
+        'min_normal_var_freq' => {
             type => 'String',
-            default => '4',
+            default => '0.00',
             is_optional => 1,
             is_input => 1,
-            doc => 'Minimum number of variant-supporting reads',
+            doc => 'Minimum variant allele frequency in normal',
         },
         'min_normal_coverage' => {
             type => 'String',
@@ -87,13 +87,6 @@ class Genome::Model::Tools::Somatic::UltraHighConfidence {
             is_optional => 1,
             is_input => 1,
             doc => 'Minimum coverage in the tumor BAM',
-        },
-        'min_read_pos' => {
-            type => 'String',
-            default => '0.10',
-            is_optional => 1,
-            is_input => 1,
-            doc => 'Minimum average relative distance from start/end of read',
         },
         'use_readcounts' => {
             type => 'String',
@@ -164,15 +157,15 @@ sub help_brief {
 }
 
 sub help_synopsis {
-    my $self = shift;
-    return <<"EOS"
-    EXAMPLE:
-    gmt somatic filter-false-positives --variant-file somatic.snvs --bam-file tumor.bam --output-file somatic.snvs.fpfilter --filtered-file somatic.snvs.fpfilter.removed
+    return <<EOS
+    gmt somatic ultra-high-confidence \
+      --variant-file somatic.snvs --normal-bam-file normal.bam --tumor-bam-file tumor.bam \
+      --output-file somatic.snvs.uhcfilter --filtered-file somatic.snvs.uhcfilter.removed
 EOS
 }
 
-sub help_detail {                           
-    return <<EOS 
+sub help_detail {
+    return <<EOS
 This module uses detailed readcount information from bam-readcounts to select ultra-high-confidence SNVs as an alternative to manual review
 It is HIGHLY recommended that you use the default settings, which have been comprehensively vetted.
 Both capture and WGS projects now use the same filter and parameters.
@@ -238,16 +231,14 @@ sub run_filter {
 
     ## Determine the strandedness and read position thresholds ##
 
-    my $min_read_pos = $self->min_read_pos;
-    my $max_read_pos = 1 - $min_read_pos;
     my $min_tumor_var_freq = $self->min_tumor_var_freq;
     my $max_normal_var_freq = $self->max_normal_var_freq;
-    my $min_var_count = $self->min_var_count;
+    my $max_tumor_var_freq = $self->max_tumor_var_freq;
+    my $min_normal_var_freq = $self->min_normal_var_freq;
+
     my $min_normal_coverage = $self->min_normal_coverage;
     my $min_tumor_coverage = $self->min_tumor_coverage;
 
-    my $min_strandedness = $self->min_strandedness;
-    my $max_strandedness = 1 - $min_strandedness;
 
 
     ## Reset counters ##
@@ -458,15 +449,15 @@ sub run_filter {
                         {
                             $tumor_var_freq = sprintf("%.3f", $tumor_reads2 / $tumor_coverage);
                             $normal_var_freq = sprintf("%.3f", $normal_reads2 / $normal_coverage);
-                            
-                            if($tumor_var_freq >= $min_tumor_var_freq && $normal_var_freq <= $max_normal_var_freq)
+
+                            if($tumor_var_freq >= $min_tumor_var_freq && $tumor_var_freq <= $max_tumor_var_freq && $normal_var_freq <= $max_normal_var_freq && $normal_var_freq >= $min_normal_var_freq)
                             {
                                 $stats{'num_pass_filter'}++;
                                 ## Make var freqs more printable ##                               
                                 $tumor_var_freq = ($tumor_var_freq * 100) . '%';
                                 $normal_var_freq = ($normal_var_freq * 100) . '%';
                                 ## Print output, and append coverage/frequency information ##
-                                
+
                                 print $ofh "$line\tPassUHC\t$normal_coverage\t$tumor_coverage\t$normal_var_freq\t$tumor_var_freq\n";                                
                             }
                             else
@@ -483,7 +474,6 @@ sub run_filter {
                             $stats{'num_fail_coverage'}++;
                             print $ffh "$line\tFailed:Coverage\t$normal_coverage\t$tumor_coverage\n";                                
                         }
-                           
 
                     } else {
                         $stats{'num_no_readcounts'}++;
@@ -532,7 +522,6 @@ sub compute_readcount_results
 {
     my ($ref_result, $var_result) = @_;
 
-    
 
     ## Parse out the bam-readcounts details for each allele. The fields should be: ##
     #num_reads : avg_mapqual : avg_basequal : avg_semq : reads_plus : reads_minus : avg_clip_read_pos : avg_mmqs : reads_q2 : avg_dist_to_q2 : avgRLclipped : avg_eff_3'_dist
@@ -542,7 +531,7 @@ sub compute_readcount_results
 
     my $ref_strandedness = my $var_strandedness = 0.50;
     $ref_dist_3 = 0.5 if(!$ref_dist_3);
-    
+
     ## Determine ref strandedness ##
 
     if(($ref_plus + $ref_minus) > 0) {
@@ -585,9 +574,8 @@ sub compute_readcount_results
         $var_strandedness = $var_plus / ($var_plus + $var_minus);
         $var_strandedness = sprintf("%.2f", $var_strandedness);
     }
-    
+
     ## Determine what we should return ##
-    
     return($ref_count, $var_count); #, $ref_strandedness, $var_strandedness);
 }
 
@@ -645,8 +633,7 @@ sub fails_homopolymer_check {
 ##########################################################################################
 
 sub wgs_filter {
-    
-    
+
 }
 
 
@@ -704,11 +691,6 @@ sub read_counts_by_allele {
     return("");
 }
 
-#############################################################
-# ParseBlocks - takes input file and parses it
-#
-#############################################################
-
 sub iupac_to_base {
     my $self = shift;
     (my $allele1, my $allele2) = @_;
@@ -743,6 +725,5 @@ sub iupac_to_base {
 
     return($allele2);
 }
-
 
 1;

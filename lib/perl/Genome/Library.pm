@@ -84,6 +84,20 @@ sub __display_name__ {
     return $_[0]->name.' ('.$_[0]->id.')';
 }
 
+sub delete {
+    my $self = shift;
+
+    $self->status_message("Deleting library " . $self->__display_name__);
+
+    my @instrument_data = Genome::InstrumentData->get(
+        library_id => $self->id,
+    );
+    for my $instrument_data (@instrument_data) {
+        $instrument_data->delete;
+    }
+
+    return $self->SUPER::delete(@_);
+}
 
 1;
 

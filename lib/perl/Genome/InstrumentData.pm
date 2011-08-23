@@ -82,7 +82,7 @@ sub delete {
         $attr->delete;
     }
 
-    $self->_delete_allocations;
+    $self->_create_deallocate_observer;
 
     for my $attribute ($self->attributes) {
         $attribute->delete;
@@ -139,13 +139,23 @@ sub _expunge_assignments{
     return 1, %affected_users;
 }
 
-sub _delete_allocations {
+sub _create_deallocate_observer {
     my $self = shift;
     my @allocations = $self->allocations;
     return 1 unless @allocations;
-    for my $allocation (@allocations) {
-        $allocation->deallocate_on_commit;
-    }
+    my $deallocator;
+    $deallocator = sub {
+        for my $allocation (@allocations) {
+            $allocation->delete;
+        }
+        UR::Context->cancel_change_subscription(
+            'commit', $deallocator
+        );
+    };
+    UR::Context->create_subscription(
+        method => 'commit',
+        callback => $deallocator
+    );
     return 1;
 }
 

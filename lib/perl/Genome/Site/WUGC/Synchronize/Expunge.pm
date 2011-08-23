@@ -50,9 +50,6 @@ sub _remove_expunged_object {
     my %affected_users;
 
     my $object = $class->get($id);
-    if ($class =~ m/Genome::InstrumentData/){
-        ($expunge_success, %affected_users) = $object->_expunge_assignments;
-    }
 
     $object->delete;
 

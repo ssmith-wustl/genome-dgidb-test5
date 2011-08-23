@@ -160,7 +160,12 @@ sub _cleanup {
     $self->status_message('Now deleting allocation with owner_id = ' . $self->id);
     my $allocation = $self->_disk_allocation;
     if ($allocation) {
-       $allocation->delete;
+        my $path = $allocation->absolute_path;
+        unless (rmtree($path)) {
+            $self->error_message("could not rmtree $path");
+            return;
+       }
+       $allocation->deallocate;
     }
 }
 
@@ -463,7 +468,7 @@ sub _merge_and_calculate_stats {
     my $tmp_unaligned_bam_file = $self->temp_scratch_directory . '/unaligned_reads.bam';
     my $unaligned_bam_file = $self->temp_staging_directory . '/unaligned_reads.bam';
     my $alignment_stats_file = $self->temp_staging_directory . '/alignment_stats.txt';
-    my $cmd = "gmt5.12.1 bio-samtools tophat-alignment-stats --aligned-bam-file=$tmp_aligned_bam_file --all-reads-bam-file=$tmp_all_reads_bam_file --unaligned-bam-file=$tmp_unaligned_bam_file --alignment-stats-file=$alignment_stats_file";
+    my $cmd = "/usr/bin/perl `which gmt` bio-samtools tophat-alignment-stats --aligned-bam-file=$tmp_aligned_bam_file --all-reads-bam-file=$tmp_all_reads_bam_file --unaligned-bam-file=$tmp_unaligned_bam_file --alignment-stats-file=$alignment_stats_file";
     Genome::Sys->shellcmd(
         cmd => $cmd,
         input_files => [$tmp_aligned_bam_file,$tmp_all_reads_bam_file],

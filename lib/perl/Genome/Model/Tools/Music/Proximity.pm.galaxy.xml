@@ -1,0 +1,70 @@
+<tool id="gmt_music_proximity" name="gmt_music_proximity">
+    <description>
+        Perform a proximity analysis on a list of mutations.
+    </description>
+    <command>
+        gmt music proximity --id=$id --is-executed=$is_executed --maf-file=$maf_file --max-proximity=$max_proximity --output-dir=$output_dir --result=$result
+    </command>
+    <inputs>
+        <param name="maf_file" format="text" type="data" help="" />
+<param name="max_proximity" format="text" type="data" help="" />
+<param name="output_dir" format="text" type="data" help="" />
+
+    </inputs>
+    <outputs>
+        <data name="result" format="text" label="" help="" />
+
+    </outputs>
+    <help>
+        
+
+**USAGE**
+
+ gmt music proximity --maf-file=? --output-dir=? [--max-proximity=?]
+
+
+**SYNOPSIS**
+
+ ... music proximity \
+    --maf-file input_dir/myMAF.tsv \
+    --output-dir output_dir/ \
+    --max-proximity 15
+
+
+**REQUIRED ARGUMENTS**
+
+  maf-file   Text
+    List of mutations using TCGA MAF specifications v2.2 
+  output-dir   Text
+    Directory where output files will be written 
+
+
+**OPTIONAL ARGUMENTS**
+
+  max-proximity   Text
+    Maximum allowed AA distance between 2 mutations 
+    Default value '10' if not specified
+
+
+**DESCRIPTION**
+
+    This module first calculates the amino acid position of each mutation in the MAF file within
+    its respective transcript. Then, for each mutation, two values are calculated: 1) the number of
+    other mutations on the same transcript within the proximity limit set by the max-proximity
+    input parameter, and 2) the distance to the closest other mutation in this nearby set. Only
+    mutations which have another mutation within close proximity are reported in the output-file.
+
+    In addition to the standard version 2.2 MAF headers, there needs to be two columns appended.
+    These column headers in the MAF must have these names in the header in order for the tool to
+    find them: transcript_name - the transcript name, such as NM_000028 amino_acid_change - the
+    amino acid change, such as p.R290H c_position - the nucleotide position changed, such as c.869
+
+    The output is generated with the folowing column headers: Mutations_Within_Proximity,
+    Nearest_Mutation, Gene, Transcript, Affected_Amino_Acid(s), Chr, Start, Stop, Ref_Allele,
+    Var_Allele, Sample
+
+
+
+
+    </help>
+</tool>

@@ -20,7 +20,7 @@ my $bam_file = join('/', $test_data_dir, 'tumor.tiny.bam');
 my $variant_file = join('/', $test_data_dir, 'varscan.snp.test');
 my $varscan_variant_file = join('/', $test_data_dir, 'varscan.snp.test.vs_format');
 
-my $expected_result_dir = join('/', $test_data_dir, '1');
+my $expected_result_dir = join('/', $test_data_dir, '2');
 my $expected_output_file = join('/', $expected_result_dir, 'varscan.snp.Somatic.strandfilter');
 my $expected_filtered_file = join('/', $expected_result_dir, 'varscan.snp.Somatic.failed_strandfilter');
 my $expected_readcount_file = join('/', $expected_result_dir, 'varscan.snp.Somatic.strandfilter.readcounts');

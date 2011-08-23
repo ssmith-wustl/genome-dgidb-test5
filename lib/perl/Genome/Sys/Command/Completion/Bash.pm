@@ -28,8 +28,9 @@ sub execute {
 
     $text .= "\n";
     $text .= "### Begin Bash completion for genome and gmt ###\n";
-    $text .= "complete -C \"trap 'unset COMP_LINE && unset COMP_POINT' SIGINT && genome\" genome\n";
-    $text .= "complete -C \"trap 'unset COMP_LINE && unset COMP_POINT' SIGINT && gmt\" gmt\n";
+    $text .= "source /gsc/scripts/opt/genome/current/usr/bin/getopt_complete.sh\n";
+    $text .= "complete -F _getopt_complete genome\n";
+    $text .= "complete -F _getopt_complete gmt\n";
     $text .= "### End Bash completion for genome and gmt ###\n";
     $text .= "\n";
 

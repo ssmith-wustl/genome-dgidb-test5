@@ -45,6 +45,10 @@ class Genome::Model::Tools::SmrtAnalysis::Mapping {
             doc => 'Number of processors to use for alignment computation',
             default_value => 4,
         },
+        use_ccs => {
+            is => 'Text',
+            valid_values => ['fullpass','allpass','denovo'],
+        },
         min_accuracy => {
             is => 'Number',
             doc => 'Min accuracy to output a hit',
@@ -161,6 +165,9 @@ sub execute {
         gff_to_bed_description => 'Mean coverage of genome in fixed interval regions',
         pulse_metrics => $self->pulse_metrics,
     );
+    if ($self->use_ccs) {
+        $params{'use_ccs'} = $self->use_ccs;
+    }
     my $module_path = $self->get_class_object->module_path;
     my $xml_path = $module_path;
     $xml_path =~ s/\.pm/\.xml/;

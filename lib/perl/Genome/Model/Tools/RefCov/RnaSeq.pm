@@ -8,14 +8,6 @@ use Genome;
 class Genome::Model::Tools::RefCov::RnaSeq {
     is => ['Genome::Model::Tools::RefCov'],
     has => [
-        roi_normalized_coverage => {
-            default_value => 0,
-            is_optional => 1,
-        },
-        evaluate_gc_content => {
-            default_value => 1,
-            is_optional => 1,
-        },
         print_headers => {
             is_optional => 1,
             default_value => 1,
@@ -26,6 +18,14 @@ class Genome::Model::Tools::RefCov::RnaSeq {
         merge_by => {
             is_optional => 1,
             default_value => 'transcript',
+        },
+        alignment_count => {
+            default_value => 1,
+            is_optional => 1,
+        },
+        print_min_max => {
+            default_value => 1,
+            is_optional => 1,
         },
     ],
 };

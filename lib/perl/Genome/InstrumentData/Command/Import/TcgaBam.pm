@@ -402,6 +402,7 @@ sub XX_rsync_bam {
         $self->error_message('Rsync cmd failed: '.$@);
         $self->status_message('Removing disk allocation: '.$self->_allocation->id);
         unlink $new_bam if -e $new_bam;
+        $self->_allocation->deallocate;
         $self->error_message('Removing instrument data: '.$self->_inst_data->id);
         $self->_inst_data->delete;
         return;
@@ -420,6 +421,7 @@ sub _bail {
     unlink $new_bam if -e $new_bam;
     my $new_md5 = $self->_new_md5;
     unlink $new_md5 if -e $new_md5;
+    $self->_allocation->deallocate;
     $self->status_message('Removing instrument data: '.$self->_inst_data->id);
     $self->_inst_data->delete;
 

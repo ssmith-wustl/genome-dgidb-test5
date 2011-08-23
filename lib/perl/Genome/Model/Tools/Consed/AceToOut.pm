@@ -9,8 +9,6 @@ use Bio::Seq::Quality;
 use Bio::SeqIO;
 use Data::Dumper;
 use File::Basename;
-use Finishing::Assembly::Factory;
-use Finishing::Assembly::Ace::Output;
 use Genome::Sys; 
 
 my @FORMATS = (qw/ fasta qual contig_names read_names /);
@@ -78,26 +76,63 @@ sub formats {
 sub execute {
     my $self = shift;
 
+    $self->_validate_params
+        or return;
+    
+    my $ace = Genome::Model::Tools::Consed::AceReader->create(file => $self->acefile)
+        or return;
+
+    my $filter_method = $self->{_filter_method};
+    my $print_method = $self->{_print_method};
+    while ( my $contig = $ace->next_contig ) {
+        $self->$print_method($contig) if $self->$filter_method($contig);
+    }
+
+    $self->{_fh}->close;
+
+    return 1;
+}
+
+
+sub Xexecute {
+    my $self = shift;
+
     # Validate params
     $self->_validate_params
         or return;
     
     # Connect 
-    my $ace = Finishing::Assembly::Factory->connect('ace', $self->acefile)
+    my $ace = Genome::Model::Tools::Consed::AceReader->create(file => $self->acefile)
         or return;
 
-    my $assembly = $ace->get_assembly;
-    my $contigs = $assembly->contigs;
-    # ERROR for no contigs?
     my $filter_method = $self->{_filter_method};
     my $print_method = $self->{_print_method};
-    while ( my $contig = $contigs->next ) {
-        next unless $self->$filter_method($contig);
-        $self->$print_method($contig);
+    my $contig = $ace->next;
+    CONTIG: while ( $contig ) {
+        if ( $contig->{type} eq 'contig' ) {
+            $contig->{unpadded_consensus} = $contig->{consensus};
+            $contig->{unpadded_consensus} =~ s/\*//g;
+            my $obj;
+            my %read_positions;
+            READ: while ( $obj = $ace->next ) {
+                if ( $obj->{type} eq 'contig' ) {
+                    last READ;
+                }
+                elsif ( $obj->{type} eq 'read_position' ) {
+                    $read_positions{$obj->{read_name}} = $obj->{position}
+                }
+                elsif ( $obj->{type} eq 'read' ) {
+                    $contig->{reads}->{ $obj->{name} } = $obj;
+                    $contig->{reads}->{ $obj->{name} }->{position} = $read_positions{ $obj->{name} };
+                }
+            }
+            $self->$print_method($contig) if $self->$filter_method($contig);
+            $contig = $obj;
+            next CONTIG;
+        }
+        $contig = $ace->next;
     }
 
-    $ace->disconnect;
-    
     return $self->{_fh}->close;
 }
 
@@ -194,40 +229,40 @@ sub _filter_contig_by_max_and_min_threshold {
 sub _filter_contig_by_max_threshold {
     my ($self, $contig) = @_;
 
-    return $contig->unpadded_length <= $self->max_threshold;
+    return length $contig->{unpadded_consensus} <= $self->max_threshold;
 }
 
 sub _filter_contig_by_min_threshold {
     my ($self, $contig) = @_;
 
-    return $contig->unpadded_length >= $self->min_threshold;
+    return length $contig->{unpadded_consensus} >= $self->min_threshold;
 }
 
 sub _filter_contig_by_ctgs {
     my ($self, $contig) = @_;
 
-    return exists $self->{_ctgs}->{$contig->name};
+    return exists $self->{_ctgs}->{$contig->{name}};
 }
 
 sub _get_bioseq_from_contig {
     my ($self, $contig) = @_;
 
     my ($bases, $quals, $start, $stop);
-    if ( my $pos = delete $self->{_ctgs}->{ $contig->name } ) {
+    if ( my $pos = delete $self->{_ctgs}->{ $contig->{name} } ) {
         my $offset = $pos->{start} - 1;
         my $length = $pos->{stop} - $pos->{start} + 1;
-        $bases = substr($contig->unpadded_base_string, $offset, $length);
-        $quals = join(' ', splice(@{$contig->qualities}, $offset, $length));
+        $bases = substr($contig->{unpadded_consensus}, $offset, $length);
+        $quals = join(' ', splice(@{$contig->{base_qualities}}, $offset, $length));
     }
     else {
-        $bases = $contig->unpadded_base_string;
-        $quals = join(' ', @{$contig->qualities});
+        $bases = $contig->{unpadded_consensus};
+        $quals = join(' ', @{$contig->{base_qualities}});
         $start = 1;
-        $stop = $contig->unpadded_length;
+        $stop = length $contig->{unpadded_consensus};
     }
     
     return Bio::Seq::Quality->new(
-        '-id' => sprintf('%s%s', ( $self->inc_name ? $self->acefile : '' ), $contig->name),
+        '-id' => sprintf('%s%s', ( $self->inc_name ? $self->acefile : '' ), $contig->{name}),
         #'-desc' => "from $start to $stop",
         '-alphabet' => 'dna',
         '-seq' => $bases,
@@ -250,32 +285,46 @@ sub _print_qual {
 sub _print_contig_names {
     my ($self, $contig) = @_;
     
-    return $self->{_io}->print( $contig->name . "\n" );
+    return $self->{_io}->print( $contig->{name} . "\n" );
 }
 
 sub _print_read_names {
     my ($self, $contig) = @_;
     
-    my $reads = $contig->reads;
-    if ( my $pos = delete $self->{_ctgs}->{ $contig->name } ) {
-        my $start = $contig->unpad_position_to_pad_position($pos->{start});
-        my $stop = $contig->unpad_position_to_pad_position($pos->{stop});
-        while ( my $read = $reads->next ) {
-            next if $read->position > $stop;
-            next if ( $read->position + $read->length - 1 ) < $start;
-            $self->{_io}->print( $read->name . "\n" );
+    if ( my $pos = delete $self->{_ctgs}->{ $contig->{name} } ) {
+        my @unpad_pos = $self->_get_unpad_positions_to_pad_positions_for_contig($contig);
+        my $start = $unpad_pos[ $pos->{start} ];
+        my $stop = $unpad_pos[ $pos->{stop} ];
+        for my $read_name ( keys %{$contig->{reads}} ) {
+            my $read = $contig->{reads}->{$read_name};
+            next if $read->{position} > $stop;
+            next if ($read->{position} + length($read->{sequence}) - 1) < $start;
+            $self->{_io}->print( $read->{name} . "\n" );
         }
     }
     else{
-        while ( my $read = $reads->next ) {
-            $self->{_io}->print( $read->name . "\n" );
+        for my $read_name ( keys %{$contig->{reads}} ) {
+            $self->{_io}->print( $read_name . "\n" );
         }
     }
 
     return 1;
 }
 
+sub _get_unpad_positions_to_pad_positions_for_contig {
+    my ($self, $contig) = @_;
+
+    my @pos;
+    my $pad = 0;
+    my $unpad = 0;
+    foreach my $base ( split(//, $contig->{consensus}) ) {
+        $pad++;
+        $unpad++ if $base ne '*';
+        $pos[$unpad] = $pad;
+    }
+
+    return @pos;
+}
+
 1;
 
-#$HeadURL$
-#$Id$

@@ -196,7 +196,7 @@ sub delete {
                 for my $allocation (@allocations) {
                     my $id = $allocation->id;
                     print 'Now deleting allocation with owner_id = ' . $id . "\n";
-                    $allocation->delete; 
+                    $allocation->deallocate; 
                     print "Deletion complete.\n";
                 }
                 return 1;

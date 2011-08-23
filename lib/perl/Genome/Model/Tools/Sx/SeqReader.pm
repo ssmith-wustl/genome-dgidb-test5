@@ -23,7 +23,7 @@ sub create {
         my $file = $self->$property_name; 
         if ( not $file ) {
             next if $property->is_optional;
-            $self->error_message("File ($property_name) is required");
+            $self->error_message("File property ($property_name) is required");
             return;
         }
         my $fh = eval{ Genome::Sys->open_file_for_reading($file); };

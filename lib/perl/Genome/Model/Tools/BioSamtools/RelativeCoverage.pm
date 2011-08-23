@@ -112,7 +112,7 @@ sub execute {
             die('The length of the ref '. $length .' does not match the depth span '. scalar( @{ $coverage }));
         }
         my $myCoverageStat = Genome::Model::Tools::RefCov::Stats->create( coverage => $coverage);
-        print $stats_fh join ("\t", $id, @{ $myCoverageStat->stats() }) . "\n";
+        print $stats_fh join ("\t", $id, @{ $myCoverageStat->stats_array_ref() }) . "\n";
         if ($self->bias_file) {
             my $size_bin = undef;
             if (($length >= 100) && ($length <= 2_999)) {

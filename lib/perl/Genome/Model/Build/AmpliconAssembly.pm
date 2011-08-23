@@ -12,7 +12,6 @@ use warnings;
 use Genome;
 
 use Carp 'confess';
-require Genome::Model::Build::AmpliconAssembly::Amplicon;
 
 class Genome::Model::Build::AmpliconAssembly {
     is => 'Genome::Model::Build',

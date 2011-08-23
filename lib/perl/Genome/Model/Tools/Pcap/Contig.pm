@@ -24,7 +24,7 @@ my $contig = Genome::Model::Tools::Pcap::Contig->new(reads => \%reads, base_segm
 =head1 DESCRIPTION
 
 Genome::Model::Tools::Pcap::Contig mainly acts a container for the reads and sequence data that are normally associated with contig.
-It inherits some useful functionality from Genome::Model::Tools::Pcap::SequenceItem, which uses GSC::IO::Assembly::Sequence.
+It inherits some useful functionality from Genome::Model::Tools::Pcap::SequenceItem.
 
 =head1 METHODS
 

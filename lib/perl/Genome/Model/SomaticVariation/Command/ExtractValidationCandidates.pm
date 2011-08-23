@@ -8,10 +8,7 @@ use Genome::Info::IUB;
 class Genome::Model::SomaticVariation::Command::ExtractValidationCandidates {
     is => 'Command::V2',
     has =>[
-        build => {
-            is => 'Genome::Model::Build::SomaticVariation',
-        },
-        output_directory => {
+       output_directory => {
             is => 'String',
             is_input => 1,
             is_output => 1,
@@ -19,6 +16,14 @@ class Genome::Model::SomaticVariation::Command::ExtractValidationCandidates {
         },
     ],
     has_optional => [
+        build => {
+            is => 'Genome::Model::Build::SomaticVariation',
+            doc => 'somatic-variation build object to run command on. Specify this OR build_id, but NOT BOTH!',
+        },
+        build_id => {
+            is => 'Text',
+            doc => 'somatic-variation build ID to run commmand on. Specy this OR build, but NOT BOTH!',
+        },
         dbsnp_bed_file => {
             is => 'String',
             is_input => 1,
@@ -36,9 +41,13 @@ class Genome::Model::SomaticVariation::Command::ExtractValidationCandidates {
 
 sub execute {
     my $self = shift;
-
-    my $build = $self->build;
-
+    unless(defined($self->build) xor defined($self->build_id)){
+        die $self->error_message("Please define build OR build_id, but not both.");
+    }
+    my $build = defined($self->build)? $self->build: Genome::Model::Build->get($self->build_id);
+    unless(defined($build)){
+        die $self->error_message("Could not get a build object to operate on, either from build or build_id param!");
+    }
     my $reference_build_id = $build->reference_sequence_build->id;
     my $output_directory = $self->output_directory;
     my $anno_build = $build->annotation_build;

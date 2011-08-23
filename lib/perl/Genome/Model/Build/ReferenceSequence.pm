@@ -615,7 +615,7 @@ sub chromosome_array_ref {
     my $seq_dict = $self->get_sequence_dictionary($format,$species,$picard_version);
     my $tmp_file = Genome::Sys->create_temp_file_path;
     # This is only required to run perl5.10.1 or greater required by Bio-SamTools
-    my $cmd = 'gmt5.12.1 bio-samtools list-chromosomes --input-file='. $seq_dict .' --output-file='. $tmp_file;
+    my $cmd = '/usr/bin/perl `which gmt` bio-samtools list-chromosomes --input-file='. $seq_dict .' --output-file='. $tmp_file;
     Genome::Sys->shellcmd(
         cmd => $cmd,
         input_files => [$seq_dict],
@@ -663,7 +663,10 @@ sub local_cache_basedir {
 
 sub local_cache_dir {
     my $self = shift;
-    return $self->local_cache_basedir."/".$self->data_directory;
+    # data_directory is usually (always?) an absolute path so remove leading / if it exists before cating with /
+    my $data_directory = $self->data_directory;
+    $data_directory =~ s/^\///;
+    return $self->local_cache_basedir . "/" . $data_directory;
 }
 
 sub local_cache_lock {

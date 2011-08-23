@@ -64,3 +64,6 @@
 [submodule "cron"]
 	path = cron
 	url = ssh://git/srv/git/genome_cron.git
+[submodule "pairoscope"]
+	path = pairoscope
+	url = ssh://git//srv/git/pairoscope.git

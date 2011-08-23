@@ -189,6 +189,7 @@ sub execute {
         gram_stain       => $config->{gram_stain},
         locus_id         => $config->{locus_id},
         dev              => $self->dev,
+        runner_count     => $config->{runner_count},
     );
     confess "Could not make prediction object!" unless $predict;
 

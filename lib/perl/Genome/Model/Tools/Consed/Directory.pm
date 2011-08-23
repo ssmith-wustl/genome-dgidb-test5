@@ -141,13 +141,10 @@ sub next_iteration_acefile_for_ace
 {
     my ($self, $current_ace) = @_;
 
-    return unless Finfo::Validate->validate
-    (
-        attr => 'ace to get next iteration',
-        value => $current_ace,
-        isa => 'string',
-        msg => 'fatal',
-    );
+    if ( not $current_ace ) {
+        $self->error_message('No current ace to get next iteration ace file');
+        return;
+    }
     
     my ($iter) = ( $current_ace =~ s/\.(\d+$)// )
     ? $1
@@ -330,34 +327,6 @@ sub owner_for_ace {
     return (getpwuid( (stat($acefile))[4] ))[0];
 }
 
-sub aceobject {
-    my ($self, $acefile) = @_;
-    
-    Finfo::Validate->validate
-    (
-        attr => 'acefile',
-        value => $acefile,
-        isa => 'file_r',
-        msg => 'fatal',
-    );
-
-    my $ao = Finishing::Assembly::Ace::Ext->new(input_file => $acefile);
-
-    $self->fatal_msg("Could not create ace for acefile ($acefile)") unless $ao;
-
-    return $ao;
-}
-
-sub recent_aceobject
-{
-    my $self = shift;
-    
-    my $acefile = $self->recent_acefile
-        or return;
-
-    return $self->aceobject($acefile);
-}
-
 sub touch_singlets_file_for_acefile
 {
     my ($self, $acefile) = @_;
@@ -376,10 +345,6 @@ sub touch_singlets_file_for_acefile
 
     return;
 }
-
-#- PHD -#
-
-#- SCF (CHROMAT) -#
 
 1;
 

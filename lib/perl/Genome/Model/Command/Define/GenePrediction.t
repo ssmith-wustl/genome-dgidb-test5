@@ -20,6 +20,7 @@ use_ok('Genome::Model::Command::Define::GenePrediction::Bacterial') or die;
 my $test_egap_pp = Genome::ProcessingProfile::GenePrediction::Eukaryotic->create(
     name => 'test egap pp',
     domain => 'eukaryotic',
+    rnammer_version => 45.56.67, # set to nonsense to make pp params unique
 );
 ok($test_egap_pp, 'created test processing profile successfully') or die;
 

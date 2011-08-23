@@ -184,45 +184,6 @@ sub _add_stats_for_reads {
         $self->{_metrix}->{qual_by_pos}->{$read_count}->[$i++] += $qual;
     }
 
-=pod This tries to make sure that the read sequence is in the consensus.  Not sure if it works...
-    my %reads = (
-        left => [],
-        right => [],
-    );
-    my $reads = $amplicon->get_reads_from_successfully_assembled_contig;
-    my %read_bioseqs = map { $_->id => $_ } $amplicon->get_bioseqs_for_processed_reads;
-    my $length = $bioseq->length;
-    while ( my $read = $reads->next ) {
-        if ( $read->start <= 1 and $read->stop >= 100 ) {
-            push @{$reads{left}}, $read;
-        }
-        elsif ( $read->start <= $length - 101 and $read->stop >= $length ) {
-            push @{$reads{right}}, $read;
-        }
-    }
-
-    return 1 unless @{$reads{left}} or @{$reads{right}};
-
-    my %consensus_qual_strings = (
-        left => join(' ', @{$bioseq->subqual(1, 100)}),
-        right => join(' ', @{$bioseq->subqual($length - 101, $length)}),
-    );
-
-    for my $side (qw/ left right /) {
-        my $consensus_qual_string = $consensus_qual_strings{$side};
-        for my $read ( @{$reads{$side}} ) {
-            my $read_name = $read->name;
-            confess "No qual for read ($read_name)" unless $read_bioseqs{$read_name};
-            my $read_qual_string = ( $read->complemented )
-            ? join(' ', reverse @{$read_bioseqs{$read_name}->qual})
-            : join(' ', @{$read_bioseqs{$read_name}->qual});
-
-            unless ( $read_qual_string =~ /$consensus_qual_string/ ) { 
-                push @{$self->{_metrix}->{read_seq_not_in_consensus}}, $amplicon->name;
-            }
-        }
-    }
-=cut
     return 1;
 }
 
