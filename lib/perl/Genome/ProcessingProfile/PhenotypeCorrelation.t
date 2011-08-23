@@ -7,18 +7,26 @@ use Test::More tests => 1;
 
 use Genome::ProcessingProfile::PhenotypeCorrelation;
 
+# these are the ASMS model groups
+my @g = Genome::ModelGroup->get([13391, 13392, 13411]);
+
+
+# create a quantitative processing profile
 my $p = Genome::ProcessingProfile::PhenotypeCorrelation->create(
-    id                       => -10001,
-    name                     => 'September 2011 Mixed-Race Genotyping and Phenotype Correlation',
-    alignment_strategy       => 'bwa 0.5.9 [_q 5] merged by picard 1.29',
-    snv_detection_strategy   => 'samtools r599 filtered by snp-filter v1',
-    indel_detection_strategy => 'samtools r599 filtered by indel-filter v1',
-    sv_detection_strategy    => undef, 
-    cnv_detection_strategy   => undef,
-    genotype_in_groups_by    => 'sample.patient.test_nomenclature.race',
+    id                              => -10001,
+    name                            => 'September 2011 Quantitative Population Phenotype Correlation',
+    alignment_strategy              => 'bwa 0.5.9 [-q 5] merged by picard 1.29',
+    snv_detection_strategy          => 'samtools r599 filtered by snp-filter v1',
+    indel_detection_strategy        => 'samtools r599 filtered by indel-filter v1',
+    sv_detection_strategy           => undef, 
+    cnv_detection_strategy          => undef,
+    group_samples_for_genotyping_by => 'test_nomenclature.race',
+    phenotype_analysis_strategy     => 'quantitative',
 );
 
 ok($p, "created a processing profile");
+
+
 
 __END__
 sub help_synopsis_for_create {

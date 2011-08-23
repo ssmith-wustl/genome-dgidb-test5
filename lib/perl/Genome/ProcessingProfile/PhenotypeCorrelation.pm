@@ -11,7 +11,6 @@ class Genome::ProcessingProfile::PhenotypeCorrelation {
         alignment_strategy => {
             is => "Text",
             is_many => 0,
-            is_optional =>1,
             doc => "Strategy align sequence reads.",
         },
         snv_detection_strategy => {
@@ -38,12 +37,19 @@ class Genome::ProcessingProfile::PhenotypeCorrelation {
             is_optional =>1,
             doc => "Strategy to be used to detect cnvs.",
         },
-        genotype_in_groups_by => {
+        group_samples_for_genotyping_by => {
             is => "Text",
             is_many => 0,
             is_optional => 1,
-            default => 'sample.id',
-            doc => "the grouping characteristic for bulk genotyping (defaults to 'sample.id', meaning no grouping), when empty groups everything together",
+            default_value => 'all',
+            doc => "group samples together when genotyping, using this attribute, instead of examining genomes independently (use \"all\" or \"trio\")",
+        },
+        phenotype_analysis_strategy => {
+            is => "Text",
+            is_many => 0,
+            is_optional =>1,
+            valid_values => ['case-control','quantitative'],
+            doc => "Strategy to use to look at phenotypes.",
         },
     ],
 };
@@ -52,26 +58,49 @@ sub help_synopsis_for_create {
     my $self = shift;
     return <<"EOS"
 
+  # quantitative 
+
     genome processing-profile create phenotype-correlation \
-      --name 'September 2011 Mix-Race Genotyping and Phenotype Correlation' \
-      --alignment-strategy          'bwa 0.5.9 [-q 5] merged by picard 1.29' \
-      --snv-detection-strategy      'samtools r599 filtered by snp-filter v1' \
-      --indel-detection-strategy    'samtools r599 filtered by indel-filter v1' \
-      --genotype-in-groups-by       'sample.patient.some_nomenclature.race' # or "trio"
+      --name 'September 2011 Quantitative Population Phenotype Correlation' \
+      --alignment-strategy              'bwa 0.5.9 [-q 5] merged by picard 1.29' \
+      --snv-detection-strategy          'samtools r599 filtered by snp-filter v1' \
+      --indel-detection-strategy        'samtools r599 filtered by indel-filter v1' \
+      --group-samples-for-genotyping-by 'race' \            # some (optional) phenotypic trait, or 'trio' or 'all'
+      --phenotype-analysis-strategy     'quantitative' \    # or 'case-control'
 
     genome propulation-group define 'ASMS-cohort-WUTGI-2011' ASMS1 ASMS2 ASMS3 ASMS4 
 
     genome model define phenotype-correlation \
-        --name                  'ASMS-v1' 
-        --subject               'ASMS-cohort-WUTGI-2011'
-        --processing-profile    'September 2011 Trio Genotyping and Phenotype Correlation'       
-        --identify-cases-by     'sample.patient.some_nomenclature.has_asms = 1'
-        --identify-controls-by  'sample.patient.some_nomenclature.has_asms = 0'
+        --name                  'ASMS-v1' \
+        --subject               'ASMS-cohort-WUTGI-2011' \
+        --processing-profile    'September 2011 Quantitative Phenotype Correlation' \
+        --trait                 'some_nomenclature.asms_severity'
+   
 
-    # ASMS is not really trios, but just as an example...
-    
+  # case-control
+
+    genome processing-profile create phenotype-correlation \
+      --name 'September 2011 Case-Control Population Phenotype Correlation' \
+      --alignment-strategy              'bwa 0.5.9 [-q 5] merged by picard 1.29' \
+      --snv-detection-strategy          'samtools r599 filtered by snp-filter v1' \
+      --indel-detection-strategy        'samtools r599 filtered by indel-filter v1' \
+      --group-samples-for-genotyping-by 'trio', \
+      --phenotype-analysis-strategy     'case-control'
+
+    genome propulation-group define 'Ceft-Lip-cohort-WUTGI-2011' CL001 CL002 CL003
+
+    genome model define phenotype-correlation \
+        --name                  'Cleft-Lip-v1' \
+        --subject               'Cleft-Lip-cohort-WUTGI-2011' \
+        --processing-profile    'September 2011 Case-Control Phenotype Correlation' \
+        --trait                 'some_nomenclature.has_cleft_lip' \
+        --identify-cases-by     'some_nomenclature.has_cleft_lip = "yes"' \
+        --identify-controls-by  'some_nomenclature.has_cleft_lip = "no"' \
+
     # If you leave off the subject, it would find all patients matching the case/control logic
     # and make a population group called ASMS-v1-cohort automatically???
+    
+
 EOS
 }
 
