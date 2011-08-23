@@ -50,11 +50,29 @@ class Genome::Model::GenePrediction::Eukaryotic::RepeatMasker {
             is_output => 1,
             doc => 'Masked sequence is placed in this file (fasta format)' 
         },
+        make_ace => {
+            is => 'Boolean',
+            is_input => 1,
+            default => 1,
+            doc => 'If set, repeat masker will create an ace file in addition to normal output',
+        },
         ace_file_location => {
             is => 'FilePath',
             is_input => 1,
             is_output => 1,
-            doc => 'If ace files are generated, they are concatenated and placed here',
+            doc => 'If ace file is generated, it goes here',
+        },
+        make_gff => {
+            is => 'Boolean',
+            is_input => 1,
+            default => 0,
+            doc => 'If set, repeat masker will create a gff file in addition to normal output',
+        },
+        gff_file_location => {
+            is => 'FilePath',
+            is_input => 1,
+            is_output => 1,
+            doc => 'If gff file is generated, it goes here',
         },
         repeat_library => {
             is => 'FilePath',
@@ -82,12 +100,6 @@ class Genome::Model::GenePrediction::Eukaryotic::RepeatMasker {
             is_input => 1,
             default => 0,
             doc => 'If set, masking is skipped',
-        },
-        make_ace => {
-            is => 'Boolean',
-            is_input => 1,
-            default => 1,
-            doc => 'If set, repeat masker will create an ace file for each sequence',
         },
     ], 
 };
@@ -127,6 +139,7 @@ sub flags {
     return qw/
         xsmall
         ace
+        gff
     /;
 }
 
@@ -156,6 +169,9 @@ sub _generate_params {
     if ($self->xsmall) {
         $params{'xsmall'} = 1;
     }
+    if ($self->make_gff) {
+        $params{'gff'} = 1;
+    }
 
     return %params;
 }
@@ -168,7 +184,8 @@ sub execute {
     $self->_check_input_fasta;
     $self->_validate_species_and_library;
     $self->_set_temp_working_directory unless defined $self->temp_working_directory;
-    $self->_set_ace_file_location unless defined $self->ace_file_location;
+    $self->_set_ace_file_location if $self->make_ace and not defined $self->ace_file_location;
+    $self->_set_gff_file_location if $self->make_gff and not defined $self->gff_file_location;
     $self->_set_masked_fasta unless defined $self->masked_fasta;
 
     if ($self->skip_masking) {
@@ -221,6 +238,7 @@ sub _move_files_from_working_directory {
         'out' => 'raw_output_directory',
         'masked' => 'masked_fasta',
         'ace' => 'ace_file_location',
+        'gff' => 'gff_file_location',
     );
 
     my @output_files = glob("$working_dir/*");
@@ -312,7 +330,15 @@ sub _set_ace_file_location {
     my $self = shift;
     my $default_ace_file = $self->fasta_file. ".repeat_masker.ace";
     $self->ace_file_location($default_ace_file);
-    $self->status_message("Ace files are being generated and location not given, defaulting to $default_ace_file");
+    $self->status_message("Ace file is being generated and location not given, defaulting to $default_ace_file");
+    return 1;
+}
+
+sub _set_gff_file_location {
+    my $self = shift;
+    my $default_gff_file = $self->fasta_file . ".repeat_masker.gff";
+    $self->gff_file_location($default_gff_file);
+    $self->status_message("Gff is file is being generated and location not given, defaulting to $default_gff_file");
     return 1;
 }
 
