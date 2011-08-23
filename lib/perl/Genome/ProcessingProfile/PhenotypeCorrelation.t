@@ -3,16 +3,16 @@ package Genome::ProcessingProfile::PhenotypeCorrelation;
 use strict;
 use warnings;
 use above "Genome";
-use Test::More skip_all => "under development";
-#use Test::More tests => 1;
+use Test::More tests => 1;
 
 use Genome::ProcessingProfile::PhenotypeCorrelation;
 
 my $p = Genome::ProcessingProfile::PhenotypeCorrelation->create(
+    id                       => -10001,
     name                     => 'September 2011 Mixed-Race Genotyping and Phenotype Correlation',
     alignment_strategy       => 'bwa 0.5.9 [_q 5] merged by picard 1.29',
-    snv_detection_strategy   => 'samtools r599 filtered by snp_filter v1',
-    indel_detection_strategy => 'samtools r599 filtered by indel_filter v1',
+    snv_detection_strategy   => 'samtools r599 filtered by snp-filter v1',
+    indel_detection_strategy => 'samtools r599 filtered by indel-filter v1',
     sv_detection_strategy    => undef, 
     cnv_detection_strategy   => undef,
     genotype_in_groups_by    => 'sample.patient.test_nomenclature.race',

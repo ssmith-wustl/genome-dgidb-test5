@@ -95,9 +95,9 @@ sub create {
     my $bx = $class->define_boolexpr(@_);
     my @errors;
     if ($bx->value_for('alignment_strategy')) {
-        my $strat = Genome::Model::Tools::DetectVariants2::Strategy->get($bx->value_for('alignment_strategy'));
-        push @errors, $strat->__errors__;
-        $strat->delete;
+        #my $strat = Genome::Model::Tools::DetectVariants2::Strategy->get($bx->value_for('alignment_strategy'));
+        #push @errors, $strat->__errors__;
+        #$strat->delete;
     }
     for my $strategy ('snv','indel','sv','cnv') {
         my $name = $strategy . '_detection_strategy';
