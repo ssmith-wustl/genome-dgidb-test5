@@ -65,6 +65,9 @@ sub dirs_ignored_by_diff {
 sub files_ignored_by_diff {
     return qw(
         split_fastas/(.*)rna_masked(.*)
+        build.xml
+        reports/Build_Initialized/report.xml
+        reports/Build_Succeeded/report.xml
     );
 }
 

@@ -91,14 +91,14 @@ sub execute {
     my @genotypes;
     if( $data_source eq 'iscan' )
     {
-      @genotypes = $organism_sample->get_genotype;
+        @genotypes = grep {$_->status eq "pass"} $organism_sample->get_genotype;
     }
     elsif( $data_source eq 'external' )
     {
       @genotypes = $organism_sample->get_external_genotype;
     }
 
-    my $genotype = (grep {$_->status eq "pass"} @genotypes)[-1];
+    my $genotype = $genotypes[-1];
     if ($genotype) {
         # Get the data adapter (DataAdapter::GSGMFinalReport class object)
         my $filter = DataAdapter::Result::Filter::Nathan->new();
