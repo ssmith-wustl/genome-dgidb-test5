@@ -579,6 +579,7 @@ sub unlock_resource {
              && $tlsf_id eq $my_job_id) {
         
              $self->error_message("This lock does not look like it belongs to me.  $basename does not match $my_host $ENV{'USER'} $$ $my_job_id.");
+             delete $SYMLINKS_TO_REMOVE{$resource_lock}; # otherwise the lock would be forcefully cleaned up when process exits
              Carp::croak($self->error_message);
         }
     }
