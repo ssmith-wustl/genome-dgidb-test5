@@ -36,6 +36,7 @@ class Genome::Model::Tools::Pindel::ProcessPindelReads {
                 'to_bed',
                 'somatic_filter',
                 'read_support',
+                'vaf_filter',
             ],
             doc => 'What to do with raw pindel reads',
         },
@@ -43,6 +44,11 @@ class Genome::Model::Tools::Pindel::ProcessPindelReads {
             is => 'Boolean',
             doc => 'This flag is set by default, unset to prevent sorting of the output bed file.',
             default => 0,
+        },
+        variant_freq_cutoff => {
+            is => 'Text',
+            doc => " This is the minimum variant freq for read-support",
+            default => "0.0",
         },
     ],
     has_optional => [
@@ -340,7 +346,6 @@ sub read_support {
     @results = `samtools view $normal_bam $chr:$stop-$stop`;
     my $normal_read_support=0;
     my $normal_read_sw_support=0;
-
     for my $result (@results){
         chomp $result;
         my @details = split /\t/, $result;
@@ -353,6 +358,9 @@ sub read_support {
         }
 
     }
+
+    my $is_lq = 1;
+
     my $p_value = Genome::Statistics::calculate_p_value(
                     $normal_read_support, 
                     $normal_read_sw_support, 
@@ -368,7 +376,6 @@ sub read_support {
 
     my $read_support = join("\t",($reads,$tumor_read_support,$tumor_read_sw_support,$normal_read_support,$normal_read_sw_support,$pos_percent,$p_value))."\n";
     my $read_support_fh = $self->_read_support_fh;
-    my $is_lq = 1;
     #my ($chr,$start,$stop,$refvar,$pindel_reads,$t_reads,$t_sw_reads,$n_reads,$n_sw_reads,$ps, $p_value) = split "\t", $line;
 
     if($p_value <= .15) { #assuming significant smith waterman support, trust the fishers exact test to make a germline determination
@@ -392,6 +399,64 @@ sub read_support {
     } 
     return 1;
 }
+
+sub vaf_filter {
+    my $self = shift;
+    my $event = shift;
+    my $hq_raw = $self->_hq_raw_output_fh;
+    my $lq_raw = $self->_lq_raw_output_fh;
+    my @event = @{ $event };
+    my ($call, $reference, @support) = @event;
+    my $tumor_bam = $self->aligned_reads_input;
+
+    unless(-s $tumor_bam){
+        die $self->error_message("Could not locate tumor_bam at: ".$tumor_bam);
+    }
+
+    my @call_fields = split /\s/, $call;
+
+    my $type = $call_fields[1];
+    my $size = $call_fields[2];
+    my $chr = $call_fields[7];
+    my $start = $call_fields[9];
+    my $stop = $call_fields[10];
+
+    my $reads = scalar(@support);
+
+    # Call samtools over the variant start-stop to get overlapping reads from the tumor bam
+    my @results = `samtools view $tumor_bam $chr:$stop-$stop`;
+    my $tumor_read_support=0;
+    for my $result (@results){
+        $tumor_read_support++;
+    }
+
+    unless($tumor_read_support > 0){
+        die $self->error_message("Found ".$tumor_read_support." reads in the tumor at this position!");
+    }
+
+    my $variant_calls = scalar( grep{ m/tumor/} @support);
+    my $vaf = $variant_calls / $tumor_read_support;
+    my $vaf_cutoff_met = 0;
+    my $cutoff = $self->variant_freq_cutoff;
+    if ($vaf >= $cutoff) {
+        $vaf_cutoff_met = 1;
+    }
+
+    my $bed = $self->get_bed_line(\@event);
+    chomp $bed;
+
+    if($self->create_hq_raw_reads && ($vaf_cutoff_met)){
+        $self->print_raw_read(\@event,$hq_raw);
+    }
+    elsif((!$vaf_cutoff_met) && $self->create_hq_raw_reads){
+        $self->print_raw_read(\@event,$lq_raw);
+    }
+    else {
+        die $self->error_message("Nothing to do!");
+    } 
+    return 1;
+}
+
 
 sub print_raw_read {
     my $self = shift;
