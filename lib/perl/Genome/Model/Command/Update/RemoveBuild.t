@@ -46,7 +46,7 @@ ok($b1, "made test build 1");
 # to test that we parse correctly
 $ENV{GENOME_NO_REQUIRE_USER_VERIFY} = 1;
 my $exit_code1 = eval { 
-    Genome::Model::Build::Command::Remove->_execute_with_shell_params_and_return_exit_code('--', $b1->id);
+    Genome::Model::Command::Update::RemoveBuild->_execute_with_shell_params_and_return_exit_code('--', $b1->id);
 };
 $ENV{GENOME_NO_REQUIRE_USER_VERIFY} = 0;
 
@@ -79,12 +79,12 @@ is($b3->status, 'Succeeded', "status is correct");
 
 is($m->last_succeeded_build, $b3, "last_succeeded_build is correct");
 
-my $exit_code1 = Genome::Model::Build::Command::Remove->_execute_with_shell_params_and_return_exit_code($b2->id);
+my $exit_code1 = Genome::Model::Command::Update::RemoveBuild->_execute_with_shell_params_and_return_exit_code($b2->id);
 is($exit_code1, 0, "removal of build 2 command succeeded");
 isa($b2,"UR::DeletedRef");
 is($m->last_succeeded_build, $b3, "last_succeeded_build is still correct");
 
-my $exit_code2 = Genome::Model::Build::Command::Remove->_execute_with_shell_params_and_return_exit_code($b3->id);
+my $exit_code2 = Genome::Model::Command::Update::RemoveBuild->_execute_with_shell_params_and_return_exit_code($b3->id);
 is($exit_code2, 0, "removal of build 3 command succeeded");
 isa($b3,"UR::DeletedRef");
 is($m->last_succeeded_build, $b1, "last_succeeded_build is now build 1");
