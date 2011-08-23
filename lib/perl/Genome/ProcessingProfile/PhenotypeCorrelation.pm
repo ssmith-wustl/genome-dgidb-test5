@@ -38,36 +38,15 @@ class Genome::ProcessingProfile::PhenotypeCorrelation {
             is_optional =>1,
             doc => "Strategy to be used to detect cnvs.",
         },
+        genotype_in_groups_by => {
+            is => "Text",
+            is_many => 0,
+            is_optional => 1,
+            default => 'sample.id',
+            doc => "the grouping characteristic for bulk genotyping (defaults to 'sample.id', meaning no grouping), when empty groups everything together",
+        },
     ],
 };
-
-sub _initialize_model {
-    my ($self,$model) = @_;
-    warn "defining new model " . $model->__display_name__ . " for profile " . $self->__display_name__ . "\n";
-    return 1;
-}
-
-sub _validate_build {
-    my $self = shift;
-    my $dir = $self->data_directory;
-    
-    my @errors;
-    unless (-e "$dir/output") {
-        my $e = $self->error_message("No output file $dir/output found!");
-        push @errors, $e;
-    }
-    unless (-e "$dir/errors") {
-        my $e = $self->error_message("No output file $dir/errors found!");
-        push @errors, $e;
-    }
-
-    if (@errors) {
-        return;
-    }
-    else {
-        return 1;
-    }
-}
 
 sub help_synopsis_for_create {
     my $self = shift;
@@ -115,43 +94,66 @@ sub create {
     my $class = shift;
     my $bx = $class->define_boolexpr(@_);
     my @errors;
-    if ($bx->value_for('snv_detection_strategy')) {
-        my $snv_strat = Genome::Model::Tools::DetectVariants2::Strategy->get($bx->value_for('snv_detection_strategy'));
-        push @errors, $snv_strat->__errors__;
-        $snv_strat->delete;
+    if ($bx->value_for('alignment_strategy')) {
+        my $strat = Genome::Model::Tools::DetectVariants2::Strategy->get($bx->value_for('alignment_strategy'));
+        push @errors, $strat->__errors__;
+        $strat->delete;
     }
-    if ($bx->value_for('sv_detection_strategy')) {
-        my $sv_strat = Genome::Model::Tools::DetectVariants2::Strategy->get($bx->value_for('sv_detection_strategy'));
-        push @errors, $sv_strat->__errors__;
-        $sv_strat->delete;
-    }
-    if ($bx->value_for('indel_detection_strategy')) {
-        my $indel_strat = Genome::Model::Tools::DetectVariants2::Strategy->get($bx->value_for('indel_detection_strategy'));
-        push @errors, $indel_strat->__errors__;
-        $indel_strat->delete;
+    for my $strategy ('snv','indel','sv','cnv') {
+        my $name = $strategy . '_detection_strategy';
+        if ($bx->value_for($name)) {
+            my $strat = Genome::Model::Tools::DetectVariants2::Strategy->get($bx->value_for($name));
+            push @errors, $strat->__errors__;
+            $strat->delete;
+        }
     }
     if (scalar(@errors)) { 
         die @errors;
     }
-
     return $class->SUPER::create($bx);
+}
+
+sub _initialize_model {
+    my ($self,$model) = @_;
+    #warn "defining new model " . $model->__display_name__ . " for profile " . $self->__display_name__ . "\n";
+    return 1;
 }
 
 sub _initialize_build {
     my($self,$build) = @_;
-    $DB::single=1;
+    #warn "definining new build " . $model->__display_name__ . " for profile " . $self->__display_name__ . "\n";
     return 1;
 }
 
 sub _execute_build {
     my ($self,$build) = @_;
-    warn "executing build logic for " . $self->__display_name__ . ':' .  $build->__display_name__ . "\n";
+
+    # TODO: remove this and replace with the workflow logic at the bottom when we have one.
+    warn "The logic for building this is not yet in place!  Cannot run " . $self->__display_name__ . ':' .  $build->__display_name__ . "\n";
 
     my @inputs = $build->inputs();
 
     my $dir = $build->data_directory;
 
     return 1;
+}
+
+sub _validate_build {
+    my $self = shift;
+    my $dir = $self->data_directory;
+    
+    my @errors;
+    unless (1) {
+        my $e = $self->error_message("Something is wrong!");
+        push @errors, $e;
+    }
+
+    if (@errors) {
+        return;
+    }
+    else {
+        return 1;
+    }
 }
 
 1;
