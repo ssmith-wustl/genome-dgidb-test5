@@ -474,7 +474,7 @@ sub generate_RNA_annotation_files {
     unless ($self->transcript_info_file($reference_sequence_id)) {
         my $status = $self->generate_transcript_info_file($reference_sequence_id);
         unless ($status) {
-            warn('Failed to generate transcfipt_info_file for '. $self->id .' and reference '. $reference_sequence_id);
+            warn('Failed to generate transcript_info_file for '. $self->id .' and reference '. $reference_sequence_id);
         }
     }
     my @types = qw/annotation rRNA rRNA_protein MT pseudogene rRNA_MT rRNA_MT_pseudogene/;
