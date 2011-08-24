@@ -2,6 +2,7 @@ package Finishing::Assembly::DSProxy;
 
 use strict;
 use warnings;
+no warnings 'reserved';
 
 use base 'Finishing::Assembly::Proxy';
 
@@ -74,6 +75,7 @@ package Finishing::Assembly::ContigDSProxy;
 
 use strict;
 use warnings;
+no warnings 'reserved';
 
 use base 'Finishing::Assembly::DSProxy';
 
@@ -212,6 +214,7 @@ package Finishing::Assembly::AssembledReadDSProxy;
 
 use strict;
 use warnings;
+no warnings 'reserved';
 
 use base 'Finishing::Assembly::DSProxy';
 

@@ -2,6 +2,7 @@ package Finishing::Assembly::Consed::Navigation::Writer;
 
 use strict;
 use warnings;
+no warnings 'reserved';
 
 use base 'Finfo::Writer';
 

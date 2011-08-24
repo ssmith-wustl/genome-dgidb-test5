@@ -2,6 +2,7 @@ package Finishing::Assembly::Source::Schema;
 
 use strict;
 use warnings;
+no warnings 'reserved';
 
 use base 'Finfo::Singleton';
 
