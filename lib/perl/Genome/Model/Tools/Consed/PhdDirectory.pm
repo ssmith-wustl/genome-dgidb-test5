@@ -63,17 +63,11 @@ sub get_phd
     my $file = $self->phd_exists($phd_name)
         or return;
 
-    my $fh = eval{ Genome::Sys->open_file_for_reading($file); };
-    if ( not $fh ) {
-        $self->error_message("Failed to open file ($file): $@");
-        return;
-    }
-    my $phd = Genome::Model::Tools::Consed::PhdReader->read($fh);
+    my $phd = Genome::Model::Tools::Consed::PhdReader->read($file);
     if ( not $phd ) {
         $self->error_message('No phd frpm reader for file: '.$file);
         return;
     }
-    $fh->close;
 
     return $phd;
 }
