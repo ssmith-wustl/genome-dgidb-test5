@@ -62,9 +62,6 @@ sub run_filter {
     ok($filter, 'created filter') || return;
     ok($filter->execute, 'executed filter') || return;
 
-    my $minimum_depth = $filter->minimum_depth;
-    my $maximum_depth = $filter->maximum_depth;
-
     my $output_directory = $filter->output_directory;
     my ($sub_dir) = $output_directory =~ /\/([^\/]+)$/;
     my $expected_output_dir = join('/', $expected_data_dir, $sub_dir);
@@ -73,5 +70,5 @@ sub run_filter {
 
     my @compare = qx(diff -u $expected_output_dir $output_directory);
     is(scalar @compare, 0, 'no diff between expected output and actual output')
-        or print join("\n", @compare) . "\n";
+        or diag @compare, "\n";
 }
