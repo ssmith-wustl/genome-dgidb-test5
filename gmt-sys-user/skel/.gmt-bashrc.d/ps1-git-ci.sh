@@ -10,6 +10,7 @@ last_perl_tests_status() {
             local FAILCOUNT=$(curl -sk https://apipe-ci.gsc.wustl.edu/job/1%20Genome%20Perl%20Tests/lastCompletedBuild/api/xml?xpath=/freeStyleBuild/action/failCount | grep -vP '^XPath' | sed -r 's/^<\w+>(.*)<\/\w+>/\1/')
             local NO_COLOR="\033[0m"
             local BLUE="\033[0;34m"
+            local CYAN="\033[0;36m"
             local RED="\033[0;31m"
             local YELLOW="\033[1;33m"
             if [ "${RESULT}" = "FAILURE" ]; then
@@ -19,7 +20,7 @@ last_perl_tests_status() {
                 echo " (YELLOW)"
             fi
             if [ "${RESULT}" = "SUCCESS" ]; then
-                echo -e " (${BLUE}*${NO_COLOR})"
+                echo -e " (${CYAN}*${NO_COLOR})"
             fi
         fi
     fi
@@ -32,6 +33,7 @@ last_perl_tests_color() {
         if [ -n "$(which curl)" ]; then
             local RESULT=$(curl -sk https://apipe-ci.gsc.wustl.edu/job/1%20Genome%20Perl%20Tests/lastCompletedBuild/api/xml?xpath=/freeStyleBuild/result | grep -vP '^XPath' | sed -r 's/^<\w+>(.*)<\/\w+>/\1/')
             local BLUE="\033[0;34m"
+            local CYAN="\033[0;36m"
             local RED="\033[0;31m"
             local YELLOW="\033[1;33m"
             if [ "${RESULT}" = "FAILURE" ]; then
@@ -41,7 +43,7 @@ last_perl_tests_color() {
                 echo $YELLOW
             fi
             if [ "${RESULT}" = "SUCCESS" ]; then
-                echo $BLUE
+                echo $CYAN
             fi
         else
             # fallback to no color if not able to determine color

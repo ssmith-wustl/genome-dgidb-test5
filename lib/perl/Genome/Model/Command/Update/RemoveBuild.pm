@@ -1,12 +1,12 @@
-package Genome::Model::Build::Command::Remove;
+package Genome::Model::Command::Update::RemoveBuild;
 
 use strict;
 use warnings;
 
 use Genome;
 
-class Genome::Model::Build::Command::Remove {
-    is => 'Genome::Model::Build::Command::Base',
+class Genome::Model::Command::Update::RemoveBuild {
+    is => 'Genome::Command::Base',
     has => [
         builds => {
             is                  => 'Genome::Model::Build',
@@ -27,6 +27,8 @@ class Genome::Model::Build::Command::Remove {
 
 sub sub_command_sort_position { 7 }
 
+sub _is_hidden_in_docs { return 1; }
+
 sub help_brief {
     "Remove a build.";
 }
@@ -35,9 +37,18 @@ sub help_detail {
     "This command will remove a build from the system.  The rest of the model remains the same, as does independent data like alignments.";
 }
 
+sub _is_hidden_in_docs { return 1; }
+
 # TODO This needs to be cleaned up
 sub execute {
     my $self = shift;
+
+    my $user = getpwuid($<);
+    my $apipe_members = (getgrnam("apipe"))[3];
+    if ($apipe_members !~ /\b$user\b/) {
+        print "You must be a member of APipe to use this command.\n";
+        return;
+    }
 
     my @builds = $self->builds;
     my $build_count = scalar(@builds);

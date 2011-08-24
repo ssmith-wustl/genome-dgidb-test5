@@ -5,6 +5,7 @@ use warnings;
 # this conflicts with all sorts of Finishing/Finfo stuff
 # ironicall it is used by Pcap stuff
 BEGIN { $INC{"UNIVERSAL/can.pm"} = 'no' };
+BEGIN { $INC{"UNIVERSAL/isa.pm"} = 'no' };
 
 # this keeps available parts of the UR pre-0.01 API we still use
 use UR::ObjectV001removed;
