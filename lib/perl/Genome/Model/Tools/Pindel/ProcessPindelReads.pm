@@ -425,13 +425,19 @@ sub vaf_filter {
 
     # Call samtools over the variant start-stop to get overlapping reads from the tumor bam
     my @results = `samtools view $tumor_bam $chr:$stop-$stop`;
-    my $tumor_read_support=0;
-    for my $result (@results){
-        $tumor_read_support++;
-    }
+    my $tumor_read_support=scalar(@results);
 
+    # Currently, there are some instances when samtools view runs for along time, and either does not return,
+    # or returns nothing, resulting in zero tumor_read_support, which itself causes a divide by zero error.
+    # SO, in the interests of testing this filter on real data, I have added an override which sets 
+    # tumor_read_support to 1 and fails the site, but notifies the user.  rlong 8/24/2011
+
+
+    my $override=0;
     unless($tumor_read_support > 0){
-        die $self->error_message("Found ".$tumor_read_support." reads in the tumor at this position!");
+        $self->status_message("Found ".$tumor_read_support." reads in the tumor, but pindel found: " . $reads . " supporting the variant at ".join("\t",($chr,$start,$stop))."\n");
+        $tumor_read_support =1;
+        $override = 1;
     }
 
     my $variant_calls = scalar( grep{ m/tumor/} @support);
@@ -440,6 +446,10 @@ sub vaf_filter {
     my $cutoff = $self->variant_freq_cutoff;
     if ($vaf >= $cutoff) {
         $vaf_cutoff_met = 1;
+    } 
+
+    if($override){
+        $vaf_cutoff_met=0;
     }
 
     my $bed = $self->get_bed_line(\@event);

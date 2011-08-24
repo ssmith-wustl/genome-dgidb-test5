@@ -649,7 +649,7 @@ sub _get_read_depth_stats_from_afg { #for velvet assemblies
 	"Depth >= 3: $three_x_cov\t". $three_x_cov/$total_consensus_pos."\n".
 	"Depth >= 2: $two_x_cov\t". $two_x_cov/$total_consensus_pos."\n".
 	"Depth >= 1: $one_x_cov\t". $one_x_cov/$total_consensus_pos."\n";
-    if ( $uncovered_pos > 0 ) {
+    if ( $uncovered_pos and $uncovered_pos > 0 ) {
         $text .= "Uncovered:  $uncovered_pos\n";
     }
     return $text;
