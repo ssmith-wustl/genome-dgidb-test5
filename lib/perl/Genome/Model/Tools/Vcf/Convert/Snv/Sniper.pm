@@ -31,8 +31,6 @@ sub parse_line {
     my $self = shift;
     my $line = shift;
 
-    my @col = split("\t",$line);
-
     # TODO snv_qual is not used...
     my ($chr, $pos, $ref, $genotype, $tumor_vaq, $snv_qual, $tumor_mq, $tumor_bq, $tumor_dp, $normal_dp ) = split("\t",$line);
     my $tumor_gq = $tumor_mq; #TODO Should these really be the same?
@@ -73,7 +71,6 @@ sub parse_line {
     my $tumor_sample_string = join (":", ($tumor_gt, $tumor_gq, $tumor_dp, $tumor_bq, $tumor_mq, $tumor_ad, $tumor_fa, $tumor_vaq));
     my $normal_sample_string = join (":", ($normal_gt, $normal_gq, $normal_dp, $normal_bq, $normal_mq, $normal_ad, $normal_fa, $normal_vaq));
 
-    # TODO Only use tumor vaq / somatic score as QUAL if a flag is set... should decide which of these behaviors to do
     my $vcf_line = join("\t", $chr, $pos, $dbsnp_id, $ref, $alt, $qual, $filter, $info, $format, $normal_sample_string, $tumor_sample_string);
 
     return $vcf_line;
