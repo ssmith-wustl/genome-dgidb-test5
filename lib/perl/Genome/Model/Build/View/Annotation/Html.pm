@@ -9,11 +9,8 @@ class Genome::Model::Build::View::Annotation::Html {
     ],
 };
 
-warn 'Hi';
-
 sub _generate_content {
     my $self = shift;
-warn 'Hello';
     my $build = $self->subject;
 
     my $return_value = <<'HTML'
