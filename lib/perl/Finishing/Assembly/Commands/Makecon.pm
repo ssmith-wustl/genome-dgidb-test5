@@ -2,6 +2,7 @@ package Finishing::Assembly::Commands::Makecon;
 
 use strict;
 use warnings;
+no warnings 'reserved';
 
 use Finfo::Std;
 

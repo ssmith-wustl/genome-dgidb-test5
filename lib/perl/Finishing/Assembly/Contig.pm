@@ -2,6 +2,7 @@ package Finishing::Assembly::Contig;
 
 use strict;
 use warnings;
+no warnings 'reserved';
 
 use base 'Finishing::Assembly::SequencedItem';
 use List::Util qw(min max);

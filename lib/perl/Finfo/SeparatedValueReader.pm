@@ -2,6 +2,7 @@ package Finfo::SeparatedValueReader;
 
 use strict;
 use warnings;
+no warnings 'reserved';
 
 use base 'Finfo::Reader';
 

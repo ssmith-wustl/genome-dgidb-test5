@@ -2,6 +2,7 @@ package Finishing::Assembly::Commands::CreateAssembly;
 
 use strict;
 use warnings;
+no warnings 'reserved';
 
 use base 'Finishing::Assembly::Commands::Base';
 
