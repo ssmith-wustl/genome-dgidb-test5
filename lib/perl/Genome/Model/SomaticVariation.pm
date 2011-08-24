@@ -215,7 +215,7 @@ sub create {
 
     unless($self->annotation_build) {
         $self->error_message('No annotation build on model!' );
-        $self->delete
+        $self->delete;
         return;
     }
     
