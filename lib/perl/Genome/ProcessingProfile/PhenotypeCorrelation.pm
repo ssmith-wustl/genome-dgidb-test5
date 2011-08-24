@@ -74,8 +74,6 @@ sub help_synopsis_for_create {
         --name                  'ASMS-v1' \
         --subject               'ASMS-cohort-WUTGI-2011' \
         --processing-profile    'September 2011 Quantitative Phenotype Correlation' \
-        --trait                 'some_nomenclature.asms_severity'
-   
 
   # case-control
 
@@ -93,7 +91,6 @@ sub help_synopsis_for_create {
         --name                  'Cleft-Lip-v1' \
         --subject               'Cleft-Lip-cohort-WUTGI-2011' \
         --processing-profile    'September 2011 Case-Control Phenotype Correlation' \
-        --trait                 'some_nomenclature.has_cleft_lip' \
         --identify-cases-by     'some_nomenclature.has_cleft_lip = "yes"' \
         --identify-controls-by  'some_nomenclature.has_cleft_lip = "no"' \
 

@@ -2,32 +2,30 @@ package Genome::ModelGroup;
 
 use strict;
 use warnings;
-
 use Genome;
+
 class Genome::ModelGroup {
-    type_name  => 'model group',
     table_name => 'MODEL_GROUP',
-    id_by      => [ id => { is => 'NUMBER' }, ],
-    has        => [
-        name          => { is => 'VARCHAR2' },
-        model_bridges => {
-            is         => 'Genome::ModelGroupBridge',
-            reverse_as => 'model_group',
-            is_many    => 1
-        },
-        models => {
-            is      => 'Genome::Model',
-            is_many => 1,
-            via     => 'model_bridges',
-            to      => 'model'
-        },
-        convergence_model => {
-            is          => 'Genome::Model::Convergence',
-            is_many => 1, # We really should only have 1 here, however reverse_as requires this
-            reverse_as  => 'group',
-            doc         => 'The auto-generated Convergence Model summarizing knowledge about this model group',
-            is_optional => 1, 
-        },
+    id_by      => [ 
+        id                  => { is => 'Number' }, 
+    ],
+    has => [
+        name                => { is => 'Text' },
+        model_bridges       => { is => 'Genome::ModelGroupBridge',
+                                    reverse_as  => 'model_group',
+                                    is_many     => 1
+                                },
+        models              => { is => 'Genome::Model',
+                                    is_many => 1,
+                                    via     => 'model_bridges',
+                                    to      => 'model'
+                                },
+        convergence_model   => { is => 'Genome::Model::Convergence',
+                                    is_many     => 1, # We really should only have 1 here, however reverse_as requires this
+                                    reverse_as  => 'group',
+                                    doc         => 'The auto-generated Convergence Model summarizing knowledge about this model group',
+                                    is_optional => 1, 
+                                },
     ],
     schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',
@@ -61,6 +59,13 @@ sub create {
     }
     
     return $self;
+}
+
+sub subjects {
+    my $self = shift;
+    my @models = $self->models;
+    my @subjects = Genome::Subject->get([ map { $_->subject_id } @models ]);
+    return @subjects;
 }
 
 sub assign_models {

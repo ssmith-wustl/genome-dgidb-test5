@@ -203,22 +203,26 @@ sub create {
 
     unless($self->tumor_model) {
         $self->error_message('No tumor model on model!' );
+        $self->delete;
         return;
     }
 
     unless($self->normal_model) {
         $self->error_message('No normal model on model!');
+        $self->delete;
         return;
     }
 
     unless($self->annotation_build) {
         $self->error_message('No annotation build on model!' );
+        $self->delete
         return;
     }
     
     if ($dbsnp_flag) {
         unless($self->previously_discovered_variations_build) {
             $self->error_message('No previous variants build on model!');
+            $self->delete;
             return;
         }
     }

@@ -37,6 +37,13 @@ class Genome::Model {
             is => 'Genome::Subject',
             id_by => 'subject_id',
         },
+        _sample_subject => {
+            # returns the subject but only when it is a sample
+            # allows samples to find their models more efficiently (update UR to automatically do reverse class disambiguation)
+            is => 'Genome::Sample',
+            is_optional => 1,
+            id_by => 'subject_id',
+        },
         subject_name => {
             via => 'subject',
             to => 'name',
