@@ -122,7 +122,7 @@ sub execute {                               # replace with real execution logic.
 	## Parse the CDS Exons or Targets File to Build the Output File ##
 	
 	$input = new FileHandle ($bed_file);
-	my $lineCounter = 0;
+	$lineCounter = 0;
 	
 	while (<$input>)
 	{
