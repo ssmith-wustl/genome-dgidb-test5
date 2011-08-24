@@ -40,7 +40,7 @@ CREATE TABLE instrument_data (
     id                  varchar(64) NOT NULL,
     subclass_name       varchar(64) NOT NULL,
     sequencing_platform varchar(64) NOT NULL,
-    library_id          integer NOT NULL REFERENCES subject(subject_id),
+    library_id          integer NOT NULL REFERENCES fragment_library(library_id),
     source_name         varchar(64),
     subset_name         varchar(64),
     run_name            varchar(64),
