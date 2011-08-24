@@ -180,12 +180,6 @@ sub _parse_list
 
 =item cross_match
 
-=item Alignment::Crossmatch::Discrepancy
-
-=item Alignment::Crossmatch directory
-
-=item Finfo::Reader
-
 =back
 
 =head1 Disclaimer
