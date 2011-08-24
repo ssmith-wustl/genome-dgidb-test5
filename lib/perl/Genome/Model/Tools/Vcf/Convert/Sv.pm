@@ -10,12 +10,12 @@ class Genome::Model::Tools::Vcf::Convert::Sv {
 };
 
 sub help_brief {
-    "Tools and scripts to convert VCF files."
+    "Tools to convert lists of svs into VCF files."
 }
 
 sub help_detail {
     return <<EOS
-Tools and scripts to convert VCF files.
+Tools to convert lists of svs into VCF files.
 EOS
 }
 
