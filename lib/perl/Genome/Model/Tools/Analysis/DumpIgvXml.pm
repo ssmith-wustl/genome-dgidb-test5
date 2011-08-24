@@ -47,6 +47,12 @@ class Genome::Model::Tools::Analysis::DumpIgvXml {
         is_optional => 0,
         doc => 'directory to dump session files. Will be named by GSC common name',
     },
+    reference_name => {
+        type => 'String',
+        is_optional => 0,
+        default => 'reference',
+        doc => 'the name of the reference (in IGV) that the bams are aligned to. E.g. b37 for build 37 or reference for our internal build36',
+    },
     ]
 };
 
@@ -63,10 +69,10 @@ sub execute {
     }
 
     if($self->relapse_bam) {
-        print $ofh $self->generate_xml("$tumor_common_name Tumor",abs_path($self->tumor_bam), "$tumor_common_name Normal", abs_path($self->normal_bam), abs_path($self->review_bed_file), $self->review_description, "$tumor_common_name Relapse", abs_path($self->relapse_bam));
+        print $ofh $self->generate_xml($self->reference_name,"$tumor_common_name Tumor",abs_path($self->tumor_bam), "$tumor_common_name Normal", abs_path($self->normal_bam), abs_path($self->review_bed_file), $self->review_description, "$tumor_common_name Relapse", abs_path($self->relapse_bam));
     }
     else {
-        print $ofh $self->generate_xml("$tumor_common_name Tumor",abs_path($self->tumor_bam), "$tumor_common_name Normal", abs_path($self->normal_bam), abs_path($self->review_bed_file), $self->review_description);
+        print $ofh $self->generate_xml($self->reference_name,"$tumor_common_name Tumor",abs_path($self->tumor_bam), "$tumor_common_name Normal", abs_path($self->normal_bam), abs_path($self->review_bed_file), $self->review_description);
     }
     $ofh->close;
     return 1;
@@ -87,7 +93,7 @@ HELP
 }
 
 sub generate_xml {
-    my ($self, $tumor_name, $tumor_bam, $normal_name, $normal_bam, $review_bed_file, $review_bed_name,$relapse_name, $relapse_bam) = @_;
+    my ($self, $reference_name, $tumor_name, $tumor_bam, $normal_name, $normal_bam, $review_bed_file, $review_bed_name,$relapse_name, $relapse_bam) = @_;
     my $relapse_resource = "";
     if($relapse_bam) {
         $relapse_resource = qq{\n        <Resource path="$relapse_bam" relativePath="false"/>};
@@ -108,7 +114,7 @@ RELAPSE_PANEL
     }   
     my $xml = <<"XML";
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<Session genome="reference" locus="1:1-100" version="3">
+<Session genome="$reference_name" locus="1:1-100" version="3">
     <Resources>
         <Resource path="$tumor_bam" relativePath="false"/>
         <Resource path="$review_bed_file" relativePath="false"/>
