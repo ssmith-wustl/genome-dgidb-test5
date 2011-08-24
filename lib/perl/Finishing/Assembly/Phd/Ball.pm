@@ -2,6 +2,7 @@ package Finishing::Assembly::Phd::Ball;
 
 use strict;
 use warnings;
+no warnings 'reserved';
 
 use Finfo::Std;
 use File::Temp;

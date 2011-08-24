@@ -6,6 +6,7 @@ package TestStd;
 {
     use strict;
     use warnings;
+    no warnings 'reserved';
 
     use Finfo::Std;
 
@@ -45,6 +46,7 @@ package TestStdInheritance;
 {
     use strict;
     use warnings;
+    no warnings 'reserved';
 
     use Data::Dumper;
 
@@ -59,6 +61,7 @@ package TestObject;
 {
     use strict;
     use warnings;
+    no warnings 'reserved';
 
     use Data::Dumper;
 
@@ -110,6 +113,7 @@ package TestObjectInheritance;
 {
     use strict;
     use warnings;
+    no warnings 'reserved';
 
     use Data::Dumper;
 
@@ -133,6 +137,7 @@ package TestOldObject;
 {
     use strict;
     use warnings;
+    no warnings 'reserved';
 
     use Data::Dumper;
 
@@ -183,6 +188,7 @@ package TestReader;
 {
     use strict;
     use warnings;
+    no warnings 'reserved';
 
     use Data::Dumper;
 
@@ -217,6 +223,7 @@ package TestWriter;
 {
     use strict;
     use warnings;
+    no warnings 'reserved';
 
     use base 'Finfo::Writer';
 
@@ -234,6 +241,7 @@ package TestSingleton;
 {
     use strict;
     use warnings;
+    no warnings 'reserved';
 
     use base 'Finfo::Singleton';
 
@@ -258,6 +266,7 @@ package FinfoTest;
 
 use strict;
 use warnings;
+no warnings 'reserved';
 
 use base qw(Test::Class);
 
@@ -1239,6 +1248,7 @@ package main;
 
 use strict;
 use warnings;
+no warnings 'reserved';
 
 Test::Class->runtests('FinfoTest');
 

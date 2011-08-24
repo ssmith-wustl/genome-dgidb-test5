@@ -1,6 +1,7 @@
 package Finishing::Assembly::Consed;
 
 use warnings;
+no warnings 'reserved';
 use strict;
 
 use Finfo::Std;
