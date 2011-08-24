@@ -12,10 +12,10 @@ use Test::More tests => 17;
 
 use above 'Genome';
 
-use_ok('Genome::Model::Tools::DetectVariants2::Filter::Depth') || die;
+use_ok('Genome::Model::Tools::DetectVariants2::Filter::VarscanPValue') || die;
 
-my $test_data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants2-Filter-Depth';
-my $expected_data_dir = join('/', $test_data_dir, 'expected');
+my $test_data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants2-Filter-VarscanPValue';
+my $expected_output_dir = join('/', $test_data_dir, 'output');
 
 my $bam_file = join('/', $test_data_dir, 'tumor.tiny.bam');
 
@@ -32,39 +32,39 @@ my $detector_result = Genome::Model::Tools::DetectVariants2::Result->__define__(
     reference_build_id => $reference->id,
 );
 
-my $output_base = File::Temp::tempdir('DetectVariants2-Filter-Depth-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites/', CLEANUP => 1);
+my $output_base = File::Temp::tempdir('DetectVariants2-Filter-VarscanPValue-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites/', CLEANUP => 1);
 
-my %minimum_only_params = (
+my %variant_p_value_only = (
     previous_result_id => $detector_result->id,
-    output_directory => $output_base . '/filter-minimum-only',
-    params => '--minimum-depth 3',
+    output_directory => $output_base . '/variant-p-value-only',
+    params => '--variant-p-value 0.5',
 );
 
-my %maximum_only_params = (
+my %somatic_p_value_only = (
     previous_result_id => $detector_result->id,
-    output_directory => $output_base . '/filter-maximum-only',
-    params => '--maximum-depth 3',
+    output_directory => $output_base . '/somatic-p-value-only',
+    params => '--somatic-p-value 0.5',
 );
 
 my %combined_params = (
     previous_result_id => $detector_result->id,
-    output_directory => $output_base . '/filter-combined',
-    params => '--minimum-depth 3 --maximum-depth 3',
+    output_directory => $output_base . '/combined',
+    params => '--variant-p-value 0.5 --somatic-p-value 0.5',
 );
 
-run_filter(%minimum_only_params);
-run_filter(%maximum_only_params);
+run_filter(%variant_p_value_only);
+run_filter(%somatic_p_value_only);
 run_filter(%combined_params);
 
 sub run_filter {
     my %params = @_;
-    my $filter = Genome::Model::Tools::DetectVariants2::Filter::Depth->create(%params);
+    my $filter = Genome::Model::Tools::DetectVariants2::Filter::VarscanPValue->create(%params);
     ok($filter, 'created filter') || return;
     ok($filter->execute, 'executed filter') || return;
 
     my $output_directory = $filter->output_directory;
     my ($sub_dir) = $output_directory =~ /\/([^\/]+)$/;
-    my $expected_output_dir = join('/', $expected_data_dir, $sub_dir);
+    my $expected_output_dir = join('/', $expected_output_dir, $sub_dir);
     ok(-d $output_directory, 'output_directory exists') or return;
     ok(-d $expected_output_dir, 'expected_output_dir exists') or die('Test data not in place? ' . $expected_output_dir);
 
