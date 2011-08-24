@@ -2,6 +2,7 @@ package Finfo::Writer;
 
 use strict;
 use warnings;
+no warnings 'reserved';
 
 use Finfo::Std;
 require Scalar::Util;
@@ -103,6 +104,7 @@ B<In your class>
 
  use strict;
  use warnings;
+no warnings 'reserved';
 
  use base 'Finfo::Writer';
 

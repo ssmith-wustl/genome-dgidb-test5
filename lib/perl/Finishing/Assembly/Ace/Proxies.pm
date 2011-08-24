@@ -6,6 +6,7 @@ package Finishing::Assembly::Ace::AssemblyProxy;
 
 use strict;
 use warnings;
+no warnings 'reserved';
 
 use base 'Finishing::Assembly::Proxy';
 
@@ -43,6 +44,7 @@ package Finishing::Assembly::Ace::SequencedItemProxy;
 
 use strict;
 use warnings;
+no warnings 'reserved';
 
 use base 'Finishing::Assembly::Proxy';
 
@@ -109,6 +111,7 @@ package Finishing::Assembly::Ace::ContigProxy;
 
 use strict;
 use warnings;
+no warnings 'reserved';
 
 use base 'Finishing::Assembly::Ace::SequencedItemProxy';
 

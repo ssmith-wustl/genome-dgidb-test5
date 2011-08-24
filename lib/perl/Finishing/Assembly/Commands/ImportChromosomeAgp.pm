@@ -2,6 +2,7 @@ package Finishing::Assembly::Commands::ImportChromosomeAgp;
 
 use strict;
 use warnings;
+no warnings 'reserved';
 
 
 use base('Finishing::Assembly::Commands::Base');
