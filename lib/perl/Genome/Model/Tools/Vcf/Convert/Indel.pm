@@ -10,12 +10,12 @@ class Genome::Model::Tools::Vcf::Convert::Indel {
 };
 
 sub help_brief {
-    "Tools and scripts to convert VCF files."
+    "Tools to convert lists of indels into VCF files."
 }
 
 sub help_detail {
     return <<EOS
-Tools and scripts to convert VCF files.
+Tools to convert lists of indels into VCF files.
 EOS
 }
 

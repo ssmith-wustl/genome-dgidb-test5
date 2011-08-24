@@ -7,17 +7,12 @@ use Genome::Info::IUB;
 
 class Genome::Model::Tools::Vcf::Convert::Snv::Sniper {
     is => 'Genome::Model::Tools::Vcf::Convert::Base',
+    doc => 'Generate a VCF file from sniper output'
 };
-
-
-sub help_brief {
-    "Generate Vcf File from sniper output"
-}
-
 
 sub help_synopsis {
     <<'HELP';
-    Generate a VCF File from sniper output
+    Generate a VCF file from sniper output
 HELP
 }
 
