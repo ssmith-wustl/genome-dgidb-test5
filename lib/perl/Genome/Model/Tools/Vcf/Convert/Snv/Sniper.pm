@@ -12,13 +12,13 @@ class Genome::Model::Tools::Vcf::Convert::Snv::Sniper {
 
 sub help_synopsis {
     <<'HELP';
-    Generate a VCF file from sniper output
+    Generate a VCF file from sniper snv output
 HELP
 }
 
 sub help_detail {
     <<'HELP';
-    Parses the relevant files and creates a VCF containing all the SNVs. This includes those that fail filters (noted in the FILTER field).
+    Parses the input file and creates a VCF containing all the snvs.
 HELP
 }
 

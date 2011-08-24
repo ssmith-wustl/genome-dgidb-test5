@@ -127,7 +127,7 @@ sub get_base_at_position {
     my ($chr,$pos) = @_;
 
     my $reference = $self->reference_sequence_input;
-    Genome::Sys->verify_file_for_reading($reference);
+    Genome::Sys->validate_file_for_reading($reference);
     my $sam_default = Genome::Model::Tools::Sam->path_for_samtools_version;
     my $faidx_cmd = "$sam_default faidx $reference $chr:$pos-$pos";
 
