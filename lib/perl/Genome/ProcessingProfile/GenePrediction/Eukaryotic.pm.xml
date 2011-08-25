@@ -22,8 +22,8 @@
     <link fromOperation="contig_predict_genes"     fromProperty="temp_prediction_directory"      toOperation="merge_predictions"        toProperty="temp_prediction_directories" />
     <link fromOperation="input connector"          fromProperty="prediction_directory"           toOperation="merge_predictions"        toProperty="prediction_directory" />
 
-    <link fromOperation="input connector"          fromProperty="repeat_masker_ace_file"         toOperation="merge_repeat_masker_ace"  toProperty="merged_ace_file" />
-    <link fromOperation="contig_predict_genes"     fromProperty="repeat_masker_ace_file_chunk"   toOperation="merge_repeat_masker_ace"  toProperty="ace_files" />
+    <link fromOperation="input connector"          fromProperty="repeat_masker_ace_file"         toOperation="merge_repeat_masker_ace"  toProperty="output_file" />
+    <link fromOperation="contig_predict_genes"     fromProperty="repeat_masker_ace_file_chunk"   toOperation="merge_repeat_masker_ace"  toProperty="input_files" />
 
     <link fromOperation="input connector"          fromProperty="repeat_masker_gff_file"         toOperation="merge_files"              toProperty="output_file" />
     <link fromOperation="contig_predict_genes"     fromProperty="repeat_masker_gff_file_chunk"   toOperation="merge_files"              toProperty="input_files" />
@@ -54,7 +54,7 @@
         <operationtype commandClass="Genome::Model::GenePrediction::Eukaryotic::MergePredictions" typeClass="Workflow::OperationType::Command" />
     </operation>
     <operation name="merge_repeat_masker_ace">
-        <operationtype commandClass="Genome::Model::GenePrediction::Eukaryotic::MergeRepeatMaskerAceFiles" typeClass="Workflow::OperationType::Command" />
+        <operationtype commandClass="Genome::Model::GenePrediction::Eukaryotic::MergeFiles" typeClass="Workflow::OperationType::Command" />
     </operation>
     <operation name="merge_prediction_ace">
         <operationtype commandClass="Genome::Model::GenePrediction::Eukaryotic::MergePredictionAceFiles" typeClass="Workflow::OperationType::Command" /> </operation>
