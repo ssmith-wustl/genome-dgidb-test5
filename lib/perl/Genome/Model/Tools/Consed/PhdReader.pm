@@ -9,9 +9,17 @@ class Genome::Model::Tools::Consed::PhdReader {
 };
 
 sub read {
-    my ($self, $io) = @_;
+    my ($self, $file) = @_;
 
-    Carp::confess('No io to read phd!') if not $io;
+    if ( not $file ) {
+        $self->error_message('No file to write read as phd');
+        return;
+    }
+    my $io = eval{ Genome::Sys->open_file_for_reading($file); };
+    if ( not $io ) {
+        $self->error_message("Failed to open file ($file): $@");
+        return;
+    }
 
     my %object_builders = ( 
         BEGIN_COMMENT => '_parse_comment',

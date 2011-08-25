@@ -79,13 +79,13 @@ CREATE INDEX project_part_project_role_index ON project_part(project_id, role);
 CREATE INDEX project_part_project_label_index ON project_part(project_id, label);
 
 CREATE TABLE genome_task (
-    id              varchar(64),
+    id              varchar(255),
     command_class   varchar(255) NOT NULL,
     params          varchar(4096),
     stdout_pathname varchar(255),
     stderr_pathname varchar(255),
     status          varchar(50) NOT NULL,
-    username        varchar(255) NOT NULL,
+    user_id         varchar(255) NOT NULL,
     submit_time     timestamp(6) DEFAULT current_timestamp NOT NULL,
     start_time      timestamp(6),
     end_time        timestamp(6),

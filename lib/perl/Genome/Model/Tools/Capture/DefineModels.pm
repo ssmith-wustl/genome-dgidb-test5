@@ -203,7 +203,7 @@ sub execute {
       my $model_name = "SomaticVariation-$expected_refseq_name-$t_sample\_vs_$n_sample";
 
       # If someone can write this in a nicer object-oriented way, that'd be great!
-      my @stdoe = `genome model define somatic-variation --processing-profile-name "$processing_profile_name" --annotation-build "$annotation_build" --previously-discovered-variations-build $dbsnp_build_id --tumor-model $t_id --normal-model $n_id --model-name $model_name 2>&1`;
+      my @stdoe = `genome model define somatic-variation --processing-profile "$processing_profile_name" --annotation-build "$annotation_build" --previously-discovered-variations-build $dbsnp_build_id --tumor-model $t_id --normal-model $n_id --model-name $model_name 2>&1`;
       if( $stdoe[0] =~ m/^Created model/ )
       {
         my ( $model_id ) = $stdoe[2] =~ m/\x1b\[31mid\x1b\[0m: \x1b\[36m(\d+)\x1b\[0m/; # Parse thru that unnecessarily colorful gunk
