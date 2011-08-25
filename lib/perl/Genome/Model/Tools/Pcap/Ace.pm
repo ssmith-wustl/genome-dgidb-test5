@@ -508,11 +508,14 @@ sub get_assembly_tags
     my $reader = $self->_reader;
 #TODO:  parse tags file
     my $cache_directory = $self->_cache_dir;
+
+    my @assembly_tags;
     my $assembly_tags_file = $cache_directory."/assembly_tags";
+    
+    return \@assembly_tags unless -s $assembly_tags_file; #No tags present
 
     $reader->{input} = IO::File->new("$assembly_tags_file");
-    
-    my @assembly_tags;
+
     while(my $obj=$reader->next_object)
     {       
         my $assembly_tag = $self->_build_assembly_tag($obj);
