@@ -19,6 +19,11 @@ class Genome::Model::GenePrediction::Eukaryotic::ConvertRepeatMaskerAceFile {
             is_input => 1,
             doc => 'Path to gff file prodcued by repeat masker',
         },
+        fasta_file => {
+            is => 'FilePath',
+            is_input => 1,
+            doc => 'Path to fasta file that was run through repeat masker',
+        },
         converted_ace_file => {
             is => 'FilePath',
             is_input => 1,
@@ -53,6 +58,8 @@ sub execute {
     Carp::confess 'Could not create file handle for input gff file ' . $self->gff_file unless $gff_fh;
     my $output_fh = IO::File->new($self->converted_ace_file, 'w');
     Carp::confess 'Could not create file handle for output ace file ' . $self->converted_ace_file unless $output_fh;
+    my $fasta_io = $self->_get_fasta_seq_object;
+    Carp::confess 'Could not create Bio::SeqIO object for input fasta file ' . $self->fasta_file unless $fasta_io;
 
     my $current_seq;
     my @lines_for_seq;
@@ -62,7 +69,7 @@ sub execute {
         chomp $gff_line;
 
         $line_count++;
-        if ($line_count % 1000 == 0) {
+        if ($line_count % 100 == 0) {
             $self->status_message("Converted $line_count lines of " . $self->ace_file);
         }
 
@@ -80,7 +87,12 @@ sub execute {
             push @lines_for_seq, $converted_line;
         }
         else {
-            $output_fh->print("Sequence $current_seq\n");
+            # Need to include description information from the fasta, which is not included in the GFF file.
+            # For example, if the fasta line were >Contig 1 2, the GFF file would only contain Contig, but the
+            # converted ace file needs to have the full "Contig 1 2" string.
+            my $current_seq_full_name = $self->_get_full_seq_name_for_seq($current_seq, $fasta_io);
+
+            $output_fh->print("Sequence $current_seq_full_name\n");
             for my $line (@lines_for_seq) {
                 $output_fh->print("$line\n");
             }
@@ -93,7 +105,8 @@ sub execute {
 
 
     if (@lines_for_seq) {
-        $output_fh->print("Sequence $current_seq\n");
+        my $current_seq_full_name = $self->_get_full_seq_name_for_seq($current_seq, $fasta_io);
+        $output_fh->print("Sequence $current_seq_full_name\n");
         for my $line (@lines_for_seq) {
             $output_fh->print("$line\n");
         }
@@ -107,19 +120,36 @@ sub execute {
     return 1;
 }
 
+sub _get_full_seq_name_for_seq {
+    my ($self, $seq_name, $fasta_io) = @_;
+    my $fasta_seq;
+    while ($fasta_seq = $fasta_io->next_seq()) {
+        last if $fasta_seq->display_id eq $seq_name;
+    }
+
+    my $full_name = $fasta_seq->display_id() . ' ' . $fasta_seq->desc();
+    unless ($full_name) {
+        $self->warning_message("Could not get full name for sequence $seq_name from fasta file " . 
+            $self->fasta_file . ", instead using shorter name $seq_name");
+        $full_name = $seq_name;
+    }
+
+    return $full_name;
+}
+
 sub _convert {
     my ($self, $ace_line, $gff_line) = @_;
     my @line_columns;
 
-    push @line_columns, $gff_line->{seq_name};
     push @line_columns,
+        $ace_line->{motif_homol},
         $ace_line->{repeat_name},
         $ace_line->{method},
         $ace_line->{percent_divergence},
         $ace_line->{start_in_query},
         $ace_line->{end_in_query},
-        $ace_line->{start_in_consensus},
-        $ace_line->{end_in_consensus};
+        $ace_line->{end_in_consensus},
+        $ace_line->{start_in_consensus};
 
     return join("\t", @line_columns);
 }
@@ -145,6 +175,15 @@ sub _ace_line_matches_gff {
     }
 
     return 1;
+}
+
+sub _get_fasta_seq_object {
+    my $self = shift;
+    my $seq_obj = Bio::SeqIO->new(
+        -file => $self->fasta_file,
+        -format => 'Fasta',
+    );
+    return $seq_obj;
 }
 
 sub _get_ace_file_handle {
@@ -185,7 +224,6 @@ sub _parse_ace_line {
     my @columns = $self->ace_columns;
 
     my @values = split(/\s+/, $line);
-    shift @values; # first column is a constant value, don't care about it
 
     unless (@values == @columns) {
         Carp::confess "Line from ace file could not be parsed: $line";
@@ -195,7 +233,6 @@ sub _parse_ace_line {
     for my $column_num (0..$#columns) {
         my $column = $columns[$column_num];
         my $value = $values[$column_num];
-        $value =~ s/"//g;
         $line{$column} = $value;
     }
 
@@ -218,7 +255,6 @@ sub _parse_gff_line {
     for my $column_num (0..$#columns) {
         my $column = $columns[$column_num];
         my $value = $values[$column_num];
-        $value =~ s/"//g;
 
         if ($column eq 'repeat_name') {
             $value =~ s/Motif://g;
@@ -232,6 +268,7 @@ sub _parse_gff_line {
 
 sub ace_columns {
     return qw/
+        motif_homol
         repeat_name
         method
         percent_divergence
