@@ -100,8 +100,8 @@ sub _map_workflow_inputs {
         skip_repeat_masker => $self->skip_repeat_masker,
         repeat_masker_ace_file => $build->repeat_masker_ace_file,
         repeat_masker_gff_file => $build->repeat_masker_gff_file,
-        remove_merged_repeat_masker_files => 1, # Don't want to keep the small unmerged files, they're 
-                                                # unnecessary and clutter the data directory
+        remove_merged_files => 1, # Don't want to keep the small unmerged files, they're 
+                                  # unnecessary and clutter the data directory
         predictions_ace_file => $build->predictions_ace_file,
         rna_predictions_ace_file => $build->rna_predictions_ace_file,
         rna_predictions_only_flag => 1; # This is just used to tell the step makes the rna predictions ace

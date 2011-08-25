@@ -24,17 +24,19 @@
 
     <link fromOperation="input connector"          fromProperty="repeat_masker_ace_file"            toOperation="merge_repeat_masker_ace"  toProperty="output_file" />
     <link fromOperation="contig_predict_genes"     fromProperty="repeat_masker_ace_file_chunk"      toOperation="merge_repeat_masker_ace"  toProperty="input_files" />
-    <link fromOperation="input connector"          fromProperty="remove_merged_repeat_masker_files" toOperation="merge_repeat_masker_ace"  toProperty="remove_input_files" />
+    <link fromOperation="input connector"          fromProperty="remove_merged_files"               toOperation="merge_repeat_masker_ace"  toProperty="remove_input_files" />
 
     <link fromOperation="input connector"          fromProperty="repeat_masker_gff_file"            toOperation="merge_repeat_masker_gff"  toProperty="output_file" />
     <link fromOperation="contig_predict_genes"     fromProperty="repeat_masker_gff_file_chunk"      toOperation="merge_repeat_masker_gff"  toProperty="input_files" />
-    <link fromOperation="input connector"          fromProperty="remove_merged_repeat_masker_files" toOperation="merge_repeat_masker_gff"  toProperty="remove_input_files" />
+    <link fromOperation="input connector"          fromProperty="remove_merged_files"               toOperation="merge_repeat_masker_gff"  toProperty="remove_input_files" />
 
-    <link fromOperation="input connector"          fromProperty="predictions_ace_file"              toOperation="merge_prediction_ace"     toProperty="ace_file" />
-    <link fromOperation="contig_predict_genes"     fromProperty="predictions_ace_file_chunk"        toOperation="merge_prediction_ace"     toProperty="ace_file_chunks" />
+    <link fromOperation="input connector"          fromProperty="predictions_ace_file"              toOperation="merge_prediction_ace"     toProperty="output_file" />
+    <link fromOperation="contig_predict_genes"     fromProperty="predictions_ace_file_chunk"        toOperation="merge_prediction_ace"     toProperty="input_files" />
+    <link fromOperation="input connector"          fromProperty="remove_merged_files"               toOperation="merge_prediction_ace"     toProperty="remove_input_files" />
 
-    <link fromOperation="input connector"          fromProperty="rna_predictions_ace_file"          toOperation="merge_rna_prediction_ace" toProperty="ace_file" />
-    <link fromOperation="contig_predict_genes"     fromProperty="rna_predictions_ace_file_chunk"    toOperation="merge_rna_prediction_ace" toProperty="ace_file_chunks" />
+    <link fromOperation="input connector"          fromProperty="rna_predictions_ace_file"          toOperation="merge_rna_prediction_ace" toProperty="output_file" />
+    <link fromOperation="contig_predict_genes"     fromProperty="rna_predictions_ace_file_chunk"    toOperation="merge_rna_prediction_ace" toProperty="input_files" />
+    <link fromOperation="input connector"          fromProperty="remove_merged_files"               toOperation="merge_rna_prediction_ace" toProperty="remove_input_files" />
 
     <link fromOperation="merge_prediction_ace"     fromProperty="result"                            toOperation="wait_merging"             toProperty="prediction_ace_merge_result" />
     <link fromOperation="merge_repeat_masker_ace"  fromProperty="result"                            toOperation="wait_merging"             toProperty="repeat_masker_ace_merge_result" />
@@ -59,9 +61,10 @@
         <operationtype commandClass="Genome::Model::GenePrediction::Eukaryotic::MergePredictions" typeClass="Workflow::OperationType::Command" />
     </operation>
     <operation name="merge_prediction_ace">
-        <operationtype commandClass="Genome::Model::GenePrediction::Eukaryotic::MergePredictionAceFiles" typeClass="Workflow::OperationType::Command" /> </operation>
+        <operationtype commandClass="Genome::Model::GenePrediction::Eukaryotic::MergeFiles" typeClass="Workflow::OperationType::Command" />
+    </operation>
     <operation name="merge_rna_prediction_ace">
-        <operationtype commandClass="Genome::Model::GenePrediction::Eukaryotic::MergePredictionAceFiles" typeClass="Workflow::OperationType::Command" />
+        <operationtype commandClass="Genome::Model::GenePrediction::Eukaryotic::MergeFiles" typeClass="Workflow::OperationType::Command" />
     </operation>
     <operation name="wait_merging">
         <operationtype typeClass="Workflow::OperationType::Block">
@@ -215,7 +218,7 @@
         <inputproperty>predictions_ace_file</inputproperty>
         <inputproperty>repeat_masker_ace_file</inputproperty>
         <inputproperty>repeat_masker_gff_file</inputproperty>
-        <inputproperty>remove_merged_repeat_masker_files</inputproperty>
+        <inputproperty>remove_merged_files</inputproperty>
         <inputproperty>skip_repeat_masker</inputproperty>
         <inputproperty>rnammer_version</inputproperty>
         <inputproperty>rfamscan_version</inputproperty>
