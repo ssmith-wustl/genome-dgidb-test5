@@ -5,6 +5,8 @@
   <xsl:template name="genome_sample" match="object[./types[./isa[@type='Genome::Sample']]]">
     <xsl:comment>template: /html/status/genome_sample.xsl  match: object[./types[./isa[@type='Genome::Sample']]]</xsl:comment>
 
+    <script type='text/javascript' src='/res/js/app/status/genome_sample.js'></script>
+
     <xsl:call-template name="control_bar_view"/>
 
     <xsl:call-template name="view_header">
