@@ -11,7 +11,7 @@ use warnings;
 use above "Genome";
 use Test::More;
 
-use_ok('Genome::Model::GenePrediction::Eukaryotic::MergePredictions') or die;
+use_ok('Genome::Model::GenePrediction::Command::Eukaryotic::MergePredictions') or die;
 
 my $gene_count = 0;
 
@@ -39,7 +39,7 @@ my $temp_merge_dir = File::Temp->tempdir(
     DIR => $test_output_dir,
 );
 
-my $merger = Genome::Model::GenePrediction::Eukaryotic::MergePredictions->create(
+my $merger = Genome::Model::GenePrediction::Command::Eukaryotic::MergePredictions->create(
     temp_prediction_directories => [$temp_dir_1, $temp_dir_2],
     prediction_directory => $temp_merge_dir,
 );

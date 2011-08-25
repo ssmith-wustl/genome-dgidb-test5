@@ -1,11 +1,11 @@
-package Genome::Model::GenePrediction::Eukaryotic::MergePredictions;
+package Genome::Model::GenePrediction::Command::Eukaryotic::MergePredictions;
 
 use strict;
 use warnings;
 use Genome;
 use Carp 'confess';
 
-class Genome::Model::GenePrediction::Eukaryotic::MergePredictions {
+class Genome::Model::GenePrediction::Command::Eukaryotic::MergePredictions {
     is => 'Command',
     has => [
         temp_prediction_directories => {

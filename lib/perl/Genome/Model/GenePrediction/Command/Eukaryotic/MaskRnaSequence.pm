@@ -1,4 +1,4 @@
-package Genome::Model::GenePrediction::Eukaryotic::MaskRnaSequence;
+package Genome::Model::GenePrediction::Command::Eukaryotic::MaskRnaSequence;
 
 use strict;
 use warnings;
@@ -10,7 +10,7 @@ use File::Basename;
 use File::Spec;
 use Genome::Sys;
 
-class Genome::Model::GenePrediction::Eukaryotic::MaskRnaSequence {
+class Genome::Model::GenePrediction::Command::Eukaryotic::MaskRnaSequence {
     is => 'Command',
     has => [
         prediction_directory => {

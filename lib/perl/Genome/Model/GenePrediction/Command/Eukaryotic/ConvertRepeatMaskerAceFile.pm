@@ -1,4 +1,4 @@
-package Genome::Model::GenePrediction::Eukaryotic::ConvertRepeatMaskerAceFile;
+package Genome::Model::GenePrediction::Command::Eukaryotic::ConvertRepeatMaskerAceFile;
 
 use strict;
 use warnings;
@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 use Carp;
 
-class Genome::Model::GenePrediction::Eukaryotic::ConvertRepeatMaskerAceFile {
+class Genome::Model::GenePrediction::Command::Eukaryotic::ConvertRepeatMaskerAceFile {
     is => 'Command',
     has => [
         ace_file => {

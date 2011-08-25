@@ -1,4 +1,4 @@
-package Genome::Model::GenePrediction::Eukaryotic::RepeatMasker;
+package Genome::Model::GenePrediction::Command::Eukaryotic::RepeatMasker;
 
 # There seems to be a Genome::Model::Tools::RepeatMasker command tree that
 # could replace this module, with some minor modifications.
@@ -12,7 +12,7 @@ use File::Temp 'tempdir';
 use File::chdir;
 use File::Basename 'fileparse';
 
-class Genome::Model::GenePrediction::Eukaryotic::RepeatMasker {
+class Genome::Model::GenePrediction::Command::Eukaryotic::RepeatMasker {
     is => 'Command',
     has => [
         fasta_file => { 

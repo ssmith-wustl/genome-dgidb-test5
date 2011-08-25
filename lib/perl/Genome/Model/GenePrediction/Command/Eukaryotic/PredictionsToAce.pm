@@ -1,4 +1,4 @@
-package Genome::Model::GenePrediction::Command::Eukaryotic::PredictionsToAce;
+package Genome::Model::GenePrediction::Command::Command::Eukaryotic::PredictionsToAce;
 
 use strict;
 use warnings;
@@ -7,7 +7,7 @@ use Carp 'confess';
 use File::Temp; 
 use Sort::Naturally qw/ ncmp nsort /;
 
-class Genome::Model::GenePrediction::Command::Eukaryotic::PredictionsToAce {
+class Genome::Model::GenePrediction::Command::Command::Eukaryotic::PredictionsToAce {
     is => 'Genome::Command::Base',
     has_optional => [
         ace_file => {
@@ -69,7 +69,7 @@ sub execute {
     my $sequence_file = $self->sequence_file;
     unless (defined $prediction_directory and defined $sequence_file) {
         if (defined $self->build_id) {
-            my $build = Genome::Model::Build::GenePrediction::Eukaryotic->get($self->build_id);
+            my $build = Genome::Model::Build::GenePrediction::Command::Eukaryotic->get($self->build_id);
             unless ($build) {
                 $self->error_message("Could not get eukaryotic gene prediction with build ID " . $self->build_id);
                 confess $self->error_message;

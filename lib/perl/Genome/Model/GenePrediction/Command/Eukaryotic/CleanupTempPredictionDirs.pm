@@ -1,11 +1,11 @@
-package Genome::Model::GenePrediction::Eukaryotic::CleanupTempPredictionDirs;
+package Genome::Model::GenePrediction::Command::Eukaryotic::CleanupTempPredictionDirs;
 
 use strict;
 use warnings;
 use Genome;
 use Carp 'confess';
 
-class Genome::Model::GenePrediction::Eukaryotic::CleanupTempPredictionDirs {
+class Genome::Model::GenePrediction::Command::Eukaryotic::CleanupTempPredictionDirs {
     is => 'Command',
     has => [
         directory => {

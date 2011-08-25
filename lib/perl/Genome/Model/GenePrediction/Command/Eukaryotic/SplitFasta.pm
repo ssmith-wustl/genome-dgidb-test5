@@ -1,4 +1,4 @@
-package Genome::Model::GenePrediction::Eukaryotic::SplitFasta;
+package Genome::Model::GenePrediction::Command::Eukaryotic::SplitFasta;
 
 use strict;
 use warnings;
@@ -9,7 +9,7 @@ use File::Path 'make_path';
 use POSIX 'ceil';
 use Bio::SeqIO;
 
-class Genome::Model::GenePrediction::Eukaryotic::SplitFasta {
+class Genome::Model::GenePrediction::Command::Eukaryotic::SplitFasta {
     is => 'Command',
     has => [
         fasta_file => {

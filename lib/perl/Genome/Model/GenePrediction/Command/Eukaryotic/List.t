@@ -11,9 +11,9 @@ use warnings;
 use above "Genome";
 use Test::More;
 
-use_ok('Genome::Model::GenePrediction::Command::Eukaryotic::List') or die;
+use_ok('Genome::Model::GenePrediction::Command::Command::Eukaryotic::List') or die;
 
-my $test_pp = Genome::ProcessingProfile::GenePrediction::Eukaryotic->create(
+my $test_pp = Genome::ProcessingProfile::GenePrediction::Command::Eukaryotic->create(
     name => 'test eukaryotic list',
     domain => 'eukaryotic',
     rnammer_version => 12.23.34, # set this to nonsense to make the pp params unique
@@ -26,9 +26,9 @@ my $test_taxon = Genome::Taxon->create(
 );
 ok($test_taxon, 'created test taxon successfully') or die;
 
-my $assembly_contigs = '/gsc/var/cache/testsuite/data/Genome-Model-GenePrediction-Eukaryotic/shorter_ctg.dna';
+my $assembly_contigs = '/gsc/var/cache/testsuite/data/Genome-Model-GenePrediction-Command::Eukaryotic/shorter_ctg.dna';
 
-my $test_model = Genome::Model::GenePrediction::Eukaryotic->create(
+my $test_model = Genome::Model::GenePrediction::Command::Eukaryotic->create(
     subject_name => $test_taxon->name,
     subject_type => $test_taxon->subject_type,
     subject_id => $test_taxon->id,
@@ -38,7 +38,7 @@ my $test_model = Genome::Model::GenePrediction::Eukaryotic->create(
 );
 ok($test_model, 'created test model successfully') or die;
 
-my $list_object = Genome::Model::GenePrediction::Command::Eukaryotic::List->create(
+my $list_object = Genome::Model::GenePrediction::Command::Command::Eukaryotic::List->create(
     show => 'domain,gram_stain,organism_name,ncbi_taxonomy_id,assembly_contigs_file,repeat_library,snap_models,fgenesh_model',
     filter => 'id=' . $test_model->id,
     style => 'pretty',

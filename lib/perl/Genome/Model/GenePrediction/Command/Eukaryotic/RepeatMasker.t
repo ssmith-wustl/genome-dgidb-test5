@@ -15,9 +15,9 @@ BEGIN {
     $ENV{UR_COMMAND_DUMP_STATUS_MESSAGES} = 1;
 }
 
-use_ok('Genome::Model::GenePrediction::Eukaryotic::RepeatMasker');
+use_ok('Genome::Model::GenePrediction::Command::Eukaryotic::RepeatMasker');
 
-my $test_data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-GenePrediction-Eukaryotic/';
+my $test_data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-GenePrediction-Command::Eukaryotic/';
 ok(-d $test_data_dir, "test data directory exists at $test_data_dir");
 
 my $fasta_file = $test_data_dir . "repeat_masker_input.fasta";
@@ -27,7 +27,7 @@ my $repeat_library = '/gsc/var/lib/repeat/Trichinella_spiralis-3.7.1_070320.rep'
 ok(-e $repeat_library, "found repeat library at $repeat_library");
 
 my $temp_dir = tempdir(
-    '/gsc/var/cache/testsuite/running_testsuites/Genome-Model-GenePrediction-Eukaryotic-RepeatMasker-XXXXXX',
+    '/gsc/var/cache/testsuite/running_testsuites/Genome-Model-GenePrediction-Command::Eukaryotic-RepeatMasker-XXXXXX',
     CLEANUP => 1,
     UNLINK => 1,
 );
@@ -50,7 +50,7 @@ my $gff_file = File::Temp->new(
     CLEANUP => 1,
 );
 
-my $command = Genome::Model::GenePrediction::Eukaryotic::RepeatMasker->create(
+my $command = Genome::Model::GenePrediction::Command::Eukaryotic::RepeatMasker->create(
     fasta_file => $fasta_file, 
     repeat_library => $repeat_library,
     masked_fasta => $masked_fasta->filename,
@@ -61,7 +61,7 @@ my $command = Genome::Model::GenePrediction::Eukaryotic::RepeatMasker->create(
     gff_file_location => $gff_file->filename,
 );
 
-isa_ok($command, 'Genome::Model::GenePrediction::Eukaryotic::RepeatMasker');
+isa_ok($command, 'Genome::Model::GenePrediction::Command::Eukaryotic::RepeatMasker');
 ok($command->execute(), 'execute');
 ok(-s $command->masked_fasta, 'data written to masked fasta');
 ok(-s $command->ace_file_location, 'data written to ace file');

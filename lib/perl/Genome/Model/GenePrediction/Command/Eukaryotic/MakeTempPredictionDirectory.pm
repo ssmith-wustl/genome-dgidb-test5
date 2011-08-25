@@ -1,4 +1,4 @@
-package Genome::Model::GenePrediction::Eukaryotic::MakeTempPredictionDirectory;
+package Genome::Model::GenePrediction::Command::Eukaryotic::MakeTempPredictionDirectory;
 
 use strict;
 use warnings;
@@ -6,7 +6,7 @@ use Genome;
 use File::Basename;
 use File::Temp 'tempdir';
 
-class Genome::Model::GenePrediction::Eukaryotic::MakeTempPredictionDirectory {
+class Genome::Model::GenePrediction::Command::Eukaryotic::MakeTempPredictionDirectory {
     is => 'Command',
     has => [
         fasta_file => {

@@ -11,9 +11,9 @@ use warnings;
 use above "Genome";
 use Test::More;
 
-use_ok('Genome::Model::GenePrediction::Command::Eukaryotic::CodingGenesToGff') or die;
+use_ok('Genome::Model::GenePrediction::Command::Command::Eukaryotic::CodingGenesToGff') or die;
 
-my $test_data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-GenePrediction-Eukaryotic/';
+my $test_data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-GenePrediction-Command::Eukaryotic/';
 ok(-d $test_data_dir, "test data dir exists at $test_data_dir") or die;
 
 my $test_output_dir = '/gsc/var/cache/testsuite/running_testsuites/';
@@ -29,7 +29,7 @@ my $output_file_fh = File::Temp->new(
 my $output_file = $output_file_fh->filename;
 $output_file_fh->close;
 
-my $gff_object = Genome::Model::GenePrediction::Command::Eukaryotic::CodingGenesToGff->create(
+my $gff_object = Genome::Model::GenePrediction::Command::Command::Eukaryotic::CodingGenesToGff->create(
     prediction_directory => $test_data_dir,
     output_file => $output_file,
 );
