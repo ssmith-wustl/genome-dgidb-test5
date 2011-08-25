@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 
 class Genome::Model::Command::Define::PooledAssemblyDecomposition {
-    is => 'Genome::Model::Command::Define::Helper',
+    is => 'Genome::Model::Command::Define::HelperDeprecated',
     has => [
         pooled_assembly => { 
             is => 'Genome::Model', 
