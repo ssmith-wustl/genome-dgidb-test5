@@ -1,4 +1,4 @@
-package Genome::Model::GenePrediction::Eukaryotic::MergeFiles;
+package Genome::Model::Tools::MergeFiles;
 
 use strict;
 use warnings;
@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 use Carp 'confess';
 
-class Genome::Model::GenePrediction::Eukaryotic::MergeFiles {
+class Genome::Model::Tools::MergeFiles {
     is => 'Command',
     has => [
         input_files => {

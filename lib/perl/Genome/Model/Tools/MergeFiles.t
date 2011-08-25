@@ -14,7 +14,7 @@ use Sys::Hostname;
 
 my $file_count = 0;
 
-use_ok('Genome::Model::GenePrediction::Eukaryotic::MergeFiles') or die;
+use_ok('Genome::Model::Tools::MergeFiles') or die;
 
 my $test_data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-GenePrediction-Eukaryotic/';
 ok(-d $test_data_dir, "test data dir exists at $test_data_dir") or die;
@@ -37,7 +37,7 @@ ok(-d $test_output_dir, "test output dir exists at $test_output_dir") or die;
 my $output_1 = make_temp_file_in_dir($test_output_dir);
 ok($output_1, "generated temp output file name $output_1");
 
-my $merge_1 = Genome::Model::GenePrediction::Eukaryotic::MergeFiles->create(
+my $merge_1 = Genome::Model::Tools::MergeFiles->create(
     input_files => [$fasta_1, $fasta_2],
     output_file => $output_1,
     remove_input_files => 0,
@@ -55,7 +55,7 @@ ok($output_1_size == $total_size, "merged file has $output_1_size lines, which m
 my $output_2 = make_temp_file_in_dir($test_output_dir);
 ok($output_2, "generated temp output file name $output_2");
 
-my $merge_2 = Genome::Model::GenePrediction::Eukaryotic::MergeFiles->create(
+my $merge_2 = Genome::Model::Tools::MergeFiles->create(
     input_files => [$fasta_1, $fasta_1],
     output_file => $output_2,
     remove_input_files => 0,
