@@ -9,7 +9,7 @@ use Genome;
 my $pp_name = "imported-variation-list";
 
 class Genome::Model::Command::Define::ImportedVariationList {
-    is => 'Genome::Model::Command::Define::Helper', 
+    is => 'Genome::Model::Command::Define::HelperDeprecated', 
     has_input => [
         version => {
             is => 'Text',

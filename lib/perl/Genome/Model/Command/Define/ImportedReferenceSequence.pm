@@ -4,7 +4,7 @@ use warnings;
 use Genome;
 
 class Genome::Model::Command::Define::ImportedReferenceSequence {
-    is => 'Genome::Model::Command::Define::Helper',
+    is => 'Genome::Model::Command::Define::HelperDeprecated',
     has_input => [
         fasta_file => {
             is => 'Text',

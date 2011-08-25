@@ -7,7 +7,7 @@ use Genome;
 use Mail::Sender;
 
 class Genome::Model::Command::Define::RnaSeq {
-    is => 'Genome::Model::Command::Define::Helper',
+    is => 'Genome::Model::Command::Define::HelperDeprecated',
     has => [
         reference_sequence_build => {
 #            is => 'Genome::Model::Build::ImportedReferenceSequence',
