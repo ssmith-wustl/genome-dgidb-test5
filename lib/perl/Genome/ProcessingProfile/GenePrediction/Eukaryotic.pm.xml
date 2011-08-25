@@ -44,9 +44,9 @@
     <link fromOperation="merge_predictions"        fromProperty="prediction_directory"              toOperation="wait_merging"             toProperty="prediction_directory" />
     <link fromOperation="merge_rna_prediction_ace" fromProperty="result"                            toOperation="wait_merging"             toProperty="rna_prediction_ace_merge_result" />
 
-    <link fromOperation="wait_merging"             fromProperty="prediction_directory"              toOperation="cleanup_temp_files"       toProperty="directory" />
+    <link fromOperation="wait_merging"             fromProperty="prediction_directory"              toOperation="cleanup_prediction_dirs"  toProperty="directory" />
 
-    <link fromOperation="cleanup_temp_files"       fromProperty="result"                            toOperation="output connector"         toProperty="result" />
+    <link fromOperation="cleanup_prediction_dirs"  fromProperty="result"                            toOperation="output connector"         toProperty="result" />
 
     <operation name="split_fasta">
         <operationtype commandClass="Genome::Model::GenePrediction::Eukaryotic::SplitFasta" typeClass="Workflow::OperationType::Command" />
@@ -75,8 +75,8 @@
             <property>repeat_masker_gff_merge_result</property>
         </operationtype>
     </operation>
-    <operation name="cleanup_temp_files">
-        <operationtype commandClass="Genome::Model::GenePrediction::Eukaryotic::CleanupTempFiles" typeClass="Workflow::OperationType::Command" />
+    <operation name="cleanup_prediction_dirs">
+        <operationtype commandClass="Genome::Model::GenePrediction::Eukaryotic::CleanupTempPredictionDirs" typeClass="Workflow::OperationType::Command" />
     </operation>
 
     <operation name="contig_predict_genes" parallelBy="fasta_file">
