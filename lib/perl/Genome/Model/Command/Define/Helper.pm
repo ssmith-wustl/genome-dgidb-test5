@@ -16,11 +16,6 @@ class Genome::Model::Command::Define::Helper {
             id_by => 'processing_profile_id',
             doc => 'Processing profile to be used by model, can provide either a name or an id',
         },
-        processing_profile_name => {
-            is => 'Text',
-            via => 'processing_profile',
-            to => 'name',
-        },
     ],
     has_optional => [
         subject => {
@@ -28,12 +23,6 @@ class Genome::Model::Command::Define::Helper {
             id_by => 'subject_id',
             doc => 'Subject for the model, can provide either a name or an id. If instrument data is provided and this is not, ' .
                 'an attempt will be made to resolve it based on the provided instrument data'
-        },
-        subject_name => {
-            is => 'Text',
-            via => 'subject',
-            to => 'name',
-            doc => 'The name of the subject of the model',
         },
         model_name => {
             is => 'Text',
