@@ -1,4 +1,4 @@
-package Genome::Model::GenePrediction::Command::Command::Eukaryotic::PredictionsToAce;
+package Genome::Model::GenePrediction::Command::Eukaryotic::PredictionsToAce;
 
 use strict;
 use warnings;
@@ -7,7 +7,7 @@ use Carp 'confess';
 use File::Temp; 
 use Sort::Naturally qw/ ncmp nsort /;
 
-class Genome::Model::GenePrediction::Command::Command::Eukaryotic::PredictionsToAce {
+class Genome::Model::GenePrediction::Command::Eukaryotic::PredictionsToAce {
     is => 'Genome::Command::Base',
     has_optional => [
         ace_file => {

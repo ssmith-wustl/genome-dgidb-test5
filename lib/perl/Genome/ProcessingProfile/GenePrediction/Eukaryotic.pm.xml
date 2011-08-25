@@ -49,7 +49,7 @@
     <link fromOperation="cleanup_prediction_dirs"  fromProperty="result"                            toOperation="output connector"         toProperty="result" />
 
     <operation name="split_fasta">
-        <operationtype commandClass="Genome::Model::GenePrediction::Eukaryotic::SplitFasta" typeClass="Workflow::OperationType::Command" />
+        <operationtype commandClass="Genome::Model::GenePrediction::Command::Eukaryotic::SplitFasta" typeClass="Workflow::OperationType::Command" />
     </operation>
     <operation name="merge_repeat_masker_gff">
         <operationtype commandClass="Genome::Model::Tools::MergeFiles" typeClass="Workflow::OperationType::Command" />
@@ -58,7 +58,7 @@
         <operationtype commandClass="Genome::Model::Tools::MergeFiles" typeClass="Workflow::OperationType::Command" />
     </operation>
     <operation name="merge_predictions">
-        <operationtype commandClass="Genome::Model::GenePrediction::Eukaryotic::MergePredictions" typeClass="Workflow::OperationType::Command" />
+        <operationtype commandClass="Genome::Model::GenePrediction::Command::Eukaryotic::MergePredictions" typeClass="Workflow::OperationType::Command" />
     </operation>
     <operation name="merge_prediction_ace">
         <operationtype commandClass="Genome::Model::Tools::MergeFiles" typeClass="Workflow::OperationType::Command" />
@@ -76,7 +76,7 @@
         </operationtype>
     </operation>
     <operation name="cleanup_prediction_dirs">
-        <operationtype commandClass="Genome::Model::GenePrediction::Eukaryotic::CleanupTempPredictionDirs" typeClass="Workflow::OperationType::Command" />
+        <operationtype commandClass="Genome::Model::GenePrediction::Command::Eukaryotic::CleanupTempPredictionDirs" typeClass="Workflow::OperationType::Command" />
     </operation>
 
     <operation name="contig_predict_genes" parallelBy="fasta_file">
@@ -144,13 +144,13 @@
         <link fromOperation="make_rna_ace_file"         fromProperty="ace_file"                    toOperation="output connector"          toProperty="rna_predictions_ace_file_chunk" />
 
         <operation name="make_temp_prediction_dir">
-            <operationtype commandClass="Genome::Model::GenePrediction::Eukaryotic::MakeTempPredictionDirectory" typeClass="Workflow::OperationType::Command" />
+            <operationtype commandClass="Genome::Model::GenePrediction::Command::Eukaryotic::MakeTempPredictionDirectory" typeClass="Workflow::OperationType::Command" />
         </operation>
         <operation name="repeat_masker">
-            <operationtype commandClass="Genome::Model::GenePrediction::Eukaryotic::RepeatMasker" typeClass="Workflow::OperationType::Command" />
+            <operationtype commandClass="Genome::Model::GenePrediction::Command::Eukaryotic::RepeatMasker" typeClass="Workflow::OperationType::Command" />
         </operation>
         <operation name="convert_repeat_masker_ace">
-            <operationtype commandClass="Genome::Model::GenePrediction::Eukaryotic::ConvertRepeatMaskerAceFile" typeClass="Workflow::OperationType::Command" />
+            <operationtype commandClass="Genome::Model::GenePrediction::Command::Eukaryotic::ConvertRepeatMaskerAceFile" typeClass="Workflow::OperationType::Command" />
         </operation>
         <operation name="rfamscan">
             <operationtype commandClass="Genome::Model::Tools::GenePredictor::RfamScan" typeClass="Workflow::OperationType::Command" />
@@ -169,7 +169,7 @@
             </operationtype>
         </operation>
         <operation name="mask_rna_sequence">
-            <operationtype commandClass="Genome::Model::GenePrediction::Eukaryotic::MaskRnaSequence" typeClass="Workflow::OperationType::Command" />
+            <operationtype commandClass="Genome::Model::GenePrediction::Command::Eukaryotic::MaskRnaSequence" typeClass="Workflow::OperationType::Command" />
         </operation>
         <operation name="snap">
             <operationtype commandClass="Genome::Model::Tools::GenePredictor::Snap" typeClass="Workflow::OperationType::Command" />
