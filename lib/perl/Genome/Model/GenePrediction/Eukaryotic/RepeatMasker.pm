@@ -65,7 +65,7 @@ class Genome::Model::GenePrediction::Eukaryotic::RepeatMasker {
         make_gff => {
             is => 'Boolean',
             is_input => 1,
-            default => 0,
+            default => 1,
             doc => 'If set, repeat masker will create a gff file in addition to normal output',
         },
         gff_file_location => {
