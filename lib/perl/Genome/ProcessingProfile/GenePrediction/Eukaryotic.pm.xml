@@ -52,19 +52,19 @@
         <operationtype commandClass="Genome::Model::GenePrediction::Eukaryotic::SplitFasta" typeClass="Workflow::OperationType::Command" />
     </operation>
     <operation name="merge_repeat_masker_gff">
-        <operationtype commandClass="Genome::Model::GenePrediction::Eukaryotic::MergeFiles" typeClass="Workflow::OperationType::Command" />
+        <operationtype commandClass="Genome::Model::Tools::MergeFiles" typeClass="Workflow::OperationType::Command" />
     </operation>
     <operation name="merge_repeat_masker_ace">
-        <operationtype commandClass="Genome::Model::GenePrediction::Eukaryotic::MergeFiles" typeClass="Workflow::OperationType::Command" />
+        <operationtype commandClass="Genome::Model::Tools::MergeFiles" typeClass="Workflow::OperationType::Command" />
     </operation>
     <operation name="merge_predictions">
         <operationtype commandClass="Genome::Model::GenePrediction::Eukaryotic::MergePredictions" typeClass="Workflow::OperationType::Command" />
     </operation>
     <operation name="merge_prediction_ace">
-        <operationtype commandClass="Genome::Model::GenePrediction::Eukaryotic::MergeFiles" typeClass="Workflow::OperationType::Command" />
+        <operationtype commandClass="Genome::Model::Tools::MergeFiles" typeClass="Workflow::OperationType::Command" />
     </operation>
     <operation name="merge_rna_prediction_ace">
-        <operationtype commandClass="Genome::Model::GenePrediction::Eukaryotic::MergeFiles" typeClass="Workflow::OperationType::Command" />
+        <operationtype commandClass="Genome::Model::Tools::MergeFiles" typeClass="Workflow::OperationType::Command" />
     </operation>
     <operation name="wait_merging">
         <operationtype typeClass="Workflow::OperationType::Block">
