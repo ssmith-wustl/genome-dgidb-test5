@@ -24,6 +24,8 @@ class Genome::Model::GenePrediction::Eukaryotic::ConvertRepeatMaskerAceFile {
             is_input => 1,
             doc => 'Path to fasta file that was run through repeat masker',
         },
+    ],
+    has_optional => [
         converted_ace_file => {
             is => 'FilePath',
             is_input => 1,
@@ -56,7 +58,7 @@ sub execute {
     Carp::confess 'Could not create file handle for input ace file ' . $self->ace_file unless $ace_fh;
     my $gff_fh = $self->_get_gff_file_handle;
     Carp::confess 'Could not create file handle for input gff file ' . $self->gff_file unless $gff_fh;
-    my $output_fh = IO::File->new($self->converted_ace_file, 'w');
+    my $output_fh = $self->_get_output_file_handle; 
     Carp::confess 'Could not create file handle for output ace file ' . $self->converted_ace_file unless $output_fh;
     my $fasta_io = $self->_get_fasta_seq_object;
     Carp::confess 'Could not create Bio::SeqIO object for input fasta file ' . $self->fasta_file unless $fasta_io;
@@ -175,6 +177,15 @@ sub _ace_line_matches_gff {
     }
 
     return 1;
+}
+
+sub _get_output_file_handle {
+    my $self = shift;
+    unless ($self->converted_ace_file) {
+        $self->converted_ace_file($self->ace_file . '.converted');
+        $self->warning_message("No converted ace file location given, defaulting to " . $self->converted_ace_file);
+    }
+    return IO::File->new($self->converted_ace_file, 'w');
 }
 
 sub _get_fasta_seq_object {
