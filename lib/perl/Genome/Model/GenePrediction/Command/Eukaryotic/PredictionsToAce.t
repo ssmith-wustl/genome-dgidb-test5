@@ -8,8 +8,8 @@ use Test::More tests => 13;
 use File::Temp 'tempdir';
 
 use_ok('Genome::Model::GenePrediction::Command');
-use_ok('Genome::Model::GenePrediction::Command::Command::Eukaryotic');
-use_ok('Genome::Model::GenePrediction::Command::Command::Eukaryotic::PredictionsToAce');
+use_ok('Genome::Model::GenePrediction::Command::Eukaryotic');
+use_ok('Genome::Model::GenePrediction::Command::Eukaryotic::PredictionsToAce');
 
 my $test_data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-GenePredictor/';
 ok(-d $test_data_dir, "test data dir exists at $test_data_dir");
@@ -40,13 +40,13 @@ my $temp_ace_file_fh = File::Temp->new(
 );
 my $temp_ace_file = $temp_ace_file_fh->filename;
 
-my $obj = Genome::Model::GenePrediction::Command::Command::Eukaryotic::PredictionsToAce->create(
+my $obj = Genome::Model::GenePrediction::Command::Eukaryotic::PredictionsToAce->create(
     ace_file => $temp_ace_file,
     prediction_directory => $test_data_dir,
     sequence_file => $seq_file,
 );
 ok($obj, 'successfully created command object');
-isa_ok($obj, 'Genome::Model::GenePrediction::Command::Command::Eukaryotic::PredictionsToAce');
+isa_ok($obj, 'Genome::Model::GenePrediction::Command::Eukaryotic::PredictionsToAce');
 
 ok($obj->execute, 'executed command object');
 ok(-s $temp_ace_file, "output written to temp ace file $temp_ace_file");

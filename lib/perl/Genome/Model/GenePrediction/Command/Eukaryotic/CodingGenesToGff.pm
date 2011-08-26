@@ -1,11 +1,11 @@
-package Genome::Model::GenePrediction::Command::Command::Eukaryotic::CodingGenesToGff;
+package Genome::Model::GenePrediction::Command::Eukaryotic::CodingGenesToGff;
 
 use strict;
 use warnings;
 use Genome;
 use Carp 'confess';
 
-class Genome::Model::GenePrediction::Command::Command::Eukaryotic::CodingGenesToGff {
+class Genome::Model::GenePrediction::Command::Eukaryotic::CodingGenesToGff {
     is => 'Genome::Command::Base',
     has => [
         prediction_directory => {

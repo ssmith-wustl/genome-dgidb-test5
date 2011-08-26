@@ -17,7 +17,7 @@ BEGIN {
 
 use_ok('Genome::Model::GenePrediction::Command::Eukaryotic::RepeatMasker');
 
-my $test_data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-GenePrediction-Command::Eukaryotic/';
+my $test_data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-GenePrediction-Eukaryotic/';
 ok(-d $test_data_dir, "test data directory exists at $test_data_dir");
 
 my $fasta_file = $test_data_dir . "repeat_masker_input.fasta";
@@ -27,7 +27,7 @@ my $repeat_library = '/gsc/var/lib/repeat/Trichinella_spiralis-3.7.1_070320.rep'
 ok(-e $repeat_library, "found repeat library at $repeat_library");
 
 my $temp_dir = tempdir(
-    '/gsc/var/cache/testsuite/running_testsuites/Genome-Model-GenePrediction-Command::Eukaryotic-RepeatMasker-XXXXXX',
+    '/gsc/var/cache/testsuite/running_testsuites/Genome-Model-GenePrediction-Eukaryotic-RepeatMasker-XXXXXX',
     CLEANUP => 1,
     UNLINK => 1,
 );

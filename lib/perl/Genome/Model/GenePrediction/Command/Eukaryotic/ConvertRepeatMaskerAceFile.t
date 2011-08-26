@@ -13,7 +13,7 @@ use Test::More;
 
 use_ok('Genome::Model::GenePrediction::Command::Eukaryotic::ConvertRepeatMaskerAceFile') or die;
 
-my $test_data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-GenePrediction-Command::Eukaryotic/repeat_masker/';
+my $test_data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-GenePrediction-Eukaryotic/repeat_masker/';
 ok(-d $test_data_dir, "test data dir exists at $test_data_dir") or die;
 
 my $test_output_dir = '/gsc/var/cache/testsuite/running_testsuites/';
