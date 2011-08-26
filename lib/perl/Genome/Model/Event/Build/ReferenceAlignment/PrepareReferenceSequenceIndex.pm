@@ -57,10 +57,10 @@ sub _process {
     my $mode = shift;
 
     $DB::single = $DB::stopper;
-    
+
     unless (-d $self->build_directory) {
         die "Missing build directory???";
-    } 
+    }
 
     $self->status_message(
         "Build directory: " . $self->build_directory
@@ -73,17 +73,18 @@ sub _process {
 
     my @errors;
 
-    my %params_for_reference = (aligner_name=>$processing_profile->read_aligner_name,
-                                aligner_params=>$processing_profile->read_aligner_params,
-                                aligner_version=>$processing_profile->read_aligner_version,
-                                reference_build=>$model->reference_sequence_build,
-                                test_name=>($ENV{GENOME_SOFTWARE_RESULT_TEST_NAME} || undef));
+    my %params_for_reference = (
+        aligner_name=>$processing_profile->read_aligner_name,
+        aligner_params=>$processing_profile->read_aligner_params,
+        aligner_version=>$processing_profile->read_aligner_version,
+        reference_build=>$model->reference_sequence_build,
+    );
 
     $self->status_message(sprintf("Finding or generating reference build index for aligner %s version %s params %s refbuild %s ",
                                                 $processing_profile->read_aligner_name, $processing_profile->read_aligner_version,
                                                 $processing_profile->read_aligner_params, $model->reference_sequence_build->id));
-   
-    my $reference_sequence_index; 
+
+    my $reference_sequence_index;
     if ($mode eq 'get_or_create') {
         $reference_sequence_index = Genome::Model::Build::ReferenceSequence::AlignerIndex->get_or_create(%params_for_reference);
         unless ($reference_sequence_index) {
@@ -93,13 +94,13 @@ sub _process {
     } elsif ($mode eq 'get') {
         $reference_sequence_index = Genome::Model::Build::ReferenceSequence::AlignerIndex->get(%params_for_reference);
         unless ($reference_sequence_index) {
-            return undef; 
+            return undef;
         }
     } else {
         $self->error_message("generate alignment reference index mode unknown: $mode");
         die $self->error_message;
     }
-    
+
     if (@errors) {
         $self->error_message(join("\n",@errors));
         return 0;
@@ -111,8 +112,8 @@ sub _process {
     }
     else {
         $self->error_message(
-            "Failed to link the build to the reference_sequence_index " 
-            . $reference_sequence_index->__display_name__ 
+            "Failed to link the build to the reference_sequence_index "
+            . $reference_sequence_index->__display_name__
             . "!"
         );
         # TODO: die, but not for now
@@ -123,7 +124,7 @@ sub _process {
         $self->error_message("Error verifying completion!");
         return 0;
     }
-    
+
     $self->status_message("Complete!");
     return 1;
 }
@@ -134,6 +135,6 @@ sub verify_successful_completion {
 }
 
 
-  
+
 1;
 

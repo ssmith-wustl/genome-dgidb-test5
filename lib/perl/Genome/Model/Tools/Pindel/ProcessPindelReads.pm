@@ -50,6 +50,11 @@ class Genome::Model::Tools::Pindel::ProcessPindelReads {
             doc => " This is the minimum variant freq for read-support",
             default => "0.0",
         },
+        excessive_read_depth => {
+            is => 'Boolean',
+            doc => "Set this flag to dump samtools view output to disk, which is slower, but avoids 'out of memory' errors.",
+            default => 0,
+        },
     ],
     has_optional => [
         create_hq_raw_reads => {
@@ -242,7 +247,7 @@ sub process_source {
             }
 
             $self->$mode(\@event);
-            undef @event;
+            @event;
         }
     }
     return 1;
@@ -327,36 +332,89 @@ sub read_support {
     #my ($chr,$start,$stop)
 
     # Call samtools over the variant start-stop to get overlapping reads
-    my @results = `samtools view $tumor_bam $chr:$stop-$stop`;
+    #my @results = `samtools view $tumor_bam $chr:$stop-$stop`;
+
     my $tumor_read_support=0;
     my $tumor_read_sw_support=0;
-    for my $result (@results){
-        chomp $result;
-        my @details = split /\t/, $result;
-        # Parse overlapping reads for cigar strings containing insertions or deletions
-        if($details[5] =~ m/[ID]/){
-            $tumor_read_sw_support++;
-        }
-        else {
-            $tumor_read_support++;
-        }
-    }
-
-    # Call samtools over the variant start-stop in the normal bam to get overlapping reads
-    @results = `samtools view $normal_bam $chr:$stop-$stop`;
     my $normal_read_support=0;
     my $normal_read_sw_support=0;
-    for my $result (@results){
-        chomp $result;
-        my @details = split /\t/, $result;
-        # Parse overlapping reads for insertions or deletions
-        if($details[5] =~ m/[ID]/){
-            $normal_read_sw_support++;
-        }
-        else {
-            $normal_read_support++;
+
+    my $temp = Genome::Sys->create_temp_file_path;
+
+    my $erd = $self->excessive_read_depth;
+
+    if($erd){
+        my $tsam_cmd = "samtools view $tumor_bam $chr:$stop-$stop > $temp";
+        #Genome::Sys->shellcmd( cmd => $tsam_cmd);
+        if(system($tsam_cmd)){
+            die $self->error_message("Failed to run the command: $tsam_cmd");
         }
 
+        my $tfh = Genome::Sys->open_file_for_reading($temp);
+
+        while(my $result = $tfh->getline){
+            chomp $result;
+            my @details = split /\t/, $result;
+            # Parse overlapping reads for cigar strings containing insertions or deletions
+            if($details[5] =~ m/[ID]/){
+                $tumor_read_sw_support++;
+            }
+            else {
+                $tumor_read_support++;
+            }
+        }
+        $tfh->close;
+
+        # Call samtools over the variant start-stop in the normal bam to get overlapping reads
+        my $nsam_cmd = "samtools view $normal_bam $chr:$stop-$stop > $temp";
+        #Genome::Sys->shellcmd( cmd => $nsam_cmd);
+        if(system($nsam_cmd)){
+            die $self->error_message("Failed to run the command: $nsam_cmd");
+        }
+        my $nfh = Genome::Sys->open_file_for_reading($temp);
+
+        while(my $result = $nfh->getline){
+            chomp $result;
+            my @details = split /\t/, $result;
+            # Parse overlapping reads for insertions or deletions
+            if($details[5] =~ m/[ID]/){
+                $normal_read_sw_support++;
+            }
+            else {
+                $normal_read_support++;
+            }
+
+        }
+        $nfh->close;
+    }
+    else {
+        my @results = `samtools view $tumor_bam $chr:$stop-$stop`;
+        for my $result (@results){
+            chomp $result;
+            my @details = split /\t/, $result;
+            # Parse overlapping reads for cigar strings containing insertions or deletions
+            if($details[5] =~ m/[ID]/){
+                $tumor_read_sw_support++;
+            }
+            else {
+                $tumor_read_support++;
+            }
+        }
+
+        @results = `samtools view $normal_bam $chr:$stop-$stop`;
+
+        for my $result (@results){
+            chomp $result;
+            my @details = split /\t/, $result;
+            # Parse overlapping reads for insertions or deletions
+            if($details[5] =~ m/[ID]/){
+                $normal_read_sw_support++;
+            }
+            else {
+                $normal_read_support++;
+            }
+
+        }
     }
 
     my $is_lq = 1;
@@ -375,7 +433,6 @@ sub read_support {
     }
 
     my $read_support = join("\t",($reads,$tumor_read_support,$tumor_read_sw_support,$normal_read_support,$normal_read_sw_support,$pos_percent,$p_value))."\n";
-    my $read_support_fh = $self->_read_support_fh;
     #my ($chr,$start,$stop,$refvar,$pindel_reads,$t_reads,$t_sw_reads,$n_reads,$n_sw_reads,$ps, $p_value) = split "\t", $line;
 
     if($p_value <= .15) { #assuming significant smith waterman support, trust the fishers exact test to make a germline determination
@@ -386,7 +443,10 @@ sub read_support {
     }
     my $bed = $self->get_bed_line(\@event);
     chomp $bed;
-    print $read_support_fh $bed."\t".$read_support;
+    if(defined($self->_read_support_fh)){
+        my $read_support_fh = $self->_read_support_fh;
+        print $read_support_fh $bed."\t".$read_support;
+    }
 
     if($self->create_hq_raw_reads && ($is_lq==0)){
         $self->print_raw_read(\@event,$hq_raw);
@@ -397,6 +457,10 @@ sub read_support {
     else {
         die $self->error_message("Nothing to do!");
     } 
+    if(system("rm -f $temp")){
+        die $self->error_message("Failed to complete the command: rm -f $temp");
+    }
+    
     return 1;
 }
 

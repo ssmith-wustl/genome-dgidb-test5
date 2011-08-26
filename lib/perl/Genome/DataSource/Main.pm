@@ -9,7 +9,7 @@ class Genome::DataSource::Main {
     has_constant => [
         server => { default_value => 'dbname=genome;host=localhost' },
         login => { default_value => 'genome' },
-        auth => { default_value => 'gsclab1' },
+        auth => { default_value => 'TGIlab' },
         owner => { default_value => 'public' },
     ],
 };

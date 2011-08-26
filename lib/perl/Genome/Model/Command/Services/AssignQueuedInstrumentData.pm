@@ -978,7 +978,7 @@ sub get_build36_to_37_rois {
     return (
         'agilent sureselect exome version 2 broad refseq cds only' => 'agilent_sureselect_exome_version_2_broad_refseq_cds_only_hs37',
         'agilent sureselect exome version 2 broad' => 'agilent sureselect exome version 2 broad hg19 liftover',
-        'hg18 nimblegen exome vermion 2' => 'hg19 nimblegen exome version 2',
+        'hg18 nimblegen exome version 2' => 'hg19 nimblegen exome version 2',
         'NCBI-human.combined-annotation-54_36p_v2_CDSome_w_RNA' => 'NCBI-human.combined-annotation-54_36p_v2_CDSome_w_RNA_build36-build37_liftOver',
         'Freimer Pool of original (4k001L) plus gapfill (4k0026)' => 'Freimer-Boehnke capture-targets.set1_build37-fix1',
         '04110401 PoP32 EZ capture chip set'   => '04110401 PoP32 EZ capture chip set build37',

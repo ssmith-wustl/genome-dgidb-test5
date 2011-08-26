@@ -22,12 +22,7 @@ use above 'Genome';
 sub execute {
     my $self = shift;
 
-    my %build36_to_37_rois = (
-        'agilent sureselect exome version 2 broad refseq cds only' => 'agilent_sureselect_exome_version_2_broad_refseq_cds_only_hs37',
-        'agilent sureselect exome version 2 broad' => 'agilent sureselect exome version 2 broad hg19 liftover',
-        'hg18 nimblegen exome version 2' => 'hg19 nimblegen exome version 2',
-        'NCBI-human.combined-annotation-54_36p_v2_CDSome_w_RNA' => 'NCBI-human.combined-annotation-54_36p_v2_CDSome_w_RNA_build36-build37_liftOver',
-    );
+    my %build36_to_37_rois = Genome::Model::Command::Services::AssignQueuedInstrumentData->get_build36_to_37_rois();
 
     # if($reference_sequence_build and $reference_sequence_build->name eq 'GRCh37-lite-build37') {
     #     $wuspace_roi_list = 'NCBI-human.combined-annotation-58_37c_cds_exon_and_rna_merged_by_gene';

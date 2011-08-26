@@ -5,7 +5,7 @@ use warnings;
 use Genome;
 
 class Genome::Model::Command::Define::GenePrediction::Helper {
-    is => 'Genome::Model::Command::Define::Helper',
+    is => 'Genome::Model::Command::Define::HelperDeprecated',
     is_abstract => 1,
     has => [
         taxon_id => {
