@@ -106,9 +106,6 @@ sub get {
         if (exists $p{aligner_name} && $class->aligner_requires_param_masking($p{aligner_name})) {
             $p{aligner_params} = undef;
         }
-        if (!exists $p{test_name}) {
-            $p{test_name} = $ENV{GENOME_SOFTWARE_RESULT_TEST_NAME} || undef;
-        }
         @objects = $class->SUPER::get(%p);
     } else {
         @objects = $class->SUPER::get(@_);
