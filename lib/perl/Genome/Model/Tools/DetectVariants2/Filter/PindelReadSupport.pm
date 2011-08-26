@@ -80,6 +80,7 @@ sub _filter_variants {
                     hq_raw_output_file => $hq_raw_file,
                     lq_raw_output_file => $lq_raw_file,
                     read_support_output_file => $read_support_file,
+                    excessive_read_depth => 1,
                     big_output_file => $big_output_file, );
     unless($ppr_cmd->execute){
         die $self->error_message("Could not execute gmt pindel process-pindel-reads");
