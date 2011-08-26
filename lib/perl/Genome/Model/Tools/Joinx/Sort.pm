@@ -51,12 +51,14 @@ sub execute {
     my $self = shift;
     my $output = "-";
     $output = $self->output_file if (defined $self->output_file);
-    my @inputs = $self->input_files;
+    # Grep out empty files
+    my @inputs = grep { -s $_ } $self->input_files;
+    return 1 unless @inputs;
+
     my $flags = join(" ", $self->flags);
     my $cmd = $self->joinx_path . " sort $flags " .
         join(" ", @inputs) .
         " -o $output";
-
 
     my %params = (
         cmd => $cmd,
