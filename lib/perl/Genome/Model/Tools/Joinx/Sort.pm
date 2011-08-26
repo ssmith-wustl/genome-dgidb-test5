@@ -53,7 +53,16 @@ sub execute {
     $output = $self->output_file if (defined $self->output_file);
     # Grep out empty files
     my @inputs = grep { -s $_ } $self->input_files;
-    return 1 unless @inputs;
+
+    # If all input files are empty, make sure the output file at least exists
+    unless (@inputs) {
+        if (defined $self->output_file) {
+            unless (system("touch $output") == 0) {
+                die $self->error_message("Failed to touch $output");
+            }
+        }
+        return 1;
+    }
 
     my $flags = join(" ", $self->flags);
     my $cmd = $self->joinx_path . " sort $flags " .
