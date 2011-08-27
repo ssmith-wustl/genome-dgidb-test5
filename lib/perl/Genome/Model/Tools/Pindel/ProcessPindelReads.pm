@@ -442,7 +442,6 @@ sub read_support {
         $is_lq=0;
     }
     my $bed = $self->get_bed_line(\@event);
-    chomp $bed;
     if(defined($self->_read_support_fh)){
         my $read_support_fh = $self->_read_support_fh;
         print $read_support_fh $bed."\t".$read_support;
