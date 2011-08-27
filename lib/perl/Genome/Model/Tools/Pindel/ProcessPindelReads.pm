@@ -50,7 +50,7 @@ class Genome::Model::Tools::Pindel::ProcessPindelReads {
             doc => " This is the minimum variant freq for read-support",
             default => "0.0",
         },
-        excessive_read_depth => {
+        capture_data => {
             is => 'Boolean',
             doc => "Set this flag to dump samtools view output to disk, which is slower, but avoids 'out of memory' errors.",
             default => 0,
@@ -146,7 +146,8 @@ EOS
 sub execute {
     my $self = shift;
     $self->_refseq($self->reference_sequence_input);
-
+    $self->status_message("Dumping reads from samtools view to temp files due to excessive read depth.") if $self->capture_data;
+    print "Dumping reads from samtools view to temp files due to excessive read depth.\n" if  $self->capture_data;
     my $big_output_file = $self->big_output_file;
     my $hq_raw_output_file = $self->hq_raw_output_file;
     my $lq_raw_output_file = $self->lq_raw_output_file;
@@ -247,7 +248,6 @@ sub process_source {
             }
 
             $self->$mode(\@event);
-            @event;
         }
     }
     return 1;
@@ -341,9 +341,9 @@ sub read_support {
 
     my $temp = Genome::Sys->create_temp_file_path;
 
-    my $erd = $self->excessive_read_depth;
+    my $cap = $self->capture_data;
 
-    if($erd){
+    if($cap){
         my $tsam_cmd = "samtools view $tumor_bam $chr:$stop-$stop > $temp";
         #Genome::Sys->shellcmd( cmd => $tsam_cmd);
         if(system($tsam_cmd)){

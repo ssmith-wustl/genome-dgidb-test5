@@ -35,6 +35,11 @@ class Genome::Model::Tools::DetectVariants2::Filter::PindelReadSupport{
             default => '0.25',
             doc => 'Throw out indels which have a normalized ratio of normal smith waterman reads to tumor smith waterman reads (nsw/(nsw+tsw)) at or below this amount.',
         },
+        capture_data => {
+            is => 'Boolean',
+            doc => 'Set this to cause the read-support filter to dump reads for each indel to a temp file in order to avoid out of memory errors',
+            is_optional => 1,
+        },
     ],
     has_constant => [
         use_old_pindel => {
@@ -65,7 +70,7 @@ sub _filter_variants {
     my $output_file = $self->_temp_staging_directory."/indels.hq.bed";
     my $output_lq_file = $self->_temp_staging_directory."/indels.lq.bed";
     my $indel_file = $self->input_directory."/indels.hq.bed";
-
+    my $capture_data = $self->capture_data;
 
     my $input_file = $self->input_directory."/indels.hq";
     my $ppr_cmd = Genome::Model::Tools::Pindel::ProcessPindelReads->create(
@@ -80,7 +85,7 @@ sub _filter_variants {
                     hq_raw_output_file => $hq_raw_file,
                     lq_raw_output_file => $lq_raw_file,
                     read_support_output_file => $read_support_file,
-                    excessive_read_depth => 1,
+                    capture_data => $capture_data,
                     big_output_file => $big_output_file, );
     unless($ppr_cmd->execute){
         die $self->error_message("Could not execute gmt pindel process-pindel-reads");
