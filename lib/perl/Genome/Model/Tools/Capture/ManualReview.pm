@@ -164,7 +164,7 @@ sub execute {
         {
           my ( $chr, $start, $stop, undef, undef, $call ) = split( /\t/, $line );
           next if( $chr eq 'Chr' ); # Skip header
-          if( !defined $call or $call =~ m/^\s*$/ or $call =~ m/[SV]/ ) # If this line is not reviewed, then let it through, for now
+          if( !defined $call or $call =~ m/^\s*$/ or $call =~ m/[SVsv]/ ) # If this line is not reviewed, then let it through, for now
           {
             $out_anno_fh->print( $anno_lines{snvs}{$chr}{$start}{$stop}, "\n" ) if( defined $anno_lines{snvs}{$chr}{$start}{$stop} );
           }
@@ -173,7 +173,7 @@ sub execute {
         {
           my ( $chr, $start, $stop, undef, undef, $call ) = split( /\t/, $line );
           next if( $chr eq 'Chr' ); # Skip header
-          if( !defined $call or $call =~ m/^\s*$/ or $call =~ m/[SV]/ ) # If this line is not reviewed, then let it through, for now
+          if( !defined $call or $call =~ m/^\s*$/ or $call =~ m/[SVsv]/ ) # If this line is not reviewed, then let it through, for now
           {
             $out_anno_fh->print( $anno_lines{indels}{$chr}{$start}{$stop}, "\n" ) if( defined $anno_lines{indels}{$chr}{$start}{$stop} );
           }
