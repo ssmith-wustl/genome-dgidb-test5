@@ -583,6 +583,7 @@ sub post_allocation_initialization {
 }
 
 sub validate_for_start_methods {
+    # Be very wary of removing any of these as many subclasses use SUPER::validate_for_start_methods
     # Each method should return tags
     my @methods = (
         #validate_inputs_have_values should be checked first
@@ -601,8 +602,7 @@ sub validate_for_start {
 
     for my $method (@methods) {
         unless ($self->can($method)) {
-            $self->warning_message("Validation method $method not found!");
-            next;
+            die $self->warning_message("Validation method $method not found!");
         }
         my @returned_tags = grep { defined $_ } $self->$method(); # Prevents undef from being pushed to tags list
         push @tags, @returned_tags if @returned_tags; 
