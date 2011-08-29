@@ -1,4 +1,4 @@
-B1;2cpackage Genome::Model::Tools::FastTier::AddTiers;
+package Genome::Model::Tools::FastTier::AddTiers;
 
 use warnings;
 use strict;
