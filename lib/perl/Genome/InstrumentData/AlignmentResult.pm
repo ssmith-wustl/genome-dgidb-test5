@@ -691,7 +691,8 @@ sub collect_inputs_and_run_aligner {
                     return;
                 }
                 if ($wc_ct % 4) {
-                    $self->warning_message("run has a line count of $wc_ct, which is not divisible by four!");
+                    $self->error_message("run has a line count of $wc_ct, which is not divisible by four!");
+                    return;
                 }
                 $fastq_rd_ct += $wc_ct/4;
             }
