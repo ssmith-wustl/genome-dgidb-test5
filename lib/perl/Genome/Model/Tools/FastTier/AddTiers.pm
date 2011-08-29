@@ -1,4 +1,4 @@
-package Genome::Model::Tools::FastTier::AddTiers;
+B1;2cpackage Genome::Model::Tools::FastTier::AddTiers;
 
 use warnings;
 use strict;
@@ -96,11 +96,19 @@ sub execute {
     close($inFh);
     close(OUTFILE);
 
-
+    #sort the bed file
+    my $cmd = "/gscuser/cmiller/usr/bin/bedsort $tempdir/temp.bed >$tempdir/temp.bed.sorted";
+    my $return = Genome::Sys->shellcmd(
+        cmd => "$cmd",
+        );
+    unless($return) {
+        $self->error_message("Failed to execute: Returned $return");
+        die $self->error_message;
+    }
 
     #annotate that bed file
-    my $cmd = "gmt fast-tier fast-tier --tier-file-location $tierfile --variant-bed-file $tempdir/temp.bed";
-my $return = Genome::Sys->shellcmd(
+    $cmd = "gmt fast-tier fast-tier --tier-file-location $tierfile --variant-bed-file $tempdir/temp.bed.sorted";
+    $return = Genome::Sys->shellcmd(
     cmd => "$cmd",
     );
     unless($return) {
@@ -114,7 +122,7 @@ my $return = Genome::Sys->shellcmd(
     #read in the tier files
     my @tiers = ("tier1","tier2","tier3","tier4");
     foreach my $tier (@tiers){
-        my $inFh = IO::File->new( "$tempdir/temp.bed.$tier" ) || die "can't open $tier file\n";
+        my $inFh = IO::File->new( "$tempdir/temp.bed.sorted.$tier" ) || die "can't open $tier file\n";
         while( my $line = $inFh->getline )
         {
             chomp($line);
@@ -124,10 +132,6 @@ my $return = Genome::Sys->shellcmd(
         }
     }
  
-    foreach my $k (keys(%tierhash)){
-        print STDERR $k . " - " . $tierhash{$k} . "\n";
-    } 
-   
     open(OUTFILE1,">$output_file") || die "can't open outfile for writing ($output_file)\n";
 
     #match up the tiers with the original file
@@ -136,7 +140,7 @@ my $return = Genome::Sys->shellcmd(
     {
         #skip header
         if (($line=~/^Chr/) || ($line =~ /^#/)){
-            print $line;
+            print OUTFILE1 $line;
             next;
         }
         
@@ -153,8 +157,5 @@ my $return = Genome::Sys->shellcmd(
     }
     close(OUTFILE1);
 
-    `cp -r $tempdir /tmp/tmpdir`
-    
-        
-
+    return 1;
 }
