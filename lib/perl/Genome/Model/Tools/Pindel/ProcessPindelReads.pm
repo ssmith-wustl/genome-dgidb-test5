@@ -485,10 +485,29 @@ sub vaf_filter {
     my $stop = $call_fields[10];
 
     my $reads = scalar(@support);
+    my $temp = Genome::Sys->create_temp_file_path;
+    my $tumor_read_support=0;
+    my $tumor_read_sw_support=0;
+
+    my $cap = $self->capture_data;
+
+    if($cap){
+        my $tsam_cmd = "samtools view $tumor_bam $chr:$stop-$stop > $temp";
+        if(system($tsam_cmd)){
+            die $self->error_message("Failed to run the command: $tsam_cmd");
+        }
+        $tumor_read_support = $self->line_count($temp);        
+    }
+    else {
+        my @results = `samtools view $tumor_bam $chr:$stop-$stop`;
+        $tumor_read_support = scalar(@results);
+    }
+
+
 
     # Call samtools over the variant start-stop to get overlapping reads from the tumor bam
-    my @results = `samtools view $tumor_bam $chr:$stop-$stop`;
-    my $tumor_read_support=scalar(@results);
+    #my @results = `samtools view $tumor_bam $chr:$stop-$stop`;
+    #my $tumor_read_support=scalar(@results);
 
     # Currently, there are some instances when samtools view runs for along time, and either does not return,
     # or returns nothing, resulting in zero tumor_read_support, which itself causes a divide by zero error.
@@ -530,6 +549,16 @@ sub vaf_filter {
     return 1;
 }
 
+sub line_count {
+    my $self = shift;
+    my $input = shift;
+    unless( -e $input ) {
+        die $self->error_message("Could not locate file for line count: $input");
+    }
+    my $result = `wc -l $input`;
+    my ($answer)  = split /\s/,$result;
+    return $answer
+}
 
 sub print_raw_read {
     my $self = shift;
