@@ -2,6 +2,7 @@ package Finishing::Assembly::Factory;
 
 use strict;
 use warnings;
+no warnings 'reserved';
 
 use Finfo::Std;
 
@@ -214,6 +215,7 @@ sub new
     __PACKAGE__->fatal_msg("Use connect to create");
 }
 use warnings;
+no warnings 'reserved';
 
 my %instances;
 sub connect

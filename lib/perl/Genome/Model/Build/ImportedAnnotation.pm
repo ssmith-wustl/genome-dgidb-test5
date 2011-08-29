@@ -290,8 +290,13 @@ sub _resolve_annotation_file_name {
     if ($squashed) {
         $file_type .= '-squashed';
     }
-    my $file_name = $self->_annotation_data_directory .'/'. $reference_sequence_id .'-'. $file_type .'.'. $suffix;
+    my $file_name = $self->_rna_annotation_directory .'/'. $reference_sequence_id .'-'. $file_type .'.'. $suffix;
     return $file_name;
+}
+
+sub _rna_annotation_directory {
+    my $self = shift;
+    return $self->_annotation_data_directory . '/rna_annotation';
 }
 
 sub generate_transcript_info_file {
@@ -470,6 +475,10 @@ sub generate_RNA_annotation_files {
     my $suffix = shift;
     my $reference_sequence_id = shift;
     my $squashed = shift;
+
+    unless(-e $self->_rna_annotation_directory){
+        Genome::Sys->create_directory($self->_rna_annotation_directory);
+    }
     
     unless ($self->transcript_info_file($reference_sequence_id)) {
         my $status = $self->generate_transcript_info_file($reference_sequence_id);

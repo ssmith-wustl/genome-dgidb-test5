@@ -9,7 +9,7 @@ use Genome;
 use Exception::Class('ImportedVariations');
 
 class Genome::Model::Command::Define::ImportedVariations {
-    is => 'Genome::Model::Command::Define::Helper',
+    is => 'Genome::Model::Command::Define::HelperDeprecated',
     has => [variations_file =>
         {
             is => 'Text',

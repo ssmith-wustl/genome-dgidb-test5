@@ -1798,6 +1798,7 @@ sub compare_output {
     my %diffs;
     FILE: for my $rel_path (sort keys %file_paths) {
         my $abs_path = delete $file_paths{$rel_path};
+        warn "abs_path ($abs_path) does not exist\n" unless (-e $abs_path);
         my $dir = $self->full_path_to_relative(dirname($abs_path));
        
         next FILE if -d $abs_path;
@@ -1867,6 +1868,7 @@ sub compare_output {
     # Make sure the other build doesn't have any extra files
     for my $rel_path (sort keys %other_file_paths) {
         my $abs_path = delete $other_file_paths{$rel_path};
+        warn "abs_path ($abs_path) does not exist\n" unless (-e $abs_path);
         my $dir = $self->full_path_to_relative(dirname($abs_path));
         next if -d $abs_path;
         next if grep { $dir =~ /$_/ } $self->dirs_ignored_by_diff;

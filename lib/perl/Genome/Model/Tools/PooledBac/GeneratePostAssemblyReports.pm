@@ -50,9 +50,13 @@ sub print_assembly_size_report
     foreach my $name (@{$project_names})
     {
         my $size = 0;        
-        if (-e "$name/edit_dir/$name.ace")
+        if (-e "$name/edit_dir/$name.fasta.screen.ace")
         {
-            my $ao = Genome::Model::Tools::Pcap::Ace->new(input_file => "$name/edit_dir/$name.ace", using_db => 1);
+            my $ao = Genome::Model::Tools::Pcap::Ace->new(input_file => "$name/edit_dir/$name.fasta.screen.ace", using_db => 1);
+            if ( not $ao ) {
+                $self->error_message("Could not get ace object for project: $name");
+                return;
+            }
             my $contig_names = $ao->get_contig_names;
             
             foreach my $contig_name (@{$contig_names})
@@ -75,9 +79,9 @@ sub print_contig_size_report
     {
         my $size = 0;
         $fh->print ("$name:\n");
-        if (-e "$name/edit_dir/$name.ace")
+        if (-e "$name/edit_dir/$name.fasta.screen.ace")
         {
-            my $ao = Genome::Model::Tools::Pcap::Ace->new(input_file => "$name/edit_dir/$name.ace", using_db => 1);
+            my $ao = Genome::Model::Tools::Pcap::Ace->new(input_file => "$name/edit_dir/$name.fasta.screen.ace", using_db => 1);
             my $contig_names = $ao->get_contig_names;
             
             foreach my $contig_name (@{$contig_names})
@@ -100,9 +104,9 @@ sub create_fasta_and_qual_files
     my ($self, $project_names) = @_;
     foreach my $name (@{$project_names})
     {             
-        if (-e "$name/edit_dir/$name.ace")
+        if (-e "$name/edit_dir/$name.fasta.screen.ace")
         {
-            $self->ace2fastaqual("$name/edit_dir/$name.ace", "$name/edit_dir/contigs.fasta");
+            $self->ace2fastaqual("$name/edit_dir/$name.fasta.screen.ace", "$name/edit_dir/contigs.fasta");
         }      
     }
 }
@@ -116,9 +120,9 @@ sub print_contigs_only_consensus_report
     {
         my $size = 0;
         $fh->print ("$name:\n");
-        if (-e "$name/edit_dir/$name.ace")
+        if (-e "$name/edit_dir/$name.fasta.screen.ace")
         {
-            my $ao = Genome::Model::Tools::Pcap::Ace->new(input_file=>"$name/edit_dir/$name.ace", using_db => 1);
+            my $ao = Genome::Model::Tools::Pcap::Ace->new(input_file=>"$name/edit_dir/$name.fasta.screen.ace", using_db => 1);
             my $contig_names = $ao->get_contig_names;
             foreach my $contig_name (@{$contig_names})
             {
@@ -138,7 +142,7 @@ sub print_contigs_only_consensus_report
                     $fh->print ($contig_name,"\n");
                 }          
             }
-            system "/bin/rm $name/edit_dir/$name.ace.db" if -e "$name/edit_dir/$name.ace.db";
+            system "/bin/rm $name/edit_dir/$name.fasta.screen.ace.db" if -e "$name/edit_dir/$name.fasta.screen.ace.db";
         }
         else
         {
@@ -199,7 +203,7 @@ sub _remove_contigs_idx_directories {
     my ( $self, $bac_names ) = @_;
 
     foreach my $bac_name ( @{$bac_names} ) {
-	my $idx_dir = $self->project_dir."/$bac_name/edit_dir/$bac_name".'.ace.idx';
+	my $idx_dir = $self->project_dir."/$bac_name/edit_dir/$bac_name".'.fasta.screen.ace.idx';
 
 	if ( -d $idx_dir ) {
 	    unless ( File::Path::rmtree( $idx_dir ) ){

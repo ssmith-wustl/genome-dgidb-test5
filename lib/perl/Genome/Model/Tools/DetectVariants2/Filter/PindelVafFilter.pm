@@ -17,6 +17,11 @@ class Genome::Model::Tools::DetectVariants2::Filter::PindelVafFilter{
             is_input => 1,
             is_optional => 1,
         },
+        capture_data => {
+            is => 'Boolean',
+            doc => 'Set this to cause the read-support filter to dump reads for each indel to a temp file in order to avoid out of memory errors',
+            default => 0,
+        },
     ],
     has_constant => [
         _variant_type => {
@@ -42,7 +47,7 @@ sub _filter_variants {
     my $output_lq_file = $self->_temp_staging_directory."/indels.lq.bed";
     my $indel_file = $self->input_directory."/indels.hq.bed";
     my $variant_freq_cutoff = $self->variant_freq_cutoff;
-
+    my $capture_data = $self->capture_data;
 
     my $input_file = $self->input_directory."/indels.hq";
     my $ppr_cmd = Genome::Model::Tools::Pindel::ProcessPindelReads->create(
@@ -57,7 +62,8 @@ sub _filter_variants {
                     hq_raw_output_file => $hq_raw_file,
                     lq_raw_output_file => $lq_raw_file,
                     big_output_file => $big_output_file, 
-                    variant_freq_cutoff => $variant_freq_cutoff, );
+                    variant_freq_cutoff => $variant_freq_cutoff,
+                    capture_data => $capture_data, );
     unless($ppr_cmd->execute){
         die $self->error_message("Could not execute gmt pindel process-pindel-reads");
     }

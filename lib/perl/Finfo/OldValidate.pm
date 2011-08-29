@@ -2,6 +2,7 @@ package Finfo::OldValidate;
 
 use strict;
 use warnings;
+no warnings 'reserved';
 
 use base qw(Class::Accessor);
 

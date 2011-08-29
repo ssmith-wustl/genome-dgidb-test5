@@ -221,4 +221,44 @@ sub workflow_name {
     return $self->build_id . ' Somatic Variation Pipeline';
 }
 
+sub path_to_individual_output {
+    my $self = shift;
+    my $build = $self; 
+
+    my ($detector_strat,$filter_strat) = @_;
+    my ($detector_name,$detector_version, @detector_params) = split /\s+/, $detector_strat;
+    my $detector_params = join(" ", @detector_params);
+    my ($filter_name,$filter_version, @filter_params) = split /\s+/, $filter_strat;
+    my $filter_params = join(" ", @filter_params);
+    $detector_name = Genome::Model::Tools::DetectVariants2::Strategy->detector_class($detector_name);
+    my %params = (
+        detector_name => $detector_name,
+        detector_version => $detector_version,
+        aligned_reads => $build->tumor_build->whole_rmdup_bam_file,
+        control_aligned_reads => $build->normal_build->whole_rmdup_bam_file,
+        reference_build_id => $build->tumor_model->reference_sequence_build_id,
+    );
+
+    $params{detector_params} = $detector_params if $detector_params;
+
+    if($filter_strat){
+        $filter_name = Genome::Model::Tools::DetectVariants2::Strategy->filter_class($filter_name);
+        $params{filter_name} = $filter_name;
+        $params{filter_params} = $filter_params if $filter_params;
+    }
+
+    my $result_class = (defined $filter_strat) ? "Genome::Model::Tools::DetectVariants2::Result::Filter" : "Genome::Model::Tools::DetectVariants2::Result";
+    my @result = $result_class->get(%params);
+    my $answer = undef;
+    if( scalar(@result)==1){
+        $answer = $result[0]->output_dir;
+    } else {
+        print "Called: ".$result_class."\n";
+        print "Found ".scalar(@result)."\n";;
+    }
+    return $answer;
+}
+
+
+
 1;

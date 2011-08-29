@@ -2,6 +2,7 @@ package Finishing::Assembly::DBIx::Proxy;
 
 use strict;
 use warnings;
+no warnings 'reserved';
 
 use base 'Finishing::Assembly::Proxy';
 
@@ -275,6 +276,7 @@ package Finishing::Assembly::DBIx::OrganismProxy;
 
 use strict;
 use warnings;
+no warnings 'reserved';
 
 use base 'Finishing::Assembly::DBIx::Proxy'; 
 
@@ -317,6 +319,7 @@ package Finishing::Assembly::DBIx::AssemblyProxy;
 
 use strict;
 use warnings;
+no warnings 'reserved';
 
 use base (qw/Finishing::Assembly::DBIx::Proxy/); 
 
@@ -386,6 +389,7 @@ package Finishing::Assembly::DBIx::SequencedItemProxy;
 
 use strict;
 use warnings;
+no warnings 'reserved';
 
 use base 'Finishing::Assembly::DBIx::Proxy'; 
 
@@ -451,6 +455,7 @@ package Finishing::Assembly::DBIx::AssembledReadProxy;
 
 use strict;
 use warnings;
+no warnings 'reserved';
 
 use base (qw/Finishing::Assembly::DBIx::SequencedItemProxy/); 
 
@@ -537,6 +542,7 @@ package Finishing::Assembly::DBIx::ContigProxy;
 
 use strict;
 use warnings;
+no warnings 'reserved';
 
 use base 'Finishing::Assembly::DBIx::SequencedItemProxy'; 
 
@@ -757,6 +763,7 @@ package Finishing::Assembly::DBIx::ChromosomeProxy;
 
 use strict;
 use warnings;
+no warnings 'reserved';
 
 use base 'Finishing::Assembly::DBIx::Proxy'; 
 
@@ -791,6 +798,7 @@ package Finishing::Assembly::DBIx::ChromosomeFirstScaffoldProxy;
 
 use strict;
 use warnings;
+no warnings 'reserved';
 
 use base 'Finishing::Assembly::DBIx::Proxy'; 
 
@@ -811,6 +819,7 @@ package Finishing::Assembly::DBIx::ScaffoldProxy;
 
 use strict;
 use warnings;
+no warnings 'reserved';
 
 use base 'Finishing::Assembly::DBIx::Proxy'; 
 
@@ -877,6 +886,7 @@ package Finishing::Assembly::DBIx::ImprovementCorrelationProxy;
 
 use strict;
 use warnings;
+no warnings 'reserved';
 
 use base 'Finishing::Assembly::DBIx::Proxy'; 
 
@@ -908,6 +918,7 @@ package Finishing::Assembly::DBIx::ProjectProxy;
 
 use strict;
 use warnings;
+no warnings 'reserved';
 
 use base 'Finishing::Assembly::DBIx::Proxy'; 
 
@@ -978,6 +989,7 @@ package Finishing::Assembly::DBIx::GapProxy;
 
 use strict;
 use warnings;
+no warnings 'reserved';
 
 use base 'Finishing::Assembly::DBIx::Proxy'; 
 

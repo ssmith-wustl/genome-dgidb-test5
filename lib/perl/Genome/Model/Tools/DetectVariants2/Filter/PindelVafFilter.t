@@ -89,6 +89,7 @@ my $pindel_vaf_filter = Genome::Model::Tools::DetectVariants2::Filter::PindelVaf
     previous_result_id => $detector_result->id,
     output_directory => $test_output_dir,
     variant_freq_cutoff => $variant_freq_cutoff,
+    #capture_data => 1,
 );
 
 ok($pindel_vaf_filter, "created PindelVafFilter object");

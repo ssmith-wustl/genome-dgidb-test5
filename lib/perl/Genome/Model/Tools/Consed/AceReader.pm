@@ -3,6 +3,8 @@ package Genome::Model::Tools::Consed::AceReader;
 use strict;
 use warnings;
 
+use Data::Dumper;
+
 class Genome::Model::Tools::Consed::AceReader {
     has => [
         file => {
@@ -22,7 +24,7 @@ sub create {
 
     my $fh = eval{ Genome::Sys->open_file_for_reading($self->file); };
     if ( not $fh ) {
-        $self->error_message('Failed to open ace file ('.$self->file.'): $@');
+        $self->error_message("Failed to open ace file (".$self->file."): $@");
         return;
     }
     $self->_fh($fh);
@@ -62,24 +64,55 @@ sub next_contig {
     $contig->{unpadded_consensus} = $contig->{consensus};
     $contig->{unpadded_consensus} =~ s/\*//g;
 
-    my %read_positions;
-    READ: while ( my $obj = $self->next ) {
+    CTG: while ( my $obj = $self->next ) {
         if ( $obj->{type} eq 'contig' ) {
             $self->_previous_contig($obj);
-            last READ;
+            last CTG;
+        }
+        elsif ( $obj->{type} eq 'base_segment' ) {
+            push @{$contig->{base_segments}}, $obj;
         }
         elsif ( $obj->{type} eq 'read_position' ) {
-            $read_positions{$obj->{read_name}} = $obj->{position}
+            $contig->{reads}->{ $obj->{read_name} }->{position} = $obj->{position};
+            $contig->{reads}->{ $obj->{read_name} }->{u_or_c} = $obj->{u_or_c};
         }
         elsif ( $obj->{type} eq 'read' ) {
+            for my $attr (qw/ position u_or_c /) {
+                $obj->{$attr} = $contig->{reads}->{ $obj->{name} }->{$attr};
+            }
             $contig->{reads}->{ $obj->{name} } = $obj;
-            $contig->{reads}->{ $obj->{name} }->{position} = $read_positions{ $obj->{name} };
-            $contig->{reads}->{ $obj->{name} }->{start} = $read_positions{ $obj->{name} };
-            $contig->{reads}->{ $obj->{name} }->{stop} = $read_positions{$obj->{name}} + length($obj->{sequence}) - 1;
+            $contig->{reads}->{ $obj->{name} }->{start} = $contig->{reads}->{ $obj->{name} }->{position};
+            $contig->{reads}->{ $obj->{name} }->{stop} = $contig->{reads}->{ $obj->{name} }->{start} + length($obj->{sequence}) - 1;
+        }
+        elsif ( $obj->{type} eq 'read_tag' ) {
+            push @{$contig->{reads}->{ $obj->{read_name} }->{tags}}, $obj;
+        }
+        elsif ( $obj->{type} eq 'contig_tag' ) {
+            push @{$self->{_contig_tags}}, $obj;
+        }
+        elsif ( $obj->{type} eq 'assembly_tag' ) {
+            push @{$self->{_assembly_tags}}, $obj;
+        }
+        else {
+            print Dumper({UNKNOWN=>$obj});
         }
     }
 
     return $contig;
+}
+
+sub assembly_tags {
+    my $self = shift;
+    my $ctg;
+    do { $ctg = $self->next_contig } until not defined $ctg;
+    return $self->{_assembly_tags} || [];
+}
+
+sub contig_tags {
+    my $self = shift;
+    my $ctg;
+    do { $ctg = $self->next_contig } until not defined $ctg;
+    return $self->{_contig_tags} || [];
 }
 
 sub _build_AS {
@@ -190,6 +223,7 @@ sub _build_RD {
             last;
         }
     }
+
     return \%ret_val;
 }
 
@@ -222,16 +256,14 @@ sub _build_CT {
     chomp $line;
 	$line =~ s/^\s*// if $line =~ /\w/;     
     @ret_val{'contig_name', 'tag_type', 'program', 'start_pos', 'end_pos', 'date', 'no_trans'} = split(/ /, $line);
-    my $data;
     while ($line = <$IN>) {
 		$line =~ s/^\s*// if $line =~ /\w/;
         if ($line =~ /^}/) {
             last;
         }
-        $data .= $line;
+        $ret_val{data} .= $line;
     }
-    $ret_val{'data'} = $data;
-
+    chomp $ret_val{data} if $ret_val{data};
     return \%ret_val;
 }
 
@@ -249,6 +281,7 @@ sub _build_RT {
         last if $nextline=~/^\s*}\s*\n?$/;
         $ret_val{data}.=$nextline;
     }
+    chomp $ret_val{data} if $ret_val{data};
     return \%ret_val;
 }
 

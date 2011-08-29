@@ -498,9 +498,6 @@ sub _resolve_subject {
     if ($try_all_types or $subject_type eq 'genomic_dna') {
         push @subjects, Genome::Sample->get(extraction_label => $subject_name, extraction_type => 'genomic dna');
     }
-    if ($try_all_types or $subject_type eq 'flow_cell_id') {
-        push @subjects, GSC::Equipment::Solexa::Run->get(flow_cell_id => $subject_name);
-    }
 
     #Only resort to a GSC::DNA if nothing else so far has worked
     if (($try_all_types and not scalar(@subjects)) or $subject_type eq 'dna_resource_item_name') {
