@@ -312,6 +312,12 @@ sub create {
 
     my $self = $class->SUPER::create($params) or return;
 
+    # do this until we drop the subject_class_name column
+    my $subject = $self->subject();
+    if ($subject) {
+        $self->subject_class_name(ref($subject));
+    }
+
     # Make sure the subject we got is really an object
     unless ( $self->_verify_subject ) {
         $self->SUPER::delete;

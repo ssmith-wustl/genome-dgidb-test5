@@ -71,9 +71,9 @@ sub help_synopsis_for_create {
     genome propulation-group define 'ASMS-cohort-WUTGI-2011' ASMS1 ASMS2 ASMS3 ASMS4 
 
     genome model define phenotype-correlation \
-        --name                  'ASMS-v1' \
-        --subject               'ASMS-cohort-WUTGI-2011' \
-        --processing-profile    'September 2011 Quantitative Phenotype Correlation' \
+        --name                      'ASMS-v1' \
+        --subject                   'ASMS-cohort-WUTGI-2011' \
+        --processing-profile        'September 2011 Quantitative Phenotype Correlation' \
 
   # case-control
 
@@ -93,7 +93,7 @@ sub help_synopsis_for_create {
         --processing-profile    'September 2011 Case-Control Phenotype Correlation' \
         --identify-cases-by     'some_nomenclature.has_cleft_lip = "yes"' \
         --identify-controls-by  'some_nomenclature.has_cleft_lip = "no"' \
-
+        
     # If you leave off the subject, it would find all patients matching the case/control logic
     # and make a population group called ASMS-v1-cohort automatically???
     
@@ -109,6 +109,8 @@ sub help_detail_for_create {
   For a detailed explanation of how to write a variant detection strategy, see: 
     perldoc Genome::Model::Tools::DetectVariants2::Strategy;
 
+  All builds will have a combined vcf in their variant detection directory.
+
 EOS
 }
 
@@ -118,68 +120,100 @@ sub help_manual_for_create {
 EOS
 }
 
-sub create {
-    my $class = shift;
-    my $bx = $class->define_boolexpr(@_);
+sub __errors__ {
+    my $self = shift;
     my @errors;
-    if ($bx->value_for('alignment_strategy')) {
+    if ($self->alignment_strategy) {
         #my $strat = Genome::Model::Tools::DetectVariants2::Strategy->get($bx->value_for('alignment_strategy'));
         #push @errors, $strat->__errors__;
         #$strat->delete;
     }
     for my $strategy ('snv','indel','sv','cnv') {
-        my $name = $strategy . '_detection_strategy';
-        if ($bx->value_for($name)) {
-            my $strat = Genome::Model::Tools::DetectVariants2::Strategy->get($bx->value_for($name));
-            push @errors, $strat->__errors__;
-            $strat->delete;
+        my $method_name = $strategy . '_detection_strategy';
+        if (my $strategy_text = $self->$method_name) {
+            my $strat = Genome::Model::Tools::DetectVariants2::Strategy->get($strategy_text);
+            push @errors, 
+                map {
+                    UR::Object::Tag->create(
+                        type => 'invalid', 
+                        properties => [$method_name], 
+                        desc => $_
+                    )
+                }
+                $strat->__errors__;
         }
     }
-    if (scalar(@errors)) { 
-        die @errors;
-    }
-    return $class->SUPER::create($bx);
-}
-
-sub _initialize_model {
-    my ($self,$model) = @_;
-    #warn "defining new model " . $model->__display_name__ . " for profile " . $self->__display_name__ . "\n";
-    return 1;
-}
-
-sub _initialize_build {
-    my($self,$build) = @_;
-    #warn "definining new build " . $model->__display_name__ . " for profile " . $self->__display_name__ . "\n";
-    return 1;
+    return @errors;
 }
 
 sub _execute_build {
     my ($self,$build) = @_;
-
-    # TODO: remove this and replace with the workflow logic at the bottom when we have one.
-    warn "The logic for building this is not yet in place!  Cannot run " . $self->__display_name__ . ':' .  $build->__display_name__ . "\n";
-
-    my $pop = $build->model->subject;
-    my @inputs = $build->inputs();
-    my $dir = $build->data_directory;
-
-    # get the population group, the individuals and samples
-    # make a model per sample
-    # make a model-group named after the population group (try to override the convergence model's subject population group to this one)
     
-    # let the models run and finish
-    # if the alignment API updates are ready, drop it in here, but only remove the smaller models when we don't need them anymore
-    #  (they duplicate the standard cron-based sample models)
+    # TODO: remove this and replace with the workflow logic at the bottom when we have one.
+    # Version 1 of this pipeline will run in a linear way only if the underlying samples have already
+    # had independent alignment and variant detection completed in other models.
+
+    warn "The logic for building this is not yet in place!  The following is initial data gathering...";
+
+    # get the subject (population group), the individual members and their samples
+    
+    my $patient_group = $build->model->subject;
+    $build->status_message("subject is " . $patient_group->__display_name__);
+
+    my @patients = $patient_group->members;
+    $build->status_message("found " . scalar(@patients) . " patients");
+
+    my @samples = map { $_->samples } @patients;
+    $build->status_message("found " . scalar(@samples) . " samples");
+    
+    # get the instddata for the model, and group up by sample
+
+    my @instdata_assn = $build->inputs(name => 'instrument_data');
+    $build->status_message("found " . scalar(@instdata_assn) . " assignments for the current build");
+    
+    my @instdata = Genome::InstrumentData->get(id => [ map { $_->id } @instdata_assn ]);
+    $build->status_message("found " . scalar(@instdata) . " instdata");
+
+    my %instdata_by_sample;
+    for my $instdata (@instdata) {
+        $instdata_by_sample{$instdata->sample->id}{$instdata->id} = 1;
+    }
+
+    # get the bam for each sample
+    # this will only work right now if the per-sample model has already run
+    # once Tom's new alignment thing is in place, it would actually generate them in parallel
+    
+    my $expected_pp = Genome::ProcessingProfile::ReferenceAlignment->get(
+        name => 'Feb 2011 Default Reference Alignment'
+    );
+    $build->status_message("profile " . $expected_pp->__display_name__ . " does alignment like we'd like");
+
+    my $params = $expected_pp->params_for_merged_alignment_result($self, @instdata);    
+    print Data::Dumper::Dumper($params);
+
+    my @alignment_results;
+    for my $sample (@samples) {
+        next;
+        my @models = Genome::Model->get(
+             subject_id => $sample->id,
+             "name like" => '%prod-refalign%',
+        );
+    }
 
     # run the DV2 API to do variant detection as we do in somatic, but let it take in N BAMs
     # internally it will:
     #  make VCF
     #  when running in cross-BAM mode, and not using a variant caller which does that automatically, dig up wildtype metrics for the VCF
+    
+    my $dir = $build->data_directory;
+    
+
 
     # dump pedigree data into a file
 
     # dump clinical data into a file
 
+    $DB::single = 1;
     return 1;
 }
 

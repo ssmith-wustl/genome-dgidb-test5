@@ -38,26 +38,28 @@ is(scalar(@members), 304, "got the expected number of patients");
 
 my $p = Genome::ProcessingProfile::PhenotypeCorrelation->create(
     id                              => -10001,
-    name                            => 'September 2011 Quantitative Population Phenotype Correlation',
+    name                            => 'TESTSUITE Quantitative Population Phenotype Correlation',
     alignment_strategy              => 'bwa 0.5.9 [-q 5] merged by picard 1.29',
     snv_detection_strategy          => 'samtools r599 filtered by snp-filter v1',
     indel_detection_strategy        => 'samtools r599 filtered by indel-filter v1',
-    sv_detection_strategy           => undef, 
-    cnv_detection_strategy          => undef,
-    group_samples_for_genotyping_by => 'test_nomenclature.race',
+    #sv_detection_strategy           => undef, 
+    #cnv_detection_strategy          => undef,
+    group_samples_for_genotyping_by => 'test_nomenclature.foo',
     phenotype_analysis_strategy     => 'quantitative',
 );
 ok($p, "created a processing profile") or diag(Genome::ProcessingProfile::PhenotypeCorrelation->error_message);
 
-
+$DB::single = 1;
 my $m = $p->add_model(
-    name    => 'ssmith-ASMS-test1',
+    name    => 'TESTSUITE-ASMS-test1',
+    subclass_name => 'Genome::Model::PhenotypeCorrelation',
     subject => $asms_cohort,
 );
 ok($m, "created a model") or diag(Genome::Model->error_message);
 
 
 my $b = $m->add_build(
+    subclass_name => 'Genome::Model::Build::PhenotypeCorrelation',
     data_directory => "/tmp/foo"
 );
 ok($b, "created a build") or diag(Genome::Model->error_message);
@@ -69,6 +71,7 @@ $b->start(
     job_dispatch    => 'inline',
 );
 is($b->status, 'Succeeded', "build succeeded!");
+
 
 sub help_synopsis_for_create {
     my $self = shift;

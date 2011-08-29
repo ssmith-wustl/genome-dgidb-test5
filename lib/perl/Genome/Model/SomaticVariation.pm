@@ -131,9 +131,8 @@ class Genome::Model::SomaticVariation {
 
 sub create {
     my $class  = shift;
-    my %params = @_;
-
-    $DB::single = 1;
+    my $bx = $class->define_boolexpr(@_);
+    my %params = $bx->params_list;
 
     my $dbsnp_flag = 1 if $params{previously_discovered_variations_build} or $params{previously_discovered_variations_build_id};
 
