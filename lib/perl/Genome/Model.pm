@@ -32,7 +32,7 @@ class Genome::Model {
             },
         },
         subject_id => { is => 'Text' },
-        subject_class_name => { is => 'Text' }, # FIXME This isn't really necessary anymore, should be refactored away
+        subject_class_name => { is => 'Text', is_optional => 1, }, # FIXME This isn't really necessary anymore, should be refactored away
         subject => { 
             is => 'Genome::Subject',
             id_by => 'subject_id',
