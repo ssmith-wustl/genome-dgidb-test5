@@ -182,7 +182,7 @@ sub print_header{
     $output_fh->print("##FORMAT=<ID=MQ,Number=1,Type=Integer,Description=\"Average Mapping Quality corresponding to alleles 0/1/2/3... after software and quality filtering\">" . "\n");
     $output_fh->print("##FORMAT=<ID=AD,Number=1,Type=Integer,Description=\"Allele Depth corresponding to alleles 0/1/2/3... after software and quality filtering\">" . "\n");
     $output_fh->print("##FORMAT=<ID=FA,Number=1,Type=Float,Description=\"Fraction of reads supporting ALT\">" . "\n");
-    $output_fh->print("##FORMAT=<ID=VAQ,Number=1,Type=Integer,Description=\"Variant Quality\">" . "\n");
+    $output_fh->print("##FORMAT=<ID=VAQ,Number=1,Type=Integer,Description=\"Variant Quality\">" . "\n"); # FIXME this is sometimes a Float and sometimes an Integer
 
     #INFO
     $output_fh->print("##INFO=<ID=VT,Number=1,Type=String,Description=\"Variant type\">" . "\n");
