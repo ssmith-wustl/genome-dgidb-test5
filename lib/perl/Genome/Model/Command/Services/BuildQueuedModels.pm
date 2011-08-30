@@ -82,6 +82,11 @@ sub execute {
         aspect => 'commit',
         callback => sub{ Genome::Sys->unlock_resource(resource_lock => $lock) },
     );
+    $context->add_observer(
+        # this observer is so we can filter emails that were able to commit
+        aspect => 'commit',
+        callback => sub{ print "COMMITTED\n" },
+    );
 
     my $max_builds_to_start = $self->num_builds_to_start;
     unless ($max_builds_to_start) {
