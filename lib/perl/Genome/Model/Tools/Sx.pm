@@ -49,6 +49,7 @@ Standard options:
           It is assumed that the bare option is the file. Use '-' to write to STDOUT. Use '.gz' to write as gzipped.
  type => The type of output. Not required if type can be determined from the file.
           Type when writing to STDOUT defaults to sanger. Valid types: sanger, illumina, phred (fasta), fasta, bed.
+ mode => The mode to open the output in. Use 'w' to write to a new file (file cannot exist) and 'a' to append to a file. Default is 'w'.
  name => The name of the writer.  If using commands that attach a writer name to a sequence,
           they will be written to the specified writer.
           
