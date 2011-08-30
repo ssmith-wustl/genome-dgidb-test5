@@ -81,7 +81,7 @@ sub _map_workflow_inputs {
         die $self->error_message;
     }
 
-    my $variant_list = $model->variant_list_file;
+    my $variant_list = $model->variant_list->file_path;
     unless($variant_list) {
         $self->error_message('Failed to get a variant list for this build!');
         die $self->error_message;

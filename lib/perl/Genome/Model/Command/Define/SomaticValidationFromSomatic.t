@@ -10,15 +10,15 @@ BEGIN {
 
 use above 'Genome';
 
-use Test::More tests => 18;
+use Test::More tests => 20;
 
-use_ok('Genome::Model::SomaticValidation::Command::DefineModels');
+use_ok('Genome::Model::Command::Define::SomaticValidationFromSomatic');
 
 my $tmpdir = File::Temp::tempdir('SomaticValidation-Command-DefineModelsXXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites/', CLEANUP => 1);
 
-my ($feature_list, $tumor_sample, $normal_sample, $somatic_build, $reference_alignment_pp, $somatic_validation_pp) = setup_test_data($tmpdir);
+my ($feature_list, $tumor_sample, $normal_sample, $somatic_build, $reference_alignment_pp, $somatic_validation_pp, $sv_tumor_model) = setup_test_data($tmpdir);
 
-my $define_command_no_feature_list_for_somatic = Genome::Model::SomaticValidation::Command::DefineModels->create(
+my $define_command_no_feature_list_for_somatic = Genome::Model::Command::Define::SomaticValidationFromSomatic->create(
     somatic_build => $somatic_build,
     #region_of_interest_set => $feature_list,
     target_region_set => $feature_list,
@@ -26,12 +26,12 @@ my $define_command_no_feature_list_for_somatic = Genome::Model::SomaticValidatio
     somatic_validation_processing_profile => $somatic_validation_pp,
 );
 
-isa_ok($define_command_no_feature_list_for_somatic, 'Genome::Model::SomaticValidation::Command::DefineModels', 'created define command');
+isa_ok($define_command_no_feature_list_for_somatic, 'Genome::Model::Command::Define::SomaticValidationFromSomatic', 'created define command');
 my $result = $define_command_no_feature_list_for_somatic->execute;
 ok(!$result, 'did not work without a subject for the feature-list');
 
 $feature_list->subject($somatic_build);
-my $define_command = Genome::Model::SomaticValidation::Command::DefineModels->create(
+my $define_command = Genome::Model::Command::Define::SomaticValidationFromSomatic->create(
     somatic_build => $somatic_build,
     #region_of_interest_set => $feature_list,
     target_region_set => $feature_list,
@@ -39,20 +39,21 @@ my $define_command = Genome::Model::SomaticValidation::Command::DefineModels->cr
     somatic_validation_processing_profile => $somatic_validation_pp,
 );
 
-isa_ok($define_command, 'Genome::Model::SomaticValidation::Command::DefineModels', 'created define command');
+isa_ok($define_command, 'Genome::Model::Command::Define::SomaticValidationFromSomatic', 'created define command');
 
 
 
-my $result = $define_command->execute;
+$result = $define_command->execute;
 ok($result, 'define command executed successfully') or die('test cannot continue without a model');
 
 my $somatic_validation_model = Genome::Model->get($result);
 isa_ok($somatic_validation_model, 'Genome::Model::SomaticValidation', 'created a somatic validation model');
 
-my $tumor_model = $somatic_validation_model->tumor_model;
+my $tumor_model = $somatic_validation_model->tumor_reference_alignment;
 isa_ok($tumor_model, 'Genome::Model::ReferenceAlignment', 'created a tumor model');
+is($tumor_model, $sv_tumor_model, 'used existing tumor model');
 
-my $normal_model = $somatic_validation_model->normal_model;
+my $normal_model = $somatic_validation_model->normal_reference_alignment;
 isa_ok($normal_model, 'Genome::Model::ReferenceAlignment', 'created a normal model');
 
 is($tumor_model->subject, $tumor_sample, 'tumor model has correct subject');
@@ -184,6 +185,16 @@ sub setup_test_data {
         snv_detection_strategy => 'test for somatic-validation define-models',
     );
 
+    my $sv_tumor_model = Genome::Model::ReferenceAlignment->create(
+        subject => $tumor_sample,
+        region_of_interest_set_name => [$feature_list->name],
+        auto_assign_inst_data => 1,
+        processing_profile => $reference_alignment_pp,
+        reference_sequence_build => $reference_sequence,
+        target_region_set_name => [$feature_list->name],
+    );
+    isa_ok($sv_tumor_model, 'Genome::Model::ReferenceAlignment', 'created the SV model\'s tumor reference alignment model');
+
     isa_ok($feature_list, 'Genome::FeatureList', 'created test feature-list');
     isa_ok($tumor_sample, 'Genome::Sample', 'created test tumor sample');
     isa_ok($normal_sample, 'Genome::Sample', 'created test normal sample');
@@ -191,5 +202,5 @@ sub setup_test_data {
     isa_ok($reference_alignment_pp, 'Genome::ProcessingProfile::ReferenceAlignment', 'created test ref. align. pp');
     isa_ok($somatic_validation_pp, 'Genome::ProcessingProfile::SomaticValidation', 'created test s.v. pp');
 
-    return ($feature_list, $tumor_sample, $normal_sample, $somatic_build, $reference_alignment_pp, $somatic_validation_pp);
+    return ($feature_list, $tumor_sample, $normal_sample, $somatic_build, $reference_alignment_pp, $somatic_validation_pp, $sv_tumor_model);
 }

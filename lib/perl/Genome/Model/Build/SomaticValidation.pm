@@ -166,4 +166,24 @@ sub dirs_ignored_by_diff {
     );
 }
 
+sub validate_for_start_methods {
+    my $self = shift;
+    my @methods = $self->SUPER::validate_for_start_methods;
+    push @methods, qw(
+        _validate_required_for_start_properties
+        _validate_subjects
+    );
+    return @methods;
+}
+
+sub _validate_required_for_start_properties {
+    my $model_method = $_[0]->model->class . '::_validate_required_for_start_properties';
+    return $model_method(@_);
+}
+
+sub _validate_subjects {
+    my $model_method = $_[0]->model->class . '::_validate_subjects';
+    return $model_method(@_);
+}
+
 1;
