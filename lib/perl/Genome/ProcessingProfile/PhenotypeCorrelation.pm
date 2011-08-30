@@ -155,23 +155,23 @@ sub _execute_build {
 
     warn "The logic for building this is not yet in place!  The following is initial data gathering...";
 
+    #
     # get the subject (population group), the individual members and their samples
-    
-    my $patient_group = $build->model->subject;
-    $build->status_message("subject is " . $patient_group->__display_name__);
+    #
 
-    my @patients = $patient_group->members;
+    my $population_group = $build->model->subject;
+    $build->status_message("subject is " . $population_group->__display_name__);
+
+    my @patients = $population_group->members();
     $build->status_message("found " . scalar(@patients) . " patients");
 
-    my @samples = map { $_->samples } @patients;
+    my @samples = $population_group->samples;
     $build->status_message("found " . scalar(@samples) . " samples");
     
-    # get the instddata for the model, and group up by sample
-
     my @instdata_assn = $build->inputs(name => 'instrument_data');
     $build->status_message("found " . scalar(@instdata_assn) . " assignments for the current build");
     
-    my @instdata = Genome::InstrumentData->get(id => [ map { $_->id } @instdata_assn ]);
+    my @instdata = Genome::InstrumentData->get(id => [ map { $_->value_id } @instdata_assn ]);
     $build->status_message("found " . scalar(@instdata) . " instdata");
 
     my %instdata_by_sample;
@@ -179,41 +179,75 @@ sub _execute_build {
         $instdata_by_sample{$instdata->sample->id}{$instdata->id} = 1;
     }
 
+    #
     # get the bam for each sample
     # this will only work right now if the per-sample model has already run
     # once Tom's new alignment thing is in place, it would actually generate them in parallel
+    #
     
-    my $expected_pp = Genome::ProcessingProfile::ReferenceAlignment->get(
-        name => 'Feb 2011 Default Reference Alignment'
-    );
-    $build->status_message("profile " . $expected_pp->__display_name__ . " does alignment like we'd like");
-
-    my $params = $expected_pp->params_for_merged_alignment_result($self, @instdata);    
-    print Data::Dumper::Dumper($params);
-
-    my @alignment_results;
-    for my $sample (@samples) {
-        next;
-        my @models = Genome::Model->get(
-             subject_id => $sample->id,
-             "name like" => '%prod-refalign%',
-        );
+    unless ($self->alignment_strategy eq 'bwa 0.5.9 [-q 5] merged by picard 1.29') {
+        die "this pipeline is currently hard-coded to only take 'bwa 0.5.9 [-q 5] merged by picard 1.29' until the new parser is complete...";
     }
 
+    my @alignment_params = (
+        'samtools_version' => 'r599',
+        'test_name' => undef,
+        'aligner_params' => '-t 4 -q 5::',
+        'merger_version' => '1.29',
+        'aligner_version' => '0.5.9',
+        'aligner_name' => 'bwa',
+        'merger_name' => 'picard',
+        'merger_params' => undef,
+        'picard_version' => '1.29',
+        'force_fragment' => undef,
+        'duplication_handler_name' => 'picard',
+        'duplication_handler_version' => '1.29',
+        'duplication_handler_params' => undef,
+        'trimmer_version' => undef,
+        'trimmer_name' => undef,
+        'trimmer_params' => undef
+    );
+
+    # FOR DEBUGGING DROP THIS TO TWO BAMS
+    @samples = (@samples[0]);
+
+    my @bams;
+    my $reference_sequence_build = $build->inputs(name => 'reference_sequence_build')->value;    
+    for my $sample (@samples) {
+        my $ihash = $instdata_by_sample{$sample->id};
+        my @instdata_ids = sort keys %$ihash;
+        my $merged_alignment_result = Genome::InstrumentData::AlignmentResult::Merged->get_with_lock(
+            @alignment_params,
+            reference_build_id => $reference_sequence_build->id,
+            instrument_data_id => \@instdata_ids,
+        );
+        unless ($merged_alignment_result) {
+            $build->error_message("no merged alignments for sample " . $sample->__display_name__);
+            next;
+        }
+        my $bam = $merged_alignment_result->merged_alignment_bam_path;
+        $self->status_message("bam for sample " . $sample->name . " is at path " . $bam);
+        push @bams, $bam; 
+    }
+    unless (@bams == @samples) {
+        die $self->error_message("Failed to find alignment results for all samples!");
+    }
+
+    #
     # run the DV2 API to do variant detection as we do in somatic, but let it take in N BAMs
-    # internally it will:
-    #  make VCF
-    #  when running in cross-BAM mode, and not using a variant caller which does that automatically, dig up wildtype metrics for the VCF
+    # _internally_ it will (for the first pass):
+    #  notice it's running on multiple BAMs
+    #  get the single-BAM results
+    #  merge them with joinx and make a combined VCF (tolerating the fact that per-bam variants are not VCF)
+    #  run bamreadcount to fill-in the blanks
+    #
     
-    my $dir = $build->data_directory;
-    
-
-
     # dump pedigree data into a file
 
     # dump clinical data into a file
 
-    $DB::single = 1;
+    # we'll figure out what to do about the analysis_strategy next...
+
     return 1;
 }
 
@@ -236,6 +270,7 @@ sub _validate_build {
 }
 
 1;
+
 __END__
 
 # TODO: replace the above _execute_build with an actual workflow

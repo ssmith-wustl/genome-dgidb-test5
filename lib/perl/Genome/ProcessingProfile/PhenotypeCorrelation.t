@@ -1,12 +1,10 @@
 package Genome::ProcessingProfile::PhenotypeCorrelation;
-
 use strict;
 use warnings;
 use above "Genome";
-use Test::More tests => 4;
+use Test::More tests => 11;
 
 use Genome::ProcessingProfile::PhenotypeCorrelation;
-
 
 my $asms_cohort = Genome::PopulationGroup->get(name => 'ASMS-cohort-TGI-2011');
 
@@ -49,7 +47,6 @@ my $p = Genome::ProcessingProfile::PhenotypeCorrelation->create(
 );
 ok($p, "created a processing profile") or diag(Genome::ProcessingProfile::PhenotypeCorrelation->error_message);
 
-$DB::single = 1;
 my $m = $p->add_model(
     name    => 'TESTSUITE-ASMS-test1',
     subclass_name => 'Genome::Model::PhenotypeCorrelation',
@@ -57,6 +54,30 @@ my $m = $p->add_model(
 );
 ok($m, "created a model") or diag(Genome::Model->error_message);
 
+my $i1 = $m->add_input(
+    name => 'reference_sequence_build',
+    value => Genome::Model::Build->get('106942997'),
+);
+ok($i1, "add a reference sequence build to it");
+
+my @patients = $asms_cohort->members;
+ok(scalar(@patients), scalar(@patients) . " patients");
+
+my @samples = Genome::Sample->get(source_id => [ map { $_->id } @patients ]);
+ok(scalar(@samples), scalar(@samples) . " samples");
+
+my @i = Genome::InstrumentData::Solexa->get('sample_id' => [ map { $_->id } @samples ]);
+ok(scalar(@i), scalar(@i) . " instdata");
+
+my @ii;
+for my $i (@i) {
+    my $ii = $m->add_input(
+        name => 'instrument_data',
+        value => $i
+    );
+    push @ii, $ii if $ii;
+}
+is(scalar(@ii), scalar(@i), "assigned " . scalar(@i) . " instrument data");
 
 my $b = $m->add_build(
     subclass_name => 'Genome::Model::Build::PhenotypeCorrelation',
@@ -64,65 +85,14 @@ my $b = $m->add_build(
 );
 ok($b, "created a build") or diag(Genome::Model->error_message);
 
-__END__
+# we would normally do $build->start() but this is easier to debug minus workflow guts...
+#$b->start(
+#    server_dispatch => 'inline',
+#    job_dispatch    => 'inline',
+#);
+#is($b->status, 'Succeeded', "build succeeded!");
 
-$b->start(
-    server_dispatch => 'inline',
-    job_dispatch    => 'inline',
-);
-is($b->status, 'Succeeded', "build succeeded!");
-
-
-sub help_synopsis_for_create {
-    my $self = shift;
-    return <<"EOS"
-
-    genome processing-profile create phenotype-correlation \
-      --name 'September 2011 Trio Genotyping and Phenotype Correlation' \
-      --alignment-strategy          'bwa 0.5.9 [-q 5] merged by picard 1.29' \
-      --snv-detection-strategy      'samtools r599 filtered by snp-filter v1' \
-      --indel-detection-strategy    'samtools r599 filtered by indel-filter v1' \
-      --genotype-in-groups-by       'sample.patient.some_nomenclature.trio' # or race, or family, or whatever 
-
-    genome propulation-group define 'ASMS-cohort-WUTGI-2011' ASMS1 ASMS2 ASMS3 ASMS4 
-
-    genome model define phenotype-correlation \
-        --name                  'ASMS v1' 
-        --subject               'ASMS-cohort-WUTGI-2011'
-        --processing-profile    'September 2011 Trio Genotyping and Phenotype Correlation'       
-        --identify-cases-by     'sample.patient.some_nomenclature.has_asms = 1'
-        --identify-controls-by  'sample.patient.some_nomenclature.has_asms = 0'
-
-    # ASMS is not really trios, but just as an example...
-
-EOS
-}
-
-
-    if (0) {
-        # some of the LIMS clinical data didn't come across so this lets us query that directly
-        #my @a = Genome::Site::WUGC::Sample::Attribute->get(sample_id => [ map { $_->id } @samples ], -order_by => 'sample_id');
-        #show_table(\@a, qw/sample_id nomenclature name value/);
-
-        # ...once correctly imported it will be here
-        #my @a = Genome::SubjectAttribute->get(subject_id => [ map { $_->id } @samples ], -order_by => 'subject_id');
-        #show_table(\@a, qw/nomenclature attribute_label attribute_value/);
-    }
-
-sub show_table {
-    my $olist = shift;
-    my @p = @_;
-    unless (@p) {
-        my $o = $olist->[0];
-        if ($olist->[0]->isa("UR::Object")) {
-            @p = grep { $_ !~ /^_/ } map { $_->property_name } $olist->[0]->__meta__->properties;
-        }
-        else {
-            @p = grep { $_ !~ /^_/ } $olist->[0]->get_class_object->property_names;
-        }
-    }
-    for my $o (@$olist) {
-        print join("\t", map { chomp($_); $_ } map { $o->$_ } @p),"\n";
-    }
-}
+my $retval = eval { $p->_execute_build($b); };
+is($retval, 1, 'execution of the build returned true');
+is($@, '', 'no exceptions thrown during build process') or diag $@;
 
