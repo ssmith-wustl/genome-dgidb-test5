@@ -122,7 +122,7 @@ sub execute {
     if( $read_review )
     {
       print "Reading review files for case $case... ";
-      if( -e "$output_dir/$case.snv.reviewed.csv" or -e "$output_dir/$case.indel.reviewed.csv" )
+      if( -e "$output_dir/$case.snv.reviewed.csv" and -e "$output_dir/$case.indel.reviewed.csv" )
       {
         # Grab the high confidence tier1 SNV and Indel annotations from their respective files
         my ( $snv_anno, $indel_anno ) = ( $bams{$case}{snvs}, $bams{$case}{indels} );
@@ -188,7 +188,7 @@ sub execute {
       }
       else
       {
-        print "files not found. Skipping case.\n";
+        print "SNV and Indel review files not found. Skipping case.\n";
       }
 
       next;
