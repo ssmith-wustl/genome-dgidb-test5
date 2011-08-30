@@ -85,7 +85,7 @@ sub execute {
     $context->add_observer(
         # this observer is so we can filter emails that were able to commit
         aspect => 'commit',
-        callback => sub{ print "COMMITTED\n" },
+        callback => sub{ print "\nCOMMITTED\n" },
     );
 
     my $max_builds_to_start = $self->num_builds_to_start;
