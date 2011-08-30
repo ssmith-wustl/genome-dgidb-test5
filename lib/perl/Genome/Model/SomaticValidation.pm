@@ -75,7 +75,7 @@ sub _validate_subjects {
         next unless $object->can('subject');
 
         my $object_subject = $object->subject;
-        next unless $object_subject;
+        next unless $object_subject and $object_subject->can('source'); #only want to test that samples come from same place (still hacky)
 
         #FIXME hacky
         unless($object_subject->source->id eq $primary_subject->id) {

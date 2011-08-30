@@ -68,8 +68,8 @@ sub _map_workflow_inputs {
         die $self->error_message;
     }
 
-    my $tumor_build = $build->tumor_build;
-    my $normal_build = $build->normal_build;
+    my $tumor_build = $build->tumor_reference_alignment;
+    my $normal_build = $build->normal_reference_alignment;
 
     unless ($tumor_build) {
         $self->error_message("Failed to get a tumor_build associated with this somatic capture build!");
