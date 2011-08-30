@@ -233,6 +233,51 @@ $DB::single = 1;
         die $self->error_message("Failed to find alignment results for all samples!");
     }
 
+    $self->status_message("Executing detect variants step");
+
+    my %params;
+    $params{snv_detection_strategy} = $build->snv_detection_strategy if $build->snv_detection_strategy;
+    $params{indel_detection_strategy} = $build->indel_detection_strategy if $build->indel_detection_strategy;
+    $params{sv_detection_strategy} = $build->sv_detection_strategy if $build->sv_detection_strategy;
+    $params{cnv_detection_strategy} = $build->cnv_detection_strategy if $build->cnv_detection_strategy;
+
+    for my $bam (@bams){
+        unless (-e $bam){
+            die $self->error_message("Bam file could not be reached at: ".$bam);
+        }
+    }
+
+    $params{multiple_bams} = \@bams;
+
+    my $reference_build = $build->reference_sequence_build;
+    my $reference_fasta = $reference_build->full_consensus_path('fa');
+    unless(-e $reference_fasta){
+        die $self->error_message("fasta file for reference build doesn't exist!");
+    }
+    $params{reference_build_id} = $reference_sequence_build->id;
+
+    #my $normal_bam = $build->normal_bam;
+    #unless (-e $normal_bam){
+    #    die $self->error_message("No normal bam found for somatic model");
+    #}
+    #$params{control_aligned_reads_input} = $normal_bam;
+
+    my $output_dir = $build->data_directory."/variants";
+    $params{output_directory} = $output_dir;
+
+    my $command = Genome::Model::Tools::DetectVariants2::Dispatcher->create(%params);
+    unless ($command){
+        die $self->error_message("Couldn't create detect variants dispatcher from params:\n".Data::Dumper::Dumper \%params);
+    }
+    my $rv = $command->execute;
+    my $err = $@;
+    unless ($rv){
+        die $self->error_message("Failed to execute detect variants dispatcher(err:$@) with params:\n".Data::Dumper::Dumper \%params);
+    }
+
+    $self->status_message("detect variants command completed successfully");
+
+
     #
     # run the DV2 API to do variant detection as we do in somatic, but let it take in N BAMs
     # _internally_ it will (for the first pass):

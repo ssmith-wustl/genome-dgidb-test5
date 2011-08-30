@@ -2,7 +2,7 @@ package Genome::ProcessingProfile::PhenotypeCorrelation;
 use strict;
 use warnings;
 use above "Genome";
-use Test::More tests => 11;
+use Test::More skip_all => "This is incomplete.";#tests => 11;
 
 use Genome::ProcessingProfile::PhenotypeCorrelation;
 

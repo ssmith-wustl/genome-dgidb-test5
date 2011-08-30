@@ -32,12 +32,6 @@ class Genome::Model::Tools::DetectVariants2::Base {
                 |,
             doc => 'Location of the reference sequence file',
         },
-        aligned_reads_input => {
-            is => 'Text',
-            doc => 'Location of the aligned reads input file',
-            shell_args_position => '1',
-            is_input => 1,
-        },
         output_directory => {
             is => 'Text',
             doc => 'Location to save to the detector-specific files generated in the course of running',
@@ -46,12 +40,25 @@ class Genome::Model::Tools::DetectVariants2::Base {
         },
     ],
     has_optional => [
+        aligned_reads_input => {
+            is => 'Text',
+            doc => 'Location of the aligned reads input file',
+            shell_args_position => '1',
+            is_input => 1,
+        },
         control_aligned_reads_input => {
             is => 'Text',
             doc => 'Location of the control aligned reads file to which the input aligned reads file should be compared (for detectors which can utilize a control)',
             shell_args_position => '2',
             is_input => 1,
             is_output => 1,
+        },
+        multiple_bams => {
+            is => 'Text',
+            is_many => 1,
+            doc => 'run on many bams',
+            is_input =>1,
+            is_output=>1,
         },
     ],
     has_transient_optional => [
@@ -83,6 +90,9 @@ EOS
 sub execute {
     
     my $self = shift;
+    unless($self->_check_for_multiple_bams){
+        die $self->error_message('Failed to find proper bam inputs.');
+    }
 
     unless($self->_verify_inputs) {
         die $self->error_message('Failed to verify inputs.');
@@ -104,6 +114,34 @@ sub execute {
         die $self->error_message('Failed to promote staged data.');
     }
     
+    return 1;
+}
+
+sub _check_for_multiple_bams {
+    my $self = shift;
+    if(defined($self->multiple_bams)){
+        die $self->error_message("This pipeline does not currently support multiple bams.");
+    }else {
+        return 1;
+    }
+    
+    
+    unless(defined $self->multiple_bams ){
+        if(defined($self->aligned_reads_input)){
+            return 1;
+        }else{
+            return undef;
+        }
+    }
+    warn "This pipeline does not currently support running on multiple bams. It will proceed only with the first bam in the list.\n";
+
+    if(defined $self->aligned_reads_input){
+        return undef;
+    }
+
+    my @bams = $self->multiple_bams;
+    $self->aligned_reads_input($bams[0]);
+
     return 1;
 }
 
