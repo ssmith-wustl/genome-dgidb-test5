@@ -58,17 +58,17 @@ sub help_synopsis_for_create {
     my $self = shift;
     return <<"EOS"
 
-  # quantitative 
+  # quantitative
 
     genome processing-profile create phenotype-correlation \
       --name 'September 2011 Quantitative Population Phenotype Correlation' \
-      --alignment-strategy              'bwa 0.5.9 [-q 5] merged by picard 1.29' \
+      --alignment-strategy              'instrument_data aligned to reference_sequence_build using bwa 0.5.9 [-q 5] then merged using picard 1.29 then deduplicated using picard 1.29' \
       --snv-detection-strategy          'samtools r599 filtered by snp-filter v1' \
       --indel-detection-strategy        'samtools r599 filtered by indel-filter v1' \
       --group-samples-for-genotyping-by 'race' \            # some (optional) phenotypic trait, or 'trio' or 'all'
       --phenotype-analysis-strategy     'quantitative' \    # or 'case-control'
 
-    genome propulation-group define 'ASMS-cohort-WUTGI-2011' ASMS1 ASMS2 ASMS3 ASMS4 
+    genome propulation-group define 'ASMS-cohort-WUTGI-2011' ASMS1 ASMS2 ASMS3 ASMS4
 
     genome model define phenotype-correlation \
         --name                      'ASMS-v1' \
@@ -79,7 +79,7 @@ sub help_synopsis_for_create {
 
     genome processing-profile create phenotype-correlation \
       --name 'September 2011 Case-Control Population Phenotype Correlation' \
-      --alignment-strategy              'bwa 0.5.9 [-q 5] merged by picard 1.29' \
+      --alignment-strategy              'instrument_data aligned to reference_sequence_build using bwa 0.5.9 [-q 5] then merged using picard 1.29 then deduplicated using picard 1.29' \
       --snv-detection-strategy          'samtools r599 filtered by snp-filter v1' \
       --indel-detection-strategy        'samtools r599 filtered by indel-filter v1' \
       --group-samples-for-genotyping-by 'trio', \
@@ -93,10 +93,10 @@ sub help_synopsis_for_create {
         --processing-profile    'September 2011 Case-Control Phenotype Correlation' \
         --identify-cases-by     'some_nomenclature.has_cleft_lip = "yes"' \
         --identify-controls-by  'some_nomenclature.has_cleft_lip = "no"' \
-        
+
     # If you leave off the subject, it would find all patients matching the case/control logic
     # and make a population group called ASMS-v1-cohort automatically???
-    
+
 
 EOS
 }
@@ -106,7 +106,7 @@ sub help_detail_for_create {
   For a detailed explanation of how to write an alignmen strategy see:
     TBD
 
-  For a detailed explanation of how to write a variant detection strategy, see: 
+  For a detailed explanation of how to write a variant detection strategy, see:
     perldoc Genome::Model::Tools::DetectVariants2::Strategy;
 
   All builds will have a combined vcf in their variant detection directory.
@@ -132,11 +132,11 @@ sub __errors__ {
         my $method_name = $strategy . '_detection_strategy';
         if (my $strategy_text = $self->$method_name) {
             my $strat = Genome::Model::Tools::DetectVariants2::Strategy->get($strategy_text);
-            push @errors, 
+            push @errors,
                 map {
                     UR::Object::Tag->create(
-                        type => 'invalid', 
-                        properties => [$method_name], 
+                        type => 'invalid',
+                        properties => [$method_name],
                         desc => $_
                     )
                 }
@@ -148,7 +148,7 @@ sub __errors__ {
 
 sub _execute_build {
     my ($self,$build) = @_;
-    
+
     # TODO: remove this and replace with the workflow logic at the bottom when we have one.
     # Version 1 of this pipeline will run in a linear way only if the underlying samples have already
     # had independent alignment and variant detection completed in other models.
@@ -167,10 +167,10 @@ sub _execute_build {
 
     my @samples = $population_group->samples;
     $build->status_message("found " . scalar(@samples) . " samples");
-    
+
     my @instdata_assn = $build->inputs(name => 'instrument_data');
     $build->status_message("found " . scalar(@instdata_assn) . " assignments for the current build");
-    
+
     my @instdata = Genome::InstrumentData->get(id => [ map { $_->value_id } @instdata_assn ]);
     $build->status_message("found " . scalar(@instdata) . " instdata");
 
@@ -184,9 +184,9 @@ sub _execute_build {
     # this will only work right now if the per-sample model has already run
     # once Tom's new alignment thing is in place, it would actually generate them in parallel
     #
-    
-    unless ($self->alignment_strategy eq 'bwa 0.5.9 [-q 5] merged by picard 1.29') {
-        die "this pipeline is currently hard-coded to only take 'bwa 0.5.9 [-q 5] merged by picard 1.29' until the new parser is complete...";
+
+    unless ($self->alignment_strategy eq 'instrument_data aligned to reference_sequence_build using bwa 0.5.9 [-q 5] then merged using picard 1.29 then deduplicated using picard 1.29') {
+        die "this pipeline is currently hard-coded to only take 'instrument_data aligned to reference_sequence_build using bwa 0.5.9 [-q 5] then merged using picard 1.29 then deduplicated using picard 1.29' until the new parser is complete...";
     }
 
     my @alignment_params = (
@@ -209,10 +209,10 @@ sub _execute_build {
     );
 
     # FOR DEBUGGING DROP THIS TO TWO BAMS
-    @samples = (@samples[0]);
-
+    @samples = (@samples[0,1]);
+$DB::single = 1;
     my @bams;
-    my $reference_sequence_build = $build->inputs(name => 'reference_sequence_build')->value;    
+    my $reference_sequence_build = $build->inputs(name => 'reference_sequence_build')->value;
     for my $sample (@samples) {
         my $ihash = $instdata_by_sample{$sample->id};
         my @instdata_ids = sort keys %$ihash;
@@ -227,7 +227,7 @@ sub _execute_build {
         }
         my $bam = $merged_alignment_result->merged_alignment_bam_path;
         $self->status_message("bam for sample " . $sample->name . " is at path " . $bam);
-        push @bams, $bam; 
+        push @bams, $bam;
     }
     unless (@bams == @samples) {
         die $self->error_message("Failed to find alignment results for all samples!");
@@ -241,7 +241,7 @@ sub _execute_build {
     #  merge them with joinx and make a combined VCF (tolerating the fact that per-bam variants are not VCF)
     #  run bamreadcount to fill-in the blanks
     #
-    
+
     # dump pedigree data into a file
 
     # dump clinical data into a file
@@ -254,7 +254,7 @@ sub _execute_build {
 sub _validate_build {
     my $self = shift;
     my $dir = $self->data_directory;
-    
+
     my @errors;
     unless (1) {
         my $e = $self->error_message("Something is wrong!");
@@ -281,11 +281,11 @@ sub _resolve_workflow_for_build {
     my $build = shift;
 
     my $operation = Workflow::Operation->create_from_xml(__FILE__ . '.xml');
-    
+
     my $log_directory = $build->log_directory;
     $operation->log_dir($log_directory);
-    
-    #I think this ideally should be handled 
+
+    #I think this ideally should be handled
     $operation->name($build->workflow_name);
 
     return $operation;
@@ -300,12 +300,12 @@ sub _map_workflow_inputs {
 
     # Verify the somatic model
     my $model = $build->model;
-    
+
     unless ($model) {
         $self->error_message("Failed to get a model for this build!");
         die $self->error_message;
     }
-    
+
     my $tumor_build = $build->tumor_build;
     my $normal_build = $build->normal_build;
 

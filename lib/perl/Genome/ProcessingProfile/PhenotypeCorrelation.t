@@ -37,7 +37,7 @@ is(scalar(@members), 304, "got the expected number of patients");
 my $p = Genome::ProcessingProfile::PhenotypeCorrelation->create(
     id                              => -10001,
     name                            => 'TESTSUITE Quantitative Population Phenotype Correlation',
-    alignment_strategy              => 'bwa 0.5.9 [-q 5] merged by picard 1.29',
+    alignment_strategy              => 'instrument_data aligned to reference_sequence_build using bwa 0.5.9 [-q 5] then merged using picard 1.29 then deduplicated using picard 1.29',
     snv_detection_strategy          => 'samtools r599 filtered by snp-filter v1',
     indel_detection_strategy        => 'samtools r599 filtered by indel-filter v1',
     #sv_detection_strategy           => undef, 
@@ -60,13 +60,19 @@ my $i1 = $m->add_input(
 );
 ok($i1, "add a reference sequence build to it");
 
+my $asms_target_region_set_name = 'Freimer Pool of original (4k001L) plus gapfill (4k0026)';
+my $i2 = $m->add_input(
+    name => 'target_region_set_name',
+    value => UR::Value->get($asms_target_region_set_name),
+);
+
 my @patients = $asms_cohort->members;
 ok(scalar(@patients), scalar(@patients) . " patients");
 
 my @samples = Genome::Sample->get(source_id => [ map { $_->id } @patients ]);
 ok(scalar(@samples), scalar(@samples) . " samples");
 
-my @i = Genome::InstrumentData::Solexa->get('sample_id' => [ map { $_->id } @samples ]);
+my @i = Genome::InstrumentData::Solexa->get('sample_id' => [ map { $_->id } @samples ], target_region_set_name => $asms_target_region_set_name);
 ok(scalar(@i), scalar(@i) . " instdata");
 
 my @ii;
