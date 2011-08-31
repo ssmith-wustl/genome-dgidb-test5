@@ -1788,7 +1788,9 @@ sub compare_output {
     my (%file_paths, %other_file_paths);
     require Cwd;
     for my $file (@{$self->files_in_data_directory}) {
-        $file_paths{$self->full_path_to_relative($file)} = Cwd::abs_path($file);
+        my $abs_path = Cwd::abs_path($file);
+        next unless $abs_path; # abs_path returns undef if a subdirectory of file does not exist
+        $file_paths{$self->full_path_to_relative($file)} = $abs_path;
     }
     for my $other_file (@{$other_build->files_in_data_directory}) {
         $other_file_paths{$other_build->full_path_to_relative($other_file)} = Cwd::abs_path($other_file);
