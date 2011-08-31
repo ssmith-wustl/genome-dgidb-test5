@@ -306,6 +306,10 @@ sub load_annotations
     my $chr_stop = $lineContents[2];
     my $ref = $lineContents[3];
     my $var = $lineContents[4];
+    
+    $ref = "-" if($ref eq "0");
+    $var = "-" if($var eq "0");
+    
     my $var_type = $lineContents[5];
     my $gene_name = $lineContents[6];
     my $trv_type = $lineContents[13];
