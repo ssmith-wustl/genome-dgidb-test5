@@ -940,6 +940,7 @@ sub _launch {
 
         # bsub into the queue specified by the dispatch spec
         my $lsf_project = "build" . $self->id;
+        $ENV{'WF_LSF_PROJECT'} = $lsf_project;
         my $user = Genome::Sys->username;
         my $lsf_command  = join(' ',
             'bsub -N -H',
@@ -2059,6 +2060,7 @@ sub is_used_as_model_or_build_input {
 sub child_lsf_jobs {
     my $self = shift;
     my @workflow_instances = $self->_get_workflow_instance_children($self->newest_workflow_instance);
+    return unless @workflow_instances;
     my @dispatch_ids = grep {defined $_} map($_->current->dispatch_identifier, @workflow_instances);
     my @valid_ids = grep {$_ !~ /^P/} @dispatch_ids;
     return @valid_ids;
@@ -2066,7 +2068,7 @@ sub child_lsf_jobs {
 
 sub _get_workflow_instance_children {
     my $self = shift;
-    my $parent = shift || die;
+    my $parent = shift || return;
     return $parent, map($self->_get_workflow_instance_children($_), $parent->related_instances);
 }
 

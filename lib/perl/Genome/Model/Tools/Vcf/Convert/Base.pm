@@ -16,9 +16,14 @@ class Genome::Model::Tools::Vcf::Convert::Base {
             is => 'Text',
             doc => "The file to be converted to VCF" ,
         },
-        sample => {
+        aligned_reads_sample => {
             is => 'Text',
-            doc => "The label to be used for the sample in the VCF header",
+            doc => "The label to be used for the aligned_reads sample in the VCF header",
+        },
+        control_aligned_reads_sample => {
+            is => 'Text',
+            doc => "The label to be used for the aligned_reads sample in the VCF header",
+            is_optional => 1,
         },
         reference_sequence_build => {
             is => 'Genome::Model::Build::ImportedReferenceSequence',
@@ -168,11 +173,13 @@ sub print_header{
 
     my $output_fh = $self->_output_fh;
 
+    my $sample = $self->aligned_reads_sample;
+
     $output_fh->print("##fileformat=VCFv" . $self->vcf_version . "\n");
     $output_fh->print("##fileDate=" . $file_date . "\n");
     $output_fh->print("##reference=$public_reference" . "\n");
     $output_fh->print("##phasing=none" . "\n");
-    $output_fh->print("##SAMPLE=" . $self->sample . "\n");
+    $output_fh->print("##SAMPLE=" . $sample . "\n");
 
     #format info
     $output_fh->print("##FORMAT=<ID=GT,Number=1,Type=String,Description=\"Genotype\">" . "\n");

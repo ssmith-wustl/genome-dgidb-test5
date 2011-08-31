@@ -63,6 +63,11 @@ class Genome::Model::Command::Services::AssignQueuedInstrumentData {
     ],
 };
 
+sub _default_mc16s_processing_profile_id {
+    # RT66900 was 2278045 
+    return 2571784;
+}
+
 #FIXME: This should be refactored so that %known_454_pipelines and 
 #%known_454_16s_pipelines are merged into a single hash.  Key shoud be the 
 #pipeline name and value should be what to do with it (if anything).  Maybe
@@ -272,6 +277,10 @@ sub execute {
                             #find or create somatic models if applicable
                             $self->find_or_create_somatic_variation_models(@new_models);
                         }
+                    }
+
+                    if ( $instrument_data_type eq '454' and $self->_is_454_16s($pse) ) {
+                        $self->_find_or_create_mc16s_454_qc_model($genome_instrument_data);
                     }
                 } # looping through processing profiles for this instdata, finding or creating the default model
             }
@@ -1008,6 +1017,38 @@ sub create_default_qc_models {
     return @new_models;
 }
 
+sub _find_or_create_mc16s_454_qc_model {
+    my ($self, $instrument_data) = @_;
+
+    $self->status_message("Find or create mc16s 454 qc model!");
+
+    my $pp_id = $self->_default_mc16s_processing_profile_id;
+    my $name = $instrument_data->run_name.'_r'.$instrument_data->region_number.'.prod-mc16s-qc';
+    my $model = Genome::Model->get(
+        name => $name,
+        processing_profile_id => $pp_id,
+    );
+    if ( not $model ) {
+        my $model = Genome::Model->create(
+            name => $name,
+            subject_id => 2863615589, # Human Metagenome
+            subject_class_name => 'Genome::Taxon',
+            processing_profile_id => $pp_id,
+            auto_assign_inst_data => 0,
+        );
+        $model->add_instrument_data($instrument_data);
+        my $new_models = $self->_newly_created_models;
+        $new_models->{$model->id} = $model;
+    } 
+    else {
+        $model->add_instrument_data($instrument_data);
+        my $assigned_to = $self->_existing_models_assigned_to;
+        $assigned_to->{$model->id} = $model;
+    }
+
+    return 1;
+}
+
 sub assign_capture_inputs {
     my $self = shift;
     my $model = shift;
@@ -1263,8 +1304,7 @@ sub add_processing_profiles_to_pses{
                 }
 
                 if ($self->_is_454_16s($pse)) {
-                    #updated from pp_id 2278045 ticket: #66900
-                    push @processing_profile_ids_to_add, '2571784';
+                    push @processing_profile_ids_to_add, $self->_default_mc16s_processing_profile_id;
                 }
             }
             elsif ($instrument_data_type =~ /sanger/i) {
