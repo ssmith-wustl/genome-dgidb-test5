@@ -16,11 +16,11 @@ class Genome::Model::Build::Command::ReferenceAlignment::SubmissionSummary {
         }, 
         bam_list_file => {
             is=> 'String',
-            doc => 'this command will generate this list of bam file names, space separated suitable for gxfer to submit bams',
+            doc => 'this command will generate this list of bam file names, newline separated suitable for gxfer to submit bams',
         },
         md5_list_file => {
             is=> 'String',
-            doc => 'this will generate a list of bam md5 file names, space separated',
+            doc => 'this will generate a list of bam md5 file names, newline separated',
         }
     ],
     has_optional => [
@@ -150,8 +150,8 @@ sub execute {
         print $samp_map "\n";
     }
 
-    print $bam_list join (" ", map {$_->whole_rmdup_bam_file} @builds);
-    print $md5_list join (" ", map {$_->whole_rmdup_bam_file.".md5"} @builds);
+    print $bam_list join ("\n", map {$_->whole_rmdup_bam_file} @builds);
+    print $md5_list join ("\n", map {$_->whole_rmdup_bam_file.".md5"} @builds);
 
     $samp_map->close;
     $bam_list->close;
