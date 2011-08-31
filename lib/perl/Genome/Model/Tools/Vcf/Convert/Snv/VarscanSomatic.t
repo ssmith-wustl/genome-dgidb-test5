@@ -19,7 +19,7 @@ my $input_file = "$test_dir/snvs.hq";
 
 my $command = Genome::Model::Tools::Vcf::Convert::Snv::VarscanSomatic->create( input_file => $input_file, 
                                                                                output_file  => $output_file,
-                                                                               sample => "TEST",
+                                                                               aligned_reads_sample => "TEST",
                                                                                reference_sequence_build_id => 101947881);
 
 ok($command, 'Command created');
