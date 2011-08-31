@@ -940,6 +940,7 @@ sub _launch {
 
         # bsub into the queue specified by the dispatch spec
         my $lsf_project = "build" . $self->id;
+        $ENV{'WF_LSF_PROJECT'} = $lsf_project;
         my $user = Genome::Sys->username;
         my $lsf_command  = join(' ',
             'bsub -N -H',
