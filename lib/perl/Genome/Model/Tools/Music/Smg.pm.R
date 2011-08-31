@@ -108,7 +108,7 @@ combineresults <- function( a, b ) {
 }
 
 smg_test <- function( gene_mr_file, pval_file ) {
-  read.table( gene_mr_file, header = T, sep = "\t" ) -> mut
+  read.delim( gene_mr_file ) -> mut
   colnames( mut ) = c( "Gene", "Class", "Bases_Covered", "Non_Syn_Mutations", "BMR" )
   mut$BMR = as.numeric( as.character( mut$BMR ))
 
