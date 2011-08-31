@@ -27,6 +27,7 @@ my @SUB_COMMANDS = qw/
     report
     sample
     sys
+    task
     taxon
     tools
 /;
