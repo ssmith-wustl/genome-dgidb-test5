@@ -43,7 +43,7 @@ class Genome::Model::Tools::Validation::LongIndels {
 
 sub help_detail {
     return <<EOS
-    This is a first attempt at creating a tool to perform many of the steps for 3bp indel validation which are outlined at this wiki page: https://gscweb.gsc.wustl.edu/wiki/Medical_Genomics/Nimblegen_Solid_Phase_Capture_Validation/Analysis#.3E3bp_Indels. Currently preforms steps 1-5.
+    This is a first attempt at creating a tool to perform many of the steps for 3bp indel validation which are outlined at this wiki page: https://gscweb.gsc.wustl.edu/wiki/Medical_Genomics/Nimblegen_Solid_Phase_Capture_Validation/Analysis#.3E3bp_Indels. Currently preforms steps 1-3.
 EOS
 }
 
@@ -72,7 +72,8 @@ sub execute {
     my $anno_cmd = Genome::Model::Tools::Annotate::TranscriptVariants->create(
         output_file => $anno_output,
         annotation_filter => "top",
-        variant_bed_file => $sort_output,
+        #variant_bed_file => $sort_output,
+        variant_file => $sort_output,
         reference_transcripts => $self->reference_transcripts,
     );
     $anno_cmd->execute;
