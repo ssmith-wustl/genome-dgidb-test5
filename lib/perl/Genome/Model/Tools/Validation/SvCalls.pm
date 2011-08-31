@@ -66,7 +66,7 @@ class Genome::Model::Tools::Validation::SvCalls {
         doc => "Used only when there is tumor contamination in normal sample. File with two columns; patientId and amount of tumor contamination in normal (0 is no contamination)."
     },
     ],
-    doc => 'Validate SV predictions. Period.',
+    doc => 'Validate SV predictions.',
 };
 
 sub help_detail {
