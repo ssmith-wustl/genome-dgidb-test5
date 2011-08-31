@@ -552,6 +552,17 @@ sub test_directory_size_recursive : Test(1) {
     is($size,$expected_size,"directory_size_recursive returned the correct size for the test case");
 }
 
+sub test_md5sum_data : Test(2) {
+    my $string = 'hello world';
+    my $expected_output = '5eb63bbbe01eeed093cb22bb8f5acdc3';
+    my $output = Genome::Sys->md5sum_data($string);
+    is($output, $expected_output, 'md5sum_data matches expected output');
+
+    local $@ = undef;
+    eval { Genome::Sys->md5sum_data() };
+    ok($@, 'md5sum_data with no data throws exception');
+}
+
 =pod
 
 =head1 Tests
