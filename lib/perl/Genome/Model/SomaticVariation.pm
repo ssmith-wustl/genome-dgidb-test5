@@ -131,9 +131,8 @@ class Genome::Model::SomaticVariation {
 
 sub create {
     my $class  = shift;
-    my %params = @_;
-
-    $DB::single = 1;
+    my $bx = $class->define_boolexpr(@_);
+    my %params = $bx->params_list;
 
     my $dbsnp_flag = 1 if $params{previously_discovered_variations_build} or $params{previously_discovered_variations_build_id};
 
@@ -203,22 +202,26 @@ sub create {
 
     unless($self->tumor_model) {
         $self->error_message('No tumor model on model!' );
+        $self->delete;
         return;
     }
 
     unless($self->normal_model) {
         $self->error_message('No normal model on model!');
+        $self->delete;
         return;
     }
 
     unless($self->annotation_build) {
         $self->error_message('No annotation build on model!' );
+        $self->delete;
         return;
     }
     
     if ($dbsnp_flag) {
         unless($self->previously_discovered_variations_build) {
             $self->error_message('No previous variants build on model!');
+            $self->delete;
             return;
         }
     }

@@ -1,4 +1,4 @@
-package VarScan::FisherTest;
+package Genome::Model::Tools::VarScan;
 
 use warnings;
 use strict;

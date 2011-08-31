@@ -36,10 +36,6 @@ class Genome::PopulationGroup {
             to => '_individual',
             where => [ attribute_label => 'member' ],
         },
-        samples => { 
-            is => 'Genome::Sample', 
-            reverse_id_by => 'source',
-        },
         sample_names => {
             via => 'samples',
             to => 'name',
@@ -68,6 +64,14 @@ sub create {
     my $member_hash = $self->generate_hash_for_individuals($self->members);
     $self->member_hash($member_hash);
     return $self;
+}
+
+sub samples {
+    # the above samples relationship is broken... fixing directly until we have a better fix
+    my $self = shift;
+    my @members = $self->members();
+    my @samples = Genome::Sample->get(source_id => [ map { $_->id } @members ]);
+    return @samples;
 }
 
 # Return any other population groups that have the same member hash as the one provided

@@ -1,5 +1,10 @@
 package Genome::Model::Build::View::Annotation::Html;
 
+use strict;
+use warnings;
+
+use Genome;
+
 class Genome::Model::Build::View::Annotation::Html {
     is => 'Genome::View::Status::Html',
     has_constant => [
@@ -9,11 +14,8 @@ class Genome::Model::Build::View::Annotation::Html {
     ],
 };
 
-warn 'Hi';
-
 sub _generate_content {
     my $self = shift;
-warn 'Hello';
     my $build = $self->subject;
 
     my $return_value = <<'HTML'

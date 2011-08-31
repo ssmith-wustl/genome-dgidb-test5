@@ -5,7 +5,6 @@ use warnings;
 
 use Genome;
 
-use Alignment::Crossmatch::Reader;
 use File::Basename;
 
 class Genome::Model::Tools::454::SeparateReadsWithCrossMatchAlignment {
@@ -64,9 +63,8 @@ sub execute {
     my $out_sff_file_root_name = $self->sff_file;
     $out_sff_file_root_name =~ s/\.sff$//;
 
-    my $reader = Alignment::Crossmatch::Reader->new(
-                                                    io => $self->cross_match_file,
-                                                    return_as_objs => 1,
+    my $reader = Genome::Model::Tools::Crossmatch::Reader->new(
+                                                    input => $self->cross_match_file,
                                                 );
     unless ($reader) {
         $self->error_message('Failed to create cross_match reader');
@@ -78,8 +76,8 @@ sub execute {
     my %hit_file;
     my %open_fhs;
     while(my $hit = $reader->next) {
-        my $query_name = $hit->query_name;
-        my $subject_name = $hit->subject_name;
+        my $query_name = $hit->{query_name};
+        my $subject_name = $hit->{subject_name};
         if (defined $query_hit{$query_name}) {
             $self->error_message('Expecting one hit per query'. $query_name .' and found more in '. $self->cross_match_file);
             return;

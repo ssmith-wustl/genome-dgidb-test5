@@ -104,7 +104,7 @@ EOS
 sub create {
     my $class = shift;
     my $self = $class->SUPER::create(@_);
-
+    
     for my $variant_type (@{ $self->variant_types }) {
         my $name_property = $variant_type . '_detection_strategy';
         my $strategy = $self->$name_property;
@@ -143,7 +143,6 @@ sub plan {
 # Detect variants using all input detection strategies. Generates a workflow to do all of the work and executes it, storing the result in $self->_workflow_result
 sub _detect_variants {
     my $self = shift;
-
     unless ($self->snv_detection_strategy || $self->indel_detection_strategy || $self->sv_detection_strategy || $self->cnv_detection_strategy) {
         $self->error_message("Please provide one or more of: snv_detection_strategy, indel_detection_strategy, sv_detection_strategy, or cnv_detection_strategy");
         die $self->error_message;

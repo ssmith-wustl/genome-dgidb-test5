@@ -15,7 +15,7 @@ class Genome::Model::Tools::Sx {
             doc => <<DOC
 Input reader configurations. Give 'key=value' pairs, separated by a colon (:). Readers may have additonal options.
 
-Do not use this option when piping from sx commands.
+DO NOT USE this option when piping from sx commands.
 
 Standard options:
  file => The file to read. The use of the preceding 'file=' is optional.
@@ -42,13 +42,14 @@ DOC
             doc => <<DOC
 Output writer configurations. Give 'key=value' pairs, separated by a colon (:). Writers may have additonal options.
 
-Do not use this option when piping from sx commands.
+DO NOT USE this option when piping from sx commands.
 
 Standard options:
  file => The file to write. The use of the preceding 'file=' is optional.
-          It is assumed that the bare option is the file. Use '-' to write to STDOUT.
+          It is assumed that the bare option is the file. Use '-' to write to STDOUT. Use '.gz' to write as gzipped.
  type => The type of output. Not required if type can be determined from the file.
           Type when writing to STDOUT defaults to sanger. Valid types: sanger, illumina, phred (fasta), fasta, bed.
+ mode => The mode to open the output in. Use 'w' to write to a new file (file cannot exist) and 'a' to append to a file. Default is 'w'.
  name => The name of the writer.  If using commands that attach a writer name to a sequence,
           they will be written to the specified writer.
           

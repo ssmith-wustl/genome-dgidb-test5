@@ -1,30 +1,9 @@
-# 
-# Copyright (C) 2004 Washington University Genome Sequencing Center
-#
-# This program is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation; either version 2 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software
-# Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
-#
-
-# Last modified: <Wed, 2005/01/26 15:13:01 lcarmich linus58.gsc.wustl.edu>
-
 package Genome::Model::Tools::Consed::CafWriter;
-our $VERSION = 0.01;
 
 =pod
 
 =head1 NAME
-GSC::IO::Assembly::Caf::Writer - Write a caf file one element at a time
+Genome::Model::Tools::Consed::Caf::Writer - Write a caf file one element at a time
 
 =head1 SYNOPSIS
 

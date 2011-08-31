@@ -80,11 +80,13 @@ sub execute {
         $options .= ' -s';
     }
     my $cmd = $self->bedtools_path .'/bin/mergeBed '. $options .' -i '. $self->input_file .' > '. $self->output_file;
+    # Let's turn off the status message printing to STDERR
     Genome::Sys->shellcmd(
         cmd => $cmd,
         input_files => [$self->input_file],
         output_files => [$self->output_file],
-		skip_if_output_is_present => 0,
+        skip_if_output_is_present => 0,
+        print_status_to_stderr => 0,
     );
     return 1;
 }

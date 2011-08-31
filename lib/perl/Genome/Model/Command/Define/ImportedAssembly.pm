@@ -9,7 +9,7 @@ use File::Basename;
 use Data::Dumper;
 
 class Genome::Model::Command::Define::ImportedAssembly {
-    is => 'Genome::Model::Command::Define::Helper',
+    is => 'Genome::Model::Command::Define::HelperDeprecated',
     has_optional => [
         sff_files => {
             is => 'Text',

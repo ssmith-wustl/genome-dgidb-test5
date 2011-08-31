@@ -664,12 +664,13 @@ sub _params_to_resolve {
 
 sub resolve_class_and_params_for_argv {
     my $self = shift;
-    my ($class, $params) = $self->SUPER::resolve_class_and_params_for_argv(@_);
-    unless ($self eq $class) {
-        return ($class, $params);
+    my ($class, $params, $error_tag_list) = $self->SUPER::resolve_class_and_params_for_argv(@_);
+
+    if ($self ne $class or ( $error_tag_list and @$error_tag_list)) {
+        return ($class, $params, $error_tag_list);
     }
     unless (@_ && scalar($self->_missing_parameters($params)) == 0) {
-        return ($class, $params);
+        return ($class, $params, $error_tag_list);
     }
     
     local $ENV{UR_COMMAND_DUMP_STATUS_MESSAGES} = 1;

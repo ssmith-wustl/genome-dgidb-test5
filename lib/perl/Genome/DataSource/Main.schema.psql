@@ -1,0 +1,93 @@
+DROP TABLE IF EXISTS genome_task;
+DROP TABLE IF EXISTS project_part;
+DROP TABLE IF EXISTS project;
+DROP TABLE IF EXISTS instrument_data_attribute;
+DROP TABLE IF EXISTS instrument_data;
+DROP TABLE IF EXISTS fragment_library;
+DROP TABLE IF EXISTS subject_attribute;
+DROP TABLE IF EXISTS subject;
+
+CREATE TABLE subject (
+    subject_id    integer NOT NULL,
+    subclass_name varchar(255) NOT NULL,
+    name          varchar(255) NOT NULL,
+    PRIMARY KEY (subject_id)
+);
+CREATE INDEX subject_name_index ON subject(name);
+
+CREATE TABLE subject_attribute (
+    subject_id      integer NOT NULL REFERENCES subject(subject_id),
+    attribute_label varchar(64) NOT NULL,
+    attribute_value varchar(512) NOT NULL,
+    nomenclature    varchar(64) NOT NULL,
+    PRIMARY KEY (subject_id, attribute_label, attribute_value, nomenclature)
+);
+CREATE INDEX subject_attribute_subject_id_index ON subject_attribute(subject_id);
+CREATE INDEX subject_attribute_label_index ON subject_attribute(attribute_label);
+
+CREATE TABLE fragment_library (
+    library_id integer NOT NULL,
+    full_name varchar(64) NOT NULL,
+    sample_id integer NOT NULL REFERENCES subject(subject_id),
+    library_insert_size varchar(64),
+    PRIMARY KEY (library_id)
+);
+CREATE INDEX fragment_library_sample_id_index ON fragment_library(sample_id);
+CREATE INDEX fragment_library_library_id_index ON fragment_library(library_id);
+
+CREATE TABLE instrument_data (
+    id                  varchar(64) NOT NULL,
+    subclass_name       varchar(64) NOT NULL,
+    sequencing_platform varchar(64) NOT NULL,
+    library_id          integer NOT NULL REFERENCES fragment_library(library_id),
+    source_name         varchar(64),
+    subset_name         varchar(64),
+    run_name            varchar(64),
+    PRIMARY KEY (id)
+);
+CREATE INDEX instrument_data_library_id_index ON instrument_data(library_id);
+
+CREATE TABLE instrument_data_attribute (
+    instrument_data_id varchar(64) NOT NULL REFERENCES instrument_data(id),
+    attribute_label    varchar(64) NOT NULL,
+    attribute_value    varchar(512) NOT NULL,
+    nomenclature       varchar(64) NOT NULL,
+    PRIMARY KEY (instrument_data_id, attribute_label, attribute_value, nomenclature)
+);
+CREATE INDEX instrument_data_id_index ON instrument_data_attribute(instrument_data_id);
+CREATE INDEX instrument_data_attribute_label_index ON instrument_data_attribute(attribute_label);
+
+CREATE TABLE project (
+    id   varchar(64) NOT NULL,
+    name varchar(200) NOT NULL,
+    PRIMARY KEY (id)
+);
+CREATE INDEX project_name_index ON project(name);
+
+CREATE TABLE project_part (
+    id              varchar(64) NOT NULL,
+    project_id      varchar(64) NOT NULL REFERENCES project(id),
+    part_class_name varchar(256) NOT NULL,
+    part_id         varchar(64) NOT NULL,
+    label           varchar(100),
+    role            varchar(100),
+    PRIMARY KEY (id),
+    UNIQUE (project_id, part_class_name, part_id)
+);
+CREATE INDEX project_part_part_role_index ON project_part(part_class_name, part_id, role);
+CREATE INDEX project_part_project_role_index ON project_part(project_id, role);
+CREATE INDEX project_part_project_label_index ON project_part(project_id, label);
+
+CREATE TABLE genome_task (
+    id              varchar(255),
+    command_class   varchar(255) NOT NULL,
+    params          varchar(4096),
+    stdout_pathname varchar(255),
+    stderr_pathname varchar(255),
+    status          varchar(50) NOT NULL,
+    user_id         varchar(255) NOT NULL,
+    submit_time     timestamp(6) DEFAULT current_timestamp NOT NULL,
+    start_time      timestamp(6),
+    end_time        timestamp(6),
+    PRIMARY KEY (id)
+);

@@ -52,6 +52,10 @@ sub execute {
     my $slice_adaptor = $self->slice_adaptor;
     my $data;
     for my $chr (sort @{$chromosomes}) {
+        if ($chr =~ /random/) {
+            warn('Skipping random chromosome: '. $chr);
+            next;
+        }
         my $slice = $slice_adaptor->fetch_by_region( 'chromosome', $chr );
         unless ($slice) {
             $slice = $slice_adaptor->fetch_by_region( 'supercontig', $chr );

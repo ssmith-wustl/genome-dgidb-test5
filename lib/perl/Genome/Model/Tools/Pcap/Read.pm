@@ -22,7 +22,7 @@ Read - Class that manages a read's data.
 
 =head1 DESCRIPTION
 
-Genome::Model::Tools::Pcap::Read inherits from GSC::IO::Assembly::SequenceItem and has all it's functionality.  I also contains the getter/setters described below.
+Genome::Model::Tools::Pcap::Read
 
 =head1 METHODS
 

@@ -2,6 +2,7 @@ package Finishing::Assembly::Consed::Navigation::Reader;
 
 use strict;
 use warnings;
+no warnings 'reserved';
 
 use base 'Finfo::Reader';
 

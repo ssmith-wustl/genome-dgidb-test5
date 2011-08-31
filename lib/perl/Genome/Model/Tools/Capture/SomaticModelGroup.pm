@@ -27,6 +27,7 @@ my %included_variants = ();
 
 my %already_reviewed = ();
 my %passed_sites = my %wildtype_sites = my %germline_sites = ();
+my %patient_sites_passed_review = ();
 my $maf_header = "";
 my $maf_header_printed = 0;
 
@@ -37,9 +38,15 @@ class Genome::Model::Tools::Capture::SomaticModelGroup {
 		group_id		=> { is => 'Text', doc => "ID of model group" , is_optional => 0},
 		output_build_dirs	=> { is => 'Text', doc => "If specified, outputs last succeeded build directory for each sample to this file" , is_optional => 1},
 		output_review	=> 	{ is => 'Text', doc => "Specify a directory to output SNV/indel files for manual review" , is_optional => 1},
+		output_germline_calls	=> 	{ is => 'Text', doc => "Specify a directory to output germline SNV/indel calls" , is_optional => 1},
+		output_loh_calls	=> 	{ is => 'Text', doc => "Specify a directory to output LOH calls" , is_optional => 1},
+		germline_roi_file	=> 	{ is => 'Text', doc => "A file in BED format to restrict germline calls" , is_optional => 1},
 		output_maf_file	=> 	{ is => 'Text', doc => "Output a MAF file for downstream analysis" , is_optional => 1},
+		uhc_filter	=> 	{ is => 'Text', doc => "If set to 1, apply ultra-high-conf filter to SNV calls" , is_optional => 1},
+		reference	=> 	{ is => 'Text', doc => "Reference to use for bam-readcounts-based filters" , is_optional => 1},
 		review_database_snvs	=> 	{ is => 'Text', doc => "If provided, use to exclude already-reviewed sites" , is_optional => 1},
 		review_database_indels	=> 	{ is => 'Text', doc => "If provided, use to exclude already-reviewed indels" , is_optional => 1},
+		varscan_copynumber	=> 	{ is => 'Text', doc => "Specify a directory to output VarScan CopyNumber Jobs" , is_optional => 1},
 	],
 };
 
@@ -111,7 +118,8 @@ sub execute {                               # replace with real execution logic.
 	## Get the models in each model group ##
 
 	my $model_group = Genome::ModelGroup->get($group_id);
-	my @models = $model_group->models; 
+	my @models = $model_group->models;
+	my $debug_counter = 0;
 
 	foreach my $model (@models)
 	{
@@ -126,7 +134,26 @@ sub execute {                               # replace with real execution logic.
 		
 		my $normal_model = $model->normal_model;
 		my $tumor_model = $model->tumor_model;
+
+		## Get Model IDs ##
 		
+		my $normal_model_id = $normal_model->id;
+		my $tumor_model_id = $tumor_model->id;
+
+		## Get TCGA-Compliant Subject Names ##
+
+		my $normal_subject_name = $normal_model->subject_name;
+		my $tumor_subject_name = $tumor_model->subject_name;
+
+		my ($sample_prefix) = split(/\-/, $normal_subject_name);
+		$normal_subject_name =~ s/$sample_prefix/TCGA/;
+		
+		($sample_prefix) = split(/\-/, $tumor_subject_name);
+		$tumor_subject_name =~ s/$sample_prefix/TCGA/;
+
+		my @temp = split(/\-/, $tumor_subject_name);
+		my $patient_id = join("-", $temp[0], $temp[1], $temp[2]);
+
 		my @normal_builds = $normal_model->builds;
 		my @tumor_builds = $tumor_model->builds;
 
@@ -158,104 +185,264 @@ sub execute {                               # replace with real execution logic.
 		my $final_build_result = "";
 		my $last_build_id = 0;
 
-		my $num_builds = 0;		
-		my $num_maf_mutations = 0;
-		my $num_maf_snvs = my $num_maf_indels = 0;
-
-		my $build_ids = my $build_statuses = "";
-		my @builds = $model->builds;
-
-		if(@builds)
+		if($self->output_build_dirs || $self->output_review || $self->output_maf_file || $self->output_germline_calls || $self->uhc_filter || $self->varscan_copynumber || $self->output_loh_calls)
 		{
-			$model_status = "Building";
-
-			foreach my $build (@builds)
+			my $num_builds = 0;		
+			my $num_maf_mutations = 0;
+			my $num_maf_snvs = my $num_maf_indels = 0;
+	
+			my $build_ids = my $build_statuses = "";
+			my @builds = $model->builds;
+	
+			if(@builds)
 			{
-				my $build_id = $build->id;
-				my $build_status = $build->status;
-				my $build_dir = $build->data_directory;
-
-				$build_ids .= "," if($build_ids);
-				$build_statuses .= "," if($build_statuses);
-
-				$build_ids .= $build_id;
-				$build_statuses .= $build_status;
-				
-				if($model_status eq "New" || $build_status eq "Succeeded" || $build_status eq "Running")
+				$model_status = "Building";
+	
+				foreach my $build (@builds)
 				{
-					$model_status = $build_status;
-					$last_build_dir = $build_dir;
+					my $build_id = $build->id;
+					my $build_status = $build->status;
+					my $build_dir = $build->data_directory;
+	
+					$build_ids .= "," if($build_ids);
+					$build_statuses .= "," if($build_statuses);
+	
+					$build_ids .= $build_id;
+					$build_statuses .= $build_status;
+					
+					if($model_status eq "New" || $build_status eq "Succeeded" || $build_status eq "Running")
+					{
+						$model_status = $build_status;
+						$last_build_dir = $build_dir;
+					}
 				}
-			}
-
-			if($model->last_succeeded_build_directory)
-			{
-				$model_status = "Succeeded";	## Override if we have successful build dir ##				
-				$succeeded_models_by_sample{$subject_name} = $model_id;
-				$last_build_dir = $model->last_succeeded_build_directory;
-				if($self->output_build_dirs)
+	
+				if($model->last_succeeded_build_directory || $model->id == 2877873505)
 				{
-					print BUILDDIRS join("\t", $subject_name, $last_build_dir) . "\n";					
-				}
-
-				
-				my %build_results = get_build_results($last_build_dir);
-				$final_build_result = $build_results{'tier1_snvs'} . " Tier1 SNVs, " . $build_results{'tier1_indels'} . " Tier1 Indels, ";
-
-				if($self->output_review)
-				{
+					$model_status = "Succeeded";	## Override if we have successful build dir ##				
+					$succeeded_models_by_sample{$subject_name} = $model_id;
+					$last_build_dir = $model->last_succeeded_build_directory;
+					$last_build_dir = "/gscmnt/ams1183/info/model_data/2877873505/build113565171" if($model->id == 2877873505);
 					my $tumor_model = $model->tumor_model;
 					my $normal_model = $model->normal_model;
-					my $tumor_model_dir = $tumor_model->last_succeeded_build_directory;
-					my $normal_model_dir = $normal_model->last_succeeded_build_directory;
-					my $tumor_bam = `ls $tumor_model_dir/alignments/*.bam`; chomp($tumor_bam);
-					my $normal_bam = `ls $normal_model_dir/alignments/*.bam`; chomp($normal_bam);
-					
-					my $tier1_snvs = $last_build_dir . "/merged.somatic.snp.filter.novel.tier1";
-					my $output_tier1_snvs = $self->output_review . "/" . $subject_name . ".$model_id.SNVs.tsv";
-					output_snvs_for_review($model_id, $tier1_snvs, $output_tier1_snvs, $subject_name, $normal_bam, $tumor_bam);
+					my $tumor_sample = $tumor_model->subject_name;
+					my $normal_sample = $normal_model->subject_name;
 
-					my $tier1_gatk = $last_build_dir . "/gatk.output.indel.formatted.Somatic.tier1";
-					my $tier1_indels = $last_build_dir . "/merged.somatic.indel.filter.tier1";
-					my $output_tier1_indels = $self->output_review . "/" . $subject_name . ".$model_id.Indels.tsv";
-					output_indels_for_review($model_id, $tier1_indels, $tier1_gatk, $output_tier1_indels, $subject_name, $normal_bam, $tumor_bam);
-				}
-				
-				if($self->output_maf_file)
-				{
-					my $sample_maf_file = $last_build_dir . "/tcga-maf.tsv";
-					if(-e $sample_maf_file)
+					my @temp = split(/\-/, $tumor_sample);
+					my $patient_id = join("-", "TCGA", $temp[1], $temp[2]);
+
+					if($self->output_build_dirs)
 					{
-						my $sample_maf_results = parse_maf_file($subject_name, $sample_maf_file);
-						my @sample_results = split(/\n/, $sample_maf_results);
-						$num_maf_mutations = @sample_results;
-						
-						foreach my $maf_line (@sample_results)
+						print BUILDDIRS join("\t", $tumor_sample . "-" . $normal_sample, $last_build_dir) . "\n";					
+					}
+	
+	
+					if($self->output_germline_calls)
+					{
+						my $dir = $self->output_germline_calls;
+						if(!(-d $dir))
 						{
-							my @temp = split(/\t/, $maf_line);
-							my $variant_type = $temp[9];
-							$num_maf_snvs++ if($variant_type eq "SNP" || $variant_type eq "SNV");
-							$num_maf_indels++ if($variant_type eq "INS" || $variant_type eq "DEL");
+							mkdir($dir) or die "Can't create output directory: $!\n";
 						}
-						
-						if($maf_header && !$maf_header_printed)
+
+						## Make output dir for this model ##
+						my $germline_dir = $self->output_germline_calls . "/" . $model_name;
+						if(!(-d $germline_dir))
 						{
-							print MAF "$maf_header\n";
-							$maf_header_printed = 1;
+							mkdir($germline_dir) or die "Can't create output directory: $!\n";
 						}
-						print MAF "$sample_maf_results\n";
+
+						my $tumor_model = $model->tumor_model;
+						my $tumor_model_dir = $tumor_model->last_succeeded_build_directory;
+						my $tumor_bam = `ls $tumor_model_dir/alignments/*.bam`; chomp($tumor_bam);
+
+						output_germline_files($self, $last_build_dir, $germline_dir, $tumor_bam);
 					}
 
+					if($self->output_loh_calls)
+					{
+						my $dir = $self->output_loh_calls;
+						if(!(-d $dir))
+						{
+							mkdir($dir) or die "Can't create output directory: $!\n";
+						}
+
+						## Get normal and tumor sample names ##
+						my $tumor_model = $model->tumor_model;
+						my $normal_model = $model->normal_model;
+						my $tumor_sample = $tumor_model->subject_name;
+						my $normal_sample = $normal_model->subject_name;
+
+						## Make output dir for this model ##
+						my $loh_dir = $self->output_loh_calls . "/" . $tumor_sample . "-" . $normal_sample;
+						if(!(-d $loh_dir))
+						{
+							mkdir($loh_dir) or die "Can't create output directory: $!\n";
+						}
+
+						## Get BAM Files ##
+
+						my $tumor_model_dir = $tumor_model->last_succeeded_build_directory;
+						my $tumor_bam = `ls $tumor_model_dir/alignments/*.bam`; chomp($tumor_bam);
+
+						my $normal_model_dir = $normal_model->last_succeeded_build_directory;
+						my $normal_bam = `ls $normal_model_dir/alignments/*.bam`; chomp($normal_bam);
+
+						## Output LOH Files ##
+
+						output_loh_files($self, $last_build_dir, $loh_dir, $normal_bam, $tumor_bam);
+#						$debug_counter++;
+#						exit(0) if($debug_counter >= 10);
+					}
+	
+					
+					my %build_results = get_build_results($last_build_dir);
+					$final_build_result = $build_results{'tier1_snvs'} . " Tier1 SNVs, " . $build_results{'tier1_indels'} . " Tier1 Indels, ";
+	
+					if($self->output_review)
+					{
+						my $tumor_model = $model->tumor_model;
+						my $normal_model = $model->normal_model;
+						my $tumor_model_dir = $tumor_model->last_succeeded_build_directory;
+						my $normal_model_dir = $normal_model->last_succeeded_build_directory;
+						my $tumor_bam = `ls $tumor_model_dir/alignments/*.bam`; chomp($tumor_bam);
+						my $normal_bam = `ls $normal_model_dir/alignments/*.bam`; chomp($normal_bam);
+						
+						my $tier1_snvs = $last_build_dir . "/merged.somatic.snp.filter.novel.tier1";
+
+						## If UHC-filter flag turned on and file exists, use it instead ##
+						if($self->uhc_filter && -e "$tier1_snvs.uhc-filter")
+						{
+							my $uhc_count = `cat $tier1_snvs.uhc-filter | wc -l`; chomp($uhc_count);
+							$stats{'uhc_sites_skipped'} += $uhc_count;
+							$tier1_snvs = $last_build_dir . "/merged.somatic.snp.filter.novel.tier1.uhc-filter.removed";
+						}
+
+						my $output_tier1_snvs = $self->output_review . "/" . $subject_name . ".$model_id.SNVs.tsv";
+						output_snvs_for_review($model_id, $tier1_snvs, $output_tier1_snvs, $subject_name, $normal_bam, $tumor_bam);
+	
+						my $tier1_gatk = $last_build_dir . "/gatk.output.indel.formatted.Somatic.tier1";
+						my $tier1_indels = $last_build_dir . "/merged.somatic.indel.filter.tier1";
+						my $output_tier1_indels = $self->output_review . "/" . $subject_name . ".$model_id.Indels.tsv";
+						output_indels_for_review($model_id, $tier1_indels, $tier1_gatk, $output_tier1_indels, $subject_name, $normal_bam, $tumor_bam);
+					}
+					elsif($self->uhc_filter)
+					{
+						my $tumor_model = $model->tumor_model;
+						my $normal_model = $model->normal_model;
+						my $tumor_model_dir = $tumor_model->last_succeeded_build_directory;
+						my $normal_model_dir = $normal_model->last_succeeded_build_directory;
+						my $tumor_bam = `ls $tumor_model_dir/alignments/*.bam`; chomp($tumor_bam);
+						my $normal_bam = `ls $normal_model_dir/alignments/*.bam`; chomp($normal_bam);
+						
+						my $tier1_snvs = $last_build_dir . "/merged.somatic.snp.filter.novel.tier1";
+						my $output_file = $tier1_snvs . ".uhc-filter";
+						my $filtered_file = $tier1_snvs . ".uhc-filter.removed";
+						
+						if(-e $output_file)
+						{
+							save_uhc_calls($patient_id, $output_file);
+						}
+						else
+						{
+							if($self->reference)
+							{
+								print "Running Reference\n";
+								system("bsub -q short -R\"select[model!=Opteron250 && mem>6000] rusage[mem=6000]\" -M 6000000 gmt somatic ultra-high-confidence --tumor-bam $tumor_bam --normal-bam $normal_bam --variant-file $tier1_snvs --output-file $output_file --filtered-file $filtered_file --reference " . $self->reference);															
+							}
+							else
+							{
+								system("bsub -q short -R\"select[model!=Opteron250 && mem>6000] rusage[mem=6000]\" -M 6000000 gmt somatic ultra-high-confidence --tumor-bam $tumor_bam --normal-bam $normal_bam --variant-file $tier1_snvs --output-file $output_file --filtered-file $filtered_file");															
+							}
+
+						}
+
+					}
+
+					if($self->varscan_copynumber)
+					{
+						my $tumor_model = $model->tumor_model;
+						my $normal_model = $model->normal_model;
+						my $tumor_sample = $tumor_model->subject_name;
+						my $normal_sample = $normal_model->subject_name;
+						my $tumor_model_dir = $tumor_model->last_succeeded_build_directory;
+						my $normal_model_dir = $normal_model->last_succeeded_build_directory;
+						my $tumor_bam = `ls $tumor_model_dir/alignments/*.bam`; chomp($tumor_bam);
+						my $normal_bam = `ls $normal_model_dir/alignments/*.bam`; chomp($normal_bam);
+					
+						my $output_dir = $self->varscan_copynumber . "/" . $tumor_sample . "-" . $normal_sample;
+						mkdir($output_dir) if(!(-d $output_dir));
+						my $cmd = "gmt varscan copy-number --output $output_dir/varScan.output --normal-bam $normal_bam --tumor-bam $tumor_bam";
+						if(!(-e "$output_dir/varScan.output.copynumber"))
+						{
+							system("bsub -q long -R\"select[model!=Opteron250 && mem>4000]\" $cmd");							
+						}
+						else
+						{
+							print "Skipping $tumor_sample-$normal_sample...\n";
+						}
+
+
+					}
+					
+					if($self->output_maf_file)
+					{
+						my $sample_maf_file = $last_build_dir . "/tcga-maf.tsv";
+						
+						## If no MAF file exists, let's build one ##
+						if(!(-e $sample_maf_file))
+						{
+							print "MAF File not found, so generating one...\n";
+							my $cmd_obj = Genome::Model::Tools::Capture::BuildMafFile->create(
+								data_dir => , $last_build_dir,
+								normal_sample => $normal_subject_name,
+								tumor_sample => $tumor_subject_name,					    
+								output_file => $sample_maf_file,
+							);
+	
+							$cmd_obj->execute;	
+						}
+						
+						if(-e $sample_maf_file)
+						{
+							my $sample_maf_results = parse_maf_file($subject_name, $sample_maf_file);
+							my @sample_results = split(/\n/, $sample_maf_results);
+							$num_maf_mutations = @sample_results;
+							
+							foreach my $maf_line (@sample_results)
+							{
+								my @temp = split(/\t/, $maf_line);
+								my $variant_type = $temp[9];
+								$num_maf_snvs++ if($variant_type eq "SNP" || $variant_type eq "SNV");
+								$num_maf_indels++ if($variant_type eq "INS" || $variant_type eq "DEL");
+							}
+							
+							if($maf_header && !$maf_header_printed)
+							{
+								print MAF "$maf_header\n";
+								$maf_header_printed = 1;
+							}
+							print MAF "$sample_maf_results\n";
+						}
+	
+					}
+	
+					
 				}
-
-				
+	
 			}
-
+	
+			## Figure out how many sites have already been reviewed ##
+			my $num_sites_passed_review = $patient_sites_passed_review{$patient_id};
+			$num_sites_passed_review = 0 if(!$num_sites_passed_review);
 		}
 
+		print join("\t", $model_id, $model_name, $normal_model_id, $tumor_model_id, $final_build_result) . "\n";
+
 #		print join("\t", $model_id, $subject_name, $model_status, $build_ids, $build_statuses, $final_build_result, $num_maf_mutations . " mutations added to MAF", $num_maf_snvs . " SNVs", $num_maf_indels . " Indels") . "\n";
-		print join("\t", $model_name, $model_id, $build_ids, $build_statuses, $final_build_result, $num_maf_mutations, $num_maf_snvs, $num_maf_indels) . "\n";
-		print "$normal_build_dir\n$tumor_build_dir\n";
+#		print join("\t", $model_name, $model_id, $build_ids, $build_statuses, $final_build_result, $num_maf_mutations, $num_maf_snvs, $num_maf_indels) . "\n";
+#		print join("\t", $model_name, $model_id, $final_build_result, "$num_sites_passed_review pass review", "$num_maf_mutations mutations ($num_maf_snvs SNVs, $num_maf_indels indels) added to MAF") . "\n";
+#		print "$normal_build_dir\n$tumor_build_dir\n";
 
 	}	
 	
@@ -266,6 +453,7 @@ sub execute {                               # replace with real execution logic.
 	if($self->output_review)
 	{
 		print $stats{'review_snvs_possible'} . " Tier 1 SNVs could be reviewed\n";
+		print $stats{'uhc_sites_skipped'} . " UHC SNVs were excluded from review\n";
 		print $stats{'review_snvs_already'} . " were already reviewed\n";
 		print $stats{'review_snvs_already_wildtype'} . " were wild-type in another sample\n";
 		print $stats{'review_snvs_already_germline'} . " were germline in at least 3 other samples\n";
@@ -283,8 +471,40 @@ sub execute {                               # replace with real execution logic.
 
 
 	close(MAF) if($self->output_maf_file);
+	
+	return 1;
 }
 
+
+
+################################################################################################
+# Get Build Results - Summarize the progress/results of a given build
+#
+################################################################################################
+
+sub save_uhc_calls
+{
+	my $patient_id = shift(@_);
+	my $FileName = shift(@_);
+
+	## Parse the Tier 1 SNVs file ##
+
+	my $input = new FileHandle ($FileName);
+	my $lineCounter = 0;
+
+	while (<$input>)
+	{
+		chomp;
+		my $line = $_;
+		$lineCounter++;
+		
+		my ($chrom, $chr_start, $chr_stop) = split(/\t/, $line);
+		my $variant_key = join("\t", $patient_id, $chrom, $chr_start, $chr_stop);
+		$passed_sites{$variant_key} = 1;
+	}
+	
+	close($input);
+}
 
 
 ################################################################################################
@@ -484,6 +704,17 @@ sub load_review_database
 
 		my ($model_id, $build_id, $sample_name, $chrom, $chr_start, $chr_stop, $ref, $var, $code) = split(/\t/, $line);
 		
+		## Determine if this is a BED-formatted file ##
+		
+		if($chr_start ne "chr_start" && $chr_stop - $chr_start == 1)
+		{
+			## Especially, for SNVs ##
+			if(length($ref) == 1 && length($var) == 1 && $ref ne "-" && $ref ne "0" && $var ne "-" && $var ne "0")
+			{
+				$chr_start++;
+			}
+		}
+		
 		my $key = join("\t", $model_id, $chrom, $chr_start, $chr_stop);
 		$already_reviewed{$key} = $code;
 
@@ -501,9 +732,16 @@ sub load_review_database
 		{
 			my @temp = split(/\-/, $sample_name);
 			my $patient_id = join("-", "TCGA", $temp[1], $temp[2]);
+			if(!$temp[1] || !$temp[2])
+			{
+				die "Error parsing line from $FileName: $line had incomplete sample name $sample_name\n";
+			}
 			my $key = join("\t", $patient_id, $chrom, $chr_start, $chr_stop);
 			$passed_sites{$key} = 1;
 			$num_passed_sites++;
+			
+			$patient_sites_passed_review{$patient_id}++;
+			
 		}
 	}
 	
@@ -777,6 +1015,129 @@ sub output_indels_for_review
 
 
 }
+
+
+
+################################################################################################
+# Output Germline Files - output the files for germline analysis 
+#
+################################################################################################
+
+sub output_germline_files
+{
+	my ($self, $build_dir, $germline_dir, $tumor_bam) = @_;
+	
+	## Get VarScan Germline File ##
+	
+	my $varscan_snv_file = `ls $build_dir/varScan.output.snp.formatted.Germline.hc`;
+	chomp($varscan_snv_file);
+	my $varscan_output_file = "$germline_dir/varScan.germline.snp";
+	
+	if($varscan_snv_file && !(-e $varscan_output_file))
+	{
+
+		
+		if($self->germline_roi_file)
+		{
+			system("java -jar /gsc/scripts/lib/java/VarScan/VarScan.v2.2.6.jar limit $varscan_snv_file --regions-file " . $self->germline_roi_file . " --output-file $varscan_output_file");			
+		}
+		else
+		{
+			system("cp $varscan_snv_file $varscan_output_file");
+		}
+
+		## Apply the FP-filter ##
+		
+		system("bsub -q long -R\"select[type==LINUX64 && mem>8000] rusage[mem=8000]\" -M 8000000 gmt somatic filter-false-positives --variant-file $varscan_output_file --bam-file $tumor_bam --output-file $varscan_output_file.fpfilter");
+	}
+	
+	## Get GATK File ##
+	
+	my $gatk_indel_file = `ls $build_dir/gatk.output.indel.formatted`;
+	chomp($gatk_indel_file);
+
+	my $gatk_output_file = "$germline_dir/gatk.germline.indel";
+	
+	if($gatk_indel_file && !(-e $gatk_output_file))
+	{	
+		if($self->germline_roi_file)
+		{
+			system("grep GERMLINE $gatk_indel_file >$gatk_output_file.temp");
+			system("java -jar /gsc/scripts/lib/java/VarScan/VarScan.v2.2.6.jar limit $gatk_output_file.temp --regions-file " . $self->germline_roi_file . " --output-file $gatk_output_file");
+			system("rm -rf $gatk_output_file.temp");
+		}
+		else
+		{
+			## Copy ALL Indels ##
+			system("grep GERMLINE $gatk_indel_file >$gatk_output_file");
+		}
+
+	}
+
+}
+
+
+
+
+
+################################################################################################
+# Output Germline Files - output the files for loh analysis 
+#
+################################################################################################
+
+sub output_loh_files
+{
+	my ($self, $build_dir, $loh_dir, $normal_bam, $tumor_bam) = @_;
+
+	## Get VarScan Germline File ##
+	
+	my $germline_snv_file = `ls $build_dir/varScan.output.snp.formatted.Germline.hc`;
+	chomp($germline_snv_file);
+	my $germline_output_file = "$loh_dir/varScan.germline.snp";
+	
+	if($germline_snv_file && !(-e $germline_output_file))
+	{	
+		## Apply a preliminary filter ##	
+		system("gmt varscan filter-variant-calls --variant $germline_snv_file --output $germline_output_file.unfiltered --min-normal-cov 8 --min-tumor-cov 8 --min-normal-freq 25 --max-normal-freq 75 --min-tumor-freq 0 --max-tumor-freq 100");
+		
+		## Apply the FP-filter ##
+		my $cmd = "gmt somatic filter-false-positives --variant-file $germline_output_file.unfiltered --bam-file $tumor_bam --output-file $germline_output_file";
+		$cmd .= " --reference " . $self->reference if($self->reference);
+		system("bsub -q long -R\"select[type==LINUX64 && mem>8000 && tmp>2000] rusage[mem=8000]\" -M 8000000 $cmd");
+	}
+	
+
+	## Get VarScan LOH File ##
+	
+	my $loh_snv_file = `ls $build_dir/varScan.output.snp.formatted.LOH.hc`;
+	chomp($loh_snv_file);
+	my $loh_output_file = "$loh_dir/varScan.loh.snp";
+	
+	if($loh_snv_file && !(-e $loh_output_file))
+	{	
+		## Apply a preliminary filter ##	
+		system("gmt varscan filter-variant-calls --variant $loh_snv_file --output $loh_output_file.unfiltered --min-normal-cov 8 --min-tumor-cov 8 --min-normal-freq 25 --max-normal-freq 75 --min-tumor-freq 0 --max-tumor-freq 100");
+
+
+		## Apply the FP-filter ##
+		my $cmd = "gmt somatic filter-false-positives --variant-file $loh_output_file.unfiltered --bam-file $normal_bam --output-file $loh_output_file";
+		$cmd .= " --reference " . $self->reference if($self->reference);
+		system("bsub -q apipe -R\"select[type==LINUX64 && mem>8000 && tmp>2000] rusage[mem=8000]\" -M 8000000 $cmd");
+	}
+	
+	## If both files exist, process them ##
+	my $merged_output_file = "$loh_dir/varScan.merged.snp";
+	if(-e $germline_output_file && -e $loh_output_file)
+	{
+		print "Merging LOH and Germline calls...\n";
+		system("cat $germline_output_file $loh_output_file >$merged_output_file");
+		system("gmt capture sort-by-chr-pos --input $merged_output_file --output $merged_output_file");
+		system("gmt varscan filter-variant-calls --variant $merged_output_file --output $merged_output_file.hc --min-normal-cov 8 --min-tumor-cov 8 --min-normal-freq 25 --max-normal-freq 75 --min-tumor-freq 0 --max-tumor-freq 100");
+#		system("echo \"chrom\tpos\tnfreq\ttfreq\tstatus\" >$merged_output_file.hc.infile");
+#		system("cut -f 1,2,8,12,14 $merged_output_file.hc | perl -pe 's/\%//g' >>$merged_output_file.hc.infile");
+	}
+}
+
 
 
 

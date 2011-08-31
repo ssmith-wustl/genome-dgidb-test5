@@ -12,7 +12,8 @@
   <link fromOperation="input connector" fromProperty="xml" toOperation="Align" toProperty="xml" />
   <link fromOperation="input connector" fromProperty="hdf5_mode" toOperation="Align" toProperty="hdf5_mode" />
   <link fromOperation="input connector" fromProperty="pulse_metrics" toOperation="Align" toProperty="pulse_metrics" />
-  
+  <link fromOperation="input connector" fromProperty="use_ccs" toOperation="Align" toProperty="use_ccs" />
+    
   <link fromOperation="Align" fromProperty="cmp_hdf5_file" toOperation="MergeCmpH5" toProperty="input_cmp_hdf5_files" />
 
   <link fromOperation="input connector" fromProperty="cmp_hdf5_file" toOperation="MergeCmpH5" toProperty="output_cmp_hdf5_file" />
@@ -57,7 +58,9 @@
     <link fromOperation="input connector" fromProperty="min_length" toOperation="CompareSequences" toProperty="min_length" />
     <link fromOperation="input connector" fromProperty="xml" toOperation="CompareSequences" toProperty="xml" />
     <link fromOperation="input connector" fromProperty="hdf5_mode" toOperation="CompareSequences" toProperty="hdf5_mode" />
-    
+    <link fromOperation="input connector" fromProperty="use_ccs" toOperation="CompareSequences" toProperty="use_ccs" />
+
+    <link fromOperation="input connector" fromProperty="use_ccs" toOperation="LoadPulses" toProperty="skip" />
     <link fromOperation="input connector" fromProperty="pulse_metrics" toOperation="LoadPulses" toProperty="metrics" />
     <link fromOperation="input connector" fromProperty="input_fofn" toOperation="LoadPulses" toProperty="input_fofn" />
   
@@ -71,7 +74,7 @@
     </operation>
     
     <operation name="LoadPulses">
-      <operationtype commandClass="Genome::Model::Tools::SmrtAnalysis::LoadPulses" typeClass="Workflow::OperationType::Command" />
+      <operationtype commandClass="Genome::Model::Tools::SmrtAnalysis::LoadPulsesDummy" typeClass="Workflow::OperationType::Command" />
     </operation>
     
     <operationtype typeClass="Workflow::OperationType::Model">
@@ -87,6 +90,7 @@
       <inputproperty>xml</inputproperty>
       <inputproperty>hdf5_mode</inputproperty>
       <inputproperty>pulse_metrics</inputproperty>
+      <inputproperty isOptional="Y">use_ccs</inputproperty>
       <outputproperty>cmp_hdf5_file</outputproperty>
       <outputproperty>result</outputproperty>
     </operationtype>
@@ -132,6 +136,7 @@
     <inputproperty>gff_to_bed_name</inputproperty>
     <inputproperty>gff_to_bed_description</inputproperty>
     <inputproperty>pulse_metrics</inputproperty>
+    <inputproperty isOptional="Y">use_ccs</inputproperty>
     <outputproperty>cmp_hdf5_file</outputproperty>
     <outputproperty>sam_file</outputproperty>
     <outputproperty>alignment_summary_gff</outputproperty>

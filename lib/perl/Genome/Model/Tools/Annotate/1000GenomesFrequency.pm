@@ -42,7 +42,7 @@ sub execute {                               # replace with real execution logic.
     my $self = shift;
     my ($bed_fh, $bed_path);
     my $input_fh = Genome::Sys->open_file_for_reading($self->variant_file);
-    my $line = $input_fh->getline;
+    chomp(my $line = $input_fh->getline);
     my @fields = split /\t/, $line;
 
     ####prepare input for liftover in bed_fh temp file or use original file
@@ -54,10 +54,13 @@ sub execute {                               # replace with real execution logic.
     else {  ###anno format
         ($bed_fh, $bed_path) = Genome::Sys->create_temp_file();
         do {
+            chomp($line);
             my ($chr, $start, $stop, $ref, $var, undef) = split /\t/, $line;
             $start = $stop -1;
             $bed_fh->print("$chr\t$start\t$stop\t$ref/$var\n");
         }while ($line = $input_fh->getline);
+        $bed_fh->close;
+        $bed_fh = Genome::Sys->open_file_for_reading($bed_path);
     }
     ######## done with prepping input
 

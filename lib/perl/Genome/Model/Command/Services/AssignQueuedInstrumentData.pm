@@ -832,15 +832,7 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
     if ( $capture_target ) {
         my $roi_list;
         #FIXME This is a lame hack for these capture sets
-        my %build36_to_37_rois = (
-            'agilent sureselect exome version 2 broad refseq cds only' => 'agilent_sureselect_exome_version_2_broad_refseq_cds_only_hs37',
-            'agilent sureselect exome version 2 broad' => 'agilent sureselect exome version 2 broad hg19 liftover',
-            'hg18 nimblegen exome version 2' => 'hg19 nimblegen exome version 2',
-            'NCBI-human.combined-annotation-54_36p_v2_CDSome_w_RNA' => 'NCBI-human.combined-annotation-54_36p_v2_CDSome_w_RNA_build36-build37_liftOver',
-            'Freimer Pool of original (4k001L) plus gapfill (4k0026)' => 'Freimer-Boehnke capture-targets.set1_build37-fix1',
-            '04110401 PoP32 EZ capture chip set'   => '04110401 PoP32 EZ capture chip set build37',
-            'RT 49315 - AMD -- pool 1' => 'AMD-pool1-build37',
-        );
+        my %build36_to_37_rois = get_build36_to_37_rois(); 
 
         my $root_build37_ref_seq = $self->root_build37_ref_seq;
 
@@ -982,6 +974,18 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
     return @new_models;
 }
 
+sub get_build36_to_37_rois {
+    return (
+        'agilent sureselect exome version 2 broad refseq cds only' => 'agilent_sureselect_exome_version_2_broad_refseq_cds_only_hs37',
+        'agilent sureselect exome version 2 broad' => 'agilent sureselect exome version 2 broad hg19 liftover',
+        'hg18 nimblegen exome version 2' => 'hg19 nimblegen exome version 2',
+        'NCBI-human.combined-annotation-54_36p_v2_CDSome_w_RNA' => 'NCBI-human.combined-annotation-54_36p_v2_CDSome_w_RNA_build36-build37_liftOver',
+        'Freimer Pool of original (4k001L) plus gapfill (4k0026)' => 'Freimer-Boehnke capture-targets.set1_build37-fix1',
+        '04110401 PoP32 EZ capture chip set'   => '04110401 PoP32 EZ capture chip set build37',
+        'RT 49315 - AMD -- pool 1' => 'AMD-pool1-build37',
+    );
+}
+
 sub create_default_qc_models {
     my $self = shift;
     my @models = @_;
@@ -994,9 +998,9 @@ sub create_default_qc_models {
         my @lane_qc_models = $model->get_or_create_lane_qc_models;
 
         for my $lane_qc (@lane_qc_models) {
-            next if $lane_qc->completed_builds;
             next if $lane_qc->build_requested;
-            $lane_qc->build_requested(1, 'first build');
+            next unless $lane_qc->build_needed;
+            $lane_qc->build_requested(1);
             push @new_models, $lane_qc;
         }
     }

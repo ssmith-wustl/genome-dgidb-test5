@@ -3,6 +3,7 @@ use version; $VERSION = qv('0.0.1');
 
 use strict;
 use warnings;
+no warnings 'reserved';
 
 use Carp;
 use Data::Dumper;

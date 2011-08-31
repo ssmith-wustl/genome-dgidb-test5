@@ -583,6 +583,7 @@ sub post_allocation_initialization {
 }
 
 sub validate_for_start_methods {
+    # Be very wary of removing any of these as many subclasses use SUPER::validate_for_start_methods
     # Each method should return tags
     my @methods = (
         #validate_inputs_have_values should be checked first
@@ -601,8 +602,7 @@ sub validate_for_start {
 
     for my $method (@methods) {
         unless ($self->can($method)) {
-            $self->warning_message("Validation method $method not found!");
-            next;
+            die $self->warning_message("Validation method $method not found!");
         }
         my @returned_tags = grep { defined $_ } $self->$method(); # Prevents undef from being pushed to tags list
         push @tags, @returned_tags if @returned_tags; 
@@ -1730,13 +1730,27 @@ sub metrics_ignored_by_diff {
     return ();
 }
 
-# A list of file suffixes that require special treatment to diff. This should include those
+# A hash of method suffixes and a file name regex that triggers a custom diff method. This should include those
 # files that have timestamps or other changing fields in them that an md5sum can't handle.
 # Each suffix should have a method called diff_<SUFFIX> that'll contain the logic.
-sub special_suffixes {
-    return qw(
-        gz
+sub regex_for_custom_diff {
+    return (
+        gz => '\.gz$',
     );
+}
+
+sub matching_regex_for_custom_diff {
+    my $self = shift;
+    my $path = shift;
+
+    my %regex_for_custom_diff = $self->regex_for_custom_diff;
+    my %matching_regex_for_custom_diff;
+    for my $key (keys %regex_for_custom_diff) {
+        my $regex = $regex_for_custom_diff{$key};
+        $matching_regex_for_custom_diff{$key} = $regex if $path =~ /$regex/;
+    }
+
+    return %matching_regex_for_custom_diff;
 }
 
 # Gzipped files contain the timestamp and name of the original file, so this prints
@@ -1784,6 +1798,7 @@ sub compare_output {
     my %diffs;
     FILE: for my $rel_path (sort keys %file_paths) {
         my $abs_path = delete $file_paths{$rel_path};
+        warn "abs_path ($abs_path) does not exist\n" unless (-e $abs_path);
         my $dir = $self->full_path_to_relative(dirname($abs_path));
        
         next FILE if -d $abs_path;
@@ -1827,11 +1842,16 @@ sub compare_output {
         # Check if the files end with a suffix that requires special handling. If not,
         # just do an md5sum on the files and compare
         my $diff_result = 0;
-        my (undef, undef, $suffix) = fileparse($abs_path, $self->special_suffixes);
-        my (undef, undef, $other_suffix) = fileparse($other_abs_path, $self->special_suffixes);
-        if ($suffix ne '' and $other_suffix ne '' and $suffix eq $other_suffix) {
-            my $method = "diff_$suffix";
-            $method =~ s/\-/\_/; # replace dashes, can't declare a method w/ dashes
+        my %matching_regex_for_custom_diff = $self->matching_regex_for_custom_diff($abs_path);
+        if (keys %matching_regex_for_custom_diff > 1) {
+            die "Path ($abs_path) matched multiple regex_for_custom_diff ('" . join("', '", keys %matching_regex_for_custom_diff) . "')!\n";
+        }
+        elsif (keys %matching_regex_for_custom_diff == 1) {
+            my ($key) = keys %matching_regex_for_custom_diff;
+            my $method = "diff_$key";
+            unless($self->can($method)) {
+                die "Custom diff method ($method) not implemented on class (" . $self->class . ").\n";
+            }
             $diff_result = $self->$method($abs_path, $other_abs_path);
         }
         else {
@@ -1848,6 +1868,7 @@ sub compare_output {
     # Make sure the other build doesn't have any extra files
     for my $rel_path (sort keys %other_file_paths) {
         my $abs_path = delete $other_file_paths{$rel_path};
+        warn "abs_path ($abs_path) does not exist\n" unless (-e $abs_path);
         my $dir = $self->full_path_to_relative(dirname($abs_path));
         next if -d $abs_path;
         next if grep { $dir =~ /$_/ } $self->dirs_ignored_by_diff;
@@ -2035,5 +2056,18 @@ sub is_used_as_model_or_build_input {
     return (scalar @inputs) ? 1 : 0;
 }
 
+sub child_lsf_jobs {
+    my $self = shift;
+    my @workflow_instances = $self->_get_workflow_instance_children($self->newest_workflow_instance);
+    my @dispatch_ids = grep {defined $_} map($_->current->dispatch_identifier, @workflow_instances);
+    my @valid_ids = grep {$_ !~ /^P/} @dispatch_ids;
+    return @valid_ids;
+}
+
+sub _get_workflow_instance_children {
+    my $self = shift;
+    my $parent = shift || die;
+    return $parent, map($self->_get_workflow_instance_children($_), $parent->related_instances);
+}
 
 1;

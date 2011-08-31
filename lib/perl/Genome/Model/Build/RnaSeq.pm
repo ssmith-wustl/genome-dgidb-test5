@@ -31,6 +31,11 @@ sub accumulated_alignments_directory {
     return $self->data_directory . '/alignments';
 }
 
+sub coverage_directory {
+    my $self = shift;
+    return $self->data_directory . '/coverage';
+}
+
 sub accumulated_alignments_disk_allocation {
     my $self = shift;
 

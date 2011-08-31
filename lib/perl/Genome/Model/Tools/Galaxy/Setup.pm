@@ -19,6 +19,8 @@ class Genome::Model::Tools::Galaxy::Setup {
     doc => 'setup the galaxy software on your system',
 };
 
+sub sub_command_sort_position { 1 }
+
 sub execute {
     my $self = shift;
 

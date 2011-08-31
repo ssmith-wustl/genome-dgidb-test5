@@ -3,7 +3,7 @@ package Genome::Model::Tools::Picard;
 use strict;
 use warnings;
 
-use Genome; 
+use Genome;
 use File::Basename;
 use Sys::Hostname;
 use Genome::Utility::AsyncFileSystem qw(on_each_line);

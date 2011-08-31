@@ -54,6 +54,13 @@ class Genome::Model::Tools::CopyNumber::Cbs {
             default => 0,
         },
 
+        min_width => {
+            is => 'Integer',
+            is_optional => 1,
+            doc => 'minimum number of consecutive probes/windows to require before making a call',
+            default => 2,
+        },
+
         sample_name => {
             is => 'String',
             is_optional => 1,
@@ -94,6 +101,7 @@ sub execute {
     my $output_file = $self->output_file;
     my $convert_names = $self->convert_names;
     my $sample_name = $self->sample_name;
+    my $min_width = $self->min_width;
     
     #sanity checks
     unless( (defined($output_R_object)) || (defined($output_file))){
@@ -150,7 +158,7 @@ sub execute {
 
 
     #segment the data
-    print R_COMMANDS "d <- segment(CNA.object, verbose=0, min.width=2) " . "\n";
+    print R_COMMANDS "d <- segment(CNA.object, verbose=0, min.width=" . $min_width . ") " . "\n";
 
     
     if(defined($output_file)){
@@ -169,7 +177,7 @@ sub execute {
     print R_COMMANDS "q()\n";
     close R_COMMANDS;
 
-#    `cp $tfile /tmp/tmp.R`;
+    `cp $tfile /tmp/tmp.R`;
 
     #now run the R command
     my $cmd = "R --vanilla --slave \< $tfile";

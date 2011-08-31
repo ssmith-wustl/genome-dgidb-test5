@@ -89,6 +89,7 @@ my $detector_result = Genome::Model::Tools::DetectVariants2::Result->__define__(
 my $pindel_read_support = Genome::Model::Tools::DetectVariants2::Filter::PindelReadSupport->create(
     previous_result_id => $detector_result->id,
     output_directory => $test_output_dir,
+    capture_data => 1,
 );
 
 ok($pindel_read_support, "created PindelReadSupport object");

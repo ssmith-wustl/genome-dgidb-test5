@@ -76,6 +76,14 @@ class Genome::Sample {
             is_mutable => 1,
             doc => 'describes the original tissue sample',
         },
+        is_control => { 
+            is => 'Text', 
+            via => 'attributes',
+            to => 'attribute_value',
+            where => [ attribute_label => 'is_control' ],
+            is_mutable => 1,
+            doc => 'describes if this sample is control',
+        },
         organ_name => { 
             is => 'Text',
             via => 'attributes',
@@ -227,12 +235,12 @@ class Genome::Sample {
         models => {
             is => 'Genome::Model',
             is_optional => 1,
-            calculate_from => 'id',
-            calculate => q{ return Genome::Model->get(subject_id => $id) },
+            is_many => 1,
+            reverse_as => '_sample_subject',
         },
         library_names => { via => 'libraries', to => 'name', is_optional => 1, },
-        solexa_lanes                => { is => 'Genome::InstrumentData::Solexa', reverse_as => 'sample' },
-        solexa_lane_names           => { via => 'solexa_lanes', to => 'full_name' },
+        solexa_lanes  => { is => 'Genome::InstrumentData::Solexa', reverse_as => 'sample' },
+        solexa_lane_names => { via => 'solexa_lanes', to => 'full_name' },
     ],
 
     doc         => 'a single specimen of DNA or RNA extracted from some tissue sample',
