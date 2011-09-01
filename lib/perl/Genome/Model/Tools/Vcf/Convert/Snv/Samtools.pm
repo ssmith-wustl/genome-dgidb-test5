@@ -26,7 +26,6 @@ sub parse_line {
     my $self = shift;
     my $line = shift;
 
-    # TODO VAQ should technically be math with both cons and snp quality, or perhaps a new calculation?
     my ($chr, $pos, $ref, $genotype, $gq, $vaq, $mq, $dp, $read_bases, $base_quality) = split("\t", $line);
 
     #replace ambiguous/IUPAC bases with N in ref
@@ -39,7 +38,7 @@ sub parse_line {
     #add the ref and alt alleles' positions in the allele array to the GT field
     my $gt = $self->generate_gt($ref, \@alt_alleles, \@alleles);
 
-    # Parse the pileup and quality strings
+    # Parse the pileup and quality strings so that they have the same length and can be mapped to one another
     if ($read_bases =~ m/[\$\^\+-]/) {
         $read_bases =~ s/\^.//g; #removing the start of the read segement mark
         $read_bases =~ s/\$//g; #removing end of the read segment mark
@@ -52,32 +51,33 @@ sub parse_line {
     my ($bq_string, $ad_string);
     if ( length($read_bases) != length($base_quality) ) {
         die $self->error_message("After processing, read base string and base quality string do not have identical lengths: $read_bases $base_quality");
-    } else {
-        my @bases = split("", $read_bases);
-        my @qualities = split("", $base_quality);
-        for (my $index = 0; $index < scalar(@bases); $index++) {
-            my $base = uc($bases[$index]);
-            for my $variant (@alt_alleles) {
-                if ($variant eq $base) {
-                    $ad{$variant}++;
-                    $bq_total{$variant} += ord($qualities[$index]); 
-                }
-            }
-        }
-
-        my %bq;
-        for my $variant (@alt_alleles) {
-            if ($ad{$variant}) {
-                $bq{$variant} = int($bq_total{$variant} / $ad{$variant});
-            } else {
-                $bq{$variant} = 0;
-                $ad{$variant} = 0;
-            }
-        }
-        $bq_string = join ",", map { $bq{$_} } @alt_alleles;
-        # Count the number of times the variant occurs in the pileup string (if there is more than one variant, this should be adjusted)
-        $ad_string = join ",", map { $ad{$_} } @alt_alleles;
     }
+
+    # Count the number of times the variant occurs in the pileup string (AD) and its quality from the quality string (BQ)
+    my @bases = split("", $read_bases);
+    my @qualities = split("", $base_quality);
+    for (my $index = 0; $index < scalar(@bases); $index++) {
+        my $base = uc($bases[$index]);
+        for my $variant (@alt_alleles) {
+            if ($variant eq $base) {
+                $ad{$variant}++;
+                $bq_total{$variant} += ord($qualities[$index]); 
+            }
+        }
+    }
+
+    # Get an average of the quality for BQ
+    my %bq;
+    for my $variant (@alt_alleles) {
+        if ($ad{$variant}) {
+            $bq{$variant} = int($bq_total{$variant} / $ad{$variant});
+        } else {
+            $bq{$variant} = 0;
+            $ad{$variant} = 0;
+        }
+    }
+    $bq_string = join ",", map { $bq{$_} } @alt_alleles;
+    $ad_string = join ",", map { $ad{$_} } @alt_alleles;
 
     # fraction of reads supporting alt
     my $total_ad;
