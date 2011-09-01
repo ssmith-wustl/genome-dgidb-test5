@@ -10,7 +10,8 @@ use above 'Genome';
 use_ok('Genome::Model::Tools::Vcf::Convert::Snv::Samtools');
 
 my $test_dir = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Vcf-Convert-Snv-Samtools";
-my $expected_base = "expected.v1";
+# V2 corrects the BQ value to subtract 33 from the ascii value
+my $expected_base = "expected.v2";
 my $expected_dir = "$test_dir/$expected_base";
 my $expected_file = "$expected_dir/output.vcf";
 
