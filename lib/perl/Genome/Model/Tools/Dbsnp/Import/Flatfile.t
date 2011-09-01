@@ -22,7 +22,7 @@ my $command_output = Genome::Sys->create_temp_file_path();
 
 my $cmd = Genome::Model::Tools::Dbsnp::Import::Flatfile->create(
     flatfile => $test_flat_file,
-    output => $command_output,
+    output_file => $command_output,
 ); 
 
 ok ($cmd, 'created the importer');

@@ -17,10 +17,10 @@ class Genome::Model::Tools::Dbsnp::Import::Flatfile {
                 is_input => 1,
                 doc => 'Path to the dbsnp flat file',
             },
-            output => {
+            output_file => {
                 is => 'Path',
                 is_output => 1,
-                doc => 'Path to the dbsnp tsv that will be created', #TODO: fix this doc, it sucks
+                doc => 'File tsv output is written to',
             }
         ],
 };
@@ -86,17 +86,15 @@ my @fd_order = qw(
 
 sub execute {
     my $self = shift;
-    my $filename = $self->flatfile;
-    if(-e $self->output){
-        $self->error_message($self->output . " already exists, exiting");
+    my $flatfile_fh = Genome::Sys->open_file_for_reading($self->flatfile);
+    if(-e $self->output_file){
+        $self->error_message($self->output_file . " already exists, exiting");
         die ($self->error_message);
     }
-    my $output_fh = Genome::Sys->open_file_for_writing($self->output);
-
-    open F, $filename or die("Couldn't open $filename: $!");
+    my $output_fh = Genome::Sys->open_file_for_writing($self->output_file);
 
     my @block = ();
-    while (<F>) {
+    while (<$flatfile_fh>) {
         chomp;
         next if ($. <= 3); # each file has a 3-line header
             my @split_line = split(/\s*\|\s*/, $_);
@@ -107,7 +105,7 @@ sub execute {
             push @block, \@split_line;
         }
     }
-    close F; #TODO: clean this up once tests pass
+    $flatfile_fh->close;
     $output_fh->close;
 }
 
