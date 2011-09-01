@@ -110,6 +110,7 @@ my $combine_test = $dispatcher_class->create(
     reference_build_id => $refbuild_id,
     aligned_reads_input => $tumor_bam,
     control_aligned_reads_input => $normal_bam,
+    aligned_reads_sample => 'TEST',
 );
 $combine_test->dump_status_messages(1);
 like($combine_test->reference_sequence_input, qr|^$refseq_tmp_dir|, "reference sequence path is in /tmp");

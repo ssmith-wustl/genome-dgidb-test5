@@ -120,6 +120,7 @@ sub _generate_control_file {
         output_directory => $detector_output_dir,
         aligned_reads_input => $self->control_aligned_reads_input,
         reference_build_id => $self->reference_build_id,
+        aligned_reads_sample => 'TEST',
     );
 
     unless($detector_command->execute) {
