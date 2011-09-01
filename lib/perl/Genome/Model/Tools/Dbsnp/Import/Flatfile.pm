@@ -50,10 +50,6 @@ Hard to imagine they had a good reason for that change....
 
 =cut
 
-my @submitter_whitelist = (
-    
-);
-
 my %ds_type_conv = ( 'in-del' => 'INDEL',
                   'microsatellite' => 'MICROSATELLITE',
                   'mixed' => 'MIXED',
@@ -70,8 +66,6 @@ my %val_type_conv = ( 'by2Hit2Allele' => 'is_validated_by_allele',
                     );
         
 my $csv_delimiter = "\t";
-#my @fd_order = qw( ds_id ds_allele ds_type ds_chr ds_start ds_stop submitter rs_id strain is_validated is_validated_by_allele is_validated_by_cluster is_validated_by_frequency is_validated_by_hap_map is_validated_by_other_pop ); 
-# bed order
 my @fd_order = qw(
     ds_chr
     ds_start
@@ -99,11 +93,7 @@ sub execute {
     }
     my $output_fh = Genome::Sys->open_file_for_writing($self->output);
 
-    if ($filename =~ /\.gz$/) {
-        open F, "<:gzip", $filename or die("Couldn't open $filename: $!");
-    } else {
-        open F, $filename or die("Couldn't open $filename: $!");
-    }
+    open F, $filename or die("Couldn't open $filename: $!");
 
     my @block = ();
     while (<F>) {
@@ -119,16 +109,6 @@ sub execute {
     }
     close F; #TODO: clean this up once tests pass
     $output_fh->close;
-}
-
-sub filter_submitters {
-    my $self = shift;
-    return;
-    my @rv;
-    return unless @submitter_whitelist;
-    for my $submitter (@_) {
-        push(@rv, $submitter) if grep { /^$submitter$/ } @submitter_whitelist;
-    }
 }
 
 sub process_block {
