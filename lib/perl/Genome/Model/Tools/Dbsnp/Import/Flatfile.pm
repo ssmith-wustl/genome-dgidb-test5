@@ -32,29 +32,21 @@ class Genome::Model::Tools::Dbsnp::Import::Flatfile {
 };
 
 sub help_brief {
-    #TODO: write me
+    'Create formatted tsv from DbSnp flat file'
 }
 
 sub help_synopsis {
-    #TODO: write me
+    return <<EOS
+gmt dbsnp import flatfile --flatfile chr1_flatfile.txt --output-file chr1.tsv
+EOS
 }
 
 sub help_detail {
-    #TODO: write me
+    return <<EOS
+This command is used for importing flat file based DbSnp files.  It creates a .tsv that can be
+merged with other such files and created as an ImportedVariationList build.
+EOS
 }
-
-=pod
-
-ftp://ftp.ncbi.nih.gov/snp/organisms/human_9606/README_human_9606_B131.txt
-DEL
-INS
-
-Note:
-
-In 131 the assembly=reference is replaced by assembly=HuRef....
-Hard to imagine they had a good reason for that change....
-
-=cut
 
 my %ds_type_conv = ( 'in-del' => 'INDEL',
                   'microsatellite' => 'MICROSATELLITE',
@@ -157,20 +149,9 @@ sub process_block {
         my ($ctg_start) = ($ctg->[5] =~ /ctg-start=(\d+)/) or next;
         my ($ctg_end)   = ($ctg->[6] =~ /ctg-end=(\d+)/) or next;
         my ($loctype)   = ($ctg->[7] =~ /loctype=(\d)/) or next;
-        
-        # ... Caused a jump from 6802 to 1089016 in diff
-        #if ($record{'ds_type'} eq 'INDEL' and $loctype == 2) { 
-        #    $record{'ds_type'} = 'DEL';
-        #} elsif ($record{'ds_type'} eq 'INDEL' and $loctype == 3) {       
-        #    $record{'ds_type'} = 'INS';
-        #}
 
         $record{'ds_start'} = $chr_pos-1;
         $record{'ds_stop'}  = $chr_pos + ($ctg_end - $ctg_start);
-        # maybe if the 'size' is 0, its a DEL?
-        #if ($record{'ds_type'} eq 'INDEL' and ($ctg_end - $ctg_start) == 0) {
-        #    $record{'ds_type'} = 'DEL';
-        #}
         
         for my $sub (@submitters){
             $record{'submitter'} = $sub;
