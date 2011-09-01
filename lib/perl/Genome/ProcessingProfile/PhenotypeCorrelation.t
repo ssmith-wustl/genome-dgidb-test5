@@ -2,7 +2,7 @@ package Genome::ProcessingProfile::PhenotypeCorrelation;
 use strict;
 use warnings;
 use above "Genome";
-use Test::More skip_all => "This is incomplete.";#tests => 11;
+use Test::More tests => 14; #skip_all => "This is incomplete.";#tests => 11;
 
 use Genome::ProcessingProfile::PhenotypeCorrelation;
 
@@ -93,7 +93,7 @@ is($@, '', 'no exceptions thrown during build process') or diag $@;
 __END__
 
     # this is how I made the cohort from Will's 3 model groups...
-    # it's slow(er) so I did it and let it commit
+    # if put at the top of this script it will use that group instead 
 
     my @groups = Genome::ModelGroup->get([13391, 13392, 13411]);
     is(scalar(@groups), 3, "got 3 members");
@@ -110,3 +110,5 @@ __END__
         members => \@patients,
     );
     ok($group, "created the ASMS cohort");
+
+

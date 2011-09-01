@@ -223,24 +223,20 @@ sub _execute_build {
     $params{sv_detection_strategy} = $self->sv_detection_strategy if $self->sv_detection_strategy;
     $params{cnv_detection_strategy} = $self->cnv_detection_strategy if $self->cnv_detection_strategy;
 
-    $params{multiple_bams} = \@bams;
     $params{reference_build_id} = $reference_sequence_build->id;
+    $params{multiple_bams} = \@bams;
 
     my $output_dir = $build->data_directory."/variants";
     $params{output_directory} = $output_dir;
 
-    my $command = Genome::Model::Tools::DetectVariants2::Dispatcher->create(%params);
-    unless ($command){
-        die $self->error_message("Couldn't create detect variants dispatcher from params:\n".Data::Dumper::Dumper \%params);
+    eval { Genome::Model::Tools::DetectVariants2::Dispatcher->execute(%params); };
+    if ($@) {
+        $self->warning_message("Failed to execute detect variants with multiple BAMs!\n");
+        #die $self->warning_message("Failed to execute detect variants dispatcher(err:$@) with params:\n" . Data::Dumper::Dumper \%params);
     }
-    my $rv = $command->execute;
-    my $err = $@;
-    unless ($rv){
-        die $self->error_message("Failed to execute detect variants dispatcher(err:$@) with params:\n".Data::Dumper::Dumper \%params);
+    else {
+        $self->status_message("detect variants command completed successfully");
     }
-
-    $self->status_message("detect variants command completed successfully");
-
 
     # dump pedigree data into a file
 
