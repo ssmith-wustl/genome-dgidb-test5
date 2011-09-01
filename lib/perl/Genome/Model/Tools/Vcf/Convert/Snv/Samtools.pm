@@ -61,7 +61,8 @@ sub parse_line {
         for my $variant (@alt_alleles) {
             if ($variant eq $base) {
                 $ad{$variant}++;
-                $bq_total{$variant} += ord($qualities[$index]); 
+                #http://samtools.sourceforge.net/pileup.shtml base quality is the same as mapping quality
+                $bq_total{$variant} += ord($qualities[$index]) - 33; 
             }
         }
     }
