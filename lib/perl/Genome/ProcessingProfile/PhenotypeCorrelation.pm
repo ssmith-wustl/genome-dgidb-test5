@@ -179,6 +179,7 @@ sub _execute_build {
         $instdata_by_sample{$instdata->sample->id}{$instdata->id} = 1;
     }
 
+
     #
     # get the bam for each sample
     # this will only work right now if the per-sample model has already run
@@ -211,6 +212,7 @@ sub _execute_build {
     # FOR DEBUGGING DROP THIS TO TWO BAMS
     @samples = (@samples[0,1]);
 $DB::single = 1;
+
     my @bams;
     my $reference_sequence_build = $build->inputs(name => 'reference_sequence_build')->value;
     for my $sample (@samples) {
@@ -229,9 +231,25 @@ $DB::single = 1;
         $self->status_message("bam for sample " . $sample->name . " is at path " . $bam);
         push @bams, $bam;
     }
+    
     unless (@bams == @samples) {
         die $self->error_message("Failed to find alignment results for all samples!");
     }
+
+    for my $bam (@bams){
+        unless (-e $bam){
+            die $self->error_message("Bam file could not be reached at: ".$bam);
+        }
+    }
+
+    #
+    # run the DV2 API to do variant detection as we do in somatic, but let it take in N BAMs
+    # _internally_ it will (for the first pass):
+    #  notice it's running on multiple BAMs
+    #  get the single-BAM results
+    #  merge them with joinx and make a combined VCF (tolerating the fact that per-bam variants are not VCF)
+    #  run bamreadcount to fill-in the blanks
+    #
 
     $self->status_message("Executing detect variants step");
 
@@ -240,12 +258,6 @@ $DB::single = 1;
     $params{indel_detection_strategy} = $build->indel_detection_strategy if $build->indel_detection_strategy;
     $params{sv_detection_strategy} = $build->sv_detection_strategy if $build->sv_detection_strategy;
     $params{cnv_detection_strategy} = $build->cnv_detection_strategy if $build->cnv_detection_strategy;
-
-    for my $bam (@bams){
-        unless (-e $bam){
-            die $self->error_message("Bam file could not be reached at: ".$bam);
-        }
-    }
 
     $params{multiple_bams} = \@bams;
 
@@ -277,15 +289,6 @@ $DB::single = 1;
 
     $self->status_message("detect variants command completed successfully");
 
-
-    #
-    # run the DV2 API to do variant detection as we do in somatic, but let it take in N BAMs
-    # _internally_ it will (for the first pass):
-    #  notice it's running on multiple BAMs
-    #  get the single-BAM results
-    #  merge them with joinx and make a combined VCF (tolerating the fact that per-bam variants are not VCF)
-    #  run bamreadcount to fill-in the blanks
-    #
 
     # dump pedigree data into a file
 
