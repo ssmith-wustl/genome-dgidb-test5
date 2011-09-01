@@ -10,7 +10,8 @@ use above 'Genome';
 use_ok('Genome::Model::Tools::Vcf::Convert::Snv::Varscan');
 
 my $test_dir = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Vcf-Convert-Snv-Varscan";
-my $expected_base = "expected.v1";
+# V2 changed to expect a blank VAQ value
+my $expected_base = "expected.v2";
 my $expected_dir = "$test_dir/$expected_base";
 my $expected_file = "$expected_dir/output.vcf";
 

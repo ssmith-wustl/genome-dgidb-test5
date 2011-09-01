@@ -7,12 +7,12 @@ use Genome::Info::IUB;
 
 class Genome::Model::Tools::Vcf::Convert::Snv::Samtools {
     is => 'Genome::Model::Tools::Vcf::Convert::Base',
-    doc => 'Generate a VCF file from sniper output'
+    doc => 'Generate a VCF file from samtools output'
 };
 
 sub help_synopsis {
     <<'HELP';
-    Generate a VCF file from sniper snv output
+    Generate a VCF file from samtools snv output
 HELP
 }
 
