@@ -21,7 +21,13 @@ class Genome::Model::Tools::Dbsnp::Import::Flatfile {
                 is => 'Path',
                 is_output => 1,
                 doc => 'File tsv output is written to',
-            }
+            },
+            reference_coordinates => {
+                is => 'Text',
+                is_input => 1,
+                default => 'GRCh37.p2',
+                doc => 'reference_coordinates whose coordinates will be used',
+            },
         ],
 };
 
@@ -113,12 +119,13 @@ sub process_block {
     # ensure the ss_pick=YES field is first
     my $self = shift;
     my $output_fh = shift;
+    my $reference_coordinates = $self->reference_coordinates;
 
     my @ss = sort { $b->[-1] cmp $a->[-1] } (grep { $_->[0] =~ /^ss/ } @_);
     my @submitters = uniq map { $_->[1] } @ss;
     my ($snp) = grep { $_->[0] eq 'SNP' } @_;
     my ($val) = grep { $_->[0] eq 'VAL' } @_;
-    my @ctgs = grep { $_->[0] eq 'CTG' && $_->[1] eq 'assembly=GRCh37.p2' } @_;
+    my @ctgs = grep { $_->[0] eq 'CTG' && $_->[1] eq "assembly=$reference_coordinates" } @_;
     
     my %record = ('ds_id'        => 0,
                   'rs_id'        => $_[0][0],
