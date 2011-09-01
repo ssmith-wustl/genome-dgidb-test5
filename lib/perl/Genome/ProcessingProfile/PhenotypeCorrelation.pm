@@ -174,68 +174,32 @@ sub _execute_build {
     my @instdata = Genome::InstrumentData->get(id => [ map { $_->value_id } @instdata_assn ]);
     $build->status_message("found " . scalar(@instdata) . " instdata");
 
-    my %instdata_by_sample;
-    for my $instdata (@instdata) {
-        $instdata_by_sample{$instdata->sample->id}{$instdata->id} = 1;
+    $self->status_message('Gathering alignments...');
+    my $reference_sequence_build = $build->inputs(name => 'reference_sequence_build')->value;
+    my $reference_fasta = $reference_sequence_build->full_consensus_path('fa');
+    unless(-e $reference_fasta){
+        die $self->error_message("fasta file for reference build doesn't exist!");
     }
-
 
     #
     # get the bam for each sample
     # this will only work right now if the per-sample model has already run
     # once Tom's new alignment thing is in place, it would actually generate them in parallel
     #
-
-    unless ($self->alignment_strategy eq 'instrument_data aligned to reference_sequence_build using bwa 0.5.9 [-q 5] then merged using picard 1.29 then deduplicated using picard 1.29') {
-        die "this pipeline is currently hard-coded to only take 'instrument_data aligned to reference_sequence_build using bwa 0.5.9 [-q 5] then merged using picard 1.29 then deduplicated using picard 1.29' until the new parser is complete...";
-    }
-
-    my @alignment_params = (
-        'samtools_version' => 'r599',
-        'test_name' => undef,
-        'aligner_params' => '-t 4 -q 5::',
-        'merger_version' => '1.29',
-        'aligner_version' => '0.5.9',
-        'aligner_name' => 'bwa',
-        'merger_name' => 'picard',
-        'merger_params' => undef,
-        'picard_version' => '1.29',
-        'force_fragment' => undef,
-        'duplication_handler_name' => 'picard',
-        'duplication_handler_version' => '1.29',
-        'duplication_handler_params' => undef,
-        'trimmer_version' => undef,
-        'trimmer_name' => undef,
-        'trimmer_params' => undef
+    
+    my $result = Genome::InstrumentData::Composite->get_or_create(
+        inputs => {
+            instrument_data => \@instdata,
+            reference_sequence_build => $reference_sequence_build,
+        },
+        strategy => $self->alignment_strategy,
     );
 
-    # FOR DEBUGGING DROP THIS TO TWO BAMS
-    @samples = (@samples[0,1]);
-$DB::single = 1;
-
-    my @bams;
-    my $reference_sequence_build = $build->inputs(name => 'reference_sequence_build')->value;
-    for my $sample (@samples) {
-        my $ihash = $instdata_by_sample{$sample->id};
-        my @instdata_ids = sort keys %$ihash;
-        my $merged_alignment_result = Genome::InstrumentData::AlignmentResult::Merged->get_with_lock(
-            @alignment_params,
-            reference_build_id => $reference_sequence_build->id,
-            instrument_data_id => \@instdata_ids,
-        );
-        unless ($merged_alignment_result) {
-            $build->error_message("no merged alignments for sample " . $sample->__display_name__);
-            next;
-        }
-        my $bam = $merged_alignment_result->merged_alignment_bam_path;
-        $self->status_message("bam for sample " . $sample->name . " is at path " . $bam);
-        push @bams, $bam;
-    }
-    
+    my @bams = $result->bam_paths;
     unless (@bams == @samples) {
         die $self->error_message("Failed to find alignment results for all samples!");
     }
-
+    $self->status_message('Found ' . scalar(@bams) . ' merged BAMs.');
     for my $bam (@bams){
         unless (-e $bam){
             die $self->error_message("Bam file could not be reached at: ".$bam);
@@ -254,25 +218,13 @@ $DB::single = 1;
     $self->status_message("Executing detect variants step");
 
     my %params;
-    $params{snv_detection_strategy} = $build->snv_detection_strategy if $build->snv_detection_strategy;
-    $params{indel_detection_strategy} = $build->indel_detection_strategy if $build->indel_detection_strategy;
-    $params{sv_detection_strategy} = $build->sv_detection_strategy if $build->sv_detection_strategy;
-    $params{cnv_detection_strategy} = $build->cnv_detection_strategy if $build->cnv_detection_strategy;
+    $params{snv_detection_strategy} = $self->snv_detection_strategy if $self->snv_detection_strategy;
+    $params{indel_detection_strategy} = $self->indel_detection_strategy if $self->indel_detection_strategy;
+    $params{sv_detection_strategy} = $self->sv_detection_strategy if $self->sv_detection_strategy;
+    $params{cnv_detection_strategy} = $self->cnv_detection_strategy if $self->cnv_detection_strategy;
 
     $params{multiple_bams} = \@bams;
-
-    my $reference_build = $build->reference_sequence_build;
-    my $reference_fasta = $reference_build->full_consensus_path('fa');
-    unless(-e $reference_fasta){
-        die $self->error_message("fasta file for reference build doesn't exist!");
-    }
     $params{reference_build_id} = $reference_sequence_build->id;
-
-    #my $normal_bam = $build->normal_bam;
-    #unless (-e $normal_bam){
-    #    die $self->error_message("No normal bam found for somatic model");
-    #}
-    #$params{control_aligned_reads_input} = $normal_bam;
 
     my $output_dir = $build->data_directory."/variants";
     $params{output_directory} = $output_dir;

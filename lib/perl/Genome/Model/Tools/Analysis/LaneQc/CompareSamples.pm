@@ -90,18 +90,20 @@ sub execute {                               # replace with real execution logic.
 	print "Loading variants from file 1...\n";
 	my %variant_calls1 = load_variant_calls($variant_file1, $min_depth_het, $min_depth_hom);
 	print $stats{'num_snps'} . " SNPs loaded\n";
+	$stats{'num_snps_file1'} = $stats{'num_snps'};
 	$stats{'num_snps'} = 0;
 	
 	print "Loading variants from file 2...\n";
 	my %variant_calls2 = load_variant_calls($variant_file2, $min_depth_het, $min_depth_hom);
 	print $stats{'num_snps'} . " SNPs loaded\n";
+	$stats{'num_snps_file2'} = $stats{'num_snps'};
 	$stats{'num_snps'} = 0;
 
 	foreach my $key (keys %variant_calls1)
 	{
 		if($variant_calls2{$key})
 		{
-			$stats{'num_snps'}++;			
+			$stats{'num_snps_compared'}++;			
 
 			my ($ref_base, $chip_gt) = split(/\t/, $variant_calls1{$key});
 			($ref_base, my $cons_gt) = split(/\t/, $variant_calls2{$key});
@@ -170,7 +172,16 @@ sub execute {                               # replace with real execution logic.
 
 	}
 
-	print $stats{'num_snps'} . " SNPs called in both samples\n";
+	print $stats{'num_snps_compared'} . " SNPs called in both samples\n";
+
+	if($stats{'num_snps_file1'} > $stats{'num_snps_file2'})
+	{
+		$stats{'pct_overlap'} = sprintf("%.2f", $stats{'num_snps_compared'} / $stats{'num_snps_file2'} * 100);
+	}
+	else
+	{
+		$stats{'pct_overlap'} = sprintf("%.2f", $stats{'num_snps_compared'} / $stats{'num_snps_file1'} * 100);
+	}
 
 	## Calculate pct ##
 	
@@ -197,21 +208,24 @@ sub execute {                               # replace with real execution logic.
 
 	if($self->verbose)
 	{
-		print $stats{'num_snps'} . " SNPs parsed from variants file\n";
-		print $stats{'num_variant_match'} . " had matching calls from sequencing\n";
-		print $stats{'hom_was_het'} . " homozygotes from array were called heterozygous\n";
-		print $stats{'het_was_hom'} . " heterozygotes from array were called homozygous\n";
-		print $stats{'het_was_diff_het'} . " heterozygotes from array were different heterozygote\n";
+		print $stats{'num_snps_compared'} . " SNPs compared\n";
+		print $stats{'num_variant_match'} . " had concordant genotypes\n";
+		print $stats{'hom_was_het'} . " homozygotes from file1 were called heterozygous in file2\n";
+		print $stats{'het_was_hom'} . " heterozygotes from file1 were called homozygous in file2\n";
+		print $stats{'het_was_diff_het'} . " heterozygotes from file1 were different heterozygote\n";
 		print $stats{'pct_variant_match'} . "% concordance at variant sites\n";
 		print $stats{'pct_hom_match'} . "% concordance at rare-homozygous sites\n";
 		print $stats{'pct_overall_match'} . "% overall concordance match\n";
 	}
 	else
 	{
-		print "Sample\tCompared\tMatched\tConcord\n";
+		print "Sample\tFile1\tFile2\tOverlap\tCompared\tMatched\tConcord\n";
 		print "$sample_name\t";
-		print $stats{'num_snps'} . "\t";
-		print $stats{'num_variant_match'} . "\t";
+		print commify($stats{'num_snps_file1'}) . "\t";
+		print commify($stats{'num_snps_file2'}) . "\t";
+		print $stats{'pct_overlap'} . "\t";
+		print commify($stats{'num_snps_compared'}) . "\t";
+		print commify($stats{'num_variant_match'}) . "\t";
 #		print $stats{'hom_was_het'} . "\t";
 #		print $stats{'het_was_hom'} . "\t";
 #		print $stats{'het_was_diff_het'} . "\t";
@@ -269,12 +283,22 @@ sub load_variant_calls
 		my $cns_call = $lineContents[3];
 		
 		my $depth = 0;
+
+		## Identify newer BED format of SNVs ##
+		
+		if($lineContents[1] =~ /[0-9]/ && $lineContents[2] =~ /[0-9]/ && $lineContents[3] =~ '/')
+		{
+			$file_type = "bed";
+			($ref_base, $cns_call) = split(/\//, $lineContents[3]);
+
+		}
 		
 		if(lc($chrom) =~ "chrom")
 		{
 			## Ignore header ##
 			$file_type = "varscan";
 		}
+
 		else
 		{
 			if($lineContents[6] && $lineContents[6] =~ '%')
@@ -313,6 +337,12 @@ sub load_variant_calls
 						$cons_gt = $allele1 . $allele2;
 						$cons_gt = sort_genotype($cons_gt);
 					}					
+				}
+				elsif($file_type eq "bed")
+				{
+#					($ref_base, $cns_call) = split(/\//, $lineContents[3]);
+					$depth = $lineContents[5];
+					$cons_gt = code_to_genotype($cns_call);
 				}
 				
 				else

@@ -718,6 +718,16 @@ sub md5sum {
     return $digest;
 }
 
+sub md5sum_data {
+    my ($self, $data) = @_;
+    unless (defined $data) {
+        Carp::croak('No data passed to md5sum_data');
+    }
+    my $digest = Digest::MD5->new;
+    $digest->add($data);
+    return $digest->hexdigest;
+}
+
 sub directory_size_recursive {
     my ($self,$directory) = @_;
     my $size;

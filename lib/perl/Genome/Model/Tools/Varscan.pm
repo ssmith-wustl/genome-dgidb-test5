@@ -71,15 +71,18 @@ sub pileup_command_for_reference_and_bam {
     my $self = shift;
     my $reference = shift;
     my $bam = shift;
+    my $mapqual = shift;
+
+    $mapqual = 10 if(!$mapqual);
 
     my $command;
     # TODO this should be made a little cleaner, but it works for now.
     if ($self->version eq "2.2.4") {
         my $samtools_path = Genome::Model::Tools::Sam->path_for_samtools_version("r963"); # The last version of samtools that supports pileup
-        $command = "$samtools_path view -b -u -q 10 $bam | $samtools_path pileup -f $reference -";
+        $command = "$samtools_path view -b -u -q $mapqual $bam | $samtools_path pileup -f $reference -";
     } else {
         my $samtools_path = Genome::Model::Tools::Sam->path_for_samtools_version("r963"); # The latest version of samtools installed should go here
-        $command = "$samtools_path mpileup -f $reference -q 10 $bam";
+        $command = "$samtools_path mpileup -f $reference -q $mapqual $bam";
     }
 
     return $command;

@@ -69,7 +69,7 @@ sub execute {
     my $sequence_file = $self->sequence_file;
     unless (defined $prediction_directory and defined $sequence_file) {
         if (defined $self->build_id) {
-            my $build = Genome::Model::Build::GenePrediction::Eukaryotic->get($self->build_id);
+            my $build = Genome::Model::Build::GenePrediction::Command::Eukaryotic->get($self->build_id);
             unless ($build) {
                 $self->error_message("Could not get eukaryotic gene prediction with build ID " . $self->build_id);
                 confess $self->error_message;

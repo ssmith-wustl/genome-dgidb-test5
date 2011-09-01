@@ -217,16 +217,19 @@ sub execute {                               # replace with real execution logic.
 					}
 				}
 	
-				if($model->last_succeeded_build_directory)
+				if($model->last_succeeded_build_directory || $model->id == 2877873505)
 				{
 					$model_status = "Succeeded";	## Override if we have successful build dir ##				
 					$succeeded_models_by_sample{$subject_name} = $model_id;
 					$last_build_dir = $model->last_succeeded_build_directory;
+					$last_build_dir = "/gscmnt/ams1183/info/model_data/2877873505/build113565171" if($model->id == 2877873505);
 					my $tumor_model = $model->tumor_model;
 					my $normal_model = $model->normal_model;
 					my $tumor_sample = $tumor_model->subject_name;
 					my $normal_sample = $normal_model->subject_name;
 
+					my @temp = split(/\-/, $tumor_sample);
+					my $patient_id = join("-", "TCGA", $temp[1], $temp[2]);
 
 					if($self->output_build_dirs)
 					{
@@ -310,6 +313,8 @@ sub execute {                               # replace with real execution logic.
 						## If UHC-filter flag turned on and file exists, use it instead ##
 						if($self->uhc_filter && -e "$tier1_snvs.uhc-filter")
 						{
+							my $uhc_count = `cat $tier1_snvs.uhc-filter | wc -l`; chomp($uhc_count);
+							$stats{'uhc_sites_skipped'} += $uhc_count;
 							$tier1_snvs = $last_build_dir . "/merged.somatic.snp.filter.novel.tier1.uhc-filter.removed";
 						}
 
@@ -334,7 +339,24 @@ sub execute {                               # replace with real execution logic.
 						my $output_file = $tier1_snvs . ".uhc-filter";
 						my $filtered_file = $tier1_snvs . ".uhc-filter.removed";
 						
-						system("bsub -q short -R\"select[model!=Opteron250 && mem>4000]\" gmt somatic ultra-high-confidence --tumor-bam $tumor_bam --normal-bam $normal_bam --variant-file $tier1_snvs --output-file $output_file --filtered-file $filtered_file");
+						if(-e $output_file)
+						{
+							save_uhc_calls($patient_id, $output_file);
+						}
+						else
+						{
+							if($self->reference)
+							{
+								print "Running Reference\n";
+								system("bsub -q short -R\"select[model!=Opteron250 && mem>6000] rusage[mem=6000]\" -M 6000000 gmt somatic ultra-high-confidence --tumor-bam $tumor_bam --normal-bam $normal_bam --variant-file $tier1_snvs --output-file $output_file --filtered-file $filtered_file --reference " . $self->reference);															
+							}
+							else
+							{
+								system("bsub -q short -R\"select[model!=Opteron250 && mem>6000] rusage[mem=6000]\" -M 6000000 gmt somatic ultra-high-confidence --tumor-bam $tumor_bam --normal-bam $normal_bam --variant-file $tier1_snvs --output-file $output_file --filtered-file $filtered_file");															
+							}
+
+						}
+
 					}
 
 					if($self->varscan_copynumber)
@@ -431,6 +453,7 @@ sub execute {                               # replace with real execution logic.
 	if($self->output_review)
 	{
 		print $stats{'review_snvs_possible'} . " Tier 1 SNVs could be reviewed\n";
+		print $stats{'uhc_sites_skipped'} . " UHC SNVs were excluded from review\n";
 		print $stats{'review_snvs_already'} . " were already reviewed\n";
 		print $stats{'review_snvs_already_wildtype'} . " were wild-type in another sample\n";
 		print $stats{'review_snvs_already_germline'} . " were germline in at least 3 other samples\n";
@@ -452,6 +475,36 @@ sub execute {                               # replace with real execution logic.
 	return 1;
 }
 
+
+
+################################################################################################
+# Get Build Results - Summarize the progress/results of a given build
+#
+################################################################################################
+
+sub save_uhc_calls
+{
+	my $patient_id = shift(@_);
+	my $FileName = shift(@_);
+
+	## Parse the Tier 1 SNVs file ##
+
+	my $input = new FileHandle ($FileName);
+	my $lineCounter = 0;
+
+	while (<$input>)
+	{
+		chomp;
+		my $line = $_;
+		$lineCounter++;
+		
+		my ($chrom, $chr_start, $chr_stop) = split(/\t/, $line);
+		my $variant_key = join("\t", $patient_id, $chrom, $chr_start, $chr_stop);
+		$passed_sites{$variant_key} = 1;
+	}
+	
+	close($input);
+}
 
 
 ################################################################################################
@@ -679,6 +732,10 @@ sub load_review_database
 		{
 			my @temp = split(/\-/, $sample_name);
 			my $patient_id = join("-", "TCGA", $temp[1], $temp[2]);
+			if(!$temp[1] || !$temp[2])
+			{
+				die "Error parsing line from $FileName: $line had incomplete sample name $sample_name\n";
+			}
 			my $key = join("\t", $patient_id, $chrom, $chr_start, $chr_stop);
 			$passed_sites{$key} = 1;
 			$num_passed_sites++;
