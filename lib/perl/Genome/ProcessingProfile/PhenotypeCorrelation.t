@@ -96,7 +96,9 @@ __END__
     # if put at the top of this script it will use that group instead 
 
     my @groups = Genome::ModelGroup->get([13391, 13392, 13411]);
-    is(scalar(@groups), 3, "got 3 members");
+    is(scalar(@groups), 3, "got 3 groups");
+
+    my @models = map { $_->members } @groups;
 
     my @samples = map { $_->subjects(-hints => [qw/attributes/]) } @groups;
     ok(scalar(@samples), "got " . scalar(@samples) . " samples");
@@ -110,5 +112,5 @@ __END__
         members => \@patients,
     );
     ok($group, "created the ASMS cohort");
-
+    # UR::Context->commit,
 
