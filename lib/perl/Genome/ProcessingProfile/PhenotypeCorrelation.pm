@@ -174,13 +174,19 @@ sub _execute_build {
     my @instdata = Genome::InstrumentData->get(id => [ map { $_->value_id } @instdata_assn ]);
     $build->status_message("found " . scalar(@instdata) . " instdata");
 
+    $self->status_message('Gathering alignments...');
+    my $reference_sequence_build = $build->inputs(name => 'reference_sequence_build')->value;
+    my $reference_fasta = $reference_sequence_build->full_consensus_path('fa');
+    unless(-e $reference_fasta){
+        die $self->error_message("fasta file for reference build doesn't exist!");
+    }
+
     #
     # get the bam for each sample
     # this will only work right now if the per-sample model has already run
     # once Tom's new alignment thing is in place, it would actually generate them in parallel
     #
-    $self->status_message('Gathering alignments...');
-    my $reference_sequence_build = $build->inputs(name => 'reference_sequence_build')->value;
+    
     my $result = Genome::InstrumentData::Composite->get_or_create(
         inputs => {
             instrument_data => \@instdata,
@@ -190,56 +196,15 @@ sub _execute_build {
     );
 
     my @bams = $result->bam_paths;
-
     unless (@bams == @samples) {
         die $self->error_message("Failed to find alignment results for all samples!");
     }
     $self->status_message('Found ' . scalar(@bams) . ' merged BAMs.');
-
-    $self->status_message("Executing detect variants step");
-
-    my %params;
-    $params{snv_detection_strategy} = $build->snv_detection_strategy if $build->snv_detection_strategy;
-    $params{indel_detection_strategy} = $build->indel_detection_strategy if $build->indel_detection_strategy;
-    $params{sv_detection_strategy} = $build->sv_detection_strategy if $build->sv_detection_strategy;
-    $params{cnv_detection_strategy} = $build->cnv_detection_strategy if $build->cnv_detection_strategy;
-
     for my $bam (@bams){
         unless (-e $bam){
             die $self->error_message("Bam file could not be reached at: ".$bam);
         }
     }
-
-    $params{multiple_bams} = \@bams;
-
-    my $reference_build = $build->reference_sequence_build;
-    my $reference_fasta = $reference_build->full_consensus_path('fa');
-    unless(-e $reference_fasta){
-        die $self->error_message("fasta file for reference build doesn't exist!");
-    }
-    $params{reference_build_id} = $reference_sequence_build->id;
-
-    #my $normal_bam = $build->normal_bam;
-    #unless (-e $normal_bam){
-    #    die $self->error_message("No normal bam found for somatic model");
-    #}
-    #$params{control_aligned_reads_input} = $normal_bam;
-
-    my $output_dir = $build->data_directory."/variants";
-    $params{output_directory} = $output_dir;
-
-    my $command = Genome::Model::Tools::DetectVariants2::Dispatcher->create(%params);
-    unless ($command){
-        die $self->error_message("Couldn't create detect variants dispatcher from params:\n".Data::Dumper::Dumper \%params);
-    }
-    my $rv = $command->execute;
-    my $err = $@;
-    unless ($rv){
-        die $self->error_message("Failed to execute detect variants dispatcher(err:$@) with params:\n".Data::Dumper::Dumper \%params);
-    }
-
-    $self->status_message("detect variants command completed successfully");
-
 
     #
     # run the DV2 API to do variant detection as we do in somatic, but let it take in N BAMs
@@ -249,6 +214,28 @@ sub _execute_build {
     #  merge them with joinx and make a combined VCF (tolerating the fact that per-bam variants are not VCF)
     #  run bamreadcount to fill-in the blanks
     #
+
+    $self->status_message("Executing detect variants step");
+
+    my %params;
+    $params{snv_detection_strategy} = $self->snv_detection_strategy if $self->snv_detection_strategy;
+    $params{indel_detection_strategy} = $self->indel_detection_strategy if $self->indel_detection_strategy;
+    $params{sv_detection_strategy} = $self->sv_detection_strategy if $self->sv_detection_strategy;
+    $params{cnv_detection_strategy} = $self->cnv_detection_strategy if $self->cnv_detection_strategy;
+    $params{reference_build_id} = $reference_sequence_build->id;
+    $params{multiple_bams} = \@bams;
+
+    my $output_dir = $build->data_directory."/variants";
+    $params{output_directory} = $output_dir;
+
+    eval { Genome::Model::Tools::DetectVariants2::Dispatcher->execute(%params); };
+    if ($@) {
+        $self->warning_message("Failed to execute detect variants with multiple BAMs!\n");
+        #die $self->warning_message("Failed to execute detect variants dispatcher(err:$@) with params:\n" . Data::Dumper::Dumper \%params);
+    }
+    else {
+        $self->status_message("detect variants command completed successfully");
+    }
 
     # dump pedigree data into a file
 
@@ -305,6 +292,8 @@ sub _map_workflow_inputs {
     my $build = shift;
 
     my @inputs = ();
+
+    #### This is old code from the somatic variation pipeline, replace with phenotype correlation params/inputs! #####
 
     # Verify the somatic model
     my $model = $build->model;

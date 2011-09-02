@@ -3,6 +3,7 @@ package Genome::Model::Tools::Vcf::Convert::Base;
 use strict;
 use warnings;
 use Genome;
+use POSIX 'strftime';
 
 class Genome::Model::Tools::Vcf::Convert::Base {
     is => 'Command',
@@ -53,8 +54,8 @@ class Genome::Model::Tools::Vcf::Convert::Base {
         vcf_version => {
             is => 'Text',
             doc => "Version of the VCF being printed" ,
-            default => "4.0",
-            valid_values => ["4.0"],
+            default => "4.1",
+            valid_values => ["4.1"],
         },
     ],
     has_transient_optional => [
@@ -145,14 +146,12 @@ sub get_base_at_position {
 }
 
 # Print the header to the output file... currently assumes "standard" columns of GT,GQ,DP,BQ,MQ,AD,FA,VAQ in the FORMAT field and VT in the INFO field.
-# TODO this also assumes a somatic file (NORMAL and PRIMARY headers) ...
 sub print_header{
     my $self = shift;
-
-    my $file_date = localtime();
+    # FIXME FIXME print source 
+    my $file_date = strftime( "%Y%m%d", localtime);
 
     my $public_reference;
-    #
     # Calculate the location of the public reference sequence
     my $seq_center = $self->sequencing_center;
     my $reference_sequence_version = $self->reference_sequence_build->version;
@@ -179,27 +178,86 @@ sub print_header{
     $output_fh->print("##fileDate=" . $file_date . "\n");
     $output_fh->print("##reference=$public_reference" . "\n");
     $output_fh->print("##phasing=none" . "\n");
-    $output_fh->print("##SAMPLE=" . $sample . "\n");
 
-    #format info
-    $output_fh->print("##FORMAT=<ID=GT,Number=1,Type=String,Description=\"Genotype\">" . "\n");
-    $output_fh->print("##FORMAT=<ID=GQ,Number=1,Type=Integer,Description=\"Genotype Quality\">" . "\n");
-    $output_fh->print("##FORMAT=<ID=DP,Number=1,Type=Integer,Description=\"Total Read Depth\">" . "\n");
-    $output_fh->print("##FORMAT=<ID=BQ,Number=1,Type=Integer,Description=\"Average Base Quality corresponding to alleles 0/1/2/3... after software and quality filtering\">" . "\n");
-    $output_fh->print("##FORMAT=<ID=MQ,Number=1,Type=Integer,Description=\"Average Mapping Quality corresponding to alleles 0/1/2/3... after software and quality filtering\">" . "\n");
-    $output_fh->print("##FORMAT=<ID=AD,Number=1,Type=Integer,Description=\"Allele Depth corresponding to alleles 0/1/2/3... after software and quality filtering\">" . "\n");
-    $output_fh->print("##FORMAT=<ID=FA,Number=1,Type=Float,Description=\"Fraction of reads supporting ALT\">" . "\n");
-    $output_fh->print("##FORMAT=<ID=VAQ,Number=1,Type=Integer,Description=\"Variant Quality\">" . "\n"); # FIXME this is sometimes a Float and sometimes an Integer
-
-    #INFO
-    $output_fh->print("##INFO=<ID=VT,Number=1,Type=String,Description=\"Variant type\">" . "\n");
+    $self->print_tag_meta;
+    
+    my @header_columns = ("CHROM","POS","ID","REF","ALT","QUAL","FILTER","INFO","FORMAT");
+    push @header_columns, ( defined $self->control_aligned_reads_sample ) ? ($self->control_aligned_reads_sample, $self->aligned_reads_sample) : ($self->aligned_reads_sample);
 
     #column header:
-    $output_fh->print( "#" . join("\t", ("CHROM","POS","ID","REF","ALT","QUAL","FILTER","INFO","FORMAT","NORMAL","PRIMARY")) . "\n");
+    $output_fh->print( "#" . join("\t", @header_columns) . "\n");
+    return 1;
+}
+
+# Print the FORMAT and INFO meta information lines which are part of the header
+sub print_tag_meta {
+    my $self = shift;
+    my $output_fh = $self->_output_fh;
+
+    my @tags = $self->get_format_meta;
+    push @tags, $self->get_info_meta;
+
+    for my $tag (@tags) {
+        my $string = $self->format_meta_line($tag);
+        $output_fh->print("$string\n");
+    }
 
     return 1;
 }
 
+# Return an array of hashrefs describing the meta information for FORMAT fields
+sub get_format_meta {
+    my $self = shift;
+
+    my $gt = {MetaType => "FORMAT", ID => "GT", Number => 1, Type => "String", Description => "Genotype"};
+    my $gq = {MetaType => "FORMAT", ID => "GQ", Number => 1, Type => "Integer", Description => "Genotype Quality"};
+    my $dp = {MetaType => "FORMAT", ID => "DP", Number => 1, Type => "Integer", Description => "Total Read Depth"};
+    my $bq = {MetaType => "FORMAT", ID => "BQ", Number => 1, Type => "Integer", Description => "Average Base Quality corresponding to alleles 0/1/2/3... after software and quality filtering"};
+    my $mq = {MetaType => "FORMAT", ID => "MQ", Number => 1, Type => "Integer", Description => "Average Mapping Quality"};
+    my $ad = {MetaType => "FORMAT", ID => "AD", Number => 1, Type => "Integer", Description => "Allele Depth corresponding to alleles 0/1/2/3... after software and quality filtering"};
+    my $fa = {MetaType => "FORMAT", ID => "FA", Number => 1, Type => "Float", Description => "Fraction of reads supporting ALT"};
+    my $vaq = {MetaType => "FORMAT", ID => "VAQ", Number => 1, Type => "Integer", Description => "Variant Quality"}; # FIXME sometimes a float
+
+    return ($gt, $gq, $dp, $bq, $mq, $ad, $fa, $vaq);
+}
+
+# Return an array of hashrefs describing the meta information for INFO fields
+sub get_info_meta {
+    my $self = shift;
+
+    # We currently have no INFO fields that are desired in every VCF for snvs (Variant Type) is currently considered redundant
+    return;
+}
+
+# Given a hashref representing one meta line, return a formatted line for printing in the header
+sub format_meta_line {
+    my $self = shift;
+    my $tag = shift;
+
+    $self->validate_meta_tag($tag);
+
+    my $string = sprintf("##%s=<ID=%s,Number=%s,Type=%s,Description=\"%s\">", $tag->{MetaType}, $tag->{ID}, $tag->{Number}, $tag->{Type}, $tag->{Description});
+
+    return $string;
+}
+
+# Takes in a hashref representing one meta tag from the header and makes sure it has the required information
+sub validate_meta_tag {
+    my $self = shift;
+    my $tag = shift;
+
+    unless (defined $tag->{MetaType} && defined $tag->{ID} && defined $tag->{Number} && defined $tag->{Type} && defined $tag->{Description} ) {
+        die $self->error_message("A meta tag must contain MetaType, ID, Number, Type, and Description\nTag: " . Data::Dumper::Dumper $tag);
+    }
+
+    unless ($tag->{MetaType} eq "INFO" || $tag->{MetaType} eq "FORMAT") {
+        die $self->error_message("MetaType for tags must be INFO or FORMAT. Value found is: " . $tag->{MetaType});
+    }
+
+    return 1;
+}
+
+# Loop through each input line, parse it, and print it to output
 sub convert_file {
     my $self = shift;
     my $input_fh = $self->_input_fh;
@@ -213,6 +271,7 @@ sub convert_file {
     return 1;
 }
 
+# Print a single line to output
 sub write_line {
     my $self = shift;
     my $line = shift;
@@ -253,6 +312,7 @@ sub generate_gt {
     return join("/", sort(@gt_string));
 }
 
+# This method should be overridden by each subclass. It should take in a single detector line and return a single VCF line representing that detector line
 sub parse_line {
     my $self = shift;
 

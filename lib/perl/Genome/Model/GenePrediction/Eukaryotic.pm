@@ -12,7 +12,6 @@ class Genome::Model::GenePrediction::Eukaryotic {
             is => 'Genome::ProcessingProfile::GenePrediction::Eukaryotic',
             id_by => 'processing_profile_id',
         },
-        # Processing profile params
         max_bases_per_fasta => {
             via => 'processing_profile',
         },

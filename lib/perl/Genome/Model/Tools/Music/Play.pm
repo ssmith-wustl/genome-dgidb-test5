@@ -31,10 +31,6 @@ class Genome::Model::Tools::Music::Play {
             is => 'Text',
             doc => 'List of mutations using TCGA MAF specifications v2.2'
         },
-        genetic_data_type => {
-            is => 'Text',
-            doc => 'Data in matrix file must be either "gene" or "variant" type data',
-        },
         pathway_file => {
             is => 'Text',
             doc => 'Tab-delimited file of pathway information',
@@ -61,6 +57,10 @@ class Genome::Model::Tools::Music::Play {
             is => 'Boolean',
             doc => 'turn on to display larger working output',
             default => 1,
+        },
+        matrix_file => {
+            is => 'Text',
+            doc => 'Define this argument to store a mutation matrix',
         },
         permutations => {
             is => 'Number',
@@ -98,6 +98,10 @@ class Genome::Model::Tools::Music::Play {
         max_fdr => {
             is => 'Number',
             doc => 'The maximum allowed false discovery rate for a gene to be considered an SMG',
+        },
+        genetic_data_type => {
+            is => 'Text',
+            doc => 'Data in matrix file must be either "gene" or "variant" type data',
         },
         wu_annotation_headers => {
             is => 'Boolean',

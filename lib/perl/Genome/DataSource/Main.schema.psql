@@ -8,7 +8,7 @@ DROP TABLE IF EXISTS subject_attribute;
 DROP TABLE IF EXISTS subject;
 
 CREATE TABLE subject (
-    subject_id    integer NOT NULL,
+    subject_id    varchar(16) NOT NULL,
     subclass_name varchar(255) NOT NULL,
     name          varchar(255) NOT NULL,
     PRIMARY KEY (subject_id)
@@ -16,7 +16,7 @@ CREATE TABLE subject (
 CREATE INDEX subject_name_index ON subject(name);
 
 CREATE TABLE subject_attribute (
-    subject_id      integer NOT NULL REFERENCES subject(subject_id),
+    subject_id      varchar(16) NOT NULL REFERENCES subject(subject_id),
     attribute_label varchar(64) NOT NULL,
     attribute_value varchar(512) NOT NULL,
     nomenclature    varchar(64) NOT NULL,
@@ -26,9 +26,9 @@ CREATE INDEX subject_attribute_subject_id_index ON subject_attribute(subject_id)
 CREATE INDEX subject_attribute_label_index ON subject_attribute(attribute_label);
 
 CREATE TABLE fragment_library (
-    library_id integer NOT NULL,
+    library_id varchar(16) NOT NULL,
     full_name varchar(64) NOT NULL,
-    sample_id integer NOT NULL REFERENCES subject(subject_id),
+    sample_id varchar(16) NOT NULL REFERENCES subject(subject_id),
     library_insert_size varchar(64),
     PRIMARY KEY (library_id)
 );
@@ -39,7 +39,7 @@ CREATE TABLE instrument_data (
     id                  varchar(64) NOT NULL,
     subclass_name       varchar(64) NOT NULL,
     sequencing_platform varchar(64) NOT NULL,
-    library_id          integer NOT NULL REFERENCES fragment_library(library_id),
+    library_id          varchar(16) NOT NULL REFERENCES fragment_library(library_id),
     source_name         varchar(64),
     subset_name         varchar(64),
     run_name            varchar(64),

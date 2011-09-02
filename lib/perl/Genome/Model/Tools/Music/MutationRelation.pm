@@ -15,6 +15,7 @@ class Genome::Model::Tools::Music::MutationRelation {
     bam_list => { is => 'Text', doc => "Tab delimited list of BAM files [sample_name, normal_bam, tumor_bam] (See Description)" },
     maf_file => { is => 'Text', doc => "List of mutations in MAF format" },
     output_file => { is => 'Text', doc => "Results of mutation-relation tool" },
+    matrix_file => { is => 'Text', doc => "Define this argument to store a mutation matrix", is_optional => 1 },
     permutations => { is => 'Number', doc => "Number of permutations used to determine P-values", is_optional => 1, default => 100 },
     gene_list => { is => 'Text', doc => "List of genes to test, typically SMGs. If unspecified, all genes in MAF are tested.", is_optional => 1 },
   ],
@@ -107,7 +108,7 @@ sub execute {
   }
 
   # Create sample-gene matrix
-  my $matrix_file = create_sample_gene_matrix( $maf_file, \@all_sample_names, \@genes_to_test );
+  my $matrix_file = $self->create_sample_gene_matrix( $maf_file, \@all_sample_names, \@genes_to_test );
 
   # Perform mutation-relation test using R
   my $R_cmd = "R --slave --args < " . __FILE__ . ".R $matrix_file $permutations $output_file";
@@ -118,7 +119,7 @@ sub execute {
 }
 
 sub create_sample_gene_matrix {
-
+  my $self = shift;
   my ( $maf_file, $all_sample_names_ref, $genes_to_test_ref ) = @_;
   my @all_sample_names = @{$all_sample_names_ref};
   my @genes_to_test = @{$genes_to_test_ref};
@@ -173,10 +174,13 @@ sub create_sample_gene_matrix {
     @genes_to_test = sort keys %all_genes;
   }
 
-  # Write the input matrix for R code to a file
-  my $matrix_file = Genome::Sys->create_temp_file_path();
-  my $matrix_fh = new IO::File $matrix_file,"w";
+  # Write the input matrix to a file for use by the R code
+  my $matrix_file;
+  unless( $matrix_file = $self->matrix_file ) {
+    $matrix_file = Genome::Sys->create_temp_file_path();
+  }
 
+  my $matrix_fh = new IO::File $matrix_file,"w";
   # Print input matrix file header
   my $header = join("\t","Sample",@genes_to_test);
   $matrix_fh->print("$header\n");

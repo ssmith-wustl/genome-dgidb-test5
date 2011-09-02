@@ -89,26 +89,26 @@ sub execute {
     
     my $rg_added_records = 0;
     
-        while (my $line = $input_fh->getline) {
-                my $first_char = substr($line, 0, 1);
-                if ( $first_char ne '@') {
-                    $line =~ m/((\S*\s){11})(.*)$/;
-                    my $front = $1;
-                    my $back = $3;
-                    chomp $front;
-		    if (defined $back) {
-			chomp $back;
-		    }
-                    if ($back eq "") {
-                        print $output_fh $front."\tRG:Z:$read_group_tag\tPG:Z:$read_group_tag\n";
-                    } else {
-                        print $output_fh $front."RG:Z:$read_group_tag\tPG:Z:$read_group_tag\t".$back."\n";
-                    }
-                    $rg_added_records++;
-                } else {
-                    print $output_fh $line if ($self->pass_sam_headers);
-                }    
+    while (my $line = $input_fh->getline) {
+        my $first_char = substr($line, 0, 1);
+        if ( $first_char ne '@') {
+            $line =~ m/((?:\S*\s){11})(.*)$/;
+            my $front = $1;
+            my $back = $2;
+            chomp $front;
+            if (defined $back) {
+                chomp $back;
             }
+            if ($back eq "") {
+                print $output_fh $front."\tRG:Z:$read_group_tag\tPG:Z:$read_group_tag\n";
+            } else {
+                print $output_fh $front."RG:Z:$read_group_tag\tPG:Z:$read_group_tag\t".$back."\n";
+            }
+            $rg_added_records++;
+        } else {
+            print $output_fh $line if ($self->pass_sam_headers);
+        }    
+    }
 
     # don't close the file if we didn't open it!
     unless ($self->output_filehandle) {

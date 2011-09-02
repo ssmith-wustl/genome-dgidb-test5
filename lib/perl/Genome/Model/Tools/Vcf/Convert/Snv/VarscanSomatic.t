@@ -10,7 +10,9 @@ use above 'Genome';
 use_ok('Genome::Model::Tools::Vcf::Convert::Snv::VarscanSomatic');
 
 my $test_dir = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Vcf-Convert-Snv-VarscanSomatic";
-my $expected_base = "expected.v1";
+# V2 updated with various corrections
+# V3 - remove VT INFO field in header and VT=SNP in the body
+my $expected_base = "expected.v3";
 my $expected_dir = "$test_dir/$expected_base";
 my $expected_file = "$expected_dir/output.vcf";
 
@@ -20,6 +22,7 @@ my $input_file = "$test_dir/snvs.hq";
 my $command = Genome::Model::Tools::Vcf::Convert::Snv::VarscanSomatic->create( input_file => $input_file, 
                                                                                output_file  => $output_file,
                                                                                aligned_reads_sample => "TEST",
+                                                                               control_aligned_reads_sample => "OTHER_TEST",
                                                                                reference_sequence_build_id => 101947881);
 
 ok($command, 'Command created');
