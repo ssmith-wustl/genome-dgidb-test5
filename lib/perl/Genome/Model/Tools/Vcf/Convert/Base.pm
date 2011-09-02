@@ -3,6 +3,7 @@ package Genome::Model::Tools::Vcf::Convert::Base;
 use strict;
 use warnings;
 use Genome;
+use POSIX 'strftime';
 
 class Genome::Model::Tools::Vcf::Convert::Base {
     is => 'Command',
@@ -53,8 +54,8 @@ class Genome::Model::Tools::Vcf::Convert::Base {
         vcf_version => {
             is => 'Text',
             doc => "Version of the VCF being printed" ,
-            default => "4.0",
-            valid_values => ["4.0"],
+            default => "4.1",
+            valid_values => ["4.1"],
         },
     ],
     has_transient_optional => [
@@ -145,14 +146,12 @@ sub get_base_at_position {
 }
 
 # Print the header to the output file... currently assumes "standard" columns of GT,GQ,DP,BQ,MQ,AD,FA,VAQ in the FORMAT field and VT in the INFO field.
-# TODO this also assumes a somatic file (NORMAL and PRIMARY headers) ...
 sub print_header{
     my $self = shift;
 
-    my $file_date = localtime();
+    my $file_date = strftime( "%Y%m%d", localtime);
 
     my $public_reference;
-    #
     # Calculate the location of the public reference sequence
     my $seq_center = $self->sequencing_center;
     my $reference_sequence_version = $self->reference_sequence_build->version;
@@ -179,24 +178,25 @@ sub print_header{
     $output_fh->print("##fileDate=" . $file_date . "\n");
     $output_fh->print("##reference=$public_reference" . "\n");
     $output_fh->print("##phasing=none" . "\n");
-    $output_fh->print("##SAMPLE=" . $sample . "\n");
 
     #format info
     $output_fh->print("##FORMAT=<ID=GT,Number=1,Type=String,Description=\"Genotype\">" . "\n");
     $output_fh->print("##FORMAT=<ID=GQ,Number=1,Type=Integer,Description=\"Genotype Quality\">" . "\n");
     $output_fh->print("##FORMAT=<ID=DP,Number=1,Type=Integer,Description=\"Total Read Depth\">" . "\n");
     $output_fh->print("##FORMAT=<ID=BQ,Number=1,Type=Integer,Description=\"Average Base Quality corresponding to alleles 0/1/2/3... after software and quality filtering\">" . "\n");
-    $output_fh->print("##FORMAT=<ID=MQ,Number=1,Type=Integer,Description=\"Average Mapping Quality corresponding to alleles 0/1/2/3... after software and quality filtering\">" . "\n");
+    $output_fh->print("##FORMAT=<ID=MQ,Number=1,Type=Integer,Description=\"Average Mapping Quality\">" . "\n");
     $output_fh->print("##FORMAT=<ID=AD,Number=1,Type=Integer,Description=\"Allele Depth corresponding to alleles 0/1/2/3... after software and quality filtering\">" . "\n");
     $output_fh->print("##FORMAT=<ID=FA,Number=1,Type=Float,Description=\"Fraction of reads supporting ALT\">" . "\n");
     $output_fh->print("##FORMAT=<ID=VAQ,Number=1,Type=Integer,Description=\"Variant Quality\">" . "\n"); # FIXME this is sometimes a Float and sometimes an Integer
 
     #INFO
     $output_fh->print("##INFO=<ID=VT,Number=1,Type=String,Description=\"Variant type\">" . "\n");
+    
+    my @header_columns = ("CHROM","POS","ID","REF","ALT","QUAL","FILTER","INFO","FORMAT");
+    push @header_columns, ( defined $self->control_aligned_reads_sample ) ? ($self->control_aligned_reads_sample, $self->aligned_reads_sample) : ($self->aligned_reads_sample);
 
     #column header:
-    $output_fh->print( "#" . join("\t", ("CHROM","POS","ID","REF","ALT","QUAL","FILTER","INFO","FORMAT","NORMAL","PRIMARY")) . "\n");
-
+    $output_fh->print( "#" . join("\t", @header_columns) . "\n");
     return 1;
 }
 
