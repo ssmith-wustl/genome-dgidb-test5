@@ -18,6 +18,7 @@
     <link fromOperation="input connector"          fromProperty="skip_masking_if_no_rna"            toOperation="contig_predict_genes"     toProperty="skip_masking_if_no_rna" />
     <link fromOperation="input connector"          fromProperty="skip_repeat_masker"                toOperation="contig_predict_genes"     toProperty="skip_repeat_masker" />
     <link fromOperation="input connector"          fromProperty="rna_predictions_only_flag"         toOperation="contig_predict_genes"     toProperty="rna_predictions_only_flag" />
+    <link fromOperation="input connector"          fromProperty="rfam_no_big_flag"                  toOperation="contig_predict_genes"     toProperty="rfam_no_big_flag" />
 
     <link fromOperation="contig_predict_genes"     fromProperty="temp_prediction_directory"         toOperation="merge_predictions"        toProperty="temp_prediction_directories" />
     <link fromOperation="input connector"          fromProperty="prediction_directory"              toOperation="merge_predictions"        toProperty="prediction_directory" />
@@ -104,6 +105,7 @@
         <link fromOperation="input connector"           fromProperty="rfamscan_version"            toOperation="rfamscan"                  toProperty="version" />
         <link fromOperation="input connector"           fromProperty="raw_output_directory"        toOperation="rfamscan"                  toProperty="raw_output_directory" />
         <link fromOperation="make_temp_prediction_dir"  fromProperty="temp_prediction_directory"   toOperation="rfamscan"                  toProperty="prediction_directory" />
+        <link fromOperation="input connector"           fromProperty="rfam_no_big_flag"            toOperation="rfamscan"                  toProperty="no_big_flag" />
 
         <link fromOperation="input connector"           fromProperty="snap_version"                toOperation="snap"                      toProperty="version" />
         <link fromOperation="input connector"           fromProperty="snap_models"                 toOperation="snap"                      toProperty="model_files" />
@@ -205,6 +207,7 @@
             <inputproperty>snap_models</inputproperty>
             <inputproperty>fgenesh_model</inputproperty>
             <inputproperty>rna_predictions_only_flag</inputproperty>
+            <inputproperty>rfam_no_big_flag</inputproperty>
             <outputproperty>temp_prediction_directory</outputproperty>
             <outputproperty>masked_fasta_file</outputproperty>
             <outputproperty>repeat_masker_ace_file_chunk</outputproperty>
@@ -236,6 +239,7 @@
         <inputproperty>fgenesh_model</inputproperty>
         <inputproperty>rna_predictions_ace_file</inputproperty>
         <inputproperty>rna_predictions_only_flag</inputproperty>
+        <inputproperty>rfam_no_big_flag</inputproperty>
         <outputproperty>result</outputproperty>
     </operationtype>
 </workflow>

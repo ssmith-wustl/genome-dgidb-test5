@@ -20,6 +20,12 @@ class Genome::ProcessingProfile::GenePrediction::Eukaryotic {
             default => 0,
             doc => 'If set to true, lower-case masking characters are used by repeat masker instead of N',
         },
+        rfam_no_big_flag => {
+            is => 'Boolean',
+            is_optional => 1,
+            default => 1,
+            doc => 'If set, rfam will skip big trnas',
+        },
         rnammer_version => {
             is => 'Text',
             is_optional => 1,
@@ -86,6 +92,7 @@ sub _map_workflow_inputs {
         domain => $self->domain,
         max_bases_per_fasta => $self->max_bases_per_fasta,
         xsmall => $self->xsmall,
+        rfam_no_big_flag => $self->rfam_no_big_flag,
         rnammer_version => $self->rnammer_version,
         rfamscan_version => $self->rfamscan_version,
         snap_version =>  $self->snap_version,
