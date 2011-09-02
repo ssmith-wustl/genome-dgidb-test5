@@ -5,7 +5,6 @@ use warnings;
 
 use Genome;
 
-use PerlIO::gzip;
 use List::AllUtils qw( :all );
 
 class Genome::Model::Tools::Dbsnp::Import::Flatfile {
