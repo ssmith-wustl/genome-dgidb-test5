@@ -119,7 +119,9 @@ sub _map_workflow_inputs {
 
     my $params;
     for (my $i = 0; $i < (scalar @inputs); $i += 2) {
-        $params .= $inputs[$i] . " : " . $inputs[$i + 1] . "\n";
+        my $key = $inputs[$i];
+        my $value = $inputs[$i + 1] || 'undef';
+        $params .= "$key : $value\n";
     }
     $self->status_message("Parameters for workflow are: \n$params");
 
