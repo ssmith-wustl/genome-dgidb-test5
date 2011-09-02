@@ -7,6 +7,7 @@ use Genome;
 
 use Carp 'confess';
 use Data::Dumper 'Dumper';
+require Mail::Sendmail;
 
 class Genome::Model::Build::MetagenomicComposition16s {
     is => 'Genome::Model::Build',
@@ -823,6 +824,7 @@ sub prepare_instrument_data {
         return;
     }
     my $attempted = $input_metrics->count;
+    $attempted = 0 if not defined $attempted;
     my $reads_attempted = $attempted;
 
     my $output_metrics = Genome::Model::Tools::Sx::Metrics->read_from_file($output_metrics_file);
@@ -831,13 +833,21 @@ sub prepare_instrument_data {
         return;
     }
     my $processed = $output_metrics->count;
+    $processed = 0 if not defined $processed;
 
     $self->amplicons_attempted($attempted);
     $self->amplicons_processed($processed);
-    $self->amplicons_processed_success( $attempted > 0 ?  sprintf('%.2f', $processed / $attempted) : 0 );
+    my $processed_success =  $attempted > 0 ?  sprintf('%.2f', $processed / $attempted) : 0;
+    $self->amplicons_processed_success($processed_success);
     $self->reads_attempted($reads_attempted);
     $self->reads_processed($processed);
     $self->reads_processed_success( $reads_attempted > 0 ?  sprintf('%.2f', $processed / $reads_attempted) : 0 );
+
+    $self->status_message('Attempted:  '.$self->amplicons_attempted);
+    $self->status_message('Processed:  '.$self->amplicons_processed);
+    $self->status_message('Success:    '.($self->amplicons_processed_success * 100).'%');
+
+    $self->status_message('Prepare instrument data...OK');
 
     return 1;
 }
@@ -1171,6 +1181,77 @@ sub classify_amplicons {
     $self->status_message('Success:    '.($self->amplicons_classified_success * 100).'%');
 
     $self->status_message('Classify amplicons...OK');
+
+    return 1;
+}
+
+#< QC Email >#
+sub perform_post_success_actions {
+    my $self = shift;
+
+    $self->status_message('Post success actions');
+    $self->status_message('Check if model is for QC: '.$self->model_name);
+
+    if ( $self->model_name !~ /\-qc$/ ) {
+        $self->status_message('Model is not for QC. Not sending confirmation email');
+        return 1;
+    }
+
+    $self->status_message('This model is QC');
+
+    my @instrument_data = $self->instrument_data;
+    my %run_region_names = map { $_->run_name.' '.$_->region_number => 1 } @instrument_data;
+    my @run_region_names = grep { defined } keys %run_region_names;
+    if ( not @run_region_names ) {
+        $self->error_message('No run names from instrument data for '.$self->description);
+        return;
+    }
+    if ( @run_region_names > 1 ) {
+        $self->error_message("Found multiple run region names (@run_region_names) for instrument data assigned to ".$self->description);
+        return;
+    }
+
+    my @instrument_data_for_run_region = Genome::InstrumentData::454->get(
+        run_name => $instrument_data[0]->run_name,
+        region_number => $instrument_data[0]->region_number,
+    );
+    if ( not @instrument_data_for_run_region ) {
+        $self->error_message('No instrument data found for run region name: '.$run_region_names[0]);
+        return;
+    }
+
+    if ( @instrument_data != @instrument_data_for_run_region ) {
+        $self->status_message('Not sending email for MC16s QC model. Have '.@instrument_data.' instrument data, but expect '.@instrument_data_for_run_region);
+        return 1;
+    }
+
+    my $msg = "Hello,\n\nThis MC16s QC build is finished and has all instrument data included.\n\n";
+    $msg .= 'Model name:      '.$self->model_name."\n";
+    $msg .= 'Model id:        '.$self->model_id."\n";
+    $msg .= 'Build id:        '.$self->id."\n";
+    $msg .= 'Directory:       '.$self->data_directory."\n";
+    $msg .= 'Run name:        '.$instrument_data[0]->run_name."\n";
+    $msg .= 'Region number:   '.$instrument_data[0]->region_number."\n";
+    $msg .= 'Inluded count:   '.@instrument_data."\n";
+    $msg .= 'Expected count:  '.@instrument_data_for_run_region."\n";
+    $msg .= 'Attempted:       '.$self->amplicons_attempted."\n";
+    $msg .= 'Processed:       '.$self->amplicons_processed."\n";
+    $msg .= 'Success :        '.(100 * $self->amplicons_processed_success)."%\n";
+    $msg .= "\n-APIPE";
+    $self->status_message($msg);
+
+    if ( not $ENV{UR_DBI_NO_COMMIT} ) { # do not send mail when in dev mode
+        Mail::Sendmail::sendmail(
+            To => 'esodergr@genome.wustl.edu, kmihindu@genome.wustl.edu', 
+            #To => 'ebelter@genome.wustl.edu', 
+            Cc => 'ebelter@genome.wustl.edu', 
+            From => 'apipe@genome.wustl.edu', 
+            Subject => 'MC16s QC Build is Done',
+            Message => $msg,
+        );
+    }
+
+    $self->status_message('Sent email to Erica (esodergren) and Kathie (kmihindu)');
 
     return 1;
 }
