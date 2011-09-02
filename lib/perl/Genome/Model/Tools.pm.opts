@@ -11035,8 +11035,15 @@ $Genome::Model::Tools::OPTS_SPEC = [
       'help!',
       undef
     ],
-    'genome',
-    undef,
+    '>dust',
+    [
+      'fastq-file=s',
+      undef,
+      'output-file=s',
+      'files',
+      'help!',
+      undef
+    ],
     '>filter-homopolymer',
     [
       'input=s',

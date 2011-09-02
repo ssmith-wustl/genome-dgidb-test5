@@ -4048,6 +4048,15 @@ $Genome::Command::OPTS_SPEC = [
         'help!',
         undef
       ],
+      '>merge-vcf',
+      [
+        'output-file=s',
+        'files',
+        'model-group=s',
+        undef,
+        'help!',
+        undef
+      ],
       '>prepare-tumor-only-build',
       [
         'bed-version=s',
@@ -4771,6 +4780,8 @@ $Genome::Command::OPTS_SPEC = [
           'describe!',
           undef,
           'max-bases-per-fasta=s',
+          undef,
+          'rfam-no-big-flag!',
           undef,
           'rfamscan-version=s',
           'files',
@@ -17507,8 +17518,15 @@ $Genome::Command::OPTS_SPEC = [
         'help!',
         undef
       ],
-      'genome',
-      undef,
+      '>dust',
+      [
+        'fastq-file=s',
+        undef,
+        'output-file=s',
+        'files',
+        'help!',
+        undef
+      ],
       '>filter-homopolymer',
       [
         'input=s',
