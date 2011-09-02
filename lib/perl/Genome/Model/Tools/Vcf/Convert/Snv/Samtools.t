@@ -13,7 +13,8 @@ my $test_dir = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Vcf-Convert-Snv
 # V2 corrects the BQ value to subtract 33 from the ascii value
 # V3 - various corrections
 # V4 - remove VT INFO field in header
-my $expected_base = "expected.v4";
+# V5 - add source in header
+my $expected_base = "expected.v5";
 my $expected_dir = "$test_dir/$expected_base";
 my $expected_file = "$expected_dir/output.vcf";
 

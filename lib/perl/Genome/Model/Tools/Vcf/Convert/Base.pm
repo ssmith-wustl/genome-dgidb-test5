@@ -151,6 +151,8 @@ sub print_header{
     # FIXME FIXME print source 
     my $file_date = strftime( "%Y%m%d", localtime);
 
+    my $source = $self->source;
+
     my $public_reference;
     # Calculate the location of the public reference sequence
     my $seq_center = $self->sequencing_center;
@@ -176,6 +178,7 @@ sub print_header{
 
     $output_fh->print("##fileformat=VCFv" . $self->vcf_version . "\n");
     $output_fh->print("##fileDate=" . $file_date . "\n");
+    $output_fh->print("##source=" . $source . "\n");
     $output_fh->print("##reference=$public_reference" . "\n");
     $output_fh->print("##phasing=none" . "\n");
 
@@ -316,8 +319,14 @@ sub generate_gt {
 sub parse_line {
     my $self = shift;
 
-    $self->error_message('The parse_line() method should be implemented by subclasses of this module.');
-    return;
+    die $self->error_message('The parse_line() method should be implemented by subclasses of this module.');
+}
+
+# This method (or property) should be overridden by each subclass. It should return a string indicating the detector that produced the vcf
+sub source {
+    my $self = shift;
+
+    die $self->error_message("The source() method should be implemented by subclasses of this module.");
 }
 
 1;

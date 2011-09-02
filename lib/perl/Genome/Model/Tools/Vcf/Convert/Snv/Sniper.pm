@@ -22,6 +22,11 @@ sub help_detail {
 HELP
 }
 
+sub source {
+    my $self = shift;
+    return "Sniper";
+}
+
 sub parse_line {
     my $self = shift;
     my $line = shift;
