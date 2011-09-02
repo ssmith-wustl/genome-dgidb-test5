@@ -21,12 +21,14 @@ use base 'Test::Class';
 
 use Data::Dumper;
 use File::Path;
+use File::Spec;
 use File::Temp;
 use Test::More;
 
 use POSIX ":sys_wait_h";
 use File::Slurp;
 use Time::HiRes qw(gettimeofday);
+use MIME::Base64;
 
 sub startup : Test(startup => 1) {
     my $self = shift;
@@ -561,6 +563,36 @@ sub test_md5sum_data : Test(2) {
     local $@ = undef;
     eval { Genome::Sys->md5sum_data() };
     ok($@, 'md5sum_data with no data throws exception');
+}
+
+sub test_extract_archive : Test(3) {
+    my $encoded = <<'END';
+H4sIADXeYE4CA+3QXW6EIBAHcJ57ijmAaURd9xQ9xCizQoqwAVy7ty+avvaxTdr8fy8kw3yBjdMk
+Wf2othrHoZ69Hrqunl0/dPqMHwY9Kq3HvtWXaztcVKt1f70qatUv2HLhRKTyzt7zLN/lLXlW/9Ab
+B3KZjMvFhWVz2YppKMRCMfgnTU+y9ToJ5xgamrZyhMoRy0e+r39355xdDHRLcaVYrCTi4Fb2uaHd
+utkeA5h8/WmKt1ostLpQpxTLZzumu6QsD0kcZjlyjHi32EIunOlzDHW7TUxtbGrQyI2LW3jyQouE
+WleOBWrhe4i7F7NIQ/Ixi5h8Nsg2pkIPsbLK1wgOT5o5BfZ09/V5W5LXFwUAAAAAAAAAAAAAAAAA
+AAAAAPBnfAKKRRlNACgAAA==
+END
+    my $decoded = decode_base64($encoded);
+    my $dir = Genome::Sys->create_temp_directory;
+    my $tarpath = '/gsc/var/cache/testsuite/data/Genome-Utility-Filesystem/hobbes.tgz';
+    my $archive = Genome::Sys->extract_archive(from => $tarpath,
+        to => $dir);
+    ok($archive, 'Extracted gzipped tarball.');
+    ok($archive->files->[0] eq 'hobbes', "Extracted correct files.");
+    my $expected = 'Man is distinguished, not only by his reason, but by this '
+    . 'singular passion from other animals, which is a lust of the mind, that '
+    . 'by a perseverance of delight in the continued and indefatigable '
+    . 'generation of knowledge, exceeds the short vehemence of any carnal '
+    . "pleasure.\n";
+    my $file = Genome::Sys->open_file_for_reading(File::Spec->catfile(
+            $dir, 'hobbes'));
+    #cause file reads to read the entire file
+    local $/;
+    my $content = <$file>;
+    print $expected;
+    ok($content eq $expected, 'File contained expected contents.');
 }
 
 =pod
