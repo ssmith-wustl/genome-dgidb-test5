@@ -197,5 +197,26 @@ sub execute {
         }
     }
 
+    my $input = $self->line_count($self->variant_bed_file);
+    my $output=0;
+    for my $tier (1..4){
+        my $out = "tier".$tier."_output";
+        $output += $self->line_count($self->$out);
+    }
+    unless(($input - $output)==0){
+        die $self->error_message("Lines of input: ".$input."\t did not match lines of output: ".$output."\n");
+    }
     return 1;
+}
+
+
+sub line_count {
+    my $self = shift;
+    my $input = shift;
+    unless( -e $input ) {
+        die $self->error_message("Could not locate file for line count: $input");
+    }
+    my $result = `wc -l $input`; 
+    my ($answer)  = split /\s/,$result;
+    return $answer
 }
