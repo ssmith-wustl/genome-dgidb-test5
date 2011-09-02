@@ -6,7 +6,7 @@ use Genome;
 use File::Basename;
 
 class Genome::Model::Tools::Fastq::Dust{
-    is => 'Genome::Command',
+    is => 'Command',
     has =>[
         fastq_file => {
             is => 'Path',
