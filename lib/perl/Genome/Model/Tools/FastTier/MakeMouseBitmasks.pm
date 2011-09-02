@@ -174,7 +174,8 @@ sub add_region {
     my $self = shift;
     my ($set,$chr, $start, $stop) = @_;
     if($start > $stop){
-        die $self->error_message(" found a record with start > stop! ");
+        $self->status_message(" found a record with start > stop! ");
+        ($stop,$start) = ($start,$stop);
     }
     unless(exists( $set->{$chr})){
         die $self->error_message(" found a chromosome that wasn't in the hash: ".$chr);
@@ -182,7 +183,8 @@ sub add_region {
     if($start >=0 && ($stop < $set->{$chr}->Size-1)){
         $set->{$chr}->Interval_Fill($start,$stop);    
     } else {
-        die $self->error_message("Found a weird record off the edge of a chrom");
+        $self->status_message("Found a weird record off the edge of a chrom");
+        return;
     }
 }
 
