@@ -225,9 +225,8 @@ sub get_format_meta {
 sub get_info_meta {
     my $self = shift;
 
-    my $vt = {MetaType => "INFO", ID => "VT", Number => 1, Type => "String", Description => "Variant type"};
-
-    return $vt;
+    # We currently have no INFO fields that are desired in every VCF for snvs (Variant Type) is currently considered redundant
+    return;
 }
 
 # Given a hashref representing one meta line, return a formatted line for printing in the header

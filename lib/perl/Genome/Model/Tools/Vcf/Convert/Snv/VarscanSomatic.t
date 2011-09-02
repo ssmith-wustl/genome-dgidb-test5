@@ -11,7 +11,8 @@ use_ok('Genome::Model::Tools::Vcf::Convert::Snv::VarscanSomatic');
 
 my $test_dir = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Vcf-Convert-Snv-VarscanSomatic";
 # V2 updated with various corrections
-my $expected_base = "expected.v2";
+# V3 - remove VT INFO field in header and VT=SNP in the body
+my $expected_base = "expected.v3";
 my $expected_dir = "$test_dir/$expected_base";
 my $expected_file = "$expected_dir/output.vcf";
 
