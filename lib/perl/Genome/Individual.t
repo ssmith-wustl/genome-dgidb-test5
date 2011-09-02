@@ -16,7 +16,9 @@ my $id = -54321;
 my $individual = Genome::Individual->get($id);
 ok(!$individual, 'individual does not exist');
 
-my $taxon = Genome::Taxon->get(species_name => 'human');
+my $taxon = Genome::Taxon->create(
+    species_name => 'human',
+);
 ok($taxon, 'human taxon');
 $individual = Genome::Individual->create(
     id => $id,

@@ -288,20 +288,14 @@ sub _filter_samxe_output {
             return;
     }
 
-    my $sam_map_output_fh = IO::File->new(">>$sam_file_name");
-    binmode $sam_map_output_fh;
-    if ( !$sam_map_output_fh ) {
-            $self->error_message("Error opening sam file for writing $!");
-            return;
-    }
-    $self->status_message("Opened $sam_file_name.  Now streaming this through the read group addition.");
-   
     my $sam_out_fh; 
     # UGLY HACK: the multi-aligner code redefines this to zero so it can extract sam files.
     if ($self->supports_streaming_to_bam) { 
         $sam_out_fh = $self->_sam_output_fh; 
+        $self->status_message("Streaming output through existing file handle");
     } else {
         $sam_out_fh = IO::File->new(">>" . $self->temp_scratch_directory . "/all_sequences.sam");
+        $self->status_message("Opened for output ( " . $self->temp_scratch_directory . "/all_sequences.sam )");
     }
     my $add_rg_cmd = Genome::Model::Tools::Sam::AddReadGroupTag->create(
             input_filehandle     => $sam_run_output_fh,
@@ -316,7 +310,6 @@ sub _filter_samxe_output {
     }
     
     $sam_run_output_fh->close;
-    $sam_map_output_fh->close;
 
     return 1;
 }

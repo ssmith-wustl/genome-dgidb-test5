@@ -2,37 +2,25 @@ package Genome::ProcessingProfile::PhenotypeCorrelation;
 use strict;
 use warnings;
 use above "Genome";
-use Test::More skip_all => "This is incomplete.";#tests => 11;
+use Test::More tests => 14; #skip_all => "This is incomplete.";#tests => 11;
 
 use Genome::ProcessingProfile::PhenotypeCorrelation;
 
-my $asms_cohort = Genome::PopulationGroup->get(name => 'ASMS-cohort-TGI-2011');
-
-unless ($asms_cohort) {
-    # this is how I made the cohort from Will's 3 model groups...
-    # it's slow(er) so I did it and let it commit
-
-    my @groups = Genome::ModelGroup->get([13391, 13392, 13411]);
-    is(scalar(@groups), 3, "got 3 members");
-
-    my @samples = map { $_->subjects(-hints => [qw/attributes/]) } @groups;
-    ok(scalar(@samples), "got " . scalar(@samples) . " samples");
-
-    my @patients = Genome::Individual->get(id => [ map { $_->source_id } @samples ], -hints => [qw/attributes/]);
-    ok(scalar(@patients), "got " . scalar(@patients) . " patients");
-
-    $asms_cohort = Genome::PopulationGroup->create(
-        id => -1000,
-        name => 'ASMS-cohort-TGI-2011',
-        members => \@patients,
-    );
-    ok($asms_cohort, "created the ASMS cohort");
+my $group = Genome::PopulationGroup->create(name => 'TEST-phenotype-correlation');
+for my $member_id (
+    qw/
+        2852840389
+        2852840390
+        2852840391
+    /
+) {
+    my $member = Genome::Individual->get($member_id);
+    ok($member, "got member");
+    $group->add_member($member);
 }
 
-# now we do everything just in memory since we're just experimenting...
-
-my @members = $asms_cohort->members();
-is(scalar(@members), 304, "got the expected number of patients");
+my @members = $group->members();
+is(scalar(@members), 3, "got the expected number of patients");
 
 my $p = Genome::ProcessingProfile::PhenotypeCorrelation->create(
     id                              => -10001,
@@ -50,7 +38,7 @@ ok($p, "created a processing profile") or diag(Genome::ProcessingProfile::Phenot
 my $m = $p->add_model(
     name    => 'TESTSUITE-ASMS-test1',
     subclass_name => 'Genome::Model::PhenotypeCorrelation',
-    subject => $asms_cohort,
+    subject => $group,
 );
 ok($m, "created a model") or diag(Genome::Model->error_message);
 
@@ -66,7 +54,7 @@ my $i2 = $m->add_input(
     value => UR::Value->get($asms_target_region_set_name),
 );
 
-my @patients = $asms_cohort->members;
+my @patients = $group->members;
 ok(scalar(@patients), scalar(@patients) . " patients");
 
 my @samples = Genome::Sample->get(source_id => [ map { $_->id } @patients ]);
@@ -101,4 +89,28 @@ ok($b, "created a build") or diag(Genome::Model->error_message);
 my $retval = eval { $p->_execute_build($b); };
 is($retval, 1, 'execution of the build returned true');
 is($@, '', 'no exceptions thrown during build process') or diag $@;
+
+__END__
+
+    # this is how I made the cohort from Will's 3 model groups...
+    # if put at the top of this script it will use that group instead 
+
+    my @groups = Genome::ModelGroup->get([13391, 13392, 13411]);
+    is(scalar(@groups), 3, "got 3 groups");
+
+    my @models = map { $_->members } @groups;
+
+    my @samples = map { $_->subjects(-hints => [qw/attributes/]) } @groups;
+    ok(scalar(@samples), "got " . scalar(@samples) . " samples");
+
+    my @patients = Genome::Individual->get(id => [ map { $_->source_id } @samples ], -hints => [qw/attributes/]);
+    ok(scalar(@patients), "got " . scalar(@patients) . " patients");
+
+    $group = Genome::PopulationGroup->create(
+        id => -1000,
+        name => 'ASMS-cohort-TGI-2011',
+        members => \@patients,
+    );
+    ok($group, "created the ASMS cohort");
+    # UR::Context->commit,
 

@@ -25,6 +25,11 @@ sub repeat_masker_ace_file {
     return $self->data_directory . "/repeat_masker.ace";
 }
 
+sub repeat_masker_gff_file {
+    my $self = shift;
+    return $self->data_directory . "/repeat_masker.gff";
+}
+
 sub predictions_ace_file {
     my $self = shift;
     return $self->data_directory . "/predictions.ace";

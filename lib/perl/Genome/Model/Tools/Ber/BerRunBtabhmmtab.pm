@@ -19,7 +19,6 @@ use File::Slurp;
 use Cwd;
 
 use Archive::Tar;
-use constant COMPRESS_BZIP => 1;
 
 UR::Object::Type->define(
 			 class_name => __PACKAGE__,

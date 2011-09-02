@@ -21,6 +21,7 @@ require Genome::Utility::Text;
 use Digest::MD5;
 use Sys::Hostname;
 use File::Find;
+use Archive::Extract;
 
 require MIME::Lite;
 
@@ -232,6 +233,46 @@ sub bunzip {
     }
 
 }
+
+sub extract_archive {
+    my $self = shift;
+    my %params = @_;
+    my $from = delete $params{from};
+    my $to = delete $params{to};
+
+    if(%params) {
+        my @crap = %params;
+        Carp::confess("Unknown params passed to extract_archive: @crap");
+    }
+
+    unless($from) {
+        Carp::croak("No 'from' passed to extract_archive");
+    }
+
+    unless($to) {
+        Carp::croak("No 'to' passed to extract_archive");
+    }
+
+    $self->validate_file_for_reading($from);
+
+    #use binaries rather than perl modules to extract archives.
+    #the perl modules will often load the entire archive into RAM
+    #we operate on files way too big to be doing that
+    $Archive::Extract::PREFER_BIN = 1;
+
+    my $archive = Archive::Extract->new(archive => $from);
+    unless($archive) {
+        Carp::croak("Can't create extract object for archive $from");
+    }
+
+    my $rv = $archive->extract( to => $to);
+    unless($rv) {
+        Carp::croak("Unable to extract $from into $to");
+    }
+
+    return $archive;
+}
+
 
 sub open_file_for_writing {
     my ($self, $file) = @_;
@@ -716,6 +757,16 @@ sub md5sum {
     $fh->close;
 
     return $digest;
+}
+
+sub md5sum_data {
+    my ($self, $data) = @_;
+    unless (defined $data) {
+        Carp::croak('No data passed to md5sum_data');
+    }
+    my $digest = Digest::MD5->new;
+    $digest->add($data);
+    return $digest->hexdigest;
 }
 
 sub directory_size_recursive {
