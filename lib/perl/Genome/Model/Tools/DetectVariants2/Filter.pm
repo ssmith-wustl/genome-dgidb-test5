@@ -508,7 +508,7 @@ sub _link_to_result {
     return unless $result;
 
     unless(-e $self->output_directory) {
-        Genome::Sys->create_symlink($result->output_dir, $self->output_directory);
+        Genome::Sys->create_symlink_and_log_change($result, $result->output_dir, $self->output_directory);
     }
 
     my $previous_result = $self->previous_result;

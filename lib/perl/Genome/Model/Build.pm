@@ -1788,7 +1788,9 @@ sub compare_output {
     my (%file_paths, %other_file_paths);
     require Cwd;
     for my $file (@{$self->files_in_data_directory}) {
-        $file_paths{$self->full_path_to_relative($file)} = Cwd::abs_path($file);
+        my $abs_path = Cwd::abs_path($file);
+        next unless $abs_path; # abs_path returns undef if a subdirectory of file does not exist
+        $file_paths{$self->full_path_to_relative($file)} = $abs_path;
     }
     for my $other_file (@{$other_build->files_in_data_directory}) {
         $other_file_paths{$other_build->full_path_to_relative($other_file)} = Cwd::abs_path($other_file);
@@ -2060,6 +2062,7 @@ sub is_used_as_model_or_build_input {
 sub child_lsf_jobs {
     my $self = shift;
     my @workflow_instances = $self->_get_workflow_instance_children($self->newest_workflow_instance);
+    return unless @workflow_instances;
     my @dispatch_ids = grep {defined $_} map($_->current->dispatch_identifier, @workflow_instances);
     my @valid_ids = grep {$_ !~ /^P/} @dispatch_ids;
     return @valid_ids;
@@ -2067,7 +2070,7 @@ sub child_lsf_jobs {
 
 sub _get_workflow_instance_children {
     my $self = shift;
-    my $parent = shift || die;
+    my $parent = shift || return;
     return $parent, map($self->_get_workflow_instance_children($_), $parent->related_instances);
 }
 

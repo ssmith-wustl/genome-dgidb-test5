@@ -75,6 +75,12 @@ class Genome::Model::Tools::DetectVariants2::Dispatcher {
         _expected_output_directories => {
             doc => "This is a hash (by variant type) of lists of all detector, filter, and combine operation output directories",
         },
+        _param_to_index_mapping => {
+            doc => "This maps a set of parameters to a number for shortening operation names",
+        },
+        _next_index => {
+            doc => "The next number for _param_to_index_mapping",
+        },
     ],
     has_param => [
         lsf_queue => {
@@ -229,8 +235,8 @@ sub get_relative_path_to_output_directory {
 sub calculate_operation_output_directory {
     my $self = shift;
     my ($base_directory, $name, $version, $param_list) = @_;
-    my $subdirectory = join('-', $name, $version, $param_list);
-    
+    my $subdirectory = join('-', $name, $version, Genome::Sys->md5sum_data($param_list));
+
     return $base_directory . '/' . Genome::Utility::Text::sanitize_string_for_filesystem($subdirectory);
 }
 
@@ -460,6 +466,24 @@ sub link_operations {
     return $unique_combine_name;
 }
 
+sub params_to_index {
+    my $self = shift;
+    my $params = shift;
+
+    my $params_to_index = $self->_param_to_index_mapping;
+
+    unless(exists $params_to_index->{$params}) {
+        my $next_index = $self->_next_index || 1;
+
+        $params_to_index->{$params} = $next_index++;
+
+        $self->_param_to_index_mapping($params_to_index);
+        $self->_next_index($next_index);
+    }
+
+    return '#' . $params_to_index->{$params};
+}
+
 # This sub creates and links in any combine operations.
 sub create_combine_operation {
     my $self = shift;
@@ -587,7 +611,7 @@ sub get_unique_detector_name {
     my $params = $hash->{params};
     my $name = $hash->{name};
     my $version = $hash->{version};
-    return join("_", ($variant_type, $name, $version, $params) );
+    return join("_", ($variant_type, $name, $version, $self->params_to_index($params)) );
 }
 
 
@@ -609,11 +633,11 @@ sub add_detectors_and_filters {
                 $class = $instance->{class};
                 $name = $instance->{name};
                 $version = $instance->{version};
-                my $unique_detector_base_name = join( "_", ($variant_type, $name, $version, $params));
+                my $unique_detector_base_name = join( "_", ($variant_type, $name, $version, $self->params_to_index($params)));
                 my @filters = @{$instance->{filters}};
                 # Make the operation
                 my $detector_operation = $workflow_model->add_operation(
-                    name => "$variant_type $name $version $params",
+                    name => "$variant_type $name $version " . $self->params_to_index($params),
                     operation_type => Workflow::OperationType::Command->get($class),
                 );
                 unless($detector_operation){
@@ -623,7 +647,7 @@ sub add_detectors_and_filters {
                 # create filter operations
                 for my $filter (@filters){
                     my $foperation = $workflow_model->add_operation(
-                        name => join(" ",($unique_detector_base_name,$filter->{name},$filter->{version},$filter->{params})),
+                        name => join(" ",($unique_detector_base_name,$filter->{name},$filter->{version}, $self->params_to_index($filter->{params}) )),
                         operation_type => Workflow::OperationType::Command->get($filter->{class})
                     ); 
                     unless($foperation){

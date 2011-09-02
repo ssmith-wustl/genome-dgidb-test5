@@ -48,7 +48,7 @@ class Genome::Model::Tools::Sv::Pairoscope {
     },
     pairoscope_program => {
         type => "String",
-        default => "/gscuser/dlarson/src/pairoscope/tags/pairoscope-0.2/pairoscope",
+        default => "pairoscope0.3",
         doc => "executable of pairoscope to use", 
         is_optional => 1,
     },

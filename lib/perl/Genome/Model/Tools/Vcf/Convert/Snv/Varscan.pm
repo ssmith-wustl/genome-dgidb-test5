@@ -7,21 +7,20 @@ use Genome::Info::IUB;
 
 class Genome::Model::Tools::Vcf::Convert::Snv::Varscan {
     is =>  'Genome::Model::Tools::Vcf::Convert::Base' ,
+    doc => 'Generate a VCF file from varscan output'
 };
 
-
-sub help_brief {
-    "tool to convert varscan output to vcf"
-}
-
 sub help_synopsis {
-    return "no help specified";
+    <<'HELP';
+    Generate a VCF file from varscan snv output
+HELP
 }
 
-sub help_detail { 
-    return "foobar";
+sub help_detail {
+    <<'HELP';
+    Parses the input file and creates a VCF containing all the snvs.
+HELP
 }
-
 
 sub parse_line { 
     my $self=shift;
@@ -44,7 +43,7 @@ sub parse_line {
     }
     my $alt_alleles = join(",", @var_alleles);
     #no genotype quality, hardcode .
-    my $GQ='.'; ##TODO: figure out if this is a good idea
+    my $GQ='.'; 
     #total depth
     my $DP= $fields[4]+$fields[5];
     #avg base quality
@@ -57,13 +56,7 @@ sub parse_line {
     my $FA = $fields[6];
     $FA =~ s/\%//;
     $FA /= 100;
-    my $VAQ;
-    if($fields[11]==0) { #TODO: ask miller wtf this is doing then rename this variable
-        $VAQ = 99;
-    } else {
-        $VAQ = sprintf "%.2f", -10*log($fields[11])/log(10);;
-    }
-
+    my $VAQ = ".";
 
     ##placeholder/dummy, some will be corrected by downstream tool
     my $dbsnp_id = ".";

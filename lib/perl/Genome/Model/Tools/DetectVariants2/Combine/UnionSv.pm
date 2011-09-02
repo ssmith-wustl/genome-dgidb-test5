@@ -20,7 +20,7 @@ class Genome::Model::Tools::DetectVariants2::Combine::UnionSv{
 sub help_synopsis {
     my $self = shift;
     return <<"EOS"
-gmt detect-variants combine --variant-file-a samtools.hq.v1.bed --variant-file-b varscan.hq.v1.bed --output-file 
+gmt detect-variants combine --variant-file-a samtools.hq.v1.bed --variant-file-b varscan.hq.v1.bed --output-file
 EOS
 }
 
@@ -43,7 +43,7 @@ sub _combine_variants {
             input_files => $input_files,
             output_file => $output_file,
         );
-    
+
         unless ($union_command->execute) {
             $self->error_message("Error executing union command");
             die $self->error_message;
@@ -54,21 +54,40 @@ sub _combine_variants {
     my @file_names = map{$self->_variant_type.'.merge.'.$_}qw(fasta file file.annot out);
 
     DIR: for my $dir ($dir_a, $dir_b) {
+        my $dir_target = readlink($dir);
+        unless ($dir_target) {
+            $self->warning_message("Failed to read the target from symlink ($dir).");
+            next DIR;
+        }
+
+        my $result_id = (split('-', $dir_target))[-1];
+        unless ($result_id) {
+            $self->warning_message("Failed to parse the result ID from target ($dir_target).");
+            next DIR;
+        }
+
+        my $result = Genome::Model::Tools::DetectVariants2::Result::Base->get($result_id);
+        unless ($result) {
+            $self->warning_message("Failed to get result for result ID ($result_id)");
+            next DIR;
+        }
+
+        my $param_list = $result->detector_params;
         my $dir_type;
-        if ($dir =~ /\-q_10_\-d/) {
+        if ($param_list =~ /\-q 10 \-d/) {
             $dir_type = 'Inter.';
         }
-        elsif ($dir =~ /\-q_10_\-o/) {
+        elsif ($param_list =~ /\-q 10 \-o/) {
             $dir_type = 'Intra.';
         }
         else {
-            $self->warning_message("Failed to figure out the dir type for $dir");
+            $self->warning_message("Failed to determine dir_type for params ($param_list).");
             next DIR;
         }
         COPY: for my $i (0..$#file_names) {
             my $target = $dir .'/'. $file_names[$i];
             my $dest   = $self->output_directory ."/$dir_type". $file_names[$i];
-            
+
             if (-e $target) {
                 #unless (Genome::Sys->create_symlink($target, $link)) {
                 unless (Genome::Sys->copy_file($target, $dest)) {
@@ -80,7 +99,7 @@ sub _combine_variants {
                 $self->warning_message("Target file: $target not existing");
             }
         }
-    }        
+    }
     return 1;
 }
 

@@ -17,8 +17,8 @@ BEGIN {
 # General setup for v3 test
 
 my $test_data_dir  = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-FastTier-FastTier';
-my $test_input_dir = $test_data_dir."/inputs";
-my $test_expected_data_dir = $test_data_dir."/expected_v2";
+my $test_input_dir = $test_data_dir."/inputs_v2"; # v2 has no repeated positions in either snvs or indels
+my $test_expected_data_dir = $test_data_dir."/expected_v4"; #v3 is the output of running on v2 inputs
 my $snvs_bed_file_name = "snvs.hq.novel.v2.bed";
 my $snvs_bed_input = $test_input_dir."/".$snvs_bed_file_name;
 my $indels_bed_file_name = "indels.hq.novel.v2.bed";
@@ -95,7 +95,7 @@ for my $expected (@indel_file_names) {
 
 # Set things up for v2 testing
 
-$test_expected_data_dir = $test_data_dir."/expected_v1";
+$test_expected_data_dir = $test_data_dir."/expected_v3";
 $tier_file_location = $ab->tiering_bed_files_by_version(2);
 
 $test_output_dir = File::Temp::tempdir('Genome-Model-Tools-FastTier-FastTier-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
