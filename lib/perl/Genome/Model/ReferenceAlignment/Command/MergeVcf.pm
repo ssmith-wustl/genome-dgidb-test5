@@ -28,6 +28,8 @@ sub execute {
     #reference alignment build object    
     my $mg = $self->model_group;
     my @input_vcfs; 
+
+    #go through the models, pulling latest builds, checking for vcfs, aggregating paths to them
     for my $model ($mg->models){
         my $build = $model->last_succeeded_build;
         unless($build){
@@ -54,6 +56,7 @@ sub execute {
     return 1;
 }
 
+#if the vcf is not gzipped and indexed for tabix, do so and reallocate the host build
 sub check_for_and_create_gz {
     my $self = shift;
     my $build = shift;
@@ -87,6 +90,5 @@ sub check_for_and_create_gz {
     }
     return 1;
 }
-
 
 1;
