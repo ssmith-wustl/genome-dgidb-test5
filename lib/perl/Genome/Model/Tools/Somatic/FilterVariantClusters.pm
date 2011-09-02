@@ -67,6 +67,7 @@ sub execute {                               # replace with real execution logic.
 	
 	my $input = new FileHandle ($variant_file);
 	my $lineCounter = 0;
+	my $totalVariants = my $failedVariants = 0;
 
 	while (<$input>)
 	{
@@ -77,6 +78,7 @@ sub execute {                               # replace with real execution logic.
 		my ($chrom, $position) = split(/\t/, $line);
 		my $key = join("\t", $chrom, $position);
 		$variants{$key} = $line;
+		$totalVariants++;
 	}
 	
 	close($input);
@@ -86,6 +88,10 @@ sub execute {                               # replace with real execution logic.
 	my $window_chrom = my $window_start = my $window_stop = my $window_variants = my $window_variant_list = "";
 	my @failedWindows = ();
 	my $numFailedWindows = 0;
+	my $numWindows = 0;
+
+	open(OUTFILE, ">$output_file") or die "Can't open outfile: $!\n";
+	open(FAILEDFILE, ">$output_file.removed") or die "Can't open outfile: $!\n";
 	
 	## Go through variants ##
 	
@@ -104,11 +110,18 @@ sub execute {                               # replace with real execution logic.
 		elsif($chrom ne $window_chrom)
 		{
 			## Process Current Window ##
-			my $result = process_window($window_chrom, $window_start, $window_stop, $window_variants, $window_variant_list);
+			my $result = process_window($self, $window_chrom, $window_start, $window_stop, $window_variants, $window_variant_list);
+			$numWindows++;
 			if($result)
 			{
 				$failedWindows[$numFailedWindows] = $result;
 				$numFailedWindows++;
+				$failedVariants += $window_variants;
+				print FAILEDFILE "$window_variant_list\n";
+			}
+			else
+			{
+				print OUTFILE "$window_variant_list\n";
 			}
 
 			## Start new window ##
@@ -120,11 +133,18 @@ sub execute {                               # replace with real execution logic.
 		elsif(($position - $window_start) > $window_size)
 		{
 			## Process Current Window ##
-			my $result = process_window($window_chrom, $window_start, $window_stop, $window_variants, $window_variant_list);
+			my $result = process_window($self, $window_chrom, $window_start, $window_stop, $window_variants, $window_variant_list);
+			$numWindows++;
 			if($result)
 			{
 				$failedWindows[$numFailedWindows] = $result;
 				$numFailedWindows++;
+				$failedVariants += $window_variants;
+				print FAILEDFILE "$window_variant_list\n";
+			}
+			else
+			{
+				print OUTFILE "$window_variant_list\n";
 			}
 			## Start new window ##
 			$window_chrom = $chrom;
@@ -142,14 +162,27 @@ sub execute {                               # replace with real execution logic.
 	}
 
 	## Process last window ##
-	my $result = process_window($window_chrom, $window_start, $window_stop, $window_variants, $window_variant_list);
+	my $result = process_window($self, $window_chrom, $window_start, $window_stop, $window_variants, $window_variant_list);
+	$numWindows++;
 	if($result)
 	{
 		$failedWindows[$numFailedWindows] = $result;
 		$numFailedWindows++;
+		$failedVariants += $window_variants;
+		print FAILEDFILE "$window_variant_list\n";
+	}
+	else
+	{
+		print OUTFILE "$window_variant_list\n";
 	}
 
+	print "$totalVariants total variants\n";
+	print "$numWindows windows assessed\n";
+	print "$numFailedWindows failed cluster-filter\n";
+	print "$failedVariants variants removed\n";
 	
+	close(OUTFILE);
+	close(FAILEDFILE);
 	
 	return 1;
 }
@@ -162,8 +195,8 @@ sub execute {                               # replace with real execution logic.
 
 sub process_window
 {                               # replace with real execution logic.
-	my ($window_chrom, $window_start, $window_stop, $window_variants, $window_variant_list) = @_;
-	if($window_variants >= 5)
+	my ($self, $window_chrom, $window_start, $window_stop, $window_variants, $window_variant_list) = @_;
+	if($window_variants > $self->max_variants)
 	{
 		print join("\t", $window_chrom, $window_start, $window_stop, $window_variants) . "\n";
 		print $window_variant_list . "\n\n";
