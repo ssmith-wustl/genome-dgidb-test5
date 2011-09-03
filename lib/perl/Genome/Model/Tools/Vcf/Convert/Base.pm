@@ -148,7 +148,6 @@ sub get_base_at_position {
 # Print the header to the output file... currently assumes "standard" columns of GT,GQ,DP,BQ,MQ,AD,FA,VAQ in the FORMAT field and VT in the INFO field.
 sub print_header{
     my $self = shift;
-    # FIXME FIXME print source 
     my $file_date = strftime( "%Y%m%d", localtime);
 
     my $source = $self->source;
@@ -183,7 +182,7 @@ sub print_header{
     $output_fh->print("##phasing=none" . "\n");
 
     $self->print_tag_meta;
-    
+
     my @header_columns = ("CHROM","POS","ID","REF","ALT","QUAL","FILTER","INFO","FORMAT");
     push @header_columns, ( defined $self->control_aligned_reads_sample ) ? ($self->control_aligned_reads_sample, $self->aligned_reads_sample) : ($self->aligned_reads_sample);
 
@@ -215,11 +214,11 @@ sub get_format_meta {
     my $gt = {MetaType => "FORMAT", ID => "GT", Number => 1, Type => "String", Description => "Genotype"};
     my $gq = {MetaType => "FORMAT", ID => "GQ", Number => 1, Type => "Integer", Description => "Genotype Quality"};
     my $dp = {MetaType => "FORMAT", ID => "DP", Number => 1, Type => "Integer", Description => "Total Read Depth"};
-    my $bq = {MetaType => "FORMAT", ID => "BQ", Number => 1, Type => "Integer", Description => "Average Base Quality corresponding to alleles 0/1/2/3... after software and quality filtering"};
+    my $bq = {MetaType => "FORMAT", ID => "BQ", Number => "A", Type => "Integer", Description => "Average Base Quality corresponding to alleles 0/1/2/3... after software and quality filtering"};
     my $mq = {MetaType => "FORMAT", ID => "MQ", Number => 1, Type => "Integer", Description => "Average Mapping Quality"};
-    my $ad = {MetaType => "FORMAT", ID => "AD", Number => 1, Type => "Integer", Description => "Allele Depth corresponding to alleles 0/1/2/3... after software and quality filtering"};
+    my $ad = {MetaType => "FORMAT", ID => "AD", Number => "A", Type => "Integer", Description => "Allele Depth corresponding to alleles 0/1/2/3... after software and quality filtering"};
     my $fa = {MetaType => "FORMAT", ID => "FA", Number => 1, Type => "Float", Description => "Fraction of reads supporting ALT"};
-    my $vaq = {MetaType => "FORMAT", ID => "VAQ", Number => 1, Type => "Integer", Description => "Variant Quality"}; # FIXME sometimes a float
+    my $vaq = {MetaType => "FORMAT", ID => "VAQ", Number => 1, Type => "Integer", Description => "Variant Quality"};
 
     return ($gt, $gq, $dp, $bq, $mq, $ad, $fa, $vaq);
 }

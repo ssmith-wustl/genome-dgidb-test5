@@ -13,7 +13,8 @@ my $test_dir = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Vcf-Convert-Snv
 # V2 updated with various corrections
 # V3 - remove VT INFO field in header and VT=SNP in the body
 # V4 - add source in header
-my $expected_base = "expected.v4";
+# V5 - Correct the AD and BQ fields number attribute
+my $expected_base = "expected.v5";
 my $expected_dir = "$test_dir/$expected_base";
 my $expected_file = "$expected_dir/output.vcf";
 
