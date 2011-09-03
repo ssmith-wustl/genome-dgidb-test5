@@ -351,7 +351,6 @@ sub _run_vcf_converter {
         output_file => $output_file, 
         aligned_reads_sample => $aligned_reads_sample,
         sequencing_center => 'WUSTL',
-        vcf_version => "4.0",
         reference_sequence_build => $reference_sequence_build,
     );
     
