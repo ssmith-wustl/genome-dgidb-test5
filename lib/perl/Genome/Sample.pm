@@ -141,12 +141,12 @@ class Genome::Sample {
         },
         source_name => { 
             via => 'source', 
-            to => 'name' 
+            to => 'name', 
             doc => 'Name of the sample source',
         },
         source_common_name => { 
             via => 'source', 
-            to => 'common_name' 
+            to => 'common_name',
             doc => 'Common name of the sample source',
         },
         # These patient properties are for convenience, since the vast majority of sample
@@ -246,7 +246,7 @@ class Genome::Sample {
         },
         solexa_lane_names => {
             via => 'solexa_lanes', 
-            to => 'full_name' 
+            to => 'full_name', 
             doc => 'Names of instrument data from this sample',
         },
     ],
