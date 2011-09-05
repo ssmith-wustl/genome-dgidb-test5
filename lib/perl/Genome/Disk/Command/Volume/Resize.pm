@@ -13,7 +13,12 @@ class Genome::Disk::Command::Volume::Resize {
             shell_args_position => 1,
         },
     ],
+    doc => 'Figures out the size of the supplied volume and updates the database accordingly',
 };
+
+sub help_detail {
+    return 'DFs the given volume and updates the size of the volume in the database';
+}
 
 sub execute {
     my $self = shift;

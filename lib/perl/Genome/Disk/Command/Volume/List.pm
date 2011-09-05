@@ -16,6 +16,7 @@ class Genome::Disk::Command::Volume::List {
             default_value => 'mount_path,disk_group_names,total_kb,percent_used,percent_allocated', 
         },
     ],
+    doc => 'Lists Genome::Disk::Volume objects',
 };
 
 1;

@@ -4,7 +4,7 @@ use strict;
 use warnings;
 use Genome;
 
-class Genome::Disk::Command:Volume {
+class Genome::Disk::Command::Volume {
     is => 'Command::Tree',
     doc => 'Commands that work with disk volumes',
 };
