@@ -27,6 +27,10 @@ class Genome::Disk::Command::Allocation::FindUnallocatedPaths{
     doc => 'Finds unallocated paths on the provided volume',
 };
 
+sub help_detail {
+    return 'Scans the provided volume for paths that are not contained in an allocation';
+}
+
 sub execute{
 
     my $self = shift;
