@@ -1,4 +1,4 @@
-package Genome::Disk::Allocation::Command::Reallocate;
+package Genome::Disk::Command::Allocation::Reallocate;
 
 use strict;
 use warnings;
@@ -6,13 +6,12 @@ use warnings;
 use Genome;
 use Carp 'confess';
 
-class Genome::Disk::Allocation::Command::Reallocate {
-    is => 'Genome::Disk::Allocation::Command',
+class Genome::Disk::Command::Allocation::Reallocate {
+    is => 'Command::V2',
     has => [
         allocations => {
             is => 'Genome::Disk::Allocation',
-            shell_args_position => 1,
-            doc => 'allocation(s) to reallocate, resolved by Genome::Command::Base',
+            doc => 'Allocadtions to reallocate',
             is_many => 1,
         },
     ],
@@ -54,11 +53,10 @@ EOS
 
 sub execute {
     my $self = shift;
-
     my @allocations = $self->allocations;
     
+    my @errors;
     for my $allocation (@allocations) {
-        $self->_total_command_count($self->_total_command_count + 1);
         my %params;
         $params{allocation_id} = $allocation->id;
         $params{kilobytes_requested} = $self->kilobytes_requested if defined $self->kilobytes_requested;
@@ -72,14 +70,17 @@ sub execute {
             $self->status_message("Successfully reallocated (" . $allocation->__display_name__ . ").");
         }
         else {
-            $self->append_error($allocation->__display_name__, "Failed to reallocate: $@.");
+            $self->error_message('Failed to reallocate ' . $allocation->__display_name__ . " : $@");
+            push @errors, $allocation->__display_name__;
             $transaction->rollback();
         }
     }
 
-    $self->display_command_summary_report();
-
-    return !scalar(keys %{$self->_command_errors});
+    if (@errors) {
+        $self->error_message("Failed to reallocate the following allocations: " . join(', ', @errors));
+        return 0;
+    }
+    return 1;
 }
 
 1;
