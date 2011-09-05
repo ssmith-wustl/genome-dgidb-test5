@@ -1,11 +1,11 @@
-package Genome::Disk::Volume::Command::List;
+package Genome::Disk::Command::Volume::List;
 
 use strict;
 use warnings;
 
 use Genome;
 
-class Genome::Disk::Volume::Command::List {
+class Genome::Disk::Command::Volume::List {
     is => 'UR::Object::Command::List',
     has => [
         subject_class_name  => {
@@ -17,7 +17,6 @@ class Genome::Disk::Volume::Command::List {
         },
     ],
 };
-sub sub_command_sort_position { 4 }
 
 1;
 

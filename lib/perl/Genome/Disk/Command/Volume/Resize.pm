@@ -1,12 +1,12 @@
-package Genome::Disk::Volume::Command::Resize;
+package Genome::Disk::Command::Volume::Resize;
 
 use strict;
 use warnings;
 
 use Genome;
 
-class Genome::Disk::Volume::Command::Resize {
-    is => 'Genome::Command::Base',
+class Genome::Disk::Command::Volume::Resize {
+    is => 'Command::V2',
     has => [
         volume => {
             is => 'Genome::Disk::Volume',
