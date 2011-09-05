@@ -1,11 +1,11 @@
-package Genome::Disk::Group::Command::FindUnallocatedPaths;
+package Genome::Disk::Command::Group::FindUnallocatedPaths;
 
 use warnings;
 use strict;
 
 use Genome;
 
-class Genome::Disk::Group::Command::FindUnallocatedPaths{
+class Genome::Disk::Command::Group::FindUnallocatedPaths{
     is => 'Command::V2',
     has_input => [
         group => {
@@ -19,7 +19,8 @@ class Genome::Disk::Group::Command::FindUnallocatedPaths{
             is_many => 1,
             is_output => 1,
         },
-    ]
+    ],
+    doc => 'Finds unallocated paths in the specified disk group',
 };
 
 sub execute{
