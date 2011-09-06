@@ -11,28 +11,30 @@ use POSIX;
 class Genome::Model::Tools::Somatic::IdentifyDnp {
     is => 'Command',
     has => [
-    annotation_input_file =>
-    {
-        type => 'String',
-        is_optional => 0,
-        doc => 'List of sites in annotation input format to look for DNPs. This must be sorted by chromosome and coordinate.',
-        default => '',
-    },
-    proportion => 
-    {
-        type => 'Float',
-        is_optional => 1,
-        default => 0.1,
-        doc => 'Proportion of reads supporting the DNP required for the site to be considered a DNP',
-    },
-    bam_file =>
-    {
-        type => 'String',
-        is_optional => 0,
-        doc => 'File from which to retrieve reads. Must be indexed.',
-    }
-
-    ]
+        annotation_input_file => {
+            type => 'String',
+            is_optional => 0,
+            doc => 'List of sites in annotation input format to look for DNPs. This must be sorted by chromosome and coordinate.',
+            default => '',
+        },
+        proportion => {
+            type => 'Float',
+            is_optional => 1,
+            default => 0.1,
+            doc => 'Proportion of reads supporting the DNP required for the site to be considered a DNP',
+        },
+        bam_file => {
+            type => 'String',
+            is_optional => 0,
+            doc => 'File from which to retrieve reads. Must be indexed.',
+        },
+    ],
+    has_optional => [
+        output_file => {
+            is => 'Text',
+            doc => 'Output file; STDOUT if not specified.',
+        },
+    ],
 };
 #Code should operate as follows
 #Scan the snp file
@@ -56,6 +58,13 @@ sub execute {
 
     my $fh = Genome::Sys->open_file_for_reading($self->annotation_input_file);
 
+    my $output_fh;
+    if ($self->output_file) {
+        $output_fh = Genome::Sys->open_file_for_writing($self->output_file);
+    }
+    else {
+        $output_fh = *STDOUT;
+    }
 
     my $last_pos = undef;
     my $last_chr = undef;
@@ -83,15 +92,17 @@ sub execute {
                     $DB::single=1;
                     $self->status_message("Potential DNP found at $chr:$pos-$last_pos\n");
 
-                    if($self->is_dnp($chr,$last_pos,$last_var,$pos,$variants[0])) {
-                        print "$chr\t$last_pos\t$pos\t$last_ref$ref\t$last_var$variants[0]\tDNP\t",join("\t",@rest),"\n";
+                    if($self->is_dnp($chr, $last_pos, $last_var, $pos, $variants[0])) {
+                        my $ref_col = $last_ref . $ref;
+                        my $var_col = $last_var . $variants[0];
+                        print $output_fh join("\t", $chr, $last_pos, $pos, $ref_col, $var_col, 'DNP', @rest) . "\n";
                         @lines = ();    #erase the DNP line
                         $line = '';
                     }
                 }
             }
         }
-        print shift @lines,"\n" if @lines;
+        print $output_fh shift @lines,"\n" if @lines;
         push @lines, $line if $line;
         
         $last_chr = $chr;
@@ -100,7 +111,7 @@ sub execute {
         $last_ref = $ref;
         $last_cns = $cns;
     }
-    print shift @lines,"\n" if @lines;
+    print $output_fh shift @lines,"\n" if @lines;
 
 
     return 1;
