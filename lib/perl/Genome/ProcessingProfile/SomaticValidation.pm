@@ -32,6 +32,10 @@ class Genome::ProcessingProfile::SomaticValidation {
             is_optional =>1,
             doc => "Strategy to be used to detect cnvs.",
         },
+        identify_dnp_proportion => {
+            is => 'Number',
+            doc => 'The proportion of reads supporting a DNP to make the call',
+        },
         minimum_coverage => {
             is => 'Number', doc => 'minimum coverage to call a site (in process-validation step)',
         },
