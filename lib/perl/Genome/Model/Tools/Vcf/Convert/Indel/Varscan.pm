@@ -34,8 +34,7 @@ sub parse_line {
     my @fields = split "\t", $line;
     my $chr = $fields[0];
     my $pos = $fields[1];
-    $pos = $pos -1;
-    my $leading_base = $self->get_base_at_position($chr,$pos );
+    my $leading_base = $fields[2];
     my $dbsnp_id = ".";
     my $indel_string = $fields[18]; #last field on varscan line should be: +ACT or -GA deletion/insertion reporting style
     my $alt_alleles;
