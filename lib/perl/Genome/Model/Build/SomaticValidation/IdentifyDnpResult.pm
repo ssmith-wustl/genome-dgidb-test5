@@ -9,9 +9,10 @@ class Genome::Model::Build::SomaticValidation::IdentifyDnpResult {
         },
     ],
     has_input => [
-        build => {
-            is => 'Genome::Model::Build::SomaticValidation',
-        }
+        build_id => {
+            is => 'Number',
+            doc => 'Build ID of the Somatic Validation model.',
+        },
     ],
     has_optional => [
         disk_allocation => {
@@ -19,7 +20,10 @@ class Genome::Model::Build::SomaticValidation::IdentifyDnpResult {
             is_many => 1,
             reverse_as => 'owner',
         },
-
+        build => {
+            is => 'Genome::Model::Build::SomaticValidation',
+            id_by => 'build_id',
+        },
     ],
 };
 
