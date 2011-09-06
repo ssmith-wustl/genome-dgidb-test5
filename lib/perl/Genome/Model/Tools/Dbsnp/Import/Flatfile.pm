@@ -8,7 +8,7 @@ use Genome;
 use List::AllUtils qw( :all );
 
 class Genome::Model::Tools::Dbsnp::Import::Flatfile {
-    is => 'Genome::Model::Tools::Dbsnp::Import',
+    is => 'Genome::Model::Tools::Dbsnp',
     has => 
         [
             flatfile => {
@@ -104,6 +104,7 @@ sub execute {
     }
     $flatfile_fh->close;
     $output_fh->close;
+    return 1;
 }
 
 sub process_block {

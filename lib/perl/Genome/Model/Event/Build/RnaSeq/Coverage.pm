@@ -9,9 +9,9 @@ class Genome::Model::Event::Build::RnaSeq::Coverage {
     is => ['Genome::Model::Event'],
 };
 
-#sub bsub_rusage {
-#    return "-R 'select[model!=Opteron250 && type==LINUX64 && mem>=32000] rusage[mem=32000] span[hosts=1]' -M 32000000 -n 4";
-#}
+sub bsub_rusage {
+    return "-R 'select[mem>=8000] rusage[mem=8000]' -M 8000000";
+}
 
 sub execute {
     my $self = shift;

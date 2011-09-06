@@ -55,7 +55,7 @@ class Genome::Model::Tools::FastTier::FastTier {
         intersect_bed_bin_location => {
             type => 'Text',
             is_input => 1,
-            default => '/gscmnt/sata921/info/medseq/intersectBed/intersectBed-pipes',  #'/gsc/pkg/bio/bedtools/installed-64/intersectBed',
+            default => '/gsc/bin/intersectBed-pipes',  #'/gsc/pkg/bio/bedtools/installed-64/intersectBed',
             doc => 'The path and filename of intersectBed',
         },
         _tier1_bed => {
