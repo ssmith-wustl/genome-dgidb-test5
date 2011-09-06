@@ -9,9 +9,11 @@ class Genome::Model::Build::SomaticValidation::IdentifyDnpResult {
         },
     ],
     has_input => [
-        build_id => {
-            is => 'Number',
-            doc => 'Build ID of the Somatic Validation model.',
+        dv2_result_id => {
+            is => 'Text',
+        },
+        tumor_aligment_result_id => {
+            is => 'Text',
         },
     ],
     has_optional => [
@@ -20,9 +22,13 @@ class Genome::Model::Build::SomaticValidation::IdentifyDnpResult {
             is_many => 1,
             reverse_as => 'owner',
         },
-        build => {
-            is => 'Genome::Model::Build::SomaticValidation',
-            id_by => 'build_id',
+        dv2_result => {
+            is => 'Genome::Model::Tools::DetectVariants2::Result::Base',
+            id_by => 'dv2_result_id',
+        },
+        tumor_alignment_result => {
+            is => 'Genome::InstrumentData::AlignmentResult::Merged',
+            id_by => 'tumor_aligment_result_id',
         },
     ],
 };
@@ -58,7 +64,7 @@ sub create {
 sub _snvs_hq_bed {
     my $self = shift;
     my $version = 2;
-    my $snvs_hq_bed = $self->build->data_set_path('variants/snvs.hq', $version, 'bed');
+    my $snvs_hq_bed = join('/', $self->dv2_result->output_dir, 'snvs.hq.bed');
     unless (defined $snvs_hq_bed) {
         die $self->error_message("Could not resolve snvs.hq.bed from input build.");
     }
@@ -67,7 +73,7 @@ sub _snvs_hq_bed {
 
 sub _tumor_bam_file {
     my $self = shift;
-    my $bam_file = $self->build->tumor_reference_alignment->whole_rmdup_bam_file;
+    my $bam_file = $self->tumor_alignment_result->merged_alignment_bam_path;
     unless (defined $bam_file) {
         die $self->error_message("'whole_rmdup_bam_file' not defined for build's tumor_reference_alignment.");
     }
@@ -126,7 +132,7 @@ sub resolve_allocation_disk_group_name { 'info_genome_models' };
 sub resolve_allocation_subdirectory {
     my $self = shift;
     my $staged_basename = File::Basename::basename($self->temp_staging_directory);
-    return join('/', 'build_merged_alignments', $self->build->id, 'identify-dnp-' . $staged_basename);
+    return join('/', 'build_merged_alignments', $self->id, 'identify-dnp-' . $staged_basename);
 };
 
 sub estimated_kb_usage {

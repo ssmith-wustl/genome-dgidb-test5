@@ -8,7 +8,6 @@ class Genome::Model::SomaticValidation::Command::IdentifyDnp {
             is => 'Number',
             doc => 'ID of a Somatic Validation Build.',
         },
-
     ],
     has_output => [
         dnp_result_id => {
@@ -37,7 +36,7 @@ sub help_detail {
 }
 
 
-sub execute {
+sub params_for_result {
     my $self = shift;
 
     my $proportion = $self->build->processing_profile->identify_dnp_proportion;
@@ -45,10 +44,63 @@ sub execute {
         die $self->error_message("'identify_dnp_proportion' not specified on processing profile.");
     }
 
-    my $result = Genome::Model::Build::SomaticValidation::IdentifyDnpResult->create(
+    my $tumor_aligment_result_id = $self->build->merged_alignment_result->id;
+    #FIXME waiting on DV2 update
+    my $dv2_result_id = undef;
+
+    my $test_name = $ENV{GENOME_SOFTWARE_RESULT_TEST_NAME};
+
+    my $params = {
         proportion => $proportion,
-        build => $self->build,
-    );
+        tumor_aligment_result_id => $tumor_aligment_result_id,
+        dv2_result_id => $dv2_result_id,
+        test_name => $test_name,
+    };
+
+    return $params;
+}
+
+
+sub _link_to_result {
+    my $self = shift;
+
+    # add user
+    my $build = $self->build;
+    my $result = $self->dnp_result;
+    $result->add_user(user_id => $build->id, user_class_name => $build->class, label => 'uses');
+
+    # symlink result in
+    my $identify_dnp_symlink = join('/', $build->data_directory, 'identify-dnp');
+    Genome::Sys->create_symlink_and_log_change($self, $result->output_dir, $identify_dnp_symlink);
+
+    return 1;
+}
+
+
+sub shortcut {
+    my $self = shift;
+
+    #try to get using the lock in order to wait here in shortcut if another process is creating this alignment result
+    my $params = $self->params_for_result;
+    my $result = Genome::Model::Build::SomaticValidation::IdentifyDnpResult->get_with_lock(%$params);
+    unless($result) {
+        $self->status_message('No existing result found.');
+        return;
+    }
+
+    $self->status_message('Using existing result ' . $result->__display_name__);
+    $self->dnp_result($result);
+    $self->_link_to_result;
+
+    return 1;
+}
+
+
+sub execute {
+    my $self = shift;
+
+    my $params = $self->params_for_result;
+    my $result = Genome::Model::Build::SomaticValidation::IdentifyDnpResult->get_or_create(%$params);
 
     my $rv = ($result ? 1 : 0);
     unless ($result) {
@@ -56,6 +108,7 @@ sub execute {
     }
 
     $self->dnp_result($result);
+    $self->_link_to_result;
 
     return $rv;
 }
