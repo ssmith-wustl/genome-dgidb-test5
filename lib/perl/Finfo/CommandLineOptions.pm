@@ -2,6 +2,7 @@ package Finfo::CommandLineOptions;
 
 use strict;
 use warnings;
+no warnings 'reserved';
 
 use Finfo::Std;
 

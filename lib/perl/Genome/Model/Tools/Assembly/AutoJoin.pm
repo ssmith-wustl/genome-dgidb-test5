@@ -479,7 +479,7 @@ sub print_report
 sub parse_cross_match_outfile
 {
     my ($self) = @_;
-    my $reader = Alignment::Crossmatch::Reader->new(io => 'AutoJoin_CM_fasta_out');
+    my $reader = Genome::Model::Tools::Crossmatch::Reader->new(input => 'AutoJoin_CM_fasta_out');
     my @alignments = $reader->all;
 
     my $aligns = {};

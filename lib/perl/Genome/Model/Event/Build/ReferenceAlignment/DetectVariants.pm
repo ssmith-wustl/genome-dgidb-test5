@@ -42,6 +42,9 @@ sub execute{
     my $output_dir = $build->variants_directory;
     $params{output_directory} = $output_dir;
 
+    my $aligned_reads_sample = $build->subject->name;
+    $params{aligned_reads_sample} = $aligned_reads_sample;
+
     my $command = Genome::Model::Tools::DetectVariants2::Dispatcher->create(%params);
     unless ($command){
         die $self->error_message("Couldn't create detect variants dispatcher from params:\n".Data::Dumper::Dumper \%params);

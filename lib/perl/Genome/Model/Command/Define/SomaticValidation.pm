@@ -7,38 +7,28 @@ use Genome;
 
 class Genome::Model::Command::Define::SomaticValidation {
     is => 'Genome::Model::Command::Define::Helper',
-    has => [
+    has_input => [
         variant_list => {
-            is => 'Genome::FeatureList', id_by => 'variant_list_id',
+            is => 'Genome::FeatureList',
+            doc => 'the list of variants to validate',
         },
-        variant_list_id => {
-             is => 'Text', implied_by => 'variant_list', is_input => 1,
-        },
-        tumor_model => { 
+        tumor_model => {
             is => 'Genome::Model',
-            id_by => 'tumor_model_id', 
-            doc => 'The tumor model id being analyzed',
-            is_input => 1,
+            doc => 'The tumor model being analyzed',
         },
-        tumor_model_id => {
-            is => 'Integer',
-            is_input => 1,
-        },
-        normal_model => { 
-            is => 'Genome::Model', 
-            id_by => 'normal_model_id', 
+        normal_model => {
+            is => 'Genome::Model',
             doc => 'The normal model id being analyzed',
-            is_input => 1,
         },
-        normal_model_id => {
-            is => 'Integer',
-            is_input => 1,
-        },
-        subject_name => {
+   ],
+   has_transient_optional_input => [
+        subject => {
             is => 'Text',
-            is_input => 1,
-            is_optional => 1,
-            doc => 'Subject name is derived from normal and tumor models and is not necessary as input to somatic models',
+            doc => 'Subject is derived from normal and tumor models and is not necessary as input to somatic-validation models',
+        },
+        reference_sequence_build => {
+            is => 'Genome::Model::Build::ReferenceSequence',
+            doc => 'Reference sequence build is derived from normal and tumor models',
         },
     ],
 };
@@ -55,10 +45,10 @@ sub type_specific_parameters_for_create {
     my @params = ();
 
     push @params,
-        variant_list_id => $self->variant_list->id,
         variant_list => $self->variant_list,
-        tumor_model => $self->tumor_model,
-        normal_model => $self->normal_model;
+        tumor_reference_alignment => $self->tumor_model,
+        normal_reference_alignment => $self->normal_model,
+        reference_sequence_build => $self->reference_sequence_build;
 
     return @params;
 }
@@ -66,25 +56,16 @@ sub type_specific_parameters_for_create {
 sub execute {
     my $self = shift;
 
-    unless(defined $self->normal_model) {
-        $self->error_message("Could not get a model for normal model id: " . $self->normal_model_id);
-        return;
-    }
-    unless(defined $self->tumor_model) {
-        $self->error_message("Could not get a model for tumor model id: " . $self->tumor_model_id);
-        return;
-    }
-
     my $tumor_subject = $self->tumor_model->subject;
     my $normal_subject = $self->normal_model->subject;
 
     if($tumor_subject->can('source') and $normal_subject->can('source')) {
         my $tumor_source = $tumor_subject->source;
         my $normal_source = $normal_subject->source;
-        
+
         if($tumor_source eq $normal_source) {
             my $subject = $tumor_source;
-            
+
             #Set up other parameters for call to parent execute()
             $self->subject($subject);
         } else {
@@ -99,7 +80,9 @@ sub execute {
     my $normal_reference = $self->normal_model->reference_sequence_build;
     my $tumor_reference = $self->tumor_model->reference_sequence_build;
 
-    unless($normal_reference eq $tumor_reference) {
+    if($normal_reference eq $tumor_reference) {
+        $self->reference_sequence_build($tumor_reference);
+    } else {
         $self->error_message('Tumor and normal reference alignment models do not have the same reference sequence!');
         return;
     }

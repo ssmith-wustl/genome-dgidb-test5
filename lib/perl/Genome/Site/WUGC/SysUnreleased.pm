@@ -21,18 +21,9 @@ require Genome::Utility::Text;
 use Digest::MD5;
 use Sys::Hostname;
 use File::Find;
+use Archive::Extract;
 
 require MIME::Lite;
-
-sub user_id {
-    return $<;
-}
-
-sub username {
-    my $class = shift;
-    my $username = getpwuid($class->user_id);
-    return $username;
-}
 
 sub sudo_username {
     my $class = shift;
@@ -59,7 +50,7 @@ my %SYMLINKS_TO_REMOVE;
 
 # disk usage management
 
-sub disk_usage_for_path { 
+sub disk_usage_for_path {
     my $self = shift;
     my $path = shift;
 
@@ -89,7 +80,7 @@ sub diff_text_vs_text {
     $self->write_file($p1, $t1);
     my $p2 = $self->create_temp_file_path();
     $self->write_file($p2, $t2);
-    
+
     return $self->diff_file_vs_file($p1, $p2);
 }
 
@@ -97,13 +88,13 @@ sub diff_file_vs_text {
     my ($self,$f1,$t2) = @_;
     my $p2 = $self->create_temp_file_path();
     $self->write_file($p2, $t2);
-    
+
     return $self->diff_file_vs_file($f1, $p2);
 }
 
 sub diff_file_vs_file {
     my ($self,$f1,$f2) = @_;
-    
+
     my $diff_fh = IO::File->new("sdiff -s $f1 $f2 2>&1 |");
     unless ($diff_fh) {
         Carp::croak("Can't run 'sdiff -s $f1 $f2' for diff_file_vs_file(): $!");
@@ -122,13 +113,13 @@ sub open_file_for_appending {
     if ( -d $file ) {
         Carp::croak("Append file ($file) is a directory and cannot be opend as a file");
     }
-    
+
     my ($name, $dir) = File::Basename::fileparse($file);
     unless ( $dir ) {
         Carp::croak("Can't determine directory from append file ($file)");
     }
-    
-    unless ( -w $dir ) { 
+
+    unless ( -w $dir ) {
         Carp::croak("Do not have WRITE access to directory ($dir) for append file ($name)");
     }
 
@@ -187,8 +178,8 @@ sub validate_file_for_writing_overwrite {
     unless ( $dir ) {
         Carp::croak("Can't validate_file_for_writing_overwrite: Can't determine directory from pathname ($file)");
     }
-    
-    unless ( -w $dir ) { 
+
+    unless ( -w $dir ) {
         Carp::croak("Can't validate_file_for_writing_overwrite: Do not have WRITE access to directory ($dir) to create file ($name)");
     }
 
@@ -207,7 +198,7 @@ sub bzip {
     my $bzip_cmd = "bzip2 -z $file";
     my $result_file = $file.".bz2";
     # shellcmd throws its own exceptions when there are problems, including checking existence of output file
-    $self->shellcmd(cmd=>$bzip_cmd, 
+    $self->shellcmd(cmd=>$bzip_cmd,
                     output_files=>[$result_file]
                     );
 
@@ -222,7 +213,7 @@ sub bunzip {
     $self->validate_file_for_reading($file)
         or return;
 
-    if ($file=~m/\.bz2$/) {  
+    if ($file=~m/\.bz2$/) {
 
         #the -k option will keep the bzip file around
         my $bzip_cmd = "bzip2 -dk $file";
@@ -231,7 +222,7 @@ sub bunzip {
         $file=~m/(\S+).bz2/;
         my $result_file = $1;
 
-        $self->shellcmd(cmd=>$bzip_cmd, 
+        $self->shellcmd(cmd=>$bzip_cmd,
                         output_files=>[$result_file],
                         );
 
@@ -239,9 +230,49 @@ sub bunzip {
 
     } else {
         Carp::croak("Input file ($file) does not have .bz2 extension.  Not unzipping.");
-    } 
+    }
 
 }
+
+sub extract_archive {
+    my $self = shift;
+    my %params = @_;
+    my $from = delete $params{from};
+    my $to = delete $params{to};
+
+    if(%params) {
+        my @crap = %params;
+        Carp::confess("Unknown params passed to extract_archive: @crap");
+    }
+
+    unless($from) {
+        Carp::croak("No 'from' passed to extract_archive");
+    }
+
+    unless($to) {
+        Carp::croak("No 'to' passed to extract_archive");
+    }
+
+    $self->validate_file_for_reading($from);
+
+    #use binaries rather than perl modules to extract archives.
+    #the perl modules will often load the entire archive into RAM
+    #we operate on files way too big to be doing that
+    $Archive::Extract::PREFER_BIN = 1;
+
+    my $archive = Archive::Extract->new(archive => $from);
+    unless($archive) {
+        Carp::croak("Can't create extract object for archive $from");
+    }
+
+    my $rv = $archive->extract( to => $to);
+    unless($rv) {
+        Carp::croak("Unable to extract $from into $to");
+    }
+
+    return $archive;
+}
+
 
 sub open_file_for_writing {
     my ($self, $file) = @_;
@@ -254,7 +285,7 @@ sub open_file_for_writing {
             Carp::croak("Can't unlink $file: $!");
         }
     }
-    
+
     return $self->_open_file($file, 'w');
 }
 
@@ -267,13 +298,13 @@ sub copy_file {
     $self->validate_file_for_writing($dest)
         or Carp::croak("Cannot open output file ($dest) for writing!");
 
-    # Note: since the file is validate_file_for_reading, and the dest is validate_file_for_writing, 
+    # Note: since the file is validate_file_for_reading, and the dest is validate_file_for_writing,
     #  the files can never be exactly the same.
-    
+
     unless ( File::Copy::copy($file, $dest) ) {
         Carp::croak("Can't copy $file to $dest: $!");
     }
-    
+
     return 1;
 }
 
@@ -287,7 +318,7 @@ sub copy_directory {
         input_directories => [$source],
         output_directories => [$dest],
     );
-    
+
     return 1;
 }
 
@@ -318,7 +349,7 @@ sub validate_directory_for_read_access {
     # Both underlying methods throw their own exceptions
     $self->validate_existing_directory($directory)
         or return;
-    
+
     return $self->_can_read_from_directory($directory);
 }
 
@@ -328,7 +359,7 @@ sub validate_directory_for_write_access {
     # Both underlying methods throw their own exceptions
     $self->validate_existing_directory($directory)
         or return;
-    
+
     return $self->_can_write_to_directory($directory);
 }
 
@@ -338,7 +369,7 @@ sub validate_directory_for_read_write_access {
     # All three underlying methods throw their own exceptions
     $self->validate_existing_directory($directory)
         or return;
-    
+
     $self->_can_read_from_directory($directory)
         or return;
 
@@ -369,7 +400,7 @@ sub open_directory {
     my ($self, $directory) = @_;
 
     my $dh = IO::Dir->new($directory);
-  
+
     unless ($dh) {
         Carp::croak("Can't open_directory $directory: $!");
     }
@@ -386,12 +417,12 @@ sub cat {
     my $input_files = delete $params{input_files};
     my $output_file = delete $params{output_file};
     my $mode = ($params{append_mode} ? ">>" : ">");
-    
+
     my @addl_params;
     if ($params{append_mode}) {
         push @addl_params, (skip_if_output_is_present=>0);
     }
-        
+
     return $self->shellcmd(
                            cmd => "cat @$input_files $mode $output_file",
                            input_files => $input_files,
@@ -438,7 +469,7 @@ sub lock_resource {
 
     # make this readable for everyone
     chmod(0777, $tempdir) or Carp::croak("Can't chmod 0777 path ($tempdir): $!");
-    
+
     # drop an info file into here for compatibility's sake with old stuff.
     # put a "NOKILL" here on LSF_JOB_ID so an old process doesn't try to snap off the job ID and kill me.
     my $lock_info = IO::File->new("$tempdir/info", ">");
@@ -478,16 +509,16 @@ sub lock_resource {
         unless($target eq readlink($resource_lock)){
             next;
         }
-   
+
         if (!$target_exists) {
             # TONY: This means the lock symlink points to something that's been deleted
             # That's _really_ bad news and should probably get an email like below.
             $self->error_message("Lock ($resource_lock) exists but target ($target) does not exist.");
             Carp::croak($self->error_message);
-        } 
+        }
         my $target_basename = File::Basename::basename($target);
-        
-        
+
+
         $target_basename =~ s/lock-.*?--//;;
         my ($host, $user, $pid, $lsf_id) = split /_/, $target_basename;
 
@@ -496,11 +527,11 @@ sub lock_resource {
             $self->unlock_resource(resource_lock => $resource_lock, force => 1);
             next;
         }
-        
+
         my $info_content=sprintf("HOST %s\nPID %s\nLSF_JOB_ID %s\nUSER %s",$host,$pid,$lsf_id,$user);
         $self->status_message("waiting on lock for resource '$resource_lock': $symlink_error. lock_info is:\n$info_content");
-       
-        if ($lsf_id ne "NONE") { 
+
+        if ($lsf_id ne "NONE") {
             my ($job_info,$events) = Genome::Model::Event->lsf_state($lsf_id);
                  unless ($job_info) {
                      $self->warning_message("Invalid lock for resource $resource_lock\n"
@@ -512,9 +543,9 @@ Hey Apipe,
 
 This is a lock attempt on %s running as PID $$ LSF job %s and user %s.
 
-I'm about to remove a lock file held by a LSF job that I think is dead.  
+I'm about to remove a lock file held by a LSF job that I think is dead.
 
-The resource is: 
+The resource is:
 
 %s
 
@@ -526,7 +557,7 @@ I'll remove the lock in an hour.  If you want to save the lock, kill me
 before I unlock the process!
 
 Your pal,
-Genome::Utility::Filesystem 
+Genome::Utility::Filesystem
 
 END_CONTENT
 
@@ -540,10 +571,10 @@ END_CONTENT
                  }
                      $self->unlock_resource(resource_lock => $resource_lock, force => 1);
                      #maybe warn here before stealing the lock...
-               } 
-           } 
+               }
+           }
         sleep $block_sleep;
-       } 
+       }
     $SYMLINKS_TO_REMOVE{$resource_lock} = 1;
 
     # do we need to activate a cleanup handler?
@@ -583,12 +614,13 @@ sub unlock_resource {
     my $my_job_id = (defined $ENV{'LSB_JOBID'} ? $ENV{'LSB_JOBID'} : "NONE");
 
     unless ($force) {
-        unless ($thost eq $my_host 
-             && $tuser eq $ENV{'USER'} 
-             && $tpid eq $$ 
+        unless ($thost eq $my_host
+             && $tuser eq $ENV{'USER'}
+             && $tpid eq $$
              && $tlsf_id eq $my_job_id) {
-        
+
              $self->error_message("This lock does not look like it belongs to me.  $basename does not match $my_host $ENV{'USER'} $$ $my_job_id.");
+             delete $SYMLINKS_TO_REMOVE{$resource_lock}; # otherwise the lock would be forcefully cleaned up when process exits
              Carp::croak($self->error_message);
         }
     }
@@ -629,7 +661,7 @@ sub check_for_path_existence {
 # FIXME - I think this is a private function to Filesystem.pm
 sub cleanup_handler_check {
     my $self = shift;
-    
+
     my $symlink_count = scalar keys %SYMLINKS_TO_REMOVE;
 
     if ($symlink_count > 0) {
@@ -673,13 +705,13 @@ sub get_classes_in_subdirectory {
     my ($subdirectory) = @_;
 
     unless ( $subdirectory ) {
-        Carp::croak("No subdirectory given to get_classes_in_subdirectory"); 
+        Carp::croak("No subdirectory given to get_classes_in_subdirectory");
     }
 
     my $genome_dir = Genome->get_base_directory_name();
     my $inc_directory = substr($genome_dir, 0, -7);
     unless ( $inc_directory ) {
-        Carp::croak("Could not get inc directory for Genome.\n"); 
+        Carp::croak("Could not get inc directory for Genome.\n");
     }
 
     my $directory = $inc_directory.'/'.$subdirectory;
@@ -698,7 +730,7 @@ sub get_classes_in_subdirectory_that_isa {
     my ($subdirectory, $isa) = @_;
 
     unless ( $isa ) {
-        Carp::confess("No isa given to get classes in directory that isa\n"); 
+        Carp::confess("No isa given to get classes in directory that isa\n");
     }
 
     my @classes;
@@ -727,6 +759,16 @@ sub md5sum {
     return $digest;
 }
 
+sub md5sum_data {
+    my ($self, $data) = @_;
+    unless (defined $data) {
+        Carp::croak('No data passed to md5sum_data');
+    }
+    my $digest = Digest::MD5->new;
+    $digest->add($data);
+    return $digest->hexdigest;
+}
+
 sub directory_size_recursive {
     my ($self,$directory) = @_;
     my $size;
@@ -735,7 +777,7 @@ sub directory_size_recursive {
     }
     find(sub { $size += -s if -f $_ }, $directory);
     return $size;
-}  
+}
 
 sub is_file_ok {
     my ($self, $file) = @_;
@@ -775,7 +817,7 @@ sub is_file_ok {
 
 sub mark_file_ok {
     my ($self, $file) = @_;
-    
+
     my $ok_file = $file.".ok";
 
     if (-f $file ) {
@@ -792,7 +834,7 @@ sub mark_file_ok {
 }
 
 sub mark_files_ok {
-	my ($self,%params) = @_;	
+	my ($self,%params) = @_;
 	my $input_files = delete $params{input_files};
 	for my $input_file (@$input_files) {
 		$self->status_message("Marking file: ".$input_file);
@@ -804,15 +846,15 @@ sub mark_files_ok {
 
 sub are_files_ok {
 
-	my ($self,%params) = @_;	
+	my ($self,%params) = @_;
 	my $input_files = delete $params{input_files};
 	my $all_ok = 1;
 	for my $input_file (@$input_files) {
 		if (!$self->is_file_ok($input_file) ) {
 			$all_ok = 0;
-		} 
+		}
 	}
-	
+
 	if ($all_ok != 1) {
     	#delete all the files and start over
     	$self->status_message("Files are NOT OK.  Deleting files: ");
@@ -831,7 +873,7 @@ sub are_files_ok {
     	$self->status_message("Expected output files already exist.");
    	    return 1;
     }
-	
+
 	return;
 }
 
@@ -890,7 +932,7 @@ Houses some generic file and directory methods
 
  Genome::Sys->validate_file_for_reading('/tmp/users.txt')
     or ...;
- 
+
 =over
 
 =item I<Synopsis>   Checks whether the given file is defined, exists, and is readable
@@ -905,7 +947,7 @@ Houses some generic file and directory methods
 
  Genome::Sys->open_file_for_reading('/tmp/users.txt')
     or die;
- 
+
 =over
 
 =item I<Synopsis>   First validates the file for reading, then creates a IO::File for it.
@@ -920,7 +962,7 @@ Houses some generic file and directory methods
 
  Genome::Sys->validate_file_for_writing('/tmp/users.txt')
     or die;
- 
+
 =over
 
 =item I<Synopsis>   Checks whether the given file is defined, does not exist, and that the directory it is in is writable
@@ -935,7 +977,7 @@ Houses some generic file and directory methods
 
  Genome::Sys->open_file_for_writing('/tmp/users.txt')
     or die;
- 
+
 =over
 
 =item I<Synopsis>   First validates the file for writing, then creates a IO::File for it.
@@ -950,7 +992,7 @@ Houses some generic file and directory methods
 
  Genome::Sys->copy_file($FROM, $TO)
     or ...;
- 
+
 =over
 
 =item I<Synopsis>   Validates the $FROM as a file for reading, and validates the $TO as a file for writing.
@@ -967,7 +1009,7 @@ Houses some generic file and directory methods
 
  Genome::Sys->validate_existing_directory('/tmp/users')
     or die;
- 
+
 =over
 
 =item I<Synopsis>   Checks whether the given directory is defined, and is a directory (does not check permissions)
@@ -982,7 +1024,7 @@ Houses some generic file and directory methods
 
  Genome::Sys->open_directory('/tmp/users')
     or die;
- 
+
 =over
 
 =item I<Synopsis>   First validates the directory, the creates a IO::Dir handle for it
@@ -997,7 +1039,7 @@ Houses some generic file and directory methods
 
  Genome::Sys->create_directory('/tmp/users')
     or die;
- 
+
 =over
 
 =item I<Synopsis>   Creates the directory with the default permissions 02775

@@ -90,6 +90,7 @@ is(Genome::Model::Tools::Sx::Writer->_type_for_file('file.fasta'), 'phred', 'typ
 is(Genome::Model::Tools::Sx::Writer->_type_for_file('file.fa'), 'phred', 'type for fa');
 is(Genome::Model::Tools::Sx::Writer->_type_for_file('file.fna'), 'phred', 'type for fna');
 is(Genome::Model::Tools::Sx::Writer->_type_for_file('file.bed'), 'bed', 'type for bed');
+is(Genome::Model::Tools::Sx::Writer->_type_for_file('file.fasta.gz'), 'phred', 'type for gzipped fasta');
 
 # class for type
 ok(!eval{ Genome::Model::Tools::Sx::Reader->_reader_class_for_type() }, 'class for undef file failed: '.$@);

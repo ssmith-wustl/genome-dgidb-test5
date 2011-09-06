@@ -126,12 +126,17 @@ sub execute {
 
     if($self->tiering_version >= 3){
 
+        my $sorted_input = Genome::Sys->create_temp_file_path;
+        my $sort_incoming = Genome::Model::Tools::Joinx::Sort->create(input_files => [$self->variant_bed_file],output_file => $sorted_input);
+        unless($sort_incoming->execute){
+            die $self->error_message("Could not call sort on input: ".$self->variant_bed_file);
+        }
         my $insertions = Genome::Sys->create_temp_file_path;
 
         my @tier_temp_files;
         map{ push @tier_temp_files, Genome::Sys->create_temp_file_path;}(1..4);
 
-        my $tier1_cmd = "joinx intersect -f -o ".$tier_temp_files[0]." -a ".$self->variant_bed_file." -b ".$self->_tier1_bed." --miss-a - ";
+        my $tier1_cmd = "joinx intersect -f -o ".$tier_temp_files[0]." -a ".$sorted_input." -b ".$self->_tier1_bed." --miss-a - ";
         my $tier2_cmd = "joinx intersect -f -o ".$tier_temp_files[1]." -a - -b ".$self->_tier2_bed." --miss-a - ";
         my $tier3_cmd = "joinx intersect -f -o ".$tier_temp_files[2]." -a - -b ".$self->_tier3_bed." --miss-a - ";
         my $tier4_cmd = "joinx intersect -f -o ".$tier_temp_files[3]." -a - -b ".$self->_tier4_bed." --miss-a - "; 
@@ -140,7 +145,9 @@ sub execute {
 
         my $cmd = $tier1_cmd . " | " . $tier2_cmd . " | " . $tier3_cmd . " | " . $tier4_cmd . " > " . $insertions_cmd;
 
-        my $result = Genome::Sys->shellcmd( cmd => $cmd );
+        unless( Genome::Sys->shellcmd( cmd => $cmd ) ){
+            die $self->error_message("Fast tier command did not complete!");
+        }
 
         my @ins_temp_files;
         map{ push @ins_temp_files, Genome::Sys->create_temp_file_path;}(1..4);
@@ -154,7 +161,10 @@ sub execute {
 
             my $ins_cmd = $tier4_ins_cmd . " | " . $tier3_ins_cmd . " | " . $tier2_ins_cmd . " > " . $tier1_ins_cmd;
 
-            my $ins_result = Genome::Sys->shellcmd( cmd => $ins_cmd);
+            unless( Genome::Sys->shellcmd( cmd => $ins_cmd ) ){
+                die $self->error_message("Fast tier command for insertions did not complete!");
+            }
+
 
             for my $tier_num (1..4){
                 my $output = "tier".$tier_num."_output";
@@ -182,8 +192,31 @@ sub execute {
 
         my $cmd = $tier1_cmd . " | " . $tier2_cmd . " | " . $tier3_cmd . " > " . $tier4_cmd;
 
-        my $result = Genome::Sys->shellcmd( cmd => $cmd );
+        unless( Genome::Sys->shellcmd( cmd => $cmd ) ){
+            die $self->error_message("Fast tier command did not complete!");
+        }
     }
 
+    my $input = $self->line_count($self->variant_bed_file);
+    my $output=0;
+    for my $tier (1..4){
+        my $out = "tier".$tier."_output";
+        $output += $self->line_count($self->$out);
+    }
+    unless(($input - $output)==0){
+        die $self->error_message("Lines of input: ".$input."\t did not match lines of output: ".$output."\n");
+    }
     return 1;
+}
+
+
+sub line_count {
+    my $self = shift;
+    my $input = shift;
+    unless( -e $input ) {
+        die $self->error_message("Could not locate file for line count: $input");
+    }
+    my $result = `wc -l $input`; 
+    my ($answer)  = split /\s/,$result;
+    return $answer
 }

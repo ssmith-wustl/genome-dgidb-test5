@@ -2,6 +2,7 @@ package Finishing::Assembly::DumpPhd;
 
 use strict;
 use warnings;
+no warnings 'reserved';
 use Data::Dumper;
 
 use Finfo::Std;

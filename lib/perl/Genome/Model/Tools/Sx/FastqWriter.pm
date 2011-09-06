@@ -17,7 +17,7 @@ sub write {
     $self->{_file}->print(
         join(
             "\n",
-            '@'.$seq->{id}.( defined $seq->{desc} ? ' '.$seq->{desc} : '' ),
+            '@'.$seq->{id}.( defined $seq->{desc} && $seq->{desc} ne '' ? ' '.$seq->{desc} : '' ),
             $seq->{seq},
             '+',
             $seq->{qual},

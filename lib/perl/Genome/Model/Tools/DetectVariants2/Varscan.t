@@ -11,6 +11,7 @@ BEGIN {
 use above 'Genome';
 use Genome::SoftwareResult;
 use Test::More;
+use File::Compare;
 
 my $archos = `uname -a`;
 if ($archos !~ /64/) {
@@ -41,7 +42,7 @@ my $bam_input = $test_dir . '/alignments/102922275_merged_rmdup.bam';
 # Updated to .v7 due to the addition of read depth
 # Updated to .v8 due to directory structure changes
 # Updated to .v12 due to a score changing from using mpileup instad of pileup
-my $expected_dir = $test_dir . '/expected.v12/';
+my $expected_dir = $test_dir . '/expected.v13/';
 ok(-d $expected_dir, "expected results directory exists");
 
 
@@ -51,6 +52,7 @@ my $version = '2.2.6';
 my $command = Genome::Model::Tools::DetectVariants2::Varscan->create(
     reference_build_id => $refbuild_id,
     aligned_reads_input => $bam_input,
+    aligned_reads_sample => 'TEST',
     version => $version,
     params => "",
     output_directory => $test_working_dir,
@@ -59,10 +61,29 @@ ok($command, 'Created `gmt detect-variants varscan` command');
 $command->dump_status_messages(1);
 ok($command->execute, 'Executed `gmt detect-variants varscan` command');
 
-my $diff_cmd = sprintf('diff -r %s %s', $test_working_dir, $expected_dir);
+my @expected_output_files = qw|
+    indels.hq
+    indels.hq.bed
+    indels.hq.filter
+    indels.hq.v1.bed
+    indels.hq.v2.bed
+    snvs.hq
+    snvs.hq.bed
+    snvs.hq.filter
+    snvs.hq.v1.bed
+    snvs.hq.v2.bed
+    snvs.hq.variants| ;
 
-my $diff = `$diff_cmd`;
-is($diff, '', 'No differences in output from expected result from running varscan for this version and parameters');
+
+for my $output_file (@expected_output_files){
+    my $expected_file = $expected_dir."/".$output_file;
+    my $actual_file = $test_working_dir."/".$output_file;
+    is(compare($actual_file, $expected_file), 0, "$actual_file output matched expected output");
+}
+
+ok(-s $test_working_dir."/snvs.vcf", "Found VCF file");
 
 done_testing();
+
+
 exit;

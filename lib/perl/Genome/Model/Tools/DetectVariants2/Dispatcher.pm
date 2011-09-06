@@ -75,6 +75,12 @@ class Genome::Model::Tools::DetectVariants2::Dispatcher {
         _expected_output_directories => {
             doc => "This is a hash (by variant type) of lists of all detector, filter, and combine operation output directories",
         },
+        _param_to_index_mapping => {
+            doc => "This maps a set of parameters to a number for shortening operation names",
+        },
+        _next_index => {
+            doc => "The next number for _param_to_index_mapping",
+        },
     ],
     has_param => [
         lsf_queue => {
@@ -104,7 +110,7 @@ EOS
 sub create {
     my $class = shift;
     my $self = $class->SUPER::create(@_);
-
+    
     for my $variant_type (@{ $self->variant_types }) {
         my $name_property = $variant_type . '_detection_strategy';
         my $strategy = $self->$name_property;
@@ -143,7 +149,6 @@ sub plan {
 # Detect variants using all input detection strategies. Generates a workflow to do all of the work and executes it, storing the result in $self->_workflow_result
 sub _detect_variants {
     my $self = shift;
-
     unless ($self->snv_detection_strategy || $self->indel_detection_strategy || $self->sv_detection_strategy || $self->cnv_detection_strategy) {
         $self->error_message("Please provide one or more of: snv_detection_strategy, indel_detection_strategy, sv_detection_strategy, or cnv_detection_strategy");
         die $self->error_message;
@@ -164,6 +169,8 @@ sub _detect_variants {
     $input->{aligned_reads_input}= $self->aligned_reads_input;
     $input->{control_aligned_reads_input} = $self->control_aligned_reads_input;
     $input->{reference_build_id} = $self->reference_build_id;
+    $input->{aligned_reads_sample} = $self->aligned_reads_sample;
+    $input->{control_aligned_reads_sample} = $self->control_aligned_reads_sample;
     $input->{output_directory} = $self->_temp_staging_directory;
    
     $self->_dump_workflow($workflow);
@@ -202,6 +209,8 @@ sub _dump_dv_cmd {
                 ." --aligned-reads-input ".$self->aligned_reads_input;
     $cmd .=     " --control-aligned-reads-input ".$self->control_aligned_reads_input if $self->control_aligned_reads_input;
     $cmd .=     " --reference-build-id ".$self->reference_build_id;
+    $cmd .=     " --aligned-reads-sample ".$self->aligned_reads_sample;
+    $cmd .=     " --control-aligned-reads-sample ".$self->control_aligned_reads_sample if $self->control_aligned_reads_sample;
     for my $var ('snv','sv','indel'){
         my $strat = $var."_detection_strategy";
         if(defined($self->$strat)){
@@ -230,8 +239,8 @@ sub get_relative_path_to_output_directory {
 sub calculate_operation_output_directory {
     my $self = shift;
     my ($base_directory, $name, $version, $param_list) = @_;
-    my $subdirectory = join('-', $name, $version, $param_list);
-    
+    my $subdirectory = join('-', $name, $version, Genome::Sys->md5sum_data($param_list));
+
     return $base_directory . '/' . Genome::Utility::Text::sanitize_string_for_filesystem($subdirectory);
 }
 
@@ -369,6 +378,8 @@ sub generate_workflow {
             'reference_build_id',
             'aligned_reads_input',
             'control_aligned_reads_input',
+            'aligned_reads_sample',
+            'control_aligned_reads_sample',
             'output_directory',
         ],
         output_properties => [
@@ -461,6 +472,24 @@ sub link_operations {
     return $unique_combine_name;
 }
 
+sub params_to_index {
+    my $self = shift;
+    my $params = shift;
+
+    my $params_to_index = $self->_param_to_index_mapping;
+
+    unless(exists $params_to_index->{$params}) {
+        my $next_index = $self->_next_index || 1;
+
+        $params_to_index->{$params} = $next_index++;
+
+        $self->_param_to_index_mapping($params_to_index);
+        $self->_next_index($next_index);
+    }
+
+    return '#' . $params_to_index->{$params};
+}
+
 # This sub creates and links in any combine operations.
 sub create_combine_operation {
     my $self = shift;
@@ -525,7 +554,14 @@ sub create_combine_operation {
         operation_type => Workflow::OperationType::Command->get($class),
     );
 
-    my @properties_to_each_operation =  ( 'reference_build_id', 'aligned_reads_input', 'control_aligned_reads_input');
+    my @properties_to_each_operation =  ( 
+        'reference_build_id', 
+        'aligned_reads_input', 
+        'control_aligned_reads_input',
+        'aligned_reads_input',
+        'aligned_reads_sample',
+        'control_aligned_reads_sample',
+    );
     for my $property ( @properties_to_each_operation) {
         $workflow_model->add_link(
                 left_operation => $workflow_model->get_input_connector,
@@ -588,7 +624,7 @@ sub get_unique_detector_name {
     my $params = $hash->{params};
     my $name = $hash->{name};
     my $version = $hash->{version};
-    return join("_", ($variant_type, $name, $version, $params) );
+    return join("_", ($variant_type, $name, $version, $self->params_to_index($params)) );
 }
 
 
@@ -610,11 +646,11 @@ sub add_detectors_and_filters {
                 $class = $instance->{class};
                 $name = $instance->{name};
                 $version = $instance->{version};
-                my $unique_detector_base_name = join( "_", ($variant_type, $name, $version, $params));
+                my $unique_detector_base_name = join( "_", ($variant_type, $name, $version, $self->params_to_index($params)));
                 my @filters = @{$instance->{filters}};
                 # Make the operation
                 my $detector_operation = $workflow_model->add_operation(
-                    name => "$variant_type $name $version $params",
+                    name => "$variant_type $name $version " . $self->params_to_index($params),
                     operation_type => Workflow::OperationType::Command->get($class),
                 );
                 unless($detector_operation){
@@ -624,7 +660,7 @@ sub add_detectors_and_filters {
                 # create filter operations
                 for my $filter (@filters){
                     my $foperation = $workflow_model->add_operation(
-                        name => join(" ",($unique_detector_base_name,$filter->{name},$filter->{version},$filter->{params})),
+                        name => join(" ",($unique_detector_base_name,$filter->{name},$filter->{version}, $self->params_to_index($filter->{params}) )),
                         operation_type => Workflow::OperationType::Command->get($filter->{class})
                     ); 
                     unless($foperation){
@@ -634,7 +670,13 @@ sub add_detectors_and_filters {
                 }
 
                 # add links for properties which every detector has from input_connector
-                my @properties_to_each_operation =  ( 'reference_build_id', 'aligned_reads_input', 'control_aligned_reads_input');
+                my @properties_to_each_operation =  ( 
+                    'reference_build_id',
+                    'aligned_reads_input',
+                    'control_aligned_reads_input',
+                    'aligned_reads_sample',
+                    'control_aligned_reads_sample',
+                );
                 for my $property ( @properties_to_each_operation) {
                     $workflow_model->add_link(
                         left_operation => $workflow_model->get_input_connector,
@@ -749,7 +791,6 @@ sub add_detectors_and_filters {
     $self->_workflow_model($workflow_model);
     return $workflow_model;
 }
-
 sub _create_directories {
     my $self = shift;
     $self->SUPER::_create_directories(@_);

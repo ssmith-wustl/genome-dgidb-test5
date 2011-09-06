@@ -2,6 +2,7 @@ package Finfo::CommandDirectory;
 
 use strict;
 use warnings;
+no warnings 'reserved';
 
 use Finfo::Std;
 
@@ -60,6 +61,7 @@ sub execute {
         no warnings 'once';
         $Text::Wrap::columns = 100;
         use warnings;
+        no warnings 'reserved';
 
         my $script_name = File::Basename::basename($0);
 

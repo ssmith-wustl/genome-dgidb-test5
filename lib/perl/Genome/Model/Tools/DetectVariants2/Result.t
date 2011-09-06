@@ -41,6 +41,7 @@ my %command_params = (
     aligned_reads_input => $bam_input,
     version => $version,
     params => $detector_parameters,
+    aligned_reads_sample => 'TEST',
     output_directory => $test_working_dir . '/test',
 );
 

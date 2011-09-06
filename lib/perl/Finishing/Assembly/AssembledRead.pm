@@ -2,6 +2,7 @@ package Finishing::Assembly::AssembledRead;
 
 use strict;
 use warnings;
+no warnings 'reserved';
 
 use base 'Finishing::Assembly::SequencedItem';
 

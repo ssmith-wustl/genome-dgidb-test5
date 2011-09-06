@@ -43,7 +43,8 @@ my $sniper = Genome::Model::Tools::DetectVariants2::Sniper->create(aligned_reads
                                                                    reference_build_id => $refbuild_id,
                                                                    output_directory => $test_working_dir,
                                                                    version => '0.7.2',
-                                                                   params => '-q 1 -Q 15');
+                                                                   params => '-q 1 -Q 15',
+                                                                   aligned_reads_sample => 'TEST',);
 ok($sniper, 'sniper command created');
 $sniper->dump_status_messages(1);
 my $rv = $sniper->execute;

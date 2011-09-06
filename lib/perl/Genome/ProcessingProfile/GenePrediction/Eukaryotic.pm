@@ -20,6 +20,12 @@ class Genome::ProcessingProfile::GenePrediction::Eukaryotic {
             default => 0,
             doc => 'If set to true, lower-case masking characters are used by repeat masker instead of N',
         },
+        rfam_no_big_flag => {
+            is => 'Boolean',
+            is_optional => 1,
+            default => 1,
+            doc => 'If set, rfam will skip big trnas',
+        },
         rnammer_version => {
             is => 'Text',
             is_optional => 1,
@@ -86,6 +92,7 @@ sub _map_workflow_inputs {
         domain => $self->domain,
         max_bases_per_fasta => $self->max_bases_per_fasta,
         xsmall => $self->xsmall,
+        rfam_no_big_flag => $self->rfam_no_big_flag,
         rnammer_version => $self->rnammer_version,
         rfamscan_version => $self->rfamscan_version,
         snap_version =>  $self->snap_version,
@@ -99,6 +106,9 @@ sub _map_workflow_inputs {
         prediction_directory => $build->prediction_directory,
         skip_repeat_masker => $self->skip_repeat_masker,
         repeat_masker_ace_file => $build->repeat_masker_ace_file,
+        repeat_masker_gff_file => $build->repeat_masker_gff_file,
+        remove_merged_files => 1, # Don't want to keep the small unmerged files, they're 
+                                  # unnecessary and clutter the data directory
         predictions_ace_file => $build->predictions_ace_file,
         rna_predictions_ace_file => $build->rna_predictions_ace_file,
         rna_predictions_only_flag => 1; # This is just used to tell the step makes the rna predictions ace
@@ -109,7 +119,9 @@ sub _map_workflow_inputs {
 
     my $params;
     for (my $i = 0; $i < (scalar @inputs); $i += 2) {
-        $params .= $inputs[$i] . " : " . $inputs[$i + 1] . "\n";
+        my $key = $inputs[$i];
+        my $value = $inputs[$i + 1] || 'undef';
+        $params .= "$key : $value\n";
     }
     $self->status_message("Parameters for workflow are: \n$params");
 

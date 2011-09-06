@@ -4,6 +4,8 @@ use strict;
 use warnings;
 use File::Basename;
 use IO::File;
+use File::Path qw(make_path);
+use File::Copy;
 
 use Genome;
 
@@ -42,6 +44,8 @@ sub required_rusage {
 sub _run_aligner {
     my $self = shift;
     my @input_pathnames = @_;
+
+    $self->copy_license_file_to_home_directory();
 
     $DB::single = 1;
 
@@ -119,6 +123,24 @@ $DB::single=1;
 
     return 1;
 }
+
+sub copy_license_file_to_home_directory {
+    my $self = shift;
+    $self->status_message("copying latest clc license to user directory");
+    ####this method grabs the latest clc license and copies it to the users home directory
+    my $allocation_id = 'f392a8fcbbf94b0f865bd172d51ae096'; #This is good through November 2011
+    my $allocation = Genome::Disk::Allocation->get($allocation_id);
+    die $self->error_message("no allocation for clc license") unless $allocation;
+    my $license_filename = "CLC_Assembly_Cell_JCVI-Singh-HMPConsortium.lic";
+    my $allocated_license = $allocation->absolute_path."/$license_filename";
+    die $self->error_message("no clc license file in allocation") unless -e $allocated_license;
+    my $user = getpwuid($<);
+    my $local_path = "/gscuser/$user/.clcbio/licenses/";
+    make_path($local_path);
+    die $self->error_message("unable to copy clc license to users home directory") unless copy($allocated_license, $local_path);
+    return 1;
+}
+
 
 sub _filter_sam_output {
     my ($self, $cur_sam_file, $all_sequences_sam_file) = @_;

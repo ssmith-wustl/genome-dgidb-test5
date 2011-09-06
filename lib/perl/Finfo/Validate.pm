@@ -5,6 +5,7 @@ package Finfo::Validate;
 
 use strict;
 use warnings;
+no warnings 'reserved';
 
 use base qw(Class::Accessor);
 

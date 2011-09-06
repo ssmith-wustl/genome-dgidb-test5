@@ -8,21 +8,19 @@ use Genome;
 class Genome::Model::Build::SomaticValidation {
     is => 'Genome::Model::Build',
     has_optional => [
-        tumor_build_links => {
-            is => 'Genome::Model::Build::Link', reverse_as => 'to_build', where => [ role => 'tumor'], is_many => 1,
-            doc => 'The bridge table entry for the links to tumor builds (should only be one)',
-        },
-        tumor_build => {
-            is => 'Genome::Model::Build', via => 'tumor_build_links', to => 'from_build',
+        tumor_reference_alignment => {
+            is => 'Genome::Model::Build', via => 'inputs', to => 'value', where => [name => 'tumor_reference_alignment'],
             doc => 'The tumor build with which this build is associated',
         },
-        normal_build_links => {
-            is => 'Genome::Model::Build::Link', reverse_as => 'to_build', where => [ role => 'normal'], is_many => 1,
-            doc => 'The bridge table entry for the links to normal builds (should only be one)',
-        },
-        normal_build => {
-            is => 'Genome::Model::Build', via => 'normal_build_links', to => 'from_build',
+        normal_reference_alignment => {
+            is => 'Genome::Model::Build', via => 'inputs', to => 'value', where => [name => 'normal_reference_alignment'],
             doc => 'The tumor build with which this build is associated'
+        },
+        reference_sequence_build => {
+            is => 'Genome::Model::Build::ReferenceSequence', via => 'inputs', to => 'value', where => [name => 'reference_sequence_build'],
+        },
+        variant_list => {
+            is => 'Genome::FeatureList', via => 'inputs', to => 'value', where => [name => 'variant_list'],
         },
         snv_detection_strategy => {
             is => 'Text',
@@ -43,50 +41,6 @@ class Genome::Model::Build::SomaticValidation {
     ],
 };
 
-sub create {
-    my $class = shift;
-    my $self = $class->SUPER::create(@_);
-
-    $DB::single = $DB::stopper;
-    unless ($self) {
-        return;
-    }
-    my $model = $self->model;
-    unless ($model) {
-        $self->error_message("Failed to get a model for this build!");
-        return;
-    }
-
-    my $tumor_model = $model->tumor_model;
-    unless ($tumor_model) {
-        $self->error_message("Failed to get a tumor_model!");
-        return;
-    }
-
-    my $normal_model = $model->normal_model;
-    unless ($normal_model) {
-        $self->error_message("Failed to get a normal_model!");
-        return;
-    }
-
-    my $tumor_build = $tumor_model->last_complete_build;
-    unless ($tumor_build) {
-        $self->error_message("Failed to get a tumor build!");
-        return;
-    }
-
-    my $normal_build = $normal_model->last_complete_build;
-    unless ($normal_build) {
-        $self->error_message("Failed to get a normal build!");
-        return;
-    }
-
-    $self->add_from_build(role => 'tumor', from_build => $tumor_build);
-    $self->add_from_build(role => 'normal', from_build => $normal_build);
-
-    return $self;
-}
-
 sub post_allocation_initialization {
     my $self = shift;
 
@@ -102,14 +56,6 @@ sub post_allocation_initialization {
     return 1;
 }
 
-sub reference_sequence_build {
-    my $self = shift;
-    my $normal_build = $self->normal_build;
-    my $normal_model = $normal_build->model;
-    my $reference_sequence_build = $normal_model->reference_sequence_build;
-    return $reference_sequence_build;
-}
-
 sub data_set_path {
     my ($self, $dataset, $version, $file_format) = @_;
     my $path;
@@ -122,8 +68,8 @@ sub data_set_path {
 
 sub tumor_bam {
     my $self = shift;
-    $DB::single = 1;
-    my $tumor_build = $self->tumor_build;
+
+    my $tumor_build = $self->tumor_reference_alignment;
     my $tumor_bam = $tumor_build->whole_rmdup_bam_file;
     unless ($tumor_bam){
         die $self->error_message("No whole_rmdup_bam file found for tumor build!");
@@ -133,7 +79,8 @@ sub tumor_bam {
 
 sub normal_bam {
     my $self = shift;
-    my $normal_build = $self->normal_build;
+
+    my $normal_build = $self->normal_reference_alignment;
     my $normal_bam = $normal_build->whole_rmdup_bam_file;
     unless ($normal_bam){
         die $self->error_message("No whole_rmdup_bam file found for normal build!");
@@ -164,6 +111,26 @@ sub dirs_ignored_by_diff {
         logs/
         reports/
     );
+}
+
+sub validate_for_start_methods {
+    my $self = shift;
+    my @methods = $self->SUPER::validate_for_start_methods;
+    push @methods, qw(
+        _validate_required_for_start_properties
+        _validate_subjects
+    );
+    return @methods;
+}
+
+sub _validate_required_for_start_properties {
+    my $model_method = $_[0]->model->class . '::_validate_required_for_start_properties';
+    return (\&$model_method)->(@_);
+}
+
+sub _validate_subjects {
+    my $model_method = $_[0]->model->class . '::_validate_subjects';
+    return (\&$model_method)->(@_);
 }
 
 1;

@@ -31,6 +31,7 @@ class Genome::Model::Tools::Varscan::SomaticParallel {
 		output_snp	=> { is => 'Text', doc => "Basename for SNP output, eg. varscan_out/varscan.status.snp" , is_optional => 1, is_input => 1, is_output => 1},
 		output_indel	=> { is => 'Text', doc => "Basename for indel output, eg. varscan_out/varscan.status.snp" , is_optional => 1, is_input => 1, is_output => 1},
 		reference        => { is => 'Text', doc => "Reference FASTA file for BAMs" , is_optional => 1, default_value => (Genome::Config::reference_sequence_directory() . '/NCBI-human-build36/all_sequences.fa')},
+		chromosome	=> { is => 'Text', doc => "Specify a single chromosome (optional)", is_optional => 1, is_input => 1},
 		heap_space	=> { is => 'Text', doc => "Megabytes to reserve for java heap [1000]" , is_optional => 1, is_input => 1},
 		skip_if_output_present	=> { is => 'Text', doc => "If set to 1, skip execution if output files exist", is_optional => 1, is_input => 1 },
 		varscan_params	=> { is => 'Text', doc => "Parameters to pass to Varscan [--min-coverage 3 --min-var-freq 0.08 --p-value 0.10 --somatic-p-value 0.05 --strand-filter 1]" , is_optional => 1, is_input => 1},
@@ -134,21 +135,25 @@ sub execute {                               # replace with real execution logic.
 			}
 			else
 			{
-				print "$chrom\t";
-				$output_snp = $output . ".$chrom.snp";
-				$output_indel = $output . ".$chrom.indel";
-				print "$output_snp\t$output_indel\n";
-                
-#                                my $normal_pileup = "samtools view -b -u -q 10 $normal_bam $chrom:1 | samtools pileup -f $reference -";
- #                               my $tumor_pileup = "samtools view -b -u -q 10 $tumor_bam $chrom:1 | samtools pileup -f $reference -";
-                                my $normal_pileup = $self->samtools_path . " mpileup -f $reference -q 10 -r $chrom:1 $normal_bam";
-                                my $tumor_pileup = $self->samtools_path . " mpileup -f $reference -q 10 -r $chrom:1 $tumor_bam";
-                                                
-                                my $cmd = $self->java_command_line(" somatic <\($normal_pileup\) <\($tumor_pileup\) --output-snp $output_snp --output-indel $output_indel $varscan_params");
+				if(!$self->chromosome  || $chrom eq $self->chromosome)
+				{
+					print "$chrom\t";
+					$output_snp = $output . ".$chrom.snp";
+					$output_indel = $output . ".$chrom.indel";
+					print "$output_snp\t$output_indel\n";
+			
+	#                                my $normal_pileup = "samtools view -b -u -q 10 $normal_bam $chrom:1 | samtools pileup -f $reference -";
+	 #                               my $tumor_pileup = "samtools view -b -u -q 10 $tumor_bam $chrom:1 | samtools pileup -f $reference -";
+					my $normal_pileup = $self->samtools_path . " mpileup -f $reference -q 10 -r $chrom:1 $normal_bam";
+					my $tumor_pileup = $self->samtools_path . " mpileup -f $reference -q 10 -r $chrom:1 $tumor_bam";
+							
+					my $cmd = $self->java_command_line(" somatic <\($normal_pileup\) <\($tumor_pileup\) --output-snp $output_snp --output-indel $output_indel $varscan_params");
+	
+					print "Running $cmd\n";                
+					system("bsub -q long -R\"select[type==LINUX64 && model != Opteron250 && mem>2000 && tmp>2000] rusage[mem=2000]\" $cmd");
+	 #                               system($cmd);					
+				}
 
-                                print "Running $cmd\n";                
-                                system("bsub -q long -R\"select[type==LINUX64 && model != Opteron250 && mem>2000 && tmp>2000] rusage[mem=2000]\" $cmd");
- #                               system($cmd);
 
 			}
 

@@ -583,6 +583,7 @@ sub post_allocation_initialization {
 }
 
 sub validate_for_start_methods {
+    # Be very wary of removing any of these as many subclasses use SUPER::validate_for_start_methods
     # Each method should return tags
     my @methods = (
         #validate_inputs_have_values should be checked first
@@ -601,8 +602,7 @@ sub validate_for_start {
 
     for my $method (@methods) {
         unless ($self->can($method)) {
-            $self->warning_message("Validation method $method not found!");
-            next;
+            die $self->warning_message("Validation method $method not found!");
         }
         my @returned_tags = grep { defined $_ } $self->$method(); # Prevents undef from being pushed to tags list
         push @tags, @returned_tags if @returned_tags; 
@@ -940,6 +940,7 @@ sub _launch {
 
         # bsub into the queue specified by the dispatch spec
         my $lsf_project = "build" . $self->id;
+        $ENV{'WF_LSF_PROJECT'} = $lsf_project;
         my $user = Genome::Sys->username;
         my $lsf_command  = join(' ',
             'bsub -N -H',
@@ -1787,7 +1788,9 @@ sub compare_output {
     my (%file_paths, %other_file_paths);
     require Cwd;
     for my $file (@{$self->files_in_data_directory}) {
-        $file_paths{$self->full_path_to_relative($file)} = Cwd::abs_path($file);
+        my $abs_path = Cwd::abs_path($file);
+        next unless $abs_path; # abs_path returns undef if a subdirectory of file does not exist
+        $file_paths{$self->full_path_to_relative($file)} = $abs_path;
     }
     for my $other_file (@{$other_build->files_in_data_directory}) {
         $other_file_paths{$other_build->full_path_to_relative($other_file)} = Cwd::abs_path($other_file);
@@ -1798,6 +1801,7 @@ sub compare_output {
     my %diffs;
     FILE: for my $rel_path (sort keys %file_paths) {
         my $abs_path = delete $file_paths{$rel_path};
+        warn "abs_path ($abs_path) does not exist\n" unless (-e $abs_path);
         my $dir = $self->full_path_to_relative(dirname($abs_path));
        
         next FILE if -d $abs_path;
@@ -1867,6 +1871,7 @@ sub compare_output {
     # Make sure the other build doesn't have any extra files
     for my $rel_path (sort keys %other_file_paths) {
         my $abs_path = delete $other_file_paths{$rel_path};
+        warn "abs_path ($abs_path) does not exist\n" unless (-e $abs_path);
         my $dir = $self->full_path_to_relative(dirname($abs_path));
         next if -d $abs_path;
         next if grep { $dir =~ /$_/ } $self->dirs_ignored_by_diff;
@@ -2057,6 +2062,7 @@ sub is_used_as_model_or_build_input {
 sub child_lsf_jobs {
     my $self = shift;
     my @workflow_instances = $self->_get_workflow_instance_children($self->newest_workflow_instance);
+    return unless @workflow_instances;
     my @dispatch_ids = grep {defined $_} map($_->current->dispatch_identifier, @workflow_instances);
     my @valid_ids = grep {$_ !~ /^P/} @dispatch_ids;
     return @valid_ids;
@@ -2064,7 +2070,7 @@ sub child_lsf_jobs {
 
 sub _get_workflow_instance_children {
     my $self = shift;
-    my $parent = shift || die;
+    my $parent = shift || return;
     return $parent, map($self->_get_workflow_instance_children($_), $parent->related_instances);
 }
 

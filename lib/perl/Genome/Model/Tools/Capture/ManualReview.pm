@@ -10,26 +10,31 @@ class Genome::Model::Tools::Capture::ManualReview {
   is => 'Command',
   has_input => [
     som_var_model_group_id => { is => 'Text', doc => "ID of model-group containing SomaticVariation models with variants to manually review" },
-    output_dir => { is => 'Text', doc => "Directory where manual review files will be written to" },
+    output_dir => { is => 'Text', doc => "Directory where manual review files will be written to or read from" },
     exclude_pindel => { is => 'Boolean', doc => "Keep aside indels unique to Pindel, since many cannot be reviewed on a BWA aligned BAM", is_optional => 1, default => 1 },
-    exclude_uhf_snvs => { is => 'Boolean', doc => "Keep aside SNV calls that pass the ultra-high-confidence filter", is_optional => 1, default => 1 },
-    min_hypermut_cnt => { is => 'Number', doc => "Minimum SNV+Indel count (before pindel/uhf exclusions) to treat a case as hypermutated", is_optional => 1, default => 500 },
+    exclude_uhf_snvs => { is => 'Boolean', doc => "Keep aside SNV calls that pass the ultra-high-confidence filter (UHF)", is_optional => 1, default => 1 },
+    max_variants => { is => 'Number', doc => "Maximum allowed SNVs+Indels (after pindel/UHF exclusions) to consider a case for review", is_optional => 1, default => 250 },
     refseq_version => { is => 'Text', doc => "Reference sequence to use with the UHF (GRCh37-lite-build37 or NCBI-human-build36)", is_optional => 1, default => "GRCh37-lite-build37" },
+    read_review => { is => 'Boolean', doc => "Read existing manual review files and create WU annotation files per case", is_optional => 1, default => 0 },
   ],
-  doc => "Prepares variants for manual review in IGV, given a model-group of SomaticVariation models",
+  doc => "Reads/creates manual review files, given a model-group of SomaticVariation models",
 };
 
 sub help_detail {
   return <<HELP;
-Given a model-group containing SomaticVariation models, this tool will gather the resulting tier1
-variants and prepare them for manual review. Existing review files will not be overwritten. Review
-files for hypermutated cases will be written output to a subdirectory named hypermutated'.
+Given a model-group of SomaticVariation models, this tool with gather resulting tier1 variants and
+prepare them for manual review. Existing review files will not be overwritten. Review files for
+cases with more than --max-variants will be written to a subdirectory named too_many_to_review.
+
+After manual review, this tool can be used again with the argument --read-review to parse the
+reviewed files (expects file extensions *.reviewed.csv), and print somatic SNVs and Indels in
+WashU annotation format for each case (variants with review codes 'S' or 'V').
 
 --exclude-pindel
   If set, calls unique to Pindel are stored in a separate review file. Pindel calls that are also
   found by GATK are stored in the Indel review file (along with calls unique to GATK).
 
---exclude-uhc-snvs
+--exclude-uhf-snvs
   If set, the Ultra High-confidence Filter (UHF) is invoked. Calls that pass the filter are stored
   separately in annotation format, and the remaining SNVs are written to the SNV review file.
 HELP
@@ -37,8 +42,8 @@ HELP
 
 sub _doc_authors {
   return <<AUTHS;
- David Larson, Ph.D.
  Cyriac Kandoth, Ph.D.
+ David Larson, Ph.D.
 AUTHS
 }
 
@@ -47,9 +52,10 @@ sub execute {
   my $som_var_model_group_id = $self->som_var_model_group_id;
   my $output_dir = $self->output_dir;
   my $exclude_pindel = $self->exclude_pindel;
-  my $exclude_uhc_snvs = $self->exclude_uhc_snvs;
-  my $min_hypermut_cnt = $self->min_hypermut_cnt;
+  my $exclude_uhf_snvs = $self->exclude_uhf_snvs;
+  my $max_variants = $self->max_variants;
   my $refseq_version = $self->refseq_version;
+  my $read_review = $self->read_review;
   $output_dir =~ s/(\/)+$//; # Remove trailing forward-slashes if any
 
   # Check on all the input data before starting work
@@ -107,18 +113,95 @@ sub execute {
     }
   }
 
-  # Unless it already exists, create a subdirectory to keep aside hypermutated cases
-  mkdir "$output_dir/hypermutated" unless( -e "$output_dir/hypermutated" );
+  # Unless it already exists, create a subdirectory to keep aside cases with too many variants
+  mkdir "$output_dir/too_many_to_review" unless( -e "$output_dir/too_many_to_review" );
 
   foreach my $case ( keys %bams )
   {
+    # If we're parsing reviewed files, then don't create any new ones
+    if( $read_review )
+    {
+      print "Reading review files for case $case... ";
+      if( -e "$output_dir/$case.snv.reviewed.csv" and -e "$output_dir/$case.indel.reviewed.csv" )
+      {
+        # Grab the high confidence tier1 SNV and Indel annotations from their respective files
+        my ( $snv_anno, $indel_anno ) = ( $bams{$case}{snvs}, $bams{$case}{indels} );
+        my @snv_lines = `cat $snv_anno`;
+        my @indel_lines = `cat $indel_anno`;
+        chomp( @snv_lines, @indel_lines );
+
+        # Store the variants into a hash to help search through them quickly
+        my %anno_lines = ();
+        for my $line ( @snv_lines )
+        {
+          my ( $chr, $start, $stop, $ref, $var ) = split( /\t/, $line );
+          $anno_lines{snvs}{$chr}{$start}{$stop} = $line;
+        }
+        for my $line ( @indel_lines )
+        {
+          my ( $chr, $start, $stop, $ref, $var ) = split( /\t/, $line );
+          $anno_lines{indels}{$chr}{$start}{$stop} = $line;
+        }
+
+        my $out_anno_file = "$output_dir/$case.reviewed.anno";
+        my $out_anno_fh = IO::File->new( $out_anno_file, ">" ) or die "Cannot open $out_anno_file. $!";
+
+        # Read in the UHF SNVs, if found, and write them straight to output
+        if ( -e "$output_dir/$case.snv.uhf.anno" )
+        {
+          my @uhf_snv_lines = `cat $output_dir/$case.snv.uhf.anno`;
+          chomp( @uhf_snv_lines ); # Chomping and reprinting newlines cuz we shouldn't make assumptions
+          $out_anno_fh->print( join( "\n", @uhf_snv_lines ), "\n" );
+        }
+
+        # Load the manual review files and print WU annotation lines for call codes 'S' or 'V'
+        my ( $snv_review, $indel_review ) = ( "$output_dir/$case.snv.reviewed.csv", "$output_dir/$case.indel.reviewed.csv" );
+        ( @snv_lines, @indel_lines ) = ((), ());
+        @snv_lines = `cat $snv_review` if( -e $snv_review );
+        @indel_lines = `cat $indel_review` if( -e $indel_review );
+        chomp( @snv_lines, @indel_lines );
+        for my $line ( @snv_lines )
+        {
+          my ( $chr, $start, $stop, undef, undef, $call ) = split( /\t/, $line );
+          next if( $chr eq 'Chr' ); # Skip header
+          if( !defined $call or $call =~ m/^\s*$/ or $call =~ m/[SVsv]/ ) # If this line is not reviewed, then let it through, for now
+          {
+            $out_anno_fh->print( $anno_lines{snvs}{$chr}{$start}{$stop}, "\n" ) if( defined $anno_lines{snvs}{$chr}{$start}{$stop} );
+          }
+        }
+        for my $line ( @indel_lines )
+        {
+          my ( $chr, $start, $stop, undef, undef, $call ) = split( /\t/, $line );
+          next if( $chr eq 'Chr' ); # Skip header
+          if( !defined $call or $call =~ m/^\s*$/ or $call =~ m/[SVsv]/ ) # If this line is not reviewed, then let it through, for now
+          {
+            $out_anno_fh->print( $anno_lines{indels}{$chr}{$start}{$stop}, "\n" ) if( defined $anno_lines{indels}{$chr}{$start}{$stop} );
+          }
+        }
+        $out_anno_fh->close;
+        print "wrote somatic variants to file $case.reviewed.anno\n";
+      }
+      elsif( -e "$output_dir/too_many_to_review/$case.snv.reviewed.csv" or -e "$output_dir/too_many_to_review/$case.indel.reviewed.csv" or
+             -e "$output_dir/too_many_to_review/$case.snv.review.csv" or -e "$output_dir/too_many_to_review/$case.indel.review.csv" )
+      {
+        print "files found in folder 'too_many_to_review'. Skipping case.\n";
+      }
+      else
+      {
+        print "SNV and Indel review files not found. Skipping case.\n";
+      }
+
+      next;
+    }
+
+    # If we're not parsing reviewed files, then go ahead and create new ones unless they exist
     print "Preparing review files for $case... ";
 
     # Check if any review files exist. We don't want to overwrite reviewed variants
     if( -e "$output_dir/$case.snv.review.csv" or -e "$output_dir/$case.indel.review.csv" or
         -e "$output_dir/$case.snv.reviewed.csv" or -e "$output_dir/$case.indel.reviewed.csv" or
-        -e "$output_dir/hypermutated/$case.snv.review.csv" or -e "$output_dir/hypermutated/$case.indel.review.csv" or
-        -e "$output_dir/hypermutated/$case.snv.reviewed.csv" or -e "$output_dir/hypermutated/$case.indel.reviewed.csv" )
+        -e "$output_dir/too_many_to_review/$case.snv.review.csv" or -e "$output_dir/too_many_to_review/$case.indel.review.csv" or
+        -e "$output_dir/too_many_to_review/$case.snv.reviewed.csv" or -e "$output_dir/too_many_to_review/$case.indel.reviewed.csv" )
     {
       print "files exist. Will not overwrite.\n";
       next;
@@ -147,12 +230,12 @@ sub execute {
 
     # Store the variants into a hash to help sort variants by loci, and to remove duplicates
     my %review_lines = ();
-    my %var_cnt = ( snvs => 0, indels => 0 );
+    my ( $snv_cnt, $indel_cnt ) = ( 0, 0 );
     for my $line ( @snv_lines )
     {
       my ( $chr, $start, $stop, $ref, $var ) = split( /\t/, $line );
-      ++$var_cnt{snvs} unless( defined $review_lines{snvs}{$chr}{$start}{$stop} );
-      $review_lines{snvs}{$chr}{$start}{$stop} = $line; # Save annotation here for uhc filtering
+      ++$snv_cnt unless( defined $review_lines{snvs}{$chr}{$start}{$stop} );
+      $review_lines{snvs}{$chr}{$start}{$stop} = $line; # Save annotation for use with the UHF
     }
     for my $line ( @indel_lines )
     {
@@ -166,17 +249,66 @@ sub execute {
       }
       else
       {
-        ++$var_cnt{indels} unless( defined $review_lines{indels}{$chr}{$start}{$stop} );
+        ++$indel_cnt unless( defined $review_lines{indels}{$chr}{$start}{$stop} );
         $review_lines{indels}{$chr}{$start}{$stop} = join( "\t", $chr, $start, $stop, $ref, $var );
       }
     }
 
-    # If there are more variants than our hypermutation threshold, store them separately
-    my $tot_var_cnt = $var_cnt{snvs} + $var_cnt{indels};
-    my $output_dir_new = $output_dir;
-    if( $tot_var_cnt >= $min_hypermut_cnt )
+    my ( $tumor_bam, $normal_bam ) = ( $bams{$case}{tumor}, $bams{$case}{normal} );
+
+    # If user wants, filter out the ultra-high-confidence SNVs
+    my $uhf_snv_file = "$output_dir/$case.snv.uhf.anno";
+    if( $exclude_uhf_snvs )
     {
-      $output_dir_new = "$output_dir/hypermutated";
+      print "Running ultra-high-confidence filter. This could take a while...\n";
+      # Print out a de-duplicated snv annotation file for use with the UHF
+      my $snv_anno_file = Genome::Sys->create_temp_file_path();
+      my $snv_anno_fh = IO::File->new( $snv_anno_file, ">" ) or die "Cannot open $snv_anno_file. $!";
+      for my $chr ( nsort keys %{$review_lines{snvs}} )
+      {
+        for my $start ( sort {$a <=> $b} keys %{$review_lines{snvs}{$chr}} )
+        {
+          for my $stop ( sort {$a <=> $b} keys %{$review_lines{snvs}{$chr}{$start}} )
+          {
+            $snv_anno_fh->print( $review_lines{snvs}{$chr}{$start}{$stop}, "\n" );
+          }
+        }
+      }
+      $snv_anno_fh->close;
+      my $snv_filtered_file = Genome::Sys->create_temp_file_path();
+
+      # Fetch the path to the reference sequence FASTA file to use with the UHF
+      my $refseq_build = Genome::Model::Build::ReferenceSequence->get( name => $refseq_version );
+      my $refseq_fasta = $refseq_build->data_directory . "/all_sequences.fa";
+
+      # Run the UHF
+      `gmt somatic ultra-high-confidence --variant-file $snv_anno_file --normal-bam-file $normal_bam --tumor-bam-file $tumor_bam --reference $refseq_fasta --output-file $uhf_snv_file --filtered-file $snv_filtered_file`;
+      `rm -f $uhf_snv_file.readcounts.normal $uhf_snv_file.readcounts.tumor`; # Remove intermediate files
+
+      # Only the variants that didn't pass the UHF will need to be reviewed
+      undef %{$review_lines{snvs}}; # Reset the review line hash
+      my @snv_filtered_lines = `cat $snv_filtered_file`;
+      chomp( @snv_filtered_lines );
+      $snv_cnt = 0;
+      for my $line ( @snv_filtered_lines )
+      {
+        my ( $chr, $start, $stop, $ref, $var ) = split( /\t/, $line );
+        ++$snv_cnt unless( defined $review_lines{snvs}{$chr}{$start}{$stop} );
+        $review_lines{snvs}{$chr}{$start}{$stop} = $line;
+      }
+    }
+
+    # If there are more variants than our max-variants threshold, store review files separately
+    my $output_dir_new = $output_dir;
+    if(( $snv_cnt + $indel_cnt ) > $max_variants )
+    {
+      $output_dir_new = "$output_dir/too_many_to_review";
+      # Move over files we've already created for this case
+      if( $exclude_uhf_snvs )
+      {
+        my $uhf_snv_file_new = "$output_dir_new/$case.snv.uhf.anno";
+        `mv $uhf_snv_file $uhf_snv_file_new`;
+      }
     }
 
     # Create review files for manual reviewers to record comments, and bed files for use with IGV
@@ -186,8 +318,25 @@ sub execute {
     my $indel_bed_file = "$output_dir_new/$case.indel.bed";
     # If user wants to exclude calls unique to pindel, create a separate file (no need for a .bed)
     my $pindel_review_file = "$output_dir_new/$case.pindel.review.csv";
-    # If user wants to exclude ultra-high-confidence calls from review, create separate files
-    my $uhc_snv_file = "$output_dir_new/$case.snv.uhc.anno";
+
+    # Write SNV review files
+    my $snv_review_fh = IO::File->new( $snv_review_file, ">" ) or die "Cannot open $snv_review_file. $!";
+    my $snv_bed_fh = IO::File->new( $snv_bed_file, ">" ) or die "Cannot open $snv_bed_file. $!";
+    $snv_review_fh->print( "Chr\tStart\tStop\tRef\tVar\tCall\tNotes\n" );
+    for my $chr ( nsort keys %{$review_lines{snvs}} )
+    {
+      for my $start ( sort {$a <=> $b} keys %{$review_lines{snvs}{$chr}} )
+      {
+        for my $stop ( sort {$a <=> $b} keys %{$review_lines{snvs}{$chr}{$start}} )
+        {
+          my ( undef, undef, undef, $ref, $var ) = split( /\t/, $review_lines{snvs}{$chr}{$start}{$stop} );
+          $snv_review_fh->print( join( "\t", $chr, $start, $stop, $ref, $var ), "\n" );
+          $snv_bed_fh->printf( "%s\t%d\t%d\t%s\t%s\n", $chr, $start-1, $stop, $ref, $var );
+        }
+      }
+    }
+    $snv_bed_fh->close;
+    $snv_review_fh->close;
 
     # Write indel review files
     my $indel_review_fh = IO::File->new( $indel_review_file, ">" ) or die "Cannot open $indel_review_file. $!";
@@ -226,70 +375,11 @@ sub execute {
       $pindel_review_fh->close if( $exclude_pindel );
     }
 
-    my ( $tumor_bam, $normal_bam ) = ( $bams{$case}{tumor}, $bams{$case}{normal} );
-
-    # If user wants, filter out the ultra-high-confidence SNVs
-    if( $exclude_uhc_snvs )
-    {
-      print "Running ultra-high-confidence filter. This could take a while...\n";
-      # Print out a de-duplicated snv annotation file for use with the UHC filter
-      my $snv_anno_file = Genome::Sys->create_temp_file_path();
-      my $snv_anno_fh = IO::File->new( $snv_anno_file, ">" ) or die "Cannot open $snv_anno_file. $!";
-      for my $chr ( nsort keys %{$review_lines{snvs}} )
-      {
-        for my $start ( sort {$a <=> $b} keys %{$review_lines{snvs}{$chr}} )
-        {
-          for my $stop ( sort {$a <=> $b} keys %{$review_lines{snvs}{$chr}{$start}} )
-          {
-            $snv_anno_fh->print( $review_lines{snvs}{$chr}{$start}{$stop}, "\n" );
-          }
-        }
-      }
-      $snv_anno_fh->close;
-      my $snv_filtered_file = Genome::Sys->create_temp_file_path();
-
-      # Fetch the path to the reference sequence FASTA file to use with the UHC filter
-      my $refseq_build = Genome::Model::Build::ReferenceSequence->get( name => $refseq_version );
-      my $reference_fasta = $refseq_build->data_directory . "/all_sequences.fa";
-
-      # Run the UHC filter
-      `gmt somatic ultra-high-confidence --variant-file $snv_anno_file --normal-bam-file $normal_bam --tumor-bam-file $tumor_bam --reference $reference_fasta --output-file $uhc_snv_file --filtered-file $snv_filtered_file`;
-      `rm -f $uhc_snv_file.readcounts.normal $uhc_snv_file.readcounts.tumor`; # Remove intermediate files
-
-      # Only the variants that didn't pass the uhc filter will need to be reviewed
-      undef %{$review_lines{snvs}}; # Reset the review line hash
-      my @snv_filtered_lines = `cat $snv_filtered_file`;
-      chomp( @snv_filtered_lines );
-      for my $line ( @snv_filtered_lines )
-      {
-        my ( $chr, $start, $stop, $ref, $var ) = split( /\t/, $line );
-        $review_lines{snvs}{$chr}{$start}{$stop} = $line;
-      }
-    }
-
-    # Write SNV review files
-    my $snv_review_fh = IO::File->new( $snv_review_file, ">" ) or die "Cannot open $snv_review_file. $!";
-    my $snv_bed_fh = IO::File->new( $snv_bed_file, ">" ) or die "Cannot open $snv_bed_file. $!";
-    $snv_review_fh->print( "Chr\tStart\tStop\tRef\tVar\tCall\tNotes\n" );
-    for my $chr ( nsort keys %{$review_lines{snvs}} )
-    {
-      for my $start ( sort {$a <=> $b} keys %{$review_lines{snvs}{$chr}} )
-      {
-        for my $stop ( sort {$a <=> $b} keys %{$review_lines{snvs}{$chr}{$start}} )
-        {
-          my ( undef, undef, undef, $ref, $var ) = split( /\t/, $review_lines{snvs}{$chr}{$start}{$stop} );
-          $snv_review_fh->print( join( "\t", $chr, $start, $stop, $ref, $var ), "\n" );
-          $snv_bed_fh->printf( "%s\t%d\t%d\t%s\t%s\n", $chr, $start-1, $stop, $ref, $var );
-        }
-      }
-    }
-    $snv_bed_fh->close;
-    $snv_review_fh->close;
-
     # Dump IGV XML files to make it easy on the manual reviewers
-    unless( Genome::Model::Tools::Analysis::DumpIgvXml->execute( tumor_bam => $tumor_bam, normal_bam => $normal_bam,
+    my $reference = (( $refseq_version eq "GRCh37-lite-build37" ) ? "b37" : "reference" );
+    unless( Genome::Model::Tools::Analysis::DumpIgvXml->execute( tumor_bam => $tumor_bam, normal_bam => $normal_bam, reference_name => $reference,
             review_bed_file => $indel_bed_file, review_description => "High-confidence Tier1 Indels", genome_name => "$case.indel", output_dir => $output_dir_new ) and
-            Genome::Model::Tools::Analysis::DumpIgvXml->execute( tumor_bam => $tumor_bam, normal_bam => $normal_bam,
+            Genome::Model::Tools::Analysis::DumpIgvXml->execute( tumor_bam => $tumor_bam, normal_bam => $normal_bam, reference_name => $reference,
             review_bed_file => $snv_bed_file, review_description => "High-confidence Tier1 SNVs", genome_name => "$case.snv", output_dir => $output_dir_new ))
     {
       print STDERR "WARNING: Unable to generate IGV XMLs for $case\n";

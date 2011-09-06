@@ -12,6 +12,7 @@ use above 'Genome';
 
 use Test::More;
 use Genome::SoftwareResult;
+use File::Compare;
 
 my $archos = `uname -a`;
 if ($archos !~ /64/) {
@@ -53,15 +54,32 @@ my $command = Genome::Model::Tools::DetectVariants2::Samtools->create(
     version => $version,
     params => "",
     output_directory => $test_working_dir,
+    aligned_reads_sample => 'TEST',
 );
 ok($command, 'Created `gmt detect-variants2 samtools` command');
 $command->dump_status_messages(1);
 ok($command->execute, 'Executed `gmt detect-variants2 samtools` command');
 
-my $diff_cmd = sprintf('diff -r -q %s %s', $test_working_dir, $expected_dir);
+my @expected_output_files = qw|
+indels.hq
+indels.hq.bed
+indels.hq.v1.bed
+indels.hq.v2.bed
+indels_all_sequences.filtered
+report_input_all_sequences
+snvs.hq
+snvs.hq.bed
+snvs.hq.v1.bed
+snvs.hq.v2.bed |;
 
-my $diff = `$diff_cmd`;
-is($diff, '', 'No differences in output from expected result from running samtools for this version and parameters');
+
+for my $output_file (@expected_output_files){
+    my $expected_file = $expected_dir."/".$output_file;
+    my $actual_file = $test_working_dir."/".$output_file;
+    is(compare($actual_file, $expected_file), 0, "$actual_file output matched expected output");
+}
+
+ok(-s $test_working_dir."/snvs.vcf", "Found VCF file");
 
 done_testing();
 exit;

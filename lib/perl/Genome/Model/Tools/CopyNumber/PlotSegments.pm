@@ -649,7 +649,7 @@ sub execute {
 
 	#first the core stuff
 	if(defined($chr)){
-	    print R_COMMANDS "chr=" . $chr;
+	    print R_COMMANDS 'chr="' . $chr . '"';
 	} else {
 	    print R_COMMANDS "chr=\"ALL\"";
 	}

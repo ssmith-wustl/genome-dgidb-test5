@@ -2,6 +2,7 @@ package Finishing::Assembly::GSC::Proxy;
 
 use strict;
 use warnings;
+no warnings 'reserved';
 
 use base 'Finishing::Assembly::Proxy';
 
@@ -18,6 +19,7 @@ package Finishing::Assembly::GSC::ProjectProxy;
 
 use strict;
 use warnings;
+no warnings 'reserved';
 
 use base 'Finishing::Assembly::GSC::Proxy';
 
@@ -117,6 +119,7 @@ package Finishing::Assembly::GSC::ScaffoldProxy;
 
 use strict;
 use warnings;
+no warnings 'reserved';
 
 use base 'Finishing::Assembly::GSC::Proxy';
 

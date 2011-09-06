@@ -10,8 +10,6 @@ use Genome::Model::Tools::Pcap::RunStats;
 use Bio::SeqIO;
 use Bio::Seq::Quality;
 use Bio::Seq::SequenceTrace;
-use Finishing::Assembly::Factory;
-use Finishing::Assembly::Phd::Exporter;
 
 use Sys::Hostname;
 use Cwd;
@@ -727,15 +725,11 @@ sub create_454_phds
             $phd_file = $phd_dir.'/'.$read.'.phd.1' if $type eq 'file';
             $phd_file = $fasta.'.tmp_phd_ball' if $type eq 'ball';
 
-            my $factory = Finishing::Assembly::Factory->connect('source');
-            my $rfo = $factory->create_assembled_read(%attr);
-            my $xporter = Finishing::Assembly::Phd::Exporter->new (
-                file => $phd_file,
-                read => $rfo,
-            );
-            my $out = $xporter->execute;
-            $self->error_message("Phd export failed") and return
-            unless $out;
+            my $write_ok = Genome::Model::Tools::Consed::PhdWriter->write($phd_file, \%attr);
+            if ( not $write_ok ) {
+                $self->error_message("Write phd to $phd_file failed");
+                return;
+            }
         }
     }
 

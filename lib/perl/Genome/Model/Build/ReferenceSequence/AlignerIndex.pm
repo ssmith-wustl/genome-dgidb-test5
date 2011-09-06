@@ -103,6 +103,9 @@ sub get {
     my @objects;
     if (@_ % 2 == 0) {
         my %p = @_;
+        unless ($p{test_name}) {
+            $p{test_name} = ($ENV{GENOME_ALIGNER_INDEX_TEST_NAME} || undef);
+        }
         if (exists $p{aligner_name} && $class->aligner_requires_param_masking($p{aligner_name})) {
             $p{aligner_params} = undef;
         }
@@ -134,6 +137,10 @@ sub get {
 sub create {
     my $class = shift;
     my %p = @_;
+
+    unless ($p{test_name}) {
+        $p{test_name} = ($ENV{GENOME_ALIGNER_INDEX_TEST_NAME} || undef);
+    }
 
     my $aligner_class = 'Genome::InstrumentData::AlignmentResult::'  . Genome::InstrumentData::AlignmentResult->_resolve_subclass_name_for_aligner_name($p{aligner_name});
     $class->status_message("Aligner class name is $aligner_class");
@@ -277,6 +284,10 @@ sub resolve_allocation_subdirectory {
     $aligner_name_tag =~ s/[^\w]/_/g;
 
     my @path_components = ('model_data','ref_build_aligner_index_data',$self->reference_build->model->id,'build'.$self->reference_build->id);
+
+    if ($self->test_name) {
+        push @path_components, "test_".$self->test_name;
+    }
 
     push @path_components, $aligner_name_tag;
 

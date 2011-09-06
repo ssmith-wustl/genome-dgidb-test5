@@ -26,7 +26,7 @@ class Genome::Sample {
             to => 'attribute_value',
             where => [ attribute_label => 'common_name' ],
             is_mutable => 1,
-            doc => 'a name like "tumor1" for a given sample',                                        
+            doc => 'Typically tumor, normal, etc. A very brief description of the sample',                                        
         },
         extraction_label => {
             is => 'Text',
@@ -34,7 +34,7 @@ class Genome::Sample {
             to => 'attribute_value',
             where => [ attribute_label => 'extraction_label' ],
             is_mutable => 1,
-            doc => 'identifies the specimen sent from the laboratory which extracted DNA/RNA',
+            doc => 'Identifies the specimen sent from the laboratory which extracted DNA/RNA',
         },
         extraction_type => {
             is => 'Text',
@@ -42,7 +42,11 @@ class Genome::Sample {
             to => 'attribute_value',
             where => [ attribute_label => 'extraction_type' ],
             is_mutable => 1,
-            doc => 'either "genomic dna" or "rna" in most cases',
+            doc => 'Either "genomic dna" or "rna" in most cases',
+        },
+        sample_type => {
+            calculate_from => 'extraction_type',
+            calculate => q{ return $extraction_type },
         },
         extraction_desc => { 
             is => 'Text', 
@@ -50,7 +54,7 @@ class Genome::Sample {
             to => 'attribute_value',
             where => [ attribute_label => 'extraction_desc' ],
             is_mutable => 1,
-            doc => 'notes specified when the specimen entered this site', 
+            doc => 'Notes specified when the specimen entered this site', 
         },
         cell_type => {         
             is => 'Text', 
@@ -58,7 +62,7 @@ class Genome::Sample {
             to => 'attribute_value',
             where => [ attribute_label => 'cell_type' ],
             is_mutable => 1,
-            doc => 'typically "primary"' 
+            doc => 'Typically "primary"' 
         },
         tissue_label => {
             is => 'Text', 
@@ -66,7 +70,7 @@ class Genome::Sample {
             to => 'attribute_value',
             where => [ attribute_label => 'tissue_label' ],
             is_mutable => 1,
-            doc => 'identifies/labels the original tissue sample from which this extraction was made' 
+            doc => 'Identifies/labels the original tissue sample from which this extraction was made' 
         },
         tissue_desc => { 
             is => 'Text', 
@@ -74,7 +78,7 @@ class Genome::Sample {
             to => 'attribute_value',
             where => [ attribute_label => 'tissue_desc' ],
             is_mutable => 1,
-            doc => 'describes the original tissue sample',
+            doc => 'Describes the original tissue sample',
         },
         is_control => { 
             is => 'Text', 
@@ -82,7 +86,7 @@ class Genome::Sample {
             to => 'attribute_value',
             where => [ attribute_label => 'is_control' ],
             is_mutable => 1,
-            doc => 'describes if this sample is control',
+            doc => 'Describes if this sample is control',
         },
         organ_name => { 
             is => 'Text',
@@ -90,7 +94,7 @@ class Genome::Sample {
             to => 'attribute_value',
             where => [ attribute_label => 'organ_name' ],
             is_mutable => 1,
-            doc => 'the name of the organ from which the sample was taken' 
+            doc => 'The name of the organ from which the sample was taken' 
         }, 
         disease => { 
             is => 'Text',
@@ -100,25 +104,26 @@ class Genome::Sample {
             is_mutable => 1,
             doc => 'The name of the disease if present in the sample.', 
         }, 
-        # Info about sample source (population group and individual)
-        # these are optional only b/c our data is not fully back-filled
-        source_id => {
-            is => 'Number',
-            via => 'attributes',
-            to => 'attribute_value',
-            where => [ attribute_label => 'source_id' ],
-            is_mutable => 1,
-        },
         default_genotype_data_id => {
             is => 'Number',
             via => 'attributes',
             to => 'attribute_value',
             where => [ attribute_label => 'default_genotype_data' ],
             is_mutable => 1,
+            doc => 'ID of genotype microarray data associated with this sample',
         },
         default_genotype_data => {
             is => 'Genome::InstrumentData::Imported',
             id_by => 'default_genotype_data_id',
+            doc => 'Genotype microarray instrument data object',
+        },
+        source_id => {
+            is => 'Number',
+            via => 'attributes',
+            to => 'attribute_value',
+            where => [ attribute_label => 'source_id' ],
+            is_mutable => 1,
+            doc => 'ID of the source of this sample, either a Genome::Individual or Genome::PopulationGroup',
         },
         source => { 
             is => 'Genome::Subject',
@@ -132,16 +137,20 @@ class Genome::Sample {
                 return unless $source;
                 return $source->subject_type; 
             },
+            doc => 'Plain text type of the sample source',
         },
         source_name => { 
             via => 'source', 
-            to => 'name' 
+            to => 'name', 
+            doc => 'Name of the sample source',
         },
         source_common_name => { 
             via => 'source', 
-            to => 'common_name' 
+            to => 'common_name',
+            doc => 'Common name of the sample source',
         },
-        # the above are overly generic, since all of our sources are Genome::Individuals, and slow, so...
+        # These patient properties are for convenience, since the vast majority of sample
+        # sources are of type Genome::Individual
         patient => { 
             is => 'Genome::Individual', 
             id_by => 'source_id',
@@ -150,12 +159,12 @@ class Genome::Sample {
         patient_name => { 
             via => 'patient', 
             to => 'name', 
-            doc => 'the system name for a patient (subset of the sample name)' 
+            doc => 'The system name for a patient (subset of the sample name)' 
         },
         patient_common_name => { 
             via => 'patient', 
             to => 'common_name', 
-            doc => 'names like AML1, BRC50, etc' 
+            doc => 'Common name of the patient, eg AML1',
         },
         age => { 
             is => 'Number',
@@ -178,18 +187,20 @@ class Genome::Sample {
             to => 'attribute_value',
             where => [ 'nomenclature like' => 'TCGA%', attribute_label => 'biospecimen_barcode_side'], 
             is_mutable => 1,
+            doc => 'TCGA name of the sample, if available',
         },
-        # Taxon properties
         taxon_id => {
             is => 'Number',
             via => 'attributes',
             to => 'attribute_value',
             where => [ attribute_label => 'taxon_id' ],
             is_mutable => 1,
+            doc => 'ID of the sample taxon',
         },
         taxon => {
             is => 'Genome::Taxon',
             id_by => 'taxon_id',
+            doc => 'Relevant taxon object for this sample',
         },
         species_name => { 
             calculate_from => 'taxon',
@@ -197,7 +208,7 @@ class Genome::Sample {
                 return unless $taxon;
                 return $taxon->name; 
             },
-            doc => 'the name of the species of the sample source\'s taxonomic category' 
+            doc => 'Name of the species of the sample source\'s taxonomic category' 
         },
         # TODO What are these for? What do they represent?
         sub_type => { 
@@ -221,39 +232,49 @@ class Genome::Sample {
         projects                     => { is => 'Genome::Site::WUGC::Project', via => 'project_assignments', to => 'project', is_many => 1},
     ],
     has_many => [
-        libraries => { 
-            is => 'Genome::Library', 
-            is_optional => 1,
-            calculate_from => 'id',
-            calculate => q{ return Genome::Library->get(sample_id => $id) },
-        },
-        library_ids => { 
-            is => 'Integer',
-            is_optional => 1,
-            calculate => q| return map { $_->id } $self->libraries |,
-        },
         models => {
             is => 'Genome::Model',
             is_optional => 1,
-            calculate_from => 'id',
-            calculate => q{ return Genome::Model->get(subject_id => $id) },
+            is_many => 1,
+            reverse_as => 'subject',
+            doc => 'Models that use this sample',
         },
-        library_names => { via => 'libraries', to => 'name', is_optional => 1, },
-        solexa_lanes                => { is => 'Genome::InstrumentData::Solexa', reverse_as => 'sample' },
-        solexa_lane_names           => { via => 'solexa_lanes', to => 'full_name' },
+        solexa_lanes  => { 
+            is => 'Genome::InstrumentData::Solexa', 
+            reverse_as => 'sample',
+            doc => 'Instrument data from this sample',
+        },
+        solexa_lane_names => {
+            via => 'solexa_lanes', 
+            to => 'full_name', 
+            doc => 'Names of instrument data from this sample',
+        },
     ],
-
-    doc         => 'a single specimen of DNA or RNA extracted from some tissue sample',
+    has_many_optional => [
+        libraries => { 
+            is => 'Genome::Library', 
+            calculate_from => 'id',
+            calculate => q{ return Genome::Library->get(sample_id => $id) },
+            doc => 'Libraries that were created from the sample',
+        },
+        library_ids => { 
+            is => 'Number',
+            calculate => q| return map { $_->id } $self->libraries |,
+            doc => 'IDs of libraries created from this sample',
+        },
+        library_names => { 
+            via => 'libraries', 
+            to => 'name',
+            doc => 'Names of libraries made from this sample',
+        },
+    ],
+    doc         => 'A single specimen of DNA or RNA extracted from some tissue sample',
     data_source => 'Genome::DataSource::GMSchema',
 };
 
 sub __display_name__ {
     my $self = $_[0];
     return $self->name . ($self->patient_common_name ? ' (' . $self->patient_common_name . ' ' . $self->common_name . ')' : '');
-}
-
-sub sample_type {
-    shift->extraction_type(@_);
 }
 
 sub canonical_model {

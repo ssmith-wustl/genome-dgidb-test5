@@ -8,7 +8,7 @@ use warnings;
 use Genome;
 
 class Genome::Model::Command::Define::Somatic {
-    is => 'Genome::Model::Command::Define::Helper',
+    is => 'Genome::Model::Command::Define::HelperDeprecated',
     has => [
         tumor_model => { 
             is => 'Genome::Model',

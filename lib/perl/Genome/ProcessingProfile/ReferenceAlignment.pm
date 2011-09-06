@@ -312,8 +312,6 @@ sub params_for_merged_alignment {
     my $build = shift; #TODO possibly calculate segment info in _fetch_merged_alignment_result (which calls this)
     my @inputs = @_;
 
-    my $model = $inputs[0]->model;
-
     my $filters = [];
     for my $i (0..$#inputs) {
         my $input = $inputs[$i];
@@ -346,22 +344,22 @@ sub params_for_merged_alignment {
 
     my %params = (
         instrument_data_id => $instrument_data,
-        reference_build_id => $model->reference_sequence_build->id,
-        merger_name => $model->merger_name,
-        merger_params => $model->merger_params,
-        merger_version => $model->merger_version,
-        duplication_handler_name => $model->duplication_handler_name,
-        duplication_handler_params => $model->duplication_handler_params,
-        duplication_handler_version => $model->duplication_handler_version,
-        aligner_name => $model->read_aligner_name || undef,
-        aligner_version => $model->read_aligner_version || undef,
-        aligner_params => $model->read_aligner_params || undef,
-        force_fragment => $model->force_fragment || undef,
-        trimmer_name => $model->read_trimmer_name || undef,
-        trimmer_version => $model->read_trimmer_version || undef,
-        trimmer_params => $model->read_trimmer_params || undef,
-        picard_version => $model->picard_version || undef,
-        samtools_version => $model->samtools_version || undef,
+        reference_build_id => $build->reference_sequence_build->id,
+        merger_name => $self->merger_name,
+        merger_params => $self->merger_params,
+        merger_version => $self->merger_version,
+        duplication_handler_name => $self->duplication_handler_name,
+        duplication_handler_params => $self->duplication_handler_params,
+        duplication_handler_version => $self->duplication_handler_version,
+        aligner_name => $self->read_aligner_name || undef,
+        aligner_version => $self->read_aligner_version || undef,
+        aligner_params => $self->read_aligner_params || undef,
+        force_fragment => $self->force_fragment || undef,
+        trimmer_name => $self->read_trimmer_name || undef,
+        trimmer_version => $self->read_trimmer_version || undef,
+        trimmer_params => $self->read_trimmer_params || undef,
+        picard_version => $self->picard_version || undef,
+        samtools_version => $self->samtools_version || undef,
         test_name => $ENV{GENOME_SOFTWARE_RESULT_TEST_NAME} || undef,
     );
     if(scalar @$filters) {

@@ -44,7 +44,7 @@ sub execute {
         return;
     }
 
-    my @headers = (qw/ sample-name instrument-data-id model-id build-id status oriented-fastas /);
+    my @headers = (qw/ sample-name instrument-data-id model-id build-id status process-success oriented-fastas /);
     my @rows;
     for my $instrument_data ( @instrument_data ) {
         my @row;
@@ -71,6 +71,12 @@ sub execute {
         }
         my ($build) = sort { $b->id <=> $a->id } map { $_->build } @build_inputs;
         push @row, map { $build->$_ } (qw/ model_id id status /);
+        if ( $build->status eq 'Succeeded' ) {
+            push @row, (($build->amplicons_processed_success * 100).'%');
+        }
+        else {
+            push @row, 'NA';
+        }
         my $files_string = join ( ' ', map { $_ } $build->oriented_fasta_files );
         push @row, $files_string;
     }

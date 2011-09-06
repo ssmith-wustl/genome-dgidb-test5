@@ -2,6 +2,7 @@ package Finishing::Assembly::Commands::RemoveAndReplaceAce;
 
 use strict;
 use warnings;
+no warnings 'reserved';
 use Data::Dumper;
 use IO::File;
 use Finishing::Assembly::Ace::Exporter;

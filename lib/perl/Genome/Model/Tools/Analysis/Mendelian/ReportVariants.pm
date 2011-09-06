@@ -29,7 +29,7 @@ class Genome::Model::Tools::Analysis::Mendelian::ReportVariants {
 		variant_file	=> { is => 'Text', doc => "List of variants to consider (annotation format)", is_optional => 0, is_input => 1},
 		affected_files	=> { is => 'Text', doc => "Consensus files for affected individuals", is_optional => 0, is_input => 1},
 		unaffected_files	=> { is => 'Text', doc => "Consensus files for unaffected individuals", is_optional => 1, is_input => 1},
-		inheritance_model	=> { is => 'Text', doc => "Presumed model of mendelian inheritance [autosomal-dominant]", is_optional => 1, is_input => 1},
+		inheritance_model	=> { is => 'Text', doc => "Presumed model of mendelian inheritance [autosomal-dominant]", is_optional => 1, is_input => 1, default => 'autosomal-dominant'},
 		min_coverage_to_refute	=> { is => 'Text', doc => "Minimum coverage to refute a possible variant in an affected [10]", is_optional => 1, is_input => 1, default => 10},
 		max_frequency_to_refute	=> { is => 'Text', doc => "Maximum observed variant allele frequency to refute a possible variant in an affected [5]", is_optional => 1, is_input => 1, default => 10},
 		min_affected_variant	=> { is => 'Text', doc => "Minimum number of affecteds with variant to include", is_optional => 1, is_input => 1, default => 1},
@@ -347,6 +347,7 @@ sub execute {                               # replace with real execution logic.
 				if($include_variant_flag)
 				{
 					print "$chromosome\t$chr_start\t$chr_stop\t$ref\t$var\t";
+#					print "$affecteds_wildtype affecteds WT\t$exclude_reason\t";
 					print "$unaffecteds_variant\t$affecteds_variant var, $affecteds_missing miss, $affecteds_ambiguous ambig\t";
 					print "$sample_genotype_string";
 					print "\n";

@@ -2,6 +2,7 @@ package Finishing::Assembly::Consed::Navigation::ConvertFromList;
 
 use strict;
 use warnings;
+no warnings 'reserved';
 
 use Finfo::Std;
 

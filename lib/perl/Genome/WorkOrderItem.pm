@@ -138,7 +138,7 @@ sub models {
         my @instrument_data_inputs = Genome::Model::Input->get(
             name => 'instrument_data',
             value_id => \@instrument_data_ids,
-            value_class_name => 'Genome::InstrumentData',
+#            value_class_name => 'Genome::InstrumentData', #FIXME this won't work as is--they are subclassed in the input
         );
         return unless @instrument_data_inputs;
         my %model_ids = map { $_->model_id => 1 } @instrument_data_inputs;
