@@ -199,7 +199,7 @@ sub create {
         @tmp_dirs = (); #clear out temp directories
 
         for my $alignment (@alignments) {
-            $alignment->add_user($self);
+            $alignment->add_user(user => $self, label => 'uses');
         }
 
         return 1;
