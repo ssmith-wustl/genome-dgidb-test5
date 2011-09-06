@@ -1,0 +1,190 @@
+REFSNP-DOCSUM-SET (FULL-DUMP)
+CREATED ON: 2011-08-10 20:21
+
+rs578 | human | 9606 | snp | genotype=YES | submitterlink=YES | updated 2011-07-08 14:47
+ss583 | KWOK | Xq3840-1 | orient=+ | ss_pick=YES
+ss136592 | TSC-CSHL | TSC0116661 | orient=+ | ss_pick=NO
+ss10566251 | BCM_SSAHASNP | chrX.NT_011726.10_2589332 | orient=+ | ss_pick=NO
+ss20390281 | CSHL-HAPMAP | CSHL-HuFF-200402.chrX.NT_011726.11_2924801 | orient=+ | ss_pick=NO
+ss23128918 | SSAHASNP | WGSA-200403-chrX.chrX.NT_011726.11_2924801 | orient=+ | ss_pick=NO
+ss43600345 | ABI | hCV2283088 | orient=+ | ss_pick=NO
+ss75069126 | ILLUMINA | ILMN_Human_1M_rs578 | orient=+ | ss_pick=NO
+ss94437647 | BCMHGSC_JDW | JWB-2713653 | orient=+ | ss_pick=NO
+ss113056370 | 1000GENOMES | CEU.trio.12.15.2008_3930468_chrX_151815755 | orient=+ | ss_pick=NO
+ss119336874 | KRIBB_YJKIM | KHS1499121 | orient=+ | ss_pick=NO
+ss133696927 | ENSEMBL | ENSSNP3113077 | orient=+ | ss_pick=NO
+ss144885560 | ENSEMBL | ENSSNP13880482 | orient=+ | ss_pick=NO
+ss173931650 | ILLUMINA | Human1M-Duov3_B_rs578-127_B_F_1514047275 | orient=+ | ss_pick=NO
+ss212187987 | 1000GENOMES | YRI.trio.3.2010_1562842_chrX_151815755 | orient=+ | ss_pick=NO
+ss294527317 | PJP | SNP_4033675_chrX_151815755 | orient=+ | ss_pick=NO
+ss341903467 | 1000GENOMES | 20100804_snps_655138_chrX_152065099 | orient=+ | ss_pick=NO
+SNP | alleles='C/T' | het=0 | se(het)=0
+VAL | validated=YES | min_prob=? | max_prob=? | notwithdrawn | byHapMap
+CTG | assembly=GRCh37.p2 | chr=X | chr-pos=152065099 | NT_167198.1 | ctg-start=2983037 | ctg-end=2983037 | loctype=2 | orient=+
+CTG | assembly=Hs_Celera | chr=X | chr-pos=152399257 | NW_927732.1 | ctg-start=106904 | ctg-end=106904 | loctype=2 | orient=+
+CTG | assembly=HuRef | chr=X | chr-pos=140866000 | NW_001842415.2 | ctg-start=208545 | ctg-end=208545 | loctype=2 | orient=-
+
+rs579 | human | 9606 | snp | genotype=NO | submitterlink=YES | updated 2011-07-08 10:25
+ss584 | KWOK | Xq3840-2 | orient=+ | ss_pick=YES
+SNP | alleles='A/G' | het=0 | se(het)=0
+VAL | validated=NO | min_prob=? | max_prob=? | notwithdrawn
+CTG | assembly=GRCh37.p2 | chr=X | chr-pos=152065200 | NT_167198.1 | ctg-start=2983138 | ctg-end=2983138 | loctype=2 | orient=+
+CTG | assembly=Hs_Celera | chr=X | chr-pos=152399358 | NW_927732.1 | ctg-start=107005 | ctg-end=107005 | loctype=2 | orient=+
+CTG | assembly=HuRef | chr=X | chr-pos=140866101 | NW_001842415.2 | ctg-start=208444 | ctg-end=208444 | loctype=2 | orient=-
+
+rs580 | human | 9606 | snp | genotype=YES | submitterlink=YES | updated 2011-07-08 14:47
+ss585 | KWOK | Xq3841-1 | orient=+ | ss_pick=YES
+ss21029115 | SSAHASNP | WGSA-200403-chrX.chrX.NT_011726.11_2974844 | orient=+ | ss_pick=NO
+ss43550981 | ABI | hCV11680298 | orient=+ | ss_pick=NO
+ss65777525 | ILLUMINA | Human1-rs580 | orient=+ | ss_pick=NO
+ss74888356 | ILLUMINA | ILMN_Human_1M_rs580 | orient=+ | ss_pick=NO
+ss105776412 | BGI | BGI_rs580 | orient=+ | ss_pick=NO
+ss119336875 | KRIBB_YJKIM | KHS1499122 | orient=+ | ss_pick=NO
+ss133990830 | ENSEMBL | ENSSNP3113139 | orient=+ | ss_pick=NO
+ss160747403 | ILLUMINA | HumanOmni1-Quad_v1-0_B_rs580-128_T_F_1513906333 | orient=+ | ss_pick=NO
+ss173932112 | ILLUMINA | Human1M-Duov3_B_rs580-127_T_F_1513906333 | orient=+ | ss_pick=NO
+ss208876096 | BCM-HGSC-SUB | BCM_CMT_1011-3331531 | orient=+ | ss_pick=NO
+ss294527379 | PJP | SNP_4033737_chrX_151865798 | orient=+ | ss_pick=NO
+ss341903745 | 1000GENOMES | 20100804_snps_655416_chrX_152115142 | orient=+ | ss_pick=NO
+SNP | alleles='A/C' | het=0 | se(het)=0
+VAL | validated=YES | min_prob=? | max_prob=? | notwithdrawn | byHapMap
+CTG | assembly=GRCh37.p2 | chr=X | chr-pos=152115142 | NT_167198.1 | ctg-start=3033080 | ctg-end=3033080 | loctype=2 | orient=+
+LOC | ZNF185 | locus_id=7739 | fxn-class=intron-variant | mrna_acc=NM_001178106.1
+LOC | ZNF185 | locus_id=7739 | fxn-class=intron-variant | mrna_acc=NM_001178107.1
+LOC | ZNF185 | locus_id=7739 | fxn-class=intron-variant | mrna_acc=NM_001178108.1
+LOC | ZNF185 | locus_id=7739 | fxn-class=intron-variant | mrna_acc=NM_007150.3
+LOC | ZNF185 | locus_id=7739 | fxn-class=intron-variant | mrna_acc=NM_001178109.1
+LOC | ZNF185 | locus_id=7739 | fxn-class=intron-variant | mrna_acc=NM_001178110.1
+LOC | ZNF185 | locus_id=7739 | fxn-class=intron-variant | mrna_acc=NM_001178113.1
+LOC | ZNF185 | locus_id=7739 | fxn-class=intron-variant | mrna_acc=NM_001178115.1
+CTG | assembly=Hs_Celera | chr=X | chr-pos=152449302 | NW_927732.1 | ctg-start=156949 | ctg-end=156949 | loctype=2 | orient=+
+LOC | ZNF185 | locus_id=7739 | fxn-class=intron-variant | mrna_acc=NM_001178106.1
+LOC | ZNF185 | locus_id=7739 | fxn-class=intron-variant | mrna_acc=NM_001178107.1
+LOC | ZNF185 | locus_id=7739 | fxn-class=intron-variant | mrna_acc=NM_001178108.1
+LOC | ZNF185 | locus_id=7739 | fxn-class=intron-variant | mrna_acc=NM_001178110.1
+LOC | ZNF185 | locus_id=7739 | fxn-class=intron-variant | mrna_acc=NM_001178113.1
+LOC | ZNF185 | locus_id=7739 | fxn-class=intron-variant | mrna_acc=NM_001178109.1
+LOC | ZNF185 | locus_id=7739 | fxn-class=intron-variant | mrna_acc=NM_007150.3
+LOC | ZNF185 | locus_id=7739 | fxn-class=intron-variant | mrna_acc=NM_001178115.1
+CTG | assembly=HuRef | chr=X | chr-pos=140915782 | NW_001842415.2 | ctg-start=158763 | ctg-end=158763 | loctype=2 | orient=-
+LOC | ZNF185 | locus_id=7739 | fxn-class=intron-variant | mrna_acc=NM_001178115.1
+LOC | ZNF185 | locus_id=7739 | fxn-class=intron-variant | mrna_acc=NM_001178109.1
+LOC | ZNF185 | locus_id=7739 | fxn-class=intron-variant | mrna_acc=NM_001178110.1
+LOC | ZNF185 | locus_id=7739 | fxn-class=intron-variant | mrna_acc=NM_001178113.1
+LOC | ZNF185 | locus_id=7739 | fxn-class=intron-variant | mrna_acc=NM_001178107.1
+LOC | ZNF185 | locus_id=7739 | fxn-class=intron-variant | mrna_acc=NM_001178106.1
+LOC | ZNF185 | locus_id=7739 | fxn-class=intron-variant | mrna_acc=NM_001178108.1
+LOC | ZNF185 | locus_id=7739 | fxn-class=intron-variant | mrna_acc=NM_007150.3
+SEQ | 296278238 | source-db=remap | seq-pos=37157 | orient=+
+
+rs581 | human | 9606 | snp | genotype=NO | submitterlink=YES | updated 2011-07-08 10:25
+ss586 | KWOK | Xq3846-2 | orient=+ | ss_pick=YES
+ss341792657 | 1000GENOMES | 20100804_snps_544328_chrX_126840274 | orient=+ | ss_pick=NO
+SNP | alleles='A/T' | het=0 | se(het)=0
+VAL | validated=NO | min_prob=? | max_prob=? | notwithdrawn
+CTG | assembly=GRCh37.p2 | chr=X | chr-pos=126840274 | NT_011786.16 | ctg-start=11107984 | ctg-end=11107984 | loctype=2 | orient=+
+CTG | assembly=Hs_Celera | chr=X | chr-pos=127223146 | NW_927721.1 | ctg-start=7428721 | ctg-end=7428721 | loctype=2 | orient=+
+CTG | assembly=HuRef | chr=? | chr-pos=? | NW_001840648.1 | ctg-start=497 | ctg-end=497 | loctype=2 | orient=+
+
+rs582 | human | 9606 | snp | genotype=YES | submitterlink=YES | updated 2011-07-08 14:47
+ss587 | KWOK | Xq3846-1 | orient=+ | ss_pick=YES
+ss8208998 | SC_SNP | NT_011786.11_2409435 | orient=+ | ss_pick=NO
+ss14154286 | WUGSC_SSAHASNP | chrX.NT_011786.14_2419048 | orient=+ | ss_pick=NO
+ss19092229 | SC_SNP | SC-CHRX_NA07340-200402.chrX.NT_011786.14_2419048 | orient=+ | ss_pick=NO
+ss43564834 | ABI | hCV2456781 | orient=+ | ss_pick=NO
+ss86106837 | HGSV | Cor18517_SNV_20070510.chrX_126566479 | orient=+ | ss_pick=NO
+ss94397519 | BCMHGSC_JDW | JWB-2704592 | orient=+ | ss_pick=NO
+ss113020868 | 1000GENOMES | CEU.trio.12.15.2008_3912656_chrX_126668625 | orient=+ | ss_pick=NO
+ss115157423 | 1000GENOMES | NA19240_2008_12_16_3563094_chrX_126668625 | orient=+ | ss_pick=NO
+ss115653412 | ILLUMINA-UK | NA18507_000070816_NCBI36.1_chrX_126668625 | orient=+ | ss_pick=NO
+ss144097253 | ENSEMBL | ENSSNP4452124 | orient=+ | ss_pick=NO
+ss144814365 | ENSEMBL | ENSSNP13868884 | orient=+ | ss_pick=NO
+ss157719687 | GMI | GMI_SNP_73067958 | orient=+ | ss_pick=NO
+ss166533740 | COMPLETE_GENOMICS | NA20431_36_chrX_126668625 | orient=+ | ss_pick=NO
+ss173932605 | ILLUMINA | Human1M-Duov3_B_rs582-127_T_F_1517450796 | orient=+ | ss_pick=NO
+ss204366816 | BUSHMAN | BUSHMAN-chrX-126668624 | orient=+ | ss_pick=NO
+ss208900326 | BCM-HGSC-SUB | BCM_CMT_1011-3355761 | orient=+ | ss_pick=NO
+ss256133635 | BL | SNP49948_X_126668625 | orient=+ | ss_pick=NO
+ss294506163 | PJP | SNP_4012521_chrX_126668625 | orient=+ | ss_pick=NO
+ss341792660 | 1000GENOMES | 20100804_snps_544331_chrX_126840944 | orient=+ | ss_pick=NO
+SNP | alleles='A/G' | het=0 | se(het)=0
+VAL | validated=YES | min_prob=? | max_prob=? | notwithdrawn | byHapMap
+CTG | assembly=GRCh37.p2 | chr=X | chr-pos=126840944 | NT_011786.16 | ctg-start=11108654 | ctg-end=11108654 | loctype=2 | orient=+
+CTG | assembly=Hs_Celera | chr=X | chr-pos=127223816 | NW_927721.1 | ctg-start=7429391 | ctg-end=7429391 | loctype=2 | orient=+
+CTG | assembly=HuRef | chr=? | chr-pos=? | NW_001840648.1 | ctg-start=1167 | ctg-end=1167 | loctype=2 | orient=+
+
+rs583 | human | 9606 | snp | genotype=YES | submitterlink=YES | updated 2011-07-08 14:47
+ss588 | KWOK | Xq3847-1 | orient=+ | ss_pick=YES
+ss65723538 | ILLUMINA | Human1-rs583 | orient=+ | ss_pick=NO
+ss66179679 | AFFY | SNP_A-2220314 | orient=+ | ss_pick=NO
+ss67422664 | ILLUMINA | HumanHap550v1.1_rs583 | orient=+ | ss_pick=NO
+ss67782698 | ILLUMINA | HumanHap650Yv1.0_rs583 | orient=+ | ss_pick=NO
+ss68244735 | ILLUMINA | HumanHap250Sv1.0_rs583 | orient=+ | ss_pick=NO
+ss69265703 | PERLEGEN | PGP10927564 | orient=+ | ss_pick=NO
+ss70848194 | ILLUMINA | HumanHap550v3.0__rs583 | orient=- | ss_pick=NO
+ss71433121 | ILLUMINA | HumanHap650Yv3.0_rs583 | orient=+ | ss_pick=NO
+ss75825472 | ILLUMINA | ILMN_Human_1M_rs583 | orient=+ | ss_pick=NO
+ss76243297 | AFFY | AFFY_6_1M_SNP_A-2220314 | orient=+ | ss_pick=NO
+ss83344216 | KRIBB_YJKIM | KHS439367 | orient=+ | ss_pick=NO
+ss94391028 | BCMHGSC_JDW | JWB-2703108 | orient=+ | ss_pick=NO
+ss113014442 | 1000GENOMES | CEU.trio.12.15.2008_3909432_chrX_122728655 | orient=+ | ss_pick=NO
+ss144802696 | ENSEMBL | ENSSNP5854261 | orient=+ | ss_pick=NO
+ss154342145 | ILLUMINA | Human610_Quadv1_B_rs583-127_B_R_1502231231 | orient=- | ss_pick=NO
+ss159518758 | ILLUMINA | Human660W-Quad_v1_A_rs583-128_B_R_1502231231 | orient=- | ss_pick=NO
+ss160747693 | ILLUMINA | HumanOmni1-Quad_v1-0_B_rs583-128_B_R_1502231231 | orient=- | ss_pick=NO
+ss172947541 | AFFY | GenomeWideSNP_5_SNP_A-2220314 | orient=+ | ss_pick=NO
+ss173932869 | ILLUMINA | Human1M-Duov3_B_rs583-127_B_R_1502231231 | orient=- | ss_pick=NO
+ss341774551 | 1000GENOMES | 20100804_snps_526222_chrX_122900974 | orient=+ | ss_pick=NO
+SNP | alleles='A/G' | het=0 | se(het)=0
+VAL | validated=YES | min_prob=? | max_prob=? | notwithdrawn | byHapMap
+CTG | assembly=GRCh37.p2 | chr=X | chr-pos=122900974 | NT_011786.16 | ctg-start=7168684 | ctg-end=7168684 | loctype=2 | orient=+
+CTG | assembly=Hs_Celera | chr=X | chr-pos=123287002 | NW_927721.1 | ctg-start=3492577 | ctg-end=3492577 | loctype=2 | orient=+
+CTG | assembly=HuRef | chr=X | chr-pos=112287988 | NW_001842397.1 | ctg-start=3081838 | ctg-end=3081838 | loctype=2 | orient=+
+
+rs584 | human | 9606 | snp | genotype=NO | submitterlink=YES | updated 2011-07-08 10:25
+ss589 | KWOK | Xq3849-1 | orient=+ | ss_pick=YES
+ss3503581 | SC_JCM | AL590081.6_151386 | orient=+ | ss_pick=NO
+ss8209128 | SC_SNP | NT_011786.11_3174044 | orient=+ | ss_pick=NO
+ss17295947 | CSHL-HAPMAP | CSHL-HuAA-200402.chrX.NT_011786.14_3183670 | orient=+ | ss_pick=NO
+ss43573464 | ABI | hCV26391356 | orient=+ | ss_pick=NO
+ss115653922 | ILLUMINA-UK | NA18507_000071326_NCBI36.1_chrX_127433247 | orient=+ | ss_pick=NO
+ss165625009 | COMPLETE_GENOMICS | NA19240_36_chrX_127433247 | orient=+ | ss_pick=NO
+ss204368098 | BUSHMAN | BUSHMAN-chrX-127433246 | orient=+ | ss_pick=NO
+ss208927742 | BCM-HGSC-SUB | BCM_CMT_1011-3383177 | orient=+ | ss_pick=NO
+ss256134747 | BL | SNP50172_X_127433247 | orient=+ | ss_pick=NO
+ss341795766 | 1000GENOMES | 20100804_snps_547437_chrX_127605566 | orient=+ | ss_pick=NO
+SNP | alleles='A/G' | het=0 | se(het)=0
+VAL | validated=NO | min_prob=? | max_prob=? | notwithdrawn
+CTG | assembly=GRCh37.p2 | chr=X | chr-pos=127605566 | NT_011786.16 | ctg-start=11873276 | ctg-end=11873276 | loctype=2 | orient=+
+CTG | assembly=Hs_Celera | chr=X | chr-pos=127994357 | NW_927721.1 | ctg-start=8199932 | ctg-end=8199932 | loctype=2 | orient=+
+
+rs585 | human | 9606 | snp | genotype=YES | submitterlink=YES | updated 2011-07-08 14:47
+ss590 | KWOK | Xq3855-1 | orient=+ | ss_pick=YES
+ss4069780 | TSC-CSHL | TSC1738826 | orient=+ | ss_pick=NO
+ss8266676 | SC_SNP | NT_011786.11_291526 | orient=- | ss_pick=NO
+ss43620841 | ABI | hCV15835025 | orient=- | ss_pick=NO
+ss69265887 | PERLEGEN | PGP13306982 | orient=- | ss_pick=NO
+ss78556148 | HGSV | Cor18507_SNV_20070510.chrX_124448568 | orient=- | ss_pick=NO
+ss94393834 | BCMHGSC_JDW | JWB-2703741 | orient=- | ss_pick=NO
+ss113017170 | 1000GENOMES | CEU.trio.12.15.2008_3910802_chrX_124550714 | orient=- | ss_pick=NO
+ss115141879 | 1000GENOMES | NA19240_2008_12_16_3561131_chrX_124550714 | orient=- | ss_pick=NO
+ss115651960 | ILLUMINA-UK | NA18507_000069364_NCBI36.1_chrX_124550714 | orient=- | ss_pick=NO
+ss142980138 | ENSEMBL | ENSSNP4797087 | orient=- | ss_pick=NO
+ss144807875 | ENSEMBL | ENSSNP13867894 | orient=- | ss_pick=NO
+ss163275033 | COMPLETE_GENOMICS | NA07022_36_chrX_124550714 | orient=- | ss_pick=NO
+ss165599077 | COMPLETE_GENOMICS | NA19240_36_chrX_124550714 | orient=- | ss_pick=NO
+ss204363594 | BUSHMAN | BUSHMAN-chrX-124550713 | orient=- | ss_pick=NO
+ss294504212 | PJP | SNP_4010570_chrX_124550714 | orient=- | ss_pick=NO
+ss341783078 | 1000GENOMES | 20100804_snps_534749_chrX_124723033 | orient=- | ss_pick=NO
+SNP | alleles='A/T' | het=0 | se(het)=0
+VAL | validated=YES | min_prob=? | max_prob=? | notwithdrawn | byHapMap
+CTG | assembly=GRCh37.p2 | chr=X | chr-pos=124723033 | NT_011786.16 | ctg-start=8990743 | ctg-end=8990743 | loctype=2 | orient=-
+CTG | assembly=Hs_Celera | chr=X | chr-pos=125108875 | NW_927721.1 | ctg-start=5314450 | ctg-end=5314450 | loctype=2 | orient=-
+CTG | assembly=HuRef | chr=X | chr-pos=114100764 | NW_001842398.1 | ctg-start=311840 | ctg-end=311840 | loctype=2 | orient=-
+
+ 
+ 
+# ================ 
+# File created at: 
+# `date` 
+# ================ 
