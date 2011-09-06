@@ -8,6 +8,8 @@ use Genome;
 use Bio::SeqIO;
 use PP::LSF;
 use Data::Dumper;
+use Cwd;
+
 class Genome::Model::Tools::PooledBac::Run {
     is => 'Command',
     has => 
@@ -133,6 +135,8 @@ $DB::single =1;
         return;
     }
         
+    my $orig_dir = cwd();
+
     my $params = {};
     $params = $self->get_params($self->params_file) if(defined $self->params_file && -e $self->params_file);
     my $project_dir = $self->project_dir || $self->project_dir($params->{project_dir});
@@ -192,6 +196,9 @@ $DB::single =1;
 
 #    $self->error_message("Error updating seqmgr") unless
 #    Genome::Model::Tools::PooledBac::UpdateSeqMgr->execute(project_dir => $project_dir);
+
+    chdir( $orig_dir );
+
     return 1;
 }
 
