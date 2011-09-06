@@ -72,21 +72,21 @@ sub execute {
     my $last_ref = undef;
     my $last_cns = undef;
     my @lines = (); #line buffer to store last few lines
-    
+
     #the following logic assumes that you have a single position per line
     while(my $line = $fh->getline) {
         chomp $line;
-        my ($chr, $pos,$stop, $ref, $cns, $type, @rest) = split /\t/, $line;  
-        
+        my ($chr, $pos, $stop, $ref, $cns, $type, @rest) = split /\t/, $line;
+
         my @variants = Genome::Info::IUB::variant_alleles_for_iub($ref, $cns);
         unless(@variants == 1) {
             warn "Multiple variant alleles not yet supported. Only taking first";
         }
-         
+
         if($last_chr && $last_pos) {
             if($chr eq $last_chr) {
                 #TODO when the annotator supports DNPs that are non-adjacent. This can be upped to 2 and the output line changed appropriately
-                #FIXME this doesn't support tri-nucleotide polymorphisms and up. 
+                #FIXME this doesn't support tri-nucleotide polymorphisms and up.
                 if(($pos - $last_pos) == 1) {
                     #potential DNP
                     $DB::single=1;
@@ -104,7 +104,7 @@ sub execute {
         }
         print $output_fh shift @lines,"\n" if @lines;
         push @lines, $line if $line;
-        
+
         $last_chr = $chr;
         $last_pos = $pos;
         $last_var = $variants[0];
@@ -112,7 +112,6 @@ sub execute {
         $last_cns = $cns;
     }
     print $output_fh shift @lines,"\n" if @lines;
-
 
     return 1;
 }
@@ -126,7 +125,7 @@ sub help_brief {
 
 sub help_detail {
     <<'HELP';
-This is a simple script which operated by identifying adjacent sites in a SORTED annotation file (really, just chr, start, stop, ref, cns, and type are need in that order) and then tries to determine if the alleles are linked in the same reads. If they are then the original lines are not printed and a new line, wrapping them into a single DNP event, is printed. This line is NOT reannotated, and will need to be annotated separately after running. Non-DNP sites are simply printed as is. Currently, only DNPs are examined and tri-nucleotide polymorphisms on up will not be properly identified. The input file was intended to be the pre-annotation "adapted file" of SNVs from the somatic pipeline file and, therefore, should NOT contain indels.  
+This is a simple script which operated by identifying adjacent sites in a SORTED annotation file (really, just chr, start, stop, ref, cns, and type are need in that order) and then tries to determine if the alleles are linked in the same reads. If they are then the original lines are not printed and a new line, wrapping them into a single DNP event, is printed. This line is NOT reannotated, and will need to be annotated separately after running. Non-DNP sites are simply printed as is. Currently, only DNPs are examined and tri-nucleotide polymorphisms on up will not be properly identified. The input file was intended to be the pre-annotation "adapted file" of SNVs from the somatic pipeline file and, therefore, should NOT contain indels.
 HELP
 }
 
@@ -141,10 +140,12 @@ sub is_dnp {
 #and checks to see if they contain both potential DNP bases
 sub _determine_dnp_from_bam_reads {
     my ($self, $alignment_file, $chr, $pos1, $base1, $pos2, $base2) = @_;
+
     unless(open(SAMTOOLS, "samtools view $alignment_file $chr:$pos1-$pos2 |")) {
         $self->error_message("Unable to open pipe to samtools view");
         return;
     }
+
     my ($reads, $reads_supporting_dnp) = (0,0);
     while( <SAMTOOLS> ) {
         chomp;
@@ -156,17 +157,19 @@ sub _determine_dnp_from_bam_reads {
         my $offset2 = $self->_calculate_offset($pos2, $pos_read, $cigar);
         next unless defined $offset2; #skip deletions
         $reads++;
-        
+
         if(uc(substr($seq,$offset1,1)) eq uc($base1) && uc(substr($seq,$offset2,1)) eq uc($base2)) {
             $reads_supporting_dnp++;
         }
 
 
     }
+
     unless(close(SAMTOOLS)) {
         $self->error_message("Error running samtools");
         return -1;
     }
+
     if($reads_supporting_dnp/$reads > $self->proportion) {
         return 1;
     }
@@ -189,18 +192,20 @@ sub _determine_dnp_from_bam_reads {
 #ok(substr($fake_read_seq,$offset,1) eq "A");
 #exit;
 #
-sub _calculate_offset { 
+sub _calculate_offset {
     my $self = shift;
     my $pos = shift;
     my $read_pos = shift;
     my $cigar = shift;
+
     my $current_offset=0;
     my $current_pos=$read_pos;
-    my @ops = $cigar =~ m/([0-9]+)([MIDNSHP])/g; 
+    my @ops = $cigar =~ m/([0-9]+)([MIDNSHP])/g;
     OP:
     while(my ($cigar_len, $cigar_op) =  splice @ops, 0, 2 ) {
         my $new_offset;
         my $last_pos=$current_pos;
+
         if($cigar_op eq 'M') {
             $current_pos+=$cigar_len;
             $current_offset+=$cigar_len;
@@ -228,6 +233,7 @@ sub _calculate_offset {
         else {
             die("CIGAR operation $cigar_op currently unsupported by this module");
         }
+
         if($pos < $current_pos && $pos >= $last_pos) {
             if($cigar_op eq 'M') {
                 my $final_adjustment = $current_pos - $pos;
@@ -239,6 +245,6 @@ sub _calculate_offset {
         }
     }
     #position didn't cross the read
-    return; 
+    return;
 }
-    
+
