@@ -41,9 +41,7 @@ class Genome::Model::Tools::Somatic::IdentifyDnp {
 #Check and see if they are in cis ie in the same read together
 
 sub execute {
-    my $self=shift;
-    $DB::single = 1;
-    my $snp_file = $self->annotation_input_file;
+    my $self = shift;
 
     #TODO Add checks on the files and architecture
     unless (POSIX::uname =~ /64/) {
@@ -56,11 +54,8 @@ sub execute {
         return;
     }
 
-    my $fh = IO::File->new($snp_file, "r");
-    unless($fh) {
-        $self->error_message("Couldn't open $snp_file: $!"); 
-        return;
-    }
+    my $fh = Genome::Sys->open_file_for_reading($self->annotation_input_file);
+
 
     my $last_pos = undef;
     my $last_chr = undef;
