@@ -123,6 +123,9 @@ sub execute {                               # replace with real execution logic.
     my @header;
     #hash the first file
     my $inFh = IO::File->new( $vcffiles[0] ) || die "can't open file\n";
+
+    $DB::single=1;
+
     while(my $line = $inFh->getline )
     {
         chomp($line);
@@ -271,6 +274,27 @@ sub execute {                               # replace with real execution logic.
                     }
                 }
 
+###############################################################################################
+####   Hacky VarScan stuff to get the FET format field included..
+
+                #if FET is defined for file 2, bring it in 
+                if($col[8] =~ m/FET/){
+                    my @format = split /\:/, $col[8];
+                    my $idx=scalar(@format)-1;
+                    for my $num (0..(scalar(@format)-1)){
+                        if( $format[$idx] =~ m/FET/ ){
+                            $idx = $num;
+                            last;
+                        }
+                    }
+                    my @values = split /\:/, $col[9];
+                    my $fet_value = $values[$idx];
+                    @{$varHash{$chr}{$id}}[8] .= ":FET";
+                    @{$varHash{$chr}{$id}}[9] .= ":".$fet_value;
+                }
+
+##############################################################################################
+
             } else {
 
                 #add source id
@@ -282,7 +306,9 @@ sub execute {                               # replace with real execution logic.
                     }
                 }                
                 #add to the hash
-                @{$varHash{$chr}{$id}} = @col;                           
+                @{$varHash{$chr}{$id}} = @col;
+
+                    
             }
             $prev_chr=$chr if $chr;
 

@@ -61,6 +61,13 @@ sub execute{
 
     my $output_dir = $build->data_directory."/variants";
     $params{output_directory} = $output_dir;
+
+    my $tmodel = $build->tumor_model;
+    my $nmodel = $build->normal_model;
+    my $aligned_reads_sample = $tmodel->subject->name;
+    my $control_aligned_reads_sample = $nmodel->subject->name;
+    $params{aligned_reads_sample} = $aligned_reads_sample;
+    $params{control_aligned_reads_sample} = $control_aligned_reads_sample;
     
     $DB::single=1;
     my $command = Genome::Model::Tools::DetectVariants2::Dispatcher->create(%params);

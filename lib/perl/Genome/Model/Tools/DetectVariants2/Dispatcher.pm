@@ -169,6 +169,8 @@ sub _detect_variants {
     $input->{aligned_reads_input}= $self->aligned_reads_input;
     $input->{control_aligned_reads_input} = $self->control_aligned_reads_input;
     $input->{reference_build_id} = $self->reference_build_id;
+    $input->{aligned_reads_sample} = $self->aligned_reads_sample;
+    $input->{control_aligned_reads_sample} = $self->control_aligned_reads_sample;
     $input->{output_directory} = $self->_temp_staging_directory;
    
     $self->_dump_workflow($workflow);
@@ -207,6 +209,8 @@ sub _dump_dv_cmd {
                 ." --aligned-reads-input ".$self->aligned_reads_input;
     $cmd .=     " --control-aligned-reads-input ".$self->control_aligned_reads_input if $self->control_aligned_reads_input;
     $cmd .=     " --reference-build-id ".$self->reference_build_id;
+    $cmd .=     " --aligned-reads-sample ".$self->aligned_reads_sample;
+    $cmd .=     " --control-aligned-reads-sample ".$self->control_aligned_reads_sample if $self->control_aligned_reads_sample;
     for my $var ('snv','sv','indel'){
         my $strat = $var."_detection_strategy";
         if(defined($self->$strat)){
@@ -374,6 +378,8 @@ sub generate_workflow {
             'reference_build_id',
             'aligned_reads_input',
             'control_aligned_reads_input',
+            'aligned_reads_sample',
+            'control_aligned_reads_sample',
             'output_directory',
         ],
         output_properties => [
@@ -548,7 +554,14 @@ sub create_combine_operation {
         operation_type => Workflow::OperationType::Command->get($class),
     );
 
-    my @properties_to_each_operation =  ( 'reference_build_id', 'aligned_reads_input', 'control_aligned_reads_input');
+    my @properties_to_each_operation =  ( 
+        'reference_build_id', 
+        'aligned_reads_input', 
+        'control_aligned_reads_input',
+        'aligned_reads_input',
+        'aligned_reads_sample',
+        'control_aligned_reads_sample',
+    );
     for my $property ( @properties_to_each_operation) {
         $workflow_model->add_link(
                 left_operation => $workflow_model->get_input_connector,
@@ -657,7 +670,13 @@ sub add_detectors_and_filters {
                 }
 
                 # add links for properties which every detector has from input_connector
-                my @properties_to_each_operation =  ( 'reference_build_id', 'aligned_reads_input', 'control_aligned_reads_input');
+                my @properties_to_each_operation =  ( 
+                    'reference_build_id',
+                    'aligned_reads_input',
+                    'control_aligned_reads_input',
+                    'aligned_reads_sample',
+                    'control_aligned_reads_sample',
+                );
                 for my $property ( @properties_to_each_operation) {
                     $workflow_model->add_link(
                         left_operation => $workflow_model->get_input_connector,
@@ -772,7 +791,6 @@ sub add_detectors_and_filters {
     $self->_workflow_model($workflow_model);
     return $workflow_model;
 }
-
 sub _create_directories {
     my $self = shift;
     $self->SUPER::_create_directories(@_);

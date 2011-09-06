@@ -20,6 +20,7 @@ class Genome::Subject {
         subject_type => {
             column_name => '',
             is_abstract => 1,
+            doc => 'Plain text description of the type of subject, defined in subclasses',
         },
     ],
     has_many_optional => [
@@ -60,6 +61,7 @@ class Genome::Subject {
                 );
                 return $disk_allocation;
             },
+            doc => 'Allocation object which tracks location and size of files',
         },
         data_directory => { 
             is => 'Text', 
@@ -68,6 +70,7 @@ class Genome::Subject {
                 return unless $disk_allocation;
                 return $disk_allocation->absolute_path;
             },
+            doc => 'Data directory for subject',
         },
     ],
     table_name => 'GENOME_SUBJECT',
@@ -87,11 +90,10 @@ sub create {
     my ($class, %params) = @_;
 
     # This extra processing allows for someone to create a subject with properties that aren't listed in any of the
-    # class definitions. Instead of having UR catch these extra and die, they are captured here and later turned into
+    # class definitions. Instead of having UR catch these extras and die, they are captured here and later turned into
     # subject attributes.
     my %extra;
     my @property_names = ('id', map { $_->property_name } ($class->__meta__->_legacy_properties, $class->__meta__->all_id_by_property_metas));
-    #my @property_names = $class->__meta__->property_names;
     for my $param (sort keys %params) {
         unless (grep { $param eq $_ } @property_names) {
             $extra{$param} = delete $params{$param};

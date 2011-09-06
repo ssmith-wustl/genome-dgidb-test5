@@ -36,6 +36,7 @@ my %command_params = (
     version => $version,
     params => $detector_parameters,
     output_directory => $test_working_dir . '/test',
+    aligned_reads_sample => 'TEST',
 );
 
 my $command = Genome::Model::Tools::DetectVariants2::Samtools->create(%command_params);

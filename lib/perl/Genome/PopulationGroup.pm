@@ -19,7 +19,7 @@ class Genome::PopulationGroup {
             to => 'attribute_value',
             where => [ attribute_label => 'member_hash' ],
             is_mutable => 1,
-            doc => 'Makes it easier to figure out if another group with the exact set of individuals already exists',
+            doc => 'MD5 hash created from member IDs, useful for finding population groups by membership',
         },
     ],
     has_many => [
@@ -29,16 +29,19 @@ class Genome::PopulationGroup {
             to => 'attribute_value',
             where => [ attribute_label => 'member' ],
             is_mutable => 1,
+            doc => 'IDs of individuals that compose this group',
         },
         members => { 
             is => 'Genome::Individual',
             via => 'attributes',
             to => '_individual',
             where => [ attribute_label => 'member' ],
+            doc => 'Genome::Individual objects that compose this group',
         },
         sample_names => {
             via => 'samples',
             to => 'name',
+            doc => 'Names of samples that come from individuals in this group',
         },
     ],
     has_optional => [
@@ -48,14 +51,16 @@ class Genome::PopulationGroup {
             to => 'attribute_value',
             where => [ attribute_label => 'taxon_id' ],
             is_mutable => 1,
+            doc => 'Optional taxon id for this group',
         },
         taxon => { 
             is => 'Genome::Taxon', 
             id_by => 'taxon_id', 
+            doc => 'Genome::Taxon object that is assumed to be the taxon for all individuals in this group',
         },
         species_name => { via => 'taxon' },
     ],
-    doc => 'a possibly arbitrary group of individual organisms',
+    doc => 'A possibly arbitrary grouping of individuals',
 };
 
 sub create {
@@ -66,8 +71,9 @@ sub create {
     return $self;
 }
 
+# Returns all samples derived from the individuals of this group.
+# Defining this as a UR property in the class definition above didn't work correctly.
 sub samples {
-    # the above samples relationship is broken... fixing directly until we have a better fix
     my $self = shift;
     my @members = $self->members();
     my @samples = Genome::Sample->get(source_id => [ map { $_->id } @members ]);

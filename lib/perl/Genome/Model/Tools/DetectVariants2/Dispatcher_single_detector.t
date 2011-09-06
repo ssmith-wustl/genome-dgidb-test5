@@ -39,6 +39,7 @@ my $detector_test = $dispatcher_class->create(
     reference_build_id => $refbuild_id,
     aligned_reads_input => $tumor_bam,
     control_aligned_reads_input => $normal_bam,
+    aligned_reads_sample => 'TEST',
 );
 ok($detector_test, "Object to test a detector case created");
 $detector_test->dump_status_messages(1);

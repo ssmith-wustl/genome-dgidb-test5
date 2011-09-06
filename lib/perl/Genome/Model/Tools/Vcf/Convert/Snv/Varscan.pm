@@ -22,6 +22,11 @@ sub help_detail {
 HELP
 }
 
+sub source {
+    my $self = shift;
+    return "Varscan";
+}
+
 sub parse_line { 
     my $self=shift;
     my $line = shift;
@@ -58,16 +63,28 @@ sub parse_line {
     $FA /= 100;
     my $VAQ = ".";
 
+    my $FET = sprintf("%e", $fields[11]); # p value from fishers exact test
+
     ##placeholder/dummy, some will be corrected by downstream tool
     my $dbsnp_id = ".";
     my $qual = ".";
     my $filter = "PASS";
     my $info = ".";
     ##need SS check in here for somatic status to come out properly..
-    my $format = "GT:GQ:DP:BQ:MQ:AD:FA:VAQ";
-    my $sample_string =join (":", ($GT, $GQ, $DP, $BQ, $MQ, $AD, $FA, $VAQ));
+    my $format = "GT:GQ:DP:BQ:MQ:AD:FA:VAQ:FET";
+    my $sample_string =join (":", ($GT, $GQ, $DP, $BQ, $MQ, $AD, $FA, $VAQ, $FET));
     my $vcf_line = join("\t", $chr, $pos, $dbsnp_id, $ref_allele, $alt_alleles, $qual, $filter, $info, $format, $sample_string);
     return $vcf_line;
 }
 
+sub get_format_meta {
+    my $self = shift;
+
+    # Get all of the base FORMAT lines
+    my @tags = $self->SUPER::get_format_meta; 
+
+    my $fet = {MetaType => "FORMAT", ID => "FET", Number => 1, Type => "String", Description => "P-value from Fisher's Exact Test"};
+
+    return (@tags, $fet);
+}
 
