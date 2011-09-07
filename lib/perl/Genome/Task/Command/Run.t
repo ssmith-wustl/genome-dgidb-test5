@@ -29,7 +29,7 @@ ok($run_cmd, "created run cmd successfully");
 
 ok($run_cmd->execute, "executed cmd ok");
 
-my $stdout_file = $tmp_dir . "/" . $task->id . "/stdout";
+my $stdout_file = $tmp_dir . "/" . $task->id . ".stdout";
 
 ok(-e $stdout_file, "redirected stdout file exists");
 my $file_contents = `cat $stdout_file`;
