@@ -197,7 +197,8 @@ sub merge_headers {
                             my $key = $data[1];
                             if(exists($header{FILTER}{$key})){
                                 unless($header{FILTER}{$key} eq $data){
-                                    die $self->error_message("Cannot merge FILTER tags.");
+                                    #TODO turn this on when it's "safe" to do so...
+                                    #die $self->error_message("Cannot merge FILTER tags.");
                                 }
                             } else {
                                 $header{FILTER}{$key} = $data;
