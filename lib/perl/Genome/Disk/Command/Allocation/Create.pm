@@ -1,11 +1,11 @@
-package Genome::Disk::Allocation::Command::Create;
+package Genome::Disk::Command::Allocation::Create;
 
 use strict;
 use warnings;
 use Genome;
 
-class Genome::Disk::Allocation::Command::Create {
-    is => 'Genome::Disk::Allocation::Command',
+class Genome::Disk::Command::Allocation::Create {
+    is => 'Command::V2',
     has => [
         disk_group_name => {
             is => 'Text',

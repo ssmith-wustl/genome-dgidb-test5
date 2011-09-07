@@ -1,12 +1,12 @@
-package Genome::Disk::Group::Command::AvailableSpace;
+package Genome::Disk::Command::Group::AvailableSpace;
 
 use strict;
 use warnings;
 use Genome;
 use MIME::Lite;
 
-class Genome::Disk::Group::Command::AvailableSpace {
-    is => 'Genome::Disk::Group::Command',
+class Genome::Disk::Command::Group::AvailableSpace {
+    is => 'Command::V2',
     has_optional => [
         disk_group_names => {
             is => 'Text',

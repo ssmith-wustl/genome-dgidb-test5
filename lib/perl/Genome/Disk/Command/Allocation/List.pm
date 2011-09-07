@@ -1,11 +1,11 @@
-package Genome::Disk::Allocation::Command::List;
+package Genome::Disk::Command::Allocation::List;
 
 use strict;
 use warnings;
 
 use Genome;
 
-class Genome::Disk::Allocation::Command::List {
+class Genome::Disk::Command::Allocation::List {
     is => 'UR::Object::Command::List',
     has => [
         subject_class_name  => {
@@ -14,9 +14,8 @@ class Genome::Disk::Allocation::Command::List {
         },
         show => { default_value => 'id,absolute_path,kilobytes_requested,owner_class_name,owner_id,creation_time,reallocation_time' },
     ],
+    doc => 'Lists Genome::Disk::Allocation objects',
 };
-
-sub sub_command_sort_position { 4 }
 
 1;
 

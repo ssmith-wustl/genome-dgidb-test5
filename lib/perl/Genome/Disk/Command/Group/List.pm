@@ -1,11 +1,11 @@
-package Genome::Disk::Group::Command::List;
+package Genome::Disk::Command::Group::List;
 
 use strict;
 use warnings;
 
 use Genome;
 
-class Genome::Disk::Group::Command::List {
+class Genome::Disk::Command::Group::List {
     is => 'UR::Object::Command::List',
     has => [
         subject_class_name  => {
@@ -19,9 +19,8 @@ class Genome::Disk::Group::Command::List {
             default_value => 'user_name=apipe' 
         },
     ],
+    doc => 'Lists Genome::Disk::Group objects',
 };
-
-sub sub_command_sort_position { 4 }
 
 1;
 

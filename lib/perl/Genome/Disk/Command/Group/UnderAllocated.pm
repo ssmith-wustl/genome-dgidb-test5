@@ -1,12 +1,12 @@
-package Genome::Disk::Group::Command::UnderAllocated;
+package Genome::Disk::Command::Group::UnderAllocated;
 
 use strict;
 use warnings;
 use Genome;
 use MIME::Lite;
 
-class Genome::Disk::Group::Command::UnderAllocated {
-    is => 'Genome::Disk::Group::Command',
+class Genome::Disk::Command::Group::UnderAllocated {
+    is => 'Command::V2',
     has_optional => [
         disk_group_names => {
             is => 'Text',
