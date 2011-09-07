@@ -173,10 +173,10 @@ sub processed_bed_file_content {
     while(my $line = <$fh>) {
         chomp($line);
         if($self->is_multitracked) {
-            if ($line eq 'track name=tiled_region description="NimbleGen Tiled Regions"') {
+            if ($line =~ /^track name=tiled_region/ or $line =~ /^track name=probes/) {
                 $print = 0;
                 next;
-            } elsif ($line eq 'track name=target_region description="Target Regions"') {
+            } elsif ($line =~ /^track name=target_region/ or $line =~ /^track name=targets/) {
                 $print = 1;
                 next;
             }
