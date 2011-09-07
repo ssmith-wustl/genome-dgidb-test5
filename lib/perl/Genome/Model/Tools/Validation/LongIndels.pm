@@ -25,6 +25,10 @@ class Genome::Model::Tools::Validation::LongIndels {
         is => 'Number',
         doc => 'validation model ID for the normal sample',
     },
+    sample_identifier => {
+        is => 'String',
+        doc => 'some string to use in model names, etc, such as "BRC2"',
+    },
     ],
     has_optional_input => [
     reference_transcripts => {
@@ -32,10 +36,10 @@ class Genome::Model::Tools::Validation::LongIndels {
         doc => 'reference transcripts plus version to be used to annotate input indel file',
         default => 'NCBI-human.combined-annotation/54_36p_v2',
     },
-    ref_seq => {
-        is => 'String',
-        doc => 'Optional reference sequence path (default: NCBI-human-build36)',
-        default => '/gscmnt/gc4096/info/model_data/2741951221/build101947881/all_sequences.fa'
+    reference_sequence_build_id => {
+        is => 'Integer',
+        doc => 'Optional reference sequence path (default: NCBI-human-build36 reference sequence build_id 101947881)',
+        default => '101947881'
     },
     ],
     doc => 'Begin validation of 3bp indels.',
@@ -55,7 +59,10 @@ sub execute {
     #parse input params
     my $indels_full_path = $self->long_indel_file;
     my $output_dir = $self->output_dir;
-    my $ref_seq = $self->ref_seq;
+    my $ref_seq_build_id = $self->reference_sequence_build_id;
+    my $ref_seq_build = Genome::Model::Build->get($ref_seq_build_id);
+    my $ref_seq_fasta = $ref_seq_build->full_consensus_path('fa');
+    my $sample_id = $self->sample_identifier . "_TESTTOOL_";
 
     #sort indels
     my ($indels_filename_only) = fileparse($indels_full_path);
@@ -108,7 +115,7 @@ sub execute {
         flank_size => '200',
         breakpoint_seq_file => $normal_breakpoint_file,
         asm_high_coverage => '1',
-        reference_file => $ref_seq,
+        reference_file => $ref_seq_fasta,
     );
     $normal_assembly_cmd->execute;
     $normal_assembly_cmd->delete;
@@ -124,7 +131,7 @@ sub execute {
         flank_size => '200',
         breakpoint_seq_file => $tumor_breakpoint_file,
         asm_high_coverage => '1',
-        reference_file => $ref_seq,
+        reference_file => $ref_seq_fasta,
     );
     $tumor_assembly_cmd->execute;
     $tumor_assembly_cmd->delete;
@@ -141,10 +148,111 @@ sub execute {
     $contig_cmd->execute;
     $contig_cmd->delete;
 
+    #create reference sequence using the new contigs (define new reference and track new reference build)
+    #my $cmd = "bsub -u ndees\@wustl.edu -J ".$luc."-import genome model define imported-reference-sequence --species-name human --use-default-sequence-uri --derived-from 101947881 --version 500bp_assembled_contigs --fasta-file $contigs --prefix ".$luc."_indels --append-to 101947881";
+    my $new_ref_cmd = Genome::Model::Command::Define::ImportedReferenceSequence->create(
+        species_name => 'human',
+        use_default_sequence_uri => '1',
+        derived_from => $ref_seq_build_id,
+        append_to => $ref_seq_build_id,
+        version => '500bp_assembled_contigs',
+        fasta_file => $contigs_file,
+        prefix => $sample_id,
+    );
+    unless ($new_ref_cmd->execute) {
+        $self->error_message('Failed to execute the definition of the new reference sequence with added contigs.');
+        return;
+    }
+    my $new_ref_build_id = $new_ref_cmd->result_build_id;
+    my $new_ref_build = Genome::Model::Build->get($new_ref_build_id);
+    my $new_ref_event = $new_ref_build->the_master_event;
+    my $new_ref_event_id = $new_ref_event->id;
+    my $new_ref_event_class = $new_ref_event->class;
+    while ($new_ref_event->event_status eq 'Running' || $new_ref_event->event_status eq 'Scheduled') {
+        sleep 600;
+        $new_ref_event = $new_ref_event_class->load($new_ref_event_id);
+    }
+    unless ($new_ref_event->event_status eq 'Succeeded') {
+        $self->error_message('New reference build not successful.');
+        return;
+    }
+
+    #copy tumor and normal validation models to align data to new reference
+    my $new_pp = "dlarson bwa0.5.9 -q 5 indel contig test picard1.42";
+    my $new_tumor_model_name = $sample_id . "-Tumor-3bpIndel-Validation";
+    my $new_normal_model_name = $sample_id . "-Normal-3bpIndel-Validation";
+    #my $tcmd = "genome model copy $tm auto_build_alignments=0 name=$tname processing_profile=name='$pp' reference_sequence_build=$ref region_of_interest_set_name= annotation_reference_build= dbsnp_build=";
+    my $tumor_copy = Genome::Model::Command::Copy->create(
+        model => $tumor_model,
+        overrides => [
+        'name='.$new_tumor_model_name,
+        'auto_build_alignments=0',
+        'processing_profile=name='.$new_pp,
+        'reference_sequence_build='.$new_ref_build_id,
+        'annotation_reference_build=',
+        'region_of_interest_set_name=',
+        'dbsnp_build=',
+        ],
+    );
+    $tumor_copy->dump_status_messages(1);
+    $tumor_copy->execute or die "copy failed";
+    my $new_tumor_model = $tumor_copy->_new_model;
+
+    #start new build and track the build
+    my $start_cmd = Genome::Model::Build::Command::Start->create(models => [$new_tumor_model]);
+    unless ($start_cmd->execute) {
+        die "couldn't start tumor model copy\n";
+    }
+    my @builds = $start_cmd->builds;
+    for my $build_id (@builds) {
+        my $build = Genome::Model::Build->get($build_id);
+        my $event = $build->the_master_event;
+        my $event_id = $event->id;
+        my $event_class = $event->class;
+        while ($event->event_status eq 'Running' || $event->event_status eq 'Scheduled') {
+            sleep 600;
+            $event = $event_class->load($event_id);
+        }
+        unless ($event->event_status eq 'Succeeded') {
+            $self->error_message('Copy of tumor build not successful.');
+            return;
+        }
+    }
+
     return 1;
 }
 1;
 
 
+=cut
+my $define_cmd = Genome::Model::Command::Define::ImportedReferenceSequence->create(
+);
+unless($define_cmd->execute) {
+    #fail
+}
+my $build_id = $define_cmd->result_build_id;
+my $build = Genome::Model::Build->get($build_id);
+my $event = $build->the_master_event;
+my $event_id = $event->id;
+my $event_class = $event->class;
+while ($event->event_status eq 'Running' || $event->event_status eq 'Scheduled') {
+    sleep 60;
+    $event = $event_class->load($event_id);
+}
+unless ($event->event_status eq 'Succeeded') {
+    #fail
+}
+# model copy etc.
+my $tumor_model
+my $normal_model
+# start new ref aligns
+my $start_cmd = Genome::Model::Build::Command::Start->create(models => [$normal_model, $tumor_model]);
+unless ($start_cmd->execute) {
+    #fail
+}
+my @builds = $start_cmd->builds;
+# watch these builds
 
+sub build_status {
+    my $build_id = shift
 
