@@ -96,7 +96,7 @@ sub create {
         # so we should archive the directory and generate software result/symlink
         if (-e $instance_output) {
             if (not -l $instance_output and -d $instance_output) {
-                my ($parent_dir, $sub_dir) = $instance_output =~ /(.*)\/(.*)/;
+                my ($parent_dir, $sub_dir) = $instance_output =~ /(.+)\/(.+)/;
                 die $self->error_message("Unable to determine parent directory from $instance_output.") unless $parent_dir;
                 die $self->error_message("Unable to determine sub-directory from $instance_output.") unless $sub_dir;
                 die $self->error_message("Parse error when determining parent directory and sub-directory from $instance_output.") unless ($instance_output eq "$parent_dir/$sub_dir");

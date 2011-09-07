@@ -20,7 +20,7 @@ class Genome::Task {
         stderr_pathname => {is => 'Text', len => 255, is_optional => 1},
         status => {is => 'Text', len => 50},
         user_id => {is => 'Text', len => 255},
-        time_submitted => {is => 'TIMESTAMP', column_name => 'submit_time'},
+        time_submitted => {is => 'TIMESTAMP', column_name => 'SUBMIT_TIME'},
         time_started => {is => 'TIMESTAMP', is_optional => 1},
         time_finished => {is => 'TIMESTAMP', is_optional => 1},
     },

@@ -152,8 +152,7 @@ sub execute {
     my $tier2 = $self->shadow_genome(\%genome);
     $self->add_region($tier2,"1","0","1");
     
-    my $tier3 = $self->difference_genomes(\%genome,$tier1);
-
+    my $tier3 = $self->complement_genome($tier1);
     my $tier4 = $self->shadow_genome(\%genome);
     $self->add_region($tier2,"1","0","1");
 
@@ -178,7 +177,8 @@ sub add_region {
         ($stop,$start) = ($start,$stop);
     }
     unless(exists( $set->{$chr})){
-        die $self->error_message(" found a chromosome that wasn't in the hash: ".$chr);
+        $self->status_message(" found a chromosome that wasn't in the hash: ".$chr);
+        return;
     }
     if($start >=0 && ($stop < $set->{$chr}->Size-1)){
         $set->{$chr}->Interval_Fill($start,$stop);    
