@@ -74,18 +74,19 @@ sub _generate_vcf {
     my $vcf_b_source = $self->get_vcf_source($input_b_vcf);
     my $source_ids;
     if($vcf_a_source =~ m/samtools/i){
-        $vcf_files = $input_a_vcf.",".$input_b_vcf;
-        $source_ids = $vcf_a_source.",".$vcf_b_source;
+        #if A has samtools, then the ordering is fine, change nothing
+    } elsif ( $vcf_b_source =~ m/samtools/i) {
+        #if B has samtools, swap the ordering
+        ($input_a_vcf,$input_b_vcf) = ($input_b_vcf,$input_a_vcf);
     } else {
-        $vcf_files = $input_b_vcf.",".$input_a_vcf;
-        $source_ids = $vcf_b_source.",".$vcf_a_source;
+        #if we cannot locate samtools, die
+        die $self->error_message("Could not positively identify samtools input!");
     }
-    my $merge_cmd = Genome::Model::Tools::Vcf::VcfMerge->create(
+    my $merge_cmd = Genome::Model::Tools::Vcf::JoinVcf->create(
         output_file => $output_file,
-        vcf_files => $vcf_files,
-        source_ids => $source_ids,
-        merge_filters => 1,
-        keep_all_passing => 1,
+        vcf_file_a => $input_a_vcf,
+        vcf_file_b => $input_b_vcf,
+        intersection => 0,
     );
     unless($merge_cmd->execute){
         die $self->error_message("Could not complete merge operation.");
