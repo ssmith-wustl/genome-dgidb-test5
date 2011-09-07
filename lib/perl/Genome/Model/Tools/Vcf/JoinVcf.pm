@@ -39,12 +39,27 @@ class Genome::Model::Tools::Vcf::JoinVcf {
             doc => 'First file to merge',
         },
 
+        vcf_file_a_source => {
+            is => 'Text',
+            is_optional => 0,
+            is_input => 1,
+            doc => 'Source of the first file to merge',
+        },
+
         vcf_file_b => {
             is => 'Text',
             is_optional => 0,
             is_input => 1,
             doc => 'Second file to merge',
         },
+
+        vcf_file_b_source => {
+            is => 'Text',
+            is_optional => 0,
+            is_input => 1,
+            doc => 'Source of the second file to merge',
+        },
+
         intersection => {
             is => 'Boolean',
             doc => 'Set this to cause non-passing filter records to be propagated above passing',
@@ -74,6 +89,12 @@ class Genome::Model::Tools::Vcf::JoinVcf {
         _info_fields => {
             doc => 'The fields used to determine the info fields in output',
         },
+        _a_source => {
+            doc => 'The detector that made the call for vcf_a',
+        },
+        _b_source => {
+            doc => 'The detector that made the call for vcf_a',
+        },
     ],
 };
 
@@ -92,12 +113,14 @@ sub execute {
     unless(-s $vcf_a){
         die $self->error_message("Could not locate vcf_file_a at: ".$vcf_a);
     }
-    my $vcf_a_fh = Genome::Sys->open_file_for_reading($vcf_a);
-    $self->_vcf_a_fh($vcf_a_fh);
     my $vcf_b = $self->vcf_file_b;
     unless(-s $vcf_b){
         die $self->error_message("Could not locate vcf_file_b at: ".$vcf_b);
     }
+
+    my $vcf_a_fh = Genome::Sys->open_file_for_reading($vcf_a);
+    $self->_vcf_a_fh($vcf_a_fh);
+
     my $vcf_b_fh = Genome::Sys->open_file_for_reading($vcf_b);
     $self->_vcf_b_fh($vcf_b_fh);
 
@@ -331,10 +354,10 @@ sub process_records {
     while( ! $done ){
         my $comparison = $self->compare($chrom_a,$pos_a,$chrom_b,$pos_b);
         if($comparison == -1){
-            $self->print_record($line_a);
+            $self->print_record($line_a,'a');
             $done = ($self->get_next($afh,\$line_a,\$chrom_a,\$pos_a)) ? 'a' : 0;
         } elsif ($comparison == 1) {
-            $self->print_record($line_b);
+            $self->print_record($line_b,'b');
             $done = ($self->get_next($bfh,\$line_b,\$chrom_b,\$pos_b)) ? 'b' : 0;
         } else {
             my $merged = $self->merge_records($line_a,$line_b);
@@ -349,7 +372,7 @@ sub process_records {
     my ($chr,$pos);
     while(my $line = $remaining_fh->getline){
         chomp $line;
-        $self->print_record($line);
+        $self->print_record($line,$done);
     }
 
     return 1;
@@ -375,9 +398,17 @@ sub get_next {
 sub print_record {
     my $self = shift;
     my $line = shift;
+    my $s = shift;
     my $fh = $self->_output_fh;
 
+    my $source = ($s eq 'a') ? $self->vcf_file_a_source : $self->vcf_file_b_source;
+  
     my @cols = split /\t/, $line;
+    if($cols[INFO] eq '.'){
+        $cols[INFO] = "VC=".$source;
+    } else {
+        $cols[INFO] .= ";VC=".$source;
+    }
 
     ($cols[FORMAT], $cols[SAMPLE]) = $self->adjust_format_and_sample_string($cols[FORMAT], $cols[SAMPLE]);
     print $fh join("\t",@cols) . "\n";
@@ -499,10 +530,16 @@ sub merge_records {
 
     my $a_info = $cols_a[INFO] eq '.';
     my $b_info = $cols_b[INFO] eq '.';
+
+    my $source_a = $self->vcf_file_a_source;
+    my $source_b = $self->vcf_file_b_source;
+
+
     if($a_info && $b_info){
-        $merged{INFO} = '.';
+        $merged{INFO} = "VC=".$source_a.",".$source_b;
     } elsif ($a_info || $b_info) {
-        $merged{INFO} = $a_pass ? $cols_b[INFO] : $cols_a[INFO];
+        $merged{INFO} = $a_info ? $cols_b[INFO] : $cols_a[INFO];
+        $merged{INFO} .= ";VC=".$source_a.",".$source_b;
     } else {
         my %info;
         my @a_info = split /\,/, $cols_a[INFO];
@@ -522,6 +559,7 @@ sub merge_records {
            push @info, join("=",$key,$info{$key} );
         }
         $merged{INFO} = join(":",@info);
+        $merged{INFO} .= ";VC=".$source_a.",".$source_b;
     }
 
     my @format_keys_a = split ":", $cols_a[FORMAT];

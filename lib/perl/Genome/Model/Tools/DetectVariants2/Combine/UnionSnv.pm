@@ -85,7 +85,9 @@ sub _generate_vcf {
     my $merge_cmd = Genome::Model::Tools::Vcf::JoinVcf->create(
         output_file => $output_file,
         vcf_file_a => $input_a_vcf,
+        vcf_file_a_source => $vcf_a_source,
         vcf_file_b => $input_b_vcf,
+        vcf_file_b_source => $vcf_b_source,
         intersection => 0,
     );
     unless($merge_cmd->execute){
