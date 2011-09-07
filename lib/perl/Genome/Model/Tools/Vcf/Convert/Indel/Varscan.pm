@@ -39,7 +39,6 @@ sub parse_line {
     my $indel_string = $fields[18]; #last field on varscan line should be: +ACT or -GA deletion/insertion reporting style
     my $alt_alleles;
     my $ref_allele;
-
     if($indel_string =~ m/\+/)  { #insertion
      $alt_alleles = $leading_base . substr($indel_string, 1);
      $ref_allele = $leading_base;
@@ -48,11 +47,13 @@ sub parse_line {
         #we should switch ref and alt (compared to insertions) to show that those bases are going away
         $ref_allele = $leading_base . substr($indel_string,1);
         $alt_alleles = $leading_base;
+
     }
     else {
         $self->error_message("line does not *appear* to contain a +/- char in final field, don't know what to do: $line");
         return 0;
     }
+    ($chr, $pos, $ref_allele, $alt_alleles) = $self->normalize_indel_location($chr, $pos, $ref_allele, $alt_alleles);
     my $genotype_call = $fields[3];
     my $GT;
     if($genotype_call =~ m/\*/) { #my belief is that varscan only calls het or hom. so if we see match an asterisk, we know its het. 

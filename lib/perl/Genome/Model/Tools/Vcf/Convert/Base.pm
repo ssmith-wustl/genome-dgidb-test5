@@ -9,64 +9,64 @@ class Genome::Model::Tools::Vcf::Convert::Base {
     is => 'Command',
     is_abstract => 1,
     has => [
-        output_file => {
-            is => 'Text',
-            doc => "List of mutations, converted to VCF",
-        },
-        input_file => {
-            is => 'Text',
-            doc => "The file to be converted to VCF" ,
-        },
-        aligned_reads_sample => {
-            is => 'Text',
-            doc => "The label to be used for the aligned_reads sample in the VCF header",
-        },
-        control_aligned_reads_sample => {
-            is => 'Text',
-            doc => "The label to be used for the aligned_reads sample in the VCF header",
-            is_optional => 1,
-        },
-        reference_sequence_build => {
-            is => 'Genome::Model::Build::ImportedReferenceSequence',
-            doc => 'The reference sequence build used to detect variants',
-            id_by => 'reference_sequence_build_id',
-        },
-        reference_sequence_input => {
-            is_constant => 1,
-            calculate_from => ['reference_sequence_build'],
-            calculate => q|
-            my $cache_base_dir = $reference_sequence_build->local_cache_basedir;
-            if ( -d $cache_base_dir ) { # WE ARE ON A MACHINE THAT SUPPORTS CACHING
-            return $reference_sequence_build->cached_full_consensus_path('fa');
-            }
-            else { # USE NETWORK REFERENCE
-            return $reference_sequence_build->full_consensus_path('fa');
-            }
-            |,
-            doc => 'Location of the reference sequence file',
-        },
-        sequencing_center => {
-            is => 'Text',
-            doc => "Center that did the sequencing. Used to figure out the 'reference' section of the header." ,
-            default => "WUSTL",
-            valid_values => ["WUSTL", "BROAD"],
-        },
-        vcf_version => {
-            is => 'Text',
-            doc => "Version of the VCF being printed" ,
-            default => "4.1",
-            valid_values => ["4.1"],
-        },
+    output_file => {
+        is => 'Text',
+        doc => "List of mutations, converted to VCF",
+    },
+    input_file => {
+        is => 'Text',
+        doc => "The file to be converted to VCF" ,
+    },
+    aligned_reads_sample => {
+        is => 'Text',
+        doc => "The label to be used for the aligned_reads sample in the VCF header",
+    },
+    control_aligned_reads_sample => {
+        is => 'Text',
+        doc => "The label to be used for the aligned_reads sample in the VCF header",
+        is_optional => 1,
+    },
+    reference_sequence_build => {
+        is => 'Genome::Model::Build::ImportedReferenceSequence',
+        doc => 'The reference sequence build used to detect variants',
+        id_by => 'reference_sequence_build_id',
+    },
+    reference_sequence_input => {
+        is_constant => 1,
+        calculate_from => ['reference_sequence_build'],
+        calculate => q|
+        my $cache_base_dir = $reference_sequence_build->local_cache_basedir;
+        if ( -d $cache_base_dir ) { # WE ARE ON A MACHINE THAT SUPPORTS CACHING
+        return $reference_sequence_build->cached_full_consensus_path('fa');
+        }
+        else { # USE NETWORK REFERENCE
+        return $reference_sequence_build->full_consensus_path('fa');
+        }
+        |,
+        doc => 'Location of the reference sequence file',
+    },
+    sequencing_center => {
+        is => 'Text',
+        doc => "Center that did the sequencing. Used to figure out the 'reference' section of the header." ,
+        default => "WUSTL",
+        valid_values => ["WUSTL", "BROAD"],
+    },
+    vcf_version => {
+        is => 'Text',
+        doc => "Version of the VCF being printed" ,
+        default => "4.1",
+        valid_values => ["4.1"],
+    },
     ],
     has_transient_optional => [
-        _input_fh => {
-            is => 'IO::File',
-            doc => 'Filehandle for the source variant file',
-        },
-        _output_fh => {
-            is => 'IO::File',
-            doc => 'Filehandle for the output VCF',
-        },
+    _input_fh => {
+        is => 'IO::File',
+        doc => 'Filehandle for the source variant file',
+    },
+    _output_fh => {
+        is => 'IO::File',
+        doc => 'Filehandle for the output VCF',
+    },
     ],
 
     doc => 'Base class for tools that convert lists of mutations to VCF',
@@ -329,3 +329,94 @@ sub source {
 }
 
 1;
+
+
+sub normalize_indel_location {
+    my $self=shift;
+    my $chr = shift;
+    my $base_before_event = shift;
+    my $ref = shift; #include all deleted bases if deletion
+    my $var = shift;  #include all inserted bases if insertion, not needed otherwis
+    my $buffer_size = 200;
+    my $array_start = $base_before_event - $buffer_size;  
+    if(length($ref) > length($var)) { 
+        if (substr($ref,0,1) eq substr($ref, -1, 1)) {
+            #normalization possible
+            $self->status_message("normalizing indel...");  
+        } 
+        else {
+            #we know this won't normalize, skip the compute heavy process
+            return($chr, $base_before_event, $ref, $var); 
+        }
+    }
+    elsif(length($var) > length($ref)) {
+        if (substr($var,0,1) eq substr($var, -1, 1)) {
+            #normalization possible
+            $self->status_message("normalizing indel...");  
+        }
+        else {
+            #we know this won't normalize, skip the compute heavy process
+            return($chr, $base_before_event, $ref, $var); 
+        }
+    }
+
+
+        my $sam_default = Genome::Model::Tools::Sam->path_for_samtools_version;
+        my $reference = $self->reference_sequence_input;
+        my $faidx_cmd = "$sam_default faidx $reference $chr:$array_start-$base_before_event";
+        my $sequence = `$faidx_cmd | grep -v \">\"`;
+        $sequence =~ s/\n//g;
+        $DB::single=1;
+
+
+        my $prev_base_array_idx = $base_before_event  - $array_start; 
+        if(length($ref) > length($var)) { 
+            #if deletion on reference test with sequence
+            #AGTGTGTGTGTA
+            #AGTGTGT--GTA want A--GTGTGTGT 
+            #original line would be 
+            #test	8	9   GT  0
+            $ref = substr($ref, 1); #knock off reference base vcf adds
+            my @allele = split //,$ref;
+            my $preceding_ref_base = substr $sequence,$prev_base_array_idx,1;
+            while($allele[-1] eq $preceding_ref_base) {
+                #TODO do some error checking here on the coordinates or we will probably screw some poop up
+                unshift @allele, pop @allele; #rotate the allele string
+                $prev_base_array_idx--; 
+                $preceding_ref_base = substr $sequence,$prev_base_array_idx, 1;
+
+            }
+            $ref = $preceding_ref_base;
+            $ref .= join(q{},@allele);
+        }
+        elsif(length($var) > length($ref)) {
+
+            #if insertion like say NPM1
+            #
+            #ATGCAT****GCATG
+            #ATGCATGCATGCATG
+            #
+            #the original line would be
+            #test	6	7	0	GCAT
+            $var = substr($var, 1);
+            my @allele = split //,$var;
+            my $preceding_ref_base = substr $sequence,$prev_base_array_idx,1;
+            while($allele[-1] eq $preceding_ref_base) {
+                #TODO do some error checking here on the coordinates or we will probably screw some poop up
+                unshift @allele, pop @allele; #rotate the allele string
+                $prev_base_array_idx--; 
+                $preceding_ref_base = substr $sequence,$prev_base_array_idx,1;
+            }
+            $var = $preceding_ref_base;
+            $var .= join(q{},@allele);
+
+        }
+        else {
+            $self->error_message("This line was not an indel: $chr\t$base_before_event\t$ref\t$var");
+        }
+        $base_before_event-=($buffer_size - $prev_base_array_idx); 
+        return($chr, $base_before_event, $ref, $var);
+
+    }
+
+
