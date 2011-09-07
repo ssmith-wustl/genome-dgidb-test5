@@ -1,11 +1,11 @@
-package Genome::Disk::Volume::Command::List;
+package Genome::Disk::Command::Volume::List;
 
 use strict;
 use warnings;
 
 use Genome;
 
-class Genome::Disk::Volume::Command::List {
+class Genome::Disk::Command::Volume::List {
     is => 'UR::Object::Command::List',
     has => [
         subject_class_name  => {
@@ -16,8 +16,8 @@ class Genome::Disk::Volume::Command::List {
             default_value => 'mount_path,disk_group_names,total_kb,percent_used,percent_allocated', 
         },
     ],
+    doc => 'Lists Genome::Disk::Volume objects',
 };
-sub sub_command_sort_position { 4 }
 
 1;
 

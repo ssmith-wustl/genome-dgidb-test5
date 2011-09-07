@@ -1,11 +1,11 @@
-package Genome::Disk::Assignment::Command::List;
+package Genome::Disk::Command::Assignment::List;
 
 use strict;
 use warnings;
 
 use Genome;
 
-class Genome::Disk::Assignment::Command::List {
+class Genome::Disk::Command::Assignment::List {
     is => 'UR::Object::Command::List',
     has => [
         subject_class_name  => {
@@ -17,7 +17,5 @@ class Genome::Disk::Assignment::Command::List {
         },
     ],
 };
-
-sub sub_command_sort_position { 4 }
 
 1;

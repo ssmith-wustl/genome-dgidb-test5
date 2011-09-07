@@ -1,19 +1,24 @@
-package Genome::Disk::Volume::Command::Resize;
+package Genome::Disk::Command::Volume::Resize;
 
 use strict;
 use warnings;
 
 use Genome;
 
-class Genome::Disk::Volume::Command::Resize {
-    is => 'Genome::Command::Base',
+class Genome::Disk::Command::Volume::Resize {
+    is => 'Command::V2',
     has => [
         volume => {
             is => 'Genome::Disk::Volume',
             shell_args_position => 1,
         },
     ],
+    doc => 'Figures out the size of the supplied volume and updates the database accordingly',
 };
+
+sub help_detail {
+    return 'DFs the given volume and updates the size of the volume in the database';
+}
 
 sub execute {
     my $self = shift;

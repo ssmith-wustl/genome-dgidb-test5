@@ -1,4 +1,4 @@
-package Genome::Disk::Allocation::Command::Deallocate;
+package Genome::Disk::Command::Allocation::Deallocate;
 
 use strict;
 use warnings;
@@ -6,14 +6,12 @@ use warnings;
 use Genome;
 use Carp 'confess';
 
-class Genome::Disk::Allocation::Command::Deallocate {
-    is => 'Genome::Disk::Allocation::Command',
-    has => [        
+class Genome::Disk::Command::Allocation::Deallocate {
+    is => 'Command::V2',
+    has_many => [        
         allocations => {
             is => 'Genome::Disk::Allocation',
-            shell_args_position => 1,
-            doc => 'allocation(s) to deallocate, resolved by Genome::Command::Base',
-            is_many => 1,
+            doc => 'Allocations to delete',
         },
     ],
     doc => 'Removes target allocation and deletes its directories',
@@ -33,27 +31,30 @@ sub help_detail {
 
 sub execute { 
     my $self = shift;
-
     my @allocations = $self->allocations;
+
+    my @errors;
     for my $allocation (@allocations) {
-        $self->_total_command_count($self->_total_command_count + 1);
         my $display_name = $allocation->__display_name__;
         my $transaction = UR::Context::Transaction->begin();
+
         my $successful = Genome::Disk::Allocation->delete(allocation_id => $allocation->id);
 
         if ($successful and $transaction->commit) {
             $self->status_message("Successfully deallocated ($display_name).");
         }
         else {
-            $self->append_error($display_name, "Failed to deallocate ($display_name): $@.");
+            $self->error_message("Failed to deallocate ($display_name): $@.");
+            push @errors, $display_name;
             $transaction->rollback;
         }
     }
 
-    $self->display_command_summary_report();
-
-    return !scalar(keys %{$self->_command_errors});
+    if (@errors) {
+        $self->error_message("Failed to deallocate the following allocations: " . join(', ', @errors));
+        return 0;
+    }
+    return 1;
 }
-
     
 1;

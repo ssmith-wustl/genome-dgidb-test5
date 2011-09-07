@@ -8,6 +8,7 @@ use Genome::Model::Tools::Pcap::Ace;
 use Genome::Model::Tools::Pcap::Phd;
 use Genome::Model::Tools::PooledBac::Utils;
 use Genome::Sys;
+use Cwd;
 use List::Util qw(max min);
 
 class Genome::Model::Tools::PooledBac::GeneratePostAssemblyReports {
@@ -218,6 +219,7 @@ sub execute {
     my $self = shift;
     print "Generating Post Assembly Reports...\n";
     $DB::single = 1;
+    my $orig_dir = cwd();
     my $project_dir = $self->project_dir;
     chdir($project_dir);
     my $reports_dir = $project_dir."/reports/";
@@ -236,7 +238,7 @@ sub execute {
     $self->print_contigs_only_consensus_report($names, $reports_dir."contigs_only_consensus");
     $self->create_fasta_and_qual_files($names);
     $self->_remove_contigs_idx_directories( $names ); 
-
+    chdir( $orig_dir );
     return 1;
 }
 

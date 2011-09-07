@@ -56,9 +56,8 @@ sub execute {
     my $contig_map = $ut->open_contig_map($contig_map_file);
     my $match_list;
     my $orphan_list;
-    Genome::Sys->create_directory('reports');
-    my $fh = IO::File->new(">reports/contigs_that_link_to_matching_contigs");
-    $self->error_message("Failed to open reports/contigs_that_link_to_matching_contigs for writing.\n") and die unless (-e 'reports/contigs_that_link_to_matching_contigs');
+    Genome::Sys->create_directory($project_dir.'/reports');
+    my $fh = Genome::Sys->open_file_for_writing( $project_dir.'/reports/contigs_that_link_to_matching_contigs' );
     ($match_list, $orphan_list) = $ut->create_match_and_orphan_lists($contig_map);
     foreach my $orphan (keys %{$orphan_list})
     {

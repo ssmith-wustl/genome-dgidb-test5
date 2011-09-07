@@ -84,7 +84,7 @@ sub execute {
     next if( $line =~ m/^#/ );
     my ( $gene, $type, undef, $cnt ) = split( /\t/, $line );
     $mut_cnts{$gene}{indels} += $cnt if( $type =~ m/Indels/ );
-    $mut_cnts{$gene}{snvs} += $cnt if( $type =~ m/(Transitions|Transversions)$/ );
+    $mut_cnts{$gene}{snvs} += $cnt if( $type =~ m/(Transitions|Transversions)/ );
   }
   $mrFh->close;
 
