@@ -78,6 +78,7 @@ sub _generate_vcf {
     } elsif ( $vcf_b_source =~ m/samtools/i) {
         #if B has samtools, swap the ordering
         ($input_a_vcf,$input_b_vcf) = ($input_b_vcf,$input_a_vcf);
+        ($vcf_a_source,$vcf_b_source) = ($vcf_b_source,$vcf_a_source);
     } else {
         #if we cannot locate samtools, die
         die $self->error_message("Could not positively identify samtools input!");
