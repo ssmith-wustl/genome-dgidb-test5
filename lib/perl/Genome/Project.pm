@@ -45,7 +45,7 @@ class Genome::Project {
                 return map {$_->entity_id} 
                         grep { $_->entity_class_name eq 'Genome::Sys::User'} 
                         @parts;
-            }
+            },
             doc => 'The user ids of people associated with this project',
         }
     ],
