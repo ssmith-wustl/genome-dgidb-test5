@@ -5,8 +5,6 @@ use warnings;
 use Genome;
 use Class::ISA;
 
-# there is a problem here with parts_count stuff- tony is looking at a change in UR
-
 class Genome::Project {
     is => 'Genome::Notable',
     id_generator => '-uuid',
@@ -16,22 +14,29 @@ class Genome::Project {
     has => [
         name => {
             is => 'Text',
-            doc => 'name of the project',
+            doc => 'Name of the project',
         },
     ],
     has_many_optional => [
         parts => {
             is => 'Genome::ProjectPart',
             reverse_as => 'project',
+            doc => 'All the parts that compose this project',
         },
         part_set => {
             is => 'Genome::ProjectPart::Set',
             is_calculated => 1,
         },
-        parts_count => { is => 'Number', via => 'part_set', to => 'count' },
+        parts_count => { 
+            is => 'Number', 
+            via => 'part_set', 
+            to => 'count',
+            doc => 'The number of parts associated with this project',
+        },
         entities => {
             via => 'parts',
             to => 'entity',
+            doc => 'All the objects to which the parts point',
         },
         user_ids => {
             calculate_from => ['parts'],
@@ -41,6 +46,7 @@ class Genome::Project {
                         grep { $_->entity_class_name eq 'Genome::Sys::User'} 
                         @parts;
             }
+            doc => 'The user ids of people associated with this project',
         }
     ],
     table_name => 'GENOME_PROJECT',
