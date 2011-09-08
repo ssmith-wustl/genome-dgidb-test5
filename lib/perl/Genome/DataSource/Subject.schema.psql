@@ -1,9 +1,6 @@
 DROP TABLE IF EXISTS genome_task;
 DROP TABLE IF EXISTS project_part;
 DROP TABLE IF EXISTS project;
-DROP TABLE IF EXISTS instrument_data_attribute;
-DROP TABLE IF EXISTS instrument_data;
-DROP TABLE IF EXISTS fragment_library;
 DROP TABLE IF EXISTS subject_attribute;
 DROP TABLE IF EXISTS subject;
 
@@ -24,38 +21,6 @@ CREATE TABLE subject_attribute (
 );
 CREATE INDEX subject_attribute_subject_id_index ON subject_attribute(subject_id);
 CREATE INDEX subject_attribute_label_index ON subject_attribute(attribute_label);
-
-CREATE TABLE fragment_library (
-    library_id varchar(16) NOT NULL,
-    full_name varchar(64) NOT NULL,
-    sample_id varchar(16) NOT NULL REFERENCES subject(subject_id),
-    library_insert_size varchar(64),
-    PRIMARY KEY (library_id)
-);
-CREATE INDEX fragment_library_sample_id_index ON fragment_library(sample_id);
-CREATE INDEX fragment_library_library_id_index ON fragment_library(library_id);
-
-CREATE TABLE instrument_data (
-    id                  varchar(64) NOT NULL,
-    subclass_name       varchar(64) NOT NULL,
-    sequencing_platform varchar(64) NOT NULL,
-    library_id          varchar(16) NOT NULL REFERENCES fragment_library(library_id),
-    source_name         varchar(64),
-    subset_name         varchar(64),
-    run_name            varchar(64),
-    PRIMARY KEY (id)
-);
-CREATE INDEX instrument_data_library_id_index ON instrument_data(library_id);
-
-CREATE TABLE instrument_data_attribute (
-    instrument_data_id varchar(64) NOT NULL REFERENCES instrument_data(id),
-    attribute_label    varchar(64) NOT NULL,
-    attribute_value    varchar(512) NOT NULL,
-    nomenclature       varchar(64) NOT NULL,
-    PRIMARY KEY (instrument_data_id, attribute_label, attribute_value, nomenclature)
-);
-CREATE INDEX instrument_data_id_index ON instrument_data_attribute(instrument_data_id);
-CREATE INDEX instrument_data_attribute_label_index ON instrument_data_attribute(attribute_label);
 
 CREATE TABLE project (
     id   varchar(64) NOT NULL,
