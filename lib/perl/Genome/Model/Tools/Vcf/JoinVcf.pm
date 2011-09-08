@@ -367,8 +367,9 @@ sub process_records {
         } else {
             my $merged = $self->merge_records($line_a,$line_b);
             $self->print_merged($merged);
-            $done = ($self->get_next($afh,\$line_a,\$chrom_a,\$pos_a)) ? 'a' : 0;
-            $done = ($self->get_next($bfh,\$line_b,\$chrom_b,\$pos_b)) ? 'b' : 0;
+            my $done_a = ($self->get_next($afh,\$line_a,\$chrom_a,\$pos_a)) ? 'a' : 0;
+            my $done_b = ($self->get_next($bfh,\$line_b,\$chrom_b,\$pos_b)) ? 'b' : 0;
+            $done = $done_a || $done_b;
         }
     }
 

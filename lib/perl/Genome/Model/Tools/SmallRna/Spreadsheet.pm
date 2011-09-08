@@ -6,7 +6,6 @@ package Genome::Model::Tools::SmallRna::Spreadsheet;
 
 use strict;
 use warnings;
-use Bio::DB::Sam;
 use Statistics::Descriptive;
 use Data::Dumper;
 use Genome;
