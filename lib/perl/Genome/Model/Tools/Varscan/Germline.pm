@@ -228,9 +228,8 @@ sub parse_variants_file
         if ($lineCounter == 1) {
             unless ($self->no_headers) {
                 ## Print header to both files ##
-
-                print SNPS "$line\n";
-                print INDELS "$line\n";
+                $snps->print($line."\n");
+                $indels->print($line."\n");
             }
         }
         if (length($cns) > 1) {

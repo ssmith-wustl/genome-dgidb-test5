@@ -147,6 +147,11 @@ sub create_edit_dir {
 
 sub get_scaffold_info_from_afg_file { #TODO - write this to file
     my $self = shift;
+
+    #return stored scaf info from file if present
+    return Storable::retrieve $self->scaffold_info_stor_file if
+        -s $self->scaffold_info_stor_file;
+
     my %scaf_info ;
     my $fh = Genome::Sys->open_file_for_reading( $self->velvet_afg_file );
     while ( my $record = getRecord($fh) ) {
@@ -156,6 +161,7 @@ sub get_scaffold_info_from_afg_file { #TODO - write this to file
             $seq =~ s/\n//g;
             my $contig_name = $fields->{eid};
             $contig_name =~ s/\-/\./; #to make numerically sortable
+            #print $contig_name."\n";
             $scaf_info{$contig_name}{contig_length} = length $seq;
         }
     }
@@ -164,18 +170,21 @@ sub get_scaffold_info_from_afg_file { #TODO - write this to file
     my %lengths;
     for my $contig ( keys %scaf_info ) {
         my ( $supercontig_number ) = $contig =~ /(\d+)\.\d+/;
-        #add up all bases
-        $lengths{$supercontig_number}{none_filtered} += $scaf_info{$contig}{contig_length};
-        #add up bases of contigs > min length
-        $lengths{$supercontig_number}{filtered} += $scaf_info{$contig}{contig_length} if
-            $scaf_info{$contig}{contig_length} >= $self->min_contig_length;
+        #add up all bases > min length
+        if ( $scaf_info{$contig}{contig_length} >= $self->min_contig_length ) {
+            $lengths{$supercontig_number}{filtered} += $scaf_info{$contig}{contig_length};
+        } else {
+            $lengths{$supercontig_number}{filtered} += 0;
+        }
     }
     #add supercontig length to scaf info
     for my $contig ( keys %scaf_info ) {
         my ( $supercontig_number ) = $contig =~ /(\d+)\.\d+/;
         $scaf_info{$contig}{filtered_supercontig_length} = $lengths{$supercontig_number}{filtered};
-        my $second_contig = $supercontig_number.'.1';
     }
+
+    #store scaf info in file for use later
+    Storable::nstore \%scaf_info, $self->scaffold_info_stor_file;
 
     return \%scaf_info;
 }
@@ -258,6 +267,10 @@ sub supercontigs_fasta_file {
 }
 
 #other files
+sub scaffold_info_stor_file {
+    return $_[0]->assembly_directory.'/scaffolds.stor';
+}
+
 sub read_names_sqlite {
     return $_[0]->assembly_directory.'/velvet_reads.sqlite';
 }
