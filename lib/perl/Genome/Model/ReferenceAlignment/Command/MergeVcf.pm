@@ -65,7 +65,7 @@ sub check_for_and_create_gz {
     my $merged_vcf_gz_tbi = $merged_vcf_gz.".tbi";
     unless(-e $merged_vcf_gz){
         unless(-e $merged_vcf){
-            die $self->error_message("Could not locate merged VCF at: ".$output_dir);
+            die $self->error_message("Could not locate merged VCF at: ".$merged_vcf);
         }
         my $cmd = "bgzip -c ".$merged_vcf." > ".$merged_vcf_gz;
         Genome::Sys->shellcmd( cmd => $cmd);
