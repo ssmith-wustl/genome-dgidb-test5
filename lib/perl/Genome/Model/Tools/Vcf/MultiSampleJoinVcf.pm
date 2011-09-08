@@ -556,7 +556,7 @@ sub get_samples_string {
     my $sources = shift;
     my %ss;
     for my $num (0..(scalar(@{$sources})-1)){
-        $ss{$sources[$num]}=$strings[$num];
+        $ss{$sources->[$num]}=$strings->[$num];
     }
 
     my $list = $self->_sample_order;
