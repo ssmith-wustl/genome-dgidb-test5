@@ -3,6 +3,7 @@ package Genome::Task;
 use strict;
 use warnings;
 
+use Command::Dispatch::Shell;
 use Genome;
 use Digest::MD5 qw(md5_hex);
 use Data::Dumper;
@@ -68,7 +69,7 @@ class Genome::Task {
 sub create {
     my $class = shift;
 
-    %Genome::Command::Base::SEEN_FROM_CLASS = ();
+    #%Command::V2::SEEN_FROM_CLASS = ();
     my $self = $class->SUPER::create(@_);
     
     my $cmd_object = $self->command_object;
@@ -136,10 +137,10 @@ sub _resolve_param_values {
             my $value;
             if ($property->is_many) {
                 $DB::single = 1;
-                my @v = $cmd_class->resolve_param_value_from_text($pre_value, $type);
+                my @v = Command::V2->resolve_param_value_from_text($pre_value, $type);
                 $value = \@v;
             } else {
-                $value = $cmd_class->resolve_param_value_from_text($pre_value, $type);
+                $value = Command::V2->resolve_param_value_from_text($pre_value, $type);
             }
 
             if (!$value || (ref($value) eq 'ARRAY' && @$value == 0)) {
