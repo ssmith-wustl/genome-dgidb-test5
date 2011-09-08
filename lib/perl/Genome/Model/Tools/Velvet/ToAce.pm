@@ -158,7 +158,7 @@ sub execute {
             $sth->execute or return $self->error_handle("Failed to insert for $name : ".$DBI::errstr);
         }
         else {
-	    push @{$seqinfo[$ct]}, $seekpos;
+            $seqinfo[$ct] = $seekpos.'-0'; #seepos-iteration (0 = not yet used);
         }
         $seekpos = $seq_fh->tell;
     }
@@ -265,15 +265,23 @@ sub execute {
                     else {
 			return $self->error_handle("Sequence of $ori_read_id (iid) not found") unless
 			    defined $seqinfo[$ori_read_id];
-			$pos = ${$seqinfo[$ori_read_id]}[0];
+                        
+                        my $string = $seqinfo[$ori_read_id];
+                        my $used_count;
+                        
+                        unless( ($pos,$used_count) = $string =~ /(\d+)-(\d+)/ ) {
+                            $self->error_message("Expected string like 3455-4(readpos-iter) but instead got: $string");
+                            return;
+                        }
 
                         my $seq_obj = $self->get_seq( $pos, $ori_read_id, $sequences_fh );
                         $sequence = $seq_obj->seq;
                         $read_id = $seq_obj->primary_id;
 
-			$read_id .= '-' . ${$seqinfo[$ori_read_id]}[2] if defined ${$seqinfo[$ori_read_id]}[2];
-			${$seqinfo[$ori_read_id]}[2]++;
+                        $read_id .= '-' . $used_count if $used_count > 0;
+                        $seqinfo[$ori_read_id] = $pos.'-'.++$used_count;
 		    }
+
                     $dbh->commit if $self->sqlite_yes;
 
                     my ($asml, $asmr) = split (/\,/, $sfields->{clr});
