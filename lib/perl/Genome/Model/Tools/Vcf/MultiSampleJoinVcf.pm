@@ -8,6 +8,7 @@ use File::Basename;
 use DateTime;
 use POSIX;
 use Sort::Naturally;
+use List::MoreUtils qw/ uniq /;
 
 use constant {
     CHROM => 0,
@@ -55,14 +56,6 @@ class Genome::Model::Tools::Vcf::MultiSampleJoinVcf {
         _sample_order => {
             doc => 'sorted list of sample column names',
         },
-        _vcf_a_fh => {
-            is => 'IO::File',
-            doc => 'File handle to vcf_a',
-        },
-        _vcf_b_fh => {
-            is => 'IO::File',
-            doc => 'File handle to vcf_b',
-        },
         _output_fh => {
             is => 'IO::File',
             doc => 'File handle to output_file',
@@ -73,14 +66,8 @@ class Genome::Model::Tools::Vcf::MultiSampleJoinVcf {
         _format_fields => {
             doc => 'The fields used to determine the format fields in the output'
         },
-        _info_fields => {
-            doc => 'The fields used to determine the info fields in output',
-        },
-        _a_source => {
-            doc => 'The detector that made the call for vcf_a',
-        },
-        _b_source => {
-            doc => 'The detector that made the call for vcf_a',
+        _format_string => {
+            doc => 'The string to be used for each format field, perhaps this can vary, but for now it will be the same for each record',
         },
     ],
 };
@@ -103,11 +90,12 @@ sub execute {
     $self->set_sample_cols;
 
     $self->process_format;
-    $self->process_info;
+
+    $self->set_format_string;
 
     my $output = $self->output_file;
-    $self->_output_fh(Genome::Sys->open_file_for_writing($output));
 
+    $self->_output_fh(Genome::Sys->open_file_for_writing($output));
 
     $self->print_header;
 
@@ -144,23 +132,6 @@ sub process_input_list {
     return 1;
 }
 
-
-sub process_info {
-    my $self = shift;
-    my $h = $self->_header;
-    my %info_fields;
-    for my $f (sort(keys(%{$h->{INFO}}))){
-        my $line = $h->{INFO}->{$f};
-        my (undef,$id) = split /\=/,$line;
-        ($id,undef) = split /\,/, $id;
-        $info_fields{$id}=1;
-        print "ID=".$id."\n";
-    }
-    $self->_info_fields(\%info_fields);
-
-    return 1;
-}
-
 sub process_format {
     my $self = shift;
     my $h = $self->_header;
@@ -176,11 +147,31 @@ sub process_format {
     return 1;
 }
 
+sub set_format_string {
+    my $self = shift;
+    my %form = %{ $self->_format_fields };
+    my @answer;
+    if(exists($form{GT})){
+        push @answer, "GT";
+        delete $form{GT};
+    }
+    if(exists($form{GQ})){
+        push @answer, "GQ";
+        delete $form{GQ};
+    }
+    if(exists($form{DP})){
+        push @answer, "DP";
+        delete $form{DP};
+    }
+
+    push @answer, nsort(keys(%form));
+    $self->_format_string(join(":",@answer));
+}
+
 sub set_sample_cols {
     my $self = shift;
 
     my $paths = $self->_vcf_list;
-    
     my @samples = nsort keys(%{$paths});
     $self->_sample_order(\@samples);
 
@@ -307,13 +298,16 @@ sub merge_headers {
             }
         }
     }
-    #my $info = "##INFO=<ID=VC,Number=.,Type=String,Description=\"Variant caller\">";
-    #my $key = "VC,Number";
-    #$header{INFO}{$key} = $info;
-    
+   
+    my $info = "<ID=VC,Number=.,Type=String,Description=\"Variant caller\">";
+    my $key = "VC,Number";
+    $header{INFO}{$key} = $info;
+ 
     $self->_header(\%header);
     return 1;
 }
+
+
 
 # Grab a hash of the header from $self->_header and print it to the _output_fh
 sub print_header {
@@ -369,6 +363,28 @@ sub print_and_delete_col_header {
     return 1;   
 }
 
+#return -1 if $chr_a,$pos_a represents a lower position than $chr_b,$pos_b, 0 if they are the same, and 1 if b is lower
+sub compare {
+    my $self = shift;
+    my ($chr_a,$pos_a,$chr_b,$pos_b) = @_;
+    if(($chr_a eq $chr_b) && ($pos_a == $pos_b)){
+        return 0;
+    }
+    if($chr_a eq $chr_b){
+        return ($pos_a < $pos_b) ? -1 : 1;
+    }
+    return ($self->chr_cmp($chr_a,$chr_b)) ? 1 : -1;
+}
+
+# return 0 if $chr_a is lower than $chr_b, 1 otherwise
+sub chr_cmp {
+    my $self = shift;
+    my ($chr_a, $chr_b) = @_;
+    my @chroms = ($chr_a,$chr_b);
+    my @answer = nsort @chroms;
+    return ($answer[0] eq $chr_a) ? 0 : 1;
+}
+
 # this will get lines from the two inputs as needed, then reformat and or merge them, and print them to _output_fh
 sub process_records {
     my $self = shift;
@@ -381,12 +397,16 @@ sub process_records {
 
     #loop until one of the files reaches EOF (it sets $done to a or b, denoting which file is done)
     while( keys(%lines)  ){
-        #my @lowest = $self->get_lowest(\%lines);
         my @answer;
         my @keys = sort(keys(%lines));
         push @answer, shift @keys;
         for my $key (@keys){
-            my $cmp = $self->compare($lines{$key}{chr},$lines{$key}{pos},$lines{$answer[0]}{chr},$lines{$answer[0]}{pos});
+            my $cmp = $self->compare(
+                $lines{$key}{chr},
+                $lines{$key}{pos},
+                $lines{$answer[0]}{chr},
+                $lines{$answer[0]}{pos},
+            );
             if($cmp == 0){
                 push @answer, $key;
             } elsif( $cmp == -1){
@@ -397,8 +417,9 @@ sub process_records {
         if(@answer == 1){
             $self->print_record($lines{$answer[0]}{line}, $answer[0]);
         } else {
-            my $line = $self->merge_records(\@answer);
+            my $line = $self->merge_records(\@answer,\%lines);
             $self->print_merged($line, \@answer);
+            #print $ofh "MERGE HAPPENS HERE!\n";
         }
 
         $self->get_lines(\%lines,\@answer);
@@ -425,34 +446,9 @@ sub opening_lines {
     return 1;
 }
 
-=cut
-sub get_lowest {
-    my $self=shift;
-    my $lines = shift;
-    my @answer;
-    my @keys = sort(keys(%{$lines}));
-    push @answer, shift @keys;
-    for my $key (@keys){
-        my $cmp = $self->compare($lines->{$key}{chr},$lines->{$key}{pos},$lines->{$answer[0]}{chr},$lines->{$answer[0]}{pos});
-        if($cmp == 0){
-            push @answer, $key;
-        } elsif( $cmp == -1){
-            @answer = ();
-            push @answer, $key;
-        }
-    }
-    if(@answer == 1){
-        $self->print_record($lines->{$answer[0]}{line}, $answer[0]);
-    } else {
-        my $line = $self->merge_records(\@answer);
-        $self->print_merged($line, \@answer);
-    }
-
-    $self->get_lines($lines,\@answer);
-    return @answer;
-}
-=cut
-
+# This function takes a hash of sample names, which contain hashes of line, chrom, and pos
+# and a list of stale samples, which means the line was used in the output and a new line
+# needs to be drawn from the file handle associated with that sample
 sub get_lines {
     my $self = shift;
     my $lines = shift;
@@ -462,12 +458,16 @@ sub get_lines {
 
     for my $key (@{$stale}){
         my $line;
+
+        # If the getline doesn't return data (EOF), remove that sample's record
+        # from the incoming hash ref, signaling this to the calling function
         unless($line = $handles->{$key}->getline){
             $handles->{$key}->close;
             delete $handles->{$key};
             delete $lines->{$key};
             next;
         }
+        chomp $line;
         my ($chr,$pos) = split /\s+/,$line;
         $lines->{$key}{line} = $line;
         $lines->{$key}{chr} = $chr;
@@ -502,14 +502,28 @@ sub print_record {
 
     my @cols = split /\t/, $line;
 
-    ($cols[FORMAT], $cols[SAMPLE]) = $self->adjust_format_and_sample_string($cols[FORMAT], $cols[SAMPLE], $source);
+    $cols[FORMAT] = $self->_format_string;
+    $cols[SAMPLE] = $self->adjust_sample_string($cols[FORMAT], $cols[SAMPLE], $source);
+
     print $fh join("\t",@cols) . "\n";
 
     return 1;
 }
 
+#This prints a vcf line hash to the _output_fh
+sub print_merged {
+    my $self = shift;
+    my $m = shift;
+    my %m = %{ $m };
+    my $fh = $self->_output_fh;
+    my $line = join("\t",($m{CHROM},$m{POS},$m{ID},$m{REF},$m{ALT},$m{QUAL},$m{FILTER},$m{INFO},$m{FORMAT},$m{SAMPLE}));
+    print $fh $line . "\n";
+
+    return 1;
+}
+
 # This method constructs format and sample fields in the proper order, adding dots where fields were missing
-sub adjust_format_and_sample_string {
+sub adjust_sample_string {
     my $self = shift;
     my $format_in = shift;
     my $sample_in = shift;
@@ -518,14 +532,17 @@ sub adjust_format_and_sample_string {
     my @formats = split /:/, $format_in;
     my @sample = split /:/, $sample_in;    
 
-    my %form = %{ $self->_format_fields };
+    my %formats;
+
+    my @format_fields = split /:/, $self->_format_string;
+    my %form;
+    @form{@format_fields}=1;
 
     my @output_formats;
     my @output_sample;
     for my $field (0..(scalar(@formats)-1)){
         if(exists($form{$formats[$field]})){
-            push @output_formats, $formats[$field];
-            push @output_sample, $sample[$field];
+            $formats{$formats[$field]} = $sample[$field];
             delete $form{$formats[$field]};
         } else {
             die $self->error_message("Could not locte format field definiton for: ".$formats[$field]." in header.");
@@ -533,22 +550,21 @@ sub adjust_format_and_sample_string {
     }
     unless( ! keys( %form )){
         for my $field (sort(keys(%form))){
-            push @output_formats, $field;
-            push @output_sample, '.';
-            delete $form{$field};
-        } 
+            $formats{$field} = '.';
+        }
+    }
+    for my $field (@format_fields){
+        push @output_sample, $formats{$field};
     }
 
-    my $format_string = join(":",@output_formats);
     my $sample_string = join(":",@output_sample);
 
     my @string = ($sample_string);
     my @source = ($source);
-    my $samples_string = $self->get_samples_string(\@string,\@source);
-
-
-    return ($format_string, $sample_string);
+    my $full_samples_string = $self->get_samples_string(\@string,\@source);
+    return $full_samples_string;
 }
+
 
 sub get_samples_string {
     my $self= shift;
@@ -572,161 +588,176 @@ sub get_samples_string {
     return join("\t",@answer);
 }
 
-#This prints a vcf line hash to the _output_fh
-sub print_merged {
-    my $self = shift;
-    my $m = shift;
-    my %m = %{ $m };
-    my $fh = $self->_output_fh;
-    my $line = join("\t",($m{CHROM},$m{POS},$m{ID},$m{REF},$m{ALT},$m{QUAL},$m{FILTER},$m{INFO},$m{FORMAT},$m{SAMPLE}));
-    print $fh $line . "\n";
-
-    return 1;
-}
-
-#return -1 if $chr_a,$pos_a represents a lower position than $chr_b,$pos_b, 0 if they are the same, and 1 if b is lower
-sub compare {
-    my $self = shift;
-    my ($chr_a,$pos_a,$chr_b,$pos_b) = @_;
-    if(($chr_a eq $chr_b) && ($pos_a == $pos_b)){
-        return 0;
-    }
-    if($chr_a eq $chr_b){
-        return ($pos_a < $pos_b) ? -1 : 1;
-    }
-    return ($self->chr_cmp($chr_a,$chr_b)) ? 1 : -1;
-}
-
-# return 0 if $chr_a is lower than $chr_b, 1 otherwise
-sub chr_cmp {
-    my $self = shift;
-    my ($chr_a, $chr_b) = @_;
-    my @chroms = ($chr_a,$chr_b);
-    my @answer = nsort @chroms;
-    return ($answer[0] eq $chr_a) ? 0 : 1;
-}
 
 #combine two intersecting records
 sub merge_records {
     my $self = shift;
-    my ($line_a,$line_b) = @_;
-    return $line_a;
-}
-=cut
-    my @cols_a = split /\t/, $line_a;
-    my @cols_b = split /\t/, $line_b;
-   
-    unless(@cols_a == @cols_b){
-        die $self->error_message("both records did not have the same number of columns! \n\t\t ".$line_a."\n\t\t".$line_b);
-    } 
-    
-    my %merged;
-    my %gt;
-    $merged{CHROM} = $cols_a[CHROM];
-    $merged{POS} = $cols_a[POS];
-    $merged{ID} = $cols_a[ID];
-    $merged{REF} = $cols_a[REF];
-    my $alt_alleles;
-    # We check later on if there is a conflict between the two ALT values... but regardless always trust A
-    $merged{ALT} = $cols_a[ALT];
+    my $answer = shift;
+    my $lines = shift;
 
-    if($cols_a[QUAL] ne '.'){
-        $merged{QUAL} = $cols_a[QUAL];
-    } else {
-        $merged{QUAL} = $cols_b[QUAL];
+    my %inputs;
+
+    for my $key (@{$answer}){
+        my @cols = split /\t/, $lines->{$key}{line};
+        $inputs{$key} = \@cols;
     }
 
-    my $a_pass = $cols_a[FILTER] eq 'PASS';
-    my $b_pass = $cols_b[FILTER] eq 'PASS';
-    if($a_pass && $b_pass){
-        $merged{FILTER} = 'PASS';
-    } elsif( $a_pass || $b_pass ){
-        if($self->intersection){
-            $merged{FILTER} = $a_pass ? $cols_b[FILTER] : $cols_a[FILTER];
+    my $num_cols=0;
+    for my $key (sort(keys(%inputs))){
+        my $nc = scalar( @{$inputs{$key}});
+        if(! $num_cols){
+            $num_cols = $nc;
         } else {
-            $merged{FILTER} = 'PASS';
-        }
-    } else {
-        $merged{FILTER} = $cols_a[FILTER];
-    }
-
-    my $a_info = $cols_a[INFO] eq '.';
-    my $b_info = $cols_b[INFO] eq '.';
-
-    my $source_a = $self->vcf_file_a_source;
-    my $source_b = $self->vcf_file_b_source;
-
-
-    if($a_info && $b_info){
-        $merged{INFO} = "VC=".$source_a.",".$source_b;
-    } elsif ($a_info || $b_info) {
-        $merged{INFO} = $a_info ? $cols_b[INFO] : $cols_a[INFO];
-        $merged{INFO} .= ";VC=".$source_a.",".$source_b;
-    } else {
-        my %info;
-        my @a_info = split /\,/, $cols_a[INFO];
-        for my $info (@a_info){
-            my ($tag,$value) = split /\=/, $info;
-            $info{$tag}=$value;
-        }
-        my @b_info = split /\,/, $cols_b[INFO];
-        for my $info (@b_info){
-            my ($tag,$value) = split /\=/, $info;
-            unless(exists($info{$tag})){
-                $info{$tag}=$value; # FIXME this will potentially stomp on values from A... ok for now probably?
+            if($nc != $num_cols){
+                die $self->error_message("Had differing number of columns in incoming data!".Data::Dumper::Dumper($answer));
             }
         }
-        my @info;
-        for my $key (sort(keys(%info))){
-           push @info, join("=",$key,$info{$key} );
+    }
+
+    my @samples = nsort(keys(%inputs));
+    my $a = $samples[0];
+ 
+    my %merged;
+    my %gt;
+    $merged{CHROM} = $inputs{$a}->[CHROM];
+    $merged{POS} = $inputs{$a}->[POS];
+    $merged{ID} = $inputs{$a}->[ID];
+
+    for my $key (@samples){
+        unless( $inputs{$key}->[ID] eq $merged{ID} ){
+            die $self->error_message("Found disagreement on ID field at ".$merged{CHROM}." ".$merged{POS});
         }
-        $merged{INFO} = join(":",@info);
-        $merged{INFO} .= ";VC=".$source_a.",".$source_b;
     }
 
-    my @format_keys_a = split ":", $cols_a[FORMAT];
-    my @format_values_a= split ":", $cols_a[SAMPLE];
-    unless (scalar @format_keys_a == scalar @format_values_a) {
-        die $self->error_message("Format keys and values counts do not match. Malformed VCF at lines $line_a, $line_b");
-    }
-    my $format_a;
-    for my $key (@format_keys_a) {
-        $format_a->{$key} = shift @format_values_a;
+    $merged{REF} = $inputs{$a}->[REF];
+
+    for my $key (@samples){
+        unless( $inputs{$key}->[REF] eq $merged{REF} ){
+            die $self->error_message("Found disagreement on REF field at ".$merged{CHROM}." ".$merged{POS});
+        }
     }
 
-    my @format_keys_b = split ":", $cols_b[FORMAT];
-    my @format_values_b= split ":", $cols_b[SAMPLE];
-    unless (scalar @format_keys_b == scalar @format_values_b) {
-        die $self->error_message("Format keys and values counts do not match. Malformed VCF at lines $line_a, $line_b");
+    my  %alts;
+    for my $key (nsort(keys(%inputs))){
+        my @alts = split /\,/, $inputs{$key}->[ALT];
+        for my $alt (@alts){
+            $alts{$alt} =1;
+        }
     }
-    my $format_b;
-    for my $key (@format_keys_b) {
-        $format_b->{$key} = shift @format_values_b;
+    $merged{ALT} = join(",", sort(keys(%alts)));
+
+    for my $sample(@samples){
+        
     }
 
-    # FIXME this is somewhat redundant since we have logic that fills in answers from A or . ... we just need to merge in B here... refactor
-    my ($format_string, $sample_string) = $self->adjust_format_and_sample_string($cols_a[FORMAT], $cols_a[SAMPLE]);
-    my @format_fields = split ":", $format_string;
-    my $merged_format_values;
-    # Merge the answers from line b in where we had no answer before
-    for my $key (@format_fields) {
-        if (defined $format_a->{$key} ) {
-            $merged_format_values->{$key} = $format_a->{$key};
-        } elsif (defined $format_b->{$key} ) {
-            $merged_format_values->{$key} = $format_b->{$key};
+    #FIXME Find a better approach than simply dropping the quality score... some way of merging them?
+    $merged{QUAL} = '.';
+
+    #my $qual=0;
+    #map { $qual += $inputs{$_}->{QUAL};} @samples;
+
+
+    $merged{FILTER} = $inputs{$a}->[FILTER];
+
+    for my $s (@samples){
+        my $merged_pass = $merged{FILTER} eq 'PASS';
+        my $pass = $inputs{$s}->[FILTER] eq 'PASS';
+        if($merged_pass && $pass){
+            #fine
+        } elsif( $merged_pass || $pass ){
+            if($self->intersection){
+                $merged{FILTER} = $merged_pass ? $inputs{$s}->[FILTER] : $merged{FILTER};
+            } else {
+                $merged{FILTER} = 'PASS';
+            }
         } else {
-            $merged_format_values->{$key} = ".";
+            # fine
         }
     }
 
-    $self->check_alt_and_gt($line_a, $line_b, $cols_a[ALT], $cols_b[ALT], $format_a->{GT}, $format_b->{GT});
+    $merged{INFO} = $inputs{$a}->[INFO];
 
-    $merged{FORMAT} = $format_string;
-    $merged{SAMPLE} = join (":", map {$merged_format_values->{$_} } @format_fields);
+    my %info;
+
+    for my $sample (@samples){
+
+        my @info = split /\;/, $inputs{$sample}->[INFO];
+        my %tags;
+        for my $record (@info){
+            my ($t,$v) =  split /\=/, $record;
+            unless(exists($info{$t})){
+                $info{$t} = $v;
+                next;
+            }
+            $tags{$t} = $v;
+        }
+
+        if(exists($tags{VC})&& exists($info{VC})){
+            unless($tags{VC} eq $info{VC}){
+                my @info_vals = split /\,/, $info{VC};
+                my @tag_vals = split /\,/, $tags{VC};        
+                my @detectors = uniq (@info_vals,@tag_vals);
+                $info{VC} = join(",",@detectors);
+            }
+        }
+        my @finfo;
+        for my $key (sort(keys(%info))){
+            push @finfo, $key."=".$info{$key};
+        }
+        $merged{INFO} = join(";",@finfo);
+    }
+
+    $merged{FORMAT} = $self->_format_string;
+
+    my @format_fields = split /:/, $merged{FORMAT};
+    my %format_fields;
+    @format_fields{@format_fields} = 1;
+    my %format;
+
+    for my $sample (@samples){
+        my %format_fields;
+        @format_fields{@format_fields} = 1;
+        my @tags = split /\:/, $inputs{$sample}->[FORMAT];
+        my @vals = split /\:/, $inputs{$sample}->[SAMPLE];
+
+        my @sample_fields;
+        for my $num (0..(scalar(@tags)-1)){
+            if(exists($format_fields{$tags[$num]})){
+                $format{$sample}{$tags[$num]} = $vals[$num];
+                delete $format_fields{$tags[$num]};
+            } else {
+                die $self->error_message("Found a format tag that was not defined in the header: ".$tags[$num]." for ".$sample);
+            }
+        }
+        unless( ! keys( %format_fields )){
+            for my $field (sort(keys(%format_fields))){
+                $format{$sample}{$field} = ".";
+                delete $format_fields{$field};
+            } 
+        }
+        $format{$sample}{GT} = Genome::Model::Tools::Vcf::Convert::Base->regenerate_gt( $merged{REF} , $inputs{$sample}->[ALT], $format{$sample}{GT},$merged{ALT});
+        my @answer;
+        for my $tag (@format_fields){
+            push @answer, $format{$sample}{$tag};
+        }
+        $inputs{$sample}->[SAMPLE] = join(":",@answer);
+    }
+
+    my @gt_fields;
+    my @sources;
+    for my $sample (@samples){
+        push @gt_fields, $inputs{$sample}->[SAMPLE];
+        push @sources, $sample;
+    }
+
+    $merged{SAMPLE} = $self->get_samples_string(\@gt_fields,\@sources);
 
     return \%merged;
 }
-=cut
+
+sub regenerate_gt {
+    return "1/1";
+}
 
 # This method will check the two inputs alt and gt values and die or warn if they are something worthy of inspection 
 sub check_alt_and_gt {
