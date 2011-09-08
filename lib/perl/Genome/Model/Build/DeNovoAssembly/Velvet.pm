@@ -167,7 +167,7 @@ sub assembler_kmer_used {
 
 #for build diff testing
 sub files_ignored_by_diff {
-    return qw/ build.xml Log /;
+    return qw/ build.xml Log scaffolds.stor /;
 }
 
 sub dirs_ignored_by_diff {

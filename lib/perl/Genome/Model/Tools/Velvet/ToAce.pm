@@ -158,7 +158,7 @@ sub execute {
             $sth->execute or return $self->error_handle("Failed to insert for $name : ".$DBI::errstr);
         }
         else {
-            $seqinfo[$ct] = $seekpos.'-0'; #seepos-iteration (0 = not yet used);
+            $seqinfo[$ct] = $seekpos.'-0'; #seepos-used_count (0 = not yet used);
         }
         $seekpos = $seq_fh->tell;
     }
@@ -267,7 +267,7 @@ sub execute {
 			    defined $seqinfo[$ori_read_id];
                         
                         my $string = $seqinfo[$ori_read_id];
-                        my $used_count;
+                        my $used_count; #number of times same read is used in assembly
                         
                         unless( ($pos,$used_count) = $string =~ /(\d+)-(\d+)/ ) {
                             $self->error_message("Expected string like 3455-4(readpos-iter) but instead got: $string");
