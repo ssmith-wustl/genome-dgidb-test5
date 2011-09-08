@@ -32,6 +32,7 @@ class Genome::Subject {
     has_optional => [
         name => {
             is => 'Text',
+            doc => 'Official name of the subject',
         },
         common_name => {
             calculate_from => 'name',
@@ -43,6 +44,7 @@ class Genome::Subject {
             to => 'attribute_value',
             is_mutable => 1,
             where => [ attribute_label => 'description' ],
+            doc => 'Some plain-text description of the subject',
         },
         nomenclature => {
             is => 'Text',
@@ -50,6 +52,7 @@ class Genome::Subject {
             to => 'attribute_value',
             is_mutable => 1,
             where => [ attribute_label => 'nomenclature', nomenclature => 'WUGC' ],
+            doc => 'The nomenclature that information about this subject follows (TCGA, WUGC, etc)',
         },
     ],
     table_name => 'GENOME_SUBJECT',
