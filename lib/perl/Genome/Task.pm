@@ -69,7 +69,6 @@ class Genome::Task {
 sub create {
     my $class = shift;
 
-    #%Command::V2::SEEN_FROM_CLASS = ();
     my $self = $class->SUPER::create(@_);
     
     my $cmd_object = $self->command_object;
