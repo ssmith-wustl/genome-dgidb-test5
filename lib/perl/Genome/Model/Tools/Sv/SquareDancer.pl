@@ -6,8 +6,6 @@ use strict;
 use warnings;
 use Getopt::Std;
 use Math::FFT;
-use FindBin qw($Bin);
-use lib "$FindBin::Bin";
 
 my $log2=log(2);
 my $floor=1e-3;
