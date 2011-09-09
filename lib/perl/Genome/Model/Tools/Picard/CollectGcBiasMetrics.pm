@@ -59,7 +59,7 @@ class Genome::Model::Tools::Picard::CollectGcBiasMetrics {
         clean_bam => {
             is => 'Text',
             is_optional => 1,
-            valid_values => ['trim','remove'],
+            valid_values => ['trim','remove','none'],
             default_value => 'trim',
             doc => 'Flag to trim overhanging alignments with picard or remove reads that align beyond the end of chromosomes with bio-samtools',
         },
@@ -155,7 +155,9 @@ sub execute {
     if ($self->min_genome_fraction) {
         $cmd .= ' MINIMUM_GENOME_FRACTION='. $self->min_genome_fraction;
     }
-
+    if ($self->max_records_in_ram) {
+        $cmd .= ' MAX_RECORDS_IN_RAM='. $self->max_records_in_ram;
+    }
     $self->run_java_vm(
         cmd          => $cmd,
         input_files  => [$input_file],
