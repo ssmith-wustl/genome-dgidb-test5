@@ -22,6 +22,8 @@ ok($model_group, 'Got a model_group');
 isa_ok($model_group, 'Genome::ModelGroup');
 
 ok($model_group->convergence_model, 'Auto-generated associated Convergence model'); 
+my $user_email = Genome::Sys::User->get(username => Genome::Sys->username)->email;
+is($model_group->user_name, $user_email, "Model username matches user email address");
 
 my ($test_model, $test_model_two) = setup_test_models();
 
