@@ -7,17 +7,24 @@ use Genome;
 
 class Genome::InstrumentData::Command::AlignmentResult::Merged::Merger::Picard {
     is => 'Genome::InstrumentData::Command::AlignmentResult::Merged::Merger',
-    has_constant => [
+    has_optional => [
         max_jvm_heap_size => {
             is => 'Number',
             doc => 'Size (in GB) of the JVM heap for Picard',
-            value => 12,
+            is_constant => 1,
         },
     ],
 };
 
+# Need to be able to override this somehow in low memory environments.
+# Ideally we would centralize the ability to determine a memory limit based on
+# job dispatcher or hardware.
+sub default_max_jvm_heap_size { 12 }
+
 sub execute {
     my $self = shift;
+
+    $self->max_jvm_heap_size($self->default_max_jvm_heap_size) unless $self->max_jvm_heap_size;
 
     my $merge_cmd = Genome::Model::Tools::Sam::Merge->create(
         files_to_merge => [$self->input_bams],

@@ -25,6 +25,12 @@ use_ok('Genome::InstrumentData::AlignmentResult::Merged');
     return Genome::Sys->create_temp_file_path;
 };
 
+# Override default memory usage for merge since tests only run with 4GB
+use Genome::InstrumentData::Command::AlignmentResult::Merged::Merger::Picard;
+*Genome::InstrumentData::Command::AlignmentResult::Merged::Merger::Picard::default_max_jvm_heap_size = sub { 3 };
+use Genome::InstrumentData::Command::AlignmentResult::Merged::DuplicationHandler::Picard;
+*Genome::InstrumentData::Command::AlignmentResult::Merged::DuplicationHandler::Picard::default_max_jvm_heap_size = sub { 3 };
+
 #
 # Gather up versions for the tools used herein
 #
