@@ -6,7 +6,7 @@ package Genome::Model::Tools::SmallRna::StatsGenerator;
 
 use strict;
 use warnings;
-use Bio::DB::Sam;
+#use Bio::DB::Sam;
 use Data::Dumper;
 use Statistics::Descriptive;
 use Genome;
