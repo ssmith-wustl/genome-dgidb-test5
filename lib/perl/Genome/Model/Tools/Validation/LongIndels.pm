@@ -67,15 +67,17 @@ sub execute {
     #sort indels
     my ($indels_filename_only) = fileparse($indels_full_path);
     my $sort_output = $output_dir . "/" . $indels_filename_only . ".sorted";
+=cut
     my $sort_cmd = Genome::Model::Tools::Snp::Sort->create(
         output_file => $sort_output,
         snp_file => $indels_full_path,
     );
     $sort_cmd->execute;
     $sort_cmd->delete;
-
+=cut
     #annotate indels
     my $anno_output = $sort_output . ".anno";
+=cut
     my $anno_cmd = Genome::Model::Tools::Annotate::TranscriptVariants->create(
         output_file => $anno_output,
         annotation_filter => "top",
@@ -85,16 +87,18 @@ sub execute {
     );
     $anno_cmd->execute;
     $anno_cmd->delete;
-
+=cut
     #prepare assembly input
     my $assembly_input = $anno_output . ".assembly_input";
+
+=cut
     my $prepare_ass_input_cmd = Genome::Model::Tools::Validation::AnnotationToAssemblyInput->create(
         annotation_file => $anno_output,
         output_file => $assembly_input,
     );
     $prepare_ass_input_cmd->execute;
     $prepare_ass_input_cmd->delete;
-
+=cut
     #secure BAM paths from input params
     my $normal_model = Genome::Model->get($self->normal_val_model_id) or die "Could not find normal model with id $self->normal_val_model_id.\n";
     my $tumor_model = Genome::Model->get($self->tumor_val_model_id) or die "Could not find tumor model with id $self->tumor_val_model_id.\n";
@@ -107,6 +111,7 @@ sub execute {
     #gmt sv assembly-validation --bam-files normal.bam --output-file normal.csv --sv-file all_indels.for_assembly --intermediate-read-dir intermediate_normal/ --min-size-of-confirm-asm-sv 3 --flank-size 200 --breakpoint-seq-file normal.bkpt.fa --asm-high-coverage
     my $normal_output_file = $output_dir . "/normal.csv";
     my $normal_breakpoint_file = $output_dir . "/normal.bkpt.fa";
+=cut
     my $normal_assembly_cmd = Genome::Model::Tools::Sv::AssemblyValidation->create(
         bam_files => $normal_bam,
         output_file =>  $normal_output_file,
@@ -119,10 +124,12 @@ sub execute {
     );
     $normal_assembly_cmd->execute;
     $normal_assembly_cmd->delete;
+=cut
 
     #run tigra on the list of predicted indels in the tumor BAM
     my $tumor_output_file = $output_dir . "/tumor.csv";
     my $tumor_breakpoint_file = $output_dir . "/tumor.bkpt.fa";
+=cut
     my $tumor_assembly_cmd = Genome::Model::Tools::Sv::AssemblyValidation->create(
         bam_files => $tumor_bam,
         output_file =>  $tumor_output_file,
@@ -135,11 +142,13 @@ sub execute {
     );
     $tumor_assembly_cmd->execute;
     $tumor_assembly_cmd->delete;
-
+=cut
     #build contigs for remapping based on the assembly results
     #gmt validation build-remapping-contigs --normal-assembly-breakpoints-file normal.bkpt.fa --tumor-assembly-breakpoints-file tumor.bkpt.fa --output-file contigs.fa --input-file all_indels.for_assembly --contig-size 500
     my $contigs_file = $output_dir . "/contigs.fa";
+=cut
     my $contig_cmd = Genome::Model::Tools::Validation::BuildRemappingContigs->create(
+        input_file => $assembly_input,
         normal_assembly_breakpoints_file => $normal_breakpoint_file,
         tumor_assembly_breakpoints_file => $tumor_breakpoint_file,
         output_file => $contigs_file,
@@ -147,14 +156,16 @@ sub execute {
     );
     $contig_cmd->execute;
     $contig_cmd->delete;
+=cut
 
     #create reference sequence using the new contigs (define new reference and track new reference build)
     #my $cmd = "bsub -u ndees\@wustl.edu -J ".$luc."-import genome model define imported-reference-sequence --species-name human --use-default-sequence-uri --derived-from 101947881 --version 500bp_assembled_contigs --fasta-file $contigs --prefix ".$luc."_indels --append-to 101947881";
+=cut
     my $new_ref_cmd = Genome::Model::Command::Define::ImportedReferenceSequence->create(
         species_name => 'human',
         use_default_sequence_uri => '1',
-        derived_from => $ref_seq_build_id,
-        append_to => $ref_seq_build_id,
+        derived_from => $ref_seq_build,
+        append_to => $ref_seq_build,
         version => '500bp_assembled_contigs',
         fasta_file => $contigs_file,
         prefix => $sample_id,
@@ -176,6 +187,9 @@ sub execute {
         $self->error_message('New reference build not successful.');
         return;
     }
+=cut
+    my $new_ref_build_id = '115047845';
+    my $new_ref_build = Genome::Model::Build->get($new_ref_build_id);
 
     #copy tumor and normal validation models to align data to new reference
     my $new_pp = "dlarson bwa0.5.9 -q 5 indel contig test picard1.42";
@@ -197,15 +211,19 @@ sub execute {
     $tumor_copy->dump_status_messages(1);
     $tumor_copy->execute or die "copy failed";
     my $new_tumor_model = $tumor_copy->_new_model;
-
+    my $foo = Genome::Model->get($new_tumor_model->id);
+    print $foo->id."\n";
+    use Devel::Peek;
+    Devel::Peek::Dump($new_tumor_model);
     #start new build and track the build
     my $start_cmd = Genome::Model::Build::Command::Start->create(models => [$new_tumor_model]);
+    print "after create cmd at this pt\n";
+    $start_cmd->dump_status_messages(1);
     unless ($start_cmd->execute) {
         die "couldn't start tumor model copy\n";
     }
     my @builds = $start_cmd->builds;
-    for my $build_id (@builds) {
-        my $build = Genome::Model::Build->get($build_id);
+    for my $build (@builds) {
         my $event = $build->the_master_event;
         my $event_id = $event->id;
         my $event_class = $event->class;
