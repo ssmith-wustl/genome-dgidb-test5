@@ -105,6 +105,42 @@ sub execute {
         }
     }
     # TODO: run once using squashed transcriptome ie. merge entire BED regardless of annotation?
+
+    unless ($self->_save_metrics) {
+        $self->error_message("Failed saving metrics: " . $self->error_message);
+        return;
+    }
+    return 1;
+}
+
+sub _save_metrics {
+    my $self = shift;
+
+    my $build = $self->build;    
+    my $coverage_dir = $build->coverage_directory;
+    my @metric_files = glob($coverage_dir . "/*_STATS.txt");
+    
+    for my $metric_file (@metric_files) {
+        my $file_basename = File::Basename::basename($metric_file);
+        my ($stat_type) = $file_basename =~ m/(.*)_STATS/;
+        my $metric_body = `cat $metric_file`;
+        my ($raw_keys, $raw_values) = split "\n", $metric_body;
+   
+        my @keys = split /\s/, $raw_keys;
+        my @values = split /\s/, $raw_values;
+
+        for my $i (0..$#keys) {
+            my $stat_key = sprintf("%s %s", $stat_type, $keys[$i]);
+            print $stat_key . "-->" . $values[$i] . "\n"; 
+            
+            my $metric = Genome::Model::Metric->create(build=>$build, name=>$stat_key, value=>$values[$i]);
+            unless($metric) {
+                $self->error_message("Failed creating metric for $stat_key");
+                return;
+            }
+        }
+    }
+
     return 1;
 }
 
