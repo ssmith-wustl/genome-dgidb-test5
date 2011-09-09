@@ -8,6 +8,11 @@ use List::Util qw( min sum );
 
 our $VERSION = $Genome::Model::Tools::Music::VERSION;
 
+# These constants let us use memory saving arrays instead of hashes, while keeping the code fairly readable
+use constant { AT_Transitions => 0, AT_Transversions => 1, CG_Transitions => 2, CG_Transversions => 3,
+               CpG_Transitions => 4, CpG_Transversions => 5, Indels => 6, Overall => 7,
+               covd_bases => 0, mutations => 1, bmr => 2 };
+
 class Genome::Model::Tools::Music::Bmr::CalcBmr {
   is => 'Genome::Model::Tools::Music::Bmr::Base',
   has_input => [
@@ -215,12 +220,14 @@ sub execute {
   $roiFh->close;
 
   # These are the various categories that each mutation will be classified into
-  my @mut_classes = qw( AT_Transitions AT_Transversions CG_Transitions CG_Transversions CpG_Transitions CpG_Transversions Indels );
+  my @mut_classes = ( AT_Transitions, AT_Transversions, CG_Transitions, CG_Transversions, CpG_Transitions, CpG_Transversions, Indels );
+  # Save the actual class names for reporting purposes, because the elements above are really just numerical constants
+  my @mut_class_names = qw( AT_Transitions AT_Transversions CG_Transitions CG_Transversions CpG_Transitions CpG_Transversions Indels );
 
-  my %sample_bmr; # Stores per sample covg and mutation information
+  my %sample_mr; # Stores per sample covg and mutation information
   foreach my $sample ( @all_sample_names )
   {
-    $sample_bmr{$sample}{$_}{mutations} = 0 foreach( @mut_classes );
+    $sample_mr{$sample}[$_][mutations] = 0 foreach( @mut_classes );
   }
 
   # Load the covered base-counts per sample from the output of "music bmr calc-covg"
@@ -233,13 +240,13 @@ sub execute {
     chomp( $line );
     ++$sample_cnt_in_total_covgs_file;
     my ( $sample, $covd_bases, $covd_at_bases, $covd_cg_bases, $covd_cpg_bases ) = split( /\t/, $line );
-    $sample_bmr{$sample}{Indels}{covd_bases} = $covd_bases;
-    $sample_bmr{$sample}{AT_Transitions}{covd_bases} = $covd_at_bases;
-    $sample_bmr{$sample}{AT_Transversions}{covd_bases} = $covd_at_bases;
-    $sample_bmr{$sample}{CG_Transitions}{covd_bases} = $covd_cg_bases;
-    $sample_bmr{$sample}{CG_Transversions}{covd_bases} = $covd_cg_bases;
-    $sample_bmr{$sample}{CpG_Transitions}{covd_bases} = $covd_cpg_bases;
-    $sample_bmr{$sample}{CpG_Transversions}{covd_bases} = $covd_cpg_bases;
+    $sample_mr{$sample}[AT_Transitions][covd_bases] = $covd_at_bases;
+    $sample_mr{$sample}[AT_Transversions][covd_bases] = $covd_at_bases;
+    $sample_mr{$sample}[CG_Transitions][covd_bases] = $covd_cg_bases;
+    $sample_mr{$sample}[CG_Transversions][covd_bases] = $covd_cg_bases;
+    $sample_mr{$sample}[CpG_Transitions][covd_bases] = $covd_cpg_bases;
+    $sample_mr{$sample}[CpG_Transversions][covd_bases] = $covd_cpg_bases;
+    $sample_mr{$sample}[Indels][covd_bases] = $covd_bases;
   }
   $totCovgFh->close;
 
@@ -254,7 +261,7 @@ sub execute {
   {
     foreach my $sample ( @all_sample_names )
     {
-      $gene_mr{$sample}{$gene}{$_}{mutations} = 0 foreach( @mut_classes );
+      $gene_mr{$sample}{$gene}[$_][mutations] = 0 foreach( @mut_classes );
     }
   }
 
@@ -269,23 +276,23 @@ sub execute {
       next unless( $line =~ m/^\S+\t\d+\t\d+\t\d+\t\d+\t\d+$/ and $line !~ m/^#/ );
       chomp( $line );
       my ( $gene, undef, $covd_bases, $covd_at_bases, $covd_cg_bases, $covd_cpg_bases ) = split( /\t/, $line );
-      $gene_mr{$sample}{$gene}{Indels}{covd_bases} += $covd_bases;
-      $gene_mr{$sample}{$gene}{AT_Transitions}{covd_bases} += $covd_at_bases;
-      $gene_mr{$sample}{$gene}{AT_Transversions}{covd_bases} += $covd_at_bases;
-      $gene_mr{$sample}{$gene}{CG_Transitions}{covd_bases} += $covd_cg_bases;
-      $gene_mr{$sample}{$gene}{CG_Transversions}{covd_bases} += $covd_cg_bases;
-      $gene_mr{$sample}{$gene}{CpG_Transitions}{covd_bases} += $covd_cpg_bases;
-      $gene_mr{$sample}{$gene}{CpG_Transversions}{covd_bases} += $covd_cpg_bases;
+      $gene_mr{$sample}{$gene}[AT_Transitions][covd_bases] += $covd_at_bases;
+      $gene_mr{$sample}{$gene}[AT_Transversions][covd_bases] += $covd_at_bases;
+      $gene_mr{$sample}{$gene}[CG_Transitions][covd_bases] += $covd_cg_bases;
+      $gene_mr{$sample}{$gene}[CG_Transversions][covd_bases] += $covd_cg_bases;
+      $gene_mr{$sample}{$gene}[CpG_Transitions][covd_bases] += $covd_cpg_bases;
+      $gene_mr{$sample}{$gene}[CpG_Transversions][covd_bases] += $covd_cpg_bases;
+      $gene_mr{$sample}{$gene}[Indels][covd_bases] += $covd_bases;
     }
     $sampleCovgFh->close;
   }
 
   # Create a hash to help classify SNVs
   my %classify;
-  $classify{$_} = 'AT_Transitions' foreach( qw( AG TC ));
-  $classify{$_} = 'AT_Transversions' foreach( qw( AC AT TA TG ));
-  $classify{$_} = 'CG_Transitions' foreach( qw( CT GA ));
-  $classify{$_} = 'CG_Transversions' foreach( qw( CA CG GC GT ));
+  $classify{$_} = AT_Transitions foreach( qw( AG TC ));
+  $classify{$_} = AT_Transversions foreach( qw( AC AT TA TG ));
+  $classify{$_} = CG_Transitions foreach( qw( CT GA ));
+  $classify{$_} = CG_Transversions foreach( qw( CA CG GC GT ));
 
   # Parse through the MAF file and categorize each somatic mutation
   print "Parsing MAF file to classify mutations\n";
@@ -387,21 +394,24 @@ sub execute {
         print STDERR "Reference allele $ref for mutation in $gene at chr$chr:$start-$stop is $fetched_ref in the reference sequence. Using it anyway.\n";
       }
 
-      # Check if a C or G reference allele belongs to a CpG pair
+      # Check if a C or G reference allele belongs to a CpG pair in the refseq
       if(( $ref eq 'C' || $ref eq 'G' ) && defined $ref_and_flanks )
       {
-        $class =~ s/CG/CpG/ if( $ref_and_flanks =~ m/CG/ );
+        if( $ref_and_flanks =~ m/CG/ )
+        {
+          $class = (( $class == CG_Transitions ) ? CpG_Transitions : CpG_Transversions );
+        }
       }
     }
     # Handle Indels
     elsif( $mutation_type =~ m/^(INS|DEL)$/ )
     {
-      $class = 'Indels';
+      $class = Indels;
     }
 
     # The user's gene exclusion list affects only the overall BMR calculations
-    $sample_bmr{$sample}{$class}{mutations}++ unless( defined $ignored_genes{$gene} );
-    $gene_mr{$sample}{$gene}{$class}{mutations}++;
+    $sample_mr{$sample}[$class][mutations]++ unless( defined $ignored_genes{$gene} );
+    $gene_mr{$sample}{$gene}[$class][mutations]++;
   }
   $mafFh->close;
 
@@ -423,15 +433,15 @@ sub execute {
       # ::TBD:: Some of these bases may also belong to another gene (on the other strand maybe?), and those should not be subtracted
       foreach my $ignored_gene ( keys %ignored_genes )
       {
-        $sample_bmr{$sample}{$class}{covd_bases} -= $gene_mr{$sample}{$ignored_gene}{$class}{covd_bases} if( defined $gene_mr{$sample}{$ignored_gene} );
+        $sample_mr{$sample}[$class][covd_bases] -= $gene_mr{$sample}{$ignored_gene}[$class][covd_bases] if( defined $gene_mr{$sample}{$ignored_gene} );
       }
-      $tot_muts += $sample_bmr{$sample}{$class}{mutations};
+      $tot_muts += $sample_mr{$sample}[$class][mutations];
     }
-    $sample_bmr{$sample}{Overall}{bmr} = $tot_muts / $sample_bmr{$sample}{Indels}{covd_bases};
+    $sample_mr{$sample}[Overall][bmr] = $tot_muts / $sample_mr{$sample}[Indels][covd_bases];
   }
 
   # Cluster samples into bmr-groups using k-means clustering
-  my @sample_bmrs = map { $sample_bmr{$_}{Overall}{bmr} } @all_sample_names;
+  my @sample_bmrs = map { $sample_mr{$_}[Overall][bmr] } @all_sample_names;
   my @bmr_clusters = k_means( $bmr_groups, \@sample_bmrs );
 
   # Calculate overall BMRs for each cluster of samples, and print them to file
@@ -454,13 +464,13 @@ sub execute {
       my ( $covd_bases, $mutations ) = ( 0, 0 );
       foreach my $sample( @samples_in_cluster )
       {
-        $covd_bases += $sample_bmr{$sample}{$class}{covd_bases};
-        $mutations += $sample_bmr{$sample}{$class}{mutations};
+        $covd_bases += $sample_mr{$sample}[$class][covd_bases];
+        $mutations += $sample_mr{$sample}[$class][mutations];
       }
-      $tot_covd_bases = $covd_bases if( $class eq "Indels" ); # Save this to calculate overall BMR below
+      $tot_covd_bases = $covd_bases if( $class == Indels ); # Save this to calculate overall BMR below
       # Calculate overall BMR for this mutation class and print it to file
-      $cluster_bmr{$i}{$class}{bmr} = ( $covd_bases == 0 ? 0 : ( $mutations / $covd_bases ));
-      $totBmrFh->print( join( "\t", $class, $covd_bases, $mutations, $cluster_bmr{$i}{$class}{bmr} ), "\n" );
+      $cluster_bmr{$i}[$class][bmr] = ( $covd_bases == 0 ? 0 : ( $mutations / $covd_bases ));
+      $totBmrFh->print( join( "\t", $mut_class_names[$class], $covd_bases, $mutations, $cluster_bmr{$i}[$class][bmr] ), "\n" );
       $tot_muts += $mutations;
     }
     $totBmrFh->print( join( "\t", "Overall_BMR", $tot_covd_bases, $tot_muts, $tot_muts / $tot_covd_bases ), "\n\n" );
@@ -482,13 +492,13 @@ sub execute {
         {
           if( defined $gene_mr{$sample}{$gene} )
           {
-            $covd_bases += $gene_mr{$sample}{$gene}{$class}{covd_bases} ;
-            $mutations += $gene_mr{$sample}{$gene}{$class}{mutations};
+            $covd_bases += $gene_mr{$sample}{$gene}[$class][covd_bases];
+            $mutations += $gene_mr{$sample}{$gene}[$class][mutations];
           }
         }
         my $rename_class = $class;
         $rename_class = ( $rename_class . "_SubGroup" . ( $i + 1 )) if( $bmr_groups > 1 );
-        $geneBmrFh->print( join( "\t", $gene, $rename_class, $covd_bases, $mutations, $cluster_bmr{$i}{$class}{bmr} ), "\n" );
+        $geneBmrFh->print( join( "\t", $gene, $mut_class_names[$rename_class], $covd_bases, $mutations, $cluster_bmr{$i}[$class][bmr] ), "\n" );
       }
     }
   }
