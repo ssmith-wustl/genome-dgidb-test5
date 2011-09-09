@@ -40,6 +40,7 @@ class Genome::Model::Tools::Capture::SomaticModelGroup {
 		output_review	=> 	{ is => 'Text', doc => "Specify a directory to output SNV/indel files for manual review" , is_optional => 1},
 		output_germline_calls	=> 	{ is => 'Text', doc => "Specify a directory to output germline SNV/indel calls" , is_optional => 1},
 		output_loh_calls	=> 	{ is => 'Text', doc => "Specify a directory to output LOH calls" , is_optional => 1},
+		process_loh_calls	=> 	{ is => 'Text', doc => "Specify a directory to process LOH calls" , is_optional => 1},
 		germline_roi_file	=> 	{ is => 'Text', doc => "A file in BED format to restrict germline calls" , is_optional => 1},
 		output_maf_file	=> 	{ is => 'Text', doc => "Output a MAF file for downstream analysis" , is_optional => 1},
 		uhc_filter	=> 	{ is => 'Text', doc => "If set to 1, apply ultra-high-conf filter to SNV calls" , is_optional => 1},
@@ -185,7 +186,7 @@ sub execute {                               # replace with real execution logic.
 		my $final_build_result = "";
 		my $last_build_id = 0;
 
-		if($self->output_build_dirs || $self->output_review || $self->output_maf_file || $self->output_germline_calls || $self->uhc_filter || $self->varscan_copynumber || $self->output_loh_calls)
+		if($self->output_build_dirs || $self->output_review || $self->output_maf_file || $self->output_germline_calls || $self->uhc_filter || $self->varscan_copynumber || $self->output_loh_calls || $self->process_loh_calls)
 		{
 			my $num_builds = 0;		
 			my $num_maf_mutations = 0;
@@ -294,7 +295,23 @@ sub execute {                               # replace with real execution logic.
 #						$debug_counter++;
 #						exit(0) if($debug_counter >= 10);
 					}
-	
+					elsif($self->process_loh_calls)
+					{
+						## Get normal and tumor sample names ##
+						my $tumor_model = $model->tumor_model;
+						my $normal_model = $model->normal_model;
+						my $tumor_sample = $tumor_model->subject_name;
+						my $normal_sample = $normal_model->subject_name;
+
+						my $loh_dir = $self->process_loh_calls . "/" . $tumor_sample . "-" . $normal_sample;
+						
+						if(-d $loh_dir)
+						{
+							process_loh($loh_dir);
+							sleep(1);
+						}
+
+					}
 					
 					my %build_results = get_build_results($last_build_dir);
 					$final_build_result = $build_results{'tier1_snvs'} . " Tier1 SNVs, " . $build_results{'tier1_indels'} . " Tier1 Indels, ";
@@ -1235,6 +1252,33 @@ sub output_loh_files
 }
 
 
+
+
+################################################################################################
+# Output Germline Files - output the files for loh analysis 
+#
+################################################################################################
+
+sub process_loh
+{
+	my $loh_dir = shift(@_);
+
+	my $germline_snp = "$loh_dir/varScan.germline.snp";
+	my $loh_snp = "$loh_dir/varScan.loh.snp";
+	
+	if(-e $germline_snp && -e $loh_snp)
+	{
+		my $combined_snp = "$loh_dir/varScan.combined.snp";
+		system("cat $germline_snp $loh_snp >$combined_snp");
+		system("gmt capture sort-by-chr-pos --input $combined_snp --output $combined_snp");
+		my $cmd = "gmt varscan loh-segments --variant-file $combined_snp --output-basename $combined_snp.loh";
+		system("bsub -q short -R\"select[type==LINUX64 && mem>1000] rusage[mem=1000]\" \"$cmd\"");
+	}
+	else
+	{
+		warn "Warning: Germline/LOH SNP file(s) $germline_snp $loh_snp missing from $loh_dir\n";
+	}
+}
 
 
 sub byChrPos
