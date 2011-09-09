@@ -289,6 +289,23 @@ sub open_file_for_writing {
     return $self->_open_file($file, 'w');
 }
 
+
+sub open_gzip_file_for_writing {
+    my ($self, $file) = @_;
+
+    $self->validate_file_for_writing($file)
+        or return;
+
+    if (-e $file) {
+        unless (unlink $file) {
+            Carp::croak("Can't unlink $file: $!");
+        }
+    }
+    my $pipe = "| bgzip -c > $file";
+
+    return $self->_open_file($pipe);
+}
+
 sub copy_file {
     my ($self, $file, $dest) = @_;
 
