@@ -220,9 +220,6 @@
       <div class="box_header span-8 last rounded-top">
         <div class="box_title"><h3 class="genome_sample_16 span-7 last">Sample</h3></div>
         <div class="box_button">
-          <xsl:call-template name="object_link_button_tiny">
-            <xsl:with-param name="icon" select="'sm-icon-extlink'"/>
-          </xsl:call-template>
         </div>
       </div>
 
@@ -230,11 +227,98 @@
         <table class="name-value">
           <tbody>
             <tr>
-              <td class="name">Name:
+              <td class="name">ID:
               </td>
-              <td class="value"><xsl:value-of select="aspect[@name='name']/value"/>
+              <td class="value">
+                <xsl:for-each select=".">
+                  <xsl:call-template name="object_link_button">
+                    <xsl:with-param name="linktext" select="@id" />
+                    <xsl:with-param name="icon" select="'sm-icon-extlink'" />
+                  </xsl:call-template>
+                </xsl:for-each>
               </td>
             </tr>
+
+            <tr>
+              <td class="name">
+                Name:
+              </td>
+              <td class="value">
+                <xsl:value-of select="aspect[@name='name']/value"/>
+              </td>
+            </tr>
+
+            <tr>
+              <td class="name">
+                Patient Common Name:
+              </td>
+              <td class="value">
+                <xsl:value-of select="aspect[@name='patient_common_name']/value"/>
+              </td>
+            </tr>
+
+            <tr>
+              <td class="name">
+                Common Name:
+              </td>
+              <td class="value">
+                <xsl:value-of select="aspect[@name='common_name']/value"/>
+              </td>
+            </tr>
+
+            <tr>
+              <td class="name">
+                Tissue Label:
+              </td>
+              <td class="value">
+                <xsl:value-of select="aspect[@name='tissue_label']/value"/>
+              </td>
+            </tr>
+
+            <tr>
+              <td class="name">
+                Tissue Description:
+              </td>
+              <td class="value">
+                <xsl:value-of select="aspect[@name='tissue_desc']/value"/>
+              </td>
+            </tr>
+
+            <tr>
+              <td class="name">
+                Extraction Type:
+              </td>
+              <td class="value">
+                <xsl:value-of select="aspect[@name='extraction_type']/value"/>
+              </td>
+            </tr>
+
+            <tr>
+              <td class="name">
+                Extraction Label:
+              </td>
+              <td class="value">
+                <xsl:value-of select="aspect[@name='extraction_label']/value"/>
+              </td>
+            </tr>
+
+            <tr>
+              <td class="name">
+                Extraction Description:
+              </td>
+              <td class="value">
+                <xsl:choose>
+                  <xsl:when test="string(normalize-space(aspect[@name='extraction_desc']/value))">
+                    <xsl:value-of select="aspect[@name='extraction_desc']/value"/>
+                  </xsl:when>
+                  <xsl:otherwise>
+                    --
+                  </xsl:otherwise>
+                </xsl:choose>
+
+              </td>
+            </tr>
+
           </tbody>
         </table>
       </div>
