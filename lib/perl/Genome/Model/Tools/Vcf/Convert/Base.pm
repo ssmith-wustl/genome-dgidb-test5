@@ -290,6 +290,7 @@ sub write_line {
 # genotype alleles is an arrayref of the alleles called at this position for this sample, including those that match the reference
 sub generate_gt {
     my ($self, $reference, $alt_alleles, $genotype_alleles) = @_;
+
     my @gt_string;
     for my $genotype_allele (@$genotype_alleles) {
         my $allele_number;
@@ -312,6 +313,38 @@ sub generate_gt {
 
     # the GT field is sorted out of convention... you'll see 0/1 but not 1/0
     return join("/", sort(@gt_string));
+}
+
+# This method is called when you are joining multiple samples together with potentially different ALT strings.
+# It will figure out what the new GT string should be based upon the old GT string, reference, new and old ALT values
+# old and new ALT are expected to be comma separated strings (as in VCF files).
+# old_gt is expected to be the / separated list (0/1) found in VCF files.
+sub regenerate_gt {
+    my ($self, $reference, $old_alt, $old_gt, $new_alt) = @_;
+
+    my @old_alt = split(",", $old_alt);
+    my @old_gt = split("/", $old_gt);
+
+    # Translate the old GT string into a list of alleles that sample contained
+    my @alleles;
+    for my $genotype_number (@old_gt) {
+        my $allele;
+        if ($genotype_number == 0) {
+            $allele = $reference;
+        } else {
+            $allele = $old_alt[$genotype_number - 1]; # Genotype number will be 1 based in regards to the alt string
+            unless (defined $allele) {
+                die $self->error_message("Could not match genotype number $genotype_number to any allele from the ALT field $old_alt");
+            }
+        }
+
+        push(@alleles, $allele);
+    }
+
+    # Now that we have the list of alternate alleles from the original line/ALT ... calculate what the new GT string should be based upon the new ALT
+    my @new_alt_alleles = split(",", $new_alt);
+
+    return $self->generate_gt($reference, \@new_alt_alleles, \@alleles);
 }
 
 # This method should be overridden by each subclass. It should take in a single detector line and return a single VCF line representing that detector line

@@ -86,7 +86,7 @@ sub execute {
 
     # Create a list of parameters and then create the command string
     my @params;
-    push @params, '-nobig' if $self->no_big_flag;
+    push @params, '--nobig' if $self->no_big_flag;
     push @params, '-f ' . $self->output_format;
     push @params, "-o $raw_output_file ";
     push @params, $self->fasta_file;
