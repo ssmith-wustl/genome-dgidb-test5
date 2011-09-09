@@ -317,9 +317,13 @@ sub execute {                               # replace with real execution logic.
 							$stats{'uhc_sites_skipped'} += $uhc_count;
 							$tier1_snvs = $last_build_dir . "/merged.somatic.snp.filter.novel.tier1.uhc-filter.removed";
 						}
+						elsif($self->uhc_filter)
+						{
+							die "Warning: $patient_id has no UHC-filter file in $last_build_dir\n";
+						}
 
 						my $output_tier1_snvs = $self->output_review . "/" . $subject_name . ".$model_id.SNVs.tsv";
-						output_snvs_for_review($model_id, $tier1_snvs, $output_tier1_snvs, $subject_name, $normal_bam, $tumor_bam);
+						output_snvs_for_review($self, $model_id, $tier1_snvs, $output_tier1_snvs, $subject_name, $normal_bam, $tumor_bam);
 	
 						my $tier1_gatk = $last_build_dir . "/gatk.output.indel.formatted.Somatic.tier1";
 						my $tier1_indels = $last_build_dir . "/merged.somatic.indel.filter.tier1";
@@ -339,6 +343,7 @@ sub execute {                               # replace with real execution logic.
 						my $output_file = $tier1_snvs . ".uhc-filter";
 						my $filtered_file = $tier1_snvs . ".uhc-filter.removed";
 						
+						## Save UHC SNVs or else generate them ##
 						if(-e $output_file)
 						{
 							save_uhc_calls($patient_id, $output_file);
@@ -347,14 +352,19 @@ sub execute {                               # replace with real execution logic.
 						{
 							if($self->reference)
 							{
-								print "Running Reference\n";
-								system("bsub -q short -R\"select[model!=Opteron250 && mem>6000] rusage[mem=6000]\" -M 6000000 gmt somatic ultra-high-confidence --tumor-bam $tumor_bam --normal-bam $normal_bam --variant-file $tier1_snvs --output-file $output_file --filtered-file $filtered_file --reference " . $self->reference);															
+								system("bsub -q short -R\"select[model!=Opteron250 && mem>6000] rusage[mem=6000]\" -M 6000000 gmt somatic ultra-high-confidence --min-tumor-var-freq 0.10 --tumor-bam $tumor_bam --normal-bam $normal_bam --variant-file $tier1_snvs --output-file $output_file --filtered-file $filtered_file --reference " . $self->reference);
 							}
 							else
 							{
-								system("bsub -q short -R\"select[model!=Opteron250 && mem>6000] rusage[mem=6000]\" -M 6000000 gmt somatic ultra-high-confidence --tumor-bam $tumor_bam --normal-bam $normal_bam --variant-file $tier1_snvs --output-file $output_file --filtered-file $filtered_file");															
+								system("bsub -q short -R\"select[model!=Opteron250 && mem>6000] rusage[mem=6000]\" -M 6000000 gmt somatic ultra-high-confidence --min-tumor-var-freq 0.10 --tumor-bam $tumor_bam --normal-bam $normal_bam --variant-file $tier1_snvs --output-file $output_file --filtered-file $filtered_file");															
 							}
 
+						}
+						
+						my $tier1_indels = $last_build_dir . "/merged.somatic.indel.filter.tier1";
+						if(-e "$tier1_indels.hc")
+						{
+							save_uhc_calls($patient_id, "$tier1_indels.hc");
 						}
 
 					}
@@ -458,6 +468,10 @@ sub execute {                               # replace with real execution logic.
 		print $stats{'review_snvs_already_wildtype'} . " were wild-type in another sample\n";
 		print $stats{'review_snvs_already_germline'} . " were germline in at least 3 other samples\n";
 		print $stats{'review_snvs_filtered'} . " were filtered as probable germline\n";
+		print $stats{'review_snvs_uhc_lowcov'} . " were removed because low-coverage makes them ambiguous\n";
+		print $stats{'review_snvs_uhc_normalfreq'} . " were removed due to variant presence in normal\n";
+		print $stats{'review_snvs_uhc_freqdiff'} . " were removed due to low freq diff between tumor and normal\n";
+		
 		print $stats{'review_snvs_included'} . " were included for review\n";
 		print $stats{'review_snvs_already_included'} . " were duplicates and not counted twice\n";
 
@@ -715,8 +729,18 @@ sub load_review_database
 			}
 		}
 		
-		my $key = join("\t", $model_id, $chrom, $chr_start, $chr_stop);
-		$already_reviewed{$key} = $code;
+		## Abbreviate sample name ##
+		
+		my @temp = split(/\-/, $sample_name);
+		my $patient_id = join("-", "TCGA", $temp[1], $temp[2]);
+		
+		my $key = join("\t", $patient_id, $chrom, $chr_start, $chr_stop);
+#		my $key = join("\t", $model_id, $chrom, $chr_start, $chr_stop);
+		
+		if($code ne "A")
+		{
+			$already_reviewed{$key} = $code;			
+		}
 
 		if($code eq "O" || $code eq "D" || $code eq "LQ")
 		{
@@ -759,7 +783,7 @@ sub load_review_database
 
 sub output_snvs_for_review
 {
-	my ($model_id, $variant_file, $output_file, $subject_name, $normal_bam, $tumor_bam) = @_;
+	my ($self, $model_id, $variant_file, $output_file, $subject_name, $normal_bam, $tumor_bam) = @_;
 	
 	## Check for Tier 1 SNVs ##
 	
@@ -787,8 +811,14 @@ sub output_snvs_for_review
 			my @lineContents = split(/\t/, $line);
 
 			my $include_flag = 0;
+
+			## Get Patient ID ##
+
+			my @temp = split(/\-/, $subject_name);
+			my $patient_id = join("-", "TCGA", $temp[1], $temp[2]);
 			
-			my $key = join("\t", $model_id, $chrom, $chr_start, $chr_stop);
+			my $key = join("\t", $patient_id, $chrom, $chr_start, $chr_stop);		
+#			my $key = join("\t", $model_id, $chrom, $chr_start, $chr_stop);
 			my $variant_key = join("\t", $chrom, $chr_start, $chr_stop, $ref, $var);
 			my $sample_variant_key = join("\t", $subject_name, $variant_key);
 			
@@ -850,6 +880,52 @@ sub output_snvs_for_review
 					$include_flag = 1;				
 				}				
 			}
+			
+			## If the UHC filter was applied, do further processing ##
+			
+			if($self->uhc_filter && $include_flag)
+			{
+				my @lineContents = split(/\t/, $line);
+				my $numContents = @lineContents;
+				
+				for(my $colCounter = 5; $colCounter < $numContents; $colCounter++)
+				{
+					## IF failed due to coverage, handle it ##
+					if($lineContents[$colCounter] && $lineContents[$colCounter] eq "Failed:Coverage")
+					{
+						my $normal_cov = $lineContents[$colCounter + 1];
+						my $tumor_cov = $lineContents[$colCounter + 2];
+						
+						if($normal_cov < 4 || $tumor_cov < 6)
+						{
+							$include_flag = 0;
+							$stats{'review_snvs_uhc_lowcov'}++;
+						}
+					}
+					elsif($lineContents[$colCounter] && $lineContents[$colCounter] eq "Failed:VarFreq")
+					{
+						my $normal_cov = $lineContents[$colCounter + 1];
+						my $tumor_cov = $lineContents[$colCounter + 2];
+						my $normal_freq = $lineContents[$colCounter + 3];
+						my $tumor_freq = $lineContents[$colCounter + 4];
+						$normal_freq =~ s/\%//;
+						$tumor_freq =~ s/\%//;
+						my $freq_diff = $tumor_freq - $normal_freq;
+						if($normal_freq > 5 && $normal_cov >= 6)
+						{
+							$include_flag = 0;
+							$stats{'review_snvs_uhc_normalfreq'}++;
+						}
+						elsif($freq_diff < 10)
+						{
+							$include_flag = 0;
+							$stats{'review_snvs_uhc_freqdiff'}++;
+						}
+					}
+				}
+			}
+			
+			
 
 			if($include_flag)
 			{
@@ -1034,9 +1110,7 @@ sub output_germline_files
 	my $varscan_output_file = "$germline_dir/varScan.germline.snp";
 	
 	if($varscan_snv_file && !(-e $varscan_output_file))
-	{
-
-		
+	{	
 		if($self->germline_roi_file)
 		{
 			system("java -jar /gsc/scripts/lib/java/VarScan/VarScan.v2.2.6.jar limit $varscan_snv_file --regions-file " . $self->germline_roi_file . " --output-file $varscan_output_file");			
@@ -1048,8 +1122,30 @@ sub output_germline_files
 
 		## Apply the FP-filter ##
 		
-		system("bsub -q long -R\"select[type==LINUX64 && mem>8000] rusage[mem=8000]\" -M 8000000 gmt somatic filter-false-positives --variant-file $varscan_output_file --bam-file $tumor_bam --output-file $varscan_output_file.fpfilter");
+		system("bsub -q long -R\"select[type==LINUX64 && mem>8000] rusage[mem=8000]\" -M 8000000 gmt somatic filter-false-positives --variant-file $varscan_output_file --bam-file $tumor_bam --output-file $varscan_output_file.fpfilter --filtered-file $varscan_output_file.fpfilter.removed");
 	}
+	
+	## Get VarScan Germline IndelFile ##
+	
+	my $varscan_indel_file = `ls $build_dir/varScan.output.indel.formatted.Germline.hc`;
+	chomp($varscan_indel_file);
+	my $varscan_indel_output_file = "$germline_dir/varScan.germline.indel";
+	
+	if($varscan_indel_file && !(-e $varscan_indel_output_file))
+	{	
+		if($self->germline_roi_file)
+		{
+			system("java -jar /gsc/scripts/lib/java/VarScan/VarScan.v2.2.6.jar limit $varscan_indel_file --regions-file " . $self->germline_roi_file . " --output-file $varscan_indel_output_file");			
+		}
+		else
+		{
+			system("cp $varscan_indel_file $varscan_indel_output_file");
+		}
+
+		## Apply the FP-filter ##
+		
+		system("bsub -q long -R\"select[type==LINUX64 && mem>8000] rusage[mem=8000]\" -M 8000000 gmt somatic filter-false-indels --min-read-pos 0.30 --max-var-mmqs 100 --min-var-readlen 75 --variant-file $varscan_indel_output_file --bam-file $tumor_bam --output-file $varscan_indel_output_file.fpfilter --filtered-file $varscan_indel_output_file.fpfilter.removed");
+	}	
 	
 	## Get GATK File ##
 	
