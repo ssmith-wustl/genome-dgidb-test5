@@ -32,7 +32,6 @@ class Genome::Model::Tools::Vcf::MultiSampleJoinVcf {
             is_optional => 0,
             doc => "Output merged VCF",
         },
-
         vcf_list => {
             is => 'Text',
             is_optional => 0,
@@ -42,6 +41,12 @@ class Genome::Model::Tools::Vcf::MultiSampleJoinVcf {
         intersection => {
             is => 'Boolean',
             doc => 'Set this to cause non-passing filter records to be propagated above passing',
+            is_input => 1,
+            default => 0,
+        },
+        use_gzip_files => {
+            is => 'Boolean',
+            doc => "Set this to use gzip input files and output gzip data",
             is_input => 1,
             default => 0,
         },
@@ -95,7 +100,11 @@ sub execute {
 
     my $output = $self->output_file;
 
-    $self->_output_fh(Genome::Sys->open_file_for_writing($output));
+    if($self->use_gzip_files){
+        $self->_output_fh(Genome::Sys->open_gzip_file_for_writing($output));
+    } else {
+        $self->_output_fh(Genome::Sys->open_file_for_writing($output));
+    }
 
     $self->print_header;
 
@@ -124,7 +133,11 @@ sub process_input_list {
             die $self->error_message("Already have a record for: ".$source_name);
         }
         $paths{$source_name} = $path;
-        $handles{$source_name} = Genome::Sys->open_file_for_reading($path);
+        if($self->use_gzip_files){
+            $handles{$source_name} = Genome::Sys->open_gzip_file_for_reading($path);
+        } else {
+            $handles{$source_name} = Genome::Sys->open_file_for_reading($path);
+        }
     }
     $self->_vcf_list(\%paths);
     $self->_vcf_handles(\%handles);
