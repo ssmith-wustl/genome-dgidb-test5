@@ -213,10 +213,10 @@ sub parse_variants_file
     my $self = shift;
     (my $variants_file, my $output_snp, my $output_indel) = @_;
 
-    open(SNPS, ">$output_snp") or die "Can't open outfile: $!\n";
-    open(INDELS, ">$output_indel") or die "Can't open outfile: $!\n";
+    my $snps = Genome::Sys->open_file_for_writing($output_snp);
+    my $indels = Genome::Sys->open_file_for_writing($output_indel);
 
-    my $input = new FileHandle ($variants_file);	
+    my $input = Genome::Sys->open_file_for_reading($variants_file);	
     my $lineCounter = 0;
 
     while (<$input>) {
@@ -228,26 +228,25 @@ sub parse_variants_file
         if ($lineCounter == 1) {
             unless ($self->no_headers) {
                 ## Print header to both files ##
-
-                print SNPS "$line\n";
-                print INDELS "$line\n";
+                $snps->print($line."\n");
+                $indels->print($line."\n");
             }
         }
         if (length($cns) > 1) {
             ## Indel ##
-            print INDELS "$line\n";
+            $indels->print($line,"\n");
         }
         else {
             ## SNP ##
-            print SNPS "$line\n";
+            $snps->print($line,"\n");
         }
     }
 
-    close($input);
+    $snps->close;
+    $indels->close;
+    $input->close;
 
-    close(SNPS);
-    close(INDELS);
-
+    return 1;
 }
 
 1;

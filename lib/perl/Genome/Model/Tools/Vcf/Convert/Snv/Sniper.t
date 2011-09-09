@@ -11,7 +11,10 @@ use_ok('Genome::Model::Tools::Vcf::Convert::Snv::Sniper');
 
 my $test_dir = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Vcf-Convert-Snv-Sniper";
 # V2 updated with various corrections
-my $expected_base = "expected.v2";
+# V3 - remove VT INFO field in header and VT=SNP in the body
+# V4 - add source in header
+# V5 - Correct the AD and BQ fields number attribute
+my $expected_base = "expected.v5";
 my $expected_dir = "$test_dir/$expected_base";
 my $expected_file = "$expected_dir/output.vcf";
 

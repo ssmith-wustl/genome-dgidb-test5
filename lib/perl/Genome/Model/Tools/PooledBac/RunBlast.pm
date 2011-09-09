@@ -7,6 +7,7 @@ use Genome;
 use GSC::IO::Assembly::Ace::Reader;
 use IO::File;
 use Genome::Sys;
+use Cwd;
 
 class Genome::Model::Tools::PooledBac::RunBlast {
     is => 'Command',
@@ -76,6 +77,7 @@ sub execute {
     
     my $ace_file = ''; 
     my $fasta_file = '';
+    my $orig_dir = cwd();
     chdir($self->pooled_bac_dir);
     #build db file
     #input that gets converted to query fasta file
@@ -109,7 +111,9 @@ sub execute {
         query_file => $query_fasta_file,
         params => $params,
     );
-        
+
+    chdir( $orig_dir );
+    
     return 1;
 }
 

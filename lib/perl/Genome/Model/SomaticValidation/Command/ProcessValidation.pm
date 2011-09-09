@@ -44,7 +44,7 @@ sub execute {
 
     my $filtered_bed = $self->filtered_validation_file;
     my $filtered_original_file = Cwd::abs_path($filtered_bed);
-    $filtered_original_file =~ s/\.bed$//;
+    $filtered_original_file =~ s/(?:\.v\d+)?\.bed$//;
     unless(Genome::Sys->check_for_path_existence($filtered_original_file)) {
         die $self->error_message('Failed to find original filtered file to use for ProcessValidation run.');
     }

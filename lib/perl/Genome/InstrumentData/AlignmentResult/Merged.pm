@@ -198,6 +198,10 @@ sub create {
         $self->_promote_validated_data;
         @tmp_dirs = (); #clear out temp directories
 
+        for my $alignment (@alignments) {
+            $alignment->add_user(user => $self, label => 'uses');
+        }
+
         return 1;
     };
     if(my $error = $@) {
@@ -215,6 +219,8 @@ sub create {
             $self->warning_message("Failed to reallocate disk allocation: " . $self->_disk_allocation->id);
         }
     }
+
+    
 
     $self->status_message('All processes completed.');
 

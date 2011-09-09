@@ -992,6 +992,7 @@ sub get_build36_to_37_rois {
         'Freimer Pool of original (4k001L) plus gapfill (4k0026)' => 'Freimer-Boehnke capture-targets.set1_build37-fix1',
         '04110401 PoP32 EZ capture chip set'   => '04110401 PoP32 EZ capture chip set build37',
         'RT 49315 - AMD -- pool 1' => 'AMD-pool1-build37',
+        '03110401 capture chip set' => '03110401 capture chip set - liftover_build37',
     );
 }
 

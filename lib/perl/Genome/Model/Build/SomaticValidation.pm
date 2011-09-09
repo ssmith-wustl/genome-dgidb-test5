@@ -41,6 +41,11 @@ class Genome::Model::Build::SomaticValidation {
     ],
 };
 
+# this is a comprimise to maintain compatibility with SomaticVariation
+# while not using tumor_model/normal_model naming scheme on inputs
+sub tumor_model { $_[0]->tumor_reference_alignment->model }
+sub normal_model { $_[0]->normal_reference_alignment->model }
+
 sub post_allocation_initialization {
     my $self = shift;
 

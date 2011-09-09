@@ -49,7 +49,7 @@ my $inst_data_dir = '/gsc/var/cache/testsuite/data/Genome-Model/MetagenomicCompo
 ok(-d $inst_data_dir, 'inst data dir') or die;
 my $instrument_data = Genome::InstrumentData::454->create(
     id => -7777,
-    region_number => 2,
+    region_number => 3,
     total_reads => 20,
     run_name => 'R_2010_01_09_11_08_12_FLX08080418_Administrator_100737113',
     library => $library,
@@ -190,6 +190,14 @@ for my $amplicon_set ( @amplicon_sets ) {
     is_deeply(\@amplicon_names, $standards[$cnt]->{amplicons}, "amplicons match for $set_name");
     $cnt++;
 }
+
+ok($build->perform_post_success_actions, 'perform post success actions');
+is($build->{status_message}->text, 'Model is not for QC. Not sending confirmation email', 'correct status message');
+my $model_name = $model->name;
+$model->name('ebelter-mc16s-qc');
+ok($build->perform_post_success_actions, 'perform post success actions');
+is($build->{status_message}->text, 'Sent email to Erica (esodergren) and Kathie (kmihindu)', 'correct status message');
+$model->name($model_name);
 
 #print $build->data_directory."\n";<STDIN>;
 done_testing();

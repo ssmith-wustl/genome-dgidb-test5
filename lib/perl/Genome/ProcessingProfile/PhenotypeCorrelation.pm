@@ -222,7 +222,6 @@ sub _execute_build {
     $params{indel_detection_strategy} = $self->indel_detection_strategy if $self->indel_detection_strategy;
     $params{sv_detection_strategy} = $self->sv_detection_strategy if $self->sv_detection_strategy;
     $params{cnv_detection_strategy} = $self->cnv_detection_strategy if $self->cnv_detection_strategy;
-
     $params{reference_build_id} = $reference_sequence_build->id;
     $params{multiple_bams} = \@bams;
 
@@ -293,6 +292,8 @@ sub _map_workflow_inputs {
     my $build = shift;
 
     my @inputs = ();
+
+    #### This is old code from the somatic variation pipeline, replace with phenotype correlation params/inputs! #####
 
     # Verify the somatic model
     my $model = $build->model;

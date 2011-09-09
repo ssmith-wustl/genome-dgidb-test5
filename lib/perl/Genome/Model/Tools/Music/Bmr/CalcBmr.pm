@@ -4,6 +4,7 @@ use warnings;
 use strict;
 use IO::File;
 use Bit::Vector;
+use List::Util qw( min sum );
 
 our $VERSION = $Genome::Model::Tools::Music::VERSION;
 
@@ -16,6 +17,7 @@ class Genome::Model::Tools::Music::Bmr::CalcBmr {
     output_dir => { is => 'Text', doc => "Directory where output files will be written (Use the same one used with calc-covg)" },
     maf_file => { is => 'Text', doc => "List of mutations using TCGA MAF specifications v2.2" },
     show_skipped => { is => 'Boolean', doc => "Report each skipped mutation, not just how many", is_optional => 1, default => 0 },
+    bmr_groups => { is => 'Integer', doc => "Number of clusters of samples with comparable BMRs (See DESCRIPTION)", is_optional => 1, default => 1 },
     genes_to_ignore => { is => 'Text', doc => "Comma-delimited list of genes to ignore for background mutation rates", is_optional => 1 },
     skip_non_coding => { is => 'Boolean', doc => "Skip non-coding mutations from the provided MAF file", is_optional => 1, default => 1 },
     skip_silent => { is => 'Boolean', doc => "Skip silent mutations from the provided MAF file", is_optional => 1, default => 1 },
@@ -92,6 +94,18 @@ sub _additional_help_sections {
 
 =back
 
+=item --bmr-groups
+
+=over 8
+
+=item Ideally, we want to test the mutation rate (MR) of a gene in a sample against the background
+  mutation rate (BMR) across that sample. But if the BMRs of some samples are comparable, we can
+  instead test the MR of a gene across a group of samples with comparable BMR, against the overall
+  BMR of that group. This argument specifies how many such groups you want to cluster samples
+  into. By default, it is assumed that all samples have comparable BMRs (bmr-groups = 1).
+
+=back
+
 =item --output-dir
 
 =over 8
@@ -138,6 +152,7 @@ sub execute {
   my $output_dir = $self->output_dir;
   my $maf_file = $self->maf_file;
   my $show_skipped = $self->show_skipped;
+  my $bmr_groups = $self->bmr_groups;
   my $genes_to_ignore = $self->genes_to_ignore;
   my $skip_non_coding = $self->skip_non_coding;
   my $skip_silent = $self->skip_silent;
@@ -202,39 +217,45 @@ sub execute {
   # These are the various categories that each mutation will be classified into
   my @mut_classes = qw( AT_Transitions AT_Transversions CG_Transitions CG_Transversions CpG_Transitions CpG_Transversions Indels );
 
-  my %overall_bmr; # Stores information needed to calculate overall BMRs
-  $overall_bmr{$_}{mutations} = 0 foreach( @mut_classes );
+  my %sample_bmr; # Stores per sample covg and mutation information
+  foreach my $sample ( @all_sample_names )
+  {
+    $sample_bmr{$sample}{$_}{mutations} = 0 foreach( @mut_classes );
+  }
 
-  # Sum up the overall covered base-counts across samples from the output of "music bmr calc-covg"
-  print "Loading overall coverages stored in $total_covgs_file\n";
-  my $sample_cnt_in_file = 0;
+  # Load the covered base-counts per sample from the output of "music bmr calc-covg"
+  print "Loading per-sample coverages stored in $total_covgs_file\n";
+  my $sample_cnt_in_total_covgs_file = 0;
   my $totCovgFh = IO::File->new( $total_covgs_file ) or die "Couldn't open $total_covgs_file. $!\n";
   while( my $line = $totCovgFh->getline )
   {
-    next if( $line =~ m/^#/ );
+    next unless( $line =~ m/^\S+\t\d+\t\d+\t\d+\t\d+$/ and $line !~ m/^#/ );
     chomp( $line );
-    ++$sample_cnt_in_file;
+    ++$sample_cnt_in_total_covgs_file;
     my ( $sample, $covd_bases, $covd_at_bases, $covd_cg_bases, $covd_cpg_bases ) = split( /\t/, $line );
-    $overall_bmr{Indels}{covd_bases} += $covd_bases;
-    $overall_bmr{AT_Transitions}{covd_bases} += $covd_at_bases;
-    $overall_bmr{AT_Transversions}{covd_bases} += $covd_at_bases;
-    $overall_bmr{CG_Transitions}{covd_bases} += $covd_cg_bases;
-    $overall_bmr{CG_Transversions}{covd_bases} += $covd_cg_bases;
-    $overall_bmr{CpG_Transitions}{covd_bases} += $covd_cpg_bases;
-    $overall_bmr{CpG_Transversions}{covd_bases} += $covd_cpg_bases;
+    $sample_bmr{$sample}{Indels}{covd_bases} = $covd_bases;
+    $sample_bmr{$sample}{AT_Transitions}{covd_bases} = $covd_at_bases;
+    $sample_bmr{$sample}{AT_Transversions}{covd_bases} = $covd_at_bases;
+    $sample_bmr{$sample}{CG_Transitions}{covd_bases} = $covd_cg_bases;
+    $sample_bmr{$sample}{CG_Transversions}{covd_bases} = $covd_cg_bases;
+    $sample_bmr{$sample}{CpG_Transitions}{covd_bases} = $covd_cpg_bases;
+    $sample_bmr{$sample}{CpG_Transversions}{covd_bases} = $covd_cpg_bases;
   }
   $totCovgFh->close;
 
-  unless( $sample_cnt_in_file == scalar( @all_sample_names ))
+  unless( $sample_cnt_in_total_covgs_file == scalar( @all_sample_names ))
   {
     print STDERR "Mismatching number of samples in $total_covgs_file and $bam_list\n";
     return undef;
   }
 
-  my %gene_mr; # Stores information regarding per-gene mutation rates
+  my %gene_mr; # Stores per gene covg and mutation information
   foreach my $gene ( keys %genes )
   {
-    $gene_mr{$gene}{$_}{mutations} = 0 foreach( @mut_classes );
+    foreach my $sample ( @all_sample_names )
+    {
+      $gene_mr{$sample}{$gene}{$_}{mutations} = 0 foreach( @mut_classes );
+    }
   }
 
   # Sum up the per-gene covered base-counts across samples from the output of "music bmr calc-covg"
@@ -245,16 +266,16 @@ sub execute {
     my $sampleCovgFh = IO::File->new( $sample_covg_file ) or die "Couldn't open $sample_covg_file. $!\n";
     while( my $line = $sampleCovgFh->getline )
     {
-      next if( $line =~ m/^#/ );
+      next unless( $line =~ m/^\S+\t\d+\t\d+\t\d+\t\d+\t\d+$/ and $line !~ m/^#/ );
       chomp( $line );
       my ( $gene, undef, $covd_bases, $covd_at_bases, $covd_cg_bases, $covd_cpg_bases ) = split( /\t/, $line );
-      $gene_mr{$gene}{Indels}{covd_bases} += $covd_bases;
-      $gene_mr{$gene}{AT_Transitions}{covd_bases} += $covd_at_bases;
-      $gene_mr{$gene}{AT_Transversions}{covd_bases} += $covd_at_bases;
-      $gene_mr{$gene}{CG_Transitions}{covd_bases} += $covd_cg_bases;
-      $gene_mr{$gene}{CG_Transversions}{covd_bases} += $covd_cg_bases;
-      $gene_mr{$gene}{CpG_Transitions}{covd_bases} += $covd_cpg_bases;
-      $gene_mr{$gene}{CpG_Transversions}{covd_bases} += $covd_cpg_bases;
+      $gene_mr{$sample}{$gene}{Indels}{covd_bases} += $covd_bases;
+      $gene_mr{$sample}{$gene}{AT_Transitions}{covd_bases} += $covd_at_bases;
+      $gene_mr{$sample}{$gene}{AT_Transversions}{covd_bases} += $covd_at_bases;
+      $gene_mr{$sample}{$gene}{CG_Transitions}{covd_bases} += $covd_cg_bases;
+      $gene_mr{$sample}{$gene}{CG_Transversions}{covd_bases} += $covd_cg_bases;
+      $gene_mr{$sample}{$gene}{CpG_Transitions}{covd_bases} += $covd_cpg_bases;
+      $gene_mr{$sample}{$gene}{CpG_Transversions}{covd_bases} += $covd_cpg_bases;
     }
     $sampleCovgFh->close;
   }
@@ -275,8 +296,8 @@ sub execute {
     next if( $line =~ m/^(#|Hugo_Symbol)/ );
     chomp $line;
     my @cols = split( /\t/, $line );
-    my ( $gene, $chr, $start, $stop, $mutation_class, $mutation_type, $ref, $var1, $var2 ) =
-    ( $cols[0], $cols[4], $cols[5], $cols[6], $cols[8], $cols[9], $cols[10], $cols[11], $cols[12] );
+    my ( $gene, $chr, $start, $stop, $mutation_class, $mutation_type, $ref, $var1, $var2, $sample ) =
+    ( $cols[0], $cols[4], $cols[5], $cols[6], $cols[8], $cols[9], $cols[10], $cols[11], $cols[12], $cols[15] );
     $chr =~ s/^chr//; # Remove chr prefixes from chrom names if any
 
     # If the mutation classification is odd, quit with error
@@ -378,13 +399,13 @@ sub execute {
       $class = 'Indels';
     }
 
-    # The user's gene exclusion list only affects the overall BMR calculations
-    $overall_bmr{$class}{mutations}++ unless( defined $ignored_genes{$gene} );
-    $gene_mr{$gene}{$class}{mutations}++;
+    # The user's gene exclusion list affects only the overall BMR calculations
+    $sample_bmr{$sample}{$class}{mutations}++ unless( defined $ignored_genes{$gene} );
+    $gene_mr{$sample}{$gene}{$class}{mutations}++;
   }
   $mafFh->close;
 
-  # Diplay statistics related to parsing the MAF
+  # Display statistics related to parsing the MAF
   print "Finished Parsing the MAF file to classify mutations\n";
   foreach my $skip_type ( sort keys %skip_cnts )
   {
@@ -392,29 +413,58 @@ sub execute {
     print "Skipped ", $skip_cnts{$skip_type}, " mutation(s) that $skip_type\n";
   }
 
-  my $totBmrFh = IO::File->new( $overall_bmr_file, ">" ) or die "Couldn't open $overall_bmr_file. $!\n";
-  $totBmrFh->print( "#User-specified genes skipped in this calculation: $genes_to_ignore\n" ) if( defined $genes_to_ignore );
-  $totBmrFh->print( "#Mutation_Class\tOverall_Covered_Bases\tNon_Syn_Mutations\tBMR\n" );
-  my $tot_muts = 0;
-  foreach my $class ( @mut_classes )
+  # Calculate per-sample BMRs, and also subtract out covered bases in genes the user wants ignored
+  foreach my $sample ( @all_sample_names )
   {
-    # Subtract the covered bases in this class that belong to the genes to be ignored
-    # ::TBD:: Some of these bases may belong to another gene, and those should not be subtracted
-    foreach my $ignored_gene ( keys %ignored_genes )
+    my $tot_muts = 0;
+    foreach my $class ( @mut_classes )
     {
-      $overall_bmr{$class}{covd_bases} -= $gene_mr{$ignored_gene}{$class}{covd_bases} if( defined $gene_mr{$ignored_gene} );
+      # Subtract the covered bases in this class that belong to the genes to be ignored
+      # ::TBD:: Some of these bases may also belong to another gene (on the other strand maybe?), and those should not be subtracted
+      foreach my $ignored_gene ( keys %ignored_genes )
+      {
+        $sample_bmr{$sample}{$class}{covd_bases} -= $gene_mr{$sample}{$ignored_gene}{$class}{covd_bases} if( defined $gene_mr{$sample}{$ignored_gene} );
+      }
+      $tot_muts += $sample_bmr{$sample}{$class}{mutations};
     }
-
-    #Calculate overall BMR for this mutation class and print it to file
-    $overall_bmr{$class}{bmr} = 0;
-    if( defined $overall_bmr{$class}{covd_bases} && $overall_bmr{$class}{covd_bases} != 0 )
-    {
-      $overall_bmr{$class}{bmr} = $overall_bmr{$class}{mutations} / $overall_bmr{$class}{covd_bases};
-    }
-    $totBmrFh->print( join( "\t", $class, $overall_bmr{$class}{covd_bases}, $overall_bmr{$class}{mutations}, $overall_bmr{$class}{bmr} ), "\n" );
-    $tot_muts += $overall_bmr{$class}{mutations};
+    $sample_bmr{$sample}{Overall}{bmr} = $tot_muts / $sample_bmr{$sample}{Indels}{covd_bases};
   }
-  $totBmrFh->print( join( "\t", "Overall_BMR", $overall_bmr{Indels}{covd_bases}, $tot_muts, $tot_muts / $overall_bmr{Indels}{covd_bases} ), "\n" );
+
+  # Cluster samples into bmr-groups using k-means clustering
+  my @sample_bmrs = map { $sample_bmr{$_}{Overall}{bmr} } @all_sample_names;
+  my @bmr_clusters = k_means( $bmr_groups, \@sample_bmrs );
+
+  # Calculate overall BMRs for each cluster of samples, and print them to file
+  my %cluster_bmr; # Stores per cluster categorized BMR
+  my $totBmrFh = IO::File->new( $overall_bmr_file, ">" ) or die "Couldn't open $overall_bmr_file. $!\n";
+  $totBmrFh->print( "#User-specified genes skipped in these calculations: $genes_to_ignore\n" ) if( defined $genes_to_ignore );
+  for( my $i = 0; $i < scalar( @bmr_clusters ); ++$i )
+  {
+    my @samples_in_cluster = map { $all_sample_names[$_] } @{$bmr_clusters[$i]};
+    unless( $bmr_groups == 1 )
+    {
+      $totBmrFh->print( "#BMR sub-group ", $i + 1, " (", scalar( @{$bmr_clusters[$i]} ), " samples)\n" );
+      $totBmrFh->print( "#Samples: ", join( ",", @samples_in_cluster ), "\n" );
+    }
+    $totBmrFh->print( "#Mutation_Class\tOverall_Covered_Bases\tNon_Syn_Mutations\tBMR\n" );
+
+    my ( $tot_covd_bases, $tot_muts ) = ( 0, 0 );
+    foreach my $class ( @mut_classes )
+    {
+      my ( $covd_bases, $mutations ) = ( 0, 0 );
+      foreach my $sample( @samples_in_cluster )
+      {
+        $covd_bases += $sample_bmr{$sample}{$class}{covd_bases};
+        $mutations += $sample_bmr{$sample}{$class}{mutations};
+      }
+      $tot_covd_bases = $covd_bases if( $class eq "Indels" ); # Save this to calculate overall BMR below
+      # Calculate overall BMR for this mutation class and print it to file
+      $cluster_bmr{$i}{$class}{bmr} = ( $covd_bases == 0 ? 0 : ( $mutations / $covd_bases ));
+      $totBmrFh->print( join( "\t", $class, $covd_bases, $mutations, $cluster_bmr{$i}{$class}{bmr} ), "\n" );
+      $tot_muts += $mutations;
+    }
+    $totBmrFh->print( join( "\t", "Overall_BMR", $tot_covd_bases, $tot_muts, $tot_muts / $tot_covd_bases ), "\n\n" );
+  }
   $totBmrFh->close;
 
   # Print out a file containing per-gene mutation counts and covered bases for use by "music smg"
@@ -422,9 +472,24 @@ sub execute {
   $geneBmrFh->print( "#Gene\tMutation_Class\tCovered_Bases\tNon_Syn_Mutations\tOverall_BMR\n" );
   foreach my $gene ( sort keys %genes )
   {
-    foreach my $class ( @mut_classes )
+    for( my $i = 0; $i < scalar( @bmr_clusters ); ++$i )
     {
-      $geneBmrFh->print( join( "\t", $gene, $class, $gene_mr{$gene}{$class}{covd_bases}, $gene_mr{$gene}{$class}{mutations}, $overall_bmr{$class}{bmr} ), "\n" );
+      my @samples_in_cluster = map { $all_sample_names[$_] } @{$bmr_clusters[$i]};
+      foreach my $class ( @mut_classes )
+      {
+        my ( $covd_bases, $mutations ) = ( 0, 0 );
+        foreach my $sample( @samples_in_cluster )
+        {
+          if( defined $gene_mr{$sample}{$gene} )
+          {
+            $covd_bases += $gene_mr{$sample}{$gene}{$class}{covd_bases} ;
+            $mutations += $gene_mr{$sample}{$gene}{$class}{mutations};
+          }
+        }
+        my $rename_class = $class;
+        $rename_class = ( $rename_class . "_SubGroup" . ( $i + 1 )) if( $bmr_groups > 1 );
+        $geneBmrFh->print( join( "\t", $gene, $rename_class, $covd_bases, $mutations, $cluster_bmr{$i}{$class}{bmr} ), "\n" );
+      }
     }
   }
   $geneBmrFh->close;
@@ -457,6 +522,49 @@ sub count_bits
     ++$count if( $vector->bit_test( $pos ));
   }
   return $count;
+}
+
+# Given a list of numerical values, returns k clusters based on k-means clustering
+sub k_means
+{
+  my ( $k, $list_ref ) = @_;
+  my @vals = @{$list_ref};
+  my $num_vals = scalar( @vals );
+
+  # Start with the first k values as the centroids
+  my @centroids = @vals[0..($k-1)];
+  my @prev_centroids = map { 0 } @centroids;
+  my @groups = ();
+
+  my $diff_means = 1; # Arbitrary non-zero value
+  # Repeat until the difference between these centroids and the previous ones, converges to zero
+  while( $diff_means > 0 )
+  {
+    @groups = ();
+    # Group values into clusters based on closest centroid
+    for( my $i = 0; $i < $num_vals; ++$i )
+    {
+      my @distances = map { abs( $vals[$i] - $_ ) } @centroids;
+      my $closest = min( @distances );
+      for( my $j = 0; $j < $k; ++$j )
+      {
+        if( $distances[$j] == $closest ) { push( @{$groups[$j]}, $i ); last; }
+      }
+    }
+
+    # Calculate means to be the new centroids, and the sum of differences
+    $diff_means = 0;
+    for( my $i = 0; $i < $k; ++$i )
+    {
+      $centroids[$i] = sum( map {$vals[$_]} @{$groups[$i]} );
+      $centroids[$i] /= scalar( @{$groups[$i]} );
+      $diff_means += abs( $centroids[$i] - $prev_centroids[$i] );
+    }
+
+    # Save the current centroids for comparisons with those in the next iteration
+    @prev_centroids = @centroids;
+  }
+  return @groups;
 }
 
 1;

@@ -7,6 +7,7 @@ use Clone qw/clone/;
 use Data::Compare;
 use Data::Dumper;
 use File::Path;
+use File::Basename;
 use Genome;
 
 class Genome::Model::Tools::DetectVariants2::Base {
@@ -59,6 +60,16 @@ class Genome::Model::Tools::DetectVariants2::Base {
             doc => 'run on many bams',
             is_input =>1,
             is_output=>1,
+        },
+        aligned_reads_sample => {
+            is => 'Text',
+            doc => 'Sample name for the source of the aligned_reads_input',
+            is_input => 1,
+        },
+        control_aligned_reads_sample => {
+            is => 'Text',
+            doc => 'Sample name for the source of the control_aligned_reads_input',
+            is_input => 1,
         },
     ],
     has_transient_optional => [
@@ -237,41 +248,45 @@ sub _generate_standard_files {
     unless(scalar(@words) > 2 and $words[0] eq 'Genome') {
         die('Could not determine detector class automatically.  Please implement _generate_standard_files in the subclass.');
     }
-    
+
     my $detector = $words[-1];
-    my $module_base = 'Genome::Model::Tools::Bed::Convert';
+    my $bed_module_base = 'Genome::Model::Tools::Bed::Convert';
+    my $vcf_module_base = 'Genome::Model::Tools::Vcf::Convert';
     
     if($self->detect_snvs) {
-        my $snv_module = join('::', $module_base, 'Snv', $detector . 'ToBed'); 
+        my $bed_snv_module = join('::', $bed_module_base, 'Snv', $detector . 'ToBed'); 
         
         for my $variant_file ($self->_snv_staging_output) {
             if(Genome::Sys->check_for_path_existence($variant_file)) {
-                $self->status_message("executing $snv_module on file $variant_file");
-                $retval &&= $self->_run_converter($snv_module, $variant_file);
+                $self->status_message("executing $bed_snv_module on file $variant_file");
+                $retval &&= $self->_run_bed_converter($bed_snv_module, $variant_file);
             }  
         }
     }
     
     if($self->detect_indels) {
-        my $indel_module = join('::', $module_base, 'Indel', $detector . 'ToBed'); 
+        my $indel_module = join('::', $bed_module_base, 'Indel', $detector . 'ToBed'); 
         
         for my $variant_file ($self->_indel_staging_output) {
             if(Genome::Sys->check_for_path_existence($variant_file)) {
                 $self->status_message("executing $indel_module on file $variant_file");
-                $retval &&= $self->_run_converter($indel_module, $variant_file);
+                $retval &&= $self->_run_bed_converter($indel_module, $variant_file);
             }  
         }
     }
+
+    $retval &&= $self->_generate_vcf;
+
     
     return $retval;
 }
 
-sub _run_converter {
+sub _run_bed_converter {
     my $self = shift;
     my $converter = shift;
     my $source = shift;
     
-    my $output = $source . '.bed'; #shift; #TODO Possibly create accessors for the bed files instead of hard-coding this
+    my $output = $source . '.bed';
     
     my $command = $converter->create(
         source => $source,
@@ -286,6 +301,68 @@ sub _run_converter {
 
     return 1;
 }
+
+sub _generate_vcf {
+    my $self = shift;
+    my $class = ref $self || $self;
+    my @words = split('::', $class);
+    
+    my $retval = 1;
+    
+    unless(scalar(@words) > 2 and $words[0] eq 'Genome') {
+        die('Could not determine detector class automatically.  Please implement _generate_standard_files in the subclass.');
+    }
+
+    my $detector = $words[-1];
+    my $vcf_module_base = 'Genome::Model::Tools::Vcf::Convert';
+
+    if($self->detect_snvs) {
+        my $vcf_snv_module = join('::', $vcf_module_base, 'Snv', $detector); 
+        eval {
+            $vcf_snv_module->__meta__;
+        };
+        if($@){
+            $self->status_message("Couldn't find a working vcf converter at $vcf_snv_module");
+        } else {  
+            for my $variant_file ($self->_snv_staging_output) {
+                if(Genome::Sys->check_for_path_existence($variant_file)) {
+                    $self->status_message("executing $vcf_snv_module on file $variant_file");
+                    $retval &&= $self->_run_vcf_converter($vcf_snv_module, $variant_file, "snvs");
+                }  
+            }
+        }
+    }
+
+    return $retval;
+}
+
+sub _run_vcf_converter {
+    my $self = shift;
+    my $converter = shift;
+    my $input_file = shift;
+    my $type = shift;
+    my $dirname = dirname($input_file);    
+    my $output_file = $dirname . '/'.$type.'.vcf';
+    my $aligned_reads_sample = $self->aligned_reads_sample;
+    my $reference_sequence_build = Genome::Model::Build->get($self->reference_build_id);
+
+    my $command = $converter->create(
+        input_file => $input_file,
+        output_file => $output_file, 
+        aligned_reads_sample => $aligned_reads_sample,
+        sequencing_center => 'WUSTL',
+        reference_sequence_build => $reference_sequence_build,
+    );
+    
+    unless($command->execute) {
+        $self->error_message('Failed to convert ' . $input_file . ' to the standard format.');
+        return;
+    }
+
+    return 1;
+}
+
+
 
 sub _promote_staged_data {
     my $self = shift;

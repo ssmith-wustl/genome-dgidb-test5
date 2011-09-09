@@ -107,6 +107,11 @@ class Genome::Model::Tools::Music::Play {
             is => 'Boolean',
             doc => 'Use this to default to wustl annotation format headers',
         },
+        bmr_groups => {
+            is => 'Integer',
+            doc => 'Number of clusters of samples with comparable BMRs',
+            default_value => 1,
+        },
         skip_non_coding => {
             is => 'Boolean',
             doc => 'Skip non-coding mutations from the provided MAF file',

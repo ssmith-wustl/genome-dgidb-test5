@@ -13,17 +13,18 @@ class Genome::Individual {
             calculate_from => 'id',
             calculate => q{ return $id; },
         },
+        subject_type => {
+            is_constant => 1,
+            is_classwide => 1,
+            value => 'sample_group',
+        },
         taxon_id => {
             is => 'Number',
             via => 'attributes',
             to => 'attribute_value',
             where => [ attribute_label => 'taxon_id' ],
             is_mutable => 1,
-        },
-        subject_type => {
-            is_constant => 1,
-            is_classwide => 1,
-            value => 'sample_group',
+            doc => 'Taxon ID for this individual',
         },
         taxon => { 
             is => 'Genome::Taxon', 
@@ -40,14 +41,17 @@ class Genome::Individual {
             to => 'attribute_value',
             where => [ attribute_label => 'father_id' ],
             is_mutable => 1,
+            doc => 'ID of this individual\' father',
         },
         father => { 
             is => 'Genome::Individual', 
-            id_by => 'father_id' 
+            id_by => 'father_id',
+            doc => 'Genome::Individual object that represents this individual\'s father',
         },
         father_name => { 
             via => 'father', 
-            to => 'name' 
+            to => 'name', 
+            doc => 'Name of this individual\'s father',
         },
         mother_id => {
             is => 'Number',
@@ -55,14 +59,17 @@ class Genome::Individual {
             to => 'attribute_value',
             where => [ attribute_label => 'mother_id' ],
             is_mutable => 1,
+            doc => 'ID of this individual\'s mother',
         },
         mother => { 
             is => 'Genome::Individual', 
-            id_by => 'mother_id' 
+            id_by => 'mother_id',
+            doc => 'Your mom',
         },
         mother_name => { 
             via => 'mother', 
-            to => 'name' 
+            to => 'name', 
+            doc => 'Name of this individual\'s mother',
         },
         upn => { 
             is => 'Text', 
@@ -70,7 +77,7 @@ class Genome::Individual {
             to => 'attribute_value',
             where => [ attribute_label => 'upn' ],
             is_mutable => 1,
-            doc => 'fully qualified internal name for the patient', 
+            doc => 'Fully qualified internal name for the patient', 
         },
         common_name => { 
             is => 'Text',
@@ -78,7 +85,7 @@ class Genome::Individual {
             to => 'attribute_value',
             where => [ attribute_label => 'common_name' ],
             is_mutable => 1,
-            doc => 'a name like "aml1" for the patient, by which the patient is commonly referred-to in the lab' 
+            doc => 'A name like "aml1" for the patient, by which the patient is commonly referred-to in the lab' 
         },
         gender => { 
             is => 'Text',
@@ -94,7 +101,7 @@ class Genome::Individual {
             to => 'attribute_value',
             where => [ attribute_label => 'ethnicity' ],
             is_mutable => 1,
-            doc => 'the "ethnicity" of the individual, Hispanic/Non-Hispanic/...'
+            doc => 'The "ethnicity" of the individual, Hispanic/Non-Hispanic/...'
         },
         race => { 
             is => 'Text',
@@ -102,13 +109,14 @@ class Genome::Individual {
             to => 'attribute_value',
             where => [ attribute_label => 'race' ],
             is_mutable => 1,
-            doc => 'the "race" of the individual, African American/Caucasian/...'
+            doc => 'The "race" of the individual, African American/Caucasian/...'
         },
     ],
     has_many_optional => [
         samples => { 
             is => 'Genome::Sample', 
             reverse_id_by => 'source',
+            doc => 'Sample extracted from this individual',
         },
         sample_names => {
             is => 'Text',

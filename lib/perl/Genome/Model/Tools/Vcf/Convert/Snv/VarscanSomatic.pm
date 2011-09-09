@@ -23,6 +23,11 @@ sub help_detail {
 HELP
 }
 
+sub source {
+    my $self = shift;
+    return "VarscanSomatic";
+}
+
 sub parse_line {
     my $self = shift;
     my $line = shift;
@@ -91,7 +96,7 @@ sub parse_line {
     my $qual = "."; # Can also be $tumor_vaq
     my $filter = "PASS";
     my $format = "GT:GQ:DP:BQ:MQ:AD:FA:VAQ";
-    my $info = "VT=SNP"; # Can also just be .
+    my $info = ".";
     my $tumor_sample_string = join (":", ($tumor_gt, $tumor_gq, $tumor_dp, $tumor_bq, $tumor_mq, $tumor_ad, $tumor_fa, $tumor_vaq));
     my $normal_sample_string = join (":", ($normal_gt, $normal_gq, $normal_dp, $normal_bq, $normal_mq, $normal_ad, $normal_fa, $normal_vaq));
 
