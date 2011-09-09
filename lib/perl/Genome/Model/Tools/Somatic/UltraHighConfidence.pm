@@ -444,11 +444,11 @@ sub run_filter {
                         my $normal_coverage = $normal_reads1 + $normal_reads2;
 
                         my $tumor_var_freq = my $normal_var_freq = 0.00;
+                        $tumor_var_freq = sprintf("%.3f", $tumor_reads2 / $tumor_coverage) if($tumor_coverage);
+                        $normal_var_freq = sprintf("%.3f", $normal_reads2 / $normal_coverage) if($normal_coverage);
 
                         if($tumor_coverage >= $min_tumor_coverage && $normal_coverage >= $min_normal_coverage)
                         {
-                            $tumor_var_freq = sprintf("%.3f", $tumor_reads2 / $tumor_coverage);
-                            $normal_var_freq = sprintf("%.3f", $normal_reads2 / $normal_coverage);
 
                             if($tumor_var_freq >= $min_tumor_var_freq && $tumor_var_freq <= $max_tumor_var_freq && $normal_var_freq <= $max_normal_var_freq && $normal_var_freq >= $min_normal_var_freq)
                             {
@@ -463,6 +463,9 @@ sub run_filter {
                             else
                             {
                                 $stats{'num_fail_varfreq'}++;
+                                
+                                ## If failed because present in the normal, don't flag for review ##
+                                
                                 ## Make var freqs more printable ##                               
                                 $tumor_var_freq = ($tumor_var_freq * 100) . '%';
                                 $normal_var_freq = ($normal_var_freq * 100) . '%';
@@ -472,7 +475,7 @@ sub run_filter {
                         else
                         {
                             $stats{'num_fail_coverage'}++;
-                            print $ffh "$line\tFailed:Coverage\t$normal_coverage\t$tumor_coverage\n";                                
+                            print $ffh "$line\tFailed:Coverage\t$normal_coverage\t$tumor_coverage\t$normal_var_freq\t$tumor_var_freq\n";                                
                         }
 
                     } else {
