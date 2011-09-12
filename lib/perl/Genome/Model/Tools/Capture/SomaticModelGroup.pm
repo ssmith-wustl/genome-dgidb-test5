@@ -400,6 +400,7 @@ sub execute {                               # replace with real execution logic.
 						my $output_dir = $self->varscan_copynumber . "/" . $tumor_sample . "-" . $normal_sample;
 						mkdir($output_dir) if(!(-d $output_dir));
 						my $cmd = "gmt varscan copy-number --output $output_dir/varScan.output --normal-bam $normal_bam --tumor-bam $tumor_bam";
+						$cmd .= " --reference " . $self->reference if($self->reference);
 						if(!(-e "$output_dir/varScan.output.copynumber"))
 						{
 							system("bsub -q long -R\"select[model!=Opteron250 && mem>4000]\" $cmd");							
