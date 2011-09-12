@@ -25,8 +25,8 @@ class Genome::Model::Tools::Capture::CreateMafFile {
   is => 'Command',
 
   has => [ # specify the command's single-value properties (parameters) <---
-    snv_file  => { is => 'Text', doc => "File of SNVs to include", is_optional => 0 },
-    snv_annotation_file => { is => 'Text', doc => "SNVs with WU annotations", is_optional => 0 },
+    snv_file  => { is => 'Text', doc => "File of SNVs to include", is_optional => 1 },
+    snv_annotation_file => { is => 'Text', doc => "SNVs with WU annotations", is_optional => 1 },
     indel_file  => { is => 'Text', doc => "File of Indels to include", is_optional => 1 },
     indel_annotation_file => { is => 'Text', doc => "Indels with WU annotations", is_optional => 1 },
     somatic_status => { is => 'Text', doc => "Predicted somatic status of variant (Germline/Somatic/LOH) [Somatic]", is_optional => 1 },
@@ -68,7 +68,7 @@ EOS
 
 sub execute {                               # replace with real execution logic.
   my $self = shift;
-
+$DB::single = 1;
   ## Get required parameters ##
   my $snv_file = $self->snv_file;
   my $snv_annotation_file = $self->snv_annotation_file;
@@ -214,66 +214,69 @@ sub execute {                               # replace with real execution logic.
       my $chr_stop = $lineContents[2];
       my $ref = $lineContents[3];
       my $var = $lineContents[4];
+      $ref = "-" if($ref eq "0");
+      $var = "-" if($var eq "0");
+
       my $key = "$chrom\t$chr_start\t$chr_stop\t$ref\t$var";
 
       if($annotations{$key})
       {
-        my ( $var_type, $gene, $trv_type ) = split( /\t/, $annotations{$key} );
-        my $var_class = trv_to_mutation_type( $trv_type );
+          my ( $var_type, $gene, $trv_type ) = split( /\t/, $annotations{$key} );
+          my $var_class = trv_to_mutation_type( $trv_type );
 
-        my $tumor_allele1 = $ref;
-        my $tumor_allele2 = $var;
-        my $normal_allele1 = $ref;
-        my $normal_allele2 = $ref;
-        
-        ## Parse the normal genotype ##
-        if($self->normal_gt_field && $lineContents[$self->normal_gt_field - 1])
-        {
-          my $normal_call= $lineContents[$self->normal_gt_field - 1];
-          if($normal_call =~ '\*')
-          {
-            $normal_allele1 = $ref;
-            $normal_allele2 = $var;
-          }
-          else
-          {
-            $normal_allele1 = $normal_allele2 = $var;
-          }
-        }
+          my $tumor_allele1 = $ref;
+          my $tumor_allele2 = $var;
+          my $normal_allele1 = $ref;
+          my $normal_allele2 = $ref;
 
-        ## Parse the tumor genotype ##
-        if($self->tumor_gt_field && $lineContents[$self->tumor_gt_field - 1])
-        {
-          my $tumor_call= $lineContents[$self->tumor_gt_field - 1];
-          if($tumor_call =~ '\*')
+          ## Parse the normal genotype ##
+          if($self->normal_gt_field && $lineContents[$self->normal_gt_field - 1])
           {
-            $tumor_allele1 = $ref;
-            $tumor_allele2 = $var;
+              my $normal_call= $lineContents[$self->normal_gt_field - 1];
+              if($normal_call =~ '\*')
+              {
+                  $normal_allele1 = $ref;
+                  $normal_allele2 = $var;
+              }
+              else
+              {
+                  $normal_allele1 = $normal_allele2 = $var;
+              }
           }
-          else
+
+          ## Parse the tumor genotype ##
+          if($self->tumor_gt_field && $lineContents[$self->tumor_gt_field - 1])
           {
-            $tumor_allele1 = $tumor_allele2 = $var;
+              my $tumor_call= $lineContents[$self->tumor_gt_field - 1];
+              if($tumor_call =~ '\*')
+              {
+                  $tumor_allele1 = $ref;
+                  $tumor_allele2 = $var;
+              }
+              else
+              {
+                  $tumor_allele1 = $tumor_allele2 = $var;
+              }
           }
-        }
 
 
-        my $maf_line =  "$gene\t0\t$center\t$genome_build\t$chrom\t$chr_start\t$chr_stop\t+\t";
-        $maf_line .=  "$var_class\t$var_type\t$ref\t";
-        $maf_line .=  "$tumor_allele1\t$tumor_allele2\t";
-        $maf_line .=  "\t\t"; #dbSNP
-        $maf_line .=  "$tumor_sample\t$normal_sample\t$normal_allele1\t$normal_allele2\t";
-        $maf_line .=  "\t\t\t\t"; # Validation alleles
-        $maf_line .=  "Unknown\tUnknown\t$somatic_status\t";
-        $maf_line .=  "$phase\tCapture\t";
-        $maf_line .=  "\t"; # Val method
-        $maf_line .=  "1\t"; # Score
-        $maf_line .=  "dbGAP\t";
-        $maf_line .=  "$platform\n";
-        print OUTFILE "$maf_line";
+          my $maf_line =  "$gene\t0\t$center\t$genome_build\t$chrom\t$chr_start\t$chr_stop\t+\t";
+          $maf_line .=  "$var_class\t$var_type\t$ref\t";
+          $maf_line .=  "$tumor_allele1\t$tumor_allele2\t";
+          $maf_line .=  "\t\t"; #dbSNP
+          $maf_line .=  "$tumor_sample\t$normal_sample\t$normal_allele1\t$normal_allele2\t";
+          $maf_line .=  "\t\t\t\t"; # Validation alleles
+          $maf_line .=  "Unknown\tUnknown\t$somatic_status\t";
+          $maf_line .=  "$phase\tCapture\t";
+          $maf_line .=  "\t"; # Val method
+          $maf_line .=  "1\t"; # Score
+          $maf_line .=  "dbGAP\t";
+          $maf_line .=  "$platform\n";
+          print OUTFILE "$maf_line";
       }
-    }
+  }
 
-    close($input);
+  close($input);
   }
   close(OUTFILE);
   return 1;                               # exits 0 for true, exits 1 for false (retval/exit code mapping is overridable)
@@ -286,39 +289,39 @@ sub execute {                               # replace with real execution logic.
 
 sub load_annotations
 {
-  my $annotation_file = shift(@_);
+    my $annotation_file = shift(@_);
 
-  ## Parse the annotation file ##
-  my %annotations = ();
-  my $input = new FileHandle ($annotation_file);
-  my $lineCounter = 0;
+    ## Parse the annotation file ##
+    my %annotations = ();
+    my $input = new FileHandle ($annotation_file);
+    my $lineCounter = 0;
 
-  while (<$input>)
-  {
-    chomp;
-    my $line = $_;
-    next if( $line =~ m/chromosome_name/ );
-    $lineCounter++;
+    while (<$input>)
+    {
+        chomp;
+        my $line = $_;
+        next if( $line =~ m/chromosome_name/ );
+        $lineCounter++;
 
-    my @lineContents = split( /\t/, $line );
-    my $chrom = $lineContents[0];
-    my $chr_start = $lineContents[1];
-    my $chr_stop = $lineContents[2];
-    my $ref = $lineContents[3];
-    my $var = $lineContents[4];
-    
-    $ref = "-" if($ref eq "0");
-    $var = "-" if($var eq "0");
-    
-    my $var_type = $lineContents[5];
-    my $gene_name = $lineContents[6];
-    my $trv_type = $lineContents[13];
-    my $key = "$chrom\t$chr_start\t$chr_stop\t$ref\t$var";
-    $annotations{$key} = "$var_type\t$gene_name\t$trv_type";
-  }
+        my @lineContents = split( /\t/, $line );
+        my $chrom = $lineContents[0];
+        my $chr_start = $lineContents[1];
+        my $chr_stop = $lineContents[2];
+        my $ref = $lineContents[3];
+        my $var = $lineContents[4];
 
-  close( $input );
-  return( %annotations );
+        $ref = "-" if($ref eq "0");
+        $var = "-" if($var eq "0");
+
+        my $var_type = $lineContents[5];
+        my $gene_name = $lineContents[6];
+        my $trv_type = $lineContents[13];
+        my $key = "$chrom\t$chr_start\t$chr_stop\t$ref\t$var";
+        $annotations{$key} = "$var_type\t$gene_name\t$trv_type";
+    }
+
+    close( $input );
+    return( %annotations );
 }
 
 #############################################################
@@ -327,27 +330,27 @@ sub load_annotations
 #############################################################
 sub trv_to_mutation_type
 {
-  my $trv_type = shift;
+    my $trv_type = shift;
 
-  return( "Missense_Mutation" ) if( $trv_type eq "missense" );
-  return( "Nonsense_Mutation" ) if( $trv_type eq "nonsense" || $trv_type eq "nonstop" );
-  return( "Silent" ) if( $trv_type eq "silent" );
-  return( "Splice_Site" ) if( $trv_type eq "splice_site" || $trv_type eq "splice_site_del" || $trv_type eq "splice_site_ins" );
-  return( "Frame_Shift_Del" ) if( $trv_type eq "frame_shift_del" );
-  return( "Frame_Shift_Ins" ) if( $trv_type eq "frame_shift_ins" );
-  return( "In_Frame_Del" ) if( $trv_type eq "in_frame_del" );
-  return( "In_Frame_Ins" ) if( $trv_type eq "in_frame_ins" );
-  return( "RNA" ) if( $trv_type eq "rna" );
-  return( "3'UTR" ) if( $trv_type eq "3_prime_untranslated_region" );
-  return( "5'UTR" ) if( $trv_type eq "5_prime_untranslated_region" );
-  return( "3'Flank" ) if( $trv_type eq "3_prime_flanking_region" );
-  return( "5'Flank" ) if( $trv_type eq "5_prime_flanking_region" );
+    return( "Missense_Mutation" ) if( $trv_type eq "missense" );
+    return( "Nonsense_Mutation" ) if( $trv_type eq "nonsense" || $trv_type eq "nonstop" );
+    return( "Silent" ) if( $trv_type eq "silent" );
+    return( "Splice_Site" ) if( $trv_type eq "splice_site" || $trv_type eq "splice_site_del" || $trv_type eq "splice_site_ins" );
+    return( "Frame_Shift_Del" ) if( $trv_type eq "frame_shift_del" );
+    return( "Frame_Shift_Ins" ) if( $trv_type eq "frame_shift_ins" );
+    return( "In_Frame_Del" ) if( $trv_type eq "in_frame_del" );
+    return( "In_Frame_Ins" ) if( $trv_type eq "in_frame_ins" );
+    return( "RNA" ) if( $trv_type eq "rna" );
+    return( "3'UTR" ) if( $trv_type eq "3_prime_untranslated_region" );
+    return( "5'UTR" ) if( $trv_type eq "5_prime_untranslated_region" );
+    return( "3'Flank" ) if( $trv_type eq "3_prime_flanking_region" );
+    return( "5'Flank" ) if( $trv_type eq "5_prime_flanking_region" );
 
-  return( "Intron" ) if( $trv_type eq "intronic" || $trv_type =~ /^splice_region/ );
-  return( "Targeted_Region" ) if( $trv_type eq "-" );
+    return( "Intron" ) if( $trv_type eq "intronic" || $trv_type =~ /^splice_region/ );
+    return( "Targeted_Region" ) if( $trv_type eq "-" );
 
-  warn( "Unknown mutation type $trv_type\n" );
-  return( "Unknown" );
+    warn( "Unknown mutation type $trv_type\n" );
+    return( "Unknown" );
 }
 
 
@@ -355,88 +358,88 @@ sub trv_to_mutation_type
 
 sub code_to_var_allele
 {
-        my $ref = shift(@_);
-	my $code = shift(@_);        
-	
-	return("A") if($code eq "A");
-	return("C") if($code eq "C");
-	return("G") if($code eq "G");
-	return("T") if($code eq "T");
+    my $ref = shift(@_);
+    my $code = shift(@_);        
 
-	if($code eq "M")
+    return("A") if($code eq "A");
+    return("C") if($code eq "C");
+    return("G") if($code eq "G");
+    return("T") if($code eq "T");
+
+    if($code eq "M")
+    {
+        if($ref eq "A")
         {
-          if($ref eq "A")
-          {
             return("C");
-          }
-          else
-          {
-            return("A");
-          }
         }
-        
-	if($code eq "R")
+        else
         {
-          if($ref eq "A")
-          {
-            return("G");
-          }
-          else
-          {
             return("A");
-          }
         }
-	if($code eq "W")
-        {
-          if($ref eq "A")
-          {
-            return("T");
-          }
-          else
-          {
-            return("A");
-          }          
-        }
+    }
 
-	if($code eq "S")
+    if($code eq "R")
+    {
+        if($ref eq "A")
         {
-          if($ref eq "C")
-          {
             return("G");
-          }
-          else
-          {
+        }
+        else
+        {
+            return("A");
+        }
+    }
+    if($code eq "W")
+    {
+        if($ref eq "A")
+        {
+            return("T");
+        }
+        else
+        {
+            return("A");
+        }          
+    }
+
+    if($code eq "S")
+    {
+        if($ref eq "C")
+        {
+            return("G");
+        }
+        else
+        {
             return("C");
-          }          
-        }
+        }          
+    }
 
-	if($code eq "Y")
+    if($code eq "Y")
+    {
+        if($ref eq "C")
         {
-          if($ref eq "C")
-          {
             return("T");
-          }
-          else
-          {
+        }
+        else
+        {
             return("C");
-          }          
-        }
-	if($code eq "K")
+        }          
+    }
+    if($code eq "K")
+    {
+        if($ref eq "G")
         {
-          if($ref eq "G")
-          {
             return("T");
-          }
-          else
-          {
-            return("G");
-          }          
         }
+        else
+        {
+            return("G");
+        }          
+    }
 
 
-	warn "Unrecognized ambiguity code $code!\n";
+    warn "Unrecognized ambiguity code $code!\n";
 
-	return("N");	
+    return("N");	
 }
 
 
