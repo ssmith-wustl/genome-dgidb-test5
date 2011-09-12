@@ -398,6 +398,21 @@ sub chr_cmp {
     return ($answer[0] eq $chr_a) ? 0 : 1;
 }
 
+sub opening_lines {
+    my $self = shift;
+    my $lines = shift;
+    my $handles = $self->_vcf_handles;
+    for my $key (sort(keys(%{$handles}))){
+        my $line = $handles->{$key}->getline;
+        chomp $line;
+        my ($chr,$pos) = split /\s+/, $line;
+        $lines->{$key}{line} = $line;
+        $lines->{$key}{chr} = $chr;
+        $lines->{$key}{pos} = $pos;
+    }
+    return 1;
+}
+
 # this will get lines from the two inputs as needed, then reformat and or merge them, and print them to _output_fh
 sub process_records {
     my $self = shift;
@@ -441,24 +456,6 @@ sub process_records {
     return 1;
 }
 
-sub opening_lines {
-    my $self = shift;
-    my $lines = shift;
-    
-    my $handles = $self->_vcf_handles;
-
-    for my $key (sort(keys(%{$handles}))){
-        my $line = $handles->{$key}->getline;
-        chomp $line;
-        my ($chr,$pos) = split /\s+/, $line;
-        $lines->{$key}{line} = $line;
-        $lines->{$key}{chr} = $chr;
-        $lines->{$key}{pos} = $pos;
-    }
-
-    return 1;
-}
-
 # This function takes a hash of sample names, which contain hashes of line, chrom, and pos
 # and a list of stale samples, which means the line was used in the output and a new line
 # needs to be drawn from the file handle associated with that sample
@@ -473,7 +470,8 @@ sub get_lines {
         my $line;
 
         # If the getline doesn't return data (EOF), remove that sample's record
-        # from the incoming hash ref, signaling this to the calling function
+        # from the incoming hash ref, which signals the calling function that
+        # the file contains no more data.
         unless($line = $handles->{$key}->getline){
             $handles->{$key}->close;
             delete $handles->{$key};
@@ -488,21 +486,6 @@ sub get_lines {
     }
 
     return 1;
-}
-
-# This pulls the next line from the file handle $fh
-# It sets $line, $chrom, and $pos, which should be passed in as refs to scalars,
-# and returns 1 if the EOF is encountered.
-sub get_next {
-    my $self = shift;
-    my ( $fh, $line, $chrom,$pos) = @_;
-    my $answer = 0;    
-    unless($$line = $fh->getline){
-        return 1;
-    }
-    chomp $$line;
-    ($$chrom,$$pos) = split /\t/, $$line;
-    return $answer;
 }
 
 # This prints $line to the _output_fh, after processing the FORMAT fields and SAMPLE fields, 
@@ -535,74 +518,7 @@ sub print_merged {
     return 1;
 }
 
-# This method constructs format and sample fields in the proper order, adding dots where fields were missing
-sub adjust_sample_string {
-    my $self = shift;
-    my $format_in = shift;
-    my $sample_in = shift;
-    my $source = shift;
-
-    my @formats = split /:/, $format_in;
-    my @sample = split /:/, $sample_in;    
-
-    my %formats;
-
-    my @format_fields = split /:/, $self->_format_string;
-    my %form;
-    @form{@format_fields}=1;
-
-    my @output_formats;
-    my @output_sample;
-    for my $field (0..(scalar(@formats)-1)){
-        if(exists($form{$formats[$field]})){
-            $formats{$formats[$field]} = $sample[$field];
-            delete $form{$formats[$field]};
-        } else {
-            die $self->error_message("Could not locte format field definiton for: ".$formats[$field]." in header.");
-        }
-    }
-    unless( ! keys( %form )){
-        for my $field (sort(keys(%form))){
-            $formats{$field} = '.';
-        }
-    }
-    for my $field (@format_fields){
-        push @output_sample, $formats{$field};
-    }
-
-    my $sample_string = join(":",@output_sample);
-
-    my @string = ($sample_string);
-    my @source = ($source);
-    my $full_samples_string = $self->get_samples_string(\@string,\@source);
-    return $full_samples_string;
-}
-
-
-sub get_samples_string {
-    my $self= shift;
-    my $strings = shift;
-    my $sources = shift;
-    my %ss;
-    for my $num (0..(scalar(@{$sources})-1)){
-        $ss{$sources->[$num]}=$strings->[$num];
-    }
-
-    my $list = $self->_sample_order;
-    my @answer;
-    for my $s (@{$list}){
-        if(exists($ss{$s})){
-            push @answer, $ss{$s};
-            delete $ss{$s};
-        } else {
-            push @answer, '.';
-        }
-    }
-    return join("\t",@answer);
-}
-
-
-#combine two intersecting records
+#combine two or more intersecting records
 sub merge_records {
     my $self = shift;
     my $answer = shift;
@@ -675,16 +591,12 @@ sub merge_records {
     for my $s (@samples){
         my $merged_pass = $merged{FILTER} eq 'PASS';
         my $pass = $inputs{$s}->[FILTER] eq 'PASS';
-        if($merged_pass && $pass){
-            #fine
-        } elsif( $merged_pass || $pass ){
+        if( $merged_pass xor $pass ){
             if($self->intersection){
                 $merged{FILTER} = $merged_pass ? $inputs{$s}->[FILTER] : $merged{FILTER};
             } else {
                 $merged{FILTER} = 'PASS';
             }
-        } else {
-            # fine
         }
     }
 
@@ -748,7 +660,12 @@ sub merge_records {
                 delete $format_fields{$field};
             } 
         }
-        $format{$sample}{GT} = Genome::Model::Tools::Vcf::Convert::Base->regenerate_gt( $merged{REF} , $inputs{$sample}->[ALT], $format{$sample}{GT},$merged{ALT});
+        $format{$sample}{GT} = Genome::Model::Tools::Vcf::Convert::Base->regenerate_gt( 
+            $merged{REF},               #Reference Base(s)
+            $inputs{$sample}->[ALT],    #Original ALT
+            $format{$sample}{GT},       #Original Genotype
+            $merged{ALT},               #New ALT
+        );
         my @answer;
         for my $tag (@format_fields){
             push @answer, $format{$sample}{$tag};
@@ -768,38 +685,70 @@ sub merge_records {
     return \%merged;
 }
 
-sub regenerate_gt {
-    return "1/1";
-}
 
-# This method will check the two inputs alt and gt values and die or warn if they are something worthy of inspection 
-sub check_alt_and_gt {
+# This method constructs format and sample fields in the proper order, adding dots where fields were missing
+sub adjust_sample_string {
     my $self = shift;
-    my ($line_a, $line_b, $alt_a, $alt_b, $gt_a, $gt_b) = @_;
+    my $format_in = shift;
+    my $sample_in = shift;
+    my $source = shift;
 
-    if ($alt_a eq $alt_b) {
-        # If alt and gt match, everything is peachy
-        if ($gt_a eq $gt_b) {
-            return 1;
-        # If Alt is the same but GT does not match, it should be 0/1 and 1/1... warn but proceed
+    my @formats = split /:/, $format_in;
+    my @sample = split /:/, $sample_in;    
+
+    my %formats;
+
+    my @format_fields = split /:/, $self->_format_string;
+    my %form;
+    @form{@format_fields}=1;
+
+    my @output_formats;
+    my @output_sample;
+    for my $field (0..(scalar(@formats)-1)){
+        if(exists($form{$formats[$field]})){
+            $formats{$formats[$field]} = $sample[$field];
+            delete $form{$formats[$field]};
         } else {
-            $self->warning_message("ALT values are the same but gt values are different. Trusting line A and proceeding. Lines:\n$line_a\n$line_b");
-            return;
-        }
-    } else {
-        # If alt is different but gt is the same... this could be 0/1 0/2, 1/1, 2/2
-        if ($gt_a eq $gt_b) {
-            $self->warning_message("ALT values are different and GT is the same. Trusting line A and proceeding. Lines:\n$line_a\n$line_b");
-            return;
-        # Die in the case that there are two homozygous snps that do not agree... this should not happen.
-        } elsif ($gt_a eq "1/1" && $gt_b eq "1/1" ) {
-            die $self->error_message("Two homozygous snps that do not agree on the genotype. Lines:\n$line_a\n$line_b");
-        # If ALT and GT are different, this is 0/1 2/2 or 1/1 1/2
-        } else {
-            $self->warning_message("ALT and GT values differ.  Trusting line A and proceeding. Lines:\n$line_a\n$line_b");
-            return;
+            die $self->error_message("Could not locte format field definiton for: ".$formats[$field]." in header.");
         }
     }
+    unless( ! keys( %form )){
+        for my $field (sort(keys(%form))){
+            $formats{$field} = '.';
+        }
+    }
+    for my $field (@format_fields){
+        push @output_sample, $formats{$field};
+    }
+
+    my $sample_string = join(":",@output_sample);
+
+    my @string = ($sample_string);
+    my @source = ($source);
+    my $full_samples_string = $self->get_samples_string(\@string,\@source);
+    return $full_samples_string;
+}
+
+sub get_samples_string {
+    my $self= shift;
+    my $strings = shift;
+    my $sources = shift;
+    my %ss;
+    for my $num (0..(scalar(@{$sources})-1)){
+        $ss{$sources->[$num]}=$strings->[$num];
+    }
+
+    my $list = $self->_sample_order;
+    my @answer;
+    for my $s (@{$list}){
+        if(exists($ss{$s})){
+            push @answer, $ss{$s};
+            delete $ss{$s};
+        } else {
+            push @answer, '.';
+        }
+    }
+    return join("\t",@answer);
 }
 
 1;
