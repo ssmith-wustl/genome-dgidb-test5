@@ -6,6 +6,7 @@ class Genome::Model::ReferenceAlignment::Command::MergeVcf {
     has => [
         model_group => {
             is => 'Genome::ModelGroup',
+            is_many => 1,
             shell_args_position => 1,
             doc => 'build to prepare',
         },
@@ -44,37 +45,41 @@ sub execute {
         die $self->error_message("Output list file already exists at: ".$output_list);
     }
 
-    #reference alignment build object    
-    my $mg = $self->model_group;
+    my @mg = $self->model_group;
     my @input_vcfs; 
 
     my %inputs;
 
     my $list_fh = Genome::Sys->open_file_for_writing($output_list);
 
-    #go through the models, pulling latest builds, checking for vcfs, aggregating paths to them
-    for my $model ($mg->models){
-        my $build = $model->last_succeeded_build;
-        unless($build){
-            $self->status_message("Skipping model: ".$model->id.". It no succeeded builds.");
-            next;
-        }
-        my $sample = $model->subject->name;
-        unless($sample){
-            die $self->error_message("Could not find a sample name for model: ".$model->id);
-        }
-
-        if ($self->use_gzipped_vcfs) {
-            unless($self->check_for_and_create_gz($build)){
-                $self->status_message("Not including model: ".$model->id." as it had no merged vcf.");
+  
+    #go through each model group and each model, pulling latest builds, checking for vcfs, and aggregating paths to them
+    for my $mg (@mg) {
+        for my $model ($mg->models){
+            my $build = $model->last_succeeded_build;
+            unless($build){
+                $self->status_message("Skipping model: ".$model->id.". It no succeeded builds.");
                 next;
             }
-            $inputs{$sample} = $build->get_merged_vcf.".gz";
-        } else {
-            $inputs{$sample} = $build->get_merged_vcf;
-        }
+            my $sample = $model->subject->name;
+            unless($sample){
+                die $self->error_message("Could not find a sample name for model: ".$model->id);
+            }
+            if(exists($inputs{$sample})){
+                die $self->error_message("Encountered multiple builds for one sample: ".$sample);
+            }
+            if ($self->use_gzipped_vcfs) {
+                unless($self->check_for_and_create_gz($build)){
+                    $self->status_message("Not including model: ".$model->id." as it had no merged vcf.");
+                    next;
+                }
+                $inputs{$sample} = $build->get_merged_vcf.".gz";
+            } else {
+                $inputs{$sample} = $build->get_merged_vcf;
+            }
 
-        print $list_fh $inputs{$sample}."\t".$sample."\n";
+            print $list_fh $inputs{$sample}."\t".$sample."\n";
+        }
     }
 
     $list_fh->close;
