@@ -4,6 +4,7 @@ use strict;
 use warnings;
 use Genome;
 use Workflow;
+use Workflow::Simple;
 
 my $DEFAULT_CLUSTERS = '5000';
 my $DEFAULT_CUTOFF = '2';
@@ -131,11 +132,18 @@ sub execute {
 	my $xml_path    = $module_path;
 	$xml_path =~ s/\.pm/\.xml/;
 	my $workflow = Workflow::Operation->create_from_xml($xml_path);
+	
 	my @errors   = $workflow->validate;
 	unless ( $workflow->is_valid ) {
 		die(    'Errors encountered while validating workflow '
 			  . $xml_path . "\n"
 			  . join( "\n", @errors ) );
+	}
+	### THIS IS NOT REQUIRED OTHERWISE, BUT ONLY WHEN THIS WORKFLOW IS RUN PARALLEL'
+	
+	unless (Workflow::Simple->can('run_workflow_lsf'))
+	{
+		die('Unable to load method');
 	}
 	my $output = Workflow::Simple::run_workflow_lsf( $xml_path, %params );
 	unless ( defined $output ) {
