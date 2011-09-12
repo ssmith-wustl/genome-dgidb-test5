@@ -257,7 +257,9 @@ sub merge_headers {
                             }
 
                         } elsif($tag =~ m/source/){
-                            $header{$tag} .= ",".$data;
+                            unless($header{$tag} =~ m/$data/){
+                                $header{$tag} .= ",".$data;
+                            }
                         } elsif ($tag =~ m/fileformat/){
                             die $self->error_message("Cannot continue, trying to merge files with different VCF versions! .. see header tags \"fileformat\"");
                         }
@@ -447,7 +449,6 @@ sub process_records {
         } else {
             my $line = $self->merge_records(\@answer,\%lines);
             $self->print_merged($line, \@answer);
-            #print $ofh "MERGE HAPPENS HERE!\n";
         }
 
         $self->get_lines(\%lines,\@answer);
@@ -510,9 +511,8 @@ sub print_record {
 sub print_merged {
     my $self = shift;
     my $m = shift;
-    my %m = %{ $m };
     my $fh = $self->_output_fh;
-    my $line = join("\t",($m{CHROM},$m{POS},$m{ID},$m{REF},$m{ALT},$m{QUAL},$m{FILTER},$m{INFO},$m{FORMAT},$m{SAMPLE}));
+    my $line = join("\t",($m->{CHROM},$m->{POS},$m->{ID},$m->{REF},$m->{ALT},$m->{QUAL},$m->{FILTER},$m->{INFO},$m->{FORMAT},$m->{SAMPLE}));
     print $fh $line . "\n";
 
     return 1;
