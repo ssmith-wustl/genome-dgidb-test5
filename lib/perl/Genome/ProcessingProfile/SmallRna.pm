@@ -131,17 +131,12 @@ sub _map_workflow_inputs {
      
     push @inputs, bam_file => $bam_file;
     push @inputs, output_base_dir => $data_directory;
-	push @inputs,
-        annotation_files => (defined $self->annotation_files ),
-        annotation_name => (defined $self->annotation_name),
-        minimum_zenith => (defined $self->minimum_zenith),
-        size_bins => (defined $self->size_bins),
-        subcluster_min_mapzero => (defined $self->subcluster_min_mapzero),
-        input_cluster_number => (defined $self->input_cluster_number), 
-        ;
-
-
-    return @inputs;
+	push @inputs, annotation_files => $self->annotation_files;
+    push @inputs, annotation_name => $self->annotation_name;
+    push @inputs, minimum_zenith => $self->minimum_zenith;
+    push @inputs, size_bins => $self->size_bins;
+    push @inputs, subcluster_min_mapzero => $self->subcluster_min_mapzero;
+    push @inputs, input_cluster_number => $self->input_cluster_number;
 
     return @inputs;
 }
