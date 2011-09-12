@@ -26,8 +26,12 @@ class Genome::ModelGroup {
                                     doc         => 'The auto-generated Convergence Model summarizing knowledge about this model group',
                                     is_optional => 1, 
                                 },
-        user_name           => {is => 'Text'},
-        uuid                => {is => 'Text'},
+        user_name           => {is => 'Text',
+                                is_optional => 1
+                               },
+        uuid                => {is => 'Text',
+                                is_optional => 1
+                               },
         project             => { is => 'Genome::Project',
                                     id_by => 'uuid',
                                 },
