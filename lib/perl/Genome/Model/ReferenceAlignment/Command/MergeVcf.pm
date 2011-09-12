@@ -78,7 +78,7 @@ sub execute {
                 $inputs{$sample} = $build->get_merged_vcf;
             }
 
-            print $list_fh $inputs{$sample}."\t".$sample."\t".$build->id"\n";
+            print $list_fh $inputs{$sample}."\t".$sample."\t".$build->id."\n";
         }
     }
 
