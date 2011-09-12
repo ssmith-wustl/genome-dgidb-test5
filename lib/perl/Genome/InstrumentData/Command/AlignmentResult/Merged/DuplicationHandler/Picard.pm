@@ -20,7 +20,7 @@ class Genome::InstrumentData::Command::AlignmentResult::Merged::DuplicationHandl
 sub default_max_jvm_heap_size {
     my $max_gb = 12;
     my $max_kb = 1_048_576 * $max_gb;
-    my $default_max_jvm_heap_size;
+    my $default_max_jvm_heap_size = $max_gb;
     my $mem_limit_kb = Genome::Sys->mem_limit_kb;
     if ($mem_limit_kb) {
         my $safe_mem_limit_kb = int(0.8 * $mem_limit_kb);
@@ -31,9 +31,6 @@ sub default_max_jvm_heap_size {
             }
             $default_max_jvm_heap_size = $safe_mem_limit_gb;
         }
-    }
-    else {
-        $default_max_jvm_heap_size = $max_gb;
     }
     return $default_max_jvm_heap_size;
 }
