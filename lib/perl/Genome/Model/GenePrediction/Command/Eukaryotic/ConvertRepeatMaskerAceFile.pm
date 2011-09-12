@@ -129,7 +129,12 @@ sub _get_full_seq_name_for_seq {
         last if $fasta_seq->display_id eq $seq_name;
     }
 
-    my $full_name = $fasta_seq->display_id() . ' ' . $fasta_seq->desc();
+    # Occasionally, no fasta sequence is found for the sequence name. 
+    my $full_name;
+    if (defined $fasta_seq) {
+        $full_name = $fasta_seq->display_id() . ' ' . $fasta_seq->desc();
+    }
+
     unless ($full_name) {
         $self->warning_message("Could not get full name for sequence $seq_name from fasta file " . 
             $self->fasta_file . ", instead using shorter name $seq_name");

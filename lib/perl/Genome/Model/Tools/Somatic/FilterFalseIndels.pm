@@ -94,6 +94,12 @@ class Genome::Model::Tools::Somatic::FilterFalseIndels {
             is_input => 1,
             doc => 'Maximum difference of mismatch quality sum between variant and reference reads (paralog filter)',
        },
+       'max_var_mmqs' => {
+            type => 'String',
+            is_optional => 1,
+            is_input => 1,
+            doc => 'Maximum mismatch quality sum for variant-supporting reads (paralog filter) [opt:100]',
+       },
        'max_mapqual_diff' => {
             type => 'String',
             default => '30',
@@ -107,6 +113,12 @@ class Genome::Model::Tools::Somatic::FilterFalseIndels {
             is_optional => 1,
             is_input => 1,
             doc => 'Maximum difference of average supporting read length between variant and reference reads [15]',
+       },
+       'min_var_readlen' => {
+            type => 'String',
+            is_optional => 1,
+            is_input => 1,
+            doc => 'Minimum average aligned read length of variant-supporting reads [75]',
        },
        'min_var_dist_3' => {
             type => 'String',
@@ -502,13 +514,17 @@ sub execute {
 					$FilterResult = "ReadLen:$ref_avg_rl-$var_avg_rl=$readlen_diff>$max_readlen_diff";
 					$stats{'num_fail_readlen'}++;
 				    }
-				    ## FAILURE 5: Read length difference exceeds allowable maximum ##
-#				    elsif($var_dist_3 < $min_var_dist_3)
-#				    {
-#					print $ffh "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tVarDist3:$var_dist_3\n";
-#					print "$line\t$ref_pos\t$var_pos\t$ref_strandedness\t$var_strandedness\tVarDist3:$var_dist_3\n" if ($self->verbose);
-#					$stats{'num_fail_dist3'}++;
-#				    }
+				    ## FAILURE 6: Var read len below minimum ##
+				    elsif($self->min_var_readlen && $var_avg_rl < $self->min_var_readlen)
+				    {
+					$FilterResult = "VarDist3:$var_dist_3\n" if ($self->verbose);
+					$stats{'num_fail_readlen'}++;
+				    }
+				    elsif($self->max_var_mmqs && $var_mmqs > $self->max_var_mmqs)
+				    {
+					$FilterResult = "VarMMQS:$var_mmqs\n" if ($self->verbose);
+					$stats{'num_fail_var_mmqs'}++;					
+				    }
 				    ## SUCCESS: Pass Filter ##				
 				    else
 				    {					

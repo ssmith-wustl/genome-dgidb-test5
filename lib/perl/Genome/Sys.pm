@@ -126,7 +126,7 @@ sub base_temp_directory {
     # auto-cleaned up when the job terminates
     my $tmp_location = $ENV{'TMPDIR'} || "/tmp";
     if ($ENV{'LSB_JOBID'}) {
-        my $lsf_possible_tempdir = sprintf("%s/%s.tmpdir", $ENV{'TMPDIR'}, $ENV{'LSB_JOBID'});
+        my $lsf_possible_tempdir = sprintf("%s/%s.tmpdir", $tmp_location, $ENV{'LSB_JOBID'});
         $tmp_location = $lsf_possible_tempdir if (-d $lsf_possible_tempdir);
     }
     # tempdir() thows its own exception if there's a problem
@@ -313,7 +313,7 @@ sub _open_file {
             die "cannot open '-' with access '$rw': r = STDIN, w = STDOUT!!!";
         }
     }
-    my $fh = IO::File->new($file, $rw);
+    my $fh = (defined $rw) ? IO::File->new($file, $rw) : IO::File->new($file);
     return $fh if $fh;
     Carp::croak("Can't open file ($file) with access '$rw': $!");
 }
@@ -352,6 +352,33 @@ sub open_file_for_reading {
 
     # _open_file throws its own exception if it doesn't work
     return $self->_open_file($file, 'r');
+}
+
+sub open_gzip_file_for_reading {
+    my ($self, $file) = @_;
+
+    $self->validate_file_for_reading($file)
+        or return;
+
+    #check file type for gzip
+    unless($self->_file_type($file) eq "gzip"){
+        Carp::croak("File ($file) is not a gzip file");
+    }
+    my $pipe = "zcat ".$file." |";
+
+    # _open_file throws its own exception if it doesn't work
+    return $self->_open_file($pipe);
+}
+
+sub _file_type {
+    my $self = shift;
+    my $file = shift;
+        
+    $self->validate_file_for_reading($file);
+
+    my $result = `file -b $file`;
+    my @answer = split /\s+/, $result;
+    return $answer[0];
 }
 
 sub shellcmd {

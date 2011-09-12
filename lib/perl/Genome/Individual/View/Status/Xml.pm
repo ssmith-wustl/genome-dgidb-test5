@@ -25,6 +25,7 @@ class Genome::Individual::View::Status::Xml {
                         'name',
                         'common_name',
                         'extraction_label',
+                        'patient_common_name',
                         'extraction_type',
                         'extraction_desc',
                         'cell_type',

@@ -332,6 +332,22 @@ sub _generate_vcf {
             }
         }
     }
+    if($self->detect_indels) {
+        my $vcf_indel_module = join('::', $vcf_module_base, 'Indel', $detector); 
+        eval {
+            $vcf_indel_module->__meta__;
+        };
+        if($@){
+            $self->status_message("Couldn't find a working vcf converter at $vcf_indel_module");
+        } else {  
+            for my $variant_file ($self->_indel_staging_output) {
+                if(Genome::Sys->check_for_path_existence($variant_file)) {
+                    $self->status_message("executing $vcf_indel_module on file $variant_file");
+                    $retval &&= $self->_run_vcf_converter($vcf_indel_module, $variant_file, "indels");
+                }  
+            }
+        }
+    }
 
     return $retval;
 }

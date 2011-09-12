@@ -3,6 +3,7 @@ package Genome::Task;
 use strict;
 use warnings;
 
+use Command::Dispatch::Shell;
 use Genome;
 use Digest::MD5 qw(md5_hex);
 use Data::Dumper;
@@ -14,17 +15,52 @@ class Genome::Task {
     id_by => {
         'id' => {is=>'Text', len=>64}
     },
-    has => {
-        command_class => {is=>'Text', len=>255, doc => 'Command class name'},
-        params => {is=>'Text', is_optional => 1, doc => 'JSON encoded param hash'},
-        stdout_pathname => {is => 'Text', len => 255, is_optional => 1, doc => 'Resulting standard out path'},
-        stderr_pathname => {is => 'Text', len => 255, is_optional => 1, doc => 'Resulting standard error path'},
-        status => {is => 'Text', len => 50, doc => 'Task lifecycle status'},
-        user_id => {is => 'Text', len => 255, doc => 'Submitting user'},
-        time_submitted => {is => 'TIMESTAMP', column_name => 'SUBMIT_TIME', doc => 'Time submitted'},
-        time_started => {is => 'TIMESTAMP', is_optional => 1, doc => 'Time execution started'},
-        time_finished => {is => 'TIMESTAMP', is_optional => 1, doc => 'Time execution concluded'},
-    },
+    has => [
+        command_class => {
+            is=>'Text', 
+            len=>255, 
+            doc => 'Command class name'
+        },
+        status => {
+            is => 'Text', 
+            len => 50, 
+            doc => 'Task lifecycle status'
+        },
+        user_id => {
+            is => 'Text', 
+            len => 255, 
+            doc => 'Submitting user'
+        },
+        time_submitted => {
+            is => 'TIMESTAMP', 
+            column_name => 'SUBMIT_TIME', 
+            doc => 'Time task was submitted'
+        },
+    ],
+    has_optional => [
+        params => {
+            is=>'Text', 
+            doc => 'JSON encoded param hash'
+        },
+        stdout_pathname => {
+            is => 'Text', 
+            len => 255,
+            doc => 'Resulting standard out path'
+        },
+        stderr_pathname => {
+            is => 'Text', 
+            len => 255, 
+            doc => 'Resulting standard error path'
+        },
+        time_started => {
+            is => 'TIMESTAMP',
+            doc => 'Time execution started'
+        },
+        time_finished => { 
+            is => 'TIMESTAMP', 
+            doc => 'Time execution concluded'
+        },
+    ],
     schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',
     doc => 'scheduled tasks'
@@ -33,7 +69,6 @@ class Genome::Task {
 sub create {
     my $class = shift;
 
-    %Genome::Command::Base::SEEN_FROM_CLASS = ();
     my $self = $class->SUPER::create(@_);
     
     my $cmd_object = $self->command_object;
@@ -101,10 +136,10 @@ sub _resolve_param_values {
             my $value;
             if ($property->is_many) {
                 $DB::single = 1;
-                my @v = $cmd_class->resolve_param_value_from_text($pre_value, $type);
+                my @v = Command::V2->resolve_param_value_from_text($pre_value, $type);
                 $value = \@v;
             } else {
-                $value = $cmd_class->resolve_param_value_from_text($pre_value, $type);
+                $value = Command::V2->resolve_param_value_from_text($pre_value, $type);
             }
 
             if (!$value || (ref($value) eq 'ARRAY' && @$value == 0)) {
@@ -153,7 +188,5 @@ sub out_of_band_attribute_update {
     
     return 1;
 }
-
-
 
 1;

@@ -75,7 +75,14 @@ class Genome::Model::Command::Define::ImportedReferenceSequence {
             default_value => 'inline',
             doc => 'dispatch specification: an LSF queue or "inline"'
         },
-   ],
+    ],
+    has_transient => [
+        result_build_id => {
+            is => 'Integer',
+            is_optional => 1,
+            doc => 'newly created build ID of reference sequence model',
+        },
+    ],
 };
 
 sub help_synopsis {
@@ -163,7 +170,12 @@ sub execute {
 
     $self->result_model_id($model->id);
 
-    return $self->_create_build($model);
+    my $build = $self->_create_build($model);
+    return unless $build;
+
+    $self->result_build_id($build->id);
+
+    return 1;
 }
 
 sub _check_existing_builds {
@@ -348,7 +360,7 @@ sub _create_build {
         return;
     }
 
-    return 1;
+    return $build;
 }
 
 1;

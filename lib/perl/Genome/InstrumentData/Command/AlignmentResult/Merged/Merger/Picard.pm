@@ -4,20 +4,44 @@ use strict;
 use warnings;
 
 use Genome;
+use POSIX;
 
 class Genome::InstrumentData::Command::AlignmentResult::Merged::Merger::Picard {
     is => 'Genome::InstrumentData::Command::AlignmentResult::Merged::Merger',
-    has_constant => [
+    has_optional => [
         max_jvm_heap_size => {
-            is => 'Number',
+            is => 'Integer',
             doc => 'Size (in GB) of the JVM heap for Picard',
-            value => 12,
+            is_constant => 1,
         },
     ],
 };
 
+sub default_max_jvm_heap_size {
+    my $max_gb = 12;
+    my $max_kb = 1_048_576 * $max_gb;
+    my $default_max_jvm_heap_size;
+    my $mem_limit_kb = Genome::Sys->mem_limit_kb;
+    if ($mem_limit_kb) {
+        my $safe_mem_limit_kb = int(0.8 * $mem_limit_kb);
+        if ($max_kb > $safe_mem_limit_kb) {
+            my $safe_mem_limit_gb = floor($safe_mem_limit_kb / 1_048_576);
+            if ($safe_mem_limit_gb == 0) {
+                die "Does not work on systems with less than 1GB of memory.\n";
+            }
+            $default_max_jvm_heap_size = $safe_mem_limit_gb;
+        }
+    }
+    else {
+        $default_max_jvm_heap_size = $max_gb;
+    }
+    return $default_max_jvm_heap_size;
+}
+
 sub execute {
     my $self = shift;
+
+    $self->max_jvm_heap_size($self->default_max_jvm_heap_size) unless $self->max_jvm_heap_size;
 
     my $merge_cmd = Genome::Model::Tools::Sam::Merge->create(
         files_to_merge => [$self->input_bams],

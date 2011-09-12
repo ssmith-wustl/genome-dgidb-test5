@@ -289,6 +289,23 @@ sub open_file_for_writing {
     return $self->_open_file($file, 'w');
 }
 
+
+sub open_gzip_file_for_writing {
+    my ($self, $file) = @_;
+
+    $self->validate_file_for_writing($file)
+        or return;
+
+    if (-e $file) {
+        unless (unlink $file) {
+            Carp::croak("Can't unlink $file: $!");
+        }
+    }
+    my $pipe = "| bgzip -c > $file";
+
+    return $self->_open_file($pipe);
+}
+
 sub copy_file {
     my ($self, $file, $dest) = @_;
 
@@ -905,6 +922,41 @@ sub remove_directory_tree {
         }
     }
     return 1;
+}
+
+# detect maximum available memory
+# would probably be better to not do this this way but it's a start
+sub mem_limit_kb {
+    my $class = shift;
+
+    my $mem_limit_kb;
+
+    # get physical total memory
+    if (-e '/proc/meminfo') {
+        my $meminfo_fh = IO::File->new('/proc/meminfo', 'r');
+        if ($meminfo_fh) {
+            while (my $meminfo = $meminfo_fh->getline) {
+                my ($mem_total) = $meminfo =~ /MemTotal:\s+(\d+)/;
+                if ($mem_total) {
+                    $mem_limit_kb = $mem_total;
+                    last;
+                }
+            }
+        }
+    }
+
+    # get LSF memory limit
+    if (my $LSB_JOBID = $ENV{LSB_JOBID}) {
+        my $bjobs_cmd = qx(which bjobs);
+        if ($bjobs_cmd) {
+            chomp $bjobs_cmd;
+            my $bjobs = qx($bjobs_cmd -l $LSB_JOBID);
+            my ($bjobs_mem_limit_kb) = $bjobs =~ /MEMLIMIT\s+(\d+)/;
+            $mem_limit_kb = $bjobs_mem_limit_kb if ($bjobs_mem_limit_kb);
+        }
+    }
+
+    return $mem_limit_kb;
 }
 
 1;

@@ -39,7 +39,6 @@ sub execute {
     $self->status_message("executing tier variants step on snvs and indels");
 
     #my $version = gmt:bed:convert::version();  todo, something like this instead of hardcoding
-    my $version = 2;
     my $tiering_version = $build->tiering_version;
     $self->status_message("Using tiering_bed_files version ".$tiering_version);
     my $tier_file_location = $build->annotation_build->tiering_bed_files_by_version($tiering_version);
@@ -57,7 +56,7 @@ sub execute {
 
     if ($build->snv_detection_strategy){
         for my $name_set (["novel","snvs.hq.novel"], ["novel","snvs.hq.previously_detected"], ["variants","snvs.lq"]){ #want to tier lq, previously_discovered, and novel snvs 
-            $self->run_fast_tier($name_set, $version, 'bed');
+            $self->run_fast_tier($name_set, $tiering_version, 'bed');
         }
     }else{
         $self->status_message("No snv detection strategy, skipping snv tiering");
@@ -65,7 +64,7 @@ sub execute {
 
     if ($build->indel_detection_strategy){
         for my $name_set (["novel","indels.hq.novel"], ["novel","indels.hq.previously_detected"], ["variants","indels.lq"]){ #want to tier lq, previously_discovered, and novel indels 
-            $self->run_fast_tier($name_set, $version, 'bed');
+            $self->run_fast_tier($name_set, $tiering_version, 'bed');
         }
 
     }else{

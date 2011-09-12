@@ -305,6 +305,10 @@ sub run_filter
                 else
                 {
                         my $cmd = "gmt somatic filter-false-positives --variant-file $variant_file --bam-file $bam_file --output-file $variant_file.fpfilter --filtered-file $variant_file.fpfilter.removed";
+			if($self->reference)
+			{
+				$cmd .= " --reference " . $self->reference;
+			}
                         system("bsub -q long -R\"select[type==LINUX64 && model != Opteron250 && mem>2000 && tmp>2000] rusage[mem=2000]\" $cmd");
                 }
         }        

@@ -26,6 +26,12 @@ class Genome::ModelGroup {
                                     doc         => 'The auto-generated Convergence Model summarizing knowledge about this model group',
                                     is_optional => 1, 
                                 },
+        user_name           => {is => 'Text'},
+        uuid                => {is => 'Text'},
+        project             => { is => 'Genome::Project',
+                                    id_by => 'uuid',
+                                },
+
     ],
     schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',
@@ -47,6 +53,10 @@ sub create {
     } 
     
     my $self = $class->SUPER::create($bx);
+     
+    my $user_name = Genome::Sys->username;
+    my $creator = Genome::Sys::User->get(username => $user_name);
+    $self->user_name($creator->email);
     
     my $define_command = Genome::Model::Command::Define::Convergence->create(
         %convergence_model_params,

@@ -24,7 +24,7 @@ my $bad_task = Genome::Task->create(command_class=>'Genome::Model::Build::Comman
 ok(!defined $bad_task, "no task created for bad params");
 
 $DB::single = 1;
-my $good_task = Genome::Task->create(command_class=>'Genome::Model::Build::Command::Start', status=>'pending', params=>encode_json({models=>1001}), user_id=>'boberkfe', time_submitted=>UR::Time->now);
+my $good_task = Genome::Task->create(command_class=>'Genome::Model::Build::Command::Start', status=>'pending', params=>encode_json({models=>2880146303}), user_id=>'boberkfe', time_submitted=>UR::Time->now);
 ok($good_task, "task created for good params");
 
 my $another_task = Genome::Task->create(command_class=>'Genome::Model::Command::List', status=>'pending', params=>encode_json($task_params), user_id=>'boberkfe', time_submitted=>UR::Time->now);
