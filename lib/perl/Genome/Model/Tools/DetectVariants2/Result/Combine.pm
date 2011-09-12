@@ -45,7 +45,11 @@ class Genome::Model::Tools::DetectVariants2::Result::Combine {
 };
 
 sub create {
-    my $self = shift;
+    my $class = shift;
+
+    my $self = $class->SUPER::create(@_);
+    return unless ($self);
+
     unless($self->_validate_inputs) {
         die $self->error_message('Failed to validate inputs.');
     }
