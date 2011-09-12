@@ -474,6 +474,8 @@ sub lock_resource {
     $block_sleep = 60 unless defined $block_sleep;
     my $max_try = delete $args{max_try};
     $max_try = 7200 unless defined $max_try;
+    my $wait_announce_interval = delete $args{wait_announce_interval};
+    $wait_announce_interval = 0 unless defined $wait_announce_interval;
 
     my ($my_host, $my_pid, $my_lsf_id, $my_user) = (hostname, $$, ($ENV{'LSB_JOBID'} || 'NONE'), Genome::Sys->username);
     my $job_id = (defined $ENV{'LSB_JOBID'} ? $ENV{'LSB_JOBID'} : "NONE");
@@ -500,6 +502,8 @@ sub lock_resource {
                      );
     $lock_info->close();
 
+    my $initial_time = time;
+    my $last_wait_announce_time = $initial_time;
     my $ret;
     while(!($ret = symlink($tempdir,$resource_lock))) {
         # TONY: The only allowable failure is EEXIST, right?
@@ -546,7 +550,14 @@ sub lock_resource {
         }
 
         my $info_content=sprintf("HOST %s\nPID %s\nLSF_JOB_ID %s\nUSER %s",$host,$pid,$lsf_id,$user);
-        $self->status_message("waiting on lock for resource '$resource_lock': $symlink_error. lock_info is:\n$info_content");
+
+        my $time = time;
+        my $elapsed_time = $time - $last_wait_announce_time;
+        if ($elapsed_time >= $wait_announce_interval) {
+            $last_wait_announce_time = $time;
+            my $total_elapsed_time = $time - $initial_time;
+            $self->status_message("waiting (total_elapsed_time = $total_elapsed_time seconds) on lock for resource '$resource_lock': $symlink_error. lock_info is:\n$info_content");
+        }
 
         if ($lsf_id ne "NONE") {
             my ($job_info,$events) = Genome::Model::Event->lsf_state($lsf_id);
