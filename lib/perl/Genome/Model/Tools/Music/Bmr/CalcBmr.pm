@@ -496,9 +496,9 @@ sub execute {
             $mutations += $gene_mr{$sample}{$gene}[$class][mutations];
           }
         }
-        my $rename_class = $class;
+        my $rename_class = $mut_class_names[$class];
         $rename_class = ( $rename_class . "_SubGroup" . ( $i + 1 )) if( $bmr_groups > 1 );
-        $geneBmrFh->print( join( "\t", $gene, $mut_class_names[$rename_class], $covd_bases, $mutations, $cluster_bmr{$i}[$class][bmr] ), "\n" );
+        $geneBmrFh->print( join( "\t", $gene, $rename_class, $covd_bases, $mutations, $cluster_bmr{$i}[$class][bmr] ), "\n" );
       }
     }
   }
