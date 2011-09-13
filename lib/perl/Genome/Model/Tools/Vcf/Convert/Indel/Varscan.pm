@@ -53,7 +53,8 @@ sub parse_line {
         $self->error_message("line does not *appear* to contain a +/- char in final field, don't know what to do: $line");
         return 0;
     }
-    ($chr, $pos, $ref_allele, $alt_alleles) = $self->normalize_indel_location($chr, $pos, $ref_allele, $alt_alleles);
+    #TODO this is turned off for now because it interferes with applying filters (bed coordinates will be different once left shifted)
+    # ($chr, $pos, $ref_allele, $alt_alleles) = $self->normalize_indel_location($chr, $pos, $ref_allele, $alt_alleles);
     my $genotype_call = $fields[3];
     my $GT;
     if($genotype_call =~ m/\*/) { #my belief is that varscan only calls het or hom. so if we see match an asterisk, we know its het. 

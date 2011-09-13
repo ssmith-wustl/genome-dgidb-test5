@@ -264,13 +264,23 @@ sub convert_file {
     my $self = shift;
     my $input_fh = $self->_input_fh;
 
-    while(my $line = $input_fh->getline) {
+    while(my $line = $self->get_record($input_fh)) {
         chomp $line;
         my $output_line = $self->parse_line($line);
         $self->write_line($output_line);
     }
 
     return 1;
+}
+
+# Get the next data record from the file to be converted
+# Default behavior is to simply get the data line by line
+# Override if you need a more complex method.
+sub get_record {
+    my $self = shift;
+    my $input_fh = shift;
+
+    return $input_fh->getline;
 }
 
 # Print a single line to output
