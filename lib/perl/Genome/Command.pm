@@ -18,6 +18,7 @@ my @SUB_COMMANDS = qw/
     individual
     instrument-data
     library
+    notable
     model
     model-group
     population-group
