@@ -5,7 +5,7 @@ use warnings;
 use Genome;
 
 class Genome::Sample::Command::Update::DefaultGenotypeData {
-    is => 'Genome::Command::Base',
+    is => 'Command::V2',
     doc => 'Update the default genotype data for any given sample.',
     has => [
         sample => {
