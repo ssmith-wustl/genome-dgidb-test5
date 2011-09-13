@@ -901,6 +901,32 @@ sub remove_directory_tree {
     return 1;
 }
 
+sub get_mem_total_from_proc {
+    my $mem_total;
+    my $meminfo_fh = IO::File->new('/proc/meminfo', 'r');
+    if ($meminfo_fh) {
+        while (my $meminfo = $meminfo_fh->getline) {
+            ($mem_total) = $meminfo =~ /MemTotal:\s+(\d+)/;
+            last if ($mem_total);
+        }
+    }
+    return $mem_total;
+}
+
+sub get_mem_limit_from_bjobs {
+    my $mem_limit;
+    my $LSB_JOBID = $ENV{LSB_JOBID};
+    my $bjobs_cmd = qx(which bjobs);
+    if ($bjobs_cmd && $LSB_JOBID) {
+        chomp $bjobs_cmd;
+        my $bjobs = qx($bjobs_cmd -l $LSB_JOBID);
+        my ($bjobs_mem_limit_kb) = $bjobs =~ /MEMLIMIT\s+(\d+)/;
+        $mem_limit = $bjobs_mem_limit_kb if ($bjobs_mem_limit_kb);
+    }
+    return $mem_limit;
+}
+
+
 # detect maximum available memory
 # would probably be better to not do this this way but it's a start
 sub mem_limit_kb {
@@ -910,27 +936,14 @@ sub mem_limit_kb {
 
     # get physical total memory
     if (-e '/proc/meminfo') {
-        my $meminfo_fh = IO::File->new('/proc/meminfo', 'r');
-        if ($meminfo_fh) {
-            while (my $meminfo = $meminfo_fh->getline) {
-                my ($mem_total) = $meminfo =~ /MemTotal:\s+(\d+)/;
-                if ($mem_total) {
-                    $mem_limit_kb = $mem_total;
-                    last;
-                }
-            }
-        }
+        my $mem_total = $class->get_mem_total_from_proc;
+        $mem_limit_kb = $mem_total if $mem_total;
     }
 
     # get LSF memory limit
-    if (my $LSB_JOBID = $ENV{LSB_JOBID}) {
-        my $bjobs_cmd = qx(which bjobs);
-        if ($bjobs_cmd) {
-            chomp $bjobs_cmd;
-            my $bjobs = qx($bjobs_cmd -l $LSB_JOBID);
-            my ($bjobs_mem_limit_kb) = $bjobs =~ /MEMLIMIT\s+(\d+)/;
-            $mem_limit_kb = $bjobs_mem_limit_kb if ($bjobs_mem_limit_kb);
-        }
+    if ($ENV{LSB_JOBID}) {
+        my $mem_limit = $class->get_mem_limit_from_bjobs;
+        $mem_limit_kb = $mem_limit if $mem_limit;
     }
 
     return $mem_limit_kb;
