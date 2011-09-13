@@ -17,8 +17,10 @@ class Genome::InstrumentData::Command::AlignmentResult::Merged::Merger::Picard {
     ],
 };
 
+sub max_gb { 12 };
+
 sub default_max_jvm_heap_size {
-    my $max_gb = 12;
+    my $max_gb = max_gb();
     my $max_kb = 1_048_576 * $max_gb;
     my $default_max_jvm_heap_size = $max_gb;
     my $mem_limit_kb = Genome::Sys->mem_limit_kb;
