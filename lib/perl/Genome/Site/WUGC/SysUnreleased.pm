@@ -385,6 +385,7 @@ sub open_directory {
     my $dh = IO::Dir->new($directory);
 
     unless ($dh) {
+        $directory ||= '';
         Carp::croak("Can't open_directory $directory: $!");
     }
     return $dh;
