@@ -597,32 +597,23 @@ END
     ok($content eq $expected, 'File contained expected contents.');
 }
 
-sub test_get_mem_total_from_proc : Test(2) {
+sub test_get_mem_total_from_proc : Test(1) {
     my $mem_limit_kb = Genome::Sys->get_mem_total_from_proc;
     ok(defined $mem_limit_kb, 'mem_limit_kb from proc is defined');
-    ok($mem_limit_kb > 0, 'mem_limit_kb from proc is greater than zero');
 }
 
-sub test_get_mem_limit_from_bjobs : Test(4) {
-    my $bsub = qx(bsub sleep 10);
-    chomp $bsub;
-    ok($bsub, 'got bsub output');
-
-    my ($jobid) = $bsub =~ /^Job <(\d+)>/;
-    ok($jobid, 'got jobid from bsub output');
-    diag "Unable to determine LSF job ID from output ($bsub)." unless $jobid;
-
-    # was getting intermittent failures and I think it was due to delay in
-    # LSF "processing" the job
-    sleep 3;
-
-    local $ENV{LSB_JOBID} = $jobid;
+sub test_get_mem_limit_from_bjobs : Test(1) {
     my $mem_limit_kb = Genome::Sys->get_mem_limit_from_bjobs;
-    ok(defined $mem_limit_kb, 'mem_limit_kb from bjobs is defined');
-    ok($mem_limit_kb > 0, 'mem_limit_kb from bjobs is greater than zero');
+    if ($ENV{LSB_JOBID}) {
+        ok(defined $mem_limit_kb, 'mem_limit_kb from bjobs (' . $ENV{LSB_JOBID} . ') is defined');
+    }
+    else {
+        ok(! defined $mem_limit_kb, 'mem_limit_kb from bjobs is not defined');
+    }
 }
 
 sub test_mem_limit_kb : Test(4) {
+    local $ENV{LSB_JOBID} = 1;
     { # case 1: can't read either
         *Genome::Sys::get_mem_total_from_proc = sub { '' };
         *Genome::Sys::get_mem_limit_from_bjobs = sub { '' };
