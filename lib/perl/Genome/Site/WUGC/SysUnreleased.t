@@ -467,7 +467,8 @@ sub do_race_lock {
 
     my $lock = Genome::Sys->lock_resource(
         resource_lock => $resource,
-        block_sleep   => 1
+        block_sleep   => 1,
+        wait_announce_interval => 30,
     );
     unless ($lock) {
         print_event($fh, "LOCK_FAIL", "Failed to get a lock" );
