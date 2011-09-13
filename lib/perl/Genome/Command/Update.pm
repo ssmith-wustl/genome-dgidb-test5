@@ -10,7 +10,7 @@ use Data::Dumper 'Dumper';
 require Scalar::Util;
 
 class Genome::Command::Update {
-    is => 'Genome::Command::Base',
+    is => 'Command::V2',
     is_abstract => 1,
     attributes_have => [ is_add_remove => { is => 'Boolean', is_optional => 1, } ],
     doc => 'CRUD update command class.',

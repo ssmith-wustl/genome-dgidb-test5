@@ -9,7 +9,7 @@ require Carp;
 use Data::Dumper 'Dumper';
 
 class Genome::Command::Create {
-    is => 'Genome::Command::Base',
+    is => 'Command::V2',
     is_abstract => 1,
     doc => 'CRUD create command class.',
 };
