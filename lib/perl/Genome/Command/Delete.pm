@@ -9,7 +9,7 @@ require Carp;
 use Data::Dumper 'Dumper';
 
 class Genome::Command::Delete {
-    is => 'Genome::Command::Base',
+    is => 'Command::V2',
     is_abstract => 1,
     doc => 'CRUD delete command class.',
 };
