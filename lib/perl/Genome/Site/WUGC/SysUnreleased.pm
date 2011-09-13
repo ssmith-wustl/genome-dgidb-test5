@@ -25,25 +25,6 @@ use Archive::Extract;
 
 require MIME::Lite;
 
-sub sudo_username {
-    my $class = shift;
-    my $who_output = $class->cmd_output_who_dash_m || '';
-    my $who_username = (split(/\s/,$who_output))[0] || '';
-    my $sudo_username = $who_username eq $class->username ? '' : $who_username;
-    $sudo_username ||= $ENV{'SUDO_USER'};
-    return ($sudo_username || '');
-}
-
-sub cmd_output_who_dash_m {
-    return `who -m`;
-}
-
-sub user_is_member_of_group {
-    my ($class, $group_name) = @_;
-    my $user = Genome::Sys->username;
-    my $members = (getgrnam($group_name))[3];
-    return ($members && $user && $members =~ /\b$user\b/);
-}
 # this helps us clean-up locks
 
 my %SYMLINKS_TO_REMOVE;
@@ -273,21 +254,6 @@ sub extract_archive {
     return $archive;
 }
 
-
-sub open_file_for_writing {
-    my ($self, $file) = @_;
-
-    $self->validate_file_for_writing($file)
-        or return;
-
-    if (-e $file) {
-        unless (unlink $file) {
-            Carp::croak("Can't unlink $file: $!");
-        }
-    }
-
-    return $self->_open_file($file, 'w');
-}
 
 
 sub open_gzip_file_for_writing {

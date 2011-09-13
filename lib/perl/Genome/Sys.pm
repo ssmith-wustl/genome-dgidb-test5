@@ -4,27 +4,43 @@ use strict;
 use warnings;
 use Genome;
 use Cwd;
+use File::Path;
+use Carp;
+use IO::File;
 
-class Genome::Sys { 
-    # TODO: remove all cases of inheritance 
-    #is => 'UR::Singleton', 
-};
+class Genome::Sys {};
 
+#####
 # API for accessing software and data by version
-
+#####
 sub dbpath {
     my ($class, $name, $version) = @_;
     unless ($version) {
-        die "Genome::Sys dbpath must be called with a database name and a version.  Use 'latest' for the latest installed version.";
+        die "Genome::Sys dbpath must be called with a database name and a version. " .
+            "Use 'latest' for the latest installed version.";
     }
     my $base_dirs = $ENV{"GENOME_DB"} ||= '/var/lib/genome/db';
     return $class->_find_in_path($base_dirs, "$name/$version");
 }
 
+sub _find_in_path {
+    my ($class, $base_dirs, $subdir) = @_;
+    my @base_dirs = split(':',$base_dirs);
+    my @dirs =
+        map { -l $_ ? Cwd::abs_path($_) : ($_) }
+        map {
+            my $path = join("/",$_,$subdir);
+            (-e $path ? ($path) : ())
+        }
+        @base_dirs;
+    return $dirs[0];
+}
+
 sub swpath {
     my ($class, $name, $version) = @_;
     unless ($version) {
-        die "Genome::Sys swpath must be called with a database name and a version.  Use 'latest' for the latest installed version.";
+        die "Genome::Sys swpath must be called with a database name and a version. " .
+            "Use 'latest' for the latest installed version.";
     }
     my $base = $ENV{"GENOME_SW"} ||= '/var/lib/genome/sw';
     my $path = join("/",$base,$name,$version);
@@ -42,7 +58,8 @@ sub swpath {
             return $path;
         }
         else {
-            die $class->error_message("Failed to find $name at version $version.  The default version is at $path.");
+            die $class->error_message("Failed to find $name at version $version. " . 
+                "The default version is at $path.");
         }
     }
     else {
@@ -51,44 +68,9 @@ sub swpath {
     return;
 }
 
-sub open_browser {
-    my ($class, @urls) = @_;
-    for my $url (@urls) {
-        if ($url !~ /:\/\//) {
-            $url = 'http://' . $url; 
-        }
-    }
-    my $browser;
-    if ($^O eq 'darwin') {
-        $browser = "open";
-    }
-    elsif ($browser = `which firefox`) {
-        
-    }
-    elsif ($browser = `which opera`) {
-
-    }
-    for my $url (@urls) {
-        Genome::Sys->shellcmd(cmd => "$browser $url");
-    }
-    return 1;
-}
-
-sub _find_in_path {
-    my ($class, $base_dirs, $subdir) = @_;
-    my @base_dirs = split(':',$base_dirs);
-    my @dirs =
-        map { -l $_ ? Cwd::abs_path($_) : ($_) }
-        map {
-            my $path = join("/",$_,$subdir);
-            (-e $path ? ($path) : ())
-        }
-        @base_dirs;
-    return $dirs[0];
-}
-
-# temp file management
-
+#####
+# Temp file management
+#####
 sub _temp_directory_prefix {
     my $self = shift;
     my $base = join("_", map { lc($_) } split('::',$self->class));
@@ -193,6 +175,9 @@ sub create_temp_directory {
     return $path;
 }
 
+#####
+# Basic filesystem operations
+#####
 sub create_directory {
     my ($self, $directory) = @_;
 
@@ -267,7 +252,9 @@ sub create_symlink_and_log_change {
         $owner->status_message("Removing symlink ($link) due to database rollback.");
         unlink $link;
     };
-    my $symlink_change = UR::Context::Transaction->log_change($owner, 'UR::Value', $link, 'external_change', $symlink_undo);
+    my $symlink_change = UR::Context::Transaction->log_change(
+        $owner, 'UR::Value', $link, 'external_change', $symlink_undo
+    );
     unless ($symlink_change) {
         die $owner->error_message("Failed to log symlink change.");
     }
@@ -354,6 +341,21 @@ sub open_file_for_reading {
     return $self->_open_file($file, 'r');
 }
 
+sub open_file_for_writing {
+    my ($self, $file) = @_;
+
+    $self->validate_file_for_writing($file)
+        or return;
+
+    if (-e $file) {
+        unless (unlink $file) {
+            Carp::croak("Can't unlink $file: $!");
+        }
+    }
+
+    return $self->_open_file($file, 'w');
+}
+
 sub open_gzip_file_for_reading {
     my ($self, $file) = @_;
 
@@ -381,6 +383,65 @@ sub _file_type {
     return $answer[0];
 }
 
+#####
+# Methods dealing with user names, groups, etc
+#####
+sub user_id {
+    return $<;
+}
+
+sub username {
+    my $class = shift;
+    my $username = getpwuid($class->user_id);
+    return $username;
+}
+
+sub sudo_username {
+    my $class = shift;
+    my $who_output = $class->cmd_output_who_dash_m || '';
+    my $who_username = (split(/\s/,$who_output))[0] || '';
+    my $sudo_username = $who_username eq $class->username ? '' : $who_username;
+    $sudo_username ||= $ENV{'SUDO_USER'};
+    return ($sudo_username || '');
+}
+
+sub cmd_output_who_dash_m {
+    return `who -m`;
+}
+
+sub user_is_member_of_group {
+    my ($class, $group_name) = @_;
+    my $user = Genome::Sys->username;
+    my $members = (getgrnam($group_name))[3];
+    return ($members && $user && $members =~ /\b$user\b/);
+}
+
+#####
+# Various utility methods
+#####
+sub open_browser {
+    my ($class, @urls) = @_;
+    for my $url (@urls) {
+        if ($url !~ /:\/\//) {
+            $url = 'http://' . $url; 
+        }
+    }
+    my $browser;
+    if ($^O eq 'darwin') {
+        $browser = "open";
+    }
+    elsif ($browser = `which firefox`) {
+        
+    }
+    elsif ($browser = `which opera`) {
+
+    }
+    for my $url (@urls) {
+        Genome::Sys->shellcmd(cmd => "$browser $url");
+    }
+    return 1;
+}
+
 sub shellcmd {
     # execute a shell command in a standard way instead of using system()\
     # verifies inputs and ouputs, and does detailed logging...
@@ -397,7 +458,8 @@ sub shellcmd {
     my $allow_zero_size_output_files = delete $params{allow_zero_size_output_files};
     my $allow_zero_size_input_files  = delete $params{allow_zero_size_input_files};
     my $skip_if_output_is_present    = delete $params{skip_if_output_is_present};
-    my $dont_create_zero_size_files_for_missing_output = delete $params{dont_create_zero_size_files_for_missing_output};
+    my $dont_create_zero_size_files_for_missing_output = 
+        delete $params{dont_create_zero_size_files_for_missing_output};
     my $print_status_to_stderr       = delete $params{print_status_to_stderr};
 
     $print_status_to_stderr = 1 if not defined $print_status_to_stderr;
@@ -482,11 +544,14 @@ sub shellcmd {
             if (@$output_files == @missing_output_files) {
                 Carp::carp("ALL output files were empty for command: $cmd");
             } else {
-                Carp::carp("SOME (but not all) output files were empty for command (PLEASE NOTE that earlier versions of Genome::Sys->shellcmd would fail in this circumstance): $cmd");
+                Carp::carp("SOME (but not all) output files were empty for command " . 
+                    "(PLEASE NOTE that earlier versions of Genome::Sys->shellcmd " . 
+                    "would fail in this circumstance): $cmd");
             }
             if ($dont_create_zero_size_files_for_missing_output) {
                 @missing_output_files = (); # reset the list of missing output files
-                @missing_output_files = grep { not -e $_ }  grep { not -p $_ } @$output_files; # rescan for only missing files
+                @missing_output_files = 
+                    grep { not -e $_ }  grep { not -p $_ } @$output_files; # rescan for only missing files
             } else {
                 for my $output_file (@$output_files) {
                     Carp::carp("ALLOWING zero size output file '$output_file' for command: $cmd");
@@ -524,16 +589,6 @@ sub shellcmd {
     }
     return 1;    
 
-}
-
-sub user_id {
-    return $<;
-}
-
-sub username {
-    my $class = shift;
-    my $username = getpwuid($class->user_id);
-    return $username;
 }
 
 1;
