@@ -357,6 +357,7 @@ sub test4_resource_locking : Test(20) {
                                                     resource_id => $bogus_id,
                                                 ), 'unlock resource_id '. $bogus_id);
     my $init_lsf_job_id = $ENV{'LSB_JOBID'};
+    local $ENV{'LSB_JOBID'};
     $ENV{'LSB_JOBID'} = 1;
     test_locking(successful => 1,
                  message => 'lock resource with bogus lsf_job_id',
