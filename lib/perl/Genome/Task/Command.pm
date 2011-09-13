@@ -6,8 +6,7 @@ use warnings;
 use Genome;
 
 class Genome::Task::Command {
-    is => 'Command',
-    is_abstract => 1,
+    is => 'Command::Tree',
     doc => 'Work with tasks',
 };
 

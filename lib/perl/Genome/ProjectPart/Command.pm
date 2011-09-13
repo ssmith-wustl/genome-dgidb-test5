@@ -6,12 +6,9 @@ use warnings;
 use Genome;
 
 class Genome::ProjectPart::Command {
-    is => 'Command',
-    is_abstract => 1,
-    doc => 'work with ProjectParts',
+    is => 'Command::Tree',
+    doc => 'Work with ProjectParts',
 };
-
-sub is_sub_command_delegator { return 1; }
 
 Genome::Command::Crud->init_sub_commands(
     target_class => 'Genome::ProjectPart',

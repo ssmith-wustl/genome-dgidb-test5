@@ -6,9 +6,8 @@ use warnings;
 use Genome;
 
 class Genome::Sample::Command {
-    is => 'Command',
-    is_abstract => 1,
-    doc => 'work with samples',
+    is => 'Command::Tree',
+    doc => 'Work with samples',
 };
 
 use Genome::Command::Crud;
