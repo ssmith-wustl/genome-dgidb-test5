@@ -71,6 +71,11 @@ class Genome::Model::Tools::Validation::CombineCounts {
         doc => "comma or big-comma separated string of pairs to calculate somatic p-values on e.g. normal,tumor or normal => tumor compares tumor to normal",
     },
     #some sort of pairwise comparison descriptor
+    output_file => {
+        type => 'String',
+        is_optional => 0,
+        doc => 'output file for combined readcounts + somatic status calling',
+    },
 
     #Genome::Statistics::calculate_p_value($normal_read_support, $normal_read_sw_support, $tumor_read_support, $tumor_read_sw_support);
 
@@ -83,6 +88,9 @@ sub execute {
     my @files = split /\s*,\s*/, $self->count_files;
     my @orig_labels = split /\s*,\s*/, $self->file_labels if $self->file_labels;
     my @labels = @orig_labels;  #set this up so we can pop off labels during file parsing
+
+    #open output file for writing
+    my $outfh = new IO::File $self->output_file,"w";
 
     #prepare for VarScan type scoring
     my %comparisons;
@@ -152,34 +160,34 @@ sub execute {
     #spit out a header, cause that's a good idea
 
     my @labeled_calculated_header;
-    print join("\t", @contig_specific_fields); 
+    print $outfh join("\t", @contig_specific_fields); 
     foreach my $label (@orig_labels) {
         my @labeled_fields =  map { "${label}_$_" } @bam_specific_fields;
-        print "\t", join("\t", @labeled_fields);
+        print $outfh "\t", join("\t", @labeled_fields);
 
         push @labeled_calculated_header, map { "${label}_$_" } @sample_calculated_fields;
     }
 
-    print "\t",join("\t", @labeled_calculated_header);
-    print "\t", qw( contig_exclusion_freq );
+    print $outfh "\t",join("\t", @labeled_calculated_header);
+    print $outfh "\t", qw( contig_exclusion_freq );
     
     for(my $i = 0; $i < @comparison_specification; $i += 2) {
         my ($control, $experimental) = @comparison_specification[$i,$i+1];
         my $comparison_label = "${experimental}_vs_${control}_";
-        print "\t", join("\t",map { $comparison_label . $_ } qw{ variant_p_value somatic_p_value status });
+        print $outfh "\t", join("\t",map { $comparison_label . $_ } qw{ variant_p_value somatic_p_value status });
     }
 
-    print "\n";
+    print $outfh "\n";
 
     #now print the data
     foreach my $contig_id (sort keys %counts) {
-        print join("\t",$contig_id, $counts{$contig_id}{contigs_overlapping});
+        print $outfh join("\t",$contig_id, $counts{$contig_id}{contigs_overlapping});
         my %calculated_values;
         my $total_contig_reads = 0;
         my $total_excluded_contig_reads = 0;
         foreach my $label (@orig_labels) {
             my @fields = @{$counts{$contig_id}{$label}}{@bam_specific_fields};
-            print "\t",join("\t",@fields);
+            print $outfh "\t",join("\t",@fields);
             
             #calculate the per sample metrics
             my $coverage = $counts{$contig_id}{$label}->{total_q1_reads_spanning_ref_pos} + $counts{$contig_id}{$label}->{total_q1_reads_spanning_contig_pos};
@@ -196,9 +204,9 @@ sub execute {
         }
         #the following line just uses array slices to maintain the ordering of fields and labels (samples)
         #It is too beautiful as is. Sorry.
-        print "\t",join("\t", map { @$_{@sample_calculated_fields} } @calculated_values{@orig_labels});
+        print $outfh "\t",join("\t", map { @$_{@sample_calculated_fields} } @calculated_values{@orig_labels});
         my $exclusion_rate = $total_contig_reads ? $total_excluded_contig_reads / $total_contig_reads : '-';
-        print "\t", $exclusion_rate;
+        print $outfh "\t", $exclusion_rate;
 
         #do varscan comparisons
         for(my $i = 0; $i < @comparison_specification; $i += 2) {
@@ -208,9 +216,9 @@ sub execute {
             if($exclusion_rate ne '-' && $exclusion_rate > $self->maximum_contig_read_exclusion_rate) {
                 $call{status} = "ExclusionFiltered";
             }
-            print "\t", join("\t", @call{ qw( variant_p_value somatic_p_value status ) });
+            print $outfh "\t", join("\t", @call{ qw( variant_p_value somatic_p_value status ) });
         }
-        print "\n";
+        print $outfh "\n";
     }
     return 1;
 }
