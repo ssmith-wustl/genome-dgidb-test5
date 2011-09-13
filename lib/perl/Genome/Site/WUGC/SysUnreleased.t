@@ -595,6 +595,58 @@ END
     ok($content eq $expected, 'File contained expected contents.');
 }
 
+sub test_get_mem_total_from_proc : Test(2) {
+    my $mem_limit_kb = Genome::Sys->get_mem_total_from_proc;
+    ok(defined $mem_limit_kb, 'mem_limit_kb from proc is defined');
+    ok($mem_limit_kb > 0, 'mem_limit_kb from proc is greater than zero');
+}
+
+sub test_get_mem_limit_from_bjobs : Test(4) {
+    my $bsub = qx(bsub sleep 10);
+    chomp $bsub;
+    ok($bsub, 'got bsub output');
+
+    my ($jobid) = $bsub =~ /^Job <(\d+)>/;
+    ok($jobid, 'got jobid from bsub output');
+    diag "Unable to determine LSF job ID from output ($bsub)." unless $jobid;
+
+    # was getting intermittent failures and I think it was due to delay in
+    # LSF "processing" the job
+    sleep 3;
+
+    local $ENV{LSB_JOBID} = $jobid;
+    my $mem_limit_kb = Genome::Sys->get_mem_limit_from_bjobs;
+    ok(defined $mem_limit_kb, 'mem_limit_kb from bjobs is defined');
+    ok($mem_limit_kb > 0, 'mem_limit_kb from bjobs is greater than zero');
+}
+
+sub test_mem_limit_kb : Test(4) {
+    { # case 1: can't read either
+        *Genome::Sys::get_mem_total_from_proc = sub { '' };
+        *Genome::Sys::get_mem_limit_from_bjobs = sub { '' };
+        my $mem_limit_kb = Genome::Sys->mem_limit_kb;
+        is($mem_limit_kb, undef, 'mem_limit_kb is undef');
+    }
+    { # case 2: not limited by LSF
+        *Genome::Sys::get_mem_total_from_proc = sub { '4194304' };
+        *Genome::Sys::get_mem_limit_from_bjobs = sub { '' };
+        my $mem_limit_kb = Genome::Sys->mem_limit_kb;
+        is($mem_limit_kb, 4194304, 'mem_limit_kb is 4194304');
+    }
+    { # case 3: limited by LSF
+        *Genome::Sys::get_mem_total_from_proc = sub { '4194304' };
+        *Genome::Sys::get_mem_limit_from_bjobs = sub { '2097152' };
+        my $mem_limit_kb = Genome::Sys->mem_limit_kb;
+        is($mem_limit_kb, 2097152, 'mem_limit_kb is 2097152');
+    }
+    { # case 4: limited by LSF but fail to read proc
+        *Genome::Sys::get_mem_total_from_proc = sub { '' };
+        *Genome::Sys::get_mem_limit_from_bjobs = sub { '2097152' };
+        my $mem_limit_kb = Genome::Sys->mem_limit_kb;
+        is($mem_limit_kb, 2097152, 'mem_limit_kb is 2097152');
+    }
+}
+
 =pod
 
 =head1 Tests
