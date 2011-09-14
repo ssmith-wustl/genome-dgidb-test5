@@ -92,6 +92,8 @@ sub execute {
 
     $self->merge_headers; 
 
+    $self->add_sample_header_tags;
+
     $self->set_sample_cols;
 
     $self->process_format;
@@ -128,11 +130,14 @@ sub process_input_list {
     my %handles;
     while(my $line = $fh->getline){
         chomp $line;
-        my ($path,$source_name) = split /\s+/,$line;
+        my ($path,$source_name,$build_id) = split /\s+/,$line;
         if(exists($paths{$source_name})){
             die $self->error_message("Already have a record for: ".$source_name);
         }
-        $paths{$source_name} = $path;
+        $paths{$source_name}{path} = $path;
+        if(defined($build_id)){
+            $paths{$source_name}{build_id} = $build_id;
+        }
         if($self->use_gzip_files){
             $handles{$source_name} = Genome::Sys->open_gzip_file_for_reading($path);
         } else {
@@ -257,7 +262,9 @@ sub merge_headers {
                             }
 
                         } elsif($tag =~ m/source/){
-                            $header{$tag} .= ",".$data;
+                            unless($header{$tag} =~ m/$data/){
+                                $header{$tag} .= ",".$data;
+                            }
                         } elsif ($tag =~ m/fileformat/){
                             die $self->error_message("Cannot continue, trying to merge files with different VCF versions! .. see header tags \"fileformat\"");
                         }
@@ -320,6 +327,17 @@ sub merge_headers {
     return 1;
 }
 
+sub add_sample_header_tags {
+    my $self = shift;
+    my $header = $self->_header;
+    my $files = $self->_vcf_list;
+    for my $sample (nsort(keys(%{$files}))){
+        my $line = "<ID=".$sample.",Build_ID=".$files->{$sample}{build_id}.",Description=\"TGI build_id to sample map\">";
+        my $key = $sample.",Number";
+        $header->{SAMPLE}{$key} = $line;
+    }
+    return 1;
+}
 
 
 # Grab a hash of the header from $self->_header and print it to the _output_fh
@@ -334,6 +352,7 @@ sub print_header {
     $self->print_and_delete_from_hash($h,"source",$fh);
     $self->print_and_delete_from_hash($h,"reference",$fh);
     $self->print_and_delete_from_hash($h,"phasing",$fh);
+    $self->print_and_delete_from_hash($h,"SAMPLE",$fh);
     $self->print_and_delete_from_hash($h,"FILTER",$fh);
     $self->print_and_delete_from_hash($h,"FORMAT",$fh);
     $self->print_and_delete_from_hash($h,"INFO",$fh) if defined $h->{INFO};
@@ -447,7 +466,6 @@ sub process_records {
         } else {
             my $line = $self->merge_records(\@answer,\%lines);
             $self->print_merged($line, \@answer);
-            #print $ofh "MERGE HAPPENS HERE!\n";
         }
 
         $self->get_lines(\%lines,\@answer);
@@ -510,9 +528,8 @@ sub print_record {
 sub print_merged {
     my $self = shift;
     my $m = shift;
-    my %m = %{ $m };
     my $fh = $self->_output_fh;
-    my $line = join("\t",($m{CHROM},$m{POS},$m{ID},$m{REF},$m{ALT},$m{QUAL},$m{FILTER},$m{INFO},$m{FORMAT},$m{SAMPLE}));
+    my $line = join("\t",($m->{CHROM},$m->{POS},$m->{ID},$m->{REF},$m->{ALT},$m->{QUAL},$m->{FILTER},$m->{INFO},$m->{FORMAT},$m->{SAMPLE}));
     print $fh $line . "\n";
 
     return 1;
@@ -721,7 +738,7 @@ sub adjust_sample_string {
         push @output_sample, $formats{$field};
     }
 
-    my $sample_string = join(":",@output_sample);
+    my $sample_string = scalar(@output_sample)>1 ? join(":",@output_sample) : $output_sample[0];
 
     my @string = ($sample_string);
     my @source = ($source);

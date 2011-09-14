@@ -136,7 +136,7 @@ sub execute {
 
         my @fields = split("\t",$line);
         if($self->bed_input) {
-            unless($fields[1]==$fields[2]) { #in bed, this would be an insertion and we should not naively ++ the start
+            unless($fields[3] =~ /\*/) { #in bed, this would be an insertion or deletion and we should not naively ++ the start
                 $fields[1]+=1;
             }
         }

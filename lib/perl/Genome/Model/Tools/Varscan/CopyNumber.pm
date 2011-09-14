@@ -137,10 +137,11 @@ sub execute {                               # replace with real execution logic.
 			$tumor_pileup = $self->samtools_path . " mpileup -f $reference -q 10 $tumor_bam";			
 		}
 		
+		my $mpileup = $self->samtools_path . " mpileup -f $reference -q 10 $normal_bam $tumor_bam";		
 #		my $cmd = $self->java_command_line("copynumber <\($normal_pileup\) <\($tumor_pileup\) $output --data-ratio $normal_tumor_ratio $varscan_params");
 #		my $cmd = "java -classpath ~dkoboldt/Software/VarScan/Test net.sf.varscan.VarScan copynumber <\($normal_pileup\) <\($tumor_pileup\) $output --data-ratio $normal_tumor_ratio $varscan_params";
-		my $cmd = $self->java_command_line(" copynumber <\($normal_pileup\) <\($tumor_pileup\) $output --data-ratio $normal_tumor_ratio $varscan_params");
-
+		#my $cmd = $self->java_command_line(" copynumber <\($normal_pileup\) <\($tumor_pileup\) $output --data-ratio $normal_tumor_ratio $varscan_params");
+		my $cmd = "java -classpath ~dkoboldt/Software/VarScan net.sf.varscan.VarScan copynumber <\($mpileup\) $output --mpileup 1 --data-ratio $normal_tumor_ratio $varscan_params";
 		## Run Varscan ##
 		if($self->heap_space)
 		{
@@ -148,7 +149,12 @@ sub execute {                               # replace with real execution logic.
 		}
 
 		print "Running $cmd\n";
-		system($cmd);
+		open(SCRIPT, ">$output.sh") or die "Can't open outfile: $!\n";
+		print SCRIPT "#!/gsc/bin/sh\n";
+		print SCRIPT "$cmd\n";
+		close(SCRIPT);
+		system("bash $output.sh");
+		#system($cmd);
 
 	
 	}
@@ -228,7 +234,7 @@ sub get_flagstat
 sub avg_read_len
 {
 	my $FileName = shift(@_);
-
+	return(100);
 	my $len_sum = my $len_num = 0;
 	my $read_seqs = `samtools view $FileName 2>/dev/null | head -10000 | cut -f 10`;
 

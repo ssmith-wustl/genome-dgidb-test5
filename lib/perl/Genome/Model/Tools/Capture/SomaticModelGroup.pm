@@ -280,18 +280,30 @@ sub execute {                               # replace with real execution logic.
 						{
 							mkdir($loh_dir) or die "Can't create output directory: $!\n";
 						}
+                                                
+                                                ## Determine if we already have results ##
+                                                
+                                                my $loh_output_file = "$loh_dir/varScan.loh.snp";
+                                                if(-e $loh_output_file)
+                                                {
+                                                        warn "Skipping $tumor_sample-$normal_sample because file exists...\n";
+                                                }
+                                                else
+                                                {
+                                                        ## Get BAM Files ##
+        
+                                                        my $tumor_model_dir = $tumor_model->last_succeeded_build_directory;
+                                                        my $tumor_bam = `ls $tumor_model_dir/alignments/*.bam`; chomp($tumor_bam);
+        
+                                                        my $normal_model_dir = $normal_model->last_succeeded_build_directory;
+                                                        my $normal_bam = `ls $normal_model_dir/alignments/*.bam`; chomp($normal_bam);
+        
+                                                        ## Output LOH Files ##
+                                                        
+                                                        output_loh_files($self, $last_build_dir, $loh_dir, $normal_bam, $tumor_bam);                                                        
+                                                }
 
-						## Get BAM Files ##
 
-						my $tumor_model_dir = $tumor_model->last_succeeded_build_directory;
-						my $tumor_bam = `ls $tumor_model_dir/alignments/*.bam`; chomp($tumor_bam);
-
-						my $normal_model_dir = $normal_model->last_succeeded_build_directory;
-						my $normal_bam = `ls $normal_model_dir/alignments/*.bam`; chomp($normal_bam);
-
-						## Output LOH Files ##
-
-						output_loh_files($self, $last_build_dir, $loh_dir, $normal_bam, $tumor_bam);
 #						$debug_counter++;
 #						exit(0) if($debug_counter >= 10);
 					}
@@ -307,9 +319,17 @@ sub execute {                               # replace with real execution logic.
 						
 						if(-d $loh_dir)
 						{
-							process_loh($loh_dir);
-							sleep(1);
-						}
+                                                        my $merged_output_file = "$loh_dir/varScan.merged.snp";
+                                                        if(-e $merged_output_file)
+                                                        {
+                                                                warn "Skipping $tumor_sample-$normal_sample because merged file exists...\n";       
+                                                        }
+                                                        else
+                                                        {
+        							process_loh($loh_dir);
+                						sleep(1);
+                                                        }
+                                                }
 
 					}
 					
@@ -400,6 +420,7 @@ sub execute {                               # replace with real execution logic.
 						my $output_dir = $self->varscan_copynumber . "/" . $tumor_sample . "-" . $normal_sample;
 						mkdir($output_dir) if(!(-d $output_dir));
 						my $cmd = "gmt varscan copy-number --output $output_dir/varScan.output --normal-bam $normal_bam --tumor-bam $tumor_bam";
+						$cmd .= " --reference " . $self->reference if($self->reference);
 						if(!(-e "$output_dir/varScan.output.copynumber"))
 						{
 							system("bsub -q long -R\"select[model!=Opteron250 && mem>4000]\" $cmd");							

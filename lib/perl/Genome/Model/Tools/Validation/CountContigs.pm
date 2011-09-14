@@ -44,7 +44,11 @@ class Genome::Model::Tools::Validation::CountContigs {
         doc => 'Maximum mismatch quality sum of a read in order for it to be counted',
         is_optional => 0,
     },
-
+    output_file => {
+        type => 'String',
+        doc => 'output file of readcounts for the sample',
+        is_optional => 0,
+    },
     ]
 };
 
@@ -52,6 +56,10 @@ sub execute {
     my $self=shift;
     $DB::single = 1;
     my $file = $self->contig_fasta_file;
+    
+    #open output filehandle
+    my $output_file = $self->output_file;
+    my $out = new IO::File $output_file,"w";
 
     #TODO Add checks on the files and architecture
     unless (POSIX::uname =~ /64/) {
@@ -74,7 +82,7 @@ sub execute {
     }
 
     #spit out a header, cause that's a good idea
-    print join("\t",qw( contig_id contigs_overlapping ref_clipped_reads_excluded ref_paralog_reads_excluded total_reads_crossing_ref_pos total_q1_reads_crossing_ref_pos total_q1_reads_spanning_ref_pos contig_clipped_reads_excluded contig_paralog_reads_excluded total_reads_crossing_contig_pos total_q1_reads_crossing_contig_pos total_q1_reads_spanning_contig_pos )), "\n"; 
+    print $out join("\t",qw( contig_id contigs_overlapping ref_clipped_reads_excluded ref_paralog_reads_excluded total_reads_crossing_ref_pos total_q1_reads_crossing_ref_pos total_q1_reads_spanning_ref_pos contig_clipped_reads_excluded contig_paralog_reads_excluded total_reads_crossing_contig_pos total_q1_reads_crossing_contig_pos total_q1_reads_spanning_contig_pos )), "\n"; 
     #scan through all the fasta headers and grab counts based on each predicted variant and denoted reference
     while(my $line = $fh->getline) {
         next unless $line =~ /^>/;
@@ -103,7 +111,7 @@ sub execute {
         my $ref_count = $self->_count_across_range($self->bam_file,$ref_count_chr, $ref_count_start, $ref_count_stop);
         my $contig_count = $self->_count_across_range($self->bam_file,$contig_name, $contig_count_start, $contig_count_stop);
 
-        print join("\t",$fields[0],$has_overlap,@$ref_count{ qw( clipped_reads paralog_reads total_reads total_reads_above_q1 spanning_reads_q1 ) }, @$contig_count{ qw( clipped_reads paralog_reads total_reads total_reads_above_q1 spanning_reads_q1 ) }), "\n";
+        print $out join("\t",$fields[0],$has_overlap,@$ref_count{ qw( clipped_reads paralog_reads total_reads total_reads_above_q1 spanning_reads_q1 ) }, @$contig_count{ qw( clipped_reads paralog_reads total_reads total_reads_above_q1 spanning_reads_q1 ) }), "\n";
     }
 
     return 1;

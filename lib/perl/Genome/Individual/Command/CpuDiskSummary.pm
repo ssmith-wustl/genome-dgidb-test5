@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 
 class Genome::Individual::Command::CpuDiskSummary {
-    is => 'Genome::Command::Base',
+    is => 'Command::V2',
     has => [
         patients    => { is => 'Genome::Individual', 
                         shell_args_position => 1,

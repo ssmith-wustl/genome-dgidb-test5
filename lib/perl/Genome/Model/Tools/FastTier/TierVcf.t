@@ -36,4 +36,14 @@ my $tier_vcf = Genome::Model::Tools::FastTier::TierVcf->create(
 ok($tier_vcf, 'created TierVcf object');
 ok($tier_vcf->execute(), 'executed TierVcf command');
 
-is(compare($vcf_output_file, $expected_file), 0, "$vcf_output_file output matched expected output");
+my $vcf_fh = Genome::Sys->open_gzip_file_for_reading($vcf_output_file);
+my @lines = <$vcf_fh>;
+
+my $expected_vcf_fh = Genome::Sys->open_gzip_file_for_reading($expected_file);
+my @expected_lines = <$expected_vcf_fh>;
+
+my $re = qr(^##source_\d{8}\.1=);
+@lines = grep($_ !~ $re, @lines);
+@expected_lines = grep($_ !~ $re, @expected_lines);
+
+is_deeply(\@lines, \@expected_lines, "$vcf_output_file output matched expected output");

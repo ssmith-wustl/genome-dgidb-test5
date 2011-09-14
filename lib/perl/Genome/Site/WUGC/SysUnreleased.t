@@ -357,6 +357,7 @@ sub test4_resource_locking : Test(20) {
                                                     resource_id => $bogus_id,
                                                 ), 'unlock resource_id '. $bogus_id);
     my $init_lsf_job_id = $ENV{'LSB_JOBID'};
+    local $ENV{'LSB_JOBID'};
     $ENV{'LSB_JOBID'} = 1;
     test_locking(successful => 1,
                  message => 'lock resource with bogus lsf_job_id',
@@ -466,7 +467,8 @@ sub do_race_lock {
 
     my $lock = Genome::Sys->lock_resource(
         resource_lock => $resource,
-        block_sleep   => 1
+        block_sleep   => 1,
+        wait_announce_interval => 30,
     );
     unless ($lock) {
         print_event($fh, "LOCK_FAIL", "Failed to get a lock" );
@@ -593,6 +595,49 @@ END
     my $content = <$file>;
     print $expected;
     ok($content eq $expected, 'File contained expected contents.');
+}
+
+sub test_get_mem_total_from_proc : Test(1) {
+    my $mem_limit_kb = Genome::Sys->get_mem_total_from_proc;
+    ok(defined $mem_limit_kb, 'mem_limit_kb from proc is defined');
+}
+
+sub test_get_mem_limit_from_bjobs : Test(1) {
+    my $mem_limit_kb = Genome::Sys->get_mem_limit_from_bjobs;
+    if ($ENV{LSB_JOBID}) {
+        ok(defined $mem_limit_kb, 'mem_limit_kb from bjobs (' . $ENV{LSB_JOBID} . ') is defined');
+    }
+    else {
+        ok(! defined $mem_limit_kb, 'mem_limit_kb from bjobs is not defined');
+    }
+}
+
+sub test_mem_limit_kb : Test(4) {
+    local $ENV{LSB_JOBID} = 1;
+    { # case 1: can't read either
+        *Genome::Sys::get_mem_total_from_proc = sub { '' };
+        *Genome::Sys::get_mem_limit_from_bjobs = sub { '' };
+        my $mem_limit_kb = Genome::Sys->mem_limit_kb;
+        is($mem_limit_kb, undef, 'mem_limit_kb is undef');
+    }
+    { # case 2: not limited by LSF
+        *Genome::Sys::get_mem_total_from_proc = sub { '4194304' };
+        *Genome::Sys::get_mem_limit_from_bjobs = sub { '' };
+        my $mem_limit_kb = Genome::Sys->mem_limit_kb;
+        is($mem_limit_kb, 4194304, 'mem_limit_kb is 4194304');
+    }
+    { # case 3: limited by LSF
+        *Genome::Sys::get_mem_total_from_proc = sub { '4194304' };
+        *Genome::Sys::get_mem_limit_from_bjobs = sub { '2097152' };
+        my $mem_limit_kb = Genome::Sys->mem_limit_kb;
+        is($mem_limit_kb, 2097152, 'mem_limit_kb is 2097152');
+    }
+    { # case 4: limited by LSF but fail to read proc
+        *Genome::Sys::get_mem_total_from_proc = sub { '' };
+        *Genome::Sys::get_mem_limit_from_bjobs = sub { '2097152' };
+        my $mem_limit_kb = Genome::Sys->mem_limit_kb;
+        is($mem_limit_kb, 2097152, 'mem_limit_kb is 2097152');
+    }
 }
 
 =pod

@@ -9,7 +9,7 @@ use Data::Dumper;
 require File::Basename;
 
 class Genome::Command {
-    is => 'Genome::Command::Base',
+    is => 'Command::Tree',
 };
          
 my @SUB_COMMANDS = qw/
@@ -18,6 +18,7 @@ my @SUB_COMMANDS = qw/
     individual
     instrument-data
     library
+    notable
     model
     model-group
     population-group
@@ -53,26 +54,6 @@ for my $class ( @SUB_COMMAND_CLASSES ) {
     die $@ if $@; 
 }
 
-sub execute_with_shell_params_and_exit {
-    my $class = shift;
-    if ($ARGV[0] && $ARGV[0] eq 'tools') {
-        # hack for our special lopsided namespace
-        $Command::entry_point_class = 'Genome::Model::Tools';
-        $Command::entry_point_bin = 'genome tools';
-    }
-    return $class->SUPER::execute_with_shell_params_and_exit(@_);
-}
-
-#< Command Naming >#
-sub command_name {
-    return 'genome';
-}
-
-sub command_name_brief {
-    return 'genome';
-}
-
-#< Sub Command Stuff >#
 sub is_sub_command_delegator {
     return 1;
 }
@@ -92,7 +73,3 @@ sub class_for_sub_command {
 }
 
 1;
-
-#$HeadURL$
-#$Id$
-

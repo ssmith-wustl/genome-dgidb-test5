@@ -119,7 +119,17 @@ sub _generate_content {
                 if (defined($indexes->{$lane}->{$sequence})) {
                     my $fwd_bases = $indexes->{$lane}->{$sequence}->fwd_kilobases_read;
                     if (defined($fwd_bases)) {
-                        $percent_node->addChild( $doc->createTextNode( sprintf("%.2f", ($fwd_bases / $total_read) * 100)) );
+                        my $percentage;
+                        if ($fwd_bases == 0) {
+                            $percentage = "0";
+                        }
+                        elsif ($fwd_bases != 0 and $total_read == 0) {
+                            $percentage = "ERROR";
+                        }
+                        else {
+                            $percentage = sprintf("%.2f", ($fwd_bases / $total_read) * 100);
+                        }
+                        $percent_node->addChild($doc->createTextNode($percentage));
                     } else {
                         $percent_node->addChild( $doc->createTextNode( "0" ) );
                     }

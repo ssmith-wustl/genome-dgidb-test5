@@ -112,6 +112,7 @@ sub get_lock {
         resource_lock => '/gsc/var/lock/allocation/volume' . $modified_mount,
         max_try => $tries,
         block_sleep => 1,
+        wait_announce_interval => 10,
     );
     return $volume_lock;
 }
