@@ -364,6 +364,9 @@ sub execute {                               # replace with real execution logic.
 	
 						my $tier1_gatk = $last_build_dir . "/gatk.output.indel.formatted.Somatic.tier1";
 						my $tier1_indels = $last_build_dir . "/merged.somatic.indel.filter.tier1";
+						## Grab HC Indels instead if possible ##
+						$tier1_indels .= ".hc" if(-e "$tier1_indels.hc"); 
+						
 						my $output_tier1_indels = $self->output_review . "/" . $subject_name . ".$model_id.Indels.tsv";
 						output_indels_for_review($model_id, $tier1_indels, $tier1_gatk, $output_tier1_indels, $subject_name, $normal_bam, $tumor_bam);
 					}
@@ -994,7 +997,7 @@ sub output_snvs_for_review
 
 sub output_indels_for_review
 {
-	my ($model_id, $variant_file1, $variant_file2, $output_file) = @_;
+	my ($model_id, $variant_file1, $variant_file2, $output_file, $subject_name, $normal_bam, $tumor_bam) = @_;
 	
 	my %indels = ();
 	
@@ -1023,7 +1026,7 @@ sub output_indels_for_review
 	}
 
 
-	if(-e $variant_file2)
+	if($variant_file2 && -e $variant_file2)
 	{
 		## Parse the Tier 1 SNVs file ##
 	
@@ -1049,6 +1052,8 @@ sub output_indels_for_review
 	## Open the output file ##
 	
 	open(OUTFILE, ">$output_file") or die "Can't open output file: $!\n";
+	print OUTFILE join("\t", "TUMOR", $tumor_bam) . "\n";
+	print OUTFILE join("\t", "NORMAL", $normal_bam) . "\n";
 	print OUTFILE "chrom\tchr_start\tchr_stop\tref\tvar\tcode\tnote\n";
 
 	foreach my $key (sort byChrPos keys %indels)
@@ -1076,7 +1081,7 @@ sub output_indels_for_review
 			$include_flag = 0;
 			$stats{'review_indels_already_wildtype'}++;
 		}
-		elsif($germline_sites{$variant_key} && $germline_sites{$variant_key} >= 3)
+		elsif($germline_sites{$variant_key}) # && $germline_sites{$variant_key} >= 3)
 		{
 			$include_flag = 0;
 			$stats{'review_indels_already_germline'}++;
