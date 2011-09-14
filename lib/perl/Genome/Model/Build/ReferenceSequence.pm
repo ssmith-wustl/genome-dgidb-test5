@@ -186,6 +186,9 @@ sub create {
     my $self = shift;
     my $build = $self->SUPER::create(@_);
 
+    # Let's store the name as an input instead of relying on calculated properties
+    $build->name($build->calculated_name);
+
     if ($build->generate_sequence_uri) {
         $build->sequence_uri($build->external_url);
     }
@@ -193,9 +196,6 @@ sub create {
     if ($build->derived_from) {
         $build->coordinates_from($build->derived_from_root);
     }
-
-    # Let's store the name as an input instead of relying on calculated properties
-    $build->name($build->calculated_name);
 
     # set this for the assembly name as well if there is not one already.
     if (!$build->assembly_name) {

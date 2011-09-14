@@ -41,12 +41,12 @@ sub execute {
     }
 
     my $old_name = $self->from->name;
-    $self->from->name( $self->to );
+    $self->from->rename( $self->to );
 
     unless ( $self->to eq $self->from->name ) {
         $self->error_message(
             sprintf(
-                'Could not rename model (<Id> %s <Name> %s) to new name (%s) for unkown reasons', 
+                'Could not rename model group (<Id> %s <Name> %s) to new name (%s)', 
                 $self->from->id, 
                 $self->from->name, 
                 $self->to,
@@ -54,13 +54,6 @@ sub execute {
         );
         return;
     }
-
-    printf(
-        "Renamed model (<Id> %s) from %s to %s\n",
-        $self->from->id, 
-        $old_name,
-        $self->from->name,
-    );
 
     return 1;
 }

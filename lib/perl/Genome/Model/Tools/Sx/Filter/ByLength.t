@@ -14,7 +14,7 @@ use_ok('Genome::Model::Tools::Sx::Filter::ByLength') or die;
 # create fail
 ok(!Genome::Model::Tools::Sx::Filter::ByLength->execute(), 'execute w/o filter length');
 ok(!Genome::Model::Tools::Sx::Filter::ByLength->execute(filter_length => 'all'), 'execute w/ filter length => all');
-ok(!Genome::Model::Tools::Sx::Filter::ByLength->execute(filter_length => 0), 'execute w/ filter length => 0');
+ok(!Genome::Model::Tools::Sx::Filter::ByLength->execute(filter_length => -1), 'execute w/ filter length less than 0');
 
 # Files
 my $dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Sx';

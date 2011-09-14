@@ -272,6 +272,40 @@ sub open_gzip_file_for_writing {
     return $self->_open_file($pipe);
 }
 
+sub open_file_for_overwriting {
+    my ($self, $file) = @_;
+
+    if ( not defined $file ) {
+        Carp::croak('Cannot open file for over writing. No file given.');
+    }
+
+    if ($file eq '-') {
+        Carp::croak("Cannot open STDOUT (-) for over writing.");
+    }
+
+    if ( -d $file ) {
+        Carp::croak("Cannot open file ($file) for over writing. It is a directory.");
+    }
+
+    if ( -e $file ) {
+        unlink $file;
+    }
+
+    my ($name, $dir) = File::Basename::fileparse($file);
+    unless ( $dir ) {
+        Carp::croak("Cannot open file ($file) for over writing. Failed to get directory from file ($file).");
+    }
+
+    unless ( -w $dir ) {
+        Carp::croak("Cannot open file ($file) for over writing. Do not have write access to directory ($dir).");
+    }
+
+    my $fh = IO::File->new($file, 'w');
+    return $fh if $fh;
+
+    Carp::croak("Failed to open file ($file) for over write: $!");
+}
+
 sub copy_file {
     my ($self, $file, $dest) = @_;
 
@@ -385,6 +419,7 @@ sub open_directory {
     my $dh = IO::Dir->new($directory);
 
     unless ($dh) {
+        $directory ||= '';
         Carp::croak("Can't open_directory $directory: $!");
     }
     return $dh;

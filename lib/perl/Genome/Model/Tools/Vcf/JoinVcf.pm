@@ -375,6 +375,9 @@ sub process_records {
 
     #Then dump the remaining records from the non EOF file into the output
     my $remaining_fh = ($done eq 'a') ? $bfh : $afh;
+    #Make sure to then switch the filehandle label... 
+    $done = ($done eq 'a') ? 'b' : 'a';
+
     my ($chr,$pos);
     while(my $line = $remaining_fh->getline){
         chomp $line;

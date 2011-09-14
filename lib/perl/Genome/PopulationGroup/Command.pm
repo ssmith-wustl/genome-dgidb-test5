@@ -6,12 +6,9 @@ use warnings;
 use Genome;
       
 class Genome::PopulationGroup::Command {
-    is => 'Command',
-    is_abstract => 1,
-    doc => 'work with population groups',
+    is => 'Command::Tree',
+    doc => 'Work with population groups',
 };
-
-sub is_sub_command_delegator { return 1; }
 
 use Genome::Command::Crud;
 Genome::Command::Crud->init_sub_commands(

@@ -686,7 +686,8 @@ sub inputs_have_compatible_reference {
         my $object_reference_sequence = $object->$input_reference_method;
         next unless $object_reference_sequence;
 
-        unless($object_reference_sequence->is_compatible_with($build_reference_sequence)) {
+        unless($object_reference_sequence->is_compatible_with($build_reference_sequence)
+                or $self->reference_being_replaced_for_input($input)) {
             push @incompatible_properties, $input->name;
         }
     }
@@ -701,6 +702,15 @@ sub inputs_have_compatible_reference {
     }
 
     return $tag;
+}
+
+sub reference_being_replaced_for_input {
+    my $self = shift;
+    my $input = shift;
+
+    #for overriding in subclasses--by default none are replaced
+    #(example of when this would be true: an imported BAM being realigned)
+    return;
 }
 
 

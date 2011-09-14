@@ -58,8 +58,10 @@ my $instrument_data = Genome::InstrumentData::454->create(
 ok($instrument_data, 'create inst data');
 no warnings qw/ once redefine /;
 *Genome::InstrumentData::454::dump_fasta_file = sub{ return $inst_data_dir.'/-7777.fasta'; };
+*Genome::InstrumentData::454::dump_sanger_fastq_files = sub{ return $inst_data_dir.'/-7777.fastq'; };
 use warnings;
 ok(-s $instrument_data->dump_fasta_file, 'fasta file');
+ok(-s $instrument_data->dump_sanger_fastq_files, 'fastq file');
 
 # pp MC16s-WashU-454-RDP2.1
 my $pp = Genome::ProcessingProfile->get(2278045);

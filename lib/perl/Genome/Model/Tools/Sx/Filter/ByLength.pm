@@ -12,7 +12,7 @@ class Genome::Model::Tools::Sx::Filter::ByLength {
     has => [
         filter_length => {
             is => 'Number',
-            doc => 'The number of bases to filter',
+            doc => 'The minimum length of a sequence',
         }    
     ],
 };
@@ -30,11 +30,11 @@ sub __errors__ {
     return @errors if @errors;
 
     my $length = $self->filter_length;
-    if ( defined $length and ( $length !~ /^$RE{num}{int}$/ or $length < 1 ) ) {
+    if ( defined $length and ( $length !~ /^$RE{num}{int}$/ or $length < 0 ) ) {
         push @errors, UR::Object::Tag->create(
             type => 'invalid',
             properties => [qw/ filter_length /],
-            desc => "Filter length ($length) must be a positive integer greater than 1",
+            desc => "Filter length ($length) must be a greater than or equal to 0",
         );
     }
 

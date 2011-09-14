@@ -98,7 +98,8 @@ sub parse_line {
         die ("Insertion/deletion type not recognized: ".$alt_alleles[0]);
     }
 
-    ($chr, $pos, $ref_allele, $alt_allele) = $self->normalize_indel_location($chr, $pos, $ref_allele, $alt_allele);
+    #TODO this is turned off for now because it interferes with applying filters (bed coordinates will be different once left shifted)
+    # ($chr, $pos, $ref_allele, $alt_allele) = $self->normalize_indel_location($chr, $pos, $ref_allele, $alt_allele);
     
     my $GT;
     my @indel_string_split = split(/\//, $indel_string);
