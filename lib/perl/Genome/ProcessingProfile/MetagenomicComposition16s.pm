@@ -9,9 +9,10 @@ class Genome::ProcessingProfile::MetagenomicComposition16s {
     is => 'Genome::ProcessingProfile::Staged',
     has_param => [
         # About
-        amplicon_size => {
-            is => 'Integer',
-            doc => 'Minimum amplicon size.  If an amplicon is less than this length, it will not be used.',
+        amplicon_processor => {
+            is => 'Text',
+            is_optional => 1,
+            doc => 'A string of paramters to process amplicons by',
         },
         sequencing_center => {
             is => 'Text',
@@ -46,7 +47,6 @@ class Genome::ProcessingProfile::MetagenomicComposition16s {
             is => 'Text',
             is_optional => 1,
             doc => 'A string of parameters to pass to the assembler',
-            is_optional => 1,
         },
         #< Classifier >#
         classifier => {
@@ -61,7 +61,6 @@ class Genome::ProcessingProfile::MetagenomicComposition16s {
             is => 'Text',
             is_optional => 1,
             doc => 'A string of parameters to pass to the classifier.',
-            is_optional => 1,
         },
     ],
 };
@@ -121,6 +120,7 @@ sub _operation_params_as_hash {
     return unless $params_string; # ok 
 
     my %params = Genome::Utility::Text::param_string_to_hash($params_string);
+
     unless ( %params ) { # not ok
         die $self->error_message("Malformed $operation params: $params_string");
     }
@@ -134,6 +134,27 @@ sub assembler_params_as_hash {
 
 sub classifier_params_as_hash {
     return $_[0]->_operation_params_as_hash('classifier');
+}
+
+sub amplicon_processor_commands {
+    my $self = shift;
+    
+    my $command_string = $self->amplicon_processor;
+    return unless $command_string;
+    my @valid_commands;
+    my @commands = split( /\|/, $command_string );
+    for my $command ( @commands ) {
+        $command =~ s/^\s+//;
+        $command =~ s/\s+$//;
+        $command = "gmt sx $command";
+        my $valid = Genome::Model::Tools::Sx::Validate->validate_command( $command );
+        if ( not $valid ) {
+            die $self->error_message("Invalid amplicon processor command: $command");
+        }
+        push @valid_commands, $command;
+    }
+
+    return @valid_commands;
 }
 
 1;

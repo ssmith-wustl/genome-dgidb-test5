@@ -15,7 +15,7 @@ use_ok('Genome::ProcessingProfile::MetagenomicComposition16s') or die;
 my $pp = Genome::ProcessingProfile->create(
     type_name => 'metagenomic composition 16s',
     name => '16S Test Sanger',
-    amplicon_size => 1150,
+    amplicon_processor => 'filter by-min-length --length 1150',
     sequencing_center => 'gsc',
     sequencing_platform => 'sanger',
     assembler => 'phred_phrap',
@@ -25,6 +25,13 @@ my $pp = Genome::ProcessingProfile->create(
 );
 ok($pp, 'create pp') or die;
 isa_ok($pp, 'Genome::ProcessingProfile::MetagenomicComposition16s');
+
+my @amplicon_processor_commands = $pp->amplicon_processor_commands;
+is_deeply(
+    @amplicon_processor_commands,
+    ('gmt sx filter by-min-length --length 1150'),
+    'amplicon processor commands'
+);
 
 my %assembler_params = $pp->assembler_params_as_hash;
 is_deeply(

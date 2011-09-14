@@ -791,8 +791,9 @@ sub prepare_instrument_data {
         push @output, 'file='.$processed_fasta_file.':qual_file='.$processed_qual_file.':type=phred'; 
     }
 
-    if ( my $min_length = $self->processing_profile->amplicon_size ) {
-        push @cmd_parts, "gmt sx filter by-min-length --length $min_length";
+    #add amplicon processing sx commands
+    if ( $self->processing_profile->amplicon_processor ) {
+        push @cmd_parts, $self->processing_profile->amplicon_processor_commands;
     }
 
     # Add input and metrics to first cmd
