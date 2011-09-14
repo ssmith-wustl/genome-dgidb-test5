@@ -5,14 +5,19 @@ use warnings;
 
 use above "Genome";
 
-use Test::More tests => 4;
+use Test::More;
 use File::Temp;
 use File::Copy;
 use File::Compare;
 
-BEGIN {
-    use_ok('Genome::Model::Tools::Sam::Coverage');
+if (Genome::Config->arch_os ne 'x86_64') {
+    plan skip_all => 'requires 64-bit machine';
 }
+else {
+    plan tests => 4;
+}
+
+use_ok('Genome::Model::Tools::Sam::Coverage');
 
 my $data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Sam-Coverage';
 my $temp_path = '/gsc/var/cache/testsuite/running_testsuites/';

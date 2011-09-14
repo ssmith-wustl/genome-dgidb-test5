@@ -6,12 +6,17 @@ use warnings;
 use above "Genome";
 
 use YAML;
-use Test::More tests => 9;
+use Test::More;
 use File::Compare;
 
-BEGIN {
-    use_ok('Genome::Model::Tools::Sam::Flagstat');
+if (Genome::Config->arch_os ne 'x86_64') {
+    plan skip_all => 'requires 64-bit machine';
 }
+else {
+    plan tests => 9;
+}
+
+use_ok('Genome::Model::Tools::Sam::Flagstat');
 
 my $data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Sam-Flagstat';
 my $tmp_dir  = Genome::Sys->create_temp_directory(Genome::Sys->username . "Flagstat_XXXXXX");

@@ -6,6 +6,10 @@ use warnings;
 use above 'Genome';
 use Test::More;
 
+if (Genome::Config->arch_os ne 'x86_64') {
+    plan skip_all => 'requires 64-bit machine';
+}
+
 my $class = 'Genome::Model::Tools::TigraSv';
 
 use_ok($class);

@@ -14,8 +14,9 @@ require File::Compare;
 use File::Temp;
 use Test::More;
 
-my $machine_hardware = `uname -m`;
-like($machine_hardware, qr/x86_64/, 'on 64 bit machine') or die;
+if (Genome::Config->arch_os ne 'x86_64') {
+    plan skip_all => 'requires 64-bit machine';
+}
 
 use_ok('Genome::Model::Build::DeNovoAssembly::Soap') or die;
 

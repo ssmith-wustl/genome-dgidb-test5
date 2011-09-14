@@ -10,7 +10,14 @@ use warnings;
 
 use above 'Genome';
 
-use Test::More tests => 23;
+use Test::More;
+
+if (Genome::Config->arch_os ne 'x86_64') {
+    plan skip_all => 'requires 64-bit machine';
+}
+else {
+    plan tests => 23;
+}
 
 # Override lock name because if people cancel tests locks don't get cleaned up.
 *Genome::SoftwareResult::_resolve_lock_name = sub {

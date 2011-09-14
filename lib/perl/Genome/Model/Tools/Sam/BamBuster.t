@@ -3,10 +3,17 @@
 use strict;
 use warnings;
 use above "Genome";  # forces a 'use lib' when run directly from the cmdline
-use Test::More tests => 10;
+use Test::More;
 use FindBin qw($Bin);
 use File::Path;
 use File::Basename;
+
+if (Genome::Config->arch_os ne 'x86_64') {
+    plan skip_all => 'requires 64-bit machine';
+}
+else {
+    plan tests => 10;
+}
 
 my $datadir = $Bin . '/BamBuster.t.d';
 

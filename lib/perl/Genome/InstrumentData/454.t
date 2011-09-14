@@ -20,7 +20,9 @@ require IO::File;
 require Test::MockObject;
 use Test::More;
 
-like(Genome::Config->arch_os, qr/x86_64/, 'On 64 bit machine') or die;
+if (Genome::Config->arch_os ne 'x86_64') {
+    plan skip_all => 'requires 64-bit machine';
+}
 
 use_ok('Genome::InstrumentData::454') or die;
 
