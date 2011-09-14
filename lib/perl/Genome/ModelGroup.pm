@@ -32,10 +32,11 @@ class Genome::ModelGroup {
         user_name           => {is => 'Text',
                                 is_optional => 1
                                },
-        uuid                => {is => 'Text',
-                                is_optional => 1
-                               },
-        project             => { 
+        uuid => {
+            is => 'Text',
+            is_optional => 1,
+        },
+        project => { 
             is => 'Genome::Project',
             is_optional => 1,
             id_by => 'uuid',
@@ -61,25 +62,32 @@ sub create {
         %convergence_model_params = %{ delete $params{convergence_model_params} };
     } 
 
-    # Create project
-    my $name = $bx->value_for('name');
-    my $project = Genome::Project->create(
-        name => $name,
-    );
-    if ( not $project ) {
-        __PACKAGE__->error_message('Failed to create project to match model group.');
-        return;
-    }
-
-    # Create, set some props from the project
     my $self = $class->SUPER::create($bx);
-    if ( not $self ) {
-        $project->delete;
-        return;
+    return if not $self;
+
+    # Create project
+    my $project = $self->project;
+    if ( not $project ) {
+        my $uuid = Genome::Project->__meta__->autogenerate_new_object_id_uuid;
+        if ( not $uuid ) {
+            $self->error_message('Failed to get uuid from Genome::Project! Cannot create model group.');
+            $self->delete;
+            return;
+        }
+        $self->uuid($uuid);
+        my $name = $bx->value_for('name');
+        $project = Genome::Project->create(
+            id => $uuid,
+            name => $name,
+        );
+        if ( not $project ) {
+            $self->error_message('Failed to create project to match model group.');
+            $self->delete;
+            return;
+        }
+        $self->name( $project->name ) if $project->name ne $self->name;
+        $self->user_name( $project->creator->email );
     }
-    $self->name( $project->name ) if $project->name ne $self->name;
-    $self->uuid( $project->id );
-    $self->user_name( $project->creator->email );
 
     # Convergence model
     my $define_command = Genome::Model::Command::Define::Convergence->create(

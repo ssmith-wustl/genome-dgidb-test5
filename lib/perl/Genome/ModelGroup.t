@@ -59,7 +59,10 @@ is($model_group2->name, 'Testsuite_ModelGroup', 'name');
 is($model_group2->project->name, $model_group2->name, 'project name matches model group name');
 $username = $orig_username;
 is($model_group->name, $username.' Testsuite_ModelGroup', 'original model group name was changed');
-is($model_group->project->name, $model_group->name, 'original project name matches original model group name');
+my $project2 = $model_group2->project;
+ok($project2, 'create a project w/ model group'); 
+is($project2->id, $model_group2->uuid, 'project id matches model group uuid');
+is($project2->name, $model_group2->name, 'project name matches model group name');
 
 # rename
 ok(!$model_group->rename(), 'failed to rename w/o name');

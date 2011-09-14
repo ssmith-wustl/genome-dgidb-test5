@@ -26,8 +26,13 @@ my $user = Genome::Sys::User->get(username => $user_name);
 ok($user, 'got user');
 is($project->creator, $user, 'creator');
 is_deeply([$project->user_ids], [$user->id], 'user ids');
+my $model_group = $project->model_group;
+ok($model_group, 'model group');
+is($model_group->name, $project->name, 'model group name matches project name');
+is($model_group->uuid, $project->id, 'model group uuid matches project id');
+is($model_group->user_name, $project->creator->email, 'model group user_name matches project creator email');
 
-# create again, name should include user name
+# create again fails
 ok(!Genome::Project->create(name => 'TEST AML'), 'failed to create project with the same name');
 
 # create again, but since we are apipe-builder, it will rename the other project
@@ -41,6 +46,12 @@ my $project2 = Genome::Project->create(
 ok($project2, 'create a project');
 is($project2->name, 'TEST AML', 'name');
 is($project->name, $user_name.' TEST AML', 'renamed existing project made by '.$user_name);
+is($model_group->name, $project->name, 'model group renamed too');
+my $model_group2 = $project2->model_group;
+ok($model_group2, 'model group');
+is($model_group2->name, $project2->name, 'model group name matches project name');
+is($model_group2->uuid, $project2->id, 'model group uuid matches project id');
+is($model_group2->user_name, $project2->creator->email, 'model group user_name matches project creator email');
 
 # rename
 ok(!$project2->rename(), 'failed to rename w/o name');
