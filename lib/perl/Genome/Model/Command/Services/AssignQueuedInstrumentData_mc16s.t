@@ -98,6 +98,8 @@ is_deeply(
     { $model_name_for_entire_run => $new_models{$model_name_for_entire_run} },
     'existing models for run 1',
 );
+my @model_groups = Genome::ModelGroup->get('name in' => [qw/ AQID-TEST-WORKORDER AQID-TEST-PROJECT /]);
+is(@model_groups, 2, 'created model groups');
 
 ok(_qidfgm(), 'made another qdidfgm');
 is(@instrument_data, 3, '3 inst data');

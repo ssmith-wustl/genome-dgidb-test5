@@ -63,6 +63,10 @@ class Genome::Project {
             is_mutable => 1,
             is_many => 1,
         },
+        model_group => {
+            is => 'Genome::ModelGroup',
+            reverse_as => 'project',
+        },
     ],
     table_name => 'GENOME_PROJECT',
     schema_name => 'GMSchema',
@@ -70,9 +74,7 @@ class Genome::Project {
     doc => 'A project, can contain any number of objects (of any type)!',
 };
 
-
 sub create {
-
     my ($class, %p) = @_;
 
     my $self = $class->SUPER::create(%p);
@@ -112,6 +114,21 @@ sub create {
         # TODO email user about name change??
     }
 
+    # Model Group
+    if ( not $self->model_group) {
+        my $model_group = Genome::ModelGroup->create(
+            name => $self->name,
+            user_name => $self->creator->email,
+            uuid => $self->id,
+        );
+        if ( not $model_group ) {
+            $self->error_message('Failed to create corresponding model group fo project');
+            $self->delete;
+            return;
+        }
+        $self->status_message('Create corresponding model group: '.$model_group->id);
+    }
+
     return $self;
 }
 
@@ -132,7 +149,7 @@ sub rename {
     my $old_name = $self->name;
     $self->name($new_name);
 
-    if ( my $model_group = Genome::ModelGroup->get(name => $old_name) ) {
+    if ( my $model_group = Genome::ModelGroup->get(uuid => $self->id) ) {
         $model_group->_rename($new_name);
     }
 

@@ -28,7 +28,7 @@ sub create {
             $self->error_message("File property ($property_name) is required");
             return;
         }
-        my ($fh, $cmd);
+        my $fh;
         if ( $file eq '-' ) {
             $fh = eval{ Genome::Sys->open_file_for_writing($file); };
             if ( not $fh ) {
@@ -37,13 +37,12 @@ sub create {
                 return;
             }
         }
-        elsif ( $cmd = $self->_cmd_for_file($file) ) {
+        elsif ( my $cmd = $self->_cmd_for_file($file) ) {
             $fh = IO::File->new($cmd);
             if ( not $fh ) {
                 $self->error_message("Failed to open command ($cmd): $!");
                 return;
             }
-
         }
         else {
             $fh = ( $self->mode eq 'a' )

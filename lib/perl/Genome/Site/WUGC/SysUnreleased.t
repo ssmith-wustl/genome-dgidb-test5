@@ -198,6 +198,29 @@ sub test1_file : Tests {
     ok(!$worked, 'Try to open a file, but it\'s a directory');
     like($@, qr/Can't validate_file_for_writing: File .* has non-zero size, refusing to write to it/, 'exception message is correct');
 
+    # OVERWRITING
+    note('open file for overwriting');
+    $fh = Genome::Sys->open_file_for_overwriting($new_file);
+    ok($fh, "Opened file for overwriting ".$new_file);
+    isa_ok($fh, 'IO::File');
+    $fh->close;
+    unlink $new_file;
+
+    # No file
+    $worked = eval { Genome::Sys->open_file_for_overwriting };
+    ok(!$worked, 'Failed to open an undef file for overwriting');
+    like($@, qr/for over writing\. No file given\./, 'exception message is correct');
+
+    # No write access
+    $worked = eval { Genome::Sys->open_file_for_overwriting( _no_write_file() ) };
+    ok(!$worked, 'Failed to open a file w/o write access for over writing');
+    like($@, qr/for over writing\. Do not have write access to directory/, 'exception message is correct');
+
+    # File is a dir
+    $worked = eval { Genome::Sys->open_file_for_overwriting( _base_test_dir() ) };
+    ok(!$worked, 'Failed to open a directory for over writing');
+    like($@, qr/for over writing\. It is a directory./, 'exception message is correct');
+
     #< Copying >#
     my $file_to_copy_to = $self->_tmpdir.'/file_to_copy_to';
     ok(

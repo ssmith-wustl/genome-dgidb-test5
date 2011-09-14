@@ -203,7 +203,7 @@ my ($pse_2_genome_model_id) = $pse_2->added_param('genome_model_id');
 is($pse_1_genome_model_id, $new_model->id, 'genome_model_id parameter set correctly for first pse');
 is($pse_2_genome_model_id, $new_model->id, 'genome_model_id parameter set correctly for second pse');
 
-my $group = Genome::ModelGroup->get(name => 'apipe-auto AQID');
+my $group = Genome::ModelGroup->get(name => 'AQID');
 ok($group, 'auto-generated model-group exists');
 
 my @members = $group->models;
@@ -549,10 +549,10 @@ my @models = values %$new_models_2;
 my @model_groups;
 push(@model_groups, $_->model_groups) for (@models);
 
-ok((grep {$_->name eq 'apipe-auto ' . $sample_pool->name} @model_groups) > 0, "found model_group for sample_pool");
-ok((grep {$_->name eq 'apipe-auto ' . $sample_pool->name . '.wu-space'} @model_groups) > 0, "found wu-space model_group for sample_pool");
-ok((grep {$_->name eq 'apipe-auto ' . $gsc_project->setup_name} @model_groups) > 0, "found model_group for project");
-ok((grep {$_->name eq 'apipe-auto ' . $gsc_project->setup_name . '.wu-space'} @model_groups) > 0, "found wu-space model_group for project");
+ok((grep {$_->name eq $sample_pool->name} @model_groups) > 0, "found model_group for sample_pool");
+ok((grep {$_->name eq $sample_pool->name . '.wu-space'} @model_groups) > 0, "found wu-space model_group for sample_pool");
+ok((grep {$_->name eq $gsc_project->setup_name} @model_groups) > 0, "found model_group for project");
+ok((grep {$_->name eq $gsc_project->setup_name . '.wu-space'} @model_groups) > 0, "found wu-space model_group for project");
 
 my $models_changed_2 = $command_2->_existing_models_assigned_to;
 is(scalar(keys %$models_changed_2), 1, 'data was assigned to an existing model');

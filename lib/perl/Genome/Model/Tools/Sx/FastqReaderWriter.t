@@ -45,6 +45,10 @@ is($count, 12, 'Read/write 12 fastq sets');
 ok($writer->flush, 'flush');
 is(File::Compare::compare($forward_fastq, $out_fastq), 0, 'files match');
 
+my $rv = eval{ $writer->write({ id => 'SEQ', seq => 'AATTGGCC', qual => 'abcdefg', }); };
+ok(!$rv, 'Failed to write when seq and qual are not the same length');
+ok($writer->write({ id => 'SEQ', seq => '', qual => '', }), 'write w/o seq and qual');
+
 #print "$tmpdir\n"; <STDIN>;
 done_testing();
 exit;

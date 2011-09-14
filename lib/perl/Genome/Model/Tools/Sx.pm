@@ -19,7 +19,7 @@ DO NOT USE this option when piping from sx commands.
 
 Standard options:
  file => The file to read. The use of the preceding 'file=' is optional.
-          It is assumed that the bare option is the file. Use '-' to read from STDIN.
+          It is assumed that the bare option is the file. Use '-' to read from STDIN. The file can be gzipped.
  type => The type of input. Not required if type can be determined from the file.
           Required when reading from STDIN. Valid types: sanger, sam, illumina, phred (fasta), fasta.
  cnt => The number of sequences to read from the input. If the input is paired, use 2.
