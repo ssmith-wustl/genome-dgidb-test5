@@ -14,6 +14,7 @@ class Genome::ModelGroup::View::Status::Xml {
             default => [
                 'id',
                 'name',
+                'user_name',
                 {
                     name => 'models',
                     perspective => 'status',
