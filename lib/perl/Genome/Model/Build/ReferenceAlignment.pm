@@ -221,6 +221,19 @@ sub check_genotype_input {
     return @tags;
 }
 
+sub reference_being_replaced_for_input {
+    my $self = shift;
+    my $input = shift;
+
+    return unless $input;
+    return if $self->processing_profile->read_aligner_name eq 'imported';
+
+    #we're going to realign, so any existing reference on the data is unimportant
+    return 1 if $input->name eq 'instrument_data';
+
+    return;
+}
+
 sub alignment_results_for_instrument_data {
     my $self = shift;
     my $instrument_data = shift;
