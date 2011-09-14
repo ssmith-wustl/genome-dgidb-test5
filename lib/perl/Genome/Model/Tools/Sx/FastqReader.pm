@@ -17,15 +17,24 @@ sub read {
     chomp $line;
 
     my ($id, $desc) = split(/\s+/, $line, 2);
-    $id =~ s/^@//;
+    if ( not $id =~ s/^@// ) {
+        Carp::confess('Id line does not start with an "@". On line: '.$line);
+    }
 
     my $seq = $self->{_file}->getline;
     chomp $seq; 
 
-    $self->{_file}->getline; 
+    my $qual_header = $self->{_file}->getline; 
+    if ( $qual_header !~ /^\+/ ) {
+        Carp::confess('Quality header does not start with a "+" for '.$line);
+    }
     
     my $qual = $self->{_file}->getline;
     chomp $qual;
+
+    if ( length $seq != length $qual ) {
+        Carp::confess( join("\n", 'Sequence and quality lengths differ:', $line, $seq, $qual) );
+    }
 
     return {
         id => $id,
