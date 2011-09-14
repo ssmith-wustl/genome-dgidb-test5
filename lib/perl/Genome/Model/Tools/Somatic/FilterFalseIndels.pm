@@ -118,7 +118,7 @@ class Genome::Model::Tools::Somatic::FilterFalseIndels {
             type => 'String',
             is_optional => 1,
             is_input => 1,
-            doc => 'Minimum average aligned read length of variant-supporting reads [75]',
+            doc => 'Minimum average aligned read length of variant-supporting reads [recommended: 75]',
        },
        'min_var_dist_3' => {
             type => 'String',
@@ -459,7 +459,7 @@ sub execute {
 
 				    my $var_freq = $var_count / ($ref_count + $var_count);
 
-				    my $readcount_info = join("\t", $var_allele, $var_count, $var_freq, $ref_pos, $var_pos, $ref_strandedness, $var_strandedness, $ref_mmqs, $var_mmqs, $mismatch_qualsum_diff);
+				    my $readcount_info = join("\t", $ref_count, $var_count, $var_freq, $ref_pos, $var_pos, $ref_avg_rl, $var_avg_rl, $ref_strandedness, $var_strandedness, $ref_mmqs, $var_mmqs, $mismatch_qualsum_diff);
 				    
 				    ## FAILURE 1: READ POSITION ##
 				    
@@ -517,13 +517,18 @@ sub execute {
 				    ## FAILURE 6: Var read len below minimum ##
 				    elsif($self->min_var_readlen && $var_avg_rl < $self->min_var_readlen)
 				    {
-					$FilterResult = "VarDist3:$var_dist_3\n" if ($self->verbose);
-					$stats{'num_fail_readlen'}++;
+					$FilterResult = "VarReadLen:$var_avg_rl\n" if ($self->verbose);
+					$stats{'num_fail_var_readlen'}++;
 				    }
 				    elsif($self->max_var_mmqs && $var_mmqs > $self->max_var_mmqs)
 				    {
 					$FilterResult = "VarMMQS:$var_mmqs\n" if ($self->verbose);
 					$stats{'num_fail_var_mmqs'}++;					
+				    }
+				    elsif($ref_mmqs < 30 && $var_mmqs > 50)
+				    {
+					$FilterResult = "MMQSthreshold:ref=$ref_mmqs,var=$var_mmqs\n" if ($self->verbose);
+					$stats{'num_fail_mmqs_threshold'}++;										
 				    }
 				    ## SUCCESS: Pass Filter ##				
 				    else
@@ -610,8 +615,11 @@ sub execute {
     print "\t" . $stats{'num_fail_readlen'} . " had read length difference > $max_readlen_diff\n";	
     print "\t" . $stats{'num_fail_dist3'} . " had var_distance_to_3' < $min_var_dist_3\n";
 
-
-
+    ## Print new optional filters if they applied ##
+    print "\t" . $stats{'num_fail_mmqs_threshold'} . " had ref MMQS < 30 but var MMQS > 50\n" if($stats{'num_fail_mmqs_threshold'});
+    print "\t" . $stats{'num_fail_var_mmqs'} . " had var MMQS > " . $self->max_var_mmqs . "\n" if($stats{'num_fail_var_mmqs'});
+    print "\t" . $stats{'num_fail_var_readlen'} . " had var readlen < " . $self->min_var_readlen . "\n" if($stats{'num_fail_var_readlen'});
+    
     return 1;
 }
 
