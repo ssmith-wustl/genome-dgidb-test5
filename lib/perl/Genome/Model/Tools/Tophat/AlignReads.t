@@ -5,8 +5,15 @@ use warnings;
 
 use above 'Genome';
 
-use Test::More tests => 8;
+use Test::More;
 use File::Compare;
+
+if (Genome::Config->arch_os ne 'x86_64') {
+    plan skip_all => 'requires 64-bit machine';
+}
+else {
+    plan tests => 8;
+}
 
 use_ok('Genome::Model::Tools::Tophat::AlignReads');
 

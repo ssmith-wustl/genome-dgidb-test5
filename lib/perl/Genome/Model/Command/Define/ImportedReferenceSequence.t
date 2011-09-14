@@ -11,6 +11,10 @@ BEGIN {
 use above 'Genome';
 use Test::More;
 
+if (Genome::Config->arch_os ne 'x86_64') {
+    plan skip_all => 'requires 64-bit machine';
+}
+
 my $cmd_class = 'Genome::Model::Command::Define::ImportedReferenceSequence';
 use_ok($cmd_class);
 

@@ -9,7 +9,14 @@ BEGIN{
 };
 
 use above "Genome";
-use Test::More tests => 26;
+use Test::More;
+
+if (Genome::Config->arch_os ne 'x86_64') {
+    plan skip_all => 'requires 64-bit machine';
+}
+else {
+    plan tests => 26;
+}
 
 use_ok('Genome::Model::Tools::DetectVariants2::Result::Filter');
 

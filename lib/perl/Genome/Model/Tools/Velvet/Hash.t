@@ -5,11 +5,16 @@ use warnings;
 
 use above "Genome";
 use File::Temp;
-use Test::More tests => 2;
+use Test::More;
 
-BEGIN {
-    use_ok('Genome::Model::Tools::Velvet::Hash');
+if (Genome::Config->arch_os ne 'x86_64') {
+    plan skip_all => 'requires 64-bit machine';
 }
+else {
+    plan tests => 2;
+}
+
+use_ok('Genome::Model::Tools::Velvet::Hash');
 
 my $test_dir  = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Velvet/Hash';
 my $test_file = 'test1.fa';

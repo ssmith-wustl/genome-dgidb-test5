@@ -5,12 +5,17 @@ use warnings;
 
 use above "Genome";
 
-use Test::More tests => 4;
+use Test::More;
 use File::Compare;
 
-BEGIN {
-    use_ok('Genome::Model::Tools::Sam::Idxstats');
+if (Genome::Config->arch_os ne 'x86_64') {
+    plan skip_all => 'requires 64-bit machine';
 }
+else {
+    plan tests => 4;
+}
+
+use_ok('Genome::Model::Tools::Sam::Idxstats');
 
 my @ori_map_chr_list = (1..22, 'X', 'Y', 'NT_113940');
 my @full_chr_list = (@ori_map_chr_list, 'NT_113908', 'NT_113917');

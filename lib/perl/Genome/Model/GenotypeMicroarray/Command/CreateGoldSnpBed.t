@@ -3,6 +3,10 @@
 use above 'Genome';
 use Test::More tests => 4;
 
+if (Genome::Config->arch_os ne 'x86_64') {
+    plan skip_all => 'requires 64-bit machine';
+}
+
 my $pkg = 'Genome::Model::GenotypeMicroarray::Command::CreateGoldSnpBed';
 use_ok($pkg);
 

@@ -7,7 +7,14 @@ BEGIN {
     $ENV{UR_DBI_NO_COMMIT} = 1;
 };
 
-use Test::More tests => 31;
+use Test::More;
+
+if (Genome::Config->arch_os ne 'x86_64') {
+    plan skip_all => 'requires 64-bit machine';
+}
+else {
+    plan tests => 31;
+}
 
 use above 'Genome';
 

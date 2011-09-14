@@ -15,6 +15,10 @@ use Test::More;
 use above 'Genome';
 use Genome::SoftwareResult;
 
+if (Genome::Config->arch_os ne 'x86_64') {
+    plan skip_all => 'requires 64-bit machine';
+}
+
 # THIS TESTS THE CACHING. Caching refseq in /var/cache/tgi-san. We gotta link these files to a tmp dir for tests so they don't get copied
 my $refbuild_id = 101947881;
 my $ref_seq_build = Genome::Model::Build::ImportedReferenceSequence->get($refbuild_id);
