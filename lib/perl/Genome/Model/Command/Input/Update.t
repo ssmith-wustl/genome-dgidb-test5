@@ -65,6 +65,15 @@ class Genome::Model::Tester {
             is_optional => 1,
             is_many => 1,
         },
+        strange_property_name => {
+            is => 'Text',
+            via => 'inputs',
+            to => 'value_id',
+            where => [ name => 'alternate_input_name', value_class_name => 'UR::Value', ],
+            is_mutable => 1,
+            is_optional => 1,
+            is_many => 0,
+        },
     ],
 };
 my $model = Genome::Model::Tester->create(
@@ -101,6 +110,7 @@ $update = Genome::Model::Command::Input::Update->create(
 ok($update, 'create');
 $update->dump_status_messages(1);
 ok($update->execute, 'execute - update optional property to NULL');
+is($model->purpose, undef, 'successfully undefined property');
 ok($tx->commit(), 'did not produce inconsistent result'); #can't have an input object with NULL value_id
 
 my $tx2 = UR::Context::Transaction->begin();
@@ -115,6 +125,15 @@ ok($tx2->commit(), 'did not produce inconsistent result');
 
 $update = Genome::Model::Command::Input::Update->create(
     model => $model,
+    name => 'purpose',
+    value => 'awesomeness',
+);
+ok($update, 'create');
+$update->dump_status_messages(1);
+ok($update->execute, 'execute - set value on initially undefined optional input');
+
+$update = Genome::Model::Command::Input::Update->create(
+    model => $model,
     name => 'shape',
     value => 'name=circle',
 );
@@ -122,6 +141,26 @@ ok($update, 'create');
 $update->dump_status_messages(1);
 ok($update->execute, 'execute - update shape');
 is_deeply([$model->shape], [$circle], 'execute - update shape to circle');
+
+$update = Genome::Model::Command::Input::Update->create(
+    model => $model,
+    name => 'alternate_input_name',
+    value => 'alternate_value',
+);
+ok($update, 'create');
+$update->dump_status_messages(1);
+ok($update->execute, 'execute - update a when input and property names do not match and input is provided');
+
+$update = Genome::Model::Command::Input::Update->create(
+    model => $model,
+    name => 'strange_property_name',
+    value => 'strange_value',
+);
+ok($update, 'create');
+$update->dump_status_messages(1);
+ok($update->execute, 'execute - update a when input and property names do not match and property is provided');
+
+
 
 # fails
 $update = Genome::Model::Command::Input::Update->create(

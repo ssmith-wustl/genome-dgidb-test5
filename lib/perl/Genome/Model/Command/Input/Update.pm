@@ -50,6 +50,12 @@ sub execute {
     my @properties = $model->real_input_properties;
     return if not @properties;
     my ($property) = grep { $name eq $_->{name} } @properties;
+    if( not $property ) {
+        #if no property found, try falling back on the name of the input itself
+        ($property) = grep { $name eq $_->{input_name} } @properties;
+        $name = $property->{name} if $property;
+    }
+
     if ( not $property ) {
         $self->error_message("Failed to find input property for $name. Here are the valid input names:");
         $self->show_inputs_and_values_for_model($model);
