@@ -75,10 +75,15 @@ sub execute {
         #my $response = <STDIN>;
         #return if $response !~ /y/i;
         $self->status_message('Value: NULL');
-        my $rv = $model->$name($value);
-        if ( defined $rv ) {
-            $self->error_message('Failed to update!');
-            return;
+
+        my $input_name = $property->{input_name};
+
+        if( defined $model->$name() ) { #only remove if there's a value
+            my $rv = $model->remove_input(name => $input_name);
+            unless($rv eq 1) {
+                $self->error_message('Failed to update!');
+                return;
+            }
         }
     }
     else {

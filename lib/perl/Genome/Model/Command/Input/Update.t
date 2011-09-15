@@ -93,6 +93,7 @@ $update->dump_status_messages(1);
 ok($update->execute, 'execute - update property');
 is($model->color, 'blue', 'color is now blue');
 
+my $tx = UR::Context::Transaction->begin();
 $update = Genome::Model::Command::Input::Update->create(
     model => $model,
     name => 'purpose',
@@ -100,6 +101,17 @@ $update = Genome::Model::Command::Input::Update->create(
 ok($update, 'create');
 $update->dump_status_messages(1);
 ok($update->execute, 'execute - update optional property to NULL');
+ok($tx->commit(), 'did not produce inconsistent result'); #can't have an input object with NULL value_id
+
+my $tx2 = UR::Context::Transaction->begin();
+$update = Genome::Model::Command::Input::Update->create(
+    model => $model,
+    name => 'purpose',
+);
+ok($update, 'create');
+$update->dump_status_messages(1);
+ok($update->execute, 'execute - update optional already NULL property to NULL');
+ok($tx2->commit(), 'did not produce inconsistent result');
 
 $update = Genome::Model::Command::Input::Update->create(
     model => $model,

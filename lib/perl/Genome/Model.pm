@@ -1098,6 +1098,15 @@ sub real_input_properties {
             is_many => $input_property->is_many,
             data_type => $input_property->data_type,
         );
+
+        if($input_property->{is_input}) {
+            $property{input_name} = $property_name;
+        } else {
+            my $where = $input_property->where;
+            my %where = @$where;
+            $property{input_name} = $where{name};
+        }
+
         if ( $input_property->is_many ) {
             $property{add_method} = 'add_'.$input_property->singular_name,
             $property{remove_method} = 'remove_'.$input_property->singular_name,
