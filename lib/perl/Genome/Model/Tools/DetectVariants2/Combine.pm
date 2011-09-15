@@ -6,18 +6,18 @@ use warnings;
 use Genome;
 
 class Genome::Model::Tools::DetectVariants2::Combine {
-    is  => ['Genome::Model::Tools::DetectVariants2::Base'],
+    is  => ['Genome::Command::Base'],
     is_abstract => 1,
-    has => [
-        input_directory_a => {
-            type => 'String',
-            is_input => 1,
-            doc => 'input directory a, find <variant_type>.hq.bed in here to combine with the same in dir b',
-        },    
-        input_directory_b => {
-            type => 'String',
-            is_input => 1,
-            doc => 'input directory b, find <variant_type>.hq.bed in here to combine with the same in dir a',
+    has_input => [
+        input_a_id => {
+            is => 'Text',
+        },
+        input_b_id => {
+            is => 'Text',
+        },
+        output_directory => {
+            is => 'Text',
+            is_output => 1,
         },
     ],
     has_constant => [
@@ -30,6 +30,20 @@ class Genome::Model::Tools::DetectVariants2::Combine {
     has_param => [
         lsf_queue => {
             default => 'apipe',
+        },
+    ],
+    has_optional => [
+        _result_id => {
+            is => 'Text',
+            is_output => 1,
+        },
+        _result_class => {
+            is => 'Text',
+            is_output => 1,
+        },
+        _result => {
+            is => 'UR::Object',
+            id_by => '_result_id', id_class_by => '_result_class',
         },
     ],
 };
@@ -46,69 +60,85 @@ EOS
 }
 
 sub help_detail {
-    return <<EOS 
+    return <<EOS
 Tools to run variant detectors with a common API and output their results in a standard format.
 EOS
 }
 
+sub result_class {
+    my $self = shift;
+    my $result_class = $self->class;
+    $result_class =~ s/DetectVariants2::Combine/DetectVariants2::Result::Combine/;
+    return $result_class;
+}
+
+sub shortcut {
+    my $self = shift;
+
+    my ($params) = $self->params_for_result;
+    my $result_class = $self->result_class;
+    my $result = $result_class->get_or_create(%$params);
+    unless($result) {
+        $self->status_message('No existing result found.');
+        return;
+    }
+
+    $self->_result($result);
+    $self->status_message('Using existing result ' . $result->__display_name__);
+    $self->_link_to_result;
+
+    return 1;
+}
 
 sub execute {
     my $self = shift;
-    unless($self->_validate_inputs) {
-        die $self->error_message('Failed to validate inputs.');
-    }
-    
-    unless($self->_create_directories) {
-        die $self->error_message('Failed to create directories.');
+
+    my ($params) = $self->params_for_result;
+    my $result_class = $self->result_class;
+    my $result = $result_class->get_or_create(%$params);
+
+    unless($result) {
+        die $self->error_message('Failed to create generate result!');
     }
 
-    unless($self->_combine_variants){
-        die $self->error_message('Failted to combine variants');
+    if(-e $self->output_directory) {
+        unless(readlink($self->output_directory) eq $result->output_dir) {
+            die $self->error_message('Existing output directory ' . $self->output_directory . ' points to a different location!');
+        }
     }
-    unless($self->_validate_output) {
-        die $self->error_message('Failed to validate output.');
-    }
+
+    $self->_result($result);
+    $self->status_message('Generated result.');
+    $self->_link_to_result;
+
     return 1;
 }
 
-sub _combine_variants {
-    die "overload this function to do work";
-}
-
-sub _validate_inputs {
+sub params_for_result {
     my $self = shift;
 
-    my $input_dir = $self->input_directory_a;
-    unless (Genome::Sys->check_for_path_existence($input_dir)) {
-        $self->error_message("input_directory_a input $input_dir does not exist");
-        return;
-    }
-    $input_dir = $self->input_directory_b;
-    unless (Genome::Sys->check_for_path_existence($input_dir)) {
-        $self->error_message("input_directory_b input $input_dir does not exist");
-        return;
-    }
-    
-    return 1;
+    my %params = (
+        input_a_id => $self->input_a_id,
+        input_b_id => $self->input_b_id,
+        subclass_name => $self->_result_class,
+        test_name => $ENV{GENOME_SOFTWARE_RESULT_TEST_NAME} || undef,
+    );
+
+    return \%params;
 }
 
-sub _validate_output {
+sub _link_to_result {
     my $self = shift;
-    my $variant_type = $self->_variant_type;
-    my $input_a_file = $self->input_directory_a."/".$variant_type.".hq.bed";
-    my $input_b_file = $self->input_directory_b."/".$variant_type.".hq.bed";
-    my $hq_output_file = $self->output_directory."/".$variant_type.".hq.bed";
-    my $lq_output_file = $self->output_directory."/".$variant_type.".lq.bed";
-    my $input_total = $self->line_count($input_a_file) + $self->line_count($input_b_file);
-    my $output_total = $self->line_count($hq_output_file) + $self->line_count($lq_output_file);
-    unless(($input_total - $output_total) == 0){
-        die $self->error_message("Combine operation in/out check failed. Input total: $input_total \toutput total: $output_total");
-    }
-    return 1;
-}
 
-sub has_version {
-    return 1;
+    my $result = $self->_result;
+    return unless $result;
+
+    if (-e $self->output_directory) {
+        return;
+    }
+    else {
+        return Genome::Sys->create_symlink_and_log_change($result, $result->output_dir, $self->output_directory);
+    }
 }
 
 1;

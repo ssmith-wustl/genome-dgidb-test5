@@ -17,14 +17,19 @@ class Genome::Model::Tools::DetectVariants2::Result::Combine::IntersectSnv{
 
 };
 
+sub _needs_symlinks_followed_when_syncing { 0 };
+sub _working_dir_prefix { 'intersect-snv' };
+sub resolve_allocation_disk_group_name { 'info_genome_models' };
+sub allocation_subdir_prefix { 'intersect_snv' };
+
 sub _combine_variants {
     my $self = shift;
 
     my $snvs_a = $self->input_directory_a."/snvs.hq.bed";
     my $snvs_b = $self->input_directory_b."/snvs.hq.bed";
-    my $output_file = $self->output_dir."/snvs.hq.bed";
-    my $miss_a_file = $self->output_dir."/snvs.lq.a.bed";
-    my $miss_b_file = $self->output_dir."/snvs.lq.b.bed";
+    my $output_file = $self->temp_staging_directory."/snvs.hq.bed";
+    my $miss_a_file = $self->temp_staging_directory."/snvs.lq.a.bed";
+    my $miss_b_file = $self->temp_staging_directory."/snvs.lq.b.bed";
 
     my $intersect_command = Genome::Model::Tools::Joinx::Intersect->create(
         input_file_a => $snvs_a,
@@ -41,7 +46,7 @@ sub _combine_variants {
 
     # Create an "lq" file that has things that were either in only file a or only file b
     # Using joinx with --merge-only will do a union, effectively
-    my $lq_file = $self->output_dir."/snvs.lq.bed";
+    my $lq_file = $self->temp_staging_directory."/snvs.lq.bed";
     my $merge_cmd = Genome::Model::Tools::Joinx::Sort->create(
         merge_only => 1,
         input_files => [$miss_a_file, $miss_b_file],
@@ -60,8 +65,8 @@ sub _validate_output {
     my $variant_type = $self->_variant_type;
     my $input_a_file = $self->input_directory_a."/".$variant_type.".hq.bed";
     my $input_b_file = $self->input_directory_b."/".$variant_type.".hq.bed";
-    my $hq_output_file = $self->output_dir."/".$variant_type.".hq.bed";
-    my $lq_output_file = $self->output_dir."/".$variant_type.".lq.bed";
+    my $hq_output_file = $self->temp_staging_directory."/".$variant_type.".hq.bed";
+    my $lq_output_file = $self->temp_staging_directory."/".$variant_type.".lq.bed";
     my $input_total = $self->line_count($input_a_file) + $self->line_count($input_b_file);
 
     # Count hq * 2 because every hq line for an intersection implies 2 lines from input combined into one
