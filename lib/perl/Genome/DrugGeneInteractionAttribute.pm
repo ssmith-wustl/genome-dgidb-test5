@@ -10,7 +10,10 @@ class Genome::DruggableGene::DrugGeneInteractionAttribute {
     schema_name => 'public',
     data_source => 'Genome::DataSource::Main',
     id_by => [
-        id => { is => 'integer' },
+        interaction_id => { 
+            is => 'integer',
+            column_name => 'id',    
+        },
         name => { is => 'varchar' },
         value => { is => 'varchar' },
     ],
