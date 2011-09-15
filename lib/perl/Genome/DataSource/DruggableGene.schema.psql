@@ -20,11 +20,12 @@ create table drug_name_association (
         drug_primary_name varchar NOT NULL,           
         drug_alternate_name varchar NOT NULL,
         description text,
-        nomenclature varchar NOT NULL,
+        primary_name_nomenclature varchar NOT NULL,
+        alternate_name_nomenclature varchar NOT NULL,
         source_db_name varchar NOT NULL,
         source_db_version varchar NOT NULL,
-        PRIMARY KEY (drug_primary_name, drug_alternate_name, nomenclature, source_db_name, source_db_version),
-        FOREIGN KEY(drug_primary_name, nomenclature, source_db_name, source_db_version) REFERENCES drug_name(name, nomenclature, source_db_name, source_db_version)
+        PRIMARY KEY (drug_primary_name, drug_alternate_name, primary_name_nomenclature, alternate_name_nomenclature, source_db_name, source_db_version),
+        FOREIGN KEY(drug_primary_name, primary_name_nomenclature, source_db_name, source_db_version) REFERENCES drug_name(name, nomenclature, source_db_name, source_db_version)
 );
 
 create table drug_name_category_association (
@@ -52,11 +53,12 @@ create table gene_name_association (
         gene_primary_name varchar NOT NULL,
         gene_alternate_name varchar NOT NULL,
         description text,
-        nomenclature varchar NOT NULL,
+        primary_name_nomenclature varchar NOT NULL,
+        alternate_name_nomenclature varchar NOT NULL,
         source_db_name varchar NOT NULL,
         source_db_version varchar NOT NULL,
-        PRIMARY KEY (gene_primary_name, gene_alternate_name, nomenclature, source_db_name, source_db_version),
-        FOREIGN KEY(gene_primary_name, nomenclature, source_db_name, source_db_version) REFERENCES gene_name(name, nomenclature, source_db_name, source_db_version)
+        PRIMARY KEY (gene_primary_name, gene_alternate_name, primary_name_nomenclature, alternate_name_nomenclature, source_db_name, source_db_version),
+        FOREIGN KEY(gene_primary_name, primary_name_nomenclature, source_db_name, source_db_version) REFERENCES gene_name(name, nomenclature, source_db_name, source_db_version)
 );
 
 create table gene_name_category_association (
