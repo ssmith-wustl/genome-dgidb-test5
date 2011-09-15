@@ -1,4 +1,4 @@
-package Genome::DruggableGene::DrugGeneInteraction;
+package Genome::DrugGeneInteraction;
 
 use strict;
 use warnings;

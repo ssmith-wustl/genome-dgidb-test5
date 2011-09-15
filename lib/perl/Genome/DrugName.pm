@@ -1,11 +1,11 @@
-package Genome::DruggableGene::DrugName;
+package Genome::DrugName;
 
 use strict;
 use warnings;
 
 use Genome;
 
-class Genome::DruggableGene::DrugName {
+class Genome::DrugName {
     table_name => 'drug_name',
     schema_name => 'public',
     data_source => 'Genome::DataSource::Main',

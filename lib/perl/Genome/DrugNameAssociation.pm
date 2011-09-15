@@ -1,11 +1,11 @@
-package Genome::DruggableGene::DrugNameAssociation;
+package Genome::DrugNameAssociation;
 
 use strict;
 use warnings;
 
 use Genome;
 
-class Genome::DruggableGene::DrugNameAssociation {
+class Genome::DrugNameAssociation {
     table_name => 'drug_name_association',
     schema_name => 'public',
     data_source => 'Genome::DataSource::Main',
