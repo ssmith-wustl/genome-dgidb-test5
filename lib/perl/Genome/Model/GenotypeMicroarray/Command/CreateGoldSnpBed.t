@@ -1,10 +1,13 @@
 #!/usr/bin/env perl
 
 use above 'Genome';
-use Test::More tests => 4;
+use Test::More;
 
 if (Genome::Config->arch_os ne 'x86_64') {
     plan skip_all => 'requires 64-bit machine';
+}
+else {
+    plan tests => 4;
 }
 
 my $pkg = 'Genome::Model::GenotypeMicroarray::Command::CreateGoldSnpBed';
