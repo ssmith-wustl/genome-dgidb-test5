@@ -50,6 +50,12 @@ class Genome::Model::Tools::Vcf::JoinMultiSampleVcf {
             is_input => 1,
             default => 0,
         },
+        per_chrom => {
+            is => 'Text',
+            doc => 'If this is set, the files listed in the vcf_list will have <vcf_filename>_CHR.vcf.gz appended',
+            is_input => 1,
+            is_optional => 1,
+        }
     ],
     has_transient_optional => [
         _vcf_handles => {
@@ -138,6 +144,11 @@ sub process_input_list {
         if(exists($paths{$key})){
             die $self->error_message("Already have a record for: ".$source_name);
         }
+        if($self->per_chrom){
+            my @stuff = split /\./, $path;
+            my $chr = $self->per_chrom;
+            $path = join(".",($stuff[0]."_".$chr,$stuff[1],$stuff[2]));
+        }
         $paths{$key}{path} = $path;
         $paths{$key}{sample_list} = $source_name;
 
@@ -209,14 +220,21 @@ sub set_sample_cols {
     for my $key (keys(%{$paths})){
         push @samples, split /\,/, $paths->{$key}{sample_list}
     }
-    $self->_sample_order(\@samples);
+    #my @uniq_samples = nsort uniq @samples;
+    my %big;
+    @big{@samples}=1;
+    my @cols;
+    for my $key ( nsort keys(%big)){
+        push @cols, $key;
+    }
+    $self->_sample_order(\@cols);
     print "Sample list: \n";
 
-    for (@samples){ print $_ . "\n";}
+    for (@cols){ print $_ . "\n";}
 
     my $h = $self->_header;
 
-    $h->{CHROM} = join("\t",($h->{CHROM},@samples));
+    $h->{CHROM} = join("\t",($h->{CHROM},@cols));
 
     return 1;
 }
@@ -284,7 +302,9 @@ sub merge_headers {
                         } elsif($tag =~ m/SAMPLE/){
                             my $key = $data[1];
                             if(exists($header{SAMPLE}{$key})){
-                                die $self->error_message("Already have a SAMPLE record in the header that o'er laps: ".$data);
+                                #unless($header{SAMPLE}{$key} eq $data){
+                                #    die $self->error_message("Already have a SAMPLE record in the header that o'er laps: ".$data."   and    ".$header{SAMPLE}{$key});
+                                #}
                             } else {
                                 $header{SAMPLE}{$key} = $data;
                             }
