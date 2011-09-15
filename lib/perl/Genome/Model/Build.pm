@@ -1747,6 +1747,7 @@ sub metrics_ignored_by_diff {
 sub regex_for_custom_diff {
     return (
         gz => '\.gz$',
+        vcf =>'\.vcf$',
     );
 }
 
@@ -1772,6 +1773,13 @@ sub diff_gz {
     my $second_md5 = `gzip -dc $second_file | md5sum`;
     return 1 if $first_md5 eq $second_md5;
     return 0;
+}
+
+sub diff_vcf {
+    my ($self, $first_file, $second_file) = @_;
+    my $first_md5 = qx(grep -vP '^##fileDate' $first_file | md5sum);
+    my $second_md5 = qx(grep -vP '^##fileDate' $second_file | md5sum);
+    return ($first_md5 eq $second_md5 ? 1 : 0);
 }
 
 # This method takes another build id and compares that build against this one. It gets
