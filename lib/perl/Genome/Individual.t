@@ -18,6 +18,7 @@ ok(!$individual, 'individual does not exist');
 
 my $taxon = Genome::Taxon->create(
     species_name => 'human',
+    name => 'test taxon',
 );
 ok($taxon, 'human taxon');
 $individual = Genome::Individual->create(
