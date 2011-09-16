@@ -97,9 +97,11 @@ sub execute {
     print STDERR "ERROR: Tier1 SNV annotations for $tcga_patient_id not found at $snv_anno\n" unless( -e $snv_anno );
     my $indel_anno = "$build_dir/effects/indels.hq.tier1.v1.annotated.top";
     print STDERR "ERROR: Tier1 Indel annotations for $tcga_patient_id not found at $indel_anno\n" unless( -e $indel_anno );
-    my $gatk_calls = "$build_dir/variants/indel/gatk-somatic-indel-5336-/indels.hq.bed";
+    my $gatk_calls = `ls $build_dir/variants/indel/gatk-somatic-indel-5336-*/indels.hq.bed`;
+    chomp( $gatk_calls );
     print STDERR "ERROR: GATK calls for $tcga_patient_id not found at $gatk_calls\n" unless( -e $gatk_calls );
-    my $pindel_calls = "$build_dir/variants/indel/pindel-0.5-/pindel-somatic-calls-v1-/pindel-read-support-v1-/indels.hq.bed";
+    my $pindel_calls = `ls $build_dir/variants/indel/pindel-0.5-*/pindel-somatic-calls-v1-*/pindel-read-support-v1-*/indels.hq.bed`;
+    chomp( $pindel_calls );
     print STDERR "ERROR: Pindel calls for $tcga_patient_id not found at $pindel_calls\n" unless( -e $pindel_calls );
     return undef unless( -e $snv_anno && -e $indel_anno && -e $gatk_calls && -e $pindel_calls );
 

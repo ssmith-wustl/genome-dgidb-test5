@@ -269,7 +269,6 @@ class Genome::Sample {
         },
     ],
     doc         => 'A single specimen of DNA or RNA extracted from some tissue sample',
-    data_source => 'Genome::DataSource::GMSchema',
 };
 
 sub __display_name__ {
