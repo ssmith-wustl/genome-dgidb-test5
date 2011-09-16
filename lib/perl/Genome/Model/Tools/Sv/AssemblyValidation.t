@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use above "Genome";
-use Test::More skip_all => 'Turn off this unit test for now';
+use Test::More;
 use File::Compare;
 use File::Temp qw(tempfile);
 use File::Path qw(rmtree);
@@ -28,26 +28,13 @@ my $sv_file     = $test_input_dir . 'sv.file';
 my @file_names = qw(normal.out normal.cm_aln.out normal.bp_seq.out);
 my @expected_files = map{$test_input_dir . $_}@file_names;
 
-=cut
 my $tmp_dir = File::Temp::tempdir(
     'Genome-Model-Tools-Sv-AssemblyValidation-XXXXX', 
     DIR     => '/gsc/var/cache/testsuite/running_testsuites', 
-    CLEANUP => 0,
+    CLEANUP => 1,
 );
 
 my @test_out_files = map{$tmp_dir.'/test.'.$_}@file_names;
-=cut
-
-my @test_out_files;
-for my $name (@file_names) {
-    my (undef, $tmp_file) = tempfile(
-        "Sv_AV_$name".'_XXXXXX',
-        #TMPDIR => 1,
-        DIR    => '/gsc/var/cache/testsuite/running_testsuites',
-        UNLINK => 0,
-    );
-    push @test_out_files, $tmp_file;
-}
 
 my $sv_valid = Genome::Model::Tools::Sv::AssemblyValidation->create(
     sv_file   => $sv_file,
@@ -65,5 +52,4 @@ for my $i (0..2) {
     is(compare($test_out_files[$i], $expected_files[$i]), 0, 'output matched expected results: '.$file_names[$i]);
 }
 
-map{unlink $_}@test_out_files;
 
