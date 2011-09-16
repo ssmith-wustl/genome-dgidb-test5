@@ -44,7 +44,7 @@ class Genome::Model::Tools::DetectVariants2::Squaredancer{
     ],
     has_param => [ 
         lsf_resource => {
-            default_value => "-M 8000000 -R 'select[mem>8000] rusage[mem=8000]'",
+            default_value => "-M 16000000 -R 'select[mem>16000] rusage[mem=16000]'",
         },
     ],
 };
@@ -145,8 +145,10 @@ sub run_squaredancer {
     my $bam_string = join ' ', @bam_list;
 
     my $sd_path = $self->squaredancer_path;
+    my $pl_path = '/usr/bin/perl'; #64 bit perl
+
     my $cmd = $sd_params ? $sd_path . " $sd_params" : $sd_path;
-       $cmd = "$cmd $bam_string" . ' 1> ' . $self->_sv_staging_output . ' 2> '. $self->_sd_error_staging_output;
+       $cmd = "$pl_path $cmd $bam_string" . ' 1> ' . $self->_sv_staging_output . ' 2> '. $self->_sd_error_staging_output;
 
     $self->status_message("EXECUTING SQUAREDANCER STEP: $cmd");
     my $return = Genome::Sys->shellcmd(

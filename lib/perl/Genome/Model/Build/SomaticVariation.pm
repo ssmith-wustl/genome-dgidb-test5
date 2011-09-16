@@ -222,80 +222,102 @@ sub workflow_name {
 }
 
 sub path_to_individual_output {
-    my $self = shift;
-    my $build = $self; 
+    my ($self, $detector_strat, $filter_strat) = @_;
 
     #pull apart detector strat and then clean up the params
-    my ($detector_strat,$filter_strat) = @_;
-    my ($detector_name,$detector_version, @detector_params) = split /\s+/, $detector_strat;
-    my $detector_params = join(" ", @detector_params);
-    $detector_params =~ s/[\[,\]]//g;
+    my ($detector_name, $detector_version, $detector_params);
 
+    if ($detector_strat =~ /^(\S+)\s+(\S+)/) {
+        ($detector_name, $detector_version) = ($1, $2);
+        if ($detector_strat =~ /\[(.+)\]/) {
+            $detector_params = $1;
+        }
+    }
+    else {
+        $self->error_message("Wrong format of detector strategy: $detector_strat");
+        return;
+    }
 
     #pull apart filter strat, if it exists
-    my ($filter_name,$filter_version,$filter_params);
-    if($filter_strat){
-        my @filter_params;
-        ($filter_name,$filter_version,@filter_params) = split /\s+/, $filter_strat;
-        $filter_params = join(" ", @filter_params);
+    my ($filter_name, $filter_version, $filter_params);
+    if ($filter_strat) {
+        if ($filter_strat =~ /^(\S+)\s+(\S+)/) {
+            ($filter_name, $filter_version) = ($1, $2);
+            if ($filter_strat =~ /\[(.+)\]/) {
+                $filter_params = $1;
+            }
+        }
+        else {
+            $self->error_message("Wrong format of filter strategy: $filter_strat");
+            return;
+        }
     }
 
     #get the class name of the detector
     $detector_name = Genome::Model::Tools::DetectVariants2::Strategy->detector_class($detector_name);
 
     #get the canonical paths to the whole_rmdup_bam_file's
-    my $aligned_reads = Cwd::abs_path($build->tumor_build->whole_rmdup_bam_file);
-    my $control_aligned_reads = Cwd::abs_path($build->normal_build->whole_rmdup_bam_file);
-
-    my $reference_build_id = $build->tumor_model->reference_sequence_build_id;
+    my $aligned_reads         = Cwd::abs_path($self->tumor_build->whole_rmdup_bam_file);
+    my $control_aligned_reads = Cwd::abs_path($self->normal_build->whole_rmdup_bam_file);
+    my $reference_build_id    = $self->tumor_model->reference_sequence_build_id;
 
     #prepare params
     my %params = (
-        detector_name => $detector_name,
-        detector_version => $detector_version,
-        aligned_reads => $aligned_reads,
+        detector_name         => $detector_name,
+        detector_version      => $detector_version,
+        aligned_reads         => $aligned_reads,
         control_aligned_reads => $control_aligned_reads,
-        reference_build_id => $reference_build_id,
+        reference_build_id    => $reference_build_id,
     );
     #add detector params if they have been specified
     $params{detector_params} = $detector_params if $detector_params;
 
+    if ($detector_strat =~ /breakdancer/) { #assume all is wanted
+        $params{chromosome_list} = 'all';
+    }
+
     #get filter class name
-    if($filter_strat){
+    if ($filter_strat){
         $filter_name = Genome::Model::Tools::DetectVariants2::Strategy->filter_class($filter_name);
-        $params{filter_name} = $filter_name;
+        $params{filter_name}    = $filter_name;
+        #$params{filter_version} = $filter_version; #somehow filter_version is not stored in SR_params now
+        $params{filter_params}  = $filter_params if $filter_params;
+        if ($filter_strat =~ /tigra\-/) { #assume user want all not single chr.
+            $params{chromosome_list} = 'all';
+        }
     }
 
     #determine which type of result we want, depends on whether we want a detector or a filter result
-    my $result_class = (defined $filter_strat) ? "Genome::Model::Tools::DetectVariants2::Result::Filter" : "Genome::Model::Tools::DetectVariants2::Result";
+    my $result_class = $filter_strat ? 'Genome::Model::Tools::DetectVariants2::Result::Filter' : 'Genome::Model::Tools::DetectVariants2::Result';
     my @result = $result_class->get(%params);
 
+    my $answer;
 
-    my $answer = undef;
-
-    if( scalar(@result)==1){
+    if (scalar @result == 1) {
         $answer = $result[0]->output_dir;
-    } else {
-        #if we didn't get the answer we want....
-        unless($filter_strat){
-            #if it was a detector, return undef since we can't find it
-            return undef;
-        } 
-
-        #if it is a filter, add in filter params and check again (assuming we found more than one result)
-        $filter_params =~ s/[\[,\]]//g;
-        $params{filter_params} = $filter_params if $filter_params;
-        @result = $result_class->get(%params);
-        if( scalar(@result) == 1 ){
-            $answer = $result[0]->output_dir;
-        } else {
-            #if we still didn't find it, give up and return undef
-            return undef;
+    }
+    elsif (scalar @result > 1) {
+        $answer = join "\n", map{$_->output_dir}@result;
+        $self->error_message("Got multiple results. Probably get test_name set :\n$answer");
+        return;
+    }
+    else {
+        delete $params{control_aligned_reads}; #sometimes control_aligned_reads not stored
+        my @results = $result_class->get(%params);
+        if (scalar @results == 1) {
+            $answer = $results[0]->output_dir;
+        }
+        elsif (scalar @results > 1) {
+            $answer = join "\n", map{$_->output_dir}@results;
+            $self->error_message("Got multiple results. Probably get test_name set :\n$answer");
+            return;
+        }
+        else {
+            $self->error_message('Failed to find output path'); 
         }
     }
     return $answer;
 }
-
 
 
 1;
