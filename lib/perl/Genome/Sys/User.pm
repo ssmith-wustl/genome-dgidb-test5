@@ -25,11 +25,9 @@ class Genome::Sys::User {
 };
 
 sub fix_params_and_get {
-
     my ($class, @p) = @_;
     my %p;
     if (scalar(@p) == 1) {
-        # Genome::Sys::User->get('yermom');
         my $key = $p[0];
         $p{'email'} = $key;
     }
