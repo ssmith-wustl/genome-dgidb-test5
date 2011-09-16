@@ -24,6 +24,7 @@ GetOptions(
 );
 
 my @types = qw(
+user
 processing_profile
 work_order
 model
@@ -131,6 +132,13 @@ sub get_functions {
     my $f = {};
 
     Genome::InstrumentData::Solexa->get(); #preload
+
+    $f->{'user'} = sub {
+        loading "users";
+        my @u = Genome::Sys::User->get();
+        Genome::Search->add(@u);
+        done;
+    };
 
     $f->{'processing_profile'} = sub {
         loading "processing profiles";

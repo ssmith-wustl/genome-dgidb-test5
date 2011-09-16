@@ -10,7 +10,7 @@ set -o nounset   # fail if an env var is used but unset
 
 
 
-bsub -u jlolofie@genome.wustl.edu -q apipe GENOME_DEV_MODE=1 perl /gsc/scripts/bin/gcsearch_load_from_db --add individual,sample,population_group,taxon --lock 2
+bsub -u jlolofie@genome.wustl.edu -q apipe GENOME_DEV_MODE=1 perl /gsc/scripts/bin/gcsearch_load_from_db --add user,individual,sample,population_group,taxon --lock 2
 bsub -u jlolofie@genome.wustl.edu -q apipe GENOME_DEV_MODE=1 perl /gsc/scripts/bin/gcsearch_load_from_db --add processing_profile,model_group,library,work_order --lock 3
 
 
