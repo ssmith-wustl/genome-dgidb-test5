@@ -17,11 +17,15 @@ class Genome::Command::Crud {
 our %inited;
 
 sub camel_case_to_string {
-    my $string = shift; 
+    my $string = shift;
     unless ($string) {
-        Carp::confess "No string to convert to camel case!";
+        Carp::confess "No camel case string to convert to string"
     }
-    return join('', map { ucfirst } split(/[\s_]+/, $string));
+
+    # Split on capital letters
+    my @words = split( /(?=(?<![A-Z])[A-Z])|(?=(?<!\d)\d)/, $string);
+    my $join = ( @_ ) ? $_[0] : ' '; 
+    return join($join, map { lc } @words);
 }
 
 sub init_sub_commands {
