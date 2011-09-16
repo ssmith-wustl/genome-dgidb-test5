@@ -24,7 +24,7 @@ CREATE INDEX misc_note_body_index ON misc_note(body_text);
 CREATE TABLE subject (
     subject_id    varchar(32) NOT NULL,
     subclass_name varchar(255) NOT NULL,
-    name          varchar(255) NOT NULL,
+    name          varchar(255),
     PRIMARY KEY (subject_id)
 );
 CREATE INDEX subject_name_index ON subject(name);
