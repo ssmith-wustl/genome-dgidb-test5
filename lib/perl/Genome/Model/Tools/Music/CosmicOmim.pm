@@ -19,6 +19,12 @@ class Genome::Model::Tools::Music::CosmicOmim {
            is => 'Path',
            doc => 'Output file contains the input file with two columns appended to the end, corresponding to cosmic and omim mutation comparisons, respectively',
            is_output => 1,
+       },
+       reference_build => {
+           is => 'Path',
+           doc => 'Put either "Build36" or "Build37"',
+           is_output => 1,
+           default => 'Build36',
        }
     ],
     has_optional_input => [
@@ -110,6 +116,11 @@ sub execute {
    my $mut_file = $self->maf_file;
    my $cosmic_dir = $self->cosmic_dir;
    my $basename = $self->output_file;
+   my $ref_build = $self->reference_build;
+   unless($ref_build eq 'Build36' xor $ref_build eq 'Build37'){
+        $self->error_message("You must either specify reference_build as either \"Build36\" or \"Build37\"");
+        die $self->error_message;
+   }
    my $omimaa_dir = $self->omimaa_dir;
    my $omimaa;
    if (-d $omimaa_dir){
@@ -242,9 +253,17 @@ if ($verbose) {print "Done Parsing Mutation File! Yippee!\n";}
 		   chomp($line);
 		   my @parser = split(/\t/, $line);
 		   $gene = $parser[$gene_col];
-		   $chr = $parser[$chr_col];
-		   $start = $parser[$start_col];
-		   $stop = $parser[$stop_col];
+                   if ($ref_build eq 'Build36') {
+        		   $chr = $parser[$chr_col];
+	        	   $start = $parser[$start_col];
+	        	   $stop = $parser[$stop_col];
+                   }
+                   else {
+        		   $chr = $parser[$chr_col_37];
+	        	   $start = $parser[$start_col_37];
+	        	   $stop = $parser[$stop_col_37];
+                   }
+
 		   $amino = $parser[$amino_col];
 		   $nucleo = $parser[$nucleo_col];
 		   $somatic = $parser[$somatic_col];
