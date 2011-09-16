@@ -1,7 +1,7 @@
 DROP TABLE IF EXISTS genome_task;
 DROP TABLE IF EXISTS project_part;
 DROP TABLE IF EXISTS project;
-DROP TABLE IF EXISTS user;
+DROP TABLE IF EXISTS genome_user;
 DROP TABLE IF EXISTS subject_attribute;
 DROP TABLE IF EXISTS subject;
 DROP TABLE IF EXISTS misc_note;
@@ -13,7 +13,7 @@ CREATE TABLE misc_note (
     subject_id         varchar(255) NOT NULL,
     header_text        varchar(255) NOT NULL,
     body_text          varchar(4000),
-    id                 varchar(16) NOT NULL,
+    id                 varchar(32) NOT NULL,
     PRIMARY KEY (id)
 );
 CREATE INDEX misc_note_subject_index ON misc_note(subject_class_name, subject_id, header_text);
@@ -22,7 +22,7 @@ CREATE INDEX misc_note_editor_index ON misc_note(editor_id, entry_date);
 CREATE INDEX misc_note_body_index ON misc_note(body_text);
 
 CREATE TABLE subject (
-    subject_id    varchar(16) NOT NULL,
+    subject_id    varchar(32) NOT NULL,
     subclass_name varchar(255) NOT NULL,
     name          varchar(255) NOT NULL,
     PRIMARY KEY (subject_id)
@@ -30,7 +30,7 @@ CREATE TABLE subject (
 CREATE INDEX subject_name_index ON subject(name);
 
 CREATE TABLE subject_attribute (
-    subject_id      varchar(16) NOT NULL REFERENCES subject(subject_id),
+    subject_id      varchar(32) NOT NULL REFERENCES subject(subject_id),
     attribute_label varchar(64) NOT NULL,
     attribute_value varchar(512) NOT NULL,
     nomenclature    varchar(64) NOT NULL,
@@ -39,7 +39,7 @@ CREATE TABLE subject_attribute (
 CREATE INDEX subject_attribute_subject_id_index ON subject_attribute(subject_id);
 CREATE INDEX subject_attribute_label_index ON subject_attribute(attribute_label);
 
-CREATE TABLE user (
+CREATE TABLE genome_user (
     name  varchar(64),
     email varchar(255) NOT NULL,
     PRIMARY KEY (email)
