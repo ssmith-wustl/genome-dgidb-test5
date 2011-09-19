@@ -38,6 +38,19 @@ class Genome::Model::Tools::FastTier::AddTiers {
             doc => 'output file is equivalent to the input file with tier info added as an additional column',
         },
 
+        tier_file_location =>{
+            is => 'String',
+            is_optional => 1,
+            is_input => 1,
+            doc => 'use this to override the default (v3) tiering files',
+        },
+
+        tiering_version =>{
+            is => 'String',
+            is_optional => 1,
+            is_input => 1,
+            doc => 'use this to override the default (v3) tiering version',
+        },
     ]
 };
 
@@ -57,15 +70,17 @@ sub execute {
     my $output_file = $self->output_file;
     my $input_is_maf = $self->input_is_maf;
     my $build = $self->build;
+    my $tier_file_location = $self->tier_file_location;
+    my $tiering_version = $self->tiering_version;
 
-
-    my $tierfile;
-    if($build == 36){
-        $tierfile = "/gscmnt/ams1100/info/model_data/2771411739/build102550711/annotation_data/tiering_bed_files_v3";
-    } elsif ($build == 37){
-        $tierfile = "/gscmnt/ams1102/info/model_data/2771411739/build106409619/annotation_data/tiering_bed_files_v3";
-    } else {
-        die("only supports builds 36 or 37");
+    unless(defined($tier_file_location)){
+        if($build == 36){
+            $tier_file_location = "/gscmnt/ams1100/info/model_data/2771411739/build102550711/annotation_data/tiering_bed_files_v3";
+        } elsif ($build == 37){
+            $tier_file_location = "/gscmnt/ams1102/info/model_data/2771411739/build106409619/annotation_data/tiering_bed_files_v3";
+        } else {
+            die("only supports builds 36 or 37");
+        }
     }
     
 
@@ -107,7 +122,11 @@ sub execute {
     }
 
     #annotate that bed file
-    $cmd = "gmt fast-tier fast-tier --tier-file-location $tierfile --variant-bed-file $tempdir/temp.bed.sorted";
+    $cmd = "gmt fast-tier fast-tier --tier-file-location $tier_file_location --variant-bed-file $tempdir/temp.bed.sorted";
+    if(defined($tiering_version)){
+        $cmd = $cmd . " --tiering-version $tiering_version";
+    }
+
     $return = Genome::Sys->shellcmd(
     cmd => "$cmd",
     );
