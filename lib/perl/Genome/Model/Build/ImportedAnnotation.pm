@@ -61,6 +61,16 @@ class Genome::Model::Build::ImportedAnnotation {
             is => 'Genome::Model::Build::ImportedReferenceSequence',
             id_by => 'reference_sequence_id',
         },
+        snapshot_date => {
+            is => 'DateTime',
+            via => 'inputs',
+            to => 'value_id',
+            where => [name => 'snapshot_date', value_class_name => 'UR::Value'],
+            is_many => 0,
+            is_optional => 1, #TODO: this should become 0
+            is_mutable => 1,
+            doc => 'Date the annotation build was snapshotted (this is only relevant for Genbank and combined annotation builds)',
+        }
     ],
     has_optional => [
         tier_file_directory => {
