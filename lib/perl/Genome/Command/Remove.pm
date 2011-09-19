@@ -7,6 +7,7 @@ use Genome;
 
 class Genome::Command::Remove {
     is => 'Command::V2',
+    is_abstract => 1,
     has_optional_transient => [
         items => { is_many => 1 },
         _deletion_params => { is_many => 1 },
