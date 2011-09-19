@@ -6,9 +6,8 @@ use warnings;
 use Genome;
       
 class Genome::Library::Command {
-    is => 'Command',
-    is_abstract => 1,
-    doc => 'work with libraries',
+    is => 'Command::Tree',
+    doc => 'Work with libraries',
 };
 
 use Genome::Command::Crud;
