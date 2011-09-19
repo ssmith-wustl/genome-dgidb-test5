@@ -39,19 +39,35 @@ sub help_detail {
 sub execute {
     my $self = shift;
 
-    my $group_id = $self->group_id;
     my $db_snp_build = $self->dbsnp_build;
     my $limit_snps_file = $self->limit_snps_file;
     my $data_source = $self->data_source;
     my $skip_if_output_present = $self->skip_if_output_present;
-    my $summary_file;
+    my $summary_file = $self->summary_file;
     if ($self->summary_file) {
-        $summary_file = $self->summary_file;
         $skip_if_output_present = 1;
         unless (open(ALL_MODELS,">$summary_file")) {
             die "Could not open input file '$summary_file' for reading";
         }
-        print ALL_MODELS "Dbsnp_Build\tSample_id\tSNPsCalled\tWithGenotype\tMetMinDepth\tReference\tRefMatch\tRefWasHet\tRefWasHom\tVariant\tVarMatch\tHomWasHet\tHetWasHom\tVarMismatch\tVarConcord\tRareHomConcord\tOverallConcord\n";
+        print ALL_MODELS join(\t,qw(
+            Dbsnp_Build
+            Sample_id
+            SNPsCalled
+            WithGenotype
+            MetMinDepth
+            Reference
+            RefMatch
+            RefWasHet
+            RefWasHom
+            Variant
+            VarMatch
+            HomWasHet
+            HetWasHom
+            VarMismatch
+            VarConcord
+            RareHomConcord
+            OverallConcord
+            )) . "\n";
     }
 
     # Correct the reference build name to what the database recognizes
@@ -79,15 +95,11 @@ sub execute {
             $snp_limit_hash{$id}++;
         }
     }
+
     ## Get the models in each model group ##
-
-    my $model_group = Genome::ModelGroup->get($group_id);
-    my @model_bridges = $model_group->model_bridges;
-
-    foreach my $model_bridge (@model_bridges)
+    for my $model (map{$_->model}map{$_->model_bridges}Genome::ModelGroup->get($self->group_id))
     {
-        my $model = Genome::Model->get($model_bridge->model_id);
-        my $model_id = $model->genome_model_id;
+        my $model_id = $model->id;
         my $subject_name = $model->subject_name;
 #		my $sample_name = $model->sample_name;
         $subject_name = "Model" . $model_id if(!$subject_name);
