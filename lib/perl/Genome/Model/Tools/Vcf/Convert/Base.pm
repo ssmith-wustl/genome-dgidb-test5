@@ -168,7 +168,7 @@ sub print_header{
             die $self->error_message("Unknown sequencing center: $seq_center");
         }
     } else {
-        die $self->error_message("Unknown reference sequence version ($reference_sequence_version) from reference sequence build " . $self->reference_sequnce_build_id);
+        die $self->error_message("Unknown reference sequence version ($reference_sequence_version) from reference sequence build " . $self->reference_sequence_build_id);
     }
 
     my $output_fh = $self->_output_fh;
