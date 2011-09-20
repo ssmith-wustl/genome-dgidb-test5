@@ -541,14 +541,14 @@ sub _create_model_and_request_build {
         $self->error_message('Failed to create model');
         return;
     }
-    my $name = $model->default_model_name;
-    if ( not $name ) {
-        $self->error_message('Failed to get default model name');
-        $model->delete;
-        return;
+    $self->_model($model);
+
+    my $name = $sample->name.'.'.$refseq_build->version.'.refalign';
+    my $i = 0;
+    while ( my $model = Genome::Model::ReferenceAlignment->get(name => $name) ) {
+        $name .= '-'.++$i;
     }
     $model->name($name);
-    $self->_model($model);
 
     my $add = $model->add_instrument_data( $self->_inst_data );
     if ( not $add ) {

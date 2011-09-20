@@ -52,7 +52,7 @@ ok(-s $i_d->archive_path, "bam exists");
 
 my $model = $cmd->_model;
 ok($model, 'created model');
-like($model->name, qr/TCGA-AB-2804-03B-01W-0728-08.refalign/, 'model name');
+like($model->name, qr/^TCGA-AB-2804-03B-01W-0728-08.36.refalign(\-\d+)?$/, 'model name');
 is($model->build_requested, 1, 'requested build');
 is_deeply([$model->instrument_data], [$i_d], 'model inst data');
 
