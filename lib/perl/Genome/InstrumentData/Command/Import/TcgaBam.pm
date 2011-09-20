@@ -55,6 +55,7 @@ class Genome::InstrumentData::Command::Import::TcgaBam {
         },
         reference_sequence_build_id => { 
             is => 'Text',
+            valid_values => [qw/ 101947881 106942997 /],
             doc => 'The id of the reference sequence the data was aligned against. Versions: 101947881 (NCBI-human-build36), 106942997 (GRCh37-lite-build37).',
         },
         reference_sequence_build => { 
