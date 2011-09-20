@@ -5,6 +5,8 @@ use warnings;
 use Genome;
 use Cwd;
 
+our $VERSION = $Genome::VERSION;
+
 class Genome::Sys { 
     # TODO: remove all cases of inheritance 
     #is => 'UR::Singleton', 
