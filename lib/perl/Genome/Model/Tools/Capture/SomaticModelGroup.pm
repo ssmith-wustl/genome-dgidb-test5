@@ -44,6 +44,7 @@ class Genome::Model::Tools::Capture::SomaticModelGroup {
 		germline_roi_file	=> 	{ is => 'Text', doc => "A file in BED format to restrict germline calls" , is_optional => 1},
 		output_maf_file	=> 	{ is => 'Text', doc => "Output a MAF file for downstream analysis" , is_optional => 1},
 		uhc_filter	=> 	{ is => 'Text', doc => "If set to 1, apply ultra-high-conf filter to SNV calls" , is_optional => 1},
+		uhc_indels	=> 	{ is => 'Text', doc => "If set to 1, pass hc indels for MAF inclusion" , is_optional => 1},
 		reference	=> 	{ is => 'Text', doc => "Reference to use for bam-readcounts-based filters" , is_optional => 1},
 		review_database_snvs	=> 	{ is => 'Text', doc => "If provided, use to exclude already-reviewed sites" , is_optional => 1},
 		review_database_indels	=> 	{ is => 'Text', doc => "If provided, use to exclude already-reviewed indels" , is_optional => 1},
@@ -218,7 +219,7 @@ sub execute {                               # replace with real execution logic.
 					}
 				}
 	
-				if($model->last_succeeded_build_directory || $model->id == 2877873505)
+				if($model->last_succeeded_build_directory)
 				{
 					$model_status = "Succeeded";	## Override if we have successful build dir ##				
 					$succeeded_models_by_sample{$subject_name} = $model_id;
@@ -400,13 +401,15 @@ sub execute {                               # replace with real execution logic.
 							}
 
 						}
-						
+					}
+
+					if($self->uhc_indels)
+					{
 						my $tier1_indels = $last_build_dir . "/merged.somatic.indel.filter.tier1";
 						if(-e "$tier1_indels.hc")
 						{
 							save_uhc_calls($patient_id, "$tier1_indels.hc");
 						}
-
 					}
 
 					if($self->varscan_copynumber)
