@@ -73,6 +73,7 @@ sub files_ignored_by_diff {
         build.xml
         reports/Build_Initialized/report.xml
         reports/Build_Succeeded/report.xml
+        repeat_masker.gff
     );
 }
 
