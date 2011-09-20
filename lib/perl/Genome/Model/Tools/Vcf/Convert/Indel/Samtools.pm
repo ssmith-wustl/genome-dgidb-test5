@@ -141,9 +141,28 @@ sub get_record {
     my $input_fh = shift;
 
     #For samtools indel, we need to get two lines at a time.
-    my $lines = $input_fh->getline;
-    if ($lines) { #Only get the second line if we got the first one
-        $lines .= $input_fh->getline;
+    my $lines;
+    my $line1 = $input_fh->getline; 
+    my $line2;
+    my $num_lines = 1;
+    while ($line1 && $num_lines < 2) { 
+        $line2 = $input_fh->getline;
+
+        #Check to make sure the lines are correctly paired
+        if ($line2) {
+            my @fields1 = split (/\t/, $line1);
+            my @fields2 = split (/\t/, $line2);
+            if ($fields1[1] eq $fields2[1]) {
+                $lines = $line1.$line2;
+                $num_lines++;
+            }
+            else {
+                $line1 = $line2;
+            }
+        }
+        else { #The file ended, so we couldn't get line2
+            return undef;
+        }
     }
 
     return $lines;
