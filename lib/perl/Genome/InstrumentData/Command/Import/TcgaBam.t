@@ -30,6 +30,7 @@ my $cmd = Genome::InstrumentData::Command::Import::TcgaBam->create(
     tcga_name           => $tcga_name,  
     import_source_name  => 'Broad',
     original_data_path  => '/gsc/var/cache/testsuite/data/Genome-InstrumentData--Command-Import-Bam/test.bam',
+    reference_sequence_build_id => 101947881,
 );
 ok($cmd, "create");
 $cmd->dump_status_messages(1);
