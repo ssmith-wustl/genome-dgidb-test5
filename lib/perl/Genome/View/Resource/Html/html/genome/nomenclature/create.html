@@ -1,0 +1,65 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN"
+   "http://www.w3.org/TR/html4/strict.dtd">
+
+<html lang="en">
+  <head>
+   <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+   <title>Nomenclature</title>
+   <link rel="stylesheet" href="css/nomenclature.css"/>
+  </head>
+<body>
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.6.4/jquery.min.js"></script>
+<script src="http://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.1.7/underscore-min.js"></script>
+<script src="http://cdnjs.cloudflare.com/ajax/libs/backbone.js/0.5.3/backbone-min.js"></script>
+<script src="/res/js/app/genome_nomenclature.js"></script>
+
+<h1>Nomenclature: New/Edit</h1>
+<p>
+<label for="name" class="nomenclature-name">Name: </label>
+<input type="text" name="name" id="nomenclature-name" placeholder="Nomenclature Name">
+</p>
+<p><button class="save-nomenclature">Save Nomenclature</button></p>
+<p><button class="load-nomenclature">Load Nomenclature from JSON (demo right now)</button></p>
+
+<hr/>
+<div id="nomenclature-columns">
+</div>
+<p><button class="save-nomenclature">Save Nomenclature</button></p>
+
+
+
+</script>
+
+<div id="output">
+
+</div>
+
+<script type="text/template" id="nomenclature-column-template">
+<label>Title</label>
+<input type="text" class="nomenclature-name" value="<%= model.get('name') %>">
+<select class="column-type-select">
+    <option value="integer">Integer</option>
+    <option value="real">Real</option>
+    <option value="numeric">Numeric (real or integer)</option>
+    <option value="date">Date</option>
+    <option value="string">String</option>
+    <option value="enumerated">Enumerated</option>
+</select>
+<button class="delete">Delete</button>
+</script>
+
+<script type="text/template" id="nomenclature-column-enumerated-template">
+<div class="enumerated-choices">
+<% _.each(model.get("enumerated_types"), function(e) { %>
+
+<div class="enum-row"><input type="text" class="enumerated-type-entry" value="<%= e %>"> 
+<button class="add-new-enum">add new</button>
+<button class="remove-enum">remove</button>
+</div>
+
+<% }); %>
+</div>
+</script>
+
+</body>
+</html>
