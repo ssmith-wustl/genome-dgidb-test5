@@ -6,6 +6,7 @@ use warnings;
 use Genome;
 use Command;
 use IO::File;
+use File::Which;
 
 class Genome::Model::Tools::Sv::Pairoscope {
     is => 'Command',
@@ -48,7 +49,7 @@ class Genome::Model::Tools::Sv::Pairoscope {
     },
     pairoscope_program => {
         type => "String",
-        default => "/gscuser/dlarson/src/pairoscope/tags/pairoscope-0.2/pairoscope",
+        default => "pairoscope0.3",
         doc => "executable of pairoscope to use", 
         is_optional => 1,
     },
@@ -135,7 +136,7 @@ sub execute {
         return;
     }
 
-    my $grapher = $self->pairoscope_program;
+    my $grapher = which($self->pairoscope_program);
     unless(-e $grapher && -x $grapher) {
         $self->error_message("$grapher does not exists or is not an executable");
         return;

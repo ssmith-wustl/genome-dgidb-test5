@@ -1,0 +1,95 @@
+DROP TABLE IF EXISTS drug_gene_interaction_attribute;
+DROP TABLE IF EXISTS drug_gene_interaction;
+DROP TABLE IF EXISTS gene_name_category_association;
+DROP TABLE IF EXISTS gene_name_association;
+DROP TABLE IF EXISTS drug_name_category_association;
+DROP TABLE IF EXISTS drug_name_association;
+DROP TABLE IF EXISTS drug_name;
+DROP TABLE IF EXISTS gene_name;
+
+create table drug_name (
+        name varchar NOT NULL,
+        description text,
+        nomenclature varchar NOT NULL,
+        source_db_name varchar NOT NULL,
+        source_db_version varchar NOT NULL,
+        PRIMARY KEY (name, nomenclature, source_db_name, source_db_version)
+);
+
+create table drug_name_association (
+        drug_primary_name varchar NOT NULL,           
+        drug_alternate_name varchar NOT NULL,
+        description text,
+        primary_name_nomenclature varchar NOT NULL,
+        alternate_name_nomenclature varchar NOT NULL,
+        source_db_name varchar NOT NULL,
+        source_db_version varchar NOT NULL,
+        PRIMARY KEY (drug_primary_name, drug_alternate_name, primary_name_nomenclature, alternate_name_nomenclature, source_db_name, source_db_version),
+        FOREIGN KEY(drug_primary_name, primary_name_nomenclature, source_db_name, source_db_version) REFERENCES drug_name(name, nomenclature, source_db_name, source_db_version)
+);
+
+create table drug_name_category_association (
+        drug_name varchar NOT NULL,
+        category_name varchar NOT NULL,
+        description text,
+        nomenclature varchar NOT NULL,
+        source_db_name varchar NOT NULL,
+        source_db_version varchar NOT NULL,
+        PRIMARY KEY (drug_name, category_name, nomenclature, source_db_name, source_db_version),
+        FOREIGN KEY(drug_name, nomenclature, source_db_name, source_db_version) REFERENCES drug_name(name, nomenclature, source_db_name, source_db_version)
+);
+
+create table gene_name (
+        name varchar NOT NULL,
+        description text,
+        nomenclature varchar NOT NULL,
+        source_db_name varchar NOT NULL,
+        source_db_version varchar NOT NULL,
+        PRIMARY KEY (name, nomenclature, source_db_name, source_db_version)
+);
+
+
+create table gene_name_association (
+        gene_primary_name varchar NOT NULL,
+        gene_alternate_name varchar NOT NULL,
+        description text,
+        primary_name_nomenclature varchar NOT NULL,
+        alternate_name_nomenclature varchar NOT NULL,
+        source_db_name varchar NOT NULL,
+        source_db_version varchar NOT NULL,
+        PRIMARY KEY (gene_primary_name, gene_alternate_name, primary_name_nomenclature, alternate_name_nomenclature, source_db_name, source_db_version),
+        FOREIGN KEY(gene_primary_name, primary_name_nomenclature, source_db_name, source_db_version) REFERENCES gene_name(name, nomenclature, source_db_name, source_db_version)
+);
+
+create table gene_name_category_association (
+        gene_name varchar NOT NULL,
+        category_name varchar NOT NULL,
+        description text,
+        nomenclature varchar NOT NULL,
+        source_db_name varchar NOT NULL,
+        source_db_version varchar NOT NULL,
+        PRIMARY KEY (gene_name, category_name, nomenclature, source_db_name, source_db_version),
+        FOREIGN KEY(gene_name, nomenclature, source_db_name, source_db_version) REFERENCES gene_name(name, nomenclature, source_db_name, source_db_version)
+);
+
+create table drug_gene_interaction (
+        id integer NOT NULL,
+        drug_name varchar NOT NULL,
+        gene_name varchar NOT NULL,
+        interaction_type varchar NOT NULL,
+        description text,
+        nomenclature varchar NOT NULL,
+        source_db_name varchar NOT NULL,
+        source_db_version varchar NOT NULL,
+        PRIMARY KEY(id),
+        FOREIGN KEY(drug_name, nomenclature, source_db_name, source_db_version) REFERENCES drug_name(name, nomenclature, source_db_name, source_db_version),
+        FOREIGN KEY(gene_name, nomenclature, source_db_name, source_db_version) REFERENCES gene_name(name, nomenclature, source_db_name, source_db_version),
+        UNIQUE (drug_name, gene_name, interaction_type, nomenclature, source_db_name, source_db_version)
+);
+
+create table drug_gene_interaction_attribute (
+        interaction_id integer NOT NULL REFERENCES drug_gene_interaction(id),
+        name varchar NOT NULL,
+        value varchar NOT NULL,
+        PRIMARY KEY (interaction_id, name, value)
+);

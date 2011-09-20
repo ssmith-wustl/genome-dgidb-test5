@@ -1,0 +1,200 @@
+REFSNP-DOCSUM-SET (FULL-DUMP)
+CREATED ON: 2011-08-11 14:45
+
+rs8896 | human | 9606 | snp | genotype=NO | submitterlink=YES | updated 2011-07-08 10:25
+ss10932 | CGAP-GAI | 52782 | orient=+ | ss_pick=NO
+ss66863544 | ILLUMINA | HumanHap550v1.1_MitoG8270A | orient=- | ss_pick=YES
+ss66932178 | ILLUMINA | HumanHap650Yv1.0_MitoG8270A | orient=- | ss_pick=NO
+ss68074852 | ILLUMINA | HumanHap250Sv1.0_MitoG8270A | orient=- | ss_pick=NO
+ss70458897 | ILLUMINA | HumanHap550v3.0__MitoG8270A | orient=+ | ss_pick=NO
+ss70979437 | ILLUMINA | HumanHap650Yv3.0_MitoG8270A | orient=- | ss_pick=NO
+ss75872026 | ILLUMINA | ILMN_Human_1M_MitoG8270A | orient=- | ss_pick=NO
+ss152537044 | ILLUMINA | Human610_Quadv1_B_MitoG8270A-13273504_B_R_1501342577 | orient=+ | ss_pick=NO
+ss159102751 | ILLUMINA | Human660W-Quad_v1_A_MitoG8270A-13273504_B_R_1501342577 | orient=+ | ss_pick=NO
+SNP | alleles='C/T' | het=0 | se(het)=0
+VAL | validated=NO | min_prob=? | max_prob=? | notwithdrawn
+CTG | assembly=GRCh37.p2 | chr=MT | chr-pos=8269 | NC_012920.1 | ctg-start=8269 | ctg-end=8269 | loctype=2 | orient=-
+
+rs8936 | human | 9606 | snp | genotype=NO | submitterlink=YES | updated 2011-07-08 10:25
+ss10974 | CGAP-GAI | 52852 | orient=+ | ss_pick=NO
+ss35324609 | SSAHASNP | TA-079.chrM_8121 | orient=+ | ss_pick=YES
+SNP | alleles='A/C/T' | het=0 | se(het)=0
+VAL | validated=NO | min_prob=? | max_prob=? | notwithdrawn
+CTG | assembly=GRCh37.p2 | chr=MT | chr-pos=8120 | NC_012920.1 | ctg-start=8120 | ctg-end=8120 | loctype=2 | orient=+
+
+rs9493 | human | 9606 | snp | genotype=NO | submitterlink=YES | updated 2011-07-08 10:25
+ss11590 | CGAP-GAI | 53927 | orient=+ | ss_pick=YES
+SNP | alleles='G/T' | het=0 | se(het)=0
+VAL | validated=NO | min_prob=? | max_prob=? | notwithdrawn
+CTG | assembly=GRCh37.p2 | chr=MT | chr-pos=7403 | NC_012920.1 | ctg-start=7403 | ctg-end=7403 | loctype=2 | orient=-
+
+rs9743 | human | 9606 | snp | genotype=YES | submitterlink=YES | updated 2011-07-08 10:25
+ss11858 | CGAP-GAI | 54405 | orient=+ | ss_pick=NO
+ss35187419 | SSAHASNP | TA-079.chrM_9699 | orient=+ | ss_pick=NO
+ss37044423 | BROAD | mt9698 | orient=+ | ss_pick=YES
+ss66863595 | ILLUMINA | HumanHap550v1.1_MitoT9699C | orient=+ | ss_pick=NO
+ss66932280 | ILLUMINA | HumanHap650Yv1.0_MitoT9699C | orient=+ | ss_pick=NO
+ss68074903 | ILLUMINA | HumanHap250Sv1.0_MitoT9699C | orient=+ | ss_pick=NO
+ss70458943 | ILLUMINA | HumanHap550v3.0__MitoT9699C | orient=- | ss_pick=NO
+ss70979483 | ILLUMINA | HumanHap650Yv3.0_MitoT9699C | orient=+ | ss_pick=NO
+ss75921452 | ILLUMINA | ILMN_Human_1M_MitoT9699C | orient=+ | ss_pick=NO
+ss104807929 | KRIBB_YJKIM | KHS1200265 | orient=+ | ss_pick=NO
+SNP | alleles='C/T' | het=0 | se(het)=0
+VAL | validated=NO | min_prob=? | max_prob=? | notwithdrawn
+CTG | assembly=GRCh37.p2 | chr=MT | chr-pos=9698 | NC_012920.1 | ctg-start=9698 | ctg-end=9698 | loctype=2 | orient=+
+
+rs708393 | human | 9606 | snp | genotype=NO | submitterlink=YES | updated 2011-07-08 10:38
+ss1521271 | LEE | 314577 | orient=+ | ss_pick=YES
+ss1553300 | LEE | 1371824 | orient=+ | ss_pick=NO
+SNP | alleles='A/G' | het=0 | se(het)=0
+VAL | validated=NO | min_prob=? | max_prob=? | notwithdrawn
+CTG | assembly=GRCh37.p2 | chr=MT | chr-pos=8239 | NC_012920.1 | ctg-start=8239 | ctg-end=8239 | loctype=2 | orient=-
+
+rs1015433 | human | 9606 | snp | genotype=NO | submitterlink=YES | updated 2011-07-08 10:45
+ss1478978 | TSC-CSHL | TSC0097520 | orient=+ | ss_pick=YES
+ss35396294 | SSAHASNP | TA-079.chrM_6528 | orient=+ | ss_pick=NO
+SNP | alleles='A/G' | het=0 | se(het)=0
+VAL | validated=NO | min_prob=? | max_prob=? | notwithdrawn
+CTG | assembly=GRCh37.p2 | chr=MT | chr-pos=6527 | NC_012920.1 | ctg-start=6527 | ctg-end=6527 | loctype=2 | orient=+
+
+rs1029272 | human | 9606 | snp | genotype=YES | submitterlink=YES | updated 2011-07-08 10:45
+ss1494493 | TSC-CSHL | TSC0254112 | orient=+ | ss_pick=NO
+ss4040975 | SC_JCM | J01415.1_6185 | orient=+ | ss_pick=NO
+ss5157857 | TSC-CSHL | TSC0254144 | orient=+ | ss_pick=NO
+ss5159752 | TSC-CSHL | TSC0349090 | orient=+ | ss_pick=YES
+ss35377526 | SSAHASNP | TA-079.chrM_6186 | orient=+ | ss_pick=NO
+ss46525684 | BROAD | mt6185 | orient=+ | ss_pick=NO
+ss76713294 | AFFY | AFFY_6_1M_SNP_A-8574518 | orient=- | ss_pick=NO
+ss104835232 | KRIBB_YJKIM | KHS1227564 | orient=+ | ss_pick=NO
+SNP | alleles='C/T' | het=0 | se(het)=0
+VAL | validated=NO | min_prob=? | max_prob=? | notwithdrawn
+CTG | assembly=GRCh37.p2 | chr=MT | chr-pos=6185 | NC_012920.1 | ctg-start=6185 | ctg-end=6185 | loctype=2 | orient=+
+
+rs1029293 | human | 9606 | snp | genotype=NO | submitterlink=YES | updated 2011-07-08 10:45
+ss1494519 | TSC-CSHL | TSC0254145 | orient=+ | ss_pick=YES
+ss35475454 | SSAHASNP | TA-079.chrM_6309 | orient=+ | ss_pick=NO
+SNP | alleles='C/T' | het=0 | se(het)=0
+VAL | validated=NO | min_prob=? | max_prob=? | notwithdrawn
+CTG | assembly=GRCh37.p2 | chr=MT | chr-pos=6308 | NC_012920.1 | ctg-start=6308 | ctg-end=6308 | loctype=2 | orient=+
+
+rs1029294 | human | 9606 | snp | genotype=YES | submitterlink=YES | updated 2011-07-08 10:45
+ss1494520 | TSC-CSHL | TSC0254146 | orient=+ | ss_pick=YES
+ss5159738 | TSC-CSHL | TSC0349036 | orient=+ | ss_pick=NO
+ss35238437 | SSAHASNP | TA-079.chrM_6474 | orient=+ | ss_pick=NO
+ss46525685 | BROAD | mt6473 | orient=+ | ss_pick=NO
+ss76713283 | AFFY | AFFY_6_1M_SNP_A-8574520 | orient=+ | ss_pick=NO
+SNP | alleles='C/T' | het=0 | se(het)=0
+VAL | validated=NO | min_prob=? | max_prob=? | notwithdrawn
+CTG | assembly=GRCh37.p2 | chr=MT | chr-pos=6473 | NC_012920.1 | ctg-start=6473 | ctg-end=6473 | loctype=2 | orient=+
+
+rs1041840 | human | 9606 | snp | genotype=NO | submitterlink=YES | updated 2011-07-08 10:45
+ss1508510 | TSC-CSHL | TSC0349035 | orient=+ | ss_pick=YES
+ss14315542 | WI_SSAHASNP | chr1.NT_034471.3_45565 | orient=+ | ss_pick=NO
+ss14426124 | WUGSC_SSAHASNP | chr1.NT_034471.3_45565 | orient=+ | ss_pick=NO
+ss14802054 | SC_SNP | NT_034471.3_45565 | orient=+ | ss_pick=NO
+ss35500404 | SSAHASNP | TA-079.chrM_6384 | orient=+ | ss_pick=NO
+ss76713281 | AFFY | AFFY_6_1M_SNP_A-8574521 | orient=- | ss_pick=NO
+ss102713375 | BGI | BGI_YHSNP0128646 | orient=+ | ss_pick=NO
+ss154522082 | GMI | GMI_SNP_37251773 | orient=+ | ss_pick=NO
+SNP | alleles='A/G' | het=0 | se(het)=0
+VAL | validated=NO | min_prob=? | max_prob=? | notwithdrawn
+CTG | assembly=GRCh37.p2 | chr=MT | chr-pos=6383 | NC_012920.1 | ctg-start=6383 | ctg-end=6383 | loctype=2 | orient=+
+
+rs1041870 | human | 9606 | snp | genotype=NO | submitterlink=YES | updated 2011-07-08 10:45
+ss1508548 | TSC-CSHL | TSC0349089 | orient=+ | ss_pick=YES
+ss76713280 | AFFY | AFFY_6_1M_SNP_A-8574522 | orient=- | ss_pick=NO
+SNP | alleles='C/T' | het=0 | se(het)=0
+VAL | validated=NO | min_prob=? | max_prob=? | notwithdrawn
+CTG | assembly=GRCh37.p2 | chr=MT | chr-pos=6151 | NC_012920.1 | ctg-start=6151 | ctg-end=6151 | loctype=2 | orient=+
+
+rs1064597 | human | 9606 | snp | genotype=NO | submitterlink=YES | updated 2011-07-08 10:46
+ss1553350 | LEE | 1373554 | orient=+ | ss_pick=YES
+ss76713279 | AFFY | AFFY_6_1M_SNP_A-8574523 | orient=- | ss_pick=NO
+SNP | alleles='C/G' | het=0 | se(het)=0
+VAL | validated=NO | min_prob=? | max_prob=? | notwithdrawn
+CTG | assembly=GRCh37.p2 | chr=MT | chr-pos=8647 | NC_012920.1 | ctg-start=8647 | ctg-end=8647 | loctype=2 | orient=-
+
+rs1116904 | human | 9606 | snp | genotype=NO | submitterlink=YES | updated 2011-07-08 10:46
+ss1420520 | TSC-CSHL | TSC0280147 | orient=+ | ss_pick=YES
+ss11200064 | SC_JCM | chr1.NT_034471.3_47210 | orient=+ | ss_pick=NO
+ss35119028 | SSAHASNP | TA-079.chrM_8028 | orient=+ | ss_pick=NO
+ss46525692 | BROAD | mt8027 | orient=+ | ss_pick=NO
+ss76713278 | AFFY | AFFY_6_1M_SNP_A-8574524 | orient=+ | ss_pick=NO
+SNP | alleles='A/G' | het=0 | se(het)=0
+VAL | validated=NO | min_prob=? | max_prob=? | notwithdrawn
+CTG | assembly=GRCh37.p2 | chr=MT | chr-pos=8027 | NC_012920.1 | ctg-start=8027 | ctg-end=8027 | loctype=2 | orient=+
+
+rs1116905 | human | 9606 | snp | genotype=YES | submitterlink=YES | updated 2011-07-08 10:46
+ss1420521 | TSC-CSHL | TSC0280149 | orient=+ | ss_pick=YES
+ss4249002 | SC_JCM | J01415.1_8428 | orient=+ | ss_pick=NO
+ss46525695 | BROAD | mt8428 | orient=+ | ss_pick=NO
+ss76713277 | AFFY | AFFY_6_1M_SNP_A-8574525 | orient=- | ss_pick=NO
+ss104836810 | KRIBB_YJKIM | KHS1229142 | orient=+ | ss_pick=NO
+SNP | alleles='C/T' | het=0 | se(het)=0
+VAL | validated=NO | min_prob=? | max_prob=? | notwithdrawn
+CTG | assembly=GRCh37.p2 | chr=MT | chr-pos=8428 | NC_012920.1 | ctg-start=8428 | ctg-end=8428 | loctype=2 | orient=+
+
+rs1116906 | human | 9606 | snp | genotype=NO | submitterlink=YES | updated 2011-07-08 10:46
+ss1420522 | TSC-CSHL | TSC0280150 | orient=+ | ss_pick=YES
+ss4248953 | SC_JCM | D38112.1_7874 | orient=+ | ss_pick=NO
+ss76713276 | AFFY | AFFY_6_1M_SNP_A-8574526 | orient=+ | ss_pick=NO
+SNP | alleles='A/G' | het=0 | se(het)=0
+VAL | validated=NO | min_prob=? | max_prob=? | notwithdrawn
+CTG | assembly=GRCh37.p2 | chr=MT | chr-pos=8460 | NC_012920.1 | ctg-start=8460 | ctg-end=8460 | loctype=2 | orient=+
+
+rs1116907 | human | 9606 | snp | genotype=YES | submitterlink=YES | updated 2011-07-08 10:46
+ss1420523 | TSC-CSHL | TSC0280151 | orient=+ | ss_pick=YES
+ss4249003 | SC_JCM | J01415.1_8468 | orient=+ | ss_pick=NO
+ss14397579 | WI_SSAHASNP | chr1.NT_034471.3_47649 | orient=+ | ss_pick=NO
+ss35156748 | SSAHASNP | TA-079.chrM_8469 | orient=+ | ss_pick=NO
+ss46525696 | BROAD | mt8468 | orient=+ | ss_pick=NO
+ss76713275 | AFFY | AFFY_6_1M_SNP_A-8574527 | orient=- | ss_pick=NO
+ss104836811 | KRIBB_YJKIM | KHS1229143 | orient=+ | ss_pick=NO
+SNP | alleles='C/T' | het=0 | se(het)=0
+VAL | validated=NO | min_prob=? | max_prob=? | notwithdrawn
+CTG | assembly=GRCh37.p2 | chr=MT | chr-pos=8468 | NC_012920.1 | ctg-start=8468 | ctg-end=8468 | loctype=2 | orient=+
+
+rs1117205 | human | 9606 | snp | genotype=NO | submitterlink=YES | updated 2011-07-08 10:46
+ss1422755 | TSC-CSHL | TSC0282748 | orient=+ | ss_pick=YES
+ss4040971 | SC_JCM | J01415.1_4104 | orient=+ | ss_pick=NO
+ss5583134 | TSC-CSHL | TSC0274118 | orient=+ | ss_pick=NO
+ss13439002 | SC_SNP | NT_034471.3_43286 | orient=+ | ss_pick=NO
+ss14306330 | WI_SSAHASNP | chr1.NT_034471.3_43286 | orient=+ | ss_pick=NO
+ss14424520 | WUGSC_SSAHASNP | chr1.NT_034471.3_43286 | orient=+ | ss_pick=NO
+ss35482900 | SSAHASNP | TA-079.chrM_4105 | orient=+ | ss_pick=NO
+ss46525672 | BROAD | mt4104 | orient=+ | ss_pick=NO
+ss66863448 | ILLUMINA | HumanHap550v1.1_MitoA4105G | orient=+ | ss_pick=NO
+ss66931986 | ILLUMINA | HumanHap650Yv1.0_MitoA4105G | orient=+ | ss_pick=NO
+ss68074756 | ILLUMINA | HumanHap250Sv1.0_MitoA4105G | orient=+ | ss_pick=NO
+ss70458808 | ILLUMINA | HumanHap550v3.0__MitoA4105G | orient=+ | ss_pick=NO
+ss70979348 | ILLUMINA | HumanHap650Yv3.0_MitoA4105G | orient=+ | ss_pick=NO
+ss75876513 | ILLUMINA | ILMN_Human_1M_MitoA4105G | orient=+ | ss_pick=NO
+ss76713274 | AFFY | AFFY_6_1M_SNP_A-8574528 | orient=+ | ss_pick=NO
+ss85004638 | HGSV | Cor18517_SNV_20070510.chrM_4105 | orient=+ | ss_pick=NO
+ss154522013 | GMI | GMI_SNP_36956643 | orient=+ | ss_pick=NO
+ss162980590 | COMPLETE_GENOMICS | NA19240_36_chr1_554517 | orient=+ | ss_pick=NO
+ss163702119 | COMPLETE_GENOMICS | NA07022_36_chr1_554517 | orient=+ | ss_pick=NO
+ss165980827 | COMPLETE_GENOMICS | NA20431_36_chr1_554517 | orient=+ | ss_pick=NO
+ss205038438 | BCM-HGSC-SUB | BCM_CMT_1011-62 | orient=+ | ss_pick=NO
+SNP | alleles='A/G' | het=0 | se(het)=0
+VAL | validated=NO | min_prob=? | max_prob=? | notwithdrawn
+CTG | assembly=GRCh37.p2 | chr=MT | chr-pos=4104 | NC_012920.1 | ctg-start=4104 | ctg-end=4104 | loctype=2 | orient=+
+SEQ | 310113672 | source-db=remap | seq-pos=194 | orient=+
+SEQ | 310118478 | source-db=remap | seq-pos=194 | orient=+
+
+rs1117206 | human | 9606 | snp | genotype=NO | submitterlink=YES | updated 2011-07-08 10:46
+ss1422756 | TSC-CSHL | TSC0282750 | orient=+ | ss_pick=NO
+ss4248999 | SC_JCM | J01415.1_4586 | orient=+ | ss_pick=NO
+ss46525675 | BROAD | mt4586 | orient=+ | ss_pick=YES
+SNP | alleles='C/T' | het=0 | se(het)=0
+VAL | validated=NO | min_prob=? | max_prob=? | notwithdrawn
+CTG | assembly=GRCh37.p2 | chr=MT | chr-pos=4586 | NC_012920.1 | ctg-start=4586 | ctg-end=4586 | loctype=2 | orient=+
+SEQ | 310113672 | source-db=remap | seq-pos=676 | orient=+
+SEQ | 310118478 | source-db=remap | seq-pos=676 | orient=+
+
+ 
+ 
+# ================ 
+# File created at: 
+# `date` 
+# ================ 

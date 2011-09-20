@@ -13,6 +13,10 @@ use above 'Genome';
 use Genome::SoftwareResult;
 use Test::More;
 
+if (Genome::Config->arch_os ne 'x86_64') {
+    plan skip_all => 'requires 64-bit machine';
+}
+
 my $refbuild_id = 101947881;
 my $ref_seq_build = Genome::Model::Build::ImportedReferenceSequence->get($refbuild_id);
 ok($ref_seq_build, 'human36 reference sequence build') or die;
@@ -39,6 +43,7 @@ my $detector_test = $dispatcher_class->create(
     reference_build_id => $refbuild_id,
     aligned_reads_input => $tumor_bam,
     control_aligned_reads_input => $normal_bam,
+    aligned_reads_sample => 'TEST',
 );
 ok($detector_test, "Object to test a detector case created");
 $detector_test->dump_status_messages(1);

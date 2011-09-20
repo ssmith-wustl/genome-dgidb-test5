@@ -127,7 +127,7 @@ sub processing_profile_for_sanger {
         type_name => 'metagenomic composition 16s',
         name => 'MC16s Sanger TEST',
         sequencing_platform => 'sanger',
-        amplicon_size => 1150,
+#        amplicon_size => 1150,
         sequencing_center => 'gsc',
         assembler => 'phred_phrap',
         assembler_params => '-vector_bound 0 -trim_qual 0',

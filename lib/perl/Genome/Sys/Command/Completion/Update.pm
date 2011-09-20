@@ -43,22 +43,36 @@ sub execute {
         }
     }
 
-    $self->status_message("Committing any updated .opts file(s)!");
-    my @files = `git status -s`;
-    map { chomp $_ } @files;
+    my @files = qx(git status -s 2> /dev/null);
+    chomp @files;
+
     my ($gmt_opts) = grep { $_ =~ /Tools\.pm\.opts/ } @files;
-    $gmt_opts =~ s/^\s*M\s*//;
+    $gmt_opts =~ s/^\s*M\s*// if $gmt_opts;
+
     my ($genome_opts) = grep { $_ =~ /Command\.pm\.opts/ } @files;
-    $genome_opts =~ s/^\s*M\s*//;
-    if ($gmt_opts || $genome_opts) {
+    $genome_opts =~ s/^\s*M\s*// if $genome_opts;
+
+    my @opts_files;
+    push @opts_files, $gmt_opts if $gmt_opts;
+    push @opts_files, $genome_opts if $genome_opts;
+
+    if (@opts_files) {
         if ($self->git_add) {
-            system("git add $gmt_opts $genome_opts");
-            $self->status_message("Added .opts file(s): " . join(" ", $gmt_opts, $genome_opts));
-            $self->status_message("Remember to commit the .opts file(s)!");
+            my $rv = system('git add ' . join (' ', @opts_files));
+            if ($rv == 0) {
+                $self->status_message(join("\n\t", 'Added .opts file(s) to git:', @opts_files));
+                $self->status_message("Remember to commit the .opts file(s).");
+            }
         }
         elsif ($self->git_commit) {
-            system("git commit -m 'genome sys completion updated opts files' $gmt_opts $genome_opts");
-            $self->status_message("Committed .opts file(s): " . join(" ", $gmt_opts, $genome_opts));
+            my $rv = system("git commit -m 'updated .opts file(s)' " . join(' ', @opts_files));
+            if ($rv == 0) {
+                $self->status_message(join("\n\t", 'Committed .opts file(s) to git:', @opts_files));
+                $self->status_message("Remember to push the .opts file(s).");
+            }
+        }
+        else {
+            $self->status_message("Remember to commit and push the .opts file(s).");
         }
     }
 

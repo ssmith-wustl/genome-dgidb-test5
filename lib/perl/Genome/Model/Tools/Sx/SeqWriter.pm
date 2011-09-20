@@ -10,6 +10,7 @@ class Genome::Model::Tools::Sx::SeqWriter {
     has => [
         name => { is => 'Text', is_optional => 1, },
         file => { is => 'Text', },
+        mode => { is => 'Text', valid_values => [qw/ a w /], default_value => 'w', },
     ],
 };
 
@@ -27,17 +28,47 @@ sub create {
             $self->error_message("File property ($property_name) is required");
             return;
         }
-        my $method = ( $file eq '-' ? 'open_file_for_writing' : 'open_file_for_appending' ); # STDOUT
-        my $fh = eval{ Genome::Sys->$method($file); };
-        if ( not $fh ) {
-            $self->error_message("Failed to open file ($file) for appending");
-            return;
+        my $fh;
+        if ( $file eq '-' ) {
+            $fh = eval{ Genome::Sys->open_file_for_writing($file); };
+            if ( not $fh ) {
+                $self->error_message($@);
+                $self->error_message("Failed to open writing to STDOUT");
+                return;
+            }
+        }
+        elsif ( my $cmd = $self->_cmd_for_file($file) ) {
+            $fh = IO::File->new($cmd);
+            if ( not $fh ) {
+                $self->error_message("Failed to open command ($cmd): $!");
+                return;
+            }
+        }
+        else {
+            $fh = ( $self->mode eq 'a' )
+            ? eval{ Genome::Sys->open_file_for_appending($file); }
+            : eval{ Genome::Sys->open_file_for_writing($file); };
+            if ( not $fh ) {
+                $self->error_message($@);
+                $self->error_message('Failed to open file ($file) in mode ('.$self->mode.')');
+                return;
+            }
         }
         $fh->autoflush(1);
         $self->{'_'.$property_name} = $fh;
     }
 
     return $self;
+}
+
+sub _cmd_for_file {
+    my ($self, $file) = @_;
+
+    if ( $file =~ /\.gz$/ ) {
+        return '| gzip > '.$file;
+    }
+
+    return;
 }
 
 sub flush {

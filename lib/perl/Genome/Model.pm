@@ -32,9 +32,16 @@ class Genome::Model {
             },
         },
         subject_id => { is => 'Text' },
-        subject_class_name => { is => 'Text' }, # FIXME This isn't really necessary anymore, should be refactored away
+        subject_class_name => { is => 'Text', is_optional => 1, }, # FIXME This isn't really necessary anymore, should be refactored away
         subject => { 
             is => 'Genome::Subject',
+            id_by => 'subject_id',
+        },
+        _sample_subject => {
+            # returns the subject but only when it is a sample
+            # allows samples to find their models more efficiently (update UR to automatically do reverse class disambiguation)
+            is => 'Genome::Sample',
+            is_optional => 1,
             id_by => 'subject_id',
         },
         subject_name => {
@@ -305,6 +312,12 @@ sub create {
 
     my $self = $class->SUPER::create($params) or return;
 
+    # do this until we drop the subject_class_name column
+    my $subject = $self->subject();
+    if ($subject) {
+        $self->subject_class_name(ref($subject));
+    }
+
     # Make sure the subject we got is really an object
     unless ( $self->_verify_subject ) {
         $self->SUPER::delete;
@@ -490,9 +503,6 @@ sub _resolve_subject {
     }
     if ($try_all_types or $subject_type eq 'genomic_dna') {
         push @subjects, Genome::Sample->get(extraction_label => $subject_name, extraction_type => 'genomic dna');
-    }
-    if ($try_all_types or $subject_type eq 'flow_cell_id') {
-        push @subjects, GSC::Equipment::Solexa::Run->get(flow_cell_id => $subject_name);
     }
 
     #Only resort to a GSC::DNA if nothing else so far has worked
@@ -1088,6 +1098,15 @@ sub real_input_properties {
             is_many => $input_property->is_many,
             data_type => $input_property->data_type,
         );
+
+        if($input_property->{is_input}) {
+            $property{input_name} = $property_name;
+        } else {
+            my $where = $input_property->where;
+            my %where = @$where;
+            $property{input_name} = $where{name};
+        }
+
         if ( $input_property->is_many ) {
             $property{add_method} = 'add_'.$input_property->singular_name,
             $property{remove_method} = 'remove_'.$input_property->singular_name,

@@ -11,9 +11,16 @@ class Genome::ProjectPart {
         id => { is => 'Text' },
     ],
     has => [
-        entity_class_name => { is => 'Text', column_name => 'PART_CLASS_NAME' },
-        entity_id => { is => 'Text', column_name => 'PART_ID' },
-        entity => { is => 'entity_class_name', id_by => 'entity_id' },
+        entity_class_name => { 
+            is => 'Text', 
+            column_name => 'PART_CLASS_NAME',
+            doc => 'Class name of the object to which this part points',
+        },
+        entity_id => { 
+            is => 'Text', 
+            column_name => 'PART_ID',
+            doc => 'ID of the object to which this part points',
+        },
         entity => {
             is => 'UR::Object',
             id_by => 'entity_id',
@@ -23,7 +30,7 @@ class Genome::ProjectPart {
         project => {
             is => 'Genome::Project',
             id_by => 'project_id',
-            doc => 'Project this part belongs to',
+            doc => 'Project of which this is a part',
         },
     ],
     has_optional => [
@@ -35,6 +42,5 @@ class Genome::ProjectPart {
     data_source => 'Genome::DataSource::GMSchema',
     doc => 'Represents a single part of a project',
 };
-
 
 1;

@@ -4,12 +4,18 @@ use strict;
 use warnings;
 
 use above "Genome";
-use Test::More tests => 6;
+use Test::More;
 use File::Copy;
 use File::Temp 'tempdir';
-BEGIN {
-    use_ok('Genome::Model::Tools::Velvet::Graph');
+
+if (Genome::Config->arch_os ne 'x86_64') {
+    plan skip_all => 'requires 64-bit machine';
 }
+else {
+    plan tests => 6;
+}
+
+use_ok('Genome::Model::Tools::Velvet::Graph');
 
 # The directory contains files that this tool needs to run (apparently), and it
 # also writes to that diretory. So copy the data in /gsc/var/cache/testsuite/data to

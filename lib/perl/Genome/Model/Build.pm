@@ -583,6 +583,7 @@ sub post_allocation_initialization {
 }
 
 sub validate_for_start_methods {
+    # Be very wary of removing any of these as many subclasses use SUPER::validate_for_start_methods
     # Each method should return tags
     my @methods = (
         #validate_inputs_have_values should be checked first
@@ -601,8 +602,7 @@ sub validate_for_start {
 
     for my $method (@methods) {
         unless ($self->can($method)) {
-            $self->warning_message("Validation method $method not found!");
-            next;
+            die $self->warning_message("Validation method $method not found!");
         }
         my @returned_tags = grep { defined $_ } $self->$method(); # Prevents undef from being pushed to tags list
         push @tags, @returned_tags if @returned_tags; 
@@ -686,7 +686,8 @@ sub inputs_have_compatible_reference {
         my $object_reference_sequence = $object->$input_reference_method;
         next unless $object_reference_sequence;
 
-        unless($object_reference_sequence->is_compatible_with($build_reference_sequence)) {
+        unless($object_reference_sequence->is_compatible_with($build_reference_sequence)
+                or $self->reference_being_replaced_for_input($input)) {
             push @incompatible_properties, $input->name;
         }
     }
@@ -701,6 +702,15 @@ sub inputs_have_compatible_reference {
     }
 
     return $tag;
+}
+
+sub reference_being_replaced_for_input {
+    my $self = shift;
+    my $input = shift;
+
+    #for overriding in subclasses--by default none are replaced
+    #(example of when this would be true: an imported BAM being realigned)
+    return;
 }
 
 
@@ -940,6 +950,7 @@ sub _launch {
 
         # bsub into the queue specified by the dispatch spec
         my $lsf_project = "build" . $self->id;
+        $ENV{'WF_LSF_PROJECT'} = $lsf_project;
         my $user = Genome::Sys->username;
         my $lsf_command  = join(' ',
             'bsub -N -H',
@@ -1736,6 +1747,7 @@ sub metrics_ignored_by_diff {
 sub regex_for_custom_diff {
     return (
         gz => '\.gz$',
+        vcf =>'\.vcf$',
     );
 }
 
@@ -1763,6 +1775,13 @@ sub diff_gz {
     return 0;
 }
 
+sub diff_vcf {
+    my ($self, $first_file, $second_file) = @_;
+    my $first_md5 = qx(grep -vP '^##fileDate' $first_file | md5sum);
+    my $second_md5 = qx(grep -vP '^##fileDate' $second_file | md5sum);
+    return ($first_md5 eq $second_md5 ? 1 : 0);
+}
+
 # This method takes another build id and compares that build against this one. It gets
 # a list of all the files in both builds and attempts to find pairs of corresponding
 # files. The files/dirs listed in the files_ignored_by_diff and dirs_ignored_by_diff
@@ -1787,7 +1806,9 @@ sub compare_output {
     my (%file_paths, %other_file_paths);
     require Cwd;
     for my $file (@{$self->files_in_data_directory}) {
-        $file_paths{$self->full_path_to_relative($file)} = Cwd::abs_path($file);
+        my $abs_path = Cwd::abs_path($file);
+        next unless $abs_path; # abs_path returns undef if a subdirectory of file does not exist
+        $file_paths{$self->full_path_to_relative($file)} = $abs_path;
     }
     for my $other_file (@{$other_build->files_in_data_directory}) {
         $other_file_paths{$other_build->full_path_to_relative($other_file)} = Cwd::abs_path($other_file);
@@ -1798,6 +1819,7 @@ sub compare_output {
     my %diffs;
     FILE: for my $rel_path (sort keys %file_paths) {
         my $abs_path = delete $file_paths{$rel_path};
+        warn "abs_path ($abs_path) does not exist\n" unless (-e $abs_path);
         my $dir = $self->full_path_to_relative(dirname($abs_path));
        
         next FILE if -d $abs_path;
@@ -1867,6 +1889,7 @@ sub compare_output {
     # Make sure the other build doesn't have any extra files
     for my $rel_path (sort keys %other_file_paths) {
         my $abs_path = delete $other_file_paths{$rel_path};
+        warn "abs_path ($abs_path) does not exist\n" unless (-e $abs_path);
         my $dir = $self->full_path_to_relative(dirname($abs_path));
         next if -d $abs_path;
         next if grep { $dir =~ /$_/ } $self->dirs_ignored_by_diff;
@@ -2022,17 +2045,49 @@ sub delta_model_input_differences_from_model {
     return @model_inputs_to_include;
 }
 
-
-sub all_allocations {
+sub input_allocation{
     my $self = shift;
-    my @input_values = map { $_->value } $self->inputs;
     my @allocations;
-    for my $object ($self, @input_values) {
-        push @allocations, Genome::Disk::Allocation->get(owner_id => $object->id, owner_class_name => $object->class);
+    my @input_values = map { $_->value } $self->inputs;
+    for my $input ($self->inputs) {
+        my $value = $input->value;
+        my $allocation = Genome::Disk::Allocation->get(owner_id => $value->id, owner_class_name => $value->class);
+        if ($allocation){
+            push @allocations, $allocation;
+        }
     }
     return @allocations;
 }
 
+sub software_result_allocations{
+    my $self = shift;
+    my @allocations;
+    my @sru = Genome::SoftwareResult::User->get( user_id => $self->id, user_class_name => $self->subclass_name );
+    foreach my $sru (@sru) {
+        my $sr = $sru->software_result;
+        my $allocation = Genome::Disk::Allocation->get(owner_id => $sr->id, owner_class_name => $sr->class);
+        if ($allocation){
+            push @allocations, $allocation;
+        }
+    }
+    return @allocations;
+}
+
+sub all_allocations {
+    my $self = shift;
+    my @allocations;
+    #get self allocation
+    push @allocations, $self->disk_allocation;
+    #get input allocations
+    push @allocations, $self->input_allocations;
+    #get sr allocations
+    push @allocations, $self->software_result_allocations;
+    #get all allocations from from_builds
+    for my $from_build ($self->from_builds){
+        push @allocations, $from_build->all_allocations;
+    }
+    return @allocations;
+}
 
 sub is_used_as_model_or_build_input {
     # Both models and builds have this method and as such it is currently duplicated.
@@ -2057,6 +2112,7 @@ sub is_used_as_model_or_build_input {
 sub child_lsf_jobs {
     my $self = shift;
     my @workflow_instances = $self->_get_workflow_instance_children($self->newest_workflow_instance);
+    return unless @workflow_instances;
     my @dispatch_ids = grep {defined $_} map($_->current->dispatch_identifier, @workflow_instances);
     my @valid_ids = grep {$_ !~ /^P/} @dispatch_ids;
     return @valid_ids;
@@ -2064,7 +2120,7 @@ sub child_lsf_jobs {
 
 sub _get_workflow_instance_children {
     my $self = shift;
-    my $parent = shift || die;
+    my $parent = shift || return;
     return $parent, map($self->_get_workflow_instance_children($_), $parent->related_instances);
 }
 

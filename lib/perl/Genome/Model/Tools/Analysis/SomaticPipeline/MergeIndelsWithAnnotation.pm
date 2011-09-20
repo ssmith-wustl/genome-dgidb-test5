@@ -103,6 +103,15 @@ sub execute {                               # replace with real execution logic.
 			my $aa_change = $lineContents[15];
 			my $ucsc_cons = $lineContents[16];
 			my $domain = $lineContents[17];
+
+			if($allele1 eq "-" || $allele1 eq "0")
+			{
+				$allele1 = "-";
+			}
+			else
+			{
+				$allele2 = "-";
+			}
 			
 			my $snp_key = "$chrom\t$chr_start\t$chr_stop\t$allele1\t$allele2" if($chrom && $chr_start && $chr_stop);
 			
@@ -198,7 +207,7 @@ sub load_snp_calls
 			my $ref = my $var = "";
 			my $indel_type = my $indel_size = "";
 
-			if($lineContents[2] =~ /[0-9]/)
+			if($lineContents[2] =~ /[0-9]/ && $lineContents[2] ne "0")
 			{
 				$chr_stop = $lineContents[2];
 				$ref = $lineContents[3];
@@ -212,18 +221,20 @@ sub load_snp_calls
 
 			## Correct alleles ##
 
-			if($ref eq '-' || $var eq '-')
+			if($ref eq '-' || $var eq '-' || $ref eq "0" || $var eq "0")
 			{
 				$allele1 = $ref;
 				$allele2 = $var;
 				
-				if($ref eq '-')
+				if($ref eq '-' || $ref eq "0")
 				{
+					$allele1 = '-';
 					$indel_type = "INSERTION";
 					$indel_size = length($var);
 				}
 				else
 				{
+					$allele2 = '-';
 					$indel_type = "DELETION";
 					$indel_size = length($ref);
 				}

@@ -513,7 +513,7 @@ sub dump_trimmed_fastq_files {
     my @fastq_pathnames = $self->dump_sanger_fastq_files(%$segment_params);
     my @trimmed_fastq_pathnames;
     #if the trimmer supports paired end, we just run it once, otherwise we need to loop over the fastqs
-    if(@fastq_pathnames == 2 && $trimmer_name eq 'far' && $self->trimmer_version >= '2.0') {
+    if(@fastq_pathnames == 2 && $trimmer_name eq 'far' && $trimmer_version >= '2.0') {
         my $trimmed_input_fastq_path = $data_directory . '/trimmeed-sanger-fastq-';
         my $trimmer = Genome::Model::Tools::Far::Trimmer->create(
             params => $trimmer_params,
@@ -544,12 +544,11 @@ sub dump_trimmed_fastq_files {
             my $trimmed_input_fastq_pathname = $data_directory . '/trimmed-sanger-fastq-' . $counter;
             my $trimmer;
             if ($trimmer_name eq 'fastx_clipper') {
-                #THIS DOES NOT EXIST YET
-                $trimmer = Genome::Model::Tools::Fastq::Clipper->create(
+                $trimmer = Genome::Model::Tools::Fastx::Clipper->create(
                     params => $trimmer_params,
-                    version => $trimmer_version,
-                    input => $input_fastq_pathname,
-                    output => $trimmed_input_fastq_pathname,
+                    use_version => $trimmer_version,
+                    input_file => $input_fastq_pathname,
+                    output_file => $trimmed_input_fastq_pathname,
                 );
             } elsif ($trimmer_name eq 'far') {
                 $trimmer = Genome::Model::Tools::Far::Trimmer->create(

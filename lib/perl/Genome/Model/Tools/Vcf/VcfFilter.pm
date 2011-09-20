@@ -74,9 +74,14 @@ class Genome::Model::Tools::Vcf::VcfFilter {
             default => 0 ,
             doc => 'remove the filtered lines, as opposed to marking them as non-passing in the VCF',
         },
+
         bed_input => {
+            is => 'Boolean',
+            is_optional => 1,
+            doc => 'filter file is in bed (0-based format). Default false (expects 1-based coordinates)',
             default=>0,
         },
+
         variant_type => {
             is => 'Text',
             is_optional => 1,
@@ -122,7 +127,7 @@ sub execute {
     my $filter_description = $self->filter_description;
     my $remove_filtered_lines = $self->remove_filtered_lines;
     my $variant_type = $self->variant_type;
-
+    
 
     # first, read the filter file and store the locations
     my %filter;
@@ -136,7 +141,7 @@ sub execute {
 
         my @fields = split("\t",$line);
         if($self->bed_input) {
-            unless($fields[1]==$fields[2]) { #in bed, this would be an insertion and we should not naively ++ the start
+            unless($fields[3] =~ /\*/) { #in bed, this would be an insertion or deletion and we should not naively ++ the start
                 $fields[1]+=1;
             }
         }

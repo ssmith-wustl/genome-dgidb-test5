@@ -21,28 +21,10 @@ require Genome::Utility::Text;
 use Digest::MD5;
 use Sys::Hostname;
 use File::Find;
+use Archive::Extract;
 
 require MIME::Lite;
 
-sub sudo_username {
-    my $class = shift;
-    my $who_output = $class->cmd_output_who_dash_m || '';
-    my $who_username = (split(/\s/,$who_output))[0] || '';
-    my $sudo_username = $who_username eq $class->username ? '' : $who_username;
-    $sudo_username ||= $ENV{'SUDO_USER'};
-    return ($sudo_username || '');
-}
-
-sub cmd_output_who_dash_m {
-    return `who -m`;
-}
-
-sub user_is_member_of_group {
-    my ($class, $group_name) = @_;
-    my $user = Genome::Sys->username;
-    my $members = (getgrnam($group_name))[3];
-    return ($members && $user && $members =~ /\b$user\b/);
-}
 # this helps us clean-up locks
 
 my %SYMLINKS_TO_REMOVE;
@@ -233,7 +215,48 @@ sub bunzip {
 
 }
 
-sub open_file_for_writing {
+sub extract_archive {
+    my $self = shift;
+    my %params = @_;
+    my $from = delete $params{from};
+    my $to = delete $params{to};
+
+    if(%params) {
+        my @crap = %params;
+        Carp::confess("Unknown params passed to extract_archive: @crap");
+    }
+
+    unless($from) {
+        Carp::croak("No 'from' passed to extract_archive");
+    }
+
+    unless($to) {
+        Carp::croak("No 'to' passed to extract_archive");
+    }
+
+    $self->validate_file_for_reading($from);
+
+    #use binaries rather than perl modules to extract archives.
+    #the perl modules will often load the entire archive into RAM
+    #we operate on files way too big to be doing that
+    $Archive::Extract::PREFER_BIN = 1;
+
+    my $archive = Archive::Extract->new(archive => $from);
+    unless($archive) {
+        Carp::croak("Can't create extract object for archive $from");
+    }
+
+    my $rv = $archive->extract( to => $to);
+    unless($rv) {
+        Carp::croak("Unable to extract $from into $to");
+    }
+
+    return $archive;
+}
+
+
+
+sub open_gzip_file_for_writing {
     my ($self, $file) = @_;
 
     $self->validate_file_for_writing($file)
@@ -244,8 +267,43 @@ sub open_file_for_writing {
             Carp::croak("Can't unlink $file: $!");
         }
     }
+    my $pipe = "| bgzip -c > $file";
 
-    return $self->_open_file($file, 'w');
+    return $self->_open_file($pipe);
+}
+
+sub open_file_for_overwriting {
+    my ($self, $file) = @_;
+
+    if ( not defined $file ) {
+        Carp::croak('Cannot open file for over writing. No file given.');
+    }
+
+    if ($file eq '-') {
+        Carp::croak("Cannot open STDOUT (-) for over writing.");
+    }
+
+    if ( -d $file ) {
+        Carp::croak("Cannot open file ($file) for over writing. It is a directory.");
+    }
+
+    if ( -e $file ) {
+        unlink $file;
+    }
+
+    my ($name, $dir) = File::Basename::fileparse($file);
+    unless ( $dir ) {
+        Carp::croak("Cannot open file ($file) for over writing. Failed to get directory from file ($file).");
+    }
+
+    unless ( -w $dir ) {
+        Carp::croak("Cannot open file ($file) for over writing. Do not have write access to directory ($dir).");
+    }
+
+    my $fh = IO::File->new($file, 'w');
+    return $fh if $fh;
+
+    Carp::croak("Failed to open file ($file) for over write: $!");
 }
 
 sub copy_file {
@@ -361,6 +419,7 @@ sub open_directory {
     my $dh = IO::Dir->new($directory);
 
     unless ($dh) {
+        $directory ||= '';
         Carp::croak("Can't open_directory $directory: $!");
     }
     return $dh;
@@ -416,6 +475,8 @@ sub lock_resource {
     $block_sleep = 60 unless defined $block_sleep;
     my $max_try = delete $args{max_try};
     $max_try = 7200 unless defined $max_try;
+    my $wait_announce_interval = delete $args{wait_announce_interval};
+    $wait_announce_interval = 0 unless defined $wait_announce_interval;
 
     my ($my_host, $my_pid, $my_lsf_id, $my_user) = (hostname, $$, ($ENV{'LSB_JOBID'} || 'NONE'), Genome::Sys->username);
     my $job_id = (defined $ENV{'LSB_JOBID'} ? $ENV{'LSB_JOBID'} : "NONE");
@@ -442,6 +503,8 @@ sub lock_resource {
                      );
     $lock_info->close();
 
+    my $initial_time = time;
+    my $last_wait_announce_time = $initial_time;
     my $ret;
     while(!($ret = symlink($tempdir,$resource_lock))) {
         # TONY: The only allowable failure is EEXIST, right?
@@ -488,7 +551,14 @@ sub lock_resource {
         }
 
         my $info_content=sprintf("HOST %s\nPID %s\nLSF_JOB_ID %s\nUSER %s",$host,$pid,$lsf_id,$user);
-        $self->status_message("waiting on lock for resource '$resource_lock': $symlink_error. lock_info is:\n$info_content");
+
+        my $time = time;
+        my $elapsed_time = $time - $last_wait_announce_time;
+        if ($elapsed_time >= $wait_announce_interval) {
+            $last_wait_announce_time = $time;
+            my $total_elapsed_time = $time - $initial_time;
+            $self->status_message("waiting (total_elapsed_time = $total_elapsed_time seconds) on lock for resource '$resource_lock': $symlink_error. lock_info is:\n$info_content");
+        }
 
         if ($lsf_id ne "NONE") {
             my ($job_info,$events) = Genome::Model::Event->lsf_state($lsf_id);
@@ -718,6 +788,16 @@ sub md5sum {
     return $digest;
 }
 
+sub md5sum_data {
+    my ($self, $data) = @_;
+    unless (defined $data) {
+        Carp::croak('No data passed to md5sum_data');
+    }
+    my $digest = Digest::MD5->new;
+    $digest->add($data);
+    return $digest->hexdigest;
+}
+
 sub directory_size_recursive {
     my ($self,$directory) = @_;
     my $size;
@@ -854,6 +934,54 @@ sub remove_directory_tree {
         }
     }
     return 1;
+}
+
+sub get_mem_total_from_proc {
+    my $mem_total;
+    my $meminfo_fh = IO::File->new('/proc/meminfo', 'r');
+    if ($meminfo_fh) {
+        while (my $meminfo = $meminfo_fh->getline) {
+            ($mem_total) = $meminfo =~ /MemTotal:\s+(\d+)/;
+            last if ($mem_total);
+        }
+    }
+    return $mem_total;
+}
+
+sub get_mem_limit_from_bjobs {
+    my $mem_limit;
+    my $LSB_JOBID = $ENV{LSB_JOBID};
+    my $bjobs_cmd = qx(which bjobs);
+    if ($bjobs_cmd && $LSB_JOBID) {
+        chomp $bjobs_cmd;
+        my $bjobs = qx($bjobs_cmd -l $LSB_JOBID);
+        my ($bjobs_mem_limit_kb) = $bjobs =~ /MEMLIMIT\s+(\d+)/;
+        $mem_limit = $bjobs_mem_limit_kb if ($bjobs_mem_limit_kb);
+    }
+    return $mem_limit;
+}
+
+
+# detect maximum available memory
+# would probably be better to not do this this way but it's a start
+sub mem_limit_kb {
+    my $class = shift;
+
+    my $mem_limit_kb;
+
+    # get physical total memory
+    if (-e '/proc/meminfo') {
+        my $mem_total = $class->get_mem_total_from_proc;
+        $mem_limit_kb = $mem_total if $mem_total;
+    }
+
+    # get LSF memory limit
+    if ($ENV{LSB_JOBID}) {
+        my $mem_limit = $class->get_mem_limit_from_bjobs;
+        $mem_limit_kb = $mem_limit if $mem_limit;
+    }
+
+    return $mem_limit_kb;
 }
 
 1;

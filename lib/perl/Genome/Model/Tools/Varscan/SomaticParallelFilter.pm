@@ -30,6 +30,9 @@ class Genome::Model::Tools::Varscan::SomaticParallelFilter {
 		output_snp	=> { is => 'Text', doc => "Basename for SNP output, eg. varscan_out/varscan.status.snp" , is_optional => 1, is_input => 1, is_output => 1},
 		output_indel	=> { is => 'Text', doc => "Basename for indel output, eg. varscan_out/varscan.status.snp" , is_optional => 1, is_input => 1, is_output => 1},
 		reference        => { is => 'Text', doc => "Reference FASTA file for BAMs" , is_optional => 1, default_value => (Genome::Config::reference_sequence_directory() . '/NCBI-human-build36/all_sequences.fa')},
+		chromosome	=> { is => 'Text', doc => "Specify a single chromosome (optional)", is_optional => 1, is_input => 1},
+		filter_loh	=> { is => 'Text', doc => "If set to 1, apply filter to LOH-HC calls using normal BAM", is_optional => 1, is_input => 1, default => 1},
+		filter_germline	=> { is => 'Text', doc => "If set to 1, apply filter to Germline-HC calls using tumor BAM", is_optional => 1, is_input => 1, default => 0},
 		heap_space	=> { is => 'Text', doc => "Megabytes to reserve for java heap [1000]" , is_optional => 1, is_input => 1},
 		skip_if_output_present	=> { is => 'Text', doc => "If set to 1, skip execution if output files exist", is_optional => 1, is_input => 1 },
 		varscan_params	=> { is => 'Text', doc => "Parameters to pass to VarScan [--min-coverage 3 --min-var-freq 0.08 --p-value 0.10 --somatic-p-value 0.05 --strand-filter 1]" , is_optional => 1, is_input => 1},
@@ -133,133 +136,136 @@ sub execute {                               # replace with real execution logic.
 			}
 			else
 			{
-				print "CHROMOSOME $chrom\n";
-				$output_snp = $output . ".$chrom.snp";
-				$output_indel = $output . ".$chrom.indel";
-
-                                ## FORMAT SNVS ##
-
-                                if(-e $output_snp)
-                                {
-                                        if($self->skip_if_output_present && -e "$output_snp.formatted")
-                                        {
-                                                ## Skip because already present 
-                                        }
-                                        else
-                                        {
-                                                print "Formatting SNVs...\n";
-                                                ## Format the variants ##
-                                                my $cmd_obj = Genome::Model::Tools::Capture::FormatSnvs->create(
-                                                    variants_file => $output_snp,
-                                                    output_file => "$output_snp.formatted",
-                                                );
-                                                
-                                                $cmd_obj->execute;                                                                                        
-                                        }
-
-                                }
-                                else
-                                {
-                                        warn "Warning: Missing SNP file $output_snp\n";
-                                }
-
-                                ## FORMAT INDELS ##
-                                
-                                if(-e $output_indel)
-                                {
-                                        if($self->skip_if_output_present && -e "$output_snp.formatted")
-                                        {
-                                                ## Skip because already present 
-                                        }
-                                        else
-                                        {
-                                                print "Formatting indels...\n";
-                                                ## Format the variants ##
-                                                my $cmd_obj = Genome::Model::Tools::Capture::FormatIndels->create(
-                                                    variants_file => $output_indel,
-                                                    output_file => "$output_indel.formatted",
-                                                );
-                                                
-                                                $cmd_obj->execute;
-                                        }
-                                }
-                                else
-                                {
-                                        warn "Warning: Missing indel file $output_indel\n";
-                                        
-                                }
-
-                                ## PROCESS SNVS ##
-
-                                if(-e "$output_snp.formatted")
-                                {
-                                        if($self->skip_if_output_present && -e "$output_snp.formatted.Somatic")
-                                        {
-                                                ## Skip because already present 
-                                        }
-                                        else
-                                        {
-                                                print "Processing SNVs...\n";
-                                                my $cmd_obj = Genome::Model::Tools::Varscan::ProcessSomatic->create(
-                                                    status_file => "$output_snp.formatted",
-                                                );
-                                                
-                                                $cmd_obj->execute;                                                
-                                        }                                        
-                                }
-                                
-                                ## PROCESS INDELS ##
-
-                                if(-e "$output_indel.formatted")
-                                {
-                                        if($self->skip_if_output_present && -e "$output_indel.formatted.Somatic")
-                                        {
-                                                ## Skip because already present 
-                                        }
-                                        else
-                                        {
-                                                print "Processing Indels...\n";
-
-                                                my $cmd_obj = Genome::Model::Tools::Varscan::ProcessSomatic->create(
-                                                    status_file => "$output_indel.formatted",
-                                                );
-                                                
-                                                $cmd_obj->execute;                                                
-                                        }                                        
-                                }
-
-
-                                ## FILTER SNVS ##
-
-                                # Somatic #                                
-                                my $variant_file = "$output_snp.formatted.Somatic.hc";
-                                my $bam_file = $tumor_bam;
-                                run_filter($self, $variant_file, $bam_file);
-                                # Germline #
-                                $variant_file = "$output_snp.formatted.Germline.hc";
-                                $bam_file = $tumor_bam;
-                                run_filter($self, $variant_file, $bam_file);
-                                # LOH using normal bam ##
-                                $variant_file = "$output_snp.formatted.LOH.hc";
-                                $bam_file = $normal_bam;
-                                run_filter($self, $variant_file, $bam_file);
-
-
-                                ## FILTER INDELS ##
-
-                                # Somatic #                                
-                                $variant_file = "$output_indel.formatted.Somatic.hc";
-                                $bam_file = $tumor_bam;
-                                run_indel_filter($self, $variant_file, $bam_file);
-                                # Germline #
-                                $variant_file = "$output_indel.formatted.Germline.hc";
-                                $bam_file = $tumor_bam;
-                                run_indel_filter($self, $variant_file, $bam_file);
-                                # LOH using normal bam ##
-                                $variant_file = "$output_indel.formatted.LOH.hc";
-                                $bam_file = $normal_bam;
-                                run_indel_filter($self, $variant_file, $bam_file);
-
+				if(!$self->chromosome || $chrom eq $self->chromosome)
+				{
+					print "CHROMOSOME $chrom\n";
+					$output_snp = $output . ".$chrom.snp";
+					$output_indel = $output . ".$chrom.indel";
+	
+					## FORMAT SNVS ##
+	
+					if(-e $output_snp)
+					{
+						if($self->skip_if_output_present && -e "$output_snp.formatted")
+						{
+							## Skip because already present 
+						}
+						else
+						{
+							print "Formatting SNVs...\n";
+							## Format the variants ##
+							my $cmd_obj = Genome::Model::Tools::Capture::FormatSnvs->create(
+							    variants_file => $output_snp,
+							    output_file => "$output_snp.formatted",
+							);
+							
+							$cmd_obj->execute;                                                                                        
+						}
+	
+					}
+					else
+					{
+						warn "Warning: Missing SNP file $output_snp\n";
+					}
+	
+					## FORMAT INDELS ##
+					
+					if(-e $output_indel)
+					{
+						if($self->skip_if_output_present && -e "$output_snp.formatted")
+						{
+							## Skip because already present 
+						}
+						else
+						{
+							print "Formatting indels...\n";
+							## Format the variants ##
+							my $cmd_obj = Genome::Model::Tools::Capture::FormatIndels->create(
+							    variants_file => $output_indel,
+							    output_file => "$output_indel.formatted",
+							);
+							
+							$cmd_obj->execute;
+						}
+					}
+					else
+					{
+						warn "Warning: Missing indel file $output_indel\n";
+						
+					}
+	
+					## PROCESS SNVS ##
+	
+					if(-e "$output_snp.formatted")
+					{
+						if($self->skip_if_output_present && -e "$output_snp.formatted.Somatic")
+						{
+							## Skip because already present 
+						}
+						else
+						{
+							print "Processing SNVs...\n";
+							my $cmd_obj = Genome::Model::Tools::Varscan::ProcessSomatic->create(
+							    status_file => "$output_snp.formatted",
+							);
+							
+							$cmd_obj->execute;                                                
+						}                                        
+					}
+					
+					## PROCESS INDELS ##
+	
+					if(-e "$output_indel.formatted")
+					{
+						if($self->skip_if_output_present && -e "$output_indel.formatted.Somatic")
+						{
+							## Skip because already present 
+						}
+						else
+						{
+							print "Processing Indels...\n";
+	
+							my $cmd_obj = Genome::Model::Tools::Varscan::ProcessSomatic->create(
+							    status_file => "$output_indel.formatted",
+							);
+							
+							$cmd_obj->execute;                                                
+						}                                        
+					}
+	
+	
+					## FILTER SNVS ##
+	
+					# Somatic #                                
+					my $variant_file = "$output_snp.formatted.Somatic.hc";
+					my $bam_file = $tumor_bam;
+					run_filter($self, $variant_file, $bam_file);
+					# Germline #
+					$variant_file = "$output_snp.formatted.Germline.hc";
+					$bam_file = $tumor_bam;
+					run_filter($self, $variant_file, $bam_file) if($self->filter_germline);
+					# LOH using normal bam ##
+					$variant_file = "$output_snp.formatted.LOH.hc";
+					$bam_file = $normal_bam;
+					run_filter($self, $variant_file, $bam_file) if($self->filter_loh);
+	
+	
+					## FILTER INDELS ##
+	
+					# Somatic #                                
+					$variant_file = "$output_indel.formatted.Somatic.hc";
+					$bam_file = $tumor_bam;
+					run_indel_filter($self, $variant_file, $bam_file);
+					# Germline #
+					$variant_file = "$output_indel.formatted.Germline.hc";
+					$bam_file = $tumor_bam;
+					run_indel_filter($self, $variant_file, $bam_file) if($self->filter_germline);
+					# LOH using normal bam ##
+					$variant_file = "$output_indel.formatted.LOH.hc";
+					$bam_file = $normal_bam;
+					run_indel_filter($self, $variant_file, $bam_file) if($self->filter_loh);
+					
+				}
 
 
 			}
@@ -299,6 +305,10 @@ sub run_filter
                 else
                 {
                         my $cmd = "gmt somatic filter-false-positives --variant-file $variant_file --bam-file $bam_file --output-file $variant_file.fpfilter --filtered-file $variant_file.fpfilter.removed";
+			if($self->reference)
+			{
+				$cmd .= " --reference " . $self->reference;
+			}
                         system("bsub -q long -R\"select[type==LINUX64 && model != Opteron250 && mem>2000 && tmp>2000] rusage[mem=2000]\" $cmd");
                 }
         }        

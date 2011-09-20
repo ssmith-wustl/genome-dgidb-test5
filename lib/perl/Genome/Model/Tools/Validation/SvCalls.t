@@ -4,8 +4,15 @@ use strict;
 use warnings;
 use above 'Genome';
 use File::Compare;
-use Test::More tests=>31;
+use Test::More;
 use Cwd;
+
+if (Genome::Config->arch_os ne 'x86_64') {
+    plan skip_all => 'requires 64-bit machine';
+}
+else {
+    plan tests => 31;
+}
 
 #test that module is use-able
 use_ok('Genome::Model::Tools::Validation::SvCalls');

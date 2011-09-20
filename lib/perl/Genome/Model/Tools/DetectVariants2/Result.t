@@ -11,6 +11,10 @@ BEGIN{
 use above "Genome";
 use Test::More;
 
+if (Genome::Config->arch_os ne 'x86_64') {
+    plan skip_all => 'requires 64-bit machine';
+}
+
 use_ok('Genome::Model::Tools::DetectVariants2::Result');
 
 my $refbuild_id = 101947881;
@@ -41,6 +45,7 @@ my %command_params = (
     aligned_reads_input => $bam_input,
     version => $version,
     params => $detector_parameters,
+    aligned_reads_sample => 'TEST',
     output_directory => $test_working_dir . '/test',
 );
 

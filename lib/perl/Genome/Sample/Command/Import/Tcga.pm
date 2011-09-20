@@ -16,12 +16,6 @@ class Genome::Sample::Command::Import::Tcga {
             shell_args_position => 1,
             doc => 'TCGA sample name. It must start with TCGA and have 7 parts separated by dashes. Ex: TCGA-00-0000-000-000-0000-00',
         },
-        files => {
-            is => 'Text',
-            is_many => 1,
-            is_optional => 1,
-            doc => 'Files that contains patient and sample information. These will be stored in the sample\'s disk allocation.',
-        },
         _individual_name => { is_optional => 1, },
         _extraction_type => { is_optional => 1, },
     ],
@@ -54,14 +48,6 @@ sub execute {
         library => 'extlibs',
     );
     return if not $import;
-
-    for my $file ( $self->files ) {
-        my $add_file = eval{ $self->_sample->add_file($file) };
-        if ( not $add_file ) {
-            $self->_bail('Failed to add file: '.$file);
-            return if not $add_file;
-        }
-    }
 
     $self->status_message('Import...OK');
 

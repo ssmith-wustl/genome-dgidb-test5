@@ -469,6 +469,8 @@ INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','MISC_N
 INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','MODEL_GROUP','ID','NUMBER','11','N','2009-10-07 14:16:35',NULL);
 INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_GROUP','MODEL_GROUP_ID','NUMBER','11','N','2009-10-07 14:16:31',NULL);
 INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','MODEL_GROUP','NAME','VARCHAR2','50','N','2009-10-07 14:16:35',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','MODEL_GROUP','USER_NAME','VARCHAR2','64','Y','2011-09-12 14:16:35',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','MODEL_GROUP','UUID','VARCHAR2','64','Y','2011-09-12 14:16:35',NULL);
 INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_GROUP','MODEL_ID','NUMBER','11','N','2009-10-07 14:16:31',NULL);
 INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','MODEL_INSTRUMENT_DATA_ASSGNMNT','FILTER_DESC','VARCHAR2','100','Y','2009-10-13 11:26:26',NULL);
 INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_INPUT','FILTER_DESC','VARCHAR2','100','Y','2009-10-13 11:26:19',NULL);

@@ -536,12 +536,13 @@ sub load_seq_for_amplicon {
     return unless -s $acefile; # ok
     my $ace = Genome::Model::Tools::Consed::AceReader->create(file => $acefile);
     my $contig;
+    my $amplicon_size = ( $self->amplicon_size ) ? $self->amplicon_size : 0;
     while ( my $obj = $ace->next ) {
         next if $obj->{type} ne 'contig';
         next unless $obj->{read_count} > 1;
         $obj->{unpadded_consensus} = $obj->{consensus};
         $obj->{unpadded_consensus} =~ s/\*//g;
-        next if length $obj->{unpadded_consensus} < $self->_build->amplicon_size;
+        next if length $obj->{unpadded_consensus} < $amplicon_size;
         $contig = $obj;
         last;
     }
@@ -564,6 +565,15 @@ sub load_seq_for_amplicon {
     $amplicon->{reads_processed} = $contig->{read_count};
 
     return $seq;
+}
+
+sub amplicon_size {
+    my $self = shift;
+    my $string = $self->_build->processing_profile->amplicon_processor;
+    return unless $string; #ok
+
+    my ($amplicon_size) = $string =~ /filter\s+by-min-length\s+--?length\s+(\d+)/;
+    return return $amplicon_size;
 }
 
 sub _remove_old_read_iterations_from_amplicon {

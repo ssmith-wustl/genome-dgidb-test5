@@ -221,6 +221,19 @@ sub check_genotype_input {
     return @tags;
 }
 
+sub reference_being_replaced_for_input {
+    my $self = shift;
+    my $input = shift;
+
+    return unless $input;
+    return if $self->processing_profile->read_aligner_name eq 'imported';
+
+    #we're going to realign, so any existing reference on the data is unimportant
+    return 1 if $input->name eq 'instrument_data';
+
+    return;
+}
+
 sub alignment_results_for_instrument_data {
     my $self = shift;
     my $instrument_data = shift;
@@ -380,6 +393,11 @@ sub get_alignments {
 sub get_alignment_bams {
     my $self = shift;
     return map { $_->alignment_bam_file_paths } $self->get_alignments;
+}
+
+sub get_merged_vcf {
+    my $self = shift;
+    return $self->variants_directory . "/merged.vcf";
 }
 
 sub calculate_estimated_kb_usage {

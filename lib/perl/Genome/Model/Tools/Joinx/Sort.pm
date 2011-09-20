@@ -51,12 +51,23 @@ sub execute {
     my $self = shift;
     my $output = "-";
     $output = $self->output_file if (defined $self->output_file);
-    my @inputs = $self->input_files;
+    # Grep out empty files
+    my @inputs = grep { -s $_ } $self->input_files;
+
+    # If all input files are empty, make sure the output file at least exists
+    unless (@inputs) {
+        if (defined $self->output_file) {
+            unless (system("touch $output") == 0) {
+                die $self->error_message("Failed to touch $output");
+            }
+        }
+        return 1;
+    }
+
     my $flags = join(" ", $self->flags);
     my $cmd = $self->joinx_path . " sort $flags " .
         join(" ", @inputs) .
         " -o $output";
-
 
     my %params = (
         cmd => $cmd,

@@ -2,6 +2,7 @@ package Finishing::Assembly::Ace::RenameReads;
 
 use strict;
 use warnings;
+no warnings 'reserved';
 
 use Finfo::Std;
 

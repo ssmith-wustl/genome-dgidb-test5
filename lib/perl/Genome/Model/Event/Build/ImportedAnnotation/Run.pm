@@ -79,6 +79,8 @@ sub execute {
         confess "Could not get annotation data directory for build" unless defined $annotation_data_directory;
         my $sym_rv = symlink $annotation_data_source_directory, $annotation_data_directory;
         confess "Could not create symlink from $annotation_data_source_directory to $annotation_data_directory" unless $sym_rv;
+        my $snapshot_date = $self->calculate_snapshot_date($genbank_file);
+        $build->snapshot_date($snapshot_date);
     }
     elsif ($source =~ /^ensembl$/i) {
         my ($host, $user, $pass) = $self->get_ensembl_info($version);
@@ -184,35 +186,19 @@ sub generate_rna_seq_files {
         confess "Failed to generate the ribosomal gene name file!";
     }
 
-    unless(-s $build->generate_transcript_info_file($build->reference_sequence_id)){
-        confess "Failed to generate the transcript_info file!";
-    }
-
-    unless (-s $build->generate_annotation_file('gtf', $build->reference_sequence_id)){
-        confess "Failed to generate the annotation file!";
-    }
-    
-    unless (-s $build->generate_rRNA_file('gtf', $build->reference_sequence_id)){
-        confess "Failed to generate the rRNA file!";
-    }
-
-    unless (-s $build->generate_MT_file('gtf', $build->reference_sequence_id)){
-        confess "Failed to generate the MT file!";
-    }
-
-    unless (-s $build->generate_pseudogene_file('gtf', $build->reference_sequence_id)){
-        confess "Failed to generate the pseudogene file!";
-    }
-
-    unless (-s $build->generate_rRNA_MT_file('gtf', $build->reference_sequence_id)){
-        confess "Failed to generate the rRNA_MT file!";
-    }
-
-    unless (-s $build->generate_rRNA_MT_pseudogene_file('gtf', $build->reference_sequence_id)){
-        confess "Failed to generate the rRNA_MT_pseudogene file!";
+    unless($build->generate_RNA_annotation_files('gtf', $build->reference_sequence_id)){
+        confess "Failed to generate RNA Seq files!";
     }
 
     return 1;
+}
+
+sub calculate_snapshot_date {
+    my ($self, $genbank_file) = @_;
+    my $output = `ls -l $genbank_file`;
+    my @parts = split(" ", $output);
+    my $date = $parts[5];
+    return $date;
 }
 
 1;

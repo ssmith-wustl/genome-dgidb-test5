@@ -113,6 +113,7 @@ sub _type_for_file {
         return 'sanger';
     }
 
+    $file =~ s/\.gz$//;
     my ($ext) = $file =~ /\.(\w+)$/;
     if ( not $ext ) {
         $self->error_message('Failed to get extension for file: '.$file);
@@ -131,6 +132,7 @@ sub _type_for_file {
         return $exts_and_types{$ext}
     }
 
+    $self->error_message('Failed to determine type for file: '.$file);
     return;
 }
 

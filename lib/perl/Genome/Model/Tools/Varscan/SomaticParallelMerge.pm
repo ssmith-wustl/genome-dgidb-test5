@@ -30,6 +30,7 @@ class Genome::Model::Tools::Varscan::SomaticParallelMerge {
 		output_snp	=> { is => 'Text', doc => "Basename for SNP output, eg. varscan_out/varscan.status.snp" , is_optional => 1, is_input => 1, is_output => 1},
 		output_indel	=> { is => 'Text', doc => "Basename for indel output, eg. varscan_out/varscan.status.snp" , is_optional => 1, is_input => 1, is_output => 1},
 		reference        => { is => 'Text', doc => "Reference FASTA file for BAMs" , is_optional => 1, default_value => (Genome::Config::reference_sequence_directory() . '/NCBI-human-build36/all_sequences.fa')},
+		chromosome	=> { is => 'Text', doc => "Specify a single chromosome (optional)", is_optional => 1, is_input => 1},
 		heap_space	=> { is => 'Text', doc => "Megabytes to reserve for java heap [1000]" , is_optional => 1, is_input => 1},
 		skip_if_output_present	=> { is => 'Text', doc => "If set to 1, skip execution if output files exist", is_optional => 1, is_input => 1 },
 		varscan_params	=> { is => 'Text', doc => "Parameters to pass to VarScan [--min-coverage 3 --min-var-freq 0.08 --p-value 0.10 --somatic-p-value 0.05 --strand-filter 1]" , is_optional => 1, is_input => 1},
@@ -151,57 +152,61 @@ sub execute {                               # replace with real execution logic.
 			}
 			else
 			{
-				## Check for file truncation ##
-				check_files($output, $chrom);
-				my $chrom_output_line = $chrom;
+				if(!$self->chromosome || $chrom eq $self->chromosome)
+				{
+					## Check for file truncation ##
+					check_files($output, $chrom);
+					my $chrom_output_line = $chrom;
+	
+					## Merge the output files ##
+					my $num_snp = my $num_indel = 0;
+	
+					# All Calls, Formatted for Annotation ##
+					($num_snp, $num_indel) = merge_output($chrom, $output, "formatted");
+	
+					# All Somatic ##
+					($num_snp, $num_indel) = merge_output($chrom, $output, "formatted.Somatic");
+					$chrom_output_line .= "\t$num_snp\t$num_indel";
+					# All LOH ##
+					($num_snp, $num_indel) = merge_output($chrom, $output, "formatted.LOH");
+					$chrom_output_line .= "\t$num_snp\t$num_indel";
+					# All Germline ##
+					($num_snp, $num_indel) = merge_output($chrom, $output, "formatted.Germline");
+					$chrom_output_line .= "\t$num_snp\t$num_indel";
+	
+	
+					# HC Somatic ##
+					($num_snp, $num_indel) = merge_output($chrom, $output, "formatted.Somatic.hc");
+					$chrom_output_line .= "\t$num_snp\t$num_indel";
+					# HC LOH ##
+					($num_snp, $num_indel) = merge_output($chrom, $output, "formatted.LOH.hc");
+					$chrom_output_line .= "\t$num_snp\t$num_indel";
+					# HC Germline ##
+					($num_snp, $num_indel) = merge_output($chrom, $output, "formatted.Germline.hc");
+					$chrom_output_line .= "\t$num_snp\t$num_indel";
+	
+					
+					# HC Somatic passing filter ##
+					($num_snp, $num_indel) = merge_output($chrom, $output, "formatted.Somatic.hc.fpfilter");
+					$chrom_output_line .= "\t$num_snp\t$num_indel";
+					# HC LOH passing filter ##
+					($num_snp, $num_indel) = merge_output($chrom, $output, "formatted.LOH.hc.fpfilter");
+					$chrom_output_line .= "\t$num_snp\t$num_indel";
+					# HC Germline passing filter ##
+					($num_snp, $num_indel) = merge_output($chrom, $output, "formatted.Germline.hc.fpfilter");
+					$chrom_output_line .= "\t$num_snp\t$num_indel";
+	
+	
+					# HC Somatic failing filter ##
+					($num_snp, $num_indel) = merge_output($chrom, $output, "formatted.Somatic.hc.fpfilter.removed");
+					# HC LOH failing filter ##
+					($num_snp, $num_indel) = merge_output($chrom, $output, "formatted.LOH.hc.fpfilter.removed");
+					# HC Germline failing filter ##
+					($num_snp, $num_indel) = merge_output($chrom, $output, "formatted.Germline.hc.fpfilter.removed");
+					
+					print "$chrom_output_line\n";					
+				}
 
-				## Merge the output files ##
-				my $num_snp = my $num_indel = 0;
-
-				# All Calls, Formatted for Annotation ##
-				($num_snp, $num_indel) = merge_output($chrom, $output, "formatted");
-
-				# All Somatic ##
-				($num_snp, $num_indel) = merge_output($chrom, $output, "formatted.Somatic");
-				$chrom_output_line .= "\t$num_snp\t$num_indel";
-				# All LOH ##
-				($num_snp, $num_indel) = merge_output($chrom, $output, "formatted.LOH");
-				$chrom_output_line .= "\t$num_snp\t$num_indel";
-				# All Germline ##
-				($num_snp, $num_indel) = merge_output($chrom, $output, "formatted.Germline");
-				$chrom_output_line .= "\t$num_snp\t$num_indel";
-
-
-				# HC Somatic ##
-				($num_snp, $num_indel) = merge_output($chrom, $output, "formatted.Somatic.hc");
-				$chrom_output_line .= "\t$num_snp\t$num_indel";
-				# HC LOH ##
-				($num_snp, $num_indel) = merge_output($chrom, $output, "formatted.LOH.hc");
-				$chrom_output_line .= "\t$num_snp\t$num_indel";
-				# HC Germline ##
-				($num_snp, $num_indel) = merge_output($chrom, $output, "formatted.Germline.hc");
-				$chrom_output_line .= "\t$num_snp\t$num_indel";
-
-				
-				# HC Somatic passing filter ##
-				($num_snp, $num_indel) = merge_output($chrom, $output, "formatted.Somatic.hc.fpfilter");
-				$chrom_output_line .= "\t$num_snp\t$num_indel";
-				# HC LOH passing filter ##
-				($num_snp, $num_indel) = merge_output($chrom, $output, "formatted.LOH.hc.fpfilter");
-				$chrom_output_line .= "\t$num_snp\t$num_indel";
-				# HC Germline passing filter ##
-				($num_snp, $num_indel) = merge_output($chrom, $output, "formatted.Germline.hc.fpfilter");
-				$chrom_output_line .= "\t$num_snp\t$num_indel";
-
-
-				# HC Somatic failing filter ##
-				($num_snp, $num_indel) = merge_output($chrom, $output, "formatted.Somatic.hc.fpfilter.removed");
-				# HC LOH failing filter ##
-				($num_snp, $num_indel) = merge_output($chrom, $output, "formatted.LOH.hc.fpfilter.removed");
-				# HC Germline failing filter ##
-				($num_snp, $num_indel) = merge_output($chrom, $output, "formatted.Germline.hc.fpfilter.removed");
-				
-				print "$chrom_output_line\n";
 			}
 
 		}

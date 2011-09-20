@@ -40,9 +40,11 @@ class Genome::Model::Tools::Capture::SomaticModelGroup {
 		output_review	=> 	{ is => 'Text', doc => "Specify a directory to output SNV/indel files for manual review" , is_optional => 1},
 		output_germline_calls	=> 	{ is => 'Text', doc => "Specify a directory to output germline SNV/indel calls" , is_optional => 1},
 		output_loh_calls	=> 	{ is => 'Text', doc => "Specify a directory to output LOH calls" , is_optional => 1},
+		process_loh_calls	=> 	{ is => 'Text', doc => "Specify a directory to process LOH calls" , is_optional => 1},
 		germline_roi_file	=> 	{ is => 'Text', doc => "A file in BED format to restrict germline calls" , is_optional => 1},
 		output_maf_file	=> 	{ is => 'Text', doc => "Output a MAF file for downstream analysis" , is_optional => 1},
 		uhc_filter	=> 	{ is => 'Text', doc => "If set to 1, apply ultra-high-conf filter to SNV calls" , is_optional => 1},
+		uhc_indels	=> 	{ is => 'Text', doc => "If set to 1, pass hc indels for MAF inclusion" , is_optional => 1},
 		reference	=> 	{ is => 'Text', doc => "Reference to use for bam-readcounts-based filters" , is_optional => 1},
 		review_database_snvs	=> 	{ is => 'Text', doc => "If provided, use to exclude already-reviewed sites" , is_optional => 1},
 		review_database_indels	=> 	{ is => 'Text', doc => "If provided, use to exclude already-reviewed indels" , is_optional => 1},
@@ -185,7 +187,7 @@ sub execute {                               # replace with real execution logic.
 		my $final_build_result = "";
 		my $last_build_id = 0;
 
-		if($self->output_build_dirs || $self->output_review || $self->output_maf_file || $self->output_germline_calls || $self->uhc_filter || $self->varscan_copynumber || $self->output_loh_calls)
+		if($self->output_build_dirs || $self->output_review || $self->output_maf_file || $self->output_germline_calls || $self->uhc_filter || $self->varscan_copynumber || $self->output_loh_calls || $self->process_loh_calls)
 		{
 			my $num_builds = 0;		
 			my $num_maf_mutations = 0;
@@ -222,11 +224,14 @@ sub execute {                               # replace with real execution logic.
 					$model_status = "Succeeded";	## Override if we have successful build dir ##				
 					$succeeded_models_by_sample{$subject_name} = $model_id;
 					$last_build_dir = $model->last_succeeded_build_directory;
+					$last_build_dir = "/gscmnt/ams1183/info/model_data/2877873505/build113565171" if($model->id == 2877873505);
 					my $tumor_model = $model->tumor_model;
 					my $normal_model = $model->normal_model;
 					my $tumor_sample = $tumor_model->subject_name;
 					my $normal_sample = $normal_model->subject_name;
 
+					my @temp = split(/\-/, $tumor_sample);
+					my $patient_id = join("-", "TCGA", $temp[1], $temp[2]);
 
 					if($self->output_build_dirs)
 					{
@@ -276,22 +281,58 @@ sub execute {                               # replace with real execution logic.
 						{
 							mkdir($loh_dir) or die "Can't create output directory: $!\n";
 						}
+                                                
+                                                ## Determine if we already have results ##
+                                                
+                                                my $loh_output_file = "$loh_dir/varScan.loh.snp";
+                                                if(-e $loh_output_file)
+                                                {
+                                                        warn "Skipping $tumor_sample-$normal_sample because file exists...\n";
+                                                }
+                                                else
+                                                {
+                                                        ## Get BAM Files ##
+        
+                                                        my $tumor_model_dir = $tumor_model->last_succeeded_build_directory;
+                                                        my $tumor_bam = `ls $tumor_model_dir/alignments/*.bam`; chomp($tumor_bam);
+        
+                                                        my $normal_model_dir = $normal_model->last_succeeded_build_directory;
+                                                        my $normal_bam = `ls $normal_model_dir/alignments/*.bam`; chomp($normal_bam);
+        
+                                                        ## Output LOH Files ##
+                                                        
+                                                        output_loh_files($self, $last_build_dir, $loh_dir, $normal_bam, $tumor_bam);                                                        
+                                                }
 
-						## Get BAM Files ##
 
-						my $tumor_model_dir = $tumor_model->last_succeeded_build_directory;
-						my $tumor_bam = `ls $tumor_model_dir/alignments/*.bam`; chomp($tumor_bam);
-
-						my $normal_model_dir = $normal_model->last_succeeded_build_directory;
-						my $normal_bam = `ls $normal_model_dir/alignments/*.bam`; chomp($normal_bam);
-
-						## Output LOH Files ##
-
-						output_loh_files($self, $last_build_dir, $loh_dir, $normal_bam, $tumor_bam);
 #						$debug_counter++;
 #						exit(0) if($debug_counter >= 10);
 					}
-	
+					elsif($self->process_loh_calls)
+					{
+						## Get normal and tumor sample names ##
+						my $tumor_model = $model->tumor_model;
+						my $normal_model = $model->normal_model;
+						my $tumor_sample = $tumor_model->subject_name;
+						my $normal_sample = $normal_model->subject_name;
+
+						my $loh_dir = $self->process_loh_calls . "/" . $tumor_sample . "-" . $normal_sample;
+						
+						if(-d $loh_dir)
+						{
+                                                        my $merged_output_file = "$loh_dir/varScan.merged.snp";
+                                                        if(-e $merged_output_file)
+                                                        {
+                                                                warn "Skipping $tumor_sample-$normal_sample because merged file exists...\n";       
+                                                        }
+                                                        else
+                                                        {
+        							process_loh($loh_dir);
+                						sleep(1);
+                                                        }
+                                                }
+
+					}
 					
 					my %build_results = get_build_results($last_build_dir);
 					$final_build_result = $build_results{'tier1_snvs'} . " Tier1 SNVs, " . $build_results{'tier1_indels'} . " Tier1 Indels, ";
@@ -310,14 +351,23 @@ sub execute {                               # replace with real execution logic.
 						## If UHC-filter flag turned on and file exists, use it instead ##
 						if($self->uhc_filter && -e "$tier1_snvs.uhc-filter")
 						{
+							my $uhc_count = `cat $tier1_snvs.uhc-filter | wc -l`; chomp($uhc_count);
+							$stats{'uhc_sites_skipped'} += $uhc_count;
 							$tier1_snvs = $last_build_dir . "/merged.somatic.snp.filter.novel.tier1.uhc-filter.removed";
+						}
+						elsif($self->uhc_filter)
+						{
+							die "Warning: $patient_id has no UHC-filter file in $last_build_dir\n";
 						}
 
 						my $output_tier1_snvs = $self->output_review . "/" . $subject_name . ".$model_id.SNVs.tsv";
-						output_snvs_for_review($model_id, $tier1_snvs, $output_tier1_snvs, $subject_name, $normal_bam, $tumor_bam);
+						output_snvs_for_review($self, $model_id, $tier1_snvs, $output_tier1_snvs, $subject_name, $normal_bam, $tumor_bam);
 	
 						my $tier1_gatk = $last_build_dir . "/gatk.output.indel.formatted.Somatic.tier1";
 						my $tier1_indels = $last_build_dir . "/merged.somatic.indel.filter.tier1";
+						## Grab HC Indels instead if possible ##
+						$tier1_indels .= ".hc" if(-e "$tier1_indels.hc"); 
+						
 						my $output_tier1_indels = $self->output_review . "/" . $subject_name . ".$model_id.Indels.tsv";
 						output_indels_for_review($model_id, $tier1_indels, $tier1_gatk, $output_tier1_indels, $subject_name, $normal_bam, $tumor_bam);
 					}
@@ -334,7 +384,32 @@ sub execute {                               # replace with real execution logic.
 						my $output_file = $tier1_snvs . ".uhc-filter";
 						my $filtered_file = $tier1_snvs . ".uhc-filter.removed";
 						
-						system("bsub -q short -R\"select[model!=Opteron250 && mem>4000]\" gmt somatic ultra-high-confidence --tumor-bam $tumor_bam --normal-bam $normal_bam --variant-file $tier1_snvs --output-file $output_file --filtered-file $filtered_file");
+						## Save UHC SNVs or else generate them ##
+						if(-e $output_file)
+						{
+							save_uhc_calls($patient_id, $output_file);
+						}
+						else
+						{
+							if($self->reference)
+							{
+								system("bsub -q short -R\"select[model!=Opteron250 && mem>6000] rusage[mem=6000]\" -M 6000000 gmt somatic ultra-high-confidence --min-tumor-var-freq 0.10 --tumor-bam $tumor_bam --normal-bam $normal_bam --variant-file $tier1_snvs --output-file $output_file --filtered-file $filtered_file --reference " . $self->reference);
+							}
+							else
+							{
+								system("bsub -q short -R\"select[model!=Opteron250 && mem>6000] rusage[mem=6000]\" -M 6000000 gmt somatic ultra-high-confidence --min-tumor-var-freq 0.10 --tumor-bam $tumor_bam --normal-bam $normal_bam --variant-file $tier1_snvs --output-file $output_file --filtered-file $filtered_file");															
+							}
+
+						}
+					}
+
+					if($self->uhc_indels)
+					{
+						my $tier1_indels = $last_build_dir . "/merged.somatic.indel.filter.tier1";
+						if(-e "$tier1_indels.hc")
+						{
+							save_uhc_calls($patient_id, "$tier1_indels.hc");
+						}
 					}
 
 					if($self->varscan_copynumber)
@@ -351,6 +426,7 @@ sub execute {                               # replace with real execution logic.
 						my $output_dir = $self->varscan_copynumber . "/" . $tumor_sample . "-" . $normal_sample;
 						mkdir($output_dir) if(!(-d $output_dir));
 						my $cmd = "gmt varscan copy-number --output $output_dir/varScan.output --normal-bam $normal_bam --tumor-bam $tumor_bam";
+						$cmd .= " --reference " . $self->reference if($self->reference);
 						if(!(-e "$output_dir/varScan.output.copynumber"))
 						{
 							system("bsub -q long -R\"select[model!=Opteron250 && mem>4000]\" $cmd");							
@@ -431,10 +507,15 @@ sub execute {                               # replace with real execution logic.
 	if($self->output_review)
 	{
 		print $stats{'review_snvs_possible'} . " Tier 1 SNVs could be reviewed\n";
+		print $stats{'uhc_sites_skipped'} . " UHC SNVs were excluded from review\n";
 		print $stats{'review_snvs_already'} . " were already reviewed\n";
 		print $stats{'review_snvs_already_wildtype'} . " were wild-type in another sample\n";
 		print $stats{'review_snvs_already_germline'} . " were germline in at least 3 other samples\n";
 		print $stats{'review_snvs_filtered'} . " were filtered as probable germline\n";
+		print $stats{'review_snvs_uhc_lowcov'} . " were removed because low-coverage makes them ambiguous\n";
+		print $stats{'review_snvs_uhc_normalfreq'} . " were removed due to variant presence in normal\n";
+		print $stats{'review_snvs_uhc_freqdiff'} . " were removed due to low freq diff between tumor and normal\n";
+		
 		print $stats{'review_snvs_included'} . " were included for review\n";
 		print $stats{'review_snvs_already_included'} . " were duplicates and not counted twice\n";
 
@@ -452,6 +533,36 @@ sub execute {                               # replace with real execution logic.
 	return 1;
 }
 
+
+
+################################################################################################
+# Get Build Results - Summarize the progress/results of a given build
+#
+################################################################################################
+
+sub save_uhc_calls
+{
+	my $patient_id = shift(@_);
+	my $FileName = shift(@_);
+
+	## Parse the Tier 1 SNVs file ##
+
+	my $input = new FileHandle ($FileName);
+	my $lineCounter = 0;
+
+	while (<$input>)
+	{
+		chomp;
+		my $line = $_;
+		$lineCounter++;
+		
+		my ($chrom, $chr_start, $chr_stop) = split(/\t/, $line);
+		my $variant_key = join("\t", $patient_id, $chrom, $chr_start, $chr_stop);
+		$passed_sites{$variant_key} = 1;
+	}
+	
+	close($input);
+}
 
 
 ################################################################################################
@@ -662,8 +773,18 @@ sub load_review_database
 			}
 		}
 		
-		my $key = join("\t", $model_id, $chrom, $chr_start, $chr_stop);
-		$already_reviewed{$key} = $code;
+		## Abbreviate sample name ##
+		
+		my @temp = split(/\-/, $sample_name);
+		my $patient_id = join("-", "TCGA", $temp[1], $temp[2]);
+		
+		my $key = join("\t", $patient_id, $chrom, $chr_start, $chr_stop);
+#		my $key = join("\t", $model_id, $chrom, $chr_start, $chr_stop);
+		
+		if($code ne "A")
+		{
+			$already_reviewed{$key} = $code;			
+		}
 
 		if($code eq "O" || $code eq "D" || $code eq "LQ")
 		{
@@ -679,6 +800,10 @@ sub load_review_database
 		{
 			my @temp = split(/\-/, $sample_name);
 			my $patient_id = join("-", "TCGA", $temp[1], $temp[2]);
+			if(!$temp[1] || !$temp[2])
+			{
+				die "Error parsing line from $FileName: $line had incomplete sample name $sample_name\n";
+			}
 			my $key = join("\t", $patient_id, $chrom, $chr_start, $chr_stop);
 			$passed_sites{$key} = 1;
 			$num_passed_sites++;
@@ -702,7 +827,7 @@ sub load_review_database
 
 sub output_snvs_for_review
 {
-	my ($model_id, $variant_file, $output_file, $subject_name, $normal_bam, $tumor_bam) = @_;
+	my ($self, $model_id, $variant_file, $output_file, $subject_name, $normal_bam, $tumor_bam) = @_;
 	
 	## Check for Tier 1 SNVs ##
 	
@@ -730,8 +855,14 @@ sub output_snvs_for_review
 			my @lineContents = split(/\t/, $line);
 
 			my $include_flag = 0;
+
+			## Get Patient ID ##
+
+			my @temp = split(/\-/, $subject_name);
+			my $patient_id = join("-", "TCGA", $temp[1], $temp[2]);
 			
-			my $key = join("\t", $model_id, $chrom, $chr_start, $chr_stop);
+			my $key = join("\t", $patient_id, $chrom, $chr_start, $chr_stop);		
+#			my $key = join("\t", $model_id, $chrom, $chr_start, $chr_stop);
 			my $variant_key = join("\t", $chrom, $chr_start, $chr_stop, $ref, $var);
 			my $sample_variant_key = join("\t", $subject_name, $variant_key);
 			
@@ -793,6 +924,52 @@ sub output_snvs_for_review
 					$include_flag = 1;				
 				}				
 			}
+			
+			## If the UHC filter was applied, do further processing ##
+			
+			if($self->uhc_filter && $include_flag)
+			{
+				my @lineContents = split(/\t/, $line);
+				my $numContents = @lineContents;
+				
+				for(my $colCounter = 5; $colCounter < $numContents; $colCounter++)
+				{
+					## IF failed due to coverage, handle it ##
+					if($lineContents[$colCounter] && $lineContents[$colCounter] eq "Failed:Coverage")
+					{
+						my $normal_cov = $lineContents[$colCounter + 1];
+						my $tumor_cov = $lineContents[$colCounter + 2];
+						
+						if($normal_cov < 4 || $tumor_cov < 6)
+						{
+							$include_flag = 0;
+							$stats{'review_snvs_uhc_lowcov'}++;
+						}
+					}
+					elsif($lineContents[$colCounter] && $lineContents[$colCounter] eq "Failed:VarFreq")
+					{
+						my $normal_cov = $lineContents[$colCounter + 1];
+						my $tumor_cov = $lineContents[$colCounter + 2];
+						my $normal_freq = $lineContents[$colCounter + 3];
+						my $tumor_freq = $lineContents[$colCounter + 4];
+						$normal_freq =~ s/\%//;
+						$tumor_freq =~ s/\%//;
+						my $freq_diff = $tumor_freq - $normal_freq;
+						if($normal_freq > 5 && $normal_cov >= 6)
+						{
+							$include_flag = 0;
+							$stats{'review_snvs_uhc_normalfreq'}++;
+						}
+						elsif($freq_diff < 10)
+						{
+							$include_flag = 0;
+							$stats{'review_snvs_uhc_freqdiff'}++;
+						}
+					}
+				}
+			}
+			
+			
 
 			if($include_flag)
 			{
@@ -823,7 +1000,7 @@ sub output_snvs_for_review
 
 sub output_indels_for_review
 {
-	my ($model_id, $variant_file1, $variant_file2, $output_file) = @_;
+	my ($model_id, $variant_file1, $variant_file2, $output_file, $subject_name, $normal_bam, $tumor_bam) = @_;
 	
 	my %indels = ();
 	
@@ -852,7 +1029,7 @@ sub output_indels_for_review
 	}
 
 
-	if(-e $variant_file2)
+	if($variant_file2 && -e $variant_file2)
 	{
 		## Parse the Tier 1 SNVs file ##
 	
@@ -878,6 +1055,8 @@ sub output_indels_for_review
 	## Open the output file ##
 	
 	open(OUTFILE, ">$output_file") or die "Can't open output file: $!\n";
+	print OUTFILE join("\t", "TUMOR", $tumor_bam) . "\n";
+	print OUTFILE join("\t", "NORMAL", $normal_bam) . "\n";
 	print OUTFILE "chrom\tchr_start\tchr_stop\tref\tvar\tcode\tnote\n";
 
 	foreach my $key (sort byChrPos keys %indels)
@@ -905,7 +1084,7 @@ sub output_indels_for_review
 			$include_flag = 0;
 			$stats{'review_indels_already_wildtype'}++;
 		}
-		elsif($germline_sites{$variant_key} && $germline_sites{$variant_key} >= 3)
+		elsif($germline_sites{$variant_key}) # && $germline_sites{$variant_key} >= 3)
 		{
 			$include_flag = 0;
 			$stats{'review_indels_already_germline'}++;
@@ -977,9 +1156,7 @@ sub output_germline_files
 	my $varscan_output_file = "$germline_dir/varScan.germline.snp";
 	
 	if($varscan_snv_file && !(-e $varscan_output_file))
-	{
-
-		
+	{	
 		if($self->germline_roi_file)
 		{
 			system("java -jar /gsc/scripts/lib/java/VarScan/VarScan.v2.2.6.jar limit $varscan_snv_file --regions-file " . $self->germline_roi_file . " --output-file $varscan_output_file");			
@@ -991,8 +1168,30 @@ sub output_germline_files
 
 		## Apply the FP-filter ##
 		
-		system("bsub -q long -R\"select[type==LINUX64 && mem>8000] rusage[mem=8000]\" -M 8000000 gmt somatic filter-false-positives --variant-file $varscan_output_file --bam-file $tumor_bam --output-file $varscan_output_file.fpfilter");
+		system("bsub -q long -R\"select[type==LINUX64 && mem>8000] rusage[mem=8000]\" -M 8000000 gmt somatic filter-false-positives --variant-file $varscan_output_file --bam-file $tumor_bam --output-file $varscan_output_file.fpfilter --filtered-file $varscan_output_file.fpfilter.removed");
 	}
+	
+	## Get VarScan Germline IndelFile ##
+	
+	my $varscan_indel_file = `ls $build_dir/varScan.output.indel.formatted.Germline.hc`;
+	chomp($varscan_indel_file);
+	my $varscan_indel_output_file = "$germline_dir/varScan.germline.indel";
+	
+	if($varscan_indel_file && !(-e $varscan_indel_output_file))
+	{	
+		if($self->germline_roi_file)
+		{
+			system("java -jar /gsc/scripts/lib/java/VarScan/VarScan.v2.2.6.jar limit $varscan_indel_file --regions-file " . $self->germline_roi_file . " --output-file $varscan_indel_output_file");			
+		}
+		else
+		{
+			system("cp $varscan_indel_file $varscan_indel_output_file");
+		}
+
+		## Apply the FP-filter ##
+		
+		system("bsub -q long -R\"select[type==LINUX64 && mem>8000] rusage[mem=8000]\" -M 8000000 gmt somatic filter-false-indels --min-read-pos 0.30 --max-var-mmqs 100 --min-var-readlen 75 --variant-file $varscan_indel_output_file --bam-file $tumor_bam --output-file $varscan_indel_output_file.fpfilter --filtered-file $varscan_indel_output_file.fpfilter.removed");
+	}	
 	
 	## Get GATK File ##
 	
@@ -1082,6 +1281,33 @@ sub output_loh_files
 }
 
 
+
+
+################################################################################################
+# Output Germline Files - output the files for loh analysis 
+#
+################################################################################################
+
+sub process_loh
+{
+	my $loh_dir = shift(@_);
+
+	my $germline_snp = "$loh_dir/varScan.germline.snp";
+	my $loh_snp = "$loh_dir/varScan.loh.snp";
+	
+	if(-e $germline_snp && -e $loh_snp)
+	{
+		my $combined_snp = "$loh_dir/varScan.combined.snp";
+		system("cat $germline_snp $loh_snp >$combined_snp");
+		system("gmt capture sort-by-chr-pos --input $combined_snp --output $combined_snp");
+		my $cmd = "gmt varscan loh-segments --variant-file $combined_snp --output-basename $combined_snp.loh";
+		system("bsub -q short -R\"select[type==LINUX64 && mem>1000] rusage[mem=1000]\" \"$cmd\"");
+	}
+	else
+	{
+		warn "Warning: Germline/LOH SNP file(s) $germline_snp $loh_snp missing from $loh_dir\n";
+	}
+}
 
 
 sub byChrPos

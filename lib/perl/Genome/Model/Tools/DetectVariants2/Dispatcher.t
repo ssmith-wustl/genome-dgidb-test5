@@ -15,6 +15,10 @@ use Test::More;
 use above 'Genome';
 use Genome::SoftwareResult;
 
+if (Genome::Config->arch_os ne 'x86_64') {
+    plan skip_all => 'requires 64-bit machine';
+}
+
 # THIS TESTS THE CACHING. Caching refseq in /var/cache/tgi-san. We gotta link these files to a tmp dir for tests so they don't get copied
 my $refbuild_id = 101947881;
 my $ref_seq_build = Genome::Model::Build::ImportedReferenceSequence->get($refbuild_id);
@@ -101,21 +105,21 @@ is_deeply($plan, $expected_plan, "plan matches expectations");
 
 my $tumor_bam = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants2-Dispatcher/flank_tumor_sorted.bam";
 my $normal_bam = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants2-Dispatcher/flank_normal_sorted.bam";
-
+my @multiple_bam = ($tumor_bam,"thing");
 # Test dispatcher for running a complex case -- the intersect is nonsensical, but tests intersections while still keeping the test short
 my $test_working_dir = File::Temp::tempdir('DetectVariants2-Dispatcher-combineXXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites/', CLEANUP => 1);
 my $combine_test = $dispatcher_class->create(
-    snv_detection_strategy => 'samtools r599 filtered by snp-filter v1 union samtools r599 filtered by snp-filter v1',
+    snv_detection_strategy => 'samtools r599 filtered by snp-filter v1 union samtools r599',
     output_directory => $test_working_dir,
     reference_build_id => $refbuild_id,
     aligned_reads_input => $tumor_bam,
     control_aligned_reads_input => $normal_bam,
+    aligned_reads_sample => 'TEST',
 );
 $combine_test->dump_status_messages(1);
 like($combine_test->reference_sequence_input, qr|^$refseq_tmp_dir|, "reference sequence path is in /tmp");
 ok($combine_test, "Object to test a combine case created");
 ok($combine_test->execute, "Test executed successfully");
 
-#sleep 10000000000;
 done_testing();
 exit;

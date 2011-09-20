@@ -9,17 +9,17 @@ BEGIN {
 };
 
 use above "Genome";
-use Test::More tests => 7; 
+use Test::More; 
 use File::Compare;
 use File::Temp;
 use IO::File;
 
-BEGIN {
-    my $archos = `uname -a`;
-    if ($archos !~ /64/) {
-        plan skip_all => "Must run from 64-bit machine";
-    } 
-};
+if (Genome::Config->arch_os ne 'x86_64') {
+    plan skip_all => 'requires 64-bit machine';
+}
+else {
+    plan tests => 7;
+}
 
 # Override lock name because if people cancel tests locks don't get cleaned up.
 *Genome::SoftwareResult::_resolve_lock_name = sub {

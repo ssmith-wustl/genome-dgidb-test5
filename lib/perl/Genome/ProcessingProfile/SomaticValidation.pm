@@ -68,8 +68,8 @@ sub _map_workflow_inputs {
         die $self->error_message;
     }
 
-    my $tumor_build = $build->tumor_build;
-    my $normal_build = $build->normal_build;
+    my $tumor_build = $build->tumor_reference_alignment;
+    my $normal_build = $build->normal_reference_alignment;
 
     unless ($tumor_build) {
         $self->error_message("Failed to get a tumor_build associated with this somatic capture build!");
@@ -81,7 +81,7 @@ sub _map_workflow_inputs {
         die $self->error_message;
     }
 
-    my $variant_list = $model->variant_list_file;
+    my $variant_list = $model->variant_list->file_path;
     unless($variant_list) {
         $self->error_message('Failed to get a variant list for this build!');
         die $self->error_message;

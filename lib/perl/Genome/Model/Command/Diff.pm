@@ -70,6 +70,7 @@ sub execute {
         my $model_id = $model->genome_model_id;
         my $type = $model->class;
         $type =~ s/Genome::Model:://;
+        $type =~ s/:://g;
         if ($type =~ /Convergence/) {
             # Talk to Tom for details... basically, there's no expectation that the output be
             # the same between builds, so diffing the output at all is pointless.

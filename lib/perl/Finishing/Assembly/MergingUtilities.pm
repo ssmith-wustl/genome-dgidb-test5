@@ -2,6 +2,7 @@ package Finishing::Assembly::MergingUtilities;
 
 use strict;
 use warnings;
+no warnings 'reserved';
 use File::Copy 'cp';
 
 #use Finishing::Assembly::Factory;

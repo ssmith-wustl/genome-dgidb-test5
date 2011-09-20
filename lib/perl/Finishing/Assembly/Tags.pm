@@ -2,6 +2,7 @@ package Finishing::Assembly::Tag;
 {
     use strict;
     use warnings;
+    no warnings 'reserved';
 
     use base 'Finishing::Assembly::Item';
 }
@@ -12,6 +13,7 @@ package Finishing::Assembly::SequenceTag;
 {
     use strict;
     use warnings;
+    no warnings 'reserved';
 
     use base 'Finishing::Assembly::Tag';
 
@@ -65,6 +67,7 @@ package Finishing::Assembly::OligoTag;
 {
     use strict;
     use warnings;
+    no warnings 'reserved';
 
     use base 'Finishing::Assembly::ConsensusTag';
 
@@ -86,6 +89,7 @@ package Finishing::Assembly::AutoFinishExpTag;
 
 use strict;
 use warnings;
+no warnings 'reserved';
 
 use base 'Finishing::Assembly::ConsensusTag';
 
@@ -152,6 +156,7 @@ package Finishing::Assembly::TagInfo;
 
 use strict;
 use warnings;
+no warnings 'reserved';
 
 use base 'Finfo::Singleton';
 

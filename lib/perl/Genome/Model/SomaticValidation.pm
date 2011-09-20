@@ -8,6 +8,7 @@ use Genome;
 class Genome::Model::SomaticValidation {
     is  => 'Genome::Model',
     has => [
+        #FIXME probably remove this and fix the (potentional) report issue by having it look at model but fallback on processing profile
         map({
             $_ => {
                 via => 'processing_profile',
@@ -15,117 +16,83 @@ class Genome::Model::SomaticValidation {
         } Genome::ProcessingProfile::SomaticValidation->params_for_class),
     ],
     has_optional => [
-        reference_sequence_build => {
-            is => 'Genome::Model::Build::ImportedReferenceSequence',
-            via => 'variant_list', to => 'reference',
-        },
-        tumor_model_links => {
-            is => 'Genome::Model::Link', reverse_as => 'to_model', where => [ role => 'tumor'], is_many => 1, doc => ''
-        },
-        tumor_model => {
-            is => 'Genome::Model', via => 'tumor_model_links', to => 'from_model', doc => '',
-        },
-        tumor_model_id => {
-            is => 'Integer', via => 'tumor_model', to => 'id',
-        },
-        normal_model_links => {
-            is => 'Genome::Model::Link', reverse_as => 'to_model', where => [ role => 'normal'], is_many => 1, doc => ''
-        },
-        normal_model => {
-            is => 'Genome::Model', via => 'normal_model_links', to => 'from_model', doc => '',
-        },
-        normal_model_id => {
-            is => 'Integer', via => 'normal_model', to => 'id',
-        },
-        variant_list_file => {
-            is => 'Text',
-            via => 'variant_list', to => 'file_path',
-        },
         variant_list => {
             is => 'Genome::FeatureList',
-            id_by => 'variant_list_id',
-        },
-        variant_list_id => {
-            is => 'Text',
-            via => 'inputs', to => 'value_id', where => [value_class_name => 'Genome::FeatureList', name => 'variant_list'],
-            is_many => 0,
+            via => 'inputs', to => 'value', where => [ name => 'variant_list' ],
             is_mutable => 1,
-        }
+        },
+        reference_sequence_build => {
+            is => 'Genome::Model::Build::ReferenceSequence',
+            via => 'inputs', to => 'value', where => [ name => 'reference_sequence_build' ],
+            is_mutable => 1,
+        },
+        tumor_reference_alignment => {
+            is => 'Genome::Model::ReferenceAlignment',
+            via => 'inputs', to => 'value', where => [ name => 'tumor_reference_alignment' ],
+            is_mutable => 1,
+        },
+        normal_reference_alignment => {
+            is => 'Genome::Model::ReferenceAlignment',
+            via => 'inputs', to => 'value', where => [ name => 'normal_reference_alignment' ],
+            is_mutable => 1,
+        },
     ],
 };
 
-sub create {
-    my $class = shift;
-    my %params = @_;
+sub _validate_required_for_start_properties {
+    my $self = shift;
 
-    my $tumor_model_id = delete $params{tumor_model_id};
-    my $tumor_model = delete $params{tumor_model};
-    my $normal_model_id = delete $params{normal_model_id};
-    my $normal_model = delete $params{normal_model};
+    my @missing_required_properties;
+    push @missing_required_properties, 'variant_list' unless ($self->variant_list);
+    push @missing_required_properties, 'reference_sequence_build' unless ($self->reference_sequence_build);
+    push @missing_required_properties, 'tumor_reference_alignment' unless ($self->tumor_reference_alignment);
+    push @missing_required_properties, 'normal_reference_alignment' unless ($self->normal_reference_alignment);
 
-    unless($tumor_model) {
-        $tumor_model = Genome::Model->get($tumor_model_id);
+    my $tag;
+    if (@missing_required_properties) {
+        $tag = UR::Object::Tag->create(
+            type => 'error',
+            properties => \@missing_required_properties,
+            desc => 'missing required property',
+        );
+    }
 
-        unless($tumor_model) {
-            $class->error_message('Could not find tumor model.' );
-            return;
+    return $tag;
+}
+
+sub _validate_subjects {
+    my $self = shift;
+
+    my $primary_subject = $self->subject;
+    return unless $primary_subject;
+
+    my @inputs = $self->inputs;
+    my @subject_mismatches;
+    for my $input (@inputs) {
+        my $object = $input->value;
+        next unless $object; #this is reported in validate_inputs_have_values
+
+        next unless $object->can('subject');
+
+        my $object_subject = $object->subject;
+        next unless $object_subject and $object_subject->can('source'); #only want to test that samples come from same place (still hacky)
+
+        #FIXME hacky
+        unless($object_subject->source->id eq $primary_subject->id) {
+            push @subject_mismatches, $input->name;
         }
     }
 
-    unless($normal_model) {
-        $normal_model = Genome::Model->get($normal_model_id);
-
-        unless($normal_model) {
-            $class->error_message('Could not find normal model.');
-            return;
-        }
+    my $tag;
+    if (@subject_mismatches) {
+        $tag = UR::Object::Tag->create(
+            type => 'error',
+            properties => \@subject_mismatches,
+            desc => "subject does not match build's subject (" . $primary_subject->__display_name__ . ")",
+        );
     }
 
-    my $tumor_subject = $tumor_model->subject;
-    my $normal_subject = $normal_model->subject;
-
-    if($tumor_subject->can('source') and $normal_subject->can('source')) {
-        my $tumor_source = $tumor_subject->source;
-        my $normal_source = $normal_subject->source;
-
-        if($tumor_source eq $normal_source) {
-            my $subject = $tumor_source;
-
-            #Set up other parameters for call to parent execute()
-            $params{subject_id} = $subject->id;
-            $params{subject_class_name} = $subject->class;
-        } else {
-            $class->error_message('Tumor and normal samples are not from same source!');
-            return;
-        }
-    } else {
-        $class->error_message('Unexpected subject for tumor or normal model!');
-        return;
-    }
-
-    my $normal_reference = $normal_model->reference_sequence_build;
-    my $tumor_reference = $tumor_model->reference_sequence_build;
-
-    unless($normal_reference eq $tumor_reference) {
-        $class->error_message('Tumor and normal reference alignment models do not have the same reference sequence!');
-        return;
-    }
-
-    if(exists $params{variant_list}) {
-        my $variant_list_reference = $params{variant_list}->reference;
-
-        unless($normal_reference eq $variant_list_reference) {
-            $class->error_message('Reference alignment models and variant list do not have the same reference sequence!');
-            return;
-        }
-    }
-
-    my $self = $class->SUPER::create(%params);
-
-    $self->add_from_model(from_model => $normal_model, role => 'normal');
-    $self->add_from_model(from_model => $tumor_model, role => 'tumor');
-
-    return $self;
+    return $tag;
 }
 
 1;

@@ -37,8 +37,6 @@ sub help_detail {
     "This command will remove a build from the system.  The rest of the model remains the same, as does independent data like alignments.";
 }
 
-sub _is_hidden_in_docs { return 1; }
-
 # TODO This needs to be cleaned up
 sub execute {
     my $self = shift;

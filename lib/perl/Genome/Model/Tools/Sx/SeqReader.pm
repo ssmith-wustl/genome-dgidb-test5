@@ -26,10 +26,22 @@ sub create {
             $self->error_message("File property ($property_name) is required");
             return;
         }
-        my $fh = eval{ Genome::Sys->open_file_for_reading($file); };
-        if ( not $fh ) {
-            $self->error_message("Failed to open file ($file)");
-            return;
+        my $fh;
+        if ( my $cmd = $self->_cmd_for_file($file) ) {
+            $fh = IO::File->new($cmd);
+            if ( not $fh ) {
+                $self->error_message("Failed to open command ($cmd): $!");
+                return;
+            }
+
+        }
+        else {
+            $fh = eval{ Genome::Sys->open_file_for_reading($file); };
+            if ( not $fh ) {
+                $self->error_message($@);
+                $self->error_message('Failed to open file ($file) in mode ('.$self->mode.')');
+                return;
+            }
         }
         $self->{'_'.$property_name} = $fh;
     }
@@ -47,6 +59,16 @@ sub _file_properties {
     }
 
     return @properties;
+}
+
+sub _cmd_for_file {
+    my ($self, $file) = @_;
+
+    if ( $file =~ /\.gz$/ ) {
+        return "zcat $file |";
+    }
+
+    return;
 }
 
 1;

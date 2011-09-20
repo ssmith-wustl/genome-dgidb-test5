@@ -15,11 +15,11 @@ class Genome::Model::Tools::Sx {
             doc => <<DOC
 Input reader configurations. Give 'key=value' pairs, separated by a colon (:). Readers may have additonal options.
 
-Do not use this option when piping from sx commands.
+DO NOT USE this option when piping from sx commands.
 
 Standard options:
  file => The file to read. The use of the preceding 'file=' is optional.
-          It is assumed that the bare option is the file. Use '-' to read from STDIN.
+          It is assumed that the bare option is the file. Use '-' to read from STDIN. The file can be gzipped.
  type => The type of input. Not required if type can be determined from the file.
           Required when reading from STDIN. Valid types: sanger, sam, illumina, phred (fasta), fasta.
  cnt => The number of sequences to read from the input. If the input is paired, use 2.
@@ -33,7 +33,7 @@ DOC
         input_metrics => {
             is => 'Text',
             is_optional => 1,
-            doc => 'Capoture input sequence metrics to this file.',
+            doc => 'Capture sequence metrics for the intput to this file. Current metrics include: count, bases',
         },
         output => {
             is => 'Text',
@@ -42,13 +42,14 @@ DOC
             doc => <<DOC
 Output writer configurations. Give 'key=value' pairs, separated by a colon (:). Writers may have additonal options.
 
-Do not use this option when piping from sx commands.
+DO NOT USE this option when piping from sx commands.
 
 Standard options:
  file => The file to write. The use of the preceding 'file=' is optional.
-          It is assumed that the bare option is the file. Use '-' to write to STDOUT.
+          It is assumed that the bare option is the file. Use '-' to write to STDOUT. Use '.gz' to write as gzipped.
  type => The type of output. Not required if type can be determined from the file.
           Type when writing to STDOUT defaults to sanger. Valid types: sanger, illumina, phred (fasta), fasta, bed.
+ mode => The mode to open the output in. Use 'w' to write to a new file (file cannot exist) and 'a' to append to a file. Default is 'w'.
  name => The name of the writer.  If using commands that attach a writer name to a sequence,
           they will be written to the specified writer.
           
@@ -76,7 +77,7 @@ DOC
         output_metrics => {
             is => 'Text',
             is_optional => 1,
-            doc => 'Output sequence metrics for the output to this file. Current metrics include: count, bases',
+            doc => 'Capture sequence metrics for the output to this file. Current metrics include: count, bases',
         },
         _input => { is_optional => 1, },
         _output => { is_optional => 1, },
@@ -96,19 +97,12 @@ sub help_synopsis {
     * illumina => fastq w/ illumina quality values
     * phred => fasta/quality
 
-    Things This Base Command Can Do
+    Things The Base Command Can Do
     * collate two inputs into one (sanger, illumina only)
     * decollate one input into two (sanger, illumina only)
     * convert type
     * remove quality fastq headers
     
-    Things This Base Command Can Not Do
-    * be used in a pipe
-
-    Metrics
-    * count
-    * bases
-
 HELP
 }
 

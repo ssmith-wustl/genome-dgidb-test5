@@ -5,9 +5,8 @@ use strict;
 use warnings;
 
 class Genome::Sys::Command {
-    is => 'Genome::Command::Base',
-    is_abstract => 1,
-    doc => 'work with OS integration',
+    is => 'Command::Tree',
+    doc => 'Work with OS integration',
 };
 
 1;

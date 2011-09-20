@@ -61,6 +61,16 @@ class Genome::Model::Build::ImportedAnnotation {
             is => 'Genome::Model::Build::ImportedReferenceSequence',
             id_by => 'reference_sequence_id',
         },
+        snapshot_date => {
+            is => 'DateTime',
+            via => 'inputs',
+            to => 'value_id',
+            where => [name => 'snapshot_date', value_class_name => 'UR::Value'],
+            is_many => 0,
+            is_optional => 1, #TODO: this should become 0
+            is_mutable => 1,
+            doc => 'Date the annotation build was snapshotted (this is only relevant for Genbank and combined annotation builds)',
+        }
     ],
     has_optional => [
         tier_file_directory => {
@@ -290,8 +300,13 @@ sub _resolve_annotation_file_name {
     if ($squashed) {
         $file_type .= '-squashed';
     }
-    my $file_name = $self->_annotation_data_directory .'/'. $reference_sequence_id .'-'. $file_type .'.'. $suffix;
+    my $file_name = $self->_rna_annotation_directory .'/'. $reference_sequence_id .'-'. $file_type .'.'. $suffix;
     return $file_name;
+}
+
+sub _rna_annotation_directory {
+    my $self = shift;
+    return $self->_annotation_data_directory . '/rna_annotation';
 }
 
 sub generate_transcript_info_file {
@@ -470,6 +485,10 @@ sub generate_RNA_annotation_files {
     my $suffix = shift;
     my $reference_sequence_id = shift;
     my $squashed = shift;
+
+    unless(-e $self->_rna_annotation_directory){
+        Genome::Sys->create_directory($self->_rna_annotation_directory);
+    }
     
     unless ($self->transcript_info_file($reference_sequence_id)) {
         my $status = $self->generate_transcript_info_file($reference_sequence_id);

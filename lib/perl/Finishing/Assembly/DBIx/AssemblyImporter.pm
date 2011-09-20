@@ -40,6 +40,7 @@ $importer->import_acefile
 use Data::Dumper;
 use strict;
 use warnings;
+no warnings 'reserved';
 
 use DateTime;
 use Finfo::Std;

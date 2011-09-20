@@ -63,6 +63,11 @@ class Genome::Model::Command::Services::AssignQueuedInstrumentData {
     ],
 };
 
+sub _default_mc16s_processing_profile_id {
+    # RT66900 was 2278045 
+    return 2571784;
+}
+
 #FIXME: This should be refactored so that %known_454_pipelines and 
 #%known_454_16s_pipelines are merged into a single hash.  Key shoud be the 
 #pipeline name and value should be what to do with it (if anything).  Maybe
@@ -272,6 +277,10 @@ sub execute {
                             #find or create somatic models if applicable
                             $self->find_or_create_somatic_variation_models(@new_models);
                         }
+                    }
+
+                    if ( $instrument_data_type eq '454' and $self->_is_454_16s($pse) ) {
+                        $self->_find_or_create_mc16s_454_qc_model($genome_instrument_data);
                     }
                 } # looping through processing profiles for this instdata, finding or creating the default model
             }
@@ -832,15 +841,7 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
     if ( $capture_target ) {
         my $roi_list;
         #FIXME This is a lame hack for these capture sets
-        my %build36_to_37_rois = (
-            'agilent sureselect exome version 2 broad refseq cds only' => 'agilent_sureselect_exome_version_2_broad_refseq_cds_only_hs37',
-            'agilent sureselect exome version 2 broad' => 'agilent sureselect exome version 2 broad hg19 liftover',
-            'hg18 nimblegen exome version 2' => 'hg19 nimblegen exome version 2',
-            'NCBI-human.combined-annotation-54_36p_v2_CDSome_w_RNA' => 'NCBI-human.combined-annotation-54_36p_v2_CDSome_w_RNA_build36-build37_liftOver',
-            'Freimer Pool of original (4k001L) plus gapfill (4k0026)' => 'Freimer-Boehnke capture-targets.set1_build37-fix1',
-            '04110401 PoP32 EZ capture chip set'   => '04110401 PoP32 EZ capture chip set build37',
-            'RT 49315 - AMD -- pool 1' => 'AMD-pool1-build37',
-        );
+        my %build36_to_37_rois = get_build36_to_37_rois(); 
 
         my $root_build37_ref_seq = $self->root_build37_ref_seq;
 
@@ -982,6 +983,19 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
     return @new_models;
 }
 
+sub get_build36_to_37_rois {
+    return (
+        'agilent sureselect exome version 2 broad refseq cds only' => 'agilent_sureselect_exome_version_2_broad_refseq_cds_only_hs37',
+        'agilent sureselect exome version 2 broad' => 'agilent sureselect exome version 2 broad hg19 liftover',
+        'hg18 nimblegen exome version 2' => 'hg19 nimblegen exome version 2',
+        'NCBI-human.combined-annotation-54_36p_v2_CDSome_w_RNA' => 'NCBI-human.combined-annotation-54_36p_v2_CDSome_w_RNA_build36-build37_liftOver',
+        'Freimer Pool of original (4k001L) plus gapfill (4k0026)' => 'Freimer-Boehnke capture-targets.set1_build37-fix1',
+        '04110401 PoP32 EZ capture chip set'   => '04110401 PoP32 EZ capture chip set build37',
+        'RT 49315 - AMD -- pool 1' => 'AMD-pool1-build37',
+        '03110401 capture chip set' => '03110401 capture chip set - liftover_build37',
+    );
+}
+
 sub create_default_qc_models {
     my $self = shift;
     my @models = @_;
@@ -1002,6 +1016,38 @@ sub create_default_qc_models {
     }
 
     return @new_models;
+}
+
+sub _find_or_create_mc16s_454_qc_model {
+    my ($self, $instrument_data) = @_;
+
+    $self->status_message("Find or create mc16s 454 qc model!");
+
+    my $pp_id = $self->_default_mc16s_processing_profile_id;
+    my $name = $instrument_data->run_name.'_r'.$instrument_data->region_number.'.prod-mc16s-qc';
+    my $model = Genome::Model->get(
+        name => $name,
+        processing_profile_id => $pp_id,
+    );
+    if ( not $model ) {
+        my $model = Genome::Model->create(
+            name => $name,
+            subject_id => 2863615589, # Human Metagenome
+            subject_class_name => 'Genome::Taxon',
+            processing_profile_id => $pp_id,
+            auto_assign_inst_data => 0,
+        );
+        $model->add_instrument_data($instrument_data);
+        my $new_models = $self->_newly_created_models;
+        $new_models->{$model->id} = $model;
+    } 
+    else {
+        $model->add_instrument_data($instrument_data);
+        my $assigned_to = $self->_existing_models_assigned_to;
+        $assigned_to->{$model->id} = $model;
+    }
+
+    return 1;
 }
 
 sub assign_capture_inputs {
@@ -1067,7 +1113,7 @@ sub add_model_to_default_modelgroups {
     }
 
     for my $group_name (@group_names) {
-        my $name = 'apipe-auto ' . $group_name;
+        my $name = $group_name;
         my $model_group = Genome::ModelGroup->get(name => $name);
 
         unless($model_group) {
@@ -1259,8 +1305,7 @@ sub add_processing_profiles_to_pses{
                 }
 
                 if ($self->_is_454_16s($pse)) {
-                    #updated from pp_id 2278045 ticket: #66900
-                    push @processing_profile_ids_to_add, '2571784';
+                    push @processing_profile_ids_to_add, $self->_default_mc16s_processing_profile_id;
                 }
             }
             elsif ($instrument_data_type =~ /sanger/i) {

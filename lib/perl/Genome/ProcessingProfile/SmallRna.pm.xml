@@ -1,0 +1,35 @@
+<?xml version='1.0' standalone='yes'?>
+
+<workflow name="Parallel Workflow" logDir="/gscmnt/sata142/techd/jhundal/miRNA_logs/" >
+<link fromOperation="input connector" fromProperty="bam_file"    toOperation="SmallRnaWorkflow" toProperty="bam_file" />
+<link fromOperation="input connector" fromProperty="output_base_dir"    toOperation="SmallRnaWorkflow" toProperty="output_base_dir" />
+<link fromOperation="input connector" fromProperty="annotation_files"  toOperation="SmallRnaWorkflow" toProperty="annotation_files" />  
+<link fromOperation="input connector" fromProperty="annotation_name"  	 	toOperation="SmallRnaWorkflow" toProperty="annotation_name" />
+<link fromOperation="input connector" fromProperty="minimum_zenith"    toOperation="SmallRnaWorkflow" toProperty="minimum_zenith" />
+<link fromOperation="input connector" fromProperty="size_bins"    toOperation="SmallRnaWorkflow" toProperty="read_size_bin" />
+<link fromOperation="input connector" fromProperty="subcluster_min_mapzero" toOperation="SmallRnaWorkflow" toProperty="subcluster_min_mapzero" />
+<link fromOperation="input connector" fromProperty="input_cluster_number"  toOperation="SmallRnaWorkflow" toProperty="input_cluster_number" />
+
+ <link fromOperation="SmallRnaWorkflow" 	 fromProperty="result" 			 toOperation="output connector" toProperty="result" />
+ 
+   	<operation name="SmallRnaWorkflow" parallelBy="read_size_bin">
+	<operationtype commandClass="Genome::Model::Tools::SmallRna::SmallRnaWorkflow" typeClass="Workflow::OperationType::Command" />
+    </operation>
+ 
+ 
+    <operationtype typeClass="Workflow::OperationType::Model">
+    
+    <inputproperty>bam_file</inputproperty>   
+ 	<inputproperty>size_bins</inputproperty>
+	 <inputproperty>minimum_zenith</inputproperty>
+     <inputproperty>annotation_files</inputproperty>
+     <inputproperty>annotation_name</inputproperty>
+     <inputproperty>output_base_dir</inputproperty>
+      <inputproperty>subcluster_min_mapzero</inputproperty>
+	<inputproperty>input_cluster_number</inputproperty>
+
+	<outputproperty>result</outputproperty>
+  </operationtype>
+  
+</workflow>
+  

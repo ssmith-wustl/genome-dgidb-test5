@@ -9,7 +9,7 @@ require Carp;
 use Regexp::Common;
 
 class Genome::Model::Command::Define::DeNovoAssembly {
-    is => 'Genome::Model::Command::Define::Helper',
+    is => 'Genome::Model::Command::Define::HelperDeprecated',
     has => [
         center_name => {
             is => 'Text',

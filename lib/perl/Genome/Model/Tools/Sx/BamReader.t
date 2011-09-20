@@ -9,6 +9,10 @@ require File::Temp;
 require File::Compare;
 use Test::More;
 
+if (Genome::Config->arch_os ne 'x86_64') {
+    plan skip_all => 'requires 64-bit machine';
+}
+
 use_ok('Genome::Model::Tools::Sx::BamReader') or die;
 
 my $tmpdir = File::Temp::tempdir(CLEANUP => 1);

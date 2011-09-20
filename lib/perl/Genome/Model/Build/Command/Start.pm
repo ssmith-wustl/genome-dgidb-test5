@@ -177,8 +177,9 @@ sub create_and_start_build {
 sub display_builds_started {
     my $self = shift;
     my @builds = $self->builds;
+
     if (@builds) {
-        $self->status_message("Started builds: " . join(' ', map { $_->id } @builds));
+        $self->status_message("Build IDs: " . join(' ', map { $_->id } @builds));
     }
     return 1;
 }

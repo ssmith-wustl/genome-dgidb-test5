@@ -50,6 +50,12 @@ sub execute {
     my @properties = $model->real_input_properties;
     return if not @properties;
     my ($property) = grep { $name eq $_->{name} } @properties;
+    if( not $property ) {
+        #if no property found, try falling back on the name of the input itself
+        ($property) = grep { $name eq $_->{input_name} } @properties;
+        $name = $property->{name} if $property;
+    }
+
     if ( not $property ) {
         $self->error_message("Failed to find input property for $name. Here are the valid input names:");
         $self->show_inputs_and_values_for_model($model);
@@ -75,10 +81,15 @@ sub execute {
         #my $response = <STDIN>;
         #return if $response !~ /y/i;
         $self->status_message('Value: NULL');
-        my $rv = $model->$name($value);
-        if ( defined $rv ) {
-            $self->error_message('Failed to update!');
-            return;
+
+        my $input_name = $property->{input_name};
+
+        if( defined $model->$name() ) { #only remove if there's a value
+            my $rv = $model->remove_input(name => $input_name);
+            unless($rv eq 1) {
+                $self->error_message('Failed to update!');
+                return;
+            }
         }
     }
     else {

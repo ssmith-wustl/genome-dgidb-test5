@@ -31,10 +31,6 @@ class Genome::Model::Tools::Music::Play {
             is => 'Text',
             doc => 'List of mutations using TCGA MAF specifications v2.2'
         },
-        genetic_data_type => {
-            is => 'Text',
-            doc => 'Data in matrix file must be either "gene" or "variant" type data',
-        },
         pathway_file => {
             is => 'Text',
             doc => 'Tab-delimited file of pathway information',
@@ -61,6 +57,10 @@ class Genome::Model::Tools::Music::Play {
             is => 'Boolean',
             doc => 'turn on to display larger working output',
             default => 1,
+        },
+        matrix_file => {
+            is => 'Text',
+            doc => 'Define this argument to store a mutation matrix',
         },
         permutations => {
             is => 'Number',
@@ -99,9 +99,18 @@ class Genome::Model::Tools::Music::Play {
             is => 'Number',
             doc => 'The maximum allowed false discovery rate for a gene to be considered an SMG',
         },
+        genetic_data_type => {
+            is => 'Text',
+            doc => 'Data in matrix file must be either "gene" or "variant" type data',
+        },
         wu_annotation_headers => {
             is => 'Boolean',
             doc => 'Use this to default to wustl annotation format headers',
+        },
+        bmr_groups => {
+            is => 'Integer',
+            doc => 'Number of clusters of samples with comparable BMRs',
+            default_value => 1,
         },
         skip_non_coding => {
             is => 'Boolean',
@@ -131,6 +140,12 @@ class Genome::Model::Tools::Music::Play {
             doc => "Set how close a 'near' match is when searching for nucleotide position near hits",
             default => '5',
         },
+        reference_build => {
+            is => 'Path',
+            doc => 'Put either "Build36" or "Build37"',
+            is_output => 1,
+            default => 'Build36',
+        }
     ],
     has_calculated_optional => [
         gene_covg_dir => {

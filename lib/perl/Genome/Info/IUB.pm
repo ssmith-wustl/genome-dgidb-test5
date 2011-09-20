@@ -68,7 +68,7 @@ sub variant_alleles_for_iub {
        return;
    }
 
-   unless($ref =~ /[ACTG]/i) { #TODO, I think N should be acceptable here
+   unless($ref =~ /[ACTGN]/i) { 
        warn "Ambiguous reference bases ($ref) not currently supported";
        return;
    }

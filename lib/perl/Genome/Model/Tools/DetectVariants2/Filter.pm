@@ -5,6 +5,8 @@ use warnings;
 
 use Genome;
 
+use File::Basename;
+
 class Genome::Model::Tools::DetectVariants2::Filter {
     is  => ['Genome::Model::Tools::DetectVariants2::Base'],
     doc => 'Tools to filter variations that have been detected',
@@ -84,6 +86,11 @@ class Genome::Model::Tools::DetectVariants2::Filter {
             doc => 'Location of the control aligned reads file to which the input aligned reads file should be compared (for detectors which can utilize a control)',
             is_optional => 1,
             is_input => 0,
+        },
+        filter_description => {
+            is => 'Text',
+            doc => 'overload this for each filter',
+            default => 'Filter description',
         },
     ],
     has_constant => [
@@ -378,6 +385,10 @@ sub _generate_standard_output {
         die $self->error_message("Could not locate output file of any type for this filter.");
     }
 
+    unless($self->_generate_vcf){
+        die $self->error_message("Attempt to generate VCF failed.");
+    }
+
     return 1;
 }
 
@@ -461,6 +472,47 @@ sub _convert_bed_to_detector {
     return 1;
 }
 
+sub get_module_name_from_class_name {
+    my $self = shift;
+    my $class = shift;
+    my @words = split('::', $class);
+    my $retval = 1;
+
+    unless(scalar(@words) > 2 and $words[0] eq 'Genome') {
+        die('Could not determine proper class-name automatically.');
+    }
+    return $words[-1];
+}
+
+sub _generate_vcf {
+    my $self = shift;
+    for my $type ($self->_variant_type){
+        my $detect_type = "detect_".$type;
+        my $incoming_vcf = $self->previous_result->output_dir."/".$type.".vcf";
+        unless(-s $incoming_vcf){
+            $self->status_message("Skipping VCF generation, no vcf if the previous result: $incoming_vcf");
+            next;
+        }
+        #my $output_dir = dirname($self->_snv_staging_output);
+        my $vcf_name = $self->output_directory."/".$type.".vcf";
+        my $hq_filter_file = $self->output_directory."/".$type.".hq.bed";
+        my $filter_name = $self->get_module_name_from_class_name(ref $self || $self);
+        my $filter_description = $self->filter_description;
+        my $vcf_filter_cmd = Genome::Model::Tools::Vcf::VcfFilter->create(
+            output_file => $vcf_name,
+            vcf_file => $incoming_vcf,
+            filter_file => $hq_filter_file,
+            filter_keep => 1,
+            filter_name => $filter_name,
+            filter_description => $filter_description,
+            bed_input => 1,
+        );
+        unless($vcf_filter_cmd->execute){
+            die $self->error_message("Could not complete call to gmt vcf vcf-filter!");
+        }
+    }
+    return 1;
+}
 
 sub params_for_result {
     my $self = shift;
@@ -508,7 +560,7 @@ sub _link_to_result {
     return unless $result;
 
     unless(-e $self->output_directory) {
-        Genome::Sys->create_symlink($result->output_dir, $self->output_directory);
+        Genome::Sys->create_symlink_and_log_change($result, $result->output_dir, $self->output_directory);
     }
 
     my $previous_result = $self->previous_result;

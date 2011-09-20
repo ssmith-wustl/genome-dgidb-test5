@@ -2,31 +2,44 @@ package Genome::ModelGroup;
 
 use strict;
 use warnings;
-
 use Genome;
+
 class Genome::ModelGroup {
-    type_name  => 'model group',
     table_name => 'MODEL_GROUP',
-    id_by      => [ id => { is => 'NUMBER' }, ],
-    has        => [
-        name          => { is => 'VARCHAR2' },
-        model_bridges => {
-            is         => 'Genome::ModelGroupBridge',
-            reverse_as => 'model_group',
-            is_many    => 1
+    id_by      => [ 
+        id                  => { is => 'Number' }, 
+    ],
+    has => [
+        name                => { is => 'Text' },
+        user_name           => { is => 'Text', },
+        uuid                => { is => 'Text', },
+        model_bridges       => { is => 'Genome::ModelGroupBridge',
+                                    reverse_as  => 'model_group',
+                                    is_many     => 1
+                                },
+        models              => { is => 'Genome::Model',
+                                    is_many => 1,
+                                    is_mutable => 1,
+                                    via     => 'model_bridges',
+                                    to      => 'model'
+                                },
+        convergence_model   => { is => 'Genome::Model::Convergence',
+                                    is_many     => 1, # We really should only have 1 here, however reverse_as requires this
+                                    reverse_as  => 'group',
+                                    doc         => 'The auto-generated Convergence Model summarizing knowledge about this model group',
+                                    is_optional => 1, 
+                                },
+        user_name           => {is => 'Text',
+                                is_optional => 1
+                               },
+        uuid => {
+            is => 'Text',
+            is_optional => 1,
         },
-        models => {
-            is      => 'Genome::Model',
-            is_many => 1,
-            via     => 'model_bridges',
-            to      => 'model'
-        },
-        convergence_model => {
-            is          => 'Genome::Model::Convergence',
-            is_many => 1, # We really should only have 1 here, however reverse_as requires this
-            reverse_as  => 'group',
-            doc         => 'The auto-generated Convergence Model summarizing knowledge about this model group',
-            is_optional => 1, 
+        project => { 
+            is => 'Genome::Project',
+            is_optional => 1,
+            id_by => 'uuid',
         },
     ],
     schema_name => 'GMSchema',
@@ -41,26 +54,112 @@ sub __display_name__ {
 
 sub create {
     my $class = shift;
+
+    # Strip out convergence model params
     my ($bx,%params) = $class->define_boolexpr(@_);
-    
     my %convergence_model_params = ();
     if(exists $params{convergence_model_params}) {
         %convergence_model_params = %{ delete $params{convergence_model_params} };
     } 
-    
+
     my $self = $class->SUPER::create($bx);
-    
+    return if not $self;
+
+    # Create project
+    my $project = $self->project;
+    if ( not $project ) {
+        my $uuid = Genome::Project->__meta__->autogenerate_new_object_id_uuid;
+        if ( not $uuid ) {
+            $self->error_message('Failed to get uuid from Genome::Project! Cannot create model group.');
+            $self->delete;
+            return;
+        }
+        $self->uuid($uuid);
+        my $name = $bx->value_for('name');
+        $project = Genome::Project->create(
+            id => $uuid,
+            name => $name,
+        );
+        if ( not $project ) {
+            $self->error_message('Failed to create project to match model group.');
+            $self->delete;
+            return;
+        }
+        $self->name( $project->name ) if $project->name ne $self->name;
+        $self->user_name( $project->creator->email );
+    }
+
+    # Convergence model
     my $define_command = Genome::Model::Command::Define::Convergence->create(
         %convergence_model_params,
         model_group_id => $self->id
     );
-
     unless ($define_command->execute == 1) {
         $self->error_message("Failed to create convergence model associated with this model group");
-        die;
+        $self->delete;
+        return;
     }
-    
+    my $convergence_model = Genome::Model->get( $define_command->result_model_id );
+    if ( not $convergence_model ) {
+        $self->error_message('Failed to find convergence model with id from define command: '.$define_command->result_model_id);
+        return;
+    }
+
+    # Add models to project
+    for my $model ( $self->models ) {
+        $project->add_model($model);
+    }
+
     return $self;
+}
+
+sub rename {
+    my ($self, $new_name) = @_;
+
+    if ( not $new_name ) {
+        $self->error_message('No new name given to rename model group');
+        return;
+    }
+
+    my @model_groups = Genome::ModelGroup->get(name => $new_name);
+    if ( @model_groups ) {
+        $self->error_message("Failed to rename model group (".$self->id.") from ".$self->name." to $new_name because one the nwe name already exists.");
+        return;
+    }
+
+    if ( my $project = $self->project ) { # delegate to project
+        return $project->rename($new_name);
+    }
+    else {
+        return $self->_rename($new_name);
+    }
+}
+
+sub _rename {
+    my ($self, $new_name) = @_;
+
+    if ( not $new_name ) {
+        Carp::confess('No new name given to rename model group');
+    }
+
+    my $old_name = $self->name;
+    $self->name($new_name);
+    $self->status_message("Renamed model group from '$old_name' to '$new_name'");
+
+    if ( my $convergence_model = $self->convergence_model ) {
+        my $old_model_name = $convergence_model->name;
+        $convergence_model->name( $self->name . '_convergence' );
+        $convergence_model->status_message("Renamed convergence model from '$old_model_name' to '".$convergence_model->name."'.");
+    }
+
+    return 1;
+}
+
+sub subjects {
+    my $self = shift;
+    my @models = $self->models;
+    my @subjects = Genome::Subject->get([ map { $_->subject_id } @models ]);
+    return @subjects;
 }
 
 sub assign_models {
@@ -71,18 +170,19 @@ sub assign_models {
         return;
     }
 
-    my %existing_models = map { $_->id => $_ } $self->models;
-
     my $added = 0;
-    for my $m (@models) {
-        if ( exists $existing_models{ $m->id } ) {
-            $self->status_message('Skipping model '.$m->__display_name__.', it is already assigned...');
+        my $project = $self->project;
+        my %existing_models = map { $_->id => $_ } $self->models;
+        for my $m (@models) {
+            if ( exists $existing_models{ $m->id } ) {
+                $self->status_message('Skipping model '.$m->__display_name__.', it is already assigned...');
             next;
         }
         my $bridge = Genome::ModelGroupBridge->create(
             model_group_id => $self->id,
             model_id       => $m->genome_model_id,
         );
+        $project->add_model($m) if $project;
         $existing_models{$m->id} = $m->id;
         $added++;
     }
@@ -102,6 +202,13 @@ sub unassign_models {
 
     my ($self, @models) = @_;
 
+    if ( not @models ) {
+        $self->error_message('No models given to unassign from group');
+        return;
+    }
+
+    my $removed = 0;
+    my $project = $self->project;
     for my $m (@models) {
 
         my $bridge = Genome::ModelGroupBridge->get(
@@ -115,9 +222,13 @@ sub unassign_models {
         }
         
         $bridge->delete();
+        $project->remove_model($m) if $project;
+        $removed++;
     }
 
-    $self->schedule_convergence_rebuild;
+    if ( $removed ) {
+        $self->schedule_convergence_rebuild;
+    }
 
     return 1;
 }
@@ -213,6 +324,11 @@ sub delete {
         else {
             $self->error_message("Failed to remove convergence model (" . $convergence_model->__display_name__ . "), please investigate and remove manually.");
         }
+    }
+
+    if ( my $project = $self->project ) {
+        $self->status_message('Deleting associated project: '.$project->id);
+        $project->delete;
     }
 
     # delete self

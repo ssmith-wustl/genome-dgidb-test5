@@ -216,10 +216,10 @@ sub _process_instrument_data {
     $sx_cmd_parts[0] .= ' --input '.join(',', map { $_.':type='.$qual_type_in } @input_files);
     my $output;
     if ( @output_files == 1 ) {
-        $output = $output_files[0].':type=sanger';
+        $output = $output_files[0].':type=sanger:mode=a';
     }
     elsif ( @output_files == 2 ) {
-        $output = $output_files[0].':name=fwd:type=sanger,'.$output_files[1].':name=rev:type=sanger';
+        $output = $output_files[0].':name=fwd:type=sanger:mode=a,'.$output_files[1].':name=rev:type=sanger:mode=a';
     }
     else {
         $self->error_message('Cannot handle more than 2 output files');

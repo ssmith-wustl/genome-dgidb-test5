@@ -357,7 +357,8 @@ sub _count_reads_in_fastq_files {
     }
 
     if ($wc % 4) {
-        $self->warning_message("run has a line count of $wc, which is not divisible by four!");
+        $self->error_message("run has a line count of $wc, which is not divisible by four!");
+        return;
     }
     my $total_reads_in_fastq_files = $wc/4; #four lines per read in FASTQ file format
     

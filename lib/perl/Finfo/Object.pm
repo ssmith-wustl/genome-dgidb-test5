@@ -2,6 +2,7 @@ package Finfo::Object;
 
 use strict;
 use warnings;
+no warnings 'reserved';
 
 use Data::Dumper;
 use Finfo::ClassUtils 'class';

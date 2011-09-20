@@ -78,6 +78,14 @@
                 </xsl:choose>
               </td>
             </tr>
+
+            <tr>
+              <td class="name">User Name:
+              </td>
+              <td class="value"><xsl:value-of select="aspect[@name='user_name']/value"/>
+              </td>
+            </tr>
+
             <xsl:if test="count(aspect[@name='models']/object/aspect[@name='region_of_interest_set_name']/value) > 0">
               <tr>
                 <td class="name">Coverage Report:

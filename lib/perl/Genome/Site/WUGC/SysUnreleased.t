@@ -21,12 +21,14 @@ use base 'Test::Class';
 
 use Data::Dumper;
 use File::Path;
+use File::Spec;
 use File::Temp;
 use Test::More;
 
 use POSIX ":sys_wait_h";
 use File::Slurp;
 use Time::HiRes qw(gettimeofday);
+use MIME::Base64;
 
 sub startup : Test(startup => 1) {
     my $self = shift;
@@ -196,6 +198,29 @@ sub test1_file : Tests {
     ok(!$worked, 'Try to open a file, but it\'s a directory');
     like($@, qr/Can't validate_file_for_writing: File .* has non-zero size, refusing to write to it/, 'exception message is correct');
 
+    # OVERWRITING
+    note('open file for overwriting');
+    $fh = Genome::Sys->open_file_for_overwriting($new_file);
+    ok($fh, "Opened file for overwriting ".$new_file);
+    isa_ok($fh, 'IO::File');
+    $fh->close;
+    unlink $new_file;
+
+    # No file
+    $worked = eval { Genome::Sys->open_file_for_overwriting };
+    ok(!$worked, 'Failed to open an undef file for overwriting');
+    like($@, qr/for over writing\. No file given\./, 'exception message is correct');
+
+    # No write access
+    $worked = eval { Genome::Sys->open_file_for_overwriting( _no_write_file() ) };
+    ok(!$worked, 'Failed to open a file w/o write access for over writing');
+    like($@, qr/for over writing\. Do not have write access to directory/, 'exception message is correct');
+
+    # File is a dir
+    $worked = eval { Genome::Sys->open_file_for_overwriting( _base_test_dir() ) };
+    ok(!$worked, 'Failed to open a directory for over writing');
+    like($@, qr/for over writing\. It is a directory./, 'exception message is correct');
+
     #< Copying >#
     my $file_to_copy_to = $self->_tmpdir.'/file_to_copy_to';
     ok(
@@ -355,6 +380,7 @@ sub test4_resource_locking : Test(20) {
                                                     resource_id => $bogus_id,
                                                 ), 'unlock resource_id '. $bogus_id);
     my $init_lsf_job_id = $ENV{'LSB_JOBID'};
+    local $ENV{'LSB_JOBID'};
     $ENV{'LSB_JOBID'} = 1;
     test_locking(successful => 1,
                  message => 'lock resource with bogus lsf_job_id',
@@ -464,7 +490,8 @@ sub do_race_lock {
 
     my $lock = Genome::Sys->lock_resource(
         resource_lock => $resource,
-        block_sleep   => 1
+        block_sleep   => 1,
+        wait_announce_interval => 30,
     );
     unless ($lock) {
         print_event($fh, "LOCK_FAIL", "Failed to get a lock" );
@@ -550,6 +577,90 @@ sub test_directory_size_recursive : Test(1) {
     my $expected_size = 22;
 
     is($size,$expected_size,"directory_size_recursive returned the correct size for the test case");
+}
+
+sub test_md5sum_data : Test(2) {
+    my $string = 'hello world';
+    my $expected_output = '5eb63bbbe01eeed093cb22bb8f5acdc3';
+    my $output = Genome::Sys->md5sum_data($string);
+    is($output, $expected_output, 'md5sum_data matches expected output');
+
+    local $@ = undef;
+    eval { Genome::Sys->md5sum_data() };
+    ok($@, 'md5sum_data with no data throws exception');
+}
+
+sub test_extract_archive : Test(3) {
+    my $encoded = <<'END';
+H4sIADXeYE4CA+3QXW6EIBAHcJ57ijmAaURd9xQ9xCizQoqwAVy7ty+avvaxTdr8fy8kw3yBjdMk
+Wf2othrHoZ69Hrqunl0/dPqMHwY9Kq3HvtWXaztcVKt1f70qatUv2HLhRKTyzt7zLN/lLXlW/9Ab
+B3KZjMvFhWVz2YppKMRCMfgnTU+y9ToJ5xgamrZyhMoRy0e+r39355xdDHRLcaVYrCTi4Fb2uaHd
+utkeA5h8/WmKt1ostLpQpxTLZzumu6QsD0kcZjlyjHi32EIunOlzDHW7TUxtbGrQyI2LW3jyQouE
+WleOBWrhe4i7F7NIQ/Ixi5h8Nsg2pkIPsbLK1wgOT5o5BfZ09/V5W5LXFwUAAAAAAAAAAAAAAAAA
+AAAAAPBnfAKKRRlNACgAAA==
+END
+    my $decoded = decode_base64($encoded);
+    my $dir = Genome::Sys->create_temp_directory;
+    my $tarpath = '/gsc/var/cache/testsuite/data/Genome-Utility-Filesystem/hobbes.tgz';
+    my $archive = Genome::Sys->extract_archive(from => $tarpath,
+        to => $dir);
+    ok($archive, 'Extracted gzipped tarball.');
+    ok($archive->files->[0] eq 'hobbes', "Extracted correct files.");
+    my $expected = 'Man is distinguished, not only by his reason, but by this '
+    . 'singular passion from other animals, which is a lust of the mind, that '
+    . 'by a perseverance of delight in the continued and indefatigable '
+    . 'generation of knowledge, exceeds the short vehemence of any carnal '
+    . "pleasure.\n";
+    my $file = Genome::Sys->open_file_for_reading(File::Spec->catfile(
+            $dir, 'hobbes'));
+    #cause file reads to read the entire file
+    local $/;
+    my $content = <$file>;
+    print $expected;
+    ok($content eq $expected, 'File contained expected contents.');
+}
+
+sub test_get_mem_total_from_proc : Test(1) {
+    my $mem_limit_kb = Genome::Sys->get_mem_total_from_proc;
+    ok(defined $mem_limit_kb, 'mem_limit_kb from proc is defined');
+}
+
+sub test_get_mem_limit_from_bjobs : Test(1) {
+    my $mem_limit_kb = Genome::Sys->get_mem_limit_from_bjobs;
+    if ($ENV{LSB_JOBID}) {
+        ok(defined $mem_limit_kb, 'mem_limit_kb from bjobs (' . $ENV{LSB_JOBID} . ') is defined');
+    }
+    else {
+        ok(! defined $mem_limit_kb, 'mem_limit_kb from bjobs is not defined');
+    }
+}
+
+sub test_mem_limit_kb : Test(4) {
+    local $ENV{LSB_JOBID} = 1;
+    { # case 1: can't read either
+        *Genome::Sys::get_mem_total_from_proc = sub { '' };
+        *Genome::Sys::get_mem_limit_from_bjobs = sub { '' };
+        my $mem_limit_kb = Genome::Sys->mem_limit_kb;
+        is($mem_limit_kb, undef, 'mem_limit_kb is undef');
+    }
+    { # case 2: not limited by LSF
+        *Genome::Sys::get_mem_total_from_proc = sub { '4194304' };
+        *Genome::Sys::get_mem_limit_from_bjobs = sub { '' };
+        my $mem_limit_kb = Genome::Sys->mem_limit_kb;
+        is($mem_limit_kb, 4194304, 'mem_limit_kb is 4194304');
+    }
+    { # case 3: limited by LSF
+        *Genome::Sys::get_mem_total_from_proc = sub { '4194304' };
+        *Genome::Sys::get_mem_limit_from_bjobs = sub { '2097152' };
+        my $mem_limit_kb = Genome::Sys->mem_limit_kb;
+        is($mem_limit_kb, 2097152, 'mem_limit_kb is 2097152');
+    }
+    { # case 4: limited by LSF but fail to read proc
+        *Genome::Sys::get_mem_total_from_proc = sub { '' };
+        *Genome::Sys::get_mem_limit_from_bjobs = sub { '2097152' };
+        my $mem_limit_kb = Genome::Sys->mem_limit_kb;
+        is($mem_limit_kb, 2097152, 'mem_limit_kb is 2097152');
+    }
 }
 
 =pod

@@ -27,13 +27,19 @@ class Genome::Model::Tools::Nimblegen::DesignFromFiles {
         type => 'Boolean',
         is_optional => 1,
         default => 1,
-        doc => "whether or not to remove sites on the mitochondria or non-chromosomal contigs",
+        doc => "Whether or not to remove sites on the mitochondria or non-chromosomal contigs",
     },
     include_y => {
         type => 'Boolean',
         is_optional => 1,
         default => 1,
-        doc => "whether or not to include sites on the Y chromosome in the output",
+        doc => "Whether or not to include sites on the Y chromosome in the output",
+    },
+    reference_index => {
+        type => 'String',
+        is_optional => 0,
+        doc => "Path to samtools index of the reference sequence (To check chromosomal bounds of regions)",
+        default => "/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa.fai",
     },
     ]
 };
@@ -103,45 +109,44 @@ sub execute {
                 next if( $line =~ m/^(#|chromosome_name|Chr\t|readgroup)/ ); #Skip headers
                 chomp( $line );
 
-               # print STDERR $line . "\n";
                 #This section and the next can be expanded to support new annotation formats
-                if( $muttype eq 'snvs' && $line =~ m/^\w+\t\d+\t\d+\t\S\t\S\tSNP/ )
+                if( $muttype eq 'snvs' && $line =~ m/^\S+\t\d+\t\d+\t\S\t\S\tSNP/ )
                 {
                     my ( $chr ) = split( /\t/, $line );
                     $chr =~ s/chr//i;
                     ++$var_cnt{snvs} if( defined $valid_chrs{$chr} );
                 }
-                elsif( $muttype eq 'snvs' && $line =~ m/^\w+\t\d+\t\d+/ ) #support bed file of snp locations
+                elsif( $muttype eq 'snvs' && $line =~ m/^\S+\t\d+\t\d+/ ) #support bed file of snp locations
                 {
                     my ( $chr ) = split( /\t/, $line );
                     $chr =~ s/chr//i;
                     ++$var_cnt{snvs} if( defined $valid_chrs{$chr} );
                 }
-                elsif( $muttype eq 'indels' && ( $line =~ m/^\w+\t\d+\t\d+\t[0-]\t\w+/ || $line =~ m/^\w+\t\d+\t\d+\t\w+\t[0-]/) )  #WU and StJude formatting```
+                elsif( $muttype eq 'indels' && ( $line =~ m/^\S+\t\d+\t\d+\t[0-]\t\w+/ || $line =~ m/^\S+\t\d+\t\d+\t\w+\t[0-]/) )  #WU and StJude formatting```
                 {
                     my ( $chr ) = split( /\t/, $line );
                     $chr =~ s/chr//i;
                     ++$var_cnt{indels} if( defined $valid_chrs{$chr} );
                 }
-                elsif( $muttype eq 'indels' && ( $line =~ m/^\w+\t\d+\t\d+/) )  #support bed file of indel locations
+                elsif( $muttype eq 'indels' && ( $line =~ m/^\S+\t\d+\t\d+/) )  #support bed file of indel locations
                 {
                     my ( $chr ) = split( /\t/, $line );
                     $chr =~ s/chr//i;
                     ++$var_cnt{indels} if( defined $valid_chrs{$chr} );
                 }
-                elsif( $muttype eq 'svs' && $line =~ m/^\w+\.\w+\t\w+\t\d+\t\d+\t\w+\t\d+\t\d+\t(INV|INS|DEL|ITX|CTX)/ ) #BreakDancer output
+                elsif( $muttype eq 'svs' && $line =~ m/^\w+\.\w+\t\S+\t\d+\t\d+\t\S+\t\d+\t\d+\t(INV|INS|DEL|ITX|CTX)/ ) #BreakDancer output
                 {
                     my ( undef, $chr1, undef, undef, $chr2 ) = split( /\t/, $line );
                     $chr1 =~ s/chr//i; $chr2 =~ s/chr//i;
                     ++$var_cnt{svs} if( defined $valid_chrs{$chr1} && defined $valid_chrs{$chr2} );
                 }
-                elsif( $muttype eq 'svs' && $line =~ m/^\w+\t\d+\t\d+(\+|\-)\t\w+\t\d+\t\d+(\+|\-)\t(INV|INS|DEL|ITX|CTX)/ ) #SquareDancer output
+                elsif( $muttype eq 'svs' && $line =~ m/^\S+\t\d+\t\d+(\+|\-)\t\S+\t\d+\t\d+(\+|\-)\t(INV|INS|DEL|ITX|CTX)/ ) #SquareDancer output
                 {
                     my ( $chr1, undef, undef, $chr2 ) = split( /\t/, $line );
                     $chr1 =~ s/chr//i; $chr2 =~ s/chr//i;
                     ++$var_cnt{svs} if( defined $valid_chrs{$chr1} && defined $valid_chrs{$chr2} );
                 }
-                elsif( $muttype eq 'svs' && $line =~ m/^\w+\t\d+\t\w+\t\d+\t\S\S\t(INV|INS|DEL|ITX|CTX)/ ) #SJ formatting
+                elsif( $muttype eq 'svs' && $line =~ m/^\S+\t\d+\t\S+\t\d+\t\S\S\t(INV|INS|DEL|ITX|CTX)/ ) #SJ formatting
                 {
                     my ( $chr1, undef, $chr2 ) = split( /\t/, $line );
                     $chr1 =~ s/chr//i; $chr2 =~ s/chr//i;
@@ -187,6 +192,7 @@ sub execute {
         output_file=>"$snv_indel_file.nimblegen",
         include_y=>$self->include_y,
         exclude_non_canonical_sites => $self->exclude_non_canonical_sites,
+        reference_index => $self->reference_index,
     );
     ( $designSnvIndel->execute ) or die "Error running \"gmt nimblegen design-from-annotation\"!\n";
 
@@ -199,19 +205,19 @@ sub execute {
         {
             next if( $line =~ m/^(#|chromosome_name|Chr\t|readgroup)/ ); #Skip headers
             chomp( $line );
-            if( $line =~ m/^\w+\.\w+\t\w+\t\d+\t\d+\t\w+\t\d+\t\d+\t(INV|INS|DEL|ITX|CTX)/ ) #BreakDancer output
+            if( $line =~ m/^\w+\.\w+\t\S+\t\d+\t\d+\t\S+\t\d+\t\d+\t(INV|INS|DEL|ITX|CTX)/ ) #BreakDancer output
             {
                 my ( undef, $chr1, $outStart, $inStart, $chr2, $inEnd, $outEnd ) = split( /\t/, $line );
                 $chr1 =~ s/chr//i; $chr2 =~ s/chr//i;
                 $svFh->print( join( ".", $chr1, $outStart, $inStart, $chr2, $inEnd, $outEnd ), "\t$line\n" ) if( defined $valid_chrs{$chr1} && defined $valid_chrs{$chr2} );
             }
-            elsif( $line =~ m/^\w+\t\d+\t\d+(\+|\-)\t\w+\t\d+\t\d+(\+|\-)\t(INV|INS|DEL|ITX|CTX)/ ) #SquareDancer output
+            elsif( $line =~ m/^\S+\t\d+\t\d+(\+|\-)\t\S+\t\d+\t\d+(\+|\-)\t(INV|INS|DEL|ITX|CTX)/ ) #SquareDancer output
             {
                 my ( $chr1, $start, undef, $chr2, $end ) = split( /\t/, $line );
                 $chr1 =~ s/chr//i; $chr2 =~ s/chr//i;
                 $svFh->print( join( ".", $chr1, $start, $start, $chr2, $end, $end ), "\t$line\n" ) if( defined $valid_chrs{$chr1} && defined $valid_chrs{$chr2} );
             }
-            elsif( $line =~ m/^\w+\t\d+\t\w+\t\d+\t\S\S\t(INV|INS|DEL|ITX|CTX)/ ) #SJ formatting
+            elsif( $line =~ m/^\S+\t\d+\t\S+\t\d+\t\S\S\t(INV|INS|DEL|ITX|CTX)/ ) #SJ formatting
             {
                 my ( $chr1, $start, $chr2, $end ) = split( /\t/, $line );
                 $chr1 =~ s/chr//i; $chr2 =~ s/chr//i;
@@ -228,6 +234,7 @@ sub execute {
         output_file => "$sv_file.nimblegen",
         include_y=>$self->include_y,
         exclude_non_canonical_sites => $self->exclude_non_canonical_sites,
+        reference_index => $self->reference_index,
     );
     ( $designSv->execute ) or die "Error running \"gmt nimblegen design-from-sv\"!\n";
 

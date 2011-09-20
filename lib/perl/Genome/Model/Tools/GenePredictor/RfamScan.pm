@@ -29,6 +29,12 @@ class Genome::Model::Tools::GenePredictor::RfamScan {
             default => 'tab',
             doc => 'Output format used by rfam, either tab-delimited or gff2',
         },
+        no_big_flag => {
+            is => 'Boolean',
+            is_input => 1,
+            default => 0,
+            doc => 'If set, trnas are skipped by rfamscan',
+        },
         # TODO There are a bunch of other parameters that could be added here,
         # just type rfam_scan -h for a full list. For now, these aren't needed.
     ],
@@ -80,6 +86,7 @@ sub execute {
 
     # Create a list of parameters and then create the command string
     my @params;
+    push @params, '--nobig' if $self->no_big_flag;
     push @params, '-f ' . $self->output_format;
     push @params, "-o $raw_output_file ";
     push @params, $self->fasta_file;
