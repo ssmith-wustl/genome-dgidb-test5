@@ -103,10 +103,6 @@ sub alignment_links_directory {
     return shift->root_directory . '/alignment_links';
 }
 
-sub model_comparison_link_directory {
-    return shift->root_directory . '/model_comparison_links';
-}
-
 # data
 
 sub alignment_data_directory {
