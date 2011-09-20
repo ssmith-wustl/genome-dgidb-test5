@@ -515,9 +515,6 @@ sub _create_model_and_request_build {
 
     $self->status_message('Create model and request build');
 
-    my $refseq_build = $self->reference_sequence_build;
-    $self->status_message('Reference build: '.$refseq_build->__display_name__);
-
     my $pp = Genome::ProcessingProfile::ReferenceAlignment->get(2580856);
     if ( not $pp ) {
         $self->error_message('Cannot find ref align processing profile for 2580856 to create model');
@@ -528,10 +525,13 @@ sub _create_model_and_request_build {
     my $sample = $self->_inst_data->sample;
     $self->status_message('Sample: '.$sample->name);
 
+    my $refseq = $self->reference_sequence_build;
+    $self->status_message('Reference build: '.$refseq->__display_name__);
+
     my $model = Genome::Model::ReferenceAlignment->create(
         name => 'TCGA_BAM_PLACE_HOLDER',
         processing_profile => $pp,
-        reference_sequence_build => $refseq_build,
+        reference_sequence_build => $refseq,
         subject_id => $sample->id,
         subject_class_name => $sample->class,
         build_requested => 1,
@@ -543,7 +543,19 @@ sub _create_model_and_request_build {
     }
     $self->_model($model);
 
-    my $name = $sample->name.'.'.$refseq_build->version.'.refalign';
+    my $dbsnp = Genome::Model::ImportedVariationList->dbsnp_build_for_reference($refseq);
+    if ( $dbsnp ) {
+        $self->status_message('dbSNP build: '.$dbsnp->__display_name__);
+        $model->dbsnp_build($dbsnp);
+    }
+
+    my $annotation = Genome::Model::ImportedAnnotation->annotation_build_for_reference($refseq);
+    if ( $annotation ) {
+        $self->status_message('Annotation build: '.$annotation->__display_name__);
+        $model->annotation_reference_build($annotation);
+    }
+
+    my $name = $sample->name.'.'.$refseq->version.'.refalign';
     my $i = 0;
     while ( my $model = Genome::Model::ReferenceAlignment->get(name => $name) ) {
         $name .= '-'.++$i;
