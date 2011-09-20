@@ -249,7 +249,8 @@ $DB::single = 1;
 
         # get statuses of latest builds from canonical models
         my $sample = $self->sample();
-        my $model = $sample->canonical_model();
+        my @models = sort { $a->id <=> $b->id } Genome::Model->get(subject_id => $sample->id);
+        my $model = $models[0];
 
         if ($model) {
             my $build = $model->latest_build();
