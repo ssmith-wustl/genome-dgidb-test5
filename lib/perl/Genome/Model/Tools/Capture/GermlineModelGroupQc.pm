@@ -143,7 +143,7 @@ sub execute {                               # replace with real execution logic.
 					open(GENOFILE, ">" . $genofile) or die "Can't open outfile: $!\n";
 
 					my $db_snp_info = GSC::SNP::DB::Info->get( snp_db_build => $db_snp_build );
-					my $type = 'HuRef';
+					my $type = 'reference';
 		 
 					# Get the sample
 					my $organism_sample = GSC::Organism::Sample->get( sample_name => $subject_name );
