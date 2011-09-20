@@ -15,15 +15,19 @@ use Test::More;
 
 use_ok('Genome::Project') or die;
 
+my $user_name = Genome::Sys->username;
+my $user = Genome::Sys::User->get(username => $user_name);
+unless ($user) {
+    $user = Genome::Sys::User->create(username => $user_name, email => "$user_name\@example.test");
+}
+ok($user, 'got (or created) sys user object for testing');
+
 # create
 my $project = Genome::Project->create(
     name => 'TEST AML',
 );
 ok($project, 'create a project');
 is($project->name, 'TEST AML', 'name');
-my $user_name = Genome::Sys->username;
-my $user = Genome::Sys::User->get(username => $user_name);
-ok($user, 'got user');
 is($project->creator, $user, 'creator');
 is_deeply([$project->user_ids], [$user->id], 'user ids');
 my $model_group = $project->model_group;
@@ -40,6 +44,12 @@ no warnings;
 my $username_sub = *Genome::Sys::username;
 *Genome::Sys::username = sub{ return 'apipe-builder' };
 use warnings;
+
+my $other_user = Genome::Sys::User->get(username => Genome::Sys->username);
+unless ($other_user) {
+    $other_user = Genome::Sys::User->create(username => Genome::Sys->username, email => Genome::Sys->username . '@example.test');
+}
+ok($other_user, "created another test user");
 my $project2 = Genome::Project->create(
     name => $project->name,
 );

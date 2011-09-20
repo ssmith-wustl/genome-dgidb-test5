@@ -7,7 +7,7 @@ use Genome;
 
 
 class Genome::FeatureList::Command {
-    is => 'Genome::Command::Base',
+    is => 'Command::Tree',
     has => [
         feature_list => {
             is => 'Genome::FeatureList',

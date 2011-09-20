@@ -33,7 +33,7 @@ DOC
         input_metrics => {
             is => 'Text',
             is_optional => 1,
-            doc => 'Capoture input sequence metrics to this file.',
+            doc => 'Capture sequence metrics for the intput to this file. Current metrics include: count, bases',
         },
         output => {
             is => 'Text',
@@ -77,7 +77,7 @@ DOC
         output_metrics => {
             is => 'Text',
             is_optional => 1,
-            doc => 'Output sequence metrics for the output to this file. Current metrics include: count, bases',
+            doc => 'Capture sequence metrics for the output to this file. Current metrics include: count, bases',
         },
         _input => { is_optional => 1, },
         _output => { is_optional => 1, },
@@ -97,19 +97,12 @@ sub help_synopsis {
     * illumina => fastq w/ illumina quality values
     * phred => fasta/quality
 
-    Things This Base Command Can Do
+    Things The Base Command Can Do
     * collate two inputs into one (sanger, illumina only)
     * decollate one input into two (sanger, illumina only)
     * convert type
     * remove quality fastq headers
     
-    Things This Base Command Can Not Do
-    * be used in a pipe
-
-    Metrics
-    * count
-    * bases
-
 HELP
 }
 

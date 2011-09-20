@@ -38,6 +38,7 @@ my $read_counts = Genome::Model::Tools::Somatic::ReadCounts->create(
     normal_bam  => $normal_bam,
     sites_file  => $sites_file,
     output_file => $output_file,
+    minimum_mapping_quality => 30,
 );
 
 ok($read_counts, 'created ReadCounts object');

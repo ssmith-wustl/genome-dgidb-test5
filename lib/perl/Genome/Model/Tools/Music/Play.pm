@@ -140,6 +140,12 @@ class Genome::Model::Tools::Music::Play {
             doc => "Set how close a 'near' match is when searching for nucleotide position near hits",
             default => '5',
         },
+        reference_build => {
+            is => 'Path',
+            doc => 'Put either "Build36" or "Build37"',
+            is_output => 1,
+            default => 'Build36',
+        }
     ],
     has_calculated_optional => [
         gene_covg_dir => {

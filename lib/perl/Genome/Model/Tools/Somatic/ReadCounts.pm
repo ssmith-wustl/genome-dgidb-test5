@@ -25,6 +25,11 @@ class Genome::Model::Tools::Somatic::ReadCounts {
            is => 'String',
            doc =>'the sites of interest in annotation format.'
        },
+       minimum_mapping_quality => {
+           is => 'String',
+           default => 1,
+           doc =>'the minimum mapping quality of a read to include it in the counts'
+       },
        reference_sequence => {
            is => 'String',
            doc =>'the reference sequence to use, defaults to NCBI-human-build36',
@@ -80,8 +85,9 @@ sub execute {
         $readcount_regions_fh->print("$chr\t$pos\t$pos\n");
     }
     $readcount_regions_fh->close;
-    my $normal_bam_command =  "bam-readcount -q 30 -f " .  $self->reference_sequence . " -l $readcount_regions_file " . $self->normal_bam;
-    my $tumor_bam_command =  "bam-readcount -q 30 -f " .  $self->reference_sequence . " -l $readcount_regions_file " . $self->tumor_bam;
+    my $min_mapping_quality = $self->minimum_mapping_quality;
+    my $normal_bam_command =  "bam-readcount -q $min_mapping_quality -f " .  $self->reference_sequence . " -l $readcount_regions_file " . $self->normal_bam;
+    my $tumor_bam_command =  "bam-readcount -q $min_mapping_quality -f " .  $self->reference_sequence . " -l $readcount_regions_file " . $self->tumor_bam;
     $DB::single=1;
     my @normal_lines = `$normal_bam_command`;
     my @tumor_lines  = `$tumor_bam_command`;

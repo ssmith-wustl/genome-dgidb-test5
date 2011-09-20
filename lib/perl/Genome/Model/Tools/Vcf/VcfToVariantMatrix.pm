@@ -65,13 +65,12 @@ sub execute {                               # replace with real execution logic.
         my @sample_names;
         my %variant_hash;
         my %sample_hash;
-
         while(my $line = $inFh->getline ) {
                 chomp($line);
                 if ($line =~ /^\#\#/) {
                         next;
                 }
-                elsif ($line =~ /^\#CHROM/) {
+                elsif ($line =~ /^\#CHROM/) { #grab sample names off of the header line
                         my ($chr, $pos, $id, $ref, $alt, $qual, $filter, $info, $format, @samples) = split(/\t/, $line);
                         @sample_names = @samples;
                         print $fh "$project_name";
@@ -79,30 +78,55 @@ sub execute {                               # replace with real execution logic.
                 }
 
                 my ($chr, $pos, $id, $ref, $alt, $qual, $filter, $info, $format, @samples) = split(/\t/, $line);
+                #current possible fields, Sept 2011: GT:GQ:DP:BQ:MQ:AD:FA:VAQ:FET
+##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
+##FORMAT=<ID=GQ,Number=1,Type=Integer,Description="Genotype Quality">
+##FORMAT=<ID=DP,Number=1,Type=Integer,Description="Total Read Depth">
+##FORMAT=<ID=BQ,Number=A,Type=Integer,Description="Average Base Quality corresponding to alleles 0/1/2/3... after software and quality filtering">
+##FORMAT=<ID=MQ,Number=1,Type=Integer,Description="Average Mapping Quality">
+##FORMAT=<ID=AD,Number=A,Type=Integer,Description="Allele Depth corresponding to alleles 0/1/2/3... after software and quality filtering">
+##FORMAT=<ID=FA,Number=1,Type=Float,Description="Fraction of reads supporting ALT">
+##FORMAT=<ID=VAQ,Number=1,Type=Integer,Description="Variant Quality">
+##FORMAT=<ID=FET,Number=1,Type=String,Description="P-value from Fisher's Exact Test">
+
+                #parse format line to find out where our pattern of interest is in the ::::: system
                 my (@format_fields) = split(/:/, $format);
-                my $gt_location;
+                my $gt_location; #genotype
+                my $dp_location; #depth - this is currently unused down below
+                my $gq_location; #genotype quality - this is only filled for samtools variants, not varscan and not homo ref - this is currrently unused down below
                 my $count = 0;
                 foreach my $format_info (@format_fields) {
                         if ($format_info eq 'GT') {
                                 $gt_location = $count;
                         }
-                        else {
-                                $count++;
+                        elsif ($format_info eq 'DP') {
+                                $dp_location = $count;
                         }
+                        elsif ($format_info eq 'GQ') {
+                                $gq_location = $count;
+                        }
+
+                        $count++;
                 }
 
+                #this file doesn't work if there are unknown genotype locations
                 unless ($gt_location || $gt_location == 0) {
                         die "Format field doesn't have a GT entry, failed to get genotype for $line\n";
                 }
 
+                #check to see if line has 0,1,2,etc as genotype numbering, store those in a hash for future reference
                 my %alleles_hash;
                 foreach my $sample_info (@samples) {
                         my ($chr, $pos, $id, $ref, $alt, $qual, $filter, $info, $format, @samples) = split(/\t/, $line);
                         my (@sample_fields) = split(/:/, $sample_info);
                         my $genotype = $sample_fields[$gt_location];
                         my ($allele1, $allele2) = split(/\//, $genotype);
-                        $alleles_hash{$allele1}++;
-                        $alleles_hash{$allele2}++;
+                        if ($allele1 =~ m/[0-9]/) {
+                                $alleles_hash{$allele1}++;
+                        }
+                        if ($allele2 =~ m/[0-9]/) {
+                                $alleles_hash{$allele2}++;
+                        }
                 }
 
                 my @allele_options = (sort { $a <=> $b } keys %alleles_hash);
@@ -113,7 +137,10 @@ sub execute {                               # replace with real execution logic.
                         my $genotype = $sample_fields[$gt_location];
                         my ($allele1, $allele2) = split(/\//, $genotype);
                         my $allele_count;
-                        if ($allele1 == $allele2) { #homo
+                        if ($allele1 =~ m/![0-9]/) {
+                                $allele_count = '.';
+                        }
+                        elsif ($allele1 == $allele2) { #homo
                                 if ($allele1 == $allele_options[0]) { #homo first variant
                                         $allele_count = 0;
                                 }
@@ -129,12 +156,12 @@ sub execute {                               # replace with real execution logic.
                         if ($allele_options[0] == 0) {
                                 $variant_name = "$chr"."_"."$pos"."_"."$ref"."_"."$alt";
                         }
-                        elsif (defined $allele_options[1]) {
+                        elsif (defined $allele_options[1]) { 
                                 my ($alt_ref, $alt_alt) = split(/,/, $alt);
                                 print "1:$alt_ref,2:$alt_alt,3:$alt,4:$allele_options[0],$allele_options[1]\n";
                                 $variant_name = "$chr"."_"."$pos"."_"."$alt_ref"."_"."$alt_alt";
                         }
-                        else {
+                        else { #for those cases where the line is 100% homo variant
                                 $variant_name = "$chr"."_"."$pos"."_"."$ref"."_"."$alt";
                         }
                         my $sample_name = $sample_names[$count];
@@ -144,6 +171,7 @@ sub execute {                               # replace with real execution logic.
                 }
         }
 
+        #print out header line of variant names
         foreach my $variant_name (sort keys %variant_hash) {
                 print $fh "\t$variant_name";
         }

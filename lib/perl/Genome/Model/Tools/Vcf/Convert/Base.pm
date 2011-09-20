@@ -156,20 +156,27 @@ sub print_header{
     # Calculate the location of the public reference sequence
     my $seq_center = $self->sequencing_center;
     my $reference_sequence_version = $self->reference_sequence_build->version;
+    my $subject = $self->reference_sequence_build->subject_name;
 
-    if ($reference_sequence_version == 37) {
-        $public_reference = "ftp://ftp.ncbi.nih.gov/genbank/genomes/Eukaryotes/vertebrates_mammals/Homo_sapiens/GRCh37/special_requests/GRCh37-lite.fa.gz";
-    } elsif ($reference_sequence_version == 36) {
-        if ($seq_center eq "WUSTL"){
-            $public_reference = "ftp://ftp.ncbi.nlm.nih.gov/genomes/H_sapiens/ARCHIVE/BUILD.36.3/special_requests/assembly_variants/NCBI36_BCCAGSC_variant.fa.gz";
-        } elsif ($seq_center eq "BROAD"){
-            $public_reference="ftp://ftp.ncbi.nlm.nih.gov/genomes/H_sapiens/ARCHIVE/BUILD.36.3/special_requests/assembly_variants/NCBI36-HG18_Broad_variant.fa.gz";
+    if ($subject eq "human") {
+        if ($reference_sequence_version == 37) {
+            $public_reference = "ftp://ftp.ncbi.nih.gov/genbank/genomes/Eukaryotes/vertebrates_mammals/Homo_sapiens/GRCh37/special_requests/GRCh37-lite.fa.gz";
+        } elsif ($reference_sequence_version == 36) {
+            if ($seq_center eq "WUSTL"){
+                $public_reference = "ftp://ftp.ncbi.nlm.nih.gov/genomes/H_sapiens/ARCHIVE/BUILD.36.3/special_requests/assembly_variants/NCBI36_BCCAGSC_variant.fa.gz";
+            } elsif ($seq_center eq "BROAD"){
+                $public_reference="ftp://ftp.ncbi.nlm.nih.gov/genomes/H_sapiens/ARCHIVE/BUILD.36.3/special_requests/assembly_variants/NCBI36-HG18_Broad_variant.fa.gz";
+            } else {
+                die $self->error_message("Unknown sequencing center: $seq_center");
+            }
         } else {
-            die $self->error_message("Unknown sequencing center: $seq_center");
+            die $self->error_message("Unknown reference sequence version ($reference_sequence_version) from reference sequence build " . $self->reference_sequence_build_id);
         }
     } else {
-        die $self->error_message("Unknown reference sequence version ($reference_sequence_version) from reference sequence build " . $self->reference_sequnce_build_id);
+        # TODO We need a map from internal reference to external references... until then just put our reference in there
+        $public_reference = $self->reference_sequence_input;
     }
+
 
     my $output_fh = $self->_output_fh;
 

@@ -1,18 +1,13 @@
 package Genome::ProcessingProfile::Command;
 
-#REVIEW fdu 11/20/2009
-#OK
-
 use strict;
 use warnings;
 
 use Genome;
-      
 use Regexp::Common;
 
 class Genome::ProcessingProfile::Command {
-    is => 'Command',
-    is_abstract => 1,
+    is => 'Command::Tree',
     english_name => 'genome processing_profile command',
     has => [
         processing_profile => {
@@ -25,7 +20,7 @@ class Genome::ProcessingProfile::Command {
             doc => 'Identifies the genome processing profile by id',
         },
     ],
-    doc => 'work with processing profiles.',
+    doc => 'Work with processing profiles.',
 };
 
 ############################################
@@ -39,18 +34,6 @@ sub help_brief {
 
 sub help_detail {
     return help_brief(@_);
-}
-
-sub command_name {
-    my $class = ref($_[0]) || $_[0];
-    return $class->SUPER::command_name unless $class eq __PACKAGE__;
-    return 'genome processing-profile';
-}
-
-sub command_name_brief {
-    my $class = ref($_[0]) || $_[0];
-    return $class->SUPER::command_name_brief unless $class eq __PACKAGE__;
-    return 'processing-profile';
 }
 
 ############################################
@@ -77,6 +60,3 @@ sub _verify_processing_profile {
 }
 
 1;
-
-#$HeadURL$
-#$Id$

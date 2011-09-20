@@ -8,7 +8,6 @@ use Genome;
 require Carp;
 use Data::Dumper 'Dumper';
 require File::Basename;
-require Genome::Utility::Text;
 require Lingua::EN::Inflect;
 
 class Genome::Command::Crud {
@@ -16,6 +15,19 @@ class Genome::Command::Crud {
 };
 
 our %inited;
+
+sub camel_case_to_string {
+    my $string = shift;
+    unless ($string) {
+        Carp::confess "No camel case string to convert to string"
+    }
+
+    # Split on capital letters
+    my @words = split( /(?=(?<![A-Z])[A-Z])|(?=(?<!\d)\d)/, $string);
+    my $join = ( @_ ) ? $_[0] : ' '; 
+    return join($join, map { lc } @words);
+}
+
 sub init_sub_commands {
     my ($class, %incoming_config) = @_;
 
@@ -33,7 +45,7 @@ sub init_sub_commands {
     # name for objects
     my $target_name = ( defined $incoming_config{target_name} )
     ? delete $incoming_config{target_name}
-    : join(' ', map { Genome::Utility::Text::camel_case_to_string($_) } split('::', $config{target_class}));
+    : join(' ', map { camel_case_to_string($_) } split('::', $config{target_class}));
     Lingua::EN::Inflect::classical(persons => 1);
     $config{name_for_objects} = Lingua::EN::Inflect::PL($target_name);
     $config{name_for_objects_ub} = $config{name_for_objects};
