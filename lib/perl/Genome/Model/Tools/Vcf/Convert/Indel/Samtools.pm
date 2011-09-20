@@ -11,13 +11,13 @@ class Genome::Model::Tools::Vcf::Convert::Indel::Samtools {
 
 sub help_synopsis {
     <<'HELP';
-    Generate a VCF file from varscan snv output
+    Generate a VCF file from samtools indel output
 HELP
 }
 
 sub help_detail {
     <<'HELP';
-    Parses the input file and creates a VCF containing all the snvs.
+    Parses the input file and creates a VCF containing all the indels.
 HELP
 }
 
@@ -62,7 +62,7 @@ sub parse_line {
         push(@alt_alleles, $indel_call_2);
     }
     if (@alt_alleles == 0) {
-        die ("No indel calls were made on this line: $indel_call_1/$indel_call_2");
+        die $self->error_message("No indel calls were made on this line: $indel_call_1/$indel_call_2");
     }
 
     #Assumption: if there are two alternate alleles, they are either both
@@ -95,7 +95,7 @@ sub parse_line {
         }
     }
     else {
-        die ("Insertion/deletion type not recognized: ".$alt_alleles[0]);
+        die $self->error_message("Insertion/deletion type not recognized: ".$alt_alleles[0]);
     }
 
     #TODO this is turned off for now because it interferes with applying filters (bed coordinates will be different once left shifted)
@@ -104,7 +104,8 @@ sub parse_line {
     my $GT;
     my @indel_string_split = split(/\//, $indel_string);
     if (@indel_string_split != 2) {
-        die ("Genotype in unexpected format: ".$indel_string);
+        $self->warning_message("Genotype in unexpected format: $indel_string at chr $chr pos $pos");
+        return;
     }
     if ($indel_string eq "*/*") {
         $GT = "0/0";
