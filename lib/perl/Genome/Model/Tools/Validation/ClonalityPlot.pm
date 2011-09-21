@@ -75,12 +75,6 @@ class Genome::Model::Tools::Validation::ClonalityPlot {
             is_input => 1,
             default => 0},
 
-        tumor_only => {
-            is => 'Boolean',
-            doc => "don't even look at normal positions for coverage",
-            is_optional => 1,
-            default => 1},
-
         ],
 };
 
@@ -122,7 +116,6 @@ sub execute {
     my $r_library = $self->varscan_r_library;
     my $skip_if_output_is_present = $self->skip_if_output_is_present;
     my $analysis_type = $self->analysis_type;
-    my $tumor_only = $self->tumor_only;
 
 
     #set readcount cutoffs
