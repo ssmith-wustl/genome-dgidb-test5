@@ -276,6 +276,9 @@ sub path_to_individual_output {
         $params{chromosome_list} = 'all';
     }
 
+    # Do not get results with the test name set... we are probably looking for "real" results.
+    $params{test_name} = undef;
+
     #get filter class name
     if ($filter_strat){
         $filter_name = Genome::Model::Tools::DetectVariants2::Strategy->filter_class($filter_name);
