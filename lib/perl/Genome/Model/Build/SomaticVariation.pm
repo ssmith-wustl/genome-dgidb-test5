@@ -301,7 +301,7 @@ sub path_to_individual_output {
     }
     elsif (scalar @result > 1) {
         $answer = join "\n", map{$_->output_dir}@result;
-        $self->error_message("Got multiple results. Probably get test_name set :\n$answer");
+        $self->error_message("Got multiple results for the software result query :\n$answer");
         return;
     }
     else {
@@ -312,7 +312,7 @@ sub path_to_individual_output {
         }
         elsif (scalar @results > 1) {
             $answer = join "\n", map{$_->output_dir}@results;
-            $self->error_message("Got multiple results. Probably get test_name set :\n$answer");
+            $self->error_message("Got multiple results for the software result query :\n$answer");
             return;
         }
         else {
