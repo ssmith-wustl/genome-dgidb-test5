@@ -49,16 +49,26 @@ sub _generate_content {
                     . $self->subject_id);
     }
 
-    my %view_args = (
-        subject_class_name => $self->subject_class_name,
-        perspective => $self->perspective(),
-        toolkit => 'xml'
-    );
+##        perspective => $self->perspective(),
+#    my %view_args = (
+#        subject_class_name => $self->subject_class_name,
+#        perspective => 'detail',
+#        toolkit => 'xml'
+#    );
+#    my $xml_view = $obj->create_view(%view_args);
+#    my $xml = $xml_view->content();
+#    my $hash = XMLin($xml);
 
-    my $xml_view = $obj->create_view(%view_args);
-    my $xml = $xml_view->content();
-
-    my $hash = XMLin($xml);
+    my $hash = {};
+    my @attributes;
+    for my $a ($obj->attributes()) {
+        push @attributes, [
+            $a->nomenclature(),
+            $a->attribute_label(),
+            $a->attribute_value()
+        ];
+    }
+    $hash->{'aaData'} = \@attributes;
 
     return $self->_json->encode($hash);
 }
