@@ -8,6 +8,8 @@ use File::Path;
 use Carp;
 use IO::File;
 
+our $VERSION = $Genome::VERSION;
+
 class Genome::Sys {};
 
 #####
