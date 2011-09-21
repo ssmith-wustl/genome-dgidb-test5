@@ -128,6 +128,10 @@ sub execute {                               # replace with real execution logic.
 	{
 		my $bam_file = $self->bam_file;
 
+        #get last samtools version with pileup
+        #will die if can't find it
+        my $samtools = Genome::Model::Tools::Sam->path_for_samtools_version("r963");
+
 		## Build positions key ##
 		my $search_string = "";
 		my $key_count = 0;
@@ -159,7 +163,8 @@ sub execute {                               # replace with real execution logic.
 		}
 		else
 		{
-			$cmd = "samtools mpileup -cf $reference_build_fasta $bam_file | cut --fields=1-8 >$temp_path";			
+            #use samtools pileup, but don't use BAQ since it sucks up a lot of CPU
+			$cmd = "$samtools pileup -B -cf $reference_build_fasta $bam_file | cut --fields=1-8 >$temp_path";			
 		}
 
 		my $return = Genome::Sys->shellcmd(
@@ -168,7 +173,7 @@ sub execute {                               # replace with real execution logic.
                            skip_if_output_is_present => 0,
                        );
 		unless($return) { 
-			$self->error_message("Failed to execute samtools mpileup: mPileup Returned $return");
+			$self->error_message("Failed to execute samtools pileup: pileup Returned $return");
 			die $self->error_message;
 		}
 		
