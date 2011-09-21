@@ -23,6 +23,9 @@ class Genome::ModelGroup {
                                     via     => 'model_bridges',
                                     to      => 'model'
                                 },
+        model_count => {
+            calculate => q| my @models = $self->models; return scalar @models; |,
+        },
         convergence_model   => { is => 'Genome::Model::Convergence',
                                     is_many     => 1, # We really should only have 1 here, however reverse_as requires this
                                     reverse_as  => 'group',
