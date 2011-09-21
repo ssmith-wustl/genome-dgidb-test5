@@ -118,10 +118,12 @@ sub execute{
         unless (-e $lq_result){
             #these are not set on the detect variants command, so I'm hardcoding them.
             my $unexpected_filename_output = $build->data_directory."/variants/indels.lq.bed";
-            unless (-e $unexpected_filename_output){
-                die $self->error_message("Expected lq detected indels $unexpected_filename_output, but it does not exist");
+            if (-e $unexpected_filename_output){
+                symlink($unexpected_filename_output, $lq_result);
+            } else {
+                $self->status_message("No lq indel file found. Creating an empty file at $lq_result");
+                system("touch $lq_result");
             }
-            symlink($unexpected_filename_output, $lq_result);
         }
     }
 
