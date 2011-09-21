@@ -152,7 +152,7 @@ sub get_record {
         if ($line2) {
             my @fields1 = split (/\t/, $line1);
             my @fields2 = split (/\t/, $line2);
-            if ($fields1[1] eq $fields2[1]) {
+            if (($fields1[0] eq $fields2[0]) && ($fields1[1] eq $fields2[1])) {
                 $lines = $line1.$line2;
                 $num_lines++;
             }
