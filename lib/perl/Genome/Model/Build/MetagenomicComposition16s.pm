@@ -1118,7 +1118,7 @@ sub classify_amplicons {
     $self->status_message('Classifier params: '.$classifier_params);
 
     my %metrics;
-    @metrics{qw/ attempted success error/} = (qw/ 0 0 0 /);
+    @metrics{qw/ attempted success error total /} = (qw/ 0 0 0 0 /);
     for my $name ( @amplicon_set_names ) {
         my $amplicon_set = $self->amplicon_set_for_name($name);
         next if not $amplicon_set;

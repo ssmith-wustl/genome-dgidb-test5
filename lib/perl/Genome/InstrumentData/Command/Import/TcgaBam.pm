@@ -8,7 +8,7 @@ use Genome;
 require File::Basename;
 
 class Genome::InstrumentData::Command::Import::TcgaBam {
-    is  => 'Genome::InstrumentData::Command::Import',
+    is  => 'Command::V2',
     has => [
         original_data_path => {
             is => 'Text',
@@ -53,14 +53,18 @@ class Genome::InstrumentData::Command::Import::TcgaBam {
             doc => 'total base count of import data',
             is_optional => 1,
         },
+        reference_sequence_build_id => { 
+            is => 'Text',
+            valid_values => [qw/ 101947881 106942997 /],
+            doc => 'The id of the reference sequence the data was aligned against. Versions: 101947881 (NCBI-human-build36), 106942997 (GRCh37-lite-build37).',
+        },
         reference_sequence_build => { 
-            calculate => q| return Genome::Model::Build::ImportedReferenceSequence->get(101947881); |,
-            is_param => 0,
-            doc => 'The reference sequence build the data was aligned against, currently "NCBI-build-36".',
+            calculate_from => [qw/ reference_sequence_build_id /],
+            calculate => q| return Genome::Model::Build::ImportedReferenceSequence->get($reference_sequence_build_id); |,
         },
         _model => { is_optional => 1, },
         _inst_data => { is_optional => 1, },
-        import_instrument_data_id => { via => '_inst_data', to => 'id', },
+        import_instrument_data_id => { via => '_inst_data', to => 'id', is_optional => 1, },
         _allocation => { via => '_inst_data', to => 'disk_allocations', },
         _absolute_path => { via => '_allocation', to => 'absolute_path', },
         _new_bam => { 
@@ -87,6 +91,12 @@ HELP
 
 sub execute {
     my $self = shift;
+
+    # Ref Seq
+    if ( not $self->reference_sequence_build ) {
+        $self->error_message('No reference sequence build given.');
+        return;
+    }
 
     # Validate BAM
     my $bam_ok = $self->_validate_bam;
@@ -160,7 +170,6 @@ sub _validate_md5 {
     $self->status_message("Getting BAM MD5 from file: $md5_file");
     my $md5_fh = eval{ Genome::Sys->open_file_for_reading($md5_file); };
     if ( not $md5_fh ) {
-        print Data::Dumper::Dumper($md5_fh);
         $self->error_message("Cannot open BAM MD5 file ($md5_file): $@");
         return;
     }
@@ -234,11 +243,11 @@ sub _create_imported_instrument_data {
 
     my $target_region;
     unless ($self->target_region eq 'none') {
-        if ($self->validate_target_region) {
-            $target_region = $self->target_region;
-        } else {
-            $self->error_message("Invalid target region " . $self->target_region);
-            die $self->error_message;
+        $target_region = $self->target_region;
+        my @feature_lists = Genome::FeatureList->get(name => $target_region);
+        if (not @feature_lists or @feature_lists > 1) {
+            $self->error_message("Invalid target region: " . $target_region);
+            return;
         }
     }
 
@@ -506,9 +515,6 @@ sub _create_model_and_request_build {
 
     $self->status_message('Create model and request build');
 
-    my $refseq_build = $self->reference_sequence_build;
-    $self->status_message('Reference build: '.$refseq_build->__display_name__);
-
     my $pp = Genome::ProcessingProfile::ReferenceAlignment->get(2580856);
     if ( not $pp ) {
         $self->error_message('Cannot find ref align processing profile for 2580856 to create model');
@@ -519,10 +525,13 @@ sub _create_model_and_request_build {
     my $sample = $self->_inst_data->sample;
     $self->status_message('Sample: '.$sample->name);
 
+    my $refseq = $self->reference_sequence_build;
+    $self->status_message('Reference build: '.$refseq->__display_name__);
+
     my $model = Genome::Model::ReferenceAlignment->create(
         name => 'TCGA_BAM_PLACE_HOLDER',
         processing_profile => $pp,
-        reference_sequence_build => $refseq_build,
+        reference_sequence_build => $refseq,
         subject_id => $sample->id,
         subject_class_name => $sample->class,
         build_requested => 1,
@@ -532,14 +541,26 @@ sub _create_model_and_request_build {
         $self->error_message('Failed to create model');
         return;
     }
-    my $name = $model->default_model_name;
-    if ( not $name ) {
-        $self->error_message('Failed to get default model name');
-        $model->delete;
-        return;
+    $self->_model($model);
+
+    my $dbsnp = Genome::Model::ImportedVariationList->dbsnp_build_for_reference($refseq);
+    if ( $dbsnp ) {
+        $self->status_message('dbSNP build: '.$dbsnp->__display_name__);
+        $model->dbsnp_build($dbsnp);
+    }
+
+    my $annotation = Genome::Model::ImportedAnnotation->annotation_build_for_reference($refseq);
+    if ( $annotation ) {
+        $self->status_message('Annotation build: '.$annotation->__display_name__);
+        $model->annotation_reference_build($annotation);
+    }
+
+    my $name = $sample->name.'.'.$refseq->version.'.refalign';
+    my $i = 0;
+    while ( my $model = Genome::Model::ReferenceAlignment->get(name => $name) ) {
+        $name .= '-'.++$i;
     }
     $model->name($name);
-    $self->_model($model);
 
     my $add = $model->add_instrument_data( $self->_inst_data );
     if ( not $add ) {

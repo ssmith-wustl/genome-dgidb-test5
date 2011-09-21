@@ -22,7 +22,7 @@ class Genome::Model::Tools::Sx::Trim::ByAvgQualWindow {
 };
 
 sub help_brief {
-    return 'Trim until window avg quality is above the threshold';
+    return "Trim sequence from 3' end until avg qual of a window is above the threshold";
 }
 
 sub help_detail {

@@ -18,7 +18,7 @@ class Genome::Model::Tools::Sx::Trim::ByAvgQual {
 };
 
 sub help_brief {
-    return 'Trim until sequence avg qual is above the threshold';
+    return "Trim sequence from 3' end until avg qual is above the threshold";
 }
 
 sub help_detail {

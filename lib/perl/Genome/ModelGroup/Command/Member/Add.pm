@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 
 class Genome::ModelGroup::Command::Member::Add {
-    is => 'Genome::ModelGroup::Command::Member',
+    is => 'Genome::ModelGroup::Command::Member::Base',
     has => [
         models => {
             is => 'Genome::Model',
