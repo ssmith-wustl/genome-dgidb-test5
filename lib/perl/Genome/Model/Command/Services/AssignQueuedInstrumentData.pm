@@ -143,6 +143,29 @@ sub help_detail {
 EOS
 }
 
+sub get_organism_taxon {
+    my $sample = shift;
+    my $population = get_population($sample);
+    if ($population){
+        return $population->taxon; 
+    }
+    if(!$sample->taxon_id){
+        return $sample->patient->taxon if $sample->patient;
+    }
+    return $sample->taxon;
+}
+
+sub get_population {
+    my $sample = shift;
+    my $source_type = $sample->source_type;
+    if($source_type && 
+            ($source_type eq 'organism individual' || 
+             $source_type eq 'population group')){
+        return $sample->source;
+    }
+    return;
+}   
+
 sub execute {
     $DB::single = $DB::stopper;
     my $self = shift;
@@ -1274,7 +1297,7 @@ sub add_processing_profiles_to_pses{
                 die $self->error_message;
             }
 
-            my $taxon = $organism_sample->get_organism_taxon;
+            my $taxon = get_organism_taxon($organism_sample);;
 
             unless (defined($taxon)) {
                 $self->error_message('failed to get taxon via Genome::Taxon for id ' . $instrument_data_id);
