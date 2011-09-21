@@ -132,16 +132,25 @@ sub execute {                               # replace with real execution logic.
         my $samtools = Genome::Model::Tools::Sam->path_for_samtools_version("r963");
 
         ## Build positions key ##
+        # and dump a bed file for filtering alignments
         my $search_string = "";
         my $key_count = 0;
+        my ($bfh,$bedfile) =  Genome::Sys->create_temp_file;
+        unless($bfh) {
+            $self->error_message("Unable to create temporary bed file for filtering alignments");
+            die;
+        }
+
         foreach my $key (sort byBamOrder keys %genotypes)
         {
             $key_count++;
             (my $chrom, my $position) = split(/\t/, $key);
             $search_string .= " " if($search_string);
-
-            $search_string .= $chrom . ":" . $position . "-" . $position;
+		    my $label = $chrom . ":" . $position . "-" . $position;	
+			$search_string .= $label;
+            print $bfh join("\t",$chrom,$position-1,$position,$label),"\n";
         }
+        $bfh->close;
 
         ## If BAM provided, call the variants ##
         my ($tfh,$temp_path) = Genome::Sys->create_temp_file;
@@ -163,7 +172,7 @@ sub execute {                               # replace with real execution logic.
         else
         {
             #use samtools pileup, but don't use BAQ since it sucks up a lot of CPU
-			$cmd = "$samtools pileup -B -cf $reference_build_fasta $bam_file | cut --fields=1-8 >$temp_path";			
+			$cmd = "$samtools view -u -L $bedfile $bam_file | $samtools pileup -B -cf $reference_build_fasta - | cut --fields=1-8 >$temp_path";			
         }
 
         my $return = Genome::Sys->shellcmd(
