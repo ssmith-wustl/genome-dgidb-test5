@@ -110,6 +110,10 @@ sub _map_workflow_inputs {
         remove_merged_files => 1, # Don't want to keep the small unmerged files, they're 
                                   # unnecessary and clutter the data directory
         predictions_ace_file => $build->predictions_ace_file,
+        coding_predictions_only_flag => 1, # Similar to the rna predictions flag below, this just tells
+                                           # the prediction ace file generator to only include coding gene
+                                           # predictions for one particular point. The same module is used
+                                           # to produce the rna gene ace file, but has a different flag set.
         rna_predictions_ace_file => $build->rna_predictions_ace_file,
         rna_predictions_only_flag => 1; # This is just used to tell the step makes the rna predictions ace
                                         # file to only look at rna. There's unfortunately no other way I'm
