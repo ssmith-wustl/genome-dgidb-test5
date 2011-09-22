@@ -33,7 +33,7 @@ my $aligned_reads         = join('/', $test_data_dir, 'flank_tumor_sorted.bam');
 my $control_aligned_reads = join('/', $test_data_dir, 'flank_normal_sorted.bam');
 
 my $detector_name_a = 'Genome::Model::Tools::DetectVariants2::Samtools';
-my $detector_version_a = 'r599';
+my $detector_version_a = 'awesome';
 my $output_dir_a = join('/', $test_data_dir, 'samtools-r599-');
 my $detector_a = Genome::Model::Tools::DetectVariants2::Result->__define__(
     output_dir            => $output_dir_a,
@@ -47,7 +47,7 @@ my $detector_a = Genome::Model::Tools::DetectVariants2::Result->__define__(
 isa_ok($detector_a, 'Genome::Model::Tools::DetectVariants2::Result', 'detector_a');
 
 my $detector_name_b    = 'Genome::Model::Tools::DetectVariants2::VarscanSomatic';
-my $detector_version_b = '2.2.4';
+my $detector_version_b = 'awesome';
 my $output_dir_b = join('/', $test_data_dir, 'varscan-somatic-2.2.4-');
 my $detector_b = Genome::Model::Tools::DetectVariants2::Result->__define__(
     output_dir            => $output_dir_b,
