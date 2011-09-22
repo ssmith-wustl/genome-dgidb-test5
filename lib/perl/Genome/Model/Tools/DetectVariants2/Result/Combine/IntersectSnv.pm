@@ -5,8 +5,10 @@ use strict;
 
 use Genome;
 
+
 class Genome::Model::Tools::DetectVariants2::Result::Combine::IntersectSnv{
     is => 'Genome::Model::Tools::DetectVariants2::Result::Combine',
+    doc => 'intereset snv filter results into one file',
     has_constant => [
         _variant_type => {
             type => 'String',
