@@ -91,23 +91,22 @@ sub _update_DS_line {
                 $new_chromat_name;
         }
     }
-    $line = 'DS CHROMAT_FILE: '.$new_chromat_name.' PHD_FILE: '.$new_read_name.'.phd.'.$right_side_of_line."\n";
 
-    return $line;
+    return 'DS CHROMAT_FILE: '.$new_chromat_name.' PHD_FILE: '.$new_read_name.'.phd.'.$right_side_of_line."\n";
 }
 
 sub _update_RD_line {
     my $self = shift;
     my $line = shift;
+
     my ( $read_name) = $line =~ /RD\s+(\S+)/;
     my $right_side_of_line = "$'";
     $read_name =~ s/-\d+$//;
     my $new_read_name = ( exists $self->{_DUP_READS}{$read_name} ) ?
         $self->_check_and_update_dup_reads_status( $read_name ) :
         $read_name;
-    $line = "RD $new_read_name".$right_side_of_line."\n";
 
-    return $line;
+    return "RD $new_read_name".$right_side_of_line."\n";
 }
 
 sub _update_AF_line {
@@ -122,23 +121,22 @@ sub _update_AF_line {
         $self->{_DUP_READS}{$read_name}{current_iteration}++;
         $new_read_name = $self->_check_and_update_dup_reads_status( $read_name );
     }
-    $line = "AF $new_read_name"."$right_side_of_line\n";
 
-    return $line;
+    return "AF $new_read_name"."$right_side_of_line\n";
 }
 
 sub _update_BS_line {
     my $self = shift;
     my $line = shift;
+
     my ( $read_name ) = $line =~ /(\S+)$/;
     my $left_side_of_line = "$`";
     $read_name =~ s/-\d+$//;
     my $new_read_name = ( exists $self->{_DUP_READS}{$read_name} ) ?
         $self->_check_and_update_dup_reads_status( $read_name ) :
         $read_name;
-    $line = $left_side_of_line.$new_read_name."\n";
 
-    return $line;
+    return $left_side_of_line.$new_read_name."\n";
 }
 
 sub _check_and_update_dup_reads_status {
