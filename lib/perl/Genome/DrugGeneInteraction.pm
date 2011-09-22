@@ -15,7 +15,7 @@ use Genome;
    FOREIGN KEY(gene_name, nomenclature, source_db_name, source_db_version) REFERENCES gene_name(name, nomenclature, source_db_name, source_db_version),
    UNIQUE (drug_name, gene_name, interaction_type, nomenclature, source_db_name, source_db_version)
 =cut
-class Genome::DruggableGene::DrugGeneInteraction {
+class Genome::DrugGeneInteraction {
     table_name => 'drug_gene_interaction',
     schema_name => 'public',
     data_source => 'Genome::DataSource::Main',
@@ -39,7 +39,7 @@ class Genome::DruggableGene::DrugGeneInteraction {
         drug_gene_interaction_attributes => {
             calculate_from => ['id'],
             calculate => q|
-                my @drug_gene_interaction_attributes = Genome::DruggableGene::DrugGeneInteractionAttribute->get(id => $id);
+                my @drug_gene_interaction_attributes = Genome::DrugGeneInteractionAttribute->get(id => $id);
                 return @drug_gene_interaction_attributes;
             |,
         },
