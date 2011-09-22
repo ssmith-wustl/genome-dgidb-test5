@@ -6,6 +6,7 @@ use warnings;
 use above 'Genome';
 use Test::More;
 require File::Compare;
+use File::Copy::Recursive;
 
 use_ok( 'Genome::Model::Tools::PooledBac::GeneratePostAssemblyReports' ) or die;
 
@@ -18,7 +19,6 @@ ok( -d $tmp_dir, 'Tmp test dir created' );
 
 my @files_to_link = qw/
 CONTIG_MAP
-H_GD-332K02
 bac_region_db.blast
 bac_region_db.xnd
 bac_region_db.xns
@@ -34,6 +34,9 @@ for my $file ( @files_to_link ) {
     symlink( $test_dir."/$file",$tmp_dir."/$file" );
     ok( -l $tmp_dir."/$file", "Linked $file in temp dir" );
 }
+
+#copy test project dir H_GD-332K02
+ok( File::Copy::Recursive::dircopy( $test_dir.'/H_GD-332K02', $tmp_dir.'/H_GD-332K02' ), 'Copied project dir' );
 
 my $tool = Genome::Model::Tools::PooledBac::GeneratePostAssemblyReports->create( project_dir => $tmp_dir );
 ok( $tool, 'Created tool' );
