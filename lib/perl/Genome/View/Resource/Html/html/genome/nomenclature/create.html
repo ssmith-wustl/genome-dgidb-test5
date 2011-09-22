@@ -93,9 +93,9 @@ $(document).data('updatedOn', new Date(1316565713000));
         </div>
         <div class="container">
         <!---- put your stuff here ---->
-<div id="nomenclature-name-input">
+<div id="div-nomenclature-name-input">
 <label for="name" class="nomenclature-name">Name: </label>
-<input type="text" name="name" id="nomenclature-name" placeholder="Nomenclature Name">
+<input type="text" name="name" id="nomenclature-name-input" placeholder="Nomenclature Name">
 </div>
 <div>
 <p><button class="save-nomenclature">Save Nomenclature</button></p>
@@ -116,7 +116,7 @@ $(document).data('updatedOn', new Date(1316565713000));
 
 <script type="text/template" id="nomenclature-column-template">
 <label>Title</label>
-<input type="text" class="nomenclature-name" value="<%= model.get('name') %>">
+<input type="text" id="nomenclature-column-name-input" class="nomenclature-column-name" value="<%= model.get('name') %>">
 <select class="column-type-select">
     <option value="integer">Integer</option>
     <option value="real">Real</option>

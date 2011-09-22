@@ -4,9 +4,11 @@ $ ->
       Backbone.sync = (method, model, success, error) ->
         success()
 
+      fieldCount = 0
+
       class Column extends Backbone.Model
         defaults:
-          name: 'none'
+          name: 'column'
           type: 'string'
           enumerated_types: []
 
@@ -18,14 +20,14 @@ $ ->
 
         events:
           'click .delete': 'remove'
-          'blur input.nomenclature-name': 'nameChanged'
+          'blur input.nomenclature-column-name': 'nameChanged'
           'change select.column-type-select': 'typeChanged'
           'click .add-new-enum': 'addNewEnum'
           'click .remove-enum': 'removeEnum'
           'blur input.enumerated-type-entry': 'enumChanged'
 
         nameChanged: ->
-          new_name = $(@el).children('.nomenclature-name')[0].value
+          new_name = $(@el).children('.nomenclature-column-name')[0].value
           @model.set({"name": new_name})
 
         typeChanged: ->
@@ -118,7 +120,11 @@ $ ->
           _(@collection.models).each (column) -> appendColumn column, @
 
         addColumn: ->
+          fieldCount++
           column = new Column
+          name = column.get('name')
+          name = name + fieldCount
+          column.set({"name", name})
           @collection.add column
 
 
@@ -126,7 +132,17 @@ $ ->
 
       $('.save-nomenclature').bind 'click', ->
         json = JSON.stringify(listView.collection)
-        alert(json)
+        name = $("#nomenclature-name-input").val()
+        if name == ""
+            alert "You can't save a nomenclature without a name!"
+            return
+
+        if listView.collection.length == 0
+            alert "You need at least one column to create a nomenclature!"
+            return
+    
+        m = {"name": name, "fields" : listView.collection}
+        alert(JSON.stringify(m))
 
       $('.load-nomenclature').bind 'click', ->
         #load_json  = "[{'name':  'hello', 'type': 'string', 'enumerated_types': []},{'name':  'there', 'type': 'enumerated', 'enumerated_types': ['woo', 'there']} ]"
