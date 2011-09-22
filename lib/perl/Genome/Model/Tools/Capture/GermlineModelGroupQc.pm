@@ -9,17 +9,17 @@ my %already_reviewed = ();
 my %wildtype_sites = my %germline_sites = ();
 
 class Genome::Model::Tools::Capture::GermlineModelGroupQc {
-	is => 'Command',                       
-	
-	has => [                                # specify the command's single-value properties (parameters) <--- 
-		group_id		=> { is => 'Text', doc => "ID of model group" , is_optional => 0},
-		output_dir	=> { is => 'Text', doc => "Outputs qc into directory for each sample" , is_optional => 0},
-		summary_file	=> { is => 'Text', doc => "Outputs qc summary into this file, must be run with already finished output (turns skip-if-output-present on)" , is_optional => 1},
-		dbsnp_build	=> { is => 'Text', doc => "dbsnp build to use: 130 for b36, 132 for b37" , is_optional => 0, default => 132},
-		limit_snps_file	=> { is => 'Text', doc => "File of snps to limit qc to, for example the 55 ASMS snps in ROI -- 1 rs_id per line" , is_optional => 1},
-		data_source	=> { is => 'Text', doc => "'internal', 'iscan', or 'external'" , is_optional => 0},
-		skip_if_output_present	=> { is => 'Boolean', doc => "Skip Creating new qc Files if they exist" , is_optional => 1, default => ""},
-	],
+    is => 'Command',                       
+
+    has => [                                # specify the command's single-value properties (parameters) <--- 
+    group_id		=> { is => 'Text', doc => "ID of model group" , is_optional => 0},
+    output_dir	=> { is => 'Text', doc => "Outputs qc into directory for each sample" , is_optional => 0},
+    summary_file	=> { is => 'Text', doc => "Outputs qc summary into this file, must be run with already finished output (turns skip-if-output-present on)" , is_optional => 1},
+    dbsnp_build	=> { is => 'Text', doc => "dbsnp build to use: 130 for b36, 132 for b37" , is_optional => 0, default => 132},
+    limit_snps_file	=> { is => 'Text', doc => "File of snps to limit qc to, for example the 55 ASMS snps in ROI -- 1 rs_id per line" , is_optional => 1},
+    data_source	=> { is => 'Text', doc => "'internal', 'iscan', or 'external'" , is_optional => 0},
+    skip_if_output_present	=> { is => 'Boolean', doc => "Skip Creating new qc Files if they exist" , is_optional => 1, default => ""},
+    ],
 };
 
 sub sub_command_sort_position { 12 }
@@ -49,7 +49,7 @@ sub execute {
         unless (open(ALL_MODELS,">$summary_file")) {
             die "Could not open input file '$summary_file' for reading";
         }
-        print ALL_MODELS join(\t,qw(
+        print ALL_MODELS join("\t",qw(
             Dbsnp_Build
             Sample_id
             SNPsCalled
@@ -95,13 +95,16 @@ sub execute {
             $snp_limit_hash{$id}++;
         }
     }
-
     ## Get the models in each model group ##
-    for my $model (map{$_->model}map{$_->model_bridges}Genome::ModelGroup->get($self->group_id))
-    {
-        my $model_id = $model->id;
+
+    my $model_group = Genome::ModelGroup->get($self->group_id);
+    my @model_bridges = $model_group->model_bridges;
+
+    foreach my $model_bridge (@model_bridges) {
+    ## Get the models in each model group ##
+        my $model = Genome::Model->get($model_bridge->model_id);
+        my $model_id = $model->genome_model_id;
         my $subject_name = $model->subject_name;
-#		my $sample_name = $model->sample_name;
         $subject_name = "Model" . $model_id if(!$subject_name);
         if ($subject_name =~ m/Pooled/) {next;}
         if($model->last_succeeded_build_directory) {
@@ -116,22 +119,19 @@ sub execute {
                 my $genofile = "$qc_dir/$subject_name.dbsnp$db_snp_build.genotype";
                 my $qcfile = "$qc_dir/$subject_name.dbsnp$db_snp_build.qc";
 
-                if ($skip_if_output_present && -s $genofile &&1&&1) { #&&1&&1 to make gedit show colors correctly after a -s check
+                if ($self->summary_file && -s $genofile && !-s $qcfile) {
+                    warn "You specified summary file but the script thinks there are unfinished qc files, please run this script to finish making qc files first\nReason: file $genofile does not exist as a non-zero file\n";
+                    next;
                 }
-                elsif ($self->summary_file) {
-                    die "You specified summary file but the script thinks there are unfinished qc files, please run this script to finish making qc files first\nReason: file $genofile does not exist as a non-zero file\n";
-                }
-                else {
+                if(!$self->summary_file && ( (! -e $qcfile) || !$skip_if_output_present) ) {
                     open(GENOFILE, ">" . $genofile) or die "Can't open outfile: $!\n";
 
                     my $db_snp_info = GSC::SNP::DB::Info->get( snp_db_build => $db_snp_build );
-					my $type = 'reference';
 
                     # Get the sample
                     my $organism_sample = GSC::Organism::Sample->get( sample_name => $subject_name );
 
                     unless ($organism_sample) {
-#					    $self->warning_message("failed to find sample $subject_name by external name, trying internal name...");
                         $organism_sample = GSC::Organism::Sample->get( full_name => $subject_name );
                         unless( defined $organism_sample ) {
                             warn "Skipping unrecognized sample name: $subject_name!\n";
@@ -159,7 +159,6 @@ sub execute {
                             genome_build => $db_snp_info->genome_build,
                             snp_db_build => $db_snp_info->snp_db_build,
                             filter       => $filter,
-#					         ( $type ? ( type => $type ) : () ),
                             ( $reference ? ( type => $reference ) : () ),
                         );
 
@@ -180,13 +179,9 @@ sub execute {
 
                 my $bsub = "bsub -N -M 4000000 -J $subject_name.dbsnp$db_snp_build.qc -o $qc_dir/$subject_name.dbsnp$db_snp_build.qc.out -e $qc_dir/$subject_name.dbsnp$db_snp_build.qc.err -R \"select[model!=Opteron250 && type==LINUX64 && mem>4000 && tmp>1000] rusage[mem=4000, tmp=1000]\"";
                 my $cmd = $bsub." \'"."gmt analysis lane-qc compare-snps --genotype-file $genofile --bam-file $bam_file --output-file $qcfile --sample-name $subject_name --min-depth-het 20 --min-depth-hom 20 --flip-alleles 1 --verbose 1 --reference-build $build_number"."\'";
-                if ($skip_if_output_present && -s $qcfile &&1&&1) { #&&1&&1 to make gedit show colors correctly after a -s check
-                }
-                elsif ($self->summary_file) {
-                    die "You specified summary file but the script thinks there are unfinished qc files, please run this script to finish making qc files first\nReason: file $qcfile does not exist as a non-zero file\n";
-                }
-                else {
-                    system("$cmd");
+                if ($self->summary_file && !-s $genofile) {
+                    warn "You specified summary file but the script thinks there are unfinished qc files, please run this script to finish making qc files first\nReason: file $qcfile does not exist as a non-zero file\n";
+                    next;
                 }
                 if ($self->summary_file) {
                     my $qc_input = new FileHandle ($qcfile);
@@ -194,6 +189,9 @@ sub execute {
                     my $qc_line = <$qc_input>;
                     chomp($qc_line);
                     print ALL_MODELS "$db_snp_build\t$qc_line\n";
+                }
+                elsif(-s $genofile && ((! -e $qcfile) || !$skip_if_output_present)) {
+                    system("$cmd");
                 }
             }
         }
