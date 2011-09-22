@@ -160,8 +160,7 @@ sub execute {
             }
 
             # Coding gene names follow pattern <sequence_name>.<method>.<id>... need to extract method.
-            $gene_name =~ /$sequence\.(\w+)\..*/;
-            my $method = $1;
+            my ($method) = $gene_name =~ /\Q$sequence\E.(\w+)\..*/;
 
             $ace_fh->print("Sequence : $gene_name\n");
             $ace_fh->print("Source $sequence\n");

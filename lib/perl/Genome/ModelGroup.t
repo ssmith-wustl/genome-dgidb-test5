@@ -35,6 +35,7 @@ ok(!@err, 'no errors in created group') or diag(map($_->__display_name__, @err))
 is($model_group->name, 'Testsuite_ModelGroup', 'name');
 ok($model_group->convergence_model, 'Auto-generated associated Convergence model'); 
 is_deeply([$model_group->models], [$test_model], 'group has test model');
+is($model_group->model_count, 1, 'group model count');
 my $project = $model_group->project;
 ok($project, 'create a project w/ model group'); 
 is($project->id, $model_group->uuid, 'project id matches model group uuid');

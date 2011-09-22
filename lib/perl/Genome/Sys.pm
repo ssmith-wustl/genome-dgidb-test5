@@ -8,6 +8,8 @@ use File::Path;
 use Carp;
 use IO::File;
 
+our $VERSION = $Genome::VERSION;
+
 class Genome::Sys {};
 
 #####
@@ -525,6 +527,19 @@ sub shellcmd {
         if ($allow_failed_exit_code) {
             Carp::carp("TOLERATING Exit code $exit_code, msg $! from: $cmd");
         } else {
+            if($! eq 'No such file or directory') {
+                for my $missing_input_file (grep { not -s $_ } @$input_files) {
+                    $self->status_message("Missing file ($missing_input_file)");
+                }
+                for my $output_file (@$output_files) {
+                    my $output_dir = (File::Basename::fileparse($_))[1];
+                    if (not -d $output_dir) {
+                        $self->status_message("Missing output dir ($output_dir)");
+                    } elsif (not -s $output_file) {
+                        $self->status_message("Missing output file ($output_file)");
+                    }
+                }
+            }
             Carp::croak("ERROR RUNNING COMMAND.  Exit code $exit_code, msg $! from: $cmd");
         }
     }

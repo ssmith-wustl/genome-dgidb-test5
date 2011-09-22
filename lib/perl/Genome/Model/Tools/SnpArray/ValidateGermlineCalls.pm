@@ -133,16 +133,18 @@ sub execute {                               # replace with real execution logic.
 		my $depth = 0;
 		my $cns_call = "";
 		
-		if($normal_coverage > $tumor_coverage)
-		{
-			$cns_call = $normal_call;
-			$depth = $normal_coverage;
-		}
-		else
-		{
+#		if($normal_coverage > $tumor_coverage)
+#		{
+#			$cns_call = $normal_call;
+#			$depth = $normal_coverage;
+#		}
+#		else
+#		{
 			$cns_call = $tumor_call;
 			$depth = $tumor_coverage;
-		}
+#		}
+		
+
 		
 		if(lc($chrom) =~ "chrom")
 		{
@@ -183,6 +185,20 @@ sub execute {                               # replace with real execution logic.
 						{
 							$chip_gt = flip_genotype($chip_gt);
 						}
+						
+						## Fix an apparently flipped het ##
+						if(is_heterozygous($chip_gt) && substr($chip_gt, 0, 1) ne $ref_base && substr($chip_gt, 1, 1) ne $ref_base)
+						{
+							$stats{'array_het_flipped'}++;
+							$chip_gt = flip_genotype($chip_gt);
+						}
+						## Fix an apparently flipped homo ##
+						elsif(is_homozygous($chip_gt) && is_homozygous($cons_gt) && $chip_gt ne $cons_gt)
+						{
+							$stats{'array_hom_flipped'}++;
+							$chip_gt = flip_genotype($chip_gt);							
+						}
+
 					
 						my $comparison_result = "Unknown";
 					
@@ -215,7 +231,8 @@ sub execute {                               # replace with real execution logic.
 							{
 								$stats{'rare_hom_total'}++;
 							}
-						
+							
+
 							if($chip_gt eq $cons_gt)
 							{
 								$stats{'num_variant_match'}++;
@@ -236,6 +253,16 @@ sub execute {                               # replace with real execution logic.
 							{
 								$stats{'het_was_hom'}++;
 								$comparison_result = "HetWasHom";
+	
+								## Check normal gt ##
+								my $normal_gt = code_to_genotype($normal_call);
+								$normal_gt = sort_genotype($normal_gt);
+
+								if($normal_gt eq $chip_gt)
+								{
+									$stats{'het_was_hom_loh'}++;
+									$comparison_result .= "LOH";
+								}
 							}
 							elsif(is_heterozygous($chip_gt) && is_heterozygous($chip_gt))
 							{
@@ -245,6 +272,7 @@ sub execute {                               # replace with real execution logic.
 							else
 							{
 								warn "Uncounted comparison: Chip=$chip_gt but Seq=$cons_gt\n";
+								$stats{'num_with_variant'}--;
 							}
 							
 
@@ -255,7 +283,7 @@ sub execute {                               # replace with real execution logic.
 						if($self->verbose)
 						{
 							$verbose_output .= "$key\t$chip_gt\t$comparison_result\t$cons_gt\t$line\n" if($self->output_file);
-							print "$key\t$chip_gt\t$comparison_result\t$cons_gt\t$line\n";
+#							print "$key\t$chip_gt\t$comparison_result\t$cons_gt\t$line\n";
 						}						
 						
 					}
@@ -281,9 +309,19 @@ sub execute {                               # replace with real execution logic.
 	$stats{'pct_overall_match'} = "0.00";
 	if($stats{'num_with_variant'} || $stats{'num_chip_was_reference'})
 	{
+		## If LOH, allow this ##
 		$stats{'pct_overall_match'} = ($stats{'num_variant_match'} + $stats{'num_ref_was_ref'}) / ($stats{'num_chip_was_reference'} + $stats{'num_with_variant'}) * 100;
 		$stats{'pct_overall_match'} = sprintf("%.3f", $stats{'pct_overall_match'});
 	}
+
+	$stats{'pct_overall_match_noloh'} = "0.00";
+	if($stats{'num_with_variant'} || $stats{'num_chip_was_reference'})
+	{
+		## If LOH, allow this ##
+		$stats{'pct_overall_matchnoloh'} = ($stats{'num_variant_match'} + $stats{'num_ref_was_ref'} + $stats{'het_was_hom_loh'}) / ($stats{'num_chip_was_reference'} + $stats{'num_with_variant'}) * 100;
+		$stats{'pct_overall_matchnoloh'} = sprintf("%.3f", $stats{'pct_overall_matchnoloh'});
+	}
+
 
 	$stats{'pct_variant_match'} = "0.00";
 	if($stats{'num_with_variant'})
@@ -301,8 +339,12 @@ sub execute {                               # replace with real execution logic.
 
 	if($self->verbose)
 	{
+		$stats{'array_het_flipped'} = 0 if(!$stats{'array_het_flipped'});
+		$stats{'array_hom_flipped'} = 0 if(!$stats{'array_hom_flipped'});
 		print $stats{'num_snps'} . " SNPs parsed from variants file\n";
 		print $stats{'num_with_genotype'} . " had genotype calls from the SNP array\n";
+		print $stats{'array_het_flipped'} . " hets on array were strand-corrected\n";
+		print $stats{'array_hom_flipped'} . " homs on array were strand-corrected\n";
 		print $stats{'num_min_depth'} . " met minimum depth of >= $min_depth_hom/$min_depth_het\n";
 		print $stats{'num_chip_was_reference'} . " were called Reference on chip\n";
 		print $stats{'num_ref_was_ref'} . " reference were called reference\n";
@@ -311,15 +353,16 @@ sub execute {                               # replace with real execution logic.
 		print $stats{'num_with_variant'} . " had informative genotype calls\n";
 		print $stats{'num_variant_match'} . " had matching calls from sequencing\n";
 		print $stats{'hom_was_het'} . " homozygotes from array were called heterozygous\n";
-		print $stats{'het_was_hom'} . " heterozygotes from array were called homozygous\n";
+		print $stats{'het_was_hom'} . " heterozygotes from array were called homozygous (" . $stats{'het_was_hom_loh'} . " were probable LOH)\n";
 		print $stats{'het_was_diff_het'} . " heterozygotes from array were different heterozygote\n";
 		print $stats{'pct_variant_match'} . "% concordance at variant sites\n";
 		print $stats{'pct_hom_match'} . "% concordance at rare-homozygous sites\n";
 		print $stats{'pct_overall_match'} . "% overall concordance match\n";
+		print $stats{'pct_overall_matchnoloh'} . "% overall concordance match when LOH sites excluded\n";
 	}
 	else
 	{
-		print "Sample\tSNPsCalled\tWithGenotype\tMetMinDepth\tReference\tRefMatch\tRefWasHet\tRefWasHom\tVariant\tVarMatch\tHomWasHet\tHetWasHom\tVarMismatch\tVarConcord\tRareHomConcord\tOverallConcord\n";
+		print "Sample\tSNPsCalled\tWithGenotype\tMetMinDepth\tReference\tRefMatch\tRefWasHet\tRefWasHom\tVariant\tVarMatch\tHomWasHet\tHetWasHom\tHetWasLOH\tVarMismatch\tVarConcord\tRareHomConcord\tOverallConcord\n";
 		print "$sample_name\t";
 		print $stats{'num_snps'} . "\t";
 		print $stats{'num_with_genotype'} . "\t";
@@ -332,6 +375,7 @@ sub execute {                               # replace with real execution logic.
 		print $stats{'num_variant_match'} . "\t";
 		print $stats{'hom_was_het'} . "\t";
 		print $stats{'het_was_hom'} . "\t";
+		print $stats{'het_was_hom_loh'} . "\t";
 		print $stats{'het_was_diff_het'} . "\t";
 		print $stats{'pct_variant_match'} . "%\t";
 		print $stats{'pct_hom_match'} . "%\t";		
@@ -340,7 +384,7 @@ sub execute {                               # replace with real execution logic.
 
 	if($self->output_file)
 	{
-		print OUTFILE "Sample\tSNPsCalled\tWithGenotype\tMetMinDepth\tReference\tRefMatch\tRefWasHet\tRefWasHom\tVariant\tVarMatch\tHomWasHet\tHetWasHom\tVarMismatch\tVarConcord\tRareHomConcord\tOverallConcord\n";
+		print OUTFILE "Sample\tSNPsCalled\tWithGenotype\tMetMinDepth\tReference\tRefMatch\tRefWasHet\tRefWasHom\tVariant\tVarMatch\tHomWasHet\tHetWasHom\tHetWasLOH\tVarMismatch\tVarConcord\tRareHomConcord\tOverallConcord\tOverallNoLOH\n";
 		print OUTFILE "$sample_name\t";
 		print OUTFILE $stats{'num_snps'} . "\t";
 		print OUTFILE $stats{'num_with_genotype'} . "\t";
@@ -353,11 +397,12 @@ sub execute {                               # replace with real execution logic.
 		print OUTFILE $stats{'num_variant_match'} . "\t";
 		print OUTFILE $stats{'hom_was_het'} . "\t";
 		print OUTFILE $stats{'het_was_hom'} . "\t";
+		print OUTFILE $stats{'het_was_hom_loh'} . "\t";
 		print OUTFILE $stats{'het_was_diff_het'} . "\t";
 		print OUTFILE $stats{'pct_variant_match'} . "%\t";
 		print OUTFILE $stats{'pct_hom_match'} . "%\t";		
-		print OUTFILE $stats{'pct_overall_match'} . "%\n";
-		
+		print OUTFILE $stats{'pct_overall_match'} . "%\t";
+		print OUTFILE $stats{'pct_overall_matchnoloh'} . "%\n";		
 		print OUTFILE "\nVERBOSE OUTPUT:\n$verbose_output\n";
 	}
 

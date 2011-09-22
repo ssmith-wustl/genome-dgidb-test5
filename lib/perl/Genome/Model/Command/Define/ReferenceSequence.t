@@ -19,8 +19,6 @@ if(Genome::Config->arch_os() =~ '64') {
     plan skip_all => 'Must be run on a 64-bit machine',
 }
 
-$ENV{GENOME_MODEL_TESTDIR} = Genome::Sys->create_temp_directory;
-
 use_ok('Genome::Model::Command::Define::ImportedReferenceSequence');
 
 my $test_data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Command-Define-ImportedReferenceSequence/';
