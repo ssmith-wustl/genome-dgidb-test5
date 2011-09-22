@@ -1,14 +1,13 @@
-package UR::Object::View::Default::Json;
+package Genome::Sample::View::Detail::Json;
 
 use strict;
 use warnings;
 require UR;
-our $VERSION = "0.34"; # UR $VERSION;
 
 use XML::Simple;
 use JSON;
 
-class UR::Object::View::Default::Json {
+class Genome::Sample::View::Detail::Json {
     is => 'UR::Object::View::Default::Text',
     has_constant => [
         toolkit     => { value => 'json' },

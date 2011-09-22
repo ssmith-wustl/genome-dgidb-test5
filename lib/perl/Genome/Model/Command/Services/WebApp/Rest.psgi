@@ -14,8 +14,10 @@ sub load_modules {
         use Workflow;
         use Plack::MIME;
         use Plack::Util;
+        use Plack::Request;
         use Cwd;
         use HTTP::Date;
+        use JSON;
         use UR::Object::View::Default::Xsl qw/type_to_url url_to_type/;
     ";
     if ($@) {
@@ -27,6 +29,48 @@ sub load_modules {
 }
 
 sub dispatch_request {
+
+    sub (PUT + /** + %*) {
+warn "OOOH SHIT BEN IS ABOUT TO PUT SOMETHING";
+        load_modules();
+$DB::single = 1;
+        my ($self, $url, $params) = @_;
+        my ($code, $obj);
+warn  "UR_DBI_NO_COMMIT IS ".$ENV{UR_DBI_NO_COMMIT};
+        my $class = url_to_type($url); # UR::Object::View::Default::Xsl
+warn "PARAMS:";
+warn Data::Dumper::Dumper $params;
+        eval { 
+            $obj = $class->create(%$params); 
+            UR::Context->commit();
+        };
+
+
+        if ($@) {
+            $code = 200; # OK (didnt work)
+warn "CREATE DIDNT WORK  $class - $@";
+        } else {
+warn "CREATE SEEMED TO WORK $class " . $obj->id();
+            $code = 201; # CREATED
+            $params->{'id'} = $obj->id();
+        }
+
+#                                pretty => 1,
+        my $body = to_json( $params, { 
+                                ascii => 1,
+                                allow_nonref => 1,
+                    });
+#        my $size; { use bytes; $size = length($body); }
+#                'Content-Length' => $size
+        return [
+            $code,
+            [
+                'Content-type'   => "text/plain"
+            ],
+            [$body]
+        ];
+
+    },
 
     # Matcher for Static content related to a view
     # **/ = class name
@@ -135,7 +179,7 @@ sub dispatch_request {
         my ( $self, $class, $perspective, $toolkit, $args ) = @_;
 
         load_modules();
-
+$DB::single = 1;
         $class = url_to_type($class);
         $perspective =~ s/\.$toolkit$//g;
 

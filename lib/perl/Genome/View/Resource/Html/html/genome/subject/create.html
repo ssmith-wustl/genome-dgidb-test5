@@ -20,27 +20,48 @@
     <script xmlns:rest="urn:rest" xmlns:str="http://xsltsl.org/string" type="text/javascript" src="/res/js/pkg/jquery.masonry.min.js"></script>
     <script xmlns:rest="urn:rest" xmlns:str="http://xsltsl.org/string" type="text/javascript" src="/res/js/pkg/dataTables/media/js/jquery.dataTables.min.js"></script>
 
-    <script src="http://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.1.7/underscore-min.js"></script>
-    <script src="http://cdnjs.cloudflare.com/ajax/libs/backbone.js/0.5.3/backbone-min.js"></script>
-    <script src="/res/js/app/genome_subject_create.js"></script>
     <link xmlns:rest="urn:rest" xmlns:str="http://xsltsl.org/string" rel="stylesheet" href="/res/css/dataTables.css" type="text/css" media="screen, projection" />
+
+    <!-- includes for autocomplete -->
+    <script type="text/javascript" src="/res/js/pkg/jquery-ui/development-bundle/ui/jquery.ui.autocomplete.js"></script>
+    <link href="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8/themes/base/jquery-ui.css" rel="stylesheet" type="text/css"/>
+
+    <!-- END includes for autocomplete -->
+
+<!--    <script src="/res/js/app/genome_subject_create.js"></script> -->
+
     <script xmlns:rest="urn:rest" xmlns:str="http://xsltsl.org/string" type="text/javascript">
-      
-               (function($) {
-               var cache = [];
-               // Arguments are image paths relative to the current page.
-               $.preLoadImages = function() {
-               var args_len = arguments.length;
-               for (var i = args_len; i--;) {
-               var cacheImage = document.createElement('img');
-               cacheImage.src = arguments[i];
-               cache.push(cacheImage);
-               }
-               }
+    
+    $(document).ready(function() {
 
-$(document).data('updatedOn', new Date(1316565713000));
-})(jQuery)
+        var cache = [];
+        // Arguments are image paths relative to the current page.
+        $.preLoadImages = function() {
+        var args_len = arguments.length;
+            for (var i = args_len; i--;) {
+                var cacheImage = document.createElement('img');
+                cacheImage.src = arguments[i];
+                cache.push(cacheImage);
+            }
+        }
 
+        autocompleteUrl = "/view/genome/nomenclature/set/autocomplete.json"
+        $.ajax({
+            url: autocompleteUrl,
+            type: "GET",
+            context: document.body,
+            success: function(data, textStatus, jqXHR) {
+                var autoCompleteData = data.names;
+                $("#nomenclature").autocomplete({
+                    source: autoCompleteData
+                });
+            },
+            error: function() {
+                alert("ajax request for nomenclature names failed");
+            }
+        });
+
+    });
 
     </script>
     <script xmlns:rest="urn:rest" xmlns:str="http://xsltsl.org/string" type="text/javascript" src="/res/js/app/ui-init.js"></script>
@@ -88,14 +109,12 @@ $(document).data('updatedOn', new Date(1316565713000));
         </div>
         <div class="container">
 
-        <!---- put your stuff here ---->
-
 <div id="sampleUpload">
 
     <form>
     
     <br>
-    1. Which nomenclature? <input size=50 name="nomenclature">
+    1. Which nomenclature? <input size=50 id="nomenclature" name="nomenclature">
     <br> <br>
     2. Each row of your file represents a ... <br>
     <input type="radio" name="subclass_name" value="Genome::Sample" CHECKED> Sample
