@@ -1,5 +1,5 @@
 
-package Genome::Model::Tools::Varscan::CopyNumberSegments;     # rename this when you give the module file a different name <--
+package Genome::Model::Tools::SnpArray::CopyNumberSegments;     # rename this when you give the module file a different name <--
 
 #####################################################################################################################################
 # RunVarscan - Run Varscan somatic on two BAM files.
@@ -23,7 +23,7 @@ use Genome;                                 # using the namespace authorizes Cla
 ## SET DEFAULT PARAMS ##
 my $undo_sd = 2;
 
-class Genome::Model::Tools::Varscan::CopyNumberSegments {
+class Genome::Model::Tools::SnpArray::CopyNumberSegments {
 	is => 'Command',                       
 	
 	has => [                                # specify the command's single-value properties (parameters) <--- 
@@ -38,7 +38,7 @@ class Genome::Model::Tools::Varscan::CopyNumberSegments {
 sub sub_command_sort_position { 12 }
 
 sub help_brief {                            # keep this to just a few words <---
-    "Generate plots of exome copy number from Varscan copyCaller calls"                 
+    "Generate plots of copy number from SNP array-based calls"                 
 }
 
 sub help_synopsis {
@@ -95,9 +95,9 @@ sub execute {                               # replace with real execution logic.
 		my @lineContents = split(/\t/, $line);
 		my $numContents = @lineContents;
 		
-		my ($chrom, $chr_start, $chr_stop, $normal, $tumor, $log_value) = split(/\t/, $line);
+		my ($chrom, $chr_start, $log_value) = split(/\t/, $line);
 		## Parse newer output ##
-		($chrom, $chr_start, $chr_stop, my $num_positions, $normal, $tumor, $log_value) = split(/\t/, $line) if($numContents > 6);
+#		($chrom, $chr_start, $chr_stop, my $num_positions, $normal, $tumor, $log_value) = split(/\t/, $line) if($numContents > 6);
 		
 		if($lineCounter > 1 || $chrom ne "chrom")
 		{
@@ -106,48 +106,16 @@ sub execute {                               # replace with real execution logic.
 			{
 				print "Chromosome $chrom...\n";
 				process_results($self, $current_chrom, $current_chrom_results);
-				$current_chrom_results = "";	
+				$current_chrom_results = "";
+				$current_chrom = $chrom;
 			}
+
+
+			$current_chrom = $chrom;		
+			$current_chrom_results .= "\n" if($current_chrom_results);
 	
-			if($normal >= $min_depth || $tumor >= $min_depth)
-			{
-				$metMinDepth++;
-				$current_chrom = $chrom;		
-				$current_chrom_results .= "\n" if($current_chrom_results);
 
-# Current pipeline prior to 7/13/11: uses only start of region ##
-#$current_chrom_results .= $line;
-
-				## Determine region size. ##
-				
-				my $region_size = $chr_stop - $chr_start + 1;
-
-				## If region size is less than 200 bp, report just the midpoint ##
-				
-				if($region_size <= 1000)
-				{
-					my $midpoint = sprintf("%d", ($chr_start + $chr_stop) / 2);
-
-					if($midpoint > $chr_start && $midpoint < $chr_stop)
-					{
-						$current_chrom_results .= join("\t", $chrom, $chr_stop, $num_positions, $normal, $tumor, $log_value);
-					}					
-				}
-				
-				## Otherwise, report both start and stop ##
-				
-				else
-				{
-					$current_chrom_results .= join("\t", $chrom, $chr_start, $num_positions, $normal, $tumor, $log_value) . "\n";
-					## Add the stop position ##
-					$current_chrom_results .= join("\t", $chrom, $chr_stop, $num_positions, $normal, $tumor, $log_value);					
-				}
-
-
-
-
-			}
-
+			$current_chrom_results .= join("\t", $chrom, $chr_start, $log_value) . "\n";
 		}
 		
 

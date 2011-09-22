@@ -29,7 +29,7 @@ sub help_brief {
 sub help_synopsis {
     return <<EOS
 Operate on capture somatic model groups
-EXAMPLE:	gmt capture germline-model-group-qc --group-id XXXX --output-dir --dbsnp-build
+EXAMPLE:    gmt capture germline-model-group-qc --group-id XXXX --output-dir --dbsnp-build
 EOS
 }
 sub help_detail {
