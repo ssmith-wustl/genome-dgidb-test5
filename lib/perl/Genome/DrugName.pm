@@ -23,14 +23,14 @@ class Genome::DrugName {
         drug_name_associations => {
             calculate_from => ['name', 'nomenclature', 'source_db_name', 'source_db_version'],
             calculate => q|
-                my @drug_name_associations = Genome::DruggableGene::DrugNameAssociation->get(drug_primary_name => $name, nomenclature => $nomenclature, source_db_name => $source_db_name, source_db_version => $source_db_version);
+                my @drug_name_associations = Genome::DrugNameAssociation->get(drug_primary_name => $name, nomenclature => $nomenclature, source_db_name => $source_db_name, source_db_version => $source_db_version);
                 return @drug_name_associations;
             |,
         },
         drug_name_category_associations => {
             calculate_from => ['name', 'nomenclature', 'source_db_name', 'source_db_version'],
             calculate => q|
-                my @drug_name_category_associations = Genome::DruggableGene::DrugNameCategoryAssociation->get(drug_name => $name, nomenclature => $nomenclature, source_db_name => $source_db_name, source_db_version => $source_db_version);
+                my @drug_name_category_associations = Genome::DrugNameCategoryAssociation->get(drug_name => $name, nomenclature => $nomenclature, source_db_name => $source_db_name, source_db_version => $source_db_version);
                 return @drug_name_category_associations;
             |,
         },
