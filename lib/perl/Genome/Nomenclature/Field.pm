@@ -36,7 +36,7 @@ class Genome::Nomenclature::Field {
         enumerated_values => {
             is_many => 1,
             is=>'Genome::Nomenclature::EnumValue',
-            reverse_by => 'nomenclature_field_id',
+            reverse_as => 'nomenclature_field_id',
         }
     ],
     schema_name => 'GMSchema',
