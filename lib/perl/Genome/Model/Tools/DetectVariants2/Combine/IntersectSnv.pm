@@ -7,6 +7,7 @@ use Genome;
 
 class Genome::Model::Tools::DetectVariants2::Combine::IntersectSnv{
     is => 'Genome::Model::Tools::DetectVariants2::Combine',
+    doc => 'intersects snv filter results into one file',
     has_constant => [
         _variant_type => {
             type => 'String',
@@ -14,9 +15,7 @@ class Genome::Model::Tools::DetectVariants2::Combine::IntersectSnv{
             doc => 'variant type that this module operates on',
         },
     ],
-
 };
-
 
 sub help_brief {
     "Intersect two snv variant bed files",
