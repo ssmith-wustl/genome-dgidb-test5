@@ -27,6 +27,7 @@ is(-d $expected_output, 1, 'expected_output exists') || die;
 
 # FIXME Swap this for a test constructed reference build.
 my $reference_build = Genome::Model::Build->get(101947881);
+ok($reference_build, 'got reference_build');
 
 my $aligned_reads         = join('/', $test_data_dir, 'flank_tumor_sorted.bam');
 my $control_aligned_reads = join('/', $test_data_dir, 'flank_normal_sorted.bam');
@@ -77,8 +78,7 @@ my @files = qw| snvs.hq.bed
 for my $file (@files) {
     my $test_output = $output_symlink."/".$file;
     my $expected_output = $expected_output."/".$file;
-    is(compare($test_output,$expected_output),0, "Found no difference between test output: ".$test_output." and expected output:".$expected_output)
-        or system("diff -u $expected_output $test_output");
+    is(compare($test_output,$expected_output),0, "Found no difference between test output: ".$test_output." and expected output:".$expected_output);
 }
 
 done_testing();
