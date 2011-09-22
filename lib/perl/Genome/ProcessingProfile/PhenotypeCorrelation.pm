@@ -194,6 +194,10 @@ sub _execute_build {
         },
         strategy => $self->alignment_strategy,
     );
+    my @results = $result->_merged_results;
+    for my $r (@results) {
+        $r->add_user(label => 'uses', user => $build);
+    }
 
     my @bams = $result->bam_paths;
     unless (@bams == @samples) {
