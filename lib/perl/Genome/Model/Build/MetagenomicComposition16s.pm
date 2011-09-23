@@ -906,7 +906,7 @@ sub fastq_from_instrument_data {
                 Carp::confess( "Attempt to get fastq from fastq via archive path failed" );
             }
         }
-        elsif ( @fastq_files = eval{$inst_data->dump_sanger_fastq_files(force_untrimmed => 1);} ) {
+        elsif ( @fastq_files = eval{$inst_data->dump_sanger_fastq_files;} ) {
             #fastq from sff files .. 454
             if ( not @fastq_files ) {
                 Carp::confess( "Did not get fastq files from inst data dump_sanger_fastq_file method" );
