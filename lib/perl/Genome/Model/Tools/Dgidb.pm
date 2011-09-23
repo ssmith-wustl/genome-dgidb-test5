@@ -1,11 +1,11 @@
-package Genome::Model::Tools::DruggableGene;
+package Genome::Model::Tools::Dgidb;
 
 use strict;
 use warnings;
 
 use Genome;
 
-class Genome::Model::Tools::DruggableGene {
+class Genome::Model::Tools::Dgidb {
     is => 'Command',
     has => [ ],
 };
@@ -18,7 +18,7 @@ sub help_brief {
 
 sub help_synopsis {
     return <<"EOS"
-gmt druggable-gene ...
+gmt dgidb ...
 EOS
 }
 
