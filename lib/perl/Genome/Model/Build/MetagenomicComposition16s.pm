@@ -917,8 +917,7 @@ sub fastq_from_instrument_data {
             }
         }
         else {
-            Carp::confess( "Failed to get fastq for instrument data, id: ".$inst_data->id.' format: '.$inst_data->sequencing_platform );
-            #maybe just skip?? probably not
+            $self->status_message($inst_data->__display_name__.' does not have any sequences! Skipping!');
         }
     }
     return 1;
