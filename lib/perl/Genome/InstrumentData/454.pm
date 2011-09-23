@@ -184,9 +184,12 @@ sub dump_sanger_fastq_files {
     
     my $output_file = sprintf("%s/%s-output.fastq", $dump_directory, $self->id);
     
-    my $cmd = Genome::Model::Tools::454::Sff2Fastq->create(sff_file => $self->sff_file,
-                                                           fastq_file => $output_file);
-    
+    my %sff2fastq_params = (
+        sff_file => $self->sff_file,
+        fastq_file => $output_file,
+    );
+    $sff2fastq_params{force_untrimmed} = $params{force_untrimmed} if exists $params{force_untrimmed};
+    my $cmd = Genome::Model::Tools::454::Sff2Fastq->create(%sff2fastq_params);
     unless ($cmd->execute) {
         $self->error_message("Sff2Fastq failed while dumping fastq file for instrument data " . $self->id);
         die $self->error_message;
