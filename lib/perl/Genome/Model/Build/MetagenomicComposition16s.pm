@@ -822,6 +822,9 @@ sub prepare_instrument_data {
             my $fasta_file = $self->processed_fasta_file_for_set_name($set_name);
             my $sz = -s $fasta_file;
             unlink $fasta_file if not $sz or $sz == 0;
+            my $qual_file = $self->processed_qual_file_for_set_name( $set_name );
+            my $qual_sz = -s $qual_file;
+            unlink $qual_file if not $qual_sz or $qual_sz == 0;
         }
     }
 
