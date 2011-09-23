@@ -689,7 +689,7 @@ sub combined_original_fastq_file {
     my $self = shift;
     return sprintf(
         '%s/%s.%s.fastq',
-        $self->data_directory,
+        $self->fasta_dir,
         $self->file_base_name,
         'original',
     );
