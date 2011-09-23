@@ -38,7 +38,9 @@ sub execute {
 
     $self->status_message("executing tier variants step on snvs and indels");
 
-    #my $version = gmt:bed:convert::version();  todo, something like this instead of hardcoding
+    #TODO find a better way to set this. It should perhaps come from the build?
+    my $bed_version = 2;
+
     my $tiering_version = $build->tiering_version;
     $self->status_message("Using tiering_bed_files version ".$tiering_version);
     my $tier_file_location = $build->annotation_build->tiering_bed_files_by_version($tiering_version);
@@ -56,7 +58,7 @@ sub execute {
 
     if ($build->snv_detection_strategy){
         for my $name_set (["novel","snvs.hq.novel"], ["novel","snvs.hq.previously_detected"], ["variants","snvs.lq"]){ #want to tier lq, previously_discovered, and novel snvs 
-            $self->run_fast_tier($name_set, $tiering_version, 'bed');
+            $self->run_fast_tier($name_set,$bed_version, $tiering_version, 'bed');
         }
     }else{
         $self->status_message("No snv detection strategy, skipping snv tiering");
@@ -64,7 +66,7 @@ sub execute {
 
     if ($build->indel_detection_strategy){
         for my $name_set (["novel","indels.hq.novel"], ["novel","indels.hq.previously_detected"], ["variants","indels.lq"]){ #want to tier lq, previously_discovered, and novel indels 
-            $self->run_fast_tier($name_set, $tiering_version, 'bed');
+            $self->run_fast_tier($name_set, $bed_version, $tiering_version, 'bed');
         }
 
     }else{
@@ -79,26 +81,26 @@ sub execute {
 
 sub run_fast_tier {
     my $self = shift;
-    my ($name_set, $version, $format) =  @_;
+    my ($name_set, $bed_version, $tiering_version, $format) =  @_;
     #breaking up filename and subdir parts of the data set path so we can put the output tiering files in the effects directory
     my $dir = $$name_set[0];
     my $name = $$name_set[1];
 
     my $build = $self->build;
 
-    my $path_to_tier = $build->data_set_path("$dir/$name",$version,$format);
+    my $path_to_tier = $build->data_set_path("$dir/$name",$bed_version,$format);
     unless (-e $path_to_tier){
         die $self->error_message("No $name file for build!");
     }
 
-    my ($tier1_path, $tier2_path, $tier3_path, $tier4_path) = map {$build->data_set_path("effects/$name.tier".$_,$version,$format)}(1..4);
+    my ($tier1_path, $tier2_path, $tier3_path, $tier4_path) = map {$build->data_set_path("effects/$name.tier".$_,$bed_version,$format)}(1..4);
 
     my %params;
     if (-s $path_to_tier){
         %params = (
             variant_bed_file => $path_to_tier,
             tier_file_location => $self->_tier_file_location,
-            tiering_version => $version,
+            tiering_version => $tiering_version,
             tier1_output => $tier1_path,
             tier2_output => $tier2_path,
             tier3_output => $tier3_path,
