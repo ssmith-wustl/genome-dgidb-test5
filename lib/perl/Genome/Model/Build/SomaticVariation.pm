@@ -276,6 +276,9 @@ sub path_to_individual_output {
         $params{chromosome_list} = 'all';
     }
 
+    # Do not get results with the test name set... we are probably looking for "real" results.
+    $params{test_name} = undef;
+
     #get filter class name
     if ($filter_strat){
         $filter_name = Genome::Model::Tools::DetectVariants2::Strategy->filter_class($filter_name);
@@ -298,7 +301,7 @@ sub path_to_individual_output {
     }
     elsif (scalar @result > 1) {
         $answer = join "\n", map{$_->output_dir}@result;
-        $self->error_message("Got multiple results. Probably get test_name set :\n$answer");
+        $self->error_message("Got multiple results for the software result query :\n$answer");
         return;
     }
     else {
@@ -309,7 +312,7 @@ sub path_to_individual_output {
         }
         elsif (scalar @results > 1) {
             $answer = join "\n", map{$_->output_dir}@results;
-            $self->error_message("Got multiple results. Probably get test_name set :\n$answer");
+            $self->error_message("Got multiple results for the software result query :\n$answer");
             return;
         }
         else {

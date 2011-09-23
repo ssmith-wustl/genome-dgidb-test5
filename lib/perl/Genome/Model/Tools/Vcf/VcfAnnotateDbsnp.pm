@@ -48,6 +48,20 @@ class Genome::Model::Tools::Vcf::VcfAnnotateDbsnp {
             is_optional => 0,            
         },
 
+        chr => {
+            is => 'String',
+            doc => "chromosome to annotate (allows for splitting if file is too big for memory",
+            is_optional => 1,            
+        },
+
+        skip_header => {
+            is => 'Boolean',
+            doc => "do not output the header",
+            is_optional => 1,
+            default => 0,
+        },
+
+
         ],
 };
 
@@ -82,6 +96,8 @@ sub execute {
     my $output_file = $self->output_file;
     my $vcf_file = $self->vcf_file;
     my $genome_build = $self->genome_build;
+    my $chrToDo = $self->chr;
+    my $skip_header = $self->skip_header;
 
         
     my $dbsnp_file;
@@ -111,18 +127,23 @@ sub execute {
         chomp($line);
         #if this is a header line
         if ($line =~ /^#/){
-            print OUTFILE $line . "\n";
+            unless($skip_header){
+                print OUTFILE $line . "\n";
+            }
         } else {   #else we're in body of the vcf, hash the data
 
             my @fields = split("\t",$line);
 
             my $chr = $fields[0];
-            $chr = "23" if $chr eq "X";
-            $chr = "24" if $chr eq "Y";
-            $chr = "25" if $chr eq "MT";
+            # $chr = "23" if $chr eq "X";
+            # $chr = "24" if $chr eq "Y";
+            # $chr = "25" if $chr eq "MT";
 
-            my $key = $chr . ":" . $fields[1];
-            push(@{$posHash{$key}}, @fields);
+            if((defined($chrToDo) && ($chr eq $chrToDo)) ||
+               !(defined($chrToDo))){
+                my $key = $chr . ":" . $fields[1];
+                push(@{$posHash{$key}}, @fields);
+            }
         }
 
     }
@@ -142,9 +163,9 @@ sub execute {
 
                 #replace X and Y for sorting
                 my $chr = $fields[1];
-                $chr = "23" if $chr eq "X";
-                $chr = "24" if $chr eq "Y";
-                $chr = "25" if $chr eq "MT";
+                # $chr = "23" if $chr eq "X";
+                # $chr = "24" if $chr eq "Y";
+                # $chr = "25" if $chr eq "MT";
 
                 #ucsc is zero-based, so we adjust
                 my $pos = $fields[2]+1;
@@ -154,7 +175,7 @@ sub execute {
                 if(exists($posHash{$key})){
                     #add to id field
                     if (@{$posHash{$key}}[2] eq "."){
-                        @{$posHash{$key}}[2] = "";
+                        @{$posHash{$key}}[2] eq "";
                     } elsif (!(@{$posHash{$key}}[2] eq "")) {
                         @{$posHash{$key}}[2] = @{$posHash{$key}}[2] . ";";
                     }

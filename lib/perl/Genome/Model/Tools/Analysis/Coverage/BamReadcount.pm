@@ -18,7 +18,7 @@ class Genome::Model::Tools::Analysis::Coverage::BamReadcount{
 	snv_file => {
 	    is => 'String',
 	    is_optional => 0,
-	    doc => 'File containing snvs in 1-based, 5-col format (chr, st, sp, var, ref)',
+	    doc => 'File containing snvs in 1-based, 5-col format (chr, st, sp, var, ref). indels will be skipped and not output',
 	},
 
         output_file => {
@@ -104,6 +104,17 @@ sub execute {
     {
         chomp($sline);
         my @fields = split("\t",$sline);
+
+        #skip indels
+        if (($fields[3] eq "0") || 
+            ($fields[3] eq "-") || 
+            ($fields[4] eq "0") || 
+            ($fields[4] eq "-") || 
+            (length($fields[3]) > 1) || 
+            (length($fields[4]) > 1)){
+            next;
+        }
+
         $refHash{$fields[0] . "|" . $fields[1]} = $fields[3];
         $varHash{$fields[0] . "|" . $fields[1]} = $fields[4]
     }

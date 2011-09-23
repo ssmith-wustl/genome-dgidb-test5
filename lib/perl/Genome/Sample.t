@@ -47,7 +47,6 @@ is($sample->body_mass_index, 22.4, 'body_mass_index');
 
 $sample = Genome::Sample->get($id);
 ok($sample, 'got new sample');
-is($sample->get_organism_taxon, $taxon, 'get_organism_taxon gives expected result');
 
 done_testing();
 exit();

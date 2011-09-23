@@ -333,7 +333,8 @@ sub trv_to_mutation_type
     my $trv_type = shift;
 
     return( "Missense_Mutation" ) if( $trv_type eq "missense" );
-    return( "Nonsense_Mutation" ) if( $trv_type eq "nonsense" || $trv_type eq "nonstop" );
+    return( "Nonsense_Mutation" ) if( $trv_type eq "nonsense" );
+    return( "Nonstop_Mutation" ) if( $trv_type eq "nonstop" );
     return( "Silent" ) if( $trv_type eq "silent" );
     return( "Splice_Site" ) if( $trv_type eq "splice_site" || $trv_type eq "splice_site_del" || $trv_type eq "splice_site_ins" );
     return( "Frame_Shift_Del" ) if( $trv_type eq "frame_shift_del" );

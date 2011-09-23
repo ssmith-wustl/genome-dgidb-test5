@@ -43,6 +43,8 @@ Class::Autouse->autouse(qr/Finishing.*/);
 Class::Autouse->autouse(qr/Finfo.*/);
 Class::Autouse->autouse(qr/Bio.*/);
 
+# Loads site-specific observers
+use Genome::Site::WUGC::Observers;
 
 # TODO: move these into tools which need them
 use Bio::Seq;

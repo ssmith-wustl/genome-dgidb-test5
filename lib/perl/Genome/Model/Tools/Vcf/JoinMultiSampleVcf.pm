@@ -50,6 +50,12 @@ class Genome::Model::Tools::Vcf::JoinMultiSampleVcf {
             is_input => 1,
             default => 0,
         },
+        per_chrom => {
+            is => 'Text',
+            doc => 'If this is set, the files listed in the vcf_list will have <vcf_filename>_CHR.vcf.gz appended',
+            is_input => 1,
+            is_optional => 1,
+        }
     ],
     has_transient_optional => [
         _vcf_handles => {
@@ -130,35 +136,30 @@ sub process_input_list {
     my %handles;
     while(my $line = $fh->getline){
         chomp $line;
-        my ($path,$source_name,$build_id) = split /\s+/,$line;
+        my ($path) = split /\s+/,$line;
+
         my $d = Digest::MD5->new;
-        $d->add($source_name);
+        $d->add($path);
         my $key = $d->hexdigest;
     
         if(exists($paths{$key})){
-            die $self->error_message("Already have a record for: ".$source_name);
+            die $self->error_message("Already have a record for: ".$path);
         }
-        $paths{$key}{path} = $path;
-        $paths{$key}{sample_list} = $source_name;
+        if($self->per_chrom){
+            my @stuff = split /\./, $path;
+            my $chr = $self->per_chrom;
+            $path = join(".",($stuff[0]."_".$chr,$stuff[1],$stuff[2]));
+        }
 
-        if(defined($build_id)){
-            $paths{$key}{build_id_list} = $build_id;
-            my @samples = split /\,/,$source_name;
-            my @build_ids = split /\,/,$build_id;
-            unless(@samples == @build_ids){
-                die $self->error_message("Found an uneven amount of samples and build_ids listed at: ".$line);
-            }
-            for my $idx (0..(scalar(@samples)-1)){
-                $paths{$key}{build_id}{$samples[$idx]} = $build_ids[$idx];
-            }
-        }
+        $paths{$key}{path} = $path;
+
         if($self->use_gzip_files){
             $handles{$key}{handle} = Genome::Sys->open_gzip_file_for_reading($path);
         } else {
             $handles{$key}{handle} = Genome::Sys->open_file_for_reading($path);
         }
-        $handles{$key}{samples} = $source_name;
     }
+
     $self->_vcf_list(\%paths);
     $self->_vcf_handles(\%handles);
 
@@ -204,19 +205,26 @@ sub set_format_string {
 sub set_sample_cols {
     my $self = shift;
 
-    my $paths = $self->_vcf_list;
+    my $paths = $self->_vcf_handles;
     my @samples;
     for my $key (keys(%{$paths})){
-        push @samples, split /\,/, $paths->{$key}{sample_list}
+        push @samples, split /\,/, $paths->{$key}{samples}
     }
-    $self->_sample_order(\@samples);
+    #my @uniq_samples = nsort uniq @samples;
+    my %big;
+    @big{@samples}=1;
+    my @cols;
+    for my $key ( nsort keys(%big)){
+        push @cols, $key;
+    }
+    $self->_sample_order(\@cols);
     print "Sample list: \n";
 
-    for (@samples){ print $_ . "\n";}
+    for (@cols){ print $_ . "\n";}
 
     my $h = $self->_header;
 
-    $h->{CHROM} = join("\t",($h->{CHROM},@samples));
+    $h->{CHROM} = join("\t",($h->{CHROM},@cols));
 
     return 1;
 }
@@ -241,8 +249,12 @@ sub merge_headers {
     my %format;
     my $handles = $self->_vcf_handles;
     my @file_handles = map{ $handles->{$_}{handle} } keys(%{ $handles });
-    FILE: for my $fh (@file_handles){
-        while(my $line = $fh->getline){
+
+    #By using the FILE label instead of the "last" command, the file handles are left at the first non-header line of each file, after processing the headers
+
+#    FILE: for my $fh (@file_handles){
+    FILE: for my $handle_key (keys(%{$handles})){
+        while(my $line = $handles->{$handle_key}{handle}->getline){
             chomp $line;
             if($line =~ m/^##/){
                 $line =~ s/^##//;
@@ -284,7 +296,9 @@ sub merge_headers {
                         } elsif($tag =~ m/SAMPLE/){
                             my $key = $data[1];
                             if(exists($header{SAMPLE}{$key})){
-                                die $self->error_message("Already have a SAMPLE record in the header that o'er laps: ".$data);
+                                #unless($header{SAMPLE}{$key} eq $data){
+                                #    die $self->error_message("Already have a SAMPLE record in the header that o'er laps: ".$data."   and    ".$header{SAMPLE}{$key});
+                                #}
                             } else {
                                 $header{SAMPLE}{$key} = $data;
                             }
@@ -333,8 +347,15 @@ sub merge_headers {
                     $line =~ s/^#//;
                     my $header = $line;
                     my @header = split /\t/, $line;
-                    delete @header[SAMPLE..$#header];
+                    my @samples;
+                    for my $header (@header[SAMPLE..$#header]){
+                        push @samples, $header;
+                    }
+
+                    $handles->{$handle_key}{samples} = join(",",@samples);
+
                     unless(exists($header{CHROM})){
+                        delete @header[SAMPLE..$#header];
                         $header{CHROM} = join("\t",@header);
                     }
                     next FILE;
@@ -345,26 +366,12 @@ sub merge_headers {
         }
     }
    
-    #my $info = "<ID=VC,Number=.,Type=String,Description=\"Variant caller\">";
-    #my $key = "VC,Number";
-    #$header{INFO}{$key} = $info;
- 
     $self->_header(\%header);
     return 1;
 }
 
 sub add_sample_header_tags {
-=cut
-    my $self = shift;
-    my $header = $self->_header;
-    my $files = $self->_vcf_list;
-    for my $sample (nsort(keys(%{$files}))){
-        my $line = "<ID=".$sample.",Build_ID=".$files->{$sample}{build_id}.",Description=\"TGI build_id to sample map\">";
-        my $key = $sample.",Number";
-        $header->{SAMPLE}{$key} = $line;
-    }
     return 1;
-=cut
 }
 
 
@@ -490,13 +497,8 @@ sub process_records {
                 push @answer, $key;
             }
         }
-        #if(@answer == 1){
-        #    $self->print_record($lines{$answer[0]}{line}, $answer[0]);
-        #} else {
-            my $line = $self->merge_records(\@answer,\%lines);
-            $self->print_merged($line, \@answer);
-        #}
-
+        my $line = $self->merge_records(\@answer,\%lines);
+        $self->print_merged($line, \@answer);
         $self->get_lines(\%lines,\@answer);
     }
 
@@ -531,26 +533,6 @@ sub get_lines {
         $lines->{$key}{chr} = $chr;
         $lines->{$key}{pos} = $pos;    
     }
-
-    return 1;
-}
-
-# This prints $line to the _output_fh, after processing the FORMAT fields and SAMPLE fields, 
-# adding '.' to any that are specified in _format_fields, but not in $line.
-sub print_record {
-    my $self = shift;
-    my $line = shift;
-    my $source = shift;
-    my $fh = $self->_output_fh;
-
-    my @cols = split /\t/, $line;
-    my $last_idx = scalar(@cols)-1;
-    my @samples = @cols[SAMPLE..$last_idx];
-    my $sample_string = join("\t",@samples);
-    $cols[FORMAT] = $self->_format_string;
-    $cols[SAMPLE] = $self->adjust_sample_string($cols[FORMAT], $sample_string, $source);
-
-    print $fh join("\t",@cols) . "\n";
 
     return 1;
 }

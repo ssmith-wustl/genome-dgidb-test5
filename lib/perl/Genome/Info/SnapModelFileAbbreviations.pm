@@ -14,6 +14,7 @@ my %model_files = (
     'spiralis_cegma_mod_intron_min30.hmm' => 'sn_tscg30',
     'D.viviparus_cegma.hmm' => 'sn_dvcg',
     'N.americanus_cegma.hmm' => 'sn_nacg',
+	'S_cerevisiae_ref_cegma.hmm' => 'sn_screfcg',
 );
 
 sub abbreviation_for_model_file {
