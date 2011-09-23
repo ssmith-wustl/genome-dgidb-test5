@@ -65,9 +65,9 @@ sub execute {
         open(FLOWCELL, ">" . $self->output_flowcell_information) or die "Can't open output file: $!\n";
     }
 
-    my @models = map{$_->model}Genome::ModelGroup->get($self->group_id)->model_bridges;
 
-    for my $model (@models) {
+    for my $model_bridge (Genome::ModelGroup->get($self->group_id)->model_bridges) {
+        my $model = $model_bridge->model;
         my $subject_name = $model->subject_name;
         $subject_name = "Model" . $model->id if(!$subject_name);
 
