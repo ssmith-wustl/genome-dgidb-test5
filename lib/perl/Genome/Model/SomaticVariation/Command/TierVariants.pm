@@ -98,7 +98,7 @@ sub run_fast_tier {
     my %params;
 
     #Skip line count on fast-tiering if running on input with duplicates (lq, in this case)
-    my $lq = $name_set =~ m/lq/;
+    my $lq = $name =~ m/lq/;
 
     if (-s $path_to_tier){
         %params = (
