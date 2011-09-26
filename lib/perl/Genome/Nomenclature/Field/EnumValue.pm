@@ -22,8 +22,9 @@ class Genome::Nomenclature::Field::EnumValue {
             doc => 'Nomenclature field id'
         },
         nomenclature_field => {
-            is=>'Nomenclature::Field', 
-            doc => 'Nomenclature field'
+            is=>'Genome::Nomenclature::Field', 
+            doc => 'Genome::Nomenclature field',
+            id_by => 'nomenclature_field_id'
         },
         value => {
             is=>'Text',

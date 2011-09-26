@@ -32,5 +32,36 @@ class Genome::Nomenclature {
     doc => 'Nomenclatures'
 };
 
+sub create {
+    my $class = shift;
+    my %p = @_;
+
+    if (exists $p{json}) {
+        return $class->create_from_json($p{json});    
+    } 
+
+    $class->SUPER::create(@_);    
+}
+
+sub create_from_json {
+    my $class = shift;
+    my $json = shift;
+
+    my $nomenclature_raw = decode_json($json);
+
+    my $nom = $class->create(name => $nomenclature_raw->{name});    
+
+    for my $rf (@{$nomenclature_raw->{fields}}) {
+        my $f = Genome::Nomenclature::Field->create(name=>$rf->{name}, type=>$rf->{type}, nomenclature=>$nom);
+        if ($rf->{type} eq 'enumerated') {
+            for my $e (@{$rf->{enumerated_types}}) {
+                my $enum = Genome::Nomenclature::Field::EnumValue->create(nomenclature_field=>$f, value=>$e);
+            }
+        } 
+    }
+    print Data::Dumper::Dumper($nom);
+    return $nom;
+}
+
 
 1;
