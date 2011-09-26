@@ -130,25 +130,48 @@ sub _intermediate_result {
         } else {
             $input_pass = $idx+1;
         }
- 
+
         my %intermediate_params = (
-            instrument_data => $self->instrument_data,
+            instrument_data_id => $self->instrument_data->id,
             aligner_name => $self->aligner_name,
             aligner_version => $self->aligner_version,
             aligner_params => $params,
-            aligner_index => $index,
-            parent_result => $self,
+            aligner_index_id => $index->id,
             input_file => $path,
             input_pass => $input_pass,
             instrument_data_segment_type => $self->instrument_data_segment_type,
             instrument_data_segment_id => $self->instrument_data_segment_id,
-        ); 
+            test_name => $ENV{GENOME_SOFTWARE_RESULT_TEST_NAME} || undef,
+        );
 
-        my $intermediate_result = Genome::InstrumentData::IntermediateAlignmentResult::Bwa->get_or_create(%intermediate_params);
+        my $includes = join(' ', map { '-I ' . $_ } UR::Util::used_libs);
+        my $class = 'Genome::InstrumentData::IntermediateAlignmentResult::Command::Bwa';
+        my $parameters = join(', ', map($_ . ' => "' . ($intermediate_params{$_} || '') . '"', sort keys %intermediate_params));
+
+        if(UR::DBI->no_commit()) {
+            my $rv = eval "$class->execute($parameters);";
+            if(!$rv or $@) {
+                my $err = $@;
+                die('Failed to generate intermediate result!' . ($err? $err : ' command returned false') );
+            }
+        } else {
+            my $cmd = qq{$^X $includes -e 'use above "Genome"; $class->execute($parameters); UR::Context->commit;' };
+            my $rv = eval{ Genome::Sys->shellcmd(cmd => $cmd) };
+            if(!$rv or $@) {
+                my $err = $@;
+                die('Failed to generate intermediate result!' . ($err? $err : ' command returned false') );
+            }
+        }
+
+        my $intermediate_result = Genome::InstrumentData::IntermediateAlignmentResult::Bwa->get_with_lock(%intermediate_params);
         unless ($intermediate_result) {
             confess "Failed to generate IntermediateAlignmentResult for $path, params were: " . Dumper(\%intermediate_params);
         }
         push(@results, $intermediate_result);
+    }
+
+    for my $result (@results) {
+        $result->add_user(user => $self, label => 'uses');
     }
 
     return @results;
