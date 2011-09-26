@@ -131,7 +131,6 @@ $ ->
       listView = new ListView
 
       $('.save-nomenclature').bind 'click', ->
-        json = JSON.stringify(listView.collection)
         name = $("#nomenclature-name-input").val()
         if name == ""
             alert "You can't save a nomenclature without a name!"
@@ -142,7 +141,16 @@ $ ->
             return
     
         m = {"name": name, "fields" : listView.collection}
-        alert(JSON.stringify(m))
+        jsonToPost = JSON.stringify(m)
+        k = JSON.parse(jsonToPost)
+        $.ajax
+           url: '/view/genome/nomenclature'
+           type: 'PUT'
+           dataType: 'json'
+           data: 
+            json: JSON.stringify(k)
+           success: (response ) ->
+            alert 'got it'
 
       $('.load-nomenclature').bind 'click', ->
         #load_json  = "[{'name':  'hello', 'type': 'string', 'enumerated_types': []},{'name':  'there', 'type': 'enumerated', 'enumerated_types': ['woo', 'there']} ]"
