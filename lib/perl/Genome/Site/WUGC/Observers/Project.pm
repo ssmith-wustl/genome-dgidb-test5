@@ -6,6 +6,11 @@ Genome::Project->add_observer(
 );
 
 Genome::Project->add_observer(
+    aspect => 'delete',
+    callback => \&delete_callback,
+);
+
+Genome::Project->add_observer(
     aspect => 'name',
     callback => \&rename_callback,
 );
@@ -81,6 +86,13 @@ sub rename_callback {
     return 1;
 }
 
+sub delete_callback {
+    my $self = shift;
+    my ($model_group) = Genome::ModelGroup->get(uuid => $self->id);
+    return 1 if not $model_group;
+    $model_group->_delete;
+    return 1;
+}
 
 1;
 

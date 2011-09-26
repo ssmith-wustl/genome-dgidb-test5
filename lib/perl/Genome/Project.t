@@ -69,6 +69,11 @@ ok(!$project2->rename('TEST AML'), 'failed to rename to same name');
 ok($project2->rename('TEST AML1'), 'rename');
 is($project2->name, 'TEST AML1', 'name after rename');
 
+# delete
+ok($project->delete, 'delete');
+isa_ok($project, 'UR::DeletedRef', 'delete project');
+isa_ok($model_group, 'UR::DeletedRef', 'delete model group');
+
 done_testing();
 exit;
 
