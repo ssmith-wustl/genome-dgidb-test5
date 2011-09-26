@@ -142,9 +142,9 @@ $(document).data('updatedOn', new Date(]]><xsl:copy-of select="$currentTime"/><!
         <h1>
           <!-- <xsl:value-of select="$label_name"/> -->
           <xsl:call-template name="str:capitalise">
-            <xsl:with-param name="text" select="$label_name"/>
+            <xsl:with-param name="text" select="$perspective"/>
           </xsl:call-template>
-          <xsl:text> </xsl:text>
+          <xsl:text>: </xsl:text>
           <xsl:value-of select="$display_name"/>
         </h1>
         </div>
@@ -176,6 +176,7 @@ $(document).data('updatedOn', new Date(]]><xsl:copy-of select="$currentTime"/><!
     <div class="control_bar app rounded-bottom shadow">
       <div class="control_bar_menu" id="bar_menu">
         <xsl:call-template name="control_bar_cache_info"/>
+        <xsl:call-template name="control_bar_tasks_info"/>
         <xsl:call-template name="control_bar_menu"/>
       </div>
 
@@ -190,6 +191,7 @@ $(document).data('updatedOn', new Date(]]><xsl:copy-of select="$currentTime"/><!
     <div class="control_bar view shadow">
       <div class="control_bar_menu" id="bar_menu">
         <xsl:call-template name="control_bar_cache_info"/>
+        <xsl:call-template name="control_bar_tasks_info"/>
         <xsl:call-template name="control_bar_menu"/>
       </div>
 
@@ -223,6 +225,8 @@ $(document).data('updatedOn', new Date(]]><xsl:copy-of select="$currentTime"/><!
     <xsl:comment>template: /html/common_includes/components.xsl name:control_bar_cache_info</xsl:comment>
 
     <div class="cache_info">
+      <div class="titlebar">
+      </div>
       <div class="cache_time">
         <p>
           View generated<br/>
@@ -234,6 +238,85 @@ $(document).data('updatedOn', new Date(]]><xsl:copy-of select="$currentTime"/><!
       </div>
     </div>
   </xsl:template>
+
+  <!-- tasks info block for control bars -->
+  <xsl:template name="control_bar_tasks_info">
+    <xsl:comment>template: /html/common_includes/components.xsl name:control_bar_tasks_info</xsl:comment>
+    <div class="tasks_info">
+      <div class="titlebar">
+      </div>
+      <table>
+        <tr>
+          <td class="count succeeded">88</td>
+          <td class="type">Succeeded</td>
+
+          <td class="count running">88</td>
+          <td class="type">Running</td>
+
+          <td class="count submitted">88</td>
+          <td class="type">Submitted</td>
+        </tr>
+        <tr>
+          <td class="count failed">88</td>
+          <td class="type">Failed</td>
+
+          <td class="count pending">88</td>
+          <td class="type">Pending</td>
+
+          <td class="button" colspan="2"><a href="#" class="btn_view_all" id="view_all_tasks" title="jmcmicha's tasks">View All</a></td>
+        </tr>
+
+
+      </table>
+    </div>
+    <div id="tasks_table" style="display: none;">
+      <table cellpadding="0" cellspacing="0" class="lister" border="0">
+        <thead>
+          <th>job</th>
+          <th>status</th>
+          <th>submitted</th>
+          <th>started</th>
+          <th>finished</th>
+        </thead>
+        <tr>
+          <td>Import Dataset</td>
+          <td class="status succeeded">succeeded</td>
+          <td>2011-09-15 19:29:18</td>
+          <td>2011-09-15 19:30:15</td>
+          <td>2011-09-15 19:35:45</td>
+        </tr>
+        <tr>
+          <td>Import Dataset</td>
+          <td class="status running">running</td>
+          <td>2011-09-15 19:29:55</td>
+          <td>2011-09-15 19:30:42</td>
+          <td>2011-09-15 19:35:45</td>
+        </tr>
+        <tr>
+          <td>Import Dataset</td>
+          <td class="status running">running</td>
+          <td>2011-09-15 19:40:21</td>
+          <td>2011-09-15 19:45:44</td>
+          <td>--</td>
+        </tr>
+        <tr>
+          <td>Import Dataset</td>
+          <td class="status pending">pending</td>
+          <td>2011-09-15 19:50:23</td>
+          <td>--</td>
+          <td>--</td>
+        </tr>
+        <tr>
+          <td>Import Dataset</td>
+          <td class="status submitted">submitted</td>
+          <td>2011-09-15 19:58:18</td>
+          <td>--</td>
+          <td>--</td>
+        </tr>
+      </table>
+    </div>
+  </xsl:template>
+
 
   <!-- basic footer -->
   <xsl:template name="footer">
