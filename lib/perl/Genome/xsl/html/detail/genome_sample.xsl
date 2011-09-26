@@ -8,26 +8,15 @@
     <script type="text/javascript" src="/res/js/pkg/dataTables/media/js/jquery.dataTables.js"></script>
 
     <script type="text/javascript" language="javascript">
-<!-- JTAL: you have no id here - but its in the params  -->
-
-        $(document).ready(function() {
-
-            var id = $("#sampleId").text();
-            var attrUrl = "/view/genome/sample/detail.json?id=" + id;
-
-            $('#samples').dataTable( {
-                "bProcessing": false,
-                "sAjaxSource": attrUrl
-            });
-        });
 
     </script>
 
-<!--    <script type='text/javascript' src='/res/js/app/detail/genome_sample.js'></script> -->
+    <script type="text/javascript" language="javascript">
+      window.sample_id = <xsl:value-of select="/object/@id"/>;
+    </script>
 
+    <script type="text/javascript" src="/res/js/app/detail/genome_sample.js"></script>
 
-
-    <span id="sampleId" style="display:none"><xsl:value-of select="/object/@id"/></span>
     <xsl:call-template name="control_bar_view"/>
 
     <xsl:call-template name="view_header">
@@ -40,7 +29,7 @@
       <div class="container">
 
             <!-- details for this sample -->
-            <table id="samples">
+            <table id="samples" class="lister">
                 <thead>
                     <tr>
                         <th>Nomenclature</th>
