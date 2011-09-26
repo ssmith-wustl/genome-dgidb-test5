@@ -431,6 +431,12 @@ table.lister td.text {
     padding: 10px;
 }
 
+table.lister td.group {
+    font-weight: bold;
+    font-size: 120%;
+    background-color: #EFEFEF;
+}
+
 td.status {
     font-weight: bold;
     text-align: center;
