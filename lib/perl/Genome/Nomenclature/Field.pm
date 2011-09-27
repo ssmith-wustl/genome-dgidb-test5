@@ -44,5 +44,10 @@ class Genome::Nomenclature::Field {
     doc => 'Nomenclature::Fields'
 };
 
+sub __display_name__ {
+    my $self = shift;
+    sprintf("%s (%s)", $self->name, $self->type);
+}
+
 
 1;

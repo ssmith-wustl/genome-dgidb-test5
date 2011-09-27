@@ -63,5 +63,10 @@ sub create_from_json {
     return $nom;
 }
 
+sub __display_name__ {
+    shift->name;
+
+}
+
 
 1;
