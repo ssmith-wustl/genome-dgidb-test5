@@ -55,18 +55,6 @@ class Genome::Project {
             to => 'entity',
             doc => 'All the objects to which the parts point',
         },
-        models => {
-            is => 'Genome::Model',
-            via => 'parts',
-            to => 'entity',
-            where => [ 'entity_class_name like' => 'Genome::Model' ],
-            is_mutable => 1,
-            is_many => 1,
-        },
-        model_group => {
-            is => 'Genome::ModelGroup',
-            reverse_as => 'project',
-        },
     ],
     table_name => 'GENOME_PROJECT',
     schema_name => 'GMSchema',
@@ -75,82 +63,38 @@ class Genome::Project {
 };
 
 sub create {
-    my ($class, %p) = @_;
-
-    my $self = $class->SUPER::create(%p);
-    return if not $self;
-
-    # Creator
-    my $user_name = Genome::Sys->username;
-    my $creator = Genome::Sys::User->get(username => $user_name);
-    if ( not $creator ) {
-        $self->error_message("Failed to create project. Failed to get user name for ".$user_name);
-        return;
+    my $class = shift;
+    my $self = eval { $class->SUPER::create(@_) };
+    if ($@ or not $self) {
+        $class->status_message("Could not create new object of type $class!" .
+            ($@ ? " Reason: $@" : ""));
     }
-    if ( not $self->creator($creator) ) {
-        $self->error_message('Failed to add creator ('.$creator->username.') to  project');
-        return;
-    }
-
-    # Name is unique. If apipe-builder is creating this project, rename the other.
-    if ( my ($existing_project) = grep { $self->id ne $_->id } $class->get(name => $self->name) ) {
-        if ( $user_name ne 'apipe-builder' ) {
-            $self->error_message('There is already a project named "'.$existing_project->name.'" created by '.$existing_project->creator->username.'. Please choose a different name.');
-            $self->delete;
-            return;
-        }
-
-        # Rename other project
-        my $i = 0;
-        my $old_name = $existing_project->name;
-        my $new_name;
-        do {
-            $new_name = $existing_project->creator->username.' '.$old_name.( $i ? '-'.$i : '' );
-            $i++;
-        } while $class->get(name => $new_name);
-
-        $self->status_message('There is already a project with this name created by '.$existing_project->creator->username.'. It will be renamed.');
-        $existing_project->rename($new_name);
-        # TODO email user about name change??
-    }
-
-    # Model Group
-    if ( not $self->model_group) {
-        my $model_group = Genome::ModelGroup->create(
-            name => $self->name,
-            user_name => $self->creator->email,
-            uuid => $self->id,
-        );
-        if ( not $model_group ) {
-            $self->error_message('Failed to create corresponding model group fo project');
-            $self->delete;
-            return;
-        }
-        $self->status_message('Create corresponding model group: '.$model_group->id);
-    }
-
     return $self;
 }
 
 sub rename {
     my ($self, $new_name) = @_;
 
-    if ( not $new_name ) {
-        $self->error_message('No new name given to rename model group');
+    unless ($new_name) {
+        $self->error_message('No new name given to rename project');
         return;
     }
 
     my @projects = Genome::Project->get(name => $new_name);
-    if ( @projects ) {
-        $self->error_message("Failed to rename project (".$self->id.") from '".$self->name."' to '$new_name' because one already exists.");
+    if (@projects) {
+        $self->error_message("Failed to rename project (" . $self->id .
+            ") from '" . $self->name . "' to '$new_name' because one already exists.");
         return;
     }
 
     my $old_name = $self->name;
     $self->name($new_name);
-
-    if ( my $model_group = Genome::ModelGroup->get(uuid => $self->id) ) {
-        $model_group->_rename($new_name);
+    my $rv = eval { $self->name($new_name) };
+    if ($@ or not $rv) {
+        $self->error_message("Could not rename project " . $self->__display_name__ .
+            " from $old_name to $new_name!" .
+            ($@ ? " Reason: $@" : ""));
+        return;
     }
 
     $self->status_message("Renamed project from '$old_name' to '$new_name'");

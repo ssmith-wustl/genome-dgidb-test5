@@ -30,7 +30,7 @@ ok($project, 'create a project');
 is($project->name, 'TEST AML', 'name');
 is($project->creator, $user, 'creator');
 is_deeply([$project->user_ids], [$user->id], 'user ids');
-my $model_group = $project->model_group;
+my $model_group = Genome::ModelGroup->get(uuid => $project->id);
 ok($model_group, 'model group');
 is($model_group->name, $project->name, 'model group name matches project name');
 is($model_group->uuid, $project->id, 'model group uuid matches project id');
@@ -57,7 +57,7 @@ ok($project2, 'create a project');
 is($project2->name, 'TEST AML', 'name');
 is($project->name, $user_name.' TEST AML', 'renamed existing project made by '.$user_name);
 is($model_group->name, $project->name, 'model group renamed too');
-my $model_group2 = $project2->model_group;
+my $model_group2 = Genome::ModelGroup->get(uuid => $project2->id);
 ok($model_group2, 'model group');
 is($model_group2->name, $project2->name, 'model group name matches project name');
 is($model_group2->uuid, $project2->id, 'model group uuid matches project id');
@@ -68,6 +68,11 @@ ok(!$project2->rename(), 'failed to rename w/o name');
 ok(!$project2->rename('TEST AML'), 'failed to rename to same name');
 ok($project2->rename('TEST AML1'), 'rename');
 is($project2->name, 'TEST AML1', 'name after rename');
+
+# delete
+ok($project->delete, 'delete');
+isa_ok($project, 'UR::DeletedRef', 'delete project');
+isa_ok($model_group, 'UR::DeletedRef', 'delete model group');
 
 done_testing();
 exit;

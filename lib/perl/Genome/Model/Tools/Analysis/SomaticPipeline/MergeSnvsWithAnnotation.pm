@@ -190,7 +190,12 @@ sub load_snp_calls
 			
 			my $chr_start = my $chr_stop = my $allele1 = my $allele2 = "";
 			
-			if($lineContents[2] =~ /[0-9]/)
+			if(substr($FileName, length($FileName) - 3, 3) eq "bed" && $lineContents[1] ne $lineContents[2])
+			{
+				$chr_start = $chr_stop = $lineContents[2];
+				($allele1, $allele2) = split(/\//, $lineContents[3]);
+			}
+			elsif($lineContents[2] =~ /[0-9]/)
 			{
 				$chr_start = $chr_stop = $lineContents[2];
 				$allele1 = $lineContents[3];

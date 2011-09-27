@@ -17,8 +17,13 @@ class Genome::Model::Tools::FastTier::FastTier {
         tier_file_location => {
             type => 'Text',
             is_input => 1,
-            #default => '/gscmnt/ams1100/info/model_data/2771411739/build102550711/annotation_data/tiering_bed_files_v2',
             doc => 'Use this to point to a directory containing tier1.bed - tier4.bed in order to use different bed files for tiering',
+        },
+        skip_line_count => {
+            type => 'Boolean',
+            is_input => 1,
+            default => 0,
+            doc => 'Set this if the input has duplicates',
         },
     ],
     has_optional => [
@@ -196,15 +201,16 @@ sub execute {
             die $self->error_message("Fast tier command did not complete!");
         }
     }
-
-    my $input = $self->line_count($self->variant_bed_file);
-    my $output=0;
-    for my $tier (1..4){
-        my $out = "tier".$tier."_output";
-        $output += $self->line_count($self->$out);
-    }
-    unless(($input - $output)==0){
-        die $self->error_message("Lines of input: ".$input."\t did not match lines of output: ".$output."\n");
+    unless($self->skip_line_count){
+        my $input = $self->line_count($self->variant_bed_file);
+        my $output=0;
+        for my $tier (1..4){
+            my $out = "tier".$tier."_output";
+            $output += $self->line_count($self->$out);
+        }
+        unless(($input - $output)==0){
+            die $self->error_message("Lines of input: ".$input."\t did not match lines of output: ".$output."\n");
+        }
     }
     return 1;
 }

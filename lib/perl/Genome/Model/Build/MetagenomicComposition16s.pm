@@ -689,7 +689,7 @@ sub combined_original_fastq_file {
     my $self = shift;
     return sprintf(
         '%s/%s.%s.fastq',
-        $self->data_directory,
+        $self->fasta_dir,
         $self->file_base_name,
         'original',
     );
@@ -822,6 +822,9 @@ sub prepare_instrument_data {
             my $fasta_file = $self->processed_fasta_file_for_set_name($set_name);
             my $sz = -s $fasta_file;
             unlink $fasta_file if not $sz or $sz == 0;
+            my $qual_file = $self->processed_qual_file_for_set_name( $set_name );
+            my $qual_sz = -s $qual_file;
+            unlink $qual_file if not $qual_sz or $qual_sz == 0;
         }
     }
 
@@ -917,8 +920,7 @@ sub fastq_from_instrument_data {
             }
         }
         else {
-            Carp::confess( "Failed to get fastq for instrument data, id: ".$inst_data->id.' format: '.$inst_data->sequencing_platform );
-            #maybe just skip?? probably not
+            $self->status_message($inst_data->__display_name__.' does not have any sequences! Skipping!');
         }
     }
     return 1;
