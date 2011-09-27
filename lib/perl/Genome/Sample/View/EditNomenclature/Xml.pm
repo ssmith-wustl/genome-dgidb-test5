@@ -1,12 +1,15 @@
-package Genome::Sample::View::Detail::Xml;
+package Genome::Sample::View::EditNomenclature::Xml;
 
 use strict;
 use warnings;
 
 use Genome;
 
-class Genome::Sample::View::Detail::Xml {
+class Genome::Sample::View::EditNomenclature::Xml {
     is => 'UR::Object::View::Default::Xml',
+    has => [
+        'nomenclature_id' => { is => 'Text' }
+    ],
     has_constant => [
         default_aspects => {
             is => 'ARRAY',
@@ -23,6 +26,25 @@ class Genome::Sample::View::Detail::Xml {
         }
     ]
 };
+
+
+sub _generate_content {
+
+    my ($self) = @_;
+
+#    my $subject = $self->subject();
+
+$DB::single = 1;
+    my $view = $self->SUPER::_generate_content();
+    my $doc = $view->_xml_doc();
+
+    my $nom_element = $doc->createElement('nomenclature');
+    $nom_element->addChild( $doc->createAttribute('name', 'shit') );
+
+    return $doc->toString(1);
+}
+
+
 
 
 1;

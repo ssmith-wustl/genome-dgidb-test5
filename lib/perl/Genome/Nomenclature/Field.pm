@@ -33,6 +33,10 @@ class Genome::Nomenclature::Field {
             is=>'Genome::Nomenclature', 
             id_by => 'nomenclature_id'
         },
+        nomenclature_name => {
+            via => 'nomenclature',
+            to => 'name',
+        },
         enumerated_values => {
             is_many => 1,
             is=>'Genome::Nomenclature::Field::EnumValue',

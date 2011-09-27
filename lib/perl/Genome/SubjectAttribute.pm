@@ -33,6 +33,14 @@ class Genome::SubjectAttribute {
             is => 'Genome::Subject',
             id_by => 'subject_id',
         },
+        nomenclature_field_name => {
+            via => 'nomenclature_field',
+            to => 'name'
+        },
+        nomenclature_name => {
+            via => 'nomenclature_field',
+            to => 'nomenclature_name',
+        },
     ],
     has_optional => [
         _individual => {
