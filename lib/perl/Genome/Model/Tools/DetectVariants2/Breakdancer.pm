@@ -6,7 +6,7 @@ use strict;
 use Genome;
 use File::Basename;
 
-my @FULL_CHR_LIST = (1..22, 'X', 'Y');
+my @FULL_CHR_LIST = (1..22, 'X', 'Y', 'MT');
 
 class Genome::Model::Tools::DetectVariants2::Breakdancer{
     is => 'Genome::Model::Tools::DetectVariants2::Detector',

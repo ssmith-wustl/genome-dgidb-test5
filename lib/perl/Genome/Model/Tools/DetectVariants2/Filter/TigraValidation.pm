@@ -47,7 +47,7 @@ use Carp 'confess';
 #         -x INT     Duplicate supplementary reads [$opts{x}] times
 #\n") unless ($#ARGV>=1);
 
-my @FULL_CHR_LIST = (1..22, 'X', 'Y');
+my @FULL_CHR_LIST = (1..22, 'X', 'Y', 'MT');
 
 class Genome::Model::Tools::DetectVariants2::Filter::TigraValidation {
     is  => 'Genome::Model::Tools::DetectVariants2::Filter',

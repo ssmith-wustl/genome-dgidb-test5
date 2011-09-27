@@ -44,7 +44,7 @@ class Genome::Model::Tools::DetectVariants2::Squaredancer{
     ],
     has_param => [ 
         lsf_resource => {
-            default_value => "-M 16000000 -R 'select[mem>16000] rusage[mem=16000]'",
+            default_value => "-M 20000000 -R 'select[mem>20000] rusage[mem=20000]'",
         },
     ],
 };
@@ -136,6 +136,20 @@ sub run_squaredancer {
         my $output_file = $self->_sv_staging_output;
         `touch $output_file`;
         return 1;
+    }
+
+    if ($sd_params =~ /\-l/) { #Some projects like PCGP need screen out normal bam
+        my $control_bam = $self->control_aligned_reads_input;
+        unless ($control_bam and -s $control_bam) {
+            $self->error_message('No control_aligned_reads_input available with -l option: '.$sd_params);
+            die;
+        }
+        my ($skip_control_name) = $control_bam =~ /^(\S+)\.bam$/;
+        unless ($skip_control_name) {
+            $self->error_message("Failed to get skip_control_name from control bam: $control_bam");
+            die;
+        }
+        $sd_params = '-l '. $skip_control_name;
     }
 
     my @bam_list;
