@@ -141,6 +141,8 @@ sub execute {
 sub _validate_bam {
     my $self = shift;
 
+    return 1;
+
     my $bam = $self->original_data_path;
     if ( not -s $bam ) {
         $self->error_message('BAM does not exist: '.$bam);
@@ -241,6 +243,20 @@ sub _create_imported_instrument_data {
     }
     my $library = $sample_importer->_library;
 
+    my $description = $self->description || "imported ".$self->import_source_name." bam, tcga name is ".$tcga_name;
+    if($self->no_md5){
+        $description = $description . ", no md5 file was provided with the import.";
+    }
+
+    my %params = (
+        original_data_path => $self->original_data_path,
+        sequencing_platform => "solexa",
+        import_format => "bam",
+        reference_sequence_build => $self->reference_sequence_build,
+        library => $library,
+        description => $description,
+    );
+
     my $target_region;
     unless ($self->target_region eq 'none') {
         $target_region = $self->target_region;
@@ -251,20 +267,12 @@ sub _create_imported_instrument_data {
         }
     }
 
-    my $description = $self->description || "imported ".$self->import_source_name." bam, tcga name is ".$tcga_name;
-    if($self->no_md5){
-        $description = $description . ", no md5 file was provided with the import.";
+    if ( $target_region ) {
+        $params{taget_region_set_name} = $target_region
     }
-    my %params = (
-        original_data_path => $self->original_data_path,
-        sequencing_platform => "solexa",
-        import_format => "bam",
-        reference_sequence_build => $self->reference_sequence_build,
-        library => $library,
-        target_region_set_name => $target_region,
-        description => $description,
-    );
+
     my $import_instrument_data = Genome::InstrumentData::Imported->create(%params);  
+
     unless ($import_instrument_data) {
        $self->error_message('Failed to create imported instrument data for '.$self->original_data_path);
        return;
