@@ -88,7 +88,7 @@ sub create {
             return;
         }
         $self->name( $project->name ) if $project->name ne $self->name;
-        $self->user_name( $project->creator->email );
+        $self->user_name( $project->parts(role => 'creator')->entity->email );
     }
 
     # Convergence model
