@@ -109,7 +109,7 @@ sub create {
 
     # Add models to project
     for my $model ( $self->models ) {
-        $project->add_model($model);
+        $project->add_part(entity => $model);
     }
 
     return $self;
@@ -184,7 +184,7 @@ sub assign_models {
             model_group_id => $self->id,
             model_id       => $m->genome_model_id,
         );
-        $project->add_model($m) if $project;
+        $project->add_part(entity => $m) if $project;
         $existing_models{$m->id} = $m->id;
         $added++;
     }
@@ -224,7 +224,7 @@ sub unassign_models {
         }
         
         $bridge->delete();
-        $project->remove_model($m) if $project;
+        $project->remove_part(entity => $m) if $project;
         $removed++;
     }
 

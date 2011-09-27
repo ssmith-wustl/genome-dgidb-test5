@@ -61,7 +61,8 @@ sub create_callback {
     }
 
     # Make sure corresponding model group exists
-    unless ($self->model_group) {
+    my ($model_group) = Genome::ModelGroup->get(uuid => $self->id);
+    unless ($model_group) {
         my $model_group = Genome::ModelGroup->create(
             name => $self->name,
             user_name => $self->creator->email,

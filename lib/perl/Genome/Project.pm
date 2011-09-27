@@ -55,18 +55,6 @@ class Genome::Project {
             to => 'entity',
             doc => 'All the objects to which the parts point',
         },
-        models => {
-            is => 'Genome::Model',
-            via => 'parts',
-            to => 'entity',
-            where => [ 'entity_class_name like' => 'Genome::Model' ],
-            is_mutable => 1,
-            is_many => 1,
-        },
-        model_group => {
-            is => 'Genome::ModelGroup',
-            reverse_as => 'project',
-        },
     ],
     table_name => 'GENOME_PROJECT',
     schema_name => 'GMSchema',
@@ -88,7 +76,7 @@ sub rename {
     my ($self, $new_name) = @_;
 
     unless ($new_name) {
-        $self->error_message('No new name given to rename model group');
+        $self->error_message('No new name given to rename project');
         return;
     }
 
