@@ -62,8 +62,8 @@ sub _generate_content {
     my @attributes;
     for my $a ($obj->attributes()) {
         push @attributes, [
-            $a->nomenclature(),
-            $a->attribute_label(),
+            $a->nomenclature_name(),
+            $a->nomenclature_field_name(),
             $a->attribute_value()
         ];
     }
