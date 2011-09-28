@@ -112,10 +112,6 @@ sub Person::__display_name__ {
     return $_[0]->name;
 }
 
-class Person::Command {
-    is => 'Command',
-};
-
 # INIT
 my %config = (
     target_class => 'Person',
@@ -123,12 +119,16 @@ my %config = (
 );
 ok(Genome::Command::Crud->init_sub_commands(%config), 'init crud commands') or die;
 
+# MAIN TREE
+my $main_tree_meta = Person::Command->__meta__;
+ok($main_tree_meta, 'MAIN TREE meta');
+
 # CREATE
 # meta 
 my $create_meta = Person::Command::Create->__meta__;
 ok($create_meta, 'CREATE meta');
 
-is(Person::Command::Create->_name_for_objects, 'persons', 'CREATE: _name_for_objects');
+is(Person::Command::Create->_target_name, 'person', 'CREATE: _target_name');
 is(Person::Command::Create->_target_class, 'Person', 'CREATE: _target_class');
 
 # fail - w/o params
@@ -205,8 +205,8 @@ ok($list_meta, 'LIST meta');
 my $update_meta = Person::Command::Update->__meta__;
 ok($update_meta, 'update meta');
 
-is(Person::Command::Update->_name_for_objects, 'persons', 'UPDATE: _name_for_objects');
-is(Person::Command::Update->_name_for_objects_ub, 'persons', 'UPDATE: _name_for_objects_ub');
+is(Person::Command::Update->_target_name_pl, 'persons', 'UPDATE: _target_name_pl');
+is(Person::Command::Update->_target_name_pl_ub, 'persons', 'UPDATE: _target_name_pl_ub');
 is_deeply(Person::Command::Update->_only_if_null, [qw/ job title mom /], 'UPDATE: _only_if_null');
 
 # fail w/o objects
@@ -311,8 +311,8 @@ is($george->mom, $mom, 'Geroge now has a mom');
 # meta
 my $delete_meta = Person::Command::Delete->__meta__;
 ok($delete_meta, 'DELETE meta');
-is(Person::Command::Delete->_name_for_objects, 'persons', 'DELETE: _name_for_objects');
-is(Person::Command::Delete->_name_for_objects_ub, 'persons', 'DELETE: _name_for_objects_ub');
+is(Person::Command::Delete->_target_name_pl, 'persons', 'DELETE: _target_name_pl');
+is(Person::Command::Delete->_target_name_pl_ub, 'persons', 'DELETE: _target_name_pl_ub');
 
 # fail w/o objects
 my $delete_fail = Person::Command::Delete->create();

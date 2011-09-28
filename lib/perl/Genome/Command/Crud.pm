@@ -47,10 +47,17 @@ sub init_sub_commands {
     ? delete $incoming_config{target_name}
     : join(' ', map { camel_case_to_string($_) } split('::', $config{target_class}));
     Lingua::EN::Inflect::classical(persons => 1);
-    $config{name_for_objects} = Lingua::EN::Inflect::PL($target_name);
-    $config{name_for_objects_ub} = $config{name_for_objects};
-    $config{name_for_objects_ub} =~ s/ /_/;
+    $config{target_name} = $target_name;
+    $config{target_name_pl} = Lingua::EN::Inflect::PL($target_name);
+    $config{target_name_pl_ub} = $config{target_name_pl};
+    $config{target_name_pl_ub} =~ s/ /_/;
 
+    # Main tree command
+    if ( not $class->_build_main_tree_class(%config) ) {
+        Carp::confess('Failed to create main tree class for '.$config{namespace});
+    }
+
+    # Sub commands
     my @namespace_sub_command_names = map {
         s/$config{namespace}:://; $_ = lc($_); $_;
     } $config{namespace}->sub_command_classes;
@@ -98,6 +105,20 @@ sub init_sub_commands {
     return 1;
 }
 
+sub _build_main_tree_class {
+    my ($class, %config) = @_;
+
+    my $meta = eval{ $config{namespace}->__meta__; };
+
+    UR::Object::Type->define(
+        class_name => $config{namespace},
+        is => 'Command::Tree',
+        doc => 'work with '.$config{target_name_pl},
+    );
+
+    return 1;
+}
+
 sub _build_create_sub_class {
     my ($class, %config) = @_;
 
@@ -110,12 +131,12 @@ sub _build_create_sub_class {
         class_name => $sub_class,
         is => 'Genome::Command::Create',
         has => [ map { $_->{property_name} => $_ } @properties ],
-        doc => 'create '.$config{name_for_objects},
+        doc => 'create '.$config{target_name_pl},
     );
 
     no strict;
-    *{ $sub_class.'::_name_for_objects' } = sub{ return $config{name_for_objects}; };
     *{ $sub_class.'::_target_class' } = sub{ return $config{target_class}; };
+    *{ $sub_class.'::_target_name' } = sub{ return $config{target_name}; };
     use strict;
 
     return $sub_class;
@@ -153,15 +174,15 @@ sub _build_update_sub_class {
         class_name => $sub_class,
         is => 'Genome::Command::Update',
         has => [ 
-            $config{name_for_objects_ub} => {
+            $config{target_name_pl_ub} => {
                 is => $config{target_class},
                 is_many => 1,
                 shell_args_position => 1,
-                doc => ucfirst($config{name_for_objects}).' to update, resolved via text string.',
+                doc => ucfirst($config{target_name_pl}).' to update, resolved via text string.',
             },
             ( map { $_->{property_name} => $_ } @properties ),
         ],
-        doc => 'update '.$config{name_for_objects},
+        doc => 'update '.$config{target_name_pl},
     );
 
     my $only_if_null = $config{only_if_null};
@@ -177,8 +198,7 @@ sub _build_update_sub_class {
     }
 
     no strict;
-    *{ $sub_class.'::_name_for_objects' } = sub{ return $config{name_for_objects}; };
-    *{ $sub_class.'::_name_for_objects_ub' } = sub{ return $config{name_for_objects_ub}; };
+    *{ $sub_class.'::_target_name' } = sub{ return $config{target_name}; };
     *{ $sub_class.'::_only_if_null' } = sub{ return $only_if_null; };
     use strict;
 
@@ -193,20 +213,19 @@ sub _build_delete_sub_class {
         class_name => $sub_class,
         is => 'Genome::Command::Delete',
         has => [ 
-            $config{name_for_objects_ub} => {
+            $config{target_name_pl_ub} => {
                 is => $config{target_class},
                 is_many => 1,
                 shell_args_position => 1,
                 require_user_verify => 1, # needed?
-                doc => ucfirst($config{name_for_objects}).' to delete, resolved via text string.',
+                doc => ucfirst($config{target_name_pl}).' to delete, resolved via text string.',
             },
         ],
-        doc => 'delete '.$config{name_for_objects},
+        doc => 'delete '.$config{target_name_pl},
     );
 
     no strict;
-    *{ $sub_class.'::_name_for_objects' } = sub{ return $config{name_for_objects}; };
-    *{ $sub_class.'::_name_for_objects_ub' } = sub{ return $config{name_for_objects_ub}; };
+    *{ $sub_class.'::_target_name' } = sub{ return $config{target_name}; };
     use strict;
 
     return $sub_class;

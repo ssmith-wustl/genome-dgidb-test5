@@ -16,14 +16,6 @@ class Genome::Project {
             is => 'Text',
             doc => 'Name of the project',
         },
-        creator => {
-            is => 'Genome::Sys::User',
-            via => 'parts',
-            to => 'entity',
-            where => [ 'entity_class_name' => 'Genome::Sys::User', role => 'creator', ],
-            is_mutable => 1,
-            is_many => 0,
-        },
         user_ids => {
             is => 'Genome::Sys::User',
             via => 'parts',
@@ -55,18 +47,6 @@ class Genome::Project {
             to => 'entity',
             doc => 'All the objects to which the parts point',
         },
-        models => {
-            is => 'Genome::Model',
-            via => 'parts',
-            to => 'entity',
-            where => [ 'entity_class_name like' => 'Genome::Model' ],
-            is_mutable => 1,
-            is_many => 1,
-        },
-        model_group => {
-            is => 'Genome::ModelGroup',
-            reverse_as => 'project',
-        },
     ],
     table_name => 'GENOME_PROJECT',
     schema_name => 'GMSchema',
@@ -76,11 +56,29 @@ class Genome::Project {
 
 sub create {
     my $class = shift;
+    
     my $self = eval { $class->SUPER::create(@_) };
     if ($@ or not $self) {
-        $class->status_message("Could not create new object of type $class!" .
+        $class->error_message("Could not create new object of type $class!" .
             ($@ ? " Reason: $@" : ""));
+        return;
     }
+
+    # Set creator
+    my $user_name = Genome::Sys->username;
+    my $creator = Genome::Sys::User->get(username => $user_name);
+    if ( not $creator ) {
+        $self->error_message("Failed to create project, could not find user $user_name");
+        $self->delete;
+        return;
+    }
+
+    if ( not $self->add_part(entity => $creator, role => 'creator') ) {
+        $self->error_message("Failed to add creater '$user_name' to project");
+        $self->delete;
+        return;
+    }
+
     return $self;
 }
 
@@ -88,7 +86,7 @@ sub rename {
     my ($self, $new_name) = @_;
 
     unless ($new_name) {
-        $self->error_message('No new name given to rename model group');
+        $self->error_message('No new name given to rename project');
         return;
     }
 

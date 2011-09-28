@@ -5,11 +5,6 @@ use warnings;
 
 use Genome;
 
-class Genome::Project::Command {
-    is => 'Command::Tree',
-    doc => 'Work with projects',
-};
-
 use Genome::Command::Crud;
 Genome::Command::Crud->init_sub_commands(
     target_class => 'Genome::Project',
@@ -20,5 +15,4 @@ Genome::Command::Crud->init_sub_commands(
 );
 
 1;
-
 

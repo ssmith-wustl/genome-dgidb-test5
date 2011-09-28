@@ -84,12 +84,11 @@ sub create {
             name => $name,
         );
         if ( not $project ) {
-            $self->error_message('Failed to create project to match model group.');
-            $self->delete;
+            $class->error_message('Failed to create project to match model group.');
             return;
         }
         $self->name( $project->name ) if $project->name ne $self->name;
-        $self->user_name( $project->creator->email );
+        $self->user_name( $project->parts(role => 'creator')->entity->email );
     }
 
     # Convergence model
@@ -110,7 +109,7 @@ sub create {
 
     # Add models to project
     for my $model ( $self->models ) {
-        $project->add_model($model);
+        $project->add_part(entity => $model);
     }
 
     return $self;
@@ -185,7 +184,7 @@ sub assign_models {
             model_group_id => $self->id,
             model_id       => $m->genome_model_id,
         );
-        $project->add_model($m) if $project;
+        $project->add_part(entity => $m) if $project;
         $existing_models{$m->id} = $m->id;
         $added++;
     }
@@ -225,7 +224,7 @@ sub unassign_models {
         }
         
         $bridge->delete();
-        $project->remove_model($m) if $project;
+        $project->remove_part(entity => $m) if $project;
         $removed++;
     }
 
@@ -305,7 +304,21 @@ sub builds {
     return @builds;
 }
 
-sub delete {
+sub delete { # Separate delete for Project delete observer
+    my $self = shift;
+
+    $self->status_message('Delete model group: '.$self->id);
+
+    if ( my $project = $self->project ) {
+        $self->status_message('Deleting associated project: '.$project->id);
+         $project->delete; # deletes model group via observer
+         return 1;
+    }
+
+    return $self->_delete;
+}
+
+sub _delete { 
     my $self = shift;
 
     # unassign existing models
@@ -327,11 +340,6 @@ sub delete {
         else {
             $self->error_message("Failed to remove convergence model (" . $convergence_model->__display_name__ . "), please investigate and remove manually.");
         }
-    }
-
-    if ( my $project = $self->project ) {
-        $self->status_message('Deleting associated project: '.$project->id);
-        $project->delete;
     }
 
     # delete self
