@@ -5,6 +5,10 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
   <xsl:template name="genome_individual" match="object[./types[./isa[@type='Genome::Individual']]]">
     <xsl:comment>template: /html/status/genome_individual.xsl; match="object[./types[./isa[@type='Genome::Individual']]]"</xsl:comment>
 
+    <script type='text/javascript' src='/res/js/pkg/boxy/javascripts/jquery.boxy.js'></script>
+    <link rel="stylesheet" href="/res/js/pkg/boxy/stylesheets/boxy.css" type="text/css" />
+    <script type='text/javascript' src='/res/js/app/genome_model_build_list.js'></script>
+
     <xsl:call-template name="control_bar_view"/>
 
     <xsl:call-template name="view_header">

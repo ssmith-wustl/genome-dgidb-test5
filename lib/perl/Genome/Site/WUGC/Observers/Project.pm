@@ -19,18 +19,13 @@ sub create_callback {
     my ($self, $construction_method) = @_;
     my $class = $self->class;
 
-    # Set project creator
+    # Get project creator
     my $user_name = Genome::Sys->username;
     my $creator = Genome::Sys::User->get(username => $user_name);
     unless ($creator) {
         $self->delete;
         die "Failed to create project, could not find user $user_name";
-    }
-
-    unless ($self->creator($creator)) {
-        $self->delete;
-        die "Failed to add creater '$user_name' to project";
-    }
+    } # DO NOT SET HERE...IT IS DONE IN PROJECT CREATE
 
     # Make sure name is unique. Fail if name is not unique, but rename any conflicting
     # projects if this project is being created by apipe-builder.
@@ -39,15 +34,17 @@ sub create_callback {
         if ($user_name eq 'apipe-builder') {
             my $i = 0;
             my $old_name = $existing_project->name;
+            my $existing_project_creator_part = $existing_project->parts(role => 'creator');
+            my $existing_project_creator_username = $existing_project_creator_part->entity->username;
             my $new_name;
             do { 
-                $new_name = $existing_project->creator->username . ' ' . $old_name .
+                $new_name = $existing_project_creator_username. ' ' . $old_name .
                     ($i ? '-'.$i : '');
                 $i++;
             } while $class->get(name => $new_name);
 
             $self->status_message("There is another project with name " . $self->name . 
-                " created by " . $existing_project->creator->username . 
+                " created by " . $existing_project_creator_username . 
                 ", it will be renamed to $new_name");
             $existing_project->rename($new_name);
             # TODO email user about name change?
@@ -56,7 +53,7 @@ sub create_callback {
             my $name = $self->name;
             $self->delete;
             die "There is already a project name '$name', created by " . 
-                $existing_project->creator->username . ". Select another name";
+                $existing_project_creator_username . ". Select another name";
         }
     }
 
@@ -65,7 +62,7 @@ sub create_callback {
     unless ($model_group) {
         my $model_group = Genome::ModelGroup->create(
             name => $self->name,
-            user_name => $self->creator->email,
+            user_name => $creator->email,
             uuid => $self->id,
         );
         unless ($model_group) {

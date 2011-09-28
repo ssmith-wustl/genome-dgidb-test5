@@ -112,16 +112,16 @@ sub Person::__display_name__ {
     return $_[0]->name;
 }
 
-class Person::Command {
-    is => 'Command',
-};
-
 # INIT
 my %config = (
     target_class => 'Person',
     update => { only_if_null => [qw/ job title mom /], },
 );
 ok(Genome::Command::Crud->init_sub_commands(%config), 'init crud commands') or die;
+
+# MAIN TREE
+my $main_tree_meta = Person::Command->__meta__;
+ok($main_tree_meta, 'MAIN TREE meta');
 
 # CREATE
 # meta 
