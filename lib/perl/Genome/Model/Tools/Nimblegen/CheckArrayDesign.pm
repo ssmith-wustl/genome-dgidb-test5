@@ -34,7 +34,6 @@ class Genome::Model::Tools::Nimblegen::CheckArrayDesign {
 
 sub execute {
     my $self = shift;
-    $DB::single = 1;
 
     #parse inputs
     my $probe_bed = $self->nimblegen_probe_bedfile;

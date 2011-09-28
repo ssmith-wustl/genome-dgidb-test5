@@ -198,7 +198,6 @@ sub execute {
     my $sv_file = $self->sv_file;
     my $out_file= $self->output_file;
 
-    $DB::single=1;
     my $bp_file = $self->breakpoint_seq_file;
     my $bp_io;
     my $cm_aln_fh = new IO::File;

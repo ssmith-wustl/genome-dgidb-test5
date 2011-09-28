@@ -47,7 +47,6 @@ sub _run_aligner {
 
     $self->copy_license_file_to_home_directory();
 
-    $DB::single = 1;
 
     my $tmp_dir = $self->temp_scratch_directory;
 
@@ -63,7 +62,6 @@ sub _run_aligner {
     my $castosam_path = '/gscmnt/233/analysis/sequence_analysis/species_independant/jmartin/CLC/server_based/castosam';
     my $aligner_params = $self->aligner_params;
 
-$DB::single=1;
 
 
 #___Fix headers in reference DB to keep only the first, white-space delimited word as the name
@@ -96,7 +94,6 @@ $DB::single=1;
 
     #my $align_cmd = $clc_path . sprintf(' -o %s -d %s -q %s -p fb ss %s %s -i %s %s %s',$tmp_cas_file,$ref_path,$frag_input,$insert_size_range_min,$insert_size_range_max,$pe1_input,$pe2_input,$other_params);
 
-$DB::single=1;
 
 
 #___Run alignment

@@ -49,7 +49,6 @@ sub help_detail {
 
 sub execute {
     my $self = shift;
-    $DB::single=1;
 
     #resolve refseq
     my $ref_build_name = $self->refseq_build_name;

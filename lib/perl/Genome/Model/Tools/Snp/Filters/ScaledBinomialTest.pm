@@ -191,7 +191,6 @@ sub _create_r_files {
             $skin_al2_read_hg,
             $skin_ref_read_hg,
         ) = @skin_metrics[@data_indices];
-        $DB::single=1;
         if($skin_chr ne $chr || $skin_position ne $position || $skin_al1 ne $al1 || $skin_al2 ne $al2) {
             #FILES ARE OFF
             #
@@ -275,7 +274,6 @@ RCODE
         $self->error_message("Couldn't access R via Statistics::R");
         return;
     }
-    $DB::single=1;
     $R_bridge->startR();
     $R_bridge->send(qq{$R_code});
     #$R_bridge->send(qq{aml.epithelial_test(infile="$snp_file_path",outfile="/tmp/skin_binom_test_chr$chromosome.less",alt="less")});

@@ -53,7 +53,6 @@ sub check_multiple_versions
 
 sub execute
 {
-    $DB::single=1;
     my $self = shift;
     my $ace_directory = $self->ace_directory; 
     my $ace_file = $self->ace_file;

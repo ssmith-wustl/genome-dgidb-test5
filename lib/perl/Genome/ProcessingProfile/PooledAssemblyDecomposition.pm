@@ -45,7 +45,6 @@ class Genome::ProcessingProfile::PooledAssemblyDecomposition {
 
 sub _execute_build {
     my ($self,$build) = @_;
-$DB::single=1;
     my $pooled_assembly_model = $build->model->from_models;
     
     my $pooled_assembly_build = $pooled_assembly_model->last_complete_build;

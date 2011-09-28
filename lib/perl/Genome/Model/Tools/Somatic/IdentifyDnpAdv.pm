@@ -117,7 +117,6 @@ HELP
 
 sub execute {
     my $self=shift;
-    $DB::single = 1;
     my $snp_file = $self->snp_input_file;
 
     #check on architecture

@@ -38,7 +38,6 @@ eval {
     );
 };
 
-$DB::single = 1; #TODO: delete me
 ok($feature_list->format ne 'unknown', 'failed to change format when format != "unknown"');
 
 

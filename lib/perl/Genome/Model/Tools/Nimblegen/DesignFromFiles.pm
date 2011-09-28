@@ -72,7 +72,6 @@ EOS
 
 sub execute {
     my $self = shift;
-    $DB::single = 1;
 
     my $probe_span = $self->span;
     #All regions in the final BED file will be restricted to those from these chromosomes

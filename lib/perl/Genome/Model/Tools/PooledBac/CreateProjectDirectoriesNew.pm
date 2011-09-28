@@ -62,7 +62,6 @@ EOS
 sub execute { 
     my $self = shift;
     print "Creating Project Directories...\n";
-    $DB::single = 1;
     my $pooled_bac_dir = $self->pooled_bac_dir;
     my $project_dir = $self->project_dir;
     my $phd_dir_or_ball = $self->phd_file_name_or_dir;

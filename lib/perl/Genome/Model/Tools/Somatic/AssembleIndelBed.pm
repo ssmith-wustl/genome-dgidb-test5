@@ -247,7 +247,6 @@ sub generate_alleles {
 
         #if there is more than one glob_pattern found
         if(@others) {
-            $DB::single=1;
 
             #if any of the filenames have already been used, find one which hasn't been used
             if (exists($DONE->{'glob'}{$chr}{$original_position})) {

@@ -134,7 +134,6 @@ sub execute
 {
     my $self = shift;
     my %cutoffs;
-    $DB::single=1;
     $cutoffs{hq_percent_identity} = $self->hq_percent_identity if defined $self->hq_percent_identity;
     $cutoffs{hq_mismatch} = $self->hq_mismatch if defined $self->hq_mismatch;
     $cutoffs{percent_identity} = $self->percent_identity if defined $self->percent_identity;

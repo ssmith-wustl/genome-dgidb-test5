@@ -103,7 +103,6 @@ sub test_alignment {
 
     ok($alignment, "Created Alignment");
     my $dir = $alignment->alignment_directory;
-    $DB::single = 1;
     ok($dir, "alignments found/generated");
     ok(-d $dir, "result is a real directory");
     ok(-s $dir . "/all_sequences.bam", "result has a bam file");

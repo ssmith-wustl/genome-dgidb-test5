@@ -59,7 +59,6 @@ sub help_detail{
 
 sub execute {
     my $self = shift;
-    $DB::single=1;
     my $name = $self->list_name;
     my $author = $self->vtest($self->author);
     my $rt_ticket = $self->vtest($self->rt_ticket);

@@ -77,7 +77,6 @@ sub execute
     my @proteins;
     my @genes;
 
-    $DB::single = 1;
 
     foreach my $ensembl_transcript_id ( @ensembl_transcript_ids ) #TODO why reverse here?
     {

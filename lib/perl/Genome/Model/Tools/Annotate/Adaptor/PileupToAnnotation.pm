@@ -47,7 +47,6 @@ EOS
 sub execute{
 
     my $self = shift;
-    $DB::single =1; #TODO: remove me
     my $temp_snp_path = "/tmp/snp_file_test"; 
     my $temp_indel_path = "/tmp/indel_file_test";
 

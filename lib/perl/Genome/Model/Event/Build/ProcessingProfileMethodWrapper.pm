@@ -30,7 +30,6 @@ sub bsub_rusage {
 sub execute {
     my $self = shift;
 
-    $DB::single=1;
 
     my $build = Genome::Model::Build->get($self->build_id) 
       or die 'cannot load build object for ' . $self->build_id;

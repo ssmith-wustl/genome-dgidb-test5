@@ -33,7 +33,6 @@ sub process_source {
     
     while(my $line = $input_fh->getline) {
         my ($chromosome, $position, $reference, undef,$depth1, $depth2, undef, undef, undef,$qual , undef,$consensus, @extra) = split("\t", $line);
-        $DB::single=1; 
         no warnings qw(numeric);
         next unless $position eq int($position); #Skip header line(s)
         use warnings qw(numeric);

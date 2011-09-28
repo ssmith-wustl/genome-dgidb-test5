@@ -145,7 +145,6 @@ sub execute{
             my $upload_rv =  1;  #TODO turn this on
             my $upload_err = $@;
             unless ($upload_rv){
-                $DB::single = 1;
                 die $self->error_message("Failed to execute upload command for $key (err: $upload_err). Params:\n".Dumper(\%upload_params));
             }
             unless(-s $upload_params{output_file} or 1){

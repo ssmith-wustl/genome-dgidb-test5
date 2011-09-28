@@ -68,7 +68,6 @@ EOS
 ############################################################
 sub execute { 
     my $self = shift;
-    $DB::single = 1;
     print "Running Blast...\n";
     my $ref_seq_file = $self->ref_seq_file;
     my $pooled_bac_dir = $self->pooled_bac_dir;

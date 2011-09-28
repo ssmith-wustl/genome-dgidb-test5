@@ -275,7 +275,6 @@ sub process_file {
                         $call = $pindel_output->getline;
                     } 
                     if($call !~ m/^Chr/) {
-                        $DB::single=1;
                         last;
                     }          
                 }

@@ -499,7 +499,6 @@ sub get_variant_bed_file {
 
 sub snvs_bed {
     my ($self, $ver) = @_;
-    $DB::single=1;
 
     my $dir = $self->variants_directory;
     if($dir =~ /snp_related_metrics/) {

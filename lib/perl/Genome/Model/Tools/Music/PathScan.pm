@@ -136,7 +136,6 @@ EOS
 sub execute
 {
   my $self = shift;
-  $DB::single = 1;
   my $covg_dir = $self->gene_covg_dir;
   my $bam_list = $self->bam_list;
   my $pathway_file = $self->pathway_file;

@@ -67,7 +67,6 @@ EOS
 ################################################################################################
 
 sub execute {                               # replace with real execution logic.
-    $DB::single = 1;
 	my $self = shift;
 	my $project_name = $self->project_name;
 	my $small_indel_list = $self->small_indel_outfile;

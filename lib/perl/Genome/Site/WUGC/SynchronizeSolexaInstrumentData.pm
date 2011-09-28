@@ -49,7 +49,6 @@ sub _update_genome_instrumentdata_solexa {
         qw/ sample_name sample_id subclass_name/
     );
 
-    $DB::single =1;
     for my $property (keys %$direct_properties){
         $new_object->$property($original_object->{$property});
     }

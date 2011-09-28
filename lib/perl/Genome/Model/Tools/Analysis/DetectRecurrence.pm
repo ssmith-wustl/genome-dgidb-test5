@@ -126,7 +126,6 @@ class Genome::Model::Tools::Analysis::DetectRecurrence {
 sub execute 
 {
         my $self=shift;
-        $DB::single = 1;
     
         my @arr_majormodel_hash=();
         my @arr_secmodel_hash=();

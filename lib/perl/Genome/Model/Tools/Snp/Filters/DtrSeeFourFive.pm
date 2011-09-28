@@ -75,7 +75,6 @@ sub help_synopsis {
 sub execute {
     my $self=shift;
     my $file = $self->experimental_metric_model_file;
-    $DB::single=1;
 
     my $type = $self->data_format;
     my $dtr = eval "Genome::Model::Tools::Maq::Metrics::Dtr::$type->create()";
@@ -113,7 +112,6 @@ sub execute {
     my @headers = $dtr->headers; #split(/,\s*/,$header_line);
     for (@headers) { s/\-/MINUS/g; s/\+/PLUS/g; s/\s/SPACE/; };
 
-    $DB::single = 1;
     
     my $keep_handle = new FileHandle;
     my $remove_handle = new FileHandle;
@@ -165,7 +163,6 @@ sub execute {
         }
 
         unless ($decision) {
-            $DB::single=1;
             ($decision) = $fref->(\%data);
             die "failed to get a decision for $line!";
         }

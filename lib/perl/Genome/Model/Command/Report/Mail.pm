@@ -64,7 +64,6 @@ sub create {
     my $self = $class->SUPER::create(@_);
     return unless $self;
 
-$DB::single = 1;
 
     # TODO: move this up
     if (my $build = $self->build) {

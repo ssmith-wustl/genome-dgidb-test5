@@ -66,7 +66,6 @@ EOS
 sub execute { 
     my $self = shift;
     $Storable::eval=1;
-    $DB::single = 1;
     my $verbose = $self->verbose;
     my $dir = $self->assembly_dir || `pwd`;
     chomp $dir;

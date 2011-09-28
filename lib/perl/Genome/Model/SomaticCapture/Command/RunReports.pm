@@ -61,7 +61,6 @@ EOS
 
 sub execute {
     my $self = shift;
-    $DB::single=1;
 
     unless($self->build) {
         $self->error_message('Failed to resolve build.');

@@ -258,7 +258,6 @@ sub repeat_mask{
 
 sub junctions{
     my $self = shift;
-    $DB::single=1;
     my ($junct) = @_;
     $self->status_message("processing $junct");
     my $juncth = IO::File->new($junct);

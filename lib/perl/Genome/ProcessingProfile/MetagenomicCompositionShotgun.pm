@@ -372,7 +372,6 @@ sub _execute_build {
     my @realigned_instrument_data;
     my %metagenomic_instrument_data_to_alignment;
     if ($self->_unaligned_metagenomic_alignment_pp) {
-        $DB::single = 1;
         for my $metagenomic_alignment_build ($build->_metagenomic_alignment_builds){
             for my $alignment_result ($metagenomic_alignment_build->get_alignments){
                 my $instrument_data_id = $alignment_result->instrument_data->id;
@@ -734,7 +733,6 @@ sub get_imported_instrument_data_or_upload_paths {  #TODO not finished, not curr
 }
 
 sub upload_instrument_data_and_unlock {
-    $DB::single=1;
     my ($self, $orig_data_paths_to_fastq_files, $locks_ref) = @_;
     #TODO: Actually use locks.
     my @locks;# = @$locks_ref;

@@ -61,7 +61,6 @@ sub execute {
     my $verbose = $self->verbose;
     $self->error_message("Ace file:$ace_file does not exist!") and return unless(-e $ace_file);
     print "Verifying $ace_file ..\n" if ($verbose >=0);
-    $DB::single = 1;
     # First, determine what dir we should look in
     my $p = __PACKAGE__ . '.pm';
     $p =~ s/::/\//g;

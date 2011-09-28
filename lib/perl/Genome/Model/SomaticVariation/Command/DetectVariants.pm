@@ -69,7 +69,6 @@ sub execute{
     $params{aligned_reads_sample} = $aligned_reads_sample;
     $params{control_aligned_reads_sample} = $control_aligned_reads_sample;
     
-    $DB::single=1;
     my $command = Genome::Model::Tools::DetectVariants2::Dispatcher->create(%params);
     unless ($command){
         die $self->error_message("Couldn't create detect variants dispatcher from params:\n".Data::Dumper::Dumper \%params);
