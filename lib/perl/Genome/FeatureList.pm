@@ -108,6 +108,13 @@ sub create {
         $self->delete;
         return;
     }
+    #set the newly copied file to read only
+    my $result = eval{  
+        chmod 0444, $self->file_path; 
+    };
+    if($@ or !$result){
+        $self->error_message("Could not modify file permissions for: ".$self->file_path);
+    }
 
     return $self; 
 }

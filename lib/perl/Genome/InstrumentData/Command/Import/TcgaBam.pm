@@ -141,6 +141,8 @@ sub execute {
 sub _validate_bam {
     my $self = shift;
 
+    return 1;
+
     my $bam = $self->original_data_path;
     if ( not -s $bam ) {
         $self->error_message('BAM does not exist: '.$bam);
@@ -241,6 +243,20 @@ sub _create_imported_instrument_data {
     }
     my $library = $sample_importer->_library;
 
+    my $description = $self->description || "imported ".$self->import_source_name." bam, tcga name is ".$tcga_name;
+    if($self->no_md5){
+        $description = $description . ", no md5 file was provided with the import.";
+    }
+
+    my %params = (
+        original_data_path => $self->original_data_path,
+        sequencing_platform => "solexa",
+        import_format => "bam",
+        reference_sequence_build => $self->reference_sequence_build,
+        library => $library,
+        description => $description,
+    );
+
     my $target_region;
     unless ($self->target_region eq 'none') {
         $target_region = $self->target_region;
@@ -251,20 +267,12 @@ sub _create_imported_instrument_data {
         }
     }
 
-    my $description = $self->description || "imported ".$self->import_source_name." bam, tcga name is ".$tcga_name;
-    if($self->no_md5){
-        $description = $description . ", no md5 file was provided with the import.";
+    if ( $target_region ) {
+        $params{taget_region_set_name} = $target_region
     }
-    my %params = (
-        original_data_path => $self->original_data_path,
-        sequencing_platform => "solexa",
-        import_format => "bam",
-        reference_sequence_build => $self->reference_sequence_build,
-        library => $library,
-        target_region_set_name => $target_region,
-        description => $description,
-    );
+
     my $import_instrument_data = Genome::InstrumentData::Imported->create(%params);  
+
     unless ($import_instrument_data) {
        $self->error_message('Failed to create imported instrument data for '.$self->original_data_path);
        return;
@@ -515,9 +523,6 @@ sub _create_model_and_request_build {
 
     $self->status_message('Create model and request build');
 
-    my $refseq_build = $self->reference_sequence_build;
-    $self->status_message('Reference build: '.$refseq_build->__display_name__);
-
     my $pp = Genome::ProcessingProfile::ReferenceAlignment->get(2580856);
     if ( not $pp ) {
         $self->error_message('Cannot find ref align processing profile for 2580856 to create model');
@@ -528,10 +533,13 @@ sub _create_model_and_request_build {
     my $sample = $self->_inst_data->sample;
     $self->status_message('Sample: '.$sample->name);
 
+    my $refseq = $self->reference_sequence_build;
+    $self->status_message('Reference build: '.$refseq->__display_name__);
+
     my $model = Genome::Model::ReferenceAlignment->create(
         name => 'TCGA_BAM_PLACE_HOLDER',
         processing_profile => $pp,
-        reference_sequence_build => $refseq_build,
+        reference_sequence_build => $refseq,
         subject_id => $sample->id,
         subject_class_name => $sample->class,
         build_requested => 1,
@@ -543,7 +551,19 @@ sub _create_model_and_request_build {
     }
     $self->_model($model);
 
-    my $name = $sample->name.'.'.$refseq_build->version.'.refalign';
+    my $dbsnp = Genome::Model::ImportedVariationList->dbsnp_build_for_reference($refseq);
+    if ( $dbsnp ) {
+        $self->status_message('dbSNP build: '.$dbsnp->__display_name__);
+        $model->dbsnp_build($dbsnp);
+    }
+
+    my $annotation = Genome::Model::ImportedAnnotation->annotation_build_for_reference($refseq);
+    if ( $annotation ) {
+        $self->status_message('Annotation build: '.$annotation->__display_name__);
+        $model->annotation_reference_build($annotation);
+    }
+
+    my $name = $sample->name.'.'.$refseq->version.'.refalign';
     my $i = 0;
     while ( my $model = Genome::Model::ReferenceAlignment->get(name => $name) ) {
         $name .= '-'.++$i;

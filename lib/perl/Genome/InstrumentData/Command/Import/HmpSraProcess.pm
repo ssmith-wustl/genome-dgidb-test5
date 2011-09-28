@@ -61,12 +61,12 @@ sub execute {
     for my $line (@srrs) {
         my $sample = Genome::Sample->get(sql=>qq/
             select os.*
-            from gsc.organism_sample os 
-            join gsc.sra_item sai on sai.sra_item_type_id=3 and sai.source_entity_type='organism sample' and sai.source_entity_id=to_char(os.organism_sample_id) 
-            join gsc.sra_experiment ex on ex.sra_sample_id=sai.sra_item_id 
-            join gsc.sra_run ru on ru.sra_experiment_id=ex.sra_item_id 
-            join gsc.sra_item rui on rui.sra_item_id=ru.sra_item_id 
-            join gsc.sra_accession ruacc on ruacc.alias=rui.alias  
+            from gsc.organism_sample os
+            join gsc.sra_organism_sample sos on sos.organism_sample_id=os.organism_sample_id
+            join gsc.sra_experiment ex on ex.sra_sample_id=sos.sra_sample_id
+            join gsc.sra_run ru on ru.sra_experiment_id=ex.sra_item_id
+            join gsc.sra_item rui on rui.sra_item_id=ru.sra_item_id
+            join gsc.sra_accession ruacc on ruacc.alias=rui.alias
             where ruacc.accession='$line'
         /);
         unless ($sample) {
@@ -86,8 +86,8 @@ sub execute {
     my $dbh = Genome::DataSource::GMSchema->get_default_handle();
     my ($fc_id, $lane) = $dbh->selectrow_array(qq/select ii.flow_cell_id, ii.lane
     from gsc.organism_sample os 
-    join gsc.sra_item sai on sai.sra_item_type_id=3 and sai.source_entity_type='organism sample' and sai.source_entity_id=to_char(os.organism_sample_id) 
-    join gsc.sra_experiment ex on ex.sra_sample_id=sai.sra_item_id 
+    join gsc.sra_organism_sample sos on sos.organism_sample_id=os.organism_sample_id
+    join gsc.sra_experiment ex on ex.sra_sample_id=sos.sra_sample_id
     join gsc.sra_run ru on ru.sra_experiment_id=ex.sra_item_id 
     join gsc.sra_item rui on rui.sra_item_id=ru.sra_item_id 
     join gsc.sra_accession ruacc on ruacc.alias=rui.alias

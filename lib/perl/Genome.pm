@@ -3,13 +3,27 @@ package Genome;
 use warnings;
 use strict;
 
-our $VERSION = '0.06'; # Genome $VERSION
+our $VERSION = '0.07'; # Genome $VERSION
 
 # software infrastructure
 use UR;
 
+# modules 
+use File::Temp;
+use IO::String;
+
+use Carp;
+use Carp::Heavy;
+
+# the standard namespace declaration for a UR namespace
+UR::Object::Type->define(
+    class_name => 'Genome',
+    is => ['UR::Namespace'],
+    english_name => 'genome',
+);
+
 # local configuration
-use Genome::Site;
+require Genome::Site;
 
 # environmental configuration
 $ENV{GENOME_DB} ||= '/var/lib/genome/db';
@@ -22,14 +36,13 @@ eval {
     require Genome::Search;
 };
 
-# modules 
-use File::Temp;
-use IO::String;
+# this ensures that the search system is updated when certain classes are updated 
+# the search system is optional so it skips this if usage above fails
+if ($INC{"Genome/Search.pm"}) {
+    Genome::Search->register_callbacks('UR::Object');
+}
 
 # account for a perl bug in pre-5.10 by applying a runtime patch to Carp::Heavy
-use Carp;
-use Carp::Heavy;
-
 if ($] < 5.01) {
     no warnings;
     *Carp::caller_info = sub {
@@ -65,22 +78,9 @@ if ($] < 5.01) {
 }
 
 
-# this ensures that the search system is updated when certain classes are updated 
-# the search system is optional so it skips this if usage above fails
-if ($INC{"Genome/Search.pm"}) {
-    Genome::Search->register_callbacks('UR::Object');
-}
-
 # DB::single is set to this value in many places, creating a source-embedded break-point
 # set it to zero in the debugger to turn off the constant stopping...
 $DB::stopper = 1;
-
-# the standard namespace declaration for a UR namespace
-UR::Object::Type->define(
-    class_name => 'Genome',
-    is => ['UR::Namespace'],
-    english_name => 'genome',
-);
 
 # Genome supports several environment variables, found under Genome/Env
 # Any GENOME_* variable which is set but does NOT corresponde to a module found will cause an exit

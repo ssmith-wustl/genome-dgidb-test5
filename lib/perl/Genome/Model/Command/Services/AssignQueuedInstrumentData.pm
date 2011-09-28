@@ -143,6 +143,29 @@ sub help_detail {
 EOS
 }
 
+sub get_organism_taxon {
+    my $sample = shift;
+    my $population = get_population($sample);
+    if ($population){
+        return $population->taxon; 
+    }
+    if(!$sample->taxon_id){
+        return $sample->patient->taxon if $sample->patient;
+    }
+    return $sample->taxon;
+}
+
+sub get_population {
+    my $sample = shift;
+    my $source_type = $sample->source_type;
+    if($source_type && 
+            ($source_type eq 'organism individual' || 
+             $source_type eq 'population group')){
+        return $sample->source;
+    }
+    return;
+}   
+
 sub execute {
     $DB::single = $DB::stopper;
     my $self = shift;
@@ -1274,7 +1297,7 @@ sub add_processing_profiles_to_pses{
                 die $self->error_message;
             }
 
-            my $taxon = $organism_sample->get_organism_taxon;
+            my $taxon = get_organism_taxon($organism_sample);;
 
             unless (defined($taxon)) {
                 $self->error_message('failed to get taxon via Genome::Taxon for id ' . $instrument_data_id);
@@ -1606,7 +1629,6 @@ sub _is_build36_project {
         H_KU => 'BRC',
         H_JG => 'LUC',
 #        H_KZ => 'PRC', #moved to separate method per RT #74107
-        H_LF => 'PNC',
         H_KX => 'MMY',
         H_LJ => 'ALS',
         H_LY => 'ESC',
@@ -1619,6 +1641,7 @@ sub _is_build36_project {
         H_GV => 'AML1', 
         H_JM => 'AML2', 
         H_LC => 'PCGP', 
+        H_LF => 'PNC', #build 37 stuff is coming in now.  Dunno what else to do about it
     );  
 
     my $instrument_data = $self->_instrument_data($pse);

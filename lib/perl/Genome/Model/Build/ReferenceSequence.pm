@@ -36,7 +36,7 @@ class Genome::Model::Build::ReferenceSequence {
             is_mutable => 1,
             is_many => 0,
             is_optional => 1,
-        },      
+        },
 
         # these change with each version
         version => {
@@ -123,7 +123,7 @@ class Genome::Model::Build::ReferenceSequence {
                     return join('/', $data_directory, 'manifest.tsv');
                 }
             ),
-        },   
+        },
 
         # optional to allow builds to indicate that they are derived from another build
         derived_from_id => {
@@ -263,7 +263,7 @@ sub is_derived_from {
 
     # recurse
     $seen->{$self->id} = 1;
-    return $self->derived_from->is_derived_from($build, $seen); 
+    return $self->derived_from->is_derived_from($build, $seen);
 }
 
 sub derived_from_root {
@@ -288,7 +288,7 @@ sub is_compatible_with {
     return if !defined $rsb;
     my $coords_from = $self->coordinates_from || $self;
     my $other_coords_from = $rsb->coordinates_from || $rsb;
-    
+
     return $coords_from->id == $other_coords_from->id;
 }
 
@@ -412,7 +412,7 @@ sub full_consensus_sam_index_path {
     unless (-e $idx_file) {
         my $sam_path = Genome::Model::Tools::Sam->path_for_samtools_version($sam_version);
         my $cmd      = $sam_path.' faidx '.$fa_file;
-        
+
         my $lock = Genome::Sys->lock_resource(
             resource_lock => $data_dir.'/lock_for_faidx',
             max_try       => 2,
@@ -427,7 +427,7 @@ sub full_consensus_sam_index_path {
             input_files  => [$fa_file],
             output_files => [$idx_file],
         );
-        
+
         unless (Genome::Sys->unlock_resource(resource_lock => $lock)) {
             $self->error_message("Failed to unlock resource: $lock");
             return;
@@ -440,7 +440,7 @@ sub full_consensus_sam_index_path {
     return $idx_file if -e $idx_file;
     return;
 }
-        
+
 sub description {
     my $self = shift;
     my $path = $self->data_directory . '/description';
@@ -503,15 +503,15 @@ sub get_sequence_dictionary {
             $self->warning_message("No sequence URI defined on this model!  Using generated default: " . $self->external_url);
             $uri = $self->external_url;
         }
-        my $ref_seq = $self->full_consensus_path('fa'); 
+        my $ref_seq = $self->full_consensus_path('fa');
         my $assembly_name = $self->assembly_name;
-    
+
         # fall back to the build name if the assembly name came up short.
         if (!$assembly_name) {
             $assembly_name = $self->name;
         }
-        
-        my $create_seq_dict_cmd = "java -Xmx4g -XX:MaxPermSize=256m -cp $picard_path/CreateSequenceDictionary.jar net.sf.picard.sam.CreateSequenceDictionary R='$ref_seq' O='$path' URI='$uri' species='$species' genome_assembly='$assembly_name' TRUNCATE_NAMES_AT_WHITESPACE=true";        
+
+        my $create_seq_dict_cmd = "java -Xmx4g -XX:MaxPermSize=256m -cp $picard_path/CreateSequenceDictionary.jar net.sf.picard.sam.CreateSequenceDictionary R='$ref_seq' O='$path' URI='$uri' species='$species' genome_assembly='$assembly_name' TRUNCATE_NAMES_AT_WHITESPACE=true";
 
         my $csd_rv = Genome::Sys->shellcmd(cmd=>$create_seq_dict_cmd);
 
@@ -523,9 +523,9 @@ sub get_sequence_dictionary {
         if ($csd_rv ne 1) {
             $self->error_message("Failed to to create sequence dictionary for $path. Quiting");
             return;
-        } 
-        
-        return $path;    
+        }
+
+        return $path;
 
     }
 
@@ -724,12 +724,12 @@ sub copy_file {
     # rather than the uncompressed.
     my $gzipped_file = $file.".gz";
     if(-s $gzipped_file){
-        $self->status_message("Found a gzipped version of: $file, preparing to zcat this file into place.");        
+        $self->status_message("Found a gzipped version of: $file, preparing to zcat this file into place.");
 
         #zcat command line
         my $zcat_cmd = "zcat ".$gzipped_file." > ".$dest;
         $self->status_message("Begin zcat of ".$file." at ".localtime()."\n");
-        my $cmd = Genome::Sys->shellcmd( 
+        my $cmd = Genome::Sys->shellcmd(
             cmd => $zcat_cmd,
         );
         $self->status_message("Completed zcat of ".$file." at ".localtime()."\n");
@@ -790,11 +790,7 @@ sub verify_or_create_local_cache {
     # create the cache dir, if necessary
     if ( not -d $local_cache_dir ) {
         $self->status_message('Create local cache directory');
-        my $mk_path = File::Path::make_path($local_cache_dir,  { mode => 02775, });
-        if ( not $mk_path or not -d $local_cache_dir ) {
-            $self->error_message("Failed to make local cache directory ($local_cache_dir)");
-            return;
-        }
+        my $mk_path = Genome::Sys->create_directory($local_cache_dir);
     }
 
     # verify files
@@ -802,13 +798,13 @@ sub verify_or_create_local_cache {
     my %files_to_copy_to_local_cache = (
         # file_base_name => is_requried
         'all_sequences.fa' => 1,
-        'all_sequences.fa.fai' => 1, 
+        'all_sequences.fa.fai' => 1,
         'all_sequences.dict' => 0,
     );
     my $dir = $self->data_directory;
     my @files_to_copy;
     my $kb_required = 0;
-    for my $base_name ( keys %files_to_copy_to_local_cache ) { 
+    for my $base_name ( keys %files_to_copy_to_local_cache ) {
         my $file = $dir.'/'.$base_name;
         $self->status_message('File: '.$file);
         my $sz = -s $file;
@@ -840,7 +836,7 @@ sub verify_or_create_local_cache {
             $self->error_message("Cannot copy files to cache directory ($local_cache_dir). The kb required ($kb_required) is greater than the kb available ($kb_available).");
             return;
         }
-        for my $base_name ( @files_to_copy ) { 
+        for my $base_name ( @files_to_copy ) {
             my $file = $dir.'/'.$base_name;
             my $cache_file = $local_cache_dir.'/'.$base_name;
             return if not $self->copy_file($file, $cache_file);
@@ -858,7 +854,7 @@ sub verify_or_create_local_cache {
     }
 
     $self->status_message('Verify or create local cache...OK');
-    
+
     return $local_cache_dir;
 }
 

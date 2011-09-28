@@ -103,22 +103,7 @@ sub alignment_links_directory {
     return shift->root_directory . '/alignment_links';
 }
 
-sub model_comparison_link_directory {
-    return shift->root_directory . '/model_comparison_links';
-}
-
 # data
-
-sub model_data_directory {
-    my $self = shift;
-    if (defined($ENV{'GENOME_MODEL_TESTDIR'}) &&
-        -e $ENV{'GENOME_MODEL_TESTDIR'}
-    ) {
-            return $ENV{'GENOME_MODEL_TESTDIR'};
-    } else {
-            return $self->data_directory .'/model_data';
-    }   
-}
 
 sub alignment_data_directory {
     return shift->data_directory . '/alignment_data';

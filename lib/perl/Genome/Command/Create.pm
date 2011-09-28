@@ -7,6 +7,7 @@ use Genome;
       
 require Carp;
 use Data::Dumper 'Dumper';
+require Lingua::EN::Inflect;
 
 class Genome::Command::Create {
     is => 'Command::V2',
@@ -15,22 +16,24 @@ class Genome::Command::Create {
 };
 
 sub _target_class { Carp::confess('Please use CRUD or implement _target_class in '.$_[0]->class); }
-sub _name_for_objects { Carp::confess('Please use CRUD or implement _name_for_objects in '.$_[0]->class); }
+sub _target_name { Carp::confess('Please use CRUD or implement _target_name in '.$_[0]->class); }
+sub _target_name_pl { return Lingua::EN::Inflect::PL($_[0]->_target_name); }
+sub _target_name_a { return Lingua::EN::Inflect::A($_[0]->_target_name); }
 
 sub sub_command_sort_position { .1 };
 
 sub help_brief {
-    return 'create '.$_[0]->_name_for_objects;
+    return 'create '.$_[0]->_target_name_pl;
 }
 
 sub help_detail {
-    return 'HELP IN PROGRESS';
+    return "This command creates ".$_[0]->_target_name_a.'.';
 }
 
 sub execute {
     my $self = shift;
 
-    $self->status_message('Create '.$self->_name_for_objects);
+    $self->status_message('Create '.$self->_target_name);
 
     my $class = $self->class;
     my @properties = grep { $_->class_name eq $class } $self->__meta__->property_metas;

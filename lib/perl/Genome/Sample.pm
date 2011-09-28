@@ -210,7 +210,6 @@ class Genome::Sample {
             },
             doc => 'Name of the species of the sample source\'s taxonomic category' 
         },
-        # TODO What are these for? What do they represent?
         sub_type => { 
             calculate_from => ['_sub_type1','_sub_type2'], 
             calculate => q|$_sub_type1 or $_sub_type2| 
@@ -227,86 +226,26 @@ class Genome::Sample {
             where => [ attribute_label => 'subtype' ], 
             is_mutable => 1,
         },
-        # TODO These can be removed when project is refactored
-        project_assignments          => { is => 'Genome::Sample::ProjectAssignment', reverse_as => 'sample', is_many => 1 },
-        projects                     => { is => 'Genome::Site::WUGC::Project', via => 'project_assignments', to => 'project', is_many => 1},
     ],
-    has_many => [
+    has_many_optional => [
         models => {
             is => 'Genome::Model',
-            is_optional => 1,
-            is_many => 1,
             reverse_as => 'subject',
             doc => 'Models that use this sample',
         },
-        solexa_lanes  => { 
-            is => 'Genome::InstrumentData::Solexa', 
-            reverse_as => 'sample',
-            doc => 'Instrument data from this sample',
-        },
-        solexa_lane_names => {
-            via => 'solexa_lanes', 
-            to => 'full_name', 
-            doc => 'Names of instrument data from this sample',
-        },
-    ],
-    has_many_optional => [
         libraries => { 
             is => 'Genome::Library', 
-            calculate_from => 'id',
-            calculate => q{ return Genome::Library->get(sample_id => $id) },
+            reverse_as => 'sample',
             doc => 'Libraries that were created from the sample',
         },
-        library_ids => { 
-            is => 'Number',
-            calculate => q| return map { $_->id } $self->libraries |,
-            doc => 'IDs of libraries created from this sample',
-        },
-        library_names => { 
-            via => 'libraries', 
-            to => 'name',
-            doc => 'Names of libraries made from this sample',
-        },
     ],
-    doc         => 'A single specimen of DNA or RNA extracted from some tissue sample',
+    doc => 'A single specimen of DNA or RNA extracted from some tissue sample',
 };
 
 sub __display_name__ {
     my $self = $_[0];
     return $self->name . ($self->patient_common_name ? ' (' . $self->patient_common_name . ' ' . $self->common_name . ')' : '');
 }
-
-sub canonical_model {
-    # TODO: maybe this should use model is_default?
-    my ($self) = @_;
-    my @models = sort { $a->id <=> $b->id } $self->models();
-    return $models[0];
-}
-
-sub get_organism_taxon {
-    #emulates GSC::Organism::Sample->get_organism_taxon to get the "right" taxon
-    my $self = shift;
-    my $population = $self->get_population;
-    if ($population){
-        return $population->taxon; 
-    }
-    if(!$self->taxon_id){
-        return $self->patient->taxon if $self->patient;
-    }
-    return $self->taxon;
-}
-
-sub get_population {
-    #emulates GSC::Organism::Sample->get_population
-    my $self = shift;
-    my $source_type = $self->source_type;
-    if($source_type && 
-            ($source_type eq 'organism individual' || 
-             $source_type eq 'population group')){
-        return $self->source;
-    }
-    return;
-}   
 
 sub check_genotype_data {
     my $self = shift;

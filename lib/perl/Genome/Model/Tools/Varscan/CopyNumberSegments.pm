@@ -300,7 +300,7 @@ p.segment.smoothed.CNA.object <- segments.p(segment.smoothed.CNA.object)
 
 ## Allow multiple runs for multiple SDs ##
 my $this_undo_sd = $undo_sd;
-while($this_undo_sd >= 0)
+while($this_undo_sd > 0.5)
 {
 	$this_undo_sd -= 0.5;
 	print SCRIPT qq|

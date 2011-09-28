@@ -35,14 +35,17 @@ ok(!@err, 'no errors in created group') or diag(map($_->__display_name__, @err))
 is($model_group->name, 'Testsuite_ModelGroup', 'name');
 ok($model_group->convergence_model, 'Auto-generated associated Convergence model'); 
 is_deeply([$model_group->models], [$test_model], 'group has test model');
+is($model_group->model_count, 1, 'group model count');
 my $project = $model_group->project;
 ok($project, 'create a project w/ model group'); 
 is($project->id, $model_group->uuid, 'project id matches model group uuid');
 is($project->name, $model_group->name, 'project name matches model group name');
 my $user_email = Genome::Sys::User->get(username => Genome::Sys->username)->email;
 is($model_group->user_name, $user_email, "Model username matches user email address");
-is($project->creator->email, $model_group->user_name, 'project creator email matches model group user name');
-is_deeply([$project->models], [$model_group->models], 'project models match model group models');
+my $creator = $project->parts(role => 'creator')->entity;
+is($creator->email, $model_group->user_name, 'project creator email matches model group user name');
+my @project_models = sort { $a->id <=> $b->id } map { $_->entity } $project->parts('entity_class_name like' => 'Genome::Model%');
+is_deeply(\@project_models, [$model_group->models], 'project models match model group models');
 
 # failed to create again
 ok(!Genome::ModelGroup->create(name => 'Testsuite_ModelGroup'), 'failed to create model group with the same name');
@@ -82,7 +85,8 @@ $add_command->dump_status_messages(1);
 ok($add_command, 'created member add command');
 ok($add_command->execute(), 'executed member add command');
 is_deeply([$model_group->models], [$test_model_two, $test_model], 'group has both models');
-is_deeply([$project->models], [$model_group->models], 'after add model - project models match model group models');
+@project_models = sort { $a->id <=> $b->id } map { $_->entity } $project->parts('entity_class_name like' => 'Genome::Model%');
+is_deeply(\@project_models, [$model_group->models], 'after add model - project models match model group models');
 
 # remove models
 ok(!$model_group->unassign_models(), 'Cannot unassign zero models!');
@@ -94,7 +98,8 @@ $remove_command->dump_status_messages(1);
 ok($remove_command, 'created member remove command');
 ok($remove_command->execute(), 'executed member remove command');
 is_deeply([$model_group->models], [$test_model_two], 'group has test model two'); 
-is_deeply([$project->models], [$model_group->models], 'after remove model - project models match model group models');
+@project_models = sort { $a->id <=> $b->id } map { $_->entity } $project->parts('entity_class_name like' => 'Genome::Model%');
+is_deeply(\@project_models, [$model_group->models], 'after remove model - project models match model group models');
 
 # delete
 my $delete_command = Genome::ModelGroup::Command::Delete->create(

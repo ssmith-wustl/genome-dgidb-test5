@@ -55,6 +55,8 @@ ok($model, 'created model');
 like($model->name, qr/^TCGA-AB-2804-03B-01W-0728-08.36.refalign(\-\d+)?$/, 'model name');
 is($model->build_requested, 1, 'requested build');
 is_deeply([$model->instrument_data], [$i_d], 'model inst data');
+ok($model->dbsnp_build, 'dbsnp build');
+ok($model->annotation_reference_build, 'annotation reference');
 
 done_testing();
 exit;

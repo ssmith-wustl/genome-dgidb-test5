@@ -276,7 +276,7 @@ sub merge_headers {
             }
         }
     }
-    my $info = "##INFO=<ID=VC,Number=.,Type=String,Description=\"Variant caller\">";
+    my $info = "<ID=VC,Number=.,Type=String,Description=\"Variant caller\">";
     my $key = "VC,Number";
     $header{INFO}{$key} = $info;
     

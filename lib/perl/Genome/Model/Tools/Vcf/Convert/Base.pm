@@ -274,7 +274,9 @@ sub convert_file {
     while(my $line = $self->get_record($input_fh)) {
         chomp $line;
         my $output_line = $self->parse_line($line);
-        $self->write_line($output_line);
+        if ($output_line) {
+            $self->write_line($output_line);
+        }
     }
 
     return 1;

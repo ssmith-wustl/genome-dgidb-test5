@@ -207,7 +207,25 @@ sub load_snp_calls
 			my $ref = my $var = "";
 			my $indel_type = my $indel_size = "";
 
-			if($lineContents[2] =~ /[0-9]/ && $lineContents[2] ne "0")
+			if(substr($FileName, length($FileName) - 3, 3) eq "bed")
+			{
+				$chr_start = $lineContents[1];
+				$chr_stop = $lineContents[2];
+				($ref, $var) = split(/\//, $lineContents[3]);
+				$ref =~ s/\*/\-/g;
+				$var =~ s/\*/\-/g;
+				if($ref eq '-')
+				{
+					$chr_stop++;
+				}
+				else
+				{
+					$chr_start++;
+				}
+				#print "$line\n";
+				#print join("\t", $chrom, $chr_start, $chr_stop, $allele1, $allele2) . "\n\n";
+			}
+			elsif($lineContents[2] =~ /[0-9]/ && $lineContents[2] ne "0")
 			{
 				$chr_stop = $lineContents[2];
 				$ref = $lineContents[3];
