@@ -90,8 +90,4 @@ sub execute {
     return 1;
 }
 
-sub joinx_path {
-    return "/gscuser/rlong/git/joinx/build/bin/joinx";
-}
-
 1;
