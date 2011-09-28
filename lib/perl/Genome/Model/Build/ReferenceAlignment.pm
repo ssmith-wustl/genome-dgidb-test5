@@ -395,9 +395,14 @@ sub get_alignment_bams {
     return map { $_->alignment_bam_file_paths } $self->get_alignments;
 }
 
-sub get_merged_vcf {
+sub get_indels_vcf {
     my $self = shift;
-    return $self->variants_directory . "/merged.vcf";
+    return $self->variants_directory . "/indels.vcf";
+}
+
+sub get_snvs_vcf {
+    my $self = shift;
+    return $self->variants_directory . "/snvs.vcf";
 }
 
 sub calculate_estimated_kb_usage {
