@@ -172,8 +172,6 @@ sub execute {
     $contig_fh->close;
     $review_fh->close;
 
-=cut
-
     #create reference sequence using new contigs (define new reference and track new reference build)
     my $ref_seq_build_id = $self->reference_sequence_build_id;
     my $ref_seq_build = Genome::Model::Build->get($ref_seq_build_id);
@@ -254,7 +252,6 @@ sub execute {
     #alert user to run builds for these copied models
     print "To start alignments against the new reference sequence which contains the indel contigs, please run this command from genome stable:\n\ngenome model build start $new_tumor_model_id $new_normal_model_id\n\n";
 
-=cut
     return 1;
 
 }
