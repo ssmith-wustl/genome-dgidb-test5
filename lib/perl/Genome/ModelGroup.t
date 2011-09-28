@@ -42,7 +42,8 @@ is($project->id, $model_group->uuid, 'project id matches model group uuid');
 is($project->name, $model_group->name, 'project name matches model group name');
 my $user_email = Genome::Sys::User->get(username => Genome::Sys->username)->email;
 is($model_group->user_name, $user_email, "Model username matches user email address");
-is($project->creator->email, $model_group->user_name, 'project creator email matches model group user name');
+my $creator = $project->parts(role => 'creator')->entity;
+is($creator->email, $model_group->user_name, 'project creator email matches model group user name');
 my @project_models = sort { $a->id <=> $b->id } map { $_->entity } $project->parts('entity_class_name like' => 'Genome::Model%');
 is_deeply(\@project_models, [$model_group->models], 'project models match model group models');
 

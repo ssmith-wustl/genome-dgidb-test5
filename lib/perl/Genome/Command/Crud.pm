@@ -52,6 +52,12 @@ sub init_sub_commands {
     $config{target_name_pl_ub} = $config{target_name_pl};
     $config{target_name_pl_ub} =~ s/ /_/;
 
+    # Main tree command
+    if ( not $class->_build_main_tree_class(%config) ) {
+        Carp::confess('Failed to create main tree class for '.$config{namespace});
+    }
+
+    # Sub commands
     my @namespace_sub_command_names = map {
         s/$config{namespace}:://; $_ = lc($_); $_;
     } $config{namespace}->sub_command_classes;
@@ -96,6 +102,20 @@ sub init_sub_commands {
     no strict;
     *{ $config{namespace}.'::sub_command_classes' } = sub{ return @sub_command_classes; };
     
+    return 1;
+}
+
+sub _build_main_tree_class {
+    my ($class, %config) = @_;
+
+    my $meta = eval{ $config{namespace}->__meta__; };
+
+    UR::Object::Type->define(
+        class_name => $config{namespace},
+        is => 'Command::Tree',
+        doc => 'work with '.$config{target_name_pl},
+    );
+
     return 1;
 }
 

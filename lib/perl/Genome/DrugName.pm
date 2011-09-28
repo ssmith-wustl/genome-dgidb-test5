@@ -37,4 +37,9 @@ class Genome::DrugName {
     ],
 };
 
+sub __display_name__ {
+    my $self = shift;
+    return $self->name . '(' . $self->source_db_name . ' ' . $self->source_db_version . ')';
+}
+
 1;

@@ -16,14 +16,6 @@ class Genome::Project {
             is => 'Text',
             doc => 'Name of the project',
         },
-        creator => {
-            is => 'Genome::Sys::User',
-            via => 'parts',
-            to => 'entity',
-            where => [ 'entity_class_name' => 'Genome::Sys::User', role => 'creator', ],
-            is_mutable => 1,
-            is_many => 0,
-        },
         user_ids => {
             is => 'Genome::Sys::User',
             via => 'parts',
@@ -64,11 +56,29 @@ class Genome::Project {
 
 sub create {
     my $class = shift;
+    
     my $self = eval { $class->SUPER::create(@_) };
     if ($@ or not $self) {
-        $class->status_message("Could not create new object of type $class!" .
+        $class->error_message("Could not create new object of type $class!" .
             ($@ ? " Reason: $@" : ""));
+        return;
     }
+
+    # Set creator
+    my $user_name = Genome::Sys->username;
+    my $creator = Genome::Sys::User->get(username => $user_name);
+    if ( not $creator ) {
+        $self->error_message("Failed to create project, could not find user $user_name");
+        $self->delete;
+        return;
+    }
+
+    if ( not $self->add_part(entity => $creator, role => 'creator') ) {
+        $self->error_message("Failed to add creater '$user_name' to project");
+        $self->delete;
+        return;
+    }
+
     return $self;
 }
 

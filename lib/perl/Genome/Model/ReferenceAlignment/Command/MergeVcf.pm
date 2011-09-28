@@ -37,21 +37,15 @@ sub execute {
     my $self = shift;
 
     my $output_file = $self->output_file;
-    my $output_list = $self->output_list_file || $self->output_file.".list";
+    my @output_list;
+    my @sample_list;
     if(-e $output_file){
         die $self->error_message("Output file already exists at: ".$output_file);
     }
-    if(-e $output_list){
-        die $self->error_message("Output list file already exists at: ".$output_list);
-    }
-
     my @mg = $self->model_group;
     my @input_vcfs; 
 
     my %inputs;
-
-    my $list_fh = Genome::Sys->open_file_for_writing($output_list);
-
   
     #go through each model group and each model, pulling latest builds, checking for vcfs, and aggregating paths to them
     for my $mg (@mg) {
@@ -73,25 +67,25 @@ sub execute {
                     $self->status_message("Not including model: ".$model->id." as it had no merged vcf.");
                     next;
                 }
-                $inputs{$sample} = $build->get_merged_vcf.".gz";
+                push @output_list, $build->get_merged_vcf.".gz";
+                
             } else {
-                $inputs{$sample} = $build->get_merged_vcf;
+                push @output_list, $build->get_merged_vcf;
             }
 
-            print $list_fh $inputs{$sample}."\t".$sample."\t".$build->id."\n";
+            push @sample_list, $sample."\t".$build->id;
         }
     }
 
-    $list_fh->close;
-
     my $gzip = $self->use_gzipped_vcfs || 0;
 
-    my $join_cmd = Genome::Model::Tools::Vcf::MultiSampleJoinVcf->create(
+    my $join_cmd = Genome::Model::Tools::Joinx::VcfMerge->create(
         output_file => $output_file,
-        vcf_list => $output_list,
-        intersection => 0,
-        use_gzip_files => $gzip,
+        input_files => \@output_list,
+        use_bgzip => $gzip,
+        joinx_bin_path => "/gscmnt/ams1158/info/pindel/joinx/joinx",
     );
+
     unless($join_cmd->execute){
         die $self->error_message("Could not execute MultiSampleJoinVcf command!");
     }
