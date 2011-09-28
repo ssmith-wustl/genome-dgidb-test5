@@ -37,7 +37,6 @@ class Genome::Model::Tools::Annotate::ChromosomeRegions {
 };
 
 sub execute {
-    $DB::single = 1;
     my $self = shift;
 
     my ($basename,$dirname,$suffix) = File::Basename::fileparse($self->bed_file,qw/.bed/);

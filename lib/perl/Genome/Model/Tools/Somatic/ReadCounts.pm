@@ -88,7 +88,6 @@ sub execute {
     my $min_mapping_quality = $self->minimum_mapping_quality;
     my $normal_bam_command =  "bam-readcount -q $min_mapping_quality -f " .  $self->reference_sequence . " -l $readcount_regions_file " . $self->normal_bam;
     my $tumor_bam_command =  "bam-readcount -q $min_mapping_quality -f " .  $self->reference_sequence . " -l $readcount_regions_file " . $self->tumor_bam;
-    $DB::single=1;
     my @normal_lines = `$normal_bam_command`;
     my @tumor_lines  = `$tumor_bam_command`;
     my %hash_of_arrays;
@@ -111,7 +110,6 @@ sub make_excel_friendly_output_sheet {
 
         for my $flowcell_id(sort keys %hash_of_arrays) {
             if(my ($line1, $line2) = grep( /$chrom\t$pos/, @{$hash_of_arrays{$flowcell_id}})) {
-                $DB::single=1;
                 my ($stats_for_var1) = ($line1 =~ m/($var\S+)/);
                 my ($stats_for_ref1) = ($line1 =~ m/($ref\S+)/);
                 my ($base_var1, $count_var1, ) = split /:/, $stats_for_var1;

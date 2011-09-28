@@ -39,7 +39,6 @@ sub execute {
     my $self = shift;
     my $project_file = $self->project_file;
     
-    $DB::single = 1;
 
     my $mr = Genome::Model::Tools::ManualReview::MRGui->new(project_file => $project_file);    
 

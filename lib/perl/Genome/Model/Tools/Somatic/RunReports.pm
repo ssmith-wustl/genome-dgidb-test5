@@ -65,7 +65,6 @@ EOS
 
 sub execute {
     my $self = shift;
-    $DB::single=1;
 
     if (($self->skip_if_output_present)&&(-s $self->variant_report_output)&&(-s $self->file_summary_report_output)) {
         $self->status_message("Skipping execution: Output is already present and skip_if_output_present is set to true");

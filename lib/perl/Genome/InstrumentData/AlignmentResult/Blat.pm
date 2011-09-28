@@ -73,7 +73,6 @@ sub _run_aligner {
 
         my $align_cmd = $blat_path . sprintf(' %s %s %s %s',
             $ref_path, $cur_input_fa, $aligner_params, $tmp_blastn_file);
-$DB::single=1;
         Genome::Sys->shellcmd(
             cmd             => $align_cmd,
             input_files     => [ $ref_path, $cur_input_fa ],

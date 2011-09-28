@@ -48,7 +48,6 @@ class Genome::Model::Tools::Validation::RunVarscanValidation {
 
 sub execute {
     my $self=shift;
-    $DB::single = 1;
 
     #we use the builds to grab the bams
     my $normal_build = Genome::Model::Build->get($self->normal_build);

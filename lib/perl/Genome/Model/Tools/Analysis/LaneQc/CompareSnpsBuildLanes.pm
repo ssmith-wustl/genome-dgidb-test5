@@ -34,7 +34,6 @@ HELP
 ###################
 sub execute {
     my $self=shift;
-    $DB::single = 1;
     my $build_id = "";
     my $dir = $self->analysis_dir;
     my $user = getlogin || getpwuid($<); #get current user name

@@ -38,7 +38,6 @@ EOS
 }
 
 sub execute {                               # replace with real execution logic.
-    $DB::single=1;
     my $self = shift;
     my ($bed_fh, $bed_path);
     my $input_fh = Genome::Sys->open_file_for_reading($self->variant_file);

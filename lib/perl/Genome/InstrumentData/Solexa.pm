@@ -436,7 +436,6 @@ sub dump_sanger_fastq_files {
 
     if (defined $self->bam_path && -s $self->bam_path) {
        $self->status_message("Now using a bam instead"); 
-        $DB::single = 1;
        return $self->dump_fastqs_from_bam(@_);
     }
 

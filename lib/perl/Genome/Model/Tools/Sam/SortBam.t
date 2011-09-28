@@ -26,7 +26,6 @@ my $cmd_1 = Genome::Model::Tools::Sam::SortBam->create(file_name=>$input,
 ok($cmd_1, "created command");
 ok($cmd_1->execute, "executed");
 ok(-s $out_file->filename, "output file is nonzero");
-$DB::single = 1;
 
 
 print "done\n";

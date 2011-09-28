@@ -418,7 +418,6 @@ sub normalize_indel_location {
         my $faidx_cmd = "$sam_default faidx $reference $chr:$array_start-$base_before_event";
         my $sequence = `$faidx_cmd | grep -v \">\"`;
         $sequence =~ s/\n//g;
-        $DB::single=1;
 
 
         my $prev_base_array_idx = $base_before_event  - $array_start; 

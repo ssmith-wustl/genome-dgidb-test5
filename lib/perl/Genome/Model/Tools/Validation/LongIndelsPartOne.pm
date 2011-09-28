@@ -224,7 +224,6 @@ sub execute {
     );
     $normal_copy->dump_status_messages(1);
     $normal_copy->execute or die "copy failed";
-    $DB::single = 1;
     my $new_normal_model = $normal_copy->_new_model;
     my $new_normal_model_id = $new_normal_model->id;
 

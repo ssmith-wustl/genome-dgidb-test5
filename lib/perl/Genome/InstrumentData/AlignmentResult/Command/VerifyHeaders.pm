@@ -37,7 +37,6 @@ EOS
 sub execute {
     my $self = shift;
 
-    $DB::single = 1;
 
     my $spec = $self->alignment_spec;
     my @p = eval $spec;

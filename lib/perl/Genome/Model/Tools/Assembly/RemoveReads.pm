@@ -51,7 +51,6 @@ EOS
 sub execute
 {
     my $self = shift;
-    $DB::single = 1;
     my $ace_file = $self->ace_file;
     my $contig_name = $self->contig;
     my $read_list = $self->read_list;

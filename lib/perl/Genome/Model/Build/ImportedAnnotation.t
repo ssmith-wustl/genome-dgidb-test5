@@ -35,7 +35,6 @@ my $ann_model = Genome::Model::ImportedAnnotation->create(
 );
 ok($ann_model, "created annotation model");
 
-$DB::single = 1;
 my $abuild = Genome::Model::Build::ImportedAnnotation->create(
     model               => $ann_model,
     data_directory      => $data_dir,

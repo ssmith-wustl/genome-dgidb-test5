@@ -31,7 +31,6 @@ class Genome::Model::Msi::Command::WriteChangesToBuild {
 sub execute {
     my $self = shift;
     
-    $DB::single = 1;
 
     my $assembly_build_id = $self->assembly_build_id;
     unless ($assembly_build_id) {

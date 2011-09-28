@@ -304,7 +304,6 @@ sub execute {
         {
             $err->('on_warning parameter value "' . $self->on_warning . '" not supported.');
         }
-        $DB::single=1;
        
 
         $self->_execute_try(\@news);

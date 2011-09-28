@@ -32,7 +32,6 @@ class Genome::Model::Tools::Nimblegen::CalculateDesignTargetSpace {
 
 sub execute {
     my $self=shift;
-    $DB::single = 1;
 
     my $reference_index = $self->reference_index;
 

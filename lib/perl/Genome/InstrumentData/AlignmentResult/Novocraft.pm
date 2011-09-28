@@ -50,7 +50,6 @@ sub _run_aligner {
     }
     
     # Format command
-    $DB::single = 1;
     my $cmdline = sprintf('%s %s -d %s -f %s -o SAM 1>> %s 2>> %s',
         $path_to_novoalign,
         $aligner_params,
@@ -59,7 +58,6 @@ sub _run_aligner {
         $novocraft_output,
         $log_file
     );
-    $DB::single = 1;
     
     # Execute alignment command
     Genome::Sys->shellcmd(
@@ -69,7 +67,6 @@ sub _run_aligner {
         skip_if_output_is_present   => 0,
     );
     
-    $DB::single = 1;
     # Run raw output through SamToBam in order to fix mates.
     my $intermediate_bam_file = $self->temp_scratch_directory . "/all_sequences_with_header.bam";
     my $sam_to_bam_object = Genome::Model::Tools::Sam::SamToBam->create(
@@ -100,7 +97,6 @@ sub _strip_header {
         $self->error_message("Error opening novocraft output file: $novocraft_output for writing!");
         die;
     }
-    $DB::single = 1;
     my $output_file_fh = IO::File->new(">>$output_file");
     unless ( $output_file_fh ) {
             $self->error_message("Error opening output sam file: $output_file for writing!");
@@ -108,7 +104,6 @@ sub _strip_header {
     }
     
     $self->status_message("Removing Novocraft generated header from SAM file.");
-    $DB::single = 1;
     while (<$novocraft_output_fh>) {
             #write out the aligned map, excluding the default header- all lines starting with @.
             my $first_char = substr($_,0,1);

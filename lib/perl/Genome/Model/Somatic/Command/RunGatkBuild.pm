@@ -32,7 +32,6 @@ class Genome::Model::Somatic::Command::RunGatkBuild {
 
 sub execute {
     my $self=shift;
-    $DB::single = 1;
     my $force = $self->force;
     #check the passed directory
     my $dir = $self->analysis_dir;

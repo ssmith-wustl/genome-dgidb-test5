@@ -72,7 +72,6 @@ sub create {
 sub execute {
     my $self = shift;
 
-    $DB::single=1;
 
     unless(defined $self->pooled_assembly) {
         $self->error_message("Could not get a model for pooled assembly id: " . $self->from_assembly);

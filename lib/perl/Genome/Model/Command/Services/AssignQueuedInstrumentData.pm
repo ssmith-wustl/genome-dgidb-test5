@@ -1629,7 +1629,6 @@ sub _is_build36_project {
         H_KU => 'BRC',
         H_JG => 'LUC',
 #        H_KZ => 'PRC', #moved to separate method per RT #74107
-        H_LF => 'PNC',
         H_KX => 'MMY',
         H_LJ => 'ALS',
         H_LY => 'ESC',
@@ -1642,6 +1641,7 @@ sub _is_build36_project {
         H_GV => 'AML1', 
         H_JM => 'AML2', 
         H_LC => 'PCGP', 
+        H_LF => 'PNC', #build 37 stuff is coming in now.  Dunno what else to do about it
     );  
 
     my $instrument_data = $self->_instrument_data($pse);

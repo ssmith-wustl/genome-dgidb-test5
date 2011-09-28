@@ -41,7 +41,6 @@ class Genome::Model::Tools::Assembly::CreateMergeList {
 sub execute {
     my $self = shift;
     
-    $DB::single=1;
     my $stats_files = $self->stats_files;
     my @stats_files = split (/,/,$stats_files);
     my $merge_list = $self->merge_list;

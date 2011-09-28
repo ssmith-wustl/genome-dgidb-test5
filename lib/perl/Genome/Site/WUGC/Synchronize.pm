@@ -91,7 +91,6 @@ sub generate_detailed_report {
 # Writes report string to a file
 sub write_report_file {
     my ($self, $report_string) = @_;
-    $DB::single = 1;
     my $fh = IO::File->new($self->report_file, 'w');
     if ($fh) {
         $fh->print($report_string);

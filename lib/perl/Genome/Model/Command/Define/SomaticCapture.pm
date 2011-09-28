@@ -81,7 +81,6 @@ sub type_specific_parameters_for_create {
 sub execute {
     my $self = shift;
 
-    $DB::single=1;
 #    $self->SUPER::execute(@_) or return;
 
     unless(defined $self->normal_model) {

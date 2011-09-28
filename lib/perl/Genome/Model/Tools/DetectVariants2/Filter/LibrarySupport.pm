@@ -44,7 +44,6 @@ sub _filter_variants {
     # regardless of position, etc.
 
     my ($self) = @_;
-    $DB::single=1;
 
     # This should be a file from sniper only
     my $input_fh = Genome::Sys->open_file_for_reading($self->input_directory . "/indels.hq");

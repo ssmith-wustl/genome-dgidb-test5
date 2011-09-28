@@ -32,7 +32,6 @@ sub help_detail {
 
 sub execute {
     my $self = shift;
-    $DB::single=1;
     my $rlibrary = "SMG_test.R";
 
     #Parse input

@@ -69,7 +69,6 @@ EOS
 
 sub execute {
     my $self = shift;
-    $DB::single=1;
     my $normal_bam = $self->normal_bam;
     my $tumor_bam = $self->tumor_bam;
     if($self->normal_build && $self->tumor_build) { 

@@ -42,7 +42,6 @@ class Genome::InstrumentData::Command::PostProcessAndImport{
 
 sub execute {
     my $self = shift;
-    $DB::single = 1;
     my $instrument_data = $self->instrument_data;
     my $lane = $instrument_data->lane;
     my $instrument_data_id = $instrument_data->id;
@@ -250,7 +249,6 @@ sub execute {
         }
 
         $self->status_message("committing newly created imported instrument data");
-        $DB::single = 1;
         $self->status_message("UR_DBI_NO_COMMIT: ".$ENV{UR_DBI_NO_COMMIT});
         UR::Context->commit(); # warning: most code should NEVER do this in a pipeline
 

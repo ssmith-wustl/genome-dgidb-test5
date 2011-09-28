@@ -81,12 +81,10 @@ my $instrument_data = generate_fake_instrument_data();
 #test_alignment(generate_shortcut_data => 1, instrument_data => $instrument_data);
 
 test_shortcutting(instrument_data => $instrument_data);
-$DB::single=1;
 test_alignment(validate_against_shortcut => 1, instrument_data=>$instrument_data, test_name => 'validate_shortcut_data');
 # cleanup locks after testing alignment
 $FAKE_INSTRUMENT_DATA_ID--;
 $instrument_data = generate_fake_instrument_data();
-$DB::single=1;
 #test_alignment(force_fragment => 1, instrument_data=>$instrument_data); # TODO not implemented
 
 sub test_alignment {
@@ -112,7 +110,6 @@ sub test_alignment {
 
     ok($alignment, "Created Alignment");
     my $dir = $alignment->alignment_directory;
-    $DB::single = 1;
     ok($dir, "alignments found/generated");
     ok(-d $dir, "result is a real directory");
     ok(-s $dir . "/all_sequences.bam", "result has a bam file");

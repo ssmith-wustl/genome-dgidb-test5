@@ -105,7 +105,6 @@ sub type_specific_parameters_for_create {
 
 sub execute {
     my $self = shift;
-    $DB::single = 1;
 
     $self->normal_model($self->_resolve_param('normal_model'));
     unless(defined $self->normal_model) {

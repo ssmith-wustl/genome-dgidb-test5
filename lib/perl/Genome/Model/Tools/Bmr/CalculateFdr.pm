@@ -26,7 +26,6 @@ sub help_detail {
 
 sub execute {
   my $self = shift;
-  $DB::single=1;
   my $rlibrary = "SMG_test.R";
 
   my $work_dir = $self->working_dir;

@@ -55,7 +55,6 @@ sub create {
 sub execute {
     my $self = shift;
 
-    $DB::single=1;
 
     unless(defined $self->input_assembly) {
         $self->error_message("Could not get a model for input assembly id: " . $self->msi_assembly);

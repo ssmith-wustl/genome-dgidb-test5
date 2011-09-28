@@ -202,7 +202,6 @@ EOS
 
 sub execute {
     my $self = shift;
-    $DB::single = 1;
 
     my %base_complement;
     $base_complement{'A'} = 'T';

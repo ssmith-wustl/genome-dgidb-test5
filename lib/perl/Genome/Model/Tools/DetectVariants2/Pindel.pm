@@ -79,16 +79,16 @@ sub _detect_variants {
         $self->error_message(@errors);
         die "Errors validating workflow\n";
     }
-    my $refbuild = Genome::Model::Build::ReferenceSequence->get($self->reference_build_id);
-    my $chrom_list = $refbuild->chromosome_array_ref;
+
+    my @chrom_list = $self->default_chromosomes;
 
     # Collect and set input parameters
-    $input{chromosome_list}=$chrom_list;
-    $input{reference_build_id}=$refbuild_id;
-    $input{tumor_bam}=$self->aligned_reads_input;
-    $input{normal_bam}=$self->control_aligned_reads_input if defined $self->control_aligned_reads_input;
-    $input{output_directory} = $self->output_directory;#$self->_temp_staging_directory;
-    $input{version}=$self->version;
+    $input{chromosome_list} = \@chrom_list;
+    $input{reference_build_id} = $refbuild_id;
+    $input{tumor_bam} = $self->aligned_reads_input;
+    $input{normal_bam} = $self->control_aligned_reads_input if defined $self->control_aligned_reads_input;
+    $input{output_directory}  =  $self->output_directory;#$self->_temp_staging_directory;
+    $input{version} = $self->version;
     
     $self->_dump_workflow($workflow);
     $workflow->log_dir($self->output_directory);
@@ -129,11 +129,9 @@ sub _create_temp_directories {
 
 sub _generate_standard_files {
     my $self = shift;
-    my $refbuild = Genome::Model::Build::ReferenceSequence->get($self->reference_build_id);
-    my $chrom_list = $refbuild->chromosome_array_ref;
     my $staging_dir = $self->_temp_staging_directory;
     my $output_dir  = $self->output_directory;
-    my @chrom_list = @{$chrom_list};
+    my @chrom_list = $self->default_chromosomes;
     my $test_chrom = $chrom_list[0];
     my $raw_output_file = $output_dir."/indels.hq";
     my @raw_inputs = map { $output_dir."/".$_."/indels.hq" } @chrom_list;
@@ -170,6 +168,28 @@ sub has_version {
     }
 
     return 0;
+}
+
+sub default_chromosomes {
+    my $self = shift;
+    my $refbuild = Genome::Model::Build::ReferenceSequence->get($self->reference_build_id);
+    die unless $refbuild;
+    my $chromosome_array_ref = $refbuild->chromosome_array_ref;
+    my @chromosome_list = sort @$chromosome_array_ref;
+    return @chromosome_list;
+}
+
+sub default_chromosomes_as_string {
+    return join(',', $_[0]->default_chromosomes);
+}
+
+sub params_for_result {
+    my $self = shift;
+    my ($params) = $self->SUPER::params_for_result;
+
+    $params->{chromosome_list} = $self->default_chromosomes_as_string;
+
+    return $params;
 }
 
 1;

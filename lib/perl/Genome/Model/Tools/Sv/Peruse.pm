@@ -63,7 +63,6 @@ class Genome::Model::Tools::Sv::Peruse {
 
 sub execute {
     my $self=shift;
-    $DB::single = 1; 
 
     my @types = map { uc $_ } split /,/, $self->types;
     my $allowed_types = $self->possible_BD_type;

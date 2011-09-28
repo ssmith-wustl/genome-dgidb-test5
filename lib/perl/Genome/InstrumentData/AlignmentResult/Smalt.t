@@ -64,7 +64,6 @@ eval "use $alignment_result_class_name";
 my $reference_model = Genome::Model::ImportedReferenceSequence->get(name => 'TEST-human');
 ok($reference_model, "got reference model");
 
-$DB::single = 1;
 my $reference_build = $reference_model->build_by_version('1');
 ok($reference_build, "got reference build");
 
@@ -191,7 +190,6 @@ sub test_shortcutting {
     # once to find old data
     my $adir = $alignment->alignment_directory;
     my @list = <$adir/*>;
-$DB::single=1;
     ok($alignment, "Created Alignment");
     my $dir = $alignment->alignment_directory;
     ok($dir, "alignments found/generated");

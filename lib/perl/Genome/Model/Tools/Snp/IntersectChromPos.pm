@@ -73,7 +73,6 @@ sub execute {
     my ($chr1, $pos1, $ref2, $genotype2) = split ($self->delimiter1, $line1);
 
     my ($prev_chrom1, $prev_chrom2); 
-    $DB::single=1;
     while(defined $line1 && defined $line2) {
         if($chr1 eq $chr2) {
             if ($pos1 < $pos2) {

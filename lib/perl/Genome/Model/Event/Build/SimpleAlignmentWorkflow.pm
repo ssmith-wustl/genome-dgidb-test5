@@ -26,7 +26,6 @@ EOS
 
 sub execute {
     my $self = shift;
-    $DB::single=1;
 
     $self->dump_status_messages(1);
     $self->dump_error_messages(1);

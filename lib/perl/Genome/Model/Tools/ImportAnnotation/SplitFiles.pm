@@ -196,7 +196,6 @@ sub split_transcripts
 
     my $fh = IO::File->new( $self->workdir . "/transcripts.csv" );
     my $csv = Text::CSV_XS->new( { sep_char => "\t" } );
-    $DB::single = 1;
     while (<$fh>)
     {
 

@@ -60,7 +60,6 @@ sub get_official_validation_for_build {
         if (($validation->model_id == $model->genome_model_id)&&($validation->validation_type eq 'Official')) {
             # There should only be one official validation
             if ($official_validation) {
-                $DB::single = 1;
                 $self->error_message("More than one 'Official' validation found for model_id " . $build->model_id);
                 return;
             } else {

@@ -41,7 +41,6 @@ sub help_detail {
 
 sub execute {
     my $self = shift;
-    $DB::single=1;
 
     #process input arguments
     my $output_fh = new IO::File;
