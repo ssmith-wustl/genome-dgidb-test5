@@ -76,12 +76,12 @@ sub execute {
                     $self->status_message("Not including model: ".$model->id." as it had no merged vcf.");
                     next;
                 }
-                push @snv_list, $build->get_snv_vcf.".gz" unless $self->exclude_snvs;
-                push @indel_list, $build->get_indel_vcf.".gz" unless $self->exclude_indels;
+                push @snv_list, $build->get_snvs_vcf.".gz" unless $self->exclude_snvs;
+                push @indel_list, $build->get_indels_vcf.".gz" unless $self->exclude_indels;
                 
             } else {
-                push @snv_list, $build->get_snv_vcf unless $self->exclude_snvs;
-                push @indel_list, $build->get_indel_vcf unless $self->exclude_indels;
+                push @snv_list, $build->get_snvs_vcf unless $self->exclude_snvs;
+                push @indel_list, $build->get_indels_vcf unless $self->exclude_indels;
             }
 
             push @sample_list, $sample."\t".$build->id;
