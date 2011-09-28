@@ -72,8 +72,10 @@ create table gene_name_category_association (
         FOREIGN KEY(gene_name, nomenclature, source_db_name, source_db_version) REFERENCES gene_name(name, nomenclature, source_db_name, source_db_version)
 );
 
+create sequence drug_gene_interaction_id_seq start 100;
+
 create table drug_gene_interaction (
-        id integer NOT NULL,
+        id integer NOT NULL default nextval('drug_gene_interaction_id_seq'),
         drug_name varchar NOT NULL,
         gene_name varchar NOT NULL,
         interaction_type varchar NOT NULL,
