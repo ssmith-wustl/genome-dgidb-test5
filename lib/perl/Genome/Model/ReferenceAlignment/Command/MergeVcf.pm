@@ -12,7 +12,7 @@ class Genome::Model::ReferenceAlignment::Command::MergeVcf {
         },
         output_file => {
             is => 'Text',
-            doc => 'Path to the multi-sample merged vcf to output',
+            doc => 'Path to the multi-sample merged vcf to output, it will be appended with an appropriate suffix like - snvs.vcf.gz',
         },
         output_list_file => {
             is => 'Text',
@@ -23,6 +23,14 @@ class Genome::Model::ReferenceAlignment::Command::MergeVcf {
             is => 'Boolean',
             doc => "Set this to operate on gzipped vcfs (and make them if they aren't there) and to output gzipped result",
             default => 0,
+        },
+        exclude_snvs => {
+            is => 'Boolean',
+            doc => 'set this if you wish to exlude snvs',
+        },
+        exclude_indels => {
+            is => 'Boolean',
+            doc => 'Set this if you wish to exclude indels',
         },
     ],
 };
@@ -37,7 +45,8 @@ sub execute {
     my $self = shift;
 
     my $output_file = $self->output_file;
-    my @output_list;
+    my @snv_list;
+    my @indel_list;
     my @sample_list;
     if(-e $output_file){
         die $self->error_message("Output file already exists at: ".$output_file);
@@ -67,10 +76,12 @@ sub execute {
                     $self->status_message("Not including model: ".$model->id." as it had no merged vcf.");
                     next;
                 }
-                push @output_list, $build->get_merged_vcf.".gz";
+                push @snv_list, $build->get_snv_vcf.".gz" unless $self->exclude_snvs;
+                push @indel_list, $build->get_indel_vcf.".gz" unless $self->exclude_indels;
                 
             } else {
-                push @output_list, $build->get_merged_vcf;
+                push @snv_list, $build->get_snv_vcf unless $self->exclude_snvs;
+                push @indel_list, $build->get_indel_vcf unless $self->exclude_indels;
             }
 
             push @sample_list, $sample."\t".$build->id;
@@ -78,21 +89,42 @@ sub execute {
     }
 
     my $gzip = $self->use_gzipped_vcfs || 0;
+    unless($self->exclude_snvs){
+        my $output = $output_file . ".snvs.vcf";
+        $output .= ".gz" if $self->use_gzipped_vcfs;
+        my $join_cmd = Genome::Model::Tools::Joinx::VcfMerge->create(
+            output_file => $output,
+            input_files => \@snv_list,
+            use_bgzip => $gzip,
+            joinx_bin_path => "/gscmnt/ams1158/info/pindel/joinx/joinx",
+        );
 
-    my $join_cmd = Genome::Model::Tools::Joinx::VcfMerge->create(
-        output_file => $output_file,
-        input_files => \@output_list,
-        use_bgzip => $gzip,
-        joinx_bin_path => "/gscmnt/ams1158/info/pindel/joinx/joinx",
-    );
+        unless($join_cmd->execute){
+            die $self->error_message("Could not execute MultiSampleJoinVcf command!");
+        }
 
-    unless($join_cmd->execute){
-        die $self->error_message("Could not execute MultiSampleJoinVcf command!");
+        unless(-s $output){
+            die $self->error_message("Could not find output file!");
+        } 
     }
+    unless($self->exclude_indels){
+        my $output = $output_file . ".indels.vcf";
+        $output .= ".gz" if $self->use_gzipped_vcfs;
+        my $join_cmd = Genome::Model::Tools::Joinx::VcfMerge->create(
+            output_file => $output,
+            input_files => \@indel_list,
+            use_bgzip => $gzip,
+            joinx_bin_path => "/gscmnt/ams1158/info/pindel/joinx/joinx",
+        );
 
-    unless(-s $output_file){
-        die $self->error_message("Could not find output file!");
-    } 
+        unless($join_cmd->execute){
+            die $self->error_message("Could not execute MultiSampleJoinVcf command!");
+        }
+
+        unless(-s $output){
+            die $self->error_message("Could not find output file!");
+        } 
+    }
     return 1;
 }
 
