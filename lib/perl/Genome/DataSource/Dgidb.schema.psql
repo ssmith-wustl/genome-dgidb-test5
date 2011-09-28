@@ -1,5 +1,6 @@
 DROP TABLE IF EXISTS drug_gene_interaction_attribute;
 DROP TABLE IF EXISTS drug_gene_interaction;
+DROP SEQUENCE IF EXISTS drug_gene_interaction_id_seq;
 DROP TABLE IF EXISTS gene_name_category_association;
 DROP TABLE IF EXISTS gene_name_association;
 DROP TABLE IF EXISTS drug_name_category_association;
