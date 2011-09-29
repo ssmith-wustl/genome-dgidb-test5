@@ -980,5 +980,31 @@ sub _rotate_old_files {
     return 1;
 }
 
+for my $type ('snv', 'indel', 'sv', 'cnv') {
+    no strict 'refs';
+    my $detection_strategy = $type . '_detection_strategy';
+    my $result_id_method = $type . '_result_id';
+    my $result_class_method = $type . '_result_class';
+    my $result_method = $type . '_result';
+    *{ $result_method } = sub {
+        my $self = shift;
+        return unless $self->$detection_strategy;
+        return unless $self->_workflow_result;
+        my $result_id = $self->_workflow_result->{$result_id_method};
+        my $result_class = $self->_workflow_result->{$result_class_method};
+        return $result_class->get($result_id);
+    };
+    use strict 'refs';
+}
+
+sub results {
+    my $self = shift;
+    my @results;
+    for my $type ('snv', 'indel', 'sv', 'cnv') {
+        my $result_method = $type . '_result';
+        push @results, $self->$result_method if $self->$result_method;
+    }
+    return @results;
+}
 
 1;
