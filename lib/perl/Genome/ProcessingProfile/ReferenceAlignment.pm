@@ -47,6 +47,12 @@ class Genome::ProcessingProfile::ReferenceAlignment {
             default_value => '0',
             valid_values => [0, 1],
         },
+        alignment_strategy => {
+            is => 'Text',
+            is_many => 0,
+            is_optional => 1,
+            doc => 'Strategy to be used to align the instrument data (this will eventually replace many of the alignment parameters)',
+        },
         snv_detection_strategy => {
             is => "Text",
             is_many => 0,
@@ -84,38 +90,38 @@ class Genome::ProcessingProfile::ReferenceAlignment {
             is_optional => 1,
         },
         merger_name => {
-            doc => 'name of bam merger, picard, samtools',
+            doc => 'name of bam merger, picard, samtools (this will be replaced by alignment_strategy)',
             is_optional => 1,
         },
         merger_version => {
-            doc => 'version of bam merger',
+            doc => 'version of bam merger (this will be replaced by alignment_strategy)',
             is_optional => 1,
         },
         merger_params => {
-            doc => 'parameters of bam merger',
+            doc => 'parameters of bam merger (this will be replaced by alignment_strategy)',
             is_optional => 1,
         },
         duplication_handler_name => {
-            doc => 'name of pcr duplication handler',
+            doc => 'name of pcr duplication handler (this will be replaced by alignment_strategy)',
             is_optional => 1,
         },
         duplication_handler_version => {
-            doc => 'version of pcr duplication handler',
+            doc => 'version of pcr duplication handler (this will be replaced by alignment_strategy)',
             is_optional => 1,
         },
         duplication_handler_params => {
-            doc => 'parameters of pcr duplication handler',
+            doc => 'parameters of pcr duplication handler (this will be replaced by alignment_strategy)',
             is_optional => 1,
         },
         read_aligner_name => {
-            doc => 'alignment algorithm/software used for this model',
+            doc => 'alignment algorithm/software used for this model (this will be replaced by alignment_strategy)',
         },
         read_aligner_version => {
-            doc => 'the aligner version used for this model',
+            doc => 'the aligner version used for this model (this will be replaced by alignment_strategy)',
             is_optional => 1,
         },
         read_aligner_params => {
-            doc => 'command line args for the aligner',
+            doc => 'command line args for the aligner (this will be replaced by alignment_strategy)',
             is_optional => 1,
         },
         force_fragment => {
