@@ -35,6 +35,7 @@ class Genome::SoftwareResult {
         inputs              => { is => 'Genome::SoftwareResult::Input', reverse_as => 'software_result'},
         metrics             => { is => 'Genome::SoftwareResult::Metric', reverse_as => 'software_result'},
         users               => { is => 'Genome::SoftwareResult::User', reverse_as => 'software_result'},
+        disk_allocations    => { is => 'Genome::Disk::Allocation', reverse_as => 'owner'},
         build_ids           => { via => 'users', to => 'user_id', } # where => ['user_class_name isa' => 'Genome::Model::Build'] },
     ],
     schema_name => 'GMSchema',

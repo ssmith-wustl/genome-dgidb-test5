@@ -153,4 +153,18 @@ sub _promote_data {
     return $output_dir;
 }
 
+sub _reallocate_disk_allocation {
+    my $self = shift;
+    my $allocation = $self->disk_allocations;
+    $self->status_message('Resizing the disk allocation...');
+    my $rv = eval { $allocation->reallocate };
+    my $error = $@;
+    if ($rv != 1) {
+        my $warning_message = 'Failed to reallocate disk allocation (' . $allocation->__display_name__ . ').';
+        $warning_message   .= " Error: '$error'." if $error;
+        $self->warning_message($warning_message);
+    }
+    return $rv;
+}
+
 1;
