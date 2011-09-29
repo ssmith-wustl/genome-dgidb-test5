@@ -68,7 +68,6 @@ my %properties = (
     reference_sequence_build_id => {
         is => 'Number',
         doc => 'This is the reference sequence that the imported BAM was aligned against.',
-        is_optional => 1,
     },
 );
     
@@ -160,7 +159,7 @@ sub execute {
     }
     $params{sequencing_platform} = "solexa";
     $params{import_format} = "bam";
-    $params{reference_sequence_build_id} = $self->reference_sequence_build_id if $self->reference_sequence_build_id;
+    $params{reference_sequence_build_id} = $self->reference_sequence_build_id;
     $params{library_id} = $library->id;
     $params{target_region_set_name} = $self->target_region;
     delete $params{sample} if exists($params{sample});
