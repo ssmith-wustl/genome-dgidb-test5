@@ -1878,7 +1878,9 @@ sub compare_output {
         }
 
         unless ($diff_result) {
-            $diffs{$rel_path} = "files $abs_path and $other_abs_path are not the same!";
+            my ($build_dir) = $abs_path =~ /^(.*)\/$rel_path/;
+            my ($other_build_dir) = $other_abs_path =~ /^(.*)\/$rel_path/;
+            $diffs{$rel_path} = "files are not the same (diff -u {$build_dir,$other_build_dir}/$rel_path)";
         }
     }
 
@@ -1890,7 +1892,7 @@ sub compare_output {
         next if -d $abs_path;
         next if grep { $dir =~ /$_/ } $self->dirs_ignored_by_diff;
         next if grep { $rel_path =~ /$_/ } $self->files_ignored_by_diff;
-        $diffs{$rel_path} = "no file $rel_path from build $build_id";
+        $diffs{$rel_path} = "no file in build $build_id";
     }
 
     # Now compare metrics of both builds
