@@ -434,7 +434,8 @@ table.lister td.text {
 table.lister td.group {
     font-weight: bold;
     font-size: 120%;
-    background-color: #EFEFEF;
+    color: #EFEFEF;
+    background-color: #333;
 }
 
 td.status {

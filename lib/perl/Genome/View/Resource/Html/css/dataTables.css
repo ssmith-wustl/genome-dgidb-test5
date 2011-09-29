@@ -77,7 +77,6 @@ table.display thead th {
 
 .dataTables_wrapper {
 	position: relative;
-	min-height: 302px;
 	clear: both;
 	_height: 302px;
 	zoom: 1; /* Feeling sorry for IE */
@@ -103,17 +102,20 @@ table.display thead th {
 .dataTables_length {
 	width: 40%;
 	float: left;
+    margin: 5px;
 }
 
 .dataTables_filter {
 	width: 50%;
 	float: right;
 	text-align: right;
+    margin: 5px;
 }
 
 .dataTables_info {
 	width: 60%;
 	float: left;
+    margin: 0 5px 5px 5px;
 }
 
 .dataTables_paginate {
@@ -121,6 +123,7 @@ table.display thead th {
 	* width: 50px;
 	float: right;
 	text-align: right;
+    margin: 0 5px 5px 5px;
 }
 
 /* Pagination nested */
@@ -377,7 +380,7 @@ tr.odd td.sorting_1 {
 }
 
 tr.odd td.sorting_2 {
-	background-color: #DADCFF;
+	background-color: #e5e5e3
 }
 
 tr.odd td.sorting_3 {

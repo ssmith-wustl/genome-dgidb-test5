@@ -27,18 +27,22 @@
 
     <div class="content rounded shadow">
       <div class="container">
+        <div class="box_header span-24 last rounded-top">
+          <div class="box_title"><h3 class="nontyped span-24 last">sample details</h3></div>
+        </div>
+        <div class="box_content rounded-bottom span-24 last">
 
-            <!-- details for this sample -->
-            <table id="samples" class="lister">
-                <thead>
-                    <tr>
-                        <th>Nomenclature</th>
-                        <th>Attribute</th>
-                        <th>Value</th>
-                    </tr>
-                </thead>
-            </table>
-
+          <!-- details for this sample -->
+          <table id="samples" class="lister datatable">
+            <thead>
+              <tr>
+                <th>Nomenclature</th>
+                <th>Attribute</th>
+                <th>Value</th>
+              </tr>
+            </thead>
+          </table>
+        </div>
       </div> <!-- end container -->
     </div> <!-- end content -->
 
