@@ -14,10 +14,12 @@ class Genome::Model::ReferenceAlignment::Command::MergeVcf {
         },
         snvs_output_file => {
             is => 'Text',
+            is_optional => 1,
             doc => 'Path to the snvs multi-sample merged vcf to output',
         },
         indels_output_file => {
             is => 'Text',
+            is_optional => 1,
             doc => 'Path to the indels multi-sample merged vcf to output',
         },
         use_gzipped_vcfs => {
@@ -36,7 +38,9 @@ EOS
 
 sub execute {
     my $self = shift;
-
+    unless($self->snvs_output_file || $self->indels_output_file){
+        die $self->error_message("You must specify at least one output file!");
+    }
     my $snvs_output_file = $self->snvs_output_file || undef;
     my $indels_output_file = $self->indels_output_file || undef;
     my @snv_list;
@@ -68,10 +72,21 @@ sub execute {
             if(exists($inputs{$sample})){
                 die $self->error_message("Encountered multiple builds for one sample: ".$sample);
             }
+            my $snvs_vcf = ($self->snvs_output_file) ? $build->get_snvs_vcf : undef;
+            my $indels_vcf = ($self->indels_output_file) ? $build->get_indels_vcf : undef;
+
             if ($self->use_gzipped_vcfs) {
-                unless($self->check_for_and_create_gz($build)){
-                    $self->status_message("Not including model: ".$model->id." as it had no merged vcf.");
-                    next;
+                if($snvs_vcf) {
+                    unless($self->check_for_and_create_gz($build,$snvs_vcf)){
+                        $self->status_message("Not including model: ".$model->id." as it had no snv vcf.");
+                        next;
+                    }
+                }
+                if($indels_vcf) {
+                    unless($self->check_for_and_create_gz($build,$indels_vcf)){
+                        $self->status_message("Not including model: ".$model->id." as it had no indel vcf.");
+                        next;
+                    }
                 }
                 push @snv_list, $build->get_snvs_vcf.".gz" if $snvs_output_file;
                 push @indel_list, $build->get_indels_vcf.".gz" if $indels_output_file;
@@ -84,9 +99,8 @@ sub execute {
             push @sample_list, $sample."\t".$build->id;
         }
     }
-
     my $gzip = $self->use_gzipped_vcfs || 0;
-    unless($snvs_output_file){
+    if($snvs_output_file){
         my $join_cmd = Genome::Model::Tools::Joinx::VcfMerge->create(
             output_file => $snvs_output_file,
             input_files => \@snv_list,
@@ -102,7 +116,7 @@ sub execute {
             die $self->error_message("Could not find output file!");
         } 
     }
-    unless($indels_output_file){
+    if($indels_output_file){
         my $join_cmd = Genome::Model::Tools::Joinx::VcfMerge->create(
             output_file => $indels_output_file,
             input_files => \@indel_list,
@@ -125,7 +139,8 @@ sub execute {
 sub check_for_and_create_gz {
     my $self = shift;
     my $build = shift;
-    my $merged_vcf = $build->get_merged_vcf;
+    my $merged_vcf = shift;
+    #my $merged_vcf = $build->get_merged_vcf;
     my $merged_vcf_gz = $merged_vcf.".gz";
     my $merged_vcf_gz_tbi = $merged_vcf_gz.".tbi";
     my $changes = undef;
@@ -151,7 +166,7 @@ sub check_for_and_create_gz {
         $changes = 1;
     }
     if($changes){
-        $self->_needs_commit(1);
+        #$self->_needs_commit(1);
         my $build_allocation = $build->disk_allocation;
         $build_allocation->reallocate;
         UR::Context->commit;
