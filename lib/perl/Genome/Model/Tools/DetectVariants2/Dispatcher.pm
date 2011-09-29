@@ -554,36 +554,37 @@ sub create_combine_operation {
         operation_type => Workflow::OperationType::Command->get($class),
     );
 
-    my @properties_to_each_operation =  ( 
-        'reference_build_id', 
-        'aligned_reads_input', 
-        'control_aligned_reads_input',
-        'aligned_reads_input',
-        'aligned_reads_sample',
-        'control_aligned_reads_sample',
-    );
-    for my $property ( @properties_to_each_operation) {
-        $workflow_model->add_link(
-                left_operation => $workflow_model->get_input_connector,
-                left_property => $property,
-                right_operation => $combine_operation,
-                right_property => $property,
-        );
-    }
+    # CHOP CHOP CHOP
+#    my @properties_to_each_operation =  ( 
+#        'reference_build_id', 
+#        'aligned_reads_input', 
+#        'control_aligned_reads_input',
+#        'aligned_reads_input',
+#        'aligned_reads_sample',
+#        'control_aligned_reads_sample',
+#    );
+#    for my $property ( @properties_to_each_operation) {
+#        $workflow_model->add_link(
+#                left_operation => $workflow_model->get_input_connector,
+#                left_property => $property,
+#                right_operation => $combine_operation,
+#                right_property => $property,
+#        );
+#    }
 
     my $left_operation = $workflow_links->{$input_a_last_op_name."_output_directory"}->{right_operation};
     $workflow_model->add_link(
         left_operation => $left_operation,
-        left_property => "output_directory",
+        left_property => "result_id",
         right_operation => $combine_operation,
-        right_property => "input_directory_a",
+        right_property => "input_a_id",
     );
     $left_operation = $workflow_links->{$input_b_last_op_name."_output_directory"}->{right_operation};
     $workflow_model->add_link(
         left_operation => $left_operation,
-        left_property => "output_directory",
+        left_property => "result_id",
         right_operation => $combine_operation,
-        right_property => "input_directory_b",
+        right_property => "input_b_id",
     );
 
 
