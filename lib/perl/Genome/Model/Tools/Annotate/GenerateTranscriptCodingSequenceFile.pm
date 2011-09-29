@@ -32,7 +32,6 @@ sub help_detail{
 
 sub execute{
     my $self = shift;
-    $DB::single = 1;
 
     my ($model_name, $build_version) = split("/", $self->reference_transcripts);
     my $model = Genome::Model->get(name => $model_name);

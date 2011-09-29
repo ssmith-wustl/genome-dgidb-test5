@@ -62,7 +62,6 @@ sub test01_get : Tests(1) {
 
 sub test02_create : Tests(1) {
     my $self = shift;
-    $DB::single = 1;
 
     my $amplicon_assembly = $self->test_class->create(
         directory => $self->tmp_dir,

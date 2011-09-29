@@ -51,7 +51,6 @@ sub execute {
     
     my $snps = $self->snp_file;
     my $maplist = $self->map_list;
-    $DB::single = 1;
     #unless(`uname -m` =~ /x86_64/)
     #{
     #    $self->error_message( "manual-review must be run on a x64 system.\n");

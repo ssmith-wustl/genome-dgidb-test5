@@ -49,7 +49,6 @@ class Genome::Model::Tools::SeeFourFive::TreeBag {
 
 sub execute {
     my $self=shift;
-    $DB::single = 1;
     unless(-f $self->data_file) {
         $self->error_message("Data file is not a file: " . $self->data_file);
         return;

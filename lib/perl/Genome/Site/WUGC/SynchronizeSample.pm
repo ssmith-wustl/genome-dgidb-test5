@@ -48,7 +48,6 @@ sub _update_genome_sample {
         qw/ subclass_name /
     );
 
-    $DB::single =1;
     for my $property (keys %$direct_properties){
         $new_object->$property($original_object->{$property});
     }

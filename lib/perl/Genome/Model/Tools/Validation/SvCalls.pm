@@ -77,7 +77,6 @@ EOS
 
 sub execute {
     
-    $DB::single = 1;
     my $self = shift;
 
     #parse input params

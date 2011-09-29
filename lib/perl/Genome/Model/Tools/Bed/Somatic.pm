@@ -33,7 +33,6 @@ class Genome::Model::Tools::Bed::Somatic {
 
 sub execute {
     my $self = shift;
-    $DB::single = 1;
     my @tumor_files = $self->tumor_bed_file;
     my @normal_files= $self->normal_bed_file;
 

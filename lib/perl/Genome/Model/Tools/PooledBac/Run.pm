@@ -129,7 +129,6 @@ sub get_params
 ############################################################
 sub execute { 
     my ($self) = @_;
-$DB::single =1;
     unless (`uname -m` =~ /64/) {
         $self->error_message('Pooled bac pipeline must be run from a 64-bit architecture');
         return;

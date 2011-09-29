@@ -93,7 +93,6 @@ EOS
 
 sub execute {
     my ($self) = @_;
-    $DB::single=1;
 
     if ($self->skip) {
         $self->status_message("Skipping execution: Skip flag set");

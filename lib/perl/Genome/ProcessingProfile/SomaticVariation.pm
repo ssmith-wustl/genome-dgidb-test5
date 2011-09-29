@@ -216,13 +216,11 @@ sub create {
 
 sub _initialize_build {
     my($self,$build) = @_;
-    $DB::single=1;
     return 1;
 }
 
 sub _resolve_workflow_for_build {
     my $self = shift;
-    $DB::single = 1;
     my $build = shift;
 
     my $operation = Workflow::Operation->create_from_xml(__FILE__ . '.xml');
@@ -238,7 +236,6 @@ sub _resolve_workflow_for_build {
 
 sub _map_workflow_inputs {
     my $self = shift;
-    $DB::single = 1;
     my $build = shift;
 
     my @inputs = ();

@@ -92,7 +92,6 @@ ok($b, "created a new build");
 is($init_build,$b,"build created (initialized)");
 
 # start it, which in our case will run it completely...
-$DB::single = 1;
 ok($b->start(server_dispatch => 'inline', job_dispatch => 'inline'), "build started");
 
 # examine the build

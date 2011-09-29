@@ -43,7 +43,6 @@ EOS
 # FIXME this should be reframed, and likely not stay a filter. For now we need to run samtools to detect snvs on the normal sample in order to replicate old behavior.
 sub _filter_variants {
     my $self = shift;
-    $DB::single=1;
 
     my $hq_fh = Genome::Sys->open_file_for_writing($self->_temp_staging_directory . "/snvs.hq.bed");
     my $lq_fh = Genome::Sys->open_file_for_writing($self->_temp_staging_directory . "/snvs.lq.bed");

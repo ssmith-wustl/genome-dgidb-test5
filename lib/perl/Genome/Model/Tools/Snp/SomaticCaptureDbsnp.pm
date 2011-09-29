@@ -67,7 +67,6 @@ sub execute {
     print "novel_snvs_file = ".$novel_snvs_file."\n";
     print "dbsnp_snvs_file = ".$dbsnp_snvs_file."\n";
 
-    $DB::single = 1;
 
     my $snv_compare = Genome::Model::Tools::Joinx::Intersect->create(
         input_file_a => $snv_input_path,

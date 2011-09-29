@@ -186,7 +186,6 @@ my $fh = new FileHandle;
 unless ($fh->open (qq{$mut_file})) { die "Could not open mutation project file '$mut_file' for reading"; }
 
 if ($verbose) {print "Parsing mutation file...\n";}
-$DB::single = 1;
 my $mutation = ParseMutationFile($fh, $mut_file, $wuheaders);
 $fh->close;
 if ($verbose) {print "Done Parsing Mutation File! Yippee!\n";}
@@ -955,7 +954,6 @@ sub ParseMutationFile {
 		unshift (@values, $line_num++);	# and the line number
 
 		my $sub_record;
-                $DB::single=1;
 		# Construct the hierarchical key structure
 		$sub_record = $record;
 		foreach my $sub_key  (@key_fields) {

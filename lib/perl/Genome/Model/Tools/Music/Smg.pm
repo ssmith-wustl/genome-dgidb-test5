@@ -53,7 +53,6 @@ EOS
 
 sub execute {
   my $self = shift;
-  $DB::single = 1;
   my $gene_mr_file = $self->gene_mr_file;
   my $output_file = $self->output_file;
   my $output_file_detailed = $output_file . "_detailed";

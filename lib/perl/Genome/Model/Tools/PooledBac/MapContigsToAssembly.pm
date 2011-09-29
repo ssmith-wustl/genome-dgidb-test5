@@ -69,7 +69,6 @@ EOS
 sub execute { 
     my $self = shift;
     print "Finding Matching Contigs...\n";
-    $DB::single = 1;
     my $pooled_bac_dir = $self->pooled_bac_dir;
     my $project_dir = $self->project_dir;
     my $blastfile = $project_dir."/bac_region_db.blast";

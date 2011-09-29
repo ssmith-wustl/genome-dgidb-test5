@@ -96,7 +96,6 @@ HELP
 sub execute {
     my $self = shift;
     # $self->input_to_tsv();
-    $DB::single = 1;
     $self->import_tsv();
     return 1;
 }
@@ -134,7 +133,6 @@ sub import_drugs {
             source_db_version => $version,
             description => '',
         );
-        $DB::single = 1;
 
         my @drug_synonyms = split(', ', $drug->{drug_synonyms});
         for my $drug_synonym (@drug_synonyms){

@@ -47,7 +47,6 @@ class Genome::Model::Tools::SeeFourFive::CrossValidate {
 
 sub execute {
     my $self=shift;
-    $DB::single = 1;
     unless(-f $self->data_file) {
         $self->error_message("Data file is not a file: " . $self->data_file);
         return;
@@ -147,7 +146,6 @@ sub parse_out_error_numbers {
         for( my $i=0; $i<5; $i++){ 
             $fh->getline;
         }
-        $DB::single=1;
 
         $line= $fh->getline;
         my ($total_error)= ($line  =~ m/\(\s*([\d.]+)\%\)\s+\(/);

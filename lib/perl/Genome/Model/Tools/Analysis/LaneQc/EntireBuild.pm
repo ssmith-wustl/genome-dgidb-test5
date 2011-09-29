@@ -32,7 +32,6 @@ class Genome::Model::Tools::Analysis::LaneQc::EntireBuild {
 
 sub execute {
     my $self=shift;
-    $DB::single = 1;
     my $build_id = $self->build_id;
     my $genotype_file = $self->genotype_file;
 

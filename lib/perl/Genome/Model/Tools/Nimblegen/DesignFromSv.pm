@@ -74,7 +74,6 @@ class Genome::Model::Tools::Nimblegen::DesignFromSv {
 
 sub execute {
     my $self=shift;
-    $DB::single = 1;
 
     my $reference_index = $self->reference_index;
 

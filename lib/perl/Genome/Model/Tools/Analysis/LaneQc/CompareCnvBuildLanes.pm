@@ -33,7 +33,6 @@ HELP
 ###################
 sub execute {
     my $self=shift;
-    $DB::single = 1;
     my $build_id ="";
     my $outfile_prefix = $self->outfile_prefix;
     my $user = getlogin || getpwuid($<); #get current user name	 

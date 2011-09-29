@@ -28,7 +28,6 @@ sub create {
     my $class = shift;
     my $self = $class->SUPER::create(@_);
 
-    $DB::single=1;
     unless ($self) {
         return;
     }

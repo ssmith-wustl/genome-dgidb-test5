@@ -66,7 +66,6 @@ sub _handle_db {
 sub _verify_fastas {
     my $self = shift;
 
-    $DB::single = 1;
     unless ( $self->fasta_files ) {
         $self->error_message("No fasta files to create database from");
         return;

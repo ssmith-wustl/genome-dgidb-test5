@@ -58,7 +58,6 @@ sub help_detail {
 }
 
 sub execute {
-    $DB::single=1;
     my $self = shift;
     my $rlibrary = "BamToCnaGraph.R";
 

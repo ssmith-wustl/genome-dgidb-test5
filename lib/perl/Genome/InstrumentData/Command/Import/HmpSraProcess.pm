@@ -52,7 +52,6 @@ sub execute {
 
 
 #___This line stops the perl debugger as though I'd set a break point in the GUI
-    $DB::single = 1;
     
     my @srrs = split /\s+/, $self->srr_accessions;
 
@@ -150,7 +149,6 @@ sub execute {
 
     } else {
 
-        $DB::single = 1;
 
         my $path_to_scripts_dir =$self->get_script_path;
         $self->status_message("Scripts are in: $path_to_scripts_dir");
@@ -179,7 +177,6 @@ sub execute {
         close SRA_SAMPLE_MAPPING;
         close SRR_LISTING;
 
-        $DB::single = 1;
 
         #Run BROAD's processing script
         my $cmd;
@@ -202,7 +199,6 @@ sub execute {
         $self->status_message("CMD=>$cmd<=\n");
         $self->status_message("PWD=>$current_dir<=\n");
         
-        $DB::single = 1;
 
         eval {
         Genome::Sys->shellcmd(
@@ -211,12 +207,10 @@ sub execute {
         };
 
         if ($@) {
-           $DB::single = 1; 
            $self->error_message("Error running broad script: $@\n");
            return;
         }
 
-        $DB::single = 1;
         my @reads = glob($working_dir . "/" . $self->srs_sample_id . "/*.trimmed.*.fastq.bz2");
         
         for (@reads) {
@@ -237,7 +231,6 @@ sub execute {
         rename($singleton_read, $working_dir . "/s_1_sequence.txt");
         $singleton_read = $working_dir . "/s_1_sequence.txt";
 
-        $DB::single = 1;
 
     }
     

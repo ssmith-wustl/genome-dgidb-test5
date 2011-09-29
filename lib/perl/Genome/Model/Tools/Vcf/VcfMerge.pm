@@ -78,7 +78,6 @@ HELP
 
 sub execute {                               # replace with real execution logic.
     my $self = shift;
-    $DB::single=1;
     my $vcf_files = $self->vcf_files;
     my $source_ids = $self->source_ids;
     my $merge_filters = $self->merge_filters;
@@ -124,7 +123,6 @@ sub execute {                               # replace with real execution logic.
     #hash the first file
     my $inFh = IO::File->new( $vcffiles[0] ) || die "can't open file\n";
 
-    $DB::single=1;
 
     while(my $line = $inFh->getline )
     {
@@ -228,7 +226,6 @@ sub execute {                               # replace with real execution logic.
 
             $prev_chr = $chr unless $prev_chr; ## load prev_chr the first time through to prevent weirdness
             if($prev_chr ne $chr) {
-                $DB::single=1;
                 $self->status_message("Finished with $prev_chr, printing to file...");
                 $self->print_chromosome($prev_chr, $output_file, $varHash{$prev_chr},  \@vcffiles, $passHash{$prev_chr});
                 delete $varHash{$prev_chr};
@@ -378,7 +375,6 @@ sub print_header {
     my $headers = shift;
     my $newInfo=shift;;
     my $newFilters=shift;
-    $DB::single=1;
     open(OUTFILE, ">>$output_file") or die "Can't open output file: $!\n";
     
     foreach my $line (@$headers){        

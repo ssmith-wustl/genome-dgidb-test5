@@ -46,7 +46,6 @@ EOS
 ############################################################
 sub execute { 
     my $self = shift;
-    $DB::single = 1;
     print "Adding Linking Contigs...\n";
     my $project_dir = $self->project_dir;
     my $ut = Genome::Model::Tools::PooledBac::Utils->create;

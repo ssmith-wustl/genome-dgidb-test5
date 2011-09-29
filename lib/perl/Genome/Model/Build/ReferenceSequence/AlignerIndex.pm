@@ -221,7 +221,6 @@ sub _prepare_reference_index {
         return;
     }
 
-    $DB::single = 1;
     $self->status_message(sprintf("Confirmed non-zero reference fasta file is %s", $reference_fasta_file));
     unless (symlink($reference_fasta_file, sprintf("%s/all_sequences.fa", $self->temp_staging_directory))) {
         $self->error_message("Couldn't symlink reference fasta into the staging directory");

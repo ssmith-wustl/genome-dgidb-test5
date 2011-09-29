@@ -89,7 +89,6 @@ sub execute {
                 #FIXME this doesn't support tri-nucleotide polymorphisms and up.
                 if(($pos - $last_pos) == 1) {
                     #potential DNP
-                    $DB::single=1;
                     $self->status_message("Potential DNP found at $chr:$pos-$last_pos\n");
 
                     if($self->is_dnp($chr, $last_pos, $last_var, $pos, $variants[0])) {

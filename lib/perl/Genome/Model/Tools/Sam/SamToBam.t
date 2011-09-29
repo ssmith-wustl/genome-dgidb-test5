@@ -42,7 +42,6 @@ my $to_bam = Genome::Model::Tools::Sam::SamToBam->create(
 isa_ok($to_bam,'Genome::Model::Tools::Sam::SamToBam');
 ok($to_bam->execute,'bam executed ok');
 
-$DB::single = 1;
 is(compare("$tmp_dir/source-1.bam", "$root_dir/expected-1-update.bam"), 0, 'Bam file was created ok');
 
 

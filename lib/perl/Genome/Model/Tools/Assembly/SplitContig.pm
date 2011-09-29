@@ -55,7 +55,6 @@ EOS
 sub execute
 {
     my $self = shift;
-    $DB::single = 1;
     my $ace_file = $self->ace_file;
     my $split_contig_name = $self->contig;
     my $split_position = $self->split_position;

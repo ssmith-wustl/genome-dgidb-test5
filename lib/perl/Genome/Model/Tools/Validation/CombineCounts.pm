@@ -84,7 +84,6 @@ class Genome::Model::Tools::Validation::CombineCounts {
 
 sub execute {
     my $self=shift;
-    $DB::single = 1;
     my @files = split /\s*,\s*/, $self->count_files;
     my @orig_labels = split /\s*,\s*/, $self->file_labels if $self->file_labels;
     my @labels = @orig_labels;  #set this up so we can pop off labels during file parsing
