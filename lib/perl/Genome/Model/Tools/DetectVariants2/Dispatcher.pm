@@ -367,10 +367,14 @@ sub generate_workflow {
     my ($trees, $plan) = @_;
     my @output_properties;
 
-    push @output_properties, 'snv_output_directory' if defined ($self->snv_detection_strategy);
-    push @output_properties, 'sv_output_directory' if defined ($self->sv_detection_strategy);
-    push @output_properties, 'indel_output_directory' if defined ($self->indel_detection_strategy);
-    push @output_properties, 'cnv_output_directory' if defined ($self->cnv_detection_strategy);
+    # add the output properties based on which detection strategies are used
+    for my $type ('snv', 'indel', 'sv', 'cnv') {
+        my $detection_strategy = $type . '_detection_strategy';
+        if (defined $self->$detection_strategy) {
+            my @new_output_properties = map { $type . '_' . $_ } ('output_directory', 'result_id', 'result_class');
+            push @output_properties, @new_output_properties;
+        }
+    }
 
     my $workflow_model = Workflow::Model->create(
         name => 'Somatic Variation Pipeline',
@@ -415,13 +419,18 @@ sub generate_workflow {
             right_operation => $workflow_model->get_output_connector,
             right_property => $variant_type."_output_directory",
         );
-#TODO Once combine functions have results, return the result as output
-#        $workflow_model->add_link(
-#            left_operation => $last_operation,
-#            left_property => 'result_id',
-#            right_operation => $workflow_mode->get_output_connector,
-#            right_property => $variant_type."_result_id",
-#        );
+        $workflow_model->add_link(
+            left_operation => $last_operation,
+            left_property => '_result_id',
+            right_operation => $workflow_model->get_output_connector,
+            right_property => $variant_type."_result_id",
+        );
+        $workflow_model->add_link(
+            left_operation => $last_operation,
+            left_property => '_result_class',
+            right_operation => $workflow_model->get_output_connector,
+            right_property => $variant_type."_result_class",
+        );
     }
     return $workflow_model;
 }
@@ -557,14 +566,14 @@ sub create_combine_operation {
     my $left_operation = $workflow_links->{$input_a_last_op_name."_output_directory"}->{right_operation};
     $workflow_model->add_link(
         left_operation => $left_operation,
-        left_property => "result_id",
+        left_property => "_result_id",
         right_operation => $combine_operation,
         right_property => "input_a_id",
     );
     $left_operation = $workflow_links->{$input_b_last_op_name."_output_directory"}->{right_operation};
     $workflow_model->add_link(
         left_operation => $left_operation,
-        left_property => "result_id",
+        left_property => "_result_id",
         right_operation => $combine_operation,
         right_property => "input_b_id",
     );
@@ -752,7 +761,7 @@ sub add_detectors_and_filters {
                     $right_op = $filters[$index]->{operation};
                     $workflow_model->add_link(
                         left_operation => $left_op,
-                        left_property => 'result_id',
+                        left_property => '_result_id',
                         right_operation => $right_op,
                         right_property => 'previous_result_id',
                     );
