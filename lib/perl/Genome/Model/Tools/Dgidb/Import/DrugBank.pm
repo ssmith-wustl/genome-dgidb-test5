@@ -95,11 +95,7 @@ HELP
 
 sub execute {
     my $self = shift;
-<<<<<<< Updated upstream
-    # $self->input_to_tsv();
-=======
     $self->input_to_tsv();
->>>>>>> Stashed changes
     $self->import_tsv();
     return 1;
 }
