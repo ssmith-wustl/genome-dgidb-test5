@@ -358,7 +358,7 @@ sub _run_vcf_converter {
     my $input_file = shift;
     my $type = shift;
     my $dirname = dirname($input_file);    
-    my $output_file = $dirname . '/'.$type.'.vcf';
+    my $output_file = $dirname . '/'.$type.'.vcf.gz';
     my $aligned_reads_sample = $self->aligned_reads_sample;
     my $reference_sequence_build = Genome::Model::Build->get($self->reference_build_id);
 

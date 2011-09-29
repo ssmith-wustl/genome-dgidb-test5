@@ -488,13 +488,13 @@ sub _generate_vcf {
     my $self = shift;
     for my $type ($self->_variant_type){
         my $detect_type = "detect_".$type;
-        my $incoming_vcf = $self->previous_result->output_dir."/".$type.".vcf";
+        my $incoming_vcf = $self->previous_result->output_dir."/".$type.".vcf.gz";
         unless(-s $incoming_vcf){
             $self->status_message("Skipping VCF generation, no vcf if the previous result: $incoming_vcf");
             next;
         }
         #my $output_dir = dirname($self->_snv_staging_output);
-        my $vcf_name = $self->output_directory."/".$type.".vcf";
+        my $vcf_name = $self->output_directory."/".$type.".vcf.gz";
         my $hq_filter_file = $self->output_directory."/".$type.".hq.bed";
         my $filter_name = $self->get_module_name_from_class_name(ref $self || $self);
         my $filter_description = $self->filter_description;
