@@ -114,7 +114,6 @@ EOS
 
 sub execute
 {
-    $DB::single = 1;
     my $self = shift;
     my $ssid = $self->sequence_set_id;
 
@@ -372,7 +371,6 @@ sub execute
     # HGMI Ace_Parse_Script and RT_Writer
 ######################################
 
-    $DB::single = 1;
     if ( $cwd ne $acedb_scripts_path )
     {
         $self->status_message("Changing directory to $acedb_scripts_path");
@@ -507,7 +505,6 @@ sub execute
 
                     #connecting to acedb database
 
-                    $DB::single = 1;
                     my $db = Ace->connect(
                         -path    => "$acedb_installation_path",
                         -program => "$program"
@@ -639,7 +636,6 @@ sub execute
         $location = join( "/", @bugline[ 0 .. 7 ] );
         carp "location is $location";
     }
-    $DB::single = 1;
     print RTFILE "$location\n\n";
     print RTFILE
         "The following analysis have been run via bap_predict_genes:\n\n";

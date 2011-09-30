@@ -11,7 +11,6 @@ class Genome::Model::Event::Build::ImportedVariations::NoOp {
 
 sub execute {
     my $self = shift;
-    $DB::single=1;
     return 1;
 
 }

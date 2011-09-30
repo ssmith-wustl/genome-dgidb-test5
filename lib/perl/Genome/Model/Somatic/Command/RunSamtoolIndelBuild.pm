@@ -26,7 +26,6 @@ HELP
 
 sub execute {
 	my $self=shift;
-    	$DB::single = 1;
     	my $somatic_build_id=$self->somatic_build_id;
     	my $analysis_dir=$self->analysis_dir;
     	my $build = Genome::Model::Build->get($somatic_build_id);

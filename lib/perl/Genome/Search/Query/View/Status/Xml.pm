@@ -70,7 +70,6 @@ sub _generate_content {
 
     my $highlights_node = $doc->createElement('highlights');
 
-    $DB::single = 1;
 
     my $highlights_raw = $response->content->{'highlighting'};
     for my $found_id (keys %$highlights_raw) {

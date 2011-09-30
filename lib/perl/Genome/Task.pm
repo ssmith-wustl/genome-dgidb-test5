@@ -135,7 +135,6 @@ sub _resolve_param_values {
         if ($type =~ m/\:\:/) {
             my $value;
             if ($property->is_many) {
-                $DB::single = 1;
                 my @v = Command::V2->resolve_param_value_from_text($pre_value, $type);
                 $value = \@v;
             } else {

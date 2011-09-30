@@ -34,7 +34,6 @@ class Genome::Model::Tools::Nimblegen::CheckArrayDesign {
 
 sub execute {
     my $self = shift;
-    $DB::single = 1;
 
     #parse inputs
     my $probe_bed = $self->nimblegen_probe_bedfile;
@@ -55,7 +54,8 @@ sub execute {
     my $track_found = 0;
 
     while (my $line = $probe_fh->getline) {
-        if ($line =~ /track name=tiled_region description="NimbleGen Tiled Regions"/i) {
+        if (($line =~ /track name=tiled_region description="NimbleGen Tiled Regions"/i) ||
+            ($line =~ /track name=hg18_tiled_region description="hg18 NimbleGen Tiled Regions"/ )) {
             $track_found = 1;
             next;
         }
@@ -68,6 +68,8 @@ sub execute {
         }
     }
     $probe_fh->close;
+
+    print STDERR "test1: " . keys(%probes) . "\n";
 
     #set up summary filehandle and header
     my $sum_fh;

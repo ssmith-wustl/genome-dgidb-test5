@@ -112,7 +112,6 @@ sub _run_aligner {
                 );
 
         #check sdf output was created
-        $DB::single=1;
         my @idx_files = glob("$input_sdf/*");
         if (!@idx_files > 0) {
             die("rtg formatting of [$input_pathname] failed  with $cmd");

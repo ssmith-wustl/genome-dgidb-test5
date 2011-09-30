@@ -104,7 +104,7 @@ sub execute {
             my $diff_string = "DIFFERENCES FOUND $type_string $model_id\n";
             for my $file (sort keys %diffs) {
                 my $reason = $diffs{$file};
-                $diff_string .= "  File: $file, Reason: $reason\n";
+                $diff_string .= "  File: $file\n  Reason: $reason\n";
             }
             $self->status_message($diff_string);
         }

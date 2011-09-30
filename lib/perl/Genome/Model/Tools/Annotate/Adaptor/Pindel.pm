@@ -63,7 +63,6 @@ EOS
 
 sub execute {
     my $self = shift;
-    $DB::single=1;
 
     # test architecture to make sure we can run (needed for samtools faidx)
     unless (`uname -a` =~ /x86_64/) {

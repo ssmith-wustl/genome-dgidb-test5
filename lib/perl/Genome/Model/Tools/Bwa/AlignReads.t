@@ -71,9 +71,7 @@ $aligner = Genome::Model::Tools::Bwa::AlignReads->create(
 							);
 
 #execute the tool 
-$DB::single = 1;
 ok($aligner->execute,'AlignReads execution, paired read solexa input.');
-$DB::single = 1;
 
 #check the number of files in the output directory, should be 2.
 @listing = glob($output_dir.'/*');

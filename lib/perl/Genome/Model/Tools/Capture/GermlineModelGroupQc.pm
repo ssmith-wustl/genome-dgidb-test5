@@ -150,8 +150,8 @@ sub execute {
                     # Get all external genotypes for this sample
                     foreach my $genotype (@genotypes) {
 
-                        #LSF: For Affymetrix, this will be the birdseed file.
-                        my $ab_file = $genotype->get_genotype_file_ab;
+#                        #LSF: For Affymetrix, this will be the birdseed file.
+#                        my $ab_file = $genotype->get_genotype_file_ab;
 
                         # Get the data adapter (DataAdapter::GSGMFinalReport class object)
                         my $filter       = DataAdapter::Result::Filter::Nathan->new();

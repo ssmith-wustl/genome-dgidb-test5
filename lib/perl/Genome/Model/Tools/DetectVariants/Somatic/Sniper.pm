@@ -111,7 +111,6 @@ sub _should_skip_execution {
 
 sub _detect_variants {
     my $self = shift;
-    $DB::single = 1;
 
     $self->status_message("beginning execute");
 

@@ -100,7 +100,7 @@ sub initialize_filehandles {
 
     eval {
         my $input_fh = Genome::Sys->open_file_for_reading($input);
-        my $output_fh = Genome::Sys->open_file_for_writing($output);
+        my $output_fh = Genome::Sys->open_gzip_file_for_writing($output);
 
         $self->_input_fh($input_fh);
         $self->_output_fh($output_fh);
@@ -418,7 +418,6 @@ sub normalize_indel_location {
         my $faidx_cmd = "$sam_default faidx $reference $chr:$array_start-$base_before_event";
         my $sequence = `$faidx_cmd | grep -v \">\"`;
         $sequence =~ s/\n//g;
-        $DB::single=1;
 
 
         my $prev_base_array_idx = $base_before_event  - $array_start; 

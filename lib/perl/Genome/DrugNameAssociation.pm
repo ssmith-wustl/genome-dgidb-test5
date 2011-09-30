@@ -10,12 +10,12 @@ class Genome::DrugNameAssociation {
     schema_name => 'public',
     data_source => 'Genome::DataSource::Main',
     id_by => [
-        drug_primary_name => { is => 'varchar'},
-        drug_alternate_name => {is => 'varchar'},
-        primary_name_nomenclature => { is => 'varchar'},
-        alternate_name_nomenclature => { is => 'varchar'},
-        source_db_name => { is => 'varchar'},
-        source_db_version => { is => 'varchar'},
+        drug_primary_name => { is => 'Text'},
+        drug_alternate_name => {is => 'Text'},
+        primary_name_nomenclature => { is => 'Text'},
+        alternate_name_nomenclature => { is => 'Text'},
+        source_db_name => { is => 'Text'},
+        source_db_version => { is => 'Text'},
     ],
     has => [
         description => {

@@ -75,6 +75,12 @@ class Genome::Model::Tools::Validation::ClonalityPlot {
             is_input => 1,
             default => 0},
 
+        minimum_labelled_peak_height => {
+            is => 'Text',
+            doc => "only peaks that exceed this height get labelled",
+            is_optional => 1,
+            is_input => 1,
+            default => 0.001},
         ],
 };
 
@@ -116,7 +122,7 @@ sub execute {
     my $r_library = $self->varscan_r_library;
     my $skip_if_output_is_present = $self->skip_if_output_is_present;
     my $analysis_type = $self->analysis_type;
-
+    my $minimum_labelled_peak_height = $self->minimum_labelled_peak_height;
 
     #set readcount cutoffs
     if ($analysis_type eq 'wgs') {
@@ -220,7 +226,7 @@ sub execute {
 
     
     #create the R script that will be run to produce the plot
-
+#-------------------------------------------------
     my $R_command = <<"_END_OF_R_";
 #options(echo = FALSE);#suppress output to stdout
 #sink("/dev/null");
@@ -233,13 +239,15 @@ sub execute {
     
     additional_plot_points = 0;
 _END_OF_R_
+#-------------------------------------------------
 
 
-    print R_COMMANDS "$R_command\n";
+   print R_COMMANDS "$R_command\n";
     
     
     #add highlighting code if specified
     if ($positions_highlight && -s $positions_highlight && 1 && 1) { #these &&1 mean nothing, they just make my text editor color things correctly (it hates -s without being s///)
+#-------------------------------------------------
         $R_command = <<"_END_OF_R_";
         additional_plot_points <- read.table(\"$temp_path2\", header = FALSE, sep = "\t");
         additional_plot_points_cn1=subset(additional_plot_points, additional_plot_points\$V1 >= 0 & additional_plot_points\$V1 <= 1.75);
@@ -247,10 +255,13 @@ _END_OF_R_
         additional_plot_points_cn3=subset(additional_plot_points, additional_plot_points\$V1 >= 2.25 & additional_plot_points\$V1 <= 3.5);
         additional_plot_points_cn4=subset(additional_plot_points, additional_plot_points\$V1 >= 3.5);
 _END_OF_R_
+#-------------------------------------------------
+
         print R_COMMANDS "$R_command\n";
     }
 
-    
+
+#-------------------------------------------------
     $R_command = <<"_END_OF_R_";    
     z1=subset(xcopy, xcopy\$V13 == "Somatic");
     z2=subset(xcopy100, xcopy100\$V13 == "Somatic");
@@ -427,6 +438,7 @@ _END_OF_R_
     maxden = max(c(den1factor,den2factor,den3factor,den4factor));
     maxden100 = max(c(den1factor100,den2factor100,den3factor100,den4factor100));
 _END_OF_R_
+#-------------------------------------------------
 
     print R_COMMANDS "$R_command\n";
 
@@ -434,7 +446,7 @@ _END_OF_R_
     #open up image for plotting
     if ($output_image =~ /.pdf/) {
         print R_COMMANDS "pdf(file=\"$output_image\",width=3.3,height=7.5,bg=\"white\");"."\n";
-
+        
     } elsif ($output_image =~ /.png/) {
         print R_COMMANDS "png(file=\"$output_image\",width=400,height=800);"."\n";
 
@@ -445,261 +457,310 @@ _END_OF_R_
     print R_COMMANDS "par(mfcol=c(5,1),mar=c(0.5,3,1,1.5),oma=c(3,0,4,0),mgp = c(3,1,0));"."\n";
 
 
-    if ($analysis_type eq 'capture') {
+if ($analysis_type eq 'capture') {
+#-------------------------------------------------
     $R_command = <<"_END_OF_R_";
-#final figure format
-finalfactor = 25 / maxden100;
+    #final figure format
+    finalfactor = 25 / maxden100;
 
-plot.default(x=c(1:10),y=c(1:10),ylim=c(0,28),xlim=c(0,100),axes=FALSE, ann=FALSE,col="#00000000",xaxs="i",yaxs="i");
-rect(0, 0, 100, 28, col = "#00000011",border=NA); #plot bg color
-#lines(c(10,100),c(25,25),lty=2,col="black");
-axis(side=2,at=c(0,25),labels=c(0,sprintf("%.3f", maxden100)),las=1,cex.axis=0.6,hadj=0.6,lwd=0.5,lwd.ticks=0.5,tck=-0.01);
-lines(den2100x\$x,(finalfactor * den2factor100),col="#67B32EAA",lwd=2);
-lines(den1100x\$x,(finalfactor * den1factor100),col="#1C3660AA",lwd=2);
-lines(den3100x\$x,(finalfactor * den3factor100),col="#F49819AA",lwd=2);
-lines(den4100x\$x,(finalfactor * den4factor100),col="#E52420AA",lwd=2);
-text(x=cn1peakpos100,y=(finalfactor * cn1peakheight100)+1.7,labels=signif(cn1peakpos100,3),cex=0.7,srt=0,col="#1C3660AA");
-text(x=cn3peakpos100,y=(finalfactor * cn3peakheight100)+1.7,labels=signif(cn3peakpos100,3),cex=0.7,srt=0,col="#F49819AA");
-text(x=cn4peakpos100,y=(finalfactor * cn4peakheight100)+1.7,labels=signif(cn4peakpos100,3),cex=0.7,srt=0,col="#E52420AA");
-text(x=cn2peakpos100,y=(finalfactor * cn2peakheight100)+1.7,labels=signif(cn2peakpos100,3),cex=0.7,srt=0,col="#67B32EAA");
+    plot.default(x=c(1:10),y=c(1:10),ylim=c(0,28),xlim=c(0,100),axes=FALSE, ann=FALSE,col="#00000000",xaxs="i",yaxs="i");
+    rect(0, 0, 100, 28, col = "#00000011",border=NA); #plot bg color
+    #lines(c(10,100),c(25,25),lty=2,col="black");
+    axis(side=2,at=c(0,25),labels=c(0,sprintf("%.3f", maxden100)),las=1,cex.axis=0.6,hadj=0.6,lwd=0.5,lwd.ticks=0.5,tck=-0.01);
+    lines(den2100x\$x,(finalfactor * den2factor100),col="#67B32EAA",lwd=2);
+    lines(den1100x\$x,(finalfactor * den1factor100),col="#1C3660AA",lwd=2);
+    lines(den3100x\$x,(finalfactor * den3factor100),col="#F49819AA",lwd=2);
+    lines(den4100x\$x,(finalfactor * den4factor100),col="#E52420AA",lwd=2);
 
-axis(side=3,at=c(0,20,40,60,80,100),labels=c(0,20,40,60,80,100),cex.axis=0.6,lwd=0.5,lwd.ticks=0.5,padj=1.4);
-mtext("Tumor Variant Allele Frequency",adj=0.5,padj=-3.1,cex=0.5,side=3);
-mtext(genome,adj=0,padj=-3.2,cex=0.65,side=3);
+    ppos = which(cn1peakheight100 > $minimum_labelled_peak_height)
+    if(!(length(ppos) == 0)){
+        text(x=cn1peakpos100[ppos],
+             y=(finalfactor * cn1peakheight100[ppos])+1.7,
+             labels=signif(cn1peakpos100[ppos],3),cex=0.7,srt=0,col="#1C3660AA");
+    }
+    ppos = which(cn3peakheight100 > $minimum_labelled_peak_height)
+    if(!(length(ppos) == 0)){
+        text(x=cn3peakpos100[ppos],
+             y=(finalfactor * cn3peakheight100[ppos])+1.7,
+             labels=signif(cn3peakpos100[ppos],3),cex=0.7,srt=0,col="#F49819AA");
+    }
+    ppos = which(cn4peakheight100 > $minimum_labelled_peak_height)
+    if(!(length(ppos) == 0)){
+        text(x=cn4peakpos100[ppos],
+             y=(finalfactor * cn4peakheight100[ppos])+1.7,
+             labels=signif(cn4peakpos100[ppos],3),cex=0.7,srt=0,col="#E52420AA");
+    }
+    ppos = which(cn2peakheight100 > $minimum_labelled_peak_height)
+    if(!(length(ppos) == 0)){
+        text(x=cn2peakpos100[ppos],
+             y=(finalfactor * cn2peakheight100[ppos])+1.7,
+             labels=signif(cn2peakpos100[ppos],3),cex=0.7,srt=0,col="#67B32EAA");
+    }
+
+    axis(side=3,at=c(0,20,40,60,80,100),labels=c(0,20,40,60,80,100),cex.axis=0.6,lwd=0.5,lwd.ticks=0.5,padj=1.4);
+    mtext("Tumor Variant Allele Frequency",adj=0.5,padj=-3.1,cex=0.5,side=3);
+    mtext(genome,adj=0,padj=-3.2,cex=0.65,side=3);
 
 
-#rect(par("usr")[1], par("usr")[3], par("usr")[2], par("usr")[4], col = "#00000055"); #plot bg color
-#mtext("Normal and Tumor Coverage > 100",cex=0.7, padj=-0.5);
-#legend(x="topright",horiz=TRUE,xjust=0, c("1", "2", "3", "4+","Chr $chr_highlight"),col=c("#1C3660","#67B32E","#F49819","#E52420","#A020F0"),pch=c(19,19,19,19,2),cex=0.6);
+    #rect(par("usr")[1], par("usr")[3], par("usr")[2], par("usr")[4], col = "#00000055"); #plot bg color
+    #mtext("Normal and Tumor Coverage > 100",cex=0.7, padj=-0.5);
+    #legend(x="topright",horiz=TRUE,xjust=0, c("1", "2", "3", "4+","Chr $chr_highlight"),col=c("#1C3660","#67B32E","#F49819","#E52420","#A020F0"),pch=c(19,19,19,19,2),cex=0.6);
 
 
-#cn1plot
-plot.default(x=(z1\$V11),y=(z1\$V9+z1\$V10),log="y", type="p",pch=19,cex=0.4,col="#00000000",xlim=c(-1,101),ylim=c(95,absmaxx+5),axes=FALSE, ann=FALSE,xaxs="i",yaxs="i");
-points(y=(cn1minus100x\$V9+cn1minus100x\$V10),x=(cn1minus100x\$V11),type="p",pch=19,cex=0.4,col="#1C366044");
-points(y=(cn1xchr100\$V9+cn1xchr100\$V10),x=(cn1xchr100\$V11),type="p",pch=2,cex=0.8,col="#1C366044");
-#add in highlight of points selected for by script input
-if(length(additional_plot_points) > 1) {
-    points(x=additional_plot_points_cn1\$V2,y=additional_plot_points_cn1\$V3,type="p",pch=7,cex=0.8,col="#555555FF");
-}
-axis(side=2,las=1,tck=0,lwd=0,cex.axis=0.6,hadj=0.5);
-for (i in 2:length(axTicks(2)-1)) {
-    lines(c(-1,101),c(axTicks(2)[i],axTicks(2)[i]),col="#00000022");
-}
-rect(-1, 95, 101, axTicks(2)[length(axTicks(2))]*1.05, col = "#00000011",border=NA); #plot bg color
-#add cn circle
-points(x=c(97),y=c((absmaxx+5)*0.70),type="p",pch=19,cex=3,col="#1C3660FF");
-text(c(97),y=c((absmaxx+5)*0.70), labels=c(1), cex=1, col="#FFFFFFFF") 
-
-#cn2plot
+    #cn1plot
     plot.default(x=(z1\$V11),y=(z1\$V9+z1\$V10),log="y", type="p",pch=19,cex=0.4,col="#00000000",xlim=c(-1,101),ylim=c(95,absmaxx+5),axes=FALSE, ann=FALSE,xaxs="i",yaxs="i");
-points(y=(cn2100x\$V9+cn2100x\$V10),x=(cn2100x\$V11),type="p",pch=19,cex=0.4,col="#67B32E44");
-points(y=(cn2xchr100\$V9+cn2xchr100\$V10),x=(cn2xchr100\$V11),type="p",pch=2,cex=0.8,col="#67B32E44");
-#add in highlight of points selected for by script input
-if(length(additional_plot_points) > 1) {
-    points(x=additional_plot_points_cn2\$V2,y=additional_plot_points_cn2\$V3,type="p",pch=7,cex=0.8,col="#555555FF");
-}
-axis(side=2,las=1,tck=0,lwd=0,cex.axis=0.6,hadj=0.5);
-for (i in 2:length(axTicks(2)-1)) {
-    lines(c(-1,101),c(axTicks(2)[i],axTicks(2)[i]),col="#00000022");
-}
-rect(-1, 95, 101, axTicks(2)[length(axTicks(2))]*1.05, col = "#00000011",border=NA); #plot bg color
-#add cn circle
-points(x=c(97),y=c((absmaxx+5)*0.70),type="p",pch=19,cex=3,col="#67B32EFF");
-text(c(97),y=c((absmaxx+5)*0.70), labels=c(2), cex=1, col="#FFFFFFFF") 
+    points(y=(cn1minus100x\$V9+cn1minus100x\$V10),x=(cn1minus100x\$V11),type="p",pch=19,cex=0.4,col="#1C366044");
+    points(y=(cn1xchr100\$V9+cn1xchr100\$V10),x=(cn1xchr100\$V11),type="p",pch=2,cex=0.8,col="#1C366044");
+    #add in highlight of points selected for by script input
+    if(length(additional_plot_points) > 1) {
+        points(x=additional_plot_points_cn1\$V2,y=additional_plot_points_cn1\$V3,type="p",pch=7,cex=0.8,col="#555555FF");
+    }
+    axis(side=2,las=1,tck=0,lwd=0,cex.axis=0.6,hadj=0.5);
+    for (i in 2:length(axTicks(2)-1)) {
+        lines(c(-1,101),c(axTicks(2)[i],axTicks(2)[i]),col="#00000022");
+    }
+    rect(-1, 95, 101, axTicks(2)[length(axTicks(2))]*1.05, col = "#00000011",border=NA); #plot bg color
+    #add cn circle
+    points(x=c(97),y=c((absmaxx+5)*0.70),type="p",pch=19,cex=3,col="#1C3660FF");
+    text(c(97),y=c((absmaxx+5)*0.70), labels=c(1), cex=1, col="#FFFFFFFF") 
 
-#cn3plot
+    #cn2plot
     plot.default(x=(z1\$V11),y=(z1\$V9+z1\$V10),log="y", type="p",pch=19,cex=0.4,col="#00000000",xlim=c(-1,101),ylim=c(95,absmaxx+5),axes=FALSE, ann=FALSE,xaxs="i",yaxs="i");
-points(y=(cn3100x\$V9+cn3100x\$V10),x=(cn3100x\$V11),type="p",pch=19,cex=0.4,col="#F4981999");
-points(y=(cn3xchr100\$V9+cn3xchr100\$V10),x=(cn3xchr100\$V11),type="p",pch=2,cex=0.8,col="#F4981955");
-#add in highlight of points selected for by script input
-if(length(additional_plot_points) > 1) {
-    points(x=additional_plot_points_cn3\$V2,y=additional_plot_points_cn3\$V3,type="p",pch=7,cex=0.8,col="#555555FF");
-}
-axis(side=2,las=1,tck=0,lwd=0,cex.axis=0.6,hadj=0.5);
-for (i in 2:length(axTicks(2)-1)) {
-    lines(c(-1,101),c(axTicks(2)[i],axTicks(2)[i]),col="#00000022");
-}
-rect(-1, 95, 101, axTicks(2)[length(axTicks(2))]*1.05, col = "#00000011",border=NA); #plot bg color
-#add cn circle
-points(x=c(97),y=c((absmaxx+5)*0.70),type="p",pch=19,cex=3,col="#F49819FF");
-text(c(97),y=c((absmaxx+5)*0.70), labels=c(3), cex=1, col="#FFFFFFFF") 
+    points(y=(cn2100x\$V9+cn2100x\$V10),x=(cn2100x\$V11),type="p",pch=19,cex=0.4,col="#67B32E44");
+    points(y=(cn2xchr100\$V9+cn2xchr100\$V10),x=(cn2xchr100\$V11),type="p",pch=2,cex=0.8,col="#67B32E44");
+    #add in highlight of points selected for by script input
+    if(length(additional_plot_points) > 1) {
+        points(x=additional_plot_points_cn2\$V2,y=additional_plot_points_cn2\$V3,type="p",pch=7,cex=0.8,col="#555555FF");
+    }
+    axis(side=2,las=1,tck=0,lwd=0,cex.axis=0.6,hadj=0.5);
+    for (i in 2:length(axTicks(2)-1)) {
+        lines(c(-1,101),c(axTicks(2)[i],axTicks(2)[i]),col="#00000022");
+    }
+    rect(-1, 95, 101, axTicks(2)[length(axTicks(2))]*1.05, col = "#00000011",border=NA); #plot bg color
+    #add cn circle
+    points(x=c(97),y=c((absmaxx+5)*0.70),type="p",pch=19,cex=3,col="#67B32EFF");
+    text(c(97),y=c((absmaxx+5)*0.70), labels=c(2), cex=1, col="#FFFFFFFF") 
 
-#cn4plot
+    #cn3plot
     plot.default(x=(z1\$V11),y=(z1\$V9+z1\$V10),log="y", type="p",pch=19,cex=0.4,col="#00000000",xlim=c(-1,101),ylim=c(95,absmaxx+5),axes=FALSE, ann=FALSE,xaxs="i",yaxs="i");
-points(y=(cn4plus100x\$V9+cn4plus100x\$V10),x=(cn4plus100x\$V11),type="p",pch=19,cex=0.4,col="#E5242044");
-points(y=(cn4xchr100\$V9+cn4xchr100\$V10),x=(cn4xchr100\$V11),type="p",pch=2,cex=0.8,col="#E5242044");
-#add in highlight of points selected for by script input
-if(length(additional_plot_points) > 1) {
-    points(x=additional_plot_points_cn4\$V2,y=additional_plot_points_cn4\$V3,type="p",pch=7,cex=0.8,col="#555555FF");
-}
-axis(side=2,las=1,tck=0,lwd=0,cex.axis=0.6,hadj=0.5);
-for (i in 2:length(axTicks(2)-1)) {
-    lines(c(-1,101),c(axTicks(2)[i],axTicks(2)[i]),col="#00000022");
-}
-rect(-1, 95, 101, axTicks(2)[length(axTicks(2))]*1.05, col = "#00000011",border=NA); #plot bg color
-#add cn circle
-points(x=c(97),y=c((absmaxx+5)*0.70),type="p",pch=19,cex=3,col="#E52420FF");
-text(c(97),y=c((absmaxx+5)*0.70), labels=c(4), cex=1, col="#FFFFFFFF") 
+    points(y=(cn3100x\$V9+cn3100x\$V10),x=(cn3100x\$V11),type="p",pch=19,cex=0.4,col="#F4981999");
+    points(y=(cn3xchr100\$V9+cn3xchr100\$V10),x=(cn3xchr100\$V11),type="p",pch=2,cex=0.8,col="#F4981955");
+    #add in highlight of points selected for by script input
+    if(length(additional_plot_points) > 1) {
+        points(x=additional_plot_points_cn3\$V2,y=additional_plot_points_cn3\$V3,type="p",pch=7,cex=0.8,col="#555555FF");
+    }
+    axis(side=2,las=1,tck=0,lwd=0,cex.axis=0.6,hadj=0.5);
+    for (i in 2:length(axTicks(2)-1)) {
+        lines(c(-1,101),c(axTicks(2)[i],axTicks(2)[i]),col="#00000022");
+    }
+    rect(-1, 95, 101, axTicks(2)[length(axTicks(2))]*1.05, col = "#00000011",border=NA); #plot bg color
+    #add cn circle
+    points(x=c(97),y=c((absmaxx+5)*0.70),type="p",pch=19,cex=3,col="#F49819FF");
+    text(c(97),y=c((absmaxx+5)*0.70), labels=c(3), cex=1, col="#FFFFFFFF") 
+
+    #cn4plot
+    plot.default(x=(z1\$V11),y=(z1\$V9+z1\$V10),log="y", type="p",pch=19,cex=0.4,col="#00000000",xlim=c(-1,101),ylim=c(95,absmaxx+5),axes=FALSE, ann=FALSE,xaxs="i",yaxs="i");
+    points(y=(cn4plus100x\$V9+cn4plus100x\$V10),x=(cn4plus100x\$V11),type="p",pch=19,cex=0.4,col="#E5242044");
+    points(y=(cn4xchr100\$V9+cn4xchr100\$V10),x=(cn4xchr100\$V11),type="p",pch=2,cex=0.8,col="#E5242044");
+    #add in highlight of points selected for by script input
+    if(length(additional_plot_points) > 1) {
+        points(x=additional_plot_points_cn4\$V2,y=additional_plot_points_cn4\$V3,type="p",pch=7,cex=0.8,col="#555555FF");
+    }
+    axis(side=2,las=1,tck=0,lwd=0,cex.axis=0.6,hadj=0.5);
+    for (i in 2:length(axTicks(2)-1)) {
+        lines(c(-1,101),c(axTicks(2)[i],axTicks(2)[i]),col="#00000022");
+    }
+    rect(-1, 95, 101, axTicks(2)[length(axTicks(2))]*1.05, col = "#00000011",border=NA); #plot bg color
+    #add cn circle
+    points(x=c(97),y=c((absmaxx+5)*0.70),type="p",pch=19,cex=3,col="#E52420FF");
+    text(c(97),y=c((absmaxx+5)*0.70), labels=c(4), cex=1, col="#FFFFFFFF") 
 
     axis(side=1,at=c(0,20,40,60,80,100),labels=c(0,20,40,60,80,100),cex.axis=0.6,lwd=0.5,lwd.ticks=0.5,padj=-1.2);
 mtext("Tumor Variant Allele Frequency",adj=0.5,padj=3.2,cex=0.5,side=1);
 
 _END_OF_R_
+#-------------------------------------------------
 
     print R_COMMANDS "$R_command\n";
 }
 elsif ($analysis_type eq 'wgs') {
 
-
+#-------------------------------------------------
     $R_command = <<"_END_OF_R_";
 
-#all coverage points plotted
-finalfactor = 25 / maxden;
+    #all coverage points plotted
+    finalfactor = 25 / maxden;
+    
+    plot.default(x=c(1:10),y=c(1:10),ylim=c(0,28),xlim=c(0,100),axes=FALSE, ann=FALSE,col="#00000000",xaxs="i",yaxs="i");
+    rect(0, 0, 100, 28, col = "#00000011",border=NA); #plot bg color
+    #lines(c(10,100),c(25,25),lty=2,col="black");
+    axis(side=2,at=c(0,25),labels=c(0,sprintf("%.3f", maxden)),las=1,cex.axis=0.6,hadj=0.6,lwd=0.5,lwd.ticks=0.5,tck=-0.01);
+    lines(den2\$x,(finalfactor * den2factor),col="#67B32EAA",lwd=2);
+    lines(den1\$x,(finalfactor * den1factor),col="#1C3660AA",lwd=2);
+    lines(den3\$x,(finalfactor * den3factor),col="#F49819AA",lwd=2);
+    lines(den4\$x,(finalfactor * den4factor),col="#E52420AA",lwd=2);
+    
 
-plot.default(x=c(1:10),y=c(1:10),ylim=c(0,28),xlim=c(0,100),axes=FALSE, ann=FALSE,col="#00000000",xaxs="i",yaxs="i");
-rect(0, 0, 100, 28, col = "#00000011",border=NA); #plot bg color
-#lines(c(10,100),c(25,25),lty=2,col="black");
-axis(side=2,at=c(0,25),labels=c(0,sprintf("%.3f", maxden)),las=1,cex.axis=0.6,hadj=0.6,lwd=0.5,lwd.ticks=0.5,tck=-0.01);
-lines(den2\$x,(finalfactor * den2factor),col="#67B32EAA",lwd=2);
-lines(den1\$x,(finalfactor * den1factor),col="#1C3660AA",lwd=2);
-lines(den3\$x,(finalfactor * den3factor),col="#F49819AA",lwd=2);
-lines(den4\$x,(finalfactor * den4factor),col="#E52420AA",lwd=2);
-text(x=cn1peakpos,y=(finalfactor * cn1peakheight)+1.7,labels=signif(cn1peakpos,3),cex=0.7,srt=0,col="#1C3660AA");
-text(x=cn3peakpos,y=(finalfactor * cn3peakheight)+1.7,labels=signif(cn3peakpos,3),cex=0.7,srt=0,col="#F49819AA");
-text(x=cn4peakpos,y=(finalfactor * cn4peakheight)+1.7,labels=signif(cn4peakpos,3),cex=0.7,srt=0,col="#E52420AA");
-text(x=cn2peakpos,y=(finalfactor * cn2peakheight)+1.7,labels=signif(cn2peakpos,3),cex=0.7,srt=0,col="#67B32EAA");
+    ppos = which(cn1peakheight > $minimum_labelled_peak_height)
+    if(!(length(ppos) == 0)){    
+        text(x=cn1peakpos[ppos], y=(finalfactor * cn1peakheight[ppos])+1.7,
+             labels=signif(cn1peakpos[ppos],3),
+             cex=0.7, srt=0, col="#1C3660AA");
+    }
+    ppos = which(cn3peakheight > $minimum_labelled_peak_height)
+    if(!(length(ppos) == 0)){    
+        text(x=cn3peakpos[ppos],
+             y=(finalfactor * cn3peakheight[ppos])+1.7,
+             labels=signif(cn3peakpos[ppos],3),
+             cex=0.7,srt=0,col="#F49819AA");
+    }
+    ppos = which(cn4peakheight > $minimum_labelled_peak_height)
+    if(!(length(ppos) == 0)){    
+        text(x=cn4peakpos[ppos],
+             y=(finalfactor * cn4peakheight[ppos])+1.7,
+             labels=signif(cn4peakpos[ppos],3),
+             cex=0.7,srt=0,col="#E52420AA");
+    }
+    ppos = which(cn2peakheight > $minimum_labelled_peak_height)
+    if(!(length(ppos) == 0)){    
+        text(x=cn2peakpos[ppos],
+             y=(finalfactor * cn2peakheight[ppos])+1.7,
+             labels=signif(cn2peakpos[ppos],3),
+             cex=0.7,srt=0,col="#67B32EAA");
+    }
+   
 
-axis(side=3,at=c(0,20,40,60,80,100),labels=c(0,20,40,60,80,100),cex.axis=0.6,lwd=0.5,lwd.ticks=0.5,padj=1.4);
-mtext("Tumor Variant Allele Frequency",adj=0.5,padj=-3.1,cex=0.5,side=3);
-mtext(genome,adj=0,padj=-3.2,cex=0.65,side=3);
+    axis(side=3,at=c(0,20,40,60,80,100),labels=c(0,20,40,60,80,100),cex.axis=0.6,lwd=0.5,lwd.ticks=0.5,padj=1.4);
+    mtext("Tumor Variant Allele Frequency",adj=0.5,padj=-3.1,cex=0.5,side=3);
+    mtext(genome,adj=0,padj=-3.2,cex=0.65,side=3);
+    
+    
+    #rect(par("usr")[1], par("usr")[3], par("usr")[2], par("usr")[4], col = "#00000055"); #plot bg color
+    #mtext("Normal and Tumor Coverage > 100",cex=0.7, padj=-0.5);
+    #legend(x="topright",horiz=TRUE,xjust=0, c("1", "2", "3", "4+","Chr $chr_highlight"),col=c("#1C3660","#67B32E","#F49819","#E52420","#A020F0"),pch=c(19,19,19,19,2),cex=0.6);
 
 
-#rect(par("usr")[1], par("usr")[3], par("usr")[2], par("usr")[4], col = "#00000055"); #plot bg color
-#mtext("Normal and Tumor Coverage > 100",cex=0.7, padj=-0.5);
-#legend(x="topright",horiz=TRUE,xjust=0, c("1", "2", "3", "4+","Chr $chr_highlight"),col=c("#1C3660","#67B32E","#F49819","#E52420","#A020F0"),pch=c(19,19,19,19,2),cex=0.6);
-
-
-#cn1plot
-plot.default(x=(z1\$V11),y=(z1\$V9+z1\$V10),log="y", type="p",pch=19,cex=0.4,col="#00000000",xlim=c(-1,101),ylim=c(5,absmaxx+5),axes=FALSE, ann=FALSE,xaxs="i",yaxs="i");
-points(y=(cn1minus\$V9+cn1minus\$V10),x=(cn1minus\$V11),type="p",pch=19,cex=0.4,col="#1C366044");
-points(y=(cn1xchr\$V9+cn1xchr\$V10),x=(cn1xchr\$V11),type="p",pch=2,cex=0.8,col="#1C366044");
-#add in highlight of points selected for by script input
-if(length(additional_plot_points) > 1) {
-    points(x=additional_plot_points_cn1\$V2,y=additional_plot_points_cn1\$V3,type="p",pch=7,cex=0.8,col="#555555FF");
-}
-axis(side=2,las=1,tck=0,lwd=0,cex.axis=0.6,hadj=0.5);
-for (i in 2:length(axTicks(2)-1)) {
-    lines(c(-1,101),c(axTicks(2)[i],axTicks(2)[i]),col="#00000022");
-}
-rect(-1, 5, 101, axTicks(2)[length(axTicks(2))]*1.05, col = "#00000011",border=NA); #plot bg color
-#add cn circle
-points(x=c(97),y=c((absmaxx+5)*0.70),type="p",pch=19,cex=3,col="#1C3660FF");
-text(c(97),y=c((absmaxx+5)*0.70), labels=c(1), cex=1, col="#FFFFFFFF") 
-
-#cn2plot
+    #cn1plot
     plot.default(x=(z1\$V11),y=(z1\$V9+z1\$V10),log="y", type="p",pch=19,cex=0.4,col="#00000000",xlim=c(-1,101),ylim=c(5,absmaxx+5),axes=FALSE, ann=FALSE,xaxs="i",yaxs="i");
-points(y=(cn2\$V9+cn2\$V10),x=(cn2\$V11),type="p",pch=19,cex=0.4,col="#67B32E44");
-points(y=(cn2xchr\$V9+cn2xchr\$V10),x=(cn2xchr\$V11),type="p",pch=2,cex=0.8,col="#67B32E44");
+    points(y=(cn1minus\$V9+cn1minus\$V10),x=(cn1minus\$V11),type="p",pch=19,cex=0.4,col="#1C366044");
+    points(y=(cn1xchr\$V9+cn1xchr\$V10),x=(cn1xchr\$V11),type="p",pch=2,cex=0.8,col="#1C366044");
 #add in highlight of points selected for by script input
-if(length(additional_plot_points) > 1) {
-    points(x=additional_plot_points_cn2\$V2,y=additional_plot_points_cn2\$V3,type="p",pch=7,cex=0.8,col="#555555FF");
-}
-axis(side=2,las=1,tck=0,lwd=0,cex.axis=0.6,hadj=0.5);
-for (i in 2:length(axTicks(2)-1)) {
-    lines(c(-1,101),c(axTicks(2)[i],axTicks(2)[i]),col="#00000022");
-}
-rect(-1, 5, 101, axTicks(2)[length(axTicks(2))]*1.05, col = "#00000011",border=NA); #plot bg color
+    if(length(additional_plot_points) > 1) {
+        points(x=additional_plot_points_cn1\$V2,y=additional_plot_points_cn1\$V3,type="p",pch=7,cex=0.8,col="#555555FF");
+    }
+    axis(side=2,las=1,tck=0,lwd=0,cex.axis=0.6,hadj=0.5);
+    for (i in 2:length(axTicks(2)-1)) {
+        lines(c(-1,101),c(axTicks(2)[i],axTicks(2)[i]),col="#00000022");
+    }
+    rect(-1, 5, 101, axTicks(2)[length(axTicks(2))]*1.05, col = "#00000011",border=NA); #plot bg color
 #add cn circle
-points(x=c(97),y=c((absmaxx+5)*0.70),type="p",pch=19,cex=3,col="#67B32EFF");
-text(c(97),y=c((absmaxx+5)*0.70), labels=c(2), cex=1, col="#FFFFFFFF") 
+    points(x=c(97),y=c((absmaxx+5)*0.70),type="p",pch=19,cex=3,col="#1C3660FF");
+    text(c(97),y=c((absmaxx+5)*0.70), labels=c(1), cex=1, col="#FFFFFFFF") 
+        
+#cn2plot
+        plot.default(x=(z1\$V11),y=(z1\$V9+z1\$V10),log="y", type="p",pch=19,cex=0.4,col="#00000000",xlim=c(-1,101),ylim=c(5,absmaxx+5),axes=FALSE, ann=FALSE,xaxs="i",yaxs="i");
+    points(y=(cn2\$V9+cn2\$V10),x=(cn2\$V11),type="p",pch=19,cex=0.4,col="#67B32E44");
+    points(y=(cn2xchr\$V9+cn2xchr\$V10),x=(cn2xchr\$V11),type="p",pch=2,cex=0.8,col="#67B32E44");
+#add in highlight of points selected for by script input
+    if(length(additional_plot_points) > 1) {
+        points(x=additional_plot_points_cn2\$V2,y=additional_plot_points_cn2\$V3,type="p",pch=7,cex=0.8,col="#555555FF");
+    }
+    axis(side=2,las=1,tck=0,lwd=0,cex.axis=0.6,hadj=0.5);
+    for (i in 2:length(axTicks(2)-1)) {
+        lines(c(-1,101),c(axTicks(2)[i],axTicks(2)[i]),col="#00000022");
+    }
+    rect(-1, 5, 101, axTicks(2)[length(axTicks(2))]*1.05, col = "#00000011",border=NA); #plot bg color
+#add cn circle
+    points(x=c(97),y=c((absmaxx+5)*0.70),type="p",pch=19,cex=3,col="#67B32EFF");
+    text(c(97),y=c((absmaxx+5)*0.70), labels=c(2), cex=1, col="#FFFFFFFF") 
 
 #cn3plot
-    plot.default(x=(z1\$V11),y=(z1\$V9+z1\$V10),log="y", type="p",pch=19,cex=0.4,col="#00000000",xlim=c(-1,101),ylim=c(5,absmaxx+5),axes=FALSE, ann=FALSE,xaxs="i",yaxs="i");
-points(y=(cn3\$V9+cn3\$V10),x=(cn3\$V11),type="p",pch=19,cex=0.4,col="#F4981999");
-points(y=(cn3xchr\$V9+cn3xchr\$V10),x=(cn3xchr\$V11),type="p",pch=2,cex=0.8,col="#F4981955");
+        plot.default(x=(z1\$V11),y=(z1\$V9+z1\$V10),log="y", type="p",pch=19,cex=0.4,col="#00000000",xlim=c(-1,101),ylim=c(5,absmaxx+5),axes=FALSE, ann=FALSE,xaxs="i",yaxs="i");
+    points(y=(cn3\$V9+cn3\$V10),x=(cn3\$V11),type="p",pch=19,cex=0.4,col="#F4981999");
+    points(y=(cn3xchr\$V9+cn3xchr\$V10),x=(cn3xchr\$V11),type="p",pch=2,cex=0.8,col="#F4981955");
 #add in highlight of points selected for by script input
-if(length(additional_plot_points) > 1) {
-    points(x=additional_plot_points_cn3\$V2,y=additional_plot_points_cn3\$V3,type="p",pch=7,cex=0.8,col="#555555FF");
-}
-axis(side=2,las=1,tck=0,lwd=0,cex.axis=0.6,hadj=0.5);
-for (i in 2:length(axTicks(2)-1)) {
-    lines(c(-1,101),c(axTicks(2)[i],axTicks(2)[i]),col="#00000022");
-}
-rect(-1, 5, 101, axTicks(2)[length(axTicks(2))]*1.05, col = "#00000011",border=NA); #plot bg color
+    if(length(additional_plot_points) > 1) {
+        points(x=additional_plot_points_cn3\$V2,y=additional_plot_points_cn3\$V3,type="p",pch=7,cex=0.8,col="#555555FF");
+    }
+    axis(side=2,las=1,tck=0,lwd=0,cex.axis=0.6,hadj=0.5);
+    for (i in 2:length(axTicks(2)-1)) {
+        lines(c(-1,101),c(axTicks(2)[i],axTicks(2)[i]),col="#00000022");
+    }
+    rect(-1, 5, 101, axTicks(2)[length(axTicks(2))]*1.05, col = "#00000011",border=NA); #plot bg color
 #add cn circle
-points(x=c(97),y=c((absmaxx+5)*0.70),type="p",pch=19,cex=3,col="#F49819FF");
-text(c(97),y=c((absmaxx+5)*0.70), labels=c(3), cex=1, col="#FFFFFFFF") 
+    points(x=c(97),y=c((absmaxx+5)*0.70),type="p",pch=19,cex=3,col="#F49819FF");
+    text(c(97),y=c((absmaxx+5)*0.70), labels=c(3), cex=1, col="#FFFFFFFF") 
 
 #cn4plot
-    plot.default(x=(z1\$V11),y=(z1\$V9+z1\$V10),log="y", type="p",pch=19,cex=0.4,col="#00000000",xlim=c(-1,101),ylim=c(5,absmaxx+5),axes=FALSE, ann=FALSE,xaxs="i",yaxs="i");
-points(y=(cn4plus\$V9+cn4plus\$V10),x=(cn4plus\$V11),type="p",pch=19,cex=0.4,col="#E5242044");
-points(y=(cn4xchr\$V9+cn4xchr\$V10),x=(cn4xchr\$V11),type="p",pch=2,cex=0.8,col="#E5242044");
+        plot.default(x=(z1\$V11),y=(z1\$V9+z1\$V10),log="y", type="p",pch=19,cex=0.4,col="#00000000",xlim=c(-1,101),ylim=c(5,absmaxx+5),axes=FALSE, ann=FALSE,xaxs="i",yaxs="i");
+    points(y=(cn4plus\$V9+cn4plus\$V10),x=(cn4plus\$V11),type="p",pch=19,cex=0.4,col="#E5242044");
+    points(y=(cn4xchr\$V9+cn4xchr\$V10),x=(cn4xchr\$V11),type="p",pch=2,cex=0.8,col="#E5242044");
 #add in highlight of points selected for by script input
-if(length(additional_plot_points) > 1) {
-    points(x=additional_plot_points_cn4\$V2,y=additional_plot_points_cn4\$V3,type="p",pch=7,cex=0.8,col="#555555FF");
-}
-axis(side=2,las=1,tck=0,lwd=0,cex.axis=0.6,hadj=0.5);
-for (i in 2:length(axTicks(2)-1)) {
-    lines(c(-1,101),c(axTicks(2)[i],axTicks(2)[i]),col="#00000022");
-}
-rect(-1, 5, 101, axTicks(2)[length(axTicks(2))]*1.05, col = "#00000011",border=NA); #plot bg color
+    if(length(additional_plot_points) > 1) {
+        points(x=additional_plot_points_cn4\$V2,y=additional_plot_points_cn4\$V3,type="p",pch=7,cex=0.8,col="#555555FF");
+    }
+    axis(side=2,las=1,tck=0,lwd=0,cex.axis=0.6,hadj=0.5);
+    for (i in 2:length(axTicks(2)-1)) {
+        lines(c(-1,101),c(axTicks(2)[i],axTicks(2)[i]),col="#00000022");
+    }
+    rect(-1, 5, 101, axTicks(2)[length(axTicks(2))]*1.05, col = "#00000011",border=NA); #plot bg color
 #add cn circle
-points(x=c(97),y=c((absmaxx+5)*0.70),type="p",pch=19,cex=3,col="#E52420FF");
-text(c(97),y=c((absmaxx+5)*0.70), labels=c(4), cex=1, col="#FFFFFFFF") 
+    points(x=c(97),y=c((absmaxx+5)*0.70),type="p",pch=19,cex=3,col="#E52420FF");
+    text(c(97),y=c((absmaxx+5)*0.70), labels=c(4), cex=1, col="#FFFFFFFF") 
 
-    axis(side=1,at=c(0,20,40,60,80,100),labels=c(0,20,40,60,80,100),cex.axis=0.6,lwd=0.5,lwd.ticks=0.5,padj=-1.2);
-mtext("Tumor Variant Allele Frequency",adj=0.5,padj=3.2,cex=0.5,side=1);
-
+        axis(side=1,at=c(0,20,40,60,80,100),labels=c(0,20,40,60,80,100),cex.axis=0.6,lwd=0.5,lwd.ticks=0.5,padj=-1.2);
+    mtext("Tumor Variant Allele Frequency",adj=0.5,padj=3.2,cex=0.5,side=1);
+    
 _END_OF_R_
-
+#-------------------------------------------------
     print R_COMMANDS "$R_command\n";
 }
 
+#-------------------------------------------------
 $R_command = <<"_END_OF_R_";
 devoff <- dev.off();
 q();
 _END_OF_R_
+#-------------------------------------------------
+
     print R_COMMANDS "$R_command\n";
 
-close R_COMMANDS;
+    close R_COMMANDS;
 
-my $cmd = "R --vanilla --slave \< $r_script_output_file";
-my $return = Genome::Sys->shellcmd(
-    cmd => "$cmd",
-    output_files => [$output_image],
-    skip_if_output_is_present => $skip_if_output_is_present,
+    my $cmd = "R --vanilla --slave \< $r_script_output_file";
+    my $return = Genome::Sys->shellcmd(
+        cmd => "$cmd",
+        output_files => [$output_image],
+        skip_if_output_is_present => $skip_if_output_is_present,
     );
-unless($return) { 
-    $self->error_message("Failed to execute: Returned $return");
-die $self->error_message;
-}
-return $return;
+    unless($return) { 
+        $self->error_message("Failed to execute: Returned $return");
+        die $self->error_message;
     }
+    return $return;
+}
 
-    sub get_cn
+sub get_cn
+{
+    my ($chr,$start,$stop,$hashref)=@_;
+    my %info_hash=%{$hashref};
+    my $cn;
+    foreach my $ch (sort keys %info_hash)
     {
-        my ($chr,$start,$stop,$hashref)=@_;
-        my %info_hash=%{$hashref};
-        my $cn;
-        foreach my $ch (sort keys %info_hash)
+        next unless ($chr eq $ch);
+        foreach my $region (sort keys %{$info_hash{$ch}})
         {
-            next unless ($chr eq $ch);
-            foreach my $region (sort keys %{$info_hash{$ch}})
+            my ($reg_start,$reg_stop)=split/\_/,$region;
+            if ($reg_start<=$start && $reg_stop>=$stop)
             {
-                my ($reg_start,$reg_stop)=split/\_/,$region;
-                if ($reg_start<=$start && $reg_stop>=$stop)
-                {
-                    $cn=$info_hash{$ch}{$region};
-                    last;
-
-                }
+                $cn=$info_hash{$ch}{$region};
+                last;
             }
         }
-
-        $cn=2 unless ($cn);
-        return $cn;
     }
-
+    $cn=2 unless ($cn);
+    return $cn;
+}
 
 
 sub build_hash

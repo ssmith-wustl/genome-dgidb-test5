@@ -41,7 +41,6 @@ class Genome::Model::Tools::Analysis::NormalizeIndelLocation {
 
 sub execute {
     my $self=shift;
-    $DB::single = 1;
     my $output_file = $self->output_file;
 
     # Check that we're on a 64-bit system and can run with the deployed samtools

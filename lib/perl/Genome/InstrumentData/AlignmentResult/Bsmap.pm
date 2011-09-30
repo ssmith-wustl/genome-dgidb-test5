@@ -106,7 +106,6 @@ sub _run_aligner {
     my $min_insert_size = -1;
     my $max_insert_size = -1;
     
-    $DB::single = 1;
     
     # seems dubious
     for (@input_pathnames) {

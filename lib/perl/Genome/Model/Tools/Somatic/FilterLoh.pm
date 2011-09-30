@@ -63,7 +63,6 @@ EOS
 
 sub execute {
     my $self = shift;
-    $DB::single=1;
 
     unless(-f $self->tumor_snp_file) {
         $self->error_message($self->tumor_snp_file . " is not a file");

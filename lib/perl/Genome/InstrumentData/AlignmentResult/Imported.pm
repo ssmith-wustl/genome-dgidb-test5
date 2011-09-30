@@ -90,7 +90,6 @@ sub create_BAM_in_staging_directory {
 sub _filter_samxe_output {
     my ($self, $sam_cmd, $sam_file_name) = @_;
 
-    $DB::single = 1;
     my $sam_run_output_fh = IO::File->new( $sam_cmd . "|" );
     $self->status_message("Running $sam_cmd");
     if ( !$sam_run_output_fh ) {

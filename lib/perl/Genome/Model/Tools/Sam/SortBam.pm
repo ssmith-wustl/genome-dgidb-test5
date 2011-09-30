@@ -68,7 +68,6 @@ sub execute {
         return;
     }
 
-    $DB::single = 1;
     return 1;
 }
 

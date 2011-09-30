@@ -75,7 +75,6 @@ sub execute {
         $self->error_message("Failed to merge and sort imported flatflies: $@");
         return 0;
     }
-    $DB::single = 1;
     #TODO: do gabe's white/black listing, make a feature list out of the filtered bed file and use it to create a new build of the dbsnp model
 
     return 1;

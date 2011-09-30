@@ -56,7 +56,6 @@ sub _prepare_objects {
     my $m = Genome::Model::Test->create(processing_profile => $pp, name => 'TEST-library-view-xml-t-model', subject => $fake_sample);
     isa_ok($m, 'Genome::Model', 'created test model');
 
-    $DB::single = 1;
 
     my @m = $fake_library->models;
     is($m[0], $m, 'fake library returns created model');

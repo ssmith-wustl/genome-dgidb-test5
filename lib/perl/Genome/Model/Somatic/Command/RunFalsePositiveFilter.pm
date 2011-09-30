@@ -27,7 +27,6 @@ HELP
 
 sub execute {
 	my $self=shift;
-    	$DB::single = 1;
     	my $analysis_dir=$self->analysis_dir;
     	my $somatic_build_id =$self->somatic_build_id;
     	unless ($somatic_build_id){

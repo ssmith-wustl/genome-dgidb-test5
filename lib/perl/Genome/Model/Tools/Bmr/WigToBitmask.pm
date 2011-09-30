@@ -62,7 +62,6 @@ HELP
 sub execute
 {
   my $self = shift;
-  $DB::single = 1;
   #check inputs
   my $reference_index = $self->reference_index;
   my $wig_file = $self->wig_file;

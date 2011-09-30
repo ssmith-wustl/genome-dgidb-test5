@@ -26,7 +26,6 @@ sub help_synopsis {
 
 sub execute {
     my $self=shift;
-    $DB::single=1;
     
     my $c45_object = Genome::Model::Tools::SeeFourFive::Tree ->create();
     $c45_object->c45_file($self->c_file);

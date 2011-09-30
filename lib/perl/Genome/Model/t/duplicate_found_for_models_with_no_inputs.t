@@ -48,7 +48,6 @@ my $model_b = Genome::Model->create(
 );
 isa_ok($model_b, 'Genome::Model::Tester');
 
-$DB::single = 1;
 is($model_a->duplicates, 0, 'Model A does not have duplicates');
 
 $model_b->processing_profile($pp_a);

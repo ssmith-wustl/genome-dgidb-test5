@@ -62,7 +62,6 @@ sub generate_report_detail {
 sub get_bam_content {
     my $self = shift;
     my $build = $self->build;
-    $DB::single = 1;
 
     #my $pileup_file = $build->bam_pileup_file;
     #$self->status_message("Using pileup file $pileup_file to generate Bam coverage.");

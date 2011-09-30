@@ -694,7 +694,6 @@ sub get_row_hash
 sub display_row
 {
     my ($self,$model, $row, $glade) = @_;
-        $DB::single = 1;
     
     my @val = $model->get($row,6,7,8,9,10,11);
     #set widgets
@@ -785,7 +784,6 @@ sub save_row
     my %rpf = (1 => 'Pass', 2 => 'Fail');
     my %dn = (Yes => 1, No => 2);
     my %rdn = (1 => 'Yes', 2 => 'No');
-        $DB::single = 1;
     my $cb = $glade->get_widget('re_genotype');
     my $active = $cb->get_active();
     $model->set($row,6 => $rev_iub_hash{$active}) if exists $rev_iub_hash{$active};
@@ -864,7 +862,6 @@ sub on_prev_button_clicked
 sub on_next_button_clicked
 {
     my ($self, $glade) = @_;
-    $DB::single = 1;
     my $g_handle = $self->g_handle;
     my $review_list = $g_handle->get_widget("review_list");
     my $mainWin = $g_handle->get_widget("manual_review");

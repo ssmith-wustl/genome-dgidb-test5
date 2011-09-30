@@ -268,7 +268,7 @@ sub _create_imported_instrument_data {
     }
 
     if ( $target_region ) {
-        $params{taget_region_set_name} = $target_region
+        $params{target_region_set_name} = $target_region
     }
 
     my $import_instrument_data = Genome::InstrumentData::Imported->create(%params);  

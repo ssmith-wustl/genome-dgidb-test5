@@ -123,7 +123,6 @@ sub _intermediate_result {
     for my $idx (0..$#input_files) {
         my $path = $input_files[$idx];
         my ($input_pass) = $path =~ m/\.bam:(\d)$/;
-        $DB::single=1;
         print "INPUT FILE: $path, INPUT PASS: $input_pass\n" . Dumper(\@_);
         if (defined($input_pass)) {
             $path =~ s/\.bam:\d$/\.bam/;
@@ -302,7 +301,6 @@ sub _filter_samxe_output {
 #    Genome::Sys->shellcmd(cmd => $cmd);
 #    return 1;
 
-    $DB::single = 1;
     my $sam_run_output_fh = IO::File->new( $sam_cmd . "|" );
     binmode $sam_run_output_fh;
     $self->status_message("Running $sam_cmd");
