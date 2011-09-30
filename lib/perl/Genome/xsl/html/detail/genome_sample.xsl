@@ -28,7 +28,7 @@
     <div class="content rounded shadow">
       <div class="container">
         <div class="box_header span-24 last rounded-top">
-          <div class="box_title"><h3 class="nontyped span-24 last">sample details</h3></div>
+          <div class="box_title"><h3 class="nontyped span-24 last">Grouped by nomenclature</h3></div>
         </div>
         <div class="box_content rounded-bottom span-24 last">
 

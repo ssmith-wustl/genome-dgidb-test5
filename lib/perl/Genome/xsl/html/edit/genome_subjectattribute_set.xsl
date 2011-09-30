@@ -11,34 +11,30 @@
     <xsl:call-template name="control_bar_view"/>
 
     <xsl:call-template name="view_header">
-      <xsl:with-param name="label_name" select="'Sample:'" />
-      <xsl:with-param name="display_name" select="aspect[@name='name']/value" />
+      <xsl:with-param name="label_name" select="'Editing Sample Attributes for: '" />
+      <xsl:with-param name="display_name" select="'test_sample0'" />
       <xsl:with-param name="icon" select="'genome_sample_32'" />
     </xsl:call-template>
+
+<!--      <xsl:with-param name="display_name" select="aspect[@name='name']/value" />
+-->
 
     <div class="content rounded shadow">
       <div class="container">
 
             <!-- details for this sample -->
-            <table id="samples" class="lister">
-                <thead>
-                    <tr>
-                        <th>key</th>
-                        <th>value</th>
-                    </tr>
-                </thead>
-                <tbody>
-<!--                    <xsl:for-each select="/object/aspect[@name='members']/object">
--->
+
+                <fieldset>
+                    <legend>Nomenclature: myNomenclature</legend>
+
                     <xsl:for-each select="/object/aspect[@name='members']/object[1]/aspect[@name='all_nomenclature_fields']/object">
                         <xsl:variable name='field_name' select="aspect[@name='name']/value"/>
                         <xsl:variable name='field_type' select="aspect[@name='type']/value"/>
                         <xsl:variable name='field_value' select="/object/aspect[@name='members']/object/aspect[value = $field_name]/../aspect[@name='attribute_value']/value"/>
-                    <tr>
-                        <td>
-                            <xsl:value-of select="$field_name"/>
-                        </td>
-                        <td>
+
+                            <p>
+                            <label> <xsl:value-of select="$field_name"/>:</label><br/>
+
                             <xsl:choose>
                                 <xsl:when test="$field_type = 'enumerated'">
                                     <select>
@@ -53,16 +49,16 @@
                                     </select>
                                 </xsl:when> 
                                 <xsl:otherwise>
-                                    <input> <xsl:attribute name="value"><xsl:value-of select="$field_value"/> </xsl:attribute> </input>
+                                    <input class="text"> <xsl:attribute name="value"><xsl:value-of select="$field_value"/> </xsl:attribute> </input>
                                 </xsl:otherwise>
-                            </xsl:choose>         
-                        </td>
-                    </tr>
-                    </xsl:for-each>
-                    <tr><td></td><td><button>save</button></td></tr>
-                </tbody>
-            </table>
+                            </xsl:choose>
 
+                            </p>
+
+                    </xsl:for-each>
+
+                    <p><button>Save</button></p>
+                </fieldset>
       </div> <!-- end container -->
     </div> <!-- end content -->
 
