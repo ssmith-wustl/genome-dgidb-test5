@@ -92,15 +92,15 @@
           </div>
         </div>
         <div class="container">
-          <div class="span-20 append-2 prepend-2 last" style="margin-top: 20px;">
+          <div class="span-16 append-4 prepend-4 last" style="margin-top: 20px;">
             <p>Use the form below to create a new nomenclature.</p>
 
             <!-- put your stuff here -->
             <fieldset>
               <legend>Nomenclature Details</legend>
               <div id="div-nomenclature-name-input">
-                <label for="name" class="nomenclature-name">Name: </label>
-                <input type="text" name="name" id="nomenclature-name-input" placeholder="Nomenclature Name"/>
+                <label for="name" class="nomenclature-name">Name: </label><br/>
+                <input type="text" name="name" id="nomenclature-name-input" class="text" placeholder="Nomenclature Name"/>
               </div>
             </fieldset>
 
@@ -121,7 +121,7 @@
 
             <script type="text/template" id="nomenclature-column-template">
               <label>Title:</label>
-              <input type="text" id="nomenclature-column-name-input" class="nomenclature-column-name" value="<%= model.get('name') %>">
+              <input type="text" id="nomenclature-column-name-input" class="nomenclature-column-name text" value="<%= model.get('name') %>">
               <label>Type:</label>
               <select class="column-type-select">
                 <option value="integer">integer</option>
@@ -136,11 +136,13 @@
 
             <script type="text/template" id="nomenclature-column-enumerated-template">
               <div class="enumerated-choices">
+                <strong>Enumerated Column Definition:</strong><br/>
                 <% _.each(model.get("enumerated_types"), function(e) { %>
 
-                <div class="enum-row"><input type="text" class="enumerated-type-entry" value="<%= e %>">
-                <button class="add-new-enum">add new</button>
+                <div class="enum-row"><input type="text" class="enumerated-type-entry text" value="<%= e %>">
+
                 <button class="remove-enum">remove</button>
+                <button class="add-new-enum">add</button>
               </div>
 
               <% }); %>
