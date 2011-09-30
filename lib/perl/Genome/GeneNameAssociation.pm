@@ -10,12 +10,12 @@ class Genome::GeneNameAssociation {
     schema_name => 'public',
     data_source => 'Genome::DataSource::Main',
     id_by => [
-        gene_primary_name => { is => 'varchar'},
-        gene_alternate_name => {is => 'varchar'},
-        primary_name_nomenclature => { is => 'varchar'},
-        alternate_name_nomenclature => { is => 'varchar'},
-        source_db_name => { is => 'varchar'},
-        source_db_version => { is => 'varchar'},
+        gene_primary_name => { is => 'Text'},
+        gene_alternate_name => {is => 'Text'},
+        primary_name_nomenclature => { is => 'Text'},
+        alternate_name_nomenclature => { is => 'Text'},
+        source_db_name => { is => 'Text'},
+        source_db_version => { is => 'Text'},
     ],
     has => [
         description => {

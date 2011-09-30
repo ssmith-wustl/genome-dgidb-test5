@@ -10,11 +10,11 @@ class Genome::GeneNameCategoryAssociation {
     schema_name => 'public',
     data_source => 'Genome::DataSource::Main',
     id_by => [
-        gene_name => { is => 'varchar' },
-        category_name => { is => 'varchar' },
-        nomenclature => { is => 'varchar' },
-        source_db_name => { is => 'varchar' },
-        source_db_version => { is => 'varchar' },
+        gene_name => { is => 'Text' },
+        category_name => { is => 'Text' },
+        nomenclature => { is => 'Text' },
+        source_db_name => { is => 'Text' },
+        source_db_version => { is => 'Text' },
     ],
     has => [
         description => {

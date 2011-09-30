@@ -8,7 +8,7 @@ use Genome;
 class Genome::DrugGeneInteractionAttribute {
     table_name => 'drug_gene_interaction_attribute',
     id_by => [
-        interaction_id => { is => 'integer'},
+        interaction_id => { is => 'Number'},
         name           => { is => 'Text' },
         value          => { is => 'Text' },
     ],
