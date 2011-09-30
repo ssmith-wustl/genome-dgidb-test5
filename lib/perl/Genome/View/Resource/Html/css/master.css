@@ -331,6 +331,10 @@ form td.label {
     text-align: right;
 }
 
+div#nomenclature-columns li {
+    list-style: none;
+    margin-right: 5px;
+}
 
 /* TABLES
  ****************************************/

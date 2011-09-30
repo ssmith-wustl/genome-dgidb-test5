@@ -3,7 +3,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-<!--template: /html/common_includes/components.xsl name="html_head_page"-->
+    <!--template: /html/common_includes/components.xsl name="html_head_page"-->
     <title xmlns:rest="urn:rest" xmlns:str="http://xsltsl.org/string">Create Nomenclature</title>
     <link xmlns:rest="urn:rest" xmlns:str="http://xsltsl.org/string" rel="shortcut icon" href="/res/img/gc_favicon.png" type="image/png" />
     <link xmlns:rest="urn:rest" xmlns:str="http://xsltsl.org/string" rel="stylesheet" href="/res/css/blueprint/screen.css" type="text/css" media="screen, projection" />
@@ -25,21 +25,21 @@
     <script src="/res/js/app/genome_nomenclature.js"></script>
     <link xmlns:rest="urn:rest" xmlns:str="http://xsltsl.org/string" rel="stylesheet" href="/res/css/dataTables.css" type="text/css" media="screen, projection" />
     <script xmlns:rest="urn:rest" xmlns:str="http://xsltsl.org/string" type="text/javascript">
-      
-               (function($) {
-               var cache = [];
-               // Arguments are image paths relative to the current page.
-               $.preLoadImages = function() {
-               var args_len = arguments.length;
-               for (var i = args_len; i--;) {
-               var cacheImage = document.createElement('img');
-               cacheImage.src = arguments[i];
-               cache.push(cacheImage);
-               }
-               }
 
-$(document).data('updatedOn', new Date(1316565713000));
-})(jQuery)
+      (function($) {
+      var cache = [];
+      // Arguments are image paths relative to the current page.
+      $.preLoadImages = function() {
+      var args_len = arguments.length;
+      for (var i = args_len; i--;) {
+      var cacheImage = document.createElement('img');
+      cacheImage.src = arguments[i];
+      cache.push(cacheImage);
+      }
+      }
+
+      $(document).data('updatedOn', new Date(1316565713000));
+      })(jQuery)
 
 
     </script>
@@ -47,43 +47,43 @@ $(document).data('updatedOn', new Date(1316565713000));
   </head>
   <body>
     <div class="page">
-<!-- ***************************************************** -->
-<!-- Genome: /gscuser/boberkfe/git/genome/lib/perl/Genome.pm-->
-<!-- UR: /gsc/scripts/opt/genome/snapshots/genome-1452/lib/perl/UR.pm-->
-<!-- Workflow: /gsc/scripts/opt/genome/snapshots/genome-1452/lib/perl/Workflow.pm-->
-<!-- ***************************************************** -->
+      <!-- ***************************************************** -->
+      <!-- Genome: /gscuser/boberkfe/git/genome/lib/perl/Genome.pm-->
+      <!-- UR: /gsc/scripts/opt/genome/snapshots/genome-1452/lib/perl/UR.pm-->
+      <!-- Workflow: /gsc/scripts/opt/genome/snapshots/genome-1452/lib/perl/Workflow.pm-->
+      <!-- ***************************************************** -->
       <script type="text/javascript" src="/res/js/app/genome_search.js"></script>
-<!--template: /html/common_includes/components.xsl name:control_bar_app-->
+      <!--template: /html/common_includes/components.xsl name:control_bar_app-->
       <div xmlns:rest="urn:rest" xmlns:str="http://xsltsl.org/string" class="control_bar app rounded-bottom shadow">
         <div class="control_bar_menu" id="bar_menu">
-<!--template: /html/common_includes/components.xsl name:control_bar_cache_info-->
+          <!--template: /html/common_includes/components.xsl name:control_bar_cache_info-->
           <div class="cache_info">
             <div class="cache_time">
               <p>
-          View generated<br /><strong><span id="updatedOn"></span></strong></p>
+              View generated<br /><strong><span id="updatedOn"></span></strong></p>
             </div>
             <div class="cache_refresh">
               <a class="btn_cache_refresh rounded" id="refreshCache" title="Refresh Cache"></a>
             </div>
           </div>
-<!--template: /html/common_includes/components.xsl name:control_bar_menu-->
+          <!--template: /html/common_includes/components.xsl name:control_bar_menu-->
           <ul class="app_menu">
             <li>
               <a href="/view/genome/status.html" class="app btn shadow"><div class="icon"><img src="/res/img/icons/app_deprecated_search_16.png" width="16" height="16" /></div>
-          Deprecated Search
-        </a>
+              Deprecated Search
+              </a>
             </li>
             <li>
               <a href="/view/genome/search/status.html" class="app btn shadow"><div class="icon"><img src="/res/img/icons/app_analysis_search_16.png" width="16" height="16" /></div>
-          Analysis Search
-        </a>
+              Analysis Search
+              </a>
             </li>
           </ul>
         </div>
         <div class="control_bar_base" id="bar_base"> </div>
       </div>
       <div class="content rounded shadow" style="padding-top: 0;">
-<!--template: /html/common_includes/components.xsl:app_header-->
+        <!--template: /html/common_includes/components.xsl:app_header-->
         <div xmlns:rest="urn:rest" xmlns:str="http://xsltsl.org/string" class="header rounded-top gradient-grey">
           <div class="container">
             <div class="title span-24 last app_analysis_search_32">
@@ -92,67 +92,73 @@ $(document).data('updatedOn', new Date(1316565713000));
           </div>
         </div>
         <div class="container">
-        <!---- put your stuff here ---->
-<div id="div-nomenclature-name-input">
-<label for="name" class="nomenclature-name">Name: </label>
-<input type="text" name="name" id="nomenclature-name-input" placeholder="Nomenclature Name">
-</div>
-<div>
-<p><button class="save-nomenclature">Save Nomenclature</button></p>
-</div>
+          <div class="span-20 append-2 prepend-2 last" style="margin-top: 20px;">
+            <p>Use the form below to create a new nomenclature.</p>
 
-<hr/>
-<div id="nomenclature-columns">
-</div>
-<p><button class="save-nomenclature">Save Nomenclature</button></p>
+            <!-- put your stuff here -->
+            <fieldset>
+              <legend>Nomenclature Details</legend>
+              <div id="div-nomenclature-name-input">
+                <label for="name" class="nomenclature-name">Name: </label>
+                <input type="text" name="name" id="nomenclature-name-input" placeholder="Nomenclature Name"/>
+              </div>
+            </fieldset>
 
+            <fieldset>
+              <legend>Nomenclature Columns</legend>
+              <div id="nomenclature-columns">
 
+              </div>
+            </fieldset>
 
-</script>
+            <div>
+              <p style="text-align: right;"><button class="save-nomenclature">Save Nomenclature</button></p>
+            </div>
 
-<div id="output">
+            <div id="output">
 
-</div>
+            </div>
 
-<script type="text/template" id="nomenclature-column-template">
-<label>Title</label>
-<input type="text" id="nomenclature-column-name-input" class="nomenclature-column-name" value="<%= model.get('name') %>">
-<select class="column-type-select">
-    <option value="integer">Integer</option>
-    <option value="real">Real</option>
-    <option value="numeric">Numeric (real or integer)</option>
-    <option value="date">Date</option>
-    <option value="string">String</option>
-    <option value="enumerated">Enumerated</option>
-</select>
-<button class="delete">Delete</button>
-</script>
+            <script type="text/template" id="nomenclature-column-template">
+              <label>Title:</label>
+              <input type="text" id="nomenclature-column-name-input" class="nomenclature-column-name" value="<%= model.get('name') %>">
+              <label>Type:</label>
+              <select class="column-type-select">
+                <option value="integer">integer</option>
+                <option value="real">real</option>
+                <option value="numeric">numeric (real or integer)</option>
+                <option value="date">date</option>
+                <option value="string">string</option>
+                <option value="enumerated">enumerated</option>
+              </select>
+              <button class="delete">Delete Column</button>
+            </script>
 
-<script type="text/template" id="nomenclature-column-enumerated-template">
-<div class="enumerated-choices">
-<% _.each(model.get("enumerated_types"), function(e) { %>
+            <script type="text/template" id="nomenclature-column-enumerated-template">
+              <div class="enumerated-choices">
+                <% _.each(model.get("enumerated_types"), function(e) { %>
 
-<div class="enum-row"><input type="text" class="enumerated-type-entry" value="<%= e %>"> 
-<button class="add-new-enum">add new</button>
-<button class="remove-enum">remove</button>
-</div>
+                <div class="enum-row"><input type="text" class="enumerated-type-entry" value="<%= e %>">
+                <button class="add-new-enum">add new</button>
+                <button class="remove-enum">remove</button>
+              </div>
 
-<% }); %>
-</div>
-</script>
-        
+              <% }); %>
+            </div>
+          </script>
         </div>
       </div>
-<!--template: /html/common_includes/components.xsl:footer-->
-      <div xmlns:rest="urn:rest" xmlns:str="http://xsltsl.org/string" class="footer rounded shadow span-24 last gradient-grey">
-        <div class="container">
-          <p class="small">
-            <br />
-          </p>
-        </div>
-      </div>
-      <br xmlns:rest="urn:rest" xmlns:str="http://xsltsl.org/string" />
-      <br xmlns:rest="urn:rest" xmlns:str="http://xsltsl.org/string" />
     </div>
-  </body>
+    <!--template: /html/common_includes/components.xsl:footer-->
+    <div xmlns:rest="urn:rest" xmlns:str="http://xsltsl.org/string" class="footer rounded shadow span-24 last gradient-grey">
+      <div class="container">
+        <p class="small">
+          <br />
+        </p>
+      </div>
+    </div>
+    <br xmlns:rest="urn:rest" xmlns:str="http://xsltsl.org/string" />
+    <br xmlns:rest="urn:rest" xmlns:str="http://xsltsl.org/string" />
+  </div>
+</body>
 </html>
