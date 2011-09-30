@@ -48,6 +48,9 @@ my $detector_test = $dispatcher_class->create(
 ok($detector_test, "Object to test a detector case created");
 $detector_test->dump_status_messages(1);
 ok($detector_test->execute, "Execution completed successfully.");
+ok($detector_test->_workflow_result->{snv_result_id}, 'snv_result_id defined in workflow result');
+ok($detector_test->_workflow_result->{snv_result_class}, 'snv_result_class defined in workflow result');
+ok($detector_test->snv_result, 'snv_result defined on command');
 
 done_testing();
 exit;

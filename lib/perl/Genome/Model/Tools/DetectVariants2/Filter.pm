@@ -110,12 +110,17 @@ class Genome::Model::Tools::DetectVariants2::Filter {
             doc => 'The offset added to the number of lines in the bed file when compared to the number of lines in the raw detector output. This is a hashref that contains offsets for HQ and LQ.',
         },
         _result => {
-            is => 'Genome::Model::Tools::DetectVariants2::Result::Filter',
+            is => 'UR::Object',
             doc => 'SoftwareResult for the run of this filter',
-            id_by => "result_id",
+            id_by => "_result_id",
+            id_class_by => '_result_class',
             is_output => 1,
         },
-        result_id => {
+        _result_class => {
+            is => 'Text',
+            is_output => 1,
+        },
+        _result_id => {
             is => 'Number',
             is_output => 1,
         },
