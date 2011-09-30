@@ -218,7 +218,6 @@ sub _remove_contigs_idx_directories {
 sub execute { 
     my $self = shift;
     print "Generating Post Assembly Reports...\n";
-    $DB::single = 1;
     my $orig_dir = cwd();
     my $project_dir = $self->project_dir;
     chdir($project_dir);

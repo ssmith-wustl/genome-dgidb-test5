@@ -82,7 +82,6 @@ warn "CREATE SEEMED TO WORK $class " . $obj->id();
     sub (GET + /**/*/* + .*) {
         # these get passed in from the matcher as documented above!
         my ( $self, $class, $perspective_toolkit, $filename, $extension ) = @_;
-        $DB::single = 1;
 
         $filename = $filename . "." . $extension;
 

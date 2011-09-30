@@ -43,7 +43,6 @@ sub execute {
     my $self=shift;
 
     #TODO Some basic file checks
-    $DB::single = 1;
     $| = 1;
     my $call_href = $self->create_call_file_hash;
     unless($call_href) {

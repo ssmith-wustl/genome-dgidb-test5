@@ -85,7 +85,6 @@ class Genome::Model::Tools::Validation::BuildRemappingContigs {
 
 sub execute {
     my $self=shift;
-    $DB::single = 1;
 
 
     #we will need to handle the following

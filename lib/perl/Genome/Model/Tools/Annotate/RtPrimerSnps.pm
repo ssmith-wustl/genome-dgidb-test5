@@ -192,7 +192,6 @@ sub execute {
         return;
     }
 
-    $DB::single = 1;
     #Do conversion
     #grab any substructures that the primer MIGHT overlap in transcript coordinates
     my @transcript_coords = grep { $_ <= $primer_stop } sort { $a <=> $b } keys %transcript_coords;

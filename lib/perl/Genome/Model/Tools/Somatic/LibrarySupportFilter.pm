@@ -68,7 +68,6 @@ sub execute {
     # reguardless of position, etc.
 
     my ($self) = @_;
-    $DB::single=1;
 
     my $indel_file = IO::File->new( $self->indel_file() )
     || die "cant read: " . $self->indel_file();

@@ -68,7 +68,6 @@ EOS
 
 sub execute {
     my $self = shift;
-    $DB::single=1;
 
     if ($self->skip) {
         $self->status_message("Skipping execution: Skip flag set");
@@ -266,7 +265,6 @@ sub execute {
     my ($got_entry, %description_list, );
     
     foreach my $line (@entire_file) {
-        $DB::single=1;
         chomp $line;
         my ($Chr, $start, $stop) = split /\s+/, $line;
 

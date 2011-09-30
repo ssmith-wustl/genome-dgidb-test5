@@ -22,6 +22,7 @@ class Genome::Model::ReferenceAlignment::Command::PrepareTumorOnlyBuild {
         previously_detected_snvs => {
             is => 'Text',
             doc => 'Intersect snvs with this list to filter out previously detected snvs',
+            is_optional => 1,
         },
         move_existing => {
             is => 'Boolean',
@@ -32,18 +33,19 @@ class Genome::Model::ReferenceAlignment::Command::PrepareTumorOnlyBuild {
 };
 
 sub help_detail {
-    return <<EOS 
+    return <<EOS
 PrepareTumorOnlyBuild is a script which is meant to be run on a reference-alignment build with a completed
-detect-variants step. This script will pull the snvs and indels then create a ./effects subdir on the build's
+detect-variants step. This script will pull the snvs and indels then create an effects subdir on the build's
 data-directory. This script then splits the snvs into dbSNP and novel, based on either the dbsnp_build param
 or the dbsnp_build param on the refalign build passed in.
 EOS
 }
+#'
 
 sub execute {
     my $self = shift;
 
-    #reference alignment build object    
+    #reference alignment build object
     my $build = $self->build;
 
     #get the appropiate dbSNP build
@@ -72,12 +74,12 @@ sub execute {
     my $novel_file = $output_dir."/snvs.hq.novel.v".$version.".bed";
 
     my $annotation_build = $build->annotation_reference_build;
-    my $tier_file_location = $annotation_build->tiering_bed_files_by_version(2);
+    my $tier_file_location = $annotation_build->tiering_bed_files_by_version(3);
     unless(defined($tier_file_location)){
         die $self->error_message("Could not locate tiering files!");
-    }    
+    }
 
-    #create the output directory 
+    #create the output directory
     unless(-d $output_dir){
         Genome::Sys->create_directory($output_dir);
     }
@@ -103,7 +105,7 @@ sub execute {
             input_file_a => $snv_bed_file,
             input_file_b => $roi_temp,
             miss_a_file => $not_in_roi,
-            output_file => $in_roi, 
+            output_file => $in_roi,
         );
         unless($roi_intersection_cmd->execute){
             die $self->error_message("Could not complete ROI intersection.");
@@ -129,32 +131,48 @@ sub execute {
         }
     }
 
+    my @snv_tiers;
+    my $snv_files_present=1;
+
     #intersect with previously detected snvs
-    unless(-e $novel_file && -e $previously_detected_file){
-        my $previously_detected_snvs = $self->previously_detected_snvs;
-        my $dbsnp_intersection = Genome::Model::Tools::Joinx::Intersect->create(
-            input_file_a => $not_in_dbsnp_file,
-            input_file_b => $previously_detected_snvs,
-            miss_a_file => $novel_file,
-            output_file => $previously_detected_file,
-        );
-        unless ($dbsnp_intersection){
-            die $self->error_message("Couldn't create joinx intersection tool!");
+    my $previously_detected_snvs = $self->previously_detected_snvs;
+    if(defined($previously_detected_snvs)){
+        unless(-e $novel_file && -e $previously_detected_file){
+            my $dbsnp_intersection = Genome::Model::Tools::Joinx::Intersect->create(
+                input_file_a => $not_in_dbsnp_file,
+                input_file_b => $previously_detected_snvs,
+                miss_a_file => $novel_file,
+                output_file => $previously_detected_file,
+                );
+            unless ($dbsnp_intersection){
+                die $self->error_message("Couldn't create joinx intersection tool!");
+            }
+            my $snv_rv = $dbsnp_intersection->execute();
+            my $snv_err = $@;
+            unless ($snv_rv){
+                die $self->error_message("Failed to execute joinx intersection (err: $snv_err )");
+            }
         }
-        my $snv_rv = $dbsnp_intersection->execute();
-        my $snv_err = $@;
-        unless ($snv_rv){
-            die $self->error_message("Failed to execute joinx intersection (err: $snv_err )");
+
+        #compose snv and indel tiering output file names
+        @snv_tiers = map{ "snvs.hq.novel.tier".$_.".v".$version.".bed"} (1..4);
+        for (1..4) {
+            my $f = -e $output_dir."/".$snv_tiers[$_];
+            $snv_files_present = $snv_files_present && $f;
         }
+
+    } else { #no prev file, tier and annotated the not_in_dbsnp file
+
+        #compose snv and indel tiering output file names
+        @snv_tiers = map{ "snvs.hq.not_in_dbsnp.tier".$_.".v".$version.".bed"} (1..4);
+        for (1..4) {
+            my $f = -e $output_dir."/".$snv_tiers[$_];
+            $snv_files_present = $snv_files_present && $f;
+        }
+        $novel_file = $not_in_dbsnp_file
     }
 
-    #compose snv and indel tiering output file names
-    my @snv_tiers = map{ "snvs.hq.novel.tier".$_.".v".$version.".bed"} (1..4);
-    my $snv_files_present=1;
-    for (1..4) {
-        my $f = -e $output_dir."/".$snv_tiers[$_];   
-        $snv_files_present = $snv_files_present && $f;
-    }
+
 
     #tier snvs
     unless( $snv_files_present ){
@@ -177,9 +195,13 @@ sub execute {
     #prepare annotation output file names
     my $snv_tier1_anno_output = $output_dir."/snvs.hq.novel.tier1.annotated";
     my $snv_tier2_anno_output = $output_dir."/snvs.hq.novel.tier2.annotated";
+    if(!(defined($previously_detected_snvs))){
+        $snv_tier1_anno_output = "snvs.hq.not_in_dbsnp.tier1.annotated";
+        $snv_tier1_anno_output = "snvs.hq.not_in_dbsnp.tier2.annotated";
+    }
 
     #Annotate Snvs
-    unless(-e $snv_tier1_anno_output && -e $snv_tier2_anno_output){ 
+    unless(-e $snv_tier1_anno_output && -e $snv_tier2_anno_output){
         my $snv_tier1_anno_cmd = Genome::Model::Tools::Annotate::TranscriptVariants->create(
             variant_bed_file => $output_dir."/".$snv_tiers[0],
             output_file => $snv_tier1_anno_output,

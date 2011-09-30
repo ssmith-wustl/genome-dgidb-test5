@@ -71,7 +71,6 @@ sub execute{
     my $self = shift;
     my $list = Genome::Utility::VariantReviewListReader->new($self->list, $self->separation_character);
     my $db_list = Genome::VRList->get($self->db_list_name ? (name=>$self->db_list_name) : (id=>$self->db_list_id)); 
-$DB::single = 1;
     unless ($db_list){
         $self->error_message("List doesn't exist");
         return 0;

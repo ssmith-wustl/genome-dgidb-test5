@@ -345,7 +345,6 @@
 
                 <xsl:choose>
                   <xsl:when test="$note_count &gt; 0">
-                    <xsl:message>build id: <xsl:value-of select="$build_id"/></xsl:message>
                     <a class="mini btn notes-popup">
                       <xsl:attribute name="title">Build <xsl:value-of select="$build_id"/> Notes</xsl:attribute>
                       <xsl:attribute name="id"><xsl:value-of select="$build_id"/></xsl:attribute>
@@ -470,18 +469,32 @@
               <tr>
                 <td class="name"><br/></td>
                 <td class="value">
-                  <xsl:variable name="button">
-                    <xsl:call-template name="object_link_button">
-                      <xsl:with-param name="type" select="'Genome::Model::Metric::Set'"/>
-                      <xsl:with-param name="key" select="'build_id'"/>
-                      <xsl:with-param name="id" select="build/@build-id"/>
-                      <xsl:with-param name="perspective" select="'status'"/>
-                      <xsl:with-param name="linktext" select="'metrics'"/>
-                      <xsl:with-param name="icon" select="'sm-icon-extlink'"/>
-                    </xsl:call-template>
-                  </xsl:variable>
+                  <a class="mini btn metrics-popup">
+                    <xsl:variable name="build_id" select="build/@build-id"/>
+                    <xsl:attribute name="title">Build <xsl:value-of select="$build_id"/> Metrics</xsl:attribute>
+                    <xsl:attribute name="id"><xsl:value-of select="$build_id"/></xsl:attribute>
+                    <xsl:attribute name="href">/view/genome/model/metric/set/detail.json?build_id=<xsl:value-of select="$build_id"/></xsl:attribute>
+                    <span class="sm-icon sm-icon-newwin"><br/></span>metrics (<xsl:value-of select="$metricCount"/>)
+                  </a>
+                  <div id="metrics_dialogue" style="display: none;">
+                    <table class="lister" id="metrics_table" width="100%">
+                      <colgroup>
+                        <col/>
+                        <col/>
+                        <col width="100%"/>
+                      </colgroup>
 
-                  <xsl:copy-of select="$button"/>
+                      <thead>
+                        <tr><th>ID</th><th>name</th><th>value</th></tr>
+                      </thead>
+
+                      <tbody>
+                      </tbody>
+
+                      <tfooter>
+                      </tfooter>
+                    </table>
+                  </div>
                 </td>
               </tr>
             </xsl:if>

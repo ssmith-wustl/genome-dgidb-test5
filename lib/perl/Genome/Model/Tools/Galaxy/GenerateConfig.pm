@@ -44,7 +44,6 @@ sub execute {
 
     for my $class_name (@class_names) {
         $self->status_message("handling $class_name...");
-        $DB::single=1;
 
         do {
             eval "use " . $class_name;

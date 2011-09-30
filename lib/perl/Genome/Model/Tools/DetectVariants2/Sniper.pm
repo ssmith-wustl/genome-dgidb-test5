@@ -44,7 +44,6 @@ EOS
 
 sub _detect_variants {
     my $self = shift;
-    $DB::single = 1;
 
     $self->status_message("beginning execute");
 

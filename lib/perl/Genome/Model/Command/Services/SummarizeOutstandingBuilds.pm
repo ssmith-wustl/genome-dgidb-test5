@@ -212,7 +212,6 @@ sub categorize_model_with_preserved_build{
 sub initialize_categories {
     my $self = shift;
     my %category_hash;
-    $DB::single = 1;
     for my $category ($self->_category_names){
         $category_hash{$category} = [];
     }

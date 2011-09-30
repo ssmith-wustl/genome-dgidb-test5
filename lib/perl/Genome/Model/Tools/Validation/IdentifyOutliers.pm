@@ -36,7 +36,6 @@ EOS
 }
 
 sub execute {
-    $DB::single = 1;
     my $self = shift;
     my $fh = IO::File->new($self->varscan_file,"r");
     unless($fh) {

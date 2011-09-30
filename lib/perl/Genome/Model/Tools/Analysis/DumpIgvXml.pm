@@ -59,7 +59,6 @@ class Genome::Model::Tools::Analysis::DumpIgvXml {
 
 sub execute {
     my $self=shift;
-    $DB::single = 1;
     my $tumor_common_name = $self->genome_name;   
     my $output_dir = $self->output_dir;
     my $ofh = IO::File->new("$output_dir/$tumor_common_name.xml","w");

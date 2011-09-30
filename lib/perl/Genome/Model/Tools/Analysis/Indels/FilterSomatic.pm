@@ -32,7 +32,6 @@ EOS
 }
 
 sub execute {
-    $DB::single = 1;
     my $self = shift;
     my $error_col_adjustment = $self->has_error_column ? 0 : 1;
 

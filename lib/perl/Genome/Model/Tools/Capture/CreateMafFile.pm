@@ -68,7 +68,6 @@ EOS
 
 sub execute {                               # replace with real execution logic.
   my $self = shift;
-$DB::single = 1;
   ## Get required parameters ##
   my $snv_file = $self->snv_file;
   my $snv_annotation_file = $self->snv_annotation_file;

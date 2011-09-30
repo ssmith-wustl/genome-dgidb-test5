@@ -161,7 +161,6 @@ EOS
 
 sub execute {
     my $self = shift;
-    $DB::single=1;
         
     #test files 
 
@@ -403,7 +402,6 @@ sub convert_anno_file {
             $label++;
             chomp $line;
             my ($chr,$start, $stop, $ref, $var, $mut, $gene, $transcript, $source, $version, $strand, $dunno, $type, $c_position, $amino_acid_change, @rest) = split /\t/, $line;
-            $DB::single=1;
             my $label = '';
             $amino_acid_change =~ s/p\.//;
             $label = "$gene\[$amino_acid_change\]" if $gene;
@@ -570,7 +568,6 @@ sub config_file_contents {
     #set up filenames here
     my $ideogram = $self->_ideogram_file;
     my $colors = $self->_colors_file;
-    $DB::single=1;
     my $cna = $self->_cna_circos_file;
     my $hc = $self->_tier1_hc_circos_file;
     my $lc = $self->_tier1_lc_circos_file;

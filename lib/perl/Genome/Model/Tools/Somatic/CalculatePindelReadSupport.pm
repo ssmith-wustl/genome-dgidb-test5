@@ -106,7 +106,6 @@ sub execute {
         $deletions{$chr}{$start}{$stop}{'id'}=$id;
     }
     $dfh->close;
-    $DB::single=1;
 
     my $fh = Genome::Sys->open_file_for_reading($self->indels_all_sequences_bed_file);
     while (<$fh>){
@@ -165,7 +164,6 @@ sub process_file {
                         $call = $pindel_output->getline;
                     } 
                     if($call !~ m/^Chr/) {
-                        $DB::single=1;
                         last;
                     }          
                 }

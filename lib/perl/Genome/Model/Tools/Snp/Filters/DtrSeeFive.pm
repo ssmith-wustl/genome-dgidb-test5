@@ -64,7 +64,6 @@ sub help_synopsis {
 sub execute {
     my $self=shift;
     my $file = $self->experimental_metric_model_file;
-    $DB::single=1;
     my $dtr_file = Genome::Model::Tools::Maq::Metrics::ConvertForDtr->execute(input=>$self->experimental_metric_model_file)->result;
     my $specificity = $self->specificity; 
     my %specificity_maqq = (
@@ -129,7 +128,6 @@ sub execute {
         @data{@headers} = split(/,\s*/,$line);
         my ($decision, $prob, $debug_info) = $fref->(\%data);
         unless ($decision) {
-            $DB::single=1;
             ($decision, $prob, $debug_info) = $fref->(\%data);
             die "failed to get a decision for $line!";
         }

@@ -176,7 +176,6 @@ sub combined_used_and_orphan_lists {
 sub execute { 
     my $self = shift;
     print "Generating Reports...\n";
-    $DB::single = 1;
     my $project_dir = $self->project_dir;
     my $blastfile = $project_dir."/bac_region_db.blast";
     my $reports_dir = $project_dir."/reports/";

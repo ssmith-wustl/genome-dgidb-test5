@@ -136,7 +136,6 @@ sub post_allocation_initialization {
 
 sub tumor_bam {
     my $self = shift;
-    $DB::single = 1;
     my $tumor_build = $self->tumor_build;
     my $tumor_bam = $tumor_build->whole_rmdup_bam_file;
     unless ($tumor_bam){

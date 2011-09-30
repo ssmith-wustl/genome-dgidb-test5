@@ -32,63 +32,54 @@ class Genome::Model::Tools::Vcf::VcfFilter {
             doc => "filtered VCF file",
             is_optional => 0,
         },
-
         vcf_file => {
             is => 'Text',
             is_input => 1,
             doc => "mutations in Vcf format",
             is_optional => 0,
         },
-
         filter_file => {
             is => 'Text',
             doc => "files containing SNVs to be filtered (assumes first col CHR, second col POS",
             is_optional => 1,
             default => "",
         },
-
         filter_keep => {
             is => 'Boolean',
             doc => "the filter file contains variants that *passed* filters (all *other* SNVs will be marked invalid). If false, the opposite is assumed - the file contains variants that did not pass filters",
             is_optional => 1,
             default => 0,
         },
-
         filter_name => {
             is => 'Text',
             doc => "name to add to the FILTER field for variants newly marked filtered",
             is_optional => 1,
             default => "",
         },
-
         filter_description => {
             is => 'Text',
             doc => "description of the FILTER for the header",
             is_optional => 1,
             default => "",
         },
-
         remove_filtered_lines => {
             is => 'Boolean',
             is_optional => 1,
             default => 0 ,
             doc => 'remove the filtered lines, as opposed to marking them as non-passing in the VCF',
         },
-
         bed_input => {
             is => 'Boolean',
             is_optional => 1,
             doc => 'filter file is in bed (0-based format). Default false (expects 1-based coordinates)',
             default=>0,
         },
-
         variant_type => {
             is => 'Text',
             is_optional => 1,
             doc => 'apply filters only to variants of this type (usually "SNP" or "INDEL")',
         },
-
-        ],
+    ],
 };
 
 
@@ -127,12 +118,14 @@ sub execute {
     my $filter_description = $self->filter_description;
     my $remove_filtered_lines = $self->remove_filtered_lines;
     my $variant_type = $self->variant_type;
-    
+
+    my $bgzip_in = ($vcf_file =~ m/gz$/) ? 1 : 0;
+    my $bgzip_out = ($output_file =~ m/gz$/) ? 1 : 0;
 
     # first, read the filter file and store the locations
     my %filter;
-    my $inFh = IO::File->new( $filter_file ) || die "can't open vcf file\n";
-    while( my $line = $inFh->getline )
+    my $filter_fh = Genome::Sys->open_file_for_reading($filter_file); #IO::File->new( $filter_file ) || die "can't open vcf file\n";
+    while( my $line = $filter_fh->getline )
     {
         chomp($line);
 
@@ -150,16 +143,14 @@ sub execute {
         #add this filter to the hash
         $filter{$key} = 0;
     }
-    close($inFh);
-
-
+    $filter_fh->close;
 
     #open the output file
-    open(OUTFILE, ">$output_file") or die "Can't open output file: $!\n";
-
+    my $outfile = ($bgzip_out) ? Genome::Sys->open_gzip_file_for_writing($output_file) : Genome::Sys->open_file_for_writing($output_file);
 
     #read the vcf
-    $inFh = IO::File->new( $vcf_file ) || die "can't open vcf file\n";
+    my $inFh = ($bgzip_in) ? Genome::Sys->open_gzip_file_for_reading($vcf_file) : Genome::Sys->open_file_for_reading($vcf_file);
+
     my $found_pass_line = 0;
     my $found_format_lines = 0;
     while( my $line = $inFh->getline )
@@ -177,13 +168,13 @@ sub execute {
             # filter headers into the VCF here
             if ($line =~ /^##FORMAT/ && $found_format_lines == 0){
                 unless ($found_pass_line){
-                    print OUTFILE "##FILTER=<ID=PASS,Description=\"Passed all filters\">" . "\n";
+                    print $outfile "##FILTER=<ID=PASS,Description=\"Passed all filters\">" . "\n";
                 }
 
-                print OUTFILE "##FILTER=<ID=" . $filter_name . ",Description=\"" . $filter_description . "\">" . "\n";
+                print $outfile "##FILTER=<ID=" . $filter_name . ",Description=\"" . $filter_description . "\">" . "\n";
                 $found_format_lines = 1;
             }
-            print OUTFILE $line . "\n";
+            print $outfile $line . "\n";
 
 
         } else {   #else we're in body of the vcf, check it against the filters
@@ -193,7 +184,7 @@ sub execute {
 
             # if this is not of the correct variant type, skip it
             if (defined($variant_type) && !($fields[7] =~ /VT=$variant_type/)){
-                print OUTFILE $line . "\n";
+                print $outfile $line . "\n";
             } else {
 
                 # only check the filters if this snv hasn't already been filtered
@@ -229,12 +220,13 @@ sub execute {
 
                 #output the line
                 unless($remove_line){
-                    print OUTFILE join("\t", @fields) . "\n";
+                    print $outfile join("\t", @fields) . "\n";
                 }
             }
         }        
     }
-    close(OUTFILE);
+    $outfile->close;
+    $inFh->close;
     
     return 1;
 }

@@ -84,7 +84,6 @@ sub output_columns {
 
 sub execute {                               # replace with real execution logic.
     my $self = shift;
-    $DB::single=1;
     ## Get required parameters ##
     my $sample_name = "Sample";
 

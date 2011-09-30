@@ -37,7 +37,6 @@ class Genome::Model::Tools::Analysis::LaneQc::CopyNumber {
 
 sub execute {
     my $self=shift;
-    $DB::single = 1;
     my $build_id = $self->build_id;
     my $outfile_prefix = $self->output_file_prefix;
     my $window = $self->bam2cn_window;

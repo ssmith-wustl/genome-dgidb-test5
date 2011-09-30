@@ -64,7 +64,6 @@ sub execute {
     my $prefix = $self->prefix||'';
     my $output_directory = $self->output_directory;
     my $cache_dir = $self->cache_dir;
-    $DB::single=1;
     `mkdir -p $output_directory` if(!-d $output_directory );
 
     if(defined $index)

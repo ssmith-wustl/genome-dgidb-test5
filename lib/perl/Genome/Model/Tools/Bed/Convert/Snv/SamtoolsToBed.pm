@@ -34,7 +34,6 @@ sub process_source {
     while(my $line = <$input_fh>) {
         my @mpileup = split("\t", $line);
         my ($chromosome, $position, $id, $reference, $consensus, $quality, $depth, $map_qual, @extra);
-        $DB::single=1;
         if($mpileup[2] eq '.') {
             ($chromosome, $position, $id,$reference, $consensus , $quality, @extra) = split("\t", $line) ;
             $quality = sprintf("%2.f", $quality);

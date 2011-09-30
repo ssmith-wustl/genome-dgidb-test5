@@ -250,7 +250,6 @@ sub execute {
     my $headers2 = $self->headers2 || 0;
     my $headers_count = ($headers1 >= $headers2 ? $headers1 : $headers2);
     while ($headers_count) {
-        $DB::single=1;
         if ($headers1) {
             $getf1->();
             $headers1--;

@@ -49,7 +49,6 @@ HELP
 
 sub execute {
   my $self = shift;
-  $DB::single = 1; # Halts execution when using a debugger
 
   # Grab arguments
   my $assemblyFastaFile = $self->assembly_file;

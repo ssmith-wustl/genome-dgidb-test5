@@ -94,7 +94,6 @@ sub scaffold_comp
 sub execute
 {
     my $self = shift;
-    $DB::single = 1;
     my $ace_file = $self->ace_file;
     my $left_scaffold = $self->left_scaffold;
     my $right_scaffold = $self->right_scaffold;

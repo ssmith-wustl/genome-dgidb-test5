@@ -84,7 +84,6 @@ class Genome::Model::Tools::Sv::Pairoscope {
 
 sub execute {
     my $self=shift;
-    $DB::single = 1; 
 
     #test architecture to make sure we can run pairoscope program
     #copied from G::M::T::Maq""Align.t 

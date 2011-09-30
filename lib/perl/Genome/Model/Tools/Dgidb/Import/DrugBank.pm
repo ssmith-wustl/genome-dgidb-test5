@@ -95,8 +95,7 @@ HELP
 
 sub execute {
     my $self = shift;
-    # $self->input_to_tsv();
-    $DB::single = 1;
+    $self->input_to_tsv();
     $self->import_tsv();
     return 1;
 }
@@ -106,10 +105,11 @@ sub import_tsv {
     my $drugs_outfile = "DrugBank_WashU_DRUGS.tsv";
     my $targets_outfile = "DrugBank_WashU_TARGETS.tsv";
     my $interactions_outfile = "DrugBank_WashU_INTERACTIONS.tsv";
+    $self->preload_objects;
     my @drug_names = $self->import_drugs($drugs_outfile);
     my @gene_names = $self->import_genes($targets_outfile);
-    #TODO: finish handling the interactions
-
+    my @interactions = $self->import_interactions($interactions_outfile);
+    return 1;
 }
 
 sub import_drugs {
@@ -129,12 +129,11 @@ sub import_drugs {
     while(my $drug = $parser->next){
         my $drug_name = Genome::DrugName->create(
             name => $drug->{drug_name},
-            nomenclature => 'todo', #TODO: fill me in
+            nomenclature => 'todo', #TODO: fill in nomenclature
             source_db_name => 'DrugBank',
             source_db_version => $version,
             description => '',
         );
-        $DB::single = 1;
 
         my @drug_synonyms = split(', ', $drug->{drug_synonyms});
         for my $drug_synonym (@drug_synonyms){
@@ -152,16 +151,16 @@ sub import_drugs {
             my $drug_name_association = $self->_get_or_create_drug_name_association($drug_name, $drug_brand, $manufacturer, '');
         }
 
-        my $drug_name_category_association = $self->_get_or_create_drug_name_category_association($drug_name, $drug->{drug_type}, 'drug_type', '');
+        my $drug_name_category_association = $self->_get_or_create_drug_name_category_association($drug_name, $drug->{drug_type}, '');
 
         my @drug_categories = split(', ', $drug->{drug_categories});
         for my $drug_category (@drug_categories){
-            my $category_association = $self->_get_or_create_drug_name_category_association($drug_name, $drug_category, 'todo', ''); #TODO: Fill in the nomenclature
+            my $category_association = $self->_get_or_create_drug_name_category_association($drug_name, $drug_category, '');
         }
 
         my @drug_groups = split(', ', $drug->{drug_groups});
         for my $drug_group (@drug_groups){
-            my $group_association = $self->_get_or_create_drug_name_category_association($drug_name, $drug_group, 'todo', ''); #TODO: fill in nomenclature
+            my $group_association = $self->_get_or_create_drug_name_category_association($drug_name, $drug_group, '');
         }
 
         push @drug_names, $drug_name;
@@ -188,7 +187,7 @@ sub import_genes {
         #FIXME: There are 290+ gene names that appear in more than 1 row of the
             #tsv file.  This will squish them together into a single record.  
             #I don't necessarily believe that this is the right thing to do
-        my $gene_name = $self->_get_or_create_gene_name($gene->{gene_name}, 'todo', 'DrugBank', $version, ''); #TODO: fill in nomenclature
+        my $gene_name = $self->_get_or_create_gene_name($gene->{gene_name}, 'hugo', 'DrugBank', $version, '');
 
         unless ($gene->{entrez_gene_synonyms} eq 'na'){
             my @entrez_gene_synonyms = split(',', $gene->{entrez_gene_synonyms});
@@ -211,6 +210,49 @@ sub import_genes {
     }
 
     return @gene_names;
+}
+
+sub import_interactions {
+    my $self = shift;
+    my $version = $self->version;
+    my $interaction_outfile = shift;
+    my @interactions;
+    my @headers = qw/ interaction_count drug_id drug_name drug_synonyms drug_brands drug_type drug_groups drug_categories partner_id known_action target_actions gene_symbol gene_name uniprot_id entrez_gene_symbols entrez_gene_synonyms /;
+    my $parser = Genome::Utility::IO::SeparatedValueReader->create(
+        input => $interaction_outfile,
+        headers => \@headers,
+        separator => "\t",
+        is_regex=> 1,
+    );
+
+    $parser->next; #eat the headers
+    while(my $interaction = $parser->next){
+        my $drug_name = Genome::DrugName->get(name => $interaction->{drug_name}, nomenclature => 'todo', source_db_name => 'DrugBank', source_db_version => $version); #TODO: fill in nomenclature
+        my $gene_name = Genome::GeneName->get(name => $interaction->{gene_name}, nomenclature => 'todo', source_db_name => 'DrugBank', source_db_version => $version); #TODO: fill in nomenclature
+        my $drug_gene_interaction = $self->_get_or_create_interaction($drug_name, $gene_name, 'todo', $interaction->{target_actions}, ''); #TODO: fill in nomenclature
+        push @interactions, $drug_gene_interaction;
+        my $is_known_action = $self->_get_or_create_interaction_attribute($drug_gene_interaction, 'is_known_action', $interaction->{'known_action'});
+    }
+
+    return @interactions;
+}
+
+sub preload_objects {
+    my $self = shift;
+    my $source_db_name = 'DrugBank';
+    my $source_db_version = $self->version;
+
+    #Let's preload anything for this database name and version so that we can not touch the database again
+    Genome::GeneName->get(source_db_name => $source_db_name, source_db_version => $source_db_version);
+    Genome::GeneNameAssociation->get(source_db_name => $source_db_name, source_db_version => $source_db_version);
+    Genome::GeneNameCategoryAssociation->get(source_db_name => $source_db_name, source_db_version => $source_db_version);
+    Genome::DrugName->get(source_db_name => $source_db_name, source_db_version => $source_db_version);
+    Genome::DrugNameAssociation->get(source_db_name => $source_db_name, source_db_version => $source_db_version);
+    Genome::DrugNameCategoryAssociation->get(source_db_name => $source_db_name, source_db_version => $source_db_version);
+    Genome::DrugGeneInteraction->get(source_db_name => $source_db_name, source_db_version => $source_db_version);
+    Genome::DrugGeneInteractionAttribute->get(source_db_name => $source_db_name, source_db_version => $source_db_version);
+
+    return 1;
 }
 
 sub help_usage_complete_text {
@@ -797,11 +839,11 @@ sub _get_or_create_drug_name_association {
 
 sub _get_or_create_drug_name_category_association {
     my $self = shift;
-    my ($drug_name, $category, $nomenclature, $description) = @_;
+    my ($drug_name, $category, $description) = @_;
     my %params = (
         drug_name => $drug_name->name,
         category_name => $category,
-        nomenclature => $nomenclature,
+        nomenclature => $drug_name->nomenclature,
         source_db_name => $drug_name->source_db_name,
         source_db_version => $drug_name->source_db_version,
         description => $description,
@@ -847,6 +889,40 @@ sub _get_or_create_gene_name_association {
         $gene_name_association = Genome::GeneNameAssociation->create(%params);
     }
     return $gene_name_association;
+}
+
+sub _get_or_create_interaction {
+    my $self = shift;
+    my ($drug_name, $gene_name, $nomenclature,  $type, $description) = @_;
+    my %params = (
+        gene_name => $gene_name->name,
+        drug_name => $drug_name->name,
+        nomenclature => $nomenclature,
+        source_db_name => $drug_name->source_db_name,
+        source_db_version => $drug_name->source_db_version,
+        interaction_type => $type,
+        description =>  $description,
+    );
+    my $drug_gene_interaction = Genome::DrugGeneInteraction->get(%params);
+    unless ($drug_gene_interaction) {
+        $drug_gene_interaction = Genome::DrugGeneInteraction->create(%params);
+    }
+    return $drug_gene_interaction;
+}
+
+sub _get_or_create_interaction_attribute {
+    my $self = shift;
+    my ($interaction, $name, $value) = @_;
+    my %params = (
+        interaction_id => $interaction->id,
+        name => $name,
+        value => $value,
+    );
+    my $attribute = Genome::DrugGeneInteractionAttribute->get(%params);
+    unless ($attribute){
+        $attribute = Genome::DrugGeneInteractionAttribute->create(%params);
+    }
+    return $attribute;
 }
 
 1;

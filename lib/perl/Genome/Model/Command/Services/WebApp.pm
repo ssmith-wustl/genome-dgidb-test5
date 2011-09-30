@@ -153,7 +153,6 @@ sub is_sub_command_delegator {
 }
 
 sub url {
-    $DB::single = 1;
     my $self = shift;
     my $hostname = Sys::Hostname::hostname;
     my $url = sprintf ( "http://%s:%d/", $hostname, $self->port );

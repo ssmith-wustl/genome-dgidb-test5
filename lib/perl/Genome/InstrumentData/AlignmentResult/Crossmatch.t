@@ -66,7 +66,6 @@ my $reference_model = Genome::Model::ImportedReferenceSequence->get(name => 'TES
 ok($reference_model, "got reference model");
 my $temp_reference_index = Genome::Model::Build::ReferenceSequence::AlignerIndex->create(reference_build=>$reference_build, aligner_version=>$aligner_version, aligner_name=>$aligner_version, aligner_params=>undef);
 
-$DB::single = 1;
 my $reference_build = $reference_model->build_by_version('1');
 ok($reference_build, "got reference build");
 
@@ -188,7 +187,6 @@ sub test_shortcutting {
     # once to find old data
     my $adir = $alignment->alignment_directory;
     my @list = <$adir/*>;
-$DB::single=1;
     ok($alignment, "Created Alignment");
     my $dir = $alignment->alignment_directory;
     ok($dir, "alignments found/generated");

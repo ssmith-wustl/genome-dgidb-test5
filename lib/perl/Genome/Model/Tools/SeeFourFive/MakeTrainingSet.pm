@@ -99,7 +99,6 @@ class Genome::Model::Tools::SeeFourFive::MakeTrainingSet {
 
 sub execute {
     my $self=shift;
-    $DB::single = 1;
     unless(-f $self->snp_file) {
         $self->error_message("Snp file is not a file: " . $self->snp_file);
         return;
@@ -371,7 +370,6 @@ sub make_validation_hash {
 
 sub make_data_arrays {
     my ($self, $handle, $dtr, $gold_het_href, $gold_hom_href, $gold_ref_href, $db_status_href) = @_;
-    $DB::single=1;
     #useful array function
     #@shuffled = shuffle(@list);
 

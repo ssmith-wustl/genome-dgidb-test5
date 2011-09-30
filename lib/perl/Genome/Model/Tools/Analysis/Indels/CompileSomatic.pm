@@ -38,7 +38,6 @@ EOS
 }
 
 sub execute {
-    $DB::single = 1;
     my $self = shift;
 
     #check the inputs before doing any significant work

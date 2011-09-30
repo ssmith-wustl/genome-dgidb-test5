@@ -32,7 +32,6 @@ sub execute{
         die $self->error_message("no build provided!");
     }
 
-    $DB::single = 1;
 
     $self->status_message("Comparing detected variants to previously discovered variations");
 
@@ -44,7 +43,6 @@ sub execute{
         $skip_flag = 1;
     }
 
-    $DB::single=1;
 
     unless ($skip_flag) {
         $snv_feature_list   = $prev_variations_build->snv_feature_list;

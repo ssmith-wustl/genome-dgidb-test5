@@ -85,7 +85,6 @@ sub dispatch_request {
     sub (/res/** + .*) {
         my $new_path = "/genome/resource.html/$_[1].$_[2]";
         my %new_params = ( %{$_[3]}, PATH_INFO => $new_path, REQUEST_URI => $new_path );
-        $DB::single = 1;
         redispatch_psgi($app{'Rest.psgi'}, \%new_params);
     },
       ## send /view without a trailing slash to /view/

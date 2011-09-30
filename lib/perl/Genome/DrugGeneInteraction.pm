@@ -24,12 +24,12 @@ class Genome::DrugGeneInteraction {
     ],
     has => [
         drug_name => { is => 'varchar'},
-        drug => {
+        # drug => {
 
-        },
-        gene => {
+        # },
+        # gene => {
 
-        },
+        # },
         gene_name => { is => 'varchar'},
         nomenclature => { is => 'varchar'},
         source_db_name => { is => 'varchar'},

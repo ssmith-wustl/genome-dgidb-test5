@@ -272,7 +272,6 @@ sub execute {
     }
 
     unless ($import_instrument_data->library_id) {
-        $DB::single = 1;
         Carp::confess("No library on new instrument data?"); 
     }
 

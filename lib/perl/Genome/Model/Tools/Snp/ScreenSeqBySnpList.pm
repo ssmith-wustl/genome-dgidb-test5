@@ -70,7 +70,6 @@ EOS
 sub execute {
 
     my $self = shift;
-    $DB::single = 1;
     my $screen_file = $self->screen_file;
     my $screen_file_fof = $self->screen_file_fof;
 

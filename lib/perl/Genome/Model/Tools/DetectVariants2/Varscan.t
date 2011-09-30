@@ -81,7 +81,7 @@ for my $output_file (@expected_output_files){
     is(compare($actual_file, $expected_file), 0, "$actual_file output matched expected output");
 }
 
-ok(-s $test_working_dir."/snvs.vcf", "Found VCF file");
+ok(-s $test_working_dir."/snvs.vcf.gz", "Found VCF file");
 
 done_testing();
 

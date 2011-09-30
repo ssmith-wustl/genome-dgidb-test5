@@ -6,17 +6,17 @@ use warnings;
 use Genome;
 
 class Genome::DrugGeneInteractionAttribute {
-    table_name => 'drug_gene_interaction_action',
+    table_name => 'drug_gene_interaction_attribute',
+    id_by => [
+        interaction_id => { is => 'integer'},
+        name           => { is => 'Text' },
+        value          => { is => 'Text' },
+    ],
+    has => [
+        drug_gene_interaction => { is => 'Genome::DrugGeneInteraction', id_by => 'interaction_id', constraint_name => 'drug_gene_interaction_attribute_interaction_id_fkey' },
+    ],
     schema_name => 'public',
     data_source => 'Genome::DataSource::Main',
-    id_by => [
-        interaction_id => { 
-            is => 'integer',
-            column_name => 'id',    
-        },
-        name => { is => 'varchar' },
-        value => { is => 'varchar' },
-    ],
 };
 
 1;
