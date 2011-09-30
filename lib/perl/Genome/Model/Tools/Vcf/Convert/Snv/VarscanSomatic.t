@@ -34,7 +34,7 @@ ok(-s $output_file, "output file created");
 
 # The files will have a timestamp that will differ. Ignore this but check the rest.
 my $expected = `cat $expected_file | grep -v fileDate`;
-my $output = `cat $output_file | grep -v fileDate`;
+my $output = `zcat $output_file | grep -v fileDate`;
 my $diff = Genome::Sys->diff_text_vs_text($output, $expected);
 ok(!$diff, 'output matched expected result')
     or diag("diff results:\n" . $diff);

@@ -50,6 +50,9 @@ my $filter_test = $dispatcher_class->create(
 ok($filter_test, "Object to test a filter case created");
 $filter_test->dump_status_messages(1);
 ok($filter_test->execute, "Successfully executed test.");
+ok($filter_test->_workflow_result->{snv_result_id}, 'snv_result_id defined in workflow result');
+ok($filter_test->_workflow_result->{snv_result_class}, 'snv_result_class defined in workflow result');
+ok($filter_test->snv_result, 'snv_result defined on command');
 
 done_testing();
 exit;

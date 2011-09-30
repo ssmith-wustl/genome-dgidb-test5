@@ -10,10 +10,10 @@ class Genome::DrugName {
     schema_name => 'public',
     data_source => 'Genome::DataSource::Main',
     id_by => [
-        name => { is => 'varchar'},
-        nomenclature => { is => 'varchar'},
-        source_db_name => { is => 'varchar'},
-        source_db_version => { is => 'varchar'},
+        name => { is => 'Text'},
+        nomenclature => { is => 'Text'},
+        source_db_name => { is => 'Text'},
+        source_db_version => { is => 'Text'},
     ],
     has => [
         description => {
