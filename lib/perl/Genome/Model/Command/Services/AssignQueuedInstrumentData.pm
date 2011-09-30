@@ -983,16 +983,7 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
             return;
         }
 
-        my @group_names = $self->_resolve_project_and_work_order_names($pse);
-        push @group_names, $self->_resolve_pooled_sample_name_for_instrument_data($genome_instrument_data);
-
-        if ($m->name =~ /\.wu-space$/) {
-            for (@group_names) {$_ .= ".wu-space" if ($_)};
-        }
-        if ($m->name =~ /\.tcga-cds$/) {
-            for (@group_names) {$_ .= ".tcga-cds" if ($_)};
-        }
-        $self->add_model_to_default_modelgroups($m, @group_names);
+        $self->add_model_to_default_modelgroups($m, $pse, $genome_instrument_data);
 
         my $new_models = $self->_newly_created_models;
         $new_models->{$m->id} = $m;
@@ -1107,10 +1098,12 @@ sub assign_capture_inputs {
 sub add_model_to_default_modelgroups {
     my $self = shift;
     my $model = shift;
-    my @project_names = @_;
+    my $pse = shift;
+    my $instrument_data = shift;
 
     my $subject = $model->subject;
 
+    
     my $source;
     if($subject->isa('Genome::Sample')) {
         $source = $subject->source;
@@ -1123,7 +1116,15 @@ sub add_model_to_default_modelgroups {
         $self->error_message('Unhandled subject for model--not adding to common name model-groups');
     }
 
-    my @group_names = @project_names;
+    my @groups = $self->_resolve_projects_and_work_orders($pse);
+    my $pooled_sample_name = $self->_resolve_pooled_sample_name_for_instrument_data($instrument_data);
+    if ($model->name =~ /\.wu-space$/) {
+        $pooled_sample_name .= ".wu-space";
+    }
+    if ($model->name =~ /\.tcga-cds$/) {
+        $pooled_sample_name .= ".tcga-cds";
+    }
+    push @groups, $pooled_sample_name if $pooled_sample_name;
 
     unless($source) {
         $self->error_message('Failed to get source for subject.');
@@ -1131,31 +1132,49 @@ sub add_model_to_default_modelgroups {
         my $common_name = $source->common_name;
         if($common_name) {
             my ($source_grouping) = $common_name =~ /^([a-z]+)\d+$/i;
-            push @group_names, $source_grouping if $source_grouping;
+            push @groups, $source_grouping if $source_grouping;
         }
     }
 
-    for my $group_name (@group_names) {
-        my $name = $group_name;
-        my $model_group = Genome::ModelGroup->get(name => $name);
-
-        unless($model_group) {
-            $model_group = Genome::ModelGroup->create(name => $name);
-            unless($model_group) {
-                $self->error_message('Failed to create a default model-group: ' . $name);
-                return;
+    for my $group (@groups) { 
+        my $name;
+        if (ref $group){#groups here can be research project objects, work order objects, pooled sample name or source grouping string       
+            $name = $group->can('name')?$group->name:$group->setup_name;
+            if ($model->name =~ /\.wu-space$/) {
+                $name .= ".wu-space";
+            }
+            if ($model->name =~ /\.tcga-cds$/) {
+                $name .= ".tcga-cds";
+            }
+        }else{
+            $name = $group;
+        }
+        if ($name eq 'AML'){
+            $DB::single = 1;
+        }
+        my $project = Genome::Project->get(name => $name);
+        unless($project) {
+            $project = Genome::Project->create(name => $name );
+            unless($project) {
+                die $self->error_message('Failed to create a default model-group: ' . $name);
+            }
+            if (ref $group){
+                $project->add_part(entity => $group);
             }
         }
 
-        unless(grep($_ eq $model, $model_group->models)) {
-            $model_group->assign_models($model);
+        my $model_group = Genome::ModelGroup->get(uuid => $project->id);
+        unless ($model_group){
+            die $self->error_message("No model group for ".$project->name);
         }
+        $model_group->assign_models($model);
+        #$project->add_part(entity => $model);
     }
 
     return 1;
 }
 
-sub _resolve_project_and_work_order_names {
+sub _resolve_projects_and_work_orders{
     my $self = shift;
     my $pse = shift;
 
@@ -1171,15 +1190,13 @@ sub _resolve_project_and_work_order_names {
     unless(scalar @work_orders) {
         $self->warning_message('No work order found for PSE ' . $pse->id);
     }
-    push @names, map($_->setup_name, @work_orders);
 
     my @projects = map($_->get_project, @work_orders); 
     unless(scalar @projects) {
         $self->warning_message('No project found for PSE ' . $pse->id);
     }
-    push @names, map($_->setup_name, @projects);
 
-    return @names;
+    return grep {defined $_} (@projects, @work_orders);
 }
 
 sub _resolve_pooled_sample_name_for_instrument_data {
