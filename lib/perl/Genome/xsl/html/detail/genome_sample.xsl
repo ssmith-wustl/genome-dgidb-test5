@@ -20,7 +20,7 @@
     <xsl:call-template name="control_bar_view"/>
 
     <xsl:call-template name="view_header">
-      <xsl:with-param name="label_name" select="'Sample:'" />
+      <xsl:with-param name="label_name" select="'Sample'" />
       <xsl:with-param name="display_name" select="aspect[@name='name']/value" />
       <xsl:with-param name="icon" select="'genome_sample_32'" />
     </xsl:call-template>
