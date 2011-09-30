@@ -331,9 +331,22 @@ form td.label {
     text-align: right;
 }
 
+div#nomenclature-columns ul {
+    margin: 0;
+    padding: 0;
+}
+
 div#nomenclature-columns li {
     list-style: none;
     margin-right: 5px;
+}
+
+div#nomenclature-columns input.text {
+    width: 200px;
+}
+
+div#nomenclature-columns div.enumerated-choices {
+    margin-left: 25px;
 }
 
 /* TABLES
