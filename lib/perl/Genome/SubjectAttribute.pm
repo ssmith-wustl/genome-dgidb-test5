@@ -35,12 +35,25 @@ class Genome::SubjectAttribute {
         },
         nomenclature_field_name => {
             via => 'nomenclature_field',
-            to => 'name'
+             to => 'name'
         },
         nomenclature_name => {
             via => 'nomenclature_field',
-            to => 'nomenclature_name',
+             to => 'nomenclature_name',
         },
+        nomenclature_id => {
+            via => 'nomenclature_field',
+             to => 'nomenclature_id'
+        },
+        nomenclature_obj => {
+            is => 'Genome::Nomenclature',
+            via => 'nomenclature_field',
+             to => 'nomenclature'
+        },
+        all_nomenclature_fields => {
+            via => 'nomenclature_obj',
+             to => 'fields' 
+        }
     ],
     has_optional => [
         _individual => {
