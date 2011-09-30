@@ -111,12 +111,12 @@ $ ->
         
         appendColumn: (column) ->
           columnView = new ColumnView model: column
-          $('ul', @el).append columnView.render().el
+          $('ul#nomenclature-list', @el).append columnView.render().el
 
         render: ->
           $(@el).html('')
-          $(@el).append "<button id='add'>Add column</button>"
-          $(@el).append "<ul></ul>"
+          $(@el).append "<ul id='nomenclature-list'></ul>"
+          $(@el).append "<div id='nomenclature-add'><button id='add'>Add column</button></div>"
           _(@collection.models).each (column) -> appendColumn column, @
 
         addColumn: ->
