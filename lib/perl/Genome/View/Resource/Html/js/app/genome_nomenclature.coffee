@@ -147,6 +147,9 @@ $ ->
       construct_from_json = (object) -> 
         name = object.name
         $("#nomenclature-name-input").val(name)
+        $(".title h1").html("Edit Nomenclature: #{name}")
+        $("#directions").html("Use the form below to edit the nomenclature #{name}")
+        document.title = "Edit Nomenclature: #{name}"
         _(object.fields).each (i) ->
             listView.collection.add(i)
         listView.render
