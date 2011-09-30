@@ -105,6 +105,7 @@ sub import_tsv {
     my $drugs_outfile = "DrugBank_WashU_DRUGS.tsv";
     my $targets_outfile = "DrugBank_WashU_TARGETS.tsv";
     my $interactions_outfile = "DrugBank_WashU_INTERACTIONS.tsv";
+    $self->preload_objects;
     my @drug_names = $self->import_drugs($drugs_outfile);
     my @gene_names = $self->import_genes($targets_outfile);
     my @interactions = $self->import_interactions($interactions_outfile);
@@ -234,6 +235,24 @@ sub import_interactions {
     }
 
     return @interactions;
+}
+
+sub preload_objects {
+    my $self = shift;
+    my $source_db_name = 'DrugBank';
+    my $source_db_version = $self->version;
+
+    #Let's preload anything for this database name and version so that we can not touch the database again
+    Genome::GeneName->get(source_db_name => $source_db_name, source_db_version => $source_db_version);
+    Genome::GeneNameAssociation->get(source_db_name => $source_db_name, source_db_version => $source_db_version);
+    Genome::GeneNameCategoryAssociation->get(source_db_name => $source_db_name, source_db_version => $source_db_version);
+    Genome::DrugName->get(source_db_name => $source_db_name, source_db_version => $source_db_version);
+    Genome::DrugNameAssociation->get(source_db_name => $source_db_name, source_db_version => $source_db_version);
+    Genome::DrugNameCategoryAssociation->get(source_db_name => $source_db_name, source_db_version => $source_db_version);
+    Genome::DrugGeneInteraction->get(source_db_name => $source_db_name, source_db_version => $source_db_version);
+    Genome::DrugGeneInteractionAttribute->get(source_db_name => $source_db_name, source_db_version => $source_db_version);
+
+    return 1;
 }
 
 sub help_usage_complete_text {
