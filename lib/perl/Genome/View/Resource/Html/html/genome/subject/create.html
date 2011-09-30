@@ -82,6 +82,80 @@
               <a class="btn_cache_refresh rounded" id="refreshCache" title="Refresh Cache"></a>
             </div>
           </div>
+
+<!-- JTAL REMOVE TIHS SHIT -->
+
+   <div class="tasks_info">
+            <div class="titlebar"></div>
+            <table>
+              <tr>
+                <td class="count succeeded">88</td>
+                <td class="type">Succeeded</td>
+                <td class="count running">88</td>
+                <td class="type">Running</td>
+                <td class="count submitted">88</td>
+                <td class="type">Submitted</td>
+              </tr>
+              <tr>
+                <td class="count failed">88</td>
+                <td class="type">Failed</td>
+                <td class="count pending">88</td>
+                <td class="type">Pending</td>
+                <td class="button" colspan="2">
+                  <a href="#" class="btn_view_all" id="view_all_tasks" title="jmcmicha's tasks">View All</a>
+                </td>
+              </tr>
+            </table>
+          </div>
+          <div id="tasks_table" style="display: none;">
+            <table cellpadding="0" cellspacing="0" class="lister" border="0">
+              <thead>
+                <th>job</th>
+                <th>status</th>
+                <th>submitted</th>
+                <th>started</th>
+                <th>finished</th>
+              </thead>
+              <tr>
+                <td>Import Dataset</td>
+                <td class="status succeeded">succeeded</td>
+                <td>2011-09-15 19:29:18</td>
+                <td>2011-09-15 19:30:15</td>
+                <td>2011-09-15 19:35:45</td>
+              </tr>
+              <tr>
+                <td>Import Dataset</td>
+                <td class="status running">running</td>
+                <td>2011-09-15 19:29:55</td>
+                <td>2011-09-15 19:30:42</td>
+                <td>2011-09-15 19:35:45</td>
+              </tr>
+              <tr>
+                <td>Import Dataset</td>
+                <td class="status running">running</td>
+                <td>2011-09-15 19:40:21</td>
+                <td>2011-09-15 19:45:44</td>
+                <td>--</td>
+              </tr>
+              <tr>
+                <td>Import Dataset</td>
+                <td class="status pending">pending</td>
+                <td>2011-09-15 19:50:23</td>
+                <td>--</td>
+                <td>--</td>
+              </tr>
+              <tr>
+                <td>Import Dataset</td>
+                <td class="status submitted">submitted</td>
+                <td>2011-09-15 19:58:18</td>
+                <td>--</td>
+                <td>--</td>
+              </tr>
+            </table>
+          </div>
+<!-- JTAL END OF SHIT TO REMOVE -->
+
+
 <!--template: /html/common_includes/components.xsl name:control_bar_menu-->
           <ul class="app_menu">
             <li>
@@ -109,30 +183,29 @@
         </div>
         <div class="container">
 
-<div id="sampleUpload">
+    <div id="sampleUpload" class="span-16 append-4 prepend-4 last" style="margin-top: 20px">
 
     <form>
-    
-    <br>
-    1. Which nomenclature? <input size=50 id="nomenclature" name="nomenclature">
-    <br> <br>
+   
+    <fieldset> 
+    <legend>Nomenclature &amp; Subject Details</legend>
+    1. Which nomenclature? <input size=50 class="text" id="nomenclature" name="nomenclature">
+    <br/>
     2. Each row of your file represents a ... <br>
     <input type="radio" name="subclass_name" value="Genome::Sample" CHECKED> Sample
     <br>
     <input type="radio" name="subclass_name" value="Genome::Individual"> Individual
     <br>
     <input type="radio" name="subclass_name" value="Genome::PopulationGroup"> Population
-    <br>
+    </fieldset>
 
-    <br> <br>
-    2. Select the file on your computer which contains the subject data.
+    <fieldset>
+    <legend>Select File &amp; Upload</legend>
+    <p>2. Select the file on your computer which contains the subject data.
     <br>(tsv, csv, xls)<br>
-    <input type="file" name="file">
-
-    <br> <br>
-    <br> <br>
-
+    <input type="file" name="file"></p>
     <p><button>Upload</button></p>
+    </fieldset>
 
     </form>
 

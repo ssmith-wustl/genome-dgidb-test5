@@ -93,7 +93,7 @@
         </div>
         <div class="container">
           <div class="span-16 append-4 prepend-4 last" style="margin-top: 20px;">
-            <p>Use the form below to create a new nomenclature.</p>
+            <p id="directions">Use the form below to create a new nomenclature.</p>
 
             <!-- put your stuff here -->
             <fieldset>
@@ -106,9 +106,8 @@
 
             <fieldset>
               <legend>Nomenclature Columns</legend>
-              <div id="nomenclature-columns">
-
-              </div>
+              <div id="nomenclature-columns"></div>
+              <div id="nomenclature-add"></div>
             </fieldset>
 
             <div>
@@ -131,13 +130,13 @@
                 <option value="string">string</option>
                 <option value="enumerated">enumerated</option>
               </select>
-              <button class="delete">Delete Column</button>
+              <button class="delete">Remove Column</button>
             </script>
 
             <script type="text/template" id="nomenclature-column-enumerated-template">
               <div class="enumerated-choices">
                 <strong>Enumerated Column Definition:</strong><br/>
-                <% _.each(model.get("enumerated_types"), function(e) { %>
+                <% _.each(model.get("enumerated_values"), function(e) { %>
 
                 <div class="enum-row"><input type="text" class="enumerated-type-entry text" value="<%= e %>">
 

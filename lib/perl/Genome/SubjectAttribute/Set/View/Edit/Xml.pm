@@ -19,6 +19,7 @@ class Genome::SubjectAttribute::Set::View::Edit::Xml {
                     subject_class_name => 'Genome::SubjectAttribute',
                     aspects => [
                         'id',
+                        'subject_name',
                         'nomenclature_field_name',
                         'attribute_value',
                         {
