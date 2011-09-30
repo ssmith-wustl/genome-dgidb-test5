@@ -112,6 +112,7 @@
 
             <div>
               <p style="text-align: right;"><button class="save-nomenclature">Save Nomenclature</button></p>
+              <p style="text-align: right;"><button class="butts">Butts</button></p>
             </div>
 
             <div id="output">
@@ -130,13 +131,13 @@
                 <option value="string">string</option>
                 <option value="enumerated">enumerated</option>
               </select>
-              <button class="delete">Delete Column</button>
+              <button class="delete">Remove Column</button>
             </script>
 
             <script type="text/template" id="nomenclature-column-enumerated-template">
               <div class="enumerated-choices">
                 <strong>Enumerated Column Definition:</strong><br/>
-                <% _.each(model.get("enumerated_types"), function(e) { %>
+                <% _.each(model.get("enumerated_values"), function(e) { %>
 
                 <div class="enum-row"><input type="text" class="enumerated-type-entry text" value="<%= e %>">
 

@@ -10,7 +10,7 @@ $ ->
         defaults:
           name: 'column'
           type: 'string'
-          enumerated_types: []
+          enumerated_values: []
 
       class List extends Backbone.Collection
         model: Column
@@ -33,15 +33,15 @@ $ ->
         typeChanged: ->
           type = $(@el).children('.column-type-select')[0].value
           if (type == 'enumerated')
-            @model.set({"enumerated_types":['Untitled']}, {"silent": true})
+            @model.set({"enumerated_values":['Untitled']}, {"silent": true})
           
           @model.set({"type": type})
 
         addNewEnum: ->
-            types = @model.get "enumerated_types"
+            types = @model.get "enumerated_values"
             types.push("untitled")
-            @model.set({"enumerated_types": undefined}, {"silent" : true})
-            @model.set({"enumerated_types": types})
+            @model.set({"enumerated_values": undefined}, {"silent" : true})
+            @model.set({"enumerated_values": types})
 
         getEnumIndexForInitiator: (initiator) ->
             parent_row = initiator.parent(".enum-row")[0]
@@ -56,19 +56,19 @@ $ ->
             index = @getEnumIndexForInitiator(initiator) 
             value = initiator.val()
 
-            types = @model.get "enumerated_types"
+            types = @model.get "enumerated_values"
             types[index] = value
-            @model.set({"enumerated_types": undefined}, {silent: true})
-            @model.set({"enumerated_types": types})
+            @model.set({"enumerated_values": undefined}, {silent: true})
+            @model.set({"enumerated_values": types})
             
         removeEnum: (k) ->
             initiator = $(k.target)
            
             index = @getEnumIndexForInitiator(initiator) 
-            types = @model.get "enumerated_types"
+            types = @model.get "enumerated_values"
             types.splice(index, 1)
-            @model.set({"enumerated_types": undefined}, {silent: true})
-            @model.set({"enumerated_types": types})
+            @model.set({"enumerated_values": undefined}, {silent: true})
+            @model.set({"enumerated_values": types})
 
 
         initialize: ->
@@ -129,6 +129,27 @@ $ ->
 
 
       listView = new ListView
+    
+#      k = new List([{'name':  'hello', 'type': 'string', 'enumerated_values': []},{'name':  'there', 'type': 'enumerated', 'enumerated_values': ['woo', 'there']} ])
+#      k.each (i) -> 
+#        listView.collection.add(i)
+
+      if (window.location.hash) 
+        m = window.location.hash.split('=')
+        if m[0] == '#id'
+          url = '/view/Genome/Nomenclature/detail.json?id=' + m[1]
+          $.ajax
+           url: url
+           type: 'GET'
+           success: (data, textStatus, jqXHR) ->
+            construct_from_json(data)
+        
+      construct_from_json = (object) -> 
+        name = object.name
+        $("#nomenclature-name-input").val(name)
+        _(object.fields).each (i) ->
+            listView.collection.add(i)
+        listView.render
 
       $('.save-nomenclature').bind 'click', ->
         name = $("#nomenclature-name-input").val()
@@ -153,8 +174,7 @@ $ ->
             alert 'got it'
 
       $('.load-nomenclature').bind 'click', ->
-        #load_json  = "[{'name':  'hello', 'type': 'string', 'enumerated_types': []},{'name':  'there', 'type': 'enumerated', 'enumerated_types': ['woo', 'there']} ]"
-        load_json  = [{"name":"XXXnone","type":"string","enumerated_types":[]}]
+        #load_json  = "[{'name':  'hello', 'type': 'string', 'enumerated_values': []},{'name':  'there', 'type': 'enumerated', 'enumerated_values': ['woo', 'there']} ]"
         listView.collection.reset(load_json)
         alert('ok')
         alert(JSON.stringify(listView.collection))
