@@ -1,8 +1,9 @@
-package Genome::Data::Writer
+package Genome::Data::Writer;
 
 use strict;
 use warnings;
 
+use Genome::Data::ReaderWriter;
 use base 'Genome::Data::ReaderWriter';
 
 =head2

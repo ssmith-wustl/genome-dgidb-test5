@@ -3,6 +3,7 @@ package Genome::Data::Reader;
 use strict;
 use warnings;
 
+use Genome::Data::ReaderWriter;
 use base 'Genome::Data::ReaderWriter';
 
 =head2

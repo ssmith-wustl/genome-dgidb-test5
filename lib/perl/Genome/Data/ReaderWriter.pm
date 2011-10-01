@@ -14,6 +14,8 @@ Args : file => File to be written/read
 sub create {
     my ($class, %params) = @_;
     $class = ref($class) || $class;
+    my $self = {};
+    bless($self, $class);
 
     my $file = delete $params{file};
     unless ($file) {
@@ -34,7 +36,7 @@ sub _init_adaptor {
     my $class = $self->_infer_adaptor_class_from_format($format);
     my $adaptor = $class->create(
         file => $file,
-        mode => $self->access_mode();
+        mode => $self->access_mode()
     );
     unless ($adaptor) {
         Carp::confess "Could not create adaptor object of class $class!"

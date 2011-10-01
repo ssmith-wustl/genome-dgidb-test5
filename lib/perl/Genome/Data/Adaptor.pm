@@ -47,7 +47,7 @@ sub access_mode {
         if ($self->{_mode}) {
             Carp::confess "Can only set mode once, cannot change to $mode!";
         }
-        $self->{_mode} = $model;
+        $self->{_mode} = $mode;
     }
     return $self->{_mode};
 }
