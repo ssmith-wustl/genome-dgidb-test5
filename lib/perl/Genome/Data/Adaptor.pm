@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use Carp;
+use IO::File;
 
 =head2 create
 Usage: Creates a new object of type Genome::Data::Adaptor. Note that
@@ -30,6 +31,12 @@ sub create {
     return $self;
 }
 
+sub DESTROY {
+    my $self = shift;
+    $self->{_fh}->close if $self->{_fh};
+    return 1;
+}
+
 sub file {
     my ($self, $file) = @_;
     if ($file) {
@@ -52,12 +59,25 @@ sub access_mode {
     return $self->{_mode};
 }
 
-sub parse_next_sequence {
+sub _get_fh {
+    my $self = shift;
+    unless ($self->{_fh}) {
+        my $fh = eval { IO::File->new($self->file(), $self->access_mode()) };
+        unless ($fh) {
+            Carp::confess "Could not create file handle with access mode " 
+                . $self->access_mode . " for file " . $self->file();
+        }
+        $self->{_fh} = $fh;
+    }
+    return $self->{_fh};
+}
+
+sub parse_next_from_file {
     my $self = shift;
     Carp::confess "Method parse_next_sequence not implemented in subclass of " . __PACKAGE__;
 }
 
-sub write_sequence {
+sub write_to_file {
     my ($self, $sequence) = @_;
     Carp::confess "Method write_sequence not implemented in subclass of " . __PACKAGE__;
 }
