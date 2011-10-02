@@ -24,7 +24,7 @@ sub sequence_name {
     if ($value) {
         $self->{_sequence_name} = $value;
     }
-    return $value;
+    return $self->{_sequence_name};
 }
 
 sub sequence {
@@ -32,7 +32,7 @@ sub sequence {
     if ($value) {
         $self->{_sequence} = $value;
     }
-    return $value;
+    return $self->{_sequence};
 }
 
 sub length {

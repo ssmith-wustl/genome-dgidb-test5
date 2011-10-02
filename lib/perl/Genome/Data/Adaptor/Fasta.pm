@@ -35,18 +35,21 @@ sub parse_next_from_file {
         }
     }
 
-    my $seq_name = pop @lines;
-    unless ($self->_is_valid_fasta_seq_name($seq_name)) {
-        Carp::confess "Could not determine sequence name for sequence number " . $self->sequence_number;
+    my $seq_obj;
+    if (@lines) {
+        my $seq_name = shift @lines;
+        unless ($self->_is_valid_fasta_seq_name($seq_name)) {
+            Carp::confess "Could not determine sequence name for sequence number " . $self->sequence_number;
+        }
+        $seq_name =~ s/^>//;
+        my $seq = join('', @lines);
+        $seq_obj = Genome::Data::Sequence->create(
+            sequence_name => $seq_name,
+            sequence => $seq,
+        );
+        $self->_increment_sequence_number();
     }
-    $seq_name =~ s/^>//;
-    my $seq = join('', @lines);
-    my $seq_obj = Genome::Data::Sequence->create(
-        sequence_name => $seq_name,
-        sequence => $seq,
-    );
 
-    $self->_increment_sequence_number();
     $self->_set_current_sequence($seq_obj);
     return $seq_obj;
 }
@@ -59,16 +62,19 @@ sub write_to_file {
     unless ($seq_name) {
         Carp::confess "Sequence has no name, cannot write to file " . $self->file;
     }
+    $fh->print(">$seq_name\n");
+
     my $seq = $seq_obj->sequence;
-    unless ($seq) {
-        Carp::confess "No sequence string found, cannot write to file " . $self->file;
+    if ($seq) {
+        for (my $i = 0; $i < (length $seq); $i += 80) {
+            my $substr = substr($seq, $i, 80);
+            $fh->print("$substr\n");
+        }
     }
 
-    $fh->print(">$seq_name\n");
-    for (my $i = 0; $i < (length $seq); $i += 80) {
-        my $substr = substr($seq, $i, 80);
-        $fh->print("$substr\n");
-    }
+    $self->_set_current_sequence($seq_obj);
+    $self->_increment_sequence_number;
+
     return 1;
 }
 
@@ -87,8 +93,11 @@ sub _increment_sequence_number {
 
 sub _pop_cached_lines {
     my $self = shift;
-    my @lines = @{$self->{_cached_lines}};
-    $self->{_cached_lines} = undef;
+    my @lines;
+    if ($self->{_cached_lines}) {
+        @lines = @{$self->{_cached_lines}};
+    }
+    delete $self->{_cached_lines};
     return @lines;
 }
 
@@ -100,7 +109,10 @@ sub _push_line_to_cache {
 
 sub _is_valid_fasta_seq_name {
     my ($self, $line) = @_;
-    return $line =~ /^>/;
+    if ($line =~ /^>/) {
+        return 1;
+    }
+    return 0;
 }
 
 1;

@@ -16,7 +16,7 @@ Args : file => path to file to be parsed
 sub create {
     my ($class, %params) = @_;
     my $self = {};
-    bless($self, $class);  
+    bless($self, $class);
 
     my $file = delete $params{file};
     unless ($file) {
@@ -74,12 +74,12 @@ sub _get_fh {
 
 sub parse_next_from_file {
     my $self = shift;
-    Carp::confess "Method parse_next_sequence not implemented in subclass of " . __PACKAGE__;
+    Carp::confess "Method parse_next_from_file not implemented in subclass of " . __PACKAGE__;
 }
 
 sub write_to_file {
     my ($self, $sequence) = @_;
-    Carp::confess "Method write_sequence not implemented in subclass of " . __PACKAGE__;
+    Carp::confess "Method write_to_file not implemented in subclass of " . __PACKAGE__;
 }
 
 1;
