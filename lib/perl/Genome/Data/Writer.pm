@@ -10,7 +10,7 @@ sub access_mode {
     return 'w';
 }
 
-sub write_to_file {
+sub write {
     my $self = shift;
     my $adaptor = $self->data_adaptor();
     return $adaptor->write_to_file(@_);
