@@ -63,10 +63,6 @@ $rv = $test_reader_obj->_infer_adaptor_class_from_format('Test');
 is($rv, 'Genome::Data::Adaptor::Test', 'inferred class matches expected value');
 
 # Test _init_adaptor method
-$rv = eval { $test_reader_obj->_init_adaptor($missing_file, 'Test') };
-$error = $@;
-ok($error =~ /No file found/, 'fail to init adaptor when file does not exist, as expected');
-
 $rv = eval { $test_reader_obj->_init_adaptor(undef, 'Test') };
 $error = $@;
 ok($error =~ /requires a file/, 'fail to init adaptor when not given a file, as expected');
