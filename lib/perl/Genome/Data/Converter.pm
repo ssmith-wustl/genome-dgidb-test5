@@ -3,6 +3,9 @@ package Genome::Data::Converter;
 use strict;
 use warnings;
 
+use Genome::Data::Reader;
+use Genome::Data::Writer;
+
 sub create {
     my ($class, %params) = @_;
     my $self = {};
@@ -69,12 +72,38 @@ sub to_format {
 sub to_file {
     my ($self, $file) = @_;
     if ($file) {
-        unless (-e $file) {
-            Carp::confess "No file found at $file!";
-        }
         $self->{_to_file} = $file;
     }
     return $self->{_to_file};
+}
+
+sub convert_all {
+    my $self = shift;
+    while ($self->convert_next) {};
+    return 1;
+}
+
+sub convert_next {
+    my $self = shift;
+    my $from_reader = $self->_from_reader;
+    my $to_writer = $self->_to_writer;
+    my $object = $from_reader->next;
+    $self->_set_current($object);
+    if ($object) {
+        $to_writer->write($object);
+    }
+    return $object;
+}
+
+sub current {
+    my $self = shift;
+    return $self->{_current};
+}
+
+sub _set_current {
+    my ($self, $obj) = @_;
+    $self->{_current} = $obj;
+    return 1;
 }
 
 sub _from_reader {
@@ -107,16 +136,6 @@ sub _to_writer {
         $self->{_to_writer} = $writer;
     }
     return $self->{_to_writer};
-}
-
-sub convert {
-    my $self = shift;
-    my $from_reader = $self->_from_reader;
-    my $to_writer = $self->_to_writer;
-    while (my $object = $from_reader->next) {
-        $to_writer->write($object);
-    }
-    return 1;
 }
 
 1;
