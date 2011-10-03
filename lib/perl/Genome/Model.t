@@ -57,6 +57,10 @@ my $library = Genome::Library->create(
 );
 ok($library, 'create library');
 
+# PROJECT
+my $project = Genome::Project->create(name => '__TEST_PROJECT__');
+ok($project, 'create project');
+
 # DATA DIR
 my $tmpdir = File::Temp::tempdir(CLEANUP => 1);
 ok(-d $tmpdir, 'create tmpdir');
@@ -109,8 +113,11 @@ my $model = Genome::Model->create(
     processing_profile => $pp,
     subject_id => $sample->id,
     subject_class_name => $sample->class,
+    projects => [ $project ],
 );
 ok($model, 'create model');
+#$model->add_project($project);
+is_deeply([$model->projects], [$project], 'add project to model');
 
 # name
 is($model->default_model_name, 'TEST-00.tester', 'default model name');
