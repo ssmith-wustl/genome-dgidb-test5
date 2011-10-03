@@ -20,7 +20,7 @@ our $BAM_FH;
 class Genome::InstrumentData::AlignmentResult {
     is_abstract => 1,
     is=>['Genome::SoftwareResult::Stageable'],
-    sub_classification_method_name => '_resolve_subclass_name',   
+    sub_classification_method_name => '_resolve_subclass_name',
     has => [
         instrument_data         => {
                                     is => 'Genome::InstrumentData',
@@ -32,19 +32,19 @@ class Genome::InstrumentData::AlignmentResult {
                                 },
         reference_name          => { via => 'reference_build', to => 'name', is_mutable => 0, is_optional => 1 },
 
-        aligner                 => { 
-                                    calculate_from => [qw/aligner_name aligner_version aligner_params/], 
-                                    calculate => q|no warnings; "$aligner_name $aligner_version $aligner_params"| 
-                                },
-        
-        trimmer                 => { 
-                                    calculate_from => [qw/trimmer_name trimmer_version trimmer_params/], 
-                                    calculate => q|no warnings; "$trimmer_name $trimmer_version $trimmer_params"| 
+        aligner                 => {
+                                    calculate_from => [qw/aligner_name aligner_version aligner_params/],
+                                    calculate => q|no warnings; "$aligner_name $aligner_version $aligner_params"|
                                 },
 
-        filter                 => { 
-                                    calculate_from => [qw/filter_name filter_params force_fragment/], 
-                                    calculate => q|no warnings; "$filter_name $filter_params $force_fragment"| 
+        trimmer                 => {
+                                    calculate_from => [qw/trimmer_name trimmer_version trimmer_params/],
+                                    calculate => q|no warnings; "$trimmer_name $trimmer_version $trimmer_params"|
+                                },
+
+        filter                 => {
+                                    calculate_from => [qw/filter_name filter_params force_fragment/],
+                                    calculate => q|no warnings; "$filter_name $filter_params $force_fragment"|
                                 },
 
         _disk_allocation        => { is => 'Genome::Disk::Allocation', is_optional => 1, is_many => 1, reverse_as => 'owner' },
@@ -86,7 +86,7 @@ class Genome::InstrumentData::AlignmentResult {
                                     doc => 'any additional params for the aligner in a single string',
                                 },
         force_fragment          => {
-                                    is => 'Boolean',    
+                                    is => 'Boolean',
                                     is_optional=>1,
                                     doc => 'Force this run to be treated as a fragment run, do not do pairing',
                                 },
@@ -274,10 +274,10 @@ sub __display_name__ {
 
 sub required_arch_os {
     # override in subclasses if 64-bit is not required
-    'x86_64' 
+    'x86_64'
 }
 
-sub required_rusage { 
+sub required_rusage {
     # override in subclasses
     # e.x.: "-R 'select[model!=Opteron250 && type==LINUX64] span[hosts=1] rusage[tmp=50000:mem=12000]' -M 1610612736";
     ''
@@ -331,7 +331,7 @@ sub _resolve_subclass_name_for_aligner_name {
 
 sub create {
     my $class = shift;
-    
+
     if ($class eq __PACKAGE__ or $class->__meta__->is_abstract) {
         # this class is abstract, and the super-class re-calls the constructor from the correct subclass
         return $class->SUPER::create(@_);
@@ -362,7 +362,7 @@ sub create {
     my $estimated_kb_usage = $self->estimated_kb_usage;
     $self->status_message("Estimated disk for this data set: " . $estimated_kb_usage . " kb");
     $self->status_message("Check for available disk...");
-    my @available_volumes = Genome::Disk::Volume->get(disk_group_names => "info_alignments"); 
+    my @available_volumes = Genome::Disk::Volume->get(disk_group_names => "info_alignments");
     $self->status_message("Found " . scalar(@available_volumes) . " disk volumes");
     my $unallocated_kb = 0;
     for my $volume (@available_volumes) {
@@ -389,7 +389,7 @@ sub create {
     }
 
     eval {
-    
+
         # STEP 6: PREPARE THE ALIGNMENT FILE (groups file, sequence dictionary)
         # this also prepares the bam output pipe and crams the alignment headers through it.
         $self->status_message("Preparing the all_sequences.sam in scratch");
@@ -428,7 +428,7 @@ sub create {
                 $error .= " ... and the input filehandle failed to close due to $@";
             }
         }
-    
+
         die $error;
     }
 
@@ -456,9 +456,9 @@ sub create {
         $self->error_message("Failed to de-stage data into alignment directory " . $self->error_message);
         die $self->error_message;
     }
-    
+
     # STEP 14: RESIZE THE DISK
-    # TODO: move this into the actual original allocation so we don't need to do this 
+    # TODO: move this into the actual original allocation so we don't need to do this
     $self->status_message("Resizing the disk allocation...");
     if ($self->_disk_allocation) {
         my %params;
@@ -468,7 +468,7 @@ sub create {
             $self->warning_message("Failed to reallocate my disk allocation: " . $self->_disk_allocation->id);
         }
     }
-        
+
     $self->status_message("Alignment complete.");
     return $self;
 }
@@ -495,22 +495,22 @@ sub delete {
 
 sub prepare_scratch_sam_file {
     my $self = shift;
-    
+
     my $scratch_sam_file = $self->temp_scratch_directory . "/all_sequences.sam";
-    
+
     unless($self->construct_groups_file) {
         $self->error_message("failed to create groups file");
         die $self->error_message;
     }
 
     my $groups_input_file = $self->temp_scratch_directory . "/groups.sam";
-    
+
     my $seq_dict = $self->get_or_create_sequence_dictionary();
     unless (-s $seq_dict) {
         $self->error_message("Failed to get sequence dictionary");
         die $self->error_message;
     }
-    
+
     my @input_files = ($seq_dict, $groups_input_file);
 
     $self->status_message("Cat-ing together: ".join("\n",@input_files). "\n to output file ".$scratch_sam_file);
@@ -522,7 +522,7 @@ sub prepare_scratch_sam_file {
     else {
         $self->status_message("Cat of sam files successful.");
     }
-    
+
     if ($self->supports_streaming_to_bam) {
         my $ref_list  = $self->reference_build->full_consensus_sam_index_path($self->samtools_version);
         my $sam_cmd = sprintf("| %s view -S -b -o %s - ", Genome::Model::Tools::Sam->path_for_samtools_version($self->samtools_version), $self->temp_scratch_directory . "/raw_all_sequences.bam");
@@ -547,39 +547,39 @@ sub prepare_scratch_sam_file {
 
 
     }
-    
-    
+
+
     return 1;
 }
 
 sub requires_fastqs_to_align {
     my $self = shift;
-   
-    # n-remove, complex filters, trimmers, instrument data disqualify bam processing 
+
+    # n-remove, complex filters, trimmers, instrument data disqualify bam processing
     return 1 if ($self->n_remove_threshold);
     return 1 if ($self->filter_name && ($self->filter_name ne 'forward-only' && $self->filter_name ne 'reverse-only'));
     return 1 if ($self->trimmer_name);
     return 1 if (defined $self->instrument_data_segment_id);
-   
-    # obviously we need fastq if we don't have a bam 
+
+    # obviously we need fastq if we don't have a bam
     return 1 unless (defined $self->instrument_data->bam_path && -e $self->instrument_data->bam_path);
 
     # disqualify if the aligner can't take a bam
     return 1 unless ($self->accepts_bam_input);
-    
+
     return 0;
 }
 
 sub collect_inputs_and_run_aligner {
     my $self = shift;
-    
+
     # STEP 6: UNPACK THE ALIGNMENT FILES
     $self->status_message("Unpacking reads...");
-    
+
     my @inputs;
-    
+
     if ($self->requires_fastqs_to_align) {
-        @inputs = $self->_extract_input_fastq_filenames;    
+        @inputs = $self->_extract_input_fastq_filenames;
     } else {
         if ($self->instrument_data->is_paired_end) {
             push @inputs, $self->instrument_data->bam_path . ":1";
@@ -588,7 +588,7 @@ sub collect_inputs_and_run_aligner {
             push @inputs, $self->instrument_data->bam_path . ":0";
         }
     }
-    
+
     unless (@inputs) {
         $self->error_message("Failed to gather fastq files: " . $self->error_message);
         die $self->error_message;
@@ -608,19 +608,19 @@ sub collect_inputs_and_run_aligner {
 
         for my $input_pathname (@inputs) {
             my $n_removed_file = $input_pathname . ".n-removed.fastq";
-            my $n_remove_cmd = Genome::Model::Tools::Fastq::RemoveN->create(n_removed_file=>$n_removed_file, n_removal_threshold=>$self->n_remove_threshold, fastq_file=>$input_pathname); 
+            my $n_remove_cmd = Genome::Model::Tools::Fastq::RemoveN->create(n_removed_file=>$n_removed_file, n_removal_threshold=>$self->n_remove_threshold, fastq_file=>$input_pathname);
             unless ($n_remove_cmd->execute) {
                 $self->error_message("Error running RemoveN: " . $n_remove_cmd->error_message);
                 die $self->error_message;
             }
-           
+
             my $passed = $n_remove_cmd->passed_read_count();
             my $failed = $n_remove_cmd->failed_read_count();
             $self->status_message("N removal complete: Passed $passed reads & Failed $failed reads");
-            if ($passed > 0) { 
+            if ($passed > 0) {
                 push @n_removed_fastqs, $n_removed_file;
             }
-            
+
             if ($input_pathname =~ m/^\/tmp/) {
                 $self->status_message("Removing original file before N removal to save space: $input_pathname");
                 unlink($input_pathname);
@@ -634,16 +634,16 @@ sub collect_inputs_and_run_aligner {
             $self->error_message("All reads were filtered away after n-removal.  Nothing to do here, bailing out.");
             die $self->error_message;
         }
-        
+
         @inputs = @n_removed_fastqs;
     }
 
     # STEP 7: DETERMINE HOW MANY PASSES OF ALIGNMENT ARE REQUIRED
     my @passes;
     if (
-        defined($self->filter_name) 
+        defined($self->filter_name)
         and (
-            $self->filter_name eq 'forward-only' 
+            $self->filter_name eq 'forward-only'
             or $self->filter_name eq 'reverse-only'
         )
     ) {
@@ -661,7 +661,7 @@ sub collect_inputs_and_run_aligner {
     }
     elsif ($self->force_fragment) {
         $self->status_message("Running the aligner in force-fragment mode.");
-        @passes = map { [ $_ ] } @inputs; 
+        @passes = map { [ $_ ] } @inputs;
     }
     elsif (@inputs == 3) {
         $self->status_message("Running aligner twice: once for PE & once for SE");
@@ -669,19 +669,19 @@ sub collect_inputs_and_run_aligner {
     }
     elsif (@inputs == 2) {
         $self->status_message("Running aligner in PE mode");
-        @passes = ( \@inputs ); 
+        @passes = ( \@inputs );
     }
     elsif (@inputs == 1) {
         $self->status_message("Running aligner in SE mode");
-        @passes = ( \@inputs ); 
+        @passes = ( \@inputs );
     }
 
     # STEP 8: RUN THE ALIGNER, APPEND TO all_sequences.sam IN SCRATCH DIRECTORY
     my $fastq_rd_ct = 0;
-    
-  
+
+
     if ($self->requires_fastqs_to_align) {
-    
+
         for my $pass (@passes) {
             for my $file (@$pass) {
                 my $line = `wc -l $file`;
@@ -704,7 +704,7 @@ sub collect_inputs_and_run_aligner {
         $self->error_message("Failed to get a read count before aligning.");
         return;
     }
-        
+
 
     for my $pass (@passes) {
         $self->status_message("Aligning @$pass...");
@@ -734,7 +734,7 @@ sub collect_inputs_and_run_aligner {
     for (@inputs) {
        if ($_ =~ m/^\/tmp\/.*\.fastq$/) {
         $self->status_message("Unlinking fastq file to save space now that we've aligned: $_");
-       } 
+       }
     }
 
     return 1;
@@ -742,34 +742,35 @@ sub collect_inputs_and_run_aligner {
 
 sub determine_input_read_count_from_bam {
     my $self = shift;
-    
-    
+
+
     my $bam_file = $self->instrument_data->bam_path;
     my $output_file = $self->temp_scratch_directory . "/input_bam.flagstat";
-    
+
     my $cmd = Genome::Model::Tools::Sam::Flagstat->create(
         bam_file       => $bam_file,
         output_file    => $output_file,
+        use_version    => $self->samtools_version,
         include_stderr => 1,
     );
-    
+
     unless ($cmd and $cmd->execute) {
         $self->error_message('Failed to create or execute flagstat command.');
         return;
     }
-    
+
     my $stats = Genome::Info::BamFlagstat->get_data($output_file);
-    
+
     unless($stats) {
         $self->status_message('Failed to get flagstat data  on input sequences from '.$output_file);
         return;
     }
-    
+
     my $total_reads = 0;
-    
+
     if ($self->filter_name) {
         my $filter_name = $self->filter_name;
-        
+
         if ($filter_name eq 'forward-only') {
             $total_reads += $stats->{reads_marked_as_read1};
         } elsif ($filter_name eq 'reverse-only') {
@@ -780,7 +781,7 @@ sub determine_input_read_count_from_bam {
     } else {
         $total_reads += $stats->{total_reads};
     }
-    
+
     return $total_reads;
 }
 
@@ -799,7 +800,7 @@ sub close_out_streamed_bam_file {
     my $samtools = Genome::Model::Tools::Sam->path_for_samtools_version($self->samtools_version);
 
     my $tmp_file = $bam_file.'.sort';
-    #402653184 bytes = 3 Gb 
+    #402653184 bytes = 3 Gb
     my $rv = system "$samtools sort -n -m 402653184 $bam_file $tmp_file";
     $self->error_message("Sort by name failed") and return if $rv or !-s $tmp_file.'.bam';
     $self->status_message("unlinking original bam file $bam_file.");
@@ -813,7 +814,7 @@ sub close_out_streamed_bam_file {
     $self->status_message("Now putting things back in chr/pos order");
     $rv = system "$samtools sort -m 402653184 $tmp_file.fixmate $tmp_file.fix";
     $self->error_message("Sort by position failed") and return if $rv or !-s $tmp_file.'.fix.bam';
-    
+
     unlink "$tmp_file.fixmate";
     unlink $bam_file;
 
@@ -834,7 +835,7 @@ sub create_BAM_in_staging_directory {
 
 sub postprocess_bam_file {
     my $self = shift;
-    
+
     #STEPS 8:  CREATE BAM.FLAGSTAT
     $self->status_message("Creating all_sequences.bam.flagstat ...");
     unless ($self->_create_bam_flagstat) {
@@ -848,7 +849,7 @@ sub postprocess_bam_file {
         $self->error_message('Fail to verify the bam');
         die $self->error_message;
     }
-    
+
     #request by RT#62311 for submission and data integrity
     $self->status_message('Creating all_sequences.bam.md5 ...');
     unless ($self->_create_bam_md5) {
@@ -919,14 +920,17 @@ sub alignment_directory {
 
 sub _create_bam_index {
     my $self = shift;
-    my $bam_file    = $self->temp_staging_directory . '/all_sequences.bam'; 
+    my $bam_file    = $self->temp_staging_directory . '/all_sequences.bam';
 
     unless (-s $bam_file) {
         $self->error_message('BAM file ' . $bam_file . ' does not exist or is empty');
         return;
     }
 
-    my $cmd = Genome::Model::Tools::Sam::IndexBam->create(bam_file=>$bam_file);
+    my $cmd = Genome::Model::Tools::Sam::IndexBam->create(
+        bam_file    => $bam_file,
+        use_version => $self->samtools_version,
+    );
 
     unless ($cmd->execute) {
         $self->error_message("Failed to index bam file $bam_file !");
@@ -938,8 +942,8 @@ sub _create_bam_index {
 
 sub _create_bam_flagstat {
     my $self = shift;
-    
-    my $bam_file    = $self->temp_staging_directory . '/all_sequences.bam'; 
+
+    my $bam_file    = $self->temp_staging_directory . '/all_sequences.bam';
     my $output_file = $bam_file . '.flagstat';
 
     unless (-s $bam_file) {
@@ -955,6 +959,7 @@ sub _create_bam_flagstat {
     my $cmd = Genome::Model::Tools::Sam::Flagstat->create(
         bam_file       => $bam_file,
         output_file    => $output_file,
+        use_version    => $self->samtools_version,
         include_stderr => 1,
     );
 
@@ -968,24 +973,24 @@ sub _create_bam_flagstat {
 
 sub _verify_bam {
     my $self = shift;
-    
+
     my $bam_file  = $self->temp_staging_directory . '/all_sequences.bam';
     my $flag_file = $bam_file . '.flagstat';
     my $flag_stat = Genome::Info::BamFlagstat->get_data($flag_file);
-    
+
     unless($flag_stat) {
         $self->status_message('Fail to get flagstat data from '.$flag_file);
         return;
     }
-    
+
     if (exists $flag_stat->{errors}) {
         my @errors = @{$flag_stat->{errors}};
-        
+
         for my $error (@errors) {
             if ($error =~ 'Truncated file') {
                 $self->error_message('Bam file: ' . $bam_file . ' appears to be truncated');
                 return;
-            } 
+            }
             else {
                 $self->status_message('Continuing despite error messages from flagstat: ' . $error);
             }
@@ -995,7 +1000,7 @@ sub _verify_bam {
     if (!exists $flag_stat->{total_reads} || $flag_stat->{total_reads} == 0) {
         $self->error_message("Bam file $bam_file has no reads reported (neither aligned nor unaligned).");
         return;
-    } 
+    }
 
     unless ($self->_check_read_count($flag_stat->{total_reads})) {
         $self->error_message("Bam file $bam_file failed read_count checking");
@@ -1027,11 +1032,11 @@ sub _create_bam_md5 {
     my $cmd      = "md5sum $bam_file > $md5_file";
 
     my $rv  = Genome::Sys->shellcmd(
-        cmd                        => $cmd, 
+        cmd                        => $cmd,
         input_files                => [$bam_file],
         output_files               => [$md5_file],
         skip_if_output_is_present  => 0,
-    ); 
+    );
     $self->error_message("Fail to run: $cmd") and return unless $rv == 1;
     return 1;
 }
@@ -1044,7 +1049,7 @@ sub _promote_validated_data {
     my $staging_dir = $self->temp_staging_directory;
     my $output_dir  = $self->output_dir;
 
-    $self->status_message("Now de-staging data from $staging_dir into $output_dir"); 
+    $self->status_message("Now de-staging data from $staging_dir into $output_dir");
 
     my $copy_cmd = sprintf("cp -rL %s/* %s/", $staging_dir, $output_dir);
     $self->status_message("Running cp: $copy_cmd");
@@ -1071,7 +1076,7 @@ sub _promote_validated_data {
         chmod 02775, $subdir;
     }
 
-    # Make everything in here read-only 
+    # Make everything in here read-only
     for my $file (grep { -f $_  } glob("$output_dir/*")) {
         chmod 0444, $file;
     }
@@ -1111,7 +1116,7 @@ sub _process_sam_files {
             die $self->error_message;
         } else {
             $self->status_message("Cat of sam files successful.");
-        }      
+        }
 
         unlink($unaligned_input_file);
     }
@@ -1134,7 +1139,7 @@ sub _process_sam_files {
 
         $self->status_message("Removing non-read-group combined sam file: " . $sam_input_file);
         unlink($sam_input_file);
-    } 
+    }
 
     #For the sake of new bam flagstat that need MD tags added. Some
     #aligner like maq doesn't output MD tag in sam file, now add it
@@ -1148,11 +1153,11 @@ sub _process_sam_files {
         my $cmd = "$sam_path fillmd -S $per_lane_sam_file_rg $ref_seq 1> $final_sam_file 2>/dev/null";
 
         my $rv  = Genome::Sys->shellcmd(
-            cmd                          => $cmd, 
+            cmd                          => $cmd,
             input_files                  => [$per_lane_sam_file_rg, $ref_seq],
             output_files                 => [$final_sam_file],
             skip_if_output_is_present    => 0,
-        ); 
+        );
         $self->error_message("Fail to run: $cmd") and return unless $rv == 1;
         unlink $per_lane_sam_file_rg;
     }
@@ -1205,7 +1210,7 @@ sub _gather_params_for_get_or_create {
         if ($meta->{is_input} && exists $params{$key}) {
             $is_input{$key} = $params{$key};
         } elsif ($meta->{is_param} && exists $params{$key}) {
-            $is_param{$key} = $params{$key}; 
+            $is_param{$key} = $params{$key};
         }
 
     }
@@ -1246,7 +1251,7 @@ sub _prepare_working_and_staging_directories {
     }
 
     return 1;
-} 
+}
 
 
 sub _staging_disk_usage {
@@ -1359,7 +1364,7 @@ sub _extract_input_fastq_filenames {
         }
 
         # this previously happened at the beginning of _run_aligner
-        @input_fastq_pathnames = $self->run_trimq2_filter_style(@input_fastq_pathnames) 
+        @input_fastq_pathnames = $self->run_trimq2_filter_style(@input_fastq_pathnames)
         if $self->trimmer_name and $self->trimmer_name eq 'trimq2_shortfilter';
 
         $self->_input_fastq_pathnames(\@input_fastq_pathnames);
@@ -1381,7 +1386,7 @@ sub input_bfq_filenames {
                 die $self->error_message;
             }
         }
-    } 
+    }
     else {
         my $counter = 0;
         for my $input_fastq_pathname (@input_fastq_pathnames) {
@@ -1547,7 +1552,7 @@ sub run_trimq2_filter_style {
             pair2_fastq_file => $p2,
         );
 
-        my $trimmer = Genome::Model::Tools::Fastq::Trimq2::PairEnd->create(%params);        
+        my $trimmer = Genome::Model::Tools::Fastq::Trimq2::PairEnd->create(%params);
         my $rv = $trimmer->execute;
 
         unless ($rv == 1) {
@@ -1597,8 +1602,8 @@ sub trimq2_filtered_to_unaligned_sam {
     }
 
     my $out_fh = File::Temp->new(
-        TEMPLATE => 'filtered_unaligned_XXXXXX', 
-        DIR      => $alignment_directory, 
+        TEMPLATE => 'filtered_unaligned_XXXXXX',
+        DIR      => $alignment_directory,
         SUFFIX   => '.sam',
     );
 
@@ -1607,7 +1612,7 @@ sub trimq2_filtered_to_unaligned_sam {
     my ($pair1, $pair2, $frag) = ("\t69", "\t133", "\t4");
     my ($rg_tag, $pg_tag)      = ("\tRG:Z:", "\tPG:Z:");
 
-    FILTER: for my $file (@filtered) {#for now there are 3 types: pair_end, fragment, pair_as_fragment    
+    FILTER: for my $file (@filtered) {#for now there are 3 types: pair_end, fragment, pair_as_fragment
         unless (-s $file) {
             $self->warning_message("trimq2 filtered file: $file is empty");
             next;
@@ -1665,7 +1670,7 @@ sub trimq2_filtered_to_unaligned_sam {
                     next FILTER;
                 }
                 $out_fh->print($name.$frag.$filler.$seq."\t".$qual.$rg_tag.$seq_id."\n");
-            }       
+            }
         }
         $fh->close;
     }
