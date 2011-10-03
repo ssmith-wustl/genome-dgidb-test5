@@ -26,8 +26,8 @@ class Genome::Sys::User {
         }
     ],
     has_many_optional => [
-        project_parts => { is => 'Genome::ProjectPart', reverse_as => 'entity', },
-        projects => { is => 'Genome::Project', via => 'project_parts', to => 'project', },
+        project_parts => { is => 'Genome::ProjectPart', reverse_as => 'entity', is_mutable => 1, },
+        projects => { is => 'Genome::Project', via => 'project_parts', to => 'project', is_mutable => 1, },
         project_names => { is => 'Text', via => 'projects', to => 'name', },
     ],
 };
