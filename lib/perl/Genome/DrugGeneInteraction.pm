@@ -16,19 +16,23 @@ class Genome::DrugGeneInteraction {
     ],
     has => [
         drug_name_id => { is => 'Text'},
-        # drug => {
-
-        # },
+        drug => {
+            is => 'Genome::DrugName',
+            id_by => 'drug_name_id',
+            constraint_name => 'drug_gene_interaction_drug_name_id_fkey',
+        },
         gene_name_id => { is => 'Text'},
-        # gene => {
-
-        # },
+        gene => {
+            is => 'Genome::GeneName',
+            id_by => 'gene_name_id',
+            constraint_name => 'drug_gene_interaction_gene_name_id_fkey',
+        },
         interaction_type => { is => 'Text'}, 
         description => { is => 'Text' },
         drug_gene_interaction_attributes => {
             calculate_from => ['id'],
             calculate => q|
-                my @drug_gene_interaction_attributes = Genome::DrugGeneInteractionAttribute->get(id => $id);
+                my @drug_gene_interaction_attributes = Genome::DrugGeneInteractionAttribute->get(interaction_id => $id);
                 return @drug_gene_interaction_attributes;
             |,
         },

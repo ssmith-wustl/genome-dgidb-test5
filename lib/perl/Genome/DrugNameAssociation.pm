@@ -16,10 +16,11 @@ class Genome::DrugNameAssociation {
     ],
     has => [
         drug_name_id => { is => 'Text'},
-        #TODO: make this work
-        # drug_name => {
-
-        # },
+        drug_name => {
+            is => 'Genome::DrugName',
+            id_by => 'drug_name_id',
+            constraint_name => 'drug_name_association_drug_name_id_fkey',
+        },
         alternate_name => {is => 'Text'},
         nomenclature => { is => 'Text'},
         description => {

@@ -16,10 +16,11 @@ class Genome::DrugNameCategoryAssociation {
     ],
     has => [
         drug_name_id => { is => 'Text' },
-        #TODO: make this work
-        # drug_name => {
-
-        # },
+        drug_name => {
+            is => 'Genome::DrugName',
+            id_by => 'drug_name_id',
+            constraint_name => 'drug_name_category_association_drug_name_id_fkey',
+        },
         category_name => { is => 'Text' },
         description => {
             is => 'Text',

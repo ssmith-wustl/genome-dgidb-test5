@@ -16,10 +16,11 @@ class Genome::GeneNameAssociation {
     ],
     has => [
         gene_name_id => { is => 'Text'},
-        #TODO: make this work
-        # gene_name => {
-
-        # },
+        gene_name => {
+            is => 'Genome::GeneName',
+            id_by => 'gene_name_id',
+            constraint_name => 'gene_name_association_gene_name_id_fkey',
+        },
         alternate_name => {is => 'Text'},
         nomenclature => { is => 'Text'},
         description => {

@@ -24,16 +24,16 @@ class Genome::GeneName {
             is_optional => 1,
         },
         gene_name_associations => {
-            calculate_from => ['name', 'nomenclature', 'source_db_name', 'source_db_version'],
+            calculate_from => ['id'],
             calculate => q|
-                my @gene_name_associations = Genome::GeneNameAssociation->get(gene_primary_name => $name, nomenclature => $nomenclature, source_db_name => $source_db_name, source_db_version => $source_db_version);
+                my @gene_name_associations = Genome::GeneNameAssociation->get(gene_name_id => $id);
                 return @gene_name_associations;
             |,
         },
         gene_name_category_associations => {
-            calculate_from => ['name', 'nomenclature', 'source_db_name', 'source_db_version'],
+            calculate_from => ['id'],
             calculate => q|
-                my @gene_name_category_associations = Genome::GeneNameCategoryAssociation->get(gene_name => $name, nomenclature => $nomenclature, source_db_name => $source_db_name, source_db_version => $source_db_version);
+                my @gene_name_category_associations = Genome::GeneNameCategoryAssociation->get(gene_name_id => $id);
                 return @gene_name_category_associations;
             |,
         },
