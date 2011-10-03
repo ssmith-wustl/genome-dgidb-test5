@@ -50,23 +50,6 @@ is_deeply(\@project_models, [$model_group->models], 'project models match model 
 # failed to create again
 ok(!Genome::ModelGroup->create(name => 'Testsuite_ModelGroup'), 'failed to create model group with the same name');
 
-# create again but as apipe-builder
-$username = 'apipe-builder';
-my $model_group2 = Genome::ModelGroup->create(
-  name => 'Testsuite_ModelGroup',
-  models => [ $test_model ],
-);
-ok($model_group2, 'create a model_group');
-isa_ok($model_group2, 'Genome::ModelGroup');
-is($model_group2->name, 'Testsuite_ModelGroup', 'name');
-is($model_group2->project->name, $model_group2->name, 'project name matches model group name');
-$username = $orig_username;
-is($model_group->name, $username.' Testsuite_ModelGroup', 'original model group name was changed');
-my $project2 = $model_group2->project;
-ok($project2, 'create a project w/ model group'); 
-is($project2->id, $model_group2->uuid, 'project id matches model group uuid');
-is($project2->name, $model_group2->name, 'project name matches model group name');
-
 # rename
 ok(!$model_group->rename(), 'failed to rename w/o name');
 ok(!$model_group->rename('Testsuite_ModelGroup'), 'failed to rename to same name');
@@ -77,6 +60,7 @@ is($model_group->project->name, 'Testsuite ModelGroup', 'project name after rena
 
 # add models
 ok(!$model_group->assign_models(), 'Cannot assign zero models!');
+ok($model_group->assign_models($test_model_two), 'Cannot assign zero models!');
 my $add_command = Genome::ModelGroup::Command::Member::Add->create(
     model_group => $model_group,
     models => [ $test_model_two, $test_model, $test_model_two, ], # give model twice and already assigned to test skipping assigned models
@@ -84,6 +68,8 @@ my $add_command = Genome::ModelGroup::Command::Member::Add->create(
 $add_command->dump_status_messages(1);
 ok($add_command, 'created member add command');
 ok($add_command->execute(), 'executed member add command');
+my @model_bridges = $model_group->model_bridges;
+is(@model_bridges, 2, 'group has 2 model bridges');
 is_deeply([$model_group->models], [$test_model_two, $test_model], 'group has both models');
 @project_models = sort { $a->id <=> $b->id } map { $_->entity } $project->parts('entity_class_name like' => 'Genome::Model%');
 is_deeply(\@project_models, [$model_group->models], 'after add model - project models match model group models');
