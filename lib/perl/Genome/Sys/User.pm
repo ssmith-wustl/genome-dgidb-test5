@@ -13,6 +13,9 @@ class Genome::Sys::User {
     ],
     has_optional => [
         name => { is => 'VARCHAR2', len => 64, column_name => 'NAME' },
+        project_parts => { is => 'Genome::ProjectPart', reverse_as => 'entity', },
+        projects => { is => 'Genome::Project', via => 'project_parts', to => 'project', },
+        project_names => { is => 'Text', via => 'projects', to => 'name', },
         username => {
             calculate_from => ['email'],
             calculate => sub { 
@@ -21,7 +24,12 @@ class Genome::Sys::User {
                 return $u;
             }
         }
-    ]
+    ],
+    has_many_optional => [
+        project_parts => { is => 'Genome::ProjectPart', reverse_as => 'entity', },
+        projects => { is => 'Genome::Project', via => 'project_parts', to => 'project', },
+        project_names => { is => 'Text', via => 'projects', to => 'name', },
+    ],
 };
 
 sub fix_params_and_get {
