@@ -287,7 +287,7 @@ The naming convention of the files produced is as follows:
 (prefix.)chr_pos_chr_pos_tumor/normal_type.q#.png
 
 The input file must be formatted as follows:
-chr1	position1	chr2	position2	type
+chr1	position1	?	chr2	position2	?	type
 
 or
 
