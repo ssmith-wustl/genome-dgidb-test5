@@ -4,6 +4,8 @@ use strict;
 use warnings;
 use FileHandle;
 use Genome;
+use File::Basename;
+use FileHandle;
 
 class Genome::Model::Tools::Validation::ClonalityPlot {
     is => 'Command',                       
@@ -18,8 +20,8 @@ class Genome::Model::Tools::Validation::ClonalityPlot {
         cnvhmm_file => { 
             is => 'Text',
             doc => "File of cnvhmm whole genome predictions",
-            is_optional => 0,
-            is_input => 1 },
+            is_optional => 1,
+            is_input => 1 },        
         
         varscan_r_library => {
             is => 'Text',
@@ -80,7 +82,13 @@ class Genome::Model::Tools::Validation::ClonalityPlot {
             doc => "only peaks that exceed this height get labelled",
             is_optional => 1,
             is_input => 1,
-            default => 0.001},
+            default => 0.001},        
+
+        only_label_highest_peak => {
+            is => 'Boolean',
+            doc => "only label the highest peak",
+            is_optional => 1,
+            default => 0},        
         ],
 };
 
@@ -101,7 +109,7 @@ EOS
 
 sub help_detail {                           # this is what the user will see with the longer version of help. <---
 return <<EOS
-This tool can be used to plot the CN-separated SNV density plots that are known at GI as 'clonality plots'. Can be used for WGS or Capture data, but was mostly intended for Capture data, and hence the SNV file format is currently Varscan output. 
+This tool can be used to plot the CN-separated SNV density plots that are known at GI as 'clonality plots'. Can be used for WGS or Capture data, but was mostly intended for Capture data, and hence the SNV file format is currently Varscan output. If no copy-number file is specified, it will draw a condensed plot with. 
 EOS
 }
 
@@ -123,6 +131,7 @@ sub execute {
     my $skip_if_output_is_present = $self->skip_if_output_is_present;
     my $analysis_type = $self->analysis_type;
     my $minimum_labelled_peak_height = $self->minimum_labelled_peak_height;
+    my $only_label_highest_peak = $self->only_label_highest_peak;
 
     #set readcount cutoffs
     if ($analysis_type eq 'wgs') {
@@ -167,10 +176,13 @@ sub execute {
     }
     $temp_path2 =~ s/\:/\\\:/g;
 
-
-    #build the copy number hashes
-    my %copynumber_hash_tumor=%{&build_hash($copynumber_file,'tumor')};
-    my %copynumber_hash_normal=%{&build_hash($copynumber_file,'normal')};
+    my %copynumber_hash_tumor;
+    my %copynumber_hash_normal;
+    if(defined($copynumber_file)){
+        #build the copy number hashes
+        %copynumber_hash_tumor=%{&build_hash($copynumber_file,'tumor')};
+        %copynumber_hash_normal=%{&build_hash($copynumber_file,'normal')};
+    } 
 
 
     #read in the varscan input
@@ -232,6 +244,7 @@ sub execute {
 #sink("/dev/null");
     genome=\"$sample_id\";
     source(\"$r_library\"); #this contains R functions for loading and graphing VarScan files
+
     library(fpc);
     library(scatterplot3d);
     varscan.load_snp_output(\"$temp_path\",header=F)->xcopy;
@@ -240,6 +253,9 @@ sub execute {
     additional_plot_points = 0;
 _END_OF_R_
 #-------------------------------------------------
+
+    my $dir_name = dirname(__FILE__);
+    print R_COMMANDS "source(\"" . $dir_name . "/ClonalityPlot.R\")\n";
 
 
    print R_COMMANDS "$R_command\n";
@@ -391,6 +407,7 @@ _END_OF_R_
          cn2peaks = peaks(den2factor);
          cn2peaks = append(cn2peaks,c("FALSE","FALSE"),after=length(cn2peaks)); 
          cn2peakpos = subset(den2\$x,cn2peaks==TRUE & den2\$y > 0.001); 
+         print(cn2peakpos);
          cn2peakheight = subset(den2factor,cn2peaks==TRUE & den2\$y > 0.001);
     }
 
@@ -444,17 +461,30 @@ _END_OF_R_
 
 
     #open up image for plotting
-    if ($output_image =~ /.pdf/) {
-        print R_COMMANDS "pdf(file=\"$output_image\",width=3.3,height=7.5,bg=\"white\");"."\n";
-        
-    } elsif ($output_image =~ /.png/) {
-        print R_COMMANDS "png(file=\"$output_image\",width=400,height=800);"."\n";
+   # if(defined($copynumber_file)){
+        if ($output_image =~ /.pdf/) {
+            print R_COMMANDS "pdf(file=\"$output_image\",width=3.3,height=7.5,bg=\"white\");"."\n";
+            
+        } elsif ($output_image =~ /.png/) {
+            print R_COMMANDS "png(file=\"$output_image\",width=400,height=800);"."\n";
+            
+        } else {
+            die "unrecognized coverage output file type...please append .pdf or .png to the end of your coverage output file\n";
+        }
+        print R_COMMANDS "par(mfcol=c(5,1),mar=c(0.5,3,1,1.5),oma=c(3,0,4,0),mgp = c(3,1,0));"."\n";
+    # } else {
+    #     if ($output_image =~ /.pdf/) {
+    #         print R_COMMANDS "pdf(file=\"$output_image\",width=3.3,height=3.3,bg=\"white\");"."\n";
+            
+    #     } elsif ($output_image =~ /.png/) {
+    #         print R_COMMANDS "png(file=\"$output_image\",width=400,height=340);"."\n";
+            
+    #     } else {
+    #         die "unrecognized coverage output file type...please append .pdf or .png to the end of your coverage output file\n";
+    #     }
 
-    } else {
-        die "unrecognized coverage output file type...please append .pdf or .png to the end of your coverage output file\n";
-    }
-
-    print R_COMMANDS "par(mfcol=c(5,1),mar=c(0.5,3,1,1.5),oma=c(3,0,4,0),mgp = c(3,1,0));"."\n";
+    #     print R_COMMANDS "par(mfcol=c(2,1),mar=c(0.5,3,1,1.5),oma=c(3,0,4,0),mgp = c(3,1,0));"."\n";
+    # }
 
 
 if ($analysis_type eq 'capture') {
@@ -472,25 +502,45 @@ if ($analysis_type eq 'capture') {
     lines(den3100x\$x,(finalfactor * den3factor100),col="#F49819AA",lwd=2);
     lines(den4100x\$x,(finalfactor * den4factor100),col="#E52420AA",lwd=2);
 
-    ppos = which(cn1peakheight100 > $minimum_labelled_peak_height)
+    ppos = c();
+    if($only_label_highest_peak){
+        ppos = which((cn1peakheight100 == max(cn1peakheight100)) & (cn1peakheight100 > $minimum_labelled_peak_height));
+    } else {
+        ppos = which(cn1peakheight100 > $minimum_labelled_peak_height);
+    }
     if(!(length(ppos) == 0)){
         text(x=cn1peakpos100[ppos],
              y=(finalfactor * cn1peakheight100[ppos])+1.7,
              labels=signif(cn1peakpos100[ppos],3),cex=0.7,srt=0,col="#1C3660AA");
     }
-    ppos = which(cn3peakheight100 > $minimum_labelled_peak_height)
+    ppos = c();
+    if($only_label_highest_peak){
+        ppos = which((cn3peakheight100 == max(cn3peakheight100)) & (cn3peakheight100 > $minimum_labelled_peak_height));
+    } else {
+        ppos = which(cn3peakheight100 > $minimum_labelled_peak_height);
+    }
     if(!(length(ppos) == 0)){
         text(x=cn3peakpos100[ppos],
              y=(finalfactor * cn3peakheight100[ppos])+1.7,
              labels=signif(cn3peakpos100[ppos],3),cex=0.7,srt=0,col="#F49819AA");
     }
-    ppos = which(cn4peakheight100 > $minimum_labelled_peak_height)
+    ppos = c();
+    if($only_label_highest_peak){
+        ppos = which((cn4peakheight100 == max(cn4peakheight100)) & (cn4peakheight100 > $minimum_labelled_peak_height));
+    } else {
+        ppos = which(cn4peakheight100 > $minimum_labelled_peak_height);
+    }
     if(!(length(ppos) == 0)){
         text(x=cn4peakpos100[ppos],
              y=(finalfactor * cn4peakheight100[ppos])+1.7,
              labels=signif(cn4peakpos100[ppos],3),cex=0.7,srt=0,col="#E52420AA");
     }
-    ppos = which(cn2peakheight100 > $minimum_labelled_peak_height)
+    ppos = c();
+    if($only_label_highest_peak){
+        ppos = which((cn2peakheight100 == max(cn2peakheight100)) & (cn2peakheight100 > $minimum_labelled_peak_height));
+    } else {
+        ppos = which(cn2peakheight100 > $minimum_labelled_peak_height);
+    }
     if(!(length(ppos) == 0)){
         text(x=cn2peakpos100[ppos],
              y=(finalfactor * cn2peakheight100[ppos])+1.7,
@@ -501,89 +551,30 @@ if ($analysis_type eq 'capture') {
     mtext("Tumor Variant Allele Frequency",adj=0.5,padj=-3.1,cex=0.5,side=3);
     mtext(genome,adj=0,padj=-3.2,cex=0.65,side=3);
 
+_END_OF_R_
+#-------------------------------------------------
+    print R_COMMANDS "$R_command\n";
 
-    #rect(par("usr")[1], par("usr")[3], par("usr")[2], par("usr")[4], col = "#00000055"); #plot bg color
-    #mtext("Normal and Tumor Coverage > 100",cex=0.7, padj=-0.5);
-    #legend(x="topright",horiz=TRUE,xjust=0, c("1", "2", "3", "4+","Chr $chr_highlight"),col=c("#1C3660","#67B32E","#F49819","#E52420","#A020F0"),pch=c(19,19,19,19,2),cex=0.6);
 
-
-    #cn1plot
-    plot.default(x=(z1\$V11),y=(z1\$V9+z1\$V10),log="y", type="p",pch=19,cex=0.4,col="#00000000",xlim=c(-1,101),ylim=c(95,absmaxx+5),axes=FALSE, ann=FALSE,xaxs="i",yaxs="i");
-    points(y=(cn1minus100x\$V9+cn1minus100x\$V10),x=(cn1minus100x\$V11),type="p",pch=19,cex=0.4,col="#1C366044");
-    points(y=(cn1xchr100\$V9+cn1xchr100\$V10),x=(cn1xchr100\$V11),type="p",pch=2,cex=0.8,col="#1C366044");
-    #add in highlight of points selected for by script input
-    if(length(additional_plot_points) > 1) {
-        points(x=additional_plot_points_cn1\$V2,y=additional_plot_points_cn1\$V3,type="p",pch=7,cex=0.8,col="#555555FF");
+    #if cn is being plotted
+    if(defined($copynumber_file)){
+        print R_COMMANDS 'drawPlot(z1, cn1minus, cn1xchr, additional_plot_points, additional_plot_points_cn1, "#1C366044", "#1C3660", cncircle=1)' . "\n";
+        print R_COMMANDS 'drawPlot(z1, cn2, cn2xchr, additional_plot_points, additional_plot_points_cn2, "#67B32E44", "#67B32E", cncircle=2)' . "\n";
+        print R_COMMANDS 'drawPlot(z1, cn3, cn3xchr, additional_plot_points, additional_plot_points_cn3, "#F4981955", "#F49819", cncircle=3)' . "\n";
+        print R_COMMANDS 'drawPlot(z1, cn4plus, cn4xchr, additional_plot_points, additional_plot_points_cn4, "#E5242044", "#E52420", cncircle=4)' . "\n";
+    } else {
+        print R_COMMANDS 'drawPlot(z1, cn2, cn2xchr, additional_plot_points, additional_plot_points_cn2, "#67B32E44", "#67B32E")' . "\n";
     }
-    axis(side=2,las=1,tck=0,lwd=0,cex.axis=0.6,hadj=0.5);
-    for (i in 2:length(axTicks(2)-1)) {
-        lines(c(-1,101),c(axTicks(2)[i],axTicks(2)[i]),col="#00000022");
-    }
-    rect(-1, 95, 101, axTicks(2)[length(axTicks(2))]*1.05, col = "#00000011",border=NA); #plot bg color
-    #add cn circle
-    points(x=c(97),y=c((absmaxx+5)*0.70),type="p",pch=19,cex=3,col="#1C3660FF");
-    text(c(97),y=c((absmaxx+5)*0.70), labels=c(1), cex=1, col="#FFFFFFFF") 
-
-    #cn2plot
-    plot.default(x=(z1\$V11),y=(z1\$V9+z1\$V10),log="y", type="p",pch=19,cex=0.4,col="#00000000",xlim=c(-1,101),ylim=c(95,absmaxx+5),axes=FALSE, ann=FALSE,xaxs="i",yaxs="i");
-    points(y=(cn2100x\$V9+cn2100x\$V10),x=(cn2100x\$V11),type="p",pch=19,cex=0.4,col="#67B32E44");
-    points(y=(cn2xchr100\$V9+cn2xchr100\$V10),x=(cn2xchr100\$V11),type="p",pch=2,cex=0.8,col="#67B32E44");
-    #add in highlight of points selected for by script input
-    if(length(additional_plot_points) > 1) {
-        points(x=additional_plot_points_cn2\$V2,y=additional_plot_points_cn2\$V3,type="p",pch=7,cex=0.8,col="#555555FF");
-    }
-    axis(side=2,las=1,tck=0,lwd=0,cex.axis=0.6,hadj=0.5);
-    for (i in 2:length(axTicks(2)-1)) {
-        lines(c(-1,101),c(axTicks(2)[i],axTicks(2)[i]),col="#00000022");
-    }
-    rect(-1, 95, 101, axTicks(2)[length(axTicks(2))]*1.05, col = "#00000011",border=NA); #plot bg color
-    #add cn circle
-    points(x=c(97),y=c((absmaxx+5)*0.70),type="p",pch=19,cex=3,col="#67B32EFF");
-    text(c(97),y=c((absmaxx+5)*0.70), labels=c(2), cex=1, col="#FFFFFFFF") 
-
-    #cn3plot
-    plot.default(x=(z1\$V11),y=(z1\$V9+z1\$V10),log="y", type="p",pch=19,cex=0.4,col="#00000000",xlim=c(-1,101),ylim=c(95,absmaxx+5),axes=FALSE, ann=FALSE,xaxs="i",yaxs="i");
-    points(y=(cn3100x\$V9+cn3100x\$V10),x=(cn3100x\$V11),type="p",pch=19,cex=0.4,col="#F4981999");
-    points(y=(cn3xchr100\$V9+cn3xchr100\$V10),x=(cn3xchr100\$V11),type="p",pch=2,cex=0.8,col="#F4981955");
-    #add in highlight of points selected for by script input
-    if(length(additional_plot_points) > 1) {
-        points(x=additional_plot_points_cn3\$V2,y=additional_plot_points_cn3\$V3,type="p",pch=7,cex=0.8,col="#555555FF");
-    }
-    axis(side=2,las=1,tck=0,lwd=0,cex.axis=0.6,hadj=0.5);
-    for (i in 2:length(axTicks(2)-1)) {
-        lines(c(-1,101),c(axTicks(2)[i],axTicks(2)[i]),col="#00000022");
-    }
-    rect(-1, 95, 101, axTicks(2)[length(axTicks(2))]*1.05, col = "#00000011",border=NA); #plot bg color
-    #add cn circle
-    points(x=c(97),y=c((absmaxx+5)*0.70),type="p",pch=19,cex=3,col="#F49819FF");
-    text(c(97),y=c((absmaxx+5)*0.70), labels=c(3), cex=1, col="#FFFFFFFF") 
-
-    #cn4plot
-    plot.default(x=(z1\$V11),y=(z1\$V9+z1\$V10),log="y", type="p",pch=19,cex=0.4,col="#00000000",xlim=c(-1,101),ylim=c(95,absmaxx+5),axes=FALSE, ann=FALSE,xaxs="i",yaxs="i");
-    points(y=(cn4plus100x\$V9+cn4plus100x\$V10),x=(cn4plus100x\$V11),type="p",pch=19,cex=0.4,col="#E5242044");
-    points(y=(cn4xchr100\$V9+cn4xchr100\$V10),x=(cn4xchr100\$V11),type="p",pch=2,cex=0.8,col="#E5242044");
-    #add in highlight of points selected for by script input
-    if(length(additional_plot_points) > 1) {
-        points(x=additional_plot_points_cn4\$V2,y=additional_plot_points_cn4\$V3,type="p",pch=7,cex=0.8,col="#555555FF");
-    }
-    axis(side=2,las=1,tck=0,lwd=0,cex.axis=0.6,hadj=0.5);
-    for (i in 2:length(axTicks(2)-1)) {
-        lines(c(-1,101),c(axTicks(2)[i],axTicks(2)[i]),col="#00000022");
-    }
-    rect(-1, 95, 101, axTicks(2)[length(axTicks(2))]*1.05, col = "#00000011",border=NA); #plot bg color
-    #add cn circle
-    points(x=c(97),y=c((absmaxx+5)*0.70),type="p",pch=19,cex=3,col="#E52420FF");
-    text(c(97),y=c((absmaxx+5)*0.70), labels=c(4), cex=1, col="#FFFFFFFF") 
-
+#-------------------------------------------------
+    $R_command = <<"_END_OF_R_";
     axis(side=1,at=c(0,20,40,60,80,100),labels=c(0,20,40,60,80,100),cex.axis=0.6,lwd=0.5,lwd.ticks=0.5,padj=-1.2);
 mtext("Tumor Variant Allele Frequency",adj=0.5,padj=3.2,cex=0.5,side=1);
 
 _END_OF_R_
 #-------------------------------------------------
-
     print R_COMMANDS "$R_command\n";
-}
-elsif ($analysis_type eq 'wgs') {
+
+} elsif ($analysis_type eq 'wgs') {
 
 #-------------------------------------------------
     $R_command = <<"_END_OF_R_";
@@ -600,29 +591,50 @@ elsif ($analysis_type eq 'wgs') {
     lines(den3\$x,(finalfactor * den3factor),col="#F49819AA",lwd=2);
     lines(den4\$x,(finalfactor * den4factor),col="#E52420AA",lwd=2);
     
-
-    ppos = which(cn1peakheight > $minimum_labelled_peak_height)
+    ppos = c();
+    if($only_label_highest_peak){
+        ppos = which((cn1peakheight == max(cn1peakheight)) & (cn1peakheight > $minimum_labelled_peak_height));
+    } else {
+        ppos = which(cn1peakheight > $minimum_labelled_peak_height);
+    }
     if(!(length(ppos) == 0)){    
         text(x=cn1peakpos[ppos], y=(finalfactor * cn1peakheight[ppos])+1.7,
              labels=signif(cn1peakpos[ppos],3),
              cex=0.7, srt=0, col="#1C3660AA");
     }
-    ppos = which(cn3peakheight > $minimum_labelled_peak_height)
+    ppos = c();
+    if($only_label_highest_peak){
+        ppos = which((cn3peakheight == max(cn3peakheight)) & (cn3peakheight > $minimum_labelled_peak_height));
+    } else {
+        ppos = which(cn3peakheight > $minimum_labelled_peak_height);
+    }
     if(!(length(ppos) == 0)){    
         text(x=cn3peakpos[ppos],
              y=(finalfactor * cn3peakheight[ppos])+1.7,
              labels=signif(cn3peakpos[ppos],3),
              cex=0.7,srt=0,col="#F49819AA");
     }
-    ppos = which(cn4peakheight > $minimum_labelled_peak_height)
+    ppos = c();
+    if($only_label_highest_peak){
+        ppos = which((cn4peakheight == max(cn4peakheight)) & (cn4peakheight > $minimum_labelled_peak_height));
+    } else {
+        ppos = which(cn4peakheight > $minimum_labelled_peak_height);
+    }
     if(!(length(ppos) == 0)){    
         text(x=cn4peakpos[ppos],
              y=(finalfactor * cn4peakheight[ppos])+1.7,
              labels=signif(cn4peakpos[ppos],3),
              cex=0.7,srt=0,col="#E52420AA");
     }
-    ppos = which(cn2peakheight > $minimum_labelled_peak_height)
-    if(!(length(ppos) == 0)){    
+    print(cn2peakpos);
+    ppos = c();
+    if($only_label_highest_peak){
+        ppos = which((cn2peakheight == max(cn2peakheight)) & (cn2peakheight > $minimum_labelled_peak_height));
+        cat(max(cn2peakheight),"--",cn2peakheight[ppos],"--",cn2peakpos[ppos])
+    } else {
+        ppos = which(cn2peakheight > $minimum_labelled_peak_height);
+    }
+    if(!(length(ppos) == 0)){   
         text(x=cn2peakpos[ppos],
              y=(finalfactor * cn2peakheight[ppos])+1.7,
              labels=signif(cn2peakpos[ppos],3),
@@ -634,88 +646,21 @@ elsif ($analysis_type eq 'wgs') {
     mtext("Tumor Variant Allele Frequency",adj=0.5,padj=-3.1,cex=0.5,side=3);
     mtext(genome,adj=0,padj=-3.2,cex=0.65,side=3);
     
-    
-    #rect(par("usr")[1], par("usr")[3], par("usr")[2], par("usr")[4], col = "#00000055"); #plot bg color
-    #mtext("Normal and Tumor Coverage > 100",cex=0.7, padj=-0.5);
-    #legend(x="topright",horiz=TRUE,xjust=0, c("1", "2", "3", "4+","Chr $chr_highlight"),col=c("#1C3660","#67B32E","#F49819","#E52420","#A020F0"),pch=c(19,19,19,19,2),cex=0.6);
 
-
-    #cn1plot
-    plot.default(x=(z1\$V11),y=(z1\$V9+z1\$V10),log="y", type="p",pch=19,cex=0.4,col="#00000000",xlim=c(-1,101),ylim=c(5,absmaxx+5),axes=FALSE, ann=FALSE,xaxs="i",yaxs="i");
-    points(y=(cn1minus\$V9+cn1minus\$V10),x=(cn1minus\$V11),type="p",pch=19,cex=0.4,col="#1C366044");
-    points(y=(cn1xchr\$V9+cn1xchr\$V10),x=(cn1xchr\$V11),type="p",pch=2,cex=0.8,col="#1C366044");
-#add in highlight of points selected for by script input
-    if(length(additional_plot_points) > 1) {
-        points(x=additional_plot_points_cn1\$V2,y=additional_plot_points_cn1\$V3,type="p",pch=7,cex=0.8,col="#555555FF");
-    }
-    axis(side=2,las=1,tck=0,lwd=0,cex.axis=0.6,hadj=0.5);
-    for (i in 2:length(axTicks(2)-1)) {
-        lines(c(-1,101),c(axTicks(2)[i],axTicks(2)[i]),col="#00000022");
-    }
-    rect(-1, 5, 101, axTicks(2)[length(axTicks(2))]*1.05, col = "#00000011",border=NA); #plot bg color
-#add cn circle
-    points(x=c(97),y=c((absmaxx+5)*0.70),type="p",pch=19,cex=3,col="#1C3660FF");
-    text(c(97),y=c((absmaxx+5)*0.70), labels=c(1), cex=1, col="#FFFFFFFF") 
-        
-#cn2plot
-        plot.default(x=(z1\$V11),y=(z1\$V9+z1\$V10),log="y", type="p",pch=19,cex=0.4,col="#00000000",xlim=c(-1,101),ylim=c(5,absmaxx+5),axes=FALSE, ann=FALSE,xaxs="i",yaxs="i");
-    points(y=(cn2\$V9+cn2\$V10),x=(cn2\$V11),type="p",pch=19,cex=0.4,col="#67B32E44");
-    points(y=(cn2xchr\$V9+cn2xchr\$V10),x=(cn2xchr\$V11),type="p",pch=2,cex=0.8,col="#67B32E44");
-#add in highlight of points selected for by script input
-    if(length(additional_plot_points) > 1) {
-        points(x=additional_plot_points_cn2\$V2,y=additional_plot_points_cn2\$V3,type="p",pch=7,cex=0.8,col="#555555FF");
-    }
-    axis(side=2,las=1,tck=0,lwd=0,cex.axis=0.6,hadj=0.5);
-    for (i in 2:length(axTicks(2)-1)) {
-        lines(c(-1,101),c(axTicks(2)[i],axTicks(2)[i]),col="#00000022");
-    }
-    rect(-1, 5, 101, axTicks(2)[length(axTicks(2))]*1.05, col = "#00000011",border=NA); #plot bg color
-#add cn circle
-    points(x=c(97),y=c((absmaxx+5)*0.70),type="p",pch=19,cex=3,col="#67B32EFF");
-    text(c(97),y=c((absmaxx+5)*0.70), labels=c(2), cex=1, col="#FFFFFFFF") 
-
-#cn3plot
-        plot.default(x=(z1\$V11),y=(z1\$V9+z1\$V10),log="y", type="p",pch=19,cex=0.4,col="#00000000",xlim=c(-1,101),ylim=c(5,absmaxx+5),axes=FALSE, ann=FALSE,xaxs="i",yaxs="i");
-    points(y=(cn3\$V9+cn3\$V10),x=(cn3\$V11),type="p",pch=19,cex=0.4,col="#F4981999");
-    points(y=(cn3xchr\$V9+cn3xchr\$V10),x=(cn3xchr\$V11),type="p",pch=2,cex=0.8,col="#F4981955");
-#add in highlight of points selected for by script input
-    if(length(additional_plot_points) > 1) {
-        points(x=additional_plot_points_cn3\$V2,y=additional_plot_points_cn3\$V3,type="p",pch=7,cex=0.8,col="#555555FF");
-    }
-    axis(side=2,las=1,tck=0,lwd=0,cex.axis=0.6,hadj=0.5);
-    for (i in 2:length(axTicks(2)-1)) {
-        lines(c(-1,101),c(axTicks(2)[i],axTicks(2)[i]),col="#00000022");
-    }
-    rect(-1, 5, 101, axTicks(2)[length(axTicks(2))]*1.05, col = "#00000011",border=NA); #plot bg color
-#add cn circle
-    points(x=c(97),y=c((absmaxx+5)*0.70),type="p",pch=19,cex=3,col="#F49819FF");
-    text(c(97),y=c((absmaxx+5)*0.70), labels=c(3), cex=1, col="#FFFFFFFF") 
-
-#cn4plot
-        plot.default(x=(z1\$V11),y=(z1\$V9+z1\$V10),log="y", type="p",pch=19,cex=0.4,col="#00000000",xlim=c(-1,101),ylim=c(5,absmaxx+5),axes=FALSE, ann=FALSE,xaxs="i",yaxs="i");
-    points(y=(cn4plus\$V9+cn4plus\$V10),x=(cn4plus\$V11),type="p",pch=19,cex=0.4,col="#E5242044");
-    points(y=(cn4xchr\$V9+cn4xchr\$V10),x=(cn4xchr\$V11),type="p",pch=2,cex=0.8,col="#E5242044");
-#add in highlight of points selected for by script input
-    if(length(additional_plot_points) > 1) {
-        points(x=additional_plot_points_cn4\$V2,y=additional_plot_points_cn4\$V3,type="p",pch=7,cex=0.8,col="#555555FF");
-    }
-    axis(side=2,las=1,tck=0,lwd=0,cex.axis=0.6,hadj=0.5);
-    for (i in 2:length(axTicks(2)-1)) {
-        lines(c(-1,101),c(axTicks(2)[i],axTicks(2)[i]),col="#00000022");
-    }
-    rect(-1, 5, 101, axTicks(2)[length(axTicks(2))]*1.05, col = "#00000011",border=NA); #plot bg color
-#add cn circle
-    points(x=c(97),y=c((absmaxx+5)*0.70),type="p",pch=19,cex=3,col="#E52420FF");
-    text(c(97),y=c((absmaxx+5)*0.70), labels=c(4), cex=1, col="#FFFFFFFF") 
-
-        axis(side=1,at=c(0,20,40,60,80,100),labels=c(0,20,40,60,80,100),cex.axis=0.6,lwd=0.5,lwd.ticks=0.5,padj=-1.2);
-    mtext("Tumor Variant Allele Frequency",adj=0.5,padj=3.2,cex=0.5,side=1);
-    
 _END_OF_R_
 #-------------------------------------------------
     print R_COMMANDS "$R_command\n";
-}
 
+    #if cn is being plotted
+    if(defined($copynumber_file)){
+        print R_COMMANDS 'drawPlot(z1, cn1minus, cn1xchr, additional_plot_points, additional_plot_points_cn1, "#1C366044", "#1C3660", cncircle=1)' . "\n";
+        print R_COMMANDS 'drawPlot(z1, cn2, cn2xchr, additional_plot_points, additional_plot_points_cn2, "#67B32E44", "#67B32E", cncircle=2)' . "\n";        
+        print R_COMMANDS 'drawPlot(z1, cn3, cn3xchr, additional_plot_points, additional_plot_points_cn3, "#F4981955", "#F49819", cncircle=3)' . "\n";
+        print R_COMMANDS 'drawPlot(z1, cn4plus, cn4xchr, additional_plot_points, additional_plot_points_cn4, "#E5242044", "#E52420", cncircle=4)' . "\n";
+    } else {
+        print R_COMMANDS 'drawPlot(z1, cn2, cn2xchr, additional_plot_points, additional_plot_points_cn2, "#67B32E44", "#67B32E")' . "\n";
+    }
+}
 #-------------------------------------------------
 $R_command = <<"_END_OF_R_";
 devoff <- dev.off();
