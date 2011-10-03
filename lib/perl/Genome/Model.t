@@ -116,7 +116,6 @@ my $model = Genome::Model->create(
     projects => [ $project ],
 );
 ok($model, 'create model');
-#$model->add_project($project);
 is_deeply([$model->projects], [$project], 'add project to model');
 
 # name
