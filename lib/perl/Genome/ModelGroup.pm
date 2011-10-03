@@ -109,21 +109,6 @@ sub rename {
         return;
     }
 
-    if ( my $project = $self->project ) { # delegate to project
-        return $project->rename($new_name);
-    }
-    else {
-        return $self->_rename($new_name);
-    }
-}
-
-sub _rename {
-    my ($self, $new_name) = @_;
-
-    if ( not $new_name ) {
-        Carp::confess('No new name given to rename model group');
-    }
-
     my $old_name = $self->name;
     $self->name($new_name);
     $self->status_message("Renamed model group from '$old_name' to '$new_name'");
