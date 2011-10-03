@@ -81,8 +81,8 @@ sub _map_workflow_inputs {
         die $self->error_message;
     }
 
-    my $variant_list = $model->variant_list->file_path;
-    unless($variant_list) {
+    my $snv_variant_list = $model->snv_variant_list->file_path;
+    unless($snv_variant_list) {
         $self->error_message('Failed to get a variant list for this build!');
         die $self->error_message;
     }
@@ -118,7 +118,7 @@ sub _map_workflow_inputs {
 
     push @inputs,
         build_id => $build->id,
-        variant_list => $variant_list,
+        snv_variant_list => $snv_variant_list,
         ;
 
     my %default_filenames = $self->default_filenames;
