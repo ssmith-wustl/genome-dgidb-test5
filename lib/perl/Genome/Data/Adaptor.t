@@ -39,24 +39,27 @@ my $test_obj = {};
 bless($test_obj, 'Genome::Data::Adaptor');
 ok($test_obj->isa('Genome::Data::Adaptor'), 'created test object of type Genome::Data::Adaptor') or die;
 
+# Testing access_mode method
+ok(!$test_obj->access_mode, 'access mode not yet set');
+my $rv = $test_obj->access_mode('r');
+is($rv, 'r', 'access_mode accessor returns expected value');
+$rv = eval { $test_obj->access_mode('w') };
+my $error = $@;
+ok($error =~ /Can only set mode once/, 'trying to reset mode fails, as expected');
+
 # Testing file method
 ok(!$test_obj->file(), 'file accessor returns undef, as expected');
 
-my $rv = eval { $test_obj->file($missing_file) };
-my $error = $@;
-ok($error =~ /No file found/, 'trying to set file to nonexistant paths fails, as expected');
+$rv = $test_obj->file($missing_file);
+ok($rv, 'trying to set file to nonexistant path succeeds');
+
+$rv = eval { $test_obj->_get_fh() };
+$error = $@;
+ok($error =~ /Could not create file handle/, 'failed to create file handle for missing file');
 
 $rv = $test_obj->file($temp_file);
 ok($rv eq $temp_file, 'return value matches input file');
 ok($test_obj->file() eq $temp_file, 'accessor returns expected file');
-
-# Testing access_mode method
-ok(!$test_obj->access_mode, 'access mode not yet set');
-$rv = $test_obj->access_mode('r');
-is($rv, 'r', 'access_mode accessor returns expected value');
-$rv = eval { $test_obj->access_mode('w') };
-$error = $@;
-ok($error =~ /Can only set mode once/, 'trying to reset mode fails, as expected');
 
 # Testing parse_next_from_file method
 $rv = eval { $test_obj->parse_next_from_file };
@@ -87,13 +90,6 @@ my $obj = eval {
 $error = $@;
 ok($error =~ /requires a file/, 'failed to create Adaptor without specifying a file');
 
-$obj = eval {
-    Genome::Data::Adaptor::Test->create(
-        file => $missing_file,
-    )
-};
-$error = $@;
-ok($error =~ /No file found/, 'failed to create Adaptor without a valid file');
 $obj = eval {
     Genome::Data::Adaptor::Test->create(
         file => $temp_file,
