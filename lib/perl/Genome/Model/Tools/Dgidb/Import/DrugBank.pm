@@ -24,11 +24,6 @@ class Genome::Model::Tools::Dgidb::Import::DrugBank {
             default => 0,
             doc => 'Print more output while running',
         },
-        # entrez_dir => {
-            # is => 'Path',
-            # is_input => 1,
-            # doc => 'PATH.  Directory containing gene info for gene name mapping ("gene2accession" and "gene_info")',
-        # },
         version => {
             is => 'Text',
             is_input => 1,
@@ -174,7 +169,6 @@ sub import_genes {
     my $version = $self->version;
     my $gene_outfiles = shift;
     my @gene_names;
-    # my @headers = qw/ partner_id gene_symbol gene_name uniprot_id entrez_gene_symbols entrez_gene_synonyms /;
     my @headers = qw/ partner_id gene_symbol uniprot_id /;
     my $parser = Genome::Utility::IO::SeparatedValueReader->create(
         input => $gene_outfiles,
@@ -188,25 +182,9 @@ sub import_genes {
         #FIXME: There are 290+ gene names that appear in more than 1 row of the
             #tsv file.  This will squish them together into a single record.  
             #I don't necessarily believe that this is the right thing to do
-        # my $gene_name = $self->_get_or_create_gene_name($gene->{gene_name}, 'hugo', 'DrugBank', $version, '');
         my $gene_name  =$self->_get_or_create_gene_name($gene->{gene_symbol}, 'todo', 'DrugBank', $version, ''); #TODO: fill in nomenclature
 
-        # unless ($gene->{entrez_gene_synonyms} eq 'na'){
-            # my @entrez_gene_synonyms = split(',', $gene->{entrez_gene_synonyms});
-            # for my $entrez_gene_synonym (@entrez_gene_synonyms){
-                # my $gene_name_association = $self->_get_or_create_gene_name_association($gene_name, $entrez_gene_synonym, 'entrez', '');
-            # }
-        # }
-
-        # unless ($gene->{entrez_gene_symbols} eq 'na'){
-            # my @entrez_gene_symbols = split(',', $gene->{entrez_gene_symbols});
-            # for my $entrez_gene_symbol (@entrez_gene_symbols){
-                # my $gene_name_association=$self->_get_or_create_gene_name_association($gene_name, $entrez_gene_symbol, 'entrez_gene_symbol', '');
-            # }
-        # }
-
         my $uniprot_gene_name_association=$self->_get_or_create_gene_name_association($gene_name, $gene->{uniprot_id}, 'uniprot_id', '');
-        # my $symbol_gene_name_association = $self->_get_or_create_gene_name_association($gene_name, $gene->{gene_symbol}, 'todo', ''); #TODO: fill in nomenclature
 
         push @gene_names, $gene_name;
     }
@@ -219,7 +197,6 @@ sub import_interactions {
     my $version = $self->version;
     my $interaction_outfile = shift;
     my @interactions;
-    # my @headers = qw/ interaction_count drug_id drug_name drug_synonyms drug_brands drug_type drug_groups drug_categories partner_id known_action target_actions gene_symbol gene_name uniprot_id entrez_gene_symbols entrez_gene_synonyms /;
     my @headers = qw/ interaction_count drug_id drug_name drug_synonyms drug_brands drug_type drug_groups drug_categories partner_id known_action target_actions gene_symbol uniprot_id /;
     my $parser = Genome::Utility::IO::SeparatedValueReader->create(
         input => $interaction_outfile,
@@ -269,25 +246,12 @@ sub help_usage_complete_text {
 sub input_to_tsv {
     my $self = shift;
     my $infile = $self->infile;
-    # my $entrez_dir = $self->entrez_dir;
     my $verbose = $self->verbose;
 
     #We're going to import everything as is deal with Entrez gene names upon retrevial
 
-    #Parse Entrez flatfiles
-    #ftp://ftp.ncbi.nih.gov/gene/DATA/gene2accession.gz
-    #ftp://ftp.ncbi.nih.gov/gene/DATA/gene_info.gz
-    # my $entrez_data = $self->loadEntrezData('-entrez_dir'=>$entrez_dir);
-    # $self->{entrez_data}=$entrez_data;
-
     #Instantiate an XML simple object
     my $xs1 = XML::Simple->new();
-
-    #Create data object for the entire XML file, forcing array creation even if there is only one element
-    #my $xml = $xs1->XMLin($infile, ForceArray => 1);
-
-    #Create data object for the entire XML file, allowing mixed array/hash structure for the same field depending of whether is only one element or more than one.
-    #my $xml = $xs1->XMLin($infile);
 
     #Create data object for the entire XML file, allowing mixed array/hash structure for the same field depending of whether is only one element or more than one.
     #Also actually specify the primary IDs you would like the resultng data structures to be keyed on ('drugbank-id' for drug records, 'id' for gene partners)
@@ -321,14 +285,12 @@ sub input_to_tsv {
     binmode(INTERACTIONS, ":utf8");
 
     #Print out a header line foreach output file
-    # my $interactions_header = "interaction_count\tdrug_id\tdrug_name\tdrug_synonyms\tdrug_brands\tdrug_type\tdrug_groups\tdrug_categories\tpartner_id\tknown_action?\ttarget_actions\tgene_symbol\tgene_name\tuniprot_id\tentrez_gene_symbols\tentrez_gene_synonyms";
     my $interactions_header = "interaction_count\tdrug_id\tdrug_name\tdrug_synonyms\tdrug_brands\tdrug_type\tdrug_groups\tdrug_categories\tpartner_id\tknown_action?\ttarget_actions\tgene_symbol\tuniprot_id";
     print INTERACTIONS "$interactions_header\n";
 
     my $drugs_header = "drug_id\tdrug_name\tdrug_synonyms\tdrug_brands\tdrug_type\tdrug_groups\tdrug_categories\ttarget_count";
     print DRUGS "$drugs_header\n";
 
-    # my $targets_header = "partner_id\tgene_symbol\tgene_name\tuniprot_id\tentrez_gene_symbols\tentrez_gene_synonyms";
     my $targets_header = "partner_id\tgene_symbol\tuniprot_id";
     print TARGETS "$targets_header\n";
 
@@ -417,10 +379,7 @@ sub input_to_tsv {
                 exit();
             }
             my $gene_symbol = $partners_lite->{$target_pid}->{gene_symbol};
-            # my $gene_name = $partners_lite->{$target_pid}->{gene_name};
             my $uniprotkb = $partners_lite->{$target_pid}->{uniprotkb};
-            # my $entrez_gene_symbols = $partners_lite->{$target_pid}->{entrez_gene_symbols};
-            # my $entrez_gene_synonyms = $partners_lite->{$target_pid}->{entrez_gene_synonyms};
 
             #Strip <tabs> from string variables
             $target_known_action =~ s/\t/ /g;
@@ -428,7 +387,6 @@ sub input_to_tsv {
 
             $ic++;
             my $interactions_line = "$ic\t$drug_id\t$drug_name\t$drug_synonyms_string\t$drug_brands_string\t$drug_type\t$drug_groups_string\t$drug_categories_string\t$target_pid\t$target_known_action\t$target_actions\t$gene_symbol\t$uniprotkb";
-            # my $interactions_line = "$ic\t$drug_id\t$drug_name\t$drug_synonyms_string\t$drug_brands_string\t$drug_type\t$drug_groups_string\t$drug_categories_string\t$target_pid\t$target_known_action\t$target_actions\t$gene_symbol\t$gene_name\t$uniprotkb\t$entrez_gene_symbols\t$entrez_gene_synonyms";
             print INTERACTIONS "$interactions_line\n";
 
         }
@@ -436,12 +394,8 @@ sub input_to_tsv {
 
     foreach my $pid (sort {$a <=> $b} keys %{$partners_lite}){
         my $gene_symbol = $partners_lite->{$pid}->{gene_symbol};
-        # my $gene_name = $partners_lite->{$pid}->{gene_name};
         my $uniprot_id = $partners_lite->{$pid}->{uniprotkb};
-        # my $entrez_gene_symbols = $partners_lite->{$pid}->{entrez_gene_symbols};
-        # my $entrez_gene_synonyms = $partners_lite->{$pid}->{entrez_gene_synonyms};
 
-        # my $targets_line = "$pid\t$gene_symbol\t$gene_name\t$uniprot_id\t$entrez_gene_symbols\t$entrez_gene_synonyms";
         my $targets_line = "$pid\t$gene_symbol\t$uniprot_id";
         print TARGETS "$targets_line\n";
     }
@@ -504,14 +458,12 @@ sub loadEntrezData{
         }
 
         #Store entrez info keyed on entrez id
-        #print "\n$entrez_id\t$symbol\t@synonyms_array";
         $entrez_map{$entrez_id}{symbol} = $symbol;
         $entrez_map{$entrez_id}{synonyms_string} = $synonyms;
         $entrez_map{$entrez_id}{synonyms_array} = \@synonyms_array;
         $entrez_map{$entrez_id}{synonyms_hash} = \%synonyms_hash;
 
         #Store entrez info keyed on symbol
-        #print "\n$symbol\t$entrez_id";
         if ($symbols_map{$symbol}){
             my $ids = $symbols_map{$symbol}{entrez_ids};
             $ids->{$entrez_id} = 1;
@@ -568,115 +520,12 @@ sub loadEntrezData{
     }
     close (ACC);
 
-    #print Dumper %entrez_map;
-    #print Dumper %symbols_map;
-    #print Dumper %synonyms_map;
-    #print Dumper %p_acc_map;
-
     $edata{'entrez_ids'} = \%entrez_map;
     $edata{'symbols'} = \%symbols_map;
     $edata{'synonyms'} = \%synonyms_map;
     $edata{'protein_accessions'} = \%p_acc_map;
 
     return(\%edata);
-}
-
-
-#######################################################################################################################################################################
-#Attempt to map the gene_symbol / uniprotkb_id to Entrez Gene Symbol
-#######################################################################################################################################################################
-sub mapGeneToEntrez{
-    my $self = shift;
-    my %args = @_;
-    my $entrez_data = $args{'-entrez_data'};
-    my $gene_symbol = $args{'-gene_symbol'};
-    my $uniprot_id = $args{'-uniprot_id'};
-    my $entrez_gene_symbol = "na";
-    my $entrez_gene_synonyms = "na";
-
-    my $entrez_map = $entrez_data->{'entrez_ids'};
-    my $symbols_map = $entrez_data->{'symbols'};
-    my $prot_acc_map = $entrez_data->{'protein_accessions'};
-
-    if ($gene_symbol eq "na" && $uniprot_id eq "na"){
-    #If gene_symbol and uniprot_id are 'na' ... nothing can be done.  Return 'na' for both symbol and synonyms
-
-    }else{
-        #If gene_symbol is not 'na', see if it matches an entrez gene symbol perfectly, return it and associated synonyms
-        my $perfect_match = 0;
-        my $uniprot_match = 0;
-        unless ($gene_symbol eq "na"){
-            if ($symbols_map->{$gene_symbol}){
-                $perfect_match = 1;
-                $entrez_gene_symbol = $gene_symbol;
-                my $ids = $symbols_map->{$gene_symbol}->{entrez_ids};
-                my %symbol_list;
-                my %synonym_list;
-                foreach my $entrez_id (keys %{$ids}){
-                    my $symbol = $entrez_map->{$entrez_id}->{symbol};
-                    $symbol_list{$symbol}=1;
-                    my @synonyms_array = @{$entrez_map->{$entrez_id}->{synonyms_array}};
-                    foreach my $syn (@synonyms_array){
-                        $synonym_list{$syn}=1;
-                    }
-                }
-                my @symbols1;
-                my @synonyms1;
-                foreach my $symbol (keys %symbol_list){
-                    push(@symbols1, $symbol);
-                }
-                foreach my $synonym (keys %synonym_list){
-                    push(@synonyms1, $synonym);
-                }
-                $entrez_gene_symbol = join(",", @symbols1);
-                $entrez_gene_synonyms = join(",", @synonyms1);
-
-            }else{
-                #If gene_symbol does not match or is 'na', attempt to get a matching symbol using the uniprot ID
-                unless ($uniprot_id eq "na"){
-                    if ($prot_acc_map->{$uniprot_id}){
-                        $uniprot_match = 1;
-                        my $ids = $prot_acc_map->{$uniprot_id}->{entrez_ids};
-                        my %symbol_list;
-                        my %synonym_list;
-                        foreach my $entrez_id (keys %{$ids}){
-                            my $symbol = $entrez_map->{$entrez_id}->{symbol};
-                            $symbol_list{$symbol}=1;
-                            my @synonyms_array = @{$entrez_map->{$entrez_id}->{synonyms_array}};
-                            foreach my $syn (@synonyms_array){
-                                $synonym_list{$syn}=1;
-                            }
-                        }
-                        my @symbols1;
-                        my @synonyms1;
-                        foreach my $symbol (keys %symbol_list){
-                            push(@symbols1, $symbol);
-                        }
-                        foreach my $synonym (keys %synonym_list){
-                            push(@synonyms1, $synonym);
-                        }
-                        $entrez_gene_symbol = join(",", @symbols1);
-                        $entrez_gene_synonyms = join(",", @synonyms1);
-
-                    }
-
-                }
-            }
-        }
-
-        #If the uniprot mapping fails, and the gene_symbol is not 'na' attempt a match to a synonym...
-        #Too risky?? - could lead to false mappings?
-
-
-    }
-
-    my %result;
-    $result{'entrez_gene_symbols'} = $entrez_gene_symbol;
-    $result{'entrez_gene_synonyms'} = $entrez_gene_synonyms;
-
-    #print YELLOW, "\n$gene_symbol\t$uniprot_id\t$entrez_gene_symbol\t$entrez_gene_synonyms", RESET;
-
-    return(\%result);
 }
 
 #######################################################################################################################################################################
@@ -806,18 +655,6 @@ sub organizePartners{
         $p_lite{$pid}{gene_symbol} = $gene_symbol;
         $p_lite{$pid}{gene_name} = $gene_name;
         $p_lite{$pid}{uniprotkb} = $uniprotkb;
-
-        #Attempt to map the gene_symbol / uniprotkb_id to Entrez Gene Symbol
-        #Get the entrez symbol AND synonyms
-        # my $entrez_gene_info = $self->mapGeneToEntrez('-entrez_data'=>$self->{entrez_data}, '-gene_symbol'=>$gene_symbol, '-uniprot_id'=>$uniprotkb);
-        # my $entrez_gene_symbols = $entrez_gene_info->{'entrez_gene_symbols'};
-        # my $entrez_gene_synonyms = $entrez_gene_info->{'entrez_gene_synonyms'};
-        # $p_lite{$pid}{entrez_gene_symbols} = $entrez_gene_symbols;
-        # $p_lite{$pid}{entrez_gene_synonyms} = $entrez_gene_synonyms;
-
-
-
-
     }
 
 #print Dumper %p_lite;
