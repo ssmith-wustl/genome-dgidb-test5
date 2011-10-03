@@ -6,16 +6,19 @@ use warnings;
 use Genome;
 
 class Genome::GeneName {
+    is => 'UR::Object',
+    id_generator => '-uuid',
     table_name => 'gene_name',
     schema_name => 'public',
     data_source => 'Genome::DataSource::Main',
     id_by => [
+        id => {is => 'Text'},
+    ],
+    has => [
         name => { is => 'Text'},
         nomenclature => { is => 'Text'},
         source_db_name => { is => 'Text'},
         source_db_version => { is => 'Text'},
-    ],
-    has => [
         description => {
             is => 'Text',
             is_optional => 1,
@@ -35,6 +38,7 @@ class Genome::GeneName {
             |,
         },
     ],
+    doc => 'Claim regarding the name of a drug',
 };
 
 1;

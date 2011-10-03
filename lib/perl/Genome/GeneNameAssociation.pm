@@ -6,23 +6,28 @@ use warnings;
 use Genome;
 
 class Genome::GeneNameAssociation {
+    is => 'UR::Object',
+    id_generator => '-uuid',
     table_name => 'gene_name_association',
     schema_name => 'public',
     data_source => 'Genome::DataSource::Main',
     id_by => [
-        gene_primary_name => { is => 'Text'},
-        gene_alternate_name => {is => 'Text'},
-        primary_name_nomenclature => { is => 'Text'},
-        alternate_name_nomenclature => { is => 'Text'},
-        source_db_name => { is => 'Text'},
-        source_db_version => { is => 'Text'},
+        id => {is => 'Text'},
     ],
     has => [
+        gene_name_id => { is => 'Text'},
+        #TODO: make this work
+        # gene_name => {
+
+        # },
+        alternate_name => {is => 'Text'},
+        nomenclature => { is => 'Text'},
         description => {
             is => 'Text',
             is_optional => 1,
         },
     ],
+    doc => 'Claim regarding an alternate name for a gene name',
 };
 
 1;
