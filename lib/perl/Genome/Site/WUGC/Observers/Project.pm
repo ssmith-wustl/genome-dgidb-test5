@@ -18,7 +18,7 @@ Genome::Project->add_observer(
 
 Genome::Project->add_observer(
     aspect => 'name',
-    callback => \&rename_callback,
+    callback => \&project_rename,
 );
 
 Genome::ProjectPart->add_observer(
@@ -95,55 +95,76 @@ sub create_callback {
     return 1;
 }
 
-sub rename_callback {
-    my ($self, $property_name, $old_name, $new_name) = @_;
-    my ($model_group) = Genome::ModelGroup->get(uuid => $self->id);
-    if ($model_group) {
-        $model_group->_rename($new_name);
-    }
+sub project_rename {
+   my ($self, $property_name, $old_name, $new_name) = @_;
+
+    my $model_group = Genome::ModelGroup->get(uuid => $self->id);
+    return 1 if not $model_group;
+
+    return 1 if $model_group->name eq $new_name;
+
+    $self->status_message('Rename associated model group');
+    $model_group->rename($new_name);
+
     return 1;
 }
 
 sub delete_callback {
     my $self = shift;
+
     $deleted_projects{ $self->id }++;
+
     my ($model_group) = Genome::ModelGroup->get(uuid => $self->id);
     return 1 if not $model_group;
     return 1 if $Genome::Site::WUGC::Observers::Project::deleted_model_groups{ $model_group->id };
+
     $self->status_message('Deleting associated model group: '.$model_group->id);
+
     $model_group->delete;
+
     return 1;
 }
 
 sub project_part_create {
     my $self = shift;
+
     return 1 if $self->entity_class_name !~ /^Genome::Model/;
+
     my ($model_group) = Genome::ModelGroup->get(uuid => $self->project_id);
     return 1 if not $model_group;
+
     my $model = $self->entity;
     my $bridge = $model_group->model_bridges(model => $model);
     return 1 if $bridge;
+
     $bridge = $model_group->add_model_bridge(model => $model);
     if ( not $bridge ) {
         die 'Failed to create model group bridge for '.$model_group->id.' '.$model->id;
     }
+
     return 1;
 }
 
 sub project_part_delete {
     my $self = shift;
+
     return 1 if $self->entity_class_name !~ /^Genome::Model/;
+
     $deleted_parts{ $self->id }++;
+
     my $project = $self->project;
     my ($model_group) = Genome::ModelGroup->get(uuid => $self->project_id);
     return 1 if not $model_group;
+
     my $model = $self->entity;
     my $bridge = $model_group->model_bridges(model => $model);
     return 1 if not $bridge;
     return 1 if $Genome::Site::WUGC::Observers::ModelGroup::deleted_bridges{ $bridge->id };
+
     if ( not $bridge->delete ) {
         die 'Failed to delete model group bridge for '.$model_group->id.' '.$model->id;
     }
+
     return 1;
 }
 
