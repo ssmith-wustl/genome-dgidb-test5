@@ -40,9 +40,6 @@ sub DESTROY {
 sub file {
     my ($self, $file) = @_;
     if ($file) {
-        unless (-e $file) {
-            Carp::confess "No file found at $file!";
-        }
         $self->{_file} = $file;
     }
     return $self->{_file};
