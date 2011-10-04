@@ -49,7 +49,7 @@ class Genome::Model::Tools::Validation::PrepareWgsForClonalityPlot{
         min_mapping_quality => {
             is => 'Number',
             is_optional => 1,
-            default => 1,
+            default => 20,
             doc => 'mapping quality lower cutoff for bam-readcounts',
         },
         
