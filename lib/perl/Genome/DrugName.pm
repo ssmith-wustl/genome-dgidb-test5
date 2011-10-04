@@ -6,35 +6,39 @@ use warnings;
 use Genome;
 
 class Genome::DrugName {
+    is => 'UR::Object',
+    id_generator => '-uuid',
     table_name => 'drug_name',
     schema_name => 'public',
     data_source => 'Genome::DataSource::Main',
     id_by => [
-        name => { is => 'varchar'},
-        nomenclature => { is => 'varchar'},
-        source_db_name => { is => 'varchar'},
-        source_db_version => { is => 'varchar'},
+        id => { is => 'Text'},
     ],
     has => [
+        name => { is => 'Text'},
+        nomenclature => { is => 'Text'},
+        source_db_name => { is => 'Text'},
+        source_db_version => { is => 'Text'},
         description => {
             is => 'Text',
             is_optional => 1,
         },
         drug_name_associations => {
-            calculate_from => ['name', 'nomenclature', 'source_db_name', 'source_db_version'],
+            calculate_from => ['id'],
             calculate => q|
-                my @drug_name_associations = Genome::DrugNameAssociation->get(drug_primary_name => $name, nomenclature => $nomenclature, source_db_name => $source_db_name, source_db_version => $source_db_version);
+                my @drug_name_associations = Genome::DrugNameAssociation->get(drug_name_id => $id);
                 return @drug_name_associations;
             |,
         },
         drug_name_category_associations => {
-            calculate_from => ['name', 'nomenclature', 'source_db_name', 'source_db_version'],
+            calculate_from => ['id'],
             calculate => q|
-                my @drug_name_category_associations = Genome::DrugNameCategoryAssociation->get(drug_name => $name, nomenclature => $nomenclature, source_db_name => $source_db_name, source_db_version => $source_db_version);
+                my @drug_name_category_associations = Genome::DrugNameCategoryAssociation->get(drug_name_id => $id);
                 return @drug_name_category_associations;
             |,
         },
     ],
+    doc => 'Claim regarding the name of a drug',
 };
 
 sub __display_name__ {

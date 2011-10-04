@@ -265,7 +265,7 @@ sub help_brief {
 }
 
 sub help_detail {
-    "generate a plot of copy number alterations"
+    "generate a plot of copy number alterations.\n\nExample:\ngmt copy-number plot-segments --segment_files copynumber.cn.seg --cnvhmm-input --plot-title AML01 --lowres --output-pdf copynumber.cn.seg.pdf"
 }
 
 

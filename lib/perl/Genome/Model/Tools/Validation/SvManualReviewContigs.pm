@@ -142,7 +142,8 @@ sub execute {
             while ($line !~ /^\>/) {
                 chomp $line;
                 $contig .= $line;
-                $line = $fasta_fh->getline;
+                if ($fasta_fh->eof) { last; } 
+                else { $line = $fasta_fh->getline; }
             }
 
             #handle negative stranded contigs

@@ -67,45 +67,45 @@ class Genome::Model::Build {
         software_revision => { is => 'VARCHAR2', len => 1000 },
     ],
     has_many_optional => [
-        inputs => { 
-            is => 'Genome::Model::Build::Input', 
-            reverse_as => 'build', 
-            doc => 'Inputs assigned to the model when the build was created.' 
+        inputs => {
+            is => 'Genome::Model::Build::Input',
+            reverse_as => 'build',
+            doc => 'Inputs assigned to the model when the build was created.'
         },
         instrument_data_inputs => {
             is => 'Genome::Model::Build::Input',
             reverse_as => 'build',
             where => [ name => 'instrument_data' ],
         },
-        instrument_data  => { 
-            is => 'Genome::InstrumentData', 
-            via => 'inputs', 
-            to => 'value', 
-            is_mutable => 1, 
-            where => [ name => 'instrument_data' ], 
-            doc => 'Instrument data assigned to the model when the build was created.' 
+        instrument_data  => {
+            is => 'Genome::InstrumentData',
+            via => 'inputs',
+            to => 'value',
+            is_mutable => 1,
+            where => [ name => 'instrument_data' ],
+            doc => 'Instrument data assigned to the model when the build was created.'
         },
         instrument_data_ids => { via => 'instrument_data', to => 'id', is_many => 1, },
-        region_of_interest_set_name => { 
+        region_of_interest_set_name => {
             is => 'Text',
-            is_many => 1, 
+            is_many => 1,
             is_mutable => 1,
-            via => 'inputs', 
+            via => 'inputs',
             to => 'value_id',
-            where => [ name => 'region_of_interest_set_name', value_class_name => 'UR::Value' ], 
+            where => [ name => 'region_of_interest_set_name', value_class_name => 'UR::Value' ],
         },
-        from_build_links => { is => 'Genome::Model::Build::Link', reverse_as => 'to_build', 
+        from_build_links => { is => 'Genome::Model::Build::Link', reverse_as => 'to_build',
                               doc => 'bridge table entries where this is the \"to\" build(used to retrieve builds this build is \"from\")' },
-        from_builds      => { is => 'Genome::Model::Build', via => 'from_build_links', to => 'from_build', 
+        from_builds      => { is => 'Genome::Model::Build', via => 'from_build_links', to => 'from_build',
                               doc => 'Genome builds that contribute \"to\" this build' },
-        to_build_links   => { is => 'Genome::Model::Build::Link', reverse_as => 'from_build', 
+        to_build_links   => { is => 'Genome::Model::Build::Link', reverse_as => 'from_build',
                               doc => 'bridge entries where this is the \"from\" build(used to retrieve builds builds this build is \"to\")' },
-        to_builds        => { is => 'Genome::Model::Build', via => 'to_build_links', to => 'to_build', 
+        to_builds        => { is => 'Genome::Model::Build', via => 'to_build_links', to => 'to_build',
                               doc => 'Genome builds this build contributes \"to\"' },
         attributes       => { is => 'Genome::MiscAttribute', reverse_as => '_build', where => [ entity_class_name => 'Genome::Model::Build' ] },
-        metrics          => { is => 'Genome::Model::Metric', reverse_as => 'build', 
+        metrics          => { is => 'Genome::Model::Metric', reverse_as => 'build',
                               doc => 'Build metrics' },
-        variants         => { is => 'Genome::Model::BuildVariant', reverse_as => 'build', 
+        variants         => { is => 'Genome::Model::BuildVariant', reverse_as => 'build',
                               doc => 'variants linked to this build... currently only for Somatic builds but need this accessor for get_all_objects' },
         group_ids        => { via => 'model', to => 'group_ids', is_many => 1, },
         group_names      => { via => 'model', to => 'group_names', is_many => 1, },
@@ -134,7 +134,7 @@ sub _resolve_subclass_name_by_sequencing_platform { # only temporary, subclass w
     my $sequencing_platform;
     if (ref($_[0]) and $_[0]->isa('Genome::Model::Build')) {
         $sequencing_platform = $_[0]->model->sequencing_platform;
-    } 
+    }
     else {
         my %params;
         if (ref($_[0]) and $_[0]->isa("UR::BoolExpr")) {
@@ -164,7 +164,7 @@ sub __extend_namespace__ {
 
     my $meta = $self->SUPER::__extend_namespace__($ext);
     return $meta if $meta;
-    
+
     my $pp_subclass_name = 'Genome::ProcessingProfile::' . $ext;
     my $pp_subclass_meta = UR::Object::Type->get($pp_subclass_name);
     if ($pp_subclass_meta and $pp_subclass_name->isa('Genome::ProcessingProfile')) {
@@ -188,7 +188,7 @@ sub create {
 
     my $self = $class->SUPER::create(@_);
     return unless $self;
-    
+
     eval {
         # Give the model a chance to update itself prior to copying inputs from it
         unless ($self->model->check_for_updates) {
@@ -239,14 +239,14 @@ sub _create_master_event {
 sub _copy_model_inputs {
     my $self = shift;
 
-    # Failing to copy an input SHOULD NOT be fatal. If the input is required for the build 
+    # Failing to copy an input SHOULD NOT be fatal. If the input is required for the build
     # to run, it'll be caught when the build is verified as part of the start method, which
     # will leave the build in an "unstartable" state that can be reviewed later.
     for my $input ($self->model->inputs) {
         eval {
             my %params = map { $_ => $input->$_ } (qw/ name value_class_name value_id filter_desc /);
 
-            # Resolve inputs pointing to a model to a build. 
+            # Resolve inputs pointing to a model to a build.
             if($params{value_class_name}->isa('Genome::Model')) {
                 my $input_name = $input->name;
                 my $existing_input = $self->inputs(name => $input_name);
@@ -260,7 +260,7 @@ sub _copy_model_inputs {
                 my $input_model = $input->value;
                 my $input_build = $self->select_build_from_input_model($input_model);
                 unless($input_build) {
-                    die "Could not resolve a build of model " . $input_model->__display_name__; 
+                    die "Could not resolve a build of model " . $input_model->__display_name__;
                 }
 
                 $params{value_class_name} = $input_build->class;
@@ -269,7 +269,7 @@ sub _copy_model_inputs {
 
             unless ($self->add_input(%params)) {
                 die "Could not copy model input " . $params{name} . " with ID " . $params{value_id} .
-                    " and class " . $params{value_class_name} . " to new build"; 
+                    " and class " . $params{value_class_name} . " to new build";
             }
         };
         if ($@) {
@@ -348,10 +348,10 @@ sub workflow_instances {
 
 sub newest_workflow_instance {
     my $self = shift;
-    my @sorted = sort { 
+    my @sorted = sort {
         $b->id <=> $a->id
     } $self->workflow_instances;
-    if (@sorted) { 
+    if (@sorted) {
         return $sorted[0];
     } else {
         return;
@@ -380,7 +380,7 @@ sub cpu_slot_hours {
             $cores = 1;
         }
         my $e = UR::Time->datetime_to_time($event->date_completed)
-                - 
+                -
                 UR::Time->datetime_to_time($event->date_scheduled);
         if ($e < 0) {
             warn "event " . $event->__display_name__ . " has negative elapsed time!";
@@ -399,7 +399,7 @@ sub calculate_estimated_kb_usage {
     # will be an allocation, which will likely be
     # wildly inaccurate, but if the build fails to fail,
     # when it finishes, it will reallocate down to the
-    # actual size.  Whereas the previous behaviour 
+    # actual size.  Whereas the previous behaviour
     # (return undef) caused *no* allocation to be made.
     # Which it has been decided is a bigger problem.
     return 512_000;
@@ -462,11 +462,11 @@ sub reallocate {
     return 1;
 }
 
-sub log_directory { 
+sub log_directory {
     return  $_[0]->data_directory . '/logs/';
 }
 
-sub reports_directory { 
+sub reports_directory {
     my $self = shift;
     return unless $self->data_directory;
     return $self->data_directory . '/reports/';
@@ -503,7 +503,7 @@ sub add_report {
             die "failed to make directory $directory!: $!";
         }
     }
-    
+
     if ($report->save($directory)) {
         $self->status_message("Saved report to override directory: $directory");
         return 1;
@@ -531,7 +531,7 @@ sub start {
         if (@tags) {
             my @msgs;
             for my $tag (@tags) {
-                push @msgs, $tag->__display_name__; 
+                push @msgs, $tag->__display_name__;
             }
             Carp::croak "Build " . $self->__display_name__ . " could not be validated for start!\n" . join("\n", @msgs);
         }
@@ -545,7 +545,7 @@ sub start {
         unless ($self->post_allocation_initialization) {
             Carp::croak "Build " . $self->__display_name__ . " failed to initialize after resolving data directory!";
         }
-        
+
         $self->the_master_event->schedule;
 
         # Creates a workflow for the build
@@ -605,7 +605,7 @@ sub validate_for_start {
             die $self->warning_message("Validation method $method not found!");
         }
         my @returned_tags = grep { defined $_ } $self->$method(); # Prevents undef from being pushed to tags list
-        push @tags, @returned_tags if @returned_tags; 
+        push @tags, @returned_tags if @returned_tags;
     }
 
     return @tags;
@@ -725,7 +725,7 @@ sub stop {
         return 0;
     }
 
-    my $job = $self->_get_running_master_lsf_job; 
+    my $job = $self->_get_running_master_lsf_job;
     if ( defined $job ) {
         $self->status_message('Killing job: '.$job->{Job});
         $self->_kill_job($job);
@@ -819,11 +819,11 @@ sub restart {
     my %params = @_;
 
     $self->status_message('Attempting to restart build: '.$self->id);
-   
+
     if (delete $params{job_dispatch}) {
         cluck $self->error_message('job_dispatch cannot be changed on restart');
     }
-    
+
     my $user = getpwuid($<);
     if ($self->run_by ne $user) {
         croak $self->error_message("Can't restart a build originally started by: " . $self->run_by);
@@ -869,7 +869,7 @@ sub restart {
     for my $e ($self->the_events(event_status => ['Running','Failed'])) {
         $e->event_status('Scheduled');
     }
-    
+
     return $self->_launch(%params);
 }
 
@@ -927,7 +927,7 @@ sub _launch {
         # TODO: redirect STDOUT/STDERR to these files
         #$build_event->output_log_file,
         #$build_event->error_log_file,
-        
+
         my %args = (
             model_id => $self->model_id,
             build_id => $self->id,
@@ -935,7 +935,7 @@ sub _launch {
         if ($job_dispatch eq 'inline') {
             $args{inline} = 1;
         }
-        
+
         my $rv = Genome::Model::Command::Services::Build::Run->execute(%args);
         return $rv;
     }
@@ -982,7 +982,7 @@ sub _lock_model_for_start {
     my $lock_path = '/gsc/var/lock/build_start/' . $model_id;
 
     my $lock = Genome::Sys->lock_resource(
-        resource_lock => $lock_path, 
+        resource_lock => $lock_path,
         block_sleep => 3,
         max_try => 3,
     );
@@ -1034,7 +1034,7 @@ sub _initialize_workflow {
         $workflow->notify_url($url);
     }
     $workflow->save_to_xml(OutputFile => $self->data_directory . '/build.xml');
-    
+
     return $workflow;
 }
 
@@ -1089,7 +1089,7 @@ sub _execute_bsub_command { # here to overload in testing
         }
 
         return "$job_id";
-    } 
+    }
     else {
         $self->error_message("Launched busb command, but unable to parse bsub output: $bsub_output");
         return;
@@ -1101,7 +1101,7 @@ sub initialize {
 
     $self->_verify_build_is_not_abandoned_and_set_status_to('Running')
         or return;
-   
+
     $self->generate_send_and_save_report('Genome::Model::Report::BuildInitialized')
         or return;
 
@@ -1128,7 +1128,7 @@ sub fail {
         },
     )
         or return;
-    
+
     # FIXME Don't know if this should go here, but then we would have to call success and abandon through the model
     my $last_complete_build = $self->model->resolve_last_complete_build;
     if ( $last_complete_build and $last_complete_build->id eq $self->id ) {
@@ -1152,7 +1152,7 @@ sub fail {
             auto_truncate_body_text => 1,
         );
     }
-    
+
     return 1;
 }
 
@@ -1176,7 +1176,7 @@ sub success {
         $self->_verify_build_is_not_abandoned_and_set_status_to('Running');
         return;
     }
-    
+
     # Launch new builds for any convergence models containing this model.
     # To prevent infinite loops, don't do this for convergence builds.
     # FIXME convert this to use the commit callback and model links with a custom notify that doesn't require succeeded builds
@@ -1218,7 +1218,7 @@ sub success {
     );
 
     # reallocate - always returns true (legacy behavior)
-    $self->reallocate; 
+    $self->reallocate;
 
     # TODO Reconsider this method name
     $self->perform_post_success_actions;
@@ -1312,12 +1312,12 @@ sub abandon {
 
 sub _unregister_software_results {
     my $self = shift;
-    my @registrations = Genome::SoftwareResult::User->get(user_class_name => $self->subclass_name, user_id => $self->id); 
+    my @registrations = Genome::SoftwareResult::User->get(user_class_name => $self->subclass_name, user_id => $self->id);
     for my $registration (@registrations){
         unless($registration->delete){
-            $self->error_message("Failed to delete registration: " . Data::Dumper::Dumper($registration)); 
+            $self->error_message("Failed to delete registration: " . Data::Dumper::Dumper($registration));
             return;
-        }    
+        }
     }
 
     return 1;
@@ -1362,7 +1362,7 @@ sub get_report {
     Genome::Report->name_to_subdirectory($report_name);
     return unless -d $report_dir;
 
-    return Genome::Report->create_report_from_directory($report_dir); 
+    return Genome::Report->create_report_from_directory($report_dir);
 }
 
 sub available_reports {
@@ -1374,7 +1374,7 @@ sub available_reports {
 
 sub generate_send_and_save_report {
     my ($self, $generator_class, $additional_params) = @_;
-    
+
     $additional_params ||= {};
     my $generator = $generator_class->create(
         build_id => $self->id,
@@ -1403,7 +1403,7 @@ sub generate_send_and_save_report {
 
     my $to = $self->_get_to_addressees_for_report_generator_class($generator_class);
     return 1 if not $to; # OK - do not send email
-    
+
     my $email_confirmation = Genome::Report::Email->send_report(
         report => $report,
         to => $to,
@@ -1519,7 +1519,7 @@ sub get_all_objects {
         return unless @_;
         #if ( $_[0]->id =~ /^\-/) {
             return sort {$b->id cmp $a->id} @_;
-            #} 
+            #}
             #else {
             #return sort {$a->id cmp $b->id} @_;
             #}
@@ -1543,7 +1543,7 @@ sub add_to_build{
     my $build = delete $params{to_build};
     my $role = delete $params{role};
     $role||='member';
-   
+
     $self->error_message("no to_build provided!") and die unless $build;
     my $from_id = $self->id;
     my $to_id = $build->id;
@@ -1579,7 +1579,7 @@ sub add_from_build { # rename "add an underlying build" or something...
     my $build = delete $params{from_build};
     my $role = delete $params{role};
     $role||='member';
-   
+
     $self->error_message("no from_build provided!") and die unless $build;
     my $to_id = $self->id;
     my $from_id = $build->id;
@@ -1620,7 +1620,7 @@ sub delete {
         );
         confess $self->error_message;
     }
-    
+
     # Delete all associated objects
     $self->status_message("Deleting other objects associated with build");
     my @objects = $self->get_all_objects; # TODO this method name should be changed
@@ -1640,7 +1640,7 @@ sub delete {
             $self->warning_message('Failed to deallocate disk space.');
         }
     }
-    
+
     # FIXME Don't know if this should go here, but then we would have to call success and abandon through the model
     #  This works b/c the events are deleted prior to this call, so the model doesn't think this is a completed
     #  build
@@ -1668,7 +1668,7 @@ sub set_metric {
     } else {
         $new_metric = Genome::Model::Metric->create(build_id=>$self->id, name=>$metric_name, value=>$metric_value);
     }
-    
+
     return $new_metric->value;
 }
 
@@ -1683,7 +1683,7 @@ sub get_metric {
 }
 
 # Returns a list of files contained in the build's data directory
-sub files_in_data_directory { 
+sub files_in_data_directory {
     my $self = shift;
     my @files;
     find({
@@ -1691,7 +1691,7 @@ sub files_in_data_directory {
             my $file = $File::Find::name;
             push @files, $file;
         },
-        follow => 1, 
+        follow => 1,
         follow_skip => 2, },
         $self->data_directory,
     );
@@ -1782,7 +1782,7 @@ sub diff_vcf {
 # a list of all the files in both builds and attempts to find pairs of corresponding
 # files. The files/dirs listed in the files_ignored_by_diff and dirs_ignored_by_diff
 # are ignored entirely, while files listed by regex_files_for_diff are retrieved
-# using regex instead of a simple string eq comparison. 
+# using regex instead of a simple string eq comparison.
 sub compare_output {
     my ($self, $other_build_id) = @_;
     my $build_id = $self->build_id;
@@ -1797,7 +1797,7 @@ sub compare_output {
         confess "Builds $build_id and $other_build_id are not the same type!";
     }
 
-    # Create hashes for each build, keys are paths relative to build directory and 
+    # Create hashes for each build, keys are paths relative to build directory and
     # values are full file paths
     my (%file_paths, %other_file_paths);
     require Cwd;
@@ -1810,21 +1810,21 @@ sub compare_output {
         $other_file_paths{$other_build->full_path_to_relative($other_file)} = Cwd::abs_path($other_file);
     }
 
-    # Now cycle through files in this build's data directory and compare with 
+    # Now cycle through files in this build's data directory and compare with
     # corresponding files in other build's dir
     my %diffs;
     FILE: for my $rel_path (sort keys %file_paths) {
         my $abs_path = delete $file_paths{$rel_path};
         warn "abs_path ($abs_path) does not exist\n" unless (-e $abs_path);
         my $dir = $self->full_path_to_relative(dirname($abs_path));
-       
+
         next FILE if -d $abs_path;
         next FILE if $rel_path =~ /server_location.txt/;
         next FILE if grep { $dir =~ /$_/ } $self->dirs_ignored_by_diff;
         next FILE if grep { $rel_path =~ /$_/ } $self->files_ignored_by_diff;
 
-        # Gotta check if this file matches any of the supplied regex patterns. 
-        # If so, find the one (and only one) file from the other build that 
+        # Gotta check if this file matches any of the supplied regex patterns.
+        # If so, find the one (and only one) file from the other build that
         # matches the same pattern
         my ($other_rel_path, $other_abs_path);
         REGEX: for my $regex ($self->regex_files_for_diff) {
@@ -1855,7 +1855,7 @@ sub compare_output {
                 next FILE;
             }
         }
-      
+
         # Check if the files end with a suffix that requires special handling. If not,
         # just do an md5sum on the files and compare
         my $diff_result = 0;
@@ -1878,7 +1878,9 @@ sub compare_output {
         }
 
         unless ($diff_result) {
-            $diffs{$rel_path} = "files $abs_path and $other_abs_path are not the same!";
+            my $build_dir = $self->data_directory;
+            my $other_build_dir = $other_build->data_directory;
+            $diffs{$rel_path} = "files are not the same (diff -u {$build_dir,$other_build_dir}/$rel_path)";
         }
     }
 
@@ -1890,7 +1892,7 @@ sub compare_output {
         next if -d $abs_path;
         next if grep { $dir =~ /$_/ } $self->dirs_ignored_by_diff;
         next if grep { $rel_path =~ /$_/ } $self->files_ignored_by_diff;
-        $diffs{$rel_path} = "no file $rel_path from build $build_id";
+        $diffs{$rel_path} = "no file in build $build_id";
     }
 
     # Now compare metrics of both builds
@@ -2014,7 +2016,7 @@ sub input_differences_from_model {
                 }
             }
         }
-    } 
+    }
 
     return (\@model_inputs_not_found, \@build_inputs_not_found);
 }

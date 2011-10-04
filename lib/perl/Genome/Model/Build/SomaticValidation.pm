@@ -19,8 +19,15 @@ class Genome::Model::Build::SomaticValidation {
         reference_sequence_build => {
             is => 'Genome::Model::Build::ReferenceSequence', via => 'inputs', to => 'value', where => [name => 'reference_sequence_build'],
         },
-        variant_list => {
-            is => 'Genome::FeatureList', via => 'inputs', to => 'value', where => [name => 'variant_list'],
+        # TODO these should be DV2 results not FeatureLists
+        snv_variant_list => {
+            is => 'Genome::FeatureList', via => 'inputs', to => 'value', where => [name => 'snv_variant_list'],
+        },
+        indel_variant_list => {
+            is => 'Genome::FeatureList', via => 'inputs', to => 'value', where => [name => 'indel_variant_list'],
+        },
+        sv_variant_list => {
+            is => 'Genome::FeatureList', via => 'inputs', to => 'value', where => [name => 'sv_variant_list'],
         },
         snv_detection_strategy => {
             is => 'Text',

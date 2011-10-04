@@ -100,7 +100,7 @@ sub initialize_filehandles {
 
     eval {
         my $input_fh = Genome::Sys->open_file_for_reading($input);
-        my $output_fh = Genome::Sys->open_file_for_writing($output);
+        my $output_fh = Genome::Sys->open_gzip_file_for_writing($output);
 
         $self->_input_fh($input_fh);
         $self->_output_fh($output_fh);

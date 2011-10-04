@@ -8,7 +8,6 @@ class Genome::InstrumentData::AlignmentResult::Command::List {
     has => [
         subject_class_name => { is_constant => 1, value => 'Genome::InstrumentData::AlignmentResult' },
         filter => { 
-            shell_args_position => 1, 
             default_value => '' 
         },
         show => {

@@ -54,6 +54,12 @@ sub execute{
     unless ($rv){
         die $self->error_message("Failed to execute detect variants dispatcher(err:$@) with params:\n".Data::Dumper::Dumper \%params);
     }
+    else {
+        my @results = $command->results;
+        for my $result (@results) {
+            $result->add_user(user => $build, label => 'uses');
+        }
+    }
 
     $self->status_message("detect variants command completed successfully");
 

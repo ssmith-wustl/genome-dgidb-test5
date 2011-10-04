@@ -114,9 +114,9 @@ class Genome::Model {
         group_ids => { via => 'model_groups', to => 'id' },
         group_names => { via => 'model_groups', to => 'name' },
         # TODO: the new project will internally have generalized assignments of models and other things
-        projects => { is => 'Genome::Site::WUGC::Project', via => 'project_assignments', to => 'project' },
-        project_assignments => { is => 'Genome::Model::ProjectAssignment', reverse_as => 'model' },
-        project_names => { is => 'Text', via => 'projects', to => 'name' },
+        projects => { is => 'Genome::Project', via => 'project_parts', to => 'project', is_many => 1, is_mutable => 1, },
+        project_parts => { is => 'Genome::ProjectPart', reverse_as => 'entity', is_many => 1, is_mutable => 1, },
+        project_names => { is => 'Text', via => 'projects', to => 'name', },
         # TODO: the new projects will suck in all of the model groups as a special case of a named project containing only models
         model_groups => { 
             is => 'Genome::ModelGroup', 
@@ -848,7 +848,7 @@ sub get_all_objects {
         }
     };
 
-    return map { $sorter->( $self->$_ ) } (qw{ inputs builds project_assignments to_model_links from_model_links });
+    return map { $sorter->( $self->$_ ) } (qw{ inputs builds to_model_links from_model_links });
 }
 
 sub yaml_string {
