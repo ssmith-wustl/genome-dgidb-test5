@@ -77,8 +77,8 @@ sub execute {
         $self->region_of_interest_set($self->target_region_set);
     }
 
-    my $variant_list = $self->_check_inputs_and_get_variant_list;
-    return unless $variant_list;
+    my $snv_variant_list = $self->_check_inputs_and_get_snv_variant_list;
+    return unless $snv_variant_list;
 
     my $tumor_model_id = $self->_get_or_create_reference_alignment_model($somatic_build->tumor_build->model->subject);
     my $tumor_model = Genome::Model->get($tumor_model_id);
@@ -94,7 +94,7 @@ sub execute {
     my $processing_profile = $self->somatic_validation_processing_profile;
 
     my $define_cmd = Genome::Model::Command::Define::SomaticValidation->create(
-        variant_list => $variant_list,
+        snv_variant_list => $snv_variant_list,
         tumor_model => $tumor_model,
         normal_model => $normal_model,
         processing_profile => $processing_profile,
@@ -167,46 +167,46 @@ sub _get_or_create_reference_alignment_model {
     return $define_cmd->result_model_id;
 }
 
-sub _check_inputs_and_get_variant_list {
+sub _check_inputs_and_get_snv_variant_list {
     my $self = shift;
 
     #Reference sequences of ROI and variant list need to match
     my $region_of_interest_set = $self->region_of_interest_set;
     my $somatic_build = $self->somatic_build;
 
-    my @variant_list = Genome::FeatureList->get(subject => $somatic_build);
-    unless(scalar @variant_list) {
+    my @snv_variant_list = Genome::FeatureList->get(subject => $somatic_build);
+    unless(scalar @snv_variant_list) {
         $self->error_message('No variant list has been entered into the system for this somatic build.  If one has been created, use `genome feature-list update` to set its subject to the somatic build.');
         return;
     }
 
-    if(scalar @variant_list > 1) {
-        while (scalar @variant_list > 1) {
+    if(scalar @snv_variant_list > 1) {
+        while (scalar @snv_variant_list > 1) {
             $self->status_message('Found multiple variant lists for the specified somatic build.');
-            @variant_list = $self->_get_user_verification_for_param_value('variant-list', @variant_list);
+            @snv_variant_list = $self->_get_user_verification_for_param_value('variant-list', @snv_variant_list);
         }
     }
-    my $variant_list = $variant_list[0];
+    my $snv_variant_list = $snv_variant_list[0];
 
     unless($region_of_interest_set->reference) {
         $self->error_message('No reference sequence associated with the specified region of interest set: ' . $region_of_interest_set->name);
         return;
     }
 
-    unless($variant_list->reference) {
-        $self->error_message('No reference sequence associated with the specified variant list: ' . $variant_list->name);
+    unless($snv_variant_list->reference) {
+        $self->error_message('No reference sequence associated with the specified variant list: ' . $snv_variant_list->name);
         return;
     }
 
-    unless($region_of_interest_set->reference->is_compatible_with($variant_list->reference)) {
+    unless($region_of_interest_set->reference->is_compatible_with($snv_variant_list->reference)) {
         $self->error_message(
             'Reference sequence for region of interest set, ' . $region_of_interest_set->reference->__display_name__ .
-            ', does not match that of the variant list, ' . $variant_list->reference->__display_name__ . '.',
+            ', does not match that of the variant list, ' . $snv_variant_list->reference->__display_name__ . '.',
         );
         return;
     }
 
-    return $variant_list;
+    return $snv_variant_list;
 }
 
 1;
