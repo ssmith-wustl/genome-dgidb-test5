@@ -45,6 +45,13 @@ class Genome::Model::Tools::Validation::PrepareWgsForClonalityPlot{
             is_optional => 1,
 	    doc => 'path to a formatted readcounts file. If provided, a bam file is not necessary, as these readcounts will be used',
         },
+
+        min_mapping_quality => {
+            is => 'Number',
+            is_optional => 1,
+            default => 1,
+            doc => 'mapping quality lower cutoff for bam-readcounts',
+        },
         
         ]
 };
@@ -67,6 +74,7 @@ sub execute {
     my $genome_build = $self->genome_build;
     my $output_readcounts_file = $self->output_readcounts_file;
     my $readcounts_file = $self->readcounts_file;
+    my $min_mapping_quality = $self->min_mapping_quality;
     
     
     #one or the other must be given
@@ -120,7 +128,7 @@ sub execute {
         `cp $readcounts_file $tempdir/readcounts`;
     } else {
         #now run the readcounting
-        my $cmd = "perl -I ~/gscCode/genome/lib/perl `which gmt` coverage bam-readcount --bam-file $bam_file --output-file $tempdir/readcounts --min-quality-score 20 --snv-file $tempdir/snvs";
+        my $cmd = "perl -I ~/gscCode/genome/lib/perl `which gmt` analysis coverage bam-readcount --bam-file $bam_file --output-file $tempdir/readcounts --min-quality-score $min_mapping_quality --snv-file $tempdir/snvs";
         my $return = Genome::Sys->shellcmd(
             cmd => "$cmd",
             );
