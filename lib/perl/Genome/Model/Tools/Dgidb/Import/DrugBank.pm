@@ -9,6 +9,9 @@ use XML::Simple;
 
 binmode(STDOUT, ":utf8");
 
+my $high = 500000;
+UR::Context->object_cache_size_highwater($high);
+
 class Genome::Model::Tools::Dgidb::Import::DrugBank {
     is => 'Command::V2',
     has => [
@@ -101,90 +104,55 @@ sub import_tsv {
     my $targets_outfile = "DrugBank_WashU_TARGETS.tsv";
     my $interactions_outfile = "DrugBank_WashU_INTERACTIONS.tsv";
     $self->preload_objects;
-    my @drug_names = $self->import_drugs($drugs_outfile);
-    my @gene_names = $self->import_genes($targets_outfile);
     my @interactions = $self->import_interactions($interactions_outfile);
     return 1;
 }
 
-sub import_drugs {
+sub _import_drug {
     my $self = shift;
     my $version = $self->version;
-    my $drugs_outfile = shift;
-    my @drug_names;
-    my @headers = qw/drug_id drug_name drug_synonyms drug_brands drug_type drug_groups drug_categories target_count/;
-    my $parser = Genome::Utility::IO::SeparatedValueReader->create(
-        input => $drugs_outfile,
-        headers => \@headers,
-        separator => "\t",
-        is_regex=> 1,
-    );
+    my $interaction = shift;
+    my $drug_name = $self->_create_drug_name($interaction->{drug_name}, 'todo', 'DrugBank', $version, ''); #TODO: fill in nomenclature
 
-    $parser->next; #eat the headers
-    while(my $drug = $parser->next){
-        my $drug_name = $self->_create_drug_name($drug->{drug_name}, 'todo', 'DrugBank', $version, ''); #TODO: fill in nomenclature
-
-        my @drug_synonyms = split(', ', $drug->{drug_synonyms});
-        for my $drug_synonym (@drug_synonyms){
-            $DB::single = 1;
-            my $drug_name_association = $self->_create_drug_name_association($drug_name, $drug_synonym, 'todo', ''); #TODO: fill in nomenclature
-        }
-
-        my @drug_brands = split(', ', $drug->{drug_brands});
-        for my $drug_brand (@drug_brands){
-            my ($brand, $manufacturer) = split(/ \(/, $drug_brand); 
-            if ($manufacturer){
-                $manufacturer =~ s/\)// ;
-            } else {
-                $manufacturer = 'drug_brand';
-            }
-            my $drug_name_association = $self->_create_drug_name_association($drug_name, $drug_brand, $manufacturer, '');
-        }
-
-        my $drug_name_category_association = $self->_create_drug_name_category_association($drug_name, $drug->{drug_type}, '');
-
-        my @drug_categories = split(', ', $drug->{drug_categories});
-        for my $drug_category (@drug_categories){
-            my $category_association = $self->_create_drug_name_category_association($drug_name, $drug_category, '');
-        }
-
-        my @drug_groups = split(', ', $drug->{drug_groups});
-        for my $drug_group (@drug_groups){
-            my $group_association = $self->_create_drug_name_category_association($drug_name, $drug_group, '');
-        }
-
-        push @drug_names, $drug_name;
+    my @drug_synonyms = split(', ', $interaction->{drug_synonyms});
+    for my $drug_synonym (@drug_synonyms){
+        $DB::single = 1;
+        my $drug_name_association = $self->_create_drug_name_association($drug_name, $drug_synonym, 'todo', ''); #TODO: fill in nomenclature
     }
 
-    return @drug_names;
+    my @drug_brands = split(', ', $interaction->{drug_brands});
+    for my $drug_brand (@drug_brands){
+        my ($brand, $manufacturer) = split(/ \(/, $drug_brand); 
+        if ($manufacturer){
+            $manufacturer =~ s/\)// ;
+        } else {
+            $manufacturer = 'drug_brand';
+        }
+        my $drug_name_association = $self->_create_drug_name_association($drug_name, $drug_brand, $manufacturer, '');
+    }
+
+    my $drug_name_category_association = $self->_create_drug_name_category_association($drug_name, $interaction->{drug_type}, '');
+
+    my @drug_categories = split(', ', $interaction->{drug_categories});
+    for my $drug_category (@drug_categories){
+        my $category_association = $self->_create_drug_name_category_association($drug_name, $drug_category, '');
+    }
+
+    my @drug_groups = split(', ', $interaction->{drug_groups});
+    for my $drug_group (@drug_groups){
+        my $group_association = $self->_create_drug_name_category_association($drug_name, $drug_group, '');
+    }
+
+    return $drug_name;
 }
 
-sub import_genes {
+sub _import_gene {
     my $self = shift;
     my $version = $self->version;
-    my $gene_outfiles = shift;
-    my @gene_names;
-    my @headers = qw/ partner_id gene_symbol uniprot_id /;
-    my $parser = Genome::Utility::IO::SeparatedValueReader->create(
-        input => $gene_outfiles,
-        headers => \@headers,
-        separator => "\t",
-        is_regex=> 1,
-    );
-
-    $parser->next; #eat the headers
-    while(my $gene = $parser->next){
-        #FIXME: There are 290+ gene names that appear in more than 1 row of the
-            #tsv file.  This will squish them together into a single record.  
-            #I don't necessarily believe that this is the right thing to do
-        my $gene_name  =$self->_create_gene_name($gene->{gene_symbol}, 'todo', 'DrugBank', $version, ''); #TODO: fill in nomenclature
-
-        my $uniprot_gene_name_association=$self->_create_gene_name_association($gene_name, $gene->{uniprot_id}, 'uniprot_id', '');
-
-        push @gene_names, $gene_name;
-    }
-
-    return @gene_names;
+    my $interaction = shift;
+    my $gene_name = $self->_create_gene_name($interaction->{gene_symbol}, 'todo', 'DrugBank', $version, ''); #TODO: fill in nomenclature
+    my $uniprot_gene_name_association=$self->_create_gene_name_association($gene_name, $interaction->{uniprot_id}, 'uniprot_id', '');
+    return $gene_name;
 }
 
 sub import_interactions {
@@ -202,8 +170,8 @@ sub import_interactions {
 
     $parser->next; #eat the headers
     while(my $interaction = $parser->next){
-        my $drug_name = Genome::DrugName->get(name => $interaction->{drug_name}, nomenclature => 'todo', source_db_name => 'DrugBank', source_db_version => $version); #TODO: fill in nomenclature
-        my $gene_name = Genome::GeneName->get(name => $interaction->{gene_symbol}, nomenclature => 'todo', source_db_name => 'DrugBank', source_db_version => $version); #TODO: fill in nomenclature
+        my $drug_name = $self->_import_drug($interaction);
+        my $gene_name = $self->_import_gene($interaction);
         my $drug_gene_interaction = $self->_create_interaction($drug_name, $gene_name, $interaction->{target_actions}, '');
         push @interactions, $drug_gene_interaction;
         my $is_known_action = $self->_create_interaction_attribute($drug_gene_interaction, 'is_known_action', $interaction->{'known_action'});
