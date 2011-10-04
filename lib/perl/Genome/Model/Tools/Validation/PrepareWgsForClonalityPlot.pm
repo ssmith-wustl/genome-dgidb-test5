@@ -70,8 +70,8 @@ sub execute {
     
     
     #one or the other must be given
-    if((defined($readcounts_file) && defined($bam_file)) || 
-       (!(defined($readcounts_file) && !(defined($bam_file))))){
+    if(( defined($readcounts_file) && defined($bam_file) ) || 
+       ( !(defined($readcounts_file)) && !(defined($bam_file)) )){
         die "must provide either bam or readcounts file (but not both)";
     }
 
