@@ -71,6 +71,31 @@ ok(!$project2->rename('TEST AML'), 'failed to rename to same name');
 ok($project2->rename('TEST AML1'), 'rename');
 is($project2->name, 'TEST AML1', 'name after rename');
 
+# add parts
+my $model = Genome::Model->get(name => 'apipe-test-mc16s-454');
+ok($project->add_part(entity => $model), 'add part => model');
+my @project_models = map { $_->entity } $project->parts('entity_class_name like' => 'Genome::Model%');
+is(@project_models, 1, 'project models');
+my @model_group_models = $model_group->models;
+is_deeply(\@model_group_models, \@project_models, 'model group and project models match');
+
+=pod
+# add again
+ok($project->add_part(entity => $model), 'add part again => model');
+@project_models = map { $_->entity } $project->parts('entity_class_name like' => 'Genome::Model%');
+is(@project_models, 1, 'project models');
+@model_group_models = $model_group->models;
+is_deeply(\@model_group_models, \@project_models, 'model group and project models match');
+UR::Context->commit;
+=cut
+
+# remove
+ok($project->remove_part(entity => $model), 'remove part => model');
+@project_models = map { $_->entity } $project->parts('entity_class_name like' => 'Genome::Model%');
+ok(!@project_models, 'project has no models');
+@model_group_models = $model_group->models;
+ok(!@model_group_models, 'model group and project do not have models');
+
 # delete
 ok($project->delete, 'delete');
 isa_ok($project, 'UR::DeletedRef', 'delete project');

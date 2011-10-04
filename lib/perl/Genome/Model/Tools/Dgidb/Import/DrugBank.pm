@@ -9,6 +9,9 @@ use XML::Simple;
 
 binmode(STDOUT, ":utf8");
 
+my $high = 500000;
+UR::Context->object_cache_size_highwater($high);
+
 class Genome::Model::Tools::Dgidb::Import::DrugBank {
     is => 'Command::V2',
     has => [
@@ -23,11 +26,6 @@ class Genome::Model::Tools::Dgidb::Import::DrugBank {
             is_optional => 1,
             default => 0,
             doc => 'Print more output while running',
-        },
-        entrez_dir => {
-            is => 'Path',
-            is_input => 1,
-            doc => 'PATH.  Directory containing gene info for gene name mapping ("gene2accession" and "gene_info")',
         },
         version => {
             is => 'Text',
@@ -106,110 +104,55 @@ sub import_tsv {
     my $targets_outfile = "DrugBank_WashU_TARGETS.tsv";
     my $interactions_outfile = "DrugBank_WashU_INTERACTIONS.tsv";
     $self->preload_objects;
-    my @drug_names = $self->import_drugs($drugs_outfile);
-    my @gene_names = $self->import_genes($targets_outfile);
     my @interactions = $self->import_interactions($interactions_outfile);
     return 1;
 }
 
-sub import_drugs {
+sub _import_drug {
     my $self = shift;
     my $version = $self->version;
-    my $drugs_outfile = shift;
-    my @drug_names;
-    my @headers = qw/drug_id drug_name drug_synonyms drug_brands drug_type drug_groups drug_categories target_count/;
-    my $parser = Genome::Utility::IO::SeparatedValueReader->create(
-        input => $drugs_outfile,
-        headers => \@headers,
-        separator => "\t",
-        is_regex=> 1,
-    );
+    my $interaction = shift;
+    my $drug_name = $self->_create_drug_name($interaction->{drug_name}, 'todo', 'DrugBank', $version, ''); #TODO: fill in nomenclature
 
-    $parser->next; #eat the headers
-    while(my $drug = $parser->next){
-        my $drug_name = Genome::DrugName->create(
-            name => $drug->{drug_name},
-            nomenclature => 'todo', #TODO: fill in nomenclature
-            source_db_name => 'DrugBank',
-            source_db_version => $version,
-            description => '',
-        );
-
-        my @drug_synonyms = split(', ', $drug->{drug_synonyms});
-        for my $drug_synonym (@drug_synonyms){
-            my $drug_name_association = $self->_get_or_create_drug_name_association($drug_name, $drug_synonym, 'todo', ''); #TODO: fill in nomenclature
-        }
-
-        my @drug_brands = split(', ', $drug->{drug_brands});
-        for my $drug_brand (@drug_brands){
-            my ($brand, $manufacturer) = split(/ \(/, $drug_brand); 
-            if ($manufacturer){
-                $manufacturer =~ s/\)// ;
-            } else {
-                $manufacturer = 'drug_brand';
-            }
-            my $drug_name_association = $self->_get_or_create_drug_name_association($drug_name, $drug_brand, $manufacturer, '');
-        }
-
-        my $drug_name_category_association = $self->_get_or_create_drug_name_category_association($drug_name, $drug->{drug_type}, '');
-
-        my @drug_categories = split(', ', $drug->{drug_categories});
-        for my $drug_category (@drug_categories){
-            my $category_association = $self->_get_or_create_drug_name_category_association($drug_name, $drug_category, '');
-        }
-
-        my @drug_groups = split(', ', $drug->{drug_groups});
-        for my $drug_group (@drug_groups){
-            my $group_association = $self->_get_or_create_drug_name_category_association($drug_name, $drug_group, '');
-        }
-
-        push @drug_names, $drug_name;
+    my @drug_synonyms = split(', ', $interaction->{drug_synonyms});
+    for my $drug_synonym (@drug_synonyms){
+        $DB::single = 1;
+        my $drug_name_association = $self->_create_drug_name_association($drug_name, $drug_synonym, 'todo', ''); #TODO: fill in nomenclature
     }
 
-    return @drug_names;
+    my @drug_brands = split(', ', $interaction->{drug_brands});
+    for my $drug_brand (@drug_brands){
+        my ($brand, $manufacturer) = split(/ \(/, $drug_brand); 
+        if ($manufacturer){
+            $manufacturer =~ s/\)// ;
+        } else {
+            $manufacturer = 'drug_brand';
+        }
+        my $drug_name_association = $self->_create_drug_name_association($drug_name, $drug_brand, $manufacturer, '');
+    }
+
+    my $drug_name_category_association = $self->_create_drug_name_category_association($drug_name, $interaction->{drug_type}, '');
+
+    my @drug_categories = split(', ', $interaction->{drug_categories});
+    for my $drug_category (@drug_categories){
+        my $category_association = $self->_create_drug_name_category_association($drug_name, $drug_category, '');
+    }
+
+    my @drug_groups = split(', ', $interaction->{drug_groups});
+    for my $drug_group (@drug_groups){
+        my $group_association = $self->_create_drug_name_category_association($drug_name, $drug_group, '');
+    }
+
+    return $drug_name;
 }
 
-sub import_genes {
+sub _import_gene {
     my $self = shift;
     my $version = $self->version;
-    my $gene_outfiles = shift;
-    my @gene_names;
-    my @headers = qw/ partner_id gene_symbol gene_name uniprot_id entrez_gene_symbols entrez_gene_synonyms /;
-    my $parser = Genome::Utility::IO::SeparatedValueReader->create(
-        input => $gene_outfiles,
-        headers => \@headers,
-        separator => "\t",
-        is_regex=> 1,
-    );
-
-    $parser->next; #eat the headers
-    while(my $gene = $parser->next){
-        #FIXME: There are 290+ gene names that appear in more than 1 row of the
-            #tsv file.  This will squish them together into a single record.  
-            #I don't necessarily believe that this is the right thing to do
-        my $gene_name = $self->_get_or_create_gene_name($gene->{gene_name}, 'hugo', 'DrugBank', $version, '');
-
-        unless ($gene->{entrez_gene_synonyms} eq 'na'){
-            my @entrez_gene_synonyms = split(',', $gene->{entrez_gene_synonyms});
-            for my $entrez_gene_synonym (@entrez_gene_synonyms){
-                my $gene_name_association = $self->_get_or_create_gene_name_association($gene_name, $entrez_gene_synonym, 'entrez', '');
-            }
-        }
-
-        unless ($gene->{entrez_gene_symbols} eq 'na'){
-            my @entrez_gene_symbols = split(',', $gene->{entrez_gene_symbols});
-            for my $entrez_gene_symbol (@entrez_gene_symbols){
-                my $gene_name_association=$self->_get_or_create_gene_name_association($gene_name, $entrez_gene_symbol, 'entrez_gene_symbol', '');
-            }
-        }
-
-        my $uniprot_gene_name_association=$self->_get_or_create_gene_name_association($gene_name, $gene->{uniprot_id}, 'uniprot_id', '');
-        my $symbol_gene_name_association = $self->_get_or_create_gene_name_association($gene_name, $gene->{gene_symbol}, 'todo', ''); #TODO: fill in nomenclature
-
-        push @gene_names, $gene_name;
-    }
-
-    return @gene_names;
+    my $interaction = shift;
+    my $gene_name = $self->_create_gene_name($interaction->{gene_symbol}, 'todo', 'DrugBank', $version, ''); #TODO: fill in nomenclature
+    my $uniprot_gene_name_association=$self->_create_gene_name_association($gene_name, $interaction->{uniprot_id}, 'uniprot_id', '');
+    return $gene_name;
 }
 
 sub import_interactions {
@@ -217,7 +160,7 @@ sub import_interactions {
     my $version = $self->version;
     my $interaction_outfile = shift;
     my @interactions;
-    my @headers = qw/ interaction_count drug_id drug_name drug_synonyms drug_brands drug_type drug_groups drug_categories partner_id known_action target_actions gene_symbol gene_name uniprot_id entrez_gene_symbols entrez_gene_synonyms /;
+    my @headers = qw/ interaction_count drug_id drug_name drug_synonyms drug_brands drug_type drug_groups drug_categories partner_id known_action target_actions gene_symbol uniprot_id /;
     my $parser = Genome::Utility::IO::SeparatedValueReader->create(
         input => $interaction_outfile,
         headers => \@headers,
@@ -227,11 +170,11 @@ sub import_interactions {
 
     $parser->next; #eat the headers
     while(my $interaction = $parser->next){
-        my $drug_name = Genome::DrugName->get(name => $interaction->{drug_name}, nomenclature => 'todo', source_db_name => 'DrugBank', source_db_version => $version); #TODO: fill in nomenclature
-        my $gene_name = Genome::GeneName->get(name => $interaction->{gene_name}, nomenclature => 'todo', source_db_name => 'DrugBank', source_db_version => $version); #TODO: fill in nomenclature
-        my $drug_gene_interaction = $self->_get_or_create_interaction($drug_name, $gene_name, 'todo', $interaction->{target_actions}, ''); #TODO: fill in nomenclature
+        my $drug_name = $self->_import_drug($interaction);
+        my $gene_name = $self->_import_gene($interaction);
+        my $drug_gene_interaction = $self->_create_interaction($drug_name, $gene_name, $interaction->{target_actions}, '');
         push @interactions, $drug_gene_interaction;
-        my $is_known_action = $self->_get_or_create_interaction_attribute($drug_gene_interaction, 'is_known_action', $interaction->{'known_action'});
+        my $is_known_action = $self->_create_interaction_attribute($drug_gene_interaction, 'is_known_action', $interaction->{'known_action'});
     }
 
     return @interactions;
@@ -243,14 +186,21 @@ sub preload_objects {
     my $source_db_version = $self->version;
 
     #Let's preload anything for this database name and version so that we can not touch the database again
-    Genome::GeneName->get(source_db_name => $source_db_name, source_db_version => $source_db_version);
-    Genome::GeneNameAssociation->get(source_db_name => $source_db_name, source_db_version => $source_db_version);
-    Genome::GeneNameCategoryAssociation->get(source_db_name => $source_db_name, source_db_version => $source_db_version);
-    Genome::DrugName->get(source_db_name => $source_db_name, source_db_version => $source_db_version);
-    Genome::DrugNameAssociation->get(source_db_name => $source_db_name, source_db_version => $source_db_version);
-    Genome::DrugNameCategoryAssociation->get(source_db_name => $source_db_name, source_db_version => $source_db_version);
-    Genome::DrugGeneInteraction->get(source_db_name => $source_db_name, source_db_version => $source_db_version);
-    Genome::DrugGeneInteractionAttribute->get(source_db_name => $source_db_name, source_db_version => $source_db_version);
+    my @gene_names = Genome::GeneName->get(source_db_name => $source_db_name, source_db_version => $source_db_version);
+    for my $gene_name (@gene_names){
+        $gene_name->gene_name_associations;
+        $gene_name->gene_name_category_associations;
+    }
+    my @drug_names = Genome::DrugName->get(source_db_name => $source_db_name, source_db_version => $source_db_version);
+    for my $drug_name (@drug_names){
+        $drug_name->drug_name_associations;
+        $drug_name->drug_name_category_associations;
+    }
+#TODO: preload the interactions correctly
+    # my @interactions = Genome::DrugGeneInteraction->get(source_db_name => $source_db_name, source_db_version => $source_db_version);
+    # for my $interaction (@interactions){
+        # $interaction->drug_gene_interaction_attributes;
+    # }
 
     return 1;
 }
@@ -264,23 +214,12 @@ sub help_usage_complete_text {
 sub input_to_tsv {
     my $self = shift;
     my $infile = $self->infile;
-    my $entrez_dir = $self->entrez_dir;
     my $verbose = $self->verbose;
 
-    #Parse Entrez flatfiles
-    #ftp://ftp.ncbi.nih.gov/gene/DATA/gene2accession.gz
-    #ftp://ftp.ncbi.nih.gov/gene/DATA/gene_info.gz
-    my $entrez_data = $self->loadEntrezData('-entrez_dir'=>$entrez_dir);
-    $self->{entrez_data}=$entrez_data;
+    #We're going to import everything as is deal with Entrez gene names upon retrevial
 
     #Instantiate an XML simple object
     my $xs1 = XML::Simple->new();
-
-    #Create data object for the entire XML file, forcing array creation even if there is only one element
-    #my $xml = $xs1->XMLin($infile, ForceArray => 1);
-
-    #Create data object for the entire XML file, allowing mixed array/hash structure for the same field depending of whether is only one element or more than one.
-    #my $xml = $xs1->XMLin($infile);
 
     #Create data object for the entire XML file, allowing mixed array/hash structure for the same field depending of whether is only one element or more than one.
     #Also actually specify the primary IDs you would like the resultng data structures to be keyed on ('drugbank-id' for drug records, 'id' for gene partners)
@@ -314,13 +253,13 @@ sub input_to_tsv {
     binmode(INTERACTIONS, ":utf8");
 
     #Print out a header line foreach output file
-    my $interactions_header = "interaction_count\tdrug_id\tdrug_name\tdrug_synonyms\tdrug_brands\tdrug_type\tdrug_groups\tdrug_categories\tpartner_id\tknown_action?\ttarget_actions\tgene_symbol\tgene_name\tuniprot_id\tentrez_gene_symbols\tentrez_gene_synonyms";
+    my $interactions_header = "interaction_count\tdrug_id\tdrug_name\tdrug_synonyms\tdrug_brands\tdrug_type\tdrug_groups\tdrug_categories\tpartner_id\tknown_action?\ttarget_actions\tgene_symbol\tuniprot_id";
     print INTERACTIONS "$interactions_header\n";
 
     my $drugs_header = "drug_id\tdrug_name\tdrug_synonyms\tdrug_brands\tdrug_type\tdrug_groups\tdrug_categories\ttarget_count";
     print DRUGS "$drugs_header\n";
 
-    my $targets_header = "partner_id\tgene_symbol\tgene_name\tuniprot_id\tentrez_gene_symbols\tentrez_gene_synonyms";
+    my $targets_header = "partner_id\tgene_symbol\tuniprot_id";
     print TARGETS "$targets_header\n";
 
     foreach my $drug_id (sort {$a cmp $b} keys %{$drugs}){
@@ -408,17 +347,14 @@ sub input_to_tsv {
                 exit();
             }
             my $gene_symbol = $partners_lite->{$target_pid}->{gene_symbol};
-            my $gene_name = $partners_lite->{$target_pid}->{gene_name};
             my $uniprotkb = $partners_lite->{$target_pid}->{uniprotkb};
-            my $entrez_gene_symbols = $partners_lite->{$target_pid}->{entrez_gene_symbols};
-            my $entrez_gene_synonyms = $partners_lite->{$target_pid}->{entrez_gene_synonyms};
 
             #Strip <tabs> from string variables
             $target_known_action =~ s/\t/ /g;
             $target_actions =~ s/\t/ /g;
 
             $ic++;
-            my $interactions_line = "$ic\t$drug_id\t$drug_name\t$drug_synonyms_string\t$drug_brands_string\t$drug_type\t$drug_groups_string\t$drug_categories_string\t$target_pid\t$target_known_action\t$target_actions\t$gene_symbol\t$gene_name\t$uniprotkb\t$entrez_gene_symbols\t$entrez_gene_synonyms";
+            my $interactions_line = "$ic\t$drug_id\t$drug_name\t$drug_synonyms_string\t$drug_brands_string\t$drug_type\t$drug_groups_string\t$drug_categories_string\t$target_pid\t$target_known_action\t$target_actions\t$gene_symbol\t$uniprotkb";
             print INTERACTIONS "$interactions_line\n";
 
         }
@@ -426,12 +362,9 @@ sub input_to_tsv {
 
     foreach my $pid (sort {$a <=> $b} keys %{$partners_lite}){
         my $gene_symbol = $partners_lite->{$pid}->{gene_symbol};
-        my $gene_name = $partners_lite->{$pid}->{gene_name};
         my $uniprot_id = $partners_lite->{$pid}->{uniprotkb};
-        my $entrez_gene_symbols = $partners_lite->{$pid}->{entrez_gene_symbols};
-        my $entrez_gene_synonyms = $partners_lite->{$pid}->{entrez_gene_synonyms};
 
-        my $targets_line = "$pid\t$gene_symbol\t$gene_name\t$uniprot_id\t$entrez_gene_symbols\t$entrez_gene_synonyms";
+        my $targets_line = "$pid\t$gene_symbol\t$uniprot_id";
         print TARGETS "$targets_line\n";
     }
 
@@ -493,14 +426,12 @@ sub loadEntrezData{
         }
 
         #Store entrez info keyed on entrez id
-        #print "\n$entrez_id\t$symbol\t@synonyms_array";
         $entrez_map{$entrez_id}{symbol} = $symbol;
         $entrez_map{$entrez_id}{synonyms_string} = $synonyms;
         $entrez_map{$entrez_id}{synonyms_array} = \@synonyms_array;
         $entrez_map{$entrez_id}{synonyms_hash} = \%synonyms_hash;
 
         #Store entrez info keyed on symbol
-        #print "\n$symbol\t$entrez_id";
         if ($symbols_map{$symbol}){
             my $ids = $symbols_map{$symbol}{entrez_ids};
             $ids->{$entrez_id} = 1;
@@ -557,115 +488,12 @@ sub loadEntrezData{
     }
     close (ACC);
 
-    #print Dumper %entrez_map;
-    #print Dumper %symbols_map;
-    #print Dumper %synonyms_map;
-    #print Dumper %p_acc_map;
-
     $edata{'entrez_ids'} = \%entrez_map;
     $edata{'symbols'} = \%symbols_map;
     $edata{'synonyms'} = \%synonyms_map;
     $edata{'protein_accessions'} = \%p_acc_map;
 
     return(\%edata);
-}
-
-
-#######################################################################################################################################################################
-#Attempt to map the gene_symbol / uniprotkb_id to Entrez Gene Symbol
-#######################################################################################################################################################################
-sub mapGeneToEntrez{
-    my $self = shift;
-    my %args = @_;
-    my $entrez_data = $args{'-entrez_data'};
-    my $gene_symbol = $args{'-gene_symbol'};
-    my $uniprot_id = $args{'-uniprot_id'};
-    my $entrez_gene_symbol = "na";
-    my $entrez_gene_synonyms = "na";
-
-    my $entrez_map = $entrez_data->{'entrez_ids'};
-    my $symbols_map = $entrez_data->{'symbols'};
-    my $prot_acc_map = $entrez_data->{'protein_accessions'};
-
-    if ($gene_symbol eq "na" && $uniprot_id eq "na"){
-    #If gene_symbol and uniprot_id are 'na' ... nothing can be done.  Return 'na' for both symbol and synonyms
-
-    }else{
-        #If gene_symbol is not 'na', see if it matches an entrez gene symbol perfectly, return it and associated synonyms
-        my $perfect_match = 0;
-        my $uniprot_match = 0;
-        unless ($gene_symbol eq "na"){
-            if ($symbols_map->{$gene_symbol}){
-                $perfect_match = 1;
-                $entrez_gene_symbol = $gene_symbol;
-                my $ids = $symbols_map->{$gene_symbol}->{entrez_ids};
-                my %symbol_list;
-                my %synonym_list;
-                foreach my $entrez_id (keys %{$ids}){
-                    my $symbol = $entrez_map->{$entrez_id}->{symbol};
-                    $symbol_list{$symbol}=1;
-                    my @synonyms_array = @{$entrez_map->{$entrez_id}->{synonyms_array}};
-                    foreach my $syn (@synonyms_array){
-                        $synonym_list{$syn}=1;
-                    }
-                }
-                my @symbols1;
-                my @synonyms1;
-                foreach my $symbol (keys %symbol_list){
-                    push(@symbols1, $symbol);
-                }
-                foreach my $synonym (keys %synonym_list){
-                    push(@synonyms1, $synonym);
-                }
-                $entrez_gene_symbol = join(",", @symbols1);
-                $entrez_gene_synonyms = join(",", @synonyms1);
-
-            }else{
-                #If gene_symbol does not match or is 'na', attempt to get a matching symbol using the uniprot ID
-                unless ($uniprot_id eq "na"){
-                    if ($prot_acc_map->{$uniprot_id}){
-                        $uniprot_match = 1;
-                        my $ids = $prot_acc_map->{$uniprot_id}->{entrez_ids};
-                        my %symbol_list;
-                        my %synonym_list;
-                        foreach my $entrez_id (keys %{$ids}){
-                            my $symbol = $entrez_map->{$entrez_id}->{symbol};
-                            $symbol_list{$symbol}=1;
-                            my @synonyms_array = @{$entrez_map->{$entrez_id}->{synonyms_array}};
-                            foreach my $syn (@synonyms_array){
-                                $synonym_list{$syn}=1;
-                            }
-                        }
-                        my @symbols1;
-                        my @synonyms1;
-                        foreach my $symbol (keys %symbol_list){
-                            push(@symbols1, $symbol);
-                        }
-                        foreach my $synonym (keys %synonym_list){
-                            push(@synonyms1, $synonym);
-                        }
-                        $entrez_gene_symbol = join(",", @symbols1);
-                        $entrez_gene_synonyms = join(",", @synonyms1);
-
-                    }
-
-                }
-            }
-        }
-
-        #If the uniprot mapping fails, and the gene_symbol is not 'na' attempt a match to a synonym...
-        #Too risky?? - could lead to false mappings?
-
-
-    }
-
-    my %result;
-    $result{'entrez_gene_symbols'} = $entrez_gene_symbol;
-    $result{'entrez_gene_synonyms'} = $entrez_gene_synonyms;
-
-    #print YELLOW, "\n$gene_symbol\t$uniprot_id\t$entrez_gene_symbol\t$entrez_gene_synonyms", RESET;
-
-    return(\%result);
 }
 
 #######################################################################################################################################################################
@@ -795,18 +623,6 @@ sub organizePartners{
         $p_lite{$pid}{gene_symbol} = $gene_symbol;
         $p_lite{$pid}{gene_name} = $gene_name;
         $p_lite{$pid}{uniprotkb} = $uniprotkb;
-
-        #Attempt to map the gene_symbol / uniprotkb_id to Entrez Gene Symbol
-        #Get the entrez symbol AND synonyms
-        my $entrez_gene_info = $self->mapGeneToEntrez('-entrez_data'=>$self->{entrez_data}, '-gene_symbol'=>$gene_symbol, '-uniprot_id'=>$uniprotkb);
-        my $entrez_gene_symbols = $entrez_gene_info->{'entrez_gene_symbols'};
-        my $entrez_gene_synonyms = $entrez_gene_info->{'entrez_gene_synonyms'};
-        $p_lite{$pid}{entrez_gene_symbols} = $entrez_gene_symbols;
-        $p_lite{$pid}{entrez_gene_synonyms} = $entrez_gene_synonyms;
-
-
-
-
     }
 
 #print Dumper %p_lite;
@@ -818,44 +634,43 @@ sub organizePartners{
     return(\%p_lite);
 }
 
-sub _get_or_create_drug_name_association {
+sub _create_drug_name {
     my $self = shift;
-    my ($drug_name, $drug_alternate_name, $drug_alternate_nomenclature, $description) = @_;
-    my %params = (
-        drug_primary_name => $drug_name->name,
-        drug_alternate_name => $drug_alternate_name,
-        primary_name_nomenclature => $drug_name->nomenclature,
-        alternate_name_nomenclature => $drug_alternate_nomenclature,
-        source_db_name => $drug_name->source_db_name,
-        source_db_version => $drug_name->source_db_version,
+    my ($name, $nomenclature, $source_db_name, $source_db_version, $description) = @_;
+    my %params = ( 
+        name => $name,
+        nomenclature => $nomenclature,
+        source_db_name => $source_db_name,
+        source_db_version => $source_db_version,
         description => $description,
     );
-    my $drug_name_association = Genome::DrugNameAssociation->get(%params);
-    unless($drug_name_association){
-        $drug_name_association = Genome::DrugNameAssociation->create(%params);    
-    }
-    return $drug_name_association
+    return Genome::DrugName->create(%params);
 }
 
-sub _get_or_create_drug_name_category_association {
+sub _create_drug_name_association {
+    my $self = shift;
+    my ($drug_name, $alternate_name, $nomenclature, $description) = @_;
+    my %params = (
+        drug_name_id => $drug_name->id,
+        alternate_name => $alternate_name,
+        nomenclature => $nomenclature,
+        description => $description,
+    );
+    return Genome::DrugNameAssociation->create(%params);    
+}
+
+sub _create_drug_name_category_association {
     my $self = shift;
     my ($drug_name, $category, $description) = @_;
     my %params = (
-        drug_name => $drug_name->name,
+        drug_name_id => $drug_name->id,
         category_name => $category,
-        nomenclature => $drug_name->nomenclature,
-        source_db_name => $drug_name->source_db_name,
-        source_db_version => $drug_name->source_db_version,
         description => $description,
     );
-    my $drug_name_category_association = Genome::DrugNameCategoryAssociation->get(%params);
-    unless ($drug_name_category_association){
-        $drug_name_category_association = Genome::DrugNameCategoryAssociation->create(%params);
-    }
-    return $drug_name_category_association;
+    return Genome::DrugNameCategoryAssociation->create(%params);
 }
 
-sub _get_or_create_gene_name {
+sub _create_gene_name {
     my $self = shift;
     my ($name, $nomenclature, $source_db_name, $source_db_version, $description) = @_;
     my %params = (
@@ -865,64 +680,42 @@ sub _get_or_create_gene_name {
         source_db_version => $source_db_version,
         description => $description,
     );
-    my $gene_name= Genome::GeneName->get(%params);
-    unless ($gene_name){
-        $gene_name= Genome::GeneName->create(%params);
-    }
-    return $gene_name;
+    return Genome::GeneName->create(%params);
 }
 
-sub _get_or_create_gene_name_association {
+sub _create_gene_name_association {
     my $self = shift;
-    my ($gene_name, $gene_alternate_name, $gene_alternate_nomenclature, $description) = @_;
+    my ($gene_name, $alternate_name, $nomenclature, $description) = @_;
     my %params = (
-        gene_primary_name => $gene_name->name,
-        gene_alternate_name => $gene_alternate_name,
-        primary_name_nomenclature => $gene_name->nomenclature,
-        alternate_name_nomenclature => $gene_alternate_nomenclature,
-        source_db_name => $gene_name->source_db_name,
-        source_db_version => $gene_name->source_db_version,
+        gene_name_id => $gene_name->id,
+        alternate_name => $alternate_name,
+        nomenclature => $nomenclature,
         description => $description,
     );
-    my $gene_name_association = Genome::GeneNameAssociation->get(%params);
-    unless ($gene_name_association){
-        $gene_name_association = Genome::GeneNameAssociation->create(%params);
-    }
-    return $gene_name_association;
+    return Genome::GeneNameAssociation->create(%params);
 }
 
-sub _get_or_create_interaction {
+sub _create_interaction {
     my $self = shift;
-    my ($drug_name, $gene_name, $nomenclature,  $type, $description) = @_;
+    my ($drug_name, $gene_name, $type, $description) = @_;
     my %params = (
-        gene_name => $gene_name->name,
-        drug_name => $drug_name->name,
-        nomenclature => $nomenclature,
-        source_db_name => $drug_name->source_db_name,
-        source_db_version => $drug_name->source_db_version,
+        gene_name_id => $gene_name->id,
+        drug_name_id => $drug_name->id,
         interaction_type => $type,
         description =>  $description,
     );
-    my $drug_gene_interaction = Genome::DrugGeneInteraction->get(%params);
-    unless ($drug_gene_interaction) {
-        $drug_gene_interaction = Genome::DrugGeneInteraction->create(%params);
-    }
-    return $drug_gene_interaction;
+    return Genome::DrugGeneInteraction->create(%params);
 }
 
-sub _get_or_create_interaction_attribute {
+sub _create_interaction_attribute {
     my $self = shift;
     my ($interaction, $name, $value) = @_;
     my %params = (
-        interaction_id => $interaction->id,
+        drug_gene_interaction => $interaction,
         name => $name,
         value => $value,
     );
-    my $attribute = Genome::DrugGeneInteractionAttribute->get(%params);
-    unless ($attribute){
-        $attribute = Genome::DrugGeneInteractionAttribute->create(%params);
-    }
-    return $attribute;
+    return Genome::DrugGeneInteractionAttribute->create(%params);
 }
 
 1;

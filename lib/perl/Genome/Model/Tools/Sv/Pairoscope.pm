@@ -55,7 +55,7 @@ class Genome::Model::Tools::Sv::Pairoscope {
     },
     exon_bam => {
         type => "String",
-        default => "/gscmnt/sata831/info/medseq/dlarson/annotation_sam_files/new_annotation_sorted.bam",
+        default => "/gscmnt/sata135/info/medseq/dlarson/hg18.NCBI-human.combined-annotation.54_36p_v2.sorted.bam",
         doc => "bam file of exons to use for displaying gene models", 
         is_optional => 1,
     },
@@ -287,7 +287,7 @@ The naming convention of the files produced is as follows:
 (prefix.)chr_pos_chr_pos_tumor/normal_type.q#.png
 
 The input file must be formatted as follows:
-chr1	position1	chr2	position2	type
+chr1	position1	?	chr2	position2	?	type
 
 or
 
