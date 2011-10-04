@@ -34,6 +34,11 @@ my %properties = (
         default => 0,
         is_optional => 1,
     },
+    new_library_name => {
+        is => 'Text',
+        doc => 'Set this to override the default <sample-name>-extlibs library name',
+        is_optional => 1,
+    },
     import_source_name => {
         is => 'Text',
         doc => 'source name for imported file, like Broad Institute',
@@ -125,9 +130,12 @@ sub execute {
             $self->error_message("A library was not resolved from the input string ".$self->library);
             die $self->error_message;
         }
-        $library = Genome::Library->get(name=>$sample->name.'-extlibs',sample_id=>$sample->id);
+
+        my $library_name = defined($self->new_library_name) ? $self->new_library_name : $sample->name.'-extlibs';
+
+        $library = Genome::Library->get( name => $library_name, sample_id => $sample->id );
         unless ($library) {
-            $library = Genome::Library->create(name=>$sample->name.'-extlibs',sample_id=>$sample->id);
+            $library = Genome::Library->create( name => $library_name, sample_id => $sample->id );
         }
         unless($library){
             $self->error_message("Unable to create a library.");
