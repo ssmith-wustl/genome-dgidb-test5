@@ -4,7 +4,7 @@
 
   <link fromOperation="input connector" fromProperty="build_id" toOperation="Detect Variants" toProperty="build_id" />
 
-  <link fromOperation="input connector" fromProperty="variant_list" toOperation="Bed to Annotation" toProperty="snv_file" />
+  <link fromOperation="input connector" fromProperty="snv_variant_list" toOperation="Bed to Annotation" toProperty="snv_file" />
   <link fromOperation="input connector" fromProperty="snv_list_file" toOperation="Bed to Annotation" toProperty="output" />
 
   <link fromOperation="Detect Variants" fromProperty="hq_snv_file" toOperation="Varscan Process-Validation" toProperty="filtered_validation_file"/>
@@ -30,7 +30,7 @@
   </operation>
 
   <operationtype typeClass="Workflow::OperationType::Model">
-    <inputproperty>variant_list</inputproperty>
+    <inputproperty>snv_variant_list</inputproperty>
     <inputproperty>snv_list_file</inputproperty>
     <inputproperty>build_id</inputproperty>
     <inputproperty>output_plot</inputproperty>

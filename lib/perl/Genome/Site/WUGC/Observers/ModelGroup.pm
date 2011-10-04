@@ -16,6 +16,11 @@ Genome::ModelGroup->add_observer(
     callback => \&model_group_delete,
 );
 
+Genome::ModelGroup->add_observer(
+    aspect => 'name',
+    callback => \&model_group_rename,
+);
+
 Genome::ModelGroupBridge->add_observer(
     aspect => 'create',
     callback => \&model_group_bridge_create,
@@ -59,47 +64,78 @@ sub model_group_create {
 sub model_group_delete {
     my $self = shift;
     $deleted_model_groups{ $self->id }++;
+
     my $project = $self->project;
     return 1 if not $project;
     return 1 if $Genome::Site::WUGC::Observers::Project::deleted_projects{ $project->id };
+
     $self->status_message('Deleting associated project: '.$project->id);
+
     if ( not $project->delete ) {
         die 'Failed to delete project: '.$project->id;
     }
+
+    return 1;
+}
+
+sub model_group_rename {
+    my ($self, $property_name, $old_name, $new_name) = @_;
+
+    if ( $self->uuid and my $project = Genome::Project->get($self->uuid) ) {
+        if ( $project and $project->name ne $new_name ) {
+            $self->status_message('Rename associated project');
+            $project->rename($new_name);
+        }
+    }
+    
+    return 1 if $self->name eq $new_name;
+
+    $self->rename($new_name) or die "Failed to rename model group: ".$self->id;
+
     return 1;
 }
 
 sub model_group_bridge_create {
     my $self = shift;
+
     my $model_group = $self->model_group;
     return 1 if not $model_group;
     return if not $model_group->uuid;
+
     my $project = Genome::Project->get($model_group->uuid);
     return 1 if not $project;
+
     my $model = $self->model;
     my $part = $project->parts(entity => $model);
     return 1 if $part;
+
     $part = $project->add_part(entity => $model);
     if ( not $part ) {
         die 'Failed to create project part for '.$project->id.' '.$model->id;
     }
+
     return 1;
 }
 
 sub model_group_bridge_delete {
     my $self = shift;
     $deleted_bridges{ $self->id }++;
+
     my $model_group = $self->model_group;
     return 1 if not $model_group;
+
     my $project = Genome::Project->get($model_group->uuid);
     return 1 if not $project;
+
     my $model = $self->model;
     my $part = $project->parts(entity => $model);
     return 1 if not $part;
+
     return 1 if $Genome::Site::WUGC::Observers::Project::deleted_parts{ $part->id };
     if ( not $part->delete ) {
         die 'Failed to delete project part for '.$project->id.' '.$model->id;
     }
+
     return 1;
 }
 
