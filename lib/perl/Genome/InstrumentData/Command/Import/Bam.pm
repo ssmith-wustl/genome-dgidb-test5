@@ -134,6 +134,7 @@ sub execute {
         my $library_name = defined($self->new_library_name) ? $self->new_library_name : $sample->name.'-extlibs';
 
         $library = Genome::Library->get( name => $library_name, sample_id => $sample->id );
+
         unless ($library) {
             $library = Genome::Library->create( name => $library_name, sample_id => $sample->id );
         }
