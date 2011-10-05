@@ -50,7 +50,8 @@ sub params_for_result {
     my @software_results = map { $_->software_result } @software_result_users;
     # TODO any way to identify DV2 results better? multiple checks with isa?
     my @dv2_results = grep { $_->class =~ /Genome::Model::Tools::DetectVariants2/ } @software_results;
-    my @snv_results = grep { $_->_variant_type eq 'snvs' } @dv2_results;
+    # TODO filesystem to detect SNV result sucks
+    my @snv_results = grep { -e $_->output_dir . '/snvs.hq' } @dv2_results;
     if (@snv_results > 1) {
         die $self->error_message('Multiple SNV results found');
     }
