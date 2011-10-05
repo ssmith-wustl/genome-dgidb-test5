@@ -23,6 +23,11 @@ class Genome::Model::Command::Define::Base {
             is => 'Genome::ProcessingProfile',
             doc => 'Processing profileby id or name.',
         },
+        projects => {
+            is => 'Genome::Project',
+            is_many => 1,
+            is_optional => 1,
+        },
         params => {
             is_many => 1,
             is_optional => 1,
@@ -93,6 +98,7 @@ sub _resolve_params {
         processing_profile => $self->processing_profile,
         subject_id => $self->subject->id,
         subject_class_name => $self->subject->class,
+        projects => [ $self->projects ],
     );
 
     my $model_meta = $self->_model_class_meta;

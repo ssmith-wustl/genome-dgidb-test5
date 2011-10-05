@@ -127,6 +127,7 @@ ok($main_tree_meta, 'MAIN TREE meta');
 # meta 
 my $create_meta = Person::Command::Create->__meta__;
 ok($create_meta, 'CREATE meta');
+#print Person::Command::Create->help_usage_complete_text;
 
 is(Person::Command::Create->_target_name, 'person', 'CREATE: _target_name');
 is(Person::Command::Create->_target_class, 'Person', 'CREATE: _target_class');
@@ -204,6 +205,7 @@ ok($list_meta, 'LIST meta');
 # meta
 my $update_meta = Person::Command::Update->__meta__;
 ok($update_meta, 'update meta');
+print Person::Command::Create->help_usage_complete_text;
 
 is(Person::Command::Update->_target_name_pl, 'persons', 'UPDATE: _target_name_pl');
 is(Person::Command::Update->_target_name_pl_ub, 'persons', 'UPDATE: _target_name_pl_ub');
@@ -311,6 +313,8 @@ is($george->mom, $mom, 'Geroge now has a mom');
 # meta
 my $delete_meta = Person::Command::Delete->__meta__;
 ok($delete_meta, 'DELETE meta');
+#print Person::Command::Create->help_usage_complete_text;
+
 is(Person::Command::Delete->_target_name_pl, 'persons', 'DELETE: _target_name_pl');
 is(Person::Command::Delete->_target_name_pl_ub, 'persons', 'DELETE: _target_name_pl_ub');
 
@@ -336,22 +340,12 @@ is_deeply(\@people, [ $mom, $ronnie, ], 'Mom and Ronnie still exist');
 # COMMIT
 ok(UR::Context->commit, 'commit');
 
+# DISPLAY NAME
+is(Genome::Command::Crud->display_name_for_value(100), 100, 'display name for "100"');
+is(Genome::Command::Crud->display_name_for_value([qw/100 200/]), '100 200', 'display name for "100 200"');
+is(Genome::Command::Crud->display_name_for_value($mom), $mom->name, 'display name for $mom');
+is(Genome::Command::Crud->display_name_for_value([ $ronnie, $mom ]), $ronnie->name.' '.$mom->name, 'display name for [ $ronnie $mom ]');
+
 done_testing();
 exit;
 
-=pod
-
-=head1 Disclaimer
-
- Copyright (C) 2011 Washington University Genome Sequencing Center
-
- This script is distributed in the hope that it will be useful,
- but WITHOUT ANY WARRANTY or the implied warranty of MERCHANTABILITY
- or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public
- License for more details.
-
-=head1 Author(s)
-
- Eddie Belter <ebelter@watson.wustl.edu>
-
-=cut

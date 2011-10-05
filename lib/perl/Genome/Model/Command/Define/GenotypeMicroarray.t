@@ -28,6 +28,8 @@ my $temp_wugc = $tempdir."/genotype-microarray-test.wugc";
 
 my $individual = Genome::Individual->create(name => 'test-patient', common_name => 'testpatient');
 my $sample = Genome::Sample->create(name => 'test-patient-sample', species_name => 'human', common_name => 'normal', source => $individual);
+my $project = Genome::Project->create(name => '__TEST_PROJECT__');
+ok($project, 'create project');
 
 my $ref_pp = Genome::ProcessingProfile::ImportedReferenceSequence->create(name => 'test_ref_pp');
 my $ref_model = Genome::Model::ImportedReferenceSequence->create(
@@ -62,6 +64,7 @@ $gm = Genome::Model::Command::Define::GenotypeMicroarray->create(
     subject_name            => $sample->name,
     model_name              => $test_model_name .".test",
     reference               => $rbuild,
+    projects                => [$project],
 );
 $gm->dump_status_messages(1);
 ok($gm->execute(),'define model');
@@ -69,7 +72,8 @@ ok($gm->execute(),'define model');
 # check for the model with the name
 my $model = Genome::Model->get(name => $test_model_name.".test");
 is($model->name,$test_model_name.".test", 'expected test model name retrieved');
-
+my @projects = $model->projects;
+is_deeply(\@projects, [$project], 'added a project');
 $model->delete;
 
-done_testing(5);
+done_testing(7);

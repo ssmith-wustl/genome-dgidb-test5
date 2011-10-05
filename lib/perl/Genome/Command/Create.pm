@@ -49,7 +49,7 @@ sub execute {
             $attrs{$property_name} = $values[0];
         }
     }
-    $self->status_message(Dumper(\%attrs));
+    $self->status_message(join("\n", map { $_.' => '.$self->display_name_for_value($attrs{$_}) } keys %attrs));
 
     my $target_class = $self->_target_class;
     my $obj = $target_class->create(%attrs);

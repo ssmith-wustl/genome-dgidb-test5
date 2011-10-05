@@ -42,13 +42,13 @@ sub execute {
     for my $obj ( @objects ) {
         $self->_total_command_count($self->_total_command_count + 1);
         my $transaction = UR::Context::Transaction->begin();
-        my $name = $obj->__display_name__;
+        my $display_name = $self->display_name_for_value($obj);
         my $deleted = eval{ $obj->delete };
         if ($deleted and $transaction->commit) {
-            $self->status_message("Deleted $name");
+            $self->status_message("Deleted $display_name");
         }
         else {
-            $self->append_error($name, "Failed to delete $name");
+            $self->append_error($display_name, "Failed to delete $display_name");
             $transaction->rollback;
         }
     }
