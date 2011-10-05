@@ -47,11 +47,26 @@ sub _generate_content {
     $hash->{name} = $nomenclature->name;
     $hash->{fields} = [];
 
+    my $ds = $UR::Context::current->resolve_data_sources_for_class_meta_and_rule(Genome::Nomenclature->__meta__);
+    my $dbh = $ds->get_default_dbh;
+
     for my $field ($nomenclature->fields) {
         my $f = {}; 
+        $f->{id} = $field->id;
         $f->{name} = $field->name;
         $f->{type} = $field->type;
-        $f->{enumerated_values} = [map {$_->value} $field->enumerated_values];
+        my @enums = $field->enumerated_values;
+        $f->{enumerated_values} = [map {$_->value} @enums];
+        $f->{enumerated_value_ids} = [map {$_->id} @enums];
+        my @enum_value_use_counts;
+        for my $e (@enums) {
+           my ($use_count) = $dbh->selectrow_array("select count(*) from mg.genome_subject_attribute where nomenclature=? and attribute_value=?",{},$field->id, $e->value);
+           push @enum_value_use_counts, $use_count;
+        }
+        $f->{enumerated_value_use_counts} = \@enum_value_use_counts;
+
+        my ($use_count) = $dbh->selectrow_array("select count(*) from mg.genome_subject_attribute where nomenclature=?",{},$field->id);
+        $f->{use_count} = $use_count;
     
         push @{$hash->{fields}}, $f;
     }

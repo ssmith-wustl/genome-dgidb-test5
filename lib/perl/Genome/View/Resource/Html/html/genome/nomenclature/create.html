@@ -108,6 +108,7 @@
               <legend>Nomenclature Columns</legend>
               <div id="nomenclature-columns"></div>
               <div id="nomenclature-add"></div>
+              <div id="why-cant-i-delete" style="display:none"><p><b>Why can't I remove some elements?</b> We've disabled the delete button for one or more attributes of your nomenclature because those fields or enumerated values have already been used to identify research subjects.  Once fields or values have been used, they cannot be removed.</p></div>
             </fieldset>
 
             <div>
@@ -120,7 +121,7 @@
 
             <script type="text/template" id="nomenclature-column-template">
               <label>Title:</label>
-              <input type="text" id="nomenclature-column-name-input" class="nomenclature-column-name text" value="<%= model.get('name') %>">
+              <input type="text" class="nomenclature-column-name text" value="<%= model.get('name') %>">
               <label>Type:</label>
               <select class="column-type-select">
                 <option value="integer">integer</option>

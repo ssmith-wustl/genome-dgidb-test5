@@ -1,5 +1,3 @@
-# Rewrote excellent intro to Backbone.js http://arturadib.com/hello-backbonejs/ in CoffeeScript
-
 $ ->
       Backbone.sync = (method, model, success, error) ->
         success()
@@ -10,7 +8,11 @@ $ ->
         defaults:
           name: 'column'
           type: 'string'
+          id: ''
+          use_count: 0
           enumerated_values: []
+          enumerated_value_ids: []
+          enumerated_value_use_counts: []
 
       class List extends Backbone.Collection
         model: Column
@@ -86,6 +88,15 @@ $ ->
           if @model.get('type') == 'enumerated'
             enumerated_template =  _.template($('#nomenclature-column-enumerated-template').html(), {model:@model}) 
             $(@el).append(enumerated_template)
+            kids = $(@el).find(".remove-enum")
+            for i in [0..kids.size()-1]
+                if parseInt(@model.get('enumerated_value_use_counts')[i]) > 0
+                    $(kids[i]).attr('disabled','true')
+                    $('#why-cant-i-delete').show()
+        
+          if parseInt(@model.get('use_count')) > 0
+            $(@el).children(".delete").attr('disabled','true')
+            $('#why-cant-i-delete').show()
           this
 
         unrender: ->
