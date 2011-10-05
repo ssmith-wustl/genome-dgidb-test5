@@ -54,12 +54,11 @@ sub create_from_json {
     for my $rf (@{$nomenclature_raw->{fields}}) {
         my $f = Genome::Nomenclature::Field->create(name=>$rf->{name}, type=>$rf->{type}, nomenclature=>$nom);
         if ($rf->{type} eq 'enumerated') {
-            for my $e (@{$rf->{enumerated_types}}) {
+            for my $e (@{$rf->{enumerated_values}}) {
                 my $enum = Genome::Nomenclature::Field::EnumValue->create(nomenclature_field=>$f, value=>$e);
             }
         } 
     }
-    print Data::Dumper::Dumper($nom);
     return $nom;
 }
 
