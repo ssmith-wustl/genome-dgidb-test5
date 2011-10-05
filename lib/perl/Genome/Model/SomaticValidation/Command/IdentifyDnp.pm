@@ -21,6 +21,7 @@ class Genome::Model::SomaticValidation::Command::IdentifyDnp {
             is => 'Genome::Model::Build::SomaticValidation::IdentifyDnpResult',
             id_by => 'dnp_result_id',
             doc => "SoftwareResult containing the output of 'gmt somatic identify-dnp'.",
+            is_optional => 1,
         },
         build => {
             is => 'Genome::Model::Build::SomaticValidation',
@@ -44,9 +45,19 @@ sub params_for_result {
         die $self->error_message("'identify_dnp_proportion' not specified on processing profile.");
     }
 
-    my $tumor_aligment_result_id = $self->build->merged_alignment_result->id;
-    #FIXME waiting on DV2 update
-    my $dv2_result_id = undef;
+    my $tumor_aligment_result_id = $self->build->tumor_reference_alignment->merged_alignment_result->id;
+    my @software_result_users = Genome::SoftwareResult::User->get(user => $self->build);
+    my @software_results = map { $_->software_result } @software_result_users;
+    # TODO any way to identify DV2 results better? multiple checks with isa?
+    my @dv2_results = grep { $_->class =~ /Genome::Model::Tools::DetectVariants2/ } @software_results;
+    my @snv_results = grep { $_->_variant_type eq 'snvs' } @dv2_results;
+    if (@snv_results > 1) {
+        die $self->error_message('Multiple SNV results found');
+    }
+    elsif (@snv_results == 0) {
+        die $self->error_message('No SNV results found');
+    }
+    my $dv2_result_id = $snv_results[0]->id;
 
     my $test_name = $ENV{GENOME_SOFTWARE_RESULT_TEST_NAME};
 
