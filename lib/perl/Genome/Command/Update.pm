@@ -62,11 +62,12 @@ sub execute {
             if ( grep { $property_name eq $_ } @$only_if_null 
                     and not $property_meta->is_add_remove
                     and defined( my $value = $obj->$property_name) ) {
-                my $obj_name = $self->_get_display_name($obj);
-                my $value_name = $self->_get_display_name($value);
+                my $obj_name = $self->display_name_for_value($obj);
+                my $value_name = $self->display_name_for_value($value);
                 $self->error_message("Cannot update $obj_name '$property_name' because it already has a value: $value_name");
                 next OBJECT;
             }
+            print Data::Dumper::Dumper($property_name, $self->$property_name);
             my $rv = eval{ $obj->$property_name( $self->$property_name ); };
             if ( defined $rv ) { $success++; } else { $self->error_message() }
         }
@@ -83,18 +84,6 @@ sub execute {
     );
 
     return ( $success ? 1 : 0 ); 
-}
-
-sub _get_display_name {
-    my ($self, $value) = @_;
-
-    if ( Scalar::Util::blessed($value) ) {
-        my $display_name =  $value->can('__display_name__');
-        return $display_name->($value) if $display_name;
-        return $value->id;
-    }
-
-    return $value;
 }
 
 1;

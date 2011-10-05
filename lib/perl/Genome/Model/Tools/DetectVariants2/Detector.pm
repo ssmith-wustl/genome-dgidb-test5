@@ -109,14 +109,24 @@ class Genome::Model::Tools::DetectVariants2::Detector {
     ],
     has_optional_transient => [
         _result => {
-            is => 'Genome::Model::Tools::DetectVariants2::Result',
+            is => 'UR::Object',
             doc => 'SoftwareResult for the run of this detector',
-            id_by => "result_id",
+            id_by => "_result_id",
+            id_class_by => '_result_class',
             is_output => 1,
         },
-        result_id => {
+        _result_class => {
+            is => 'Text',
+            is_output => 1,
+        },
+        _result_id => {
             is => 'Number',
             is_output => 1,
+        },
+        _previous_output_directory => {
+            is => 'Text',
+            is_input => 1,
+            doc => 'If this detector is the same as another for a different variant type and is the second run, the prior run will be referenced here',
         },
     ],
     has_constant => [

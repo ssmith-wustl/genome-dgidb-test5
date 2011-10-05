@@ -3,7 +3,14 @@
 use strict;
 use warnings;
 
-use Test::More tests => 5;
+use Test::More;
+
+if (Genome::Config->arch_os ne 'x86_64') {
+    plan skip_all => 'requires 64-bit machine';
+}
+else {
+    plan tests => 5;
+}
 
 use above 'Genome';
 
@@ -35,7 +42,7 @@ ok(-s $output_file, "output file created");
 
 # The files will have a timestamp that will differ. Ignore this but check the rest.
 my $expected = `cat $expected_file | grep -v fileDate`;
-my $output = `cat $output_file | grep -v fileDate`;
+my $output = `zcat $output_file | grep -v fileDate`;
 my $diff = Genome::Sys->diff_text_vs_text($output, $expected);
 ok(!$diff, 'output matched expected result')
     or diag("diff results:\n" . $diff);

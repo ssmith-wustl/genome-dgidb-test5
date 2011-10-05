@@ -5,11 +5,6 @@ use warnings;
 
 use Genome;
       
-class Genome::Library::Command {
-    is => 'Command::Tree',
-    doc => 'Work with libraries',
-};
-
 use Genome::Command::Crud;
 Genome::Command::Crud->init_sub_commands(
     target_class => 'Genome::Library',

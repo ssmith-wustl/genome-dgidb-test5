@@ -100,7 +100,7 @@ sub execute {
         chomp($line);
         my @F = split("\t",$line);
         
-        next if ($line =~ /^Hugo_/ || $line =~ /Chromosome/);
+        next if ($line =~ /^Hugo_/ || $line =~ /Chromosome/i);
 
         if($input_is_maf){
             print OUTFILE join("\t",($F[4], $F[5]-1, $F[6])) . "\n";
@@ -122,7 +122,7 @@ sub execute {
     }
 
     #annotate that bed file
-    $cmd = "gmt fast-tier fast-tier --tier-file-location $tier_file_location --variant-bed-file $tempdir/temp.bed.sorted";
+    $cmd = "gmt fast-tier fast-tier --tier-file-location $tier_file_location --variant-bed-file $tempdir/temp.bed.sorted --skip-line-count";
     if(defined($tiering_version)){
         $cmd = $cmd . " --tiering-version $tiering_version";
     }
@@ -158,7 +158,7 @@ sub execute {
     while( my $line = $inFh->getline )
     {
         #skip header
-        if (($line=~/^Chr/) || ($line =~ /^#/)){
+        if (($line=~/^Chr/i) || ($line =~ /^#/)){
             print OUTFILE1 $line;
             next;
         }
@@ -171,6 +171,7 @@ sub execute {
         } else {
             $key = $F[0] . ":" . $F[1] . ":" . $F[2];
         }
+        print $key unless exists($tierhash{$key});
         push(@F,$tierhash{$key});
         print OUTFILE1 join("\t",@F) . "\n";
     }

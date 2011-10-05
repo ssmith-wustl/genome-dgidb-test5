@@ -28,6 +28,9 @@ class Genome::Subject {
             is => 'Genome::SubjectAttribute',
             reverse_as => 'subject',
         },
+        project_parts => { is => 'Genome::ProjectPart', reverse_as => 'entity', is_mutable => 1, },
+        projects => { is => 'Genome::Project', via => 'project_parts', to => 'project', is_mutable => 1, doc => 'Projects that include this subject.' },
+        project_names => { is => 'Text', via => 'projects', to => 'name', },
     ],
     has_optional => [
         name => {

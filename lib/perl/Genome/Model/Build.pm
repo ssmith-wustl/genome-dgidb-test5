@@ -1878,8 +1878,8 @@ sub compare_output {
         }
 
         unless ($diff_result) {
-            my ($build_dir) = $abs_path =~ /^(.*)\/$rel_path/;
-            my ($other_build_dir) = $other_abs_path =~ /^(.*)\/$rel_path/;
+            my $build_dir = $self->data_directory;
+            my $other_build_dir = $other_build->data_directory;
             $diffs{$rel_path} = "files are not the same (diff -u {$build_dir,$other_build_dir}/$rel_path)";
         }
     }

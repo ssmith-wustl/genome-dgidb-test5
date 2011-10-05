@@ -65,31 +65,16 @@ sub create {
         %convergence_model_params = %{ delete $params{convergence_model_params} };
     } 
 
+    # Check for name uniqueness
+    my $name = $bx->value_for('name');
+    if ( my ($exsiting_self) = Genome::ModelGroup->get(name => $name) ) {
+        $class->error_message('Found existing model group with the same name: '.join(' ', map { $exsiting_self->$_ } (qw/ id name /)));
+        return;
+    }
+
+    # Create
     my $self = $class->SUPER::create($bx);
     return if not $self;
-
-    # Create project
-    my $project = $self->project;
-    if ( not $project ) {
-        my $uuid = Genome::Project->__meta__->autogenerate_new_object_id_uuid;
-        if ( not $uuid ) {
-            $self->error_message('Failed to get uuid from Genome::Project! Cannot create model group.');
-            $self->delete;
-            return;
-        }
-        $self->uuid($uuid);
-        my $name = $bx->value_for('name');
-        $project = Genome::Project->create(
-            id => $uuid,
-            name => $name,
-        );
-        if ( not $project ) {
-            $class->error_message('Failed to create project to match model group.');
-            return;
-        }
-        $self->name( $project->name ) if $project->name ne $self->name;
-        $self->user_name( $project->parts(role => 'creator')->entity->email );
-    }
 
     # Convergence model
     my $define_command = Genome::Model::Command::Define::Convergence->create(
@@ -107,11 +92,6 @@ sub create {
         return;
     }
 
-    # Add models to project
-    for my $model ( $self->models ) {
-        $project->add_part(entity => $model);
-    }
-
     return $self;
 }
 
@@ -127,21 +107,6 @@ sub rename {
     if ( @model_groups ) {
         $self->error_message("Failed to rename model group (".$self->id.") from ".$self->name." to $new_name because one the nwe name already exists.");
         return;
-    }
-
-    if ( my $project = $self->project ) { # delegate to project
-        return $project->rename($new_name);
-    }
-    else {
-        return $self->_rename($new_name);
-    }
-}
-
-sub _rename {
-    my ($self, $new_name) = @_;
-
-    if ( not $new_name ) {
-        Carp::confess('No new name given to rename model group');
     }
 
     my $old_name = $self->name;
@@ -173,18 +138,16 @@ sub assign_models {
     }
 
     my $added = 0;
-        my $project = $self->project;
-        my %existing_models = map { $_->id => $_ } $self->models;
-        for my $m (@models) {
-            if ( exists $existing_models{ $m->id } ) {
-                $self->status_message('Skipping model '.$m->__display_name__.', it is already assigned...');
+    my %existing_models = map { $_->id => $_ } $self->models;
+    for my $m (@models) {
+        if ( exists $existing_models{ $m->id } ) {
+            $self->status_message('Skipping model '.$m->__display_name__.', it is already assigned...');
             next;
         }
         my $bridge = Genome::ModelGroupBridge->create(
             model_group_id => $self->id,
             model_id       => $m->genome_model_id,
         );
-        $project->add_part(entity => $m) if $project;
         $existing_models{$m->id} = $m->id;
         $added++;
     }
@@ -196,7 +159,7 @@ sub assign_models {
     if ( $added ) {
         $self->schedule_convergence_rebuild;
     }
-    
+
     return 1;
 }
 
@@ -210,7 +173,7 @@ sub unassign_models {
     }
 
     my $removed = 0;
-    my $project = $self->project;
+
     for my $m (@models) {
 
         my $bridge = Genome::ModelGroupBridge->get(
@@ -224,7 +187,6 @@ sub unassign_models {
         }
         
         $bridge->delete();
-        $project->remove_part(entity => $m) if $project;
         $removed++;
     }
 
@@ -304,22 +266,10 @@ sub builds {
     return @builds;
 }
 
-sub delete { # Separate delete for Project delete observer
+sub delete {
     my $self = shift;
 
     $self->status_message('Delete model group: '.$self->id);
-
-    if ( my $project = $self->project ) {
-        $self->status_message('Deleting associated project: '.$project->id);
-         $project->delete; # deletes model group via observer
-         return 1;
-    }
-
-    return $self->_delete;
-}
-
-sub _delete { 
-    my $self = shift;
 
     # unassign existing models
     my @models = $self->models;
