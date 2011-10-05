@@ -50,8 +50,9 @@ sub create {
         return if not $reader_class;
         $self->status_message('reader => '.$reader_class);
 
-        my $reader = $reader_class->create(%params);
+        my $reader = eval{ $reader_class->create(%params) };
         if ( not $reader ) {
+            $self->status_message($@) if $@;
             $self->error_message('Failed to create '.$reader_class);
             return;
         }
@@ -138,6 +139,7 @@ sub _type_for_file {
         fa => 'phred',
         sam => 'sam',
         bam => 'bam',
+        sff => 'sff',
     );
     if ( $file_exts_and_formats{$ext} ) {
         return $file_exts_and_formats{$ext}
@@ -160,6 +162,7 @@ sub _reader_class_for_type {
         illumina => 'IlluminaFastqReader',
         sam => 'SamReader',
         bam => 'BamReader',
+        sff => 'SffReader',
         'ref' => 'StdinRefReader',
     );
 

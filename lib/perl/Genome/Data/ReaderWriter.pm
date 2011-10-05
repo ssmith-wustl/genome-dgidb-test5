@@ -6,11 +6,6 @@ use warnings;
 use Carp;
 use Genome::Data::Adaptor;
 
-=head2
-Usage: Base class for data readers and writers.
-Args : file => File to be written/read
-       format => File format (eg, 'fasta')
-=cut
 sub create {
     my ($class, %params) = @_;
     $class = ref($class) || $class;
@@ -33,16 +28,18 @@ sub create {
 
 sub _init_adaptor {
     my ($self, $file, $format) = @_;
-    my $class = $self->_infer_adaptor_class_from_format($format);
-    my $adaptor = $class->create(
-        file => $file,
-        mode => $self->access_mode()
-    );
-    unless ($adaptor) {
-        Carp::confess "Could not create adaptor object of class $class!"
+    unless ($self->{_adaptor}) {
+        my $class = $self->_infer_adaptor_class_from_format($format);
+        my $adaptor = $class->create(
+            file => $file,
+            mode => $self->access_mode()
+        );
+        unless ($adaptor) {
+            Carp::confess "Could not create adaptor object of class $class!"
+        }
+        $self->{_adaptor} = $adaptor;
     }
-    $self->{_adaptor} = $adaptor;
-    return 1;
+    return $self->{_adaptor};
 }
 
 sub _infer_adaptor_class_from_format {
@@ -51,9 +48,9 @@ sub _infer_adaptor_class_from_format {
         Carp::confess "Not given format, cannot infer adaptor!";
     }
 
-    my $class = 'Genome::Data::Format' . ucfirst(lc($format));
-    unless ($class->isa('Genome::Data::Format')) {
-        Carp::confess "Format class $class is not a Genome::Data::Format!";
+    my $class = 'Genome::Data::Adaptor::' . ucfirst(lc($format));
+    unless ($class->isa('Genome::Data::Adaptor')) {
+        Carp::confess "Adaptor class $class is not a Genome::Data::Adaptor!";
     }
     return $class;
 }

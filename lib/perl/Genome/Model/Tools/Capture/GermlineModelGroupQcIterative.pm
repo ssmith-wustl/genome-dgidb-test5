@@ -179,7 +179,8 @@ sub execute {                               # replace with real execution logic.
 	
 					my @genotypes;
 					if( $data_source eq 'iscan' || $data_source eq 'internal') {
-						@genotypes = $organism_sample->get_genotype;
+#                                                @genotypes = $organism_sample->get_genotype;
+                                                @genotypes = grep {$_->status eq "pass"} $organism_sample->get_genotype;
 					}
 					elsif( $data_source eq 'external') {
 						@genotypes = $organism_sample->get_external_genotype;

@@ -123,6 +123,11 @@ class Genome::Model::Tools::DetectVariants2::Detector {
             is => 'Number',
             is_output => 1,
         },
+        _previous_output_directory => {
+            is => 'Text',
+            is_input => 1,
+            doc => 'If this detector is the same as another for a different variant type and is the second run, the prior run will be referenced here',
+        },
     ],
     has_constant => [
         #These can't be turned off--just pass no detector name to skip

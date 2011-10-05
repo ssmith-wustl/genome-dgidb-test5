@@ -52,28 +52,54 @@ sub execute {
 
 
 #___This line stops the perl debugger as though I'd set a break point in the GUI
+    $DB::single = 1;
     
     my @srrs = split /\s+/, $self->srr_accessions;
 
     my %samples;
 
     for my $line (@srrs) {
-        my $sample = Genome::Sample->get(sql=>qq/
-            select os.*
-            from gsc.organism_sample os
-            join gsc.sra_organism_sample sos on sos.organism_sample_id=os.organism_sample_id
-            join gsc.sra_experiment ex on ex.sra_sample_id=sos.sra_sample_id
-            join gsc.sra_run ru on ru.sra_experiment_id=ex.sra_item_id
-            join gsc.sra_item rui on rui.sra_item_id=ru.sra_item_id
-            join gsc.sra_accession ruacc on ruacc.alias=rui.alias
-            where ruacc.accession='$line'
-        /);
+
+
+
+
+##_______This does not work as of 110927...jmartin
+#        my $sample = Genome::Sample->get(sql=>qq/
+#            select os.*
+#            from gsc.organism_sample os
+#            join gsc.sra_organism_sample sos on sos.organism_sample_id=os.organism_sample_id
+#            join gsc.sra_experiment ex on ex.sra_sample_id=sos.sra_sample_id
+#            join gsc.sra_run ru on ru.sra_experiment_id=ex.sra_item_id
+#            join gsc.sra_item rui on rui.sra_item_id=ru.sra_item_id
+#            join gsc.sra_accession ruacc on ruacc.alias=rui.alias
+#            where ruacc.accession='$line'
+#        /);
+#_______Modified to use a 'workaround' to deal with 'deprecated Genome gets'...jmartin 110927
+	my $sample = GSC::Organism::Sample->get(sql=>qq/
+						select os.organism_sample_id from gsc.organism_sample\@dw os 
+						join gsc.sra_organism_sample\@dw sos 
+						on sos.organism_sample_id=os.organism_sample_id 
+						join gsc.sra_experiment\@dw ex 
+						on ex.sra_sample_id=sos.sra_sample_id 
+						join gsc.sra_run\@dw ru 
+						on ru.sra_experiment_id=ex.sra_item_id 
+						join gsc.sra_item\@dw rui 
+						on rui.sra_item_id=ru.sra_item_id 
+						join gsc.sra_accession\@dw ruacc 
+						on ruacc.alias=rui.alias where ruacc.accession='$line'
+						/);
+
+
+
+
         unless ($sample) {
             $self->error_message("Failed to get a sample object from the warehouse for SRR ID $line.");
             return;
         }
         
-        $samples{$sample->name} = 1;
+#_______The 'name' attribute doesn't seem to exist, but full_name does, and this value seems only used for the sanity check immediately below, so this change should be OK ... jmartin 110929
+        ####$samples{$sample->name} = 1;
+	$samples{$sample->full_name} = 1;
     }
 
     unless (scalar keys %samples == 1) {
@@ -149,6 +175,7 @@ sub execute {
 
     } else {
 
+        $DB::single = 1;
 
         my $path_to_scripts_dir =$self->get_script_path;
         $self->status_message("Scripts are in: $path_to_scripts_dir");
@@ -177,6 +204,7 @@ sub execute {
         close SRA_SAMPLE_MAPPING;
         close SRR_LISTING;
 
+        $DB::single = 1;
 
         #Run BROAD's processing script
         my $cmd;
@@ -192,13 +220,24 @@ sub execute {
         my $pwd  = $self->ascp_pw;
 
 
+
+
         #Note: I need to set the path to my scripts INSIDE the shell command
         ####$cmd = "cd $working_dir; export PATH=$path; process_runs.sh $list_of_srrs $sra_samples $picard_dir $tmp_dir > $outfile 2> $errfile";
-        $cmd = "cd $working_dir; export PATH=$path; process_runs.sh $list_of_srrs $sra_samples $picard_dir $tmp_dir $user $pwd";
+
+#_______THIS LINE IS FOR REAL DATA...UNCOMMENT TO REALLY DO PROCESSING AND UPLOAD TO DACC!!!! jmartin ... 110927
+        ####$cmd = "cd $working_dir; export PATH=$path; process_runs.sh $list_of_srrs $sra_samples $picard_dir $tmp_dir $user $pwd";
+
+#_______This line is just for testing, the DACC upload is commented out in this version jmartin ... 110923
+	$cmd = "cd $working_dir; export PATH=$path; process_runs.for_testing.sh $list_of_srrs $sra_samples $picard_dir $tmp_dir $user $pwd";
+
+
+
 
         $self->status_message("CMD=>$cmd<=\n");
         $self->status_message("PWD=>$current_dir<=\n");
         
+        $DB::single = 1;
 
         eval {
         Genome::Sys->shellcmd(
@@ -207,10 +246,12 @@ sub execute {
         };
 
         if ($@) {
+           $DB::single = 1; 
            $self->error_message("Error running broad script: $@\n");
            return;
         }
 
+        $DB::single = 1;
         my @reads = glob($working_dir . "/" . $self->srs_sample_id . "/*.trimmed.*.fastq.bz2");
         
         for (@reads) {
@@ -231,6 +272,7 @@ sub execute {
         rename($singleton_read, $working_dir . "/s_1_sequence.txt");
         $singleton_read = $working_dir . "/s_1_sequence.txt";
 
+        $DB::single = 1;
 
     }
     

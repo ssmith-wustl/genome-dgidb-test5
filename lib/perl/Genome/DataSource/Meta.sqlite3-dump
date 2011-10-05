@@ -67,6 +67,8 @@ INSERT INTO "dd_fk_constraint" VALUES('Genome::DataSource::Main','public','publi
 INSERT INTO "dd_fk_constraint" VALUES('Genome::DataSource::Main','public','public','drug_name_category_association','drug_name','drug_name_category_association_drug_name_id_fkey','2011-10-03 12:35:22');
 INSERT INTO "dd_fk_constraint" VALUES('Genome::DataSource::Main','public','public','gene_name_association','gene_name','gene_name_association_gene_name_id_fkey','2011-10-03 12:35:23');
 INSERT INTO "dd_fk_constraint" VALUES('Genome::DataSource::Main','public','public','gene_name_category_association','gene_name','gene_name_category_association_gene_name_id_fkey','2011-10-03 12:35:22');
+INSERT INTO "dd_fk_constraint" VALUES('Genome::DataSource::GMSchema','MG','MG','FEATURE_LIST','GENOME_MODEL_BUILD','FLR_GMBFK','2011-10-05 08:49:32');
+INSERT INTO "dd_fk_constraint" VALUES('Genome::DataSource::GMSchema','MG','MG','FEATURE_LIST','GENOME_MODEL_BUILD','FLS_GMB_FK','2011-10-05 08:49:32');
 CREATE TABLE dd_fk_constraint_column (
     fk_constraint_name varchar NOT NULL,
     data_source varchar NOT NULL,
@@ -134,6 +136,8 @@ INSERT INTO "dd_fk_constraint_column" VALUES('drug_name_association_drug_name_id
 INSERT INTO "dd_fk_constraint_column" VALUES('drug_name_category_association_drug_name_id_fkey','Genome::DataSource::Main','public','drug_name_category_association','drug_name','drug_name_id','id');
 INSERT INTO "dd_fk_constraint_column" VALUES('gene_name_association_gene_name_id_fkey','Genome::DataSource::Main','public','gene_name_association','gene_name','gene_name_id','id');
 INSERT INTO "dd_fk_constraint_column" VALUES('gene_name_category_association_gene_name_id_fkey','Genome::DataSource::Main','public','gene_name_category_association','gene_name','gene_name_id','id');
+INSERT INTO "dd_fk_constraint_column" VALUES('FLS_GMB_FK','Genome::DataSource::GMSchema','MG','FEATURE_LIST','GENOME_MODEL_BUILD','SUBJECT_ID','BUILD_ID');
+INSERT INTO "dd_fk_constraint_column" VALUES('FLR_GMBFK','Genome::DataSource::GMSchema','MG','FEATURE_LIST','GENOME_MODEL_BUILD','REFERENCE_ID','BUILD_ID');
 CREATE TABLE dd_pk_constraint_column (
     data_source varchar NOT NULL,
     owner varchar,
@@ -228,7 +232,7 @@ INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::Main','public'
 INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::Main','public','gene_name','id',1);
 INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::Main','public','gene_name_association','id',1);
 INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::Main','public','gene_name_category_association','id',1);
-
+INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::GMSchema','MG','FEATURE_LIST','ID',1);
 CREATE TABLE dd_table (
      data_source varchar NOT NULL,
      owner varchar,
@@ -292,6 +296,7 @@ INSERT INTO "dd_table" VALUES('Genome::DataSource::Main','public','drug_name_cat
 INSERT INTO "dd_table" VALUES('Genome::DataSource::Main','public','gene_name','TABLE','entity',NULL,'2011-10-03 12:35:23',NULL);
 INSERT INTO "dd_table" VALUES('Genome::DataSource::Main','public','gene_name_association','TABLE','entity',NULL,'2011-10-03 12:35:23',NULL);
 INSERT INTO "dd_table" VALUES('Genome::DataSource::Main','public','gene_name_category_association','TABLE','entity',NULL,'2011-10-03 12:35:22',NULL);
+INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','FEATURE_LIST','TABLE','entity','2011-10-04 07:46:05','2011-10-05 08:49:32',null);
 CREATE TABLE dd_table_column (
     data_source varchar NOT NULL,
     owner varchar,
@@ -612,6 +617,16 @@ INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','public','gene_n
 INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','public','gene_name_category_association','description','text',NULL,'Y','2011-09-27 09:40:39',NULL);
 INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','public','gene_name_category_association','gene_name_id','character varying',NULL,'N','2011-10-03 12:35:22',NULL);
 INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','public','gene_name_category_association','id','character varying',NULL,'N','2011-10-03 12:35:22',NULL);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','FEATURE_LIST','SUBJECT_ID','NUMBER',10,'Y','2011-10-05 08:49:32',null);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','FEATURE_LIST','FILE_ID','NUMBER',20,'Y','2011-10-05 08:49:32',null);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','FEATURE_LIST','NAME','VARCHAR2',200,'N','2011-10-05 08:49:32',null);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','FEATURE_LIST','SOURCE','VARCHAR2',64,'Y','2011-10-05 08:49:32',null);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','FEATURE_LIST','FORMAT','VARCHAR2',64,'N','2011-10-05 08:49:32',null);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','FEATURE_LIST','ID','VARCHAR2',64,'N','2011-10-05 08:49:32',null);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','FEATURE_LIST','FILE_CONTENT_HASH','VARCHAR2',32,'N','2011-10-05 08:49:32',null);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','FEATURE_LIST','REFERENCE_ID','NUMBER',10,'Y','2011-10-05 08:49:32',null);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','FEATURE_LIST','DESCRIPTION','VARCHAR2',255,'Y','2011-10-05 08:49:32',null);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','FEATURE_LIST','CONTENT_TYPE','VARCHAR2',255,'Y','2011-10-05 08:49:32',null);
 CREATE TABLE dd_unique_constraint_column (
     data_source varchar NOT NULL,
     owner varchar,
@@ -660,4 +675,5 @@ INSERT INTO "dd_unique_constraint_column" VALUES('Genome::DataSource::Main','pub
 INSERT INTO "dd_unique_constraint_column" VALUES('Genome::DataSource::Main','public','gene_name','gene_name_pkey','id');
 INSERT INTO "dd_unique_constraint_column" VALUES('Genome::DataSource::Main','public','gene_name_association','gene_name_association_pkey','id');
 INSERT INTO "dd_unique_constraint_column" VALUES('Genome::DataSource::Main','public','gene_name_category_association','gene_name_category_association_pkey','id');
+INSERT INTO "dd_unique_constraint_column" VALUES('Genome::DataSource::GMSchema','MG','FEATURE_LIST','FL_NAME_U','NAME');
 COMMIT;
