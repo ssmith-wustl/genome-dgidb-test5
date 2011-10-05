@@ -8,14 +8,6 @@ use Genome;
 class Genome::Model::Tools::DetectVariants2::Combine::UnionCnv{
     is => 'Genome::Model::Tools::DetectVariants2::Combine',
     doc => 'Union snvs into one file',
-    has_constant => [
-        _variant_type => {
-            type => 'String',
-            default => 'cnvs',
-            doc => 'variant type that this module operates on',
-        },
-    ],
-
 };
 
 sub help_synopsis {
@@ -24,6 +16,8 @@ sub help_synopsis {
 gmt detect-variants combine --variant-file-a samtools.hq.v1.bed --variant-file-b varscan.hq.v1.bed --output-file 
 EOS
 }
+
+sub _variant_type { 'cnvs' };
 
 
 sub _combine_variants {

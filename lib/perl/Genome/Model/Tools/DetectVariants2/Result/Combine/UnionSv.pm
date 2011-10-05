@@ -9,19 +9,13 @@ use File::Basename;
 class Genome::Model::Tools::DetectVariants2::Result::Combine::UnionSv{
     is  => 'Genome::Model::Tools::DetectVariants2::Result::Combine',
     doc => 'Union svs into one file',
-    has_constant => [
-        _variant_type => {
-            type => 'String',
-            default => 'svs',
-            doc => 'variant type that this module operates on',
-        },
-    ],
 };
 
 sub _needs_symlinks_followed_when_syncing { 0 };
 sub _working_dir_prefix { 'union-sv' };
 sub resolve_allocation_disk_group_name { 'info_genome_models' };
 sub allocation_subdir_prefix { 'union_sv' };
+sub _variant_type { 'svs' };
 
 sub _combine_variants {
     my $self = shift;

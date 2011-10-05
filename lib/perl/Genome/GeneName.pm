@@ -41,4 +41,9 @@ class Genome::GeneName {
     doc => 'Claim regarding the name of a drug',
 };
 
+sub __display_name__ {
+    my $self = shift;
+    return $self->name . '(' . $self->source_db_name . ' ' . $self->source_db_version . ')';
+}
+
 1;

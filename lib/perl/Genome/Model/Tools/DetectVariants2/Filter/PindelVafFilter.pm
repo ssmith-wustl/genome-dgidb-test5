@@ -23,13 +23,6 @@ class Genome::Model::Tools::DetectVariants2::Filter::PindelVafFilter{
             default => 0,
         },
     ],
-    has_constant => [
-        _variant_type => {
-            type => 'String',
-            default => 'indels',
-            doc => 'variant type that this module operates on, overload this in submodules accordingly',
-        },
-    ],
     has_param => [
         lsf_resource => {
             default => "-R 'span[hosts=1] rusage[mem=16000]' -M 1600000000",
@@ -37,6 +30,8 @@ class Genome::Model::Tools::DetectVariants2::Filter::PindelVafFilter{
     ],
 
 };
+
+sub _variant_type { 'indels' };
 
 sub _filter_variants {
     my $self = shift;

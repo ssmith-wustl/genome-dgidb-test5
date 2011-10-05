@@ -47,7 +47,7 @@ ok($instrument_data, 'instrument data');
 is($instrument_data->sequencing_platform, 'affymetrix', 'sequencing platform');
 is($instrument_data->library_name, $sample_name.'-microarraylib', 'library name');
 is($instrument_data->original_data_path, $source_dir, "found imported data and source_data_path is properly set");
-ok($instrument_data->disk_allocations, "disk allocation");
+ok($instrument_data->allocations, "disk allocation");
 ok($instrument_data->data_directory, "data directory");
 my $data_directory = $instrument_data->data_directory;
 ok(-d $data_directory, "data directory is present");

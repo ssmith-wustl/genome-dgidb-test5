@@ -219,7 +219,7 @@ sub execute {
     $params{library_id} = $library->id;
     $params{library_name} = $library->name;
     if(defined($self->allocation)){
-        $params{disk_allocations} = $self->allocation;
+        $params{allocations} = $self->allocation;
     }
 
     $self->check_fastq_integritude;

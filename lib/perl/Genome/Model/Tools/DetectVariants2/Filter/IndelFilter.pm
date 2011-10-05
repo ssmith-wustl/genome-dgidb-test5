@@ -9,13 +9,6 @@ use IO::File;
 class Genome::Model::Tools::DetectVariants2::Filter::IndelFilter{
     is => ['Genome::Model::Tools::DetectVariants2::Filter'],
     doc => 'Filters out indels that are around indels',
-    has_constant => [
-        _variant_type => {
-            type => 'String',
-            default => 'indels',
-            doc => 'variant type that this module operates on, overload this in submodules accordingly',
-        },
-    ],
     has_optional_input => [
         max_read_depth => {
             is  => 'Integer',
@@ -47,6 +40,8 @@ sub help_detail {
 Samtools indel filter
 EOS
 }
+
+sub _variant_type { 'indels' };
 
 sub _filter_variants {
     my $self = shift;

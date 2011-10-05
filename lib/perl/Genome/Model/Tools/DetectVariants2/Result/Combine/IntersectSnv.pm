@@ -9,20 +9,13 @@ use Genome;
 class Genome::Model::Tools::DetectVariants2::Result::Combine::IntersectSnv{
     is => 'Genome::Model::Tools::DetectVariants2::Result::Combine',
     doc => 'intereset snv filter results into one file',
-    has_constant => [
-        _variant_type => {
-            type => 'String',
-            default => 'snvs',
-            doc => 'variant type that this module operates on',
-        },
-    ],
-
 };
 
 sub _needs_symlinks_followed_when_syncing { 0 };
 sub _working_dir_prefix { 'intersect-snv' };
 sub resolve_allocation_disk_group_name { 'info_genome_models' };
 sub allocation_subdir_prefix { 'intersect_snv' };
+sub _variant_type { 'snvs' };
 
 sub _combine_variants {
     my $self = shift;

@@ -299,7 +299,7 @@ sub _create_instrument_data_allocation {
     my $kilobytes_requested = $params{kilobytes_requested};
     Carp::confess('No kilobytes requested given to create allocation') if not $kilobytes_requested;
 
-    my $allocation = $instrument_data->disk_allocations;
+    my $allocation = $instrument_data->allocations;
     if ( defined $allocation ) {
         $self->status_message('Allocation already exists for instrument data: '.$instrument_data->id);
         return;

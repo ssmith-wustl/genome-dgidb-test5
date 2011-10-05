@@ -113,7 +113,7 @@ my $alloc = Genome::Disk::Allocation->__define__(
     group_subdirectory => 'inst_data',
 );
 ok($alloc, 'created disk alloc');
-is_deeply($i4->disk_allocations, $alloc, 'got disk alloc');
+is_deeply($i4->allocations, $alloc, 'got disk alloc');
 my $build36_file = $i4->genotype_microarray_file_for_human_version_36;
 is($build36_file, $alloc->absolute_path.'/'.$l->sample_name.'.human-36.genotype', 'human 36 genotype microarray file');
 my $build37_file = $i4->genotype_microarray_file_for_human_version_37;
