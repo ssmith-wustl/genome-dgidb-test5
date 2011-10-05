@@ -75,7 +75,7 @@ sub parse_next_from_file {
 }
 
 sub write_to_file {
-    my ($self, $sequence) = @_;
+    my ($self, @objects) = @_;
     Carp::confess "Method write_to_file not implemented in subclass of " . __PACKAGE__;
 }
 

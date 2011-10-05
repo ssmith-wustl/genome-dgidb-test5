@@ -55,25 +55,28 @@ sub parse_next_from_file {
 }
 
 sub write_to_file {
-    my ($self, $seq_obj) = @_;
-    my $fh = $self->_get_fh;
+    my ($self, @sequences) = @_;
+    for my $seq_obj (@sequences) {
+        my ($self, $seq_obj) = @_;
+        my $fh = $self->_get_fh;
 
-    my $seq_name = $seq_obj->sequence_name;
-    unless ($seq_name) {
-        Carp::confess "Sequence has no name, cannot write to file " . $self->file;
-    }
-    $fh->print(">$seq_name\n");
-
-    my $seq = $seq_obj->sequence;
-    if ($seq) {
-        for (my $i = 0; $i < (length $seq); $i += 80) {
-            my $substr = substr($seq, $i, 80);
-            $fh->print("$substr\n");
+        my $seq_name = $seq_obj->sequence_name;
+        unless ($seq_name) {
+            Carp::confess "Sequence has no name, cannot write to file " . $self->file;
         }
-    }
+        $fh->print(">$seq_name\n");
 
-    $self->_set_current_sequence($seq_obj);
-    $self->_increment_sequence_number;
+        my $seq = $seq_obj->sequence;
+        if ($seq) {
+            for (my $i = 0; $i < (length $seq); $i += 80) {
+                my $substr = substr($seq, $i, 80);
+                $fh->print("$substr\n");
+            }
+        }
+
+        $self->_set_current_sequence($seq_obj);
+        $self->_increment_sequence_number;
+    }
 
     return 1;
 }
