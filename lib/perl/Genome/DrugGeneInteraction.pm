@@ -40,4 +40,10 @@ class Genome::DrugGeneInteraction {
     doc => 'Claim regarding an interaction between a drug name and a gene name',
 };
 
+sub __display_name__ {
+    my $self = shift;
+#TODO: write me
+    return "Interaction of " . $self->drug->__display_name__ . " and " . $self->gene->__display_name__;
+}
+
 1;
