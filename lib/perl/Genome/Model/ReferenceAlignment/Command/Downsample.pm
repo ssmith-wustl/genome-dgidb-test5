@@ -112,6 +112,40 @@ sub execute {
     return 1;
 }
 
+sub get_or_create_library {
+    my $self = shift;
+    my $sample = shift;
+    my $library;
+    my $new_library_name = $sample->name . "-extlibs";
+    my $try_count = 0;
+
+    #try creating or getting the library until it succeeds or max tries reached
+    while(!$library && ($try_count < 5)){
+        $try_count++;
+        my $time = int(rand(10));
+        $self->status_message( "Waiting $time seconds before trying to get or create a library.\n" );
+        sleep $time;
+        $library = Genome::Library->get(name => $new_library_name);
+
+        if($library){
+            next;
+        } else {
+            my $cmd = "genome library create --name $new_library_name --sample $sample->id";
+            my $result  = Genome::Sys->shellcmd( cmd => $cmd );
+            unless($result){
+                die $self->error_message("Could not create new library.");
+            }
+        }
+        $library = Genome::Library->get(name => $new_library_name);
+    }
+
+    unless($library){
+        die $self->error_message("Could not get or create library.");
+    }
+
+    return $library;
+}
+
 sub _define_new_model {
     my $self = shift;
     my $model = shift;
@@ -142,7 +176,7 @@ sub _import_bam {
         die $self->error_message("Cannot locate a sample to use for importing downsampled bam!");
     }
 
-    my $new_library_name = $sample->name . "-extlibs";
+    my $library = $self->get_or_create_library($sample);
 
     my %params = (
         original_data_path => $filename,
@@ -151,8 +185,9 @@ sub _import_bam {
         import_source_name => 'TGI',
         description => "Downsampled bam, ratio=".$downsample_ratio,
         reference_sequence_build_id => $model->reference_sequence_build_id,
-        new_library_name => $new_library_name,
+        library => $library->id,
     );
+
     $params{target_region} = $model->target_region_set_name unless not defined($model->target_region_set_name);
 
     print Data::Dumper::Dumper(\%params);

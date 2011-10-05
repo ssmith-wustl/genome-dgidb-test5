@@ -34,8 +34,8 @@ class Genome::ProjectPart {
         },
     ],
     has_optional => [
-        label => { is => 'Text' },
-        role => { is => 'Text' }
+        label => { is => 'Text', doc => 'The label for the part.', },
+        role => { is => 'Text', doc => 'The role of the part.'  }
     ],
     table_name => 'GENOME_PROJECT_PART',
     schema_name => 'GMSchema',
