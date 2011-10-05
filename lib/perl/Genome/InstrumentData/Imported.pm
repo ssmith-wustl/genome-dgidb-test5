@@ -157,8 +157,7 @@ class Genome::InstrumentData::Imported {
             is => 'Genome::Model::Build::ImportedReferenceSequence',
             id_by => 'reference_sequence_build_id',
         },
-        disk_allocations => { is => 'Genome::Disk::Allocation', reverse_as => 'owner', is_many => 1 },
-        bam_path => { calculate => q|my $f = $self->disk_allocations->absolute_path . '/all_sequences.bam';  return $f if (-e $f);| },
+        bam_path => { calculate => q|my $f = $self->allocations->absolute_path . '/all_sequences.bam';  return $f if (-e $f);| },
     ],
     schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',
@@ -195,7 +194,7 @@ sub data_directory {
 # TODO: remove me and use the actual object accessor
 sub get_disk_allocation {
     my $self = shift;
-    return $self->disk_allocations;
+    return $self->allocations;
 }
 
 sub calculate_alignment_estimated_kb_usage {
@@ -413,7 +412,7 @@ sub _archive_file_name { # private for now...can be public
 sub archive_path {
     my $self = shift;
 
-    my $alloc = $self->disk_allocations;
+    my $alloc = $self->allocations;
     return if not $alloc;
 
     my $file_name = $self->_archive_file_name;
@@ -427,7 +426,7 @@ sub get_segments {
         return ();
     }
     
-    my ($allocation) = $self->disk_allocations;
+    my ($allocation) = $self->allocations;
     unless ($allocation) {
         $self->error_message("Found no disk allocation for imported instrument data " . $self->id, ", so cannot find bam!");
         die $self->error_message;
@@ -454,7 +453,7 @@ sub get_segments {
 sub genotype_microarray_raw_file {
     my $self = shift;
 
-    my $disk_allocation = $self->disk_allocations;
+    my $disk_allocation = $self->allocations;
     return if not $disk_allocation;
 
     my $absolute_path = $disk_allocation->absolute_path;
@@ -473,7 +472,7 @@ sub genotype_microarray_file_for_subject_and_version {
     Carp::confess('No reference name given to get genotype microarray file') if not $subject_name;
     Carp::confess('No version given to get genotype microarray file') if not defined $version;
 
-    my $disk_allocation = $self->disk_allocations;
+    my $disk_allocation = $self->allocations;
     if (not $disk_allocation) {
         $self->status_message('Missing disk allocation for genotype microarray file.');
         return;

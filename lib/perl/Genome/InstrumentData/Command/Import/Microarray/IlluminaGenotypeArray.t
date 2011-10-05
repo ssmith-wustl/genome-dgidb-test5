@@ -49,7 +49,7 @@ ok($cmd->execute, "execution was successful");
 my $i = $cmd->_instrument_data;
 is($i->original_data_path,$source_dir,"found imported data and source_data_path is properly set");
 is($i->library_name, $sample_name.'-microarraylib', "library name");
-my $disk = $i->disk_allocations;
+my $disk = $i->allocations;
 ok($disk, "found an allocation owned by the new instrument data");
 my $data_directory = $i->data_directory;
 ok(-d $data_directory, "data directory is present");
