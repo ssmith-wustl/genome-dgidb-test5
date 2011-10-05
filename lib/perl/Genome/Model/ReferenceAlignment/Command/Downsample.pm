@@ -120,7 +120,7 @@ sub get_or_create_library {
     my $try_count = 0;
 
     #try creating or getting the library until it succeeds or max tries reached
-    while(!$library || ($try_count < 5)){
+    while(!$library && ($try_count < 5)){
         $try_count++;
         my $time = int(rand(10));
         $self->status_message( "Waiting $time seconds before trying to get or create a library.\n" );
