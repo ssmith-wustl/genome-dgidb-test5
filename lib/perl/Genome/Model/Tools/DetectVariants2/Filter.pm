@@ -93,13 +93,6 @@ class Genome::Model::Tools::DetectVariants2::Filter {
             default => 'Filter description',
         },
     ],
-    has_constant => [
-        _variant_type => {
-            type => 'String',
-            default => 'variant_type',
-            doc => 'variant type that this module operates on, overload this in submodules accordingly',
-        },
-    ],
     has_optional_transient => [
         _validate_output_offset => {
             type => 'Integer',
@@ -148,6 +141,8 @@ sub help_detail {
 Tools to run variant detector filters with a common API
 EOS
 }
+
+sub _variant_type { die 'override _variant_type' };
 
 # Take all parameters from the "params" property and store them in individual properties for the class.
 # resolve_class_and_params_for_argv will check for us to make sure all the property names are valid

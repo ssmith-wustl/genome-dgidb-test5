@@ -18,13 +18,6 @@ class Genome::Model::Tools::DetectVariants2::Filter::SnpFilter{
             doc => 'minimum average mapping quality threshold for a high quality call',
         },
     ],
-    has_constant => [
-        _variant_type => {
-            type => 'String',
-            default => 'snvs',
-            doc => 'variant type that this module operates on, overload this in submodules accordingly',
-        },
-    ],
 };
 
 sub help_synopsis {
@@ -39,6 +32,8 @@ sub help_detail {
 Filters out snvs that are around indels
 EOS
 }
+
+sub _variant_type { 'snvs' };
 
 sub _filter_variants {
     my $self = shift;
