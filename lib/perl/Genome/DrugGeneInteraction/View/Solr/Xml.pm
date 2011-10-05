@@ -53,7 +53,7 @@ class Genome::DrugGeneInteraction::View::Solr::Xml {
                     position => 'title',
                 },
                 {
-                    name => 'drug',
+                    name => 'drug_name',
                     position => 'content',
                     perspective => 'default',
                     toolkit => 'text',
@@ -67,7 +67,7 @@ class Genome::DrugGeneInteraction::View::Solr::Xml {
                 },
                 {
 
-                    name => 'gene',
+                    name => 'gene_name',
                     position => 'content',
                     perspective => 'default',
                     toolkit => 'text',
