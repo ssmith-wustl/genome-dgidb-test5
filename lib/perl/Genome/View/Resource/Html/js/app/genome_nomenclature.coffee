@@ -167,6 +167,7 @@ $ ->
         m = {"name": name, "fields" : listView.collection}
         jsonToPost = JSON.stringify(m)
         k = JSON.parse(jsonToPost)
+        $('#save-spinner').show();
         $.ajax
            url: '/view/genome/nomenclature'
            type: 'PUT'
@@ -174,7 +175,11 @@ $ ->
            data: 
             json: JSON.stringify(k)
            success: (response ) ->
-            alert 'got it'
+            window.location="/view/genome/nomenclature/set/status.html"
+           error: (response) ->
+            alert("Sorry, an error occurred trying to save this nomenclature.")
+           complete: ->
+            $('#save-spinner').hide();
 
       $('.load-nomenclature').bind 'click', ->
         #load_json  = "[{'name':  'hello', 'type': 'string', 'enumerated_values': []},{'name':  'there', 'type': 'enumerated', 'enumerated_values': ['woo', 'there']} ]"
