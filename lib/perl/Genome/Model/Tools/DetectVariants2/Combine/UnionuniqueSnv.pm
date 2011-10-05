@@ -8,14 +8,6 @@ use Genome;
 class Genome::Model::Tools::DetectVariants2::Combine::UnionuniqueSnv{
     is => 'Genome::Model::Tools::DetectVariants2::Combine',
     doc => 'Union snvs into one file',
-    has_constant => [
-        _variant_type => {
-            type => 'String',
-            default => 'snvs',
-            doc => 'variant type that this module operates on',
-        },
-    ],
-
 };
 
 sub help_synopsis {
@@ -25,6 +17,7 @@ gmt detect-variants combine unionunique-snv --variant-file-a samtools.hq.v1.bed 
 EOS
 }
 
+sub _variant_type { 'snvs' };
 
 sub _combine_variants {
     my $self = shift;

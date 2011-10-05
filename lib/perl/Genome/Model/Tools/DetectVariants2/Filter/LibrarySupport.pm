@@ -8,14 +8,6 @@ use Genome;
 class Genome::Model::Tools::DetectVariants2::Filter::LibrarySupport{
     is => 'Genome::Model::Tools::DetectVariants2::Filter',
     doc => "Outputs list of input indels from Sniper that have high library support.",
-    has_constant => [
-        _variant_type => {
-            type => 'String',
-            default => 'indels',
-            doc => 'variant type that this module operates on, overload this in submodules accordingly',
-        },
-    ],
-
 };
 
 sub help_synopsis {
@@ -36,6 +28,8 @@ of libraries where strength is a function of the number of reads supporting
 the indel.
 EOS
 }
+
+sub _variant_type { 'indels' };
 
 sub _filter_variants {
 

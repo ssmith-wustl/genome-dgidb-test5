@@ -44,13 +44,6 @@ class Genome::Model::Tools::DetectVariants2::Filter::SomaticScoreMappingQuality{
             doc => 'minimum somatic quality threshold for high confidence call',
         },
     ],
-    has_constant => [
-        _variant_type => {
-            type => 'String',
-            default => 'snvs',
-            doc => 'variant type that this module operates on, overload this in submodules accordingly',
-        },
-    ],
 };
 
 my %READCOUNT_VERSIONS = (
@@ -73,6 +66,8 @@ sub help_detail {
 This module takes in somatic sniper output and filters it to high confidence variants
 EOS
 }
+
+sub _variant_type { 'snvs' };
 
 sub _filter_variants {
     my $self = shift;

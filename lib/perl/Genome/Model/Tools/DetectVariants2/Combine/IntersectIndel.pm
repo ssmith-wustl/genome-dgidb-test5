@@ -7,14 +7,6 @@ use Genome;
 
 class Genome::Model::Tools::DetectVariants2::Combine::IntersectIndel{
     is => 'Genome::Model::Tools::DetectVariants2::Combine',
-    has_constant => [
-        _variant_type => {
-            type => 'String',
-            default => 'indels',
-            doc => 'variant type that this module operates on',
-        },
-    ],
-
 };
 
 
@@ -33,6 +25,8 @@ sub help_detail {
     return <<EOS 
 EOS
 }
+
+sub _variant_type { 'indels' };
 
 sub _combine_variants {
     my $self = shift;
