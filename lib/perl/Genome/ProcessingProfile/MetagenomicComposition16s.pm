@@ -79,14 +79,15 @@ sub create {
     }
     
     # Validate amplicon processor
-    $self->status_message('Validate amplicon processor: '.$self->amplicon_processor);
-    if ( not eval { $self->amplicon_processor_commands } ) {
-        $self->error_message('Failed to validate amplicon processor: '.$self->amplicon_processor);
-        $self->delete;
-        return;
+    if ( $self->amplicon_processor ) {
+        $self->status_message('Validate amplicon processor: '.$self->amplicon_processor);
+        if ( not eval { $self->amplicon_processor_commands } ) {
+            $self->error_message('Failed to validate amplicon processor: '.$self->amplicon_processor);
+            $self->delete;
+            return;
+        }
+        $self->status_message('Validate amplicon processor OK');
     }
-    $self->status_message('Validate amplicon processor OK');
-
     # Validate classifier version
     # TODO
 
