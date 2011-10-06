@@ -1342,7 +1342,7 @@ sub _extract_input_fastq_filenames {
         my $temp_directory = Genome::Sys->create_temp_directory;
 
         my $trimmer_name = $self->trimmer_name;
-        undef($trimmer_name) if $trimmer_name eq 'trimq2_shortfilter';
+        undef($trimmer_name) if $trimmer_name and $trimmer_name eq 'trimq2_shortfilter';
 
         @input_fastq_pathnames = $instrument_data->dump_trimmed_fastq_files(
             segment_params => \%segment_params,
