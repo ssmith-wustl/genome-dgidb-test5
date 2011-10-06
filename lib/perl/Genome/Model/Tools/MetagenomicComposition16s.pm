@@ -47,4 +47,15 @@ sub path_to_chimera_slayer {
     return $script;
 }
 
+sub path_to_nastier {
+    my $self = shift;
+
+    my $script = '/gsc/pkg/bio/broad/NAST-iEr/run_NAST-iEr.pl';
+    if ( not -x $script ) {
+        $self->error_message("Failed to find script of script is not executable: $script");
+        return;
+    }
+    return $script;
+}
+
 1;
