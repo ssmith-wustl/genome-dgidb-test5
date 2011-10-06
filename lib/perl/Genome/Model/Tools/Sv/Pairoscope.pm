@@ -11,72 +11,99 @@ use File::Which;
 class Genome::Model::Tools::Sv::Pairoscope {
     is => 'Command',
     has => [
-    input_file => 
-    { 
-        type => 'String',
-        is_optional => 0,
-        doc => "Input file of svs in primer design input format",
-    },
-    output_dir =>
-    {
-        type => 'String',
-        is_optional => 0,
-        doc => "Output directory name for placement of directories",
-    },        
-    tumor_bam =>
-    {
-        type => 'String',
-        is_optional => 0,
-        doc => "bam file location for tumor",
-    },
-    normal_bam =>
-    {
-        type => 'String',
-        is_optional => 0,
-        doc => "bam file location for normal",
-    },
-    types => {
-        type => 'String',
-        is_optional => 1,
-        doc => "Comma separated string of types to graph",
-        default => "INV,INS,DEL,ITX,CTX",
-    },
-    possible_BD_type => {
-        type => 'hashref',
-        doc => "hashref of possible BreakDancer SV types",
-        is_optional => 1,
-        default => {INV => 1,INS => 1,DEL => 1,ITX => 1,CTX => 1,},
-    },
-    pairoscope_program => {
-        type => "String",
-        default => "pairoscope0.3",
-        doc => "executable of pairoscope to use", 
-        is_optional => 1,
-    },
-    exon_bam => {
-        type => "String",
-        default => "/gscmnt/sata135/info/medseq/dlarson/hg18.NCBI-human.combined-annotation.54_36p_v2.sorted.bam",
-        doc => "bam file of exons to use for displaying gene models", 
-        is_optional => 1,
-    },
-    buffer_size => {
-        type => "Integer",
-        default => 500,
-        doc => "number of bases to include on either side of the predicted breakpoint(s)",
-        is_optional => 1,
-    },
-    pairoscope_options => {
-        type => "String",
-        default => "",
-        doc => "option string to pass through to pairoscope for experimental options etc",
-        is_optional => 1,
-    },
-    output_prefix => {
-        type => "String",
-        default => "",
-        doc => "String that will be prepended to all output file names. Cannot contain an underscore or period",
-        is_optional => 1,
-    },
+        input_file => 
+        { 
+            type => 'String',
+            is_optional => 0,
+            doc => "Input file of svs in primer design input format",
+        },
+        output_dir =>
+        {
+            type => 'String',
+            is_optional => 0,
+            doc => "Output directory name for placement of directories",
+        },        
+        tumor_bam =>
+        {
+            type => 'String',
+            is_optional => 0,
+            doc => "bam file location for tumor",
+        },
+        normal_bam =>
+        {
+            type => 'String',
+            is_optional => 0,
+            doc => "bam file location for normal",
+        },
+        types => {
+            type => 'String',
+            is_optional => 1,
+            doc => "Comma separated string of types to graph",
+            default => "INV,INS,DEL,ITX,CTX",
+        },
+        possible_BD_type => {
+            type => 'hashref',
+            doc => "hashref of possible BreakDancer SV types",
+            is_optional => 1,
+            default => {INV => 1,INS => 1,DEL => 1,ITX => 1,CTX => 1,},
+        },
+        pairoscope_program => {
+            type => "String",
+            default => "pairoscope0.3",
+            doc => "executable of pairoscope to use", 
+            is_optional => 1,
+        },
+        exon_bam => {
+            type => "String",
+            default => "/gscmnt/sata135/info/medseq/dlarson/hg18.NCBI-human.combined-annotation.54_36p_v2.sorted.bam",
+            doc => "bam file of exons to use for displaying gene models", 
+            is_optional => 1,
+        },
+        buffer_size => {
+            type => "Integer",
+            default => 500,
+            doc => "number of bases to include on either side of the predicted breakpoint(s)",
+            is_optional => 1,
+        },
+        pairoscope_options => {
+            type => "String",
+            default => "",
+            doc => "option string to pass through to pairoscope for experimental options etc",
+            is_optional => 1,
+        },
+        output_prefix => {
+            type => "String",
+            default => "",
+            doc => "String that will be prepended to all output file names. Cannot contain an underscore or period",
+            is_optional => 1,
+        },
+        simplified_plot => {
+            type => "Boolean",
+            default => 0,
+            doc => "If specified, produces a simplified plot showing only the read connections (middle section)",
+            is_optional => 1,
+        },
+
+        simplified_plot_title => {
+            type => "String",
+            doc => "If simplified plot is being produced, adds this title",
+            default => "",
+            is_optional => 1,
+        },
+
+
+        # output_width => {
+        #     type => "Integer",
+        #     default => 1024,
+        #     doc => "width in pixels of the output document"
+        #     is_optional => 1,
+        # }
+        # output_height => {
+        #     type => "Integer",
+        #     default => 768,
+        #     doc => "height in pixels of the output document"
+        #     is_optional => 1,
+        # }
 
     ],
 };
@@ -141,7 +168,11 @@ sub execute {
         return;
     }
 
+    my $simple_plot = $self->simplified_plot;
+    my $simple_plot_title = $self->simplified_plot_title;
+
     my $additional_opts = $self->pairoscope_options;
+
     my $exon_file = $self->exon_bam;
     if($exon_file) {
         unless(-e $exon_file) {
@@ -257,6 +288,36 @@ sub execute {
             $self->error_message("Type $type invalid");
             $self->error_message("Valid types are " . join("\t",keys %{$allowed_types}));
             return;
+        }
+
+        if($simple_plot){
+            #two temp files, one for each plot
+            my ($tfh,$newfile1) = Genome::Sys->create_temp_file;
+            unless($tfh) {
+                $self->error_message("Unable to create temporary file $!");
+                die;
+            }
+            my ($tfh2,$newfile2) = Genome::Sys->create_temp_file;
+            unless($tfh2) {
+                $self->error_message("Unable to create temporary file $!");
+                die;
+            }
+            my $cmd;
+            #use imagemagick to create the plot
+            $cmd = "convert -crop 1024x260+0+250 ${prefix}${chr1}_${chr1_pos}_${chr2}_${chr2_pos}_Normal_${type}.q1.png $newfile1"; 
+            system($cmd);
+            $cmd = "convert -crop 1024x260+0+250 ${prefix}${chr1}_${chr1_pos}_${chr2}_${chr2_pos}_Tumor_${type}.q1.png $newfile2";
+            system($cmd);
+
+            # fonts won't work unless you run this script and save the output in ~/.magick/type.xml
+            # http://www.imagemagick.org/Usage/scripts/imagick_type_gen
+            if($simple_plot_title eq ""){                
+                $cmd = "montage -tile 1x2 -geometry 1024x260 -shadow $newfile1 $newfile2 ${prefix}${chr1}_${chr1_pos}_${chr2}_${chr2_pos}_Both_${type}.q1.simple.png";
+                system($cmd);
+            } else {
+                $cmd = "montage -tile 1x2 -geometry 1024x260 -font Kayrawan -title " . $simple_plot_title . " -shadow $newfile1 $newfile2 ${prefix}${chr1}_${chr1_pos}_${chr2}_${chr2_pos}_Both_${type}.q1.simple.png";
+                system($cmd);
+            }
         }
 
 
