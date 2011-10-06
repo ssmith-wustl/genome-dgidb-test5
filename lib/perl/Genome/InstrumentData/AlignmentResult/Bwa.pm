@@ -27,7 +27,7 @@ sub required_rusage {
     my $tmp_mb = $class->tmp_megabytes_estimated($instrument_data);
     my $mem_mb = 1024 * 14; # increased b/c we have about 16 GB available when 6 jobs run on a 96 Gb server
     my $cpus = 4;
-    
+
     my $mem_kb = $mem_mb*1024;
     my $tmp_gb = $tmp_mb/1024;
 
@@ -145,7 +145,7 @@ sub _intermediate_result {
 
         my $includes = join(' ', map { '-I ' . $_ } UR::Util::used_libs);
         my $class = 'Genome::InstrumentData::IntermediateAlignmentResult::Command::Bwa';
-        my $parameters = join(', ', map($_ . ' => "' . ($intermediate_params{$_} || '') . '"', sort keys %intermediate_params));
+        my $parameters = join(', ', map($_ . ' => "' . (defined($intermediate_params{$_}) ? $intermediate_params{$_} : '') . '"', sort keys %intermediate_params));
 
         if(UR::DBI->no_commit()) {
             my $rv = eval "$class->execute($parameters);";
@@ -232,8 +232,8 @@ sub _run_aligner {
 
     # decompose aligner params for each stage of bwa alignment
     my %aligner_params = $self->decomposed_aligner_params;
-   
-    #### STEP 1: Use "bwa aln" to align each fastq independently to the reference sequence 
+
+    #### STEP 1: Use "bwa aln" to align each fastq independently to the reference sequence
 
     my $bwa_aln_params = (defined $aligner_params{'bwa_aln_params'} ? $aligner_params{'bwa_aln_params'} : "");
     my @indices = $self->_all_reference_indices;
@@ -254,7 +254,7 @@ sub _run_aligner {
 
     map { s/\.bam:\d/.bam/ } @input_pathnames; # strip :[12] suffix from bam files if present
 
-    my $samxe_logfile = $tmp_dir . "/bwa.samxe.log"; 
+    my $samxe_logfile = $tmp_dir . "/bwa.samxe.log";
     my $samxe_cmdline = $self->_samxe_cmdline(\%aligner_params, \@input_groups, @input_pathnames);
     my $sam_file = $self->temp_scratch_directory . "/all_sequences.sam";
 
@@ -277,7 +277,7 @@ sub _run_aligner {
     }
 
     #### STEP 3: Merge log files.
- 
+
     my $log_input_fileset = join " ",  (@aln_log_files, $samxe_logfile);
     my $log_output_file   = $self->temp_staging_directory . "/aligner.log";
     my $concat_log_cmd = sprintf('cat %s >> %s', $log_input_fileset, $log_output_file);
@@ -309,10 +309,10 @@ sub _filter_samxe_output {
             return;
     }
 
-    my $sam_out_fh; 
+    my $sam_out_fh;
     # UGLY HACK: the multi-aligner code redefines this to zero so it can extract sam files.
-    if ($self->supports_streaming_to_bam) { 
-        $sam_out_fh = $self->_sam_output_fh; 
+    if ($self->supports_streaming_to_bam) {
+        $sam_out_fh = $self->_sam_output_fh;
         $self->status_message("Streaming output through existing file handle");
     } else {
         $sam_out_fh = IO::File->new(">>" . $self->temp_scratch_directory . "/all_sequences.sam");
@@ -329,7 +329,7 @@ sub _filter_samxe_output {
         $self->error_message("Adding read group to sam file failed!");
         die $self->error_message;
     }
-    
+
     $sam_run_output_fh->close;
 
     return 1;
@@ -344,14 +344,14 @@ sub _verify_bwa_aln_did_happen {
         $self->error_message("Expected SAI file is $p{sai_file} nonexistent or zero length.");
         return;
     }
-    
+
     unless ($self->_inspect_log_file(log_file=>$p{log_file},
                                      log_regex=>'(\d+) sequences have been processed')) {
-        
+
         $self->error_message("Expected to see 'X sequences have been processed' in the log file where 'X' must be a nonzero number.");
         return 0;
     }
-    
+
     return 1;
 }
 
@@ -365,9 +365,9 @@ sub _inspect_log_file {
         return;
     }
 
-    my $last_line = `tail -1 $log_file`;    
+    my $last_line = `tail -1 $log_file`;
     my $check_nonzero = 0;
-    
+
     my $log_regex = $p{log_regex};
     if ($log_regex =~ m/\(\\d\+\)/) {
         $check_nonzero = 1;
@@ -379,7 +379,7 @@ sub _inspect_log_file {
             return 1;
         }
     }
-    
+
     $self->error_message("The last line of $log_file is not valid: $last_line");
     return;
 }
@@ -388,15 +388,15 @@ sub _inspect_log_file {
 sub decomposed_aligner_params {
     my $self = shift;
     my $params = $self->aligner_params || ":::";
-    
+
     my @spar = split /\:/, $params;
 
-    my $bwa_aln_params = $spar[0] || ""; 
+    my $bwa_aln_params = $spar[0] || "";
 
-    my $cpu_count = $self->_available_cpu_count;    
+    my $cpu_count = $self->_available_cpu_count;
 
     $self->status_message("[decomposed_aligner_params] cpu count is $cpu_count");
-  
+
     $self->status_message("[decomposed_aligner_params] bwa aln params are: $bwa_aln_params");
 
     if (!$bwa_aln_params || $bwa_aln_params !~ m/-t/) {
@@ -407,19 +407,19 @@ sub decomposed_aligner_params {
 
     $self->status_message("[decomposed_aligner_params] autocalculated CPU requirement, bwa aln params modified: $bwa_aln_params");
 
-    
+
     return ('bwa_aln_params' => $bwa_aln_params, 'bwa_samse_params' => $spar[1], 'bwa_sampe_params' => $spar[2]);
 }
 
 sub aligner_params_for_sam_header {
     my $self = shift;
-    
+
     my %params = $self->decomposed_aligner_params;
     my $aln_params = $params{bwa_aln_params} || "";
-  
+
     if ($self->instrument_data->is_paired_end) {
         $self->_derive_bwa_sampe_parameters;
-    } 
+    }
     my $sam_cmd = $self->_bwa_sam_cmd || "";
 
     return "bwa aln $aln_params; $sam_cmd ";
@@ -429,7 +429,7 @@ sub _derive_bwa_sampe_parameters {
     my $self = shift;
     my %aligner_params = $self->decomposed_aligner_params;
     my $bwa_sampe_params = (defined $aligner_params{'bwa_sampe_params'} ? $aligner_params{'bwa_sampe_params'} : "");
-    
+
     # Ignore where we have a -a already specified
     if ($bwa_sampe_params =~ m/\-a\s*(\d+)/) {
         $self->status_message("Aligner params specify a -a parameter ($1) as upper bound on insert size.");
@@ -493,7 +493,7 @@ sub prepare_reference_sequence_index {
         unless($actual_fasta_file) {
             $class->error_message("Can't read target of symlink $staged_fasta_file");
             return;
-        } 
+        }
     }
 
     $class->status_message(sprintf("Checking size of fasta file %s", $actual_fasta_file));
