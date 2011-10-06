@@ -170,7 +170,7 @@ sub _import_bam {
         reference_sequence_build_id => $model->reference_sequence_build_id,
         library => $library->id,
     );
-    $params{target_region} = $model->target_region_set_name unless not defined($model->target_region_set_name);
+    $params{target_region} = $model->target_region_set_name || "none";
 
     my $import_cmd = Genome::InstrumentData::Command::Import::Bam->execute(
         %params,
@@ -217,10 +217,11 @@ sub _get_readcount {
 sub _get_readlength {
     my $self = shift;
     my $model = shift;
-    my @id = $model->instrument_data;
+    my @id = grep{ defined($_)} $model->instrument_data;
+    $self->status_message("Found ". scalar(@id) . " instrument-data records associated with model ".$model->id);
     my $readlength;
     for my $id (@id){
-        if(defined($id)){
+        if(defined($readlength)){
             unless($id->read_length == $readlength){
                 die $self->error_message("Found instrument data with different read lengths: ". $readlength."  and  ".$id->read_length."\n"
                     ."This tool currently works only on homogenous read length models.");
