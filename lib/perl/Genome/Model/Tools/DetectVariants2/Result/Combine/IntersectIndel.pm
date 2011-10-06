@@ -7,20 +7,13 @@ use Genome;
 
 class Genome::Model::Tools::DetectVariants2::Result::Combine::IntersectIndel{
     is => 'Genome::Model::Tools::DetectVariants2::Result::Combine',
-    has_constant => [
-        _variant_type => {
-            type => 'String',
-            default => 'indels',
-            doc => 'variant type that this module operates on',
-        },
-    ],
-
 };
 
 sub _needs_symlinks_followed_when_syncing { 0 };
 sub _working_dir_prefix { 'intersect-indel' };
 sub resolve_allocation_disk_group_name { 'info_genome_models' };
 sub allocation_subdir_prefix { 'intersect_indel' };
+sub _variant_type { 'indels' };
 
 sub _combine_variants {
     my $self = shift;

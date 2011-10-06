@@ -77,7 +77,7 @@ sub execute {
 
     $self->status_message("Total Bases: ".$total_bases);
 
-    my $downsample_ratio = $new_coverage / $total_bases;
+    my $downsample_ratio = sprintf("%.5f", $new_coverage / $total_bases );
 
     if($downsample_ratio >= 1.0){
         die $self->error_message("The downsample ratio ended up being >= 1. You must specify a coverage_in_gb that is lower than the existing bam.");
@@ -98,16 +98,52 @@ sub execute {
     } 
     $self->status_message("Downsampled bam has been created at: ".$temp);
 
-    my $imported_bam = $self->_import_bam($temp,$model);
+    my $imported_bam = $self->_import_bam($temp,$model,$downsample_ratio);
 
     unless($imported_bam){
         die $self->error_message("Could not import bam");
     }
 
     $self->status_message("Your new instrument-data id is: ".$imported_bam->id);
+
+    #TODO add code to create new models using the newly imported instrument-data
  
     #my $new_model = $self->_define_new_model($model,$imported_bam);
     return 1;
+}
+
+sub get_or_create_library {
+    my $self = shift;
+    my $sample = shift;
+    my $library;
+    my $new_library_name = $sample->name . "-extlibs";
+    my $try_count = 0;
+
+    #try creating or getting the library until it succeeds or max tries reached
+    while(!$library && ($try_count < 5)){
+        $try_count++;
+        my $time = int(rand(10));
+        $self->status_message( "Waiting $time seconds before trying to get or create a library.\n" );
+        sleep $time;
+        $library = Genome::Library->get(name => $new_library_name);
+
+        if($library){
+            next;
+        } else {
+            my $cmd = "genome library create --name $new_library_name --sample $sample->id";
+            my $result  = Genome::Sys->shellcmd( cmd => $cmd );
+            unless($result){
+                die $self->error_message("Could not create new library.");
+            }
+        }
+        $library = Genome::Library->get(name => $new_library_name);
+    }
+
+    unless($library){
+        die $self->error_message("Could not get or create library.");
+    }
+
+    return $library;
 }
 
 sub _define_new_model {
@@ -128,31 +164,38 @@ sub _import_bam {
     my $self = shift;
     my $bam = shift;
     my $model = shift;
+    my $downsample_ratio = shift;
 
     my $dir = dirname($bam);
     my $filename = $dir."/all_sequences.bam";
     rename $bam, $filename; 
 
-    my $sample = $model->subject->id;
-    unless(Genome::Sample->get($sample)){
+    my $sample_id = $model->subject->id;
+    my $sample = Genome::Sample->get($sample_id);
+    unless($sample){
         die $self->error_message("Cannot locate a sample to use for importing downsampled bam!");
     }
 
+    my $library = $self->get_or_create_library($sample);
+
     my %params = (
         original_data_path => $filename,
-        sample => $sample,
+        sample => $sample->id,
         create_library => 1,
         import_source_name => 'TGI',
-        description => "Downsampled aligned bam",
+        description => "Downsampled bam, ratio=".$downsample_ratio,
         reference_sequence_build_id => $model->reference_sequence_build_id,
+        library => $library->id,
     );
+
     $params{target_region} = $model->target_region_set_name unless not defined($model->target_region_set_name);
 
     print Data::Dumper::Dumper(\%params);
 
     my $import_cmd = Genome::InstrumentData::Command::Import::Bam->execute(
-        %params
+        %params,
     );
+
     unless($import_cmd){
         die $self->error_message("Could not execute bam import command!");
     }

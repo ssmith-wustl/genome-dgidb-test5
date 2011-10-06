@@ -8,13 +8,6 @@ use Genome;
 
 class Genome::Model::Tools::DetectVariants2::Filter::VarscanHighConfidence{
     is => 'Genome::Model::Tools::DetectVariants2::Filter',
-    has_constant => [
-        _variant_type => {
-            type => 'String',
-            default => 'snvs',
-            doc => 'variant type that this module operates on, overload this in submodules accordingly',
-        },
-    ],
     has_optional_input => [
         p_value_for_hc  => { is => 'Number', doc => "P-value threshold for high confidence", is_input => 1, default_value => '0.07'},
         max_normal_freq => { is => 'Number', doc => "Maximum normal frequency for HC Somatic", is_input => 1, default_value => '5'},
@@ -29,6 +22,8 @@ class Genome::Model::Tools::DetectVariants2::Filter::VarscanHighConfidence{
          },
      ],
 };
+
+sub _variant_type { 'snvs' };
 
 sub _filter_variants {
     my $self = shift;

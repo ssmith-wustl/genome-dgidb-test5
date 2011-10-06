@@ -20,13 +20,6 @@ class Genome::Model::Tools::DetectVariants2::Result::Combine {
             is => 'Integer',
         },
     ],
-    has_constant => [
-        _variant_type => {
-            type => 'String',
-            default => 'variant_type',
-            doc => 'variant type that this module operates on, overload this in submodules accordingly',
-        },
-    ],
     has_optional => [
         input_a => {
             is => 'Genome::Model::Tools::DetectVariants2::Result::Base',
@@ -48,6 +41,8 @@ class Genome::Model::Tools::DetectVariants2::Result::Combine {
         },
     ],
 };
+
+sub _variant_type { die 'override _variant_type' };
 
 sub create {
     my $class = shift;

@@ -27,6 +27,11 @@ class Genome::Model::ReferenceAlignment::Command::MergeVcf {
             doc => "Set this to operate on gzipped vcfs (and make them if they aren't there) and to output gzipped result",
             default => 0,
         },
+        joinx_executable => {
+            is => 'Text',
+            doc => 'Path to joinx executable, default is the deployed joinx',
+            is_optional => 1,
+        }
     ],
 };
 
@@ -117,11 +122,14 @@ sub execute {
         } 
     }
     if($indels_output_file){
-        my $join_cmd = Genome::Model::Tools::Joinx::VcfMerge->create(
+        my %params = (
             output_file => $indels_output_file,
             input_files => \@indel_list,
-            use_bgzip => $gzip,
-            joinx_bin_path => "/gscmnt/ams1158/info/pindel/joinx/joinx",
+            use_bgzip => $gzip, 
+        );
+        $params{joinx_bin_path} = $self->joinx_executable if defined $self->joinx_executable;
+        my $join_cmd = Genome::Model::Tools::Joinx::VcfMerge->create(
+            %params,
         );
 
         unless($join_cmd->execute){

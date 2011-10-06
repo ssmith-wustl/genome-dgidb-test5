@@ -8,13 +8,6 @@ use Genome;
 class Genome::Model::Tools::DetectVariants2::Combine::UnionSv{
     is  => 'Genome::Model::Tools::DetectVariants2::Combine',
     doc => 'Union svs into one file',
-    has_constant => [
-        _variant_type => {
-            type => 'String',
-            default => 'svs',
-            doc => 'variant type that this module operates on',
-        },
-    ],
 };
 
 sub help_brief {
@@ -32,5 +25,7 @@ sub help_detail {
     return <<EOS
 EOS
 }
+
+sub _variant_type { 'svs' };
 
 1;

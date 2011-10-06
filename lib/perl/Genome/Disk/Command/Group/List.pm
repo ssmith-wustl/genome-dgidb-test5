@@ -15,9 +15,6 @@ class Genome::Disk::Command::Group::List {
         show => { 
             default_value => 'disk_group_name,dg_id,user_name,group_name,subdirectory' 
         },
-        filter => { 
-            default_value => 'user_name=apipe' 
-        },
     ],
     doc => 'Lists Genome::Disk::Group objects',
 };
