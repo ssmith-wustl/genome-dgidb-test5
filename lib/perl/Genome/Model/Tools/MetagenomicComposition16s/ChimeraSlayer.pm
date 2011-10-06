@@ -20,12 +20,12 @@ class Genome::Model::Tools::MetagenomicComposition16s::ChimeraSlayer {
         db_NAST => {
             is => 'Text',
             is_optional => 1,
-            doc => 'Database in NAST format (default /gscmnt/gc4096/info/reference_sequences/chimera-detector-16SrRNA/2010-07-07/rRNA16S.gold.NAST_ALIGNED.fasta',
+            doc => 'Database in NAST format (default: file installed 2010-07-07)',
         },
         db_FASTA => {
             is => 'Text',
             is_optional => 1,
-            doc => 'Database in fasta format (default: /gscmnt/gc4096/info/reference_sequences/chimera-detector-16SrRNA/2010-07-07/rRNA16S.gold.fasta)',
+            doc => 'Database in fasta format (default: file installed 2010-07-07)',
         },
         n => {
             is => 'Number',
@@ -106,12 +106,13 @@ class Genome::Model::Tools::MetagenomicComposition16s::ChimeraSlayer {
 };
 
 sub help_brief {
-    'Tool to run chimera detector',
+    'Tool to run chimera detector: chimera_slayer',
 }
 
 sub help_detail {
     return <<"EOS"
-gmt metagenomic-composition16s ..
+gmt metagenomic-composition16s chimera-slayer --query-NAST chims.NAST --exec-dir /gscmnt/100/mc16s --printCSalignments
+gmt metagenomic-composition16s chimera-slayer --query-NAST chims.NAST --exec-dir /gscmnt/103/mc16s --S 10 --windowSize 50
 EOS
 }
 
