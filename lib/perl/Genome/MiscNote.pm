@@ -20,7 +20,7 @@ class Genome::MiscNote {
         auto_truncate_body_text => { is => 'Boolean', default => '0', is_transient => 1},
     ],
     has_optional => [
-        body_text          => { is => 'VARCHAR2', len => 4000 },
+        body_text          => { is => 'VARCHAR2', len => 4000, default => '' },
     ],
     schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',
@@ -39,7 +39,7 @@ sub create {
         $self->editor_id(Genome::Sys->username);
     }
 
-    my $body_text = $self->body_text || '';
+    my $body_text = $self->body_text;
 
     $self->_auto_truncate_body_text if $self->auto_truncate_body_text;
 
