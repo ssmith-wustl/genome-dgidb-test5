@@ -65,7 +65,7 @@ class Genome::InstrumentData::Command::Import::TcgaBam {
         _model => { is_optional => 1, },
         _inst_data => { is_optional => 1, },
         import_instrument_data_id => { via => '_inst_data', to => 'id', is_optional => 1, },
-        _allocation => { via => '_inst_data', to => 'disk_allocations', },
+        _allocation => { via => '_inst_data', to => 'allocations', },
         _absolute_path => { via => '_allocation', to => 'absolute_path', },
         _new_bam => { 
             calculate_from => [qw/ _absolute_path /], 

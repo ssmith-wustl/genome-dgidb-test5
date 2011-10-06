@@ -21,11 +21,6 @@ BEGIN {
 my $result_class = 'Genome::InstrumentData::IntermediateAlignmentResult::Bwa';
 use_ok($result_class);
 
-# Override lock name because if people cancel tests locks don't get cleaned up.
-*Genome::SoftwareResult::_resolve_lock_name = sub {
-    return "/tmp/lock/Genome--InstrumentData--IntermediateAlignmentResult--Bwa/" . time();
-};
-
 my $aligner_name = 'bwa';
 my $aligner_version = Genome::Model::Tools::Bwa->default_bwa_version;
 my $aligner_label   = $aligner_name.$aligner_version;
