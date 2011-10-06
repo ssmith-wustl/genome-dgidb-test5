@@ -31,37 +31,26 @@ sub load_modules {
 sub dispatch_request {
 
     sub (PUT + /** + %*) {
-warn "OOOH SHIT BEN IS ABOUT TO PUT SOMETHING";
         load_modules();
-$DB::single = 1;
         my ($self, $url, $params) = @_;
         my ($code, $obj);
-warn  "UR_DBI_NO_COMMIT IS ".$ENV{UR_DBI_NO_COMMIT};
         my $class = url_to_type($url); # UR::Object::View::Default::Xsl
-warn "PARAMS:";
-warn Data::Dumper::Dumper $params;
         eval { 
             $obj = $class->create(%$params); 
             UR::Context->commit();
         };
 
-
         if ($@) {
             $code = 200; # OK (didnt work)
-warn "CREATE DIDNT WORK  $class - $@";
         } else {
-warn "CREATE SEEMED TO WORK $class " . $obj->id();
             $code = 201; # CREATED
             $params->{'id'} = $obj->id();
         }
 
-#                                pretty => 1,
         my $body = to_json( $params, { 
                                 ascii => 1,
                                 allow_nonref => 1,
                     });
-#        my $size; { use bytes; $size = length($body); }
-#                'Content-Length' => $size
         return [
             $code,
             [
@@ -71,6 +60,58 @@ warn "CREATE SEEMED TO WORK $class " . $obj->id();
         ];
 
     },
+    sub (POST + /** + %*) {
+        load_modules();
+        my ($self, $url, $params) = @_;
+        my ($code, $obj, $body);
+        my $class = url_to_type($url); # UR::Object::View::Default::Xsl
+
+        my $id = $params->{'id'};
+        $obj = $class->get($id);
+        if (!$id) {
+            $code = 400;
+            $body = "ERROR: No ID passed in.";
+            return [ $code, [ 'Content-type'   => "text/plain" ], [$body] ];
+        }
+    
+        if (!$obj) {
+            $code = 404;
+            $body = "ERROR: No object by that ID found.";
+            return [ $code, [ 'Content-type'   => "text/plain" ], [$body] ];
+        }
+        eval {
+            for my $p (keys %$params) {
+                 $obj->$p($params->{$p});
+             }
+            UR::Context->commit;
+        };
+
+        if ($@) {
+            $code = 500; 
+            return [ $code, [ 'Content-type'   => "text/plain" ], ["An error occurred processing the input: $@"] ];
+        } else {
+            $code = 201; # CREATED
+            $params->{'id'} = $obj->id();
+        }
+
+        my $body = to_json( $params, { 
+                                ascii => 1,
+                                allow_nonref => 1,
+                    });
+        return [
+            $code,
+            [
+                'Content-type'   => "text/plain"
+            ],
+            [$body]
+        ];
+
+    },
+
+    # Matcher for Static content related to a view
+    # **/ = class name
+    # */ = perspective.toolkit
+    # * + .* = filename & extension
 
     # Matcher for Static content related to a view
     # **/ = class name
