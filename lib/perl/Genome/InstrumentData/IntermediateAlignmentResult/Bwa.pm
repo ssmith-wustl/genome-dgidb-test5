@@ -56,7 +56,7 @@ sub _run_aligner {
     my $bwa = Genome::Model::Tools::Bwa->path_for_bwa_version($self->aligner_version);
 
     my @args = (
-        "aln", 
+        "aln",
         $self->aligner_params || '',
         $bam_flag,
         $fasta_file,
@@ -102,11 +102,11 @@ sub _create_md5 {
     my $cmd      = "md5sum $file > $md5_file";
 
     my $rv  = Genome::Sys->shellcmd(
-        cmd                        => $cmd, 
+        cmd                        => $cmd,
         input_files                => [$file],
         output_files               => [$md5_file],
         skip_if_output_is_present  => 0,
-    ); 
+    );
     $self->error_message("Fail to run: $cmd") and return unless $rv == 1;
     return $md5_file;
 }
@@ -150,7 +150,7 @@ sub _verify_bwa_aln_did_happen {
             $self->error_message('Failed to create or execute flagstat command.');
             return;
         }
-        my $stats = Genome::Info::BamFlagstat->get_data($output_file);
+        my $stats = Genome::Model::Tools::Sam::Flagstat->parse_file_into_hashref($output_file);
         unless($stats) {
             $self->status_message('Failed to get flagstat data  on input sequences from '.$output_file);
             return;
@@ -198,9 +198,9 @@ sub _inspect_log_file {
         return;
     }
 
-    my $last_line = `tail -1 $log_file`;    
+    my $last_line = `tail -1 $log_file`;
     my $check_nonzero = 0;
-    
+
     my $log_regex = $p{log_regex};
     if ($log_regex =~ m/\(\\d\+\)/) {
         $check_nonzero = 1;
@@ -212,7 +212,7 @@ sub _inspect_log_file {
             return $1;
         }
     }
-    
+
     $self->error_message("The last line of $log_file is not valid: $last_line");
     return;
 }

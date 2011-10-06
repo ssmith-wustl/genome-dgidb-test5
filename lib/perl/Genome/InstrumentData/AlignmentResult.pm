@@ -759,8 +759,7 @@ sub determine_input_read_count_from_bam {
         return;
     }
 
-    my $stats = Genome::Info::BamFlagstat->get_data($output_file);
-
+    my $stats = Genome::Model::Tools::Sam::Flagstat->parse_file_into_hashref($output_file);
     unless($stats) {
         $self->status_message('Failed to get flagstat data  on input sequences from '.$output_file);
         return;
@@ -976,7 +975,7 @@ sub _verify_bam {
 
     my $bam_file  = $self->temp_staging_directory . '/all_sequences.bam';
     my $flag_file = $bam_file . '.flagstat';
-    my $flag_stat = Genome::Info::BamFlagstat->get_data($flag_file);
+    my $flag_stat = Genome::Model::Tools::Sam::Flagstat->parse_file_into_hashref($flag_file);
 
     unless($flag_stat) {
         $self->status_message('Fail to get flagstat data from '.$flag_file);
