@@ -1,3 +1,5 @@
+window.action_mode='PUT'
+
 $ ->
       Backbone.sync = (method, model, success, error) ->
         success()
@@ -68,7 +70,9 @@ $ ->
            
             index = @getEnumIndexForInitiator(initiator) 
             types = @model.get "enumerated_values"
+            ids = @model.get "enumerated_value_ids"
             types.splice(index, 1)
+            ids.splice(index, 1)
             @model.set({"enumerated_values": undefined}, {silent: true})
             @model.set({"enumerated_values": types})
 
@@ -80,6 +84,7 @@ $ ->
           @model.bind 'remove', @unrender
 
         render: ->
+          alert @model.get("enumerated_value_ids")
           item_template = _.template($('#nomenclature-column-template').html(), {model:@model})
           i = $(item_template)
         
@@ -156,8 +161,10 @@ $ ->
             construct_from_json(data)
         
       construct_from_json = (object) -> 
+        window.action_mode = 'POST'
         name = object.name
         $("#nomenclature-name-input").val(name)
+        window.nomenclature_id = object.id
         $(".title h1").html("Edit Nomenclature: #{name}")
         $("#directions").html("Use the form below to edit the nomenclature #{name}")
         document.title = "Edit Nomenclature: #{name}"
@@ -178,15 +185,19 @@ $ ->
         m = {"name": name, "fields" : listView.collection}
         jsonToPost = JSON.stringify(m)
         k = JSON.parse(jsonToPost)
-        $('#save-spinner').show();
+        ajax_data = {json:JSON.stringify(k)}
+        alert(ajax_data.json)
+        alert(ajax_data.id)
+        if window.nomenclature_id != undefined
+            ajax_data.id = window.nomenclature_id
+        $('#save-spinner').show()
         $.ajax
            url: '/view/genome/nomenclature'
-           type: 'PUT'
+           type: window.action_mode
            dataType: 'json'
-           data: 
-            json: JSON.stringify(k)
-           success: (response ) ->
-            window.location="/view/genome/nomenclature/set/status.html"
+           data: ajax_data
+#           success: (response ) ->
+#            window.location="/view/genome/nomenclature/set/status.html"
            error: (response) ->
             alert("Sorry, an error occurred trying to save this nomenclature.")
            complete: ->
