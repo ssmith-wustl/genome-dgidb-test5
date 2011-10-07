@@ -18,8 +18,14 @@ class Genome::Model::ReferenceAlignment::Command::Downsample {
         },
         coverage_in_gb => {
             is => 'Text',
-            doc => "Set this to the amount of bases to lower the input to, in GB. 1.5 = 1,500,000,000 bases",
-            is_optional => 0,
+            doc => "Set this to the amount of bases to lower the input to, in GB. 1.5 = 1,500,000,000 bases. Set this or ratio, not both.",
+            is_optional => 1,
+            is_input => 1,
+        },
+        coverage_in_ratio => {
+            is => 'Text',
+            doc => "Set this to the ratio reduction in bases, units should be 0 to 1, where 1 = 100% = whole bam. Set this or gb, not both.",
+            is_optional => 1,
             is_input => 1,
         },
         random_seed => {
@@ -39,7 +45,10 @@ EOS
 sub execute {
     my $self = shift;
 
-    my $new_coverage = $self->coverage_in_gb * 1000000000;  #convert gigabases to bases
+    unless($self->coverage_in_gb xor $self->coverage_in_ratio){
+        $self->error_message("You must either specify coverage_in_gb or coverage_in_ratio, not both.");
+        die $self->error_message;
+    }
 
     my $model = $self->model;
     unless($model){
@@ -57,24 +66,31 @@ sub execute {
         die $self->error_message("Could not locate bam at: ". $bam);
     }
 
+    my $downsample_ratio;
+    if ($self->coverage_in_gb) {
+            my $new_coverage = $self->coverage_in_gb * 1000000000;  #convert gigabases to bases
 
-    my $total_readcount = $self->_get_readcount($bam);
-    $self->status_message("Total read-count in the original bam: ".$total_readcount);
+            my $total_readcount = $self->_get_readcount($bam);
+            $self->status_message("Total read-count in the original bam: ".$total_readcount);
 
-    #TODO this currently assumes homogenous read-length instrument-data
-    my $read_length = $self->_get_readlength($model);
-    $self->status_message("Read Length: ".$read_length);
+            #TODO this currently assumes homogenous read-length instrument-data
+            my $read_length = $self->_get_readlength($model);
+            $self->status_message("Read Length: ".$read_length);
 
-    my $total_bases = $read_length * $total_readcount;
-    $self->status_message("Total Bases: ".$total_bases);
+            my $total_bases = $read_length * $total_readcount;
+            $self->status_message("Total Bases: ".$total_bases);
 
-    #Calculate downsample ratio by taking the ratio of desired coverage to the current total bases, 
-    # round to 5 decimal places
-    my $downsample_ratio = sprintf("%.5f", $new_coverage / $total_bases );
-    unless($downsample_ratio < 1.0){
-        die $self->error_message("The downsample ratio ended up being >= 1. You must specify a coverage_in_gb that is lower than the existing bam.");
+            #Calculate downsample ratio by taking the ratio of desired coverage to the current total bases, 
+            # round to 5 decimal places
+            $downsample_ratio = sprintf("%.5f", $new_coverage / $total_bases );
+            unless($downsample_ratio < 1.0){
+                die $self->error_message("The downsample ratio ended up being >= 1. You must specify a coverage_in_gb that is lower than the existing bam.");
+            }
+            $self->status_message("Downsample ratio = ".$downsample_ratio);
     }
-    $self->status_message("Downsample ratio = ".$downsample_ratio);
+    elsif ($self->coverage_in_ratio) {
+            $downsample_ratio = $self->coverage_in_ratio;
+    }
 
     #Place the output of the downsampling into temp
     my $temp = Genome::Sys->create_temp_file_path;
