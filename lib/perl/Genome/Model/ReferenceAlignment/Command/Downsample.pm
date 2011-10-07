@@ -22,6 +22,11 @@ class Genome::Model::ReferenceAlignment::Command::Downsample {
             is_optional => 0,
             is_input => 1,
         },
+        random_seed => {
+            is => 'Text',
+            doc => 'Set this equal to the reported random seed to reproduce previous results',
+            is_optional => 1,
+        },
     ],
 };
 
@@ -44,6 +49,9 @@ sub execute {
     unless($build){
         die $self->error_message("Could not locate a succeeded build for model: ".$model->id);
     }
+
+    $self->status_message("Using Build: ".$build->id);
+
     my $bam = $build->whole_rmdup_bam_file;
     unless(-e $bam){
         die $self->error_message("Could not locate bam at: ". $bam);
@@ -70,10 +78,16 @@ sub execute {
 
     #Place the output of the downsampling into temp
     my $temp = Genome::Sys->create_temp_file_path;
+
+    #Get or create a random seed from combining PID and current time
+    my $seed = (defined($self->random_seed)) ? $self->random_seed : ($$ + time);
+    $self->status_message("Random Seed: ".$seed);
+
     my $ds_cmd = Genome::Model::Tools::Picard::Downsample->create(
         input_file => $bam,
         output_file => $temp,
         downsample_ratio => $downsample_ratio,
+        random_seed => $seed,
     );
     unless($ds_cmd->execute){
         die $self->error_message("Could not complete picard downsample command.");
