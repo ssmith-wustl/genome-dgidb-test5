@@ -527,7 +527,6 @@ sub execute {                               # replace with real execution logic.
     else {
         chomp(my @chroms = `cut -f 1 $sniper_file | sort -n | uniq`);
 
-        $DB::single=1;
         my @complete_chrom_list = $self->order_chroms(@chroms);
         for my $chrom (@complete_chrom_list) {
             $self->status_message("processing $chrom...");

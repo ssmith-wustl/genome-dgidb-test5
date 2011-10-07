@@ -50,7 +50,6 @@ sub check_multiple_versions
 sub execute
 {
     my $self = shift;
-    $DB::single=1;
     my $ace_directory = $self->ace_directory; 
     my $merge_list = $self->merge_list;
     my $cache_dir = $self->cache_dir;

@@ -47,7 +47,6 @@ class Genome::Model::Tools::Analysis::AddAndBuild {
 
 sub execute {
     my $self=shift;
-    $DB::single = 1;
     my @models;
     if($self->model_ids) {
         my @model_ids = split / /, $self->model_ids;

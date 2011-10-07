@@ -41,9 +41,8 @@ class Genome::FeatureList {
                   }
                }
         },
-
-        #TODO This will point to a subclass of Genome::Feature at such point as that class exists.
-        content_type => { is => 'VARCHAR2', len => 255, doc => 'The kind of features in the list' },
+        content_type => { is => 'VARCHAR2', len => 255, doc => 'The type of list (used for determining automated processing)', valid_values => ['exome', 'targeted', 'validation', undef] },
+        description => { is => 'VARCHAR2', len => 255, doc => 'General description of the BED file'},
     ],
     has_optional_transient => [
         #TODO These could be pre-computed and stored in the allocation rather than re-generated every time

@@ -35,6 +35,7 @@ class Genome::SoftwareResult {
         inputs              => { is => 'Genome::SoftwareResult::Input', reverse_as => 'software_result'},
         metrics             => { is => 'Genome::SoftwareResult::Metric', reverse_as => 'software_result'},
         users               => { is => 'Genome::SoftwareResult::User', reverse_as => 'software_result'},
+        disk_allocations    => { is => 'Genome::Disk::Allocation', reverse_as => 'owner'},
         build_ids           => { via => 'users', to => 'user_id', } # where => ['user_class_name isa' => 'Genome::Model::Build'] },
     ],
     schema_name => 'GMSchema',
@@ -388,7 +389,7 @@ sub lock {
     my $lock = Genome::Sys->lock_resource(resource_lock => $resource_lock_name, max_try => 2);
     unless ($lock) {
         $self->status_message("This data set is still being processed by its creator.  Waiting for existing data lock...");
-        $lock = Genome::Sys->lock_resource(resource_lock => $resource_lock_name);
+        $lock = Genome::Sys->lock_resource(resource_lock => $resource_lock_name, wait_announce_interval => 600);
         unless ($lock) {
             $self->error_message("Failed to get existing data lock!");
             die($self->error_message);

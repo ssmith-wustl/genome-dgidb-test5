@@ -32,7 +32,6 @@ EOS
 
 sub execute {
     my $self = shift;
-    $DB::single = 1;
     
     my $model = $self->model;
     my $build = $self->build;

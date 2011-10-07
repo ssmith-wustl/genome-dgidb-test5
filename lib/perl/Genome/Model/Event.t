@@ -173,7 +173,6 @@ ok(!-e $tmp_file_path, $tmp_file_path .' does not exist yet');
 my $dirname = File::Basename::dirname($tmp_file_path);
 my $basename = File::Basename::basename($tmp_file_path);
 is($dirname,$event_tmp_dir,'event temp dir correct');
-$DB::single=1;
 ok($event->create_temp_directory($basename),'create tmp file path dir '. $tmp_file_path);
 ok(scalar(grep { $_ =~ /Created directory\: $tmp_file_path/ } $event->status_messages),'status message found when directory created');
 

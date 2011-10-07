@@ -265,7 +265,7 @@ sub help_brief {
 }
 
 sub help_detail {
-    "generate a plot of copy number alterations"
+    "generate a plot of copy number alterations.\n\nExample:\ngmt copy-number plot-segments --segment_files copynumber.cn.seg --cnvhmm-input --plot-title AML01 --lowres --output-pdf copynumber.cn.seg.pdf"
 }
 
 
@@ -444,6 +444,7 @@ sub cnaHmmToCbs{
 
 	if ($inCoords){
 	    my @fields = split("\t",$line);
+	    next if($fields[6] == 0 or $fields[8] ==0); #skip line that would result in dividing by zero or taking log of zero.
 	    print OUTFILE join("\t",($fields[0],$fields[1],$fields[2],$fields[4],(log_base(2,$fields[6]/$fields[8])))) . "\n";
 	}
     }

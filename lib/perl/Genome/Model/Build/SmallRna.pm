@@ -69,7 +69,6 @@ unless ($ref_build) {
 
 sub bam_file {
     my $self = shift;
-    $DB::single = 1;
   #  my $ref_build = $self->ref_build;
     my $ref_model = $self->ref_model;
     my $ref_build =  $ref_model->last_succeeded_build;

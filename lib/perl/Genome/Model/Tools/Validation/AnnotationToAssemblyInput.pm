@@ -39,7 +39,6 @@ EOS
 }
 
 sub execute {
-    $DB::single = 1;
     my $self = shift;
     my $fh = Genome::Sys->open_file_for_reading($self->annotation_file);
     unless($fh) {

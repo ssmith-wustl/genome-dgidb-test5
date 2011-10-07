@@ -8,14 +8,6 @@ use Genome;
 class Genome::Model::Tools::DetectVariants2::Filter::LibrarySupport{
     is => 'Genome::Model::Tools::DetectVariants2::Filter',
     doc => "Outputs list of input indels from Sniper that have high library support.",
-    has_constant => [
-        _variant_type => {
-            type => 'String',
-            default => 'indels',
-            doc => 'variant type that this module operates on, overload this in submodules accordingly',
-        },
-    ],
-
 };
 
 sub help_synopsis {
@@ -37,6 +29,8 @@ the indel.
 EOS
 }
 
+sub _variant_type { 'indels' };
+
 sub _filter_variants {
 
     # for each row in the indel output file of somatic sniper,
@@ -44,7 +38,6 @@ sub _filter_variants {
     # regardless of position, etc.
 
     my ($self) = @_;
-    $DB::single=1;
 
     # This should be a file from sniper only
     my $input_fh = Genome::Sys->open_file_for_reading($self->input_directory . "/indels.hq");

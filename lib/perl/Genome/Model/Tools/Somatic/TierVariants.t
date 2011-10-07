@@ -37,7 +37,6 @@ my $tier_variants_1 = Genome::Model::Tools::Somatic::TierVariants->create(
     only_tier_1                 => 1,
 );
 
-$DB::single = 1;
 
 ok($tier_variants_1, 'created TierVariants object for tier 1');
 ok($tier_variants_1->execute(), 'executed TierVariants for tier 1');

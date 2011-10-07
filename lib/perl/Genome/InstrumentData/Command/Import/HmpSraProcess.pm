@@ -59,22 +59,47 @@ sub execute {
     my %samples;
 
     for my $line (@srrs) {
-        my $sample = Genome::Sample->get(sql=>qq/
-            select os.*
-            from gsc.organism_sample os
-            join sra_organism_sample sos on sos.organism_sample_id=os.organism_sample_id
-            join gsc.sra_experiment ex on ex.sra_sample_id=sos.sra_sample_id
-            join gsc.sra_run ru on ru.sra_experiment_id=ex.sra_item_id
-            join gsc.sra_item rui on rui.sra_item_id=ru.sra_item_id
-            join gsc.sra_accession ruacc on ruacc.alias=rui.alias
-            where ruacc.accession='$line'
-        /);
+
+
+
+
+##_______This does not work as of 110927...jmartin
+#        my $sample = Genome::Sample->get(sql=>qq/
+#            select os.*
+#            from gsc.organism_sample os
+#            join gsc.sra_organism_sample sos on sos.organism_sample_id=os.organism_sample_id
+#            join gsc.sra_experiment ex on ex.sra_sample_id=sos.sra_sample_id
+#            join gsc.sra_run ru on ru.sra_experiment_id=ex.sra_item_id
+#            join gsc.sra_item rui on rui.sra_item_id=ru.sra_item_id
+#            join gsc.sra_accession ruacc on ruacc.alias=rui.alias
+#            where ruacc.accession='$line'
+#        /);
+#_______Modified to use a 'workaround' to deal with 'deprecated Genome gets'...jmartin 110927
+	my $sample = GSC::Organism::Sample->get(sql=>qq/
+						select os.organism_sample_id from gsc.organism_sample\@dw os 
+						join gsc.sra_organism_sample\@dw sos 
+						on sos.organism_sample_id=os.organism_sample_id 
+						join gsc.sra_experiment\@dw ex 
+						on ex.sra_sample_id=sos.sra_sample_id 
+						join gsc.sra_run\@dw ru 
+						on ru.sra_experiment_id=ex.sra_item_id 
+						join gsc.sra_item\@dw rui 
+						on rui.sra_item_id=ru.sra_item_id 
+						join gsc.sra_accession\@dw ruacc 
+						on ruacc.alias=rui.alias where ruacc.accession='$line'
+						/);
+
+
+
+
         unless ($sample) {
             $self->error_message("Failed to get a sample object from the warehouse for SRR ID $line.");
             return;
         }
         
-        $samples{$sample->name} = 1;
+#_______The 'name' attribute doesn't seem to exist, but full_name does, and this value seems only used for the sanity check immediately below, so this change should be OK ... jmartin 110929
+        ####$samples{$sample->name} = 1;
+	$samples{$sample->full_name} = 1;
     }
 
     unless (scalar keys %samples == 1) {
@@ -86,7 +111,7 @@ sub execute {
     my $dbh = Genome::DataSource::GMSchema->get_default_handle();
     my ($fc_id, $lane) = $dbh->selectrow_array(qq/select ii.flow_cell_id, ii.lane
     from gsc.organism_sample os 
-    join sra_organism_sample sos on sos.organism_sample_id=os.organism_sample_id
+    join gsc.sra_organism_sample sos on sos.organism_sample_id=os.organism_sample_id
     join gsc.sra_experiment ex on ex.sra_sample_id=sos.sra_sample_id
     join gsc.sra_run ru on ru.sra_experiment_id=ex.sra_item_id 
     join gsc.sra_item rui on rui.sra_item_id=ru.sra_item_id 
@@ -116,7 +141,7 @@ sub execute {
     for my $srr (@srrs) {
         my $instrument_data = Genome::InstrumentData::Imported->get(import_format=>'raw sra download', sra_accession=>$srr);
         
-        my ($alloc) = $instrument_data->disk_allocations; 
+        my ($alloc) = $instrument_data->allocations; 
         unless(symlink($alloc->absolute_path . "/" . $srr, $working_dir . "/" . $srr)) {
 	    $self->error_message("Failed to set up symlink from SRA data dir: " . $alloc->absolute_path . " to " . $working_dir . "/" . $srr);
 	   return;
@@ -195,9 +220,19 @@ sub execute {
         my $pwd  = $self->ascp_pw;
 
 
+
+
         #Note: I need to set the path to my scripts INSIDE the shell command
         ####$cmd = "cd $working_dir; export PATH=$path; process_runs.sh $list_of_srrs $sra_samples $picard_dir $tmp_dir > $outfile 2> $errfile";
-        $cmd = "cd $working_dir; export PATH=$path; process_runs.sh $list_of_srrs $sra_samples $picard_dir $tmp_dir $user $pwd";
+
+#_______THIS LINE IS FOR REAL DATA...UNCOMMENT TO REALLY DO PROCESSING AND UPLOAD TO DACC!!!! jmartin ... 110927
+        ####$cmd = "cd $working_dir; export PATH=$path; process_runs.sh $list_of_srrs $sra_samples $picard_dir $tmp_dir $user $pwd";
+
+#_______This line is just for testing, the DACC upload is commented out in this version jmartin ... 110923
+	$cmd = "cd $working_dir; export PATH=$path; process_runs.for_testing.sh $list_of_srrs $sra_samples $picard_dir $tmp_dir $user $pwd";
+
+
+
 
         $self->status_message("CMD=>$cmd<=\n");
         $self->status_message("PWD=>$current_dir<=\n");
@@ -277,7 +312,7 @@ sub execute {
             return;
         }
 
-        my $path = $iid->disk_allocations->absolute_path;
+        my $path = $iid->allocations->absolute_path;
     
         unless ($self->copy_metrics($path)) {
             $self->error_message("could not copy metrics into the destination path!");

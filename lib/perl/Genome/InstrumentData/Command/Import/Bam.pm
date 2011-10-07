@@ -34,6 +34,11 @@ my %properties = (
         default => 0,
         is_optional => 1,
     },
+    new_library_name => {
+        is => 'Text',
+        doc => 'Set this to override the default <sample-name>-extlibs library name',
+        is_optional => 1,
+    },
     import_source_name => {
         is => 'Text',
         doc => 'source name for imported file, like Broad Institute',
@@ -68,7 +73,6 @@ my %properties = (
     reference_sequence_build_id => {
         is => 'Number',
         doc => 'This is the reference sequence that the imported BAM was aligned against.',
-        is_optional => 1,
     },
 );
     
@@ -91,7 +95,6 @@ class Genome::InstrumentData::Command::Import::Bam {
 
 sub execute {
     my $self = shift;
-
     # If the target region is set to whole genome, then we want the imported instrument data's
     # target_region_set_name column set to undef. Otherwise, we need to make sure the target region
     # name corresponds to only one Genome::FeatureList.
@@ -108,7 +111,6 @@ sub execute {
         $self->error_message("Unable to find the sample name based on the parameter: ".$self->sample);
         my $possible_name;
         if($self->sample =~ /TCGA/){
-            print "got here.\n";
             $possible_name = GSC::Organism::Sample->get(sample_name => $self->sample);
             if($possible_name){
                 $self->error_message("There is an organism_sample which matches the TCGA name, which has a full_name of ".$possible_name->full_name);
@@ -128,16 +130,19 @@ sub execute {
             $self->error_message("A library was not resolved from the input string ".$self->library);
             die $self->error_message;
         }
-        $library = Genome::Library->get(name=>$sample->name.'-extlibs',sample_id=>$sample->id);
+
+        my $library_name = defined($self->new_library_name) ? $self->new_library_name : $sample->name.'-extlibs';
+
+        $library = Genome::Library->get( name => $library_name, sample_id => $sample->id );
+
         unless ($library) {
-            $library = Genome::Library->create(name=>$sample->name.'-extlibs',sample_id=>$sample->id);
+            $library = Genome::Library->create( name => $library_name, sample_id => $sample->id );
         }
         unless($library){
             $self->error_message("Unable to create a library.");
             die $self->error_message;
         }
         $self->status_message("Created a library named ".$library->name);
-        print $self->status_message;
     }
 
     unless (-s $bam_path and $bam_path =~ /\.bam$/) {
@@ -166,6 +171,7 @@ sub execute {
     $params{reference_sequence_build_id} = $self->reference_sequence_build_id;
     $params{library_id} = $library->id;
     $params{target_region_set_name} = $self->target_region;
+    delete $params{sample} if exists($params{sample});
     
     my $import_instrument_data = Genome::InstrumentData::Imported->create(%params);  
     unless ($import_instrument_data) {
@@ -267,7 +273,7 @@ sub execute {
     $self->status_message("Importation of BAM completed successfully.");
     $self->status_message("Your instrument-data id is ".$instrument_data_id);
 
-    return 1;
+    return $instrument_data_id;
 }
 
 sub _add_stats {

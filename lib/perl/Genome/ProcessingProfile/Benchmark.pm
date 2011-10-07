@@ -112,7 +112,6 @@ sub _execute_build {
 
     # combine params with build inputs and produce output in the build's data directory
 
-    $DB::single=1;
 
     my $cmd = $self->command;
     die "Command not present and executable: $cmd" if (! -x $cmd);

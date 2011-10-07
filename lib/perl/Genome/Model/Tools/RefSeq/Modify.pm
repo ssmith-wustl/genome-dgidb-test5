@@ -76,7 +76,6 @@ sub execute {
             if($x eq $mut->{chr}) {
                 print "applying";
                 print Dumper $mut;
-                $DB::single=1;
                 my $start=$pos-1;
                 my $len=$mut->{start}-$pos;
 
@@ -170,7 +169,6 @@ sub infer_variant_type {
     } elsif (($variant->{variant} eq '-')||($variant->{variant} eq '0')) {
         return 'DEL';
     } else {
-        $DB::single=1;
         die("Could not determine variant type from variant:");
     }
 }

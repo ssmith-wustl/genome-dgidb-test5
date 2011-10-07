@@ -112,10 +112,6 @@ sub Person::__display_name__ {
     return $_[0]->name;
 }
 
-class Person::Command {
-    is => 'Command',
-};
-
 # INIT
 my %config = (
     target_class => 'Person',
@@ -123,12 +119,17 @@ my %config = (
 );
 ok(Genome::Command::Crud->init_sub_commands(%config), 'init crud commands') or die;
 
+# MAIN TREE
+my $main_tree_meta = Person::Command->__meta__;
+ok($main_tree_meta, 'MAIN TREE meta');
+
 # CREATE
 # meta 
 my $create_meta = Person::Command::Create->__meta__;
 ok($create_meta, 'CREATE meta');
+#print Person::Command::Create->help_usage_complete_text;
 
-is(Person::Command::Create->_name_for_objects, 'persons', 'CREATE: _name_for_objects');
+is(Person::Command::Create->_target_name, 'person', 'CREATE: _target_name');
 is(Person::Command::Create->_target_class, 'Person', 'CREATE: _target_class');
 
 # fail - w/o params
@@ -204,9 +205,10 @@ ok($list_meta, 'LIST meta');
 # meta
 my $update_meta = Person::Command::Update->__meta__;
 ok($update_meta, 'update meta');
+print Person::Command::Create->help_usage_complete_text;
 
-is(Person::Command::Update->_name_for_objects, 'persons', 'UPDATE: _name_for_objects');
-is(Person::Command::Update->_name_for_objects_ub, 'persons', 'UPDATE: _name_for_objects_ub');
+is(Person::Command::Update->_target_name_pl, 'persons', 'UPDATE: _target_name_pl');
+is(Person::Command::Update->_target_name_pl_ub, 'persons', 'UPDATE: _target_name_pl_ub');
 is_deeply(Person::Command::Update->_only_if_null, [qw/ job title mom /], 'UPDATE: _only_if_null');
 
 # fail w/o objects
@@ -311,8 +313,10 @@ is($george->mom, $mom, 'Geroge now has a mom');
 # meta
 my $delete_meta = Person::Command::Delete->__meta__;
 ok($delete_meta, 'DELETE meta');
-is(Person::Command::Delete->_name_for_objects, 'persons', 'DELETE: _name_for_objects');
-is(Person::Command::Delete->_name_for_objects_ub, 'persons', 'DELETE: _name_for_objects_ub');
+#print Person::Command::Create->help_usage_complete_text;
+
+is(Person::Command::Delete->_target_name_pl, 'persons', 'DELETE: _target_name_pl');
+is(Person::Command::Delete->_target_name_pl_ub, 'persons', 'DELETE: _target_name_pl_ub');
 
 # fail w/o objects
 my $delete_fail = Person::Command::Delete->create();
@@ -336,22 +340,12 @@ is_deeply(\@people, [ $mom, $ronnie, ], 'Mom and Ronnie still exist');
 # COMMIT
 ok(UR::Context->commit, 'commit');
 
+# DISPLAY NAME
+is(Genome::Command::Crud->display_name_for_value(100), 100, 'display name for "100"');
+is(Genome::Command::Crud->display_name_for_value([qw/100 200/]), '100 200', 'display name for "100 200"');
+is(Genome::Command::Crud->display_name_for_value($mom), $mom->name, 'display name for $mom');
+is(Genome::Command::Crud->display_name_for_value([ $ronnie, $mom ]), $ronnie->name.' '.$mom->name, 'display name for [ $ronnie $mom ]');
+
 done_testing();
 exit;
 
-=pod
-
-=head1 Disclaimer
-
- Copyright (C) 2011 Washington University Genome Sequencing Center
-
- This script is distributed in the hope that it will be useful,
- but WITHOUT ANY WARRANTY or the implied warranty of MERCHANTABILITY
- or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public
- License for more details.
-
-=head1 Author(s)
-
- Eddie Belter <ebelter@watson.wustl.edu>
-
-=cut

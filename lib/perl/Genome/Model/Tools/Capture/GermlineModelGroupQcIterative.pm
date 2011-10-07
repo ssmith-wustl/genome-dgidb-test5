@@ -83,7 +83,25 @@ sub execute {                               # replace with real execution logic.
 		unless (open(ALL_MODELS,">$summary_file")) {
 		    die "Could not open input file '$summary_file' for reading";
 		}
-		print ALL_MODELS "Dbsnp_Build\tSample_id\tSNPsCalled\tWithGenotype\tMetMinDepth\tReference\tRefMatch\tRefWasHet\tRefWasHom\tVariant\tVarMatch\tHomWasHet\tHetWasHom\tVarMismatch\tVarConcord\tRareHomConcord\tOverallConcord\n";
+                print ALL_MODELS join("\t",qw(
+                    Dbsnp_Build
+                    Sample_id
+                    SNPsCalled
+                    WithGenotype
+                    MetMinDepth
+                    Reference
+                    RefMatch
+                    RefWasHet
+                    RefWasHom
+                    Variant
+                    VarMatch
+                    HomWasHet
+                    HetWasHom
+                    VarMismatch
+                    VarConcord
+                    RareHomConcord
+                    OverallConcord
+                    )) . "\n";
 	}
 
 	# Correct the reference build name to what the database recognizes
@@ -111,15 +129,14 @@ sub execute {                               # replace with real execution logic.
 			$snp_limit_hash{$id}++;
 		}
 	}
-	## Get the models in each model group ##
 
 	my $model_group = Genome::ModelGroup->get($group_id);
 	my @model_bridges = $model_group->model_bridges;
 	my %qc_iteration_hash_genotype;
 	my %qc_iteration_hash_bam_file;
-	foreach my $model_bridge (@model_bridges)
-	{
-	     my $model = Genome::Model->get($model_bridge->model_id);
+	foreach my $model_bridge (@model_bridges) {
+        	## Get the models in each model group ##
+	        my $model = Genome::Model->get($model_bridge->model_id);
 		my $model_id = $model->genome_model_id;
 		my $subject_name = $model->subject_name;
 #		my $sample_name = $model->sample_name;
@@ -137,12 +154,12 @@ sub execute {                               # replace with real execution logic.
 				my $genofile = "$qc_dir/$subject_name.dbsnp$db_snp_build.genotype";
 				my $qcfile = "$qc_dir/$subject_name.dbsnp$db_snp_build.qc";
 	
-				if ($skip_if_output_present && -s $genofile &&1&&1) { #&&1&&1 to make gedit show colors correctly after a -s check
-				}
-				elsif ($self->summary_file) {
-					die "You specified summary file but the script thinks there are unfinished qc files, please run this script to finish making qc files first\nReason: file $genofile does not exist as a non-zero file\n";
-				}
-				else {
+                                if ($self->summary_file && -s $genofile && !-s $qcfile) {
+                                    warn "You specified summary file but the script thinks there are unfinished qc files, please run this script to finish making qc files first\nReason: file $genofile does not exist as a non-zero file\n";
+                                    next;
+                                }
+
+                                if(!$self->summary_file && ( (! -e $qcfile) || !$skip_if_output_present) ) {
 					open(GENOFILE, ">" . $genofile) or die "Can't open outfile: $!\n";
 
 					my $db_snp_info = GSC::SNP::DB::Info->get( snp_db_build => $db_snp_build );
@@ -162,7 +179,8 @@ sub execute {                               # replace with real execution logic.
 	
 					my @genotypes;
 					if( $data_source eq 'iscan' || $data_source eq 'internal') {
-						@genotypes = $organism_sample->get_genotype;
+#                                                @genotypes = $organism_sample->get_genotype;
+                                                @genotypes = grep {$_->status eq "pass"} $organism_sample->get_genotype;
 					}
 					elsif( $data_source eq 'external') {
 						@genotypes = $organism_sample->get_external_genotype;
@@ -171,8 +189,8 @@ sub execute {                               # replace with real execution logic.
 					# Get all external genotypes for this sample
 					foreach my $genotype (@genotypes) {
 		 
-					    #LSF: For Affymetrix, this will be the birdseed file.
-					    my $ab_file = $genotype->get_genotype_file_ab;
+#					    #LSF: For Affymetrix, this will be the birdseed file.
+#					    my $ab_file = $genotype->get_genotype_file_ab;
 		 
 					    # Get the data adapter (DataAdapter::GSGMFinalReport class object)
 					    my $filter       = DataAdapter::Result::Filter::Nathan->new();
@@ -253,7 +271,7 @@ sub execute {                               # replace with real execution logic.
 					if ($skip_if_output_present && -s $qcfile &&1&&1) { #&&1&&1 to make gedit show colors correctly after a -s check
 					}
 					elsif ($self->summary_file) {
-						die "You specified summary file but the script thinks there are unfinished qc files, please run this script to finish making qc files first\nReason: file $qcfile does not exist as a non-zero file\n";
+						warn "You specified summary file but the script thinks there are unfinished qc files, please run this script to finish making qc files first\nReason: file $qcfile does not exist as a non-zero file\n";
 					}
 					else {
 						if ($halt_submissions > 200) {

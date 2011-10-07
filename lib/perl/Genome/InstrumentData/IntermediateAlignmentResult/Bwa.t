@@ -21,11 +21,6 @@ BEGIN {
 my $result_class = 'Genome::InstrumentData::IntermediateAlignmentResult::Bwa';
 use_ok($result_class);
 
-# Override lock name because if people cancel tests locks don't get cleaned up.
-*Genome::SoftwareResult::_resolve_lock_name = sub {
-    return "/tmp/lock/Genome--InstrumentData--IntermediateAlignmentResult--Bwa/" . time();
-};
-
 my $aligner_name = 'bwa';
 my $aligner_version = Genome::Model::Tools::Bwa->default_bwa_version;
 my $aligner_label   = $aligner_name.$aligner_version;
@@ -53,7 +48,6 @@ my %params = (
     aligner_name => $aligner_name,
     aligner_version => $aligner_version,
     aligner_index => $aligner_index,
-    parent_result => $parent_result,
     input_file => $input_file,
     input_pass => 1,
 );
@@ -64,6 +58,7 @@ my @result_ids;
 # Make first object
 my $result = $result_class->create(%params);
 ok($result, "created result (1st end)");
+$result->add_user(label => 'uses', user => $parent_result); #normally the outer alignment would do this upon getting back the intermediate result
 push(@result_ids, $result->id);
 
 ok($result->users, "found parent in software result users");
@@ -89,6 +84,7 @@ is($result->id, $fetched->id, "get_or_create returned the right object");
 $params{input_pass} = 2;
 $result = $result_class->create(%params);
 ok($result, "created result (2nd end)");
+$result->add_user(label => 'uses', user => $parent_result); #normally the outer alignment would do this upon getting back the intermediate result
 push(@result_ids, $result->id);
 
 ok($result->users, "found parent in software result users");

@@ -57,7 +57,6 @@ HELP
 ###############
 
 sub execute {                               # replace with real execution logic
-    $DB::single=1;
     my $self = shift;
     my $build = Genome::Model::Build->get($self->build_id);
     unless($build) {

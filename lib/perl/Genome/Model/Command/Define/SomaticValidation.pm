@@ -8,7 +8,7 @@ use Genome;
 class Genome::Model::Command::Define::SomaticValidation {
     is => 'Genome::Model::Command::Define::Helper',
     has_input => [
-        variant_list => {
+        snv_variant_list => {
             is => 'Genome::FeatureList',
             doc => 'the list of variants to validate',
         },
@@ -45,7 +45,7 @@ sub type_specific_parameters_for_create {
     my @params = ();
 
     push @params,
-        variant_list => $self->variant_list,
+        snv_variant_list => $self->snv_variant_list,
         tumor_reference_alignment => $self->tumor_model,
         normal_reference_alignment => $self->normal_model,
         reference_sequence_build => $self->reference_sequence_build;
@@ -87,9 +87,9 @@ sub execute {
         return;
     }
 
-    my $variant_list_reference = $self->variant_list->reference;
+    my $snv_variant_list_reference = $self->snv_variant_list->reference;
 
-    unless($normal_reference eq $variant_list_reference) {
+    unless($normal_reference eq $snv_variant_list_reference) {
         $self->error_message('Reference alignment models and variant list do not have the same reference sequence!');
         return;
     }

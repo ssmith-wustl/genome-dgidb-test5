@@ -89,7 +89,6 @@ sub generate_report_detail {
         die "Please specify which template to use for this report.";
     }
 
-$DB::single = 1;   
 
     print "calling generate_report_detail\n";
 

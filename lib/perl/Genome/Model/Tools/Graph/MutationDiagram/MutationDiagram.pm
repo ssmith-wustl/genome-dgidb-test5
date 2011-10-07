@@ -25,7 +25,6 @@ use Genome::Model::Tools::Graph::MutationDiagram::MutationDiagram::Legend;
 use Genome::Model::Tools::Graph::MutationDiagram::MutationDiagram::LayoutManager;
 #------------------------------------------------
 sub new {
-    $DB::single = 1;
     my ($class, %arg) = @_;
 
     my $self = {

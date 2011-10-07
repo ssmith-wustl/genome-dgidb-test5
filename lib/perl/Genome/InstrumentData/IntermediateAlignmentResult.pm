@@ -83,18 +83,6 @@ class Genome::InstrumentData::IntermediateAlignmentResult {
                                 },
     ],
     has_transient => [
-        parent_result_id        => {
-                                    is => 'Number',
-                                    doc => 'The parent AlignmentResult object for this intermediate set of results',
-                                    is_transient => 1,
-                                },
-
-        parent_result           => {
-                                    is => 'Genome::InstrumentData::AlignmentResult',
-                                    id_by => 'parent_result_id',
-                                    is_transient => 1,
-                                },
-
         temp_scratch_directory  => {
                                     is=>'Text',
                                     doc=>'Temp scratch directory',
@@ -184,9 +172,20 @@ sub get {
     # Defining a BoolExpr in that case will cause things to fail.
     return $class->SUPER::get(@_) if ref($class);
 
-    my ($bx, @extra) = $class->define_boolexpr(@_);
-    $bx = $bx->remove_filter("parent_result")->remove_filter("parent_result_id");
-    return $class->SUPER::get($bx);
+    return $class->SUPER::get($class->_process_params(@_));
+}
+
+sub _process_params {
+    my $class = shift;
+    my @params = @_;
+
+    my ($bx, @extra) = $class->define_boolexpr(@params);
+    if($bx->specifies_value_for('input_file')) {
+        my $absolute_path = $bx->value_for('input_file');
+        $bx = $bx->remove_filter('input_file')->add_filter(input_file => basename($absolute_path));
+    }
+
+    return ($bx, @extra);
 }
 
 sub create {
@@ -198,18 +197,18 @@ sub create {
 
     $class->verify_os();
 
-    my $self = $class->SUPER::create(@_);
+    #have to process params in advance so UR index is built correctly
+    my $self = $class->SUPER::create($class->_process_params(@_));
     return unless $self;
+
+    my ($bx, @extra) = $class->define_boolexpr(@_);
+    my $full_input_path = $bx->value_for('input_file');
 
     if (my $output_dir = $self->output_dir) {
         if (-d $output_dir) {
             $self->status_message("BACKFILL DIRECTORY: $output_dir!");
             return $self;
         }
-    }
-
-    unless ($self->parent_result and $self->parent_result->id) {
-        confess "Bad or missing value specified for required property: parent_result.";
     }
 
     $self->verify_disk_space();
@@ -222,11 +221,10 @@ sub create {
     $self->status_message("Alignment output path is $output_dir");
 
     # symlink the input file in the working directory, drop the full path from the input
-    my $symlink_target = $self->temp_scratch_directory . "/" . basename($self->input_file);
-    unless(symlink($self->input_file, $symlink_target)) {
+    my $symlink_target = $self->temp_scratch_directory . "/" . $self->input_file;
+    unless(symlink($full_input_path, $symlink_target)) {
         confess "Failed to create symlink of input file " . $self->input_file . " at $symlink_target.";
     }
-    $self->input_file( basename($self->input_file) );
 
     # do some work!
     $self->_run_aligner();
@@ -251,8 +249,6 @@ sub create {
     }
         
     $self->status_message("Intermediate alignment result generation complete.");
-
-    $self->add_user(user => $self->parent_result, label => 'uses');
     return $self;
 }
 

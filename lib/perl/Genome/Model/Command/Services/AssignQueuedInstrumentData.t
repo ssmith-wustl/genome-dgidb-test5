@@ -539,6 +539,7 @@ my $command_2 = Genome::Model::Command::Services::AssignQueuedInstrumentData->cr
     test => 1,
 );
 
+$DB::single = 1;
 isa_ok($command_2, 'Genome::Model::Command::Services::AssignQueuedInstrumentData');
 ok($command_2->execute(), 'assign-queued-instrument-data executed successfully.');
 
@@ -603,8 +604,10 @@ is($pse_3_genome_model_ids[0], $new_model->id, 'genome_model_id parameter set co
 is_deeply([sort @pse_4_genome_model_ids], [sort map($_->id, @new_refalign_models)], 'genome_model_id parameter set correctly to match builds created for fourth pse');
 
 my @members_2 = $group->models;
+print Dumper \@new_models_2;
+print Dumper \@members_2; 
+print Dumper \@members;
 is(scalar(@members_2) - scalar(@members), 3, 'two subsequent models added to the group');
-
 
 my $instrument_data_5 = Genome::InstrumentData::Solexa->create(
     id => '-104',
@@ -802,6 +805,7 @@ is($normal->build_requested, 0, 'the normal model does not have a build requeste
 
 @models = values %$new_models_4;
 push(@model_groups, $_->model_groups) for (@models);
+print Dumper(\@model_groups);
 ok((grep {$_->name =~ /\.tcga/} @model_groups), "found tcga-cds model_group");
 
 is($pse_7->pse_status, 'completed', 'seventh pse completed');

@@ -96,7 +96,6 @@ sub execute {
 	my $module_path = $self->get_class_object->module_path;
 	my $xml_path    = $module_path;
 	$xml_path =~ s/\.pm/\.xml/;
-	$DB::single=1;
 	my $workflow = Workflow::Operation->create_from_xml($xml_path);
 	my @errors   = $workflow->validate;
 	unless ( $workflow->is_valid ) {

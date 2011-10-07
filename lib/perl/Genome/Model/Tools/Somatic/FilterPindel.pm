@@ -62,7 +62,6 @@ EOS
 
 sub execute {
     my $self = shift;
-    $DB::single=1;
 
     my $ifh = Genome::Sys->open_file_for_reading($self->_dbsnp_insertions); #IO::File->new($self->_dbsnp_insertions);
     while (my $line = $ifh->getline) {

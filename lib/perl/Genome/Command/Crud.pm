@@ -14,8 +14,6 @@ class Genome::Command::Crud {
     doc => 'Class for dynamically building CRUD commands',
 };
 
-our %inited;
-
 sub camel_case_to_string {
     my $string = shift;
     unless ($string) {
@@ -28,6 +26,27 @@ sub camel_case_to_string {
     return join($join, map { lc } @words);
 }
 
+sub display_name_for_value {
+    my ($class, $value) = @_;
+
+    my @display_names;
+    for my $value ( ref($value) eq 'ARRAY' ? @$value : $value ) {
+        if ( not Scalar::Util::blessed($value) ) {
+            push @display_names, $value;
+            next;
+        }
+        elsif ( my $display_name_sub =  $value->can('__display_name__') ) {
+            push @display_names, $display_name_sub->($value);
+        }
+        else {
+            push @display_names, $value->id;
+        }
+    }
+
+    return join(" ", @display_names);
+}
+
+our %inited;
 sub init_sub_commands {
     my ($class, %incoming_config) = @_;
 
@@ -47,10 +66,17 @@ sub init_sub_commands {
     ? delete $incoming_config{target_name}
     : join(' ', map { camel_case_to_string($_) } split('::', $config{target_class}));
     Lingua::EN::Inflect::classical(persons => 1);
-    $config{name_for_objects} = Lingua::EN::Inflect::PL($target_name);
-    $config{name_for_objects_ub} = $config{name_for_objects};
-    $config{name_for_objects_ub} =~ s/ /_/;
+    $config{target_name} = $target_name;
+    $config{target_name_pl} = Lingua::EN::Inflect::PL($target_name);
+    $config{target_name_pl_ub} = $config{target_name_pl};
+    $config{target_name_pl_ub} =~ s/ /_/;
 
+    # Main tree command
+    if ( not $class->_build_main_tree_class(%config) ) {
+        Carp::confess('Failed to create main tree class for '.$config{namespace});
+    }
+
+    # Sub commands
     my @namespace_sub_command_names = map {
         s/$config{namespace}:://; $_ = lc($_); $_;
     } $config{namespace}->sub_command_classes;
@@ -79,6 +105,8 @@ sub init_sub_commands {
             Carp::confess('Cannot dynamically create class for sub command name: '.$sub_command);
         }
         push @sub_classes, $sub_class;
+        no strict;
+        *{ $sub_class.'::display_name_for_value' } = \&display_name_for_value;
     }
 
     # Note inited
@@ -98,27 +126,88 @@ sub init_sub_commands {
     return 1;
 }
 
+sub _build_main_tree_class {
+    my ($class, %config) = @_;
+
+    my $meta = eval{ $config{namespace}->__meta__; };
+
+    UR::Object::Type->define(
+        class_name => $config{namespace},
+        is => 'Command::Tree',
+        doc => 'work with '.$config{target_name_pl},
+    );
+
+    return 1;
+}
+
 sub _build_create_sub_class {
     my ($class, %config) = @_;
 
-    # get the properties for creating
-    my @properties = $class->_command_properties_for_target_class($config{target_class});
-
-    # define class
+    my @properties = $class->_create_command_properties(%config);
     my $sub_class = $config{namespace}.'::Create';
     UR::Object::Type->define(
         class_name => $sub_class,
         is => 'Genome::Command::Create',
         has => [ map { $_->{property_name} => $_ } @properties ],
-        doc => 'create '.$config{name_for_objects},
+        doc => 'create '.$config{target_name_pl},
     );
 
     no strict;
-    *{ $sub_class.'::_name_for_objects' } = sub{ return $config{name_for_objects}; };
     *{ $sub_class.'::_target_class' } = sub{ return $config{target_class}; };
+    *{ $sub_class.'::_target_name' } = sub{ return $config{target_name}; };
     use strict;
 
     return $sub_class;
+}
+
+sub _create_command_properties { 
+    my ($class, %config) = @_;
+
+    my $target_class = $config{target_class};
+    Carp::confess('No target class given to get properties') if not $target_class;
+    my $target_name = $config{target_name};
+    Carp::confess('No target name given to get properties') if not $target_name;
+
+    my $target_meta = $target_class->__meta__;
+    my @properties;
+    for my $target_property ( $target_meta->property_metas ) {
+        my $property_name = $target_property->property_name;
+
+        next if $target_property->class_name eq 'UR::Object';
+        next if $property_name =~ /^_/;
+        next if grep { $target_property->$_ } (qw/ is_id is_calculated is_constant is_transient /);
+        next if grep { not $target_property->$_ } (qw/ is_mutable /);
+        next if $target_property->is_many and $target_property->is_delegated and not $target_property->via; # direct relationship
+
+        my %property = (
+            property_name => $property_name,
+            singular_name => $target_property->singular_name,
+            plural_name => $target_property->plural_name,
+            data_type => $target_property->data_type,
+            is_many => $target_property->is_many,
+            is_optional => $target_property->is_optional,
+            valid_values => $target_property->valid_values,
+            default_value => $target_property->default_value,
+            doc => $target_property->doc,
+        );
+
+        if ( $property_name =~ s/_id$// ) {
+            my $object_meta = $target_meta->property_meta_for_name($property_name);
+            if ( $object_meta and  not grep { $object_meta->$_ } (qw/ is_calculated is_constant is_transient id_class_by /) ) {
+                $property{property_name} = $property_name;
+                $property{data_type} = $object_meta->data_type;
+                $property{doc} = $object_meta->doc if $object_meta->doc;
+            }
+        }
+
+        push @properties, \%property;
+    }
+
+    if ( not @properties ) {
+        Carp::confess('No properties found for target class: '.$target_class);
+    }
+
+    return @properties;
 }
 
 sub _build_list_sub_class {
@@ -147,21 +236,21 @@ sub _build_list_sub_class {
 sub _build_update_sub_class {
     my ($class, %config) = @_;
 
-    my @properties = $class->_update_command_properties_for_target_class($config{target_class});
+    my @properties = $class->_update_command_properties_for_target_class(%config);
     my $sub_class = $config{namespace}.'::Update';
     UR::Object::Type->define(
         class_name => $sub_class,
         is => 'Genome::Command::Update',
         has => [ 
-            $config{name_for_objects_ub} => {
+            $config{target_name_pl_ub} => {
                 is => $config{target_class},
                 is_many => 1,
                 shell_args_position => 1,
-                doc => ucfirst($config{name_for_objects}).' to update, resolved via text string.',
+                doc => ucfirst($config{target_name_pl}).' to update, resolved via text string.',
             },
             ( map { $_->{property_name} => $_ } @properties ),
         ],
-        doc => 'update '.$config{name_for_objects},
+        doc => 'update '.$config{target_name_pl},
     );
 
     my $only_if_null = $config{only_if_null};
@@ -177,12 +266,70 @@ sub _build_update_sub_class {
     }
 
     no strict;
-    *{ $sub_class.'::_name_for_objects' } = sub{ return $config{name_for_objects}; };
-    *{ $sub_class.'::_name_for_objects_ub' } = sub{ return $config{name_for_objects_ub}; };
+    *{ $sub_class.'::_target_name' } = sub{ return $config{target_name}; };
     *{ $sub_class.'::_only_if_null' } = sub{ return $only_if_null; };
     use strict;
 
     return $sub_class;
+}
+
+sub _update_command_properties_for_target_class {
+    my ($class, %config) = @_;
+
+    my $target_class = $config{target_class};
+    Carp::confess('No target class given to get properties') if not $target_class;
+    my $target_name = $config{target_name};
+    Carp::confess('No target name given to get properties') if not $target_name;
+
+    my $target_meta = $target_class->__meta__;
+    my @properties;
+    for my $target_property ( $target_meta->property_metas ) {
+        my $property_name = $target_property->property_name;
+
+        next if $target_property->class_name eq 'UR::Object';
+        next if $property_name =~ /^_/;
+        next if grep { $target_property->$_ } (qw/ is_id is_calculated is_constant is_transient /);
+        next if grep { not $target_property->$_ } (qw/ is_mutable /);
+        next if $target_property->is_many and $target_property->is_delegated and not $target_property->via; # direct relationship
+
+        if ( $target_property->is_many ) {
+            for my $function (qw/ add remove /) { 
+                my $property_name = $target_property->property_name;
+                push @properties, {
+                    property_name => $function.'_'.$target_property->singular_name,
+                    data_type => $target_property->data_type,
+                    is_optional => 1,
+                    valid_values => $target_property->valid_values,
+                    doc => ucfirst($function).' '.$target_property->singular_name,
+                    is_add_remove => 1,
+                };
+            }
+        }
+        else {
+            my %property = (
+                property_name => $property_name,
+                singular_name => $target_property->singular_name,
+                plural_name => $target_property->plural_name,
+                data_type => $target_property->data_type,
+                valid_values => $target_property->valid_values,
+                is_optional => 1,
+                doc => $target_property->doc,
+            );
+            push @properties, \%property;
+
+            if ( $property_name =~ s/_id$// ) {
+                my $object_meta = $target_meta->property_meta_for_name($property_name);
+                if ( $object_meta ) {
+                    next if grep { $object_meta->$_ } (qw/ is_calculated is_constant is_transient id_class_by /);
+                    $property{property_name} = $property_name;
+                    $property{data_type} = $object_meta->data_type;
+                    $property{doc} = $object_meta->doc if $object_meta->doc;
+                }
+            }
+        }
+    }
+
+    return @properties;
 }
 
 sub _build_delete_sub_class {
@@ -193,109 +340,22 @@ sub _build_delete_sub_class {
         class_name => $sub_class,
         is => 'Genome::Command::Delete',
         has => [ 
-            $config{name_for_objects_ub} => {
-                is => $config{target_class},
-                is_many => 1,
-                shell_args_position => 1,
-                require_user_verify => 1, # needed?
-                doc => ucfirst($config{name_for_objects}).' to delete, resolved via text string.',
-            },
+        $config{target_name_pl_ub} => {
+            is => $config{target_class},
+            is_many => 1,
+            shell_args_position => 1,
+            require_user_verify => 1, # needed?
+            doc => ucfirst($config{target_name_pl}).' to delete, resolved via text string.',
+        },
         ],
-        doc => 'delete '.$config{name_for_objects},
+        doc => 'delete '.$config{target_name_pl},
     );
 
     no strict;
-    *{ $sub_class.'::_name_for_objects' } = sub{ return $config{name_for_objects}; };
-    *{ $sub_class.'::_name_for_objects_ub' } = sub{ return $config{name_for_objects_ub}; };
+    *{ $sub_class.'::_target_name' } = sub{ return $config{target_name}; };
     use strict;
 
     return $sub_class;
-}
-
-sub _command_properties_for_target_class {
-    my ($class, $target_class) = @_;
-
-    Carp::confess('No target class given to get properties') if not $target_class;
-
-    my $target_meta = $target_class->__meta__;
-    my @properties;
-    my @seen_properties;
-    for my $target_property ( $target_meta->property_metas ) {
-        my $property_name = $target_property->property_name;
-        push @seen_properties, $property_name;
-
-        next if $target_property->class_name eq 'UR::Object';
-        next if $property_name =~ /^_/;
-        next if grep { $target_property->$_ } (qw/ is_id is_calculated is_constant is_transient /);
-        next if grep { not $target_property->$_ } (qw/ is_mutable /);
-
-        my %property = (
-            property_name => $property_name,
-            singular_name => $target_property->singular_name,
-            plural_name => $target_property->plural_name,
-            data_type => $target_property->data_type,
-            is_many => $target_property->is_many,
-            is_optional => $target_property->is_optional,
-            is_mutable => $target_property->is_mutable,
-            valid_values => $target_property->valid_values,
-            default_value => $target_property->default_value,
-            doc => $target_property->doc,
-        );
-        push @properties, \%property;
-
-        if ( $property_name =~ s/_id$// ) {
-            my $object_meta = $target_meta->property_meta_for_name($property_name);
-            if ( $object_meta ) {
-                next if grep { $object_meta->$_ } (qw/ is_calculated is_constant is_transient /);
-                push @seen_properties, $property_name;
-                $property{property_name} = $property_name;
-                $property{data_type} = $object_meta->data_type;
-                $property{doc} = $object_meta->doc if $object_meta->doc;
-            }
-        }
-    }
-
-    if ( not @properties ) {
-        Carp::confess('No properties found for target class: '.$target_class);
-    }
-
-    return @properties;
-}
-
-sub _update_command_properties_for_target_class {
-    my $class = shift;
-
-    my @properties = $class->_command_properties_for_target_class(@_);
-    return if not @properties;
-
-    my @update_properties;
-    for my $property ( @properties ) {
-        $property->{is_optional} = 1;
-        delete $property->{default_value};
-        my $is_mutable = delete $property->{is_mutable};
-        next if not $is_mutable;
-
-        if ( not $property->{is_many} ) {
-            push @update_properties, $property;
-            next;
-        }
-
-        for my $function (qw/ add remove /) { 
-            my $property_name = $property->{property_name};
-            push @update_properties, {
-                property_name => $function.'_'.$property->{singular_name},
-                data_type => $property->{data_type},
-                is_many => $property->{is_many},
-                is_many => 0,
-                is_optional => 1,
-                valid_values => $property->{valid_values},
-                doc => ucfirst($function).' '.$property->{singular_name},
-                is_add_remove => 1,
-            };
-        }
-    }
-
-    return @update_properties;
 }
 
 1;

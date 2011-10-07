@@ -604,7 +604,6 @@ sub _transcript_annotation_for_cds_exon {
             # In the above example, first changed amino acid would be T.
             $trv_type = "frame_shift_" . lc $variant->{type};
             if ($self->{get_frame_shift_sequence}) {
-                $DB::single = 1;
                 my $aa_after_indel = $self->_apply_indel_and_translate($transcript, $structure, $variant);
                 $protein_string = "p." . $aa_after_indel . $protein_position . "fs";
             }

@@ -80,13 +80,11 @@ EOS
 
 sub _initialize_build {
     my($self,$build) = @_;
-    $DB::single=1;
     return 1;
 }
 
 sub _resolve_workflow_for_build {
     my $self = shift;
-    $DB::single = 1;
     my $build = shift;
 
     my $operation = Workflow::Operation->create_from_xml(__FILE__ . '.xml');
@@ -101,7 +99,6 @@ sub _resolve_workflow_for_build {
 
 sub _map_workflow_inputs {
     my $self = shift;
-    $DB::single = 1;
     my $build = shift;
 
     my @inputs = ();
@@ -128,13 +125,16 @@ sub _map_workflow_inputs {
         $self->error_message("Bam file $bam_file does not exist!");
         die $self->error_message;
     }
-     
+    
+    my @size_array		= split (',',$self->size_bins);
+    my $bin 			= \@size_array;
+    
     push @inputs, bam_file => $bam_file;
     push @inputs, output_base_dir => $data_directory;
-	push @inputs, annotation_files => $self->annotation_files;
+    push @inputs, annotation_files => $self->annotation_files;
     push @inputs, annotation_name => $self->annotation_name;
     push @inputs, minimum_zenith => $self->minimum_zenith;
-    push @inputs, size_bins => $self->size_bins;
+    push @inputs, size_bins => $bin;
     push @inputs, subcluster_min_mapzero => $self->subcluster_min_mapzero;
     push @inputs, input_cluster_number => $self->input_cluster_number;
 

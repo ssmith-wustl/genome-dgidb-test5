@@ -141,7 +141,8 @@ sub execute {
 
                     my @genotypes;
                     if( $data_source eq 'iscan' || $data_source eq 'internal') {
-                        @genotypes = $organism_sample->get_genotype;
+#                        @genotypes = $organism_sample->get_genotype;
+                        @genotypes = grep {$_->status eq "pass"} $organism_sample->get_genotype;
                     }
                     elsif( $data_source eq 'external') {
                         @genotypes = $organism_sample->get_external_genotype;
@@ -150,8 +151,8 @@ sub execute {
                     # Get all external genotypes for this sample
                     foreach my $genotype (@genotypes) {
 
-                        #LSF: For Affymetrix, this will be the birdseed file.
-                        my $ab_file = $genotype->get_genotype_file_ab;
+#                        #LSF: For Affymetrix, this will be the birdseed file.
+#                        my $ab_file = $genotype->get_genotype_file_ab;
 
                         # Get the data adapter (DataAdapter::GSGMFinalReport class object)
                         my $filter       = DataAdapter::Result::Filter::Nathan->new();

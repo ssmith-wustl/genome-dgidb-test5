@@ -231,14 +231,18 @@ sub _execute_build {
 
     my $output_dir = $build->data_directory."/variants";
     $params{output_directory} = $output_dir;
-
-    eval { Genome::Model::Tools::DetectVariants2::Dispatcher->execute(%params); };
+    my $dispatcher_cmd = Genome::Model::Tools::DetectVariants2::Dispatcher->create(%params); 
+    eval { $dispatcher_cmd->execute };
     if ($@) {
         $self->warning_message("Failed to execute detect variants with multiple BAMs!\n");
         #die $self->warning_message("Failed to execute detect variants dispatcher(err:$@) with params:\n" . Data::Dumper::Dumper \%params);
     }
     else {
         $self->status_message("detect variants command completed successfully");
+        my @results = $dispatcher_cmd->results;
+        for my $result (@results) {
+            $result->add_user(user => $build, label => 'uses');
+        }
     }
 
     # dump pedigree data into a file
@@ -276,7 +280,6 @@ __END__
 
 sub _resolve_workflow_for_build {
     my $self = shift;
-    $DB::single = 1;
     my $build = shift;
 
     my $operation = Workflow::Operation->create_from_xml(__FILE__ . '.xml');
@@ -292,7 +295,6 @@ sub _resolve_workflow_for_build {
 
 sub _map_workflow_inputs {
     my $self = shift;
-    $DB::single = 1;
     my $build = shift;
 
     my @inputs = ();

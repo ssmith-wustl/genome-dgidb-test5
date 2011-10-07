@@ -72,7 +72,6 @@ EOS
 
 sub execute {
     my $self = shift;
-    $DB::single=1;
     unless(defined($self->output_file)){
         $self->output_file($self->read_support_file.".filtered");
     }

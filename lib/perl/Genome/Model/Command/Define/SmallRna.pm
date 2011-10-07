@@ -67,7 +67,6 @@ sub type_specific_parameters_for_create {
 
 sub execute {
     my $self = shift;
-    $DB::single = 1;
   
     $self->ref_model($self->_resolve_param('ref_model'));
     unless(defined $self->ref_model) {

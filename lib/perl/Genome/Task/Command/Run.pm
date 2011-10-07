@@ -7,7 +7,7 @@ use JSON::XS;
 use File::Path;
 
 class Genome::Task::Command::Run {
-    is => 'Genome::Command::Base',
+    is => 'Command::V2',
     has => [
         task => {
             is => 'Genome::Task',

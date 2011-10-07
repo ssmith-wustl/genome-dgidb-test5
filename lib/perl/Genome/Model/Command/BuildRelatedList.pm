@@ -8,22 +8,28 @@ use Genome;
 class Genome::Model::Command::BuildRelatedList {
     is => 'UR::Object::Command::List',
     is_abstract => 1,
-    has => [
+    has_optional => [
+        filter => {
+            # override shell_args_position from UR::Object::Command::List
+            shell_args_position => undef,
+        },
         build_spec => {
             is => 'Text',
             shell_args_position => 1,
-            is_optional => 1,
-            doc => "The id of the build, or the id or name of a model",
-        }
+            doc => "The id of the build, or the id or name of a model, or a filter",
+        },
     ],
 };
 
 sub create {
     # TODO: pull this up into Genome::Model::Command so it's fast/easy to run model/build centric things.
+    # 2011-10: instead can now just use Command::V2 but that isn't integrated into lister yet
     my $class = shift;
 
     # TODO: get rid of the ' ' key in the construction params
     # It was a hack to get around not having "shell_args_position" in the properties.
+    # 2011-10: Now shell_args_position is set but this does more, e.g. match by name or ID
+    # lots of overlap with Command::V2 but that isn't integrated into lister yet
     my %params = @_;
     delete $params{' '};
     my $bx = $class->define_boolexpr(%params);
@@ -53,6 +59,9 @@ sub create {
             }
             elsif (@models > 1) {
                 $filter_updated = $filter_prefix . 'model_name~' . $build_spec . '%';
+            }
+            else {
+                $filter_updated = $filter_prefix . $build_spec;
             }
         }
         if ($filter_updated) {

@@ -92,7 +92,7 @@ sub execute {
     my $add_and_build = $self->_add_instrument_data_to_model_and_build($instrument_data);
     return $self->_deallocate if not $add_and_build;
 
-    my $reallocate = eval{ $self->_instrument_data->disk_allocations->reallcoate; };
+    my $reallocate = eval{ $self->_instrument_data->allocations->reallcoate; };
 
     return 1;
 }
@@ -289,7 +289,7 @@ sub _copy_directory {
 
     my $instrument_data = $self->_instrument_data;
     Carp::confess('No instruemnt data set to copy directory') if not $instrument_data;
-    my $allocation = $instrument_data->disk_allocations;
+    my $allocation = $instrument_data->allocations;
     Carp::confess('No allocation for instrument data ('.$instrument_data->id.') to copy directory') if not $allocation;
     my $destination = $allocation->absolute_path;
     Carp::confess('No absolute path for allocation ('.$allocation->id.') to copy directory') if not $allocation;
@@ -435,7 +435,7 @@ sub _deallocate {
     my $instrument_data = $self->_instrument_data;
     return if not $instrument_data;
 
-    my $allocation = $instrument_data->disk_allocations;
+    my $allocation = $instrument_data->allocations;
     return if not $allocation;
 
     $self->status_message('Deallocate');

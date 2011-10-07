@@ -15,7 +15,6 @@ class Genome::Search::Query::View::Status::Html {
 ## to give html, not transform it
 sub _generate_content {
 
-$DB::single = 1;
     my $self = shift;
 
     my $view = Genome::Search::Query::View::Status::Xml->create( subject => $self->subject(), format => 'xml' );

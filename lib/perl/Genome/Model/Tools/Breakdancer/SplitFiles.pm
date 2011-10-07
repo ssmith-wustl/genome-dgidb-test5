@@ -38,7 +38,7 @@ class Genome::Model::Tools::Breakdancer::SplitFiles {
     ],
 };
 
-my @FULL_CHR_LIST = (1..22, 'X', 'Y');
+my @FULL_CHR_LIST = (1..22, 'X', 'Y', 'MT');
 
 sub help_synopsis {
     return 'Splits up a breakdancer output file by chromosome';

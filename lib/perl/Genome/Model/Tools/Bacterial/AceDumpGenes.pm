@@ -227,7 +227,6 @@ sub execute {
             }
 
             if ($phase eq 'phase_5' and ($coding_gene->gene_id == 6093590 or $coding_gene->gene_id == 6093636 or $coding_gene->gene_id == 6139539)) {
-                $DB::single = 1;
             }
 
             my @coding_gene_tags = $coding_gene->tag_names;

@@ -32,7 +32,6 @@ class Genome::Model::Tools::Annotate::TranscriptVariants::Version0::BedToAnnotat
 
 sub execute{
     my $self = shift;
-    $DB::single = 1;
     
     unless(defined $self->snv_file or defined $self->indel_file){
         $self->error_message("snv-file and/or indel-file must be defined") and die; 

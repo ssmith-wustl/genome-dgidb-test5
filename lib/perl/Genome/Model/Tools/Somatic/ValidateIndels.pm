@@ -89,7 +89,6 @@ sub load_bed_file {
     my %data;
 
     my $fh = Genome::Sys->open_file_for_reading($file);
-    $DB::single=1;
     while(my $line = $fh->getline){
         chomp $line;
         my ($chr,$start,$stop,$ref,$var,$lower_range,$upper_range) = split "\t",$line;

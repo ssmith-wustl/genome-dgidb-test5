@@ -42,7 +42,6 @@ class Genome::Model::Tools::Library::CheckLibs {
 
 sub execute {
     my $self=shift;
-    $DB::single = 1;
     my @builds;
     if($self->builds) {
         @builds = map { Genome::Model::Build->get($_); }  split /\s+/, $self->builds;

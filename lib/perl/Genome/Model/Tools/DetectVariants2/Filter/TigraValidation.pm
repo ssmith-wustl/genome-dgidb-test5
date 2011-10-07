@@ -47,7 +47,7 @@ use Carp 'confess';
 #         -x INT     Duplicate supplementary reads [$opts{x}] times
 #\n") unless ($#ARGV>=1);
 
-my @FULL_CHR_LIST = (1..22, 'X', 'Y');
+my @FULL_CHR_LIST = (1..22, 'X', 'Y', 'MT');
 
 class Genome::Model::Tools::DetectVariants2::Filter::TigraValidation {
     is  => 'Genome::Model::Tools::DetectVariants2::Filter',
@@ -251,14 +251,9 @@ class Genome::Model::Tools::DetectVariants2::Filter::TigraValidation {
             default_value => "-R 'select[mem>8000] rusage[mem=8000]' -M 8000000", 
         },
     ],
-    has_constant => [
-        _variant_type => {
-            type => 'String',
-            default => 'svs',
-            doc => 'variant type that this module operates on, overload this in submodules accordingly',
-        },
-    ],
 };
+
+sub _variant_type { 'svs' };
 
 my %TIGRA_PARAMS_LIST = (
     l => 'flank_size',

@@ -32,7 +32,7 @@ EOBED
 my $test_bed_file = Genome::Sys->create_temp_file_path;
 Genome::Sys->write_file($test_bed_file, $data);
 my $test_bed_file_md5 = Genome::Sys->md5sum($test_bed_file);
-my $variant_list = Genome::FeatureList->create(
+my $snv_variant_list = Genome::FeatureList->create(
     name => 'test_somatic_validation_feature_list',
     format              => 'true-BED',
     content_type        => 'target region set',
@@ -40,7 +40,7 @@ my $variant_list = Genome::FeatureList->create(
     file_content_hash   => $test_bed_file_md5,
     reference_id        => $test_models->{tumor}->reference_sequence_build->id,
 );
-isa_ok($variant_list, 'Genome::FeatureList', 'created test feature-list');
+isa_ok($snv_variant_list, 'Genome::FeatureList', 'created test feature-list');
 
 ### Begin a SomaticValidation test run
 
@@ -49,7 +49,7 @@ my $create_command = Genome::Model::Command::Define::SomaticValidation->create(
     tumor_model => $test_models->{tumor},
     normal_model => $test_models->{normal},
     processing_profile => $processing_profile,
-    variant_list => $variant_list,
+    snv_variant_list => $snv_variant_list,
 );
 
 ok($create_command, 'Created command to create SomaticValidation model.');

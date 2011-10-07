@@ -32,6 +32,10 @@ class Genome::ProcessingProfile::SomaticValidation {
             is_optional =>1,
             doc => "Strategy to be used to detect cnvs.",
         },
+        identify_dnp_proportion => {
+            is => 'Number',
+            doc => 'The proportion of reads supporting a DNP to make the call',
+        },
         minimum_coverage => {
             is => 'Number', doc => 'minimum coverage to call a site (in process-validation step)',
         },
@@ -81,8 +85,8 @@ sub _map_workflow_inputs {
         die $self->error_message;
     }
 
-    my $variant_list = $model->variant_list->file_path;
-    unless($variant_list) {
+    my $snv_variant_list = $model->snv_variant_list->file_path;
+    unless($snv_variant_list) {
         $self->error_message('Failed to get a variant list for this build!');
         die $self->error_message;
     }
@@ -118,7 +122,7 @@ sub _map_workflow_inputs {
 
     push @inputs,
         build_id => $build->id,
-        variant_list => $variant_list,
+        snv_variant_list => $snv_variant_list,
         ;
 
     my %default_filenames = $self->default_filenames;

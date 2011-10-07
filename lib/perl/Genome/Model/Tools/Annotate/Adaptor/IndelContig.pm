@@ -32,7 +32,6 @@ class Genome::Model::Tools::Annotate::Adaptor::IndelContig {
 
 sub execute {
     my $self=shift;
-    $DB::single = 1;
     my $contigs = $self->contig_fasta_file;
     my $sites = $self->contig_count_file;
 

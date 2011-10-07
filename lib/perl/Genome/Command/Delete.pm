@@ -7,6 +7,7 @@ use Genome;
       
 require Carp;
 use Data::Dumper 'Dumper';
+require Lingua::EN::Inflect;
 
 class Genome::Command::Delete {
     is => 'Command::V2',
@@ -14,37 +15,40 @@ class Genome::Command::Delete {
     doc => 'CRUD delete command class.',
 };
 
-sub _name_for_objects { Carp::confess('Please use CRUD or implement _name_for_objects in '.$_[0]->class); }
-sub _name_for_objects_ub { Carp::confess('Please use CRUD or implement _name_for_objects_ub in '.$_[0]->class); }
+sub _target_name { Carp::confess('Please use CRUD or implement _target_name in '.$_[0]->class); }
+sub _target_name_pl { return Lingua::EN::Inflect::PL($_[0]->_target_name); }
+sub _target_name_pl_ub { my $target_name_pl = $_[0]->_target_name_pl; $target_name_pl =~ s/\_/ /g; return $target_name_pl; }
 
 sub sub_command_sort_position { .4 };
 
 sub help_brief {
-    return 'delete '.$_[0]->_name_for_objects;
+    return 'delete '.Lingua::EN::Inflect::PL($_[0]->_target_name);
 }
 
 sub help_detail {
-    return 'HELP IN PROGRESS';
+    my $class = shift;
+    my $target_name_pl = $class->_target_name_pl;
+    return "This command deletes $target_name_pl resolved via text string.";
 }
 
 sub execute {
     my $self = shift;
 
-    $self->status_message('Delete '.$self->_name_for_objects);
+    $self->status_message('Delete '.$self->_target_name_pl);
 
-    my $name_for_objects_ub = $self->_name_for_objects_ub;
-    my @objects = $self->$name_for_objects_ub;
+    my $target_name_pl_ub = $self->_target_name_pl_ub;
+    my @objects = $self->$target_name_pl_ub;
     my %errors;
     for my $obj ( @objects ) {
         $self->_total_command_count($self->_total_command_count + 1);
         my $transaction = UR::Context::Transaction->begin();
-        my $name = $obj->__display_name__;
+        my $display_name = $self->display_name_for_value($obj);
         my $deleted = eval{ $obj->delete };
         if ($deleted and $transaction->commit) {
-            $self->status_message("Deleted $name");
+            $self->status_message("Deleted $display_name");
         }
         else {
-            $self->append_error($name, "Failed to delete $name");
+            $self->append_error($display_name, "Failed to delete $display_name");
             $transaction->rollback;
         }
     }

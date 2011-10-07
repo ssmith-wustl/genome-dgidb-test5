@@ -79,7 +79,6 @@ sub infer_variant_type {
 # Takes in a variation hash, returns the type
 sub infer_variation_type {
     my ($self, $variation) = @_;
-    $DB::single=1;
 
     # If the start and stop are the same, and ref and variation are defined its a SNP
     if (($variation->stop == $variation->start)&&

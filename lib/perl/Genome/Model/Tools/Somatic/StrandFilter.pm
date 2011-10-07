@@ -151,7 +151,6 @@ EOS
 
 sub execute {
     my $self = shift;
-    $DB::single=1;
 
 #    if ($self->skip) {
         $self->status_message("This filter is now deprecated. Please use 'gmt somatic filter-false-positives' instead!");

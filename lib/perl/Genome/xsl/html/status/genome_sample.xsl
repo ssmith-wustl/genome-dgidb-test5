@@ -6,6 +6,7 @@
     <xsl:comment>template: /html/status/genome_sample.xsl  match: object[./types[./isa[@type='Genome::Sample']]]</xsl:comment>
 
     <script type='text/javascript' src='/res/js/app/status/genome_sample.js'></script>
+    <script type='text/javascript' src='/res/js/app/genome_model_build_list.js'></script>
 
     <xsl:call-template name="control_bar_view"/>
 

@@ -101,7 +101,7 @@ EOS
 } #TODO Fill in this synopsis with a few examples. Possible examples are shown in the processing profile create help
 
 sub help_detail {
-    return <<EOS 
+    return <<EOS
 A variant detector(s) specified under snv-detection-strategy, indel-detection-strategy, or sv-detection-strategy must have a corresponding module under `gmt detect-variants`.
 EOS
 }
@@ -110,7 +110,7 @@ EOS
 sub create {
     my $class = shift;
     my $self = $class->SUPER::create(@_);
-    
+
     for my $variant_type (@{ $self->variant_types }) {
         my $name_property = $variant_type . '_detection_strategy';
         my $strategy = $self->$name_property;
@@ -141,7 +141,7 @@ sub plan {
             $trees->{$variant_type} = $tree;
             $self->build_detector_list($trees->{$variant_type}, $plan, $variant_type);
         }
-    } 
+    }
 
     return ($trees, $plan);
 }
@@ -163,7 +163,7 @@ sub _detect_variants {
         $self->error_message(@errors);
         die "Errors validating workflow\n";
     }
-    my $input;  
+    my $input;
     my $workflow_inputs = $self->_workflow_inputs;
     map { $input->{$_} = $workflow_inputs->{$_}->{value}} keys(%{$workflow_inputs});
     $input->{aligned_reads_input}= $self->aligned_reads_input;
@@ -172,7 +172,7 @@ sub _detect_variants {
     $input->{aligned_reads_sample} = $self->aligned_reads_sample;
     $input->{control_aligned_reads_sample} = $self->control_aligned_reads_sample;
     $input->{output_directory} = $self->_temp_staging_directory;
-   
+
     $self->_dump_workflow($workflow);
     $self->_dump_dv_cmd;
 
@@ -230,7 +230,7 @@ sub _dump_dv_cmd {
 sub get_relative_path_to_output_directory {
     my $self = shift;
     my $full_path = shift;
-    my $relative_path = $full_path; 
+    my $relative_path = $full_path;
     my $temp_path = $self->_temp_staging_directory;
     $relative_path =~ s/$temp_path\/?//;
     return $relative_path;
@@ -249,16 +249,16 @@ sub parse_detection_strategy {
     my $string = shift;
 
     return unless $string;
-    
+
     my $parser = $self->parser;
-    
+
     my $result = $parser->startrule($string);
-    
+
     unless($result) {
         $self->error_message('Failed to interpret detector string from ' . $string);
         die($self->error_message);
     }
-    
+
     return $result;
 }
 
@@ -271,19 +271,19 @@ sub merge_filters {
 sub build_detector_list {
     my $self = shift;
     my ($detector_tree, $detector_list, $detector_type) = @_;
-    
+
     #Just recursively keep looking for detectors
     my $branch_case = sub {
         my $self = shift;
         my ($combination, $subtrees, $branch_case, $leaf_case, $detector_list, $detector_type) = @_;
-        
+
         for my $subtree (@$subtrees) {
             $self->walk_tree($subtree, $branch_case, $leaf_case, $detector_list, $detector_type);
         }
-        
+
         return $detector_list;
     };
-    
+
     #We found the detector we're looking for
     my $leaf_case = sub {
         my $self = shift;
@@ -293,7 +293,7 @@ sub build_detector_list {
         my $version = $detector->{version};
         my $params = $detector->{params};
         my $d = clone($detector);
-        
+
         #Do not push duplicate entries
         if (exists($detector_list->{$name}{$version}{$detector_type})) {
             my @matching_params = grep {$_->{params} eq $params} @{$detector_list->{$name}{$version}{$detector_type}};
@@ -310,10 +310,10 @@ sub build_detector_list {
         } else {
             $detector_list->{$name}{$version}{$detector_type} = [$d];
         }
-        
+
         return $detector_list;
     };
-    
+
     return $self->walk_tree($detector_tree, $branch_case, $leaf_case, $detector_list, $detector_type);
 }
 
@@ -321,31 +321,31 @@ sub build_detector_list {
 sub walk_tree {
     my $self = shift;
     my ($detector_tree, $branch_case, $leaf_case, @params) = @_;
-    
+
     unless($detector_tree) {
         $self->error_message('No parsed detector tree provided.');
         die($self->error_message);
     }
-    
+
     my @keys = keys %$detector_tree;
-    
+
     #There should always be exactly one outer rule (or detector)
     unless(scalar @keys eq 1) {
         $self->error_message('Unexpected data structure encountered!  There were ' . scalar(@keys) . ' keys');
         die($self->error_message . "\nTree: " . Dumper($detector_tree));
     }
-    
+
     my $key = $keys[0];
-    
+
     #Case One:  We're somewhere in the middle of the data-structure--we need to combine some results
     if($key eq 'intersect' or $key eq 'union' or $key eq 'unionunique') {
         my $value = $detector_tree->{$key};
-        
+
         unless(ref $value eq 'ARRAY') {
             $self->error_message('Unexpected data structure encountered! I really wanted an ARRAY, not ' . (ref($value)||$value) );
             die($self->error_message);
         }
-        
+
         return $branch_case->($self, $key, $value, $branch_case, $leaf_case, @params);
     } elsif($key eq 'detector') {
         my $value = $detector_tree->{$key};
@@ -358,7 +358,7 @@ sub walk_tree {
     } else {
         $self->error_message("Unknown key in detector hash: $key");
     }
-    #Case Two: Otherwise the key should be the a detector specification hash, 
+    #Case Two: Otherwise the key should be the a detector specification hash,
 }
 
 # Create the outer workflow and then call methods to generate the individual operations
@@ -367,10 +367,14 @@ sub generate_workflow {
     my ($trees, $plan) = @_;
     my @output_properties;
 
-    push @output_properties, 'snv_output_directory' if defined ($self->snv_detection_strategy);
-    push @output_properties, 'sv_output_directory' if defined ($self->sv_detection_strategy);
-    push @output_properties, 'indel_output_directory' if defined ($self->indel_detection_strategy);
-    push @output_properties, 'cnv_output_directory' if defined ($self->cnv_detection_strategy);
+    # add the output properties based on which detection strategies are used
+    for my $type ('snv', 'indel', 'sv', 'cnv') {
+        my $detection_strategy = $type . '_detection_strategy';
+        if (defined $self->$detection_strategy) {
+            my @new_output_properties = map { $type . '_' . $_ } ('output_directory', 'result_id', 'result_class');
+            push @output_properties, @new_output_properties;
+        }
+    }
 
     my $workflow_model = Workflow::Model->create(
         name => 'Somatic Variation Pipeline',
@@ -415,13 +419,18 @@ sub generate_workflow {
             right_operation => $workflow_model->get_output_connector,
             right_property => $variant_type."_output_directory",
         );
-#TODO Once combine functions have results, return the result as output
-#        $workflow_model->add_link(
-#            left_operation => $last_operation,
-#            left_property => 'result_id',
-#            right_operation => $workflow_mode->get_output_connector,
-#            right_property => $variant_type."_result_id",
-#        );
+        $workflow_model->add_link(
+            left_operation => $last_operation,
+            left_property => '_result_id',
+            right_operation => $workflow_model->get_output_connector,
+            right_property => $variant_type."_result_id",
+        );
+        $workflow_model->add_link(
+            left_operation => $last_operation,
+            left_property => '_result_class',
+            right_operation => $workflow_model->get_output_connector,
+            right_property => $variant_type."_result_class",
+        );
     }
     return $workflow_model;
 }
@@ -432,7 +441,7 @@ sub generate_workflow {
 # the lower level ops into it.  The anchor case is when a detector is reached. Then recursion stops
 # and the function returns the unqiue detector name.
 
-sub link_operations { 
+sub link_operations {
     my $self = shift;
 
     my $tree = shift;
@@ -441,10 +450,10 @@ sub link_operations {
     my ($key) = keys( %{$tree} );
     my @incoming_links;
     my $unique_combine_name;
-    
+
     # This is a leaf node, cease recursion and return the unique detector name
-    # If the detector has no filters, tack on "unfiltered" to the name. This is 
-    # a hack in order to allow smarter shortcutting for strategies which have 
+    # If the detector has no filters, tack on "unfiltered" to the name. This is
+    # a hack in order to allow smarter shortcutting for strategies which have
     # multiple instances of the same detector, but filtered differently
     if($key eq 'detector'){
         my $name =  $self->get_unique_detector_name($tree->{$key}, $variant_type);
@@ -509,12 +518,12 @@ sub create_combine_operation {
 
     my @links = @{$links};
 
-    # This bit of code (below) allows re-use of detectors. For example, a 
+    # This bit of code (below) allows re-use of detectors. For example, a
     # strategy which had 'samtools r599 intersect samtools r599 filtered by snp-filter'
-    # would run samtools r599 once, then intersect the output of the detector with the 
+    # would run samtools r599 once, then intersect the output of the detector with the
     # output of the filter, which itself ran on the output of the detector
 
-    ### TODO However! This code only allows shortcutting if one or both of the instances of the 
+    ### TODO However! This code only allows shortcutting if one or both of the instances of the
     ### repeated detector are unfiltered.
 
     my ($op_a,$op_b);
@@ -554,38 +563,20 @@ sub create_combine_operation {
         operation_type => Workflow::OperationType::Command->get($class),
     );
 
-    my @properties_to_each_operation =  ( 
-        'reference_build_id', 
-        'aligned_reads_input', 
-        'control_aligned_reads_input',
-        'aligned_reads_input',
-        'aligned_reads_sample',
-        'control_aligned_reads_sample',
-    );
-    for my $property ( @properties_to_each_operation) {
-        $workflow_model->add_link(
-                left_operation => $workflow_model->get_input_connector,
-                left_property => $property,
-                right_operation => $combine_operation,
-                right_property => $property,
-        );
-    }
-
     my $left_operation = $workflow_links->{$input_a_last_op_name."_output_directory"}->{right_operation};
     $workflow_model->add_link(
         left_operation => $left_operation,
-        left_property => "output_directory",
+        left_property => "_result_id",
         right_operation => $combine_operation,
-        right_property => "input_directory_a",
+        right_property => "input_a_id",
     );
     $left_operation = $workflow_links->{$input_b_last_op_name."_output_directory"}->{right_operation};
     $workflow_model->add_link(
         left_operation => $left_operation,
-        left_property => "output_directory",
+        left_property => "_result_id",
         right_operation => $combine_operation,
-        right_property => "input_directory_b",
+        right_property => "input_b_id",
     );
-
 
     $workflow_links->{$unique_combine_name."_output_directory"}->{value} = $combine_directory;
     $workflow_links->{$unique_combine_name."_output_directory"}->{right_property_name} = 'output_directory';
@@ -608,7 +599,7 @@ sub create_combine_operation {
             right_property => "output_directory",
     );
 
-    $self->_workflow_inputs($workflow_links); 
+    $self->_workflow_inputs($workflow_links);
 
     $self->_workflow_links($workflow_links);
     $self->_workflow_model($workflow_model);
@@ -628,7 +619,7 @@ sub get_unique_detector_name {
 }
 
 
-sub add_detectors_and_filters { 
+sub add_detectors_and_filters {
     my $self = shift;
     my $detector_hash = shift;
     my $workflow_model = shift;
@@ -648,6 +639,7 @@ sub add_detectors_and_filters {
                 $version = $instance->{version};
                 my $unique_detector_base_name = join( "_", ($variant_type, $name, $version, $self->params_to_index($params)));
                 my @filters = @{$instance->{filters}};
+
                 # Make the operation
                 my $detector_operation = $workflow_model->add_operation(
                     name => "$variant_type $name $version " . $self->params_to_index($params),
@@ -657,12 +649,41 @@ sub add_detectors_and_filters {
                     die $self->error_message("Failed to generate a workflow operation object for ".$class);
                 }
 
+                my $other_detector_operation;
+                OTHER_VARIANT_TYPE: for my $other_variant_type (grep($_ ne $variant_type, keys(%$version_hash))) {
+                    OTHER_INSTANCE: for my $other_instance (@{ $version_hash->{$other_variant_type} }) {
+                        if($other_instance->{params} eq $params) {
+                            if(exists $other_instance->{_detector_operation}) {
+                                $other_detector_operation = $other_instance->{_detector_operation};
+                                last OTHER_VARIANT_TYPE;
+                            } else {
+                                next OTHER_VARIANT_TYPE; #we found the instance we wanted for this variant type, but no operation has been made for it
+                            }
+                        }
+                    }
+                }
+
+                if($other_detector_operation) {
+                    #prevent both copies of the same process from running concurrently (theoretically the second one will then shortcut)
+                    $workflow_model->add_link(
+                        left_operation => $other_detector_operation,
+                        left_property => 'output_directory',
+                        right_operation => $detector_operation,
+                        right_property => '_previous_output_directory',
+                    );
+                    #$self->status_message('Blocker found for ' . $detector_operation->name);
+                } else {
+                    #This is a candidate to block on for others
+                    $instance->{_detector_operation} = $detector_operation;
+                    #$self->status_message('No blocker found for ' . $detector_operation->name);
+                }
+
                 # create filter operations
                 for my $filter (@filters){
                     my $foperation = $workflow_model->add_operation(
                         name => join(" ",($unique_detector_base_name,$filter->{name},$filter->{version}, $self->params_to_index($filter->{params}) )),
                         operation_type => Workflow::OperationType::Command->get($filter->{class})
-                    ); 
+                    );
                     unless($foperation){
                         die $self->error_message("Failed to generate a workflow operation object for ".$filter->{class});
                     }
@@ -670,7 +691,7 @@ sub add_detectors_and_filters {
                 }
 
                 # add links for properties which every detector has from input_connector
-                my @properties_to_each_operation =  ( 
+                my @properties_to_each_operation =  (
                     'reference_build_id',
                     'aligned_reads_input',
                     'control_aligned_reads_input',
@@ -685,12 +706,12 @@ sub add_detectors_and_filters {
                         right_property => $property,
                     );
                 }
-                
+
                 # compose a hash containing input_connector outputs and the operations to which they connect, then connect them
 
                 # first add links from input_connector to detector
                 my $detector_output_directory = $self->calculate_operation_output_directory($self->_temp_staging_directory."/".$variant_type, $name, $version, $params);
-                
+
                 my $inputs_to_store;
                 $inputs_to_store->{$unique_detector_base_name."_version"}->{value} = $version;
                 $inputs_to_store->{$unique_detector_base_name."_version"}->{right_property_name} = 'version';
@@ -730,7 +751,7 @@ sub add_detectors_and_filters {
 
                     $inputs_to_store->{$unique_detector_base_name."_output_directory"}->{last_operation} = $unique_filter_name;
                 }
-                
+
                 # use the hash keys, which are input_connector property names, to add the links to the workflow
                 for my $property (keys %$inputs_to_store) {
                     $workflow_model->add_link(
@@ -756,8 +777,8 @@ sub add_detectors_and_filters {
                 else {
                     %workflow_inputs = %{$inputs_to_store};
                 }
-                $self->_workflow_inputs(\%workflow_inputs); 
-            
+                $self->_workflow_inputs(\%workflow_inputs);
+
                 # connect the output to the input between all operations in this detector's branch
                 for my $index (0..(scalar(@filters)-1)){
                     my ($right_op,$left_op);
@@ -770,11 +791,11 @@ sub add_detectors_and_filters {
                     $right_op = $filters[$index]->{operation};
                     $workflow_model->add_link(
                         left_operation => $left_op,
-                        left_property => 'result_id',
+                        left_property => '_result_id',
                         right_operation => $right_op,
                         right_property => 'previous_result_id',
                     );
-                    
+
                 }
                 $workflow_links = $self->_workflow_links;
                 if($workflow_links){
@@ -810,7 +831,7 @@ sub _create_directories {
             eval {
                 Genome::Sys->create_directory($output_directory);
             };
-            
+
             if($@) {
                 $self->error_message($@);
                 return;
@@ -863,7 +884,7 @@ sub _promote_staged_data {
                     }
                 }
 
-                # Create LQ links also, if an lq file was produced 
+                # Create LQ links also, if an lq file was produced
                 (my $lq_output = $output) =~ s/hq/lq/;
                 (my $unversioned_lq_output = $lq_output) =~ s/\.v\d//;
                 (my $lq_v2_output = $unversioned_lq_output) =~ s/\.bed/.v2.bed/;
@@ -905,8 +926,8 @@ sub set_output_files {
             }
             my $file;
             if(-l $hq_output_dir."/".$hq_file){
-                $file = readlink($hq_output_dir."/".$hq_file); # Should look like "dir/snvs_hq.bed" 
-                $file = basename($file,['bed']); 
+                $file = readlink($hq_output_dir."/".$hq_file); # Should look like "dir/snvs_hq.bed"
+                $file = basename($file,['bed']);
             }
             else{
                 $file = $hq_file;
@@ -918,12 +939,12 @@ sub set_output_files {
     return 1;
 }
 
-# The HQ bed files for each variant type are already symlinked to the base output directory. 
+# The HQ bed files for each variant type are already symlinked to the base output directory.
 # This method collects all the LQ variants that fell out at each filter and combine stage and sorts them into one LQ output.
 # FIXME _validate_output should be added to check that the HQ and LQ bed files totaled have the same line count as each detectors HQ bed output files
 sub _generate_standard_files {
     my $self = shift;
-    
+
     # For each variant type that is expected, gather all the lq files that exist for that variant type and sort them into the dispatcher output directory
     for my $variant_type (@{ $self->variant_types }) {
         my $strategy = $variant_type."_detection_strategy";
@@ -989,5 +1010,31 @@ sub _rotate_old_files {
     return 1;
 }
 
+for my $type ('snv', 'indel', 'sv', 'cnv') {
+    no strict 'refs';
+    my $detection_strategy = $type . '_detection_strategy';
+    my $result_id_method = $type . '_result_id';
+    my $result_class_method = $type . '_result_class';
+    my $result_method = $type . '_result';
+    *{ $result_method } = sub {
+        my $self = shift;
+        return unless $self->$detection_strategy;
+        return unless $self->_workflow_result;
+        my $result_id = $self->_workflow_result->{$result_id_method};
+        my $result_class = $self->_workflow_result->{$result_class_method};
+        return $result_class->get($result_id);
+    };
+    use strict 'refs';
+}
+
+sub results {
+    my $self = shift;
+    my @results;
+    for my $type ('snv', 'indel', 'sv', 'cnv') {
+        my $result_method = $type . '_result';
+        push @results, $self->$result_method if $self->$result_method;
+    }
+    return @results;
+}
 
 1;

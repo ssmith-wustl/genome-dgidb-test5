@@ -78,7 +78,6 @@ sub execute {
         my $parser = $factory->run($seq);
         my $current_seq_name = $seq->id();
 
-        $DB::single = 1;
         # Since fgenesh only runs on a single sequence at a time and generates a new output file for each
         # run and I don't want a bazillion output files to look at, I'll just append each file generated
         # by fgenesh into the raw output file I've created above

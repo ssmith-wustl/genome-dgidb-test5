@@ -54,7 +54,6 @@ class Genome::Model::Tools::Validation::CountContigs {
 
 sub execute {
     my $self=shift;
-    $DB::single = 1;
     my $file = $self->contig_fasta_file;
     
     #open output filehandle

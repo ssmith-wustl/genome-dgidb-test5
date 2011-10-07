@@ -983,16 +983,7 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
             return;
         }
 
-        my @group_names = $self->_resolve_project_and_work_order_names($pse);
-        push @group_names, $self->_resolve_pooled_sample_name_for_instrument_data($genome_instrument_data);
-
-        if ($m->name =~ /\.wu-space$/) {
-            for (@group_names) {$_ .= ".wu-space" if ($_)};
-        }
-        if ($m->name =~ /\.tcga-cds$/) {
-            for (@group_names) {$_ .= ".tcga-cds" if ($_)};
-        }
-        $self->add_model_to_default_modelgroups($m, @group_names);
+        $self->add_model_to_default_modelgroups($m, $pse, $genome_instrument_data);
 
         my $new_models = $self->_newly_created_models;
         $new_models->{$m->id} = $m;
@@ -1107,10 +1098,12 @@ sub assign_capture_inputs {
 sub add_model_to_default_modelgroups {
     my $self = shift;
     my $model = shift;
-    my @project_names = @_;
+    my $pse = shift;
+    my $instrument_data = shift;
 
     my $subject = $model->subject;
 
+    
     my $source;
     if($subject->isa('Genome::Sample')) {
         $source = $subject->source;
@@ -1123,7 +1116,15 @@ sub add_model_to_default_modelgroups {
         $self->error_message('Unhandled subject for model--not adding to common name model-groups');
     }
 
-    my @group_names = @project_names;
+    my @groups = $self->_resolve_projects_and_work_orders($pse);
+    my $pooled_sample_name = $self->_resolve_pooled_sample_name_for_instrument_data($instrument_data);
+    if ($model->name =~ /\.wu-space$/) {
+        $pooled_sample_name .= ".wu-space";
+    }
+    if ($model->name =~ /\.tcga-cds$/) {
+        $pooled_sample_name .= ".tcga-cds";
+    }
+    push @groups, $pooled_sample_name if $pooled_sample_name;
 
     unless($source) {
         $self->error_message('Failed to get source for subject.');
@@ -1131,31 +1132,49 @@ sub add_model_to_default_modelgroups {
         my $common_name = $source->common_name;
         if($common_name) {
             my ($source_grouping) = $common_name =~ /^([a-z]+)\d+$/i;
-            push @group_names, $source_grouping if $source_grouping;
+            push @groups, $source_grouping if $source_grouping;
         }
     }
 
-    for my $group_name (@group_names) {
-        my $name = $group_name;
-        my $model_group = Genome::ModelGroup->get(name => $name);
-
-        unless($model_group) {
-            $model_group = Genome::ModelGroup->create(name => $name);
-            unless($model_group) {
-                $self->error_message('Failed to create a default model-group: ' . $name);
-                return;
+    for my $group (@groups) { 
+        my $name;
+        if (ref $group){#groups here can be research project objects, work order objects, pooled sample name or source grouping string       
+            $name = $group->can('name')?$group->name:$group->setup_name;
+            if ($model->name =~ /\.wu-space$/) {
+                $name .= ".wu-space";
+            }
+            if ($model->name =~ /\.tcga-cds$/) {
+                $name .= ".tcga-cds";
+            }
+        }else{
+            $name = $group;
+        }
+        if ($name eq 'AML'){
+            $DB::single = 1;
+        }
+        my $project = Genome::Project->get(name => $name);
+        unless($project) {
+            $project = Genome::Project->create(name => $name );
+            unless($project) {
+                die $self->error_message('Failed to create a default model-group: ' . $name);
+            }
+            if (ref $group){
+                $project->add_part(entity => $group);
             }
         }
 
-        unless(grep($_ eq $model, $model_group->models)) {
-            $model_group->assign_models($model);
+        my $model_group = Genome::ModelGroup->get(uuid => $project->id);
+        unless ($model_group){
+            die $self->error_message("No model group for ".$project->name);
         }
+        $model_group->assign_models($model);
+        #$project->add_part(entity => $model);
     }
 
     return 1;
 }
 
-sub _resolve_project_and_work_order_names {
+sub _resolve_projects_and_work_orders{
     my $self = shift;
     my $pse = shift;
 
@@ -1171,15 +1190,13 @@ sub _resolve_project_and_work_order_names {
     unless(scalar @work_orders) {
         $self->warning_message('No work order found for PSE ' . $pse->id);
     }
-    push @names, map($_->setup_name, @work_orders);
 
     my @projects = map($_->get_project, @work_orders); 
     unless(scalar @projects) {
         $self->warning_message('No project found for PSE ' . $pse->id);
     }
-    push @names, map($_->setup_name, @projects);
 
-    return @names;
+    return grep {defined $_} (@projects, @work_orders);
 }
 
 sub _resolve_pooled_sample_name_for_instrument_data {
@@ -1387,13 +1404,9 @@ sub add_processing_profiles_to_pses{
                     else {
                         my $pp_id = '2580856';
                         push @processing_profile_ids_to_add, $pp_id;
-                        if ($self->_is_build36_project($pse)) {
-                            $reference_sequence_names_for_processing_profile_ids{$pp_id} = 'NCBI-human-build36';
-                        } 
-                        else {
-                            # NOTE: this is the _fixed_ build 37 with a correct external URI
-                            $reference_sequence_names_for_processing_profile_ids{$pp_id} = 'GRCh37-lite-build37';
-                        }
+
+                        # NOTE: this is the _fixed_ build 37 with a correct external URI
+                        $reference_sequence_names_for_processing_profile_ids{$pp_id} = 'GRCh37-lite-build37';
                     }
                 }
                 elsif ($taxon->species_latin_name =~ /mus musculus/i){
@@ -1614,91 +1627,6 @@ sub _is_pcgp {
     }
 
     return 0;
-}
-
-sub _is_build36_project {
-    my $self = shift;
-    my $pse = shift;
-
-    my %legacy_project_mapping = (
-        H_GP => 'OVC/GBM',
-        H_LK => 'COAD',
-        H_LN => 'READ',
-        H_LE => 'tAML',
-        H_LB => 'MDS sAML',
-        H_KU => 'BRC',
-        H_JG => 'LUC',
-#        H_KZ => 'PRC', #moved to separate method per RT #74107
-        H_LF => 'PNC',
-        H_KX => 'MMY',
-        H_LJ => 'ALS',
-        H_LY => 'ESC',
-    );
-
-    #these are build 37 until further notice
-    my %ambiguous_legacy_project_mapping = (
-        H_LX => 'MEL', 
-        H_KA => 'AML',  
-        H_GV => 'AML1', 
-        H_JM => 'AML2', 
-        H_LC => 'PCGP', 
-    );  
-
-    my $instrument_data = $self->_instrument_data($pse);
-    my $sample = $instrument_data->sample;
-
-    unless($sample and $sample->isa('Genome::Sample')) {
-        return 0;
-    }
-
-    my $name = $sample->name;
-    my $sample_prefix = substr($name,0,4);
-
-    return $legacy_project_mapping{$sample_prefix} if $legacy_project_mapping{$sample_prefix};
-    my $aml_build36 = $self->_is_aml_build_36($pse, $sample);
-    return $aml_build36 if $aml_build36;
-    my $mel_build36 = $self->_is_mel_build_36($sample);
-    return $mel_build36 if $mel_build36;
-    return $self->_is_prc_build_36($sample_prefix, $instrument_data);
-}
-
-sub _is_aml_build_36 {
-    my $self = shift;
-    my $pse = shift;
-    my $sample = shift;
-
-    # Check if in work order from RT #72713
-    my ($instrument_data_id) = $pse->added_param('instrument_data_id');
-    my $index_illumina = GSC::IndexIllumina->get($instrument_data_id);
-    my @work_orders = $index_illumina->get_work_orders;
-
-    foreach my $work_order (@work_orders) {
-        if ( $work_order->project_id == 2589194 ) {
-            return 1;
-        }
-    }
-
-    # Is it one of these samples from RT #72713
-    my @sample_names = qw(H_KA-758168-0912815 H_KA-758168-1003495 H_KA-758168-S.22139 H_KA-400220-0814727 H_KA-400220-0912813 H_KA-400220-0802127 H_KA-426980-091280 H_KA-426980-1002510 H_KA-426980-S.14770 H_KA-452198-0912806 H_KA-452198-0814719 H_KA-452198-S.22477 H_KA-573988-0814941 H_KA-573988-0926957 H_KA-573988-0815176 H_KA-804168-0814948 H_KA-804168-0802136 H_KA-804168-0912812 H_KA-817156-0912808 H_KA-817156-0814950 H_KA-817156-0802138 H_KA-869586G-0926998 H_KA-869586G-S.16427 H_KA-869586G-S.16508);
-    return grep( $sample->name eq $_, @sample_names );
-}
-
-sub _is_mel_build_36 {
-    my $self = shift;
-    my $sample = shift;
-
-    my @sample_names = qw(H_LX-001922-06S11008354 H_LX-003286-06S10352280 H_LX-003286-06S11008366 H_LX-004608-06S11008352 H_LX-004608-06S11008368 H_LX-005621-06S11008357 H_LX-005621-06S11008369 H_LX-011221-06S10352279 H_LX-011221-06S11008359 H_LX-011221-06S11008362 H_LX-000779-06S11008355 H_LX-002441-06S11008346 H_LX-002455-06S11008356 H_LX-003154-06S11008358 H_LX-003611-06S11008349 H_LX-003611-06S11008372 H_LX-003791-06S11008344 H_LX-003791-06S11008364 H_LX-004192-06S11008345 H_LX-004192-06S11008365);
-    return grep( $sample->name eq $_, @sample_names);
-}
-
-sub _is_prc_build_36 {
-    my $self = shift;
-    my $sample_prefix = shift;
-    my $instrument_data = shift;
-
-    #PRC WGS should stay on build36 (ndees) and exome capture should move to build37 (dlarson).  This is the current hacky way to decide something is exome capture.
-    return unless $sample_prefix eq 'H_KZ';
-    return !($instrument_data->target_region_set_name and ($instrument_data->target_region_set_name =~ /exome/));
 }
 
 1;

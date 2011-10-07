@@ -60,7 +60,7 @@ sub _execute {
             }
         }
         # Make sure the inst data has an allocation
-        my $allocation = $instrument_data->disk_allocations;
+        my $allocation = $instrument_data->allocations;
         if ( not $allocation ) { # this could happen if a command gets killed
             $allocation = $self->_create_instrument_data_allocation(
                 instrument_data => $instrument_data,

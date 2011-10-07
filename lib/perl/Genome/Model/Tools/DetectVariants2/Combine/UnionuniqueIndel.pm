@@ -8,14 +8,6 @@ use Genome;
 class Genome::Model::Tools::DetectVariants2::Combine::UnionuniqueIndel{
     is => 'Genome::Model::Tools::DetectVariants2::Combine',
     doc => 'Union indels into one file',
-    has_constant => [
-        _variant_type => {
-            type => 'String',
-            default => 'indels',
-            doc => 'variant type that this module operates on',
-        },
-    ],
-
 };
 
 sub help_synopsis {
@@ -25,6 +17,7 @@ gmt detect-variants combine unionunique-indel --variant-file-a samtools.hq.v1.be
 EOS
 }
 
+sub _variant_type { 'indels' };
 
 sub _combine_variants {
     my $self = shift;

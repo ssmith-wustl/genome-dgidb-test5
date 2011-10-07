@@ -44,7 +44,7 @@ class Genome::Model::Tools::DetectVariants2::Squaredancer{
     ],
     has_param => [ 
         lsf_resource => {
-            default_value => "-M 16000000 -R 'select[mem>16000] rusage[mem=16000]'",
+            default_value => "-M 20000000 -R 'select[mem>20000] rusage[mem=20000]'",
         },
     ],
 };
@@ -127,15 +127,29 @@ sub run_config {
 
 
 sub run_squaredancer {
-    my $self      = shift;
-    my $sd_params = $self->params;
+    my $self        = shift;
+    my $sd_params   = $self->params;
+    my $output_file = $self->_sv_staging_output;
 
     #Allow 0 size of config, breakdancer output
     if (-z $self->config_file) {
         $self->warning_message("0 size of breakdancer config file. Probably it is for testing of small bam files");
-        my $output_file = $self->_sv_staging_output;
         `touch $output_file`;
         return 1;
+    }
+
+    if ($sd_params =~ /\-l/) { #Some projects like PCGP need screen out normal bam
+        my $control_bam = $self->control_aligned_reads_input;
+        unless ($control_bam and -s $control_bam) {
+            $self->error_message('No control_aligned_reads_input available with -l option: '.$sd_params);
+            die;
+        }
+        my ($skip_control_name) = $control_bam =~ /^(\S+)\.bam$/;
+        unless ($skip_control_name) {
+            $self->error_message("Failed to get skip_control_name from control bam: $control_bam");
+            die;
+        }
+        $sd_params = '-l '. $skip_control_name;
     }
 
     my @bam_list;
@@ -146,15 +160,16 @@ sub run_squaredancer {
 
     my $sd_path = $self->squaredancer_path;
     my $pl_path = '/usr/bin/perl'; #64 bit perl
-
+    my $ori_out = $output_file . '.ori';
+    
     my $cmd = $sd_params ? $sd_path . " $sd_params" : $sd_path;
-       $cmd = "$pl_path $cmd $bam_string" . ' 1> ' . $self->_sv_staging_output . ' 2> '. $self->_sd_error_staging_output;
+       $cmd = "$pl_path $cmd $bam_string" . ' 1> ' . $ori_out . ' 2> '. $self->_sd_error_staging_output;
 
     $self->status_message("EXECUTING SQUAREDANCER STEP: $cmd");
     my $return = Genome::Sys->shellcmd(
         cmd => $cmd,
         input_files  => \@bam_list,
-        output_files => [$self->_sv_staging_output],
+        output_files => [$ori_out],
         allow_zero_size_output_files => 1,
     );
 
@@ -163,10 +178,26 @@ sub run_squaredancer {
         die;
     }
 
-    unless (-s $self->_sv_staging_output) {
-        $self->error_message("$cmd output " . $self->_sv_staging_output . " does not exist or has zero size");
-        die;
+    #Squaredancer output sometimes contains hit to GL ref seq, clean them out like follows:
+    #GL000220.1	128698	2-	X	55709807	5-	CTX	100	50	2	normal.bam:1|tumor.bam:1
+    my $out_fh = Genome::Sys->open_file_for_writing($output_file) or return;
+    my $in_fh  = Genome::Sys->open_file_for_reading($ori_out) or return;
+
+    while (my $line = $in_fh->getline) {
+        if ($line =~ /^\#/) {
+            $out_fh->print($line);
+        }
+        else {
+            my ($chr1, $chr2) = $line =~ /^(\S+)\s+\S+\s+\S+\s+(\S+)\s+/;
+            if ($chr1 =~ /^GL/ and $chr2 !~ /^GL/) {
+                $self->warning_message("Line:\n$line has $chr1 matched to $chr2");
+                next;
+            }
+            $out_fh->print($line);
+        }
     }
+    $in_fh->close;
+    $out_fh->close;
 
     $self->status_message('Squaredancer run finished ok');
     return 1;

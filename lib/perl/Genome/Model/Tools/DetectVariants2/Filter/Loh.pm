@@ -15,14 +15,6 @@ class Genome::Model::Tools::DetectVariants2::Filter::Loh{
             doc => 'Snv file for the LoH filter to use as a control. This will be generated if not provided.',
         },
     ],
-    has_constant => [
-        _variant_type => {
-            type => 'String',
-            default => 'snvs',
-            doc => 'variant type that this module operates on, overload this in submodules accordingly',
-        },
-    ],
-
 };
 
 sub help_synopsis {
@@ -40,10 +32,11 @@ The input directory must contain snvs.hq.bed and this file must be in bed format
 EOS
 }
 
+sub _variant_type { 'snvs' };
+
 # FIXME this should be reframed, and likely not stay a filter. For now we need to run samtools to detect snvs on the normal sample in order to replicate old behavior.
 sub _filter_variants {
     my $self = shift;
-    $DB::single=1;
 
     my $hq_fh = Genome::Sys->open_file_for_writing($self->_temp_staging_directory . "/snvs.hq.bed");
     my $lq_fh = Genome::Sys->open_file_for_writing($self->_temp_staging_directory . "/snvs.lq.bed");
@@ -129,7 +122,7 @@ sub _generate_control_file {
 
     my $filter_output = $self->_temp_scratch_directory . "/snpfilter";
     my $filter_command = Genome::Model::Tools::DetectVariants2::Filter::SnpFilter->create(
-        previous_result_id => $detector_command->result_id,
+        previous_result_id => $detector_command->_result_id,
         output_directory => $filter_output,
     );
 

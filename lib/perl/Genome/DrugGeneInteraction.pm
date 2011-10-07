@@ -5,45 +5,44 @@ use warnings;
 
 use Genome;
 
-=out
-   interaction_type varchar NOT NULL,
-   description text,
-   nomenclature varchar NOT NULL,
-   source_db_name varchar NOT NULL,
-   source_db_version varchar NOT NULL,
-   FOREIGN KEY(drug_name, nomenclature, source_db_name, source_db_version) REFERENCES drug_name(name, nomenclature, source_db_name, source_db_version),
-   FOREIGN KEY(gene_name, nomenclature, source_db_name, source_db_version) REFERENCES gene_name(name, nomenclature, source_db_name, source_db_version),
-   UNIQUE (drug_name, gene_name, interaction_type, nomenclature, source_db_name, source_db_version)
-=cut
 class Genome::DrugGeneInteraction {
+    is => 'UR::Object',
+    id_generator => '-uuid',
     table_name => 'drug_gene_interaction',
     schema_name => 'public',
     data_source => 'Genome::DataSource::Main',
     id_by => [
-        id => { is => 'integer' },
+        id => { is => 'Number' },
     ],
     has => [
-        drug_name => { is => 'varchar'},
-        drug => {
-
+        drug_name_id => { is => 'Text'},
+        drug_name => {
+            is => 'Genome::DrugName',
+            id_by => 'drug_name_id',
+            constraint_name => 'drug_gene_interaction_drug_name_id_fkey',
         },
-        gene => {
-
+        gene_name_id => { is => 'Text'},
+        gene_name => {
+            is => 'Genome::GeneName',
+            id_by => 'gene_name_id',
+            constraint_name => 'drug_gene_interaction_gene_name_id_fkey',
         },
-        gene_name => { is => 'varchar'},
-        nomenclature => { is => 'varchar'},
-        source_db_name => { is => 'varchar'},
-        source_db_version => { is => 'varchar'},
-        interaction_type => { is => 'varchar'}, 
+        interaction_type => { is => 'Text'}, 
         description => { is => 'Text' },
         drug_gene_interaction_attributes => {
             calculate_from => ['id'],
             calculate => q|
-                my @drug_gene_interaction_attributes = Genome::DrugGeneInteractionAttribute->get(id => $id);
+                my @drug_gene_interaction_attributes = Genome::DrugGeneInteractionAttribute->get(interaction_id => $id);
                 return @drug_gene_interaction_attributes;
             |,
         },
     ],
+    doc => 'Claim regarding an interaction between a drug name and a gene name',
 };
+
+sub __display_name__ {
+    my $self = shift;
+    return "Interaction of " . $self->drug_name->__display_name__ . " and " . $self->gene_name->__display_name__;
+}
 
 1;

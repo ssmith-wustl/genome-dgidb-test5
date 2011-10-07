@@ -113,7 +113,6 @@ sub execute {
         }
 
         for(my $i = 0; $i < 2; $i++) {
-            $DB::single = 1;
             my $mut = $haps->[$i];
             print "applying";
             print Dumper $mut;
@@ -148,7 +147,6 @@ sub execute {
 #This will read in the VCF file and add mutations to the two haplotypes, returning two arrays.
 sub read_mutation_list{
     my ($self, $fh) = @_;
-    $DB::single = 1;
     while(<$fh>){
         chomp;
         next if /^##/;  #skip meta information lines

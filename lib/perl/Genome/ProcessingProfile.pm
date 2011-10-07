@@ -65,7 +65,6 @@ sub _initialize_build {
 sub _build_success_callback {
     my ($self, $build) = @_;
     # override in sub-classes to get custom commit hook when a build succeeds
-$DB::single = 1;
     my $model = $build->model;
 
     #Notify any models set to depend on this one that a new build is ready

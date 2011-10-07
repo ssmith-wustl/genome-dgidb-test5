@@ -96,11 +96,16 @@ sub run_fast_tier {
     my ($tier1_path, $tier2_path, $tier3_path, $tier4_path) = map {$build->data_set_path("effects/$name.tier".$_,$bed_version,$format)}(1..4);
 
     my %params;
+
+    #Skip line count on fast-tiering if running on input with duplicates (lq, in this case)
+    my $lq = $name =~ m/lq/;
+
     if (-s $path_to_tier){
         %params = (
             variant_bed_file => $path_to_tier,
             tier_file_location => $self->_tier_file_location,
             tiering_version => $tiering_version,
+            skip_line_count => $lq,
             tier1_output => $tier1_path,
             tier2_output => $tier2_path,
             tier3_output => $tier3_path,

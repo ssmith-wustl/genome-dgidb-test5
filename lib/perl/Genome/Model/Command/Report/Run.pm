@@ -66,7 +66,6 @@ sub create {
     my $self = $class->SUPER::create(@_);
     return unless $self;
 
-$DB::single = 1;
 
     # TODO: move this up
     if (my $build = $self->build) {
@@ -121,7 +120,6 @@ $DB::single = 1;
 sub execute {
     my $self = shift;
     
-$DB::single = 1;
     
     my $build = $self->build;
     my $report_name = $self->report_name;
@@ -155,7 +153,6 @@ $DB::single = 1;
         return;
     }
     
-    $DB::single = 1;
     my $saved = 0;
     my $path;
     eval { 

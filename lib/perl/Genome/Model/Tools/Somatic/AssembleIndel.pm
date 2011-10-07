@@ -91,7 +91,6 @@ sub dir_for_chrom {
 
 sub execute {
     my $self=shift;
-    $DB::single = 1;
     my %DONE;
     my $DONE = \%DONE;
 
@@ -138,7 +137,6 @@ sub execute {
 
     while(my $line = $fh->getline) {
         chomp $line;
-        $DB::single=1;
         my ($chr, $start, $stop, $ref, $var) = split /\t/, $line;
         my $dir = $self->dir_for_chrom($chr);
         unless(-e $dir) {
@@ -182,7 +180,6 @@ sub execute {
             }
             $ref_fh->close;
 
-    $DB::single=1;
 
             my $cmd = "gmt parse crossmatch --chr-pos ${chr}_${region_start} --crossmatch=$prefix.stat --min-indel-size=1";
             print "$cmd\n";
@@ -257,7 +254,6 @@ sub generate_alleles {
 
         #if there is more than one glob_pattern found
         if(@others) {
-            $DB::single=1;
 
             #if any of the filenames have already been used, find one which hasn't been used
             if (exists($DONE->{'glob'}{$chr}{$original_position})) {

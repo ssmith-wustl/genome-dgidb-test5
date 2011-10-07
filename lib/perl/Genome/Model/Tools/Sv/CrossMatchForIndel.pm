@@ -98,7 +98,6 @@ class Genome::Model::Tools::Sv::CrossMatchForIndel {
 
 sub execute {
     my $self = shift;
-    $DB::single = 1;
     my $cm = Genome::Model::Tools::Sv::ParseCrossMatch->create(
         input_file => $self->cross_match_file
     );

@@ -40,7 +40,6 @@ EOS
 sub execute
 {
   my $self = shift;
-  $DB::single = 1;
   my $t0 = Benchmark->new;
 
   my $normal_bam = $self->normal_bam;

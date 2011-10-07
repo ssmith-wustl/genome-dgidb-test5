@@ -31,7 +31,6 @@ class Genome::Model::Tools::Gatk::FetIndelTest {
 
 sub execute {
     my $self=shift;
-    $DB::single = 1;
 
     my $indel_call_file = $self->gatk_verbose_output;
 
