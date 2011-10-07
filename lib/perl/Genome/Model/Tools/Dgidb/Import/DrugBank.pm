@@ -77,7 +77,7 @@ sub _doc_manual_body {
 
 sub help_synopsis {
     return <<HELP
-gmt dgidb import drug-bank --infile drugbank.xml --entrez-dir ./gene-info --verbose --version 3
+gmt dgidb import drug-bank --infile drugbank.xml --verbose --version 3
 HELP
 }
 
