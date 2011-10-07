@@ -33,7 +33,7 @@ class Genome::ModelGroup::Command::RelationshipQc {
     ],
     has_optional => {
     },
-    doc => 'run fastIBD make a new model group from another, varying properties on the model as specified' 
+    doc => 'run fastIBD' 
 };
 
 sub help_synopsis {
