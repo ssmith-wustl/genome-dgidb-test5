@@ -88,10 +88,10 @@ sub execute {
                 printf("%s\t%0.01f\n",$build->id, $data_available);
                 my $model_id = $build->model_id;
 
-                my $out_file = "$outdir/$model_id.$level.out";
-                my $error_file = "$outdir/$model_id.$level.err";
                 my $last_lsf_job;
                 for my $level (@data_levels) {
+                    my $out_file = "$outdir/$model_id.$level.out";
+                    my $error_file = "$outdir/$model_id.$level.err";
                     if($level < $data_available || $self->coverage_ratio) {
                         #bsub command
                         if( ! -e "$error_file" ) {
@@ -114,10 +114,10 @@ sub execute {
                         }
                     }
                 }
+        }
         UR::Context->commit() or die 'commit failed';
         UR::Context->clear_cache(dont_unload => ['Genome::ModelGroup', 'Genome::ModelGroupBridge']);
-    }	
-    close(OUTFILE);
+    }
 
     #dont progress until all above jobs have finished (done or not found)
     my $not_done = 1;
@@ -135,15 +135,15 @@ sub execute {
     my @files = glob("$outdir/*.err");
 
     my %downsampled_to;# = ( 0.5 => [], 0.75 => [], 1 => [], 1.5 => [], 2 => [], 3 => [] );
-    my %group_for;# = ( 0.5 => 16722, 0.75 => 16723, 1 => 16710, 1.5 => 16711, 2 => 16712, 3 => 16733 );
+#    my %group_for;# = ( 0.5 => 16722, 0.75 => 16723, 1 => 16710, 1.5 => 16711, 2 => 16712, 3 => 16733 );
     foreach my $level (sort @data_levels) {
-        $downsampled_to{$level} => [];
-        $group_for{$level} => $model_groups{$level}; #HAVE YET TO DEFINE MODEL GROUPS
+        $downsampled_to{$level}++;
+#        $group_for{$level} => $model_groups{$level}; #HAVE YET TO DEFINE MODEL GROUPS
     }
 
     for my $file (@files) {
-        my ($model_id,$coverage_level_in_gb) = $file =~ /^(\d+?)\.([0-9.]+?)\.err$/;
-        print "$model_id\t$coverage_level_in_gb Gbp\n";
+        my ($model_id,$downsample_level) = $file =~ /^(\d+?)\.([0-9.]+?)\.err$/;
+        print "$model_id\t$downsample_level Gbp\n";
 
         my $fh = Genome::Sys->open_file_for_reading($file);
 
@@ -154,7 +154,13 @@ sub execute {
         #genome model copy 123456789 "name=Copy of my Awesome Model" processing_profile="use this processing profile instead" auto_build_alignments=0
         my $model = Genome::Model->get($model_id);
         my $model_name = $model->name;
-        my $obj = Genome::Model::Command::Copy->execute( model => $model, overrides => [ "name='${model_name}.downsampled-to-$coverage_level_in_gb-Gbp'", "processing_profile=$processing_profile_id", "auto_build_alignments=0", "instrument_data=$instrument_data_id"] );
+        my $obj;
+        if ($self->coverage_in_gb) {
+            $obj = Genome::Model::Command::Copy->execute( model => $model, overrides => [ "name='${model_name}.downsampled-to-$downsample_level-Gbp'", "processing_profile=$processing_profile_id", "auto_build_alignments=0", "instrument_data=$instrument_data_id"] );
+        }
+        elsif ($self->coverage_ratio) {
+            $obj = Genome::Model::Command::Copy->execute( model => $model, overrides => [ "name='${model_name}.downsampled-to-$downsample_level-ratio'", "processing_profile=$processing_profile_id", "auto_build_alignments=0", "instrument_data=$instrument_data_id"] );
+        }
         unless($obj) {
             die "Unable to copy $model_name with instrument data $instrument_data_id\n";
         }
@@ -163,7 +169,7 @@ sub execute {
             die "Unable to grab new model id\n";
         }
 
-        push @{$downsampled_to{$coverage_level_in_gb}}, $new_id;
+        push @{$downsampled_to{$downsample_level}}, $new_id;
     }
     UR::Context->commit;
 
@@ -178,7 +184,7 @@ sub execute {
             $self->error_message("Unable to create modelgroup for downsampling level $level");
             return;
         }
-        $new_model_group->assign_models(@{$downsampled_to{$level}}));
+        $new_model_group->assign_models(@{$downsampled_to{$level}});
     } 
 
     return 1;
