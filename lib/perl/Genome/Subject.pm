@@ -114,6 +114,5 @@ sub delete {
     return $self->SUPER::delete;
 }
 
-# This is about as far as you can get from the top of the file.
 1;
 
