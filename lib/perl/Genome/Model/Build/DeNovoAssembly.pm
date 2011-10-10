@@ -153,7 +153,8 @@ sub genome_size {
         $self->genome_size_used( $taxon->estimated_genome_size );
         return $taxon->estimated_genome_size;
     }
-    elsif ( defined $taxon->domain and $taxon->domain =~ /bacteria/i ) {
+    #elsif ( defined $taxon->domain and $taxon->domain =~ /bacteria/i ) {
+    else {
         $self->genome_size_used( 4000000 );
         return 4000000;
     }
