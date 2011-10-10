@@ -26,7 +26,7 @@ sub execute {
     my $self = shift;
     my $sql = $self->sql;
     my $dbh = Genome::DataSource::GMSchema->get_default_handle();
-    UR::Report->generate( sql => [$sql], dbh => $dbh); 
+    UR::DBI::Report->generate( sql => [$sql], dbh => $dbh); 
     # my $ch = IO::File->new("| sqlrun - --instance warehouse");
     # $ch->print($sql);
     # $ch->close;

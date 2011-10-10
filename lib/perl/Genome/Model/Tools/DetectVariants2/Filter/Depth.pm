@@ -20,11 +20,6 @@ class Genome::Model::Tools::DetectVariants2::Filter::Depth {
             is_optional => 1,
         },
     ],
-    has_constant => [
-        _variant_type => {
-            value => 'snvs',
-        },
-    ],
 };
 
 sub help_synopsis {
@@ -39,6 +34,8 @@ as part of a strategy for the dispatcher, e.g.:
 EOS
 ;
 }
+
+sub _variant_type { 'snvs' };
 
 sub _filter_variants {
     my $self = shift;

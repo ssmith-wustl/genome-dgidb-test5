@@ -73,15 +73,9 @@ class Genome::Model::Tools::DetectVariants2::Filter::NovoRealign {
             default_value => "-R 'select[mem>10000] rusage[mem=10000]' -M 10000000",
         },
     ],
-    has_constant => [
-        _variant_type => {
-            type => 'String',
-            default => 'svs',
-            doc => 'variant type that this module operates on, overload this in submodules accordingly',
-        },
-    ],
 };
 
+sub _variant_type { 'svs' };
 
 sub _filter_variants {
     my $self     = shift;

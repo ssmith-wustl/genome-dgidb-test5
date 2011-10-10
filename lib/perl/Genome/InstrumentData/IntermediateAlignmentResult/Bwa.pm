@@ -56,7 +56,7 @@ sub _run_aligner {
     my $bwa = Genome::Model::Tools::Bwa->path_for_bwa_version($self->aligner_version);
 
     my @args = (
-        "aln", 
+        "aln",
         $self->aligner_params || '',
         $bam_flag,
         $fasta_file,
@@ -102,11 +102,11 @@ sub _create_md5 {
     my $cmd      = "md5sum $file > $md5_file";
 
     my $rv  = Genome::Sys->shellcmd(
-        cmd                        => $cmd, 
+        cmd                        => $cmd,
         input_files                => [$file],
         output_files               => [$md5_file],
         skip_if_output_is_present  => 0,
-    ); 
+    );
     $self->error_message("Fail to run: $cmd") and return unless $rv == 1;
     return $md5_file;
 }
@@ -125,15 +125,66 @@ sub _verify_bwa_aln_did_happen {
     unless (-e $p{sai_file} && -s $p{sai_file}) {
         $self->error_message("Expected SAI file is $p{sai_file} nonexistent or zero length.");
         return;
-    } 
-    
-    unless ($self->_inspect_log_file(log_file=>$p{log_file},
-                                     log_regex=>'(\d+) sequences have been processed')) {
-        
+    }
+
+    my $count = $self->_inspect_log_file(
+        log_file=>$p{log_file},
+        log_regex=>'(\d+) sequences have been processed'
+    );
+
+    unless($count) {
         $self->error_message("Expected to see 'X sequences have been processed' in the log file where 'X' must be a nonzero number.");
         return;
     }
-    
+
+    my $expected_count;
+    my $input_file = $self->temp_scratch_directory . "/" . $self->input_file;
+    if($input_file =~ /\.bam/) {
+        my $output_file = $self->temp_scratch_directory . "/input_bam.flagstat";
+        my $cmd = Genome::Model::Tools::Sam::Flagstat->create(
+            bam_file       => $input_file,
+            output_file    => $output_file,
+            include_stderr => 1,
+        );
+        unless ($cmd and $cmd->execute) {
+            $self->error_message('Failed to create or execute flagstat command.');
+            return;
+        }
+        my $stats = Genome::Model::Tools::Sam::Flagstat->parse_file_into_hashref($output_file);
+        unless($stats) {
+            $self->status_message('Failed to get flagstat data  on input sequences from '.$output_file);
+            return;
+        }
+
+        my $input_pass = $self->input_pass;
+        if($input_pass eq 1) {
+            $expected_count = $stats->{reads_marked_as_read1};
+        } elsif($input_pass eq 2) {
+            $expected_count = $stats->{reads_marked_as_read2};
+        }
+    } else {
+        my $wc_count_file = $self->temp_scratch_directory . '/wc.count';
+        unless(Genome::Sys->shellcmd(
+            cmd => 'wc -l ' . $input_file . ' > ' . $wc_count_file,
+            input_files => [$input_file],
+            output_files => [$wc_count_file],
+        )) {
+            $self->error_message('Failed to determine line count of FASTQ.');
+            return;
+        }
+
+        my $wc_count = Genome::Sys->read_file($wc_count_file);
+        ($expected_count) = $wc_count =~ /^(\d+)/;
+        $expected_count /= 4;
+    }
+
+    if($count eq $expected_count) {
+        $self->status_message('Log reported expected count of ' . $expected_count . ' sequences processed.');
+    } else {
+        $self->error_message('Expected to process ' . $expected_count . ' sequences but processed ' . $count);
+        return;
+    }
+
     return 1;
 }
 
@@ -147,9 +198,9 @@ sub _inspect_log_file {
         return;
     }
 
-    my $last_line = `tail -1 $log_file`;    
+    my $last_line = `tail -1 $log_file`;
     my $check_nonzero = 0;
-    
+
     my $log_regex = $p{log_regex};
     if ($log_regex =~ m/\(\\d\+\)/) {
         $check_nonzero = 1;
@@ -158,10 +209,10 @@ sub _inspect_log_file {
     if ($last_line =~ m/$log_regex/) {
         if ( !$check_nonzero || $1 > 0 ) {
             $self->status_message('The last line of aligner.log matches the expected pattern');
-            return 1;
+            return $1;
         }
     }
-    
+
     $self->error_message("The last line of $log_file is not valid: $last_line");
     return;
 }

@@ -1742,8 +1742,9 @@ sub metrics_ignored_by_diff {
 # Each suffix should have a method called diff_<SUFFIX> that'll contain the logic.
 sub regex_for_custom_diff {
     return (
-        gz => '\.gz$',
-        vcf =>'\.vcf$',
+        gz     => '(?<!\.vcf)\.gz$',
+        vcf    => '\.vcf$',
+        vcf_gz => '\.vcf\.gz$',
     );
 }
 
@@ -1765,7 +1766,7 @@ sub matching_regex_for_custom_diff {
 # the uncompressed file to STDOUT and pipes it to md5sum.
 sub diff_gz {
     my ($self, $first_file, $second_file) = @_;
-    my $first_md5 = `gzip -dc $first_file | md5sum`;
+    my $first_md5  = `gzip -dc $first_file | md5sum`;
     my $second_md5 = `gzip -dc $second_file | md5sum`;
     return 1 if $first_md5 eq $second_md5;
     return 0;
@@ -1773,10 +1774,18 @@ sub diff_gz {
 
 sub diff_vcf {
     my ($self, $first_file, $second_file) = @_;
-    my $first_md5 = qx(grep -vP '^##fileDate' $first_file | md5sum);
+    my $first_md5  = qx(grep -vP '^##fileDate' $first_file | md5sum);
     my $second_md5 = qx(grep -vP '^##fileDate' $second_file | md5sum);
     return ($first_md5 eq $second_md5 ? 1 : 0);
 }
+
+sub diff_vcf_gz {
+    my ($self, $first_file, $second_file) = @_;
+    my $first_md5  = qx(zcat $first_file | grep -vP '^##fileDate' | md5sum);
+    my $second_md5 = qx(zcat $second_file | grep -vP '^##fileDate' | md5sum);
+    return ($first_md5 eq $second_md5 ? 1 : 0);
+}
+
 
 # This method takes another build id and compares that build against this one. It gets
 # a list of all the files in both builds and attempts to find pairs of corresponding

@@ -297,6 +297,9 @@ sub infer_variant_type {
     } else {
         $self->error_message("Could not determine variant type from variant:");
         $self->error_message(Dumper($variant));
+        if(defined($self->variant_bed_file)){
+            $self->error_message("Perhaps you meant to use --variant-file instead of --variant-bed-file?");
+        }
         die;
     }
 }

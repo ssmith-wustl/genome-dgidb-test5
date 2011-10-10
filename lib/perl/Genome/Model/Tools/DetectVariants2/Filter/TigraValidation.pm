@@ -251,14 +251,9 @@ class Genome::Model::Tools::DetectVariants2::Filter::TigraValidation {
             default_value => "-R 'select[mem>8000] rusage[mem=8000]' -M 8000000", 
         },
     ],
-    has_constant => [
-        _variant_type => {
-            type => 'String',
-            default => 'svs',
-            doc => 'variant type that this module operates on, overload this in submodules accordingly',
-        },
-    ],
 };
+
+sub _variant_type { 'svs' };
 
 my %TIGRA_PARAMS_LIST = (
     l => 'flank_size',

@@ -22,7 +22,7 @@ class Genome::Model::Tools::Music::CosmicOmim {
        },
        reference_build => {
            is => 'Path',
-           doc => 'Put either "Build36" or "Build37"',
+           doc => 'Put either "Build36" or "Build37" (This specifies which build coordinates in the Cosmic database are appropriate to match to the coordinates supplied in the MAF)',
            is_output => 1,
            default => 'Build36',
        }
@@ -74,7 +74,7 @@ This tool looks at the amino acid changes for the given set of mutations and com
 
 The output of this script returns each row the original input MAF file with two columns appended to the end of each, one column for each of the databases. Also included is a STDOUT printout of a summary of what was found in the input MAF. Neither output can be suppressed in the current version. The --verbose option is used to display working notes that are useful for various purposes in debugging potential MAF problems. The Omim and Cosmic directories must point to the output of the downloader, named appropriately, as they don't recognize the OMIM database in the raw download format.
 
-Also please note that this tool only compares to Build36 coordinates in the Cosmic database. Support for build 37 is coming, but as of this update the Cosmic database only has sparse entries in build 37 coordinates.
+This tool only compares build 36 or build 37 coordinates that are specified in Cosmic to the coordinates in your maf file. This is a weakness of the Cosmic database (not all position entries are currently available for both builds) that is out of our control.
 
 In addition to the standard version 2.2 MAF headers, there needs to be two columns appended. These column headers in the MAF must be exactly these names in header line in order for the tool to find them:
 

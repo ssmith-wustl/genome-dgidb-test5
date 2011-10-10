@@ -36,6 +36,11 @@ class Genome::Model::Tools::Picard::Downsample {
             doc => 'Set this to control the number of records in ram. Defaults to 500,000',
             default => '500000',
         },
+        random_seed => {
+            is => 'String',
+            doc => 'Set this to attain reproducability',
+            is_optional => 1,
+        },
     ],
 };
 
@@ -57,6 +62,10 @@ sub execute {
     my $output_file = $self->output_file;
     my $ratio = $self->downsample_ratio;
     my $sort_cmd = $jar_path .' net.sf.picard.sam.DownsampleSam O='. $output_file .' I='. $input_file .' PROBABILITY='.$ratio.' MAX_RECORDS_IN_RAM='. $self->max_records_in_ram;
+    if(defined($self->random_seed)){
+        my $seed = int($self->random_seed);
+        $sort_cmd .= " RANDOM_SEED=".$seed;
+    }
     $self->run_java_vm(
         cmd => $sort_cmd,
         input_files => [$input_file],

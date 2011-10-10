@@ -193,7 +193,7 @@ sub _create_command_properties {
 
         if ( $property_name =~ s/_id$// ) {
             my $object_meta = $target_meta->property_meta_for_name($property_name);
-            if ( $object_meta and not grep { $object_meta->$_ } (qw/ is_calculated is_constant is_transient /) ) {
+            if ( $object_meta and  not grep { $object_meta->$_ } (qw/ is_calculated is_constant is_transient id_class_by /) ) {
                 $property{property_name} = $property_name;
                 $property{data_type} = $object_meta->data_type;
                 $property{doc} = $object_meta->doc if $object_meta->doc;
@@ -320,7 +320,7 @@ sub _update_command_properties_for_target_class {
             if ( $property_name =~ s/_id$// ) {
                 my $object_meta = $target_meta->property_meta_for_name($property_name);
                 if ( $object_meta ) {
-                    next if grep { $object_meta->$_ } (qw/ is_calculated is_constant is_transient /);
+                    next if grep { $object_meta->$_ } (qw/ is_calculated is_constant is_transient id_class_by /);
                     $property{property_name} = $property_name;
                     $property{data_type} = $object_meta->data_type;
                     $property{doc} = $object_meta->doc if $object_meta->doc;

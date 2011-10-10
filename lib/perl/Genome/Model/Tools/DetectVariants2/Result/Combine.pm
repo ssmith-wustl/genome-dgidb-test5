@@ -20,20 +20,16 @@ class Genome::Model::Tools::DetectVariants2::Result::Combine {
             is => 'Integer',
         },
     ],
-    has_constant => [
-        _variant_type => {
-            type => 'String',
-            default => 'variant_type',
-            doc => 'variant type that this module operates on, overload this in submodules accordingly',
-        },
-    ],
     has_optional => [
+        # these should be DV2 results but there is not yet a common base for all types of results
+        # filters and detectors are Result/Base
+        # combine are not (because Result/Base has a lot of properties that aren't needed)
         input_a => {
-            is => 'Genome::Model::Tools::DetectVariants2::Result::Base',
+            is => 'Genome::SoftwareResult',
             id_by => 'input_a_id',
         },
         input_b => {
-            is => 'Genome::Model::Tools::DetectVariants2::Result::Base',
+            is => 'Genome::SoftwareResult',
             id_by => 'input_b_id',
         },
         input_directory_a => {
@@ -48,6 +44,8 @@ class Genome::Model::Tools::DetectVariants2::Result::Combine {
         },
     ],
 };
+
+sub _variant_type { die 'override _variant_type' };
 
 sub create {
     my $class = shift;

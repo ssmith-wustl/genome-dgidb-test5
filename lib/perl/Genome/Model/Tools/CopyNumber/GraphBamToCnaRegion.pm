@@ -21,6 +21,12 @@ class Genome::Model::Tools::CopyNumber::GraphBamToCnaRegion {
         is_optional => 1,
         doc => 'Title of the graph.',
     },
+    color_roi => {
+        is => 'Boolean',
+        is_optional => 1,
+        default => 1,
+        doc => 'Whether or not to color ROI points in red',
+    },
     chromosome => {
         is => 'String',
         is_optional => 0,
@@ -63,9 +69,10 @@ sub execute {
 
     #TODO some sanity checks on the input
     
+    my $color = $self->color_roi ? "T" : "F";
 
     #Call R for graphing 
-    my $graph_cmd = sprintf("graph_cna_region(cna_file='%s',output_file='%s',chromosome='%s',region_start=%d,region_end=%d,roi_start=%d,roi_end=%d);",$self->cna_file,$self->output_file,$self->chromosome,$self->start,$self->end,$self->roi_start,$self->roi_end);
+    my $graph_cmd = sprintf("graph_cna_region(cna_file='%s',output_file='%s',chromosome='%s',region_start=%d,region_end=%d,roi_start=%d,roi_end=%d,color_roi=%s);",$self->cna_file,$self->output_file,$self->chromosome,$self->start,$self->end,$self->roi_start,$self->roi_end,$color);
     my $graph_rcall = Genome::Model::Tools::R::CallR->create(command=>$graph_cmd,library=>$rlibrary);
     $graph_rcall->execute;
 
