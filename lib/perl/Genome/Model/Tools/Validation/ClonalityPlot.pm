@@ -17,6 +17,11 @@ class Genome::Model::Tools::Validation::ClonalityPlot {
             is_optional => 0, 
             is_input => 1 },
 
+        varscan_file_with_cn => {
+            is => 'Text',
+            doc => "Optional output file of varscan validated calls with copy-number appended",
+            is_optional => 1 },
+
         cnvhmm_file => { 
             is => 'Text',
             doc => "File of cnvhmm whole genome predictions",
@@ -102,8 +107,8 @@ sub help_synopsis {
     #gmt validation clonality-plot --cnvhmm-file /gscmnt/sata872/info/medseq/luc_wgs/CNV/cnaseg/LUC1.cnaseg --output-image LUC1.clonality.pdf --analysis-type capture --r-script-output-file LUC1.R --varscan-file /gscmnt/sata872/info/medseq/luc_wgs/LUC1/validation/varscan/t123_targeted.pvalue_filtered.somatic --sample-id "LUC1" --positions-highlight test.X.sites
 return <<EOS
         Inputs of Varscan and copy-number segmentation data, Output of R plots.
-EXAMPLE:	gmt validation clonality-plot --analysis-type 'capture' --varscan-file snvs.txt --cnaseg-file cnaseg.txt --output-image clonality.pdf --sample-id 'Sample'
-EXAMPLE:	gmt validation clonality-plot --analysis-type 'capture' --varscan-file snvs.txt --cnaseg-file cnaseg.txt --output-image clonality.pdf --sample-id 'Sample' --r-script-output-file Sample.R --positions-highlight chr.pos.txt
+EXAMPLE:	gmt validation clonality-plot --analysis-type 'capture' --varscan-file snvs.txt --cnvhmm-file cnaseg.txt --output-image clonality.pdf --sample-id 'Sample'
+EXAMPLE:	gmt validation clonality-plot --analysis-type 'capture' --varscan-file snvs.txt --cnvhmm-file cnaseg.txt --output-image clonality.pdf --sample-id 'Sample' --r-script-output-file Sample.R --positions-highlight chr.pos.txt --varscan-file-with-cn snvs.txt.cn
 EOS
 }
 
@@ -118,6 +123,7 @@ sub execute {
 
     ##inputs##
     my $varscan_file = $self->varscan_file;
+    my $varscan_file_with_cn = $self->varscan_file_with_cn;
     my $copynumber_file = $self->cnvhmm_file;
     my $sample_id = $self->sample_id;
     my $readcount_cutoff;
@@ -161,11 +167,20 @@ sub execute {
     
 
     ## Build temp file for positions where readcounts are needed ##
-    my ($tfh,$temp_path) = Genome::Sys->create_temp_file;
+    my ($tfh,$temp_path);
+    if (defined $self->varscan_file_with_cn) {
+        $temp_path = $self->varscan_file_with_cn;
+        $tfh = FileHandle->new($temp_path,"w");
+    }
+    else {
+        ($tfh,$temp_path) = Genome::Sys->create_temp_file;
+    }
+
     unless($tfh) {
         $self->error_message("Unable to create temporary file $!");
         die;
     }
+    
     $temp_path =~ s/\:/\\\:/g;
 
     ## Build temp file for extra positions to highlight ##
@@ -236,7 +251,7 @@ sub execute {
         $absmaxx = 5000;
     }
 
-    
+
     #create the R script that will be run to produce the plot
 #-------------------------------------------------
     my $R_command = <<"_END_OF_R_";
@@ -249,7 +264,7 @@ sub execute {
     library(scatterplot3d);
     varscan.load_snp_output(\"$temp_path\",header=F)->xcopy;
     varscan.load_snp_output(\"$temp_path\",header=F,min_tumor_depth=$readcount_cutoff,min_normal_depth=$readcount_cutoff)->xcopy100;
-    
+
     additional_plot_points = 0;
 _END_OF_R_
 #-------------------------------------------------
@@ -258,9 +273,9 @@ _END_OF_R_
     print R_COMMANDS "source(\"" . $dir_name . "/ClonalityPlot.R\")\n";
 
 
-   print R_COMMANDS "$R_command\n";
-    
-    
+    print R_COMMANDS "$R_command\n";
+
+
     #add highlighting code if specified
     if ($positions_highlight && -s $positions_highlight && 1 && 1) { #these &&1 mean nothing, they just make my text editor color things correctly (it hates -s without being s///)
 #-------------------------------------------------
@@ -289,7 +304,7 @@ _END_OF_R_
 #    covnorm1=(z1\$V5+z1\$V6);
 #    covnorm2=(z2\$V5+z2\$V6);
 #    absmaxx2=maxx2=max(c(covnorm1,covnorm2));
-    
+
 #if (maxx >= 1200) {maxx = 1200};
 #if (maxx2 >= 1200) {maxx2 = 1200};
 #if (maxx <= 800) {maxx = 800};
@@ -373,7 +388,7 @@ _END_OF_R_
     } else {
         den4100x <- density(cn4plus100x\$V11, from=0,to=100,na.rm=TRUE);den4factor100 = dim(cn4plus100x)[1]/N100 * den4100x\$y
     }
-    
+
     # dennormcov <- density((z1\$V5+z1\$V6), bw=4, from=0,to=maxx,na.rm=TRUE);
     # dennormcov100x <- density((z2\$V5+z2\$V6), bw=4, from=0,to=maxx,na.rm=TRUE);
     # dentumcov <- density((z1\$V9+z1\$V10), bw=4, from=0,to=maxx,na.rm=TRUE);
@@ -461,24 +476,24 @@ _END_OF_R_
 
 
     #open up image for plotting
-   # if(defined($copynumber_file)){
-        if ($output_image =~ /.pdf/) {
-            print R_COMMANDS "pdf(file=\"$output_image\",width=3.3,height=7.5,bg=\"white\");"."\n";
-            
-        } elsif ($output_image =~ /.png/) {
-            print R_COMMANDS "png(file=\"$output_image\",width=400,height=800);"."\n";
-            
-        } else {
-            die "unrecognized coverage output file type...please append .pdf or .png to the end of your coverage output file\n";
-        }
-        print R_COMMANDS "par(mfcol=c(5,1),mar=c(0.5,3,1,1.5),oma=c(3,0,4,0),mgp = c(3,1,0));"."\n";
+    # if(defined($copynumber_file)){
+    if ($output_image =~ /.pdf/) {
+        print R_COMMANDS "pdf(file=\"$output_image\",width=3.3,height=7.5,bg=\"white\");"."\n";
+
+    } elsif ($output_image =~ /.png/) {
+        print R_COMMANDS "png(file=\"$output_image\",width=400,height=800);"."\n";
+
+    } else {
+        die "unrecognized coverage output file type...please append .pdf or .png to the end of your coverage output file\n";
+    }
+    print R_COMMANDS "par(mfcol=c(5,1),mar=c(0.5,3,1,1.5),oma=c(3,0,4,0),mgp = c(3,1,0));"."\n";
     # } else {
     #     if ($output_image =~ /.pdf/) {
     #         print R_COMMANDS "pdf(file=\"$output_image\",width=3.3,height=3.3,bg=\"white\");"."\n";
-            
+
     #     } elsif ($output_image =~ /.png/) {
     #         print R_COMMANDS "png(file=\"$output_image\",width=400,height=340);"."\n";
-            
+
     #     } else {
     #         die "unrecognized coverage output file type...please append .pdf or .png to the end of your coverage output file\n";
     #     }
@@ -487,9 +502,9 @@ _END_OF_R_
     # }
 
 
-if ($analysis_type eq 'capture') {
+    if ($analysis_type eq 'capture') {
 #-------------------------------------------------
-    $R_command = <<"_END_OF_R_";
+        $R_command = <<"_END_OF_R_";
     #final figure format
     finalfactor = 25 / maxden100;
 
@@ -553,35 +568,35 @@ if ($analysis_type eq 'capture') {
 
 _END_OF_R_
 #-------------------------------------------------
-    print R_COMMANDS "$R_command\n";
+        print R_COMMANDS "$R_command\n";
 
 
-    #if cn is being plotted
-    if(defined($copynumber_file)){
-        print R_COMMANDS 'drawPlot(z1, cn1minus, cn1xchr, additional_plot_points, additional_plot_points_cn1, "#1C366044", "#1C3660", cncircle=1)' . "\n";
-        print R_COMMANDS 'drawPlot(z1, cn2, cn2xchr, additional_plot_points, additional_plot_points_cn2, "#67B32E44", "#67B32E", cncircle=2)' . "\n";
-        print R_COMMANDS 'drawPlot(z1, cn3, cn3xchr, additional_plot_points, additional_plot_points_cn3, "#F4981955", "#F49819", cncircle=3)' . "\n";
-        print R_COMMANDS 'drawPlot(z1, cn4plus, cn4xchr, additional_plot_points, additional_plot_points_cn4, "#E5242044", "#E52420", cncircle=4)' . "\n";
-    } else {
-        print R_COMMANDS 'drawPlot(z1, cn2, cn2xchr, additional_plot_points, additional_plot_points_cn2, "#67B32E44", "#67B32E")' . "\n";
-    }
+        #if cn is being plotted
+        if(defined($copynumber_file)){
+            print R_COMMANDS 'drawPlot(z1, cn1minus, cn1xchr, additional_plot_points, additional_plot_points_cn1, "#1C366044", "#1C3660", cncircle=1)' . "\n";
+            print R_COMMANDS 'drawPlot(z1, cn2, cn2xchr, additional_plot_points, additional_plot_points_cn2, "#67B32E44", "#67B32E", cncircle=2)' . "\n";
+            print R_COMMANDS 'drawPlot(z1, cn3, cn3xchr, additional_plot_points, additional_plot_points_cn3, "#F4981955", "#F49819", cncircle=3)' . "\n";
+            print R_COMMANDS 'drawPlot(z1, cn4plus, cn4xchr, additional_plot_points, additional_plot_points_cn4, "#E5242044", "#E52420", cncircle=4)' . "\n";
+        } else {
+            print R_COMMANDS 'drawPlot(z1, cn2, cn2xchr, additional_plot_points, additional_plot_points_cn2, "#67B32E44", "#67B32E")' . "\n";
+        }
 #-------------------------------------------------
-    $R_command = <<"_END_OF_R_";
+        $R_command = <<"_END_OF_R_";
     axis(side=1,at=c(0,20,40,60,80,100),labels=c(0,20,40,60,80,100),cex.axis=0.6,lwd=0.5,lwd.ticks=0.5,padj=-1.2);
 mtext("Tumor Variant Allele Frequency",adj=0.5,padj=3.2,cex=0.5,side=1);
 
 _END_OF_R_
 #-------------------------------------------------
-    print R_COMMANDS "$R_command\n";
+        print R_COMMANDS "$R_command\n";
 
-} elsif ($analysis_type eq 'wgs') {
+    } elsif ($analysis_type eq 'wgs') {
 
 #-------------------------------------------------
-    $R_command = <<"_END_OF_R_";
+        $R_command = <<"_END_OF_R_";
 
     #all coverage points plotted
     finalfactor = 25 / maxden;
-    
+
     plot.default(x=c(1:10),y=c(1:10),ylim=c(0,28),xlim=c(0,100),axes=FALSE, ann=FALSE,col="#00000000",xaxs="i",yaxs="i");
     rect(0, 0, 100, 28, col = "#00000011",border=NA); #plot bg color
     #lines(c(10,100),c(25,25),lty=2,col="black");
@@ -590,7 +605,7 @@ _END_OF_R_
     lines(den1\$x,(finalfactor * den1factor),col="#1C3660AA",lwd=2);
     lines(den3\$x,(finalfactor * den3factor),col="#F49819AA",lwd=2);
     lines(den4\$x,(finalfactor * den4factor),col="#E52420AA",lwd=2);
-    
+
     ppos = c();
     if($only_label_highest_peak){
         ppos = which((cn1peakheight == max(cn1peakheight)) & (cn1peakheight > $minimum_labelled_peak_height));
@@ -640,29 +655,29 @@ _END_OF_R_
              labels=signif(cn2peakpos[ppos],3),
              cex=0.7,srt=0,col="#67B32EAA");
     }
-   
+
 
     axis(side=3,at=c(0,20,40,60,80,100),labels=c(0,20,40,60,80,100),cex.axis=0.6,lwd=0.5,lwd.ticks=0.5,padj=1.4);
     mtext("Tumor Variant Allele Frequency",adj=0.5,padj=-3.1,cex=0.5,side=3);
     mtext(genome,adj=0,padj=-3.2,cex=0.65,side=3);
-    
+
 
 _END_OF_R_
 #-------------------------------------------------
-    print R_COMMANDS "$R_command\n";
+        print R_COMMANDS "$R_command\n";
 
-    #if cn is being plotted
-    if(defined($copynumber_file)){
-        print R_COMMANDS 'drawPlot(z1, cn1minus, cn1xchr, additional_plot_points, additional_plot_points_cn1, "#1C366044", "#1C3660", cncircle=1)' . "\n";
-        print R_COMMANDS 'drawPlot(z1, cn2, cn2xchr, additional_plot_points, additional_plot_points_cn2, "#67B32E44", "#67B32E", cncircle=2)' . "\n";        
-        print R_COMMANDS 'drawPlot(z1, cn3, cn3xchr, additional_plot_points, additional_plot_points_cn3, "#F4981955", "#F49819", cncircle=3)' . "\n";
-        print R_COMMANDS 'drawPlot(z1, cn4plus, cn4xchr, additional_plot_points, additional_plot_points_cn4, "#E5242044", "#E52420", cncircle=4)' . "\n";
-    } else {
-        print R_COMMANDS 'drawPlot(z1, cn2, cn2xchr, additional_plot_points, additional_plot_points_cn2, "#67B32E44", "#67B32E")' . "\n";
+        #if cn is being plotted
+        if(defined($copynumber_file)){
+            print R_COMMANDS 'drawPlot(z1, cn1minus, cn1xchr, additional_plot_points, additional_plot_points_cn1, "#1C366044", "#1C3660", cncircle=1)' . "\n";
+            print R_COMMANDS 'drawPlot(z1, cn2, cn2xchr, additional_plot_points, additional_plot_points_cn2, "#67B32E44", "#67B32E", cncircle=2)' . "\n";        
+            print R_COMMANDS 'drawPlot(z1, cn3, cn3xchr, additional_plot_points, additional_plot_points_cn3, "#F4981955", "#F49819", cncircle=3)' . "\n";
+            print R_COMMANDS 'drawPlot(z1, cn4plus, cn4xchr, additional_plot_points, additional_plot_points_cn4, "#E5242044", "#E52420", cncircle=4)' . "\n";
+        } else {
+            print R_COMMANDS 'drawPlot(z1, cn2, cn2xchr, additional_plot_points, additional_plot_points_cn2, "#67B32E44", "#67B32E")' . "\n";
+        }
     }
-}
 #-------------------------------------------------
-$R_command = <<"_END_OF_R_";
+    $R_command = <<"_END_OF_R_";
 devoff <- dev.off();
 q();
 _END_OF_R_
