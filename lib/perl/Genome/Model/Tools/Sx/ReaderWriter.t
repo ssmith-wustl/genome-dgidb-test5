@@ -69,7 +69,7 @@ $fail = Genome::Model::Tools::Sx::Writer->create(
 );
 ok(!$fail, 'Failed to create writer w/ rev and not fwd');
 
-# types for files
+# reader: types for files
 ok(!eval{ Genome::Model::Tools::Sx::Reader->_type_for_file() }, 'type for undef file failed: '.$@);
 ok(!Genome::Model::Tools::Sx::Reader->_type_for_file('file.unknown'), 'type for unknown file failed');
 ok(Genome::Model::Tools::Sx::Reader->_type_for_file('-'), 'default type for STDOUT is sanger');
@@ -80,7 +80,9 @@ is(Genome::Model::Tools::Sx::Reader->_type_for_file('file.fa'), 'phred', 'type f
 is(Genome::Model::Tools::Sx::Reader->_type_for_file('file.fna'), 'phred', 'type for fna');
 is(Genome::Model::Tools::Sx::Reader->_type_for_file('file.sam'), 'sam', 'type for sam');
 is(Genome::Model::Tools::Sx::Reader->_type_for_file('file.bam'), 'bam', 'type for bam');
+is(Genome::Model::Tools::Sx::Reader->_type_for_file('file.sff'), 'sff', 'type for sff');
 
+# writer: types for files
 ok(!eval{ Genome::Model::Tools::Sx::Writer->_type_for_file() }, 'type for undef file failed: '.$@);
 ok(!Genome::Model::Tools::Sx::Writer->_type_for_file('file.unknown'), 'type for unknown file failed');
 ok(Genome::Model::Tools::Sx::Writer->_type_for_file('-'), 'default type for STDOUT is sanger');

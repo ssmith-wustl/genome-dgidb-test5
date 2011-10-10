@@ -9,7 +9,7 @@ use XML::Simple;
 
 binmode(STDOUT, ":utf8");
 
-my $high = 500000;
+my $high = 750000;
 UR::Context->object_cache_size_highwater($high);
 
 class Genome::Model::Tools::Dgidb::Import::DrugBank {
@@ -77,7 +77,7 @@ sub _doc_manual_body {
 
 sub help_synopsis {
     return <<HELP
-gmt dgidb import drug-bank --infile drugbank.xml --entrez-dir ./gene-info --verbose --version 3
+gmt dgidb import drug-bank --infile drugbank.xml --verbose --version 3
 HELP
 }
 
@@ -185,7 +185,7 @@ sub preload_objects {
     my $source_db_name = 'DrugBank';
     my $source_db_version = $self->version;
 
-    #Let's preload anything for this database name and version so that we can not touch the database again
+    #Let's preload anything for this database name and version so that we can avoid death by 1000 queries
     my @gene_names = Genome::GeneName->get(source_db_name => $source_db_name, source_db_version => $source_db_version);
     for my $gene_name (@gene_names){
         $gene_name->gene_name_associations;
@@ -196,11 +196,11 @@ sub preload_objects {
         $drug_name->drug_name_associations;
         $drug_name->drug_name_category_associations;
     }
-#TODO: preload the interactions correctly
-    # my @interactions = Genome::DrugGeneInteraction->get(source_db_name => $source_db_name, source_db_version => $source_db_version);
-    # for my $interaction (@interactions){
-        # $interaction->drug_gene_interaction_attributes;
-    # }
+    my @gene_ids = map($_->id, @gene_names);
+    my @interactions = Genome::DrugGeneInteraction->get(gene_name_id => \@gene_ids);
+    for my $interaction (@interactions){
+        $interaction->drug_gene_interaction_attributes;
+    }
 
     return 1;
 }
@@ -644,6 +644,9 @@ sub _create_drug_name {
         source_db_version => $source_db_version,
         description => $description,
     );
+
+    my $drug_name = Genome::DrugName->get(%params);
+    return $drug_name if $drug_name;
     return Genome::DrugName->create(%params);
 }
 
@@ -680,6 +683,11 @@ sub _create_gene_name {
         source_db_version => $source_db_version,
         description => $description,
     );
+
+    if($name ne 'na'){
+        my $gene_name = Genome::GeneName->get(%params);
+        return $gene_name if $gene_name;
+    }
     return Genome::GeneName->create(%params);
 }
 
@@ -704,6 +712,9 @@ sub _create_interaction {
         interaction_type => $type,
         description =>  $description,
     );
+
+    my $interaction = Genome::DrugGeneInteraction->get(%params);
+    return $interaction if $interaction;
     return Genome::DrugGeneInteraction->create(%params);
 }
 

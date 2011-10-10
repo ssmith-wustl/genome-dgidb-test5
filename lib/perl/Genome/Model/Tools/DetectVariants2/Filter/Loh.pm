@@ -15,14 +15,6 @@ class Genome::Model::Tools::DetectVariants2::Filter::Loh{
             doc => 'Snv file for the LoH filter to use as a control. This will be generated if not provided.',
         },
     ],
-    has_constant => [
-        _variant_type => {
-            type => 'String',
-            default => 'snvs',
-            doc => 'variant type that this module operates on, overload this in submodules accordingly',
-        },
-    ],
-
 };
 
 sub help_synopsis {
@@ -39,6 +31,8 @@ This filters out SNVs that are likely to be the result of Loss of Heterozygosity
 The input directory must contain snvs.hq.bed and this file must be in bed format. It will output only bed files.
 EOS
 }
+
+sub _variant_type { 'snvs' };
 
 # FIXME this should be reframed, and likely not stay a filter. For now we need to run samtools to detect snvs on the normal sample in order to replicate old behavior.
 sub _filter_variants {

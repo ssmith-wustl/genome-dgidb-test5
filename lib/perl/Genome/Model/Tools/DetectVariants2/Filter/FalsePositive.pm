@@ -93,13 +93,6 @@ class Genome::Model::Tools::DetectVariants2::Filter::FalsePositive {
            doc => 'The minimum base quality to require for bam-readcount',
        },
     ],
-    has_constant => [
-        _variant_type => {
-            type => 'String',
-            default => 'snvs',
-            doc => 'variant type that this module operates on, overload this in submodules accordingly',
-        },
-    ],
     has_param => [
          lsf_resource => {
              default_value => "-M 8000000 -R 'select[type==LINUX64 && mem>8000] rusage[mem=8000]'",
@@ -124,6 +117,8 @@ Both capture and WGS projects now use the same filter and parameters.
 For questions, e-mail Dan Koboldt (dkoboldt\@genome.wustl.edu) or Dave Larson (dlarson\@genome.wustl.edu)
 EOS
 }
+
+sub _variant_type { 'snvs' };
 
 ##########################################################################################
 # Capture filter for high-depth, lower-breadth datasets

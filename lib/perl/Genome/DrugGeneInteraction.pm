@@ -16,13 +16,13 @@ class Genome::DrugGeneInteraction {
     ],
     has => [
         drug_name_id => { is => 'Text'},
-        drug => {
+        drug_name => {
             is => 'Genome::DrugName',
             id_by => 'drug_name_id',
             constraint_name => 'drug_gene_interaction_drug_name_id_fkey',
         },
         gene_name_id => { is => 'Text'},
-        gene => {
+        gene_name => {
             is => 'Genome::GeneName',
             id_by => 'gene_name_id',
             constraint_name => 'drug_gene_interaction_gene_name_id_fkey',
@@ -39,5 +39,10 @@ class Genome::DrugGeneInteraction {
     ],
     doc => 'Claim regarding an interaction between a drug name and a gene name',
 };
+
+sub __display_name__ {
+    my $self = shift;
+    return "Interaction of " . $self->drug_name->__display_name__ . " and " . $self->gene_name->__display_name__;
+}
 
 1;

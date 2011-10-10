@@ -39,14 +39,18 @@ sub parse_file_into_hashref {
         warn 'Fail to open ' . $flag_file . ' for reading';
         return;
     }
-    
+
     my %data;
     my @lines = <$flag_fh>;
     $flag_fh->close;
     my $line_ct = scalar @lines;
-            
+
     while ($line_ct and $lines[0] =~ /^\[.*\]/){
-        push @{ $data{errors} }, shift @lines;
+        my $error = shift @lines;
+        if ($error =~ /EOF marker is absent/){
+            $line_ct--;
+        }
+        push @{ $data{errors} }, $error;
     }
 
     unless ($line_ct =~ /^1[12]$/) {#samtools 0.1.15 (r949), older versions get 12 lines, newer get 11 line with QC passed/failed separate in each line
@@ -62,7 +66,7 @@ sub parse_file_into_hashref {
         $data{reads_marked_duplicates} = $1 if /^(\d+) (\+\s\d+\s)?duplicates$/;
         ($data{reads_mapped}, $data{reads_mapped_percentage}) = ($1, $3)
             if /^(\d+) (\+\s\d+\s)?mapped \((\d{1,3}\.\d{2}|nan)\%[\:\)]/;
-        undef($data{reads_mapped_percentage}) 
+        undef($data{reads_mapped_percentage})
             if $data{reads_mapped_percentage} && $data{reads_mapped_percentage} eq 'nan';
 
         $data{reads_paired_in_sequencing} = $1 if /^(\d+) (\+\s\d+\s)?paired in sequencing$/;
@@ -71,14 +75,14 @@ sub parse_file_into_hashref {
 
         ($data{reads_mapped_in_proper_pairs}, $data{reads_mapped_in_proper_pairs_percentage}) = ($1, $3)
             if /^(\d+) (\+\s\d+\s)?properly paired \((\d{1,3}\.\d{2}|nan)\%[\:\)]/;
-        undef($data{reads_mapped_in_proper_pairs_percentage}) 
+        undef($data{reads_mapped_in_proper_pairs_percentage})
             if $data{reads_mapped_in_proper_pairs_percentage} && $data{reads_mapped_in_proper_pairs_percentage} eq 'nan';
 
         $data{reads_mapped_in_pair} = $1 if /^(\d+) (\+\s\d+\s)?with itself and mate mapped$/;
 
         ($data{reads_mapped_as_singleton}, $data{reads_mapped_as_singleton_percentage}) = ($1, $3)
             if /^(\d+) (\+\s\d+\s)?singletons \((\d{1,3}\.\d{2}|nan)\%[\:\)]/;
-        undef($data{reads_mapped_as_singleton_percentage}) 
+        undef($data{reads_mapped_as_singleton_percentage})
             if $data{reads_mapped_as_singleton_percentage} && $data{reads_mapped_as_singleton_percentage} eq 'nan';
 
         $data{reads_mapped_in_interchromosomal_pairs}    = $1 if /^(\d+) (\+\s\d+\s)?with mate mapped to a different chr$/;

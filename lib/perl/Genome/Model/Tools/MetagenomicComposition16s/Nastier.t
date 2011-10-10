@@ -1,0 +1,45 @@
+#!/usr/bin/env perl
+
+use strict;
+use warnings;
+
+use above 'Genome';
+
+use Test::More;
+
+require File::Compare;
+
+use_ok( 'Genome::Model::Tools::MetagenomicComposition16s::Nastier' );
+
+#test suite dir
+my $version = 1;
+my $data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-MetagenomicComposition16s/Nastier-v'.$version;
+ok( -d $data_dir, 'data dir exists' );
+
+#in/out files
+my $input = 'chims.NAST';
+my $output = 'chims.NAST.cs';
+ok( -s $data_dir.'/'.$input, 'input test file exists' );
+ok( -s $data_dir.'/'.$output, 'results file exists' );
+
+#temp test dir
+my $temp_dir = Genome::Sys->create_temp_directory();
+ok( -d $temp_dir, 'created temp dir' );
+ok( File::Copy::copy($data_dir.'/'.$input, $temp_dir), 'copied input fasta file' );
+
+#create/execute tool
+my $tool = Genome::Model::Tools::MetagenomicComposition16s::Nastier->create(
+    query_FASTA => $temp_dir.'/'.$input,
+    output_file => $temp_dir.'/'.$output,
+);
+ok( $tool, 'created tool' );
+ok( $tool->execute, 'executed tool' );
+
+#compare out files
+ok( File::Compare::compare($data_dir.'/'.$output, $temp_dir.'/'.$output) == 0, 'Output files match' );
+
+#<STDIN>;
+
+done_testing();
+
+exit;

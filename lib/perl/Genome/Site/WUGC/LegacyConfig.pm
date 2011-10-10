@@ -97,12 +97,6 @@ sub data_directory {
      $ENV{GENOME_MODEL_DATA} || '/gscmnt/sata835/info/medseq';
 }
 
-# links
-
-sub alignment_links_directory {
-    return shift->root_directory . '/alignment_links';
-}
-
 # data
 
 sub alignment_data_directory {

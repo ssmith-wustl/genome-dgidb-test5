@@ -29,7 +29,7 @@ class Genome::Subject {
             reverse_as => 'subject',
         },
         project_parts => { is => 'Genome::ProjectPart', reverse_as => 'entity', is_mutable => 1, },
-        projects => { is => 'Genome::Project', via => 'project_parts', to => 'project', is_mutable => 1, },
+        projects => { is => 'Genome::Project', via => 'project_parts', to => 'project', is_mutable => 1, doc => 'Projects that include this subject.' },
         project_names => { is => 'Text', via => 'projects', to => 'name', },
     ],
     has_optional => [
@@ -61,7 +61,7 @@ class Genome::Subject {
     table_name => 'GENOME_SUBJECT',
     schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',
-    doc => 'Contains all information about a particular subject (sample, individual, taxon, etc)',
+    doc => 'Contains all information about a particular subject (sample, individual, etc)',
 };
 
 sub __display_name__ {

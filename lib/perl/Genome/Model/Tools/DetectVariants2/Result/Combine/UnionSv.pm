@@ -9,19 +9,13 @@ use File::Basename;
 class Genome::Model::Tools::DetectVariants2::Result::Combine::UnionSv{
     is  => 'Genome::Model::Tools::DetectVariants2::Result::Combine',
     doc => 'Union svs into one file',
-    has_constant => [
-        _variant_type => {
-            type => 'String',
-            default => 'svs',
-            doc => 'variant type that this module operates on',
-        },
-    ],
 };
 
 sub _needs_symlinks_followed_when_syncing { 0 };
 sub _working_dir_prefix { 'union-sv' };
 sub resolve_allocation_disk_group_name { 'info_genome_models' };
 sub allocation_subdir_prefix { 'union_sv' };
+sub _variant_type { 'svs' };
 
 sub _combine_variants {
     my $self = shift;
@@ -51,20 +45,22 @@ sub _combine_variants {
     $self->status_message("Now make copy to sv merge outputs");
     
     for my $dir ($dir_a, $dir_b) {
-
-        if ($dir =~ /union\-sv/) {
+        $self->status_message("dir is $dir");
+        my $subclass_name = $self->_get_sr_name($dir, 'subclass_name');
+        if ($subclass_name =~ /Combine\:\:UnionSv/) {
             $self->status_message("This is a union directory: $dir");
             $self->_copy_file($dir);
             next;
         }
 
+        #If not combine result, it must have a detector_name
         my $dir_type;
-
-        if ($dir =~ /squaredancer/) {
+        my $detector_name = $self->_get_sr_name($dir, 'detector_name');
+        if ($detector_name =~ /Squaredancer/) {
             $dir_type = 'squaredancer.';
         }
-        else { #for breakdancer output
-            my $param_list = $self->_get_param_list($dir);
+        elsif ($detector_name =~ /Breakdancer/) { 
+            my $param_list = $self->_get_sr_name($dir, 'detector_params');
             next unless $param_list;
                         
             if ($param_list =~ /\-t/) {
@@ -78,37 +74,47 @@ sub _combine_variants {
                 next;
             }
         }
+        else {
+            $self->error_message("Unknown detector: $detector_name");
+            die;
+        }
         $self->_copy_file($dir, $dir_type);
     }        
     return 1;
 }
 
 
-sub _get_param_list {
+sub _get_sr_name {
+    my ($self, $dir, $property) = @_;
+    my $sr = $self->_get_sr($dir);
+    my $name = $sr->$property;
+    unless ($name) {
+        $self->error_message("Failed to get $property for sr: ".$sr->id);
+        die;
+    }
+    return $name;
+}
+
+
+sub _get_sr {
     my ($self, $dir) = @_;
-    my $dir_target = readlink($dir);
+    my $dir_target = -l $dir ? readlink($dir) : $dir;
 
     unless ($dir_target) {
         $self->warning_message("Failed to read the target from symlink ($dir).");
         return;
     }
 
+    $dir_target =~ s/\/$//;
     my $result_id = (split('-', $dir_target))[-1];
-    unless ($result_id) {
-        $self->warning_message("Failed to parse the result ID from target ($dir_target).");
-        return;
-    }
+    my $result    = Genome::SoftwareResult->get($result_id);
 
-    my $result = Genome::Model::Tools::DetectVariants2::Result::Base->get($result_id);
     unless ($result) {
-        $self->warning_message("Failed to get result for result ID ($result_id)");
-        return;
+        $self->error_message("Failed to get result for result ID ($result_id)");
+        die;
     }
-    my $param_list = $result->detector_params;
-    return $param_list if $param_list;
 
-    $self->warning_message("Failed to get detector_params for software_result: $result_id");
-    return;
+    return $result;
 }
 
 

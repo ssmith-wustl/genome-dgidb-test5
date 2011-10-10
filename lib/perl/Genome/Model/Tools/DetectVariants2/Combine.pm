@@ -20,13 +20,6 @@ class Genome::Model::Tools::DetectVariants2::Combine {
             is_output => 1,
         },
     ],
-    has_constant => [
-        _variant_type => {
-            type => 'String',
-            default => 'variant_type',
-            doc => 'variant type that this module operates on, overload this in submodules accordingly',
-        },
-    ],
     has_param => [
         lsf_queue => {
             default => 'apipe',
@@ -64,6 +57,8 @@ sub help_detail {
 Tools to run variant detectors with a common API and output their results in a standard format.
 EOS
 }
+
+sub _variant_type { die 'override _variant_type' };
 
 sub result_class {
     my $self = shift;

@@ -639,6 +639,7 @@ sub add_detectors_and_filters {
                 $version = $instance->{version};
                 my $unique_detector_base_name = join( "_", ($variant_type, $name, $version, $self->params_to_index($params)));
                 my @filters = @{$instance->{filters}};
+
                 # Make the operation
                 my $detector_operation = $workflow_model->add_operation(
                     name => "$variant_type $name $version " . $self->params_to_index($params),
@@ -646,6 +647,35 @@ sub add_detectors_and_filters {
                 );
                 unless($detector_operation){
                     die $self->error_message("Failed to generate a workflow operation object for ".$class);
+                }
+
+                my $other_detector_operation;
+                OTHER_VARIANT_TYPE: for my $other_variant_type (grep($_ ne $variant_type, keys(%$version_hash))) {
+                    OTHER_INSTANCE: for my $other_instance (@{ $version_hash->{$other_variant_type} }) {
+                        if($other_instance->{params} eq $params) {
+                            if(exists $other_instance->{_detector_operation}) {
+                                $other_detector_operation = $other_instance->{_detector_operation};
+                                last OTHER_VARIANT_TYPE;
+                            } else {
+                                next OTHER_VARIANT_TYPE; #we found the instance we wanted for this variant type, but no operation has been made for it
+                            }
+                        }
+                    }
+                }
+
+                if($other_detector_operation) {
+                    #prevent both copies of the same process from running concurrently (theoretically the second one will then shortcut)
+                    $workflow_model->add_link(
+                        left_operation => $other_detector_operation,
+                        left_property => 'output_directory',
+                        right_operation => $detector_operation,
+                        right_property => '_previous_output_directory',
+                    );
+                    #$self->status_message('Blocker found for ' . $detector_operation->name);
+                } else {
+                    #This is a candidate to block on for others
+                    $instance->{_detector_operation} = $detector_operation;
+                    #$self->status_message('No blocker found for ' . $detector_operation->name);
                 }
 
                 # create filter operations

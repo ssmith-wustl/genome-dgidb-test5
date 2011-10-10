@@ -53,6 +53,10 @@ class Genome::Model::Command::Define::Helper {
             is => 'Genome::ModelGroup',
             doc => 'Model groups to put the newly created model into',
         },        
+        projects => {
+            is => 'Genome::Project',
+            doc => 'Projects for the model.',
+        },
         bare_args => {
             shell_args_position => 99
         },
@@ -126,6 +130,7 @@ sub execute {
         name => $self->model_name,
         auto_assign_inst_data => $self->auto_assign_inst_data,
         auto_build_alignments => $self->auto_build_alignments,
+        projects => [ $self->projects ],
         $self->type_specific_parameters_for_create,
     );
     $params{instrument_data} = [$self->instrument_data] if $self->instrument_data;

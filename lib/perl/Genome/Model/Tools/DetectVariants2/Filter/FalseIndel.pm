@@ -93,13 +93,6 @@ class Genome::Model::Tools::DetectVariants2::Filter::FalseIndel {
            doc => 'Print the filtering result for each site.',
        },
     ],
-    has_constant => [
-        _variant_type => {
-            type => 'String',
-            default => 'indels',
-            doc => 'variant type that this module operates on, overload this in submodules accordingly',
-        },
-    ],
     has_param => [
        lsf_resource => {
            default_value => "-M 32000000 -R 'select[type==LINUX64 && mem>32000] rusage[mem=32000]'",
@@ -124,6 +117,8 @@ This module uses detailed readcount information from bam-readcounts to filter li
 For questions, e-mail Dan Koboldt (dkoboldt\@genome.wustl.edu) or Dave Larson (dlarson\@genome.wustl.edu)
 EOS
 }
+
+sub _variant_type { 'indels' };
 
 sub _filter_variants {
     my $self = shift;

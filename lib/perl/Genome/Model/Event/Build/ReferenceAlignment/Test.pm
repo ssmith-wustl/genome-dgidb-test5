@@ -51,7 +51,6 @@ sub new {
     }
 
     my $tmp_dir = File::Temp::tempdir('ReferenceAlignmentTestXXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
-    $ENV{GENOME_MODEL_ROOT} = $tmp_dir;
     $ENV{GENOME_MODEL_DATA} = $tmp_dir;
     if ($args{messages}) {
         $self->{_messages} = $args{messages};
@@ -179,9 +178,6 @@ sub create_model {
 
     $self->model($model);
 
-    my $base_alignment_directory = Genome::Config->alignment_links_directory .'/'.
-        $model->read_aligner_name .'/'. $model->reference_sequence_name;
-    Genome::Sys->create_directory($base_alignment_directory);
 }
 
 sub add_instrument_data {

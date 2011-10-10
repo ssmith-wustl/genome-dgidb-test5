@@ -16,8 +16,10 @@ use_ok('Genome::Model::Command::Define::MetagenomicCompositionShotgun') or die;
 
 my $pp = Genome::ProcessingProfile::MetagenomicCompositionShotgun->get(2378727);# human microbiome metagenomic alignment with samtools merge
 ok($pp, 'pp');
-my $subject = Genome::Sample->create(name => '__TEST__SAMPLE__');
+my $subject = Genome::Sample->create(name => '__TEST_SAMPLE__');
 ok($subject, 'subject');
+my $project = Genome::Project->create(name => '__TEST_PROJECT__');
+ok($project, 'create project');
 
 my $contamination_screen_reference = 111751613;
 my $metagenomic_reference = 111742950;
@@ -26,6 +28,7 @@ my $cmd = Genome::Model::Command::Define::MetagenomicCompositionShotgun->create(
     name => '__TEST_MCS_MODEL__',
     processing_profile => $pp,
     subject => $subject,
+    projects => [ $project ],
     params => [ 
         'contamination_screen_reference=model_name=apipe-test-refseq-minicontam,status=Succeeded', # 111751613
         'metagenomic_references='.$metagenomic_reference,
@@ -44,6 +47,8 @@ ok(!$model->auto_assign_inst_data, 'auto_assign_inst_data is off');
 ok($model->auto_build_alignments, 'auto_build_alignments is on');
 is($model->contamination_screen_reference->id, $contamination_screen_reference, 'contamination_screen_reference set');
 is_deeply([sort {$a <=> $b } map { $_->id } $model->metagenomic_references], [$metagenomic_reference, $contamination_screen_reference], 'metagenomic_references set');
+my @projects = $model->projects;
+is_deeply(\@projects, [$project], 'added a project');
 ok($model->delete, 'delete model');
 
 # fail
