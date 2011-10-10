@@ -1,12 +1,15 @@
-DROP TABLE IF EXISTS genome_task;
-DROP TABLE IF EXISTS project_part;
-DROP TABLE IF EXISTS project;
-DROP TABLE IF EXISTS genome_user;
-DROP TABLE IF EXISTS subject_attribute;
-DROP TABLE IF EXISTS subject;
-DROP TABLE IF EXISTS misc_note;
+DROP TABLE IF EXISTS subject.genome_task;
+DROP TABLE IF EXISTS subject.project_part;
+DROP TABLE IF EXISTS subject.project;
+DROP TABLE IF EXISTS subject.genome_user;
+DROP TABLE IF EXISTS subject.subject_attribute;
+DROP TABLE IF EXISTS subject.subject;
+DROP TABLE IF EXISTS subject.misc_note;
 
-CREATE TABLE misc_note (
+DROP SCHEMA IF EXISTS subject CASCADE;
+CREATE SCHEMA subject AUTHORIZATION genome;
+
+CREATE TABLE subject.misc_note (
     editor_id          varchar(200) NOT NULL,
     entry_date         timestamp(6) NOT NULL,
     subject_class_name varchar(255) NOT NULL,
@@ -16,45 +19,45 @@ CREATE TABLE misc_note (
     id                 varchar(32) NOT NULL,
     PRIMARY KEY (id)
 );
-CREATE INDEX misc_note_subject_index ON misc_note(subject_class_name, subject_id, header_text);
-CREATE INDEX misc_note_subject_date_index ON misc_note(entry_date, subject_class_name, subject_id);
-CREATE INDEX misc_note_editor_index ON misc_note(editor_id, entry_date);
-CREATE INDEX misc_note_body_index ON misc_note(body_text);
+CREATE INDEX misc_note_subject_index ON subject.misc_note(subject_class_name, subject_id, header_text);
+CREATE INDEX misc_note_subject_date_index ON subject.misc_note(entry_date, subject_class_name, subject_id);
+CREATE INDEX misc_note_editor_index ON subject.misc_note(editor_id, entry_date);
+CREATE INDEX misc_note_body_index ON subject.misc_note(body_text);
 
-CREATE TABLE subject (
+CREATE TABLE subject.subject (
     subject_id    varchar(32) NOT NULL,
     subclass_name varchar(255) NOT NULL,
     name          varchar(255),
     PRIMARY KEY (subject_id)
 );
-CREATE INDEX subject_name_index ON subject(name);
+CREATE INDEX subject_name_index ON subject.subject(name);
 
-CREATE TABLE subject_attribute (
-    subject_id      varchar(32) NOT NULL REFERENCES subject(subject_id),
+CREATE TABLE subject.subject_attribute (
+    subject_id      varchar(32) NOT NULL REFERENCES subject.subject(subject_id),
     attribute_label varchar(64) NOT NULL,
     attribute_value varchar(512) NOT NULL,
     nomenclature    varchar(64) NOT NULL,
     PRIMARY KEY (subject_id, attribute_label, attribute_value, nomenclature)
 );
-CREATE INDEX subject_attribute_subject_id_index ON subject_attribute(subject_id);
-CREATE INDEX subject_attribute_label_index ON subject_attribute(attribute_label);
+CREATE INDEX subject_attribute_subject_id_index ON subject.subject_attribute(subject_id);
+CREATE INDEX subject_attribute_label_index ON subject.subject_attribute(attribute_label);
 
-CREATE TABLE genome_user (
+CREATE TABLE subject.genome_user (
     name  varchar(64),
     email varchar(255) NOT NULL,
     PRIMARY KEY (email)
 );
 
-CREATE TABLE project (
+CREATE TABLE subject.project (
     id   varchar(64) NOT NULL,
     name varchar(200) NOT NULL,
     PRIMARY KEY (id)
 );
-CREATE INDEX project_name_index ON project(name);
+CREATE INDEX project_name_index ON subject.project(name);
 
-CREATE TABLE project_part (
+CREATE TABLE subject.project_part (
     id              varchar(64) NOT NULL,
-    project_id      varchar(64) NOT NULL REFERENCES project(id),
+    project_id      varchar(64) NOT NULL REFERENCES subject.project(id),
     part_class_name varchar(256) NOT NULL,
     part_id         varchar(64) NOT NULL,
     label           varchar(100),
@@ -62,11 +65,11 @@ CREATE TABLE project_part (
     PRIMARY KEY (id),
     UNIQUE (project_id, part_class_name, part_id)
 );
-CREATE INDEX project_part_part_role_index ON project_part(part_class_name, part_id, role);
-CREATE INDEX project_part_project_role_index ON project_part(project_id, role);
-CREATE INDEX project_part_project_label_index ON project_part(project_id, label);
+CREATE INDEX project_part_part_role_index ON subject.project_part(part_class_name, part_id, role);
+CREATE INDEX project_part_project_role_index ON subject.project_part(project_id, role);
+CREATE INDEX project_part_project_label_index ON subject.project_part(project_id, label);
 
-CREATE TABLE genome_task (
+CREATE TABLE subject.genome_task (
     id              varchar(255),
     command_class   varchar(255) NOT NULL,
     params          varchar(4096),
