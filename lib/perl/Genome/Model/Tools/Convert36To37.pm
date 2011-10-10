@@ -46,6 +46,7 @@ sub execute {
             print $model->id . " updating region of interest set name to " . $roi36to37{$model->region_of_interest_set_name} . "\n";
             $model->region_of_interest_set_name($roi36to37{$model->region_of_interest_set_name});
         }
+        $model->build_requested(1);
         push @build37_model_ids, $result->_new_model->id;
     }
     print join(',',@build37_model_ids) . "\n";
