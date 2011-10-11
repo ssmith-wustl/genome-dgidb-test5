@@ -8,6 +8,10 @@ use above 'Genome';
 use Test::More;
 require File::Compare;
 
+if (Genome::Config->arch_os ne 'x86_64') {
+    plan skip_all => 'requires 64-bit machine';
+}
+
 use_ok( 'Genome::Model::Tools::MetagenomicComposition16s::ChimeraSlayer' );
 
 my $version = 1;
