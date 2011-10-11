@@ -35,6 +35,7 @@ our %app = map { $_ => load_app($_) } qw/
   Dump.psgi 
   Cache.psgi
   Info.psgi
+  File.psgi
   /;
 
 ## Utility functions
@@ -78,6 +79,9 @@ sub dispatch_request {
             return $resp;
         };
 
+    },
+    sub (/view/x/...) {
+        redispatch_psgi($app{'File.psgi'}, $request);
     },
     sub (/view/debug) {
         redispatch_psgi($app{'Info.psgi'}, $request);

@@ -11,7 +11,7 @@
     <xsl:call-template name="control_bar_view"/>
 
     <xsl:call-template name="view_header">
-      <xsl:with-param name="label_name" select="'Editing Sample Attributes for: '" />
+      <xsl:with-param name="label_name" select="'Sample Attributes '" />
       <xsl:with-param name="display_name" select="'test_sample0'" />
       <xsl:with-param name="icon" select="'genome_sample_32'" />
     </xsl:call-template>
