@@ -84,7 +84,6 @@ $ ->
           @model.bind 'remove', @unrender
 
         render: ->
-          alert @model.get("enumerated_value_ids")
           item_template = _.template($('#nomenclature-column-template').html(), {model:@model})
           i = $(item_template)
         
@@ -186,8 +185,6 @@ $ ->
         jsonToPost = JSON.stringify(m)
         k = JSON.parse(jsonToPost)
         ajax_data = {json:JSON.stringify(k)}
-        alert(ajax_data.json)
-        alert(ajax_data.id)
         if window.nomenclature_id != undefined
             ajax_data.id = window.nomenclature_id
         $('#save-spinner').show()
@@ -206,8 +203,6 @@ $ ->
       $('.load-nomenclature').bind 'click', ->
         #load_json  = "[{'name':  'hello', 'type': 'string', 'enumerated_values': []},{'name':  'there', 'type': 'enumerated', 'enumerated_values': ['woo', 'there']} ]"
         listView.collection.reset(load_json)
-        alert('ok')
-        alert(JSON.stringify(listView.collection))
 
 
           
