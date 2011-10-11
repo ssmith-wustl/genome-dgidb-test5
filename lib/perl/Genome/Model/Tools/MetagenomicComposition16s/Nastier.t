@@ -7,6 +7,10 @@ use above 'Genome';
 
 use Test::More;
 
+if (Genome::Config->arch_os ne 'x86_64') {
+    plan skip_all => 'requires 64-bit machine';
+}
+
 require File::Compare;
 
 use_ok( 'Genome::Model::Tools::MetagenomicComposition16s::Nastier' );
