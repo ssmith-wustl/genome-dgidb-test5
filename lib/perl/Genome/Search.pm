@@ -22,12 +22,12 @@ class Genome::Search {
         },
         _solr_server_location => {
             is => 'Text',
-            default_value => 'http://solr-dev:8080/solr',
+            default_value => 'http://solr:8080/solr',
             doc => 'Location of the Solr server',
         },
         _dev_solr_server_location => {
             is => 'Text',
-            default_value => 'http://solr:8080/solr',
+            default_value => 'http://solr-dev:8080/solr',
             doc => 'Location of the Solr development server',
         },
         _solr_server => {
