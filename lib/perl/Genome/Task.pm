@@ -70,7 +70,12 @@ class Genome::Task {
 sub create {
     my $class = shift;
 
-    my $self = $class->SUPER::create(@_);
+    my %p = @_;
+    if (!exists $p{time_submitted}) {
+        $p{time_submitted} = UR::Time->now();
+    }
+
+    my $self = $class->SUPER::create(%p);
     
     my $cmd_object = $self->command_object;
 
