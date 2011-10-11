@@ -63,7 +63,7 @@ sub parse_line {
         $GT="1/1";
     }
     my $DP=$fields[4]+$fields[5];  #ref allele supporting reads + var allele supporting reads
-    my $MQ=$fields[13]; # ref allele supporitng read map qual
+    my $MQ= '.'; #$fields[13]; # ref allele supporitng read map qual
     my $AD = $fields[5];
     my $FA = sprintf("%0.3f",$fields[5]/$DP);
     my $FET = sprintf("%e", $fields[11]);
