@@ -9,14 +9,6 @@ hostname=`hostname -s`
 
 INC=/gsc/scripts/opt/genome/current/web/lib/perl
 
-# TODO make this less dependent on the real hostname, check aims-dev cname?
-if [ $hostname == 'vm45' ]
-then
-  INC=/gsc/scripts/opt/genome-webapp-dev/lib/perl
-  GENOME_DEV_MODE=1
-  export GENOME_DEV_MODE
-fi
-
 GENOME_DEV_MODE=0
 export GENOME_DEV_MODE
 
@@ -46,5 +38,7 @@ export PERL5LIB
 
 GENOME_VIEW_CACHE=1
 export GENOME_VIEW_CACHE
+
+echo "starting server from $0 with GENOME_DEV_MODE=$GENOME_DEV_MODE" >>$LOGFILE
 
 exec /gsc/bin/plackup $OPTIONS >>$LOGFILE 2>&1

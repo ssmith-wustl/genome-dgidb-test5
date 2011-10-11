@@ -187,6 +187,9 @@ sub files_ignored_by_diff {
         \.vcf$
         \.vcf.idx$
         workflow\.xml$
+        build\.xml$
+        \d+\.out$
+        \d+\.err$
         \.png$
         readcounts$
         variants/sv/breakdancer
@@ -196,7 +199,7 @@ sub files_ignored_by_diff {
 sub dirs_ignored_by_diff {
     return qw(
         logs/
-        /\d+/
+        variants/\d+/
         variants/sv/breakdancer
     );
 }
