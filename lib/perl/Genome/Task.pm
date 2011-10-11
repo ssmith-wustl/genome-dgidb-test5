@@ -21,8 +21,9 @@ class Genome::Task {
             len=>255, 
             doc => 'Command class name'
         },
-        status => {
+        status => {  # submitted, pending_execute, running, failed, succeeded
             is => 'Text', 
+            default => 'submitted',
             len => 50, 
             doc => 'Task lifecycle status'
         },
