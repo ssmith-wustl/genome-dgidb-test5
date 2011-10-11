@@ -85,7 +85,6 @@ sub create {
         return;
     }
 
-
     return $self;
 }
 

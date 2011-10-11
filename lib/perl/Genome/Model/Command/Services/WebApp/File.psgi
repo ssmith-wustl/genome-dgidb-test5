@@ -50,8 +50,8 @@ sub dispatch_request {
             content => $c });
 
         my $task_params = {
-            command_class => 'Genome::Subject::Command',
-            user_id       => $ENV{'REMOTE_USER'},
+            command_class => 'Genome::Subject::Command::Import',
+            user_id       => 'tigerwoods',
             params        => $task_params_json
         };
 
@@ -63,7 +63,7 @@ sub dispatch_request {
         my $code; my $body = {};
         if ($@ || !$task) {
             $code = 200; # OK (didnt work)
-            $body->{'error'} = $@ || 'Couldnt create a task with params: ' Data::Dumper::Dumper $task_params;
+            $body->{'error'} = $@ || 'Couldnt create a task with params: ' . Data::Dumper::Dumper $task_params;
         } else {
             $code = 201; # CREATED
             $body->{'id'} = $task->id();
