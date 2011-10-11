@@ -7,7 +7,7 @@ use Genome;
 class Genome::ModelGroup {
     table_name => 'MODEL_GROUP',
     id_by      => [ 
-        id                  => { is => 'Number' }, 
+        id                  => { is => 'Text' },
     ],
     has => [
         name                => { is => 'Text' },

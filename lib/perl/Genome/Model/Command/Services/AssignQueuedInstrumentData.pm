@@ -1292,6 +1292,9 @@ sub request_builds {
 sub add_processing_profiles_to_pses{
     my $self = shift;
     my @pses = @_;
+
+    $DB::single = 1;
+
     for my $pse (@pses){
         next if $pse->added_param('processing_profile_id'); #FIXME: THIS SHOULD ONLY BE USED DURING THE TRANSITION PERIOD WHILE OLD AQID IS IN USE
         my ($instrument_data_id) = $pse->added_param('instrument_data_id');
@@ -1418,7 +1421,17 @@ sub add_processing_profiles_to_pses{
                     # updated 2011jun15 RT 72143 ctomlins
                     push @processing_profile_ids_to_add, '2599969';
                 }
-
+                #process inst data with work orders 2634033 2636663 with pp 2599969 RT76069
+                elsif ( $taxon->id == 1653198763 ) { #unknow taxon normally skipped
+                    my $index_illumina = GSC::IndexIllumina->get( $instrument_data_id );
+                    if ( $index_illumina ) {
+                        my @work_orders = $index_illumina->get_work_orders;
+                        for my $work_order ( @work_orders ) {
+                            push @processing_profile_ids_to_add, '2599969' if
+                                $work_order->id == 2636663 or $work_order->id == 2634033;
+                        }
+                    }
+                }
             }
 
             $self->_verify_parameter_lists(\@processing_profile_ids_to_add, \%reference_sequence_names_for_processing_profile_ids);
