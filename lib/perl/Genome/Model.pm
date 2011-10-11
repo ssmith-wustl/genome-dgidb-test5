@@ -338,7 +338,7 @@ sub create {
     if ( not defined $self->name ) {
         my $default_name = $self->default_model_name;
         if ( not defined $default_name ) {
-            $self->error_message("No model name given and cannot get a deafult name from $class");
+            $self->error_message("No model name given and cannot get a default name from $class");
             $self->SUPER::delete;
             return;
         }
