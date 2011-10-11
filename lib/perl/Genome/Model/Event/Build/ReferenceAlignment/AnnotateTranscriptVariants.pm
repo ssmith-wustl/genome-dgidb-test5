@@ -35,10 +35,19 @@ class Genome::Model::Event::Build::ReferenceAlignment::AnnotateTranscriptVariant
 
 sub execute {
     my $self = shift;
-    
-    unless ($self->check_for_existence($self->pre_annotation_filtered_snp_file)) {
-        $self->error_message("Adapted filtered snp file does not exist for annotation");
+    my $pre_annot_file  = $self->pre_annotation_filtered_snp_file;
+    my $post_annot_file = $self->post_annotation_filtered_snp_file;
+
+    unless ($self->check_for_existence($pre_annot_file)) {
+        $self->error_message("Adapted filtered snp file: $pre_annot_file does not exist for annotation");
         return;
+    }
+
+    #Allowing empty pre_annotation file
+    if (-z $pre_annot_file) {
+        $self->warning_message("pre annotation filtered snp file: $pre_annot_file is empty. Skip");
+        `touch $post_annot_file`;
+        return 1;
     }
 
     # This has been vetted by the processing profile's _initialize_build method already
@@ -48,21 +57,21 @@ sub execute {
     {
         my $build = $self->build;
         my $model = $build->model;
-        my $pp = $model->processing_profile;
+        my $pp    = $model->processing_profile;
         $annotator_version = $pp->transcript_variant_annotator_version;
-        $annotator_filter = $pp->transcript_variant_annotator_filter;
+        $annotator_filter  = $pp->transcript_variant_annotator_filter;
         $accept_reference_IUB_codes = $pp->transcript_variant_annotator_accept_reference_IUB_codes;
     }
     
 
     my %params = (
-        variant_file => $self->pre_annotation_filtered_snp_file,
-        output_file => $self->post_annotation_filtered_snp_file,
-        annotation_filter => $annotator_filter,
+        variant_file               => $pre_annot_file,
+        output_file                => $post_annot_file,
+        annotation_filter          => $annotator_filter,
         accept_reference_IUB_codes => $accept_reference_IUB_codes,
-        no_headers => 1,
+        no_headers                 => 1,
         #reference_transcripts => $self->model->annotation_reference_transcripts, 
-        use_version => $annotator_version,
+        use_version                => $annotator_version,
     );
     my $abuild = $self->model->annotation_reference_build;
     $params{build_id} = $abuild->id if $abuild;

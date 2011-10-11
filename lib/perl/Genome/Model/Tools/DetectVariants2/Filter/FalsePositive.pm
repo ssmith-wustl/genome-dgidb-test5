@@ -160,19 +160,29 @@ sub _filter_variants {
 
     my $hq_output_file = $self->_temp_staging_directory . "/snvs.hq.raw_filter";
     my $hq_fh = Genome::Sys->open_file_for_writing($hq_output_file);
-    unless($hq_fh) {
-        $self->error_message("Unable to open temp output file $hq_output_file for writing.");
-        die;
+    
+    ## Open the filtered output file ##
+    my $lq_file = $self->_temp_staging_directory . "/snvs.lq.raw_filter";
+    my $lq_fh = Genome::Sys->open_file_for_writing($lq_file);
+
+    die $self->error_message('Unable to open temp output file '.$hq_output_file. ' for writing') unless $hq_fh;
+    die $self->error_message('Unable to open temp output file '.$lq_file. ' for writing') unless $lq_fh;
+    
+    #First, need to create a variant list file to use for generating the readcounts.
+    my $input_file = $self->input_directory . "/snvs.hq.bed";
+    unless (-s $input_file) {
+        $self->warning_message("Input file ($input_file) is empty. Skip filter");
+        $hq_fh->close;
+        $lq_fh->close;
+        $self->_generate_standard_files;
+        return 1;
     }
+
+    my $input = Genome::Sys->open_file_for_reading($input_file);
 
     ## Run BAM readcounts in batch mode to get read counts for all positions in file ##
     my $readcount_file;
     $self->status_message('Running BAM Readcounts...');
-
-    #First, need to create a variant list file to use for generating the readcounts.
-    my $input_file = $self->input_directory . "/snvs.hq.bed";
-    die $self->error_message("Input file ($input_file) is empty") unless (-s $input_file);
-    my $input = Genome::Sys->open_file_for_reading($input_file);
 
     ## Build temp file for positions where readcounts are needed ##
     my $temp_path = $self->_temp_scratch_directory."/temp_dump";
@@ -204,10 +214,7 @@ sub _filter_variants {
 
     my $readcount_fh = Genome::Sys->open_file_for_reading($readcount_file);
 
-    ## Open the filtered output file ##
-    my $lq_file = $self->_temp_staging_directory . "/snvs.lq.raw_filter";
-    my $lq_fh = Genome::Sys->open_file_for_writing($lq_file);
-
+   
     ## Reopen file for parsing ##
     $input = Genome::Sys->open_file_for_reading($input_file);
 
