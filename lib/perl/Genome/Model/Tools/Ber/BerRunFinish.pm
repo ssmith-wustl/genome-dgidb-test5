@@ -29,6 +29,8 @@ use File::Basename;
 use File::stat;
 use File::Find::Rule;
 
+use Bio::SeqIO;
+
 use Cwd;
 
 UR::Object::Type->define(
@@ -553,7 +555,7 @@ sub execute
 	$mgap_genome{'rnammer_count'} = $rnammer_all;
 
 	my @p5_ace_objects = $db->fetch(
-			Sequence => "$locus_tag*p5*"
+			Sequence => "$locus_tag\_C*p5*"
 			);
 
 	my $p5_gene_count = scalar(@p5_ace_objects);
@@ -642,6 +644,26 @@ sub execute
     ## BER data location
     my $ber_dir = $locustagdir. "/ber";
 
+    my $location = $amgap_path . "/"
+        . $org_dirname . "/"
+        . $assembly_name . "/"
+        . $assembly_version;
+
+    my $fasta_file = $location. "/"
+					. "Sequence/Unmasked/"
+					. $locus_tag . ".v1.contigs.newname.fasta";
+
+    ## We will find the sequence length
+	my $total_length = 0;
+	if (-e $fasta_file) {
+		my $seqio = new Bio::SeqIO('-file' => $fasta_file,
+				'-format' => 'fasta', );
+		while(my $seq = $seqio->next_seq() ) {
+			$total_length += $seq->length;
+		}
+	}
+	$mgap_genome{'sequence_length'} = $total_length;
+
     ########################################################
     # Writing the rt file
     ########################################################
@@ -672,11 +694,6 @@ sub execute
     print $rtfile_fh qq{BAP/MGAP Version: $software_version }, "\n";
     print $rtfile_fh qq{Data Version: $data_version},          "\n\n";
     print $rtfile_fh qq{Location:\n\n};
-
-    my $location = $amgap_path . "/"
-        . $org_dirname . "/"
-        . $assembly_name . "/"
-        . $assembly_version;
 
     print $rtfile_fh qq{$location\n\n};
     print $rtfile_fh
@@ -720,6 +737,7 @@ sub execute
 	
 	$mgap_genome {'genemark_gene_count'} = $genemark_counter;
 	$mgap_genome {'glimmer_gene_count'} = $glimmer3_counter;
+	$mgap_genome {'blastx_gene_count'} = $blastx_counter;
 
     print $rtfile_fh qq{blastx count   =\t $blastx_counter},   "\n";
     print $rtfile_fh qq{GeneMark count =\t $genemark_counter}, "\n";
@@ -895,13 +913,14 @@ sub populate_mgap_genome_db
 
 	## Insert data to genome_info
 	my $genome_info_sql = <<SQL;
-	INSERT INTO genome_info (locus_name, assembly_name)
-	VALUES (?, ?);
+	INSERT INTO genome_info (locus_name, assembly_name, sequence_length)
+	VALUES (?, ?, ?);
 SQL
 
 	my $sth = $dbh->prepare($genome_info_sql);
 	$sth->bind_param(1, $mgap_genome{'locus_name'});
 	$sth->bind_param(2, $mgap_genome{'assembly_name'});
+	$sth->bind_param(3, $mgap_genome{'sequence_length'});
 
 	$sth->execute() or confess "Couldn't execute statement: " . $sth->errstr ;
 	$sth->finish;
@@ -929,8 +948,8 @@ SQL
 	my $hit_counts_sql = <<SQL;
 	INSERT INTO hit_counts (p5_gene_count, p5_blastx_count, rnammer_count, 
 							genemark_gene_count, glimmer_gene_count,keggscan_count, 
-							iprscan_count, psortb_count, ber_naming_count, genome_id, dead_gene_count)
-	VALUES (?,?,?,?,?,?,?,?,?,?,?);
+							iprscan_count, psortb_count, ber_naming_count, genome_id, dead_gene_count, blastx_gene_count)
+	VALUES (?,?,?,?,?,?,?,?,?,?,?,?);
 SQL
 
 	my $sth3 = $dbh->prepare($hit_counts_sql);
@@ -945,6 +964,7 @@ SQL
 	$sth3->bind_param(9, $mgap_genome{'ber_naming_count'});
 	$sth3->bind_param(10, $genome_id);
 	$sth3->bind_param(11, $mgap_genome{'dead_gene_count'});
+	$sth3->bind_param(12, $mgap_genome{'blastx_gene_count'});
 
 	$sth3->execute() or confess "Couldn't execute statement: " . $sth3->errstr ;
 	$sth3->finish;
