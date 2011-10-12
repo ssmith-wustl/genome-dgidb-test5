@@ -91,13 +91,18 @@ sub execute {                               # replace with real execution logic.
         else {
             $inFh = Genome::Sys->open_file_for_reading( $vcffile ) || die "can't open file\n";
         }
+        my @samplenames;
         while(my $line = $inFh->getline ) {
             chomp($line);
             if ($line =~ /^\#/){
+                if ($line =~ /^\#CHROM/){
+                    my ($chr, $pos, $id, $ref, $alt, $qual, $filter, $info, $format, @samplestuff) = split("\t",$line);
+                    @samplenames = @samplestuff;
+                }
                 next;
             } 
 
-            my ($chr, $pos, $id, $ref, $alt, $qual, $filter, @otherstuff) = split("\t",$line);
+            my ($chr, $pos, $id, $ref, $alt, $qual, $filter, $info, $format, @samplestuff) = split("\t",$line);
 
             if ($self->keep_only_passing && $filter ne "PASS" && $filter ne "."){
 #                print "Skipped line because it didn't pass filters: $line\n";
@@ -158,7 +163,51 @@ sub execute {                               # replace with real execution logic.
                     $annot_stop = ($pos+$indel_length);
                 }
 
-                my $position = "$chr\t$annot_start\t$annot_stop\t$ref\t$alt\t$indel_length";
+                my (@format_fields) = split(/:/, $format);
+                my $gt_location; #genotype
+                my $count = 0;
+                foreach my $format_info (@format_fields) {
+                    if ($format_info eq 'GT') {
+                            $gt_location = $count;
+                    }
+                    $count++;
+                }
+
+                my @geno;
+                unless (defined $gt_location) {
+                    print "No GT field in your vcf, this makes indel genotype ambiguous\n";
+                    foreach my $sample (@samplestuff){
+                        push(@geno,"0/1");
+                    }
+                }
+                else {
+                    foreach my $sample (@samplestuff){
+                        my (@sample_fields) = split(/:/, $sample);
+                        push(@geno,$sample_fields[$gt_location]);
+                    }
+                }
+
+                #if all samples are 1/1 then this isn't a variant site
+                my $valid_variant = 0;
+                foreach my $gt (@geno) {
+                    if ($gt ne "1/1") {
+                        $valid_variant = 1;
+                    }
+                }
+                #dont subsample from places with missing genotypes
+                foreach my $gt (@geno) {
+                    unless ($gt =~ m/\//) {
+                        $valid_variant = 0;
+                    }
+                }
+
+                if ($valid_variant == 0) {
+                    next;
+                }
+
+                my $sample_genotypes = join(",",@geno);
+                my $sample_names = join(",",@samplenames);
+                my $position = "$chr\t$annot_start\t$annot_stop\t$ref\t$alt\t$indel_length\t$sample_names\t$sample_genotypes";
                 $indel_size_hash{$vcffile}{$indel_length}{$indel_type}{$position}++;
             }
         }
