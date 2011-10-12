@@ -20,6 +20,10 @@ sub current_sequence {
     return $seq;
 }
 
+sub produces {
+    return 'Genome::Data::Sequence';
+}
+
 sub parse_next_from_file {
     my $self = shift;
     my $fh = $self->_get_fh;
