@@ -20,7 +20,6 @@ sub create {
     $self->alt_alleles(delete $params{alt_alleles}); 
     $self->qual(delete $params{qual});
 
-my @keys = keys(%params);
     if (%params) {
         Carp::confess "Extra parameters provided to constructor of " . __PACKAGE__;
     }
