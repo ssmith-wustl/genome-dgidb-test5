@@ -1,6 +1,9 @@
 <?xml version='1.0' standalone='yes'?>
 <workflow name="eukaryotic gene prediction pipeline" executor="Workflow::Executor::SerialDeferred">
-    <link fromOperation="input connector"          fromProperty="contig_fasta"                      toOperation="split_fasta"              toProperty="fasta_file" />
+    <link fromOperation="input connector"          fromProperty="contig_fasta"                      toOperation="sort_fasta"               toProperty="input_fasta" />
+    <link fromOperation="input connector"          fromProperty="sorted_fasta"                      toOperation="sort_fasta"               toProperty="sorted_fasta" />
+    
+    <link fromOperation="sort_fasta"               fromProperty="sorted_fasta"                      toOperation="split_fasta"              toProperty="fasta_file" />
     <link fromOperation="input connector"          fromProperty="split_fastas_output_directory"     toOperation="split_fasta"              toProperty="output_directory" />
     <link fromOperation="input connector"          fromProperty="max_bases_per_fasta"               toOperation="split_fasta"              toProperty="max_bases_per_file" />
 
@@ -50,6 +53,9 @@
 
     <link fromOperation="cleanup_prediction_dirs"  fromProperty="result"                            toOperation="output connector"         toProperty="result" />
 
+    <operation name="sort_fasta">
+        <operationtype commandClass="Genome::Model::Tools::Fasta::SortByName" typeClass="Workflow::OperationType::Command" />
+    </operation>
     <operation name="split_fasta">
         <operationtype commandClass="Genome::Model::GenePrediction::Command::Eukaryotic::SplitFasta" typeClass="Workflow::OperationType::Command" />
     </operation>
@@ -222,6 +228,7 @@
     </operation>
 
     <operationtype typeClass="Workflow::OperationType::Model">
+        <inputproperty>sorted_fasta</inputproperty>
         <inputproperty>predictions_ace_file</inputproperty>
         <inputproperty>repeat_masker_ace_file</inputproperty>
         <inputproperty>repeat_masker_gff_file</inputproperty>
