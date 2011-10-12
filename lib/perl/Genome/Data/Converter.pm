@@ -3,8 +3,8 @@ package Genome::Data::Converter;
 use strict;
 use warnings;
 
-use Genome::Data::Reader;
-use Genome::Data::Writer;
+use Genome::Data::IO::Reader;
+use Genome::Data::IO::Writer;
 
 sub create {
     my ($class, %params) = @_;
