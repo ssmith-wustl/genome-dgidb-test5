@@ -1,4 +1,4 @@
-package Genome::Data::Writer;
+package Genome::Data::IO::Writer;
 
 use strict;
 use warnings;

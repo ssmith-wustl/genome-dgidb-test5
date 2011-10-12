@@ -2,7 +2,9 @@ package Genome::Model::Tools::Fasta::SortByName;
 
 use strict;
 use warnings;
+
 use Genome;
+use Genome::Data::Sorter;
 
 class Genome::Model::Tools::Fasta::SortByName {
     is => 'Command::V2',
@@ -16,6 +18,7 @@ class Genome::Model::Tools::Fasta::SortByName {
     has_optional => [
         sorted_fasta => {
             is => 'FilePath',
+            is_input => 1,
             is_output => 1,
             doc => 'Sorted output fasta',
         },
@@ -30,33 +33,20 @@ sub help_detail {
 sub execute {
     my $self = shift;
 
-    unless (-e $self->input_fasta) {
-        Carp::confess "No file found at " . $self->input_fasta;
+    unless ($self->sorted_fasta) {
+        $self->sorted_fasta($self->input_fasta . '.sorted');
+        $self->status_message("No sorted fasta file provided, defaulting to " . $self->sorted_fasta . "!");
     }
-    my $reader = Genome::Data::Reader->create(
-        format => 'fasta',
-        file => $self->input_fasta,
-    );
-    unless ($reader) {
-        Carp::confess "Could not create reader for file " . $self->input_fasta;
-    }
-    my @seqs = $reader->slurp();
 
-    @seqs = sort { $a->sequence_name() cmp $b->sequence_name() } @seqs;
+    $self->status_message("Sorting fasta " . $self->input_fasta . " by sequence name and putting results in " . $self->sorted_fasta);
 
-    my $output = $self->sorted_fasta;
-    unless ($output) {
-        $output = $self->input_fasta . '.sorted';
-        $self->status_message("No sorted fasta file provided, defaulting to $output!");
-    }
-    my $writer = Genome::Data::Reader->create(
+    my $sorter = Genome::Data::Sorter->create(
+        input_file => $self->input_fasta,
+        output_file => $self->sorted_fasta,
         format => 'fasta',
-        file => $output,
+        sort_by => 'sequence_name',
     );
-    unless ($writer) {
-        Carp::confess "Could not create writer for file $output";
-    }
-    $writer->write(@seqs);
+    $sorter->sort;
 
     return 1;
 }

@@ -60,6 +60,11 @@ sub data_adaptor {
     return $self->{_adaptor};
 }
 
+sub produces {
+    my $self = shift;
+    return $self->data_adaptor->produces;
+}
+
 sub access_mode {
     Carp::confess 'Method access_mode must be implemented in subclasses of ' . __PACKAGE__;
 }

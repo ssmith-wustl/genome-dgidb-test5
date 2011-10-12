@@ -89,6 +89,7 @@ sub _map_workflow_inputs {
     my @inputs;
 
     push @inputs,
+        sorted_fasta => $build->sorted_fasta_file,
         domain => $self->domain,
         max_bases_per_fasta => $self->max_bases_per_fasta,
         xsmall => $self->xsmall,
