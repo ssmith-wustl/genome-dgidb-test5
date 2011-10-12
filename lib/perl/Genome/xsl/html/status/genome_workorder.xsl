@@ -39,8 +39,8 @@
           <xsl:for-each select="//aspect[@name='items']/object[@type='Genome::WorkOrderItem']">
 
             <!-- set up some variable to calculate stage cell widths -->
-            <xsl:variable name="production_stages" select="count(aspect[@name='event_statuses']/perldata/hashref/item[@key='production']/hashref/item)"/>
-            <xsl:variable name="analysis_stages" select="count(aspect[@name='event_statuses']/perldata/hashref/item[@key='analysis']/hashref/item)"/>
+            <xsl:variable name="production_stages" select="count(aspect[@name='event_statuses']/object[@type='UR::Value::HASH']/perldata/hashref/item[@key='production']/hashref/item)"/>
+            <xsl:variable name="analysis_stages" select="count(aspect[@name='event_statuses']/object[@type='UR::Value::HASH']/perldata/hashref/item[@key='analysis']/hashref/item)"/>
             <xsl:variable name="total_stages" select="$production_stages + $analysis_stages"/>
             <xsl:variable name="prod_width" select="floor((100 div $total_stages) * $production_stages)"/>
             <xsl:variable name="prod_stage_width" select="floor(100 div $production_stages)"/>
@@ -72,8 +72,8 @@
                     </tr>
                     <tr>
                       <xsl:choose>
-                        <xsl:when test="count(aspect[@name='event_statuses']/perldata/hashref/item[@key='production']/hashref/item) > 0">
-                          <xsl:for-each select="aspect[@name='event_statuses']/perldata/hashref/item[@key='production']/hashref/item">
+                        <xsl:when test="count(aspect[@name='event_statuses']/object[@type='UR::Value::HASH']/perldata/hashref/item[@key='production']/hashref/item) > 0">
+                          <xsl:for-each select="aspect[@name='event_statuses']/object[@type='UR::Value::HASH']/perldata/hashref/item[@key='production']/hashref/item">
                             <xsl:sort order="ascending" data-type="number" select="hashref/item/hashref/item[@key='sort_order']"/>
                             <td class="stage_cell" width="{$prod_stage_width}%">
                               <table class="stage_table" cellpadding="0" cellspacing="0" border="0">
@@ -141,7 +141,7 @@
                       <td class="wo_item_category">Analysis</td>
                     </tr>
                     <tr>
-                      <xsl:for-each select="aspect[@name='event_statuses']/perldata/hashref/item[@key='analysis']/hashref/item">
+                      <xsl:for-each select="aspect[@name='event_statuses']/object[@type='UR::Value::HASH']/perldata/hashref/item[@key='analysis']/hashref/item">
                         <xsl:sort select="hashref/item/hashref/item/hashref/item[@key='sort_order']"/>
                         <td class="stage_cell" width="{$analysis_stage_width}%">
                           <table class="stage_table" cellpadding="0" cellspacing="0" border="0">
