@@ -109,7 +109,7 @@ sub _set_current {
 sub _from_reader {
     my $self = shift;
     unless ($self->{_from_reader}) {
-        my $reader = Genome::Data::Reader->create(
+        my $reader = Genome::Data::IO::Reader->create(
             file => $self->from_file,
             format => $self->from_format,
         );
@@ -125,7 +125,7 @@ sub _from_reader {
 sub _to_writer {
     my $self = shift;
     unless ($self->{_to_writer}) {
-        my $writer = Genome::Data::Writer->create(
+        my $writer = Genome::Data::IO::Writer->create(
             file => $self->to_file,
             format => $self->to_format,
         );
