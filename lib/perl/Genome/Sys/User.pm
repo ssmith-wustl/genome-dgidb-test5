@@ -9,13 +9,10 @@ class Genome::Sys::User {
     data_source => 'Genome::DataSource::GMSchema',
     table_name => 'genome_sys_user',
     id_by => [
-        email => { is => 'VARCHAR2', len => 255, column_name => 'EMAIL' },
+        email => { is => 'Text' },
     ],
     has_optional => [
-        name => { is => 'VARCHAR2', len => 64, column_name => 'NAME' },
-        project_parts => { is => 'Genome::ProjectPart', reverse_as => 'entity', },
-        projects => { is => 'Genome::Project', via => 'project_parts', to => 'project', doc => 'projects that include this user'},
-        project_names => { is => 'Text', via => 'projects', to => 'name', },
+        name => { is => 'Text' },
         username => {
             calculate_from => ['email'],
             calculate => sub { 
