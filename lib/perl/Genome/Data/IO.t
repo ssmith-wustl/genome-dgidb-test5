@@ -11,8 +11,8 @@ BEGIN {
 }
 
 # Test packages, useful for creating dummy objects
-package Genome::Data::TestReader;
-use base 'Genome::Data::ReaderWriter';
+package Genome::Data::IO::TestReader;
+use base 'Genome::Data::IO';
 
 sub access_mode { return 'test' };
 
@@ -22,7 +22,7 @@ use base 'Genome::Data::Adaptor';
 # Test logic below!
 package main;
 
-use_ok('Genome::Data::ReaderWriter') or die;
+use_ok('Genome::Data::IO') or die;
 use_ok('Genome::Data::Adaptor') or die;
 
 # Test file and dir setup
@@ -45,10 +45,10 @@ unlink $missing_file;
 
 # Make dummy reader object
 my $test_reader_obj = {};
-bless($test_reader_obj, 'Genome::Data::TestReader');
+bless($test_reader_obj, 'Genome::Data::IO::TestReader');
 ok($test_reader_obj, 'created test object');
-ok($test_reader_obj->isa('Genome::Data::TestReader'), 'test object is a test reader');
-ok($test_reader_obj->isa('Genome::Data::ReaderWriter'), 'test object is also a reader writer');
+ok($test_reader_obj->isa('Genome::Data::IO::TestReader'), 'test object is a test reader');
+ok($test_reader_obj->isa('Genome::Data::IO'), 'test object is also a reader writer');
 
 # Test _infer_adaptor_class_from_format
 my $rv = eval { $test_reader_obj->_infer_adaptor_class_from_format() };
@@ -89,17 +89,17 @@ $rv = $test_reader_obj->access_mode();
 is($rv, 'test', 'access mode is test, as expected');
 
 # Test create method
-my $obj = eval { Genome::Data::TestReader->create() };
+my $obj = eval { Genome::Data::IO::TestReader->create() };
 $error = $@;
 ok($error =~ /No file provided/, 'fail to create test reader without a file, as expected');
 
-$obj = eval { Genome::Data::TestReader->create(file => $temp_file) };
+$obj = eval { Genome::Data::IO::TestReader->create(file => $temp_file) };
 $error = $@;
 ok($error =~ /No format provided/, 'fail to create test reader without a format');
 
-$obj = eval { Genome::Data::TestReader->create(file => $temp_file, format => 'Test') };
+$obj = eval { Genome::Data::IO::TestReader->create(file => $temp_file, format => 'Test') };
 ok($obj, 'created object successfully');
-ok($obj->isa('Genome::Data::TestReader'), 'created object is a TestReader');
-ok($obj->isa('Genome::Data::ReaderWriter'), 'created object is a ReaderWriter');
+ok($obj->isa('Genome::Data::IO::TestReader'), 'created object is a IO::TestReader');
+ok($obj->isa('Genome::Data::IO'), 'created object is a IO');
 
 done_testing();

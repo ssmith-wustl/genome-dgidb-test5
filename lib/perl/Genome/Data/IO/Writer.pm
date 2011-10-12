@@ -3,8 +3,8 @@ package Genome::Data::Writer;
 use strict;
 use warnings;
 
-use Genome::Data::ReaderWriter;
-use base 'Genome::Data::ReaderWriter';
+use Genome::Data::IO;
+use base 'Genome::Data::IO';
 
 sub access_mode {
     return 'w';
