@@ -276,12 +276,12 @@ sub calculate_average_insert_size {
                     $self->error_message("Failed to get median insert size from inst data nor frag size range from library for inst data")
                 );
             }
-            unless ( $insert_size =~ /^\d+$/ or $insert_size =~ /^\d+\s+\d+$/ ) {
+            unless ( $insert_size =~ /^\d+$/ or $insert_size =~ /^\d+\s+\d+$/ or $insert_size =~ /^\d+-\d+$/) {
                 Carp::confess(
                     $self->status_message("Expected a number or two numbers separated by blank space but got: $insert_size")
                 );
             }
-            my @sizes = split( /\s+/, $insert_size );
+            my @sizes = split( /\s+|-/, $insert_size );
             @insert_sizes = ( @insert_sizes, @sizes );
         }
         else {
