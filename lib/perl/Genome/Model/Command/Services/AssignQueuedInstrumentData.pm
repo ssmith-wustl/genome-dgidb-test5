@@ -232,7 +232,6 @@ sub execute {
             
             PP:
             foreach my $processing_profile_id (@processing_profile_ids) {
-#TODO: handle RNASEQ
                 my $processing_profile = Genome::ProcessingProfile->get( $processing_profile_id );
 
                 unless ($processing_profile) {
