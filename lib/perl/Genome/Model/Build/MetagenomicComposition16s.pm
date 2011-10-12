@@ -166,7 +166,6 @@ sub amplicon_set_names {
         my %set_names_and_primers = $self->$method;
         return sort keys %set_names_and_primers;
     }
-    $self->warning_message( "No amplicon set primers for sequencing platform: ".$self->processing_profile->sequencing_platform );
     return ( '' );
 }
 

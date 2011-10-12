@@ -40,7 +40,7 @@ sub _builds {
         return;
     }
 
-    my @builds;
+    my %builds;
     for my $identifier ( @identifiers ) {
         my $build;
         if ( $identifier !~ /^$RE{num}{int}$/ ) {
@@ -57,10 +57,10 @@ sub _builds {
                     or return; # error in sub
             }
         }
-        push @builds, $build;
+        $builds{ $build->id } = $build;
     }
 
-    return @builds;
+    return values %builds;
 }
 
 sub _get_last_complete_build_for_model_params {
@@ -83,5 +83,3 @@ sub _get_last_complete_build_for_model_params {
 
 1;
 
-#$HeadURL$
-#$Id$

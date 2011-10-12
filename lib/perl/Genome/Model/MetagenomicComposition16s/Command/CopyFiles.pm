@@ -36,7 +36,7 @@ class Genome::Model::MetagenomicComposition16s::Command::CopyFiles {
             is => 'Boolean',
             is_optional => 1,
             default_value => 0,
-            doc => 'List (don\'t copy) the builds\' files',
+            doc => "List (don't copy) the builds files",
         },
     ],
 };
@@ -52,10 +52,7 @@ sub help_detail {
     To just see the files, use --list. 
     Use --force to overwrite existing files.
 
-    This command is backward compatible for amplicon assembly builds:
-     oriented fasta is the same
-     processed fasta in MC16s is 'assembly' fasta in amplicon assembly
-     classification file does not exist for amplicon assembly
+    This command is backward compatible for amplicon assembly builds. The oriented fastas are the same in MC16s and AA. The AA assembly fasta is the MC16s processed fasta. The classification files do not exist for amplicon assembly.
 
 HELP
 }
