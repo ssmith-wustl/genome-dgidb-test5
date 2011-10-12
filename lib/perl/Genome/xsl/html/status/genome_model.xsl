@@ -34,7 +34,7 @@
             <xsl:call-template name="genome_processingprofile_box"/>
           </xsl:for-each>
 
-          <xsl:for-each select="aspect[@name='last_complete_build_flagstat']/perldata/hashref">
+          <xsl:for-each select="aspect[@name='last_complete_build_flagstat']/object[@type='UR::Value::HASH']/perldata/hashref">
             <xsl:call-template name="genome_model_flagstat_table"/>
           </xsl:for-each>
 
@@ -343,7 +343,7 @@
                   <td class="name"><br/>
                   </td>
                   <td class="value">
-                    <xsl:for-each select="aspect[@name='last_complete_build_flagstat']/perldata/hashref">
+                    <xsl:for-each select="aspect[@name='last_complete_build_flagstat']/object[@type='UR::Value::HASH']/perldata/hashref">
                       <a class="mini btn" id="flagstat_button" href="#"><span class="sm-icon sm-icon-newwin"><br/></span>flagstat report</a>
                     </xsl:for-each>
 
