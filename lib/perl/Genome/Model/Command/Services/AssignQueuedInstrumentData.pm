@@ -68,6 +68,10 @@ sub _default_mc16s_processing_profile_id {
     return 2571784;
 }
 
+sub _default_rna_seq_processing_profile_id {
+    return 2623697;
+}
+
 #FIXME: This should be refactored so that %known_454_pipelines and 
 #%known_454_16s_pipelines are merged into a single hash.  Key shoud be the 
 #pipeline name and value should be what to do with it (if anything).  Maybe
@@ -226,87 +230,83 @@ sub execute {
         if ($subject_class_name and $subject_id and @processing_profile_ids) {
             my $subject      = $subject_class_name->get($subject_id);
             
-            if($subject->isa("Genome::Sample") and $subject->extraction_type eq 'rna'){
-                #record that the above code was skipped so we could reattempt it if we decide to do model generation for rna samples later
-                $pse->add_param('no_model_generation_attempted',1);
-                $self->status_message('No model generation attempted for PSE ' . $pse->id . ' representing RNA data');
-            } else{
-                PP:
-                foreach my $processing_profile_id (@processing_profile_ids) {
-                    my $processing_profile = Genome::ProcessingProfile->get( $processing_profile_id );
+            PP:
+            foreach my $processing_profile_id (@processing_profile_ids) {
+#TODO: handle RNASEQ
+                my $processing_profile = Genome::ProcessingProfile->get( $processing_profile_id );
 
-                    unless ($processing_profile) {
-                        $self->error_message(
-                            'Failed to get processing profile'
-                            . " '$processing_profile_id' for inprogress pse "
-                            . $pse->pse_id );
+                unless ($processing_profile) {
+                    $self->error_message(
+                        'Failed to get processing profile'
+                        . " '$processing_profile_id' for inprogress pse "
+                        . $pse->pse_id );
+                    push @process_errors, $self->error_message;
+                    next PP;
+                }
+
+                my @reference_sequence_builds = ( undef ); # this allows to use a loop to assign
+                # These pps require imported reference seq build
+                if( $processing_profile->isa('Genome::ProcessingProfile::ReferenceAlignment')
+                        or $processing_profile->isa('Genome::ProcessingProfile::GenotypeMicroarray')
+                        or $processing_profile->isa('Genome::ProcessingProfile::RnaSeq')) {
+                    my @reference_sequence_build_ids = $pse->reference_sequence_build_param_for_processing_profile($processing_profile);
+                    if ( not @reference_sequence_build_ids ) {
+                        $self->error_message('No imported reference sequence build id found on pse ('.$pse->id.') to create '.$processing_profile->type_name.' model');
                         push @process_errors, $self->error_message;
                         next PP;
                     }
 
-                    my @reference_sequence_builds = ( undef ); # this allows to use a loop to assign
-                    # These pps require imported reference seq build
-                    if( $processing_profile->isa('Genome::ProcessingProfile::ReferenceAlignment')
-                            or $processing_profile->isa('Genome::ProcessingProfile::GenotypeMicroarray') ) {
-                        my @reference_sequence_build_ids = $pse->reference_sequence_build_param_for_processing_profile($processing_profile);
-                        if ( not @reference_sequence_build_ids ) {
-                            $self->error_message('No imported reference sequence build id found on pse ('.$pse->id.') to create '.$processing_profile->type_name.' model');
+                    @reference_sequence_builds = Genome::Model::Build::ImportedReferenceSequence->get(\@reference_sequence_build_ids);
+                    if ( not @reference_sequence_builds or @reference_sequence_builds ne @reference_sequence_build_ids ) {
+                        $self->error_message("Failed to get imported reference sequence builds for ids: @reference_sequence_build_ids");
+                        push @process_errors, $self->error_message;
+                        next PP;
+                    }
+
+                }
+
+                my @models = Genome::Model->get(
+                    subject_id            => $subject_id,
+                    subject_class_name    => $subject_class_name,
+                    processing_profile_id => $processing_profile->id,
+                    auto_assign_inst_data => 1,
+                );
+
+                for my $reference_sequence_build ( @reference_sequence_builds ) {
+                    my @assigned = $self->assign_instrument_data_to_models($genome_instrument_data, $reference_sequence_build, @models);
+
+                    #returns an explicit undef on error
+                    if(scalar(@assigned) eq 1 and not defined $assigned[0]) {
+                        push @process_errors, $self->error_message;
+                        next PP;
+                    }
+
+                    if(scalar(@assigned > 0)) {
+                        for my $m (@assigned) {
+                            $pse->add_param('genome_model_id', $m->id);
+                        }
+                        #find or create default qc models if applicable
+                        $self->create_default_qc_models(@assigned);
+                        #find or create somatic models if applicable
+                        $self->find_or_create_somatic_variation_models(@assigned);
+
+                    } else {
+                        # no model found for this PP, make one (or more) and assign all applicable data
+                        $DB::single = $DB::stopper;
+                        my @new_models = $self->create_default_models_and_assign_all_applicable_instrument_data($genome_instrument_data, $subject, $processing_profile, $reference_sequence_build, $pse);
+                        unless(@new_models) {
                             push @process_errors, $self->error_message;
                             next PP;
                         }
-
-                        @reference_sequence_builds = Genome::Model::Build::ImportedReferenceSequence->get(\@reference_sequence_build_ids);
-                        if ( not @reference_sequence_builds or @reference_sequence_builds ne @reference_sequence_build_ids ) {
-                            $self->error_message("Failed to get imported reference sequence builds for ids: @reference_sequence_build_ids");
-                            push @process_errors, $self->error_message;
-                            next PP;
-                        }
-
+                        #find or create somatic models if applicable
+                        $self->find_or_create_somatic_variation_models(@new_models);
                     }
+                }
 
-                    my @models = Genome::Model->get(
-                        subject_id            => $subject_id,
-                        subject_class_name    => $subject_class_name,
-                        processing_profile_id => $processing_profile->id,
-                        auto_assign_inst_data => 1,
-                    );
-
-                    for my $reference_sequence_build ( @reference_sequence_builds ) {
-                        my @assigned = $self->assign_instrument_data_to_models($genome_instrument_data, $reference_sequence_build, @models);
-
-                        #returns an explicit undef on error
-                        if(scalar(@assigned) eq 1 and not defined $assigned[0]) {
-                            push @process_errors, $self->error_message;
-                            next PP;
-                        }
-
-                        if(scalar(@assigned > 0)) {
-                            for my $m (@assigned) {
-                                $pse->add_param('genome_model_id', $m->id);
-                            }
-                            #find or create default qc models if applicable
-                            $self->create_default_qc_models(@assigned);
-                            #find or create somatic models if applicable
-                            $self->find_or_create_somatic_variation_models(@assigned);
-
-                        } else {
-                            # no model found for this PP, make one (or more) and assign all applicable data
-                            $DB::single = $DB::stopper;
-                            my @new_models = $self->create_default_models_and_assign_all_applicable_instrument_data($genome_instrument_data, $subject, $processing_profile, $reference_sequence_build, $pse);
-                            unless(@new_models) {
-                                push @process_errors, $self->error_message;
-                                next PP;
-                            }
-                            #find or create somatic models if applicable
-                            $self->find_or_create_somatic_variation_models(@new_models);
-                        }
-                    }
-
-                    if ( $instrument_data_type eq '454' and $self->_is_454_16s($pse) ) {
-                        $self->_find_or_create_mc16s_454_qc_model($genome_instrument_data);
-                    }
-                } # looping through processing profiles for this instdata, finding or creating the default model
-            }
+                if ( $instrument_data_type eq '454' and $self->_is_454_16s($pse) ) {
+                    $self->_find_or_create_mc16s_454_qc_model($genome_instrument_data);
+                }
+            } # looping through processing profiles for this instdata, finding or creating the default model
         } else {
             #record that the above code was skipped so we could reattempt it if more information gained later
             $pse->add_param('no_model_generation_attempted',1);
@@ -763,6 +763,13 @@ sub assign_instrument_data_to_models {
         }
     }
 
+    #we don't want to (automagically) assign rna seq and non-rna seq data to the same model.
+    if (@models and $self->_is_rna_instrument_data($genome_instrument_data)){
+        @models = grep($_->isa('Genome::Model::RnaSeq'), @models);
+    }else{
+        @models = grep(!($_->isa('Genome::Model::RnaSeq')), @models);
+    }
+
     if($reference_sequence_build) {
         @models = grep($_->reference_sequence_build eq $reference_sequence_build, @models);
     }
@@ -829,8 +836,10 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
 
     if ( $reference_sequence_build ) {
         $model_params{reference_sequence_build} = $reference_sequence_build;
-        my $dbsnp_build = Genome::Model::ImportedVariationList->dbsnp_build_for_reference($reference_sequence_build);
-        $model_params{dbsnp_build} = $dbsnp_build if $dbsnp_build;
+        unless( $processing_profile->isa('Genome::ProcessingProfile::RnaSeq')){
+            my $dbsnp_build = Genome::Model::ImportedVariationList->dbsnp_build_for_reference($reference_sequence_build);
+            $model_params{dbsnp_build} = $dbsnp_build if $dbsnp_build;
+        }
         if ( $processing_profile->isa('Genome::ProcessingProfile::ReferenceAlignment')){
             my $annotation_build = Genome::Model::ImportedAnnotation->annotation_build_for_reference($reference_sequence_build);
             $model_params{annotation_reference_build} = $annotation_build if $annotation_build;
@@ -960,18 +969,20 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
             return;
         }
 
-        my $assign_all =
-        Genome::Model::Command::InstrumentData::Assign->create(
-            model_id => $m->id,
-            all => 1,
-        );
+        unless($m->isa('Genome::Model::RnaSeq')){
+            my $assign_all =
+            Genome::Model::Command::InstrumentData::Assign->create(
+                model_id => $m->id,
+                all => 1,
+            );
 
-        unless ( $assign_all->execute ) {
-            $self->error_message(
-                'Failed to execute instrument-data assign --all for model '
-                . $m->id );
-            for my $model (@new_models) { $model->delete; }
-            return;
+            unless ( $assign_all->execute ) {
+                $self->error_message(
+                    'Failed to execute instrument-data assign --all for model '
+                    . $m->id );
+                for my $model (@new_models) { $model->delete; }
+                return;
+            }
         }
 
         my @existing_instrument_data = $m->input_for_instrument_data($genome_instrument_data);
@@ -983,7 +994,9 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
             return;
         }
 
-        $self->add_model_to_default_modelgroups($m, $pse, $genome_instrument_data);
+        unless($m->isa('Genome::Model::RnaSeq')){
+            $self->add_model_to_default_modelgroups($m, $pse, $genome_instrument_data);
+        }
 
         my $new_models = $self->_newly_created_models;
         $new_models->{$m->id} = $m;
@@ -1293,8 +1306,6 @@ sub add_processing_profiles_to_pses{
     my $self = shift;
     my @pses = @_;
 
-    $DB::single = 1;
-
     for my $pse (@pses){
         next if $pse->added_param('processing_profile_id'); #FIXME: THIS SHOULD ONLY BE USED DURING THE TRANSITION PERIOD WHILE OLD AQID IS IN USE
         my ($instrument_data_id) = $pse->added_param('instrument_data_id');
@@ -1345,6 +1356,10 @@ sub add_processing_profiles_to_pses{
 
                     $self->error_message("unknown 454 workorder pipeline '$pipeline_string' encountered");
                     die $self->error_message;
+                }
+
+                if($self->_is_rna($pse)){
+                    push @processing_profile_ids_to_add, $self->_default_rna_seq_processing_profile_id;
                 }
 
                 if ($self->_is_454_16s($pse)) {
@@ -1403,7 +1418,12 @@ sub add_processing_profiles_to_pses{
 
                         push @processing_profile_ids_to_add, $pp_id;
                         $reference_sequence_names_for_processing_profile_ids{$pp_id} = 'GRCh37-lite-build37';
-                    } 
+                    }
+                    elsif ($self->_is_rna($pse)){
+                        my $pp_id = $self->_default_rna_seq_processing_profile_id;
+                        push @processing_profile_ids_to_add, $pp_id;
+                        $reference_sequence_names_for_processing_profile_ids{$pp_id} = 'GRCh37-lite-build37';
+                    }
                     else {
                         my $pp_id = '2580856';
                         push @processing_profile_ids_to_add, $pp_id;
@@ -1639,6 +1659,28 @@ sub _is_pcgp {
         }
     }
 
+    return 0;
+}
+
+sub _is_rna {
+    my $self = shift;
+    my $pse = shift;
+
+    my $instrument_data = $self->_instrument_data($pse); 
+    my $sample = $instrument_data->sample;
+    if(grep($sample->sample_type eq $_, ('rna', 'cdna', 'total rna', 'cdna library', 'mrna'))) {
+        return 1;
+    }
+    return 0;
+}
+
+sub _is_rna_instrument_data {
+    my $self = shift;
+    my $instrument_data = shift;
+    my $sample = $instrument_data->sample;
+    if(grep($sample->sample_type eq $_, ('rna', 'cdna', 'total rna', 'cdna library', 'mrna'))) {
+        return 1;
+    }
     return 0;
 }
 
