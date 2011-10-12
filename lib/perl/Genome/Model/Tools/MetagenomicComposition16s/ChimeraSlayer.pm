@@ -12,10 +12,12 @@ class Genome::Model::Tools::MetagenomicComposition16s::ChimeraSlayer {
         exec_dir => {
             is => 'Text',
             doc => 'Directory to execute program in',
+            is_optional => 1,
         },
         query_NAST => {
             is => 'Text',
             doc => 'Multi-fasta file containing query sequences in alignment format',
+            is_optional => 1,
         },
         db_NAST => {
             is => 'Text',
@@ -119,12 +121,12 @@ EOS
 sub execute {
     my $self = shift;
 
-    unless( -d $self->exec_dir ) {
+    unless( $self->exec_dir and -d $self->exec_dir ) {
         $self->error_message("Failed to find exec_dir dir: ".$self->exec_dir);
         return;
     }
 
-    unless( -s $self->query_NAST ) {
+    unless( $self->query_NAST and -s $self->query_NAST ) {
         $self->error_message("Failed to find query_NAST file or file is zero size: ".$self->query_NAST);
         return;
     }

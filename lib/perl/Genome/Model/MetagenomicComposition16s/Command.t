@@ -23,88 +23,46 @@ sub Genome::Model::MetagenomicComposition16s::Command::Tester::execute {
 # model
 my $model = Genome::Model::MetagenomicComposition16s::Test->model_for_sanger;
 ok($model, 'Got mock MC16s sanger model');
-my $cmd;
-
-#< FAIL >#
-# fail in create - no build identifiers
-ok(
-    !Genome::Model::MetagenomicComposition16s::Command::Tester->execute(),
-    'Failed as expected - no build identifiers',
-);
-
-# fail in execute - no models for identifiers
-$cmd = Genome::Model::MetagenomicComposition16s::Command::Tester->execute(
-    build_identifiers => 'BLAH',
-);
-ok(
-    !$cmd->result,
-    'Failed as expected - no build identifiers',
-);
-
-# fail in execute - model doesn't have a build
-$cmd = Genome::Model::MetagenomicComposition16s::Command::Tester->execute(
-    build_identifiers => $model->id,
-);
-ok(
-    $cmd && !$cmd->result,
-    'Execute list ok',
-);
-
-# fail in execute - no build for identifer
-$cmd = Genome::Model::MetagenomicComposition16s::Command::Tester->execute(
-    build_identifiers => 1,
-);
-ok(
-    $cmd && !$cmd->result,
-    'Execute list ok',
-);
-#<>#
-
-# build
 my $build = Genome::Model::Build::MetagenomicComposition16s->create(
-    model => $model
+    model => $model,
 );
 ok($build, 'Added build to model');
+ok($build->the_master_event->date_completed(UR::Time->now), 'build has date completed');
 
-#< OK >#
-# execute ok - model name
-ok(
-    Genome::Model::MetagenomicComposition16s::Command::Tester->execute(
-        build_identifiers => $model->name,
-    ),
-    'Execute ok',
-);
+#< FAIL >#
+# fail - no builds
+my $cmd = Genome::Model::MetagenomicComposition16s::Command::Tester->create();
+ok($cmd, 'create');
+$cmd->dump_status_messages(1);
+ok(!$cmd->execute, 'execute failed w/o builds');
 
-# execute ok - build id
-ok(
-    Genome::Model::MetagenomicComposition16s::Command::Tester->execute(
-        build_identifiers => $build->id,
-    ),
-    'Execute ok',
+# fail - model doesn't have a build
+$cmd = Genome::Model::MetagenomicComposition16s::Command::Tester->create(
+    models => [$model],
 );
-#<>#
+ok($cmd, 'create');
+$cmd->dump_status_messages(1);
+ok(!$cmd->execute, 'execute failed w/ model w/o builds');
+
+is($build->the_master_event->event_status('Succeeded'), 'Succeeded', 'build is succeeded');
+
+# execute ok - models and builds
+$cmd = Genome::Model::MetagenomicComposition16s::Command::Tester->create(
+    models => [$model],
+);
+ok($cmd, 'create');
+$cmd->dump_status_messages(1);
+ok($cmd->execute, 'execute');
+is_deeply([$cmd->_builds], [$build], 'builds from cmd');
+
+$cmd = Genome::Model::MetagenomicComposition16s::Command::Tester->create(
+    builds => [$build],
+);
+ok($cmd, 'create');
+$cmd->dump_status_messages(1);
+ok($cmd->execute, 'execute');
+is_deeply([$cmd->_builds], [$build], 'builds from cmd');
 
 done_testing();
 exit;
 
-=pod
-
-=head1 Tests
-
-=head1 Disclaimer
-
- Copyright (C) 2010 Washington University Genome Sequencing Center
-
- This script is distributed in the hope that it will be useful,
- but WITHOUT ANY WARRANTY or the implied warranty of MERCHANTABILITY
- or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public
- License for more details.
-
-=head1 Author(s)
-
- Eddie Belter <ebelter@genome.wustl.edu>
-
-=cut
-
-#$HeadURL$
-#$Id$

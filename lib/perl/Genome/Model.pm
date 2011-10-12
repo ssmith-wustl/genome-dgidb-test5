@@ -703,7 +703,7 @@ sub completed_builds {
     my $self = shift;
 
     my @completed_builds;
-    for my $build ( $self->builds ) {
+    for my $build ( $self->builds('-hint' => ['the_master_event']) ) {
         my $build_status = $build->status;
         next unless defined $build_status and $build_status eq 'Succeeded';
         next unless defined $build->date_completed; # error?

@@ -12,6 +12,7 @@ class Genome::Model::Tools::MetagenomicComposition16s::Nastier {
         query_FASTA => {
             is => 'Text',
             doc => 'query database in FASTA format (seqs to NAST-align)',
+            is_optional => 1,
         },
         db_NAST => {
             is => 'Text',
@@ -54,7 +55,7 @@ EOS
 sub execute {
     my $self = shift;
 
-    if ( not -s $self->query_FASTA ) {
+    unless ( $self->query_FASTA and -s $self->query_FASTA ) {
         $self->error_message("Failed to find query FASTA file or file is zero size: ".$self->query_FASTA);
         return;
     }

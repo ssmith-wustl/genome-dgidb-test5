@@ -49,12 +49,21 @@ sub _detect_variants {
         die $self->error_message("A version of Varscan must be specified");
     }
 
+    # Grab the map_quality param and pass it separately
+    my $params = $self->params;
+    my $map_quality;
+    if ($params =~ m/map-quality/) {
+        ($map_quality) = ($params =~ m/--map-quality\s*(\d+)/);
+        $params =~ s/--map-quality\s*(\d+)\s*//;
+    }
+
     my $varscan = Genome::Model::Tools::Varscan::Germline->create(
         bam_file => $self->aligned_reads_input,
         reference => $self->reference_sequence_input,
         output_snp => $output_snp,
         output_indel => $output_indel,
-        varscan_params => $self->params,
+        varscan_params => $params,
+        map_quality => $map_quality,
         no_headers => 1,
         version => $self->version,
     );

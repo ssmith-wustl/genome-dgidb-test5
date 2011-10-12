@@ -97,7 +97,7 @@
               </td>
             </tr>
 
-            <xsl:for-each select="aspect[@name='run_region_454']/perldata/hashref/item">
+            <xsl:for-each select="aspect[@name='run_region_454']/object[@type='UR::Value::HASH']/perldata/hashref/item">
               <xsl:if test="@key != 'db_committed'">
                 <tr>
                   <td class="name"><xsl:value-of select="translate(@key,'_', ' ')"/>:

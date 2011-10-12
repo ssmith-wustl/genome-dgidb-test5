@@ -12,7 +12,12 @@ class Genome::WorkOrderItem::View::Status::Xml {
             is => 'ARRAY',
             value => [
                 'id',
-                'event_statuses',
+                {
+                    name => 'event_statuses',
+                    subject_class_name => 'UR::Value::HASH',
+                    perspective => 'default',
+                    toolkit => 'xml',
+                },
                 {
                     name => 'sample',
                     perspective => 'default',

@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 
 class Genome::Command::Remove {
-    is => 'Command::V2',
+    is => 'Command::Tree',
     has_optional_transient => [
         items => { is_many => 1 },
         _deletion_params => { is_many => 1 },

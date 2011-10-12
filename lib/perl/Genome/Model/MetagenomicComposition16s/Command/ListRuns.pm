@@ -12,6 +12,8 @@ class Genome::Model::MetagenomicComposition16s::Command::ListRuns {
     is => 'Genome::Model::MetagenomicComposition16s::Command',
 };
 
+sub sub_command_category { return; }
+
 sub help_brief { 
     return 'List the unique runs of traces in the build';
 }

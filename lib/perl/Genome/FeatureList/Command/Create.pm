@@ -18,7 +18,8 @@ class Genome::FeatureList::Command::Create {
         reference => { is => 'Genome::Model::Build::ImportedReferenceSequence', doc => 'reference sequence build for which the features apply' },
         subject => { is => 'Genome::Model::Build', doc => 'subject to which the features are relevant' },
 
-        content_type => { is => 'Text', doc => 'the kind of information in the BED file' },
+        content_type => { is => 'Text', doc => 'the kind of information in the BED file', valid_values => Genome::FeatureList->__meta__->property('content_type')->valid_values },
+        description => { is => 'Text', doc => 'General description of the BED file' },
     ],
 };
 

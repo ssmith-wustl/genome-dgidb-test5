@@ -20,6 +20,10 @@ sub current_sequence {
     return $seq;
 }
 
+sub produces {
+    return 'Genome::Data::Sequence';
+}
+
 sub parse_next_from_file {
     my $self = shift;
     my $fh = $self->_get_fh;
@@ -56,10 +60,8 @@ sub parse_next_from_file {
 
 sub write_to_file {
     my ($self, @sequences) = @_;
+    my $fh = $self->_get_fh;
     for my $seq_obj (@sequences) {
-        my ($self, $seq_obj) = @_;
-        my $fh = $self->_get_fh;
-
         my $seq_name = $seq_obj->sequence_name;
         unless ($seq_name) {
             Carp::confess "Sequence has no name, cannot write to file " . $self->file;

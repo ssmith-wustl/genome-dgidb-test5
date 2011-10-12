@@ -1,4 +1,4 @@
-package Genome::Data::ReaderWriter;
+package Genome::Data::IO;
 
 use strict;
 use warnings;
@@ -58,6 +58,11 @@ sub _infer_adaptor_class_from_format {
 sub data_adaptor {
     my $self = shift;
     return $self->{_adaptor};
+}
+
+sub produces {
+    my $self = shift;
+    return $self->data_adaptor->produces;
 }
 
 sub access_mode {

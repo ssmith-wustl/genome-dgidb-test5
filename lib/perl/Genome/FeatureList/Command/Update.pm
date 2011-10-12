@@ -36,6 +36,11 @@ class Genome::FeatureList::Command::Update{
         content_type => {
             is => 'Text',
             doc => 'New content type for the feature list',
+            valid_values => Genome::FeatureList->__meta__->property('content_type')->valid_values,
+        },
+        description => {
+            is => 'Text',
+            doc => 'New description for the feature list',
         },
     ],
 };

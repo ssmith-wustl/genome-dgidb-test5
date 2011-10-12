@@ -248,8 +248,6 @@ ok($command_ignored->execute(), 'assign-queued-instrument-data executed successf
 my $new_models = $command_ignored->_newly_created_models;
 is(scalar(keys %$new_models), 0, 'the cron created no models from ignores.');
 
-
-
 # Test AML build 36
 my $aml_sample = Genome::Sample->get(name => "H_KA-758168-0912815");
 my $aml_library = Genome::Library->create(id => '-1234', sample_id => $aml_sample->id);
@@ -330,8 +328,7 @@ for my $model (values(%aml_new_models)) {
     is($model->reference_sequence_build_id, 101947881, 'aml model uses correct reference sequence');
 }
 
-
-
+#Test mouse
 my $mouse_taxon = Genome::Taxon->get( species_name => 'mouse' );
 my $mouse_individual = Genome::Individual->create(
     id => '-111',
@@ -399,6 +396,7 @@ for my $mouse_model_id (keys %mouse_new_models){
 }
 is($mouse_pse->pse_status, 'completed', 'mouse pse completed');
 
+#Test rna
 my $rna_sample = Genome::Sample->create(
     id => '-1001',
     name => 'AQID-rna-test-sample',
@@ -429,6 +427,16 @@ my $rna_instrument_data = Genome::InstrumentData::Solexa->create(
 );
 ok($rna_instrument_data, 'Created an instrument data');
 
+my $rna_454_instrument_data = Genome::InstrumentData::454->create(
+    id => '-14',
+    library => $rna_library,
+    region_number => 3,
+    total_reads => 20,
+    run_name => 'R_2010_01_09_11_08_12_FLX08080418_Administrator_100737113',
+    sequencing_platform => '454',
+);
+isa_ok($rna_454_instrument_data, 'Genome::InstrumentData::454');
+
 my $rna_pse = GSC::PSE::QueueInstrumentDataForGenomeModeling->create(
     pse_status => 'inprogress',
     pse_id => '-765432',
@@ -440,8 +448,18 @@ $rna_pse->add_param('instrument_data_type', 'solexa');
 $rna_pse->add_param('instrument_data_id', $rna_instrument_data->id);
 $rna_pse->add_param('subject_class_name', 'Genome::Sample');
 $rna_pse->add_param('subject_id', $rna_sample->id);
-$rna_pse->add_param('processing_profile_id', $processing_profile->id);
-$rna_pse->add_reference_sequence_build_param_for_processing_profile( $processing_profile, $ref_seq_build);
+
+my $rna_454_pse = GSC::PSE::QueueInstrumentDataForGenomeModeling->create(
+    pse_status => 'inprogress',
+    pse_id => '-12314',
+    ps_id => $ps->ps_id,
+    ei_id => '464681',
+);
+
+$rna_454_pse->add_param('instrument_data_type', '454');
+$rna_454_pse->add_param('instrument_data_id', $rna_454_instrument_data->id);
+$rna_454_pse->add_param('subject_class_name', 'Genome::Sample');
+$rna_454_pse->add_param('subject_id', $rna_sample->id);
 
 my $rna_command = Genome::Model::Command::Services::AssignQueuedInstrumentData->create(
     test => 1,
@@ -450,8 +468,7 @@ my $rna_command = Genome::Model::Command::Services::AssignQueuedInstrumentData->
 ok($rna_command->execute(), 'assign-queued-instrument-data executed successfully.');
 
 my $rna_new_models = $rna_command->_newly_created_models;
-is(scalar(keys %$rna_new_models), 0, 'the cron created no models from rna sample.');
-is($rna_pse->pse_status, 'completed', 'rna pse completed');
+is(scalar(keys %$rna_new_models), 1, 'the cron created 1 rna model');
 
 my $instrument_data_3 = Genome::InstrumentData::Solexa->create(
     id => '-102',
@@ -539,7 +556,6 @@ my $command_2 = Genome::Model::Command::Services::AssignQueuedInstrumentData->cr
     test => 1,
 );
 
-$DB::single = 1;
 isa_ok($command_2, 'Genome::Model::Command::Services::AssignQueuedInstrumentData');
 ok($command_2->execute(), 'assign-queued-instrument-data executed successfully.');
 
@@ -604,9 +620,6 @@ is($pse_3_genome_model_ids[0], $new_model->id, 'genome_model_id parameter set co
 is_deeply([sort @pse_4_genome_model_ids], [sort map($_->id, @new_refalign_models)], 'genome_model_id parameter set correctly to match builds created for fourth pse');
 
 my @members_2 = $group->models;
-print Dumper \@new_models_2;
-print Dumper \@members_2; 
-print Dumper \@members;
 is(scalar(@members_2) - scalar(@members), 3, 'two subsequent models added to the group');
 
 my $instrument_data_5 = Genome::InstrumentData::Solexa->create(
@@ -805,7 +818,6 @@ is($normal->build_requested, 0, 'the normal model does not have a build requeste
 
 @models = values %$new_models_4;
 push(@model_groups, $_->model_groups) for (@models);
-print Dumper(\@model_groups);
 ok((grep {$_->name =~ /\.tcga/} @model_groups), "found tcga-cds model_group");
 
 is($pse_7->pse_status, 'completed', 'seventh pse completed');
@@ -853,7 +865,6 @@ my $command_5 = Genome::Model::Command::Services::AssignQueuedInstrumentData->cr
 isa_ok($command_5, 'Genome::Model::Command::Services::AssignQueuedInstrumentData');
 ok($command_5->execute(), 'assign-queued-instrument-data executed successfully.');
 my $new_models_5 = $command_5->_newly_created_models;
-print Data::Dumper::Dumper($new_models_5);
 is(scalar(keys %$new_models_5), 0, 'the cron created zero new models');
 ok(scalar($normal->instrument_data), 'the cron assigned the new instrument data to the empty paired model');
 

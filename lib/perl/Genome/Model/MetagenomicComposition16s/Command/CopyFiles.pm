@@ -21,11 +21,6 @@ class Genome::Model::MetagenomicComposition16s::Command::CopyFiles {
             is_optional => 1,
             doc => 'The directory to copy the files.',
         },
-        #rename_to => {
-        #    is => 'Text',
-        #    is_optional => 1,
-        #    doc => 'The pattern to rename the file when copying.',
-        #},
         force => {
             is => 'Boolean',
             is_optional => 1,
@@ -36,10 +31,12 @@ class Genome::Model::MetagenomicComposition16s::Command::CopyFiles {
             is => 'Boolean',
             is_optional => 1,
             default_value => 0,
-            doc => 'List (don\'t copy) the builds\' files',
+            doc => "List (don't copy) the builds files",
         },
     ],
 };
+
+sub sub_command_category { return; }
 
 sub help_brief { 
     return 'List and copy files for MC16s models';
@@ -52,10 +49,7 @@ sub help_detail {
     To just see the files, use --list. 
     Use --force to overwrite existing files.
 
-    This command is backward compatible for amplicon assembly builds:
-     oriented fasta is the same
-     processed fasta in MC16s is 'assembly' fasta in amplicon assembly
-     classification file does not exist for amplicon assembly
+    This command is backward compatible for amplicon assembly builds. The oriented fastas are the same in MC16s and AA. The AA assembly fasta is the MC16s processed fasta. The classification files do not exist for amplicon assembly.
 
 HELP
 }
@@ -67,17 +61,20 @@ sub execute {
     if ( $self->list ) {
         # list
         $method = '_list';
+        $self->status_message('List mc16s files');
     }
     else {
         # copy
         Genome::Sys->validate_existing_directory( $self->destination )
             or return;
         $method = '_copy';
+        $self->status_message('Copy mc16s files to '.$self->destination);
     }
 
     my $file_method = $self->file_type.'_file';
-    my @builds = $self->_builds # errors in this method
-        or return;
+    my @builds = $self->_builds;
+    return if not @builds;
+    $self->status_message('Found '.@builds.' builds');
     for my $build ( @builds ) {
         # aa backward compatibility
         if ( $build->type_name eq 'metagenomic composition 16s' ) {
@@ -99,6 +96,8 @@ sub execute {
             die "Incompatible build type: ".$build->type_name;
         }
     }
+
+    $self->status_message('Done');
 
     return 1;
 }
