@@ -29,7 +29,7 @@ sub _add_to_report_xml {
 
     for my $name ( @amplicon_set_names ) {
         my $amplicon_set = $self->build->amplicon_set_for_name($name);
-        next if not $amplicon_set; # ok
+        next if not $amplicon_set or not $amplicon_set->amplicon_iterator; # ok
         while ( my $amplicon = $amplicon_set->next_amplicon ) {
             $self->_add_amplicon($amplicon);
         }
