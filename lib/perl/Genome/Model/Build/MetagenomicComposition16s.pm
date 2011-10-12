@@ -1026,6 +1026,7 @@ sub orient_amplicons {
 
     my $no_classification = 0;
     for my $amplicon_set ( @amplicon_sets ) {
+        next if not $amplicon_set->amplicon_iterator;
         my $writer = $self->fasta_and_qual_writer_for_type_and_set_name('oriented', $amplicon_set->name)
             or return;
 
