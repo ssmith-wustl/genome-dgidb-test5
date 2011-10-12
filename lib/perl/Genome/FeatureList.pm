@@ -41,7 +41,7 @@ class Genome::FeatureList {
                   }
                }
         },
-        content_type => { is => 'VARCHAR2', len => 255, doc => 'The type of list (used for determining automated processing)', valid_values => ['exome', 'targeted', 'validation', undef] },
+        content_type => { is => 'VARCHAR2', len => 255, doc => 'The type of list (used for determining automated processing)', valid_values => ['exome', 'targeted', 'validation', 'roi', undef] },
         description => { is => 'VARCHAR2', len => 255, doc => 'General description of the BED file'},
     ],
     has_optional_transient => [
