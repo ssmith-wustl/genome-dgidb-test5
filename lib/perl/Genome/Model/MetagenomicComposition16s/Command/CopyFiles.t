@@ -51,69 +51,66 @@ ok($example_build->the_master_event->date_completed( UR::Time->now ), 'build has
 
 my $tmpdir = File::Temp::tempdir(CLEANUP => 1);
 
-# ok - list w/ model name
-my $copy_cmd = Genome::Model::MetagenomicComposition16s::Command::CopyFiles->create(
-    build_identifiers => $model->name,
+# ok - list w/ model 
+my $cmd = Genome::Model::MetagenomicComposition16s::Command::CopyFiles->create(
+    models => [$model],
     file_type => 'oriented_fasta',
     list => 1,
 );
-ok($copy_cmd, 'create command');
-$copy_cmd->dump_status_messages(1);
-ok($copy_cmd->execute, 'Execute list ok');
+ok($cmd, 'create');
+$cmd->dump_status_messages(1);
+ok($cmd->execute, 'execute list');
 
-# ok - copy
-#  tests multiple build retrieving methods: model id and build id
-$copy_cmd = Genome::Model::MetagenomicComposition16s::Command::CopyFiles->execute(
-    build_identifiers => $model->last_complete_build->id,
+# ok - copy w/  models adn builds
+$cmd = Genome::Model::MetagenomicComposition16s::Command::CopyFiles->create(
+    models => [$model],
+    builds => [$example_build],
     file_type => 'processed_fasta',
     destination => $tmpdir,
 );
-ok(
-    $copy_cmd && $copy_cmd->result,
-    'Execute copy ok',
-);
+ok($cmd, 'create');
+$cmd->dump_status_messages(1);
+ok($cmd->execute, 'execute');
 my @files = glob("$tmpdir/*");
 is(scalar @files, 1, 'Copied files');
 
 # fail - copy to existing
-$copy_cmd = Genome::Model::MetagenomicComposition16s::Command::CopyFiles->execute(
-    build_identifiers => $model->id,
+$cmd = Genome::Model::MetagenomicComposition16s::Command::CopyFiles->create(
+    models => [$model],
     file_type => 'processed_fasta',
     destination => $tmpdir,
 );
-ok(
-    $copy_cmd && !$copy_cmd->result,
-    'Failed as expected - no copy to existing file',
-);
+ok($cmd, 'create');
+$cmd->dump_status_messages(1);
+ok(!$cmd->execute, 'execute failed as expected to copy existing file');
 
 # ok - force copy
-$copy_cmd = Genome::Model::MetagenomicComposition16s::Command::CopyFiles->execute(
-    build_identifiers => $model->name,
+$cmd = Genome::Model::MetagenomicComposition16s::Command::CopyFiles->create(
+    models => [$model, $model],
     file_type => 'processed_fasta',
     destination => $tmpdir,
     force => 1,
 );
-ok(
-    $copy_cmd && $copy_cmd->result,
-    'Execute copy ok',
-);
+ok($cmd, 'create');
+$cmd->dump_status_messages(1);
+ok($cmd->execute, 'execute w/ force copy');
 
 # fail - no type
-ok(
-    !Genome::Model::MetagenomicComposition16s::Command::CopyFiles->execute(
-        build_identifiers => $model->id,
-    ),
-    'Failed as expected - no type',
+$cmd = Genome::Model::MetagenomicComposition16s::Command::CopyFiles->create(
+    builds => [$example_build],
 );
+ok($cmd, 'create');
+$cmd->dump_status_messages(1);
+ok(!$cmd->execute, 'execute failed w/o type');
 
 # fail - invalid type
-ok(
-    !Genome::Model::MetagenomicComposition16s::Command::CopyFiles->execute(
-        build_identifiers => $model->id,
-        file_type => 'some_file_type_that_is_not_valid',
-    ),
-    'Failed as expected - no type',
+$cmd = Genome::Model::MetagenomicComposition16s::Command::CopyFiles->create(
+    models => [$model],
+    file_type => 'some_file_type_that_is_not_valid',
 );
+ok($cmd, 'create');
+$cmd->dump_status_messages(1);
+ok(!$cmd->execute, 'execute failed w/ invalid type');
 
 done_testing();
 exit;
