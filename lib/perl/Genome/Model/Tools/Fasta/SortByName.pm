@@ -18,6 +18,7 @@ class Genome::Model::Tools::Fasta::SortByName {
     has_optional => [
         sorted_fasta => {
             is => 'FilePath',
+            is_input => 1,
             is_output => 1,
             doc => 'Sorted output fasta',
         },
