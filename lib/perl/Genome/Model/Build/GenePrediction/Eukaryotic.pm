@@ -15,6 +15,11 @@ sub calculate_estimated_kb_usage {
     return 2_048_000;
 }
 
+sub sorted_fasta_file {
+    my $self = shift;
+    return $self->data_directory . '/fasta.sorted';
+}
+
 sub workflow_name {
     my $self = shift;
     return 'eukaryotic gene prediction ' . $self->build_id;

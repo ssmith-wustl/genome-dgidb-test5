@@ -109,13 +109,13 @@ ok($obj->convert_all, "successfully converted all lines in $test_csv into new fo
 $obj->_to_writer->data_adaptor->_get_fh->close; # To flush output to the file
 
 # Make readers for both files, makes sure sequences match up between the two
-my $csv_reader = Genome::Data::Reader->create(
+my $csv_reader = Genome::Data::IO::Reader->create(
     file => $test_csv,
     format => 'csv',
 );
 ok($csv_reader, 'created csv reader');
 
-my $tsv_reader = Genome::Data::Reader->create(
+my $tsv_reader = Genome::Data::IO::Reader->create(
     file => $output_file,
     format => 'tsv'
 );
