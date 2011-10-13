@@ -51,18 +51,8 @@ ok($example_build->the_master_event->date_completed( UR::Time->now ), 'build has
 
 my $tmpdir = File::Temp::tempdir(CLEANUP => 1);
 
-# ok - list w/ model 
+# ok - copy w/  models and builds
 my $cmd = Genome::Model::MetagenomicComposition16s::Command::CopyFiles->create(
-    models => [$model],
-    file_type => 'oriented_fasta',
-    list => 1,
-);
-ok($cmd, 'create');
-$cmd->dump_status_messages(1);
-ok($cmd->execute, 'execute list');
-
-# ok - copy w/  models adn builds
-$cmd = Genome::Model::MetagenomicComposition16s::Command::CopyFiles->create(
     models => [$model],
     builds => [$example_build],
     file_type => 'processed_fasta',

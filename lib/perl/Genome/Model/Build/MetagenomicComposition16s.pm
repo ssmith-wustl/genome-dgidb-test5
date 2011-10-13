@@ -435,12 +435,8 @@ sub amplicon_set_for_name {
 
     Carp::confess('No amplicon set name to get amplicon iterator') if not defined $set_name;
 
-    my $amplicon_iterator = $self->_amplicon_iterator_for_name($set_name);
-    return if not $amplicon_iterator;
-
     my %params = (
         name => $set_name,
-        amplicon_iterator => $amplicon_iterator,
         classification_dir => $self->classification_dir,
         classification_file => $self->classification_file_for_set_name($set_name),
         processed_fasta_file => $self->processed_fasta_file_for_set_name($set_name),
@@ -449,6 +445,9 @@ sub amplicon_set_for_name {
         oriented_qual_file => $self->oriented_qual_file_for_set_name( $set_name ),
     );
     
+    my $amplicon_iterator = $self->_amplicon_iterator_for_name($set_name);
+    $params{amplicon_iterator} = $amplicon_iterator if $amplicon_iterator;
+
     return Genome::Model::Build::MetagenomicComposition16s::AmpliconSet->create(%params);
 }
 
@@ -1027,6 +1026,7 @@ sub orient_amplicons {
 
     my $no_classification = 0;
     for my $amplicon_set ( @amplicon_sets ) {
+        next if not $amplicon_set->amplicon_iterator;
         my $writer = $self->fasta_and_qual_writer_for_type_and_set_name('oriented', $amplicon_set->name)
             or return;
 
