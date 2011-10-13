@@ -17,6 +17,10 @@ my %model_files = (
 	'S_cerevisiae_ref_cegma.hmm' => 'sn_screfcg',
 	'Namericanus.4.2.1.cegma.hmm' => 'sn_nacg421',
 	'Acaninum.9.3.2.cegma.hmm ' => 'sn_accg932',
+	'Namericanus_4.2.2.ec.cg.v4.hmm' => 'sn_nacg422ecv4',
+	'Namericanus_4.2.2.ec.mkrd.v3.hmm' => 'sn_namkrd422ecv3',
+	'Namericanus_4.2.2.ec.mkis.v3.hmm' => 'sn_namkis422ecv3',
+	'Namericanus_4.2.2.ec.mkcb.v3.hmm' => 'sn_namkcb422ecv3',
 );
 
 sub abbreviation_for_model_file {
