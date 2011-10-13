@@ -1,8 +1,8 @@
-package Genome::Model::Tools::Convert36To37;
+package Genome::Model::ReferenceAlignment::Command::Convert36To37;
 use strict;
 use warnings;
 
-class Genome::Model::Tools::Convert36To37 {
+class Genome::Model::ReferenceAlignment::Command::Convert36To37 {
     is => 'Genome::Command::Base',
     has_input => [
         models => {
