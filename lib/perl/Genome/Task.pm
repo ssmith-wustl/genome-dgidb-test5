@@ -193,4 +193,27 @@ sub out_of_band_attribute_update {
     return 1;
 }
 
+sub get {
+    my $class= shift;
+
+    my $ds = $UR::Context::current->resolve_data_sources_for_class_meta_and_rule(Genome::Task->__meta__);
+    my $dbh = $ds->get_default_dbh;
+    my $orig_long_read_len = $dbh->{LongReadLen};
+    $dbh->{LongReadLen} = 30_000_000;
+
+    my @objects = $class->SUPER::get(@_);
+    $dbh->{LongReadLen} = $orig_long_read_len;
+
+    
+    if (@objects > 1) {
+        return @objects if wantarray;
+        my @ids = map { $_->id } @objects;
+        die "Multiple matches for $class but get or create was called in scalar context!  Found ids: @ids";
+    } else {
+        return $objects[0];
+    }
+
+
+}
+
 1;
