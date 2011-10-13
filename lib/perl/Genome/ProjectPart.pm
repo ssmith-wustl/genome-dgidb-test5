@@ -13,12 +13,12 @@ class Genome::ProjectPart {
     has => [
         entity_class_name => { 
             is => 'Text', 
-            column_name => 'part_class_name',
+            column_name => 'PART_CLASS_NAME',
             doc => 'Class name of the object to which this part points',
         },
         entity_id => { 
             is => 'Text', 
-            column_name => 'part_id',
+            column_name => 'PART_ID',
             doc => 'ID of the object to which this part points',
         },
         entity => {
