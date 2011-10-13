@@ -87,10 +87,12 @@ make_barplot <- function(data.in,plot_title="Mutation Spectrum",bar_type='dodge'
     p <- p + geom_bar(position='fill',aes(fill=Category),width=0.9,stat="identity");
     p <- p + geom_bar(position='fill',aes(fill=Category),width=0.9, stat="identity", colour='gray22',legend=FALSE);
     if(length(levels(factor(data.in$Category))) > 2) {
-      #p <- p + scale_fill_brewer(pal="Set1");
+      p <- p + scale_fill_brewer(pal="Set1");
     }else {
       p <- p + scale_fill_manual(value=c("red3","mediumblue"));
     }
+    plot_theme <- opts(panel.background=theme_rect(fill='grey95'),axis.text.x=theme_text(colour='black',angle=90,hjust=1),axis.text.y=theme_text(colour='black'),plot.title=theme_text(size=14,face='bold'));
+
   }else {
     #dodge bar plot with samples in different colors
     p <- ggplot(data.in,aes(x=Category,y=Density));  
@@ -101,16 +103,14 @@ make_barplot <- function(data.in,plot_title="Mutation Spectrum",bar_type='dodge'
     }else {
       p <- p + scale_fill_manual(value=c("red3","mediumblue"));
     }
-
+    plot_theme <- opts(panel.background=theme_rect(fill='grey95'),axis.text.x=theme_text(colour='black',angle=0,hjust=0.5),axis.text.y=theme_text(colour='black'),plot.title=theme_text(size=14,face='bold'));
   }
  
   p <- p + scale_y_continuous(name='% Total Mutations',limits=c(0,1),formatter="percent");
   #p <- p + scale_x_discrete(name="",breaks=c("A->C","A->G","A->T","C->A","C->G","C->T"), labels=c(" p = A1.5E-6","A->G0.002","A->T0.003","C->A0.004","C->G0.005","C->T0.006"));
   p <- p + scale_x_discrete(name="");
   p <- p + opts(legend.position = 'right',legend.title=theme_blank());
-
   p <- p + opts(title=plot_title);
-  plot_theme <- opts(panel.background=theme_rect(fill='grey95'),axis.text.x=theme_text(colour='black',angle=90,hjust=1),axis.text.y=theme_text(colour='black'),plot.title=theme_text(size=14,face='bold'));
   p <- p + plot_theme;
   
   return(p);
