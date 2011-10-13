@@ -46,6 +46,7 @@ my %CUFFLINKS_VERSIONS = (
     '1.0.0'  => '/gsc/pkg/bio/cufflinks/cufflinks-1.0.0.Linux_x86_64',
     '1.0.1'  => '/gsc/pkg/bio/cufflinks/cufflinks-1.0.1.Linux_x86_64',
     '1.0.3'  => '/gsc/pkg/bio/cufflinks/cufflinks-1.0.3.Linux_x86_64',
+    '1.1.0'  => '/gsc/pkg/bio/cufflinks/cufflinks-1.1.0.Linux_x86_64',
 );
 
 sub gtf_to_sam_path {

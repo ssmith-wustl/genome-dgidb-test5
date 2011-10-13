@@ -84,13 +84,13 @@ sub execute {
                 return;
             }
             for my $amplicon_set ( @amplicon_sets ) {
-                $self->$method($amplicon_set, $file_method)
-                    or return;
+                my $rv = $self->$method($amplicon_set, $file_method);
+                return if not $rv;
             }
         }
         elsif ( $build->type_name eq 'amplicon assembly' ) {
-            $self->$method($build, $file_method) # the build acts as amplicon set
-                or return;
+            my $rv = $self->$method($build, $file_method);
+            return if not $rv;
         }
         else {
             die "Incompatible build type: ".$build->type_name;
@@ -105,14 +105,19 @@ sub execute {
 sub _list {
     my ($self, $amplicon_set, $file_method) = @_;
 
-    return print $amplicon_set->$file_method."\n";
+    my $file = $amplicon_set->$file_method;
+    return 1 if not -e $file; 
+
+    return print "$file\n";
 }
 
 sub _copy {
     my ($self, $amplicon_set, $file_method) = @_;
 
-    my $target = $amplicon_set->$file_method;
-    my $base_name = File::Basename::basename($target);
+    my $from = $amplicon_set->$file_method;
+    return 1 if not -e $from; 
+
+    my $base_name = File::Basename::basename($from);
     my $dest = $self->destination.'/'.$base_name;
 
     if ( -e $dest ) {
@@ -125,8 +130,8 @@ sub _copy {
         }
     }
 
-    unless ( File::Copy::copy($target, $dest) ) {
-        $self->error_message("Can't copy $target\nto $dest\nError: $!");
+    unless ( File::Copy::copy($from, $dest) ) {
+        $self->error_message("Can't copy $from\nto $dest\nError: $!");
         return;
     }
 
@@ -135,5 +140,3 @@ sub _copy {
 
 1;
 
-#$HeadURL$
-#$Id$
