@@ -1,8 +1,8 @@
 window.action_mode='PUT'
 
 $ ->
-      Backbone.sync = (method, model, success, error) ->
-        success()
+      Backbone.sync = (method, model, callback_bundle) ->
+        callback_bundle.success()
 
       fieldCount = 0
 

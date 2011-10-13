@@ -53,5 +53,14 @@ sub __display_name__ {
     sprintf("%s (%s)", $self->name, $self->type);
 }
 
+sub delete {
+    my $self = shift;
+    
+    for ($self->enumerated_values) {
+        $_->delete;
+    }
+    $self->SUPER::delete(@_);
+}
+
 
 1;

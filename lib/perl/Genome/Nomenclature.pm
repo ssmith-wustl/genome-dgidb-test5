@@ -74,43 +74,84 @@ sub json {
         die "no decodable JSON";
     } 
 
-    #die Data::Dumper::Dumper($self);
+    # step 1: update the name if necessary
 
     if ($nomenclature_raw->{name} ne $self->name) {
         $self->name($nomenclature_raw->{name});
     }
-    my %field_ids = map {$_->id, 1} Genome::Nomenclature::Field->get(nomenclature=>$self);
+
+    # step 2: collect existing field ids so we know if we need to delete any fields.
+    # if we see a field in the json then we'll delete it here, so at the end we'll have
+    # a whole list of fields that need deleting altogether.
+    my %fields_to_delete = map {$_->id, 1} Genome::Nomenclature::Field->get(nomenclature=>$self);
+
 
     for my $rf (@{$nomenclature_raw->{fields}}) {
-        my $field_record;
+        my $nom_field;
         if ($rf->{id}) {
-            $field_record = Genome::Nomenclature::Field->get($rf->{id});
+            $nom_field = Genome::Nomenclature::Field->get($rf->{id});
         }
+
+        # this must be an all new field.  let's add it and any enum values if needed.
+        if (!$nom_field) {
+            $nom_field = Genome::Nomenclature::Field->create(nomenclature=>$self, name=>$rf->{name}, type=>$rf->{type});
+            for (@{$rf->{enumerated_values}}) {
+                Genome::Nomenclature::Field::EnumValue->create(nomenclature_field=>$nom_field, value=>$_);
+            }
+
+            # nothing more to do since we've created the field and all that should go along with it.
+            next;
+        }
+
+
+        # Is this an enumerated field?  Update the values for the field and remove unused ones. 
 
         my %enum_records;
-        warn $field_record->type;
-        if ($field_record->type eq 'enumerated') {
-            %enum_records = map {$_,1} Genome::Nomenclature::Field::EnumValue->get(nomenclature_field=>$field_record);
+        warn $nom_field->type;
+        if ($nom_field->type eq 'enumerated') {
+
+            # as we scan the existing value ids we remove them, what's left in here needs to be deleted.
+            my %enum_values_to_delete = map {$_->id,1} Genome::Nomenclature::Field::EnumValue->get(nomenclature_field=>$nom_field);
            
-            my @record_ids = @{$rf->{enumerated_value_ids}}; 
-            my @record_values = @{$rf->{enumerated_values}}; 
-            for my $i (0...$#record_ids) {
-                delete $enum_records{$record_ids[$i]};
-                my $e = Genome::Nomenclature::Field::EnumValue->get($record_ids[$i]);
-                warn sprintf("Updating %s to %s", $e->value, $record_values[$i]);
-                $e->value($record_values[$i]);
+            my @value_ids = @{$rf->{enumerated_value_ids}}; 
+            my @values = @{$rf->{enumerated_values}}; 
+            for my $i (0...$#value_ids) {
+
+                if ($value_ids[$i] == -1) {
+                    Genome::Nomenclature::Field::EnumValue->create(nomenclature_field=>$nom_field, value=>$values[$i]); 
+                } else {
+                    delete $enum_values_to_delete{$value_ids[$i]};
+                    my $e = Genome::Nomenclature::Field::EnumValue->get($value_ids[$i]);
+                    warn sprintf("Updating %s to %s", $e->value, $values[$i]);
+                    $e->value($values[$i]);
+                }
+            }
+    
+            for(Genome::Nomenclature::Field::EnumValue->get(id=>[keys %enum_values_to_delete])) {
+                $_->delete;
             }
         }
 
-        if ($field_record) {
-            $field_record->name($rf->{name});
-            if ($rf->{type} eq 'enumerated' && $field_record->{type} ne 'enumerated') {
+        if ($nom_field) {
+            $nom_field->name($rf->{name});
+            if ($rf->{type} eq 'enumerated' && $nom_field->type ne 'enumerated') {
                 for my $e (@{$rf->{enumerated_values}}) {
-                    my $enum = Genome::Nomenclature::Field::EnumValue->create(nomenclature_field=>$field_record, value=>$e);
+                    my $enum = Genome::Nomenclature::Field::EnumValue->create(nomenclature_field=>$nom_field, value=>$e);
                 }
             }
-            $field_record->type($rf->{type})
+            if ($rf->{type} ne 'enumerated' && $nom_field->{type} eq 'enumerated') {
+                for ($nom_field->enumerated_values) {
+                    $_->delete;
+                }
+            }
+            $nom_field->type($rf->{type})
         } 
+
+        delete $fields_to_delete{$nom_field->id};
+    }
+    
+    for (Genome::Nomenclature::Field->get(id=>[keys %fields_to_delete])) {
+        $_->delete;
     }
 
     return $self;
