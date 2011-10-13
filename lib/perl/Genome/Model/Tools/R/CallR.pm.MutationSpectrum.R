@@ -87,7 +87,7 @@ make_barplot <- function(data.in,plot_title="Mutation Spectrum",bar_type='dodge'
     p <- p + geom_bar(position='fill',aes(fill=Category),width=0.9,stat="identity");
     p <- p + geom_bar(position='fill',aes(fill=Category),width=0.9, stat="identity", colour='gray22',legend=FALSE);
     if(length(levels(factor(data.in$Category))) > 2) {
-      p <- p + scale_fill_brewer(pal="Set1");
+      #p <- p + scale_fill_brewer(pal="Set1");
     }else {
       p <- p + scale_fill_manual(value=c("red3","mediumblue"));
     }
@@ -97,7 +97,7 @@ make_barplot <- function(data.in,plot_title="Mutation Spectrum",bar_type='dodge'
     p <- p + geom_bar(position='dodge',aes(fill=Sample),width=0.9,stat="identity");
     p <- p + geom_bar(position='dodge',aes(fill=Sample),width=0.9, stat="identity", colour='gray22',legend=FALSE);
     if(length(levels(factor(data.in$Sample))) > 2) {
-      p <- p + scale_fill_brewer(pal="Set1");
+      #p <- p + scale_fill_brewer(pal="Set1");
     }else {
       p <- p + scale_fill_manual(value=c("red3","mediumblue"));
     }
@@ -110,7 +110,7 @@ make_barplot <- function(data.in,plot_title="Mutation Spectrum",bar_type='dodge'
   p <- p + opts(legend.position = 'right',legend.title=theme_blank());
 
   p <- p + opts(title=plot_title);
-  plot_theme <- opts(panel.background=theme_rect(fill='grey95'),axis.text.x=theme_text(colour='black'),axis.text.y=theme_text(colour='black'),plot.title=theme_text(size=14,face='bold'));
+  plot_theme <- opts(panel.background=theme_rect(fill='grey95'),axis.text.x=theme_text(colour='black',angle=90,hjust=1),axis.text.y=theme_text(colour='black'),plot.title=theme_text(size=14,face='bold'));
   p <- p + plot_theme;
   
   return(p);
@@ -137,7 +137,7 @@ barplot_facet_mutation_type <- function(data,plot_title="Mutation Spectrum",pval
   p <- p + opts(legend.position = 'right',legend.title=theme_blank());
 
   if(length(levels(factor(data$Sample))) > 2) {
-    p <- p + scale_fill_brewer(pal="Set1");
+    #p <- p + scale_fill_brewer(pal="Set1");
   }else {
     p <- p + scale_fill_manual(value=c("red3","mediumblue"));
   }
@@ -160,14 +160,14 @@ barplot_facet_sample <- function(data,plot_title="Mutation Spectrum") {
   p <- p + opts(legend.position = 'right',legend.title=theme_blank());
 
   if(length(levels(factor(data$Category))) > 2) {
-    p <- p + scale_fill_brewer(pal="Set2");
+    #p <- p + scale_fill_brewer(pal="Set2");
   }else {
     p <- p + scale_fill_manual(value=c("red3","mediumblue"));
   }
   p <- p + opts(title=plot_title);
   p <- p + facet_wrap( ~ Sample,scales='free_x',nrow=1);
 
-  plot_theme <- opts(panel.background=theme_rect(fill='grey95'),axis.text.x=theme_text(colour='black',angle=90),axis.text.y=theme_text(colour='black'),plot.title=theme_text(size=14,face='bold'));
+  plot_theme <- opts(panel.background=theme_rect(fill='grey95'),axis.text.x=theme_text(colour='black',angle=90,hjust=1),axis.text.y=theme_text(colour='black'),plot.title=theme_text(size=14,face='bold'));
   p <- p + plot_theme;
   
   return(p);
