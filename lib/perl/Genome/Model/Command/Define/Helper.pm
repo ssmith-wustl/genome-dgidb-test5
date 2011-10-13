@@ -57,9 +57,6 @@ class Genome::Model::Command::Define::Helper {
             is => 'Genome::Project',
             doc => 'Projects for the model.',
         },
-        bare_args => {
-            shell_args_position => 99
-        },
     ],
 };
 
@@ -103,12 +100,6 @@ sub type_specific_parameters_for_create {
 
 sub execute {
     my $self = shift;
-
-    if (my @args = $self->bare_args) {
-        $self->error_message("extra arguments: @args");
-        $self->usage_message($self->help_usage_complete_text);
-        return;
-    }
 
     my $processing_profile = $self->validate_processing_profile;
     unless ($processing_profile) {
