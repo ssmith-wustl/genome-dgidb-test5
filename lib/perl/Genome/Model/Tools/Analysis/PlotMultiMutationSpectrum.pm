@@ -152,7 +152,7 @@ EOS
 
 sub help_detail {                           
     return <<EOS 
-    Given multiple output of mutation spectrum outputfile, make plots that compares the mutation spectrum of multiple samples.  You can specify the files using either a file via --group-file (tab-delimited where 1st column is the path to the file, 2nd column is the label) or via a comma-separated list via --mut-spec-files and --labels (make sure the order and number matche).  This tool can make 4 different plots.  Facet1 (default) separates the plots into multiplot by mutation type.  Facet2 separates the plot into multiple by sample.  Bar1 is a standard bargraph (similar to facet1 (but only makes 1 graph).  Bar2 is a stacked barplot which is great if you have large number of samples.  With the exception of --plot-type=Bar2, all other graphs cannot handle more than 8 samples.
+    Given multiple output of mutation spectrum outputfile, make plots that compares the mutation spectrum of multiple samples.  You can specify the files using either a file via --group-file (tab-delimited where 1st column is the path to the file, 2nd column is the label) or via a comma-separated list via --mut-spec-files and --labels (make sure the order and number match)..  This tool can make 4 different plots.  --plot-type=facet1 (default) separates the plots into multiplot by mutation type.  --plot-type=facet2 separates the plot into multiple plots by sample.  --plot-type=bar1 is a standard bargraph (similar to facet1 (but only makes 1 graph).  --plot-type=bar2 is a stacked barplot which is great if you have large number of samples.  
 EOS
 }
 
