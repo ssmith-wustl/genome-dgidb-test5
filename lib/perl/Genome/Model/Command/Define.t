@@ -43,29 +43,6 @@ test_model_from_params(
     },
 );
 
-# test when bare args empty array_ref is passed
-test_model_from_params(
-    model_params => {
-        subject_name => $default_subject_name,
-        processing_profile_name   => $default_pp_name,
-        bare_args => [],
-        reference_sequence_build => '93636924', #NCBI-human build 36
-    },
-);
-
-# test when a bogus_param gets passed in as bare args
-test_model_from_params(
-    test_params => {
-        fail => 'bogus_param',
-    },
-    model_params => {
-        subject_name => $default_subject_name,
-        processing_profile_name   => $default_pp_name,
-        bare_args => [ 'bogus_param' ],
-        reference_sequence_build => '93636924', #NCBI-human build 36
-    },
-);
-
 my $group1 = Genome::ModelGroup->create(name => "test 1");
 my $group2 = Genome::ModelGroup->create(name => "test 2");
 
