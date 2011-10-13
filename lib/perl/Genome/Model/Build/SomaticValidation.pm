@@ -8,26 +8,32 @@ use Genome;
 class Genome::Model::Build::SomaticValidation {
     is => 'Genome::Model::Build',
     has_optional => [
+        #TODO Remove refalign dependency in favor of alignment dispatcher
         tumor_reference_alignment => {
-            is => 'Genome::Model::Build', via => 'inputs', to => 'value', where => [name => 'tumor_reference_alignment'],
-            doc => 'The tumor build with which this build is associated',
+            is => 'genome::model::build', via => 'inputs', to => 'value', where => [name => 'tumor_reference_alignment'],
+            doc => 'the tumor build with which this build is associated',
         },
         normal_reference_alignment => {
-            is => 'Genome::Model::Build', via => 'inputs', to => 'value', where => [name => 'normal_reference_alignment'],
-            doc => 'The tumor build with which this build is associated'
+            is => 'genome::model::build', via => 'inputs', to => 'value', where => [name => 'normal_reference_alignment'],
+            doc => 'the tumor build with which this build is associated'
         },
         reference_sequence_build => {
             is => 'Genome::Model::Build::ReferenceSequence', via => 'inputs', to => 'value', where => [name => 'reference_sequence_build'],
         },
-        # TODO these should be DV2 results not FeatureLists
         snv_variant_list => {
-            is => 'Genome::FeatureList', via => 'inputs', to => 'value', where => [name => 'snv_variant_list'],
+            is => 'Genome::SoftwareResult',
+            via => 'inputs', to => 'value', where => [ name => 'snv_variant_list' ],
+            is_mutable => 1,
         },
         indel_variant_list => {
-            is => 'Genome::FeatureList', via => 'inputs', to => 'value', where => [name => 'indel_variant_list'],
+            is => 'Genome::SoftwareResult',
+            via => 'inputs', to => 'value', where => [ name => 'indel_variant_list' ],
+            is_mutable => 1,
         },
         sv_variant_list => {
-            is => 'Genome::FeatureList', via => 'inputs', to => 'value', where => [name => 'sv_variant_list'],
+            is => 'Genome::SoftwareResult',
+            via => 'inputs', to => 'value', where => [ name => 'sv_variant_list' ],
+            is_mutable => 1,
         },
         snv_detection_strategy => {
             is => 'Text',
@@ -44,6 +50,31 @@ class Genome::Model::Build::SomaticValidation {
         cnv_detection_strategy => {
             is => 'Text',
             via => 'model',
+        },
+        target_region_set_name => {
+            is => 'Text',
+            via => 'target_region_set',
+            to => 'name',
+        },
+        target_region_set => {
+            is => 'Genome::FeatureList',
+            via => 'inputs', to => 'value', where => [ name => 'target_region_set' ],
+            is_mutable => 1,
+        },
+        design_set => {
+            is => 'Genome::FeatureList',
+            via => 'inputs', to => 'value', where => [ name => 'desgin_set' ],
+            is_mutable => 1,
+        },
+        tumor_sample => {
+            is => 'Genome::Sample',
+            via => 'inputs', to => 'value', where => [ name => 'tumor_sample' ],
+            is_mutable => 1,
+        },
+        normal_sample => {
+            is => 'Genome::Sample',
+            via => 'inputs', to => 'value', where => [ name => 'normal_sample' ],
+            is_mutable => 1,
         },
     ],
 };

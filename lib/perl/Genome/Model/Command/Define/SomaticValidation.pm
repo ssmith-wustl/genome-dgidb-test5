@@ -5,98 +5,236 @@ use warnings;
 
 use Genome;
 
+use Cwd;
+use File::Basename;
+
 class Genome::Model::Command::Define::SomaticValidation {
-    is => 'Genome::Model::Command::Define::Helper',
-    has_input => [
-        snv_variant_list => {
-            is => 'Genome::FeatureList',
-            doc => 'the list of variants to validate',
-        },
-        tumor_model => {
-            is => 'Genome::Model',
-            doc => 'The tumor model being analyzed',
-        },
-        normal_model => {
-            is => 'Genome::Model',
-            doc => 'The normal model id being analyzed',
-        },
-   ],
-   has_transient_optional_input => [
-        subject => {
+    is => 'Command::V2',
+    has_optional_input => [
+        name => {
             is => 'Text',
-            doc => 'Subject is derived from normal and tumor models and is not necessary as input to somatic-validation models',
+            doc => 'A name for the model',
+        },
+        variants => {
+            is => 'Genome::SoftwareResult', #TODO ideally these would all have share a DV2 base class
+            doc => 'The DV2 results to validate',
+            is_many => 1,
+            shell_args_position => 3,
+        },
+        design => {
+            is => 'Genome::FeatureList',
+            doc => 'BED file of the designs for the probes',
+            shell_args_position => 1,
+        },
+        target => {
+            is => 'Genome::FeatureList',
+            doc => 'BED file of the target region set',
+            shell_args_position => 2,
+        },
+        processing_profile => {
+            is => 'Genome::ProcessingProfile::SomaticValidation',
+            doc => 'Processing profile for the model',
+        },
+    ],
+    has_transient_optional_input => [
+        subject => {
+            is => 'Genome::Subject',
+            doc => 'Subject of the model',
         },
         reference_sequence_build => {
             is => 'Genome::Model::Build::ReferenceSequence',
-            doc => 'Reference sequence build is derived from normal and tumor models',
+            doc => 'Reference used for the variant calls',
+        },
+        snv_result => {
+            is => 'Genome::SoftwareResult',
+            doc => 'The DV2 result with the snvs',
+        },
+        indel_result => {
+            is => 'Genome::SoftwareResult',
+            doc => 'The DV2 result with the indels',
+        },
+        sv_result => {
+            is => 'Genome::SoftwareResult',
+            doc => 'The DV2 result with the svs',
+        },
+    ],
+    has_transient_optional_output => [
+        result_model_id => {
+            is => 'Number',
+            doc => 'ID of the model created by this command',
+        },
+        result_model => {
+            is => 'Genome::Model::SomaticValidation',
+            id_by => 'result_model_id',
+            doc => 'model created by this command',
         },
     ],
 };
 
-sub help_detail {
-    return <<"EOS"
-This defines a new genome model representing the validation of somatic analysis between a normal and tumor model.
-EOS
-}
-
-sub type_specific_parameters_for_create {
-    my $self = shift;
-
-    my @params = ();
-
-    push @params,
-        snv_variant_list => $self->snv_variant_list,
-        tumor_reference_alignment => $self->tumor_model,
-        normal_reference_alignment => $self->normal_model,
-        reference_sequence_build => $self->reference_sequence_build;
-
-    return @params;
-}
-
 sub execute {
     my $self = shift;
 
-    my $tumor_subject = $self->tumor_model->subject;
-    my $normal_subject = $self->normal_model->subject;
+    #these two parameters are required to create a model
+    $self->resolve_subject or return;
+    $self->resolve_processing_profile or return;
 
-    if($tumor_subject->can('source') and $normal_subject->can('source')) {
-        my $tumor_source = $tumor_subject->source;
-        my $normal_source = $normal_subject->source;
+    #these parameters are optional until build time
+    $self->resolve_reference_sequence_build;
+    $self->resolve_variant_lists;
 
-        if($tumor_source eq $normal_source) {
-            my $subject = $tumor_source;
+    my @params = (
+        subject => $self->subject,
+        processing_profile => $self->processing_profile,
+    );
 
-            #Set up other parameters for call to parent execute()
-            $self->subject($subject);
-        } else {
-            $self->error_message('Tumor and normal samples are not from same source!');
-            return;
+    push @params, name => $self->name
+        if defined $self->name;
+    push @params, reference_sequence_build => $self->reference_sequence_build
+        if defined $self->reference_sequence_build;
+    push @params, design_set => $self->design
+        if defined $self->design;
+    push @params, target_region_set => $self->target
+        if defined $self->target;
+    push @params, snv_variant_list => $self->snv_result
+        if defined $self->snv_result;
+    push @params, indel_variant_list => $self->indel_result
+        if defined $self->indel_result;
+    push @params, sv_variant_list => $self->sv_result
+        if defined $self->sv_result;
+
+    my $m = Genome::Model->create(@params);
+    return unless $m;
+
+    $self->result_model($m);
+    return $m;
+}
+
+sub resolve_subject {
+    my $self = shift;
+
+    return 1 if $self->subject;
+
+    my ($tumor_sample, $control_sample);
+    SOURCE: for my $potential_source ($self->variants) {
+        next unless $potential_source;
+
+        if($potential_source->can('sample') and $potential_source->can('control_sample')) {
+            #this is the expected case for manual results
+            $tumor_sample = $potential_source->sample;
+            $control_sample = $potential_source->control_sample;
+            last SOURCE;
+        } elsif($potential_source->can('users')) {
+            my @users = $potential_source->users;
+            my @user_objects = map($_->user, @users);
+            my @candidate_objects = grep($_->isa('Genome::Model::Build::SomaticVariation'), @user_objects);
+            if(@candidate_objects) {
+                for my $c (@candidate_objects) {
+                    if($c->can('normal_model') and $c->can('tumor_model')) {
+                        #this is the expected case for results directly from somatic variation models
+                        $tumor_sample = $c->tumor_model->subject;
+                        $control_sample = $c->normal_model->subject;
+                        last SOURCE;
+                    }
+                }
+            }
         }
-    } else {
-        $self->error_message('Unexpected subject for tumor or normal model!');
+    }
+
+
+    unless($tumor_sample or $control_sample) {
+        $self->error_message('At least one sample is required to define a model.');
         return;
     }
 
-    my $normal_reference = $self->normal_model->reference_sequence_build;
-    my $tumor_reference = $self->tumor_model->reference_sequence_build;
+    my $subject;
+    if($tumor_sample) {
+        if($control_sample and $tumor_sample->source ne $control_sample->source) {
+            my $problem = 'Tumor and control samples do not appear to have come from the same individual.';
+            my $answer = $self->_ask_user_question(
+                $problem . ' Continue anyway?',
+                300,
+                "y.*|n.*",
+                "no",
+                "[y]es/[n]o",
+            );
+            unless($answer and $answer =~ /^y/) {
+                $self->error_message($problem);
+                return;
+            }
+        }
 
-    if($normal_reference eq $tumor_reference) {
-        $self->reference_sequence_build($tumor_reference);
-    } else {
-        $self->error_message('Tumor and normal reference alignment models do not have the same reference sequence!');
-        return;
+        $subject = $tumor_sample->source;
+    } elsif($control_sample) {
+        $subject = $control_sample->source;
     }
 
-    my $snv_variant_list_reference = $self->snv_variant_list->reference;
+    $self->subject($subject);
+    return $subject;
+}
 
-    unless($normal_reference eq $snv_variant_list_reference) {
-        $self->error_message('Reference alignment models and variant list do not have the same reference sequence!');
-        return;
+sub resolve_processing_profile {
+    my $self = shift;
+
+    return 1 if $self->processing_profile;
+
+    my $pp = Genome::ProcessingProfile::SomaticValidation->get(2636889); #FIXME fill in real default
+
+    $self->processing_profile($pp);
+    return $pp;
+}
+
+
+sub resolve_reference_sequence_build {
+    my $self = shift;
+
+    return 1 if $self->reference_sequence_build;
+
+    my $rsb;
+    for my $potential_indicator ($self->design, $self->target, $self->variants) {
+        next unless $potential_indicator;
+        if($potential_indicator->can('reference')) {
+            $rsb = $potential_indicator->reference;
+            last;
+        } elsif($potential_indicator->can('reference_build')) {
+            $rsb = $potential_indicator->reference;
+        }
     }
 
-    # run Genome::Model::Command::Define execute
-    my $super = $self->super_can('_execute_body');
-    return $super->($self,@_);
+    $self->reference_sequence_build($rsb);
+    return $rsb;
+}
+
+sub resolve_variant_lists {
+    my $self = shift;
+
+    my @variant_results = $self->variants;
+
+    for my $variant_result (@variant_results) {
+        my $variant_type;
+        if($variant_result->can('variant_type')) {
+            $variant_type = $variant_result->variant_type;
+        } elsif ($variant_result->can('_variant_type')) {
+            $variant_type = $variant_result->_variant_type;
+        } else {
+            my @files = glob($variant_result->output_dir . '/*.hq');
+            if(scalar @files > 1) {
+                $self->error_message('Multiple .hq files found in result ' . $variant_result->id . ' at ' . $variant_result->output_dir);
+                return;
+            }
+            unless(scalar @files) {
+                $self->error_message('No .hq file found in result ' . $variant_result->id . ' at ' . $variant_result->output_dir);
+            }
+
+            ($variant_type) = $files[0] =~ /(\w+)\.hq/; #lame solution
+        }
+
+        $variant_type =~ s/s$//;
+        my $property = $variant_type . '_result';
+        $self->$property($variant_result);
+    }
+
+    return 1;
 }
 
 1;
+
