@@ -150,24 +150,27 @@ sub _execute_build {
         for my $assignment (@assignments) {
             my $instrument_data = $assignment->value;
             my $screen_assignment = $screen_model->instrument_data_input(
-                value_id => $instrument_data->id #TODO inst data switch
+                value_id => $instrument_data->id 
             );
             if ($screen_assignment) {
                 $self->status_message("Instrument data " . $instrument_data->__display_name__ . " is already assigned to the screening model");
             }
             else {
-                $screen_assignment =
-                $screen_model->add_instrument_data(
-                    value => $instrument_data,
-                    filter_desc => $assignment->filter_desc,
-                );
-                if ($screen_assignment) {
-                    $self->status_message("Assigning instrument data " . $instrument_data->__display_name__ . " to the screening model");
+                my $cmd = 'genome model instrument-data assign --model-id '.$screen_model->id.' --instrument-data-id '.$instrument_data->id;
+                if ($assignment->filter_desc){
+                    $cmd.=' --filter '.$assignment->filter_desc;
                 }
-                else {
-                    $self->error_message("Failed to assign instrument data " . $instrument_data->__display_name__ . " to the screening model");
-                    Carp::confess($self->error_message());
+                my $exit_code = system($cmd);
+                unless ($exit_code == 0){
+                    die $self->error_message("Failed to add instrument data ".$instrument_data->id." to contamination screen model!");
                 }
+                my $confirm_screen_assignment = UR::Context->current->reload("Genome::Model::Input", model_id=>$screen_model->id, value_id=>$instrument_data->id);
+                if ($confirm_screen_assignment){
+                    $self->status_message("Added instrument data ".$instrument_data->id." to contamination screen model");
+                }else{
+                    die $self->error_message("Can't find instrument data assignment for ".$instrument_data->id." after attempting to assign to contamination screen model");
+                }
+
             }
         }
 
@@ -233,6 +236,7 @@ sub _execute_build {
         my %assignments_expected;
         for my $n (0..$#imported_instrument_data_for_metagenomic_models) {
             my $prev_assignment = $screened_assignments[$n];
+            my $filter_desc = $prev_assignment->filter_desc;
             my $post_processed_instdata_for_prev_assignment = $imported_instrument_data_for_metagenomic_models[$n];
             for my $instrument_data (@$post_processed_instdata_for_prev_assignment) {
                 my $metagenomic_assignment = $metagenomic_model->instrument_data_input(
@@ -242,17 +246,19 @@ sub _execute_build {
                     $self->status_message("Instrument data " . $instrument_data->__display_name__ . " is already assigned to model " . $metagenomic_model->__display_name__);
                 }
                 else {
-                    $metagenomic_assignment =
-                    $metagenomic_model->add_instrument_data(
-                        value => $instrument_data,
-                        filter_desc => $prev_assignment->filter_desc,
-                    );
-                    if ($metagenomic_assignment) {
-                        $self->status_message("Assigning instrument data " . $instrument_data->__display_name__ . " to model " . $metagenomic_model->__display_name__);
+                    my $cmd = 'genome model instrument-data assign --model-id '.$metagenomic_model->id.' --instrument-data-id '.$instrument_data->id;
+                    if ($filter_desc){
+                        $cmd.=' --filter '.$filter_desc;
                     }
-                    else {
-                        $self->error_message("Failed to assign instrument data " . $instrument_data->__display_name__ . " to model " . $metagenomic_model->__display_name__);
-                        Carp::confess($self->error_message());
+                    my $exit_code = system($cmd);
+                    unless ($exit_code == 0){
+                        die $self->error_message("Failed to add instrument data ".$instrument_data->id." to model ".$metagenomic_model->__display_name__."!");
+                    }
+                    $metagenomic_assignment = UR::Context->current->reload("Genome::Model::Input", model_id=>$metagenomic_model->id, value_id=>$instrument_data->id);
+                    if ($metagenomic_assignment){
+                        $self->status_message("Added instrument data ".$instrument_data->id." to model ".$metagenomic_model->__display_name__);
+                    }else{
+                        die $self->error_message("Can't find instrument data assignment for ".$instrument_data->id." after attempting to assign to model ".$metagenomic_model->__display_name__);
                     }
                 }
                 $assignments_expected{$metagenomic_assignment->id} = $metagenomic_assignment;
@@ -999,7 +1005,7 @@ sub _find_scheduled_or_running_build_for_model {
     my ($self, $model) = @_;
 
     Carp::confess('No model sent to find running or scheduled build') if not $model;
-    
+
     $self->status_message('Find running or scheduled build for model: '.$model->__display_name__);
 
     UR::Context->reload('Genome::Model::Build', model_id => $model->id);
@@ -1016,7 +1022,7 @@ sub _start_build_for_model {
     my ($self, $model) = @_;
 
     Carp::confess('No model sent to start build') if not $model;
-    
+
     my $cmd = 'genome model build start '.$model->id.' --job-dispatch apipe --server-dispatch workflow'; # these are defaults
     $self->status_message('Cmd: '.$cmd);
     my $rv = eval{ Genome::Sys->shellcmd(cmd => $cmd); };
