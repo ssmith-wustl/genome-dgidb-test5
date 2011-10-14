@@ -24,14 +24,17 @@ my $id = "rs1234";
 my $reference_allele = 'A';
 my @alt_alleles = qw(C G TA);
 my $qual = 0.00;
+
+my %annotations;
+$annotations{"id"} = $id;
+$annotations{"qual"} = $qual;
 $obj = Genome::Data::Variant->create(
     chrom => $chrom,
     start => $start,
     end => $end,
-    id => $id,
     reference_allele => $reference_allele,
     alt_alleles => \@alt_alleles,
-    qual => $qual,
+    annotations => \%annotations,
 );
 
 ok($obj, 'created object');
@@ -40,11 +43,11 @@ ok($obj->isa('Genome::Data::Variant'), 'object is a Genome::Data::Variant');
 is($obj->chrom, $chrom, 'chrom matches');
 is($obj->start, $start, 'start matches');
 is($obj->end, $end, 'end matches');
-is($obj->id, $id, 'id matches');
+is($obj->annotations->{"id"}, $id, 'id matches');
 is($obj->reference_allele, $reference_allele, 'reference_allele matches');
 is($obj->alt_alleles->[0], $alt_alleles[0], 'first alt allele matches');
 is($obj->alt_alleles->[1], $alt_alleles[1], 'second alt allele matches');
 is($obj->alt_alleles->[2], $alt_alleles[2], 'third alt allele matches');
-is($obj->qual, $qual, 'qual matches');
+is($obj->annotations->{"qual"}, $qual, 'qual matches');
 
 done_testing();

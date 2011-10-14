@@ -15,10 +15,9 @@ sub create {
     $self->chrom(delete $params{chrom});
     $self->start(delete $params{start});
     $self->end(delete $params{end});
-    $self->id(delete $params{id});
     $self->reference_allele(delete $params{reference_allele});
     $self->alt_alleles(delete $params{alt_alleles}); 
-    $self->qual(delete $params{qual});
+    $self->annotations(delete $params{annotations});
 
     if (%params) {
         Carp::confess "Extra parameters provided to constructor of " . __PACKAGE__;
@@ -50,12 +49,12 @@ sub end {
     return $self->{_end};
 }
 
-sub id {
+sub annotations {
     my ($self, $value) = @_;
     if (defined $value) {
-        $self->{_id} = $value;
+        $self->{_annotations} = $value;
     }
-    return $self->{_id};
+    return $self->{_annotations};
 }
 
 sub reference_allele {
@@ -74,12 +73,5 @@ sub alt_alleles {
     return $self->{_alt_alleles};
 }
 
-sub qual {
-    my ($self, $value) = @_;
-    if (defined $value) {
-        $self->{_qual} = $value;
-    }
-    return $self->{_qual};
-}
 1;
 

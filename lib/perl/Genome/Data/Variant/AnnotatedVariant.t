@@ -24,6 +24,11 @@ my $id = "rs1234";
 my $reference_allele = 'A';
 my @alt_alleles = qw(C G TA);
 my $qual = 0.00;
+
+my %annotations;
+$annotations{"qual"} = 0.00;
+$annotations{"id"} = "rs1234";
+
 my %annotation1;
 %annotation1 = (
     gene_name => "foo",
@@ -50,10 +55,9 @@ $obj = Genome::Data::Variant::AnnotatedVariant->create(
     chrom => $chrom,
     start => $start,
     end => $end,
-    id => $id,
     reference_allele => $reference_allele,
     alt_alleles => \@alt_alleles,
-    qual => $qual,
+    annotations => \%annotations,
     transcript_annotations => [\%annotation1, \%annotation2],
 );
 
@@ -63,12 +67,12 @@ ok($obj->isa('Genome::Data::Variant::AnnotatedVariant'), 'object is a Genome::Da
 is($obj->chrom, $chrom, 'chrom matches');
 is($obj->start, $start, 'start matches');
 is($obj->end, $end, 'end matches');
-is($obj->id, $id, 'id matches');
+is($obj->annotations->{"id"}, $id, 'id matches');
 is($obj->reference_allele, $reference_allele, 'reference_allele matches');
 is($obj->alt_alleles->[0], $alt_alleles[0], 'first alt allele matches');
 is($obj->alt_alleles->[1], $alt_alleles[1], 'second alt allele matches');
 is($obj->alt_alleles->[2], $alt_alleles[2], 'third alt allele matches');
-is($obj->qual, $qual, 'qual matches');
+is($obj->annotations->{"qual"}, $qual, 'annotation qual matches');
 
 is($obj->transcript_annotations->[0]->{transcript_name}, "bar", 'first transcript name matches');
 is($obj->transcript_annotations->[1]->{transcript_name}, "bar2", 'second transcript name matches');
