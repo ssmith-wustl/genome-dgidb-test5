@@ -20,13 +20,21 @@
           <table id="myTable" width="100%" cellpadding="0" cellspacing="0" border="0" class="dataTable">
             <thead>
              <th>Nomenclature Name</th>
+             <th>Template</th>
             </thead>
             <tbody>
               <xsl:for-each select="aspect[@name='members']/object">
               <tr>
               <td>
                 <a><xsl:attribute name="href">/res/html/genome/nomenclature/create.html#id=<xsl:value-of select='@id'/></xsl:attribute>
-                <xsl:value-of select="display_name"/></a></td>
+                <xsl:value-of select="display_name"/></a>
+              </td>
+              <td>
+                Get: 
+                <a><xsl:attribute name="href">/view/genome/nomenclature/detail.xls?id=<xsl:value-of select='@id'/></xsl:attribute>Excel</a>
+                |
+                <a><xsl:attribute name="href">/view/genome/nomenclature/detail.csv?id=<xsl:value-of select='@id'/></xsl:attribute>CSV</a>
+              </td>
               </tr>
               </xsl:for-each>
             </tbody>
