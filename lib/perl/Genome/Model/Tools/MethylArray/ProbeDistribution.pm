@@ -55,8 +55,18 @@ sub execute {
     	}
 	}
     my $output_fh = Genome::Sys->open_file_for_writing($self->output_file);
-    
-	print $output_fh Data::Dumper::Dumper(%feature_count) ."\n";
+    while (my ($key, $value) = each(%feature_count))
+    {
+    	if ($key eq "")
+     	{
+     		print $output_fh "Intergenic"."\t ".$value."\n";
+    	 }
+     	else
+     	{
+    		 print $output_fh $key."\t ".$value."\n";
+     	}
+    }
+	#print $output_fh Data::Dumper::Dumper(%feature_count) ."\n";
 
 	return 1;   
 }
