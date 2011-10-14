@@ -8,11 +8,6 @@ use IO::File;
 use Data::Dumper;
 use Carp;
 
-my $low=100000;
-my $high=200000;
-UR::Context->object_cache_size_highwater($high);
-UR::Context->object_cache_size_lowwater($low);
-
 class Genome::Model::Tools::ImportAnnotation {
     is => 'Command',
     has => [ 
@@ -41,6 +36,23 @@ class Genome::Model::Tools::ImportAnnotation {
     },
     ],
 };
+
+sub create {
+    my $class = shift;
+    my $self = $class->SUPER::create(@_);
+
+    # Using Genome::Model::Tools::Annotate should not enable cache pruning options
+    # because the class is loaded as part of calculating sub-commands.
+    # Previously this was being set when the class was used. If something needs this
+    # set and was "benefiting" from the previous behavior then either make it a
+    # subclass of this or add this code to it.
+    my $low = 100000;
+    my $high = 200000;
+    UR::Context->object_cache_size_highwater($high);
+    UR::Context->object_cache_size_lowwater($low);
+
+    return $self;
+}
 
 sub sub_command_sort_position { 15 }
 
