@@ -43,7 +43,14 @@ class Genome::Model::Tools::MethylArray::CreateUcscTrack {
         experiment_scale => {
             is => 'Text',
             doc => 'The experiment scale value used for color gradients',
-            default_value => '2',
+            default_value => '6',
+            is_optional => 1,
+        },
+        experiment_color => {
+            is => 'Text',
+            doc => 'The experiment color scheme',
+            default_value => 'redBlueOnWhite',
+            valid_values => ['redGreen', 'redBlue', 'yellowBlue', 'redBlueOnWhite', 'redBlueOnYellow'],
             is_optional => 1,
         },
         track_visibility => {
@@ -92,7 +99,7 @@ sub execute {
         die('Failed to open output file:'. $self->ucsc_track_file);
     }
 
-    print $bed15_fh 'track type="array" visibility='. $self->track_visibility .' expScale='. $self->experiment_scale .' expStep='. $self->experiment_step .' expNames="'. $exp_names .'" name="'. $self->array_name .'" description="'. $self->array_description .'"' . "\n";
+    print $bed15_fh 'track type="array" visibility='. $self->track_visibility .' expColor="'. $self->experiment_color .'" expScale='. $self->experiment_scale .' expStep='. $self->experiment_step .' expNames="'. $exp_names .'" name="'. $self->array_name .'" description="'. $self->array_description .'"' . "\n";
 
     my $samples = scalar(@sample_names);
     # The id string
