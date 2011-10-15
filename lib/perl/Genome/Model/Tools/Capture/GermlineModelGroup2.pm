@@ -171,26 +171,26 @@ sub index_summary {
         ) = (0)x20;
         for my $build (@$builds) {
             my %metric = map{$_->name,$_->value}$build->metrics;
-            $coverage_depth       += $metric{'wingspan_0_20_coverage_depth'};
-            $duplication          += $metric{'wingspan_0_percent_duplication'};
-            $mapped               += $metric{'wingspan_0_percent_mapped'};
-            $on_target            += $metric{'wingspan_0_percent_unique_on_target'};
-            $off_target           += $metric{'wingspan_0_percent_unique_off_target'};
-            $snps_called          += $metric{'snps_called'};
-            $with_genotype        += $metric{'with_genotype'};
-            $met_min_depth        += $metric{'met_min_depth'};
-            $reference            += $metric{'reference'};
-            $ref_match            += $metric{'ref_match'};
-            $ref_was_het          += $metric{'ref_was_het'};
-            $ref_was_hom          += $metric{'ref_was_hom'};
-            $variant              += $metric{'variant'};
-            $var_match            += $metric{'var_match'};
-            $hom_was_het          += $metric{'hom_was_het'};
-            $het_was_hom          += $metric{'het_was_hom'};
-            $var_mismatch         += $metric{'var_mismatch'};
-            $var_concordance      += $metric{'var_concordance'};
-            $rare_hom_concordance += $metric{'rare_hom_concordance'};
-            $overall_concordance  += $metric{'overall_concordance'};
+            $coverage_depth       += $metric{'wingspan_0_20_coverage_depth'} || 0;
+            $duplication          += $metric{'wingspan_0_percent_duplication'} || 0;
+            $mapped               += $metric{'wingspan_0_percent_mapped'} || 0;
+            $on_target            += $metric{'wingspan_0_percent_unique_on_target'} || 0;
+            $off_target           += $metric{'wingspan_0_percent_unique_off_target'} || 0;
+            $snps_called          += $metric{'snps_called'} || 0;
+            $with_genotype        += $metric{'with_genotype'} || 0;
+            $met_min_depth        += $metric{'met_min_depth'} || 0;
+            $reference            += $metric{'reference'} || 0;
+            $ref_match            += $metric{'ref_match'} || 0;
+            $ref_was_het          += $metric{'ref_was_het'} || 0;
+            $ref_was_hom          += $metric{'ref_was_hom'} || 0;
+            $variant              += $metric{'variant'} || 0;
+            $var_match            += $metric{'var_match'} || 0;
+            $hom_was_het          += $metric{'hom_was_het'} || 0;
+            $het_was_hom          += $metric{'het_was_hom'} || 0;
+            $var_mismatch         += $metric{'var_mismatch'} || 0;
+            $var_concordance      += $metric{'var_concordance'} || 0;
+            $rare_hom_concordance += $metric{'rare_hom_concordance'} || 0;
+            $overall_concordance  += $metric{'overall_concordance'} || 0;
         }
         print $fh join("\t", (
                 $index,
@@ -249,26 +249,26 @@ sub pool_summary {
         ) = (0)x20;
         for my $build (@$builds) {
             my %metric = map{$_->name,$_->value}$build->metrics;
-            $coverage_depth       += $metric{'wingspan_0_20_coverage_depth'};
-            $duplication          += $metric{'wingspan_0_percent_duplication'};
-            $mapped               += $metric{'wingspan_0_percent_mapped'};
-            $on_target            += $metric{'wingspan_0_percent_unique_on_target'};
-            $off_target           += $metric{'wingspan_0_percent_unique_off_target'};
-            $snps_called          += $metric{'snps_called'};
-            $with_genotype        += $metric{'with_genotype'};
-            $met_min_depth        += $metric{'met_min_depth'};
-            $reference            += $metric{'reference'};
-            $ref_match            += $metric{'ref_match'};
-            $ref_was_het          += $metric{'ref_was_het'};
-            $ref_was_hom          += $metric{'ref_was_hom'};
-            $variant              += $metric{'variant'};
-            $var_match            += $metric{'var_match'};
-            $hom_was_het          += $metric{'hom_was_het'};
-            $het_was_hom          += $metric{'het_was_hom'};
-            $var_mismatch         += $metric{'var_mismatch'};
-            $var_concordance      += $metric{'var_concordance'};
-            $rare_hom_concordance += $metric{'rare_hom_concordance'};
-            $overall_concordance  += $metric{'overall_concordance'};
+            $coverage_depth       += $metric{'wingspan_0_20_coverage_depth'} || 0;
+            $duplication          += $metric{'wingspan_0_percent_duplication' || 0};
+            $mapped               += $metric{'wingspan_0_percent_mapped'} || 0;
+            $on_target            += $metric{'wingspan_0_percent_unique_on_target'} || 0;
+            $off_target           += $metric{'wingspan_0_percent_unique_off_target'} || 0;
+            $snps_called          += $metric{'snps_called'} || 0;
+            $with_genotype        += $metric{'with_genotype'} || 0;
+            $met_min_depth        += $metric{'met_min_depth'} || 0;
+            $reference            += $metric{'reference'} || 0;
+            $ref_match            += $metric{'ref_match'} || 0;
+            $ref_was_het          += $metric{'ref_was_het'} || 0;
+            $ref_was_hom          += $metric{'ref_was_hom'} || 0;
+            $variant              += $metric{'variant'} || 0;
+            $var_match            += $metric{'var_match'} || 0;
+            $hom_was_het          += $metric{'hom_was_het'} || 0;
+            $het_was_hom          += $metric{'het_was_hom'} || 0;
+            $var_mismatch         += $metric{'var_mismatch'} || 0;
+            $var_concordance      += $metric{'var_concordance'} || 0;
+            $rare_hom_concordance += $metric{'rare_hom_concordance'} || 0;
+            $overall_concordance  += $metric{'overall_concordance'} || 0;
         }
         print $fh join("\t", (
                 $pool,
@@ -311,35 +311,42 @@ sub subject_summary {
         #  on how to handle per-sample data, when per-instrument-data data is unavailable
         my $index = (map{$_->index_sequence}$model->instrument_data)[0];
         my $pool = Genome::Model::Command::Services::AssignQueuedInstrumentData->_resolve_pooled_sample_name_for_instrument_data((),$model->instrument_data);
+        my @libraries = map{$_->name}$model->subject->libraries;
+        my $libraries;
+        if(@libraries){
+            $libraries = join ',', @libraries;
+        } else {
+            $libraries = '-';
+        }
 
         #add model->instrument_data->lane
         print $fh join("\t", (
                 $model->id,
                 $build->id,
                 $model->subject->name,
-                join(',',map{$_->name}$model->subject->libraries),
+                $libraries,
                 $index,
                 $pool,
-                $metric{'wingspan_0_20_coverage_depth'},
+                $metric{'wingspan_0_20_coverage_depth'} || '-',
                 $metric{'wingspan_0_percent_duplication'} ? sprintf ("%.1f%%", $metric{'wingspan_0_percent_duplication'}) : '-',
-                sprintf ("%.2f%%", $metric{'wingspan_0_percent_mapped'}),
-                sprintf ("%.2f%%", $metric{'wingspan_0_percent_unique_on_target'}),
-                sprintf ("%.2f%%", $metric{'wingspan_0_percent_unique_off_target'}),
-                $metric{'snps_called'},
-                $metric{'with_genotype'},
-                $metric{'met_min_depth'},
-                $metric{'reference'},
-                $metric{'ref_match'},
-                $metric{'ref_was_het'},
-                $metric{'ref_was_hom'},
-                $metric{'variant'},
-                $metric{'var_match'},
-                $metric{'hom_was_het'},
-                $metric{'het_was_hom'},
-                $metric{'var_mismatch'},
-                $metric{'var_concordance'},
-                $metric{'rare_hom_concordance'},
-                $metric{'overall_concordance'},
+                sprintf ("%.2f%%", $metric{'wingspan_0_percent_mapped'}) || '-',
+                sprintf ("%.2f%%", $metric{'wingspan_0_percent_unique_on_target'}) || '-',
+                sprintf ("%.2f%%", $metric{'wingspan_0_percent_unique_off_target'}) || '-',
+                $metric{'snps_called'} || '-',
+                $metric{'with_genotype'} || '-',
+                $metric{'met_min_depth'} || '-',
+                $metric{'reference'} || '-',
+                $metric{'ref_match'} || '-',
+                $metric{'ref_was_het'} || '-',
+                $metric{'ref_was_hom'} || '-',
+                $metric{'variant'} || '-',
+                $metric{'var_match'} || '-',
+                $metric{'hom_was_het'} || '-',
+                $metric{'het_was_hom'} || '-',
+                $metric{'var_mismatch'} || '-',
+                $metric{'var_concordance'} || '-',
+                $metric{'rare_hom_concordance'} || '-',
+                $metric{'overall_concordance'} || '-',
             )) . "\n";
     }
 }
