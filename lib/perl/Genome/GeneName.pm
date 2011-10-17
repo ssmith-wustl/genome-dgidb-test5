@@ -37,6 +37,12 @@ class Genome::GeneName {
                 return @gene_name_category_associations;
             |,
         },
+        drug_gene_interactions => {
+            calculate_from => ['id'],
+            calculate => q|
+                return Genome::DrugGeneInteraction->get(gene_name_id => $id);
+            |,
+        },
     ],
     doc => 'Claim regarding the name of a drug',
 };
