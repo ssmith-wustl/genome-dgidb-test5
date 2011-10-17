@@ -205,6 +205,7 @@ sub execute {                               # replace with real execution logic.
                     next;
                 }
 
+                $stats{$vcffile}{'Indel Length2'}{$indel_length}++;
                 my $sample_genotypes = join(",",@geno);
                 my $sample_names = join(",",@samplenames);
                 my $position = "$chr\t$annot_start\t$annot_stop\t$ref\t$alt\t$indel_length\t$sample_names\t$sample_genotypes";
@@ -218,7 +219,7 @@ sub execute {                               # replace with real execution logic.
         foreach my $file (sort keys %stats) {
             print "File:$file\n";
             foreach my $category (sort keys %{$stats{$file}}) {
-                if ($category eq 'Indel Length') {
+                if ($category =~ m/Length/) {
                     next;
                 }
                 print "Stat Category:$category\n";
@@ -237,6 +238,14 @@ sub execute {                               # replace with real execution logic.
         foreach my $type (sort { $a <=> $b } keys %{$stats{$file}{'Indel Length'}}) {
             my $count = $stats{$file}{'Indel Length'}{$type};
             print "$type\t$count\n";
+        }
+        if ($self->subsample_vcf_size) {
+            print "Genotype Filtered Indel size distribution:\n";
+            print "Size\tCount\n";
+            foreach my $type (sort { $a <=> $b } keys %{$stats{$file}{'Indel Length2'}}) {
+                my $count = $stats{$file}{'Indel Length2'}{$type};
+                print "$type\t$count\n";
+            }
         }
     }
     if ($self->subsample_vcf_size) {
