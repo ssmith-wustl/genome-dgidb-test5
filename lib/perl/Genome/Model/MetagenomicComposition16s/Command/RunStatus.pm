@@ -65,11 +65,11 @@ sub execute {
             if ( not @model_inputs ) {
                 next;
             }
-            my ($model) = sort { $b->id <=> $a->id } map { $_->model } @model_inputs;
+            my ($model) = sort { $b->id <=> $a->id } grep { $_->subject_id eq $instrument_data->sample_id } map { $_->model } @model_inputs;
             push @row, $model->id, 'NA', ( $model->build_requested ? 'Requested' : 'None' );
             next;
         }
-        my ($build) = sort { $b->id <=> $a->id } map { $_->build } @build_inputs;
+        my ($build) = sort { $b->id <=> $a->id } grep { $_->subject_id eq $instrument_data->sample_id } map { $_->build } @build_inputs;
         push @row, map { $build->$_ } (qw/ model_id id status /);
         if ( $build->status eq 'Succeeded' ) {
             push @row, (($build->amplicons_processed_success * 100).'%');
