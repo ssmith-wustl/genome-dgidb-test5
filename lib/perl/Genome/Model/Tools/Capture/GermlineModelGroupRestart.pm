@@ -98,7 +98,7 @@ sub execute {                               # replace with real execution logic.
 		        my $build;
 		        my $build_id;
 		        my $last_build_dir;
-		        my $bam_file;
+		        my $bam_file = 'n/a';
                         my $build_status;
 
 		        if($model->last_succeeded_build_directory) {
@@ -114,10 +114,35 @@ sub execute {                               # replace with real execution logic.
                                 $build_status = $build->status;
                         }
 
-#	                print OUTPUT join("\t", $model_id, $build_id, $subject_name, $build_status) . "\n";
+
 
                         unless ($build_status =~ m/run/i || $build_status =~ m/schedule/i || $build_status =~ m/succeed/i) {
-                                if ($check_coverage) {
+                                #unstartable builds restarted without other checks if they have instrument data
+                                if ($build_status =~ m/Unstartable/i) {
+                                        my @instrument_data = $build->instrument_data;
+                                        my $size = @instrument_data;
+                                        if ($size) {
+                                                my $new_status = "$build_status-restartable";
+               		                        print OUTPUT join("\t", $model_id, $build_id, $subject_name, $new_status) . "\n";
+                                                my $abandon_command = "perl -I /gsc/scripts/opt/genome/current/pipeline/lib/perl/ `which genome` model build abandon $build_id";
+                                                my $restart_command = "perl -I /gsc/scripts/opt/genome/current/pipeline/lib/perl/ `which genome` model build start $model_id";
+                                                unless ($build_status =~ m/abandon/i || $build_status =~ m/run/i || $build_status =~ m/schedule/i || $build_status =~ m/succeed/i) {
+                                                        if ($rebuild_set) {
+                                                                system($abandon_command);
+                                                        }
+                                                }
+                                                unless ($build_status =~ m/run/i || $build_status =~ m/schedule/i || $build_status =~ m/succeed/i) {
+                                                        if ($rebuild_set) {
+                                                                system($restart_command);
+                                                        }
+                                               }
+                                        }
+                                        else {
+                                                my $new_status = "$build_status-no_inst_data";
+               		                        print OUTPUT join("\t", $model_id, $build_id, $subject_name, $new_status) . "\n";
+                                        }
+                                }
+                                elsif ($check_coverage) {
 		                        my $read_length = 100; #should calc this but this is good enough for most
 		                        my $wingspan = 0;
 		                        my $average_depth = 'mean_depth';
@@ -161,7 +186,7 @@ sub execute {                               # replace with real execution logic.
 			                        my $summary_stats_ref2 = join("\t",@depth_array2);
 			                        my $summary_stats_ref3 = join("\t",@depth_array3);
                         #			print join("\t", $model_id, $build_id, $subject_name, $build_status, $specific_stats_file, $general_stats_file, $summary_stats_ref, $summary_stats_ref2) . "\n";
-			                        print OUTPUT join("\t", $model_id, $build_id, $subject_name, $build_status, $summary_stats_ref, $summary_stats_ref2, $summary_stats_ref3) . "\n";
+			                        print OUTPUT join("\t", $model_id, $build_id, $subject_name, $build_status, $bam_file, $summary_stats_ref, $summary_stats_ref2, $summary_stats_ref3) . "\n";
                                                 if ($depth_array3[0] > 100000) {
                                                         my $abandon_command = "perl -I /gsc/scripts/opt/genome/current/pipeline/lib/perl/ `which genome` model build abandon $build_id";
                                                         my $restart_command = "perl -I /gsc/scripts/opt/genome/current/pipeline/lib/perl/ `which genome` model build start $model_id";
@@ -179,7 +204,7 @@ sub execute {                               # replace with real execution logic.
 		                        }
                                 }
                                 else {
-		                        print OUTPUT join("\t", $model_id, $build_id, $subject_name, $build_status) . "\n";
+		                        print OUTPUT join("\t", $model_id, $build_id, $subject_name, $build_status, $bam_file) . "\n";
                                         my $abandon_command = "perl -I /gsc/scripts/opt/genome/current/pipeline/lib/perl/ `which genome` model build abandon $build_id";
                                         my $restart_command = "perl -I /gsc/scripts/opt/genome/current/pipeline/lib/perl/ `which genome` model build start $model_id";
                                         unless ($build_status =~ m/abandon/i || $build_status =~ m/run/i || $build_status =~ m/schedule/i || $build_status =~ m/succeed/i) {
@@ -193,6 +218,9 @@ sub execute {                               # replace with real execution logic.
                                                 }
                                         }
                                 }
+                        }
+                        else { #print succeeded, running, or scheduled
+        	                print OUTPUT join("\t", $model_id, $build_id, $subject_name, $build_status, $bam_file) . "\n";
                         }
                   UR::Context->commit() or die 'commit failed';
                   UR::Context->clear_cache(dont_unload => ['Genome::ModelGroup', 'Genome::ModelGroupBridge']);
