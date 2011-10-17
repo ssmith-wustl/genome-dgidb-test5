@@ -204,7 +204,7 @@ sub validate_chimera_detector_params {
     my $class = $self->chimera_detector;
     $class =~ s/-/ /;
     $class = Genome::Utility::Text::string_to_camel_case( $class );
-    $class = 'Genome::Model::Tools::MetagenomicComposition16s::'.$class;
+    $class = 'Genome::Model::Tools'.$class;
 
     #params
     my %params = Genome::Utility::Text::param_string_to_hash( $self->chimera_detector_params );
