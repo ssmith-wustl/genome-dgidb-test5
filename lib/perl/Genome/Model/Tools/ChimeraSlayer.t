@@ -12,10 +12,10 @@ if (Genome::Config->arch_os ne 'x86_64') {
     plan skip_all => 'requires 64-bit machine';
 }
 
-use_ok( 'Genome::Model::Tools::MetagenomicComposition16s::ChimeraSlayer' );
+use_ok( 'Genome::Model::Tools::ChimeraSlayer' );
 
 my $version = 1;
-my $test_data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-MetagenomicComposition16s/ChimeraSlayer-v'.$version;
+my $test_data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-ChimeraSlayer/v'.$version;
 ok( -d $test_data_dir, 'Test data dir' );
 
 #check test files

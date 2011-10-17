@@ -1,4 +1,4 @@
-package Genome::Model::Tools::MetagenomicComposition16s::Nastier;
+package Genome::Model::Tools::Nastier;
 
 use strict;
 use warnings;
@@ -6,8 +6,8 @@ use warnings;
 use Genome;
 use Data::Dumper 'Dumper';
 
-class Genome::Model::Tools::MetagenomicComposition16s::Nastier {
-    is => 'Genome::Model::Tools::MetagenomicComposition16s',
+class Genome::Model::Tools::Nastier {
+    is => 'Command',
     has => [
         query_FASTA => {
             is => 'Text',
@@ -48,7 +48,7 @@ sub help_brief {
 
 sub help_detail {
     return <<"EOS"
-gmt metagenomic-composition16s nastier --query-FASTA chims.NAST.fasta --Evalue 1e-50 --output-file chims.NAST.align.cs
+gmt nastier --query-FASTA chims.NAST.fasta --Evalue 1e-50 --output-file chims.NAST.align.cs
 EOS
 }
 
@@ -103,6 +103,33 @@ sub build_command_string {
     $cmd .= ' > '.$self->output_file if $self->output_file; #otherwise prints to screen
 
     return $cmd;
+}
+
+sub version {
+    return '2010-07-07';
+}
+
+sub path_to_db_files {
+    return '/gscmnt/gc4096/info/reference_sequences/chimera-detector-16SrRNA/';
+}
+
+sub version_db_nast_file {
+    return $_[0]->path_to_db_files.'/'.$_[0]->version.'/rRNA16S.gold.NAST_ALIGNED.fasta';
+}
+
+sub version_db_fasta_file {
+    return $_[0]->path_to_db_files.'/'.$_[0]->version.'/rRNA16S.gold.fasta';
+}
+
+sub path_to_nastier {
+    my $self = shift;
+
+    my $script = '/gsc/pkg/bio/broad/NAST-iEr/run_NAST-iEr.pl';
+    if ( not -x $script ) {
+        $self->error_message("Failed to find script of script is not executable: $script");
+        return;
+    }
+    return $script;
 }
 
 1;

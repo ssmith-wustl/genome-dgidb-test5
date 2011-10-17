@@ -13,11 +13,11 @@ if (Genome::Config->arch_os ne 'x86_64') {
 
 require File::Compare;
 
-use_ok( 'Genome::Model::Tools::MetagenomicComposition16s::Nastier' );
+use_ok( 'Genome::Model::Tools::Nastier' );
 
 #test suite dir
 my $version = 1;
-my $data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-MetagenomicComposition16s/Nastier-v'.$version;
+my $data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Nastier/v'.$version;
 ok( -d $data_dir, 'data dir exists' );
 
 #in/out files
