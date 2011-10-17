@@ -124,12 +124,9 @@ sub print_grouped_interactions{
         gene_name gene_nomenclature gene_source_db_name gene_source_db_version/;
     print join("\t", @headers), "\n";
     for my $drug_name (keys %grouped_interactions){
-        # print $drug_name, ": \n";
         for my $interaction (@{$grouped_interactions{$drug_name}}){
-            # print "\t", $self->_build_interaction_line($interaction), "\n"; 
             print $self->_build_interaction_line($interaction), "\n"; 
         }
-        # print "\n";
     }
     return 1;
 }
