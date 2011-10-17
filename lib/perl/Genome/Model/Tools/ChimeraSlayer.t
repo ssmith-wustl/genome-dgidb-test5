@@ -41,7 +41,7 @@ ok( -d $temp_test_dir, 'Temp test dir' );
 ok( File::Copy::copy( $test_data_dir.'/'.$test_input, $temp_test_dir ), 'Copied test input file' );
 
 #create/execute tool
-my $tool = Genome::Model::Tools::MetagenomicComposition16s::ChimeraSlayer->create(
+my $tool = Genome::Model::Tools::ChimeraSlayer->create(
     query_NAST => $temp_test_dir.'/'.$test_input,
     exec_dir => $temp_test_dir,
     printCSalignments => 1,

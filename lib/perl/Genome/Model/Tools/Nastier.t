@@ -32,7 +32,7 @@ ok( -d $temp_dir, 'created temp dir' );
 ok( File::Copy::copy($data_dir.'/'.$input, $temp_dir), 'copied input fasta file' );
 
 #create/execute tool
-my $tool = Genome::Model::Tools::MetagenomicComposition16s::Nastier->create(
+my $tool = Genome::Model::Tools::Nastier->create(
     query_FASTA => $temp_dir.'/'.$input,
     output_file => $temp_dir.'/'.$output,
 );
