@@ -1,4 +1,4 @@
-package Genome::Model::Tools::MetagenomicComposition16s::ChimeraSlayer;
+package Genome::Model::Tools::ChimeraSlayer;
 
 use strict;
 use warnings;
@@ -6,8 +6,8 @@ use warnings;
 use Genome;
 use Data::Dumper 'Dumper';
 
-class Genome::Model::Tools::MetagenomicComposition16s::ChimeraSlayer {
-    is => 'Genome::Model::Tools::MetagenomicComposition16s',
+class Genome::Model::Tools::ChimeraSlayer {
+    is => 'Command',
     has => [
         exec_dir => {
             is => 'Text',
@@ -113,8 +113,8 @@ sub help_brief {
 
 sub help_detail {
     return <<"EOS"
-gmt metagenomic-composition16s chimera-slayer --query-NAST chims.NAST --exec-dir /gscmnt/100/mc16s --printCSalignments
-gmt metagenomic-composition16s chimera-slayer --query-NAST chims.NAST --exec-dir /gscmnt/103/mc16s --S 10 --windowSize 50
+gmt chimera-slayer --query-NAST chims.NAST --exec-dir /gscmnt/100/mc16s --printCSalignments
+gmt chimera-slayer --query-NAST chims.NAST --exec-dir /gscmnt/103/mc16s --S 10 --windowSize 50
 EOS
 }
 
@@ -200,6 +200,34 @@ sub optional_params_with_defaults {
         num_parents_test
         MAX_CHIMERA_PARENT_PER_ID
     /;
+}
+
+sub version {
+    return '2010-07-07';
+}
+
+sub path_to_db_files {
+    return '/gscmnt/gc4096/info/reference_sequences/chimera-detector-16SrRNA/';
+}
+
+sub version_db_nast_file {
+    return $_[0]->path_to_db_files.'/'.$_[0]->version.'/rRNA16S.gold.NAST_ALIGNED.fasta';
+}
+
+sub version_db_fasta_file {
+    return $_[0]->path_to_db_files.'/'.$_[0]->version.'/rRNA16S.gold.fasta';
+}
+
+sub path_to_chimera_slayer {
+    my $self = shift;
+
+    my $script = '/gsc/pkg/bio/broad/ChimeraSlayer/ChimeraSlayer.pl';
+    unless( -x $script ) {
+        $self->error_message("Failed to find script or script is not executable: $script");
+        return;
+    }
+
+    return $script;
 }
 
 1;

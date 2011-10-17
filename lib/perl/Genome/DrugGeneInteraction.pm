@@ -30,11 +30,9 @@ class Genome::DrugGeneInteraction {
         interaction_type => { is => 'Text'}, 
         description => { is => 'Text' },
         drug_gene_interaction_attributes => {
-            calculate_from => ['id'],
-            calculate => q|
-                my @drug_gene_interaction_attributes = Genome::DrugGeneInteractionAttribute->get(interaction_id => $id);
-                return @drug_gene_interaction_attributes;
-            |,
+            is => 'Genome::DrugGeneInteractionAttribute',
+            reverse_as => 'drug_gene_interaction',
+            is_many => 1,
         },
     ],
     doc => 'Claim regarding an interaction between a drug name and a gene name',

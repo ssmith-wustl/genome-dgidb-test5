@@ -19,12 +19,12 @@ plot_spectrum=function(spectrum_file="",output_file="",genome="",absolute_axis=T
 }
 
 
-plot_multi_mutation_spectrum <- function(input_file,plot_title="Mutation Spectrum",output_file=NULL,plot_type="facet1",pvalue=FALSE) {
+plot_multi_mutation_spectrum <- function(input_file,plot_title="Mutation Spectrum",output_file=NULL,plot_type="facet1",pvalue=FALSE,plot.sample.order=NULL) {
 
   library("ggplot2");
   mutation_spectrum <- read.table(input_file,sep="\t",header=T);
 
-  mutation_spectrum$Sample <- toupper(mutation_spectrum$Sample); #convert sample label to uppercase
+  #mutation_spectrum$Sample <- toupper(mutation_spectrum$Sample); #convert sample label to uppercase
   mutation_spectrum$Density <- mutation_spectrum$Density/100;
   #separate out the basechange from transiton/transverstion
   mut_spec1 <- subset(mutation_spectrum,grepl("->",Category));
@@ -41,17 +41,17 @@ plot_multi_mutation_spectrum <- function(input_file,plot_title="Mutation Spectru
   }
   
   if(plot_type == "facet1") {
-    p1 <- barplot_facet_mutation_type(data=mut_spec1,plot_title,pvalue=mut_spec1_pvalue);
-    p2 <- barplot_facet_mutation_type(data=mut_spec2,plot_title,pvalue=mut_spec2_pvalue);
+    p1 <- barplot_facet_mutation_type(data=mut_spec1,plot_title,pvalue=mut_spec1_pvalue,plot_order=plot.sample.order);
+    p2 <- barplot_facet_mutation_type(data=mut_spec2,plot_title,pvalue=mut_spec2_pvalue,plot_order=plot.sample.order);
   }else if(plot_type == "facet2"){
     p1 <- barplot_facet_sample(data=mut_spec1,plot_title);
     p2 <- barplot_facet_sample(data=mut_spec2,plot_title);
   } else if(plot_type == "bar1") {
-    p1 <- make_barplot(mut_spec1,plot_title,bar_type='dodge');
-    p2 <- make_barplot(mut_spec2,plot_title,bar_type='dodge');
+    p1 <- make_dodge_barplot(mut_spec1,plot_title,plot_order=plot.sample.order);
+    p2 <- make_dodge_barplot(mut_spec2,plot_title,plot_order=plot.sample.order);
   } else if(plot_type == "bar2") {
-    p1 <- make_barplot(mut_spec1,plot_title,bar_type='stack');
-    p2 <- make_barplot(mut_spec2,plot_title,bar_type='stack');
+    p1 <- make_stack_barplot(mut_spec1,plot_title,plot_order=plot.sample.order);
+    p2 <- make_stack_barplot(mut_spec2,plot_title,plot_order=plot.sample.order);
   }
   
   #if outputfile is defined, print plots to outputfile
@@ -70,57 +70,81 @@ plot_multi_mutation_spectrum <- function(input_file,plot_title="Mutation Spectru
     return(list(a=p1,b=p2));
   }
 
-
-
   
 }
 
 
+make_stack_barplot <- function(data.in,plot_title="Mutation Spectrum",plot_order=NULL) {
 
-make_barplot <- function(data.in,plot_title="Mutation Spectrum",bar_type='dodge') {
-#generates a standard dodge bargraph with default theme.
-  p <- ggplot(data.in,aes(x=Category,y=Density));
-
-  if(bar_type == 'stack') {
-    #stack barplot with mutation category in different colors
-    p <- ggplot(data.in,aes(x=Sample,y=Density));
-    p <- p + geom_bar(position='fill',aes(fill=Category),width=0.9,stat="identity");
-    p <- p + geom_bar(position='fill',aes(fill=Category),width=0.9, stat="identity", colour='gray22',legend=FALSE);
-    if(length(levels(factor(data.in$Category))) > 2) {
-      p <- p + scale_fill_brewer(pal="Set1");
-    }else {
-      p <- p + scale_fill_manual(value=c("red3","mediumblue"));
-    }
-    plot_theme <- opts(panel.background=theme_rect(fill='grey95'),axis.text.x=theme_text(colour='black',angle=90,hjust=1),axis.text.y=theme_text(colour='black'),plot.title=theme_text(size=14,face='bold'));
-
+  #stack barplot with mutation category in different colors
+  p <- ggplot(data.in,aes(x=Sample,y=Density));
+  p <- p + geom_bar(position='fill',aes(fill=Category),width=0.9,stat="identity");
+  p <- p + geom_bar(position='fill',aes(fill=Category),width=0.9, stat="identity", colour='gray22',legend=FALSE);
+  if(length(levels(factor(data.in$Category))) > 2) {
+    p <- p + scale_fill_brewer(pal="Set1",breaks=rev(levels(data.in$Category)));
   }else {
-    #dodge bar plot with samples in different colors
-    p <- ggplot(data.in,aes(x=Category,y=Density));  
-    p <- p + geom_bar(position='dodge',aes(fill=Sample),width=0.9,stat="identity");
-    p <- p + geom_bar(position='dodge',aes(fill=Sample),width=0.9, stat="identity", colour='gray22',legend=FALSE);
-    if(length(levels(factor(data.in$Sample))) > 2) {
-      #p <- p + scale_fill_brewer(pal="Set1");
-    }else {
-      p <- p + scale_fill_manual(value=c("red3","mediumblue"));
-    }
-    plot_theme <- opts(panel.background=theme_rect(fill='grey95'),axis.text.x=theme_text(colour='black',angle=0,hjust=0.5),axis.text.y=theme_text(colour='black'),plot.title=theme_text(size=14,face='bold'));
+    p <- p + scale_fill_manual(value=c("red3","mediumblue"));
   }
- 
+ #allow user to specify the order of the X-axis
+  if(!is.null(plot_order)) {
+    x.axis.label.order <- strsplit(plot_order,',')[[1]];
+    p <- p + scale_x_discrete(name="",limits=x.axis.label.order);
+  }else {
+    p <- p + scale_x_discrete(name="");
+  }
+  p <- p + scale_y_continuous(name='% Total Mutations',limits=c(0,1),formatter="percent");
+  p <- p + opts(legend.position = 'right',legend.title=theme_blank());
+  p <- p + opts(title=plot_title);
+  plot_theme <- opts(panel.background=theme_rect(fill='grey95'),axis.text.x=theme_text(colour='black',angle=90,hjust=1),axis.text.y=theme_text(colour='black'),plot.title=theme_text(size=14,face='bold'));
+  p <- p + plot_theme;
+
+  return(p);
+
+}
+
+make_dodge_barplot <- function(data.in,plot_title="Mutation Spectrum",plot_order=NULL) {
+
+  #change the order of the default factor of samples
+  #this allows users to specify the order which each sample is plotted
+  if(!is.null(plot_order)) {
+    x.axis.label.order <- strsplit(plot_order,',')[[1]];
+    data.in$Sample <- factor(data.in$Sample,levels=x.axis.label.order);   
+  }
+
+  p <- ggplot(data.in,aes(x=Category,y=Density));
+  #dodge bar plot with samples in different colors
+  p <- ggplot(data.in,aes(x=Category,y=Density));  
+  p <- p + geom_bar(position='dodge',aes(fill=Sample),width=0.9,stat="identity");
+  p <- p + geom_bar(position='dodge',aes(fill=Sample),width=0.9, stat="identity", colour='gray22',legend=FALSE);
+  if(length(levels(factor(data.in$Sample))) > 2) {
+    p <- p + scale_fill_hue();
+  }else {
+    p <- p + scale_fill_manual(value=c("red3","mediumblue"));
+  }
+
+  #specify the X and Y axis labels,legend,title,and plot theme
   p <- p + scale_y_continuous(name='% Total Mutations',limits=c(0,1),formatter="percent");
   #p <- p + scale_x_discrete(name="",breaks=c("A->C","A->G","A->T","C->A","C->G","C->T"), labels=c(" p = A1.5E-6","A->G0.002","A->T0.003","C->A0.004","C->G0.005","C->T0.006"));
   p <- p + scale_x_discrete(name="");
   p <- p + opts(legend.position = 'right',legend.title=theme_blank());
   p <- p + opts(title=plot_title);
+  plot_theme <- opts(panel.background=theme_rect(fill='grey95'),axis.text.x=theme_text(colour='black',angle=0,hjust=0.5),axis.text.y=theme_text(colour='black'),plot.title=theme_text(size=14,face='bold'));
   p <- p + plot_theme;
-  
+
   return(p);
-  #ggsave(plot=ggplot_obj,filename=output_file);
   
 }
 
-barplot_facet_mutation_type <- function(data,plot_title="Mutation Spectrum",pvalue=NULL) {
+barplot_facet_mutation_type <- function(data.in,plot_title="Mutation Spectrum",pvalue=NULL,plot_order=NULL) {
 
-  p <- ggplot(data,aes(y=Density,x=Category));
+  #change the order of the default factor of samples
+  #this allows users to specify the order which each sample is plotted
+  if(!is.null(plot_order)) {
+    x.axis.label.order <- strsplit(plot_order,',')[[1]];
+    data.in$Sample <- factor(data.in$Sample,levels=x.axis.label.order);   
+  }
+
+  p <- ggplot(data.in,aes(y=Density,x=Category));
   p <- p + geom_bar(position='dodge',aes(fill=Sample),width=0.9);
   p <- p + geom_bar(position='dodge',aes(fill=Sample),width=0.9,colour='gray22',legend=FALSE);
   p <- p + scale_y_continuous(name='% Total Mutations',limits=c(0,1),formatter="percent");
@@ -132,11 +156,10 @@ barplot_facet_mutation_type <- function(data,plot_title="Mutation Spectrum",pval
   }else {
     p <- p + scale_x_discrete(name="");
   }
-
- #p <- p + scale_x_discrete(name="",breaks=c("A->C","A->G","A->T","C->A","C->G","C->T"), labels=c(" p=1.5E-6","A->G0.002","A->T0.003","C->A0.004","C->G0.005","C->T0.006"));
   p <- p + opts(legend.position = 'right',legend.title=theme_blank());
 
-  if(length(levels(factor(data$Sample))) > 2) {
+  if(length(levels(factor(data.in$Sample))) > 2) {
+    p <- p + scale_fill_hue();
     #p <- p + scale_fill_brewer(pal="Set1");
   }else {
     p <- p + scale_fill_manual(value=c("red3","mediumblue"));
@@ -160,14 +183,14 @@ barplot_facet_sample <- function(data,plot_title="Mutation Spectrum") {
   p <- p + opts(legend.position = 'right',legend.title=theme_blank());
 
   if(length(levels(factor(data$Category))) > 2) {
-    #p <- p + scale_fill_brewer(pal="Set2");
+    p <- p + scale_fill_hue();
   }else {
     p <- p + scale_fill_manual(value=c("red3","mediumblue"));
   }
   p <- p + opts(title=plot_title);
   p <- p + facet_wrap( ~ Sample,scales='free_x',nrow=1);
 
-  plot_theme <- opts(panel.background=theme_rect(fill='grey95'),axis.text.x=theme_text(colour='black',angle=90,hjust=1),axis.text.y=theme_text(colour='black'),plot.title=theme_text(size=14,face='bold'));
+  plot_theme <- opts(panel.background=theme_rect(fill='grey95'),axis.text.x=theme_text(colour='black',angle=90),axis.text.y=theme_text(colour='black'),plot.title=theme_text(size=14,face='bold'));
   p <- p + plot_theme;
   
   return(p);
@@ -209,5 +232,3 @@ calc_pvalue <- function(inputDF,pattern="->") {
   
   return(pvalue_label);
 }
-
-

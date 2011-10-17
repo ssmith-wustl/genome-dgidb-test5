@@ -13,11 +13,11 @@ if (Genome::Config->arch_os ne 'x86_64') {
 
 require File::Compare;
 
-use_ok( 'Genome::Model::Tools::MetagenomicComposition16s::Nastier' );
+use_ok( 'Genome::Model::Tools::Nastier' );
 
 #test suite dir
 my $version = 1;
-my $data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-MetagenomicComposition16s/Nastier-v'.$version;
+my $data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Nastier/v'.$version;
 ok( -d $data_dir, 'data dir exists' );
 
 #in/out files
@@ -32,7 +32,7 @@ ok( -d $temp_dir, 'created temp dir' );
 ok( File::Copy::copy($data_dir.'/'.$input, $temp_dir), 'copied input fasta file' );
 
 #create/execute tool
-my $tool = Genome::Model::Tools::MetagenomicComposition16s::Nastier->create(
+my $tool = Genome::Model::Tools::Nastier->create(
     query_FASTA => $temp_dir.'/'.$input,
     output_file => $temp_dir.'/'.$output,
 );

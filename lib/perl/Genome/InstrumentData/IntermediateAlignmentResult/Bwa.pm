@@ -161,6 +161,8 @@ sub _verify_bwa_aln_did_happen {
             $expected_count = $stats->{reads_marked_as_read1};
         } elsif($input_pass eq 2) {
             $expected_count = $stats->{reads_marked_as_read2};
+        } elsif($input_pass eq 0) {
+            $expected_count = $stats->{total_reads}; #fragment data
         }
     } else {
         my $wc_count_file = $self->temp_scratch_directory . '/wc.count';

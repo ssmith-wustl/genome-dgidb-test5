@@ -12,10 +12,10 @@ if (Genome::Config->arch_os ne 'x86_64') {
     plan skip_all => 'requires 64-bit machine';
 }
 
-use_ok( 'Genome::Model::Tools::MetagenomicComposition16s::ChimeraSlayer' );
+use_ok( 'Genome::Model::Tools::ChimeraSlayer' );
 
 my $version = 1;
-my $test_data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-MetagenomicComposition16s/ChimeraSlayer-v'.$version;
+my $test_data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-ChimeraSlayer/v'.$version;
 ok( -d $test_data_dir, 'Test data dir' );
 
 #check test files
@@ -41,7 +41,7 @@ ok( -d $temp_test_dir, 'Temp test dir' );
 ok( File::Copy::copy( $test_data_dir.'/'.$test_input, $temp_test_dir ), 'Copied test input file' );
 
 #create/execute tool
-my $tool = Genome::Model::Tools::MetagenomicComposition16s::ChimeraSlayer->create(
+my $tool = Genome::Model::Tools::ChimeraSlayer->create(
     query_NAST => $temp_test_dir.'/'.$test_input,
     exec_dir => $temp_test_dir,
     printCSalignments => 1,

@@ -98,7 +98,14 @@ is_deeply(
     { $model_name_for_entire_run => $new_models{$model_name_for_entire_run} },
     'existing models for run 1',
 );
-my @model_groups = Genome::ModelGroup->get('name in' => [qw/ AQID-TEST-WORKORDER AQID-TEST-PROJECT /]);
+my @projects = Genome::Project->get('name in' => [ map { $_->setup_name } $gsc_project, $gsc_workorder ]);
+is(@projects, 2, 'created projects');
+is_deeply(
+    [ sort { $a <=> $b } map { $_->id } @projects ],
+    [ sort { $a <=> $b } map { $_->id } ($gsc_project, $gsc_workorder) ],
+    'project ids match gsc entity ids',
+);
+my @model_groups = Genome::ModelGroup->get(uuid => [ map { $_->id } @projects ]);
 is(@model_groups, 2, 'created model groups');
 
 ok(_qidfgm(), 'made another qdidfgm');

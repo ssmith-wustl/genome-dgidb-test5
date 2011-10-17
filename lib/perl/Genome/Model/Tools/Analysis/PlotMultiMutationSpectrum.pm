@@ -75,7 +75,13 @@ class Genome::Model::Tools::Analysis::PlotMultiMutationSpectrum {
         default_value => 'output.pdf',
         doc => 'The name of pdf file to save the plot to',
     },
-
+    plot_order => {
+        is_input => 1,
+        is_optional => 1,
+	is => 'String',
+        default => 0,
+        doc => 'order at which the labels will be plotted on the graph (comma,separated), will use the order defined by --label as default',
+    },
     #below here are variables with which to store results
     #hopefully these can then be judiciously used to write cross-comparison scripts
 
@@ -169,6 +175,9 @@ sub execute {
 	@$mutation_spec_files = split(",",$self->mut_spec_files);
 	@$input_labels = split(",",$self->labels);	
     }
+    my $plot_label_order = $self->plot_order || $self->labels;
+    $plot_label_order = undef if(!$plot_label_order);
+
 
     #my @mutation_spec_files = split(",",$self->mut_spec_files);
     #my @input_labels = split(",",$self->labels);
@@ -215,7 +224,13 @@ sub execute {
 	$calc_pvalue='TRUE'
     }
 
-    my $plot_cmd = qq{ plot_multi_mutation_spectrum("$input_plot_file",output_file="$plot_output_file",plot_title="$plot_title",plot_type="$plot_type",pvalue=$calc_pvalue) };
+    my $plot_cmd;
+    if($plot_label_order) {
+	$plot_cmd = qq{ plot_multi_mutation_spectrum("$input_plot_file",output_file="$plot_output_file",plot_title="$plot_title",plot_type="$plot_type",pvalue=$calc_pvalue,plot.sample.order='$plot_label_order') };
+    }else {
+	$plot_cmd = qq{ plot_multi_mutation_spectrum("$input_plot_file",output_file="$plot_output_file",plot_title="$plot_title",plot_type="$plot_type",pvalue=$calc_pvalue) };
+    }
+
     my $call = Genome::Model::Tools::R::CallR->create(command=>$plot_cmd, library=> "MutationSpectrum.R");
     $call->execute;
 

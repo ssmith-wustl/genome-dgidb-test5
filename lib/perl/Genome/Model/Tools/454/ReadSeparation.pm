@@ -90,7 +90,7 @@ sub create {
 
 sub execute {
     my $self = shift;
-
+$DB::single = 1;
     my $sff_file_dirname = dirname($self->sff_file);
     my $sff_file_basename = basename($self->sff_file);
     $sff_file_basename =~ s/\.sff$//;

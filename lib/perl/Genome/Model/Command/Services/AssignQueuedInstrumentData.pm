@@ -1161,12 +1161,11 @@ sub add_model_to_default_modelgroups {
         }else{
             $name = $group;
         }
-        if ($name eq 'AML'){
-            $DB::single = 1;
-        }
         my $project = Genome::Project->get(name => $name);
         unless($project) {
-            $project = Genome::Project->create(name => $name );
+            my %params = ( name => $name );
+            $params{id} = $group->id if ref $group and $group->setup_name eq $name;
+            $project = Genome::Project->create(%params);
             unless($project) {
                 die $self->error_message('Failed to create a default model-group: ' . $name);
             }

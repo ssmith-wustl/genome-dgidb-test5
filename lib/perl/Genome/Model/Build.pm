@@ -451,11 +451,13 @@ sub reallocate {
         my $reallocated = eval { $disk_allocation->reallocate };
         $self->warning_message("Failed to reallocate disk space!") unless $reallocated;
     }
-    elsif ( grep { $status eq $_ } ('New', 'Unstartable') ) {
-        # New and Unstartable builds are not expected to have disk allocations.
-    }
     else {
-        $self->warning_message("Reallocate called for build (" . $self->__display_name__ . ") but it does not have a disk allocation.");
+        if ( grep { $status eq $_ } ('New', 'Unstartable') ) {
+            # New and Unstartable builds are not expected to have disk allocations.
+        }
+        else {
+            $self->warning_message("Reallocate called for build (" . $self->__display_name__ . ") but it does not have a disk allocation.");
+        }
     }
 
     # Always returns 1 due to legacy behavior.
