@@ -20,11 +20,11 @@ class Genome::DrugName::View::Solr::Xml {
             is  => 'Text',
             default => 'genome_drug-name_32',
         },
-        display_url0 => { #TODO: make this url legit
+        display_url0 => {
             is => 'Text',
-            calculate => q { 
-                    my $subject = $self->subject;
-                    return join ('?id=', '/view/genome/drug-name/status.html',$subject->id()); 
+            calculate_from => ['subject'],
+            calculate => q{
+                return join ('?id=', '/view/genome/drug-name/status.html',$_->id());
             },
         },
         display_label1 => {
