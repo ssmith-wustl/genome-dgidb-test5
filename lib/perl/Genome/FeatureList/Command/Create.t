@@ -20,7 +20,8 @@ ok(-e $test_bed_file, 'test file ' . $test_bed_file . ' exists');
 my $create_command = Genome::FeatureList::Command::Create->create(
     name                => 'GFL test feature-list',
     format              => 'true-BED',
-    content_type        => 'target region set',
+    content_type        => 'targeted',
+    description         => 'A dummy feature-list for testing the create command',
     file_path           => $test_bed_file,
 );
 ok($create_command, 'constructed create command');

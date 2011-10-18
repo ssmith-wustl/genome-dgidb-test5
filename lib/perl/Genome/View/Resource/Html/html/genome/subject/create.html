@@ -1,44 +1,283 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<!--template: /html/status/root.xsl; match="/" -->
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<!--template: /html/common_includes/components.xsl name="html_head_page"-->
+    <title xmlns:rest="urn:rest" xmlns:str="http://xsltsl.org/string">Upload Subject Data</title>
+    <link xmlns:rest="urn:rest" xmlns:str="http://xsltsl.org/string" rel="shortcut icon" href="/res/img/gc_favicon.png" type="image/png" />
+    <link xmlns:rest="urn:rest" xmlns:str="http://xsltsl.org/string" rel="stylesheet" href="/res/css/blueprint/screen.css" type="text/css" media="screen, projection" />
+    <link xmlns:rest="urn:rest" xmlns:str="http://xsltsl.org/string" rel="stylesheet" href="/res/css/blueprint/print.css" type="text/css" media="print" />
+    <link xmlns:rest="urn:rest" xmlns:str="http://xsltsl.org/string" rel="stylesheet" href="/res/css/master.css" type="text/css" media="screen, projection" />
+    <link xmlns:rest="urn:rest" xmlns:str="http://xsltsl.org/string" rel="stylesheet" href="/res/css/buttons.css" type="text/css" media="screen, projection" />
+    <link xmlns:rest="urn:rest" xmlns:str="http://xsltsl.org/string" rel="stylesheet" href="/res/css/icons.css" type="text/css" media="screen, projection" />
+    <link xmlns:rest="urn:rest" xmlns:str="http://xsltsl.org/string" rel="stylesheet" href="/res/css/forms.css" type="text/css" media="screen, projection" />
+    <link xmlns:rest="urn:rest" xmlns:str="http://xsltsl.org/string" type="text/css" href="/res/js/pkg/jquery-ui-1.8.1.custom/css/gsc-theme/jquery-ui-1.8.1.custom.css" rel="stylesheet" />
+    <link xmlns:rest="urn:rest" xmlns:str="http://xsltsl.org/string" href="/res/css/jquery-ui-overrides.css" type="text/css" rel="stylesheet" media="screen, projection" />
+    <script xmlns:rest="urn:rest" xmlns:str="http://xsltsl.org/string" type="text/javascript" src="/res/js/pkg/jquery.js"></script>
+    <script xmlns:rest="urn:rest" xmlns:str="http://xsltsl.org/string" type="text/javascript" src="/res/js/pkg/jquery-ui.js"></script>
+    <script xmlns:rest="urn:rest" xmlns:str="http://xsltsl.org/string" type="text/javascript" src="/res/js/pkg/jquery.easydate.js"></script>
+    <script xmlns:rest="urn:rest" xmlns:str="http://xsltsl.org/string" type="text/javascript" src="/res/js/pkg/jquery.masonry.min.js"></script>
+    <script xmlns:rest="urn:rest" xmlns:str="http://xsltsl.org/string" type="text/javascript" src="/res/js/pkg/dataTables/media/js/jquery.dataTables.min.js"></script>
+
+    <link xmlns:rest="urn:rest" xmlns:str="http://xsltsl.org/string" rel="stylesheet" href="/res/css/dataTables.css" type="text/css" media="screen, projection" />
+
+    <!-- includes for autocomplete -->
+    <script type="text/javascript" src="/res/js/pkg/jquery-ui-1.8.1.custom/development-bundle/ui/jquery.ui.autocomplete.js"></script>
+    <link href="/res/js/pkg/jquery-ui-1.8.1.custom/development-bundle/themes/base/jquery.ui.autocomplete.css" rel="stylesheet" type="text/css"/>
+
+    <!-- END includes for autocomplete -->
+
+<!--    <script src="/res/js/app/genome_subject_create.js"></script> -->
+
+    <script xmlns:rest="urn:rest" xmlns:str="http://xsltsl.org/string" type="text/javascript">
+    
+    $(document).ready(function() {
+
+        $('#submit-button').click(function() {
+
+            // validate
+            if (! $('#nomenclature').val() ) {
+                alert("Please specify a nomenclature");
+                return false;
+            }
+
+            if ( $("input[name='subclass_name']:checked").length <= 0 ) {
+                alert('Please select Sample, Indivdual or Population.');
+                return false;
+            }
+
+            var fakeFilename = $('#file').val(); 
+            if ( ! fakeFilename ) {
+                alert('Please select the file containing the subject data');
+                return false;
+            }
+
+            var filename = fakeFilename.substring(1 + fakeFilename.lastIndexOf("\\"));
+
+            if (filename.indexOf(".xls") > -1) {
+                $('#filetype').val("xls");
+            } else if (filename.indexOf(".csv") > -1) {
+                $('#filetype').val("csv");
+            } else {
+                alert("Please upload only Excel (xls) or Comma Separated Values (csv) files");
+                return false;
+            }
+
+            $('create-samples').submit();
+        });
+
+
+        // autocomplete stuff below
+
+        var cache = [];
+        // Arguments are image paths relative to the current page.
+        $.preLoadImages = function() {
+        var args_len = arguments.length;
+            for (var i = args_len; i--;) {
+                var cacheImage = document.createElement('img');
+                cacheImage.src = arguments[i];
+                cache.push(cacheImage);
+            }
+        }
+
+        autocompleteUrl = "/view/genome/nomenclature/set/autocomplete.json"
+        $.ajax({
+            url: autocompleteUrl,
+            type: "GET",
+            context: document.body,
+            success: function(data, textStatus, jqXHR) {
+                var autoCompleteData = data.names;
+                $("#nomenclature").autocomplete({
+                    source: autoCompleteData
+                });
+            },
+            error: function() {
+                alert("ajax request for nomenclature names failed");
+            }
+        });
+
+    });
 
 
 
-<html>
 
-<head><title>Upload subject data</title></head>
+    </script>
+    <script xmlns:rest="urn:rest" xmlns:str="http://xsltsl.org/string" type="text/javascript" src="/res/js/app/ui-init.js"></script>
+  </head>
+  <body>
+    <div class="page">
 
-<body>
+<!--template: /html/common_includes/components.xsl name:control_bar_app-->
+      <div xmlns:rest="urn:rest" xmlns:str="http://xsltsl.org/string" class="control_bar app rounded-bottom shadow">
+        <div class="control_bar_menu" id="bar_menu">
+<!--template: /html/common_includes/components.xsl name:control_bar_cache_info-->
+          <div class="cache_info">
+            <div class="cache_time">
+              <p>
+          View generated<br /><strong><span id="updatedOn"></span></strong></p>
+            </div>
+            <div class="cache_refresh">
+              <a class="btn_cache_refresh rounded" id="refreshCache" title="Refresh Cache"></a>
+            </div>
+          </div>
+
+<!-- JTAL REMOVE TIHS SHIT -->
+
+   <div class="tasks_info">
+            <div class="titlebar"></div>
+            <table>
+              <tr>
+                <td class="count succeeded">88</td>
+                <td class="type">Succeeded</td>
+                <td class="count running">88</td>
+                <td class="type">Running</td>
+                <td class="count submitted">88</td>
+                <td class="type">Submitted</td>
+              </tr>
+              <tr>
+                <td class="count failed">88</td>
+                <td class="type">Failed</td>
+                <td class="count pending">88</td>
+                <td class="type">Pending</td>
+                <td class="button" colspan="2">
+                  <a href="#" class="btn_view_all" id="view_all_tasks" title="jmcmicha's tasks">View All</a>
+                </td>
+              </tr>
+            </table>
+          </div>
+          <div id="tasks_table" style="display: none;">
+            <table cellpadding="0" cellspacing="0" class="lister" border="0">
+              <thead>
+                <th>job</th>
+                <th>status</th>
+                <th>submitted</th>
+                <th>started</th>
+                <th>finished</th>
+              </thead>
+              <tr>
+                <td>Import Dataset</td>
+                <td class="status succeeded">succeeded</td>
+                <td>2011-09-15 19:29:18</td>
+                <td>2011-09-15 19:30:15</td>
+                <td>2011-09-15 19:35:45</td>
+              </tr>
+              <tr>
+                <td>Import Dataset</td>
+                <td class="status running">running</td>
+                <td>2011-09-15 19:29:55</td>
+                <td>2011-09-15 19:30:42</td>
+                <td>2011-09-15 19:35:45</td>
+              </tr>
+              <tr>
+                <td>Import Dataset</td>
+                <td class="status running">running</td>
+                <td>2011-09-15 19:40:21</td>
+                <td>2011-09-15 19:45:44</td>
+                <td>--</td>
+              </tr>
+              <tr>
+                <td>Import Dataset</td>
+                <td class="status pending">pending</td>
+                <td>2011-09-15 19:50:23</td>
+                <td>--</td>
+                <td>--</td>
+              </tr>
+              <tr>
+                <td>Import Dataset</td>
+                <td class="status submitted">submitted</td>
+                <td>2011-09-15 19:58:18</td>
+                <td>--</td>
+                <td>--</td>
+              </tr>
+            </table>
+          </div>
+<!-- JTAL END OF SHIT TO REMOVE -->
 
 
-<form>
+<!--template: /html/common_includes/components.xsl name:control_bar_menu-->
+          <ul class="app_menu">
+            <li>
+              <a href="/view/genome/status.html" class="app btn shadow"><div class="icon"><img src="/res/img/icons/app_deprecated_search_16.png" width="16" height="16" /></div>
+          Deprecated Search
+        </a>
+            </li>
+            <li>
+              <a href="/view/genome/search/status.html" class="app btn shadow"><div class="icon"><img src="/res/img/icons/app_analysis_search_16.png" width="16" height="16" /></div>
+          Analysis Search
+        </a>
+            </li>
+          </ul>
+        </div>
+        <div class="control_bar_base" id="bar_base"> </div>
+      </div>
+      <div class="content rounded shadow" style="padding-top: 0;">
+<!--template: /html/common_includes/components.xsl:app_header-->
+        <div xmlns:rest="urn:rest" xmlns:str="http://xsltsl.org/string" class="header rounded-top gradient-grey">
+          <div class="container">
+            <div class="title span-24 last app_analysis_search_32">
+              <h1>Upload Subject Data</h1>
+            </div>
+          </div>
+        </div>
+        <div class="container">
 
-<h3>Upload subject data</h3>
+    <div id="sampleUpload" class="span-16 append-4 prepend-4 last" style="margin-top: 20px">
 
-Nomenclature: <input name="nomenclature">
-<br> <br>
+<!--    
+    <form id="create-samples" action="/view/x/subject-upload" method=POST enctype="form-data">
+-->
 
-Kind of subject: <br>
-<input type="radio" name="subclass_name" value="Genome::Sample" CHECKED> Sample
-<br>
-<input type="radio" name="subclass_name" value="Genome::Individual"> Individual
-<br>
-<input type="radio" name="subclass_name" value="Genome::PopulationGroup"> Population
-<br>
+<form id="create-samples" action="/view/x/subject-upload" method=POST enctype="multipart/form-data">
+   
+    <input type="hidden" id="filetype" name="filetype"></p>
+    <fieldset> 
+    <legend>Nomenclature &amp; Subject Details</legend>
+    1. Which nomenclature? <input size=50 class="text" id="nomenclature" name="nomenclature">
+    (<a href="/view/genome/nomenclature/set/status.html">see a list</a>)
+    <br/><br/>
+    2. Each row of your file represents a ... <br>
+    <input type="radio" id="subclass-name-sample" name="subclass_name" value="Genome::Sample" CHECKED> Sample
+    <br>
+    <input type="radio" id="subclass-name-individual" name="subclass_name" value="Genome::Individual"> Individual
+    <br>
+    <input type="radio" id="subclass-name-populationgroup" name="subclass_name" value="Genome::PopulationGroup"> Population
+    </fieldset>
 
-<br> <br>
-Select a file (tsv, csv, xls) to upload.
-<br>
-<input type="file" name="file">
+    <fieldset>
+    <legend>Select File &amp; Upload</legend>
+    <p>3. Select the file on your computer which contains your subject data.
+    <br/>The first column should contain the name of the sample, individual, etc. (csv, xls supported)
+    <br/><br/>
+    <input type="file" id="file" name="file"></p>
+    </fieldset>
 
-<br> <br>
-<br> <br>
+    <div>
+        <p style="text-align: right;"><button id="submit-button">Save</button></p>
+    </div>
 
-<input type="submit" value="done">
+    </form>
+
+</div>
 
 
-</form>
 
 
-</body>
 
+
+        
+        </div>
+      </div>
+<!--template: /html/common_includes/components.xsl:footer-->
+      <div xmlns:rest="urn:rest" xmlns:str="http://xsltsl.org/string" class="footer rounded shadow span-24 last gradient-grey">
+        <div class="container">
+          <p class="small">
+            <br />
+          </p>
+        </div>
+      </div>
+      <br xmlns:rest="urn:rest" xmlns:str="http://xsltsl.org/string" />
+      <br xmlns:rest="urn:rest" xmlns:str="http://xsltsl.org/string" />
+    </div>
+  </body>
 </html>
-
-

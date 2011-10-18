@@ -21,8 +21,9 @@ class Genome::Task {
             len=>255, 
             doc => 'Command class name'
         },
-        status => {
+        status => {  # submitted, pending_execute, running, failed, succeeded
             is => 'Text', 
+            default => 'submitted',
             len => 50, 
             doc => 'Task lifecycle status'
         },
@@ -69,7 +70,12 @@ class Genome::Task {
 sub create {
     my $class = shift;
 
-    my $self = $class->SUPER::create(@_);
+    my %p = @_;
+    if (!exists $p{time_submitted}) {
+        $p{time_submitted} = UR::Time->now();
+    }
+
+    my $self = $class->SUPER::create(%p);
     
     my $cmd_object = $self->command_object;
 
@@ -78,7 +84,6 @@ sub create {
         $self->delete;
         return;
     }
-
 
     return $self;
 }
@@ -127,7 +132,7 @@ sub _resolve_param_values {
     for my $arg_key (keys %$args) {
         my $property = $cmd_class_meta->property($arg_key);
         if (!$property) {
-            $class->error_message("Invalid param $arg_key provided as a task parameter.");
+            $class->error_message("Invalid param $arg_key provided as a command parameter.");
             return;
         }
         my $type = $property->data_type;
@@ -183,9 +188,53 @@ sub out_of_band_attribute_update {
         exit(0); 
     }
 
+    set_long_read_len();
     $self = UR::Context->current->reload(ref($self), $self->id);
+    reset_long_read_len();
     
     return 1;
 }
+
+sub get {
+    my $class= shift;
+
+    my $ds = $UR::Context::current->resolve_data_sources_for_class_meta_and_rule(Genome::Task->__meta__);
+    my $dbh = $ds->get_default_dbh;
+    my $orig_long_read_len = $dbh->{LongReadLen};
+    $dbh->{LongReadLen} = 30_000_000;
+
+    set_long_read_len();
+    my @objects = $class->SUPER::get(@_);
+    reset_long_read_len();
+
+    
+    if (@objects > 1) {
+        return @objects if wantarray;
+        my @ids = map { $_->id } @objects;
+        die "Multiple matches for $class but get or create was called in scalar context!  Found ids: @ids";
+    } else {
+        return $objects[0];
+    }
+}
+
+our $ORIG_LONG_READ_LEN;
+BEGIN: { 
+    my $ds = $UR::Context::current->resolve_data_sources_for_class_meta_and_rule(Genome::Task->__meta__);
+    my $dbh = $ds->get_default_dbh;
+    $ORIG_LONG_READ_LEN = $dbh->{LongReadLen};
+}
+
+sub set_long_read_len {
+    my $ds = $UR::Context::current->resolve_data_sources_for_class_meta_and_rule(Genome::Task->__meta__);
+    my $dbh = $ds->get_default_dbh;
+    $dbh->{LongReadLen} = 30_000_000;
+}
+
+sub reset_long_read_len {
+    my $ds = $UR::Context::current->resolve_data_sources_for_class_meta_and_rule(Genome::Task->__meta__);
+    my $dbh = $ds->get_default_dbh;
+    $dbh->{LongReadLen} = $ORIG_LONG_READ_LEN;
+}
+
 
 1;

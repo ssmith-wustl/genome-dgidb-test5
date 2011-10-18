@@ -14,8 +14,10 @@ sub load_modules {
         use Workflow;
         use Plack::MIME;
         use Plack::Util;
+        use Plack::Request;
         use Cwd;
         use HTTP::Date;
+        use JSON;
         use UR::Object::View::Default::Xsl qw/type_to_url url_to_type/;
     ";
     if ($@) {
@@ -27,6 +29,89 @@ sub load_modules {
 }
 
 sub dispatch_request {
+
+    sub (PUT + /** + %*) {
+        load_modules();
+        my ($self, $url, $params) = @_;
+        my ($code, $obj);
+        my $class = url_to_type($url); # UR::Object::View::Default::Xsl
+        eval { 
+            $obj = $class->create(%$params); 
+            UR::Context->commit();
+        };
+
+        if ($@) {
+            $code = 200; # OK (didnt work)
+        } else {
+            $code = 201; # CREATED
+            $params->{'id'} = $obj->id();
+        }
+
+        my $body = to_json( $params, { 
+                                ascii => 1,
+                                allow_nonref => 1,
+                    });
+        return [
+            $code,
+            [
+                'Content-type'   => "text/plain"
+            ],
+            [$body]
+        ];
+
+    },
+    sub (POST + /** + %*) {
+        load_modules();
+        my ($self, $url, $params) = @_;
+        my ($code, $obj, $body);
+        my $class = url_to_type($url); # UR::Object::View::Default::Xsl
+
+        my $id = $params->{'id'};
+        $obj = $class->get($id);
+        if (!$id) {
+            $code = 400;
+            $body = "ERROR: No ID passed in.";
+            return [ $code, [ 'Content-type'   => "text/plain" ], [$body] ];
+        }
+    
+        if (!$obj) {
+            $code = 404;
+            $body = "ERROR: No object by that ID found.";
+            return [ $code, [ 'Content-type'   => "text/plain" ], [$body] ];
+        }
+        eval {
+            for my $p (keys %$params) {
+                 $obj->$p($params->{$p});
+             }
+            UR::Context->commit;
+        };
+
+        if ($@) {
+            $code = 500; 
+            return [ $code, [ 'Content-type'   => "text/plain" ], ["An error occurred processing the input: $@"] ];
+        } else {
+            $code = 201; # CREATED
+            $params->{'id'} = $obj->id();
+        }
+
+        my $body = to_json( $params, { 
+                                ascii => 1,
+                                allow_nonref => 1,
+                    });
+        return [
+            $code,
+            [
+                'Content-type'   => "text/plain"
+            ],
+            [$body]
+        ];
+
+    },
+
+    # Matcher for Static content related to a view
+    # **/ = class name
+    # */ = perspective.toolkit
+    # * + .* = filename & extension
 
     # Matcher for Static content related to a view
     # **/ = class name
@@ -134,7 +219,7 @@ sub dispatch_request {
         my ( $self, $class, $perspective, $toolkit, $args ) = @_;
 
         load_modules();
-
+$DB::single = 1;
         $class = url_to_type($class);
         $perspective =~ s/\.$toolkit$//g;
 
@@ -197,6 +282,8 @@ sub dispatch_request {
             $view_args{'xsl_root'} =
               Genome->base_dir . '/xsl';    ## maybe move this to $res_path?
             $view_args{'xsl_path'} = '/static/xsl';
+            $view_args{'html_root'} =
+              Genome->base_dir . '/View/Resource/Html/html';
 
             #            $view_args{'rest_variable'} = '/view';
 

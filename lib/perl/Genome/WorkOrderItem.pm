@@ -188,6 +188,9 @@ sub _hash_up {
     my $status     = $pse->pse_status;
     my $process_to = _summarize( $pse->process_to );
 
+    if (not exists $events->{'production'}->{$process_to}->{$status}->{'count'}) {
+        $events->{'production'}->{$process_to}->{$status}->{'count'} = 0;
+    }
     return {
         count      => $events->{'production'}->{$process_to}->{$status}->{'count'} + 1,
         sort_order => $sort_order,

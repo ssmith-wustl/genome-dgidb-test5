@@ -29,11 +29,8 @@ sub _combine_variants {
 
     # Using joinx with --merge-only will do a union, effectively
     my $union_command = Genome::Model::Tools::Joinx::Union->create(
-        input_file_a => $indels_a,
-        input_file_b => $indels_b,
+        input_files => \@input_files,
         output_file => $output_file,
-        exact_pos => 1,
-        exact_allele => 1,
     );
     
     unless ($union_command->execute) {

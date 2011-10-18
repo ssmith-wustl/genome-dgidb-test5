@@ -24,19 +24,26 @@ class Genome::GeneName {
             is_optional => 1,
         },
         gene_name_associations => {
-            calculate_from => ['id'],
-            calculate => q|
-                my @gene_name_associations = Genome::GeneNameAssociation->get(gene_name_id => $id);
-                return @gene_name_associations;
-            |,
+            is => 'Genome::GeneNameAssociation',
+            reverse_as => 'gene_name',
+            is_many => 1,
         },
         gene_name_category_associations => {
-            calculate_from => ['id'],
-            calculate => q|
-                my @gene_name_category_associations = Genome::GeneNameCategoryAssociation->get(gene_name_id => $id);
-                return @gene_name_category_associations;
-            |,
+            is => 'Genome::GeneNameCategoryAssociation',
+            reverse_as => 'gene_name',
+            is_many => 1,
         },
+        drug_gene_interactions => {
+            is => 'Genome::DrugGeneInteraction',
+            reverse_as => 'gene_name',
+            is_many => 1,
+        },
+        drug_names => {
+            is => 'Genome::DrugName',
+            via => 'drug_gene_interactions',
+            to => 'drug_name',
+            is_many => 1,
+        }
     ],
     doc => 'Claim regarding the name of a drug',
 };

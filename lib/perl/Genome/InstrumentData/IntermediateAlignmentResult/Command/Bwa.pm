@@ -46,6 +46,10 @@ class Genome::InstrumentData::IntermediateAlignmentResult::Command::Bwa {
             is => 'Text',
             doc => 'The specific value of the segment type to work with in this instance',
         },
+        samtools_version => {
+            is => 'Text',
+            doc => 'The samtools version used',
+        },
         test_name => {
             is => 'Text',
             doc => 'A test name for the software result',
@@ -73,6 +77,7 @@ sub execute {
         input_pass => $self->input_pass,
         instrument_data_segment_type => $self->instrument_data_segment_type,
         instrument_data_segment_id => $self->instrument_data_segment_id,
+        samtools_version => $self->samtools_version,
         test_name => $self->test_name,
     );
 

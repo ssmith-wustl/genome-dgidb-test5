@@ -17,7 +17,7 @@ class Genome::Sample::View::Detail::Xml {
                     name => 'attributes',
                     perspective => 'default',
                     toolkit => 'xml',
-                    aspects => ['nomenclature','attribute_label','attribute_value','subject_id']
+                    aspects => ['nomenclature_name','nomenclature_field_name','attribute_label','attribute_value','subject_id']
                 }
             ]
         }

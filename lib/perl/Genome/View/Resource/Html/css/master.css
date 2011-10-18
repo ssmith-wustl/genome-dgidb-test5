@@ -331,6 +331,23 @@ form td.label {
     text-align: right;
 }
 
+div#nomenclature-columns ul {
+    margin: 0;
+    padding: 0;
+}
+
+div#nomenclature-columns li {
+    list-style: none;
+    margin-right: 5px;
+}
+
+div#nomenclature-columns input.text {
+    width: 200px;
+}
+
+div#nomenclature-columns div.enumerated-choices {
+    margin-left: 25px;
+}
 
 /* TABLES
  ****************************************/
@@ -431,6 +448,13 @@ table.lister td.text {
     padding: 10px;
 }
 
+table.lister td.group {
+    font-weight: bold;
+    font-size: 120%;
+    color: #EFEFEF;
+    background-color: #333;
+}
+
 td.status {
     font-weight: bold;
     text-align: center;
@@ -446,9 +470,14 @@ td.running {
     background-color: #f8f7a3 !important;
 }
 
-td.new, td.scheduled {
+td.new, td.scheduled, td.submitted {
     background-color: #ffac2a !important;
     color: #5c3e0f;
+}
+
+td.pending {
+    background-color: #d0a2ff !important;
+    color: #362a42;
 }
 
 td.failed,
@@ -909,4 +938,69 @@ a.btn_cache_refresh {
     display: block;
     background: #2a2a27 url("../img/components/buttons/btn_cache_refresh_icon.png") center no-repeat;
     cursor: pointer;
+}
+
+
+
+/* tasks info items */
+
+div.tasks_info {
+    background: transparent url("../img/components/control_bar/tasks_info_bg.png") right;
+    height: 36px;
+    float: left;
+    color: #FFF;
+}
+
+div.tasks_info .titlebar {
+    width: 14px;
+    height: 36px;
+    background: url("../img/components/control_bar/tasks_title.png");
+    float: left;
+}
+
+div.tasks_info table {
+    width: 250px;
+    float: left;
+    margin: 0;
+    padding: 0;
+    cell-padding: 0;
+    cell-spacing: 0;
+}
+
+div.tasks_info table td {
+    padding: 3px 5px;
+    line-height: 12px;
+    font-size: 11px;
+}
+
+div.tasks_info td.count {
+    font-weight: bold;
+}
+
+div.tasks_info td.type {
+    padding-left: 5px;
+}
+
+div.tasks_info table td.button {
+    padding: 0 3px 0 0;
+    text-align: right;
+}
+
+div.tasks_info a.btn_view_all {
+    display: inline-block;
+    line-height: 12px;
+    font-size: 9px;
+    font-weight: bold;
+    padding: 1px 5px;
+    text-decoration: none;
+    background: #888884;
+    color: #FFF;
+    border-radius: 2px;
+    -moz-border-radius: 2px;
+    -webkit-border-radius: 2px;
+}
+
+div.tasks_info a.btn_view_all:hover {
+    background: #FFF;
+    color: #34342f;
 }

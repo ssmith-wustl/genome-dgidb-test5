@@ -85,7 +85,8 @@ sub _map_workflow_inputs {
         die $self->error_message;
     }
 
-    my $snv_variant_list = $model->snv_variant_list->file_path;
+    #TODO Make optional, support other types
+    my ($snv_variant_list) = glob($model->snv_variant_list->output_dir . '/snvs.hq.bed');
     unless($snv_variant_list) {
         $self->error_message('Failed to get a variant list for this build!');
         die $self->error_message;

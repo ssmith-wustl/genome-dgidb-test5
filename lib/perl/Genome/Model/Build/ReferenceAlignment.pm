@@ -167,7 +167,15 @@ sub check_region_of_interest {
         my $roi_list = eval { $self->model->region_of_interest_set; };
         if($roi_list) {
             my $roi_reference = $roi_list->reference;
-            unless ($rsb->is_compatible_with($roi_reference)) {
+            unless ($roi_reference) {
+                push @tags, UR::Object::Tag->create(
+                    type => 'invalid',
+                    properties => [qw/ region_of_interest_set_name /],
+                    desc => "Supplied region of interest $roi_name has no reference sequence defined!",
+                );
+            }
+
+            if ($roi_reference and !$rsb->is_compatible_with($roi_reference)) {
                 my $converter =  Genome::Model::Build::ReferenceSequence::Converter->get(
                     source_reference_build => $roi_reference, 
                     destination_reference_build => $rsb,

@@ -23,6 +23,12 @@ class Genome::Model::Tools::Vcf::VcfToVariantMatrix {
         doc => "Merged Multisample Vcf containing mutations from all samples",
     },
 
+    positions_file => {
+        is => 'Text',
+        is_optional => 1,
+        doc => "Limit Variant Matrix to Sites - File format chr\\tpos\\tref\\talt",
+    },
+
     project_name => {
         is => 'Text',
         is_optional => 1,
@@ -59,8 +65,23 @@ sub execute {                               # replace with real execution logic.
         my $project_name = $self->project_name;
 
         my $fh = Genome::Sys->open_file_for_writing($output_file);
-
         my $inFh = IO::File->new( $vcf_file ) || die "can't open file\n";
+
+        my $inFh_positions;
+        my %positions_selection_hash;
+        if ($self->positions_file) {
+                print "Loading Position Restriction File\n";
+                my $positions_file = $self->positions_file;
+                $inFh_positions = IO::File->new( $positions_file ) || die "can't open $positions_file\n";
+                while(my $line = $inFh_positions->getline ) {
+                        chomp($line);
+                        my ($chr, $pos, $ref, $alt) = split(/\t/, $line);
+                        my $variant_name = "$chr"."_"."$pos"."_"."$ref"."_"."$alt";
+                        $positions_selection_hash{$variant_name}++;
+                }
+        }
+
+        print "Loading Genotype Positions from Vcf\n";
         my $header_line;
         my @sample_names;
         my %variant_hash;
@@ -92,8 +113,8 @@ sub execute {                               # replace with real execution logic.
                 #parse format line to find out where our pattern of interest is in the ::::: system
                 my (@format_fields) = split(/:/, $format);
                 my $gt_location; #genotype
-                my $dp_location; #depth - this is currently unused down below
-                my $gq_location; #genotype quality - this is only filled for samtools variants, not varscan and not homo ref - this is currrently unused down below
+                my $dp_location; #depth - this is not filled for vasily ucla files - this is currently unused down below
+                my $gq_location; #genotype quality - this is only filled in washu vcf for samtools variants, not varscan and not homo ref - this is currrently unused down below
                 my $count = 0;
                 foreach my $format_info (@format_fields) {
                         if ($format_info eq 'GT') {
@@ -115,29 +136,31 @@ sub execute {                               # replace with real execution logic.
                 }
 
                 #check to see if line has 0,1,2,etc as genotype numbering, store those in a hash for future reference
+
                 my %alleles_hash;
-                foreach my $sample_info (@samples) {
-                        my ($chr, $pos, $id, $ref, $alt, $qual, $filter, $info, $format, @samples) = split(/\t/, $line);
+                foreach my $sample_info (@samples) {                    
                         my (@sample_fields) = split(/:/, $sample_info);
                         my $genotype = $sample_fields[$gt_location];
-                        my ($allele1, $allele2) = split(/\//, $genotype);
-                        if ($allele1 =~ m/[0-9]/) {
+                        my $allele1 = my $allele2 = ".";
+                        ($allele1, $allele2) = split(/\//, $genotype);
+                        if ($allele1 =~ m/\d+/) {
                                 $alleles_hash{$allele1}++;
-                        }
-                        if ($allele2 =~ m/[0-9]/) {
-                                $alleles_hash{$allele2}++;
+                                if ($allele2 =~ m/\d+/) {
+                                        $alleles_hash{$allele2}++;
+                                }
                         }
                 }
 
                 my @allele_options = (sort { $a <=> $b } keys %alleles_hash);
                 $count = 0;
                 foreach my $sample_info (@samples) {
-                        my ($chr, $pos, $id, $ref, $alt, $qual, $filter, $info, $format, @samples) = split(/\t/, $line);
                         my (@sample_fields) = split(/:/, $sample_info);
                         my $genotype = $sample_fields[$gt_location];
-                        my ($allele1, $allele2) = split(/\//, $genotype);
+                        my $allele1 = my $allele2 = ".";
                         my $allele_count;
-                        if ($allele1 =~ m/![0-9]/) {
+                        ($allele1, $allele2) = split(/\//, $genotype);
+
+                        if ($allele1 =~ m/\D+/) {
                                 $allele_count = '.';
                         }
                         elsif ($allele1 == $allele2) { #homo
@@ -172,19 +195,39 @@ sub execute {                               # replace with real execution logic.
         }
 
         #print out header line of variant names
+        print "Outputting File of Variant Positions\n";
         foreach my $variant_name (sort keys %variant_hash) {
-                print $fh "\t$variant_name";
+                if ($self->positions_file) {
+                        if(defined ($positions_selection_hash{$variant_name})) {
+                                print $fh "\t$variant_name";
+                        }
+                }
+                else {
+                        print $fh "\t$variant_name";
+                }
         }
         print $fh "\n";
 
         foreach my $sample_name (sort keys %sample_hash) {
                 print $fh "$sample_name";
                 foreach my $variant_name (sort keys %variant_hash) {
-                        if (defined $sample_hash{$sample_name}{$variant_name}) {
-                                print $fh "\t$sample_hash{$sample_name}{$variant_name}";
+                        if ($self->positions_file) {
+                                if(defined ($positions_selection_hash{$variant_name})) {
+                                        if (defined $sample_hash{$sample_name}{$variant_name}) {
+                                                print $fh "\t$sample_hash{$sample_name}{$variant_name}";
+                                        }
+                                        else {
+                                                print $fh "\t.";
+                                        }
+                                }
                         }
                         else {
-                                print $fh "\t.";
+                                if (defined $sample_hash{$sample_name}{$variant_name}) {
+                                        print $fh "\t$sample_hash{$sample_name}{$variant_name}";
+                                }
+                                else {
+                                        print $fh "\t.";
+                                }
                         }
                 }
                 print $fh "\n";

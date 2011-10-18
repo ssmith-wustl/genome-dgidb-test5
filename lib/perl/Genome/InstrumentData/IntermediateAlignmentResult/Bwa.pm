@@ -144,6 +144,7 @@ sub _verify_bwa_aln_did_happen {
         my $cmd = Genome::Model::Tools::Sam::Flagstat->create(
             bam_file       => $input_file,
             output_file    => $output_file,
+            use_version    => $self->samtools_version,
             include_stderr => 1,
         );
         unless ($cmd and $cmd->execute) {
@@ -161,6 +162,8 @@ sub _verify_bwa_aln_did_happen {
             $expected_count = $stats->{reads_marked_as_read1};
         } elsif($input_pass eq 2) {
             $expected_count = $stats->{reads_marked_as_read2};
+        } elsif($input_pass eq 0) {
+            $expected_count = $stats->{total_reads}; #fragment data
         }
     } else {
         my $wc_count_file = $self->temp_scratch_directory . '/wc.count';

@@ -338,7 +338,7 @@ sub create {
     if ( not defined $self->name ) {
         my $default_name = $self->default_model_name;
         if ( not defined $default_name ) {
-            $self->error_message("No model name given and cannot get a deafult name from $class");
+            $self->error_message("No model name given and cannot get a default name from $class");
             $self->SUPER::delete;
             return;
         }
@@ -703,7 +703,7 @@ sub completed_builds {
     my $self = shift;
 
     my @completed_builds;
-    for my $build ( $self->builds ) {
+    for my $build ( $self->builds('-hint' => ['the_master_event']) ) {
         my $build_status = $build->status;
         next unless defined $build_status and $build_status eq 'Succeeded';
         next unless defined $build->date_completed; # error?

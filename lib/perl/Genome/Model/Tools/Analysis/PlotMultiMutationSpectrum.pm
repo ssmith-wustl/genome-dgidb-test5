@@ -75,7 +75,13 @@ class Genome::Model::Tools::Analysis::PlotMultiMutationSpectrum {
         default_value => 'output.pdf',
         doc => 'The name of pdf file to save the plot to',
     },
-
+    plot_order => {
+        is_input => 1,
+        is_optional => 1,
+	is => 'String',
+        default => 0,
+        doc => 'order at which the labels will be plotted on the graph (comma,separated), will use the order defined by --label as default',
+    },
     #below here are variables with which to store results
     #hopefully these can then be judiciously used to write cross-comparison scripts
 
@@ -152,7 +158,7 @@ EOS
 
 sub help_detail {                           
     return <<EOS 
-    Given multiple output of mutation spectrum outputfile, make plots that compares the mutation spectrum of multiple samples.  You can specify the files using either a file via --group-file (tab-delimited where 1st column is the path to the file, 2nd column is the label) or via a comma-separated list via --mut-spec-files and --labels (make sure the order and number matche).  This tool can make 4 different plots.  Facet1 (default) separates the plots into multiplot by mutation type.  Facet2 separates the plot into multiple by sample.  Bar1 is a standard bargraph (similar to facet1 (but only makes 1 graph).  Bar2 is a stacked barplot which is great if you have large number of samples.  With the exception of --plot-type=Bar2, all other graphs cannot handle more than 8 samples.
+    Given multiple output of mutation spectrum outputfile, make plots that compares the mutation spectrum of multiple samples.  You can specify the files using either a file via --group-file (tab-delimited where 1st column is the path to the file, 2nd column is the label) or via a comma-separated list via --mut-spec-files and --labels (make sure the order and number match)..  This tool can make 4 different plots.  --plot-type=facet1 (default) separates the plots into multiplot by mutation type.  --plot-type=facet2 separates the plot into multiple plots by sample.  --plot-type=bar1 is a standard bargraph (similar to facet1 (but only makes 1 graph).  --plot-type=bar2 is a stacked barplot which is great if you have large number of samples.  
 EOS
 }
 
@@ -169,6 +175,9 @@ sub execute {
 	@$mutation_spec_files = split(",",$self->mut_spec_files);
 	@$input_labels = split(",",$self->labels);	
     }
+    my $plot_label_order = $self->plot_order || $self->labels;
+    $plot_label_order = undef if(!$plot_label_order);
+
 
     #my @mutation_spec_files = split(",",$self->mut_spec_files);
     #my @input_labels = split(",",$self->labels);
@@ -215,7 +224,13 @@ sub execute {
 	$calc_pvalue='TRUE'
     }
 
-    my $plot_cmd = qq{ plot_multi_mutation_spectrum("$input_plot_file",output_file="$plot_output_file",plot_title="$plot_title",plot_type="$plot_type",pvalue=$calc_pvalue) };
+    my $plot_cmd;
+    if($plot_label_order) {
+	$plot_cmd = qq{ plot_multi_mutation_spectrum("$input_plot_file",output_file="$plot_output_file",plot_title="$plot_title",plot_type="$plot_type",pvalue=$calc_pvalue,plot.sample.order='$plot_label_order') };
+    }else {
+	$plot_cmd = qq{ plot_multi_mutation_spectrum("$input_plot_file",output_file="$plot_output_file",plot_title="$plot_title",plot_type="$plot_type",pvalue=$calc_pvalue) };
+    }
+
     my $call = Genome::Model::Tools::R::CallR->create(command=>$plot_cmd, library=> "MutationSpectrum.R");
     $call->execute;
 

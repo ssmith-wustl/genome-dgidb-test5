@@ -55,10 +55,10 @@ sub execute {
     }
 
     my $basename = basename($self->in_sff_file);
-    #my $tmp_trim_file = $self->_tmp_dir . '/'. $basename .'.trim';
+    my $tmp_trim_file = $self->_tmp_dir . '/'. $basename .'.trim';
 
     #for testing
-    my $tmp_trim_file = $self->in_sff_file .'.trim';
+    #my $tmp_trim_file = $self->in_sff_file .'.trim';
 
     my $writer = Genome::Utility::454TrimFile::Writer->create(file => $tmp_trim_file);
     unless ($writer) {

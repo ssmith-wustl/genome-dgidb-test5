@@ -100,7 +100,7 @@ sub execute {
     my $dbh = Genome::DataSource::GMSchema->get_default_handle();
     my $sth = $dbh->prepare($sql) or die "Failed to connect to the database!";
     $sth->execute($sample_pattern,$date) or die "Error querying the database!";
-    UR::Report->print_formatted(sth => $sth);
+    UR::DBI::Report->print_formatted(sth => $sth);
     return 1;
 }
 

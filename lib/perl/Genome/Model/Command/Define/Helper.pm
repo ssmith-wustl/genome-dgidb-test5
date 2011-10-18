@@ -57,9 +57,6 @@ class Genome::Model::Command::Define::Helper {
             is => 'Genome::Project',
             doc => 'Projects for the model.',
         },
-        bare_args => {
-            shell_args_position => 99
-        },
     ],
 };
 
@@ -104,12 +101,6 @@ sub type_specific_parameters_for_create {
 sub execute {
     my $self = shift;
 
-    if (my @args = $self->bare_args) {
-        $self->error_message("extra arguments: @args");
-        $self->usage_message($self->help_usage_complete_text);
-        return;
-    }
-
     my $processing_profile = $self->validate_processing_profile;
     unless ($processing_profile) {
         confess "Could not validate processing profile!";
@@ -130,11 +121,11 @@ sub execute {
         name => $self->model_name,
         auto_assign_inst_data => $self->auto_assign_inst_data,
         auto_build_alignments => $self->auto_build_alignments,
-        projects => [ $self->projects ],
         $self->type_specific_parameters_for_create,
     );
     $params{instrument_data} = [$self->instrument_data] if $self->instrument_data;
     $params{model_groups} = [$self->groups] if $self->groups;
+    $params{projects} = [$self->projects] if $self->projects;
             
     my $model = Genome::Model->create(%params);
     unless ($model) {

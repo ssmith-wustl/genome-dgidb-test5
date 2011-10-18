@@ -9,38 +9,38 @@ use File::Basename;
 class Genome::Model::Tools::Validation::LongIndelsPartOne {
     is => 'Command',
     has_input => [
-    long_indel_bed_file => {
-        is => 'String',
-        doc => 'unsorted, unannotated 3bp indel file in BED format!!! BED format!!!',
-    },
-    output_dir => {
-        is => 'String',
-        doc => 'directory for output files',
-    },
-    tumor_val_model_id => {
-        is => 'Number',
-        doc => 'validation model ID for the tumor sample',
-    },
-    normal_val_model_id => {
-        is => 'Number',
-        doc => 'validation model ID for the normal sample',
-    },
-    sample_identifier => {
-        is => 'String',
-        doc => 'some string to use in model names, etc, such as "BRC2"',
-    },
+        long_indel_bed_file => {
+            is => 'String',
+            doc => 'unsorted, unannotated 3bp indel file in BED format!!! BED format!!!',
+        },
+        output_dir => {
+            is => 'String',
+            doc => 'directory for output files',
+        },
+        tumor_val_model_id => {
+            is => 'Number',
+            doc => 'validation model ID for the tumor sample',
+        },
+        normal_val_model_id => {
+            is => 'Number',
+            doc => 'validation model ID for the normal sample',
+        },
+        sample_identifier => {
+            is => 'String',
+            doc => 'some string to use in model names, etc, such as "BRC2"',
+        },
     ],
     has_optional_input => [
-    reference_transcripts => {
-        is => 'String',
-        doc => 'reference transcripts plus version to be used to annotate input indel file',
-        default => 'NCBI-human.combined-annotation/54_36p_v2',
-    },
-    reference_sequence_build_id => {
-        is => 'Integer',
-        doc => 'Optional reference sequence path (default: NCBI-human-build36 reference sequence build_id 101947881)',
-        default => '101947881'
-    },
+        reference_transcripts => {
+            is => 'String',
+            doc => 'reference transcripts plus version to be used to annotate input indel file',
+            default => 'NCBI-human.combined-annotation/54_36p_v2',
+        },
+        reference_sequence_build_id => {
+            is => 'Integer',
+            doc => 'Optional reference sequence path (default: NCBI-human-build36 reference sequence build_id 101947881)',
+            default => '101947881'
+        },
     ],
     doc => 'Begin validation of 3bp indels.',
 };

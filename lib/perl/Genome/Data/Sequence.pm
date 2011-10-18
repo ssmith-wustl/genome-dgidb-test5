@@ -3,6 +3,9 @@ package Genome::Data::Sequence;
 use strict;
 use warnings;
 
+use Genome::Data;
+use base 'Genome::Data';
+
 use Carp;
 
 sub create {

@@ -26,11 +26,8 @@ sub _combine_variants {
 
     # Using joinx with --merge-only will do a union, effectively
     my $union_command = Genome::Model::Tools::Joinx::Union->create(
-        input_file_a => $snvs_a,
-        input_file_b => $snvs_b,
+        input_files => \@input_files,
         output_file => $output_file,
-        exact_pos => 1,
-        exact_allele => 1,
     );
     
     unless ($union_command->execute) {
@@ -58,7 +55,11 @@ sub _validate_output {
 
     # Since we throw out non-unique variants in the union... we have to find out how many things were tossed out
     # We can figure that out by finding out how many things intersected.
-    my $scratch_dir = File::Temp::tempdir('Genome-Model-Tools-DetectVariants2-Combine-UnionuniqueSnv-XXXXX', CLEANUP => 1);
+    my $scratch_dir = File::Temp::tempdir(
+        'Genome-Model-Tools-DetectVariants2-Combine-UnionuniqueSnv-XXXXX',
+        DIR => Genome::Sys->base_temp_directory(),
+        CLEANUP => 1
+        );
     my $temp_intersect_file = $scratch_dir . "/UnionuniqueSnv.intersected";
     my $intersect_command = Genome::Model::Tools::Joinx::Intersect->create(
         input_file_a => $input_a_file,

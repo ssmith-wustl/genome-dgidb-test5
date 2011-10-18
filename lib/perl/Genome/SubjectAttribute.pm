@@ -12,6 +12,7 @@ class Genome::SubjectAttribute {
     id_by => [
         attribute_label => {
             is => 'Text',
+            default => 'NONE',
         },
         subject_id => {
             is => 'Text',
@@ -24,10 +25,39 @@ class Genome::SubjectAttribute {
         },
     ],
     has => [        
+        nomenclature_field => {
+            is => 'Genome::Nomenclature::Field',
+            id_by => 'nomenclature',
+        },
         subject => {
             is => 'Genome::Subject',
             id_by => 'subject_id',
         },
+        subject_name => {
+            via => 'subject',
+             to => 'name'
+        },
+        nomenclature_field_name => {
+            via => 'nomenclature_field',
+             to => 'name'
+        },
+        nomenclature_name => {
+            via => 'nomenclature_field',
+             to => 'nomenclature_name',
+        },
+        nomenclature_id => {
+            via => 'nomenclature_field',
+             to => 'nomenclature_id'
+        },
+        nomenclature_obj => {
+            is => 'Genome::Nomenclature',
+            via => 'nomenclature_field',
+             to => 'nomenclature'
+        },
+        all_nomenclature_fields => {
+            via => 'nomenclature_obj',
+             to => 'fields' 
+        }
     ],
     has_optional => [
         _individual => {

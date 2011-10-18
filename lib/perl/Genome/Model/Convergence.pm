@@ -92,7 +92,10 @@ sub check_for_updates {
 sub build_needed {
     my $self = shift;
 
-    my @potential_members = grep(defined $_->last_complete_build, $self->members);
+    my @group_members = $self->members;
+    my @b = Genome::Model::Build->get(model_id => [map($_->id, @group_members)], '-hint' => ['the_master_event']); #preload in one query
+
+    my @potential_members = grep(defined $_->last_complete_build, @group_members);
     unless(scalar @potential_members) {
         #$self->status_message('Skipping convergence rebuild--no succeeded builds found among members.');
         return;
