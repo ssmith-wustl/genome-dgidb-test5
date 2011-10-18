@@ -26,6 +26,7 @@ my $aligner_version = Genome::Model::Tools::Bwa->default_bwa_version;
 my $aligner_label   = $aligner_name.$aligner_version;
 $aligner_label =~ s/\./\_/g;
 
+my $samtools_version = 'r599';
 
 # Gather test data
 my $reference_model = Genome::Model::ImportedReferenceSequence->get(name => 'TEST-human');
@@ -50,6 +51,7 @@ my %params = (
     aligner_index => $aligner_index,
     input_file => $input_file,
     input_pass => 1,
+    samtools_version => $samtools_version,
 );
 
 my @result_ids;

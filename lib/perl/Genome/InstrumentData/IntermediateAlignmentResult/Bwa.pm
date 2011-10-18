@@ -144,6 +144,7 @@ sub _verify_bwa_aln_did_happen {
         my $cmd = Genome::Model::Tools::Sam::Flagstat->create(
             bam_file       => $input_file,
             output_file    => $output_file,
+            use_version    => $self->samtools_version,
             include_stderr => 1,
         );
         unless ($cmd and $cmd->execute) {
