@@ -105,6 +105,8 @@ sub execute {
     my $m = Genome::Model->create(@params);
     return unless $m;
 
+    $self->status_message('Successfully defined model: '.$m->__display_name__);
+
     $self->result_model($m);
     return $m;
 }
