@@ -9,31 +9,31 @@ use File::Basename;
 class Genome::Model::Tools::Validation::LongIndelsPartTwo {
     is => 'Command',
     has_input => [
-    output_dir => {
-        is => 'String',
-        doc => 'directory for output files from LongIndelsPartOne.pm; must contain a file "contigs.fa"',
-    },
-    tumor_val_model_copy_id => {
-        is => 'Number',
-        doc => 'model ID for copy of tumor validation model made in LongIndelsPartOne.pm',
-    },
-    normal_val_model_copy_id => {
-        is => 'Number',
-        doc => 'model ID for copy of normal validation model made in LongIndelsPartOne.pm',
-    },
+        output_dir => {
+            is => 'String',
+            doc => 'directory for output files from LongIndelsPartOne.pm; must contain a file "contigs.fa"',
+        },
+        tumor_val_model_copy_id => {
+            is => 'Number',
+            doc => 'model ID for copy of tumor validation model made in LongIndelsPartOne.pm',
+        },
+        normal_val_model_copy_id => {
+            is => 'Number',
+            doc => 'model ID for copy of normal validation model made in LongIndelsPartOne.pm',
+        },
     ],
     has_optional_input => [
-    contigs_file => {
-        is => 'String',
-        doc => 'contigs.fa file output from LongIndelsPartOne.pm',
-        is_optional => 1,
-    },
-    tier_file_location => {
-        is => 'String',
-        doc => 'tiering file location to be used by gmt fast-tier fast-tier. Defaults to build36 location.',
-        is_optional => 1,
-        default => '/gscmnt/ams1100/info/model_data/2771411739/build102550711/annotation_data/tiering_bed_files_v3',
-    },
+        contigs_file => {
+            is => 'String',
+            doc => 'contigs.fa file output from LongIndelsPartOne.pm',
+            is_optional => 1,
+        },
+        tier_file_location => {
+            is => 'String',
+            doc => 'tiering file location to be used by gmt fast-tier fast-tier. Defaults to build36 location.',
+            is_optional => 1,
+            default => '/gscmnt/ams1100/info/model_data/2771411739/build102550711/annotation_data/tiering_bed_files_v3',
+        },
     ],
     doc => 'Final steps in the validation of 3bp indels.',
 };

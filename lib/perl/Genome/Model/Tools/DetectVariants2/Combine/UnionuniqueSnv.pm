@@ -26,14 +26,12 @@ sub _combine_variants {
     my $output_file = $self->output_directory."/snvs.hq.bed";
 
     my @input_files = ($snvs_a, $snvs_b);
+    print "SNV INPUT FILES:\n\t" . join("\n\t", @input_files) . "\n";
 
     # Using joinx with --merge-only will do a union, effectively
     my $union_command = Genome::Model::Tools::Joinx::Union->create(
-        input_file_a => $snvs_a,
-        input_file_b => $snvs_b,
+        input_files => \@input_files,
         output_file => $output_file,
-        exact_pos => 1,
-        exact_allele => 1,
     );
     
     unless ($union_command->execute) {
