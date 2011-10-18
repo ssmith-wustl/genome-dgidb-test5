@@ -188,7 +188,9 @@ sub out_of_band_attribute_update {
         exit(0); 
     }
 
+    set_long_read_len();
     $self = UR::Context->current->reload(ref($self), $self->id);
+    reset_long_read_len();
     
     return 1;
 }
@@ -201,8 +203,9 @@ sub get {
     my $orig_long_read_len = $dbh->{LongReadLen};
     $dbh->{LongReadLen} = 30_000_000;
 
+    set_long_read_len();
     my @objects = $class->SUPER::get(@_);
-    $dbh->{LongReadLen} = $orig_long_read_len;
+    reset_long_read_len();
 
     
     if (@objects > 1) {
@@ -212,8 +215,26 @@ sub get {
     } else {
         return $objects[0];
     }
-
-
 }
+
+our $ORIG_LONG_READ_LEN;
+BEGIN: { 
+    my $ds = $UR::Context::current->resolve_data_sources_for_class_meta_and_rule(Genome::Task->__meta__);
+    my $dbh = $ds->get_default_dbh;
+    $ORIG_LONG_READ_LEN = $dbh->{LongReadLen};
+}
+
+sub set_long_read_len {
+    my $ds = $UR::Context::current->resolve_data_sources_for_class_meta_and_rule(Genome::Task->__meta__);
+    my $dbh = $ds->get_default_dbh;
+    $dbh->{LongReadLen} = 30_000_000;
+}
+
+sub reset_long_read_len {
+    my $ds = $UR::Context::current->resolve_data_sources_for_class_meta_and_rule(Genome::Task->__meta__);
+    my $dbh = $ds->get_default_dbh;
+    $dbh->{LongReadLen} = $ORIG_LONG_READ_LEN;
+}
+
 
 1;
