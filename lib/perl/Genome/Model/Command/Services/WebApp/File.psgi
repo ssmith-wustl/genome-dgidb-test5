@@ -1,6 +1,7 @@
 #!/usr/bin/env perl
 
 use Web::Simple 'Genome::Model::Command::Services::WebApp::File';
+use MIME::Base64;
 
 package Genome::Model::Command::Services::WebApp::File;
 
@@ -43,11 +44,13 @@ sub dispatch_request {
             $c = <$fh>;
             close($fh);
         }
+    
+        my $base64 = MIME::Base64::encode_base64($c);
 
         my $task_params_json = encode_json( { 
             nomenclature => $params->{'nomenclature'},
             subclass_name => $params->{'subclass_name'},
-            content => $c });
+            content => $base64 });
 
         my $task_params = {
             command_class => 'Genome::Subject::Command::Import',
