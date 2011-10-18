@@ -22,75 +22,8 @@
 
     <link xmlns:rest="urn:rest" xmlns:str="http://xsltsl.org/string" rel="stylesheet" href="/res/css/dataTables.css" type="text/css" media="screen, projection" />
 
-    <!-- includes for autocomplete -->
-    <script type="text/javascript" src="/res/js/pkg/jquery-ui-1.8.1.custom/development-bundle/ui/jquery.ui.autocomplete.js"></script>
-    <link href="/res/js/pkg/jquery-ui-1.8.1.custom/development-bundle/themes/base/jquery.ui.autocomplete.css" rel="stylesheet" type="text/css"/>
+    <script src="/res/js/app/detail/genome_sample_set.js"></script>
 
-    <!-- END includes for autocomplete -->
-
-<!--    <script src="/res/js/app/genome_subject_create.js"></script> -->
-
-    <script xmlns:rest="urn:rest" xmlns:str="http://xsltsl.org/string" type="text/javascript">
-    
-    $(document).ready(function() {
-
-        $('#submit-button').click(function() {
-
-            // validate
-            if (! $('#nomenclature').val() ) {
-                alert("Please specify a nomenclature");
-                return false;
-            }
-
-            if ( $("input[name='subclass_name']:checked").length <= 0 ) {
-                alert('Please select Sample, Indivdual or Population.');
-                return false;
-            }
-alert($('#file').val());
-            if ( ! $('#file').val() ) {
-                alert('Please select the file containing the subject data');
-                return false;
-            }
-
-            $('create-samples').submit();
-        });
-
-
-        // autocomplete stuff below
-
-        var cache = [];
-        // Arguments are image paths relative to the current page.
-        $.preLoadImages = function() {
-        var args_len = arguments.length;
-            for (var i = args_len; i--;) {
-                var cacheImage = document.createElement('img');
-                cacheImage.src = arguments[i];
-                cache.push(cacheImage);
-            }
-        }
-
-        autocompleteUrl = "/view/genome/nomenclature/set/autocomplete.json"
-        $.ajax({
-            url: autocompleteUrl,
-            type: "GET",
-            context: document.body,
-            success: function(data, textStatus, jqXHR) {
-                var autoCompleteData = data.names;
-                $("#nomenclature").autocomplete({
-                    source: autoCompleteData
-                });
-            },
-            error: function() {
-                alert("ajax request for nomenclature names failed");
-            }
-        });
-
-    });
-
-
-
-
-    </script>
     <script xmlns:rest="urn:rest" xmlns:str="http://xsltsl.org/string" type="text/javascript" src="/res/js/app/ui-init.js"></script>
   </head>
   <body>
@@ -204,56 +137,31 @@ alert($('#file').val());
         <div xmlns:rest="urn:rest" xmlns:str="http://xsltsl.org/string" class="header rounded-top gradient-grey">
           <div class="container">
             <div class="title span-24 last app_analysis_search_32">
-              <h1>Upload Subject Data</h1>
+              <h1>Sample Set Attributes</h1>
             </div>
           </div>
         </div>
-        <div class="container">
-
-    <div id="sampleUpload" class="span-16 append-4 prepend-4 last" style="margin-top: 20px">
-
-<!--    
-    <form id="create-samples" action="/view/x/subject-upload" method=POST enctype="form-data">
--->
-
-<form id="create-samples" action="/view/x/subject-upload" method=POST enctype="multipart/form-data">
-   
-    <fieldset> 
-    <legend>Nomenclature &amp; Subject Details</legend>
-    1. Which nomenclature? <input size=50 class="text" id="nomenclature" name="nomenclature">
-    (<a href="/view/genome/nomenclature/set/status.html">see a list</a>)
-    <br/><br/>
-    2. Each row of your file represents a ... <br>
-    <input type="radio" id="subclass-name-sample" name="subclass_name" value="Genome::Sample"> Sample
-    <br>
-    <input type="radio" id="subclass-name-individual" name="subclass_name" value="Genome::Individual"> Individual
-    <br>
-    <input type="radio" id="subclass-name-populationgroup" name="subclass_name" value="Genome::PopulationGroup"> Population
-    </fieldset>
-
-    <fieldset>
-    <legend>Select File &amp; Upload</legend>
-    <p>3. Select the file on your computer which contains your subject data.
-    <br/>The first column should contain the name of the sample, individual, etc. (tsv, csv, xls supported)
-    <br/><br/>
-    <input type="file" id="file" name="file"></p>
-    </fieldset>
-
-    <div>
-        <p style="text-align: right;"><button id="submit-button">Save</button></p>
-    </div>
-
-    </form>
-
-</div>
 
 
 
-
-
-
-        
+    <div class="content rounded shadow">
+      <div class="container">
+        <div class="box_header span-24 last rounded-top">
+          <div class="box_title"><h3 class="nontyped span-24 last"></h3></div>
         </div>
+        <div class="box_content rounded-bottom span-24 last">
+
+          <!-- details for this sample -->
+          <table id="samples" class="lister datatable">
+            <thead id="datatable-head">
+            </thead>
+          </table>
+        </div>
+      </div> <!-- end container -->
+    </div> <!-- end content -->
+
+
+
       </div>
 <!--template: /html/common_includes/components.xsl:footer-->
       <div xmlns:rest="urn:rest" xmlns:str="http://xsltsl.org/string" class="footer rounded shadow span-24 last gradient-grey">

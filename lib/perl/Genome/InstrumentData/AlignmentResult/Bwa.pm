@@ -131,16 +131,17 @@ sub _intermediate_result {
         }
 
         my %intermediate_params = (
-            instrument_data_id => $self->instrument_data->id,
-            aligner_name => $self->aligner_name,
-            aligner_version => $self->aligner_version,
-            aligner_params => $params,
-            aligner_index_id => $index->id,
-            input_file => $path,
-            input_pass => $input_pass,
+            instrument_data_id           => $self->instrument_data->id,
+            aligner_name                 => $self->aligner_name,
+            aligner_version              => $self->aligner_version,
+            aligner_params               => $params,
+            aligner_index_id             => $index->id,
+            input_file                   => $path,
+            input_pass                   => $input_pass,
             instrument_data_segment_type => $self->instrument_data_segment_type,
-            instrument_data_segment_id => $self->instrument_data_segment_id,
-            test_name => $ENV{GENOME_SOFTWARE_RESULT_TEST_NAME} || undef,
+            instrument_data_segment_id   => $self->instrument_data_segment_id,
+            samtools_version             => $self->samtools_version,
+            test_name                    => $ENV{GENOME_SOFTWARE_RESULT_TEST_NAME} || undef,
         );
 
         my $includes = join(' ', map { '-I ' . $_ } UR::Util::used_libs);
