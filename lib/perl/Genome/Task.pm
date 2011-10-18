@@ -132,7 +132,7 @@ sub _resolve_param_values {
     for my $arg_key (keys %$args) {
         my $property = $cmd_class_meta->property($arg_key);
         if (!$property) {
-            $class->error_message("Invalid param $arg_key provided as a task parameter.");
+            $class->error_message("Invalid param $arg_key provided as a command parameter.");
             return;
         }
         my $type = $property->data_type;
