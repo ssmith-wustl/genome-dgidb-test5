@@ -81,6 +81,11 @@ class Genome::InstrumentData::IntermediateAlignmentResult {
                                     is_optional=>1,
                                     doc => 'Force this run to be treated as a fragment run, do not do pairing',
                                 },
+        samtools_version        => {
+                                    is => 'Text',
+                                    is_optional => 1,
+                                    doc => 'the samtools version used',
+                                },
     ],
     has_transient => [
         temp_scratch_directory  => {
