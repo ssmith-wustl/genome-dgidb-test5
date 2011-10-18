@@ -46,9 +46,21 @@
                 alert('Please select Sample, Indivdual or Population.');
                 return false;
             }
-alert($('#file').val());
-            if ( ! $('#file').val() ) {
+
+            var fakeFilename = $('#file').val(); 
+            if ( ! fakeFilename ) {
                 alert('Please select the file containing the subject data');
+                return false;
+            }
+
+            var filename = fakeFilename.substring(1 + fakeFilename.lastIndexOf("\\"));
+
+            if (filename.indexOf(".xls") > -1) {
+                $('#filetype').val("xls");
+            } else if (filename.indexOf(".csv") > -1) {
+                $('#filetype').val("csv");
+            } else {
+                alert("Please upload only Excel (xls) or Comma Separated Values (csv) files");
                 return false;
             }
 
@@ -218,13 +230,14 @@ alert($('#file').val());
 
 <form id="create-samples" action="/view/x/subject-upload" method=POST enctype="multipart/form-data">
    
+    <input type="hidden" id="filetype" name="filetype"></p>
     <fieldset> 
     <legend>Nomenclature &amp; Subject Details</legend>
     1. Which nomenclature? <input size=50 class="text" id="nomenclature" name="nomenclature">
     (<a href="/view/genome/nomenclature/set/status.html">see a list</a>)
     <br/><br/>
     2. Each row of your file represents a ... <br>
-    <input type="radio" id="subclass-name-sample" name="subclass_name" value="Genome::Sample"> Sample
+    <input type="radio" id="subclass-name-sample" name="subclass_name" value="Genome::Sample" CHECKED> Sample
     <br>
     <input type="radio" id="subclass-name-individual" name="subclass_name" value="Genome::Individual"> Individual
     <br>
@@ -234,7 +247,7 @@ alert($('#file').val());
     <fieldset>
     <legend>Select File &amp; Upload</legend>
     <p>3. Select the file on your computer which contains your subject data.
-    <br/>The first column should contain the name of the sample, individual, etc. (tsv, csv, xls supported)
+    <br/>The first column should contain the name of the sample, individual, etc. (csv, xls supported)
     <br/><br/>
     <input type="file" id="file" name="file"></p>
     </fieldset>
