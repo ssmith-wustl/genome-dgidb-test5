@@ -18,11 +18,20 @@ sub create {
     $self->reference_allele(delete $params{reference_allele});
     $self->alt_alleles(delete $params{alt_alleles}); 
     $self->annotations(delete $params{annotations});
+    $self->type(delete $params{type});
 
     if (%params) {
         Carp::confess "Extra parameters provided to constructor of " . __PACKAGE__;
     }
     return $self;
+}
+
+sub type {
+    my ($self, $value) = @_;
+    if (defined $value) {
+        $self->{_type} = $value;
+    }
+    return $self->{_type};
 }
 
 sub chrom {
@@ -71,6 +80,10 @@ sub alt_alleles {
         $self->{_alt_alleles} = $value;
     }
     return $self->{_alt_alleles};
+}
+
+sub get_annotation_fields {
+    die ("get_annotation_fields must be implemented by child class");
 }
 
 1;
