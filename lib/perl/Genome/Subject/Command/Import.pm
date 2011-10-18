@@ -11,6 +11,8 @@ class Genome::Subject::Command::Import {
     is => 'Command',
     has => [
        nomenclature_id => { is => 'Text' },
+       nomenclature    => { is => 'Genome::Nomenclature', id_by=>'nomenclature_id' },
+       nomenclature_name    => { is => 'Text', via=>'nomenclature', to=>'name' },
        subclass_name   => { is => 'Text' },
        content => { is => 'Text' }
     ],
