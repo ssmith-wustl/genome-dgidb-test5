@@ -5,6 +5,8 @@ use warnings;
 
 use Genome;
 use Digest::MD5 qw(md5_hex);
+use Cwd;
+use File::Basename qw(fileparse);
 use Data::Dumper;
 
 class Genome::SoftwareResult {
@@ -555,6 +557,24 @@ sub _available_cpu_count {
         die $self->error_message;
     }
     
+}
+
+sub _resolve_param_value_from_text_by_name_or_id {
+    my $class = shift;
+    my $param_arg = shift;
+
+    #First try default behaviour of looking up by name or id
+    my @results = Command::V2->_resolve_param_value_from_text_by_name_or_id($class, $param_arg);
+
+    #If that didn't work, and the argument is a filename, see if it's part of our output directory.
+    if(!@results and -f $param_arg) {
+        my $abs_path = Cwd::abs_path($param_arg);
+        my (undef, $dir) = fileparse($abs_path);
+        $dir =~ s!/$!!; #remove trailing slash!
+        @results = Genome::SoftwareResult->get(output_dir => $dir);
+    }
+
+    return @results;
 }
 
 
