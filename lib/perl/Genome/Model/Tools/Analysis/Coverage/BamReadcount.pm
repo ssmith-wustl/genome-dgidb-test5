@@ -75,8 +75,8 @@ sub execute {
     elsif ($genome_build eq "mus37") {
         my $reference_build_fasta_object = Genome::Model::Build::ReferenceSequence->get(name => "NCBI-mouse-build37");
         $fasta = $reference_build_fasta_object->data_directory . "/all_sequences.fa";        
-        print STDERR $fasta . "\n";
-        #/gscmnt/839/info/medseq/reference_sequences/NCBI-mouse-build37/all_sequences.fa
+    } elsif ($genome_build eq "mus37wOSK") {
+        $fasta = "/gscmnt/sata135/info/medseq/dlarson/iPS_analysis/lentiviral_reference/mousebuild37_plus_lentivirus.fa"
     } else {
         die "genome build must be 36 or 37";
     }
