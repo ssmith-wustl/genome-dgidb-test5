@@ -17,6 +17,11 @@ class Genome::Model::Tools::Joinx::Sort {
         },
     ],
     has_optional_input => [
+        unique => {
+            is => 'Boolean',
+            value => '0',
+            doc => 'Print only unique entries (which are compared up to and including alleles)',
+        },
         merge_only => {
             is => 'Boolean',
             value => '0',
@@ -44,6 +49,7 @@ sub flags {
     my $self = shift;
     my @flags = ('--stable');
     push(@flags, "--merge-only") if $self->merge_only;
+    push(@flags, "--unique") if $self->unique;
     return @flags;
 }
 
