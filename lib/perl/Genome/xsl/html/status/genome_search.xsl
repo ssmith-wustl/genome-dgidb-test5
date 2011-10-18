@@ -42,32 +42,7 @@
 <br/>
         </div> <!-- end .span-12 -->
         <div class="span-12 last">
-        <div class="main_search_hints clearfix">
-          <div class="box_header span-8 last rounded-top">
-            <div class="box_title"><h3 class="nontyped last">Data Management</h3></div>
-          </div>
-          <div class="box_content rounded-bottom span-24 last">
-            <div style="width: 100%; float: left;">
-              <div class="padding10">
-                <ul style="list-style-type: none; padding-left: 0;">
-                    <li style="padding-bottom: .25em">
-                        <a class="btn" href="/view/genome/nomenclature/set/status.html">List Available Subject Nomenclatures</a>
-                    </li>
-                    <li style="padding-bottom: .25em">
-                        <a class="btn" href="/res/html/genome/nomenclature/create.html">Create A New Subject Nomenclature</a>
-                    </li>
-                    <li style="padding-bottom: .25em">
-                        <a class="btn" href="/res/html/genome/subject/create.html">Upload New Subjects or Subject Attributes</a>
-                    </li>
-                    <li style="padding-bottom: .25em">
-                        <a class="btn" href="#">Access Galaxy</a>
-                    </li>
-                </ul>
-              </div>
-            </div>
-          </div>
-
-        </div>
+          <br/>
         </div>
         <hr class="space"/>
 
