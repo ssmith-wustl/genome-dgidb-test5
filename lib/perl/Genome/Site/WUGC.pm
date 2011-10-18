@@ -2,6 +2,15 @@ package Genome::Site::WUGC;
 use strict;
 use warnings;
 
+BEGIN {
+    if ($ENV{GENOME_DEV_MODE}) {
+        $ENV{GENOME_SYS_SERVICES_MEMCACHE} = 'aims-dev.gsc.wustl.edu:11211'
+    }
+    else {
+        $ENV{GENOME_SYS_SERVICES_MEMCACHE} = 'imp.gsc.wustl.edu:11211'
+    }
+}
+
 # this conflicts with all sorts of Finishing/Finfo stuff
 # ironicall it is used by Pcap stuff
 BEGIN { $INC{"UNIVERSAL/can.pm"} = 'no' };
