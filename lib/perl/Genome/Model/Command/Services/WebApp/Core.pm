@@ -32,6 +32,9 @@ sub import {
         },
         $base_dir
     );
+    unless (@classes) {
+        warn "There were no classes to load!";
+    }
 
     @error_classes = grep {
         my $r = 0;
