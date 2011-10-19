@@ -46,8 +46,8 @@ sub execute {
 
     my $source_build = $self->source_build;
     my $previous_result;
-    if($source_build->can('combined_result_for_variant_type')){
-        $previous_result = $source_build->combined_result_for_variant_type($self->variant_type .'s');
+    if($source_build->can('final_result_for_variant_type')){
+        $previous_result = $source_build->final_result_for_variant_type($self->variant_type .'s');
     }
 
     my $manual_result = Genome::Model::Tools::DetectVariants2::Result::Manual->get_or_create(
@@ -60,7 +60,7 @@ sub execute {
         format => $self->format,
         previous_result_id => ($previous_result? $previous_result->id : undef),
         test_name => $ENV{GENOME_SOFTWARE_RESULT_TEST_NAME} || undef,
-        source_build => $source_build,
+        source_build_id => $source_build->id,
     );
 
     unless($manual_result) {

@@ -41,6 +41,10 @@ class Genome::Model::Tools::DetectVariants2::Result::Manual {
             is => 'Number',
             doc => 'ID of the build from which this variant list is defined',
         },
+        previous_result_id => {
+            is => 'Text',
+            doc => 'ID of the result upon which these manually chosen variants were based',
+        },
     ],
     has_optional_metric => [
         original_file_path => {
@@ -50,6 +54,10 @@ class Genome::Model::Tools::DetectVariants2::Result::Manual {
         description => {
             is => 'Text',
             doc => 'How this list was created, the source of the list, etc.',
+        },
+        username => {
+            is => 'Text',
+            doc => 'the user that created this result',
         },
     ],
     has => [
@@ -80,12 +88,6 @@ class Genome::Model::Tools::DetectVariants2::Result::Manual {
             is => 'Text',
             via => 'sample',
             to => 'name',
-        },
-    ],
-    has_optional_input => [
-        previous_result_id => {
-            is => 'Text',
-            doc => 'ID of the result upon which these manually chosen variants were based',
         },
     ],
 };
@@ -146,6 +148,11 @@ sub create {
 
     my $self = $class->SUPER::create(@_);
     return unless $self;
+
+    my $user = Genome::Sys->username;
+    my $sudo_user = Genome::Sys->sudo_username;
+    $user .= " ($sudo_user)" if $sudo_user;
+    $self->username($user);
 
     $self->_prepare_staging_directory;
 

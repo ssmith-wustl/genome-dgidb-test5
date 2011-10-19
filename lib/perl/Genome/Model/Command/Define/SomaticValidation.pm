@@ -57,6 +57,14 @@ class Genome::Model::Command::Define::SomaticValidation {
             is => 'Genome::SoftwareResult',
             doc => 'The DV2 result with the svs',
         },
+        tumor_sample => {
+            is => 'Genome::Sample',
+            doc => 'the tumor sample',
+        },
+        normal_sample => {
+            is => 'Genome::Sample',
+            doc => 'the normal sample',
+        },
     ],
     has_transient_optional_output => [
         result_model_id => {
@@ -70,6 +78,19 @@ class Genome::Model::Command::Define::SomaticValidation {
         },
     ],
 };
+
+sub help_detail {
+    return <<'EOHELP'
+To set up the model to run the validation process, three pieces of information are needed: the design (as sent to the vendor), the target set (as received from the vendor), and the variants to be validated. Each of these constituent parts are tracked individually by the analysis system, and this model takes the individual pieces and links them together.
+
+First, the individual pieces need to be added to the system. For the designs we send to the vendor and targets we get back from the vendor, the files are stored as feature lists. For the lists of variants, we track them as detect variants results, either directly from the Somatic Variation pipeline or from manual curation. Then the parts are assembled with this command. The two main commands to add the individual pieces are:
+
+`genome feature-list create` to create the feature lists, once for the design, and once for the target set.
+
+`genome model somatic-validation manual-result` to record the manually curated results, if necessary. (One per variant type.)
+EOHELP
+;
+}
 
 sub execute {
     my $self = shift;
@@ -101,9 +122,15 @@ sub execute {
         if defined $self->indel_result;
     push @params, sv_variant_list => $self->sv_result
         if defined $self->sv_result;
+    push @params, tumor_sample => $self->tumor_sample
+        if defined $self->tumor_sample;
+    push @params, normal_sample => $self->normal_sample
+        if defined $self->normal_sample;
 
     my $m = Genome::Model->create(@params);
     return unless $m;
+
+    $self->status_message('Successfully defined model: '.$m->__display_name__);
 
     $self->result_model($m);
     return $m;
@@ -145,6 +172,9 @@ sub resolve_subject {
         $self->error_message('At least one sample is required to define a model.');
         return;
     }
+
+    $self->tumor_sample($tumor_sample);
+    $self->normal_sample($control_sample);
 
     my $subject;
     if($tumor_sample) {
