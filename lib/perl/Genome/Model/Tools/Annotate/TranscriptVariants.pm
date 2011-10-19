@@ -348,6 +348,10 @@ END {
 sub execute { 
     my $self = shift;
 
+    # enable object cache pruning
+    UR::Context->object_cache_size_highwater(200_000);
+    UR::Context->object_cache_size_lowwater(20_000);
+
     unless($self->variant_file xor $self->variant_bed_file){
         $self->error_message("Please specify either a --variant-file or a --variant-bed-file");
         return;
