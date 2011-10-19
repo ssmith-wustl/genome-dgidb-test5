@@ -18,30 +18,21 @@ class Genome::Search {
     has => [
         environment => {
             is => 'Text',
-            value => Genome::Config->dev_mode() ? 'dev' : 'prod'
+            calculate => q|
+                return 'prod' if exists $ENV{GENOME_DEV_MODE} and $ENV{GENOME_DEV_MODE} == 1;
+                return 'dev';
+            |,
         },
-        _solr_server_location => {
+        solr_server => {
             is => 'Text',
-            default_value => 'http://solr:8080/solr',
+            default_value => $ENV{GENOME_SYS_SERVICES_SOLR},
             doc => 'Location of the Solr server',
-        },
-        _dev_solr_server_location => {
-            is => 'Text',
-            default_value => 'http://solr-dev:8080/solr',
-            doc => 'Location of the Solr development server',
         },
         _solr_server => {
             is => 'WebService::Solr',
             is_transient => 1,
-        },
-        solr_server => {
-            calculate_from => ['environment', '_solr_server', '_solr_server_location', '_dev_solr_server_location',],
-            calculate => q[
-                return $_solr_server if $_solr_server;
-                my $location = $environment eq 'prod' ? $_solr_server_location : $_dev_solr_server_location;
-                $self->_solr_server(WebService::Solr->new($location));
-                return $self->_solr_server();
-            ]
+            calculate_from => 'solr_server',
+            calculate => q| return WebService::Solr->new($solr_server); |,
         },
         cache_timeout => {
             is => 'Integer',
