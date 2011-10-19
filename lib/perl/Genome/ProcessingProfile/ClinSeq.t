@@ -16,7 +16,7 @@ use Genome::ProcessingProfile::ClinSeq;
 
 
 my $patient = Genome::Individual->get(common_name => "HG3");
-ok($patient, "got the HG2 patient");
+ok($patient, "got the HG3 patient");
 
 
 my $tumor_rna_sample = $patient->samples(common_name => "tumor", sample_type => "rna");
