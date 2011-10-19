@@ -215,6 +215,10 @@ sub dump_fastqs_from_bam {
     my $rev_file = sprintf("%s/s_%s_2_sequence.txt", $directory, $subset);
     my $fragment_file = sprintf("%s/s_%s_sequence.txt", $directory, $subset);
     my $cmd = Genome::Model::Tools::Picard::SamToFastq->create(input=>$self->bam_path, fastq=>$fwd_file, fastq2=>$rev_file, fragment_fastq=>$fragment_file, no_orphans=>1, %read_group_params);
+    if ( not $cmd ) {
+        die $self->error_message('Failed to create gmt picard sam-to-fastq');
+    }
+    $cmd->dump_status_messages(1);
     unless ($cmd->execute()) {
         die $cmd->error_message;
     }
