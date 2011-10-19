@@ -81,6 +81,10 @@ EOS
 
 sub execute {
     my $self = shift;
+
+    my ($orig_lowater, $orig_highwater) = Genome::Model::Tools::Annotate->object_cache_sizes();
+    Genome::Model::Tools::Annotate->object_cache_sizes(100_000, 200_000);
+
     $self->prepare_for_execution;
 
     # If the index file does not exist, we need to generate one
@@ -441,6 +445,9 @@ sub execute {
             #return 1; #uncomment for testing
         }
     }
+
+    Genome::Model::Tools::Annotate->object_cache_sizes($orig_lowater, $orig_highwater);
+
     $self->status_message("committing...($count)");
     UR::Context->commit;
     $self->status_message("finished commit!");

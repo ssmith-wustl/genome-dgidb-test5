@@ -29,6 +29,7 @@ my $cmd_1  = Genome::Model::Tools::Picard::SamToFastq->create(
     no_orphans => 1,
 );
 isa_ok( $cmd_1, 'Genome::Model::Tools::Picard::SamToFastq' );
+$cmd_1->dump_status_messages(1);
 ok( $cmd_1->execute, 'execute' );
 ok( -s $fq1,         'output file is non-zero' );
 ok( -s $fq2,         'output file is non-zero' );
