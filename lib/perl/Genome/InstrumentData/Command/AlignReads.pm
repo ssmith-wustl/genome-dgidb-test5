@@ -148,7 +148,7 @@ sub _process_alignments {
             $self->error_message("Error finding or generating alignments!");
             return 0;
         }
-    } elsif ($mode eq 'get') {
+    } elsif ($mode eq 'get_with_lock') {
         unless ($alignment) {
             return undef;
         }
