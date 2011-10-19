@@ -174,7 +174,7 @@ sub generate_workflow {
         my $master_input_connector = $master_workflow->get_input_connector;
         my $workflow_input_connector = $workflow; #implicitly uses input connector
         for my $property (@{ $workflow->operation_type->input_properties }) {
-            $workflow->add_link(
+            $master_workflow->add_link(
                 left_operation => $master_input_connector,
                 left_property => 'm_' . $property,
                 right_operation => $workflow_input_connector,
@@ -185,7 +185,7 @@ sub generate_workflow {
         my $master_output_connector = $master_workflow->get_output_connector;
         my $workflow_output_connector = $workflow; #implicitly uses output connector
         for my $property (@{ $workflow->operation_type->output_properties }) {
-            $workflow->add_link(
+            $master_workflow->add_link(
                 left_operation => $workflow_output_connector,
                 left_property => $property,
                 right_operation => $master_output_connector,
