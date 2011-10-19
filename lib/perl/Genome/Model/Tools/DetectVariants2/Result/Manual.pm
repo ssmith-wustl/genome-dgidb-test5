@@ -41,6 +41,10 @@ class Genome::Model::Tools::DetectVariants2::Result::Manual {
             is => 'Number',
             doc => 'ID of the build from which this variant list is defined',
         },
+        previous_result_id => {
+            is => 'Text',
+            doc => 'ID of the result upon which these manually chosen variants were based',
+        },
     ],
     has_optional_metric => [
         original_file_path => {
@@ -84,12 +88,6 @@ class Genome::Model::Tools::DetectVariants2::Result::Manual {
             is => 'Text',
             via => 'sample',
             to => 'name',
-        },
-    ],
-    has_optional_input => [
-        previous_result_id => {
-            is => 'Text',
-            doc => 'ID of the result upon which these manually chosen variants were based',
         },
     ],
 };
