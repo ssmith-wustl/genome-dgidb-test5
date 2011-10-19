@@ -8,15 +8,6 @@ use Genome;
 class Genome::Model::Build::SomaticValidation {
     is => 'Genome::Model::Build',
     has_optional => [
-        #TODO Remove refalign dependency in favor of alignment dispatcher
-        tumor_reference_alignment => {
-            is => 'genome::model::build', via => 'inputs', to => 'value', where => [name => 'tumor_reference_alignment'],
-            doc => 'the tumor build with which this build is associated',
-        },
-        normal_reference_alignment => {
-            is => 'genome::model::build', via => 'inputs', to => 'value', where => [name => 'normal_reference_alignment'],
-            doc => 'the tumor build with which this build is associated'
-        },
         reference_sequence_build => {
             is => 'Genome::Model::Build::ReferenceSequence', via => 'inputs', to => 'value', where => [name => 'reference_sequence_build'],
         },
@@ -34,6 +25,10 @@ class Genome::Model::Build::SomaticValidation {
             is => 'Genome::SoftwareResult',
             via => 'inputs', to => 'value', where => [ name => 'sv_variant_list' ],
             is_mutable => 1,
+        },
+        alignment_strategy => {
+            is => 'Text',
+            via => 'model',
         },
         snv_detection_strategy => {
             is => 'Text',
@@ -161,18 +156,12 @@ sub validate_for_start_methods {
     my @methods = $self->SUPER::validate_for_start_methods;
     push @methods, qw(
         _validate_required_for_start_properties
-        _validate_subjects
     );
     return @methods;
 }
 
 sub _validate_required_for_start_properties {
     my $model_method = $_[0]->model->class . '::_validate_required_for_start_properties';
-    return (\&$model_method)->(@_);
-}
-
-sub _validate_subjects {
-    my $model_method = $_[0]->model->class . '::_validate_subjects';
     return (\&$model_method)->(@_);
 }
 
