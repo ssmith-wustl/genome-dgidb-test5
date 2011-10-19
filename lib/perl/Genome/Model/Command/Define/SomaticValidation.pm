@@ -57,6 +57,14 @@ class Genome::Model::Command::Define::SomaticValidation {
             is => 'Genome::SoftwareResult',
             doc => 'The DV2 result with the svs',
         },
+        tumor_sample => {
+            is => 'Genome::Sample',
+            doc => 'the tumor sample',
+        },
+        normal_sample => {
+            is => 'Genome::Sample',
+            doc => 'the normal sample',
+        },
     ],
     has_transient_optional_output => [
         result_model_id => {
@@ -114,6 +122,10 @@ sub execute {
         if defined $self->indel_result;
     push @params, sv_variant_list => $self->sv_result
         if defined $self->sv_result;
+    push @params, tumor_sample => $self->tumor_sample
+        if defined $self->tumor_sample;
+    push @params, normal_sample => $self->normal_sample
+        if defined $self->normal_sample;
 
     my $m = Genome::Model->create(@params);
     return unless $m;
@@ -160,6 +172,9 @@ sub resolve_subject {
         $self->error_message('At least one sample is required to define a model.');
         return;
     }
+
+    $self->tumor_sample($tumor_sample);
+    $self->normal_sample($control_sample);
 
     my $subject;
     if($tumor_sample) {
