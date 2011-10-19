@@ -332,8 +332,10 @@ sub _assign_all_instrument_data {
     }
 
     my @inputs = Genome::Model::Input->get(model_id => $self->model_id(), name => 'target_region_set_name');
-
     my %model_capture_targets = map { $_->value_id() => 1 } @inputs;
+
+    my @set_inputs = Genome::Model::Input->get(model_id => $self->model_id(), name => 'target_region_set');
+    for my $si (@set_inputs) { $model_capture_targets{$si->value->name} = 1; }
 
     ID: for my $id ( @unassigned_instrument_data ) {
 
