@@ -42,6 +42,10 @@ class Genome::InstrumentData::Composite::Workflow {
             doc => 'The alignments created/found as a result of running the workflow',
             is_output => 1,
         },
+        log_directory => {
+            is => 'Text',
+            doc => 'Where to write the workflow logs',
+        }
     ],
 };
 
@@ -58,6 +62,9 @@ sub execute {
     my ($workflow, $inputs) = $self->generate_workflow($tree);
     $self->_workflow($workflow);
 
+    if($self->log_directory) {
+        $workflow->log_dir($self->log_directory);
+    }
     #print STDERR $workflow->save_to_xml;
     #print STDERR Data::Dumper::Dumper $inputs, "\n";
 

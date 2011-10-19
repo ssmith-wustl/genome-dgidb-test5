@@ -193,6 +193,7 @@ sub _execute_build {
             reference_sequence_build => $reference_sequence_build,
         },
         strategy => $self->alignment_strategy,
+        log_directory => $build->log_directory,
     );
     my @results = $result->_merged_results;
     for my $r (@results) {
