@@ -135,9 +135,6 @@ sub execute {
 		    );
 
 
-    # RM Input BAM
-    unlink $input_file if ($unlink_input_bam_on_end && $self->input ne $input_file);
-
     # BAM v. FASTQ read counts
     my $bam_read_count = $self->_read_count_for_bam($input_file);
     return if not $bam_read_count;
@@ -145,6 +142,11 @@ sub execute {
     my $fastq_read_count = $self->_read_count_for_fastq(@output_files);
     return if not $fastq_read_count;
     $self->status_message("$fastq_read_count reads in FASTQ: ".join(' ', @output_files));
+
+    # RM Input BAM
+    unlink $input_file if ($unlink_input_bam_on_end && $self->input ne $input_file);
+
+    # Compare read counts
     if ( $bam_read_count ne $fastq_read_count ) {
         $self->error_message("Different number of reads in BAM ($bam_read_count) and FASTQ ($fastq_read_count)");
         return;
