@@ -18,7 +18,7 @@
       <div class="container">
         <div id="objects" class="span-24 last">
 
-        <!-- details for this library -->
+        <!-- details for this task-->
         <div class="span_16_box_masonry">
           <div class="box_header span-16 last rounded-top">
             <div class="box_title"><h3 class="nontyped span-7 last">Task Attributes</h3></div>
@@ -111,34 +111,6 @@
       </xsl:with-param>
     </xsl:call-template>
 
-  </xsl:template>
-
-  <!-- box element for library, intended for display in a jquery masonry layout -->
-  <xsl:template name="genome_library_box">
-    <xsl:comment>template: status/genome_library.xsl:genome_library_box</xsl:comment>
-    <div class="span_8_box_masonry">
-      <div class="box_header span-8 last rounded-top">
-        <div class="box_title"><h3 class="genome_library_16 span-7 last">Library</h3></div>
-        <div class="box_button">
-          <xsl:call-template name="object_link_button_tiny">
-            <xsl:with-param name="icon" select="'sm-icon-extlink'"/>
-          </xsl:call-template>
-        </div>
-      </div>
-
-      <div class="box_content rounded-bottom span-8 last">
-        <table class="name-value">
-          <tbody>
-            <tr>
-              <td class="name">Name:
-              </td>
-              <td class="value"><xsl:value-of select="aspect[@name='name']/value"/>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
   </xsl:template>
 
 
