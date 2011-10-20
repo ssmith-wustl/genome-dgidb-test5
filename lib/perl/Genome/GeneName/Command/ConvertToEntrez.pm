@@ -24,11 +24,11 @@ class Genome::GeneName::Command::ConvertToEntrez {
 };
 
 sub help_brief {
-    #TODO: write me
+    'Translate a gene identifier to one or more Genome::GeneNames';
 }
 
 sub help_synopsis {
-    #TODO: write me
+    'genome gene-name convert-to-entrez --gene-identifier ARK1D1';
 }
 
 sub help_detail {
