@@ -30,7 +30,7 @@ class Genome::Search {
         },
         _solr_server => {
             is => 'WebService::Solr',
-            is_transient => 1,
+            is_constant => 1,
             calculate_from => 'solr_server',
             calculate => q| return WebService::Solr->new($solr_server); |,
         },
@@ -105,7 +105,7 @@ sub search {
     my $webservice_solr_options = shift;
     
     my $self = $class->_singleton_object;
-    my $response = $self->solr_server->search($query, $webservice_solr_options);
+    my $response = $self->_solr_server->search($query, $webservice_solr_options);
     
     #TODO Better error handling--WebService::Solr doesn't handle error responses gracefully.
     return $response;
@@ -156,7 +156,7 @@ sub add {
     my $self = $class->_singleton_object;
     my @docs = $class->generate_document(@objects);
 
-    unless($self->solr_server->add(\@docs)) {
+    unless($self->_solr_server->add(\@docs)) {
         $self->error_message('Failed to send ' . (scalar @docs) . ' document(s) to solr-dev.');
         return;
     }

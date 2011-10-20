@@ -29,8 +29,10 @@ class Genome::Model::SomaticValidation::Command::IdentifyDnp {
             doc => "Somatic Validation build that the DNP result will belong to and which procides the reads and proportion parameters.",
         },
     ],
+    doc => 'identify DNPs',
 };
 
+sub sub_command_category { 'pipeline steps' }
 
 sub help_detail {
     "This is a command line wrapper to create a Genome::Model::Build::SomaticValidation::IdentifyDnpResult. It is used by Genome::Model::Build::SomaticValidation's workflow."

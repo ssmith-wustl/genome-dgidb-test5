@@ -37,16 +37,6 @@
         $('#submit-button').click(function() {
 
             // validate
-            if (! $('#nomenclature').val() ) {
-                alert("Please specify a nomenclature");
-                return false;
-            }
-
-            if ( $("input[name='subclass_name']:checked").length <= 0 ) {
-                alert('Please select Sample, Indivdual or Population.');
-                return false;
-            }
-
             var fakeFilename = $('#file').val(); 
             if ( ! fakeFilename ) {
                 alert('Please select the file containing the subject data');
@@ -59,6 +49,16 @@
                 $('#filetype').val("csv");
             } else {
                 alert("CSV (comma separated values) is the only format currently supported");
+                return false;
+            }
+
+            if ( $("input[name='subclass_name']:checked").length <= 0 ) {
+                alert('Please select sample or patient');
+                return false;
+            }
+
+            if (! $('#nomenclature').val() ) {
+                alert("Please specify a nomenclature");
                 return false;
             }
 

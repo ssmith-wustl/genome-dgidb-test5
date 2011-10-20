@@ -31,7 +31,10 @@ class Genome::Model::SomaticValidation::Command::ProcessValidation {
             default_value => 'rusage[tmp=2000] select[tmp>2000]',
         },
     ],
+    doc => 'final processing of HQ SNV detection results',
 };
+
+sub sub_command_category { 'pipeline steps' }
 
 sub execute {
     my $self = shift;

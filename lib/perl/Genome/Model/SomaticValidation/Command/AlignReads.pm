@@ -38,7 +38,10 @@ class Genome::Model::SomaticValidation::Command::AlignReads {
             doc => 'Path to the merged control instrument data bam',
         },
     ],
+    doc => 'align reads',
 };
+
+sub sub_command_category { 'pipeline steps' }
 
 sub execute {
     my $self = shift;
