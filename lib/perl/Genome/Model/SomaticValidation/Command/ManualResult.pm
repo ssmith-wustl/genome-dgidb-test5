@@ -39,7 +39,11 @@ class Genome::Model::SomaticValidation::Command::ManualResult {
             doc => 'The SoftwareResult record created for the supplied data',
         },
     ],
+    doc => 'log a reduced list of variants selected for validation',
+
 };
+
+sub sub_command_category { 'analyst tools' }
 
 sub execute {
     my $self = shift;

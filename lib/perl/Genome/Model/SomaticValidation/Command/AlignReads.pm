@@ -40,6 +40,8 @@ class Genome::Model::SomaticValidation::Command::AlignReads {
     ],
 };
 
+sub sub_command_category { 'pipeline steps' }
+
 sub execute {
     my $self = shift;
     my $build = $self->build;

@@ -33,6 +33,8 @@ class Genome::Model::SomaticValidation::Command::ProcessValidation {
     ],
 };
 
+sub sub_command_category { 'pipeline steps' }
+
 sub execute {
     my $self = shift;
     my $build = $self->build;

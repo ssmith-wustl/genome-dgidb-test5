@@ -31,6 +31,7 @@ class Genome::Model::SomaticValidation::Command::IdentifyDnp {
     ],
 };
 
+sub sub_command_category { 'pipeline steps' }
 
 sub help_detail {
     "This is a command line wrapper to create a Genome::Model::Build::SomaticValidation::IdentifyDnpResult. It is used by Genome::Model::Build::SomaticValidation's workflow."
