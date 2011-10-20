@@ -17,18 +17,18 @@ class Genome::Model::Command::Define::SomaticValidation {
         },
         variants => {
             is => 'Genome::SoftwareResult', #TODO ideally these would all have share a DV2 base class
-            doc => 'The DV2 results to validate',
+            doc => 'One or more BED files (or database ids) of the variants to validate',
             is_many => 1,
             shell_args_position => 3,
         },
         design => {
             is => 'Genome::FeatureList',
-            doc => 'BED file of the designs for the probes',
+            doc => 'BED file (or database id) of the designs for the probes',
             shell_args_position => 1,
         },
         target => {
             is => 'Genome::FeatureList',
-            doc => 'BED file of the target region set',
+            doc => 'BED file (or database id) of the target region set',
             shell_args_position => 2,
         },
         processing_profile => {
@@ -87,7 +87,7 @@ First, the individual pieces need to be added to the system. For the designs we 
 
 `genome feature-list create` to create the feature lists, once for the design, and once for the target set.
 
-`genome model somatic-validation manual-result` to record the manually curated results, if necessary. (One per variant type.)
+`genome model somatic-validation manual-result` to record the manually curated results, if necessary. (One per file of variants.)
 EOHELP
 ;
 }
