@@ -84,8 +84,8 @@ sub execute{
     my $output_dir = $build->data_directory."/variants";
     $params{output_directory} = $output_dir;
 
-    my $aligned_reads_sample = $build->tumor_sample;
-    my $control_aligned_reads_sample = $build->normal_sample;
+    my $aligned_reads_sample = $build->tumor_sample->name;
+    my $control_aligned_reads_sample = $build->normal_sample->name;
     $params{aligned_reads_sample} = $aligned_reads_sample;
     $params{control_aligned_reads_sample} = $control_aligned_reads_sample;
 
