@@ -91,6 +91,15 @@ sub post_allocation_initialization {
         Genome::Sys->create_directory($subdir) unless -d $subdir;
     }
 
+    for my $variant_type ('snv', 'indel', 'sv') {
+        my $property = $variant_type . '_variant_list';
+        my $variant_list = $self->$property;
+
+        if($variant_list) {
+            $variant_list->add_user(label => 'uses', user => $self);
+        }
+    }
+
     return 1;
 }
 
