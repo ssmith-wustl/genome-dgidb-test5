@@ -68,6 +68,7 @@ sub process_26_col {
         $tumor_consensus_quality,
         $tumor_snv_quality,
         $tumor_rms_map_quality,
+        $normal_consensus_quality,
         $normal_snv_quality,
         $normal_rms_map_quality,
         $tumor_depth,
