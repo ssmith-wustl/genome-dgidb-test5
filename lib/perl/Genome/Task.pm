@@ -39,10 +39,6 @@ class Genome::Task {
         },
     ],
     has_optional => [
-        params => {
-            is=>'Text', 
-            doc => 'JSON encoded param hash'
-        },
         stdout_pathname => {
             is => 'Text', 
             len => 255,
@@ -75,7 +71,20 @@ sub create {
         $p{time_submitted} = UR::Time->now();
     }
 
+    if (!exists $p{params}) {
+        $class->error_message("No json params specified");
+        return;
+    }
+    my $params_json = delete $p{params};
+
     my $self = $class->SUPER::create(%p);
+
+    my $params_object = Genome::Task::Params->create(task=>$self, params=>$params_json);
+    if (!$params_object) {
+        $self->error_message("Could, not create params object.");
+        $self->delete;
+        return;
+    }
     
     my $cmd_object = $self->command_object;
 
@@ -86,6 +95,37 @@ sub create {
     }
 
     return $self;
+}
+
+sub params {
+    my $self = shift;
+    my $ds = $UR::Context::current->resolve_data_sources_for_class_meta_and_rule(Genome::Task->__meta__);
+    my $dbh = $ds->get_default_dbh;
+    my $orig_long_read_len = $dbh->{LongReadLen};
+    $dbh->{LongReadLen} = 30_000_000;
+
+    my $params = Genome::Task::Params->get(task=>$self);
+    $dbh->{LongReadLen} = $orig_long_read_len;
+    
+    return $params;
+}
+
+sub json_params  {
+    my $self = shift;
+    my $params = $self->params;
+
+    return $params->params if ($params);
+}
+
+sub delete {
+    my $self = shift;
+
+    my $params = $self->params;
+    if ($params) {
+        $params->delete;
+    }
+
+    return $self->SUPER::delete;
 }
 
 sub command_object {
@@ -101,7 +141,7 @@ sub command_object {
     }
 
     my $vals = $self->_resolve_param_values(cmd_class=>$self->command_class,
-                                            args => decode_json($self->params)); 
+                                            args => decode_json($self->json_params)); 
     
     if(!$vals) {
         $self->error_message(sprintf("Couldn't resolve params for %s based on params specified in the JSON", $self->command_class));
@@ -191,29 +231,6 @@ sub out_of_band_attribute_update {
     $self = UR::Context->current->reload(ref($self), $self->id);
     
     return 1;
-}
-
-sub get {
-    my $class= shift;
-
-    my $ds = $UR::Context::current->resolve_data_sources_for_class_meta_and_rule(Genome::Task->__meta__);
-    my $dbh = $ds->get_default_dbh;
-    my $orig_long_read_len = $dbh->{LongReadLen};
-    $dbh->{LongReadLen} = 30_000_000;
-
-    my @objects = $class->SUPER::get(@_);
-    $dbh->{LongReadLen} = $orig_long_read_len;
-
-    
-    if (@objects > 1) {
-        return @objects if wantarray;
-        my @ids = map { $_->id } @objects;
-        die "Multiple matches for $class but get or create was called in scalar context!  Found ids: @ids";
-    } else {
-        return $objects[0];
-    }
-
-
 }
 
 1;
