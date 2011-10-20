@@ -8,18 +8,18 @@ use Genome;
 class Genome::Model::SomaticValidation::Command::ManualResult {
     is => 'Command::V2',
     has_input => [
+        source_build => {
+            is => 'Genome::Model::Build::SomaticVariation',
+            doc => 'The build on which these variants are based',
+        },
         variant_file => {
-            is => 'Text',
+            is => 'FilePath',
             doc => 'Path to the file of variants',
         },
         variant_type => {
             is => 'Text',
             doc => 'The type of variants in this result',
             valid_values => ['snv', 'indel', 'sv', 'cnv'],
-        },
-        source_build => {
-            is => 'Genome::Model::Build::SomaticVariation',
-            doc => 'The build on which these variants are based',
         },
         description => {
             is => 'Text',

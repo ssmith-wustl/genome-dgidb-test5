@@ -45,6 +45,7 @@ class Genome::Model::SomaticValidation::Command::DetectVariants{
             doc => 'The unfiltered snv file from the DV run',
         }
     ],
+    doc => 'detect variants',
 };
 
 sub sub_command_category { 'pipeline steps' }
