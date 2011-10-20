@@ -35,6 +35,12 @@ class Genome::InstrumentData::Composite {
             is_many => 1,
         },
     ],
+    has_transient_optional => {
+        log_directory => {
+            is => 'Text',
+            doc => 'where to write the workflow logs',
+        },
+    },
 };
 
 #This method should just use the one from Genome::SoftwareResult and then get will return the existing result and create will run the alignment dispatcher
@@ -53,6 +59,7 @@ sub get_or_create {
         },
         strategy => $self->strategy,
         merge_group => $self->merge_group,
+        log_directory => $self->log_directory,
     );
 
     $generator->dump_status_messages(1);

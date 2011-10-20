@@ -9,7 +9,7 @@ BEGIN {
 };
 
 use above 'Genome';
-use Test::More tests => 6;
+use Test::More tests => 8;
 
 use_ok('Genome::Model::SomaticValidation::Command::ManualResult');
 
@@ -40,7 +40,8 @@ ok($cmd->execute, 'executed command');
 
 my $result = $cmd->manual_result;
 isa_ok($result, 'Genome::Model::Tools::DetectVariants2::Result::Manual', 'created manual result');
-
+is($result->sample, $somatic_variation_build->tumor_model->subject, 'result has expected sample');
+is($result->control_sample, $somatic_variation_build->normal_model->subject, 'result has expected control sample');
 
 
 sub setup_somatic_variation_build {

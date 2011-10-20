@@ -80,7 +80,7 @@ my $result_3 = Genome::InstrumentData::AlignmentResult::Bwa->__define__(
 
 my $merge_result2 = construct_merge_result($instrument_data_3);
 
-
+my $log_directory = Genome::Sys->create_temp_directory();
 my $ad = Genome::InstrumentData::Composite::Workflow->create(
     inputs => {
         inst => \@instrument_data,
@@ -88,6 +88,7 @@ my $ad = Genome::InstrumentData::Composite::Workflow->create(
         force_fragment => 0,
     },
     strategy => 'inst aligned to ref using bwa 0.5.9 [-t 4 -q 5::] api v1',
+    log_directory => $log_directory,
 );
 isa_ok(
     $ad,
@@ -100,7 +101,6 @@ ok($ad->execute, 'executed dispatcher for simple alignments');
 my @ad_result_ids = $ad->_result_ids;
 my @ad_results = Genome::SoftwareResult->get(\@ad_result_ids);
 is_deeply([sort @results], [sort @ad_results], 'found expected alignment results');
-
 
 my $merge_result = construct_merge_result(@instrument_data);
 

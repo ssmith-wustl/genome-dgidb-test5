@@ -134,10 +134,86 @@ sub execute {
 		    skip_if_output_is_present => 0,
 		    );
 
+
+    # BAM v. FASTQ read counts
+    my $bam_read_count = $self->_read_count_for_bam($input_file);
+    return if not $bam_read_count;
+    $self->status_message("$bam_read_count reads in BAM: $input_file");
+    my $fastq_read_count = $self->_read_count_for_fastq(@output_files);
+    return if not $fastq_read_count;
+    $self->status_message("$fastq_read_count reads in FASTQ: ".join(' ', @output_files));
+
+    # RM Input BAM
     unlink $input_file if ($unlink_input_bam_on_end && $self->input ne $input_file);
+
+    # Compare read counts
+    if ( $bam_read_count ne $fastq_read_count ) {
+        $self->error_message("Different number of reads in BAM ($bam_read_count) and FASTQ ($fastq_read_count)");
+        return;
+    }
+
     return 1;
 }
 
+sub _read_count_for_bam {
+    my ($self, $bam) = @_;
+
+    Carp::confess('No bamto get read count!') if not $bam;
+
+    my $tmpdir = Genome::Sys->base_temp_directory;
+    my $flagstat_file = $tmpdir.'/flagstat';
+    my $gmt = Genome::Model::Tools::Sam::Flagstat->create(
+        bam_file => $bam,
+        output_file => $flagstat_file,
+    );
+    if ( not $gmt ) {
+        $self->error_message('Failed to create gmt same flagstat!');
+        return;
+    }
+    $gmt->dump_status_messages(1);
+    my $ok = $gmt->execute;
+    if ( not $ok ) {
+        $self->error_message('Failed to execute gmt sam flagstat!');
+        return;
+    }
+
+    my $flagstat = Genome::Model::Tools::Sam::Flagstat->parse_file_into_hashref($flagstat_file);
+    if ( not $flagstat ) {
+        $self->error_message('Failed to get metrics from flagstat file: '.$flagstat_file);
+        return;
+    }
+
+    if ( not defined $flagstat->{total_reads} ) {
+        $self->error_message('No total reads from flagstat file!');
+        return;
+    }
+
+    return $flagstat->{total_reads};
+}
+
+sub _read_count_for_fastq {
+    my ($self, @fastqs) = @_;
+
+    Carp::confess('No fastq to get read count!') if not @fastqs;
+
+    my $read_count;
+    for my $fastq ( @fastqs ) {
+        my $line_count = `wc -l < $fastq`;
+        if ( $? or not $line_count ) {
+            $self->error_message("Line count on fastq ($fastq) failed : $?");
+            return;
+        }
+
+        chomp $line_count;
+        if ( ($line_count % 4) != 0 ) {
+            $self->error_message("Line count ($line_count) on fastq ($fastq) not divisble by 4.");
+            return;
+        }
+        $read_count += $line_count / 4;
+    }
+
+    return $read_count;
+}
 
 1;
 __END__

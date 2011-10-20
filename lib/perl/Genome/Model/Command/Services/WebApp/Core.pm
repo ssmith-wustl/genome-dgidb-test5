@@ -20,23 +20,27 @@ sub import {
     my $base_dir = Genome->base_dir;
     find(
         sub {
-            return if (index($_,'Test.pm') == 0);
-            return if (index($_,'.pm') < 0 || index($_,'.pm') != length($_) - 3);
-            my $name = 'Genome' . substr($File::Find::name,length($base_dir));
-            return if (index($name,'Genome/Model/Tools') == 0);
+            my $position = length($File::Find::name) - 3;
+            return if (index($File::Find::name, '.pm', $position) != $position);
+            return if (index($File::Find::name, 'Genome/Model/Tools') >= 0);
+            return if (index($File::Find::name, 'Test.pm') >= 0);
+            return if (index($File::Find::dir, '.d') >= 0);
 
+            my $name = 'Genome' . substr($File::Find::name, length($base_dir));
             $name =~ s/\//::/g;
-            substr($name,index($name,'.pm'),3,'');
+            substr($name, index($name, '.pm'), 3, '');
 
             push @classes, $name;
         },
         $base_dir
     );
+    unless (@classes) {
+        warn "There were no classes to load!";
+    }
 
     @error_classes = grep {
         my $r = 0;
         if ($_ !~ /^Genome::(Model::Alignment|Utility::MetagenomicClassifier|Assembly)/) {
-#            print "$_\n";
             eval "use $_";
             $r = $@;
         }

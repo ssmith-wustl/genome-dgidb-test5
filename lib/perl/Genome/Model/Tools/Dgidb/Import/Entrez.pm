@@ -107,7 +107,7 @@ sub import_genes {
     my $version = $self->version;
     my $gene_outfile = shift;
     my @gene_names;
-    my @headers = qw/ entrez_gene_symbol entrez_gene_synonyms /;
+    my @headers = qw/ entrez_id entrez_gene_symbol entrez_gene_synonyms /;
     my $parser = Genome::Utility::IO::SeparatedValueReader->create(
         input => $gene_outfile,
         headers => \@headers,
@@ -117,12 +117,13 @@ sub import_genes {
 
     $parser->next; #eat the headers
     while(my $gene = $parser->next){
-        my $gene_name = $self->_create_gene_name($gene->{entrez_gene_symbol}, 'entrez', 'Entrez', $version, ''); #TODO: make sure this is all correct
+        my $gene_name = $self->_create_gene_name($gene->{entrez_id}, 'entrez_id', 'Entrez', $version, '');
         push @gene_names, $gene_name;
+        my $gene_symbol_association = $self->_create_gene_name_association($gene_name, $gene->{entrez_gene_symbol}, 'entrez_gene_symbol', '');
         my @entrez_gene_synonyms = split(',', $gene->{entrez_gene_synonyms});
         for my $entrez_gene_synonym (@entrez_gene_synonyms){
             unless ($entrez_gene_synonym eq 'na'){
-                my $gene_name_association = $self->_create_gene_name_association($gene_name, $entrez_gene_synonym, 'todo', ''); #TODO: fill in nomenclature
+                my $gene_name_association = $self->_create_gene_name_association($gene_name, $entrez_gene_synonym, 'entrez_gene_synonym', '');
             }
         }
     }
@@ -161,7 +162,7 @@ sub input_to_tsv {
     open(TARGETS, ">$targets_outfile") || die "\n\nCould not open outfile: $targets_outfile\n\n";
     binmode(TARGETS, ":utf8");
 
-    my $targets_header = "entrez_gene_symbol\tentrez_gene_synonyms";
+    my $targets_header = join("\t", 'entrez_id', 'entrez_gene_symbol', 'entrez_gene_synonyms');
     print TARGETS "$targets_header\n";
 
     my %entrez_ids = %{$entrez_data->{'entrez_ids'}}; 
@@ -170,7 +171,7 @@ sub input_to_tsv {
         my $synonyms = $entrez_id_names{synonyms_array};
         $synonyms = join(",", @$synonyms);
         my $symbol = $entrez_id_names{symbol};
-        print TARGETS join("\t", $symbol, $synonyms), "\n";
+        print TARGETS join("\t", $entrez_id, $symbol, $synonyms), "\n";
     }
 
     close(TARGETS);

@@ -176,7 +176,6 @@ $(document).data('updatedOn', new Date(]]><xsl:copy-of select="$currentTime"/><!
     <div class="control_bar app rounded-bottom shadow">
       <div class="control_bar_menu" id="bar_menu">
         <xsl:call-template name="control_bar_cache_info"/>
-        <xsl:call-template name="control_bar_tasks_info"/>
         <xsl:call-template name="control_bar_menu"/>
       </div>
 
@@ -191,7 +190,6 @@ $(document).data('updatedOn', new Date(]]><xsl:copy-of select="$currentTime"/><!
     <div class="control_bar view shadow">
       <div class="control_bar_menu" id="bar_menu">
         <xsl:call-template name="control_bar_cache_info"/>
-        <xsl:call-template name="control_bar_tasks_info"/>
         <xsl:call-template name="control_bar_menu"/>
       </div>
 
