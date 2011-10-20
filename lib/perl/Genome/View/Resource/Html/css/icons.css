@@ -178,6 +178,18 @@
     background-position: left center;
 }
 
+.genome_result_16 {
+    background-image: url("../img/icons/genome_result_16.png");
+    background-repeat: no-repeat;
+    background-position: left center;
+}
+
+.genome_result_32 {
+    background-image: url("../img/icons/genome_result_32.png");
+    background-repeat: no-repeat;
+    background-position: left center;
+}
+
 .genome_sample_16 {
     background-image: url("../img/icons/genome_sample_16.png");
     background-repeat: no-repeat;

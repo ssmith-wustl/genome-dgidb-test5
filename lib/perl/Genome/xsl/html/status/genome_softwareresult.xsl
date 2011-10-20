@@ -10,7 +10,7 @@
     <xsl:call-template name="view_header">
       <xsl:with-param name="label_name" select="'Software Result:'" />
       <xsl:with-param name="display_name" select="./display_name" />
-      <xsl:with-param name="icon" select="'genome_softwareresult_32'" />
+      <xsl:with-param name="icon" select="'genome_result_32'" />
     </xsl:call-template>
 
     <div class="content rounded shadow">
