@@ -152,14 +152,12 @@ sub execute {                               # replace with real execution logic.
 				my $qc_dir = $self->output_dir . "/$subject_name/";
 				mkdir($qc_dir);
 				my $genofile = "$qc_dir/$subject_name.dbsnp$db_snp_build.genotype";
-				my $qcfile = "$qc_dir/$subject_name.dbsnp$db_snp_build.qc";
-	
-                                if ($self->summary_file && -s $genofile && !-s $qcfile) {
-                                    warn "You specified summary file but the script thinks there are unfinished qc files, please run this script to finish making qc files first\nReason: file $genofile does not exist as a non-zero file\n";
-                                    next;
-                                }
+                if ($self->summary_file && ! -s $genofile) {
+                    warn "You specified summary file but the script thinks there are unfinished genotype files, please run this script to finish making qc files first\nReason: file $genofile does not exist as a non-zero file\n";
+                    next;
+                }
 
-                                if(!$self->summary_file && ( (! -e $qcfile) || !$skip_if_output_present) ) {
+                if(!$self->summary_file && ( (! -e $genofile) || !$skip_if_output_present) ) {
 					open(GENOFILE, ">" . $genofile) or die "Can't open outfile: $!\n";
 
 					my $db_snp_info = GSC::SNP::DB::Info->get( snp_db_build => $db_snp_build );
@@ -233,7 +231,7 @@ sub execute {                               # replace with real execution logic.
 			foreach my $subject_name2 (sort keys %qc_iteration_hash_bam_file) {
 				foreach my $bam_file (sort keys %{$qc_iteration_hash_bam_file{$subject_name2}}) {
 #					print "Genosample:$subject_name1\t$genofile\nBamsample:$subject_name2\t$bam_file\n";
-					my $qc_dir = $self->output_dir . "/qc_iteration_files/";
+    				my $qc_dir = $self->output_dir . "/qc_iteration_files/";
 					mkdir($qc_dir);
 					my $qcfile = "$qc_dir/Geno_$subject_name1.Bam_$subject_name2.dbsnp$db_snp_build.qc";
 					my $output_bsub = "$qc_dir/Geno_$subject_name1.Bam_$subject_name2.dbsnp$db_snp_build.out";
@@ -267,7 +265,6 @@ sub execute {                               # replace with real execution logic.
 							}
 						}
 					}
-
 					if ($skip_if_output_present && -s $qcfile &&1&&1) { #&&1&&1 to make gedit show colors correctly after a -s check
 					}
 					elsif ($self->summary_file) {
