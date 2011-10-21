@@ -18,7 +18,6 @@ class Genome::Model {
     attributes_have => [
         is_input => { is => 'Boolean', is_optional => 1, },
     ],
-    subclass_description_preprocessor => 'Genome::Model::_support_inputs_and_params',
     has => [
         name => { is => 'Text' },
         subclass_name => { 
@@ -107,28 +106,13 @@ class Genome::Model {
         builds  => { 
             is => 'Genome::Model::Build', reverse_as => 'model',
             doc => 'versions of a model over time, with varying quantities of evidence' 
-        },        
-        
-        # OLD/BAD:
-        inputs => { # TODO: start using input_associations instead of "inputs" for bridges
+        },
+        inputs => { 
             is => 'Genome::Model::Input', reverse_as => 'model',
             doc => 'links to data currently assigned to the model for processing' 
         },
-
-        # NEW:
-        input_associations => { 
-            is => 'Genome::Model::Input', reverse_as => 'model',
-            doc => 'links to data currently assigned to the model for processing' 
-        },
-        input_values => {  # we would just call this inputs() but the name was used above for the bridge
-            via => 'input_associations',
-            to => 'value',
-            doc => 'the data assigned to the model for processing',
-        },
-
         group_ids => { via => 'model_groups', to => 'id' },
         group_names => { via => 'model_groups', to => 'name' },
-
         # TODO: the new project will internally have generalized assignments of models and other things
         projects => { is => 'Genome::Project', via => 'project_parts', to => 'project', is_many => 1, is_mutable => 1, doc => 'Projects that include this model', },
         project_parts => { is => 'Genome::ProjectPart', reverse_as => 'entity', is_many => 1, is_mutable => 1, },
@@ -280,23 +264,6 @@ sub __extend_namespace__ {
         return $model_subclass_meta;
     }
     return;
-}
-
-sub _support_inputs_and_params {
-    my ($class, $desc) = @_;
-    while (my ($prop_name, $prop_desc) = each(%{ $desc->{has} })) {
-        if (exists $prop_desc->{'is_param'} and $prop_desc->{'is_param'}) {
-            $prop_desc->{'to'} = 'value';
-            $prop_desc->{'is_delegated'} = 1;
-            $prop_desc->{'where'} = [
-                'name' => $prop_name
-            ];
-            $prop_desc->{'via'} = 'params';
-            $prop_desc->{'is_mutable'} = 1;
-        }
-    }
-
-    return $desc;
 }
 
 sub create {
