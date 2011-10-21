@@ -17,11 +17,8 @@ ok($entrez_gene_symbol_cmd->_entrez_gene_names, 'Found entrez_gene_symbol: AKR1D
 my $entrez_id_cmd = Genome::GeneName::Command::ConvertToEntrez->execute(gene_identifier => '26157');
 ok($entrez_id_cmd->_entrez_gene_names, 'Found entrez_gene_id: 26157');
 
-SKIP: {
-    skip 'This needs to be written correctly once ensembl importer exists and is imported', 1;
-    my $ensembl_id_cmd = Genome::GeneName::Command::ConvertToEntrez->execute(gene_identifier => '');
-    ok($ensembl_id_cmd->_entrez_gene_names, 'Found ensembl_id: na');
-}
+my $ensembl_id_cmd = Genome::GeneName::Command::ConvertToEntrez->execute(gene_identifier => 'ENSG00000189114');
+ok($ensembl_id_cmd->_entrez_gene_names, 'Found ensembl_id: ENSG00000189114');
 
 my $uniprot_id_cmd = Genome::GeneName::Command::ConvertToEntrez->execute(gene_identifier => 'P51857');
 ok($uniprot_id_cmd->_entrez_gene_names, 'Found uniprot_id: P51857');

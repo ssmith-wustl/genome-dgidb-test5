@@ -94,8 +94,17 @@ sub _match_as_entrez_id {
 sub _match_as_ensembl_id {
     my $self = shift;
     my $gene_identifier = shift;
-    #TODO: try to match ensembl_id once ensembl is imported so this works
-    return;
+    my @entrez_gene_names;
+
+    my @gene_names = Genome::GeneName->get(source_db_name => 'Ensembl', name => $gene_identifier);
+    for my $gene_name (@gene_names){
+        my @identifiers = ($gene_name->name, map($_->alternate_name, $gene_name->gene_name_associations)); 
+        for my $identifier (@identifiers){
+            push @entrez_gene_names, $self->_match_as_entrez_gene_symbol($identifier);
+        }
+    }
+
+    return @entrez_gene_names;
 }
 
 sub _match_as_uniprot_id {
