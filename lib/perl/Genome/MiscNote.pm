@@ -32,7 +32,7 @@ sub create {
     return unless $self;
 
     unless ($self->entry_date) {
-        $self->entry_date(UR::Time->now);
+        $self->entry_date($UR::Context::current->now);
     }
 
     unless ($self->editor_id) {

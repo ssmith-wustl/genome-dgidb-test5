@@ -26,7 +26,7 @@ sub _generate_content {
 
     my $doc = XML::LibXML->createDocument();
     my $search_form_node = $doc->createElement("search-form");
-    my $time = UR::Time->now();
+    my $time = $UR::Context::current->now;
 
     $search_form_node->addChild( $doc->createAttribute("generated-at",$time) );
 
