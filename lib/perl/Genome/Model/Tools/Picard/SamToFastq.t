@@ -27,6 +27,7 @@ my $cmd_1  = Genome::Model::Tools::Picard::SamToFastq->create(
     fastq2 => $fq2 . '',
     fragment_fastq => $fq3 . '',
     no_orphans => 1,
+    read_group_id => 2854142190,
 );
 isa_ok( $cmd_1, 'Genome::Model::Tools::Picard::SamToFastq' );
 $cmd_1->dump_status_messages(1);
