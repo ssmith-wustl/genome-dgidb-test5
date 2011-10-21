@@ -27,6 +27,7 @@ my %command_map = (
     'project-part' => 'Genome::ProjectPart::Command',
     'report' => 'Genome::Report::Command',
     'sample' => 'Genome::Sample::Command',
+    'subject' => 'Genome::Subject::Command',
     'sys' => 'Genome::Sys::Command',
     'task' => 'Genome::Task::Command',
     'taxon' => 'Genome::Taxon::Command',

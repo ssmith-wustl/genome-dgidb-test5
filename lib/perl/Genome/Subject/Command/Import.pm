@@ -17,8 +17,11 @@ class Genome::Subject::Command::Import {
        nomenclature    => { is => 'Genome::Nomenclature', id_by=>'nomenclature_id' },
        nomenclature_name    => { is => 'Text', via=>'nomenclature', to=>'name' },
        subclass_name   => { is => 'Text' },
-       content => { is => 'Text' },
        decoded_content => { calculate_from => ['content'], calculate => q|MIME::Base64::decode_base64($content)|}
+    ],
+    has_optional => [
+       content  => { is => 'Text' },
+       filename => { is => 'Text' }
     ],
 };
 
@@ -26,17 +29,43 @@ sub help_brief {
     return 'Import subjects and subject attributes from CSV (used by web interface)';
 }
 
+sub create {
+
+    my ($class, %p) = @_;
+
+    if (my $f = $p{'filename'}) {
+
+        if ($p{'content'}) {
+            warn "You passed a filename and some content- ignoring the filename, using content";
+        } else {
+            $p{'content'} = do {
+                local $/ = undef;
+                open(my $fh, $f);
+                my $c = <$fh>;
+                close($fh); 
+                $c;
+            };
+        }
+    } elsif (! $p{'content'}) {
+        die "Error: you must pass either --filename or --content as an argument";
+    }
+ 
+    return $class->SUPER::create(%p);
+}
+
 sub execute {
 
     my ($self) = @_;
-
+$DB::single = 1;
     # Assumes first row contains column names
     # Assumes first col is the name of the object or
     #   blank to create a new object
 
     my $subclass_name = $self->subclass_name();
 
-    my $raw = $self->decoded_content();
+    # data can come in from a filename or directly (and encoded)
+    my $raw = $self->filename ? $self->content() : $self->decoded_content();
+
     my $fh = new IO::Scalar \$raw;
     my $csv = Text::CSV->new();
     my @header;
@@ -57,12 +86,12 @@ sub execute {
 
         if (@header != @values) {
             warn "Skipping row - number of columns, values, and types dont match: $subclass_name with name "
-                . $header[0];
+                . $row->[0];
             next ROW;
         }
 
 
-        my $obj = $subclass_name->get_or_create(name => $header[0]);
+        my $obj = $subclass_name->get_or_create(name => $row->[0]);
 
         
         if ( !$obj ) {
