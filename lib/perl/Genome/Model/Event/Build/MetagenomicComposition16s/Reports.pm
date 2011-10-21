@@ -14,7 +14,10 @@ class Genome::Model::Event::Build::MetagenomicComposition16s::Reports {
 sub execute {
     my $self = shift;
 
-    for my $report_name ('summary', 'composition') {
+    my @report_names = (qw/ summary /);
+    push @report_names, 'composition' if not $self->model->is_for_qc;
+
+    for my $report_name ( @report_names ) {
         $self->_generate_and_save_report($report_name);
     }
 
@@ -23,6 +26,8 @@ sub execute {
 
 sub _generate_and_save_report {
     my ($self, $name) = @_;
+
+    $self->status_message(ucfirst($name).' report...');
 
     my $build = $self->build;
     my $class = 'Genome::Model::MetagenomicComposition16s::Report::'.Genome::Utility::Text::string_to_camel_case($name);
@@ -92,6 +97,8 @@ sub _generate_and_save_report {
         $fh->print( $xslt->{content} );
     }
 
+    $self->status_message(ucfirst($name).' report...OK');
+    
     return $report;
 }
 

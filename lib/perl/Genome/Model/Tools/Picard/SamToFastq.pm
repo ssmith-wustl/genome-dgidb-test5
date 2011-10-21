@@ -165,6 +165,7 @@ sub _read_count_for_bam {
     my $gmt = Genome::Model::Tools::Sam::Flagstat->create(
         bam_file => $bam,
         output_file => $flagstat_file,
+        use_version => 'r982',
     );
     if ( not $gmt ) {
         $self->error_message('Failed to create gmt same flagstat!');
