@@ -9,7 +9,7 @@ BEGIN {
 
     our %DEFAULT_ENV = (
         GENOME_SYS_SERVICES_MEMCACHE => 'localhost:11211',
-        GENOME_SYS_SERVICES_SOLR => 'http://localhost:8080/genome-solr',
+        GENOME_SYS_SERVICES_SOLR => 'http://localhost:8080/genome_solr',
     );
 
     for my $var (keys %DEFAULT_ENV) {
