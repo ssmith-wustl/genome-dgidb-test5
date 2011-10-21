@@ -3,6 +3,7 @@ package Genome::GeneName::Command::LookupInteractions;
 use strict;
 use warnings;
 use Genome;
+use List::MoreUtils qw/ uniq /;
 
 class Genome::GeneName::Command::LookupInteractions {
     is => 'Genome::Command::Base',
@@ -39,7 +40,15 @@ sub execute {
     my $gene_name_results = {};
 
     for my $gene_identifier (@gene_identifiers){
-        $self->find_gene_names($gene_identifier, $gene_name_results);
+        my $cmd = Genome::GeneName::Command::ConvertToEntrez->execute(gene_identifier => $gene_identifier);
+        my @entrez_gene_names = $cmd->_entrez_gene_names;
+        my @intermediates = $cmd->_intermediate_gene_names;
+        $DB::single = 1;
+        my @gene_names = $self->find_gene_names($gene_identifier);
+        my @complete_gene_names = (@entrez_gene_names, @intermediates, @gene_names);
+        @complete_gene_names = uniq @complete_gene_names;
+        $gene_name_results->{$gene_identifier} = {};
+        $gene_name_results->{$gene_identifier}->{'gene_names'} = \@complete_gene_names;
         $self->get_interactions($gene_identifier, $gene_name_results);
     }
 
@@ -50,38 +59,15 @@ sub execute {
     return 1;
 }
 
-sub _get_gene_identifiers{
-    my $self = shift;
-    my $gene_file = $self->gene_file;
-    my @gene_identifiers;
-
-    my $gene_fh = Genome::Sys->open_file_for_reading($gene_file);
-    unless($gene_fh){
-        $self->error_message("Failed to open gene_file $gene_file: $@");
-        return;
-    }
-
-    while (my $gene_identifier = <$gene_fh>){
-        chomp $gene_identifier;    
-        push @gene_identifiers, $gene_identifier;
-    }
-
-    $gene_fh->close;
-    return @gene_identifiers;
-}
-
 sub find_gene_names {
     my $self = shift;
     my $gene_identifier = shift;
-    my $gene_name_results = shift;
 
     my @gene_names = Genome::GeneName->get(name => $gene_identifier);
     my @gene_name_associations = Genome::GeneNameAssociation->get(alternate_name => $gene_identifier);
     @gene_names = (@gene_names, map($_->gene_name, @gene_name_associations));
-    my %results;
-    $results{'gene_names'} = \@gene_names;
-    $gene_name_results->{$gene_identifier} = \%results;
-    return $gene_name_results
+    @gene_names = uniq @gene_names;
+    return @gene_names;
 }
 
 sub get_interactions {
@@ -97,11 +83,12 @@ sub get_interactions {
 }
 
 sub group_interactions_by_drug_name {
-    my $self = shift; 
+    my $self = shift;
     my $gene_name_results = shift;
     my %grouped_interactions;
 
     for my $gene_name (keys %$gene_name_results){
+    #TODO: rework this using $gene_name->drug_names
         for my $interaction (@{$gene_name_results->{$gene_name}->{'interactions'}}){
             if($grouped_interactions{$interaction->drug_name->name}){
                 my @interactions = @{$grouped_interactions{$interaction->drug_name->name}};
@@ -118,14 +105,14 @@ sub group_interactions_by_drug_name {
 }
 
 sub print_grouped_interactions{
-    my $self = shift; 
+    my $self = shift;
     my %grouped_interactions = @_;
     my @headers = qw/interaction_id interaction_type drug_name_id drug_name drug_nomenclature drug_source_db_name drug_source_db_version gene_name_id
         gene_name gene_nomenclature gene_source_db_name gene_source_db_version/;
     print join("\t", @headers), "\n";
     for my $drug_name (keys %grouped_interactions){
         for my $interaction (@{$grouped_interactions{$drug_name}}){
-            print $self->_build_interaction_line($interaction), "\n"; 
+            print $self->_build_interaction_line($interaction), "\n";
         }
     }
     return 1;
@@ -137,10 +124,30 @@ sub _build_interaction_line {
     my $drug_name = $interaction->drug_name;
     my $gene_name = $interaction->gene_name;
     my $interaction_line = join("\t", $interaction->id, $interaction->interaction_type,
-        $drug_name->id, $drug_name->name, $drug_name->nomenclature, $drug_name->source_db_name, 
-        $drug_name->source_db_version, $gene_name->id, $gene_name->name, $gene_name->nomenclature, 
-        $gene_name->source_db_name, $gene_name->source_db_version); 
+        $drug_name->id, $drug_name->name, $drug_name->nomenclature, $drug_name->source_db_name,
+        $drug_name->source_db_version, $gene_name->id, $gene_name->name, $gene_name->nomenclature,
+        $gene_name->source_db_name, $gene_name->source_db_version);
     return $interaction_line;
+}
+
+sub _get_gene_identifiers{
+    my $self = shift;
+    my $gene_file = $self->gene_file;
+    my @gene_identifiers;
+
+    my $gene_fh = Genome::Sys->open_file_for_reading($gene_file);
+    unless($gene_fh){
+        $self->error_message("Failed to open gene_file $gene_file: $@");
+        return;
+    }
+
+    while (my $gene_identifier = <$gene_fh>){
+        chomp $gene_identifier;
+        push @gene_identifiers, $gene_identifier;
+    }
+
+    $gene_fh->close;
+    return @gene_identifiers;
 }
 
 1;
