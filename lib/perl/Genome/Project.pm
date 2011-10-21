@@ -54,6 +54,8 @@ class Genome::Project {
     doc => 'A project, can contain any number of objects (of any type)!',
 };
 
+sub sub_command_sort_position { 1 }
+
 sub create {
     my $class = shift;
     
