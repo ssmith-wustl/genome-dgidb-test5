@@ -3,7 +3,7 @@ package Genome::GeneName::Command::ConvertToEntrez;
 use strict;
 use warnings;
 use Genome;
-use List::MoreUtils qw/ uniq /; 
+use List::MoreUtils qw/ uniq /;
 
 class Genome::GeneName::Command::ConvertToEntrez {
     is => 'Genome::Command::Base',
@@ -19,7 +19,14 @@ class Genome::GeneName::Command::ConvertToEntrez {
             is_output => 1,
             is_optional => 1,
             doc => 'Array of gene names produced as output',
-        }
+        },
+        _intermediate_gene_names => {
+            is => 'Genome::GeneName',
+            is_many => 1,
+            is_output => 1,
+            is_optional => 1,
+            doc => 'Array of gene names that were used to create _entrez_gene_names',
+        },
     ],
 };
 
@@ -75,10 +82,10 @@ sub convert_to_entrez_gene_name {
 sub _match_as_entrez_gene_symbol {
     my $self = shift;
     my $gene_identifier = shift;
-    
+
     my @entrez_gene_name_associations = Genome::GeneNameAssociation->get(nomenclature => ['entrez_gene_symbol', 'entrez_gene_synonym'], alternate_name => $gene_identifier);
     my @gene_names = map($_->gene_name, @entrez_gene_name_associations);
-    
+
     @gene_names = uniq @gene_names;
     return @gene_names;
 }
@@ -98,7 +105,7 @@ sub _match_as_ensembl_id {
 
     my @gene_names = Genome::GeneName->get(source_db_name => 'Ensembl', name => $gene_identifier);
     for my $gene_name (@gene_names){
-        my @identifiers = ($gene_name->name, map($_->alternate_name, $gene_name->gene_name_associations)); 
+        my @identifiers = ($gene_name->name, map($_->alternate_name, $gene_name->gene_name_associations));
         for my $identifier (@identifiers){
             push @entrez_gene_names, $self->_match_as_entrez_gene_symbol($identifier);
         }
@@ -114,14 +121,15 @@ sub _match_as_uniprot_id {
     my @gene_name_associations = Genome::GeneNameAssociation->get(nomenclature => 'uniprot_id', alternate_name => $gene_identifier);
     my @gene_names = map($_->gene_name, @gene_name_associations);
     @gene_names = uniq @gene_names;
+    $self->_intermediate_gene_names(\@gene_names);
     my @entrez_gene_names;
     for my $gene_name (@gene_names){
-        my @identifiers = ($gene_name->name, map($_->alternate_name, grep($_->nomenclature ne 'uniprot_id', $gene_name->gene_name_associations))); 
+        my @identifiers = ($gene_name->name, map($_->alternate_name, grep($_->nomenclature ne 'uniprot_id', $gene_name->gene_name_associations)));
         for my $identifier (@identifiers){
             push @entrez_gene_names, $self->_match_as_entrez_gene_symbol($identifier);
         }
     }
-    
+
     @entrez_gene_names = uniq @entrez_gene_names;
     return @entrez_gene_names;
 }
