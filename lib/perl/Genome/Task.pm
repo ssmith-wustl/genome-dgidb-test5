@@ -68,7 +68,7 @@ sub create {
 
     my %p = @_;
     if (!exists $p{time_submitted}) {
-        $p{time_submitted} = UR::Time->now();
+        $p{time_submitted} = $UR::Context::current->now;
     }
 
     if (!exists $p{params}) {
