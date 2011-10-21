@@ -1179,7 +1179,7 @@ sub perform_post_success_actions {
     $self->status_message('Post success actions');
     $self->status_message('Check if model is for QC: '.$self->model_name);
 
-    if ( $self->model_name !~ /\-qc$/ ) {
+    if ( not $self->model->is_for_qc ) {
         $self->status_message('Model is not for QC. Not sending confirmation email');
         return 1;
     }
