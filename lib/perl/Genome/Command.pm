@@ -32,6 +32,7 @@ my %command_map = (
     'task' => 'Genome::Task::Command',
     'taxon' => 'Genome::Taxon::Command',
     'tools' => 'Genome::Model::Tools',
+    'db' => 'Genome::Db',
 );
 
 for my $class (values %command_map) {
