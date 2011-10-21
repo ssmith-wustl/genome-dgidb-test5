@@ -18,7 +18,7 @@ class Genome::Model::Tools::Dgidb::Import::Entrez {
         genes_outfile => {
             is => 'Path',
             is_input => 1,
-            default => '/tmp/DrugBank_WashU_TARGETS.tsv',
+            default => '/tmp/Entrez_WashU_TARGETS.tsv',
             doc => 'PATH.  Path to .tsv file for genes (targets)',
         },
         gene_info_file => {
@@ -122,7 +122,7 @@ sub import_genes {
         my $gene_symbol_association = $self->_create_gene_name_association($gene_name, $gene->{entrez_gene_symbol}, 'entrez_gene_symbol', '');
         my @entrez_gene_synonyms = split(',', $gene->{entrez_gene_synonyms});
         for my $entrez_gene_synonym (@entrez_gene_synonyms){
-            unless ($entrez_gene_synonym eq 'na'){
+            if ($entrez_gene_synonym and $entrez_gene_synonym ne 'na'){
                 my $gene_name_association = $self->_create_gene_name_association($gene_name, $entrez_gene_synonym, 'entrez_gene_synonym', '');
             }
         }

@@ -233,4 +233,9 @@ sub out_of_band_attribute_update {
     return 1;
 }
 
+sub __display_name__ {
+    my $self = shift;
+    return sprintf("%s (%s)", $self->command_class, $self->status);
+}
+
 1;

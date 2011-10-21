@@ -266,6 +266,10 @@ sub execute {
     varscan.load_snp_output(\"$temp_path\",header=F,min_tumor_depth=$readcount_cutoff,min_normal_depth=$readcount_cutoff)->xcopy100;
 
     additional_plot_points = 0;
+    additional_plot_points_cn1 = 0;
+    additional_plot_points_cn2 = 0;
+    additional_plot_points_cn3 = 0;
+    additional_plot_points_cn4 = 0;
 _END_OF_R_
 #-------------------------------------------------
 
@@ -573,12 +577,12 @@ _END_OF_R_
 
         #if cn is being plotted
         if(defined($copynumber_file)){
-            print R_COMMANDS 'drawPlot(z1, cn1minus, cn1xchr, additional_plot_points, additional_plot_points_cn1, "#1C366044", "#1C3660", cncircle=1)' . "\n";
-            print R_COMMANDS 'drawPlot(z1, cn2, cn2xchr, additional_plot_points, additional_plot_points_cn2, "#67B32E44", "#67B32E", cncircle=2)' . "\n";
-            print R_COMMANDS 'drawPlot(z1, cn3, cn3xchr, additional_plot_points, additional_plot_points_cn3, "#F4981955", "#F49819", cncircle=3)' . "\n";
-            print R_COMMANDS 'drawPlot(z1, cn4plus, cn4xchr, additional_plot_points, additional_plot_points_cn4, "#E5242044", "#E52420", cncircle=4)' . "\n";
+            print R_COMMANDS 'drawPlot(z1, cn1minus, cn1xchr, additional_plot_points_cn1, "#1C366044", "#1C3660", cncircle=1)' . "\n";
+            print R_COMMANDS 'drawPlot(z1, cn2, cn2xchr, additional_plot_points_cn2, "#67B32E44", "#67B32E", cncircle=2)' . "\n";
+            print R_COMMANDS 'drawPlot(z1, cn3, cn3xchr, additional_plot_points_cn3, "#F4981955", "#F49819", cncircle=3)' . "\n";
+            print R_COMMANDS 'drawPlot(z1, cn4plus, cn4xchr, additional_plot_points_cn4, "#E5242044", "#E52420", cncircle=4)' . "\n";
         } else {
-            print R_COMMANDS 'drawPlot(z1, cn2, cn2xchr, additional_plot_points, additional_plot_points_cn2, "#67B32E44", "#67B32E")' . "\n";
+            print R_COMMANDS 'drawPlot(z1, cn2, cn2xchr, additional_plot_points_cn2, "#67B32E44", "#67B32E")' . "\n";
         }
 #-------------------------------------------------
         $R_command = <<"_END_OF_R_";
@@ -668,12 +672,12 @@ _END_OF_R_
 
         #if cn is being plotted
         if(defined($copynumber_file)){
-            print R_COMMANDS 'drawPlot(z1, cn1minus, cn1xchr, additional_plot_points, additional_plot_points_cn1, "#1C366044", "#1C3660", cncircle=1)' . "\n";
-            print R_COMMANDS 'drawPlot(z1, cn2, cn2xchr, additional_plot_points, additional_plot_points_cn2, "#67B32E44", "#67B32E", cncircle=2)' . "\n";        
-            print R_COMMANDS 'drawPlot(z1, cn3, cn3xchr, additional_plot_points, additional_plot_points_cn3, "#F4981955", "#F49819", cncircle=3)' . "\n";
-            print R_COMMANDS 'drawPlot(z1, cn4plus, cn4xchr, additional_plot_points, additional_plot_points_cn4, "#E5242044", "#E52420", cncircle=4)' . "\n";
+            print R_COMMANDS 'drawPlot(z1, cn1minus, cn1xchr, additional_plot_points_cn1, "#1C366044", "#1C3660", cncircle=1)' . "\n";
+            print R_COMMANDS 'drawPlot(z1, cn2, cn2xchr, additional_plot_points_cn2, "#67B32E44", "#67B32E", cncircle=2)' . "\n";        
+            print R_COMMANDS 'drawPlot(z1, cn3, cn3xchr, additional_plot_points_cn3, "#F4981955", "#F49819", cncircle=3)' . "\n";
+            print R_COMMANDS 'drawPlot(z1, cn4plus, cn4xchr, additional_plot_points_cn4, "#E5242044", "#E52420", cncircle=4)' . "\n";
         } else {
-            print R_COMMANDS 'drawPlot(z1, cn2, cn2xchr, additional_plot_points, additional_plot_points_cn2, "#67B32E44", "#67B32E")' . "\n";
+            print R_COMMANDS 'drawPlot(z1, cn2, cn2xchr, additional_plot_points_cn2, "#67B32E44", "#67B32E")' . "\n";
         }
     }
 #-------------------------------------------------
