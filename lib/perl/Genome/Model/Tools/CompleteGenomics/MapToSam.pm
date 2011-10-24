@@ -7,7 +7,7 @@ use Genome;
 use File::Basename;
 
 class Genome::Model::Tools::CompleteGenomics::MapToSam {
-    is => 'Genome::Model::Tools::CompleteGenomics',
+    is => 'Command::V2',
     has_input => [
         map_file => {
             is => 'Text',
@@ -63,7 +63,7 @@ sub execute {
     my $tmp_file = Genome::Sys->create_temp_file_path;
     my $cmd = 'map2sam -m ' . $self->map_file . ' -r ' . $reads_file . ' -s ' . $self->reference_file . ' | samtools view - -b -S -o ' . $tmp_file;
 
-    $self->run_command($cmd, input_files => [$self->map_file, $reads_file], output_files => [$tmp_file]);
+    Genome::Model::Tools::CompleteGenomics->run_command($cmd, input_files => [$self->map_file, $reads_file], output_files => [$tmp_file]);
     Genome::Sys->copy_file($tmp_file, $self->bam_file);
 
     return 1;

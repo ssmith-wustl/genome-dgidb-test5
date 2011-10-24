@@ -7,7 +7,7 @@ use Genome;
 use File::Basename;
 
 class Genome::Model::Tools::CompleteGenomics::EvidenceToSam {
-    is => 'Genome::Model::Tools::CompleteGenomics',
+    is => 'Command::V2',
     has_input => [
         evidence_file => {
             is => 'Text',
@@ -57,7 +57,7 @@ sub execute {
     #This is a "beta" command, so the --beta flag is required
     my $cmd = 'evidence2sam --beta -e ' . $self->evidence_file . ' -s ' . $self->reference_file . ' | samtools view - -b -S -o ' . $tmp_file;
 
-    $self->run_command($cmd, input_files => [$self->evidence_file], output_files => [$tmp_file]);
+    Genome::Model::Tools::CompleteGenomics->run_command($cmd, input_files => [$self->evidence_file], output_files => [$tmp_file]);
     Genome::Sys->copy_file($tmp_file, $self->bam_file);
 
     return 1;
