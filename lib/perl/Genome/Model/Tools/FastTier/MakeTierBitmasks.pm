@@ -139,10 +139,10 @@ sub execute {
 
 
     #this makes UR retain fewer objects. Perhaps this will help with memory issues
-    my $low=20000;
-    my $high=100000;
-    UR::Context->object_cache_size_lowwater($low);
-    UR::Context->object_cache_size_highwater($high);
+    #my $low=20000;
+    #my $high=100000;
+    #UR::Context->object_cache_size_lowwater($low);
+    #UR::Context->object_cache_size_highwater($high);
 
     #This script calculates the number of the bases in the genome covered by each current tier definition (as of 5/26/2009)
 
