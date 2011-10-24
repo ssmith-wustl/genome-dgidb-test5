@@ -68,7 +68,8 @@ sub create {
     my $user_name = Genome::Sys->username;
     my $creator = Genome::Sys::User->get(username => $user_name);
     if ( not $creator ) {
-        $self->error_message("Failed to create project, could not find user $user_name");
+        $self->error_message("Found no user entry for $user_name, cannot create project. " .
+            "Either create an entry for $user_name by running 'genome sys user create' or contact informatics.");
         $self->delete;
         return;
     }
