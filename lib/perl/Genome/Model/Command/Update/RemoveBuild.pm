@@ -54,13 +54,12 @@ sub execute {
         $self->_total_command_count($self->_total_command_count + 1);
         my $transaction = UR::Context::Transaction->begin();
         my $display_name = $build->__display_name__;
-        my $remove_build = Genome::Command::Remove->create(items => [$build], _deletion_params => [keep_build_directory => $self->keep_build_directory]);
         my $successful = eval {
             my @__errors__ = $build->__errors__;
             if (@__errors__) {
                 die "build or instrument data has __errors__, cannot remove: " . join('; ', @__errors__);
             }
-            $remove_build->execute;
+            $build->delete;
         };
         if ($successful and $transaction->commit) {
             $self->status_message("Successfully removed build (" . $display_name . ").");
