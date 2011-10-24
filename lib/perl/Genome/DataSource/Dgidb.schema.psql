@@ -1,13 +1,13 @@
-DROP TABLE IF EXISTS drug_gene_interaction_attribute;
-DROP TABLE IF EXISTS drug_gene_interaction;
-DROP TABLE IF EXISTS gene_name_category_association;
-DROP TABLE IF EXISTS gene_name_association;
-DROP TABLE IF EXISTS drug_name_category_association;
-DROP TABLE IF EXISTS drug_name_association;
-DROP TABLE IF EXISTS drug_name;
-DROP TABLE IF EXISTS gene_name;
+DROP TABLE IF EXISTS drug_gene_interaction_report_attribute;
+DROP TABLE IF EXISTS drug_gene_interaction_report;
+DROP TABLE IF EXISTS gene_name_report_category_association;
+DROP TABLE IF EXISTS gene_name_report_association;
+DROP TABLE IF EXISTS drug_name_report_category_association;
+DROP TABLE IF EXISTS drug_name_report_association;
+DROP TABLE IF EXISTS drug_name_report;
+DROP TABLE IF EXISTS gene_name_report;
 
-create table drug_name (
+create table drug_name_report (
         id varchar NOT NULL,
         name varchar NOT NULL,
         description text,
@@ -17,70 +17,91 @@ create table drug_name (
         PRIMARY KEY (id)
 );
 
-create table drug_name_association (
+create table drug_name_report_association (
         id varchar NOT NULL,
-        drug_name_id varchar NOT NULL,
+        drug_name_report_id varchar NOT NULL,
         alternate_name varchar NOT NULL,
         description text,
         nomenclature varchar NOT NULL,
         PRIMARY KEY (id),
-        FOREIGN KEY(drug_name_id) REFERENCES drug_name(id)
+        FOREIGN KEY(drug_name_report_id) REFERENCES drug_name_report(id)
 );
 
-create table drug_name_category_association (
+create table drug_name_report_category_association (
         id varchar NOT NULL,
-        drug_name_id varchar NOT NULL,
+        drug_name_report_id varchar NOT NULL,
         category_name varchar NOT NULL,
+        category_value varchar NOT NULL,
         description text,
         PRIMARY KEY (id),
-        FOREIGN KEY(drug_name_id) REFERENCES drug_name(id)
+        FOREIGN KEY(drug_name_report_id) REFERENCES drug_name_report(id)
+);
+
+create table drug_name (
+        id varchar NOT NULL,
+        name varchar NOT NULL,
+        PRIMARY KEY (id)
+);
+
+create table gene_name_report (
+        id varchar NOT NULL,
+        name varchar NOT NULL,
+        description text,
+        nomenclature varchar NOT NULL,
+        source_db_name varchar NOT NULL,
+        source_db_version varchar NOT NULL,
+        PRIMARY KEY (id)
+);
+
+create table gene_name_report_association (
+        id varchar NOT NULL,
+        gene_name_report_id varchar NOT NULL,
+        alternate_name varchar NOT NULL,
+        description text,
+        nomenclature varchar NOT NULL,
+        PRIMARY KEY (id),
+        FOREIGN KEY(gene_name_report_id) REFERENCES gene_name_report(id)
+);
+
+create table gene_name_report_category_association (
+        id varchar NOT NULL,
+        gene_name_report_id varchar NOT NULL,
+        category_name varchar NOT NULL,
+        category_value varchar NOT NULL,
+        description text,
+        PRIMARY KEY (id),
+        FOREIGN KEY(gene_name_report_id) REFERENCES gene_name_report(id)
 );
 
 create table gene_name (
         id varchar NOT NULL,
         name varchar NOT NULL,
-        description text,
-        nomenclature varchar NOT NULL,
-        source_db_name varchar NOT NULL,
-        source_db_version varchar NOT NULL,
         PRIMARY KEY (id)
 );
 
-create table gene_name_association (
+create table drug_gene_interaction_report (
         id varchar NOT NULL,
-        gene_name_id varchar NOT NULL,
-        alternate_name varchar NOT NULL,
-        description text,
-        nomenclature varchar NOT NULL,
-        PRIMARY KEY (id),
-        FOREIGN KEY(gene_name_id) REFERENCES gene_name(id)
-);
-
-create table gene_name_category_association (
-        id varchar NOT NULL,
-        gene_name_id varchar NOT NULL,
-        category_name varchar NOT NULL,
-        description text,
-        PRIMARY KEY (id),
-        FOREIGN KEY(gene_name_id) REFERENCES gene_name(id)
-);
-
-create table drug_gene_interaction (
-        id varchar NOT NULL,
-        drug_name_id varchar NOT NULL,
-        gene_name_id varchar NOT NULL,
+        drug_name_report_id varchar NOT NULL,
+        gene_name_report_id varchar NOT NULL,
         interaction_type varchar NOT NULL,
         description text,
         PRIMARY KEY(id),
-        FOREIGN KEY(drug_name_id) REFERENCES drug_name(id),
-        FOREIGN KEY(gene_name_id) REFERENCES gene_name(id),
-        UNIQUE (drug_name_id, gene_name_id, interaction_type)
+        FOREIGN KEY(drug_name_report_id) REFERENCES drug_name_report(id),
+        FOREIGN KEY(gene_name_report_id) REFERENCES gene_name_report(id),
+        UNIQUE (drug_name_report_id, gene_name_report_id, interaction_type)
 );
 
-create table drug_gene_interaction_attribute (
+create table drug_gene_interaction_report_attribute (
         id varchar NOT NULL,
-        interaction_id varchar NOT NULL REFERENCES drug_gene_interaction(id),
+        interaction_id varchar NOT NULL REFERENCES drug_gene_interaction_report(id),
         name varchar NOT NULL,
         value varchar NOT NULL,
+        PRIMARY KEY (id)
+);
+
+create table drug_gene_interaction_report (
+        id varchar NOT NULL,
+        gene_name varchar NOT NULL,
+        drug_name varchar NOT NULL,
         PRIMARY KEY (id)
 );
