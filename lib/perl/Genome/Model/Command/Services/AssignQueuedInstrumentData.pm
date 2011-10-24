@@ -993,7 +993,7 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
             return;
         }
 
-        unless($m->isa('Genome::Model::RnaSeq')){
+        unless($m->isa('Genome::Model::RnaSeq') or $m->isa('Genome::Model::GenotypeMicroarray')){
             $self->add_model_to_default_modelgroups($m, $pse, $genome_instrument_data);
         }
 
@@ -1197,7 +1197,10 @@ sub _resolve_projects_and_work_orders{
     my $index_illumina = GSC::IndexIllumina->get($instrument_data_id);
     if($index_illumina){
         @work_orders = $index_illumina->get_work_orders;
+    } else {
+        @work_orders = $pse->get_inherited_assigned_directed_setups_filter_on('setup work order');
     }
+
     unless(scalar @work_orders) {
         $self->warning_message('No work order found for PSE ' . $pse->id);
     }
