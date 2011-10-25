@@ -29,14 +29,18 @@ my @fields = (qw/
     divergence_ratio_right_A_left_B percent_identity_right_A_left_B confidence_right_A_left_B
     verdict est_breakpoint_NAST est_breakpoint_ECOLI
     /);
+sub fields {
+    return @fields;
+}
+
 sub read {
     my $self = shift;
 
     while ( my $line = $self->input->getline ) {
         next if not $line =~ s/^ChimeraSlayer\t//;
-        #next if $line !~ /^ChimeraSlayer/;
         chomp $line;
         my @tokens = split(/\t/, $line);
+        Carp::confess('Got '.@tokens.' fields, but expected '.@fields.' from chimera slayer line: '.$line) if @tokens != @fields;
         my %chimera;
         @chimera{@fields} = @tokens;
         return \%chimera;
