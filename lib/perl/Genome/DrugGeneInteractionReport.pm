@@ -28,7 +28,7 @@ class Genome::DrugGeneInteractionReport {
             constraint_name => 'drug_gene_interaction_report_gene_name_report_id_fkey',
         },
         interaction_type => { is => 'Text'}, 
-        description => { is => 'Text' },
+        description => { is => 'Text', is_optional => 1 },
         drug_gene_interaction_report_attributes => {
             is => 'Genome::DrugGeneInteractionReportAttribute',
             reverse_as => 'drug_gene_interaction_report',

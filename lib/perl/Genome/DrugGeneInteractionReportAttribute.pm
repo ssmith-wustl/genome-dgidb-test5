@@ -13,8 +13,8 @@ class Genome::DrugGeneInteractionReportAttribute {
         id => { is => 'Text' },
     ],
     has => [
-        interaction_id               => { is => 'Text', implied_by => 'drug_gene_interaction_report' },
-        drug_gene_interaction_report => { is => 'Genome::DrugGeneInteractionReport', constraint_name => 'drug_gene_interaction_report_attribute_interaction_id_fkey' },
+        interaction_id               => { is => 'Text' },
+        drug_gene_interaction_report => { is => 'Genome::DrugGeneInteractionReport', id_by => 'interaction_id', constraint_name => 'drug_gene_interaction_report_attribute_interaction_id_fkey' },
         name                         => { is => 'Text' },
         value                        => { is => 'Text' },
     ],
