@@ -42,7 +42,9 @@ sub set_default_values {
         die $@ if $@;
 
         no strict 'refs';
+        no warnings 'once';
         my $default = ${$package . "::default_value"};
+        use warnings 'once';
         use strict 'refs';
         next unless $default;
         $ENV{$variable} = $default;
