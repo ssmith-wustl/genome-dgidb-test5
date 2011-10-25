@@ -33,11 +33,6 @@ sub new {
 sub create {
     my ($class, %params) = @_;
 
-    unless ( $class->can('next') ) {
-        $class->error_message("Can't read because there isn't a 'next' method in class ($class)");
-        return;
-    }
-
     my $input = delete $params{input};
     my $self = $class->SUPER::create(%params)
         or return;
