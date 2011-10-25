@@ -1,3 +1,6 @@
+package Genome::Env::GENOME_DB;
+our $default_value = '/var/lib/genome/db';
+
 =pod
 
 =head1 NAME

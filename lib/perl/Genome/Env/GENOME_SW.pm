@@ -1,3 +1,6 @@
+package Genome::Env::GENOME_SW;
+our $default_value = '/var/lib/genome/sw';
+
 =pod
 
 =head1 NAME
