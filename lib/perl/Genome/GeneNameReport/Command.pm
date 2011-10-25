@@ -1,22 +1,22 @@
-package Genome::GeneName::Command;
+package Genome::GeneNameReport::Command;
 
 use strict;
 use warnings;
 
 use Genome;
 
-class Genome::GeneName::Command {
+class Genome::GeneNameReport::Command {
     is => 'Command::Tree',
 };
 
 sub help_brief {
-    "work with gene-names"
+    "work with gene-name-reports"
 }
 
 sub help_synopsis {
     my $self = shift;
     return <<"EOS"
- genome gene-name ...
+ genome gene-name-report ...
 EOS
 }
 
