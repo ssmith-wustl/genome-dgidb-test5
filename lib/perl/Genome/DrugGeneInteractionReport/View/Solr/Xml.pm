@@ -1,30 +1,30 @@
-package Genome::DrugGeneInteraction::View::Solr::Xml;
+package Genome::DrugGeneInteractionReport::View::Solr::Xml;
 
 use strict;
 use warnings;
 
 use Genome;
 
-class Genome::DrugGeneInteraction::View::Solr::Xml {
+class Genome::DrugGeneInteractionReport::View::Solr::Xml {
     is => 'Genome::View::Solr::Xml',
     has => [
         type => {
             is => 'Text',
-            default => 'drug-gene-interaction'
+            default => 'drug-gene-interaction-report'
         },
         display_type => {
             is  => 'Text',
-            default => 'DrugGeneInteraction',
+            default => 'DrugGeneInteractionReport',
         },
         display_icon_url => {
             is  => 'Text',
-            default => 'genome_drug-gene-interaction_32',
+            default => 'genome_drug-gene-interaction-report_32',
         },
         display_url0 => {
             is => 'Text',
             calculate_from => ['subject'],
             calculate => q{
-                return join ('?id=', '/view/genome/drug-gene-interaction/status.html',$_->id());
+                return join ('?id=', '/view/genome/drug-gene-interaction-report/status.html',$_->id());
             },
         },
         display_label1 => {
@@ -53,7 +53,7 @@ class Genome::DrugGeneInteraction::View::Solr::Xml {
                     position => 'title',
                 },
                 {
-                    name => 'drug_name',
+                    name => 'drug_name_report',
                     position => 'content',
                     perspective => 'default',
                     toolkit => 'text',
@@ -67,7 +67,7 @@ class Genome::DrugGeneInteraction::View::Solr::Xml {
                 },
                 {
 
-                    name => 'gene_name',
+                    name => 'gene_name_report',
                     position => 'content',
                     perspective => 'default',
                     toolkit => 'text',

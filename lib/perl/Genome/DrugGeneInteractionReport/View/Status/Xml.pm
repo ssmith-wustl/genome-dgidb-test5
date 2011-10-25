@@ -1,4 +1,4 @@
-package Genome::DrugGeneInteraction::View::Status::Xml;
+package Genome::DrugGeneInteractionReport::View::Status::Xml;
 
 use strict;
 use warnings;
@@ -6,7 +6,7 @@ use Genome;
 use Data::Dumper;
 use XML::LibXML;
 
-class Genome::DrugGeneInteraction::View::Status::Xml {
+class Genome::DrugGeneInteractionReport::View::Status::Xml {
     is => 'Genome::View::Status::Xml',
     has_constant => [
         default_aspects => {
@@ -15,7 +15,7 @@ class Genome::DrugGeneInteraction::View::Status::Xml {
                'id',
                'interaction_type',
                {
-                    name => 'drug_name',
+                    name => 'drug_name_report',
                     perspective => 'default',
                     toolkit => 'xml',
                     aspects => [
@@ -27,7 +27,7 @@ class Genome::DrugGeneInteraction::View::Status::Xml {
                     ]
                },
                {
-                    name => 'gene_name',
+                    name => 'gene_name_report',
                     perspective => 'default',
                     toolkit => 'xml',
                     aspects => [
