@@ -1,30 +1,30 @@
-package Genome::DrugName::View::Solr::Xml;
+package Genome::DrugNameReport::View::Solr::Xml;
 
 use strict;
 use warnings;
 
 use Genome;
 
-class Genome::DrugName::View::Solr::Xml {
+class Genome::DrugNameReport::View::Solr::Xml {
     is => 'Genome::View::Solr::Xml',
     has => [
         type => {
             is => 'Text',
-            default => 'drug-name'
+            default => 'drug-name-report'
         },
         display_type => {
             is  => 'Text',
-            default => 'DrugName',
+            default => 'DrugNameReport',
         },
         display_icon_url => {
             is  => 'Text',
-            default => 'genome_drug-name_32',
+            default => 'genome_drug-name-report_32',
         },
         display_url0 => {
             is => 'Text',
             calculate_from => ['subject'],
             calculate => q{
-                return join ('?id=', '/view/genome/drug-name/status.html',$_->id());
+                return join ('?id=', '/view/genome/drug-name-report/status.html',$_->id());
             },
         },
         display_label1 => {

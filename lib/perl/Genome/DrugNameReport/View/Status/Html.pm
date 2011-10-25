@@ -1,11 +1,11 @@
-package Genome::DrugName::View::Status::Html;
+package Genome::DrugNameReport::View::Status::Html;
 
 use strict;
 use warnings;
 
 use Genome;
 
-class Genome::DrugName::View::Status::Html {
+class Genome::DrugNameReport::View::Status::Html {
     is => 'Genome::View::Status::Html',
 };
 
