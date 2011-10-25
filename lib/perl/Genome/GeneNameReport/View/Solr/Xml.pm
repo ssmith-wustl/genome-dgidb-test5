@@ -1,30 +1,30 @@
-package Genome::GeneName::View::Solr::Xml;
+package Genome::GeneNameReport::View::Solr::Xml;
 
 use strict;
 use warnings;
 
 use Genome;
 
-class Genome::GeneName::View::Solr::Xml {
+class Genome::GeneNameReport::View::Solr::Xml {
     is => 'Genome::View::Solr::Xml',
     has => [
         type => {
             is => 'Text',
-            default => 'gene-name'
+            default => 'gene-name-report'
         },
         display_type => {
             is  => 'Text',
-            default => 'GeneName',
+            default => 'GeneNameReport',
         },
         display_icon_url => {
             is  => 'Text',
-            default => 'genome_gene-name_32',
+            default => 'genome_gene-name-report_32',
         },
         display_url0 => {
             is => 'Text',
             calculate_from => ['subject'],
             calculate => q{
-                return join ('?id=', '/view/genome/gene-name/status.html', $_->id());
+                return join ('?id=', '/view/genome/gene-name-report/status.html', $_->id());
             },
         },
         display_label1 => {
