@@ -55,11 +55,11 @@ require Exporter;
 @EXPORT = qw();
 
 @EXPORT_OK = qw(
-                &createNewDir &checkDir &commify &memoryUsage &loadEntrezEnsemblData &mapGeneName &fixGeneName &importIdeogramData &getCytoband &getColumnPosition
+                &createNewDir &checkDir &commify &memoryUsage &loadEntrezEnsemblData &mapGeneName &fixGeneName &importIdeogramData &getCytoband &getColumnPosition &importGeneSymbolLists &getFilePathBase
                );
 
 %EXPORT_TAGS = (
-                all => [qw(&createNewDir &checkDir &commify &memoryUsage &loadEntrezEnsemblData &mapGeneName &fixGeneName &importIdeogramData &getCytoband &getColumnPosition)]
+                all => [qw(&createNewDir &checkDir &commify &memoryUsage &loadEntrezEnsemblData &mapGeneName &fixGeneName &importIdeogramData &getCytoband &getColumnPosition &importGeneSymbolLists &getFilePathBase)]
                );
 
 use strict;
@@ -275,8 +275,12 @@ sub checkDir{
 #######################################################################################################################################################################
 sub loadEntrezEnsemblData{
   my %args = @_;
-  my $entrez_dir = $args{'-entrez_dir'};
-  my $ensembl_dir = $args{'-ensembl_dir'};
+
+  #Parse Entrez flatfiles and Ensembl files from BioMart
+  #ftp://ftp.ncbi.nih.gov/gene/DATA/gene2accession.gz
+  #ftp://ftp.ncbi.nih.gov/gene/DATA/gene_info.gz
+  my $entrez_dir = "/gscmnt/sata132/techd/mgriffit/reference_annotations/EntrezGene/";
+  my $ensembl_dir = "/gscmnt/sata132/techd/mgriffit/reference_annotations/EnsemblGene/";
   my %edata;
 
   #Check input dirs
@@ -521,7 +525,7 @@ sub mapGeneName{
   my $genome_acc_map = $edata->{'genome_accessions'};
 
   my $any_match = 0;
-  my @entrez_symbols;
+  my %entrez_symbols;
   my $entrez_name_string = '';
 
   #Try mapping directly to the entrez symbols
@@ -532,10 +536,11 @@ sub mapGeneName{
     my $entrez_ids = $symbols_map->{$original_name}->{entrez_ids};
     foreach my $entrez_id (keys %{$entrez_ids}){
       my $entrez_symbol = $entrez_map->{$entrez_id}->{symbol};
-      push (@entrez_symbols, $entrez_symbol);
+      $entrez_symbols{$entrez_symbol}=1;
     }
   }
   if ($entrez_match){
+    my @entrez_symbols = keys %entrez_symbols;
     $entrez_name_string = join(",", @entrez_symbols);
     $corrected_name = $entrez_name_string;
   }
@@ -550,10 +555,11 @@ sub mapGeneName{
       my $entrez_ids = $ensembl_map->{$original_name}->{entrez_ids};
       foreach my $entrez_id (keys %{$entrez_ids}){
         my $entrez_symbol = $entrez_map->{$entrez_id}->{symbol};
-        push (@entrez_symbols, $entrez_symbol);
+        $entrez_symbols{$entrez_symbol}=1;
       }
     }
     if ($ensembl_match){
+      my @entrez_symbols = keys %entrez_symbols;
       $entrez_name_string = join(",", @entrez_symbols);
       $corrected_name = $entrez_name_string;
     }
@@ -577,10 +583,11 @@ sub mapGeneName{
       my $entrez_ids = $prot_acc_map->{$original_name}->{entrez_ids};
       foreach my $entrez_id (keys %{$entrez_ids}){
         my $entrez_symbol = $entrez_map->{$entrez_id}->{symbol};
-        push (@entrez_symbols, $entrez_symbol);
+        $entrez_symbols{$entrez_symbol}=1;
       }
     }
     if ($protein_acc_match){
+      my @entrez_symbols = keys %entrez_symbols;
       $entrez_name_string = join(",", @entrez_symbols);
       $corrected_name = $entrez_name_string;
     }
@@ -595,10 +602,11 @@ sub mapGeneName{
       my $entrez_ids = $genome_acc_map->{$original_name}->{entrez_ids};
       foreach my $entrez_id (keys %{$entrez_ids}){
         my $entrez_symbol = $entrez_map->{$entrez_id}->{symbol};
-        push (@entrez_symbols, $entrez_symbol);
+        $entrez_symbols{$entrez_symbol}=1;
       }
     }
     if ($genome_acc_match){
+      my @entrez_symbols = keys %entrez_symbols;
       $entrez_name_string = join(",", @entrez_symbols);
       $corrected_name = $entrez_name_string;
     }
@@ -616,11 +624,12 @@ sub mapGeneName{
         $any_match = 1;
         foreach my $entrez_id (keys %{$entrez_ids}){
           my $entrez_symbol = $entrez_map->{$entrez_id}->{symbol};
-          push (@entrez_symbols, $entrez_symbol);
+          $entrez_symbols{$entrez_symbol}=1;
         }
       }
     }
     if ($synonyms_match){
+      my @entrez_symbols = keys %entrez_symbols;
       $entrez_name_string = join(",", @entrez_symbols);
       $corrected_name = $entrez_name_string;
     }
@@ -635,10 +644,11 @@ sub mapGeneName{
         my $entrez_ids = $ensembl_map->{$ensembl_id}->{entrez_ids};
         foreach my $entrez_id (keys %{$entrez_ids}){
           my $entrez_symbol = $entrez_map->{$entrez_id}->{symbol};
-          push (@entrez_symbols, $entrez_symbol);
+          $entrez_symbols{$entrez_symbol}=1;
         }
       }
       if ($ensembl_match){
+        my @entrez_symbols = keys %entrez_symbols;
         $entrez_name_string = join(",", @entrez_symbols);
         $corrected_name = $entrez_name_string;
       }
@@ -665,7 +675,8 @@ sub mapGeneName{
       print GREEN, "\nFixed name: $original_name -> $corrected_name", RESET;
     }
   }
-  return($corrected_name);
+  my $uc_corrected_name = uc($corrected_name);
+  return($uc_corrected_name);
 }
 
 
@@ -686,6 +697,39 @@ sub fixGeneName{
     $fixed_gene_name = &mapGeneName('-entrez_ensembl_data'=>$entrez_ensembl_data, '-name'=>$original_gene_name, '-verbose'=>$verbose);
   }
   return($fixed_gene_name)
+}
+
+
+###############################################################################################################################
+#Import a set of gene symbol lists                                                                                            #
+###############################################################################################################################
+sub importGeneSymbolLists{
+  my %args = @_;
+  my $gene_symbol_lists_dir = $args{'-gene_symbol_lists_dir'};
+  my @symbol_list_names = @{$args{'-symbol_list_names'}};
+  my $entrez_ensembl_data = $args{'-entrez_ensembl_data'};
+  my $verbose = $args{'-verbose'};
+  my %symbol_lists;
+
+  my $s = 0;
+  foreach my $file (@symbol_list_names){
+    $s++;
+    my $file_path = $gene_symbol_lists_dir."$file".".txt";
+    open(GENES, "$file_path") || die "\n\nCould not open gene symbol file: $file_path\n\n";
+    my %symbols;
+    while(<GENES>){
+      chomp($_);
+      my @line = split("\t", $_);
+      my $symbol = $line[0];
+      my $fixed_gene_name = &fixGeneName('-gene'=>$symbol, '-entrez_ensembl_data'=>$entrez_ensembl_data, '-verbose'=>$verbose);
+      $symbols{$fixed_gene_name}=1;
+    }
+    close(GENES);
+    $symbol_lists{$file}{symbols} = \%symbols;
+    $symbol_lists{$file}{order} = $s;
+  }
+
+  return(\%symbol_lists);
 }
 
 
@@ -851,6 +895,32 @@ sub getColumnPosition{
   return($desired_column_position);
 }
 
+
+#############################################################################################################################
+#Given a file name or path, return the path with the extension removed as well as the extension as a hash                   #
+#############################################################################################################################
+sub getFilePathBase{
+  my %args = @_;
+  my $path = $args{'-path'};
+
+  my %fb;
+
+  my $base = '';
+  my $extension = '';
+
+  if ($path =~ /(.*)(\.\w+)$/){
+    $base = $1;
+    $extension = $2;
+  }else{
+    print RED, "\n\n&getFileBasePath could not determine base and extension of a file path: $path\n\n", RESET;
+    exit();
+  }
+
+  $fb{$path}{base} = $base;
+  $fb{$path}{extension} = $extension;
+
+  return(\%fb);
+}
 
 
 1;
