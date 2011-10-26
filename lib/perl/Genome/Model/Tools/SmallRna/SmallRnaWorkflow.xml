@@ -6,6 +6,7 @@
 <link fromOperation="input connector" fromProperty="read_size_bin"    toOperation="FilterBamFlagstat" toProperty="read_size_bin" />
 
 <link fromOperation="input connector" fromProperty="zenith_depth"    toOperation="ClusterCoverage" toProperty="zenith_depth" />
+<link fromOperation="input connector" fromProperty="minimum_depth"    toOperation="ClusterCoverage" toProperty="minimum_depth" />
 <link fromOperation="input connector" fromProperty="stats_file"    toOperation="ClusterCoverage" toProperty="stats_file" />
 <link fromOperation="input connector" fromProperty="bed_file"    toOperation="ClusterCoverage" toProperty="bed_file" />
 
@@ -88,6 +89,7 @@
     <inputproperty>filtered_bam_file</inputproperty>
  	<inputproperty>read_size_bin</inputproperty>
 	 <inputproperty>zenith_depth</inputproperty>
+<inputproperty>minimum_depth</inputproperty>
      <inputproperty>bed_file</inputproperty>
 <inputproperty>flagstat_17_70_file</inputproperty>
      <inputproperty>output_stats_file</inputproperty>

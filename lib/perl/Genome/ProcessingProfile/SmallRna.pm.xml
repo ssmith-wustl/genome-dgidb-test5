@@ -6,6 +6,8 @@
 <link fromOperation="input connector" fromProperty="annotation_files"  toOperation="SmallRnaWorkflow" toProperty="annotation_files" />  
 <link fromOperation="input connector" fromProperty="annotation_name"  	 	toOperation="SmallRnaWorkflow" toProperty="annotation_name" />
 <link fromOperation="input connector" fromProperty="minimum_zenith"    toOperation="SmallRnaWorkflow" toProperty="minimum_zenith" />
+<link fromOperation="input connector" fromProperty="minimum_depth"    toOperation="SmallRnaWorkflow" toProperty="minimum_depth" />
+
 <link fromOperation="input connector" fromProperty="size_bins"    toOperation="SmallRnaWorkflow" toProperty="read_size_bin" />
 <link fromOperation="input connector" fromProperty="subcluster_min_mapzero" toOperation="SmallRnaWorkflow" toProperty="subcluster_min_mapzero" />
 <link fromOperation="input connector" fromProperty="input_cluster_number"  toOperation="SmallRnaWorkflow" toProperty="input_cluster_number" />
@@ -36,6 +38,7 @@
     <inputproperty>bam_file</inputproperty>   
  	<inputproperty>size_bins</inputproperty>
 	 <inputproperty>minimum_zenith</inputproperty>
+	  <inputproperty>minimum_depth</inputproperty>
      <inputproperty>annotation_files</inputproperty>
      <inputproperty>annotation_name</inputproperty>
      <inputproperty>output_base_dir</inputproperty>
