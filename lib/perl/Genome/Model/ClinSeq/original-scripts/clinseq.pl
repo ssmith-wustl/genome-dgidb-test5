@@ -4,19 +4,22 @@
 #Load modules
 use strict;
 use warnings;
-use Genome;
+use above "Genome"; #Makes sure I am using the local genome.pm and use lib right above it (don't do this in a module)
 use Getopt::Long;
 use Term::ANSIColor qw(:constants);
 use Data::Dumper;
 
-use lib '/gscmnt/sata206/techd/git/clinseq';
-use ClinSeq qw(:all);
-
 my $script_dir;
 use Cwd 'abs_path';
-if (abs_path($0) =~ /(.*\/).*\.pl/){
-  $script_dir = $1;
+BEGIN{
+  if (abs_path($0) =~ /(.*\/).*\.pl/){
+    $script_dir = $1;
+  }
 }
+use lib $script_dir;
+use ClinSeq qw(:all);
+
+
 
 #This script attempts to automate the process of running the 'clinseq' pipeline
 
@@ -103,12 +106,7 @@ if ($rna_seq_model_id){$rnaseq=1;}
 $working_dir = &checkDir('-dir'=>$working_dir, '-clear'=>"no");
 
 #Get Entrez and Ensembl data for gene name mappings
-#Parse Entrez flatfiles and Ensembl files from BioMart
-#ftp://ftp.ncbi.nih.gov/gene/DATA/gene2accession.gz
-#ftp://ftp.ncbi.nih.gov/gene/DATA/gene_info.gz
-my $entrez_dir = "/gscmnt/sata132/techd/mgriffit/reference_annotations/EntrezGene/";
-my $ensembl_dir = "/gscmnt/sata132/techd/mgriffit/reference_annotations/EnsemblGene/";
-my $entrez_ensembl_data = &loadEntrezEnsemblData('-entrez_dir'=>$entrez_dir, '-ensembl_dir'=>$ensembl_dir);
+my $entrez_ensembl_data = &loadEntrezEnsemblData();
 
 #Define reference builds - TODO: should determine this automatically from input builds
 my $reference_build_ucsc = "hg19";
@@ -144,6 +142,7 @@ if ($clean){
 $step++; print MAGENTA, "\n\nStep $step. Getting data paths from 'genome' for specified model ids", RESET;
 my $data_paths = &getDataDirs('-wgs_som_var_model_id'=>$wgs_som_var_model_id, '-exome_som_var_model_id'=>$exome_som_var_model_id, '-rna_seq_model_id'=>$rna_seq_model_id);
 
+
 #Create a summarized file of SNVs for: WGS, exome, and WGS+exome merged
 #Grab the gene name used in the 'annotation.top' file, but grab the AA changes from the '.annotation' file
 #Fix the gene name if neccessary...
@@ -158,55 +157,50 @@ if ($wgs){
   &identifyCnvGenes('-data_paths'=>$data_paths, '-out_paths'=>$out_paths, '-reference_build_name'=>$reference_build_ucsc, '-common_name'=>$common_name, '-patient_dir'=>$patient_dir, '-gene_symbol_lists_dir'=>$gene_symbol_lists_dir, '-symbol_list_names'=>\@cnv_symbol_lists, '-verbose'=>$verbose);
 }
 
+
+#Run RNA-seq analysis on the RNA-seq data (if available)
+if ($rnaseq){
+
+  my $rnaseq_dir = &createNewDir('-path'=>$patient_dir, '-new_dir_name'=>'rnaseq', '-silent'=>1);
+
+  #Perform the single-tumor outlier analysis
+  $step++; print MAGENTA, "\n\nStep $step. Summarizing RNA-seq absolute expression values", RESET;
+  &runRnaSeqAbsolute('-data_paths'=>$data_paths, '-out_paths'=>$out_paths, '-rnaseq_dir'=>$rnaseq_dir, '-script_dir'=>$script_dir, '-verbose'=>$verbose);
+
+  #Perform the multi-tumor differential outlier analysis
+
+
+
+}
+
+
 #Annotate gene lists to deal with commonly asked questions like: is each gene a kinase?
 #Read in file, get gene name column, fix gene name, compare to list, set answer to 1/0, overwrite old file
 #Repeat this process for each gene symbol list defined
 $step++; print MAGENTA, "\n\nStep $step. Annotating gene files", RESET;
 &annotateGeneFiles('-gene_symbol_lists'=>$gene_symbol_lists1, '-out_paths'=>$out_paths);
 
-
-
 #Create drugDB interaction files
 $step++; print MAGENTA, "\n\nStep $step. Intersecting gene lists with druggable genes of various categories", RESET;
 &drugDbIntersections('-script_dir'=>$script_dir, '-out_paths'=>$out_paths);
+
+
+#Generate a clonality plot for this patient (if WGS data is available)
+if ($wgs){
+  $step++; print MAGENTA, "\n\nStep $step. Creating clonality plot for $common_name", RESET;
+  my $test_dir = $patient_dir . "clonality/";
+  unless (-e $test_dir && -d $test_dir){
+    my $clonality_dir = &createNewDir('-path'=>$patient_dir, '-new_dir_name'=>'clonality', '-silent'=>1);
+    my $master_clonality_cmd = "$script_dir"."snv/generateClonalityPlot.pl  --somatic_var_model_id=$wgs_som_var_model_id  --working_dir=$clonality_dir  --common_name='$common_name'  --verbose=1";
+    system($master_clonality_cmd);
+  }
+}
 
 print "\n\n";
 
 #print Dumper $out_paths;
 
 exit();
-
-###############################################################################################################################
-#Import a set of gene symbol lists                                                                                            #
-###############################################################################################################################
-sub importGeneSymbolLists{
-  my %args = @_;
-  my $gene_symbol_lists_dir = $args{'-gene_symbol_lists_dir'};
-  my @symbol_list_names = @{$args{'-symbol_list_names'}};
-  my $entrez_ensembl_data = $args{'-entrez_ensembl_data'};
-  my $verbose = $args{'-verbose'};
-  my %symbol_lists;
-
-  my $s = 0;
-  foreach my $file (@symbol_list_names){
-    $s++;
-    my $file_path = $gene_symbol_lists_dir."$file".".txt";
-    open(GENES, "$file_path") || die "\n\nCould not open gene symbol file: $file_path\n\n";
-    my %symbols;
-    while(<GENES>){
-      chomp($_);
-      my @line = split("\t", $_);
-      my $symbol = $line[0];
-      my $fixed_gene_name = &fixGeneName('-gene'=>$symbol, '-entrez_ensembl_data'=>$entrez_ensembl_data, '-verbose'=>$verbose);
-      $symbols{$fixed_gene_name}=1;
-    }
-    close(GENES);
-    $symbol_lists{$file}{symbols} = \%symbols;
-    $symbol_lists{$file}{order} = $s;
-  }
-
-  return(\%symbol_lists);
-}
 
 
 ###############################################################################################################################
@@ -226,7 +220,10 @@ sub getDataDirs{
     if ($wgs_som_var_model){
       my $wgs_som_var_build = $wgs_som_var_model->last_succeeded_build;
       if ($wgs_som_var_build){
-        $wgs_som_var_datadir = $wgs_som_var_build->data_directory ."/";
+        #... /genome/lib/perl/Genome/Model/Build/SomaticVariation.pm
+        $data_paths{wgs}{root} =  $wgs_som_var_build->data_directory ."/";
+        $data_paths{wgs}{normal_bam} = $wgs_som_var_build->normal_bam;
+        $data_paths{wgs}{tumor_bam} = $wgs_som_var_build->tumor_bam;
       }else{
         print RED, "\n\nA WGS model ID was specified, but a successful build could not be found!\n\n", RESET;
         exit();
@@ -241,7 +238,9 @@ sub getDataDirs{
     if ($exome_som_var_model){
       my $exome_som_var_build = $exome_som_var_model->last_succeeded_build;
       if ($exome_som_var_build){
-      $exome_som_var_datadir = $exome_som_var_build->data_directory ."/";
+        $data_paths{exome}{root} = $exome_som_var_build->data_directory ."/";
+        $data_paths{exome}{normal_bam} = $exome_som_var_build->normal_bam;
+        $data_paths{exome}{tumor_bam} = $exome_som_var_build->tumor_bam;
       }else{
         print RED, "\n\nAn exome model ID was specified, but a successful build could not be found!\n\n", RESET;
         exit();
@@ -256,7 +255,9 @@ sub getDataDirs{
       if ($rna_seq_model){
       my $rna_seq_build = $rna_seq_model->last_succeeded_build;
       if ($rna_seq_build){
-        $rna_seq_datadir = $rna_seq_build->data_directory ."/";
+        $data_paths{rnaseq}{root} = $rna_seq_build->data_directory ."/";
+        my $alignment_result = $rna_seq_build->alignment_result;
+        $data_paths{rnaseq}{bam} = $alignment_result->bam_file;
       }else{
         print RED, "\n\nAn RNA-seq model ID was specified, but a successful build could not be found!\n\n", RESET;
         exit();
@@ -266,10 +267,6 @@ sub getDataDirs{
       exit();
     }
   }
-
-  $data_paths{wgs}{root} = $wgs_som_var_datadir;
-  $data_paths{exome}{root} = $exome_som_var_datadir;
-  $data_paths{rnaseq}{root} = $rna_seq_datadir;
 
   my @dt = qw(wgs exome);
   foreach my $dt (@dt){
@@ -332,18 +329,18 @@ sub summarizeSNVs{
     $dataset{'1'}{data_type} = "wgs";
     $dataset{'1'}{var_type} = "snv";
     $dataset{'1'}{effects_dir} = $effects_dir;
-    $dataset{'1'}{t1_hq_annotated} = $effects_dir."snvs.hq.tier1.v1.annotated";
-    $dataset{'1'}{t1_hq_annotated_top} = $effects_dir."snvs.hq.tier1.v1.annotated.top";
-    $dataset{'1'}{compact_file} = "$snv_wgs_dir"."snvs.hq.tier1.v1.annotated.compact";
+    $dataset{'1'}{t1_hq_annotated} = "snvs.hq.tier1.v1.annotated";
+    $dataset{'1'}{t1_hq_annotated_top} = "snvs.hq.tier1.v1.annotated.top";
+    $dataset{'1'}{compact_file} = "$snv_wgs_dir"."snvs.hq.tier1.v1.annotated.compact.tsv";
     $dataset{'1'}{aa_effect_filter} = $snv_filter;
     $dataset{'1'}{target_dir} = $snv_wgs_dir;
 
     $dataset{'2'}{data_type} = "wgs";
     $dataset{'2'}{var_type} = "indel";
     $dataset{'2'}{effects_dir} = $effects_dir;
-    $dataset{'2'}{t1_hq_annotated} = $effects_dir."indels.hq.tier1.v1.annotated";
-    $dataset{'2'}{t1_hq_annotated_top} = $effects_dir."indels.hq.tier1.v1.annotated.top";
-    $dataset{'2'}{compact_file} = "$indel_wgs_dir"."indels.hq.tier1.v1.annotated.compact";
+    $dataset{'2'}{t1_hq_annotated} = "indels.hq.tier1.v1.annotated";
+    $dataset{'2'}{t1_hq_annotated_top} = "indels.hq.tier1.v1.annotated.top";
+    $dataset{'2'}{compact_file} = "$indel_wgs_dir"."indels.hq.tier1.v1.annotated.compact.tsv";
     $dataset{'2'}{aa_effect_filter} = $indel_filter;
     $dataset{'2'}{target_dir} = $indel_wgs_dir;
   }
@@ -352,18 +349,18 @@ sub summarizeSNVs{
     $dataset{'3'}{data_type} = "exome";
     $dataset{'3'}{var_type} = "snv";
     $dataset{'3'}{effects_dir} = $effects_dir;
-    $dataset{'3'}{t1_hq_annotated} = $effects_dir."snvs.hq.tier1.v1.annotated";
-    $dataset{'3'}{t1_hq_annotated_top} = $effects_dir."snvs.hq.tier1.v1.annotated.top";
-    $dataset{'3'}{compact_file} = "$snv_exome_dir"."snvs.hq.tier1.v1.annotated.compact";
+    $dataset{'3'}{t1_hq_annotated} = "snvs.hq.tier1.v1.annotated";
+    $dataset{'3'}{t1_hq_annotated_top} = "snvs.hq.tier1.v1.annotated.top";
+    $dataset{'3'}{compact_file} = "$snv_exome_dir"."snvs.hq.tier1.v1.annotated.compact.tsv";
     $dataset{'3'}{aa_effect_filter} = $snv_filter;
     $dataset{'3'}{target_dir} = $snv_exome_dir;
 
     $dataset{'4'}{data_type} = "exome";
     $dataset{'4'}{var_type} = "indel";
     $dataset{'4'}{effects_dir} = $effects_dir;
-    $dataset{'4'}{t1_hq_annotated} = $effects_dir."indels.hq.tier1.v1.annotated";
-    $dataset{'4'}{t1_hq_annotated_top} = $effects_dir."indels.hq.tier1.v1.annotated.top";
-    $dataset{'4'}{compact_file} = "$indel_exome_dir"."indels.hq.tier1.v1.annotated.compact";
+    $dataset{'4'}{t1_hq_annotated} = "indels.hq.tier1.v1.annotated";
+    $dataset{'4'}{t1_hq_annotated_top} = "indels.hq.tier1.v1.annotated.top";
+    $dataset{'4'}{compact_file} = "$indel_exome_dir"."indels.hq.tier1.v1.annotated.compact.tsv";
     $dataset{'4'}{aa_effect_filter} = $indel_filter;
     $dataset{'4'}{target_dir} = $indel_exome_dir;
   }
@@ -382,7 +379,9 @@ sub summarizeSNVs{
     my $aa_effect_filter = $dataset{$ds}{aa_effect_filter};
     my $target_dir = $dataset{$ds}{target_dir};
 
-    system ("cp $t1_hq_annotated $t1_hq_annotated_top $target_dir");
+    #system ("cp $t1_hq_annotated $t1_hq_annotated_top $target_dir");
+    system ("cp $effects_dir$t1_hq_annotated $target_dir$t1_hq_annotated".".tsv");
+    system ("cp $effects_dir$t1_hq_annotated_top $target_dir$t1_hq_annotated_top".".tsv");
 
     #Define headers in a variant file
     my @input_headers = qw (chr start stop ref_base var_base var_type gene_name transcript_id species transcript_source transcript_version strand transcript_status var_effect_type coding_pos aa_change score domains1 domains2 unk_1 unk_2);
@@ -391,7 +390,7 @@ sub summarizeSNVs{
     my %aa_changes;
     my $reader = Genome::Utility::IO::SeparatedValueReader->create(
       headers => \@input_headers,
-      input => $t1_hq_annotated,
+      input => "$target_dir$t1_hq_annotated".".tsv",
       separator => "\t",
     );
     while (my $data = $reader->next) {
@@ -406,7 +405,7 @@ sub summarizeSNVs{
     #Get compact SNV info from the '.top' file but grab the complete list of AA changes from the '.annotated' file
     $reader = Genome::Utility::IO::SeparatedValueReader->create(
       headers => \@input_headers,
-      input => $t1_hq_annotated_top,
+      input => "$target_dir$t1_hq_annotated_top".".tsv",
       separator => "\t",
     );
 
@@ -445,8 +444,8 @@ sub summarizeSNVs{
 
   #If both WGS and Exome data were present, print out a data merge for SNVs and Indels
   if ($wgs && $exome){
-    my $snv_merge_file = "$snv_wgs_exome_dir"."snvs.hq.tier1.v1.annotated.compact";
-    my $indel_merge_file = "$indel_wgs_exome_dir"."indels.hq.tier1.v1.annotated.compact";
+    my $snv_merge_file = "$snv_wgs_exome_dir"."snvs.hq.tier1.v1.annotated.compact.tsv";
+    my $indel_merge_file = "$indel_wgs_exome_dir"."indels.hq.tier1.v1.annotated.compact.tsv";
 
     open (OUT, ">$snv_merge_file") || die "\n\nCould not open output file: $snv_merge_file\n\n";
     print OUT "coord\tgene_name\tmapped_gene_name\taa_changes\n";
@@ -465,7 +464,6 @@ sub summarizeSNVs{
     }
     close(OUT);
     $out_paths->{'wgs_exome'}->{'indel'}->{path} = $indel_merge_file;
-
   }
 
   return();
@@ -527,6 +525,50 @@ sub identifyCnvGenes{
       $out_paths->{'wgs'}->{'cnv_ampdel'}->{'path'} = $cnv_ampdel_path2;
     }
   }
+  return();
+}
+
+
+###################################################################################################################################
+#Run RNAseq absolute analysis to identify highly expressed genes                                                                  #
+###################################################################################################################################
+sub runRnaSeqAbsolute{
+  my %args = @_;
+  my $data_paths = $args{'-data_paths'};
+  my $out_paths = $args{'-out_paths'};
+  my $rnaseq_dir = $args{'-rnaseq_dir'};
+  my $script_dir = $args{'-script_dir'};
+  my $verbose = $args{'-verbose'};
+
+  my $cufflinks_dir = $data_paths->{rnaseq}->{expression};
+
+  #Skip this analysis if the directory already exists
+  my $test_dir = $rnaseq_dir . "absolute/";
+  unless (-e $test_dir && -d $test_dir){
+    my $absolute_rnaseq_dir = &createNewDir('-path'=>$rnaseq_dir, '-new_dir_name'=>'absolute', '-silent'=>1);
+
+    my $outliers_cmd = "$script_dir"."rna-seq/outlierGenesAbsolute.pl  --cufflinks_dir=$cufflinks_dir  --working_dir=$absolute_rnaseq_dir  --verbose=$verbose";
+  
+    if ($verbose){print YELLOW, "\n\n$outliers_cmd\n\n", RESET;}
+    system($outliers_cmd);
+
+    my @subdirs = qw (genes isoforms isoforms_merged);
+    foreach my $subdir (@subdirs){
+      my $subdir_path = "$absolute_rnaseq_dir"."$subdir/";
+      opendir(DIR, $subdir_path);
+      my @files = readdir(DIR);
+      closedir(DIR);
+
+      foreach my $file (@files){
+        #Only store .tsv files
+        if ($file =~ /\.tsv$/){
+          #Store the files to be annotated later:
+          $out_paths->{'rnaseq_absolute'}->{$file}->{'path'} = $subdir_path.$file;
+        }
+      }
+    }
+  }
+
   return();
 }
 
@@ -623,47 +665,35 @@ sub drugDbIntersections{
   my $script_dir = $args{'-script_dir'};
   my $out_paths = $args{'-out_paths'};
 
-  my %files;
-  my $gene_column_name = "mapped_gene_name";
-  if ($wgs){
-    $files{$out_paths->{'wgs'}->{'snv'}->{'path'}}{name_col} = &getColumnPosition('-path'=>$out_paths->{'wgs'}->{'snv'}->{'path'}, '-column_name'=>$gene_column_name);
-    $files{$out_paths->{'wgs'}->{'indel'}->{'path'}}{name_col} = &getColumnPosition('-path'=>$out_paths->{'wgs'}->{'indel'}->{'path'}, '-column_name'=>$gene_column_name);
-    $files{$out_paths->{'wgs'}->{'cnv'}->{'path'}}{name_col} = &getColumnPosition('-path'=>$out_paths->{'wgs'}->{'cnv'}->{'path'}, '-column_name'=>$gene_column_name);
-    $files{$out_paths->{'wgs'}->{'cnv_amp'}->{'path'}}{name_col} = &getColumnPosition('-path'=>$out_paths->{'wgs'}->{'cnv_amp'}->{'path'}, '-column_name'=>$gene_column_name);
-    $files{$out_paths->{'wgs'}->{'cnv_del'}->{'path'}}{name_col} = &getColumnPosition('-path'=>$out_paths->{'wgs'}->{'cnv_del'}->{'path'}, '-column_name'=>$gene_column_name);
-    $files{$out_paths->{'wgs'}->{'cnv_ampdel'}->{'path'}}{name_col} = &getColumnPosition('-path'=>$out_paths->{'wgs'}->{'cnv_ampdel'}->{'path'}, '-column_name'=>$gene_column_name);
+  foreach my $type (keys %{$out_paths}){
+    my $sub_types = $out_paths->{$type};
+    foreach my $sub_type (keys %{$sub_types}){
+      #Store the file input data for this file
+      my $path = $sub_types->{$sub_type}->{'path'};
+      my $name_col = &getColumnPosition('-path'=>$path, '-column_name'=>'mapped_gene_name');
+      my $drugdb_script = "$script_dir"."summary/identifyDruggableGenes.pl";
+
+      #Get file path with the file extension removed:
+      my $fb = &getFilePathBase('-path'=>$path);
+
+      #Default filter
+      my $out1 = $fb->{$path}->{base} . ".dgidb.default" . $fb->{$path}->{extension};
+      my $cmd1 = "$drugdb_script --candidates_file=$path  --name_col_1=$name_col  --interactions_file=/gscmnt/sata132/techd/mgriffit/DruggableGenes/KnownDruggable/DrugBank/query_files/DrugBank_WashU_INTERACTIONS.filtered.3.tsv  --name_col_2=12 > $out1";
+      my $out2 = $fb->{$path}->{base} . ".dgidb.antineo" . $fb->{$path}->{extension};
+      my $cmd2 = "$drugdb_script --candidates_file=$path  --name_col_1=$name_col  --interactions_file=/gscmnt/sata132/techd/mgriffit/DruggableGenes/KnownDruggable/DrugBank/query_files/DrugBank_WashU_INTERACTIONS.filtered.4.tsv  --name_col_2=12 > $out2";
+      my $out3 = $fb->{$path}->{base} . ".dgidb.inhibitor" . $fb->{$path}->{extension};
+      my $cmd3 = "$drugdb_script --candidates_file=$path  --name_col_1=$name_col  --interactions_file=/gscmnt/sata132/techd/mgriffit/DruggableGenes/KnownDruggable/DrugBank/query_files/DrugBank_WashU_INTERACTIONS.filtered.5.tsv  --name_col_2=12 > $out3";
+      my $out4 = $fb->{$path}->{base} . ".dgidb.kinase" . $fb->{$path}->{extension};
+      my $cmd4 = "$drugdb_script --candidates_file=$path  --name_col_1=$name_col  --interactions_file=/gscmnt/sata132/techd/mgriffit/DruggableGenes/KnownDruggable/DrugBank/query_files/DrugBank_WashU_INTERACTIONS.filtered.6.tsv  --name_col_2=12 > $out4";
+
+      #print YELLOW, "\n\n$cmd1\n$cmd2\n$cmd3\n$cmd4\n\n", RESET;
+      system ("$cmd1; $cmd2; $cmd3; $cmd4");
+    }
   }
-  if ($exome){
-    $files{$out_paths->{'exome'}->{'snv'}->{'path'}}{name_col} = &getColumnPosition('-path'=>$out_paths->{'exome'}->{'snv'}->{'path'}, '-column_name'=>$gene_column_name);
-    $files{$out_paths->{'exome'}->{'indel'}->{'path'}}{name_col} = &getColumnPosition('-path'=>$out_paths->{'exome'}->{'indel'}->{'path'}, '-column_name'=>$gene_column_name);
-  }
-  if ($wgs && $exome){
-    $files{$out_paths->{'wgs_exome'}->{'snv'}->{'path'}}{name_col} = &getColumnPosition('-path'=>$out_paths->{'wgs_exome'}->{'snv'}->{'path'}, '-column_name'=>$gene_column_name);
-    $files{$out_paths->{'wgs_exome'}->{'indel'}->{'path'}}{name_col} = &getColumnPosition('-path'=>$out_paths->{'wgs_exome'}->{'indel'}->{'path'}, '-column_name'=>$gene_column_name);
-  }
-
-  foreach my $candidates_file (keys %files){
-    my $name_col = $files{$candidates_file}{name_col};
-    my $drugdb_script = "$script_dir"."summary/identifyDruggableGenes.pl";
-
-    #Default filter
-    my $out1 = "$candidates_file".".dgidb.default";
-    my $cmd1 = "$drugdb_script --candidates_file=$candidates_file  --name_col_1=$name_col  --interactions_file=/gscmnt/sata132/techd/mgriffit/DruggableGenes/KnownDruggable/DrugBank/query_files/DrugBank_WashU_INTERACTIONS.filtered.3.tsv  --name_col_2=12 > $out1";
-    my $out2 = "$candidates_file".".dgidb.antineo";
-    my $cmd2 = "$drugdb_script --candidates_file=$candidates_file  --name_col_1=$name_col  --interactions_file=/gscmnt/sata132/techd/mgriffit/DruggableGenes/KnownDruggable/DrugBank/query_files/DrugBank_WashU_INTERACTIONS.filtered.4.tsv  --name_col_2=12 > $out2";
-    my $out3 = "$candidates_file".".dgidb.inhibitor";
-    my $cmd3 = "$drugdb_script --candidates_file=$candidates_file  --name_col_1=$name_col  --interactions_file=/gscmnt/sata132/techd/mgriffit/DruggableGenes/KnownDruggable/DrugBank/query_files/DrugBank_WashU_INTERACTIONS.filtered.5.tsv  --name_col_2=12 > $out3";
-    my $out4 = "$candidates_file".".dgidb.kinase";
-    my $cmd4 = "$drugdb_script --candidates_file=$candidates_file  --name_col_1=$name_col  --interactions_file=/gscmnt/sata132/techd/mgriffit/DruggableGenes/KnownDruggable/DrugBank/query_files/DrugBank_WashU_INTERACTIONS.filtered.6.tsv  --name_col_2=12 > $out4";
-
-    #print YELLOW, "\n\n$cmd1\n$cmd2\n$cmd3\n$cmd4\n\n", RESET;
-    system ("$cmd1; $cmd2; $cmd3; $cmd4");
-
-
-  }
-
   return();
 }
+
+
 
 
 

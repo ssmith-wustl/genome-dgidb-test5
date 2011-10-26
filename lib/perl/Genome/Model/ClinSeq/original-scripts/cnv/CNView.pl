@@ -15,7 +15,7 @@ use Data::Dumper;
 use File::Basename;
 use Cwd 'abs_path';
 
-use lib '/gscmnt/sata206/techd/git/clinseq';
+use lib '/gscmnt/sata206/techd/git/genome/lib/perl/Genome/ProcessingProfile/ClinSeq.pm.d';
 use ClinSeq qw(:all);
 
 my $script_dir;
@@ -81,9 +81,7 @@ my ($gene_to_trans_file, $transcript_bed_file, $subdir, $outfile, $outfile_amp, 
 my $extra_flank = 100000;
 &checkInput();
 
-my $entrez_dir = "/gscmnt/sata132/techd/mgriffit/reference_annotations/EntrezGene/";
-my $ensembl_dir = "/gscmnt/sata132/techd/mgriffit/reference_annotations/EnsemblGene/";
-my $entrez_ensembl_data = &loadEntrezEnsemblData('-entrez_dir'=>$entrez_dir, '-ensembl_dir'=>$ensembl_dir);
+my $entrez_ensembl_data = &loadEntrezEnsemblData();
 
 #If the user is supplying a pre-computed CNV file, the following steps will be skipped
 my ($gt_map, $t_coords, $window_size, $cnvs, $targets);
