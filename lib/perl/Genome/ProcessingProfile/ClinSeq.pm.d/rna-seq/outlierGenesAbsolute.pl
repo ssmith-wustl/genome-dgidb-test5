@@ -9,7 +9,7 @@ use Getopt::Long;
 use Term::ANSIColor qw(:constants);
 use Data::Dumper;
 
-use lib '/gscmnt/sata206/techd/git/clinseq';
+use lib '/gscmnt/sata206/techd/git/genome/lib/perl/Genome/ProcessingProfile/ClinSeq.pm.d';
 use ClinSeq qw(:all);
 
 my $script_dir;

@@ -9,7 +9,7 @@ use Getopt::Long;
 use Term::ANSIColor qw(:constants);
 use Data::Dumper;
 
-use lib '/gscmnt/sata206/techd/git/clinseq';
+use lib '/gscmnt/sata206/techd/git/genome/lib/perl/Genome/ProcessingProfile/ClinSeq.pm.d';
 use ClinSeq qw(:all);
 
 my $script_dir;
@@ -134,11 +134,11 @@ system($cp_cmd);
 my $centromere_file;
 my $gap_file;
 if ($data_paths{display_name} =~ /NCBI\-human\-build36/){
-  $centromere_file = "$script_dir"."borrowed/kchen/centromere.hg18.csv";
-  $gap_file = "$script_dir"."borrowed/kchen/hg18gaps.csv";
+  $centromere_file = "/gscmnt/sata132/techd/mgriffit/reference_annotations/hg18/ideogram/centromere.hg18.csv";
+  $gap_file = "/gscmnt/sata132/techd/mgriffit/reference_annotations/hg18/ideogram/hg18gaps.csv";
 }elsif($data_paths{display_name} =~ /GRCh37\-lite\-build37/){
-  $centromere_file = "$script_dir"."borrowed/kchen/centromere.hg19.csv";
-  $gap_file = "$script_dir"."borrowed/kchen/hg19gaps.csv";
+  $centromere_file = "/gscmnt/sata132/techd/mgriffit/reference_annotations/hg19/ideogram/centromere.hg19.csv";
+  $gap_file = "/gscmnt/sata132/techd/mgriffit/reference_annotations/hg19/ideogram/hg19gaps.csv";
 }else{
   print RED, "\n\nUnrecognized build - unable to identify centromere and gapfiles, you will need to generate these and place in the appropriate location\n\n", RESET;
   exit();

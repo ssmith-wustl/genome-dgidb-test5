@@ -15,7 +15,7 @@ use Data::Dumper;
 use File::Basename;
 use Cwd 'abs_path';
 
-use lib '/gscmnt/sata206/techd/git/clinseq';
+use lib '/gscmnt/sata206/techd/git/genome/lib/perl/Genome/ProcessingProfile/ClinSeq.pm.d';
 use ClinSeq qw(:all);
 
 my $script_dir;
