@@ -20,9 +20,11 @@ sub help_synopsis_for_create {
     my $self = shift;
     return <<"EOS"
 
-    genome processing-profile create clin-seq
-      --name 'November 2011 Clinical Sequencing' \
-      --foo blah
+    genome processing-profile create clin-seq --name 'November 2011 Clinical Sequencing' \
+
+    genome model define clin-seq  -w wgsmodel -e exomemodel -r rnaseqmodel -p 'November 2011 Clinical Sequencing'
+    
+    # auto matically builds if/when the models have a complete underlying build
 EOS
 }
 
@@ -54,8 +56,27 @@ sub _execute_build {
         if (defined $_) { $_ = $_->value }
     }
 
-    # DO WORK HERE ON THOSE BUILDS
-    # (if there are params on the profile, get them with $value = $self->myparam_name)
+    require Genome::Model::ClinSeq;
+    my $dir = $INC{"Genome/Model/ClinSeq.pm"};
+    $dir =~ s/.pm//;
+    $dir .= '/Command/original-scripts';
+
+    my $cmd =  "$dir/clinseq.pl";
+    if ($wgs_build) {
+        $cmd .= ' --wgs ' . $wgs_build->id;
+    }
+    if ($exome_build) {
+        $cmd .= ' --exome ' . $exome_build->id;
+    }
+    if ($rna_build) {
+        $cmd .= ' --rna ' . $rna_build->id;
+    }
+
+    my $common_name = $wgs_build->subject->patient->common_name;
+    $cmd .= ' --common-name $common_name' if $common_name;
+
+    $build->status_message("Not running! I _would_ have run: $cmd");
+    #Genome::Sys->shellcmd(cmd => $cmd);
     
     return 1;
 }
