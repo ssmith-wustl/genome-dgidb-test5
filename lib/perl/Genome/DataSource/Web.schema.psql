@@ -20,9 +20,9 @@ CREATE TABLE web.nomenclature_field (
 CREATE INDEX nomenclature_field_nomenclature_id_index ON web.nomenclature_field(nomenclature_id);
 
 CREATE TABLE web.nomenclature_enum_value (
-    id                    varchar(255) NOT NULL REFERENCES web.nomenclature_field(id),
+    id                    varchar(255) NOT NULL,
     value                 varchar(255) NOT NULL,
-    nomenclature_field_id varchar(255) NOT NULL,
+    nomenclature_field_id varchar(255) NOT NULL REFERENCES web.nomenclature_field(id),
     PRIMARY KEY (id)
 );
 CREATE INDEX nomenclature_enum_field_index ON web.nomenclature_enum_value(nomenclature_field_id);
