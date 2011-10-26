@@ -130,11 +130,13 @@ sub _import_drug {
     my @drug_synonyms = split(', ', $interaction->{drug_synonyms});
     for my $drug_synonym (@drug_synonyms){
         $DB::single = 1;
+        next if $drug_synonym eq 'na';
         my $drug_name_association = $self->_create_drug_name_report_association($drug_name, $drug_synonym, 'todo', ''); #TODO: fill in nomenclature
     }
 
     my @drug_brands = split(', ', $interaction->{drug_brands});
     for my $drug_brand (@drug_brands){
+        next if $drug_brand eq 'na';
         my ($brand, $manufacturer) = split(/ \(/, $drug_brand); 
         if ($manufacturer){
             $manufacturer =~ s/\)// ;
@@ -144,15 +146,19 @@ sub _import_drug {
         my $drug_name_association = $self->_create_drug_name_report_association($drug_name, $drug_brand, $manufacturer, '');
     }
 
-    my $drug_name_category_association = $self->_create_drug_name_report_category_association($drug_name, 'drug_type', $interaction->{drug_type}, '');
+    unless($interaction->{drug_type} eq 'na'){
+        my $drug_name_category_association = $self->_create_drug_name_report_category_association($drug_name, 'drug_type', $interaction->{drug_type}, '');
+    }
 
     my @drug_categories = split(', ', $interaction->{drug_categories});
     for my $drug_category (@drug_categories){
+        next if $drug_category eq 'na';
         my $category_association = $self->_create_drug_name_report_category_association($drug_name, 'drug_category', $drug_category, '');
     }
 
     my @drug_groups = split(', ', $interaction->{drug_groups});
     for my $drug_group (@drug_groups){
+        next if $drug_group eq 'na';
         my $group_association = $self->_create_drug_name_report_category_association($drug_name, 'drug_group', $drug_group, '');
     }
 
