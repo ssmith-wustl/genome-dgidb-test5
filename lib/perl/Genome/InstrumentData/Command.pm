@@ -11,7 +11,7 @@ class Genome::InstrumentData::Command {
         instrument_data => { is => 'Genome::InstrumentData', id_by => 'instrument_data_id' },
         instrument_data_id => { is => 'Integer', doc => 'identifies the instrument data by id' },
     ],
-    doc => 'Work with instrument data',
+    doc => 'work with instrument data',
 };
 
 1;

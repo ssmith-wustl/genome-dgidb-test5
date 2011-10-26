@@ -34,7 +34,6 @@ class Genome::Task {
         },
         time_submitted => {
             is => 'TIMESTAMP', 
-            column_name => 'SUBMIT_TIME', 
             doc => 'Time task was submitted'
         },
     ],

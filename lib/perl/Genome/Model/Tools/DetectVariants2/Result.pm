@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 
 class Genome::Model::Tools::DetectVariants2::Result {
-    is => ['Genome::Model::Tools::DetectVariants2::Result::Base'],
+    is => ['Genome::Model::Tools::DetectVariants2::Result::DetectionBase'],
     doc => 'This class represents the result of a variant detector.',
 };
 

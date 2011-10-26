@@ -7,6 +7,7 @@ use Genome;
 
 class Genome::Subject::Command {
     is => 'Command::Tree',
+    doc => 'works with subjects',
 };
          
 

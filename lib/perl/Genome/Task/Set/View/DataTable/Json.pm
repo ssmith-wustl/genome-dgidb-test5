@@ -28,6 +28,7 @@ sub _generate_content {
             aoColumns => [
                     {mDataProp => 'command class',},
                     {mDataProp => 'status',},
+                    {mDataProp => 'user id',},
                     {mDataProp => 'time submitted',},
                     {mDataProp => 'time started',},
                     {mDataProp => 'time finished',},

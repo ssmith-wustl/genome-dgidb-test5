@@ -7,7 +7,7 @@ use Genome;
       
 class Genome::PopulationGroup::Command {
     is => 'Command::Tree',
-    doc => 'Work with population groups',
+    doc => 'work with population groups',
 };
 
 use Genome::Command::Crud;

@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 
 class Genome::Model::Tools::DetectVariants2::Result::Manual {
-    is => 'Genome::SoftwareResult::Stageable',
+    is => ['Genome::Model::Tools::DetectVariants2::Result::Base'],
     has_input => [
         file_content_hash => {
             is => 'Text',
@@ -62,7 +62,7 @@ class Genome::Model::Tools::DetectVariants2::Result::Manual {
     ],
     has => [
         previous_result => {
-            is => 'Genome::SoftwareResult',
+            is => 'Genome::Model::Tools::DetectVariants2::Result::Base',
             id_by => 'previous_result_id',
             doc => 'The result upon which these manually chosen variants were based',
         },
@@ -199,8 +199,9 @@ sub generate_standard_files {
 }
 
 sub resolve_allocation_subdirectory {
-    Genome::Model::Tools::DetectVariants2::Result::Base->class; #autoload
-    return Genome::Model::Tools::DetectVariants2::Result::Base::_resolve_subdirectory(@_);
+    Genome::Model::Tools::DetectVariants2::Result::DetectionBase->class; #autoload
+    #TODO This method should really be moved into the base class
+    return Genome::Model::Tools::DetectVariants2::Result::DetectionBase::_resolve_subdirectory(@_);
 }
 
 sub resolve_allocation_disk_group_name { return 'info_genome_models'; }

@@ -7,7 +7,7 @@ use Genome;
 
 class Genome::ModelGroup::Command {
     is => 'Command::Tree',
-    doc => "Work with model-groups",
+    doc => "work with model-groups",
 };
 
 sub help_synopsis {
