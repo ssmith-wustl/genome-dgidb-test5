@@ -3,9 +3,16 @@
 use strict;
 use warnings FATAL => 'all';
 
+use Test::More;
+if (Genome::Config->arch_os ne 'x86_64') {
+   plan skip_all => 'requires 64-bit machine';
+}
+else {
+   plan tests => 4;
+}
+
 use above 'Genome';
 use Genome::Model::Tools::Picard::SamToFastq;
-use Test::More tests => 4;
 use File::Temp;
 use Path::Class qw(dir file);
 

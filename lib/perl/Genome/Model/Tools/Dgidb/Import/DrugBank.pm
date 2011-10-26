@@ -144,16 +144,16 @@ sub _import_drug {
         my $drug_name_association = $self->_create_drug_name_association($drug_name, $drug_brand, $manufacturer, '');
     }
 
-    my $drug_name_category_association = $self->_create_drug_name_category_association($drug_name, $interaction->{drug_type}, '');
+    my $drug_name_category_association = $self->_create_drug_name_category_association($drug_name, 'drug_type', $interaction->{drug_type}, '');
 
     my @drug_categories = split(', ', $interaction->{drug_categories});
     for my $drug_category (@drug_categories){
-        my $category_association = $self->_create_drug_name_category_association($drug_name, $drug_category, '');
+        my $category_association = $self->_create_drug_name_category_association($drug_name, 'drug_category', $drug_category, '');
     }
 
     my @drug_groups = split(', ', $interaction->{drug_groups});
     for my $drug_group (@drug_groups){
-        my $group_association = $self->_create_drug_name_category_association($drug_name, $drug_group, '');
+        my $group_association = $self->_create_drug_name_category_association($drug_name, 'drug_group', $drug_group, '');
     }
 
     return $drug_name;
@@ -200,18 +200,18 @@ sub preload_objects {
     my $source_db_version = $self->version;
 
     #Let's preload anything for this database name and version so that we can avoid death by 1000 queries
-    my @gene_names = Genome::GeneName->get(source_db_name => $source_db_name, source_db_version => $source_db_version);
+    my @gene_names = Genome::GeneNameReport->get(source_db_name => $source_db_name, source_db_version => $source_db_version);
     for my $gene_name (@gene_names){
         $gene_name->gene_name_associations;
         $gene_name->gene_name_category_associations;
     }
-    my @drug_names = Genome::DrugName->get(source_db_name => $source_db_name, source_db_version => $source_db_version);
+    my @drug_names = Genome::DrugNameReport->get(source_db_name => $source_db_name, source_db_version => $source_db_version);
     for my $drug_name (@drug_names){
         $drug_name->drug_name_associations;
         $drug_name->drug_name_category_associations;
     }
     my @gene_ids = map($_->id, @gene_names);
-    my @interactions = Genome::DrugGeneInteraction->get(gene_name_id => \@gene_ids);
+    my @interactions = Genome::DrugGeneInteractionReport->get(gene_name_id => \@gene_ids);
     for my $interaction (@interactions){
         $interaction->drug_gene_interaction_attributes;
     }

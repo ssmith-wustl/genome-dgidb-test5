@@ -1,13 +1,7 @@
-DROP TABLE IF EXISTS subject.task;
-DROP TABLE IF EXISTS subject.project_part;
-DROP TABLE IF EXISTS subject.project;
-DROP TABLE IF EXISTS subject.genome_user;
-DROP TABLE IF EXISTS subject.subject_attribute;
-DROP TABLE IF EXISTS subject.subject;
-DROP TABLE IF EXISTS subject.misc_note;
-
 DROP SCHEMA IF EXISTS subject CASCADE;
 CREATE SCHEMA subject AUTHORIZATION genome;
+
+SELECT set_config('search_path', current_setting('search_path')  || ',subject', false);
 
 CREATE TABLE subject.misc_note (
     editor_id          varchar(200) NOT NULL,

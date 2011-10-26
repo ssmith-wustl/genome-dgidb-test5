@@ -1,5 +1,10 @@
 package Genome::Model::SomaticValidation::Command::IdentifyDnp;
 
+use strict;
+use warnings;
+
+use Genome;
+
 class Genome::Model::SomaticValidation::Command::IdentifyDnp {
     is => 'Command::V2',
     doc => "Command line interface to create a Genome::Model::Build::SomaticValidation::IdentifyDnpResult",
@@ -47,11 +52,17 @@ sub params_for_result {
         die $self->error_message("'identify_dnp_proportion' not specified on processing profile.");
     }
 
-    my $tumor_aligment_result_id = $self->build->tumor_reference_alignment->merged_alignment_result->id;
+    my $build = $self->build;
+    my @merged_result_users = Genome::SoftwareResult::User->get(user => $build, 'software_result.subclass_name' => 'Genome::InstrumentData::AlignmentResult::Merged');
+    my @merged_results = map($_->software_result, @merged_result_users);
+    my ($tumor_alignment_result) = grep( ($_->instrument_data)[0]->sample eq $build->tumor_sample, @merged_results);
+
+    my $tumor_aligment_result_id = $tumor_alignment_result->id;
     my @software_result_users = Genome::SoftwareResult::User->get(user => $self->build);
     my @software_results = map { $_->software_result } @software_result_users;
     # TODO any way to identify DV2 results better? multiple checks with isa?
     my @dv2_results = grep { $_->class =~ /Genome::Model::Tools::DetectVariants2/ } @software_results;
+    @dv2_results = grep { $_ ne $build->snv_variant_list} @dv2_results; # don't find our input variant set
     # TODO filesystem to detect SNV result sucks
     my @snv_results = grep { -e $_->output_dir . '/snvs.hq' } @dv2_results;
     if (@snv_results > 1) {

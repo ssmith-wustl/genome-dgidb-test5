@@ -108,7 +108,7 @@ sub input_to_tsv {
     while(<ENSG>){
       chomp($_);
       my @line = split("\t", $_);
-      # gene_id "ENSG00000237375"; transcript_id "ENST00000327822"; exon_number "1"; gene_name "BX072566.1"; gene_biotype "protein_coding"; transcript_name "BX072566.1-201";
+      # gene_id "ENSG00000237375"; transcript_id "ENST00000327822"; exon_number "1"; gene_name_report "BX072566.1"; gene_biotype "protein_coding"; transcript_name "BX072566.1-201";
       $DB::single=1;
       my @gene_info = split("; ", $line[8]);
       my ($gene_id_string) = grep ($_ =~ /gene_id/i, @gene_info);
@@ -116,10 +116,10 @@ sub input_to_tsv {
       $gene_id_string =~ s/ gene_id //i; #Kill the gene_id part leaving the actual ENSG id
       my $gene_id = uc($gene_id_string);
 
-      my ($gene_name_string) = grep ($_ =~ /gene_name/i, @gene_info);
-      $gene_name_string =~ s/\"//g; #Kill the quotes
-      $gene_name_string =~ s/gene_name //i; #Kill the gene_id part leaving the actual ENSG id
-      my $gene_name = uc($gene_name_string);
+      my ($gene_name_report_string) = grep ($_ =~ /gene_name_report/i, @gene_info);
+      $gene_name_report_string =~ s/\"//g; #Kill the quotes
+      $gene_name_report_string =~ s/gene_name_report //i; #Kill the gene_id part leaving the actual ENSG id
+      my $gene_name_report = uc($gene_name_report_string);
 
       my ($gene_biotype_string) = grep ($_ =~ /gene_biotype/i, @gene_info);
       my $gene_biotype = '';
@@ -130,7 +130,7 @@ sub input_to_tsv {
       }else{
         $gene_biotype = "na";
       }
-      $ensembl_map{$gene_id}{name} = $gene_name;
+      $ensembl_map{$gene_id}{name} = $gene_name_report;
       $ensembl_map{$gene_id}{biotype} = $gene_biotype;
     }
     close(ENSG);
@@ -152,7 +152,7 @@ sub import_tsv {
     my $genes_outfile_path = $self->genes_outfile;
     #TODO: Take in the $genes_outfile_path, parse it, make the db objects;
     $self->preload_objects;
-    my @gene_names = $self->import_genes($genes_outfile_path); #Imports gene names and related info to Dgidb and returns gene_name objects
+    my @gene_name_reports = $self->import_genes($genes_outfile_path); #Imports gene names and related info to Dgidb and returns gene_name_report objects
     #We don't actually need to do anything with these objects, the data is ready to be commited to the database but will not be committed until after the execute finishes
 
     return 1;
@@ -165,10 +165,10 @@ sub preload_objects {
     my $source_db_version = $self->version;
 
     #Let's preload anything for this database name and version so that we can avoid death by 1000 queries
-    my @gene_names = Genome::GeneName->get(source_db_name => $source_db_name, source_db_version => $source_db_version);
-    for my $gene_name (@gene_names){
-        $gene_name->gene_name_associations;
-        $gene_name->gene_name_category_associations;
+    my @gene_name_reports = Genome::GeneNameReport->get(source_db_name => $source_db_name, source_db_version => $source_db_version);
+    for my $gene_name_report (@gene_name_reports){
+        $gene_name_report->gene_name_report_report_associations;
+        $gene_name_report->gene_name_report_report_category_associations;
     }
     return 1;
 }
@@ -178,7 +178,7 @@ sub import_genes {
     my $self = shift;
     my $version = $self->version;
     my $gene_outfile = shift;
-    my @gene_names;
+    my @gene_name_reports;
     my @headers = qw/ ensembl_id ensembl_gene_symbol ensembl_gene_biotype /;
     my $parser = Genome::Utility::IO::SeparatedValueReader->create(
         input => $gene_outfile,
@@ -189,14 +189,14 @@ sub import_genes {
 
     $parser->next; #eat the headers
     while(my $gene = $parser->next){
-        my $gene_name = $self->_create_gene_name($gene->{ensembl_id}, 'ensembl_id', 'Ensembl', $version, ''); #Description left undefined for now
-        push @gene_names, $gene_name;
-        my $gene_symbol_association = $self->_create_gene_name_association($gene_name, $gene->{ensembl_gene_symbol}, 'ensembl_gene_symbol', '');
+        my $gene_name_report = $self->_create_gene_name_report($gene->{ensembl_id}, 'ensembl_id', 'Ensembl', $version, ''); #Description left undefined for now
+        push @gene_name_reports, $gene_name_report;
+        my $gene_symbol_association = $self->_create_gene_name_report_report_association($gene_name_report, $gene->{ensembl_gene_symbol}, 'ensembl_gene_symbol', '');
         unless ($gene->{ensembl_gene_biotype} eq "na"){
-          my $biotype_category = $self->_create_gene_name_category_association($gene_name, $gene->{ensembl_gene_biotype}, '');
+          my $biotype_category = $self->_create_gene_name_report_category_association($gene_name_report, 'gene_biotype', $gene->{ensembl_gene_biotype}, '');
         }
     }
-    return @gene_names;
+    return @gene_name_reports;
 }
 
 

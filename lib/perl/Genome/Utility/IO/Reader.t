@@ -7,7 +7,7 @@ use above 'Genome';
 
 use Data::Dumper 'Dumper';
 use IO::String;
-use Test::More tests => 19;
+use Test::More;
 use Storable 'retrieve';
 
 use_ok('Genome::Utility::IO::Reader');
@@ -96,33 +96,6 @@ ok(!$reader, 'Failed as expected - create reader w/ invalid file');
 $reader = Album::Reader->create(input => IO::NoGetline->create());
 ok(!$reader, 'Failed as expected - create reader w/ object cant "getline"');
 
-#< INVALID READER >#
-$reader = NoNext::Reader->create();
-ok(!$reader, 'Failed as expected - create reader w/o "next" method');
-
+done_testing();
 exit;
-
-#########
-
-=pod
-
-=head1 Tests
-
-=head1 Disclaimer
-
- Copyright (C) 2006 Washington University Genome Sequencing Center
-
- This script is distributed in the hope that it will be useful,
- but WITHOUT ANY WARRANTY or the implied warranty of MERCHANTABILITY
- or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public
- License for more details.
-
-=head1 Author(s)
-
- Eddie Belter <ebelter@watson.wustl.edu>
-
-=cut
-
-#$HeadURL$
-#$Id$
 

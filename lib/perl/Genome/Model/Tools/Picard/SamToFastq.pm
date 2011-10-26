@@ -151,14 +151,9 @@ sub execute {
 
     print $java_vm_cmd . "\n";
 
-    my @output_files = ($self->fastq);
-    push @output_files, $self->fastq2 if $self->fastq2;
-#    push @output_files, $self->fragment_fastq if $self->fragment_fastq;
-
     $self->run_java_vm(
         cmd          => $java_vm_cmd,
         input_files  => [ $input_file ],
-#        output_files => \@output_files,
         skip_if_output_is_present => 0,
     );
 
@@ -167,6 +162,10 @@ sub execute {
         $bam_read_count = $self->_read_count_for_bam($input_file);
         return if not $bam_read_count;
     }
+    my @output_files = ($self->fastq);
+    push @output_files, $self->fastq2 if $self->fastq2;
+    push @output_files, $self->fragment_fastq if $self->fragment_fastq;
+
     my $fastq_read_count = $self->_read_count_for_fastq(@output_files);
     return if not $fastq_read_count;
     $self->status_message("VERIFY READ COUNTS: INPUT BAM v. OUTPUT FASTQ(s)");
@@ -188,7 +187,7 @@ sub execute {
 sub _read_count_for_bam {
     my ($self, $bam) = @_;
 
-    Carp::confess('No bamto get read count!') if not $bam;
+    Carp::confess('No bam to get read count!') if not $bam;
 
     my $tmpdir = Genome::Sys->base_temp_directory;
     my $flagstat_file = $tmpdir.'/flagstat';
@@ -215,12 +214,14 @@ sub _read_count_for_bam {
         return;
     }
 
-    if ( not defined $flagstat->{total_reads} ) {
-        $self->error_message('No total reads from flagstat file!');
+    #It seems this picard tool will only return reads passing QC. No QC
+    #failed reads will be put in fastq files.
+    if ( not defined $flagstat->{reads_marked_passing_qc} ) {
+        $self->error_message('No reads_marked_passing_qc from flagstat file!');
         return;
     }
 
-    return $flagstat->{total_reads};
+    return $flagstat->{reads_marked_passing_qc};
 }
 
 sub _read_count_for_fastq {
@@ -230,6 +231,7 @@ sub _read_count_for_fastq {
 
     my $read_count;
     for my $fastq ( @fastqs ) {
+        next if not -s $fastq;
         my $line_count = `wc -l < $fastq`;
         if ( $? or not $line_count ) {
             $self->error_message("Line count on fastq ($fastq) failed : $?");

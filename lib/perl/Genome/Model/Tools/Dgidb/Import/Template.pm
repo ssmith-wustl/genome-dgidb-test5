@@ -42,9 +42,9 @@ sub execute {
 
     # Retrieve a drug name. You can provide a hash of parameters for your query, like I have below. 
     # Internally, this is converted to SQL that hits the postgres database. You can query on any
-    # of the properties that are defined in the Genome/DrugName.pm module, so refer to that
+    # of the properties that are defined in the Genome/DrugNameReport.pm module, so refer to that
     # for some help.
-    my @retrieved_drug_names = Genome::DrugName->get(
+    my @retrieved_drug_names = Genome::DrugNameReport->get(
         name => 'whatever',
         nomenclature => 'Entrez',
         description => 'whatever',
@@ -54,7 +54,7 @@ sub execute {
     # database yet, it only lives locally. A UR::Context->commit is required to have this object 
     # converted into a row in the database. This commit is done automatically once your command
     # successfully returns, though you can do it manually if you wish.
-    my $new_drug_name = Genome::DrugName->create(
+    my $new_drug_name = Genome::DrugNameReport->create(
         name => 'whatever',
         nomenclature => 'whatever',
         source_db_name => 'foo',
