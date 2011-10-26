@@ -9,6 +9,7 @@ use Workflow::Simple;
 my $DEFAULT_CLUSTERS = '5000';
 my $DEFAULT_CUTOFF = '2';
 my $DEFAULT_ZENITH = '5';
+my $DEFAULT_MIN_DEPTH = '1';
 
 class Genome::Model::Tools::SmallRna::SmallRnaWorkflow {
 	is        => ['Genome::Model::Tools::SmallRna::Base'],
@@ -28,20 +29,26 @@ class Genome::Model::Tools::SmallRna::SmallRnaWorkflow {
 		},
 		
 		annotation_name => {
-            is => 'String',
-            doc => 'Comma delimited list of the Annotation Tracks. Should be in the same order as the list of annotation bed files.',
-        },
+        		    is => 'String',
+            		    doc => 'Comma delimited list of the Annotation Tracks. Should be in the same order as the list of annotation bed files.',
+        	},
 		
 		normalized_bam_file => {
-		is =>'Text',
-		doc => 'Bam file for head bin normalization',
+			    is =>'Text',
+			    doc => 'Bam file for head bin normalization',
 		},
 
-	   minimum_zenith => {
-            is => 'String',
-            doc => 'Minimum zenith depth for generating clusters',
-            default_value => $DEFAULT_ZENITH,
+	   	minimum_zenith => {
+            		is => 'String',
+            		doc => 'Minimum zenith depth for generating clusters',
+            		default_value => $DEFAULT_ZENITH,
+        	},
+		minimum_depth => {
+            		is => 'String',
+            		doc => 'Minimum depth to filter coverage',
+            		default_value => $DEFAULT_MIN_DEPTH,
         },
+
         
 		read_size_bin => {
 			is => 'Text',
@@ -117,6 +124,7 @@ sub execute {
 #		xa_tag			  				=> $xa_tag_value,
 		read_size_bin						=> $bin,
 		zenith_depth						=> $zenith,
+		minimum_depth						=> $self->minimum_depth,
 		stats_file 						=> $coverage_stats,
 		bed_file						=> $regions_bed,
 		flagstat_17_70_file					=> $flagstat_17_70_file,

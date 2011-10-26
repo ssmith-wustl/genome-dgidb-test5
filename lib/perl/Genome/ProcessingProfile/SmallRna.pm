@@ -5,6 +5,7 @@ use warnings;
 my $DEFAULT_CLUSTERS = '5000';
 my $DEFAULT_CUTOFF = '2';
 my $DEFAULT_ZENITH = '5';
+my $DEFAULT_MIN_DEPTH = '1';
 my $DEFAULT_BIN 	= '17_70';
 use Workflow::Simple;
 use Workflow;
@@ -31,7 +32,12 @@ class Genome::ProcessingProfile::SmallRna{
             doc => 'Minimum zenith depth for generating clusters',
             default_value => $DEFAULT_ZENITH,
         },
-        
+        minimum_depth => {
+            is => 'String',
+            is_optional => 1,
+            doc => 'Minimum depth to filter coverage',
+            default_value => $DEFAULT_MIN_DEPTH,
+        },
         normalization_bin => {
 			is => 'Text',
 			doc =>'Head bin to normalize by: eg 17_70 ',
@@ -150,6 +156,7 @@ sub _map_workflow_inputs {
 	push @inputs, annotation_files => $self->annotation_files;
     push @inputs, annotation_name => $self->annotation_name;
     push @inputs, minimum_zenith => $self->minimum_zenith;
+    push @inputs, minimum_depth=> $self->minimum_depth;
     push @inputs, size_bins => $bin;
     push @inputs, subcluster_min_mapzero => $self->subcluster_min_mapzero;
     push @inputs, input_cluster_number => $self->input_cluster_number;

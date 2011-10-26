@@ -5,9 +5,12 @@ use warnings;
 
 use Genome;
 use Workflow;
+# added mim depth on Oct 26
 
 
 my $DEFAULT_ZENITH = '5';
+my $DEFAULT_MIN_DEPTH = '1';
+
 class Genome::Model::Tools::SmallRna::ClusterCoverage {
     is => ['Genome::Model::Tools::SmallRna::Base'],
     has_input => [
@@ -20,6 +23,12 @@ class Genome::Model::Tools::SmallRna::ClusterCoverage {
             is_output=> 1,
             doc => 'Minimum zepth depth cutoff',
             default_value => $DEFAULT_ZENITH,
+        },
+        minimum_depth => {
+            is => 'Text',
+            is_output=> 1,
+            doc => 'Minimum depth to filter coverage',
+            default_value => $DEFAULT_MIN_DEPTH,
         },
         stats_file => {
             is => 'Text',
@@ -39,12 +48,13 @@ sub execute {
     my $self = shift;
     
     
-    my $cmd = '/usr/bin/perl `which gmt` bio-samtools cluster-coverage --bam-file='. $self->bam_file .' --minimum-zenith='. $self->zenith_depth .' --stats-file='. $self->stats_file .' --bed-file='. $self->bed_file ;
+    my $cmd = '/usr/bin/perl `which gmt` bio-samtools cluster-coverage --bam-file='. $self->bam_file .' --minimum-zenith='. $self->zenith_depth .' --minimum-depth='. $self->minimum_depth .' --stats-file='. $self->stats_file .' --bed-file='. $self->bed_file ;
     
     Genome::Sys->shellcmd(
         cmd => $cmd,
         input_files => [$self->bam_file],
         output_files => [$self->bed_file,$self->stats_file],
+        skip_if_output_is_present => 0,
     );
     
     return 1;   
