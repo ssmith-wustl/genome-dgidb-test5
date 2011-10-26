@@ -54,7 +54,7 @@ sub dispatch_request {
 
         my $task_params = {
             command_class => 'Genome::Subject::Command::Import',
-            user_id       => 'tigerwoods',
+            user_id       => $ENV{'REMOTE_USER'} || 'genome@localhost',
             params        => $task_params_json
         };
 
@@ -72,7 +72,7 @@ sub dispatch_request {
             $body->{'id'} = $task->id();
         }
 
-        return [201, [ 'Content-type' => "text/plain" ], [encode_json($body)]];
+        return [301, [ 'Location' => "/view/genome/task/status.html?id=" . $task->id() ], [encode_json($body)]];
     }
 };
 
