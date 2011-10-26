@@ -6,7 +6,7 @@ use Genome;
 
 class Genome::Notable::Command {
     is => 'Command::Tree',
-    doc => 'Work with Notables',
+    doc => 'work with notables',
 };
 
 1;
