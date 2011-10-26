@@ -66,12 +66,11 @@ sub execute {
     
     #iterate through contigs
     while ( my $contig = $reader->next_contig ) {
-        $self->status_message('Processing '.$contig->{name});
         my @padded_consensus = split( '', $contig->{consensus} );
 
         #find XNs in consensus
         if ( my @xns_positions = $self->xn_positions_from_consensus(\@padded_consensus) ) {
-
+            $self->status_message('Processing '.$contig->{name});
             for my $xns_pos_base ( @xns_positions ) {
                 my ( $xns_pos, $xns_base ) = split ( ' ', $xns_pos_base );
                 $self->status_message("Found $xns_base at consensus position $xns_pos");
