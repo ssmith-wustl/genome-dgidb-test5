@@ -14,7 +14,7 @@ class Genome::Model::ClinSeq {
         #someparam2 => { is => 'Boolean', doc => 'blah' },
         #someparam2 => { is => 'Text', valid_values => ['a','b','c'], doc => 'blah' },
     ],
-    doc => 'clinial sequencing convergence of RNASeq, WGS and exome capture data',
+    doc => 'clinial sequencing data convergence of RNASeq, WGS and exome capture data',
 };
 
 1;
