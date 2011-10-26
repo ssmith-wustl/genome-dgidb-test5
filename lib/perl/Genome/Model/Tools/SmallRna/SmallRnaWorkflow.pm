@@ -32,7 +32,12 @@ class Genome::Model::Tools::SmallRna::SmallRnaWorkflow {
             doc => 'Comma delimited list of the Annotation Tracks. Should be in the same order as the list of annotation bed files.',
         },
 		
-		minimum_zenith => {
+		normalized_bam_file => {
+		is =>'Text',
+		doc => 'Bam file for head bin normalization',
+		},
+
+	   minimum_zenith => {
             is => 'String',
             doc => 'Minimum zenith depth for generating clusters',
             default_value => $DEFAULT_ZENITH,
@@ -64,68 +69,67 @@ class Genome::Model::Tools::SmallRna::SmallRnaWorkflow {
 };
 
 sub execute {
-	my $self            = shift;
-
-	my $base_output_dir = $self->output_base_dir;
-	my $clusters_number	= $self->input_cluster_number;
+	my $self            		= shift;
+	my $base_output_dir 		= $self->output_base_dir;
+	my $clusters_number		= $self->input_cluster_number;
 	my $bin 			= $self->read_size_bin;
-
-	my $bam_file        = $self->bam_file;
-
-	my $output_dir = $base_output_dir .'/'.$bin;
+	my $bam_file        		= $self->bam_file;
+	my $output_dir 			= $base_output_dir .'/'.$bin;
 
 	#print $output_dir."\n";
 	Genome::Sys->create_directory($output_dir);
 
 #### FILTER-BAM PARAMETERS####
-	my $filtered_bam    	= $output_dir . '/'.$bin.'.bam';
+	my $filtered_bam    		= $output_dir . '/'.$bin.'.bam';
 	my $xa_tag_value		= '1';
 	
 #### CLUSTER-COVERAGE PARAMETERS## 	
 
-	my $zenith 				= $self->minimum_zenith;
-	my $coverage_stats  	= $output_dir . '/coverage_stats.tsv';
+	my $zenith 			= $self->minimum_zenith;
+	my $coverage_stats  		= $output_dir . '/coverage_stats.tsv';
 	my $regions_bed			= $output_dir . '/all_regions.bed'; 
 
 #### STATS-GENERATOR PARAMETERS###
 
 	my $sorted_clusters_bed		= $output_dir . '/top_sorted_clusters.bed';
-	my $alignment_stats			= $output_dir . '/alignment_stats.tsv';
-	my $subclusters				= $output_dir . '/subclusters.bed'; 
+	my $alignment_stats		= $output_dir . '/alignment_stats.tsv';
+	my $subclusters			= $output_dir . '/subclusters.bed'; 
 	my $subclusters_intersect	= $output_dir . '/subclusters_intersect.tsv'; 
-	my $min_mapscore			= $self->subcluster_min_mapzero;
-	
+	my $min_mapscore		= $self->subcluster_min_mapzero;
+        my $flagstat_17_70_file		= $self->normalized_bam_file.'.flagstat';
+ 
 ### ANNOTATE-CLUSTER PARAMETERS###
 
 	my $annotations			= $self->annotation_files; 
 	my $anno_name			= $self->annotation_name;
-	my $annotation_output	= $output_dir . '/annotation_intersect.tsv'; 
+	my $annotation_output		= $output_dir . '/annotation_intersect.tsv'; 
 	
 ### SPREADSHEET PARAMETERS###
 	
 	my $spreadsheet			= $output_dir . '/Final_spreadsheet.tsv';
-	my $number 				= $self->input_cluster_number;
+	my $number 			= $self->input_cluster_number;
 	
 ####
 
 	my %params = (
 		input_bam_file    					=> $bam_file,
 		filtered_bam_file					=> $filtered_bam,
-		xa_tag			  					=> $xa_tag_value,
+#		xa_tag			  				=> $xa_tag_value,
 		read_size_bin						=> $bin,
 		zenith_depth						=> $zenith,
-		stats_file 							=> $coverage_stats,
-		bed_file							=> $regions_bed,
+		stats_file 						=> $coverage_stats,
+		bed_file						=> $regions_bed,
+		flagstat_17_70_file					=> $flagstat_17_70_file,
 		output_stats_file					=> $alignment_stats,
-		output_clusters_file				=> $sorted_clusters_bed,
-		output_subclusters_file				=> $subclusters,
-		output_subcluster_intersect_file	=> $subclusters_intersect,
-		subcluster_min_mapzero				=> $min_mapscore,
+		output_clusters_file					=> $sorted_clusters_bed,
+		output_subclusters_file					=> $subclusters,
+		output_subcluster_intersect_file			=> $subclusters_intersect,
+		subcluster_min_mapzero					=> $min_mapscore,
 		annotation_bed_file					=> $annotations,
 		annotation_name						=> $anno_name,
 		output_tsv_file						=> $annotation_output,
 		output_spreadsheet					=> $spreadsheet,
-		input_cluster_number				=> $number
+		input_cluster_number					=> $number
 	);
 
 	my $module_path = $self->get_class_object->module_path;

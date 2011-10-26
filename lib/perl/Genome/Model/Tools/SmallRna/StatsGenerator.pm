@@ -2,11 +2,15 @@ package Genome::Model::Tools::SmallRna::StatsGenerator;
 
 #based on input from ClusterCoverage(JW) instead of ClusterGenerator(JH)#
 #also merged sub-clustering
-# Additional parameter added to take in minimum % map score for subclustering 
+#Additional parameter added to take in minimum % map score for subclustering 
+# FUNCTIONALITY FOR NORMALIZATION USING FLAGSTAT FILES
+	#a) added new parameter for taking in flagstat from 17-70 bp bam
+	#b) Other flagstat for the respective size-fraction will be intuitively determined
+
 
 use strict;
 use warnings;
-#use Bio::DB::Sam;
+
 use Data::Dumper;
 use Statistics::Descriptive;
 use Genome;
@@ -27,6 +31,12 @@ class Genome::Model::Tools::SmallRna::StatsGenerator {
 			doc => 'Input BAM file of alignments',
 			is_output=>1
 		},
+		
+		flagstat_17_70_file => {
+			is  => 'Text',
+			doc => 'Input BAM file of alignments',
+			is_output=>1
+		},
 		output_stats_file => {
 			is => 'Text',
 			is_output=> 1,
@@ -39,7 +49,7 @@ class Genome::Model::Tools::SmallRna::StatsGenerator {
 			doc =>'Output BED file containing coordinates of clusters in BED format (sorted by depth) ',
 
 		},   
-        	   output_subclusters_file => {
+	   output_subclusters_file => {
 			is        => 'Text',
 			is_output => 1,
 			doc 	  =>'Output BED file of Subclusters for each cluster in the input BED file',
@@ -70,6 +80,29 @@ sub execute {
 	my $output 	 	=  $self->output_stats_file;
 	my $cutoff 		= $self ->subcluster_min_mapzero;
 	my $sub_output  = $self->output_subclusters_file;
+	my $flagstat_17_70 = $self->flagstat_17_70_file;
+	my $flagstat_file= $bamfile.'.flagstat';	
+	
+	
+	
+	
+	### OPENING 17_70 FLAGSTAT FILE AND GETTING STATS###
+    	my $data_flagstats_17_70 = Genome::Model::Tools::Sam::Flagstat->parse_file_into_hashref($flagstat_17_70);
+        my $flagstat_total_17_70 = $data_flagstats_17_70->{total_reads};
+    	my $flagstat_mapped_17_70 = $data_flagstats_17_70->{reads_mapped};
+
+	
+	
+	### OPENING BIN FLAGSTAT FILE AND GETTING STATS###
+
+    	my $data_flagstats = Genome::Model::Tools::Sam::Flagstat->parse_file_into_hashref($flagstat_file);
+        my $flagstat_total = $data_flagstats->{total_reads};
+    	my $flagstat_mapped = $data_flagstats->{reads_mapped};
+	
+
+	
+	
+	######OPENING BAM AND GENERATING STATS#######
 	
 	my $index    =  Bio::DB::Bam->index_open($bamfile);
 	
@@ -102,6 +135,8 @@ sub execute {
 		"Avg Depth",
 		"Zenith Depth",
 		"Length of Raw Cluster",
+		"Normalization -17_70",
+		"Normalization -per bin",
 		"% Mismatches",
 		"ZeroMM",
 		"1MM",
@@ -228,8 +263,10 @@ sub execute {
 		my $min_mismatch     = $cluster_stats{mismatches}->min();
 		my $max_mismatch     = $cluster_stats{mismatches}->max();
 
+		my $normalization_17_70 = $zenith_depth/$flagstat_mapped_17_70 ; 
+		my $normalization_bin = $zenith_depth/$flagstat_mapped ; 
 		
-		print $output_fh join("\t",$name,$chr,$start,$stop,$depth,$zenith_depth,$cluster_length). "\t";
+		print $output_fh join("\t",$name,$chr,$start,$stop,$depth,$zenith_depth,$cluster_length,$normalization_17_70,$normalization_bin). "\t";
 		
 		################## CALCULATING MISMATCH STATISTICS###
 		my $totalMM = 0;

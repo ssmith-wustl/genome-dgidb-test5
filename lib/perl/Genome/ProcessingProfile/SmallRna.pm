@@ -5,6 +5,7 @@ use warnings;
 my $DEFAULT_CLUSTERS = '5000';
 my $DEFAULT_CUTOFF = '2';
 my $DEFAULT_ZENITH = '5';
+my $DEFAULT_BIN 	= '17_70';
 use Workflow::Simple;
 use Workflow;
 use Genome;
@@ -30,6 +31,12 @@ class Genome::ProcessingProfile::SmallRna{
             doc => 'Minimum zenith depth for generating clusters',
             default_value => $DEFAULT_ZENITH,
         },
+        
+        normalization_bin => {
+			is => 'Text',
+			doc =>'Head bin to normalize by: eg 17_70 ',
+			default_value => $DEFAULT_BIN,
+		},
         
 		size_bins => {
 			is => 'Text',
@@ -80,11 +87,13 @@ EOS
 
 sub _initialize_build {
     my($self,$build) = @_;
+    $DB::single=1;
     return 1;
 }
 
 sub _resolve_workflow_for_build {
     my $self = shift;
+    $DB::single = 1;
     my $build = shift;
 
     my $operation = Workflow::Operation->create_from_xml(__FILE__ . '.xml');
@@ -99,6 +108,7 @@ sub _resolve_workflow_for_build {
 
 sub _map_workflow_inputs {
     my $self = shift;
+    $DB::single = 1;
     my $build = shift;
 
     my @inputs = ();
@@ -125,13 +135,19 @@ sub _map_workflow_inputs {
         $self->error_message("Bam file $bam_file does not exist!");
         die $self->error_message;
     }
+     
     
-    my @size_array		= split (',',$self->size_bins);
-    my $bin 			= \@size_array;
+    my @size_array		              = split (',',$self->size_bins);
+    my $bin 				          = \@size_array;
+    my $normalized_output_dir 		  = $data_directory .'/'.$self->normalization_bin;
+    Genome::Sys->create_directory($normalized_output_dir);
+    my $normalized_filtered_bam    	  = $normalized_output_dir . '/'.$self->normalization_bin.'.bam';
     
+    push @inputs, normalization_bin => $self->normalization_bin;
+    push @inputs, normalized_filtered_bam => $normalized_filtered_bam;
     push @inputs, bam_file => $bam_file;
     push @inputs, output_base_dir => $data_directory;
-    push @inputs, annotation_files => $self->annotation_files;
+	push @inputs, annotation_files => $self->annotation_files;
     push @inputs, annotation_name => $self->annotation_name;
     push @inputs, minimum_zenith => $self->minimum_zenith;
     push @inputs, size_bins => $bin;

@@ -1,10 +1,9 @@
 <?xml version='1.0' standalone='yes'?>
 
 <workflow name="SmallRna Workflow" logDir="/gscmnt/sata142/techd/jhundal/miRNA_logs/" >
-<link fromOperation="input connector" fromProperty="input_bam_file"    toOperation="FilterNewBam" toProperty="bam_file" />
-<link fromOperation="input connector" fromProperty="filtered_bam_file"    toOperation="FilterNewBam" toProperty="filtered_bam_file" />
-<link fromOperation="input connector" fromProperty="xa_tag"			      toOperation="FilterNewBam" toProperty="xa_tag" />
-<link fromOperation="input connector" fromProperty="read_size_bin"    toOperation="FilterNewBam" toProperty="read_size_bin" />
+<link fromOperation="input connector" fromProperty="input_bam_file"    toOperation="FilterBamFlagstat" toProperty="bam_file" />
+<link fromOperation="input connector" fromProperty="filtered_bam_file"    toOperation="FilterBamFlagstat" toProperty="filtered_bam_file" />
+<link fromOperation="input connector" fromProperty="read_size_bin"    toOperation="FilterBamFlagstat" toProperty="read_size_bin" />
 
 <link fromOperation="input connector" fromProperty="zenith_depth"    toOperation="ClusterCoverage" toProperty="zenith_depth" />
 <link fromOperation="input connector" fromProperty="stats_file"    toOperation="ClusterCoverage" toProperty="stats_file" />
@@ -14,6 +13,7 @@
 <link fromOperation="input connector" fromProperty="output_stats_file"  toOperation="StatsGenerator" toProperty="output_stats_file" />
 
 <link fromOperation="input connector" fromProperty="output_clusters_file"  toOperation="StatsGenerator" toProperty="output_clusters_file" />
+<link fromOperation="input connector" fromProperty="flagstat_17_70_file"  toOperation="StatsGenerator" toProperty="flagstat_17_70_file" />
 <link fromOperation="input connector" fromProperty="output_subclusters_file"  toOperation="StatsGenerator" toProperty="output_subclusters_file" />
 <link fromOperation="input connector" fromProperty="output_subcluster_intersect_file"  toOperation="StatsGenerator" toProperty="output_subcluster_intersect_file" />
 <link fromOperation="input connector" fromProperty="subcluster_min_mapzero" toOperation="StatsGenerator" toProperty="subcluster_min_mapzero" />
@@ -29,8 +29,8 @@
 <link fromOperation="input connector" fromProperty="input_cluster_number"  toOperation="Spreadsheet" toProperty="input_cluster_number" />
   
   ######
-  <link fromOperation="FilterNewBam" fromProperty="filtered_bam_file" toOperation="ClusterCoverage" toProperty="bam_file" />
-   <link fromOperation="FilterNewBam" fromProperty="filtered_bam_file" 	toOperation="StatsGenerator" toProperty="bam_file" />
+  <link fromOperation="FilterBamFlagstat" fromProperty="filtered_bam_file" toOperation="ClusterCoverage" toProperty="bam_file" />
+   <link fromOperation="FilterBamFlagstat" fromProperty="filtered_bam_file" 	toOperation="StatsGenerator" toProperty="bam_file" />
   
   <link fromOperation="ClusterCoverage" fromProperty="stats_file" 	toOperation="StatsGenerator" toProperty="coverage_stats_file" />
   
@@ -45,7 +45,7 @@
 
 
 
- <link fromOperation="FilterNewBam" 	 fromProperty="result" 			 toOperation="output connector" toProperty="result" />
+ <link fromOperation="FilterBamFlagstat" 	 fromProperty="result" 			 toOperation="output connector" toProperty="result" />
   <link fromOperation="ClusterCoverage" 	 fromProperty="result" 			 toOperation="output connector" toProperty="result" />
  
   <link fromOperation="StatsGenerator" 	 fromProperty="result" 			 toOperation="output connector" toProperty="result" />
@@ -58,8 +58,8 @@
  <link fromOperation="Spreadsheet" 	 fromProperty="result" 			 toOperation="output connector" toProperty="result" />
  
  
-   	<operation name="FilterNewBam">
-	<operationtype commandClass="Genome::Model::Tools::SmallRna::FilterNewBam" typeClass="Workflow::OperationType::Command" />
+   	<operation name="FilterBamFlagstat">
+	<operationtype commandClass="Genome::Model::Tools::SmallRna::FilterBamFlagstat" typeClass="Workflow::OperationType::Command" />
     </operation>
  
  
@@ -86,10 +86,10 @@
     
     <inputproperty>input_bam_file</inputproperty>
     <inputproperty>filtered_bam_file</inputproperty>
-    <inputproperty>xa_tag</inputproperty>
  	<inputproperty>read_size_bin</inputproperty>
 	 <inputproperty>zenith_depth</inputproperty>
      <inputproperty>bed_file</inputproperty>
+<inputproperty>flagstat_17_70_file</inputproperty>
      <inputproperty>output_stats_file</inputproperty>
      <inputproperty>output_clusters_file</inputproperty>
      <inputproperty>output_subclusters_file</inputproperty>
