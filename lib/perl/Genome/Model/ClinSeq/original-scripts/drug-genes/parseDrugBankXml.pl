@@ -12,7 +12,14 @@ use Term::ANSIColor qw(:constants);
 use Data::Dumper;
 use XML::Simple;
 
-use lib '/gscmnt/sata206/techd/git/genome/lib/perl/Genome/ProcessingProfile/ClinSeq.pm.d/drug-genes/';
+my $script_dir;
+use Cwd 'abs_path';
+BEGIN{
+  if (abs_path($0) =~ /(.*\/).*\.pl/){
+    $script_dir = $1;
+  }
+}
+use lib $script_dir;
 use utility qw(:all);
 
 binmode(STDOUT, ":utf8");

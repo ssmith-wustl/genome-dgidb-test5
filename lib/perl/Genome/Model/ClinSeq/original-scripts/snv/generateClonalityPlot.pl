@@ -9,14 +9,16 @@ use Getopt::Long;
 use Term::ANSIColor qw(:constants);
 use Data::Dumper;
 
-use lib '/gscmnt/sata206/techd/git/genome/lib/perl/Genome/ProcessingProfile/ClinSeq.pm.d';
-use ClinSeq qw(:all);
-
 my $script_dir;
 use Cwd 'abs_path';
-if (abs_path($0) =~ /(.*\/).*\/.*\.pl/){
-  $script_dir = $1;
+BEGIN{
+  if (abs_path($0) =~ /(.*\/).*\.pl/){
+    $script_dir = $1;
+  }
 }
+use lib $script_dir;
+use ClinSeq qw(:all);
+
 
 #This script running a series of commands obtained from Nate Dees that results in the creation of a clonality plot (.pdf)
 my $somatic_var_model_id = '';
