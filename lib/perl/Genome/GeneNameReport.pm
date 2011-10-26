@@ -33,15 +33,15 @@ class Genome::GeneNameReport {
             reverse_as => 'gene_name_report',
             is_many => 1,
         },
-        drug_gene_interactions => {
-            is => 'Genome::DrugGeneInteraction',
+        drug_gene_interaction_reports => {
+            is => 'Genome::DrugGeneInteractionReport',
             reverse_as => 'gene_name_report',
             is_many => 1,
         },
-        drug_names => {
-            is => 'Genome::DrugName',
-            via => 'drug_gene_interactions',
-            to => 'drug_name',
+        drug_name_reports => {
+            is => 'Genome::DrugNameReport',
+            via => 'drug_gene_interaction_reports',
+            to => 'drug_name_report',
             is_many => 1,
         }
     ],

@@ -145,10 +145,6 @@ $ ->
 
       listView = new ListView
     
-#      k = new List([{'name':  'hello', 'type': 'string', 'enumerated_values': []},{'name':  'there', 'type': 'enumerated', 'enumerated_values': ['woo', 'there']} ])
-#      k.each (i) -> 
-#        listView.collection.add(i)
-
       if (window.location.hash) 
         m = window.location.hash.split('=')
         if m[0] == '#id'
@@ -193,8 +189,8 @@ $ ->
            type: window.action_mode
            dataType: 'json'
            data: ajax_data
-#           success: (response ) ->
-#            window.location="/view/genome/nomenclature/set/status.html"
+           success: (response ) ->
+            window.location="/view/genome/nomenclature/set/status.html"
            error: (response) ->
             alert("Sorry, an error occurred trying to save this nomenclature.")
            complete: ->

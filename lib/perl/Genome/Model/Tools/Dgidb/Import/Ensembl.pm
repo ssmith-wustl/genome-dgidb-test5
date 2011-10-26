@@ -167,8 +167,8 @@ sub preload_objects {
     #Let's preload anything for this database name and version so that we can avoid death by 1000 queries
     my @gene_name_reports = Genome::GeneNameReport->get(source_db_name => $source_db_name, source_db_version => $source_db_version);
     for my $gene_name_report (@gene_name_reports){
-        $gene_name_report->gene_name_report_report_associations;
-        $gene_name_report->gene_name_report_report_category_associations;
+        $gene_name_report->gene_name_report_associations;
+        $gene_name_report->gene_name_report_category_associations;
     }
     return 1;
 }
@@ -191,8 +191,10 @@ sub import_genes {
     while(my $gene = $parser->next){
         my $gene_name_report = $self->_create_gene_name_report($gene->{ensembl_id}, 'ensembl_id', 'Ensembl', $version, ''); #Description left undefined for now
         push @gene_name_reports, $gene_name_report;
-        my $gene_symbol_association = $self->_create_gene_name_report_report_association($gene_name_report, $gene->{ensembl_gene_symbol}, 'ensembl_gene_symbol', '');
-        unless ($gene->{ensembl_gene_biotype} eq "na"){
+        unless($gene->{ensembl_gene_symbol} eq 'na'){
+            my $gene_symbol_association = $self->_create_gene_name_report_association($gene_name_report, $gene->{ensembl_gene_symbol}, 'ensembl_gene_symbol', '');
+        }
+        unless ($gene->{ensembl_gene_biotype} eq 'na'){
           my $biotype_category = $self->_create_gene_name_report_category_association($gene_name_report, 'gene_biotype', $gene->{ensembl_gene_biotype}, '');
         }
     }
