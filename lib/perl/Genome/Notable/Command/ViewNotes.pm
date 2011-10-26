@@ -30,6 +30,10 @@ class Genome::Notable::Command::ViewNotes {
     doc => 'View notes that have been set on notable objects',
 };
 
+sub _is_hidden_in_docs {
+    return 1;
+}
+
 sub help_detail {
     return <<EOS
 This command can be used to view the notes that have been added to a notable object.
