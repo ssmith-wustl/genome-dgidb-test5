@@ -114,7 +114,7 @@ sub transform_xml {
 
     my $parser = XML::LibXML->new;
     my $xslt = XML::LibXSLT->new;
-$DB::single = 1;
+
     # convert the xml
     my $stylesheet = $xslt->parse_stylesheet($style_doc);
     my $results = $stylesheet->transform($xml_doc);
@@ -128,7 +128,7 @@ sub _resolve_xsl_template_files {
     my ($xml_view, $output_format, $xsl_path, $perspective) = @_;
 
     my @files = $self->SUPER::_resolve_xsl_template_files(@_);
-$DB::single =1;
+
     my $static_template = '/' . $self->output_format . '/static/root.xsl';
     push @files, $static_template
         if -f "$xsl_path$static_template";
