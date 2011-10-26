@@ -4,19 +4,22 @@
 #Load modules
 use strict;
 use warnings;
-use Genome;
+use above "Genome"; #Makes sure I am using the local genome.pm and use lib right above it (don't do this in a module)
 use Getopt::Long;
 use Term::ANSIColor qw(:constants);
 use Data::Dumper;
 
-use lib '/gscmnt/sata206/techd/git/genome/lib/perl/Genome/ProcessingProfile/ClinSeq.pm.d';
-use ClinSeq qw(:all);
-
 my $script_dir;
 use Cwd 'abs_path';
-if (abs_path($0) =~ /(.*\/).*\.pl/){
-  $script_dir = $1;
+BEGIN{
+  if (abs_path($0) =~ /(.*\/).*\.pl/){
+    $script_dir = $1;
+  }
 }
+use lib $script_dir;
+use ClinSeq qw(:all);
+
+
 
 #This script attempts to automate the process of running the 'clinseq' pipeline
 
