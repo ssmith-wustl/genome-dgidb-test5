@@ -33,7 +33,9 @@
 #  - Tophat fusion, Chimera scan
 #- Previously discovered variants
 #- Germline variants
-#- CNVseg -> partial gene amplifications / deletions
+#- Find partial gene amplifications / deletions
+#  - Use 'gmt copy-number cbs' and 'gmt copy-number cna-seg' to find segments that are copy-number amplified/deleted
+#  - Find the genes that overlap these regions
 #- Overlap of observed mutations with Cosmic / OMIM sites (use MUSIC?)
 #- Overlap of observed mutations with TGI recurrent sites
 
