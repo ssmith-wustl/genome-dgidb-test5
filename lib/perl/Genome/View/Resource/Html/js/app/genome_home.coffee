@@ -3,6 +3,7 @@ prepareDataTables = (data) ->
     for col in columns
         val = col.mDataProp
         $("#table-header").append($("<th>#{val}</th>"))
+    $("#loading-task-info").hide()
     $("#task-list").dataTable(data)
 
 $ ()->
