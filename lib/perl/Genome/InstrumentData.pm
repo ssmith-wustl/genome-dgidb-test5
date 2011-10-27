@@ -73,6 +73,10 @@ class Genome::InstrumentData {
 
 sub create {
     my ($class, %params) = @_;
+    if ($class eq __PACKAGE__ or $class->__meta__->is_abstract) {
+        # this class is abstract, and the super-class re-calls the constructor from the correct subclass
+        return $class->SUPER::create(@_);
+    }
 
     # This extra processing allows for someone to create instrument data with properties that aren't listed in any of the
     # class definitions. Instead of having UR catch these extras and die, they are captured here and later turned into
