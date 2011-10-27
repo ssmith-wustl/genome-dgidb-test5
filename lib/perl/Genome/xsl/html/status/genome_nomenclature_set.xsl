@@ -21,6 +21,7 @@
             <thead>
              <th>Nomenclature Name</th>
              <th>Template</th>
+             <th>Upload Samples</th>
             </thead>
             <tbody>
               <xsl:for-each select="aspect[@name='members']/object">
@@ -30,10 +31,11 @@
                 <xsl:value-of select="display_name"/></a>
               </td>
               <td>
-                Get: 
-                <a><xsl:attribute name="href">/view/genome/nomenclature/detail.xls?id=<xsl:value-of select='@id'/></xsl:attribute>Excel</a>
-                |
                 <a><xsl:attribute name="href">/view/genome/nomenclature/detail.csv?id=<xsl:value-of select='@id'/></xsl:attribute>CSV</a>
+              </td>
+              <td>
+                <a><xsl:attribute name="href">/view/genome/subject/set/create.html#nomenclature_name=<xsl:value-of select='display_name'/></xsl:attribute>
+                Upload Samples</a>
               </td>
               </tr>
               </xsl:for-each>
