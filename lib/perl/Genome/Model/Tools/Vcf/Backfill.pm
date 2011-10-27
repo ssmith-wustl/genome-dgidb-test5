@@ -7,9 +7,10 @@ use Sort::Naturally;
 
 class Genome::Model::Tools::Vcf::Backfill{
     is => 'Command',
-    has => [
+    has_input => [
         output_file => {
             is => 'Text',
+            is_output => 1,
             doc => "Output backfilled VCF",
         },
         pileup_file => {
