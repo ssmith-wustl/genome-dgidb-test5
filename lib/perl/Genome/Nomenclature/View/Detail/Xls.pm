@@ -28,7 +28,7 @@ sub _generate_content {
                     . $self->subject_id);
     }
 
-    my @fields = sort map {sprintf("%s (%s)", $_->name, $_->type)} $obj->fields;
+    my @fields = sort map {$_->name} $obj->fields;
 
     open my $workbook_fh, '>', \my $workbook_content or die "Failed to open FH $!";
     my $writer = Spreadsheet::WriteExcel->new($workbook_fh);
