@@ -1,0 +1,106 @@
+<script xmlns:rest="urn:rest" xmlns:str="http://xsltsl.org/string" type="text/javascript">
+<![CDATA[
+    $(document).ready(function() {
+
+        $('#submit-button').click(function() {
+
+            // validate
+            var fakeFilename = $('#file').val(); 
+            if ( ! fakeFilename ) {
+                alert('Please select the file containing the subject data');
+                return false;
+            }
+
+            var filename = fakeFilename.substring(1 + fakeFilename.lastIndexOf("\\"));
+
+            if (filename.indexOf(".csv") > -1) {
+                $('#filetype').val("csv");
+            } else {
+                alert("CSV (comma separated values) is the only format currently supported");
+                return false;
+            }
+
+            if ( $("input[name='subclass_name']:checked").length <= 0 ) {
+                alert('Please select sample or patient');
+                return false;
+            }
+
+            if (! $('#nomenclature').val() ) {
+                alert("Please specify a nomenclature");
+                return false;
+            }
+
+            $('create-samples').submit();
+        });
+
+
+        // autocomplete stuff below
+
+        var cache = [];
+        // Arguments are image paths relative to the current page.
+        $.preLoadImages = function() {
+        var args_len = arguments.length;
+            for (var i = args_len; i--;) {
+                var cacheImage = document.createElement('img');
+                cacheImage.src = arguments[i];
+                cache.push(cacheImage);
+            }
+        }
+
+        autocompleteUrl = "/view/genome/nomenclature/set/autocomplete.json"
+        $.ajax({
+            url: autocompleteUrl,
+            type: "GET",
+            context: document.body,
+            success: function(data, textStatus, jqXHR) {
+                var autoCompleteData = data.names;
+                $("#nomenclature").autocomplete({
+                    source: autoCompleteData
+                });
+            },
+            error: function() {
+                alert("ajax request for nomenclature names failed");
+            }
+        });
+
+    });
+
+
+
+]]>
+    </script>
+
+<div id="sampleUpload" class="span-16 append-4 prepend-4 last" style="margin-top: 20px">
+
+<!--    
+    <form id="create-samples" action="/view/x/subject-upload" method='POST' enctype="form-data">
+-->
+
+    <form id="create-samples" action="/view/x/subject-upload" method='POST' enctype="multipart/form-data">
+
+      <input type="hidden" id="filetype" name="filetype"/>
+      <fieldset>
+<!--    <legend>do stuff</legend> -->
+        <p>
+          <span style="font-weight: bold">1. Select the CSV file on your computer which contains your subject data.</span>
+          <br/>The first column should contain the name of the sample to be updated or blank to create a new sample.
+          <br/><br/>
+          <input type="file" id="file" name="file"/>
+        </p>
+        <br/>
+
+        <span style="font-weight: bold">2. Each row of your file represents a ...</span><br/>
+        <input type="radio" id="subclass-name-sample" name="subclass_name" value="Genome::Sample" checked="CHECKED">Sample</input>
+        <br/>
+        <input type="radio" id="subclass-name-individual" name="subclass_name" value="Genome::Individual"> Patient</input>
+        <br/><br/><br/>
+
+        <span style="font-weight: bold">3. Which nomenclature?</span>&#160;<input size='50' class="text" id="nomenclature" name="nomenclature"/>
+        (<a href="/view/genome/nomenclature/set/status.html">see a list</a>)
+        <br/>
+      </fieldset>
+      <div>
+        <p style="text-align: right;"><button id="submit-button">Save</button></p>
+      </div>
+    </form>
+</div>

@@ -60,9 +60,23 @@ sub parse_file_into_hashref {
 
    for (@lines) {
         chomp;
-        $data{total_reads}             = $1 if /^(\d+) (\+\s\d+\s)?in total/;
-        $data{reads_marked_failing_qc} = $1 if /^\d+ \+ (\d+) in total/;
-        $data{reads_marked_failing_qc} = $1 if /^(\d+) QC failure/;
+
+        if (/^(\d+) \+ (\d+) in total/) {
+            $data{reads_marked_passing_qc} = $1;
+            $data{reads_marked_failing_qc} = $2;
+            $data{total_reads} = $data{reads_marked_passing_qc} + $data{reads_marked_failing_qc};
+        }
+
+        if (/^(\d+) in total/) {
+            $data{total_reads} = $1;
+        }
+
+        #For older samtools (before r949) total reads count in flagstat includes QC failed read count
+        if (/^(\d+) QC failure/) { 
+            $data{reads_marked_failing_qc} = $1;
+            $data{reads_marked_passing_qc} = $data{total_reads} - $data{reads_marked_failing_qc};
+        }
+
         $data{reads_marked_duplicates} = $1 if /^(\d+) (\+\s\d+\s)?duplicates$/;
         ($data{reads_mapped}, $data{reads_mapped_percentage}) = ($1, $3)
             if /^(\d+) (\+\s\d+\s)?mapped \((\d{1,3}\.\d{2}|nan)\%[\:\)]/;

@@ -1,3 +1,6 @@
+package Genome::Env::GENOME_SYS_SERVICES_MEMCACHE;
+our $default_value = 'localhost:11211';
+
 =pod
 
 =head1 NAME

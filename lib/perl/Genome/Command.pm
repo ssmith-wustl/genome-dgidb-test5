@@ -14,7 +14,7 @@ class Genome::Command {
 my %command_map = (
     'disk' => 'Genome::Disk::Command',
     'feature-list' => 'Genome::FeatureList::Command',
-    'gene-name' => 'Genome::GeneName::Command',
+    'gene-name-report' => 'Genome::GeneNameReport::Command',
     'individual' => 'Genome::Individual::Command',
     'instrument-data' => 'Genome::InstrumentData::Command',
     'library' => 'Genome::Library::Command',

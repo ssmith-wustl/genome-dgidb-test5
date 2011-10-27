@@ -7,7 +7,7 @@ use Genome;
 
 class Genome::Task::Command {
     is => 'Command::Tree',
-    doc => 'Work with tasks',
+    doc => 'work with tasks',
 };
 
 Genome::Command::Crud->init_sub_commands(

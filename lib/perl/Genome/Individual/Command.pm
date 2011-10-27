@@ -7,7 +7,7 @@ use Genome;
 
 class Genome::Individual::Command {
     is => 'Command::Tree',
-    doc => 'Work with individuals',
+    doc => 'work with individuals',
 };
 
 use Genome::Command::Crud;

@@ -15,6 +15,9 @@ use Test::More;
 
 use_ok('Genome::Model::Command::Services::AssignQueuedInstrumentData') or die;
 
+my $qidfgm_cnt = 0;
+my $sample_cnt = 0;
+
 my $taxon = Genome::Taxon->get(name => 'Human Metagenome');
 ok($taxon, 'got human metagenome taxon');
 my $ps = GSC::ProcessStep->get( process_to => 'queue instrument data for genome modeling' );
@@ -25,8 +28,8 @@ my (@samples, @instrument_data, @pses);
 for my $i (1..2) {
     ok(_qidfgm(), 'create qidfgm');
 }
-is(@instrument_data, 2, 'create 2 inst data');
-is(@pses, 2, 'create 2 pses');
+is(@instrument_data, $qidfgm_cnt, "create $qidfgm_cnt inst data");
+is(@pses, $qidfgm_cnt, "create $qidfgm_cnt pses");
 
 my $gsc_workorder = GSC::Setup::WorkOrder->create(
     setup_name => 'AQID-TEST-WORKORDER',
@@ -109,8 +112,9 @@ my @model_groups = Genome::ModelGroup->get(uuid => [ map { $_->id } @projects ])
 is(@model_groups, 2, 'created model groups');
 
 ok(_qidfgm(), 'made another qdidfgm');
-is(@instrument_data, 3, '3 inst data');
-is(@pses, 3, '3 pses');
+ok(_qidfgm('n-ctrl'), 'create qidfgm'); # pse for negatice control sample
+is(@instrument_data, $qidfgm_cnt, "$qidfgm_cnt inst data");
+is(@pses, $qidfgm_cnt, "$qidfgm_cnt pses");
 
 $cmd = Genome::Model::Command::Services::AssignQueuedInstrumentData->create(
     test => 1,
@@ -141,7 +145,7 @@ is_deeply(
         $model_name_for_entire_run => {
             subject => "Human Metagenome",
             processing_profile_id => Genome::Model::Command::Services::AssignQueuedInstrumentData->_default_mc16s_processing_profile_id,
-            inst => [ map { $_->id } @instrument_data ],
+            inst => [ map { $_->id } grep { $_->sample_name ne 'n-ctrl' } @instrument_data ],
             auto_assign_inst_data => 0,
         },
     },
@@ -151,37 +155,42 @@ is_deeply(
 done_testing();
 exit;
 
-my $i = 0;
 sub _qidfgm {
-    $i++;
-    my $sample = Genome::Sample->create(
-        name => 'AQID-testsample'.$i,
-        taxon_id => $taxon->id,
-        extraction_type => 'genomic',
-    );
-    ok($sample, 'create sample '.$i);
+    $qidfgm_cnt++;
+    my $sample;
+    if ( @_ ) {
+        $sample = Genome::Sample->create(name => $_[0]);
+    } else {
+        $sample_cnt++;
+        $sample = Genome::Sample->create(
+            name => 'AQID-testsample'.$sample_cnt,
+            taxon_id => $taxon->id,
+            extraction_type => 'genomic',
+        );
+    }
+    ok($sample, 'sample '.$sample_cnt);
     push @samples, $sample;
     my $library = Genome::Library->create(
-        name => $sample->name.'-lib1',
+        name => $sample->name.'-testlib',
         sample_id => $sample->id,
     );
-    ok($library, 'create library '.$i);
+    ok($library, 'create library '.$qidfgm_cnt);
 
     my $instrument_data = Genome::InstrumentData::454->create(
         library_id => $library->id,
         run_name => 'R_2011_07_27_14_54_40_FLX08080419_Administrator_113684816',
         region_number => 1,
     );
-    ok($instrument_data, 'created instrument data '.$i);
+    ok($instrument_data, 'created instrument data '.$qidfgm_cnt);
     push @instrument_data, $instrument_data;
 
     my $pse = GSC::PSE::QueueInstrumentDataForGenomeModeling->create(
         pse_status => 'inprogress',
-        pse_id => $i - 10000,
+        pse_id => $qidfgm_cnt - 10000,
         ps_id => $ps->ps_id,
         ei_id => '464681',
     );
-    ok($pse, 'create pse '.$i);
+    ok($pse, 'create pse '.$qidfgm_cnt);
     $pse->add_param('instrument_data_type', '454');
     $pse->add_param('instrument_data_id', $instrument_data->id);
     $pse->add_param('subject_class_name', 'Genome::Sample');

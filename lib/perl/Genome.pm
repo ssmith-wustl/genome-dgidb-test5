@@ -11,7 +11,7 @@ use UR;
 # modules 
 use File::Temp;
 use IO::String;
-
+use File::Basename;
 use Carp;
 use Carp::Heavy;
 
@@ -25,9 +25,9 @@ UR::Object::Type->define(
 # local configuration
 require Genome::Site;
 
-# environmental configuration
-$ENV{GENOME_DB} ||= '/var/lib/genome/db';
-$ENV{GENOME_SW} ||= '/var/lib/genome/sw';
+# Checks that all variables that start with GENOME_ have a corresponding Genome/Env/* module
+# and assigns default values to any variables that have one set.
+require Genome::Env;
 
 # if the search engine is installed, configure its hooks
 eval {
@@ -77,29 +77,9 @@ if ($] < 5.01) {
     use warnings;
 }
 
-
 # DB::single is set to this value in many places, creating a source-embedded break-point
 # set it to zero in the debugger to turn off the constant stopping...
 $DB::stopper = 1;
-
-# Genome supports several environment variables, found under Genome/Env
-# Any GENOME_* variable which is set but does NOT corresponde to a module found will cause an exit
-# (a hedge against typos such as GENOME_NNNNNO_REQUIRE_USER_VERIFY=1 leading to unexpected behavior)
-for my $e (keys %ENV) {
-    next unless ($e =~ /^GENOME_/);
-    eval "use Genome::Env::$e";
-    if ($@) {
-        my $path = __FILE__;
-        $path =~ s/.pm$//;
-        my @files = glob($path . '/Env/*');
-        my @vars = map { /Genome\/Env\/(.*).pm/; $1 } @files; 
-        print STDERR "Environment variable $e set to $ENV{$e} but there were errors using Genome::Env::$e:\n"
-        . "Available variables:\n\t" 
-        . join("\n\t",@vars)
-        . "\n";
-        exit 1;
-    }
-}
 
 1;
 

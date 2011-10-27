@@ -1,15 +1,15 @@
-package Genome::DrugName;
+package Genome::DrugNameReport;
 
 use strict;
 use warnings;
 
 use Genome;
 
-class Genome::DrugName {
+class Genome::DrugNameReport {
     is => 'UR::Object',
     id_generator => '-uuid',
-    table_name => 'drug_name',
-    schema_name => 'public',
+    table_name => 'drug_name_report',
+    schema_name => 'subject',
     data_source => 'Genome::DataSource::Main',
     id_by => [
         id => { is => 'Text'},
@@ -23,25 +23,25 @@ class Genome::DrugName {
             is => 'Text',
             is_optional => 1,
         },
-        drug_name_associations => {
-            is => 'Genome::DrugNameAssociation',
-            reverse_as => 'drug_name',
+        drug_name_report_associations => {
+            is => 'Genome::DrugNameReportAssociation',
+            reverse_as => 'drug_name_report',
             is_many => 1,
         },
-        drug_name_category_associations => {
-            is => 'Genome::DrugNameCategoryAssociation',
-            reverse_as => 'drug_name',
+        drug_name_report_category_associations => {
+            is => 'Genome::DrugNameReportCategoryAssociation',
+            reverse_as => 'drug_name_report',
             is_many => 1,
         },
         drug_gene_interactions => {
             is => 'Genome::DrugGeneInteraction',
-            reverse_as => 'drug_name',
+            reverse_as => 'drug_name_report',
             is_many => 1,
         },
-        gene_names => {
-            is => 'Genome::DrugName',
+        gene_name_reports => {
+            is => 'Genome::GeneNameReport',
             via => 'drug_gene_interactions',
-            to => 'gene_name',
+            to => 'gene_name_report',
             is_many => 1,
         }
     ],

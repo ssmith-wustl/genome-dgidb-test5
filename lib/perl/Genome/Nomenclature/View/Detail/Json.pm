@@ -61,12 +61,12 @@ sub _generate_content {
         $f->{enumerated_value_ids} = [map {$_->id} @enums];
         my @enum_value_use_counts;
         for my $e (@enums) {
-           my ($use_count) = $dbh->selectrow_array("select count(*) from mg.genome_subject_attribute where nomenclature=? and attribute_value=?",{},$field->id, $e->value);
+           my ($use_count) = $dbh->selectrow_array("select count(*) from genome_subject_attribute where nomenclature=? and attribute_value=?",{},$field->id, $e->value);
            push @enum_value_use_counts, $use_count;
         }
         $f->{enumerated_value_use_counts} = \@enum_value_use_counts;
 
-        my ($use_count) = $dbh->selectrow_array("select count(*) from mg.genome_subject_attribute where nomenclature=?",{},$field->id);
+        my ($use_count) = $dbh->selectrow_array("select count(*) from genome_subject_attribute where nomenclature=?",{},$field->id);
         $f->{use_count} = $use_count;
     
         push @{$hash->{fields}}, $f;

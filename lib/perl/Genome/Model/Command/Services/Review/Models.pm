@@ -36,6 +36,13 @@ sub execute {
 
     my @models_to_start;
     my @models_to_cleanup;
+
+    #preload data
+    my @builds = Genome::Model::Build->get(
+        model_id => [map($_->id, @models)],
+        -hint => ['the_master_event'],
+    );
+
     for my $model (@models) {
         my $latest_build        = ($model        ? $model->latest_build  : undef);
         my $latest_build_status = ($latest_build ? $latest_build->status : '-');

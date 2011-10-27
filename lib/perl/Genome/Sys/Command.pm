@@ -6,7 +6,7 @@ use warnings;
 
 class Genome::Sys::Command {
     is => 'Command::Tree',
-    doc => 'Work with OS integration',
+    doc => 'work with OS integration',
 };
 
 1;
