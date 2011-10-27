@@ -10,6 +10,10 @@ use File::Basename;
 # For example, a module that contains observers for the relationship 
 # between Samples and Libraries should be called SampleLibrary.pm.
 
+# Try to avoid cascading deletes in these observers unless you are 
+# absolutely certain it's the correct thing to do. In most cases, you 
+# should throw an exception rather than cascade.
+
 # Loads all observers in Genome/Observers/*
 my $base_path = __FILE__;
 $base_path =~ s/.pm$//;
