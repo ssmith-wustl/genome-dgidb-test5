@@ -1,6 +1,40 @@
 window.action_mode='PUT'
 
 $ ->
+
+      templateContents = '''
+        <script type="text/template" id="nomenclature-column-template">
+          <label>Title:</label>
+          <input type="text" class="nomenclature-column-name text" value="<%= model.get('name') %>">
+          <label>Type:</label>
+          <select class="column-type-select">
+            <option value="integer">integer</option>
+            <option value="real">real</option>
+            <option value="numeric">numeric (real or integer)</option>
+            <option value="date">date</option>
+            <option value="string">string</option>
+            <option value="enumerated">enumerated</option>
+          </select>
+          <button class="delete">Remove Column</button>
+        </script>
+
+        <script type="text/template" id="nomenclature-column-enumerated-template">
+          <div class="enumerated-choices">
+            <strong>Enumerated Column Definition:</strong><br/>
+            <% _.each(model.get("enumerated_values"), function(e) { %>
+
+            <div class="enum-row"><input type="text" class="enumerated-type-entry text" value="<%= e %>">
+
+            <button class="remove-enum">remove</button>
+            <button class="add-new-enum">add</button>
+          </div>
+
+          <% }); %>
+        </div>
+        </script>
+      '''
+
+      $("#script-container").append($(templateContents))
       Backbone.sync = (method, model, callback_bundle) ->
         callback_bundle.success()
 
