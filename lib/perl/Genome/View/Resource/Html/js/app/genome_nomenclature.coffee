@@ -1,6 +1,40 @@
 window.action_mode='PUT'
 
 $ ->
+
+      templateContents = '''
+        <script type="text/template" id="nomenclature-column-template">
+          <label>Title:</label>
+          <input type="text" class="nomenclature-column-name text" value="<%= model.get('name') %>">
+          <label>Type:</label>
+          <select class="column-type-select">
+            <option value="integer">integer</option>
+            <option value="real">real</option>
+            <option value="numeric">numeric (real or integer)</option>
+            <option value="date">date</option>
+            <option value="string">string</option>
+            <option value="enumerated">enumerated</option>
+          </select>
+          <button class="delete">Remove Column</button>
+        </script>
+
+        <script type="text/template" id="nomenclature-column-enumerated-template">
+          <div class="enumerated-choices">
+            <strong>Enumerated Column Definition:</strong><br/>
+            <% _.each(model.get("enumerated_values"), function(e) { %>
+
+            <div class="enum-row"><input type="text" class="enumerated-value-entry text" value="<%= e %>">
+
+            <button class="remove-enum">remove</button>
+            <button class="add-new-enum">add</button>
+          </div>
+
+          <% }); %>
+        </div>
+        </script>
+      '''
+
+      $("#script-container").append($(templateContents))
       Backbone.sync = (method, model, callback_bundle) ->
         callback_bundle.success()
 
@@ -28,7 +62,7 @@ $ ->
           'change select.column-type-select': 'typeChanged'
           'click .add-new-enum': 'addNewEnum'
           'click .remove-enum': 'removeEnum'
-          'blur input.enumerated-type-entry': 'enumChanged'
+          'blur input.enumerated-value-entry': 'enumChanged'
 
         nameChanged: ->
           new_name = $(@el).children('.nomenclature-column-name')[0].value
@@ -92,14 +126,17 @@ $ ->
           if @model.get('type') == 'enumerated'
             enumerated_template =  _.template($('#nomenclature-column-enumerated-template').html(), {model:@model}) 
             $(@el).append(enumerated_template)
-            kids = $(@el).find(".remove-enum")
+            kids = $(@el).find(".enum-row")
             for i in [0..kids.size()-1]
                 if parseInt(@model.get('enumerated_value_use_counts')[i]) > 0
-                    $(kids[i]).attr('disabled','true')
+                    $(kids[i]).children('.remove-enum').attr('disabled','true')
+                    $(kids[i]).children('.enumerated-value-entry').attr('disabled','true')
                     $('#why-cant-i-delete').show()
         
           if parseInt(@model.get('use_count')) > 0
             $(@el).children(".delete").attr('disabled','true')
+            $(@el).children(".column-type-select").attr('disabled','true')
+            $(@el).children(".nomenclature-column-name").attr('disabled','true')
             $('#why-cant-i-delete').show()
           this
 
