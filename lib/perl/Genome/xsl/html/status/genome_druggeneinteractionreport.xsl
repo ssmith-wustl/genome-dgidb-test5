@@ -2,8 +2,8 @@
 <xsl:stylesheet version="1.0"
 xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
 
-  <xsl:template name="genome_druggeneinteraction" match="object[./types[./isa[@type='Genome::DrugGeneInteraction']]]">
-    <xsl:comment>template: /html/status/genome_DrugGeneInteraction.xsl; match="object[./types[./isa[@type='Genome::DrugGeneInteraction']]]"</xsl:comment>
+  <xsl:template name="genome_druggeneinteractionreport" match="object[./types[./isa[@type='Genome::DrugGeneInteractionReport']]]">
+    <xsl:comment>template: /html/status/genome_DrugGeneInteractionReport.xsl; match="object[./types[./isa[@type='Genome::DrugGeneInteractionReport']]]"</xsl:comment>
 
     <script type='text/javascript' src='/res/js/pkg/boxy/javascripts/jquery.boxy.js'></script>
     <link rel="stylesheet" href="/res/js/pkg/boxy/stylesheets/boxy.css" type="text/css" />
@@ -12,21 +12,21 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
     <xsl:call-template name="control_bar_view"/>
 
     <xsl:call-template name="view_header">
-      <xsl:with-param name="label_name" select="'DrugGeneInteraction:'" />
+      <xsl:with-param name="label_name" select="'DrugGeneInteractionReport:'" />
       <xsl:with-param name="display_name" select="@id" />
-      <xsl:with-param name="icon" select="'genome_druggeneinteraction_32'" />
+      <xsl:with-param name="icon" select="'genome_druggeneinteractionreport_32'" />
     </xsl:call-template>
 
     <div class="content rounded shadow">
       <div class="container">
         <div id="objects" class="span-24 last">
 
-          <!-- details for this DrugGeneInteraction -->
+          <!-- details for this DrugGeneInteractionReport -->
           <div class="span_8_box_masonry">
             <div class="box_header span-8 last rounded-top">
-              <div class="box_title"><h3 class="nontyped span-7 last">Drug Gene Interaction Attributes</h3></div>
+              <div class="box_title"><h3 class="nontyped span-7 last">Drug Gene Interaction Report Attributes</h3></div>
               <div class="box_button">
-                
+
               </div>
             </div>
 
@@ -58,14 +58,20 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
               </table>
             </div>
           </div> <!-- end .masonry -->
-          <xsl:for-each select="aspect[@name='gene_name']/object">
-            <xsl:call-template name="genome_genename_box"/>
-          </xsl:for-each>
-
-          <xsl:for-each select="aspect[@name='drug_name']/object">
-            <xsl:call-template name="genome_drugname_box"/>
-          </xsl:for-each>
         </div> <!-- end objects -->
+      </div> <!-- end container -->
+      <div class='container'>
+          <div class="span-24 last">
+              <h2><xsl:value-of select="aspect[@name='gene_name_report']/object/display_name/text()"/></h2>
+              <xsl:for-each select="aspect[@name='gene_name_report']/object">
+                <xsl:call-template name="name_value_table"/>
+              </xsl:for-each>
+
+              <h2><xsl:value-of select="aspect[@name='drug_name_report']/object/display_name/text()"/></h2>
+              <xsl:for-each select="aspect[@name='drug_name_report']/object">
+                <xsl:call-template name="name_value_table"/>
+              </xsl:for-each>
+          </div>
       </div> <!-- end container -->
     </div> <!-- end content -->
 
@@ -75,5 +81,18 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
       </xsl:with-param>
     </xsl:call-template>
 
+  </xsl:template>
+
+  <xsl:template name="name_value_table">
+      <table border='1'>
+          <tbody>
+              <xsl:for-each select="aspect">
+                  <tr>
+                      <td><xsl:value-of select='string(@name)'/></td>
+                      <td><xsl:value-of select='value/text()'/></td>
+                  </tr>
+              </xsl:for-each>
+          </tbody>
+      </table>
   </xsl:template>
 </xsl:stylesheet>
