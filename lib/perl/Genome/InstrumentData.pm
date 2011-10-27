@@ -71,6 +71,40 @@ class Genome::InstrumentData {
     doc => 'Contains information common to all types of instrument data',
 };
 
+sub create {
+    my ($class, %params) = @_;
+
+    # This extra processing allows for someone to create instrument data with properties that aren't listed in any of the
+    # class definitions. Instead of having UR catch these extras and die, they are captured here and later turned into
+    # instrument data attributes.
+    my %extra;
+    my @property_names = ('id', map { $_->property_name } ($class->__meta__->_legacy_properties, $class->__meta__->all_id_by_property_metas));
+    for my $param (sort keys %params) {
+        unless (grep { $param eq $_ } @property_names) {
+            $extra{$param} = delete $params{$param};
+        }
+    }
+
+    my $self = $class->SUPER::create(%params);
+    unless ($self) {
+        Carp::confess "Could not create instrument data with params: " . Data::Dumper::Dumper(\%params);
+    }
+
+    for my $label (sort keys %extra) {
+        my $attribute = Genome::InstrumentDataAttribute->create(
+            attribute_label => $label,
+            attribute_value => $extra{$label},
+            instrument_data_id => $self->id,
+        );
+        unless ($attribute) {
+            $self->error_message("Could not create attribute $label => " . $extra{$label} . " for instrument data " . $self->id);
+            $self->delete;
+        }
+    }
+
+    return $self;
+}
+
 sub delete {
     my $self = shift;
 
