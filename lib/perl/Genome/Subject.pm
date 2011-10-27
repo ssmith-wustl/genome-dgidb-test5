@@ -67,7 +67,8 @@ class Genome::Subject {
 sub __display_name__ {
     my $self = shift;
     my $name = $self->name . ' ' if defined $self->name;
-    $name .= '(' . $self->id . ')';
+    my $common_name = ($self->can("common_name") ? $self->common_name : ());
+    $name .= '(' . ($common_name ? $common_name . ' ' : '') . $self->id . ')';
     return $name;
 }
     
