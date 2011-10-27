@@ -52,6 +52,11 @@ class Genome::InstrumentData::Command::MergeAlignments {
             doc => 'The result generated/found when running the command',
         },
     ],
+    has_param => [
+        lsf_resource => {
+            default_value => &bsub_rusage,
+        },
+    ],
 };
 
 sub bsub_rusage {

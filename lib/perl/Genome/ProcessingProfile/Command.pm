@@ -20,7 +20,7 @@ class Genome::ProcessingProfile::Command {
             doc => 'Identifies the genome processing profile by id',
         },
     ],
-    doc => 'Work with processing profiles.',
+    doc => 'work with processing profiles.',
 };
 
 ############################################

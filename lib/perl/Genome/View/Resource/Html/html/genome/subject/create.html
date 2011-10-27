@@ -37,16 +37,6 @@
         $('#submit-button').click(function() {
 
             // validate
-            if (! $('#nomenclature').val() ) {
-                alert("Please specify a nomenclature");
-                return false;
-            }
-
-            if ( $("input[name='subclass_name']:checked").length <= 0 ) {
-                alert('Please select Sample, Indivdual or Population.');
-                return false;
-            }
-
             var fakeFilename = $('#file').val(); 
             if ( ! fakeFilename ) {
                 alert('Please select the file containing the subject data');
@@ -55,12 +45,20 @@
 
             var filename = fakeFilename.substring(1 + fakeFilename.lastIndexOf("\\"));
 
-            if (filename.indexOf(".xls") > -1) {
-                $('#filetype').val("xls");
-            } else if (filename.indexOf(".csv") > -1) {
+            if (filename.indexOf(".csv") > -1) {
                 $('#filetype').val("csv");
             } else {
-                alert("Please upload only Excel (xls) or Comma Separated Values (csv) files");
+                alert("CSV (comma separated values) is the only format currently supported");
+                return false;
+            }
+
+            if ( $("input[name='subclass_name']:checked").length <= 0 ) {
+                alert('Please select sample or patient');
+                return false;
+            }
+
+            if (! $('#nomenclature').val() ) {
+                alert("Please specify a nomenclature");
                 return false;
             }
 
@@ -231,25 +229,27 @@
 <form id="create-samples" action="/view/x/subject-upload" method=POST enctype="multipart/form-data">
    
     <input type="hidden" id="filetype" name="filetype"></p>
-    <fieldset> 
-    <legend>Nomenclature &amp; Subject Details</legend>
-    1. Which nomenclature? <input size=50 class="text" id="nomenclature" name="nomenclature">
-    (<a href="/view/genome/nomenclature/set/status.html">see a list</a>)
-    <br/><br/>
-    2. Each row of your file represents a ... <br>
-    <input type="radio" id="subclass-name-sample" name="subclass_name" value="Genome::Sample" CHECKED> Sample
-    <br>
-    <input type="radio" id="subclass-name-individual" name="subclass_name" value="Genome::Individual"> Individual
-    <br>
-    <input type="radio" id="subclass-name-populationgroup" name="subclass_name" value="Genome::PopulationGroup"> Population
-    </fieldset>
 
     <fieldset>
-    <legend>Select File &amp; Upload</legend>
-    <p>3. Select the file on your computer which contains your subject data.
-    <br/>The first column should contain the name of the sample, individual, etc. (csv, xls supported)
+<!--    <legend>do stuff</legend> -->
+
+    <p><span style="font-weight: bold">1. Select the CSV file on your computer which contains your subject data.</span>
+    <br/>The first column should contain the name of the sample to be updated or blank to create a new sample.
     <br/><br/>
     <input type="file" id="file" name="file"></p>
+    <br/>
+
+    <span style="font-weight: bold">2. Each row of your file represents a ...</span><br/>
+    <input type="radio" id="subclass-name-sample" name="subclass_name" value="Genome::Sample" CHECKED> Sample
+    <br/>
+    <input type="radio" id="subclass-name-individual" name="subclass_name" value="Genome::Individual"> Patient
+    <br/><br/><br/>
+      
+    <span style="font-weight: bold">3. Which nomenclature?</span> <input size=50 class="text" id="nomenclature" name="nomenclature">
+    (<a href="/view/genome/nomenclature/set/status.html">see a list</a>)
+    <br/>
+
+
     </fieldset>
 
     <div>

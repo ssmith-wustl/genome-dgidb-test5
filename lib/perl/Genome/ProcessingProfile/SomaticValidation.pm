@@ -8,28 +8,29 @@ use Genome;
 class Genome::ProcessingProfile::SomaticValidation {
     is => 'Genome::ProcessingProfile',
     has_param_optional => [
+        alignment_strategy => {
+            is => 'Text',
+            is_many => 0,
+            doc => 'Strategy to be used to align',
+        },
         snv_detection_strategy => {
             is => "Text",
             is_many => 0,
-            is_optional =>1,
             doc => "Strategy to be used to detect snvs.",
         },
         indel_detection_strategy => {
             is => "Text",
             is_many => 0,
-            is_optional =>1,
             doc => "Strategy to be used to detect indels.",
         },
         sv_detection_strategy => {
             is => "Text",
             is_many => 0,
-            is_optional =>1,
             doc => "Strategy to be used to detect svs.",
         },
         cnv_detection_strategy => {
             is => "Text",
             is_many => 0,
-            is_optional =>1,
             doc => "Strategy to be used to detect cnvs.",
         },
         identify_dnp_proportion => {
@@ -72,41 +73,16 @@ sub _map_workflow_inputs {
         die $self->error_message;
     }
 
-    my $tumor_build = $build->tumor_reference_alignment;
-    my $normal_build = $build->normal_reference_alignment;
-
-    unless ($tumor_build) {
-        $self->error_message("Failed to get a tumor_build associated with this somatic capture build!");
-        die $self->error_message;
-    }
-
-    unless ($normal_build) {
-        $self->error_message("Failed to get a normal_build associated with this somatic capture build!");
-        die $self->error_message;
-    }
-
     #TODO Make optional, support other types
     my ($snv_variant_list) = glob($model->snv_variant_list->output_dir . '/snvs.hq.bed');
     unless($snv_variant_list) {
-        $self->error_message('Failed to get a variant list for this build!');
+        $self->error_message('Failed to get a snv variant list for this build!');
         die $self->error_message;
     }
 
     my $data_directory = $build->data_directory;
     unless ($data_directory) {
         $self->error_message("Failed to get a data_directory for this build!");
-        die $self->error_message;
-    }
-
-    my $tumor_bam = $tumor_build->whole_rmdup_bam_file;
-    unless (-e $tumor_bam) {
-        $self->error_message("Tumor bam file $tumor_bam does not exist!");
-        die $self->error_message;
-    }
-
-    my $normal_bam = $normal_build->whole_rmdup_bam_file;
-    unless (-e $normal_bam) {
-        $self->error_message("Normal bam file $normal_bam does not exist!");
         die $self->error_message;
     }
 

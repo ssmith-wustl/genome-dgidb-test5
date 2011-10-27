@@ -33,5 +33,11 @@ sub _additional_parts_for_default_model_name {
     return @parts;
 }
 
+sub is_for_qc {
+    my $self = shift;
+    return 1 if $self->name =~ /\-qc$/;
+    return 0;
+}
+
 1;
 

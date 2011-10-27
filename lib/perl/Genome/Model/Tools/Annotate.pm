@@ -11,21 +11,16 @@ class Genome::Model::Tools::Annotate {
     doc => "annotation tools",
 };
 
-sub create {
+sub object_cache_sizes {
     my $class = shift;
-    my $self = $class->SUPER::create(@_);
-
-    # Using Genome::Model::Tools::Annotate should not enable cache pruning options
-    # because the class is loaded as part of calculating sub-commands.
-    # Previously this was being set when the class was used. If something needs this
-    # set and was "benefiting" from the previous behavior then either make it a
-    # subclass of this or add this code to it.
-    my $low  =  20_000;
-    my $high = 200_000;
-    UR::Context->object_cache_size_highwater($high);
-    UR::Context->object_cache_size_lowwater($low);
-
-    return $self;
+    if (@_) {
+        my ($low, $high) = @_;
+        UR::Context->object_cache_size_lowwater($low);
+        UR::Context->object_cache_size_highwater($high);
+    }
+    else {
+        return (UR::Context->object_cache_size_lowwater, UR::Context->object_cache_size_highwater);
+    }
 }
 
 sub sub_command_sort_position { 15 }

@@ -175,7 +175,7 @@ sub _create_command_properties {
 
         next if $target_property->class_name eq 'UR::Object';
         next if $property_name =~ /^_/;
-        next if grep { $target_property->$_ } (qw/ is_id is_calculated is_constant is_transient /);
+        next if grep { $target_property->$_ } (qw/ is_calculated is_constant is_transient /);
         next if $target_property->is_id and ($property_name eq 'id' or $property_name =~ /_id$/);
         next if grep { not $target_property->$_ } (qw/ is_mutable /);
         next if $target_property->is_many and $target_property->is_delegated and not $target_property->via; # direct relationship

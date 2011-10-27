@@ -74,6 +74,14 @@ class Genome::InstrumentData::Command::AlignReads {
             doc => 'The result generated/found when running the command',
         },
     ],
+    has_param => [
+        lsf_resource => {
+            calculate => q{
+                $self->bsub_rusage;
+            },
+            default_value => &_fallback_lsf_resource, # workflow doesn't support varying this per instance
+        },
+    ]
 };
 
 sub results_class {
@@ -82,6 +90,42 @@ sub results_class {
     my $aligner_name = $self->name;
     return 'Genome::InstrumentData::AlignmentResult::' .
         Genome::InstrumentData::AlignmentResult->_resolve_subclass_name_for_aligner_name($aligner_name);
+}
+
+sub _fallback_lsf_resource {
+    my $tmp_mb = 90000;
+    my $mem_mb = 1024 * 14; # increased b/c we have about 16 GB available when 6 jobs run on a 96 Gb server
+    my $cpus = 4;
+
+    my $mem_kb = $mem_mb*1024;
+    my $tmp_gb = $tmp_mb/1024;
+
+    my $user = getpwuid($<);
+    my $queue = 'alignment';
+    $queue = 'alignment-pd' if (Genome::Config->should_use_alignment_pd);
+
+    my $host_groups;
+    $host_groups = qx(bqueues -l $queue | grep ^HOSTS:);
+    $host_groups =~ s/\/\s+/\ /;
+    $host_groups =~ s/^HOSTS:\s+//;
+
+    my $select  = "select[ncpus >= $cpus && mem >= $mem_mb && gtmp >= $tmp_gb] span[hosts=1]";
+    my $rusage  = "rusage[mem=$mem_mb, gtmp=$tmp_gb]";
+    my $options = "-M $mem_kb -n $cpus -q $queue";
+
+    my $required_usage = "-R '$select $rusage' $options";
+
+    #check to see if our resource requests are feasible (This uses "maxmem" to check theoretical availability)
+    #factor of four is based on current six jobs per host policy this should be revisited later
+    my $select_check = "select[ncpus >= $cpus && maxmem >= " . ($mem_mb * 4) . " && gtmp >= $tmp_gb] span[hosts=1]";
+
+    my @selected_blades = `bhosts -R '$select_check' $host_groups | grep ^blade`;
+
+    if (@selected_blades) {
+        return $required_usage;
+    } else {
+        die __PACKAGE__->error_message("Failed to find hosts that meet resource requirements ($required_usage). [Looked with $select_check]");
+    }
 }
 
 sub bsub_rusage {
@@ -148,7 +192,7 @@ sub _process_alignments {
             $self->error_message("Error finding or generating alignments!");
             return 0;
         }
-    } elsif ($mode eq 'get') {
+    } elsif ($mode eq 'get_with_lock') {
         unless ($alignment) {
             return undef;
         }

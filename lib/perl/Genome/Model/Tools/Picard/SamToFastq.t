@@ -3,9 +3,16 @@
 use strict;
 use warnings FATAL => 'all';
 
+use Test::More;
+if (Genome::Config->arch_os ne 'x86_64') {
+   plan skip_all => 'requires 64-bit machine';
+}
+else {
+   plan tests => 4;
+}
+
 use above 'Genome';
 use Genome::Model::Tools::Picard::SamToFastq;
-use Test::More tests => 4;
 use File::Temp;
 use Path::Class qw(dir file);
 
@@ -27,8 +34,10 @@ my $cmd_1  = Genome::Model::Tools::Picard::SamToFastq->create(
     fastq2 => $fq2 . '',
     fragment_fastq => $fq3 . '',
     no_orphans => 1,
+    read_group_id => 2854142190,
 );
 isa_ok( $cmd_1, 'Genome::Model::Tools::Picard::SamToFastq' );
+$cmd_1->dump_status_messages(1);
 ok( $cmd_1->execute, 'execute' );
 ok( -s $fq1,         'output file is non-zero' );
 ok( -s $fq2,         'output file is non-zero' );

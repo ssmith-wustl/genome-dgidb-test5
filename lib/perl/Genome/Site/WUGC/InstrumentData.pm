@@ -46,14 +46,6 @@ class Genome::Site::WUGC::InstrumentData {
            FROM GSC.run_region_454 r 
            JOIN GSC.region_index_454 ri on ri.region_id = r.region_id
      UNION ALL
-        SELECT to_char(imported.id) id,
-               run_name,
-               'Genome::Site::WUGC::InstrumentData::Imported' subclass_name,
-               sequencing_platform,
-               subset_name,
-               library_id
-          FROM imported_instrument_data imported
-     UNION ALL
         SELECT run_name id,
                sanger.run_name,
                'Genome::Site::WUGC::InstrumentData::Sanger' subclass_name,

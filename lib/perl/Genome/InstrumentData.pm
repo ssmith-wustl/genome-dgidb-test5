@@ -71,6 +71,44 @@ class Genome::InstrumentData {
     doc => 'Contains information common to all types of instrument data',
 };
 
+sub create {
+    my ($class, %params) = @_;
+    if ($class eq __PACKAGE__ or $class->__meta__->is_abstract) {
+        # this class is abstract, and the super-class re-calls the constructor from the correct subclass
+        return $class->SUPER::create(@_);
+    }
+
+    # This extra processing allows for someone to create instrument data with properties that aren't listed in any of the
+    # class definitions. Instead of having UR catch these extras and die, they are captured here and later turned into
+    # instrument data attributes.
+    my %extra;
+    my @property_names = ('id', map { $_->property_name } ($class->__meta__->_legacy_properties, $class->__meta__->all_id_by_property_metas));
+    for my $param (sort keys %params) {
+        unless (grep { $param eq $_ } @property_names) {
+            $extra{$param} = delete $params{$param};
+        }
+    }
+
+    my $self = $class->SUPER::create(%params);
+    unless ($self) {
+        Carp::confess "Could not create instrument data with params: " . Data::Dumper::Dumper(\%params);
+    }
+
+    for my $label (sort keys %extra) {
+        my $attribute = Genome::InstrumentDataAttribute->create(
+            attribute_label => $label,
+            attribute_value => $extra{$label},
+            instrument_data_id => $self->id,
+        );
+        unless ($attribute) {
+            $self->error_message("Could not create attribute $label => " . $extra{$label} . " for instrument data " . $self->id);
+            $self->delete;
+        }
+    }
+
+    return $self;
+}
+
 sub delete {
     my $self = shift;
 
@@ -215,6 +253,10 @@ sub dump_fastqs_from_bam {
     my $rev_file = sprintf("%s/s_%s_2_sequence.txt", $directory, $subset);
     my $fragment_file = sprintf("%s/s_%s_sequence.txt", $directory, $subset);
     my $cmd = Genome::Model::Tools::Picard::SamToFastq->create(input=>$self->bam_path, fastq=>$fwd_file, fastq2=>$rev_file, fragment_fastq=>$fragment_file, no_orphans=>1, %read_group_params);
+    if ( not $cmd ) {
+        die $self->error_message('Failed to create gmt picard sam-to-fastq');
+    }
+    $cmd->dump_status_messages(1);
     unless ($cmd->execute()) {
         die $cmd->error_message;
     }

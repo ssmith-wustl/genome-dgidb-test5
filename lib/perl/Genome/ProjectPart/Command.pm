@@ -7,7 +7,7 @@ use Genome;
 
 class Genome::ProjectPart::Command {
     is => 'Command::Tree',
-    doc => 'Work with ProjectParts',
+    doc => 'work with project parts',
 };
 
 Genome::Command::Crud->init_sub_commands(

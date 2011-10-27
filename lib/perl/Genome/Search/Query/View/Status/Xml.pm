@@ -58,7 +58,7 @@ sub _generate_content {
 
     my $param_str = join(',', @p);
 
-    my $time = UR::Time->now();
+    my $time = $UR::Context::current->now;
     $results_node->addChild( $doc->createAttribute( "generated-at", $time ) );
     $results_node->addChild( $doc->createAttribute( "input-name",   "query" ) );
     $results_node->addChild( $doc->createAttribute( "query",        $query ) );

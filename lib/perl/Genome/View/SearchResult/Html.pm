@@ -16,7 +16,9 @@ class Genome::View::SearchResult::Html {
         }
     ],
     has_constant => [
-        perspective => 'search-result',
+        perspective => {
+            value => 'search-result',
+        },
     ],
     doc => 'Concrete classes that want to be able to transform their SearchResult::Xml views to html should inherit from this class.'
 };

@@ -34,9 +34,8 @@ class Genome::Project::Command::Add::Part {
             doc => 'The label for the part',
         },
     ],
+    doc => 'add a part to a project',
 };
-
-sub sub_command_sort_position { .5 };
 
 sub help_synopsis {
     my $class = shift;

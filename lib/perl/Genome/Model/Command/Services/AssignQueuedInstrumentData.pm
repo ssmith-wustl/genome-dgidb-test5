@@ -22,7 +22,7 @@ class Genome::Model::Command::Services::AssignQueuedInstrumentData {
             is_optional => 1,
             len         => 5,
             default     => 200,
-            doc         => 'Max # of PSEs to process in one invocation',   
+            doc         => 'Max # of PSEs to process in one invocation',
         },
         max_pses_to_check => {
             is          => 'Number',
@@ -64,7 +64,7 @@ class Genome::Model::Command::Services::AssignQueuedInstrumentData {
 };
 
 sub _default_mc16s_processing_profile_id {
-    # RT66900 was 2278045 
+    # RT66900 was 2278045
     return 2571784;
 }
 
@@ -72,8 +72,8 @@ sub _default_rna_seq_processing_profile_id {
     return 2623697;
 }
 
-#FIXME: This should be refactored so that %known_454_pipelines and 
-#%known_454_16s_pipelines are merged into a single hash.  Key shoud be the 
+#FIXME: This should be refactored so that %known_454_pipelines and
+#%known_454_16s_pipelines are merged into a single hash.  Key shoud be the
 #pipeline name and value should be what to do with it (if anything).  Maybe
 #processing_profile if if we do something with it and empty string if we ignore
 #it.
@@ -151,7 +151,7 @@ sub get_organism_taxon {
     my $sample = shift;
     my $population = get_population($sample);
     if ($population){
-        return $population->taxon; 
+        return $population->taxon;
     }
     if(!$sample->taxon_id){
         return $sample->patient->taxon if $sample->patient;
@@ -162,18 +162,18 @@ sub get_organism_taxon {
 sub get_population {
     my $sample = shift;
     my $source_type = $sample->source_type;
-    if($source_type && 
-            ($source_type eq 'organism individual' || 
+    if($source_type &&
+            ($source_type eq 'organism individual' ||
              $source_type eq 'population group')){
         return $sample->source;
     }
     return;
-}   
+}
 
 sub execute {
     $DB::single = $DB::stopper;
     my $self = shift;
-    
+
     my $lock;
     unless($self->test) {
         my $lock_resource = '/gsc/var/lock/genome_model_command_services_assign-queued-instrument-data/loader';
@@ -185,7 +185,7 @@ sub execute {
         }
 
         UR::Context->current->add_observer(
-            aspect => 'commit', 
+            aspect => 'commit',
             callback => sub{
                 Genome::Sys->unlock_resource(resource_lock=>$lock);
             }
@@ -198,9 +198,9 @@ sub execute {
 
     $self->add_processing_profiles_to_pses(@pses);
 
-    my @completable_pses;    
+    my @completable_pses;
 
-    PSE: 
+    PSE:
     foreach my $pse (@pses) {
         $self->status_message('Starting PSE ' . $pse->id);
 
@@ -229,7 +229,14 @@ sub execute {
 
         if ($subject_class_name and $subject_id and @processing_profile_ids) {
             my $subject      = $subject_class_name->get($subject_id);
-            
+
+            if ( $instrument_data_type =~ /454/i and $subject->name eq 'n-ctrl' ) { 
+                print Data::Dumper::Dumper($subject);
+                # Do not process 454 negative control (n-ctrl)
+                $self->status_message('Skipping n-ctrl PSE '.$pse->id);
+                next PSE;
+            }
+
             PP:
             foreach my $processing_profile_id (@processing_profile_ids) {
                 my $processing_profile = Genome::ProcessingProfile->get( $processing_profile_id );
@@ -320,9 +327,9 @@ sub execute {
         }
 
         # Handle this instdata for other models besides the default
-        {    
+        {
             my $sequencing_platform = $instrument_data_type;
-            
+
             # Mismatch between the valid values for a sequencing platform via
             # a processing profile and what is stored as the
             # instrument_data_type PSE param
@@ -342,13 +349,13 @@ sub execute {
                         subject_class_name => $subject->class,
                         auto_assign_inst_data => 1,
                     );
-                    
+
                     my $new_models = $self->_newly_created_models;
                     @some_models = grep { not $new_models->{$_->id} } @some_models;
                     push @found_models,@some_models;
                 }
-            }           
- 
+            }
+
             @found_models =
                 grep {
                     $_->processing_profile->can('sequencing_platform')
@@ -356,7 +363,7 @@ sub execute {
 
             @found_models =
                 grep {
-                    $_->processing_profile->sequencing_platform() eq $sequencing_platform 
+                    $_->processing_profile->sequencing_platform() eq $sequencing_platform
 	           } @found_models;
 
             #Don't care here what ref. seq. was used (if any)
@@ -365,15 +372,15 @@ sub execute {
                 push @process_errors, $self->error_message;
             }
         } # end of adding instdata to non-autogen models
-        
-            
+
+
         if (@process_errors > 0) {
             $self->error_message(
                 "Leaving queue instrument data PSE inprogress, due to errors. \n"
                     . join("\n",@process_errors)
             );
         }
-        else {            
+        else {
             # Set the pse as completed since this is the end of the line
             # for the pses
             push @completable_pses, $pse;
@@ -383,13 +390,13 @@ sub execute {
 
     #schedule new builds for the models we found and stored in the output hashes
     $self->request_builds;
-    
+
     $self->status_message("Completing PSEs...");
     for my $pse (@completable_pses) {
-        $pse->pse_status("completed");  
+        $pse->pse_status("completed");
     }
 
-    return 1;    
+    return 1;
 }
 
 sub find_or_create_somatic_variation_models{
@@ -405,21 +412,21 @@ sub find_or_create_somatic_variation_models{
         #find or create mate ref-align model
         if ($sample->name =~ m/([^-]+-[^-]+-[^-]+-)([01]{2}A)(.*)/){
             my ($prefix, $designator, $suffix) = ($1, $2, $3);
-            my %designator_pairing = ( 
-                '10A' => '01A', 
+            my %designator_pairing = (
+                '10A' => '01A',
                 '01A' => '10A',
             );
             my $mate_designator = $designator_pairing{$designator};
-            $self->error_message("Not processing somatic variation model with sample name: " . $sample->name . " and designator: $designator") and next unless $mate_designator; 
-            my $mate_name = join("", $prefix, $mate_designator, $suffix);  
-            
+            $self->error_message("Not processing somatic variation model with sample name: " . $sample->name . " and designator: $designator") and next unless $mate_designator;
+            my $mate_name = join("", $prefix, $mate_designator, $suffix);
+
             my $subject_for_mate = Genome::Sample->get(name => $mate_name);
-            $self->error_message("No sample found for mate_name $mate_name (paired to: " . $model->name . ")") and next unless $subject_for_mate; 
+            $self->error_message("No sample found for mate_name $mate_name (paired to: " . $model->name . ")") and next unless $subject_for_mate;
 
             my %mate_params = (
-                subject_id => $subject_for_mate->id, 
-                reference_sequence_build => $model->reference_sequence_build, 
-                processing_profile => $model->processing_profile, 
+                subject_id => $subject_for_mate->id,
+                reference_sequence_build => $model->reference_sequence_build,
+                processing_profile => $model->processing_profile,
                 auto_assign_inst_data => '1',
             );
             $mate_params{annotation_reference_build_id} = $model->annotation_reference_build_id if $model->can('annotation_reference_build_id') and $model->annotation_reference_build_id;
@@ -434,10 +441,10 @@ sub find_or_create_somatic_variation_models{
                     instrument_data => undef,
                 );
                 $self->error_message("Failed to find copied mate with subject name: $mate_name") and next unless $mate;
-                
+
                 $mate->subject_id($subject_for_mate->id);
 
-                my $capture_target = eval{$model->target_region_set_name}; 
+                my $capture_target = eval{$model->target_region_set_name};
                 my $mate_model_name = $mate->default_model_name(capture_target => $capture_target);
                 $self->error_message("Could not name mate model for with subject name: $mate_name") and next unless $mate_model_name;
                 $mate->name($mate_model_name);
@@ -458,7 +465,7 @@ sub find_or_create_somatic_variation_models{
 
             my $capture_somatic_processing_profile_id = '2595664'; #may 2011 somatic-variation exome
             my $somatic_processing_profile_id = '2594193'; #may 2011 somatic-variation wgs
-            my $capture_target = eval{$model->target_region_set_name}; 
+            my $capture_target = eval{$model->target_region_set_name};
             if($capture_target){
                 $somatic_params{processing_profile_id} = $capture_somatic_processing_profile_id;
             }
@@ -474,14 +481,14 @@ sub find_or_create_somatic_variation_models{
             }else{
                 die $self->error_message("Serious error in sample designators for automated create of somatic-variation models for ".$model->subject_name);
             }
-            
+
             my $somatic_variation = Genome::Model::SomaticVariation->get(%somatic_params);
 
             unless ($somatic_variation){
                 $somatic_params{model_name} = 'AQID-PLACE_HOLDER';
                 my $create = Genome::Model::Command::Define::SomaticVariation->execute( %somatic_params );
                 $self->error_message('Failed to create somatic variation model with component model: ' . $model->name) and next unless $create;
-                
+
                 delete $somatic_params{model_name};
                 $somatic_params{name} = 'AQID-PLACE_HOLDER';
                 $somatic_variation = Genome::Model::SomaticVariation->get(%somatic_params);
@@ -499,8 +506,8 @@ sub find_or_create_somatic_variation_models{
         else{
             $self->error_message("Not processing somatic variation model with sample name: " . $model->subject_name);
         }
-             
-        
+
+
     }
 }
 
@@ -613,9 +620,9 @@ sub preload_data {
 
     my @pse_params = GSC::PSEParam->get(pse_id => [ map { $_->pse_id } @pses ]);
 
-    my @instrument_data_ids = 
-    map { $_->param_value } 
-    grep { $_->param_name eq 'instrument_data_id' } 
+    my @instrument_data_ids =
+    map { $_->param_value }
+    grep { $_->param_name eq 'instrument_data_id' }
     @pse_params;
 
     $self->status_message("Pre-loading " . scalar(@instrument_data_ids) . " instrument data");
@@ -633,7 +640,7 @@ sub preload_data {
     my @taxon_ids = sort keys %taxon_ids;
     $self->status_message("Pre-loading models for " . scalar(@taxon_ids) . " taxons");
     push @models, Genome::Model->get(subject_id => \@taxon_ids);
-    $self->status_message("  got " . scalar(@models) . " models");        
+    $self->status_message("  got " . scalar(@models) . " models");
 
     if(scalar @models > 0) {
         $self->status_message("Pre-loading instrument data inputs for " . scalar(@models) . " models");
@@ -666,7 +673,7 @@ sub check_pse {
 
         unless ( defined($analyze_traces_pse) ) {
             $self->error_message(
-                'failed to fetch pse for sanger instrument data with id ' . 
+                'failed to fetch pse for sanger instrument data with id ' .
                 $instrument_data_id .  ' and pse_id ' . $pse_id);
             return;
         }
@@ -676,7 +683,7 @@ sub check_pse {
         unless ( defined($run_name) ) {
             $self->error_message(
                 'failed to get a run_name for sanger instrument data with'
-                . " id '$instrument_data_id' and pse_id '$pse_id'" 
+                . " id '$instrument_data_id' and pse_id '$pse_id'"
             );
             return;
         }
@@ -686,7 +693,7 @@ sub check_pse {
 
     my $genome_instrument_data = Genome::InstrumentData->get(id => $instrument_data_id);
 
-    unless ( $genome_instrument_data ) {            
+    unless ( $genome_instrument_data ) {
         $self->error_message(
             "Failed to get a Genome::InstrumentData ($instrument_data_type) via"
             . " id '$instrument_data_id'.  PSE_ID is '$pse_id'");
@@ -741,21 +748,21 @@ sub assign_instrument_data_to_models {
 
     # we don't want to (automagically) assign capture and non-capture data to the same model.
     if ( @models and $genome_instrument_data->can('target_region_set_name') ) {
-        my $id_capture_target = $genome_instrument_data->target_region_set_name();                 
+        my $id_capture_target = $genome_instrument_data->target_region_set_name();
 
         if ($id_capture_target) {
             # keep only models with the specified capture target
             my @inputs =
             Genome::Model::Input->get(
-                model_id => [ map { $_->id } @models ], 
+                model_id => [ map { $_->id } @models ],
                 name => 'target_region_set_name',
                 value_id => $id_capture_target,
             );
-            @models = map { $_->model } @inputs;    
+            @models = map { $_->model } @inputs;
         } else {
             # keep only models with NO capture target
             my %capture_model_ids = map { $_->model_id => 1 } Genome::Model::Input->get(
-                model_id => [ map { $_->id } @models ], 
+                model_id => [ map { $_->id } @models ],
                 name => 'target_region_set_name',
             );
             @models = grep { not $capture_model_ids{$_->id} } @models;
@@ -864,7 +871,7 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
         return;
     }
     $regular_model->name($name);
-    
+
     if ($regular_model->isa('Genome::Model::ReferenceAlignment')) {
         push @ref_align_models, $regular_model;
     }
@@ -872,11 +879,11 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
     if ( $capture_target ) {
         my $roi_list;
         #FIXME This is a lame hack for these capture sets
-        my %build36_to_37_rois = get_build36_to_37_rois(); 
+        my %build36_to_37_rois = get_build36_to_37_rois();
 
         my $root_build37_ref_seq = $self->root_build37_ref_seq;
 
-        if($reference_sequence_build and $reference_sequence_build->is_compatible_with($root_build37_ref_seq) 
+        if($reference_sequence_build and $reference_sequence_build->is_compatible_with($root_build37_ref_seq)
                 and exists $build36_to_37_rois{$capture_target}) {
             $roi_list = $build36_to_37_rois{$capture_target};
         } else {
@@ -993,7 +1000,7 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
             return;
         }
 
-        unless($m->isa('Genome::Model::RnaSeq')){
+        unless($m->isa('Genome::Model::RnaSeq') or $m->isa('Genome::Model::GenotypeMicroarray')){
             $self->add_model_to_default_modelgroups($m, $pse, $genome_instrument_data);
         }
 
@@ -1066,7 +1073,7 @@ sub _find_or_create_mc16s_454_qc_model {
         $model->add_instrument_data($instrument_data);
         my $new_models = $self->_newly_created_models;
         $new_models->{$model->id} = $model;
-    } 
+    }
     else {
         $model->add_instrument_data($instrument_data);
         my $assigned_to = $self->_existing_models_assigned_to;
@@ -1115,7 +1122,7 @@ sub add_model_to_default_modelgroups {
 
     my $subject = $model->subject;
 
-    
+
     my $source;
     if($subject->isa('Genome::Sample')) {
         $source = $subject->source;
@@ -1130,13 +1137,15 @@ sub add_model_to_default_modelgroups {
 
     my @groups = $self->_resolve_projects_and_work_orders($pse);
     my $pooled_sample_name = $self->_resolve_pooled_sample_name_for_instrument_data($instrument_data);
-    if ($model->name =~ /\.wu-space$/) {
-        $pooled_sample_name .= ".wu-space";
+    if ($pooled_sample_name){
+        if ($model->name =~ /\.wu-space$/) {
+            $pooled_sample_name .= ".wu-space";
+        }
+        if ($model->name =~ /\.tcga-cds$/) {
+            $pooled_sample_name .= ".tcga-cds";
+        }
+        push @groups, $pooled_sample_name;
     }
-    if ($model->name =~ /\.tcga-cds$/) {
-        $pooled_sample_name .= ".tcga-cds";
-    }
-    push @groups, $pooled_sample_name if $pooled_sample_name;
 
     unless($source) {
         $self->error_message('Failed to get source for subject.');
@@ -1148,9 +1157,9 @@ sub add_model_to_default_modelgroups {
         }
     }
 
-    for my $group (@groups) { 
+    for my $group (@groups) {
         my $name;
-        if (ref $group){#groups here can be research project objects, work order objects, pooled sample name or source grouping string       
+        if (ref $group){#groups here can be research project objects, work order objects, pooled sample name or source grouping string
             $name = $group->can('name')?$group->name:$group->setup_name;
             if ($model->name =~ /\.wu-space$/) {
                 $name .= ".wu-space";
@@ -1195,14 +1204,15 @@ sub _resolve_projects_and_work_orders{
     my $index_illumina = GSC::IndexIllumina->get($instrument_data_id);
     if($index_illumina){
         @work_orders = $index_illumina->get_work_orders;
-    } else{
+    } else {
         @work_orders = $pse->get_inherited_assigned_directed_setups_filter_on('setup work order');
     }
+
     unless(scalar @work_orders) {
         $self->warning_message('No work order found for PSE ' . $pse->id);
     }
 
-    my @projects = map($_->get_project, @work_orders); 
+    my @projects = map($_->get_project, @work_orders);
     unless(scalar @projects) {
         $self->warning_message('No project found for PSE ' . $pse->id);
     }
@@ -1254,7 +1264,7 @@ sub request_builds {
         $models_to_build{$model->id} = [$model, 'it has been assigned to'];
     }
 
-    $self->status_message("Finding models which need to build...");   
+    $self->status_message("Finding models which need to build...");
     my $possibly_build = ($self->_existing_models_with_existing_assignments);
     for my $model (values %$possibly_build) {
         next if exists $models_to_build{$model->id}; #already added above
@@ -1456,8 +1466,8 @@ sub add_processing_profiles_to_pses{
 
             #all verification is complete--now go through and set the parameters
             $pse->add_param('sample_name',  $sample_name);
-            $pse->add_param('subject_class_name', $subject_class_name);        
-            $pse->add_param('subject_id', $subject_id);        
+            $pse->add_param('subject_class_name', $subject_class_name);
+            $pse->add_param('subject_id', $subject_id);
 
             # ask each if they work with this type of instrument data?
             PP:         for my $pp_id (@processing_profile_ids_to_add) {
@@ -1478,10 +1488,10 @@ sub add_processing_profiles_to_pses{
                 my $pp = Genome::ProcessingProfile->get($pp_id);
                 my $imported_reference_sequence = Genome::Model::Build::ImportedReferenceSequence->get_by_name($imported_reference_sequence_name);
                 $pse->add_reference_sequence_build_param_for_processing_profile($pp, $imported_reference_sequence);
-            }        
+            }
         };
         if($@){
-            #something went horribly wrong.  do something about it.  
+            #something went horribly wrong.  do something about it.
             $self->warning_message("PSE " . $pse->pse_id . " failed: $@");
         }
     }
@@ -1613,7 +1623,7 @@ sub _is_unknown_454_pipeline {
         my @pipelines = split(',', $pipeline_string);
         for my $pipeline (@pipelines) {
             if (not exists($known_454_pipelines{$pipeline})) {
-                push @workorders_with_unknown_pipelines, $work_order; 
+                push @workorders_with_unknown_pipelines, $work_order;
             }
         }
     }
@@ -1633,7 +1643,7 @@ sub _workorder_prettyprint {
 
     my $detailed_string = "";
 
-    for my $work_order (@work_orders){ 
+    for my $work_order (@work_orders){
         $detailed_string .= join("\n", map($_ .": " .$work_order->$_, (qw/ id pipeline facilitator_unix_login setup_status /)));
         $detailed_string .= "\n\n";
     }
@@ -1664,7 +1674,7 @@ sub _is_rna {
     my $self = shift;
     my $pse = shift;
 
-    my $instrument_data = $self->_instrument_data($pse); 
+    my $instrument_data = $self->_instrument_data($pse);
     my $sample = $instrument_data->sample;
     if(grep($sample->sample_type eq $_, ('rna', 'cdna', 'total rna', 'cdna library', 'mrna'))) {
         return 1;

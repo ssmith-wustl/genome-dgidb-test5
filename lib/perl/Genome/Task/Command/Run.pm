@@ -59,10 +59,10 @@ sub execute {
         
     my $result;
     eval {
-        my %attrs_to_update = (status => 'running', time_started => UR::Time->now());
+        my %attrs_to_update = (status => 'running', time_started => $UR::Context::current->now);
         if ($self->output_basedir) {
-            $attrs_to_update{stdout_pathname} = $log_basedir. "/" . $self->task->id. "/stdout"; 
-            $attrs_to_update{stderr_pathname} = $log_basedir. "/" . $self->task->id. "/stderr"; 
+            $attrs_to_update{stdout_pathname} = $log_basedir. "/" . $self->task->id. ".stdout"; 
+            $attrs_to_update{stderr_pathname} = $log_basedir. "/" . $self->task->id. ".stderr"; 
         }
 
         $self->task->out_of_band_attribute_update(%attrs_to_update);
@@ -81,7 +81,7 @@ sub execute {
         open (STDERR, ">&", $old_stderr);
     }
     
-    $self->task->time_finished(UR::Time->now);
+    $self->task->time_finished($UR::Context::current->now);
 
     return $result;
 }

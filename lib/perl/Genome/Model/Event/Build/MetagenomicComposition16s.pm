@@ -40,5 +40,3 @@ sub create {
 
 1;
 
-#$HeadURL$
-#$Id$

@@ -31,7 +31,6 @@ sub objects_to_sync {
         'Genome::Site::WUGC::InstrumentData::454' => 'Genome::InstrumentData::454',
         'Genome::Site::WUGC::InstrumentData::Sanger' => 'Genome::InstrumentData::Sanger',
         'Genome::Site::WUGC::InstrumentData::Solexa' => 'Genome::InstrumentData::Solexa',
-        'Genome::Site::WUGC::InstrumentData::Imported' => 'Genome::InstrumentData::Imported',
         'Genome::Site::WUGC::Individual' => 'Genome::Individual',
         'Genome::Site::WUGC::PopulationGroup' => 'Genome::PopulationGroup',
         'Genome::Site::WUGC::Taxon' => 'Genome::Taxon',
@@ -49,7 +48,6 @@ sub sync_order {
         Genome::Site::WUGC::Sample
         Genome::Site::WUGC::Library
         Genome::Site::WUGC::InstrumentData::Solexa
-        Genome::Site::WUGC::InstrumentData::Imported
         Genome::Site::WUGC::InstrumentData::454
     /;
 

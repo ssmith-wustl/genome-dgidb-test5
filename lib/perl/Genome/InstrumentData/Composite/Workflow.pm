@@ -42,6 +42,10 @@ class Genome::InstrumentData::Composite::Workflow {
             doc => 'The alignments created/found as a result of running the workflow',
             is_output => 1,
         },
+        log_directory => {
+            is => 'Text',
+            doc => 'Where to write the workflow logs',
+        }
     ],
 };
 
@@ -58,6 +62,9 @@ sub execute {
     my ($workflow, $inputs) = $self->generate_workflow($tree);
     $self->_workflow($workflow);
 
+    if($self->log_directory) {
+        $workflow->log_dir($self->log_directory);
+    }
     #print STDERR $workflow->save_to_xml;
     #print STDERR Data::Dumper::Dumper $inputs, "\n";
 
@@ -167,7 +174,7 @@ sub generate_workflow {
         my $master_input_connector = $master_workflow->get_input_connector;
         my $workflow_input_connector = $workflow; #implicitly uses input connector
         for my $property (@{ $workflow->operation_type->input_properties }) {
-            $workflow->add_link(
+            $master_workflow->add_link(
                 left_operation => $master_input_connector,
                 left_property => 'm_' . $property,
                 right_operation => $workflow_input_connector,
@@ -178,7 +185,7 @@ sub generate_workflow {
         my $master_output_connector = $master_workflow->get_output_connector;
         my $workflow_output_connector = $workflow; #implicitly uses output connector
         for my $property (@{ $workflow->operation_type->output_properties }) {
-            $workflow->add_link(
+            $master_workflow->add_link(
                 left_operation => $workflow_output_connector,
                 left_property => $property,
                 right_operation => $master_output_connector,

@@ -6,17 +6,6 @@ use warnings;
 our $VERSION = $Genome::VERSION;
 
 BEGIN {
-
-    our %DEFAULT_ENV = (
-        GENOME_SYS_SERVICES_MEMCACHE => 'localhost:11211',
-    );
-
-    for my $var (keys %DEFAULT_ENV) {
-        if (not exists $ENV{$var}) {
-            $ENV{$var} = $DEFAULT_ENV{$var};
-        }
-    }
-
     if (my $config = $ENV{GENOME_CONFIG}) {
         # call the specified configuration module;
         eval "use $config";

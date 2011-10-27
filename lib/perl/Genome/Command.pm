@@ -14,7 +14,7 @@ class Genome::Command {
 my %command_map = (
     'disk' => 'Genome::Disk::Command',
     'feature-list' => 'Genome::FeatureList::Command',
-    'gene-name' => 'Genome::GeneName::Command',
+    'gene-name-report' => 'Genome::GeneNameReport::Command',
     'individual' => 'Genome::Individual::Command',
     'instrument-data' => 'Genome::InstrumentData::Command',
     'library' => 'Genome::Library::Command',
@@ -27,10 +27,12 @@ my %command_map = (
     'project-part' => 'Genome::ProjectPart::Command',
     'report' => 'Genome::Report::Command',
     'sample' => 'Genome::Sample::Command',
+    'subject' => 'Genome::Subject::Command',
     'sys' => 'Genome::Sys::Command',
     'task' => 'Genome::Task::Command',
     'taxon' => 'Genome::Taxon::Command',
     'tools' => 'Genome::Model::Tools',
+    'db' => 'Genome::Db',
 );
 
 for my $class (values %command_map) {
