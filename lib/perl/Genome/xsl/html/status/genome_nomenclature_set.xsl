@@ -26,7 +26,7 @@
               <xsl:for-each select="aspect[@name='members']/object">
               <tr>
               <td>
-                <a><xsl:attribute name="href">/res/html/genome/nomenclature/create.html#id=<xsl:value-of select='@id'/></xsl:attribute>
+                <a><xsl:attribute name="href">/view/genome/nomenclature/set/create.html#id=<xsl:value-of select='@id'/></xsl:attribute>
                 <xsl:value-of select="display_name"/></a>
               </td>
               <td>
