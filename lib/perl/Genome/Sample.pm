@@ -244,7 +244,7 @@ class Genome::Sample {
 
 sub __display_name__ {
     my $self = $_[0];
-    return $self->name . ($self->patient_common_name ? ' (' . $self->patient_common_name . ' ' . $self->common_name . ')' : '');
+    return $self->name . ' (' . ($self->source->common_name ? $self->source->common_name . ($self->common_name ? ' ' . $self->common_name  : '') : '') . ' ' . $self->id . ')';
 }
 
 sub check_genotype_data {
