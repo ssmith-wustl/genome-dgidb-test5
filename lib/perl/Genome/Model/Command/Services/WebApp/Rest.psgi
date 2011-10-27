@@ -11,7 +11,6 @@ sub load_modules {
     return if $loaded;
     eval "
         use above 'Genome';
-        use Workflow;
         use Plack::MIME;
         use Plack::Util;
         use Plack::Request;

@@ -7,7 +7,7 @@
 
     <xsl:call-template name="view_header">
       <xsl:with-param name="label_name" select="'Task '" />
-      <xsl:with-param name="display_name" select="aspect[@name='command_class']/value" />
+      <xsl:with-param name="display_name" select="display_name" />
       <xsl:with-param name="icon" select="'genome_task_32'" />
     </xsl:call-template>
 
@@ -30,9 +30,9 @@
             <table class="name-value">
               <tbody>
                 <tr>
-                  <td class="name">Command Name:
+                  <td class="name">Task:
                   </td>
-                  <td class="value"><xsl:value-of select="aspect[@name='command_class']/value"/>
+                  <td class="value"><xsl:value-of select="display_name"/>
                   </td>
                 </tr>
                 <tr>

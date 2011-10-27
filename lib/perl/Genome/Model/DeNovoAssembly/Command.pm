@@ -15,7 +15,7 @@ class Genome::Model::DeNovoAssembly::Command {
 
 #< Help >#
 sub help_brief {
-    return 'Operate on de novo assembly models/builds';
+    return 'operate on de novo assembly models/builds';
 }
 
 sub help_detail {

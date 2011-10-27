@@ -8,7 +8,7 @@ class Genome::View::Home::Html {
     is => 'Genome::View::Static::Html',
     has_constant => [
         toolkit     => { value => 'html' },
-        perspective => { value => 'create' },
+        perspective => { value => 'home' },
         desired_perspective => { value => 'status' },
     ],
 };

@@ -29,9 +29,16 @@ class Genome::Model::Tools::CompleteGenomics::MapToSam {
             doc => 'Path to CRR reference file',
         },
     ],
+    has_optional_input => [
+        sort_output => {
+            default_value => undef,
+            valid_values => [undef, 'coordinate', 'queryname'],
+            doc => 'if provided, will sort the BAM by the criteria given',
+        },
+    ],
     has_param => [
         lsf_resource => {
-            default_value => "-R 'select[model!=Opteron250 && type==LINUX64 && tmp>10000 && mem>4000] span[hosts=1] rusage[tmp=10000,mem=4000]'",
+            default_value => "-R 'select[model!=Opteron250 && type==LINUX64 && tmp>20000 && mem>4000] span[hosts=1] rusage[tmp=20000,mem=4000]'",
         },
     ],
 };
@@ -60,10 +67,28 @@ sub execute {
         $self->bam_file($self->bam_directory . '/' . $bam_file);
     }
 
-    my $tmp_file = Genome::Sys->create_temp_file_path;
+    my $tmp_file = Genome::Sys->create_temp_file_path . '.bam';
     my $cmd = 'map2sam -m ' . $self->map_file . ' -r ' . $reads_file . ' -s ' . $self->reference_file . ' | samtools view - -b -S -o ' . $tmp_file;
 
     Genome::Model::Tools::CompleteGenomics->run_command($cmd, input_files => [$self->map_file, $reads_file], output_files => [$tmp_file]);
+
+    if($self->sort_output) {
+        my $tmp_sort_file = Genome::Sys->create_temp_file_path . '.bam';
+
+        my $cmd = Genome::Model::Tools::Picard::SortSam->create(
+            input_file => $tmp_file,
+            output_file => $tmp_sort_file,
+            sort_order => $self->sort_output,
+        );
+
+        unless($cmd->execute) {
+            die $self->error_message('failed to sort sam file');
+        }
+
+        unlink($tmp_file);
+        $tmp_file = $tmp_sort_file;
+    }
+
     Genome::Sys->copy_file($tmp_file, $self->bam_file);
 
     return 1;
