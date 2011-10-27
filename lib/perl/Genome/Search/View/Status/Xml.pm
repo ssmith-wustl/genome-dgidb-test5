@@ -7,8 +7,8 @@ use warnings;
 class Genome::Search::View::Status::Xml {
     is => 'UR::Object::View::Default::Xml',
     has_constant => [
-        perspective => 'status',
-        toolkit => 'xml',
+        perspective => { value => 'status' },
+        toolkit => { value => 'xml' },
         default_aspects => {
             value => ['genome_path', 'ur_path', 'workflow_path']
         }
