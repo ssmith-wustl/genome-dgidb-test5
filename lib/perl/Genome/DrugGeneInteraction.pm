@@ -21,7 +21,7 @@ class Genome::DrugGeneInteraction {
         drug_gene_interaction_reports => {
             calculate_from => ['drug_name', 'gene_name'],
             calculate => q|
-                return Genome::DrugGeneInteractionReport->get(gene_name_report.id => $gene_name, drug_name_report.id => $drug_name);
+                return Genome::DrugGeneInteractionReport->get('gene_name_report.id' => $gene_name, 'drug_name_report.id' => $drug_name);
             |,
         },
     ],
