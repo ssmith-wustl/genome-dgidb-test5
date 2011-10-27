@@ -231,7 +231,6 @@ sub execute {
             my $subject      = $subject_class_name->get($subject_id);
 
             if ( $instrument_data_type =~ /454/i and $subject->name eq 'n-ctrl' ) { 
-                print Data::Dumper::Dumper($subject);
                 # Do not process 454 negative control (n-ctrl)
                 $self->status_message('Skipping n-ctrl PSE '.$pse->id);
                 next PSE;
