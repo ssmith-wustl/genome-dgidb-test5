@@ -234,7 +234,11 @@ sub out_of_band_attribute_update {
 
 sub __display_name__ {
     my $self = shift;
-    return sprintf("%s (%s)", $self->command_class, $self->status);
+    if ($self->command_class->can('help_brief')) {
+        return $self->command_class->help_brief;
+    } else {
+        return $self->command_class;
+    }
 }
 
 1;

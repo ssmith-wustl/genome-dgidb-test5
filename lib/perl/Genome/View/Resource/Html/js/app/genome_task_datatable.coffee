@@ -1,6 +1,10 @@
 prepareDataTables = (data) ->
     columns = data.aoColumns
     for col in columns
+        if col.mDataProp == "command class"
+            col.fnRender = (obj) ->
+                cellVal = obj.aData[obj.iDataColumn]
+                "<a href='/view/genome/task/status.html?id=#{data.wutgiTaskIds[obj.iDataRow]}'>#{cellVal}</a>"
         if col.mDataProp == "status"
             col.fnRender = (obj)->
                 cellVal = obj.aData[obj.iDataColumn]

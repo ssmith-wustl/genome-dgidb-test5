@@ -25,7 +25,7 @@ class Genome::Subject::Command::Import {
 };
 
 sub help_brief {
-    return 'import subjects and subject attributes from CSV (used by web interface)';
+    return 'Import subjects/attributes from web';
 }
 
 sub create {

@@ -21,7 +21,7 @@ sub _generate_content {
     my @set; 
 
     for my $obj ($self->subject->members) {
-        push @set, [$obj->command_class, $obj->status, $obj->user_id, $obj->time_submitted, $obj->time_started, $obj->time_finished ]
+        push @set, [$obj->__display_name__, $obj->status, $obj->user_id, $obj->time_submitted, $obj->time_started, $obj->time_finished ]
     }
     
     return $self->_json->encode({aaData => \@set, 
@@ -32,8 +32,8 @@ sub _generate_content {
                     {mDataProp => 'time submitted',},
                     {mDataProp => 'time started',},
                     {mDataProp => 'time finished',},
-            ]
-
+            ],
+            wutgiTaskIds => [map {$_->id} $self->subject->members],
      });
 
 }
