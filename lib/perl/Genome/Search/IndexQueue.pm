@@ -5,6 +5,11 @@ package Genome::Search::IndexQueue;
 
 class Genome::Search::IndexQueue {
     id_generator => '-uuid',
+    id_by => [
+        id => {
+            is => 'Text',
+        },
+    ],
     has => [
         timestamp => {
             is => 'Time',
