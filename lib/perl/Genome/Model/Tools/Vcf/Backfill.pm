@@ -23,7 +23,7 @@ class Genome::Model::Tools::Vcf::Backfill{
         },
         use_bgzip => {
             is => 'Boolean',
-            doc => 'Expect input in bgzip format and bgzips the output',
+            doc => 'Expect pileup (but not VCF) input in bgzip format and bgzips the output',
             default => 0,
         },
     ],
@@ -40,16 +40,15 @@ HELP
 sub execute {
     my $self = shift;
 
-    my ($vcf_fh, $mpileup_fh, $output_fh);
+    my ($mpileup_fh, $output_fh);
     if ($self->use_bgzip) {
         $mpileup_fh = Genome::Sys->open_gzip_file_for_reading($self->pileup_file);
-        $vcf_fh = Genome::Sys->open_gzip_file_for_reading($self->vcf_file);
         $output_fh = Genome::Sys->open_gzip_file_for_writing($self->output_file);
     } else {
         $mpileup_fh = Genome::Sys->open_file_for_reading($self->pileup_file);
-        $vcf_fh = Genome::Sys->open_file_for_reading($self->vcf_file);
         $output_fh = Genome::Sys->open_file_for_writing($self->output_file);
     }
+    my $vcf_fh = Genome::Sys->open_file_for_reading($self->vcf_file);
 
     # Copy the header from the input vcf to the output vcf
     my $header_copied = 0;
