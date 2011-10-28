@@ -4,7 +4,7 @@ CREATE TABLE search_index_queue (
     timestamp timestamp NOT NULL,
     subject_id varchar NOT NULL,
     subject_class varchar NOT NULL,
+    action varchar NOT NULL,
     PRIMARY KEY (id)
 );
-INSERT INTO "search_index_queue" VALUES('1EDAF30A018911E1BE3CE9998DCAA6BD','2011-10-28 12:20:23',2862809551,'Genome::Model::ReferenceAlignment');
 COMMIT;

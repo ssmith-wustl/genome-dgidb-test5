@@ -25,6 +25,10 @@ class Genome::Search::IndexQueue {
             id_by => 'subject_id',
             id_class_by => 'subject_class',
         },
+        action => {
+            is => 'Text',
+            valid_values => ['add', 'delete'],
+        },
     ],
     data_source => 'Genome::DataSource::SearchIndexQueue',
     table_name => 'search_index_queue',
