@@ -1,9 +1,9 @@
-package Genome::DataSource::Queue;
+package Genome::DataSource::SearchIndexQueue;
 
 use strict;
 use warnings;
 
-class Genome::DataSource::Queue {
+class Genome::DataSource::SearchIndexQueue {
     is => 'UR::DataSource::SQLite',
 };
 
