@@ -42,9 +42,9 @@ sub execute {
 
     my ($vcf_fh, $mpileup_fh, $output_fh);
     if ($self->use_bgzip) {
-        $mpileup_fh = Genome::Sys->open_bgzip_file_for_reading($self->pileup_file);
-        $vcf_fh = Genome::Sys->open_bgzip_file_for_reading($self->vcf_file);
-        $output_fh = Genome::Sys->open_bgzip_file_for_writing($self->output_file);
+        $mpileup_fh = Genome::Sys->open_gzip_file_for_reading($self->pileup_file);
+        $vcf_fh = Genome::Sys->open_gzip_file_for_reading($self->vcf_file);
+        $output_fh = Genome::Sys->open_gzip_file_for_writing($self->output_file);
     } else {
         $mpileup_fh = Genome::Sys->open_file_for_reading($self->pileup_file);
         $vcf_fh = Genome::Sys->open_file_for_reading($self->vcf_file);
