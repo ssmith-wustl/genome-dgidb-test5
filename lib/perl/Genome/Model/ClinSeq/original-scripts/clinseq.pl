@@ -121,7 +121,7 @@ $gene_symbol_lists_dir = &checkDir('-dir'=>$gene_symbol_lists_dir, '-clear'=>"no
 #Import a set of gene symbol lists (these files must be gene symbols in the first column, .txt extension, tab-delimited if multiple columns, one symbol per field, no header)
 #Different sets of genes list could be used for different purposes
 #Fix gene names as they are being imported
-my @symbol_list_names1 = qw (KinasesList CancerGeneCensusList DrugBankAntineoplastic DrugBankInhibitors Druggable_RussLampel TfcatTransFactors);
+my @symbol_list_names1 = qw (KinasesList CancerGeneCensusList DrugBankAntineoplastic DrugBankInhibitors Druggable_RussLampel TfcatTransFactors FactorBookTransFactors);
 $step++; print MAGENTA, "\n\nStep $step. Importing gene symbol lists (@symbol_list_names1)", RESET;
 my $gene_symbol_lists1 = &importGeneSymbolLists('-gene_symbol_lists_dir'=>$gene_symbol_lists_dir, '-symbol_list_names'=>\@symbol_list_names1, '-entrez_ensembl_data'=>$entrez_ensembl_data, '-verbose'=>$verbose);
 
@@ -149,6 +149,7 @@ my $data_paths = &getDataDirs('-wgs_som_var_model_id'=>$wgs_som_var_model_id, '-
 #Perform druggable genes analysis on each list (filtered, kinase-only, inhibitor-only, antineoplastic-only)
 $step++; print MAGENTA, "\n\nStep $step. Summarizing SNVs and Indels", RESET;
 &summarizeSNVs('-data_paths'=>$data_paths, '-out_paths'=>$out_paths, '-patient_dir'=>$patient_dir, '-entrez_ensembl_data'=>$entrez_ensembl_data, '-verbose'=>$verbose);
+
 
 #Run CNView analyses on the CNV data to identify amplified/deleted genes
 $step++; print MAGENTA, "\n\nStep $step. Identifying CNV altered genes", RESET;
@@ -420,6 +421,10 @@ sub summarizeSNVs{
       $data_merge{$var_type}{$coord}{gene_name} = $data->{gene_name};
       $data_out{$coord}{aa_changes} = $aa_string;
       $data_merge{$var_type}{$coord}{aa_changes} = $aa_string;
+      $data_out{$coord}{ref_base} = $data->{ref_base};
+      $data_merge{$var_type}{$coord}{ref_base} = $data->{ref_base};
+      $data_out{$coord}{var_base} = $data->{var_base};
+      $data_merge{$var_type}{$coord}{var_base} = $data->{var_base};
 
       #Attempt to fix the gene name:
       my $fixed_gene_name = &fixGeneName('-gene'=>$data->{gene_name}, '-entrez_ensembl_data'=>$entrez_ensembl_data, '-verbose'=>$verbose);
@@ -430,9 +435,10 @@ sub summarizeSNVs{
 
     #Print out the resulting list, sorting on fixed gene name
     open (OUT, ">$compact_file") || die "\n\nCould not open output file: $compact_file\n\n";
-    print OUT "coord\tgene_name\tmapped_gene_name\taa_changes\n";
+
+    print OUT "coord\tgene_name\tmapped_gene_name\taa_changes\tref_base\tvar_base\n";
     foreach my $coord (sort {$data_out{$a}->{mapped_gene_name} cmp $data_out{$b}->{mapped_gene_name}} keys %data_out){
-      print OUT "$coord\t$data_out{$coord}{gene_name}\t$data_out{$coord}{mapped_gene_name}\t$data_out{$coord}{aa_changes}\n";
+      print OUT "$coord\t$data_out{$coord}{gene_name}\t$data_out{$coord}{mapped_gene_name}\t$data_out{$coord}{aa_changes}\t$data_out{$coord}{ref_base}\t$data_out{$coord}{var_base}\n";
     }
     close(OUT);
 
@@ -448,19 +454,19 @@ sub summarizeSNVs{
     my $indel_merge_file = "$indel_wgs_exome_dir"."indels.hq.tier1.v1.annotated.compact.tsv";
 
     open (OUT, ">$snv_merge_file") || die "\n\nCould not open output file: $snv_merge_file\n\n";
-    print OUT "coord\tgene_name\tmapped_gene_name\taa_changes\n";
+    print OUT "coord\tgene_name\tmapped_gene_name\taa_changes\tref_base\tvar_base\n";
     my %data_out = %{$data_merge{'snv'}};
     foreach my $coord (sort {$data_out{$a}->{mapped_gene_name} cmp $data_out{$b}->{mapped_gene_name}} keys %data_out){
-      print OUT "$coord\t$data_out{$coord}{gene_name}\t$data_out{$coord}{mapped_gene_name}\t$data_out{$coord}{aa_changes}\n";
+      print OUT "$coord\t$data_out{$coord}{gene_name}\t$data_out{$coord}{mapped_gene_name}\t$data_out{$coord}{aa_changes}\t$data_out{$coord}{ref_base}\t$data_out{$coord}{var_base}\n";
     }
     close(OUT);
     $out_paths->{'wgs_exome'}->{'snv'}->{path} = $snv_merge_file;
 
     open (OUT, ">$indel_merge_file") || die "\n\nCould not open output file: $indel_merge_file\n\n";
-    print OUT "coord\tgene_name\tmapped_gene_name\taa_changes\n";
+    print OUT "coord\tgene_name\tmapped_gene_name\taa_changes\tref_base\tvar_base\n";
     %data_out = %{$data_merge{'indel'}};
     foreach my $coord (sort {$data_out{$a}->{mapped_gene_name} cmp $data_out{$b}->{mapped_gene_name}} keys %data_out){
-      print OUT "$coord\t$data_out{$coord}{gene_name}\t$data_out{$coord}{mapped_gene_name}\t$data_out{$coord}{aa_changes}\n";
+      print OUT "$coord\t$data_out{$coord}{gene_name}\t$data_out{$coord}{mapped_gene_name}\t$data_out{$coord}{aa_changes}\t$data_out{$coord}{ref_base}\t$data_out{$coord}{var_base}\n";
     }
     close(OUT);
     $out_paths->{'wgs_exome'}->{'indel'}->{path} = $indel_merge_file;
