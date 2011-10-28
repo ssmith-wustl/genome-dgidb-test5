@@ -488,17 +488,12 @@ sub _commit_callback {
     ## during test cases
     return 1 if UR::DBI->no_commit && $class->environment eq 'prod';
 
-    eval {
-        if($class->is_indexable($object)) {
-            $class->add($object);
-        }
-    };
-
-    if($@) {
-        system("echo '$@' | mailx -s 'search commit callback failed' jlolofie\@genome.wustl.edu");
-        my $self = $class->_singleton_object;
-        $self->error_message('failed to update search engine, sending an email.');
-        return;
+    if($class->is_indexable($object)) {
+        my $iq = Genome::Search::IndexQueue->create(
+            subject => $object,
+            action => 'add',
+        );
+        return unless $iq;
     }
 
     return 1;
@@ -512,16 +507,12 @@ sub _delete_callback {
 
     return 1 if UR::DBI->no_commit && $class->environment eq 'prod';
 
-    eval {
-        if($class->is_indexable($object)) {
-            $class->delete($object);
-        }
-    };
-
-    if($@) {
-        my $self = $class->_singleton_object;
-        $self->error_message('Error in delete callback: ' . $@);
-        return;
+    if($class->is_indexable($object)) {
+        my $iq = Genome::Search::IndexQueue->create(
+            subject => $object,
+            action => 'delete',
+        );
+        return unless $iq;
     }
 
     return 1;

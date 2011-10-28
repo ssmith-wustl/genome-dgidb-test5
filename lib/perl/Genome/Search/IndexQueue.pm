@@ -1,6 +1,3 @@
-# TODO
-# - change Search observers to add item here instead of committing straight to server
-
 package Genome::Search::IndexQueue;
 
 class Genome::Search::IndexQueue {
