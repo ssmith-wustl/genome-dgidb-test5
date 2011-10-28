@@ -12,7 +12,7 @@ use Data::Dumper;
 my $script_dir;
 use Cwd 'abs_path';
 BEGIN{
-  if (abs_path($0) =~ /(.*\/).*\.pl/){
+  if (abs_path($0) =~ /(.*\/).*\/.*\.pl/){
     $script_dir = $1;
   }
 }
