@@ -81,6 +81,7 @@ HELP
 
 sub execute {
     my $self = shift;
+    $DB::single = 1; #TODO: remove me
     $self->input_to_tsv(); #Get the data from source files and write to a temp file
     $self->import_tsv();   #Dump the contents of the temp file to the database
     return 1;
@@ -116,9 +117,9 @@ sub input_to_tsv {
       $gene_id_string =~ s/ gene_id //i; #Kill the gene_id part leaving the actual ENSG id
       my $gene_id = uc($gene_id_string);
 
-      my ($gene_name_report_string) = grep ($_ =~ /gene_name_report/i, @gene_info);
+      my ($gene_name_report_string) = grep ($_ =~ /gene_name/i, @gene_info);
       $gene_name_report_string =~ s/\"//g; #Kill the quotes
-      $gene_name_report_string =~ s/gene_name_report //i; #Kill the gene_id part leaving the actual ENSG id
+      $gene_name_report_string =~ s/gene_name //i; #Kill the gene_id part leaving the actual ENSG id
       my $gene_name_report = uc($gene_name_report_string);
 
       my ($gene_biotype_string) = grep ($_ =~ /gene_biotype/i, @gene_info);
