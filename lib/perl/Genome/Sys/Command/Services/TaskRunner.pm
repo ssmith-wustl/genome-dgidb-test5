@@ -7,7 +7,7 @@ use JSON::XS;
 use File::Path;
 
 class Genome::Sys::Command::Services::TaskRunner {
-    is => 'Genome::Command::Base',
+    is => 'Command',
     doc => 'Runner for scheduled tasks',
     has => [
         output_basedir => {
