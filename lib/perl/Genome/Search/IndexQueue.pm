@@ -21,6 +21,6 @@ class Genome::Search::IndexQueue {
             id_class_by => 'subject_class',
         },
     ],
-    data_source => 'Genome::DataSource::GMSchema',
+    data_source => 'Genome::DataSource::Queue',
     table_name => 'search_index_queue',
 };
