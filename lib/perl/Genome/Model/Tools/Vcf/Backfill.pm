@@ -165,9 +165,7 @@ sub create_vcf_line_from_pileup {
     my $alt = ".";
     my $qual = ".";
     my $info = ".";
-    my $filter = "PASS"; #FIXME ?
-    # FIXME adjust pos or no?
-    # FIXME what to put for alt?
+    my $filter = "."; 
     my $new_vcf_line = join "\t", ($chr, $pos, $id, $ref, $alt, $qual, $filter, $info, $format_tags, $sample_string); 
 
     return $new_vcf_line;
