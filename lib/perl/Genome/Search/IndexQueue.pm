@@ -33,3 +33,16 @@ class Genome::Search::IndexQueue {
     data_source => 'Genome::DataSource::SearchIndexQueue',
     table_name => 'search_index_queue',
 };
+
+sub create {
+    my $class = shift;
+    my %params = @_;
+
+    unless (exists $params{timestamp}) {
+        $params{timestamp} = UR::Context->now;
+    }
+
+    return $class->SUPER::create(%params);
+}
+
+1;
