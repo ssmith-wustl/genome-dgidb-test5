@@ -21,6 +21,11 @@ class Genome::Model::Tools::Vcf::Backfill{
             is => 'Text',
             doc => "Input vcf file for this sample to be backfilled",
         },
+        use_bgzip => {
+            is => 'Boolean',
+            doc => 'Expect pileup (but not VCF) input in bgzip format and bgzips the output',
+            default => 0,
+        },
     ],
     doc => "Backfill a single sample VCF with reference information from mpileup",
 };
@@ -35,9 +40,15 @@ HELP
 sub execute {
     my $self = shift;
 
-    my $mpileup_fh = Genome::Sys->open_file_for_reading($self->pileup_file);
+    my ($mpileup_fh, $output_fh);
+    if ($self->use_bgzip) {
+        $mpileup_fh = Genome::Sys->open_gzip_file_for_reading($self->pileup_file);
+        $output_fh = Genome::Sys->open_gzip_file_for_writing($self->output_file);
+    } else {
+        $mpileup_fh = Genome::Sys->open_file_for_reading($self->pileup_file);
+        $output_fh = Genome::Sys->open_file_for_writing($self->output_file);
+    }
     my $vcf_fh = Genome::Sys->open_file_for_reading($self->vcf_file);
-    my $output_fh = Genome::Sys->open_file_for_writing($self->output_file);
 
     # Copy the header from the input vcf to the output vcf
     my $header_copied = 0;
@@ -165,9 +176,7 @@ sub create_vcf_line_from_pileup {
     my $alt = ".";
     my $qual = ".";
     my $info = ".";
-    my $filter = "PASS"; #FIXME ?
-    # FIXME adjust pos or no?
-    # FIXME what to put for alt?
+    my $filter = "."; 
     my $new_vcf_line = join "\t", ($chr, $pos, $id, $ref, $alt, $qual, $filter, $info, $format_tags, $sample_string); 
 
     return $new_vcf_line;

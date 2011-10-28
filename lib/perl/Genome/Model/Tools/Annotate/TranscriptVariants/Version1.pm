@@ -235,6 +235,11 @@ sub _create_iterator_for_variant_intersection {
     my $structure_class = $self->transcript_structure_class_name;
     my $intersect_sub_name = $self->_resolve_intersector_sub_name();
 
+    #Because of this hack, the query cache is not actually valid.  The cache remembers that it did
+    #a query, but it didn't actually cache everything.  To fix this, delete the template for the
+    #query rule each time you do the query.
+    my $template_id = UR::BoolExpr::Template::And->_fast_construct($structure_class, ['chrom_name', 'data_directory', '-order_by'], ['structure_start'])->get_normalized_template_equivalent->id;
+
     # This sub plugs into a hook in the Genome::DataSource::TranscriptStructures loader
     # to reject data that does not intersect the given variation to avoid passing the
     # data up the call stack and creating objects for TranscriptStructures we aren't 
@@ -302,6 +307,7 @@ sub _create_iterator_for_variant_intersection {
         $last_variant_stop  = $variant_stop;
         $last_chrom_name    = $variant->{'chromosome_name'};
 
+        delete $UR::Context::all_params_loaded->{$template_id};
         return \@intersections;
     };
 }
