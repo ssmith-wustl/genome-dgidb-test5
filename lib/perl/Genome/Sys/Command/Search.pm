@@ -1,11 +1,11 @@
-package Genome::Search::Command;
+package Genome::Sys::Command::Search;
 
 use strict;
 use warnings;
 
 use Genome;
 
-class Genome::Search::Command {
+class Genome::Sys::Command::Search {
     is => 'Command::Tree',
 };
 
