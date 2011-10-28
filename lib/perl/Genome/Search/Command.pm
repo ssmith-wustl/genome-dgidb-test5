@@ -8,6 +8,5 @@ use Genome;
 class Genome::Search::Command {
     is => 'Command::Tree',
 };
-         
 
 1;
