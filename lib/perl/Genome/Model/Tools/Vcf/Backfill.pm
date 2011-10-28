@@ -21,6 +21,11 @@ class Genome::Model::Tools::Vcf::Backfill{
             is => 'Text',
             doc => "Input vcf file for this sample to be backfilled",
         },
+        use_bgzip => {
+            is => 'Boolean',
+            doc => 'Expect input in bgzip format and bgzips the output',
+            default => 0,
+        },
     ],
     doc => "Backfill a single sample VCF with reference information from mpileup",
 };
@@ -35,9 +40,16 @@ HELP
 sub execute {
     my $self = shift;
 
-    my $mpileup_fh = Genome::Sys->open_file_for_reading($self->pileup_file);
-    my $vcf_fh = Genome::Sys->open_file_for_reading($self->vcf_file);
-    my $output_fh = Genome::Sys->open_file_for_writing($self->output_file);
+    my ($vcf_fh, $mpileup_fh, $output_fh);
+    if ($self->use_bgzip) {
+        $mpileup_fh = Genome::Sys->open_bgzip_file_for_reading($self->pileup_file);
+        $vcf_fh = Genome::Sys->open_bgzip_file_for_reading($self->vcf_file);
+        $output_fh = Genome::Sys->open_bgzip_file_for_writing($self->output_file);
+    } else {
+        $mpileup_fh = Genome::Sys->open_file_for_reading($self->pileup_file);
+        $vcf_fh = Genome::Sys->open_file_for_reading($self->vcf_file);
+        $output_fh = Genome::Sys->open_file_for_writing($self->output_file);
+    }
 
     # Copy the header from the input vcf to the output vcf
     my $header_copied = 0;
