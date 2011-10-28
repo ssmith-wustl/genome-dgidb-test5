@@ -20,8 +20,7 @@ BEGIN{
 }
 use lib $lib_dir;
 use ClinSeq qw(:all);
-use lib $script_dir;
-use RnaSeq qw(:all);
+use rnaseq::RnaSeq qw(:all);
 
 
 #This script takes a Cufflinks build dir as input and processes the genes.fpkm_tracking AND isoforms.fpkm_tracking files into more useful forms

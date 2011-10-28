@@ -132,6 +132,8 @@ system($varscan_format_cmd);
 $cp_cmd = "cp $data_paths{cnvs_hq} $working_dir";
 if ($verbose){print YELLOW, "\n\n$cp_cmd", RESET;}
 system($cp_cmd);
+my $chmod_cmd = "chmod 664 $working_dir"."cnvs.hq";
+system ($chmod_cmd);
 
 my $centromere_file;
 my $gap_file;
