@@ -73,8 +73,12 @@ sub log_dispatch_init {
 # create object methods for each log level
 for my $log_level (@log_levels) {
     $sub_ref = sub {
-        my $self = shift;
-        return $self->log_dispatch->$log_level(@_);
+        my ($self, $message) = @_;
+
+        chomp $message;
+        $message = uc($log_level) . ": $message\n";
+
+        return $self->log_dispatch->$log_level($message);
     };
     *$log_level = $sub_ref;
 }
