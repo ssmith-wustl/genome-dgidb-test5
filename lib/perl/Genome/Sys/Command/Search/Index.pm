@@ -30,7 +30,7 @@ sub execute {
 
     my $confirmed = $self->prompt_for_confirmation() if $self->confirm;
     if ($self->confirm && !$confirmed) {
-        print "Aborting.\n";
+        $self->info('Aborting.');
         return;
     }
 
