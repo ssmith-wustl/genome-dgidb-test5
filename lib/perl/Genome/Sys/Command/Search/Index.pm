@@ -91,7 +91,7 @@ sub index_all {
 
     my @classes_to_index = $self->indexable_classes;
     for my $class (@classes_to_index) {
-        $self->info("Scanning $class...\n");
+        $self->info("Scanning $class...");
         my @subjects = $class->get();
         for my $subject (@subjects) {
             $self->index($subject);
@@ -141,7 +141,7 @@ sub index {
 
     my $rv = ($self->testing ? 1 : eval { Genome::Search->add($subject) });
     if ($rv) {
-        $self->info("Indexed (Class: $class, ID: $id)\n");
+        $self->info("Indexed (Class: $class, ID: $id)");
     }
     else {
         $self->error("Failed (Class: $class, ID: $id)");
@@ -160,13 +160,13 @@ sub indexable_classes {
         eval "use $class";
         my $use_errors = $@;
         if ($use_errors) {
-            $self->debug("Class ($class) in searchable_classes is not usable ($use_errors).\n");
+            $self->debug("Class ($class) in searchable_classes is not usable ($use_errors).");
             next;
         }
 
         my $class_is_indexable = Genome::Search->is_indexable($class);
         if (!$class_is_indexable) {
-            $self->debug("Class ($class) in searchable_classes is not indexable.\n");
+            $self->debug("Class ($class) in searchable_classes is not indexable.");
             next;
         }
 
