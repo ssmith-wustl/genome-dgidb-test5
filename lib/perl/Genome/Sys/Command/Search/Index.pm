@@ -68,18 +68,18 @@ sub get_subject_from_subject_text {
 
     my ($subject_class, $subject_id) = $self->subject_text =~ /^(.*)=(.*)$/;
     unless ($subject_class && $subject_id) {
-        $self->error_message("Failed to parse subject_text (" . $self->subject_text . ") for class and ID. Must be in the form Class=ID.");
+        $self->error("Failed to parse subject_text (" . $self->subject_text . ") for class and ID. Must be in the form Class=ID.");
         return;
     }
 
     unless ($subject_class->isa('UR::Object')) {
-        $self->error_message("Class ($subject_class) is not recognized as an UR object.");
+        $self->error("Class ($subject_class) is not recognized as an UR object.");
         return;
     }
 
     my $subject = $subject_class->get($subject_id);
     unless ($subject) {
-        $self->error_message("Failed to get object (Class: $subject_class, ID: $subject_id).");
+        $self->error("Failed to get object (Class: $subject_class, ID: $subject_id).");
         return;
     }
 
@@ -144,7 +144,7 @@ sub index {
         $self->info("Indexed (Class: $class, ID: $id)\n");
     }
     else {
-        $self->error_message("Failed (Class: $class, ID: $id)");
+        $self->error("Failed (Class: $class, ID: $id)");
     }
 
     return $rv;
