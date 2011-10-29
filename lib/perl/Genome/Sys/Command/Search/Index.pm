@@ -5,6 +5,10 @@ use Genome;
 class Genome::Sys::Command::Search::Index {
     is => ['Genome::Role::Logger', 'Command'],
     has => [
+        action => {
+            is => 'Text',
+            default => 'add',
+        },
         subject_text => {
             is => 'Text',
             shell_args_position => 1,
@@ -44,8 +48,9 @@ sub execute {
         $self->daemon;
     }
     else {
+        my $action = $self->action();
         my $subject = $self->get_subject_from_subject_text();
-        $self->index($subject) if $subject;
+        $self->modify_index($subject, $action) if $subject;
     }
 
     return 1;
@@ -89,12 +94,14 @@ sub get_subject_from_subject_text {
 sub index_all {
     my $self = shift;
 
+    my $action = $self->action;
+
     my @classes_to_index = $self->indexable_classes;
     for my $class (@classes_to_index) {
         $self->info("Scanning $class...");
         my @subjects = $class->get();
         for my $subject (@subjects) {
-            $self->index($subject);
+            $self->modify_index($subject, $action);
         }
     }
 
@@ -124,8 +131,9 @@ sub index_queued {
     );
 
     while (my $index_queue_item = $index_queue_iterator->next) {
+        my $action = $index_queue_item->action;
         my $subject = $index_queue_item->subject;
-        if ($self->index($subject)) {
+        if ($self->modify_index($subject, $action)) {
             $index_queue_item->delete() unless $self->testing;
         }
     }
@@ -133,18 +141,21 @@ sub index_queued {
     return 1;
 }
 
-sub index {
-    my ($self, $subject) = @_;
+sub modify_index {
+    my ($self, $subject, $action) = @_;
 
     my $class = $subject->class;
     my $id = $subject->id;
+    my $display_name = "(Class: $class, ID: $id)";
 
-    my $rv = ($self->testing ? 1 : eval { Genome::Search->add($subject) });
+    my $rv = ($self->testing ? 1 : eval { Genome::Search->$action($subject) });
     if ($rv) {
-        $self->info("Indexed (Class: $class, ID: $id)");
+        my $message = ($action eq 'add' ? 'Added' : 'Deleted');
+        $self->info("$display_action $display_name");
     }
     else {
-        $self->error("Failed (Class: $class, ID: $id)");
+        my $message = ($action eq 'add' ? 'Failed to add' : 'Failed to delete');
+        $self->info("$display_action $display_name");
     }
 
     return $rv;
