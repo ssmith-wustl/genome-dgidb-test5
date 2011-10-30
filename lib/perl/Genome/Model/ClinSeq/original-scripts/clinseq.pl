@@ -127,7 +127,7 @@ $gene_symbol_lists_dir = &checkDir('-dir'=>$gene_symbol_lists_dir, '-clear'=>"no
 #Fix gene names as they are being imported
 my @symbol_list_names1 = qw (KinasesList CancerGeneCensusList DrugBankAntineoplastic DrugBankInhibitors Druggable_RussLampel TfcatTransFactors FactorBookTransFactors);
 $step++; print MAGENTA, "\n\nStep $step. Importing gene symbol lists (@symbol_list_names1)", RESET;
-my $gene_symbol_lists1 = &importGeneSymbolLists('-gene_symbol_lists_dir'=>$gene_symbol_lists_dir, '-symbol_list_names'=>\@symbol_list_names1, '-entrez_ensembl_data'=>$entrez_ensembl_data, '-verbose'=>$verbose);
+my $gene_symbol_lists1 = &importGeneSymbolLists('-gene_symbol_lists_dir'=>$gene_symbol_lists_dir, '-symbol_list_names'=>\@symbol_list_names1, '-entrez_ensembl_data'=>$entrez_ensembl_data, '-verbose'=>0);
 
 
 #Create a hash for storing output files as they are created
@@ -188,8 +188,6 @@ if ($normal_rnaseq){
 }
 
 
-
-
 #Annotate gene lists to deal with commonly asked questions like: is each gene a kinase?
 #Read in file, get gene name column, fix gene name, compare to list, set answer to 1/0, overwrite old file
 #Repeat this process for each gene symbol list defined
@@ -213,9 +211,11 @@ my $read_counts_script = "$script_dir"."snv/getBamReadCounts.pl";
 foreach my $positions_file (@positions_files){
   my $fb = &getFilePathBase('-path'=>$positions_file);
   my $output_file = $fb->{$positions_file}->{base} . ".readcounts" . $fb->{$positions_file}->{extension};
-
-
-  my $bam_rc_cmd = "$read_counts_script  --positions_file=$positions_file  --wgs_som_var_model_id='$wgs_som_var_model_id'  --exome_som_var_model_id='$exome_som_var_model_id'  --rna_seq_tumor_model_id='$tumor_rna_seq_model_id'  --rna_seq_normal_model_id='$normal_rna_seq_model_id'  --output_file=$output_file";
+  unless($wgs_som_var_model_id){$wgs_som_var_model_id=0;}
+  unless($exome_som_var_model_id){$exome_som_var_model_id=0;}
+  unless($tumor_rna_seq_model_id){$wgs_som_var_model_id=0;}
+  unless($normal_rna_seq_model_id){$normal_rna_seq_model_id=0;}
+  my $bam_rc_cmd = "$read_counts_script  --positions_file=$positions_file  --wgs_som_var_model_id='$wgs_som_var_model_id'  --exome_som_var_model_id='$exome_som_var_model_id'  --rna_seq_tumor_model_id='$tumor_rna_seq_model_id'  --rna_seq_normal_model_id='$normal_rna_seq_model_id'  --output_file=$output_file  --verbose=$verbose";
   if ($verbose){print YELLOW, "\n\n$bam_rc_cmd", RESET;}
   system($bam_rc_cmd);
 }
@@ -491,7 +491,7 @@ sub summarizeSNVs{
       $data_merge{$var_type}{$coord}{var_base} = $data->{var_base};
 
       #Attempt to fix the gene name:
-      my $fixed_gene_name = &fixGeneName('-gene'=>$data->{gene_name}, '-entrez_ensembl_data'=>$entrez_ensembl_data, '-verbose'=>$verbose);
+      my $fixed_gene_name = &fixGeneName('-gene'=>$data->{gene_name}, '-entrez_ensembl_data'=>$entrez_ensembl_data, '-verbose'=>0);
       $data_out{$coord}{mapped_gene_name} = $fixed_gene_name;
       $data_merge{$var_type}{$coord}{mapped_gene_name} = $fixed_gene_name;
 
