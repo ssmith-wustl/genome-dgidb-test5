@@ -60,20 +60,22 @@ use ClinSeq qw(:all);
 #Input parameters
 my $wgs_som_var_model_id = '';
 my $exome_som_var_model_id = '';
-my $rna_seq_model_id = '';
+my $tumor_rna_seq_model_id = '';
+my $normal_rna_seq_model_id = '';
 my $working_dir = '';
 my $common_name = '';
 my $verbose = 0;
 my $clean = 0;
 
-GetOptions ('rna_seq_model_id=s'=>\$rna_seq_model_id, 'wgs_som_var_model_id=s'=>\$wgs_som_var_model_id, 'exome_som_var_model_id=s'=>\$exome_som_var_model_id, 'working_dir=s'=>\$working_dir, 'common_name=s'=>\$common_name, 
-            'verbose=i'=>\$verbose, 'clean=i'=>\$clean);
+GetOptions ('tumor_rna_seq_model_id=s'=>\$tumor_rna_seq_model_id, 'normal_rna_seq_model_id=s'=>\$normal_rna_seq_model_id,
+	    'wgs_som_var_model_id=s'=>\$wgs_som_var_model_id, 'exome_som_var_model_id=s'=>\$exome_som_var_model_id, 
+ 	    'working_dir=s'=>\$working_dir, 'common_name=s'=>\$common_name, 'verbose=i'=>\$verbose, 'clean=i'=>\$clean);
 
 my $usage=<<INFO;
 
   Example usage: 
   
-  clinseq.pl  --wgs_som_var_model_id='2880644349'  --exome_som_var_model_id='2880732183'  --rna_seq_model_id='2880693923'  --working_dir=/gscmnt/sata132/techd/mgriffit/hgs/  --common_name='hg3'
+  clinseq.pl  --wgs_som_var_model_id='2880644349'  --exome_som_var_model_id='2880732183'  --tumor_rna_seq_model_id='2880693923'  --working_dir=/gscmnt/sata132/techd/mgriffit/hgs/  --common_name='hg3'
   
   Intro:
   This script attempts to automate the process of running the 'clinseq' pipeline
@@ -81,7 +83,8 @@ my $usage=<<INFO;
   Details:
   --wgs_som_var_model_id          Whole genome sequence (WGS) somatic variation model ID
   --exome_som_var_model_id        Exome capture sequence somatic variation model ID
-  --rna_seq_model_id              RNA-seq model id
+  --tumor_rna_seq_model_id        RNA-seq model id for the tumor sample
+  --normal_rna_seq_model_id       RNA-seq model id for the normal sample
   --working_dir                   Directory where a patient subdir will be created
   --common_name                   Patient's common name (will be used for the name of a results dir and labeling purposes)
   --verbose                       To display more output, set to 1
@@ -89,7 +92,7 @@ my $usage=<<INFO;
 
 INFO
 
-unless (($wgs_som_var_model_id || $exome_som_var_model_id || $rna_seq_model_id) && $working_dir && $common_name){
+unless (($wgs_som_var_model_id || $exome_som_var_model_id || $tumor_rna_seq_model_id || $normal_rna_seq_model_id) && $working_dir && $common_name){
   print GREEN, "$usage", RESET;
   exit();
 }
@@ -97,10 +100,11 @@ unless (($wgs_som_var_model_id || $exome_som_var_model_id || $rna_seq_model_id) 
 my $step = 0;
 
 #Set flags for each datatype
-my ($wgs, $exome, $rnaseq) = (0,0,0);
+my ($wgs, $exome, $tumor_rnaseq, $normal_rnaseq) = (0,0,0,0);
 if ($wgs_som_var_model_id){$wgs=1;}
 if ($exome_som_var_model_id){$exome=1;}
-if ($rna_seq_model_id){$rnaseq=1;}
+if ($tumor_rna_seq_model_id){$tumor_rnaseq=1;}
+if ($normal_rna_seq_model_id){$normal_rnaseq=1;}
 
 #Check the working dir
 $working_dir = &checkDir('-dir'=>$working_dir, '-clear'=>"no");
@@ -138,9 +142,9 @@ if ($clean){
   $patient_dir = &createNewDir('-path'=>$working_dir, '-new_dir_name'=>$common_name);
 }
 
-#Get build directories for the three datatypes: $data_paths->{'wgs'}->*, $data_paths->{'exome'}->*, $data_paths->{'rnaseq'}->*
+#Get build directories for the three datatypes: $data_paths->{'wgs'}->*, $data_paths->{'exome'}->*, $data_paths->{'tumor_rnaseq'}->*
 $step++; print MAGENTA, "\n\nStep $step. Getting data paths from 'genome' for specified model ids", RESET;
-my $data_paths = &getDataDirs('-wgs_som_var_model_id'=>$wgs_som_var_model_id, '-exome_som_var_model_id'=>$exome_som_var_model_id, '-rna_seq_model_id'=>$rna_seq_model_id);
+my $data_paths = &getDataDirs('-wgs_som_var_model_id'=>$wgs_som_var_model_id, '-exome_som_var_model_id'=>$exome_som_var_model_id, '-tumor_rna_seq_model_id'=>$tumor_rna_seq_model_id, '-normal_rna_seq_model_id'=>$normal_rna_seq_model_id);
 
 
 #Create a summarized file of SNVs for: WGS, exome, and WGS+exome merged
@@ -160,19 +164,30 @@ if ($wgs){
 
 
 #Run RNA-seq analysis on the RNA-seq data (if available)
-if ($rnaseq){
-
-  my $rnaseq_dir = &createNewDir('-path'=>$patient_dir, '-new_dir_name'=>'rnaseq', '-silent'=>1);
-
+if ($tumor_rnaseq){
+  my $rnaseq_dir = &createNewDir('-path'=>$patient_dir, '-new_dir_name'=>'rnaseq_tumor', '-silent'=>1);
+  my $cufflinks_dir = $data_paths->{tumor_rnaseq}->{expression};
+  
   #Perform the single-tumor outlier analysis
   $step++; print MAGENTA, "\n\nStep $step. Summarizing RNA-seq absolute expression values", RESET;
-  &runRnaSeqAbsolute('-data_paths'=>$data_paths, '-out_paths'=>$out_paths, '-rnaseq_dir'=>$rnaseq_dir, '-script_dir'=>$script_dir, '-verbose'=>$verbose);
+  &runRnaSeqAbsolute('-label'=>'tumor_rnaseq_absolute', '-cufflinks_dir'=>$cufflinks_dir, '-out_paths'=>$out_paths, '-rnaseq_dir'=>$rnaseq_dir, '-script_dir'=>$script_dir, '-verbose'=>$verbose);
 
   #Perform the multi-tumor differential outlier analysis
 
+}
+if ($normal_rnaseq){
+  my $rnaseq_dir = &createNewDir('-path'=>$patient_dir, '-new_dir_name'=>'rnaseq_normal', '-silent'=>1);
+  my $cufflinks_dir = $data_paths->{normal_rnaseq}->{expression};
+  
+  #Perform the single-tumor outlier analysis
+  $step++; print MAGENTA, "\n\nStep $step. Summarizing RNA-seq absolute expression values", RESET;
+  &runRnaSeqAbsolute('-label'=>'normal_rnaseq_absolute', '-cufflinks_dir'=>$cufflinks_dir, '-out_paths'=>$out_paths, '-rnaseq_dir'=>$rnaseq_dir, '-script_dir'=>$script_dir, '-verbose'=>$verbose);
 
+  #Perform the multi-tumor differential outlier analysis
 
 }
+
+
 
 
 #Annotate gene lists to deal with commonly asked questions like: is each gene a kinase?
@@ -181,9 +196,29 @@ if ($rnaseq){
 $step++; print MAGENTA, "\n\nStep $step. Annotating gene files", RESET;
 &annotateGeneFiles('-gene_symbol_lists'=>$gene_symbol_lists1, '-out_paths'=>$out_paths);
 
+
 #Create drugDB interaction files
 $step++; print MAGENTA, "\n\nStep $step. Intersecting gene lists with druggable genes of various categories", RESET;
 &drugDbIntersections('-script_dir'=>$script_dir, '-out_paths'=>$out_paths);
+
+
+#For each of the following: WGS SNVs, Exome SNVs, and WGS+Exome SNVs, do the following:
+#Get BAM readcounts for WGS (tumor/normal), Exome (tumor/normal), RNAseq (tumor), RNAseq (normal) - as available of course
+$step++; print MAGENTA, "\n\nStep $step. Getting BAM read counts for all BAM associated with input models (and expression values if available)", RESET;
+my @positions_files;
+if ($wgs){push(@positions_files, $out_paths->{'wgs'}->{'snv'}->{path});}
+if ($exome){push(@positions_files, $out_paths->{'exome'}->{'snv'}->{path});}
+if ($wgs && $exome){push(@positions_files, $out_paths->{'wgs_exome'}->{'snv'}->{path});}
+my $read_counts_script = "$script_dir"."snv/getBamReadCounts.pl";
+foreach my $positions_file (@positions_files){
+  my $fb = &getFilePathBase('-path'=>$positions_file);
+  my $output_file = $fb->{$positions_file}->{base} . ".readcounts" . $fb->{$positions_file}->{extension};
+
+
+  my $bam_rc_cmd = "$read_counts_script  --positions_file=$positions_file  --wgs_som_var_model_id='$wgs_som_var_model_id'  --exome_som_var_model_id='$exome_som_var_model_id'  --rna_seq_tumor_model_id='$tumor_rna_seq_model_id'  --rna_seq_normal_model_id='$normal_rna_seq_model_id'  --output_file=$output_file";
+  if ($verbose){print YELLOW, "\n\n$bam_rc_cmd", RESET;}
+  system($bam_rc_cmd);
+}
 
 
 #Generate a clonality plot for this patient (if WGS data is available)
@@ -211,11 +246,12 @@ sub getDataDirs{
   my %args = @_;
   my $wgs_som_var_model_id = $args{'-wgs_som_var_model_id'};
   my $exome_som_var_model_id = $args{'-exome_som_var_model_id'};
-  my $rna_seq_model_id = $args{'-rna_seq_model_id'};
+  my $tumor_rna_seq_model_id = $args{'-tumor_rna_seq_model_id'};
+  my $normal_rna_seq_model_id = $args{'-normal_rna_seq_model_id'};
 
   my %data_paths;
   
-  my ($wgs_som_var_datadir, $exome_som_var_datadir, $rna_seq_datadir) = ('', '', '');
+  my ($wgs_som_var_datadir, $exome_som_var_datadir, $tumor_rna_seq_datadir, $normal_rna_seq_datadir) = ('', '', '', '');
   if ($wgs_som_var_model_id){
     my $wgs_som_var_model = Genome::Model->get($wgs_som_var_model_id);
     if ($wgs_som_var_model){
@@ -251,20 +287,38 @@ sub getDataDirs{
       exit();
     }
   }
-  if ($rna_seq_model_id){
-    my $rna_seq_model = Genome::Model->get($rna_seq_model_id);
+  if ($tumor_rna_seq_model_id){
+    my $rna_seq_model = Genome::Model->get($tumor_rna_seq_model_id);
       if ($rna_seq_model){
       my $rna_seq_build = $rna_seq_model->last_succeeded_build;
       if ($rna_seq_build){
-        $data_paths{rnaseq}{root} = $rna_seq_build->data_directory ."/";
+        $data_paths{tumor_rnaseq}{root} = $rna_seq_build->data_directory ."/";
         my $alignment_result = $rna_seq_build->alignment_result;
-        $data_paths{rnaseq}{bam} = $alignment_result->bam_file;
+        $data_paths{tumor_rnaseq}{bam} = $alignment_result->bam_file;
       }else{
-        print RED, "\n\nAn RNA-seq model ID was specified, but a successful build could not be found!\n\n", RESET;
+        print RED, "\n\nA tumor RNA-seq model ID was specified, but a successful build could not be found!\n\n", RESET;
         exit();
       }
     }else{
-      print RED, "\n\nAn RNA-seq model ID was specified, but it could not be found!\n\n", RESET;
+      print RED, "\n\nA tumor RNA-seq model ID was specified, but it could not be found!\n\n", RESET;
+      exit();
+    }
+  }
+
+  if ($normal_rna_seq_model_id){
+    my $rna_seq_model = Genome::Model->get($normal_rna_seq_model_id);
+      if ($rna_seq_model){
+      my $rna_seq_build = $rna_seq_model->last_succeeded_build;
+      if ($rna_seq_build){
+        $data_paths{normal_rnaseq}{root} = $rna_seq_build->data_directory ."/";
+        my $alignment_result = $rna_seq_build->alignment_result;
+        $data_paths{normal_rnaseq}{bam} = $alignment_result->bam_file;
+      }else{
+        print RED, "\n\nA normal RNA-seq model ID was specified, but a successful build could not be found!\n\n", RESET;
+        exit();
+      }
+    }else{
+      print RED, "\n\nA normal RNA-seq model ID was specified, but it could not be found!\n\n", RESET;
       exit();
     }
   }
@@ -282,14 +336,24 @@ sub getDataDirs{
     }
   }
 
-  if ($data_paths{rnaseq}{root}){
-    my $root = $data_paths{rnaseq}{root};
-    $data_paths{rnaseq}{alignments} = $root."alignments/";
-    $data_paths{rnaseq}{coverage} = $root."coverage/";
-    $data_paths{rnaseq}{expression} = $root."expression/";
-    $data_paths{rnaseq}{logs} = $root."logs/";
-    $data_paths{rnaseq}{reports} = $root."reports/";
+  if ($data_paths{tumor_rnaseq}{root}){
+    my $root = $data_paths{tumor_rnaseq}{root};
+    $data_paths{tumor_rnaseq}{alignments} = $root."alignments/";
+    $data_paths{tumor_rnaseq}{coverage} = $root."coverage/";
+    $data_paths{tumor_rnaseq}{expression} = $root."expression/";
+    $data_paths{tumor_rnaseq}{logs} = $root."logs/";
+    $data_paths{tumor_rnaseq}{reports} = $root."reports/";
   }
+
+  if ($data_paths{normal_rnaseq}{root}){
+    my $root = $data_paths{normal_rnaseq}{root};
+    $data_paths{normal_rnaseq}{alignments} = $root."alignments/";
+    $data_paths{normal_rnaseq}{coverage} = $root."coverage/";
+    $data_paths{normal_rnaseq}{expression} = $root."expression/";
+    $data_paths{normal_rnaseq}{logs} = $root."logs/";
+    $data_paths{normal_rnaseq}{reports} = $root."reports/";
+  }
+
   #print Dumper %data_paths;
 
   return(\%data_paths);
@@ -540,20 +604,19 @@ sub identifyCnvGenes{
 ###################################################################################################################################
 sub runRnaSeqAbsolute{
   my %args = @_;
-  my $data_paths = $args{'-data_paths'};
+  my $label = $args{'-label'};
+  my $cufflinks_dir = $args{'-cufflinks_dir'};
   my $out_paths = $args{'-out_paths'};
   my $rnaseq_dir = $args{'-rnaseq_dir'};
   my $script_dir = $args{'-script_dir'};
   my $verbose = $args{'-verbose'};
-
-  my $cufflinks_dir = $data_paths->{rnaseq}->{expression};
 
   #Skip this analysis if the directory already exists
   my $test_dir = $rnaseq_dir . "absolute/";
   unless (-e $test_dir && -d $test_dir){
     my $absolute_rnaseq_dir = &createNewDir('-path'=>$rnaseq_dir, '-new_dir_name'=>'absolute', '-silent'=>1);
 
-    my $outliers_cmd = "$script_dir"."rna-seq/outlierGenesAbsolute.pl  --cufflinks_dir=$cufflinks_dir  --working_dir=$absolute_rnaseq_dir  --verbose=$verbose";
+    my $outliers_cmd = "$script_dir"."rnaseq/outlierGenesAbsolute.pl  --cufflinks_dir=$cufflinks_dir  --working_dir=$absolute_rnaseq_dir  --verbose=$verbose";
   
     if ($verbose){print YELLOW, "\n\n$outliers_cmd\n\n", RESET;}
     system($outliers_cmd);
@@ -569,7 +632,7 @@ sub runRnaSeqAbsolute{
         #Only store .tsv files
         if ($file =~ /\.tsv$/){
           #Store the files to be annotated later:
-          $out_paths->{'rnaseq_absolute'}->{$file}->{'path'} = $subdir_path.$file;
+          $out_paths->{$label}->{$file}->{'path'} = $subdir_path.$file;
         }
       }
     }
