@@ -125,9 +125,50 @@ foreach my $bam (sort {$a <=> $b} keys %{$data}){
 #6.) RNAseq Normal Gene FPKM, RNAseq Normal Gene Percentile
 #7.) RNAseq Tumor Ref Count, RNAseq Tumor Var Count, RNAseq Tumor Var Frequency
 #8.) RNAseq Tumor Gene FPKM, RNAseq Tumor Gene Percentile
+my %new_snv;
+foreach my $bam (sort {$a <=> $b} keys %{$data}){
+  my $data_type = $data->{$bam}->{data_type};
+  my $sample_type = $data->{$bam}->{sample_type};
+  my $read_counts = $data->{$bam}->{read_counts};
 
+  my $new_header = "\t$data_type"."_"."$sample_type"."_ref_rc\t"."$data_type"."_"."$sample_type"."_var_rc\t"."$data_type"."_"."$sample_type"."_VAF";
+  $snv_header .= $new_header;
+  foreach my $snv_pos (keys %{$read_counts}){
+    my $total_rc = $read_counts->{$snv_pos}->{total_rc};
+    my $ref_rc = $read_counts->{$snv_pos}->{ref_rc};
+    my $var_rc = $read_counts->{$snv_pos}->{var_rc};
+    my $var_allele_frequency = $read_counts->{$snv_pos}->{var_allele_frequency};
+    if ($new_snv{$snv_pos}){
+      $new_snv{$snv_pos}{read_count_string} .= "\t$ref_rc\t$var_rc\t$var_allele_frequency";
+    }else{
+      $new_snv{$snv_pos}{read_count_string} = "\t$ref_rc\t$var_rc\t$var_allele_frequency";
+    }
+  }
 
+  if (defined($data->{$bam}->{gene_expression})){
+    my $gene_exp = $data->{$bam}->{gene_expression};
+    my $new_header = "\t$data_type"."_"."$sample_type"."_gene_FPKM\t"."$data_type"."_"."$sample_type"."_gene_FPKM_percentile";
+    $snv_header .= $new_header;
+    foreach my $snv_pos (keys %{$gene_exp}){
+      my $fpkm = $gene_exp->{$snv_pos}->{FPKM};
+      my $percentile = $gene_exp->{$snv_pos}->{percentile};
+      my $rank = $gene_exp->{$snv_pos}->{rank};
+      if ($new_snv{$snv_pos}){
+        $new_snv{$snv_pos}{read_count_string} .= "\t$fpkm\t$percentile";
+      }else{
+        $new_snv{$snv_pos}{read_count_string} = "\t$fpkm\t$percentile";
+      }
+    }
+  }
+}
 
+open (OUT, ">$output_file") || die "\n\nCould not open output file: $output_file\n\n";
+print OUT "$snv_header\n";
+foreach my $snv_pos (sort {$snvs->{$a}->{order} <=> $snvs->{$b}->{order}} keys %{$snvs}){
+  my $read_count_string = $new_snv{$snv_pos}{read_count_string};
+  print OUT "$snvs->{$snv_pos}->{line}"."$read_count_string\n";
+}
+close (OUT);
 
 print Dumper $data;
 
