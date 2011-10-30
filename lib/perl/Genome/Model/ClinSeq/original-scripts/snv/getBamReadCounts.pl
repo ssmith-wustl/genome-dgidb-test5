@@ -80,8 +80,10 @@ unless (-e $positions_file){
 my $entrez_ensembl_data = &loadEntrezEnsemblData();
 
 #Import SNVs from the specified file
-my $snvs = &importPositions('-positions_file'=>$positions_file);
-#print Dumper $snvs;
+my $result = &importPositions('-positions_file'=>$positions_file);
+my $snvs = $result->{'snvs'};
+my $snv_header = $result->{'header'};
+#print Dumper $result;
 
 #Get BAM file paths from build IDs.  Perform sanity checks
 my $data = &getFilePaths('-wgs_som_var_model_id'=>$wgs_som_var_model_id, '-exome_som_var_model_id'=>$exome_som_var_model_id, '-rna_seq_normal_model_id'=>$rna_seq_normal_model_id, '-rna_seq_tumor_model_id'=>$rna_seq_tumor_model_id);
@@ -97,8 +99,8 @@ foreach my $bam (sort {$a <=> $b} keys %{$data}){
   my $snv_count = keys %{$snvs};
 
   if ($verbose){print YELLOW, "\n\nSNV count = $snv_count\n$data_type\n$sample_type\n$bam_path\n$ref_fasta\n", RESET};
-  #my $counts = &getBamReadCounts('-snvs'=>$snvs, '-data_type'=>$data_type, '-sample_type'=>$sample_type, '-bam_path'=>$bam_path, '-ref_fasta'=>$ref_fasta, '-verbose'=>$verbose);
-  #$data->{$bam}->{read_counts} = $counts;
+  my $counts = &getBamReadCounts('-snvs'=>$snvs, '-data_type'=>$data_type, '-sample_type'=>$sample_type, '-bam_path'=>$bam_path, '-ref_fasta'=>$ref_fasta, '-verbose'=>$verbose);
+  $data->{$bam}->{read_counts} = $counts;
 }
 
 
@@ -125,6 +127,7 @@ foreach my $bam (sort {$a <=> $b} keys %{$data}){
 #6.) RNAseq Normal Gene FPKM, RNAseq Normal Gene Percentile
 #7.) RNAseq Tumor Ref Count, RNAseq Tumor Var Count, RNAseq Tumor Var Frequency
 #8.) RNAseq Tumor Gene FPKM, RNAseq Tumor Gene Percentile
+
 my %new_snv;
 foreach my $bam (sort {$a <=> $b} keys %{$data}){
   my $data_type = $data->{$bam}->{data_type};
@@ -166,11 +169,11 @@ open (OUT, ">$output_file") || die "\n\nCould not open output file: $output_file
 print OUT "$snv_header\n";
 foreach my $snv_pos (sort {$snvs->{$a}->{order} <=> $snvs->{$b}->{order}} keys %{$snvs}){
   my $read_count_string = $new_snv{$snv_pos}{read_count_string};
-  print OUT "$snvs->{$snv_pos}->{line}"."$read_count_string\n";
+  print OUT "$snvs->{$snv_pos}->{line}"."$read_count_string\n";  
 }
 close (OUT);
 
-print Dumper $data;
+#print Dumper $data;
 
 print "\n\n";
 
@@ -183,10 +186,13 @@ exit();
 sub importPositions{
   my %args = @_;
   my $infile = $args{'-positions_file'};
+  my %result;
   my %s;
 
   my $header = 1;
+  my $header_line;
   my %columns;
+  my $order = 0;
   open (SNV, "$infile") || die "\n\nCould not open input SNV file: $infile\n\n";
   while(<SNV>){
     chomp($_);
@@ -198,6 +204,7 @@ sub importPositions{
         $p++;
       }
       $header = 0;
+      $header_line = $_;
       #Make sure all neccessary columns are defined
       unless (defined($columns{'coord'}) && defined($columns{'mapped_gene_name'}) && defined($columns{'ref_base'}) && defined($columns{'var_base'})){
         print RED, "\n\nRequired column missing from file: $infile (need: coord, mapped_gene_name, ref_base, var_base)", RESET;
@@ -205,7 +212,9 @@ sub importPositions{
       }
       next();
     }
+    $order++;
     my $coord = $line[$columns{'coord'}{position}];
+    $s{$coord}{order} = $order;
     $s{$coord}{mapped_gene_name} = $line[$columns{'mapped_gene_name'}{position}];
     $s{$coord}{ref_base} = $line[$columns{'ref_base'}{position}];
     $s{$coord}{var_base} = $line[$columns{'var_base'}{position}];
@@ -222,7 +231,9 @@ sub importPositions{
 
   }
   close(SNV);
-  return(\%s);
+  $result{'snvs'} = \%s;
+  $result{'header'} = $header_line;
+  return(\%result);
 }
 
 
