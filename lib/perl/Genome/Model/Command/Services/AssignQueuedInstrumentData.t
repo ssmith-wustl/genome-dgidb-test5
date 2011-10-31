@@ -210,7 +210,7 @@ my @members = $group->models;
 ok(grep($_ eq $new_model, @members), 'group contains the newly created model');
 
 my $instrument_data_ignored = Genome::InstrumentData::Solexa->create(
-    id => '-101',
+    id => '-1101',
     library_id => $library->id,
     flow_cell_id => 'TM-021',
     lane => '2',

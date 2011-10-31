@@ -7,7 +7,7 @@ use Genome;
 
 class Genome::Sample::Command {
     is => 'Command::Tree',
-    doc => 'Work with samples',
+    doc => 'work with samples',
 };
 
 use Genome::Command::Crud;

@@ -7,7 +7,7 @@ use Genome;
 
 class Genome::Project::Command::Add {
     is => 'Command::Tree',
-    doc => 'Add objects to projects',
+    doc => 'add objects to projects',
 };
 
 1;

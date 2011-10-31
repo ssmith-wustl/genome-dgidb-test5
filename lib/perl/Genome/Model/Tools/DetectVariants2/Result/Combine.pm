@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 
 class Genome::Model::Tools::DetectVariants2::Result::Combine {
-    is  => ['Genome::SoftwareResult::Stageable'],
+    is  => ['Genome::Model::Tools::DetectVariants2::Result::Base'],
     has_input => [
         input_a_id => {
             is => 'Text',
@@ -25,11 +25,11 @@ class Genome::Model::Tools::DetectVariants2::Result::Combine {
         # filters and detectors are Result/Base
         # combine are not (because Result/Base has a lot of properties that aren't needed)
         input_a => {
-            is => 'Genome::SoftwareResult',
+            is => 'Genome::Model::Tools::DetectVariants2::Result::Base',
             id_by => 'input_a_id',
         },
         input_b => {
-            is => 'Genome::SoftwareResult',
+            is => 'Genome::Model::Tools::DetectVariants2::Result::Base',
             id_by => 'input_b_id',
         },
         input_directory_a => {

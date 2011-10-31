@@ -34,9 +34,8 @@ class Genome::Project::Command::Remove::Part {
             doc => 'The label for the part',
         },
     ],
+    doc => 'remove parts from projects',
 };
-
-sub sub_command_sort_position { .6 };
 
 sub help_synopsis {
     my $class = shift;

@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 
 class Genome::Model::Tools::DetectVariants2::Result::Filter {
-    is => ['Genome::Model::Tools::DetectVariants2::Result::Base'],
+    is => ['Genome::Model::Tools::DetectVariants2::Result::DetectionBase'],
     has_param => [
         filter_name => {
             is => 'Text',

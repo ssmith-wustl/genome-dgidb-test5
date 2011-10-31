@@ -7,7 +7,7 @@ use Genome;
       
 class Genome::Taxon::Command {
     is => 'Command::Tree',
-    doc => 'Work with taxons',
+    doc => 'work with taxons',
 };
 
 use Genome::Command::Crud;

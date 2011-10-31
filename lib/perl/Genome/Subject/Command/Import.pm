@@ -9,7 +9,6 @@ use MIME::Base64;
 use Text::CSV;
 use IO::Scalar;
 
-
 class Genome::Subject::Command::Import {
     is => 'Command',
     has => [
@@ -26,7 +25,7 @@ class Genome::Subject::Command::Import {
 };
 
 sub help_brief {
-    return 'Import subjects and subject attributes from CSV (used by web interface)';
+    return 'Import subjects/attributes from web';
 }
 
 sub create {

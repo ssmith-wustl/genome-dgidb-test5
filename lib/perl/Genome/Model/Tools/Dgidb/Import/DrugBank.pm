@@ -125,35 +125,41 @@ sub _import_drug {
     my $self = shift;
     my $version = $self->version;
     my $interaction = shift;
-    my $drug_name = $self->_create_drug_name($interaction->{drug_name}, 'todo', 'DrugBank', $version, ''); #TODO: fill in nomenclature
+    my $drug_name = $self->_create_drug_name_report($interaction->{drug_name}, 'Primary DrugBank drug name', 'DrugBank', $version, '');
 
     my @drug_synonyms = split(', ', $interaction->{drug_synonyms});
     for my $drug_synonym (@drug_synonyms){
         $DB::single = 1;
-        my $drug_name_association = $self->_create_drug_name_association($drug_name, $drug_synonym, 'todo', ''); #TODO: fill in nomenclature
+        next if $drug_synonym eq 'na';
+        my $drug_name_association = $self->_create_drug_name_report_association($drug_name, $drug_synonym, 'DrugBank primary name to synonym association', '');
     }
 
     my @drug_brands = split(', ', $interaction->{drug_brands});
     for my $drug_brand (@drug_brands){
+        next if $drug_brand eq 'na';
         my ($brand, $manufacturer) = split(/ \(/, $drug_brand); 
         if ($manufacturer){
             $manufacturer =~ s/\)// ;
         } else {
             $manufacturer = 'drug_brand';
         }
-        my $drug_name_association = $self->_create_drug_name_association($drug_name, $drug_brand, $manufacturer, '');
+        my $drug_name_association = $self->_create_drug_name_report_association($drug_name, $drug_brand, $manufacturer, '');
     }
 
-    my $drug_name_category_association = $self->_create_drug_name_category_association($drug_name, $interaction->{drug_type}, '');
+    unless($interaction->{drug_type} eq 'na'){
+        my $drug_name_category_association = $self->_create_drug_name_report_category_association($drug_name, 'drug_type', $interaction->{drug_type}, '');
+    }
 
     my @drug_categories = split(', ', $interaction->{drug_categories});
     for my $drug_category (@drug_categories){
-        my $category_association = $self->_create_drug_name_category_association($drug_name, $drug_category, '');
+        next if $drug_category eq 'na';
+        my $category_association = $self->_create_drug_name_report_category_association($drug_name, 'drug_category', $drug_category, '');
     }
 
     my @drug_groups = split(', ', $interaction->{drug_groups});
     for my $drug_group (@drug_groups){
-        my $group_association = $self->_create_drug_name_category_association($drug_name, $drug_group, '');
+        next if $drug_group eq 'na';
+        my $group_association = $self->_create_drug_name_report_category_association($drug_name, 'drug_group', $drug_group, '');
     }
 
     return $drug_name;
@@ -163,9 +169,9 @@ sub _import_gene {
     my $self = shift;
     my $version = $self->version;
     my $interaction = shift;
-    my $gene_name = $self->_create_gene_name($interaction->{partner_id}, 'drugbank_partner_id', 'DrugBank', $version, ''); #TODO: verify nomenclature is correct
-    my $gene_symbol_gene_name_association = $self->_create_gene_name_association($gene_name, $interaction->{gene_symbol}, 'gene_symbol', ''); #TODO: verify nomenclature is correct
-    my $uniprot_gene_name_association=$self->_create_gene_name_association($gene_name, $interaction->{uniprot_id}, 'uniprot_id', '');
+    my $gene_name = $self->_create_gene_name_report($interaction->{partner_id}, 'drugbank_partner_id', 'DrugBank', $version, '');
+    my $gene_symbol_gene_name_association = $self->_create_gene_name_report_association($gene_name, $interaction->{gene_symbol}, 'drugbank_gene_symbol', '');
+    my $uniprot_gene_name_association=$self->_create_gene_name_report_association($gene_name, $interaction->{uniprot_id}, 'uniprot_id', '');
     return $gene_name;
 }
 
@@ -186,9 +192,9 @@ sub import_interactions {
     while(my $interaction = $parser->next){
         my $drug_name = $self->_import_drug($interaction);
         my $gene_name = $self->_import_gene($interaction);
-        my $drug_gene_interaction = $self->_create_interaction($drug_name, $gene_name, $interaction->{target_actions}, '');
+        my $drug_gene_interaction = $self->_create_interaction_report($drug_name, $gene_name, $interaction->{target_actions}, '');
         push @interactions, $drug_gene_interaction;
-        my $is_known_action = $self->_create_interaction_attribute($drug_gene_interaction, 'is_known_action', $interaction->{'known_action'});
+        my $is_known_action = $self->_create_interaction_report_attribute($drug_gene_interaction, 'is_known_action', $interaction->{'known_action'});
     }
 
     return @interactions;
@@ -200,20 +206,20 @@ sub preload_objects {
     my $source_db_version = $self->version;
 
     #Let's preload anything for this database name and version so that we can avoid death by 1000 queries
-    my @gene_names = Genome::GeneName->get(source_db_name => $source_db_name, source_db_version => $source_db_version);
+    my @gene_names = Genome::GeneNameReport->get(source_db_name => $source_db_name, source_db_version => $source_db_version);
     for my $gene_name (@gene_names){
-        $gene_name->gene_name_associations;
-        $gene_name->gene_name_category_associations;
+        $gene_name->gene_name_report_associations;
+        $gene_name->gene_name_category_report_associations;
     }
-    my @drug_names = Genome::DrugName->get(source_db_name => $source_db_name, source_db_version => $source_db_version);
+    my @drug_names = Genome::DrugNameReport->get(source_db_name => $source_db_name, source_db_version => $source_db_version);
     for my $drug_name (@drug_names){
-        $drug_name->drug_name_associations;
-        $drug_name->drug_name_category_associations;
+        $drug_name->drug_name_report_associations;
+        $drug_name->drug_name_report_category_associations;
     }
     my @gene_ids = map($_->id, @gene_names);
-    my @interactions = Genome::DrugGeneInteraction->get(gene_name_id => \@gene_ids);
+    my @interactions = Genome::DrugGeneInteractionReport->get(gene_name_report_id => \@gene_ids);
     for my $interaction (@interactions){
-        $interaction->drug_gene_interaction_attributes;
+        $interaction->drug_gene_interaction_report_attributes;
     }
 
     return 1;

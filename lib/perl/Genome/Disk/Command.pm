@@ -7,7 +7,7 @@ use Genome;
 
 class Genome::Disk::Command {
     is => 'Command::Tree',
-    doc => 'Commands that work with allocations, volumes, etc',
+    doc => 'commands that work with allocations, volumes, etc',
 };
 
 1;

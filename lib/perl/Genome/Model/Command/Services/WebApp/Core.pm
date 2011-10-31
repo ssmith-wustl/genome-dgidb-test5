@@ -25,11 +25,16 @@ sub import {
             return if (index($File::Find::name, 'Genome/Model/Tools') >= 0);
             return if (index($File::Find::name, 'Test.pm') >= 0);
             return if (index($File::Find::dir, '.d') >= 0);
+            
 
             my $name = 'Genome' . substr($File::Find::name, length($base_dir));
             $name =~ s/\//::/g;
-            substr($name, index($name, '.pm'), 3, '');
+            
 
+            substr($name, index($name, '.pm'), 3, '');
+            
+            #skip things which cannot compose to a package name and be 'used'
+            return if $name =~ /[\-\.]/;
             push @classes, $name;
         },
         $base_dir
