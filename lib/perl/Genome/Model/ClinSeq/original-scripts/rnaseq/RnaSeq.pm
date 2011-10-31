@@ -16,7 +16,7 @@ use strict;
 use warnings;
 use Data::Dumper;
 use Term::ANSIColor qw(:constants);
-use lib qw(..);
+use lib File::Basename::dirname(__FILE__).'/..';
 use ClinSeq qw(:all);
 
 
