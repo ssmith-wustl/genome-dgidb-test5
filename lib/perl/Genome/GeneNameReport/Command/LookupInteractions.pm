@@ -76,7 +76,7 @@ sub get_interactions {
     my $gene_name_report_results = shift;
 
     for my $gene_name_report (@{$gene_name_report_results->{$gene_identifier}->{'gene_name_reports'}}){
-        my @interactions = $gene_name_report->drug_gene_interactions;
+        my @interactions = $gene_name_report->drug_gene_interaction_reports;
         $gene_name_report_results->{$gene_identifier}->{'interactions'} = \@interactions;
     }
     return $gene_name_report_results;
