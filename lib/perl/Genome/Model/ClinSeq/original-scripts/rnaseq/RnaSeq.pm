@@ -16,6 +16,7 @@ use strict;
 use warnings;
 use Data::Dumper;
 use Term::ANSIColor qw(:constants);
+use lib qw(..);
 use ClinSeq qw(:all);
 
 
