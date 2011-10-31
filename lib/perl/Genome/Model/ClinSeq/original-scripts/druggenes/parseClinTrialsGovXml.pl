@@ -38,9 +38,16 @@ use Getopt::Long;
 use Data::Dumper;
 use XML::Simple;
 binmode(STDOUT, ":utf8");
-use lib '/gscmnt/sata206/techd/git/genome/lib/perl/Genome/ProcessingProfile/ClinSeq.pm.d/';
+use Cwd 'abs_path';
+my $script_dir;
+BEGIN{
+  if (abs_path($0) =~ /(.*\/).*\/.*\.pl/){
+    $script_dir = $1;
+  }
+}
+use lib $script_dir;
 use ClinSeq qw(:all);
-use lib '/gscmnt/sata206/techd/git/genome/lib/perl/Genome/ProcessingProfile/ClinSeq.pm.d/drug-genes/';
+use lib $script_dir."/drug-genes";
 use utility qw(:all);
 
 my $annotation_dir = '';

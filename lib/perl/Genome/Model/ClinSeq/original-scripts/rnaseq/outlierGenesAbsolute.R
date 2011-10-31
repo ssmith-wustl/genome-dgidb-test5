@@ -52,8 +52,6 @@ genes_fpkm = read.table(file=genes_fpkm_namesort_file, header=TRUE, as.is=c(1:4,
 isoforms_fpkm = read.table(file=isoforms_fpkm_namesort_file, header=TRUE, as.is=c(1:4,10), na.strings=c("na","-","NA","N/A","n/a"))
 isoforms_merged_fpkm = read.table(file=isoforms_merged_fpkm_namesort_file, header=TRUE, as.is=c(1:4,10), na.strings=c("na","-","NA","N/A","n/a"))
 
-
-
 writeFiles = function(data, outfile, outfile_goi, outfile_top, outfile_top_goi){
   #Write out the FPKM ordered files (with all data entries) - append a rank column as well
   o = order(data[,"FPKM"], na.last = TRUE, decreasing = TRUE)

@@ -15,13 +15,17 @@ use Data::Dumper;
 use File::Basename;
 use Cwd 'abs_path';
 
-use lib '/gscmnt/sata206/techd/git/genome/lib/perl/Genome/ProcessingProfile/ClinSeq.pm.d';
-use ClinSeq qw(:all);
-
 my $script_dir;
-if (abs_path($0) =~ /(.*)\/.*\.pl/){
-  $script_dir = $1;
+my $lib_dir;
+use Cwd 'abs_path';
+BEGIN{
+  if (abs_path($0) =~ /(.*\/)(.*\/).*\.pl/){
+    $lib_dir = $1;
+    $script_dir = $1.$2;
+  }
 }
+use lib $lib_dir;
+use ClinSeq qw(:all);
 
 #Required
 my $reference_build = '';

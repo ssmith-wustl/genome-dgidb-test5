@@ -15,20 +15,21 @@ class Genome::Model::Tools::Joinx::VcfMerge {
             doc => 'List of bed files to sort',
             shell_args_position => 1,
         },
-        joinx_bin_path => {
-            is => 'Text',
-            doc => 'path to the joinx binary to use. This tool is being released before joinx vcf-merge will be released. This will go away when it is.',
-        },
     ],
     has_optional_input => [
         output_file => {
             is => 'Text',
+            is_output => 1,
             doc => 'The output file (defaults to stdout)',
         },
         use_bgzip => {
             is => 'Boolean',
             doc => 'zcats the input files into stdin, and bgzips the output',
             default => 0,
+        },
+        joinx_bin_path => {
+            is => 'Text',
+            doc => 'path to the joinx binary to use. This tool is being released before joinx vcf-merge will be released. This will go away when it is.',
         },
     ],
 };
@@ -71,7 +72,10 @@ sub execute {
         }
         @inputs = @new_inputs;
     }
-    
+
+    unless($self->joinx_bin_path){
+        $self->joinx_bin_path("joinx");
+    }
     my $cmd = $self->joinx_bin_path . " vcf-merge " . join(" ", @inputs);
     if(defined($self->output_file) && not defined($self->use_bgzip)){
         $cmd .= " -o $output" if defined($self->output_file);

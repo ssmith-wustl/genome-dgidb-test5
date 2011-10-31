@@ -30,6 +30,7 @@ sub _create_drug_name_report {
     );
 
     my $drug_name_report = Genome::DrugNameReport->get(%params);
+    my $drug_name = $self->_get_or_create_drug_name($name);
     return $drug_name_report if $drug_name_report;
     return Genome::DrugNameReport->create(%params);
 }
@@ -58,6 +59,16 @@ sub _create_drug_name_report_category_association {
     return Genome::DrugNameReportCategoryAssociation->create(%params);
 }
 
+sub _get_or_create_drug_name {
+    my $self = shift;
+    my ($name) = @_;
+    my $drug_name = Genome::DrugName->get(name => $name);
+    unless($drug_name){
+        $drug_name = Genome::DrugName->create(name => $name);
+    }
+    return $drug_name;
+}
+
 sub _create_gene_name_report {
     my $self = shift;
     my ($name, $nomenclature, $source_db_name, $source_db_version, $description) = @_;
@@ -69,6 +80,7 @@ sub _create_gene_name_report {
         description => $description,
     );
 
+    my $gene_name = $self->_get_or_create_gene_name($name);
     if($name ne 'na'){
         my $gene_name_report = Genome::GeneNameReport->get(%params);
         return $gene_name_report if $gene_name_report;
@@ -102,6 +114,16 @@ sub _create_gene_name_report_category_association {
     return Genome::GeneNameReportCategoryAssociation->create(%params);
 }
 
+sub _get_or_create_gene_name {
+    my $self = shift;
+    my ($name) = @_;
+    my $gene_name = Genome::GeneName->get(name => $name);
+    unless($gene_name){
+        $gene_name = Genome::GeneName->create(name => $name);
+    }
+    return $gene_name;
+}
+
 sub _create_interaction_report {
     my $self = shift;
     my ($drug_name_report, $gene_name_report, $type, $description) = @_;
@@ -112,6 +134,7 @@ sub _create_interaction_report {
         description =>  $description,
     );
 
+    my $drug_gene_interaction = $self->_get_or_create_drug_gene_interaction($drug_name_report->name, $gene_name_report->name);
     my $interaction = Genome::DrugGeneInteractionReport->get(%params);
     return $interaction if $interaction;
     return Genome::DrugGeneInteractionReport->create(%params);
@@ -126,6 +149,17 @@ sub _create_interaction_report_attribute {
         value => $value,
     );
     return Genome::DrugGeneInteractionReportAttribute->create(%params);
+}
+
+sub _get_or_create_drug_gene_interaction {
+    my $self = shift;
+    my ($drug_name, $gene_name) = @_;
+    my $drug_gene_interaction = Genome::DrugGeneInteraction->get(drug_name => $drug_name, gene_name => $gene_name);
+    unless($drug_gene_interaction){
+        $drug_gene_interaction = Genome::DrugGeneInteraction->create(drug_name => $drug_name, gene_name => $gene_name);
+    }
+    return $drug_gene_interaction;
+
 }
 
 1;

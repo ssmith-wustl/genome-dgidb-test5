@@ -1,36 +1,32 @@
 <script src="/res/js/app/genome_subject_set_create.js"/>
 <div id="sampleUpload" class="span-16 append-4 prepend-4 last" style="margin-top: 20px">
 
-<!--    
-    <form id="create-samples" action="/view/x/subject-upload" method='POST' enctype="form-data">
--->
-
     <form id="create-samples" action="/view/x/subject-upload" method='POST' enctype="multipart/form-data">
 
       <input type="hidden" id="filetype" name="filetype"/>
       <fieldset>
-<!--    <legend>do stuff</legend> -->
         <p>
           <span style="font-weight: bold">1. Select the CSV file on your computer which contains your subject data.</span>
           <br/>The first column should contain the name of the sample to be updated or blank to create a new sample.
           <br/><br/>
           <input type="file" id="file" name="file"/>
         </p>
-        <br/>
-
         <span style="font-weight: bold">2. Each row of your file represents a ...</span><br/>
         <input type="radio" id="subclass-name-sample" name="subclass_name" value="Genome::Sample" checked="CHECKED">Sample</input>
         <br/>
         <input type="radio" id="subclass-name-individual" name="subclass_name" value="Genome::Individual"> Patient</input>
-        <br/><br/><br/>
-
-        <span style="font-weight: bold">3. Which nomenclature?</span>&#160;<input size='50' class="text" id="nomenclature" name="nomenclature"/>
-        (<a href="/view/genome/nomenclature/set/status.html">see a list</a>)
         <br/>
-      </fieldset>
+        <span style="font-weight: bold">3. Which nomenclature?</span>&#160;<input size='50' class="text" id="nomenclature" name="nomenclature"/>
+        <a href="/view/genome/nomenclature/set/create.html">Create a new one</a>
+        <p><i>A nomenclature defines the collection of columns in your spreadsheet.</i></p>
+        <ul>
+        <li><a href="/view/genome/nomenclature/set/status.html">See a list of nomenclatures</a></li>
+        </ul>
+
       <div>
         <p style="text-align: right;"><button id="submit-button">Save</button></p>
       </div>
+      </fieldset>
     </form>
 </div>
 

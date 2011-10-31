@@ -48,7 +48,6 @@ sub help_synopsis {
 sub execute {
     my $self = shift;
     $self->models([$self->model_group->models]) unless $self->models;
-    my $qcdir = $self->qc_directory;
 
     my $group_id = $self->model_group->id;
     my $subject_summary_file = Genome::Sys->open_file_for_overwriting($self->output_directory . "/$group_id.subject_summary.csv");

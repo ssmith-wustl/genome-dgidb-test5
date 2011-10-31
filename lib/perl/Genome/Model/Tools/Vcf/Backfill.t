@@ -9,7 +9,7 @@ use Test::More tests => 5;
 use_ok('Genome::Model::Tools::Vcf::Backfill');
 
 my $test_dir = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Vcf-Backfill";
-my $expected_base = "expected.v1";
+my $expected_base = "expected.v2";
 my $expected_dir = "$test_dir/$expected_base";
 my $expected_file = "$expected_dir/output.vcf";
 

@@ -1,4 +1,4 @@
-package Genome::Model::Command::Services::TaskRunner;
+package Genome::Sys::Command::Services::TaskRunner;
 
 use warnings;
 use strict;
@@ -6,8 +6,9 @@ use Genome;
 use JSON::XS;
 use File::Path;
 
-class Genome::Model::Command::Services::TaskRunner {
-    is => 'Genome::Command::Base',
+class Genome::Sys::Command::Services::TaskRunner {
+    is => 'Command',
+    doc => 'Runner for scheduled tasks',
     has => [
         output_basedir => {
             is => 'String',
