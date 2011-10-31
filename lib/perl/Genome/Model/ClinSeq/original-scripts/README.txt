@@ -39,7 +39,6 @@
 #- Overlap of observed mutations with Cosmic / OMIM sites (use MUSIC?)
 #- Overlap of observed mutations with TGI recurrent sites
 
-
 #Summary stats.
 #A descriptive stats, question/answer table
 #Every record in the table will have the following:
@@ -52,11 +51,13 @@
 
 
 #Figures
-# - Scatter plot of Variant Allele Frequency in WGS Tumor vs Exome Tumor - report the R^2 and n
-# - Scatter plot of Variant Allele Frequency in WGS Normal vs Exome Normal - report the R^2 and n
+#- Scatter plot of Variant Allele Frequency in WGS Tumor vs Exome Tumor - report the R^2 and n
+#- Scatter plot of Variant Allele Frequency in WGS Normal vs Exome Normal - report the R^2 and n
 
-
-
+#- Experiment with some ways to visualize mutation variant allele frequency in combination with RNA expression
+#  - WGS VAF (total RC) + Exome VAF (total RC) + RNA-seq VAF (total RC) + RNA-seq Gene FPKM...
+#  - bar plot? 
+#  - scatter plot of Exome VAF vs. RNAseq VAF and then color points according to gene FPKM
 
 
 
