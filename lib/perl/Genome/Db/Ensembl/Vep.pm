@@ -5,7 +5,7 @@ use warnings;
 use Genome;
 
 my $VEP_SCRIPT_PATH = "Vep.d/vep";
-my $ENSEMBL_API_PATH = "ensembl-64";
+my $ENSEMBL_API_PATH = $ENV{GENOME_DB_ENSEMBL_API_PATH};
 
 class Genome::Db::Ensembl::Vep {
     is => 'Command',

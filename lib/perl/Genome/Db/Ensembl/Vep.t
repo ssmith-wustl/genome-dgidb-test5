@@ -35,8 +35,6 @@ ok(-s $output_file, 'output file is non-zero');
 my $expected = `cat $expected_output_file | grep -v "Output produced at"`;
 my $output = `cat $output_file | grep -v "Output produced at"`;
 
-#TODO: currently the results won't contain sift scores because db is not yet in place
-#must update expected output once we get the db.
 my $diff = Genome::Sys->diff_text_vs_text($output, $expected);
 ok(!$diff, 'output matched expected result');
 
