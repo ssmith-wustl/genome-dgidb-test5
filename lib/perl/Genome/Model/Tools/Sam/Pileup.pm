@@ -54,10 +54,12 @@ sub execute {
     #check to see if the region file is gzipped, if so, pipe zcat output to the -l
     my $rf = $self->region_file;
     my $region_file = undef;
-    if($rf =~ m/.bed.gz$/){
-        $region_file = "-l <(zcat ".$rf.") ";
-    }elsif (defined($rf)){
-        $region_file = "-l ".$rf;
+    if(defined($self->region_file)){
+        if($rf =~ m/.bed.gz$/){
+            $region_file = "-l <(zcat ".$rf.") ";
+        }elsif (defined($rf)){
+            $region_file = "-l ".$rf;
+        }
     }
 
     #if bgzip is set, push the output through bgzip then to disk
