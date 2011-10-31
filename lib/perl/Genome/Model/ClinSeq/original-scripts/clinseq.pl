@@ -213,11 +213,15 @@ foreach my $positions_file (@positions_files){
   my $output_file = $fb->{$positions_file}->{base} . ".readcounts" . $fb->{$positions_file}->{extension};
   unless($wgs_som_var_model_id){$wgs_som_var_model_id=0;}
   unless($exome_som_var_model_id){$exome_som_var_model_id=0;}
-  unless($tumor_rna_seq_model_id){$wgs_som_var_model_id=0;}
+  unless($tumor_rna_seq_model_id){$tumor_rna_seq_model_id=0;}
   unless($normal_rna_seq_model_id){$normal_rna_seq_model_id=0;}
-  my $bam_rc_cmd = "$read_counts_script  --positions_file=$positions_file  --wgs_som_var_model_id='$wgs_som_var_model_id'  --exome_som_var_model_id='$exome_som_var_model_id'  --rna_seq_tumor_model_id='$tumor_rna_seq_model_id'  --rna_seq_normal_model_id='$normal_rna_seq_model_id'  --output_file=$output_file  --verbose=$verbose";
-  if ($verbose){print YELLOW, "\n\n$bam_rc_cmd", RESET;}
-  system($bam_rc_cmd);
+  if(-e $output_file){
+    if ($verbose){print YELLOW, "\n\nOutput bam read counts file already exists:\n\t$output_file", RESET;}
+  }else{
+    my $bam_rc_cmd = "$read_counts_script  --positions_file=$positions_file  --wgs_som_var_model_id='$wgs_som_var_model_id'  --exome_som_var_model_id='$exome_som_var_model_id'  --rna_seq_tumor_model_id='$tumor_rna_seq_model_id'  --rna_seq_normal_model_id='$normal_rna_seq_model_id'  --output_file=$output_file  --verbose=$verbose";
+    if ($verbose){print YELLOW, "\n\n$bam_rc_cmd", RESET;}
+    system($bam_rc_cmd);
+  }
 }
 
 
@@ -225,9 +229,12 @@ foreach my $positions_file (@positions_files){
 if ($wgs){
   $step++; print MAGENTA, "\n\nStep $step. Creating clonality plot for $common_name", RESET;
   my $test_dir = $patient_dir . "clonality/";
-  unless (-e $test_dir && -d $test_dir){
+  if (-e $test_dir && -d $test_dir){
+    if ($verbose){print YELLOW, "\n\nClonality dir already exists - skipping", RESET;}
+  }else{
     my $clonality_dir = &createNewDir('-path'=>$patient_dir, '-new_dir_name'=>'clonality', '-silent'=>1);
     my $master_clonality_cmd = "$script_dir"."snv/generateClonalityPlot.pl  --somatic_var_model_id=$wgs_som_var_model_id  --working_dir=$clonality_dir  --common_name='$common_name'  --verbose=1";
+    if ($verbose){print YELLOW, "\n\n$master_clonality_cmd", RESET;}
     system($master_clonality_cmd);
   }
 }
