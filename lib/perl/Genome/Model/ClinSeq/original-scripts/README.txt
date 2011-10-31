@@ -40,4 +40,25 @@
 #- Overlap of observed mutations with TGI recurrent sites
 
 
+#Summary stats.
+#A descriptive stats, question/answer table
+#Every record in the table will have the following:
+#Question | Data type | analysis type | statistic type
+#What is the median coverage of mutated positions in the exome data? | Exome | SNV | Median 
+
+#Question list:
+#- Median coverage of SNV positions for WGS & Exome seperately, for both the Tumor and the Normal sample
+#- Overall coverage of the genome or exome for both Tumor and Normal
+
+
+#Figures
+# - Scatter plot of Variant Allele Frequency in WGS Tumor vs Exome Tumor - report the R^2 and n
+# - Scatter plot of Variant Allele Frequency in WGS Normal vs Exome Normal - report the R^2 and n
+
+
+
+
+
+
+
 

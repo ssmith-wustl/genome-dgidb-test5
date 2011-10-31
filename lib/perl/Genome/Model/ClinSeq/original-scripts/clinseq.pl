@@ -153,6 +153,7 @@ my $data_paths = &getDataDirs('-wgs_som_var_model_id'=>$wgs_som_var_model_id, '-
 #Perform druggable genes analysis on each list (filtered, kinase-only, inhibitor-only, antineoplastic-only)
 $step++; print MAGENTA, "\n\nStep $step. Summarizing SNVs and Indels", RESET;
 &summarizeSNVs('-data_paths'=>$data_paths, '-out_paths'=>$out_paths, '-patient_dir'=>$patient_dir, '-entrez_ensembl_data'=>$entrez_ensembl_data, '-verbose'=>$verbose);
+#TODO: when merging SNVs/Indels from WGS + Exome, add a column that indicates (1|0) whether each was called by WGS or Exome, 1+1 = BOTH
 
 
 #Run CNView analyses on the CNV data to identify amplified/deleted genes
