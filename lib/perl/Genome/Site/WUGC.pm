@@ -156,10 +156,6 @@ sub _sync_env {
 }
 
 
-if ($0 =~ /(?:gmt|genome)(?:5\.12\.1)?$/ and not `grep log_command $0`) {
-    require Genome::Site::WUGC::Security;
-}
-
 1;
 
 =pod
