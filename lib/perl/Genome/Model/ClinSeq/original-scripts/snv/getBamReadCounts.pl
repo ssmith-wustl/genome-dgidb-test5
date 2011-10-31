@@ -175,7 +175,7 @@ close (OUT);
 
 #print Dumper $data;
 
-print "\n\n";
+if ($verbose){print "\n\n";}
 
 exit();
 
