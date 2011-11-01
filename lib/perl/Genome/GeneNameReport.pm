@@ -53,4 +53,16 @@ sub __display_name__ {
     return $self->name . '(' . $self->source_db_name . ' ' . $self->source_db_version . ')';
 }
 
+if ($INC{"Genome/Search.pm"}) {
+    __PACKAGE__->create_subscription(
+        method => 'commit',
+        callback => \&commit_callback,
+    );
+}
+
+sub commit_callback {
+    my $self = shift;
+    Genome::Search->add(Genome::GeneNameReport->define_set(name => $self->name));
+}
+
 1;
