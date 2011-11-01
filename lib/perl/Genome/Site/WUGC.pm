@@ -57,13 +57,6 @@ Class::Autouse->autouse(qr/Bio.*/);
 # Loads site-specific observers
 use Genome::Site::WUGC::Observers;
 
-# TODO: move these into tools which need them
-#use Bio::Seq;
-#use Bio::Seq::Quality;
-#use Bio::SeqIO;
-#use Bio::DB::Fasta;
-#use FASTAParse;
-
 # this callback will load the GSCApp module, and initialize the app to work with GSC modules
 my $initialized = ''; 
 our $checks = 0;

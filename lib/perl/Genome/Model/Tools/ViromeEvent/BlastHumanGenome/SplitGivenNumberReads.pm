@@ -6,6 +6,8 @@ use warnings;
 use Genome;
 use IO::File;
 
+use Bio::SeqIO;
+
 class Genome::Model::Tools::ViromeEvent::BlastHumanGenome::SplitGivenNumberReads{
     is => 'Genome::Model::Tools::ViromeEvent',
 };

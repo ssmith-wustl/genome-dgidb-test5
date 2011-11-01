@@ -9,6 +9,8 @@ use AMOS::AmosLib;
 use Data::Dumper;
 use Regexp::Common;
 
+use Bio::SeqIO;
+
 class Genome::Model::Tools::Velvet {
     is  => 'Command',
     is_abstract  => 1,

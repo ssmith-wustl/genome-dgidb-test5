@@ -7,6 +7,7 @@ use Genome;
 use Workflow;
 use IO::File;
 use Switch;
+use Bio::SeqIO;
 use Bio::SearchIO;
 use File::Basename;
 use Data::Dumper;

@@ -8,6 +8,8 @@ use Workflow;
 use IO::File;
 use File::Basename;
 
+use Bio::SeqIO;
+
 class Genome::Model::Tools::ViromeEvent{
     is => 'Command',
     is_abstract => 1,

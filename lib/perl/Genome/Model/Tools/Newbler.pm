@@ -7,6 +7,8 @@ use Genome;
 use Data::Dumper;
 use Carp 'confess';
 
+use Bio::SeqIO;
+
 class Genome::Model::Tools::Newbler {
     is => 'Command',
     has => [],

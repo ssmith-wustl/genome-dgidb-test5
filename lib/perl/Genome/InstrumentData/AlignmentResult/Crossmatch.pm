@@ -5,7 +5,6 @@ use warnings;
 use File::Basename;
 
 use Bio::SeqIO;
-use Bio::Seq::Quality;
 use Carp;
  
 use Genome;
