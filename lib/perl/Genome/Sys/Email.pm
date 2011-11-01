@@ -9,7 +9,7 @@ use Email::Simple;
 use LWP::UserAgent;
 
 class Genome::Sys::Email {
-    is => ['Genome::Searchable','UR::Value'],
+    is => ['UR::Value','Genome::Searchable'],
     doc => 'Represents a mailing list message',
     has => [
         list_name => {
