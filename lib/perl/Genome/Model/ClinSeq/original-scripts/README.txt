@@ -19,7 +19,15 @@
 
 
 #TODO / Feature wish list
-#- Summary stats.tsv -> # SNVs, #tier 1,2,3, WGS. vs. Exome, etc.
+#- Summary stats.
+#  - Data quality
+#    - Stats from reference alignment build (reports directory of the reference build dir):
+#      - lane count: 	5 
+#      - input base count: 	212.587 Gb 
+#      - haploid coverage: 	75.281 
+#      - dbSNP % Concordance:   93.6585 	samtools r599 filtered by snp-filter v1 
+#  - #SNVs, #tier 1,2,3, WGS. vs. Exome, etc.
+
 #- CNV amplified / deleted + over-expressed / under-expressed
 #- WGS vs. Exome Venn Diagrams : For SNVs & Indels
 #- Mutated and expressed vs. not expressed summary

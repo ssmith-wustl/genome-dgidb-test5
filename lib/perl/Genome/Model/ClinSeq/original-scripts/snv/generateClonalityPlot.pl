@@ -99,7 +99,6 @@ my $cat_cmd = "cat $working_dir"."snvs* > $working_dir"."allsnvs.hq.novel.tier12
 if ($verbose){print YELLOW, "\n\n$cat_cmd", RESET;}
 system($cat_cmd);
 
-
 #Step 3 - take it out of bed format to be fed into bam-readcounts:
 my $adapted_file ="$working_dir"."allsnvs.hq.novel.tier123.v2.bed.adapted";
 my $awk_cmd = "awk \'{OFS=\"\\t\";FS=\"\\t\";}{print \$1,\$3,\$3,\$4}\' $working_dir"."allsnvs.hq.novel.tier123.v2.bed | sed \'s/\\//\\t/g\' > $adapted_file";
@@ -122,6 +121,15 @@ my $readcounts_varscan_file = "$readcounts_outfile".".varscan";
 my $varscan_format_cmd = "$script_dir"."borrowed/kkanchi/create_pseudo_varscan.pl $adapted_file $readcounts_outfile > $readcounts_varscan_file";
 if ($verbose){print YELLOW, "\n\n$varscan_format_cmd", RESET;}
 system($varscan_format_cmd);
+
+
+#TODO: Replace steps 3-5 above by using the following script:
+#gmt validation prepare-wgs-for-clonality-plot --help
+#USAGE
+# gmt validation prepare-wgs-for-clonality-plot --output-file=? --snv-file=? [--bam-file=?]
+#    [--genome-build=?] [--min-mapping-quality=?] [--output-readcounts-file=?] [--readcounts-file=?]
+#Use the optional --bam-file input so that readcounts are generated for you.
+
 
 
 #Step 6 - Take the cnvs.hq file from the somatic-variation build, and run the cna-seg tool to create known regions of copy-number
