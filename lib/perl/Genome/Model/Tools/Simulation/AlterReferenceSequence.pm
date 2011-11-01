@@ -58,13 +58,16 @@ sub execute {
         $self->error_message("not yet working on entire genomes, please supply a region");
         return 0;
     }
- 
-    my $out1=IO::File->new($self->output_file, ">");
-    my $desc="mutated according to " . $self->mutation_bed;
-    $out1->print(">$region-A $desc\n");
-    my $out2=IO::File->new($self->output_file . "2", ">");
-    $out2->print(">$region-B $desc\n");
+
     my ($refseq, $offset)=$self->read_region_of_fasta($self->region, $self->ref_fasta);
+    my $refseq_length= length($refseq);
+    my ($out1, $out1_name) =Genome::Sys->create_temp_file();
+    #my $out1=IO::File->new($self->output_file, ">");
+    my $desc="mutated according to " . $self->mutation_bed;
+    $out1->print(">$region-A\t$refseq_length\t$desc\n");
+    my ($out2, $out2_name) = Genome::Sys->create_temp_file();
+#   my $out2=IO::File->new($self->output_file . "2", ">");
+    $out2->print(">$region-B\t$refseq_length\t$desc\n");
     my $pos = $offset;
     my $newrefseq1='';
     my $newrefseq2='';
@@ -73,7 +76,9 @@ sub execute {
         print Dumper $mut;
         my $start=$pos-$offset;
         my $len=$mut->{start}-$pos;
-
+        if($mut->{type}=~/SNP/i){
+            $len++;
+        }
         #my $subseq=unpack("x$start a$len", $refseq);
         my $subseq=substr($refseq,$start,$len);
         next if(length($subseq)!=$len);
@@ -97,8 +102,8 @@ sub execute {
             printf "%s\t%d\t%d\t%d\t%s\n",$mut->{chr},$mut->{start},$mut->{end},$mut->{size},$mut->{type};
             die;
         }
-        $newrefseq1=$self->print_and_flush($newrefseq1, $out1,0);
-        $newrefseq2=$self->print_and_flush($newrefseq2, $out2,0);
+#        $newrefseq1=$self->print_and_flush($newrefseq1, $out1,0);
+#        $newrefseq2=$self->print_and_flush($newrefseq2, $out2,0);
     }
     my $start=$pos-$offset;
     my $len=length($refseq)-$start;
@@ -107,6 +112,15 @@ sub execute {
     $newrefseq2.=$subseq;
     $self->print_and_flush($newrefseq1, $out1,1);
     $self->print_and_flush($newrefseq2, $out2,1);
+    $out1->close;
+    $out2->close;
+    my $final_output = $self->output_file;
+    if(Genome::Sys->shellcmd(cmd=>"cat $out1_name $out2_name > $final_output")) {
+        return 1;
+    }
+    else {
+        return 0;
+    }
 
 }
 
@@ -115,10 +129,8 @@ sub print_and_flush {
     my $refseq = shift;
     my $out_fh=shift;
     my $final = shift;
-    while(length($refseq) >= 55) {
-        $out_fh->print(substr($refseq, 0, 55) . "\n");
-        $refseq = substr($refseq, 55);
-    }
+
+    $refseq =~ s/(.{60})/$1\n/g;
     if($final) {
         $out_fh->print($refseq . "\n");
     }
@@ -158,13 +170,7 @@ sub read_mutation_list{
         $mut->{start}=$start;
         $mut->{stop}=$stop;
         $mut->{reference}=$ref;
-        if(length($var)==1 &&  $var ne '0' && $ref ne '0') {
-            my ($variant_allele) = Genome::Info::IUB->variant_alleles_for_iub($mut->{reference}, $var);
-            $mut->{variant}=$variant_allele;
-        }      
-        else {
-            $mut->{variant}=$var;
-        }  
+        $mut->{variant}=$var;
         my $type = $self->infer_variant_type($mut);
         $mut->{type}=$type;
 #    print STDERR "$_\n";
