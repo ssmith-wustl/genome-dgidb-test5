@@ -203,7 +203,7 @@ sub _delete_by_id {
 
     my $self = $class->_singleton_object;
 
-    my $solr = $self->solr_server();
+    my $solr = $self->_solr_server();
 
     my $memcached = Genome::Memcache->server;
 
@@ -225,7 +225,7 @@ sub _delete_by_doc {
     my @docs = @_;
     
     my $self = $class->_singleton_object;
-    my $solr = $self->solr_server;
+    my $solr = $self->_solr_server;
     
     my $error_count = 0;
     for my $doc (@docs) {
@@ -246,7 +246,7 @@ sub clear {
     
     return 1 if UR::DBI->no_commit; #Prevent automated index manipulation when changes certainly won't be committed
     
-    my $solr = $self->solr_server;
+    my $solr = $self->_solr_server;
     
     $solr->delete_by_query('*:*') || return; #Optimized by solr for fast index clearing
     $solr->optimize() || return; #Prevent former entries from influencing future index

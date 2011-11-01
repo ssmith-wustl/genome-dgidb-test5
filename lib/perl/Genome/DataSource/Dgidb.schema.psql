@@ -1,6 +1,3 @@
-DROP TABLE IF EXISTS drug_name;
-DROP TABLE IF EXISTS gene_name;
-DROP TABLE IF EXISTS drug_gene_interaction;
 DROP TABLE IF EXISTS drug_gene_interaction_report_attribute;
 DROP TABLE IF EXISTS drug_gene_interaction_report;
 DROP TABLE IF EXISTS gene_name_report_category_association;
@@ -40,12 +37,6 @@ create table drug_name_report_category_association (
         FOREIGN KEY(drug_name_report_id) REFERENCES drug_name_report(id)
 );
 
-create table drug_name (
-        id varchar NOT NULL,
-        name varchar NOT NULL,
-        PRIMARY KEY (id)
-);
-
 create table gene_name_report (
         id varchar NOT NULL,
         name varchar NOT NULL,
@@ -76,12 +67,6 @@ create table gene_name_report_category_association (
         FOREIGN KEY(gene_name_report_id) REFERENCES gene_name_report(id)
 );
 
-create table gene_name (
-        id varchar NOT NULL,
-        name varchar NOT NULL,
-        PRIMARY KEY (id)
-);
-
 create table drug_gene_interaction_report (
         id varchar NOT NULL,
         drug_name_report_id varchar NOT NULL,
@@ -99,12 +84,5 @@ create table drug_gene_interaction_report_attribute (
         interaction_id varchar NOT NULL REFERENCES drug_gene_interaction_report(id),
         name varchar NOT NULL,
         value varchar NOT NULL,
-        PRIMARY KEY (id)
-);
-
-create table drug_gene_interaction (
-        id varchar NOT NULL,
-        gene_name varchar NOT NULL,
-        drug_name varchar NOT NULL,
         PRIMARY KEY (id)
 );

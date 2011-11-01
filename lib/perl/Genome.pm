@@ -26,9 +26,6 @@ require Genome::Site;
 # and assigns default values to any variables that have one set.
 require Genome::Env;
 
-# Loads all observers
-require Genome::Observers;
-
 # If the search engine is installed, configure its hooks
 eval {
     local $SIG{__WARN__};
