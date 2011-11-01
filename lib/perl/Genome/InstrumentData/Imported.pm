@@ -8,7 +8,7 @@ use File::stat;
 use File::Path;
 
 class Genome::InstrumentData::Imported {
-    is => 'Genome::InstrumentData',
+    is => ['Genome::Searchable', 'Genome::InstrumentData'],
     has_optional => [
         source => { is => 'Genome::Subject', via => 'sample', to => 'source', },
         source_id => { is=> 'Text', via => 'source', to => 'id', },

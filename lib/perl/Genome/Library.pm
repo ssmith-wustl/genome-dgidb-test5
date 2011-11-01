@@ -5,7 +5,7 @@ use warnings;
 use Genome;
 
 class Genome::Library {
-    is => 'Genome::Notable',
+    is => ['Genome::Searchable','Genome::Notable'],
     id_by => [
         library_id => { 
             is => 'Number', 

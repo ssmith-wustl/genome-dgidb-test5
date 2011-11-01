@@ -9,7 +9,7 @@ use File::Path;
 use YAML;
 
 class Genome::Model {
-    is => 'Genome::Notable',
+    is => ['Genome::Searchable','Genome::Notable'],
     is_abstract => 1,
     subclassify_by => 'subclass_name',
     id_by => [

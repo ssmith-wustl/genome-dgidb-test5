@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 
 class Genome::GeneNameReport {
-    is => 'UR::Object',
+    is => 'Genome::Searchable',
     id_generator => '-uuid',
     table_name => 'gene_name_report',
     schema_name => 'subject',

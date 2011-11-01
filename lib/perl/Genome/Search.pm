@@ -3,8 +3,6 @@ package Genome::Search;
 use strict;
 use warnings;
 
-use WebService::Solr;
-use MRO::Compat;
 
 #Don't "use Genome;" here or we introduce a circular dependency.
 use UR;
@@ -478,6 +476,8 @@ sub generate_document {
 
 ###  Callbacks for automatically updating index  ###
 
+our $LOADED_MODULES = 0;
+our $searchable_classes;
 sub _commit_callback {
     my $class = shift;
     my $object = shift;
@@ -487,6 +487,22 @@ sub _commit_callback {
     ## dont cruft up the production solr when no_commit is on, but run through this code
     ## during test cases
     return 1 if UR::DBI->no_commit && $class->environment eq 'prod'; 
+
+    # Skip loading the search-related code unless at least one of the committing objects
+    # is one of the searchable things.
+    # FIXME: a better solution would be for the searchable classes to inherit from a new
+    # parent class (say, Genome::Searchable), and then Genome.pm can register an observer for
+    # that class instead of UR::Object
+    unless ($searchable_classes) {
+        my %searchable_classes = map { $_ => 1 } $class->searchable_classes();
+        $searchable_classes = \%searchable_classes;
+    }
+    return 1 unless $searchable_classes->{$object->class};
+
+    unless ($LOADED_MODULES++) {
+        require WebService::Solr;
+        require MRO::Compat;
+    }
     
     eval {
         if($class->is_indexable($object)) {

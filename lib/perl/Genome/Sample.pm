@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 
 class Genome::Sample {
-    is => 'Genome::Subject',
+    is => ['Genome::Searchable','Genome::Subject'],
     has => [
         sample_id => {
             is => 'Text',

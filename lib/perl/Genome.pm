@@ -39,7 +39,7 @@ eval {
 # this ensures that the search system is updated when certain classes are updated 
 # the search system is optional so it skips this if usage above fails
 if ($INC{"Genome/Search.pm"}) {
-    Genome::Search->register_callbacks('UR::Object');
+    Genome::Search->register_callbacks('Genome::Searchable');
 }
 
 # account for a perl bug in pre-5.10 by applying a runtime patch to Carp::Heavy
