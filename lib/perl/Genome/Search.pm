@@ -485,10 +485,6 @@ sub _index_queue_callback {
 
     return unless $object;
 
-    # dont cruft up the production solr when no_commit is on, but run
-    # through this code during test cases
-    return 1 if UR::DBI->no_commit && $class->environment eq 'prod';
-
     # this causes an error:
     # Error while autoloading with 'use UR::Vocabulary': Can't locate object method "_singleton_object" via package "UR::Vocabulary" at /gscuser/nnutter/genome/git/lib/perl/Genome/Search.pm line 129
     # which is actually trigger on line 142 at "UR::Object::View->_resolve_view_class_for_params"
