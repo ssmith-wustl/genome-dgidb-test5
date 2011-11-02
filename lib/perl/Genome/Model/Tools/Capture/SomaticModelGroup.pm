@@ -45,9 +45,11 @@ class Genome::Model::Tools::Capture::SomaticModelGroup {
 		output_maf_file	=> 	{ is => 'Text', doc => "Output a MAF file for downstream analysis" , is_optional => 1},
 		uhc_filter	=> 	{ is => 'Text', doc => "If set to 1, apply ultra-high-conf filter to SNV calls" , is_optional => 1},
 		uhc_indels	=> 	{ is => 'Text', doc => "If set to 1, pass hc indels for MAF inclusion" , is_optional => 1},
-		reference	=> 	{ is => 'Text', doc => "Reference to use for bam-readcounts-based filters" , is_optional => 1},
+		reference	=> 	{ is => 'Text', doc => "Reference to use for bam-readcounts-based filters; defaults to build 37" , is_optional => 1, default=> '/gscmnt/sata420/info/model_data/2857786885/build102671028/all_sequences.fa'},
+		reference_transcripts	=> 	{ is => 'Text', doc => "Transcripts to use for variant annotation " , is_optional => 1, default=> 'NCBI-human.combined-annotation/58_37c_v2'},
 		review_database_snvs	=> 	{ is => 'Text', doc => "If provided, use to exclude already-reviewed sites" , is_optional => 1},
 		review_database_indels	=> 	{ is => 'Text', doc => "If provided, use to exclude already-reviewed indels" , is_optional => 1},
+		tier_file_location	=> 	{ is => 'Text', doc => "Folder containing tiering BED files (defaults to build 37) " , is_optional => 1, default=> '/gscmnt/ams1102/info/model_data/2771411739/build106409619/annotation_data/tiering_bed_files_v3'},
 		varscan_copynumber	=> 	{ is => 'Text', doc => "Specify a directory to output VarScan CopyNumber Jobs" , is_optional => 1},
 	],
 };
@@ -258,7 +260,12 @@ sub execute {                               # replace with real execution logic.
 						my $tumor_model_dir = $tumor_model->last_succeeded_build_directory;
 						my $tumor_bam = `ls $tumor_model_dir/alignments/*.bam`; chomp($tumor_bam);
 
-						output_germline_files($self, $last_build_dir, $germline_dir, $tumor_bam);
+						my $normal_model = $model->normal_model;
+						my $normal_model_dir = $normal_model->last_succeeded_build_directory;
+						my $normal_bam = `ls $normal_model_dir/alignments/*.bam`; chomp($normal_bam);
+
+						output_germline_files($self, $last_build_dir, $germline_dir, $tumor_bam, $normal_bam, $tumor_model_dir, $normal_model_dir);
+						exit(0);
 					}
 
 					if($self->output_loh_calls)
@@ -1142,56 +1149,175 @@ sub output_indels_for_review
 
 ################################################################################################
 # Output Germline Files - output the files for germline analysis 
-#
+# 1.) Get BED files from SAMtools -> Subtract Somatic -> FPfilter -> Combine
+# 2.) Get Germline/LOH calls from VarScan -> Combine -> FPfilter
 ################################################################################################
 
 sub output_germline_files
 {
-	my ($self, $build_dir, $germline_dir, $tumor_bam) = @_;
+	my ($self, $build_dir, $germline_dir, $tumor_bam, $normal_bam, $tumor_model_dir, $normal_model_dir) = @_;
+
+#	print "Somatic\t$build_dir\nTumor\t$tumor_model_dir\nNormal\t$normal_model_dir\n";
+
+	## Get File of Somatic SNVs ##
 	
-	## Get VarScan Germline File ##
+	my $somatic_snvs = "$build_dir/merged.somatic.snp.filter.novel";
+
+	## Get variant file to parse ##
 	
-	my $varscan_snv_file = `ls $build_dir/varScan.output.snp.formatted.Germline.hc`;
-	chomp($varscan_snv_file);
-	my $varscan_output_file = "$germline_dir/varScan.germline.snp";
+	my $normal_variant_file = "$normal_model_dir/variants/filtered.variants.post_annotation";
+	my $tumor_variant_file = "$tumor_model_dir/variants/filtered.variants.post_annotation";
 	
-	if($varscan_snv_file && !(-e $varscan_output_file))
-	{	
+	if(!(-e $normal_variant_file))
+	{
+		$normal_variant_file = "$normal_model_dir/snp_related_metrics/filtered.variants.post_annotation";
+	}
+
+	if(!(-e $tumor_variant_file))
+	{
+		$tumor_variant_file = "$tumor_model_dir/snp_related_metrics/filtered.variants.post_annotation";
+	}	
+
+	my $outfile_tumor_snp = $germline_dir . "/samtools.tumor.snp";
+	my $outfile_normal_snp = $germline_dir . "/samtools.normal.snp";
+
+	if(-e $normal_variant_file && !(-e $outfile_normal_snp))
+	{
+		## Parse out Normal SNPs ##
+	
+		warn "Parsing Normal SAMtools SNPs file...\n";
+		my $num_normal_snps = get_samtools_snps($normal_variant_file, $outfile_normal_snp);
+		print "$num_normal_snps SNPs obtained for normal\n";
+	
 		if($self->germline_roi_file)
 		{
-			system("java -jar /gsc/scripts/lib/java/VarScan/VarScan.v2.2.6.jar limit $varscan_snv_file --regions-file " . $self->germline_roi_file . " --output-file $varscan_output_file");			
-		}
-		else
-		{
-			system("cp $varscan_snv_file $varscan_output_file");
-		}
+			warn "Limiting SNPs to ROI...\n";
+			## Limit SNPs to Germline ROI BED ##
+			system("java -jar /gsc/scripts/lib/java/VarScan/VarScan.jar limit $outfile_normal_snp --regions-file " . $self->germline_roi_file . " --output-file $outfile_normal_snp.roi");
+			$outfile_normal_snp .= ".roi";
+		}		
+	}
 
-		## Apply the FP-filter ##
+	if(-e $tumor_variant_file && !(-e $outfile_tumor_snp))
+	{
+		## Parse out Tumor SNPs ##
+	
+		warn "Parsing Tumor SAMtools SNPs file...\n";
+		my $num_tumor_snps = get_samtools_snps($tumor_variant_file, $outfile_tumor_snp);
+		print "$num_tumor_snps SNPs obtained for tumor\n";
+	
+		if($self->germline_roi_file)
+		{
+			warn "Limiting SNPs to ROI...\n";
+			## Limit SNPs to Germline ROI BED ##
+			system("java -jar /gsc/scripts/lib/java/VarScan/VarScan.jar limit $outfile_tumor_snp --regions-file " . $self->germline_roi_file . " --output-file $outfile_tumor_snp.roi");
+			$outfile_tumor_snp .= ".roi";
+		}
 		
-		system("bsub -q long -R\"select[type==LINUX64 && mem>8000] rusage[mem=8000]\" -M 8000000 gmt somatic filter-false-positives --variant-file $varscan_output_file --bam-file $tumor_bam --output-file $varscan_output_file.fpfilter --filtered-file $varscan_output_file.fpfilter.removed");
+	}
+
+
+	## Remove somatic SNPs ##
+	warn "Removing Somatic SNVs from normal list...\n";
+	system("java -jar /gsc/scripts/lib/java/VarScan/VarScan.jar limit $outfile_normal_snp --regions-file " . $somatic_snvs . " --not-file $outfile_normal_snp.germline") if(!(-e "$outfile_normal_snp.germline"));	
+
+	warn "Removing Somatic SNVs from tumor list...\n";
+	system("java -jar /gsc/scripts/lib/java/VarScan/VarScan.jar limit $outfile_tumor_snp --regions-file " . $somatic_snvs . " --not-file $outfile_tumor_snp.germline") if(!(-e "$outfile_tumor_snp.germline"));	
+	$outfile_normal_snp .= ".germline";
+	$outfile_tumor_snp .= ".germline";
+
+	## Apply FP-filter to normal SNPs ##
+	my $cmd = "";	
+	$cmd = "bsub -q long -R\"select[type==LINUX64 && mem>8000] rusage[mem=8000]\" -M 8000000 gmt somatic filter-false-positives ";
+	$cmd .= "--reference " . $self->reference . " ";
+	$cmd .= "--variant-file $outfile_normal_snp --bam-file $normal_bam --output-file $outfile_normal_snp.fpfilter --filtered-file $outfile_normal_snp.fpfilter.removed ";
+	$cmd .= "--max-mm-qualsum-diff 100 ";
+#	system($cmd);
+
+	## Apply FP-filter to tumor SNPs ##
+	$cmd = "";	
+	$cmd = "bsub -q long -R\"select[type==LINUX64 && mem>8000] rusage[mem=8000]\" -M 8000000 gmt somatic filter-false-positives ";
+	$cmd .= "--reference " . $self->reference . " ";
+	$cmd .= "--variant-file $outfile_tumor_snp --bam-file $tumor_bam --output-file $outfile_tumor_snp.fpfilter --filtered-file $outfile_tumor_snp.fpfilter.removed ";
+	$cmd .= "--max-mm-qualsum-diff 100 ";
+#	system($cmd);
+
+
+	my $varscan_germline_snps = `ls $build_dir/varScan.output.snp.formatted.Germline.hc 2>/dev/null`;
+	chomp($varscan_germline_snps);
+
+	my $varscan_loh_snps = `ls $build_dir/varScan.output.snp.formatted.LOH.hc 2>/dev/null`;
+	chomp($varscan_loh_snps);
+
+	if(-e $varscan_germline_snps && -e $varscan_loh_snps)
+	{
+		my $output_snp_varscan = $germline_dir . "/varScan.germline.snp";
+		system("cat $varscan_germline_snps $varscan_loh_snps >$output_snp_varscan");
+		system("gmt capture sort-by-chr-pos --input $output_snp_varscan --output $output_snp_varscan");
+
+		if($self->germline_roi_file)
+		{
+			system("java -jar /gsc/scripts/lib/java/VarScan/VarScan.jar limit $output_snp_varscan --regions-file " . $self->germline_roi_file . " --output-file $output_snp_varscan.roi");
+			$output_snp_varscan .= ".roi";
+		}
+		
+		## Apply FP-filter using Normal BAM ##
+		my $cmd = "";	
+		$cmd = "bsub -q long -R\"select[type==LINUX64 && mem>8000] rusage[mem=8000]\" -M 8000000 gmt somatic filter-false-positives ";
+		$cmd .= "--reference " . $self->reference . " ";
+		$cmd .= "--variant-file $output_snp_varscan --bam-file $normal_bam --output-file $output_snp_varscan.fpfilter --filtered-file $output_snp_varscan.fpfilter.removed ";
+		$cmd .= "--max-mm-qualsum-diff 100 ";
+		system($cmd);
+
+		## Also run transcript-annotation ##
+		
+		$cmd = "bsub -q long gmt annotate transcript-variants --annotation-filter top --reference-transcripts " . $self->reference_transcripts . " ";
+		$cmd .= "--variant-file $output_snp_varscan --output-file $output_snp_varscan.transcript-annotation";
+		system($cmd);
+	}
+	else
+	{
+		warn "Missing VarScan Germline-HC or LOH-HC files in $build_dir\n";
 	}
 	
-	## Get VarScan Germline IndelFile ##
-	
-	my $varscan_indel_file = `ls $build_dir/varScan.output.indel.formatted.Germline.hc`;
-	chomp($varscan_indel_file);
-	my $varscan_indel_output_file = "$germline_dir/varScan.germline.indel";
-	
-	if($varscan_indel_file && !(-e $varscan_indel_output_file))
-	{	
+
+
+
+	my $varscan_germline_indels = `ls $build_dir/varScan.output.indel.formatted.Germline.hc 2>/dev/null`;
+	chomp($varscan_germline_indels);
+
+	my $varscan_loh_indels = `ls $build_dir/varScan.output.indel.formatted.LOH.hc 2>/dev/null`;
+	chomp($varscan_loh_indels);
+
+	if(-e $varscan_germline_indels && -e $varscan_loh_indels)
+	{
+		my $output_indel_varscan = $germline_dir . "/varScan.germline.indel";
+		system("cat $varscan_germline_indels $varscan_loh_indels >$output_indel_varscan");
+		system("gmt capture sort-by-chr-pos --input $output_indel_varscan --output $output_indel_varscan");
+
 		if($self->germline_roi_file)
 		{
-			system("java -jar /gsc/scripts/lib/java/VarScan/VarScan.v2.2.6.jar limit $varscan_indel_file --regions-file " . $self->germline_roi_file . " --output-file $varscan_indel_output_file");			
+			system("java -jar /gsc/scripts/lib/java/VarScan/VarScan.jar limit $output_indel_varscan --regions-file " . $self->germline_roi_file . " --output-file $output_indel_varscan.roi");
+			$output_indel_varscan .= ".roi";
 		}
-		else
-		{
-			system("cp $varscan_indel_file $varscan_indel_output_file");
-		}
-
-		## Apply the FP-filter ##
 		
-		system("bsub -q long -R\"select[type==LINUX64 && mem>8000] rusage[mem=8000]\" -M 8000000 gmt somatic filter-false-indels --min-read-pos 0.30 --max-var-mmqs 100 --min-var-readlen 75 --variant-file $varscan_indel_output_file --bam-file $tumor_bam --output-file $varscan_indel_output_file.fpfilter --filtered-file $varscan_indel_output_file.fpfilter.removed");
-	}	
+		## Apply FP-filter using Normal BAM ##
+		my $cmd = "";	
+		$cmd = "bsub -q long -R\"select[type==LINUX64 && mem>8000] rusage[mem=8000]\" -M 8000000 gmt somatic filter-false-indels ";
+		$cmd .= "--reference " . $self->reference . " ";
+		$cmd .= "--variant-file $output_indel_varscan --bam-file $normal_bam --output-file $output_indel_varscan.fpfilter --filtered-file $output_indel_varscan.fpfilter.removed ";
+		$cmd .= "--max-mm-qualsum-diff 100 ";
+		system($cmd);
+
+		## Also run transcript-annotation ##
+		
+		$cmd = "bsub -q long gmt annotate transcript-variants --annotation-filter top --reference-transcripts " . $self->reference_transcripts . " ";
+		$cmd .= "--variant-file $output_indel_varscan --output-file $output_indel_varscan.transcript-annotation";
+		system($cmd);
+	}
+	
+
+
 	
 	## Get GATK File ##
 	
@@ -1220,7 +1346,70 @@ sub output_germline_files
 
 
 
+################################################################################################
+# Get SAMtools SNPs - get the SNPs from SAMtools filtered post-annotation file
+#
+################################################################################################
 
+sub get_samtools_snps
+{
+	my ($variant_file, $output_file) = @_;	
+	my $num_snps = 0;
+	## Check for Tier 1 SNVs ##
+	
+	if(-e $variant_file)
+	{
+		open(OUTFILE, ">$output_file") or die "Can't open outfile: $!\n";
+
+		## Parse the Tier 1 SNVs file ##
+	
+		my $input = new FileHandle ($variant_file);
+		my $lineCounter = 0;
+	
+		while (<$input>)
+		{
+			chomp;
+			my $line = $_;
+			$lineCounter++;
+
+			my ($chrom, $chr_start, $chr_stop, $ref, $var, $var_type, $gene, $transcript, $organism, $source, $version, $strand, $status, $trv_type) = split(/\t/, $line);
+			
+			if($var_type eq "SNP" && is_tier1($trv_type))
+			{
+				$num_snps++;
+				print OUTFILE "$line\n";
+			}
+		}
+		
+		close($input);
+		
+		close(OUTFILE);
+	}
+	
+	return($num_snps);
+
+
+
+
+}
+
+
+###############################################################################################
+# is_tier1 - return 1 if this trv_type is considered tier 1
+#
+################################################################################################
+
+sub is_tier1
+{
+	my $trv_type = shift(@_);
+	
+	if($trv_type eq 'missense' || $trv_type eq 'nonsense' || $trv_type eq 'nonstop' || $trv_type eq 'splice_site' || $trv_type =~ 'frame')
+	{
+		return(1);
+	}
+	
+	return(0);
+}
 
 ################################################################################################
 # Output Germline Files - output the files for loh analysis 
