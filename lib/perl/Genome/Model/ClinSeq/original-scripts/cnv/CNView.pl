@@ -224,7 +224,7 @@ sub checkInput{
   }
   #Set the default gene targets file if it wasnt specified by the user
   unless ($gene_targets_file){
-    $gene_targets_file = "/gscmnt/sata132/techd/mgriffit/reference_annotations/hg19/gene_symbol_lists/CancerGeneCensusList.txt"
+    $gene_targets_file = "/gscmnt/sata132/techd/mgriffit/reference_annotations/hg19/gene_symbol_lists/CancerGeneCensus.txt"
   }
   unless (-e $gene_targets_file){
     print RED, "\n\nGene targets file not found:\n$gene_targets_file\n\n", RESET;
