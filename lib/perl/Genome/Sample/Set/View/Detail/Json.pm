@@ -61,7 +61,7 @@ sub _generate_content {
         my $row = [$sample->name(), $sample->id];
         for my $field (@fields) {
             my $attr = Genome::SubjectAttribute->get(nomenclature=>$field->id, subject=>$sample);
-            my $val = (defined $attr ? $attr->attribute_value : 'hallo');
+            my $val = (defined $attr ? $attr->attribute_value : '-');
             push @$row, $val;
         }
         push @{$ret->{'aaData'}}, $row;
