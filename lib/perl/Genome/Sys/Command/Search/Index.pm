@@ -8,6 +8,7 @@ class Genome::Sys::Command::Search::Index {
         action => {
             is => 'Text',
             default => 'add',
+            valid_values => ['add', 'delete'],
         },
         subject_text => {
             is => 'Text',
