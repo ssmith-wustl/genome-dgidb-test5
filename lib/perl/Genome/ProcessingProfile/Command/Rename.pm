@@ -10,6 +10,7 @@ class Genome::ProcessingProfile::Command::Rename {
     has => [
         processing_profile => {
             is => 'Genome::ProcessingProfile',
+            shell_args_position => 1,
             doc => 'The processing profile to rename',
         },
         new_name => {
@@ -19,6 +20,10 @@ class Genome::ProcessingProfile::Command::Rename {
         },
     ],
 };
+
+sub help_brief {
+    return 'rename a processing profile';
+}
 
 sub execute {
     my $self = shift;
