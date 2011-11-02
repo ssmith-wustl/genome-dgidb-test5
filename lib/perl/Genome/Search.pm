@@ -519,12 +519,14 @@ my $observer;
 # so typically it won't need to be called elsewhere.
 sub register_callbacks {
     my $class = shift;
-    my $module_to_observe = shift;
 
-    # no aspect means it fires on all signals
-    $observer = $module_to_observe->add_observer(
-        callback => sub { $class->_index_queue_callback(@_); },
-    );
+    for my $searchable_class ($class->searchable_classes) {
+        # no aspect means it fires on all signals
+        # observer is declared above in module's scope
+        $observer = $searchable_class->add_observer(
+            callback => sub { $class->_index_queue_callback(@_); },
+        );
+    }
 }
 
 sub unregister_callbacks {
