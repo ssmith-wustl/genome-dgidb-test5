@@ -81,21 +81,6 @@ my %TYPE_NAME_PARAMS = (
         roi => 'mouse',
         append_event_steps => undef,
     }, 
-    'amplicon assembly' => {
-        class => 'Genome::ProcessingProfile::AmpliconAssembly',
-        type_name => 'amplicon assembly',
-        name => '16S Test 27F to 1492R (907R)',
-        assembler => 'phredphrap',
-        assembly_size => 1465,
-        primer_amp_forward => '18SEUKF:ACCTGGTTGATCCTGCCAG',
-        primer_amp_reverse => '18SEUKR:TGATCCTTCYGCAGGTTCAC',
-        primer_seq_forward => '502F:GGAGGGCAAGTCTGGT',
-        primer_seq_reverse => '1174R:CCCGTGTTGAGTCAAA',
-        purpose => 'composition',
-        region_of_interest => '16S',
-        sequencing_center => 'gsc',
-        sequencing_platform => 'sanger',
-    }, 
     'metagenomic composition 16s sanger' => {
         class => 'Genome::ProcessingProfile::MetagenomicComposition16s',
         type_name => 'metagenomic composition 16s',
@@ -184,8 +169,6 @@ sub valid_params_for_type_name {
 }
 
 #< Additional Methods for Mock PP Type Names >#
-# TODO
-#sub _add_mock_methods_to_amplicon_assembly { }
 sub _add_mock_methods_to_metagenomic_composition_16s {
     my ($self, $pp) = @_;
 
@@ -213,12 +196,6 @@ sub _add_mock_methods_to_de_novo_assembly {
 
     return 1;
 }
-
-#sub _add_mock_methods_to_tester { }
-#sub _add_mock_methods_to_reference_alignement { }
-
-# NO ADDITIONAL METHODS TO MOCK FOR VIROME SCREEN
-#sub _add_mock_methods_to_virome_screen { }
 
 #######################
 # Type Name Test Base #
@@ -278,79 +255,6 @@ sub params_for_test_class {
     return %{$self->{_params_for_class}};
 }
 
-# TODO test params?
-
-#####################
-# Amplicon Assembly #
-#####################
-
-package Genome::ProcessingProfile::AmpliconAssembly::Test;
-
-use strict;
-use warnings;
-
-use base 'Genome::ProcessingProfile::TestBase';
-
-sub invalid_params_for_test_class {
-    return (
-        primer_amp_forward => 'AAGGTGAGCCCGCGATGCGAGCTTAT',
-        primer_amp_reverse => '55:55',
-        sequencing_platform => 'super-seq',
-        sequencing_center => 'monsanto',
-        purpose => 'because',
-    );
-}
-
-###############################
-# Metagenomic Composition 16s #
-###############################
-
-############
-# Commands #
-############
-
-package Genome::ProcessingProfile::Command::TestBase;
-
-use strict;
-use warnings;
-
-use base 'Genome::Utility::TestBase';
-
-sub test_class {
-    return 'Genome::ProcessingProfile::Command::'.$$_[0]->subclass;
-}
-
-sub command_name {
-    return Genome::Utility::Text::camel_case_to_string($_[0]->subclass);
-}
-
-sub params_for_test_class {
-    return (
-        $_[0]->_params_for_test_class,
-    );
-}
-
-sub _params_for_test_class { 
-    return;
-}
-
-sub test01_execute : Tests() {
-    my $self = shift;
-
-    ok($self->{_object}->execute, 'Executed '.$self->command_name);
-
-    return 1;
-}
-
-sub test01_invalid : Tests() {
-    my $self = shift;
-
-    #ok($self->{_object}->execute, 'Executed '.$self->command_name);
-
-    return 1;
-}
 
 1;
 
-#$HeadURL$
-#$Id$
