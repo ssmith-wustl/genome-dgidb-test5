@@ -476,81 +476,60 @@ sub generate_document {
     return @docs;
 }
 
-###  Callbacks for automatically updating index  ###
+###  Callback for automatically updating index  ###
 
-sub _commit_callback {
-    my $class = shift;
-    my $object = shift;
+sub _index_queue_callback {
+    my ($class, $object, $aspect) = @_;
 
     return unless $object;
 
-    ## dont cruft up the production solr when no_commit is on, but run through this code
-    ## during test cases
+    # dont cruft up the production solr when no_commit is on, but run
+    # through this code during test cases
     return 1 if UR::DBI->no_commit && $class->environment eq 'prod';
 
-    if($class->is_indexable($object)) {
-        my $iq = Genome::Search::IndexQueue->create(
+    # this causes an error:
+    # Error while autoloading with 'use UR::Vocabulary': Can't locate object method "_singleton_object" via package "UR::Vocabulary" at /gscuser/nnutter/genome/git/lib/perl/Genome/Search.pm line 129
+    # which is actually trigger on line 142 at "UR::Object::View->_resolve_view_class_for_params"
+    # return unless $class->is_indexable($object);
+
+    my $meta = $object->__meta__;
+    my @add_property_names = ('create', $meta->all_property_names);
+
+    my $action;
+    if (grep { $aspect eq $_ } @add_property_names) {
+        $action = 'add';
+    }
+    elsif ($aspect eq 'delete') {
+        $action = 'delete';
+    }
+
+    my $index_queue;
+    if ($action) {
+        $index_queue = Genome::Search::IndexQueue->create_or_update(
             subject => $object,
             action => 'add',
         );
-        return unless $iq;
     }
 
-    return 1;
+    return $index_queue;
 }
 
-sub _delete_callback {
-    my $class = shift;
-    my $object = shift;
+my $observer;
 
-    return unless $object;
-
-    return 1 if UR::DBI->no_commit && $class->environment eq 'prod';
-
-    if($class->is_indexable($object)) {
-        my $iq = Genome::Search::IndexQueue->create(
-            subject => $object,
-            action => 'delete',
-        );
-        return unless $iq;
-    }
-
-    return 1;
-}
-
-my %commit_cb = ();
-my %delete_cb = ();
-#This should be called from Genome.pm, so typically it won't need to be called elsewhere.
+# register_callbacks and unregister_callbacks should be called from Genome.pm,
+# so typically it won't need to be called elsewhere.
 sub register_callbacks {
     my $class = shift;
     my $module_to_observe = shift;
 
-    $commit_cb{$module_to_observe} = sub { $class->_commit_callback(@_); };
-    $module_to_observe->create_subscription(
-        method => 'commit',
-        callback => $commit_cb{$module_to_observe},
-    );
-
-    $delete_cb{$module_to_observe} = sub { $class->_delete_callback(@_); };
-    $module_to_observe->create_subscription(
-        method => 'delete',
-        callback => $delete_cb{$module_to_observe}
+    # no aspect means it fires on all signals
+    $observer = $module_to_observe->add_observer(
+        callback => sub { $class->_index_queue_callback(@_); },
     );
 }
 
 sub unregister_callbacks {
-    my $class = shift;
-    my $module_to_observe = shift;
-
-    $module_to_observe->cancel_change_subscription(
-        'commit', $commit_cb{$module_to_observe},
-    );
-    delete $commit_cb{$module_to_observe};
-
-    $module_to_observe->cancel_change_subscription(
-        'delete', $delete_cb{$module_to_observe}
-    );
-    delete $delete_cb{$module_to_observe}
+    $observer->delete;
 }
 
 #OK!
