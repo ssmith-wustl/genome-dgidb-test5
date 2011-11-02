@@ -126,11 +126,13 @@ sub _resolve_solr_xml_view {
 
     return if (!$subject_class_name->isa('UR::Object'));
     return if $subject_class_name->isa('UR::Object::Ghost');
-    return UR::Object::View->_resolve_view_class_for_params(
-        subject_class_name => $subject_class_name,
-        toolkit => 'xml',
-        perspective => 'solr'
-    );
+    return eval {
+        UR::Object::View->_resolve_view_class_for_params(
+            subject_class_name => $subject_class_name,
+            toolkit => 'xml',
+            perspective => 'solr'
+        );
+    };
 }
 
 sub _resolve_result_xml_view {
@@ -490,7 +492,8 @@ sub _index_queue_callback {
     # this causes an error:
     # Error while autoloading with 'use UR::Vocabulary': Can't locate object method "_singleton_object" via package "UR::Vocabulary" at /gscuser/nnutter/genome/git/lib/perl/Genome/Search.pm line 129
     # which is actually trigger on line 142 at "UR::Object::View->_resolve_view_class_for_params"
-    # return unless $class->is_indexable($object);
+    # I worked around this by wrapping an eval around the above call.
+    return unless $class->is_indexable($object);
 
     my $meta = $object->__meta__;
     my @add_property_names = ('create', $meta->all_property_names);
