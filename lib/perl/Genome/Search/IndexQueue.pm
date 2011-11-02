@@ -1,30 +1,31 @@
 package Genome::Search::IndexQueue;
 
 class Genome::Search::IndexQueue {
-    id_generator => '-uuid',
     id_by => [
-        id => {
+        subject_class => {
             is => 'Text',
+            doc => 'Class of the subject to be indexed by search.',
+        },
+        subject_id => {
+            is => 'Text',
+            doc => 'ID of the subject to be indexed by search.',
         },
     ],
     has => [
         timestamp => {
             is => 'Time',
-        },
-        subject_id => {
-            is => 'Text',
-        },
-        subject_class => {
-            is => 'Text',
+            doc => 'Timestamp of first request. Automatically added if not provided.',
         },
         subject => {
             is => 'UR::Object',
             id_by => 'subject_id',
             id_class_by => 'subject_class',
+            doc => 'Subject to be indexed by search.',
         },
         action => {
             is => 'Text',
             valid_values => ['add', 'delete'],
+            doc => 'For the given subject, perform this action on the search index.',
         },
     ],
     data_source => 'Genome::DataSource::Main',
