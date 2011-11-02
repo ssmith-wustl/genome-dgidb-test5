@@ -5,7 +5,6 @@ use warnings;
 
 require Carp;
 use Data::Dumper 'Dumper';
-require Genome::Model::Test;
 use Test::More;
 
 BEGIN {
