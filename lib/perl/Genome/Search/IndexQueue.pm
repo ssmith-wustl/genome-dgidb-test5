@@ -1,5 +1,8 @@
 package Genome::Search::IndexQueue;
 
+use Carp;
+use Genome;
+
 class Genome::Search::IndexQueue {
     id_by => [
         subject_class => {
@@ -32,15 +35,38 @@ class Genome::Search::IndexQueue {
     table_name => 'search_index_queue',
 };
 
-sub create {
+sub create_or_update {
     my $class = shift;
     my %params = @_;
 
-    unless (exists $params{timestamp}) {
-        $params{timestamp} = UR::Context->now;
+    unless (exists $params{subject}) {
+        Carp::croak "Must provide a subject when calling create_or_update";
     }
 
-    return $class->SUPER::create(%params);
+    unless (exists $params{action}) {
+        Carp::croak "Must provide an action when calling create_or_update";
+    }
+
+    unless (Genome::Search->is_indexable($params{subject})) {
+        Carp::croak "Subject must be indexable in order to add to IndexQueue";
+    }
+
+    # get by "ID"
+    my $index_queue = $class->get(subject => $params{subject});
+
+    if ($index_queue) {
+        # Only set action, leave timestamp as original so that frequent updates
+        # would not always move subject to the end of the index queue.
+        $index_queue->action($params{action});
+    }
+    else {
+        unless (exists $params{timestamp}) {
+            $params{timestamp} = UR::Context->now;
+        }
+        $index_queue = $class->create(%params);
+    }
+
+    return $index_queue;
 }
 
 1;
