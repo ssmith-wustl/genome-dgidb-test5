@@ -14,7 +14,7 @@ class Genome::Subject::Set::View::Create::Html {
 };
 
 sub _title {
-    return 'Upload Subject Data';
+    return 'Import Subject Data';
 }
 
 sub _html_body {

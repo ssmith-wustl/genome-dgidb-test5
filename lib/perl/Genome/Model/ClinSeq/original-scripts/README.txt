@@ -19,7 +19,15 @@
 
 
 #TODO / Feature wish list
-#- Summary stats.tsv -> # SNVs, #tier 1,2,3, WGS. vs. Exome, etc.
+#- Summary stats.
+#  - Data quality
+#    - Stats from reference alignment build (reports directory of the reference build dir):
+#      - lane count: 	5 
+#      - input base count: 	212.587 Gb 
+#      - haploid coverage: 	75.281 
+#      - dbSNP % Concordance:   93.6585 	samtools r599 filtered by snp-filter v1 
+#  - #SNVs, #tier 1,2,3, WGS. vs. Exome, etc.
+
 #- CNV amplified / deleted + over-expressed / under-expressed
 #- WGS vs. Exome Venn Diagrams : For SNVs & Indels
 #- Mutated and expressed vs. not expressed summary
@@ -38,6 +46,28 @@
 #  - Find the genes that overlap these regions
 #- Overlap of observed mutations with Cosmic / OMIM sites (use MUSIC?)
 #- Overlap of observed mutations with TGI recurrent sites
+
+#Summary stats.
+#A descriptive stats, question/answer table
+#Every record in the table will have the following:
+#Question | Data type | analysis type | statistic type
+#What is the median coverage of mutated positions in the exome data? | Exome | SNV | Median 
+
+#Question list:
+#- Median coverage of SNV positions for WGS & Exome seperately, for both the Tumor and the Normal sample
+#- Overall coverage of the genome or exome for both Tumor and Normal
+
+
+#Figures
+#- Scatter plot of Variant Allele Frequency in WGS Tumor vs Exome Tumor - report the R^2 and n
+#- Scatter plot of Variant Allele Frequency in WGS Normal vs Exome Normal - report the R^2 and n
+
+#- Experiment with some ways to visualize mutation variant allele frequency in combination with RNA expression
+#  - WGS VAF (total RC) + Exome VAF (total RC) + RNA-seq VAF (total RC) + RNA-seq Gene FPKM...
+#  - bar plot? 
+#  - scatter plot of Exome VAF vs. RNAseq VAF and then color points according to gene FPKM
+
+
 
 
 

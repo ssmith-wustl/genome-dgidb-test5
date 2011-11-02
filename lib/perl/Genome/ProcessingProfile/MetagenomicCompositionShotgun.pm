@@ -515,17 +515,15 @@ sub _run_refcov {
     }
 
     my $sorted_bam = $build->_final_metagenomic_bam;
-    $self->status_message('Metagenoic BAM: '.$sorted_bam);
+    $self->status_message('Metagenomic BAM: '.$sorted_bam);
     if ( not -s $sorted_bam ) {
-        $self->error_message('Sorted BAM does not exist!');
-        return;
+        die $self->error_message('Sorted BAM does not exist!');
     }
 
     my $regions_file = $build->metagenomic_reference_regions_file; 
     $self->status_message('Regions file: '.$regions_file);
     if ( not -s $regions_file ) {
-        $self->error_message("No regions file ($regions_file) does not exist");
-        return;
+        die $self->error_message("No regions file ($regions_file) does not exist");
     }
 
     my $command = "/usr/bin/perl `which gmt` ref-cov standard";
