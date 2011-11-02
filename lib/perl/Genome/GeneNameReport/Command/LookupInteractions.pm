@@ -31,6 +31,17 @@ sub help_detail {
 
 sub execute {
     my $self = shift;
+
+    my $gene_name_report_results = $self->lookup_gene_identifiers;
+    my %grouped_interactions = $self->group_interactions_by_drug_name_report($gene_name_report_results);
+    $self->print_grouped_interactions(%grouped_interactions);
+
+    return 1;
+}
+
+sub lookup_gene_identifiers {
+    my $self = shift;
+
     my @gene_identifiers = $self->_get_gene_identifiers();
     unless(@gene_identifiers){
         $self->error_message('No gene identifiers in gene_file ' . $self->gene_file . ', exiting');
@@ -40,23 +51,25 @@ sub execute {
     my $gene_name_report_results = {};
 
     for my $gene_identifier (@gene_identifiers){
-        my $cmd = Genome::GeneNameReport::Command::ConvertToEntrez->execute(gene_identifier => $gene_identifier);
-        my @entrez_gene_name_reports = $cmd->_entrez_gene_name_reports;
-        my @intermediates = $cmd->_intermediate_gene_name_reports;
-        $DB::single = 1;
-        my @gene_name_reports = $self->find_gene_name_reports($gene_identifier);
-        my @complete_gene_name_reports = (@entrez_gene_name_reports, @intermediates, @gene_name_reports);
-        @complete_gene_name_reports = uniq @complete_gene_name_reports;
+        my @complete_gene_name_reports = $self->_lookup_gene_identifier($gene_identifier);
         $gene_name_report_results->{$gene_identifier} = {};
         $gene_name_report_results->{$gene_identifier}->{'gene_name_reports'} = \@complete_gene_name_reports;
         $self->get_interactions($gene_identifier, $gene_name_report_results);
     }
 
-    my %grouped_interactions = $self->group_interactions_by_drug_name_report($gene_name_report_results);
+    return $gene_name_report_results;
+}
 
-    $self->print_grouped_interactions(%grouped_interactions);
-
-    return 1;
+sub _lookup_gene_identifier {
+    my $self = shift;
+    my $gene_identifier = shift;
+    my $cmd = Genome::GeneNameReport::Command::ConvertToEntrez->execute(gene_identifier => $gene_identifier);
+    my @entrez_gene_name_reports = $cmd->_entrez_gene_name_reports;
+    my @intermediates = $cmd->_intermediate_gene_name_reports;
+    my @gene_name_reports = $self->find_gene_name_reports($gene_identifier);
+    my @complete_gene_name_reports = (@entrez_gene_name_reports, @intermediates, @gene_name_reports);
+    @complete_gene_name_reports = uniq @complete_gene_name_reports;
+    return @complete_gene_name_reports;
 }
 
 sub find_gene_name_reports {
