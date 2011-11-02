@@ -8,7 +8,7 @@ use Cwd;
 use Data::Dumper;
 use AMOS::AmosLib;
 
-use BIO::SeqIO;
+use Bio::SeqIO;
 
 class Genome::Model::Tools::Velvet::Stats {
     is => ['Genome::Model::Tools::Velvet'],
