@@ -150,13 +150,14 @@ sub modify_index {
     my $display_name = "(Class: $class, ID: $id)";
 
     my $rv = ($self->testing ? 1 : eval { Genome::Search->$action($subject) });
+    my $error = $@;
     if ($rv) {
-        my $message = ($action eq 'add' ? 'Added' : 'Deleted');
+        my $display_action = ($action eq 'add' ? 'Added' : 'Deleted');
         $self->info("$display_action $display_name");
     }
     else {
-        my $message = ($action eq 'add' ? 'Failed to add' : 'Failed to delete');
-        $self->info("$display_action $display_name");
+        my $display_action = ($action eq 'add' ? 'Failed to add' : 'Failed to delete');
+        $self->info("$display_action $display_name\n$@");
     }
 
     return $rv;
