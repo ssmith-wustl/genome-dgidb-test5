@@ -41,9 +41,6 @@ use Genome::Site::WUGC::LegacyConfig;
 $ENV{GENOME_DB} ||= '/gsc/scripts/opt/genome/db';
 $ENV{GENOME_SW} ||= '/gsc/pkg/bio';
 
-# TODO: get things which use this to do so explicitly
-use Test::MockObject; 
-
 # configuration for internal WUGC network software & LIMS 
 # this module is called by Genome::Config::edu::wustl::gsc right now on all *.gsc.wustl.edu hosts
 # print STDERR "using " . __PACKAGE__ . "\n";
