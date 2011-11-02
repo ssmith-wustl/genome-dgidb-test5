@@ -32,7 +32,7 @@ class Genome::Search::IndexQueue {
         },
     ],
     data_source => 'Genome::DataSource::Main',
-    table_name => 'search_index_queue',
+    table_name => 'web.search_index_queue',
 };
 
 sub create_or_update {
