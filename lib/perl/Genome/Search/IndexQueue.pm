@@ -27,7 +27,7 @@ class Genome::Search::IndexQueue {
             valid_values => ['add', 'delete'],
         },
     ],
-    data_source => 'Genome::DataSource::SearchIndexQueue',
+    data_source => 'Genome::DataSource::Main',
     table_name => 'search_index_queue',
 };
 
