@@ -510,7 +510,7 @@ sub _index_queue_callback {
     if ($action) {
         $index_queue = Genome::Search::IndexQueue->create_or_update(
             subject => $object,
-            action => 'add',
+            action => $action,
         );
     }
 
