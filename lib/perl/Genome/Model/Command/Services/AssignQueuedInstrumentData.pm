@@ -1445,8 +1445,8 @@ sub add_processing_profiles_to_pses{
                     $reference_sequence_names_for_processing_profile_ids{$pp_id} = 'UCSC-mouse-buildmm9'
                 }
                 elsif ($taxon->domain =~ /bacteria/i) {
-                    # updated 2011jun15 RT 72143 ctomlins
-                    push @processing_profile_ids_to_add, '2599969';
+                    #updated 2011 Nov 02 .. requested by Chad
+                    push @processing_profile_ids_to_add, '2628526';
                 }
                 #process inst data with work orders 2634033 2636663 with pp 2599969 RT76069
                 elsif ( $taxon->id == 1653198763 ) { #unknow taxon normally skipped
