@@ -126,15 +126,5 @@ class Genome::Individual {
     ],
 };
 
-sub __display_name__ {
-    my $self = shift;
-    if (defined $self->name) {
-        return $self->name .' (' . $self->id . ')';
-    }
-    else {
-        return '(' . $self->id . ')';
-    }
-}
-
 1;
 

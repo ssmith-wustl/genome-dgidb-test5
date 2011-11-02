@@ -93,7 +93,7 @@ sub dispatch_request {
             $params->{'id'} = $obj->id();
         }
 
-        my $body = to_json( $params, { 
+        $body = to_json( $params, {
                                 ascii => 1,
                                 allow_nonref => 1,
                     });

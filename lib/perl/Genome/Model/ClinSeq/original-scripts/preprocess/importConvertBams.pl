@@ -18,6 +18,8 @@ Use extra option --bam_file to specify a single bam file directly instead of loo
 
 Use extra option --trim if you want to trim the reads.  e.g. --trim="16,95" will trim the first 15 bases and the last 5 bases from both R1 and R2
 
+Use --p to specify multiple CPUs for bzip2 compression
+
 INFO
 
 my $working_dir = '';

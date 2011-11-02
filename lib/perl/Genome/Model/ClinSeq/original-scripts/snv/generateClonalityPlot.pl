@@ -9,14 +9,16 @@ use Getopt::Long;
 use Term::ANSIColor qw(:constants);
 use Data::Dumper;
 
-use lib '/gscmnt/sata206/techd/git/genome/lib/perl/Genome/ProcessingProfile/ClinSeq.pm.d';
-use ClinSeq qw(:all);
-
 my $script_dir;
 use Cwd 'abs_path';
-if (abs_path($0) =~ /(.*\/).*\/.*\.pl/){
-  $script_dir = $1;
+BEGIN{
+  if (abs_path($0) =~ /(.*\/).*\/.*\.pl/){
+    $script_dir = $1;
+  }
 }
+use lib $script_dir;
+use ClinSeq qw(:all);
+
 
 #This script running a series of commands obtained from Nate Dees that results in the creation of a clonality plot (.pdf)
 my $somatic_var_model_id = '';
@@ -97,7 +99,6 @@ my $cat_cmd = "cat $working_dir"."snvs* > $working_dir"."allsnvs.hq.novel.tier12
 if ($verbose){print YELLOW, "\n\n$cat_cmd", RESET;}
 system($cat_cmd);
 
-
 #Step 3 - take it out of bed format to be fed into bam-readcounts:
 my $adapted_file ="$working_dir"."allsnvs.hq.novel.tier123.v2.bed.adapted";
 my $awk_cmd = "awk \'{OFS=\"\\t\";FS=\"\\t\";}{print \$1,\$3,\$3,\$4}\' $working_dir"."allsnvs.hq.novel.tier123.v2.bed | sed \'s/\\//\\t/g\' > $adapted_file";
@@ -122,6 +123,15 @@ if ($verbose){print YELLOW, "\n\n$varscan_format_cmd", RESET;}
 system($varscan_format_cmd);
 
 
+#TODO: Replace steps 3-5 above by using the following script:
+#gmt validation prepare-wgs-for-clonality-plot --help
+#USAGE
+# gmt validation prepare-wgs-for-clonality-plot --output-file=? --snv-file=? [--bam-file=?]
+#    [--genome-build=?] [--min-mapping-quality=?] [--output-readcounts-file=?] [--readcounts-file=?]
+#Use the optional --bam-file input so that readcounts are generated for you.
+
+
+
 #Step 6 - Take the cnvs.hq file from the somatic-variation build, and run the cna-seg tool to create known regions of copy-number
 #Specify config file paths for hg19/build37
 #gmt copy-number cna-seg --copy-number-file=/gscmnt/ams1184/info/model_data/2875816457/build111674790/variants/cnvs.hq  --min-markers=4  --detect-somatic  --centromere-file=/gscmnt/sata186/info/medseq/kchen/work/SolexaCNV/scripts/centromere.hg19.csv  --gap-file=/gscmnt/sata186/info/medseq/kchen/work/SolexaCNV/scripts/hg19gaps.csv  --output-file=hg1.cnvhmm
@@ -130,6 +140,8 @@ system($varscan_format_cmd);
 $cp_cmd = "cp $data_paths{cnvs_hq} $working_dir";
 if ($verbose){print YELLOW, "\n\n$cp_cmd", RESET;}
 system($cp_cmd);
+my $chmod_cmd = "chmod 664 $working_dir"."cnvs.hq";
+system ($chmod_cmd);
 
 my $centromere_file;
 my $gap_file;

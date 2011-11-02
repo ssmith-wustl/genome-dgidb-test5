@@ -519,13 +519,14 @@ sub _remove_original_bam {
 }
 
 sub _create_model_and_request_build {
-    my $self =  shift;
+    my $self  = shift;
+    my $pp_id = 2635769;  #Nov 2011 Default Reference Alignment 
 
     $self->status_message('Create model and request build');
 
-    my $pp = Genome::ProcessingProfile::ReferenceAlignment->get(2580856);
+    my $pp = Genome::ProcessingProfile::ReferenceAlignment->get($pp_id);
     if ( not $pp ) {
-        $self->error_message('Cannot find ref align processing profile for 2580856 to create model');
+        $self->error_message("Cannot find ref align processing profile for $pp_id to create model");
         return;
     }
     $self->status_message('Processing profile: '.$pp->name);

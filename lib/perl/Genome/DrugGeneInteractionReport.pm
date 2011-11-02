@@ -12,7 +12,7 @@ class Genome::DrugGeneInteractionReport {
     schema_name => 'subject',
     data_source => 'Genome::DataSource::Main',
     id_by => [
-        id => { is => 'Number' },
+        id => { is => 'Text' },
     ],
     has => [
         drug_name_report_id => { is => 'Text'},
