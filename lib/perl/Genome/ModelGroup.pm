@@ -69,7 +69,7 @@ sub create {
     # Check for name uniqueness
     my $name = $bx->value_for('name');
     if ( my ($exsiting_self) = Genome::ModelGroup->get(name => $name) ) {
-        $class->error_message('Found existing model group with the same name: '.join(' ', map { $exsiting_self->$_ } (qw/ id name /)));
+        $class->error_message('Found existing model group with the same name: '.join(' ', map { $exsiting_self->$_ } (qw{ id name })));
         return;
     }
 
