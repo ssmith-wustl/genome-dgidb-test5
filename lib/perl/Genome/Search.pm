@@ -9,7 +9,7 @@ use UR;
 
 # JTAL: solr-dev is going to be prod, because old code will still point to solr
 
-class Genome::Search { 
+class Genome::Search {
     is => 'UR::Singleton',
     doc => 'This module contains methods for adding and updating objects in the Solr search engine.',
     has => [
@@ -65,21 +65,26 @@ sub searchable_classes {
 
     # order of this array determines sort order of search results
 
-    my @ordered_searchable_classes =
-      qw(Genome::Individual 
-         Genome::Taxon 
-         Genome::Library 
-         Genome::PopulationGroup 
-         Genome::Sample 
-         Genome::ModelGroup 
-         Genome::Model 
-         Genome::ProcessingProfile 
-         Genome::InstrumentData::FlowCell
-         Genome::WorkOrder
-         Genome::Site::WUGC::Project
-         Genome::Disk::Group 
-         Genome::Disk::Volume 
-         Genome::Sys::Email );
+    my @ordered_searchable_classes = qw(
+        Genome::Individual
+        Genome::Taxon
+        Genome::Library
+        Genome::PopulationGroup
+        Genome::Sample
+        Genome::ModelGroup
+        Genome::Model
+        Genome::ProcessingProfile
+        Genome::InstrumentData::FlowCell
+        Genome::WorkOrder
+        Genome::Site::WUGC::Project
+        Genome::Sys::Email
+        Genome::DrugGeneInteractionReport
+        Genome::DrugNameReport
+        Genome::GeneNameReport
+        Genome::InstrumentData::Imported
+        Genome::Sys::User
+        Genome::Wiki::Document
+    );
 
     return @ordered_searchable_classes;
 }
@@ -100,10 +105,10 @@ sub search {
     my $class = shift;
     my $query = shift;
     my $webservice_solr_options = shift;
-    
+
     my $self = $class->_singleton_object;
     my $response = $self->_solr_server->search($query, $webservice_solr_options);
-    
+
     #TODO Better error handling--WebService::Solr doesn't handle error responses gracefully.
     return $response;
 }
@@ -118,16 +123,18 @@ sub is_indexable {
 sub _resolve_solr_xml_view {
     my $class = shift;
     my $object = shift;
-   
-    my $subject_class_name = ref($object) || $object; 
+
+    my $subject_class_name = ref($object) || $object;
 
     return if (!$subject_class_name->isa('UR::Object'));
     return if $subject_class_name->isa('UR::Object::Ghost');
-    return UR::Object::View->_resolve_view_class_for_params(
-        subject_class_name => $subject_class_name,
-        toolkit => 'xml',
-        perspective => 'solr'
-    );
+    return eval {
+        UR::Object::View->_resolve_view_class_for_params(
+            subject_class_name => $subject_class_name,
+            toolkit => 'xml',
+            perspective => 'solr'
+        );
+    };
 }
 
 sub _resolve_result_xml_view {
@@ -171,17 +178,17 @@ sub add {
 
 sub update {
     my $class = shift;
-    
+
     #In solr, updating a record is the same as creating it--if the ID matches it overwrites
     return $class->add(@_);
 }
 
 sub delete {
     my $class = shift;
-    my @objects = grep { exists $_->{db_committed} } @_;   
- 
+    my @objects = grep { exists $_->{db_committed} } @_;
+
     my $self = $class->_singleton_object;
-   
+
     my @ids = map { join('---', $_->class, $_->id()) } @objects;
 
     my $error_count = $class->_delete_by_id(@ids);
@@ -191,7 +198,7 @@ sub delete {
         $self->error_message('Failed to remove ' . $error_count . ' document(s) from Solr.');
         return;
     }
-    
+
     return $deleted_count || 1;
 }
 
@@ -213,17 +220,17 @@ sub _delete_by_id {
             $error_count++;
         }
     }
-    
+
     return $error_count;
 }
 
 sub _delete_by_doc {
     my $class = shift;
     my @docs = @_;
-    
+
     my $self = $class->_singleton_object;
     my $solr = $self->_solr_server;
-    
+
     my $error_count = 0;
     for my $doc (@docs) {
         if($solr->delete_by_id($doc->value_for('id'))) {
@@ -232,34 +239,34 @@ sub _delete_by_doc {
             $error_count++;
         }
     }
-    
+
     return $error_count;
 }
 
 sub clear {
     my $class = shift;
-    
+
     my $self = $class->_singleton_object;
-    
+
     return 1 if UR::DBI->no_commit; #Prevent automated index manipulation when changes certainly won't be committed
-    
+
     my $solr = $self->_solr_server;
-    
+
     $solr->delete_by_query('*:*') || return; #Optimized by solr for fast index clearing
     $solr->optimize() || return; #Prevent former entries from influencing future index
-    
+
     #$self->status_message('Solr index cleared.');
-    
+
     #NOTE: The memcached information is not cleared at this point.
     #However, anything added to search will trigger a cache update.
-    
+
     return 1;
 }
 
 sub cache_key_for_doc {
     my $class = shift;
     my $doc = shift;
-    
+
     return 'genome_search:' . $doc->value_for('id');
 }
 
@@ -271,16 +278,16 @@ sub generate_pager_xml {
     my $class = shift;
     my $pager = shift;
     my $xml_doc = shift || XML::LibXML->createDocument();
-    
+
     my $page_info_node = $xml_doc->createElement('page-info');
-    
+
     $page_info_node->addChild( $xml_doc->createAttribute('previous-page', $pager->previous_page) )
-        if $pager->previous_page;    
+        if $pager->previous_page;
     $page_info_node->addChild( $xml_doc->createAttribute('current-page', $pager->current_page) );
     $page_info_node->addChild( $xml_doc->createAttribute('next-page', $pager->next_page) )
         if $pager->next_page;
     $page_info_node->addChild( $xml_doc->createAttribute('last-page', $pager->last_page) );
-    
+
     return $page_info_node;
 }
 
@@ -290,40 +297,40 @@ sub generate_result_xml {
     my $xml_doc = shift || XML::LibXML->createDocument();
     my $format = shift || 'xml';
     my $override_cache = shift || 0;
-    
+
     my @docs;
     if(ref $doc_or_docs eq 'ARRAY') {
         @docs = @$doc_or_docs;
     } else {
         @docs = $doc_or_docs;
     }
-    
+
     my %views;
     my @result_nodes;
 
     for my $doc (@docs) {
         my $object_id = $doc->value_for('object_id');
-        my $object_class = $doc->value_for('class'); 
-        
+        my $object_class = $doc->value_for('class');
+
         unless($object_id) {
             #Older snapshots will create duplicate entries in the index; let's not show them.
             $class->_delete_by_doc($doc);
             next;
         }
-        
+
         if(!$override_cache and $format eq 'html') {
             if(my $result_node = $class->_get_cached_result($doc, $xml_doc)) {
                 push @result_nodes, $result_node;
                 next;
             }
-        }    
-            
-        
+        }
+
+
         require Genome; #It is only at this point that we actually need to load other objects
-        
-        $object_class->can('isa'); #Force class autoloading    
+
+        $object_class->can('isa'); #Force class autoloading
         my $object = $object_class->get($object_id);
-            
+
         unless($object and ($object_class eq $object->class)) {
             #Either
             # (1) the entity in the index no longer exists
@@ -333,7 +340,7 @@ sub generate_result_xml {
             $class->_delete_by_doc($doc);
             next;
         }
-        
+
         my $view;
 # NOTE: turning off this optimization; it reuses the first object, which doesnt work
 #  out so well when your view is doing $self->property (self is the original instance)
@@ -353,11 +360,11 @@ sub generate_result_xml {
                     subject => $object,
                     rest_variable => '/view',
                 );
-                
+
                 if($format eq 'xsl' or $format eq 'html') {
                     $view_args{xsl_root} = Genome->base_dir . '/xsl';
                 }
-                
+
                 $view = $view_class->create(%view_args);
                 $views{$object_class} = $view;
             } else {
@@ -365,32 +372,32 @@ sub generate_result_xml {
                 next;
             }
         }
-                
-                
+
+
         my $object_content = $view->content;
-                
+
         if($format eq 'xsl' or $format eq 'html') {
             $object_content =~ s/^<\?.*?\?>//;
         }
-                
+
         my $result_node = $xml_doc->createElement('result');
-                
+
         if($format eq 'xml') {
             my $lib_xml = XML::LibXML->new();
             my $content = $lib_xml->parse_string($object_content);
-            
+
             $result_node->addChild($content->childNodes);
         } else {
             $result_node->addChild($xml_doc->createTextNode($object_content));
         }
-                
+
         push @result_nodes, $result_node;
-        
+
         if($format eq 'html') {
             $class->_cache_result($doc, $result_node);
         }
     }
-    
+
     return @result_nodes;
 }
 
@@ -398,22 +405,22 @@ sub _cache_result {
     my $class = shift;
     my $doc = shift;
     my $result_node = shift;
-    
+
     my $self = $class->_singleton_object;
-    
+
     my $html_to_cache = $result_node->childNodes->string_value;
-    
+
     my $memcached = Genome::Memcache->server;
-    
+
     return $memcached->set($self->cache_key_for_doc($doc), $html_to_cache, $self->cache_timeout);
 }
 
 sub _delete_cached_result {
     my $class = shift;
     my $doc = shift;
-    
+
     my $memcached = Genome::Memcache->server;
-    
+
     $memcached->delete($class->cache_key_for_doc($doc));
 }
 
@@ -421,18 +428,18 @@ sub _get_cached_result {
     my $class = shift;
     my $doc = shift;
     my $xml_doc = shift;
-    
+
     my $memcached = Genome::Memcache->server;
-    
+
     my $cache_key = $class->cache_key_for_doc($doc);
     my $html_snippet = $memcached->get($cache_key);
-    
+
     #Cache miss
     return unless $html_snippet;
-    
+
     my $result_node = $xml_doc->createElement('result');
     $result_node->addChild($xml_doc->createTextNode($html_snippet));
-    
+
     return $result_node;
 }
 
@@ -441,19 +448,19 @@ sub _get_cached_result {
 sub generate_document {
     my $class = shift;
     my @objects = @_;
-    
+
     my @docs = ();
-    
+
     # Building new instances of View classes is slow as the system has to resolve a large set of information
     # According to NYTProf, recycling the view reduced the time spent here from 457s to 45.5s on a set of 1000 models
-    
-    my %views;    
+
+    my %views;
     for my $o (@objects) {
         my $view;
- 
+
 # NOTE: turning off this optimization; it reuses the first object, which doesnt work
 #  out so well when your view is doing $self->property (self is the original instance)
- 
+
         if(defined $views{$o->class}) {
             $view = $views{$o->class};
             $view->subject($o);
@@ -466,115 +473,62 @@ sub generate_document {
                  Carp::confess('To make an object searchable create an appropriate ::View::Solr::Xml that inherits from Genome::View::Solr::Xml.');
              }
         }
-        
+
         push @docs, $view->content_doc;
     }
-    
+
     return @docs;
 }
 
-###  Callbacks for automatically updating index  ###
+###  Callback for automatically updating index  ###
 
 our $LOADED_MODULES = 0;
-our $searchable_classes;
-sub _commit_callback {
-    my $class = shift;
-    my $object = shift;
-    
+sub _index_queue_callback {
+    my ($class, $object, $aspect) = @_;
+
     return unless $object;
-
-    ## dont cruft up the production solr when no_commit is on, but run through this code
-    ## during test cases
-    return 1 if UR::DBI->no_commit && $class->environment eq 'prod'; 
-
-    # Skip loading the search-related code unless at least one of the committing objects
-    # is one of the searchable things.
-    # FIXME: a better solution would be for the searchable classes to inherit from a new
-    # parent class (say, Genome::Searchable), and then Genome.pm can register an observer for
-    # that class instead of UR::Object
-    unless ($searchable_classes) {
-        my %searchable_classes = map { $_ => 1 } $class->searchable_classes();
-        $searchable_classes = \%searchable_classes;
-    }
-    return 1 unless $searchable_classes->{$object->class};
 
     unless ($LOADED_MODULES++) {
         require WebService::Solr;
         require MRO::Compat;
     }
-    
-    eval {
-        if($class->is_indexable($object)) {
-            $class->add($object);
-        }
-    };
-    
-    if($@) {
-        system("echo '$@' | mailx -s 'search commit callback failed' jlolofie\@genome.wustl.edu");
-        my $self = $class->_singleton_object;
-        $self->error_message('failed to update search engine, sending an email.');
-        return;
+
+    my $meta = $object->__meta__;
+    my @add_property_names = ('create', $meta->all_property_names);
+
+    my $action;
+    if (grep { $aspect eq $_ } @add_property_names) {
+        $action = 'add';
     }
-    
-    return 1;
+    elsif ($aspect eq 'delete') {
+        $action = 'delete';
+    }
+
+    my $index_queue;
+    if ($action) {
+        $index_queue = Genome::Search::IndexQueue->create_or_update(
+            subject => $object,
+            action => $action,
+        );
+    }
+
+    return $index_queue;
 }
 
-sub _delete_callback {
-    my $class = shift;
-    my $object = shift;
-
-    return unless $object;
-
-    return 1 if UR::DBI->no_commit && $class->environment eq 'prod'; 
-    
-    eval {
-        if($class->is_indexable($object)) {
-            $class->delete($object);
-        }
-    };
-    
-    if($@) {
-        my $self = $class->_singleton_object;
-        $self->error_message('Error in delete callback: ' . $@);
-        return;
-    }
-    
-    return 1;
-}
-
-my %commit_cb = ();
-my %delete_cb = ();
-#This should be called from Genome.pm, so typically it won't need to be called elsewhere.
+my $observer;
+# register_callbacks and unregister_callbacks should be called from Genome.pm,
+# so typically it won't need to be called elsewhere.
 sub register_callbacks {
     my $class = shift;
-    my $module_to_observe = shift;
-    
-    $commit_cb{$module_to_observe} = sub { $class->_commit_callback(@_); };
-    $module_to_observe->create_subscription(
-        method => 'commit',
-        callback => $commit_cb{$module_to_observe},
-    );
-   
-    $delete_cb{$module_to_observe} = sub { $class->_delete_callback(@_); }; 
-    $module_to_observe->create_subscription(
-        method => 'delete',
-        callback => $delete_cb{$module_to_observe} 
+    my $searchable_class = shift;
+
+    $observer = $searchable_class->add_observer(
+        callback => sub { $class->_index_queue_callback(@_); },
     );
 }
 
 sub unregister_callbacks {
-    my $class = shift;
-    my $module_to_observe = shift;
-
-    $module_to_observe->cancel_change_subscription(
-        'commit', $commit_cb{$module_to_observe},
-    ); 
-    delete $commit_cb{$module_to_observe};   
- 
-    $module_to_observe->cancel_change_subscription(
-        'delete', $delete_cb{$module_to_observe}
-    );
-    delete $delete_cb{$module_to_observe}
+    $observer->delete;
 }
 
 #OK!
@@ -591,7 +545,7 @@ Genome::Search
   Genome::Search->add(@objects);
   Genome::Search->delete(@objects);
   Genome::Search->is_indexable($object);
-  
+
   Genome::Search->search($query, $options);
 
 =head1 DESCRIPTION

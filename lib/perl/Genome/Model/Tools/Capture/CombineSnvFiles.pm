@@ -1,8 +1,8 @@
 
-package Genome::Model::Tools::Capture::FormatSnvs;     # rename this when you give the module file a different name <--
+package Genome::Model::Tools::Capture::CombineSnvFiles;     # rename this when you give the module file a different name <--
 
 #####################################################################################################################################
-# FormatSnvsForAnnotation - Merge glfSomatic/Varscan somatic calls in a file that can be converted to MAF format
+# CombineSnvFilesForAnnotation - Merge glfSomatic/Varscan somatic calls in a file that can be converted to MAF format
 #					
 #	AUTHOR:		Dan Koboldt (dkoboldt@watson.wustl.edu)
 #
@@ -18,27 +18,26 @@ use warnings;
 use FileHandle;
 use Genome;                                 # using the namespace authorizes Class::Autouse to lazy-load modules under it
 
-class Genome::Model::Tools::Capture::FormatSnvs {
+class Genome::Model::Tools::Capture::CombineSnvFiles {
 	is => 'Command',                       
 	
 	has => [                                # specify the command's single-value properties (parameters) <--- 
-		variants_file	=> { is => 'Text', doc => "File of SNV predictions", is_optional => 0, is_input => 1 },
-		output_file     => { is => 'Text', doc => "Output file to receive formatted lines", is_optional => 0, is_input => 1, is_output => 1 },
-		preserve_call	=> { is => 'Text', doc => "If set to 1, preserves the consensus call", is_optional => 1, is_input => 1 },
-		append_line	=> { is => 'Text', doc => "If set to 1, appends extra columns in input lines to output lines", is_optional => 1, is_input => 1, default => 0 },
+		variant_file1	=> { is => 'Text', doc => "Variants in annotation format", is_optional => 0, is_input => 1 },
+		variant_file2	=> { is => 'Text', doc => "Variants in annotation format", is_optional => 0, is_input => 1 },
+		output_file     => { is => 'Text', doc => "Output file to receive annotation-formatted lines", is_optional => 0, is_input => 1, is_output => 1 },
 	],
 };
 
 sub sub_command_sort_position { 12 }
 
 sub help_brief {                            # keep this to just a few words <---
-    "Formats SNVs for the annotation pipeline"                 
+    "Combines variants in two files into a single file"                 
 }
 
 sub help_synopsis {
     return <<EOS
-This command formats indels for the annotation pipeline
-EXAMPLE:	gmt analysis somatic-pipeline format-snvs-for-annotation --variants-file [file] --output-file [file]
+This command combines variants in two files into a single file, making columns 1-5 unique, and preserving additional columns (if shared, from file 1)
+EXAMPLE:	gmt capture combine_snv_files --variant-file [file] --output-file [file]
 EOS
 }
 
@@ -57,17 +56,104 @@ EOS
 sub execute {                               # replace with real execution logic.
 	my $self = shift;
 
+	my %stats = ();
+
 	## Get required parameters ##
-	my $variants_file = $self->variants_file;
+	my $variant_file1 = $self->variant_file1;
+	my $variant_file2 = $self->variant_file2;
 	my $output_file = $self->output_file;
+	
+	warn "Loading variants in file 1...\n";
+	my %variants1 = load_variants($variant_file1);
+
+	print "Loading variants in file 2...\n";
+	my %variants2 = load_variants($variant_file2);
+	
+	my %all_variants = ();
+	
+	foreach my $key (keys %variants1)
+	{
+		$all_variants{$key}++;
+	}
+
+	foreach my $key (keys %variants2)
+	{
+		$all_variants{$key}++;
+	}
+	
 	
 	## Open outfile ##
 	
 	open(OUTFILE, ">$output_file") or die "Can't open outfile: $!\n";
-	
-	## Parse the indels ##
 
-	my $input = new FileHandle ($variants_file);
+	foreach my $key (sort byChrPos keys %all_variants)
+	{
+		$stats{'total variants'}++;
+		
+		if($variants1{$key} && $variants2{$key})
+		{
+			my @line1 = split(/\t/, $variants1{$key});
+			my @line2 = split(/\t/, $variants2{$key});
+			
+			my $numContents = @line1;
+			my $rest_of_line = "";
+			for (my $colCounter = 2; $colCounter < $numContents; $colCounter++)
+			{
+				$rest_of_line .= "\t" if($rest_of_line);
+				$rest_of_line .= $line1[$colCounter];
+			}
+			
+			my $ref1 = $line1[0];
+			my $ref2 = $line2[0];
+			
+			my $var1 = $line1[1];
+			my $var2 = $line2[1];
+			
+			my $ref = $ref1;
+			$ref .= "/$ref2" if(!($ref =~ $ref2));
+
+			my $var = $var1;
+			$var .= "/$var2" if(!($var =~ $var2));
+			
+			print OUTFILE join("\t", $key, $ref, $var, $rest_of_line) . "\n";
+			$stats{'variants shared'}++;
+		}
+		elsif($variants1{$key})
+		{
+			print OUTFILE join("\t", $key, $variants1{$key}) . "\n";
+			$stats{'variants unique to file 1'}++;
+		}
+		elsif($variants2{$key})
+		{
+			print OUTFILE join("\t", $key, $variants2{$key}) . "\n";
+			$stats{'variants unique to file 2'}++;
+		}
+	}
+	
+	close(OUTFILE);
+
+	foreach my $key (sort keys %stats)
+	{
+		print "$stats{$key} $key\n";
+	}
+	
+	return(1);
+}
+
+
+
+################################################################################################
+# Load variants - parse a variant file 
+#
+################################################################################################
+
+sub load_variants
+{                               # replace with real execution logic.
+	my $FileName = shift(@_);	
+
+	my %variants = ();
+
+	my $input = new FileHandle ($FileName);
 	my $lineCounter = 0;
 
 	my @formatted = ();
@@ -86,63 +172,32 @@ sub execute {                               # replace with real execution logic.
 			my $chrom = $lineContents[0];
 			$chrom = fix_chrom($chrom);
 			my $chr_start = $lineContents[1];
-			my $chr_stop = my $allele1  = my $allele2 = "";
-
-			my $restColumn = 0;
-
-			if($lineContents[2] && $lineContents[2] =~ /[0-9]/)
+			my $chr_stop = $lineContents[2];
+			my $allele1= $lineContents[3];
+			my $allele2 = $lineContents[4];
+			my $numContents = @lineContents;
+			
+			my $rest_of_line = "";
+			for(my $colCounter = 5; $colCounter < $numContents; $colCounter++)
 			{
-				$chr_stop = $lineContents[2];
-				$allele1 = $lineContents[3];
-				$allele2 = $lineContents[4];
-				$restColumn = 5;
-			}
-			else
-			{
-				$chr_stop = $chr_start;
-				$allele1 = $lineContents[2];
-				$allele2 = $lineContents[3];
-				$restColumn = 4;
+				$rest_of_line .= "\t" if($rest_of_line);
+				$rest_of_line .= $lineContents[$colCounter];
 			}
 
 			if($chrom && $chr_start && $chr_stop)
 			{
-				$allele2 = iupac_to_base($allele1, $allele2) if(!$self->preserve_call);
-	
-				## If we have other information on line, output it ##
-				my $numContents = @lineContents;
-				my $rest_of_line = "";
-				if($self->append_line && $restColumn && $restColumn > 0 && $restColumn < $numContents)
-				{
-					for(my $colCounter = $restColumn; $colCounter < $numContents; $colCounter++)
-					{
-						$rest_of_line .= "\t" if($colCounter > $restColumn);
-						$rest_of_line .= $lineContents[$colCounter];
-					}
-	
-				}
-	
-				$formatted[$formatCounter] = "$chrom\t$chr_start\t$chr_stop\t$allele1\t$allele2\t$rest_of_line";
-				$formatCounter++;
+				my $key = join("\t", $chrom, $chr_start, $chr_stop);
+				$variants{$key} = "$allele1\t$allele2";
+				$variants{$key} .= "\t$rest_of_line" if($rest_of_line);
 			}
 		}
 	}
 
 	close($input);
 	
-	## Sort the formatted indels by chr pos ##
-
-	@formatted = sort byChrPos @formatted;
+	return(%variants);
 	
-	foreach my $snv (@formatted)
-	{
-		print OUTFILE "$snv\n";
-	}
-	
-	
-	close(OUTFILE);
 }
-
 
 #############################################################
 # ParseBlocks - takes input file and parses it

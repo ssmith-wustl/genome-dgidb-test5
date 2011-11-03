@@ -66,6 +66,12 @@ class Genome::Model::Tools::Vcf::JoinVcf {
             is_input => 1,
             default => 0,
         },
+        use_gzip_files => {
+            is => 'Boolean',
+            doc => "Set this to use gzip input files and output gzip data",
+            is_input => 1,
+            default => 0,
+        },
     ],
     has_transient_optional => [
         _vcf_a_fh => {
@@ -118,14 +124,20 @@ sub execute {
         die $self->error_message("Could not locate vcf_file_b at: ".$vcf_b);
     }
 
-    my $vcf_a_fh = Genome::Sys->open_file_for_reading($vcf_a);
-    $self->_vcf_a_fh($vcf_a_fh);
-
-    my $vcf_b_fh = Genome::Sys->open_file_for_reading($vcf_b);
-    $self->_vcf_b_fh($vcf_b_fh);
-
+    my ($vcf_a_fh, $vcf_b_fh, $output_fh);
     my $output = $self->output_file;
-    my $output_fh = Genome::Sys->open_file_for_writing($output);
+    if ($self->use_gzip_files) {
+        $vcf_a_fh = Genome::Sys->open_gzip_file_for_reading($vcf_a);
+        $vcf_b_fh = Genome::Sys->open_gzip_file_for_reading($vcf_b);
+        $output_fh = Genome::Sys->open_gzip_file_for_writing($output);
+    } else {
+        $vcf_a_fh = Genome::Sys->open_file_for_reading($vcf_a);
+        $vcf_b_fh = Genome::Sys->open_file_for_reading($vcf_b);
+        $output_fh = Genome::Sys->open_file_for_writing($output);
+    }
+
+    $self->_vcf_a_fh($vcf_a_fh);
+    $self->_vcf_b_fh($vcf_b_fh);
     $self->_output_fh($output_fh);
 
     $self->merge_headers; 
@@ -134,7 +146,6 @@ sub execute {
     $self->print_header;
     
     $self->process_records;
-
 
     $self->_vcf_a_fh->close;
     $self->_vcf_b_fh->close;

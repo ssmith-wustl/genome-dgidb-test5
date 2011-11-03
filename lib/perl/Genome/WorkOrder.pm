@@ -82,7 +82,7 @@ class Genome::WorkOrder {
             is => 'Text',
             len => 16,
         },
-        requester_gu_id => {
+        requester_con_id => {
                 is => 'Integer',
                 len => 10,
         },
