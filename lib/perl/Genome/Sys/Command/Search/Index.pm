@@ -41,8 +41,10 @@ sub execute {
     }
     else {
         my $action = $self->action();
-        my $subject = $self->get_subject_from_subject_text();
-        $self->modify_index($subject, $action) if $subject;
+        my $subject_iterator = $self->get_subject_iterator_from_subject_text();
+        while (my $subject = $subject_iterator->next) {
+            $self->modify_index($subject, $action);
+        }
     }
 
     return 1;
@@ -60,12 +62,12 @@ sub prompt_for_confirmation {
     return ($response =~ /^(y|yes)$/);
 }
 
-sub get_subject_from_subject_text {
+sub get_subject_iterator_from_subject_text {
     my $self = shift;
 
     my ($subject_class, $subject_id) = $self->subject_text =~ /^(.*)=(.*)$/;
-    unless ($subject_class && $subject_id) {
-        $self->error("Failed to parse subject_text (" . $self->subject_text . ") for class and ID. Must be in the form Class=ID.");
+    unless ($subject_class) {
+        $self->error("Failed to parse subject_text (" . $self->subject_text . ") for class. Must be in the form Class or Class=ID.");
         return;
     }
 
@@ -74,13 +76,14 @@ sub get_subject_from_subject_text {
         return;
     }
 
-    my $subject = $subject_class->get($subject_id);
-    unless ($subject) {
-        $self->error("Failed to get object (Class: $subject_class, ID: $subject_id).");
+    my $subject_iterator = $subject_class->create_iterator($subject_id);
+    unless ($subject_iterator) {
+        $subject_id ||= '*';
+        $self->error("Failed to get iterator (Class: $subject_class, ID: $subject_id).");
         return;
     }
 
-    return $subject;
+    return $subject_iterator;
 }
 
 sub index_all {
