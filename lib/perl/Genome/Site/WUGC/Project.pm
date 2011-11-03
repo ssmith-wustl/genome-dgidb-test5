@@ -7,6 +7,7 @@ use Genome;
 # The new Genome::Project is built from this plus analyst-created projects
 
 class Genome::Site::WUGC::Project {
+    is => 'Genome::Searchable',
     id_properties => ['setup_project_id'],
     table_name =>   "(SELECT * FROM setup_project\@oltp p JOIN setup\@oltp s ON setup_id = setup_project_id WHERE project_type != 'setup project finishing' AND setup_status != 'abandoned') project ",
     has => [

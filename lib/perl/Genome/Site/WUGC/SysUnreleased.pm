@@ -21,7 +21,7 @@ require Genome::Utility::Text;
 use Digest::MD5;
 use Sys::Hostname;
 use File::Find;
-use Archive::Extract;
+#use Archive::Extract;
 
 require MIME::Lite;
 
@@ -240,6 +240,8 @@ sub extract_archive {
     #the perl modules will often load the entire archive into RAM
     #we operate on files way too big to be doing that
     $Archive::Extract::PREFER_BIN = 1;
+
+    require Archive::Extract;
 
     my $archive = Archive::Extract->new(archive => $from);
     unless($archive) {

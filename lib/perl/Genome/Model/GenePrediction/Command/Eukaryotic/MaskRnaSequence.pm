@@ -10,6 +10,8 @@ use File::Basename;
 use File::Spec;
 use Genome::Sys;
 
+use Bio::SeqIO;
+
 class Genome::Model::GenePrediction::Command::Eukaryotic::MaskRnaSequence {
     is => 'Command',
     has => [

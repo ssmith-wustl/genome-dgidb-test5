@@ -5,6 +5,7 @@ use warnings;
 
 use Genome;
 use Data::Dumper 'Dumper';
+use Bio::Seq;
 use Bio::SeqIO;
 use AMOS::AmosLib;
 
