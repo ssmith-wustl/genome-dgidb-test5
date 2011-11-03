@@ -4,7 +4,9 @@ use strict;
 use warnings;
 
 use Genome;
+use Bio::Seq;
 use Bio::SeqIO;
+use Bio::Seq::Quality;
 use Data::Dumper 'Dumper';
 
 class Genome::Model::Tools::Newbler::CreateContigsFiles {

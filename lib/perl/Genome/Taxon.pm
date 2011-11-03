@@ -5,7 +5,7 @@ use warnings;
 use Genome;
 
 class Genome::Taxon {
-    is => 'Genome::Subject',
+    is => ['Genome::Subject','Genome::Searchable'],
     has => [
         taxon_id => { 
             calculate => q|$self->id| 

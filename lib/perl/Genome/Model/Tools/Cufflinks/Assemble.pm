@@ -5,6 +5,7 @@ use warnings;
 
 use Genome;
 use Cwd;
+use version;
 
 class Genome::Model::Tools::Cufflinks::Assemble {
     is => 'Genome::Model::Tools::Cufflinks',

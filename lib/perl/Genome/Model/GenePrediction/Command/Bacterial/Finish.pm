@@ -15,8 +15,6 @@ use Getopt::Long;
 use Pod::Usage;
 use Ace;
 use Ace::Sequence;
-use Bio::SeqIO;
-use Bio::Seq;
 use Carp;
 use File::Path;
 use MIME::Lite;

@@ -5,6 +5,7 @@ use warnings;
 use Genome;
 
 class Genome::ModelGroup {
+    is => 'Genome::Searchable',
     table_name => 'MODEL_GROUP',
     id_by      => [ 
         id                  => { is => 'Text' },

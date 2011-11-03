@@ -22,7 +22,6 @@ use FileHandle;
 use Data::Dumper;
 use List::Util qw( max );
 use IO::File;
-use Bio::DB::Fasta;
 use Genome::Info::IUB;
 use DBI;
 use Cwd ('getcwd','abs_path');

@@ -5,6 +5,8 @@ use warnings;
 use Genome;
 use FileHandle;
 
+use Bio::Seq;
+
 class Genome::Model::Tools::Snp::GetDbsnps {
     is => 'Command',                    
     has => [ # specify the command's properties (parameters) <--- 

@@ -104,9 +104,28 @@ sub execute {
   $inFh->close;
 
   # Let the user know if a type of variant wasn't listed. Can also indicate bad input formatting
-  ( scalar @{$files{snvs}} > 0 ) or warn "No SNV files listed in input. Continuing anyway...";
-  ( scalar @{$files{indels}} > 0 ) or warn "No Indel files listed in input. Continuing anyway...";
-  ( scalar @{$files{svs}} > 0 ) or warn "No SV files listed in input. Continuing anyway...";
+  if (exists($files{"snvs"})){
+      unless(scalar @{$files{"snvs"}} > 0 ){
+          warn "No SNV files listed in input. Continuing anyway...";
+      }
+  } else {
+      warn "No SNV files listed in input. Continuing anyway...";
+  }
+  if (exists($files{"indels"})){
+      unless(scalar @{$files{"indels"}} > 0 ){
+          warn "No INDEL files listed in input. Continuing anyway...";
+      }
+  } else {
+      warn "No INDEL files listed in input. Continuing anyway...";
+  }
+  if (exists($files{"svs"})){
+      unless(scalar @{$files{"svs"}} > 0 ){
+          warn "No SV files listed in input. Continuing anyway...";
+      }
+  } else {
+      warn "No SV files listed in input. Continuing anyway...";
+  }
+
 
   # Quit if one of the files don't exist
   ( -e $_ ) or die "File doesn't exist: $_" foreach( @{$files{snvs}}, @{$files{indels}}, @{$files{svs}} );

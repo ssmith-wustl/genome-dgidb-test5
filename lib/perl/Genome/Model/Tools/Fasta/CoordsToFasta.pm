@@ -4,6 +4,9 @@ use strict;
 use warnings;
 use Genome;
 
+use Bio::Seq;
+use Bio::DB::Fasta;
+
 class Genome::Model::Tools::Fasta::CoordsToFasta {
     is => 'Command',                    
     has => [ # specify the command's properties (parameters) <--- 

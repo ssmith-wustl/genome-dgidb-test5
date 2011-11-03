@@ -26,6 +26,8 @@ use warnings;
 use Genome;
 use File::Basename;
 
+use Bio::Seq;
+
 class Genome::Model::Tools::Fastq::Trimq2::Simple {
     is  => 'Genome::Model::Tools::Fastq::Trimq2',
     has_input => [

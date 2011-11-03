@@ -3,6 +3,7 @@ package Genome::Model::Tools::Snp::ScreenNonsynonymousSnps;
 use strict;
 use warnings;
 use Genome;
+use Bio::Seq;
 use Bio::SeqIO;
 
 

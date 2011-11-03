@@ -5,6 +5,7 @@ use warnings;
 
 use Genome;
 use IO::File;
+use Bio::Seq;
 use Bio::SeqIO;
 use Genome::Model::Tools::Pcap::Ace::Reader;
 

@@ -32,17 +32,6 @@ BEGIN {
     }
 }
 
-# This module potentially conflicts to the perl-supplied Config.pm if you've
-# set up your @INC or -I options incorrectly.  For example, you used -I /path/to/modules/Genome/
-# instead of -I /path/to/modules/.  Many modules use the real Config.pm to get info and
-# you'll get wierd failures if it loads this module instead of the right one.
-{
-    my @caller_info = caller(0);
-    if ($caller_info[3] eq '(eval)' and $caller_info[6] eq 'Config.pm') {
-        die "package Genome::Config was loaded from a 'use Config' statement, and is not want you wanted.  Are your \@INC and -I options correct?";
-    }
-}
-
 1;
 
 =pod
