@@ -265,7 +265,7 @@ sub execute {                               # replace with real execution logic.
 						my $normal_bam = `ls $normal_model_dir/alignments/*.bam`; chomp($normal_bam);
 
 						output_germline_files($self, $last_build_dir, $germline_dir, $tumor_bam, $normal_bam, $tumor_model_dir, $normal_model_dir);
-						exit(0);
+#						exit(0);
 					}
 
 					if($self->output_loh_calls)
@@ -1157,168 +1157,123 @@ sub output_germline_files
 {
 	my ($self, $build_dir, $germline_dir, $tumor_bam, $normal_bam, $tumor_model_dir, $normal_model_dir) = @_;
 
+	my $cmd = "";	
 #	print "Somatic\t$build_dir\nTumor\t$tumor_model_dir\nNormal\t$normal_model_dir\n";
+
+	## Open output script ##
+	
+	open(SCRIPT, ">$germline_dir/germline.sh");
+	print SCRIPT "#!/gsc/bin/sh\n";
 
 	## Get File of Somatic SNVs ##
 	
 	my $somatic_snvs = "$build_dir/merged.somatic.snp.filter.novel";
 
-	## Get variant file to parse ##
+	## Get SAMtools variant files with Annotation ##
+	my $normal_annotation_file = "$normal_model_dir/variants/filtered.variants.post_annotation";
+	$normal_annotation_file = "$normal_model_dir/snp_related_metrics/filtered.variants.post_annotation" if(!(-e $normal_annotation_file));
+
+	my $tumor_annotation_file = "$tumor_model_dir/variants/filtered.variants.post_annotation";
+	$tumor_annotation_file = "$tumor_model_dir/snp_related_metrics/filtered.variants.post_annotation" if(!(-e $tumor_annotation_file));
+
+	## Get SAMtools variant files with Annotation ##
+	my $normal_variant_file = "$normal_model_dir/variants/snps_all_sequences.filtered";
+	$normal_variant_file = "$normal_model_dir/snp_related_metrics/snps_all_sequences.filtered" if(!(-e $normal_variant_file));
+
+	my $tumor_variant_file = "$tumor_model_dir/variants/snps_all_sequences.filtered";
+	$tumor_variant_file = "$tumor_model_dir/snp_related_metrics/snps_all_sequences.filtered" if(!(-e $tumor_variant_file));
+
+	## Format Normal and Tumor Variant Files ##
+	print "Isolating normal/tumor SNP calls...\n";
+	$cmd = "gmt capture format-snvs --variant $normal_variant_file --output-file $germline_dir/samtools.normal.snp --preserve-call 1 --append-line 0";
+	print SCRIPT "$cmd\n";
+	$cmd = "gmt capture format-snvs --variant $tumor_variant_file --output-file $germline_dir/samtools.tumor.snp --preserve-call 1 --append-line 0";
+	print SCRIPT "$cmd\n";
 	
-	my $normal_variant_file = "$normal_model_dir/variants/filtered.variants.post_annotation";
-	my $tumor_variant_file = "$tumor_model_dir/variants/filtered.variants.post_annotation";
-	
-	if(!(-e $normal_variant_file))
-	{
-		$normal_variant_file = "$normal_model_dir/snp_related_metrics/filtered.variants.post_annotation";
-	}
+	## Get VarScan Files ##
 
-	if(!(-e $tumor_variant_file))
-	{
-		$tumor_variant_file = "$tumor_model_dir/snp_related_metrics/filtered.variants.post_annotation";
-	}	
-
-	my $outfile_tumor_snp = $germline_dir . "/samtools.tumor.snp";
-	my $outfile_normal_snp = $germline_dir . "/samtools.normal.snp";
-
-	if(-e $normal_variant_file && !(-e $outfile_normal_snp))
-	{
-		## Parse out Normal SNPs ##
-	
-		warn "Parsing Normal SAMtools SNPs file...\n";
-		my $num_normal_snps = get_samtools_snps($normal_variant_file, $outfile_normal_snp);
-		print "$num_normal_snps SNPs obtained for normal\n";
-	
-		if($self->germline_roi_file)
-		{
-			warn "Limiting SNPs to ROI...\n";
-			## Limit SNPs to Germline ROI BED ##
-			system("java -jar /gsc/scripts/lib/java/VarScan/VarScan.jar limit $outfile_normal_snp --regions-file " . $self->germline_roi_file . " --output-file $outfile_normal_snp.roi");
-			$outfile_normal_snp .= ".roi";
-		}		
-	}
-
-	if(-e $tumor_variant_file && !(-e $outfile_tumor_snp))
-	{
-		## Parse out Tumor SNPs ##
-	
-		warn "Parsing Tumor SAMtools SNPs file...\n";
-		my $num_tumor_snps = get_samtools_snps($tumor_variant_file, $outfile_tumor_snp);
-		print "$num_tumor_snps SNPs obtained for tumor\n";
-	
-		if($self->germline_roi_file)
-		{
-			warn "Limiting SNPs to ROI...\n";
-			## Limit SNPs to Germline ROI BED ##
-			system("java -jar /gsc/scripts/lib/java/VarScan/VarScan.jar limit $outfile_tumor_snp --regions-file " . $self->germline_roi_file . " --output-file $outfile_tumor_snp.roi");
-			$outfile_tumor_snp .= ".roi";
-		}
-		
-	}
-
-
-	## Remove somatic SNPs ##
-	warn "Removing Somatic SNVs from normal list...\n";
-	system("java -jar /gsc/scripts/lib/java/VarScan/VarScan.jar limit $outfile_normal_snp --regions-file " . $somatic_snvs . " --not-file $outfile_normal_snp.germline") if(!(-e "$outfile_normal_snp.germline"));	
-
-	warn "Removing Somatic SNVs from tumor list...\n";
-	system("java -jar /gsc/scripts/lib/java/VarScan/VarScan.jar limit $outfile_tumor_snp --regions-file " . $somatic_snvs . " --not-file $outfile_tumor_snp.germline") if(!(-e "$outfile_tumor_snp.germline"));	
-	$outfile_normal_snp .= ".germline";
-	$outfile_tumor_snp .= ".germline";
-
-	## Apply FP-filter to normal SNPs ##
-	my $cmd = "";	
-	$cmd = "bsub -q long -R\"select[type==LINUX64 && mem>8000] rusage[mem=8000]\" -M 8000000 gmt somatic filter-false-positives ";
-	$cmd .= "--reference " . $self->reference . " ";
-	$cmd .= "--variant-file $outfile_normal_snp --bam-file $normal_bam --output-file $outfile_normal_snp.fpfilter --filtered-file $outfile_normal_snp.fpfilter.removed ";
-	$cmd .= "--max-mm-qualsum-diff 100 ";
-#	system($cmd);
-
-	## Apply FP-filter to tumor SNPs ##
-	$cmd = "";	
-	$cmd = "bsub -q long -R\"select[type==LINUX64 && mem>8000] rusage[mem=8000]\" -M 8000000 gmt somatic filter-false-positives ";
-	$cmd .= "--reference " . $self->reference . " ";
-	$cmd .= "--variant-file $outfile_tumor_snp --bam-file $tumor_bam --output-file $outfile_tumor_snp.fpfilter --filtered-file $outfile_tumor_snp.fpfilter.removed ";
-	$cmd .= "--max-mm-qualsum-diff 100 ";
-#	system($cmd);
-
-
+	print "Getting VarScan files...\n";
 	my $varscan_germline_snps = `ls $build_dir/varScan.output.snp.formatted.Germline.hc 2>/dev/null`;
 	chomp($varscan_germline_snps);
 
 	my $varscan_loh_snps = `ls $build_dir/varScan.output.snp.formatted.LOH.hc 2>/dev/null`;
 	chomp($varscan_loh_snps);
 
-	if(-e $varscan_germline_snps && -e $varscan_loh_snps)
-	{
-		my $output_snp_varscan = $germline_dir . "/varScan.germline.snp";
-		system("cat $varscan_germline_snps $varscan_loh_snps >$output_snp_varscan");
-		system("gmt capture sort-by-chr-pos --input $output_snp_varscan --output $output_snp_varscan");
+	$cmd = "cut -f 1-4,9 $varscan_germline_snps >$germline_dir/varScan.germline.snp";
+	print SCRIPT "$cmd\n";
+	$cmd = "cut -f 1-4,9 $varscan_loh_snps >$germline_dir/varScan.loh.snp";
+	print SCRIPT "$cmd\n";
 
-		if($self->germline_roi_file)
-		{
-			system("java -jar /gsc/scripts/lib/java/VarScan/VarScan.jar limit $output_snp_varscan --regions-file " . $self->germline_roi_file . " --output-file $output_snp_varscan.roi");
-			$output_snp_varscan .= ".roi";
-		}
-		
-		## Apply FP-filter using Normal BAM ##
-		my $cmd = "";	
-		$cmd = "bsub -q long -R\"select[type==LINUX64 && mem>8000] rusage[mem=8000]\" -M 8000000 gmt somatic filter-false-positives ";
-		$cmd .= "--reference " . $self->reference . " ";
-		$cmd .= "--variant-file $output_snp_varscan --bam-file $normal_bam --output-file $output_snp_varscan.fpfilter --filtered-file $output_snp_varscan.fpfilter.removed ";
-		$cmd .= "--max-mm-qualsum-diff 100 ";
-		system($cmd);
-
-		## Also run transcript-annotation ##
-		
-		$cmd = "bsub -q long gmt annotate transcript-variants --annotation-filter top --reference-transcripts " . $self->reference_transcripts . " ";
-		$cmd .= "--variant-file $output_snp_varscan --output-file $output_snp_varscan.transcript-annotation";
-		system($cmd);
-	}
-	else
-	{
-		warn "Missing VarScan Germline-HC or LOH-HC files in $build_dir\n";
-	}
+	## Merge files ##
 	
+	print "Merging files...\n";
+	$cmd = "cat $germline_dir/samtools.normal.snp $germline_dir/varScan.germline.snp $germline_dir/varScan.loh.snp | cut -f 1-5 | sort -u >$germline_dir/merged.normal.snp";
+	print SCRIPT "$cmd\n";
+	$cmd = "cat $germline_dir/samtools.tumor.snp $germline_dir/varScan.germline.snp | cut -f 1-5 | sort -u >$germline_dir/merged.tumor.snp";
+	print SCRIPT "$cmd\n";
 
+	## Sort merged files ##
 
+	print "Sorting files...\n";	
+	$cmd = "gmt capture sort-by-chr-pos --input $germline_dir/merged.normal.snp --output $germline_dir/merged.normal.snp";
+	print SCRIPT "$cmd\n";
+	$cmd = "gmt capture sort-by-chr-pos --input $germline_dir/merged.tumor.snp --output $germline_dir/merged.tumor.snp";
+	print SCRIPT "$cmd\n";
 
-	my $varscan_germline_indels = `ls $build_dir/varScan.output.indel.formatted.Germline.hc 2>/dev/null`;
-	chomp($varscan_germline_indels);
-
-	my $varscan_loh_indels = `ls $build_dir/varScan.output.indel.formatted.LOH.hc 2>/dev/null`;
-	chomp($varscan_loh_indels);
-
-	if(-e $varscan_germline_indels && -e $varscan_loh_indels)
-	{
-		my $output_indel_varscan = $germline_dir . "/varScan.germline.indel";
-		system("cat $varscan_germline_indels $varscan_loh_indels >$output_indel_varscan");
-		system("gmt capture sort-by-chr-pos --input $output_indel_varscan --output $output_indel_varscan");
-
-		if($self->germline_roi_file)
-		{
-			system("java -jar /gsc/scripts/lib/java/VarScan/VarScan.jar limit $output_indel_varscan --regions-file " . $self->germline_roi_file . " --output-file $output_indel_varscan.roi");
-			$output_indel_varscan .= ".roi";
-		}
-		
-		## Apply FP-filter using Normal BAM ##
-		my $cmd = "";	
-		$cmd = "bsub -q long -R\"select[type==LINUX64 && mem>8000] rusage[mem=8000]\" -M 8000000 gmt somatic filter-false-indels ";
-		$cmd .= "--reference " . $self->reference . " ";
-		$cmd .= "--variant-file $output_indel_varscan --bam-file $normal_bam --output-file $output_indel_varscan.fpfilter --filtered-file $output_indel_varscan.fpfilter.removed ";
-		$cmd .= "--max-mm-qualsum-diff 100 ";
-		system($cmd);
-
-		## Also run transcript-annotation ##
-		
-		$cmd = "bsub -q long gmt annotate transcript-variants --annotation-filter top --reference-transcripts " . $self->reference_transcripts . " ";
-		$cmd .= "--variant-file $output_indel_varscan --output-file $output_indel_varscan.transcript-annotation";
-		system($cmd);
-	}
+	## Convert to bed ##
 	
+	print "Converting to BED...\n";
+	$cmd = "gmt capture convert-to-bed --variant $germline_dir/merged.normal.snp --output $germline_dir/merged.normal.snp.bed";
+	print SCRIPT "$cmd\n";
+	$cmd = "gmt capture convert-to-bed --variant $germline_dir/merged.tumor.snp --output $germline_dir/merged.tumor.snp.bed";
+	print SCRIPT "$cmd\n";
 
+	print "Fast-tiering...\n";
+	$cmd = "gmt fast-tier fast-tier --variant-bed-file $germline_dir/merged.normal.snp.bed --tier1-output $germline_dir/merged.normal.snp.tier1.bed --tier-file-location " . $self->tier_file_location;
+	print SCRIPT "$cmd\n";;
 
+	$cmd = "gmt fast-tier fast-tier --variant-bed-file $germline_dir/merged.tumor.snp.bed --tier1-output $germline_dir/merged.tumor.snp.tier1.bed --tier-file-location " . $self->tier_file_location;
+	print SCRIPT "$cmd\n";
+
+	print "Converting from BED...\n";
+	$cmd = "gmt capture convert-from-bed --variant-file $germline_dir/merged.normal.snp.tier1.bed --output-file $germline_dir/merged.normal.snp.tier1";
+	print SCRIPT "$cmd\n";
+	$cmd = "gmt capture convert-from-bed --variant-file $germline_dir/merged.tumor.snp.tier1.bed --output-file $germline_dir/merged.tumor.snp.tier1";
+	print SCRIPT "$cmd\n";
+
+	print "Running FP Filter...\n";
+	## Apply FP-filter to Germline using Tumor BAM ##
+	#bsub -q long -R\"select[type==LINUX64 && mem>8000] rusage[mem=8000]\" -M 8000000 
+	$cmd = "gmt somatic filter-false-positives --reference " . $self->reference . " --max-mm-qualsum-diff 100 ";
+	$cmd .= "--variant-file $germline_dir/merged.tumor.snp.tier1 --bam-file $tumor_bam --output-file $germline_dir/merged.tumor.snp.tier1.fpfilter --filtered-file $germline_dir/merged.tumor.snp.tier1.fpfilter.removed";
+	print SCRIPT "$cmd\n";
+
+	$cmd = "gmt somatic filter-false-positives --reference " . $self->reference . " --max-mm-qualsum-diff 100 ";
+	$cmd .= "--variant-file $germline_dir/merged.normal.snp.tier1 --bam-file $normal_bam --output-file $germline_dir/merged.normal.snp.tier1.fpfilter --filtered-file $germline_dir/merged.normal.snp.tier1.fpfilter.removed";
+	print SCRIPT "$cmd\n";
+
+	$cmd = "gmt capture combine-snv-files --variant-file1 $germline_dir/merged.normal.snp.tier1.fpfilter --variant-file2 $germline_dir/merged.tumor.snp.tier1.fpfilter --output-file $germline_dir/merged.germline.snp";
+	print SCRIPT "$cmd\n";
+
+	$cmd = "gmt annotate transcript-variants --annotation-filter top --reference-transcripts " . $self->reference_transcripts . " ";
+	$cmd .= "--variant-file $germline_dir/merged.germline.snp --output-file $germline_dir/merged.germline.snp.transcript-annotation";
+	print SCRIPT "$cmd\n";
+
+	## Merge SNVs with Annotation ##
+	print "Merging with Annotation...\n";	
+	$cmd = "gmt analysis somatic-pipeline merge-snvs-with-annotation --variant $germline_dir/merged.germline.snp --output $germline_dir/merged.germline.snp.annotated --annotation $germline_dir/merged.germline.snp.transcript-annotation";
+	print SCRIPT "$cmd\n";
+
+	close(SCRIPT);
 	
+	system("bsub -q long -R\"select[type==LINUX64 && mem>8000] rusage[mem=8000]\" -M 8000000 -oo $germline_dir/germline.sh.log \"sh $germline_dir/germline.sh\"");
+
+
+	## Process Germline Indels ##
+
+	open(SCRIPT, ">$germline_dir/germline-indel.sh");
+	print SCRIPT "#!/gsc/bin/sh\n";
+
 	## Get GATK File ##
 	
 	my $gatk_indel_file = `ls $build_dir/gatk.output.indel.formatted`;
@@ -1330,17 +1285,61 @@ sub output_germline_files
 	{	
 		if($self->germline_roi_file)
 		{
-			system("grep GERMLINE $gatk_indel_file >$gatk_output_file.temp");
-			system("java -jar /gsc/scripts/lib/java/VarScan/VarScan.v2.2.6.jar limit $gatk_output_file.temp --regions-file " . $self->germline_roi_file . " --output-file $gatk_output_file");
-			system("rm -rf $gatk_output_file.temp");
+			$cmd = "grep GERMLINE $gatk_indel_file >$gatk_output_file.temp";
+			print SCRIPT "$cmd\n";
+			$cmd = "java -jar /gsc/scripts/lib/java/VarScan/VarScan.v2.2.6.jar limit $gatk_output_file.temp --regions-file " . $self->germline_roi_file . " --output-file $gatk_output_file";
+			print SCRIPT "$cmd\n";
+			$cmd = "rm -rf $gatk_output_file.temp";
+			print SCRIPT "$cmd\n";
 		}
 		else
 		{
 			## Copy ALL Indels ##
-			system("grep GERMLINE $gatk_indel_file >$gatk_output_file");
+			$cmd = "grep GERMLINE $gatk_indel_file >$gatk_output_file";
+			print SCRIPT "$cmd\n";
 		}
 
 	}
+
+	my $varscan_germline_indels = `ls $build_dir/varScan.output.indel.formatted.Germline.hc 2>/dev/null`;
+	chomp($varscan_germline_indels);
+
+	my $varscan_loh_indels = `ls $build_dir/varScan.output.indel.formatted.LOH.hc 2>/dev/null`;
+	chomp($varscan_loh_indels);
+
+	if(-e $varscan_germline_indels && -e $varscan_loh_indels)
+	{
+		my $output_indel_varscan = $germline_dir . "/varScan.germline.indel";
+		$cmd = "cat $varscan_germline_indels $varscan_loh_indels >$output_indel_varscan";
+		print SCRIPT "$cmd\n";
+		$cmd = "gmt capture sort-by-chr-pos --input $output_indel_varscan --output $output_indel_varscan";
+		print SCRIPT "$cmd\n";
+
+		if($self->germline_roi_file)
+		{
+			$cmd = "java -jar /gsc/scripts/lib/java/VarScan/VarScan.jar limit $output_indel_varscan --regions-file " . $self->germline_roi_file . " --output-file $output_indel_varscan.roi";
+			print SCRIPT "$cmd\n";
+			$output_indel_varscan .= ".roi";
+		}
+		
+		## Apply FP-filter using Normal BAM ##
+		$cmd = "gmt somatic filter-false-indels ";
+		$cmd .= "--reference " . $self->reference . " ";
+		$cmd .= "--variant-file $output_indel_varscan --bam-file $normal_bam --output-file $output_indel_varscan.fpfilter --filtered-file $output_indel_varscan.fpfilter.removed ";
+		$cmd .= "--max-mm-qualsum-diff 100 ";
+		print SCRIPT "$cmd\n";
+
+		$cmd = "gmt capture combine-indel-files --variant-file1 $output_indel_varscan.fpfilter --variant-file2 $gatk_output_file --output-file $germline_dir/merged.germline.indel";
+		print SCRIPT "$cmd\n";
+
+		## Also run transcript-annotation ##
+		
+		$cmd = "gmt annotate transcript-variants --annotation-filter top --reference-transcripts " . $self->reference_transcripts . " ";
+		$cmd .= "--variant-file $germline_dir/merged.germline.indel --output-file $germline_dir/merged.germline.indel.transcript-annotation";
+		print SCRIPT "$cmd\n";
+	}
+
+	system("bsub -q long -R\"select[type==LINUX64 && mem>8000] rusage[mem=8000]\" -M 8000000 -oo $germline_dir/germline-indel.sh.log \"sh $germline_dir/germline-indel.sh\"");
 
 }
 

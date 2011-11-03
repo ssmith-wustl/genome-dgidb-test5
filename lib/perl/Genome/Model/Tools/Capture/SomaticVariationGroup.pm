@@ -46,6 +46,7 @@ class Genome::Model::Tools::Capture::SomaticVariationGroup {
 		uhc_filter	=> 	{ is => 'Text', doc => "If set to 1, apply ultra-high-conf filter to SNV calls" , is_optional => 1},
 		uhc_indels	=> 	{ is => 'Text', doc => "If set to 1, pass hc indels for MAF inclusion" , is_optional => 1},
 		reference	=> 	{ is => 'Text', doc => "Reference to use for bam-readcounts-based filters; defaults to build 37" , is_optional => 1, default=> '/gscmnt/sata420/info/model_data/2857786885/build102671028/all_sequences.fa'},
+		reference_transcripts	=> 	{ is => 'Text', doc => "Transcripts to use for variant annotation " , is_optional => 1, default=> 'NCBI-human.combined-annotation/58_37c_v2'},
 		review_database_snvs	=> 	{ is => 'Text', doc => "If provided, use to exclude already-reviewed sites" , is_optional => 1},
 		review_database_indels	=> 	{ is => 'Text', doc => "If provided, use to exclude already-reviewed indels" , is_optional => 1},
 		varscan_copynumber	=> 	{ is => 'Text', doc => "Specify a directory to output VarScan CopyNumber Jobs" , is_optional => 1},
@@ -1225,7 +1226,11 @@ sub output_germline_files
 		$cmd .= "--max-mm-qualsum-diff 100 ";
 		system($cmd);
 
-
+		## Also run transcript-annotation ##
+		
+		$cmd = "bsub -q long gmt annotate transcript-variants --annotation-filter top --reference-transcripts " . $self->reference_transcripts . " ";
+		$cmd .= "--variant-file $output_snp_varscan --output-file $output_snp_varscan.transcript-annotation";
+		system($cmd);
 	}
 
 	###################################################################
@@ -1245,9 +1250,14 @@ sub output_germline_files
 			system("java -jar /gsc/scripts/lib/java/VarScan/VarScan.jar limit $output_indel_gatk --regions-file " . $self->germline_roi_file . " --output-file $output_indel_gatk.roi");
 			$output_indel_gatk .= ".roi";
 		}
+
+		## Also run transcript-annotation ##
+		
+		$cmd = "bsub -q long gmt annotate transcript-variants --annotation-filter top --reference-transcripts " . $self->reference_transcripts . " ";
+		$cmd .= "--variant-file $output_indel_gatk --output-file $output_indel_gatk.transcript-annotation";
+		system($cmd);
 	}
 
-	exit(0);
 }
 
 
