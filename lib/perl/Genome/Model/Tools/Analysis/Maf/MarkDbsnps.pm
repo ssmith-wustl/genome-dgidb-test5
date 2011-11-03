@@ -94,7 +94,44 @@ sub execute {                               # replace with real execution logic.
 		my $key = join("\t", $chrom, $chr_start);
 		if($snvs_by_position{$key})
 		{
-			$dbsnp{$key} = join("\t", $ref, $var, $rs_number, $val_status);			
+			## Determine approved validation status ##
+			
+			my $tcga_val_status = "";
+			#by1000genomes;by2Hit2Allele; byCluster; byFrequency; byHapMap; byOtherPop; bySubmitter; alternate_allele 
+			
+			if($val_status =~ 'by-cluster')
+			{
+				$tcga_val_status .= ";" if($tcga_val_status);
+				$tcga_val_status .= "byCluster";
+			}
+			if($val_status =~ 'by-frequency')
+			{
+				$tcga_val_status .= ";" if($tcga_val_status);
+				$tcga_val_status .= "byFrequency";
+			}
+			if($val_status =~ 'by-2hit-2allele')
+			{
+				$tcga_val_status .= ";" if($tcga_val_status);
+				$tcga_val_status .= "by2Hit2Allele";
+			}
+			if($val_status =~ 'by-hapmap')
+			{
+				$tcga_val_status .= ";" if($tcga_val_status);
+				$tcga_val_status .= "byHapMap";
+			}
+			if($val_status =~ 'by-1000genomes')
+			{
+				$tcga_val_status .= ";" if($tcga_val_status);
+				$tcga_val_status .= "by1000genomes";
+			}
+			if($val_status =~ 'by-submitter')
+			{
+				$tcga_val_status .= ";" if($tcga_val_status);
+				$tcga_val_status .= "bySubmitter";
+			}
+			
+			
+			$dbsnp{$key} = join("\t", $ref, $var, $rs_number, $tcga_val_status);			
 		}
 
 	}

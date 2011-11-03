@@ -68,21 +68,26 @@ sub searchable_classes {
 
     # order of this array determines sort order of search results
 
-    my @ordered_searchable_classes =
-      qw(Genome::Individual
-         Genome::Taxon
-         Genome::Library
-         Genome::PopulationGroup
-         Genome::Sample
-         Genome::ModelGroup
-         Genome::Model
-         Genome::ProcessingProfile
-         Genome::InstrumentData::FlowCell
-         Genome::WorkOrder
-         Genome::Site::WUGC::Project
-         Genome::Disk::Group
-         Genome::Disk::Volume
-         Genome::Sys::Email );
+    my @ordered_searchable_classes = qw(
+        Genome::Individual
+        Genome::Taxon
+        Genome::Library
+        Genome::PopulationGroup
+        Genome::Sample
+        Genome::ModelGroup
+        Genome::Model
+        Genome::ProcessingProfile
+        Genome::InstrumentData::FlowCell
+        Genome::WorkOrder
+        Genome::Site::WUGC::Project
+        Genome::Sys::Email
+        Genome::DrugGeneInteractionReport
+        Genome::DrugNameReport
+        Genome::GeneNameReport
+        Genome::InstrumentData::Imported
+        Genome::Sys::User
+        Genome::Wiki::Document
+    );
 
     return @ordered_searchable_classes;
 }

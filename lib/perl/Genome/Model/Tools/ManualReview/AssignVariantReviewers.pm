@@ -3,7 +3,7 @@ package Genome::Model::Tools::ManualReview::AssignVariantReviewers;
 use strict;
 use warnings;
 use Command;
-use above 'Genome';
+use Genome;
 
 UR::Object::Type->define(
     class_name => __PACKAGE__, is => 'Command',

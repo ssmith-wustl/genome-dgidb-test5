@@ -17,7 +17,7 @@ class Genome::Model::Command::Services::Review::CheckRoi {
 
 use strict;
 use warnings;
-use above 'Genome';
+use Genome;
 
 sub execute {
     my $self = shift;

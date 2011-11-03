@@ -1,8 +1,8 @@
 
-package Genome::Model::Tools::Capture::FormatSnvs;     # rename this when you give the module file a different name <--
+package Genome::Model::Tools::Capture::ConvertToBed;     # rename this when you give the module file a different name <--
 
 #####################################################################################################################################
-# FormatSnvsForAnnotation - Merge glfSomatic/Varscan somatic calls in a file that can be converted to MAF format
+# ConvertToBedForAnnotation - Merge glfSomatic/Varscan somatic calls in a file that can be converted to MAF format
 #					
 #	AUTHOR:		Dan Koboldt (dkoboldt@watson.wustl.edu)
 #
@@ -18,27 +18,25 @@ use warnings;
 use FileHandle;
 use Genome;                                 # using the namespace authorizes Class::Autouse to lazy-load modules under it
 
-class Genome::Model::Tools::Capture::FormatSnvs {
+class Genome::Model::Tools::Capture::ConvertToBed {
 	is => 'Command',                       
 	
 	has => [                                # specify the command's single-value properties (parameters) <--- 
-		variants_file	=> { is => 'Text', doc => "File of SNV predictions", is_optional => 0, is_input => 1 },
-		output_file     => { is => 'Text', doc => "Output file to receive formatted lines", is_optional => 0, is_input => 1, is_output => 1 },
-		preserve_call	=> { is => 'Text', doc => "If set to 1, preserves the consensus call", is_optional => 1, is_input => 1 },
-		append_line	=> { is => 'Text', doc => "If set to 1, appends extra columns in input lines to output lines", is_optional => 1, is_input => 1, default => 0 },
+		variant_file	=> { is => 'Text', doc => "Variants in annotation format", is_optional => 0, is_input => 1 },
+		output_file     => { is => 'Text', doc => "Output file to receive BED-formatted lines", is_optional => 0, is_input => 1, is_output => 1 },
 	],
 };
 
 sub sub_command_sort_position { 12 }
 
 sub help_brief {                            # keep this to just a few words <---
-    "Formats SNVs for the annotation pipeline"                 
+    "Reformats from annotation to BED format"                 
 }
 
 sub help_synopsis {
     return <<EOS
-This command formats indels for the annotation pipeline
-EXAMPLE:	gmt analysis somatic-pipeline format-snvs-for-annotation --variants-file [file] --output-file [file]
+This command reformats from annotation to BED format
+EXAMPLE:	gmt capture convert-to-bed --variant-file [file] --output-file [file]
 EOS
 }
 
@@ -58,7 +56,7 @@ sub execute {                               # replace with real execution logic.
 	my $self = shift;
 
 	## Get required parameters ##
-	my $variants_file = $self->variants_file;
+	my $variant_file = $self->variant_file;
 	my $output_file = $self->output_file;
 	
 	## Open outfile ##
@@ -67,7 +65,7 @@ sub execute {                               # replace with real execution logic.
 	
 	## Parse the indels ##
 
-	my $input = new FileHandle ($variants_file);
+	my $input = new FileHandle ($variant_file);
 	my $lineCounter = 0;
 
 	my @formatted = ();
@@ -107,12 +105,12 @@ sub execute {                               # replace with real execution logic.
 
 			if($chrom && $chr_start && $chr_stop)
 			{
-				$allele2 = iupac_to_base($allele1, $allele2) if(!$self->preserve_call);
+#				$allele2 = iupac_to_base($allele1, $allele2);
 	
 				## If we have other information on line, output it ##
 				my $numContents = @lineContents;
 				my $rest_of_line = "";
-				if($self->append_line && $restColumn && $restColumn > 0 && $restColumn < $numContents)
+				if($restColumn && $restColumn > 0 && $restColumn < $numContents)
 				{
 					for(my $colCounter = $restColumn; $colCounter < $numContents; $colCounter++)
 					{
@@ -122,7 +120,9 @@ sub execute {                               # replace with real execution logic.
 	
 				}
 	
-				$formatted[$formatCounter] = "$chrom\t$chr_start\t$chr_stop\t$allele1\t$allele2\t$rest_of_line";
+				$chr_start-- if($chr_start == $chr_stop);
+	
+				$formatted[$formatCounter] = "$chrom\t$chr_start\t$chr_stop\t$allele1/$allele2\t$rest_of_line";
 				$formatCounter++;
 			}
 		}
