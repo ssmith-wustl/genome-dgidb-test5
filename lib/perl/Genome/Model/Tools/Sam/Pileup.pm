@@ -53,7 +53,7 @@ sub execute {
 
     #check to see if the region file is gzipped, if so, pipe zcat output to the -l
     my $rf = $self->region_file;
-    my $region_file = undef;
+    my $region_file = "";
     if(defined($self->region_file)){
         if($rf =~ m/.bed.gz$/){
             $region_file = "-l <(zcat ".$rf.") ";
@@ -71,9 +71,9 @@ sub execute {
     }
 
     #put the command components together
-    my $cmd = "bash -c \"".$self->path_for_samtools_version($self->use_version)." pileup -c -f ".$self->reference_sequence_path." ".$bam." ".$region_file." ".$out;
+    my $cmd = "bash -c \"".$self->path_for_samtools_version($self->use_version)." pileup -c -f $refseq_path $bam $region_file $out";
 
-    my $result = Genome::Sys->shellcmd( cmd => $cmd);
+    my $result = Genome::Sys->shellcmd( cmd => $cmd, input_files => [$refseq_path, $bam], output_files => [$output_file], skip_if_output_is_present => 1);
     unless($result){
         die $self->error_message("failed to execute cmd: ".$cmd);
     }

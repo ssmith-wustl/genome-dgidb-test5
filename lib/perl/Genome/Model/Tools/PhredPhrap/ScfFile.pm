@@ -3,7 +3,7 @@ package Genome::Model::Tools::PhredPhrap::ScfFile;
 use strict;
 use warnings;
 
-use above 'Genome';
+use Genome;
 
 use Data::Dumper;
 require IO::File;

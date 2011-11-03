@@ -296,7 +296,12 @@ sub _build_contig_index
             $contig->{base_qualities}{offset} = $offset; 
             $contig->{base_sequence}{length} = ($offset-1)-$contig->{offset};
 			$found_bq = 1;
-			$fh->seek($contig->{sequence_length}*2,1);
+            #It looks like this was intended to get though the base qual lines
+            #quickly by skipping the seq_length * 2 seek positions but this
+            #causes problems when ratio of pads to bases is more then 1/3 which
+            #causes seek pos to end up in the middle AF lines thus preventing 
+            #proper parsing of AF lines
+			#$fh->seek($contig->{sequence_length}*2,1);
 			
         }
 		elsif($first_three eq "WA ")

@@ -43,13 +43,17 @@ sub _generate_content {
 
     my $hash = {};
     my @attributes;
-    for my $a ($obj->attributes()) {
+
+    for my $attr ($obj->attributes()) {
         push @attributes, [
-            $a->nomenclature_name(),
-            $a->nomenclature_field_name(),
-            $a->attribute_value()
+            $attr->nomenclature_name(),
+            $attr->nomenclature_id(),
+            $attr->nomenclature_field_name(),
+            $attr->attribute_value()
         ];
     }
+
+    @attributes = sort { $b->[0] cmp $a->[0] } @attributes;
     $hash->{'aaData'} = \@attributes;
 
     return $self->_json->encode($hash);

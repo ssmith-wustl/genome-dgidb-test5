@@ -80,7 +80,6 @@ sub execute {                               # replace with real execution logic.
 
     ## Load dbSNPs ##
     my %dbsnp = ();
-
     my $input = new FileHandle ($dbsnp_file);
     my $lineCounter = 0;
     
@@ -94,24 +93,60 @@ sub execute {                               # replace with real execution logic.
         my $key = join("\t", $chrom, $chr_start);
         if($snvs_by_position{$key})
         {
-            $dbsnp{$key} = join("\t", $ref, $var, $rs_number, $val_status);			
+            ## Determine approved validation status ##
+            
+            my $tcga_val_status = "";
+            #by1000genomes;by2Hit2Allele; byCluster; byFrequency; byHapMap; byOtherPop; bySubmitter; alternate_allele 
+            
+            if($val_status =~ 'by-cluster')
+            {
+                $tcga_val_status .= ";" if($tcga_val_status);
+                $tcga_val_status .= "byCluster";
+            }
+            if($val_status =~ 'by-frequency')
+            {
+                $tcga_val_status .= ";" if($tcga_val_status);
+                $tcga_val_status .= "byFrequency";
+            }
+            if($val_status =~ 'by-2hit-2allele')
+            {
+                $tcga_val_status .= ";" if($tcga_val_status);
+                $tcga_val_status .= "by2Hit2Allele";
+            }
+            if($val_status =~ 'by-hapmap')
+            {
+                $tcga_val_status .= ";" if($tcga_val_status);
+                $tcga_val_status .= "byHapMap";
+            }
+            if($val_status =~ 'by-1000genomes')
+            {
+                $tcga_val_status .= ";" if($tcga_val_status);
+                $tcga_val_status .= "by1000genomes";
+            }
+            if($val_status =~ 'by-submitter')
+            {
+                $tcga_val_status .= ";" if($tcga_val_status);
+                $tcga_val_status .= "bySubmitter";
+            }
+            
+            
+            $dbsnp{$key} = join("\t", $ref, $var, $rs_number, $tcga_val_status);			
         }
 
     }
     
     close($input);
-
-
-
-    ## Column index for fields in MAF file ##
     
+    
+    ## Column index for fields in MAF file ##
+
     my %column_index = ();
     my @columns = ();
 
     my %snp_is_dnp = ();
 
     ## open outfile ##
-    
+
     open(OUTFILE, ">$output_file") or die "Can't open outfile: $!\n";
 
     $input = new FileHandle ($maf_file);
@@ -122,9 +157,9 @@ sub execute {                               # replace with real execution logic.
         chomp;
         my $line = $_;
         $lineCounter++;		
-
+        
         my @lineContents = split(/\t/, $line);
-	
+        
         if($lineCounter <= 2 && $line =~ "Chrom")
         {
             
@@ -243,7 +278,7 @@ sub execute {                               # replace with real execution logic.
     }
 
     close($input);
-    
+
     close(OUTFILE);
 
     print $stats{'num_mutations'} . " mutations in MAF file\n";

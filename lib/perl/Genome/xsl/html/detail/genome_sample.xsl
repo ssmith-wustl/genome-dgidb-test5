@@ -37,6 +37,7 @@
             <thead>
               <tr>
                 <th>Nomenclature</th>
+                <th>Nomenclature ID</th>
                 <th>Attribute</th>
                 <th>Value</th>
               </tr>

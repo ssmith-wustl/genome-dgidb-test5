@@ -34,7 +34,7 @@ use ClinSeq qw(:all);
 #2.) Specifically identify the events most likely to be useful in a clinical context (clinically actionable events) - Missense mutations, amplifications, over-expressed genes
 #3.) Generate summary statistics files and figures that will serve as the input for a clincal genomics report to be generated downstream
 
-#Specific goals - attempt to all of the following in a fault tolerant fashion...
+#Specific goals - attempt to do all of the following in a fault tolerant fashion...
 #1.) Summarize library statistics for each data type for both tumor/normal (where applicable) - WGS, Exome, RNA-seq
 #    - Number of lanes of data, read counts, base counts, mapping rate, SNP concordance, expressed genes, etc.
 #2.) Summarize WGS/exome somatic SNVs.  Produce a merged tier1 SNV file.
@@ -50,6 +50,7 @@ use ClinSeq qw(:all);
 #11.) Produce a master list of candidate genes (mutated, amplified, over-expressed, differentially-expressed, gene-fusions)
 #12.) Perform druggable genes analysis on the master list of candidate genes. Produce a master list of interactions but also breakdown further (e.g. antineoplastic drugs only)
 #13.) Produce a clonality plot
+#14.) Create single genome copy number plots (i.e. different from tumor vs. normal plots) - these help identify sample swaps, etc.
 #NN.) Summarize germline SNV,  results for WGS data.
 #NN.) Summarize LOH results for WGS data.
 
@@ -153,6 +154,7 @@ my $data_paths = &getDataDirs('-wgs_som_var_model_id'=>$wgs_som_var_model_id, '-
 #Perform druggable genes analysis on each list (filtered, kinase-only, inhibitor-only, antineoplastic-only)
 $step++; print MAGENTA, "\n\nStep $step. Summarizing SNVs and Indels", RESET;
 &summarizeSNVs('-data_paths'=>$data_paths, '-out_paths'=>$out_paths, '-patient_dir'=>$patient_dir, '-entrez_ensembl_data'=>$entrez_ensembl_data, '-verbose'=>$verbose);
+#TODO: when merging SNVs/Indels from WGS + Exome, add a column that indicates (1|0) whether each was called by WGS or Exome, 1+1 = BOTH
 
 
 #Run CNView analyses on the CNV data to identify amplified/deleted genes
@@ -238,6 +240,10 @@ if ($wgs){
     system($master_clonality_cmd);
   }
 }
+
+#TODO: Generate single genome (i.e. single BAM) global copy number segment plots for each BAM.  These help to identify sample swaps
+#gmt copy-number plot-segments-from-bams-workflow --normal-bam=/gscmnt/gc7001/info/model_data/2880820353/build115943750/alignments/115955253.bam  --tumor-bam=/gscmnt/gc7001/info/model_data/2880820341/build115943568/alignments/115955703.bam  --output-directory=/gscmnt/sata132/techd/mgriffit/hgs/temp/seg_plots/normal_vs_primary/  --genome-build=37  --output-pdf='CNV_SingleBAMs_TumorAndNormal.pdf'
+
 
 print "\n\n";
 

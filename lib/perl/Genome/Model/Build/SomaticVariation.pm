@@ -193,6 +193,9 @@ sub files_ignored_by_diff {
         \.png$
         readcounts$
         variants/sv/breakdancer
+        variants/sv/squaredancer
+        svs\.merge\.index$
+        cnv_graph\.pdf$
     );
 }
 
@@ -201,6 +204,7 @@ sub dirs_ignored_by_diff {
         logs/
         variants/\d+/
         variants/sv/breakdancer
+        variants/sv/squaredancer
     );
 }
 
