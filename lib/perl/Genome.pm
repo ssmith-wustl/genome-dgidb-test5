@@ -3,46 +3,42 @@ package Genome;
 use warnings;
 use strict;
 
-our $VERSION = '0.07'; # Genome $VERSION
+our $VERSION = '0.07';
 
-# software infrastructure
 use UR;
-
-# modules 
 use File::Temp;
 use IO::String;
 use File::Basename;
 use Carp;
 use Carp::Heavy;
 
-# the standard namespace declaration for a UR namespace
+# Standard namespace declaration for a UR namespace
 UR::Object::Type->define(
     class_name => 'Genome',
     is => ['UR::Namespace'],
     english_name => 'genome',
 );
 
-# local configuration
+# Local configuration
 require Genome::Site;
 
 # Checks that all variables that start with GENOME_ have a corresponding Genome/Env/* module
 # and assigns default values to any variables that have one set.
 require Genome::Env;
 
-# if the search engine is installed, configure its hooks
+# If the search engine is installed, configure its hooks
 eval {
     local $SIG{__WARN__};
     local $SIG{__DIE__};
     require Genome::Search;
 };
-
-# this ensures that the search system is updated when certain classes are updated 
-# the search system is optional so it skips this if usage above fails
+# This ensures that the search system is updated when certain classes are updated 
+# The search system is optional so it skips this if usage above fails
 if ($INC{"Genome/Search.pm"}) {
-    Genome::Search->register_callbacks('UR::Object');
+    Genome::Search->register_callbacks();
 }
 
-# account for a perl bug in pre-5.10 by applying a runtime patch to Carp::Heavy
+# Account for a perl bug in pre-5.10 by applying a runtime patch to Carp::Heavy
 if ($] < 5.01) {
     no warnings;
     *Carp::caller_info = sub {

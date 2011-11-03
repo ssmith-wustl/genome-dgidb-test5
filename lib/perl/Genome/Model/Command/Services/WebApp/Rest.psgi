@@ -11,7 +11,6 @@ sub load_modules {
     return if $loaded;
     eval "
         use above 'Genome';
-        use Workflow;
         use Plack::MIME;
         use Plack::Util;
         use Plack::Request;
@@ -94,7 +93,7 @@ sub dispatch_request {
             $params->{'id'} = $obj->id();
         }
 
-        my $body = to_json( $params, { 
+        $body = to_json( $params, {
                                 ascii => 1,
                                 allow_nonref => 1,
                     });

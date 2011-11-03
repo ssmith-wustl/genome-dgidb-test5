@@ -193,6 +193,7 @@ sub files_ignored_by_diff {
         \.png$
         readcounts$
         variants/sv/breakdancer
+        svs\.merge\.index$
     );
 }
 

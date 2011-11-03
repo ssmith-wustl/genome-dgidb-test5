@@ -231,7 +231,6 @@ sub execute {
             my $subject      = $subject_class_name->get($subject_id);
 
             if ( $instrument_data_type =~ /454/i and $subject->name eq 'n-ctrl' ) { 
-                print Data::Dumper::Dumper($subject);
                 # Do not process 454 negative control (n-ctrl)
                 $self->status_message('Skipping n-ctrl PSE '.$pse->id);
                 next PSE;
@@ -463,8 +462,8 @@ sub find_or_create_somatic_variation_models{
             $somatic_params{previously_discovered_variations_build} = Genome::Model::ImportedVariationList->dbsnp_build_for_reference($model->reference_sequence_build);
             $self->error_message('Failed to get previously_discovered_variations_build for somatic variation model with model: ' . $model->name) and next unless $somatic_params{previously_discovered_variations_build};
 
-            my $capture_somatic_processing_profile_id = '2595664'; #may 2011 somatic-variation exome
-            my $somatic_processing_profile_id = '2594193'; #may 2011 somatic-variation wgs
+            my $capture_somatic_processing_profile_id = '2642139'; #Nov. 2011 somatic-variation exome
+            my $somatic_processing_profile_id = '2642137'; #Nov. 2011 somatic-variation wgs
             my $capture_target = eval{$model->target_region_set_name};
             if($capture_target){
                 $somatic_params{processing_profile_id} = $capture_somatic_processing_profile_id;
@@ -1421,7 +1420,7 @@ sub add_processing_profiles_to_pses{
                 if ($taxon->species_latin_name =~ /homo sapiens/i) {
                     if ($self->_is_pcgp($pse)) {
                         my $individual = $organism_sample->patient;
-                        my $pp_id = '2586039';
+                        my $pp_id = '2644306';
                         my $common_name = $individual ? $individual->common_name : '';
 
                         push @processing_profile_ids_to_add, $pp_id;
@@ -1433,7 +1432,7 @@ sub add_processing_profiles_to_pses{
                         $reference_sequence_names_for_processing_profile_ids{$pp_id} = 'GRCh37-lite-build37';
                     }
                     else {
-                        my $pp_id = '2580856';
+                        my $pp_id = '2635769';
                         push @processing_profile_ids_to_add, $pp_id;
 
                         # NOTE: this is the _fixed_ build 37 with a correct external URI
@@ -1441,13 +1440,13 @@ sub add_processing_profiles_to_pses{
                     }
                 }
                 elsif ($taxon->species_latin_name =~ /mus musculus/i){
-                    my $pp_id = 2580856;
+                    my $pp_id = 2635769;
                     push @processing_profile_ids_to_add, $pp_id;
                     $reference_sequence_names_for_processing_profile_ids{$pp_id} = 'UCSC-mouse-buildmm9'
                 }
                 elsif ($taxon->domain =~ /bacteria/i) {
-                    # updated 2011jun15 RT 72143 ctomlins
-                    push @processing_profile_ids_to_add, '2599969';
+                    #updated 2011 Nov 02 .. requested by Chad
+                    push @processing_profile_ids_to_add, '2628526';
                 }
                 #process inst data with work orders 2634033 2636663 with pp 2599969 RT76069
                 elsif ( $taxon->id == 1653198763 ) { #unknow taxon normally skipped

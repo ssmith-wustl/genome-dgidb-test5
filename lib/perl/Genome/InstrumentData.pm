@@ -71,6 +71,46 @@ class Genome::InstrumentData {
     doc => 'Contains information common to all types of instrument data',
 };
 
+sub create {
+    my ($class) = @_;
+    if ($class eq __PACKAGE__ or $class->__meta__->is_abstract) {
+        # this class is abstract, and the super-class re-calls the constructor from the correct subclass
+        return $class->SUPER::create(@_);
+    }
+
+    # This extra processing allows for someone to create instrument data with properties that aren't listed in any of the
+    # class definitions. Instead of having UR catch these extras and die, they are captured here and later turned into
+    # instrument data attributes.
+    $class = shift;
+    my ($bx, @extra);
+    eval{ ($bx, @extra) = $class->define_boolexpr(@_); };
+    return if not $bx;
+    @extra = grep { defined } @extra;
+    if ( @extra and @extra % 2 == 1 ) {
+        $class->error_message("Odd number of attributes sent to create intrument data: ".Data::Dumper::Dumper(\@extra));
+        return;
+    }
+
+    my $self = $class->SUPER::create($bx);
+    return if not $self;
+
+    for ( my $i = 0; $i <= @extra - 1; $i += 2 ) {
+        print Data::Dumper::Dumper([$i, $extra[$i], $extra[$i + 1]]);
+        my $attribute = Genome::InstrumentDataAttribute->create(
+            attribute_label => $extra[$i],
+            attribute_value => $extra[$i + 1],
+            instrument_data_id => $self->id,
+        );
+        unless ($attribute) {
+            $self->error_message("Could not create attribute ".$extra[$i]." => " . $extra[$i + 1] . " for instrument data " . $self->id);
+            $self->delete;
+            return;
+        }
+    }
+
+    return $self;
+}
+
 sub delete {
     my $self = shift;
 

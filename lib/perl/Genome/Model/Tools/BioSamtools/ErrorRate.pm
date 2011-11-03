@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use Genome;
+use Bio::DB::Sam::Constants;
 
 class Genome::Model::Tools::BioSamtools::ErrorRate {
     is => ['Genome::Model::Tools::BioSamtools'],
@@ -19,10 +20,12 @@ class Genome::Model::Tools::BioSamtools::ErrorRate {
     ],
 };
 
+my @CIGAR_OPS = qw/M I D N S H P/;
+
 sub execute {
     my $self = shift;
 
-    my $refcov_bam  = Genome::Model::Tools::RefCov::Bam->new(bam_file => $self->bam_file );
+    my $refcov_bam  = Genome::Model::Tools::RefCov::Bam->create(bam_file => $self->bam_file );
     unless ($refcov_bam) {
         die('Failed to load bam file '. $self->bam_file);
     }
@@ -41,7 +44,7 @@ sub execute {
         my $lib = $1;
         $rg_libraries{$id} = $lib;
     }
-    my $default_rg_id;
+    my $default_rg_id = 0;
     my @rg_ids = keys %rg_libraries;
     if (scalar(@rg_ids) == 1) {
         $default_rg_id = $rg_ids[0];
@@ -73,19 +76,33 @@ sub execute {
             unless ($match_descriptor) {
                 $match_descriptor = $align->aux_get('XD');
             }
-            my @match_fields = split(/[^0-9]+/,$match_descriptor);
-            #sum
-            for my $matches (@match_fields) {
-                if ($matches =~ /^\s*$/) { next; }
-                $read_groups{$read_group}{$type}{matches} += $matches;
+            if ($match_descriptor) {
+                my @match_fields = split(/[^0-9]+/,$match_descriptor);
+                #sum
+                for my $matches (@match_fields) {
+                    if ($matches =~ /^\s*$/) { next; }
+                    $read_groups{$read_group}{$type}{matches} += $matches;
+                }
+                #character count minus ^
+                my @mismatch_fields = split(/[0-9]+/,$match_descriptor);
+                for my $mismatch_field (@mismatch_fields) {
+                    $mismatch_field =~ s/\^//g;
+                    $read_groups{$read_group}{$type}{mismatches} += length($mismatch_field);
+                }
+                #print $match_descriptor ."\t". $match_sum ."\t". $mismatch_sum ."\n";
+            } else {
+                print $align->qname ."\n";
+                my $cigar_str = $align->cigar_str;
+                print $cigar_str ."\n";
+                my $c = $align->cigar;
+                #die(Data::Dumper::Dumper($cigar));
+                for (my $i=0; $i <scalar(@{$c}); $i++) {
+                    my $op  = $c->[$i] & BAM_CIGAR_MASK;
+                    my $len = $c->[$i] >> BAM_CIGAR_SHIFT;
+                    print $CIGAR_OPS[$op] ."\t". $len ."\n";
+                }
+                die('Please implement cigar string parsing or use: gmt bio-samtools error-rate-pileup!');
             }
-            #character count minus ^
-            my @mismatch_fields = split(/[0-9]+/,$match_descriptor);
-            for my $mismatch_field (@mismatch_fields) {
-                $mismatch_field =~ s/\^//g;
-                $read_groups{$read_group}{$type}{mismatches} += length($mismatch_field);
-            }
-            #print $match_descriptor ."\t". $match_sum ."\t". $mismatch_sum ."\n";
         } else {
             $read_groups{$read_group}{$type}{unaligned} += $align->l_qseq;
         }
@@ -100,7 +117,8 @@ sub execute {
             my $read_group_type_total = $read_group_type_aligned + $read_group_type_unaligned;
             my $read_group_type_align_rate = sprintf("%.02f",(($read_group_type_aligned / $read_group_type_total ) * 100));
             my $read_group_type_error_rate = sprintf("%.02f",(($read_group_type_mismatches / $read_group_type_aligned ) * 100));
-            print $output_fh $rg_libraries{$read_group} ."\t". $read_group ."\t". $read_group_type ."\t".$read_group_type_unaligned ."\t". $read_group_type_aligned ."\t". $read_group_type_align_rate
+            my $library = $rg_libraries{$read_group} || 'NA';
+            print $output_fh $library ."\t". $read_group ."\t". $read_group_type ."\t".$read_group_type_unaligned ."\t". $read_group_type_aligned ."\t". $read_group_type_align_rate
                 ."\t". $read_group_type_mismatches ."\t". $read_group_type_matches ."\t". $read_group_type_error_rate ."%\n";
         }
     }

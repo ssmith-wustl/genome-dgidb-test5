@@ -10,7 +10,6 @@ sub load_modules {
     return if $loaded;
     eval "
         use above 'Genome';
-        use Workflow;
         use HTML::Tags;
         use Plack::MIME;
         use Plack::Util;

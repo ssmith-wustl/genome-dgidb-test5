@@ -11,7 +11,6 @@ use Genome::Model::Command::Services::WebApp::Loader;
 use Genome::Model::Command::Services::WebApp::Runner;
 
 use Genome;
-use Workflow;
 use Sys::Hostname;
 use AnyEvent;
 use AnyEvent::Util;
@@ -125,7 +124,7 @@ sub run_starman {
 
     my $psgi_path = $self->psgi_path . '/Main.psgi';
     $runner->parse_options( '--app', $psgi_path, '--port', $self->port,
-        '--workers', 4, '--single_request', 1, '-R', Genome->base_dir . ',' . Workflow->base_dir );
+        '--workers', 4, '--single_request', 1, '-R', Genome->base_dir);
 
     $runner->run;
 }
