@@ -204,6 +204,13 @@ sub execute {                               # replace with real execution logic.
                         if($column_name eq "dbSNP_Val_Status"){
                             $value = $dbsnp_val_status;
                             $value =~ s/,/;/g;
+
+                            $value =~ s/by-1000genomes/by1000genomes/g;
+                            $value =~ s/by-2hit-2allele/by2Hit2Allele/g;
+                            $value =~ s/by-cluster/byCluster/g;
+                            $value =~ s/by-frequency/byFrequency/g;
+                            $value =~ s/by-hapmap/byHapMap/g;
+                            $value =~ s/by-submitter/bySubmitter/g;                            
                         }
                         
 
