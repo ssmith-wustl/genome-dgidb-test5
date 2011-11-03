@@ -39,6 +39,9 @@ sub execute {
     elsif ($self->subject_text eq 'daemon') {
         $self->daemon;
     }
+    elsif ($self->subject_test eq 'list') {
+        $self->list;
+    }
     else {
         my $action = $self->action();
         my $subject_iterator = $self->get_subject_iterator_from_subject_text();
@@ -125,6 +128,25 @@ sub daemon {
         $self->index_queued;
         UR::Context->commit;
         UR::Context->reload('Genome::Search::IndexQueue');
+    }
+
+    return 1;
+}
+
+sub list {
+    my $self = shift;
+
+    my $index_queue_iterator = Genome::Search::IndexQueue->create_iterator(
+        '-order_by' => 'timestamp',
+    );
+
+    while (my $index_queue_item = $index_queue_iterator->next) {
+        print join("\t",
+            $index_queue_item->timestamp,
+            $index_queue_item->action,
+            $index_queue_item->subject_class,
+            $index_queue_item->subject_id,
+        ) . "\n";
     }
 
     return 1;
