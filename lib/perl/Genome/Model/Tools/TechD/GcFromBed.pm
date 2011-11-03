@@ -5,7 +5,8 @@ use warnings;
 
 use Genome;
 
-use Bio::DB::Sam;
+#can't use this until on Perl 5.10
+#use Bio::DB::Sam;
 
 class Genome::Model::Tools::TechD::GcFromBed {
     is => 'Command',
