@@ -65,7 +65,14 @@ sub prompt_for_confirmation {
 sub get_subject_iterator_from_subject_text {
     my $self = shift;
 
-    my ($subject_class, $subject_id) = $self->subject_text =~ /^(.*)=(.*)$/;
+    my ($subject_class, $subject_bx_string);
+    if ($self->subject_text =~ /=/) {
+        ($subject_class, $subject_bx_string) = $self->subject_text =~ /(.*?)=(.*)/;
+    }
+    else {
+        $subject_class = $self->subject_text;
+    }
+
     unless ($subject_class) {
         $self->error("Failed to parse subject_text (" . $self->subject_text . ") for class. Must be in the form Class or Class=ID.");
         return;
@@ -76,10 +83,16 @@ sub get_subject_iterator_from_subject_text {
         return;
     }
 
-    my $subject_iterator = $subject_class->create_iterator($subject_id);
+    my $subject_bx = UR::BoolExpr->resolve_for_string($subject_class, $subject_bx_string);
+    if ($subject_bx_string && !$subject_bx) {
+        $self->error("Invalid BoolExpr provided (Class: $subject_class, BX: $subject_bx_string).");
+        return;
+    }
+
+    my $subject_iterator = $subject_class->create_iterator($subject_bx);
     unless ($subject_iterator) {
-        $subject_id ||= '*';
-        $self->error("Failed to get iterator (Class: $subject_class, ID: $subject_id).");
+        $subject_bx_string ||= '';
+        $self->error("Failed to get iterator (Class: $subject_class, BX: $subject_bx_string).");
         return;
     }
 
