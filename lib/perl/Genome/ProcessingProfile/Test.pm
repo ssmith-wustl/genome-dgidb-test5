@@ -10,6 +10,65 @@ use Data::Dumper 'Dumper';
 use Genome;
 use Test::More;
 
+class Genome::ProcessingProfile::Tester {
+    is => 'Genome::ProcessingProfile::Staged',
+    has_param => [
+    # Attrs
+        sequencing_platform => { 
+            is => 'Text',
+            doc => 'The sequencing_platform of this profile',
+        },
+        dna_source => {
+            is => 'Text',
+            default_value => 'genomic',
+            valid_values => [qw/ genomic metagenomic /],
+            doc => 'The dna source of this profile',
+        },
+        roi => {
+            is => 'Text',
+            is_optional => 1,
+            doc => 'This param may be undefined.',
+        },
+    ],
+};
+sub Genome::ProcessingProfile::Tester::stages {
+     return (qw/ prepare assemble /);
+}
+sub Genome::ProcessingProfile::Tester::prepare_job_classes {
+     return (qw/ 
+         Genome::ProcessingProfile::Tester::Prepare 
+         /);
+}
+sub Genome::ProcessingProfile::Tester::prepare_objects {
+    return 1;
+}
+sub Genome::ProcessingProfile::Tester::assemble_job_classes {
+     return (qw/ 
+         Genome::ProcessingProfile::Tester::PreAssemble 
+         Genome::ProcessingProfile::Tester::Assemble 
+         Genome::ProcessingProfile::Tester::PostAssemble 
+         /);
+}
+sub Genome::ProcessingProfile::Tester::assemble_objects {
+    return 1;
+}
+
+# Prepare
+class Genome::ProcessingProfile::Tester::Prepare {
+    is => 'Genome::Model::Event',
+};
+
+# Assemble
+class Genome::ProcessingProfile::Tester::PreAssemble {
+    is => 'Genome::Model::Event',
+};
+class Genome::ProcessingProfile::Tester::Assemble {
+    is => 'Genome::Model::Event',
+};
+class Genome::ProcessingProfile::Tester::PostAssemble {
+    is => 'Genome::Model::Event',
+};
+
 #< MOCK ># 
 sub create_mock_processing_profile {
     my ($self, $type_name) = @_; # seq plat for ref align
