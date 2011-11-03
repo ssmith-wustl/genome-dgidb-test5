@@ -125,13 +125,13 @@ sub _import_drug {
     my $self = shift;
     my $version = $self->version;
     my $interaction = shift;
-    my $drug_name = $self->_create_drug_name_report($interaction->{drug_name}, 'Primary DrugBank human readable drug name', 'DrugBank', $version, ''); #TODO: fill in nomenclature
+    my $drug_name = $self->_create_drug_name_report($interaction->{drug_name}, 'Primary DrugBank drug name', 'DrugBank', $version, '');
 
     my @drug_synonyms = split(', ', $interaction->{drug_synonyms});
     for my $drug_synonym (@drug_synonyms){
         $DB::single = 1;
         next if $drug_synonym eq 'na';
-        my $drug_name_association = $self->_create_drug_name_report_association($drug_name, $drug_synonym, 'DrugBank primary name to synonym association', ''); #TODO: fill in nomenclature
+        my $drug_name_association = $self->_create_drug_name_report_association($drug_name, $drug_synonym, 'DrugBank primary name to synonym association', '');
     }
 
     my @drug_brands = split(', ', $interaction->{drug_brands});
@@ -169,8 +169,8 @@ sub _import_gene {
     my $self = shift;
     my $version = $self->version;
     my $interaction = shift;
-    my $gene_name = $self->_create_gene_name_report($interaction->{partner_id}, 'drugbank_partner_id', 'DrugBank', $version, ''); #TODO: verify nomenclature is correct
-    my $gene_symbol_gene_name_association = $self->_create_gene_name_report_association($gene_name, $interaction->{gene_symbol}, 'drugbank_gene_symbol', ''); #TODO: verify nomenclature is correct
+    my $gene_name = $self->_create_gene_name_report($interaction->{partner_id}, 'drugbank_partner_id', 'DrugBank', $version, '');
+    my $gene_symbol_gene_name_association = $self->_create_gene_name_report_association($gene_name, $interaction->{gene_symbol}, 'drugbank_gene_symbol', '');
     my $uniprot_gene_name_association=$self->_create_gene_name_report_association($gene_name, $interaction->{uniprot_id}, 'uniprot_id', '');
     return $gene_name;
 }

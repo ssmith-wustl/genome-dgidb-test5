@@ -389,7 +389,7 @@ my %mouse_new_models = %{$mouse_command->_newly_created_models};
 is(scalar(keys %mouse_new_models), 1, 'the cron created one model from mouse sample.');
 for my $mouse_model_id (keys %mouse_new_models){
     my $mouse_model = $mouse_new_models{$mouse_model_id};
-    is($mouse_model->processing_profile_id, '2580856', 'mouse model has the correct procesing profile');
+    is($mouse_model->processing_profile_id, '2635769', 'mouse model has the correct procesing profile');
     is($mouse_model->annotation_reference_build_id, '106410073', 'mouse model has the correct annotation build');
     my @mouse_instrument_data = scalar($mouse_model->instrument_data);
     is(scalar(@mouse_instrument_data), 1, "mouse model has the expected 1 instrument data");
