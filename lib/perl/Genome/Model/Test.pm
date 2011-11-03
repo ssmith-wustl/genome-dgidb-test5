@@ -17,7 +17,7 @@ use Test::More;
 class Genome::Model::Tester { # 'real' model for testing
     is => 'Genome::Model',
     has => [
-        ( map { $_ => { via => 'processing_profile' } } Genome::ProcessingProfile::Tester->params_for_class ),
+        ( map { $_ => { via => 'processing_profile' } } Genome::ProcessingProfile::Test->params_for_test_class ),
         coolness => {
             via => 'inputs',
             is_mutable => 1,

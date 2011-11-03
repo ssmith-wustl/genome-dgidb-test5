@@ -69,40 +69,22 @@ sub original_tests {
 }
 
 sub test_index_queue_callback {
-    UR::Object::Type->define(
-        class_name => 'Thing',
-        has => [
-            name => { is => 'Text' },
-        ],
-        has_optional => [
-            desc => { is => 'Text' },
-        ],
+    my @searchable_classes = Genome::Search->searchable_classes();
+    ok(grep { $_ eq 'Genome::Taxon' } @searchable_classes, 'Genome::Taxon is a searchable class') || die;
+
+    my $taxon = Genome::Taxon->create(
+        name => 'Wookiee',
+        domain => 'Unknown',
+        strain_name => 'Short Hair',
+        species_latin_name => 'Kashyyyk Wookiee',
+        estimated_genome_size => 7000000000,
     );
+    ok($taxon, "created a new taxon");
 
-    require Genome::Search;
-    my $orig_is_indexable = \&Genome::Search::is_indexable;
-    my $thing_is_indexable = sub {
-        my ($class, $object) = @_;
-        if ($object->isa('Thing')) {
-            return 1;
-        }
-        else {
-            return;
-        }
-    };
-
-    *Genome::Search::is_indexable = $thing_is_indexable;
-
-    my $thing_one = Thing->create(name => 'One');
-
-    $thing_one->desc('Better Than Thing Two');
-
-    my $index_queue = Genome::Search::IndexQueue->get(subject => $thing_one);
-    isa_ok($index_queue, 'Genome::Search::IndexQueue', 'got an IndexQueue object for thing_one') || die;
+    my $index_queue = Genome::Search::IndexQueue->get(subject => $taxon);
+    isa_ok($index_queue, 'Genome::Search::IndexQueue', 'got an IndexQueue object for taxon') || die;
     is($index_queue->action, 'add', 'action is set to add (to queue)');
 
-    $thing_one->delete;
+    $taxon->delete;
     is($index_queue->action, 'delete', 'action is set to delete (to queue)');
-
-    *Genome::Search::is_indexable = $orig_is_indexable;
 }
