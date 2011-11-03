@@ -4,6 +4,8 @@ use strict;
 use warnings;
 use Genome;
 
+use Bio::DB::Fasta;
+
 class Genome::Model::Tools::Annotate::GeneRegions {
     is => 'Command',                       
     has => [ 

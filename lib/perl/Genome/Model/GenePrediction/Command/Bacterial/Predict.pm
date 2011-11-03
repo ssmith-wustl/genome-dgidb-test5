@@ -22,6 +22,9 @@ use GAP::JobSource::RfamScan;
 use GAP::JobSource::RNAmmer;
 use GAP::JobSource::MetaRna;
 
+use Bio::Seq;
+use Bio::SeqIO;
+
 use PP::RPC;
 
 use Carp;

@@ -14,6 +14,8 @@ use Data::Dumper;
 use IO::File;
 use Carp;
 
+use Bio::DB::Fasta;
+
 #            default  => '/gscmnt/sata835/info/medseq/imported_variations/dbSNP/130/',
 
 class Genome::Model::Tools::Annotate::LookupVariants {

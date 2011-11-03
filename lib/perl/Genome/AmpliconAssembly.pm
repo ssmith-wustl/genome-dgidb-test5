@@ -12,6 +12,8 @@ require File::Copy;
 require Genome::Model::Tools::Consed::Directory;
 require Genome::AmpliconAssembly::Amplicon;
 
+use Bio::SeqIO;
+
 my %ATTRIBUTES = (
     directory => {
         is => 'Text',

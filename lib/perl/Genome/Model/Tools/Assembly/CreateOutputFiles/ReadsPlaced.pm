@@ -5,6 +5,8 @@ use warnings;
 
 use Genome;
 
+use Bio::SeqIO;
+
 class Genome::Model::Tools::Assembly::CreateOutputFiles::ReadsPlaced {
     is => 'Genome::Model::Tools::Assembly::CreateOutputFiles',
     has => [

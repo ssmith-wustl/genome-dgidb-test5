@@ -9,7 +9,7 @@ BEGIN {
 };
 
 use above "Genome";
-use Test::More tests => 15;
+use Test::More tests => 21;
 
 use Cwd;
 #use Carp::Always;
@@ -18,7 +18,7 @@ use Cwd;
 my $temp_dir = File::Temp::tempdir('Model-Command-Define-SomaticValidation-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
 my $temp_build_data_dir = File::Temp::tempdir('t_SomaticValidation_Build-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
 
-my $somatic_variation_build = &setup_somatic_variation_build;
+my $somatic_variation_build = &setup_somatic_variation_build(1);
 isa_ok($somatic_variation_build, 'Genome::Model::Build::SomaticVariation', 'setup test somatic variation build');
 
 #Set up a fake feature-list
@@ -41,22 +41,28 @@ isa_ok($test_targets, 'Genome::FeatureList', 'created test feature-list');
 
 my $variants_1 = $somatic_variation_build->final_result_for_variant_type('snvs');
 
+my $mg = Genome::ModelGroup->__define__( name => 'test for SomaticValidation.t');
+isa_ok($mg, 'Genome::ModelGroup', 'defined model-group');
+
 my @params_for_define_1 = (
     target => $test_targets,
     variants => [$variants_1],
+    groups => [$mg],
 );
 
 my $define_1 = Genome::Model::Command::Define::SomaticValidation->create(@params_for_define_1);
 isa_ok($define_1, 'Genome::Model::Command::Define::SomaticValidation', 'first creation command');
+$define_1->dump_status_messages(1);
 
 ok($define_1->execute, 'executed first creation command');
-my $m_1 = Genome::Model->get($define_1->result_model_id);
+my $m_1 = Genome::Model->get($define_1->result_model_ids);
 isa_ok($m_1, 'Genome::Model::SomaticValidation', 'created model with the first creation command');
 my $snv_result = $m_1->snv_variant_list;
 isa_ok($snv_result, 'Genome::Model::Tools::DetectVariants2::Result', 'result for first model');
 is($snv_result->detector_name, 'samtools', 'found existing result for first model as expected');
 is($snv_result->detector_params, '--fake', 'found existing result for first model as expected');
 is($m_1->subject, $somatic_variation_build->tumor_model->subject->source, 'model has expected subject');
+is($mg->models, $m_1, 'new model was added to group');
 
 my $manual_result_cmd = Genome::Model::SomaticValidation::Command::ManualResult->create(
     variant_file => $test_bed_file,
@@ -76,37 +82,57 @@ my @params_for_define_2 = (
 
 my $define_2 = Genome::Model::Command::Define::SomaticValidation->create(@params_for_define_2);
 isa_ok($define_2, 'Genome::Model::Command::Define::SomaticValidation', 'second creation command');
+$define_2->dump_status_messages(1);
 
 ok($define_2->execute, 'executed second creation command');
-my $m_2 = Genome::Model->get($define_2->result_model_id);
+my $m_2 = Genome::Model->get($define_2->result_model_ids);
 isa_ok($m_2, 'Genome::Model::SomaticValidation', 'created model with the second creation command');
 my $indel_result = $m_2->indel_variant_list;
 isa_ok($indel_result, 'Genome::Model::Tools::DetectVariants2::Result::Manual', 'result for second model');
 is($indel_result->description, 'curated for testing purposes', 'found existing result for second model as expected');
 
 
+my $somatic_variation_build2 = &setup_somatic_variation_build(2);
+my $variants_2 = $somatic_variation_build2->final_result_for_variant_type('snvs');
+my @params_for_define_3 = (
+    design => $test_targets,
+    target => $test_targets,
+    variants => [$variants_1, $variants_2],
+);
+
+my $define_3 = Genome::Model::Command::Define::SomaticValidation->create(@params_for_define_3);
+isa_ok($define_3, 'Genome::Model::Command::Define::SomaticValidation', 'third creation command');
+$define_3->dump_status_messages(1);
+
+ok($define_3->execute, 'executed third creation command');
+my @m_3 = Genome::Model->get([$define_3->result_model_ids]);
+is(scalar(@m_3), 2, 'created two models');
+isnt($m_3[0]->subject, $m_3[1]->subject, 'two models have two different subjects');
+
+
 # Create some test models with builds and all of their prerequisites
 sub setup_somatic_variation_build {
+    my $i = shift;
     my $test_profile = Genome::ProcessingProfile::ReferenceAlignment->create(
-        name => 'test_profile',
+        name => 'test_profile' . $i,
         sequencing_platform => 'solexa',
         dna_type => 'cdna',
         read_aligner_name => 'bwa',
-        snv_detection_strategy => 'samtools',
+        snv_detection_strategy => 'samtools [--test ' . $i . ']',
     );
 
     my $test_individual = Genome::Individual->create(
-        common_name => 'TEST',
-        name => 'test_individual',
+        common_name => 'TEST' . $i,
+        name => 'test_individual' . $i,
     );
 
     my $test_sample = Genome::Sample->create(
-        name => 'test_subject',
+        name => 'test_subject' . $i,
         source_id => $test_individual->id,
     );
 
     my $test_control_sample = Genome::Sample->create(
-        name => 'test_control_subject',
+        name => 'test_control_subject' . $i,
         source_id => $test_individual->id,
     );
 
@@ -116,8 +142,8 @@ sub setup_somatic_variation_build {
     my $reference_sequence_build = Genome::Model::Build::ReferenceSequence->get_by_name('NCBI-human-build36');
 
     my $test_model = Genome::Model->create(
-        name => 'test_reference_aligment_model_TUMOR',
-        subject_name => 'test_subject',
+        name => 'test_reference_aligment_model_TUMOR' . $i,
+        subject_name => 'test_subject' . $i,
         subject_type => 'sample_name',
         processing_profile_id => $test_profile->id,
         reference_sequence_build => $reference_sequence_build,
@@ -131,8 +157,8 @@ sub setup_somatic_variation_build {
     );
 
     my $test_model_two = Genome::Model->create(
-        name => 'test_reference_aligment_model_mock_NORMAL',
-        subject_name => 'test_control_subject',
+        name => 'test_reference_aligment_model_mock_NORMAL' . $i,
+        subject_name => 'test_control_subject' . $i,
         subject_type => 'sample_name',
         processing_profile_id => $test_profile->id,
         reference_sequence_build => $reference_sequence_build,
@@ -146,19 +172,19 @@ sub setup_somatic_variation_build {
     );
 
     my $test_somvar_pp = Genome::ProcessingProfile::SomaticVariation->create(
-        name => 'test somvar pp',
-        snv_detection_strategy => 'samtools r599 [--test=1]',
+        name => 'test somvar pp' . $i,
+        snv_detection_strategy => 'samtools r599 [--test=' . $i . ']',
         tiering_version => 1,
     );
 
     my $annotation_build = Genome::Model::Build::ImportedAnnotation->__define__(
-        model_id => '-1',
+        model_id => (-1 - $i),
     );
 
     my $somvar_model = Genome::Model::SomaticVariation->create(
         tumor_model => $test_model,
         normal_model => $test_model_two,
-        name => 'test somvar model',
+        name => 'test somvar model' . $i,
         processing_profile => $test_somvar_pp,
         annotation_build => $annotation_build,
     );
@@ -170,14 +196,14 @@ sub setup_somatic_variation_build {
         normal_build => $test_build,
     );
 
-    my $dir = ($temp_dir . '/' . 'fake_samtools_result');
+    my $dir = ($temp_dir . '/' . 'fake_samtools_result' . $i);
     Genome::Sys->create_directory($dir);
     my $result = Genome::Model::Tools::DetectVariants2::Result->__define__(
         detector_name => 'samtools',
         detector_version => 'r599',
         detector_params => '--fake',
         output_dir => Cwd::abs_path($dir),
-        id => -2013,
+        id => (-2013 - $i),
     );
 
     my $bed_file = $dir . '/snvs.hq.bed';
@@ -194,11 +220,11 @@ EOBED
 SAMTOOLSFILE
     );
 
-    my $dir2 = ($temp_dir .'/' . 'fake_combine_result');
+    my $dir2 = ($temp_dir .'/' . 'fake_combine_result' . $i);
     Genome::Sys->create_directory($dir2);
     my $result2 = Genome::Model::Tools::DetectVariants2::Result::Combine::IntersectIndel->__define__(
         output_dir => Cwd::abs_path($dir2),
-        id => -2014,
+        id => (-3014 - $i),
     );
 
 

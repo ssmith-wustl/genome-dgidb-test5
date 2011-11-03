@@ -127,6 +127,7 @@ sub daemon {
     while ($loop) {
         $self->index_queued;
         UR::Context->commit;
+        sleep 10;
         UR::Context->reload('Genome::Search::IndexQueue');
     }
 

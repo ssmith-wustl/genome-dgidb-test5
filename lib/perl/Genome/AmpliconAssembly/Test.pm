@@ -7,6 +7,8 @@ use warnings;
 
 use base 'Test::Class';
 
+use Test::MockObject;
+
 use Data::Dumper 'Dumper';
 use Test::More;
 require File::Temp;

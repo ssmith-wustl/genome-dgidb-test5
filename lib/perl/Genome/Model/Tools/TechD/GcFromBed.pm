@@ -5,6 +5,8 @@ use warnings;
 
 use Genome;
 
+use Bio::DB::Sam;
+
 class Genome::Model::Tools::TechD::GcFromBed {
     is => 'Command',
     has => [

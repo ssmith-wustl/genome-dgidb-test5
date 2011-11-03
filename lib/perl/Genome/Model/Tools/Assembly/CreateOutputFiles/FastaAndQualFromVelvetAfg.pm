@@ -7,6 +7,10 @@ use Genome;
 use AMOS::AmosLib;
 use IO::File;
 
+use Bio::Seq;
+use Bio::Seq::Quality;
+use Bio::SeqIO;
+
 class Genome::Model::Tools::Assembly::CreateOutputFiles::FastaAndQualFromVelvetAfg {
     is => 'Genome::Model::Tools::Assembly::CreateOutputFiles',
     has => [

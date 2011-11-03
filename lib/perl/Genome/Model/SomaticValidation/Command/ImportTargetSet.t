@@ -32,5 +32,6 @@ my $cmd = Genome::Model::SomaticValidation::Command::ImportTargetSet->create(
 );
 isa_ok($cmd, 'Genome::Model::SomaticValidation::Command::ImportTargetSet', 'created command');
 
+$cmd->dump_status_messages(1);
 ok($cmd->execute, 'executed import command');
 isa_ok($cmd->feature_list, 'Genome::FeatureList', 'created feature-list');

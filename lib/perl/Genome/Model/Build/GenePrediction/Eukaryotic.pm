@@ -5,6 +5,8 @@ use warnings;
 use Genome;
 use Carp 'confess';
 
+use Bio::SeqIO;
+
 class Genome::Model::Build::GenePrediction::Eukaryotic {
     is => 'Genome::Model::Build::GenePrediction',
 };
