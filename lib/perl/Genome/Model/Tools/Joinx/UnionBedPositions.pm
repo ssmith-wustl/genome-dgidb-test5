@@ -29,6 +29,8 @@ class Genome::Model::Tools::Joinx::UnionBedPositions {
         },
         output_file => {
             is => 'Text',
+            is_output => 1,
+            is_input => 1,
             doc => 'The output file (defaults to stdout)',
         },
     ],
