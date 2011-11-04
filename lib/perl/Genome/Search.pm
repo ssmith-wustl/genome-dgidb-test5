@@ -3,12 +3,9 @@ package Genome::Search;
 use strict;
 use warnings;
 
-use WebService::Solr;
-use MRO::Compat;
 
 #Don't "use Genome;" here or we introduce a circular dependency.
 use UR;
-use Genome::Memcache;
 
 # JTAL: solr-dev is going to be prod, because old code will still point to solr
 
@@ -68,21 +65,26 @@ sub searchable_classes {
 
     # order of this array determines sort order of search results
 
-    my @ordered_searchable_classes =
-      qw(Genome::Individual
-         Genome::Taxon
-         Genome::Library
-         Genome::PopulationGroup
-         Genome::Sample
-         Genome::ModelGroup
-         Genome::Model
-         Genome::ProcessingProfile
-         Genome::InstrumentData::FlowCell
-         Genome::WorkOrder
-         Genome::Site::WUGC::Project
-         Genome::Disk::Group
-         Genome::Disk::Volume
-         Genome::Sys::Email );
+    my @ordered_searchable_classes = qw(
+        Genome::Individual
+        Genome::Taxon
+        Genome::Library
+        Genome::PopulationGroup
+        Genome::Sample
+        Genome::ModelGroup
+        Genome::Model
+        Genome::ProcessingProfile
+        Genome::InstrumentData::FlowCell
+        Genome::WorkOrder
+        Genome::Site::WUGC::Project
+        Genome::Sys::Email
+        Genome::DrugGeneInteractionReport
+        Genome::DrugNameReport
+        Genome::GeneNameReport
+        Genome::InstrumentData::Imported
+        Genome::Sys::User
+        Genome::Wiki::Document
+    );
 
     return @ordered_searchable_classes;
 }
@@ -126,11 +128,13 @@ sub _resolve_solr_xml_view {
 
     return if (!$subject_class_name->isa('UR::Object'));
     return if $subject_class_name->isa('UR::Object::Ghost');
-    return UR::Object::View->_resolve_view_class_for_params(
-        subject_class_name => $subject_class_name,
-        toolkit => 'xml',
-        perspective => 'solr'
-    );
+    return eval {
+        UR::Object::View->_resolve_view_class_for_params(
+            subject_class_name => $subject_class_name,
+            toolkit => 'xml',
+            perspective => 'solr'
+        );
+    };
 }
 
 sub _resolve_result_xml_view {
@@ -476,90 +480,55 @@ sub generate_document {
     return @docs;
 }
 
-###  Callbacks for automatically updating index  ###
+###  Callback for automatically updating index  ###
 
-sub _commit_callback {
-    my $class = shift;
-    my $object = shift;
-
-    return unless $object;
-
-    ## dont cruft up the production solr when no_commit is on, but run through this code
-    ## during test cases
-    return 1 if UR::DBI->no_commit && $class->environment eq 'prod';
-
-    eval {
-        if($class->is_indexable($object)) {
-            $class->add($object);
-        }
-    };
-
-    if($@) {
-        system("echo '$@' | mailx -s 'search commit callback failed' jlolofie\@genome.wustl.edu");
-        my $self = $class->_singleton_object;
-        $self->error_message('failed to update search engine, sending an email.');
-        return;
-    }
-
-    return 1;
-}
-
-sub _delete_callback {
-    my $class = shift;
-    my $object = shift;
+our $LOADED_MODULES = 0;
+sub _index_queue_callback {
+    my ($class, $object, $aspect) = @_;
 
     return unless $object;
 
-    return 1 if UR::DBI->no_commit && $class->environment eq 'prod';
-
-    eval {
-        if($class->is_indexable($object)) {
-            $class->delete($object);
-        }
-    };
-
-    if($@) {
-        my $self = $class->_singleton_object;
-        $self->error_message('Error in delete callback: ' . $@);
-        return;
+    unless ($LOADED_MODULES++) {
+        require WebService::Solr;
+        require MRO::Compat;
     }
 
-    return 1;
+    my $meta = $object->__meta__;
+    my @add_property_names = ('create', $meta->all_property_names);
+
+    my $action;
+    if (grep { $aspect eq $_ } @add_property_names) {
+        $action = 'add';
+    }
+    elsif ($aspect eq 'delete') {
+        $action = 'delete';
+    }
+
+    my $index_queue;
+    if ($action) {
+        $index_queue = Genome::Search::IndexQueue->create_or_update(
+            subject => $object,
+            action => $action,
+        );
+    }
+
+    return $index_queue;
 }
 
-my %commit_cb = ();
-my %delete_cb = ();
-#This should be called from Genome.pm, so typically it won't need to be called elsewhere.
+my $observer;
+# register_callbacks and unregister_callbacks should be called from Genome.pm,
+# so typically it won't need to be called elsewhere.
 sub register_callbacks {
     my $class = shift;
-    my $module_to_observe = shift;
+    my $searchable_class = shift;
 
-    $commit_cb{$module_to_observe} = sub { $class->_commit_callback(@_); };
-    $module_to_observe->create_subscription(
-        method => 'commit',
-        callback => $commit_cb{$module_to_observe},
-    );
-
-    $delete_cb{$module_to_observe} = sub { $class->_delete_callback(@_); };
-    $module_to_observe->create_subscription(
-        method => 'delete',
-        callback => $delete_cb{$module_to_observe}
+    $observer = $searchable_class->add_observer(
+        callback => sub { $class->_index_queue_callback(@_); },
     );
 }
 
 sub unregister_callbacks {
-    my $class = shift;
-    my $module_to_observe = shift;
-
-    $module_to_observe->cancel_change_subscription(
-        'commit', $commit_cb{$module_to_observe},
-    );
-    delete $commit_cb{$module_to_observe};
-
-    $module_to_observe->cancel_change_subscription(
-        'delete', $delete_cb{$module_to_observe}
-    );
-    delete $delete_cb{$module_to_observe}
+    $observer->delete;
 }
 
 #OK!
