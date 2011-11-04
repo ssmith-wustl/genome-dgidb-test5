@@ -528,7 +528,7 @@ sub register_callbacks {
 }
 
 sub unregister_callbacks {
-    $observer->delete;
+    $observer->delete unless $observer->isa("UR::DeletedRef");
 }
 
 #OK!
