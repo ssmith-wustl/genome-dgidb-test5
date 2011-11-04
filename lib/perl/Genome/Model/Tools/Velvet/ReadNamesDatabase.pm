@@ -6,6 +6,8 @@ use warnings;
 use DBI;
 use Genome;
 
+use Bio::SeqIO;
+
 class Genome::Model::Tools::Velvet::ReadNamesDatabase {
     is => 'Genome::Model::Tools::Velvet',
     has => [

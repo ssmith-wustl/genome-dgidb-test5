@@ -4,6 +4,7 @@ use warnings;
 use Genome;
 
 class Genome::WorkOrder {
+    is => 'Genome::Searchable',
     table_name => '(SELECT swo.*, 
                            s.*, 
                            s.setup_name as name,
@@ -81,7 +82,7 @@ class Genome::WorkOrder {
             is => 'Text',
             len => 16,
         },
-        requester_gu_id => {
+        requester_con_id => {
                 is => 'Integer',
                 len => 10,
         },

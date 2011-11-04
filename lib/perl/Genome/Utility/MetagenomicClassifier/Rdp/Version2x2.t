@@ -5,6 +5,7 @@ use warnings;
 
 use above "Genome";
 
+use Bio::Seq;
 use Bio::SeqIO;
 use Test::More;
 

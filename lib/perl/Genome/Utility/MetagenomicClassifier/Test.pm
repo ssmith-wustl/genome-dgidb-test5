@@ -316,6 +316,7 @@ use warnings;
 
 use base 'Test::Class';
 
+use Bio::Seq;
 use Bio::SeqIO;
 use Test::More;
 

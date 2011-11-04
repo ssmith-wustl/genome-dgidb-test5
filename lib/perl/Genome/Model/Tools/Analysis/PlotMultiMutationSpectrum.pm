@@ -22,10 +22,10 @@ use FileHandle;
 use Data::Dumper;
 use List::Util qw( max );
 use IO::File;
-use Bio::DB::Fasta;
 use Genome::Info::IUB;
 use DBI;
-use Cwd qw( abs_path );
+use Cwd ('getcwd','abs_path');
+
 class Genome::Model::Tools::Analysis::PlotMultiMutationSpectrum {
     is => ['Command'],
     has => [
@@ -82,9 +82,14 @@ class Genome::Model::Tools::Analysis::PlotMultiMutationSpectrum {
         default => 0,
         doc => 'order at which the labels will be plotted on the graph (comma,separated), will use the order defined by --label as default',
     },
+    temp_file => {
+	is_input => 1,
+        is_optional => 1,
+	is => 'String',
+	doc => 'The name of the temporary file to save the data to be plotted',
     #below here are variables with which to store results
     #hopefully these can then be judiciously used to write cross-comparison scripts
-
+    },
     _total_lines => {
         is => 'Integer',
         is_optional => 1,
@@ -160,7 +165,7 @@ sub help_detail {
     return <<EOS 
     Given multiple output of mutation spectrum outputfile, make plots that compares the mutation spectrum of multiple samples.  You can specify the files using either a file via --group-file (tab-delimited where 1st column is the path to the file, 2nd column is the label) or via a comma-separated list via --mut-spec-files and --labels (make sure the order and number match)..  This tool can make 4 different plots.  --plot-type=facet1 (default) separates the plots into multiplot by mutation type.  --plot-type=facet2 separates the plot into multiple plots by sample.  --plot-type=bar1 is a standard bargraph (similar to facet1 (but only makes 1 graph).  --plot-type=bar2 is a stacked barplot which is great if you have large number of samples.  
 EOS
-}
+    }
 
 sub execute {
     my $self = shift;
@@ -186,11 +191,23 @@ sub execute {
 	die "Number of Input Files Must Match Number of Labels!!!\n";
     }
 
+    my $temp_file = $self->temp_file;
+    my $input_plot_file;
+    my ($fh,$tfile);
+    if(defined($temp_file)) {
+	$temp_file = abs_path($temp_file);
+	$fh = Genome::Sys->open_file_for_writing($temp_file);
+	$input_plot_file = $temp_file;
+    }
+    else {
+	($fh,$tfile) = Genome::Sys->create_temp_file;	
+	$input_plot_file = $tfile;
+    }
 
-    my $out1 = abs_path("temp.1");
-    open(OUT1, ">$out1") or die "Can't write to $out1 due to $!";
+
+
     my $header = "Category\tCount\tDensity\tSample";
-    print OUT1 "$header\n";
+    $fh->print("$header\n");
 
     for(my $i=0;$i<@$mutation_spec_files;$i++) {
 	my $mut_spec = parse_mut_spec_file($mutation_spec_files->[$i]);
@@ -199,19 +216,26 @@ sub execute {
 	foreach my $cat(sort keys %{$mut_spec->{'basechg'}}) {
 	    my $count = $mut_spec->{'basechg'}->{$cat}->[0];
 	    my $density = $mut_spec->{'basechg'}->{$cat}->[1];
-	    print OUT1 "$cat\t$count\t$density\t$lab\n";
+	    $fh->print("$cat\t$count\t$density\t$lab\n");
 	}
 	
 	foreach my $cat(sort keys %{$mut_spec->{'class'}}) {
 	    my $count = $mut_spec->{'class'}->{$cat}->[0];
 	    my $density = $mut_spec->{'class'}->{$cat}->[1];
-	    print OUT1 "$cat\t$count\t$density\t$lab\n";
+	    $fh->print("$cat\t$count\t$density\t$lab\n");
 	}
     }
-    close OUT1;
+    close $fh;
 
-    my $input_plot_file = $out1;
+
+
+    #my $input_plot_file = $out1;
     my $plot_output_file = $self->plot_output_file;
+
+    if($plot_output_file !~ /^\//) { #if user does not specify absolute path, use current directory
+	my $cwd = getcwd();
+	$plot_output_file = "$cwd/$plot_output_file";
+    }
     unless($plot_output_file =~ /\.pdf$/) {
 	$plot_output_file .= ".pdf";
     }

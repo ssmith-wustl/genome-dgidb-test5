@@ -5,6 +5,10 @@ use warnings;
 use Genome;
 use IPC::Run;
 
+use Bio::Seq;
+use Bio::Tools::CodonTable;
+use Bio::DB::Fasta;
+
 class Genome::Model::Tools::Annotate::Translocation {
     is => 'Command',                       
     has => [ 
@@ -657,7 +661,6 @@ sub get_ref_base {
 
     my ($chr_start,$chr_stop,$chr_name,$organism) = @_;
 
-    use Bio::DB::Fasta;
     my $RefDir;
     if ($organism eq "human") {
 	$RefDir = "/gscmnt/sata180/info/medseq/biodb/shared/Hs_build36_mask1c/";

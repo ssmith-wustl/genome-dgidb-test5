@@ -5,6 +5,8 @@ use warnings;
 
 use Genome;
 
+use Bio::SeqIO;
+
 class Genome::ProcessingProfile::AmpliconAssembly {
     is => 'Genome::ProcessingProfile::Staged',
     has_param => [

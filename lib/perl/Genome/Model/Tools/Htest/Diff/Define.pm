@@ -7,6 +7,7 @@ use Genome;
 use Command;
 use Genome::Model;
 
+use Bio::Seq;
 use Bio::SeqIO;
 
 class Genome::Model::Tools::Htest::Diff::Define {

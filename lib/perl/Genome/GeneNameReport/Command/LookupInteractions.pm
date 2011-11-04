@@ -14,6 +14,13 @@ class Genome::GeneNameReport::Command::LookupInteractions {
             doc => 'Path to a list of gene identifiers',
             shell_args_position => 1,
         },
+        output_file => {
+            is => 'Text',
+            is_input => 1,
+            is_output=> 1,
+            doc => "Output interactions to specified file. Defaults to STDOUT if no file is supplied.",
+            default => "STDOUT",
+        },
     ],
 };
 
@@ -31,6 +38,8 @@ sub help_detail {
 
 sub execute {
     my $self = shift;
+
+    $DB::single = 1;
 
     my $gene_name_report_results = $self->lookup_gene_identifiers;
     my %grouped_interactions = $self->group_interactions_by_drug_name_report($gene_name_report_results);
@@ -90,7 +99,12 @@ sub get_interactions {
 
     for my $gene_name_report (@{$gene_name_report_results->{$gene_identifier}->{'gene_name_reports'}}){
         my @interactions = $gene_name_report->drug_gene_interaction_reports;
-        $gene_name_report_results->{$gene_identifier}->{'interactions'} = \@interactions;
+        if($gene_name_report_results->{$gene_identifier}->{'interactions'}){
+            my @complete_interactions = (@{$gene_name_report_results->{$gene_identifier}->{'interactions'}}, @interactions);
+            $gene_name_report_results->{$gene_identifier}->{'interactions'} = \@complete_interactions
+        }else{
+            $gene_name_report_results->{$gene_identifier}->{'interactions'} = \@interactions;
+        }
     }
     return $gene_name_report_results;
 }
@@ -120,14 +134,32 @@ sub group_interactions_by_drug_name_report {
 sub print_grouped_interactions{
     my $self = shift;
     my %grouped_interactions = @_;
-    my @headers = qw/interaction_id interaction_type drug_name_report_id drug_name_report drug_nomenclature drug_source_db_name drug_source_db_version gene_name_report_id
-        gene_name_report gene_nomenclature gene_source_db_name gene_source_db_version/;
-    print join("\t", @headers), "\n";
-    for my $drug_name_report (keys %grouped_interactions){
-        for my $interaction (@{$grouped_interactions{$drug_name_report}}){
-            print $self->_build_interaction_line($interaction), "\n";
+
+    my $output_file = $self->output_file;
+    my $output_fh;
+    if ($self->output_file =~ /STDOUT/i) {
+        $output_fh = 'STDOUT';
+    }else{
+        $output_fh = IO::File->new($self->output_file, 'w');
+        unless($output_fh){
+            $self->error_message("Could not open file " . $self->output_file . " : $@");
+            return;
         }
     }
+
+    my @headers = qw/interaction_id interaction_type drug_name_report_id drug_name_report drug_nomenclature drug_source_db_name drug_source_db_version gene_name_report_id
+        gene_name_report gene_nomenclature gene_source_db_name gene_source_db_version/;
+    $output_fh->print(join("\t", @headers), "\n");
+    for my $drug_name_report (keys %grouped_interactions){
+        for my $interaction (@{$grouped_interactions{$drug_name_report}}){
+            $output_fh->print($self->_build_interaction_line($interaction), "\n");
+        }
+    }
+
+    unless($self->output_file =~ /STDOUT/i){
+        $output_fh->close;
+    }
+
     return 1;
 }
 

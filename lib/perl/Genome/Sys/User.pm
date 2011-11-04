@@ -5,6 +5,7 @@ use warnings;
 use Genome;
 
 class Genome::Sys::User {
+    is => 'Genome::Searchable',
     schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',
     table_name => 'genome_sys_user',

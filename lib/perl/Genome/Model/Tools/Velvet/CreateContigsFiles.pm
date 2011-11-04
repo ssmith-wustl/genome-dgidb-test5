@@ -7,6 +7,10 @@ use Genome;
 use Data::Dumper 'Dumper';
 use AMOS::AmosLib;
 
+use Bio::Seq;
+use Bio::Seq::Quality;
+use Bio::SeqIO;
+
 class Genome::Model::Tools::Velvet::CreateContigsFiles {
     is => 'Genome::Model::Tools::Velvet',
     has => [

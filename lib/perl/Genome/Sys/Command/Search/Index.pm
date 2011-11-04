@@ -39,10 +39,15 @@ sub execute {
     elsif ($self->subject_text eq 'daemon') {
         $self->daemon;
     }
+    elsif ($self->subject_test eq 'list') {
+        $self->list;
+    }
     else {
         my $action = $self->action();
-        my $subject = $self->get_subject_from_subject_text();
-        $self->modify_index($subject, $action) if $subject;
+        my $subject_iterator = $self->get_subject_iterator_from_subject_text();
+        while (my $subject = $subject_iterator->next) {
+            $self->modify_index($subject, $action);
+        }
     }
 
     return 1;
@@ -60,12 +65,19 @@ sub prompt_for_confirmation {
     return ($response =~ /^(y|yes)$/);
 }
 
-sub get_subject_from_subject_text {
+sub get_subject_iterator_from_subject_text {
     my $self = shift;
 
-    my ($subject_class, $subject_id) = $self->subject_text =~ /^(.*)=(.*)$/;
-    unless ($subject_class && $subject_id) {
-        $self->error("Failed to parse subject_text (" . $self->subject_text . ") for class and ID. Must be in the form Class=ID.");
+    my ($subject_class, $subject_bx_string);
+    if ($self->subject_text =~ /=/) {
+        ($subject_class, $subject_bx_string) = $self->subject_text =~ /(.*?)=(.*)/;
+    }
+    else {
+        $subject_class = $self->subject_text;
+    }
+
+    unless ($subject_class) {
+        $self->error("Failed to parse subject_text (" . $self->subject_text . ") for class. Must be in the form Class or Class=ID.");
         return;
     }
 
@@ -74,13 +86,20 @@ sub get_subject_from_subject_text {
         return;
     }
 
-    my $subject = $subject_class->get($subject_id);
-    unless ($subject) {
-        $self->error("Failed to get object (Class: $subject_class, ID: $subject_id).");
+    my $subject_bx = UR::BoolExpr->resolve_for_string($subject_class, $subject_bx_string);
+    if ($subject_bx_string && !$subject_bx) {
+        $self->error("Invalid BoolExpr provided (Class: $subject_class, BX: $subject_bx_string).");
         return;
     }
 
-    return $subject;
+    my $subject_iterator = $subject_class->create_iterator($subject_bx);
+    unless ($subject_iterator) {
+        $subject_bx_string ||= '';
+        $self->error("Failed to get iterator (Class: $subject_class, BX: $subject_bx_string).");
+        return;
+    }
+
+    return $subject_iterator;
 }
 
 sub index_all {
@@ -108,7 +127,27 @@ sub daemon {
     while ($loop) {
         $self->index_queued;
         UR::Context->commit;
+        sleep 10;
         UR::Context->reload('Genome::Search::IndexQueue');
+    }
+
+    return 1;
+}
+
+sub list {
+    my $self = shift;
+
+    my $index_queue_iterator = Genome::Search::IndexQueue->create_iterator(
+        '-order_by' => 'timestamp',
+    );
+
+    while (my $index_queue_item = $index_queue_iterator->next) {
+        print join("\t",
+            $index_queue_item->timestamp,
+            $index_queue_item->action,
+            $index_queue_item->subject_class,
+            $index_queue_item->subject_id,
+        ) . "\n";
     }
 
     return 1;

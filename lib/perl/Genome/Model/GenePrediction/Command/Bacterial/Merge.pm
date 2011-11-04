@@ -20,6 +20,9 @@ use PP::RPC;
 
 use Bio::AlignIO;
 use Bio::SeqIO;
+use Bio::Seq;
+use Bio::Tools::GFF;
+use Bio::SeqFeature::Generic;
 
 use Carp;
 use Data::Dumper;

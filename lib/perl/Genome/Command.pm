@@ -35,11 +35,6 @@ my %command_map = (
     'db' => 'Genome::Db',
 );
 
-for my $class (values %command_map) {
-    eval "use $class";
-    die $@ if $@;
-}
-
 $Genome::Command::SUB_COMMAND_MAPPING = \%command_map;
 
 1;

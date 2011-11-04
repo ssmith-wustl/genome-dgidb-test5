@@ -10,6 +10,7 @@ use Data::Dumper 'Dumper';
 use File::Temp 'tempdir';
 use Storable qw/ nstore retrieve /;
 use Test::More;
+use Test::MockObject;
 
 #< UR No Commit and Dummy Ids >#
 sub _ur_no_commit_and_dummy_ids {

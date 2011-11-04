@@ -8,6 +8,7 @@ use Genome;
 use File::Temp;
 use List::Util qw/ max min /;
 use List::MoreUtils qw/ uniq /;
+use Bio::Seq;
 use Bio::Tools::CodonTable;
 use DateTime;
 use Carp;
