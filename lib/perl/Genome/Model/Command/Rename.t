@@ -6,7 +6,7 @@ use warnings;
 use above 'Genome';
 
 require Genome::Model::Test;
-use Test::More 'no_plan';
+use Test::More;
 
 use_ok('Genome::Model::Command::Rename');
 
@@ -40,7 +40,7 @@ $renamer = Genome::Model::Command::Rename->create(from => $model, to => $old_nam
 ok(!$renamer->execute, 'Failed as expected - execute w/ same name');
 $renamer->delete;
 
-exit;
+done_testing();
 
 =pod
 
