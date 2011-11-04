@@ -5,7 +5,7 @@ use Genome;
 use Workflow;
 
 class Genome::Model::Build::ErrorLogEntry {
-    table_name => 'ERROR_LOG_ENTRY',
+    table_name => 'error_log_entry',
     id_generator => '-uuid',
     id_by => [
         id => { is => 'Text' },
@@ -30,7 +30,7 @@ class Genome::Model::Build::ErrorLogEntry {
         build => { is => 'Genome::Model::Build', id_by => 'build_id' },
         build_id => { is => 'NUMBER', implied_by => 'build'},
     ],
-    data_source => 'Genome::DataSource::ErrorLogEntryDataSource',
+    data_source => 'Genome::DataSource::Main',
 };
 
 sub create {
