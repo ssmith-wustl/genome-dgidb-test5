@@ -3,8 +3,10 @@ package Genome::Db::Ensembl::Vep;
 use strict;
 use warnings;
 use Genome;
+use Cwd;
 
-my $VEP_SCRIPT_PATH = "Vep.d/vep";
+my ($VEP_DIR) = Cwd::abs_path(__FILE__) =~ /(.*)\//;
+my $VEP_SCRIPT_PATH = $VEP_DIR . "/Vep.d/vep";
 my $ENSEMBL_API_PATH = $ENV{GENOME_DB_ENSEMBL_API_PATH};
 
 class Genome::Db::Ensembl::Vep {
