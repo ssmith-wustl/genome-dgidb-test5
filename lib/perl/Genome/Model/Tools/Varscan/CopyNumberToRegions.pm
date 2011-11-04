@@ -87,39 +87,42 @@ sub execute {                               # replace with real execution logic.
 
 		if(-e $exome_file)
 		{
-			## Load the exon targets on this chrom ##
-			my $exons = $cds_exons{$chrom};
-			
-			## Load the sample's CBS segments for this chrom ##
-			my $copy_regions = load_regions($exome_file);
-
-			my @exons = split(/\n/, $exons);
-			
-			foreach my $exon (@exons)
-			{
-				$num_exons++;
-				my $matched_flag = 0;
+			if($cds_exons{$chrom})
+			{			
+				## Load the exon targets on this chrom ##
+				my $exons = $cds_exons{$chrom};
 				
-				## Parse out exon coordinates ##
+				## Load the sample's CBS segments for this chrom ##
+				my $copy_regions = load_regions($exome_file);
+	
+				my @exons = split(/\n/, $exons);
 				
-				my ($chrom, $chr_start, $chr_stop, $gene) = split(/\t/, $exon);
-				my $exon_result = "";
-				
-				## Get Result for Start of Exon ##
-
-				$exon_result = get_copy_result($chrom, $chr_start, $chr_stop, $copy_regions);
-				
-				if($exon_result)
+				foreach my $exon (@exons)
 				{
-					$matched_flag = 1;
-					print OUTFILE join("\t", $chrom, $chr_start, $chr_stop, $gene, $exon_result) . "\n";
+					$num_exons++;
+					my $matched_flag = 0;
+					
+					## Parse out exon coordinates ##
+					
+					my ($chrom, $chr_start, $chr_stop, $gene) = split(/\t/, $exon);
+					my $exon_result = "";
+					
+					## Get Result for Start of Exon ##
+	
+					$exon_result = get_copy_result($chrom, $chr_start, $chr_stop, $copy_regions);
+					
+					if($exon_result)
+					{
+						$matched_flag = 1;
+						print OUTFILE join("\t", $chrom, $chr_start, $chr_stop, $gene, $exon_result) . "\n";
+					}
+					else
+					{
+						print OUTFILE join("\t", $chrom, $chr_start, $chr_stop, $gene, "NA") . "\n";					
+					}
+	
+					$num_exons_matched++ if($matched_flag);
 				}
-				else
-				{
-					print OUTFILE join("\t", $chrom, $chr_start, $chr_stop, $gene, "NA") . "\n";					
-				}
-
-				$num_exons_matched++ if($matched_flag);
 			}
 		}
 		else
@@ -151,7 +154,7 @@ sub get_copy_result
 	
 	my $size = $chr_stop - $chr_start + 1;
 	my $best_overlap = my $best_seg_mean = "";
-	
+	my $best_event = "";
 	if($events)
 	{
 		my @events = split(/\n/, $events);		
@@ -192,6 +195,7 @@ sub get_copy_result
 					{
 						$best_seg_mean = $event_seg_mean;
 						$best_overlap = $overlap;
+						$best_event = $check_event;
 					}
 				}
 			}
@@ -203,7 +207,7 @@ sub get_copy_result
 	
 	if($best_overlap)
 	{
-		return($best_seg_mean);		
+		return($best_seg_mean . "\t" . $best_event);		
 	}
 	else
 	{
