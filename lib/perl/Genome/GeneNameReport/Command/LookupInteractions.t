@@ -23,5 +23,5 @@ my $command = Genome::GeneNameReport::Command::LookupInteractions->create(gene_f
 isa_ok($command, 'Genome::GeneNameReport::Command::LookupInteractions', 'created a LookupInteractions command');
 ok($command->execute, 'Successfully excuted lookup interactions command');
 
-my $output = `diff $test_output_file, $output_file`;
+my $output = `diff $test_output_file $output_file`;
 ok(!$output, 'Command output and expected output are identical');
