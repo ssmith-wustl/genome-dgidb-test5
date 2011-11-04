@@ -35,8 +35,11 @@ sub command_death_handler {
 
     my $build_id = $command_death_metrics{build_id} || 0;
 
-    my $includes = join(' ', map { '-I ' . $_ } UR::Util::used_libs);
+    #escape single quotes so they don't end the shell cmd
+    $message =~ s/'/"/g;
+    $inferred_message =~ s/'/"/g;
 
+    my $includes = join(' ', map { '-I ' . $_ } UR::Util::used_libs);
     my $cmd = <<EOF
 $^X $includes -e 'use Genome;
 Genome::Model::Build::ErrorLogEntry->create(
