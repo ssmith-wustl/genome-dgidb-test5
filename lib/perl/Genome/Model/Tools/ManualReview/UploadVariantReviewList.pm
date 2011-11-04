@@ -6,7 +6,7 @@ use Genome::Utility::VariantReviewListReader;
 use Data::Dumper;
 
 
-use above 'Genome';
+use Genome;
 
 UR::Object::Type->define(
     class_name => __PACKAGE__, is => 'Command',

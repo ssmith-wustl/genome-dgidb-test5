@@ -5,6 +5,7 @@ use warnings;
 
 use Genome;
 use Parse::RecDescent;
+use Storable;
 
 class Genome::InstrumentData::Composite::Strategy {
     is => 'Command::V2',

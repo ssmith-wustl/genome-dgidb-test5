@@ -5,7 +5,6 @@ use strict;
 use Genome;
 use IO::File;
 use Bit::Vector;
-use Bio::DB::Fasta;
 
 class Genome::Model::ReferenceSequence::Command::GenerateBitmask {
     is => 'Genome::Command::Base',

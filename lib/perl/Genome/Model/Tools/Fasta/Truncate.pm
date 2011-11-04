@@ -5,6 +5,8 @@ use warnings;
 
 use Genome;
 
+use FASTAParse;
+
 class Genome::Model::Tools::Fasta::Truncate {
     is => 'Command',
     has => [

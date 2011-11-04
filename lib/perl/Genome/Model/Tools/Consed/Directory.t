@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use Test::More tests => 5;
+use Test::MockObject;
 
 use Genome::Model::Tools::Consed::Directory;
 use File::Path;

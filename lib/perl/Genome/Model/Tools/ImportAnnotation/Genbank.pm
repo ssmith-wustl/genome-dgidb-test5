@@ -5,6 +5,7 @@ use warnings;
 use Genome;
 use Carp;
 
+use Bio::Seq;
 use Bio::SeqIO;
 use Storable;
 use File::Slurp qw/ write_file /;

@@ -7,6 +7,8 @@ use Carp 'confess';
 use File::Temp; 
 use Sort::Naturally qw/ ncmp nsort /;
 
+use Bio::SeqIO;
+
 class Genome::Model::GenePrediction::Command::Eukaryotic::PredictionsToAce {
     is => 'Genome::Command::Base',
     has_optional => [

@@ -7,6 +7,7 @@ use warnings;
 use Genome;
 use Carp;
 use Bio::Tools::CodonTable;
+use Bio::Seq;
 
 class Genome::Transcript {
     table_name => 'TRANSCRIPT',

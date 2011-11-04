@@ -31,6 +31,10 @@
  * jQuery UI specific styling
  */
 
+.link {
+    color: white;
+}
+
 .paging_two_button .fg-button {
 	float: left;
 	cursor: pointer;

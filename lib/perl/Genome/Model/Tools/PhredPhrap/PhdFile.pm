@@ -3,7 +3,7 @@ package Genome::Model::Tools::PhredPhrap::PhdFile;
 use strict;
 use warnings;
 
-use above 'Genome';
+use Genome;
 
 require Cwd;
 use Data::Dumper;

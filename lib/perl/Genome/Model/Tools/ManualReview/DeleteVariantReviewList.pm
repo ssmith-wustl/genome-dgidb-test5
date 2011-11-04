@@ -3,7 +3,7 @@ package Genome::Model::Tools::ManualReview::DeleteVariantReviewList;
 use strict;
 use warnings;
 
-use above 'Genome';
+use Genome;
 
 UR::Object::Type->define(
     class_name => __PACKAGE__, is => 'Command',

@@ -55,6 +55,7 @@ sub set_default_values {
 sub get_all_submodule_paths {
     my $base_path = __FILE__;
     $base_path =~ s/.pm$//;
+    $base_path =~ s/ /\\ /g; # escape spaces for glob
     my @paths = glob("$base_path/*");
     return @paths;
 }
