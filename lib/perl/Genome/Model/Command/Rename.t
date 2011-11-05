@@ -11,8 +11,8 @@ use Test::More;
 use_ok('Genome::Model::Command::Rename');
 
 # MOCK 
-my $model = Genome::Model::Test->create_basic_mock_model(type_name => 'amplicon assembly')
-    or die "Can't create mock model for amplicon assembly\n";
+my $model = Genome::Model::Test->create_basic_mock_model(type_name => 'metagenomic composition 16s sanger')
+    or die "Can't create mock model for metagenomic composition 16s sanger\n";
 
 my $new_name = 'mrs. mock';
 my $old_name = $model->name; # should be 'mr. mock'
