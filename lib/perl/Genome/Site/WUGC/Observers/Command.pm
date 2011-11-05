@@ -57,7 +57,7 @@ UR::Context->commit;'
 EOF
 ;
 
-    Genome::Sys->shellcmd(cmd => $cmd);
+    system($cmd);
 
     return 1;
 }
