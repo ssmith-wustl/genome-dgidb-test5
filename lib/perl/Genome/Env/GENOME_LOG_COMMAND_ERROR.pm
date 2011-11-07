@@ -1,5 +1,5 @@
 package Genome::Env::GENOME_LOG_COMMAND_ERROR;
-our $default_value = 1;
+our $default_value = 'default';
 
 =pod
 
@@ -20,9 +20,14 @@ inferred_file
 inferred_line
 build_id
 
+Set to 1 to log all errors
+Set to 0 to log zero errors
+
 =head1 DEFAULT VALUE
 
-1
+'default'
+
+Only log errors when a build id is present and apipe-builder is the user
 
 =cut
 
