@@ -1,3 +1,4 @@
+DROP TABLE IF EXISTS citation;
 DROP TABLE IF EXISTS drug_gene_interaction_report_attribute;
 DROP TABLE IF EXISTS drug_gene_interaction_report;
 DROP TABLE IF EXISTS gene_name_report_category_association;
@@ -72,6 +73,8 @@ create table drug_gene_interaction_report (
         drug_name_report_id varchar NOT NULL,
         gene_name_report_id varchar NOT NULL,
         interaction_type varchar NOT NULL,
+        source_db_name varchar NOT NULL,
+        source_db_version varchar NOT NULL,
         description text,
         PRIMARY KEY(id),
         FOREIGN KEY(drug_name_report_id) REFERENCES drug_name_report(id),
@@ -84,5 +87,13 @@ create table drug_gene_interaction_report_attribute (
         interaction_id varchar NOT NULL REFERENCES drug_gene_interaction_report(id),
         name varchar NOT NULL,
         value varchar NOT NULL,
+        PRIMARY KEY (id)
+);
+
+create table citation (
+        id varchar NOT NULL,
+        source_db_name varchar NOT NULL,
+        source_db_version varchar NOT NULL,
+        citation text,
         PRIMARY KEY (id)
 );
