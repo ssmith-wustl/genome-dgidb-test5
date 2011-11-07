@@ -1,11 +1,11 @@
-package Genome::GeneNameReport;
+package Genome::DruggableGene::GeneNameReport;
 
 use strict;
 use warnings;
 
 use Genome;
 
-class Genome::GeneNameReport {
+class Genome::DruggableGene::GeneNameReport {
     is => 'Genome::Searchable',
     id_generator => '-uuid',
     table_name => 'gene_name_report',
@@ -24,22 +24,22 @@ class Genome::GeneNameReport {
             is_optional => 1,
         },
         gene_name_report_associations => {
-            is => 'Genome::GeneNameReportAssociation',
+            is => 'Genome::DruggableGene::GeneNameReportAssociation',
             reverse_as => 'gene_name_report',
             is_many => 1,
         },
         gene_name_report_category_associations => {
-            is => 'Genome::GeneNameReportCategoryAssociation',
+            is => 'Genome::DruggableGene::GeneNameReportCategoryAssociation',
             reverse_as => 'gene_name_report',
             is_many => 1,
         },
         drug_gene_interaction_reports => {
-            is => 'Genome::DrugGeneInteractionReport',
+            is => 'Genome::DruggableGene::DrugGeneInteractionReport',
             reverse_as => 'gene_name_report',
             is_many => 1,
         },
         drug_name_reports => {
-            is => 'Genome::DrugNameReport',
+            is => 'Genome::DruggableGene::DrugNameReport',
             via => 'drug_gene_interaction_reports',
             to => 'drug_name_report',
             is_many => 1,
@@ -62,7 +62,7 @@ if ($INC{"Genome/Search.pm"}) {
 
 sub commit_callback {
     my $self = shift;
-    Genome::Search->add(Genome::GeneNameReport->define_set(name => $self->name));
+    Genome::Search->add(Genome::DruggableGene::GeneNameReport->define_set(name => $self->name));
 }
 
 1;

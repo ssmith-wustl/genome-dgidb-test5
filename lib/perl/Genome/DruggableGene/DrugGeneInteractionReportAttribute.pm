@@ -1,11 +1,11 @@
-package Genome::DrugGeneInteractionReportAttribute;
+package Genome::DruggableGene::DrugGeneInteractionReportAttribute;
 
 use strict;
 use warnings;
 
 use Genome;
 
-class Genome::DrugGeneInteractionReportAttribute {
+class Genome::DruggableGene::DrugGeneInteractionReportAttribute {
     is => 'UR::Object',
     id_generator => '-uuid',
     table_name => 'drug_gene_interaction_report_attribute',
@@ -14,7 +14,7 @@ class Genome::DrugGeneInteractionReportAttribute {
     ],
     has => [
         interaction_id               => { is => 'Text' },
-        drug_gene_interaction_report => { is => 'Genome::DrugGeneInteractionReport', id_by => 'interaction_id', constraint_name => 'drug_gene_interaction_report_attribute_interaction_id_fkey' },
+        drug_gene_interaction_report => { is => 'Genome::DruggableGene::DrugGeneInteractionReport', id_by => 'interaction_id', constraint_name => 'drug_gene_interaction_report_attribute_interaction_id_fkey' },
         name                         => { is => 'Text' },
         value                        => { is => 'Text' },
     ],

@@ -1,11 +1,11 @@
-package Genome::DrugNameReport;
+package Genome::DruggableGene::DrugNameReport;
 
 use strict;
 use warnings;
 
 use Genome;
 
-class Genome::DrugNameReport {
+class Genome::DruggableGene::DrugNameReport {
     is => 'Genome::Searchable',
     id_generator => '-uuid',
     table_name => 'drug_name_report',
@@ -24,22 +24,22 @@ class Genome::DrugNameReport {
             is_optional => 1,
         },
         drug_name_report_associations => {
-            is => 'Genome::DrugNameReportAssociation',
+            is => 'Genome::DruggableGene::DrugNameReportAssociation',
             reverse_as => 'drug_name_report',
             is_many => 1,
         },
         drug_name_report_category_associations => {
-            is => 'Genome::DrugNameReportCategoryAssociation',
+            is => 'Genome::DruggableGene::DrugNameReportCategoryAssociation',
             reverse_as => 'drug_name_report',
             is_many => 1,
         },
         drug_gene_interaction_reports => {
-            is => 'Genome::DrugGeneInteractionReport',
+            is => 'Genome::DruggableGene::DrugGeneInteractionReport',
             reverse_as => 'drug_name_report',
             is_many => 1,
         },
         gene_name_reports => {
-            is => 'Genome::GeneNameReport',
+            is => 'Genome::DruggableGene::GeneNameReport',
             via => 'drug_gene_interaction_reports',
             to => 'gene_name_report',
             is_many => 1,

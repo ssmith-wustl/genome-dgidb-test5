@@ -1,11 +1,11 @@
-package Genome::GeneNameReportAssociation;
+package Genome::DruggableGene::GeneNameReportAssociation;
 
 use strict;
 use warnings;
 
 use Genome;
 
-class Genome::GeneNameReportAssociation {
+class Genome::DruggableGene::GeneNameReportAssociation {
     is => 'UR::Object',
     id_generator => '-uuid',
     table_name => 'gene_name_report_association',
@@ -17,7 +17,7 @@ class Genome::GeneNameReportAssociation {
     has => [
         gene_name_report_id => { is => 'Text'},
         gene_name_report => {
-            is => 'Genome::GeneNameReport',
+            is => 'Genome::DruggableGene::GeneNameReport',
             id_by => 'gene_name_report_id',
             constraint_name => 'gene_name_report_association_gene_name_report_id_fkey',
         },
