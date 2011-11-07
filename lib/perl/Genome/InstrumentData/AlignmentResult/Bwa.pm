@@ -107,7 +107,7 @@ sub _all_reference_indices {
         my $b = $self->reference_build;
         do {
             $self->status_message("Getting reference sequence index for build ".$b->__display_name__);
-            push(@indices, $self->get_reference_sequence_index($b));
+            unshift(@indices, $self->get_reference_sequence_index($b));
             $b = $b->append_to;
         } while ($b);
     } else {

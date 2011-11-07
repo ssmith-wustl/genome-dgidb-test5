@@ -31,6 +31,8 @@ class Genome::Model::Build::ErrorLogEntry {
 
         build => { is => 'Genome::Model::Build', id_by => 'build_id' },
         build_id => { is => 'NUMBER', implied_by => 'build'},
+        username        => { is => 'Text' },
+        sudo_username   => { is => 'Text' },
     ],
 };
 
@@ -40,6 +42,9 @@ sub create {
     return unless $self;
 
     $self->entry_date(Workflow::Time->now) unless $self->entry_date;
+    $self->username(Genome::Sys->username) unless $self->username;
+    $self->sudo_username(Genome::Sys->sudo_username) unless $self->sudo_username;
+
     $self->_auto_truncate_message if $self->auto_truncate_message;
     $self->_auto_truncate_inferred_message if $self->auto_truncate_inferred_message;
 
