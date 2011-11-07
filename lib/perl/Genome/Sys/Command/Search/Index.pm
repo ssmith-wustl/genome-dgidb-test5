@@ -24,10 +24,12 @@ class Genome::Sys::Command::Search::Index {
 sub execute {
     my $self = shift;
 
-    my $confirmed = $self->prompt_for_confirmation() if $self->confirm;
-    if ($self->confirm && !$confirmed) {
-        $self->info('Aborting.');
-        return;
+    if ($self->subject_text ne 'list') {
+        my $confirmed = $self->prompt_for_confirmation() if $self->confirm;
+        if ($self->confirm && !$confirmed) {
+            $self->info('Aborting.');
+            return;
+        }
     }
 
     if ($self->subject_text eq 'all') {
