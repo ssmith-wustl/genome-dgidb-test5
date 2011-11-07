@@ -39,7 +39,7 @@ sub execute {
     elsif ($self->subject_text eq 'daemon') {
         $self->daemon;
     }
-    elsif ($self->subject_test eq 'list') {
+    elsif ($self->subject_text eq 'list') {
         $self->list;
     }
     else {
