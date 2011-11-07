@@ -93,7 +93,7 @@ class Genome::Model::Tools::RefCov {
             is => 'String',
             doc => 'The format of the region-of-interest file.',
             default_value => $DEFAULT_ROI_FILE_FORMAT,
-            valid_values => ['bed'],
+            valid_values => ['bed','bam'],
             is_optional => 1,
         },
         min_depth_filter => {
