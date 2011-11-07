@@ -167,7 +167,7 @@
 				  <h3 class="nontyped">coverage</h3>
 				  <div class="color_controls">
 					 <span>color scheme:</span>
-					 <input name="scheme_select" value="analagous" id="analagous" type="radio" onchange="coverage_vis.render()" checked="checked"/><label for="analagous">analagous</label>
+					 <input name="scheme_select" value="analogous" id="analogous" type="radio" onchange="coverage_vis.render()" checked="checked"/><label for="analogous">analogous</label>
 					 <input name="scheme_select" value="complementary" id="complementary" type="radio" onchange="coverage_vis.render()"/><label for="complementary">complementary</label>
 				  </div>
 				</div>
@@ -175,9 +175,6 @@
           <div class="box_content rounded-bottom span-11 last">
             <div id="coverage" style="background: #FFF;padding: 10px;margin-bottom: 10px;border-bottom: 1px solid #C1C1B7;">
 				  <script type="text/javascript" src="/res/js/app/genome_model_coverage_chart.js"></script>
-              <!-- <script type="text/javascript"> -->
-              <!--   render_coverage_chart('analagous'); -->
-              <!-- </script> -->
             </div>
           </div>
         </div>
