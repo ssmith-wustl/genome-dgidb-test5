@@ -1,11 +1,11 @@
-package Genome::GeneNameReport::Set::View::Solr::Xml;
+package Genome::DruggableGene::GeneNameReport::Set::View::Solr::Xml;
 
 use strict;
 use warnings;
 
 use Genome;
 
-class Genome::GeneNameReport::Set::View::Solr::Xml {
+class Genome::DruggableGene::GeneNameReport::Set::View::Solr::Xml {
     is => 'Genome::View::Solr::Xml',
     has => [
         type => {
@@ -18,13 +18,13 @@ class Genome::GeneNameReport::Set::View::Solr::Xml {
         },
         display_icon_url => {
             is  => 'Text',
-            default => 'genome_gene-name_32',
+            default => 'genome_druggable-gene_gene-name_32',
         },
         display_url0 => {
             is => 'Text',
             calculate_from => ['subject'],
             calculate => q{
-                return '/view/genome/gene-name-report/set/status.html?name=' . $subject->name();
+                return '/view/genome/druggable-gene/gene-name-report/set/status.html?name=' . $subject->name();
             },
         },
         display_label1 => {

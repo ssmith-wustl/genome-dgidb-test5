@@ -1,11 +1,11 @@
-package Genome::DrugGeneInteractionReport::View::Solr::Xml;
+package Genome::DruggableGene::DrugGeneInteractionReport::View::Solr::Xml;
 
 use strict;
 use warnings;
 
 use Genome;
 
-class Genome::DrugGeneInteractionReport::View::Solr::Xml {
+class Genome::DruggableGene::DrugGeneInteractionReport::View::Solr::Xml {
     is => 'Genome::View::Solr::Xml',
     has => [
         type => {
@@ -18,13 +18,13 @@ class Genome::DrugGeneInteractionReport::View::Solr::Xml {
         },
         display_icon_url => {
             is  => 'Text',
-            default => 'genome_drug-gene-interaction-report_32',
+            default => 'genome_druggable-gene_drug-gene-interaction-report_32',
         },
         display_url0 => {
             is => 'Text',
             calculate_from => ['subject'],
             calculate => q{
-                return join ('?id=', '/view/genome/drug-gene-interaction-report/status.html',$_->id());
+                return join ('?id=', '/view/genome/druggable-gene/drug-gene-interaction-report/status.html',$_->id());
             },
         },
         display_label1 => {

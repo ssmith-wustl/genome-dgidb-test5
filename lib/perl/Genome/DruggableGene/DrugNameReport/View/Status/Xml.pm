@@ -1,4 +1,4 @@
-package Genome::DrugNameReport::View::Status::Xml;
+package Genome::DruggableGene::DrugNameReport::View::Status::Xml;
 
 use strict;
 use warnings;
@@ -6,7 +6,7 @@ use Genome;
 use Data::Dumper;
 use XML::LibXML;
 
-class Genome::DrugNameReport::View::Status::Xml {
+class Genome::DruggableGene::DrugNameReport::View::Status::Xml {
     is => 'Genome::View::Status::Xml',
     has_constant => [
         default_aspects => {
