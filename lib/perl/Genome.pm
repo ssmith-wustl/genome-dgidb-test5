@@ -26,9 +26,6 @@ require Genome::Site;
 # and assigns default values to any variables that have one set.
 require Genome::Env;
 
-# Loads all observers
-require Genome::Observers;
-
 # If the search engine is installed, configure its hooks
 eval {
     local $SIG{__WARN__};
@@ -38,7 +35,7 @@ eval {
 # This ensures that the search system is updated when certain classes are updated 
 # The search system is optional so it skips this if usage above fails
 if ($INC{"Genome/Search.pm"}) {
-    Genome::Search->register_callbacks('UR::Object');
+    Genome::Search->register_callbacks('Genome::Searchable');
 }
 
 # Account for a perl bug in pre-5.10 by applying a runtime patch to Carp::Heavy

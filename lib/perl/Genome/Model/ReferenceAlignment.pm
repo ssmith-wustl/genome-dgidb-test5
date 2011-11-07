@@ -415,6 +415,8 @@ sub qc_processing_profile_id {
     my $self = shift;
 
     my %qc_pp_id = ( # Map alignment processing profile to lane QC version
+        2635769 => '2653572', # Nov 2011 Default Reference Alignment
+        2644306 => '2653579', # Nov 2011 Default Reference Alignment (PCGP)
         2574937 => '2597031', # bwa 0.5.5 untrimmed and samtools r453 and picard_align 1.17 and picard_dedup 1.29
         2580856 => '2581081', # Feb 2011 Default Reference Alignment
         2582616 => '2589389', # old february 2011 default genome and exome with build37 annotation
@@ -496,13 +498,6 @@ sub get_or_create_lane_qc_models {
         return @lane_qc_models;
     }
     return;
-}
-
-sub latest_build_id {
-    my $self = shift;
-    my $build = $self->latest_build;
-    unless ($build) { return; }
-    return $build->id;
 }
 
 sub latest_build_bam_file {

@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 
 class Genome::DrugGeneInteractionReport {
-    is => 'UR::Object',
+    is => 'Genome::Searchable',
     id_generator => '-uuid',
     table_name => 'drug_gene_interaction_report',
     schema_name => 'subject',
@@ -27,6 +27,8 @@ class Genome::DrugGeneInteractionReport {
             id_by => 'gene_name_report_id',
             constraint_name => 'drug_gene_interaction_report_gene_name_report_id_fkey',
         },
+        source_db_name => { is => 'Text'},
+        source_db_version => { is => 'Text'},
         interaction_type => { is => 'Text'}, 
         description => { is => 'Text', is_optional => 1 },
         drug_gene_interaction_report_attributes => {

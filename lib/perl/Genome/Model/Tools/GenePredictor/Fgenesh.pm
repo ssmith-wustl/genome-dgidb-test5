@@ -7,6 +7,7 @@ use strict;
 use warnings;
 
 use Genome;
+use Bio::Seq;
 use Bio::SeqIO;
 use Bio::Tools::Run::Fgenesh;
 use Carp 'confess';

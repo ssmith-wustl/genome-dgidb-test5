@@ -20,6 +20,18 @@ class Genome::FeatureList::Command::DumpMergedList {
             is => 'Genome::Model::Build::ReferenceSequence',
             doc => 'To convert the coordinates of the BED file to a different reference',
             is_optional => 1,
+        },
+        merge => {
+            is => 'Boolean',
+            doc => 'A command line option to merge or not merge the feature list',
+            default_value => 1,
+            is_optional => 1,
+        },
+        short_name => {
+            is => 'Boolean',
+            doc => 'A command line option to merge or not merge the feature list',
+            default_value => 1,
+            is_optional => 1,
         }
     ]
 };
@@ -50,9 +62,15 @@ sub execute {
 
     my $alternate_reference = $self->alternate_reference;
     if($alternate_reference) {
-        $bed = $feature_list->converted_bed_file($alternate_reference);
+        $bed = $feature_list->converted_bed_file(
+            reference => $alternate_reference,
+            short_name => $self->short_name,
+            merge => $self->merge,
+        );
+    } elsif ($self->merge) {
+        $bed = $feature_list->merged_bed_file(short_name => $self->short_name);
     } else {
-        $bed = $feature_list->merged_bed_file;
+        $bed = $feature_list->processed_bed_file(short_name => $self->short_name);
     }
 
     if($self->output_path) {

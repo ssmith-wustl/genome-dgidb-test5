@@ -6,11 +6,11 @@ use warnings;
 use above 'Genome';
 
 use Data::Dumper 'Dumper';
-use Test::More 'no_plan';
+use Test::More;
 
 use_ok('Genome::Model::Build::Input');
 
-exit;
+done_testing();
 
 =pod
 

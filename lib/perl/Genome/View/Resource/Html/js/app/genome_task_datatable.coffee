@@ -19,4 +19,5 @@ $ ()->
         url: '/view/genome/task/set/data-table.json'
         dataType: 'json'
         success: (data) ->
-            prepareDataTables(data) 
+            prepareDataTables(data)
+            $('#task-list_length').parent().prepend($('<h3>Upload Tasks</h3>'))

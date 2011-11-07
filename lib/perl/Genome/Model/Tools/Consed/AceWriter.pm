@@ -66,14 +66,14 @@ sub add_assembly_tags {
     my ($self, $tags) = @_;
 
     foreach my $tag ( @$tags ) {
-        $self->_at_buffer->print
-        (
-            "\nWA{\n%s %s %s%s%s\n}\n",,
-            $tag->{tag_type},
-            $tag->{source},
-            $tag->{date},
-            ( $tag->{no_trans} ? ' ' . $tag->no_trans : '' ),
-            ( $tag->{data} ? "\n".$tag->{data} : '' ),
+        $self->_at_buffer->print (
+            sprintf (
+                "\nWA{\n%s %s%s%s\n}\n",,
+                $tag->{tag_type},
+                $tag->{date},
+                ( $tag->{no_trans} ? ' ' . $tag->no_trans : '' ),
+                ( $tag->{data} ? "\n".$tag->{data} : '' ),
+            )
         );
     }
 
@@ -125,6 +125,7 @@ sub add_contig {
     $self->_add_to_read_count($read_count);
 
     my $base_segments = $contig->{base_segments};
+    my $base_segments_count = ( $contig->{base_segments} ) ? scalar (@$base_segments) : 0;
 
     $self->_fh->print (
         sprintf (
@@ -132,7 +133,7 @@ sub add_contig {
             $name,
             length $contig->{consensus},
             $contig->{read_count},
-            scalar(@$base_segments),
+            $base_segments_count,
             $contig->{u_or_c},
         )
     );
@@ -140,7 +141,7 @@ sub add_contig {
     $self->_fh->print("\n");
     $self->_write_qualities($contig);
     $self->_write_read_positions($contig->{reads});
-    $self->_write_base_segments($base_segments);
+    $self->_write_base_segments($base_segments) if $contig->{base_segments};
     $self->_write_reads($contig->{reads});
     $self->_add_contig_tags_to_buffer($contig->{tags}) if $contig->{tags};
     

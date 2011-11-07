@@ -9,7 +9,7 @@ use POSIX;
 use DateTime;
 use IO::File;
 
-my $DEFAULT = 'r544';
+my $DEFAULT = 'r963';
 #3Gb
 my $DEFAULT_MEMORY = 402653184;
 

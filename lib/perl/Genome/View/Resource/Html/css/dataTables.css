@@ -31,6 +31,14 @@
  * jQuery UI specific styling
  */
 
+.link:hover {
+    color: #C1C1B7;
+}
+
+.link {
+    color: white;
+}
+
 .paging_two_button .fg-button {
 	float: left;
 	cursor: pointer;

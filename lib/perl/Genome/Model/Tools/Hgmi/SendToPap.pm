@@ -17,6 +17,9 @@ use Workflow::Simple;
 use Data::Dumper;
 use PAP;
 
+use Bio::Seq;
+use Bio::SeqIO;
+
 class Genome::Model::Tools::Hgmi::SendToPap (
     is => 'Command',
     has => [

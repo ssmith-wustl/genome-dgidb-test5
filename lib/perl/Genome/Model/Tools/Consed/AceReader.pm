@@ -233,11 +233,12 @@ sub _build_WA {
     $ret_val{'type'} = 'assembly_tag';
     my $line = <$IN>;
     chomp $line;
-	$line =~ s/^\s*// if $line =~ /\w/;;
+    $line =~ s/^\s*// if $line =~ /\w/;
     @ret_val{'tag_type', 'program', 'date'} = split(/ /, $line);
     my $data;
     while ($line = <$IN>) {
-		$line =~ s/^\s*// if $line =~ /\w/;;
+        chomp $line;
+        $line =~ s/^\s*// if $line =~ /\w/;
         if ($line =~ /^}/) {
             last;
         }

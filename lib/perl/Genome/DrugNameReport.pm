@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 
 class Genome::DrugNameReport {
-    is => 'UR::Object',
+    is => 'Genome::Searchable',
     id_generator => '-uuid',
     table_name => 'drug_name_report',
     schema_name => 'subject',
@@ -33,14 +33,14 @@ class Genome::DrugNameReport {
             reverse_as => 'drug_name_report',
             is_many => 1,
         },
-        drug_gene_interactions => {
-            is => 'Genome::DrugGeneInteraction',
+        drug_gene_interaction_reports => {
+            is => 'Genome::DrugGeneInteractionReport',
             reverse_as => 'drug_name_report',
             is_many => 1,
         },
         gene_name_reports => {
             is => 'Genome::GeneNameReport',
-            via => 'drug_gene_interactions',
+            via => 'drug_gene_interaction_reports',
             to => 'gene_name_report',
             is_many => 1,
         }

@@ -41,8 +41,11 @@ use Genome::Site::WUGC::LegacyConfig;
 $ENV{GENOME_DB} ||= '/gsc/scripts/opt/genome/db';
 $ENV{GENOME_SW} ||= '/gsc/pkg/bio';
 
-# TODO: get things which use this to do so explicitly
-use Test::MockObject; 
+# configure our local ensembl db
+$ENV{GENOME_DB_ENSEMBL_API_PATH} ||= '/gsc/scripts/share/ensembl-64/';
+$ENV{GENOME_DB_ENSEMBL_HOST} ||= 'mysql1';
+$ENV{GENOME_DB_ENSEMBL_USER} ||= 'mse';
+$ENV{GENOME_DB_ENSEMBL_PORT} ||= '3306';
 
 # configuration for internal WUGC network software & LIMS 
 # this module is called by Genome::Config::edu::wustl::gsc right now on all *.gsc.wustl.edu hosts
@@ -56,13 +59,6 @@ Class::Autouse->autouse(qr/Bio.*/);
 
 # Loads site-specific observers
 use Genome::Site::WUGC::Observers;
-
-# TODO: move these into tools which need them
-use Bio::Seq;
-use Bio::Seq::Quality;
-use Bio::SeqIO;
-use Bio::DB::Fasta;
-use FASTAParse;
 
 # this callback will load the GSCApp module, and initialize the app to work with GSC modules
 my $initialized = ''; 
@@ -155,10 +151,6 @@ sub _sync_env {
     }
 }
 
-
-if ($0 =~ /(?:gmt|genome)(?:5\.12\.1)?$/ and not `grep log_command $0`) {
-    require Genome::Site::WUGC::Security;
-}
 
 1;
 

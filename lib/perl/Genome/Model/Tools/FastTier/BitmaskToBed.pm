@@ -3,7 +3,7 @@ package Genome::Model::Tools::FastTier::BitmaskToBed;
 use strict;
 use warnings;
 
-use above 'Genome';
+use Genome;
 use IO::File;
 use Bit::Vector;
 

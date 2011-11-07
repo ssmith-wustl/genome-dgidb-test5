@@ -1366,10 +1366,29 @@ sub region_of_interest_set_bed_file {
     unless($reference->is_compatible_with($roi_set->reference)) {
         $alt_reference = $reference;
     }
-
+    my $merge_status;
+    if (defined($self->model->merge_roi_set)) {
+        $merge_status = $self->model->merge_roi_set;
+    } else {
+        # This is to retain backward compatibility, previously all BED files were merged
+        $merge_status = 1;
+    }
+    my $use_short_names;
+    if (defined($self->model->short_roi_names)) {
+        $use_short_names = $self->model->short_roi_names;
+    } else {
+        # This is to retain backward compatibility, previously all BED files had short roi names(like r###)
+        $use_short_names = 1;
+    }
     my $bed_file_path = $self->reference_coverage_directory .'/'. $roi_set->id .'.bed';
     unless (-e $bed_file_path) {
-        my $dump_command = Genome::FeatureList::Command::DumpMergedList->create(feature_list => $roi_set, output_path => $bed_file_path, alternate_reference => $alt_reference);
+        my $dump_command = Genome::FeatureList::Command::DumpMergedList->create(
+            feature_list => $roi_set,
+            output_path => $bed_file_path,
+            alternate_reference => $alt_reference,
+            merge => $merge_status,
+            short_name => $use_short_names,
+        );
         unless ($dump_command->execute) {
             die('Failed to print bed file to path '. $bed_file_path);
         }

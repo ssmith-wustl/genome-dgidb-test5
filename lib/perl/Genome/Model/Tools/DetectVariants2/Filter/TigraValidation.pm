@@ -4,6 +4,7 @@ package Genome::Model::Tools::DetectVariants2::Filter::TigraValidation;
 use strict;
 use warnings;
 use Genome;
+use Bio::Seq;
 use Bio::SeqIO;
 use File::Temp;
 use File::Basename;

@@ -4,6 +4,10 @@ use strict;
 use warnings;
 use Genome;
 
+use Bio::Seq;
+use Bio::Tools::CodonTable;
+use Bio::DB::Fasta;
+
 class Genome::Model::Tools::Annotate::AminoAcidSubstitution {
     is  => 'Genome::Model::Tools::Annotate',
     has => [

@@ -7,6 +7,8 @@ use above 'Genome';
 
 use Genome::Model::Event::Build::AmpliconAssembly::Test;
 
+use Test::More skip_all => 'test to be updated/retired';
+
 Genome::Model::Event::Build::AmpliconAssembly::VerifyInstrumentData::Test->runtests;
 
 exit;

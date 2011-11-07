@@ -22,21 +22,23 @@ class Genome::Model::Tools::Capture::FormatSnvs {
 	is => 'Command',                       
 	
 	has => [                                # specify the command's single-value properties (parameters) <--- 
-		variants_file	=> { is => 'Text', doc => "File of indel predictions", is_optional => 0, is_input => 1 },
+		variants_file	=> { is => 'Text', doc => "File of SNV predictions", is_optional => 0, is_input => 1 },
 		output_file     => { is => 'Text', doc => "Output file to receive formatted lines", is_optional => 0, is_input => 1, is_output => 1 },
+		preserve_call	=> { is => 'Text', doc => "If set to 1, preserves the consensus call", is_optional => 1, is_input => 1 },
+		append_line	=> { is => 'Text', doc => "If set to 1, appends extra columns in input lines to output lines", is_optional => 1, is_input => 1, default => 0 },
 	],
 };
 
 sub sub_command_sort_position { 12 }
 
 sub help_brief {                            # keep this to just a few words <---
-    "Formats indels for the annotation pipeline"                 
+    "Formats SNVs for the annotation pipeline"                 
 }
 
 sub help_synopsis {
     return <<EOS
 This command formats indels for the annotation pipeline
-EXAMPLE:	gmt analysis somatic-pipeline format-indels-for-annotation --variants-file [file] --output-file [file]
+EXAMPLE:	gmt analysis somatic-pipeline format-snvs-for-annotation --variants-file [file] --output-file [file]
 EOS
 }
 
@@ -105,12 +107,12 @@ sub execute {                               # replace with real execution logic.
 
 			if($chrom && $chr_start && $chr_stop)
 			{
-				$allele2 = iupac_to_base($allele1, $allele2);
+				$allele2 = iupac_to_base($allele1, $allele2) if(!$self->preserve_call);
 	
 				## If we have other information on line, output it ##
 				my $numContents = @lineContents;
 				my $rest_of_line = "";
-				if($restColumn && $restColumn > 0 && $restColumn < $numContents)
+				if($self->append_line && $restColumn && $restColumn > 0 && $restColumn < $numContents)
 				{
 					for(my $colCounter = $restColumn; $colCounter < $numContents; $colCounter++)
 					{

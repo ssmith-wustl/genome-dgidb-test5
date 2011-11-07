@@ -6,6 +6,8 @@ use warnings;
 use Genome;
 use AMOS::AmosLib;
 
+use Bio::SeqIO;
+
 class Genome::Model::Tools::Assembly::CreateOutputFiles {
     is => 'Command',
     has => [

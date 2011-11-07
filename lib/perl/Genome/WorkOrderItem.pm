@@ -3,7 +3,7 @@ package Genome::WorkOrderItem;
 use strict;
 use warnings;
 
-use above 'Genome';
+use Genome;
 
 use Carp 'confess';
 use Data::Dumper 'Dumper';

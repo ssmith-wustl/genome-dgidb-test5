@@ -11,6 +11,8 @@ use Carp 'confess';
 use File::Path 'make_path';
 use File::Basename 'basename';
 
+use Bio::Seq;
+
 class Genome::Model::Tools::GenePredictor::Snap {
     is  => 'Genome::Model::Tools::GenePredictor',
     has => [

@@ -273,14 +273,48 @@ sub checkDir{
 #######################################################################################################################################################################
 #Load Entrez Data from flatfiles                                                                                                                                      #
 #######################################################################################################################################################################
+
 sub loadEntrezEnsemblData{
   my %args = @_;
 
+  my $species = $args{-species} || 'human';
+
+  my $taxon_id;
+  my $entrez_dir;
+  my $ensembl_dir;
+  my @files;
   #Parse Entrez flatfiles and Ensembl files from BioMart
   #ftp://ftp.ncbi.nih.gov/gene/DATA/gene2accession.gz
   #ftp://ftp.ncbi.nih.gov/gene/DATA/gene_info.gz
-  my $entrez_dir = "/gscmnt/sata132/techd/mgriffit/reference_annotations/EntrezGene/";
-  my $ensembl_dir = "/gscmnt/sata132/techd/mgriffit/reference_annotations/EnsemblGene/";
+
+  if ($species eq 'human') {
+      $taxon_id = '9606';
+      $entrez_dir = "/gscmnt/sata132/techd/mgriffit/reference_annotations/EntrezGene/";
+      $ensembl_dir = "/gscmnt/sata132/techd/mgriffit/reference_annotations/EnsemblGene/";
+      @files = qw (Ensembl_Genes_Human_v63.txt Ensembl_Genes_Human_v62.txt Ensembl_Genes_Human_v61.txt Ensembl_Genes_Human_v60.txt Ensembl_Genes_Human_v59.txt Ensembl_Genes_Human_v58.txt Ensembl_Genes_Human_v56.txt Ensembl_Genes_Human_v55.txt Ensembl_Genes_Human_v54.txt Ensembl_Genes_Human_v53.txt Ensembl_Genes_Human_v52.txt Ensembl_Genes_Human_v51.txt);
+  } elsif ($species eq 'mouse') {
+      $taxon_id = '10090';
+      $entrez_dir = '/gscmnt/sata132/techd/solexa/jwalker/RNAseq/annotation/mm9/entrez';
+      $ensembl_dir = '/gscmnt/sata132/techd/solexa/jwalker/RNAseq/annotation/mm9/ensembl';
+      @files = qw/
+                     ensembl_v64_id_to_gene_name.txt
+                     ensembl_v63_id_to_gene_name.txt
+                     ensembl_v62_id_to_gene_name.txt
+                     ensembl_v61_id_to_gene_name.txt
+                     ensembl_v60_id_to_gene_name.txt
+                     ensembl_v59_id_to_gene_name.txt
+                     ensembl_v58_id_to_gene_name.txt
+                     ensembl_v57_id_to_gene_name.txt
+                     ensembl_v56_id_to_gene_name.txt
+                     ensembl_v55_id_to_gene_name.txt
+                     ensembl_v54_id_to_gene_name.txt
+                     ensembl_v53_id_to_gene_name.txt
+                     ensembl_v52_id_to_gene_name.txt
+                     ensembl_v51_id_to_gene_name.txt
+                     ensembl_v50_id_to_gene_name.txt
+                 /;
+  }
+
   my %edata;
 
   #Check input dirs
@@ -308,8 +342,8 @@ sub loadEntrezEnsemblData{
   my %p_acc_map;       #Protein accessions -> entrez_id(s)
   my %g_acc_map;       #Genomic accessions -> entrez_id(s)
 
-  my $gene2accession_file = "$entrez_dir"."gene2accession.human";
-  my $gene_info_file = "$entrez_dir"."gene_info.human";
+  my $gene2accession_file = "$entrez_dir"."gene2accession.$species";
+  my $gene_info_file = "$entrez_dir"."gene_info.$species";
   open (GENE, "$gene_info_file") || die "\n\nCould not open gene_info file: $gene_info_file\n\n";
   while(<GENE>){
     chomp($_);
@@ -319,7 +353,7 @@ sub loadEntrezEnsemblData{
     my @line = split("\t", $_);
     my $tax_id = uc($line[0]);
     #Skip all non-human records
-    unless ($tax_id eq "9606"){
+    unless ($tax_id eq $taxon_id){
       next();
     }
     my $entrez_id = uc($line[1]);
@@ -408,7 +442,7 @@ sub loadEntrezEnsemblData{
     my @line = split("\t", $_);
     my $tax_id = uc($line[0]);
     #Skip all non-human records
-    unless ($tax_id eq "9606"){
+    unless ($tax_id eq $taxon_id){
       next();
     }
     my $entrez_id = uc($line[1]);
@@ -459,7 +493,6 @@ sub loadEntrezEnsemblData{
 
   #Now load ensembl gene id to gene name mappings from a series of legacy ensembl versions
   #Give preference to latest build
-  my @files = qw (Ensembl_Genes_Human_v63.txt Ensembl_Genes_Human_v62.txt Ensembl_Genes_Human_v61.txt Ensembl_Genes_Human_v60.txt Ensembl_Genes_Human_v59.txt Ensembl_Genes_Human_v58.txt Ensembl_Genes_Human_v56.txt Ensembl_Genes_Human_v55.txt Ensembl_Genes_Human_v54.txt Ensembl_Genes_Human_v53.txt Ensembl_Genes_Human_v52.txt Ensembl_Genes_Human_v51.txt);
 
   foreach my $file (@files){
     my $path = "$ensembl_dir"."$file";
@@ -921,10 +954,6 @@ sub getFilePathBase{
 
   return(\%fb);
 }
-
-
-
-
 
 
 1;

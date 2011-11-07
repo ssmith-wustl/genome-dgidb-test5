@@ -4,6 +4,10 @@ use strict;
 use warnings;
 use Genome;
 
+use Bio::Seq;
+use Bio::Tools::CodonTable;
+use Bio::DB::Fasta;
+
 class Genome::Model::Tools::Annotate::TranscriptSequence {
     is => 'Command',                       
     has => [ 
@@ -590,8 +594,6 @@ sub reverse_complement_allele {
 sub get_ref_base {
 
     my ($chr_start,$chr_stop,$chr_name,$organism) = @_;
-
-    use Bio::DB::Fasta;
 
     my $RefDir;
     if ($organism eq "human"){

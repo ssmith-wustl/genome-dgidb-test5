@@ -12,6 +12,7 @@ use warnings;
 use DBI;
 use Genome;
 use GSC::IO::Assembly::Ace;
+use Bio::Seq;
 use Bio::DB::Fasta;
 
 class Genome::Utility::AceSupportQA {
