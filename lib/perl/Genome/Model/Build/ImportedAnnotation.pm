@@ -251,10 +251,10 @@ sub transcript_iterator{
         }
 
         if ($chrom_name){
-            return Genome::Transcript->create_iterator(where => [data_directory => $data_dir, chrom_name => $chrom_name]);
+            return Genome::Transcript->create_iterator(data_directory => $data_dir, chrom_name => $chrom_name);
         }
         else {
-            return Genome::Transcript->create_iterator(where => [data_directory => $data_dir]);
+            return Genome::Transcript->create_iterator(data_directory => $data_dir);
         }
     }
 }
