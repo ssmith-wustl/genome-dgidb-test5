@@ -1,11 +1,11 @@
-package Genome::GeneNameReport::Command;
+package Genome::DruggableGene::Command::GeneNameReport;
 
 use strict;
 use warnings;
 
 use Genome;
 
-class Genome::GeneNameReport::Command {
+class Genome::DruggableGene::Command::GeneNameReport {
     is => 'Command::Tree',
 };
 
@@ -16,7 +16,7 @@ sub help_brief {
 sub help_synopsis {
     my $self = shift;
     return <<"EOS"
- genome gene-name-report ...
+ genome druggable-gene gene-name-report ...
 EOS
 }
 

@@ -1,11 +1,11 @@
-package Genome::GeneNameReport::Command::ConvertToEntrez;
+package Genome::DruggableGene::Command::GeneNameReport::ConvertToEntrez;
 
 use strict;
 use warnings;
 use Genome;
 use List::MoreUtils qw/ uniq /;
 
-class Genome::GeneNameReport::Command::ConvertToEntrez {
+class Genome::DruggableGene::Command::GeneNameReport::ConvertToEntrez {
     is => 'Genome::Command::Base',
     has => [
         gene_identifier => {
@@ -14,14 +14,14 @@ class Genome::GeneNameReport::Command::ConvertToEntrez {
             doc => 'Gene identifiers to convert to entrez',
         },
         _entrez_gene_name_reports => {
-            is => 'Genome::GeneNameReport',
+            is => 'Genome::DruggableGene::GeneNameReport',
             is_many => 1,
             is_output => 1,
             is_optional => 1,
             doc => 'Array of gene name reports produced as output',
         },
         _intermediate_gene_name_reports => {
-            is => 'Genome::GeneNameReport',
+            is => 'Genome::DruggableGene::GeneNameReport',
             is_many => 1,
             is_output => 1,
             is_optional => 1,
@@ -31,11 +31,11 @@ class Genome::GeneNameReport::Command::ConvertToEntrez {
 };
 
 sub help_brief {
-    'Translate a gene identifier to one or more Genome::GeneNameReports';
+    'Translate a gene identifier to one or more Genome::DruggableGene::GeneNameReports';
 }
 
 sub help_synopsis {
-    'genome gene-name-report convert-to-entrez --gene-identifier ARK1D1';
+    'genome druggable-gene gene-name-report convert-to-entrez --gene-identifier ARK1D1';
 }
 
 sub help_detail {
@@ -83,7 +83,7 @@ sub _match_as_entrez_gene_symbol {
     my $self = shift;
     my $gene_identifier = shift;
 
-    my @entrez_gene_name_report_associations = Genome::GeneNameReportAssociation->get(nomenclature => ['entrez_gene_symbol', 'entrez_gene_synonym'], alternate_name => $gene_identifier);
+    my @entrez_gene_name_report_associations = Genome::DruggableGene::GeneNameReportAssociation->get(nomenclature => ['entrez_gene_symbol', 'entrez_gene_synonym'], alternate_name => $gene_identifier);
     my @gene_name_reports = map($_->gene_name_report, @entrez_gene_name_report_associations);
 
     @gene_name_reports = uniq @gene_name_reports;
@@ -94,7 +94,7 @@ sub _match_as_entrez_id {
     my $self = shift;
     my $gene_identifier = shift;
 
-    my @entrez_gene_name_reports = Genome::GeneNameReport->get(nomenclature => 'entrez_id', name => $gene_identifier);
+    my @entrez_gene_name_reports = Genome::DruggableGene::GeneNameReport->get(nomenclature => 'entrez_id', name => $gene_identifier);
     return @entrez_gene_name_reports;
 }
 
@@ -103,7 +103,7 @@ sub _match_as_ensembl_id {
     my $gene_identifier = shift;
     my @entrez_gene_name_reports;
 
-    my @gene_name_reports = Genome::GeneNameReport->get(source_db_name => 'Ensembl', name => $gene_identifier);
+    my @gene_name_reports = Genome::DruggableGene::GeneNameReport->get(source_db_name => 'Ensembl', name => $gene_identifier);
     for my $gene_name_report (@gene_name_reports){
         my @identifiers = ($gene_name_report->name, map($_->alternate_name, $gene_name_report->gene_name_report_associations));
         for my $identifier (@identifiers){
@@ -118,7 +118,7 @@ sub _match_as_uniprot_id {
     my $self = shift;
     my $gene_identifier = shift;
 
-    my @gene_name_report_associations = Genome::GeneNameReportAssociation->get(nomenclature => 'uniprot_id', alternate_name => $gene_identifier);
+    my @gene_name_report_associations = Genome::DruggableGene::GeneNameReportAssociation->get(nomenclature => 'uniprot_id', alternate_name => $gene_identifier);
     my @gene_name_reports = map($_->gene_name_report, @gene_name_report_associations);
     @gene_name_reports = uniq @gene_name_reports;
     $self->_intermediate_gene_name_reports(\@gene_name_reports);

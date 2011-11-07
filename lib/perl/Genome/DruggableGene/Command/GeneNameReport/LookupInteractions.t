@@ -10,7 +10,7 @@ BEGIN {
 
 use Test::More tests => 6;
 use above 'Genome';
-use_ok('Genome::GeneNameReport::Command::LookupInteractions');
+use_ok('Genome::DruggableGene::Command::GeneNameReport::LookupInteractions');
 
 my $test_input_file = __FILE__ . '.d/input.tsv';
 my $test_output_file = __FILE__ . '.d/output.tsv';
@@ -19,8 +19,8 @@ ok(-e $test_output_file, 'test file ' . $test_output_file . ' exists');
 
 my $test_output_dir = File::Temp::tempdir('Genome-GeneNameReport-Command-LookupInteractions-XXXXX', '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
 my $output_file = join("/", $test_output_dir, 'test_output');
-my $command = Genome::GeneNameReport::Command::LookupInteractions->create(gene_file => $test_input_file, output_file => $output_file);
-isa_ok($command, 'Genome::GeneNameReport::Command::LookupInteractions', 'created a LookupInteractions command');
+my $command = Genome::DruggableGene::Command::GeneNameReport::LookupInteractions->create(gene_file => $test_input_file, output_file => $output_file);
+isa_ok($command, 'Genome::DruggableGene::Command::GeneNameReport::LookupInteractions', 'created a LookupInteractions command');
 ok($command->execute, 'Successfully excuted lookup interactions command');
 
 my $output = `diff $test_output_file $output_file`;

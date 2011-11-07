@@ -1,11 +1,11 @@
-package Genome::GeneNameReport::Command::LookupInteractions;
+package Genome::DruggableGene::Command::GeneNameReport::LookupInteractions;
 
 use strict;
 use warnings;
 use Genome;
 use List::MoreUtils qw/ uniq /;
 
-class Genome::GeneNameReport::Command::LookupInteractions {
+class Genome::DruggableGene::Command::GeneNameReport::LookupInteractions {
     is => 'Genome::Command::Base',
     has => [
         gene_file => {
@@ -72,7 +72,7 @@ sub lookup_gene_identifiers {
 sub _lookup_gene_identifier {
     my $self = shift;
     my $gene_identifier = shift;
-    my $cmd = Genome::GeneNameReport::Command::ConvertToEntrez->execute(gene_identifier => $gene_identifier);
+    my $cmd = Genome::DruggableGene::Command::GeneNameReport::ConvertToEntrez->execute(gene_identifier => $gene_identifier);
     my @entrez_gene_name_reports = $cmd->_entrez_gene_name_reports;
     my @intermediates = $cmd->_intermediate_gene_name_reports;
     my @gene_name_reports = $self->find_gene_name_reports($gene_identifier);
@@ -85,8 +85,8 @@ sub find_gene_name_reports {
     my $self = shift;
     my $gene_identifier = shift;
 
-    my @gene_name_reports = Genome::GeneNameReport->get(name => $gene_identifier);
-    my @gene_name_report_associations = Genome::GeneNameReportAssociation->get(alternate_name => $gene_identifier);
+    my @gene_name_reports = Genome::DruggableGene::GeneNameReport->get(name => $gene_identifier);
+    my @gene_name_report_associations = Genome::DruggableGene::GeneNameReportAssociation->get(alternate_name => $gene_identifier);
     @gene_name_reports = (@gene_name_reports, map($_->gene_name_report, @gene_name_report_associations));
     @gene_name_reports = uniq @gene_name_reports;
     return @gene_name_reports;
