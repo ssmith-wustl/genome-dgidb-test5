@@ -16,8 +16,6 @@ Command::V1->add_observer(
 );
 
 sub command_death_handler {
-    return 1 unless $ENV{GENOME_LOG_COMMAND_ERROR};
-
     my $self = shift;
     my $aspect = shift;
     my %command_death_metrics = @_;
@@ -34,6 +32,9 @@ sub command_death_handler {
     my $inferred_line = $command_death_metrics{inferred_line} || 0;
 
     my $build_id = $command_death_metrics{build_id} || 0;
+
+    return 1 unless $build_id;
+    return 1 unless $ENV{GENOME_LOG_COMMAND_ERROR};
 
     #escape single quotes so they don't end the shell cmd
     $message =~ s/'/"/g;
