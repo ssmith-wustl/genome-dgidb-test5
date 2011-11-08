@@ -121,12 +121,14 @@ sub index_all {
     return 1;
 }
 
+my $signaled_to_quit;
 sub daemon {
     my $self = shift;
 
-    my $loop = 1;
-    local $SIG{INT} = sub { $loop = 0 };
-    while ($loop) {
+    local $SIG{INT} = sub { $signaled_to_quit = 1 };
+    local $SIG{TERM} = sub { $signaled_to_quit = 1 };
+
+    while (!$signaled_to_quit) {
         $self->index_queued;
         UR::Context->commit;
         sleep 10;
@@ -162,7 +164,7 @@ sub index_queued {
         '-order_by' => 'timestamp',
     );
 
-    while (my $index_queue_item = $index_queue_iterator->next) {
+    while (!$signaled_to_quit && (my $index_queue_item = $index_queue_iterator->next)) {
         my $action = $index_queue_item->action;
         my $subject = $index_queue_item->subject;
         if ($self->modify_index($subject, $action)) {
