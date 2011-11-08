@@ -243,8 +243,9 @@ sub processed_bed_file {
 sub generate_merged_bed_file {
     my $self = shift;
     my %args = @_;
+
     my $processed_bed_file = $self->processed_bed_file(%args);
-    my $output_file = shift || Genome::Sys->create_temp_file_path( $self->id . '.merged.bed' );
+    my $output_file = Genome::Sys->create_temp_file_path( $self->id . '.merged.bed' );
 
     my %merge_params = (
         input_file => $processed_bed_file,
