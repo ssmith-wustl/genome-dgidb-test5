@@ -77,7 +77,9 @@ sub index_all {
         $self->info("Scanning $class...");
         my @subjects = $class->get();
         for my $subject (@subjects) {
-            $self->modify_index($subject, $action);
+            my $subject_class = $subject->class;
+            my $subject_id = $subject->id;
+            $self->modify_index($action, $subject_class, $subject_id);
         }
     }
 
@@ -144,8 +146,9 @@ sub index_queued {
         && (my $index_queue_item = $index_queue_iterator->next)
     ) {
         my $action = $index_queue_item->action;
-        my $subject = $index_queue_item->subject;
-        if ($self->modify_index($subject, $action)) {
+        my $subject_class = $index_queue_item->subject_class;
+        my $subject_id = $index_queue_item->subject_id;
+        if ($self->modify_index($action, $subject_class, $subject_id)) {
             $index_queue_item->delete();
             $modified_count++;
         }
@@ -155,14 +158,24 @@ sub index_queued {
 }
 
 sub modify_index {
-    my ($self, $subject, $action) = @_;
+    my ($self, $action, $subject_class, $subject_id) = @_;
 
-    my $class = $subject->class;
-    my $id = $subject->id;
-    my $display_name = "(Class: $class, ID: $id)";
+    my $display_name = "(Class: $subject_class, ID: $subject_id)";
 
-    my $rv = eval { Genome::Search->$action($subject) };
-    my $error = $@;
+    my ($rv, $error);
+    if ($action eq 'add') {
+        $rv = eval {
+            my $subject = $subject_class->get($subject_id);
+            unless ($subject) { die "Could not get object $display_name" };
+            Genome::Search->add($subject);
+        };
+        $error = $@;
+    }
+    elsif ($action eq 'delete') {
+        $rv = eval { Genome::Search->delete_by_class_and_id($subject_class, $subject_id) };
+        $error = $@;
+    }
+
     if ($rv) {
         my $display_action = ($action eq 'add' ? 'Added' : 'Deleted');
         $self->info("$display_action $display_name");
