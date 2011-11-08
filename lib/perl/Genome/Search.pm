@@ -202,6 +202,31 @@ sub delete {
     return $deleted_count || 1;
 }
 
+sub delete_by_class_and_id {
+    my $class = shift;
+    my $subject_class = shift;
+    my $subject_id = shift;
+
+    my $self = $class->_singleton_object;
+
+    my $solr = $self->_solr_server;
+
+    my $memcached = Genome::Memcache->server;
+
+    my $solr_index_id = join('---', $subject_class, $subject_id);
+    my $cache_id = join('genome_search:', $solr_index_id);
+
+    if ($solr->delete_by_id($solr_index_id)) {
+        $memcached->delete($cache_id);
+    }
+    else {
+        $self->error_message("Failed to remove document from search (Class: $subject_class, ID: $subject_id).");
+        return;
+    }
+
+    return 1;
+}
+
 sub _delete_by_id {
     my ($class, @ids) = @_;
 
