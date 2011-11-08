@@ -78,9 +78,9 @@ sub searchable_classes {
         Genome::WorkOrder
         Genome::Site::WUGC::Project
         Genome::Sys::Email
-        Genome::DrugGeneInteractionReport
-        Genome::DrugNameReport
-        Genome::GeneNameReport
+        Genome::DruggableGene::DrugGeneInteractionReport
+        Genome::DruggableGene::DrugNameReport
+        Genome::DruggableGene::GeneNameReport
         Genome::InstrumentData::Imported
         Genome::Sys::User
         Genome::Wiki::Document
