@@ -8,7 +8,7 @@ use Genome;
 class Genome::DruggableGene::DrugGeneInteractionReportAttribute {
     is => 'UR::Object',
     id_generator => '-uuid',
-    table_name => 'drug_gene_interaction_report_attribute',
+    table_name => 'subject.drug_gene_interaction_report_attribute',
     id_by => [
         id => { is => 'Text' },
     ],

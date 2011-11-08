@@ -8,7 +8,7 @@ use Genome;
 class Genome::DruggableGene::GeneNameReport {
     is => 'Genome::Searchable',
     id_generator => '-uuid',
-    table_name => 'gene_name_report',
+    table_name => 'subject.gene_name_report',
     schema_name => 'subject',
     data_source => 'Genome::DataSource::Main',
     id_by => [
