@@ -129,9 +129,16 @@ sub daemon {
     local $SIG{TERM} = sub { $signaled_to_quit = 1 };
 
     while (!$signaled_to_quit) {
+        $self->info("Processing index queue...");
         $self->index_queued;
+
+        $self->info("Commiting...");
         UR::Context->commit;
+
+        $self->info("Sleeping for 10 seconds...");
         sleep 10;
+
+        $self->info("Reloading Genome::Search::IndexQueue...");
         UR::Context->reload('Genome::Search::IndexQueue');
     }
 
