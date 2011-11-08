@@ -178,11 +178,9 @@ sub execute {
 	($mutation_spec_files, $input_labels) = parse_grouping_file($gr_file);
     }else {
 	@$mutation_spec_files = split(",",$self->mut_spec_files);
-	@$input_labels = split(",",$self->labels);	
+	@$input_labels = split(",",$self->labels);
     }
-    my $plot_label_order = $self->plot_order || $self->labels;
-    $plot_label_order = undef if(!$plot_label_order);
-
+    my $plot_label_order = $self->plot_order || join(",",@$input_labels);
 
     #my @mutation_spec_files = split(",",$self->mut_spec_files);
     #my @input_labels = split(",",$self->labels);
@@ -251,8 +249,6 @@ sub execute {
     my $plot_cmd;
     if($plot_label_order) {
 	$plot_cmd = qq{ plot_multi_mutation_spectrum("$input_plot_file",output_file="$plot_output_file",plot_title="$plot_title",plot_type="$plot_type",pvalue=$calc_pvalue,plot.sample.order='$plot_label_order') };
-    }else {
-	$plot_cmd = qq{ plot_multi_mutation_spectrum("$input_plot_file",output_file="$plot_output_file",plot_title="$plot_title",plot_type="$plot_type",pvalue=$calc_pvalue) };
     }
 
     my $call = Genome::Model::Tools::R::CallR->create(command=>$plot_cmd, library=> "MutationSpectrum.R");
