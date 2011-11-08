@@ -473,6 +473,10 @@ sub _move {
     my $new_volume;
     my $new_volume_lock;
     if ($new_mount_path) {
+        if ($new_mount_path eq $self->mount_path) {
+            confess "Target volume $new_mount_path matches current mount path, cannot move!";
+        }
+
         $new_volume_lock = Genome::Volume->get_lock($new_mount_path);
         unless ($new_volume_lock) {
             confess "Could not get lock for volume $new_mount_path";
@@ -487,6 +491,7 @@ sub _move {
             disk_group_name => $group_name, 
             kilobytes_requested => $kilobytes_requested,
             reallocating => 1,
+            exclude => [$self->mount_path],
         );
         ($new_volume, $new_volume_lock) = $self->_lock_volume_from_list($kilobytes_requested, @candidate_volumes);
     }
@@ -766,14 +771,17 @@ sub _get_candidate_volumes {
     my $disk_group_name = delete $params{disk_group_name};
     my $kilobytes_requested = delete $params{kilobytes_requested};
     my $reallocating = delete $params{reallocating};
+    my $exclude = delete $params{exclude};
     $reallocating ||= 0;
 
-    my @volumes = Genome::Disk::Volume->get(
+    my %volume_params = (
         disk_group_names => $disk_group_name,
         'unallocated_kb >=' => $kilobytes_requested,
         can_allocate => 1,
         disk_status => 'active',
     );
+    $volume_params{'mount_path not in'} = $exclude if $exclude;
+    my @volumes = Genome::Disk::Volume->get(%volume_params);
     unless (@volumes) {
         confess "Did not get any allocatable and active volumes belonging to group $disk_group_name with " .
             "$kilobytes_requested kb of unallocated space!";
