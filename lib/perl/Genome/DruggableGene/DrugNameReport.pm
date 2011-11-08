@@ -43,6 +43,13 @@ class Genome::DruggableGene::DrugNameReport {
             via => 'drug_gene_interaction_reports',
             to => 'gene_name_report',
             is_many => 1,
+        },
+        citation => {
+            calculate_from => ['source_db_name', 'source_db_version'],
+            calculate => q|
+                my $citation = Genome::DruggableGene::Citation->get(source_db_name => $source_db_name, source_db_version => $source_db_version);
+                return $citation;
+            |,
         }
     ],
     doc => 'Claim regarding the name of a drug',
