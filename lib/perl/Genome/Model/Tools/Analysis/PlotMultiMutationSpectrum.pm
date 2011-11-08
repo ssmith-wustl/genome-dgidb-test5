@@ -72,7 +72,7 @@ class Genome::Model::Tools::Analysis::PlotMultiMutationSpectrum {
         is  => 'String',
         is_input=>1, 
         is_optional => 0,
-        default_value => 'output.pdf',
+        #default_value => 'output.pdf',
         doc => 'The name of pdf file to save the plot to',
     },
     plot_order => {
@@ -194,6 +194,7 @@ sub execute {
     my ($fh,$tfile);
     if(defined($temp_file)) {
 	$temp_file = abs_path($temp_file);
+	unlink($temp_file) if(-e $temp_file);
 	$fh = Genome::Sys->open_file_for_writing($temp_file);
 	$input_plot_file = $temp_file;
     }
