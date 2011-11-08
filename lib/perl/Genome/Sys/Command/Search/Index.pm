@@ -242,3 +242,5 @@ sub indexable_classes {
 
     return @classes_to_add;
 }
+
+1;
