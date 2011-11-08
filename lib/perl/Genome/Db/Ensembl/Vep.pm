@@ -82,6 +82,30 @@ class Genome::Db::Ensembl::Vep {
             default_value => 0,
             is_optional => 1,
         },
+        per_gene => {
+            is => 'boolean',
+            doc => 'Output only the most severe consequence per gene.  The transcript selected is arbitrary if more than one has the same predicted consequence.',
+            default_value => 0,
+            is_optional => 1,
+        },
+        hgnc => {
+            is => 'boolean',
+            doc => 'Adds the HGNC gene identifier (where available) to the output.',
+            default_value => 0,
+            is_optional => 1,
+        },
+        coding_only => {
+            is => 'boolean',
+            doc => 'Only return consequences that fall in the coding regions of transcripts.',
+            default_value => 0,
+            is_optional => 1,
+        },
+        force => {
+            is => 'boolean',
+            doc => 'By default, the script will fail with an error if the output file already exists.  You can force the overwrite of the existing file by using this flag.',
+            default_value => 0,
+            is_optional => 1,
+        },
     ],
 };
 
@@ -100,23 +124,35 @@ sub execute {
     my $self = shift;
 
     my $script_path = $VEP_SCRIPT_PATH.$self->{version}.".pl";
-    my $string_args = join( ' ',
+    my $string_args = "";
+
+    #UR magic to get the string and boolean property lists
+    my $meta = $self->__meta__;
+    my @all_bool_args = $meta->properties(
+        data_type => 'boolean');
+    my @all_string_args = $meta->properties(
+        data_type => 'String');
+
+    $string_args = join( ' ',
         map {
-            my $value = $self->$_;
-            defined($value) ? ("--".($_)." ".$value) : ()
-        } qw(input_file format output_file species terms sift polyphen condel)
+            my $name = $_->property_name;
+            my $value = $self->$name;
+            defined($value) ? ("--".($name)." ".$value) : ()
+        } @all_string_args
     );
-    my $bool_args = join (' ',
+    my $bool_args = "";
+    $bool_args = join (' ',
         map {
-            my $value = $self->$_;
-            $value ? ("--".($_)) : ()
-        } qw(regulatory gene most_severe)
+            my $name = $_->property_name;
+            my $value = $self->$name;
+            $value ? ("--".($name)) : ()
+        } @all_bool_args
     );
 
-    my $host_param = defined $ENV{GENOME_DB_ENSEMBL_HOST} ? "--host ".$ENV{GENOME_DB_ENSEMBL_HOST} : ();
-    my $user_param = defined $ENV{GENOME_DB_ENSEMBL_USER} ? "--user ".$ENV{GENOME_DB_ENSEMBL_USER} : ();
-    my $password_param = defined $ENV{GENOME_DB_ENSEMBL_PASS} ? "--password ".$ENV{GENOME_DB_ENSEMBL_PASS} : ();
-    my $port_param = defined $ENV{GENOME_DB_ENSEMBL_PORT} ? "--port ".$ENV{GENOME_DB_ENSEMBL_PORT} : ();
+    my $host_param = defined $ENV{GENOME_DB_ENSEMBL_HOST} ? "--host ".$ENV{GENOME_DB_ENSEMBL_HOST} : "";
+    my $user_param = defined $ENV{GENOME_DB_ENSEMBL_USER} ? "--user ".$ENV{GENOME_DB_ENSEMBL_USER} : "";
+    my $password_param = defined $ENV{GENOME_DB_ENSEMBL_PASS} ? "--password ".$ENV{GENOME_DB_ENSEMBL_PASS} : "";
+    my $port_param = defined $ENV{GENOME_DB_ENSEMBL_PORT} ? "--port ".$ENV{GENOME_DB_ENSEMBL_PORT} : "";
 
     my $cmd = "PERL5LIB=$ENSEMBL_API_PATH/ensembl-variation/modules:$ENSEMBL_API_PATH/ensembl/modules:$ENSEMBL_API_PATH/ensembl-functgenomics/modules:\$PERL5LIB perl $script_path $string_args $bool_args $host_param $user_param $password_param $port_param";
     Genome::Sys->shellcmd(
