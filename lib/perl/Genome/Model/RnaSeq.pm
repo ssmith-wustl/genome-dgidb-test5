@@ -75,4 +75,11 @@ sub build_subclass_name {
     return 'rna seq';
 }
 
+sub compatible_instrument_data {
+    my $self = shift;
+    my %params;
+    my @compatible_instrument_data = $self->SUPER::compatible_instrument_data(%params);
+    return grep{!($_->can('is_paired_end')) or $_->is_paired_end} @compatible_instrument_data;
+}
+
 1;

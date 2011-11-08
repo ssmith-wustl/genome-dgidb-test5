@@ -1427,9 +1427,11 @@ sub add_processing_profiles_to_pses{
                         $reference_sequence_names_for_processing_profile_ids{$pp_id} = 'GRCh37-lite-build37';
                     }
                     elsif ($self->_is_rna($pse)){
-                        my $pp_id = $self->_default_rna_seq_processing_profile_id;
-                        push @processing_profile_ids_to_add, $pp_id;
-                        $reference_sequence_names_for_processing_profile_ids{$pp_id} = 'GRCh37-lite-build37';
+                        if($instrument_data->is_paired_end){
+                            my $pp_id = $self->_default_rna_seq_processing_profile_id;
+                            push @processing_profile_ids_to_add, $pp_id;
+                            $reference_sequence_names_for_processing_profile_ids{$pp_id} = 'GRCh37-lite-build37';
+                        }
                     }
                     else {
                         my $pp_id = '2635769';

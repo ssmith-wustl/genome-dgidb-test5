@@ -117,4 +117,32 @@ sub get_lock {
     return $volume_lock;
 }
 
+sub create_dummy_volume {
+    my ($class, %params) = @_;
+    my $mount_path = $params{mount_path};
+    my $volume;
+    if (!$mount_path || ($mount_path && $mount_path !~ /^\/tmp\//)) {
+        $params{mount_path} = File::Temp::tempdir( TEMPLATE => 'tempXXXXX', CLEANUP => 1 );
+        $volume = Genome::Disk::Volume->__define__(
+            mount_path => $params{mount_path},
+            unallocated_kb => 104857600, # 100 GB
+            total_kb => 104857600,
+            can_allocate => 1,
+            disk_status => 'active',
+            hostname => 'localhost',
+            physical_path => '/tmp',
+        );
+        my $disk_group = Genome::Disk::Group->get(disk_group_name => $params{disk_group_name});
+        Genome::Disk::Assignment->__define__(
+            volume => $volume,
+            group => $disk_group,
+        );
+    }
+    else {
+        $volume = Genome::Disk::Volume->get(mount_path => $mount_path, disk_status => 'active', can_allocate => 1);
+    }
+
+    return $volume;
+}
+
 1;
