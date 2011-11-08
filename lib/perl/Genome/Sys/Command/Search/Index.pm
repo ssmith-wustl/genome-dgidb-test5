@@ -50,11 +50,7 @@ sub execute {
         $self->list;
     }
     else {
-        my $action = $self->action();
-        my $subject_iterator = $self->get_subject_iterator_from_subject_text();
-        while (my $subject = $subject_iterator->next) {
-            $self->modify_index($subject, $action);
-        }
+        die "Not able to modify specific items at this time";
     }
 
     return 1;
@@ -70,43 +66,6 @@ sub prompt_for_confirmation {
     $response = lc($response);
 
     return ($response =~ /^(y|yes)$/);
-}
-
-sub get_subject_iterator_from_subject_text {
-    my $self = shift;
-
-    my ($subject_class, $subject_bx_string);
-    if ($self->subject_text =~ /=/) {
-        ($subject_class, $subject_bx_string) = $self->subject_text =~ /(.*?)=(.*)/;
-    }
-    else {
-        $subject_class = $self->subject_text;
-    }
-
-    unless ($subject_class) {
-        $self->error("Failed to parse subject_text (" . $self->subject_text . ") for class. Must be in the form Class or Class=ID.");
-        return;
-    }
-
-    unless ($subject_class->isa('UR::Object')) {
-        $self->error("Class ($subject_class) is not recognized as an UR object.");
-        return;
-    }
-
-    my $subject_bx = UR::BoolExpr->resolve_for_string($subject_class, $subject_bx_string);
-    if ($subject_bx_string && !$subject_bx) {
-        $self->error("Invalid BoolExpr provided (Class: $subject_class, BX: $subject_bx_string).");
-        return;
-    }
-
-    my $subject_iterator = $subject_class->create_iterator($subject_bx);
-    unless ($subject_iterator) {
-        $subject_bx_string ||= '';
-        $self->error("Failed to get iterator (Class: $subject_class, BX: $subject_bx_string).");
-        return;
-    }
-
-    return $subject_iterator;
 }
 
 sub index_all {
