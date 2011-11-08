@@ -18,6 +18,11 @@ class Genome::Sys::Command::Search::Index {
             is => 'Boolean',
             default => 1,
         },
+        max_changes_per_commit => {
+            is => 'Number',
+            is_constant => 1,
+            default => 250,
+        },
     ],
 };
 
@@ -130,7 +135,7 @@ sub daemon {
 
     while (!$signaled_to_quit) {
         $self->info("Processing index queue...");
-        $self->index_queued;
+        $self->index_queued(max_changes_count => $self->max_changes_per_commit);
 
         $self->info("Commiting...");
         UR::Context->commit;
@@ -166,16 +171,25 @@ sub list {
 
 sub index_queued {
     my $self = shift;
+    my %params = @_;
+
+    my $max_changes_count = delete $params{max_changes_count};
 
     my $index_queue_iterator = Genome::Search::IndexQueue->create_iterator(
         '-order_by' => 'timestamp',
     );
 
-    while (!$signaled_to_quit && (my $index_queue_item = $index_queue_iterator->next)) {
+    my $modified_count = 0;
+    while (
+        !$signaled_to_quit
+        && (!defined($max_changes_count) || $modified_count <= $max_changes_count)
+        && (my $index_queue_item = $index_queue_iterator->next)
+    ) {
         my $action = $index_queue_item->action;
         my $subject = $index_queue_item->subject;
         if ($self->modify_index($subject, $action)) {
             $index_queue_item->delete();
+            $modified_count++;
         }
     }
 
