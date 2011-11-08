@@ -16,8 +16,6 @@ Command::V1->add_observer(
 );
 
 sub command_death_handler {
-    return 1 unless $ENV{GENOME_LOG_COMMAND_ERROR};
-
     my $self = shift;
     my $aspect = shift;
     my %command_death_metrics = @_;
@@ -35,7 +33,13 @@ sub command_death_handler {
 
     my $build_id = $command_death_metrics{build_id} || 0;
 
-    #escape single quotes so they don't end the shell cmd
+    return 1 unless $ENV{GENOME_LOG_COMMAND_ERROR};
+    if ($ENV{GENOME_LOG_COMMAND_ERROR} eq 'default') {
+        return 1 unless $build_id;
+        return 1 unless Genome::Sys->username eq 'apipe-builder';
+    }
+
+    #replace single quotes so they don't end the shell cmd
     $message =~ s/'/"/g;
     $inferred_message =~ s/'/"/g;
 

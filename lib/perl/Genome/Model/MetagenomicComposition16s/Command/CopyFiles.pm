@@ -14,7 +14,7 @@ class Genome::Model::MetagenomicComposition16s::Command::CopyFiles {
         file_type => {
             is => 'Text',
             doc => 'Type of file to copy/list.',
-            valid_values => [qw/ oriented_fasta processed_fasta classification /],
+            valid_values => [qw/ oriented_fasta oriented_qual processed_fasta processed_qual classification /],
         },
         destination => {
             is => 'Text',

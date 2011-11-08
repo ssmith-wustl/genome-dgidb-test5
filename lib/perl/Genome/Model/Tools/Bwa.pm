@@ -52,6 +52,7 @@ my %BWA_VERSIONS = (
     '0.5.9rc1' => '/gsc/pkg/bio/bwa/bwa-0.5.9rc1-64/bwa',
     '0.5.9' => '/gsc/pkg/bio/bwa/bwa-0.5.9-64/bwa',
     '0.5.9-pem0.1' => '/usr/bin/bwa-0.5.9-pem0.1',
+    '0.5.9-i0.3' => '/usr/bin/ibwa-0.5.9-0.3',
     'bwa'   => 'bwa',
 );
 
@@ -98,7 +99,10 @@ sub supports_multiple_reference {
     my $class = shift;
     my $version = shift;
 
-    my %ok_versions = ('0.5.9-pem0.1' => 1);
+    my %ok_versions = (
+        '0.5.9-pem0.1' => 1,
+        '0.5.9-i0.3' => 1,
+    );
 
     return exists $ok_versions{$version};
 }

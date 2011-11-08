@@ -18,16 +18,23 @@ class Genome::Sys::Command::Search::Index {
             is => 'Boolean',
             default => 1,
         },
+        max_changes_per_commit => {
+            is => 'Number',
+            is_constant => 1,
+            default => 250,
+        },
     ],
 };
 
 sub execute {
     my $self = shift;
 
-    my $confirmed = $self->prompt_for_confirmation() if $self->confirm;
-    if ($self->confirm && !$confirmed) {
-        $self->info('Aborting.');
-        return;
+    if ($self->subject_text ne 'list') {
+        my $confirmed = $self->prompt_for_confirmation() if $self->confirm;
+        if ($self->confirm && !$confirmed) {
+            $self->info('Aborting.');
+            return;
+        }
     }
 
     if ($self->subject_text eq 'all') {
@@ -39,7 +46,7 @@ sub execute {
     elsif ($self->subject_text eq 'daemon') {
         $self->daemon;
     }
-    elsif ($self->subject_test eq 'list') {
+    elsif ($self->subject_text eq 'list') {
         $self->list;
     }
     else {
@@ -119,15 +126,24 @@ sub index_all {
     return 1;
 }
 
+my $signaled_to_quit;
 sub daemon {
     my $self = shift;
 
-    my $loop = 1;
-    local $SIG{INT} = sub { $loop = 0 };
-    while ($loop) {
-        $self->index_queued;
+    local $SIG{INT} = sub { $signaled_to_quit = 1 };
+    local $SIG{TERM} = sub { $signaled_to_quit = 1 };
+
+    while (!$signaled_to_quit) {
+        $self->info("Processing index queue...");
+        $self->index_queued(max_changes_count => $self->max_changes_per_commit);
+
+        $self->info("Commiting...");
         UR::Context->commit;
+
+        $self->info("Sleeping for 10 seconds...");
         sleep 10;
+
+        $self->info("Reloading Genome::Search::IndexQueue...");
         UR::Context->reload('Genome::Search::IndexQueue');
     }
 
@@ -155,16 +171,25 @@ sub list {
 
 sub index_queued {
     my $self = shift;
+    my %params = @_;
+
+    my $max_changes_count = delete $params{max_changes_count};
 
     my $index_queue_iterator = Genome::Search::IndexQueue->create_iterator(
         '-order_by' => 'timestamp',
     );
 
-    while (my $index_queue_item = $index_queue_iterator->next) {
+    my $modified_count = 0;
+    while (
+        !$signaled_to_quit
+        && (!defined($max_changes_count) || $modified_count <= $max_changes_count)
+        && (my $index_queue_item = $index_queue_iterator->next)
+    ) {
         my $action = $index_queue_item->action;
         my $subject = $index_queue_item->subject;
         if ($self->modify_index($subject, $action)) {
             $index_queue_item->delete();
+            $modified_count++;
         }
     }
 
@@ -217,3 +242,5 @@ sub indexable_classes {
 
     return @classes_to_add;
 }
+
+1;
