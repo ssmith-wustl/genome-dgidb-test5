@@ -20,7 +20,6 @@ class Genome::Sys::Command::Search::Index {
         },
         max_changes_per_commit => {
             is => 'Number',
-            is_constant => 1,
             default => 250,
         },
     ],
