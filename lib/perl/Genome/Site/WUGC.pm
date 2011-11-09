@@ -41,6 +41,12 @@ use Genome::Site::WUGC::LegacyConfig;
 $ENV{GENOME_DB} ||= '/gsc/scripts/opt/genome/db';
 $ENV{GENOME_SW} ||= '/gsc/pkg/bio';
 
+# configure our local ensembl db
+$ENV{GENOME_DB_ENSEMBL_API_PATH} ||= '/gsc/scripts/share/ensembl-64';
+$ENV{GENOME_DB_ENSEMBL_HOST} ||= 'mysql1';
+$ENV{GENOME_DB_ENSEMBL_USER} ||= 'mse';
+$ENV{GENOME_DB_ENSEMBL_PORT} ||= '3306';
+
 # configuration for internal WUGC network software & LIMS 
 # this module is called by Genome::Config::edu::wustl::gsc right now on all *.gsc.wustl.edu hosts
 # print STDERR "using " . __PACKAGE__ . "\n";

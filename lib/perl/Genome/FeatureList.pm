@@ -159,7 +159,11 @@ sub verify_file_md5 {
 #The output of this method is the standardized "true-BED" representation
 sub processed_bed_file_content {
     my $self = shift;
-
+    my %args = @_;
+    my $short_name = delete($args{short_name});
+    unless (defined($short_name)) {
+        $short_name = 1;
+    }
     if($self->format eq 'unknown'){
         $self->error_message('Cannot process BED file with unknown format');
         die $self->error_message;
@@ -193,7 +197,9 @@ sub processed_bed_file_content {
                 $self->error_message('At least three fields are required in BED format files.  Error with line: '. $line);
                 die($self->error_message);
             }
-
+            if (!defined($entry[3])) {
+                $entry[3] = $entry[0] .':'. $entry[1] .'-'. $entry[2];
+            }
             $entry[0] =~ s/chr//g;
             if ($entry[0] =~ /random/) { next; }
 
@@ -207,7 +213,9 @@ sub processed_bed_file_content {
                 $entry[1]--;
             }
             #Bio::DB::Sam slows down dramatically when large names are used, so just number the regions sequentially
-            $entry[3] = 'r' . $name_counter++;
+            if ($short_name) {
+                $entry[3] = 'r' . $name_counter++;
+            }
             $bed_file_content .= join("\t",@entry) ."\n";
         }
     }
@@ -216,14 +224,14 @@ sub processed_bed_file_content {
 
 sub processed_bed_file {
     my $self = shift;
-
+    my %args = @_;
     if($self->format eq 'unknown'){
         $self->error_message('Cannot process BED file with unknown format');
         die $self->error_message;
     }
 
     unless($self->_processed_bed_file_path) {
-        my $content = $self->processed_bed_file_content;
+        my $content = $self->processed_bed_file_content(%args);
         my $temp_file = Genome::Sys->create_temp_file_path( $self->id . '.processed.bed' );
         Genome::Sys->write_file($temp_file, $content);
         $self->_processed_bed_file_path($temp_file);
@@ -234,9 +242,10 @@ sub processed_bed_file {
 
 sub generate_merged_bed_file {
     my $self = shift;
+    my %args = @_;
 
-    my $processed_bed_file = $self->processed_bed_file;
-    my $output_file = shift || Genome::Sys->create_temp_file_path( $self->id . '.merged.bed' );
+    my $processed_bed_file = $self->processed_bed_file(%args);
+    my $output_file = Genome::Sys->create_temp_file_path( $self->id . '.merged.bed' );
 
     my %merge_params = (
         input_file => $processed_bed_file,
@@ -261,14 +270,14 @@ sub generate_merged_bed_file {
 
 sub merged_bed_file {
     my $self = shift;
-
+    my %args = @_;
     if ($self->format eq 'unknown'){
         $self->error_message('Cannot merge BED file with unknown format');
         die $self->error_message;
     }
 
     unless($self->_merged_bed_file_path) {
-        my $temp_file = $self->generate_merged_bed_file;
+        my $temp_file = $self->generate_merged_bed_file(%args);
 
         $self->_merged_bed_file_path($temp_file);
     }
@@ -278,10 +287,19 @@ sub merged_bed_file {
 
 sub generate_converted_bed_file {
     my $self = shift;
-    my $reference = shift;
+    my %args = @_;
 
-    my $converted_file_path = shift || Genome::Sys->create_temp_file_path( $self->id . '.merged.' . $reference->id . '.converted.bed' );
-    my $converted_bed_file = Genome::Model::Build::ReferenceSequence::Converter->convert_bed($self->merged_bed_file, $self->reference, $converted_file_path, $reference);
+    my $merge = delete($args{merge});
+    my $reference = delete($args{reference});
+
+    my $converted_file_path = delete($args{file_path}) || Genome::Sys->create_temp_file_path( $self->id . '.merged.' . $reference->id . '.converted.bed' );
+    my $original_file_path;
+    if ($merge) {
+        $original_file_path = $self->merged_bed_file(%args);
+    } else {
+        $original_file_path = $self->processed_bed_file(%args);
+    }
+    my $converted_bed_file = Genome::Model::Build::ReferenceSequence::Converter->convert_bed($original_file_path, $self->reference, $converted_file_path, $reference);
 
     unless(-s $converted_bed_file) {
         $self->error_message('Could not convert to requested reference!');
@@ -293,8 +311,9 @@ sub generate_converted_bed_file {
 
 sub converted_bed_file {
     my $self = shift;
-    my $reference = shift;
-
+    my %args = @_;
+    my $reference = $args{reference};
+    #TODO: add short name and merge options
     if ($self->format eq 'unknown'){
         $self->error_message('Cannot convert BED file with unknown format');
         die $self->error_message;
@@ -308,7 +327,7 @@ sub converted_bed_file {
     my $converted_bed_files = $self->_converted_bed_file_paths;
 
     unless(exists $converted_bed_files->{$reference->id}) {
-        $converted_bed_files->{$reference->id} = $self->generate_converted_bed_file($reference);
+        $converted_bed_files->{$reference->id} = $self->generate_converted_bed_file(%args);
         $self->_converted_bed_file_paths($converted_bed_files);
     }
 

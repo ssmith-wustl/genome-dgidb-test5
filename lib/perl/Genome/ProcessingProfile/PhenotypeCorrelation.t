@@ -38,7 +38,7 @@ my $p = Genome::ProcessingProfile::PhenotypeCorrelation->create(
     indel_detection_strategy        => 'samtools r599 filtered by indel-filter v1',
     #sv_detection_strategy           => undef, 
     #cnv_detection_strategy          => undef,
-    group_samples_for_genotyping_by => 'test_nomenclature.foo',
+    group_samples_for_genotyping_by => 'each',
     phenotype_analysis_strategy     => 'quantitative',
 );
 ok($p, "created a processing profile") or diag(Genome::ProcessingProfile::PhenotypeCorrelation->error_message);

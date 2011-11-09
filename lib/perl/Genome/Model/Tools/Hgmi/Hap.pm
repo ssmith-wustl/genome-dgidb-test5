@@ -24,6 +24,7 @@ use English;
 use Cwd;
 use File::Path qw(mkpath);
 use File::Spec;
+use File::Temp qw/ tempfile tempdir /;
 use YAML qw( LoadFile DumpFile );
 use Data::Dumper;
 
@@ -63,6 +64,15 @@ class Genome::Model::Tools::Hgmi::Hap (
             is => 'Boolean',
             doc => 'skips running bap_finish, protein annotation and ber',
             default => 0,
+        },
+		keep_pep => {
+            is => 'Boolean',
+            doc => 'Keep temporary fasta file of gene proteins',
+            default => 1
+        },
+        pep_file => {
+            is => 'String',
+            doc => 'Fasta file of gene proteins',
         },
     ]
 );
@@ -318,6 +328,12 @@ sub execute {
         return 1;
     }
 
+    $self->status_message("Moving data from mgap to biosql: Hap.pm");
+    $self->mgap_to_biosql($config->{locus_tag}, $merge->sequence_set_id);
+
+    $self->status_message("Creating peptide file: Hap.pm");
+    $self->get_gene_peps($config->{locus_tag});
+	
     $self->status_message("Getting ready to run PAP!");
 
     my $gram_stain = $config->{gram_stain};
@@ -349,6 +365,7 @@ sub execute {
         keggscan_archive_dir => $keggscan_archive_dir,
         psortb_archive_dir   => $psortb_archive_dir,
         dev                  => $self->dev,
+		pep_file			 => $self->pep_file,
     );
     confess 'Could not create command object for send to pap!' unless $send;
 
@@ -525,6 +542,7 @@ sub acedb_version_lookup
 
     my %acedb_version_lookup = (
         'DEV'  => 'Development',
+        'DEV1'  => 'Development_1',
         'V1'  => 'Version_1.0',
         'V2'  => 'Version_2.0',
         'V3'  => 'Version_3.0',
@@ -545,7 +563,155 @@ sub acedb_version_lookup
     return $acedb_lookup;
 }
 
+sub get_gene_peps {
+    my $self = shift;
+    my ($locus_tag) = @_;
 
+    my $dbadp;
+
+    if($self->dev()) {
+        $dbadp = Bio::DB::BioDB->new(
+            -database => 'biosql',
+            -user     => 'sg_user',
+            -pass     => 'sgus3r',
+            -dbname   => 'DWDEV',
+            -driver   => 'Oracle'
+        );
+    }
+    else {
+        $dbadp = Bio::DB::BioDB->new(
+            -database => 'biosql',
+            -user     => 'sg_user',
+            -pass     => 'sg_us3r',
+            -dbname   => 'DWRAC',
+            -driver   => 'Oracle'
+        );
+    }
+
+    my $cleanup = $self->keep_pep ? 0 : 1;
+    my $tempdir = tempdir(
+        CLEANUP => $cleanup,
+        DIR     => '/gscmnt/temp212/info/annotation/PAP_tmp', # FIXME Shouldn't have hard-coded paths for temp stuff
+    );
+    my ($fh, $file) = tempfile(
+        "pap-XXXXXX",
+        DIR    => $tempdir,
+        SUFFIX => '.fa'
+    );
+
+    unless(defined($self->pep_file)) {
+        $self->pep_file($file);
+    }
+
+    $file = $self->pep_file();
+    my $seqout = new Bio::SeqIO(
+        -file   => ">$file",
+        -format => "fasta"
+    );
+
+    my $adp = $dbadp->get_object_adaptor("Bio::SeqI");
+    $adp->dbh->{'LongTruncOk'} = 0;
+    $adp->dbh->{'LongReadLen'} = 1000000000;
+
+    my $query = Bio::DB::Query::BioQuery->new();
+    $query->datacollections( [ "Bio::PrimarySeqI s", ] );
+
+    $query->where( ["s.display_id like '$locus_tag%'"] );
+    my $res = $adp->find_by_query($query);
+    GENE: while (my $seq = $res->next_object()) {
+        my $gene_name = $seq->display_name();
+        my @feat = $seq->get_SeqFeatures();
+        foreach my $f (@feat) {
+            my $display_name = $f->display_name();
+            next GENE if $f->primary_tag ne 'gene';
+            next if $f->has_tag('Dead');
+            my $ss;
+            $ss = $seq->subseq( $f->start, $f->end );
+
+            unless(defined($ss)) {
+                die "failed to fetch sequence for '$display_name' from BioSQL";
+            }
+
+            my $pep = $self->make_into_pep( $f->strand,
+                $ss,
+                $display_name );
+            $seqout->write_seq($pep);
+        }
+    }
+
+    unless (-f $file) {
+        print STDERR "the fasta file $file doesn't exist! SendToPap.pm\n";
+        return 0;
+    }
+    unless(-s $file > 0) {
+        print STDERR "the fasta file $file still empty! SendToPap.pm\n";
+    }
+
+    return 1;
+}
+
+sub mgap_to_biosql
+{
+    my $self      = shift;
+	my ($locus_tag, $ssid, $testnorun) = @_;
+
+    # FIXME Deployed code... NOOOOOOOOOOOOOO!
+    my @command = (
+        'bap_load_biosql', '--sequence-set-id', $ssid,
+        #'--tax-id',        $taxid,
+    );
+
+    if($self->dev)
+    {
+        push(@command,'--dev');
+        push(@command,'--biosql-dev');
+    }
+    my ($cmd_out,$cmd_err);
+
+	if($testnorun)
+	{
+# just for testing.
+		print join(" " , @command),"\n";;
+		return 1;
+	}
+
+	IPC::Run::run(
+			\@command,
+			\undef,
+			'>',
+			\$cmd_out,
+			'2>',
+			\$cmd_err,
+			) or croak "can't load biosql from mgap!!!\n$cmd_err SendToPap.pm";
+
+	print STDERR $cmd_err,"\n";
+	return 1;
+
+}
+
+sub make_into_pep
+{
+    my ( $self, $strand, $subseq, $name ) = @_;
+
+    my $seq = new Bio::Seq(
+        -display_id => $name,
+        -seq        => $subseq
+    );
+    my $newseq;
+    if ( $strand < 0 )
+    {
+        $newseq = $seq->revcom->translate->seq;
+    }
+    else
+    {
+        $newseq = $seq->translate->seq;
+    }
+    my $seqobj = new Bio::Seq(
+        -display_id => $name,
+        -seq        => $newseq
+    );
+    return $seqobj;
+}
 
 1;
 

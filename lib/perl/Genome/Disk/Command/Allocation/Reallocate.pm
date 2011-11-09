@@ -11,8 +11,9 @@ class Genome::Disk::Command::Allocation::Reallocate {
     has => [
         allocations => {
             is => 'Genome::Disk::Allocation',
-            doc => 'Allocadtions to reallocate',
+            doc => 'Allocations to reallocate',
             is_many => 1,
+            shell_args_position => 1,
         },
     ],
     has_optional => [
@@ -25,11 +26,6 @@ class Genome::Disk::Command::Allocation::Reallocate {
             is => 'Boolean',
             default => 0,
             doc => 'Allow the allocation to be moved to a new volume if current volume is too small.',
-        },
-        force_move => {
-            is => 'Boolean',
-            default => 0,
-            doc => 'If set, allocations will be moved to a new volume regardless of available space',
         },
     ],
     doc => 'This command changes the requested kilobytes for a target allocation',
@@ -61,7 +57,6 @@ sub execute {
         $params{allocation_id} = $allocation->id;
         $params{kilobytes_requested} = $self->kilobytes_requested if defined $self->kilobytes_requested;
         $params{allow_reallocate_with_move} = $self->allow_reallocate_with_move;
-        $params{force_move} = $self->force_move;
 
         my $transaction = UR::Context::Transaction->begin();
         my $successful = eval {Genome::Disk::Allocation->reallocate(%params) };

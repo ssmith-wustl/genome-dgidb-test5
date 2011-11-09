@@ -10,7 +10,7 @@ The GENOME_DB_ENSEMBL_HOST environment variable points to the host:port of the m
 
 =head1 DEFAULT VALUE
 
-localhost:11211
+not set
 
 =cut
 

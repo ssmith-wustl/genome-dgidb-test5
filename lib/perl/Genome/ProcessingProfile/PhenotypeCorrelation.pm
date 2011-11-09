@@ -41,7 +41,8 @@ class Genome::ProcessingProfile::PhenotypeCorrelation {
             is => "Text",
             is_many => 0,
             is_optional => 1,
-            default_value => 'all',
+            default_value => 'each',
+            valid_values => ['each', 'trio', 'all'],
             doc => "group samples together when genotyping, using this attribute, instead of examining genomes independently (use \"all\" or \"trio\")",
         },
         phenotype_analysis_strategy => {
@@ -174,12 +175,18 @@ sub _execute_build {
     my @instdata = Genome::InstrumentData->get(id => [ map { $_->value_id } @instdata_assn ]);
     $build->status_message("found " . scalar(@instdata) . " instdata");
 
-    $self->status_message('Gathering alignments...');
+    #
+    # get the reference sequence
+    #
+
     my $reference_sequence_build = $build->inputs(name => 'reference_sequence_build')->value;
+    $build->status_message("reference sequence build: " . $reference_sequence_build->__display_name__);
+    
     my $reference_fasta = $reference_sequence_build->full_consensus_path('fa');
     unless(-e $reference_fasta){
         die $self->error_message("fasta file for reference build doesn't exist!");
     }
+    $build->status_message("reference sequence fasta: " . $reference_fasta);
 
     #
     # get the bam for each sample
@@ -187,6 +194,7 @@ sub _execute_build {
     # once Tom's new alignment thing is in place, it would actually generate them in parallel
     #
     
+    $self->status_message('Gathering alignments...');
     my $result = Genome::InstrumentData::Composite->get_or_create(
         inputs => {
             instrument_data => \@instdata,
@@ -256,6 +264,7 @@ sub _execute_build {
 }
 
 sub _validate_build {
+    # this is where we sanity check things like inputs making sense before actually building
     my $self = shift;
     my $dir = $self->data_directory;
 
