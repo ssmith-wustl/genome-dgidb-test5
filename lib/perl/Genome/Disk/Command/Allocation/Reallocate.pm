@@ -11,8 +11,9 @@ class Genome::Disk::Command::Allocation::Reallocate {
     has => [
         allocations => {
             is => 'Genome::Disk::Allocation',
-            doc => 'Allocadtions to reallocate',
+            doc => 'Allocations to reallocate',
             is_many => 1,
+            shell_args_position => 1,
         },
     ],
     has_optional => [

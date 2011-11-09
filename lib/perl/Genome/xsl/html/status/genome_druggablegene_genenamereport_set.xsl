@@ -2,7 +2,7 @@
 <xsl:stylesheet version="1.0"
 xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
 
-  <xsl:template name="genome_genenamereport_set" match="object[./types[./isa[@type='Genome::GeneNameReport::Set']]]">
+  <xsl:template name="genome_druggablegene_genenamereport_set" match="object[./types[./isa[@type='Genome::DruggableGene::GeneNameReport::Set']]]">
 
     <script type='text/javascript' src='/res/js/pkg/boxy/javascripts/jquery.boxy.js'></script>
     <link rel="stylesheet" href="/res/js/pkg/boxy/stylesheets/boxy.css" type="text/css" />

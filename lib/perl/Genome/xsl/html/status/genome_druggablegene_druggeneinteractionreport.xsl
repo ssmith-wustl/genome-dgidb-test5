@@ -2,8 +2,7 @@
 <xsl:stylesheet version="1.0"
 xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
 
-  <xsl:template name="genome_druggeneinteractionreport" match="object[./types[./isa[@type='Genome::DrugGeneInteractionReport']]]">
-    <xsl:comment>template: /html/status/genome_DrugGeneInteractionReport.xsl; match="object[./types[./isa[@type='Genome::DrugGeneInteractionReport']]]"</xsl:comment>
+  <xsl:template name="genome_druggablegene_druggeneinteractionreport" match="object[./types[./isa[@type='Genome::DruggableGene::DrugGeneInteractionReport']]]">
 
     <script type='text/javascript' src='/res/js/pkg/boxy/javascripts/jquery.boxy.js'></script>
     <link rel="stylesheet" href="/res/js/pkg/boxy/stylesheets/boxy.css" type="text/css" />

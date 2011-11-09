@@ -1,3 +1,6 @@
+#!/usr/local/bin/perl
+
+
 package Genome::Disk::Allocation;
 
 use strict;
@@ -121,11 +124,11 @@ sub create {
     my ($class, %params) = @_;
 
     # TODO Switch from %params to BoolExpr and pass in BX to autogenerate_new_object_id
-    unless (exists $params{id}) {
-        $params{id} = $class->__meta__->autogenerate_new_object_id;
+    unless (exists $params{allocation_id}) {
+        $params{allocation_id} = $class->__meta__->autogenerate_new_object_id;
     }
 
-    # If no commit is on, make a dummy volume to allocate to and allocate without shelling out
+    # If no commit is on, make a dummy volume to allocate to
     if ($ENV{UR_DBI_NO_COMMIT}) {
         if ($CREATE_DUMMY_VOLUMES_FOR_TESTING) {
             my $tmp_volume = Genome::Disk::Volume->create_dummy_volume(
@@ -134,23 +137,25 @@ sub create {
             );
             $params{mount_path} = $tmp_volume->mount_path;
         }
-        my $allocation = $class->_create(%params);
-        push @PATHS_TO_REMOVE, $allocation->absolute_path;
-        return $allocation;
     }
 
-    $class->_execute_system_command('_create', %params);
+    my $self = $class->_execute_system_command('_create', %params);
 
-    my $self = $class->get(id => $params{id});
-    confess "Could not retrieve created allocation with id " . $params{id} unless $self;
-    $self->_log_change_for_rollback;
+    if ($ENV{UR_DBI_NO_COMMIT}) {
+        push @PATHS_TO_REMOVE, $self->absolute_path;
+    }
+    else {
+        $self->_log_change_for_rollback;
+    }
+
     return $self;
 }
 
 sub deallocate { return shift->delete(@_); }
 sub delete {
     my ($class, %params) = @_;
-    return $class->_execute_system_command('_delete', %params);
+    $class->_execute_system_command('_delete', %params);
+    return 1;
 }
 
 sub reallocate {
@@ -191,7 +196,7 @@ sub _create {
     }
 
     # Make sure there aren't any extra params
-    my $id = delete $params{id};
+    my $id = delete $params{allocation_id};
     $id = $class->__meta__->autogenerate_new_object_id unless defined $id; # TODO autogenerate_new_object_id should technically receive a BoolExpr
     my $kilobytes_requested = delete $params{kilobytes_requested};
     my $owner_class_name = delete $params{owner_class_name};
@@ -598,21 +603,23 @@ sub _execute_system_command {
     }
     confess "Require allocation ID!" unless exists $params{allocation_id};
 
+    my $allocation;
     if ($ENV{UR_DBI_NO_COMMIT}) {
-        return $class->$method(%params);
+        $allocation = $class->$method(%params);
+    }
+    else {
+        # Serialize params hash, construct command, and execute
+        my $param_string = Genome::Utility::Text::hash_to_string(\%params);
+        my $includes = join(' ', map { '-I ' . $_ } UR::Util::used_libs);
+        my $cmd = "perl $includes -e \"use above Genome; $class->$method($param_string); UR::Context->commit;\"";
+
+        unless (eval { system($cmd) } == 0) {
+            confess "Could not perform allocation action!";
+        }
+        $allocation = $class->_reload_allocation($params{allocation_id});
     }
 
-    # Serialize params hash, construct command, and execute
-    my $param_string = Genome::Utility::Text::hash_to_string(\%params);
-    my $includes = join(' ', map { '-I ' . $_ } UR::Util::used_libs);
-    my $cmd = "perl $includes -e \"use above Genome; $class->$method($param_string); UR::Context->commit;\"";
-    unless (eval{ system($cmd) } == 0) {
-        confess "Could not perform allocation action!";
-    }
-
-    # Reload object to reflect changes
-    $class->_reload_allocation($params{allocation_id});
-    return 1;
+    return $allocation;
 }
 
 sub _log_change_for_rollback {
@@ -628,10 +635,6 @@ sub _log_change_for_rollback {
     my $allocation_change = UR::Context::Transaction->log_change(
         $self->owner, 'UR::Value', $self->id, 'external_change', $remove_sub,
     );
-    # Not being able to roll back the allocation shouldn't be grounds for failure methinks
-    unless ($allocation_change) { 
-        print STDERR "Failed to record allocation creation!\n";
-    }
     return 1;
 }
 
@@ -655,8 +658,8 @@ sub _update_owner_for_move {
 # Unloads the allocation and then reloads to ensure that changes from database are retrieved
 sub _reload_allocation {
     my ($class, $id) = @_;
-    my $allocation = Genome::Disk::Allocation->load($id);
-    return 1;
+    my $mode = $class->_retrieve_mode;
+    return Genome::Disk::Allocation->$mode($id);
 }
 
 # Creates an observer that executes the supplied closures
