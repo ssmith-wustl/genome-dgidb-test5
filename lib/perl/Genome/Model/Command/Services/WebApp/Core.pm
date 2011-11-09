@@ -24,6 +24,7 @@ sub import {
             return if (index($File::Find::name, '.pm', $position) != $position);
             return if (index($File::Find::name, 'Genome/Model/Tools') >= 0);
             return if (index($File::Find::name, 'Test.pm') >= 0);
+            return if (index($File::Find::name, 'Test2.pm') >= 0);
             return if (index($File::Find::dir, '.d') >= 0);
 
 
