@@ -31,6 +31,7 @@ sub parse_next_from_file {
         $ucsc_cons, $domain, $all_domains, $deletion_substructures, $transcript_error);
 
     if ($line) {
+        chomp $line;
         ($chrom, $start, $stop, $reference, $variant, $type, $gene_name,
             $transcript_name, $transcript_species, $transcript_source, $transcript_version,
             $strand, $transcript_status, $trv_type, $c_position, $amino_acid_change,
@@ -46,6 +47,7 @@ sub parse_next_from_file {
             $self->_push_annotation_to_cache($line);
             $line = $fh->getline;
             if ($line) {
+                chomp $line;
                 ($chrom, $start, $stop, $reference, $variant, $type, $gene_name,
                     $transcript_name, $transcript_species, $transcript_source, $transcript_version,
                     $strand, $transcript_status, $trv_type, $c_position, $amino_acid_change,
@@ -61,6 +63,7 @@ sub parse_next_from_file {
             $line = $fh->getline;
 
             if ($line) {
+                chomp $line;
                 ($chrom, $start, $stop, $reference, $variant, $type, $gene_name,
                 $transcript_name, $transcript_species, $transcript_source, $transcript_version,
                 $strand, $transcript_status, $trv_type, $c_position, $amino_acid_change,

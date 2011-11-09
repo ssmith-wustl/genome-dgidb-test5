@@ -14,7 +14,7 @@ sub parse_next_from_file {
     my $fh = $self->_get_fh;
     my $variant;
     if (my $line = $fh->getline) {
-
+        chomp $line;
         my @fields = split(/\t/, $line);
         my @alt_alleles = split(/,/, $fields[4]);
         my @info_fields = split(/;/, $fields[7]);
