@@ -29,7 +29,7 @@ class Genome::Search {
             is => 'WebService::Solr',
             is_constant => 1,
             calculate_from => 'solr_server',
-            calculate => q| return WebService::Solr->new($solr_server); |,
+            calculate => q| require WebService::Solr; return WebService::Solr->new($solr_server); |,
         },
         cache_timeout => {
             is => 'Integer',
