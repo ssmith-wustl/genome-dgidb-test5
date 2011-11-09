@@ -11,6 +11,7 @@ class Genome::Disk::Command::Allocation::Deallocate {
     has_many => [        
         allocations => {
             is => 'Genome::Disk::Allocation',
+            shell_args_position => 1,
             doc => 'Allocations to delete',
         },
     ],
