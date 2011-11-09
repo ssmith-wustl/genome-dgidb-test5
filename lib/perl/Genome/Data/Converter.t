@@ -131,6 +131,7 @@ while (my $csv_seq = $csv_reader->next()) {
 ok(!$csv_reader->next(), 'csv reader exhausted');
 ok(!$tsv_reader->next(), 'tsv reader exhausted');
 
+=cut
 my $mapper_test = Genome::Data::Converter->create (
     from_file => '/tmp/dbSnpFiltered2.snpeff.vcf',
     from_format => 'snpeff',
@@ -139,9 +140,20 @@ my $mapper_test = Genome::Data::Converter->create (
     mapper => 'Genome::Data::Mapper::AnnotatedVariant::VcfSnpeffV1ToTGIV1',
 );
 ok($mapper_test, 'created converter with mapper');
-$obj->convert_all();
+$mapper_test->convert_all();
 ok(-e '/tmp/dbSnpFiltered2.snpeff.vcf.tgi');
 
+my $mapper_test2 = Genome::Data::Converter->create (
+    from_file => '/tmp/dbSnpTopEffects.vcf.noHeader',
+    from_format => 'snpeffgatk',
+    to_file => '/tmp/dbSnpTopEffects.vcf.tgi',
+    to_format => 'tgi',
+    mapper => 'Genome::Data::Mapper::AnnotatedVariant::VcfSnpeffV1ToTGIV1',
+);
+ok($mapper_test2, 'created converter with mapper');
+$mapper_test2->convert_all();
+ok(-e '/tmp/dbSnpTopEffects.vcf.tgi');
+=cut
 #TODO: test non-Sequence converter, with Mapper
 done_testing();
 

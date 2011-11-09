@@ -10,13 +10,8 @@ use warnings;
 
 use above "Genome";
 use Test::More;
-use File::Temp;
 
 use_ok('Genome::Data::Adaptor') or die;
-use_ok('Genome::Data::Adaptor::Tgi') or die;
-
-#TODO test single annotations for a variant as well as multiple annotations for a single variant
+use_ok('Genome::Data::Adaptor::Snpeffgatk') or die;
 
 done_testing();
-
-

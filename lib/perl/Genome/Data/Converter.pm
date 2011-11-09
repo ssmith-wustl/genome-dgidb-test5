@@ -5,6 +5,7 @@ use warnings;
 
 use Genome::Data::IO::Reader;
 use Genome::Data::IO::Writer;
+use Genome::Data::Mapper::AnnotatedVariant::VcfSnpeffV1ToTGIV1;
 
 sub create {
     my ($class, %params) = @_;
@@ -43,6 +44,7 @@ sub create {
 
     if (%params) {
         Carp::confess 'Extra parameters given to create method of ' . __PACKAGE__;
+        print "Mapper: $mapper params: %params\n";
     }
 
     return $self;
@@ -51,7 +53,7 @@ sub create {
 sub mapper {
     my ($self, $mapper) = @_;
     if (defined $mapper) {
-        $self->{_mapper} = $mapper;
+        $self->{_mapper} = $mapper->create();
     }
     return $self->{_mapper};
 }
@@ -104,7 +106,7 @@ sub convert_next {
     my $object = $from_reader->next;
     #TODO: this is stupid - change this
     if (defined $self->mapper && defined $object) {
-        $object = ($self->mapper)->map($object);
+        $object = ($self->mapper)->map_object($object);
     }
     $self->_set_current($object);
     if ($object) {

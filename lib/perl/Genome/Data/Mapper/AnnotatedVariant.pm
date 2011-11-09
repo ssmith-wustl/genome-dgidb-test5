@@ -5,7 +5,7 @@ use warnings;
 use Genome::Data::Mapper;
 use base 'Genome::Data::Mapper';
 
-sub map {
+sub map_object {
     my $self = shift;
     my ($variant) = @_;
     ($self->get_new_object())->chrom($variant->chrom);

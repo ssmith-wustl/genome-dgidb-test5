@@ -79,7 +79,7 @@ my $var1 = Genome::Data::Variant::AnnotatedVariant::TestAv1->create(
         transcript_annotations => \@t_annotations,
     );
 
-my $var2 = $obj->map($var1);
+my $var2 = $obj->map_object($var1);
 
 ok($var2, 'mapped object successfully');
 ok($var2->isa('Genome::Data::Variant::AnnotatedVariant::TestAv2'));
