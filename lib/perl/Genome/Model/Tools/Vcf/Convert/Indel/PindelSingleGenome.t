@@ -11,7 +11,7 @@ use warnings;
 use above "Genome";
 use Test::More;
 
-plan tests => 4;
+plan tests => 5;
 
 use_ok('Genome::Model::Tools::Vcf::Convert::Indel::PindelSingleGenome');
 
