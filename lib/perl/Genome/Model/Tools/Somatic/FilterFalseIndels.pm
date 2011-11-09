@@ -372,7 +372,7 @@ sub execute {
                 {
 
 
-		    if($indel_size <= 2 && fails_homopolymer_check($self, $reference, $min_homopolymer, $chrom, $chr_start, $chr_stop, $ref, $var))
+		    if($indel_size <= 2 && $min_homopolymer && fails_homopolymer_check($self, $reference, $min_homopolymer, $chrom, $chr_start, $chr_stop, $ref, $var))
 		    {
 			$stats{'num_fail_homopolymer'}++;
 			print $ffh join("\t", $line, "Homopolymer") . "\n" if($self->filtered_file);	
