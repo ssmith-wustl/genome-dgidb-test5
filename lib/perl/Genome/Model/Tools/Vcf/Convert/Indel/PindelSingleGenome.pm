@@ -62,7 +62,7 @@ sub execute {
     unless($result){
         die $self->error_message("Could not move tmp zipped output to final output_file location: ".$result);
     }
-    
+    unlink($output.".tmp"); 
     return 1;
 }
 
