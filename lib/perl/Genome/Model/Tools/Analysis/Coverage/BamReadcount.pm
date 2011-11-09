@@ -1,5 +1,4 @@
 package Genome::Model::Tools::Analysis::Coverage::BamReadcount;
-
 use strict;
 use Genome;
 use IO::File;
@@ -30,7 +29,7 @@ class Genome::Model::Tools::Analysis::Coverage::BamReadcount{
         genome_build => {
             is => 'String',
             is_optional => 1,
-	    doc => 'genome build (36, 37, or mus37)',
+	    doc => 'takes either a string describing the genome build (one of 36, 37lite, mus37, mus37wOSK) or a path to the genome fasta file',
             default => '36',
         },
 
@@ -68,7 +67,7 @@ sub execute {
         my $reference_build_fasta_object = Genome::Model::Build::ReferenceSequence->get(name => "NCBI-human-build36");
         $fasta = $reference_build_fasta_object->data_directory . "/all_sequences.fa";
     }
-    elsif ($genome_build eq "37") {
+    elsif ($genome_build eq "37lite") {
         my $reference_build_fasta_object = Genome::Model::Build::ReferenceSequence->get(name => "GRCh37-lite-build37");
         $fasta = $reference_build_fasta_object->data_directory . "/all_sequences.fa";
     }
@@ -76,11 +75,13 @@ sub execute {
         my $reference_build_fasta_object = Genome::Model::Build::ReferenceSequence->get(name => "NCBI-mouse-build37");
         $fasta = $reference_build_fasta_object->data_directory . "/all_sequences.fa";        
     } elsif ($genome_build eq "mus37wOSK") {
-        $fasta = "/gscmnt/sata135/info/medseq/dlarson/iPS_analysis/lentiviral_reference/mousebuild37_plus_lentivirus.fa"
+        $fasta = "/gscmnt/sata135/info/medseq/dlarson/iPS_analysis/lentiviral_reference/mousebuild37_plus_lentivirus.fa";
+    } elsif (-e $genome_build ) {
+        $fasta = $genome_build;
     } else {
-        die "genome build must be 36 or 37";
+        die ("invalid genome build or fasta path: $genome_build\n");
     }
-
+    
 
     #create temp directory for munging
     my $tempdir = Genome::Sys->create_temp_directory();
@@ -91,6 +92,8 @@ sub execute {
 
     
     #now run the readcounting
+    
+    `cp -r $snv_file /tmp/clu`;
     my $cmd = "bam-readcount -q $min_quality_score -f $fasta -l $snv_file $bam_file >$tempdir/readcounts";
     my $return = Genome::Sys->shellcmd(
 	cmd => "$cmd",
@@ -246,5 +249,6 @@ sub execute {
         }
         print OUTFILE "\n";
     }
-    close(OUTFILE)
+    close(OUTFILE);
+
 }
