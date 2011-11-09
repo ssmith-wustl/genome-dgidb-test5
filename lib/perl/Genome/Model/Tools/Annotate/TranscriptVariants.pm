@@ -257,7 +257,7 @@ sub transcript_attributes {
                     transcript_version strand transcript_status trv_type c_position
                     amino_acid_change ucsc_cons domain all_domains deletion_substructures
                     transcript_error );
-    if ($self->extra_columns) {
+    if ($self->extra_details) {
         push @attrs, qw( flank_annotation_distance_to_transcript
                          intron_annotation_substructure_ordinal intron_annotation_substructure_size
                          intron_annotation_substructure_position );
