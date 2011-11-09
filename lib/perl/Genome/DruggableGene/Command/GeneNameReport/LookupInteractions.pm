@@ -123,7 +123,6 @@ sub group_interactions_by_drug_name_report {
     my %grouped_interactions;
 
     for my $gene_name_report (keys %$gene_name_report_results){
-    #TODO: rework this using $gene_name_report->drug_name_reports
         for my $interaction (@{$gene_name_report_results->{$gene_name_report}->{'interactions'}}){
             if($grouped_interactions{$interaction->drug_name_report->name}){
                 my @interactions = @{$grouped_interactions{$interaction->drug_name_report->name}};
