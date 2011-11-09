@@ -121,8 +121,8 @@ sub create {
     my ($class, %params) = @_;
 
     # TODO Switch from %params to BoolExpr and pass in BX to autogenerate_new_object_id
-    unless (exists $params{id}) {
-        $params{id} = $class->__meta__->autogenerate_new_object_id;
+    unless (exists $params{allocation_id}) {
+        $params{allocation_id} = $class->__meta__->autogenerate_new_object_id;
     }
 
     # If no commit is on, make a dummy volume to allocate to and allocate without shelling out
@@ -141,8 +141,8 @@ sub create {
 
     $class->_execute_system_command('_create', %params);
 
-    my $self = $class->get(id => $params{id});
-    confess "Could not retrieve created allocation with id " . $params{id} unless $self;
+    my $self = $class->get(id => $params{allocation_id});
+    confess "Could not retrieve created allocation with id " . $params{allocation_id} unless $self;
     $self->_log_change_for_rollback;
     return $self;
 }
@@ -191,7 +191,7 @@ sub _create {
     }
 
     # Make sure there aren't any extra params
-    my $id = delete $params{id};
+    my $id = delete $params{allocation_id};
     $id = $class->__meta__->autogenerate_new_object_id unless defined $id; # TODO autogenerate_new_object_id should technically receive a BoolExpr
     my $kilobytes_requested = delete $params{kilobytes_requested};
     my $owner_class_name = delete $params{owner_class_name};
