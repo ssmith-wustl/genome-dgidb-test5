@@ -221,7 +221,6 @@ sub _filter_variants {
         }
         else {
             `mv $bams[0] $prefix.$conv_lib.bam`;  #rename behaves strange to interpolate/escape, use mv for now.
-            #rename $bams[0], "$prefix.$lib.bam"; #using $conv_lib here will give extra \ to file name containing ()
         }
 
         $cmd = $samtools_path." rmdup $prefix.$conv_lib.bam $prefix.$conv_lib.rmdup.bam"; #using $conv_lib here will properly parse ()
@@ -229,47 +228,62 @@ sub _filter_variants {
         push @librmdupbams, "$prefix.$conv_lib.rmdup.bam";
     }
 
-    unless (@librmdupbams > 1) {
-        $self->error_message("The number of rmdup library bams is less than 2. Failed for now");
+    my $merge_bam = "$prefix.novo.rmdup.bam";
+
+    if (@librmdupbams) {
+        my $cmd;
+        if (@librmdupbams == 1) {
+            if ($self->control_aligned_reads_input) {
+                $self->error_message('It is impossible for smatic case to have only 1 per lib rmdup bam');
+                die;
+            }
+            $self->warning_message('There is only 1 per library rmdup bam. Probably for germline purpose');
+            `mv $librmdupbams[0] $merge_bam`;  #rg header already made during novo2sam step
+        }
+        else {
+            $self->status_message('Now merge per library rmdup bam files');
+            my $header_file = $prefix . '.header';
+            my $header = Genome::Sys->open_file_for_writing($header_file) or die "fail to open $header_file for writing\n";
+
+            for my $line (keys %headerline) {
+                $header->print("$line\n");
+            }
+            $header->close;
+
+            $cmd = $samtools_path . " merge -h $header_file $merge_bam ". join(' ', @librmdupbams);
+            $self->_run_cmd($cmd);
+            unlink $header_file;
+        }
+    }
+    else {
+        $self->error_message('There is no per library rmdup bam');
         die;
     }
 
-    my $header_file = $prefix . '.header';
-    my $header = Genome::Sys->open_file_for_writing($header_file) or die "fail to open $header_file for writing\n";
-    for my $line (keys %headerline) {
-        $header->print("$line\n");
-    }
-    $header->close;
+    $self->status_message('Now prepare breakdancer config file');
+    my $novo_cfg    = "$prefix.novo.cfg";
+    my $novo_cfg_fh = Genome::Sys->open_file_for_writing($novo_cfg) or die "failed to open $novo_cfg for writing\n";
 
-    my $cmd = $samtools_path . " merge -h $header_file $prefix.novo.rmdup.bam ". join(' ', @librmdupbams);
-    $self->_run_cmd($cmd);
-    
-    my $out_file = "$prefix.novo.cfg";
-
-    my $novo_cfg = Genome::Sys->open_file_for_writing($out_file) or die "failed to open $out_file for writing\n";
     for my $lib (keys %fastqs) {
-        $novo_cfg->printf("map:$prefix.novo.rmdup.bam\tmean:%s\tstd:%s\treadlen:%s\tsample:%s\texe:samtools view\n",$mean_insertsize{$lib},$std_insertsize{$lib},$readlens{$lib},$lib);
+        $novo_cfg_fh->printf("map:$merge_bam\tmean:%s\tstd:%s\treadlen:%s\tsample:%s\texe:samtools view\n",$mean_insertsize{$lib},$std_insertsize{$lib},$readlens{$lib},$lib);
     }
-    $novo_cfg->close;
+    $novo_cfg_fh->close;
 
-    unlink (@bams2remove, @librmdupbams, @novoaligns, $header_file);
-    #unlink glob($self->_temp_staging_directory."/*.bam");   #In case leftover bam
+    unless (-s $novo_cfg) {
+        $self->error_message("novo.cfg file $novo_cfg is not valid");
+        die;
+    }
+
+    unlink (@bams2remove, @librmdupbams, @novoaligns);
+    $self->status_message('Now run breakdancer');
 
     my $bd_out_hq_filtered = $self->pass_staging_output;
     my $bd_out_lq_filtered = $self->fail_staging_output;
     my $bd_in_hq           = $self->detector_directory .'/svs.hq';  #DV2::Filter does not have _sv_base_name preset
+    my $bd_path            = $self->breakdancer_path;
 
-    my $bd_path = $self->breakdancer_path;
-
-    unless (-s $out_file) {
-        $self->error_message("novo.cfg file $out_file is not valid");
-        die;
-    }
-
-    $cmd = $bd_path . ' -t -a '. $out_file .' > '. $bd_out_hq_filtered; #-a to print out copy number per lib so tigra can skip normal lib
+    my $cmd = $bd_path . ' -t -a '. $novo_cfg .' > '. $bd_out_hq_filtered; #-a to print out copy number per lib so tigra can skip normal lib
     $self->_run_cmd($cmd);
-
-    #rename $bd_out_hq, $bd_out_hq_filtered;
 
     my $bd_in_hq_fh  = Genome::Sys->open_file_for_reading($bd_in_hq) or die "Failed to open $bd_in_hq for reading\n";
     my $bd_out_hq_fh = Genome::Sys->open_file_for_reading($bd_out_hq_filtered) or die "Failed to open $bd_out_hq_filtered for reading\n";

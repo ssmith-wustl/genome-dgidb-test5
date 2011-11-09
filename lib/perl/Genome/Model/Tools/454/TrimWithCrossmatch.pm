@@ -17,7 +17,6 @@ use strict;
 use warnings;
 
 use FileHandle;
-use Bio::DB::Fasta;
 
 use Genome;                                 # using the namespace authorizes Class::Autouse to lazy-load modules under it
 

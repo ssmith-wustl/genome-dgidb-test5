@@ -7,6 +7,8 @@ use Genome;
 use IO::File;
 use Data::Dumper;
 
+use Bio::SeqIO;
+
 class Genome::Model::Tools::Assembly::CreateOutputFiles::ContigsFromAce {
     is => 'Genome::Model::Tools::Assembly::CreateOutputFiles',
     has => [

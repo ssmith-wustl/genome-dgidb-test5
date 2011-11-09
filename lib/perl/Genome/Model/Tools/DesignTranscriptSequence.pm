@@ -4,6 +4,9 @@ use strict;
 use warnings;
 use Genome;
 
+use Bio::Seq;
+use Bio::DB::Fasta;
+
 class Genome::Model::Tools::DesignTranscriptSequence {
     is => 'Command',                    
     has => [ # specify the command's properties (parameters) <--- 
@@ -384,7 +387,6 @@ sub reverse_complement_allele {
 
 sub get_ref_base {
 
-    use Bio::DB::Fasta;
     my $RefDir = "/gscmnt/sata180/info/medseq/biodb/shared/Hs_build36_mask1c/";
     my $refdb = Bio::DB::Fasta->new($RefDir);
 

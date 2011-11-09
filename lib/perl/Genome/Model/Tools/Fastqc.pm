@@ -3,11 +3,11 @@ package Genome::Model::Tools::Fastqc;
 use strict;
 use warnings;
 
-use Genome; 
+use Genome;
 use File::Basename;
 
 # who decides what the default is?
-my $FASTQC_DEFAULT = 0.3;
+my $FASTQC_DEFAULT = 0.10.0;
 #my $FASTQC_DEFAULT = '0.4.3';
 my $DEFAULT_MEMORY = 2;
 
@@ -47,6 +47,8 @@ EOS
 }
 
 my %FASTQC_VERSIONS = (
+    '0.10.0' => '/gsc/pkg/bio/fastqc/FastQC-0.10.0',
+    '0.6.1' => '/gsc/pkg/bio/fastqc/FastQC-0.6.1',
     '0.4.3' => '/gsc/pkg/bio/fastqc/FastQC-0.4.3',
     '0.4.1' => '/gsc/pkg/bio/fastqc/FastQC-0.4.1',
     '0.3'   => '/gsc/pkg/bio/fastqc/FastQC-0.3',

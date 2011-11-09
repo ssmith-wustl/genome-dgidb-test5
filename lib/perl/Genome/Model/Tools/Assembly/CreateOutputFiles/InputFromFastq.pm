@@ -6,7 +6,6 @@ use warnings;
 use Genome;
 
 use IO::File;
-use Bio::SeqIO;
 
 class Genome::Model::Tools::Assembly::CreateOutputFiles::InputFromFastq {
     is => 'Genome::Model::Tools::Assembly::CreateOutputFiles',

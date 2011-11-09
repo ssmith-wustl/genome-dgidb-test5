@@ -8,6 +8,7 @@ use Workflow;
 use Switch;
 use IO::File;
 use File::Basename;
+use Bio::SeqIO;
 use Bio::SearchIO;
 
 class Genome::Model::Tools::ViromeEvent::Assignment::Generate{

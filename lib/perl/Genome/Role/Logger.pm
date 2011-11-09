@@ -3,7 +3,7 @@ package Genome::Role::Logger;
 use Genome;
 use Log::Dispatch;
 use Log::Dispatch::Screen;
-use Log::Dispatch::File;
+use Log::Dispatch::FileRotate;
 
 our @log_levels = qw(debug info notice warning error critical alert emergency);
 
@@ -59,10 +59,12 @@ sub log_dispatch_init {
 
     if ($self->log_file) {
         $log->add(
-            Log::Dispatch::File->new(
+            Log::Dispatch::FileRotate->new(
                 name => 'File',
                 min_level => $self->log_file_level,
                 filename => $self->log_file,
+                mode => 'append',
+                max => 5,
             )
         );
     }

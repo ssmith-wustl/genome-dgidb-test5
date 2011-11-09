@@ -6,6 +6,8 @@ use warnings;
 use Genome;
 use Data::Dumper;
 
+use Bio::SeqIO;
+
 class Genome::Model::Tools::Soap::Stats {
     is => 'Genome::Model::Tools::Soap',
     has => [

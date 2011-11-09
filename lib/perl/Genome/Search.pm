@@ -3,12 +3,9 @@ package Genome::Search;
 use strict;
 use warnings;
 
-use WebService::Solr;
-use MRO::Compat;
 
 #Don't "use Genome;" here or we introduce a circular dependency.
 use UR;
-use Genome::Memcache;
 
 # JTAL: solr-dev is going to be prod, because old code will still point to solr
 
@@ -203,6 +200,31 @@ sub delete {
     }
 
     return $deleted_count || 1;
+}
+
+sub delete_by_class_and_id {
+    my $class = shift;
+    my $subject_class = shift;
+    my $subject_id = shift;
+
+    my $self = $class->_singleton_object;
+
+    my $solr = $self->_solr_server;
+
+    my $memcached = Genome::Memcache->server;
+
+    my $solr_index_id = join('---', $subject_class, $subject_id);
+    my $cache_id = join('genome_search:', $solr_index_id);
+
+    if ($solr->delete_by_id($solr_index_id)) {
+        $memcached->delete($cache_id);
+    }
+    else {
+        $self->error_message("Failed to remove document from search (Class: $subject_class, ID: $subject_id).");
+        return;
+    }
+
+    return 1;
 }
 
 sub _delete_by_id {
@@ -485,16 +507,16 @@ sub generate_document {
 
 ###  Callback for automatically updating index  ###
 
+our $LOADED_MODULES = 0;
 sub _index_queue_callback {
     my ($class, $object, $aspect) = @_;
 
     return unless $object;
 
-    # this causes an error:
-    # Error while autoloading with 'use UR::Vocabulary': Can't locate object method "_singleton_object" via package "UR::Vocabulary" at /gscuser/nnutter/genome/git/lib/perl/Genome/Search.pm line 129
-    # which is actually trigger on line 142 at "UR::Object::View->_resolve_view_class_for_params"
-    # I worked around this by wrapping an eval around the above call.
-    return unless $class->is_indexable($object);
+    unless ($LOADED_MODULES++) {
+        require WebService::Solr;
+        require MRO::Compat;
+    }
 
     my $meta = $object->__meta__;
     my @add_property_names = ('create', $meta->all_property_names);
@@ -519,23 +541,19 @@ sub _index_queue_callback {
 }
 
 my $observer;
-
 # register_callbacks and unregister_callbacks should be called from Genome.pm,
 # so typically it won't need to be called elsewhere.
 sub register_callbacks {
     my $class = shift;
+    my $searchable_class = shift;
 
-    for my $searchable_class ($class->searchable_classes) {
-        # no aspect means it fires on all signals
-        # observer is declared above in module's scope
-        $observer = $searchable_class->add_observer(
-            callback => sub { $class->_index_queue_callback(@_); },
-        );
-    }
+    $observer = $searchable_class->add_observer(
+        callback => sub { $class->_index_queue_callback(@_); },
+    );
 }
 
 sub unregister_callbacks {
-    $observer->delete;
+    $observer->delete unless $observer->isa("UR::DeletedRef");
 }
 
 #OK!

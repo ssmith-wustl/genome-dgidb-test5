@@ -6,6 +6,8 @@ use warnings;
 use Genome;
 use Carp;
 
+use Bio::SeqIO;
+
 class Genome::Model::GenePrediction::Command::Eukaryotic::ConvertRepeatMaskerAceFile {
     is => 'Command',
     has => [

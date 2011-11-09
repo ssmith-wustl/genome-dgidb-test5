@@ -47,7 +47,17 @@ class Genome::Model::Command::Define::ReferenceAlignment {
         region_of_interest_set_name => {
             is => 'Text',
             doc => 'limit coverage and variant detection to within these regions of interest',
-        }
+        },
+        merge_roi_set => {
+            is => 'Boolean',
+            default_value => 1,
+            doc => 'A flag to merge the region_of_interest_set_name BED file before evaluating coverage.',
+        },
+        short_roi_names => {
+            is => 'Boolean',
+            default_value => 1,
+            doc => 'A flag to use short ROI names in the BED file used to evaluate coverage.',
+        },
     ],
 };
 
@@ -144,6 +154,34 @@ sub execute {
             $self->error_message("Failed to add region of interest set '$name'!");
             $model->delete;
             return;
+        }
+        if (defined($self->merge_roi_set)) {
+            my $merge_input = $model->add_input(value_class_name => 'UR::Value', value_id => $self->merge_roi_set, name => 'merge_roi_set');
+            if ($merge_input) {
+                if ($merge_input->value_id) {
+                    $self->status_message('Region of interest set '. $name .' will be merged before analysis.');
+                } else {
+                    $self->status_message('Region of interest set '. $name .' will NOT be merged before analysis.');
+                }
+            } else {
+                $self->error_message('Failed to set model input merge_roi_set to '. $self->merge_roi_set .'!');
+                $model->delete;
+                return;
+            }
+        }
+        if (defined($self->short_roi_names)) {
+            my $short_names_input = $model->add_input(value_class_name => 'UR::Value', value_id => $self->short_roi_names, name => 'short_roi_names');
+            if ($short_names_input) {
+                if ($short_names_input->value_id) {
+                    $self->status_message('Short names will be used for region of interest set '. $name .'.');
+                } else {
+                    $self->status_message('The original ROI names will be used for region of interest set '. $name .'.');
+                }
+            } else {
+                $self->error_message('Failed to set model input short_roi_names to '. $self->short_roi_names .'!');
+                $model->delete;
+                return;
+            }
         }
     } else {
         $self->status_message("Analyzing whole-genome (non-targeted) reference.");

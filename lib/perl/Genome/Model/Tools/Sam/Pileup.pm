@@ -63,12 +63,7 @@ sub execute {
     }
 
     #if bgzip is set, push the output through bgzip then to disk
-    my $out;
-    if($self->use_bgzip){
-        $out = "| bgzip -c > ".$output_file."\"";
-    } else {
-        $out = "> ".$output_file."\"";
-    }
+    my $out = "> ".$output_file."\"";
 
     #put the command components together
     my $cmd = "bash -c \"".$self->path_for_samtools_version($self->use_version)." pileup -c -f $refseq_path $bam $region_file $out";
@@ -76,6 +71,19 @@ sub execute {
     my $result = Genome::Sys->shellcmd( cmd => $cmd, input_files => [$refseq_path, $bam], output_files => [$output_file], skip_if_output_is_present => 1);
     unless($result){
         die $self->error_message("failed to execute cmd: ".$cmd);
+    }
+    my $temp_sorted_output = Genome::Sys->create_temp_file_path;
+
+    if($self->use_bgzip){
+        my $sort = Genome::Model::Tools::Bed::ChromSort->create( input => $output_file, output => $temp_sorted_output);
+        unless($sort->execute){
+            die $self->error_message("Could not complete sorting of pileup output!");
+        }
+        my $bgzip_cmd = "cat $temp_sorted_output | bgzip -c > $output_file";
+        my $bgzip_result = Genome::Sys->shellcmd( cmd => $bgzip_cmd );
+        unless($bgzip_result){
+            die $self->error_message("Could not successfully bgzip sorted pileup output!");
+        }
     }
 
     return 1;

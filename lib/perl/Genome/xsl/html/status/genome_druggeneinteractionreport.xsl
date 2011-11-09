@@ -18,6 +18,31 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
     </xsl:call-template>
 
     <div class="content rounded shadow">
+      <xsl:call-template name='DrugGeneInteractionReportDetail'/>
+
+    </div> <!-- end content -->
+
+    <xsl:call-template name="footer">
+      <xsl:with-param name="footer_text">
+        <br/>
+      </xsl:with-param>
+    </xsl:call-template>
+
+  </xsl:template>
+
+  <xsl:template name="name_value_table">
+      <table border='1'>
+          <tbody>
+              <xsl:for-each select="aspect">
+                  <tr>
+                      <td><xsl:value-of select='string(@name)'/></td>
+                      <td><xsl:value-of select='value/text()'/></td>
+                  </tr>
+              </xsl:for-each>
+          </tbody>
+      </table>
+  </xsl:template>
+  <xsl:template name='DrugGeneInteractionReportDetail'>
       <div class="container">
         <div id="objects" class="span-24 last">
 
@@ -60,7 +85,7 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           </div> <!-- end .masonry -->
         </div> <!-- end objects -->
       </div> <!-- end container -->
-      <div class='container'>
+            <div class='container'>
           <div class="span-24 last">
               <h2><xsl:value-of select="aspect[@name='gene_name_report']/object/display_name/text()"/></h2>
               <xsl:for-each select="aspect[@name='gene_name_report']/object">
@@ -73,26 +98,5 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
               </xsl:for-each>
           </div>
       </div> <!-- end container -->
-    </div> <!-- end content -->
-
-    <xsl:call-template name="footer">
-      <xsl:with-param name="footer_text">
-        <br/>
-      </xsl:with-param>
-    </xsl:call-template>
-
-  </xsl:template>
-
-  <xsl:template name="name_value_table">
-      <table border='1'>
-          <tbody>
-              <xsl:for-each select="aspect">
-                  <tr>
-                      <td><xsl:value-of select='string(@name)'/></td>
-                      <td><xsl:value-of select='value/text()'/></td>
-                  </tr>
-              </xsl:for-each>
-          </tbody>
-      </table>
   </xsl:template>
 </xsl:stylesheet>

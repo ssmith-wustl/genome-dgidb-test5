@@ -5,6 +5,9 @@ use warnings;
 
 use Genome;
 
+use Bio::Seq;
+use Bio::DB::Fasta;
+
 class Genome::Model::Tools::Fasta::HugoToFasta {
     is => 'Command',                       
     has => [ 
@@ -270,7 +273,6 @@ sub reverse_complement_allele {
 sub get_ref_base {
 
     my ($chr_start,$chr_stop,$chr_name,$organism) = @_;
-    use Bio::DB::Fasta;
     my $RefDir;
     if ($organism eq "human"){
 	$RefDir = "/gscmnt/sata180/info/medseq/biodb/shared/Hs_build36_mask1c/";
