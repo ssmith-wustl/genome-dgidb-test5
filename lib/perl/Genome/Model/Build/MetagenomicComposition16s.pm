@@ -14,7 +14,8 @@ class Genome::Model::Build::MetagenomicComposition16s {
     is_abstract => 1,
     subclassify_by => 'subclass_name',
     has => [
-        subclass_name => { is => 'String', len => 255, is_mutable => 0, column_name => 'SUBCLASS_NAME',
+        subclass_name => { 
+                           is => 'String', len => 255, is_mutable => 0,
                            calculate_from => ['model_id'],
                            calculate => sub {
                                             my($model_id) = @_;
