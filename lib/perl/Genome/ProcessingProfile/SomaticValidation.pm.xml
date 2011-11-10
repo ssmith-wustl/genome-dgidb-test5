@@ -4,9 +4,6 @@
   <link fromOperation="input connector" fromProperty="build_id" toOperation="Alignments" toProperty="build_id" />
   <link fromOperation="input connector" fromProperty="build_id" toOperation="Detect Variants" toProperty="build_id" />
 
-  <link fromOperation="input connector" fromProperty="snv_variant_list" toOperation="Bed to Annotation" toProperty="snv_file" />
-  <link fromOperation="input connector" fromProperty="snv_list_file" toOperation="Bed to Annotation" toProperty="output" />
-
   <link fromOperation="Alignments" fromProperty="merged_bam_path" toOperation="Detect Variants" toProperty="bam_path"/>
   <link fromOperation="Alignments" fromProperty="control_merged_bam_path" toOperation="Detect Variants" toProperty="control_bam_path"/>
 
@@ -15,7 +12,6 @@
 
   <link fromOperation="Detect Variants" fromProperty="build_id" toOperation="Identify DNPs" toProperty="build_id" />
 
-  <link fromOperation="Bed to Annotation" fromProperty="output" toOperation="Varscan Process-Validation" toProperty="variants_file" />
   <link fromOperation="input connector" fromProperty="targeted_snv_validation" toOperation="Varscan Process-Validation" toProperty="output_file" />
   <link fromOperation="input connector" fromProperty="minimum_coverage" toOperation="Varscan Process-Validation" toProperty="min_coverage" />
   <link fromOperation="input connector" fromProperty="output_plot" toOperation="Varscan Process-Validation" toProperty="output_plot" />
@@ -31,10 +27,6 @@
     <operationtype commandClass="Genome::Model::SomaticValidation::Command::DetectVariants" typeClass="Workflow::OperationType::Command" />
   </operation>
 
-  <operation name="Bed to Annotation">
-    <operationtype commandClass="Genome::Model::Tools::Bed::Convert::BedToAnnotation" typeClass="Workflow::OperationType::Command" />
-  </operation>
-
   <operation name="Identify DNPs">
     <operationtype commandClass="Genome::Model::SomaticValidation::Command::IdentifyDnp" typeClass="Workflow::OperationType::Command" />
   </operation>
@@ -44,8 +36,6 @@
   </operation>
 
   <operationtype typeClass="Workflow::OperationType::Model">
-    <inputproperty>snv_variant_list</inputproperty>
-    <inputproperty>snv_list_file</inputproperty>
     <inputproperty>build_id</inputproperty>
     <inputproperty>output_plot</inputproperty>
     <inputproperty>targeted_snv_validation</inputproperty>

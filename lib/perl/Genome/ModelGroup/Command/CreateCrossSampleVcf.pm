@@ -76,7 +76,9 @@ sub execute {
 
     $self->_num_inputs(scalar(@builds));
     my $num_inputs = $self->_num_inputs;
-    my @input_files = map{ $_->get_snvs_vcf.".gz" } @builds;
+    my $var_type = $self->variant_type;
+    my $accessor = "get_".$var_type."_vcf";
+    my @input_files = map{ $_->$accessor.".gz" } @builds;
     my @existing_files = grep { -s $_ } @input_files;
     unless( scalar(@existing_files) == $num_inputs){
         die $self->error_message("The number of input builds did not match the number of .vcf.gz files found. Check the input builds for completeness.");
@@ -107,8 +109,8 @@ sub execute {
         }
         $inputs{$sample."_bam_file"} = $build->whole_rmdup_bam_file;
         $inputs{$sample."_mpileup_output_file"} = $dir."/".$sample.".for_".$model_group->id.".pileup.gz"; 
-        $inputs{$sample."_vcf_file"} = $build->get_snvs_vcf;
-        $inputs{$sample."_backfilled_vcf"} = $dir."/snvs.backfilled_for_".$model_group->id.".vcf.gz";
+        $inputs{$sample."_vcf_file"} = $build->$accessor;
+        $inputs{$sample."_backfilled_vcf"} = $dir."/".$var_type.".backfilled_for_".$model_group->id.".vcf.gz";
     }
 
     #create the workflow object

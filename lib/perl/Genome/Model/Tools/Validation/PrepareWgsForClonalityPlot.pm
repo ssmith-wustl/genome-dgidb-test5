@@ -89,7 +89,7 @@ sub execute {
         my $reference_build_fasta_object= Genome::Model::Build::ReferenceSequence->get(name => "NCBI-human-build36");
         $fasta = $reference_build_fasta_object->data_directory . "/all_sequences.fa";
     }
-    elsif ($genome_build eq "37") {
+    elsif ($genome_build eq "37lite") {
         my $reference_build_fasta_object = Genome::Model::Build::ReferenceSequence->get(name => "GRCh37-lite-build37");
         $fasta = $reference_build_fasta_object->data_directory . "/all_sequences.fa";
     } elsif (-e $genome_build) {
@@ -130,7 +130,7 @@ sub execute {
         `cp $readcounts_file $tempdir/readcounts`;
     } else {
         #now run the readcounting
-        my $cmd = "perl -I ~/gscCode/genome/lib/perl `which gmt` analysis coverage bam-readcount --bam-file $bam_file --output-file $tempdir/readcounts --min-quality-score $min_mapping_quality --snv-file $tempdir/snvs";
+        my $cmd = "gmt analysis coverage bam-readcount --bam-file $bam_file --output-file $tempdir/readcounts --min-quality-score $min_mapping_quality --snv-file $tempdir/snvs --genome-build $fasta";
         my $return = Genome::Sys->shellcmd(
             cmd => "$cmd",
             );
