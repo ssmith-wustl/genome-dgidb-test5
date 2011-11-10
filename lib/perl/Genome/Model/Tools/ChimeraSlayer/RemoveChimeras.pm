@@ -20,6 +20,7 @@ class Genome::Model::Tools::ChimeraSlayer::RemoveChimeras {
             is => 'Text',
             doc => 'The output to write chimera free sequences. Type is determined by extension. For more options, see "gmt sx -h" for format help.',
         },
+        _metrics => { is_optional => 1, is_transient => 1, },
     ],
 };
 
@@ -59,16 +60,19 @@ sub execute {
     while ( my $seq = $reader->read ) {
         $metrics{sequences}++;
         if ( $seq->{id} eq $chimera->{id} ) {
-            $metrics{chimeras}++;
             my $verdict = $chimera->{verdict}; # store verdict
             $chimera = $chimera_reader->read; # get next chimera
-            next if $verdict eq 'YES'; # do not write seq if it is a chimera
+            if ( $verdict eq 'YES' ) { # do not write seq if it is a chimera
+                $metrics{chimeras}++;
+                next;
+            }
         }
         $metrics{output}++;
         $writer->write($seq);
     }
     $self->status_message('Read sequences...OK');
 
+    $self->_metrics(\%metrics);
     $self->status_message('Sequence count: '.$metrics{sequences});
     $self->status_message('Chimera count: '.$metrics{chimeras});
     $self->status_message('Output count: '.$metrics{output});

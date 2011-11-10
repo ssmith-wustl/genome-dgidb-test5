@@ -30,6 +30,7 @@ ok($cmd, 'create');
 $cmd->dump_status_messages(1);
     ok($cmd->execute, 'execute');
 is(File::Compare::compare($output, $expected_output), 0, 'output mathces');
+is_deeply($cmd->_metrics, { sequences => 7, chimeras => 3, output => 4, }, 'metrics match');
 
 #print "$tmpdir\n"; <STDIN>;
 done_testing();
