@@ -28,6 +28,7 @@ class Genome::InstrumentData::Command::Microarray::Extract {
         },
         separator => {
             is => 'Text',
+            is_optional => 1,
             default_value => 'tab',
             doc => 'Field separator of the output. Use "tab" for tab delineated.',
         },
@@ -56,13 +57,12 @@ class Genome::InstrumentData::Command::Microarray::Extract {
         variation_list_build => {
             is => 'Genome::Model::Build::ImportedVariationList',
             doc => 'Imported variation list build. Give id from command line. Commonly used: 
-            ID          REFERENCE                   VERSION
-            106227442   dbSNP-NCBI-human-build36    130
-            106375969   dbSNP-g1k-human-build37     132
-            ',
+ ID          REFERENCE                   VERSION
+ 106227442   dbSNP-NCBI-human-build36    130
+ 106375969   dbSNP-g1k-human-build37     132',
         },
         filters => {
-            is => 'Genome::InstrumentData::Microarray::Filter',
+            is => 'Text',
             is_many => 1,
             is_optional => 1,
             doc => "Filter genotypes. Give name and parameters, if required. Filters:\n gc_scrore => filter by min gc score (Ex: gc_score:min=0.7)\n invalid_iscan_ids => list of invalid iscan snvs compiled by Nate",
