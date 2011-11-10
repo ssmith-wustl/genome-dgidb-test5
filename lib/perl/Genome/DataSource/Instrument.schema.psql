@@ -1,12 +1,8 @@
 DROP SCHEMA IF EXISTS instrument CASCADE;
 CREATE SCHEMA instrument AUTHORIZATION genome;
 
-SELECT set_config('search_path', current_setting('search_path') || ',instrument', false);
+SELECT set_config('search_path', current_setting('search_path') || ', instrument', false);
 ALTER USER genome SET search_path FROM current;
-
-DROP TABLE IF EXISTS instrument.data_attribute;
-DROP TABLE IF EXISTS instrument.data;
-DROP TABLE IF EXISTS instrument.fragment_library;
 
 CREATE TABLE instrument.fragment_library (
     library_id varchar(16) NOT NULL,

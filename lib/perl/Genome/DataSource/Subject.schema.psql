@@ -1,7 +1,7 @@
 DROP SCHEMA IF EXISTS subject CASCADE;
 CREATE SCHEMA subject AUTHORIZATION genome;
 
-SELECT set_config('search_path', current_setting('search_path')  || ',subject', false);
+SELECT set_config('search_path', current_setting('search_path')  || ', subject', false);
 ALTER USER genome SET search_path FROM current;
 
 CREATE TABLE subject.misc_note (
