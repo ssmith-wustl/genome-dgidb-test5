@@ -57,10 +57,9 @@ class Genome::InstrumentData::Command::Microarray::Extract {
         variation_list_build => {
             is => 'Genome::Model::Build::ImportedVariationList',
             doc => 'Imported variation list build. Give id from command line. Commonly used: 
-            ID          REFERENCE                   VERSION
-            106227442   dbSNP-NCBI-human-build36    130
-            106375969   dbSNP-g1k-human-build37     132
-            ',
+ ID          REFERENCE                   VERSION
+ 106227442   dbSNP-NCBI-human-build36    130
+ 106375969   dbSNP-g1k-human-build37     132',
         },
         filters => {
             is => 'Text',
