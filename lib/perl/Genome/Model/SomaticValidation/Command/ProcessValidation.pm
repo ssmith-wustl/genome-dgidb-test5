@@ -36,9 +36,43 @@ class Genome::Model::SomaticValidation::Command::ProcessValidation {
 
 sub sub_command_category { 'pipeline steps' }
 
+sub shortcut {
+    my $self = shift;
+    my $build = $self->build;
+
+    my $variant_list = $build->snv_variant_list;
+    unless($variant_list) {
+        $self->status_message('No SNVs list provided. Skipping run.');
+        return 1;
+    }
+
+    return; #have to do the work otherwise
+}
+
 sub execute {
     my $self = shift;
     my $build = $self->build;
+
+    my $variant_list = $build->snv_variant_list;
+    unless($variant_list) {
+        $self->status_message('No SNVs list provided. Skipping run.');
+        return 1;
+    }
+
+    my ($snv_variant_file) = glob($variant_list->output_dir . '/snvs.hq.bed');
+    unless($snv_variant_file) {
+        $self->error_message('Failed to get a snv variant file for this build!');
+        die $self->error_message;
+    }
+
+    my $anno_file = $build->data_directory . '/variant_list.snvs';
+    my $bed_to_anno = Genome::Model::Tools::Bed::Convert::BedToAnnotation->create(
+        snv_file => $snv_variant_file,
+        output => $anno_file,
+    );
+    unless($bed_to_anno->execute) {
+        die $self->error_message('Failed to convert BED file to annotation format');
+    }
 
     my @validation_original_file = glob($build->data_directory . '/variants/snv/varscan-somatic-validation*/snvs.hq.validation'); 
     unless(scalar @validation_original_file == 1) {
@@ -55,7 +89,7 @@ sub execute {
     my $process_validation = Genome::Model::Tools::Varscan::ProcessValidation->create(
         validation_file => $validation_original_file[0],
         filtered_validation_file => $filtered_original_file,
-        variants_file => $self->variants_file,
+        variants_file => $anno_file,
         output_file => $self->output_file,
         output_plot => $self->output_plot,
     );
