@@ -96,7 +96,12 @@ sub _validate_required_for_start_properties {
 #limit compatible instrument data check to these samples
 sub get_all_possible_samples {
     my $self = shift;
-    return ($self->tumor_sample, $self->normal_sample);
+
+    my @result;
+    push @result, $self->tumor_sample if $self->tumor_sample;
+    push @result, $self->normal_sample if $self->normal_sample;
+
+    return @result;
 }
 
 1;
