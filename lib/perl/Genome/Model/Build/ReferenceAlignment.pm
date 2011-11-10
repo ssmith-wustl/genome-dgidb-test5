@@ -20,7 +20,7 @@ class Genome::Model::Build::ReferenceAlignment {
     subclassify_by => 'subclass_name',
     has => [
         subclass_name => { 
-            is => 'String', len => 255, is_mutable => 0, column_name => 'SUBCLASS_NAME',
+            is => 'String', len => 255, is_mutable => 0, 
             calculate_from => 'model_id',
             calculate => sub {
                 my($model_id) = @_;
