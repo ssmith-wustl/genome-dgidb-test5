@@ -350,7 +350,6 @@ sub execute {
 
     # enable object cache pruning
     my ($orig_lowater, $orig_highwater) = Genome::Model::Tools::Annotate->object_cache_sizes();
-    Genome::Model::Tools::Annotate->object_cache_sizes(500_000, 5_000_000);
 
     unless($self->variant_file xor $self->variant_bed_file){
         $self->error_message("Please specify either a --variant-file or a --variant-bed-file");

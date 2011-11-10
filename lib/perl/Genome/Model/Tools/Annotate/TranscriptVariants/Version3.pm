@@ -55,7 +55,7 @@ UR::Object::Type->define(
         variant_priorities           => {  },
         transcript_error_priorities  => {  },
     ],
-    doc => q(Do proper intersections between variations and transcript structures by considering both entities' start and stop positions rather than just the start position of the variation),
+    doc => q(Do proper intersections between variations and transcript structures by considering both entities' start and stop positions rather than just the start position of the variation.  Use caching of InterproResults to speed up performance),
 
 );
 
@@ -316,6 +316,9 @@ sub transcripts {
     my ($self, %variant) = @_;
 
     if (!defined $self->{_cached_chromosome} or $self->{_cached_chromosome} ne $variant{chromosome_name}) {
+        Genome::InterproResult->unload();
+        $self->transcript_structure_class_name->unload();
+
         $self->{_cached_chromosome} = $variant{chromosome_name};
         Genome::InterproResult->get(
             data_directory => $self->data_directory,
