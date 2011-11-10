@@ -6,6 +6,7 @@ use warnings;
 use Genome::Data::IO::Reader;
 use Genome::Data::IO::Writer;
 use Genome::Data::Mapper::AnnotatedVariant::VcfSnpeffV1ToTGIV1;
+use Genome::Data::Mapper::AnnotatedVariant::VepOutV1ToTGIV1;
 
 sub create {
     my ($class, %params) = @_;
