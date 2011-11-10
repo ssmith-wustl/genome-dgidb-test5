@@ -32,7 +32,7 @@ class Genome::Model::Tools::Velvet::OneButton {
 	    doc => 'the version of velvet to use'
 	},
 	ins_length => {
-	    is => 'Integer',
+	    is => 'Number',
 	    doc => 'fragment length (average/estimated)',
 	    #default_value => 280,
 	},
