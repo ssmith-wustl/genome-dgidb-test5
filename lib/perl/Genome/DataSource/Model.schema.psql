@@ -172,3 +172,18 @@ CREATE TABLE model.model_group_bridge (
     PRIMARY KEY (group_id, model_id)
 );
 
+CREATE TABLE model.feature_list (
+    id                varchar(32) NOT NULL,
+    name              varchar(200) NOT NULL,
+    source            varchar(64),
+    format            varchar(64) NOT NULL,
+    reference_id      varchar(32) REFERENCES model.build(id),
+    subject_id        varchar(32) REFERENCES subject.subject(subject_id),
+    file_id           bigint,
+    file_content_hash varchar(32) NOT NULL,
+    content_type      varchar(255),
+    description       varchar(255),
+    PRIMARY KEY (id),
+    UNIQUE (name)
+);
+CREATE INDEX feature_list_name_index ON model.feature_list(name);
