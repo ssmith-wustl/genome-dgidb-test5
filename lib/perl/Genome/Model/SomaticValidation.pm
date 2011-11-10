@@ -75,7 +75,7 @@ sub _validate_required_for_start_properties {
     my $self = shift;
 
     my @missing_required_properties;
-    push @missing_required_properties, '*_variant_list' unless ($self->snv_variant_list || $self->indel_variant_list || $self->sv_variant_list);
+    #push @missing_required_properties, '*_variant_list' unless ($self->snv_variant_list || $self->indel_variant_list || $self->sv_variant_list);
     push @missing_required_properties, 'reference_sequence_build' unless ($self->reference_sequence_build);
     push @missing_required_properties, 'tumor_sample' unless ($self->tumor_sample);
     push @missing_required_properties, 'normal_sample' unless ($self->normal_sample);
