@@ -13,8 +13,10 @@ UR::Object::Type->add_observer(
         } elsif ($class_name eq 'Genome::Project') {
             eval "use Genome::Site::WUGC::Observers::Project;";
         } elsif ($class_name eq 'Command::V1') {
+            $DB::single=1;
             eval "use Genome::Site::WUGC::Observers::Command;";
         }
+        die $@ if $@;
     },
 );
 

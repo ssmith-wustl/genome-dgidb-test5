@@ -29,7 +29,7 @@ class Genome::Search {
             is => 'WebService::Solr',
             is_constant => 1,
             calculate_from => 'solr_server',
-            calculate => q| return WebService::Solr->new($solr_server); |,
+            calculate => q| require WebService::Solr; return WebService::Solr->new($solr_server); |,
         },
         cache_timeout => {
             is => 'Integer',
@@ -78,9 +78,9 @@ sub searchable_classes {
         Genome::WorkOrder
         Genome::Site::WUGC::Project
         Genome::Sys::Email
-        Genome::DrugGeneInteractionReport
-        Genome::DrugNameReport
-        Genome::GeneNameReport
+        Genome::DruggableGene::DrugGeneInteractionReport
+        Genome::DruggableGene::DrugNameReport
+        Genome::DruggableGene::GeneNameReport
         Genome::InstrumentData::Imported
         Genome::Sys::User
         Genome::Wiki::Document

@@ -24,7 +24,7 @@ sub load_modules {
     }
 
     # search's callbacks are expensive, web server can't change anything anyway so don't waste the time
-    Genome::Search->unregister_callbacks('UR::Object');
+    Genome::Search->unregister_callbacks();
 }
 
 sub dispatch_request {

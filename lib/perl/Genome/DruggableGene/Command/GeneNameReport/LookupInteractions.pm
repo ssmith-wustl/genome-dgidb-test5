@@ -41,11 +41,19 @@ sub execute {
 
     $DB::single = 1;
 
+    $self->preload_druggable_gene_objects; #TODO: test and see if this speeds things up
     my $gene_name_report_results = $self->lookup_gene_identifiers;
     my %grouped_interactions = $self->group_interactions_by_drug_name_report($gene_name_report_results);
     $self->print_grouped_interactions(%grouped_interactions);
 
     return 1;
+}
+
+sub preload_druggable_gene_objects {
+    my $self = shift;
+    my @gene_name_reports = Genome::DruggableGene::GeneNameReport->get();    
+    my @gene_name_report_associations = Genome::DruggableGene::GeneNameReportAssociation->get();
+    my @interactions = Genome::DruggableGene::DrugGeneInteractionReport->get();
 }
 
 sub lookup_gene_identifiers {
@@ -75,13 +83,13 @@ sub _lookup_gene_identifier {
     my $cmd = Genome::DruggableGene::Command::GeneNameReport::ConvertToEntrez->execute(gene_identifier => $gene_identifier);
     my @entrez_gene_name_reports = $cmd->_entrez_gene_name_reports;
     my @intermediates = $cmd->_intermediate_gene_name_reports;
-    my @gene_name_reports = $self->find_gene_name_reports($gene_identifier);
+    my @gene_name_reports = $self->_find_gene_name_reports_for_identifier($gene_identifier);
     my @complete_gene_name_reports = (@entrez_gene_name_reports, @intermediates, @gene_name_reports);
     @complete_gene_name_reports = uniq @complete_gene_name_reports;
     return @complete_gene_name_reports;
 }
 
-sub find_gene_name_reports {
+sub _find_gene_name_reports_for_identifier {
     my $self = shift;
     my $gene_identifier = shift;
 
@@ -115,7 +123,6 @@ sub group_interactions_by_drug_name_report {
     my %grouped_interactions;
 
     for my $gene_name_report (keys %$gene_name_report_results){
-    #TODO: rework this using $gene_name_report->drug_name_reports
         for my $interaction (@{$gene_name_report_results->{$gene_name_report}->{'interactions'}}){
             if($grouped_interactions{$interaction->drug_name_report->name}){
                 my @interactions = @{$grouped_interactions{$interaction->drug_name_report->name}};

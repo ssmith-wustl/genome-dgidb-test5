@@ -49,15 +49,20 @@ sub _eval_seqs {
     my ($self, $seqs) = @_;
 
     SEQ: for my $seq (@$seqs) {
-        my $qual = $seq->{qual};
-        while ( Genome::Model::Tools::Sx::Base->calculate_average_quality( substr($seq->{qual}, -1, $self->window) ) < $self->quality ) {
-            chop $seq->{seq};
-            chop $seq->{qual};
+        while ( 1 ) {
             if ( length($seq->{seq}) < $self->window ) { 
                 $seq->{seq} = '';
                 $seq->{qual} = '';
                 next SEQ;
             }
+            my $offset = length($seq->{qual}) - $self->window;
+            my $qual = substr($seq->{qual}, $offset, $self->window);
+            my $score = Genome::Model::Tools::Sx::Base->calculate_average_quality($qual);
+            if ( $score >= $self->quality ) { 
+                next SEQ;
+            }
+            chop $seq->{seq};
+            chop $seq->{qual};
         }
     }
 

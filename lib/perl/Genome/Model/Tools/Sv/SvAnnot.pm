@@ -288,7 +288,6 @@ sub execute {
                 }
             }
         }
-
         #Prepare repeatMasker table
         if ($self->repeat_mask) {
             my $table = "chr$chr"."_rmsk";
@@ -299,7 +298,15 @@ sub execute {
             $RPMK{$chr} = $dbh->prepare($query) || die "Could not prepare statement '$query': $DBI::errstr \n";
         }
     }
-    $out_fh->print("$header\tRefseqGene\tDataBases\tSegDup\tRepeat\tShortIndex\n") if defined $header;
+
+    if (defined $header) {
+        if ($self->repeat_mask) {
+            $out_fh->print("$header\tRefseqGene\tDataBases\tSegDup\tRepeat\tShortIndex\n");
+        }
+        else {
+            $out_fh->print("$header\tRefseqGene\tDataBases\tSegDup\tShortIndex\n");
+        }
+    }
 
     for my $sv (@SVs) {
         my @u   = split /\s+/, $sv;
