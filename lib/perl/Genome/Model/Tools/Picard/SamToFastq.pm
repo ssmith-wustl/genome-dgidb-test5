@@ -29,7 +29,7 @@ class Genome::Model::Tools::Picard::SamToFastq {
         },
         no_orphans      => {
             is => 'Boolean',
-            doc => 'Ignore orphaned reads (good reads, but whose mates were marked as failing quality filtering)',
+            doc => 'Do not warn on orphaned reads (good reads, but whose mates were marked as failing quality filtering)',
             default_value => 0,
         },
         read_group_id => {

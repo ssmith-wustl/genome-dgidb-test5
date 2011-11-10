@@ -73,13 +73,6 @@ sub _map_workflow_inputs {
         die $self->error_message;
     }
 
-    #TODO Make optional, support other types
-    my ($snv_variant_list) = glob($model->snv_variant_list->output_dir . '/snvs.hq.bed');
-    unless($snv_variant_list) {
-        $self->error_message('Failed to get a snv variant list for this build!');
-        die $self->error_message;
-    }
-
     my $data_directory = $build->data_directory;
     unless ($data_directory) {
         $self->error_message("Failed to get a data_directory for this build!");
@@ -99,7 +92,6 @@ sub _map_workflow_inputs {
 
     push @inputs,
         build_id => $build->id,
-        snv_variant_list => $snv_variant_list,
         ;
 
     my %default_filenames = $self->default_filenames;
@@ -123,7 +115,6 @@ sub default_filenames{
 
     my %default_filenames = (
         targeted_snv_validation => 'targeted.snvs.validation',
-        snv_list_file => 'variant_list.snvs', 
     );
 
     return %default_filenames;

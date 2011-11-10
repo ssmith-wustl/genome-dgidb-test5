@@ -9,7 +9,7 @@ BEGIN {
 };
 
 use above "Genome";
-use Test::More tests => 21;
+use Test::More tests => 26;
 
 use Cwd;
 #use Carp::Always;
@@ -109,6 +109,22 @@ my @m_3 = Genome::Model->get([$define_3->result_model_ids]);
 is(scalar(@m_3), 2, 'created two models');
 isnt($m_3[0]->subject, $m_3[1]->subject, 'two models have two different subjects');
 
+my @params_for_define_4 = (
+    design => $test_targets,
+    target => $test_targets,
+    tumor_sample => $somatic_variation_build2->tumor_model->subject,
+    normal_sample => $somatic_variation_build2->normal_model->subject,
+);
+
+my $define_4 = Genome::Model::Command::Define::SomaticValidation->create(@params_for_define_4);
+isa_ok($define_4, 'Genome::Model::Command::Define::SomaticValidation', 'fourth creation command');
+$define_4->dump_status_messages(1);
+
+ok($define_4->execute, 'executed fourth creation command');
+my $m_4 = Genome::Model->get($define_4->result_model_ids);
+isa_ok($m_4, 'Genome::Model::SomaticValidation', 'created fourth model with samples explicitly named');
+is($m_4->tumor_sample, $somatic_variation_build2->tumor_model->subject, 'tumor sample set properly');
+is($m_4->normal_sample, $somatic_variation_build2->normal_model->subject, 'normal sample set properly');
 
 # Create some test models with builds and all of their prerequisites
 sub setup_somatic_variation_build {

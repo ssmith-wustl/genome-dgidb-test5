@@ -1,3 +1,4 @@
+DROP TABLE IF EXISTS gene_name_interaction_association;
 DROP TABLE IF EXISTS citation;
 DROP TABLE IF EXISTS drug_gene_interaction_report_attribute;
 DROP TABLE IF EXISTS drug_gene_interaction_report;
@@ -96,4 +97,10 @@ create table citation (
         source_db_version varchar NOT NULL,
         citation text,
         PRIMARY KEY (id)
+);
+
+create table gene_name_interaction_association (
+        gene_name varchar NOT NULL,
+        interaction_id varchar NOT NULL,
+        PRIMARY KEY (gene_name, interaction_id)
 );
