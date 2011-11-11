@@ -22,12 +22,13 @@ CREATE TABLE model.processing_profile_param (
 );
 
 CREATE TABLE model.model (
-    id                         varchar(32) NOT NULL,
+    genome_model_id            varchar(32) NOT NULL,
+    id                         varchar(32),
     name                       varchar(255) NOT NULL,
     sample_name                varchar(255),
     processing_profile_id      varchar(32) NOT NULL REFERENCES model.processing_profile(id),
     data_directory             varchar(1000),
-    comparable_normal_model_id integer,
+    comparable_normal_model_id varchar(32),
     current_running_build_id   varchar(32),
     last_complete_build_id     varchar(32),
     user_name                  varchar(64),
@@ -44,7 +45,7 @@ CREATE TABLE model.model (
     subclass_name              varchar(255),
     auto_build                 boolean,
     build_requested            boolean,
-    PRIMARY KEY (id)
+    PRIMARY KEY (genome_model_id)
 );
 CREATE INDEX model_name_index ON model.model(name);
 CREATE INDEX model_processing_profile_index ON model.model(processing_profile_id);
@@ -53,7 +54,7 @@ CREATE INDEX model_subject_index ON model.model(subject_class_name, subject_id);
 CREATE INDEX model_subject_id_index ON model.model(subject_id);
 
 CREATE TABLE model.model_input (
-    model_id         varchar(32) NOT NULL REFERENCES model.model(id),
+    model_id         varchar(32) NOT NULL REFERENCES model.model(genome_model_id),
     value_class_name varchar(255) NOT NULL,
     value_id         varchar(1000) NOT NULL,
     name             varchar(255) NOT NULL,
@@ -65,15 +66,15 @@ CREATE INDEX model_input_model_id_index ON model.model_input(model_id);
 CREATE INDEX model_input_value_id_name_index ON model.model_input(value_id, name);
 
 CREATE TABLE model.model_link (
-    to_model_id   varchar(32) NOT NULL REFERENCES model.model(id),
-    from_model_id varchar(32) NOT NULL REFERENCES model.model(id),
+    to_model_id   varchar(32) NOT NULL REFERENCES model.model(genome_model_id),
+    from_model_id varchar(32) NOT NULL REFERENCES model.model(genome_model_id),
     role          varchar(56) NOT NULL DEFAULT 'member',
     PRIMARY KEY (to_model_id, from_model_id)
 );
 
 CREATE TABLE model.build (
     id                varchar(32) NOT NULL,
-    model_id          varchar(32) NOT NULL REFERENCES model.model(id),
+    model_id          varchar(32) NOT NULL REFERENCES model.model(genome_model_id),
     data_directory    varchar(1000),
     software_revision varchar(1000),
     subclass_name     varchar(255),
@@ -107,24 +108,24 @@ CREATE TABLE model.build_metric (
 CREATE INDEX metric_build_id_metric_name_index ON model.build_metric(build_id, metric_name);
 
 CREATE TABLE model.event (
-    id                   varchar(32) NOT NULL,
-    model_id             varchar(32),
-    run_id               varchar(32),
-    event_type           varchar(255) NOT NULL,
-    event_status         varchar(255),
-    lsf_job_id           varchar(64),
-    date_scheduled       timestamp(6),
-    date_completed       timestamp(6),
-    user_name            varchar(64),
-    ref_seq_id           varchar(64), 
-    retry_count          integer,
-    parent_event_id      varchar(32),
-    prior_event_id       varchar(32), 
-    status_detail        varchar(200),
-    build_id             varchar(32),
-    instrument_data_id   varchar(32),
-    workflow_instance_id integer,
-    PRIMARY KEY (id)
+    genome_model_event_id varchar(32) NOT NULL,
+    model_id              varchar(32),
+    run_id                varchar(32),
+    event_type            varchar(255) NOT NULL,
+    event_status          varchar(255),
+    lsf_job_id            varchar(64),
+    date_scheduled        timestamp(6),
+    date_completed        timestamp(6),
+    user_name             varchar(64),
+    ref_seq_id            varchar(64), 
+    retry_count           integer,
+    parent_event_id       varchar(32),
+    prior_event_id        varchar(32), 
+    status_detail         varchar(200),
+    build_id              varchar(32),
+    instrument_data_id    varchar(32),
+    workflow_instance_id  integer,
+    PRIMARY KEY (genome_model_event_id)
 );
 CREATE INDEX event_build_id_index ON model.event(build_id);
 CREATE INDEX event_status_index ON model.event(event_status);
@@ -138,21 +139,21 @@ CREATE INDEX event_run_id_index ON model.event(run_id);
 CREATE INDEX event_user_name_index ON model.event(user_name);
 
 CREATE TABLE model.event_input (
-    event_id    varchar(32) NOT NULL REFERENCES model.event(id),
+    event_id    varchar(32) NOT NULL REFERENCES model.event(genome_model_event_id),
     param_name  varchar(100) NOT NULL,
     param_value varchar(1000) NOT NULL,
     PRIMARY KEY (event_id, param_name, param_value)
 );
 
 CREATE TABLE model.event_metric (
-    event_id     varchar(32) NOT NULL REFERENCES model.event(id),
+    event_id     varchar(32) NOT NULL REFERENCES model.event(genome_model_event_id),
     metric_name  varchar(100) NOT NULL,
     metric_value varchar(1000),
     PRIMARY KEY (event_id, metric_name)
 );
 
 CREATE TABLE model.event_output (
-    event_id    varchar(32) NOT NULL REFERENCES model.event(id),
+    event_id    varchar(32) NOT NULL REFERENCES model.event(genome_model_event_id),
     param_name  varchar(100) NOT NULL,
     param_value varchar(1000) NOT NULL,
     PRIMARY KEY (event_id, param_name, param_value)
@@ -168,7 +169,7 @@ CREATE INDEX model_group_name_index ON model.model_group(name);
 
 CREATE TABLE model.model_group_bridge (
     group_id varchar(32) NOT NULL REFERENCES model.model_group(id),
-    model_id varchar(32) NOT NULL REFERENCES model.model(id),
+    model_id varchar(32) NOT NULL REFERENCES model.model(genome_model_id),
     PRIMARY KEY (group_id, model_id)
 );
 
