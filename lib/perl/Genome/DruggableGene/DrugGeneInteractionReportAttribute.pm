@@ -8,7 +8,7 @@ use Genome;
 class Genome::DruggableGene::DrugGeneInteractionReportAttribute {
     is => 'UR::Object',
     id_generator => '-uuid',
-    table_name => 'subject.drug_gene_interaction_report_attribute',
+    table_name => 'dgidb.drug_gene_interaction_report_attribute',
     id_by => [
         id => { is => 'Text' },
     ],
@@ -18,7 +18,7 @@ class Genome::DruggableGene::DrugGeneInteractionReportAttribute {
         name                         => { is => 'Text' },
         value                        => { is => 'Text' },
     ],
-    schema_name => 'subject',
+    schema_name => 'dgidb',
     data_source => 'Genome::DataSource::Main',
     doc => 'Claim regarding an attribute of a drug gene interaction claim',
 };
