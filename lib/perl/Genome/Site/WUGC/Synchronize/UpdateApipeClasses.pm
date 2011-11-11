@@ -36,12 +36,16 @@ sub objects_to_sync {
         'Genome::Site::WUGC::Taxon' => 'Genome::Taxon',
         'Genome::Site::WUGC::Sample' => 'Genome::Sample',
         'Genome::Site::WUGC::Library' => 'Genome::Library',
+        'Genome::Site::WUGC::SetupProjectResearch' => 'Genome::Project',
+        'Genome::Site::WUGC::SetupWorkOrder' => 'Genome::Project',
     );
 }
 
 # Specifies the order in which classes should be synced
 sub sync_order {
-    return qw/ 
+    return qw/
+        Genome::Site::WUGC::SetupProjectResearch
+        Genome::Site::WUGC::SetupWorkOrder
         Genome::Site::WUGC::Taxon
         Genome::Site::WUGC::Individual
         Genome::Site::WUGC::PopulationGroup
@@ -55,10 +59,39 @@ sub sync_order {
     #Genome::Site::WUGC::InstrumentData::Sanger
 }
 
+sub _suppress_status_messages {
+    my $self = shift;
+
+    for my $class (qw/ 
+        Genome::Model::Command::Define::Convergence
+        Genome::Model::Command::Input::Update
+        Genome::Model::Command::List
+        Genome::ModelGroup 
+        Genome::Project 
+        UR::Object::Command::List
+        /) {
+        $class->__meta__;
+        no strict 'refs';
+        *{$class.'::status_message'} = sub{return $_[0];};
+    }
+    for my $class (qw/ 
+        UR::Object::Command::List::Style
+        /) {
+        eval("use $class");
+        no strict 'refs';
+        *{$class.'::format_and_print'} = sub{return $_[0];};
+    }
+
+
+    return 1;
+}
+
 # For each pair of classes above, determine which objects exist in both the old and new schemas and
 # copy the old objects into the new schema and report the new objects that don't exist in the old schema
 sub execute {
     my $self = shift;
+
+    $self->_suppress_status_messages;
 
     # Stores copied and missing IDs for each type
     my %report;
@@ -76,11 +109,11 @@ sub execute {
 
         $self->status_message("\nSyncing $new_type and $old_type");
         $self->status_message("Creating iterators...");
+        my ($created_objects, $seen_old, $seen_new, $found) = (qw/ 0 0 0 0 /);
         my $new_iterator = $new_type->create_iterator;
+        my $new = sub{ $seen_new++; return $new_iterator->next; };
         my $old_iterator = $old_type->create_iterator;
-
-        my $created_objects = 0;
-        my $seen_objects = 0;
+        my $old = sub{ $seen_old++; return $old_iterator->next; };
 
         # The rows in the old/new tables have the same IDs. UR sorts these objects by their
         # IDs internally, so simply iterating over old/new objects and checking the IDs is
@@ -88,11 +121,9 @@ sub execute {
         # TODO I believe Tony is playing around with order by, which would be preferable to relying
         # on the assumption that UR sorts things by IDs.
         $self->status_message("Iterating over all objects and copying as needed");
-        my $new_object = $new_iterator->next;
-        my $old_object = $old_iterator->next;
-
+        my $new_object = $new->();
+        my $old_object = $old->();
         while ($new_object or $old_object) {
-            $seen_objects++;
             my $object_created = 0;
             my $new_id = $new_object->id if $new_object;
             my $old_id = $old_object->id if $old_object;
@@ -101,7 +132,7 @@ sub execute {
             # instrument data, this means the data may have been expunged. In other cases, apipe may need to know.
             if ($new_object and not $old_object) {
                 push @{$report{$new_type}{'missing'}}, $new_id;
-                $new_object = $new_iterator->next;
+                $new_object = $new->();
             }
             # New iterator exhausted, so copy any old objects still remaining.
             elsif ($old_object and not $new_object) {
@@ -110,18 +141,19 @@ sub execute {
                     $object_created = 1;
                     push @{$report{$new_type}{'copied'}}, $old_id;
                 }
-                $old_object = $old_iterator->next;
+                $old_object = $old->();
             }
             else {
                 # If IDs are equal, iterate both old and new and continue
                 if ($new_id eq $old_id) {
-                    $new_object = $new_iterator->next;
-                    $old_object = $old_iterator->next;
+                    $new_object = $new->();
+                    $old_object = $old->();
+                    $found++;
                 }
                 # If new ID is less than old ID, then we are missing an old object (since the iterator skipped over several)
                 elsif ($new_id lt $old_id) {
                     push @{$report{$new_type}{'missing'}}, $new_id;
-                    $new_object = $new_iterator->next;
+                    $new_object = $new->();
                 }
                 # Old ID is less than new ID, so a new object needs to be created
                 else {
@@ -130,18 +162,18 @@ sub execute {
                         $object_created = 1;
                         push @{$report{$new_type}{'copied'}}, $old_id;
                     }
-                    $old_object = $old_iterator->next;
+                    $old_object = $old->();
                 }
             }
 
-            print STDERR "\n" and $self->print_object_cache_summary if $self->show_object_cache_summary and $seen_objects % 1000 == 0;
+            $self->status_message($self->print_object_cache_summary) if $self->show_object_cache_summary and ($seen_old + $seen_new) % 1000 == 0;
 
             # Periodic commits to prevent lost progress in case of failure
             if ($created_objects != 0 and $created_objects % 1000 == 0 and $object_created) {
                 confess 'Could not commit!' unless UR::Context->commit;
             }
 
-            print STDERR "Looked at $seen_objects objects, created $created_objects\r";
+           print STDERR "Looked at $seen_old $old_type objects. Found $found existing and created $created_objects $new_type objects\r";
         }
         print STDERR "\n";
         
@@ -149,7 +181,6 @@ sub execute {
         $self->print_object_cache_summary if $self->show_object_cache_summary;
         $self->status_message("Done syncning $new_type and $old_type");
     }
-    print STDERR "\n";
 
     $self->_report(\%report);
     return 1;
@@ -476,6 +507,33 @@ sub _create_taxon {
     };
     confess "Could not create new object of type $new_object_class based on object of type " .
         $original_object->class . " with id " . $original_object->id . ":\n$@" unless $object;
+
+    return 1;
+}
+
+sub _create_setupprojectresearch {
+    my ($self, $original_object, $new_object_class) = @_;
+    return $self->_create_project($original_object, $new_object_class);
+}
+
+sub _create_setupworkorder {
+    my ($self, $original_object, $new_object_class) = @_;
+    return $self->_create_project($original_object, $new_object_class);
+}
+
+sub _create_project {
+    my ($self, $original_object, $new_object_class) = @_;
+
+    my $object = eval { 
+        $new_object_class->create(
+            id => $original_object->id, 
+            name => $original_object->name,
+        );
+    };
+    if ( not $object ) {
+        confess "Could not create new object of type $new_object_class based on object of type " .
+            $original_object->class . " with id " . $original_object->id . ":\n$@";
+    }
 
     return 1;
 }
