@@ -10,10 +10,11 @@ use Workflow::Simple;
 class Genome::ModelGroup::Command::CreateCrossSampleVcf {
     is => 'Genome::Command::Base',
     has_input => [
-        model_group => {
-            is => 'Genome::ModelGroup',
+        models => {
+            is => 'Genome::Model',
+            is_many => 1,
             is_optional=>0,
-            doc => 'this is the model group you wish to create a cross-sample vcf for',
+            doc => 'The models that you wish to create a cross-sample vcf for',
         },
         output_directory => {
             is => 'Text',
@@ -59,7 +60,8 @@ EOS
 
 sub execute {
     my $self=shift;
-    my $model_group  = $self->model_group;
+    $DB::single=1;
+    my @models = $self->models;
     my $output_directory = $self->output_directory;
 
     #Check for output directory
@@ -69,9 +71,13 @@ sub execute {
     }
 
     #grab VCF's from the builds
-    my @builds = map{ $_->last_succeeded_build } $model_group->models;
+    my @builds = map{ $_->last_succeeded_build } @models;
     unless (@builds) {
         die $self->error_message("No succeeded builds found for this model group");
+    }
+
+    unless(scalar(@models) == scalar(@builds)){
+        die $self->error_message("Number of models (".scalar(@models).") did not match the number of succeeded builds (".scalar(@builds).").");
     }
 
     $self->_num_inputs(scalar(@builds));
@@ -89,7 +95,8 @@ sub execute {
     my %inputs;
 
     $inputs{output_directory} = $output_directory;
-    $inputs{final_output} = $output_directory."/".$model_group->id.".merged.vcf.gz";
+    $inputs{final_output} = $output_directory."/".$var_type.".merged.vcf.gz";
+    $inputs{merged_vcf} = $inputs{final_output};
     $inputs{reference_sequence_path} = $reference_sequence_build->full_consensus_path('fa');
     $inputs{merged_positions_bed} = $output_directory."/merged_positions.bed.gz";
     $inputs{use_bgzip} = 1;
@@ -108,9 +115,9 @@ sub execute {
             }
         }
         $inputs{$sample."_bam_file"} = $build->whole_rmdup_bam_file;
-        $inputs{$sample."_mpileup_output_file"} = $dir."/".$sample.".for_".$model_group->id.".pileup.gz"; 
-        $inputs{$sample."_vcf_file"} = $build->$accessor;
-        $inputs{$sample."_backfilled_vcf"} = $dir."/".$var_type.".backfilled_for_".$model_group->id.".vcf.gz";
+        $inputs{$sample."_mpileup_output_file"} = $dir."/".$sample.".for_".$var_type.".pileup.gz"; 
+        $inputs{$sample."_vcf_file"} = $build->$accessor.".gz";
+        $inputs{$sample."_backfilled_vcf"} = $dir."/".$var_type.".backfilled_for_".$var_type.".vcf.gz";
     }
 
     #create the workflow object
@@ -165,7 +172,7 @@ sub execute {
         die $self->error_message("Workflow did not return correctly.");
     }
 
-    return 1;
+    return $result;
 
 }
 
@@ -186,7 +193,8 @@ sub _generate_workflow {
     my $self = shift;
     my $build_array = shift;
     my $output_directory = shift;
-    my @builds = map { $_->last_succeeded_build } $self->model_group->models;
+    my @models = $self->models;
+    my @builds = map { $_->last_succeeded_build } @models;
     my @inputs;
 
     for my $build (@builds){
@@ -228,6 +236,7 @@ sub _generate_workflow {
             'output_directory',
             'merged_positions_bed',
             'final_output',
+            'merged_vcf',
             'use_bgzip',
             'reference_sequence_path',
             @inputs,
@@ -407,8 +416,8 @@ sub _add_mpileup_and_backfill {
     my $workflow = shift;
     $workflow = $$workflow; #de-reference workflow ref
     my $merge_operation = shift;
-
-    my @builds = map { $_->last_succeeded_build } $self->model_group->models;
+    my @models = $self->models;
+    my @builds = map { $_->last_succeeded_build } @models;
     my @backfill_ops;
 
     #for each model, add an mpileup and backfill command
