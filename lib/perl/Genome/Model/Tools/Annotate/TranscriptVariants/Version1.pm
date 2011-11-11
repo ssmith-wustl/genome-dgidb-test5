@@ -319,6 +319,17 @@ sub _create_iterator_for_variant_intersection {
 sub transcripts {
     my ($self, %variant) = @_;
 
+    if (!defined $self->{_cached_chromosome} or $self->{_cached_chromosome} ne $variant{chromosome_name}) {
+        Genome::InterproResult->unload();
+        $self->transcript_structure_class_name->unload();
+
+        $self->{_cached_chromosome} = $variant{chromosome_name};
+        Genome::InterproResult->get(
+            data_directory => $self->data_directory,
+            chrom_name => $variant{chromosome_name},
+        );
+    }
+
     my $variant_start = $variant{'start'};
     my $variant_stop = $variant{'stop'};
 

@@ -63,8 +63,8 @@ UR::Object::Type->define(
 ## These originally lived in Genome::Info::AnnotationPriorities
 sub transcript_source_priorities {
     return (
-        genbank => 2,
-        ensembl => 1,
+        genbank => 1,
+        ensembl => 2,
     );
 }
 
@@ -167,12 +167,6 @@ sub reverse_complement {
     my ($self, $seq) = @_;
     return unless defined $seq;
 
-#    my $s = Bio::Seq->new(-display_id => "junk", -seq => $seq);
-#    my $rev_com = $s->revcom->seq;
-#    unless ($rev_com) {
-#        $self->error_message("Could not create reverse complement for sequence");
-#        confess;
-#    }
     $seq =~ tr/acgtrymkswhbvdnxACGTRYMKSWHBVDNX/tgcayrkmswdvbhnxTGCAYRKMSWDVBHNX/;
     my $rev_com = CORE::reverse $seq;
 
@@ -320,20 +314,14 @@ sub transcripts {
 
     my ($self, %variant) = @_;
 
-    if (!defined $self->{_cached_chromosome} or $self->{_cached_chromosome} ne $variant{chromosome_name}){
-#Cache everything first
+    if (!defined $self->{_cached_chromosome} or $self->{_cached_chromosome} ne $variant{chromosome_name}) {
+        Genome::InterproResult->unload();
+        $self->transcript_structure_class_name->unload();
         $self->{_cached_chromosome} = $variant{chromosome_name};
-           Genome::InterproResult->get(
-               data_directory => $self->data_directory,
-               chrom_name => $variant{chromosome_name},
-           );
-
-=cut
-           Genome::Model::Tools::Annotate::TranscriptVariants::Version2::TranscriptStructure->get(
-                data_directory => $self->data_directory,
-                chrom_name => $variant{chromosome_name},
-            );
-=cut
+        Genome::InterproResult->get(
+            data_directory => $self->data_directory,
+            chrom_name => $variant{chromosome_name},
+        );
     }
 
     my $variant_start = $variant{'start'};
@@ -987,7 +975,6 @@ sub _ucsc_conservation_score {
                   coordinates => $range,
                   species => $substruct->transcript_species,
                   version => $substruct->transcript_version,
-                  #reference_transcripts => "NCBI-human.combined-annotation/54_36p_v2", #TODO: Test code, delete me immediately
         );
     };
     return '-' unless $ref;
@@ -1005,11 +992,11 @@ sub _protein_domain {
     my ($self, $structure, $variant, $protein_position) = @_;
     return 'NULL', 'NULL' unless defined $structure and defined $variant;
 
-my @all_domains = Genome::InterproResult->get(
-           transcript_name => $structure->transcript_transcript_name,
-           data_directory => $structure->data_directory,
-           chrom_name => $variant->{chromosome_name},
-           );
+    my @all_domains = Genome::InterproResult->get(
+        transcript_name => $structure->transcript_transcript_name,
+        data_directory => $structure->data_directory,
+        chrom_name => $variant->{chromosome_name},
+        );
     return 'NULL', 'NULL' unless @all_domains;
 
     my @variant_domains;
