@@ -3,11 +3,10 @@ package Genome::Model::Tools::Vcf::Convert::Snv::Cosmic;
 use strict;
 use warnings;
 use Genome;
-#use Shell;
 
 class Genome::Model::Tools::Vcf::Convert::Snv::Cosmic {
     is => 'Genome::Model::Tools::Vcf::Convert::Base',
-    doc => 'Generate a VCF file from a cosmic file of variants (may be snvs or indels)'
+    doc => 'Generate a VCF file from a cosmic file of variants (may be snvs or indels).  This is specific to reference build 37 coordinates.'
 };
 
 sub help_synopsis {
