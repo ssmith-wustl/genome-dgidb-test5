@@ -838,6 +838,7 @@ sub version_lookup
     my $lookup         = undef;
     my %version_lookup = (
         'DEV'  => 'Development',
+        'DEV1'  => 'Development_1',
         'V1' => 'Version_1.0',
         'V2' => 'Version_2.0',
         'V3' => 'Version_3.0',

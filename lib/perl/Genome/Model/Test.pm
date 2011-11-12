@@ -9,7 +9,7 @@ use Carp 'confess';
 use Data::Dumper 'Dumper';
 require File::Temp;
 require Genome;
-require Genome::ProcessingProfile::Test;
+require Genome::ProcessingProfile::Test2; # ::Test ensures that this modules is used before the guts of test2
 require Genome::Utility::Text;
 use Test::More;
 

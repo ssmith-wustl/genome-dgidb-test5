@@ -452,8 +452,8 @@ sub dump_sanger_fastq_files {
         if ($self->resolve_quality_converter eq 'sol2sanger') {
             $converted_fastq_pathname = $requested_directory . '/' . $self->id . '-sanger-fastq-'. $counter . ".fastq";
             $self->status_message("Applying sol2sanger quality conversion.  Converting to $converted_fastq_pathname");
-            unless (Genome::Model::Tools::Maq::Sol2sanger->execute( use_version       => '0.7.1',
-                                                                    solexa_fastq_file => $illumina_fastq_pathname,
+            unless (Genome::Model::Tools::Fastq::Sol2sanger->execute(
+                                                                    fastq_file => $illumina_fastq_pathname,
                                                                     sanger_fastq_file => $converted_fastq_pathname)) {
                 $self->error_message('Failed to execute sol2sanger quality conversion $illumina_fastq_pathname $converted_fastq_pathname.');
                 die($self->error_message);

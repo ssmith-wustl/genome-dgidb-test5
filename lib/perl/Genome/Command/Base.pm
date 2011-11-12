@@ -39,7 +39,7 @@ our %ALTERNATE_FROM_CLASS = (
     'Genome::InstrumentData' => {
         'Genome::Model' => ['instrument_data'],
         'Genome::Model::Build' => ['instrument_data'],
-    },                        
+    },
     'Genome::Model' => {
         'Genome::Model::Build' => ['model'],
         'Genome::ModelGroup' => ['models'],
@@ -90,13 +90,13 @@ sub resolve_param_value_from_cmdline_text {
     for (my $i = 0; $i < @param_args; $i++) {
         my $arg = $param_args[$i];
         my @arg_results;
-        (my $arg_display = $arg) =~ s/,/ AND /g; 
+        (my $arg_display = $arg) =~ s/,/ AND /g;
 
         for my $param_class (@param_class) {
             %SEEN_FROM_CLASS = ();
             # call resolve_param_value_from_text without a via_method to "bootstrap" recursion
             @arg_results = eval{$self->resolve_param_value_from_text($arg, $param_class)};
-        } 
+        }
         last if ($@ && !@arg_results);
 
         $require_user_verify = 1 if (@arg_results > 1 && !defined($require_user_verify));
@@ -173,7 +173,7 @@ sub resolve_param_value_from_text {
             @results_by_string = $param_class->_resolve_param_value_from_text_by_name_or_id($param_arg);
         }
         else {
-            @results_by_string = $self->_resolve_param_value_from_text_by_name_or_id($param_class, $param_arg); 
+            @results_by_string = $self->_resolve_param_value_from_text_by_name_or_id($param_class, $param_arg);
         }
         push @results, @results_by_string;
     }
@@ -494,7 +494,7 @@ sub _shell_args_property_meta
     my $class_meta = $self->__meta__;
 
     # Find which property metas match the rules.  We have to do it this way
-    # because just calling 'get_all_property_metas()' will product multiple matches 
+    # because just calling 'get_all_property_metas()' will product multiple matches
     # if a property is overridden in a child class
     my $rule = UR::Object::Property->define_boolexpr(@_);
     my %seen;
@@ -533,14 +533,14 @@ sub _shell_args_property_meta
             push @required, $property_meta;
         }
     }
-    
+
     my @result;
-    @result = ( 
+    @result = (
         (sort { $a->property_name cmp $b->property_name } @required),
         (sort { $a->property_name cmp $b->property_name } @optional),
         (sort { $a->{shell_args_position} <=> $b->{shell_args_position} } @positional),
     );
-    
+
     return @result;
 }
 
@@ -605,7 +605,7 @@ sub _params_to_resolve {
 
         for my $param_name (keys %$params) {
             next if ($param_name eq 'help');
-            my $pmeta = $cmeta->property($param_name); 
+            my $pmeta = $cmeta->property($param_name);
             unless ($pmeta) {
                 # This message was a die after a next, so I guess it isn't supposed to be fatal?
                 $self->warning_message("No metadata for property '$param_name'");
@@ -672,19 +672,19 @@ sub resolve_class_and_params_for_argv {
     unless (@_ && scalar($self->_missing_parameters($params)) == 0) {
         return ($class, $params, $error_tag_list);
     }
-    
+
     local $ENV{UR_COMMAND_DUMP_STATUS_MESSAGES} = 1;
 
     my @params_to_resolve = $self->_params_to_resolve($params);
     for my $p (@params_to_resolve) {
         my $param_arg_str = join(',', @{$p->{value}});
-        my $pmeta = $self->__meta__->property($p->{name}); 
+        my $pmeta = $self->__meta__->property($p->{name});
 
         my @params;
         eval {
             @params = $self->resolve_param_value_from_cmdline_text($p);
         };
-        
+
         if ($@) {
             push @error_tags, UR::Object::Tag->create(
                 type => 'invalid',

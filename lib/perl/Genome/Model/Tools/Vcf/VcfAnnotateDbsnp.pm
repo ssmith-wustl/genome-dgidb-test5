@@ -175,7 +175,7 @@ sub execute {
                 if(exists($posHash{$key})){
                     #add to id field
                     if (@{$posHash{$key}}[2] eq "."){
-                        @{$posHash{$key}}[2] eq "";
+                        @{$posHash{$key}}[2] = "";
                     } elsif (!(@{$posHash{$key}}[2] eq "")) {
                         @{$posHash{$key}}[2] = @{$posHash{$key}}[2] . ";";
                     }

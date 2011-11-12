@@ -83,7 +83,7 @@ sub execute {
     if(defined($self->output_file) && not defined($self->use_bgzip)){
         $cmd .= " -o $output" if defined($self->output_file);
     } elsif ( defined($self->use_bgzip) && defined($self->output_file) ){
-        $cmd .= " | grep -v ^# | cut -f1-2| awk \'{print \\\$1,\\\$2-1,\\\$2}\' | bgzip -c > $output";
+        $cmd .= " | grep -v ^# | cut -f1-2 | awk \'BEGIN { OFS=\\\"\\t\\\"; }  { print \\\$1,\\\$2,\\\$2; }\' | bgzip -c > $output";
         $cmd = "bash -c \"$cmd\"";
     }
         

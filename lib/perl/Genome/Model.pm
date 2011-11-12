@@ -185,6 +185,18 @@ class Genome::Model {
             to => 'value_id',
             where => [ name => 'region_of_interest_set_name', value_class_name => 'UR::Value' ], 
         },
+        merge_roi_set => {
+            is_mutable => 1,
+            via => 'inputs', 
+            to => 'value_id',
+            where => [ name => 'merge_roi_set', value_class_name => 'UR::Value' ], 
+        },
+        short_roi_names => {
+            is_mutable => 1,
+            via => 'inputs', 
+            to => 'value_id',
+            where => [ name => 'short_roi_names', value_class_name => 'UR::Value' ], 
+        },
     ],
     has_optional_calculated => [
         individual_common_name => {
@@ -719,6 +731,25 @@ sub latest_build {
     my @builds = $self->builds();
     return $builds[-1] if @builds;
     return;
+}
+
+sub latest_build_id {
+    my $self = shift;
+    my $build = $self->latest_build;
+    unless ($build) { return; }
+    return $build->id;
+}
+
+sub status {
+    my $self = shift;
+    return $self->latest_build_status;
+}
+
+sub latest_build_status {
+    my $self = shift;
+    my $build = $self->latest_build;
+    unless ($build) { return; }
+    return $build->status;
 }
 
 sub last_succeeded_build { return $_[0]->resolve_last_complete_build; }

@@ -27,7 +27,7 @@ my $converter = Genome::Model::Build::ReferenceSequence::Converter->create(
 
 isa_ok($converter, 'Genome::Model::Build::ReferenceSequence::Converter', 'created converter');
 
-my $converted_bed_file = $feature_list->converted_bed_file($ref_seq_b);
+my $converted_bed_file = $feature_list->converted_bed_file(reference => $ref_seq_b);
 ok($converted_bed_file, 'got converted BED file');
 
 my $expected_result = <<EOBED
@@ -65,7 +65,7 @@ sub setup_test_data {
     my $test_bed_content = <<EOBED
 chr1	2	3	region1
 chr19_GL000209R	1000	1100	region2
-chrX	15 	25	region3
+chrX	15	25	region3
 EOBED
 ;
     Genome::Sys->write_file($temp_file, $test_bed_content);

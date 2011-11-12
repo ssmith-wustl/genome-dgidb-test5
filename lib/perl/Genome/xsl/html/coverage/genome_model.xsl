@@ -13,7 +13,6 @@
     <script type="text/javascript" src="/res/js/pkg/TableTools/media/js/TableTools.min.js"></script>
 
     <script type="text/javascript" src="/res/js/app/genome_model_alignment_chart.js"></script>
-    <script type="text/javascript" src="/res/js/app/genome_model_coverage_chart.js"></script>
     <script type="text/javascript" src="/res/js/app/genome_model_coverage_tables.js"></script>
     <script type="text/javascript" src="/res/js/app/genome_model_enrichment_chart.js"></script>
     <script type="text/javascript" src="/res/js/app/datatable_sort_extensions/percent.js"></script>
@@ -162,31 +161,20 @@
 
     <div class="content rounded shadow">
       <div class="container">
-
-        <!-- <div class="span-24 last" style="margin-bottom: 10px;"> -->
-        <!--   <div class="box rounded" style="margin: 0;"> -->
-        <!--     <table border="0" cellpadding="0" cellspacing="0" class="name-value" style="margin:0;"> -->
-        <!--       <tr> -->
-        <!--         <td class="name">model group name:</td> -->
-        <!--         <td class="value"><xsl:value-of select="@display_name"/></td> -->
-        <!--       </tr> -->
-        <!--       <tr> -->
-        <!--         <td class="name">models in group:</td> -->
-        <!--         <td class="value"><xsl:value-of select="count(//coverage-summary/model)"/></td> -->
-        <!--       </tr> -->
-        <!--     </table> -->
-
-        <!--   </div> -->
-        <!-- </div> -->
         <div class="span-11">
           <div class="box_header rounded-top span-11 last">
-            <div class="box_title"><h3 class="nontyped">coverage</h3></div>
+            <div class="box_title" style="position: relative">
+				  <h3 class="nontyped">coverage</h3>
+				  <div class="color_controls">
+					 <span>color scheme:</span>
+					 <input name="scheme_select" value="analogous" id="analogous" type="radio" onchange="coverage_vis.render()" checked="checked"/><label for="analogous">analogous</label>
+					 <input name="scheme_select" value="complementary" id="complementary" type="radio" onchange="coverage_vis.render()"/><label for="complementary">complementary</label>
+				  </div>
+				</div>
           </div>
           <div class="box_content rounded-bottom span-11 last">
-            <div style="background: #FFF;padding: 10px;margin-bottom: 10px;border-bottom: 1px solid #C1C1B7;">
-              <script type="text/javascript">
-                render_coverage_chart();
-              </script>
+            <div id="coverage" style="background: #FFF;padding: 10px;margin-bottom: 10px;border-bottom: 1px solid #C1C1B7;">
+				  <script type="text/javascript" src="/res/js/app/genome_model_coverage_chart.js"></script>
             </div>
           </div>
         </div>

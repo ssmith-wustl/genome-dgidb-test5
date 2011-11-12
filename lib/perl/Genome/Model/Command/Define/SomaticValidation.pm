@@ -31,6 +31,14 @@ class Genome::Model::Command::Define::SomaticValidation {
             doc => 'BED file (or database id) of the target region set',
             shell_args_position => 2,
         },
+        tumor_sample => {
+            is => 'Genome::Sample',
+            doc => 'If there are no variants, specify the "tumor" sample directly',
+        },
+        normal_sample => {
+            is => 'Genome::Sample',
+            doc => 'If there are no variants, specify the "normal" sample directly',
+        },
         processing_profile => {
             is => 'Genome::ProcessingProfile::SomaticValidation',
             doc => 'Processing profile for the model',
@@ -149,6 +157,17 @@ sub execute {
 sub resolve_subjects {
     my $self = shift;
 
+    if($self->tumor_sample or $self->normal_sample) {
+        if($self->variants) {
+            die $self->error_message('Please only supply tumor and normal sample if no variants are available.');
+        }
+        my $subject = $self->_resolve_subject_from_samples($self->tumor_sample, $self->normal_sample);
+        $self->subjects([$subject]);
+
+        #TODO Optionally support no "normal" sample
+        return { $subject->id => { $self->tumor_sample->id => { $self->normal_sample->id => []}}};
+    }
+
     my @subjects;
     my $variants_by_subject_id = {};
 
@@ -198,6 +217,17 @@ sub resolve_subject {
     #$self->tumor_sample($tumor_sample);
     #$self->normal_sample($control_sample);
 
+    my $subject = $self->_resolve_subject_from_samples($tumor_sample, $control_sample);
+
+    return ($subject, $tumor_sample, $control_sample) if wantarray;
+    return $subject;
+}
+
+sub _resolve_subject_from_samples {
+    my $self = shift;
+    my $tumor_sample = shift;
+    my $control_sample = shift;
+
     my $subject;
     if($tumor_sample) {
         if($control_sample and $tumor_sample->source ne $control_sample->source) {
@@ -220,7 +250,6 @@ sub resolve_subject {
         $subject = $control_sample->source;
     }
 
-    return ($subject, $tumor_sample, $control_sample) if wantarray;
     return $subject;
 }
 

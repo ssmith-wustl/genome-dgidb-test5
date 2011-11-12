@@ -38,24 +38,24 @@ sub create {
 
     my @readers;
     for my $config ( $self->config ) {
-        my %params = $self->_parse_reader_config($config);
-        return if not %params;
-
-        if ( $params{file} eq 'stdinref' ) {
-            delete $params{file};
-        };
-        my $cnt = ( exists $params{cnt} ? delete $params{cnt} : 1 );
-
-        my $reader_class = $self->_reader_class_for_type( delete $params{type} );
+        $self->status_message('Parsing reader config: '.$config);
+        my ($reader_class, $params) = $self->parse_reader_config($config);
         return if not $reader_class;
-        $self->status_message('reader => '.$reader_class);
 
-        my $reader = eval{ $reader_class->create(%params) };
+        $self->status_message('Config: ');
+        $self->status_message('reader: '.$reader_class);
+        for my $key ( keys %$params ) {
+            $self->status_message($key.' => '.$params->{$key});
+        }
+        my $cnt = ( exists $params->{cnt} ? delete $params->{cnt} : 1 );
+
+        my $reader = eval{ $reader_class->create(%$params) };
         if ( not $reader ) {
             $self->status_message($@) if $@;
             $self->error_message('Failed to create '.$reader_class);
             return;
         }
+
         for ( 1..$cnt ) {
             push @readers, $reader;
         }
@@ -67,12 +67,11 @@ sub create {
     return $self;
 }
 
-sub _parse_reader_config {
+sub parse_reader_config {
     my ($self, $config) = @_;
 
     Carp::confess('No config to parse') if not $config;
 
-    $self->status_message('Parsing reader config: '.$config);
     my %params;
     my (@tokens) = split(':', $config);
     if ( not @tokens ) {
@@ -98,17 +97,16 @@ sub _parse_reader_config {
         return;
     }
 
-    if ( not $params{type} ) {
-        $params{type} = $self->_type_for_file($params{file});
-        return if not $params{type};
+    my $type = delete $params{type};
+    if ( not $type ) {
+        $type = $self->_type_for_file($params{file});
+        return if not $type;
     }
 
-    $self->status_message('Config: ');
-    for my $key ( keys %params ) {
-        $self->status_message($key.' => '.$params{$key});
-    }
+    my $reader_class = $self->_reader_class_for_type($type);
+    return if not $reader_class;
 
-    return %params;
+    return ($reader_class, \%params);
 }
 
 sub _type_for_file {

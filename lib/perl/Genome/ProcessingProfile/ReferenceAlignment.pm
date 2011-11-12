@@ -590,7 +590,9 @@ sub alignment_objects {
     
     for my $instr (@segmentable_data) {
         my @segments = $instr->get_segments();
-        if (@segments > 1 && $self->read_aligner_name ne 'imported') {
+
+        # take imported instrument data and split them by read group
+        if (@segments > 0 && $self->read_aligner_name ne 'imported' && $instr->isa('Genome::InstrumentData::Imported')) {
             for my $seg (@segments) {
                 push @instrument_data_output, {object=>$instr, segment=>$seg};
             }
