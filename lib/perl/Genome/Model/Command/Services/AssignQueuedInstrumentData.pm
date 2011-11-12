@@ -312,6 +312,27 @@ sub execute {
                     $self->_find_or_create_mc16s_454_qc_model($genome_instrument_data);
                 }
             } # looping through processing profiles for this instdata, finding or creating the default model
+        } elsif ( $instrument_data_type =~ /solexa/i
+                  and $genome_instrument_data->target_region_set_name
+                  and Genome::FeatureList->get(name => $genome_instrument_data->target_region_set_name)
+                  and Genome::FeatureList->get(name => $genome_instrument_data->target_region_set_name)->content_type eq 'validation'
+                ) {
+            my @validation = Genome::Model::SomaticValidation->get(
+                target_region_set_name => $genome_instrument_data->target_region_set_name,
+                subject => $genome_instrument_data->sample->source,
+            );
+
+            @validation = grep(($_->tumor_sample eq $genome_instrument_data->sample or $_->normal_sample eq $genome_instrument_data->sample), @validation);
+            if(@validation) {
+                my $ok = $self->assign_instrument_data_to_models($genome_instrument_data, Genome::FeatureList->get(name => $genome_instrument_data->target_region_set_name)->reference, @validation);
+                unless($ok) {
+                    push @process_errors,
+                        $self->error_message('Did not assign validation instrument data to any models.');
+                }
+            } else {
+                push @process_errors,
+                    $self->error_message('No validation models found to assign data.');
+            }
         } else {
             #record that the above code was skipped so we could reattempt it if more information gained later
             $pse->add_param('no_model_generation_attempted',1);
@@ -751,13 +772,7 @@ sub assign_instrument_data_to_models {
 
         if ($id_capture_target) {
             # keep only models with the specified capture target
-            my @inputs =
-            Genome::Model::Input->get(
-                model_id => [ map { $_->id } @models ],
-                name => 'target_region_set_name',
-                value_id => $id_capture_target,
-            );
-            @models = map { $_->model } @inputs;
+            @models = grep($_->can('target_region_set_name') && $_->target_region_set_name eq $id_capture_target, @models);
         } else {
             # keep only models with NO capture target
             my %capture_model_ids = map { $_->model_id => 1 } Genome::Model::Input->get(
@@ -1417,7 +1432,11 @@ sub add_processing_profiles_to_pses{
                 }
             }
             elsif ($instrument_data_type =~ /solexa/i) {
-                if ($taxon->species_latin_name =~ /homo sapiens/i) {
+                if($instrument_data->target_region_set_name and Genome::FeatureList->get(name => $instrument_data->target_region_set_name) and Genome::FeatureList->get(name => $instrument_data->target_region_set_name)->content_type eq 'validation') {
+                     #Do not create ref-align models--will try to assign to existing SomaticValidation models.
+                } elsif ($instrument_data->target_region_set_name and not Genome::FeatureList->get(name => $instrument_data->target_region_set_name)) {
+                    die $self->error_message('No feature list found for target region set name ' . $instrument_data->target_region_set_name);
+                } elsif ($taxon->species_latin_name =~ /homo sapiens/i) {
                     if ($self->_is_pcgp($pse)) {
                         my $individual = $organism_sample->patient;
                         my $pp_id = '2644306';
@@ -1427,9 +1446,11 @@ sub add_processing_profiles_to_pses{
                         $reference_sequence_names_for_processing_profile_ids{$pp_id} = 'GRCh37-lite-build37';
                     }
                     elsif ($self->_is_rna($pse)){
-                        my $pp_id = $self->_default_rna_seq_processing_profile_id;
-                        push @processing_profile_ids_to_add, $pp_id;
-                        $reference_sequence_names_for_processing_profile_ids{$pp_id} = 'GRCh37-lite-build37';
+                        if($instrument_data->is_paired_end){
+                            my $pp_id = $self->_default_rna_seq_processing_profile_id;
+                            push @processing_profile_ids_to_add, $pp_id;
+                            $reference_sequence_names_for_processing_profile_ids{$pp_id} = 'GRCh37-lite-build37';
+                        }
                     }
                     else {
                         my $pp_id = '2635769';

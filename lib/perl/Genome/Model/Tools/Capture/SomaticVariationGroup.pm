@@ -1200,10 +1200,10 @@ sub output_germline_files
 	###################################################################
 
 
-	my $varscan_germline_snps = `ls $build_dir/variants/snv/varscan-somatic-*/varscan-high-confidence-v1-/snvs.Germline.hc 2>/dev/null`;
+	my $varscan_germline_snps = `ls $build_dir/variants/snv/varscan-somatic-*/varscan-high-confidence-v1-*/snvs.Germline.hc 2>/dev/null`;
 	chomp($varscan_germline_snps);
 
-	my $varscan_loh_snps = `ls $build_dir/variants/snv/varscan-somatic-*/varscan-high-confidence-v1-/snvs.LOH.hc 2>/dev/null`;
+	my $varscan_loh_snps = `ls $build_dir/variants/snv/varscan-somatic-*/varscan-high-confidence-v1-*/snvs.LOH.hc 2>/dev/null`;
 	chomp($varscan_loh_snps);
 
 	if(-e $varscan_germline_snps && -e $varscan_loh_snps)

@@ -6,7 +6,7 @@ use Genome;
 use Class::ISA;
 
 class Genome::Project {
-    is => 'Genome::Notable',
+    is => ['Genome::Notable','Genome::Searchable'],
     id_generator => '-uuid',
     id_by => [
         id => { is => 'Text', }

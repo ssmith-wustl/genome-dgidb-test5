@@ -50,7 +50,7 @@ sub create {
             : eval{ Genome::Sys->open_file_for_writing($file); };
             if ( not $fh ) {
                 $self->error_message($@);
-                $self->error_message('Failed to open file ($file) in mode ('.$self->mode.')');
+                $self->error_message("Failed to open file ($file) in mode (".$self->mode.")");
                 return;
             }
         }

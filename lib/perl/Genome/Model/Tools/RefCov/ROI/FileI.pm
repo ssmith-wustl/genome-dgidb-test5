@@ -43,6 +43,7 @@ sub create {
     my $class = shift;
     my $self = $class->SUPER::create(@_);
     unless ($self) { return; }
+    if ($class eq 'Genome::Model::Tools::RefCov::ROI::Bam') { return $self; }
     my $fh = IO::File->new($self->file,'r');
     unless ($fh) { die('Failed to load file: '. $self->file); }
     $self->_fh($fh);

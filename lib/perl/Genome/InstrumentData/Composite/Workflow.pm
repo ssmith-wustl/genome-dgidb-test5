@@ -286,6 +286,10 @@ sub inputs_for_api_version {
             picard_version => '1.29',
             samtools_version => 'r599',
         },
+        'v2' => {
+            picard_version => '1.46',
+            samtools_version => 'r963',
+        },
     );
 
     unless(exists $VERSIONS{$version}) {

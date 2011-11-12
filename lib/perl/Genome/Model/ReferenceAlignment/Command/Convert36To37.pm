@@ -30,6 +30,7 @@ sub help_synopsis {
 sub execute {
     my $self = shift;
     my @build37_model_ids;
+    my %group_to_models;
     my %roi36to37 = Genome::Model::Command::Services::AssignQueuedInstrumentData->get_build36_to_37_rois();
     for my $model ($self->models) {
         my $result = Genome::Model::Command::Copy->execute(
@@ -43,11 +44,20 @@ sub execute {
         );
         map{$_->delete}grep{$_->name eq 'genotype_microarray'}$result->_new_model->inputs;
         if(exists $roi36to37{$model->region_of_interest_set_name}) {
-            print $model->id . " updating region of interest set name to " . $roi36to37{$model->region_of_interest_set_name} . "\n";
-            $model->region_of_interest_set_name($roi36to37{$model->region_of_interest_set_name});
+            print $result->_new_model->id . " updating region of interest set name to " . $roi36to37{$model->region_of_interest_set_name} . "\n";
+            $result->_new_model->region_of_interest_set_name($roi36to37{$model->region_of_interest_set_name});
         }
+
+        for my $group_id ($model->group_ids){
+            push @{$group_to_models{$group_id}}, $result->_new_model;
+        }
+
         $model->build_requested(1);
         push @build37_model_ids, $result->_new_model->id;
+    }
+    while(my ($group_id,$models) = each %group_to_models){
+        my $group = Genome::ModelGroup->get($group_id);
+        $group->assign_models(@$models);
     }
     print join(',',@build37_model_ids) . "\n";
     return 1;
