@@ -302,12 +302,13 @@ my $vcf_cmd = "gmt vcf-2-maf --vcf-file $vcf_file_per_sample --annotation-file $
     my $proximity_cmd = "gmt music proximity --maf-file $maf_file --reference-sequence $reference_fasta --output-file $output_dir/variant_proximity";
 
 #instead of pathways, use smg test to limit maf file input into mutation relations $maf_file_smg -- no script for this step yet
+#The smg test limits its --output-file to a --max-fdr cutoff. A full list of genes is always stored separately next to the output with prefix "_detailed". The FDR filtered SMG list can be used as input to "gmt music mutation-relation" thru --gene-list, so it limits its tests to SMGs only. No need to make a new MAF. Something similar could be implemented for clinical-correlation.
 
 #Ran clinical-correlation:
 #need clinical data file $clinical_data
 #example: /gscmnt/sata809/info/medseq/MRSA/analysis/Sureselect_49_Exomes_Germline/music/input/sample_phenotypes2.csv
 #this is not the logistic regression yet, found out that yyou and ckandoth did not put logit into music, but just into the R package that music runs
-my $clin_corr = "gmt music clinical-correlation --genetic-data-type gene --bam-list $bam_list --maf-file $maf_file_smg --output-file $output_dir/clin_corr_result --categorical-clinical-data-file $clinical_data";
+    my $clin_corr = "gmt music clinical-correlation --genetic-data-type gene --bam-list $bam_list --maf-file $maf_file_smg --output-file $output_dir/clin_corr_result --categorical-clinical-data-file $clinical_data";
 
 #instead of clinical correlation, we can call these stats directly
     #Ran mutation-relation:
