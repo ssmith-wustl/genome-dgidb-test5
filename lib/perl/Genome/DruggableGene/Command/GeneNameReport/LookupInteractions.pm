@@ -80,11 +80,9 @@ sub lookup_gene_identifiers {
 sub _lookup_gene_identifier {
     my $self = shift;
     my $gene_identifier = shift;
-    my $cmd = Genome::DruggableGene::Command::GeneNameReport::ConvertToEntrez->execute(gene_identifier => $gene_identifier);
-    my @entrez_gene_name_reports = $cmd->_entrez_gene_name_reports;
-    my @intermediates = $cmd->_intermediate_gene_name_reports;
+    my ($entrez_gene_name_reports, $intermediates) = Genome::DruggableGene::GeneNameReport->convert_to_entrez($gene_identifier);
     my @gene_name_reports = $self->_find_gene_name_reports_for_identifier($gene_identifier);
-    my @complete_gene_name_reports = (@entrez_gene_name_reports, @intermediates, @gene_name_reports);
+    my @complete_gene_name_reports = (@{$entrez_gene_name_reports}, @{$intermediates}, @gene_name_reports);
     @complete_gene_name_reports = uniq @complete_gene_name_reports;
     return @complete_gene_name_reports;
 }
