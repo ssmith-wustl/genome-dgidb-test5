@@ -83,6 +83,11 @@ sub create {
     return $self;
 }
 
+sub __display_name {
+    my $self = shift;
+    return $self->name."(".$self->id.")";
+}
+
 sub rename {
     my ($self, $new_name) = @_;
 
