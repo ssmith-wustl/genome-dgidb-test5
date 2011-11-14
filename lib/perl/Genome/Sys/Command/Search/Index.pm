@@ -98,12 +98,17 @@ sub daemon {
     local $SIG{TERM} = sub { print STDERR "\nDaemon will exit as soon as possible.\n"; $signaled_to_quit = 1 };
 
     while (!$signaled_to_quit) {
+        my $initial_serial_id = $UR::Context::GET_COUNTER;
+
         $self->info("Processing index queue...");
         $self->index_queued(max_changes_count => $self->max_changes_per_commit);
 
         $self->info("Commiting...");
         UR::Context->commit;
+        last if $signaled_to_quit;
 
+        $self->info("Pruning...");
+        $self->prune_objects_loaded_since($initial_serial_id);
         last if $signaled_to_quit;
 
         my $loop_sleep = $self->loop_sleep;
@@ -118,6 +123,62 @@ sub daemon {
 
     $self->info("Exiting...");
     return 1;
+}
+
+sub prune_objects_loaded_since {
+    my ($self, $since) = @_;
+    die unless defined $since;
+
+    # Need to unload objects loaded in each loop to prevent memory leak.
+
+    # This whole thing is debatable, i.e. "explicit cleanup" vs "automatic cleanup".
+    # View have to be manually cleaned up so I put that in Genome::Search. Objects without
+    # data sources do not get unloaded via automatic cleanup which means UR::Values do not.
+    # Until that is working automatic cleanup is not an option. Even once it is though it
+    # seems like it would be better to just manually cleanup in the interest of efficiency.
+
+    my @all_objects_loaded = (
+        UR::Context->current->all_objects_loaded('UR::Object'),
+    );
+    $self->info("\tBefore pruning all_objects_loaded has " . scalar(@all_objects_loaded));
+
+    # This could be replaced with automatic cleanup by enabling cache pruning.
+    my @objects_to_unload =
+        grep { !$_->isa('UR::DataSource::RDBMS::Entity') }
+        grep { $_->__meta__->data_source }
+        grep { $_->{'__get_serial'} > $since }
+        @all_objects_loaded;
+    for (@objects_to_unload) {
+        last if $signaled_to_quit;
+        my $display_name = "(Class: " . $_->class . ", ID: " . $_->id. ")";
+        unless ($_->unload()) {
+            $self->debug("Failed to unload object $display_name.");
+        } else {
+            $self->debug("Unloaded object $display_name.");
+        }
+    }
+
+    @all_objects_loaded = (
+        UR::Context->current->all_objects_loaded('UR::Object'),
+    );
+    $self->info("\tAfter pruning all_objects_loaded has " . scalar(@all_objects_loaded));
+    $self->debug_loaded_objects(@all_objects_loaded);
+
+    return 1;
+}
+
+sub debug_loaded_objects {
+    my $self = shift;
+    my @loaded_objects = @_;
+    my %loaded_classes;
+    for (@loaded_objects) {
+        $loaded_classes{$_->class}++;
+    }
+    my @keys = sort { $loaded_classes{$a} <=> $loaded_classes{$b} } keys %loaded_classes;
+    if (@keys > 10) { @keys = @keys[-10..-1] }
+    for (@keys) {
+        $self->debug("$_ has " . $loaded_classes{$_});
+    }
 }
 
 sub list {
