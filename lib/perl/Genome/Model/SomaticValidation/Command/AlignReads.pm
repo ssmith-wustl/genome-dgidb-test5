@@ -47,9 +47,10 @@ sub execute {
     my $self = shift;
     my $build = $self->build;
 
+    my @instrument_data = $build->instrument_data;
     my $result = Genome::InstrumentData::Composite->get_or_create(
         inputs => {
-            instrument_data => [$build->instrument_data],
+            instrument_data => \@instrument_data,
             reference_sequence_build => $build->reference_sequence_build,
         },
         strategy => $build->processing_profile->alignment_strategy,
@@ -57,8 +58,8 @@ sub execute {
     );
 
     my @bams = $result->bam_paths;
-    unless(scalar(@bams) == 2) {
-        die $self->error_message('Found ' . scalar(@bams) . ' from alignment when 2 expected.');
+    unless(scalar(@bams) == scalar(@instrument_data)) {
+        die $self->error_message('Found ' . scalar(@bams) . ' from alignment when ' . scalar(@instrument_data) . ' expected.');
     }
 
     $self->status_message("Alignment BAM paths:\n " . join("\n ", @bams));
