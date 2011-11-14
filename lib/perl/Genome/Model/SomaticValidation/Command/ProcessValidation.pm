@@ -11,7 +11,6 @@ class Genome::Model::SomaticValidation::Command::ProcessValidation {
     has_input => [
         filtered_validation_file    => { is => 'Text', doc => "bed file of variants passing filter", is_optional => 0 },
         min_coverage                => { is => 'Text', doc => "Minimum coverage to call a site", is_optional => 1 },
-        variants_file               => { is => 'Text', doc => "File of variants to report on", },
         output_file                 => { is => 'Text', doc => "Output file for validation results", is_output => 1 },
         output_plot                 => { is => 'Boolean', doc => "Optional plot of variant allele frequencies", is_optional => 1, },
         build_id => {
