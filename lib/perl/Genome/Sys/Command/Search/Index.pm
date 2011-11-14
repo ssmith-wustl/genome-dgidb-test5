@@ -22,6 +22,10 @@ class Genome::Sys::Command::Search::Index {
             is => 'Number',
             default => 250,
         },
+        loop_sleep => {
+            is => 'Number',
+            default => 10,
+        },
     ],
 };
 
@@ -102,8 +106,9 @@ sub daemon {
 
         last if $signaled_to_quit;
 
-        $self->info("Sleeping for 10 seconds...");
-        sleep 10;
+        my $loop_sleep = $self->loop_sleep;
+        $self->info("Sleeping for $loop_sleep seconds...");
+        sleep $loop_sleep;
 
         last if $signaled_to_quit;
 
