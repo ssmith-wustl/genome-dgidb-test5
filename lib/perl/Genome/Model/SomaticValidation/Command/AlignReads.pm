@@ -58,8 +58,13 @@ sub execute {
     );
 
     my @bams = $result->bam_paths;
-    unless(scalar(@bams) == scalar(@instrument_data)) {
-        die $self->error_message('Found ' . scalar(@bams) . ' from alignment when ' . scalar(@instrument_data) . ' expected.');
+
+    my $num_expected_samples = 0;
+    $num_expected_samples++ if $self->tumor_sample;
+    $num_expected_samples++ if $self->normal_sample;
+
+    unless(scalar(@bams) == $num_expected_samples) {
+        die $self->error_message('Found ' . scalar(@bams) . ' from alignment when ' . $num_expected_samples . ' expected.');
     }
 
     $self->status_message("Alignment BAM paths:\n " . join("\n ", @bams));
