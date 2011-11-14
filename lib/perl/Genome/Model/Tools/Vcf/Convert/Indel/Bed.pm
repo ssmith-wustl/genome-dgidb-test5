@@ -33,18 +33,23 @@ sub parse_line {
 
     my ($chr, $pos1, $pos2, $alleles) = split("\t", $line);
     my ($ref, $alt) = split("/", $alleles);
+    my $pos;
 
     my $reference_allele = $self->get_base_at_position($chr, $pos1);
     if ($ref eq "0") { #insertion
         $ref = $reference_allele;
         $alt = $ref.$alt;
+        $pos = $pos1;
     }
     elsif ($alt eq "0") {#deletion
         $alt = $reference_allele;
         $ref = $alt.$ref;
+        $pos = $pos1;
     }
     else {
-        die("Indel type not recognized\n");
+        my @alt_alleles = Genome::Info::IUB->variant_alleles_for_iub($ref, $alt);
+        $alt = join(",", @alt_alleles);
+        $pos = $pos2;
     }
     
     my $id = ".";
