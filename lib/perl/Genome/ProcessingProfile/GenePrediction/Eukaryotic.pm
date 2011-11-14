@@ -92,6 +92,18 @@ class Genome::ProcessingProfile::GenePrediction::Eukaryotic {
     ],
 };
 
+sub validate_created_object {
+    my $self = shift;
+    if ($self->skip_rnammer == 1 and $self->skip_trnascan == 1 and $self->skip_rfamscan == 1
+            and $self->skip_masking_if_no_rna == 0) {
+        $self->error_message('All RNA predictors are disabled and the rna masking step has been ' .
+            'configured to fail in the case that no RNA predictions can be found! This processing ' .
+            'profile is invalid!');
+        return 0;
+    }
+    return $self->SUPER::validate_created_object;
+}
+
 sub _resolve_type_name_for_class {
     return "gene prediction";
 }
