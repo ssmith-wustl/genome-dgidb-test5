@@ -94,8 +94,8 @@ my $signaled_to_quit;
 sub daemon {
     my $self = shift;
 
-    local $SIG{INT} = sub { $signaled_to_quit = 1 };
-    local $SIG{TERM} = sub { $signaled_to_quit = 1 };
+    local $SIG{INT} = sub { print STDERR "\nDaemon will exit as soon as possible.\n"; $signaled_to_quit = 1 };
+    local $SIG{TERM} = sub { print STDERR "\nDaemon will exit as soon as possible.\n"; $signaled_to_quit = 1 };
 
     while (!$signaled_to_quit) {
         $self->info("Processing index queue...");
@@ -116,6 +116,7 @@ sub daemon {
         UR::Context->reload('Genome::Search::IndexQueue');
     }
 
+    $self->info("Exiting...");
     return 1;
 }
 
