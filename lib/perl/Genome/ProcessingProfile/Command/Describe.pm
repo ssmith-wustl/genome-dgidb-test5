@@ -17,7 +17,12 @@ class Genome::ProcessingProfile::Command::Describe {
             doc => 'Processing profile to list properties and params.',
         },
     ],
+    doc => 'List all params and values for processing profiles.',
 };
+
+sub help_detail {
+    return 'List all params and values for processing profiles.';
+}
 
 sub execute {
     my $self = shift;
