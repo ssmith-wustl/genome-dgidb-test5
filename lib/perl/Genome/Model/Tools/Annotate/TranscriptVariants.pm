@@ -348,9 +348,6 @@ END {
 sub execute { 
     my $self = shift;
 
-    # enable object cache pruning
-    my ($orig_lowater, $orig_highwater) = Genome::Model::Tools::Annotate->object_cache_sizes();
-
     unless($self->variant_file xor $self->variant_bed_file){
         $self->error_message("Please specify either a --variant-file or a --variant-bed-file");
         return;
@@ -621,7 +618,6 @@ sub execute {
         $self->status_message("$processed_variants variants processed " . scalar(localtime)) unless ($processed_variants % 10000);
     }
     $we_are_done_flag = 1;
-    Genome::Model::Tools::Annotate->object_cache_sizes($orig_lowater, $orig_highwater);
 
     my $annotation_loop_stop_time = time();
 
