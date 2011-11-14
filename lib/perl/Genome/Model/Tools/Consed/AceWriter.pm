@@ -68,8 +68,9 @@ sub add_assembly_tags {
     foreach my $tag ( @$tags ) {
         $self->_at_buffer->print (
             sprintf (
-                "\nWA{\n%s %s%s%s\n}\n",,
+                "\nWA{\n%s %s%s%s%s\n}\n",,
                 $tag->{tag_type},
+                (exists $tag->{program}) ? $tag->{program}.' ' : '' ,
                 $tag->{date},
                 ( $tag->{no_trans} ? ' ' . $tag->no_trans : '' ),
                 ( $tag->{data} ? "\n".$tag->{data} : '' ),

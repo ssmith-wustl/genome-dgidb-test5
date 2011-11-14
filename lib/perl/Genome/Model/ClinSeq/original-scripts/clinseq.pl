@@ -126,7 +126,7 @@ $gene_symbol_lists_dir = &checkDir('-dir'=>$gene_symbol_lists_dir, '-clear'=>"no
 #Import a set of gene symbol lists (these files must be gene symbols in the first column, .txt extension, tab-delimited if multiple columns, one symbol per field, no header)
 #Different sets of genes list could be used for different purposes
 #Fix gene names as they are being imported
-my @symbol_list_names1 = qw (KinasesList CancerGeneCensusList DrugBankAntineoplastic DrugBankInhibitors Druggable_RussLampel TfcatTransFactors FactorBookTransFactors);
+my @symbol_list_names1 = qw (Kinases KinasesGO CancerGeneCensus DrugBankAntineoplastic DrugBankInhibitors Druggable_RussLampel TfcatTransFactors FactorBookTransFactors);
 $step++; print MAGENTA, "\n\nStep $step. Importing gene symbol lists (@symbol_list_names1)", RESET;
 my $gene_symbol_lists1 = &importGeneSymbolLists('-gene_symbol_lists_dir'=>$gene_symbol_lists_dir, '-symbol_list_names'=>\@symbol_list_names1, '-entrez_ensembl_data'=>$entrez_ensembl_data, '-verbose'=>0);
 
@@ -160,7 +160,7 @@ $step++; print MAGENTA, "\n\nStep $step. Summarizing SNVs and Indels", RESET;
 #Run CNView analyses on the CNV data to identify amplified/deleted genes
 $step++; print MAGENTA, "\n\nStep $step. Identifying CNV altered genes", RESET;
 if ($wgs){
-  my @cnv_symbol_lists = qw (KinasesList CancerGeneCensusListPlus DrugBankAntineoplastic DrugBankInhibitors Ensembl_v58);
+  my @cnv_symbol_lists = qw (Kinases CancerGeneCensusPlus DrugBankAntineoplastic DrugBankInhibitors Ensembl_v58);
   &identifyCnvGenes('-data_paths'=>$data_paths, '-out_paths'=>$out_paths, '-reference_build_name'=>$reference_build_ucsc, '-common_name'=>$common_name, '-patient_dir'=>$patient_dir, '-gene_symbol_lists_dir'=>$gene_symbol_lists_dir, '-symbol_list_names'=>\@cnv_symbol_lists, '-verbose'=>$verbose);
 }
 
@@ -584,7 +584,7 @@ sub identifyCnvGenes{
       my $cnview_cmd = "$cnview_script  --reference_build=$reference_build_name  --cnv_file=$cnv_data_file  --working_dir=$cnv_dir  --sample_name=$common_name  --gene_targets_file=$gene_targets_file  --name='$symbol_list_name'  --force=1";
       #print "\n\n$cnview_cmd";
       system ($cnview_cmd);
-      #  CNView.pl  --reference_build=hg19  --cnv_file=/gscmnt/ams1184/info/model_data/2875816457/build111674790/variants/cnvs.hq  --working_dir=/gscmnt/sata132/techd/mgriffit/hg1/cnvs/  --sample_name=hg1  --gene_targets_file=/gscmnt/sata132/techd/mgriffit/reference_annotations/hg19/gene_symbol_lists/CancerGeneCensusListPlus.txt  --name='CancerGeneCensusListPlus'  
+      #  CNView.pl  --reference_build=hg19  --cnv_file=/gscmnt/ams1184/info/model_data/2875816457/build111674790/variants/cnvs.hq  --working_dir=/gscmnt/sata132/techd/mgriffit/hg1/cnvs/  --sample_name=hg1  --gene_targets_file=/gscmnt/sata132/techd/mgriffit/reference_annotations/hg19/gene_symbol_lists/CancerGeneCensusPlus.txt  --name='CancerGeneCensusPlus'  
     }
 
     #Store the gene amplification/deletion results files for the full Ensembl gene list so that these file can be annotated

@@ -48,7 +48,7 @@ class Genome::Model::SomaticValidation {
         },
         design_set => {
             is => 'Genome::FeatureList',
-            via => 'inputs', to => 'value', where => [ name => 'desgin_set' ],
+            via => 'inputs', to => 'value', where => [ name => 'design_set' ],
             is_mutable => 1,
         },
         tumor_sample => {

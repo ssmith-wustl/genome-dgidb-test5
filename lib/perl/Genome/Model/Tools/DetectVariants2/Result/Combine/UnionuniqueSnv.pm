@@ -71,8 +71,29 @@ sub _validate_output {
     unless ($intersect_command->execute) {
         die $self->error_message("Failed to execute intersect command to validate output");
     }
-
     my $offset_lines = $self->line_count($temp_intersect_file);
+
+    # We also need to find out if there were any duplicates within each of the individual files
+    # Using joinx with --merge-only will do a union, effectively
+    my $temp_unique_a = $scratch_dir . "/file_a.unique";
+    my $unique_a = Genome::Model::Tools::Joinx::Union->create(
+        input_files => [$input_a_file],
+        output_file => $temp_unique_a,
+    );
+    unless ($unique_a->execute) {
+        die $self->error_message("Failed to execute unique_a command to validate output");
+    }
+    $offset_lines += $self->line_count($input_a_file) - $self->line_count($temp_unique_a);
+
+    my $temp_unique_b = $scratch_dir . "/file_b.unique";
+    my $unique_b = Genome::Model::Tools::Joinx::Union->create(
+        input_files => [$input_b_file],
+        output_file => $temp_unique_b,
+    );
+    unless ($unique_b->execute) {
+        die $self->error_message("Failed to execute unique_b command to validate output");
+    }
+    $offset_lines += $self->line_count($input_b_file) - $self->line_count($temp_unique_b);
 
     unless(($input_total - $output_total - $offset_lines) == 0){
         die $self->error_message("Combine operation in/out check failed. Input total: $input_total \toutput total: $output_total\t with an intersected offset of $offset_lines");

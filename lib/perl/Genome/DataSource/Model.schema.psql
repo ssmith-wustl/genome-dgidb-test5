@@ -1,7 +1,7 @@
 DROP SCHEMA IF EXISTS model CASCADE;
 CREATE SCHEMA model AUTHORIZATION genome;
 
-SELECT set_config('search_path', current_setting('search_path') || ',model', false);
+SELECT set_config('search_path', current_setting('search_path') || ', model', false);
 ALTER USER genome SET search_path FROM current;
 
 CREATE TABLE model.processing_profile (
