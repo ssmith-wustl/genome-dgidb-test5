@@ -46,6 +46,11 @@ EOS
 sub execute {
     my $self = shift;
 
+    if ($self->skip_execution) {
+        $self->status_message("Skip execution flag is set, exiting.");
+        return 1;
+    }
+
     $self->status_message("Running fgenesh gene predictor on sequence in " . $self->fasta_file .
         " using model file " . $self->model_file . "!");
 
@@ -242,7 +247,7 @@ sub execute {
 
         }
 
-        # Unux operating systems (and probably Windows/OSX/etc as well) have a limit on how many subdirectories
+        # Unix operating systems (and probably Windows/OSX/etc as well) have a limit on how many subdirectories
         # a given directory can have. For Unix it's 32k. Fgenesh creates a temp directory in /tmp for every sequence
         # it parses which are cleaned up after all parsing is done. This can exceed 32k for some fasta files. To prevent
         # any problems, these directories are manually cleaned up here since they aren't needed anymore.

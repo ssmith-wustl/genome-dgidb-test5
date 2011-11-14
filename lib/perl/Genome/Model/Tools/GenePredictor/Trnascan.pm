@@ -43,6 +43,12 @@ EOS
 
 sub execute {
     my $self = shift;
+
+    if ($self->skip_execution) {
+        $self->status_message("Skip execution flag is set, exiting.");
+        return 1;
+    }
+
     $self->status_message("Running trnascan on sequence in " . $self->fasta_file);
 
     unless (-d $self->raw_output_directory) {

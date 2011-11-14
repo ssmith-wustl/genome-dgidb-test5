@@ -57,6 +57,12 @@ EOS
 
 sub execute {
     my $self = shift;
+
+    if ($self->skip_execution) {
+        $self->status_message("Skip execution flag is set, exiting.");
+        return 1;
+    }
+
     $self->status_message("Running rfamscan on sequence in " . $self->fasta_file);
 
     # Figure out the exact path to the executable instead of relying on a symlink in /gsc/scripts/bin, which
