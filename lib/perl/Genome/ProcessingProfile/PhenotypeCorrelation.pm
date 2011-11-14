@@ -263,6 +263,7 @@ sub _execute_build {
     # we'll figure out what to do about the analysis_strategy next...
 
 =cut
+
 if ($self->phenotype-analysis-strategy eq 'case-control') { #unrelated individuals, case-control -- MRSA
 
 #change vcf -> maf here, which also needs annotation files
@@ -356,23 +357,7 @@ my $vcf_cmd = "gmt vcf-2-maf --vcf-file $vcf_file_per_sample --annotation-file $
             die $self->error_message;
         }
 
-
-
 =cut
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
     return 1;
 }
