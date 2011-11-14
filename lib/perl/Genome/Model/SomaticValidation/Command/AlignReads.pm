@@ -60,8 +60,8 @@ sub execute {
     my @bams = $result->bam_paths;
 
     my $num_expected_samples = 0;
-    $num_expected_samples++ if $self->tumor_sample;
-    $num_expected_samples++ if $self->normal_sample;
+    $num_expected_samples++ if $build->tumor_sample;
+    $num_expected_samples++ if $build->normal_sample;
 
     unless(scalar(@bams) == $num_expected_samples) {
         die $self->error_message('Found ' . scalar(@bams) . ' from alignment when ' . $num_expected_samples . ' expected.');
