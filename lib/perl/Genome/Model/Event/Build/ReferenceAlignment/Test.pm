@@ -398,12 +398,8 @@ sub remove_data {
 
 sub create_test_pp {
     my $self = shift;
-
     my %processing_profile = @_;
-    my $create_pp_command = Genome::ProcessingProfile::Command::Create::ReferenceAlignment->create(%processing_profile);
-    unless($create_pp_command->execute()) {
-        confess("Failed to create processing_profile for test:  $!");
-    }
+    Genome::ProcessingProfile::ReferenceAlignment->create(%processing_profile);
     return 1;
 }
 
