@@ -323,7 +323,7 @@ sub _create_operations_for_alignment_tree {
 
     return @operations if exists $tree->{$self->_operation_key($instrument_data, %options)}; #generation already complete for this subtree
 
-    push @operations, $self->_generate_operation($tree, $instrument_data);
+    push @operations, $self->_generate_operation($tree, $instrument_data, %options);
     if(exists $tree->{parent}) {
         push @operations, $self->_create_operations_for_alignment_tree($tree->{parent}, $instrument_data);
     }
