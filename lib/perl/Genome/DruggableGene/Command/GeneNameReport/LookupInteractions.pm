@@ -59,7 +59,7 @@ sub preload_druggable_gene_objects {
 sub lookup_gene_identifiers {
     my $self = shift;
 
-    my @gene_identifiers = $self->_get_gene_identifiers();
+    my @gene_identifiers = $self->_read_gene_file();
     unless(@gene_identifiers){
         $self->error_message('No gene identifiers in gene_file ' . $self->gene_file . ', exiting');
         return;
@@ -182,7 +182,7 @@ sub _build_interaction_line {
     return $interaction_line;
 }
 
-sub _get_gene_identifiers{
+sub _read_gene_file{
     my $self = shift;
     my $gene_file = $self->gene_file;
     my @gene_identifiers;
