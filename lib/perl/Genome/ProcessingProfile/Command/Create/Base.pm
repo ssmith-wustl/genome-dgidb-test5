@@ -158,7 +158,7 @@ sub _properties_for_class {
 
 sub _target_class_property_names {
     my $self = shift;
-    my %properties = $self->_properties_for_class( $self->_target_class ) or return;
+    my %properties = $self->_properties_for_class( $self->_target_class_name ) or return;
     return keys %properties;
 }
 
