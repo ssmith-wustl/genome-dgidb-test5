@@ -29,6 +29,12 @@ class Genome::Model::Tools::GenePredictor {
             is_output => 1,
             doc => 'Predictions are written to files in this directory',
         },
+        skip_execution => {
+            is => 'Boolean',
+            is_input => 1,
+            default => 0,
+            doc => 'If set, the tool will return immediately without executing',
+        },
     ],
 };
 

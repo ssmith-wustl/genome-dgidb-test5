@@ -34,6 +34,7 @@
 #- RNA-seq variant validation
 #  - BAM read counts ... WGS, Exome, RNA
 #  - Cufflinks expression.  FPKM + percentile
+#  - Assess RNA-seq BAM read counts for Tier 2,3 SNVs.  High values might indicate an erroneous classification as Tier 2,3.  In theory RNA-seq should only cover Tier 1 ... 
 #- RNA-seq outlier analysis
 #  - Differential / relative comparisons to other samples / tumors of the same type
 #- SVs.  Annotation strategies, validation, filtering
@@ -46,6 +47,8 @@
 #  - Find the genes that overlap these regions
 #- Overlap of observed mutations with Cosmic / OMIM sites (use MUSIC?)
 #- Overlap of observed mutations with TGI recurrent sites
+
+
 
 #Summary stats.
 #A descriptive stats, question/answer table

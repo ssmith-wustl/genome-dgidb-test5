@@ -142,11 +142,15 @@ sub execute {
 
         my $next_read = $all_reads_bam->read1;
         my $next_read_flag = $next_read->flag;
-        my $next_read_end;
-        if ($next_read_flag & 64 ) {
-            $next_read_end = 1;
-        } elsif ( $next_read_flag & 128 ) {
-            $next_read_end = 2;
+        my $next_read_end = 0;
+        if ($next_read_flag & 1) {
+            if ($next_read_flag & 64 ) {
+                $next_read_end = 1;
+            } elsif ( $next_read_flag & 128 ) {
+                $next_read_end = 2;
+            } else {
+                die ('Lost read pair info for: '. $next_read->qname);
+            }
         }
         my $next_read_name = $next_read->qname .'/'. $next_read_end;
         # If the unaligned read is not the same as the aligned read, we have an unmapped read
@@ -157,10 +161,14 @@ sub execute {
             $unaligned_bam->write1($next_read);
             $next_read = $all_reads_bam->read1;
             $next_read_flag = $next_read->flag;
-            if ($next_read_flag & 64 ) {
-                $next_read_end = 1;
-            } elsif ( $next_read_flag & 128 ) {
-                $next_read_end = 2;
+            if ($next_read_flag & 1) {
+                if ($next_read_flag & 64 ) {
+                    $next_read_end = 1;
+                } elsif ( $next_read_flag & 128 ) {
+                    $next_read_end = 2;
+                } else {
+                    die ('Lost read pair info for: '. $next_read->qname);
+                }
             }
             $next_read_name = $next_read->qname .'/'. $next_read_end;
         }
@@ -270,13 +278,18 @@ sub validate_aligned_bam_header {
 
 sub validate_query_name_format {
     my $bam = shift;
+
     my $start_position = $bam->tell;
     my $align = $bam->read1;
+
     Bio::DB::Bam::seek($bam,$start_position,0);
     my $query_name = $align->qname;
-    unless ($query_name =~ /^\S+:\d+:\d+:\d+:\d+[#ACTG0]*$/) {
-        warn('Query name '. $query_name .' is invalid!');
-        return;
+    my $align_flag = $align->flag;
+    if ($align_flag & 1) {
+        unless ($query_name =~ /^\S+:\d+:\d+:\d+:\d+[#ACTG0]*$/) {
+            warn('Query name '. $query_name .' is invalid!');
+            return;
+        }
     }
     return $query_name;
 }

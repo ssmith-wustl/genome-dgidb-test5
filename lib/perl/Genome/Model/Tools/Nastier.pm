@@ -94,7 +94,7 @@ sub build_command_string {
     my $cmd = $self->path_to_nastier;
     #mandidatory
     $cmd .= ' --query_FASTA '.$self->query_FASTA;
-    $cmd .= ' --dbNAST '.$db_nast_file;
+    $cmd .= ' --db_NAST '.$db_nast_file;
     $cmd .= ' --db_FASTA '.$db_fasta_file;
     #optional with default already set in orig script
     $cmd .= ' --num_top_hits '.$self->num_top_hits if $self->num_top_hits;

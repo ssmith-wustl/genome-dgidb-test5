@@ -498,6 +498,14 @@ $pse_3->add_param('subject_id', $sample->id);
 $pse_3->add_param('processing_profile_id', $processing_profile->id);
 $pse_3->add_reference_sequence_build_param_for_processing_profile( $processing_profile, $ref_seq_build);
 
+my $fl = Genome::FeatureList->__define__(
+    id => 'ABCDEFG',
+    name => 'test-capture-data',
+    format => 'true-BED',
+    content_type => 'capture',
+    reference => $ref_seq_build,
+);
+
 my $instrument_data_4 = Genome::InstrumentData::Solexa->create(
     id => '-103',
     library_id => $library->id, 

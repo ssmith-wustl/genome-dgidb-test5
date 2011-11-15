@@ -86,7 +86,7 @@ sub help_synopsis_for_create {
       --group-samples-for-genotyping-by 'trio', \
       --phenotype-analysis-strategy     'case-control'
 
-    genome propulation-group define 'Ceft-Lip-cohort-WUTGI-2011' CL001 CL002 CL003
+    genome propulation-group define 'Cleft-Lip-cohort-WUTGI-2011' CL001 CL002 CL003
 
     genome model define phenotype-correlation \
         --name                  'Cleft-Lip-v1' \
@@ -254,11 +254,110 @@ sub _execute_build {
         }
     }
 
+    # we now have a VCF file
+
     # dump pedigree data into a file
 
     # dump clinical data into a file
 
     # we'll figure out what to do about the analysis_strategy next...
+
+=cut
+
+if ($self->phenotype-analysis-strategy eq 'case-control') { #unrelated individuals, case-control -- MRSA
+
+#change vcf -> maf here, which also needs annotation files
+#make $maf_file -- might need one with everything and one that doesnt have silent variants in it
+my $vcf_cmd = "gmt vcf-2-maf --vcf-file $vcf_file_per_sample --annotation-file $annotation_file_per_sample --output-file $maf_file"; #won't work in this context of a unified vcf but we could make it work
+
+#start workflow to find significantly mutated genes in our set:
+    #get list of bams and load into tmp file named $bam_list
+    #for exome set $target_region_set_name_bedfile to be all exons including splice sites, these files are maintained by cyriac
+    #not sure how to define $output_dir but in a workflow context this just needs to be a clean folder. Perhaps in the model build context this would be ...model/build/music/bmr/
+    my $bmr_cmd = "gmt music bmr calc-covg --bam-list $bam_list --output-dir $output_dir --reference-sequence $reference_fasta --roi-file $target_region_set_name_bedfile --cmd-prefix bsub --cmd-list-file $temp_file";
+
+    #Submitted all the jobs in cmd_list_file to LSF:
+    bash $temp_file
+
+    #After the parallelized commands are all done, merged the individual results using the same tool that generated the commands: - MUST KNOW ABOVE STEP IS COMPLETE
+    my $brm_step2_cmd = "gmt music bmr calc-covg --bam-list $bam_list --output-dir $output_dir --reference-sequence $reference_fasta --roi-file $target_region_set_name_bedfile";
+
+    #Calculated mutation rates:
+    my $brm_step2_cmd = "gmt music bmr calc-bmr --bam-list $bam_list --maf-file $maf_file --output-dir $output_dir --reference-sequence $reference_fasta --roi-file $target_region_set_name_bedfile --show-skipped"; #show skipped doesn't work in workflow context
+
+    #Ran SMG test:
+    my $smg_cmd = "gmt music smg --gene-mr-file $output_dir/gene_mrs --output-file $output_dir/smgs";
+
+#get some pathway information, not used now but we could technically choose to run only genes from certain pathways
+    #Ran PathScan on the KEGG DB (Larger DBs take longer):
+    #get KEGG DB FILE $kegg_db
+    my $pathscan_cmd = "gmt music path-scan --bam-list $bam_list --gene-covg-dir $output_dir/gene_covgs/ --maf-file $maf_file --output-file $output_dir/sm_pathways_kegg --pathway-file $kegg_db --bmr 8.9E-07 --min-mut-genes-per-path 2";
+
+    #Ran COSMIC-OMIM tool:
+    my $cosmic_cmd = "gmt music cosmic-omim --maf-file $maf_file --output-file $maf_file.cosmic_omim";
+
+    #Ran Pfam tool:
+    my $pfam_cmd = "gmt music pfam --maf-file $maf_file --output-file $maf_file.pfam";
+
+    #Ran Proximity tool:
+    my $proximity_cmd = "gmt music proximity --maf-file $maf_file --reference-sequence $reference_fasta --output-file $output_dir/variant_proximity";
+
+#instead of pathways, use smg test to limit maf file input into mutation relations $maf_file_smg -- no script for this step yet
+#The smg test limits its --output-file to a --max-fdr cutoff. A full list of genes is always stored separately next to the output with prefix "_detailed". The FDR filtered SMG list can be used as input to "gmt music mutation-relation" thru --gene-list, so it limits its tests to SMGs only. No need to make a new MAF. Something similar could be implemented for clinical-correlation.
+
+#Ran clinical-correlation:
+#need clinical data file $clinical_data
+#example: /gscmnt/sata809/info/medseq/MRSA/analysis/Sureselect_49_Exomes_Germline/music/input/sample_phenotypes2.csv
+#this is not the logistic regression yet, found out that yyou and ckandoth did not put logit into music, but just into the R package that music runs
+    my $clin_corr = "gmt music clinical-correlation --genetic-data-type gene --bam-list $bam_list --maf-file $maf_file_smg --output-file $output_dir/clin_corr_result --categorical-clinical-data-file $clinical_data";
+
+#instead of clinical correlation, we can call these stats directly
+    #Ran mutation-relation:
+    my $mutrel_cmd = "gmt music mutation-relation --bam-list $bam_list --maf-file $maf_file_smg --output-file $output_dir/mutation_relations.csv --permutations 10000"; #number of permutations can be a variable or something
+
+    #break up clinical data into two files, one for explanatory variable and one for covariates
+    #sample_infection.csv = $expl_file
+    #Sample_Name	Levels of Infection Invasiveness (0=control, 1=case)
+    #H_MRS-6305-1025125	0
+    #H_MRS-6401-1025123	1
+
+    #sample_phenotypes.csv = $pheno_file
+    #Sample_Name	Age at Time of Infection (years)	Race (1 white 2 black 3 asian)	Gender (1 male 2 female)
+    #H_MRS-6305-1025125	10	1	1
+    #H_MRS-6401-1025123	16	1	1
+
+
+    #make .R file example
+        ## Build temp file for extra positions to highlight ##
+        my ($tfh,$temp_path) = Genome::Sys->create_temp_file;
+        unless($tfh) {
+            $self->error_message("Unable to create temporary file $!");
+            die;
+        }
+        $temp_path =~ s/\:/\\\:/g;
+        my $R_command = <<"_END_OF_R_";
+    options(error=recover)
+    source("stat.lib", chdir=TRUE)
+    #this should work, but I havent tested using the .csv out of mut rel -- wschierd
+    mut.file="$output_dir/mutation_relations.csv" 
+    inf.file="$expl_file";
+    pheno.file="$pheno_file";
+    output.file="$output_dir/logit_out_cor.csv";
+    #to do logistic regression, might need /gscuser/yyou/git/genome/lib/perl/Genome/Model/Tools/Music/stat.lib.R -- talk to Cyriac here
+    cor2test(y=inf.file, x=mut.file, cov=pheno.file, outf=output.file, method="logit", sep="\t");
+    _END_OF_R_
+        print $tfh "$R_command\n";
+
+        my $cmd = "R --vanilla --slave \< $temp_path";
+        my $return = Genome::Sys->shellcmd(
+            cmd => "$cmd",
+        );
+        unless($return) { 
+            $self->error_message("Failed to execute: Returned $return");
+            die $self->error_message;
+        }
+
+=cut
 
     return 1;
 }

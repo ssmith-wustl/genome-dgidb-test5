@@ -46,7 +46,7 @@ class Genome::ProcessingProfile::Tester {
 };
 
 class Genome::ProcessingProfile::Command::Create::Tester {
-    is => 'Genome::ProcessingProfile::Command::Create',
+    is => 'Genome::ProcessingProfile::Command::Create::Base',
     has => [ 
         sequencing_platform => { 
             is => 'Text',
@@ -70,6 +70,8 @@ class Genome::ProcessingProfile::Command::Create::Tester {
     ],
 };
 
+sub Genome::ProcessingProfile::Command::Create::Tester::_target_class_name { return 'Genome::ProcessingProfile::Tester' };
+
 # Create a pp
 my %params = (
     name => '__TEST__PP__',
@@ -91,51 +93,19 @@ ok(!$creator->execute, 'Failed as expected - tried to create same processing pro
 ok(
     Genome::ProcessingProfile::Command::Create::Tester->execute(
         name => 'Tester for ROI UNDEF',
-        based_on => $pp->id,
+        based_on => $pp,
         roi => 'UNDEF',
     ),
     'Create new tester pp w/ based on, but changed roi to UNDEF'
 );
 
-# invalid based on pp
-$creator = Genome::ProcessingProfile::Command::Create::Tester->create(
-    name => 'FAILS',
-    based_on => 'no way this pp exists',
-);
-ok(!$creator, 'Failed as expected - tried to base on pp that does not exist');
 
 # w/o changing anything (fails)
 $creator = Genome::ProcessingProfile::Command::Create::Tester->create(
     name => 'FAILS',
-    based_on => $pp->id
+    based_on => $pp
 );
 ok(!$creator->execute, 'Failed as expected - tried to base on pp w/o changing params');
-
-# pp w/o params (fails) 
-#  make fake calsses
-#  create a one first so we can get it in the create module
-#  try to create again, using based on
-class Genome::ProcessingProfile::TesterNoParams {
-    is => 'Genome::ProcessingProfile',
-};
-class Genome::ProcessingProfile::Command::Create::TesterNoParams {
-    is => 'Genome::ProcessingProfile::Command::Create',
-};
-ok(
-    Genome::ProcessingProfile::Command::Create::TesterNoParams->execute(
-        name => 'PP W/O Params I',
-    ),
-    "Create tester w/o params pp"
-);
-my $pp_no_params = Genome::ProcessingProfile::TesterNoParams->get();
-ok($pp_no_params, 'Got tester w/o params pp');
-ok(
-    ! Genome::ProcessingProfile::Command::Create::TesterNoParams->execute(
-        name => 'FAILS',
-        based_on => $pp_no_params->id,
-    ),
-    'Failed as expected - tried to base on pp w/o changing params'
-);
 
 done_testing();
 exit;

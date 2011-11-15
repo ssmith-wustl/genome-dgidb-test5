@@ -1,9 +1,10 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 #Written by Malachi Griffith
 
 #Given a list of gene symbols in the column X of a TSV file, join drug interaction records for matching gene-to-drug interactions with gene names in column Y and print a merged file
 
 use strict;
+use warnings;
 use Getopt::Long;
 use Term::ANSIColor qw(:constants);
 use Data::Dumper;

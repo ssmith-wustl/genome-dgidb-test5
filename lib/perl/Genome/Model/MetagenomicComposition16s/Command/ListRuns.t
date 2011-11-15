@@ -5,18 +5,13 @@ use warnings;
 
 use above 'Genome';
 
-use Data::Dumper 'Dumper';
-use Genome::Model::Test;
-use Genome::Model::MetagenomicComposition16s::Test;
 use Test::More;
 
 use_ok('Genome::Model::MetagenomicComposition16s::Command::ListRuns') or die;
 
 # model/build
-my $model = Genome::Model::MetagenomicComposition16s::Test->model_for_sanger;
+my $model = Genome::Model::MetagenomicComposition16s->get(name => 'apipe-test-mc16s-sanger');
 ok($model, 'Got mock mc16s sanger model');
-my $build = Genome::Model::MetagenomicComposition16s::Test->example_build_for_model($model);
-ok($build, 'Got mock mc16s build');
 
 my $tmpdir = File::Temp::tempdir(CLEANUP => 1);
 

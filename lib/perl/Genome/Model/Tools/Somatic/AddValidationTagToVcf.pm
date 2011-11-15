@@ -96,7 +96,7 @@ sub execute {                               # replace with real execution logic.
         chomp $vcf_line;
         if($vcf_line =~ /^##/) {
             #pass through
-            print $vcf_line,"\n";
+            print $vcf_ofh $vcf_line,"\n";
         }
         elsif($vcf_line =~ /^#CHROM/) {
             print $vcf_ofh $validation_format_header_line,"\n";

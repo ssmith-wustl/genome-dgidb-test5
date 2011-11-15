@@ -8,8 +8,8 @@ use Genome;
 class Genome::DruggableGene::DrugNameReport {
     is => 'Genome::Searchable',
     id_generator => '-uuid',
-    table_name => 'subject.drug_name_report',
-    schema_name => 'subject',
+    table_name => 'dgidb.drug_name_report',
+    schema_name => 'dgidb',
     data_source => 'Genome::DataSource::Main',
     id_by => [
         id => { is => 'Text'},

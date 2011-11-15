@@ -234,7 +234,12 @@ sub _build_WA {
     my $line = <$IN>;
     chomp $line;
     $line =~ s/^\s*// if $line =~ /\w/;
-    @ret_val{'tag_type', 'program', 'date'} = split(/ /, $line);
+    my @tmp = split(/ /, $line);
+    if ( scalar @tmp == 2 ) {
+        @ret_val{'tag_type', 'date'} = @tmp;
+    } elsif ( scalar @tmp == 3 ) {
+        @ret_val{'tag_type', 'program', 'date'} = @tmp;
+    }
     my $data;
     while ($line = <$IN>) {
         chomp $line;
