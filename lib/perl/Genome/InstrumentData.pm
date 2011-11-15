@@ -95,7 +95,6 @@ sub create {
     return if not $self;
 
     for ( my $i = 0; $i <= @extra - 1; $i += 2 ) {
-        print Data::Dumper::Dumper([$i, $extra[$i], $extra[$i + 1]]);
         my $attribute = Genome::InstrumentDataAttribute->create(
             attribute_label => $extra[$i],
             attribute_value => $extra[$i + 1],
