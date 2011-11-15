@@ -18,14 +18,14 @@ class Genome::Model::Build::ErrorLogEntry {
         auto_truncate_inferred_message => { is => 'Boolean', default => '1', is_transient => 1},
     ],
     has_optional => [
-        message     => { is => 'Text', len => 4000, default => '' },
+        message     => { is => 'Text', len => 1000, default => '' },
         line        => { is => 'Integer' },
         file        => { is => 'Text' },
         package     => { is => 'Text' },
         subroutine  => { is => 'Text' },
 
         #The die message is parsed with a regex to glean extra information
-        inferred_message => { is => 'Text', len => 4000, default => '' },
+        inferred_message => { is => 'Text', len => 1000, default => '' },
         inferred_file => { is => 'Text' },
         inferred_line => { is => 'Integer' },
 
