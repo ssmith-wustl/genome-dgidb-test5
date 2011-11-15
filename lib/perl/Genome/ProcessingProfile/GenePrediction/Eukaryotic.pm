@@ -163,16 +163,17 @@ sub _map_workflow_inputs {
                                         # aware of that'll do this, and since this same module is used to
                                         # create the coding gene predictions ace file too, I can't change
                                         # the default value of the module itself.
-        skip_rnammer => $self->skip_rnammer,
-        skip_trnascan => $self->skip_trnascan,
-        skip_rfamscan => $self->skip_rfamscan,
-        skip_snap => $self->skip_snap,
-        skip_fgenesh => $self->skip_fgenesh;
+        skip_rnammer => (defined $self->skip_rnammer ? $self->skip_rnammer : 0),
+        skip_trnascan => (defined $self->skip_trnascan ? $self->skip_trnascan : 0),
+        skip_rfamscan => (defined $self->skip_rfamscan ? $self->skip_rfamscan : 0),
+        skip_snap => (defined $self->skip_snap ? $self->skip_snap : 0),
+        skip_fgenesh => (defined $self->skip_fgenesh ? $self->skip_fgenesh : 0);
 
     my $params;
     for (my $i = 0; $i < (scalar @inputs); $i += 2) {
         my $key = $inputs[$i];
-        my $value = $inputs[$i + 1] || 'undef';
+        my $value = $inputs[$i = 1];
+        $value = 'undef' if not defined $value;
         $params .= "$key : $value\n";
     }
     $self->status_message("Parameters for workflow are: \n$params");
