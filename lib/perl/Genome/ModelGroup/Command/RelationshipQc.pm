@@ -90,7 +90,9 @@ sub assemble_list_of_snvs {
         $snp_fh->close;
     }
     #TODO: move output shit up into the class def
-    my $output_snvs = $self->output_dir . "/" . $self->model_group->name . ".union.bed";
+    my $name = $self->model_group->name;
+    $name =~ s/ /_/g;
+    my $output_snvs = $self->output_dir . "/" . $name . ".union.bed";
     my $union_snv_fh = Genome::Sys->open_file_for_writing($output_snvs);
     for my $chr (sort keys %snvs) {
         for my $pos (sort keys %{$snvs{$chr}}) {
@@ -110,7 +112,9 @@ sub run_mpileup {
     my @bams = map {$_->last_succeeded_build->whole_rmdup_bam_file} @{$models_ref};
     my $ref = $models_ref->[0]->reference_sequence_build->full_consensus_path("fa");
     #TODO: move output filenames into class def
-    my $output_vcf_gz = $self->output_dir . "/" . $self->model_group->name . ".vcf.gz";
+    my $name = $self->model_group->name;
+    $name =~ s/ /_/g;
+    my $output_vcf_gz = $self->output_dir . "/" . $name . ".vcf.gz";
    #samtools mpileup<BAMS>  -uf<REF>   -Dl<SITES.BED>  | bcftools view -g - | bgzip -c>  <YOUR GZIPPED VCF-LIKE OUTPUT> 
     my $cmd = "samtools mpileup @bams -uf $ref -Dl $bed_file | bcftools view -g - | bgzip -c > $output_vcf_gz";
     my $rv = Genome::Sys->shellcmd( cmd => $cmd, input_files => [$bed_file, $ref, @bams]);
@@ -127,6 +131,7 @@ sub convert_mpileup_to_beagle {
     #TODO: move output files into class def
 
     my $output_bgl_file = $self->output_dir . "/" . $self->model_group->name . ".bgl.input";
+    my $output_bgl_file =~ s/ /_/g;
     my $output_fh = Genome::Sys->open_file_for_writing($output_bgl_file);
     my $vcf_fh = IO::File->new("zcat $pileup_vcf_gz|");
     my @header;

@@ -29,6 +29,11 @@ class Genome::Model::Tools::Simulation::AlterReferenceSequence {
         is_optional =>0,
         doc =>"restrict the output to a subsection of the input ref",
     },
+    limit_regions => {
+        type =>'String',
+        is_optional=>1,
+        doc =>'restrict the output by a target bed. may conflict with region. use intelligently',
+    },
     ],
 };
 
@@ -63,11 +68,8 @@ sub execute {
     my $refseq_length= length($refseq);
     my ($out1, $out1_name) =Genome::Sys->create_temp_file();
     #my $out1=IO::File->new($self->output_file, ">");
-    my $desc="mutated according to " . $self->mutation_bed;
-    $out1->print(">$region-A\t$refseq_length\t$desc\n");
     my ($out2, $out2_name) = Genome::Sys->create_temp_file();
 #   my $out2=IO::File->new($self->output_file . "2", ">");
-    $out2->print(">$region-B\t$refseq_length\t$desc\n");
     my $pos = $offset;
     my $newrefseq1='';
     my $newrefseq2='';
@@ -110,8 +112,18 @@ sub execute {
     my $subseq=substr($refseq,$start,$len);
     $newrefseq1.=$subseq;
     $newrefseq2.=$subseq;
-    $self->print_and_flush($newrefseq1, $out1,1);
-    $self->print_and_flush($newrefseq2, $out2,1);
+    if($self->limit_regions) {
+       $self->dump_some_regions($newrefseq1, $out1, $self->limit_regions, "A");
+       $self->dump_some_regions($newrefseq2, $out2, $self->limit_regions, "B");
+    }
+    else {
+        my $desc="mutated according to " . $self->mutation_bed;
+        $out1->print(">$region-A\t$refseq_length\t$desc\n");
+        $out2->print(">$region-B\t$refseq_length\t$desc\n");
+        $self->print_and_flush($newrefseq1, $out1);
+        $self->print_and_flush($newrefseq2, $out2);
+    }
+
     $out1->close;
     $out2->close;
     my $final_output = $self->output_file;
@@ -123,20 +135,56 @@ sub execute {
     }
 
 }
+sub dump_some_regions {
+    my $self = shift;
+    my $ref = shift;
+    my $out_fh = shift;
+    my $bed_file = shift;
+    my $hap = shift;
+    my $bed_fh = IO::File->new($bed_file);
+    my ($temp_bed, $temp_bed_path) = Genome::Sys->create_temp_file();
+    my $merged_padded_bed = Genome::Sys->create_temp_file_path();
+    while(my $line = $bed_fh->getline) {
+        chomp($line);
+        my ($chr, $start, $stop, undef) = split /\t/, $line;
+        $start-=600; 
+        $stop +=600;
+        $temp_bed->print("$chr\t$start\t$stop\n");
+    }
+    my $cmd = "mergeBed -i $temp_bed_path > $merged_padded_bed";
+    Genome::Sys->shellcmd(cmd=>$cmd);
+    $bed_fh->close;
+    $bed_fh = IO::File->new($merged_padded_bed);
+    while(my $line = $bed_fh->getline) {
+        chomp($line);
+        my ($chr, $start, $stop, undef) = split /\t/, $line;
+        $stop = $stop -1;
+        if($stop > length($ref)) {
+            $stop = length($ref);
+        }
+        if($start < 0) {
+            $start =0;
+        }
+        my $length = $stop - $start;
+        $out_fh->print(">22:$start-$stop:$hap\t$length\n"); #FIXME: WTF hardcode
+        my $fasta_seq = substr($ref, $start, $length);
+        $self->print_and_flush($fasta_seq, $out_fh);
+        $self->status_message("Dumped 22:$start-$stop to fasta\n");
+    }
+}
+
+
+
+
+
 
 sub print_and_flush {
     my $self = shift;
     my $refseq = shift;
     my $out_fh=shift;
-    my $final = shift;
 
     $refseq =~ s/(.{60})/$1\n/g;
-    if($final) {
-        $out_fh->print($refseq . "\n");
-    }
-    else {
-        return $refseq;
-    }
+    $out_fh->print($refseq . "\n");
 }
 
 
