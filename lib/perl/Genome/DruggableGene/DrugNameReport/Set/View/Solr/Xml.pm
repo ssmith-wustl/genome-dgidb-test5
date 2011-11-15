@@ -1,11 +1,11 @@
-package Genome::DruggableGene::DrugNameReport::View::Solr::Xml;
+package Genome::DruggableGene::DrugNameReport::Set::View::Solr::Xml;
 
 use strict;
 use warnings;
 
 use Genome;
 
-class Genome::DruggableGene::DrugNameReport::View::Solr::Xml {
+class Genome::DruggableGene::DrugNameReport::Set::View::Solr::Xml {
     is => 'Genome::View::Solr::Xml',
     has => [
         type => {
