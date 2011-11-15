@@ -122,13 +122,13 @@ sub group_interactions_by_drug_name_report {
 
     for my $gene_name_report (keys %$gene_name_report_results){
         for my $interaction (@{$gene_name_report_results->{$gene_name_report}->{'interactions'}}){
-            if($grouped_interactions{$interaction->drug_name_report->name}){
-                my @interactions = @{$grouped_interactions{$interaction->drug_name_report->name}};
+            if($grouped_interactions{$interaction->drug_name_report_id}){
+                my @interactions = @{$grouped_interactions{$interaction->drug_name_report_id}};
                 push @interactions, $interaction;
-                $grouped_interactions{$interaction->drug_name_report->name} = \@interactions;
+                $grouped_interactions{$interaction->drug_name_report_id} = \@interactions;
             }
             else{
-                $grouped_interactions{$interaction->drug_name_report->name} = [$interaction];
+                $grouped_interactions{$interaction->drug_name_report_id} = [$interaction];
             }
         }
     }
@@ -155,8 +155,13 @@ sub print_grouped_interactions{
     my @headers = qw/interaction_id interaction_type drug_name_report_id drug_name_report drug_nomenclature drug_source_db_name drug_source_db_version gene_name_report_id
         gene_name_report gene_nomenclature gene_source_db_name gene_source_db_version/;
     $output_fh->print(join("\t", @headers), "\n");
-    for my $drug_name_report (keys %grouped_interactions){
-        for my $interaction (@{$grouped_interactions{$drug_name_report}}){
+
+    #Load drug_name_reports
+    Genome::DruggableGene::DrugNameReport->get(id => [keys %grouped_interactions]);
+    #
+
+    for my $drug_name_report_id (keys %grouped_interactions){
+        for my $interaction (@{$grouped_interactions{$drug_name_report_id}}){
             $output_fh->print($self->_build_interaction_line($interaction), "\n");
         }
     }
