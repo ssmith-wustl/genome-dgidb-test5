@@ -59,6 +59,9 @@ sub parse_next_from_file {
             $stop eq $self->current_var->{"end"} && $reference eq $self->current_var->{"reference_allele"} &&
             $variant eq $self->current_var->{"alt_allele"}) {
 
+            if (!$line) {
+                last;
+            }
             $self->_push_annotation_to_cache($line);
             $line = $fh->getline;
 
