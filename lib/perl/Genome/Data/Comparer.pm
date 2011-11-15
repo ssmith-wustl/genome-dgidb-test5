@@ -114,8 +114,6 @@ sub convert_all {
                 $object->transcript_annotations->[0]->{"trv_type"} eq
                 $other_object->transcript_annotations->[0]->{"trv_type"} ) {
                 $to_writer_same->write($object);
-                $object = $from_reader->next;
-                $other_object = $from_reader2->next;
             }
 
             else { 
@@ -125,10 +123,10 @@ sub convert_all {
                  $object->transcript_annotations->[0]->{"trv_type"} =~ m/frame_shift/) {
                 $to_writer_different_1->write($object);
                 $to_writer_different_2->write($other_object);
+                }
             }
-                $object = $from_reader->next;
-                $other_object = $from_reader2->next;
-            }
+            $object = $from_reader->next;
+            $other_object = $from_reader2->next;
         }
 
     }
