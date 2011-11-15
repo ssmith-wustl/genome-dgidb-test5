@@ -156,10 +156,7 @@ sub print_grouped_interactions{
         gene_name_report gene_nomenclature gene_source_db_name gene_source_db_version/;
     $output_fh->print(join("\t", @headers), "\n");
 
-    #Load drug_name_reports
-    Genome::DruggableGene::DrugNameReport->get(id => [keys %grouped_interactions]);
-    #
-
+    Genome::DruggableGene::DrugNameReport->get(id => [keys %grouped_interactions]); #Load the DrugNameReports
     for my $drug_name_report_id (keys %grouped_interactions){
         for my $interaction (@{$grouped_interactions{$drug_name_report_id}}){
             $output_fh->print($self->_build_interaction_line($interaction), "\n");
