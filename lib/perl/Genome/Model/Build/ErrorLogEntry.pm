@@ -13,7 +13,7 @@ class Genome::Model::Build::ErrorLogEntry {
         id => { is => 'Text' },
     ],
     has => [
-        entry_date         => { is => 'DateTime' },
+        entry_date         => { is => 'TIMESTAMP' },
         auto_truncate_message => { is => 'Boolean', default => '1', is_transient => 1},
         auto_truncate_inferred_message => { is => 'Boolean', default => '1', is_transient => 1},
     ],
