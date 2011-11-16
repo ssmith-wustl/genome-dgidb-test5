@@ -10,7 +10,8 @@ class Genome::Model::SomaticValidation::Command::AlignReads {
     has_input => [
         build_id => {
             is => 'Number',
-            doc => 'id of build for whcih to run alignments',
+            doc => 'id of build for which to run alignments',
+            is_output => 1,
         },
     ],
     has => [
@@ -70,9 +71,6 @@ sub execute {
     $self->status_message("Alignment BAM paths:\n " . join("\n ", @bams));
 
     my @results = $result->_merged_results;
-    for my $r (@results) {
-        $r->add_user(label => 'uses', user => $build);
-    }
 
     for my $r (@results) {
         my @i = $r->instrument_data;
@@ -80,9 +78,13 @@ sub execute {
         if($sample eq $build->tumor_sample) {
             $self->merged_alignment_result_id($r->id);
             $self->merged_bam_path($r->merged_alignment_bam_path);
+            $r->add_user(label => 'merged_alignment', user => $build);
         } elsif ($sample eq $build->normal_sample) {
             $self->control_merged_alignment_result_id($r->id);
             $self->control_merged_bam_path($r->merged_alignment_bam_path);
+            $r->add_user(label => 'control_merged_alignment', user => $build);
+        } else {
+            $r->add_user(label => 'uses', user => $build);
         }
     }
 
