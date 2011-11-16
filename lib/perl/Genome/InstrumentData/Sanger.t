@@ -5,8 +5,6 @@ use warnings;
 
 use above 'Genome';
 
-require File::Temp;
-use Genome::Utility::TestBase;
 use Test::More;
 
 BEGIN {
@@ -14,14 +12,19 @@ BEGIN {
     $ENV{UR_DBI_NO_COMMIT} = 1;
 }
 
-use_ok('Genome::InstrumentData::Sanger');
+use_ok('Genome::InstrumentData::Sanger') or die;
 
-# mock disk allocation
-my $tmpdir = File::Temp::tempdir(CLEANUP => 1);
-ok(-d $tmpdir, 'created tmp dir');
-my $disk_allocation = Genome::Utility::TestBase->create_mock_object(
-    class => 'Genome::Disk::Allocation',
-    absolute_path => $tmpdir,
+my $sanger_inst_data = Genome::InstrumentData::Sanger->create(
+    run_name => '1jan00.000amaa',
+);
+ok($sanger_inst_data, 'create sanger inst data');
+
+my $disk_allocation = Genome::Disk::Allocation->create(
+    disk_group_name => 'info_alignments',
+    allocation_path => '__SANGER__TEST__ALLOC__',
+    kilobytes_requested => 10_000,
+    owner_class_name => $sanger_inst_data->class,
+    owner_id => $sanger_inst_data->id,
 );
 ok($disk_allocation, 'created mock disk allocation') or die;
 
@@ -46,17 +49,6 @@ sub ReadIterator::next {
 my $read_iterator = ReadIterator->create();
 ok($read_iterator, 'created read iterator');
 
-# get real inst data
-my $sanger_inst_data = Genome::InstrumentData::Sanger->get('24jun09.906pmcb1');
-ok($sanger_inst_data, 'got sanger inst data');
-
-# full path from attributes - it's undefined
-ok(!defined($sanger_inst_data->full_path), 'full path from attributes');
-
-# full path from disk allocation
-no warnings;
-*Genome::InstrumentData::Sanger::disk_allocation = sub{ return $disk_allocation; };
-use warnings;
 my $path = $sanger_inst_data->full_path;
 print "$path\n";
 is($path, $disk_allocation->absolute_path, 'full path from allocation') or die;
@@ -80,24 +72,3 @@ isnt(-s $scf, $scf_sz, "redumped $trace_name");
 done_testing();
 exit;
 
-=pod
-
-=head1 Tests
-
-=head1 Disclaimer
-
- Copyright (C) 2006 Washington University Genome Sequencing Center
-
- This script is distributed in the hope that it will be useful,
- but WITHOUT ANY WARRANTY or the implied warranty of MERCHANTABILITY
- or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public
- License for more details.
-
-=head1 Author(s)
-
- Eddie Belter <ebelter@watson.wustl.edu>
-
-=cut
-
-#$HeadURL$
-#$Id$

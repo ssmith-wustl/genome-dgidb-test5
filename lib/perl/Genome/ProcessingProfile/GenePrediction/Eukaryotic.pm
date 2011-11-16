@@ -172,7 +172,7 @@ sub _map_workflow_inputs {
     my $params;
     for (my $i = 0; $i < (scalar @inputs); $i += 2) {
         my $key = $inputs[$i];
-        my $value = $inputs[$i = 1];
+        my $value = $inputs[$i + 1];
         $value = 'undef' if not defined $value;
         $params .= "$key : $value\n";
     }

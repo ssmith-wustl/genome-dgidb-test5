@@ -1145,8 +1145,23 @@ sub reference_coverage_directory {
 
 ####BEGIN REGION OF INTEREST SECTION####
 
+sub reference_coverage_result {
+    my $self = shift;
+
+    my @used = Genome::SoftwareResult::User->get(user => $self);
+    my $refcov_result = Genome::InstrumentData::AlignmentResult::Merged::CoverageStats->get([map($_->software_result_id, @used)]); #will crash if multiple
+
+    return $refcov_result;
+}
+
 sub alignment_summary_file {
-    my ($self,$wingspan) = @_;
+    my $self = shift;
+    my ($wingspan) = @_;
+
+    if(my $r = $self->reference_coverage_result) {
+        return $r->alignment_summary_file(@_);
+    }
+
     unless (defined($wingspan)) {
         die('Must provide wingspan_value to method alignment_summary_file in '. __PACKAGE__);
     }
@@ -1162,6 +1177,10 @@ sub alignment_summary_file {
 
 sub alignment_summary_hash_ref {
     my $self = shift;
+
+    if(my $r = $self->reference_coverage_result) {
+        return $r->alignment_summary_hash_ref(@_);
+    }
 
     unless ($self->{_alignment_summary_hash_ref}) {
         my $wingspan_array_ref = $self->wingspan_values_array_ref;
@@ -1232,13 +1251,24 @@ sub alignment_summary_hash_ref {
 }
 
 sub coverage_stats_directory_path {
-    my ($self,$wingspan) = @_;
+    my $self = shift;
+    my ($wingspan) = @_;
+
+    if(my $r = $self->reference_coverage_result) {
+        return $r->coverage_stats_directory_path(@_);
+    }
+
     return $self->reference_coverage_directory .'/wingspan_'. $wingspan;
 }
 
 sub stats_file {
     my $self = shift;
-    my $wingspan = shift;
+    my ($wingspan) = @_;
+
+    if(my $r = $self->reference_coverage_result) {
+        return $r->stats_file(@_);
+    }
+
     unless (defined($wingspan)) {
         die('Must provide wingspan_value to method coverage_stats_file in '. __PACKAGE__);
     }
@@ -1256,6 +1286,11 @@ sub stats_file {
 
 sub coverage_stats_hash_ref {
     my $self = shift;
+
+    if(my $r = $self->reference_coverage_result) {
+        return $r->coverage_stats_hash_ref(@_);
+    }
+
     unless ($self->{_coverage_stats_hash_ref}) {
         my @headers = qw/name pc_covered length covered_bp uncovered_bp mean_depth stdev_mean_depth median_depth gaps mean_gap_length stdev_gap_length median_gap_length minimum_depth minimum_depth_discarded_bp pc_minimum_depth_discarded_bp/;
 
@@ -1285,7 +1320,13 @@ sub coverage_stats_hash_ref {
 }
 
 sub coverage_stats_summary_file {
-    my ($self,$wingspan) = @_;
+    my $self = shift;
+    my ($wingspan) = @_;
+
+    if(my $r = $self->reference_coverage_result) {
+        return $r->coverage_stats_summary_file(@_);
+    }
+
     unless (defined($wingspan)) {
         die('Must provide wingspan_value to method coverage_stats_file in '. __PACKAGE__);
     }
@@ -1303,6 +1344,11 @@ sub coverage_stats_summary_file {
 
 sub coverage_stats_summary_hash_ref {
     my $self = shift;
+
+    if(my $r = $self->reference_coverage_result) {
+        return $r->coverage_stats_summary_hash_ref(@_);
+    }
+
     unless ($self->{_coverage_stats_summary_hash_ref}) {
         my %stats_summary;
         my $min_depth_array_ref = $self->minimum_depths_array_ref;

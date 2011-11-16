@@ -39,6 +39,10 @@ class Genome::Model::Command::Define::SomaticValidation {
             is => 'Genome::Sample',
             doc => 'If there are no variants, specify the "normal" sample directly',
         },
+        region_of_interest_set => {
+            is => 'Genome::FeatureList',
+            doc => 'Specify this if reference coverage should be run on a different set than the target',
+        },
         processing_profile => {
             is => 'Genome::ProcessingProfile::SomaticValidation',
             doc => 'Processing profile for the model',
@@ -136,6 +140,12 @@ sub execute {
             if defined $variant_results_by_type->{sv};
         push @params, tumor_sample => $tumor_sample;
         push @params, normal_sample => $control_sample;
+
+        if($self->region_of_interest_set) {
+            push @params, region_of_interest_set => $self->region_of_interest_set;
+        } elsif($self->target) {
+            push @params, region_of_interest_set => $self->target;
+        }
 
         my $m = Genome::Model->create(@params);
         return unless $m;
