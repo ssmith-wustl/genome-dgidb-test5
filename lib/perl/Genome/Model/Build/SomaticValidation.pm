@@ -96,7 +96,7 @@ sub post_allocation_initialization {
     my $self = shift;
 
     my @result_subfolders;
-    for my $subdir ('alignments', 'variants') {
+    for my $subdir ('alignments', 'variants', 'coverage') {
         push @result_subfolders, $self->data_directory."/".$subdir;
     }
 
