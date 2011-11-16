@@ -163,7 +163,7 @@ sub print_header{
             $public_reference = "ftp://ftp.ncbi.nih.gov/genbank/genomes/Eukaryotes/vertebrates_mammals/Homo_sapiens/GRCh37/special_requests/GRCh37-lite.fa.gz";
         } elsif ($reference_sequence_version == 36) {
             if ($seq_center eq "WUSTL"){
-                $public_reference = "ftp://ftp.ncbi.nlm.nih.gov/genomes/H_sapiens/ARCHIVE/BUILD.36.3/special_requests/assembly_variants/NCBI36_BCCAGSC_variant.fa.gz";
+                $public_reference = "ftp://ftp.ncbi.nlm.nih.gov/genomes/H_sapiens/ARCHIVE/BUILD.36.3/special_requests/assembly_variants/NCBI36_WUGSC_variant.fa.gz";
             } elsif ($seq_center eq "BROAD"){
                 $public_reference="ftp://ftp.ncbi.nlm.nih.gov/genomes/H_sapiens/ARCHIVE/BUILD.36.3/special_requests/assembly_variants/NCBI36-HG18_Broad_variant.fa.gz";
             } else {
@@ -221,9 +221,9 @@ sub get_format_meta {
     my $gt = {MetaType => "FORMAT", ID => "GT", Number => 1, Type => "String", Description => "Genotype"};
     my $gq = {MetaType => "FORMAT", ID => "GQ", Number => 1, Type => "Integer", Description => "Genotype Quality"};
     my $dp = {MetaType => "FORMAT", ID => "DP", Number => 1, Type => "Integer", Description => "Total Read Depth"};
-    my $bq = {MetaType => "FORMAT", ID => "BQ", Number => "A", Type => "Integer", Description => "Average Base Quality corresponding to alleles 0/1/2/3... after software and quality filtering"};
+    my $bq = {MetaType => "FORMAT", ID => "BQ", Number => "A", Type => "Integer", Description => "Average Base Quality corresponding to alternate alleles 1/2/3... after software and quality filtering"};
     my $mq = {MetaType => "FORMAT", ID => "MQ", Number => 1, Type => "Integer", Description => "Average Mapping Quality"};
-    my $ad = {MetaType => "FORMAT", ID => "AD", Number => "A", Type => "Integer", Description => "Allele Depth corresponding to alleles 0/1/2/3... after software and quality filtering"};
+    my $ad = {MetaType => "FORMAT", ID => "AD", Number => "A", Type => "Integer", Description => "Allele Depth corresponding to alternate alleles 1/2/3... after software and quality filtering"};
     my $fa = {MetaType => "FORMAT", ID => "FA", Number => 1, Type => "Float", Description => "Fraction of reads supporting ALT"};
     my $vaq = {MetaType => "FORMAT", ID => "VAQ", Number => 1, Type => "Integer", Description => "Variant Quality"};
 

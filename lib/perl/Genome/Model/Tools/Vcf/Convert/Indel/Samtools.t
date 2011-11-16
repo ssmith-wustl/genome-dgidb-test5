@@ -19,7 +19,8 @@ use_ok('Genome::Model::Tools::Vcf::Convert::Indel::Samtools');
 
 my $test_dir = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Vcf-Convert-Indel-Samtools";
 
-my $expected_base = "expected.v2";
+# V3 - Correct reference sequence specification and description of BQ and AD fields
+my $expected_base = "expected.v3";
 my $input_base = "test_input.v2";
 my $expected_dir = "$test_dir/$expected_base";
 my $input_dir = "$test_dir/$input_base";
