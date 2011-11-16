@@ -61,10 +61,15 @@ sub execute {
 #but keeping it here allows the rest of the process to this point to run...
 sub _reference_sequence_matches {
     my $self = shift;
+    my $build = $self->build;
 
-    my $roi_list = $self->model->region_of_interest_set;
+    my $roi_list = Genome::FeatureList->get(name => $build->region_of_interest_set_name);
+    unless($roi_list) {
+        die('No feature-list found for ROI: ' . $build->region_of_interest_set_name);
+    }
+
     my $roi_reference = $roi_list->reference;
-    my $reference = $self->model->reference_sequence_build;
+    my $reference = $self->build->reference_sequence_build;
 
     unless($roi_reference) {
         $self->error_message('no reference set on region of interest ' . $roi_list->name);
@@ -113,6 +118,7 @@ sub params_for_result {
         minimum_mapping_quality => ($build->minimum_mapping_quality || 0),
         use_short_roi_names => $use_short_roi,
         merge_contiguous_regions => $merge_regions,
+        test_name => ($ENV{GENOME_SOFTWARE_RESULT_TEST_NAME} || undef),
     );
 }
 
