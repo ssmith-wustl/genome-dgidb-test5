@@ -46,6 +46,11 @@ class Genome::Model::SomaticValidation {
             via => 'inputs', to => 'value', where => [ name => 'target_region_set' ],
             is_mutable => 1,
         },
+        region_of_interest_set => {
+            is => 'Genome::FeatureList',
+            via => 'inputs', to => 'value', where => [ name => 'region_of_interest_set' ],
+            is_mutable => 1,
+        },
         design_set => {
             is => 'Genome::FeatureList',
             via => 'inputs', to => 'value', where => [ name => 'design_set' ],
