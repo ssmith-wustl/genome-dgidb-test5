@@ -94,6 +94,15 @@ class Genome::Model::Build {
             to => 'value_id',
             where => [ name => 'region_of_interest_set_name', value_class_name => 'UR::Value' ],
         },
+        result_users => {
+            is => 'Genome::SoftwareResult::User',
+            reverse_as => 'user',
+        },
+        results => {
+            is => 'Genome::SoftwareResult',
+            via => 'result_users',
+            to => 'software_result',
+        },
         from_build_links => { is => 'Genome::Model::Build::Link', reverse_as => 'to_build',
                               doc => 'bridge table entries where this is the \"to\" build(used to retrieve builds this build is \"from\")' },
         from_builds      => { is => 'Genome::Model::Build', via => 'from_build_links', to => 'from_build',
