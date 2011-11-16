@@ -71,21 +71,10 @@ sub execute {
     $output_fh->close;
     $vcf_fh->close;
 
-    my $window_bed_cmd = "bash -c \"windowBed -a ".$bed_file." -b <(zcat ".$vcf_file.") -w ".$wingspan." | cut -f5- | bgzip -c >> ".$output_file."\"";
+    my $window_bed_cmd = "bash -c \"windowBed -u -b ".$bed_file." -a <(zcat ".$vcf_file.") -w ".$wingspan." |  bgzip -c >> ".$output_file."\"";
     my $result = Genome::Sys->shellcmd( cmd => $window_bed_cmd );
     unless($result){
         die $self->error_message("Could not complete windowBed command.");
-    }
-    my $sort_vcf_cmd = "bash -c \"joinx sort <(zcat ".$output_file.") | bgzip -c > ".$output_file.".tmp \"";
-    my $sort_result = Genome::Sys->shellcmd( cmd => $sort_vcf_cmd );
-    unless($sort_result){
-        die $self->error_message("Unable to complete sorting VCF output");
-    }
-    if(-s $output_file.".tmp"){
-        move( $output_file.".tmp", $output_file);
-        unlink( $output_file.".tmp");        
-    } else {
-        die $self->error_message("Sorted output, but could not locate intermediate temp file: ".$output_file.".tmp");
     }
     return 1;
 }
