@@ -69,7 +69,7 @@ class Genome::ProcessingProfile::Command::Create::Tester {
         },
     ],
 };
-
+Genome::ProcessingProfile::Command::Create::Tester->dump_status_messages(1);
 sub Genome::ProcessingProfile::Command::Create::Tester::_target_class_name { return 'Genome::ProcessingProfile::Tester' };
 
 # Create a pp
@@ -90,21 +90,20 @@ ok(!$creator->execute, 'Failed as expected - tried to create same processing pro
 
 #< Based on >#
 # success
-ok(
-    Genome::ProcessingProfile::Command::Create::Tester->execute(
-        name => 'Tester for ROI UNDEF',
-        based_on => $pp,
-        roi => 'UNDEF',
-    ),
-    'Create new tester pp w/ based on, but changed roi to UNDEF'
+$creator = Genome::ProcessingProfile::Command::Create::Tester->create(
+    name => 'Tester for ROI UNDEF',
+    based_on => $pp->id,
+    roi => 'UNDEF',
 );
-
+ok($creator, 'create w/ based on');
+ok($creator->execute, 'execute - create new pp w/ based on, but changed roi to UNDEF');
 
 # w/o changing anything (fails)
 $creator = Genome::ProcessingProfile::Command::Create::Tester->create(
     name => 'FAILS',
-    based_on => $pp
+    based_on => 'id='.$pp->id,
 );
+ok($creator, 'create w/ based on but no changes');
 ok(!$creator->execute, 'Failed as expected - tried to base on pp w/o changing params');
 
 done_testing();

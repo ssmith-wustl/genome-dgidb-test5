@@ -16,10 +16,11 @@ class Genome::ProcessingProfile::Command::Create::Base {
             doc => 'Human readable name.', 
         },
         based_on => {
-            is => 'Genome::ProcessingProfile',
+            is => 'Text',
             doc => "Another profile which is used to specify default values for this new one. To qualify a the based on profile must have params, and at least one must be different. Use --param-name='UNDEF' to indicate that a param that is defined for the based on profile should not be for the new profile.",
             is_optional => 1,
         },
+        _based_on => { is_transient => 1, },
         supersedes => {
             is => 'Text',
             doc => 'The processing profile name that this replaces',
@@ -63,8 +64,13 @@ sub create {
     my $self = $class->SUPER::create(@_);
     return unless $self;
 
+    my $based_on = $self->based_on;
+    return $self if not $based_on;
+
+    my $other_profile = $self->_resolve_based_on($based_on);
+    return if not $other_profile;
+
     my %defaults;
-    my $other_profile = $self->based_on;
     if ($other_profile) {
         my @params = $other_profile->params;
         if (not @params) {
@@ -88,6 +94,29 @@ sub create {
     }
 
     return $self;
+}
+
+sub _resolve_based_on {
+    my ($self, $based_on) = @_;
+
+    Carp::confess('No based on!') unless $based_on;
+
+    $based_on = 'id='.$based_on if $based_on =~ /^$RE{num}{int}$/;
+    my @other_profiles = $self->resolve_param_value_from_cmdline_text({
+            class => 'Genome::ProcessingProfile',
+            name => 'based_on',
+            value => [ $based_on ],
+        });
+    if ( not @other_profiles ) {
+        $self->error_message('Failed to get based on processing profile for '.$based_on);
+        return;
+    }
+    elsif ( @other_profiles > 1 ) {
+        $self->error_message('Got multiple based on processing profiles for '.$based_on."\n".join("\n", map { $_->id } @other_profiles)."\nPlease use id.");
+        return;
+    }
+
+    return $self->_based_on($other_profiles[0]);
 }
 
 #< Execute and supporters >#
