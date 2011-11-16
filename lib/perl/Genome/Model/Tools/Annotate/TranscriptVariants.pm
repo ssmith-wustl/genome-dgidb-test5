@@ -346,6 +346,7 @@ END {
 };
 
 sub execute { 
+ 
     my $self = shift;
 
     unless($self->variant_file xor $self->variant_bed_file){
