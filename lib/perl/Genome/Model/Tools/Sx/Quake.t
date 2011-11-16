@@ -7,9 +7,9 @@ use above 'Genome';
 
 use Test::More;
 
-use_ok('Genome::Model::Tools::Quake') or die;
+use_ok('Genome::Model::Tools::Sx::Quake') or die;
 
-my %quake_params = map { $_ => 1 } Genome::Model::Tools::Quake->quake_param_names;
+my %quake_params = map { $_ => 1 } Genome::Model::Tools::Sx::Quake->quake_param_names;
 $quake_params{q} = 33;
 my $quake_cmd = 'quake.py -f 1 --hash_size 1 --headers --int -k 1 -l 1 --log --no_count --no_cut --no_jelly -p 1 -q 33 -r 1 --ratio 1 -t 1 -u';
 no warnings;
@@ -20,7 +20,7 @@ no warnings;
 };
 use warnings;
 
-my $quake = Genome::Model::Tools::Quake->create(%quake_params);
+my $quake = Genome::Model::Tools::Sx::Quake->create(%quake_params);
 ok($quake, 'create');
 $quake->dump_status_messages(1);
 ok($quake->execute, 'execute');
