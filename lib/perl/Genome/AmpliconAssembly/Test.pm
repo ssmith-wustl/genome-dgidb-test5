@@ -967,41 +967,6 @@ sub test01_generate_report : Test(2) {
 
 ######################################################################
 
-package Genome::AmpliconAssembly::Report::Compare::Test;
-
-use strict;
-use warnings;
-
-use base 'Genome::AmpliconAssembly::Report::TestBase';
-
-use Data::Dumper 'Dumper';
-use Test::More;
-
-sub test_class {
-    'Genome::AmpliconAssembly::Report::Compare';
-}
-
-sub params_for_test_class {
-    return (
-        amplicon_assemblies => [ $_[0]->mock_model->last_succeeded_build->amplicon_assembly,
-        $_[0]->mock_model->last_succeeded_build->amplicon_assembly,
-        ],
-    );
-}
-
-sub invalid_params_for_test_class {
-    return (
-    );
-}
-
-sub test01_ {# : Tests(2) {
-    my $self = shift;
-
-    return 1;
-}
-
-######################################################################
-
 package Genome::AmpliconAssembly::Report::Stats::Test;
 
 use strict;
