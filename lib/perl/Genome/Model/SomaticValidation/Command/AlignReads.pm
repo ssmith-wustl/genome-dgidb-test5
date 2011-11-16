@@ -21,6 +21,11 @@ class Genome::Model::SomaticValidation::Command::AlignReads {
             doc => 'build for which to run alignments',
         },
     ],
+    has_param => [
+        lsf_queue => {
+            default => 'apipe',
+        },
+    ],
     has_transient_optional_output => [
         merged_alignment_result_id => {
             is => 'Number',
