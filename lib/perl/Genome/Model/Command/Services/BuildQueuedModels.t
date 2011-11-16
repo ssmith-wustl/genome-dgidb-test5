@@ -10,9 +10,6 @@ BEGIN {
 
 use above 'Genome';
 
-use Data::Dumper 'Dumper';
-use Genome::Utility::TestBase;
-use Test::MockObject;
 use Test::More;
 
 use_ok('Genome::Model::Command::Services::BuildQueuedModels') or die;
@@ -24,17 +21,6 @@ sub Genome::ProcessingProfile::Tester::sequencing_platform { return 'solexa'; };
 
 class Genome::Model::Tester {
     is => 'Genome::Model',
-    has => [
-        foo => { 
-            is_optional => 1, is_mutable => 1,
-            via => 'inputs', to => 'value_id', where => [name => 'foo', value_class_name => 'UR::Value', ],
-        },
-        baz => { 
-            is_optional => 1, is_mutable => 1, is_many =>1,
-            via => 'inputs', to => 'value_id', 
-            where => [name => 'baz', value_class_name => 'UR::Value'],
-        },
-    ],
 };
 
 class Genome::Model::Build::Tester {
@@ -55,15 +41,6 @@ my $sample = Genome::Sample->create(
     name => 'TEST-00',
 );
 ok($sample, 'create sample') or die;
-my $library = Genome::Library->create(
-    name => $sample->name.'-testlib',
-    sample_id => $sample->id,
-);
-ok($library, 'create library');
-
-# DATA DIR
-my $tmpdir = File::Temp::tempdir(CLEANUP => 1);
-ok(-d $tmpdir, 'create tmpdir');
 
 my @model_ids;
 for my $count (1..3) {
