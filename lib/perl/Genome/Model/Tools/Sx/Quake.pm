@@ -1,4 +1,4 @@
-package Genome::Model::Tools::Quake;
+package Genome::Model::Tools::Sx::Quake;
 
 use strict;
 use warnings;
@@ -92,7 +92,7 @@ our %QUAKE_PARAMS = (
     },
 );
 
-class Genome::Model::Tools::Quake {
+class Genome::Model::Tools::Sx::Quake {
     is  => 'Command::V2',
     has => [ %QUAKE_PARAMS ],
 };
