@@ -77,6 +77,8 @@ sub execute {
 
     my @results = $result->_merged_results;
 
+    my $build_alignment_dir = join('/', $build->data_directory, 'alignments');
+
     for my $r (@results) {
         my @i = $r->instrument_data;
         my $sample = $i[0]->sample;
@@ -84,11 +86,14 @@ sub execute {
             $self->merged_alignment_result_id($r->id);
             $self->merged_bam_path($r->merged_alignment_bam_path);
             $r->add_user(label => 'merged_alignment', user => $build);
+            Genome::Sys->create_symlink($r->output_dir, $build_alignment_dir . '/tumor');
         } elsif ($sample eq $build->normal_sample) {
             $self->control_merged_alignment_result_id($r->id);
             $self->control_merged_bam_path($r->merged_alignment_bam_path);
             $r->add_user(label => 'control_merged_alignment', user => $build);
+            Genome::Sys->create_symlink($r->output_dir, $build_alignment_dir . '/normal');
         } else {
+            $self->warning_message('Unexpected alignment result encountered! Check samples of instrument data.');
             $r->add_user(label => 'uses', user => $build);
         }
     }
