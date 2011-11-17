@@ -40,8 +40,9 @@ sub execute {
     my $self = shift;
 
     $self->preload_druggable_gene_objects; #TODO: test and see if this speeds things up
-    my $gene_name_report_results = $self->lookup_gene_identifiers;
-    my %grouped_interactions = $self->group_interactions_by_drug_name_report($gene_name_report_results);
+    my @gene_name_reports = $self->lookup_gene_identifiers;
+    my @interactions = $self->get_interactions(@gene_name_reports);
+    my %grouped_interactions = $self->group_interactions_by_drug_name_report(@interactions);
     $self->print_grouped_interactions(%grouped_interactions);
 
     return 1;
@@ -64,27 +65,23 @@ sub lookup_gene_identifiers {
     my ($entrez_gene_name_reports, $intermediates) = Genome::DruggableGene::GeneNameReport->convert_to_entrez(@gene_identifiers);
     my %gene_name_reports = $self->_find_gene_name_reports_for_identifiers(@gene_identifiers);
 
-    my $gene_name_report_results = {};
+    my @complete_genes;
     for my $gene_identifier (@gene_identifiers){
-        my ($entrez_gene_name_reports_for_identifier, $intermediates_for_identifier) = ($entrez_gene_name_reports->{$gene_identifier}, $intermediates->{$gene_identifier});
+        my $entrez_gene_name_reports_for_identifier = $entrez_gene_name_reports->{$gene_identifier};
+        push @complete_genes, @$entrez_gene_name_reports_for_identifier if $entrez_gene_name_reports_for_identifier;
+        my $intermediates_for_identifier = $intermediates->{$gene_identifier};
+        push @complete_genes, @$intermediates_for_identifier if $intermediates_for_identifier;
         my $gene_name_reports_for_identifier = $gene_name_reports{$gene_identifier};
-        my @complete_gene_name_reports = ( ($entrez_gene_name_reports_for_identifier ? @$entrez_gene_name_reports_for_identifier : ()), 
-                                           ($intermediates_for_identifier ? @$intermediates_for_identifier : ()), 
-                                           ($gene_name_reports_for_identifier ? @$gene_name_reports_for_identifier : ()) );
-        @complete_gene_name_reports = uniq @complete_gene_name_reports;
-        $gene_name_report_results->{$gene_identifier} = {};
-        $gene_name_report_results->{$gene_identifier}->{'gene_name_reports'} = \@complete_gene_name_reports;
-        $self->get_interactions($gene_identifier, $gene_name_report_results);
+        push @complete_genes, @$gene_name_reports_for_identifier if $gene_name_reports_for_identifier;
     }
 
-    return $gene_name_report_results;
+    return uniq @complete_genes;
 }
 
 sub _find_gene_name_reports_for_identifiers {
     my $self = shift;
     my @gene_identifiers = @_;
     my %results;
-    $DB::single = 1;
 
     my @gene_name_reports = Genome::DruggableGene::GeneNameReport->get(name => \@gene_identifiers);
     my @gene_name_report_associations = Genome::DruggableGene::GeneNameReportAssociation->get(alternate_name => \@gene_identifiers);
@@ -100,36 +97,27 @@ sub _find_gene_name_reports_for_identifiers {
 
 sub get_interactions {
     my $self = shift;
-    my $gene_identifier = shift;
-    my $gene_name_report_results = shift;
+    my @gene_name_reports = @_;
 
-    for my $gene_name_report (@{$gene_name_report_results->{$gene_identifier}->{'gene_name_reports'}}){
-        my @interactions = $gene_name_report->drug_gene_interaction_reports;
-        if($gene_name_report_results->{$gene_identifier}->{'interactions'}){
-            my @complete_interactions = (@{$gene_name_report_results->{$gene_identifier}->{'interactions'}}, @interactions);
-            $gene_name_report_results->{$gene_identifier}->{'interactions'} = \@complete_interactions
-        }else{
-            $gene_name_report_results->{$gene_identifier}->{'interactions'} = \@interactions;
-        }
-    }
-    return $gene_name_report_results;
+    my @gene_name_report_ids = map($_->id, @gene_name_reports);
+    @gene_name_report_ids = uniq @gene_name_report_ids;
+    return Genome::DruggableGene::DrugGeneInteractionReport->get(gene_name_report_id => \@gene_name_report_ids);
 }
 
 sub group_interactions_by_drug_name_report {
     my $self = shift;
-    my $gene_name_report_results = shift;
-    my %grouped_interactions;
+    my @interactions = @_;
+    my %grouped_interactions = ();
 
-    for my $gene_name_report (keys %$gene_name_report_results){
-        for my $interaction (@{$gene_name_report_results->{$gene_name_report}->{'interactions'}}){
-            if($grouped_interactions{$interaction->drug_name_report_id}){
-                my @interactions = @{$grouped_interactions{$interaction->drug_name_report_id}};
-                push @interactions, $interaction;
-                $grouped_interactions{$interaction->drug_name_report_id} = \@interactions;
-            }
-            else{
-                $grouped_interactions{$interaction->drug_name_report_id} = [$interaction];
-            }
+    for my $interaction (@interactions){
+        my $drug_name_report_id = $interaction->drug_name_report_id;
+        if($grouped_interactions{$drug_name_report_id}){
+            my @temp = @{$grouped_interactions{$drug_name_report_id}};
+            push @temp, $interaction;
+            $grouped_interactions{$drug_name_report_id} = \@temp;
+        }
+        else{
+            $grouped_interactions{$drug_name_report_id} = [$interaction];
         }
     }
 
@@ -156,7 +144,7 @@ sub print_grouped_interactions{
         gene_name_report gene_nomenclature gene_source_db_name gene_source_db_version/;
     $output_fh->print(join("\t", @headers), "\n");
 
-    Genome::DruggableGene::DrugNameReport->get(id => [keys %grouped_interactions]); #Load the DrugNameReports
+    Genome::DruggableGene::DrugNameReport->get(id => [keys %grouped_interactions]);
     for my $drug_name_report_id (keys %grouped_interactions){
         for my $interaction (@{$grouped_interactions{$drug_name_report_id}}){
             $output_fh->print($self->_build_interaction_line($interaction), "\n");
