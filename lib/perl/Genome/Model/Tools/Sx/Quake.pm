@@ -14,21 +14,25 @@ our %QUAKE_PARAMS = (
     },
     p => {
         is => 'Number',
+        is_optional => 1,
         default_value => 4,
         doc => 'Number of processes.',
     },
     no_jelly => {
         is => 'Boolean',
+        is_optional => 1,
         default_value => 0,
         doc => 'Count k-mers using a simpler program than Jellyfish.'
     },
     no_count => {
         is => 'Boolean',
+        is_optional => 1,
         doc => 'Kmers are already counted and in expected file [reads file].qcts or [reads file].cts [default: False].',
         default_value => 0,
     },
     'int' => {
         is => 'Boolean',
+        is_optional => 1,
         default_value => 0,
         doc => 'Count kmers as integers w/o the use of quality values [default: False].',
     },
