@@ -55,7 +55,7 @@ UR::Object::Type->define(
         variant_priorities           => {  },
         transcript_error_priorities  => {  },
     ],
-    doc => q(Do proper intersections between variations and transcript structures by considering both entities' start and stop positions rather than just the start position of the variation.  Use caching of InterproResults to speed up performance),
+    doc => q(Do proper intersections between variations and transcript structures by considering both entities' start and stop positions rather than just the start position of the variation.),
 
 );
 

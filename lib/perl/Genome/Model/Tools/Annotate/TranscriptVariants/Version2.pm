@@ -317,6 +317,7 @@ sub transcripts {
     if (!defined $self->{_cached_chromosome} or $self->{_cached_chromosome} ne $variant{chromosome_name}) {
         Genome::InterproResult->unload();
         $self->transcript_structure_class_name->unload();
+
         $self->{_cached_chromosome} = $variant{chromosome_name};
         Genome::InterproResult->get(
             data_directory => $self->data_directory,

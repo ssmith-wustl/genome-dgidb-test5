@@ -167,13 +167,8 @@ sub reverse_complement {
     my ($self, $seq) = @_;
     return unless defined $seq;
 
-    my $s = Bio::Seq->new(-display_id => "junk", -seq => $seq);
-    my $rev_com = $s->revcom->seq;
-    unless ($rev_com) {
-        $self->error_message("Could not create reverse complement for sequence");
-        confess;
-    }
-
+    $seq =~ tr/acgtrymkswhbvdnxACGTRYMKSWHBVDNX/tgcayrkmswdvbhnxTGCAYRKMSWDVBHNX/;
+    my $rev_com = CORE::reverse $seq;
     return $rev_com;
 }
 
