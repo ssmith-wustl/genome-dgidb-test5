@@ -296,7 +296,7 @@ sub get_coverage_summary_node {
                         my $expected_min_depth = $min_depths[$i];
                         my $other_min_depth = $other_min_depths[$i];
                         unless ($expected_min_depth == $other_min_depth) {
-                            #die('Model '. $model->name .' has '. $other_min_depth .' minimum_depth filter expecting '. $expected_min_depth .' minimum_depth filter');
+                            die('Model '. $model->name .' has '. $other_min_depth .' minimum_depth filter expecting '. $expected_min_depth .' minimum_depth filter');
                         }
                     }
                 }
