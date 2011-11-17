@@ -56,6 +56,10 @@ sub execute {
 
     my ($self) = @_;
 
+    # one project per upload
+    my $project = Genome::Project->create(name => $self);
+
+
     # Assumes first row contains column names
     # Assumes first col is the name of the object or
     #   blank to create a new object
@@ -99,6 +103,7 @@ sub execute {
             next ROW;
         }
 
+
         my $j = -1;
         VALUE:
         for my $v (@values) {
@@ -126,6 +131,9 @@ sub execute {
     
             if ($sa) { $added++; }
         }
+
+        # add each subject obj to the project
+        $project->add_part( entity => $obj, role => 'automatic');
     }
 
     return $added;
