@@ -39,18 +39,12 @@ sub help_detail {
 sub execute {
     my $self = shift;
 
-    $self->preload_druggable_gene_objects; #TODO: test and see if this speeds things up
     my @gene_name_reports = $self->lookup_gene_identifiers;
     my @interactions = $self->get_interactions(@gene_name_reports);
     my %grouped_interactions = $self->group_interactions_by_drug_name_report(@interactions);
     $self->print_grouped_interactions(%grouped_interactions);
 
     return 1;
-}
-
-sub preload_druggable_gene_objects {
-    my $self = shift;
-    my @interactions = Genome::DruggableGene::DrugGeneInteractionReport->get();
 }
 
 sub lookup_gene_identifiers {
