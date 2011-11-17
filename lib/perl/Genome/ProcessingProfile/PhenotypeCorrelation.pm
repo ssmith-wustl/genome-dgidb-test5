@@ -311,8 +311,11 @@ system($final_maf_maker_cmd);
     my $bmr_step3_cmd = "gmt music bmr calc-bmr --bam-list $bam_list --output-dir $output_dir --reference-sequence $reference_fasta --roi-file $target_region_set_name_bedfile --maf-file $maf_file --show-skipped"; #show skipped doesn't work in workflow context
 
     #Ran SMG test:
+    #The smg test limits its --output-file to a --max-fdr cutoff. A full list of genes is always stored separately next to the output with prefix "_detailed".
     my $fdr_cutoff = 0.2; #0.2 is the default -- For every gene, if the FDR for at least 2 of theses test are less than $fdr_cutoff, it is considered as an SMG.
     my $smg_cmd = "gmt music smg --gene-mr-file $output_dir/gene_mrs --output-file $output_dir/smgs --max-fdr $fdr_cutoff";
+
+    my $smg_maf_cmd = "gmt capture restrict-maf-to-smgs --maf-file $maf_file --output-file $output_dir/smg_restricted_maf.maf --output-bed-smgs $output_dir/smg_restricted_bed.bed --smg-file $output_dir/smgs";
 
 #get some pathway information, not used now but we could technically choose to run only genes from certain pathways
     #Ran PathScan on the KEGG DB (Larger DBs take longer):
@@ -328,19 +331,20 @@ system($final_maf_maker_cmd);
     #Ran Proximity tool:
     my $proximity_cmd = "gmt music proximity --maf-file $maf_file --reference-sequence $reference_fasta --output-file $output_dir/variant_proximity";
 
+    #Ran mutation-relation:
+    my $permutations = 1000; #the default is 100, but cyriac and yanwen used either 1000 or 10000. Not sure of the reasoning behind those choices.
+    my $mutrel_cmd = "gmt music mutation-relation --bam-list $bam_list --maf-file $maf_file --output-file $output_dir/mutation_relations.csv --permutations $permutations --gene-list $output_dir/smgs"; #number of permutations can be a variable or something
+
 #instead of pathways, use smg test to limit maf file input into mutation relations $maf_file_smg -- no script for this step yet
-#The smg test limits its --output-file to a --max-fdr cutoff. A full list of genes is always stored separately next to the output with prefix "_detailed". The FDR filtered SMG list can be used as input to "gmt music mutation-relation" thru --gene-list, so it limits its tests to SMGs only. No need to make a new MAF. Something similar could be implemented for clinical-correlation.
+#The FDR filtered SMG list can be used as input to "gmt music mutation-relation" thru --gene-list, so it limits its tests to SMGs only. No need to make a new MAF. Something similar could be implemented for clinical-correlation.
 
 #Ran clinical-correlation:
 #need clinical data file $clinical_data
 #example: /gscmnt/sata809/info/medseq/MRSA/analysis/Sureselect_49_Exomes_Germline/music/input/sample_phenotypes2.csv
 #this is not the logistic regression yet, found out that yyou and ckandoth did not put logit into music, but just into the R package that music runs
-    my $clin_corr = "gmt music clinical-correlation --genetic-data-type gene --bam-list $bam_list --maf-file $maf_file_smg --output-file $output_dir/clin_corr_result --categorical-clinical-data-file $clinical_data";
+    my $clin_corr = "gmt music clinical-correlation --genetic-data-type gene --bam-list $bam_list --maf-file $output_dir/smg_restricted_maf.maf --output-file $output_dir/clin_corr_result --categorical-clinical-data-file $clinical_data";
 
 #instead of clinical correlation, we can call these stats directly
-    #Ran mutation-relation:
-    my $permutations = 1000; #the default is 100, but cyriac and yanwen used either 1000 or 10000. Not sure of the reasoning behind those choices.
-    my $mutrel_cmd = "gmt music mutation-relation --bam-list $bam_list --maf-file $maf_file_smg --output-file $output_dir/mutation_relations.csv --permutations $permutations --gene-list $output_dir/smgs"; #number of permutations can be a variable or something
 
     #break up clinical data into two files, one for explanatory variable and one for covariates
     #sample_infection.csv = $expl_file
@@ -353,6 +357,10 @@ system($final_maf_maker_cmd);
     #H_MRS-6305-1025125	10	1	1
     #H_MRS-6401-1025123	16	1	1
 
+    #make smg bed file STILL UNDONE
+
+
+    my $variant_matrix_cmd = "gmt vcf vcf-to-variant-matrix --output-file $output_dir/variant_matrix.txt --vcf-file $multisample_vcf --bed-roi-file $output_dir/smg_restricted_bed.bed";
 
     #make .R file example
         ## Build temp file for extra positions to highlight ##
@@ -366,7 +374,7 @@ system($final_maf_maker_cmd);
     options(error=recover)
     source("stat.lib", chdir=TRUE)
     #this should work, but I havent tested using the .csv out of mut rel -- wschierd
-    mut.file="$output_dir/mutation_relations.csv" 
+    mut.file="$output_dir/variant_matrix.txt" 
     inf.file="$expl_file";
     pheno.file="$pheno_file";
     output.file="$output_dir/logit_out_cor.csv";
