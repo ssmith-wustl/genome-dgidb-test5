@@ -50,12 +50,12 @@ class Genome::ProcessingProfile::MetagenomicShotgun {
         },
         _metagenomic_nucleotide_pp => {
             is => 'Genome::ProcessingProfile::ReferenceAlignment',
-            id_by => 'metagenomic_pp_id',
+            id_by => 'metagenomic_nucleotide_pp_id',
             doc => 'processing profile to use for metagenomic alignment',
         },
         _metagenomic_protein_pp=> {
             is => 'Genome::ProcessingProfile::ReferenceAlignment',
-            id_by => 'unaligned_metagenomic_alignment_pp_id',
+            id_by => 'metagenomic_protein_pp_id',
             doc => 'processing profile to use for realignment of unaligned reads from first metagenomic alignment',
         },
         _viral_nucleotide_pp=> {
@@ -81,6 +81,8 @@ sub _resource_requirements_for_execute_build {
 sub _execute_build {
     my ($self, $build) = @_;
 
+    $DB::single=1;
+
     my $model = $build->model;
     $self->status_message('Build '.$model->__display_name__);
     my $contamination_screen_model = $model->_contamination_screen_model;
@@ -89,13 +91,75 @@ sub _execute_build {
     $self->status_message("Got metagenomic_nucleotide_model ".$metagenomic_nucleotide_model->__display_name__) if $metagenomic_nucleotide_model;
     my $metagenomic_protein_model = $model->_metagenomic_protein_model;
     $self->status_message("Got metagenomic_protein_model ".$metagenomic_protein_model->__display_name__) if $metagenomic_protein_model;
-    my $first_viral_verifiacation_model = $model->_first_viral_verifiacation_model;
-    $self->status_message("Got first_viral_verifiacation_model ".$first_viral_verifiacation_model->__display_name__) if $first_viral_verifiacation_model;
-    my $second_viral_verifiacation_model = $model->_second_viral_verifiacation_model;
-    $self->status_message("Got second_viral_verifiacation_model ".$second_viral_verifiacation_model->__display_name__) if $second_viral_verifiacation_model;
+    my $viral_nucleotide_model = $model->_viral_nucleotide_model;
+    $self->status_message("Got viral_nucleotide_model ".$viral_nucleotide_model->__display_name__) if $viral_nucleotide_model;
+    my $viral_protein_model = $model->_viral_protein_model;
+    $self->status_message("Got viral_protein_model ".$viral_protein_model->__display_name__) if $viral_protein_model;
+
+    my @original_instdata = $build->instrument_data;
+
+    my $cs_build = $self->_add_data($contamination_screen_model, @original_instdata);
+    $self->_start_build($cs_build);
+    $self->_wait_build($cs_build);
+
+    my @cs_unaligned;
+    if ($self->filter_contaminant_fragments){
+        @cs_unaligned = $self->_extract_data($cs_build, "unaligned-paired");
+    }
+    else{
+        @cs_unaligned = $self->_extract_data($cs_build, "unaligned");
+    }
+
+    my $mg_nucleotide_build = $self->_add_data($metagenomic_nucleotide_model, @cs_unaligned);
+    $self->_start_build($mg_nucleotide_build);
+    $self->_wait_build($mg_nucleotide_build);
+
+    my @mg_nucleotide_unaligned = $self->_extract_data($mg_nucleotide_build, "unaligned");
+    my @mg_nucleotide_aligned = $self->_extract_data($mg_nucleotide_build, "aligned");
+
+    my $mg_protein_build = $self->_add_data($metagenomic_protein_model, @mg_nucleotide_unaligned);
+    $self->_start_build($mg_protein_build);
+    $self->_wait_build($mg_protein_build);
+
+    my @mg_protein_aligned = $self->_extract_data($mg_protein_build, "aligned");
+
+    my $viral_nucleotide_build = $self->_add_data($viral_nucleotide_model, @mg_nucleotide_aligned, @mg_protein_aligned);
+    my $viral_protein_build = $self->_add_data($viral_protein_model, @mg_nucleotide_aligned, @mg_protein_aligned);
+
+    $self->_start_build($viral_nucleotide_build);
+    $self->_start_build($viral_protein_build);
 
     return 1;
 }
+
+sub _extract_data{
+    my $self = shift;
+    my ($build, $extraction_type) = @_;
+    $self->status_message("Extracting $extraction_type reads from ".$build->__display_name__);
+    return $build->instrument_data;
+}
+
+sub _add_data{
+    my $self = shift;
+    my ($model, @instrument_data) = @_;
+    $self->status_message("Adding instrument data ".join(",",map{$_->__display_name__}@instrument_data)." to ".$model->__display_name__);
+    return $model->add_build(data_directory=>"/tmp");
+}
+
+sub _start_build{
+    my $self = shift;
+    my $build = shift;
+    $self->status_message("Starting build ".$build->__display_name__);
+    return $build;
+}
+
+sub _wait_build{
+    my $self = shift;
+    my $build = shift;
+    return $self->status_message("Waiting for build ".$build->__display_name__."... done");
+}
+
+
 __END__
     # temp hack for debugging
     my $log_model_name = $model->name;
