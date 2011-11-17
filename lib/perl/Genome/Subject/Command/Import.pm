@@ -55,7 +55,7 @@ sub create {
 sub execute {
 
     my ($self) = @_;
-$DB::single = 1;
+
     # Assumes first row contains column names
     # Assumes first col is the name of the object or
     #   blank to create a new object
