@@ -39,8 +39,6 @@ sub help_detail {
 sub execute {
     my $self = shift;
 
-    $DB::single = 1;
-
     $self->preload_druggable_gene_objects; #TODO: test and see if this speeds things up
     my $gene_name_report_results = $self->lookup_gene_identifiers;
     my %grouped_interactions = $self->group_interactions_by_drug_name_report($gene_name_report_results);
@@ -82,7 +80,8 @@ sub _lookup_gene_identifier {
     my $gene_identifier = shift;
     my ($entrez_gene_name_reports, $intermediates) = Genome::DruggableGene::GeneNameReport->convert_to_entrez($gene_identifier);
     my @gene_name_reports = $self->_find_gene_name_reports_for_identifier($gene_identifier);
-    my @complete_gene_name_reports = (@{$entrez_gene_name_reports}, @{$intermediates}, @gene_name_reports);
+    ($entrez_gene_name_reports, $intermediates) = ($entrez_gene_name_reports->{$gene_identifier}, $intermediates->{$gene_identifier});
+    my @complete_gene_name_reports = (($entrez_gene_name_reports ? @$entrez_gene_name_reports : ()), ($intermediates ? @$intermediates : ()), @gene_name_reports);
     @complete_gene_name_reports = uniq @complete_gene_name_reports;
     return @complete_gene_name_reports;
 }
