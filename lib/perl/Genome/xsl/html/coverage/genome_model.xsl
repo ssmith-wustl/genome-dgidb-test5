@@ -3,9 +3,8 @@
                 xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
 
 
-  <xsl:template name="genome_model_set_coverage" match="object[@type='Genome::Model::Set'] | object[@type='Genome::ModelGroup']">
-    <xsl:comment>template: /html/coverage/genome_model.xsl match="object[@type='Genome::Model::Set'] | object[@type='Genome::ModelGroup']"</xsl:comment>
-
+  <xsl:template name="genome_model_set_coverage" match="object[@type='Genome::Model::Set'] | object[@type='Genome::ModelGroup'] | object[@type='Genome::Model::Build::Set'] | object[@type='Genome::Model::Build'] ">
+    <xsl:comment>template: /html/coverage/genome_model.xsl</xsl:comment>
     <link rel="stylesheet" href="/res/js/pkg/TableTools/media/css/TableTools.css" media="screen"/>
 
     <script type="text/javascript" src="/res/js/pkg/protovis.js"></script>
