@@ -49,8 +49,6 @@ sub execute {
 
 sub preload_druggable_gene_objects {
     my $self = shift;
-    my @gene_name_reports = Genome::DruggableGene::GeneNameReport->get();    
-    my @gene_name_report_associations = Genome::DruggableGene::GeneNameReportAssociation->get();
     my @interactions = Genome::DruggableGene::DrugGeneInteractionReport->get();
 }
 
@@ -62,7 +60,6 @@ sub lookup_gene_identifiers {
         $self->error_message('No gene identifiers in gene_file ' . $self->gene_file . ', exiting');
         return;
     }
-    $DB::single = 1;
 
     my ($entrez_gene_name_reports, $intermediates) = Genome::DruggableGene::GeneNameReport->convert_to_entrez(@gene_identifiers);
     my %gene_name_reports = $self->_find_gene_name_reports_for_identifiers(@gene_identifiers);
