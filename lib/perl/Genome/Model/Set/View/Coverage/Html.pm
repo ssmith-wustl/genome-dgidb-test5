@@ -8,7 +8,7 @@ use Genome;
 class Genome::Model::Set::View::Coverage::Html {
     is => 'Genome::View::Status::Html',
     has => [
-        perspective => { 'coverage', },
+        perspective => { value => 'coverage', },
     ],
 };
 
