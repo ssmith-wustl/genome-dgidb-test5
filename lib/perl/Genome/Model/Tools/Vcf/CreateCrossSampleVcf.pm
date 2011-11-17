@@ -1,4 +1,4 @@
-package Genome::ModelGroup::Command::CreateCrossSampleVcf;
+package Genome::Model::Tools::Vcf::CreateCrossSampleVcf;
 
 use strict;
 use warnings;
@@ -7,7 +7,7 @@ use Genome;
 use Workflow;
 use Workflow::Simple;
 
-class Genome::ModelGroup::Command::CreateCrossSampleVcf {
+class Genome::Model::Tools::Vcf::CreateCrossSampleVcf {
     is => 'Genome::Command::Base',
     has_input => [
         models => {

@@ -26,19 +26,19 @@ if ($archos !~ /64/) {
     }
 }
 
-use_ok( 'Genome::ModelGroup::Command::CreateCrossSampleVcf');
+use_ok( 'Genome::Model::Tools::Vcf::CreateCrossSampleVcf');
 
 my $refbuild_id = 101947881;
-my $test_data_directory = "/gsc/var/cache/testsuite/data/Genome-ModelGroup-Command-CreateCrossSampleVcf";
+my $test_data_directory = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Vcf-CreateCrossSampleVcf";
 
 my @input_models = map{ Genome::Model->get($_)} (2881222865,2881222915,2881222946);
 #my @input_modelgroup = Genome::ModelGroup->get(20955);
 
 # Updated to .v2 for correcting an error with newlines
 my $expected_directory = $test_data_directory . "/expected";
-my $test_output_base = File::Temp::tempdir('Genome-ModelGroup-Command-CreateCrossSampleVcf-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
+my $test_output_base = File::Temp::tempdir('Genome-Model-Tools-Vcf-CreateCrossSampleVcf-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
 
-my $ccsv_cmd = Genome::ModelGroup::Command::CreateCrossSampleVcf->create(
+my $ccsv_cmd = Genome::Model::Tools::Vcf::CreateCrossSampleVcf->create(
     output_directory => $test_output_base,
     models => \@input_models,
     max_files_per_merge => 10,
