@@ -49,6 +49,7 @@ my $library = Genome::Library->create(
     id => -12345,
     name => $sample->name.'-testlibs',
     sample_id => $sample->id,
+    fragment_size_range => 260,
 );
 ok($library, 'library') or die;
 
@@ -59,7 +60,6 @@ my $instrument_data = Genome::InstrumentData::Solexa->create(
     subset_name => '8-CGATGT',
     run_type => 'Paired',
     library => $library,
-    median_insert_size => 260,# 181, but 260 was used to generate assembly
     archive_path => $archive_path,
     fwd_clusters => 15000,
     rev_clusters => 15000,
