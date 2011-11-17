@@ -25,7 +25,7 @@ class Genome::DruggableGene::Command::GeneNameReport::LookupInteractions {
 };
 
 sub help_brief {
-    'Lookup drug-gene interactions by gene identifier';
+    'Lookup drug-gene interactions by gene identifiers';
 }
 
 sub help_synopsis {
@@ -56,15 +56,15 @@ sub lookup_gene_identifiers {
         return;
     }
 
-    my ($entrez_gene_name_reports, $intermediates) = Genome::DruggableGene::GeneNameReport->convert_to_entrez(@gene_identifiers);
+    my ($entrez_gene_name_reports, $entrez_gene_name_intermediate_reports) = Genome::DruggableGene::GeneNameReport->convert_to_entrez(@gene_identifiers);
     my %gene_name_reports = $self->_find_gene_name_reports_for_identifiers(@gene_identifiers);
 
     my @complete_genes;
     for my $gene_identifier (@gene_identifiers){
         my $entrez_gene_name_reports_for_identifier = $entrez_gene_name_reports->{$gene_identifier};
         push @complete_genes, @$entrez_gene_name_reports_for_identifier if $entrez_gene_name_reports_for_identifier;
-        my $intermediates_for_identifier = $intermediates->{$gene_identifier};
-        push @complete_genes, @$intermediates_for_identifier if $intermediates_for_identifier;
+        my $entrez_gene_name_intermediate_reports_for_identifier = $entrez_gene_name_intermediate_reports->{$gene_identifier};
+        push @complete_genes, @$entrez_gene_name_intermediate_reports_for_identifier if $entrez_gene_name_intermediate_reports_for_identifier;
         my $gene_name_reports_for_identifier = $gene_name_reports{$gene_identifier};
         push @complete_genes, @$gene_name_reports_for_identifier if $gene_name_reports_for_identifier;
     }
