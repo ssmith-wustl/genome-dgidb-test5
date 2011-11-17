@@ -3,6 +3,8 @@ package Genome::Model::Build::Set::View::Coverage::Xml;
 use strict;
 use warnings;
 
+use Genome;
+
 class Genome::Model::Build::Set::View::Coverage::Xml {
     is => 'Genome::Model::Set::View::Coverage::Xml',
 };
