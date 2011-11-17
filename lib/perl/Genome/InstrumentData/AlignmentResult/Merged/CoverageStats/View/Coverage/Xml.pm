@@ -1,37 +1,41 @@
-package Genome::Model::Build::ReferenceAlignment::View::Coverage::Xml;
+package Genome::InstrumentData::AlignmentResult::Merged::CoverageStats::View::Coverage::Xml;
 
 use strict;
 use warnings;
 
 use Genome;
 
-class Genome::Model::Build::ReferenceAlignment::View::Coverage::Xml {
-    is => 'Genome::InstrumentData::AlignmentResult::Merged::CoverageStats::View::Coverage::Xml',
+class Genome::InstrumentData::AlignmentResult::Merged::CoverageStats::View::Coverage::Xml {
+    is => 'UR::Object::View::Default::Xml',
+    has => [
+        perspective => { default_value => 'coverage' },
+    ],
 };
 
+#for convenience of overriding in coverage views of other objects
 sub coverage_result {
     my $self = shift;
 
-    my $build = $self->subject;
-    return unless $build;
+    return $self->subject;
+}
 
-    return $build->reference_coverage_result;
+sub all_subject_classes {
+    my $self = shift;
+    my @cl = $self->SUPER::all_subject_classes;
+
+    my $class = 'Genome::InstrumentData::AlignmentResult::Merged::CoverageStats';
+    unless(grep( $_ eq $class, @cl )) {
+        push @cl, $class;
+    }
+
+    return @cl;
 }
 
 sub _generate_content {
     my $self = shift;
 
-    if($self->coverage_result) {
-        #new view for result based builds
-        return $self->SUPER::_generate_content;
-    }
-
-    #old view for non-result based builds
-
-    my $subject = $self->subject();
-    return '' unless $subject;
-
-    my $model = $subject->model;
+    my $coverage_result = $self->coverage_result;
+    return '' unless $coverage_result;
 
     my $xml_doc = XML::LibXML->createDocument();
     $self->_xml_doc($xml_doc);
@@ -42,16 +46,21 @@ sub _generate_content {
     my $time = UR::Time->now();
     $object->addChild( $xml_doc->createAttribute("generated-at",$time) );
 
-    $object->addChild( $xml_doc->createAttribute('type', $self->subject_class_name) );
-    $object->addChild( $xml_doc->createAttribute('id', $subject->id) );
+    $object->addChild( $xml_doc->createAttribute('type', $coverage_result->class) );
+    $object->addChild( $xml_doc->createAttribute('id', $coverage_result->id) );
 
     my $roi_set_name = $object->addChild( $xml_doc->createElement('region_of_interest_set_name') );
-    $roi_set_name->addChild( $xml_doc->createTextNode($model->region_of_interest_set_name) );
+    $roi_set_name->addChild( $xml_doc->createTextNode($coverage_result->region_of_interest_set->name) );
+
+    my @instrument_data = $coverage_result->alignment_result->instrument_data;
+    my %target_region_set_names;
+    for my $i (@instrument_data) {
+        $target_region_set_names{$i->target_region_set_name}++;
+    }
 
     my $target_region_set_names = $object->addChild( $xml_doc->createElement('target_region_set_names') );
-    my @inputs = Genome::Model::Input->get(model_id => $model->id, name => 'target_region_set_name');
-    for my $input (@inputs) {
-        $target_region_set_names->addChild( $xml_doc->createTextNode($input->value_id) );
+    for my $target (sort keys %target_region_set_names) {
+        $target_region_set_names->addChild( $xml_doc->createTextNode($target) );
     }
     $object->addChild( $self->get_alignment_summary_node );
     $object->addChild( $self->get_coverage_stats_summary_node );
@@ -61,8 +70,10 @@ sub _generate_content {
 sub get_alignment_summary_node {
     my $self = shift;
     my $xml_doc = $self->_xml_doc;
-    my $build = $self->subject;
-    my $alignment_summary_hash_ref = $build->alignment_summary_hash_ref;
+
+    my $coverage_result = $self->coverage_result;
+
+    my $alignment_summary_hash_ref = $coverage_result->alignment_summary_hash_ref;
     my $alignment_summary_node = $xml_doc->createElement('alignment-summary');
     for my $wingspan (keys %{$alignment_summary_hash_ref}) {
         my $wingspan_node = $alignment_summary_node->addChild( $xml_doc->createElement('wingspan') );
@@ -72,14 +83,17 @@ sub get_alignment_summary_node {
             $key_node->addChild( $xml_doc->createTextNode( $alignment_summary_hash_ref->{$wingspan}->{$key} ) );
         }
     }
+
     return $alignment_summary_node;
 }
 
 sub get_coverage_stats_summary_node {
     my $self = shift;
     my $xml_doc = $self->_xml_doc;
-    my $build = $self->subject;
-    my $coverage_stats_summary_hash_ref = $build->coverage_stats_summary_hash_ref;
+
+    my $coverage_result = $self->coverage_result;
+
+    my $coverage_stats_summary_hash_ref = $coverage_result->coverage_stats_summary_hash_ref;
     my $coverage_stats_summary_node = $xml_doc->createElement('coverage-stats-summary');
     for my $wingspan (keys %{$coverage_stats_summary_hash_ref}) {
         my $wingspan_node = $coverage_stats_summary_node->addChild( $xml_doc->createElement('wingspan') );
@@ -93,5 +107,6 @@ sub get_coverage_stats_summary_node {
             }
         }
     }
+
     return $coverage_stats_summary_node;
 }
