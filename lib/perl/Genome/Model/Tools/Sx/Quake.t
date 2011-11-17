@@ -25,7 +25,7 @@ no warnings;
     my ($self, %params) = @_;
     is(
         $params{cmd},
-        'quake.py -f '.$quake->_tmpdir.'/quake.fastq --hash_size 1 --headers --int -k 1 -l 1 --log --no_count --no_cut --no_jelly -p 1 --ratio 1 -t 1 -u',
+        'quake.py -q 33 -r '.$quake->_tmpdir.'/quake.fastq --hash_size 1 --headers --int -k 1 -l 1 --log --no_count --no_cut --no_jelly -p 1 --ratio 1 -t 1 -u',
         'quake command matches',
     );
     Genome::Sys->copy_file($input, $quake->_tmpdir.'/quake.cor.fastq');

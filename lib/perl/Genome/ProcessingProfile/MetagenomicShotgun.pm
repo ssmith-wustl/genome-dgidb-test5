@@ -96,862 +96,108 @@ sub _execute_build {
     my $viral_protein_model = $model->_viral_protein_model;
     $self->status_message("Got viral_protein_model ".$viral_protein_model->__display_name__) if $viral_protein_model;
 
+    my $start_build = sub {
+        my ($model, @instrument_data) = @_;
+        my %existing;
+        for my $inst_data($model->instrument_data){
+            $existing{$inst_data->id} = $inst_data;
+        }
+        my @to_add;
+        for my $inst_data(@instrument_data){
+            if ($existing{$inst_data->id}) {
+                delete $existing{$inst_data->id};
+            }
+            else {
+                push @to_add, $inst_data;
+            }
+        }
+        for my $inst_data (values %existing){
+            $self->status_message("Removing Instrument Data " . $inst_data->id . " from model " . $model->__display_name__);
+            $model->remove_instrument_data($inst_data)
+        }
+        for my $inst_data(@to_add){
+            $self->status_message("Adding Instrument Data " . $inst_data->id . " to model " . $model->__display_name__);
+            $model->add_instrument_data($inst_data);
+        }
+        
+        my $build = $self->build_if_necessary($model);
+        return $build;
+    };
+
+    my $wait_build = sub {
+        my @watched_builds = @_;
+        for my $build ( @watched_builds ) {
+            $self->status_message('Watching build: '.$build->__display_name__);
+            $self->wait_for_build($build);
+            unless ($build->status eq 'Succeeded') {
+                $self->error_message("Failed to execute build (".$build->__display_name__."). Status: ".$build->status);
+                return;
+            }
+        }
+    };
+
+    my $extract_data = sub {
+        my ($from_build, $extraction_type) = @_;
+        $self->status_message("Extracting $extraction_type reads from ".$from_build->__display_name__);
+        return $from_build->instrument_data;
+    };
+
     my @original_instdata = $build->instrument_data;
 
-    my $cs_build = $self->_add_data($contamination_screen_model, @original_instdata);
-    $self->_start_build($cs_build);
-    $self->_wait_build($cs_build);
+    my $cs_build = $start_build->($contamination_screen_model, @original_instdata);
+    $wait_build->($cs_build);
+    exit;
 
     my @cs_unaligned;
     if ($self->filter_contaminant_fragments){
-        @cs_unaligned = $self->_extract_data($cs_build, "unaligned-paired");
+        @cs_unaligned = $extract_data->($cs_build, "unaligned-paired");
     }
     else{
-        @cs_unaligned = $self->_extract_data($cs_build, "unaligned");
+        @cs_unaligned = $extract_data->($cs_build, "unaligned");
     }
 
-    my $mg_nucleotide_build = $self->_add_data($metagenomic_nucleotide_model, @cs_unaligned);
-    $self->_start_build($mg_nucleotide_build);
-    $self->_wait_build($mg_nucleotide_build);
+    my $mg_nucleotide_build = $start_build->($metagenomic_nucleotide_model, @cs_unaligned);
+    $wait_build->($mg_nucleotide_build);
 
-    my @mg_nucleotide_unaligned = $self->_extract_data($mg_nucleotide_build, "unaligned");
-    my @mg_nucleotide_aligned = $self->_extract_data($mg_nucleotide_build, "aligned");
+    my @mg_nucleotide_unaligned = $extract_data->($mg_nucleotide_build, "unaligned");
+    my @mg_nucleotide_aligned = $extract_data->($mg_nucleotide_build, "aligned");
 
-    my $mg_protein_build = $self->_add_data($metagenomic_protein_model, @mg_nucleotide_unaligned);
-    $self->_start_build($mg_protein_build);
-    $self->_wait_build($mg_protein_build);
+    my $mg_protein_build = $start_build->($metagenomic_protein_model, @mg_nucleotide_unaligned);
+    $wait_build->($mg_protein_build);
 
-    my @mg_protein_aligned = $self->_extract_data($mg_protein_build, "aligned");
+    my @mg_protein_aligned = $extract_data->($mg_protein_build, "aligned");
 
-    my $viral_nucleotide_build = $self->_add_data($viral_nucleotide_model, @mg_nucleotide_aligned, @mg_protein_aligned);
-    my $viral_protein_build = $self->_add_data($viral_protein_model, @mg_nucleotide_aligned, @mg_protein_aligned);
+    my $viral_nucleotide_build = $start_build->($viral_nucleotide_model, @mg_nucleotide_aligned, @mg_protein_aligned);
+    my $viral_protein_build = $start_build->($viral_protein_model, @mg_nucleotide_aligned, @mg_protein_aligned);
 
-    $self->_start_build($viral_nucleotide_build);
-    $self->_start_build($viral_protein_build);
+    $wait_build->($viral_nucleotide_build);
+    $wait_build->($viral_protein_build);
 
     return 1;
 }
 
-sub _extract_data{
-    my $self = shift;
-    my ($build, $extraction_type) = @_;
-    $self->status_message("Extracting $extraction_type reads from ".$build->__display_name__);
-    return $build->instrument_data;
-}
-
-sub _add_data{
-    my $self = shift;
-    my ($model, @instrument_data) = @_;
-    $self->status_message("Adding instrument data ".join(",",map{$_->__display_name__}@instrument_data)." to ".$model->__display_name__);
-    return $model->add_build(data_directory=>"/tmp");
-}
-
-sub _start_build{
-    my $self = shift;
-    my $build = shift;
-    $self->status_message("Starting build ".$build->__display_name__);
-    return $build;
-}
-
-sub _wait_build{
-    my $self = shift;
-    my $build = shift;
-    return $self->status_message("Waiting for build ".$build->__display_name__."... done");
-}
-
-
-__END__
-    # temp hack for debugging
-    my $log_model_name = $model->name;
-    $self->status_message("Starting build for model $log_model_name");
-
-    my $screen_model;
-    my $screen_build;
-    my @screened_assignments;
-
-    if ($self->_contamination_screen_pp){ 
-        $screen_model = $model->_contamination_screen_alignment_model;
-        unless ($screen_model) {
-            die $self->error_message("couldn't grab contamination screen underlying model!");
-        }
-
-        # ENSURE WE HAVE INSTRUMENT DATA
-        my @assignments = $model->instrument_data_inputs;
-        if (@assignments == 0) {
-            die $self->error_message("NO INSTRUMENT DATA ASSIGNED!");
-        }
-
-        # ASSIGN ANY NEW INSTRUMENT DATA TO THE CONTAMINATION SCREENING MODEL
-        for my $assignment (@assignments) {
-            my $instrument_data = $assignment->value;
-            my $screen_assignment = $screen_model->instrument_data_input(
-                value_id => $instrument_data->id 
-            );
-            if ($screen_assignment) {
-                $self->status_message("Instrument data " . $instrument_data->__display_name__ . " is already assigned to the screening model");
-            }
-            else {
-                my $cmd = 'genome model instrument-data assign --model-id '.$screen_model->id.' --instrument-data-id '.$instrument_data->id;
-                if ($assignment->filter_desc){
-                    $cmd.=' --filter '.$assignment->filter_desc;
-                }
-                my $exit_code = system($cmd);
-                unless ($exit_code == 0){
-                    die $self->error_message("Failed to add instrument data ".$instrument_data->id." to contamination screen model!");
-                }
-                my $confirm_screen_assignment = UR::Context->current->reload("Genome::Model::Input", model_id=>$screen_model->id, value_id=>$instrument_data->id);
-                if ($confirm_screen_assignment){
-                    $self->status_message("Added instrument data ".$instrument_data->id." to contamination screen model");
-                }else{
-                    die $self->error_message("Can't find instrument data assignment for ".$instrument_data->id." after attempting to assign to contamination screen model");
-                }
-
-            }
-        }
-
-        # BUILD HUMAN CONTAMINATION SCREEN MODEL
-        $self->status_message("Building contamination screen model if necessary");
-        $screen_build = $self->build_if_necessary_and_wait($screen_model);
-        return if not $screen_build;
-
-        my ($prev_from_build) = grep {$_->id eq $screen_build->id} $build->from_builds();
-        $build->add_from_build(from_build=>$screen_build, role=>'contamination_screen_alignment_build') unless $prev_from_build;;
-
-    }else{
-        $self->status_message("Skipping contamination screen for instrument data");
-    }
-
-    # POST-PROCESS THE UNALIGNED READS FROM THE CONTAMINATION SCREEN MODEL
-
-    my @imported_instrument_data_for_metagenomic_models;
-    if ($self->_contamination_screen_pp){
-
-        #if we contamination screened, we'll use the alignment results, extract unaligned reads to a fastq and then post-process, create new imported instrument data
-        $self->status_message("Processing and importing instrument data for any new unaligned reads");
-        @screened_assignments = $screen_model->instrument_data_inputs;
-        my @post_processed_unaligned_reads;
-        for my $assignment (@screened_assignments) {
-            my @alignment_results = $screen_build->alignment_results_for_instrument_data($assignment->value);
-            if (@alignment_results > 1) {
-                $self->error_message( "Multiple alignment_results found for instrument data assignment: " . $assignment->__display_name__);
-                return;
-            }
-            if (@alignment_results == 0) {
-                $self->error_message( "No alignment_results found for instrument data assignment: " . $assignment->__display_name__);
-                return;
-            }
-            $self->status_message("Processing instrument data assignment ".$assignment->__display_name__." for unaligned reads import");
-
-            my $alignment_result = $alignment_results[0];
-            my @post_processed_unaligned_reads_for_alignment_result = $self->_process_unaligned_reads($alignment_result);
-            push @post_processed_unaligned_reads, \@post_processed_unaligned_reads_for_alignment_result
-        }
-
-        unless (@post_processed_unaligned_reads == @screened_assignments) {
-            Carp::confess("The count of post-processed unaligned reads does not match the count of screened instrument data assignments.");
-        }
-        @imported_instrument_data_for_metagenomic_models = @post_processed_unaligned_reads;
-
-    }else{
-        #if skipping contamination_screen, we need to extract the originally assigned imported instrument data and process and reimport it for the metagenomic screen.
-        #sra data is stored in fastq/sangerqual format, so these just need to be extracted, dusted, n-removed
-        my @sra_assignments = $build->instrument_data_inputs;
-        for my $assignment(@sra_assignments){
-            my @post_processed_reads = $self->_process_sra_instrument_data($assignment->value);
-            #TODO, this doesn't need to be an array of array refs, since we should get a 1 to 1 sra inst_data to post-processed imported inst_data, but this is how it's done in the original pipeline, where the 1 to 1 convention doesn't hold.  We're sticking to this standard for now.
-            push @imported_instrument_data_for_metagenomic_models, \@post_processed_reads;
-        }
-        @screened_assignments = @sra_assignments;
-    }
-
-
-    # ASSIGN THE POST-PROCESSED READS TO THE METAGENOMIC MODELS
-    my @metagenomic_models = $model->_metagenomic_alignment_models;
-    for my $metagenomic_model (@metagenomic_models) {
-        my %assignments_expected;
-        for my $n (0..$#imported_instrument_data_for_metagenomic_models) {
-            my $prev_assignment = $screened_assignments[$n];
-            my $filter_desc = $prev_assignment->filter_desc;
-            my $post_processed_instdata_for_prev_assignment = $imported_instrument_data_for_metagenomic_models[$n];
-            for my $instrument_data (@$post_processed_instdata_for_prev_assignment) {
-                my $metagenomic_assignment = $metagenomic_model->instrument_data_input(
-                    value_id => $instrument_data->id #TODO inst data switch
-                );
-                if ($metagenomic_assignment) {
-                    $self->status_message("Instrument data " . $instrument_data->__display_name__ . " is already assigned to model " . $metagenomic_model->__display_name__);
-                }
-                else {
-                    my $cmd = 'genome model instrument-data assign --model-id '.$metagenomic_model->id.' --instrument-data-id '.$instrument_data->id;
-                    if ($filter_desc){
-                        $cmd.=' --filter '.$filter_desc;
-                    }
-                    my $exit_code = system($cmd);
-                    unless ($exit_code == 0){
-                        die $self->error_message("Failed to add instrument data ".$instrument_data->id." to model ".$metagenomic_model->__display_name__."!");
-                    }
-                    $metagenomic_assignment = UR::Context->current->reload("Genome::Model::Input", model_id=>$metagenomic_model->id, value_id=>$instrument_data->id);
-                    if ($metagenomic_assignment){
-                        $self->status_message("Added instrument data ".$instrument_data->id." to model ".$metagenomic_model->__display_name__);
-                    }else{
-                        die $self->error_message("Can't find instrument data assignment for ".$instrument_data->id." after attempting to assign to model ".$metagenomic_model->__display_name__);
-                    }
-                }
-                $assignments_expected{$metagenomic_assignment->id} = $metagenomic_assignment;
-            }
-        }
-
-        #TODO  When a model with skip_contamination_screen restarts, the potential extra fragment instrument data from n-removal will not be returned from _process_sra_data, and therefore won't be an expected assignment, so we'll need to check if the extra assignment's source_data_files contains(is derived from) the original instrument data assigned to the model. tldr: don't break on skip_contamination_restarts if extra inst_data looks legit.
-        my @mcs_instrument_data_ids = map {$_->id} $build->instrument_data;
-
-        # ensure there are no other odd assignments on the model besides those expected
-        # this can happen if instrument-data is re-processed (deleted)
-        for my $assignment ($metagenomic_model->instrument_data_inputs) {
-            unless ($assignments_expected{$assignment->id}) {
-                my $instrument_data = $assignment->instrument_data; #TODO inst data switch to value
-                if ($instrument_data) {
-                    my ($derived_from) = $instrument_data->original_data_path =~ m{^/tmp/(?:unaligned_reads/)?(\d+)}; 
-                    #if unaligned reads is in the data path, the id may be an instrument data id(deprecated way of storing original data path), or an alignment result id, here we will figure out which and return the derived from instrument data id
-                    my $inst_data = Genome::InstrumentData->get($derived_from);
-                    unless($inst_data){
-                        my $alignment =Genome::InstrumentData::AlignmentResult->get($derived_from);
-                        unless ($alignment){
-                            die $self->error_message("Couldn't determine derived_from instrument data id from original data path ".$instrument_data->original_data_path);
-                        }
-                        $derived_from = $alignment->instrument_data->id;
-                    }
-                    unless (grep {$derived_from eq $_} @mcs_instrument_data_ids){
-                        $self->error_message(
-                            "Odd assignment found on model "
-                            . $metagenomic_model->__display_name__
-                            . " for instrument data "
-                            . $instrument_data->__display_name__
-                        );
-                        Carp::confess($self->error_message);
-                    }
-                }
-                else {
-                    $self->warning_message(
-                        "Odd assignment found on model "
-                        . $model->__display_name__
-                        . " for MISSING instrument data.  Deleting the assignment."
-                    );
-                    $assignment->delete;
-                }
-            }
-        }
-    }
-
-
-    # BUILD THE METAGENOMIC REFERENCE ALIGNMENT MODELS
-    my @metagenomic_builds = $self->build_if_necessary_and_wait(@metagenomic_models);
-    return if not @metagenomic_builds;
-
-    for my $meta_build (@metagenomic_builds){
-        my ($prev_meta_from_build) = grep {$_->id eq $meta_build->id} $build->from_builds();
-        $build->add_from_build(from_build=>$meta_build, role=>'metagenomic_alignment_build') unless $prev_meta_from_build;
-    }
-    # SYMLINK ALIGNMENT FILES TO BUILD DIRECTORY
-    my $data_directory = $build->data_directory;
-    if ($self->contamination_screen_pp_id){
-        my ($screen_bam, $screen_flagstat) = $self->get_bam_and_flagstat_from_build($screen_build);
-
-        unless ($screen_bam and $screen_flagstat){
-            die $self->error_message("Bam or flagstat undefined for contamination screen build(screen bam: $screen_bam, screen flagstat: $screen_flagstat) ");
-        }
-        unless (-e $screen_bam and -e $screen_flagstat){
-            die $self->error_message("Bam or flagstat doesn't exist for contamination screen build(screen bam: $screen_bam, screen flagstat: $screen_flagstat) ");
-        }
-        $self->symlink($screen_bam, "$data_directory/contamination_screen.bam");
-        $self->symlink($screen_flagstat, "$data_directory/contamination_screen.bam.flagstat");
-    }
-
-    my $counter;
-    my @meta_bams;
-    for my $meta_build (@metagenomic_builds){
-        $counter++;
-        my ($meta_bam, $meta_flagstat) = $self->get_bam_and_flagstat_from_build($meta_build);
-        push @meta_bams, $meta_bam;
-
-        unless ($meta_bam and $meta_flagstat){ 
-            die $self->error_message("Bam or flagstat undefined for metagenomic alignemnt build $counter(meta bam: $meta_bam, meta flagstat: $meta_flagstat) ");
-        }
-        unless (-e $meta_bam and -e $meta_flagstat){
-            die $self->error_message("Bam or flagstat doesn't exist for metagenomic alignment build $counter(meta bam: $meta_bam, meta flagstat: $meta_flagstat) ");
-        }
-
-        $self->symlink($meta_bam, "$data_directory/metagenomic_alignment$counter.bam");
-        $self->symlink($meta_flagstat, "$data_directory/metagenomic_alignment$counter.bam.flagstat");
-    }
-
-    # REPORTS
-
-    # enable "verbose" logging so we can actually see status messages from these methods
-    local $ENV{UR_COMMAND_DUMP_STATUS_MESSAGES} = 1;
-
-    if ($self->contamination_screen_pp_id){
-        my $qc_report = Genome::Model::MetagenomicCompositionShotgun::Command::QcReport->create(
-            build_id => $build->id,
-            skip_qc_on_untrimmed_reads => $self->skip_qc_on_untrimmed_reads,
-        );
-        unless($qc_report->execute()) {
-            die $self->error_message("Failed to create QC report!");
-        }
-    }
-
-    my $final_metagenomic_bam = $build->_final_metagenomic_bam();
-    if (@meta_bams > 1){
-        $final_metagenomic_bam = $self->merge_metagenomic_bams(\@meta_bams, $final_metagenomic_bam);
-    }else{
-        $self->symlink($meta_bams[0], $final_metagenomic_bam);
-    }
-
-    # TODO we should probably lock here for all instrument data id's involved
-    my $locks_ref;
-
-    # If we are trying to re-align unaligned stuff from the previous metagenomic alignment...
-    # Get the unaligned reads from the metagenomic alignment, make a model, and re-align
-    my @realigned_instrument_data;
-    my %metagenomic_instrument_data_to_alignment;
-    if ($self->_unaligned_metagenomic_alignment_pp) {
-        for my $metagenomic_alignment_build ($build->_metagenomic_alignment_builds){
-            for my $alignment_result ($metagenomic_alignment_build->get_alignments){
-                my $instrument_data_id = $alignment_result->instrument_data->id;
-                $metagenomic_instrument_data_to_alignment{$instrument_data_id} = $alignment_result->id;
-            }
-        }
-
-        #EXTRACT UNALIGNED READS FROM METAGENOMIC ALIGNMENT AND IMPORT NEW INSTRUMENT DATA(1)
-        my ($orig_data_paths_to_unaligned_fastq_files) = $self->extract_unaligned_reads_from_bam($final_metagenomic_bam, \%metagenomic_instrument_data_to_alignment);
-        # $original_data_path_to_fastq_files{$original_data_path}->{file} = $file;_
-        # $original_data_path_to_fastq_files{$original_data_path}->{instrument_data_id} = $instrument_data_id;
-        my @unaligned_instrument_data = $self->upload_instrument_data_and_unlock($orig_data_paths_to_unaligned_fastq_files, $locks_ref);
-
-        #ASSIGN INSTRUMENT DATA TO UNALIGNED_METAGENOMIC_ALIGNMENT_MODEL
-        my $unaligned_metagenomic_alignment_model = $model->_unaligned_metagenomic_alignment_model;
-        unless ($unaligned_metagenomic_alignment_model) {
-            die $self->error_message("couldn't grab unaligned metagenomic alignment underlying model!");
-        }
-        ## Assign unaligned instrument data from (1) to this model 
-        for my $instrument_data (@unaligned_instrument_data) {
-            $unaligned_metagenomic_alignment_model->add_instrument_data(
-                value => $instrument_data,
-                #filter_desc => "What do we put here?",  FIXME
-            );
-        }
-
-        my $unaligned_metagenomic_alignment_build = $self->build_if_necessary_and_wait($unaligned_metagenomic_alignment_model);
-        return if not $unaligned_metagenomic_alignment_build;
-
-        my $realigned_bam = $unaligned_metagenomic_alignment_build->whole_rmdup_bam_file;
-
-        Genome::Sys->create_symlink($realigned_bam, $build->data_directory . "/realigned.bam");
-        Genome::Sys->create_symlink($realigned_bam.".flagstat", $build->data_directory . "/realigned.bam.flagstat");
-
-        #EXTRACT ALIGNED (AND VIRAL) READS FROM REALIGNING UNALIGNED_METAGENOMIC_ALIGNMENT_MODEL AND IMPORT(2)
-        my %realigned_instrument_data_to_alignment;
-        for my $alignment_result ($unaligned_metagenomic_alignment_build->alignment_results){
-            my $instrument_data_id = $alignment_result->instrument_data->id;
-            $realigned_instrument_data_to_alignment{$instrument_data_id} ||= [];
-            push @{$realigned_instrument_data_to_alignment{$instrument_data_id}}, $alignment_result->id;
-        }
-
-        my ($orig_data_paths_to_realigned_fastq_files) = $self->extract_aligned_reads_from_bam($realigned_bam, \%realigned_instrument_data_to_alignment); # @fastq_files includes fragment, forward and reverse... which do we use?
-        $orig_data_paths_to_realigned_fastq_files = $self->extract_virus_reads_from_fastqs($orig_data_paths_to_realigned_fastq_files);
-        @realigned_instrument_data = $self->upload_instrument_data_and_unlock($orig_data_paths_to_realigned_fastq_files, $locks_ref);
-    }
-
-    # If we are doing viral realignment for either model...
-    # Assign the previously aligned metagenomic reads (after screening for only viral reads) ... and the re-aligned reads if we did them
-    if ($self->_viral_nucleotide_alignment_pp || $self->_viral_protein_alignment_pp) {
-        #EXTRACT ALIGNED (AND VIRAL) READS FROM THE ORIGINAL METAGENOMIC ALIGNMENT AND IMPORT(3)
-        my ($orig_data_paths_to_metagenomic_fastq_files) = $self->extract_aligned_reads_from_bam($final_metagenomic_bam, \%metagenomic_instrument_data_to_alignment); 
-        $orig_data_paths_to_metagenomic_fastq_files = $self->extract_virus_reads_from_fastqs($orig_data_paths_to_metagenomic_fastq_files);
-        my @aligned_instrument_data = $self->upload_instrument_data_and_unlock($orig_data_paths_to_metagenomic_fastq_files, $locks_ref); 
-
-        #ASSIGN NEW IMPORTED READS(2,3) TO VIRAL_VERIFICATION_ALIGNMENT MODELS AND BUILD
-        if ($self->_viral_nucleotide_alignment_pp) {
-            my $virus_alignment_model_1 = $model->_viral_nucleotide_alignment_model;
-            unless ($virus_alignment_model_1) {
-                die $self->error_message("couldn't grab virus alignment underlying model!");
-            }
-
-            for my $instrument_data (@realigned_instrument_data, @aligned_instrument_data) {
-                $virus_alignment_model_1->add_instrument_data(
-                    value => $instrument_data,
-                    # filter_desc => "What do we put here?", FIXME
-                );
-            }
-            my $virus_alignment_build_1 = $self->build_if_necessary_and_wait($virus_alignment_model_1);
-            return if not $virus_alignment_build_1;
-            my $virus_1_bam = $virus_alignment_build_1->whole_rmdup_bam_file;
-            Genome::Sys->create_symlink($virus_1_bam, $build->data_directory . "/virus_1.bam");
-            Genome::Sys->create_symlink($virus_1_bam.".flagstat", $build->data_directory . "/virus_1.bam.flagstat");
-        }
-
-        if ($self->_viral_protein_alignment_pp) {
-            my $virus_alignment_model_2 = $model->_viral_protein_alignment_pp;
-            unless ($virus_alignment_model_2) {
-                die $self->error_message("couldn't grab virus alignment underlying model!");
-            }
-            for my $instrument_data (@realigned_instrument_data, @aligned_instrument_data) {
-                $virus_alignment_model_2->add_instrument_data(
-                    value => $instrument_data,
-                    # filter_desc => "What do we put here?", FIXME
-                );
-            }
-            my $virus_alignment_build_2 = $self->build_if_necessary_and_wait($virus_alignment_model_2);
-            return if not $virus_alignment_build_2;
-            my $virus_2_bam = $virus_alignment_build_2->whole_rmdup_bam_file;
-            Genome::Sys->create_symlink($virus_2_bam, $build->data_directory . "/virus_2.bam");
-            Genome::Sys->create_symlink($virus_2_bam.".flagstat", $build->data_directory . "/virus_2.bam.flagstat");
-        }
-    }
-
-    # REFCOV
-    my $refcov = $self->_run_refcov($build);
-    if ( not $refcov ) {
-        $self->error_message('Failed to run refcov');
-        return;
-    }
-
-    # TAXONOMY REPORT
-    if ( $self->include_taxonomy_report ){
-        my $taxonomy = $self->_run_taxonomy_report($build);
-        if ( not $taxonomy ) {
-            $self->error_message('Failed to run taxonomy report');
-            return;
-        }
-    }
-
-    # VALIDATE
-    unless($self->_contamination_screen_pp){ #TODO: update validate to deal with this arg
-        my $validate_build = Genome::Model::MetagenomicCompositionShotgun::Command::Validate->create(build_id => $build->id);
-        $validate_build->dump_status_messages(1);
-        unless($validate_build->execute()) {
-            die $self->error_message("Failed to validate build!");
-        }
-    }
-
-    $self->status_message('Build success!');
-
-    return 1;
-}
-
-sub _run_refcov {
+sub wait_for_build {
     my ($self, $build) = @_;
-
-    $self->status_message('Run Refcov');
-
-    my $refcov_output = $build->refcov_output;
-    $self->status_message('Refcov output: '.$refcov_output);
-    if (-e $refcov_output and -e "$refcov_output.ok"){
-        $self->status_message("Refcov already complete, shortcutting");
-        return 1;
-    }
-
-    my $sorted_bam = $build->_final_metagenomic_bam;
-    $self->status_message('Metagenomic BAM: '.$sorted_bam);
-    if ( not -s $sorted_bam ) {
-        die $self->error_message('Sorted BAM does not exist!');
-    }
-
-    my $regions_file = $build->metagenomic_reference_regions_file; 
-    $self->status_message('Regions file: '.$regions_file);
-    if ( not -s $regions_file ) {
-        die $self->error_message("No regions file ($regions_file) does not exist");
-    }
-
-    my $command = "/usr/bin/perl `which gmt` ref-cov standard";
-    $command .= " --alignment-file-path ".$sorted_bam;
-    $command .= " --roi-file-path ".$regions_file;
-    $command .= " --stats-file ".$refcov_output;
-    $command .= " --min-depth-filter 0";
-
-    $self->status_message($command);
-    my $rv = eval{
-        Genome::Sys->shellcmd(
-            cmd=>$command,
-            #output_files=>[$refcov_output],
-            #input_files => [$sorted_bam, $regions_file],
-        );
-    };
-    if ( not $rv ) {
-        $self->error_message("Failed to run refcov command: $@");
-        return;
-    }
-    if ( not -e $refcov_output ) {
-        $self->error_message("Refcov command succeeded, but output file ($refcov_output) does not exist");
-        return;
-    }
-
-    $self->status_message('Run Refcov...OK');
-
-    return 1;
-}
-
-sub _run_taxonomy_report {
-    my ($self, $build) = @_;
-
-    $self->status_message('Run taxonomy report');
-
-    my $report = Genome::Model::MetagenomicCompositionShotgun::Command::TaxonomyReport->create(build => $build);
-    if ( not $report ) {
-        $self->error_message('Failed to create taxnomy report command');
-        return;
-    }
-    $report->dump_status_messages(1);
-    unless( $report->execute ) {
-        $self->error_message('Failed to exectue taxonomy report command');
-        return;
-    }
-
-    $self->status_message('Run taxonomy report...OK');
-
-    return 1;
-}
-
-sub merge_metagenomic_bams{
-    my ($self, $meta_bams, $sorted_bam) = @_;
-    if (-e $sorted_bam and -e $sorted_bam.".OK"){
-        $self->status_message("sorted metagenomic merged bam already produced, skipping");
-    }else{
-        my $merged_bam = $sorted_bam.".name_sorted.bam";
-        $self->status_message("starting sort and merge");
-
-        my $sort_and_merge_meta = Genome::Model::Tools::Sam::SortAndMergeSplitReferenceAlignments->create(
-            input_files => $meta_bams,
-            output_file => $merged_bam,
-        );
-        unless($sort_and_merge_meta->execute()) {
-            die $self->error_message("Failed to sort and merge metagenomic bams: $@");
+    my $last_status = '';
+    my $time = 0;
+    my $inc = 30;
+    while (1) {
+        UR::Context->current->reload($build->the_master_event);
+        my $status = $build->status;
+        if ($status and !($status eq 'Running' or $status eq 'Scheduled')){
+            return 1;
         }
 
-        unless (-s $merged_bam){
-            die $self->error_message("Merged bam has no size!");
+        if ($last_status ne $status or !($time % 300)){
+            $self->status_message("Waiting for build(~$time sec) ".$build->id.", status: $status");
         }
-
-        $self->status_message("starting position sort of merged bam");
-
-        my $sort_merged_bam = Genome::Model::Tools::Sam::SortBam->create(
-            file_name => $merged_bam,
-            output_file => $sorted_bam,
-        );
-        unless($sort_merged_bam->execute()) {
-            die $self->error_message("Failed to position sort merged metagenomic bam.");
-        }
-
-        unless (-s $sorted_bam){
-            die $self->error_message("Sorted bam has no size!");
-        }
-
-        system ("touch $sorted_bam.OK");
-        unlink $merged_bam;
-    }
-    return $sorted_bam;
-}
-
-# TODO This method should take a list of fastq files and return new fastq files that contain only viral reads.
-# The logic for this method is not yet available. So this serves as a placeholder.
-sub extract_virus_reads_from_fastqs {
-    my $self = shift;
-    return @_;
-}
-
-sub extract_unaligned_reads_from_bam {
-    my $self = shift;
-    return $self->extract_reads_from_bam(@_, 0);
-}
-
-sub extract_aligned_reads_from_bam {
-    my $self = shift;
-    return $self->extract_reads_from_bam(@_, 1);
-}
-
-# Extracts reads from a bam file and checks the output
-# $extract_aligned_reads should be provided a 0 to extract unaligned reads, or a 1 to extract aligned reads
-sub extract_reads_from_bam {
-    my ($self, $bam, $instrument_data_to_alignment, $extract_aligned_reads) = @_;
-    my ($frag_fastq, $fwd_fastq, $rev_fastq);
-
-    #TODO we should check to see if we have already done this work and uploaded instrument data before doing it again
-
-    my $output_dir = Genome::Sys->create_temp_directory;
-
-    unless (-s $bam) {
-        die $self->error_message("Failed to find expected BAM file $bam\n");
-    }
-
-    $self->status_message("Preparing imported instrument data for import path $output_dir");
-#    my $extract_unaligned = Genome::Model::Tools::BioSamtools::BamToUnalignedFastq->create(
-#        bam_file => $bam,
-#        output_directory => $output_dir,
-#        print_aligned => $extract_aligned_reads,
-#        );
-#    $self->execute_or_die($extract_unaligned);
-
-    my $cmd = "/usr/bin/perl `which gmt` bio-samtools bam-to-unaligned-fastq --bam-file $bam --output-directory $output_dir";
-    if($extract_aligned_reads) {
-        $cmd .= " --print-aligned";
-    }
-    if(system($cmd)) {
-        die("$cmd failed: $?");
-    }
-
-    my @files = glob("$output_dir/*/*_sequence.txt");
-
-
-    my %original_data_path_to_fastq_files;
-
-    my $dir = Genome::Sys->create_temp_directory();
-
-    # Create a hash to map original_data_path -- (to be used when uploading , describing where the reads came from (which alignment result) and what they are, (aligned on unaligned) )
-    # -- to the original location of the file, and the original instrument data id it came from
-    for my $file (@files) {
-        my ($instrument_data_id,$lane,$pe_segment) = $file =~ m{(\d+)/s_(\d)_?([12])?_sequence.txt};
-        my $alignment_result = $instrument_data_to_alignment->{$instrument_data_id};
-        my $read_type;
-        if ($extract_aligned_reads) {
-            $read_type = "aligned_reads";
-        } else {
-            $read_type = "unaligned_reads";
-        }
-        my $part = "$dir/$read_type/$alignment_result";
-        make_path($part);
-        if ($pe_segment){
-            my $original_data_path = "$part/s_".$lane."_1_sequence.txt," . "$part/s_".$lane."_2_sequence.txt";
-            $original_data_path_to_fastq_files{$original_data_path}->{file}->{$pe_segment} = $file;
-            $original_data_path_to_fastq_files{$original_data_path}->{instrument_data_id} = $instrument_data_id;
-        }else{
-            my $original_data_path = "$part/s_".$lane."_sequence.txt";
-            $original_data_path_to_fastq_files{$original_data_path}->{file} = $file;
-            $original_data_path_to_fastq_files{$original_data_path}->{instrument_data_id} = $instrument_data_id;
-        }
-    }
-
-    $self->status_message("Extracted unaligned reads from bam file($bam)");
-    return \%original_data_path_to_fastq_files;
-}
-
-sub get_imported_instrument_data_or_upload_paths {  #TODO not finished, not currently used
-    my ($self, $orig_inst_data, @paths) = @_;
-    my @inst_data;
-    my @upload_paths;
-    my @locks;
-    my $tmp_dir;
-    my $subdir;
-
-    # check for previous unaligned reads
-    $self->status_message("Checking for previously imported unaligned and post-processed reads from: $tmp_dir/$subdir");
-    for my $path (@paths) {
-        my $inst_data = Genome::InstrumentData::Imported->get(original_data_path => $path);
-        if ($inst_data) {
-            $self->status_message("imported instrument data already found for path $path, skipping");
-            push @inst_data, $inst_data;
-        }
-        else {
-            for my $sub_path (split(',', $path)) {
-                my $lock_path = '/gsc/var/lock/' . $orig_inst_data->id . '/' . basename($sub_path);
-                my $lock = lock_or_die($lock_path);
-                push @locks, $lock;
-            }
-            push @upload_paths, $path;
-        }
-    }
-
-    if (@upload_paths) {
-        for my $path (@upload_paths) {
-            $self->status_message("planning to upload for $path");
-        }
-        return @upload_paths;
-    }
-    else {
-        $self->status_message("skipping read processing since all data is already processed and uploaded");
-        return @inst_data;
-    }
-    return \@inst_data, \@upload_paths;
-}
-
-sub upload_instrument_data_and_unlock {
-    my ($self, $orig_data_paths_to_fastq_files, $locks_ref) = @_;
-    #TODO: Actually use locks.
-    my @locks;# = @$locks_ref;
-
-    my @properties_from_prior = qw/ run_name subset_name sequencing_platform median_insert_size sd_above_insert_size library_name sample_name /;
-    my @instrument_data;
-    for my $original_data_path (keys %$orig_data_paths_to_fastq_files) {
-        # If it is paired end
-        if ($original_data_path =~ /,/) {
-            my ($original_data_path_1, $original_data_path_2) = split ",", $original_data_path;
-            Genome::Sys->create_symlink($orig_data_paths_to_fastq_files->{$original_data_path}->{file}->{1}, $original_data_path_1);
-            Genome::Sys->create_symlink($orig_data_paths_to_fastq_files->{$original_data_path}->{file}->{2}, $original_data_path_2);
-            if(! -s $original_data_path_1) {
-                $self->warning_message('$original_data_path_1 is empty');
-                next;
-            }
-            if(! -s $original_data_path_2) {
-                $self->warning_message('$original_data_path_2 is empty');
-                next;
-            }
-        } else {
-            Genome::Sys->create_symlink($orig_data_paths_to_fastq_files->{$original_data_path}->{file}, $original_data_path);
-            if(! -s $original_data_path) {
-                $self->warning_message('$original_data_path is empty');
-                next;
-            }
-        }
-        # Link the actual file to the descriptive location in original_data_path
-        my $orig_inst_data = Genome::InstrumentData->get($orig_data_paths_to_fastq_files->{$original_data_path}->{instrument_data_id});
-
-        $self->status_message("uploading new instrument data ...");
-        my @errors;
-        my %properties_from_prior;
-        for my $property_name (@properties_from_prior) {
-            my $value = $orig_inst_data->$property_name;
-            no warnings;
-            $self->status_message("Value for $property_name is $value");
-            $properties_from_prior{$property_name} = $value;
-        }
-
-        if ($original_data_path =~ /,/){
-            $properties_from_prior{is_paired_end} = 1;
-        }else{
-            $properties_from_prior{is_paired_end} = 0;
-        }
-        my %params = (
-            %properties_from_prior,
-            source_data_files => $original_data_path,
-            import_format => 'illumina fastq',
-        );
-        $self->status_message("importing fastq with the following params:" . Data::Dumper::Dumper(\%params));
-
-
-        my $command = Genome::InstrumentData::Command::Import::Fastq->create(%params);
-        unless ($command) {
-            $self->error_message( "Couldn't create command to import unaligned fastq instrument data!");
-        };
-        my $result = $command->execute();
-        unless ($result) {
-            die $self->error_message( "Error importing data from $original_data_path! " . Genome::InstrumentData::Command::Import::Fastq->error_message() );
-        }
-        $self->status_message("committing newly created imported instrument data");
-        $self->status_message("UR_DBI_NO_COMMIT: ".$ENV{UR_DBI_NO_COMMIT});
-        UR::Context->commit(); # warning: most code should NEVER do this in a pipeline
-
-        my $instrument_data = Genome::InstrumentData::Imported->get(
-            original_data_path => $original_data_path
-        );
-        unless ($instrument_data) {
-            die $self->error_message( "Failed to find new instrument data $original_data_path!");
-        }
-        if ($instrument_data->__changes__) {
-            die "Unsaved changes present on instrument data $instrument_data->{id} from $original_data_path!!!";
-        }
-        for my $lock (@locks) {
-            if ($lock) {
-                unless(Genome::Sys->unlock_resource(resource_lock => $lock)) {
-                    die $self->error_message("Failed to unlock " . $lock->resource_lock . ".");
-                }
-            }
-        }
-        push @instrument_data, $instrument_data;
-    }
-
-    return @instrument_data;
-}
-
-sub lock_or_die {
-    my ($self, $lock_path) = @_;
-    my $lock = Genome::Sys->lock_resource(
-        resource_lock => $lock_path,
-        max_try => 2,
-    );
-    if ($lock) {
-        $self->status_message("Locked $lock_path successfully.");
-        return $lock;
-    }
-    else {
-        die $self->error_message("Failed to lock $lock_path.");
+        sleep $inc;
+        $time += 30;
+        $last_status = $status;
     }
 }
 
-sub execute_or_die {
-    my ($self, $command) = @_;
-    my $class = $command->class;
-
-    $self->status_message("Executing $class, command object details are:\n" . Data::Dumper::Dumper($command));
-
-    if ($command->execute){
-        $self->status_message("Execution of $class complete.");
-        return 1;
-    }
-    else {
-        die $self->error_message("Failed to execute $class.");
-    }
-}
-
-sub assign_missing_instrument_data_to_model{
-    my ($self, $model, @instrument_data) = shift;
-}
-
-sub symlink {
-    my $self = shift;
-    my ($source, $target) = @_;
-    if(-l $target && readlink($target) ne $source) {
-        die $self->error_message("$target already exists but points to " . readlink($target));
-    }
-    elsif(! -l $target) {
-        Genome::Sys->create_symlink($source, $target);
-    }
-}
-
-sub get_bam_and_flagstat_from_build{
-    my ($self, $build) = @_;
-    $self->status_message("getting bam and flagstat from build: ".$build->id);
-
-    #we have to try two different methods to find the merged bam, one uses the <picard software result id>.bam which is the new way, and the old uses the <build_id>.bam
-
-    my @swus = Genome::SoftwareResult::User->get(user_id=>$build->id);
-
-    my @software_results = grep { ref($_) eq "Genome::InstrumentData::AlignmentResult::Merged" } Genome::SoftwareResult->get(id=>[map {$_->software_result_id} @swus]);
-
-    if (scalar @software_results > 1) {
-        die $self->error_message("Found more than one merged bam alignment software result for metagenomic alignment build ".$build->id);
-    }
-    my $alignment = shift @software_results;
-    my $alignment_file;
-    my $alignment_dir;
-    if ($alignment){
-        $alignment_dir = $alignment->output_dir;
-        $alignment_file = $alignment_dir . "/" . $alignment->id . ".bam";
-        unless (-e $alignment_file){
-            die $self->error_message("merged bam ($alignment_file) for build ".$build->id." from software result doesn't exist");
-        }
-    }else{
-        #try old method
-        $alignment_dir = $build->accumulated_alignments_directory;
-        my $build_id = $build->id;
-        my @alignment_file = glob("$alignment_dir/$build_id*bam");
-        unless (@alignment_file){
-            die $self->error_message("no bam file in alignment directory $alignment_dir");
-        }
-        if (@alignment_file > 1){
-            die $self->error_message("more than one bam file found in alignment directory $alignment_dir");
-        }
-        $alignment_file = shift @alignment_file;
-        unless (-e $alignment_file){
-            die $self->error_message("Failed to find bam for build ".$build->id." in alignments dir $alignment_dir");
-        }
-    } 
-
-    my $flagstat_file = "$alignment_file.flagstat";
-    unless (-e $flagstat_file){
-        die $self->error_message("Failed to flagstat for build ".$build->id." in alignments dir $alignment_dir");
-    }
-    return ($alignment_file, $flagstat_file);
-}
-
-# todo move to the model class
-sub build_if_necessary_and_wait {
+sub build_if_necessary {
     my ($self, @models) = @_;
 
     my (@succeeded_builds, @watched_builds);
@@ -988,18 +234,29 @@ sub build_if_necessary_and_wait {
         return;
     }
 
-    if ( @watched_builds ) {
-        for my $build ( @watched_builds ) {
-            $self->status_message('Watching build: '.$build->__display_name__);
-            $self->wait_for_build($build);
-            unless ($build->status eq 'Succeeded') {
-                $self->error_message("Failed to execute build (".$build->__display_name__."). Status: ".$build->status);
-                return;
-            }
-        }
+    return ( @builds > 1 ? @builds : $builds[0] );
+}
+
+sub _start_build_for_model {
+    my ($self, $model) = @_;
+
+    Carp::confess('no model sent to start build') if not $model;
+
+    my $cmd = 'genome model build start '.$model->id.' --job-dispatch apipe --server-dispatch workflow'; # these are defaults
+    $self->status_message('cmd: '.$cmd);
+
+    UR::Context->commit();
+    my $rv = eval{ Genome::Sys->shellcmd(cmd => $cmd); };
+    if ( not $rv ) {
+        die $self->error_message('failed to execute build start command');
     }
 
-    return ( @builds > 1 ? @builds : $builds[0] );
+    my $build = $self->_find_scheduled_or_running_build_for_model($model);
+    if ( not $build ) {
+        die $self->error_message('executed build start command, but cannot find build.');
+    }
+    
+    return $build;
 }
 
 sub _verify_model_and_build_instrument_data_match {
@@ -1050,50 +307,802 @@ sub _find_scheduled_or_running_build_for_model {
 
     return;
 }
+__END__
+# temp hack for debugging
+my $log_model_name = $model->name;
+$self->status_message("Starting build for model $log_model_name");
 
-sub _start_build_for_model {
-    my ($self, $model) = @_;
+my $screen_model;
+my $screen_build;
+my @screened_assignments;
 
-    Carp::confess('No model sent to start build') if not $model;
-
-    my $cmd = 'genome model build start '.$model->id.' --job-dispatch apipe --server-dispatch workflow'; # these are defaults
-    $self->status_message('Cmd: '.$cmd);
-    my $rv = eval{ Genome::Sys->shellcmd(cmd => $cmd); };
-    if ( not $rv ) {
-        $self->error_message('Failed to execute build start command');
-        return;
-    }
-
-    my $build = $self->_find_scheduled_or_running_build_for_model($model);
-    if ( not $build ) {
-        $self->error_message('Executed build start command, but cannot find build.');
-        return;
-    }
-
-    return $build;
+if ($self->_contamination_screen_pp){ 
+$screen_model = $model->_contamination_screen_alignment_model;
+unless ($screen_model) {
+die $self->error_message("couldn't grab contamination screen underlying model!");
 }
+
+# ENSURE WE HAVE INSTRUMENT DATA
+my @assignments = $model->instrument_data_inputs;
+if (@assignments == 0) {
+die $self->error_message("NO INSTRUMENT DATA ASSIGNED!");
+}
+
+# ASSIGN ANY NEW INSTRUMENT DATA TO THE CONTAMINATION SCREENING MODEL
+for my $assignment (@assignments) {
+my $instrument_data = $assignment->value;
+my $screen_assignment = $screen_model->instrument_data_input(
+value_id => $instrument_data->id 
+);
+if ($screen_assignment) {
+$self->status_message("Instrument data " . $instrument_data->__display_name__ . " is already assigned to the screening model");
+}
+else {
+my $cmd = 'genome model instrument-data assign --model-id '.$screen_model->id.' --instrument-data-id '.$instrument_data->id;
+if ($assignment->filter_desc){
+$cmd.=' --filter '.$assignment->filter_desc;
+}
+my $exit_code = system($cmd);
+unless ($exit_code == 0){
+die $self->error_message("Failed to add instrument data ".$instrument_data->id." to contamination screen model!");
+}
+my $confirm_screen_assignment = UR::Context->current->reload("Genome::Model::Input", model_id=>$screen_model->id, value_id=>$instrument_data->id);
+if ($confirm_screen_assignment){
+$self->status_message("Added instrument data ".$instrument_data->id." to contamination screen model");
+}else{
+die $self->error_message("Can't find instrument data assignment for ".$instrument_data->id." after attempting to assign to contamination screen model");
+}
+
+}
+}
+
+# BUILD HUMAN CONTAMINATION SCREEN MODEL
+$self->status_message("Building contamination screen model if necessary");
+$screen_build = $self->build_if_necessary_and_wait($screen_model);
+return if not $screen_build;
+
+my ($prev_from_build) = grep {$_->id eq $screen_build->id} $build->from_builds();
+$build->add_from_build(from_build=>$screen_build, role=>'contamination_screen_alignment_build') unless $prev_from_build;;
+
+}else{
+$self->status_message("Skipping contamination screen for instrument data");
+}
+
+# POST-PROCESS THE UNALIGNED READS FROM THE CONTAMINATION SCREEN MODEL
+
+my @imported_instrument_data_for_metagenomic_models;
+if ($self->_contamination_screen_pp){
+
+#if we contamination screened, we'll use the alignment results, extract unaligned reads to a fastq and then post-process, create new imported instrument data
+$self->status_message("Processing and importing instrument data for any new unaligned reads");
+@screened_assignments = $screen_model->instrument_data_inputs;
+my @post_processed_unaligned_reads;
+for my $assignment (@screened_assignments) {
+my @alignment_results = $screen_build->alignment_results_for_instrument_data($assignment->value);
+if (@alignment_results > 1) {
+$self->error_message( "Multiple alignment_results found for instrument data assignment: " . $assignment->__display_name__);
+return;
+}
+if (@alignment_results == 0) {
+$self->error_message( "No alignment_results found for instrument data assignment: " . $assignment->__display_name__);
+return;
+}
+$self->status_message("Processing instrument data assignment ".$assignment->__display_name__." for unaligned reads import");
+
+my $alignment_result = $alignment_results[0];
+my @post_processed_unaligned_reads_for_alignment_result = $self->_process_unaligned_reads($alignment_result);
+push @post_processed_unaligned_reads, \@post_processed_unaligned_reads_for_alignment_result
+}
+
+unless (@post_processed_unaligned_reads == @screened_assignments) {
+Carp::confess("The count of post-processed unaligned reads does not match the count of screened instrument data assignments.");
+}
+@imported_instrument_data_for_metagenomic_models = @post_processed_unaligned_reads;
+
+}else{
+#if skipping contamination_screen, we need to extract the originally assigned imported instrument data and process and reimport it for the metagenomic screen.
+#sra data is stored in fastq/sangerqual format, so these just need to be extracted, dusted, n-removed
+my @sra_assignments = $build->instrument_data_inputs;
+for my $assignment(@sra_assignments){
+my @post_processed_reads = $self->_process_sra_instrument_data($assignment->value);
+#TODO, this doesn't need to be an array of array refs, since we should get a 1 to 1 sra inst_data to post-processed imported inst_data, but this is how it's done in the original pipeline, where the 1 to 1 convention doesn't hold.  We're sticking to this standard for now.
+push @imported_instrument_data_for_metagenomic_models, \@post_processed_reads;
+}
+@screened_assignments = @sra_assignments;
+}
+
+
+# ASSIGN THE POST-PROCESSED READS TO THE METAGENOMIC MODELS
+my @metagenomic_models = $model->_metagenomic_alignment_models;
+for my $metagenomic_model (@metagenomic_models) {
+my %assignments_expected;
+for my $n (0..$#imported_instrument_data_for_metagenomic_models) {
+my $prev_assignment = $screened_assignments[$n];
+my $filter_desc = $prev_assignment->filter_desc;
+my $post_processed_instdata_for_prev_assignment = $imported_instrument_data_for_metagenomic_models[$n];
+for my $instrument_data (@$post_processed_instdata_for_prev_assignment) {
+my $metagenomic_assignment = $metagenomic_model->instrument_data_input(
+value_id => $instrument_data->id #TODO inst data switch
+);
+if ($metagenomic_assignment) {
+$self->status_message("Instrument data " . $instrument_data->__display_name__ . " is already assigned to model " . $metagenomic_model->__display_name__);
+}
+else {
+my $cmd = 'genome model instrument-data assign --model-id '.$metagenomic_model->id.' --instrument-data-id '.$instrument_data->id;
+if ($filter_desc){
+$cmd.=' --filter '.$filter_desc;
+}
+my $exit_code = system($cmd);
+unless ($exit_code == 0){
+die $self->error_message("Failed to add instrument data ".$instrument_data->id." to model ".$metagenomic_model->__display_name__."!");
+}
+$metagenomic_assignment = UR::Context->current->reload("Genome::Model::Input", model_id=>$metagenomic_model->id, value_id=>$instrument_data->id);
+if ($metagenomic_assignment){
+$self->status_message("Added instrument data ".$instrument_data->id." to model ".$metagenomic_model->__display_name__);
+}else{
+die $self->error_message("Can't find instrument data assignment for ".$instrument_data->id." after attempting to assign to model ".$metagenomic_model->__display_name__);
+}
+}
+$assignments_expected{$metagenomic_assignment->id} = $metagenomic_assignment;
+}
+}
+
+#TODO  When a model with skip_contamination_screen restarts, the potential extra fragment instrument data from n-removal will not be returned from _process_sra_data, and therefore won't be an expected assignment, so we'll need to check if the extra assignment's source_data_files contains(is derived from) the original instrument data assigned to the model. tldr: don't break on skip_contamination_restarts if extra inst_data looks legit.
+my @mcs_instrument_data_ids = map {$_->id} $build->instrument_data;
+
+# ensure there are no other odd assignments on the model besides those expected
+# this can happen if instrument-data is re-processed (deleted)
+for my $assignment ($metagenomic_model->instrument_data_inputs) {
+unless ($assignments_expected{$assignment->id}) {
+my $instrument_data = $assignment->instrument_data; #TODO inst data switch to value
+if ($instrument_data) {
+my ($derived_from) = $instrument_data->original_data_path =~ m{^/tmp/(?:unaligned_reads/)?(\d+)}; 
+#if unaligned reads is in the data path, the id may be an instrument data id(deprecated way of storing original data path), or an alignment result id, here we will figure out which and return the derived from instrument data id
+my $inst_data = Genome::InstrumentData->get($derived_from);
+unless($inst_data){
+my $alignment =Genome::InstrumentData::AlignmentResult->get($derived_from);
+unless ($alignment){
+die $self->error_message("Couldn't determine derived_from instrument data id from original data path ".$instrument_data->original_data_path);
+}
+$derived_from = $alignment->instrument_data->id;
+}
+unless (grep {$derived_from eq $_} @mcs_instrument_data_ids){
+$self->error_message(
+"Odd assignment found on model "
+. $metagenomic_model->__display_name__
+. " for instrument data "
+. $instrument_data->__display_name__
+);
+Carp::confess($self->error_message);
+}
+}
+else {
+$self->warning_message(
+"Odd assignment found on model "
+. $model->__display_name__
+. " for MISSING instrument data.  Deleting the assignment."
+);
+$assignment->delete;
+}
+}
+}
+}
+
+
+# BUILD THE METAGENOMIC REFERENCE ALIGNMENT MODELS
+my @metagenomic_builds = $self->build_if_necessary_and_wait(@metagenomic_models);
+return if not @metagenomic_builds;
+
+for my $meta_build (@metagenomic_builds){
+my ($prev_meta_from_build) = grep {$_->id eq $meta_build->id} $build->from_builds();
+$build->add_from_build(from_build=>$meta_build, role=>'metagenomic_alignment_build') unless $prev_meta_from_build;
+}
+# SYMLINK ALIGNMENT FILES TO BUILD DIRECTORY
+my $data_directory = $build->data_directory;
+if ($self->contamination_screen_pp_id){
+my ($screen_bam, $screen_flagstat) = $self->get_bam_and_flagstat_from_build($screen_build);
+
+unless ($screen_bam and $screen_flagstat){
+die $self->error_message("Bam or flagstat undefined for contamination screen build(screen bam: $screen_bam, screen flagstat: $screen_flagstat) ");
+}
+unless (-e $screen_bam and -e $screen_flagstat){
+die $self->error_message("Bam or flagstat doesn't exist for contamination screen build(screen bam: $screen_bam, screen flagstat: $screen_flagstat) ");
+}
+$self->symlink($screen_bam, "$data_directory/contamination_screen.bam");
+$self->symlink($screen_flagstat, "$data_directory/contamination_screen.bam.flagstat");
+}
+
+my $counter;
+my @meta_bams;
+for my $meta_build (@metagenomic_builds){
+$counter++;
+my ($meta_bam, $meta_flagstat) = $self->get_bam_and_flagstat_from_build($meta_build);
+push @meta_bams, $meta_bam;
+
+unless ($meta_bam and $meta_flagstat){ 
+die $self->error_message("Bam or flagstat undefined for metagenomic alignemnt build $counter(meta bam: $meta_bam, meta flagstat: $meta_flagstat) ");
+}
+unless (-e $meta_bam and -e $meta_flagstat){
+die $self->error_message("Bam or flagstat doesn't exist for metagenomic alignment build $counter(meta bam: $meta_bam, meta flagstat: $meta_flagstat) ");
+}
+
+$self->symlink($meta_bam, "$data_directory/metagenomic_alignment$counter.bam");
+$self->symlink($meta_flagstat, "$data_directory/metagenomic_alignment$counter.bam.flagstat");
+}
+
+# REPORTS
+
+# enable "verbose" logging so we can actually see status messages from these methods
+local $ENV{UR_COMMAND_DUMP_STATUS_MESSAGES} = 1;
+
+if ($self->contamination_screen_pp_id){
+my $qc_report = Genome::Model::MetagenomicCompositionShotgun::Command::QcReport->create(
+build_id => $build->id,
+skip_qc_on_untrimmed_reads => $self->skip_qc_on_untrimmed_reads,
+);
+unless($qc_report->execute()) {
+die $self->error_message("Failed to create QC report!");
+}
+}
+
+my $final_metagenomic_bam = $build->_final_metagenomic_bam();
+if (@meta_bams > 1){
+$final_metagenomic_bam = $self->merge_metagenomic_bams(\@meta_bams, $final_metagenomic_bam);
+}else{
+$self->symlink($meta_bams[0], $final_metagenomic_bam);
+}
+
+# TODO we should probably lock here for all instrument data id's involved
+my $locks_ref;
+
+# If we are trying to re-align unaligned stuff from the previous metagenomic alignment...
+# Get the unaligned reads from the metagenomic alignment, make a model, and re-align
+my @realigned_instrument_data;
+my %metagenomic_instrument_data_to_alignment;
+if ($self->_unaligned_metagenomic_alignment_pp) {
+for my $metagenomic_alignment_build ($build->_metagenomic_alignment_builds){
+for my $alignment_result ($metagenomic_alignment_build->get_alignments){
+my $instrument_data_id = $alignment_result->instrument_data->id;
+$metagenomic_instrument_data_to_alignment{$instrument_data_id} = $alignment_result->id;
+}
+}
+
+#EXTRACT UNALIGNED READS FROM METAGENOMIC ALIGNMENT AND IMPORT NEW INSTRUMENT DATA(1)
+my ($orig_data_paths_to_unaligned_fastq_files) = $self->extract_unaligned_reads_from_bam($final_metagenomic_bam, \%metagenomic_instrument_data_to_alignment);
+# $original_data_path_to_fastq_files{$original_data_path}->{file} = $file;_
+# $original_data_path_to_fastq_files{$original_data_path}->{instrument_data_id} = $instrument_data_id;
+my @unaligned_instrument_data = $self->upload_instrument_data_and_unlock($orig_data_paths_to_unaligned_fastq_files, $locks_ref);
+
+#ASSIGN INSTRUMENT DATA TO UNALIGNED_METAGENOMIC_ALIGNMENT_MODEL
+my $unaligned_metagenomic_alignment_model = $model->_unaligned_metagenomic_alignment_model;
+unless ($unaligned_metagenomic_alignment_model) {
+die $self->error_message("couldn't grab unaligned metagenomic alignment underlying model!");
+}
+## Assign unaligned instrument data from (1) to this model 
+for my $instrument_data (@unaligned_instrument_data) {
+$unaligned_metagenomic_alignment_model->add_instrument_data(
+value => $instrument_data,
+#filter_desc => "What do we put here?",  FIXME
+);
+}
+
+my $unaligned_metagenomic_alignment_build = $self->build_if_necessary_and_wait($unaligned_metagenomic_alignment_model);
+return if not $unaligned_metagenomic_alignment_build;
+
+my $realigned_bam = $unaligned_metagenomic_alignment_build->whole_rmdup_bam_file;
+
+Genome::Sys->create_symlink($realigned_bam, $build->data_directory . "/realigned.bam");
+Genome::Sys->create_symlink($realigned_bam.".flagstat", $build->data_directory . "/realigned.bam.flagstat");
+
+#EXTRACT ALIGNED (AND VIRAL) READS FROM REALIGNING UNALIGNED_METAGENOMIC_ALIGNMENT_MODEL AND IMPORT(2)
+my %realigned_instrument_data_to_alignment;
+for my $alignment_result ($unaligned_metagenomic_alignment_build->alignment_results){
+my $instrument_data_id = $alignment_result->instrument_data->id;
+$realigned_instrument_data_to_alignment{$instrument_data_id} ||= [];
+push @{$realigned_instrument_data_to_alignment{$instrument_data_id}}, $alignment_result->id;
+}
+
+my ($orig_data_paths_to_realigned_fastq_files) = $self->extract_aligned_reads_from_bam($realigned_bam, \%realigned_instrument_data_to_alignment); # @fastq_files includes fragment, forward and reverse... which do we use?
+$orig_data_paths_to_realigned_fastq_files = $self->extract_virus_reads_from_fastqs($orig_data_paths_to_realigned_fastq_files);
+@realigned_instrument_data = $self->upload_instrument_data_and_unlock($orig_data_paths_to_realigned_fastq_files, $locks_ref);
+}
+
+# If we are doing viral realignment for either model...
+# Assign the previously aligned metagenomic reads (after screening for only viral reads) ... and the re-aligned reads if we did them
+if ($self->_viral_nucleotide_alignment_pp || $self->_viral_protein_alignment_pp) {
+#EXTRACT ALIGNED (AND VIRAL) READS FROM THE ORIGINAL METAGENOMIC ALIGNMENT AND IMPORT(3)
+my ($orig_data_paths_to_metagenomic_fastq_files) = $self->extract_aligned_reads_from_bam($final_metagenomic_bam, \%metagenomic_instrument_data_to_alignment); 
+$orig_data_paths_to_metagenomic_fastq_files = $self->extract_virus_reads_from_fastqs($orig_data_paths_to_metagenomic_fastq_files);
+my @aligned_instrument_data = $self->upload_instrument_data_and_unlock($orig_data_paths_to_metagenomic_fastq_files, $locks_ref); 
+
+#ASSIGN NEW IMPORTED READS(2,3) TO VIRAL_VERIFICATION_ALIGNMENT MODELS AND BUILD
+if ($self->_viral_nucleotide_alignment_pp) {
+my $virus_alignment_model_1 = $model->_viral_nucleotide_alignment_model;
+unless ($virus_alignment_model_1) {
+die $self->error_message("couldn't grab virus alignment underlying model!");
+}
+
+for my $instrument_data (@realigned_instrument_data, @aligned_instrument_data) {
+$virus_alignment_model_1->add_instrument_data(
+value => $instrument_data,
+# filter_desc => "What do we put here?", FIXME
+);
+}
+my $virus_alignment_build_1 = $self->build_if_necessary_and_wait($virus_alignment_model_1);
+return if not $virus_alignment_build_1;
+my $virus_1_bam = $virus_alignment_build_1->whole_rmdup_bam_file;
+Genome::Sys->create_symlink($virus_1_bam, $build->data_directory . "/virus_1.bam");
+Genome::Sys->create_symlink($virus_1_bam.".flagstat", $build->data_directory . "/virus_1.bam.flagstat");
+}
+
+if ($self->_viral_protein_alignment_pp) {
+my $virus_alignment_model_2 = $model->_viral_protein_alignment_pp;
+unless ($virus_alignment_model_2) {
+die $self->error_message("couldn't grab virus alignment underlying model!");
+}
+for my $instrument_data (@realigned_instrument_data, @aligned_instrument_data) {
+$virus_alignment_model_2->add_instrument_data(
+value => $instrument_data,
+# filter_desc => "What do we put here?", FIXME
+);
+}
+my $virus_alignment_build_2 = $self->build_if_necessary($virus_alignment_model_2);
+return if not $virus_alignment_build_2;
+my $virus_2_bam = $virus_alignment_build_2->whole_rmdup_bam_file;
+Genome::Sys->create_symlink($virus_2_bam, $build->data_directory . "/virus_2.bam");
+Genome::Sys->create_symlink($virus_2_bam.".flagstat", $build->data_directory . "/virus_2.bam.flagstat");
+}
+}
+
+# REFCOV
+my $refcov = $self->_run_refcov($build);
+if ( not $refcov ) {
+$self->error_message('Failed to run refcov');
+return;
+}
+
+# TAXONOMY REPORT
+if ( $self->include_taxonomy_report ){
+my $taxonomy = $self->_run_taxonomy_report($build);
+if ( not $taxonomy ) {
+$self->error_message('Failed to run taxonomy report');
+return;
+}
+}
+
+# VALIDATE
+unless($self->_contamination_screen_pp){ #TODO: update validate to deal with this arg
+my $validate_build = Genome::Model::MetagenomicCompositionShotgun::Command::Validate->create(build_id => $build->id);
+$validate_build->dump_status_messages(1);
+unless($validate_build->execute()) {
+die $self->error_message("Failed to validate build!");
+}
+}
+
+$self->status_message('Build success!');
+
+return 1;
+}
+
+sub _run_refcov {
+my ($self, $build) = @_;
+
+$self->status_message('Run Refcov');
+
+my $refcov_output = $build->refcov_output;
+$self->status_message('Refcov output: '.$refcov_output);
+if (-e $refcov_output and -e "$refcov_output.ok"){
+$self->status_message("Refcov already complete, shortcutting");
+return 1;
+}
+
+my $sorted_bam = $build->_final_metagenomic_bam;
+$self->status_message('Metagenomic BAM: '.$sorted_bam);
+if ( not -s $sorted_bam ) {
+die $self->error_message('Sorted BAM does not exist!');
+}
+
+my $regions_file = $build->metagenomic_reference_regions_file; 
+$self->status_message('Regions file: '.$regions_file);
+if ( not -s $regions_file ) {
+die $self->error_message("No regions file ($regions_file) does not exist");
+}
+
+my $command = "/usr/bin/perl `which gmt` ref-cov standard";
+$command .= " --alignment-file-path ".$sorted_bam;
+$command .= " --roi-file-path ".$regions_file;
+$command .= " --stats-file ".$refcov_output;
+$command .= " --min-depth-filter 0";
+
+$self->status_message($command);
+my $rv = eval{
+Genome::Sys->shellcmd(
+cmd=>$command,
+#output_files=>[$refcov_output],
+#input_files => [$sorted_bam, $regions_file],
+);
+};
+if ( not $rv ) {
+$self->error_message("Failed to run refcov command: $@");
+return;
+}
+if ( not -e $refcov_output ) {
+$self->error_message("Refcov command succeeded, but output file ($refcov_output) does not exist");
+return;
+}
+
+$self->status_message('Run Refcov...OK');
+
+return 1;
+}
+
+sub _run_taxonomy_report {
+my ($self, $build) = @_;
+
+$self->status_message('Run taxonomy report');
+
+my $report = Genome::Model::MetagenomicCompositionShotgun::Command::TaxonomyReport->create(build => $build);
+if ( not $report ) {
+$self->error_message('Failed to create taxnomy report command');
+return;
+}
+$report->dump_status_messages(1);
+unless( $report->execute ) {
+$self->error_message('Failed to exectue taxonomy report command');
+return;
+}
+
+$self->status_message('Run taxonomy report...OK');
+
+return 1;
+}
+
+sub merge_metagenomic_bams{
+my ($self, $meta_bams, $sorted_bam) = @_;
+if (-e $sorted_bam and -e $sorted_bam.".OK"){
+$self->status_message("sorted metagenomic merged bam already produced, skipping");
+}else{
+my $merged_bam = $sorted_bam.".name_sorted.bam";
+$self->status_message("starting sort and merge");
+
+my $sort_and_merge_meta = Genome::Model::Tools::Sam::SortAndMergeSplitReferenceAlignments->create(
+input_files => $meta_bams,
+output_file => $merged_bam,
+);
+unless($sort_and_merge_meta->execute()) {
+die $self->error_message("Failed to sort and merge metagenomic bams: $@");
+}
+
+unless (-s $merged_bam){
+die $self->error_message("Merged bam has no size!");
+}
+
+$self->status_message("starting position sort of merged bam");
+
+my $sort_merged_bam = Genome::Model::Tools::Sam::SortBam->create(
+file_name => $merged_bam,
+output_file => $sorted_bam,
+);
+unless($sort_merged_bam->execute()) {
+die $self->error_message("Failed to position sort merged metagenomic bam.");
+}
+
+unless (-s $sorted_bam){
+die $self->error_message("Sorted bam has no size!");
+}
+
+system ("touch $sorted_bam.OK");
+unlink $merged_bam;
+}
+return $sorted_bam;
+}
+
+# TODO This method should take a list of fastq files and return new fastq files that contain only viral reads.
+# The logic for this method is not yet available. So this serves as a placeholder.
+sub extract_virus_reads_from_fastqs {
+my $self = shift;
+return @_;
+}
+
+sub extract_unaligned_reads_from_bam {
+my $self = shift;
+return $self->extract_reads_from_bam(@_, 0);
+}
+
+sub extract_aligned_reads_from_bam {
+my $self = shift;
+return $self->extract_reads_from_bam(@_, 1);
+}
+
+# Extracts reads from a bam file and checks the output
+# $extract_aligned_reads should be provided a 0 to extract unaligned reads, or a 1 to extract aligned reads
+sub extract_reads_from_bam {
+my ($self, $bam, $instrument_data_to_alignment, $extract_aligned_reads) = @_;
+my ($frag_fastq, $fwd_fastq, $rev_fastq);
+
+#TODO we should check to see if we have already done this work and uploaded instrument data before doing it again
+
+my $output_dir = Genome::Sys->create_temp_directory;
+
+unless (-s $bam) {
+die $self->error_message("Failed to find expected BAM file $bam\n");
+}
+
+$self->status_message("Preparing imported instrument data for import path $output_dir");
+#    my $extract_unaligned = Genome::Model::Tools::BioSamtools::BamToUnalignedFastq->create(
+#        bam_file => $bam,
+#        output_directory => $output_dir,
+#        print_aligned => $extract_aligned_reads,
+#        );
+#    $self->execute_or_die($extract_unaligned);
+
+my $cmd = "/usr/bin/perl `which gmt` bio-samtools bam-to-unaligned-fastq --bam-file $bam --output-directory $output_dir";
+if($extract_aligned_reads) {
+$cmd .= " --print-aligned";
+}
+if(system($cmd)) {
+die("$cmd failed: $?");
+}
+
+my @files = glob("$output_dir/*/*_sequence.txt");
+
+
+my %original_data_path_to_fastq_files;
+
+my $dir = Genome::Sys->create_temp_directory();
+
+# Create a hash to map original_data_path -- (to be used when uploading , describing where the reads came from (which alignment result) and what they are, (aligned on unaligned) )
+# -- to the original location of the file, and the original instrument data id it came from
+for my $file (@files) {
+my ($instrument_data_id,$lane,$pe_segment) = $file =~ m{(\d+)/s_(\d)_?([12])?_sequence.txt};
+my $alignment_result = $instrument_data_to_alignment->{$instrument_data_id};
+my $read_type;
+if ($extract_aligned_reads) {
+$read_type = "aligned_reads";
+} else {
+$read_type = "unaligned_reads";
+}
+my $part = "$dir/$read_type/$alignment_result";
+make_path($part);
+if ($pe_segment){
+my $original_data_path = "$part/s_".$lane."_1_sequence.txt," . "$part/s_".$lane."_2_sequence.txt";
+$original_data_path_to_fastq_files{$original_data_path}->{file}->{$pe_segment} = $file;
+$original_data_path_to_fastq_files{$original_data_path}->{instrument_data_id} = $instrument_data_id;
+}else{
+my $original_data_path = "$part/s_".$lane."_sequence.txt";
+$original_data_path_to_fastq_files{$original_data_path}->{file} = $file;
+$original_data_path_to_fastq_files{$original_data_path}->{instrument_data_id} = $instrument_data_id;
+}
+}
+
+$self->status_message("Extracted unaligned reads from bam file($bam)");
+return \%original_data_path_to_fastq_files;
+}
+
+sub get_imported_instrument_data_or_upload_paths {  #TODO not finished, not currently used
+my ($self, $orig_inst_data, @paths) = @_;
+my @inst_data;
+my @upload_paths;
+my @locks;
+my $tmp_dir;
+my $subdir;
+
+# check for previous unaligned reads
+$self->status_message("Checking for previously imported unaligned and post-processed reads from: $tmp_dir/$subdir");
+for my $path (@paths) {
+my $inst_data = Genome::InstrumentData::Imported->get(original_data_path => $path);
+if ($inst_data) {
+$self->status_message("imported instrument data already found for path $path, skipping");
+push @inst_data, $inst_data;
+}
+else {
+for my $sub_path (split(',', $path)) {
+my $lock_path = '/gsc/var/lock/' . $orig_inst_data->id . '/' . basename($sub_path);
+my $lock = lock_or_die($lock_path);
+push @locks, $lock;
+}
+push @upload_paths, $path;
+}
+}
+
+if (@upload_paths) {
+for my $path (@upload_paths) {
+$self->status_message("planning to upload for $path");
+}
+return @upload_paths;
+}
+else {
+$self->status_message("skipping read processing since all data is already processed and uploaded");
+return @inst_data;
+}
+return \@inst_data, \@upload_paths;
+}
+
+sub upload_instrument_data_and_unlock {
+my ($self, $orig_data_paths_to_fastq_files, $locks_ref) = @_;
+#TODO: Actually use locks.
+my @locks;# = @$locks_ref;
+
+my @properties_from_prior = qw/ run_name subset_name sequencing_platform median_insert_size sd_above_insert_size library_name sample_name /;
+my @instrument_data;
+for my $original_data_path (keys %$orig_data_paths_to_fastq_files) {
+# If it is paired end
+if ($original_data_path =~ /,/) {
+my ($original_data_path_1, $original_data_path_2) = split ",", $original_data_path;
+Genome::Sys->create_symlink($orig_data_paths_to_fastq_files->{$original_data_path}->{file}->{1}, $original_data_path_1);
+Genome::Sys->create_symlink($orig_data_paths_to_fastq_files->{$original_data_path}->{file}->{2}, $original_data_path_2);
+if(! -s $original_data_path_1) {
+$self->warning_message('$original_data_path_1 is empty');
+next;
+}
+if(! -s $original_data_path_2) {
+$self->warning_message('$original_data_path_2 is empty');
+next;
+}
+} else {
+Genome::Sys->create_symlink($orig_data_paths_to_fastq_files->{$original_data_path}->{file}, $original_data_path);
+if(! -s $original_data_path) {
+$self->warning_message('$original_data_path is empty');
+next;
+}
+}
+# Link the actual file to the descriptive location in original_data_path
+my $orig_inst_data = Genome::InstrumentData->get($orig_data_paths_to_fastq_files->{$original_data_path}->{instrument_data_id});
+
+$self->status_message("uploading new instrument data ...");
+my @errors;
+my %properties_from_prior;
+for my $property_name (@properties_from_prior) {
+my $value = $orig_inst_data->$property_name;
+no warnings;
+$self->status_message("Value for $property_name is $value");
+$properties_from_prior{$property_name} = $value;
+}
+
+if ($original_data_path =~ /,/){
+$properties_from_prior{is_paired_end} = 1;
+}else{
+$properties_from_prior{is_paired_end} = 0;
+}
+my %params = (
+%properties_from_prior,
+source_data_files => $original_data_path,
+import_format => 'illumina fastq',
+);
+$self->status_message("importing fastq with the following params:" . Data::Dumper::Dumper(\%params));
+
+
+my $command = Genome::InstrumentData::Command::Import::Fastq->create(%params);
+unless ($command) {
+$self->error_message( "Couldn't create command to import unaligned fastq instrument data!");
+};
+my $result = $command->execute();
+unless ($result) {
+die $self->error_message( "Error importing data from $original_data_path! " . Genome::InstrumentData::Command::Import::Fastq->error_message() );
+}
+$self->status_message("committing newly created imported instrument data");
+$self->status_message("UR_DBI_NO_COMMIT: ".$ENV{UR_DBI_NO_COMMIT});
+UR::Context->commit(); # warning: most code should NEVER do this in a pipeline
+
+my $instrument_data = Genome::InstrumentData::Imported->get(
+original_data_path => $original_data_path
+);
+unless ($instrument_data) {
+die $self->error_message( "Failed to find new instrument data $original_data_path!");
+}
+if ($instrument_data->__changes__) {
+die "Unsaved changes present on instrument data $instrument_data->{id} from $original_data_path!!!";
+}
+for my $lock (@locks) {
+if ($lock) {
+unless(Genome::Sys->unlock_resource(resource_lock => $lock)) {
+die $self->error_message("Failed to unlock " . $lock->resource_lock . ".");
+}
+}
+}
+push @instrument_data, $instrument_data;
+}
+
+return @instrument_data;
+}
+
+sub lock_or_die {
+my ($self, $lock_path) = @_;
+my $lock = Genome::Sys->lock_resource(
+resource_lock => $lock_path,
+max_try => 2,
+);
+if ($lock) {
+$self->status_message("Locked $lock_path successfully.");
+return $lock;
+}
+else {
+die $self->error_message("Failed to lock $lock_path.");
+}
+}
+
+sub execute_or_die {
+my ($self, $command) = @_;
+my $class = $command->class;
+
+$self->status_message("Executing $class, command object details are:\n" . Data::Dumper::Dumper($command));
+
+if ($command->execute){
+$self->status_message("Execution of $class complete.");
+return 1;
+}
+else {
+die $self->error_message("Failed to execute $class.");
+}
+}
+
+sub assign_missing_instrument_data_to_model{
+my ($self, $model, @instrument_data) = shift;
+}
+
+sub symlink {
+my $self = shift;
+my ($source, $target) = @_;
+if(-l $target && readlink($target) ne $source) {
+die $self->error_message("$target already exists but points to " . readlink($target));
+}
+elsif(! -l $target) {
+Genome::Sys->create_symlink($source, $target);
+}
+}
+
+sub get_bam_and_flagstat_from_build{
+my ($self, $build) = @_;
+$self->status_message("getting bam and flagstat from build: ".$build->id);
+
+#we have to try two different methods to find the merged bam, one uses the <picard software result id>.bam which is the new way, and the old uses the <build_id>.bam
+
+my @swus = Genome::SoftwareResult::User->get(user_id=>$build->id);
+
+my @software_results = grep { ref($_) eq "Genome::InstrumentData::AlignmentResult::Merged" } Genome::SoftwareResult->get(id=>[map {$_->software_result_id} @swus]);
+
+if (scalar @software_results > 1) {
+die $self->error_message("Found more than one merged bam alignment software result for metagenomic alignment build ".$build->id);
+}
+my $alignment = shift @software_results;
+my $alignment_file;
+my $alignment_dir;
+if ($alignment){
+$alignment_dir = $alignment->output_dir;
+$alignment_file = $alignment_dir . "/" . $alignment->id . ".bam";
+unless (-e $alignment_file){
+die $self->error_message("merged bam ($alignment_file) for build ".$build->id." from software result doesn't exist");
+}
+}else{
+#try old method
+$alignment_dir = $build->accumulated_alignments_directory;
+my $build_id = $build->id;
+my @alignment_file = glob("$alignment_dir/$build_id*bam");
+unless (@alignment_file){
+die $self->error_message("no bam file in alignment directory $alignment_dir");
+}
+if (@alignment_file > 1){
+die $self->error_message("more than one bam file found in alignment directory $alignment_dir");
+}
+$alignment_file = shift @alignment_file;
+unless (-e $alignment_file){
+die $self->error_message("Failed to find bam for build ".$build->id." in alignments dir $alignment_dir");
+}
+} 
+
+my $flagstat_file = "$alignment_file.flagstat";
+unless (-e $flagstat_file){
+die $self->error_message("Failed to flagstat for build ".$build->id." in alignments dir $alignment_dir");
+}
+return ($alignment_file, $flagstat_file);
+}
+
+# todo move to the model class
+
+
+
 
 # TODO: move this to the build class itself
-sub wait_for_build {
-    my ($self, $build) = @_;
-    my $last_status = '';
-    my $time = 0;
-    my $inc = 30;
-    while (1) {
-        UR::Context->current->reload($build->the_master_event);
-        my $status = $build->status;
-        if ($status and !($status eq 'Running' or $status eq 'Scheduled')){
-            return 1;
-        }
-
-        if ($last_status ne $status or !($time % 300)){
-            $self->status_message("Waiting for build(~$time sec) ".$build->id.", status: $status");
-        }
-        sleep $inc;
-        $time += 30;
-        $last_status = $status;
-    }
-}
 
 # TODO: move this to the model class itself
 #this name is maybe not the best
@@ -1149,9 +1158,9 @@ sub _process_unaligned_reads {
         }
         $self->status_message("Preparing imported instrument data for import path $tmp_dir/$subdir");
 
-        # proceed extracting and uploading unaligned reads into $tmp_dir/$subdir....
-        # resolve the paths at which we will place processed instrument data
-        # we're currently using these paths to find previous unaligned reads processed the same way
+# proceed extracting and uploading unaligned reads into $tmp_dir/$subdir....
+# resolve the paths at which we will place processed instrument data
+# we're currently using these paths to find previous unaligned reads processed the same way
 
         my $forward_basename = "s_$lane" . "_1_sequence.txt";
         my $reverse_basename = "s_$lane" . "_2_sequence.txt";
@@ -1175,7 +1184,7 @@ sub _process_unaligned_reads {
         my ($se_lock, $pe_lock);
 
 
-        # check for previous unaligned reads
+# check for previous unaligned reads
         $self->status_message("Checking for previously imported unaligned and post-processed reads from: $tmp_dir/$subdir");
         my $se_instdata = Genome::InstrumentData::Imported->get(original_data_path => $expected_se_path);
         if ($se_instdata) {
@@ -1224,7 +1233,7 @@ sub _process_unaligned_reads {
             $self->status_message("planning to upload for $path");
         }
 
-        # extract
+# extract
         my $create_directory = eval{ Genome::Sys->create_directory($tmp_dir.'/'.$subdir); };
         if ( not $create_directory ) {
             die "Failed to create tmp directory ($tmp_dir/$subdir): $@";
@@ -1237,15 +1246,15 @@ sub _process_unaligned_reads {
             die "Failed to extract unaligned reads: $@";
         }
 
-        #$self->status_message("Perl version: $]");
-        #my $extract_unaligned = Genome::Model::Tools::BioSamtools::BamToUnalignedFastq->create(
-        #    bam_file => $bam,
-        #    output_directory =>$tmp_dir,
-        #);
-        #my $rv = $extract_unaligned->execute;
-        #unless ($rv){
-        #    die $self->error_message("Couldn't extract unaligned reads from bam file $bam");
-        #}
+#$self->status_message("Perl version: $]");
+#my $extract_unaligned = Genome::Model::Tools::BioSamtools::BamToUnalignedFastq->create(
+#    bam_file => $bam,
+#    output_directory =>$tmp_dir,
+#);
+#my $rv = $extract_unaligned->execute;
+#unless ($rv){
+#    die $self->error_message("Couldn't extract unaligned reads from bam file $bam");
+#}
 
         my @expected_output_fastqs = ( $instrument_data->is_paired_end )
         ?  ($forward_unaligned_data_path, $reverse_unaligned_data_path, $fragment_unaligned_data_path)
@@ -1256,7 +1265,7 @@ sub _process_unaligned_reads {
         }
         $self->status_message("Extracted unaligned reads from bam file (@expected_output_fastqs)");
 
-        # process the fragment data
+# process the fragment data
         if (-e $fragment_unaligned_data_path) {
             $self->status_message("processind single-end reads...");
             my $processed_fastq = $self->_process_unaligned_fastq($fragment_unaligned_data_path, $expected_data_path0);
@@ -1265,7 +1274,7 @@ sub _process_unaligned_reads {
             }
         }
 
-        # process the paired data
+# process the paired data
         if (-e $forward_unaligned_data_path or -e $reverse_unaligned_data_path) {
             $self->status_message("processind paired-end reads...");
             unless (-e $forward_unaligned_data_path and -e $reverse_unaligned_data_path) {
@@ -1280,7 +1289,7 @@ sub _process_unaligned_reads {
             }
         }
 
-        # upload
+# upload
         $self->status_message("uploading new instrument data from the post-processed unaligned reads...");
         my @properties_from_prior = qw/
         run_name
@@ -1300,7 +1309,7 @@ sub _process_unaligned_reads {
         }
         $properties_from_prior{subset_name} = $instrument_data->lane;
 
-        #my @instrument_data;
+#my @instrument_data;
         for my $original_data_path (@upload_paths) {
             $self->status_message("Attempting to upload $original_data_path...");
             if ($original_data_path =~ /,/){
@@ -1308,15 +1317,15 @@ sub _process_unaligned_reads {
             }else{
                 $properties_from_prior{is_paired_end} = 0;
             }
-            #my $previous = Genome::InstrumentData::Imported->get(
-            #    original_data_path => $original_data_path,
-            #);
+#my $previous = Genome::InstrumentData::Imported->get(
+#    original_data_path => $original_data_path,
+#);
             my $previous;
             if ($previous){
                 $self->error_message("imported instrument data already found for path $original_data_path????");
                 Carp::confess($self->error_message);
-                #push @instrument_data, $previous;
-                #next;
+#push @instrument_data, $previous;
+#next;
             }
             my %params = (
                 %properties_from_prior,
@@ -1361,7 +1370,7 @@ sub _process_unaligned_reads {
             }
             push @instrument_data, $new_instrument_data;
         }
-        #return @instrument_data;
+#return @instrument_data;
     };
 
     system "/bin/rm -rf $tmp_dir";
@@ -1376,7 +1385,7 @@ sub _process_unaligned_reads {
 sub _process_unaligned_fastq_pair {
     my $self = shift;
     my ($forward, $reverse, $forward_out, $reverse_out, $fragment_out) = @_;
-    #run dust on forward and reverse
+#run dust on forward and reverse
     my $forward_dusted;
     my $reverse_dusted;
 
@@ -1393,7 +1402,7 @@ sub _process_unaligned_fastq_pair {
         $reverse_dusted = $reverse;
     }
 
-    #run pairwise n-removal
+#run pairwise n-removal
     if ($self->n_removal_threshold){
         $self->status_message("running remove-n-pairwise on $forward, $reverse");
         my $cmd = Genome::Model::Tools::Fastq::RemoveNPairwise->create(
@@ -1414,21 +1423,21 @@ sub _process_unaligned_fastq_pair {
         unless(-e $forward_out && -e $reverse_out && -e $fragment_out){
             die $self->error_message("couldn't find all expected output files! $forward_out, $reverse_out, $fragment_out");
         }
-        #clean up, maybe make these temp files
+#clean up, maybe make these temp files
         if ($self->dust_unaligned_reads){
-            #only need to do this if we actually dusted
+#only need to do this if we actually dusted
             unlink $forward_dusted;
             unlink $reverse_dusted;
         }
 
-        #return the 3 processed fastq files
+#return the 3 processed fastq files
         return ($forward_out, $reverse_out, $fragment_out);
     }else{
         $self->status_message("skipping n-removal");
         Genome::Sys::copy_file($forward_dusted, $forward_out);
         Genome::Sys::copy_file($reverse_dusted, $reverse_out);
         if ($self->dust_unaligned_reads){
-            #only need to do this if we actually dusted
+#only need to do this if we actually dusted
             unlink $forward_dusted;
             unlink $reverse_dusted;
         }
