@@ -45,8 +45,8 @@ sub execute {
     my $self = shift;
     my $gene_identifier = $self->gene_identifier;
     my ($entrez_gene_name_reports, $intermediate_gene_name_reports) = Genome::DruggableGene::GeneNameReport->convert_to_entrez($gene_identifier);
-    $self->_entrez_gene_name_reports($entrez_gene_name_reports);
-    $self->_intermediate_gene_name_reports($intermediate_gene_name_reports);
+    $self->_entrez_gene_name_reports($entrez_gene_name_reports->{$gene_identifier}) if $entrez_gene_name_reports->{$gene_identifier};
+    $self->_intermediate_gene_name_reports($intermediate_gene_name_reports->{$gene_identifier}) if $intermediate_gene_name_reports->{$gene_identifier};
     return 1;
 }
 
