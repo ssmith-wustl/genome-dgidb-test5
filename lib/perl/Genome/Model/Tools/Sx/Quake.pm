@@ -8,22 +8,6 @@ use Genome;
 use Data::Dumper 'Dumper';
 
 our %QUAKE_PARAMS = (
-    r =>  {
-        is => 'Text',
-        is_optional => 1,
-        doc => 'Fastq file of reads',
-    },
-    f => {
-        is => 'Text',
-        is_optional => 1,
-        doc => 'File containing fastq file names, one per line or two per line for paired end reads.',
-    },
-    q => {
-        is => 'Number',
-        is_optional => 1,
-        valid_values => [qw/ 33 64 /],
-        doc => 'Quality value ascii scale, generally 64 or 33. If not specified, it will guess.',
-    },
     k => {
         is => 'Number',
         doc => 'Size of k-mers to correct.',
@@ -93,8 +77,11 @@ our %QUAKE_PARAMS = (
 );
 
 class Genome::Model::Tools::Sx::Quake {
-    is  => 'Command::V2',
-    has => [ %QUAKE_PARAMS ],
+    is  => 'Genome::Model::Tools::Sx',
+    has => [ 
+        %QUAKE_PARAMS,
+        _tmpdir => { is_transient => 1, is_optional => 1, },
+    ],
 };
 
 sub quake_param_names {
@@ -102,15 +89,63 @@ sub quake_param_names {
 }
 
 sub help_brief {
-    return 'QUAKE: Correct substitution errors with deep coverage.';
+    return 'Correct substitution errors with deep coverage.';
 }
 
 sub execute {
     my $self = shift;
 
-    my $cmd = 'quake.py';
+    my $init = $self->_init;
+    return if not $init;
+
+    my $tmpdir = $self->_tmpdir( Genome::Sys->base_temp_directory );
+
+    my $quake_input = $tmpdir.'/quake.fastq';
+    my $quake_intput_writer = Genome::Model::Tools::Sx::Writer->create(
+        config => [ $quake_input.':type=sanger' ],
+    );
+    if ( not $quake_intput_writer ) {
+        $self->error_message('Failed to open temp quake input!');
+        return;
+    }
+
+    $self->status_message('Write quake input: '.$quake_input);
+    my $reader = $self->_input;
+    while ( my $seqs = $reader->read ) {
+        $quake_intput_writer->write($seqs);
+    }
+    $self->status_message('Write quake input...OK');
+
+    $self->status_message('Run quake');
+    my $quake = $self->_run_quake_command($quake_input);
+    return if not $quake;
+    $self->status_message('Run quake..OK');
+
+    my $quake_output = $tmpdir.'/quake.cor.fastq';
+    my $quake_output_reader = Genome::Model::Tools::Sx::Reader->create(
+        config => [ $quake_output.':type=sanger' ],
+    );
+    if ( not $quake_output_reader ) {
+        $self->error_message('Failed to open reader for quake output!');
+        return;
+    }
+
+    $self->status_message('Read quake output: '.$quake_output);
+    my $writer = $self->_output;
+    while ( my $seqs = $quake_output_reader->read ) {
+        $writer->write($seqs);
+    }
+    $self->status_message('Read quake output...OK');
+
+    return 1;
+}
+
+sub _run_quake_command {
+    my ($self, $file) = @_;
+
+    my $cmd = 'quake.py -f '.$file;
     my $meta = $self->__meta__;
-    for my $key ( sort keys %QUAKE_PARAMS ) {
+    for my $key ( $self->quake_param_names ) {
         my $property = $meta->property_meta_for_name($key);
         my $value = $self->$key;
         next if not defined $value;
@@ -123,11 +158,12 @@ sub execute {
     }
     my $rv = eval{ Genome::Sys->shellcmd(cmd => $cmd); };
     if ( not $rv ) {
-        $self->error_message('Failed to run quake: '.$cmd);
+        $self->error_message($@) if $@;
+        $self->error_message("Failed to run quake: $cmd");
         return;
     }
 
-    return 1;
+    return $cmd;
 }
 
 1;
