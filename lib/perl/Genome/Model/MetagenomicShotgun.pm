@@ -12,7 +12,6 @@ class Genome::Model::MetagenomicShotgun {
             is => 'Genome::Model::Build::ImportedReferenceSequence',
             is_mutable => 1,
             is_optional => 1,
-            is_many => 1,
             via => 'inputs',
             to => 'value',
             where => [name => 'contamination_screen_reference', value_class_name => 'Genome::Model::Build::ImportedReferenceSequence'],
@@ -79,7 +78,7 @@ class Genome::Model::MetagenomicShotgun {
             is_optional => 1, 
             via => 'from_model_links',
             to => 'from_model',
-            where => [role => 'viral_protein_alignment_model'],
+            where => [role => 'viral_protein_model'],
         },
     ],
 };
@@ -90,8 +89,7 @@ sub build_subclass_name {
 
 sub delete {
     my $self = shift;
-    for my $sub_model ($self->_contamination_screen_alignment_model, $self->_metagenomic_alignment_models) {
-        next unless $sub_model;
+    for my $sub_model ($self->from_models) {
         $sub_model->delete;
     }
     return $self->SUPER::delete(@_);
@@ -100,15 +98,17 @@ sub delete {
 sub create{
     my $class = shift;
 
+    $DB::single=1;
+
     my %params = @_;
     my $self = $class->SUPER::create(%params);
     return unless $self;
 
     my $processing_profile = $self->processing_profile;
     for (qw/contamination_screen metagenomic_nucleotide metagenomic_protein viral_nucleotide viral_protein/){
-        my $pp_method = $_."_pp";
-        if($self->$pp_method) {
-            my $model = $self->_create_method_for_type($_);
+        my $pp_method = "_".$_."_pp";
+        if($self->processing_profile->$pp_method) {
+            my $model = $self->_create_model_for_type($_);
             unless ($model) {
                 $self->error_message("Error creating $_ model!");
                 $self->delete;
@@ -120,15 +120,19 @@ sub create{
     return $self;
 }
 
+sub sequencing_platform{
+    return 'solexa';
+}
+
 sub _create_model_for_type {
     my $self = shift;
     my $type = shift;
 
     #CREATE UNDERLYING REFERENCE ALIGNMENT MODELS
-    my $pp_accessor = $type."_pp";
+    my $pp_accessor = "_".$type."_pp";
     my $reference_accessor = $type."_reference";
     my %model_params = (
-        processing_profile => $self->$pp_accessor,
+        processing_profile => $self->processing_profile->$pp_accessor,
         subject_name => $self->subject_name,
         name => $self->name.".$type model",
         reference_sequence_build=>$self->$reference_accessor,
@@ -136,19 +140,17 @@ sub _create_model_for_type {
     my $model = Genome::Model::ReferenceAlignment->create( %model_params );
 
     unless ($model){
-        $self->error_message("Couldn't create contamination screen model with params ".join(", ", map {$_ ."=>". $model_params{$_}} keys %model_params) );
-        return;
+        die $self->error_message("Couldn't create contamination screen model with params ".join(", ", map {$_ ."=>". $model_params{$_}} keys %model_params) );
     }
 
     if ($model->reference_sequence_build($self->$reference_accessor)){
         $self->status_message("updated reference sequence build on $type model ".$model->name);
     }
     else{
-        $self->error_message("failed to update reference sequence build on $type model ".$model->name);
-        return;
+        die $self->error_message("failed to update reference sequence build on $type model ".$model->name);
     }
 
-    $self->add_from_model(from_model=> $model, role=>$type.'_alignment_model');
+    $self->add_from_model(from_model=> $model, role=>$type.'_model');
     $self->status_message("Created $type model ".$model->__display_name__);
 
     return $model;
