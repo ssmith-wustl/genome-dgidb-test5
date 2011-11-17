@@ -6,7 +6,7 @@ use warnings;
 class Genome::Model::Set::View::Coverage::Xml {
     is => 'UR::Object::View::Default::Xml',
     has_constant => [
-        perspective => 'coverage',
+        perspective => { default_value => 'coverage' },
     ],
     has_transient_optional => [
         _genomes_total_bp => {
