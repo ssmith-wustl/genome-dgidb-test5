@@ -62,11 +62,19 @@ sub lookup_gene_identifiers {
         $self->error_message('No gene identifiers in gene_file ' . $self->gene_file . ', exiting');
         return;
     }
+    $DB::single = 1;
+
+    my ($entrez_gene_name_reports, $intermediates) = Genome::DruggableGene::GeneNameReport->convert_to_entrez(@gene_identifiers);
+    my %gene_name_reports = $self->_find_gene_name_reports_for_identifiers(@gene_identifiers);
 
     my $gene_name_report_results = {};
-
     for my $gene_identifier (@gene_identifiers){
-        my @complete_gene_name_reports = $self->_lookup_gene_identifier($gene_identifier);
+        my ($entrez_gene_name_reports_for_identifier, $intermediates_for_identifier) = ($entrez_gene_name_reports->{$gene_identifier}, $intermediates->{$gene_identifier});
+        my $gene_name_reports_for_identifier = $gene_name_reports{$gene_identifier};
+        my @complete_gene_name_reports = ( ($entrez_gene_name_reports_for_identifier ? @$entrez_gene_name_reports_for_identifier : ()), 
+                                           ($intermediates_for_identifier ? @$intermediates_for_identifier : ()), 
+                                           ($gene_name_reports_for_identifier ? @$gene_name_reports_for_identifier : ()) );
+        @complete_gene_name_reports = uniq @complete_gene_name_reports;
         $gene_name_report_results->{$gene_identifier} = {};
         $gene_name_report_results->{$gene_identifier}->{'gene_name_reports'} = \@complete_gene_name_reports;
         $self->get_interactions($gene_identifier, $gene_name_report_results);
@@ -75,26 +83,22 @@ sub lookup_gene_identifiers {
     return $gene_name_report_results;
 }
 
-sub _lookup_gene_identifier {
+sub _find_gene_name_reports_for_identifiers {
     my $self = shift;
-    my $gene_identifier = shift;
-    my ($entrez_gene_name_reports, $intermediates) = Genome::DruggableGene::GeneNameReport->convert_to_entrez($gene_identifier);
-    my @gene_name_reports = $self->_find_gene_name_reports_for_identifier($gene_identifier);
-    ($entrez_gene_name_reports, $intermediates) = ($entrez_gene_name_reports->{$gene_identifier}, $intermediates->{$gene_identifier});
-    my @complete_gene_name_reports = (($entrez_gene_name_reports ? @$entrez_gene_name_reports : ()), ($intermediates ? @$intermediates : ()), @gene_name_reports);
-    @complete_gene_name_reports = uniq @complete_gene_name_reports;
-    return @complete_gene_name_reports;
-}
+    my @gene_identifiers = @_;
+    my %results;
+    $DB::single = 1;
 
-sub _find_gene_name_reports_for_identifier {
-    my $self = shift;
-    my $gene_identifier = shift;
-
-    my @gene_name_reports = Genome::DruggableGene::GeneNameReport->get(name => $gene_identifier);
-    my @gene_name_report_associations = Genome::DruggableGene::GeneNameReportAssociation->get(alternate_name => $gene_identifier);
-    @gene_name_reports = (@gene_name_reports, map($_->gene_name_report, @gene_name_report_associations));
-    @gene_name_reports = uniq @gene_name_reports;
-    return @gene_name_reports;
+    my @gene_name_reports = Genome::DruggableGene::GeneNameReport->get(name => \@gene_identifiers);
+    my @gene_name_report_associations = Genome::DruggableGene::GeneNameReportAssociation->get(alternate_name => \@gene_identifiers);
+    for my $gene_identifier(@gene_identifiers){
+        my @reports_for_identifier = grep($_->name eq $gene_identifier, @gene_name_reports);
+        my @associations_for_identifier = grep($_->alternate_name eq $gene_identifier, @gene_name_report_associations);
+        @reports_for_identifier = (@reports_for_identifier, map($_->gene_name_report, @associations_for_identifier));
+        @reports_for_identifier = uniq @reports_for_identifier;
+        $results{$gene_identifier} = \@reports_for_identifier;
+    }
+    return %results;
 }
 
 sub get_interactions {
