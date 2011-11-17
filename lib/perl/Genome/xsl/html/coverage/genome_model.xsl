@@ -268,7 +268,7 @@
             <tbody>
               <xsl:for-each select="coverage-summary/model">
                 <xsl:sort select="@model_name" order="ascending"/>
-                <xsl:sort select="../@lane_count" order="ascending"/>
+                <xsl:sort select="@lane_count" order="ascending"/>
                 <tr>
                   <td>
                     <xsl:value-of select="@model_name"/> (<xsl:value-of select="@lane_count"/> lane<xsl:if test="@lane_count &gt; 1">s</xsl:if>)
@@ -304,7 +304,7 @@
             <tbody>
               <xsl:for-each select="coverage-summary/model">
                 <xsl:sort select="@model_name" order="ascending"/>
-                <xsl:sort select="../@lane_count" order="ascending"/>
+                <xsl:sort select="@lane_count" order="ascending"/>
 
                 <tr>
                   <td>
@@ -338,7 +338,7 @@
             <tbody>
               <xsl:for-each select="enrichment-factor/model">
                 <xsl:sort select="@model_name" order="ascending"/>
-                <xsl:sort select="../@lane_count" order="ascending"/>
+                <xsl:sort select="@lane_count" order="ascending"/>
                 <tr>
                   <td>
                     <xsl:value-of select="@model_name"/> (<xsl:value-of select="@lane_count"/> lane<xsl:if test="@lane_count &gt; 1">s</xsl:if>)
