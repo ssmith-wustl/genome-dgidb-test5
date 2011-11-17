@@ -15,7 +15,7 @@ sub help_brief {
 
 sub help_detail {
     return <<EOS
-Tools to convert lists of indels into VCF files.
+Tools to convert VCF files into Maf files.
 EOS
 }
 
