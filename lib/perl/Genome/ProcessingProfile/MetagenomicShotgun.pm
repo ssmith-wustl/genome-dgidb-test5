@@ -120,7 +120,6 @@ sub _execute_build {
             $model->add_instrument_data($inst_data);
         }
         
-        $self->status_message("Adding instrument data ".join(",",map{$_->__display_name__}@instrument_data)." to ".$model->__display_name__);
         my $build = $self->build_if_necessary($model);
         return $build;
     };
@@ -147,7 +146,7 @@ sub _execute_build {
 
     my $cs_build = $start_build->($contamination_screen_model, @original_instdata);
     $wait_build->($cs_build);
-    return 1;
+    exit;
 
     my @cs_unaligned;
     if ($self->filter_contaminant_fragments){
