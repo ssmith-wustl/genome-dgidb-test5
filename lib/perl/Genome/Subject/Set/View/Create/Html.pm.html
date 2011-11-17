@@ -7,7 +7,7 @@
       <fieldset>
         <p>
           <span style="font-weight: bold">1. Select the CSV file on your computer which contains your subject data.</span>
-          <br/>The first column should contain the name of the sample to be updated or blank to create a new sample.
+          <br/><i>The first column should contain the name of the sample to be updated or be blank to create a new sample.</i>
           <br/><br/>
           <input type="file" id="file" name="file"/>
         </p>
@@ -15,16 +15,14 @@
         <input type="radio" id="subclass-name-sample" name="subclass_name" value="Genome::Sample" checked="CHECKED">Sample</input>
         <br/>
         <input type="radio" id="subclass-name-individual" name="subclass_name" value="Genome::Individual"> Patient</input>
-        <br/>
+        <br/> <br/>
         <span style="font-weight: bold">3. Which nomenclature?</span>&#160;<input size='50' class="text" id="nomenclature" name="nomenclature"/>
-        <a href="/view/genome/nomenclature/set/create.html">Create a new one</a>
-        <p><i>A nomenclature defines the collection of columns in your spreadsheet.</i></p>
-        <ul>
-        <li><a href="/view/genome/nomenclature/set/status.html">See a list of nomenclatures</a></li>
-        </ul>
+        <p><i>A nomenclature describes the columns in your spreadsheet.
+        You can find an exsiting nomenclature in the </i><a href="/view/genome/nomenclature/set/status.html">list of existing nomenclatures</a> <i> or you
+        can </i><a href="/view/genome/nomenclature/set/create.html">create a new nomenclature</a>.</p>
 
       <div>
-        <p style="text-align: right;"><button id="submit-button">Save</button></p>
+        <p style="text-align: right;"><button id="submit-button">Import</button></p>
       </div>
       </fieldset>
     </form>
