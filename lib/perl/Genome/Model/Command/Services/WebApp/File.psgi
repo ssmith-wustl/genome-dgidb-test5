@@ -28,7 +28,6 @@ sub load_modules {
 }
 
 sub dispatch_request {
-
 #    sub ( POST + /view/x/subject-upload + *file= ) {
     sub ( POST + /view/x/subject-upload + %* + *file= )  {
 
@@ -43,17 +42,18 @@ sub dispatch_request {
             $c = <$fh>;
             close($fh);
         }
-    
+
         my $base64 = MIME::Base64::encode_base64($c);
 
         my $task_params_json = encode_json( { 
             nomenclature => $params->{'nomenclature'},
             subclass_name => $params->{'subclass_name'},
+            project_name => $params->{'project_name'},
             content => $base64 });
 
         my $task_params = {
             command_class => 'Genome::Subject::Command::Import',
-            user_id       => $ENV{'REMOTE_USER'} || 'genome@localhost',
+            user_id       => Genome::Sys->username(),
             params        => $task_params_json
         };
 
@@ -66,6 +66,7 @@ sub dispatch_request {
         if ($@ || !$task) {
             $code = 200; # OK (didnt work)
             $body->{'error'} = $@ || 'Couldnt create a task with params: ' . Data::Dumper::Dumper $task_params;
+            return [$code, ['Content-type' => "text/plain"], [$body->{'error'}]];
         } else {
             $code = 201; # CREATED
             $body->{'id'} = $task->id();

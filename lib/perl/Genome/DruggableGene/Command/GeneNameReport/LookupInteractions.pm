@@ -39,7 +39,8 @@ sub help_detail {
 sub execute {
     my $self = shift;
 
-    my @gene_name_reports = $self->lookup_gene_identifiers;
+    my @gene_identifiers = $self->_read_gene_file();
+    my @gene_name_reports = $self->lookup_gene_identifiers(@gene_identifiers);
     my @interactions = $self->get_interactions(@gene_name_reports);
     my %grouped_interactions = $self->group_interactions_by_drug_name_report(@interactions);
     $self->print_grouped_interactions(%grouped_interactions);
@@ -49,12 +50,7 @@ sub execute {
 
 sub lookup_gene_identifiers {
     my $self = shift;
-
-    my @gene_identifiers = $self->_read_gene_file();
-    unless(@gene_identifiers){
-        $self->error_message('No gene identifiers in gene_file ' . $self->gene_file . ', exiting');
-        return;
-    }
+    my @gene_identifiers = @_;
 
     my ($entrez_gene_name_reports, $entrez_gene_name_intermediate_reports) = Genome::DruggableGene::GeneNameReport->convert_to_entrez(@gene_identifiers);
     my %gene_name_reports = $self->_find_gene_name_reports_for_identifiers(@gene_identifiers);
@@ -82,7 +78,8 @@ sub _find_gene_name_reports_for_identifiers {
     for my $gene_identifier(@gene_identifiers){
         my @reports_for_identifier = grep($_->name eq $gene_identifier, @gene_name_reports);
         my @associations_for_identifier = grep($_->alternate_name eq $gene_identifier, @gene_name_report_associations);
-        @reports_for_identifier = (@reports_for_identifier, map($_->gene_name_report, @associations_for_identifier));
+        my @ids = map($_->gene_name_report_id, @associations_for_identifier); #This isn't super concise, but it shaves off a substantial amount of run time
+        @reports_for_identifier = (@reports_for_identifier, Genome::DruggableGene::GeneNameReport->get(id => \@ids));
         @reports_for_identifier = uniq @reports_for_identifier;
         $results{$gene_identifier} = \@reports_for_identifier;
     }
@@ -181,6 +178,12 @@ sub _read_gene_file{
     }
 
     $gene_fh->close;
+
+    unless(@gene_identifiers){
+        $self->error_message('No gene identifiers in gene_file ' . $self->gene_file . ', exiting');
+        return;
+    }
+
     return @gene_identifiers;
 }
 

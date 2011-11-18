@@ -19,6 +19,11 @@ sub _build_sub_command {
 
     my $subclass_name = $class_name;
     $subclass_name =~ s/Genome::ProcessingProfile::Command::Create:://;
+    # If the create command is something like Genome::ProcesingProfile::Command::Create::Foo::Bar,
+    # then the resulting subclass will be Foo::Bar. Combine this with the target class name (as done
+    # below when making the new class) and you get Genome::ProcessingProfile::Foo::Foo::Bar. This
+    # regex fixes this by only capturing the last piece of the class (eg, Bar).
+    ($subclass_name) = $subclass_name =~ /::(\w+)$/;
 
     my $profile_string = Genome::Utility::Text::camel_case_to_string($subclass_name);
     $profile_string =~ s/:://;

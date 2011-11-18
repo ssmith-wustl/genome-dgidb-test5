@@ -16,6 +16,7 @@ class Genome::Subject::Command::Import {
        nomenclature    => { is => 'Genome::Nomenclature', id_by=>'nomenclature_id' },
        nomenclature_name    => { is => 'Text', via=>'nomenclature', to=>'name' },
        subclass_name   => { is => 'Text' },
+       project_name    => { is => 'Text' },
        decoded_content => { calculate_from => ['content'], calculate => q|MIME::Base64::decode_base64($content)|}
     ],
     has_optional => [
@@ -55,6 +56,10 @@ sub create {
 sub execute {
 
     my ($self) = @_;
+
+    # one project per upload
+    my $project = Genome::Project->create(name => $self->project_name);
+
 
     # Assumes first row contains column names
     # Assumes first col is the name of the object or
@@ -99,6 +104,7 @@ sub execute {
             next ROW;
         }
 
+
         my $j = -1;
         VALUE:
         for my $v (@values) {
@@ -117,15 +123,26 @@ sub execute {
                 }
             }
 
-            my $sa = Genome::SubjectAttribute->create(
+            my $sa = Genome::SubjectAttribute->get(
+                subject_id      => $obj->id,
+                attribute_label => $col_name,
+                nomenclature    => $f->id
+            );
+
+            if ($sa) { 
+                $sa->delete;
+            }
+            $sa = Genome::SubjectAttribute->create(
                 subject_id      => $obj->id,
                 attribute_label => $col_name,
                 attribute_value => $v,
-                nomenclature    => $self->nomenclature_id
+                nomenclature    => $f->id
             );
-    
-            if ($sa) { $added++; }
+            $added++; 
         }
+
+        # add each subject obj to the project
+        $project->add_part( entity => $obj, role => 'automatic');
     }
 
     return $added;
