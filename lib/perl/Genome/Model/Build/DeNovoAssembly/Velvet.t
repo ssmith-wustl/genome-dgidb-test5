@@ -63,6 +63,7 @@ my $instrument_data = Genome::InstrumentData::Solexa->create(
     lane => 8,
     library => $library,
     archive_path => $archive_path,
+    clusters => 15000,
     fwd_clusters => 15000,
     rev_clusters => 15000,
     analysis_software_version => 'not_old_iilumina',
