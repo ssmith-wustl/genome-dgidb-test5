@@ -6,6 +6,7 @@ use Genome;
 use Genome::Info::IUB;
 use Workflow;
 use Workflow::Simple;
+use File::Basename;
 
 class Genome::Model::Tools::Vcf::Convert::Indel::PindelSingleGenome {
     is =>  'Genome::Model::Tools::Vcf::Convert::Base' ,
@@ -41,22 +42,30 @@ sub execute {
     my $output = $self->output_file;
     my $pindel_raw = $self->input_file;
     my $refbuild_id = $self->reference_sequence_build->id;
+=cut
     my $pindel2vcf_cmd = Genome::Model::Tools::Pindel::RunPindel2Vcf->create(
         output_file => $output,
         pindel_raw_output => $pindel_raw,
         reference_build_id => $refbuild_id,
     );
+    unless($pindel2vcf_cmd->execute){
+       die $self->error_message("Couldn't execute pindel2vcf command"); 
+    }
     unless(-s $output){
         die $self->error_message("Could not locate an output file at: ".$output);
     }  
-
 =cut
+
+    my ($output_directory) = basename($output);
+    $self->status_message("Output Directory for pindel-single-genome vcf creation will be: ".$output_directory);
+
     my %inputs;
     $inputs{pindel_raw_output} = $pindel_raw;
     $inputs{output_file} = $output;
+    $self->status_message("VCF conversion output will be at: ".$output);
     $inputs{reference_build_id} = $refbuild_id;
 
-    my $temp_dir = Genome::Sys->create_temp_file_path;
+    #my $temp_dir = Genome::Sys->create_temp_file_path;
 
     my $workflow = Workflow::Model->create(
         name => 'Multi-Vcf Merge',
@@ -69,7 +78,7 @@ sub execute {
             'output',
         ],
     );
-    $workflow->log_dir($temp_dir);
+    $workflow->log_dir($output_directory);
 
     my $pindel2vcf = $workflow->add_operation(
         name => "Pindel2Vcf",
@@ -105,6 +114,7 @@ sub execute {
         die $self->error_message("Workflow did not return correctly.");
     }
 
+=cut
 
     #FIXME   this is all hardcoded, these need to be filled dynamically
     my $pindel2vcf_path = "/gscmnt/ams1158/info/pindel/pindel2vcf/pindel2vcf";

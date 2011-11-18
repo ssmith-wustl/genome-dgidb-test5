@@ -24,13 +24,16 @@ my $expected_dir = "$test_dir/$expected_base";
 my $input_dir = "$test_dir/$input_base";
 my $expected_file = "$expected_dir/output.vcf.gz";
 
-my $output_file = Genome::Sys->create_temp_file_path.".vcf.gz";
+my $output_file = Genome::Sys->create_temp_file_path("test.vcf.gz");
 my $input_file = "$input_dir/indels.hq";
+$DB::single=1;
+my $command = Genome::Model::Tools::Vcf::Convert::Indel::PindelSingleGenome->create( 
+    input_file => $input_file,
+    output_file => $output_file,
+    aligned_reads_sample => "tumor",
+    reference_sequence_build_id => 101947881
+);
 
-my $command = Genome::Model::Tools::Vcf::Convert::Indel::PindelSingleGenome->create( input_file => $input_file,
-                                                                           output_file => $output_file,
-                                                                           aligned_reads_sample => "tumor",
-                                                                           reference_sequence_build_id => 101947881);
 ok($command, 'Command created');
 my $rv = $command->execute;
 ok($rv, 'Command completed successfully');
