@@ -99,6 +99,7 @@ sub execute {
         return;
     }
 
+    $DB::single = 1;
     my $errors = 0;
     my $non_unique_coverage = 0;
     while(my $line = $input_fh->getline) {
@@ -113,8 +114,8 @@ sub execute {
             #this may still break if the minimum size is ever smaller than the chromosome.
 
             my $length_for_pad = $self->minimum_size - $length;
-            my $left_pad = ceil($length / 2);
-            my $right_pad = floor($length / 2);
+            my $left_pad = ceil($length_for_pad / 2);
+            my $right_pad = floor($length_for_pad / 2);
             if($start <= $left_pad) {
                 my $hangoff = $left_pad - $start + 1;
                 $left_pad -= $hangoff;
