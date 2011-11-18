@@ -11,6 +11,6 @@ use warnings;
 use above "Genome";
 use Test::More;
 
-use_ok('Genome::Data::Comparer') or die;
+use_ok('Genome::Data::Comparer_v2') or die;
 
 done_testing();

@@ -11,19 +11,19 @@ use warnings;
 use above "Genome";
 use Test::More;
 
-use_ok('Genome::Data::Mapper::AnnotatedVariant::VcfSnpeffV1ToTGIV1') or die;
+use_ok('Genome::Data::Mapper::AnnotatedVariant::VepOutV1ToTGIV1') or die;
 
 #Test create
 
 my $obj = eval {
-    Genome::Data::Mapper::AnnotatedVariant::VcfSnpeffV1ToTGIV1->create()
+    Genome::Data::Mapper::AnnotatedVariant::VepOutV1ToTGIV1->create()
 };
 
 my $error = $@;
 print "$error\n";
 
 ok($obj, 'created object successfully');
-ok($obj->isa('Genome::Data::Mapper::AnnotatedVariant::VcfSnpeffV1ToTGIV1'), 'object is a Genome::Data::Mapper::AnnotatedVariant::VcfSnpeffV1ToTGIV1');
+ok($obj->isa('Genome::Data::Mapper::AnnotatedVariant::VepOutV1ToTGIV1'), 'object is a Genome::Data::Mapper::AnnotatedVariant::VepOutV1ToTGIV1');
 ok($obj->isa('Genome::Data::Mapper::AnnotatedVariant'), 'object is a Genome::Data::Mapper::AnnotatedVariant');
 
 #TODO test calculate_annotation_field and calculate_transcript_annotation_field
