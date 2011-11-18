@@ -54,42 +54,74 @@ sub parse_next_from_file {
         $annotations{"qual"} = $fields[5];
 
         my $type;
-        foreach my $alt_allele (@alt_alleles) {
+        my $start;
+        my $end;
+        my $ref_allele;
+        my @new_alt_alleles;
+        foreach my $alt_allele ($alt_alleles[0]) {
             my $new_type;
             my $ref_length = length $fields[3];
             my $alt_length = length $alt_allele;
-            if ($alt_length == $ref_length) {
-                if ($alt_length == 1) {
-                    $new_type = "SNP";
-                }
-                elsif ($alt_length == 2) {
+            if ($ref_length < $alt_length) { #insertion
+                $ref_allele = "-";
+                $alt_allele = substr($alt_allele, $ref_length);
+                $ref_length = 0;
+                $alt_length = length $alt_allele;
+                $new_type = "INS";
+                $start = $fields[1];
+                $end = $start+1;
+            }   
+            elsif ($ref_length == $alt_length and $alt_length == 1) { #snv
+                $new_type = "SNP";
+                $start = $fields[1];
+                $end = $start;
+                $ref_allele = $fields[3];
+            }
+            elsif ($ref_length == $alt_length and $alt_length >= 2) { #dnp or mnp
+                $ref_allele = substr($fields[3], 1);
+                $alt_allele = substr($alt_allele, 1);
+                $ref_length = length $ref_allele;
+                $alt_length = length $alt_allele;
+                if ($alt_length == 2) {
                     $new_type = "DNP";
+                    $start = $fields[1]-2;
+                    $end = $start + $alt_length;
                 }
                 else {
                     $new_type = "MNP";
+                    $start = $fields[1]-2;
+                    $end = $start + 1;
                 }
             }
-            elsif ($ref_length > $alt_length) {
+            elsif ($ref_length > $alt_length) { #deletion
+                $ref_allele = substr($fields[3], $alt_length);
+                $alt_allele = "-";
                 $new_type = "DEL";
+                $start = $fields[1]+1;
+                $ref_length = length $ref_allele;
+                $alt_length = 0;
+                $end = $start + $ref_length-1;
             }
             else {
-                $new_type = "INS";
+                die("unrecognized variant type");
             }
+            push @new_alt_alleles, $alt_allele;
+
 
             if (! defined $type) {
                 $type = $new_type;
             }
             elsif ($new_type ne $type) {
-               $type = "SKIP"; 
+               $type = "SKIP";
             }
         }
 
         $variant = Genome::Data::Variant::AnnotatedVariant->create(
             chrom => $fields[0],
-            start => $fields[1]-1,
-            end => $fields[1],
-            reference_allele => $fields[3],
-            alt_alleles => \@alt_alleles,
+            start => $start,
+            end => $end,
+            reference_allele => $ref_allele,
+            alt_alleles => [$new_alt_alleles[0]],
             type => $type, 
             annotations => \%annotations,
             transcript_annotations => \@transcript_annotations,
