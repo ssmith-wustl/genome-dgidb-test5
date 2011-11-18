@@ -58,11 +58,16 @@ my $instrument_data = Genome::InstrumentData::Solexa->create(
     sequencing_platform => 'solexa',
     read_length => 100,
     subset_name => '8-CGATGT',
+    index_sequence => 'CGATGT',
+    run_name => 'XXXXXX/8-CGATGT',
     run_type => 'Paired',
+    flow_cell_id => 'XXXXXX',
+    lane => 8,
     library => $library,
     archive_path => $archive_path,
     fwd_clusters => 15000,
     rev_clusters => 15000,
+    analysis_software_version => 'not_old_iilumina',
 );
 ok($instrument_data, 'instrument data');
 ok($instrument_data->is_paired_end, 'inst data is paired');
@@ -92,6 +97,9 @@ my $build = Genome::Model::Build::DeNovoAssembly->create(
     data_directory => $tmpdir,
 );
 ok($build, 'created build');
+my @invalid_tags = $build->validate_for_start;
+print Data::Dumper::Dumper(@invalid_tags);
+ok(!@invalid_tags, 'build can start');
 my $example_build = Genome::Model::Build->create(
     model => $model,
     data_directory => $example_dir,

@@ -30,14 +30,6 @@ sub create {
     return $self;
 }
 
-sub is_imported {
-    my $self = shift;
-    if ( $self->processing_profile->assembler_name =~ /import/ ) {
-        return 1;
-    }
-    return;
-}
-
 #general
 sub soap_output_dir_and_file_prefix {
     return $_[0]->data_directory.'/'.$_[0]->file_prefix;
