@@ -23,16 +23,14 @@ class Genome::Model::Event::Build::DeNovoAssembly::PrepareInstrumentData {
 };
 
 sub bsub_rusage {
-    return "-R 'select[type==LINUX64 && tmp>20000] rusage[tmp=20000] span[hosts=1]'"
+    return "-R 'select[type==LINUX64 && tmp>25000] rusage[tmp=25000] span[hosts=1]'"
 }
 
 sub _tempdir {
     my $self = shift;
 
     unless ( $self->{_tempdir} ) {
-        $self->{_tempdir} = File::Temp::tempdir(CLEANUP => 1 );
-        Genome::Sys->validate_existing_directory( $self->{_tempdir} )
-            or die;
+        $self->{_tempdir} = Genome::Sys->base_temp_directory;
     }
     
     return $self->{_tempdir};
@@ -72,7 +70,7 @@ sub execute {
         }
     }
 
-    $self->status_message('Processing instrument data');
+    $self->status_message('Process instrument data');
     INST_DATA: for my $instrument_data ( @instrument_data ) {
         my $process_ok = $self->_process_instrument_data($instrument_data);
         return if not $process_ok;
@@ -81,7 +79,7 @@ sub execute {
             last INST_DATA;
         }
     }
-    $self->status_message('Processing instrument data...OK');
+    $self->status_message('Process instrument data...OK');
 
     $self->status_message('Verify assembler input files');
     @existing_assembler_input_files = $self->build->existing_assembler_input_files;
@@ -156,45 +154,72 @@ sub _is_there_a_base_limit_and_has_it_been_exceeded {
 }
 #<>#
 
-sub _instrument_data_qual_type_in {
-    my ( $self, $instrument_data ) = @_;
-    
-    if ( $instrument_data->class eq 'Genome::InstrumentData::Solexa' ) {
-        return 'sanger' if $instrument_data->bam_path and -s $instrument_data->bam_path;
-        return 'illumina';
-    }
-
-    if ( $instrument_data->class eq 'Genome::InstrumentData::Imported' ) {
-        return 'sanger';
-    }
-
-    if ( $instrument_data->class eq 'Genome::InstrumentData::454' ) {
-        return 'sanger';
-    }
-
-    return;
-}
-
 sub _process_instrument_data {
     my ($self, $instrument_data) = @_;
+    $self->status_message('Process: '.join(' ', map { $instrument_data->$_ } (qw/ class id/)));
 
-    # Inst data quality type
-    my $qual_type_in = $self->_instrument_data_qual_type_in( $instrument_data );
-    unless ( $qual_type_in ) {
-        $self->error_message( "Can't determine quality type in for inst data, ID: ".$instrument_data->id );
+    # Output files
+    my @output_files = $self->build->read_processor_output_files_for_instrument_data($instrument_data);
+    return if not @output_files;
+    my $output;
+    if ( @output_files == 1 ) {
+        $output = $output_files[0].':type=sanger:mode=a';
+    }
+    elsif ( @output_files == 2 ) {
+        $output = $output_files[0].':name=fwd:type=sanger:mode=a,'.$output_files[1].':name=rev:type=sanger:mode=a';
+    }
+    else {
+        $self->error_message('Cannot handle more than 2 output files');
         return;
     }
-    my $qual_type_out = 'sanger';
 
-    $self->status_message('Processing: '.join(' ', $instrument_data->class, $instrument_data->id, $qual_type_in) );
+    # Input files
+    my @inputs;
+    if ( my $bam = eval{ $instrument_data->bam_path } ) {
+        @inputs = ( $bam.':type=bam' );
+    }
+    elsif ( my $sff_file = eval{ $instrument_data->sff_file } ) {
+        @inputs = ( $sff_file.':type=sff' );
+    }
+    elsif ( my $archive = eval{ $instrument_data->archive_path; } ){
+        my $qual_type = 'sanger'; # imported will be sanger; check solexa
+        if ( $instrument_data->can('resolve_quality_converter') ) {
+            my $converter = eval{ $instrument_data->resolve_quality_converter };
+            if ( not $converter ) {
+                $self->error_message('No quality converter for instrument data '.$instrument_data->id);
+                return;
+            }
+            elsif ( $converter eq 'sol2sanger' ) {
+                $self->error_message('Cannot process old illumina data! Instrument data '.$instrument_data->id);
+                return;
+            }
+            $qual_type = 'illumina';
+        }
+        my $instrument_data_tempdir = $self->_tempdir.'/'.$instrument_data->id;
+        my $create_dir = Genome::Sys->create_directory($instrument_data_tempdir);
+        if ( not $create_dir or not -d $instrument_data_tempdir ) {
+            $self->error_message('Failed to make temp directory for instrument data!');
+            return;
+        }
+        my $cmd = "tar -xzf $archive --directory=$instrument_data_tempdir";
+        my $tar = Genome::Sys->shellcmd(cmd => $cmd);
+        if ( not $tar ) {
+            $self->error_message('Failed extract archive for instrument data '.$instrument_data->id);
+            return;
+        }
+        my @input_files = grep { not -d } glob("$instrument_data_tempdir/*");
+        if ( not @input_files ) {
+            $self->error_message('No fastqs from archive from instrument data '.$instrument_data->id);
+            return;
+        }
+        @inputs = map { $_.':type='.$qual_type } @input_files;
+    }
+    else {
+        $self->error_message('Failed to get bam, sff or archived fastqs from instrument data: '.$instrument_data->id);
+        return;
+    }
 
-    # In/out files
-    my $fastq_method = '_fastq_files_from_'.$instrument_data->sequencing_platform;
-    my @input_files = $self->$fastq_method($instrument_data)
-        or return;
-    my @output_files = $self->build->read_processor_output_files_for_instrument_data($instrument_data)
-        or return;
-
+    # Sx read processor
     my $read_processor = $self->processing_profile->read_processor;
     my @read_processor_parts = split(/\s+\|\s+/, $read_processor);
 
@@ -211,23 +236,12 @@ sub _process_instrument_data {
         @read_processor_parts = ('');
     }
 
-    # Fast qual command
     my @sx_cmd_parts = map { 'gmt sx '.$_ } @read_processor_parts;
-    $sx_cmd_parts[0] .= ' --input '.join(',', map { $_.':type='.$qual_type_in } @input_files);
-    my $output;
-    if ( @output_files == 1 ) {
-        $output = $output_files[0].':type=sanger:mode=a';
-    }
-    elsif ( @output_files == 2 ) {
-        $output = $output_files[0].':name=fwd:type=sanger:mode=a,'.$output_files[1].':name=rev:type=sanger:mode=a';
-    }
-    else {
-        $self->error_message('Cannot handle more than 2 output files');
-        return;
-    }
+    $sx_cmd_parts[0] .= ' --input '.join(',', @inputs);
     $sx_cmd_parts[$#read_processor_parts] .= ' --output '.$output;
     $sx_cmd_parts[$#read_processor_parts] .= ' --output-metrics '.$self->_metrics_file;
 
+    # Run
     my $sx_cmd = join(' | ', @sx_cmd_parts);
     my $rv = eval{ Genome::Sys->shellcmd(cmd => $sx_cmd); };
     if ( not $rv ) {
@@ -235,92 +249,9 @@ sub _process_instrument_data {
         return;
     }
 
-    $self->status_message('Process Instrument data...OK');
-
     return 1;
 }
 #<>#
 
-#< Files From Instrument Data >#
-sub _fastq_files_from_solexa {
-    my ($self, $inst_data) = @_;
-
-    $self->status_message("Getting fastq files from solexa instrument data ".$inst_data->id);
-
-    my @fastq_files;
-
-    if ( not $inst_data->bam_path ) {
-        my $archive_path = $inst_data->archive_path;
-        $self->status_message("No bam path for instrument dataq, verifying archive path: $archive_path");
-        unless ( -s $archive_path ) {
-            $self->error_message(
-                "No archive path for instrument data (".$inst_data->id.")"
-                );
-            return;
-        }
-        $self->status_message("Archive path OK");
-
-        # tar to tempdir
-        my $tempdir = $self->_tempdir;
-        my $inst_data_tempdir = $tempdir.'/'.$inst_data->id;
-        $self->status_message("Creating temp dir: $inst_data_tempdir");
-        Genome::Sys->create_directory($inst_data_tempdir)
-            or die;
-        $self->status_message("Temp dir OK");
-
-        my $tar_cmd = "tar zxf $archive_path -C $inst_data_tempdir";
-        $self->status_message("Running tar: $tar_cmd");
-        unless ( Genome::Sys->shellcmd(cmd => $tar_cmd) ) {
-            $self->error_message("Can't extract archive file $archive_path with command '$tar_cmd'");
-            return;
-        }
-        $self->status_message("Tar OK");
-
-        # glob files
-        $self->status_message("Checking fastqs we're dumped...");
-        @fastq_files = glob $inst_data_tempdir .'/*';
-        unless ( @fastq_files ) {
-            $self->error_message("Extracted archive path ($archive_path), but no fastqs found.");
-            return;
-        }
-        $self->status_message('Fastq files from archive OK:'.join(", ", @fastq_files));
-    }
-    else {
-        unless ( -s $inst_data->bam_path ) {
-            $self->error_message("No bam file found or file is zero size: ".$inst_data->bam_path);
-            return;
-        }
-        $self->status_message("Attempting to get fastqs from bam");
-
-        my $tempdir = $self->_tempdir;
-        my $inst_data_tempdir = $tempdir.'/'.$inst_data->id;
-
-        @fastq_files = $inst_data->dump_fastqs_from_bam( directory => $tempdir );
-
-        $self->status_message('Fastq files from bam OK:'.join(", ", @fastq_files));
-    }
-
-    return @fastq_files;
-}
-
-sub _fastq_files_from_454 {
-    my ( $self, $inst_data ) = @_;
-
-    $self->status_message( "Getting fastq files fro 454 inst data: ".$inst_data->id );
-
-    my @fastq_files = $inst_data->dump_sanger_fastq_files; #Dumps to temp dir
-
-    unless ( @fastq_files ) {
-        $self->error_message( "Could not dump fastq files from inst data: ".$inst_data->id );
-        return;
-    }
-
-    return @fastq_files;
-}
-
-#<>#
-
 1;
 
-#$HeadURL$
-#$Id$
