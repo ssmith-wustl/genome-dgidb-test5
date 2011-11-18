@@ -82,7 +82,8 @@ sub _find_gene_name_reports_for_identifiers {
     for my $gene_identifier(@gene_identifiers){
         my @reports_for_identifier = grep($_->name eq $gene_identifier, @gene_name_reports);
         my @associations_for_identifier = grep($_->alternate_name eq $gene_identifier, @gene_name_report_associations);
-        @reports_for_identifier = (@reports_for_identifier, map($_->gene_name_report, @associations_for_identifier));
+        my @ids = map($_->gene_name_report_id, @associations_for_identifier); #This isn't super concise, but it shaves off a substantial amount of run time
+        @reports_for_identifier = (@reports_for_identifier, Genome::DruggableGene::GeneNameReport->get(id => \@ids));
         @reports_for_identifier = uniq @reports_for_identifier;
         $results{$gene_identifier} = \@reports_for_identifier;
     }
