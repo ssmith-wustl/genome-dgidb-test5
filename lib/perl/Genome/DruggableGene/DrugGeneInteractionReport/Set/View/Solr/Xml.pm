@@ -1,29 +1,31 @@
-package Genome::DruggableGene::DrugGeneInteractionReport::View::Solr::Xml;
+package Genome::DruggableGene::DrugGeneInteractionReport::Set::View::Solr::Xml;
+
 use strict;
 use warnings;
+
 use Genome;
 
-class Genome::DruggableGene::DrugGeneInteractionReport::View::Solr::Xml {
+class Genome::DruggableGene::DrugGeneInteractionReport::Set::View::Solr::Xml {
     is => 'Genome::View::Solr::Xml',
     has => [
         type => {
             is => 'Text',
-            default => 'drug-gene-interaction-report'
+            default => 'drug-gene-interaction'
         },
         display_type => {
             is  => 'Text',
-            default => 'DrugGeneInteractionReport',
+            default => 'DrugGeneInteraction',
         },
         display_icon_url => {
             is  => 'Text',
-            default => 'genome_druggable-gene_drug-gene-interaction-report_32',
+            default => 'genome_druggable-gene_drug-gene-interaction_32',
         },
         display_url0 => {
             is => 'Text',
             calculate_from => ['subject'],
             calculate => q{
-                return '/view/genome/druggable-gene/drug-gene-interaction-report/status.html?id=' . $subject->id());
-            },
+                return '/view/genome/druggable-gene/drug-gene-interaction-report/set/status.html?name=' . $subject->name();
+            },#calling subject->name isnt going to work for an interaction which doesnt have a name
         },
         display_label1 => {
             is  => 'Text',
@@ -47,38 +49,23 @@ class Genome::DruggableGene::DrugGeneInteractionReport::View::Solr::Xml {
             is => 'ARRAY',
             default => [
                 {
-                    name => '__display_name__',
+                    name => 'name',
                     position => 'title',
                 },
                 {
-                    name => 'drug_name_report',
+                    name => 'nomenclature',
                     position => 'content',
-                    perspective => 'default',
-                    toolkit => 'text',
-                    aspects => [
-                        'id',
-                        'name',
-                        'nomenclature',
-                        'source_db_name',
-                        'source_db_version'
-                    ]
                 },
                 {
-
-                    name => 'gene_name_report',
+                    name => 'source_db_name',
                     position => 'content',
-                    perspective => 'default',
-                    toolkit => 'text',
-                    aspects => [
-                        'id',
-                        'name',
-                        'nomenclature',
-                        'source_db_name',
-                        'source_db_version'
-                    ]
                 },
                 {
-                    name => 'interaction_type',
+                    name => 'source_db_version',
+                    position => 'content',
+                },
+                {
+                    name => 'name',
                     position => 'content',
                 },
                 {
@@ -89,3 +76,19 @@ class Genome::DruggableGene::DrugGeneInteractionReport::View::Solr::Xml {
         },
     ]
 };
+
+sub _generate_id_field_data {
+    my $self = shift;
+    my $subject = $self->subject;
+
+    return $subject->__display_name__;
+}
+
+sub _generate_object_id_field_data {
+    my $self = shift;
+    my $subject = $self->subject;
+
+    return $subject->__display_name__;
+}
+
+1;

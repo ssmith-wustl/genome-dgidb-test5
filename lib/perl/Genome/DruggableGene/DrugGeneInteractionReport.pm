@@ -50,7 +50,11 @@ class Genome::DruggableGene::DrugGeneInteractionReport {
                 my $citation = Genome::DruggableGene::Citation->get(source_db_name => $source_db_name, source_db_version => $source_db_version);
                 return $citation;
             |,
-        }
+        },
+        name => {
+            calculate_from => ['drug_name_report_name','gene_name_report_name'],
+            calculate => q| return $drug_name_report_name . $gene_name_report_name |,
+        },
     ],
     doc => 'Claim regarding an interaction between a drug name and a gene name',
 };
