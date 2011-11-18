@@ -11,7 +11,7 @@ use Test::More;
 use_ok('Genome::Model::Tools::Sx::Quake') or die;
 
 my $test_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Sx/';
-my $input = $test_dir.'/fast_qual.example.fastq';
+my $input = $test_dir.'/reader_writer.collated.fastq';
 my $tmp_dir = Genome::Sys->base_temp_directory;
 my $output = $tmp_dir.'/output.fastq';
 
@@ -39,8 +39,10 @@ $quake = Genome::Model::Tools::Sx::Quake->create(
 ok($quake, 'create');
 $quake->dump_status_messages(1);
 ok($quake->execute, 'execute');
+is(File::Compare::compare($input, $quake->_tmpdir.'/quake.fastq'), 0, 'input written correctly');
 is(File::Compare::compare($output, $input), 0, 'output file matches');
 
+#print "$tmp_dir\n";<STDIN>;
 done_testing();
 exit;
 
