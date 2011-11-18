@@ -7,18 +7,18 @@ use Genome::Info::IUB;
 
 class Genome::Model::Tools::Vcf::Convert::Indel::Bed {
     is => 'Genome::Model::Tools::Vcf::Convert::Base',
-    doc => 'Generate a VCF file from a bed file of indels'
+    doc => 'Generate a VCF file from a bed file of indels and snvs'
 };
 
 sub help_synopsis {
     <<'HELP';
-    Generate a VCF file from a bed file of indels
+    Generate a VCF file from a bed file of indels and snvs
 HELP
 }
 
 sub help_detail {
     <<'HELP';
-    Parses the input file and creates a VCF containing all the indels.
+    Parses the input file and creates a VCF containing all the indel and snvs.
 HELP
 }
 

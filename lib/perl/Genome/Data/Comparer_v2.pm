@@ -120,25 +120,6 @@ sub convert_all {
     return 1;
 }
 
-sub compare_first {
-    my ($self, $object, $other_object) = @_;
-    if (#$object->transcript_annotations->[0]->{"gene_name"} eq 
-        #$other_object->transcript_annotations->[0]->{"gene_name"} and
-        $object->transcript_annotations->[0]->{"trv_type"} eq
-        $other_object->transcript_annotations->[0]->{"trv_type"} ) {
-        return 1;
-    }
-    elsif ($object->transcript_annotations->[0]->{"trv_type"} eq "missense" or
-        $other_object->transcript_annotations->[0]->{"trv_type"} eq "missense" or
-        $other_object->transcript_annotations->[0]->{"trv_type"} =~ m/frame_shift/ or
-        $object->transcript_annotations->[0]->{"trv_type"} =~ m/frame_shift/) {
-        return 0;
-    }
-    else {
-        return -1; #Neither the same nor different "enough"
-    }
-}
-
 sub compare_all {
     my ($self, $object, $other_object, $to_writer_same, $to_writer_different_1, $to_writer_different_2) = @_;
     
