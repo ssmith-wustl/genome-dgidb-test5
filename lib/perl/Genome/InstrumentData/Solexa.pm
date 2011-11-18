@@ -509,6 +509,10 @@ sub dump_trimmed_fastq_files {
         return $self->dump_sanger_fastq_files(%$segment_params, directory => $data_directory);
     }
 
+    # DO __NOT__ ADD TO THE CONDITIONAL LOGIC HERE
+    # MAKE A TRIMMER IN THE SX API, AND FALL THROUGH TO THE "ELSE" BLOCK
+    # EVENTUALLY, ALL OF THIS IF STATMENT NEEDS TO GO AWAY -SSMITH
+
     my @fastq_pathnames = $self->dump_sanger_fastq_files(%$segment_params);
     my @trimmed_fastq_pathnames;
     #if the trimmer supports paired end, we just run it once, otherwise we need to loop over the fastqs
@@ -530,7 +534,7 @@ sub dump_trimmed_fastq_files {
             $self->error_message('Failed to execute fastq trim command '. $trimmer->command_name);
             die($self->error_message);
          }
-        push @trimmed_fastq_pathnames, glob "$trimmed_input_fastq_path*";
+        push @trimmed_fastq_pathnames, glob "$trimmed_input_fastq_path*fastq";
         unless (@trimmed_fastq_pathnames){
             die $self->error_message("Failed to get expected trimmed output files");
         }
