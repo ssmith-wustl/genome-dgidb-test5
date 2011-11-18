@@ -9,8 +9,8 @@
   <link fromOperation="Alignments" fromProperty="build_id" toOperation="Reference Coverage Stats (Tumor)" toProperty="build_id" />
   <link fromOperation="Alignments" fromProperty="build_id" toOperation="Reference Coverage Stats (Normal)" toProperty="build_id" />
 
-  <link fromOperation="Reference Coverage Stats (Tumor)" fromProperty="reference_coverage_result_id" toOperation="output connector" toProperty="tumor_reference_coverage_result"/>
-  <link fromOperation="Reference Coverage Stats (Normal)" fromProperty="reference_coverage_result_id" toOperation="output connector" toProperty="normal_reference_coverage_result"/>
+  <link fromOperation="Reference Coverage Stats (Tumor)" fromProperty="result" toOperation="output connector" toProperty="tumor_reference_coverage_result"/>
+  <link fromOperation="Reference Coverage Stats (Normal)" fromProperty="result" toOperation="output connector" toProperty="normal_reference_coverage_result"/>
 
   <link fromOperation="Alignments" fromProperty="merged_bam_path" toOperation="Detect Variants" toProperty="bam_path"/>
   <link fromOperation="Alignments" fromProperty="control_merged_bam_path" toOperation="Detect Variants" toProperty="control_bam_path"/>

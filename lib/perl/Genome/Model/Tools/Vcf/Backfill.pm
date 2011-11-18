@@ -48,7 +48,7 @@ sub execute {
         $mpileup_fh = Genome::Sys->open_file_for_reading($self->pileup_file);
         $output_fh = Genome::Sys->open_file_for_writing($self->output_file);
     }
-    my $vcf_fh = Genome::Sys->open_file_for_reading($self->vcf_file);
+    my $vcf_fh = Genome::Sys->open_gzip_file_for_reading($self->vcf_file);
 
     # Copy the header from the input vcf to the output vcf
     my $header_copied = 0;
