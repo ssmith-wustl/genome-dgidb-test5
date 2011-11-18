@@ -14,10 +14,10 @@ class Genome::SubjectAttribute {
             is => 'Text',
             default => 'NONE',
         },
-        subject_id => {
+        attribute_value => {
             is => 'Text',
         },
-        attribute_value => {
+        subject_id => {
             is => 'Text',
         },
         nomenclature => {
