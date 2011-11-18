@@ -142,7 +142,25 @@ sub prune_objects_loaded_since {
     );
     $self->info("\tBefore pruning all_objects_loaded has " . scalar(@all_objects_loaded));
 
+    # Need to delete views so we can unload UR::Values that are referenced by them
+    return if $signaled_to_quit;
+    my @views_to_delete =
+        grep { $_->isa('UR::Object::View') }
+        grep { $_->{'__get_serial'} > $since }
+        @all_objects_loaded;
+    for (@views_to_delete) {
+        last if $signaled_to_quit;
+        next if (ref($_) eq 'UR::DeletedRef');
+        my $display_name = "(Class: " . $_->class . ", ID: " . $_->id. ")";
+        unless ($self->delete_view_and_aspects($_)) {
+            $self->debug("Failed to delete object $display_name.");
+        } else {
+            $self->debug("Deleted object $display_name.");
+        }
+    }
+
     # This could be replaced with automatic cleanup by enabling cache pruning.
+    return if $signaled_to_quit;
     my @objects_to_unload =
         grep { !$_->isa('UR::DataSource::RDBMS::Entity') }
         grep { $_->__meta__->data_source }
@@ -283,6 +301,17 @@ sub indexable_classes {
     }
 
     return @classes_to_add;
+}
+
+sub delete_view_and_aspects {
+    my ($self, $view) = @_;
+    for my $aspect ($view->aspects) {
+        if (my $delegate_view = $aspect->delegate_view) {
+            $self->delete_view_and_aspects($delegate_view);
+        }
+        $aspect->delete;
+    }
+    $view->delete;
 }
 
 1;
