@@ -6,6 +6,7 @@ use warnings;
 use Genome;
 use Command;
 use IO::File;
+use POSIX qw(ceil floor); 
 
 class Genome::Model::Tools::Nimblegen::CalculateDesignTargetSpace {
     is => 'Command',
@@ -25,6 +26,13 @@ class Genome::Model::Tools::Nimblegen::CalculateDesignTargetSpace {
         is_optional => 1,
         doc => "Output file containing results. Output goes to stdout if unspecified.",
     },
+    minimum_size => {
+        type => 'Integer',
+        default => 120,
+        is_optional => 1,
+        doc => "Minimum size of a target. Less than this will be padded out.",
+    },
+
     ]
 };
 
@@ -95,7 +103,32 @@ sub execute {
     my $non_unique_coverage = 0;
     while(my $line = $input_fh->getline) {
         chomp $line;
+        #this should be 1-based.
         my ($chr, $start, $stop) = split /\t/, $line;
+
+        my $length = $stop - $start + 1;
+        if( $length < $self->minimum_size) {
+            #pad out around feature
+            #larger side will be to the left. Arbitratry dlarson decision. Don't know what Nimblegen or any other Vendor actually does in the case of uncentered variants.
+            #this may still break if the minimum size is ever smaller than the chromosome.
+
+            my $length_for_pad = $self->minimum_size - $length;
+            my $left_pad = ceil($length / 2);
+            my $right_pad = floor($length / 2);
+            if($start <= $left_pad) {
+                my $hangoff = $left_pad - $start + 1;
+                $left_pad -= $hangoff;
+                $right_pad += $hangoff;
+            }
+            if(($chromosome_lengths{$chr} - $stop) < $right_pad) {
+                my $hangoff = $right_pad - ($chromosome_lengths{$chr} - $stop);
+                $right_pad -= $hangoff;
+                $left_pad += $hangoff;
+            }
+            $start -= $left_pad;
+            $stop += $right_pad;
+        }
+
         unless(defined $chr && defined $start && defined $stop) {
             $self->error_message("Missing chromosome, start or start field at line $. from $line\n");
             $errors++;
