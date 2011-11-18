@@ -243,10 +243,11 @@ sub prepare_reference_sequence_index {
 
     my $rtg_path = Genome::Model::Tools::Rtg->path_for_rtg_format($refindex->aligner_version);
 
-    my $cmd = sprintf("%s format -o %s/all_sequences.sdf %s", $rtg_path, $staging_dir, $staged_fasta_file);
+    my $cmd = sprintf("%s -o %s/all_sequences.sdf %s", $rtg_path, $staging_dir, $staged_fasta_file);
 
     my $rv = Genome::Sys->shellcmd(
-        cmd=>$cmd
+        cmd=>$cmd,
+        output_files => ["$staging_dir/all_sequences.sdf"],
     );
 
     unless ($rv) {
