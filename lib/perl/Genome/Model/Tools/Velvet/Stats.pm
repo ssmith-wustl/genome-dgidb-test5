@@ -683,6 +683,7 @@ sub check_existing_post_asm_files {
     unless ( -s $dir.'/contigs.bases' and -s $dir.'/contigs.quals' ) {
 	my $tool = Genome::Model::Tools::Velvet::CreateContigsFiles->create(
 	    assembly_directory => $self->assembly_directory,
+        min_contig_length => 1,
 	    );
 	unless( $tool->execute ) {
 	    $self->error_message("Failed to create contigs bases/quals files for stats");

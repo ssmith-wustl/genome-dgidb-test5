@@ -151,6 +151,7 @@ sub parse_contigs_bases_file {
     unless ( -s $contigs_bases_file ) {#create it
 	my $create =  Genome::Model::Tools::Soap::CreateContigsBasesFile->create(
 	    assembly_directory => $self->assembly_directory,
+        min_contig_length => 1,
 	    );
 	unless ( $create->execute ) {
 	    $self->error_message("Failed to create contigs.bases file");
