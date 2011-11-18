@@ -42,21 +42,8 @@ sub execute {
     my $output = $self->output_file;
     my $pindel_raw = $self->input_file;
     my $refbuild_id = $self->reference_sequence_build->id;
-=cut
-    my $pindel2vcf_cmd = Genome::Model::Tools::Pindel::RunPindel2Vcf->create(
-        output_file => $output,
-        pindel_raw_output => $pindel_raw,
-        reference_build_id => $refbuild_id,
-    );
-    unless($pindel2vcf_cmd->execute){
-       die $self->error_message("Couldn't execute pindel2vcf command"); 
-    }
-    unless(-s $output){
-        die $self->error_message("Could not locate an output file at: ".$output);
-    }  
-=cut
 
-    my ($output_directory) = basename($output);
+    my ($output_directory) = dirname($output);
     $self->status_message("Output Directory for pindel-single-genome vcf creation will be: ".$output_directory);
 
     my %inputs;
