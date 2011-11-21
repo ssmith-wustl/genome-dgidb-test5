@@ -174,12 +174,14 @@ sub _process_instrument_data {
     }
 
     # Input files
+    my $is_paired_end = eval{ $instrument_data->is_paired_end; };
+    my $input_cnt = ( $is_paired_end ? 2 : 1 );
     my @inputs;
     if ( my $bam = eval{ $instrument_data->bam_path } ) {
-        @inputs = ( $bam.':type=bam' );
+        @inputs = ( $bam.':type=bam:cnt='.$input_cnt );
     }
-    elsif ( my $sff_file = eval{ $instrument_data->sff_file } ) {
-        @inputs = ( $sff_file.':type=sff' );
+    elsif ( my $sff = eval{ $instrument_data->sff_file } ) {
+        @inputs = ( $sff.':type=sff:cnt='.$input_cnt );
     }
     elsif ( my $archive = eval{ $instrument_data->archive_path; } ){
         my $qual_type = 'sanger'; # imported will be sanger; check solexa
