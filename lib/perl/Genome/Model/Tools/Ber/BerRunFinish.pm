@@ -831,7 +831,7 @@ sub execute
     print $rtfile_fh qq{Thanks,\n\n};
     print $rtfile_fh qq{Sasi\n};
 
-    #send_mail( $ssid, $assembly_name, $rtfileloc, $rtfilename, $rtfullname );
+    send_mail( $ssid, $assembly_name, $rtfileloc, $rtfilename, $rtfullname );
 	populate_mgap_genome_db (\%mgap_genome);
 
     return 1;
