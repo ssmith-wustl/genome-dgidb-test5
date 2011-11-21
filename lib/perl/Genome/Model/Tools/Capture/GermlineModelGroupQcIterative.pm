@@ -1,16 +1,15 @@
-
 package Genome::Model::Tools::Capture::GermlineModelGroupQcIterative;     # rename this when you give the module file a different name <--
 
 #####################################################################################################################################
 # ModelGroup - Build Genome Models for Germline Capture Datasets
-#					
+#
 #	AUTHOR:		Will Schierding
 #
 #	CREATED:	2/09/2011 by W.S.
 #	MODIFIED:	2/09/2011 by W.S.
 #
-#	NOTES:	
-#			
+#	NOTES:
+#
 #####################################################################################################################################
 
 use strict;
@@ -20,17 +19,10 @@ use FileHandle;
 
 use Genome;                                 # using the namespace authorizes Class::Autouse to lazy-load modules under it
 
-## Declare global statistics hash ##
-
-my %stats = ();
-
-my %already_reviewed = ();
-my %wildtype_sites = my %germline_sites = ();
-
 class Genome::Model::Tools::Capture::GermlineModelGroupQcIterative {
-	is => 'Command',                       
-	
-	has => [                                # specify the command's single-value properties (parameters) <--- 
+	is => 'Command',
+
+	has => [                                # specify the command's single-value properties (parameters) <---
 		group_id		=> { is => 'Text', doc => "ID of model group" , is_optional => 0},
 		output_dir	=> { is => 'Text', doc => "Outputs qc into directory for each sample" , is_optional => 0},
 		summary_file	=> { is => 'Text', doc => "Outputs qc summary into this file, must be run with already finished output (turns skip-if-output-present on)" , is_optional => 1},
@@ -45,7 +37,7 @@ class Genome::Model::Tools::Capture::GermlineModelGroupQcIterative {
 sub sub_command_sort_position { 12 }
 
 sub help_brief {                            # keep this to just a few words <---
-    "Operate on germline capture model groups"                 
+    "Operate on germline capture model groups"
 }
 
 sub help_synopsis {
@@ -56,9 +48,7 @@ EOS
 }
 
 sub help_detail {                           # this is what the user will see with the longer version of help. <---
-    return <<EOS 
-
-EOS
+    '';
 }
 
 
@@ -162,10 +152,10 @@ sub execute {                               # replace with real execution logic.
 
 					my $db_snp_info = GSC::SNP::DB::Info->get( snp_db_build => $db_snp_build );
 					my $type = 'HuRef';
-		 
+
 					# Get the sample
 					my $organism_sample = GSC::Organism::Sample->get( sample_name => $subject_name );
-	
+
 					unless ($organism_sample) {
 #					    $self->warning_message("failed to find sample $subject_name by external name, trying internal name...");
 					    $organism_sample = GSC::Organism::Sample->get( full_name => $subject_name );
@@ -174,7 +164,7 @@ sub execute {                               # replace with real execution logic.
 					        next;
 					    }
 					}
-	
+
 					my @genotypes;
 					if( $data_source eq 'iscan' || $data_source eq 'internal') {
 #                                                @genotypes = $organism_sample->get_genotype;
@@ -183,13 +173,13 @@ sub execute {                               # replace with real execution logic.
 					elsif( $data_source eq 'external') {
 						@genotypes = $organism_sample->get_external_genotype;
 					}
-	
+
 					# Get all external genotypes for this sample
 					foreach my $genotype (@genotypes) {
-		 
+
 #					    #LSF: For Affymetrix, this will be the birdseed file.
 #					    my $ab_file = $genotype->get_genotype_file_ab;
-		 
+
 					    # Get the data adapter (DataAdapter::GSGMFinalReport class object)
 					    my $filter       = DataAdapter::Result::Filter::Nathan->new();
 					    my $data_adapter = $genotype->get_genotype_data_adapter(
@@ -199,10 +189,10 @@ sub execute {                               # replace with real execution logic.
 #					         ( $type ? ( type => $type ) : () ),
 					         ( $reference ? ( type => $reference ) : () ),
 					    );
-		 
+
 					    # Next if there is no genotype data.
 					    next unless($data_adapter);
-					 
+
 					    # Loop through the result row (DataAdapter::Result::GSGMFinalReport class object)
 						    while ( my $result = $data_adapter->next_result ) {
 							if (!$self->limit_snps_file || defined $snp_limit_hash{$result->snp_name}) {
@@ -305,16 +295,11 @@ sub execute {                               # replace with real execution logic.
 	return 1;
 }
 
-
-
-
-
-
 sub byChrPos
 {
 	my ($chr_a, $pos_a) = split(/\t/, $a);
 	my ($chr_b, $pos_b) = split(/\t/, $b);
-	
+
 	$chr_a cmp $chr_b
 	or
 	$pos_a <=> $pos_b;
@@ -322,4 +307,3 @@ sub byChrPos
 
 
 1;
-
