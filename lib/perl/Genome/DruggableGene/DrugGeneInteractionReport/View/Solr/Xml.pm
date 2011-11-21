@@ -22,7 +22,7 @@ class Genome::DruggableGene::DrugGeneInteractionReport::View::Solr::Xml {
             is => 'Text',
             calculate_from => ['subject'],
             calculate => q{
-                return '/view/genome/druggable-gene/drug-gene-interaction-report/status.html?id=' . $subject->id());
+                return '/view/genome/druggable-gene/drug-gene-interaction-report/status.html?id=' . $subject->id();
             },
         },
         display_label1 => {
