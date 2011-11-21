@@ -14,22 +14,22 @@ our %QUAKE_PARAMS = (
     },
     p => {
         is => 'Number',
-        default_value => 4,
+        is_optional => 1,
         doc => 'Number of processes.',
     },
     no_jelly => {
         is => 'Boolean',
-        default_value => 0,
+        is_optional => 1,
         doc => 'Count k-mers using a simpler program than Jellyfish.'
     },
     no_count => {
         is => 'Boolean',
+        is_optional => 1,
         doc => 'Kmers are already counted and in expected file [reads file].qcts or [reads file].cts [default: False].',
-        default_value => 0,
     },
     'int' => {
         is => 'Boolean',
-        default_value => 0,
+        is_optional => 1,
         doc => 'Count kmers as integers w/o the use of quality values [default: False].',
     },
     hash_size => {
@@ -40,13 +40,11 @@ our %QUAKE_PARAMS = (
     no_cut => {
         is => 'Boolean',
         is_optional => 1,
-        default_value => 0,
         doc => 'Coverage model is optimized and cutoff was printed to expected file cutoff.txt [default: False].'
     },
     ratio => {
         is => 'Number',
         is_optional => 1,
-        default_value => 200,
         doc => 'Likelihood ratio to set trusted/untrusted cutoff.  Generally set between 10-1000 with lower numbers suggesting a lower threshold. [default: 200].',
     },
     l => {
@@ -111,9 +109,11 @@ sub execute {
 
     $self->status_message('Write quake input: '.$quake_input);
     my $reader = $self->_input;
-    while ( my $seqs = $reader->read ) {
+    my $seqs = $reader->read;
+    my $cnt = scalar @$seqs; 
+    do {
         $quake_intput_writer->write($seqs);
-    }
+    } while $seqs = $reader->read;
     $self->status_message('Write quake input...OK');
 
     $self->status_message('Run quake');
@@ -123,7 +123,7 @@ sub execute {
 
     my $quake_output = $tmpdir.'/quake.cor.fastq';
     my $quake_output_reader = Genome::Model::Tools::Sx::Reader->create(
-        config => [ $quake_output.':type=sanger' ],
+        config => [ "$quake_output:type=sanger:cnt=$cnt" ],
     );
     if ( not $quake_output_reader ) {
         $self->error_message('Failed to open reader for quake output!');
@@ -143,7 +143,7 @@ sub execute {
 sub _run_quake_command {
     my ($self, $file) = @_;
 
-    my $cmd = 'quake.py -f '.$file;
+    my $cmd = 'quake.py -q 33 -r '.$file;
     my $meta = $self->__meta__;
     for my $key ( $self->quake_param_names ) {
         my $property = $meta->property_meta_for_name($key);

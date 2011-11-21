@@ -394,7 +394,7 @@ sub user_id {
 
 sub username {
     my $class = shift;
-    my $username = getpwuid($class->user_id);
+    my $username = $ENV{'REMOTE_USER'} || getpwuid($class->user_id);
     return $username;
 }
 

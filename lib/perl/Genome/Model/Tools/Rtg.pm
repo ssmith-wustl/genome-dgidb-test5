@@ -42,8 +42,9 @@ my %RTG_VERSIONS = (
     'EAP-2010-08-13-30504' => '/gsc/pkg/bio/rtg/rtg-EAP-2010-08-13-30504',
     'EAP-2010-09-13-WashU-31357' => '/gsc/pkg/bio/rtg/rtg-EAP2010-09-13-WashU-31357',
     'rtg'   => 'rtg',
+    '2.3.1' => '/gsc/pkg/bio/rtg/rtg-2.3.1',
+    '2.3.2' => '/gsc/pkg/bio/rtg/rtg-2.3.2',
 );
-
 
 sub rtg_path {
     my $self = $_[0];

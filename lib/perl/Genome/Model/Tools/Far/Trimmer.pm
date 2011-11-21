@@ -101,10 +101,12 @@ sub execute {
         $far_cmd .= ' > '. $self->far_output;
         push @output_files, $self->far_output;
     }
+
+    $DB::single=1;
+
     Genome::Sys->shellcmd(
         cmd => $far_cmd,
         input_files => [$self->source],
-        output_files => \@output_files,
         skip_if_output_is_present => 0,
     );
     return 1;

@@ -22,19 +22,23 @@ class Genome::Model::Tools::Vcf::Convert::Maf::Vcf2Maf {
     has_input => [ # All parameters are required
 	    vcf_file => {
 	        is => 'Text',
-	        doc => 'VCF file to convert'
+	        doc => 'VCF file to convert -- can only be single sample vcf',
+            is_optional => 0,
 	    },
 	    annotation_file => {
 	        is => 'Text',
-	        doc => 'Annotation file'
+	        doc => 'Annotation file of all positions within the vcf',
+            is_optional => 0,
 	    },
 	    output_file => {
 	        is => 'Text',
-	        doc => 'Output MAF file'
+	        doc => 'Output MAF file',
+            is_optional => 0,
 	    },
         remove_silent => {
 	        is => 'Boolean',
-	        doc => 'Remove silent variants from the maf'
+	        doc => 'Remove silent variants from the maf',
+            default_value => 0,
 	    },
     ],
     # add has_optional_input here for optional arguments
@@ -72,29 +76,27 @@ sub execute {
 
     # Verify existence of files
     unless(-e $vcf_file || $annotation_file) {
-	# don't die, because might be part of another script
-	warn "Error: VCF file or annotation does not exist!\n";
-        return 1;
+        $self->error_message("Error: VCF file or annotation does not exist!\n");
+        die $self->error_message;
     }
     # Try to open the files
     unless(open VCF, "<$vcf_file") {
-	warn "Error: Could not open file \"$vcf_file\"";
-	return 1;
+        $self->error_message("Error: Could not open file \"$vcf_file\"\n");
+        die $self->error_message;
     }
     unless(open ANNOT, "<$annotation_file") {
-	warn "Error: Could not open file \"$annotation_file\"";
-	return 1;
+        $self->error_message("Error: Could not open file \"$annotation_file\"\n");
+        die $self->error_message;
     }
     unless(open MAF, ">$output_file") {
-	warn "Error: Could not open file \"$output_file\" for output";
-	return 1;
+        $self->error_message("Error: Could not open file \"$output_file\" for output\n");
+        die $self->error_message;
     }
-
 
     # Skip the metadata and find the line in VCF with the headders
     my $vcf_line;
     do {
-	$vcf_line = <VCF>;
+    	$vcf_line = <VCF>;
     } while($vcf_line !~ /^#[^#]/); # match only one hash symbol
     chomp $vcf_line;
     $vcf_line =~ s/^#//; # remove leading '#' symbol
@@ -109,22 +111,22 @@ sub execute {
 
     # Loop through both files line by line to generate the MAF file
     while(1) {
-	$vcf_line = <VCF>;
-	last unless($vcf_line); # stop when EOF is reached
-	$annot_line = <ANNOT>;
-	last unless($annot_line);
-	chomp $vcf_line; chomp $annot_line;
+	    $vcf_line = <VCF>;
+	    last unless($vcf_line); # stop when EOF is reached
+	    $annot_line = <ANNOT>;
+	    last unless($annot_line);
+	    chomp $vcf_line; chomp $annot_line;
 
-	# Store vcf fields in a hash
-	my $vcf = $self->make_vcf_hash($vcf_line);
-	# Store annotation fields in hash
-	my $annot = $self->make_annot_hash($annot_line);
+	    # Store vcf fields in a hash
+	    my $vcf = $self->make_vcf_hash($vcf_line);
+	    # Store annotation fields in hash
+	    my $annot = $self->make_annot_hash($annot_line);
 
-	# convert to maf hash
-	my $maf = $self->make_maf_hash($vcf, $annot);
+	    # convert to maf hash
+	    my $maf = $self->make_maf_hash($vcf, $annot);
 
-	# print it out to the file
-	$self->print_to_maf($maf);
+	    # print it out to the file
+	    $self->print_to_maf($maf);
     }
 
     return 1; # No error
@@ -192,7 +194,9 @@ sub make_annot_hash {
 sub print_to_maf {
     my $self = shift;
     my ($maf) = @_;
-
+    if ($self->remove_silent && $maf->{Variant_Classification} eq 'Silent') {
+        next;
+    }
     # First one without tab
     print MAF $maf->{$maf_columns[0]};
     foreach my $column (@maf_columns[1 .. $#maf_columns]) {
@@ -207,9 +211,7 @@ sub print_to_maf {
 # Most fields are converted simply by copying over the data to the corresponding column
 #
 # The conversion isn't perfect
-# For example, "Missense_Mutation" in MAF is "missense" in the annotation
-# This is not accounted for (as of 6/28/11)
-# Also, some MAF fields are unused, because there is no such
+# Some MAF fields are unused, because there is no such
 # corresponding data in the VCF and annotation files
 #
 # If, in the future, such data is found, please implement them
@@ -295,27 +297,6 @@ sub make_maf_hash {
     $maf->{Strand} = 0; # Unsure whether this is OK? Just assumed 0 for all inputs
 
     $maf->{Variant_Classification} = &trv_to_mutation_type($annot->{trv_type});
-
-    # $maf->{Variant_Classification} =
-    #     $annot->{trv_type} eq 'frame_shift_del'             ? 'Frame_Shift_Del' :
-    #     $annot->{trv_type} eq 'frame_shift_ins'             ? 'Frame_Shift_Ins' :
-    #     $annot->{trv_type} eq 'in_frame_del'                ? 'In_Frame_Del' :
-    #     $annot->{trv_type} eq 'in_frame_ins'                ? 'In_Frame_Ins' :
-    #     $annot->{trv_type} eq 'missense'                    ? 'Missense_Mutation' :
-    #     $annot->{trv_type} eq 'nonsense'                    ? 'Nonsense_Mutation' :
-    #     $annot->{trv_type} eq 'rna'                         ? 'RNA' :
-    #     $annot->{trv_type} eq 'silent'                      ? 'Silent' :
-    #     $annot->{trv_type} eq 'splice_site'                 ? 'Splice_Site_SNP' :
-    #     $annot->{trv_type} eq 'splice_site_del'             ? 'Splice_Site_Indel' :
-    #     $annot->{trv_type} eq 'splice_site_ins'             ? 'Splice_Site_Indel' :
-    #     $annot->{trv_type} eq '3_prime_flanking_region'     ? '' :
-    #     $annot->{trv_type} eq '3_prime_untranslated_region' ? '' :
-    #     $annot->{trv_type} eq '5_prime_flanking_region'     ? '' :
-    #     $annot->{trv_type} eq '5_prime_untranslated_region' ? '' :
-    #     $annot->{trv_type} eq 'nonstop'                     ? '' :
-    #     $annot->{trv_type} eq 'splice_region_del'           ? '' :
-    #     $annot->{trv_type} eq 'splice_region_ins'           ? '' :
-    #     $annot->{trv_type} eq 'intronic'                    ? '' : '' ;
 
     warn "Unrecognized trv_type \"$annot->{trv_type}\" in annotation file: $maf->{Hugo_Symbol}, chr$maf->{Chromosome}:$maf->{Start_Position}-$maf->{End_Position}\n" if ! $maf->{Variant_Classification};
 

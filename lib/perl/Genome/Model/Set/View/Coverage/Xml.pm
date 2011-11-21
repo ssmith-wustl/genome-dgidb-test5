@@ -364,6 +364,10 @@ sub _get_model_node {
 
     $model_node->addChild( $xml_doc->createAttribute('lane_count', scalar(@idata)) );
 
+    if($result->isa('Genome::SoftwareResult')) {
+        $model_node->addChild( $xml_doc->createAttribute('result_id', $result->id) );
+    }
+
     return $model_node;
 }
 

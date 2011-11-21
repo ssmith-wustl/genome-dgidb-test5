@@ -254,7 +254,8 @@ sub _execute_build {
         }
     }
 
-    # we now have a VCF file
+    # we now have a VCF file 
+    #until we get annotation into the vcf, we'll also need to have access to annotation files somehow
 
     # dump pedigree data into a file
 
@@ -266,9 +267,31 @@ sub _execute_build {
 
 if ($self->phenotype-analysis-strategy eq 'case-control') { #unrelated individuals, case-control -- MRSA
 
+
+# assume that the vcf is passed in as $multisample_vcf
+
 #change vcf -> maf here, which also needs annotation files
 #make $maf_file -- might need one with everything and one that doesnt have silent variants in it
-my $vcf_cmd = "gmt vcf-2-maf --vcf-file $vcf_file_per_sample --annotation-file $annotation_file_per_sample --output-file $maf_file"; #won't work in this context of a unified vcf but we could make it work
+my $vcf_line = `grep -v "##" $multisample_vcf | head -n 1`;
+chomp($vcf_line);
+my ($chr, $pos, $id, $ref, $alt, $qual, $filter, $info, $format, @sample_names) = split(/\t/, $vcf_line);
+
+
+my $vcf_split_cmd = "gmt vcf vcf-split-samples --vcf-input $multisample_vcf --output-dir $single_sample_dir";
+
+my $maf_header;
+my $maf_maker_cmd = "";
+foreach $sample_id (@sample_names) {
+    my $annotation_file_per_sample = ""; #needs to get some sort of single-sample annotation file from the build or maybe there is a unified annotation file to use?
+    my $vcf_cmd = "gmt vcf convert maf vcf-2-maf --vcf-file $single_sample_dir/$sample_id.vcf --annotation-file $annotation_file_per_sample --output-file $single_sample_dir/$sample_id.maf";
+system($vcf_cmd);
+    $maf_maker_cmd .= " $single_sample_dir/$sample_id.maf";    
+}
+my $maf_sample_id = $sample_names[0];
+$maf_maker_cmd .= " | grep -v \"Hugo_Symbol\" > $single_sample_dir/All_Samples_noheader.maf";
+my $final_maf_maker_cmd = "head -n1 $single_sample_dir/$maf_sample_id.maf | cat - $single_sample_dir/All_Samples_noheader.maf > $single_sample_dir/All_Samples.maf";
+
+system($final_maf_maker_cmd);
 
 #start workflow to find significantly mutated genes in our set:
     #get list of bams and load into tmp file named $bam_list
@@ -277,16 +300,22 @@ my $vcf_cmd = "gmt vcf-2-maf --vcf-file $vcf_file_per_sample --annotation-file $
     my $bmr_cmd = "gmt music bmr calc-covg --bam-list $bam_list --output-dir $output_dir --reference-sequence $reference_fasta --roi-file $target_region_set_name_bedfile --cmd-prefix bsub --cmd-list-file $temp_file";
 
     #Submitted all the jobs in cmd_list_file to LSF:
-    bash $temp_file
+    my $submit_cmd = "bash $temp_file";
+
+#need to wait for the above to be done......
 
     #After the parallelized commands are all done, merged the individual results using the same tool that generated the commands: - MUST KNOW ABOVE STEP IS COMPLETE
-    my $brm_step2_cmd = "gmt music bmr calc-covg --bam-list $bam_list --output-dir $output_dir --reference-sequence $reference_fasta --roi-file $target_region_set_name_bedfile";
+    my $bmr_step2_cmd = "gmt music bmr calc-covg --bam-list $bam_list --output-dir $output_dir --reference-sequence $reference_fasta --roi-file $target_region_set_name_bedfile";
 
     #Calculated mutation rates:
-    my $brm_step2_cmd = "gmt music bmr calc-bmr --bam-list $bam_list --maf-file $maf_file --output-dir $output_dir --reference-sequence $reference_fasta --roi-file $target_region_set_name_bedfile --show-skipped"; #show skipped doesn't work in workflow context
+    my $bmr_step3_cmd = "gmt music bmr calc-bmr --bam-list $bam_list --output-dir $output_dir --reference-sequence $reference_fasta --roi-file $target_region_set_name_bedfile --maf-file $maf_file --show-skipped"; #show skipped doesn't work in workflow context
 
     #Ran SMG test:
-    my $smg_cmd = "gmt music smg --gene-mr-file $output_dir/gene_mrs --output-file $output_dir/smgs";
+    #The smg test limits its --output-file to a --max-fdr cutoff. A full list of genes is always stored separately next to the output with prefix "_detailed".
+    my $fdr_cutoff = 0.2; #0.2 is the default -- For every gene, if the FDR for at least 2 of theses test are less than $fdr_cutoff, it is considered as an SMG.
+    my $smg_cmd = "gmt music smg --gene-mr-file $output_dir/gene_mrs --output-file $output_dir/smgs --max-fdr $fdr_cutoff";
+
+    my $smg_maf_cmd = "gmt capture restrict-maf-to-smgs --maf-file $maf_file --output-file $output_dir/smg_restricted_maf.maf --output-bed-smgs $output_dir/smg_restricted_bed.bed --smg-file $output_dir/smgs";
 
 #get some pathway information, not used now but we could technically choose to run only genes from certain pathways
     #Ran PathScan on the KEGG DB (Larger DBs take longer):
@@ -302,18 +331,20 @@ my $vcf_cmd = "gmt vcf-2-maf --vcf-file $vcf_file_per_sample --annotation-file $
     #Ran Proximity tool:
     my $proximity_cmd = "gmt music proximity --maf-file $maf_file --reference-sequence $reference_fasta --output-file $output_dir/variant_proximity";
 
+    #Ran mutation-relation:
+    my $permutations = 1000; #the default is 100, but cyriac and yanwen used either 1000 or 10000. Not sure of the reasoning behind those choices.
+    my $mutrel_cmd = "gmt music mutation-relation --bam-list $bam_list --maf-file $maf_file --output-file $output_dir/mutation_relations.csv --permutations $permutations --gene-list $output_dir/smgs"; #number of permutations can be a variable or something
+
 #instead of pathways, use smg test to limit maf file input into mutation relations $maf_file_smg -- no script for this step yet
-#The smg test limits its --output-file to a --max-fdr cutoff. A full list of genes is always stored separately next to the output with prefix "_detailed". The FDR filtered SMG list can be used as input to "gmt music mutation-relation" thru --gene-list, so it limits its tests to SMGs only. No need to make a new MAF. Something similar could be implemented for clinical-correlation.
+#The FDR filtered SMG list can be used as input to "gmt music mutation-relation" thru --gene-list, so it limits its tests to SMGs only. No need to make a new MAF. Something similar could be implemented for clinical-correlation.
 
 #Ran clinical-correlation:
 #need clinical data file $clinical_data
 #example: /gscmnt/sata809/info/medseq/MRSA/analysis/Sureselect_49_Exomes_Germline/music/input/sample_phenotypes2.csv
 #this is not the logistic regression yet, found out that yyou and ckandoth did not put logit into music, but just into the R package that music runs
-    my $clin_corr = "gmt music clinical-correlation --genetic-data-type gene --bam-list $bam_list --maf-file $maf_file_smg --output-file $output_dir/clin_corr_result --categorical-clinical-data-file $clinical_data";
+    my $clin_corr = "gmt music clinical-correlation --genetic-data-type gene --bam-list $bam_list --maf-file $output_dir/smg_restricted_maf.maf --output-file $output_dir/clin_corr_result --categorical-clinical-data-file $clinical_data";
 
 #instead of clinical correlation, we can call these stats directly
-    #Ran mutation-relation:
-    my $mutrel_cmd = "gmt music mutation-relation --bam-list $bam_list --maf-file $maf_file_smg --output-file $output_dir/mutation_relations.csv --permutations 10000"; #number of permutations can be a variable or something
 
     #break up clinical data into two files, one for explanatory variable and one for covariates
     #sample_infection.csv = $expl_file
@@ -326,6 +357,10 @@ my $vcf_cmd = "gmt vcf-2-maf --vcf-file $vcf_file_per_sample --annotation-file $
     #H_MRS-6305-1025125	10	1	1
     #H_MRS-6401-1025123	16	1	1
 
+    #make smg bed file STILL UNDONE
+
+
+    my $variant_matrix_cmd = "gmt vcf vcf-to-variant-matrix --output-file $output_dir/variant_matrix.txt --vcf-file $multisample_vcf --bed-roi-file $output_dir/smg_restricted_bed.bed";
 
     #make .R file example
         ## Build temp file for extra positions to highlight ##
@@ -339,7 +374,7 @@ my $vcf_cmd = "gmt vcf-2-maf --vcf-file $vcf_file_per_sample --annotation-file $
     options(error=recover)
     source("stat.lib", chdir=TRUE)
     #this should work, but I havent tested using the .csv out of mut rel -- wschierd
-    mut.file="$output_dir/mutation_relations.csv" 
+    mut.file="$output_dir/variant_matrix.txt" 
     inf.file="$expl_file";
     pheno.file="$pheno_file";
     output.file="$output_dir/logit_out_cor.csv";

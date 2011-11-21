@@ -72,7 +72,7 @@ sub shortcut {
 
     my ($params) = $self->params_for_result;
     my $result_class = $self->result_class;
-    my $result = $result_class->get_or_create(%$params);
+    my $result = $result_class->get_with_lock(%$params);
     unless($result) {
         $self->status_message('No existing result found.');
         return;

@@ -22,8 +22,7 @@ use_ok('Genome::Model::Build::DeNovoAssembly::Newbler') or die;
 my $base_dir = '/gsc/var/cache/testsuite/data/Genome-Model/DeNovoAssembly';
 my $archive_path = $base_dir.'/inst_data/-7777/archive.tgz';
 ok(-s $archive_path, 'inst data archive path') or die;
-my $example_version = '2';
-my $example_dir = $base_dir.'/newbler_v'.$example_version;
+my $example_dir = $base_dir.'/newbler_v2';
 ok(-d $example_dir, 'example dir') or die;
 my $tmpdir = File::Temp::tempdir(CLEANUP => 1);
 
@@ -49,6 +48,7 @@ my $library = Genome::Library->create(
     id => -12345,
     name => $sample->name.'-testlibs',
     sample_id => $sample->id,
+    fragment_size_range => 260,
 );
 ok($library, 'library') or die;
 
@@ -57,12 +57,18 @@ my $instrument_data = Genome::InstrumentData::Solexa->create(
     sequencing_platform => 'solexa',
     read_length => 100,
     subset_name => '8-CGATGT',
+    index_sequence => 'CGATGT',
+    run_name => 'XXXXXX/8-CGATGT',
     run_type => 'Paired',
+    flow_cell_id => 'XXXXXX',
+    lane => 8,
     library => $library,
-    median_insert_size => 260,# 181, but 260 was used to generate assembly
     archive_path => $archive_path,
+    median_insert_size => 260,
+    clusters => 15000,
     fwd_clusters => 15000,
     rev_clusters => 15000,
+    analysis_software_version => 'not_old_iilumina',
 );
 ok($instrument_data, 'instrument data');
 ok($instrument_data->is_paired_end, 'inst data is paired');
@@ -174,6 +180,7 @@ ok( $metrics->execute, 'Executed report' );
 ok( -s $example_build->stats_file, 'Example build stats file exists' );
 ok( -s $build->stats_file, 'Test created stats file' );
 is(File::Compare::compare($example_build->stats_file,$build->stats_file), 0, 'Stats files match' );
+print 'gvimdiff '.$example_build->stats_file.' '.$build->stats_file."\n";
 #check build metrics
 my %expected_metrics = (
     'n50_supercontig_length' => '208',
@@ -204,7 +211,6 @@ for my $metric_name ( keys %expected_metrics ) {
 }
 
 #print $build->data_directory."\n"; <STDIN>;
-
 done_testing();
 exit;
 
