@@ -12,8 +12,12 @@ use above "Genome";
 
 use Test::More;
 
-# Use, make sure it has subclasses
 use_ok('Genome::ProcessingProfile::Command::Create') or die;
+
+test_command_subclass();
+test_processing_profile_class();
+
+# make sure it has subclasses
 ok(
     Genome::ProcessingProfile::Command::Create->sub_command_classes,
     'Sub command classes',
@@ -107,5 +111,20 @@ ok($creator, 'create w/ based on but no changes');
 ok(!$creator->execute, 'Failed as expected - tried to base on pp w/o changing params');
 
 done_testing();
-exit;
 
+sub test_command_subclass {
+    my $class = 'Genome::ProcessingProfile::Command::Create';
+    for my $subclass ('Foo', 'Foo::Bar') {
+        my $class_name = join('::', $class, $subclass);
+        is($class->_command_subclass($class_name), $subclass, '_command_subclass works for subclass (' . $subclass . ')');
+    }
+}
+
+sub test_processing_profile_class {
+    my $class = 'Genome::ProcessingProfile::Command::Create';
+    for my $subclass ('Foo', 'Foo::Bar') {
+        my $class_name = join('::', $class, $subclass);
+        my $expected_processing_profile_class = join('::', 'Genome::ProcessingProfile', $subclass);
+        is($class->_processing_profile_class($class_name), $expected_processing_profile_class, '_processing_profile_class works for subclass (' . $subclass . ')');
+    }
+}
