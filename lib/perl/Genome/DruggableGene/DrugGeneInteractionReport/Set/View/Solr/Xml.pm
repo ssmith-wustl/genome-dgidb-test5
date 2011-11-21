@@ -25,7 +25,7 @@ class Genome::DruggableGene::DrugGeneInteractionReport::Set::View::Solr::Xml {
             calculate_from => ['subject'],
             calculate => q{
                 return '/view/genome/druggable-gene/drug-gene-interaction-report/set/status.html?name=' . $subject->name();
-            },#calling subject->name isnt going to work for an interaction which doesnt have a name
+            },
         },
         display_label1 => {
             is  => 'Text',
