@@ -194,6 +194,14 @@ sub execute {
           ( defined $valid_chrs{$chr1} && defined $valid_chrs{$chr2} ) or die "Invalid chrom name in file:\n$filepath!\nIn line:\n\n$line\n";
           ++$var_cnt{svs} if( defined $include_chrs{$chr1} && defined $include_chrs{$chr2} );
         }
+        elsif( $muttype eq 'svs' && $line =~ m/^\w+\t\d+\t\w+[+-]\w+[+-]\t\w+\t\d+\t\w+[+-]\w+[+-]\t(INV|INS|DEL|ITX|CTX)/ ) # Somatic pipeline output
+        {
+          my ( $chr1, undef, undef, $chr2 ) = split( /\t/, $line );
+          $chr1 =~ s/chr//i; $chr2 =~ s/chr//i;
+          ( defined $valid_chrs{$chr1} && defined $valid_chrs{$chr2} ) or die "Invalid chrom name in file:\n$filepath!\nIn line:\n\n$line\n";
+          ++$var_cnt{svs} if( defined $include_chrs{$chr1} && defined $include_chrs{$chr2} );
+        }
+
         else
         {
           die "Unrecognized format in file:\n$filepath!\nIn line:\n\n$line\n";
@@ -264,6 +272,12 @@ sub execute {
       elsif( $line =~ m/^\S+\t\d+\t\S+\t\d+\t\S\S\t(INV|INS|DEL|ITX|CTX)/ ) # SJ formatting
       {
         my ( $chr1, $start, $chr2, $end ) = split( /\t/, $line );
+        $chr1 =~ s/chr//i; $chr2 =~ s/chr//i;
+        $svFh->print( join( ".", $chr1, $start, $start, $chr2, $end, $end ), "\t$line\n" ) if( defined $include_chrs{$chr1} && defined $include_chrs{$chr2} );
+      }
+      elsif( $line =~ m/^\w+\t\d+\t\w+[+-]\w+[+-]\t\w+\t\d+\t\w+[+-]\w+[+-]\t(INV|INS|DEL|ITX|CTX)/ ) # somatic-variation pipeline output
+      {
+        my ( $chr1, $start, undef, $chr2, $end ) = split( /\t/, $line );
         $chr1 =~ s/chr//i; $chr2 =~ s/chr//i;
         $svFh->print( join( ".", $chr1, $start, $start, $chr2, $end, $end ), "\t$line\n" ) if( defined $include_chrs{$chr1} && defined $include_chrs{$chr2} );
       }
