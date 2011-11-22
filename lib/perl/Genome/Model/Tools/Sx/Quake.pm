@@ -161,14 +161,13 @@ sub _run_quake_command {
         );
     }
     my $rv = eval{ Genome::Sys->shellcmd(cmd => $cmd); };
+    chdir $cwd;
+    $self->status_message('Chdir back to: '.$cwd);
     if ( not $rv ) {
         $self->error_message($@) if $@;
         $self->error_message("Failed to run quake: $cmd");
         return;
     }
-
-    chdir $cwd;
-    $self->status_message('Chdir back to: '.$cwd);
 
     return $cmd;
 }

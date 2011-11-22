@@ -12,8 +12,6 @@ BEGIN {
 use above "Genome";
 use Test::More tests => 14; #skip_all => "This is incomplete.";
 
-use Genome::ProcessingProfile::PhenotypeCorrelation;
-
 my $group = Genome::PopulationGroup->create(name => 'TEST-phenotype-correlation');
 for my $member_id (
     qw/
@@ -94,7 +92,7 @@ ok($b, "created a build") or diag(Genome::Model->error_message);
 #);
 #is($b->status, 'Succeeded', "build succeeded!");
 
-my $retval = eval { $p->_execute_build($b); };
+my $retval = eval { $m->_execute_build($b); };
 is($retval, 1, 'execution of the build returned true');
 is($@, '', 'no exceptions thrown during build process') or diag $@;
 
