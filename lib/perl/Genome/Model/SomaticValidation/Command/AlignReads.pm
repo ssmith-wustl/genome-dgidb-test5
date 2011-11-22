@@ -10,7 +10,8 @@ class Genome::Model::SomaticValidation::Command::AlignReads {
     has_input => [
         build_id => {
             is => 'Number',
-            doc => 'id of build for whcih to run alignments',
+            doc => 'id of build for which to run alignments',
+            is_output => 1,
         },
     ],
     has => [
@@ -18,6 +19,11 @@ class Genome::Model::SomaticValidation::Command::AlignReads {
             is => 'Genome::Model::Build',
             id_by => 'build_id',
             doc => 'build for which to run alignments',
+        },
+    ],
+    has_param => [
+        lsf_queue => {
+            default => 'apipe',
         },
     ],
     has_transient_optional_output => [
@@ -60,8 +66,8 @@ sub execute {
     my @bams = $result->bam_paths;
 
     my $num_expected_samples = 0;
-    $num_expected_samples++ if $self->tumor_sample;
-    $num_expected_samples++ if $self->normal_sample;
+    $num_expected_samples++ if $build->tumor_sample;
+    $num_expected_samples++ if $build->normal_sample;
 
     unless(scalar(@bams) == $num_expected_samples) {
         die $self->error_message('Found ' . scalar(@bams) . ' from alignment when ' . $num_expected_samples . ' expected.');
@@ -70,9 +76,8 @@ sub execute {
     $self->status_message("Alignment BAM paths:\n " . join("\n ", @bams));
 
     my @results = $result->_merged_results;
-    for my $r (@results) {
-        $r->add_user(label => 'uses', user => $build);
-    }
+
+    my $build_alignment_dir = join('/', $build->data_directory, 'alignments');
 
     for my $r (@results) {
         my @i = $r->instrument_data;
@@ -80,9 +85,16 @@ sub execute {
         if($sample eq $build->tumor_sample) {
             $self->merged_alignment_result_id($r->id);
             $self->merged_bam_path($r->merged_alignment_bam_path);
+            $r->add_user(label => 'merged_alignment', user => $build);
+            Genome::Sys->create_symlink($r->output_dir, $build_alignment_dir . '/tumor');
         } elsif ($sample eq $build->normal_sample) {
             $self->control_merged_alignment_result_id($r->id);
             $self->control_merged_bam_path($r->merged_alignment_bam_path);
+            $r->add_user(label => 'control_merged_alignment', user => $build);
+            Genome::Sys->create_symlink($r->output_dir, $build_alignment_dir . '/normal');
+        } else {
+            $self->warning_message('Unexpected alignment result encountered! Check samples of instrument data.');
+            $r->add_user(label => 'uses', user => $build);
         }
     }
 

@@ -5,6 +5,8 @@ use warnings;
 
 use Genome::Data::IO::Reader;
 use Genome::Data::IO::Writer;
+use Genome::Data::Mapper::AnnotatedVariant::VcfSnpeffV1ToTGIV1;
+use Genome::Data::Mapper::AnnotatedVariant::VepOutV1ToTGIV1;
 
 sub create {
     my ($class, %params) = @_;
@@ -35,11 +37,26 @@ sub create {
     }
     $self->to_file($to_file);
 
+    my $mapper;
+    if (defined $params{mapper}) {
+        my $mapper = delete $params{mapper};
+        $self->mapper($mapper);
+    }
+
     if (%params) {
         Carp::confess 'Extra parameters given to create method of ' . __PACKAGE__;
+        print "Mapper: $mapper params: %params\n";
     }
 
     return $self;
+}
+
+sub mapper {
+    my ($self, $mapper) = @_;
+    if (defined $mapper) {
+        $self->{_mapper} = $mapper->create();
+    }
+    return $self->{_mapper};
 }
 
 sub from_format {
@@ -88,6 +105,10 @@ sub convert_next {
     my $from_reader = $self->_from_reader;
     my $to_writer = $self->_to_writer;
     my $object = $from_reader->next;
+    #TODO: this is stupid - change this
+    if (defined $self->mapper && defined $object) {
+        $object = ($self->mapper)->map_object($object);
+    }
     $self->_set_current($object);
     if ($object) {
         $to_writer->write($object);

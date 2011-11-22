@@ -8,28 +8,15 @@ use Genome;
 use Carp 'confess';
 
 class Genome::Model::MetagenomicComposition16s::Command::ProcessSangerInstrumentData {
-    is => 'Command',
+    is => 'Command::V2',
     has => [
-        build_id => {
-            is => 'Integer',
-            doc => 'genome model build id',
+        build => {
+            is => 'Genome::Model::Build',
+            doc => 'The build, resolved via string.',
         },
+        _raw_reads_fasta_and_qual_writer => { is_optional => 1, is_transient => 1, },
     ],
 };
-
-sub _build {
-    my $self = shift;
-
-    unless ( $self->{_build} ) {
-        my $build = Genome::Model::Build->get( $self->build_id );
-        unless ( $build ) {
-            $self->error_message( "Failed to get buld for build_id: ".$self->build_id );
-            return;
-        }
-        $self->{_build} = $build;
-    }
-    return $self->{_build};
-}
 
 sub prepare_instrument_data {
     my $self = shift;
@@ -37,20 +24,31 @@ sub prepare_instrument_data {
     $self->_dump_and_link_instrument_data
         or return;
 
-    my @amplicon_set_names = $self->_build->amplicon_set_names;
+    my @amplicon_set_names = $self->build->amplicon_set_names;
     Carp::confess('No amplicon set names for '.$self->description) if not @amplicon_set_names; # bad
 
-    $self->_raw_reads_fasta_and_qual_writer
-        or return;
+    my $fasta_file = $self->raw_reads_fasta_file;
+    unlink $fasta_file if -e $fasta_file;
+    my $qual_file = $self->raw_reads_qual_file;
+    unlink  $qual_file if -e $qual_file;
+    my $raw_reads_writer = Genome::Model::Tools::Sx::PhredWriter->create(
+        file => $fasta_file,
+        qual_file => $qual_file,
+    );
+    if ( not $raw_reads_writer ) {
+        $self->error_message('Failed to create phred reader for raw reads');
+        return;
+    }
+    $self->_raw_reads_fasta_and_qual_writer($raw_reads_writer);
 
-    my %assembler_params = $self->_build->processing_profile->assembler_params_as_hash;
+    my %assembler_params = $self->build->processing_profile->assembler_params_as_hash;
 
     my ($attempted, $processed, $reads_attempted, $reads_processed) = (qw/ 0 0 0 /);
     for my $name ( @amplicon_set_names ) {
         my $amplicon_set = $self->amplicon_set_for_name($name);
         next if not $amplicon_set; # ok
 
-        my $writer = $self->_build->fasta_and_qual_writer_for_type_and_set_name('processed', $amplicon_set->name);
+        my $writer = $self->build->fasta_and_qual_writer_for_type_and_set_name('processed', $amplicon_set->name);
         return if not $writer;
 
         while ( my $amplicon = $amplicon_set->next_amplicon ) {
@@ -75,12 +73,12 @@ sub prepare_instrument_data {
         }
     }
 
-    $self->_build->amplicons_attempted($attempted);
-    $self->_build->amplicons_processed($processed);
-    $self->_build->amplicons_processed_success( $attempted > 0 ?  sprintf('%.2f', $processed / $attempted) : 0 );
-    $self->_build->reads_attempted($reads_attempted);
-    $self->_build->reads_processed($reads_processed);
-    $self->_build->reads_processed_success( $reads_attempted > 0 ?  sprintf('%.2f', $reads_processed / $reads_attempted) : 0 );
+    $self->build->amplicons_attempted($attempted);
+    $self->build->amplicons_processed($processed);
+    $self->build->amplicons_processed_success( $attempted > 0 ?  sprintf('%.2f', $processed / $attempted) : 0 );
+    $self->build->reads_attempted($reads_attempted);
+    $self->build->reads_processed($reads_processed);
+    $self->build->reads_processed_success( $reads_attempted > 0 ?  sprintf('%.2f', $reads_processed / $reads_attempted) : 0 );
 
     return 1;
 }
@@ -88,9 +86,9 @@ sub prepare_instrument_data {
 sub _dump_and_link_instrument_data {
     my $self = shift;
 
-    my @instrument_data = $self->_build->instrument_data;
+    my @instrument_data = $self->build->instrument_data;
     unless ( @instrument_data ) { # should not happen
-        $self->error_message('No instrument data found for '.$self->_build->description);
+        $self->error_message('No instrument data found for '.$self->build->description);
         return;
     }
 
@@ -103,8 +101,8 @@ sub _dump_and_link_instrument_data {
                     'Error dumping instrument data (%s <Id> %s) assigned to model (%s <Id> %s)',
                     $instrument_data->run_name,
                     $instrument_data->id,
-                    $self->_build->model->name,
-                    $self->_build->model->id,
+                    $self->build->model->name,
+                    $self->build->model->id,
                 )
             );
             return;
@@ -117,7 +115,7 @@ sub _dump_and_link_instrument_data {
 
         for (1..2) {  # . and ..
             my $dot_dir = $dh->read;
-            confess("Expecting one of the dot directories, but got $dot_dir for ".$self->_build->description) unless $dot_dir =~ /^\.{1,2}$/;
+            confess("Expecting one of the dot directories, but got $dot_dir for ".$self->build->description) unless $dot_dir =~ /^\.{1,2}$/;
         }
         my $cnt = 0;
         while ( my $trace = $dh->read ) {
@@ -177,34 +175,12 @@ sub _prepare {
         qual_file => $qual_file,
     );
     return if not $reader;
+    my $writer = $self->_raw_reads_fasta_and_qual_writer;
     while ( my $seq = $reader->read ) {
-        $self->_raw_reads_fasta_and_qual_writer->write($seq)
-            or return;
+        $writer->write($seq) or return;
     }
     
     return 1;
-}
-
-sub _raw_reads_fasta_and_qual_writer {
-    my $self = shift;
-
-    unless ( $self->{_raw_reads_fasta_and_qual_writer} ) {
-        my $fasta_file = $self->raw_reads_fasta_file;
-        unlink $fasta_file if -e $fasta_file;
-        my $qual_file = $self->raw_reads_qual_file;
-        unlink  $qual_file if -e $qual_file;
-        my $writer = Genome::Model::Tools::Sx::PhredWriter->create(
-            file => $fasta_file,
-            qual_file => $qual_file,
-        );
-        if ( not $writer ) {
-            $self->error_message('Failed to create phred reader for raw reads');
-            return;
-        }
-        $self->{_raw_reads_fasta_and_qual_writer} = $writer;
-    }
-
-    return $self->{_raw_reads_fasta_and_qual_writer};
 }
 
 sub _trim {
@@ -330,7 +306,7 @@ sub _sub_dirs {
 }
 
 sub edit_dir {
-    my $edit_dir = $_[0]->_build->data_directory.'/edit_dir';
+    my $edit_dir = $_[0]->build->data_directory.'/edit_dir';
     unless ( -d $edit_dir ) {
         Genome::Sys->create_directory( $edit_dir );
     }
@@ -338,7 +314,7 @@ sub edit_dir {
 }
 
 sub chromat_dir {
-    my $chromat_dir = $_[0]->_build->data_directory.'/chromat_dir';
+    my $chromat_dir = $_[0]->build->data_directory.'/chromat_dir';
     unless ( -d $chromat_dir ) {
         Genome::Sys->create_directory( $chromat_dir );
     }
@@ -348,7 +324,7 @@ sub chromat_dir {
 #< Files >#
 # raw reads
 sub raw_reads_fasta_file {
-    return $_[0]->_build->fasta_dir.'/'.$_[0]->_build->file_base_name.'.reads.raw.fasta';
+    return $_[0]->build->fasta_dir.'/'.$_[0]->build->file_base_name.'.reads.raw.fasta';
 }
 
 sub raw_reads_qual_file {
@@ -357,7 +333,7 @@ sub raw_reads_qual_file {
 
 # processsed reads
 sub processed_reads_fasta_file {
-    return $_[0]->_build->fasta_dir.'/'.$_[0]->_build->file_base_name.'.reads.processed.fasta';
+    return $_[0]->build->fasta_dir.'/'.$_[0]->build->file_base_name.'.reads.processed.fasta';
 }
 
 sub processed_reads_qual_file {
@@ -375,18 +351,15 @@ sub amplicon_set_for_name { #moved from g:m:b:mc16s base class
 
     my %params = (
         name => $set_name,
-        amplicon_iterator => $amplicon_iterator,
-        classification_dir => $self->_build->classification_dir,
-        classification_file => $self->_build->classification_file_for_set_name($set_name),
-        processed_fasta_file => $self->_build->processed_fasta_file_for_set_name($set_name),
-        oriented_fasta_file => $self->_build->oriented_fasta_file_for_set_name($set_name),
+        _amplicon_iterator => $amplicon_iterator,
+        classification_dir => $self->build->classification_dir,
+        classification_file => $self->build->classification_file_for_set_name($set_name),
+        processed_fasta_file => $self->build->processed_fasta_file_for_set_name($set_name),
+        processed_qual_file => $self->build->processed_fasta_file_for_set_name($set_name),
+        oriented_fasta_file => $self->build->oriented_fasta_file_for_set_name($set_name),
+        oriented_qual_file => $self->build->oriented_qual_file_for_set_name($set_name),
     );
 
-    if ( $self->_build->sequencing_platform eq 'sanger' ) { # has qual
-        $params{processed_qual_file} = $self->_build->processed_fasta_file_for_set_name($set_name);
-        $params{oriented_qual_file} = $self->_build->oriented_qual_file_for_set_name($set_name);
-    }
-    
     return Genome::Model::Build::MetagenomicComposition16s::AmpliconSet->create(%params);
 }
 
@@ -413,8 +386,8 @@ sub _amplicon_iterator_for_name {
         $self->error_message(
             sprintf(
                 "No reads found in chromat dir of build (%s) data directory (%s)",
-                $self->_build->id,
-                $self->_build->data_directory,
+                $self->build->id,
+                $self->build->data_directory,
             )
         );
         return;
@@ -422,17 +395,7 @@ sub _amplicon_iterator_for_name {
     #sort
     @all_read_names = sort { $a cmp $b } @all_read_names;
 
-    # Filters - setup
-    my @filters;
-    if ( $self->_build->processing_profile->only_use_latest_iteration_of_reads ) {
-        push @filters, '_remove_old_read_iterations_from_amplicon';
-    }
-    
-    if ( $self->_build->processing_profile->exclude_contaminated_amplicons ) {
-        push @filters, '_amplicon_is_not_contaminated';
-    }
-
-    my $classification_file = $self->_build->classification_file_for_set_name($set_name);
+    my $classification_file = $self->build->classification_file_for_set_name($set_name);
     my ($classification_io, $classification_line);
     if ( -s $classification_file ) {
         $classification_io = eval{ Genome::Sys->open_file_for_reading($classification_file); };
@@ -444,7 +407,7 @@ sub _amplicon_iterator_for_name {
         chomp $classification_line;
     }
 
-    my $amplicon_name_for_read_name = '_get_amplicon_name_for_'.$self->_build->sequencing_center.'_read_name';
+    my $amplicon_name_for_read_name = '_get_amplicon_name_for_'.$self->build->sequencing_center.'_read_name';
     my $pos = 0;
     return sub{
         AMPLICON: while ( $pos < $#all_read_names ) {
@@ -464,8 +427,8 @@ sub _amplicon_iterator_for_name {
                     confess sprintf(
                         'Could not determine amplicon name for %s read name (%s) for build (%s)',
                         $all_read_names[$pos],
-                        $self->_build->sequencing_center,
-                        $self->_build->id,
+                        $self->build->sequencing_center,
+                        $self->build->id,
                     );
                 }
                 unless ( $read_amplicon_name eq $amplicon_name ) { 
@@ -480,11 +443,6 @@ sub _amplicon_iterator_for_name {
                 name => $amplicon_name,
                 reads => \@read_names,
             };
-
-            # Filter
-            for my $filter ( @filters ) {
-                next AMPLICON unless $self->$filter($amplicon);
-            }
 
             # Processed oseq
             $self->load_seq_for_amplicon($amplicon); # dies on error
@@ -515,15 +473,6 @@ sub _get_amplicon_name_for_gsc_read_name {
         or return;
 
     return $1;
-}
-
-sub _get_amplicon_name_for_broad_read_name {
-    my ($self, $read_name) = @_;
-
-    $read_name =~ s#\.T\d+$##;
-    $read_name =~ s#[FR](\w\d\d?)$#\_$1#; # or next;
-
-    return $read_name;
 }
 
 sub load_seq_for_amplicon {
@@ -569,63 +518,11 @@ sub load_seq_for_amplicon {
 
 sub amplicon_size {
     my $self = shift;
-    my $string = $self->_build->processing_profile->amplicon_processor;
+    my $string = $self->build->processing_profile->amplicon_processor;
     return unless $string; #ok
 
     my ($amplicon_size) = $string =~ /filter\s+by-min-length\s+--?length\s+(\d+)/;
     return return $amplicon_size;
-}
-
-sub _remove_old_read_iterations_from_amplicon {
-    my ($self, $amplicon) = @_;
-
-    my %reads;
-    for my $read_name ( @{$amplicon->{reads}} ) {
-        my $read = GSC::Sequence::Read->get(trace_name => $read_name);
-        confess "Can't get GSC read ($read_name). This is required to remove old read iterations from an amplicon." unless $read;
-
-        my $read_id = $amplicon->{name}.$read->primer_code;
-        if ( exists $reads{$read_id} ) {
-            my $date_compare = UR::Time->compare_dates(
-                '00:00:00 '.$read->run_date,
-                '00:00:00 '.$reads{$read_id}->run_date,
-            ); #returns -1, 0, or 1
-            #print "RUN DATE $read_name => ".$read->run_date."($date_compare)\n";
-            $reads{$read_id} = $read if $date_compare eq 1;
-        }
-        else {
-            $reads{$read_id} = $read;
-        }
-    }
-
-    $amplicon->{reads} = [
-        sort { 
-            $a cmp $b 
-        } map { 
-            $_->trace_name 
-        } values %reads 
-    ];
-
-    return 1;
-}
-
-sub _amplicon_is_not_contaminated {
-    my ($self, $amplicon) = @_;
-
-    for my $read_name ( @{$amplicon->{reads}} ) {
-        my $read = GSC::Sequence::Read->get(trace_name => $read_name);
-        confess "Can't get GSC read ($read_name). This is required to check if an amplicon is contaminated." unless $read;
-        my $screen_reads_stat = $read->get_screen_read_stat_hmp;
-        if ( $screen_reads_stat and $screen_reads_stat->is_contaminated ) {
-            return;
-        }
-    }
-
-    return 1;
-}
-
-sub _get_gsc_sequence_read { # in sub to overload on test
-    return GSC::Sequence::Read->get(trace_name => $_[1]);
 }
 
 sub ace_file_for_amplicon { #moved to build base .. remove

@@ -180,7 +180,7 @@ sub execute {
           ( defined $valid_chrs{$chr1} && defined $valid_chrs{$chr2} ) or die "Invalid chrom name in file:\n$filepath!\nIn line:\n\n$line\n";
           ++$var_cnt{svs} if( defined $include_chrs{$chr1} && defined $include_chrs{$chr2} );
         }
-        elsif( $muttype eq 'svs' && $line =~ m/^\S+\t\d+\t\d+(\+|\-)\t\S+\t\d+\t\d+(\+|\-)\t(INV|INS|DEL|ITX|CTX)/ ) # SquareDancer output
+        elsif( $muttype eq 'svs' && $line =~ m/^\S+\t\d+\t\d+(\+|\-)\S*\t\S+\t\d+\t\d+(\+|\-)\t(INV|INS|DEL|ITX|CTX)/ ) # SquareDancer output
         {
           my ( $chr1, undef, undef, $chr2 ) = split( /\t/, $line );
           $chr1 =~ s/chr//i; $chr2 =~ s/chr//i;

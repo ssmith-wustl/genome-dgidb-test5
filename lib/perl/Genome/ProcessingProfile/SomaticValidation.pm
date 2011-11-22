@@ -43,6 +43,32 @@ class Genome::ProcessingProfile::SomaticValidation {
         output_plot => {
             is => 'Boolean', doc => 'include output plot in final results',
         },
+
+        #RefCov parameters
+        refcov_wingspan_values => {
+            is => 'Text',
+            doc => 'Comma-delimited list of wingspans to use',
+        },
+        refcov_minimum_depths => {
+            is => 'Text',
+            doc => 'Comma-delimited list of depth levels to use',
+        },
+        refcov_minimum_base_quality => {
+            is => 'Text',
+            doc => 'Minimum base quality for consideration',
+        },
+        refcov_minimum_mapping_quality => {
+            is => 'Text',
+            doc => 'Minimum mapping quality for consideration',
+        },
+        refcov_merge_roi_regions => {
+            is => 'Boolean',
+            doc => 'Merge contiguous regions in the ROI set before analysis',
+        },
+        refcov_use_short_names => {
+            is => 'Boolean',
+            doc => 'Replace names in the BED file with short pre-generated names',
+        },
     ],
 };
 
@@ -92,6 +118,8 @@ sub _map_workflow_inputs {
 
     push @inputs,
         build_id => $build->id,
+        tumor_mode => 'tumor',
+        normal_mode => 'normal',
         ;
 
     my %default_filenames = $self->default_filenames;

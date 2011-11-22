@@ -12,69 +12,48 @@ class Genome::Model::Event::Build::ReferenceAlignment::CoverageStats {
     has => [ ],
 };
 
+sub shortcut {
+    my $self = shift;
+
+    my %params = $self->params_for_result;
+    my $result = Genome::InstrumentData::AlignmentResult::Merged::CoverageStats->get(%params);
+
+    if($result) {
+        $self->status_message('Using existing result ' . $result->__display_name__);
+        return $self->link_result_to_build($result);
+    } else {
+        return;
+    }
+}
+
 sub execute {
     my $self = shift;
+    my $build = $self->build;
 
     unless($self->_reference_sequence_matches) {
         die $self->error_message;
     }
 
-    my $coverage_dir = $self->build->reference_coverage_directory;
-    if (-d $coverage_dir) {
-        #just remove the existing one to avoid shortcutting without verification...
-        #TODO: Add verification and the ability to shortcut if output exists and is complete
-        unless (rmtree($coverage_dir)) {
-            $self->error_message('Failed to remove existing coverage directory '. $coverage_dir);
-            die($self->error_message);
-        }
-    }
-    unless (Genome::Sys->create_directory($coverage_dir)) {
-        $self->error_message('Failed to create coverage directory '. $coverage_dir .":  $!");
-        return;
-    }
-    my $bed_file = $self->build->region_of_interest_set_bed_file;
-    my $log_file = $self->build->log_directory;
-    my $bam_file = $self->build->whole_rmdup_bam_file;
-    my $cmd = '/usr/bin/perl `which gmt` bio-samtools coverage-stats --output-directory='. $coverage_dir .' --log-directory='. $log_file
-        .' --bed-file='. $bed_file .' --bam-file='. $bam_file .' --minimum-depths='. $self->build->minimum_depths
-            .' --wingspan-values='. $self->build->wingspan_values;
-    #my %coverage_stats_params = (
-    #    output_directory => $coverage_dir,
-    #    log_directory => $log_file,
-    #    bed_file => $bed_file,
-    #    bam_file => $self->build->whole_rmdup_bam_file,
-    #    minimum_depths => $self->build->minimum_depths,
-    #    wingspan_values => $self->build->wingspan_values,
-    #);
-
-    my $minimum_base_quality = $self->build->minimum_base_quality;
-    if (defined($minimum_base_quality)) {
-        $cmd .= ' --minimum-base-quality='. $minimum_base_quality;
-        #$coverage_stats_params{minimum_base_quality} = $minimum_base_quality;
-    }
-    my $minimum_mapping_quality = $self->build->minimum_mapping_quality;
-    if (defined($minimum_mapping_quality)) {
-        $cmd .= ' --minimum-mapping-quality='. $minimum_mapping_quality;
-        #$coverage_stats_params{minimum_mapping_quality} = $minimum_mapping_quality;
-    }
-    #unless (Genome::Model::Tools::BioSamtools::CoverageStats->execute(%coverage_stats_params)) {
-    #    $self->error_message('Failed to generate coverage stats with params: '.  Data::Dumper::Dumper(%coverage_stats_params));
-    #    die($self->error_message);
-    #}
-    Genome::Sys->shellcmd(
-        cmd => $cmd,
-        input_files => [$bed_file,$bam_file],
+    my %params = (
+        $self->params_for_result,
+        log_directory => $build->log_directory,
     );
-    my $as_ref = $self->build->alignment_summary_hash_ref;
+
+    my $result = Genome::InstrumentData::AlignmentResult::Merged::CoverageStats->get_or_create(%params);
+
+    $self->link_result_to_build($result);
+
+    my $as_ref = $build->alignment_summary_hash_ref;
     unless ($as_ref) {
         $self->error_message('Failed to load the alignment summary metrics!');
         die($self->error_message);
     }
-    my $cov_ref = $self->build->coverage_stats_summary_hash_ref;
+    my $cov_ref = $build->coverage_stats_summary_hash_ref;
     unless ($cov_ref) {
         $self->error_message('Failed to load the coverage summary metrics!');
         die($self->error_message);
     }
+
     return 1;
 }
 
@@ -82,10 +61,15 @@ sub execute {
 #but keeping it here allows the rest of the process to this point to run...
 sub _reference_sequence_matches {
     my $self = shift;
+    my $build = $self->build;
 
-    my $roi_list = $self->model->region_of_interest_set;
+    my $roi_list = Genome::FeatureList->get(name => $build->region_of_interest_set_name);
+    unless($roi_list) {
+        die('No feature-list found for ROI: ' . $build->region_of_interest_set_name);
+    }
+
     my $roi_reference = $roi_list->reference;
-    my $reference = $self->model->reference_sequence_build;
+    my $reference = $self->build->reference_sequence_build;
 
     unless($roi_reference) {
         $self->error_message('no reference set on region of interest ' . $roi_list->name);
@@ -100,6 +84,51 @@ sub _reference_sequence_matches {
             return;
         }
     }
+
+    return 1;
+}
+
+sub params_for_result {
+    my $self = shift;
+    my $build = $self->build;
+
+    my $fl = Genome::FeatureList->get(name => $build->region_of_interest_set_name);
+    unless($fl) {
+        die('No feature-list found for ROI: ' . $build->region_of_interest_set_name);
+    }
+
+    my $use_short_roi = 1;
+    my $short_roi_input = Genome::Model::Build::Input->get(name => 'short_roi_names', build => $build);
+    if($short_roi_input) {
+        $use_short_roi = $short_roi_input->value_id;
+    }
+
+    my $merge_regions = 1;
+    my $merge_regions_input = Genome::Model::Build::Input->get(name => 'merge_roi_set', build => $build);
+    if($merge_regions_input) {
+        $merge_regions = $merge_regions_input->value_id;
+    }
+
+    return (
+        alignment_result_id => $build->merged_alignment_result->id,
+        region_of_interest_set_id => $fl->id,
+        minimum_depths => $build->minimum_depths,
+        wingspan_values => $build->wingspan_values,
+        minimum_base_quality => ($build->minimum_base_quality || 0),
+        minimum_mapping_quality => ($build->minimum_mapping_quality || 0),
+        use_short_roi_names => $use_short_roi,
+        merge_contiguous_regions => $merge_regions,
+        test_name => ($ENV{GENOME_SOFTWARE_RESULT_TEST_NAME} || undef),
+    );
+}
+
+sub link_result_to_build {
+    my $self = shift;
+    my $result = shift;
+    my $build = $self->build;
+
+    Genome::Sys->create_symlink($result->output_dir, $build->reference_coverage_directory);
+    $result->add_user(label => 'uses', user => $build);
 
     return 1;
 }

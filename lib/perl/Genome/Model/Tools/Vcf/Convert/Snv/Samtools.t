@@ -22,7 +22,8 @@ my $test_dir = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Vcf-Convert-Snv
 # V4 - remove VT INFO field in header
 # V5 - add source in header
 # V6 - Correct the AD and BQ fields number attribute
-my $expected_base = "expected.v6";
+# V7 - Correct reference sequence specification and description of BQ and AD fields
+my $expected_base = "expected.v7";
 my $expected_dir = "$test_dir/$expected_base";
 my $expected_file = "$expected_dir/output.vcf";
 

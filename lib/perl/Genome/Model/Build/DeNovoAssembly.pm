@@ -57,7 +57,8 @@ sub description {
     my $self = shift;
 
     return sprintf(
-        'de novo assembly %s build (%s) for model (%s %s)',
+        '%sde novo %s build (%s) for model (%s %s)',
+        ( $self->is_imported ? 'imported ' : '' ),
         $self->processing_profile->assembler_name,
         $self->id,
         $self->model->name,
@@ -65,26 +66,52 @@ sub description {
     );
 }
 
+sub is_imported {
+    my $self = shift;
+    if ( $self->processing_profile->assembler_name =~ /import/ ) {
+        return 1;
+    }
+    return;
+}
+
 sub validate_for_start_methods {
     my $self = shift;
     my @methods = $self->SUPER::validate_for_start_methods;
-    push @methods, 'instrument_data_assigned';
+    push @methods, 'validate_instrument_data_and_insert_size';
     return @methods;
 }
 
-sub instrument_data_assigned {
+sub validate_instrument_data_and_insert_size {
     my $self = shift;
-    my @tags;
 
+    return if $self->is_imported;
+
+    # Check that inst data is assigned
     my @instrument_data = $self->instrument_data;
-    unless (@instrument_data or $self->processing_profile->assembler_name =~ /import/) {
-        push @tags, UR::Object::Tag->create(
+    unless (@instrument_data) {
+        return UR::Object::Tag->create(
             properties => ['instrument_data'],
             desc => 'No instrument for build',
         );
     }
 
-    return @tags;
+    # Check insert size
+    my %assembler_params = $self->processing_profile->assembler_params_as_hash; # DEPRECATED!
+    return if defined $assembler_params{insert_size};
+
+    my @tags;
+    for my $instrument_data ( @instrument_data ) {
+        my $library = $instrument_data->library;
+        next if defined $library->fragment_size_range;
+        next if $instrument_data->median_insert_size;
+        push @tags, UR::Object::Tag->create(
+            properties => ['instrument_data'],
+            desc => 'No insert size for instrument data ('.$instrument_data->id.') or library ('.$library->id.'). Please correct.',
+        );
+    }
+
+    return @tags if @tags;
+    return;
 }
 
 sub calculate_estimated_kb_usage {

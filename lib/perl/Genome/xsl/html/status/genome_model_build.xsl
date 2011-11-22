@@ -623,6 +623,18 @@
               <td class="name">processing profile:</td>
               <td class="value">
                 <xsl:value-of select="build/stages/@processing_profile"/> (<xsl:value-of select="build/stages/@processing_profile_type"/>)
+
+                <xsl:call-template name="object_link_button">
+                    <xsl:with-param name="icon" select="'sm-icon-extlink'" />
+
+                    <xsl:with-param name="linktext">
+                        <xsl:value-of select="build/stages/@processing_profile_id"/>
+                    </xsl:with-param>
+
+                    <xsl:with-param name="type" select="'Genome::ProcessingProfile'"/>
+                    <xsl:with-param name="id" select="build/stages/@processing_profile_id"/>
+                    <xsl:with-param name="perspective" select="'status'"/>
+                </xsl:call-template>
               </td>
             </tr>
 

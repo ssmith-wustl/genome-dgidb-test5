@@ -9,6 +9,7 @@ use Genome;
 use Carp;
 use IPC::Run;
 use File::Slurp;
+use PP::LSF;
 
 class Genome::Model::Tools::Bacterial::CoreGeneCoverage (
     is => 'Command',

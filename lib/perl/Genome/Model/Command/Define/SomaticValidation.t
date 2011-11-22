@@ -9,7 +9,7 @@ BEGIN {
 };
 
 use above "Genome";
-use Test::More tests => 26;
+use Test::More tests => 27;
 
 use Cwd;
 #use Carp::Always;
@@ -108,7 +108,7 @@ ok($define_3->execute, 'executed third creation command');
 my @m_3 = Genome::Model->get([$define_3->result_model_ids]);
 is(scalar(@m_3), 2, 'created two models');
 isnt($m_3[0]->subject, $m_3[1]->subject, 'two models have two different subjects');
-
+is($m_3[1]->region_of_interest_set, $test_targets, 'roi set to default properly');
 my @params_for_define_4 = (
     design => $test_targets,
     target => $test_targets,

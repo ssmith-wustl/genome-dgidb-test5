@@ -9,7 +9,7 @@ use strict;
 use warnings;
 
 use above 'Genome';
-
+use Genome::Model;
 use Test::More;
 
 use_ok('Genome::Model::Command::Input::Update') or die;
@@ -23,10 +23,6 @@ ok($circle, 'create a circle');
 class Genome::ProcessingProfile::Tester {
     is => 'Genome::ProcessingProfile',
 };
-my $sample = Genome::Sample->create(name => '__SAMPLE__');
-ok($sample, 'create sample');
-my $pp = Genome::ProcessingProfile::Tester->create(name => '__PP__');
-ok($pp, 'create pp');
 class Genome::Model::Tester {
     is => 'Genome::Model',
     has => [
@@ -76,6 +72,10 @@ class Genome::Model::Tester {
         },
     ],
 };
+my $sample = Genome::Sample->create(name => '__SAMPLE__');
+ok($sample, 'create sample');
+my $pp = Genome::ProcessingProfile::Tester->create(name => '__PP__');
+ok($pp, 'create pp');
 my $model = Genome::Model::Tester->create(
     name => '__MODEL__',
     subject => $sample,

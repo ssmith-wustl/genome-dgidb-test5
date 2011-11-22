@@ -430,7 +430,7 @@ sub amplicon_sets {
     for my $set_name ( $self->amplicon_set_names ) {
         my $amplicon_set;
         if ( $self->sequencing_platform eq 'sanger' ) { #TODO - make it so it auto recognizes sanger
-            my $cmd = Genome::Model::MetagenomicComposition16s::Command::ProcessSangerInstrumentData->create( build_id => $self->id );
+            my $cmd = Genome::Model::MetagenomicComposition16s::Command::ProcessSangerInstrumentData->create(build => $self);
             $amplicon_set = $cmd->amplicon_set_for_name( $set_name );
         } else {
             $amplicon_set = $self->amplicon_set_for_name($set_name); #call command for sanger
@@ -462,59 +462,7 @@ sub amplicon_set_for_name {
         oriented_qual_file => $self->oriented_qual_file_for_set_name( $set_name ),
     );
     
-    my $amplicon_iterator = $self->_amplicon_iterator_for_name($set_name);
-    $params{amplicon_iterator} = $amplicon_iterator if $amplicon_iterator;
-
     return Genome::Model::Build::MetagenomicComposition16s::AmpliconSet->create(%params);
-}
-
-sub _amplicon_iterator_for_name { # 454 and solexa for now
-    my ($self, $set_name) = @_;
-
-    my $reader = $self->fasta_and_qual_reader_for_type_and_set_name('processed', $set_name);
-    return unless $reader; # returns undef if no file exists OK or dies w/ error 
-
-    my $classification_file = $self->classification_file_for_set_name($set_name);
-    my ($classification_io, $classification_line);
-    if ( -s $classification_file ) {
-        $classification_io = eval{ Genome::Sys->open_file_for_reading($classification_file); };
-        if ( not $classification_io ) {
-            $self->error_message('Failed to open classification file: '.$classification_file);
-            return;
-        }
-        $classification_line = $classification_io->getline;
-        chomp $classification_line;
-    }
-
-    my $amplicon_iterator = sub{
-        my $seq = $reader->read;
-        return unless $seq;  #<-- HERER
-
-        my %amplicon = (
-            name => $seq->{id},
-            reads => [ $seq->{id} ],
-            reads_processed => 1,
-            seq => $seq,
-        );
-
-        return \%amplicon if not $classification_line;
-
-        my @classification = split(';', $classification_line); # 0 => id | 1 => ori
-        if ( not defined $classification[0] ) {
-            Carp::confess('Malformed classification line: '.$classification_line);
-        }
-        if ( $seq->{id} ne $classification[0] ) {
-            return \%amplicon;
-        }
-
-        $classification_line = $classification_io->getline;
-        chomp $classification_line if $classification_line;
-
-        $amplicon{classification} = \@classification;
-        return \%amplicon;
-    };
-
-    return $amplicon_iterator;
 }
 
 sub get_writer_for_set_name {
@@ -748,7 +696,7 @@ sub prepare_instrument_data {
     #call a separate command for sanger
     if ( $self->sequencing_platform eq 'sanger' ) {
         my $cmd = Genome::Model::MetagenomicComposition16s::Command::ProcessSangerInstrumentData->create(
-            build_id => $self->id,
+            build => $self,
             );
         unless ( $cmd->prepare_instrument_data ) {
             $self->error_message("Failed to execute mc16s process sanger");

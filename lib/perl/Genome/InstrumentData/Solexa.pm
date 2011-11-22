@@ -513,7 +513,7 @@ sub dump_trimmed_fastq_files {
     my @trimmed_fastq_pathnames;
     #if the trimmer supports paired end, we just run it once, otherwise we need to loop over the fastqs
     if(@fastq_pathnames == 2 && $trimmer_name eq 'far' && $trimmer_version >= '2.0') {
-        my $trimmed_input_fastq_path = $data_directory . '/trimmeed-sanger-fastq-';
+        my $trimmed_input_fastq_path = $data_directory . '/trimmed-sanger-fastq';
         my $trimmer = Genome::Model::Tools::Far::Trimmer->create(
             params => $trimmer_params,
             use_version => $trimmer_version,
@@ -531,6 +531,9 @@ sub dump_trimmed_fastq_files {
             die($self->error_message);
          }
         push @trimmed_fastq_pathnames, glob "$trimmed_input_fastq_path*";
+        unless (@trimmed_fastq_pathnames){
+            die $self->error_message("Failed to get expected trimmed output files");
+        }
     }
     else {
         my $counter = 0;

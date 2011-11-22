@@ -45,18 +45,36 @@
       </div> <!-- end container -->
     </div> <!-- end content -->
 
+    <style type="text/css">
+            .toolbar {
+                float: left;
+                margin-top: 10px;
+                margin-left: 30px;
+            }
+            div .dataTables_length {
+                width: inherit;
+            }
+    </style>
   <script type="text/javascript">
+
+  <xsl:text disable-output-escaping="yes">
+    <![CDATA[
                  $(document).ready(function(){
-                 $('#myTable').dataTable({
-                 "sScrollX": "100%",
-                 "sScrollInner": "110%",
-                 "bJQueryUI": true,
-                 "sPaginationType": "full_numbers",
-                 "bStateSave": true,
-                 "iDisplayLength": 25
+                    $('#myTable').dataTable({
+                        "sScrollX": "100%",
+                        "sScrollInner": "110%",
+                        "bJQueryUI": true,
+                        "sPaginationType": "full_numbers",
+                        "bStateSave": true,
+                        "iDisplayLength": 25,
+                        "sDom": '<"H"l<"toolbar">f>t<"F"ip>' 
+                    });
+
+                    $("div.toolbar").html('<a href="/view/genome/nomenclature/set/create.html">create a new nomenclature</a>');
                  });
-                 }
-                 );
+    ]]>
+    </xsl:text>
+
     </script>
 
     <xsl:call-template name="footer">
