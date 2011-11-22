@@ -5,7 +5,7 @@ use warnings;
 
 use Genome;
 
-use Data::Dumper 'Dumper';
+require Cwd;
 
 our %QUAKE_PARAMS = (
     k => {
@@ -109,9 +109,11 @@ sub execute {
 
     $self->status_message('Write quake input: '.$quake_input);
     my $reader = $self->_input;
-    while ( my $seqs = $reader->read ) {
+    my $seqs = $reader->read;
+    my $cnt = scalar @$seqs; 
+    do {
         $quake_intput_writer->write($seqs);
-    }
+    } while $seqs = $reader->read;
     $self->status_message('Write quake input...OK');
 
     $self->status_message('Run quake');
@@ -121,7 +123,7 @@ sub execute {
 
     my $quake_output = $tmpdir.'/quake.cor.fastq';
     my $quake_output_reader = Genome::Model::Tools::Sx::Reader->create(
-        config => [ $quake_output.':type=sanger' ],
+        config => [ "$quake_output:type=sanger:cnt=$cnt" ],
     );
     if ( not $quake_output_reader ) {
         $self->error_message('Failed to open reader for quake output!');
@@ -141,6 +143,10 @@ sub execute {
 sub _run_quake_command {
     my ($self, $file) = @_;
 
+    my $cwd = Cwd::getcwd();
+    chdir $self->_tmpdir; # quake dumps files in the cwd!
+    $self->status_message('Chdir to: '.$self->_tmpdir);
+
     my $cmd = 'quake.py -q 33 -r '.$file;
     my $meta = $self->__meta__;
     for my $key ( $self->quake_param_names ) {
@@ -155,6 +161,8 @@ sub _run_quake_command {
         );
     }
     my $rv = eval{ Genome::Sys->shellcmd(cmd => $cmd); };
+    chdir $cwd;
+    $self->status_message('Chdir back to: '.$cwd);
     if ( not $rv ) {
         $self->error_message($@) if $@;
         $self->error_message("Failed to run quake: $cmd");

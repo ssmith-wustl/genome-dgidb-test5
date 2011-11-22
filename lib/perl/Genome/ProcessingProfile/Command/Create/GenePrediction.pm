@@ -5,11 +5,11 @@ use warnings;
 use Genome;
 
 class Genome::ProcessingProfile::Command::Create::GenePrediction {
-    is => ['Genome::ProcessingProfile::Command::Create', 'Command::DynamicSubCommands'],
-    is_abstract => 1,
+    is => ['Genome::ProcessingProfile::Command::Create'],
+    doc => 'Create a new profile for gene prediction',
 };
 
-sub _sub_commands_from { 'Genome::ProcessingProfile::GenePrediction' }
+sub _sub_commands_from { 'Genome::ProcessingProfile::GenePrediction' };
 
 1;
 

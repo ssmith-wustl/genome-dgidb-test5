@@ -14,12 +14,16 @@
         <span style="font-weight: bold">2. Each row of your file represents a ...</span><br/>
         <input type="radio" id="subclass-name-sample" name="subclass_name" value="Genome::Sample" checked="CHECKED">Sample</input>
         <br/>
-        <input type="radio" id="subclass-name-individual" name="subclass_name" value="Genome::Individual"> Patient</input>
+        <input type="radio" id="subclass-name-individual" name="subclass_name" value="Genome::Individual">Patient</input>
         <br/> <br/>
         <span style="font-weight: bold">3. Which nomenclature?</span>&#160;<input size='50' class="text" id="nomenclature" name="nomenclature"/>
         <p><i>A nomenclature describes the columns in your spreadsheet.
         You can find an exsiting nomenclature in the </i><a href="/view/genome/nomenclature/set/status.html">list of existing nomenclatures</a> <i> or you
         can </i><a href="/view/genome/nomenclature/set/create.html">create a new nomenclature</a>.</p>
+
+        <span style="font-weight: bold">4. Project name?</span>&#160;<input size='50' class="text" id="project" name="project_name"/>
+        <p><i>A project is a way to organize pieces of data. A new project will be created with the given name and your clinical data
+        will automatically be associated with it.</i></p>
 
       <div>
         <p style="text-align: right;"><button id="submit-button">Import</button></p>
@@ -34,6 +38,7 @@
 <!-- this populates the task list -->
 <script src="/res/js/app/genome_task_datatable.js"/>
 
+<h3>Tasks</h3>
 <table id="task-list">
 <thead>
 <tr id="table-header"></tr>

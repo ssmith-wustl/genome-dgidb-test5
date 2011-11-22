@@ -1,30 +1,30 @@
-package Genome::DruggableGene::DrugNameReport::View::Solr::Xml;
+package Genome::DruggableGene::DrugNameReport::Set::View::Solr::Xml;
 
 use strict;
 use warnings;
 
 use Genome;
 
-class Genome::DruggableGene::DrugNameReport::View::Solr::Xml {
+class Genome::DruggableGene::DrugNameReport::Set::View::Solr::Xml {
     is => 'Genome::View::Solr::Xml',
     has => [
         type => {
             is => 'Text',
-            default => 'drug-name-report'
+            default => 'drug-name'
         },
         display_type => {
             is  => 'Text',
-            default => 'DrugNameReport',
+            default => 'DrugName',
         },
         display_icon_url => {
             is  => 'Text',
-            default => 'genome_druggable-gene_drug-name-report_32',
+            default => 'genome_druggable-gene_drug-name_32',
         },
         display_url0 => {
             is => 'Text',
             calculate_from => ['subject'],
             calculate => q{
-                return join ('?id=', '/view/genome/druggable-gene/drug-name-report/status.html',$_->id());
+                return '/view/genome/druggable-gene/drug-name-report/set/status.html?name=' . $subject->name();
             },
         },
         display_label1 => {
@@ -65,6 +65,10 @@ class Genome::DruggableGene::DrugNameReport::View::Solr::Xml {
                     position => 'content',
                 },
                 {
+                    name => 'name',
+                    position => 'content',
+                },
+                {
                     name => '__display_name__',
                     position => 'display_title',
                 },
@@ -72,5 +76,19 @@ class Genome::DruggableGene::DrugNameReport::View::Solr::Xml {
         },
     ]
 };
+
+sub _generate_id_field_data {
+    my $self = shift;
+    my $subject = $self->subject;
+
+    return $subject->__display_name__;
+}
+
+sub _generate_object_id_field_data {
+    my $self = shift;
+    my $subject = $self->subject;
+
+    return $subject->__display_name__;
+}
 
 1;
