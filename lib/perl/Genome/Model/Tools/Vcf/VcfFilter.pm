@@ -152,12 +152,14 @@ sub execute {
 
     my $found_pass_line = 0;
     my $found_format_lines = 0;
-    while( my $line = $inFh->getline ) {
-        my $remove_line = 0;
+    my $done_with_header = 0;
+    my $found_ft_header = 0;
 
+    #if this is a header line
+    while(!$done_with_header) {
+        my $line = $inFh->getline;
         chomp($line);
-        #if this is a header line
-        if ($line =~ /^#/){
+        if ($line =~ /^##/){
             if ($line =~/^##FILTER=<ID=PASS/){
                 $found_pass_line = 1;
             }
@@ -174,82 +176,96 @@ sub execute {
             }
             print $outfile $line . "\n";
 
+            if ($line =~ /^##FILTER=<ID=FT,/) {
+                $found_ft_header = 1;
+            }
+        } elsif ($line =~ /^#CHROM/){
+            $done_with_header = 1;
+            unless ($found_ft_header) {
+                print $outfile '##FORMAT=<ID=FT,Number=1,Type=Integer,Description="Filter Status">' . "\n";
+            }
+            print $outfile $line . "\n";
+        } else {
+            die $self->error_message("Failed to find the final header line");
+        }
+    }
 
-        } else {   #else we're in body of the vcf, check it against the filters
+    while( my $line = $inFh->getline ) {
+        my $remove_line = 0;
+        chomp($line);
 
-            my @fields = split("\t",$line);
+        my @fields = split("\t",$line);
 
-            # if this is not of the correct variant type, skip it
-            if (defined($variant_type) && !($fields[7] =~ /VT=$variant_type/)){
-                print $outfile $line . "\n";
-            } else {
+        # if this is not of the correct variant type, skip it
+        if (defined($variant_type) && !($fields[7] =~ /VT=$variant_type/)){
+            print $outfile $line . "\n";
+        } else {
 
-                # only check the filters if this snv hasn't already been filtered
-                # (is passing). If it has been filtered, then accept the prior filter
-                # and move on
-                my $filter_value;
-                if (($fields[6] eq "") || ($fields[6] eq "PASS") || ($fields[6] eq ".")){
+            # only check the filters if this snv hasn't already been filtered
+            # (is passing). If it has been filtered, then accept the prior filter
+            # and move on
+            my $filter_value;
+            if (($fields[6] eq "") || ($fields[6] eq "PASS") || ($fields[6] eq ".")){
 
-                    my $key = $fields[0] . ":" . $fields[1];
+                my $key = $fields[0] . ":" . $fields[1];
 
-                    if ($filter_keep){
-                        if (exists($filter{$key})){
-                            $filter_value = "PASS";
-                        } else {
-                            if($remove_filtered_lines){
-                                $remove_line = 1;
-                            } else {
-                                $filter_value = $filter_name;
-                            }
-                        }
+                if ($filter_keep){
+                    if (exists($filter{$key})){
+                        $filter_value = "PASS";
                     } else {
-                        if (exists($filter{$key})){
-                            if($remove_filtered_lines){
-                                $remove_line = 1;
-                            } else {
-                                $filter_value = $filter_name;
-                            }
+                        if($remove_filtered_lines){
+                            $remove_line = 1;
                         } else {
-                            $filter_value = "PASS";
+                            $filter_value = $filter_name;
                         }
                     }
-                    $fields[6] = $filter_value;
                 } else {
-                    $filter_value = $fields[6];
-                }
-
-                # Add a FT field with the same information as the filter field
-                my $format_field = $fields[8];
-                my @format_keys = split ":", $format_field;
-                # Find the FT field if it exists
-                my $ft_index;
-                for (my $i = 0; $i <= $#format_keys; $i++) {
-                    if ($format_keys[$i] eq "FT") {
-                        $ft_index = $i;
-                    }
-                }
-
-                # If FT was not previously present, add it to the format field
-                unless ($ft_index) {
-                    $fields[8] = join(":", (@format_keys, "FT") );
-                }
-
-                # For each sample present in the file, either replace the old FT value if one was present or insert a new one
-                for (my $sample_index = 9; $sample_index <= $#fields; $sample_index++) {
-                    my $sample_field = $fields[$sample_index];
-                    if ($ft_index) {
-                        my @sample_fields = split ":", $sample_field;
-                        $sample_fields[$ft_index] = $filter_value;
-                        $fields[$sample_index] = join(":", @sample_fields);
+                    if (exists($filter{$key})){
+                        if($remove_filtered_lines){
+                            $remove_line = 1;
+                        } else {
+                            $filter_value = $filter_name;
+                        }
                     } else {
-                        $fields[$sample_index] = join(":", ($fields[$sample_index], $filter_value) );
+                        $filter_value = "PASS";
                     }
                 }
+                $fields[6] = $filter_value;
+            } else {
+                $filter_value = $fields[6];
+            }
 
-                #output the line
-                unless($remove_line){
-                    print $outfile join("\t", @fields) . "\n";
+            # Add a FT field with the same information as the filter field
+            my $format_field = $fields[8];
+            my @format_keys = split ":", $format_field;
+            # Find the FT field if it exists
+            my $ft_index;
+            for (my $i = 0; $i <= $#format_keys; $i++) {
+                if ($format_keys[$i] eq "FT") {
+                    $ft_index = $i;
                 }
+            }
+
+            # If FT was not previously present, add it to the format field
+            unless ($ft_index) {
+                $fields[8] = join(":", (@format_keys, "FT") );
+            }
+
+            # For each sample present in the file, either replace the old FT value if one was present or insert a new one
+            for (my $sample_index = 9; $sample_index <= $#fields; $sample_index++) {
+                my $sample_field = $fields[$sample_index];
+                if ($ft_index) {
+                    my @sample_fields = split ":", $sample_field;
+                    $sample_fields[$ft_index] = $filter_value;
+                    $fields[$sample_index] = join(":", @sample_fields);
+                } else {
+                    $fields[$sample_index] = join(":", ($fields[$sample_index], $filter_value) );
+                }
+            }
+
+            #output the line
+            unless($remove_line){
+                print $outfile join("\t", @fields) . "\n";
             }
         }
     }
