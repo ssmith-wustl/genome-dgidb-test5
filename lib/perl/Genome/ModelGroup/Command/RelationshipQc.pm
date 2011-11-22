@@ -61,7 +61,7 @@ sub execute {
     else {
         $bed_file = $self->assemble_list_of_snvs(\@sorted_models);
     }
-#    my $pileup_file = "/gscmnt/sata921/info/medseq/test_mg_ibd_tool/RP-Family-RFS034.vcf.gz"; 
+#    my $pileup_file = "/gscmnt/sata921/info/medseq/fastIBD_Beagle/stricter_input_for_solved_family/VCH026_germline_pipeline.vcf.gz";
     my $pileup_file = $self->run_mpileup(\@sorted_models, $bed_file);
     unless($pileup_file) {
         return;
@@ -131,7 +131,7 @@ sub convert_mpileup_to_beagle {
     #TODO: move output files into class def
 
     my $output_bgl_file = $self->output_dir . "/" . $self->model_group->name . ".bgl.input";
-    my $output_bgl_file =~ s/ /_/g;
+    $output_bgl_file =~ s/ /_/g;
     my $output_fh = Genome::Sys->open_file_for_writing($output_bgl_file);
     my $vcf_fh = IO::File->new("zcat $pileup_vcf_gz|");
     my @header;
