@@ -40,13 +40,12 @@ sub create {
     }
 
     my $body_text = $self->body_text;
-
-    $self->_auto_truncate_body_text if $self->auto_truncate_body_text;
-
     my $sudo_username = Genome::Sys->sudo_username;
     if ($sudo_username) {
         $self->body_text($sudo_username . ' is running as ' . $self->editor_id . '. ' . $body_text);
     }
+
+    $self->_auto_truncate_body_text if $self->auto_truncate_body_text;
 
     return $self;
 }
