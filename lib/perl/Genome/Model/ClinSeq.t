@@ -12,7 +12,7 @@ BEGIN {
 use above "Genome";
 use Test::More tests => 15; #skip_all => "This is incomplete.";
 
-use Genome::ProcessingProfile::ClinSeq;
+use Genome::Model::ClinSeq;
 
 
 my $patient = Genome::Individual->get(common_name => "HG3");
@@ -96,7 +96,7 @@ ok($b, "created a new build");
 #);
 #is($b->status, 'Succeeded', "build succeeded!");
 
-my $retval = eval { $p->_execute_build($b); };
+my $retval = eval { $m->_execute_build($b); };
 is($retval, 1, 'execution of the build returned true');
 is($@, '', 'no exceptions thrown during build process') or diag $@;
 

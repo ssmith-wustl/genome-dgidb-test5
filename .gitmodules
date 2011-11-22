@@ -67,3 +67,6 @@
 [submodule "pairoscope"]
 	path = pairoscope
 	url = ssh://git//srv/git/pairoscope.git
+[submodule "alignment_summary"]
+	path = alignment_summary
+	url = ssh://git//srv/git/alignment_summary.git

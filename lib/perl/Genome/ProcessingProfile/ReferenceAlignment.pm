@@ -334,7 +334,7 @@ sub params_for_merged_alignment {
             my @alignment_events = grep {$_->instrument_data_id == $input->value->id} @align_reads_events;
         
             #if multiple events, this is a chunked alignment
-            if (@alignment_events > 1) {
+            if (@alignment_events > 1 or (@alignment_events == 1 and defined $alignment_events[0]->instrument_data_segment_id)) {
                 for my $alignment_event (@alignment_events) {
                     push @$segment_parameters, join(':', $alignment_event->instrument_data_id, $alignment_event->instrument_data_segment_id, $alignment_event->instrument_data_segment_type);
                 }

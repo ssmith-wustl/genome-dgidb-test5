@@ -49,6 +49,7 @@ sub import {
         if ($_ !~ /^Genome::(Model::Alignment|Utility::MetagenomicClassifier|Assembly)/) {
             eval "use $_";
             $r = $@;
+            warn $@ if $@;
         }
         $r;
     } @classes;

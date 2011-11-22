@@ -21,15 +21,23 @@ class Genome::DruggableGene::DrugGeneInteractionReport {
             id_by => 'drug_name_report_id',
             constraint_name => 'drug_gene_interaction_report_drug_name_report_id_fkey',
         },
+        drug_name_report_name => {
+            via => 'drug_name_report',
+            to => 'name',
+        },
         gene_name_report_id => { is => 'Text'},
         gene_name_report => {
             is => 'Genome::DruggableGene::GeneNameReport',
             id_by => 'gene_name_report_id',
             constraint_name => 'drug_gene_interaction_report_gene_name_report_id_fkey',
         },
+        gene_name_report_name => {
+            via => 'gene_name_report',
+            to => 'name',
+        },
         source_db_name => { is => 'Text'},
         source_db_version => { is => 'Text'},
-        interaction_type => { is => 'Text'}, 
+        interaction_type => { is => 'Text'},
         description => { is => 'Text', is_optional => 1 },
         drug_gene_interaction_report_attributes => {
             is => 'Genome::DruggableGene::DrugGeneInteractionReportAttribute',
@@ -42,7 +50,11 @@ class Genome::DruggableGene::DrugGeneInteractionReport {
                 my $citation = Genome::DruggableGene::Citation->get(source_db_name => $source_db_name, source_db_version => $source_db_version);
                 return $citation;
             |,
-        }
+        },
+        name => {
+            calculate_from => ['drug_name_report_name','gene_name_report_name'],
+            calculate => q| return $drug_name_report_name . $gene_name_report_name |,
+        },
     ],
     doc => 'Claim regarding an interaction between a drug name and a gene name',
 };
@@ -50,6 +62,18 @@ class Genome::DruggableGene::DrugGeneInteractionReport {
 sub __display_name__ {
     my $self = shift;
     return "Interaction of " . $self->drug_name_report->__display_name__ . " and " . $self->gene_name_report->__display_name__;
+}
+
+if ($INC{"Genome/Search.pm"}) {
+    __PACKAGE__->create_subscription(
+        method => 'commit',
+        callback => \&commit_callback,
+    );
+}
+
+sub commit_callback {
+    my $self = shift;
+    Genome::Search->add(Genome::DruggableGene::DrugGeneInteractionReport->define_set(drug_name_report_name => $self->drug_name_report_name , gene_name_report_name => $self->gene_name_report_name));
 }
 
 1;

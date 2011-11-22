@@ -78,6 +78,7 @@ class Genome::Model::Command::Define::SomaticValidation {
             doc => 'model created by this command',
         },
     ],
+    doc => 'define a new somatic validation model',
 };
 
 sub help_detail {

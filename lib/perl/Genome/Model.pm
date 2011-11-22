@@ -12,11 +12,14 @@ class Genome::Model {
     is => ['Genome::Notable','Genome::Searchable'],
     is_abstract => 1,
     subclassify_by => 'subclass_name',
+    subclass_description_preprocessor => __PACKAGE__ . '::_preprocess_subclass_description',
     id_by => [
         genome_model_id => { is => 'Number', },
     ],
     attributes_have => [
-        is_input => { is => 'Boolean', is_optional => 1, },
+        is_input    => { is => 'Boolean', is_optional => 1, },
+        is_param    => { is => 'Boolean', is_optional => 1, },
+        is_output   => { is => 'Boolean', is_optional => 1, },
     ],
     has => [
         name => { is => 'Text' },
@@ -64,9 +67,10 @@ class Genome::Model {
             |, 
         },
 
-        processing_profile => { is => 'Genome::ProcessingProfile', id_by => 'processing_profile_id' },
+        processing_profile      => { is => 'Genome::ProcessingProfile', id_by => 'processing_profile_id' },
+        processing_profile_id   => { is => 'Number', }, # this would be defined implicitly, but causes loading circularity with sub-classes
         processing_profile_name => { via => 'processing_profile', to => 'name' },
-        type_name => { via => 'processing_profile' },
+        type_name               => { via => 'processing_profile' },
     ],
     has_optional => [
         limit_inputs_id => {
@@ -252,12 +256,22 @@ sub __display_name__ {
     return $self->name . ' (' . $self->id . ')';
 }
 
+my $depth = 0;
 sub __extend_namespace__ {
     # auto generate sub-classes for any valid processing profile
     my ($self,$ext) = @_;
 
+    $depth++;
+    if ($depth>1) {
+        $depth--;
+        return;
+    }
+
     my $meta = $self->SUPER::__extend_namespace__($ext);
-    return $meta if $meta;
+    if ($meta) {
+        $depth--;
+        return $meta;
+    }
 
     my $pp_subclass_name = 'Genome::ProcessingProfile::' . $ext;
     my $pp_subclass_meta = UR::Object::Type->get($pp_subclass_name);
@@ -273,8 +287,10 @@ sub __extend_namespace__ {
             has => \@pp_delegated_properties
         );
         die "Error defining $model_subclass_name for $pp_subclass_name!" unless $model_subclass_meta;
+        $depth--;
         return $model_subclass_meta;
     }
+    $depth--;
     return;
 }
 
@@ -584,7 +600,7 @@ sub get_samples_for_view {
     } elsif ( $self->subject_class_name eq 'Genome::Individual') {
        @samples = $subject->samples();
     }
-return @samples;
+    return @samples;
 }
 
 sub get_all_possible_samples {
@@ -1387,6 +1403,88 @@ sub builds_are_used_as_model_or_build_input {
     my @builds = $self->builds;
 
     return grep { $_->is_used_as_model_or_build_input } @builds;
+}
+
+sub _preprocess_subclass_description {
+    my ($class, $desc) = @_;
+    my @names = keys %{ $desc->{has} };
+    for my $prop_name (@names) {
+        my $prop_desc = $desc->{has}{$prop_name};
+        # skip old things for which the developer has explicitly set-up indirection
+        next if $prop_desc->{id_by};
+        next if $prop_desc->{via};
+        next if $prop_desc->{reverse_as};
+        next if $prop_desc->{implied_by};
+        
+        if ($prop_desc->{is_param} and $prop_desc->{is_input}) {
+            die "class $class has is_param and is_input on the same property! $prop_name";
+        }
+
+        if (exists $prop_desc->{'is_param'} and $prop_desc->{'is_param'}) {
+            $prop_desc->{'via'} = 'processing_profile',
+            $prop_desc->{'to'} = $prop_name;
+            $prop_desc->{'is_mutable'} = 0;
+            $prop_desc->{'is_delegated'} = 1;
+        }
+
+        if (exists $prop_desc->{'is_input'} and $prop_desc->{'is_input'}) {
+
+            my $assoc = $prop_name . '_association' . ($prop_desc->{is_many} ? 's' : '');
+            next if $desc->{has}{$assoc};
+
+            $desc->{has}{$assoc} = {
+                property_name => $assoc,
+                implied_by => $prop_name,
+                is => 'Genome::Model::Input',
+                reverse_as => 'model', 
+                where => [ name => $prop_name ],
+                is_mutable => $prop_desc->{is_mutable},
+                is_optional => $prop_desc->{is_optional},
+                is_many => 1, #$prop_desc->{is_many},
+            };
+
+            # We hopefully don't need _id accessors
+            # If we do duplicate the code below for value_id
+
+            %$prop_desc = (%$prop_desc,
+                via => $assoc, 
+                to => 'value',
+            );
+        }
+    }
+
+    #my ($ext) = ($desc->{class_name} =~ /Genome::Model::(.*)/);
+    #my $pp_subclass_name = 'Genome::ProcessingProfile::' . $ext;
+    
+    #my $pp_data = $desc->{has}{processing_profile} ||= {};;
+    #$pp_data->{data_type} = $pp_subclass_name;
+    #$pp_data->{id_by} = ['processing_profile_id'];
+
+    #$pp_data = $desc->{has}{processing_profile_id} ||= {};;
+    #$pp_data->{data_type} = 'Number';
+
+    return $desc;
+}
+
+sub params_for_class {
+    my $meta = shift->class->__meta__;
+    
+    my @param_names = map {
+        $_->property_name
+    } sort {
+        $a->{position_in_module_header} <=> $b->{position_in_module_header}
+    } grep {
+        defined $_->{is_param} && $_->{is_param}
+    } $meta->property_metas;
+    
+    return @param_names;
+}
+
+sub _resolve_type_name_for_class {
+    my $class = shift;
+    my ($subclass) = $class =~ /^Genome::Model::([\w\d]+)$/;
+    return unless $subclass;
+    return Genome::Utility::Text::camel_case_to_string($subclass);
 }
 
 1;

@@ -21,6 +21,12 @@ class Genome::DruggableGene::Command::GeneNameReport::LookupInteractions {
             doc => "Output interactions to specified file. Defaults to STDOUT if no file is supplied.",
             default => "STDOUT",
         },
+        filter => {
+            is => 'Text',  
+            is_optional => 1,
+            doc => 'Filter results based on the parameters.  See below for how to.',
+            shell_args_position => 2,
+        },
     ],
 };
 
@@ -92,7 +98,8 @@ sub get_interactions {
 
     my @gene_name_report_ids = map($_->id, @gene_name_reports);
     @gene_name_report_ids = uniq @gene_name_report_ids;
-    return Genome::DruggableGene::DrugGeneInteractionReport->get(gene_name_report_id => \@gene_name_report_ids);
+    my $bool_expr = $self->_resolve_boolexpr('Genome::DruggableGene::DrugGeneInteractionReport', @gene_name_report_ids);
+    return Genome::DruggableGene::DrugGeneInteractionReport->get($bool_expr);
 }
 
 sub group_interactions_by_drug_name_report {
@@ -185,6 +192,31 @@ sub _read_gene_file{
     }
 
     return @gene_identifiers;
+}
+
+sub _resolve_boolexpr {
+    my $self = shift;
+    my $subject_class_name = shift;
+    my @subject_class_name_ids = @_;
+    my $filter = $self->_complete_filter(@subject_class_name_ids);
+    my ($bool_expr, %extra) = UR::BoolExpr->resolve_for_string(
+        $subject_class_name,
+        $filter,
+        # $self->_hint_string,
+        # $self->order_by,
+    );
+
+    $self->error_message( sprintf('Unrecognized field(s): %s', join(', ', keys %extra)) )
+        and return if %extra;
+
+    return $bool_expr;
+}
+
+sub _complete_filter {
+    my $self = shift;
+    my @subject_class_name_ids = @_;
+    my $ids = join("/", @subject_class_name_ids);
+    return join(',', grep { defined $_ } ("gene_name_report_id:$ids", $self->filter));
 }
 
 1;
