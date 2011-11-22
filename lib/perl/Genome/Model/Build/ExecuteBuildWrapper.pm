@@ -1,4 +1,4 @@
-package Genome::Model::Event::Build::ProcessingProfileMethodWrapper;
+package Genome::Model::Build::ExecuteBuildWrapper;
 
 use strict;
 use warnings;
@@ -7,7 +7,7 @@ use Genome;
 # this command is not intended to be executed by users
 # the only purpose of this command is to call _execute_build, or some other method, on the processing_profile
 
-class Genome::Model::Event::Build::ProcessingProfileMethodWrapper {
+class Genome::Model::Build::ExecuteBuildWrapper {
     is  => 'Command',
     has_input => [
         build_id => {
