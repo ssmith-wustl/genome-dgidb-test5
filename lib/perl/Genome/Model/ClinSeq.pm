@@ -4,15 +4,15 @@ use Genome;
 
 class Genome::Model::ClinSeq {
     is => 'Genome::Model',
-    has_input => [
-        wgs_data    => { is => 'Genome::Model::SomaticVariation' },
-        exome_data  => { is => 'Genome::Model::SomaticVariation' },
-        rna_data    => { is => 'Genome::Model::RnaSeq' },
+    has_optional_input => [
+        wgs_model       => { is => 'Genome::Model::SomaticVariation' },
+        exome_model     => { is => 'Genome::Model::SomaticVariation' },
+        rnaseq_model    => { is => 'Genome::Model::RnaSeq' },
     ],
-    has_param => [
-        #someparam1 => { is => 'Number', doc => 'blah' },
-        #someparam2 => { is => 'Boolean', doc => 'blah' },
-        #someparam2 => { is => 'Text', valid_values => ['a','b','c'], doc => 'blah' },
+    has_optional_param => [
+        someparam1 => { is => 'Number', doc => 'blah' },
+        someparam2 => { is => 'Boolean', doc => 'blah' },
+        someparam2 => { is => 'Text', valid_values => ['a','b','c'], doc => 'blah' },
     ],
     doc => 'clinial sequencing data convergence of RNASeq, WGS and exome capture data',
 };

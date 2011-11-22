@@ -1,11 +1,12 @@
-package Genome::ProcessingProfile::PhenotypeCorrelation;
+package Genome::Model::PhenotypeCorrelation;
 
 use strict;
 use warnings;
 use Genome;
+use Genome::ProcessingProfile::PhenotypeCorrelation;
 
-class Genome::ProcessingProfile::PhenotypeCorrelation {
-    is => 'Genome::ProcessingProfile',
+class Genome::Model::PhenotypeCorrelation {
+    is => 'Genome::Model',
     doc => "genotype-phenotype correlation of a population group",
     has_param => [
         alignment_strategy => {
@@ -41,7 +42,7 @@ class Genome::ProcessingProfile::PhenotypeCorrelation {
             is => "Text",
             is_many => 0,
             is_optional => 1,
-            default_value => 'each',
+            #default_value => 'each',
             valid_values => ['each', 'trio', 'all'],
             doc => "group samples together when genotyping, using this attribute, instead of examining genomes independently (use \"all\" or \"trio\")",
         },
@@ -55,7 +56,7 @@ class Genome::ProcessingProfile::PhenotypeCorrelation {
     ],
 };
 
-sub help_synopsis_for_create {
+sub help_synopsis_for_create_profile {
     my $self = shift;
     return <<"EOS"
 
@@ -86,7 +87,7 @@ sub help_synopsis_for_create {
       --group-samples-for-genotyping-by 'trio', \
       --phenotype-analysis-strategy     'case-control'
 
-    genome propulation-group define 'Cleft-Lip-cohort-WUTGI-2011' CL001 CL002 CL003
+    genome propulation-group define 'Ceft-Lip-cohort-WUTGI-2011' CL001 CL002 CL003
 
     genome model define phenotype-correlation \
         --name                  'Cleft-Lip-v1' \
@@ -102,7 +103,7 @@ sub help_synopsis_for_create {
 EOS
 }
 
-sub help_detail_for_create {
+sub help_detail_for_create_profile {
     return <<EOS
   For a detailed explanation of how to write an alignmen strategy see:
     TBD
@@ -115,13 +116,13 @@ sub help_detail_for_create {
 EOS
 }
 
-sub help_manual_for_create {
+sub help_manual_for_create_profile {
     return <<EOS
   Manual page content for this pipeline goes here.
 EOS
 }
 
-sub __errors__ {
+sub __profile_errors__ {
     my $self = shift;
     my @errors;
     if ($self->alignment_strategy) {
@@ -254,145 +255,11 @@ sub _execute_build {
         }
     }
 
-    # we now have a VCF file 
-    #until we get annotation into the vcf, we'll also need to have access to annotation files somehow
-
     # dump pedigree data into a file
 
     # dump clinical data into a file
 
     # we'll figure out what to do about the analysis_strategy next...
-
-=cut
-
-if ($self->phenotype-analysis-strategy eq 'case-control') { #unrelated individuals, case-control -- MRSA
-
-
-# assume that the vcf is passed in as $multisample_vcf
-
-#change vcf -> maf here, which also needs annotation files
-#make $maf_file -- might need one with everything and one that doesnt have silent variants in it
-my $vcf_line = `grep -v "##" $multisample_vcf | head -n 1`;
-chomp($vcf_line);
-my ($chr, $pos, $id, $ref, $alt, $qual, $filter, $info, $format, @sample_names) = split(/\t/, $vcf_line);
-
-
-my $vcf_split_cmd = "gmt vcf vcf-split-samples --vcf-input $multisample_vcf --output-dir $single_sample_dir";
-
-my $maf_header;
-my $maf_maker_cmd = "";
-foreach $sample_id (@sample_names) {
-    my $annotation_file_per_sample = ""; #needs to get some sort of single-sample annotation file from the build or maybe there is a unified annotation file to use?
-    my $vcf_cmd = "gmt vcf convert maf vcf-2-maf --vcf-file $single_sample_dir/$sample_id.vcf --annotation-file $annotation_file_per_sample --output-file $single_sample_dir/$sample_id.maf";
-system($vcf_cmd);
-    $maf_maker_cmd .= " $single_sample_dir/$sample_id.maf";    
-}
-my $maf_sample_id = $sample_names[0];
-$maf_maker_cmd .= " | grep -v \"Hugo_Symbol\" > $single_sample_dir/All_Samples_noheader.maf";
-my $final_maf_maker_cmd = "head -n1 $single_sample_dir/$maf_sample_id.maf | cat - $single_sample_dir/All_Samples_noheader.maf > $single_sample_dir/All_Samples.maf";
-
-system($final_maf_maker_cmd);
-
-#start workflow to find significantly mutated genes in our set:
-    #get list of bams and load into tmp file named $bam_list
-    #for exome set $target_region_set_name_bedfile to be all exons including splice sites, these files are maintained by cyriac
-    #not sure how to define $output_dir but in a workflow context this just needs to be a clean folder. Perhaps in the model build context this would be ...model/build/music/bmr/
-    my $bmr_cmd = "gmt music bmr calc-covg --bam-list $bam_list --output-dir $output_dir --reference-sequence $reference_fasta --roi-file $target_region_set_name_bedfile --cmd-prefix bsub --cmd-list-file $temp_file";
-
-    #Submitted all the jobs in cmd_list_file to LSF:
-    my $submit_cmd = "bash $temp_file";
-
-#need to wait for the above to be done......
-
-    #After the parallelized commands are all done, merged the individual results using the same tool that generated the commands: - MUST KNOW ABOVE STEP IS COMPLETE
-    my $bmr_step2_cmd = "gmt music bmr calc-covg --bam-list $bam_list --output-dir $output_dir --reference-sequence $reference_fasta --roi-file $target_region_set_name_bedfile";
-
-    #Calculated mutation rates:
-    my $bmr_step3_cmd = "gmt music bmr calc-bmr --bam-list $bam_list --output-dir $output_dir --reference-sequence $reference_fasta --roi-file $target_region_set_name_bedfile --maf-file $maf_file --show-skipped"; #show skipped doesn't work in workflow context
-
-    #Ran SMG test:
-    #The smg test limits its --output-file to a --max-fdr cutoff. A full list of genes is always stored separately next to the output with prefix "_detailed".
-    my $fdr_cutoff = 0.2; #0.2 is the default -- For every gene, if the FDR for at least 2 of theses test are less than $fdr_cutoff, it is considered as an SMG.
-    my $smg_cmd = "gmt music smg --gene-mr-file $output_dir/gene_mrs --output-file $output_dir/smgs --max-fdr $fdr_cutoff";
-
-    my $smg_maf_cmd = "gmt capture restrict-maf-to-smgs --maf-file $maf_file --output-file $output_dir/smg_restricted_maf.maf --output-bed-smgs $output_dir/smg_restricted_bed.bed --smg-file $output_dir/smgs";
-
-#get some pathway information, not used now but we could technically choose to run only genes from certain pathways
-    #Ran PathScan on the KEGG DB (Larger DBs take longer):
-    #get KEGG DB FILE $kegg_db
-    my $pathscan_cmd = "gmt music path-scan --bam-list $bam_list --gene-covg-dir $output_dir/gene_covgs/ --maf-file $maf_file --output-file $output_dir/sm_pathways_kegg --pathway-file $kegg_db --bmr 8.9E-07 --min-mut-genes-per-path 2";
-
-    #Ran COSMIC-OMIM tool:
-    my $cosmic_cmd = "gmt music cosmic-omim --maf-file $maf_file --output-file $maf_file.cosmic_omim";
-
-    #Ran Pfam tool:
-    my $pfam_cmd = "gmt music pfam --maf-file $maf_file --output-file $maf_file.pfam";
-
-    #Ran Proximity tool:
-    my $proximity_cmd = "gmt music proximity --maf-file $maf_file --reference-sequence $reference_fasta --output-file $output_dir/variant_proximity";
-
-    #Ran mutation-relation:
-    my $permutations = 1000; #the default is 100, but cyriac and yanwen used either 1000 or 10000. Not sure of the reasoning behind those choices.
-    my $mutrel_cmd = "gmt music mutation-relation --bam-list $bam_list --maf-file $maf_file --output-file $output_dir/mutation_relations.csv --permutations $permutations --gene-list $output_dir/smgs"; #number of permutations can be a variable or something
-
-#instead of pathways, use smg test to limit maf file input into mutation relations $maf_file_smg -- no script for this step yet
-#The FDR filtered SMG list can be used as input to "gmt music mutation-relation" thru --gene-list, so it limits its tests to SMGs only. No need to make a new MAF. Something similar could be implemented for clinical-correlation.
-
-#Ran clinical-correlation:
-#need clinical data file $clinical_data
-#example: /gscmnt/sata809/info/medseq/MRSA/analysis/Sureselect_49_Exomes_Germline/music/input/sample_phenotypes2.csv
-#this is not the logistic regression yet, found out that yyou and ckandoth did not put logit into music, but just into the R package that music runs
-    my $clin_corr = "gmt music clinical-correlation --genetic-data-type gene --bam-list $bam_list --maf-file $output_dir/smg_restricted_maf.maf --output-file $output_dir/clin_corr_result --categorical-clinical-data-file $clinical_data";
-
-#instead of clinical correlation, we can call these stats directly
-
-    #break up clinical data into two files, one for explanatory variable and one for covariates
-    #sample_infection.csv = $expl_file
-    #Sample_Name	Levels of Infection Invasiveness (0=control, 1=case)
-    #H_MRS-6305-1025125	0
-    #H_MRS-6401-1025123	1
-
-    #sample_phenotypes.csv = $pheno_file
-    #Sample_Name	Age at Time of Infection (years)	Race (1 white 2 black 3 asian)	Gender (1 male 2 female)
-    #H_MRS-6305-1025125	10	1	1
-    #H_MRS-6401-1025123	16	1	1
-
-    #make smg bed file STILL UNDONE
-
-
-    my $variant_matrix_cmd = "gmt vcf vcf-to-variant-matrix --output-file $output_dir/variant_matrix.txt --vcf-file $multisample_vcf --bed-roi-file $output_dir/smg_restricted_bed.bed";
-
-    #make .R file example
-        ## Build temp file for extra positions to highlight ##
-        my ($tfh,$temp_path) = Genome::Sys->create_temp_file;
-        unless($tfh) {
-            $self->error_message("Unable to create temporary file $!");
-            die;
-        }
-        $temp_path =~ s/\:/\\\:/g;
-        my $R_command = <<"_END_OF_R_";
-    options(error=recover)
-    source("stat.lib", chdir=TRUE)
-    #this should work, but I havent tested using the .csv out of mut rel -- wschierd
-    mut.file="$output_dir/variant_matrix.txt" 
-    inf.file="$expl_file";
-    pheno.file="$pheno_file";
-    output.file="$output_dir/logit_out_cor.csv";
-    #to do logistic regression, might need /gscuser/yyou/git/genome/lib/perl/Genome/Model/Tools/Music/stat.lib.R -- talk to Cyriac here
-    cor2test(y=inf.file, x=mut.file, cov=pheno.file, outf=output.file, method="logit", sep="\t");
-    _END_OF_R_
-        print $tfh "$R_command\n";
-
-        my $cmd = "R --vanilla --slave \< $temp_path";
-        my $return = Genome::Sys->shellcmd(
-            cmd => "$cmd",
-        );
-        unless($return) { 
-            $self->error_message("Failed to execute: Returned $return");
-            die $self->error_message;
-        }
-
-=cut
 
     return 1;
 }
