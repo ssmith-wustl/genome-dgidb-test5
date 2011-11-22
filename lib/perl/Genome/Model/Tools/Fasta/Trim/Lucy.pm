@@ -9,6 +9,8 @@ use Data::Dumper 'Dumper';
 require File::Copy;
 use File::Temp;
 
+use Bio::Seq;
+
 class Genome::Model::Tools::Fasta::Trim::Lucy {
     is  => 'Genome::Model::Tools::Fasta::Trim',
     has => [	 

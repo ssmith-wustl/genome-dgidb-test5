@@ -8,7 +8,6 @@ use warnings;
 use Genome;
 use File::Copy;
 use Data::Dumper;
-use Bio::SeqIO;
 
 class Genome::Model::Event::Build::ViromeScreen::PrepareInstrumentData {
     is => 'Genome::Model::Event',

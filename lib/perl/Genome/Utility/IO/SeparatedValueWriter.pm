@@ -1,9 +1,5 @@
 package Genome::Utility::IO::SeparatedValueWriter;
 
-#:eclark 11/17/2009 Code review.
-
-# use statements should be cleaned up, Genome is not used here.
-
 use strict;
 use warnings;
 
@@ -243,5 +239,3 @@ Eddie Belter <ebelter@watson.wustl.edu>
 
 =cut
 
-#$HeadURL$
-#$Id$

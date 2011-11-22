@@ -43,6 +43,32 @@ class Genome::ProcessingProfile::SomaticValidation {
         output_plot => {
             is => 'Boolean', doc => 'include output plot in final results',
         },
+
+        #RefCov parameters
+        refcov_wingspan_values => {
+            is => 'Text',
+            doc => 'Comma-delimited list of wingspans to use',
+        },
+        refcov_minimum_depths => {
+            is => 'Text',
+            doc => 'Comma-delimited list of depth levels to use',
+        },
+        refcov_minimum_base_quality => {
+            is => 'Text',
+            doc => 'Minimum base quality for consideration',
+        },
+        refcov_minimum_mapping_quality => {
+            is => 'Text',
+            doc => 'Minimum mapping quality for consideration',
+        },
+        refcov_merge_roi_regions => {
+            is => 'Boolean',
+            doc => 'Merge contiguous regions in the ROI set before analysis',
+        },
+        refcov_use_short_names => {
+            is => 'Boolean',
+            doc => 'Replace names in the BED file with short pre-generated names',
+        },
     ],
 };
 
@@ -73,13 +99,6 @@ sub _map_workflow_inputs {
         die $self->error_message;
     }
 
-    #TODO Make optional, support other types
-    my ($snv_variant_list) = glob($model->snv_variant_list->output_dir . '/snvs.hq.bed');
-    unless($snv_variant_list) {
-        $self->error_message('Failed to get a snv variant list for this build!');
-        die $self->error_message;
-    }
-
     my $data_directory = $build->data_directory;
     unless ($data_directory) {
         $self->error_message("Failed to get a data_directory for this build!");
@@ -99,7 +118,8 @@ sub _map_workflow_inputs {
 
     push @inputs,
         build_id => $build->id,
-        snv_variant_list => $snv_variant_list,
+        tumor_mode => 'tumor',
+        normal_mode => 'normal',
         ;
 
     my %default_filenames = $self->default_filenames;
@@ -123,7 +143,6 @@ sub default_filenames{
 
     my %default_filenames = (
         targeted_snv_validation => 'targeted.snvs.validation',
-        snv_list_file => 'variant_list.snvs', 
     );
 
     return %default_filenames;

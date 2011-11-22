@@ -8,6 +8,7 @@ use Genome;
 use File::Temp;
 use List::Util qw/ max min /;
 use List::MoreUtils qw/ uniq /;
+use Bio::Seq;
 use Bio::Tools::CodonTable;
 use DateTime;
 use Carp;
@@ -54,7 +55,7 @@ UR::Object::Type->define(
         variant_priorities           => {  },
         transcript_error_priorities  => {  },
     ],
-    doc => q(Do proper intersections between variations and transcript structures by considering both entities' start and stop positions rather than just the start position of the variation),
+    doc => q(Do proper intersections between variations and transcript structures by considering both entities' start and stop positions rather than just the start position of the variation.),
 
 );
 
@@ -166,12 +167,8 @@ sub reverse_complement {
     my ($self, $seq) = @_;
     return unless defined $seq;
 
-    my $s = Bio::Seq->new(-display_id => "junk", -seq => $seq);
-    my $rev_com = $s->revcom->seq;
-    unless ($rev_com) {
-        $self->error_message("Could not create reverse complement for sequence");
-        confess;
-    }
+    $seq =~ tr/acgtrymkswhbvdnxACGTRYMKSWHBVDNX/tgcayrkmswdvbhnxTGCAYRKMSWDVBHNX/;
+    my $rev_com = CORE::reverse $seq;
 
     return $rev_com;
 }
@@ -317,6 +314,17 @@ sub _create_iterator_for_variant_intersection {
 # Corresponds to none filter in Genome::Model::Tools::Annotate::TranscriptVariants
 sub transcripts {
     my ($self, %variant) = @_;
+
+    if (!defined $self->{_cached_chromosome} or $self->{_cached_chromosome} ne $variant{chromosome_name}) {
+        Genome::InterproResult->unload();
+        $self->transcript_structure_class_name->unload();
+
+        $self->{_cached_chromosome} = $variant{chromosome_name};
+        Genome::InterproResult->get(
+            data_directory => $self->data_directory,
+            chrom_name => $variant{chromosome_name},
+        );
+    }
 
     my $variant_start = $variant{'start'};
     my $variant_stop = $variant{'stop'};
@@ -987,16 +995,16 @@ sub _protein_domain {
     return 'NULL', 'NULL' unless defined $structure and defined $variant;
 
     my @all_domains = Genome::InterproResult->get(
-            transcript_name => $structure->transcript_transcript_name,
-            data_directory => $structure->data_directory,
-            chrom_name => $variant->{chromosome_name},
-            );
+        transcript_name => $structure->transcript_transcript_name,
+        data_directory => $structure->data_directory,
+        chrom_name => $variant->{chromosome_name},
+        );
     return 'NULL', 'NULL' unless @all_domains;
 
     my @variant_domains;
     my @all_domain_names;
     for my $domain (@all_domains) {
-         if ($protein_position >= $domain->{start} and $protein_position <= $domain->{stop}) {
+        if ($protein_position >= $domain->{start} and $protein_position <= $domain->{stop}) {
             push @variant_domains, $domain->{name};
         }
         push @all_domain_names, $domain->{name};

@@ -5,6 +5,8 @@ use warnings;
 
 use Genome;
 
+use FASTAParse;
+
 class Genome::Model::Tools::RepeatMasker::GenerateTable {
     is => 'Genome::Model::Tools::RepeatMasker::TableI',
     has => [

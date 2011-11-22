@@ -20,7 +20,7 @@ class Genome::Model::Build::ReferenceAlignment {
     subclassify_by => 'subclass_name',
     has => [
         subclass_name => { 
-            is => 'String', len => 255, is_mutable => 0, column_name => 'SUBCLASS_NAME',
+            is => 'String', len => 255, is_mutable => 0, 
             calculate_from => 'model_id',
             calculate => sub {
                 my($model_id) = @_;
@@ -1145,8 +1145,23 @@ sub reference_coverage_directory {
 
 ####BEGIN REGION OF INTEREST SECTION####
 
+sub reference_coverage_result {
+    my $self = shift;
+
+    my @used = Genome::SoftwareResult::User->get(user => $self);
+    my $refcov_result = Genome::InstrumentData::AlignmentResult::Merged::CoverageStats->get([map($_->software_result_id, @used)]); #will crash if multiple
+
+    return $refcov_result;
+}
+
 sub alignment_summary_file {
-    my ($self,$wingspan) = @_;
+    my $self = shift;
+    my ($wingspan) = @_;
+
+    if(my $r = $self->reference_coverage_result) {
+        return $r->alignment_summary_file(@_);
+    }
+
     unless (defined($wingspan)) {
         die('Must provide wingspan_value to method alignment_summary_file in '. __PACKAGE__);
     }
@@ -1162,6 +1177,10 @@ sub alignment_summary_file {
 
 sub alignment_summary_hash_ref {
     my $self = shift;
+
+    if(my $r = $self->reference_coverage_result) {
+        return $r->alignment_summary_hash_ref(@_);
+    }
 
     unless ($self->{_alignment_summary_hash_ref}) {
         my $wingspan_array_ref = $self->wingspan_values_array_ref;
@@ -1232,13 +1251,24 @@ sub alignment_summary_hash_ref {
 }
 
 sub coverage_stats_directory_path {
-    my ($self,$wingspan) = @_;
+    my $self = shift;
+    my ($wingspan) = @_;
+
+    if(my $r = $self->reference_coverage_result) {
+        return $r->coverage_stats_directory_path(@_);
+    }
+
     return $self->reference_coverage_directory .'/wingspan_'. $wingspan;
 }
 
 sub stats_file {
     my $self = shift;
-    my $wingspan = shift;
+    my ($wingspan) = @_;
+
+    if(my $r = $self->reference_coverage_result) {
+        return $r->stats_file(@_);
+    }
+
     unless (defined($wingspan)) {
         die('Must provide wingspan_value to method coverage_stats_file in '. __PACKAGE__);
     }
@@ -1256,6 +1286,11 @@ sub stats_file {
 
 sub coverage_stats_hash_ref {
     my $self = shift;
+
+    if(my $r = $self->reference_coverage_result) {
+        return $r->coverage_stats_hash_ref(@_);
+    }
+
     unless ($self->{_coverage_stats_hash_ref}) {
         my @headers = qw/name pc_covered length covered_bp uncovered_bp mean_depth stdev_mean_depth median_depth gaps mean_gap_length stdev_gap_length median_gap_length minimum_depth minimum_depth_discarded_bp pc_minimum_depth_discarded_bp/;
 
@@ -1285,7 +1320,13 @@ sub coverage_stats_hash_ref {
 }
 
 sub coverage_stats_summary_file {
-    my ($self,$wingspan) = @_;
+    my $self = shift;
+    my ($wingspan) = @_;
+
+    if(my $r = $self->reference_coverage_result) {
+        return $r->coverage_stats_summary_file(@_);
+    }
+
     unless (defined($wingspan)) {
         die('Must provide wingspan_value to method coverage_stats_file in '. __PACKAGE__);
     }
@@ -1303,6 +1344,11 @@ sub coverage_stats_summary_file {
 
 sub coverage_stats_summary_hash_ref {
     my $self = shift;
+
+    if(my $r = $self->reference_coverage_result) {
+        return $r->coverage_stats_summary_hash_ref(@_);
+    }
+
     unless ($self->{_coverage_stats_summary_hash_ref}) {
         my %stats_summary;
         my $min_depth_array_ref = $self->minimum_depths_array_ref;
@@ -1366,10 +1412,29 @@ sub region_of_interest_set_bed_file {
     unless($reference->is_compatible_with($roi_set->reference)) {
         $alt_reference = $reference;
     }
-
+    my $merge_status;
+    if (defined($self->model->merge_roi_set)) {
+        $merge_status = $self->model->merge_roi_set;
+    } else {
+        # This is to retain backward compatibility, previously all BED files were merged
+        $merge_status = 1;
+    }
+    my $use_short_names;
+    if (defined($self->model->short_roi_names)) {
+        $use_short_names = $self->model->short_roi_names;
+    } else {
+        # This is to retain backward compatibility, previously all BED files had short roi names(like r###)
+        $use_short_names = 1;
+    }
     my $bed_file_path = $self->reference_coverage_directory .'/'. $roi_set->id .'.bed';
     unless (-e $bed_file_path) {
-        my $dump_command = Genome::FeatureList::Command::DumpMergedList->create(feature_list => $roi_set, output_path => $bed_file_path, alternate_reference => $alt_reference);
+        my $dump_command = Genome::FeatureList::Command::DumpMergedList->create(
+            feature_list => $roi_set,
+            output_path => $bed_file_path,
+            alternate_reference => $alt_reference,
+            merge => $merge_status,
+            short_name => $use_short_names,
+        );
         unless ($dump_command->execute) {
             die('Failed to print bed file to path '. $bed_file_path);
         }

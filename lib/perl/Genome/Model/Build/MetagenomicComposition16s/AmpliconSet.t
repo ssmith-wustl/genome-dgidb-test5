@@ -7,20 +7,24 @@ use above 'Genome';
 
 use Test::More;
 
-my $class = 'Genome::Model::Build::MetagenomicComposition16s::AmpliconSet';
-use_ok($class);
+use_ok('Genome::Model::Build::MetagenomicComposition16s::AmpliconSet') or die;
 
-my $amplicon_set = $class->create(
+my $test_dir = '/gsc/var/cache/testsuite/data/Genome-Model/MetagenomicComposition16s454/build';
+my $amplicon_set = Genome::Model::Build::MetagenomicComposition16s::AmpliconSet->create(
     name => '',
-    amplicon_iterator => sub{ return 1; },
-    classification_dir => 'dir',
-    classification_file => 'file',
-    processed_fasta_file => 'file',
-    oriented_fasta_file => 'file',
+    classification_dir => $test_dir.'/classification',
+    classification_file => $test_dir.'/classification/H_GV-933124G-S.MOCK.V1_V3.rdp2-1',
+    processed_fasta_file => $test_dir.'/fasta/H_GV-933124G-S.MOCK.V1_V3.processed.fasta',
+    processed_qual_file => $test_dir.'/fasta/H_GV-933124G-S.MOCK.V1_V3.processed.fasta.qual',
+    oriented_fasta_file => $test_dir.'/fasta/H_GV-933124G-S.MOCK.V1_V3.oriented.fasta',
 );
 ok($amplicon_set, 'Created amplicon set');
 is($amplicon_set->name, '', 'Set name');
-ok($amplicon_set->next_amplicon, 'Next amplicon');
+my $amplicon = $amplicon_set->next_amplicon;
+ok($amplicon, 'Next amplicon');
+is($amplicon->{name}, 'FZ0V7MM01A01AQ', 'Amplicon name');
+ok($amplicon->{seq}, 'Amplicon seq');
+ok($amplicon->{classification}, 'Amplicon classification');
 
 done_testing();
 exit;

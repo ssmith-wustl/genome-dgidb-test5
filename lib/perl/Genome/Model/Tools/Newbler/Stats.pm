@@ -6,6 +6,8 @@ use warnings;
 use Genome;
 use Data::Dumper;
 
+use Bio::SeqIO;
+
 class Genome::Model::Tools::Newbler::Stats {
     is => 'Genome::Model::Tools::Newbler',
     has => [

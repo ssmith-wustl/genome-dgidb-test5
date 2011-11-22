@@ -46,9 +46,14 @@ class Genome::Model::SomaticValidation {
             via => 'inputs', to => 'value', where => [ name => 'target_region_set' ],
             is_mutable => 1,
         },
+        region_of_interest_set => {
+            is => 'Genome::FeatureList',
+            via => 'inputs', to => 'value', where => [ name => 'region_of_interest_set' ],
+            is_mutable => 1,
+        },
         design_set => {
             is => 'Genome::FeatureList',
-            via => 'inputs', to => 'value', where => [ name => 'desgin_set' ],
+            via => 'inputs', to => 'value', where => [ name => 'design_set' ],
             is_mutable => 1,
         },
         tumor_sample => {
@@ -75,10 +80,10 @@ sub _validate_required_for_start_properties {
     my $self = shift;
 
     my @missing_required_properties;
-    push @missing_required_properties, '*_variant_list' unless ($self->snv_variant_list || $self->indel_variant_list || $self->sv_variant_list);
+    #push @missing_required_properties, '*_variant_list' unless ($self->snv_variant_list || $self->indel_variant_list || $self->sv_variant_list);
     push @missing_required_properties, 'reference_sequence_build' unless ($self->reference_sequence_build);
     push @missing_required_properties, 'tumor_sample' unless ($self->tumor_sample);
-    push @missing_required_properties, 'normal_sample' unless ($self->normal_sample);
+#    push @missing_required_properties, 'normal_sample' unless ($self->normal_sample);
     push @missing_required_properties, 'instrument_data' unless (scalar @{[ $self->instrument_data ]} );
 
     my $tag;
@@ -96,7 +101,12 @@ sub _validate_required_for_start_properties {
 #limit compatible instrument data check to these samples
 sub get_all_possible_samples {
     my $self = shift;
-    return ($self->tumor_sample, $self->normal_sample);
+
+    my @result;
+    push @result, $self->tumor_sample if $self->tumor_sample;
+    push @result, $self->normal_sample if $self->normal_sample;
+
+    return @result;
 }
 
 1;

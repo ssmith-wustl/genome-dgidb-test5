@@ -8,7 +8,7 @@ use File::Basename;
 use Sys::Hostname;
 use Genome::Utility::AsyncFileSystem qw(on_each_line);
 
-my $PICARD_DEFAULT = '1.22';
+my $PICARD_DEFAULT = '1.46';
 my $DEFAULT_MEMORY = 2;
 my $DEFAULT_PERMGEN_SIZE = 64; #Mbytes
 my $DEFAULT_VALIDATION_STRINGENCY = 'SILENT';
@@ -265,6 +265,39 @@ MESSAGE
 
     return $cv->recv;
 }
+
+
+sub parse_metrics_file_into_histogram_hashref {
+    my ($class,$metrics_file) = @_;
+    my $as_fh = Genome::Sys->open_file_for_reading($metrics_file);
+    my @headers;
+    my %data;
+    while (my $line = $as_fh->getline) {
+        chomp($line);
+        if ($line =~ /^## HISTOGRAM/) {
+            my $next_line = $as_fh->getline;
+            chomp($next_line);
+            @headers = split("\t",$next_line);
+            next;
+        }
+        if (@headers) {
+            if ($line =~ /^\s+$/) {
+                last;
+            } else {
+                my $category;
+                my @values = split("\t",$line);
+                $category = $values[0];
+                for (my $i = 0; $i < scalar(@values); $i++) {
+                    my $header = $headers[$i];
+                    my $value = $values[$i];
+                    $data{$category}{$header} = $value;
+                }
+            }
+        }
+    }
+    return \%data;
+}
+
 
 1;
 

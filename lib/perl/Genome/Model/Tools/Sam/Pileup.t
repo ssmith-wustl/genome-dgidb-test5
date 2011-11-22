@@ -26,10 +26,11 @@ my $tmp_dir  = File::Temp::tempdir(
 );
 
 my $bam_file = $data_dir .'/test.bam';
-my $example_output_file = $data_dir .'/test.pileup.gz';
+my $example_output_file = $data_dir .'/expected/test.pileup.gz';
 
 my $output_file = $tmp_dir."/test.pileup.gz";
 my $refseq_path = "/gscmnt/gc4096/info/model_data/2741951221/build101947881/all_sequences.fa";
+my $region_file = $data_dir."/test.region.gz";
 
 
 my $pileup_cmd = Genome::Model::Tools::Sam::Pileup->create(
@@ -38,10 +39,10 @@ my $pileup_cmd = Genome::Model::Tools::Sam::Pileup->create(
     use_version => "r599",
     reference_sequence_path => $refseq_path,
     use_bgzip => 1,
+    region_file => $region_file,
 );
 
 my $result = $pileup_cmd->execute;
-$DB::single=1;
 
 ok($result,"Tool exited properly.");
 

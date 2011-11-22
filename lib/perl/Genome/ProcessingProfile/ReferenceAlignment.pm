@@ -334,7 +334,7 @@ sub params_for_merged_alignment {
             my @alignment_events = grep {$_->instrument_data_id == $input->value->id} @align_reads_events;
         
             #if multiple events, this is a chunked alignment
-            if (@alignment_events > 1) {
+            if (@alignment_events > 1 or (@alignment_events == 1 and defined $alignment_events[0]->instrument_data_segment_id)) {
                 for my $alignment_event (@alignment_events) {
                     push @$segment_parameters, join(':', $alignment_event->instrument_data_id, $alignment_event->instrument_data_segment_id, $alignment_event->instrument_data_segment_type);
                 }
@@ -590,7 +590,9 @@ sub alignment_objects {
     
     for my $instr (@segmentable_data) {
         my @segments = $instr->get_segments();
-        if (@segments > 1 && $self->read_aligner_name ne 'imported') {
+
+        # take imported instrument data and split them by read group
+        if (@segments > 0 && $self->read_aligner_name ne 'imported' && $instr->isa('Genome::InstrumentData::Imported')) {
             for my $seg (@segments) {
                 push @instrument_data_output, {object=>$instr, segment=>$seg};
             }

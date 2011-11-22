@@ -7,6 +7,8 @@ use above "Genome";
 use Test::More tests => 12;
 use Genome::Utility::MetagenomicClassifier::ChimeraClassifier;
 
+use Bio::Seq;
+
 my $cc_broad = Genome::Utility::MetagenomicClassifier::ChimeraClassifier->create(
         training_set => 'broad',
     );

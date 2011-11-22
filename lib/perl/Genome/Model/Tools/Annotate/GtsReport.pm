@@ -545,6 +545,8 @@ sub parse_gts {
 sub reverse_complement_allele {
     my ($allele_in) = @_;
 
+    use Bio::Seq;
+
     unless ($allele_in =~ /[ACGT]/) { return ($allele_in); }
     my $seq_1 = new Bio::Seq(-seq => $allele_in);
     my $revseq_1 = $seq_1->revcom();

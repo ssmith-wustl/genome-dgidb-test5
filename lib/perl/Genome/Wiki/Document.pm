@@ -14,16 +14,16 @@ use Carp;
 # __myProperties
 
 class Genome::Wiki::Document {
-    is  => 'UR::Value',
+    is  => ['UR::Value','Genome::Searchable'],
     id_by => [
-        title => { is => 'Text', is_transient => 1 },
+        title => { is => 'Text' },
     ],
     doc => 'represents a page in the wiki',
     has => {
-        revision_id   => { is => 'Number', is_transient => 1 },
-        content       => { is => 'Text', is_transient => 1 },
-        timestamp     => { is => 'Text', is_transient => 1 },
-        user          => { is => 'Text', is_transient => 1 },
+        revision_id   => { is => 'Number' },
+        content       => { is => 'Text' },
+        timestamp     => { is => 'Text' },
+        user          => { is => 'Text' },
         environment => {
             calculate => q{
                 default_value => Genome::Config::dev_mode() ? 'dev' : 'prod'

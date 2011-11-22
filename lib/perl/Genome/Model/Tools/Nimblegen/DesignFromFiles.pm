@@ -104,9 +104,28 @@ sub execute {
   $inFh->close;
 
   # Let the user know if a type of variant wasn't listed. Can also indicate bad input formatting
-  ( scalar @{$files{snvs}} > 0 ) or warn "No SNV files listed in input. Continuing anyway...";
-  ( scalar @{$files{indels}} > 0 ) or warn "No Indel files listed in input. Continuing anyway...";
-  ( scalar @{$files{svs}} > 0 ) or warn "No SV files listed in input. Continuing anyway...";
+  if (exists($files{"snvs"})){
+      unless(scalar @{$files{"snvs"}} > 0 ){
+          warn "No SNV files listed in input. Continuing anyway...";
+      }
+  } else {
+      warn "No SNV files listed in input. Continuing anyway...";
+  }
+  if (exists($files{"indels"})){
+      unless(scalar @{$files{"indels"}} > 0 ){
+          warn "No INDEL files listed in input. Continuing anyway...";
+      }
+  } else {
+      warn "No INDEL files listed in input. Continuing anyway...";
+  }
+  if (exists($files{"svs"})){
+      unless(scalar @{$files{"svs"}} > 0 ){
+          warn "No SV files listed in input. Continuing anyway...";
+      }
+  } else {
+      warn "No SV files listed in input. Continuing anyway...";
+  }
+
 
   # Quit if one of the files don't exist
   ( -e $_ ) or die "File doesn't exist: $_" foreach( @{$files{snvs}}, @{$files{indels}}, @{$files{svs}} );
@@ -161,7 +180,7 @@ sub execute {
           ( defined $valid_chrs{$chr1} && defined $valid_chrs{$chr2} ) or die "Invalid chrom name in file:\n$filepath!\nIn line:\n\n$line\n";
           ++$var_cnt{svs} if( defined $include_chrs{$chr1} && defined $include_chrs{$chr2} );
         }
-        elsif( $muttype eq 'svs' && $line =~ m/^\S+\t\d+\t\d+(\+|\-)\t\S+\t\d+\t\d+(\+|\-)\t(INV|INS|DEL|ITX|CTX)/ ) # SquareDancer output
+        elsif( $muttype eq 'svs' && $line =~ m/^\S+\t\d+\t\d+(\+|\-)\S*\t\S+\t\d+\t\d+(\+|\-)\t(INV|INS|DEL|ITX|CTX)/ ) # SquareDancer output
         {
           my ( $chr1, undef, undef, $chr2 ) = split( /\t/, $line );
           $chr1 =~ s/chr//i; $chr2 =~ s/chr//i;

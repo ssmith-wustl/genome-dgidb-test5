@@ -6,7 +6,7 @@ use warnings;
 use above 'Genome';
 
 use Data::Dumper 'Dumper';
-use Test::More 'no_plan';
+use Test::More;
 
 use_ok('Genome::Utility::Text') or die;
 
@@ -55,5 +55,5 @@ is(Genome::Utility::Text::capitalize_words($uncap_string1), $cap_string, 'capita
 is(Genome::Utility::Text::capitalize_words($uncap_string2, '-'), $cap_string, 'capitalize words');
 ok(!eval{Genome::Utility::Text::capitalize_words(undef)}, 'failed as expected - capitalize w/o string words');
 
-exit;
+done_testing();
 

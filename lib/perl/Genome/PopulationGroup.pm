@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 
 class Genome::PopulationGroup {
-    is => 'Genome::Subject',
+    is => ['Genome::Subject','Genome::Searchable'],
     has => [
         subject_type => { 
             is_constant => 1, 
@@ -22,7 +22,7 @@ class Genome::PopulationGroup {
             doc => 'MD5 hash created from member IDs, useful for finding population groups by membership',
         },
     ],
-    has_many => [
+    has_many_optional => [
         member_ids => {
             is => 'Number',
             via => 'attributes',

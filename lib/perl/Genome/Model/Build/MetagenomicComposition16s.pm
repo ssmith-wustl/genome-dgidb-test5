@@ -14,25 +14,26 @@ class Genome::Model::Build::MetagenomicComposition16s {
     is_abstract => 1,
     subclassify_by => 'subclass_name',
     has => [
-        subclass_name => { is => 'String', len => 255, is_mutable => 0, column_name => 'SUBCLASS_NAME',
-                           calculate_from => ['model_id'],
-                           calculate => sub {
-                                            my($model_id) = @_;
-                                            return unless $model_id;
-                                            my $model = Genome::Model->get($model_id);
-                                            Carp::croak("Can't find Genome::Model with ID $model_id while resolving subclass for Build") unless $model;
-                                            my $seq_platform = $model->sequencing_platform;
-                                            Carp::croak("Can't subclass Build: Genome::Model id $model_id has no sequencing_platform") unless $seq_platform;
-                                            return return __PACKAGE__ . '::' . Genome::Utility::Text::string_to_camel_case($seq_platform);
-                                          },
-                         },
+        subclass_name => { 
+            is => 'String', len => 255, is_mutable => 0,
+            calculate_from => ['model_id'],
+            calculate => sub {
+                my($model_id) = @_;
+                return unless $model_id;
+                my $model = Genome::Model->get($model_id);
+                Carp::croak("Can't find Genome::Model with ID $model_id while resolving subclass for Build") unless $model;
+                my $seq_platform = $model->sequencing_platform;
+                Carp::croak("Can't subclass Build: Genome::Model id $model_id has no sequencing_platform") unless $seq_platform;
+                return return __PACKAGE__ . '::' . Genome::Utility::Text::string_to_camel_case($seq_platform);
+            },
+        },
         map( { 
                 $_ => { via => 'processing_profile' } 
             } Genome::ProcessingProfile::MetagenomicComposition16s->params_for_class 
         ),
         # Metrics
         amplicons_attempted => {
-            is => 'Integer',
+            is => 'Number',
             via => 'metrics',
             is_mutable => 1,
             where => [ name => 'amplicons attempted' ],
@@ -40,7 +41,7 @@ class Genome::Model::Build::MetagenomicComposition16s {
             doc => 'Number of amplicons that were attempted in this build.'
         },
         amplicons_processed => {
-            is => 'Integer',
+            is => 'Number',
             via => 'metrics',
             is_mutable => 1,
             where => [ name => 'amplicons processed' ],
@@ -48,15 +49,15 @@ class Genome::Model::Build::MetagenomicComposition16s {
             doc => 'Number of amplicons that were processed in this build.'
         },
         amplicons_processed_success => {
-            is => 'Integer',
+            is => 'Number',
             via => 'metrics',
             is_mutable => 1,
             where => [ name => 'amplicons processed success' ],
             to => 'value',
-            doc => 'Number of amplicons that were successfully processed in this build.'
+            doc => 'Ratio of amplicons that were successfully processed in this build.'
         },
         amplicons_classified => {
-            is => 'Integer',
+            is => 'Number',
             via => 'metrics',
             is_mutable => 1,
             where => [ name => 'amplicons classified' ],
@@ -69,18 +70,34 @@ class Genome::Model::Build::MetagenomicComposition16s {
             is_mutable => 1,
             where => [ name => 'amplicons classified success' ],
             to => 'value',
-            doc => 'Number of amplicons that were successfully classified in this build.'
+            doc => 'Ratio of amplicons that were successfully classified in this build.'
         },
         amplicons_classification_error => {
-            is => 'Integer',
+            is => 'Number',
             via => 'metrics',
             is_mutable => 1,
             where => [ name => 'amplicons classification error' ],
             to => 'value',
             doc => 'Number of amplicons that had a classification error, and did not classify.'
         },
+        amplicons_chimeric => {
+            is => 'Number',
+            via => 'metrics',
+            is_mutable => 1,
+            where => [ name => 'amplicons chimeric' ],
+            to => 'value',
+            doc => 'Number of amplicons that were chimeric.'
+        },
+        amplicons_chimeric_percent => {
+            is => 'Number',
+            via => 'metrics',
+            is_mutable => 1,
+            where => [ name => 'amplicons chimeric percent' ],
+            to => 'value',
+            doc => 'Ratio of amplicons that were chimeric.'
+        },
         reads_attempted => {
-            is => 'Integer',
+            is => 'Number',
             via => 'metrics',
             is_mutable => 1,
             where => [ name => 'reads attempted' ],
@@ -88,7 +105,7 @@ class Genome::Model::Build::MetagenomicComposition16s {
             doc => 'Number of reads attempted.'
         },
         reads_processed => {
-            is => 'Integer',
+            is => 'Number',
             via => 'metrics',
             is_mutable => 1,
             where => [ name => 'reads processed' ],
@@ -101,7 +118,7 @@ class Genome::Model::Build::MetagenomicComposition16s {
             is_mutable => 1,
             where => [ name => 'reads processed success' ],
             to => 'value',
-            doc => 'Percentage of reads successfully processed into amplicon sequence.'
+            doc => 'Ratio of reads successfully processed into amplicon sequence.'
         },
     ],
 };
@@ -413,7 +430,7 @@ sub amplicon_sets {
     for my $set_name ( $self->amplicon_set_names ) {
         my $amplicon_set;
         if ( $self->sequencing_platform eq 'sanger' ) { #TODO - make it so it auto recognizes sanger
-            my $cmd = Genome::Model::MetagenomicComposition16s::Command::ProcessSangerInstrumentData->create( build_id => $self->id );
+            my $cmd = Genome::Model::MetagenomicComposition16s::Command::ProcessSangerInstrumentData->create(build => $self);
             $amplicon_set = $cmd->amplicon_set_for_name( $set_name );
         } else {
             $amplicon_set = $self->amplicon_set_for_name($set_name); #call command for sanger
@@ -445,59 +462,7 @@ sub amplicon_set_for_name {
         oriented_qual_file => $self->oriented_qual_file_for_set_name( $set_name ),
     );
     
-    my $amplicon_iterator = $self->_amplicon_iterator_for_name($set_name);
-    $params{amplicon_iterator} = $amplicon_iterator if $amplicon_iterator;
-
     return Genome::Model::Build::MetagenomicComposition16s::AmpliconSet->create(%params);
-}
-
-sub _amplicon_iterator_for_name { # 454 and solexa for now
-    my ($self, $set_name) = @_;
-
-    my $reader = $self->fasta_and_qual_reader_for_type_and_set_name('processed', $set_name);
-    return unless $reader; # returns undef if no file exists OK or dies w/ error 
-
-    my $classification_file = $self->classification_file_for_set_name($set_name);
-    my ($classification_io, $classification_line);
-    if ( -s $classification_file ) {
-        $classification_io = eval{ Genome::Sys->open_file_for_reading($classification_file); };
-        if ( not $classification_io ) {
-            $self->error_message('Failed to open classification file: '.$classification_file);
-            return;
-        }
-        $classification_line = $classification_io->getline;
-        chomp $classification_line;
-    }
-
-    my $amplicon_iterator = sub{
-        my $seq = $reader->read;
-        return unless $seq;  #<-- HERER
-
-        my %amplicon = (
-            name => $seq->{id},
-            reads => [ $seq->{id} ],
-            reads_processed => 1,
-            seq => $seq,
-        );
-
-        return \%amplicon if not $classification_line;
-
-        my @classification = split(';', $classification_line); # 0 => id | 1 => ori
-        if ( not defined $classification[0] ) {
-            Carp::confess('Malformed classification line: '.$classification_line);
-        }
-        if ( $seq->{id} ne $classification[0] ) {
-            return \%amplicon;
-        }
-
-        $classification_line = $classification_io->getline;
-        chomp $classification_line if $classification_line;
-
-        $amplicon{classification} = \@classification;
-        return \%amplicon;
-    };
-
-    return $amplicon_iterator;
 }
 
 sub get_writer_for_set_name {
@@ -517,15 +482,10 @@ sub get_writer_for_set_name {
 
 #< Dirs >#
 sub sub_dirs {
-    return (qw| classification fasta reports |), $_[0]->_sub_dirs;
-}
-
-sub _sub_dirs {
     my $self = shift;
-    if ( $self->sequencing_platform eq 'sanger' ) {
-        return (qw/ chromat_dir edit_dir /);
-    }
-    return;
+    my @sub_dirs = (qw| classification fasta reports |);
+    push @sub_dirs, (qw/ chromat_dir edit_dir /) if $self->sequencing_platform eq 'sanger';
+    return @sub_dirs;
 }
 
 sub classification_dir {
@@ -736,7 +696,7 @@ sub prepare_instrument_data {
     #call a separate command for sanger
     if ( $self->sequencing_platform eq 'sanger' ) {
         my $cmd = Genome::Model::MetagenomicComposition16s::Command::ProcessSangerInstrumentData->create(
-            build_id => $self->id,
+            build => $self,
             );
         unless ( $cmd->prepare_instrument_data ) {
             $self->error_message("Failed to execute mc16s process sanger");

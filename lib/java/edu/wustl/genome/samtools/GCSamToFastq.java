@@ -83,7 +83,7 @@ public class GCSamToFastq extends CommandLineProgram {
     @Option(shortName="NON_PF", doc="Include non-PF reads from the SAM file into the output FASTQ files.")
     public boolean INCLUDE_NON_PF_READS = false;
 
-    @Option(shortName="NO_ORPHAN", doc="Ignore orphaned mates when one side of the pair was filtered")
+    @Option(shortName="NO_ORPHAN", doc="Do not warn on orphaned mates when one side of the pair was filtered")
     public boolean IGNORE_ORPHAN_MATES = false;
 
     @Option(shortName="CLIP_ATTR", doc="The attribute that stores the position at which " +
@@ -178,6 +178,18 @@ public class GCSamToFastq extends CommandLineProgram {
                 }
             }
 
+            if (firstSeenMates.size() > 0)  {
+                
+                // are we ignoring these.    
+                if (IGNORE_ORPHAN_MATES == false)
+                    throw new PicardException("Found "+firstSeenMates.size()+" reads with flags that indicated they were paired, but no mates were seen.");
+            
+                for (final SAMRecord currentRecord : firstSeenMates.values()) {
+                    writeRecord(currentRecord, null, fragWriter);
+                }
+
+            }
+
         } finally {
             // Flush as much as possible.
             writer1.close();
@@ -186,9 +198,6 @@ public class GCSamToFastq extends CommandLineProgram {
             reader.close();
         }
 
-        if (firstSeenMates.size() > 0 && IGNORE_ORPHAN_MATES == false) {
-            throw new PicardException("Found "+firstSeenMates.size()+" unpaired mates");
-        }
     }
 
     protected void doGrouped()

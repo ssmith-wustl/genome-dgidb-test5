@@ -257,7 +257,7 @@ sub transcript_attributes {
                     transcript_version strand transcript_status trv_type c_position
                     amino_acid_change ucsc_cons domain all_domains deletion_substructures
                     transcript_error );
-    if ($self->extra_columns) {
+    if ($self->extra_details) {
         push @attrs, qw( flank_annotation_distance_to_transcript
                          intron_annotation_substructure_ordinal intron_annotation_substructure_size
                          intron_annotation_substructure_position );
@@ -346,11 +346,8 @@ END {
 };
 
 sub execute { 
+ 
     my $self = shift;
-
-    # enable object cache pruning
-    my ($orig_lowater, $orig_highwater) = Genome::Model::Tools::Annotate->object_cache_sizes();
-    Genome::Model::Tools::Annotate->object_cache_sizes(20_000, 200_000);
 
     unless($self->variant_file xor $self->variant_bed_file){
         $self->error_message("Please specify either a --variant-file or a --variant-bed-file");
@@ -622,7 +619,6 @@ sub execute {
         $self->status_message("$processed_variants variants processed " . scalar(localtime)) unless ($processed_variants % 10000);
     }
     $we_are_done_flag = 1;
-    Genome::Model::Tools::Annotate->object_cache_sizes($orig_lowater, $orig_highwater);
 
     my $annotation_loop_stop_time = time();
 

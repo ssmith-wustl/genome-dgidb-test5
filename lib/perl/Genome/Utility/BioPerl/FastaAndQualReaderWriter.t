@@ -5,7 +5,7 @@ use warnings;
 
 use above 'Genome';
 
-use Test::More 'no_plan';
+use Test::More;
 require File::Temp;
 use Bio::Seq::Quality;
 
@@ -67,7 +67,7 @@ ok($same_bioseq, 'Got bioseq from reader.');
 is($bioseq->id, $same_bioseq->id, 'Compared bioseqs ids from reader and writer');
 is($bioseq->seq, $same_bioseq->seq, 'Compared bioseqs seqs from reader and writer');
 
-exit;
+done_testing();
 
 
 =pod

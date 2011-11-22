@@ -11,7 +11,8 @@ class Genome::Model::Build::RnaSeq {
     is_abstract => 1,
     subclassify_by => 'subclass_name',
     has => [
-        subclass_name => { is => 'VARCHAR2', len => 255, is_mutable => 0, column_name => 'SUBCLASS_NAME',
+        subclass_name => { 
+            is => 'VARCHAR2', len => 255, is_mutable => 0,
                            calculate_from => ['model_id'],
                            calculate => sub {
                                             my($model_id) = @_;

@@ -500,13 +500,6 @@ sub get_or_create_lane_qc_models {
     return;
 }
 
-sub latest_build_id {
-    my $self = shift;
-    my $build = $self->latest_build;
-    unless ($build) { return; }
-    return $build->id;
-}
-
 sub latest_build_bam_file {
     my $self = shift;
 

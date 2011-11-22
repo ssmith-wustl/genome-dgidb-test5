@@ -14,6 +14,8 @@ package Genome::InstrumentData::AlignmentResult::Crossmatch::NISC::Assembly::Ali
 use strict;
 use Carp;
 
+use Bio::Seq;
+
 #use Opendb;
 #use NISC::Comp::Disc;
 #use NISC::Comp::Discrepancy;

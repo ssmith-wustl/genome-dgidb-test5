@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use Genome;
+use version;
 
 class Genome::Model::Event::Build::RnaSeq::Coverage {
     is => ['Genome::Model::Event'],

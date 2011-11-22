@@ -8,6 +8,9 @@ use GSCApp;
 use FileHandle;
 use Genome;
 
+use Bio::Seq;
+use Bio::SeqIO;
+
 if(@ARGV<1) {die "$0  annotation_file\n";}
 
 #MPSampleData::DBI::myinit("dbi:Oracle:dwrac","mguser_prd"); #switch to production by default

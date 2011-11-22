@@ -55,11 +55,11 @@ require Exporter;
 @EXPORT = qw();
 
 @EXPORT_OK = qw(
-                &createNewDir &checkDir &commify &memoryUsage &loadEntrezEnsemblData &mapGeneName &fixGeneName &importIdeogramData &getCytoband &getColumnPosition &importGeneSymbolLists &getFilePathBase
+                &createNewDir &checkDir &commify &memoryUsage &loadEntrezEnsemblData &mapGeneName &fixGeneName &importIdeogramData &getCytoband &getColumnPosition &listGeneCategories &importGeneSymbolLists &getFilePathBase
                );
 
 %EXPORT_TAGS = (
-                all => [qw(&createNewDir &checkDir &commify &memoryUsage &loadEntrezEnsemblData &mapGeneName &fixGeneName &importIdeogramData &getCytoband &getColumnPosition &importGeneSymbolLists &getFilePathBase)]
+                all => [qw(&createNewDir &checkDir &commify &memoryUsage &loadEntrezEnsemblData &mapGeneName &fixGeneName &importIdeogramData &getCytoband &getColumnPosition &listGeneCategories &importGeneSymbolLists &getFilePathBase)]
                );
 
 use strict;
@@ -273,7 +273,6 @@ sub checkDir{
 #######################################################################################################################################################################
 #Load Entrez Data from flatfiles                                                                                                                                      #
 #######################################################################################################################################################################
-
 sub loadEntrezEnsemblData{
   my %args = @_;
 
@@ -282,6 +281,7 @@ sub loadEntrezEnsemblData{
   my $taxon_id;
   my $entrez_dir;
   my $ensembl_dir;
+  my $ucsc_dir;
   my @files;
   #Parse Entrez flatfiles and Ensembl files from BioMart
   #ftp://ftp.ncbi.nih.gov/gene/DATA/gene2accession.gz
@@ -291,6 +291,7 @@ sub loadEntrezEnsemblData{
       $taxon_id = '9606';
       $entrez_dir = "/gscmnt/sata132/techd/mgriffit/reference_annotations/EntrezGene/";
       $ensembl_dir = "/gscmnt/sata132/techd/mgriffit/reference_annotations/EnsemblGene/";
+      $ucsc_dir = "/gscmnt/sata132/techd/mgriffit/reference_annotations/UcscGene/";
       @files = qw (Ensembl_Genes_Human_v63.txt Ensembl_Genes_Human_v62.txt Ensembl_Genes_Human_v61.txt Ensembl_Genes_Human_v60.txt Ensembl_Genes_Human_v59.txt Ensembl_Genes_Human_v58.txt Ensembl_Genes_Human_v56.txt Ensembl_Genes_Human_v55.txt Ensembl_Genes_Human_v54.txt Ensembl_Genes_Human_v53.txt Ensembl_Genes_Human_v52.txt Ensembl_Genes_Human_v51.txt);
   } elsif ($species eq 'mouse') {
       $taxon_id = '10090';
@@ -514,6 +515,28 @@ sub loadEntrezEnsemblData{
     close(ENSG);
   }
 
+  #Now load UCSC gene/transcript to gene symbol mappings
+  my $ucsc_file = "$ucsc_dir"."UCSC.Genes.info";
+  open (UCSC, "$ucsc_file") || die "\n\nCould not open UCSC file: $ucsc_file in &loadEntrezEnsemblData()\n\n";
+  my %ucsc_map;
+  my $header = 1;
+  while(<UCSC>){
+    chomp($_);
+    my @line = split("\t", $_);
+    my $ucsc_id = uc($line[0]);
+    my $ucsc_name = uc($line[1]);
+    if ($header){
+      $header = 0;
+      next();
+    }
+    #Clip the version number from the ID
+    if ($ucsc_id =~ /(.*)\.\d+$/){
+      $ucsc_id = $1;
+    }
+    $ucsc_map{$ucsc_id}{name}=$ucsc_name;
+  }
+  close(UCSC);
+
   $edata{'entrez_ids'} = \%entrez_map;
   $edata{'ensembl_ids'} = \%ensembl_map;
   $edata{'ensembl_ids2'} = \%ensembl_map2;
@@ -521,6 +544,7 @@ sub loadEntrezEnsemblData{
   $edata{'synonyms'} = \%synonyms_map;
   $edata{'protein_accessions'} = \%p_acc_map;
   $edata{'genome_accessions'} = \%g_acc_map;
+  $edata{'ucsc_ids'} = \%ucsc_map;
 
   return(\%edata);
 }
@@ -532,12 +556,25 @@ sub loadEntrezEnsemblData{
 sub mapGeneName{
   my %args = @_;
   my $edata = $args{'-entrez_ensembl_data'};
-  my $original_name = $args{'-name'};
+  my $original_name = uc($args{'-name'});
   my $verbose = $args{'-verbose'};
+  my $multiple_names_allowed;
+  if (defined($args{'-multiple_names_allowed'})){
+    $multiple_names_allowed = $args{'-multiple_names_allowed'};
+  }
+
 
   my $ensembl_id;
   if (defined($args{'-ensembl_id'})){
-     $ensembl_id = $args{'-ensembl_id'};
+    $ensembl_id = uc($args{'-ensembl_id'});
+  }
+  my $ucsc_id;
+  if (defined($args{'-ucsc_id'})){
+    $ucsc_id = uc($args{'-ucsc_id'});
+    #If the incoming ucsc id has a trailing version number, strip it off before comparison
+    if ($ucsc_id =~ /(.*)\.\d+$/){
+      $ucsc_id = $1;
+    }
   }
   
   #Unless a better match is found, the original name will be returned
@@ -556,6 +593,7 @@ sub mapGeneName{
   my $synonyms_map = $edata->{'synonyms'};
   my $prot_acc_map = $edata->{'protein_accessions'};
   my $genome_acc_map = $edata->{'genome_accessions'};
+  my $ucsc_map = $edata->{'ucsc_ids'};
 
   my $any_match = 0;
   my %entrez_symbols;
@@ -699,6 +737,29 @@ sub mapGeneName{
     }
   }
 
+  #Unless a match was already found, try mapping to UCSC IDs (from UCSC) - starting with an actual UCSC ID supplied separately
+  my $ucsc_match = 0;
+  if ($ucsc_id){
+    unless ($any_match){
+      if ($ucsc_map->{$ucsc_id}){
+        $ucsc_match = 1;
+        $any_match = 1;
+        $corrected_name = $ucsc_map->{$ucsc_id}->{name};
+      }
+    }
+  }
+
+  #Note!
+  #Do not return multiple names - unless specified, reset multiple names match to original name
+  my @names = split(",", $corrected_name);
+  my $name_count = scalar(@names);
+  if ($name_count > 1){
+    unless ($multiple_names_allowed){
+      $corrected_name = $original_name;
+    }
+  }
+
+
   if ($verbose){
     if ($entrez_name_string eq $original_name){
       print BLUE, "\nSimple Entrez match: $original_name -> $corrected_name", RESET;
@@ -725,7 +786,10 @@ sub fixGeneName{
   if ($original_gene_name =~ /^ensg\d+/i){
     #If the gene name looks like an Ensembl name, try fixing it twice to allow: Ensembl->Name->Entrez Name
     $fixed_gene_name = &mapGeneName('-entrez_ensembl_data'=>$entrez_ensembl_data, '-name'=>$original_gene_name, '-ensembl_id'=>$original_gene_name, '-verbose'=>$verbose);
-    $fixed_gene_name = &mapGeneName('-entrez_ensembl_data'=>$entrez_ensembl_data, '-name'=>$original_gene_name, '-verbose'=>$verbose);
+    $fixed_gene_name = &mapGeneName('-entrez_ensembl_data'=>$entrez_ensembl_data, '-name'=>$fixed_gene_name, '-verbose'=>$verbose);
+  }elsif($original_gene_name =~ /^uc\w{6}\.\d+/i){
+    $fixed_gene_name = &mapGeneName('-entrez_ensembl_data'=>$entrez_ensembl_data, '-name'=>$original_gene_name, '-ucsc_id'=>$original_gene_name, '-verbose'=>$verbose);
+    $fixed_gene_name = &mapGeneName('-entrez_ensembl_data'=>$entrez_ensembl_data, '-name'=>$fixed_gene_name, '-verbose'=>$verbose);
   }else{
     $fixed_gene_name = &mapGeneName('-entrez_ensembl_data'=>$entrez_ensembl_data, '-name'=>$original_gene_name, '-verbose'=>$verbose);
   }
@@ -733,9 +797,54 @@ sub fixGeneName{
 }
 
 
-###############################################################################################################################
-#Import a set of gene symbol lists                                                                                            #
-###############################################################################################################################
+###################################################################################################################################
+#List gene category files and the number of genes, return the names and counts for each                                           #
+###################################################################################################################################
+sub listGeneCategories{
+  my %args = @_;
+  my $dir = $args{'-category_dir'};
+  my $verbose = $args{'-verbose'};
+  my %categories;
+  #Clean up the working directory
+  opendir(DIRHANDLE, "$dir") || die "\nCannot open directory: $dir\n\n";
+  my @temp = readdir(DIRHANDLE);
+  closedir(DIRHANDLE);
+  foreach my $file (@temp){
+    if ($file =~ /(.*)\.txt/){
+      my $category_name = $1;
+      my $path = "$dir"."$file";
+      open(FILE, "$path") || die "\n\nCould not open file: $path\n\n";
+      my %genes;
+      while(<FILE>){
+        chomp($_);
+        $genes{$_}=1;
+      }
+      close(FILE);
+      my $symbol_count = keys %genes;
+      $categories{$category_name}=$symbol_count;
+    }else{
+      next();
+    }
+  }
+  my $cat_count = keys %categories;
+  if ($verbose){
+    print BLUE, "\n\nFound $cat_count gene categories to chose from:", RESET;
+  }
+  foreach my $cat (sort keys %categories){
+    if ($verbose){
+      print YELLOW, "\n\t$categories{$cat} genes -> $cat", RESET;
+    }
+  }
+  if ($verbose){
+    print "\n\n";
+  }
+  return(\%categories)
+}
+
+
+###################################################################################################################################
+#Import a set of gene symbol lists                                                                                                #
+###################################################################################################################################
 sub importGeneSymbolLists{
   my %args = @_;
   my $gene_symbol_lists_dir = $args{'-gene_symbol_lists_dir'};

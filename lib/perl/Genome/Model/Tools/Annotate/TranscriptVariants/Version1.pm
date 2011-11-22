@@ -8,6 +8,7 @@ use Genome;
 use File::Temp;
 use List::Util qw/ max min /;
 use List::MoreUtils qw/ uniq /;
+use Bio::Seq;
 use Bio::Tools::CodonTable;
 use DateTime;
 use Carp;
@@ -166,13 +167,8 @@ sub reverse_complement {
     my ($self, $seq) = @_;
     return unless defined $seq;
 
-    my $s = Bio::Seq->new(-display_id => "junk", -seq => $seq);
-    my $rev_com = $s->revcom->seq;
-    unless ($rev_com) {
-        $self->error_message("Could not create reverse complement for sequence");
-        confess;
-    }
-
+    $seq =~ tr/acgtrymkswhbvdnxACGTRYMKSWHBVDNX/tgcayrkmswdvbhnxTGCAYRKMSWDVBHNX/;
+    my $rev_com = CORE::reverse $seq;
     return $rev_com;
 }
 
@@ -317,6 +313,17 @@ sub _create_iterator_for_variant_intersection {
 # Corresponds to none filter in Genome::Model::Tools::Annotate::TranscriptVariants
 sub transcripts {
     my ($self, %variant) = @_;
+
+    if (!defined $self->{_cached_chromosome} or $self->{_cached_chromosome} ne $variant{chromosome_name}) {
+        Genome::InterproResult->unload();
+        $self->transcript_structure_class_name->unload();
+
+        $self->{_cached_chromosome} = $variant{chromosome_name};
+        Genome::InterproResult->get(
+            data_directory => $self->data_directory,
+            chrom_name => $variant{chromosome_name},
+        );
+    }
 
     my $variant_start = $variant{'start'};
     my $variant_stop = $variant{'stop'};

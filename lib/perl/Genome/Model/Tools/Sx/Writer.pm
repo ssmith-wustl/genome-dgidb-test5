@@ -38,14 +38,17 @@ sub create {
 
     my @writers;
     for my $config ( $self->config ) {
-        my %params = $self->_parse_writer_config($config);
-        return if not %params;
-
-        my $writer_class = $self->_writer_class_for_type( delete $params{type} );
+        $self->status_message('Parsing writer config: '.$config);
+        my ($writer_class, $params) = $self->parse_writer_config($config);
         return if not $writer_class;
-        $self->status_message('writer => '.$writer_class);
 
-        my $writer = $writer_class->create(%params);
+        $self->status_message('Config: ');
+        $self->status_message('writer => '.$writer_class);
+        for my $key ( keys %$params ) {
+            $self->status_message($key.' => '.$params->{$key});
+        }
+
+        my $writer = $writer_class->create(%$params);
         if ( not $writer ) {
             $self->error_message('Failed to create '.$writer_class);
             return;
@@ -60,12 +63,11 @@ sub create {
     return $self;
 }
 
-sub _parse_writer_config {
+sub parse_writer_config {
     my ($self, $config) = @_;
 
     Carp::confess('No config to parse') if not $config;
 
-    $self->status_message('Parsing writer config: '.$config);
     my %params;
     my (@tokens) = split(':', $config);
     if ( not @tokens ) {
@@ -91,17 +93,16 @@ sub _parse_writer_config {
         return;
     }
 
-    if ( not $params{type} ) {
-        $params{type} = $self->_type_for_file($params{file});
-        return if not $params{type};
+    my $type = delete $params{type};
+    if ( not $type ) {
+        $type = $self->_type_for_file($params{file});
+        return if not $type;
     }
 
-    $self->status_message('Config: ');
-    for my $key ( keys %params ) {
-        $self->status_message($key.' => '.$params{$key});
-    }
+    my $writer_class = $self->_writer_class_for_type($type);
+    return if not $writer_class;
 
-    return %params;
+    return ($writer_class, \%params);
 }
 
 sub _type_for_file {

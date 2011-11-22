@@ -14,7 +14,7 @@ class Genome::Command {
 my %command_map = (
     'disk' => 'Genome::Disk::Command',
     'feature-list' => 'Genome::FeatureList::Command',
-    'gene-name-report' => 'Genome::GeneNameReport::Command',
+    'druggable-gene' => 'Genome::DruggableGene::Command',
     'individual' => 'Genome::Individual::Command',
     'instrument-data' => 'Genome::InstrumentData::Command',
     'library' => 'Genome::Library::Command',
@@ -34,11 +34,6 @@ my %command_map = (
     'tools' => 'Genome::Model::Tools',
     'db' => 'Genome::Db',
 );
-
-for my $class (values %command_map) {
-    eval "use $class";
-    die $@ if $@;
-}
 
 $Genome::Command::SUB_COMMAND_MAPPING = \%command_map;
 

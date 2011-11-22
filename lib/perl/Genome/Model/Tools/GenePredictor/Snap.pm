@@ -11,6 +11,8 @@ use Carp 'confess';
 use File::Path 'make_path';
 use File::Basename 'basename';
 
+use Bio::Seq;
+
 class Genome::Model::Tools::GenePredictor::Snap {
     is  => 'Genome::Model::Tools::GenePredictor',
     has => [
@@ -50,6 +52,12 @@ EOS
 # readable and to reduce redundancy between this module and the fgenesh module.
 sub execute {
     my $self = shift;
+
+    if ($self->skip_execution) {
+        $self->status_message("Skip execution flag is set, exiting");
+        return 1;
+    }
+
     $self->status_message("Starting Snap prediction wrapper, reading sequences from " . $self->fasta_file);
 
     # Use full path to snap executable, with version, instead of the symlink.

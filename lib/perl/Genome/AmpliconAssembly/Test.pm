@@ -7,6 +7,8 @@ use warnings;
 
 use base 'Test::Class';
 
+use Test::MockObject;
+
 use Data::Dumper 'Dumper';
 use Test::More;
 require File::Temp;
@@ -331,110 +333,6 @@ sub _create_mock_gsc_sequence_reads {
     }
 
     return %reads;
-}
-
-# TODO sub test_02_amplicons_broad_sanger : Tests {
-
-###########################################################################
-
-package Genome::AmpliconAssembly::AmpliconTest;
-
-use strict;
-use warnings;
-
-use base 'Genome::Utility::TestBase';
-
-use Data::Dumper 'Dumper';
-use Test::More;
-
-sub amplicon {
-    return $_[0]->{_object};
-}
-
-sub test_class {
-    'Genome::AmpliconAssembly::Amplicon';
-}
-
-sub params_for_test_class {
-    return (
-        name => 'HMPB-aad13e12',
-        directory => '/gsc/var/cache/testsuite/data/Genome-Model-AmpliconAssembly/edit_dir',
-        reads => [qw/ HMPB-aad13e12.b1 HMPB-aad13e12.b2 HMPB-aad13e12.b3 HMPB-aad13e12.b4 HMPB-aad13e12.g1 HMPB-aad13e12.g2 /],
-    );
-}
-
-sub invalid_params_for_test_class {
-    return (
-        directory => 'does_not_exist',
-    );
-}
-
-sub test01_accessors : Tests {
-    my $self = shift;
-
-    my $amplicon = $self->amplicon;
-
-    my %params = $self->params_for_test_class;
-    for my $attr ( keys %params ) {
-        my $method = 'get_'.$attr;
-        is_deeply($amplicon->$method, $params{$attr}, "Got $attr");
-    }
-
-    return 1;
-}
-
-sub test02_bioseq : Tests {
-    my $self = shift;
-
-    my $amplicon = $self->amplicon;
-    ok($amplicon->get_bioseq, 'Got bioseq');
-    is($amplicon->get_bioseq_source, 'assembly', 'Got source - assembly');
-    is($amplicon->was_assembled_successfully, 1, 'Assembled successfully');
-    is($amplicon->is_bioseq_oriented, 0, 'Not oriented');
- 
-    return 1;
-}
-
-sub test03_reads : Tests {
-    my $self = shift;
-
-    my $amplicon = $self->amplicon;
-    my %params = $self->params_for_test_class;
-    my $attempted_reads = $params{reads};
-    
-    my $assembled_reads = $amplicon->get_assembled_reads;
-    is_deeply($assembled_reads, $attempted_reads, 'Got source');
-    is($amplicon->get_assembled_read_count, scalar(@$assembled_reads), 'Got source');
-    my $read_bioseq = $amplicon->get_bioseq_for_raw_read($attempted_reads->[2]);
-    is($read_bioseq->id, $attempted_reads->[2], 'Got read bioseq for '.$attempted_reads->[2]);
-    my $processed_bioseq = $amplicon->get_bioseq_for_processed_read($attempted_reads->[4]);
-    is($processed_bioseq->id, $attempted_reads->[4], 'Got processed bioseq for '.$attempted_reads->[4]);
-    
-    return 1;
-}
-
-sub test04_succesful_assembly_reqs : Tests(3) {
-    my $self = shift;
-
-    my $length = $self->test_class->successfully_assembled_length;
-    is($length, 1150, 'Successfully assembled length');
-    my $cnt = $self->test_class->successfully_assembled_read_count;
-    is($cnt, 2, 'Successfully assembled read count');
-    is(
-        $self->test_class->successfully_assembled_requirements_as_string,
-        "length >= $length, reads >= $cnt",
-        'Successfully assembled reqs string',
-    );
-
-    return 1;
-}
-
-sub test03_files {#: Tests {
-    my $self = shift;
-
-    #TODO
-    
-    return 1;
 }
 
 ###########################################################################
@@ -1069,41 +967,6 @@ sub test01_generate_report : Test(2) {
 
 ######################################################################
 
-package Genome::AmpliconAssembly::Report::Compare::Test;
-
-use strict;
-use warnings;
-
-use base 'Genome::AmpliconAssembly::Report::TestBase';
-
-use Data::Dumper 'Dumper';
-use Test::More;
-
-sub test_class {
-    'Genome::AmpliconAssembly::Report::Compare';
-}
-
-sub params_for_test_class {
-    return (
-        amplicon_assemblies => [ $_[0]->mock_model->last_succeeded_build->amplicon_assembly,
-        $_[0]->mock_model->last_succeeded_build->amplicon_assembly,
-        ],
-    );
-}
-
-sub invalid_params_for_test_class {
-    return (
-    );
-}
-
-sub test01_ {# : Tests(2) {
-    my $self = shift;
-
-    return 1;
-}
-
-######################################################################
-
 package Genome::AmpliconAssembly::Report::Stats::Test;
 
 use strict;
@@ -1189,26 +1052,4 @@ sub test05_none_attempted : Tests(1) {
 ######################################################################
 
 1;
-
-=pod
-
-=head1 Tests
-
-=head1 Disclaimer
-
- Copyright (C) 2009 Washington University Genome Sequencing Center
-
- This script is distributed in the hope that it will be useful,
- but WITHOUT ANY WARRANTY or the implied warranty of MERCHANTABILITY
- or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public
- License for more details.
-
-=head1 Author(s)
-
- Eddie Belter <ebelter@watson.wustl.edu>
-
-=cut
-
-#$HeadURL$
-#$Id$
 

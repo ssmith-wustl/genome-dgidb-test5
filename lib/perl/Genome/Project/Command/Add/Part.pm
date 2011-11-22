@@ -12,7 +12,7 @@ class Genome::Project::Command::Add::Part {
             is => 'Genome::Project',
             is_many => 1,
             shell_args_position => 1,
-            doc => 'Project(s), resolved via test string.',
+            doc => 'Project(s), resolved via string.',
         },
         class_name => {
             is => 'Text',
@@ -47,6 +47,10 @@ sub help_synopsis {
  Add a priority value to project name 'High Priority':
   $command_name name='High Priority' --value 10 --label priority
 HELP
+}
+
+sub help_detail {
+    return 'Add values and objects to projects.'
 }
 
 sub execute {

@@ -452,8 +452,8 @@ sub dump_sanger_fastq_files {
         if ($self->resolve_quality_converter eq 'sol2sanger') {
             $converted_fastq_pathname = $requested_directory . '/' . $self->id . '-sanger-fastq-'. $counter . ".fastq";
             $self->status_message("Applying sol2sanger quality conversion.  Converting to $converted_fastq_pathname");
-            unless (Genome::Model::Tools::Maq::Sol2sanger->execute( use_version       => '0.7.1',
-                                                                    solexa_fastq_file => $illumina_fastq_pathname,
+            unless (Genome::Model::Tools::Fastq::Sol2sanger->execute(
+                                                                    fastq_file => $illumina_fastq_pathname,
                                                                     sanger_fastq_file => $converted_fastq_pathname)) {
                 $self->error_message('Failed to execute sol2sanger quality conversion $illumina_fastq_pathname $converted_fastq_pathname.');
                 die($self->error_message);
@@ -513,7 +513,7 @@ sub dump_trimmed_fastq_files {
     my @trimmed_fastq_pathnames;
     #if the trimmer supports paired end, we just run it once, otherwise we need to loop over the fastqs
     if(@fastq_pathnames == 2 && $trimmer_name eq 'far' && $trimmer_version >= '2.0') {
-        my $trimmed_input_fastq_path = $data_directory . '/trimmeed-sanger-fastq-';
+        my $trimmed_input_fastq_path = $data_directory . '/trimmed-sanger-fastq';
         my $trimmer = Genome::Model::Tools::Far::Trimmer->create(
             params => $trimmer_params,
             use_version => $trimmer_version,
@@ -531,6 +531,9 @@ sub dump_trimmed_fastq_files {
             die($self->error_message);
          }
         push @trimmed_fastq_pathnames, glob "$trimmed_input_fastq_path*";
+        unless (@trimmed_fastq_pathnames){
+            die $self->error_message("Failed to get expected trimmed output files");
+        }
     }
     else {
         my $counter = 0;

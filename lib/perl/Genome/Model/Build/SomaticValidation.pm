@@ -56,9 +56,14 @@ class Genome::Model::Build::SomaticValidation {
             via => 'inputs', to => 'value', where => [ name => 'target_region_set' ],
             is_mutable => 1,
         },
+        region_of_interest_set => {
+            is => 'Genome::FeatureList',
+            via => 'inputs', to => 'value', where => [ name => 'region_of_interest_set' ],
+            is_mutable => 1,
+        },
         design_set => {
             is => 'Genome::FeatureList',
-            via => 'inputs', to => 'value', where => [ name => 'desgin_set' ],
+            via => 'inputs', to => 'value', where => [ name => 'design_set' ],
             is_mutable => 1,
         },
         tumor_sample => {
@@ -71,19 +76,27 @@ class Genome::Model::Build::SomaticValidation {
             via => 'inputs', to => 'value', where => [ name => 'normal_sample' ],
             is_mutable => 1,
         },
+
+        merged_alignment_result => {
+            is => 'Genome::InstrumentData::AlignmentResult::Merged',
+            via => 'result_users',
+            to => 'software_result',
+            where => [label => 'merged_alignment'],
+        },
+        control_merged_alignment_result => {
+            is => 'Genome::InstrumentData::AlignmentResult::Merged',
+            via => 'result_users',
+            to => 'software_result',
+            where => [label => 'control_merged_alignment'],
+        },
     ],
 };
-
-# this is a comprimise to maintain compatibility with SomaticVariation
-# while not using tumor_model/normal_model naming scheme on inputs
-sub tumor_model { $_[0]->tumor_reference_alignment->model }
-sub normal_model { $_[0]->normal_reference_alignment->model }
 
 sub post_allocation_initialization {
     my $self = shift;
 
     my @result_subfolders;
-    for my $subdir ('variants') {
+    for my $subdir ('alignments', 'variants', 'coverage') {
         push @result_subfolders, $self->data_directory."/".$subdir;
     }
 
@@ -116,23 +129,17 @@ sub data_set_path {
 sub tumor_bam {
     my $self = shift;
 
-    my $tumor_build = $self->tumor_reference_alignment;
-    my $tumor_bam = $tumor_build->whole_rmdup_bam_file;
-    unless ($tumor_bam){
-        die $self->error_message("No whole_rmdup_bam file found for tumor build!");
-    }
-    return $tumor_bam;
+    my $result = $self->merged_alignment_result;
+    return unless $result;
+    return $result->merged_alignment_bam_path;
 }
 
 sub normal_bam {
     my $self = shift;
 
-    my $normal_build = $self->normal_reference_alignment;
-    my $normal_bam = $normal_build->whole_rmdup_bam_file;
-    unless ($normal_bam){
-        die $self->error_message("No whole_rmdup_bam file found for normal build!");
-    }
-    return $normal_bam;
+    my $result = $self->control_merged_alignment_result;
+    return unless $result;
+    return $result->merged_alignment_bam_path;
 }
 
 sub workflow_name {

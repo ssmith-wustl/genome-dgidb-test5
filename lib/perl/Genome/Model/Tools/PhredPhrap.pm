@@ -3,7 +3,7 @@ package Genome::Model::Tools::PhredPhrap;
 use strict;
 use warnings;
 
-use above 'Genome';
+use Genome;
 
 class Genome::Model::Tools::PhredPhrap {
     is => 'Command',

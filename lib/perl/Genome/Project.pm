@@ -6,7 +6,7 @@ use Genome;
 use Class::ISA;
 
 class Genome::Project {
-    is => 'Genome::Notable',
+    is => ['Genome::Notable','Genome::Searchable'],
     id_generator => '-uuid',
     id_by => [
         id => { is => 'Text', }
@@ -81,6 +81,11 @@ sub create {
     }
 
     return $self;
+}
+
+sub __display_name {
+    my $self = shift;
+    return $self->name."(".$self->id.")";
 }
 
 sub rename {

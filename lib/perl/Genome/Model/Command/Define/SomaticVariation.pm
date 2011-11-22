@@ -60,11 +60,6 @@ This defines a new genome model representing the somatic analysis between a norm
 EOS
 }
 
-sub _shell_args_property_meta {
-    my $self = shift;
-    return $self->Genome::Command::Base::_shell_args_property_meta(@_);
-}
-
 sub _resolve_param {
     my ($self, $param) = @_;
 

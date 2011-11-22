@@ -22,7 +22,7 @@ ok(scalar(Genome::Model::Tools::Sx::Trim::ByAvgQualWindow->create(quality => 25,
 my $dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Sx';
 my $in_fastq = $dir.'/trimmer.in.fastq';
 ok(-s $in_fastq, 'in fastq');
-my $example_fastq = $dir.'/trimmer_by_avg_qual_window.example.fastq';
+my $example_fastq = $dir.'/trimmer_by_avg_qual_window.example2.fastq';
 ok(-s $example_fastq, 'example fastq');
 
 my $tmp_dir = File::Temp::tempdir(CLEANUP => 1);

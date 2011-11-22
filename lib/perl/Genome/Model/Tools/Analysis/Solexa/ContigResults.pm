@@ -17,7 +17,6 @@ use strict;
 use warnings;
 
 use FileHandle;
-use Bio::DB::Fasta;
 
 my $ref_dir = "/gscmnt/sata180/info/medseq/biodb/shared/Hs_build36_mask1c/";
 

@@ -8,7 +8,7 @@ use File::stat;
 use File::Path;
 
 class Genome::InstrumentData::Imported {
-    is => 'Genome::InstrumentData',
+    is => ['Genome::InstrumentData','Genome::Searchable'],
     has_optional => [
         source => { is => 'Genome::Subject', via => 'sample', to => 'source', },
         source_id => { is=> 'Text', via => 'source', to => 'id', },
@@ -287,19 +287,13 @@ sub dump_sanger_fastq_files {
     }
 }
 
-
-
-
 sub total_bases_read {
     my $self = shift;
-    
-    my $fwd_read_length = $self->fwd_read_length || 0;
-    my $rev_read_length = $self->rev_read_length || 0;
-    my $fragment_count = $self->fragment_count || 0;
-    unless(defined($self->fragment_count)){
-        return undef;
-    }
-    return ($fwd_read_length + $rev_read_length) * $fragment_count;
+    #guess return zero rather than fail a build for this
+    my $read_length = $self->read_length || 0;
+    my $read_count = $self->read_count || 0;
+
+    return $read_length * $read_count;
 }
 
 # leave as-is for first test, 

@@ -1,7 +1,11 @@
 package Genome::Sample::Command::Attribute;
 
+use strict;
+use warnings;
+
+use Genome;
 class Genome::Sample::Command::Attribute {
-    is => 'Command',
+    is => 'Command::Tree',
     doc => 'commands to work with clinical data',
 };
 

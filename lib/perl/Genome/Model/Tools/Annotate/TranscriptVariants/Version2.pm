@@ -8,6 +8,7 @@ use Genome;
 use File::Temp;
 use List::Util qw/ max min /;
 use List::MoreUtils qw/ uniq /;
+use Bio::Seq;
 use Bio::Tools::CodonTable;
 use DateTime;
 use Carp;
@@ -166,12 +167,8 @@ sub reverse_complement {
     my ($self, $seq) = @_;
     return unless defined $seq;
 
-    my $s = Bio::Seq->new(-display_id => "junk", -seq => $seq);
-    my $rev_com = $s->revcom->seq;
-    unless ($rev_com) {
-        $self->error_message("Could not create reverse complement for sequence");
-        confess;
-    }
+    $seq =~ tr/acgtrymkswhbvdnxACGTRYMKSWHBVDNX/tgcayrkmswdvbhnxTGCAYRKMSWDVBHNX/;
+    my $rev_com = CORE::reverse $seq;
 
     return $rev_com;
 }
@@ -271,7 +268,6 @@ sub _create_iterator_for_variant_intersection {
 
             $loaded_substructures = [];
             $structure_iterator = undef;
-
             $structure_iterator = $structure_class->create_iterator(
                                       chrom_name => $chrom_name,
                                       data_directory => $self->data_directory,
@@ -315,7 +311,19 @@ sub _create_iterator_for_variant_intersection {
 # Annotates all transcripts affected by a variant
 # Corresponds to none filter in Genome::Model::Tools::Annotate::TranscriptVariants
 sub transcripts {
+
     my ($self, %variant) = @_;
+
+    if (!defined $self->{_cached_chromosome} or $self->{_cached_chromosome} ne $variant{chromosome_name}) {
+        Genome::InterproResult->unload();
+        $self->transcript_structure_class_name->unload();
+
+        $self->{_cached_chromosome} = $variant{chromosome_name};
+        Genome::InterproResult->get(
+            data_directory => $self->data_directory,
+            chrom_name => $variant{chromosome_name},
+        );
+    }
 
     my $variant_start = $variant{'start'};
     my $variant_stop = $variant{'stop'};
@@ -968,7 +976,6 @@ sub _ucsc_conservation_score {
                   coordinates => $range,
                   species => $substruct->transcript_species,
                   version => $substruct->transcript_version,
-                  #reference_transcripts => "NCBI-human.combined-annotation/54_36p_v2", #TODO: Test code, delete me immediately
         );
     };
     return '-' unless $ref;
@@ -987,16 +994,16 @@ sub _protein_domain {
     return 'NULL', 'NULL' unless defined $structure and defined $variant;
 
     my @all_domains = Genome::InterproResult->get(
-            transcript_name => $structure->transcript_transcript_name,
-            data_directory => $structure->data_directory,
-            chrom_name => $variant->{chromosome_name},
-            );
+        transcript_name => $structure->transcript_transcript_name,
+        data_directory => $structure->data_directory,
+        chrom_name => $variant->{chromosome_name},
+        );
     return 'NULL', 'NULL' unless @all_domains;
 
     my @variant_domains;
     my @all_domain_names;
     for my $domain (@all_domains) {
-         if ($protein_position >= $domain->{start} and $protein_position <= $domain->{stop}) {
+        if ($protein_position >= $domain->{start} and $protein_position <= $domain->{stop}) {
             push @variant_domains, $domain->{name};
         }
         push @all_domain_names, $domain->{name};
@@ -1005,7 +1012,6 @@ sub _protein_domain {
     return 'NULL', join(",", uniq @all_domain_names) unless @variant_domains;
     return join(",", uniq @variant_domains), join(",", uniq @all_domain_names);
 }
-
 
 # For full description of this positioning convention, see http://www.hgvs.org/mutnomen/recs-DNA.html
 # and/or http://www.hgmd.cf.ac.uk/docs/mut_nom.html

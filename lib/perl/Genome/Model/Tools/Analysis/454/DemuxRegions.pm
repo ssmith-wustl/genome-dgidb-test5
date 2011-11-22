@@ -142,6 +142,7 @@ sub execute {                               # replace with real execution logic.
 			}
 			elsif($run_name && $region)
 			{
+				warn "Processing run $run_name region $region...\n";
 				my $demux_result = process_region($run_name, $region);
 				
 				my @results = split(/\n/, $demux_result);

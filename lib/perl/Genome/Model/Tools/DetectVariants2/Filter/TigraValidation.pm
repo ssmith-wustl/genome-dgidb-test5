@@ -4,6 +4,7 @@ package Genome::Model::Tools::DetectVariants2::Filter::TigraValidation;
 use strict;
 use warnings;
 use Genome;
+use Bio::Seq;
 use Bio::SeqIO;
 use File::Temp;
 use File::Basename;
@@ -446,9 +447,26 @@ sub _filter_variants {
             return 1;
         }
 
-        #my $annot_cmd = $self->sv_annot_path . ' -A '. $merge_file . ' > '. $merge_annot;
-        #$rv = system $annot_cmd;
-        #$self->warning_message("Annot command: $annot_cmd probably did not finished ok") unless $rv == 0;       
+        $self->status_message('Running SvAnnot');
+        my $ref_build_id = $self->_get_ref_build_id;
+
+        if ($ref_build_id) {
+            my %annot_params = (
+                sv_file     => $merge_file,
+                output_file => $merge_annot,
+                sv_format   => 'merged',
+                annot_build => $ref_build_id,
+            );
+            $annot_params{repeat_mask} = 1 if $ref_build_id eq '36';
+
+            my $annot = Genome::Model::Tools::Sv::SvAnnot->create(%annot_params);
+            my $rv = $annot->execute;    
+            $self->warning_message("SvAnnot probably did not finished ok") unless $rv == 1;     
+        }
+        else {
+            $self->warning_message('No ref_build_id available. Skip SvAnnot');
+            `touch $merge_annot`;
+        }
         return 1;
     }
 
@@ -812,6 +830,28 @@ sub _get_tigra_options {
     }
     return $tigra_opts;
 }
+
+
+sub _get_ref_build_id {
+    my $self   = shift;
+    my $ref_id = $self->reference_build_id;
+    return unless $ref_id;
+
+    my %refs = (
+        106942997 => 37,  #GRCh37-lite-build37
+        102671028 => 37,  #g1k-human-build37
+        101947881 => 36,  #NCBI-human-build36
+        109104543 => 36,  #fdu_human36_chr16_17_for_novo_test-build for Jenkins apipe test build
+    );
+    
+    if ($refs{$ref_id}) {
+        return $refs{$ref_id};
+    }
+    else {
+        return;
+    }
+}
+
 
 sub crossmatch_options {
     my $self = shift;

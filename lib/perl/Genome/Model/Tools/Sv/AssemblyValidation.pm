@@ -5,6 +5,7 @@ package Genome::Model::Tools::Sv::AssemblyValidation;
 use strict;
 use warnings;
 use Genome;
+use Bio::Seq;
 use Bio::SeqIO;
 use File::Temp;
 use File::Basename;
