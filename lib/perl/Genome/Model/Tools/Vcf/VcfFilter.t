@@ -12,7 +12,8 @@ my $test_dir = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Vcf-VcfFilter";
 
 # V2 adds the FT per-sample column
 # V3 adds the FT header line mistakenly omitted from v2
-my $expected_base = "expected.v3";
+# V4 corrects the FT header to be a string
+my $expected_base = "expected.v4";
 my $expected_dir = "$test_dir/$expected_base";
 my $expected_file = "$expected_dir/output.vcf";
 

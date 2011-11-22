@@ -176,13 +176,13 @@ sub execute {
             }
             print $outfile $line . "\n";
 
-            if ($line =~ /^##FILTER=<ID=FT,/) {
+            if ($line =~ /^##FORMAT=<ID=FT,/) {
                 $found_ft_header = 1;
             }
         } elsif ($line =~ /^#CHROM/){
             $done_with_header = 1;
             unless ($found_ft_header) {
-                print $outfile '##FORMAT=<ID=FT,Number=1,Type=Integer,Description="Filter Status">' . "\n";
+                print $outfile '##FORMAT=<ID=FT,Number=1,Type=String,Description="Filter Status">' . "\n";
             }
             print $outfile $line . "\n";
         } else {
