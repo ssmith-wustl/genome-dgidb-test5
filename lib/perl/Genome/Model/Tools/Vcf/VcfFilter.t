@@ -9,7 +9,9 @@ use Test::More tests => 5;
 use_ok('Genome::Model::Tools::Vcf::VcfFilter');
 
 my $test_dir = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Vcf-VcfFilter";
-my $expected_base = "expected.v1";
+
+# V2 adds the FT per-sample column
+my $expected_base = "expected.v2";
 my $expected_dir = "$test_dir/$expected_base";
 my $expected_file = "$expected_dir/output.vcf";
 

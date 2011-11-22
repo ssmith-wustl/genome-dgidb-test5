@@ -125,8 +125,7 @@ sub execute {
     # first, read the filter file and store the locations
     my %filter;
     my $filter_fh = Genome::Sys->open_file_for_reading($filter_file); #IO::File->new( $filter_file ) || die "can't open vcf file\n";
-    while( my $line = $filter_fh->getline )
-    {
+    while( my $line = $filter_fh->getline ) {
         chomp($line);
 
         #skip header lines
@@ -153,8 +152,7 @@ sub execute {
 
     my $found_pass_line = 0;
     my $found_format_lines = 0;
-    while( my $line = $inFh->getline )
-    {
+    while( my $line = $inFh->getline ) {
         my $remove_line = 0;
 
         chomp($line);
@@ -181,7 +179,6 @@ sub execute {
 
             my @fields = split("\t",$line);
 
-
             # if this is not of the correct variant type, skip it
             if (defined($variant_type) && !($fields[7] =~ /VT=$variant_type/)){
                 print $outfile $line . "\n";
@@ -190,18 +187,19 @@ sub execute {
                 # only check the filters if this snv hasn't already been filtered
                 # (is passing). If it has been filtered, then accept the prior filter
                 # and move on
+                my $filter_value;
                 if (($fields[6] eq "") || ($fields[6] eq "PASS") || ($fields[6] eq ".")){
 
                     my $key = $fields[0] . ":" . $fields[1];
 
                     if ($filter_keep){
                         if (exists($filter{$key})){
-                            $fields[6] = "PASS";
+                            $filter_value = "PASS";
                         } else {
                             if($remove_filtered_lines){
                                 $remove_line = 1;
                             } else {
-                                $fields[6] = $filter_name;
+                                $filter_value = $filter_name;
                             }
                         }
                     } else {
@@ -209,24 +207,54 @@ sub execute {
                             if($remove_filtered_lines){
                                 $remove_line = 1;
                             } else {
-                                $fields[6] = $filter_name;
+                                $filter_value = $filter_name;
                             }
                         } else {
-                            $fields[6] = "PASS";
+                            $filter_value = "PASS";
                         }
+                    }
+                    $fields[6] = $filter_value;
+                } else {
+                    $filter_value = $fields[6];
+                }
+
+                # Add a FT field with the same information as the filter field
+                my $format_field = $fields[8];
+                my @format_keys = split ":", $format_field;
+                # Find the FT field if it exists
+                my $ft_index;
+                for (my $i = 0; $i <= $#format_keys; $i++) {
+                    if ($format_keys[$i] eq "FT") {
+                        $ft_index = $i;
                     }
                 }
 
+                # If FT was not previously present, add it to the format field
+                unless ($ft_index) {
+                    $fields[8] = join(":", (@format_keys, "FT") );
+                }
+
+                # For each sample present in the file, either replace the old FT value if one was present or insert a new one
+                for (my $sample_index = 9; $sample_index <= $#fields; $sample_index++) {
+                    my $sample_field = $fields[$sample_index];
+                    if ($ft_index) {
+                        my @sample_fields = split ":", $sample_field;
+                        $sample_fields[$ft_index] = $filter_value;
+                        $fields[$sample_index] = join(":", @sample_fields);
+                    } else {
+                        $fields[$sample_index] = join(":", ($fields[$sample_index], $filter_value) );
+                    }
+                }
 
                 #output the line
                 unless($remove_line){
                     print $outfile join("\t", @fields) . "\n";
                 }
             }
-        }        
+        }
     }
     $outfile->close;
     $inFh->close;
-    
+
     return 1;
 }
