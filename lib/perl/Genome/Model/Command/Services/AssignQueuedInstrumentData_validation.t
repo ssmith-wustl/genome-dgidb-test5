@@ -11,7 +11,7 @@ BEGIN {
 use above 'Genome';
 
 require Genome::InstrumentData::Solexa;
-use Test::More tests => 11;
+use Test::More tests => 18;
 use Test::MockObject;
 
 use_ok('Genome::Model::Command::Services::AssignQueuedInstrumentData');
@@ -133,3 +133,64 @@ is(scalar(keys %$new_models), 0, 'the cron created no models for validation');
 is($sv_model->instrument_data, $instrument_data_1, 'the cron added the instrument data to the validation model');
 my $models_changed_1 = $command_1->_existing_models_assigned_to;
 is(scalar(keys %$models_changed_1), 1, 'data was reported assigned to an existing model');
+
+
+
+my $fl2 = Genome::FeatureList->__define__(
+    id => 'ABCDEFGH',
+    name => 'validation-test-roi',
+    format => 'true-BED',
+    content_type => 'roi',
+    reference => $ref_seq_build,
+);
+
+my $pse_2 = GSC::PSE::QueueInstrumentDataForGenomeModeling->create(
+    pse_status => 'inprogress',
+    pse_id => '-12346',
+    ps_id => $ps->ps_id,
+    ei_id => '464681',
+);
+
+my $instrument_data_2 = Genome::InstrumentData::Solexa->create(
+    id => '-101',
+    library_id => $library->id,
+    flow_cell_id => 'TM-021',
+    lane => '2',
+    run_type => 'Paired',
+    fwd_read_length => 100,
+    rev_read_length => 100,
+    fwd_clusters => 65535,
+    rev_clusters => 65536,
+    target_region_set_name => 'validation-test-roi',
+);
+
+$pse_2->add_param('instrument_data_type', 'solexa');
+$pse_2->add_param('instrument_data_id', $instrument_data_2->id);
+$pse_2->add_param('subject_class_name', 'Genome::Sample');
+$pse_2->add_param('subject_id', $sample->id);
+
+my $command_2 = Genome::Model::Command::Services::AssignQueuedInstrumentData->create(
+    test => 1,
+);
+
+isa_ok($command_2, 'Genome::Model::Command::Services::AssignQueuedInstrumentData');
+$command_2->dump_status_messages(1);
+ok($command_2->execute(), 'assign-queued-instrument-data executed successfully.');
+
+my $err = $command_2->error_message;
+ok($err =~ 'validation-test-roi', 'reported error about feature-list');
+
+is($pse_2->pse_status, 'inprogress', 'PSE still in progress');
+
+$fl2->content_type(undef);
+my $command_3 = Genome::Model::Command::Services::AssignQueuedInstrumentData->create(
+    test => 1,
+);
+
+isa_ok($command_3, 'Genome::Model::Command::Services::AssignQueuedInstrumentData');
+$command_3->dump_status_messages(1);
+ok($command_3->execute(), 'assign-queued-instrument-data executed successfully.');
+
+my $err = $command_3->error_message;
+ok($err =~ 'validation-test-roi', 'reported error about feature-list');
+
