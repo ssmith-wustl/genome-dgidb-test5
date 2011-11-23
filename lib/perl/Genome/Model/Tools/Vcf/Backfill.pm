@@ -87,10 +87,11 @@ sub execute {
             $vcf_line = $vcf_fh->getline;
         }
     }
+
     # Print the remaining line from the previous loop
     if ($vcf_line) {
         $output_fh->print($vcf_line);
-    } else {
+    } elsif ($pileup_line) {
         my $new_vcf_line = $self->create_vcf_line_from_pileup($pileup_line);
         $output_fh->print("$new_vcf_line\n");
     }
