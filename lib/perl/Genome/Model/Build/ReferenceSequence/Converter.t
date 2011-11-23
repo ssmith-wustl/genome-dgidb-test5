@@ -42,7 +42,7 @@ ok(!$diff, 'converter produced expected result')
 
 sub setup_test_data {
     my $taxon = Genome::Taxon->get(species_name => 'human');
-    my $pp = Genome::ProcessingProfile::ImportedReferenceSequence->create(name => 'test_ref_seq_pp');
+    my $pp = Genome::ProcessingProfile::ReferenceSequence->create(name => 'test_ref_seq_pp');
     my $ref_seq_model = Genome::Model::ReferenceSequence->create(
         processing_profile_id => $pp->id,
         subject_id => $taxon->id,
