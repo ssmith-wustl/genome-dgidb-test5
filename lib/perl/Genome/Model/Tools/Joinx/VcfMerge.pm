@@ -17,6 +17,16 @@ class Genome::Model::Tools::Joinx::VcfMerge {
         },
     ],
     has_optional_input => [
+        clear_filters => {
+            is => 'Boolean',
+            default => 0,
+            doc => 'Merged entries will have the FILTER column stripped out (-c option)',
+        },
+        merge_samples => {
+            is => 'Boolean',
+            default => 0,
+            doc => 'Allow input files with overlapping samples (-s option)',
+        },
         output_file => {
             is => 'Text',
             is_output => 1,
@@ -30,6 +40,10 @@ class Genome::Model::Tools::Joinx::VcfMerge {
         joinx_bin_path => {
             is => 'Text',
             doc => 'path to the joinx binary to use. This tool is being released before joinx vcf-merge will be released. This will go away when it is.',
+        },
+        error_log => {
+            is => 'Text',
+            doc => 'path to the error log file, if desired',
         },
     ],
 };
@@ -76,14 +90,29 @@ sub execute {
     unless($self->joinx_bin_path){
         $self->joinx_bin_path("joinx");
     }
-    my $cmd = $self->joinx_bin_path . " vcf-merge " . join(" ", @inputs);
+    my $flags = "";
+    if ($self->clear_filters) {
+        $flags .= " -c";
+    }
+    if ($self->merge_samples) {
+        $flags .= " -s";
+    }
+    my $cmd = $self->joinx_bin_path . " vcf-merge $flags " . join(" ", @inputs);
     if(defined($self->output_file) && not defined($self->use_bgzip)){
-        $cmd .= " -o $output" if defined($self->output_file);
+        if (defined $self->error_log) {
+            $cmd .= " -o $output 2> " . $self->error_log;
+        } else {
+            $cmd .= " -o $output";
+        }
     } elsif ( defined($self->use_bgzip) && defined($self->output_file) ){
-        $cmd .= " | bgzip -c > $output";
+        if (defined $self->error_log) {
+            $cmd .= " 2> " . $self->error_log . " | bgzip -c > $output";
+        } else {
+            $cmd .= " | bgzip -c > $output";
+        }
         $cmd = "bash -c \'$cmd\'";
     }
-        
+
     my %params = (
         cmd => $cmd,
         allow_zero_size_output_files=>1,
