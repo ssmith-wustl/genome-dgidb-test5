@@ -43,7 +43,7 @@ sub execute {
             ],
         );
         map{$_->delete}grep{$_->name eq 'genotype_microarray'}$result->_new_model->inputs;
-        if(exists $roi36to37{$model->region_of_interest_set_name}) {
+        if($model->region_of_interest_set_name and exists $roi36to37{$model->region_of_interest_set_name}) {
             print $result->_new_model->id . " updating region of interest set name to " . $roi36to37{$model->region_of_interest_set_name} . "\n";
             $result->_new_model->region_of_interest_set_name($roi36to37{$model->region_of_interest_set_name});
         }
