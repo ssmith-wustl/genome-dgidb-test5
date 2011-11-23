@@ -10,11 +10,11 @@ use Workflow::Simple;
 class Genome::Model::Tools::Vcf::CreateCrossSampleVcf {
     is => 'Genome::Command::Base',
     has_input => [
-        models => {
-            is => 'Genome::Model',
+        builds => {
+            is => 'Genome::Model::Build',
             is_many => 1,
             is_optional=>0,
-            doc => 'The models that you wish to create a cross-sample vcf for',
+            doc => 'The builds that you wish to create a cross-sample vcf for',
         },
         output_directory => {
             is => 'Text',
@@ -60,24 +60,13 @@ EOS
 
 sub execute {
     my $self=shift;
-    $DB::single=1;
-    my @models = $self->models;
+    my @builds = $self->builds;
     my $output_directory = $self->output_directory;
 
     #Check for output directory
     unless(-d $output_directory) {
         $self->error_message("Unable to find output directory: " . $output_directory);
         return;
-    }
-
-    #grab VCF's from the builds
-    my @builds = map{ $_->last_succeeded_build } @models;
-    unless (@builds) {
-        die $self->error_message("No succeeded builds found for this model group");
-    }
-
-    unless(scalar(@models) == scalar(@builds)){
-        die $self->error_message("Number of models (".scalar(@models).") did not match the number of succeeded builds (".scalar(@builds).").");
     }
 
     $self->_num_inputs(scalar(@builds));
@@ -172,7 +161,7 @@ sub execute {
         die $self->error_message("Workflow did not return correctly.");
     }
 
-    return $result;
+    return $inputs{final_output};
 
 }
 
@@ -193,8 +182,7 @@ sub _generate_workflow {
     my $self = shift;
     my $build_array = shift;
     my $output_directory = shift;
-    my @models = $self->models;
-    my @builds = map { $_->last_succeeded_build } @models;
+    my @builds = $self->builds;
     my @inputs;
 
     for my $build (@builds){
@@ -416,8 +404,7 @@ sub _add_mpileup_and_backfill {
     my $workflow = shift;
     $workflow = $$workflow; #de-reference workflow ref
     my $merge_operation = shift;
-    my @models = $self->models;
-    my @builds = map { $_->last_succeeded_build } @models;
+    my @builds = $self->builds;
     my @backfill_ops;
 
     #for each model, add an mpileup and backfill command

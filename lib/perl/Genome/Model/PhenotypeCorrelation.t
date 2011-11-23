@@ -13,13 +13,7 @@ use above "Genome";
 use Test::More tests => 14; #skip_all => "This is incomplete.";
 
 my $group = Genome::PopulationGroup->create(name => 'TEST-phenotype-correlation');
-for my $member_id (
-    qw/
-        2852840389
-        2852840390
-        2852840391
-    /
-) {
+for my $member_id (2874846805,2874846807,2874846809) {
     my $member = Genome::Individual->get($member_id);
     ok($member, "got member");
     $group->add_member($member);
@@ -34,7 +28,7 @@ my $p = Genome::ProcessingProfile::PhenotypeCorrelation->create(
     alignment_strategy              => 'instrument_data aligned to reference_sequence_build using bwa 0.5.9 [-t 4 -q 5::] then merged using picard 1.29 then deduplicated using picard 1.29 api v1',
     snv_detection_strategy          => 'samtools r599 filtered by snp-filter v1',
     indel_detection_strategy        => 'samtools r599 filtered by indel-filter v1',
-    #sv_detection_strategy           => undef, 
+    #sv_detection_strategy           => undef,
     #cnv_detection_strategy          => undef,
     group_samples_for_genotyping_by => 'each',
     phenotype_analysis_strategy     => 'quantitative',
@@ -42,7 +36,7 @@ my $p = Genome::ProcessingProfile::PhenotypeCorrelation->create(
 ok($p, "created a processing profile") or diag(Genome::ProcessingProfile::PhenotypeCorrelation->error_message);
 
 my $m = $p->add_model(
-    name    => 'TESTSUITE-ASMS-test1',
+    name    => 'TESTSUITE-Indel-test1',
     subclass_name => 'Genome::Model::PhenotypeCorrelation',
     subject => $group,
 );
@@ -50,23 +44,36 @@ ok($m, "created a model") or diag(Genome::Model->error_message);
 
 my $i1 = $m->add_input(
     name => 'reference_sequence_build',
-    value => Genome::Model::Build->get('106942997'),
+    value => Genome::Model::Build->get('101947881'),
 );
 ok($i1, "add a reference sequence build to it");
 
-my $asms_target_region_set_name = 'Freimer Pool of original (4k001L) plus gapfill (4k0026)';
-my $i2 = $m->add_input(
-    name => 'target_region_set_name',
-    value => UR::Value->get($asms_target_region_set_name),
-);
+#my $asms_target_region_set_name = 'Freimer Pool of original (4k001L) plus gapfill (4k0026)';
+#my $i2 = $m->add_input(
+#    name => 'target_region_set_name',
+#    value => UR::Value->get($asms_target_region_set_name),
+#);
 
 my @patients = $group->members;
 ok(scalar(@patients), scalar(@patients) . " patients");
 
-my @samples = Genome::Sample->get(source_id => [ map { $_->id } @patients ]);
-ok(scalar(@samples), scalar(@samples) . " samples");
+my @samples = Genome::Sample->get(id => [ (2880837135,2880837162,2880837289)]);
+#my @samples = Genome::Sample->get(source_id => [ map { $_->id } @patients ]);
+#ok(scalar(@samples), scalar(@samples) . " samples");
 
-my @i = Genome::InstrumentData::Solexa->get('sample_id' => [ map { $_->id } @samples ], target_region_set_name => $asms_target_region_set_name);
+#my @i = Genome::InstrumentData::Solexa->get('sample_id' => [ map { $_->id } @samples ], target_region_set_name => $asms_target_region_set_name);
+
+#unless(@i){
+my @i = Genome::InstrumentData::Imported->get('sample_id' => [ map { $_->id } @samples ]);
+$DB::single=1;
+#}
+=cut
+
+
+my @i = Genome::InstrumentData::Imported->get('sample_id' => [ map { $_->id } @samples ] );
+=cut
+
+
 ok(scalar(@i), scalar(@i) . " instdata");
 
 my @ii;
@@ -79,9 +86,11 @@ for my $i (@i) {
 }
 is(scalar(@ii), scalar(@i), "assigned " . scalar(@i) . " instrument data");
 
+my $tmp_dir = File::Temp::tempdir('Genome-Model-Build-PhenotypeCorrelation-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
+
 my $b = $m->add_build(
     subclass_name => 'Genome::Model::Build::PhenotypeCorrelation',
-    data_directory => "/tmp/foo"
+    data_directory => $tmp_dir,
 );
 ok($b, "created a build") or diag(Genome::Model->error_message);
 
