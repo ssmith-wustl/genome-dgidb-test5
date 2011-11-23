@@ -1,11 +1,11 @@
-package Genome::ProcessingProfile::PhenotypeCorrelation;
+package Genome::Model::PhenotypeCorrelation;
 
 use strict;
 use warnings;
 use Genome;
 
-class Genome::ProcessingProfile::PhenotypeCorrelation {
-    is => 'Genome::ProcessingProfile',
+class Genome::Model::PhenotypeCorrelation {
+    is => 'Genome::Model',
     doc => "genotype-phenotype correlation of a population group",
     has_param => [
         alignment_strategy => {
@@ -41,7 +41,7 @@ class Genome::ProcessingProfile::PhenotypeCorrelation {
             is => "Text",
             is_many => 0,
             is_optional => 1,
-            default_value => 'each',
+            #default_value => 'each',
             valid_values => ['each', 'trio', 'all'],
             doc => "group samples together when genotyping, using this attribute, instead of examining genomes independently (use \"all\" or \"trio\")",
         },
@@ -53,9 +53,21 @@ class Genome::ProcessingProfile::PhenotypeCorrelation {
             doc => "Strategy to use to look at phenotypes.",
         },
     ],
+    has_input => [
+        identify_cases_by => { 
+            is => 'Text', 
+            is_optional => 1,
+            doc => 'the expression which matches "case" samples, typically by their attributes' 
+        },
+        identify_controls_by => { 
+            is => 'Text', 
+            is_optional => 1,
+            doc => 'the expression which matches "control" samples, typically by their attributes' 
+        },
+    ],
 };
 
-sub help_synopsis_for_create {
+sub help_synopsis_for_create_profile {
     my $self = shift;
     return <<"EOS"
 
@@ -86,7 +98,7 @@ sub help_synopsis_for_create {
       --group-samples-for-genotyping-by 'trio', \
       --phenotype-analysis-strategy     'case-control'
 
-    genome propulation-group define 'Cleft-Lip-cohort-WUTGI-2011' CL001 CL002 CL003
+    genome propulation-group define 'Ceft-Lip-cohort-WUTGI-2011' CL001 CL002 CL003
 
     genome model define phenotype-correlation \
         --name                  'Cleft-Lip-v1' \
@@ -102,7 +114,7 @@ sub help_synopsis_for_create {
 EOS
 }
 
-sub help_detail_for_create {
+sub help_detail_for_create_profile {
     return <<EOS
   For a detailed explanation of how to write an alignmen strategy see:
     TBD
@@ -115,13 +127,13 @@ sub help_detail_for_create {
 EOS
 }
 
-sub help_manual_for_create {
+sub help_manual_for_create_profile {
     return <<EOS
   Manual page content for this pipeline goes here.
 EOS
 }
 
-sub __errors__ {
+sub __profile_errors__ {
     my $self = shift;
     my @errors;
     if ($self->alignment_strategy) {
@@ -253,9 +265,6 @@ sub _execute_build {
             $result->add_user(user => $build, label => 'uses');
         }
     }
-
-    # we now have a VCF file 
-    #until we get annotation into the vcf, we'll also need to have access to annotation files somehow
 
     # dump pedigree data into a file
 

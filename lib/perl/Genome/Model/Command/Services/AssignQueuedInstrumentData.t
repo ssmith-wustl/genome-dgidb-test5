@@ -502,7 +502,7 @@ my $fl = Genome::FeatureList->__define__(
     id => 'ABCDEFG',
     name => 'test-capture-data',
     format => 'true-BED',
-    content_type => 'capture',
+    content_type => 'targeted',
     reference => $ref_seq_build,
 );
 
