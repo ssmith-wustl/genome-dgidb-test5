@@ -284,6 +284,11 @@ sub _copy_model_inputs {
             # Resolve inputs pointing to a model to a build.
             if($params{value_class_name}->isa('Genome::Model')) {
                 my $input_name = $input->name;
+                if ($input_name =~ /_model$/) {
+                    $input_name =~ s/_model$/_build/g;
+                    $params{name} = $input_name;
+                }
+
                 my $existing_input = $self->inputs(name => $input_name);
                 if ($existing_input) {
                     my $existing_input_value = $existing_input->value;
