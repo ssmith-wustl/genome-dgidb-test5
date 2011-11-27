@@ -9,11 +9,22 @@ BEGIN {
     $ENV{NO_LSF} = 1;
 };
 
-use above "Genome";
-use Test::More tests => 15; #skip_all => "This is incomplete.";
 
+use above "Genome";
+use Test::More;
 use Genome::Model::ClinSeq;
 
+my $dry_run;
+if (@ARGV and $ARGV[0] eq 'RUN') {
+    note("NOT A DRY RUN...");
+    plan tests => 16;
+    $dry_run = 0;
+}
+else {
+    note("DRY RUN... put 'RUN' on the command line for this test to actually generate and compare results");
+    plan tests => 16;
+    $dry_run = 1;
+}
 
 my $patient = Genome::Individual->get(common_name => "HG3");
 ok($patient, "got the HG3 patient");
@@ -80,6 +91,15 @@ my $i3 = $m->add_input(
 );
 ok($i3, "add a tumor rnaseq model to it");
 
+if ($dry_run) {
+    my $i4 = $m->add_input(
+        name => 'dry_run',
+        value_class_name => 'UR::Value::Boolean',
+        value_id => 1, 
+    );
+    ok($i4, "set the dry run flag");
+}
+
 # this will prevent disk allocation during build initiation
 # we will have to turn this off if the tasks in this pipeline spread to other machines
 my $temp_dir = Genome::Sys->create_temp_directory("dummy-clinseq-build-dir");
@@ -100,7 +120,18 @@ my $retval = eval { $m->_execute_build($b); };
 is($retval, 1, 'execution of the build returned true');
 is($@, '', 'no exceptions thrown during build process') or diag $@;
 
-
+unless ($dry_run) {
+    my $expected_data_directory = $ENV{"GENOME_TESTSUITE_INPUTS_PATH"} . '/Genome-Model-ClinSeq/2011-11-27';
+    system "touch $temp_dir/foo";
+    my @diff = `diff $expected_data_directory $temp_dir`;
+    ok(@diff == 0, "no differences from expected results and actual")
+        or do { 
+            diag("differences are:");
+            diag(@diff);
+            Genome::Sys->shellcmd(cmd => "mv $temp_dir /tmp/last-clinseq-test-result");
+        };
+}
+        
 __END__
 
 # When the pipeline actually runs, and is perhaps slow, we'll need to run on fake data

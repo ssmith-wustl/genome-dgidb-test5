@@ -31,9 +31,12 @@ sub _execute_build {
     my $exome_build         = $build->inputs(name => 'exome_build');
     my $tumor_rnaseq_build  = $build->inputs(name => 'tumor_rnaseq_build');
     my $normal_rnaseq_build = $build->inputs(name => 'normal_rnaseq_build');
+    
+    # this input is used for testing, and when set will not actually do any work just organize params
+    my $dry_run             = $build->inputs(name => 'dry_run');
 
     # go from the input record to the actual build it references
-    for ($wgs_build, $exome_build, $tumor_rnaseq_build, $normal_rnaseq_build) {
+    for ($wgs_build, $exome_build, $tumor_rnaseq_build, $normal_rnaseq_build, $dry_run) {
         if (defined $_) { $_ = $_->value }
     }
 
@@ -62,9 +65,13 @@ sub _execute_build {
     $cmd .= " --working '$data_directory'";
     $cmd .= " --verbose=1 --clean=1";
 
-    $build->status_message("Not running! I _would_ have run: $cmd");
-    #Genome::Sys->shellcmd(cmd => $cmd);
-    
+    if ($dry_run) {
+        $build->status_message("NOT running! I _would_ have run: $cmd");
+    }
+    else {
+        Genome::Sys->shellcmd(cmd => $cmd);
+    }
+
     return 1;
 }
 
