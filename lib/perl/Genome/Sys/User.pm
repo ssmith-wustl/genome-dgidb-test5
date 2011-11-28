@@ -2,7 +2,9 @@ package Genome::Sys::User;
 
 use strict;
 use warnings;
+
 use Genome;
+use Carp;
 
 class Genome::Sys::User {
     is => 'Genome::Searchable',
@@ -40,6 +42,18 @@ class Genome::Sys::User {
     ],
 };
 
+sub add_role {
+    my ($self, $role) = @_;
+    my $bridge = Genome::Sys::User::RoleMember->create(
+        user => $self,
+        role => $role,
+    );
+    unless ($bridge) {
+        Carp::confess "Could not create user role bridge entity!";
+    }
+    return 1;
+}
+
 sub fix_params_and_get {
     my ($class, @p) = @_;
     my %p;
@@ -62,5 +76,38 @@ sub fix_params_and_get {
     return $class->SUPER::get(%p);
 }
 
-1;
+sub __errors__ {
+    my $self = shift;
+    my @tags;
 
+    my @duplicates = Genome::Sys::User->get(
+        email => $self->email,
+        'id not' => $self->id,
+    );
+    if (@duplicates) {
+        push @tags, UR::Object::Tag->create(
+            type => 'invalid',
+            properties => ['email'],
+            desc => 'user already exists with email ' . $self->email,
+        );
+    }
+
+    return @tags;
+}
+
+sub delete {
+    my $self = shift;
+
+    for my $bridge ($self->user_role_bridges) {
+        my $role_name = $bridge->role->name;
+        my $user_name = $self->name;
+        my $rv = $bridge->delete;
+        unless ($rv) {
+            Carp::confess "Could not delete bridge object between user $user_name and role $role_name";
+        }
+    }
+
+    return $self->SUPER::delete(@_);
+}
+
+1;
