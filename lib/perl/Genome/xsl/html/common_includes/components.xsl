@@ -141,10 +141,6 @@ $(document).data('updatedOn', new Date(]]><xsl:copy-of select="$currentTime"/><!
         <div><xsl:attribute name="class">title span-24 last <xsl:copy-of select="$icon"/></xsl:attribute>
         <h1>
           <xsl:value-of select="$label_name"/><xsl:text> </xsl:text>
-          <xsl:call-template name="str:capitalise">
-            <xsl:with-param name="text" select="$perspective"/>
-          </xsl:call-template>
-          <xsl:text>: </xsl:text>
           <xsl:value-of select="$display_name"/>
         </h1>
         </div>
