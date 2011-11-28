@@ -9,7 +9,7 @@ use Sys::Hostname;
 use Genome::Utility::AsyncFileSystem qw(on_each_line);
 
 my $PICARD_DEFAULT = '1.46';
-my $DEFAULT_MEMORY = 2;
+my $DEFAULT_MEMORY = 4;
 my $DEFAULT_PERMGEN_SIZE = 64; #Mbytes
 my $DEFAULT_VALIDATION_STRINGENCY = 'SILENT';
 
