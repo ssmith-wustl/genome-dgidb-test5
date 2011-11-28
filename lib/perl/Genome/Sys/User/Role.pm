@@ -30,25 +30,13 @@ class Genome::Sys::User::Role {
     ],
 };
 
-sub add_user {
-    my ($self, $user) = @_;
-    my $bridge = Genome::Sys::User::RoleMember->create(
-        role => $self,
-        user => $user,
-    );
-    unless ($bridge) {
-        Carp::confess "Could not add role " . $self->name . " to user " . $user->name;
-    }
-    return 1;
-}
-
 sub __errors__ {
     my $self = shift;
     my @tags;
 
     my @duplicate_names = Genome::Sys::User::Role->get(
         name => $self->name,
-        'id not' => $self->id,
+        'id ne'  => $self->id,
     );
     if (@duplicate_names) {
         push @tags, UR::Object::Tag->create(
