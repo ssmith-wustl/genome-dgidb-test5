@@ -27,6 +27,16 @@ class Genome::Sys::User {
         project_parts => { is => 'Genome::ProjectPart', reverse_as => 'entity', is_mutable => 1, },
         projects => { is => 'Genome::Project', via => 'project_parts', to => 'project', is_mutable => 1, },
         project_names => { is => 'Text', via => 'projects', to => 'name', },
+        user_role_bridges => {
+            is => 'Genome::Sys::User::RoleMember',
+            reverse_as => 'user',
+        },
+        user_roles => {
+            is => 'Genome::Sys::User::Role',
+            is_mutable => 1,
+            via => 'user_role_bridges',
+            to => 'role',
+        },
     ],
 };
 
