@@ -310,7 +310,7 @@ sub _add_position_merge {
     #create the merge operation object
     my $merge_operation = $workflow->add_operation(
         name => $op_name,
-        operation_type => Workflow::OperationType::Command->get("Genome::Model::Tools::Joinx::VcfMergePositionsOnly"),
+        operation_type => Workflow::OperationType::Command->get("Genome::Model::Tools::Joinx::VcfMergeForBackfill"),
     );
 
     #link the merged_positions_bed input to the output_file param
