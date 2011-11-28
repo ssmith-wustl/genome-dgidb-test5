@@ -175,7 +175,7 @@ http://linus221:8090/view/genome/model-group/coverage.html?id=16646
           </div>
           <div class="box_content rounded-bottom span-11 last">
             <div id="coverage-error" style="background: #FFF;padding: 10px;margin-bottom: 10px;border-bottom: 1px solid #C1C1B7;">
-                Error: <xsl:value-of select="$coverage_error" />
+                <xsl:value-of select="$coverage_error" />
                 <xsl:for-each select="/object[1]/coverage-summary[1]/depth_group">
                     <br/>
                     <a><xsl:attribute name="href"><xsl:value-of select="@url"/></xsl:attribute>View graph</a>
