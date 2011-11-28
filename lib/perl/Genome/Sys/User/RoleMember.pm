@@ -29,7 +29,7 @@ sub __errors__ {
     my @tags;
 
     my @duplicates = eval { 
-        Genome::Sys::User::RoleMember->create(
+        Genome::Sys::User::RoleMember->get(
             role => $self->role,
             user => $self->user,
         )
