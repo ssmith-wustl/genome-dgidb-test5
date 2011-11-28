@@ -269,25 +269,38 @@ sub get_alignment_summary_node {
     return $as_node;
 }
 
+sub get_result_depths {
+
+    my ($result) = @_;
+    my @result_depths;
+
+    if($result->isa('Genome::SoftwareResult')) {
+        @result_depths = split(',', $result->minimum_depths);
+    } else {
+        @result_depths = @{ $result->minimum_depths_array_ref };
+    }
+
+    return @result_depths;
+}
+
 sub get_coverage_summary_node {
     my $self = shift;
     my $xml_doc = $self->_xml_doc;
 
     my $cs_node = $xml_doc->createElement('coverage-summary');
+    my @builds  = $self->builds();
+    my $model_ids_by_depths = {};
 
     my @min_depths;
-    for my $build ($self->builds) {
+    BUILD:
+    for my $build (@builds) {
         my $model = $build->model;
 
         my @results = $self->_results_for_build($build);
 
         for my $result (@results) {
-            my @result_depths;
-            if($result->isa('Genome::SoftwareResult')) {
-                @result_depths = split(',', $result->minimum_depths);
-            } else {
-                @result_depths = @{ $result->minimum_depths_array_ref };
-            }
+            my @result_depths = get_result_depths($result);
+            $model_ids_by_depths->{join(',',@result_depths)}->{$model->id}++;
 
             unless (@min_depths) {
                 @min_depths = sort{ $a <=> $b } @result_depths;
@@ -298,13 +311,15 @@ sub get_coverage_summary_node {
             } else {
                 my @other_min_depths = sort{ $a <=> $b } @result_depths;
                 unless (scalar(@min_depths) == scalar(@other_min_depths)) {
-                    die('Model '. $model->name .' has '. scalar(@other_min_depths) .' minimum_depth filters expecting '. scalar(@min_depths) .' minimum_depth filters');
+                    warn('Model '. $model->name .' has '. scalar(@other_min_depths) .' minimum_depth filters expecting '. scalar(@min_depths) .' minimum_depth filters');
+                    next BUILD;
                 }
                 for (my $i = 0; $i < scalar(@min_depths); $i++) {
                     my $expected_min_depth = $min_depths[$i];
                     my $other_min_depth = $other_min_depths[$i];
                     unless ($expected_min_depth == $other_min_depth) {
-                        die('Model '. $model->name .' has '. $other_min_depth .' minimum_depth filter expecting '. $expected_min_depth .' minimum_depth filter');
+                        warn('Model '. $model->name .' has '. $other_min_depth .' minimum_depth filter expecting '. $expected_min_depth .' minimum_depth filter');
+                        next BUILD;
                     }
                 }
             }
@@ -324,7 +339,34 @@ sub get_coverage_summary_node {
         }
     }
 
+    # things have gone all wrong so return an error node with links to separate graphs
+    # grouped by depth grouping
+    if (keys %$model_ids_by_depths > 1) {
+        $cs_node = $self->get_error_node('Found conflicting depth groupings (different processing profiles?)');
+
+        for my $depth_grouping (keys %$model_ids_by_depths) {
+            my $group_node = $cs_node->addChild( $xml_doc->createElement('depth_group') );
+            $group_node->addChild( $xml_doc->createAttribute('description',$depth_grouping) );
+            my $url = '/view/genome/model/set/coverage.html?id='
+                    .  join('&id=', keys %{$model_ids_by_depths->{$depth_grouping}} );
+            $group_node->addChild( $xml_doc->createAttribute('url',$url) );
+        }
+    }
+
     return $cs_node;
+}
+
+sub get_error_node {
+
+    my ($self, $msg) = @_;
+    my $xml_doc = $self->_xml_doc;
+    my $node = $xml_doc->createElement('coverage-summary');
+    $node->addChild($xml_doc->createAttribute('error',$msg));
+
+#        my $header_node = $cs_node->addChild( $xml_doc->createElement('error') );
+#        $header_node->addChild( $xml_doc->createAttribute('value',$msg) );
+
+    return $node;
 }
 
 sub _results_for_build {
