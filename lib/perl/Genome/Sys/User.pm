@@ -80,15 +80,22 @@ sub __errors__ {
     my $self = shift;
     my @tags;
 
-    my @duplicates = Genome::Sys::User->get(
-        email => $self->email,
-        'id not' => $self->id,
-    );
-    if (@duplicates) {
+    my @duplicates = eval {
+        Genome::Sys::User->get(
+            email => $self->email,
+        )
+    };
+    my $error = $@;
+    if ($error) {
+        if ($error =~ /An object of type Genome::Sys::User already exists with id/) {
+            $error = "Cannot create user with email " . $self->email .
+                ", a user with that email already exists!";
+        }
+
         push @tags, UR::Object::Tag->create(
             type => 'invalid',
             properties => ['email'],
-            desc => 'user already exists with email ' . $self->email,
+            desc => $error,
         );
     }
 
