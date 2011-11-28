@@ -1,4 +1,4 @@
-package Genome::Model::Tools::Joinx::VcfMergePositionsOnly;
+package Genome::Model::Tools::Joinx::VcfMergeForBackfill;
 
 use strict;
 use warnings;
@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 use Data::Dumper;
 
-class Genome::Model::Tools::Joinx::VcfMergePositionsOnly {
+class Genome::Model::Tools::Joinx::VcfMergeForBackfill {
     is => 'Genome::Model::Tools::Joinx',
     has_input => [
         input_files => {
@@ -83,7 +83,7 @@ sub execute {
     if(defined($self->output_file) && not defined($self->use_bgzip)){
         $cmd .= " -o $output" if defined($self->output_file);
     } elsif ( defined($self->use_bgzip) && defined($self->output_file) ){
-        $cmd .= " | grep -v ^# | cut -f1-2 | awk \'BEGIN { OFS=\\\"\\t\\\"; }  { print \\\$1,\\\$2,\\\$2; }\' | bgzip -c > $output";
+        $cmd .= " | grep -v ^# | cut -f1-5 | awk \'BEGIN { OFS=\\\"\\t\\\"; }  { print \\\$1,\\\$2,\\\$2,\\\$5; }\' | bgzip -c > $output";
         $cmd = "bash -c \"$cmd\"";
     }
         
