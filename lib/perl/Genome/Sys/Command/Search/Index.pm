@@ -224,6 +224,7 @@ sub index_queued {
 
     my $max_changes_count = delete $params{max_changes_count};
 
+    # TODO Should optimize this by grouping by subject id and class and removing all related rows
     my $index_queue_iterator = Genome::Search::IndexQueue->create_iterator(
         '-order_by' => 'timestamp',
     );
@@ -234,9 +235,9 @@ sub index_queued {
         && (!defined($max_changes_count) || $modified_count <= $max_changes_count)
         && (my $index_queue_item = $index_queue_iterator->next)
     ) {
-        my $action = $index_queue_item->action;
         my $subject_class = $index_queue_item->subject_class;
         my $subject_id = $index_queue_item->subject_id;
+        my $action = ($subject_class->get($subject_id) ? 'add' : 'delete');
         if ($self->modify_index($action, $subject_class, $subject_id)) {
             $index_queue_item->delete();
             $modified_count++;
