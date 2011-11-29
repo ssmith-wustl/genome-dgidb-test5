@@ -1521,7 +1521,7 @@ sub files_ignored_by_diff {
         alignments/(.*).log
         alignments/(.*).metrics
         reports/Build_Initialized/report.xml
-        reports/Build_Succeeded/report.xml
+        reports/Build_Succeeded.*/report.xml
         reports/Input_Base_Counts/report.html
         reports/Input_Base_Counts/report.xml
         reports/Summary/report.html
