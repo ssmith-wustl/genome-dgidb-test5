@@ -4,7 +4,13 @@ use Carp;
 use Genome;
 
 class Genome::Search::IndexQueue {
+    id_generator => '-uuid',
     id_by => [
+        id => {
+            is => 'Text',
+        },
+    ],
+    has => [
         subject_class => {
             is => 'Text',
             doc => 'Class of the subject to be indexed by search.',
@@ -13,8 +19,6 @@ class Genome::Search::IndexQueue {
             is => 'Text',
             doc => 'ID of the subject to be indexed by search.',
         },
-    ],
-    has => [
         timestamp => {
             is => 'Time',
             doc => 'Timestamp of first request. Automatically added if not provided.',
