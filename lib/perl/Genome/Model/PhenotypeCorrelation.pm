@@ -52,6 +52,21 @@ class Genome::Model::PhenotypeCorrelation {
             valid_values => ['case-control','quantitative'],
             doc => "Strategy to use to look at phenotypes.",
         },
+        roi_file => {
+            is => 'Text',
+            doc => 'Bed format  file containing the ROI set',
+            is_optional => 1,
+        },
+        roi_name => {
+            is => 'Text',
+            doc => 'ROI set name',
+            is_optional => 1,
+        },
+        wingspan => {
+            is => 'Text',
+            doc => 'Area to include before and after ROI regions',
+            is_optional => 1,
+        },
     ],
     has_input => [
         identify_cases_by => { 
@@ -282,12 +297,19 @@ sub _execute_build {
             die $self->error_message("Output directory doesn't exist and can't be created at: ".$vcf_output_directory);
         }
     }
+    my %region_limiting_params = ( 
+        roi_file => $self->roi_file,
+        roi_name => $self->roi_name,
+        wingspan => $self->wingspan,
+    );
+
 
     my $snv_vcf_creation = Genome::Model::Tools::Vcf::CreateCrossSampleVcf->create(
         builds => \@builds,
         output_directory => $vcf_output_directory,
         max_files_per_merge => 100,
         variant_type => 'snvs',
+        %region_limiting_params,
     );
     my $vcf_result;
     unless($vcf_result = $snv_vcf_creation->execute){
