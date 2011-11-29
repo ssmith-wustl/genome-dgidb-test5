@@ -161,6 +161,31 @@
     <div class="content rounded shadow">
       <div class="container">
         <div class="span-11">
+<!-- JTAL: THERE IS A PROBLEM HERE WITH A DIV
+http://linus221:8090/view/genome/model-group/coverage.html?id=16646
+-->
+
+        <xsl:variable name="coverage_error" select="/object/coverage-summary/@error"/>
+        <xsl:choose>
+        <xsl:when test="$coverage_error">
+          <div class="box_header rounded-top span-11 last">
+            <div class="box_title" style="position: relative">
+				  <h3 class="nontyped">coverage</h3>
+	    </div>
+          </div>
+          <div class="box_content rounded-bottom span-11 last">
+            <div id="coverage-error" style="background: #FFF;padding: 10px;margin-bottom: 10px;border-bottom: 1px solid #C1C1B7;">
+                <xsl:value-of select="$coverage_error" />
+                <xsl:for-each select="/object[1]/coverage-summary[1]/depth_group">
+                    <br/>
+                    <a><xsl:attribute name="href"><xsl:value-of select="@url"/></xsl:attribute>View graph</a>
+                        for models with coverage stats depths: <xsl:value-of select="@description"/>
+                </xsl:for-each>
+            </div>
+          </div>
+
+        </xsl:when>
+        <xsl:otherwise>
           <div class="box_header rounded-top span-11 last">
             <div class="box_title" style="position: relative">
 				  <h3 class="nontyped">coverage</h3>
@@ -169,15 +194,17 @@
 					 <input name="scheme_select" value="analogous" id="analogous" type="radio" onchange="coverage_vis.render()" checked="checked"/><label for="analogous">analogous</label>
 					 <input name="scheme_select" value="complementary" id="complementary" type="radio" onchange="coverage_vis.render()"/><label for="complementary">complementary</label>
 				  </div>
-				</div>
+            </div>
           </div>
           <div class="box_content rounded-bottom span-11 last">
             <div id="coverage" style="background: #FFF;padding: 10px;margin-bottom: 10px;border-bottom: 1px solid #C1C1B7;">
 				  <script type="text/javascript" src="/res/js/app/genome_model_coverage_chart.js"></script>
             </div>
           </div>
-        </div>
+        </xsl:otherwise>
+        </xsl:choose>
 
+        </div> <!-- span-11 -->
         <div class="span-8">
           <div class="box_header span-8 last rounded-top">
             <div class="box_title"><h3 class="nontyped">alignment</h3></div>
@@ -190,6 +217,8 @@
             </div>
           </div>
         </div>
+
+        
 
         <div class="span-5 last">
           <div class="box_header span-5 last rounded-top">

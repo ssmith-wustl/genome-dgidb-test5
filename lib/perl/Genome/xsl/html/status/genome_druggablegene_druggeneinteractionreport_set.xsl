@@ -11,8 +11,7 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
     <xsl:call-template name="control_bar_view"/>
 
     <xsl:call-template name="view_header">
-      <xsl:with-param name="label_name" select="'DrugGeneInteractionReport:'" />
-      <xsl:with-param name="display_name" select="@id" />
+      <xsl:with-param name="display_name" select="/object/aspect[@name='members']/object/display_name" />
       <xsl:with-param name="icon" select="'genome_druggeneinteractionreport_32'" />
     </xsl:call-template>
 

@@ -61,7 +61,7 @@ class Genome::DruggableGene::DrugGeneInteractionReport {
 
 sub __display_name__ {
     my $self = shift;
-    return "Interaction of " . $self->drug_name_report->__display_name__ . " and " . $self->gene_name_report->__display_name__;
+    return "Interaction of " . $self->drug_name_report_name . " and " . $self->gene_name_report_name;
 }
 
 if ($INC{"Genome/Search.pm"}) {

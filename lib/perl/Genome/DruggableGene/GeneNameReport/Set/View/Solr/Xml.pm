@@ -72,9 +72,13 @@ class Genome::DruggableGene::GeneNameReport::Set::View::Solr::Xml {
                     name => '__display_name__',
                     position => 'display_title',
                 },
-            ]
+                {
+                    name => 'alternate_names',
+                    position => 'content',
+                },
+            ],
         },
-    ]
+    ],
 };
 
 sub _generate_id_field_data {
