@@ -543,7 +543,8 @@ sub register_callbacks {
     my $searchable_class = shift;
 
     $observer = $searchable_class->add_observer(
-        callback => sub { $class->_index_queue_callback(@_); },
+        #callback => sub { $class->_index_queue_callback(@_); },
+        callback => sub { return; },
     );
 }
 
