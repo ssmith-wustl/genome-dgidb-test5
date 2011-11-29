@@ -24,8 +24,8 @@ class Genome::Search::IndexQueue {
             doc => 'Timestamp of first request. Automatically added if not provided.',
         },
     ],
-    data_source => 'Genome::DataSource::Main',
-    table_name => 'web.search_index_queue',
+    data_source => 'Genome::DataSource::GMSchema',
+    table_name => 'SEARCH_INDEX_QUEUE',
 };
 
 sub create {
