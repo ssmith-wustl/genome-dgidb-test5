@@ -31,6 +31,21 @@ class Genome::Model::Tools::Vcf::CreateCrossSampleVcf {
             default => 'snvs',
             valid_values => ['snvs','indels'],
         },
+        roi_file => {
+            is => 'Text',
+            is_optional => 1,
+            doc => 'Set this along with roi_name to limit the incoming vcfs to roi target regions',
+        },
+        roi_name => {
+            is => 'Text',
+            is_optional => 1,
+            doc => 'Set this along with roi_file to limit the incoming vcfs to roi target regions',
+        },
+        wingspan => {
+            is => 'Text',
+            is_optional => 1,
+            doc => 'Set this to add a wingspan to region limiting',
+        },
     ],
     has_transient_optional => [
         _num_inputs => {
@@ -45,6 +60,9 @@ class Genome::Model::Tools::Vcf::CreateCrossSampleVcf {
         },
         _max_ops => {
             doc => 'Number of operations',
+        },
+        _input_files => {
+            doc => 'The paths to the vcf files to be merged',
         },
     ],
     doc => 'All ',
@@ -63,6 +81,15 @@ sub execute {
     my @builds = $self->builds;
     my $output_directory = $self->output_directory;
 
+    my $roi_file = defined($self->roi_file);
+    my $roi_name = defined($self->roi_name);
+    my $reglim=0;
+    if($roi_file == $roi_name){
+        $reglim = 1;
+    } else {
+        die $self->error_message("You must define both roi_name and roi_file or neither.");
+    }
+
     #Check for output directory
     unless(-d $output_directory) {
         $self->error_message("Unable to find output directory: " . $output_directory);
@@ -74,6 +101,7 @@ sub execute {
     my $var_type = $self->variant_type;
     my $accessor = "get_".$var_type."_vcf";
     my @input_files = map{ $_->$accessor.".gz" } @builds;
+    $self->_input_files(\@input_files);
     my @existing_files = grep { -s $_ } @input_files;
     unless( scalar(@existing_files) == $num_inputs){
         die $self->error_message("The number of input builds did not match the number of .vcf.gz files found. Check the input builds for completeness.");
@@ -103,14 +131,22 @@ sub execute {
                 die $self->error_message("Could not create backfill directory for ".$sample);
             }
         }
+        
+        #if region-limiting, set vcf_file as the region-limited file, otherwise use the input vcf
+        my $vcf_file = $reglim ? $output_directory."/region_limited_inputs/".$var_type.".".$sample.".region_limited.vcf.gz" : $build->$accessor.".gz";
         $inputs{$sample."_bam_file"} = $build->whole_rmdup_bam_file;
         $inputs{$sample."_mpileup_output_file"} = $dir."/".$sample.".for_".$var_type.".pileup.gz"; 
-        $inputs{$sample."_vcf_file"} = $build->$accessor.".gz";
+        $inputs{$sample."_vcf_file"} = $vcf_file;        
         $inputs{$sample."_backfilled_vcf"} = $dir."/".$var_type.".backfilled_for_".$var_type.".vcf.gz";
     }
 
     #create the workflow object
     my $workflow = $self->_generate_workflow(\@builds, $output_directory);
+
+    #create region limited vcfs to work on
+    if($reglim){
+        @input_files = $self->_region_limit_inputs;
+    }
 
     #set up inputs which are determined by the number of merge steps
     if(defined($self->max_files_per_merge) && ($self->max_files_per_merge < $num_inputs)){
@@ -153,14 +189,13 @@ sub execute {
     $self->_dump_workflow($workflow);
 
     $self->status_message("Now launching the vcf-merge workflow.");
-    $DB::single=1;
     my $result = Workflow::Simple::run_workflow_lsf( $workflow, %inputs);
 
     unless($result){
         $self->error_message( join("\n", map($_->name . ': ' . $_->error, @Workflow::Simple::ERROR)) );
         die $self->error_message("Workflow did not return correctly.");
     }
-
+    $DB::single=1;
     return $inputs{final_output};
 
 }
@@ -168,15 +203,131 @@ sub execute {
 sub _dump_workflow {
     my $self = shift;
     my $workflow = shift;
+    my $xml_location = shift || $self->output_directory."/workflow.xml";
     my $xml = $workflow->save_to_xml;
-    my $xml_location = $self->output_directory."/workflow.xml";
     my $xml_file = Genome::Sys->open_file_for_writing($xml_location);
     print $xml_file $xml;
     $xml_file->close;
     #$workflow->as_png($self->output_directory."/workflow.png"); #currently commented out because blades do not all have the "dot" library to use graphviz
 }
 
+sub _region_limit_inputs {
+    my $self = shift;
+    my @builds = $self->builds;
 
+    my @answers;
+    my $output_directory = $self->output_directory . "/region_limited_inputs";
+    unless(-d $output_directory){
+        mkdir $output_directory;
+        unless(-d $output_directory){
+            die $self->error_message("Could not create output directory for region_limiting at: ".$output_directory);
+        }
+    }
+    my %in_out;
+
+    my $var_type = $self->variant_type;
+    my $accessor = "get_".$var_type."_vcf";
+    my %inputs;
+
+    $inputs{region_bed_file} = $self->roi_file;
+    $inputs{roi_name} = $self->roi_name;
+    $inputs{wingspan} = $self->wingspan;
+
+    my @inputs;
+    my $count=1;
+    
+    #set up individualized input params and input values
+    for my $b (@builds){
+        my $sample = $b->model->subject->name;
+        my $vcf = $b->$accessor.".gz";
+        my $output = $output_directory."/".$var_type.".".$sample.".region_limited.vcf.gz";
+        $in_out{$vcf} = $output;
+        push @inputs, ("input_vcf_".$count,"output_vcf_".$count);
+        $inputs{"input_vcf_".$count} = $vcf;
+        $inputs{"output_vcf_".$count} = $output;
+        push @answers, $output;
+        $count++;
+    }
+
+    my $workflow = Workflow::Model->create(
+        name => 'Multi-Vcf Merge',
+        input_properties => [
+            "region_bed_file",
+            "roi_name",
+            "wingspan",
+            @inputs,
+        ],
+        output_properties => [
+            'output',
+        ],
+    );
+
+    $workflow->log_dir($output_directory);
+
+    #add individual region-limiting operations
+    for my $num (1..($count-1)){
+        my $region_limit_operation = $workflow->add_operation(
+            name => "region limiting ".$num,
+            operation_type => Workflow::OperationType::Command->get("Genome::Model::Tools::Vcf::RegionLimit"),
+        );
+
+        #link common properties
+        for my $prop ("region_bed_file","wingspan","roi_name"){
+            $workflow->add_link(
+                left_operation => $workflow->get_input_connector,
+                left_property => $prop,
+                right_operation => $region_limit_operation,
+                right_property => $prop,
+            );
+        }
+
+        #link individual inputs and outputs
+        $workflow->add_link(
+            left_operation => $workflow->get_input_connector,
+            left_property => "input_vcf_".$num,
+            right_operation => $region_limit_operation,
+            right_property => "vcf_file",
+        );
+        $workflow->add_link(
+            left_operation => $workflow->get_input_connector,
+            left_property => "output_vcf_".$num,
+            right_operation => $region_limit_operation,
+            right_property => "output_file",
+        );
+
+        #link to output
+        $workflow->add_link(
+            left_operation => $region_limit_operation,
+            left_property => "output_file",
+            right_operation => $workflow->get_output_connector,
+            right_property => "output",
+        );
+    }
+
+    #validate workflow
+    my @errors = $workflow->validate;
+    if (@errors) {
+        $self->error_message(@errors);
+        die "Errors validating region-limiting workflow\n";
+    }
+    $self->_dump_workflow($workflow, $output_directory."/workflow.xml");
+
+    $self->status_message("Now launching the region-limiting workflow.");
+    my $result = Workflow::Simple::run_workflow_lsf( $workflow, %inputs);
+
+    unless($result){
+        $self->error_message( join("\n", map($_->name . ': ' . $_->error, @Workflow::Simple::ERROR)) );
+        die $self->error_message("Workflow did not return correctly.");
+    }
+    
+    #check output files to make sure they exist
+    if(my @error = grep{ not(-e $_)} @answers){
+        die $self->error_message("The following region limit output files could not be found: ".join("\n",@error));
+    }
+
+    #return a list of the output files
+    return @answers; 
+}
 
 sub _generate_workflow {
     my $self = shift;

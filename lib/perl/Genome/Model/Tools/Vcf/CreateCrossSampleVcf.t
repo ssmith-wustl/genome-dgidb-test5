@@ -19,29 +19,28 @@ my $archos = `uname -a`;
 if ($archos !~ /64/) {
     plan skip_all => "Must run from 64-bit machine";
 } else {
-    if(not $ENV{GSCAPP_RUN_LONG_TESTS}) {
-        plan skip_all => 'This test takes up to 10 minutes to run and thus is skipped.  Use `ur test run --long` to enable.';
-    }else {
-        plan  tests => 4;
-    }
+    plan  tests => 4;
 }
 
 use_ok( 'Genome::Model::Tools::Vcf::CreateCrossSampleVcf');
 
 my $refbuild_id = 101947881;
 my $test_data_directory = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Vcf-CreateCrossSampleVcf";
+my $region_file = $test_data_directory."/input/feature_list_3.bed.gz";
 
-my @input_builds = map{ Genome::Model::Build->get($_)} (116552788,116559016,116559101); # (2881222865,2881222915,2881222946);
-#my @input_modelgroup = Genome::ModelGroup->get(20955);
+my @input_builds = map{ Genome::Model::Build->get($_)} (116552788,116559016,116559101);
 
 # Updated to .v2 for correcting an error with newlines
-my $expected_directory = $test_data_directory . "/expected";
+my $expected_directory = $test_data_directory . "/expected_2";
 my $test_output_base = File::Temp::tempdir('Genome-Model-Tools-Vcf-CreateCrossSampleVcf-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
 
 my $ccsv_cmd = Genome::Model::Tools::Vcf::CreateCrossSampleVcf->create(
     output_directory => $test_output_base,
     builds => \@input_builds,
     max_files_per_merge => 10,
+    roi_file => $region_file,
+    roi_name => "TEST_ROI_NAME",
+    wingspan => 500,
 );
 
 my $output_file = $test_output_base."/snvs.merged.vcf.gz";
