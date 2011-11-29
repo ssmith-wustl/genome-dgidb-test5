@@ -513,22 +513,13 @@ sub _index_queue_callback {
         require MRO::Compat;
     }
 
-    my $meta = $object->__meta__;
-    my @add_property_names = ('create', $meta->all_property_names);
-
-    my $action;
-    if (grep { $aspect eq $_ } @add_property_names) {
-        $action = 'add';
-    }
-    elsif ($aspect eq 'delete') {
-        $action = 'delete';
-    }
-
     my $index_queue;
-    if ($action) {
-        $index_queue = Genome::Search::IndexQueue->create_or_update(
-            subject => $object,
-            action => $action,
+    my $meta = $object->__meta__;
+    my @trigger_properties = ('create', 'delete', $meta->all_property_names);
+    if (grep { $aspect eq $_ } @trigger_properties) {
+        $index_queue = Genome::Search::IndexQueue->create(
+            subject_id => $object->id,
+            subject_class => $object->class,
         );
     }
 
@@ -543,8 +534,7 @@ sub register_callbacks {
     my $searchable_class = shift;
 
     $observer = $searchable_class->add_observer(
-        #callback => sub { $class->_index_queue_callback(@_); },
-        callback => sub { return; },
+        callback => sub { $class->_index_queue_callback(@_); },
     );
 }
 

@@ -81,11 +81,6 @@ sub test_index_queue_callback {
     );
     ok($taxon, "created a new taxon");
 
-# disabled while the IndexQueue creation is disabled in the search callback
-#    my $index_queue = Genome::Search::IndexQueue->get(subject => $taxon);
-#    isa_ok($index_queue, 'Genome::Search::IndexQueue', 'got an IndexQueue object for taxon') || die;
-#    is($index_queue->action, 'add', 'action is set to add (to queue)');
-#
-#    $taxon->delete;
-#    is($index_queue->action, 'delete', 'action is set to delete (to queue)');
+    my $index_queue = Genome::Search::IndexQueue->get(subject_id => $taxon->id, subject_class => $taxon->class);
+    isa_ok($index_queue, 'Genome::Search::IndexQueue', 'got an IndexQueue object for taxon') || die;
 }
