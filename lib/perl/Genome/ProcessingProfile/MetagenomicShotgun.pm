@@ -99,6 +99,7 @@ sub _execute_build {
     my $start_build = sub {
         my ($model, @instrument_data) = @_;
         my %existing;
+
         for my $inst_data($model->instrument_data){
             $existing{$inst_data->id} = $inst_data;
         }
@@ -119,6 +120,10 @@ sub _execute_build {
             $self->status_message("Adding Instrument Data " . $inst_data->id . " to model " . $model->__display_name__);
             $model->add_instrument_data($inst_data);
         }
+        if (@instrument_data == 0){
+            $self->status_message("No instrument data for model ".$model->__display_name__.", skipping build");
+            return;
+        }
         
         my $build = $self->build_if_necessary($model);
         return $build;
@@ -126,6 +131,10 @@ sub _execute_build {
 
     my $wait_build = sub {
         my @watched_builds = @_;
+        if (@watched_builds == 0){
+            $self->status_message("No build to wait for");
+            return;
+        }
         for my $build ( @watched_builds ) {
             $self->status_message('Watching build: '.$build->__display_name__);
             $self->wait_for_build($build);
@@ -138,18 +147,20 @@ sub _execute_build {
 
     my $extract_data = sub {
         my ($from_build, $extraction_type) = @_;
+        if ( not defined $from_build ){
+            $self->status_message("No previous build provided, skipping $extraction_type data extraction");
+            return;
+        }
         $self->status_message("Extracting $extraction_type reads from ".$from_build->__display_name__);
         my @assignments = $from_build->instrument_data_inputs;
         my @extracted_instrument_data;
         for my $assignment (@assignments) {
             my @alignment_results = $from_build->alignment_results_for_instrument_data($assignment->value);
             if (@alignment_results > 1) {
-                $self->error_message( "multiple alignment_results found for instrument data assignment: " . $assignment->__display_name__);
-                return;
+                die $self->error_message( "multiple alignment_results found for instrument data assignment: " . $assignment->__display_name__);
             }
             if (@alignment_results == 0) {
-                $self->error_message( "no alignment_results found for instrument data assignment: " . $assignment->__display_name__);
-                return;
+                die $self->error_message( "no alignment_results found for instrument data assignment: " . $assignment->__display_name__);
             }
             $self->status_message("processing instrument data assignment ".$assignment->__display_name__." for unaligned reads import");
 
@@ -414,7 +425,7 @@ sub _extract_data_from_alignment_result{
 
     if (!$se_lock and !$pe_lock) {
         $self->status_message("skipping read processing since all data is already processed and uploaded");
-        return grep { defined } ($se_instdata, $pe_instdata);
+        return grep { defined $_ } ($se_instdata, $pe_instdata);
     }
 
     # extract what we did not already find...

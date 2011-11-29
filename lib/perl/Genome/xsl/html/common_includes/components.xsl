@@ -141,10 +141,6 @@ $(document).data('updatedOn', new Date(]]><xsl:copy-of select="$currentTime"/><!
         <div><xsl:attribute name="class">title span-24 last <xsl:copy-of select="$icon"/></xsl:attribute>
         <h1>
           <xsl:value-of select="$label_name"/><xsl:text> </xsl:text>
-          <xsl:call-template name="str:capitalise">
-            <xsl:with-param name="text" select="$perspective"/>
-          </xsl:call-template>
-          <xsl:text>: </xsl:text>
           <xsl:value-of select="$display_name"/>
         </h1>
         </div>
@@ -203,6 +199,13 @@ $(document).data('updatedOn', new Date(]]><xsl:copy-of select="$currentTime"/><!
     <xsl:comment>template: /html/common_includes/components.xsl name:control_bar_menu</xsl:comment>
 
     <ul class="app_menu">
+      <li>
+        <a id="perspective_switcher" title="Available Perspectives">
+          <xsl:attribute name="alt"><xsl:value-of select="$objectId"/></xsl:attribute>
+          <xsl:attribute name="href"><xsl:text>/view/u-r/object/type/available-views.html?class_name=</xsl:text><xsl:value-of select="$objectClassName"/></xsl:attribute>
+          Perspectives
+        </a>
+      </li>
       <li>
         <a href="/view/genome/status.html" class="app btn shadow">
           <div class="icon"><img src="/res/img/icons/app_deprecated_search_16.png" width="16" height="16"/></div>

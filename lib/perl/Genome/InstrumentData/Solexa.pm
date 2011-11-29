@@ -508,8 +508,81 @@ sub dump_trimmed_fastq_files {
     unless($trimmer_name) {
         return $self->dump_sanger_fastq_files(%$segment_params, directory => $data_directory);
     }
-
     my @fastq_pathnames = $self->dump_sanger_fastq_files(%$segment_params);
+
+    # see if there is an SX API trimmer for this trimmer name
+    my $class_name = 'Genome::Model::Tools::Sx::Trim';
+    my @words = split(' ',$trimmer_name);
+    for my $word (@words) {
+        my @parts = map { ucfirst($_) } split('-',$word);
+        $class_name .= "::" . join('',@parts);
+    }
+    eval { $class_name->class };
+
+    if (not $@) {
+        # SX trimmer: yay
+
+        my @params = eval("no strict; no warnings; $trimmer_params");
+        if ($@) {
+            die "error in params: $@\n$trimmer_params\n";
+        }
+
+        my @trimmed_fastq_pathnames;
+
+        my @output;
+        if ($self->is_paired_end) {
+            @trimmed_fastq_pathnames = 
+                map { $data_directory . '/trimmed-sanger-fastq-' . $_ . '.fastq' } 
+                    ('read1','read2','fragment');
+            @output = (
+                $trimmed_fastq_pathnames[0].':name=fwd',
+                $trimmed_fastq_pathnames[1].':name=rev',
+                $trimmed_fastq_pathnames[2].':name=sing',
+            );
+
+        }
+        else {
+            @trimmed_fastq_pathnames = 
+                map { $data_directory . '/trimmed-sanger-fastq-' . $_ .'.fastq'} 
+                    ('fragment');
+            @output = $trimmed_fastq_pathnames[0];
+        }
+
+        $self->status_message('Creating fastq trim command...');
+        my $trimmer = $class_name->create(
+            input => \@fastq_pathnames,
+            output => \@output,
+            @params,
+        );
+
+        unless ($trimmer) {
+            $self->
+            $self->error_message('Failed to create fastq trim command');
+            die($self->error_message);
+        }
+        
+        unless ($trimmer->execute) {
+            $self->error_message('Failed to execute fastq trim command '. $trimmer->command_name);
+            die($self->error_message);
+        }
+
+        for my $input_fastq_pathname (@fastq_pathnames) {
+            if ($input_fastq_pathname =~ m/^\/tmp/) {
+                $self->status_message("Removing original file from before trimming to save space: $input_fastq_pathname");
+                unlink($input_fastq_pathname);
+            }
+        }
+
+        return @trimmed_fastq_pathnames;
+    }
+    
+    # if the above did not work, we have a legacy trimmer.
+
+
+    # DO __NOT__ ADD TO THE CONDITIONAL LOGIC HERE
+    # MAKE A TRIMMER IN THE SX API, AND FALL THROUGH TO THE "ELSE" BLOCK
+    # EVENTUALLY, ALL OF THIS IF STATMENT NEEDS TO GO AWAY -SSMITH
+
     my @trimmed_fastq_pathnames;
     #if the trimmer supports paired end, we just run it once, otherwise we need to loop over the fastqs
     if(@fastq_pathnames == 2 && $trimmer_name eq 'far' && $trimmer_version >= '2.0') {
@@ -530,7 +603,7 @@ sub dump_trimmed_fastq_files {
             $self->error_message('Failed to execute fastq trim command '. $trimmer->command_name);
             die($self->error_message);
          }
-        push @trimmed_fastq_pathnames, glob "$trimmed_input_fastq_path*";
+        push @trimmed_fastq_pathnames, glob "$trimmed_input_fastq_path*fastq";
         unless (@trimmed_fastq_pathnames){
             die $self->error_message("Failed to get expected trimmed output files");
         }
@@ -630,54 +703,35 @@ sub dump_trimmed_fastq_files {
                 $trimmed_input_fastq_pathname = $random_input_fastq_pathname;
             }
             else {
-                # TODO: modularize the above and refactor until they work in this logic:
-                # Then ensure that the trimmer gets to work on paired files, and is
-                # a more generic "preprocess_reads = 'foo | bar | baz' & "[1,2],[],[3,4,5]"
-                my @params = eval("no strict; no warnings; $trimmer_params");
-                if ($@) {
-                    die "error in params: $@\n$trimmer_params\n";
-                }
-
-                my $class_name = 'Genome::Model::Tools::Sx::Trim';
-                my @words = split(' ',$trimmer_name);
-                for my $word (@words) {
-                    my @parts = map { ucfirst($_) } split('-',$word);
-                    $class_name .= "::" . join('',@parts);
-                }
-                eval {
-                    $trimmer = $class_name->create(
-                        input => [$input_fastq_pathname],
-                        output => [$trimmed_input_fastq_pathname],
-                        @params,
-                    );
-                };
-                unless ($trimmer) {
-                    $self->error_message(
-                        sprintf(
-                            "Unknown read trimmer_name %s.  Class $class_name params @params. $@",
-                            $trimmer_name,
-                            $class_name
-                        )
-                    );
-                    die($self->error_message);
-                }
+                $self->error_message(
+                    sprintf(
+                        "Unknown read trimmer_name %s.",
+                        $trimmer_name,
+                    )
+                );
+                die($self->error_message);
             }
+
+            # error check and runn the legacy trimmer
+
             unless ($trimmer) {
                 $self->error_message('Failed to create fastq trim command');
                 die($self->error_message);
             }
+            
             unless ($trimmer->execute) {
                 $self->error_message('Failed to execute fastq trim command '. $trimmer->command_name);
                 die($self->error_message);
             }
 
+            # this legacy trimmer has post-execute work (which should have been in the module)
             if ($trimmer_name eq 'normalize') {
                 my @empty = ();
                 $trimmer->_index(\@empty);
             }
 
             if ($input_fastq_pathname =~ m/^\/tmp/) {
-                $self->status_message("Removing original file before trimming to save space: $input_fastq_pathname");
+                $self->status_message("Removing original file from before trimming to save space: $input_fastq_pathname");
                 unlink($input_fastq_pathname);
             }
 

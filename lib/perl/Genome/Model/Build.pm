@@ -284,6 +284,11 @@ sub _copy_model_inputs {
             # Resolve inputs pointing to a model to a build.
             if($params{value_class_name}->isa('Genome::Model')) {
                 my $input_name = $input->name;
+                if ($input_name =~ /_model$/) {
+                    $input_name =~ s/_model$/_build/g;
+                    $params{name} = $input_name;
+                }
+
                 my $existing_input = $self->inputs(name => $input_name);
                 if ($existing_input) {
                     my $existing_input_value = $existing_input->value;
@@ -1031,9 +1036,13 @@ sub _lock_model_for_start {
     # create a change record so that if it is "undone" it will kill the job
     # create a commit observer to resume the job when build is committed to database
     my $process = UR::Context->process;
-    my $unlock_sub = sub { Genome::Sys->unlock_resource(resource_lock => $lock) };
+    my $commit_observer;
+    my $unlock_sub = sub {
+        Genome::Sys->unlock_resource(resource_lock => $lock);
+        $commit_observer->delete;
+    };
     my $lock_change = UR::Context::Transaction->log_change($self, 'UR::Value', $lock, 'external_change', $unlock_sub);
-    my $commit_observer = $process->add_observer(aspect => 'commit', callback => $unlock_sub);
+    $commit_observer = $process->add_observer(aspect => 'commit', callback => $unlock_sub);
     unless ($commit_observer) {
         $self->error_message("Failed to add commit observer to unlock $lock.");
     }

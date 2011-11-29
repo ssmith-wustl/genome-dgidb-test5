@@ -41,8 +41,10 @@ import net.sf.samtools.util.StringUtil;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Extracts read sequences and qualities from the input SAM/BAM file and writes them into 
@@ -137,6 +139,11 @@ public class GCSamToFastq extends CommandLineProgram {
         writer.close();
     }
 
+    protected void notifyOrphan(String name) {
+        if (IGNORE_ORPHAN_MATES == false)
+            throw new PicardException("Read "+name+" is orphaned!");
+    }
+
     protected void doPaired() {
         IoUtil.assertFileIsWritable(SECOND_END_FASTQ);
         IoUtil.assertFileIsWritable(FRAGMENT_FASTQ);
@@ -145,34 +152,54 @@ public class GCSamToFastq extends CommandLineProgram {
         final FastqWriter writer1 = new FastqWriter(FASTQ);
         final FastqWriter writer2 = new FastqWriter(SECOND_END_FASTQ);
         final FastqWriter fragWriter = new FastqWriter(FRAGMENT_FASTQ);
-
         final Map<String,SAMRecord> firstSeenMates = new HashMap<String,SAMRecord>();
+        final Set<String> failedReadNames = new HashSet<String>();
 
         try {
+
             for (final SAMRecord currentRecord : reader ) {
+
+                final String currentReadName = currentRecord.getReadName() ;
+                final SAMRecord firstRecord = firstSeenMates.get(currentReadName);
+
                 // Skip non-PF reads as necessary
-                if (currentRecord.getReadFailsVendorQualityCheckFlag() && !INCLUDE_NON_PF_READS) continue;
-
+                if (currentRecord.getReadFailsVendorQualityCheckFlag() && !INCLUDE_NON_PF_READS) {
                     if (currentRecord.getReadPairedFlag()) {
+                        failedReadNames.add(currentReadName);
+                        // if this record failed QC, but we were already holding its mate...
+                        if (firstRecord != null) {
+                            firstSeenMates.remove(currentReadName);
+                            notifyOrphan(currentReadName); 
+                            writeRecord(firstRecord, null, fragWriter);
+                        }
+                    }
+                    continue;
+                }
 
-                        final String currentReadName = currentRecord.getReadName() ;
-                        final SAMRecord firstRecord = firstSeenMates.get(currentReadName);
-                        if (firstRecord == null) {
-                            firstSeenMates.put(currentReadName, currentRecord) ;
+                if (currentRecord.getReadPairedFlag()) {
+                    // if this reads mate already failed QC...
+                    if (failedReadNames.contains(currentReadName)) {
+                        notifyOrphan(currentReadName); 
+                        writeRecord(currentRecord, null, fragWriter);
+                        continue;
+                    }
+
+                    if (firstRecord == null) {
+                        firstSeenMates.put(currentReadName, currentRecord) ;
+                    }
+                    else {
+                        assertPairedMates(firstRecord, currentRecord);
+
+                        if (currentRecord.getFirstOfPairFlag()) {
+                             writeRecord(currentRecord, 1, writer1);
+                             writeRecord(firstRecord, 2, writer2);
                         }
                         else {
-                            assertPairedMates(firstRecord, currentRecord);
-
-                            if (currentRecord.getFirstOfPairFlag()) {
-                                 writeRecord(currentRecord, 1, writer1);
-                                 writeRecord(firstRecord, 2, writer2);
-                            }
-                            else {
-                                 writeRecord(firstRecord, 1, writer1);
-                                 writeRecord(currentRecord, 2, writer2);
-                            }
-                            firstSeenMates.remove(currentReadName);
+                             writeRecord(firstRecord, 1, writer1);
+                             writeRecord(currentRecord, 2, writer2);
                         }
+                        firstSeenMates.remove(currentReadName);
+                    }
                 } else {
                     writeRecord(currentRecord, null, fragWriter);
                 }

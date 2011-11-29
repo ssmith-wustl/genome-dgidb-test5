@@ -71,10 +71,10 @@ sub execute {
     #set up the appropriate region/view files for the commmand
     if(defined($self->region_file)){
         if($rf =~ m/.gz$/){
-            $region_file = "-l <(zcat ".$rf.")";
+            $region_file = "-l <(zcat ".$rf." | awk \'BEGIN { OFS=\\\"\\t\\\"; }  { print \\\$1,\\\$2,\\\$2; }\')";
             $view_region_file = "-L <(zcat ".$vlf.")";
         }elsif (defined($rf)){
-            $region_file = "-l $rf";
+            $region_file = "-l <(cat ".$rf." | awk \'BEGIN { OFS=\\\"\\t\\\"; }  { print \\\$1,\\\$2,\\\$2; }\')";
             $view_region_file = "-L $vlf ";
         }
     }

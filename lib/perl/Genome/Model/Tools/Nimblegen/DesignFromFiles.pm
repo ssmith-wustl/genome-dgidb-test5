@@ -141,7 +141,7 @@ sub execute {
       my $fh = IO::File->new( $filepath );
       while( my $line = $fh->getline )
       {
-        next if( $line =~ m/^(#|chromosome_name|Chr\t|readgroup)/ ); #Skip headers
+        next if( $line =~ m/^(#|chromosome_name|Chr\t|CHR1\t|readgroup)/ ); #Skip headers
         chomp( $line );
 
         # This section and the next can be expanded to support new annotation formats
@@ -177,21 +177,28 @@ sub execute {
         {
           my ( undef, $chr1, undef, undef, $chr2 ) = split( /\t/, $line );
           $chr1 =~ s/chr//i; $chr2 =~ s/chr//i;
-          ( defined $valid_chrs{$chr1} && defined $valid_chrs{$chr2} ) or die "Invalid chrom name in file:\n$filepath!\nIn line:\n\n$line\n";
+          ( defined $valid_chrs{$chr1} && defined $valid_chrs{$chr2} ) or die "Invalid chrom name in file:\n$filepath!\nIn line:\n$line\n\n";
           ++$var_cnt{svs} if( defined $include_chrs{$chr1} && defined $include_chrs{$chr2} );
         }
-        elsif( $muttype eq 'svs' && $line =~ m/^\S+\t\d+\t\d+(\+|\-)\S*\t\S+\t\d+\t\d+(\+|\-)\t(INV|INS|DEL|ITX|CTX)/ ) # SquareDancer output
+        elsif( $muttype eq 'svs' && $line =~ m/^\S+\t\d+\t\d+\t\S+\t\d+\t\d+\t(INV|INS|DEL|ITX|CTX)/ ) # Another BreakDancer output
         {
           my ( $chr1, undef, undef, $chr2 ) = split( /\t/, $line );
           $chr1 =~ s/chr//i; $chr2 =~ s/chr//i;
-          ( defined $valid_chrs{$chr1} && defined $valid_chrs{$chr2} ) or die "Invalid chrom name in file:\n$filepath!\nIn line:\n\n$line\n";
+          ( defined $valid_chrs{$chr1} && defined $valid_chrs{$chr2} ) or die "Invalid chrom name in file:\n$filepath!\nIn line:\n$line\n\n";
+          ++$var_cnt{svs} if( defined $include_chrs{$chr1} && defined $include_chrs{$chr2} );
+        }
+        elsif( $muttype eq 'svs' && $line =~ m/^\S+\t\d+\t\d+(\+|\-)\S*\t\S+\t\d+\t\d+(\+|\-)\S*\t(INV|INS|DEL|ITX|CTX)/ ) # SquareDancer output
+        {
+          my ( $chr1, undef, undef, $chr2 ) = split( /\t/, $line );
+          $chr1 =~ s/chr//i; $chr2 =~ s/chr//i;
+          ( defined $valid_chrs{$chr1} && defined $valid_chrs{$chr2} ) or die "Invalid chrom name in file:\n$filepath!\nIn line:\n$line\n\n";
           ++$var_cnt{svs} if( defined $include_chrs{$chr1} && defined $include_chrs{$chr2} );
         }
         elsif( $muttype eq 'svs' && $line =~ m/^\S+\t\d+\t\S+\t\d+\t\S\S\t(INV|INS|DEL|ITX|CTX)/ ) # SJ formatting
         {
           my ( $chr1, undef, $chr2 ) = split( /\t/, $line );
           $chr1 =~ s/chr//i; $chr2 =~ s/chr//i;
-          ( defined $valid_chrs{$chr1} && defined $valid_chrs{$chr2} ) or die "Invalid chrom name in file:\n$filepath!\nIn line:\n\n$line\n";
+          ( defined $valid_chrs{$chr1} && defined $valid_chrs{$chr2} ) or die "Invalid chrom name in file:\n$filepath!\nIn line:\n$line\n\n";
           ++$var_cnt{svs} if( defined $include_chrs{$chr1} && defined $include_chrs{$chr2} );
         }
         elsif( $muttype eq 'svs' && $line =~ m/^\w+\t\d+\t\w+[+-]\w+[+-]\t\w+\t\d+\t\w+[+-]\w+[+-]\t(INV|INS|DEL|ITX|CTX)/ ) # Somatic pipeline output
@@ -227,7 +234,7 @@ sub execute {
     my $fh = IO::File->new( $filepath );
     while( my $line = $fh->getline )
     {
-      next if( $line =~ m/^(#|chromosome_name|Chr\t)/ ); #Skip headers
+      next if( $line =~ m/^(#|chromosome_name|Chr\t|CHR1\t)/ ); #Skip headers
       chomp( $line );
       my ( @cols ) = split( /\t/, $line );
       $cols[0] =~ s/chr//i;
@@ -255,7 +262,7 @@ sub execute {
     my $fh = IO::File->new( $filepath );
     while( my $line = $fh->getline )
     {
-      next if( $line =~ m/^(#|chromosome_name|Chr\t|readgroup)/ ); # Skip headers
+      next if( $line =~ m/^(#|chromosome_name|Chr\t|CHR1\t|readgroup)/ ); # Skip headers
       chomp( $line );
       if( $line =~ m/^\w+\.\w+\t\S+\t\d+\t\d+\t\S+\t\d+\t\d+\t(INV|INS|DEL|ITX|CTX)/ ) # BreakDancer output
       {
@@ -263,7 +270,13 @@ sub execute {
         $chr1 =~ s/chr//i; $chr2 =~ s/chr//i;
         $svFh->print( join( ".", $chr1, $outStart, $inStart, $chr2, $inEnd, $outEnd ), "\t$line\n" ) if( defined $include_chrs{$chr1} && defined $include_chrs{$chr2} );
       }
-      elsif( $line =~ m/^\S+\t\d+\t\d+(\+|\-)\t\S+\t\d+\t\d+(\+|\-)\t(INV|INS|DEL|ITX|CTX)/ ) # SquareDancer output
+      elsif( $line =~ m/^\S+\t\d+\t\d+\t\S+\t\d+\t\d+\t(INV|INS|DEL|ITX|CTX)/ ) # Another BreakDancer output
+      {
+        my ( $chr1, $outStart, $inStart, $chr2, $inEnd, $outEnd ) = split( /\t/, $line );
+        $chr1 =~ s/chr//i; $chr2 =~ s/chr//i;
+        $svFh->print( join( ".", $chr1, $outStart, $inStart, $chr2, $inEnd, $outEnd ), "\t$line\n" ) if( defined $include_chrs{$chr1} && defined $include_chrs{$chr2} );
+      }
+      elsif( $line =~ m/^\S+\t\d+\t\d+(\+|\-)\S*\t\S+\t\d+\t\d+(\+|\-)\S*\t(INV|INS|DEL|ITX|CTX)/ ) # SquareDancer output
       {
         my ( $chr1, $start, undef, $chr2, $end ) = split( /\t/, $line );
         $chr1 =~ s/chr//i; $chr2 =~ s/chr//i;

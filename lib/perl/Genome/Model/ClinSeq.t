@@ -9,11 +9,22 @@ BEGIN {
     $ENV{NO_LSF} = 1;
 };
 
-use above "Genome";
-use Test::More tests => 15; #skip_all => "This is incomplete.";
 
+use above "Genome";
+use Test::More;
 use Genome::Model::ClinSeq;
 
+my $dry_run;
+if (@ARGV and $ARGV[0] eq 'RUN') {
+    note("NOT A DRY RUN...");
+    plan tests => 16;
+    $dry_run = 0;
+}
+else {
+    note("DRY RUN... put 'RUN' on the command line for this test to actually generate and compare results");
+    plan tests => 16;
+    $dry_run = 1;
+}
 
 my $patient = Genome::Individual->get(common_name => "HG3");
 ok($patient, "got the HG3 patient");
@@ -29,11 +40,11 @@ my $normal_genome_sample = $patient->samples(common_name => "normal", sample_typ
 ok($normal_genome_sample, "found the normal genome sample");
 
 
-my $rna_model = Genome::Model::RnaSeq->get(
+my $tumor_rnaseq_model = Genome::Model::RnaSeq->get(
     #subject => $tumor_rna_sample,
     name    => 'HG3 - RNA-seq - Ensembl 58_37c - TopHat 1.3.1 - Cufflinks 1.1.0 - Mask rRNA_MT - refcov - build37',
 );
-ok($rna_model, "got the RNASeq model");
+ok($tumor_rnaseq_model, "got the RNASeq model");
 
 my $wgs_model = Genome::Model::SomaticVariation->get(
     #subject => $tumor_genome_sample,
@@ -63,22 +74,31 @@ my $m = $p->add_model(
 ok($m, "created a model") or diag(Genome::Model->error_message);
 
 my $i1 = $m->add_input(
-    name => 'wgs_data',
+    name => 'wgs_model',
     value => $wgs_model, 
 );
 ok($i1, "add a wgs model to it");
 
 my $i2 = $m->add_input(
-    name => 'exome_data',
+    name => 'exome_model',
     value => $exome_model, 
 );
 ok($i2, "add a exome model to it");
 
 my $i3 = $m->add_input(
-    name => 'rna_data',
-    value => $rna_model, 
+    name => 'tumor_rnaseq_model',
+    value => $tumor_rnaseq_model, 
 );
-ok($i3, "add a rna model to it");
+ok($i3, "add a tumor rnaseq model to it");
+
+if ($dry_run) {
+    my $i4 = $m->add_input(
+        name => 'dry_run',
+        value_class_name => 'UR::Value::Boolean',
+        value_id => 1, 
+    );
+    ok($i4, "set the dry run flag");
+}
 
 # this will prevent disk allocation during build initiation
 # we will have to turn this off if the tasks in this pipeline spread to other machines
@@ -100,7 +120,18 @@ my $retval = eval { $m->_execute_build($b); };
 is($retval, 1, 'execution of the build returned true');
 is($@, '', 'no exceptions thrown during build process') or diag $@;
 
-
+unless ($dry_run) {
+    my $expected_data_directory = $ENV{"GENOME_TESTSUITE_INPUTS_PATH"} . '/Genome-Model-ClinSeq/2011-11-27';
+    system "touch $temp_dir/foo";
+    my @diff = `diff $expected_data_directory $temp_dir`;
+    ok(@diff == 0, "no differences from expected results and actual")
+        or do { 
+            diag("differences are:");
+            diag(@diff);
+            Genome::Sys->shellcmd(cmd => "mv $temp_dir /tmp/last-clinseq-test-result");
+        };
+}
+        
 __END__
 
 # When the pipeline actually runs, and is perhaps slow, we'll need to run on fake data

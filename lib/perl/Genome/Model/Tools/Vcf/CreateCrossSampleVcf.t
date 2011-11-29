@@ -31,7 +31,7 @@ use_ok( 'Genome::Model::Tools::Vcf::CreateCrossSampleVcf');
 my $refbuild_id = 101947881;
 my $test_data_directory = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Vcf-CreateCrossSampleVcf";
 
-my @input_models = map{ Genome::Model->get($_)} (2881222865,2881222915,2881222946);
+my @input_builds = map{ Genome::Model::Build->get($_)} (116552788,116559016,116559101); # (2881222865,2881222915,2881222946);
 #my @input_modelgroup = Genome::ModelGroup->get(20955);
 
 # Updated to .v2 for correcting an error with newlines
@@ -40,7 +40,7 @@ my $test_output_base = File::Temp::tempdir('Genome-Model-Tools-Vcf-CreateCrossSa
 
 my $ccsv_cmd = Genome::Model::Tools::Vcf::CreateCrossSampleVcf->create(
     output_directory => $test_output_base,
-    models => \@input_models,
+    builds => \@input_builds,
     max_files_per_merge => 10,
 );
 

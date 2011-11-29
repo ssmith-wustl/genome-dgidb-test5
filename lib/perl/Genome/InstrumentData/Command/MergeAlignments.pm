@@ -2,7 +2,7 @@ package Genome::InstrumentData::Command::MergeAlignments;
 
 use strict;
 use warnings;
-
+use List::MoreUtils qw/ uniq /;
 use Genome;
 
 class Genome::InstrumentData::Command::MergeAlignments {
@@ -79,11 +79,11 @@ sub params_for_merged_alignment {
             push @$segments, join(':', $result->instrument_data_id, $result->instrument_data_segment_id, $result->instrument_data_segment_type);
         }
     }
-
+    my @instrument_data_ids = uniq (map($_->instrument_data_id, @alignment_results));
     my %params = (
         #after merged alignments are refactored can replace most params with this:
         #alignment_result_id => [$self->alignment_result_ids],
-        instrument_data_id => [map($_->instrument_data_id, @alignment_results)],
+        instrument_data_id => \@instrument_data_ids,
         reference_build_id => $alignment_results[0]->reference_build_id,
         aligner_name => $alignment_results[0]->aligner_name,
         aligner_version => $alignment_results[0]->aligner_version,

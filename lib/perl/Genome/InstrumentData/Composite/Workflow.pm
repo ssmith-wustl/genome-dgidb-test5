@@ -106,8 +106,7 @@ sub generate_workflow {
 
     my %workflows; #hold the per-instrument-data workflows
     my $inputs = []; #hold all the inputs that need to be passed at runtime
-
-    my @alignment_objects = $self->_alignment_objects(@$instrument_data);
+    my @alignment_objects = $self->_alignment_objects($instrument_data, $tree);
     for my $obj (@alignment_objects) {
         my ($workflow, $input) = $self->generate_workflow_for_instrument_data(
             $tree, @$obj,
@@ -290,6 +289,10 @@ sub inputs_for_api_version {
             picard_version => '1.46',
             samtools_version => 'r963',
         },
+        'v3' => {
+            picard_version => '1.42',
+            samtools_version => 'r599',
+        },
     );
 
     unless(exists $VERSIONS{$version}) {
@@ -354,14 +357,19 @@ sub _instrument_data_params {
 
 sub _alignment_objects {
     my $self = shift;
-    my @instrument_data = @_;
+    my $id = shift;
+    my $tree = shift;
+    my @instrument_data = @$id ;
+    my @actions = @{ $tree->{action}};
+    my $read_aligner_name = $actions[0]->{name};
 
     my @instrument_data_output = map([$_, $self->_instrument_data_params($_)], grep {! $_->can('get_segments')} @instrument_data);
     my @segmentable_data = grep {$_->can('get_segments')} @instrument_data;
 
     for my $i (@segmentable_data) {
+        
         my @segments = $i->get_segments();
-        if (@segments > 1) {
+        if (@segments > 1 && $read_aligner_name ne 'imported' && $i->isa('Genome::InstrumentData::Imported')) {
             for my $seg (@segments) {
                 push @instrument_data_output, [
                     $i,

@@ -207,6 +207,7 @@ sub _execute_build {
     #
     
     $self->status_message('Gathering alignments...');
+    $DB::single=1;
     my $result = Genome::InstrumentData::Composite->get_or_create(
         inputs => {
             instrument_data => \@instdata,
@@ -221,9 +222,11 @@ sub _execute_build {
     }
 
     my @bams = $result->bam_paths;
-    unless (@bams == @samples) {
-        die $self->error_message("Failed to find alignment results for all samples!");
-    }
+    # TODO this check is commented out until specific samples associated with individuals in the population group can be
+    # included/excluded at will
+    #unless (@bams == @samples) {
+    #    die $self->error_message("Failed to find alignment results for all samples!");
+    #}
     $self->status_message('Found ' . scalar(@bams) . ' merged BAMs.');
     for my $bam (@bams){
         unless (-e $bam){
@@ -231,6 +234,7 @@ sub _execute_build {
         }
     }
 
+=cut
     #
     # run the DV2 API to do variant detection as we do in somatic, but let it take in N BAMs
     # _internally_ it will (for the first pass):
@@ -265,6 +269,38 @@ sub _execute_build {
             $result->add_user(user => $build, label => 'uses');
         }
     }
+=cut
+
+    my @builds = $self->_get_builds(\@results);
+
+    my $vcf_output_directory = $build->data_directory."/variants";
+    unless(-e $vcf_output_directory){
+        unless(mkdir $vcf_output_directory){
+            die $self->error_message("Output directory doesn't exist and can't be created at: ".$vcf_output_directory);
+        }
+        unless(mkdir $vcf_output_directory."/merge_vcfs"){
+            die $self->error_message("Output directory doesn't exist and can't be created at: ".$vcf_output_directory);
+        }
+    }
+
+    my $snv_vcf_creation = Genome::Model::Tools::Vcf::CreateCrossSampleVcf->create(
+        builds => \@builds,
+        output_directory => $vcf_output_directory,
+        max_files_per_merge => 100,
+        variant_type => 'snvs',
+    );
+    my $vcf_result;
+    unless($vcf_result = $snv_vcf_creation->execute){
+        die $self->error_message("Could not complete vcf merging!");
+    }
+    my $vcf_file; 
+    if(-s $vcf_result){
+        $vcf_file = $vcf_result;
+    } else {
+        die $self->error_message("Could not locate an output VCF");
+    }
+    $self->status_message("Merged VCF file located at: ".$vcf_file);
+
 
     # dump pedigree data into a file
 
@@ -405,6 +441,19 @@ system($final_maf_maker_cmd);
 
     return 1;
 }
+
+sub _get_builds {
+    my $self = shift;
+    my $results = shift;
+    my @results = @{$results};
+    my @builds;
+    for my $result (@results) {
+        my @users_who_are_builds = grep { $_->user_class_name =~ m/Genome\:\:Model\:\:Build\:\:ReferenceAlignment/ } $result->users;
+        push @builds, Genome::Model::Build->get($users_who_are_builds[0]->user_id);
+    }
+    return @builds;
+}
+
 
 sub _validate_build {
     # this is where we sanity check things like inputs making sense before actually building

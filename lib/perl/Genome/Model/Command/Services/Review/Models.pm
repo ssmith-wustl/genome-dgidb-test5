@@ -21,6 +21,11 @@ class Genome::Model::Command::Services::Review::Models {
             default => 0,
             doc => 'auto act based on recommended actions',
         },
+        auto_batch_size  => {
+            is => 'Integer',
+            default => 0,
+            doc => 'When "--auto" is true, commit() to the database after this many Models have been identified for cleanup or restart.  0 means wait until the end to commit everything',
+        }
     ],
 };
 
@@ -31,11 +36,13 @@ use Genome;
 sub execute {
     my $self = shift;
 
+    if ($self->auto_batch_size > 0 and !$self->auto) {
+        $self->error_message("Cannot use --auto_batch_size unless --auto is true");
+        return;
+    }
+
     my @models = $self->models;
     my @hide_statuses = $self->hide_statuses;
-
-    my @models_to_start;
-    my @models_to_cleanup;
 
     #preload data
     my @builds = Genome::Model::Build->get(
@@ -43,6 +50,50 @@ sub execute {
         -hint => ['the_master_event'],
     );
 
+    my $synchronous = ($self->auto and $self->auto_batch_size);  # whether we should start builds as we go or wait until the end
+
+    my $models_changed_count = 0;
+    my %start_rv;
+    my @models_to_start;
+    my $start_build = sub {
+        my $model = shift;
+        if ($synchronous) {
+            my $cmd = Genome::Model::Build::Command::Start->create(models => [$model]);
+            $start_rv{$cmd->execute}++;
+            if ($self->auto_batch_size and ++$models_changed_count > $self->auto_batch_size) {
+                $self->status_message("\n\nCommitting progress so far...");
+                die "Commit failed!  Bailing out." unless UR::Context->commit;
+                $self->status_message("Continuing...\n");
+                $models_changed_count = 0;
+            }
+        } else {
+            push @models_to_start, $model;
+        }
+    };
+
+    my %cleanup_rv;
+    my @models_to_cleanup;
+    my $cleanup_build = sub {
+        my $model = shift;
+        if ($synchronous) {
+            my $cmd = Genome::Model::Command::Services::Review::CleanupSucceeded->create(models => [$model]);
+            $cleanup_rv{$cmd->execute}++;
+            if ($self->auto_batch_size and ++$models_changed_count > $self->auto_batch_size) {
+                $self->status_message("\n\nCommitting progress so far...");
+                die "Commit failed!  Bailing out." unless UR::Context->commit;
+                $self->status_message("Continuing...\n");
+                $models_changed_count = 0;
+            }
+        } else {
+            push @models_to_cleanup, $model;
+        }
+    };
+
+    # Header for the report produced at the end of the loop
+    $self->print_message(join("\t", qw(model_id action latest_build_status first_nondone_step latest_build_rev model_name pp_name fail_count)));
+    $self->print_message(join("\t", qw(-------- ------ ------------------- ------------------ ---------------- ---------- ------- ----------)));
+
+    EXAMIME_MODELS:
     for my $model (@models) {
         my $latest_build        = ($model        ? $model->latest_build  : undef);
         my $latest_build_status = ($latest_build ? $latest_build->status : '-');
@@ -74,32 +125,29 @@ sub execute {
         }
         elsif ($latest_build && $latest_build->status eq 'Succeeded') {
             $action = 'cleanup';
-            push @models_to_cleanup, $model;
+            $cleanup_build->($model);
         }
         elsif (should_review_model($model)) {
             $action = 'review';
         }
         else {
             $action = 'rebuild';
-            push @models_to_start, $model;
+            $start_build->($model);
         }
 
         next if (grep { lc $_ eq lc $latest_build_status } @hide_statuses);
         $self->print_message(join "\t", $model_id, $action, $latest_build_status, $first_nondone_step, $latest_build_revision, $model_name, $pp_name, $fail_count);
     }
 
-    my %start_rv;
+    $synchronous = 1;  # Now we'll actually start things running if they were just being noted before
     if ($self->auto and @models_to_start) {
         for my $model (@models_to_start) {
-            my $cmd = Genome::Model::Build::Command::Start->create(models => [$model]);
-            $start_rv{$cmd->execute}++;
+            $start_build->($model);
         }
     }
-    my %cleanup_rv;
     if ($self->auto and @models_to_cleanup) {
         for my $model (@models_to_cleanup) {
-            my $cmd = Genome::Model::Command::Services::Review::CleanupSucceeded->create(models => [$model]);
-            $cleanup_rv{$cmd->execute}++;
+            $cleanup_build->($model);
         }
     }
 

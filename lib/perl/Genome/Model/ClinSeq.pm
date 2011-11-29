@@ -7,9 +7,10 @@ use Genome;
 class Genome::Model::ClinSeq {
     is => 'Genome::Model',
     has_optional_input => [
-        wgs_model       => { is => 'Genome::Model::SomaticVariation' },
-        exome_model     => { is => 'Genome::Model::SomaticVariation' },
-        rnaseq_model    => { is => 'Genome::Model::RnaSeq' },
+        wgs_model           => { is => 'Genome::Model::SomaticVariation' },
+        exome_model         => { is => 'Genome::Model::SomaticVariation' },
+        tumor_rnaseq_model  => { is => 'Genome::Model::RnaSeq' },
+        normal_rnaseq_model => { is => 'Genome::Model::RnaSeq' },
     ],
     has_optional_param => [
         #someparam1 => { is => 'Number', doc => 'blah' },
@@ -26,37 +27,51 @@ sub _execute_build {
 
     my $data_directory = $build->data_directory;
 
-    my $wgs_build   = $build->inputs(name => 'wgs_data');
-    my $exome_build = $build->inputs(name => 'exome_data');
-    my $rna_build   = $build->inputs(name => 'rna_data');
+    my $wgs_build           = $build->inputs(name => 'wgs_build');
+    my $exome_build         = $build->inputs(name => 'exome_build');
+    my $tumor_rnaseq_build  = $build->inputs(name => 'tumor_rnaseq_build');
+    my $normal_rnaseq_build = $build->inputs(name => 'normal_rnaseq_build');
+    
+    # this input is used for testing, and when set will not actually do any work just organize params
+    my $dry_run             = $build->inputs(name => 'dry_run');
 
     # go from the input record to the actual build it references
-    for ($wgs_build, $exome_build, $rna_build) {
+    for ($wgs_build, $exome_build, $tumor_rnaseq_build, $normal_rnaseq_build, $dry_run) {
         if (defined $_) { $_ = $_->value }
     }
 
     require Genome::Model::ClinSeq;
     my $dir = $INC{"Genome/Model/ClinSeq.pm"};
     $dir =~ s/.pm//;
-    $dir .= '/Command/original-scripts';
+    $dir .= '/original-scripts';
 
     my $cmd =  "$dir/clinseq.pl";
     if ($wgs_build) {
-        $cmd .= ' --wgs ' . $wgs_build->id;
+        $cmd .= ' --wgs ' . $wgs_build->model->id;
     }
     if ($exome_build) {
-        $cmd .= ' --exome ' . $exome_build->id;
+        $cmd .= ' --exome ' . $exome_build->model->id;
     }
-    if ($rna_build) {
-        $cmd .= ' --rna ' . $rna_build->id;
+    if ($tumor_rnaseq_build) {
+        $cmd .= ' --tumor_rna ' . $tumor_rnaseq_build->model->id;
+    }
+    if ($normal_rnaseq_build) {
+        $cmd .= ' --normal_rna ' . $normal_rnaseq_build->model->id;
     }
 
     my $common_name = $wgs_build->subject->patient->common_name;
-    $cmd .= ' --common-name $common_name' if $common_name;
+    $cmd .= " --common_name $common_name" if $common_name;
 
-    $build->status_message("Not running! I _would_ have run: $cmd");
-    #Genome::Sys->shellcmd(cmd => $cmd);
-    
+    $cmd .= " --working '$data_directory'";
+    $cmd .= " --verbose=1 --clean=1";
+
+    if ($dry_run) {
+        $build->status_message("NOT running! I _would_ have run: $cmd");
+    }
+    else {
+        Genome::Sys->shellcmd(cmd => $cmd);
+    }
+
     return 1;
 }
 

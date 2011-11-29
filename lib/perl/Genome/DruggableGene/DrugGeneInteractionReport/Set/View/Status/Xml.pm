@@ -23,7 +23,6 @@ class Genome::DruggableGene::DrugGeneInteractionReport::Set::View::Status::Xml {
                         'interaction_type',
                     ],
                },
-               'name',
             ],
         },
     ],
