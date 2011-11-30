@@ -35,9 +35,16 @@ class Genome::ProcessingProfile::Command::Create::Base {
     ],
 };
 
+sub _profile_class_name {
+    my $self = shift;
+    my $profile_class_name = $self->_target_class_name;
+    $profile_class_name =~ s/^Genome::Model/Genome::ProcessingProfile/;
+    return $profile_class_name;
+}
+
 sub help_synopsis {
     my $self = $_[0];
-    my $profile_class_name = $self->_target_class_name;
+    my $profile_class_name = $self->_profile_class_name;
     if ($profile_class_name->can("help_synopsis_for_create")) {
         my $help = $profile_class_name->help_synopsis_for_create();
         return $help;
@@ -49,7 +56,7 @@ sub help_synopsis {
 
 sub help_detail {
     my $self = $_[0];
-    my $profile_class_name = $self->_target_class_name;
+    my $profile_class_name = $self->_profile_class_name;
     if ($profile_class_name->can("help_detail_for_create")) {
         my $help = $profile_class_name->help_detail_for_create();
         return $help;
@@ -119,11 +126,11 @@ sub _resolve_based_on {
     return $self->_based_on($other_profiles[0]);
 }
 
-#< Execute and supporters >#
 sub execute {
     my $self = shift;
 
-    my $target_class = $self->_target_class_name;
+    my $profile_class = $self->_profile_class_name;
+
     my %target_params = (
         name => $self->name,
         $self->_get_target_class_params,
@@ -132,7 +139,7 @@ sub execute {
         $target_params{'supersedes'} = $self->supersedes;
     }
 
-    my $processing_profile = $target_class->create(%target_params);
+    my $processing_profile = $profile_class->create(%target_params);
 
     unless ($processing_profile) {
         $self->error_message("Failed to create processing profile.");
@@ -187,7 +194,7 @@ sub _properties_for_class {
 
 sub _target_class_property_names {
     my $self = shift;
-    my %properties = $self->_properties_for_class( $self->_target_class_name ) or return;
+    my %properties = $self->_properties_for_class( $self->_profile_class_name ) or return;
     return keys %properties;
 }
 

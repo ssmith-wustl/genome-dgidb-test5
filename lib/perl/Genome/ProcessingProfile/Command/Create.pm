@@ -9,7 +9,7 @@ class Genome::ProcessingProfile::Command::Create {
     doc => 'Create a processing profile',
 };
 
-sub _sub_commands_from { 'Genome::ProcessingProfile' }
+sub _sub_commands_from { 'Genome::Model' }
 
 sub _sub_commands_inherit_from { 'Genome::ProcessingProfile::Command::Create::Base' }
 
