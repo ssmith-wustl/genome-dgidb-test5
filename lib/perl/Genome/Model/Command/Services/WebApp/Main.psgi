@@ -115,19 +115,15 @@ sub dispatch_request {
         redispatch_psgi ($app{'Cache.psgi'}, $_[1]);
       },
 
-      ($always_memcache ? (
-      sub (/viewajax/...) {
-        redispatch_psgi($app{'Cache.psgi'}, $_[1], 2);
-      },
-      sub (/view/...) {
-        redispatch_psgi($app{'Cache.psgi'}, $_[1]);
-      },
-      ) : (
-      ## this exists so the embedded web server can run without caching
       sub (/viewajax/...) {
         redispatch_psgi($app{'Rest.psgi'}, $_[1]);
       },
 
+      ($always_memcache ? (
+      sub (/view/...) {
+        redispatch_psgi($app{'Cache.psgi'}, $_[1]);
+      },
+      ) : (
       ## this exists so the embedded web server can run without caching
       sub (/view/...) {
         redispatch_psgi ($app{'Rest.psgi'}, $_[1], 2);
