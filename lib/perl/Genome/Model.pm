@@ -342,8 +342,14 @@ sub create {
 
     # do this until we drop the subject_class_name column
     my $subject = $self->subject();
+
+    if (not $subject and $self->can("_resolve_subject")) {
+        $subject = $self->_resolve_subject();
+    }
+
     if ($subject) {
         $self->subject_class_name(ref($subject));
+        $self->subject_id($subject->id);
     }
 
     # Make sure the subject we got is really an object
