@@ -14,7 +14,7 @@ class Genome::Model::ClinSeq::Command::List {
             is_constant => 1, 
             value => 'Genome::Model::ClinSeq' 
         },
-        show => { default_value => 'id,name,wgs_data,exome_data,rna_data' },
+        show => { default_value => 'id,name,wgs_model,exome_model,tumor_rnaseq_model,normal_rnaseq_model' },
     ],
     doc => 'list clinseq genome models',
 };
