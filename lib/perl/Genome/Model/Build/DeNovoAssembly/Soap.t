@@ -202,14 +202,13 @@ max_rd_len=120
 [LIB]
 map_len=60
 asm_flags=3
-reverse_seq=0
 pair_num_cutoff=2
+reverse_seq=0
 avg_ins=260
 CONFIG
 $expected_config .= 'q1='.$build->data_directory.'/'.$build->file_prefix.".$library_id.forward.fastq\n";
 $expected_config .= 'q2='.$build->data_directory.'/'.$build->file_prefix.".$library_id.reverse.fastq\n";
 is($config, $expected_config, 'config matches');
-
 my @file_exts = qw/ contig         gapSeq        links     peGrads
                     preGraphBasic  readOnContig  scafSeq   updated.edge
                     ContigIndex    edge          kmerFreq  newContigIndex
