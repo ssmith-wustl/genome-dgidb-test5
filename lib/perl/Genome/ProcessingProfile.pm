@@ -49,17 +49,22 @@ sub __display_name__ {
     return $self->name . ' (' . $self->id . ')';
 }
 
-### Override When Implementing New Pipelines ###
+### Override these in the model subclass when Implementing New Pipelines ###
 
 sub _initialize_model {
-    # my ($self,$model) = @_;
-    # override in sub-classes to get custom mods to the model
+    my ($self,$model) = @_;
+    if ($model->can('_initialize_model')) {
+        return $model->_initialize_model();
+    }
     return 1;
 }
 
 sub _initialize_build {
-    # my ($self,$build) = @_;
-    # override in sub-classes to get custom mods to the build
+    my ($self,$build) = @_;
+    my $model = $build->model;
+    if ($model->can('_initialize_build')) {
+        return $model->_initialize_build($build);
+    }
     return 1;
 }
 
@@ -77,7 +82,7 @@ sub _build_success_callback {
     return 1;
 }
 
-# Override this method in subclass to use non-default resource requirement string for _execute_build method
+# Override this method in the model subclass to use non-default resource requirement string for _execute_build method
 #sub _resource_requirements_for_execute_build {
 #    my $self = shift;
 #    my $resource = "-R ...";
@@ -86,12 +91,17 @@ sub _build_success_callback {
 
 sub _resolve_workflow_for_build {
     my ($self,$build, $optional_lsf_queue) = @_;
-    
+   
+    my $model = $build->model;
+    if ($model->can('_resolve_workflow_for_build')) {
+        return $model->_resolve_workflow_for_build($build);
+    }
+
     # override in sub-classes to return the correct workflow
     # for now this is build specific, but should eventually be pp specific,
     # and hopefully pp-subclass specific.
 
-    if ($self->can('_execute_build') or $build->model->can('execute_build')) {
+    if ($self->can('_execute_build') or $build->model->can('_execute_build')) {
 
         my %opts = (
             name => $build->id . ' all stages',
@@ -158,11 +168,14 @@ sub _resolve_workflow_for_build {
 # override in subclasses to compose processing profile parameters and build inputs to the workflow provided above
 sub _map_workflow_inputs {
     my ($self, $build) = @_;
-    
+    my $model = $build->model;
+    if ($model->can('_map_workflow_inputs')) {
+        return $model->_map_workflow_inputs($build);
+    }
     return (build_id => $build->id);
 }
 
-# override in sub-classes if you want a non-workflow build
+# override in build sub-classes if you want a non-workflow build
 #sub _execute_build {
 #   # my ($self,$build) = @_;
 #    
@@ -174,6 +187,11 @@ sub _map_workflow_inputs {
 # Override in subclass if you want some kind of validation of the processing profile object
 sub validate_created_object {
     my $self = shift;
+    my $model_class = $self->class;
+    $model_class =~ s/Genome::ProcessingProfile/Genome::Model/;
+    if ($model_class->can("_initialize_profile")) {
+        return $model_class->_initialize_profile($self);
+    }
     return 1;
 }
 
@@ -501,6 +519,7 @@ sub __extend_namespace__ {
             is => 'Genome::ProcessingProfile',
             has_param => \@has,
         );
+
         die "Error defining $profile_subclass_name for $model_subclass_name!" unless $model_subclass_meta;
         return $profile_subclass_meta;
     }
