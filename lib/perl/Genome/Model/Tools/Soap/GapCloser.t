@@ -50,22 +50,22 @@ for my $file ( qw/ config_file TEST.scafSeq / ) {
 #FAIL tests create/execute tool
 my $fail_1 = Genome::Model::Tools::Soap::GapCloser->create(
     assembly_directory => $temp_dir,
-    scaffold_sequence_file => $temp_dir.'/TEST.scafSeq',
+    a => $temp_dir.'/TEST.scafSeq',
     version => '1.10',
-    overlap_length => 25,
+    p => 25,
 );
 ok( ! $fail_1->execute, 'Failed execute with assembly_directory and scaffold_sequences_file specified');
 
 my $fail_2 = Genome::Model::Tools::Soap::GapCloser->create(
     assembly_directory => $temp_dir,
     version => '1.10',
-    overlap_length => 32,
+    p => 32,
 );
-ok( ! $fail_2->execute, 'Failed execute with overlap_length > 31' ); 
+ok( ! $fail_2->execute, 'Failed execute with p > 31' ); 
 
 my $fail_3 = Genome::Model::Tools::Soap::GapCloser->create(
     assembly_directory => $temp_dir,
-    overlap_length => 25,
+    p => 25,
 );
 ok( ! $fail_3->execute, 'Failed execute without version specified' );
 
@@ -73,7 +73,7 @@ ok( ! $fail_3->execute, 'Failed execute without version specified' );
 my $tool = Genome::Model::Tools::Soap::GapCloser->create(
     assembly_directory => $temp_dir,
     version => '1.10',
-    overlap_length => 25,
+    p => 25,
 );
 ok( $tool, "Created tool" );
 ok( $tool->execute, "Executed tool" );

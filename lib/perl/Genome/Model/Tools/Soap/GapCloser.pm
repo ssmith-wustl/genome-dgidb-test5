@@ -12,30 +12,29 @@ class  Genome::Model::Tools::Soap::GapCloser {
         version => {
             is => 'String',
             doc => 'Version of GapCloser',
-            default_value => 1.10, # only one, and it's deployed to /gsc/scripts/bin
-            valid_values => [qw/ 1.10 /],
+            valid_values => [qw/ 1.10 /], # only one, and it's deployed to /gsc/scripts/bin
         },
         assembly_directory => {
             is => 'Text',
             is_optional => 1,
             doc => 'Assembly directory to derive input/output files from.',
         },
-        scaffold_sequence_file => {
+        a => {
             is => 'Text',
             is_optional => 1,
-            doc => 'SOAP generated scafSeq file. Default is named *.scafSeq in the assembly directory',
+            doc => 'SOAP generated scafSeq file. Default is named "*.scafSeq" in the assembly directory',
         },
-        config_file => {
+        b => {
             is => 'Text',
             is_optional => 1,
             doc => 'Config file used for the SOAP assembly. Default is named "config_file" in the assembly directory',
         },
-        output_file => {
+        o => {
             is => 'Text',
             is_optional => 1,
-            doc => 'GapCloser output fasta file. Default is named "gapfill" in the assembly directory',
+            doc => 'GapCloser output fasta file name. It will be in the assembly directory. Default is named "gapfill".',
         },
-        overlap_length => {
+        p => {
             is => 'Number',
             doc => 'Overlap length/K value. Typical default is 25. Max is 31.',
         },
@@ -57,14 +56,14 @@ sub __errors__ {
     my @errors = $self->SUPER::__errors__(@_);
     return @errors if @errors;
 
-    my @input_file_methods = (qw/ scaffold_sequence_file config_file /);
+    my @input_file_methods = (qw/ a b /);
 
-    my $overlap_length = $self->overlap_length;
-    if ( $overlap_length > 31 or $overlap_length < 1 ) {
+    my $p = $self->p;
+    if ( $p > 31 or $p < 1 ) {
         push @errors, UR::Object::Tag->create(
             type => 'invalid',
-            properties => [qw/ overlap_length /],
-            desc => "The overlap_length ($overlap_length) must be an integer between 1 and 31!",
+            properties => [qw/ p /],
+            desc => "The p ($p) must be an integer between 1 and 31!",
         );
     }
 
@@ -85,15 +84,15 @@ sub __errors__ {
             );
             return @errors;
         }
-        $self->scaffold_sequence_file( $self->assembly_scaffold_sequence_file );
-        $self->config_file( $self->assembly_config_file );
-        $self->output_file( $self->assembly_directory.'/gapfill' );
+        $self->a( $self->_resolve_scaffold_sequence_file );
+        $self->b( $self->_resolve_config_file );
+        $self->o( $self->assembly_directory.'/gapfill' );
     }
-    elsif ( not $self->output_file ) { 
+    elsif ( not $self->o ) { 
         push @errors, UR::Object::Tag->create(
             type => 'invalid',
-            properties => [qw/ output_file /],
-            desc => 'No output_file given and no assembly_directory given to determine the output file!',
+            properties => [qw/ o /],
+            desc => 'No o given and no assembly_directory given to determine the output file!',
         );
     }
 
@@ -103,7 +102,7 @@ sub __errors__ {
             push @errors, UR::Object::Tag->create(
                 type => 'invalid',
                 properties => [ $input_file_method ],
-                desc => "The $input_file_method is required! This can be resolved from the assmbly directory or passed in.",
+                desc => "Parameter ($input_file_method) is required! This can be resolved from the assmbly directory or passed in.",
             );
             return @errors;
         }
@@ -111,7 +110,7 @@ sub __errors__ {
             push @errors, UR::Object::Tag->create(
                 type => 'invalid',
                 properties => [ $input_file_method ],
-                desc => "The $input_file_method ($file) does not have any size!",
+                desc => "File $file ($input_file_method) does not have any size!",
             );
             return @errors;
         }
@@ -125,14 +124,14 @@ sub execute {
 
     $self->status_message('SOAP GapCloser...');
 
-    unlink $self->output_file;
+    unlink $self->o;
 
     my $cmd = sprintf(
         'GapCloser -o %s -a %s -b %s -p %s',
-        $self->output_file,
-        $self->scaffold_sequence_file,
-        $self->config_file,
-        $self->overlap_length,
+        $self->o,
+        $self->a,
+        $self->b,
+        $self->p,
     );
     $self->status_message("Running GapCloser with command: $cmd");
     my $rv = eval{ Genome::Sys->shellcmd( cmd => $cmd ) };
