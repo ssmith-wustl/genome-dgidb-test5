@@ -20,7 +20,42 @@ class Genome::Model::ClinSeq {
     doc => 'clinial sequencing data convergence of RNASeq, WGS and exome capture data',
 };
 
-1;
+sub _initialize_profile {
+    my ($self, $profile) = @_;
+    $self->status_message("..initializing new profile " . $profile->__display_name__);
+}
+
+sub _resolve_subject {
+    my $self = shift;
+    my @subjects = $self->_infer_candidate_subjects_from_input_models();
+    if (@subjects > 1) {
+        $self->error_message(
+            "Conflicting subjects on input models!:\n\t"
+            . join("\n\t", map { $_->__display_name__ } @subjects)
+        );
+        return;
+    }
+    elsif (@subjects == 0) {
+        $self->error_message("No subjects on input models?  Contact Informatics.");
+        return;
+    }
+    return $subjects[0];
+}
+
+sub _initialize_model {
+    my $self = shift;
+    $self->status_message("..initializing new model " . $self->__display_name__);
+}
+
+sub _initialize_build {
+    my ($self, $build) = @_;
+    $self->status_message("..initializing new build " . $build->__display_name__);
+}
+
+sub _resource_requirements_for_execute_build {
+    #my $self = shift;
+    return "-R 'select[type==LINUX64]'";
+}
 
 sub _execute_build {
     my ($self,$build) = @_;
@@ -75,19 +110,19 @@ sub _execute_build {
     return 1;
 }
 
-sub _help_synopsis_for_create_profile {
+sub _help_synopsis {
     my $self = shift;
     return <<"EOS"
 
-    genome processing-profile create clin-seq --name 'November 2011 Clinical Sequencing' \
+    genome processing-profile create clin-seq --name 'November 2011 Clinical Sequencing' 
 
-    genome model define clin-seq  -w wgsmodel -e exomemodel -r rnaseqmodel -p 'November 2011 Clinical Sequencing'
+    genome model define clin-seq  -w wgsmodel -e exomemodel -t rnaseqtumormodel -n rnaseqnormalmodel -p 'November 2011 Clinical Sequencing'
     
     # auto matically builds if/when the models have a complete underlying build
 EOS
 }
 
-sub _help_detail_for_create_profile {
+sub _help_detail_for_profile_create {
     return <<EOS
 
 The initial ClinSeq pipeline has no parameters.  Just use the default profile to run it.
@@ -95,10 +130,47 @@ The initial ClinSeq pipeline has no parameters.  Just use the default profile to
 EOS
 }
 
-sub _help_manual_for_create_profile {
+sub _help_detail_for_model_define {
     return <<EOS
-  Manual page content for this pipeline goes here.
+
+The ClinSeq pipeline takes four models, each of which is optional, and produces data sets potentially useful in a clinical setting.
+
 EOS
+}
+
+sub _infer_candidate_subjects_from_input_models {
+    my $self = shift;
+    my %subjects;
+    for my $input_model (
+        $self->wgs_model,
+        $self->exome_model,
+        $self->tumor_rnaseq_model,
+        $self->normal_rnaseq_model,
+    ) {
+        next unless $input_model;
+        my $patient;
+        if ($input_model->subject->isa("Genome::Individual")) {
+            $patient = $input_model->subject;
+        }
+        else {
+            $patient = $input_model->subject->patient;
+        }
+        $subjects{ $patient->id } = $patient;
+
+        # this will only work when the subject is an original tissue
+        next;
+
+        my $tumor_model;
+        if ($input_model->can("tumor_model")) {
+            $tumor_model = $input_model->tumor_model;
+        }
+        else {
+            $tumor_model = $input_model;
+        }
+        $subjects{ $tumor_model->subject_id } = $tumor_model->subject;
+    }
+    my @subjects = sort { $a->id cmp $b->id } values %subjects;
+    return @subjects;
 }
 
 1;
@@ -106,6 +178,7 @@ EOS
 __END__
 
 # TODO: replace the above _execute_build with an actual workflow
+# This is the code from Somatic Variation:
 
 sub _resolve_workflow_for_build {
     my $self = shift;
