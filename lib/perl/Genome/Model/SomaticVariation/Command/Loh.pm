@@ -48,6 +48,12 @@ sub execute {
     unless ($build){
         die $self->error_message("no build provided!");
     }
+
+    unless(defined($build->model->snv_detection_strategy)){
+        $self->status_message("No SNV Detection Strategy, skipping LOH.");
+        return 1;
+    }
+
     my $normal_build = $build->normal_build;
     unless ($normal_build){
         die $self->error_message("No previous normal build found on somatic build!");

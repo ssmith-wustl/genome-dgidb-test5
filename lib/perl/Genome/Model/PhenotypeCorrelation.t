@@ -15,13 +15,10 @@ my $archos = `uname -a`;
 if ($archos !~ /64/) {
     plan skip_all => "Must run from 64-bit machine";
 } else {
-    if(not $ENV{GSCAPP_RUN_LONG_TESTS}) {
-        plan skip_all => 'This test takes up to 10 minutes to run and thus is skipped.  Use `ur test run --long` to enable.';
-    }else {
-        plan  tests => 13;
-    }
+    plan  tests => 13;
 }
 
+my $test_data_directory = "/gsc/var/cache/testsuite/data/Genome-Model-PhenotypeCorrelation";
 
 my $group = Genome::PopulationGroup->create(name => 'TEST-phenotype-correlation');
 for my $member_id (2874846805,2874846807,2874846809) {
@@ -33,6 +30,10 @@ for my $member_id (2874846805,2874846807,2874846809) {
 my @members = $group->members();
 is(scalar(@members), 3, "got the expected number of patients");
 
+my $roi_file = $test_data_directory."/input/feature_list_3.bed.gz";
+my $roi_name = "TEST_REGION";
+my $wingspan = 500;
+
 my $p = Genome::ProcessingProfile::PhenotypeCorrelation->create(
     id                              => -10001,
     name                            => 'TESTSUITE Quantitative Population Phenotype Correlation',
@@ -43,6 +44,9 @@ my $p = Genome::ProcessingProfile::PhenotypeCorrelation->create(
     #cnv_detection_strategy          => undef,
     group_samples_for_genotyping_by => 'each',
     phenotype_analysis_strategy     => 'quantitative',
+    roi_file                        => $roi_file,
+    roi_name                        => $roi_name,
+    wingspan                        => $wingspan,
 );
 ok($p, "created a processing profile") or diag(Genome::ProcessingProfile::PhenotypeCorrelation->error_message);
 

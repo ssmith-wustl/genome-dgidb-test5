@@ -1,4 +1,4 @@
-package Genome::Model::Tools::Sx::Trim::Remove;
+package Genome::Model::Tools::Sx::Trim::RemoveFivePrime;
 
 use strict;
 use warnings;
@@ -7,7 +7,7 @@ use Genome;
 
 use Regexp::Common;
 
-class Genome::Model::Tools::Sx::Trim::Remove {
+class Genome::Model::Tools::Sx::Trim::RemoveFivePrime {
     is => 'Genome::Model::Tools::Sx',
     has => [
         length => {
@@ -18,7 +18,7 @@ class Genome::Model::Tools::Sx::Trim::Remove {
 };
 
 sub help_brief {
-    return 'Remove bases from the 3 prime (right) end';
+    return 'Remove bases from the 5 prime (left) end';
 }
 
 sub __errors__ {
@@ -39,14 +39,13 @@ sub _eval_seqs {
     my ($self, $seqs) = @_;
 
     for my $seq ( @$seqs ) {
-        my $length = length($seq->{seq}) - $self->length;
-        if ( $length >= length($seq->{seq}) ) {
+        if ( $self->length > length($seq->{seq}) ) {
             $seq->{seq} = '';
             $seq->{qual} = '';
         }
         else {
-            $seq->{seq} = substr($seq->{seq}, 0, $length);
-            $seq->{qual} =substr($seq->{qual}, 0, $length);
+            $seq->{seq} = substr($seq->{seq}, $self->length);
+            $seq->{qual} =substr($seq->{qual}, $self->length);
         }
     }
 

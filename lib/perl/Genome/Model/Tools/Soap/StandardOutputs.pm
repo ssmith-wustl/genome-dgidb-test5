@@ -7,7 +7,7 @@ use Genome;
 use Data::Dumper;
 
 class Genome::Model::Tools::Soap::StandardOutputs {
-    is => 'Genome::Model::Tools::Soap',
+    is => 'Genome::Model::Tools::Soap::Base',
     has => [
 	assembly_directory => {
 	    is => 'Text',

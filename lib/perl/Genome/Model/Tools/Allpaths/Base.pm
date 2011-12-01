@@ -6,7 +6,10 @@ use warnings;
 use Genome;
 
 my %versions = (
-    39099 => { },
+    39099 => { version_path => "allpathslg-39099/bin",
+               prepare_path => "allpaths_cache"},
+    36892 => { version_path => "allpathslg-36892/bin",
+               prepare_path => ""},
 );
 
 class Genome::Model::Tools::Allpaths::Base {
@@ -16,7 +19,8 @@ class Genome::Model::Tools::Allpaths::Base {
 	    version => {
             is => 'Text',
             doc => 'Version of ALLPATHS to use',
-            valid_values => [ sort keys %versions ],
+#            valid_values => [ sort keys %versions ],
+            default_value => "36892",
         },
     ],
 };
@@ -27,6 +31,12 @@ sub allpaths_directory {
 
 sub allpaths_version_directory {
     my ($self, $version) = @_;
+    return $self->allpaths_directory."/".$versions{$version}->{"version_path"};
+}
+
+sub allpaths_prepare_directory {
+    my ($self, $version) = @_;
+    return $self->allpaths_version_directory($version)."/".$versions{$version}->{"prepare_path"};
 }
 
 sub RunAllPathsLG_path {

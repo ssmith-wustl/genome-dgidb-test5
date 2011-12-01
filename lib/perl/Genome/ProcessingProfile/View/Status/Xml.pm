@@ -22,21 +22,7 @@ class Genome::ProcessingProfile::View::Status::Xml {
                     aspects => [
                         'id', 'name', 'value',
                     ]
-                },
-                {
-                    name => 'models',
-                    perspective => 'default',
-                    toolkit => 'xml',
-                    aspects => [
-                        'genome_model_id',
-                        'name',
-                        'subject_id',
-                        'subject_class_name',
-                        'is_default',
-                        'creation_date',
-                        'user_name',
-                    ],
-                },
+                }
             ]
         }
     ]

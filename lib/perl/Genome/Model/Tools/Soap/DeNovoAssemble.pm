@@ -7,7 +7,7 @@ use Genome;
 use File::Basename;
 
 class Genome::Model::Tools::Soap::DeNovoAssemble {
-    is => 'Genome::Model::Tools::Soap',
+    is => 'Genome::Model::Tools::Soap::Base',
     has => [
 	version => {
 	    is => 'Text',

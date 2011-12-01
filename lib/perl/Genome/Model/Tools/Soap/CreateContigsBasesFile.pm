@@ -9,7 +9,7 @@ use Bio::SeqIO;
 use Data::Dumper;
 
 class Genome::Model::Tools::Soap::CreateContigsBasesFile {
-    is => 'Genome::Model::Tools::Soap',
+    is => 'Genome::Model::Tools::Soap::Base',
     has => [
 	assembly_directory => {
 	    is => 'Text',
