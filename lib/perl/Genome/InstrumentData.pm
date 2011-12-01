@@ -234,8 +234,8 @@ sub dump_fastqs_from_bam {
     die "cannot call bam path" if (!$self->can('bam_path'));
     
     unless (-e $self->bam_path) {
-	$self->error_message("Attempted to dump a bam but the path does not exist:" . $self->bam_path);
-	die $self->error_message;
+        $self->error_message("Attempted to dump a bam but the path does not exist:" . $self->bam_path);
+        die $self->error_message;
     }
     
     my $directory = delete $p{directory};
@@ -272,7 +272,7 @@ sub dump_fastqs_from_bam {
     if (-s $fwd_file && -s $rev_file) { 
         push @files, ($fwd_file, $rev_file);
     }
-    if (-s $fragment_file) {
+    if (-s $fragment_file && !$p{discard_fragments}) {
         push @files, $fragment_file;
     }
    
