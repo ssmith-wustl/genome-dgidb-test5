@@ -86,7 +86,7 @@ sub __errors__ {
             return @errors;
         }
         $self->scaffold_sequence_file( $self->assembly_scaffold_sequence_file );
-        $self->config_file( $self->scaffold_sequence_file );
+        $self->config_file( $self->assembly_config_file );
         $self->output_file( $self->assembly_directory.'/gapfill' );
     }
     elsif ( not $self->output_file ) { 
@@ -134,10 +134,9 @@ sub execute {
         $self->config_file,
         $self->overlap_length,
     );
-
-    #my $rv = eval{ Genome::Sys->shell_cmd(cmd => $cmd); };
-    my $rv = print "$cmd\n";
-    if ( not $rv ) {
+    $self->status_message("Running GapCloser with command: $cmd");
+    my $rv = eval{ Genome::Sys->shellcmd( cmd => $cmd ) };
+    if ( $rv ) {
         $self->error_message('GapCloser shell command failed!');
         return;
     }
