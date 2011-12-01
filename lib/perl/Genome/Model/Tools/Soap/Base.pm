@@ -92,16 +92,25 @@ sub soap_file_prefix {
 
 sub assembly_scaffold_sequence_file {
     my $self = shift;
+    return $self->_resolve_scaffold_sequence_file;
+}
+    
+sub _resolve_scaffold_sequence_file {
+    my $self = shift;
     
     my @files = glob( $self->assembly_directory."/*scafSeq" ); #glob .. don't know file prefix
-    if ( scalar @files != 1 ) {
-	$self->error_message("Expected one *scafSeq file in assembly dir but found ".scalar @files);
-	return;
+    if ( not @files ) {
+        $self->error_message('No scaffold sequence file in assembly directory: '.$self->assembly_directory);
+        return;
+    }
+    elsif ( scalar @files != 1 ) {
+        $self->error_message("Expected one scaffold sequence file (.scafSeq) in assembly dir but found ".scalar @files);
+        return;
     }
 
     unless ( -s $files[0] ) {
-	$self->error_message("Assembly scafSeq file is zero size: ".$files[0]);
-	return;
+        $self->error_message("Assembly scafSeq file is zero size: ".$files[0]);
+        return;
     }
 
     return $files[0];
@@ -128,12 +137,16 @@ sub assembly_input_fastq_files {
 
 sub assembly_config_file {
     my $self = shift;
+    return $self->_resolve_config_file;
+}
+sub _resolve_config_file {
+    my $self = shift;
 
     my $config_file = $self->assembly_directory.'/config_file';
 
     unless ( -s $config_file ) {
-	$self->error_message("Failed to find config file: $config_file");
-	return;
+        $self->error_message("Failed to find config file: $config_file");
+        return;
     }
 
     return $config_file;
