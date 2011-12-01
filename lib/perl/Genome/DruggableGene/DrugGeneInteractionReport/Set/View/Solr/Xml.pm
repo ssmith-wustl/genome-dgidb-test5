@@ -24,7 +24,7 @@ class Genome::DruggableGene::DrugGeneInteractionReport::Set::View::Solr::Xml {
             is => 'Text',
             calculate_from => ['subject'],
             calculate => q{
-                return '/view/genome/druggable-gene/drug-gene-interaction-report/set/status.html?name=' . $subject->name();
+                return '/view/genome/druggable-gene/drug-gene-interaction-report/set/status.html?drug_name_report_name=' . ($subject->members)[0]->drug_name_report_name() . '&gene_name_report_name=' . ($subject->members)[0]->gene_name_report_name();
             },
         },
         display_label1 => {
@@ -45,13 +45,21 @@ class Genome::DruggableGene::DrugGeneInteractionReport::Set::View::Solr::Xml {
         display_url3 => {
             is  => 'Text',
         },
+        display_title => {
+            is => 'Text',
+            calculate_from => ['subject'],
+            calculate => q{ ($subject->members)[0]->__display_name__ },
+        },
+        title => {
+            is => 'Text',
+            calculate_from => ['subject'],
+            calculate => q{
+                ($subject->members)[0]->drug_name_report_name . ' ' . ($subject->members)[0]->gene_name_report_name
+            },
+        },
         default_aspects => {
             is => 'ARRAY',
             default => [
-                {
-                    name => 'name',
-                    position => 'title',
-                },
                 {
                     name => 'nomenclature',
                     position => 'content',
@@ -64,17 +72,9 @@ class Genome::DruggableGene::DrugGeneInteractionReport::Set::View::Solr::Xml {
                     name => 'source_db_version',
                     position => 'content',
                 },
-                {
-                    name => 'name',
-                    position => 'content',
-                },
-                {
-                    name => '__display_name__',
-                    position => 'display_title',
-                },
-            ]
+            ],
         },
-    ]
+    ],
 };
 
 sub _generate_id_field_data {
