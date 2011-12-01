@@ -97,7 +97,7 @@ sub execute {
     $cmd .= " -l $legend_file ";
     $cmd .= " -m $recomb_file ";
     $cmd .= " -o $output_file "; 
-    $cmd .= "-n $cases $controls ";
+    $cmd .= "-n $controls $cases ";
     $cmd .= " $disease_allele_string ";
     print "trying to execute $cmd \n";
     my $rv = Genome::Sys->shellcmd(cmd=>"$cmd");

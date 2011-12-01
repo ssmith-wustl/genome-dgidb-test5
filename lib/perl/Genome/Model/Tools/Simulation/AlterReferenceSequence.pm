@@ -9,7 +9,7 @@ our $VERSION = '0.01';
 
 class Genome::Model::Tools::Simulation::AlterReferenceSequence {
     is => 'Command',
-    has => [
+    has_optional_input => [
     ref_fasta => {
         type => 'String',
         is_optional => 0,
@@ -22,7 +22,8 @@ class Genome::Model::Tools::Simulation::AlterReferenceSequence {
     },
     output_file => { 
         type => 'String',
-        doc => 'output fasta name. Will generate two files to correctly model diploid, second will have "2"',
+        doc => 'output fasta name.' ,
+        is_optional=>1,
     },
     region=> {
         type=>'String',
@@ -52,6 +53,9 @@ sub execute {
         $self->error_message("mutation_list has no size?");
         return 0;
     }
+    my $output_file_name = $self->mutation_bed;
+    $output_file_name =~ s/\.bed/\.fasta/g;
+    $self->output_file($output_file_name);
 
     my @muts=$self->read_mutation_list($self->mutation_bed);
     unless(@muts) {
@@ -113,8 +117,8 @@ sub execute {
     $newrefseq1.=$subseq;
     $newrefseq2.=$subseq;
     if($self->limit_regions) {
-       $self->dump_some_regions($newrefseq1, $out1, $self->limit_regions, "A");
-       $self->dump_some_regions($newrefseq2, $out2, $self->limit_regions, "B");
+        $self->dump_some_regions($newrefseq1, $out1, $self->limit_regions, "A");
+        $self->dump_some_regions($newrefseq2, $out2, $self->limit_regions, "B");
     }
     else {
         my $desc="mutated according to " . $self->mutation_bed;
@@ -147,9 +151,11 @@ sub dump_some_regions {
     while(my $line = $bed_fh->getline) {
         chomp($line);
         my ($chr, $start, $stop, undef) = split /\t/, $line;
-        $start-=600; 
-        $stop +=600;
-        $temp_bed->print("$chr\t$start\t$stop\n");
+        if($chr eq $self->region) {
+            $start-=600; 
+            $stop +=600;
+            $temp_bed->print("$chr\t$start\t$stop\n");
+        }
     }
     my $cmd = "mergeBed -i $temp_bed_path > $merged_padded_bed";
     Genome::Sys->shellcmd(cmd=>$cmd);
@@ -230,12 +236,12 @@ sub read_mutation_list{
 sub infer_variant_type {
     my ($self,$variant) = @_;
 
-    # If the start and stop are the same, and ref and variant are defined its a SNP
+# If the start and stop are the same, and ref and variant are defined its a SNP
     if (($variant->{stop} == $variant->{start}+1)&&
         ($variant->{reference} ne '-')&&($variant->{reference} ne '0')&&
         ($variant->{variant} ne '-')&&($variant->{variant} ne '0')) {
         return 'SNP';
-        # If start and stop are 1 off, and ref and variant are defined its a DNP
+# If start and stop are 1 off, and ref and variant are defined its a DNP
     } elsif (($variant->{reference} eq '-')||($variant->{reference} eq '0')) {
         return 'INS';
     } elsif (($variant->{variant} eq '-')||($variant->{variant} eq '0')) {
