@@ -1,4 +1,4 @@
-package Genome::Model::Tools::Vcf::Convert::Indel::PindelSingleGenome;
+package Genome::Model::Tools::Vcf::Convert::Indel::Pindel;
 
 use strict;
 use warnings;
@@ -8,7 +8,7 @@ use Workflow;
 use Workflow::Simple;
 use File::Basename;
 
-class Genome::Model::Tools::Vcf::Convert::Indel::PindelSingleGenome {
+class Genome::Model::Tools::Vcf::Convert::Indel::Pindel {
     is =>  'Genome::Model::Tools::Vcf::Convert::Base' ,
     doc => 'Generate a VCF file from varscan output',
     has => [
@@ -51,8 +51,6 @@ sub execute {
     $inputs{output_file} = $output;
     $self->status_message("VCF conversion output will be at: ".$output);
     $inputs{reference_build_id} = $refbuild_id;
-
-    #my $temp_dir = Genome::Sys->create_temp_file_path;
 
     my $workflow = Workflow::Model->create(
         name => 'Multi-Vcf Merge',
