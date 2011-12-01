@@ -45,6 +45,7 @@ class Genome::Model::Tools::Allpaths::DeNovoAssemble {
         reference_name => {
             is => 'String',
             doc => 'name of the reference',
+            default_value => 'sample',
         },
     ],
 };
@@ -59,9 +60,6 @@ sub help_detail {
 
 sub execute {
     my $self = shift;
-
-    $self->error_message("Not ready!");
-    return;
 
     if (not $self->pre or not -d $self->pre) {
         $self->error_message("Output directory prefix does not exist");
@@ -85,7 +83,7 @@ sub execute {
         make_path($output_dir."/data");
     }
 
-    my $prepare_cmd = 'ulimit -s 100000 && PATH='.$self->allpaths_prepare_directory($self->version).':'.$ENV{PATH}.' PrepareAllPathsInputs.pl PICARD_TOOLS_DIR='.$PICARD_TOOLS_DIR.' DATA_DIR='.$output_dir.'/data PLOIDY='.$self->ploidy.' IN_GROUPS_CSV='.$self->in_group_file.' IN_LIBS_CSV='.$self->in_libs_file;
+    my $prepare_cmd = 'ulimit -s 100000 && PATH='.$self->allpaths_version_directory($self->version).':'.$ENV{PATH}.' PrepareAllPathsInputs.pl PICARD_TOOLS_DIR='.$PICARD_TOOLS_DIR.' DATA_DIR='.$output_dir.'/data PLOIDY='.$self->ploidy.' IN_GROUPS_CSV='.$self->in_group_file.' IN_LIBS_CSV='.$self->in_libs_file;
 
     $self->status_message("Run PrepareAllPathsInput");
     Genome::Sys->shellcmd(cmd => $prepare_cmd); 
@@ -93,8 +91,15 @@ sub execute {
         $self->error_message("Failed to run PrepareAllPathsInput: $@");
         return;
     }
-    #required params
-    my $cmd = 'ulimit -s 100000 && PATH='.$self->allpaths_version_directory($self->version).':'.$ENV{PATH}.' RunAllPathsLG PRE='.$self->pre.' REFERENCE_NAME='.$self->reference_name.' DATA_SUBDIR=data RUN='.$self->run.' SUBDIR='.$self->sub_dir.' TARGETS=standard OVERWRITE=True';
+
+    my $overwrite;
+    if ($self->overwrite) {
+        $overwrite="True";
+    }
+    else {
+        $overwrite = "False";
+    }
+    my $cmd = 'ulimit -s 100000 && PATH='.$self->allpaths_version_directory($self->version).':'.$ENV{PATH}.' RunAllPathsLG PRE='.$self->pre.' REFERENCE_NAME='.$self->reference_name.' DATA_SUBDIR=data RUN='.$self->run.' SUBDIR='.$self->sub_dir.' TARGETS=standard OVERWRITE='.$overwrite;
 
     $self->status_message("Run ALLPATHS de novo");
     Genome::Sys->shellcmd(cmd => $cmd);
