@@ -261,16 +261,15 @@ sub __extend_namespace__ {
     # auto generate sub-classes for any valid processing profile
     my ($self,$ext) = @_;
 
+    my $meta = $self->SUPER::__extend_namespace__($ext);
+    if ($meta) {
+        return $meta;
+    }
+
     $depth++;
     if ($depth>1) {
         $depth--;
         return;
-    }
-
-    my $meta = $self->SUPER::__extend_namespace__($ext);
-    if ($meta) {
-        $depth--;
-        return $meta;
     }
 
     my $pp_subclass_name = 'Genome::ProcessingProfile::' . $ext;
