@@ -99,6 +99,7 @@ sub _execute_build {
 
     $cmd .= " --working '$data_directory'";
     $cmd .= " --verbose=1 --clean=1";
+    $cmd .= " 1>&2";
 
     if ($dry_run) {
         $build->status_message("NOT running! I _would_ have run: $cmd");
