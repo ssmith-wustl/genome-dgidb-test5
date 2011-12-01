@@ -43,14 +43,16 @@ sub default_align_version {
 #methods for soap denovo
 
 sub path_for_soap_denovo_version {
-    #my ($self, $version) = @_;
     my $self = shift;
-    unless (-s '/gsc/pkg/bio/soap/SOAPdenovo-'.$self->version.'/SOAPdenovo') {
-	$self->error_message("Failed to find soap assembler for version: ".$self->verions."\n".
-			     "Expected /gsc/pkg/bio/soap/SOAPdenovo-".$self->version.'/SOAPdenovo');
-	return;
+    my @base_cmds = (qw/ SOAPdenovo SOAPdenovo63mer /);
+    for my $base_cmd ( @base_cmds ) {
+        my $command = '/gsc/pkg/bio/soap/SOAPdenovo-'.$self->version.'/'.$base_cmd;
+        next if not -s $command;
+        return $command;
     }
-    return '/gsc/pkg/bio/soap/SOAPdenovo-'.$self->version.'/SOAPdenovo';
+
+    $self->error_message("Failed to find soap assembler for version (".$self->verion.") and base commands (@base_cmds)");
+    return;
 }
 
 #create edit_dir
@@ -59,7 +61,7 @@ sub create_edit_dir {
     my $self = shift;
 
     unless ( -d $self->assembly_directory.'/edit_dir' ) {
-	Genome::Sys->create_directory( $self->assembly_directory.'/edit_dir' );
+        Genome::Sys->create_directory( $self->assembly_directory.'/edit_dir' );
     }
 
     return 1;
