@@ -58,6 +58,9 @@ sub execute {
     chomp($line);
     my @fields = split " ", $line;
     my $number_of_individuals = scalar(@fields)/2;
+    if($number_of_individuals ==0 ){
+        return 1;
+    }
     my @fhs = $self->prepare_files_for_writing($number_of_individuals, $self->output_prefix);
     my $count=0;
     do {

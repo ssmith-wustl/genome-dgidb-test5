@@ -500,13 +500,14 @@ sub dump_trimmed_fastq_files {
     my $data_directory = $params{directory} || Genome::Sys->create_temp_directory;
 
     my $segment_params = $params{segment_params};
+    my $discard_fragments = $params{discard_fragments} || 0;
 
     my $trimmer_name = $params{trimmer_name};
     my $trimmer_version = $params{trimmer_version};
     my $trimmer_params = $params{trimmer_params};
 
     unless($trimmer_name) {
-        return $self->dump_sanger_fastq_files(%$segment_params, directory => $data_directory);
+        return $self->dump_sanger_fastq_files(%$segment_params, directory => $data_directory, discard_fragments => $discard_fragments);
     }
     my @fastq_pathnames = $self->dump_sanger_fastq_files(%$segment_params);
 

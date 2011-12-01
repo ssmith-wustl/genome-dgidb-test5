@@ -13,6 +13,14 @@ use above "Genome";
 use Test::More;
 
 use_ok('Genome::ProcessingProfile::Command::Create') or die;
+ok(Genome::ProcessingProfile::Command::Create->sub_command_classes) or die;
+is(Genome::ProcessingProfile::Command::Create->_sub_commands_from, 'Genome::Model', 'subcommands from');
+is(
+    Genome::ProcessingProfile::Command::Create->_sub_commands_inherit_from, 
+    'Genome::ProcessingProfile::Command::Create::Base',
+    'subcommands inherit from',
+);
+is(Genome::ProcessingProfile::Command::Create->_target_base_class, 'Genome::ProcessingProfile', 'target base class');
 
 test_command_subclass();
 test_processing_profile_class();
@@ -74,7 +82,8 @@ class Genome::ProcessingProfile::Command::Create::Tester {
     ],
 };
 Genome::ProcessingProfile::Command::Create::Tester->dump_status_messages(1);
-sub Genome::ProcessingProfile::Command::Create::Tester::_target_class_name { return 'Genome::ProcessingProfile::Tester' };
+Genome::ProcessingProfile::Command::Create->_overload_target_class_name('Genome::ProcessingProfile::Command::Create::Tester');
+is(Genome::ProcessingProfile::Command::Create::Tester->_target_class_name, 'Genome::ProcessingProfile::Tester', 'target class is Genome::ProcessingProfile::Tester');
 
 # Create a pp
 my %params = (
