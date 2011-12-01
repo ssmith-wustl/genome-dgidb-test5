@@ -75,6 +75,15 @@ sub help_brief {
 }
 
 sub help_synopsis {
+    my $self = shift;
+    my $target_class_name = $self->class;
+    $target_class_name =~ s/::Command::Define::/::/;
+    if ($target_class_name->can("_help_synopsis_for_model_define")) {
+        return $target_class_name->_help_synopsis_for_model_define;
+    }
+    elsif ($target_class_name->can("_help_synopsis")) {
+        return $target_class_name->_help_synopsis;
+    }
     return <<"EOS"
 genome model define reference-alignment 
   --model-name test5
@@ -84,6 +93,15 @@ EOS
 }
 
 sub help_detail {
+    my $self = shift;
+    my $target_class_name = $self->class;
+    $target_class_name =~ s/::Command::Define::/::/;
+    if ($target_class_name->can("_help_detail_for_model_define")) {
+        return $target_class_name->_help_detail_for_model_define;
+    }
+    elsif ($target_class_name->can("_help_detail")) {
+        return $target_class_name->_help_detail;
+    }
     return <<"EOS"
 This defines a new genome model for the specified subject, using the 
 specified processing profile.
@@ -95,7 +113,28 @@ EOS
 # Should be overridden in subclasses
 sub type_specific_parameters_for_create {
     my $self = shift;
-    return (); 
+    my $model_class = $self->class;
+    $model_class =~ s/::Command::Define::/::/;
+    my @p = 
+        map { 
+            my @values = grep { defined $_ } $self->$_;
+            if (@values == 0) {
+                ()
+            }
+            elsif (@values == 1) {
+                ($_ => $values[0]);
+
+            }
+            elsif (@values > 1) {
+                ($_ => \@values);
+            }
+        }
+        grep { $model_class->can($_) }
+        map { $_->property_name }
+        grep { $_->can("is_input") and $_->is_input }
+        $self->__meta__->properties();
+    
+    return @p 
 }
 
 sub execute {
@@ -108,15 +147,21 @@ sub execute {
 
     unless ($self->subject) {
         my $subject = $self->deduce_subject_from_instrument_data;
-        unless ($subject) {
-            confess "Not given subject and could not derive subject from instrument data!";
+        if ($subject) {
+            $self->subject($subject);
         }
-        $self->subject($subject);
     }
 
     my %params = (
-        subject_id => $self->subject->id,
-        subject_class_name => $self->subject->class,
+        (   
+            $self->subject ? 
+            (
+                subject_id => $self->subject->id,
+                subject_class_name => $self->subject->class,
+            )
+            :
+            ()
+        ),
         processing_profile_id => $self->processing_profile->id,
         name => $self->model_name,
         auto_assign_inst_data => $self->auto_assign_inst_data,
@@ -132,6 +177,17 @@ sub execute {
         confess "Could not create a model!";
     }
 
+    unless ($model->subject) {
+        my @instrument_data = $self->instrument_data;
+        $model->delete;
+        if (@instrument_data) {
+            confess "Not given subject and could not derive subject from instrument data!";
+        }
+        else {
+            confess "No instrument data provided, cannot deduce subject!";
+        }
+    }
+
     $self->result_model_id($model->id);
     $self->display_model_information($model);
     return 1;
@@ -142,7 +198,7 @@ sub deduce_subject_from_instrument_data {
 
     my @instrument_data = $self->instrument_data;
     unless (@instrument_data) {
-        confess "No instrument data provided, cannot deduce subject!";
+        return; 
     }
 
     my @samples = map { $_->sample } @instrument_data;
@@ -160,8 +216,7 @@ sub deduce_subject_from_instrument_data {
         return $taxons[0];
     }
 
-    # TODO Could possibly create a population group here similar to convergence models instead of failing
-    confess "Could not deduce model subject from provided instrument data!";
+    return;
 }
 
 sub display_model_information {
