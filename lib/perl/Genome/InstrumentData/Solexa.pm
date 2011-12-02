@@ -7,7 +7,7 @@ use Genome;
 use File::Basename;
 
 class Genome::InstrumentData::Solexa {
-    is => 'Genome::InstrumentData',
+    is => ['Genome::InstrumentData', 'Genome::Searchable'],
     has_constant => [
         sequencing_platform => { value => 'solexa' },
     ],

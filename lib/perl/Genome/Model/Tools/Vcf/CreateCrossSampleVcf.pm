@@ -46,6 +46,11 @@ class Genome::Model::Tools::Vcf::CreateCrossSampleVcf {
             is_optional => 1,
             doc => 'Set this to add a wingspan to region limiting',
         },
+        allow_multiple_processing_profiles => {
+            is => 'Boolean',
+            is_optional => 1,
+            doc => 'Setting this prevents the check for identical processing profiles on all inputs',
+        },
     ],
     has_transient_optional => [
         _num_inputs => {
@@ -79,6 +84,16 @@ EOS
 sub execute {
     my $self=shift;
     my @builds = $self->builds;
+
+    unless($self->allow_multiple_processing_profiles){
+        my $pp = $builds[0]->model->processing_profile->id;
+        for my $build (@builds){
+            unless($build->model->processing_profile->id == $pp){
+                die $self->error_message("Inputs do not have matching processing profiles!");
+            }
+        }
+    } 
+
     my $output_directory = $self->output_directory;
 
     my $roi_file = defined($self->roi_file);
