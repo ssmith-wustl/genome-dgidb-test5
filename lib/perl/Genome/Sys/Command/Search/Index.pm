@@ -209,7 +209,6 @@ sub list {
     while (my $index_queue_item = $index_queue_iterator->next) {
         print join("\t",
             $index_queue_item->timestamp,
-            $index_queue_item->action,
             $index_queue_item->subject_class,
             $index_queue_item->subject_id,
         ) . "\n";
