@@ -166,28 +166,31 @@ if ($wgs){
 
 
 #Run RNA-seq analysis on the RNA-seq data (if available)
+my $rnaseq_dir = createNewDir('-path'=>$patient_dir, '-new_dir_name'=>'rnaseq', '-silent'=>1);
 if ($tumor_rnaseq){
-  my $rnaseq_dir = &createNewDir('-path'=>$patient_dir, '-new_dir_name'=>'rnaseq_tumor', '-silent'=>1);
+  my $tumor_rnaseq_dir = &createNewDir('-path'=>$rnaseq_dir, '-new_dir_name'=>'tumor', '-silent'=>1);
   my $cufflinks_dir = $data_paths->{tumor_rnaseq}->{expression};
   
   #Perform the single-tumor outlier analysis
   $step++; print MAGENTA, "\n\nStep $step. Summarizing RNA-seq absolute expression values", RESET;
-  &runRnaSeqAbsolute('-label'=>'tumor_rnaseq_absolute', '-cufflinks_dir'=>$cufflinks_dir, '-out_paths'=>$out_paths, '-rnaseq_dir'=>$rnaseq_dir, '-script_dir'=>$script_dir, '-verbose'=>$verbose);
+  &runRnaSeqAbsolute('-label'=>'tumor_rnaseq_absolute', '-cufflinks_dir'=>$cufflinks_dir, '-out_paths'=>$out_paths, '-rnaseq_dir'=>$tumor_rnaseq_dir, '-script_dir'=>$script_dir, '-verbose'=>$verbose);
 
   #Perform the multi-tumor differential outlier analysis
 
 }
 if ($normal_rnaseq){
-  my $rnaseq_dir = &createNewDir('-path'=>$patient_dir, '-new_dir_name'=>'rnaseq_normal', '-silent'=>1);
+  my $normal_rnaseq_dir = &createNewDir('-path'=>$rnaseq_dir, '-new_dir_name'=>'normal', '-silent'=>1);
   my $cufflinks_dir = $data_paths->{normal_rnaseq}->{expression};
   
   #Perform the single-tumor outlier analysis
   $step++; print MAGENTA, "\n\nStep $step. Summarizing RNA-seq absolute expression values", RESET;
-  &runRnaSeqAbsolute('-label'=>'normal_rnaseq_absolute', '-cufflinks_dir'=>$cufflinks_dir, '-out_paths'=>$out_paths, '-rnaseq_dir'=>$rnaseq_dir, '-script_dir'=>$script_dir, '-verbose'=>$verbose);
+  &runRnaSeqAbsolute('-label'=>'normal_rnaseq_absolute', '-cufflinks_dir'=>$cufflinks_dir, '-out_paths'=>$out_paths, '-rnaseq_dir'=>$normal_rnaseq_dir, '-script_dir'=>$script_dir, '-verbose'=>$verbose);
 
   #Perform the multi-tumor differential outlier analysis
 
 }
+
+#TODO: IF both tumor and normal RNA-seq are defined - run Cuffdiff on the comparison
 
 
 #Annotate gene lists to deal with commonly asked questions like: is each gene a kinase?
@@ -204,7 +207,7 @@ $step++; print MAGENTA, "\n\nStep $step. Intersecting gene lists with druggable 
 
 #For each of the following: WGS SNVs, Exome SNVs, and WGS+Exome SNVs, do the following:
 #Get BAM readcounts for WGS (tumor/normal), Exome (tumor/normal), RNAseq (tumor), RNAseq (normal) - as available of course
-$step++; print MAGENTA, "\n\nStep $step. Getting BAM read counts for all BAM associated with input models (and expression values if available)", RESET;
+$step++; print MAGENTA, "\n\nStep $step. Getting BAM read counts for all BAMs associated with input models (and expression values if available) - for candidate SNVs", RESET;
 my @positions_files;
 if ($wgs){push(@positions_files, $out_paths->{'wgs'}->{'snv'}->{path});}
 if ($exome){push(@positions_files, $out_paths->{'exome'}->{'snv'}->{path});}
@@ -220,11 +223,16 @@ foreach my $positions_file (@positions_files){
   if(-e $output_file){
     if ($verbose){print YELLOW, "\n\nOutput bam read counts file already exists:\n\t$output_file", RESET;}
   }else{
+    #First get the read counts for the current file of SNVs (from WGS, Exome, or WGS+Exome
     my $bam_rc_cmd = "$read_counts_script  --positions_file=$positions_file  --wgs_som_var_model_id='$wgs_som_var_model_id'  --exome_som_var_model_id='$exome_som_var_model_id'  --rna_seq_tumor_model_id='$tumor_rna_seq_model_id'  --rna_seq_normal_model_id='$normal_rna_seq_model_id'  --output_file=$output_file  --verbose=$verbose";
     if ($verbose){print YELLOW, "\n\n$bam_rc_cmd", RESET;}
     system($bam_rc_cmd);
+  
+    #Summarize the BAM readcounts results for candidate variants - produce descriptive statistics, figures etc.
+    
   }
 }
+
 
 
 #Generate a clonality plot for this patient (if WGS data is available)
