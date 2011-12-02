@@ -1,13 +1,35 @@
+#!/usr/bin/env Rscript
+#Written by Malachi Griffith
+args = (commandArgs(TRUE))
+working_dir = args[1]; #Directory where output will be written
+readcounts_file = args[2];  #snvs.hq.tier1.v1.annotated.compact.readcounts.tsv
+gene_expression_file = args[3];  #isoforms.merged.fpkm.expsort.tsv
+
+#Example execution
+#WGS_vs_Exome_vs_RNAseq_VAF_and_FPKM.R  /gscmnt/sata132/techd/mgriffit/hgs/test/ /gscmnt/sata132/techd/mgriffit/hgs/all1/snv/wgs_exome/snvs.hq.tier1.v1.annotated.compact.readcounts.tsv /gscmnt/sata132/techd/mgriffit/hgs/all1/rnaseq/tumor/absolute/isoforms_merged/isoforms.merged.fpkm.expsort.tsv
+
+#Load libraries
 library(ggplot2)
 
-#LUC9 example
-setwd("/Users/mgriffit/Dropbox/Documents/Analysis_development/luc9")
+if (length(args) < 2){
+  message_text1 = "Required arguments missing for WGS_vs_Exome_vs_RNAseq_VAF_and_FPKM.R"
+  stop(message_text1)
+}
 
-#ALL1 example 
-setwd("/Users/mgriffit/Dropbox/Documents/Analysis_development/all1")
+#Initialize the gene expression object, if the filepath was passed, load it, otherwise delete the object
+gene_expression=NULL
+if (is.na(args[3])){
+  print ("Gene expression file not defined")
+  rm(gene_expression)
+}else{
+  gene_expression=read.table(file=gene_expression_file, header=TRUE, sep="\t", as.is=c(1:4,10))
+}
 
-readcounts=read.table(file="snvs.hq.tier1.v1.annotated.compact.readcounts.tsv", header=TRUE, sep="\t", as.is=c(1:6))
-gene_expression=read.table(file="isoforms.merged.fpkm.expsort.tsv", header=TRUE, sep="\t", as.is=c(1:4,10))
+#Load the readcounts object
+readcounts=read.table(file=readcounts_file, header=TRUE, sep="\t", as.is=c(1:6))
+
+#Set the working directory
+setwd(working_dir)
 
 #Define some arbitrary cutoffs (TODO: be more systematic / rationalized)
 var_stabilization = 0.1
