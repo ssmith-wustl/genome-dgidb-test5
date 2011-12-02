@@ -1,0 +1,591 @@
+library(ggplot2)
+
+#LUC9 example
+setwd("/Users/mgriffit/Dropbox/Documents/Analysis_development/luc9")
+
+#ALL1 example 
+setwd("/Users/mgriffit/Dropbox/Documents/Analysis_development/all1")
+
+readcounts=read.table(file="snvs.hq.tier1.v1.annotated.compact.readcounts.tsv", header=TRUE, sep="\t", as.is=c(1:6))
+gene_expression=read.table(file="isoforms.merged.fpkm.expsort.tsv", header=TRUE, sep="\t", as.is=c(1:4,10))
+
+#Define some arbitrary cutoffs (TODO: be more systematic / rationalized)
+var_stabilization = 0.1
+rc_cutoff = 5
+fpkm_cutoff = 1
+vaf_diff_cutoff_pos = 20
+vaf_diff_cutoff_neg = vaf_diff_cutoff_pos*-1
+psize = 3
+
+#Create a series of X-Y scatter plots of Tumor/Normal Variant Allele Frequencies (VAF) using ggplot2
+#Plot WGS vs. RNA-seq, Exome vs. RNA-seq, and WGS vs. Exome according to data availability
+#If available, plot RNA-seq Tumor VAF vs. RNA-seq Normal VAF
+
+#For plots involving RNAseq VAFs ... color points on a yellow->red spectrum according to Gene FPKM
+
+########################################################################################################
+ypos=115
+#1.) Tumor VAF - WGS vs RNA-seq - Check for existence of these data columns
+if (length(which(names(readcounts)=="WGS_Tumor_VAF")) & length(which(names(readcounts)=="RNAseq_Tumor_gene_FPKM"))){
+  #A.) All data
+  #Adjust the Tumor Gene FPKM values
+  Gene_FPKM=log2(readcounts[,"RNAseq_Tumor_gene_FPKM"] + var_stabilization)
+    if (min(Gene_FPKM, na.rm=TRUE) < 0){
+	  Gene_FPKM = Gene_FPKM + abs(min(Gene_FPKM, na.rm=TRUE))
+  }
+  n = length(readcounts[,"WGS_Tumor_VAF"])
+  m = length(which(readcounts[,"WGS_Tumor_VAF"] > 0 & readcounts[,"RNAseq_Tumor_VAF"] > 0))
+  p = round(((m/n)*100), digits=1)
+  spearmanR = cor(x=readcounts[,"WGS_Tumor_VAF"], y=readcounts[,"RNAseq_Tumor_VAF"], method="spearman")
+  pearsonR = cor(x=readcounts[,"WGS_Tumor_VAF"], y=readcounts[,"RNAseq_Tumor_VAF"], method="pearson")
+  text1 = paste("n = ", n, " (", m, " observed in both", " [", p, "%])", sep="")
+  text2 = paste("R = ", round(spearmanR, digits=2), " (spearman)", sep="")
+  text3 = paste("R = ", round(pearsonR, digits=2), " (pearson)", sep="")
+  
+  pdf(file="Tumor_VAF_WGS_vs_RNAseq_scatter.pdf")
+  print({
+    d = ggplot(data=readcounts, aes(x=WGS_Tumor_VAF, y=RNAseq_Tumor_VAF))
+    d + geom_point(aes(colour=Gene_FPKM), size=psize) + scale_colour_gradient('FPKM', low="yellow", high="red") + 
+    xlab("Tumor Variant Allele Frequency (WGS)") + ylab("Tumor Variant Allele Frequency (RNA-seq)") + 
+    xlim(c(0,100)) + ylim(c(0,ypos)) + 
+    opts(title="Detection and RNA expression of variants identified by WGS") +
+    geom_abline(intercept=0, slope=1, linetype=2, size=0.2) +
+    geom_abline(intercept=20, slope=1, linetype=2, size=0.1) +
+    geom_abline(intercept=-20, slope=1, linetype=2, size=0.1) +
+	geom_text(aes(x2,y2,label = textlist, hjust=0), data.frame(x2=c(0,0,0), y2=c(ypos,ypos-5,ypos-10), textlist=c(text1,text2,text3)))
+  })
+  dev.off()
+  
+  #B.) Read count filtered data
+  #Apply a minimum total tumor read count cutoff (ref + var) and then replot the data - WGS vs RNA-seq
+  #- RNAseq and WGS Read counts covering the variant position must be higher than a min read cutoff
+  i = which(((readcounts[,"RNAseq_Tumor_ref_rc"] + readcounts[,"RNAseq_Tumor_var_rc"]) > rc_cutoff) & ((readcounts[,"WGS_Tumor_ref_rc"] + readcounts[,"WGS_Tumor_var_rc"]) > rc_cutoff))
+  readcounts_cut = readcounts[i,]
+  Gene_FPKM=log2(readcounts_cut[,"RNAseq_Tumor_gene_FPKM"] + var_stabilization)
+  if (min(Gene_FPKM, na.rm=TRUE) < 0){
+	Gene_FPKM = Gene_FPKM + abs(min(Gene_FPKM, na.rm=TRUE))
+  }
+  n = length(readcounts_cut[,"WGS_Tumor_VAF"])
+  m = length(which(readcounts_cut[,"WGS_Tumor_VAF"] > 0 & readcounts_cut[,"RNAseq_Tumor_VAF"] > 0))
+  p = round(((m/n)*100), digits=1)
+  spearmanR = cor(x=readcounts_cut[,"WGS_Tumor_VAF"], y=readcounts_cut[,"RNAseq_Tumor_VAF"], method="spearman")
+  pearsonR = cor(x=readcounts_cut[,"WGS_Tumor_VAF"], y=readcounts_cut[,"RNAseq_Tumor_VAF"], method="pearson")
+  text1 = paste("n = ", n, " (", m, " observed in both", " [", p, "%])", sep="")
+  text2 = paste("R = ", round(spearmanR, digits=2), " (spearman)", sep="")
+  text3 = paste("R = ", round(pearsonR, digits=2), " (pearson)", sep="")
+
+  pdf(file="Tumor_VAF_WGS_vs_RNAseq_ReadCutoff_scatter.pdf")
+  print({
+    d = ggplot(data=readcounts_cut, aes(x=WGS_Tumor_VAF, y=RNAseq_Tumor_VAF)) 
+    d + geom_point(aes(colour=Gene_FPKM), size=psize) + scale_colour_gradient('FPKM', low="yellow", high="red") + 
+    xlab("Tumor Variant Allele Frequency (WGS)") + ylab("Tumor Variant Allele Frequency (RNA-seq)") + 
+    xlim(c(0,100)) + ylim(c(0,ypos)) + 
+    opts(title="Detection and RNA expression of variants identified by WGS (> rc)") +
+    geom_abline(intercept=0, slope=1, linetype=2, size=0.2) +
+    geom_abline(intercept=20, slope=1, linetype=2, size=0.1) +
+    geom_abline(intercept=-20, slope=1, linetype=2, size=0.1) +
+	geom_text(aes(x2,y2,label = textlist, hjust=0), data.frame(x2=c(0,0,0), y2=c(ypos,ypos-5,ypos-10), textlist=c(text1,text2,text3)))
+  })
+  dev.off()
+}
+
+
+########################################################################################################
+#2.) Tumor VAF - Exome vs RNA-seq - Check for existence of these data columns
+if (length(which(names(readcounts)=="Exome_Tumor_VAF")) & length(which(names(readcounts)=="RNAseq_Tumor_gene_FPKM"))){
+  #A.) All data
+  #Adjust the Tumor Gene FPKM values
+  Gene_FPKM=log2(readcounts[,"RNAseq_Tumor_gene_FPKM"] + var_stabilization)
+    if (min(Gene_FPKM, na.rm=TRUE) < 0){
+	  Gene_FPKM = Gene_FPKM + abs(min(Gene_FPKM, na.rm=TRUE))
+  }
+  n = length(readcounts[,"Exome_Tumor_VAF"])
+  m = length(which(readcounts[,"Exome_Tumor_VAF"] > 0 & readcounts[,"RNAseq_Tumor_VAF"] > 0))
+  p = round(((m/n)*100), digits=1)
+  spearmanR = cor(x=readcounts[,"Exome_Tumor_VAF"], y=readcounts[,"RNAseq_Tumor_VAF"], method="spearman")
+  pearsonR = cor(x=readcounts[,"Exome_Tumor_VAF"], y=readcounts[,"RNAseq_Tumor_VAF"], method="pearson")
+  text1 = paste("n = ", n, " (", m, " observed in both", " [", p, "%])", sep="")
+  text2 = paste("R = ", round(spearmanR, digits=2), " (spearman)", sep="")
+  text3 = paste("R = ", round(pearsonR, digits=2), " (pearson)", sep="")
+
+  pdf(file="Tumor_VAF_Exome_vs_RNAseq_scatter.pdf")
+  print({
+    d = ggplot(data=readcounts, aes(x=Exome_Tumor_VAF, y=RNAseq_Tumor_VAF))
+    d + geom_point(aes(colour=Gene_FPKM), size=psize) + scale_colour_gradient('FPKM', low="yellow", high="red") + 
+    xlab("Tumor Variant Allele Frequency (Exome)") + ylab("Tumor Variant Allele Frequency (RNA-seq)") + 
+    xlim(c(0,100)) + ylim(c(0,ypos)) + 
+    opts(title="Detection and RNA expression of variants identified by Exome") +
+    geom_abline(intercept=0, slope=1, linetype=2, size=0.2) +
+    geom_abline(intercept=20, slope=1, linetype=2, size=0.1) +
+    geom_abline(intercept=-20, slope=1, linetype=2, size=0.1) +
+  	geom_text(aes(x2,y2,label = textlist, hjust=0), data.frame(x2=c(0,0,0), y2=c(ypos,ypos-5,ypos-10), textlist=c(text1,text2,text3)))
+  })
+  dev.off()
+  
+  #B.) Read count filtered data
+  #Apply a minimum total tumor read count cutoff (ref + var) and then replot the data - Exome vs RNA-seq
+  #- RNAseq and Exome Read counts covering the variant position must be higher than a min read cutoff
+  i = which(((readcounts[,"RNAseq_Tumor_ref_rc"] + readcounts[,"RNAseq_Tumor_var_rc"]) > rc_cutoff) & ((readcounts[,"Exome_Tumor_ref_rc"] + readcounts[,"Exome_Tumor_var_rc"]) > rc_cutoff))
+  readcounts_cut = readcounts[i,]
+  Gene_FPKM=log2(readcounts_cut[,"RNAseq_Tumor_gene_FPKM"] + var_stabilization)
+  if (min(Gene_FPKM, na.rm=TRUE) < 0){
+	Gene_FPKM = Gene_FPKM + abs(min(Gene_FPKM, na.rm=TRUE))
+  }
+  n = length(readcounts_cut[,"Exome_Tumor_VAF"])
+  m = length(which(readcounts_cut[,"Exome_Tumor_VAF"] > 0 & readcounts_cut[,"RNAseq_Tumor_VAF"] > 0))
+  p = round(((m/n)*100), digits=1)
+  spearmanR = cor(x=readcounts_cut[,"Exome_Tumor_VAF"], y=readcounts_cut[,"RNAseq_Tumor_VAF"], method="spearman")
+  pearsonR = cor(x=readcounts_cut[,"Exome_Tumor_VAF"], y=readcounts_cut[,"RNAseq_Tumor_VAF"], method="pearson")
+  text1 = paste("n = ", n, " (", m, " observed in both", " [", p, "%])", sep="")
+  text2 = paste("R = ", round(spearmanR, digits=2), " (spearman)", sep="")
+  text3 = paste("R = ", round(pearsonR, digits=2), " (pearson)", sep="")
+
+  pdf(file="Tumor_VAF_Exome_vs_RNAseq_ReadCutoff_scatter.pdf")
+  print({
+    d = ggplot(data=readcounts_cut, aes(x=Exome_Tumor_VAF, y=RNAseq_Tumor_VAF)) 
+    d + geom_point(aes(colour=Gene_FPKM), size=psize) + scale_colour_gradient('FPKM', low="yellow", high="red") + 
+    xlab("Tumor Variant Allele Frequency (Exome)") + ylab("Tumor Variant Allele Frequency (RNA-seq)") + 
+    xlim(c(0,100)) + ylim(c(0,ypos)) + 
+    opts(title="Detection and RNA expression of variants identified by Exome (> rc)") +
+    geom_abline(intercept=0, slope=1, linetype=2, size=0.2) +
+    geom_abline(intercept=20, slope=1, linetype=2, size=0.1) +
+    geom_abline(intercept=-20, slope=1, linetype=2, size=0.1) + 
+	geom_text(aes(x2,y2,label = textlist, hjust=0), data.frame(x2=c(0,0,0), y2=c(ypos,ypos-5,ypos-10), textlist=c(text1,text2,text3)))    
+  })
+  dev.off()
+}
+
+
+########################################################################################################
+#3.) Tumor VAF - WGS vs Exome - Check for existence of these data columns
+if (length(which(names(readcounts)=="WGS_Tumor_VAF")) & length(which(names(readcounts)=="Exome_Tumor_VAF"))){
+  #A.) All data
+
+  n = length(readcounts[,"WGS_Tumor_VAF"])
+  m = length(which(readcounts[,"WGS_Tumor_VAF"] > 0 & readcounts[,"Exome_Tumor_VAF"] > 0))
+  p = round(((m/n)*100), digits=1)
+  spearmanR = cor(x=readcounts[,"WGS_Tumor_VAF"], y=readcounts[,"Exome_Tumor_VAF"], method="spearman")
+  pearsonR = cor(x=readcounts[,"WGS_Tumor_VAF"], y=readcounts[,"Exome_Tumor_VAF"], method="pearson")
+  text1 = paste("n = ", n, " (", m, " observed in both", " [", p, "%])", sep="")
+  text2 = paste("R = ", round(spearmanR, digits=2), " (spearman)", sep="")
+  text3 = paste("R = ", round(pearsonR, digits=2), " (pearson)", sep="")
+
+  pdf(file="Tumor_VAF_WGS_vs_Exome_scatter.pdf")
+  print({
+    d = ggplot(data=readcounts, aes(x=WGS_Tumor_VAF, y=Exome_Tumor_VAF))
+    d + geom_point(size=psize) + 
+    xlab("Tumor Variant Allele Frequency (WGS)") + ylab("Tumor Variant Allele Frequency (Exome)") + 
+    xlim(c(0,100)) + ylim(c(0,ypos)) + 
+    opts(title="Detection of variants by WGS vs. Exome") +
+    geom_abline(intercept=0, slope=1, linetype=2, size=0.2) +
+    geom_abline(intercept=20, slope=1, linetype=2, size=0.1) +
+    geom_abline(intercept=-20, slope=1, linetype=2, size=0.1) + 
+	geom_text(aes(x2,y2,label = textlist, hjust=0), data.frame(x2=c(0,0,0), y2=c(ypos,ypos-5,ypos-10), textlist=c(text1,text2,text3)))
+  })
+  dev.off()
+  
+  #B.) Read count filtered data
+  #Apply a minimum total tumor read count cutoff (ref + var) and then replot the data - WGS vs Exome
+  #- Exome and WGS Read counts covering the variant position must be higher than a min read cutoff
+  i = which(((readcounts[,"Exome_Tumor_ref_rc"] + readcounts[,"Exome_Tumor_var_rc"]) > rc_cutoff) & ((readcounts[,"WGS_Tumor_ref_rc"] + readcounts[,"WGS_Tumor_var_rc"]) > rc_cutoff))
+  readcounts_cut = readcounts[i,]
+
+  n = length(readcounts_cut[,"WGS_Tumor_VAF"])
+  m = length(which(readcounts_cut[,"WGS_Tumor_VAF"] > 0 & readcounts_cut[,"Exome_Tumor_VAF"] > 0))
+  p = round(((m/n)*100), digits=1)
+  spearmanR = cor(x=readcounts_cut[,"WGS_Tumor_VAF"], y=readcounts_cut[,"Exome_Tumor_VAF"], method="spearman")
+  pearsonR = cor(x=readcounts_cut[,"WGS_Tumor_VAF"], y=readcounts_cut[,"Exome_Tumor_VAF"], method="pearson")
+  text1 = paste("n = ", n, " (", m, " observed in both", " [", p, "%])", sep="")
+  text2 = paste("R = ", round(spearmanR, digits=2), " (spearman)", sep="")
+  text3 = paste("R = ", round(pearsonR, digits=2), " (pearson)", sep="")
+
+  pdf(file="Tumor_VAF_WGS_vs_Exome_ReadCutoff_scatter.pdf")
+  print({
+    d = ggplot(data=readcounts_cut, aes(x=WGS_Tumor_VAF, y=Exome_Tumor_VAF)) 
+    d + geom_point(size=psize) + 
+    xlab("Tumor Variant Allele Frequency (WGS)") + ylab("Tumor Variant Allele Frequency (Exome)") + 
+    xlim(c(0,100)) + ylim(c(0,ypos)) + 
+    opts(title="Detection of variants by WGS vs. Exome (> rc)") +
+    geom_abline(intercept=0, slope=1, linetype=2, size=0.2) +
+    geom_abline(intercept=20, slope=1, linetype=2, size=0.1) +
+    geom_abline(intercept=-20, slope=1, linetype=2, size=0.1) + 
+	geom_text(aes(x2,y2,label = textlist, hjust=0), data.frame(x2=c(0,0,0), y2=c(ypos,ypos-5,ypos-10), textlist=c(text1,text2,text3)))
+  })
+  dev.off()
+}
+
+#Plot distributions of Tumor FPKM values for Mutant vs. Non-Mutant genes
+if (exists("gene_expression")){
+  if (length(which(names(gene_expression)=="FPKM"))){
+  
+    #Transform the FPKM values for display purposes
+	gene_expression[,"FPKM_trans"] = log2(gene_expression[,"FPKM"] + var_stabilization)
+
+	#Identify the subset of all genes that are mutant
+	mutant_gene_names = unique(readcounts[,"mapped_gene_name"])
+	gene_expression[,"Group"] = "Non-Mutant"
+	i = which(gene_expression[,"mapped_gene_name"] %in% mutant_gene_names)
+	gene_expression[i,"Group"] = "Mutant"
+	mutant_count = length(i)
+	title_text = paste("Expression of non-mutant vs. mutant genes (n = ", mutant_count, ")", sep="")
+
+	#Plot distribution of all Gene FPKMs vs. those of mutant genes - Tumor
+	#Boxplot
+	pdf("Tumor_MutantGene_vs_NonMutantGene_FPKM_boxplot.pdf")
+	print ({
+  	  p <- ggplot(gene_expression, aes(factor(Group), FPKM_trans)) 
+      p + geom_boxplot(aes(fill=Group)) + xlab("Gene group") + ylab("FPKM (log2)") + opts(title=title_text)
+	})
+	dev.off()
+
+	#Density plot
+	pdf("Tumor_MutantGene_vs_NonMutantGene_FPKM_density.pdf")
+	print ({
+  	  ggplot(gene_expression, aes(FPKM_trans, fill = Group)) + geom_density(alpha = 0.2) + xlab("FPKM (log2)") + ylab("Density") + opts(title=title_text)
+	})
+	dev.off()
+
+	#Repeat these plots using only genes with nonzero expression
+	exp_i = which(gene_expression[,"FPKM"] > 0)
+	ge_i = gene_expression[exp_i,]
+	mutant_count = length(which(ge_i[,"Group"] == "Mutant"))
+	title_text = paste("Expression of expressed non-mutant vs. mutant genes (n = ", mutant_count, ")", sep="")
+
+	pdf("Tumor_MutantGene_vs_NonMutantGene_FPKM_ReadCutoff_boxplot.pdf")
+	print ({
+  	  p <- ggplot(ge_i, aes(factor(Group), FPKM_trans)) 
+  	  p + geom_boxplot(aes(fill=Group)) + xlab("Gene group") + ylab("FPKM (log2) (genes with FPKM > 0)") + opts(title=title_text)
+	})
+	dev.off()
+
+	pdf("Tumor_MutantGene_vs_NonMutantGene_FPKM_ReadCutoff_density.pdf")
+	print ({
+ 	  ggplot(ge_i, aes(FPKM_trans, fill = Group)) + geom_density(alpha = 0.2) + xlab("FPKM (log2) (genes with FPKM > 0)") + ylab("Density") + opts(title=title_text)
+	})
+	dev.off()
+  }
+}
+
+#Plot VAF values as histograms
+plotVafHist = function(dataset, sample_type, data_type){
+  colname = paste(data_type, "_", sample_type, "_VAF", sep="")
+  filename = paste(sample_type, "_VAF_", data_type, "_hist.pdf", sep="")
+  title_text = paste("Distribution of variant allele frequencies (", sample_type, " tissue, ", data_type, ")", sep="")
+  x_label = paste(data_type, " ", sample_type, " variant allele frequency", sep="")
+  if (length(which(names(dataset)==colname))){
+    dataset[,"VAF"] = dataset[,colname]
+    pdf(filename)
+    print({
+      m <- ggplot(dataset, aes(x=VAF)); m + geom_histogram(aes(y = ..density.., fill= ..count..)) + geom_density() + 
+      opts(title=title_text) + xlab(x_label)
+    })
+    dev.off()
+  }
+}
+plotVafHist(readcounts, "Normal", "WGS")
+plotVafHist(readcounts, "Tumor", "WGS")
+plotVafHist(readcounts, "Normal", "Exome")
+plotVafHist(readcounts, "Tumor", "Exome")
+plotVafHist(readcounts, "Normal", "RNAseq")
+plotVafHist(readcounts, "Tumor", "RNAseq")
+
+
+#Create density plots for the distributions of Tumor VAFs (and Normal?) for:
+#WGS + Exome + RNAseq (all on one plot)
+x=NULL
+y=NULL
+z=NULL
+var_count = 0
+if (length(which(names(readcounts)=="WGS_Tumor_VAF"))){
+  x=readcounts[,"WGS_Tumor_VAF"]
+  var_count = length(x)
+}
+if (length(which(names(readcounts)=="Exome_Tumor_VAF"))){
+  y=readcounts[,"Exome_Tumor_VAF"]
+  var_count = length(y)
+}
+if (length(which(names(readcounts)=="RNAseq_Tumor_VAF"))){
+  z=readcounts[,"RNAseq_Tumor_VAF"]
+  var_count = length(z)
+}
+classes = c(rep("WGS", length(x)), rep("Exome", length(y)), rep("RNAseq", length(z)))
+vafs = data.frame(c(x,y,z), classes)
+y_label = paste("Density (n = ", var_count, " variants)", sep="")
+names(vafs) = c("Tumor_VAF","Group")
+pdf("Tumor_VAF_AllDataSources_density.pdf")
+print ({
+  ggplot(vafs, aes(Tumor_VAF, fill = Group)) + geom_density(alpha = 0.2) + xlab("Tumor Variant Allele Frequency") + ylab(y_label) + opts(title="Comparison of variant allele frequencies from each data source")
+})
+dev.off()
+
+#Summarize coverage levels for mutation positions according to: WGS, Exome, and RNA-seq 
+plotCoverageHist = function(data, ref_rc, var_rc, filename, title_name){
+  #With outliers
+  filename1 = paste(filename, "_hist.pdf", sep="")
+  z = data[,c(ref_rc,var_rc)]
+  z[,"coverage"] = z[,ref_rc]+z[,var_rc]
+  median_cov = median(z[,"coverage"], na.rm=TRUE)
+  x_label = paste("Read coverage (median X = ", round(median_cov, digits=1), ")", sep="")
+  y_label = paste("Density (n = ", dim(z)[1], "variant positions)", sep="")
+  pdf(filename1)
+  print({
+    m <- ggplot(z, aes(x=coverage)); m + geom_histogram(aes(y = ..density.., fill= ..count..)) + geom_density() + 
+    opts(title=title_name) + xlab(x_label) + ylab(y_label)
+  })
+  dev.off()
+  #Remove outliers
+  outliers=boxplot(z[,"coverage"], plot=FALSE)$out
+  z = z[which(!z[,"coverage"] %in% outliers),]
+  filename2 = paste(filename, "_RmOutliers_hist.pdf", sep="")
+  x_label = paste("Read coverage (median X = ", round(median_cov, digits=1), ") - Outliers removed", sep="")
+  y_label = paste("Density (n = ", dim(z)[1], " variant positions)", sep="")
+  pdf(filename2)
+  print({
+    m <- ggplot(z, aes(x=coverage)); m + geom_histogram(aes(y = ..density.., fill= ..count..)) + geom_density() + 
+    opts(title=title_name) + xlab(x_label) + ylab(y_label)
+  })
+  dev.off()
+}
+if (length(which(names(readcounts)=="WGS_Tumor_ref_rc"))){
+  plotCoverageHist(readcounts, "WGS_Tumor_ref_rc", "WGS_Tumor_var_rc", "Tumor_VariantReadCoverage_WGS", "Distribution of variant read coverage (Tumor, WGS)")
+}
+if (length(which(names(readcounts)=="WGS_Normal_ref_rc"))){
+  plotCoverageHist(readcounts, "WGS_Normal_ref_rc", "WGS_Normal_var_rc", "Normal_VariantReadCoverage_WGS", "Distribution of variant read coverage (Normal, WGS)")
+}
+if (length(which(names(readcounts)=="Exome_Tumor_ref_rc"))){
+  plotCoverageHist(readcounts, "Exome_Tumor_ref_rc", "Exome_Tumor_var_rc", "Tumor_VariantReadCoverage_Exome", "Distribution of variant read coverage (Tumor, Exome)")
+}
+if (length(which(names(readcounts)=="Exome_Normal_ref_rc"))){
+  plotCoverageHist(readcounts, "Exome_Normal_ref_rc", "Exome_Normal_var_rc", "Normal_VariantReadCoverage_Exome", "Distribution of variant read coverage (Normal, Exome)")
+}
+if (length(which(names(readcounts)=="RNAseq_Tumor_ref_rc"))){
+  plotCoverageHist(readcounts, "RNAseq_Tumor_ref_rc", "RNAseq_Tumor_var_rc", "Tumor_VariantReadCoverage_RNAseq", "Distribution of variant read coverage (Tumor, RNAseq)")
+}
+if (length(which(names(readcounts)=="RNAseq_Normal_ref_rc"))){
+  plotCoverageHist(readcounts, "RNAseq_Normal_ref_rc", "RNAseq_Normal_var_rc", "Normal_VariantReadCoverage_RNAseq", "Distribution of variant read coverage (Normal, RNAseq)")
+}
+
+#Same idea as above but combine on one plot
+#Tumor
+plotCoverageComparison = function(dataset, sample_type, remove_outliers){
+  x=NULL; xt=NULL; y=NULL; yt=NULL; z=NULL; zt=NULL; xmedian=NULL; ymedian=NULL; zmedian=NULL;
+  wgs_ref_rc = paste("WGS_", sample_type, "_ref_rc", sep="")
+  wgs_var_rc = paste("WGS_", sample_type, "_var_rc", sep="")
+  exome_ref_rc = paste("Exome_", sample_type, "_ref_rc", sep="")
+  exome_var_rc = paste("Exome_", sample_type, "_var_rc", sep="")
+  rnaseq_ref_rc = paste("RNAseq_", sample_type, "_ref_rc", sep="")
+  rnaseq_var_rc = paste("RNAseq_", sample_type, "_var_rc", sep="")
+  var_count = 0
+  if (length(which(names(dataset)==wgs_ref_rc))){
+    x=dataset[,wgs_ref_rc]+dataset[,wgs_var_rc]
+    xmedian=median(x)
+    if (remove_outliers){
+      outliers=boxplot(x, plot=FALSE)$out
+      x = x[which(!x %in% outliers)]
+    }
+    xt=paste("WGS=", round(xmedian, digits=1), "X ", sep="")
+    if (length(x) > var_count){var_count = length(x)}
+  }
+  if (length(which(names(dataset)==exome_ref_rc))){
+    y=dataset[,exome_ref_rc]+dataset[,exome_var_rc]
+    ymedian=median(y)
+    if (remove_outliers){
+      outliers=boxplot(y, plot=FALSE)$out
+      y = y[which(!y %in% outliers)]
+    }
+    yt=paste("Exome=" , round(ymedian, digits=1), "X ", sep="")
+    if (length(y) > var_count){var_count = length(y)}
+  }
+  #For RNAseq only, calculate the median from nonzero values only
+  if (length(which(names(dataset)==rnaseq_ref_rc))){
+    z=dataset[,rnaseq_ref_rc]+dataset[,rnaseq_var_rc]
+    z_nonzero = z[which(z > 0)]
+    zmedian=median(z_nonzero)
+    if (remove_outliers){
+      outliers=boxplot(z, plot=FALSE)$out
+      z = z[which(!z %in% outliers)]
+    }
+    zt=paste("RNAseq=", round(zmedian, digits=1), "X ", sep="")
+    if (length(z) > var_count){var_count = length(z)}
+  }
+  classes = c(rep("WGS", length(x)), rep("Exome", length(y)), rep("RNAseq", length(z)))
+  rcs = data.frame(c(x,y,z), classes)
+  names(rcs) = c("ReadCounts","DataType")
+  x_label = paste(sample_type, " Read Coverage ( ", zt, xt, yt, ")", sep="")
+  y_label = paste("Density (n = ", var_count, " variants)", sep="")
+  filename = paste(sample_type,"_ReadCoverage_AllDataSources_density.pdf", sep="")
+  if (remove_outliers){
+  	filename = paste(sample_type,"_ReadCoverage_AllDataSources_RmOutliers_density.pdf", sep="")	
+  }
+  pdf(filename)
+  print ({
+    ggplot(rcs, aes(ReadCounts, fill = DataType)) + geom_density(alpha = 0.2) + xlab(x_label) + ylab(y_label) + opts(title="Comparison of read coverages from each data source") + geom_vline(xintercept=xmedian, linetype=3, color="black", size=0.3) + geom_vline(xintercept=ymedian, linetype=3, color="black", size=0.3) + geom_vline(xintercept=zmedian, linetype=3, color="black", size=0.3)
+
+  })
+  dev.off()
+}
+plotCoverageComparison(readcounts, "Tumor", remove_outliers=FALSE)
+plotCoverageComparison(readcounts, "Normal", remove_outliers=FALSE)
+plotCoverageComparison(readcounts, "Tumor", remove_outliers=TRUE)
+plotCoverageComparison(readcounts, "Normal", remove_outliers=TRUE)
+
+#Plot expression values from the tumor - FPKMs vs. Coverage values (and then mark mutant genes)
+if (exists("gene_expression")){
+  if (length(which(names(gene_expression)=="FPKM"))){
+    #Transform the FPKM values for display purposes
+	gene_expression[,"FPKM_trans"] = log2(gene_expression[,"FPKM"] + var_stabilization)
+	#Similar transformation on the coverage values
+	gene_expression[,"coverage_trans"] = log2(gene_expression[,"coverage"] + var_stabilization)
+	#Identify the subset of all genes that are mutant
+	mutant_gene_names = unique(readcounts[,"mapped_gene_name"])
+	gene_expression[,"Group"] = "Non-Mutant"
+	i = which(gene_expression[,"mapped_gene_name"] %in% mutant_gene_names)
+	gene_expression[i,"Group"] = "Mutant"
+	mutant_count = length(i)
+	pointsize=1
+	if (mutant_count > 150){
+      pointsize=0.35	
+	}
+    jpeg("Tumor_Gene_Expression_Mutant_vs_NonMutant_scatter.jpg", quality=100, width=800, height=800)
+	plot(x=gene_expression[,"FPKM_trans"], y=gene_expression[,"coverage_trans"], col="blue", pch=16, cex=0.2, 
+	     xlab="FPKM (log2)", ylab="Coverage (log2)", main="Gene expression value for mutant and non-mutant genes")
+    points(x=gene_expression[i,"FPKM_trans"], y=gene_expression[i,"coverage_trans"], col="magenta", pch=16, cex=1)
+	legend("topleft", c("Mutant", "Non-Mutant"), col=c("magenta", "blue"), pch=16)
+    dev.off()
+  }
+}
+
+
+#SUMMARY STATISTICS
+#Write out all stats in the following format:
+#Question | Answer | Data type | analysis type | statistic type | Extra description
+
+#Initialize a stats data.frame
+stats = data.frame(NA,NA,NA,NA,NA,NA)
+names(stats) = c("Question", "Answer", "Data_Type", "Analysis_Type", "Statistic_Type", "Extra description")
+total_variants = dim(readcounts)[1]
+stats[dim(stats)[1],] = c("Number of variants", total_variants,"RNA-seq","SNV","Count","Variants from WGS/Exome")
+
+#Correlation values for:
+# - WGS vs. Exome VAFs
+if (length(which(names(readcounts)=="Exome_Tumor_VAF")) & length(which(names(readcounts)=="WGS_Tumor_VAF"))){
+  i = which(readcounts[,"Exome_Tumor_VAF"] > rc_cutoff & readcounts[,"WGS_Tumor_VAF"] > rc_cutoff)
+  wgs_vs_exome_vaf_cor = cor(x=readcounts[,"Exome_Tumor_VAF"], y=readcounts[,"WGS_Tumor_VAF"], method="spearman")
+  wgs_vs_exome_vaf_cor_rc = cor(x=readcounts[i,"Exome_Tumor_VAF"], y=readcounts[i,"WGS_Tumor_VAF"], method="spearman")
+  stats[dim(stats)[1]+1,] = c("Exome vs. WGS Tumor VAF correlation", wgs_vs_exome_vaf_cor, "WGS and Exome","SNV","Spearman correlation", "Correlation between tumor variant allele frequencies for Exome vs. WGS data")
+  stats[dim(stats)[1]+1,] = c("Exome vs. WGS Tumor VAF correlation - with min coverage cutoff", wgs_vs_exome_vaf_cor_rc, "WGS and Exome","SNV","Spearman correlation", "Correlation between tumor variant allele frequencies for Exome vs. WGS data")
+}
+# - WGS vs. RNAseq VAFs (all & 'expressed' variants only)
+if (length(which(names(readcounts)=="RNAseq_Tumor_VAF")) & length(which(names(readcounts)=="WGS_Tumor_VAF"))){
+  i = which(readcounts[,"RNAseq_Tumor_VAF"] > rc_cutoff & readcounts[,"WGS_Tumor_VAF"] > rc_cutoff)
+  rnaseq_vs_wgs_vaf_cor = cor(x=readcounts[,"RNAseq_Tumor_VAF"], y=readcounts[,"WGS_Tumor_VAF"], method="spearman")
+  rnaseq_vs_wgs_vaf_cor_rc = cor(x=readcounts[i,"RNAseq_Tumor_VAF"], y=readcounts[i,"WGS_Tumor_VAF"], method="spearman")
+  stats[dim(stats)[1]+1,] = c("RNAseq vs. WGS Tumor VAF correlation", rnaseq_vs_wgs_vaf_cor, "RNAseq and WGS","SNV","Spearman correlation", "Correlation between tumor variant allele frequencies for RNAseq vs. WGS data")
+  stats[dim(stats)[1]+1,] = c("RNAseq vs. WGS Tumor VAF correlation - with min coverage cutoff", rnaseq_vs_wgs_vaf_cor_rc, "RNAseq and WGS","SNV","Spearman correlation", "Correlation between tumor variant allele frequencies for RNAseq vs. WGS data")
+}
+# - Exome vs. RNAseq VAFs (all & 'expressed' variants only)
+if (length(which(names(readcounts)=="RNAseq_Tumor_VAF")) & length(which(names(readcounts)=="Exome_Tumor_VAF"))){
+  i = which(readcounts[,"RNAseq_Tumor_VAF"] > rc_cutoff & readcounts[,"Exome_Tumor_VAF"] > rc_cutoff)
+  exome_vs_rnaseq_vaf_cor = cor(x=readcounts[,"Exome_Tumor_VAF"], y=readcounts[,"RNAseq_Tumor_VAF"], method="spearman")
+  exome_vs_rnaseq_vaf_cor_rc = cor(x=readcounts[i,"Exome_Tumor_VAF"], y=readcounts[i,"RNAseq_Tumor_VAF"], method="spearman")
+  stats[dim(stats)[1]+1,] = c("RNAseq vs. Exome Tumor VAF correlation", exome_vs_rnaseq_vaf_cor, "RNAseq and Exome","SNV","Spearman correlation", "Correlation between tumor variant allele frequencies for RNAseq vs. Exome data")
+  stats[dim(stats)[1]+1,] = c("RNAseq vs. Exome Tumor VAF correlation - with min coverage cutoff", exome_vs_rnaseq_vaf_cor_rc, "RNAseq and Exome","SNV","Spearman correlation", "Correlation between tumor variant allele frequencies for RNAseq vs. Exome data") 
+}
+
+# - Median coverage of variant positions in 
+# - WGS
+if (length(which(names(readcounts)=="WGS_Tumor_var_rc"))){
+  wgs_median_coverage = median(readcounts[,"WGS_Tumor_ref_rc"] + readcounts[,"WGS_Tumor_var_rc"])
+  stats[dim(stats)[1]+1,] = c("WGS median read coverage", wgs_median_coverage, "WGS","SNV", "Median", "Median coverage (reads supporting reference and variant bases)") 
+}
+# - Exome
+if (length(which(names(readcounts)=="Exome_Tumor_var_rc"))){
+  exome_median_coverage = median(readcounts[,"Exome_Tumor_ref_rc"] + readcounts[,"Exome_Tumor_var_rc"])
+  stats[dim(stats)[1]+1,] = c("Exome median read coverage", exome_median_coverage, "Exome","SNV", "Median", "Median coverage (reads supporting reference and variant bases)") 
+}
+
+# - RNAseq (all, variant observed only, expressed gene only)
+if (length(which(names(readcounts)=="RNAseq_Tumor_var_rc")) & length(which(names(readcounts)=="RNAseq_Tumor_gene_FPKM"))){
+  rnaseq_median_coverage = median(readcounts[,"RNAseq_Tumor_ref_rc"] + readcounts[,"RNAseq_Tumor_var_rc"])
+  i = which(readcounts[,"RNAseq_Tumor_var_rc"] > 0)
+  rnaseq_median_coverage_obs = median(readcounts[i,"RNAseq_Tumor_ref_rc"] + readcounts[i,"RNAseq_Tumor_var_rc"])
+  i = which(readcounts[,"RNAseq_Tumor_gene_FPKM"] > fpkm_cutoff)
+  rnaseq_median_coverage_exp = median(readcounts[i,"RNAseq_Tumor_ref_rc"] + readcounts[i,"RNAseq_Tumor_var_rc"])
+  stats[dim(stats)[1]+1,] = c("RNAseq median read coverage", rnaseq_median_coverage, "RNAseq","SNV", "Median", "Median coverage (reads supporting reference and variant bases)")
+  stats[dim(stats)[1]+1,] = c("RNAseq median read coverage - observed variants only", rnaseq_median_coverage_obs, "RNAseq","SNV", "Median", "Median coverage (reads supporting reference and variant bases) of variants with at least one RNAseq read")  
+  stats[dim(stats)[1]+1,] = c("RNAseq median read coverage - expressed genes only", rnaseq_median_coverage_exp, "RNAseq","SNV", "Median", "Median coverage (reads supporting reference and variant bases) of variants in a gene that is expressed")  
+}
+
+
+#Summarize variants in various categories:
+#'expressed' variants.               -> RNA-seq Read Count > rc_cutoff && RNA-seq Gene FPKM > fpkm_cutoff
+#'mutant allele biased' variants.    -> 'expressed' && VAF Difference > +vaf_diff_cutoff
+#'wild type allele biased' variants. -> 'expressed' && VAF Difference < -vaf_diff_cutoff
+#'silent gene' variants              -> RNA-seq Read Count < rc_cutoff && Gene FPKM < fpkm_cutoff
+readcounts[,"MutantExpressionClass"] = "Other"
+if (length(which(names(readcounts)=="RNAseq_Tumor_var_rc")) & length(which(names(readcounts)=="RNAseq_Tumor_gene_FPKM"))){
+  i = which(readcounts[,"RNAseq_Tumor_var_rc"] > 0)
+  supported_variants = length(i)
+  supported_variants_p = round(((supported_variants/total_variants)*100), digits=2)
+  if(length(i)){readcounts[i,"MutantExpressionClass"] = "Supported"}
+  i = which(((readcounts[,"RNAseq_Tumor_ref_rc"] + readcounts[,"RNAseq_Tumor_var_rc"]) > rc_cutoff) & readcounts[,"RNAseq_Tumor_gene_FPKM"] > fpkm_cutoff)
+  if(length(i)){readcounts[i,"MutantExpressionClass"] = "Expressed"}
+  expressed_variants = length(i)
+  expressed_variants_p = round(((expressed_variants/total_variants)*100), digits=2)
+  i = which(((readcounts[,"RNAseq_Tumor_ref_rc"] + readcounts[,"RNAseq_Tumor_var_rc"]) < rc_cutoff) & readcounts[,"RNAseq_Tumor_gene_FPKM"] < fpkm_cutoff)
+  if(length(i)){readcounts[i,"MutantExpressionClass"] = "SilentGene"}
+  silent_gene_variants = length(i)
+  silent_gene_variants_p = round(((silent_gene_variants/total_variants)*100), digits=2)
+  stats[dim(stats)[1]+1,] = c("Number of supported variants", supported_variants,"RNA-seq","SNV","Count","Variants from WGS/Exome at least one supporting read in RNA-seq")
+  stats[dim(stats)[1]+1,] = c("Percent of supported variants", supported_variants_p,"RNA-seq","SNV","Percent","Variants from WGS/Exome at least one supporting read in RNA-seq")
+  stats[dim(stats)[1]+1,] = c("Number of expressed variants", expressed_variants,"RNA-seq","SNV","Count", paste("Variants from WGS/Exome exceeding a read cutoff with RNA-seq support (Cutoff = ", rc_cutoff, ")", sep=""))
+  stats[dim(stats)[1]+1,] = c("Percent of expressed variants", expressed_variants_p,"RNA-seq","SNV","Percent", paste("Variants from WGS/Exome exceeding a read cutoff with RNA-seq support (Cutoff = ", rc_cutoff, ")", sep=""))
+  stats[dim(stats)[1]+1,] = c("Number of variants in non-expressed genes", silent_gene_variants,"RNA-seq","SNV","Count","Variants that appear to be in a gene that is not expressed")
+  stats[dim(stats)[1]+1,] = c("Percent of variants in non-expressed genes", silent_gene_variants_p,"RNA-seq","SNV","Percent","Variants that appear to be in a gene that is not expressed")
+}
+
+#WGS vs RNAseq
+if (length(which(names(readcounts)=="RNAseq_Tumor_VAF")) & length(which(names(readcounts)=="WGS_Tumor_VAF")) & length(which(names(readcounts)=="RNAseq_Tumor_gene_FPKM"))){
+  #Calculate the variant allele frequency difference between WGS and RNAseq
+  readcounts[,"WGS_Tumor_VAF_Diff"]=(readcounts[,"RNAseq_Tumor_VAF"] - readcounts[,"WGS_Tumor_VAF"])
+  i = which(((readcounts[,"RNAseq_Tumor_ref_rc"] + readcounts[,"RNAseq_Tumor_var_rc"]) > rc_cutoff) & ((readcounts[,"WGS_Tumor_ref_rc"] + readcounts[,"WGS_Tumor_var_rc"]) > rc_cutoff) & (readcounts[,"RNAseq_Tumor_gene_FPKM"] > fpkm_cutoff) & (readcounts[,"WGS_Tumor_VAF_Diff"] > vaf_diff_cutoff_pos))
+  if(length(i)){readcounts[i,"MutantExpressionClass"] = "MutantBiased"}
+  mutant_biased_variants = length(i)
+  mutant_biased_variants_p = round(((mutant_biased_variants/total_variants)*100), digits=2)
+  i = which(((readcounts[,"RNAseq_Tumor_ref_rc"] + readcounts[,"RNAseq_Tumor_var_rc"]) > rc_cutoff) & ((readcounts[,"WGS_Tumor_ref_rc"] + readcounts[,"WGS_Tumor_var_rc"]) > rc_cutoff) & (readcounts[,"RNAseq_Tumor_gene_FPKM"] > fpkm_cutoff) & (readcounts[,"WGS_Tumor_VAF_Diff"] < vaf_diff_cutoff_neg))
+  if(length(i)){readcounts[i,"MutantExpressionClass"] = "WildTypeBiased"}
+  wildtype_biased_variants = length(i)
+  wildtype_biased_variants_p = round(((wildtype_biased_variants/total_variants)*100), digits=2)
+  stats[dim(stats)[1]+1,] = c("Number of WGS variants with mutant biased expression", mutant_biased_variants,"RNA-seq and WGS","SNV","Count","WGS called variants that appear to be preferentially expressed from the mutant allele")
+  stats[dim(stats)[1]+1,] = c("Percent of WGS variants with mutant biased expression", mutant_biased_variants_p,"RNA-seq and WGS","SNV","Percent","WGS called variants that appear to be preferentially expressed from the mutant allele")
+  stats[dim(stats)[1]+1,] = c("Number of WGS variants with wild-type biased expression", wildtype_biased_variants,"RNA-seq and WGS","SNV","Count","WGS called variants that appear to be preferentially expressed from the wild type allele")	
+  stats[dim(stats)[1]+1,] = c("Percent of WGS variants with wild-type biased expression", wildtype_biased_variants_p,"RNA-seq and WGS","SNV","Percent","WGS called variants that appear to be preferentially expressed from the wild type allele")	
+}
+
+#Exome vs RNAseq
+if (length(which(names(readcounts)=="RNAseq_Tumor_VAF")) & length(which(names(readcounts)=="Exome_Tumor_VAF"))){
+  #Calculate the variant allele frequency difference between WGS and RNAseq 
+  readcounts[,"Exome_Tumor_VAF_Diff"]=(readcounts[,"RNAseq_Tumor_VAF"] - readcounts[,"Exome_Tumor_VAF"])
+  i = which(((readcounts[,"RNAseq_Tumor_ref_rc"] + readcounts[,"RNAseq_Tumor_var_rc"]) > rc_cutoff) & ((readcounts[,"Exome_Tumor_ref_rc"] + readcounts[,"Exome_Tumor_var_rc"]) > rc_cutoff) & (readcounts[,"RNAseq_Tumor_gene_FPKM"] > fpkm_cutoff) & (readcounts[,"Exome_Tumor_VAF_Diff"] > vaf_diff_cutoff_pos))
+  if(length(i)){readcounts[i,"MutantExpressionClass"] = "MutantBiased"}
+  mutant_biased_variants = length(i)
+  mutant_biased_variants_p = round(((mutant_biased_variants/total_variants)*100), digits=2)
+  i = which(((readcounts[,"RNAseq_Tumor_ref_rc"] + readcounts[,"RNAseq_Tumor_var_rc"]) > rc_cutoff) & ((readcounts[,"Exome_Tumor_ref_rc"] + readcounts[,"Exome_Tumor_var_rc"]) > rc_cutoff) & (readcounts[,"RNAseq_Tumor_gene_FPKM"] > fpkm_cutoff) & (readcounts[,"Exome_Tumor_VAF_Diff"] < vaf_diff_cutoff_neg))
+  if(length(i)){readcounts[i,"MutantExpressionClass"] = "WildTypeBiased"}
+  wildtype_biased_variants = length(i)
+  wildtype_biased_variants_p = round(((wildtype_biased_variants/total_variants)*100), digits=2)
+  stats[dim(stats)[1]+1,] = c("Number of Exome variants with mutant biased expression", mutant_biased_variants,"RNA-seq and Exome","SNV","Count","Exome called variants that appear to be preferentially expressed from the mutant allele")
+  stats[dim(stats)[1]+1,] = c("Percent of WGS variants with mutant biased expression", mutant_biased_variants_p,"RNA-seq and WGS","SNV","Percent","WGS called variants that appear to be preferentially expressed from the mutant allele")
+  stats[dim(stats)[1]+1,] = c("Number of Exome variants with wild-type biased expression", wildtype_biased_variants,"RNA-seq and Exome","SNV","Count","Exome called variants that appear to be preferentially expressed from the wild type allele")	
+  stats[dim(stats)[1]+1,] = c("Percent of WGS variants with wild-type biased expression", wildtype_biased_variants_p,"RNA-seq and WGS","SNV","Percent","WGS called variants that appear to be preferentially expressed from the wild type allele")	
+}
+
+#Write out the stats to a tsv file
+filename = "Stats.tsv"
+write.table(stats, file=filename, sep="\t", row.names=FALSE)
+
+#Write out the amended data.frame so that the user can identify Mutant biased gene expression etc.
+filename = "ProcessedData.tsv"
+write.table(readcounts, file=filename, sep="\t", row.names=FALSE)
+
+
