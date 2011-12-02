@@ -7,6 +7,7 @@
 
 #define _GNU_SOURCE
 #include <stdio.h>
+#include <stdbool.h>
 #include "sam.h"
 #include "faidx.h"
 #include "khash.h"
@@ -181,9 +182,10 @@ int main( int argc, char *argv[] )
 
   size_t length;
   char *line = NULL;
+  line = (char*)malloc( 200 );
   while( getline( &line, &length, roiFp ) != -1 )
   {
-    char ref_name[20], gene_name[50];
+    char ref_name[50], gene_name[100];
     if( sscanf( line, "%s %i %i %s", ref_name, &data.beg, &data.end, gene_name ) == 4 )
     {
       int ref_id;

@@ -10,7 +10,7 @@ require File::Basename;
 require Genome::Model::Tools::Dacc::Download;
 
 class Genome::Model::Tools::Soap::Import {
-    is => 'Genome::Model::Tools::Soap',
+    is => 'Genome::Model::Tools::Soap::Base',
     has => [
         version => {
             is => 'Text',

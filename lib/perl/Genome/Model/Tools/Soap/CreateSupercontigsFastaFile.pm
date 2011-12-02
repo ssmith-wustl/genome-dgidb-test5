@@ -7,7 +7,7 @@ use Genome;
 use Bio::SeqIO;
 
 class Genome::Model::Tools::Soap::CreateSupercontigsFastaFile {
-    is => 'Genome::Model::Tools::Soap',
+    is => 'Genome::Model::Tools::Soap::Base',
     has => [
         assembly_directory => {
             is => 'Text',

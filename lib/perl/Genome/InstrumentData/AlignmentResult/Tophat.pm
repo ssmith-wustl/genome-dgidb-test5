@@ -297,10 +297,12 @@ sub _gather_input_fastqs {
             trimmer_name => $self->trimmer_name,
             trimmer_version => $self->trimmer_version,
             trimmer_params => $self->trimmer_params,
+            discard_fragments => 1,
             directory => $directory,
         );
         unless(scalar(@files) == 2) {
-            $self->error_message('Unexpected number of FASTQ files!');
+            $self->error_message("Unexpected number of FASTQ files (expected 2, got "
+                .scalar(@files)."):\n\t".join("\n\t", @files));
             die $self->error_message;
         }
         push @left_fastqs, $files[0];
