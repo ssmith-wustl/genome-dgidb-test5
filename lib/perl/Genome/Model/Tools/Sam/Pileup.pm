@@ -32,7 +32,11 @@ class Genome::Model::Tools::Sam::Pileup {
     has_optional_input => [
         region_file => {
             is => 'Text',
-            doc => "limit calls to this region",
+            doc => '1-based file listing sites to get calls for',
+        },
+        view_limit_file => {
+            is => 'Text',
+            doc => 'true bed file used to limit samtools view input to pileup',
         },
     ],
 };
@@ -54,11 +58,24 @@ sub execute {
     #check to see if the region file is gzipped, if so, pipe zcat output to the -l
     my $rf = $self->region_file;
     my $region_file = "";
+    my $view_region_file = "";
+
+    #Create a temporary file and to dump region_limit file into, but in BED format
+    my $vlf = Genome::Sys->create_temp_file_path;
+    my $vlf_cmd = "bash -c \"zcat ".$rf." | awk \'BEGIN { OFS=\\\"\\t\\\"; }  { print \\\$1,\\\$2-1,\\\$2; }\' | bgzip -c > ".$vlf."\"";
+    my $vlf_result = Genome::Sys->shellcmd( cmd => $vlf_cmd);
+    unless($vlf_result){
+        die $self->error_message("Could not convert region file into view limiting file..");
+    }
+
+    #set up the appropriate region/view files for the commmand
     if(defined($self->region_file)){
-        if($rf =~ m/.bed.gz$/){
-            $region_file = "-l <(zcat ".$rf.") ";
+        if($rf =~ m/.gz$/){
+            $region_file = "-l <(zcat ".$rf." | awk \'BEGIN { OFS=\\\"\\t\\\"; }  { print \\\$1,\\\$2,\\\$2; }\')";
+            $view_region_file = "-L <(zcat ".$vlf.")";
         }elsif (defined($rf)){
-            $region_file = "-l ".$rf;
+            $region_file = "-l <(cat ".$rf." | awk \'BEGIN { OFS=\\\"\\t\\\"; }  { print \\\$1,\\\$2,\\\$2; }\')";
+            $view_region_file = "-L $vlf ";
         }
     }
 
@@ -66,14 +83,16 @@ sub execute {
     my $out = "> ".$output_file."\"";
 
     #put the command components together
-    my $cmd = "bash -c \"".$self->path_for_samtools_version($self->use_version)." pileup -c -f $refseq_path $bam $region_file $out";
+    my $samtools = $self->path_for_samtools_version($self->use_version);
+    my $cmd = "bash -c \"samtools view -u $view_region_file $bam | $samtools pileup -c -f $refseq_path $region_file - $out";
 
-    my $result = Genome::Sys->shellcmd( cmd => $cmd, input_files => [$refseq_path, $bam], output_files => [$output_file], skip_if_output_is_present => 1);
+    my $result = Genome::Sys->shellcmd( cmd => $cmd); #, input_files => [$refseq_path, $bam], output_files => [$output_file], skip_if_output_is_present => 1);
     unless($result){
         die $self->error_message("failed to execute cmd: ".$cmd);
     }
-    my $temp_sorted_output = Genome::Sys->create_temp_file_path;
 
+    #If we are using bgzip, place the output into bgzip format
+    my $temp_sorted_output = Genome::Sys->create_temp_file_path;
     if($self->use_bgzip){
         my $sort = Genome::Model::Tools::Bed::ChromSort->create( input => $output_file, output => $temp_sorted_output);
         unless($sort->execute){

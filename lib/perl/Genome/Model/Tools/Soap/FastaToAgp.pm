@@ -7,7 +7,7 @@ use Genome;
 use File::Basename;
 
 class  Genome::Model::Tools::Soap::FastaToAgp {
-    is => 'Genome::Model::Tools::Soap',
+    is => 'Genome::Model::Tools::Soap::Base',
     has => [
         scaffold_size_cutoff => {
             is => 'Integer',

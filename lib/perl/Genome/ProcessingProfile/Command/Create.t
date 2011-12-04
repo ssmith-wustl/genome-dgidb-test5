@@ -12,8 +12,20 @@ use above "Genome";
 
 use Test::More;
 
-# Use, make sure it has subclasses
 use_ok('Genome::ProcessingProfile::Command::Create') or die;
+ok(Genome::ProcessingProfile::Command::Create->sub_command_classes) or die;
+is(Genome::ProcessingProfile::Command::Create->_sub_commands_from, 'Genome::Model', 'subcommands from');
+is(
+    Genome::ProcessingProfile::Command::Create->_sub_commands_inherit_from, 
+    'Genome::ProcessingProfile::Command::Create::Base',
+    'subcommands inherit from',
+);
+is(Genome::ProcessingProfile::Command::Create->_target_base_class, 'Genome::ProcessingProfile', 'target base class');
+
+test_command_subclass();
+test_processing_profile_class();
+
+# make sure it has subclasses
 ok(
     Genome::ProcessingProfile::Command::Create->sub_command_classes,
     'Sub command classes',
@@ -46,7 +58,7 @@ class Genome::ProcessingProfile::Tester {
 };
 
 class Genome::ProcessingProfile::Command::Create::Tester {
-    is => 'Genome::ProcessingProfile::Command::Create',
+    is => 'Genome::ProcessingProfile::Command::Create::Base',
     has => [ 
         sequencing_platform => { 
             is => 'Text',
@@ -69,6 +81,9 @@ class Genome::ProcessingProfile::Command::Create::Tester {
         },
     ],
 };
+Genome::ProcessingProfile::Command::Create::Tester->dump_status_messages(1);
+Genome::ProcessingProfile::Command::Create->_overload_target_class_name('Genome::ProcessingProfile::Command::Create::Tester');
+is(Genome::ProcessingProfile::Command::Create::Tester->_target_class_name, 'Genome::ProcessingProfile::Tester', 'target class is Genome::ProcessingProfile::Tester');
 
 # Create a pp
 my %params = (
@@ -88,55 +103,37 @@ ok(!$creator->execute, 'Failed as expected - tried to create same processing pro
 
 #< Based on >#
 # success
-ok(
-    Genome::ProcessingProfile::Command::Create::Tester->execute(
-        name => 'Tester for ROI UNDEF',
-        based_on => $pp->id,
-        roi => 'UNDEF',
-    ),
-    'Create new tester pp w/ based on, but changed roi to UNDEF'
-);
-
-# invalid based on pp
 $creator = Genome::ProcessingProfile::Command::Create::Tester->create(
-    name => 'FAILS',
-    based_on => 'no way this pp exists',
+    name => 'Tester for ROI UNDEF',
+    based_on => $pp->id,
+    roi => 'UNDEF',
 );
-ok(!$creator, 'Failed as expected - tried to base on pp that does not exist');
+ok($creator, 'create w/ based on');
+ok($creator->execute, 'execute - create new pp w/ based on, but changed roi to UNDEF');
 
 # w/o changing anything (fails)
 $creator = Genome::ProcessingProfile::Command::Create::Tester->create(
     name => 'FAILS',
-    based_on => $pp->id
+    based_on => 'id='.$pp->id,
 );
+ok($creator, 'create w/ based on but no changes');
 ok(!$creator->execute, 'Failed as expected - tried to base on pp w/o changing params');
 
-# pp w/o params (fails) 
-#  make fake calsses
-#  create a one first so we can get it in the create module
-#  try to create again, using based on
-class Genome::ProcessingProfile::TesterNoParams {
-    is => 'Genome::ProcessingProfile',
-};
-class Genome::ProcessingProfile::Command::Create::TesterNoParams {
-    is => 'Genome::ProcessingProfile::Command::Create',
-};
-ok(
-    Genome::ProcessingProfile::Command::Create::TesterNoParams->execute(
-        name => 'PP W/O Params I',
-    ),
-    "Create tester w/o params pp"
-);
-my $pp_no_params = Genome::ProcessingProfile::TesterNoParams->get();
-ok($pp_no_params, 'Got tester w/o params pp');
-ok(
-    ! Genome::ProcessingProfile::Command::Create::TesterNoParams->execute(
-        name => 'FAILS',
-        based_on => $pp_no_params->id,
-    ),
-    'Failed as expected - tried to base on pp w/o changing params'
-);
-
 done_testing();
-exit;
 
+sub test_command_subclass {
+    my $class = 'Genome::ProcessingProfile::Command::Create';
+    for my $subclass ('Foo', 'Foo::Bar') {
+        my $class_name = join('::', $class, $subclass);
+        is($class->_command_subclass($class_name), $subclass, '_command_subclass works for subclass (' . $subclass . ')');
+    }
+}
+
+sub test_processing_profile_class {
+    my $class = 'Genome::ProcessingProfile::Command::Create';
+    for my $subclass ('Foo', 'Foo::Bar') {
+        my $class_name = join('::', $class, $subclass);
+        my $expected_processing_profile_class = join('::', 'Genome::ProcessingProfile', $subclass);
+        is($class->_processing_profile_class($class_name), $expected_processing_profile_class, '_processing_profile_class works for subclass (' . $subclass . ')');
+    }
+}

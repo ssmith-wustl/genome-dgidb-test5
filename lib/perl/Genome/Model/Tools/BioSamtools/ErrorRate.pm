@@ -38,7 +38,7 @@ sub execute {
     my @rg_lines = grep {$_ =~ /^\@RG/} @lines;
     my %rg_libraries;
     for my $rg_line (@rg_lines) {
-        unless ($rg_line =~ /ID\:(\d+)/) { die; }
+        unless ($rg_line =~ /ID\:(\S+)/) { die; }
         my $id = $1;
         unless ($rg_line =~ /LB\:(\S+)/) { die; }
         my $lib = $1;

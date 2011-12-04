@@ -27,6 +27,7 @@ class Genome::Model::SomaticValidation::Command::DetectVariants{
             is => 'Text',
             is_input => 1,
             doc => 'path to normal bam file',
+            is_optional => 1,
         },
     ],
     has_param => [
@@ -78,19 +79,22 @@ sub execute{
     }
     $params{reference_build_id} = $reference_build->id;
 
-    my $normal_bam = $self->control_bam_path;
-    unless (-e $normal_bam){
-        die $self->error_message("No normal bam found for somatic model");
-    }
-    $params{control_aligned_reads_input} = $normal_bam;
-
     my $output_dir = $build->data_directory."/variants";
     $params{output_directory} = $output_dir;
 
     my $aligned_reads_sample = $build->tumor_sample->name;
-    my $control_aligned_reads_sample = $build->normal_sample->name;
     $params{aligned_reads_sample} = $aligned_reads_sample;
-    $params{control_aligned_reads_sample} = $control_aligned_reads_sample;
+
+    if($build->normal_sample) {
+        my $normal_bam = $self->control_bam_path;
+        unless (-e $normal_bam){
+            die $self->error_message("No normal bam found for somatic model");
+        }
+        $params{control_aligned_reads_input} = $normal_bam;
+
+        my $control_aligned_reads_sample = $build->normal_sample->name;
+        $params{control_aligned_reads_sample} = $control_aligned_reads_sample;
+    }
 
     my $command = Genome::Model::Tools::DetectVariants2::Dispatcher->create(%params);
     unless ($command){

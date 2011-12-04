@@ -40,15 +40,14 @@ my $taxon = Genome::Taxon->create(
 );
 ok($taxon, 'taxon') or die;
 my $sample = Genome::Sample->create(
-    id => -1234,
     name => 'TEST-000',
     taxon_id => $taxon->id,
 );
 ok($sample, 'sample') or die;
 my $library = Genome::Library->create(
-    id => -12345,
     name => $sample->name.'-testlibs',
     sample_id => $sample->id,
+    fragment_size_range => 260,
 );
 ok($library, 'library') or die;
 
@@ -57,12 +56,17 @@ my $instrument_data = Genome::InstrumentData::Solexa->create(
     sequencing_platform => 'solexa',
     read_length => 100,
     subset_name => '8-CGATGT',
+    index_sequence => 'CGATGT',
+    run_name => 'XXXXXX/8-CGATGT',
     run_type => 'Paired',
+    flow_cell_id => 'XXXXXX',
+    lane => 8,
     library => $library,
-    median_insert_size => 260,# 181, but 260 was used to generate assembly
     archive_path => $archive_path,
+    clusters => 15000,
     fwd_clusters => 15000,
     rev_clusters => 15000,
+    analysis_software_version => 'not_old_iilumina',
 );
 ok($instrument_data, 'instrument data');
 ok($instrument_data->is_paired_end, 'inst data is paired');

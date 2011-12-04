@@ -1,7 +1,7 @@
 DROP SCHEMA IF EXISTS web CASCADE;
 CREATE SCHEMA web AUTHORIZATION genome;
 
-SELECT set_config('search_path', current_setting('search_path') || ',web', false);
+SELECT set_config('search_path', current_setting('search_path') || ', web', false);
 ALTER USER genome SET search_path FROM current;
 
 CREATE TABLE web.nomenclature (

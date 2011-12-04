@@ -364,10 +364,17 @@ sub open_gzip_file_for_reading {
     $self->validate_file_for_reading($file)
         or return;
 
-    #check file type for gzip
-    unless($self->_file_type($file) eq "gzip"){
+    #check file type for gzip or symlink to a gzip
+    my $file_type = $self->_file_type($file);
+    if ($file_type eq "symbolic") {
+        my $symlink_target = readlink($file);
+        unless($self->_file_type($symlink_target) eq "gzip"){
+            Carp::croak("File ($file) is not a gzip file");
+        }
+    } elsif ($file_type ne "gzip") {
         Carp::croak("File ($file) is not a gzip file");
     }
+
     my $pipe = "zcat ".$file." |";
 
     # _open_file throws its own exception if it doesn't work
@@ -394,7 +401,7 @@ sub user_id {
 
 sub username {
     my $class = shift;
-    my $username = getpwuid($class->user_id);
+    my $username = $ENV{'REMOTE_USER'} || getpwuid($class->user_id);
     return $username;
 }
 

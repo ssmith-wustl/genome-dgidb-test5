@@ -48,7 +48,7 @@ sub execute {
         $mpileup_fh = Genome::Sys->open_file_for_reading($self->pileup_file);
         $output_fh = Genome::Sys->open_file_for_writing($self->output_file);
     }
-    my $vcf_fh = Genome::Sys->open_file_for_reading($self->vcf_file);
+    my $vcf_fh = Genome::Sys->open_gzip_file_for_reading($self->vcf_file);
 
     # Copy the header from the input vcf to the output vcf
     my $header_copied = 0;
@@ -87,10 +87,11 @@ sub execute {
             $vcf_line = $vcf_fh->getline;
         }
     }
+
     # Print the remaining line from the previous loop
     if ($vcf_line) {
         $output_fh->print($vcf_line);
-    } else {
+    } elsif ($pileup_line) {
         my $new_vcf_line = $self->create_vcf_line_from_pileup($pileup_line);
         $output_fh->print("$new_vcf_line\n");
     }

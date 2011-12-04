@@ -129,7 +129,6 @@ sub _import_drug {
 
     my @drug_synonyms = split(', ', $interaction->{drug_synonyms});
     for my $drug_synonym (@drug_synonyms){
-        $DB::single = 1;
         next if $drug_synonym eq 'na';
         my $drug_name_association = $self->_create_drug_name_report_association($drug_name, $drug_synonym, 'DrugBank primary name to synonym association', '');
     }
@@ -192,7 +191,7 @@ sub import_interactions {
     while(my $interaction = $parser->next){
         my $drug_name = $self->_import_drug($interaction);
         my $gene_name = $self->_import_gene($interaction);
-        my $drug_gene_interaction = $self->_create_interaction_report($drug_name, $gene_name, $interaction->{target_actions}, '');
+        my $drug_gene_interaction = $self->_create_interaction_report($drug_name, $gene_name, $interaction->{target_actions}, 'DrugBank', $version, '');
         push @interactions, $drug_gene_interaction;
         my $is_known_action = $self->_create_interaction_report_attribute($drug_gene_interaction, 'is_known_action', $interaction->{'known_action'});
     }

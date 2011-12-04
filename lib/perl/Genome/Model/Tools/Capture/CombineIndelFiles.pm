@@ -94,37 +94,48 @@ sub execute {                               # replace with real execution logic.
 		{
 			my @line1 = split(/\t/, $variants1{$key});
 			my @line2 = split(/\t/, $variants2{$key});
-			
-			my $numContents = @line1;
-			my $rest_of_line = "";
-			for (my $colCounter = 2; $colCounter < $numContents; $colCounter++)
-			{
-				$rest_of_line .= "\t" if($rest_of_line);
-				$rest_of_line .= $line1[$colCounter];
-			}
 
-			## Print rest of line 2 as well ##
-			$numContents = @line2;			
-			for (my $colCounter = 2; $colCounter < $numContents; $colCounter++)
-			{
-				$rest_of_line .= "\t" if($rest_of_line);
-				$rest_of_line .= $line2[$colCounter];
-			}
-
-			
 			my $ref1 = $line1[0];
 			my $ref2 = $line2[0];
 			
 			my $var1 = $line1[1];
 			my $var2 = $line2[1];
-			
-			my $ref = $ref1;
-			$ref .= "/$ref2" if(!($ref =~ $ref2));
 
-			my $var = $var1;
-			$var .= "/$var2" if(!($var =~ $var2));
-			
-			print OUTFILE join("\t", $key, $ref, $var, $rest_of_line) . "\n";
+			if($ref1 eq $ref2 && $var1 eq $var2)
+			{
+				my $numContents = @line1;
+				my $rest_of_line = "";
+				for (my $colCounter = 2; $colCounter < $numContents; $colCounter++)
+				{
+					$rest_of_line .= "\t" if($rest_of_line);
+					$rest_of_line .= $line1[$colCounter];
+				}
+	
+				## Print rest of line 2 as well ##
+				$numContents = @line2;			
+				for (my $colCounter = 2; $colCounter < $numContents; $colCounter++)
+				{
+					$rest_of_line .= "\t" if($rest_of_line);
+					$rest_of_line .= $line2[$colCounter];
+				}
+	
+				my $ref = $ref1;
+#				$ref .= "/$ref2" if(!($ref =~ $ref2));
+	
+				my $var = $var1;
+#				$var .= "/$var2" if(!($var =~ $var2));
+				
+				print OUTFILE join("\t", $key, $ref, $var, $rest_of_line) . "\n";
+								
+			}
+			else
+			{
+				## Print each line because indels differ ##
+				print OUTFILE join("\t", $key, $variants1{$key}) . "\n";				
+				print OUTFILE join("\t", $key, $variants2{$key}) . "\n";
+			}
+
+
 			$stats{'variants shared'}++;
 		}
 		elsif($variants1{$key})

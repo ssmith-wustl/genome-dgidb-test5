@@ -1,7 +1,7 @@
 DROP SCHEMA IF EXISTS disk CASCADE;
 CREATE SCHEMA disk AUTHORIZATION genome;
 
-SELECT set_config('search_path', current_setting('search_path') || ',disk', false);
+SELECT set_config('search_path', current_setting('search_path') || ', disk', false);
 ALTER USER genome SET search_path FROM current;
 
 CREATE TABLE disk.allocation (

@@ -95,7 +95,6 @@ sub create {
     return if not $self;
 
     for ( my $i = 0; $i <= @extra - 1; $i += 2 ) {
-        print Data::Dumper::Dumper([$i, $extra[$i], $extra[$i + 1]]);
         my $attribute = Genome::InstrumentDataAttribute->create(
             attribute_label => $extra[$i],
             attribute_value => $extra[$i + 1],
@@ -235,8 +234,8 @@ sub dump_fastqs_from_bam {
     die "cannot call bam path" if (!$self->can('bam_path'));
     
     unless (-e $self->bam_path) {
-	$self->error_message("Attempted to dump a bam but the path does not exist:" . $self->bam_path);
-	die $self->error_message;
+        $self->error_message("Attempted to dump a bam but the path does not exist:" . $self->bam_path);
+        die $self->error_message;
     }
     
     my $directory = delete $p{directory};
@@ -273,7 +272,7 @@ sub dump_fastqs_from_bam {
     if (-s $fwd_file && -s $rev_file) { 
         push @files, ($fwd_file, $rev_file);
     }
-    if (-s $fragment_file) {
+    if (-s $fragment_file && !$p{discard_fragments}) {
         push @files, $fragment_file;
     }
    

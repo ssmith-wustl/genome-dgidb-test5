@@ -35,6 +35,7 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
 
 <xsl:variable name="displayName">Search</xsl:variable>
 <xsl:variable name="objectId">wee_id</xsl:variable>
+<xsl:variable name="objectClassName">Genome::Search::Query</xsl:variable>
 <xsl:variable name="currentTime">now</xsl:variable>
 <xsl:variable name="currentPerspective">status</xsl:variable>
 <xsl:variable name="currentToolkit">html</xsl:variable>

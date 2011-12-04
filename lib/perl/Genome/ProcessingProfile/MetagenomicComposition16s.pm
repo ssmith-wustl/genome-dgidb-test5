@@ -24,18 +24,6 @@ class Genome::ProcessingProfile::MetagenomicComposition16s {
             doc => 'Platform (machine) from whence the reads where created.',
             valid_values => [qw/ sanger 454 solexa /],
         },
-        exclude_contaminated_amplicons => {
-            is => 'Boolean',
-            is_optional => 1,
-            default_value => 0,
-            doc => 'When getting amplicons, exclude those that have a contaminated read(s). Only for "gsc" generated reads. Default is to include all amplicons.',
-        },
-        only_use_latest_iteration_of_reads => {
-            is => 'Boolean',
-            is_optional => 1,
-            default_value => 0,
-            doc => 'When getting reads for amplicons, only use the most recent iteration for each primer. Currently, only for "gsc" sanger reads. Default is to include all reads for each amplicon.',
-        },
         #< Assembler >#
         assembler => {
             is => 'Text',

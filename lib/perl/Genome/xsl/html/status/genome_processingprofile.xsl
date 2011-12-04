@@ -21,14 +21,14 @@
 
           <!-- details for this taxon -->
           <div class="span_8_box_masonry">
-            <div class="box_header span-8 last rounded-top">
+            <div class="box_header span-12 last rounded-top">
               <div class="box_title"><h3 class="nontyped span-7 last">Processing Profile Attributes</h3></div>
               <div class="box_button">
 
               </div>
             </div>
 
-            <div class="box_content rounded-bottom span-8 last">
+            <div class="box_content rounded-bottom span-12 last">
               <table class="name-value">
                 <tbody>
                   <tr>
@@ -63,30 +63,6 @@
           </div>
 
         </div> <!-- end .objects -->
-        <xsl:if test="count(aspect[@name='models']/object) > 0">
-          <br class="space"/>
-          <h2 class="subheader">models</h2>
-          <div class="span-24 last">
-            <table width="100%" cellpadding="0" cellspacing="0" border="0" id="set" class="dataTable">
-              <thead>
-                <xsl:apply-templates select="aspect[@name='models']/object[1]" mode="set_header" />
-              </thead>
-              <tbody>
-                <xsl:for-each select="aspect[@name='models']">
-                  <xsl:apply-templates mode="set_row" />
-                </xsl:for-each>
-              </tbody>
-            </table>
-          </div>
-          <xsl:apply-templates select="aspect[@name='models']/object[1]" mode="set_table_init" />
-
-
-          <!-- <xsl:for-each select="aspect[@name='models']"> -->
-          <!--   <xsl:call-template name="genome_model_build_table"> -->
-          <!--     <xsl:with-param name="want_builds" select="0"/> -->
-          <!--   </xsl:call-template> -->
-          <!-- </xsl:for-each> -->
-        </xsl:if>
 
       </div> <!-- end container -->
     </div> <!-- end content -->

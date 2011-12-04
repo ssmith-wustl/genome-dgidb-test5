@@ -6,13 +6,28 @@ use warnings;
 use Genome;
 
 class Genome::Model::Build::ReferenceAlignment::View::Coverage::Xml {
-    is => 'UR::Object::View::Default::Xml',
+    is => 'Genome::InstrumentData::AlignmentResult::Merged::CoverageStats::View::Coverage::Xml',
 };
 
+sub coverage_result {
+    my $self = shift;
 
+    my $build = $self->subject;
+    return unless $build;
+
+    return $build->reference_coverage_result;
+}
 
 sub _generate_content {
     my $self = shift;
+
+    if($self->coverage_result) {
+        #new view for result based builds
+        return $self->SUPER::_generate_content;
+    }
+
+    #old view for non-result based builds
+
     my $subject = $self->subject();
     return '' unless $subject;
 

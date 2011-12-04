@@ -28,6 +28,7 @@ use File::Copy;
 use File::Basename;
 use File::stat;
 use File::Find::Rule;
+use File::stat;
 
 use Bio::SeqIO;
 
@@ -644,6 +645,14 @@ sub execute
     ## BER data location
     my $ber_dir = $locustagdir. "/ber";
 
+	## We will find the *btab files with 0 size
+	my $zero_size_btab_file_count = 0;
+	my @btab_files = <$ber_dir/*btab>;
+	foreach my $btab_file (@btab_files) {
+		$zero_size_btab_file_count++ if (stat($btab_file)->size == 0);
+	}
+	$mgap_genome { 'btab_0_size' } = $zero_size_btab_file_count;
+
     my $location = $amgap_path . "/"
         . $org_dirname . "/"
         . $assembly_name . "/"
@@ -949,8 +958,8 @@ SQL
 	my $hit_counts_sql = <<SQL;
 	INSERT INTO hit_counts (p5_gene_count, p5_blastx_count, rnammer_count, 
 							genemark_gene_count, glimmer_gene_count,keggscan_count, 
-							iprscan_count, psortb_count, ber_naming_count, genome_id, dead_gene_count, blastx_gene_count)
-	VALUES (?,?,?,?,?,?,?,?,?,?,?,?);
+							iprscan_count, psortb_count, ber_naming_count, genome_id, dead_gene_count, blastx_gene_count, btab_0_size)
+	VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?);
 SQL
 
 	my $sth3 = $dbh->prepare($hit_counts_sql);
@@ -966,6 +975,7 @@ SQL
 	$sth3->bind_param(10, $genome_id);
 	$sth3->bind_param(11, $mgap_genome{'dead_gene_count'});
 	$sth3->bind_param(12, $mgap_genome{'blastx_gene_count'});
+	$sth3->bind_param(13, $mgap_genome{'btab_0_size'});
 
 	$sth3->execute() or confess "Couldn't execute statement: " . $sth3->errstr ;
 	$sth3->finish;

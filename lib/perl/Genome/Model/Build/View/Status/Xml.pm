@@ -329,6 +329,7 @@ sub get_processing_profile_node {
     my $pp_type = $pp->type_name;
 
     my $stages_node = $self->anode("stages","processing_profile",$pp_name);
+    $stages_node->addChild( $doc->createAttribute("processing_profile_id", $pp->id));
     $stages_node->addChild( $doc->createAttribute("processing_profile_type", $pp_type));
 
     if($pp->can('stages')) {

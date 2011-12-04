@@ -74,6 +74,12 @@ EOS
 
 sub execute {
     my $self = shift;
+
+    if ($self->skip_execution) {
+        $self->status_message("Skip execution flag is set, exiting.");
+        return 1;
+    }
+
     my $fasta_file = $self->fasta_file;
     $self->status_message("Running rnammer on sequence in $fasta_file");
 

@@ -9,7 +9,7 @@ use Data::Dumper;
 use Bio::SeqIO;
 
 class Genome::Model::Tools::Soap::Stats {
-    is => 'Genome::Model::Tools::Soap',
+    is => 'Genome::Model::Tools::Soap::Base',
     has => [
 	assembly_directory => {
 	    is => 'Text',
@@ -137,6 +137,7 @@ sub _resolve_tier_values {
 	$t1 = int ($est_genome_size * 0.2);
 	$t2 = int ($est_genome_size * 0.2);
     }
+    print Data::Dumper::Dumper ($t1, $t2);
     return ($t1, $t2);
 }
 
@@ -151,6 +152,7 @@ sub parse_contigs_bases_file {
     unless ( -s $contigs_bases_file ) {#create it
 	my $create =  Genome::Model::Tools::Soap::CreateContigsBasesFile->create(
 	    assembly_directory => $self->assembly_directory,
+        min_contig_length => 1,
 	    );
 	unless ( $create->execute ) {
 	    $self->error_message("Failed to create contigs.bases file");

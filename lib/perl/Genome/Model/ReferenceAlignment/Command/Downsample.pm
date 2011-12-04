@@ -33,6 +33,11 @@ class Genome::Model::ReferenceAlignment::Command::Downsample {
             doc => 'Set this equal to the reported random seed to reproduce previous results',
             is_optional => 1,
         },
+        backoff_wait => {
+            is => 'Text',
+            doc => 'The number of seconds to sleep (randomly selected between 1 and $self->backoff_wait) before retrying library get/create',
+            default => "20",
+        },
     ],
 };
 
@@ -130,10 +135,12 @@ sub get_or_create_library {
     my $new_library_name = $sample->name . "-extlibs";
     my $try_count = 0;
 
+    my $backoff_wait = $self->backoff_wait;
+
     #try creating or getting the library until it succeeds or max tries reached
     while(!$library && ($try_count < 5)){
         $try_count++;
-        my $time = int(rand(10));
+        my $time = int(rand($backoff_wait));
         $self->status_message( "Waiting $time seconds before trying to get or create a library.\n" );
         sleep $time;
         UR::Context->reload("Genome::Library", name => $new_library_name);

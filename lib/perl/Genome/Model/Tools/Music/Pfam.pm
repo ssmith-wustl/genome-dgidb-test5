@@ -24,6 +24,12 @@ class Genome::Model::Tools::Music::Pfam {
             file_format => 'pfam',
             doc => "MAF file with Pfam domain column appended",
         },
+       reference_build => {
+           is => 'Text',
+           doc => 'Options are \'Build36\' or \'Build37\'. This parameter ensures appropriate annotation of domains.',
+           is_output => 1,
+           default => 'Build36',
+       },
     ],
     doc => 'Add Pfam annotation to a MAF file.',
 };
@@ -64,6 +70,7 @@ sub execute {
     #parse input arguments
     my $self = shift;
     my $maf_file = $self->maf_file;
+    my $reference_build = $self->reference_build;
     my $output_file = $self->output_file;
 
     #open MAF file and output file
@@ -91,17 +98,30 @@ sub execute {
         die "MAF does not seem to contain a header!\n";
     }
 
+    #parse MAF variants and reprint file with domain column appended
     while (my $line = $maf_fh->getline) {
+
+        #find position of variant
         chomp $line;
         my @fields = split /\t/,$line;
         my $chr = $fields[$maf_columns{'Chromosome'}];
         my $start = $fields[$maf_columns{'Start_position'}];
         my $stop = $fields[$maf_columns{'End_position'}];
-        #my $ref = $fields[$maf_columns{'Reference_Allele'}];
         # use environment variable but fall back to reasonable default
+        
+        #formulate tabix command
         my $db_path = Genome::Sys->dbpath('pfam', 'latest') or die "Cannot find the pfam db path.";
         my $tabix = can_run('tabix') or die "Cannot find the tabix command. It can be obtained from http://sourceforge.net/projects/samtools/files/tabix";
-        my $tabix_cmd = "$tabix $db_path/pfam.annotation.gz $chr:$start-$stop - |";
+        my $tabix_cmd = "$tabix";
+        if ($reference_build eq 'Build36') {
+            $tabix_cmd .= " $db_path/pfam.annotation.build36.gz $chr:$start-$stop - |";
+        }
+        elsif ($reference_build eq 'Build37') {
+            $tabix_cmd .= " $db_path/pfam.annotation.build37.gz $chr:$start-$stop - |";
+        }
+        else { die "Please specify either 'Build36' or 'Build37' for the --reference-build parameter."; }
+
+        #run tabix command
         my %domains;
         open(TABIX,$tabix_cmd) or die "Cannot open() the tabix command. Please check it is in your PATH. It can be installed from the samtools project. $!";
         while (my $tabline = <TABIX>) {

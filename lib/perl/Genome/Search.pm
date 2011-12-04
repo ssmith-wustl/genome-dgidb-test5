@@ -137,6 +137,19 @@ sub _resolve_solr_xml_view {
     };
 }
 
+sub _create_solr_xml_view_for_subject_class {
+    my $class = shift;
+    my $subject_class = shift;
+
+    my $view_class = $class->_resolve_solr_xml_view($subject_class);
+    unless ($view_class) {
+        Carp::confess('To make an object searchable create an appropriate ::View::Solr::Xml that inherits from Genome::View::Solr::Xml.');
+    }
+
+    my $view = $view_class->create(subject_class_name => $subject_class, perspective => 'solr', toolkit => 'xml');
+    return $view;
+}
+
 sub _resolve_result_xml_view {
     my $class = shift;
     my $subject_class_name = shift;
@@ -470,38 +483,20 @@ sub _get_cached_result {
 
 ###  Search "document" creation/delegation  ###
 
+my %views;
 sub generate_document {
     my $class = shift;
     my @objects = @_;
 
-    my @docs = ();
-
-    # Building new instances of View classes is slow as the system has to resolve a large set of information
-    # According to NYTProf, recycling the view reduced the time spent here from 457s to 45.5s on a set of 1000 models
-
-    my %views;
+    my @docs;
     for my $o (@objects) {
-        my $view;
-
-# NOTE: turning off this optimization; it reuses the first object, which doesnt work
-#  out so well when your view is doing $self->property (self is the original instance)
-
-        if(defined $views{$o->class}) {
-            $view = $views{$o->class};
-            $view->subject($o);
-            $view->_update_view_from_subject();
-        } else {
-             if(my $view_class = $class->_resolve_solr_xml_view($o)) {
-                 $view = $view_class->create(subject => $o, perspective => 'solr', toolkit => 'xml');
-                 $views{$o->class} = $view;
-             } else {
-                 Carp::confess('To make an object searchable create an appropriate ::View::Solr::Xml that inherits from Genome::View::Solr::Xml.');
-             }
-        }
-
+        # Building new instances of View classes is slow as the system has to resolve a large set of information
+        # According to NYTProf, recycling the view reduced the time spent here from 457s to 45.5s on a set of 1000 models
+        my $view = $views{$o->class} || $class->_create_solr_xml_view_for_subject_class($o->class);
+        $view->subject($o);
+        $view->_update_view_from_subject();
         push @docs, $view->content_doc;
     }
-
     return @docs;
 }
 
@@ -518,22 +513,13 @@ sub _index_queue_callback {
         require MRO::Compat;
     }
 
-    my $meta = $object->__meta__;
-    my @add_property_names = ('create', $meta->all_property_names);
-
-    my $action;
-    if (grep { $aspect eq $_ } @add_property_names) {
-        $action = 'add';
-    }
-    elsif ($aspect eq 'delete') {
-        $action = 'delete';
-    }
-
     my $index_queue;
-    if ($action) {
-        $index_queue = Genome::Search::IndexQueue->create_or_update(
-            subject => $object,
-            action => $action,
+    my $meta = $object->__meta__;
+    my @trigger_properties = ('create', 'delete', $meta->all_property_names);
+    if (grep { $aspect eq $_ } @trigger_properties) {
+        $index_queue = Genome::Search::IndexQueue->create(
+            subject_id => $object->id,
+            subject_class => $object->class,
         );
     }
 

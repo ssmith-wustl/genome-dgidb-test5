@@ -14,12 +14,17 @@ class Genome::DruggableGene::DrugGeneInteractionReport::Set::View::Status::Xml {
             value => [
                {
                     name => 'members',
-                    perspective => 'status',
+                    perspective => 'default',
                     toolkit => 'xml',
                     subject_class_name => 'Genome::DruggableGene::DrugGeneInteractionReport',
+                    aspects => [
+                        'drug_name_report_name',
+                        'gene_name_report_name',
+                        'interaction_type',
+                    ],
                },
-            ]
-        }
+            ],
+        },
     ],
 };
 

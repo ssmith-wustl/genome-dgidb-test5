@@ -22,6 +22,10 @@ class Genome::Sys::Command::Search::Index {
             is => 'Number',
             default => 250,
         },
+        loop_sleep => {
+            is => 'Number',
+            default => 10,
+        },
     ],
 };
 
@@ -90,20 +94,26 @@ my $signaled_to_quit;
 sub daemon {
     my $self = shift;
 
-    local $SIG{INT} = sub { $signaled_to_quit = 1 };
-    local $SIG{TERM} = sub { $signaled_to_quit = 1 };
+    local $SIG{INT} = sub { print STDERR "\nDaemon will exit as soon as possible.\n"; $signaled_to_quit = 1 };
+    local $SIG{TERM} = sub { print STDERR "\nDaemon will exit as soon as possible.\n"; $signaled_to_quit = 1 };
 
     while (!$signaled_to_quit) {
+        my $initial_serial_id = $UR::Context::GET_COUNTER;
+
         $self->info("Processing index queue...");
         $self->index_queued(max_changes_count => $self->max_changes_per_commit);
 
         $self->info("Commiting...");
         UR::Context->commit;
-
         last if $signaled_to_quit;
 
-        $self->info("Sleeping for 10 seconds...");
-        sleep 10;
+        $self->info("Pruning...");
+        $self->prune_objects_loaded_since($initial_serial_id);
+        last if $signaled_to_quit;
+
+        my $loop_sleep = $self->loop_sleep;
+        $self->info("Sleeping for $loop_sleep seconds...");
+        sleep $loop_sleep;
 
         last if $signaled_to_quit;
 
@@ -111,7 +121,82 @@ sub daemon {
         UR::Context->reload('Genome::Search::IndexQueue');
     }
 
+    $self->info("Exiting...");
     return 1;
+}
+
+sub prune_objects_loaded_since {
+    my ($self, $since) = @_;
+    die unless defined $since;
+
+    # Need to unload objects loaded in each loop to prevent memory leak.
+
+    # This whole thing is debatable, i.e. "explicit cleanup" vs "automatic cleanup".
+    # View have to be manually cleaned up so I put that in Genome::Search. Objects without
+    # data sources do not get unloaded via automatic cleanup which means UR::Values do not.
+    # Until that is working automatic cleanup is not an option. Even once it is though it
+    # seems like it would be better to just manually cleanup in the interest of efficiency.
+
+    my @all_objects_loaded = (
+        UR::Context->current->all_objects_loaded('UR::Object'),
+    );
+    $self->info("\tBefore pruning all_objects_loaded has " . scalar(@all_objects_loaded));
+
+    # Need to delete views so we can unload UR::Values that are referenced by them
+    return if $signaled_to_quit;
+    my @views_to_delete =
+        grep { $_->isa('UR::Object::View') }
+        grep { $_->{'__get_serial'} > $since }
+        @all_objects_loaded;
+    for (@views_to_delete) {
+        last if $signaled_to_quit;
+        next if (ref($_) eq 'UR::DeletedRef');
+        my $display_name = "(Class: " . $_->class . ", ID: " . $_->id. ")";
+        unless ($self->delete_view_and_aspects($_)) {
+            $self->debug("Failed to delete object $display_name.");
+        } else {
+            $self->debug("Deleted object $display_name.");
+        }
+    }
+
+    # This could be replaced with automatic cleanup by enabling cache pruning.
+    return if $signaled_to_quit;
+    my @objects_to_unload =
+        grep { !$_->isa('UR::DataSource::RDBMS::Entity') }
+        grep { $_->__meta__->data_source }
+        grep { $_->{'__get_serial'} > $since }
+        @all_objects_loaded;
+    for (@objects_to_unload) {
+        last if $signaled_to_quit;
+        my $display_name = "(Class: " . $_->class . ", ID: " . $_->id. ")";
+        unless ($_->unload()) {
+            $self->debug("Failed to unload object $display_name.");
+        } else {
+            $self->debug("Unloaded object $display_name.");
+        }
+    }
+
+    @all_objects_loaded = (
+        UR::Context->current->all_objects_loaded('UR::Object'),
+    );
+    $self->info("\tAfter pruning all_objects_loaded has " . scalar(@all_objects_loaded));
+    $self->debug_loaded_objects(@all_objects_loaded);
+
+    return 1;
+}
+
+sub debug_loaded_objects {
+    my $self = shift;
+    my @loaded_objects = @_;
+    my %loaded_classes;
+    for (@loaded_objects) {
+        $loaded_classes{$_->class}++;
+    }
+    my @keys = sort { $loaded_classes{$a} <=> $loaded_classes{$b} } keys %loaded_classes;
+    if (@keys > 10) { @keys = @keys[-10..-1] }
+    for (@keys) {
+        $self->debug("$_ has " . $loaded_classes{$_});
+    }
 }
 
 sub list {
@@ -124,7 +209,6 @@ sub list {
     while (my $index_queue_item = $index_queue_iterator->next) {
         print join("\t",
             $index_queue_item->timestamp,
-            $index_queue_item->action,
             $index_queue_item->subject_class,
             $index_queue_item->subject_id,
         ) . "\n";
@@ -139,6 +223,7 @@ sub index_queued {
 
     my $max_changes_count = delete $params{max_changes_count};
 
+    # TODO Should optimize this by grouping by subject id and class and removing all related rows
     my $index_queue_iterator = Genome::Search::IndexQueue->create_iterator(
         '-order_by' => 'timestamp',
     );
@@ -149,9 +234,9 @@ sub index_queued {
         && (!defined($max_changes_count) || $modified_count <= $max_changes_count)
         && (my $index_queue_item = $index_queue_iterator->next)
     ) {
-        my $action = $index_queue_item->action;
         my $subject_class = $index_queue_item->subject_class;
         my $subject_id = $index_queue_item->subject_id;
+        my $action = ($subject_class->get($subject_id) ? 'add' : 'delete');
         if ($self->modify_index($action, $subject_class, $subject_id)) {
             $index_queue_item->delete();
             $modified_count++;
@@ -216,6 +301,17 @@ sub indexable_classes {
     }
 
     return @classes_to_add;
+}
+
+sub delete_view_and_aspects {
+    my ($self, $view) = @_;
+    for my $aspect ($view->aspects) {
+        if (my $delegate_view = $aspect->delegate_view) {
+            $self->delete_view_and_aspects($delegate_view);
+        }
+        $aspect->delete;
+    }
+    $view->delete;
 }
 
 1;

@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use Genome;
+use Carp;
 use File::Basename;
 
 my $DEFAULT = 'EAP-2010-08-13-30504';
@@ -42,8 +43,9 @@ my %RTG_VERSIONS = (
     'EAP-2010-08-13-30504' => '/gsc/pkg/bio/rtg/rtg-EAP-2010-08-13-30504',
     'EAP-2010-09-13-WashU-31357' => '/gsc/pkg/bio/rtg/rtg-EAP2010-09-13-WashU-31357',
     'rtg'   => 'rtg',
+    '2.3.1' => '/gsc/pkg/bio/rtg/rtg-2.3.1',
+    '2.3.2' => '/gsc/pkg/bio/rtg/rtg-2.3.2',
 );
-
 
 sub rtg_path {
     my $self = $_[0];
@@ -57,7 +59,10 @@ sub available_rtg_versions {
 
 sub path_for_rtg_version {
     my $class = shift;
-    my $version = shift || $DEFAULT;
+    my $version = shift;
+    if (!$version){
+        Carp::confess $class->error_message("No version passed to path_for_rtg_version");
+    }
 
     if (defined $RTG_VERSIONS{$version}) {
         return $RTG_VERSIONS{$version};
@@ -70,7 +75,7 @@ sub path_for_rtg_format {
     my ($self,$version) = @_;
 
     if (defined $RTG_VERSIONS{$version}) {
-        return $self->path_for_rtg_version . '/rtg format';
+        return $self->path_for_rtg_version($version) . '/rtg format';
     }
  
     die('No path for rtg version '. $version);
@@ -80,7 +85,7 @@ sub path_for_rtg_sdfsplit {
     my ($self,$version) = @_;
 
     if (defined $RTG_VERSIONS{$version}) {
-        return $self->path_for_rtg_version . '/rtg sdfsplit';
+        return $self->path_for_rtg_version($version) . '/rtg sdfsplit';
     }
  
     die('No path for rtg version '. $version);
@@ -90,7 +95,7 @@ sub path_for_rtg_map {
     my ($self,$version) = @_;
 
     if (defined $RTG_VERSIONS{$version}) {
-        return $self->path_for_rtg_version . '/rtg map';
+        return $self->path_for_rtg_version($version) . '/rtg map';
     }
  
     die('No path for rtg version '. $version);
@@ -100,7 +105,7 @@ sub path_for_rtg_mapx {
     my ($self,$version) = @_;
 
     if (defined $RTG_VERSIONS{$version}) {
-        return $self->path_for_rtg_version . '/rtg mapx';
+        return $self->path_for_rtg_version($version) . '/rtg mapx';
     }
  
     die('No path for rtg version '. $version);

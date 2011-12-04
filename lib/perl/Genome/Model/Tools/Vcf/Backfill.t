@@ -14,7 +14,7 @@ my $expected_dir = "$test_dir/$expected_base";
 my $expected_file = "$expected_dir/output.vcf";
 
 my $output_file = Genome::Sys->create_temp_file_path;
-my $input_vcf= "$test_dir/input.vcf";
+my $input_vcf= "$test_dir/input.vcf.gz";
 my $input_pileup = "$test_dir/pileup.in";
 
 my $command = Genome::Model::Tools::Vcf::Backfill->create( vcf_file => $input_vcf, 

@@ -3,9 +3,8 @@
                 xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
 
 
-  <xsl:template name="genome_model_set_coverage" match="object[@type='Genome::Model::Set'] | object[@type='Genome::ModelGroup']">
-    <xsl:comment>template: /html/coverage/genome_model.xsl match="object[@type='Genome::Model::Set'] | object[@type='Genome::ModelGroup']"</xsl:comment>
-
+  <xsl:template name="genome_model_set_coverage" match="object[@type='Genome::Model::Set'] | object[@type='Genome::ModelGroup'] | object[@type='Genome::Model::Build::Set'] | object[@type='Genome::Model::Build'] ">
+    <xsl:comment>template: /html/coverage/genome_model.xsl</xsl:comment>
     <link rel="stylesheet" href="/res/js/pkg/TableTools/media/css/TableTools.css" media="screen"/>
 
     <script type="text/javascript" src="/res/js/pkg/protovis.js"></script>
@@ -162,6 +161,31 @@
     <div class="content rounded shadow">
       <div class="container">
         <div class="span-11">
+<!-- JTAL: THERE IS A PROBLEM HERE WITH A DIV
+http://linus221:8090/view/genome/model-group/coverage.html?id=16646
+-->
+
+        <xsl:variable name="coverage_error" select="/object/coverage-summary/@error"/>
+        <xsl:choose>
+        <xsl:when test="$coverage_error">
+          <div class="box_header rounded-top span-11 last">
+            <div class="box_title" style="position: relative">
+				  <h3 class="nontyped">coverage</h3>
+	    </div>
+          </div>
+          <div class="box_content rounded-bottom span-11 last">
+            <div id="coverage-error" style="background: #FFF;padding: 10px;margin-bottom: 10px;border-bottom: 1px solid #C1C1B7;">
+                <xsl:value-of select="$coverage_error" />
+                <xsl:for-each select="/object[1]/coverage-summary[1]/depth_group">
+                    <br/>
+                    <a><xsl:attribute name="href"><xsl:value-of select="@url"/></xsl:attribute>View graph</a>
+                        for models with coverage stats depths: <xsl:value-of select="@description"/>
+                </xsl:for-each>
+            </div>
+          </div>
+
+        </xsl:when>
+        <xsl:otherwise>
           <div class="box_header rounded-top span-11 last">
             <div class="box_title" style="position: relative">
 				  <h3 class="nontyped">coverage</h3>
@@ -170,15 +194,17 @@
 					 <input name="scheme_select" value="analogous" id="analogous" type="radio" onchange="coverage_vis.render()" checked="checked"/><label for="analogous">analogous</label>
 					 <input name="scheme_select" value="complementary" id="complementary" type="radio" onchange="coverage_vis.render()"/><label for="complementary">complementary</label>
 				  </div>
-				</div>
+            </div>
           </div>
           <div class="box_content rounded-bottom span-11 last">
             <div id="coverage" style="background: #FFF;padding: 10px;margin-bottom: 10px;border-bottom: 1px solid #C1C1B7;">
 				  <script type="text/javascript" src="/res/js/app/genome_model_coverage_chart.js"></script>
             </div>
           </div>
-        </div>
+        </xsl:otherwise>
+        </xsl:choose>
 
+        </div> <!-- span-11 -->
         <div class="span-8">
           <div class="box_header span-8 last rounded-top">
             <div class="box_title"><h3 class="nontyped">alignment</h3></div>
@@ -191,6 +217,8 @@
             </div>
           </div>
         </div>
+
+        
 
         <div class="span-5 last">
           <div class="box_header span-5 last rounded-top">
@@ -227,6 +255,16 @@
                 <xsl:sort select="../@lane_count" order="ascending"/>
                 <tr>
                   <td>
+                    <xsl:attribute name="title"><xsl:value-of select="../@subject_name"/></xsl:attribute>
+                    <xsl:if test="../@result_id">
+                      <xsl:call-template name="object_link_button_tiny">
+                        <xsl:with-param name="icon" select="'sm-icon-extlink'"/>
+                        <xsl:with-param name="id" select="../@result_id"/>
+                        <xsl:with-param name="type" select="'Genome::InstrumentData::AlignmentResult::Merged::CoverageStats'" />
+                        <xsl:with-param name="perspective" select="'coverage'"/>
+                      </xsl:call-template>
+                      <xsl:text> </xsl:text>
+                    </xsl:if>
                     <xsl:value-of select="../@model_name"/> (<xsl:value-of select="../@lane_count"/> lane<xsl:if test="../@lane_count &gt; 1">s</xsl:if>)
                   </td>
                   <td class="right">
@@ -269,9 +307,19 @@
             <tbody>
               <xsl:for-each select="coverage-summary/model">
                 <xsl:sort select="@model_name" order="ascending"/>
-                <xsl:sort select="../@lane_count" order="ascending"/>
+                <xsl:sort select="@lane_count" order="ascending"/>
                 <tr>
                   <td>
+                    <xsl:attribute name="title"><xsl:value-of select="../@subject_name"/></xsl:attribute>
+                    <xsl:if test="@result_id">
+                      <xsl:call-template name="object_link_button_tiny">
+                        <xsl:with-param name="icon" select="'sm-icon-extlink'"/>
+                        <xsl:with-param name="id" select="@result_id"/>
+                        <xsl:with-param name="type" select="'Genome::InstrumentData::AlignmentResult::Merged::CoverageStats'" />
+                        <xsl:with-param name="perspective" select="'coverage'"/>
+                      </xsl:call-template>
+                      <xsl:text> </xsl:text>
+                    </xsl:if>
                     <xsl:value-of select="@model_name"/> (<xsl:value-of select="@lane_count"/> lane<xsl:if test="@lane_count &gt; 1">s</xsl:if>)
                   </td>
                   <xsl:for-each select="minimum_depth">
@@ -305,10 +353,20 @@
             <tbody>
               <xsl:for-each select="coverage-summary/model">
                 <xsl:sort select="@model_name" order="ascending"/>
-                <xsl:sort select="../@lane_count" order="ascending"/>
+                <xsl:sort select="@lane_count" order="ascending"/>
 
                 <tr>
                   <td>
+                    <xsl:attribute name="title"><xsl:value-of select="@subject_name"/></xsl:attribute>
+                    <xsl:if test="@result_id">
+                      <xsl:call-template name="object_link_button_tiny">
+                        <xsl:with-param name="icon" select="'sm-icon-extlink'"/>
+                        <xsl:with-param name="id" select="@result_id"/>
+                        <xsl:with-param name="type" select="'Genome::InstrumentData::AlignmentResult::Merged::CoverageStats'" />
+                        <xsl:with-param name="perspective" select="'coverage'"/>
+                      </xsl:call-template>
+                      <xsl:text> </xsl:text>
+                    </xsl:if>
                     <xsl:value-of select="@model_name"/> (<xsl:value-of select="@lane_count"/> lane<xsl:if test="@lane_count &gt; 1">s</xsl:if>)
                   </td>
                   <xsl:for-each select="minimum_depth">
@@ -339,9 +397,19 @@
             <tbody>
               <xsl:for-each select="enrichment-factor/model">
                 <xsl:sort select="@model_name" order="ascending"/>
-                <xsl:sort select="../@lane_count" order="ascending"/>
+                <xsl:sort select="@lane_count" order="ascending"/>
                 <tr>
                   <td>
+                    <xsl:attribute name="title"><xsl:value-of select="@subject_name"/></xsl:attribute>
+                    <xsl:if test="@result_id">
+                      <xsl:call-template name="object_link_button_tiny">
+                        <xsl:with-param name="icon" select="'sm-icon-extlink'"/>
+                        <xsl:with-param name="id" select="@result_id"/>
+                        <xsl:with-param name="type" select="'Genome::InstrumentData::AlignmentResult::Merged::CoverageStats'" />
+                        <xsl:with-param name="perspective" select="'coverage'"/>
+                      </xsl:call-template>
+                      <xsl:text> </xsl:text>
+                    </xsl:if>
                     <xsl:value-of select="@model_name"/> (<xsl:value-of select="@lane_count"/> lane<xsl:if test="@lane_count &gt; 1">s</xsl:if>)
                   </td>
                   <td class="right">

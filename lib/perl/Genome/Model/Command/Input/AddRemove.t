@@ -16,17 +16,7 @@ use_ok('Genome::Model::Command::Input::Add') or die;
 use_ok('Genome::Model::Command::Input::Remove') or die;
 
 class Shape { is => 'UR::Object', id_by => 'name', has => [ name =>  { is => 'Text', }, ], };
-my $square = Shape->create(name => 'square');
-ok($square, 'create a square');
-my $circle = Shape->create(name => 'circle');
-ok($circle, 'create a circle');
-class Genome::ProcessingProfile::Tester {
-    is => 'Genome::ProcessingProfile',
-};
-my $sample = Genome::Sample->create(name => '__SAMPLE__');
-ok($sample, 'create sample');
-my $pp = Genome::ProcessingProfile::Tester->create(name => '__PP__');
-ok($pp, 'create pp');
+
 class Genome::Model::Tester {
     is => 'Genome::Model',
     has => [
@@ -71,6 +61,15 @@ class Genome::Model::Tester {
         },
     ],
 };
+
+my $square = Shape->create(name => 'square');
+ok($square, 'create a square');
+my $circle = Shape->create(name => 'circle');
+ok($circle, 'create a circle');
+my $sample = Genome::Sample->create(name => '__SAMPLE__');
+ok($sample, 'create sample');
+my $pp = Genome::ProcessingProfile::Tester->create(name => '__PP__');
+ok($pp, 'create pp');
 my $model = Genome::Model::Tester->create(
     name => '__MODEL__',
     subject => $sample,
