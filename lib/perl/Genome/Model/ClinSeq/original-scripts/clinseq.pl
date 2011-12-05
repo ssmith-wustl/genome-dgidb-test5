@@ -72,6 +72,12 @@ GetOptions ('tumor_rna_seq_model_id=s'=>\$tumor_rna_seq_model_id, 'normal_rna_se
 	    'wgs_som_var_model_id=s'=>\$wgs_som_var_model_id, 'exome_som_var_model_id=s'=>\$exome_som_var_model_id, 
  	    'working_dir=s'=>\$working_dir, 'common_name=s'=>\$common_name, 'verbose=i'=>\$verbose, 'clean=i'=>\$clean);
 
+my $step = 0;
+
+#Get build directories for the three datatypes: $data_paths->{'wgs'}->*, $data_paths->{'exome'}->*, $data_paths->{'tumor_rnaseq'}->*
+$step++; print MAGENTA, "\n\nStep $step. Getting data paths from 'genome' for specified model ids", RESET;
+my $data_paths = &getDataDirs('-wgs_som_var_model_id'=>$wgs_som_var_model_id, '-exome_som_var_model_id'=>$exome_som_var_model_id, '-tumor_rna_seq_model_id'=>$tumor_rna_seq_model_id, '-normal_rna_seq_model_id'=>$normal_rna_seq_model_id);
+
 my $usage=<<INFO;
 
   Example usage: 
@@ -98,7 +104,6 @@ unless (($wgs_som_var_model_id || $exome_som_var_model_id || $tumor_rna_seq_mode
   exit();
 }
 
-my $step = 0;
 
 #Set flags for each datatype
 my ($wgs, $exome, $tumor_rnaseq, $normal_rnaseq) = (0,0,0,0);
@@ -142,10 +147,6 @@ if ($clean){
 }else{
   $patient_dir = &createNewDir('-path'=>$working_dir, '-new_dir_name'=>$common_name);
 }
-
-#Get build directories for the three datatypes: $data_paths->{'wgs'}->*, $data_paths->{'exome'}->*, $data_paths->{'tumor_rnaseq'}->*
-$step++; print MAGENTA, "\n\nStep $step. Getting data paths from 'genome' for specified model ids", RESET;
-my $data_paths = &getDataDirs('-wgs_som_var_model_id'=>$wgs_som_var_model_id, '-exome_som_var_model_id'=>$exome_som_var_model_id, '-tumor_rna_seq_model_id'=>$tumor_rna_seq_model_id, '-normal_rna_seq_model_id'=>$normal_rna_seq_model_id);
 
 
 #Create a summarized file of SNVs for: WGS, exome, and WGS+exome merged
@@ -285,118 +286,81 @@ exit();
 ###############################################################################################################################
 sub getDataDirs{
   my %args = @_;
-  my $wgs_som_var_model_id = $args{'-wgs_som_var_model_id'};
-  my $exome_som_var_model_id = $args{'-exome_som_var_model_id'};
-  my $tumor_rna_seq_model_id = $args{'-tumor_rna_seq_model_id'};
-  my $normal_rna_seq_model_id = $args{'-normal_rna_seq_model_id'};
 
   my %data_paths;
   
-  my ($wgs_som_var_datadir, $exome_som_var_datadir, $tumor_rna_seq_datadir, $normal_rna_seq_datadir) = ('', '', '', '');
-  if ($wgs_som_var_model_id){
-    my $wgs_som_var_model = Genome::Model->get($wgs_som_var_model_id);
-    if ($wgs_som_var_model){
-      my $wgs_som_var_build = $wgs_som_var_model->last_succeeded_build;
-      if ($wgs_som_var_build){
-        #... /genome/lib/perl/Genome/Model/Build/SomaticVariation.pm
-        $data_paths{wgs}{root} =  $wgs_som_var_build->data_directory ."/";
-        $data_paths{wgs}{normal_bam} = $wgs_som_var_build->normal_bam;
-        $data_paths{wgs}{tumor_bam} = $wgs_som_var_build->tumor_bam;
-      }else{
-        print RED, "\n\nA WGS model ID was specified, but a successful build could not be found!\n\n", RESET;
-        exit();
-      }
-    }else{
-      print RED, "\n\nA WGS model ID was specified, but it could not be found!\n\n", RESET;
-      exit();
-    }
-  }
-  if ($exome_som_var_model_id){
-    my $exome_som_var_model = Genome::Model->get($exome_som_var_model_id);
-    if ($exome_som_var_model){
-      my $exome_som_var_build = $exome_som_var_model->last_succeeded_build;
-      if ($exome_som_var_build){
-        $data_paths{exome}{root} = $exome_som_var_build->data_directory ."/";
-        $data_paths{exome}{normal_bam} = $exome_som_var_build->normal_bam;
-        $data_paths{exome}{tumor_bam} = $exome_som_var_build->tumor_bam;
-      }else{
-        print RED, "\n\nAn exome model ID was specified, but a successful build could not be found!\n\n", RESET;
-        exit();
-      }
-    }else{
-      print RED, "\n\nAn exome model ID was specified, but it could not be found!\n\n", RESET;
-      exit();
-    }
-  }
-  if ($tumor_rna_seq_model_id){
-    my $rna_seq_model = Genome::Model->get($tumor_rna_seq_model_id);
-      if ($rna_seq_model){
-      my $rna_seq_build = $rna_seq_model->last_succeeded_build;
-      if ($rna_seq_build){
-        $data_paths{tumor_rnaseq}{root} = $rna_seq_build->data_directory ."/";
-        my $alignment_result = $rna_seq_build->alignment_result;
-        $data_paths{tumor_rnaseq}{bam} = $alignment_result->bam_file;
-      }else{
-        print RED, "\n\nA tumor RNA-seq model ID was specified, but a successful build could not be found!\n\n", RESET;
-        exit();
-      }
-    }else{
-      print RED, "\n\nA tumor RNA-seq model ID was specified, but it could not be found!\n\n", RESET;
-      exit();
-    }
-  }
+  my %arg_dt = (
+    -wgs_som_var_model_id => 'wgs',
+    -exome_som_var_model_id => 'exome',
+    -tumor_rna_seq_model_id => 'tumor_rnaseq',
+    -normal_rna_seq_model_id => 'normal_rnaseq',
+  );
 
-  if ($normal_rna_seq_model_id){
-    my $rna_seq_model = Genome::Model->get($normal_rna_seq_model_id);
-      if ($rna_seq_model){
-      my $rna_seq_build = $rna_seq_model->last_succeeded_build;
-      if ($rna_seq_build){
-        $data_paths{normal_rnaseq}{root} = $rna_seq_build->data_directory ."/";
-        my $alignment_result = $rna_seq_build->alignment_result;
-        $data_paths{normal_rnaseq}{bam} = $alignment_result->bam_file;
-      }else{
-        print RED, "\n\nA normal RNA-seq model ID was specified, but a successful build could not be found!\n\n", RESET;
-        exit();
-      }
-    }else{
-      print RED, "\n\nA normal RNA-seq model ID was specified, but it could not be found!\n\n", RESET;
-      exit();
-    }
-  }
+  for my $arg_name (keys %arg_dt) {
+    my $arg_value = $args{$arg_name};
+    next unless $arg_value;
 
-  my @dt = qw(wgs exome);
-  foreach my $dt (@dt){
-    if ($data_paths{$dt}{root}){
-      my $root = $data_paths{$dt}{root};
-      $data_paths{$dt}{effects} = $root."effects/";
-      $data_paths{$dt}{logs} = $root."logs/";
-      $data_paths{$dt}{loh} = $root."loh/";
-      $data_paths{$dt}{novel} = $root."novel/";
-      $data_paths{$dt}{reports} = $root."reports/";
-      $data_paths{$dt}{variants} = $root."variants/";
+    # this is the key to use in the data_path hash
+    my $dt = $arg_dt{$arg_name};
+    
+    # this is used in error messages
+    my $type = $dt;
+    $type =~ s/wgs/WGS/;
+    $type =~ s/rna_seq/RNA-seq/g;
+    $type =~ s/_/ /;
+
+    # identify the build and model
+    my $build = Genome::Model::Build->get($arg_value);
+    my $model;
+    if ($build) {
+        # yay: build directly specified
+        $model = $build->model;
+    }
+    else {
+        # not a build ...hopefully a model
+        $model = Genome::Model->get($arg_value);
+        if (not $model) {
+            print RED, "\n\nA $type ID was specified, but no model or build with that ID could be found!\n\n", RESET;
+            exit 1;
+        }
+        $build = $model->last_succeeded_build;
+        if (not $build) {
+            print RED, "\n\nA $type model ID was specified, but a successful build could not be found!\n\n", RESET;
+            exit 1;
+        }
+    }
+  
+    # the build directory root
+    my $root = $data_paths{$dt}{root} = $build->data_directory . '/';
+   
+    # record paths to essential data based on data type ($dt)
+    if ($dt =~ /rna/i) {
+        # tumor rna and normal rna
+        my $alignment_result = $build->alignment_result;
+        $data_paths{$dt}{bam} = $alignment_result->bam_file;
+    
+        $data_paths{$dt}{alignments} = $root."alignments/";
+        $data_paths{$dt}{coverage} = $root."coverage/";
+        $data_paths{$dt}{expression} = $root."expression/";
+        $data_paths{$dt}{logs} = $root."logs/";
+        $data_paths{$dt}{reports} = $root."reports/";
+    }
+    else {
+        # wgs and exome
+        $data_paths{$dt}{tumor_bam} = $build->tumor_bam;
+        $data_paths{$dt}{normal_bam} = $build->normal_bam;
+        
+        $data_paths{$dt}{effects} = $root."effects/";
+        $data_paths{$dt}{logs} = $root."logs/";
+        $data_paths{$dt}{loh} = $root."loh/";
+        $data_paths{$dt}{novel} = $root."novel/";
+        $data_paths{$dt}{reports} = $root."reports/";
+        $data_paths{$dt}{variants} = $root."variants/";
     }
   }
 
-  if ($data_paths{tumor_rnaseq}{root}){
-    my $root = $data_paths{tumor_rnaseq}{root};
-    $data_paths{tumor_rnaseq}{alignments} = $root."alignments/";
-    $data_paths{tumor_rnaseq}{coverage} = $root."coverage/";
-    $data_paths{tumor_rnaseq}{expression} = $root."expression/";
-    $data_paths{tumor_rnaseq}{logs} = $root."logs/";
-    $data_paths{tumor_rnaseq}{reports} = $root."reports/";
-  }
-
-  if ($data_paths{normal_rnaseq}{root}){
-    my $root = $data_paths{normal_rnaseq}{root};
-    $data_paths{normal_rnaseq}{alignments} = $root."alignments/";
-    $data_paths{normal_rnaseq}{coverage} = $root."coverage/";
-    $data_paths{normal_rnaseq}{expression} = $root."expression/";
-    $data_paths{normal_rnaseq}{logs} = $root."logs/";
-    $data_paths{normal_rnaseq}{reports} = $root."reports/";
-  }
-
-  #print Dumper %data_paths;
-
+  print Dumper \%data_paths;
+  exit;
   return(\%data_paths);
 }
 
