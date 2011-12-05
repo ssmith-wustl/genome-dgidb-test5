@@ -359,8 +359,8 @@ sub getDataDirs{
     }
   }
 
-  print Dumper \%data_paths;
-  exit;
+  #print Dumper \%data_paths;
+  #exit;
   return(\%data_paths);
 }
 
