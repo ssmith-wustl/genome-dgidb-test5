@@ -188,8 +188,10 @@ sub execute {
     }
     else {
         foreach my $h (@hash_sizes) {
-            #method return an array but it's not needed here
-            unless ($self->_run_velveth_get_opt_expcov_covcutoff($h)) {
+            #method is called in multiple places and returns a pair of numbers which
+            #are not used here but needed in other calls;
+            my @pair = $self->_run_velveth_get_opt_expcov_covcutoff($h);
+            if ( not @pair ) {
                 $self->error_message("Failed to run _run_velveth_get_opt_expcov_covcutoff with hash_size $h");
                 return;
             }
