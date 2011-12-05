@@ -202,9 +202,7 @@ sub debug_loaded_objects {
 sub list {
     my $self = shift;
 
-    my $index_queue_iterator = Genome::Search::IndexQueue->create_iterator(
-        '-order_by' => ['priority', 'timestamp'],
-    );
+    my $index_queue_iterator = Genome::Search::IndexQueue->queue_iterator();
 
     print join("\t", 'PRIORITY', 'TIMESTAMP', 'SUBJECT_CLASS', 'SUBJECT_ID') . "\n";
     print join("\t", '--------', '---------', '-------------', '----------') . "\n";
@@ -227,9 +225,7 @@ sub index_queued {
     my $max_changes_count = delete $params{max_changes_count};
 
     # TODO Should optimize this by grouping by subject id and class and removing all related rows
-    my $index_queue_iterator = Genome::Search::IndexQueue->create_iterator(
-        '-order_by' => ['priority', 'timestamp'],
-    );
+    my $index_queue_iterator = Genome::Search::IndexQueue->queue_iterator();
 
     my $modified_count = 0;
     while (
