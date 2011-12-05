@@ -25,7 +25,7 @@ class Genome::Search::IndexQueue {
         },
         priority => {
             is => 'Number',
-            doc => 'Set or increase numeric value to *lower* priority. (-order_by is ascending with undef in first position)',
+            doc => 'Set or increase numeric value to *lower* priority. (-order_by is ascending with undef in last position)',
             default_value => 0,
         },
     ],
