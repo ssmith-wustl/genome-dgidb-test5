@@ -166,28 +166,31 @@ if ($wgs){
 
 
 #Run RNA-seq analysis on the RNA-seq data (if available)
+my $rnaseq_dir = createNewDir('-path'=>$patient_dir, '-new_dir_name'=>'rnaseq', '-silent'=>1);
 if ($tumor_rnaseq){
-  my $rnaseq_dir = &createNewDir('-path'=>$patient_dir, '-new_dir_name'=>'rnaseq_tumor', '-silent'=>1);
+  my $tumor_rnaseq_dir = &createNewDir('-path'=>$rnaseq_dir, '-new_dir_name'=>'tumor', '-silent'=>1);
   my $cufflinks_dir = $data_paths->{tumor_rnaseq}->{expression};
   
   #Perform the single-tumor outlier analysis
   $step++; print MAGENTA, "\n\nStep $step. Summarizing RNA-seq absolute expression values", RESET;
-  &runRnaSeqAbsolute('-label'=>'tumor_rnaseq_absolute', '-cufflinks_dir'=>$cufflinks_dir, '-out_paths'=>$out_paths, '-rnaseq_dir'=>$rnaseq_dir, '-script_dir'=>$script_dir, '-verbose'=>$verbose);
+  &runRnaSeqAbsolute('-label'=>'tumor_rnaseq_absolute', '-cufflinks_dir'=>$cufflinks_dir, '-out_paths'=>$out_paths, '-rnaseq_dir'=>$tumor_rnaseq_dir, '-script_dir'=>$script_dir, '-verbose'=>$verbose);
 
   #Perform the multi-tumor differential outlier analysis
 
 }
 if ($normal_rnaseq){
-  my $rnaseq_dir = &createNewDir('-path'=>$patient_dir, '-new_dir_name'=>'rnaseq_normal', '-silent'=>1);
+  my $normal_rnaseq_dir = &createNewDir('-path'=>$rnaseq_dir, '-new_dir_name'=>'normal', '-silent'=>1);
   my $cufflinks_dir = $data_paths->{normal_rnaseq}->{expression};
   
-  #Perform the single-tumor outlier analysis
+  #Perform the single-normal outlier analysis
   $step++; print MAGENTA, "\n\nStep $step. Summarizing RNA-seq absolute expression values", RESET;
-  &runRnaSeqAbsolute('-label'=>'normal_rnaseq_absolute', '-cufflinks_dir'=>$cufflinks_dir, '-out_paths'=>$out_paths, '-rnaseq_dir'=>$rnaseq_dir, '-script_dir'=>$script_dir, '-verbose'=>$verbose);
+  &runRnaSeqAbsolute('-label'=>'normal_rnaseq_absolute', '-cufflinks_dir'=>$cufflinks_dir, '-out_paths'=>$out_paths, '-rnaseq_dir'=>$normal_rnaseq_dir, '-script_dir'=>$script_dir, '-verbose'=>$verbose);
 
-  #Perform the multi-tumor differential outlier analysis
+  #Perform the multi-normal differential outlier analysis
 
 }
+
+#TODO: IF both tumor and normal RNA-seq are defined - run Cuffdiff on the comparison
 
 
 #Annotate gene lists to deal with commonly asked questions like: is each gene a kinase?
@@ -204,27 +207,52 @@ $step++; print MAGENTA, "\n\nStep $step. Intersecting gene lists with druggable 
 
 #For each of the following: WGS SNVs, Exome SNVs, and WGS+Exome SNVs, do the following:
 #Get BAM readcounts for WGS (tumor/normal), Exome (tumor/normal), RNAseq (tumor), RNAseq (normal) - as available of course
-$step++; print MAGENTA, "\n\nStep $step. Getting BAM read counts for all BAM associated with input models (and expression values if available)", RESET;
+$step++; print MAGENTA, "\n\nStep $step. Getting BAM read counts for all BAMs associated with input models (and expression values if available) - for candidate SNVs", RESET;
 my @positions_files;
 if ($wgs){push(@positions_files, $out_paths->{'wgs'}->{'snv'}->{path});}
 if ($exome){push(@positions_files, $out_paths->{'exome'}->{'snv'}->{path});}
 if ($wgs && $exome){push(@positions_files, $out_paths->{'wgs_exome'}->{'snv'}->{path});}
 my $read_counts_script = "$script_dir"."snv/getBamReadCounts.pl";
+my $read_counts_summary_script = "$script_dir"."snv/WGS_vs_Exome_vs_RNAseq_VAF_and_FPKM.R";
 foreach my $positions_file (@positions_files){
   my $fb = &getFilePathBase('-path'=>$positions_file);
   my $output_file = $fb->{$positions_file}->{base} . ".readcounts" . $fb->{$positions_file}->{extension};
+  my $output_stats_dir = $output_file . ".stats/";
+
   unless($wgs_som_var_model_id){$wgs_som_var_model_id=0;}
   unless($exome_som_var_model_id){$exome_som_var_model_id=0;}
   unless($tumor_rna_seq_model_id){$tumor_rna_seq_model_id=0;}
   unless($normal_rna_seq_model_id){$normal_rna_seq_model_id=0;}
+  my $bam_rc_cmd = "$read_counts_script  --positions_file=$positions_file  --wgs_som_var_model_id='$wgs_som_var_model_id'  --exome_som_var_model_id='$exome_som_var_model_id'  --rna_seq_tumor_model_id='$tumor_rna_seq_model_id'  --rna_seq_normal_model_id='$normal_rna_seq_model_id'  --output_file=$output_file  --verbose=$verbose";
+
+  #WGS_vs_Exome_vs_RNAseq_VAF_and_FPKM.R  /gscmnt/sata132/techd/mgriffit/hgs/test/ /gscmnt/sata132/techd/mgriffit/hgs/all1/snv/wgs_exome/snvs.hq.tier1.v1.annotated.compact.readcounts.tsv /gscmnt/sata132/techd/mgriffit/hgs/all1/rnaseq/tumor/absolute/isoforms_merged/isoforms.merged.fpkm.expsort.tsv
+  my $rc_summary_cmd;
+  if ($tumor_rna_seq_model_id){
+    my $tumor_fpkm_file = $out_paths->{'tumor_rnaseq_absolute'}->{'isoforms.merged.fpkm.expsort.tsv'}->{path};
+    $rc_summary_cmd = "$read_counts_summary_script $output_stats_dir $output_file $tumor_fpkm_file";
+  }else{
+    $rc_summary_cmd = "$read_counts_summary_script $output_stats_dir $output_file";
+  }
+  print RED, "\n\n$rc_summary_cmd", RESET;
   if(-e $output_file){
     if ($verbose){print YELLOW, "\n\nOutput bam read counts file already exists:\n\t$output_file", RESET;}
+    if (-e $output_stats_dir && -d $output_stats_dir){
+      if ($verbose){print YELLOW, "\n\nOutput read count stats dir already exists:\n\t$output_stats_dir", RESET;}
+    }else{
+      #Summarize the BAM readcounts results for candidate variants - produce descriptive statistics, figures etc.
+      mkdir($output_stats_dir);
+      system($rc_summary_cmd);
+    }
   }else{
-    my $bam_rc_cmd = "$read_counts_script  --positions_file=$positions_file  --wgs_som_var_model_id='$wgs_som_var_model_id'  --exome_som_var_model_id='$exome_som_var_model_id'  --rna_seq_tumor_model_id='$tumor_rna_seq_model_id'  --rna_seq_normal_model_id='$normal_rna_seq_model_id'  --output_file=$output_file  --verbose=$verbose";
+    #First get the read counts for the current file of SNVs (from WGS, Exome, or WGS+Exome
     if ($verbose){print YELLOW, "\n\n$bam_rc_cmd", RESET;}
     system($bam_rc_cmd);
+    #Summarize the BAM readcounts results for candidate variants - produce descriptive statistics, figures etc.
+    mkdir($output_stats_dir);
+    system($rc_summary_cmd);
   }
 }
+
 
 
 #Generate a clonality plot for this patient (if WGS data is available)
@@ -623,34 +651,30 @@ sub runRnaSeqAbsolute{
   my $rnaseq_dir = $args{'-rnaseq_dir'};
   my $script_dir = $args{'-script_dir'};
   my $verbose = $args{'-verbose'};
-
   #Skip this analysis if the directory already exists
   my $test_dir = $rnaseq_dir . "absolute/";
   unless (-e $test_dir && -d $test_dir){
     my $absolute_rnaseq_dir = &createNewDir('-path'=>$rnaseq_dir, '-new_dir_name'=>'absolute', '-silent'=>1);
-
     my $outliers_cmd = "$script_dir"."rnaseq/outlierGenesAbsolute.pl  --cufflinks_dir=$cufflinks_dir  --working_dir=$absolute_rnaseq_dir  --verbose=$verbose";
-  
     if ($verbose){print YELLOW, "\n\n$outliers_cmd\n\n", RESET;}
     system($outliers_cmd);
-
-    my @subdirs = qw (genes isoforms isoforms_merged);
-    foreach my $subdir (@subdirs){
-      my $subdir_path = "$absolute_rnaseq_dir"."$subdir/";
-      opendir(DIR, $subdir_path);
-      my @files = readdir(DIR);
-      closedir(DIR);
-
-      foreach my $file (@files){
-        #Only store .tsv files
-        if ($file =~ /\.tsv$/){
-          #Store the files to be annotated later:
-          $out_paths->{$label}->{$file}->{'path'} = $subdir_path.$file;
-        }
+  }
+  #Store the file paths for later processing
+  my $absolute_rnaseq_dir = "$rnaseq_dir"."absolute/";
+  my @subdirs = qw (genes isoforms isoforms_merged);
+  foreach my $subdir (@subdirs){
+    my $subdir_path = "$absolute_rnaseq_dir"."$subdir/";
+    opendir(DIR, $subdir_path);
+    my @files = readdir(DIR);
+    closedir(DIR);
+    foreach my $file (@files){
+      #Only store .tsv files
+      if ($file =~ /\.tsv$/){
+        #Store the files to be annotated later:
+        $out_paths->{$label}->{$file}->{'path'} = $subdir_path.$file;
       }
     }
   }
-
   return();
 }
 
@@ -761,15 +785,30 @@ sub drugDbIntersections{
       #Default filter
       my $out1 = $fb->{$path}->{base} . ".dgidb.default" . $fb->{$path}->{extension};
       my $cmd1 = "$drugdb_script --candidates_file=$path  --name_col_1=$name_col  --interactions_file=/gscmnt/sata132/techd/mgriffit/DruggableGenes/KnownDruggable/DrugBank/query_files/DrugBank_WashU_INTERACTIONS.filtered.3.tsv  --name_col_2=12 > $out1";
+      unless (-e $out1){
+        system ("$cmd1");
+      }
+
+      #Anti-neoplastic only
       my $out2 = $fb->{$path}->{base} . ".dgidb.antineo" . $fb->{$path}->{extension};
       my $cmd2 = "$drugdb_script --candidates_file=$path  --name_col_1=$name_col  --interactions_file=/gscmnt/sata132/techd/mgriffit/DruggableGenes/KnownDruggable/DrugBank/query_files/DrugBank_WashU_INTERACTIONS.filtered.4.tsv  --name_col_2=12 > $out2";
+      unless (-e $out2){
+        system ("$cmd2");
+      }
+
+      #Inhibitor only
       my $out3 = $fb->{$path}->{base} . ".dgidb.inhibitor" . $fb->{$path}->{extension};
       my $cmd3 = "$drugdb_script --candidates_file=$path  --name_col_1=$name_col  --interactions_file=/gscmnt/sata132/techd/mgriffit/DruggableGenes/KnownDruggable/DrugBank/query_files/DrugBank_WashU_INTERACTIONS.filtered.5.tsv  --name_col_2=12 > $out3";
+      unless (-e $out3){
+        system ("$cmd3");
+      }
+
+      #Kinases only
       my $out4 = $fb->{$path}->{base} . ".dgidb.kinase" . $fb->{$path}->{extension};
       my $cmd4 = "$drugdb_script --candidates_file=$path  --name_col_1=$name_col  --interactions_file=/gscmnt/sata132/techd/mgriffit/DruggableGenes/KnownDruggable/DrugBank/query_files/DrugBank_WashU_INTERACTIONS.filtered.6.tsv  --name_col_2=12 > $out4";
-
-      #print YELLOW, "\n\n$cmd1\n$cmd2\n$cmd3\n$cmd4\n\n", RESET;
-      system ("$cmd1; $cmd2; $cmd3; $cmd4");
+      unless (-e $out4){
+        system ("$cmd4");
+      }
     }
   }
   return();
