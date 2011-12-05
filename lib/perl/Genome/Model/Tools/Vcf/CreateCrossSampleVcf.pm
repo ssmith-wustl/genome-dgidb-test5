@@ -491,7 +491,7 @@ sub _add_position_merge {
     #create the merge operation object
     my $merge_operation = $workflow->add_operation(
         name => $op_name,
-        operation_type => Workflow::OperationType::Command->get("Genome::Model::Tools::Joinx::VcfMergeForBackfill"),
+        operation_type => Workflow::OperationType::Command->get("Genome::Model::Tools::Joinx::VcfMerge"),
     );
 
     #link the merged_positions_bed input to the output_file param
@@ -560,7 +560,7 @@ sub _merge_position_merges {
     #create the merge operation object
     my $merge_operation = $workflow->add_operation(
         name => "Final Union of Positions to Backfill",
-        operation_type => Workflow::OperationType::Command->get("Genome::Model::Tools::Joinx::UnionBedPositions"),
+        operation_type => Workflow::OperationType::Command->get("Genome::Model::Tools::Joinx::VcfMergeForBackfill"),
     );
 
     #link the merged_positions_bed input to the output_file param
@@ -569,6 +569,12 @@ sub _merge_position_merges {
         left_property => "merged_positions_bed",
         right_operation => $merge_operation,
         right_property => "output_file",
+    );
+    $workflow->add_link(
+        left_operation => $workflow->get_input_connector,
+        left_property => "use_bgzip",
+        right_operation => $merge_operation,
+        right_property => "use_bgzip",
     );
 
     $workflow->add_link(
@@ -708,7 +714,6 @@ sub _add_limited_final_merge {
                 }
                 push @backfill_sub_ops, shift @backfill_ops;
             }
-            print scalar(@backfill_sub_ops)." === \n";
             push @merge_ops, $self->_add_final_merge(\$workflow,\@backfill_sub_ops,$group);
         }
         return $self->_merge_vcf_merges(\$workflow,\@merge_ops);
