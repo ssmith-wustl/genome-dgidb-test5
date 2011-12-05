@@ -15,7 +15,7 @@ my $text_is_indexable = sub {
     if ($object->isa('UR::Value::Text')) {
         return 1;
     }
-    else { 
+    else {
         return;
     }
 };
@@ -24,6 +24,7 @@ test_create_missing_subject();
 test_create_missing_timestamp();
 test_create_existing_subject();
 test_create_non_indexable_subject();
+test_priority_sorting();
 
 done_testing();
 
@@ -100,6 +101,43 @@ sub test_create_non_indexable_subject {
 
     is($index_queue, undef, 'failed to create index_queue when subject is not indexable');
     like($error, qr/indexable/, 'error mentions indexable');
+
+    $tx->rollback();
+}
+
+sub test_priority_sorting {
+    my $tx = UR::Context::Transaction->begin();
+
+    *Genome::Search::is_indexable = $text_is_indexable;
+
+    # purposely out of order so that timestamps won't sort in the same order as priority
+    my @subject_ids = ('Thing 9', 'Thing', 'Thing 5', 'Thing 1', 'Thing 2');
+
+    # undef = 0, numerically ascending
+    my @sorted_subject_ids = ('Thing', 'Thing 1', 'Thing 2', 'Thing 5', 'Thing 9');
+
+    for my $subject_id (@subject_ids) {
+        my ($priority) = $subject_id =~ /(\d)$/;
+        my $subject = UR::Value::Text->get($subject_id);
+        my $index_queue = Genome::Search::IndexQueue->create(
+            subject_id => $subject->id,
+            subject_class => $subject->class,
+            priority => $priority,
+        );
+        isa_ok($index_queue, 'Genome::Search::IndexQueue', "created queue object for $subject_id");
+        sleep 1;
+    }
+
+    my @priority_sorted_queue = Genome::Search::IndexQueue->get(subject_id => \@subject_ids, -order_by => 'priority');
+    ok(@priority_sorted_queue, 'got priority_sorted_queue') || return;
+    my @priority_sorted_queue_subject_ids = map { $_->subject_id } @priority_sorted_queue;
+    is_deeply(\@priority_sorted_queue_subject_ids, \@sorted_subject_ids, 'ordering by priority matches expected results');
+
+    my @timestamp_sorted_queue = Genome::Search::IndexQueue->get(subject_id => \@subject_ids, -order_by => 'timestamp');
+    ok(@priority_sorted_queue, 'got timestamp_sorted_queue') || return;
+    my @timestamp_sorted_queue_subject_ids = map { $_->subject_id } @timestamp_sorted_queue;
+    isnt(join('', @timestamp_sorted_queue_subject_ids), join('', @sorted_subject_ids), 'ordering by timestamp does not match priorty sort');
+    isnt(join('', @timestamp_sorted_queue_subject_ids), join('', @priority_sorted_queue_subject_ids), 'ordering by timestamp does not match priorty sort');
 
     $tx->rollback();
 }

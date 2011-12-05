@@ -203,11 +203,14 @@ sub list {
     my $self = shift;
 
     my $index_queue_iterator = Genome::Search::IndexQueue->create_iterator(
-        '-order_by' => 'timestamp',
+        '-order_by' => ['priority', 'timestamp'],
     );
 
+    print join("\t", 'PRIORITY', 'TIMESTAMP', 'SUBJECT_CLASS', 'SUBJECT_ID') . "\n";
+    print join("\t", '--------', '---------', '-------------', '----------') . "\n";
     while (my $index_queue_item = $index_queue_iterator->next) {
         print join("\t",
+            $index_queue_item->priority,
             $index_queue_item->timestamp,
             $index_queue_item->subject_class,
             $index_queue_item->subject_id,
@@ -225,7 +228,7 @@ sub index_queued {
 
     # TODO Should optimize this by grouping by subject id and class and removing all related rows
     my $index_queue_iterator = Genome::Search::IndexQueue->create_iterator(
-        '-order_by' => 'timestamp',
+        '-order_by' => ['priority', 'timestamp'],
     );
 
     my $modified_count = 0;
