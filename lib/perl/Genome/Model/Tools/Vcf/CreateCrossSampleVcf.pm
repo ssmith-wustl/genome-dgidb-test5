@@ -12,6 +12,7 @@ class Genome::Model::Tools::Vcf::CreateCrossSampleVcf {
     has_input => [
         builds => {
             is => 'Genome::Model::Build',
+            require_user_verify => 0,
             is_many => 1,
             is_optional=>0,
             doc => 'The builds that you wish to create a cross-sample vcf for',
