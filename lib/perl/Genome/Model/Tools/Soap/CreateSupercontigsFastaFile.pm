@@ -58,8 +58,8 @@ sub execute {
         $old_fasta =~ s/^N+//;
         $old_fasta =~ s/N+$//;
         next unless length $old_fasta >= $self->min_contig_length;
-        my @bases = split( /N+/, $old_fasta );
-        my @gaps = split ( /[ACGT]+/, $old_fasta );
+        my @bases = split( /N+/i, $old_fasta );
+        my @gaps = split ( /[ACGT]+/i, $old_fasta );
         shift @gaps; #split creates undef first array element
         my $pos = 0;
         my $new_fasta;
@@ -76,7 +76,7 @@ sub execute {
             $pos++;
         }
         unless( length $old_fasta eq length $new_fasta ) {
-            $self->error_message( "Length of new supercontig fasta did not match the length of old" );
+            $self->error_message( "Length of new supercontig fasta did not match the length of old: new: " . length ($new_fasta).", old: ".length $old_fasta );
             return;
         }
         $seq->id('Contig'.$supercontig_number++);
