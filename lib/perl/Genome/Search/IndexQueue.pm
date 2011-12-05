@@ -26,6 +26,7 @@ class Genome::Search::IndexQueue {
         priority => {
             is => 'Number',
             doc => 'Set or increase numeric value to *lower* priority. (-order_by is ascending with undef in first position)',
+            default_value => 0,
         },
     ],
     data_source => 'Genome::DataSource::GMSchema',
