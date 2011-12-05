@@ -55,4 +55,11 @@ sub create {
     return $index_queue;
 }
 
+sub default_priority {
+    my $class = shift;
+    my $meta = $class->__meta__;
+    my $property = $meta->property('priority');
+    return $property->{default_value};
+}
+
 1;
