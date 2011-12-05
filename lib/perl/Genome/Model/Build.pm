@@ -20,6 +20,7 @@ class Genome::Model::Build {
     table_name => 'GENOME_MODEL_BUILD',
     is_abstract => 1,
     subclassify_by => 'subclass_name',
+    subclass_description_preprocessor => __PACKAGE__ . '::_preprocess_subclass_description',
     id_by => [
         build_id => { is => 'NUMBER', },
     ],
@@ -188,25 +189,27 @@ sub __extend_namespace__ {
         my @has;
         for my $p (@p) {
             if ($p->can("is_input") and $p->is_input) {
-                my %data = %{ UR::Util::deep_copy($p) };
-                for my $key (keys %data) {
-                    delete $data{$key} if $key =~ /^_/;
-                }                
-                delete $data{id};
-                delete $data{db_committed};
-                my $type = $data{data_type};
                 my $name = $p->property_name;
+                my %data = %{ UR::Util::deep_copy($p) };
+                my $type = $data{data_type};
+                for my $key (keys %data) {
+                    delete $data{$key} unless $key =~ /^is_/; 
+                }                
+                delete $data{is_specified_in_module_header};
                 if ($type->isa("Genome::Model")) {
                     $type =~ s/^Genome::Model/Genome::Model::Build/;
                     $name =~ s/_model$/_build/;
                 }
+                $data{property_name} = $name;
+                $data{data_type} = $type;
                 push @has, $name, \%data;
             }
         }
+        #print Data::Dumper::Dumper($build_subclass_name, \@has);
         my $build_subclass_meta = UR::Object::Type->define(
             class_name => $build_subclass_name,
             is => 'Genome::Model::Build',
-            has_param => \@has,
+            has => \@has,
         );
         die "Error defining $build_subclass_name for $model_subclass_name!" unless $model_subclass_meta;
         return $build_subclass_meta;
@@ -2175,6 +2178,68 @@ sub _get_workflow_instance_children {
     my $self = shift;
     my $parent = shift || return;
     return $parent, map($self->_get_workflow_instance_children($_), $parent->related_instances);
+}
+
+sub _preprocess_subclass_description {
+    my ($class, $desc) = @_;
+    #print "PREPROC BUILD!\n";
+    #print Data::Dumper::Dumper($desc);
+    #print Carp::longmess();
+    my @names = keys %{ $desc->{has} };
+    for my $prop_name (@names) {
+        my $prop_desc = $desc->{has}{$prop_name};
+        # skip old things for which the developer has explicitly set-up indirection
+        next if $prop_desc->{id_by};
+        next if $prop_desc->{via};
+        next if $prop_desc->{reverse_as};
+        next if $prop_desc->{implied_by};
+        
+        if ($prop_desc->{is_param} and $prop_desc->{is_input}) {
+            die "class $class has is_param and is_input on the same property! $prop_name";
+        }
+
+        if (exists $prop_desc->{'is_param'} and $prop_desc->{'is_param'}) {
+            $prop_desc->{'via'} = 'processing_profile',
+            $prop_desc->{'to'} = $prop_name;
+            $prop_desc->{'is_mutable'} = 0;
+            $prop_desc->{'is_delegated'} = 1;
+        }
+
+        if (exists $prop_desc->{'is_input'} and $prop_desc->{'is_input'}) {
+
+            my $assoc = $prop_name . '_association' . ($prop_desc->{is_many} ? 's' : '');
+            next if $desc->{has}{$assoc};
+
+            $desc->{has}{$assoc} = {
+                property_name => $assoc,
+                implied_by => $prop_name,
+                is => 'Genome::Model::Build::Input',
+                reverse_as => 'build', 
+                where => [ name => $prop_name ],
+                is_mutable => $prop_desc->{is_mutable},
+                is_optional => $prop_desc->{is_optional},
+                is_many => 1, #$prop_desc->{is_many},
+            };
+
+            # We hopefully don't need _id accessors
+            # If we do duplicate the code below for value_id
+
+            %$prop_desc = (%$prop_desc,
+                via => $assoc, 
+                to => 'value',
+            );
+        }
+    }
+
+    my ($ext) = ($desc->{class_name} =~ /Genome::Model::Build::(.*)/);
+    my $pp_subclass_name = 'Genome::ProcessingProfile::' . $ext;
+    
+    my $pp_data = $desc->{has}{processing_profile} = {};
+    $pp_data->{data_type} = $pp_subclass_name;
+    $pp_data->{via} = 'model'; 
+    $pp_data->{to} = 'processing_profile';
+
+    return $desc;
 }
 
 1;
