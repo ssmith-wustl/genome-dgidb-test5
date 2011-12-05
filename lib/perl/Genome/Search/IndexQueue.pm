@@ -23,6 +23,10 @@ class Genome::Search::IndexQueue {
             is => 'Time',
             doc => 'Timestamp of first request. Automatically added if not provided.',
         },
+        priority => {
+            is => 'Number',
+            doc => 'Set or increase numeric value to *lower* priority. (-order_by is ascending with undef in first position)',
+        },
     ],
     data_source => 'Genome::DataSource::GMSchema',
     table_name => 'SEARCH_INDEX_QUEUE',
