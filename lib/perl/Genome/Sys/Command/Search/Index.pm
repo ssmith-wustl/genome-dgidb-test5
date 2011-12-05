@@ -20,7 +20,7 @@ class Genome::Sys::Command::Search::Index {
         },
         max_changes_per_commit => {
             is => 'Number',
-            default => 250,
+            default => 50,
         },
         loop_sleep => {
             is => 'Number',
