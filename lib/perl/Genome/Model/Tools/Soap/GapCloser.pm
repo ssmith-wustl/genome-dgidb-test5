@@ -86,7 +86,7 @@ sub __errors__ {
         }
         $self->a( $self->_resolve_scaffold_sequence_file );
         $self->b( $self->_resolve_config_file );
-        $self->o( $self->assembly_directory.'/gapfill' );
+        $self->o( $self->assembly_directory.'/edit_dir/gapfill' );
     }
     elsif ( not $self->o ) { 
         push @errors, UR::Object::Tag->create(
