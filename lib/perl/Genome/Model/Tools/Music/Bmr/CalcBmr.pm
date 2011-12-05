@@ -295,7 +295,7 @@ sub execute {
   $classify{$_} = CG_Transversions foreach( qw( CA CG GC GT ));
 
   # Create a hash to help lookup sample names
-  my %sample_names = map { $_ -> 1 } @all_sample_names;
+  my %sample_names = map { $_ => 1 } @all_sample_names;
 
   # Parse through the MAF file and categorize each somatic mutation
   print "Parsing MAF file to classify mutations\n";
