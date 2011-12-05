@@ -294,6 +294,9 @@ sub execute {
   $classify{$_} = CG_Transitions foreach( qw( CT GA ));
   $classify{$_} = CG_Transversions foreach( qw( CA CG GC GT ));
 
+  # Create a hash to help lookup sample names
+  my %sample_names = map { $_ -> 1 } @all_sample_names;
+
   # Parse through the MAF file and categorize each somatic mutation
   print "Parsing MAF file to classify mutations\n";
   my %skip_cnts;
@@ -306,6 +309,14 @@ sub execute {
     my ( $gene, $chr, $start, $stop, $mutation_class, $mutation_type, $ref, $var1, $var2, $sample ) =
     ( $cols[0], $cols[4], $cols[5], $cols[6], $cols[8], $cols[9], $cols[10], $cols[11], $cols[12], $cols[15] );
     $chr =~ s/^chr//; # Remove chr prefixes from chrom names if any
+
+    # Skip mutations in samples that are not in the provided bam list
+    unless( defined $sample_names{$sample} )
+    {
+      $skip_cnts{"belong to unrecognized samples"}++;
+      print "Skipping unrecognized sample ($sample not in BAM list): $gene, chr$chr:$start-$stop\n" if( $show_skipped );
+      next;
+    }
 
     # If the mutation classification is odd, quit with error
     if( $mutation_class !~ m/^(Missense_Mutation|Nonsense_Mutation|Nonstop_Mutation|Splice_Site|Translation_Start_Site|Frame_Shift_Del|Frame_Shift_Ins|In_Frame_Del|In_Frame_Ins|Silent|Intron|RNA|3'Flank|3'UTR|5'Flank|5'UTR|IGR|Targeted_Region)$/ )
