@@ -121,8 +121,8 @@ is($retval, 1, 'execution of the build returned true');
 is($@, '', 'no exceptions thrown during build process') or diag $@;
 
 unless ($dry_run) {
-    my $expected_data_directory = $ENV{"GENOME_TESTSUITE_INPUTS_PATH"} . '/Genome-Model-ClinSeq/2011-11-27';
-    my @diff = `diff $expected_data_directory $temp_dir`;
+    my $expected_data_directory = $ENV{"GENOME_TESTSUITE_INPUTS_PATH"} . '/Genome-Model-ClinSeq/2011-12-05';
+    my @diff = `diff -r --brief $expected_data_directory $temp_dir`;
     ok(@diff == 0, "no differences from expected results and actual")
         or do { 
             diag("differences are:");
