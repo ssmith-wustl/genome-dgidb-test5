@@ -517,10 +517,14 @@ sub _index_queue_callback {
     my $meta = $object->__meta__;
     my @trigger_properties = ('create', 'delete', $meta->all_property_names);
     if (grep { $aspect eq $_ } @trigger_properties) {
-        $index_queue = Genome::Search::IndexQueue->create(
+        my %create_params = (
             subject_id => $object->id,
             subject_class => $object->class,
         );
+        if ($object->class->can('search_index_queue_priority')) {
+            $create_params{priority} = $object->class->search_index_queue_priority;
+        }
+        $index_queue = Genome::Search::IndexQueue->create(%create_params);
     }
 
     return $index_queue;

@@ -25,13 +25,18 @@ class Genome::Search::IndexQueue {
         },
         priority => {
             is => 'Number',
-            doc => 'Set or increase numeric value to *lower* priority. (-order_by is ascending with undef in last position)',
-            default_value => 0,
+            doc => 'Priority describes the order to process. (0 = high, 1 = normal, 2-9 = low)',
+            default_value => 1,
         },
     ],
     data_source => 'Genome::DataSource::GMSchema',
     table_name => 'SEARCH_INDEX_QUEUE',
 };
+
+sub queue_iterator {
+    my $class = shift;
+    return $class->create_iterator(-order_by => ['priority', 'timestamp']);
+}
 
 sub create {
     my $class = shift;
@@ -53,6 +58,13 @@ sub create {
     $index_queue = $class->SUPER::create($bx);
 
     return $index_queue;
+}
+
+sub default_priority {
+    my $class = shift;
+    my $meta = $class->__meta__;
+    my $property = $meta->property('priority');
+    return $property->{default_value};
 }
 
 1;
