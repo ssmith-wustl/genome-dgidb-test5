@@ -206,8 +206,11 @@ sub list {
         '-order_by' => ['priority', 'timestamp'],
     );
 
+    print join("\t", 'PRIORITY', 'TIMESTAMP', 'SUBJECT_CLASS', 'SUBJECT_ID') . "\n";
+    print join("\t", '--------', '---------', '-------------', '----------') . "\n";
     while (my $index_queue_item = $index_queue_iterator->next) {
         print join("\t",
+            $index_queue_item->priority,
             $index_queue_item->timestamp,
             $index_queue_item->subject_class,
             $index_queue_item->subject_id,
