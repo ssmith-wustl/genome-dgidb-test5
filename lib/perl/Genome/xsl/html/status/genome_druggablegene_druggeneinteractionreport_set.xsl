@@ -34,15 +34,15 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
       <div id="objects" class="span-24 last">
 
         <!-- details for this DrugGeneInteractionReport -->
-        <div class="span_8_box_masonry">
-          <div class="box_header span-8 last rounded-top">
+        <div class="span_12_box_masonry">
+          <div class="box_header span-12 last rounded-top">
             <div class="box_title"><h3 class="nontyped span-7 last">Drug Gene Interaction</h3></div>
             <div class="box_button">
 
             </div>
           </div>
 
-          <div class="box_content rounded-bottom span-8 last">
+          <div class="box_content rounded-bottom span-12 last">
             <table class="name-value">
               <tbody>
                 <tr>
