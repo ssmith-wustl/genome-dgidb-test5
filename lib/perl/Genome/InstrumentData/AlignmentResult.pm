@@ -1353,6 +1353,9 @@ sub _extract_input_fastq_filenames {
             trimmer_params => $self->trimmer_params,
             directory => $temp_directory,
         );
+        if (!@input_fastq_pathnames){
+            $self->error_message("no input_fastq_pathnames returned from dump_trimmed_fastq_files");
+        }
 
         my @report_files = glob($temp_directory ."/*report*");
         my @length_distributions = glob($temp_directory ."/*.lengthdist");
