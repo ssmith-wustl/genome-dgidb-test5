@@ -333,7 +333,15 @@ sub _execute_build {
 =cut
 
     if ($self->phenotype-analysis-strategy eq 'quantitative') { #unrelated individuals, quantitative -- ASMS-NFBC
-        my $maf_file = vcf_to_maf($multisample_vcf);
+#create a directory for results
+        my ($tfh,$temp_path) = Genome::Sys->create_temp_file;
+        unless($tfh) {
+            $self->error_message("Unable to create temporary file $!");
+            die;
+        }
+        $temp_path =~ s/\:/\\\:/g;
+
+        my $maf_file = vcf_to_maf($multisample_vcf,$temp_path,\@builds);
 
 #Ran clinical-correlation:
 #need clinical data file $clinical_data
@@ -389,8 +397,16 @@ my $haplo_cmd = "perl /gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20
 #/gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/Genotypes_tgres.pdf
     }
     elsif ($self->phenotype-analysis-strategy eq 'case-control') { #unrelated individuals, case-control -- MRSA
+#create a directory for results
+        my ($tfh,$temp_path) = Genome::Sys->create_temp_file;
+        unless($tfh) {
+            $self->error_message("Unable to create temporary file $!");
+            die;
+        }
+        $temp_path =~ s/\:/\\\:/g;
+
 # assume that the vcf is passed in as $multisample_vcf
-        my $maf_file = vcf_to_maf($multisample_vcf);
+        my $maf_file = vcf_to_maf($multisample_vcf,$temp_path,\@builds);
 
 #start workflow to find significantly mutated genes in our set:
         #get list of bams and load into tmp file named $bam_list
@@ -468,6 +484,7 @@ my $haplo_cmd = "perl /gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20
             die;
         }
         $temp_path =~ s/\:/\\\:/g;
+        #-------------------------------------------------
         my $R_command = <<"_END_OF_R_";
         options(error=recover)
         source("stat.lib", chdir=TRUE)
@@ -479,6 +496,7 @@ my $haplo_cmd = "perl /gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20
         #to do logistic regression, might need /gscuser/yyou/git/genome/lib/perl/Genome/Model/Tools/Music/stat.lib.R -- talk to Cyriac here
         cor2test(y=inf.file, x=mut.file, cov=pheno.file, outf=output.file, method="logit", sep="\t");
         _END_OF_R_
+        #-------------------------------------------------
         print $tfh "$R_command\n";
 
         my $cmd = "R --vanilla --slave \< $temp_path";
@@ -495,35 +513,41 @@ my $haplo_cmd = "perl /gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20
     return 1;
 }
 
-=cut
 sub vcf_to_maf {
     # assume that the vcf is passed in as $multisample_vcf
+    my $self = shift;
+    my $multisample_vcf = shift;
+    my $temp_path = shift;
+    my @builds = shift;
+    my $single_sample_dir = $temp_path;
 
     #change vcf -> maf here, which also needs annotation files
     #make $maf_file -- might need one with everything and one that doesnt have silent variants in it
+
     #my $vcf_line = `grep -v "##" $multisample_vcf | head -n 1`;
     #chomp($vcf_line);
     #my ($chr, $pos, $id, $ref, $alt, $qual, $filter, $info, $format, @sample_names) = split(/\t/, $vcf_line);
-
-
+    
     my $vcf_split_cmd = "gmt vcf vcf-split-samples --vcf-input $multisample_vcf --output-dir $single_sample_dir";
 
     my $maf_header;
     my $maf_maker_cmd = "";
-    foreach $sample_id (@sample_names) {
-        my $annotation_file_per_sample = ""; #needs to get some sort of single-sample annotation file from the build or maybe there is a unified annotation file to use?
+    foreach my $build (@builds) {
+        my $sample_id = $build->subject_name;
+        my $annotation_output_directory = $build->data_directory."/variants";
+        my $annotation_file_per_sample = $annotation_output_directory."/filtered.variants.post_annotation"; #needs to get some sort of single-sample annotation file from the build or maybe there is a unified annotation file to use?
         my $vcf_cmd = "gmt vcf convert maf vcf-2-maf --vcf-file $single_sample_dir/$sample_id.vcf --annotation-file $annotation_file_per_sample --output-file $single_sample_dir/$sample_id.maf";
-    system($vcf_cmd);
+        system($vcf_cmd);
         $maf_maker_cmd .= " $single_sample_dir/$sample_id.maf";    
     }
-    my $maf_sample_id = $sample_names[0];
+    my $maf_sample_id = $builds[0]->subject_name;
     $maf_maker_cmd .= " | grep -v \"Hugo_Symbol\" > $single_sample_dir/All_Samples_noheader.maf";
-    my $final_maf = $single_sample_dir/All_Samples.maf;
+    system($maf_maker_cmd);
+    my $final_maf = "$single_sample_dir/All_Samples.maf";
     my $final_maf_maker_cmd = "head -n1 $single_sample_dir/$maf_sample_id.maf | cat - $single_sample_dir/All_Samples_noheader.maf > $final_maf";
     system($final_maf_maker_cmd);
     return $final_maf;
 }
-=cut
 
 sub _get_builds {
     my $self = shift;
