@@ -78,6 +78,18 @@ class Genome::InstrumentData::Solexa::View::Solr::Xml {
                     name => '__display_name__',
                     position => 'display_title',
                 },
+                {
+                    name => 'library_name',
+                    position => 'display_title',
+                },
+                {
+                    name => 'project_name',
+                    position => 'display_title',
+                },
+                {
+                    name => 'species_name',
+                    position => 'display_title',
+                },
             ]
         },
     ]
