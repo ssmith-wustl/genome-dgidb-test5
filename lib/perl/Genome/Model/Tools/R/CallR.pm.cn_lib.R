@@ -11,8 +11,8 @@ x<-read.table(file=varscan_file,sep="\t",quote = "");
 x$V8 = as.numeric(sub('%','',(x$V8)));
 x$V12 = as.numeric(sub('%','',(x$V12)));
 pdf(file=output_file,width=10, height=7.5);
-plot(x$V2,x$V8,col='blue',type="p",pch=19,xlab=paste("Chr ",x$V1[1]," Coordinates"),ylab="Tumor (Red) & Normal (Blue) Var. Allele Freq",ylim=c(0,100));
-points(x$V2,x$V12,col='red',type="p",pch=19);
+plot(x$V2,x$V8,col='blue',type="p",pch=19,xlab=paste("Chr ",x$V1[1]," Coordinates"),ylab="Tumor (Red) & Normal (Blue) Var. Allele Freq",ylim=c(0,100),cex=0.1);
+points(x$V2,x$V12,col='red',type="p",pch=19,cex=0.1);
 dev.off();
 
 }

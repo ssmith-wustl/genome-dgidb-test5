@@ -129,7 +129,8 @@ sub model_group_has_members {
     my $self = shift;
     my @tags;
 
-    unless ($self->model->members) {
+    my @member_models = $self->model->members;
+    unless (@member_models) {
         push @tags, UR::Object::Tag->create(
             type => 'error',
             properties => ['members'],
