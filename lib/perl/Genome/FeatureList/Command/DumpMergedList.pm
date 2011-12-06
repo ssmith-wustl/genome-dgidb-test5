@@ -18,7 +18,7 @@ class Genome::FeatureList::Command::DumpMergedList {
         },
         alternate_reference => {
             is => 'Genome::Model::Build::ReferenceSequence',
-            doc => 'To convert the coordinates of the BED file to a different reference',
+            doc => 'To convert the coordinates of the BED file to a different reference (a converter must be defined--see `genome model referenece-sequence converter list` for supported conversions)',
             is_optional => 1,
         },
         merge => {
