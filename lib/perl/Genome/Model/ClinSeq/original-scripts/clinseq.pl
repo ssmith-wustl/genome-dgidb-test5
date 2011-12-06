@@ -95,7 +95,7 @@ INFO
 
 unless (($wgs_som_var_model_id || $exome_som_var_model_id || $tumor_rna_seq_model_id || $normal_rna_seq_model_id) && $working_dir && $common_name){
   print GREEN, "$usage", RESET;
-  exit();
+  exit(1);
 }
 
 my $step = 0;
@@ -214,10 +214,12 @@ if ($exome){push(@positions_files, $out_paths->{'exome'}->{'snv'}->{path});}
 if ($wgs && $exome){push(@positions_files, $out_paths->{'wgs_exome'}->{'snv'}->{path});}
 my $read_counts_script = "$script_dir"."snv/getBamReadCounts.pl";
 my $read_counts_summary_script = "$script_dir"."snv/WGS_vs_Exome_vs_RNAseq_VAF_and_FPKM.R";
+
 foreach my $positions_file (@positions_files){
   my $fb = &getFilePathBase('-path'=>$positions_file);
   my $output_file = $fb->{$positions_file}->{base} . ".readcounts" . $fb->{$positions_file}->{extension};
   my $output_stats_dir = $output_file . ".stats/";
+  my $read_counts_summary_log = "$output_stats_dir"."WGS_vs_Exome_vs_RNAseq_VAF_and_FPKM.log";
 
   unless($wgs_som_var_model_id){$wgs_som_var_model_id=0;}
   unless($exome_som_var_model_id){$exome_som_var_model_id=0;}
@@ -229,17 +231,17 @@ foreach my $positions_file (@positions_files){
   my $rc_summary_cmd;
   if ($tumor_rna_seq_model_id){
     my $tumor_fpkm_file = $out_paths->{'tumor_rnaseq_absolute'}->{'isoforms.merged.fpkm.expsort.tsv'}->{path};
-    $rc_summary_cmd = "$read_counts_summary_script $output_stats_dir $output_file $tumor_fpkm_file";
+    $rc_summary_cmd = "$read_counts_summary_script $output_stats_dir $output_file $tumor_fpkm_file 2>&1 > $read_counts_summary_log";
   }else{
-    $rc_summary_cmd = "$read_counts_summary_script $output_stats_dir $output_file";
+    $rc_summary_cmd = "$read_counts_summary_script $output_stats_dir $output_file 2>&1 > $read_counts_summary_log";
   }
-  print RED, "\n\n$rc_summary_cmd", RESET;
   if(-e $output_file){
     if ($verbose){print YELLOW, "\n\nOutput bam read counts file already exists:\n\t$output_file", RESET;}
     if (-e $output_stats_dir && -d $output_stats_dir){
       if ($verbose){print YELLOW, "\n\nOutput read count stats dir already exists:\n\t$output_stats_dir", RESET;}
     }else{
       #Summarize the BAM readcounts results for candidate variants - produce descriptive statistics, figures etc.
+      if ($verbose){print YELLOW, "\n\n$rc_summary_cmd", RESET;}
       mkdir($output_stats_dir);
       system($rc_summary_cmd);
     }
@@ -248,11 +250,11 @@ foreach my $positions_file (@positions_files){
     if ($verbose){print YELLOW, "\n\n$bam_rc_cmd", RESET;}
     system($bam_rc_cmd);
     #Summarize the BAM readcounts results for candidate variants - produce descriptive statistics, figures etc.
+    if ($verbose){print YELLOW, "\n\n$rc_summary_cmd", RESET;}
     mkdir($output_stats_dir);
     system($rc_summary_cmd);
   }
 }
-
 
 
 #Generate a clonality plot for this patient (if WGS data is available)
@@ -263,21 +265,32 @@ if ($wgs){
     if ($verbose){print YELLOW, "\n\nClonality dir already exists - skipping", RESET;}
   }else{
     my $clonality_dir = &createNewDir('-path'=>$patient_dir, '-new_dir_name'=>'clonality', '-silent'=>1);
-    my $master_clonality_cmd = "$script_dir"."snv/generateClonalityPlot.pl  --somatic_var_model_id=$wgs_som_var_model_id  --working_dir=$clonality_dir  --common_name='$common_name'  --verbose=1";
+    my $clonality_log = "$clonality_dir"."clonality.log";
+    my $master_clonality_cmd = "$script_dir"."snv/generateClonalityPlot.pl  --somatic_var_model_id=$wgs_som_var_model_id  --working_dir=$clonality_dir  --common_name='$common_name'  --verbose=$verbose  2>&1 > $clonality_log";
     if ($verbose){print YELLOW, "\n\n$master_clonality_cmd", RESET;}
     system($master_clonality_cmd);
   }
 }
 
-#TODO: Generate single genome (i.e. single BAM) global copy number segment plots for each BAM.  These help to identify sample swaps
-#gmt copy-number plot-segments-from-bams-workflow --normal-bam=/gscmnt/gc7001/info/model_data/2880820353/build115943750/alignments/115955253.bam  --tumor-bam=/gscmnt/gc7001/info/model_data/2880820341/build115943568/alignments/115955703.bam  --output-directory=/gscmnt/sata132/techd/mgriffit/hgs/temp/seg_plots/normal_vs_primary/  --genome-build=37  --output-pdf='CNV_SingleBAMs_TumorAndNormal.pdf'
-
+#Generate single genome (i.e. single BAM) global copy number segment plots for each BAM.  These help to identify sample swaps
+if ($wgs){
+  $step++; print MAGENTA, "\n\nStep $step. Creating single BAM CNV plots for each BAM", RESET;
+  my $single_bam_cnv_dir = "$patient_dir"."cnv/single_bam_cnv/";
+  mkdir ($single_bam_cnv_dir);
+  my $output_pdf = "$single_bam_cnv_dir"."CNV_SingleBAMs_TumorAndNormal.pdf";
+  my $single_bam_cnv_plot_cmd = "gmt copy-number plot-segments-from-bams-workflow  --normal-bam=$data_paths->{wgs}->{normal_bam}  --tumor-bam=$data_paths->{wgs}->{tumor_bam}  --output-directory=$single_bam_cnv_dir  --genome-build=$reference_build_ncbi_n  --output-pdf=$output_pdf";
+  if (-e $output_pdf){
+    if ($verbose){print YELLOW, "\n\nSingle BAM CNV pdf already exists - skipping", RESET;}
+  }else{
+    if ($verbose){print YELLOW, "\n\n$single_bam_cnv_plot_cmd", RESET;}
+  }
+}
 
 print "\n\n";
 
 #print Dumper $out_paths;
 
-exit();
+exit(1);
 
 
 ###############################################################################################################################
@@ -304,11 +317,11 @@ sub getDataDirs{
         $data_paths{wgs}{tumor_bam} = $wgs_som_var_build->tumor_bam;
       }else{
         print RED, "\n\nA WGS model ID was specified, but a successful build could not be found!\n\n", RESET;
-        exit();
+        exit(1);
       }
     }else{
       print RED, "\n\nA WGS model ID was specified, but it could not be found!\n\n", RESET;
-      exit();
+      exit(1);
     }
   }
   if ($exome_som_var_model_id){
@@ -321,11 +334,11 @@ sub getDataDirs{
         $data_paths{exome}{tumor_bam} = $exome_som_var_build->tumor_bam;
       }else{
         print RED, "\n\nAn exome model ID was specified, but a successful build could not be found!\n\n", RESET;
-        exit();
+        exit(1);
       }
     }else{
       print RED, "\n\nAn exome model ID was specified, but it could not be found!\n\n", RESET;
-      exit();
+      exit(1);
     }
   }
   if ($tumor_rna_seq_model_id){
@@ -338,11 +351,11 @@ sub getDataDirs{
         $data_paths{tumor_rnaseq}{bam} = $alignment_result->bam_file;
       }else{
         print RED, "\n\nA tumor RNA-seq model ID was specified, but a successful build could not be found!\n\n", RESET;
-        exit();
+        exit(1);
       }
     }else{
       print RED, "\n\nA tumor RNA-seq model ID was specified, but it could not be found!\n\n", RESET;
-      exit();
+      exit(1);
     }
   }
 
@@ -356,11 +369,11 @@ sub getDataDirs{
         $data_paths{normal_rnaseq}{bam} = $alignment_result->bam_file;
       }else{
         print RED, "\n\nA normal RNA-seq model ID was specified, but a successful build could not be found!\n\n", RESET;
-        exit();
+        exit(1);
       }
     }else{
       print RED, "\n\nA normal RNA-seq model ID was specified, but it could not be found!\n\n", RESET;
-      exit();
+      exit(1);
     }
   }
 
@@ -716,7 +729,7 @@ sub annotateGeneFiles{
           $header = 0;
           unless ($cols{'mapped_gene_name'}){
             print RED, "\n\nFile has no 'mapped_gene_name' column: $path\n\n", RESET;
-            exit();
+            exit(1);
           }
           next();
         }
