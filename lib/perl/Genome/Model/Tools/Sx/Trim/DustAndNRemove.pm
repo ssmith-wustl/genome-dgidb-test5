@@ -188,5 +188,3 @@ sub dust_fastq{
     return $out;
 }
 1;
-
-€ı`€ı`:q
