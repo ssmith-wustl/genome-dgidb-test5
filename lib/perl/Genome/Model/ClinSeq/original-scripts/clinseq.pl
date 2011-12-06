@@ -197,17 +197,17 @@ if ($normal_rnaseq){
 #Read in file, get gene name column, fix gene name, compare to list, set answer to 1/0, overwrite old file
 #Repeat this process for each gene symbol list defined
 $step++; print MAGENTA, "\n\nStep $step. Annotating gene files", RESET;
-&annotateGeneFiles('-gene_symbol_lists'=>$gene_symbol_lists1, '-out_paths'=>$out_paths);
+&annotateGeneFiles('-gene_symbol_lists'=>$gene_symbol_lists1, '-out_paths'=>$out_paths, '-verbose'=>$verbose);
 
 
 #Create drugDB interaction files
 $step++; print MAGENTA, "\n\nStep $step. Intersecting gene lists with druggable genes of various categories", RESET;
-&drugDbIntersections('-script_dir'=>$script_dir, '-out_paths'=>$out_paths);
+&drugDbIntersections('-script_dir'=>$script_dir, '-out_paths'=>$out_paths, '-verbose'=>$verbose);
 
 
 #For each of the following: WGS SNVs, Exome SNVs, and WGS+Exome SNVs, do the following:
 #Get BAM readcounts for WGS (tumor/normal), Exome (tumor/normal), RNAseq (tumor), RNAseq (normal) - as available of course
-$step++; print MAGENTA, "\n\nStep $step. Getting BAM read counts for all BAMs associated with input models (and expression values if available) - for candidate SNVs", RESET;
+$step++; print MAGENTA, "\n\nStep $step. Getting BAM read counts for all BAMs associated with input models (and expression values if available) - for candidate SNVs only", RESET;
 my @positions_files;
 if ($wgs){push(@positions_files, $out_paths->{'wgs'}->{'snv'}->{path});}
 if ($exome){push(@positions_files, $out_paths->{'exome'}->{'snv'}->{path});}
@@ -701,12 +701,14 @@ sub annotateGeneFiles{
   my %args = @_;
   my $gene_symbol_lists = $args{'-gene_symbol_lists'};
   my $out_paths = $args{'-out_paths'};
+  my $verbose = $args{'-verbose'};
 
   foreach my $type (keys %{$out_paths}){
     my $sub_types = $out_paths->{$type};
     foreach my $sub_type (keys %{$sub_types}){
       #Store the file input data for this file
       my $path = $sub_types->{$sub_type}->{'path'};
+      if ($verbose){print "\n\tProcessing: $path";}
       my $new_path = $path.".tmp";
       open (INDATA, "$path") || die "\n\nCould not open input datafile: $path\n\n";
       my %data;
@@ -768,8 +770,8 @@ sub annotateGeneFiles{
 
       #Replace the original file with the new file
       my $mv_cmd = "mv $new_path $path";
+      if ($verbose){print "\n\t\t $mv_cmd";}
       system ($mv_cmd);
-
     }
   }
   return();
@@ -783,6 +785,14 @@ sub drugDbIntersections{
   my %args = @_;
   my $script_dir = $args{'-script_dir'};
   my $out_paths = $args{'-out_paths'};
+  my $verbose = $args{'-verbose'};
+
+  my $drugbank_interactions_dir = "/gscmnt/sata132/techd/mgriffit/DruggableGenes/KnownDruggable/DrugBank/query_files/";
+  my %filter_options;
+  $filter_options{'3'}{name} = ".dgidb.default";   #Default filter
+  $filter_options{'4'}{name} = ".dgidb.antineo";   #Anti-neoplastic only
+  $filter_options{'5'}{name} = ".dgidb.inhibitor"; #Inhibitor only
+  $filter_options{'6'}{name} = ".dgidb.kinase";    #Kinases only
 
   foreach my $type (keys %{$out_paths}){
     my $sub_types = $out_paths->{$type};
@@ -795,35 +805,29 @@ sub drugDbIntersections{
       #Get file path with the file extension removed:
       my $fb = &getFilePathBase('-path'=>$path);
 
-      #Default filter
-      my $out1 = $fb->{$path}->{base} . ".dgidb.default" . $fb->{$path}->{extension};
-      my $cmd1 = "$drugdb_script --candidates_file=$path  --name_col_1=$name_col  --interactions_file=/gscmnt/sata132/techd/mgriffit/DruggableGenes/KnownDruggable/DrugBank/query_files/DrugBank_WashU_INTERACTIONS.filtered.3.tsv  --name_col_2=12 > $out1";
-      unless (-e $out1){
-        system ("$cmd1");
-      }
+      #Run with each filtering option
+      foreach my $filter (sort {$a <=> $b} keys %filter_options){
+        my $filter_name = $filter_options{$filter}{name};
 
-      #Anti-neoplastic only
-      my $out2 = $fb->{$path}->{base} . ".dgidb.antineo" . $fb->{$path}->{extension};
-      my $cmd2 = "$drugdb_script --candidates_file=$path  --name_col_1=$name_col  --interactions_file=/gscmnt/sata132/techd/mgriffit/DruggableGenes/KnownDruggable/DrugBank/query_files/DrugBank_WashU_INTERACTIONS.filtered.4.tsv  --name_col_2=12 > $out2";
-      unless (-e $out2){
-        system ("$cmd2");
-      }
+        my $dgidb_dir = $fb->{$path}->{base_dir} . "/";
+        my $drugbank_dir = $dgidb_dir . "drugbank/";
 
-      #Inhibitor only
-      my $out3 = $fb->{$path}->{base} . ".dgidb.inhibitor" . $fb->{$path}->{extension};
-      my $cmd3 = "$drugdb_script --candidates_file=$path  --name_col_1=$name_col  --interactions_file=/gscmnt/sata132/techd/mgriffit/DruggableGenes/KnownDruggable/DrugBank/query_files/DrugBank_WashU_INTERACTIONS.filtered.5.tsv  --name_col_2=12 > $out3";
-      unless (-e $out3){
-        system ("$cmd3");
-      }
-
-      #Kinases only
-      my $out4 = $fb->{$path}->{base} . ".dgidb.kinase" . $fb->{$path}->{extension};
-      my $cmd4 = "$drugdb_script --candidates_file=$path  --name_col_1=$name_col  --interactions_file=/gscmnt/sata132/techd/mgriffit/DruggableGenes/KnownDruggable/DrugBank/query_files/DrugBank_WashU_INTERACTIONS.filtered.6.tsv  --name_col_2=12 > $out4";
-      unless (-e $out4){
-        system ("$cmd4");
+        if (-e $drugbank_dir && -d $drugbank_dir){
+          if ($verbose){print YELLOW, "\n\nDrugBank dir already exists - skipping", RESET;}
+        }else{
+          #Make the main DGIdb dir if it is not already present
+          unless (-e $dgidb_dir && -d $dgidb_dir){ mkdir ($dgidb_dir);}
+          #Make the DrugBank subdir (remember there can be other sources of drug-gene interactions)
+          mkdir ($drugbank_dir);
+          my $out = $drugbank_dir . $fb->{$path}->{file_name} . "$filter_name" . $fb->{$path}->{extension};
+          my $cmd = "$drugdb_script --candidates_file=$path  --name_col_1=$name_col  --interactions_file=$drugbank_interactions_dir/DrugBank_WashU_INTERACTIONS.filtered."."$filter".".tsv  --name_col_2=12 > $out";
+          if ($verbose){print YELLOW, "\n\t$cmd", RESET;}
+          system ("$cmd");
+        }
       }
     }
   }
+
   return();
 }
 
