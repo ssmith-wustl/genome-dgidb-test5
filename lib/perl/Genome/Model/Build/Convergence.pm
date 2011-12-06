@@ -130,7 +130,7 @@ sub model_group_has_members {
     my @tags;
 
     my @member_models = $self->model->members;
-    unless (scalar @member_models) {
+    unless (@member_models) {
         push @tags, UR::Object::Tag->create(
             type => 'error',
             properties => ['members'],
