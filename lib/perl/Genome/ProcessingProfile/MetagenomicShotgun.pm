@@ -184,6 +184,7 @@ sub _execute_build {
     $wait_build->($cs_build);
 
     my @cs_unaligned;
+    $DB::single = 1;
     if ($self->filter_contaminant_fragments){
         @cs_unaligned = $extract_data->($cs_build, "unaligned-paired");
     }
@@ -435,7 +436,7 @@ sub _extract_data_from_alignment_result{
     my $reverse_unaligned_data_path     = "$working_dir/$instrument_data_id/$reverse_basename";
     my $fragment_unaligned_data_path    = "$working_dir/$instrument_data_id/$fragment_basename";
 
-    my $cmd = "/usr/bin/perl `which gmt` bio-samtools bam-to-unaligned-fastq --bam-file $bam --output-directory $working_dir";
+    my $cmd = "/usr/bin/perl `which gmt` sam bam-to-unaligned-fastq --bam-file $bam --output-directory $working_dir --ignore-bitflags"; #add ignore bitflags here because some of the aligners used in this pipeline produce untrustworthy flag information
     if ($extraction_type eq 'aligned'){
         $cmd.=" --print-aligned";
     }
