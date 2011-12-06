@@ -6,7 +6,8 @@ use Genome;
 class Genome::Sys::Service {
     table_name => 'service',
     doc         => 'a service used by the genome system',
-    data_source => 'Genome::DataSource::Service',
+    #data_source => 'Genome::DataSource::Service', #Still deciding on a data source,
+    #           whether sqlite or singleton with constants and environment variables
 
     id_generator => '-uuid',
     id_by => [
