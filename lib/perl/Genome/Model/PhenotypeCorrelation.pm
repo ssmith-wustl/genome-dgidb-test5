@@ -332,6 +332,7 @@ sub _execute_build {
 
 =cut
 
+    my $multisample_vcf = $vcf_file;
     if ($self->phenotype-analysis-strategy eq 'quantitative') { #unrelated individuals, quantitative -- ASMS-NFBC
 #create a directory for results
         my ($tfh,$temp_path) = Genome::Sys->create_temp_file;
@@ -346,23 +347,21 @@ sub _execute_build {
 #Ran clinical-correlation:
 #need clinical data file $clinical_data
 #get list of bams and load into tmp file named $bam_list
+#$name is project name or some other good identifier
         my $clin_corr = "gmt music clinical-correlation --genetic-data-type gene --bam-list $bam_list --maf-file $maf_file --output-file $output_dir/clin_corr_result --categorical-clinical-data-file $clinical_data";
         my $fdr_cutoff = 0.05;
         my $clin_corr_finish = "gmt germline finish-music-clinical-correlation --input-file $output_dir/clin_corr_result --output-file $output_dir/clin_corr_result_stats_FDR005.txt --output-pdf-image-file $output_dir/clin_corr_result_stats_FDR005.pdf  --clinical-data-file $clinical_data --project-name $name --fdr-cutoff $fdr_cutoff --maf-file $maf_file";
 
-#gene pathways
-#perl /gscmnt/sata424/info/medseq/Freimer-Boehnke/79_gene_pathways/groupGenes.pl 
-#Matrix:
-#/gscmnt/sata424/info/medseq/Freimer-Boehnke/79_gene_pathways/GeneConnectome.txt
-#Raw output:
-#/gscmnt/sata424/info/medseq/Freimer-Boehnke/79_gene_pathways/GenePathways.txt 
-
 #haplotype analysis
-my $haplo_cmd = "perl /gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/Vasily_to_Haploview_Format.pl"
-#haploview
-#/gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/1941samples_washuvasilyoverlap_haploview_file.txt
-#/gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/1941samples_washuvasilyoverlap_haploview_file_markers.txt
 
+#haploview (per chr)
+for my $chr (1..22,'X','Y') { #this needs to be set by the ROI or there will be empty files created where there are no variants on a chromosome (instead of chr, could be set per region)
+    #split pedigree file up and specifically for haploview -- perhaps vcftools or plink can create this file for us?
+#example script that messed around with this idea:
+my $haplo_cmd = "perl /gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/Vasily_to_Haploview_Format.pl"
+#these need to be coming from the pedigree file, if we make one
+#/gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/1941samples_washuvasilyoverlap_haploview_file.txt
+#per chromosome version of the above file
 #/gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/1941samples_washuvasilyoverlap_haploview_filechr1.haps
 #/gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/1941samples_washuvasilyoverlap_haploview_filechr2.haps
 #/gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/1941samples_washuvasilyoverlap_haploview_filechr8.haps
@@ -373,19 +372,19 @@ my $haplo_cmd = "perl /gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20
 #/gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/1941samples_washuvasilyoverlap_haploview_filechr15.haps
 #/gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/1941samples_washuvasilyoverlap_haploview_filechr16.haps
 #/gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/1941samples_washuvasilyoverlap_haploview_filechr19.haps
+    my $hap_infile = "$temp_path/$name.haploview_filechr$chr.haps";
 
-#haploview -nogui -out /gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/1941samples_washuvasilyoverlap_haploview_filechr1_output -haps /gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/1941samples_washuvasilyoverlap_haploview_filechr1.haps -png
-#haploview -nogui -out /gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/1941samples_washuvasilyoverlap_haploview_filechr2_output -haps /gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/1941samples_washuvasilyoverlap_haploview_filechr2.haps -png
-#haploview -nogui -out /gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/1941samples_washuvasilyoverlap_haploview_filechr8_output -haps /gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/1941samples_washuvasilyoverlap_haploview_filechr8.haps -png
-#haploview -nogui -out /gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/1941samples_washuvasilyoverlap_haploview_filechr9_output -haps /gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/1941samples_washuvasilyoverlap_haploview_filechr9.haps -png
-#haploview -nogui -out /gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/1941samples_washuvasilyoverlap_haploview_filechr10_output -haps /gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/1941samples_washuvasilyoverlap_haploview_filechr10.haps -png
-#haploview -nogui -out /gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/1941samples_washuvasilyoverlap_haploview_filechr11_output -haps /gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/1941samples_washuvasilyoverlap_haploview_filechr11.haps -png
-#haploview -nogui -out /gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/1941samples_washuvasilyoverlap_haploview_filechr12_output -haps /gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/1941samples_washuvasilyoverlap_haploview_filechr12.haps -png
-#haploview -nogui -out /gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/1941samples_washuvasilyoverlap_haploview_filechr15_output -haps /gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/1941samples_washuvasilyoverlap_haploview_filechr15.haps -png
-#haploview -nogui -out /gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/1941samples_washuvasilyoverlap_haploview_filechr16_output -haps /gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/1941samples_washuvasilyoverlap_haploview_filechr16.haps -png
-#haploview -nogui -out /gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/1941samples_washuvasilyoverlap_haploview_filechr19_output -haps /gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/1941samples_washuvasilyoverlap_haploview_filechr19.haps -png
+#variant name and position information can be fed into haploview somehow
+#/gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/1941samples_washuvasilyoverlap_haploview_file_markers.txt
 
-#genotype distributions by clinical variable
+    my $hap_outfile = "$temp_path/$name.haploview_filechr$chr.output";
+    my $hapview_cmd = "haploview -nogui -out $hap_outfile -haps $hap_infile -png";
+    my $haploview_png = $hap_outfile.".LD.PNG";
+}
+
+#plot genotype distributions by clinical variable
+my $clinical_variable_distribution_cmd = "perl /gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/Vasily_plus_Phenotype.pl"
+#example outputs:
 #/gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/Genotypes_bmires.pdf
 #/gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/Genotypes_crpres.pdf
 #/gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/Genotypes_diares.pdf
@@ -395,6 +394,15 @@ my $haplo_cmd = "perl /gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20
 #/gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/Genotypes_ldlres.pdf
 #/gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/Genotypes_sysres.pdf
 #/gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/Genotypes_tgres.pdf
+
+
+#find the significant gene pathways within an ROI:
+#perl /gscmnt/sata424/info/medseq/Freimer-Boehnke/79_gene_pathways/groupGenes.pl 
+#Raw output:
+#/gscmnt/sata424/info/medseq/Freimer-Boehnke/79_gene_pathways/GenePathways.txt 
+#Matrix:
+#/gscmnt/sata424/info/medseq/Freimer-Boehnke/79_gene_pathways/GeneConnectome.txt
+
     }
     elsif ($self->phenotype-analysis-strategy eq 'case-control') { #unrelated individuals, case-control -- MRSA
 #create a directory for results
@@ -484,6 +492,7 @@ my $haplo_cmd = "perl /gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20
             die;
         }
         $temp_path =~ s/\:/\\\:/g;
+
         #-------------------------------------------------
         my $R_command = <<"_END_OF_R_";
         options(error=recover)
@@ -497,6 +506,7 @@ my $haplo_cmd = "perl /gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20
         cor2test(y=inf.file, x=mut.file, cov=pheno.file, outf=output.file, method="logit", sep="\t");
         _END_OF_R_
         #-------------------------------------------------
+
         print $tfh "$R_command\n";
 
         my $cmd = "R --vanilla --slave \< $temp_path";
@@ -507,6 +517,10 @@ my $haplo_cmd = "perl /gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20
             $self->error_message("Failed to execute: Returned $return");
             die $self->error_message;
         }
+
+#find sites that are important and also of a type we like (such as all Nonsynonymous/splice_site mutations in regions of interest unique to cases vs controls
+#/gscmnt/sata809/info/medseq/MRSA/analysis/Sureselect_49_Exomes_Germline/causal_variants/pull_causal_variants.pl
+
     }
 =cut
 
