@@ -19,6 +19,11 @@ class Genome::Model::Tools::DetectVariants2::Result::Classify {
             is => 'Text',
             doc => 'Version of the classifier to use',
         },
+        variant_type => {
+            is => 'Text',
+            valid_values => ['snv', 'indel', 'sv', 'cnv'],
+            doc => 'The type of variants being classified',
+        }
     ],
     has => [
         prior_result => {
@@ -62,6 +67,60 @@ sub _gather_params_for_get_or_create {
         inputs=>\%is_input,
         params=>\%is_param,
     };
+}
+
+sub create {
+    my $class = shift;
+    my $self = $class->SUPER::create(@_);
+
+    unless($self->_validate_inputs) {
+        my $err = $self->error_message;
+        die $self->error_message('Failed to validate inputs: ' . $err);
+    }
+
+    unless($self->_prepare_staging_directory) {
+        die $self->error_message('Failed to prepare staging directory.');
+    }
+
+    unless($self->_classify_variants) {
+        die $self->error_message('Failed to run LOH.');
+    }
+
+    unless($self->_prepare_output_directory) {
+        die $self->error_message('Failed to prepare output directory.');
+    }
+
+    unless($self->_promote_data) {
+        die $self->error_message('Failed to promote data.');
+    }
+
+    return $self;
+}
+
+sub available_versions {
+    return (1); #for yet unversioned things default to a version of 1
+}
+
+sub _validate_inputs {
+    my $self = shift;
+
+    unless($self->prior_result) {
+        $self->error_message('No prior result found.');
+        return;
+    }
+
+    unless(-e (join('/', $self->prior_result->output_dir, $self->variant_type . 's.hq.bed'))) {
+        $self->error_message('Could not find ' . $self->variant_type . ' file for prior result.');
+        return;
+    }
+
+    my $version = $self->classifier_version;
+    unless(grep($_ eq $version, $self->available_versions)) {
+        $self->error_message('Unsupported classifier version passed.  Supported versions: ' . join(', ', $self->classifier_versions));
+        return;
+    }
+
+    return 1;
 }
 
 1;
