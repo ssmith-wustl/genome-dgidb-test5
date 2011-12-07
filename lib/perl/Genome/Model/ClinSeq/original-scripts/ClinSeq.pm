@@ -1058,7 +1058,7 @@ sub getFilePathBase{
   }
 
   if ($path =~ /(.*)\/(.*)$/){
-    $base_dir = $1;
+    $base_dir = "$1"."/";
     $file_name = $2;
   }else{
     print RED, "\n\n&getFileBasePath could not determine base_dir and file_name of a file path: $path\n\n", RESET;
