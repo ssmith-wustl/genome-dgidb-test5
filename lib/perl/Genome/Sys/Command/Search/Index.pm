@@ -103,8 +103,8 @@ sub daemon {
             die "Failed to fork";
         }
         elsif ($pid == 0) {
-            local $SIG{INT} = sub { print STDERR "\nTrying to stop forked process.\n"; $signaled_to_quit = 1 };
-            local $SIG{TERM} = sub { print STDERR "\nTrying to stop forked process.\n"; $signaled_to_quit = 1 };
+            local $SIG{INT} = sub { $signaled_to_quit = 1 };
+            local $SIG{TERM} = sub { $signaled_to_quit = 1 };
 
             exit if $signaled_to_quit;
             $self->info("Processing index queue...");
@@ -117,7 +117,6 @@ sub daemon {
             exit;
         }
         else {
-            $self->info("Waiting for child...");
             waitpid($pid, 0);
 
             last if $signaled_to_quit;
