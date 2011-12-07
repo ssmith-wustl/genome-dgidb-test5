@@ -290,7 +290,8 @@ sub _resolve_annotation_file_name {
     my $suffix = shift;
     my $reference_sequence_id = shift;
     my $squashed = shift;
-
+    my $with_strand = shift;
+    
     unless (defined($reference_sequence_id)) {
         unless ($self->reference_sequence_id) {
             die('There is no reference sequence build associated with imported annotation build: '. $self->id);
@@ -299,6 +300,9 @@ sub _resolve_annotation_file_name {
     }
     if ($squashed) {
         $file_type .= '-squashed';
+    }
+    if ($with_strand) {
+        $file_type .= '-wStrand';
     }
     my $file_name = $self->_rna_annotation_directory .'/'. $reference_sequence_id .'-'. $file_type .'.'. $suffix;
     return $file_name;
@@ -374,12 +378,13 @@ sub generate_annotation_file {
     my $suffix = shift;
     my $reference_sequence_id = shift;
     my $squashed = shift;
-
+    my $with_strand = shift;
+    
     unless ($suffix) {
         die('Must provide file suffix as parameter to annotation_file method in '.  __PACKAGE__);
     }
 
-    my $file_name = $self->_resolve_annotation_file_name('all_sequences',$suffix,$reference_sequence_id,$squashed);
+    my $file_name = $self->_resolve_annotation_file_name('all_sequences',$suffix,$reference_sequence_id,$squashed,$with_strand);
     if (-s $file_name) {
         return $file_name;
     }
@@ -417,7 +422,7 @@ sub generate_annotation_file {
                 $self->error_message('Failed to squash the annotation by gene: '. $bed_path);
             }
             # Remove the long names created by MergeBy and replace with gene and 'squashed' as the transcript name 
-            $self->remove_long_squashed_bed_names($tmp_file,$file_name);
+            $self->remove_long_squashed_bed_names($tmp_file,$file_name,$with_strand);
         } else {
             #This is not just a gtf file converted to bed, but rather limited to only exon feature types to remove CDS redundancy
             my $gtf_path = $self->annotation_file('gtf',$reference_sequence_id);
@@ -439,7 +444,8 @@ sub remove_long_squashed_bed_names {
     my $tmp_file = shift;
     # Output file
     my $file_name = shift;
-
+    my $with_strand = shift;
+    
     my @headers = qw/chr start end name/;
     my $reader = Genome::Utility::IO::SeparatedValueReader->create(
         input => $tmp_file,
@@ -456,8 +462,13 @@ sub remove_long_squashed_bed_names {
         my $names = $data->{name};
         my @names = split(';',$names);
         my $name = $names[0];
-        my ($gene) = split(':',$name);
-        $data->{name} = $gene .':squashed:exon:na:na';
+        my ($gene,$transcript,$type,$ordinal,$strand) = split(':',$name);
+        $data->{name} = $gene .':squashed:exon:na:';
+        if ($with_strand) {
+            $data->{name} .= $strand;
+        } else {
+            $data->{name} .= 'na';
+        }
         $writer->write_one($data);
     }
     return 1;
@@ -467,13 +478,15 @@ sub annotation_file {
     my $self = shift;
     my $suffix = shift;
     my $reference_sequence_id = shift;
+
     my $squashed = shift;
+    my $with_strand = shift;
 
     unless ($suffix) {
         die('Must provide file suffix as parameter to annotation_file method in '.  __PACKAGE__);
     }
 
-    my $file_name = $self->_resolve_annotation_file_name('all_sequences',$suffix,$reference_sequence_id,$squashed);
+    my $file_name = $self->_resolve_annotation_file_name('all_sequences',$suffix,$reference_sequence_id,$squashed,$with_strand);
     if (-s $file_name) {
         return $file_name;
     }
