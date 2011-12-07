@@ -40,6 +40,11 @@ class Genome::Model::Tools::Vcf::Convert::Maf::Vcf2Maf {
 	        doc => 'Remove silent variants from the maf',
             default_value => 0,
 	    },
+        annotation_has_header => {
+	        is => 'Boolean',
+	        doc => 'In the pipeline, annotation files dont have a header',
+            default_value => 0,
+	    },
     ],
     # add has_optional_input here for optional arguments
 };
@@ -93,7 +98,7 @@ sub execute {
         die $self->error_message;
     }
 
-    # Skip the metadata and find the line in VCF with the headders
+    # Skip the metadata and find the line in VCF with the headers
     my $vcf_line;
     do {
     	$vcf_line = <VCF>;
@@ -102,9 +107,15 @@ sub execute {
     $vcf_line =~ s/^#//; # remove leading '#' symbol
     @vcf_columns = split(/\t/, $vcf_line);
 
-    # Find annotation file headders
-    my $annot_line = <ANNOT>; chomp $annot_line;
-    @annot_columns = split(/\t/, $annot_line);
+    # Find annotation file headers
+    my $annot_line;
+    if ($self->annotation_has_header) {
+        $annot_line = <ANNOT>; chomp $annot_line;
+        @annot_columns = split(/\t/, $annot_line);
+    }
+    else {
+        @annot_columns = qw(chromosome_name start stop reference variant type gene_name transcript_name transcript_species transcript_source transcript_version strand transcript_status trv_type c_position amino_acid_change ucsc_cons domain all_domains deletion_substructures transcript_error);
+    }
 
     # Make the MAF header
     print MAF join("\t", @maf_columns), "\n";
@@ -265,28 +276,23 @@ sub make_maf_hash {
 
     # Check for consistency in chromosome position
     if ($vcf->{POS} == $annot->{start}) {
-	$maf->{Start_Position} = $vcf->{POS};
+    	$maf->{Start_Position} = $vcf->{POS};
     } else {
-	# this should not happen, so die
-	die "VCF and Annotation files have different position numbers!\n",
-	    "VCF: Chromosome $vcf->{CHROM}, Position $vcf->{POS}\n",
-	    "Annotation: Chromosome $annot->{chromosome_name}, Position $annot->{start}";
-	# Alternatively: don't die, and try to skip the inconsistent lines
-        # Replace the die statement above with the following to implement this
-	#
-	# warn "VCF and Annotation files have different position numbers!\n",
-	#      "VCF: Chromosome $vcf->{CHROM}, Position $vcf->{POS}\n",
-	#      "Annotation: Chromosome $annot->{chromosome_name}, Position $annot->{start}";
-	# # if vcf is ahead of annotation
-	# if($vcf->{POS} ge $annot->{start}) {
-	#     # skip a line in the annotation file to catch up
-	#     <ANNOT>;
-	#     next;
-	# } else { # annotation is ahead of vcf
-	#     # skip a line in the vcf file to catch up
-	#     <VCF>;
-	#     next;
-	# }
+	    #die "VCF and Annotation files have different position numbers!\n","VCF: Chromosome $vcf->{CHROM}, Position $vcf->{POS}\n","Annotation: Chromosome $annot->{chromosome_name}, Position $annot->{start}\n";
+	    #Don't die, and try to skip the inconsistent lines
+        warn "VCF and Annotation files have different position numbers!\n",
+          "VCF: Chromosome $vcf->{CHROM}, Position $vcf->{POS}\n",
+          "Annotation: Chromosome $annot->{chromosome_name}, Position $annot->{start}";
+        # if vcf is ahead of annotation
+        if($vcf->{POS} ge $annot->{start}) {
+            # skip a line in the annotation file to catch up
+            <ANNOT>;
+            next;
+        } else { # annotation is ahead of vcf
+            # skip a line in the vcf file to catch up
+            <VCF>;
+            next;
+        }
     }
 
     $maf->{Hugo_Symbol} = $annot->{gene_name};
