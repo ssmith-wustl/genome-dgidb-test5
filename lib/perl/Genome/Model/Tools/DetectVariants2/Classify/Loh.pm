@@ -14,6 +14,12 @@ class Genome::Model::Tools::DetectVariants2::Classify::Loh {
             doc => 'ID of the snv results considered "germline"',
         },
     ],
+    has_param => [
+        variant_type => {
+            is_constant => 1,
+            value => 'snv',
+        },
+    ],
     has => [
         control_result => {
             is => 'Genome::Model::Tools::DetectVariants2::Result::Base',
@@ -22,46 +28,8 @@ class Genome::Model::Tools::DetectVariants2::Classify::Loh {
     ],
 };
 
-sub create {
-    my $class = shift;
-    my $self = $class->SUPER::create(@_);
-
-    unless($self->_validate_inputs) {
-        my $err = $self->error_message;
-        die $self->error_message('Failed to validate inputs: ' . $err);
-    }
-
-    unless($self->_prepare_staging_directory) {
-        die $self->error_message('Failed to prepare staging directory.');
-    }
-
-    unless($self->_generate_result) {
-        die $self->error_message('Failed to run LOH.');
-    }
-
-    unless($self->_prepare_output_directory) {
-        die $self->error_message('Failed to prepare output directory.');
-    }
-
-    unless($self->_promote_data) {
-        die $self->error_message('Failed to promote data.');
-    }
-
-    return $self;
-}
-
 sub _validate_inputs {
     my $self = shift;
-
-    unless($self->prior_result) {
-        $self->error_message('No Somatic SNV result found.');
-        return;
-    }
-
-    unless(-e (join('/', $self->prior_result->output_dir, 'snvs.hq.bed'))) {
-        $self->error_message('Could not find snvs file for somatic result.');
-        return;
-    }
 
     unless($self->control_result) {
         $self->error_message('No Control SNV result found.');
@@ -73,15 +41,10 @@ sub _validate_inputs {
         return;
     }
 
-    unless($self->classifier_version eq '1') {
-        $self->error_message('Unsupported classifier version passed.  Supported versions: 1');
-        return;
-    }
-
-    return 1;
+    return $self->SUPER::_validate_inputs;
 }
 
-sub _generate_result {
+sub _classify_variants {
     my $self = shift;
 
     my $version = 2;
