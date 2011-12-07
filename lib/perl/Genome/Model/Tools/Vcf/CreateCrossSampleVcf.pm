@@ -680,6 +680,13 @@ sub _add_mpileup_and_backfill {
             right_operation => $backfill,
             right_property => "pileup_file",
         );
+        $workflow->add_link(
+            left_operation => $merge_operation,
+            left_property => "output_file",
+            right_operation => $backfill,
+            right_property => "merged_positions_file",
+        );
+
         push @backfill_ops, $backfill;
     }
 
