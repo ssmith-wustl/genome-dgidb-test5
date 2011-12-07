@@ -78,16 +78,16 @@ sub _execute_build {
 
     my $cmd =  "$dir/clinseq.pl";
     if ($wgs_build) {
-        $cmd .= ' --wgs ' . $wgs_build->model->id;
+        $cmd .= ' --wgs ' . $wgs_build->id;
     }
     if ($exome_build) {
-        $cmd .= ' --exome ' . $exome_build->model->id;
+        $cmd .= ' --exome ' . $exome_build->id;
     }
     if ($tumor_rnaseq_build) {
-        $cmd .= ' --tumor_rna ' . $tumor_rnaseq_build->model->id;
+        $cmd .= ' --tumor_rna ' . $tumor_rnaseq_build->id;
     }
     if ($normal_rnaseq_build) {
-        $cmd .= ' --normal_rna ' . $normal_rnaseq_build->model->id;
+        $cmd .= ' --normal_rna ' . $normal_rnaseq_build->id;
     }
 
     my $common_name = $wgs_build->subject->patient->common_name;

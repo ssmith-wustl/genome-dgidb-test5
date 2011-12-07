@@ -59,39 +59,41 @@ use ClinSeq qw(:all);
 
 
 #Input parameters
-my $wgs_som_var_model_id = '';
-my $exome_som_var_model_id = '';
-my $tumor_rna_seq_model_id = '';
-my $normal_rna_seq_model_id = '';
+my $wgs_som_var_data_set = '';
+my $exome_som_var_data_set = '';
+my $tumor_rna_seq_data_set = '';
+my $normal_rna_seq_data_set = '';
 my $working_dir = '';
 my $common_name = '';
 my $verbose = 0;
 my $clean = 0;
 
-GetOptions ('tumor_rna_seq_model_id=s'=>\$tumor_rna_seq_model_id, 'normal_rna_seq_model_id=s'=>\$normal_rna_seq_model_id,
-	    'wgs_som_var_model_id=s'=>\$wgs_som_var_model_id, 'exome_som_var_model_id=s'=>\$exome_som_var_model_id, 
+GetOptions ('tumor_rna_seq_data_set=s'=>\$tumor_rna_seq_data_set, 'normal_rna_seq_data_set=s'=>\$normal_rna_seq_data_set,
+	    'wgs_som_var_data_set=s'=>\$wgs_som_var_data_set, 'exome_som_var_data_set=s'=>\$exome_som_var_data_set, 
  	    'working_dir=s'=>\$working_dir, 'common_name=s'=>\$common_name, 'verbose=i'=>\$verbose, 'clean=i'=>\$clean);
 
 my $step = 0;
 
 #Get build directories for the three datatypes: $data_paths->{'wgs'}->*, $data_paths->{'exome'}->*, $data_paths->{'tumor_rnaseq'}->*
 $step++; print MAGENTA, "\n\nStep $step. Getting data paths from 'genome' for specified model ids", RESET;
-my $data_paths = &getDataDirs('-wgs_som_var_model_id'=>$wgs_som_var_model_id, '-exome_som_var_model_id'=>$exome_som_var_model_id, '-tumor_rna_seq_model_id'=>$tumor_rna_seq_model_id, '-normal_rna_seq_model_id'=>$normal_rna_seq_model_id);
+my ($data_paths, $builds) = getDataDirsAndBuilds('-wgs_som_var_data_set'=>$wgs_som_var_data_set, '-exome_som_var_data_set'=>$exome_som_var_data_set, '-tumor_rna_seq_data_set'=>$tumor_rna_seq_data_set, '-normal_rna_seq_data_set'=>$normal_rna_seq_data_set);
+
+print "BUILDS: " . Data::Dumper::Dumper($builds);
 
 my $usage=<<INFO;
 
   Example usage: 
   
-  clinseq.pl  --wgs_som_var_model_id='2880644349'  --exome_som_var_model_id='2880732183'  --tumor_rna_seq_model_id='2880693923'  --working_dir=/gscmnt/sata132/techd/mgriffit/hgs/  --common_name='hg3'
+  clinseq.pl  --wgs_som_var_data_set='2880644349'  --exome_som_var_data_set='2880732183'  --tumor_rna_seq_data_set='2880693923'  --working_dir=/gscmnt/sata132/techd/mgriffit/hgs/  --common_name='hg3'
   
   Intro:
   This script attempts to automate the process of running the 'clinseq' pipeline
 
   Details:
-  --wgs_som_var_model_id          Whole genome sequence (WGS) somatic variation model ID
-  --exome_som_var_model_id        Exome capture sequence somatic variation model ID
-  --tumor_rna_seq_model_id        RNA-seq model id for the tumor sample
-  --normal_rna_seq_model_id       RNA-seq model id for the normal sample
+  --wgs_som_var_data_set          Whole genome sequence (WGS) somatic variation model or build ID
+  --exome_som_var_data_set        Exome capture sequence somatic variation model or build ID
+  --tumor_rna_seq_data_set        RNA-seq model or build id for the tumor sample
+  --normal_rna_seq_data_set       RNA-seq model or build id for the normal sample
   --working_dir                   Directory where a patient subdir will be created
   --common_name                   Patient's common name (will be used for the name of a results dir and labeling purposes)
   --verbose                       To display more output, set to 1
@@ -99,18 +101,17 @@ my $usage=<<INFO;
 
 INFO
 
-unless (($wgs_som_var_model_id || $exome_som_var_model_id || $tumor_rna_seq_model_id || $normal_rna_seq_model_id) && $working_dir && $common_name){
+unless (($wgs_som_var_data_set || $exome_som_var_data_set || $tumor_rna_seq_data_set || $normal_rna_seq_data_set) && $working_dir && $common_name){
   print GREEN, "$usage", RESET;
   exit();
 }
 
 
 #Set flags for each datatype
-my ($wgs, $exome, $tumor_rnaseq, $normal_rnaseq) = (0,0,0,0);
-if ($wgs_som_var_model_id){$wgs=1;}
-if ($exome_som_var_model_id){$exome=1;}
-if ($tumor_rna_seq_model_id){$tumor_rnaseq=1;}
-if ($normal_rna_seq_model_id){$normal_rnaseq=1;}
+my $wgs = exists $builds->{wgs} || 0;
+my $exome = exists $builds->{exome} || 0;
+my $tumor_rnaseq = exists $builds->{tumor_rnaseq} || 0;
+my $normal_rnaseq = exists $builds->{normal_rnaseq} || 0;
 
 #Check the working dir
 $working_dir = &checkDir('-dir'=>$working_dir, '-clear'=>"no");
@@ -220,15 +221,16 @@ foreach my $positions_file (@positions_files){
   my $output_file = $fb->{$positions_file}->{base} . ".readcounts" . $fb->{$positions_file}->{extension};
   my $output_stats_dir = $output_file . ".stats/";
 
-  unless($wgs_som_var_model_id){$wgs_som_var_model_id=0;}
-  unless($exome_som_var_model_id){$exome_som_var_model_id=0;}
-  unless($tumor_rna_seq_model_id){$tumor_rna_seq_model_id=0;}
-  unless($normal_rna_seq_model_id){$normal_rna_seq_model_id=0;}
+  # TODO: swith this to take build IDs.
+  my $wgs_som_var_model_id     = $builds->{wgs}             ? $builds->{wgs}->model->id : 0;
+  my $exome_som_var_model_id   = $builds->{exome}           ? $builds->{exome}->model->id : 0;
+  my $tumor_rna_seq_model_id   = $builds->{tumor_rnaseq}    ? $builds->{tumor_rnaseq}->model->id : 0;
+  my $normal_rna_seq_model_id  = $builds->{normal_rnaseq}   ? $builds->{normal_rnaseq}->model->id : 0;
   my $bam_rc_cmd = "$read_counts_script  --positions_file=$positions_file  --wgs_som_var_model_id='$wgs_som_var_model_id'  --exome_som_var_model_id='$exome_som_var_model_id'  --rna_seq_tumor_model_id='$tumor_rna_seq_model_id'  --rna_seq_normal_model_id='$normal_rna_seq_model_id'  --output_file=$output_file  --verbose=$verbose";
 
   #WGS_vs_Exome_vs_RNAseq_VAF_and_FPKM.R  /gscmnt/sata132/techd/mgriffit/hgs/test/ /gscmnt/sata132/techd/mgriffit/hgs/all1/snv/wgs_exome/snvs.hq.tier1.v1.annotated.compact.readcounts.tsv /gscmnt/sata132/techd/mgriffit/hgs/all1/rnaseq/tumor/absolute/isoforms_merged/isoforms.merged.fpkm.expsort.tsv
   my $rc_summary_cmd;
-  if ($tumor_rna_seq_model_id){
+  if ($builds->{tumor_rnaseq}){
     my $tumor_fpkm_file = $out_paths->{'tumor_rnaseq_absolute'}->{'isoforms.merged.fpkm.expsort.tsv'}->{path};
     $rc_summary_cmd = "$read_counts_summary_script $output_stats_dir $output_file $tumor_fpkm_file";
   }else{
@@ -264,7 +266,11 @@ if ($wgs){
     if ($verbose){print YELLOW, "\n\nClonality dir already exists - skipping", RESET;}
   }else{
     my $clonality_dir = &createNewDir('-path'=>$patient_dir, '-new_dir_name'=>'clonality', '-silent'=>1);
+
+    # TODO: switch this to take build IDs
+    my $wgs_som_var_model_id = $builds->{wgs}->model->id;
     my $master_clonality_cmd = "$script_dir"."snv/generateClonalityPlot.pl  --somatic_var_model_id=$wgs_som_var_model_id  --working_dir=$clonality_dir  --common_name='$common_name'  --verbose=1";
+
     if ($verbose){print YELLOW, "\n\n$master_clonality_cmd", RESET;}
     system($master_clonality_cmd);
   }
@@ -284,16 +290,17 @@ exit();
 ###############################################################################################################################
 #Get build directories for the three datatypes                                                                                #
 ###############################################################################################################################
-sub getDataDirs{
+sub getDataDirsAndBuilds{
   my %args = @_;
 
   my %data_paths;
+  my %builds;
   
   my %arg_dt = (
-    -wgs_som_var_model_id => 'wgs',
-    -exome_som_var_model_id => 'exome',
-    -tumor_rna_seq_model_id => 'tumor_rnaseq',
-    -normal_rna_seq_model_id => 'normal_rnaseq',
+    -wgs_som_var_data_set => 'wgs',
+    -exome_som_var_data_set => 'exome',
+    -tumor_rna_seq_data_set => 'tumor_rnaseq',
+    -normal_rna_seq_data_set => 'normal_rnaseq',
   );
 
   for my $arg_name (keys %arg_dt) {
@@ -329,6 +336,8 @@ sub getDataDirs{
             exit 1;
         }
     }
+
+    $builds{$dt} = $build;
   
     # the build directory root
     my $root = $data_paths{$dt}{root} = $build->data_directory . '/';
@@ -361,7 +370,7 @@ sub getDataDirs{
 
   #print Dumper \%data_paths;
   #exit;
-  return(\%data_paths);
+  return(\%data_paths, \%builds);
 }
 
 
