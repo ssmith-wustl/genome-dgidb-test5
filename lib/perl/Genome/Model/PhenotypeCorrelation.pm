@@ -330,31 +330,37 @@ sub _execute_build {
 
     # we'll figure out what to do about the analysis_strategy next...
 
-=cut
 
-    if ($self->phenotype-analysis-strategy eq 'quantitative') { #unrelated individuals, quantitative -- ASMS-NFBC
-        my $maf_file = vcf_to_maf($multisample_vcf);
+
+    my $multisample_vcf = $vcf_file;
+    if ($self->phenotype_analysis_strategy eq 'quantitative') { #unrelated individuals, quantitative -- ASMS-NFBC
+#create a directory for results
+        my $temp_path = Genome::Sys->create_temp_directory;
+        $temp_path =~ s/\:/\\\:/g;
+
+        my $maf_file = vcf_to_maf($multisample_vcf,$temp_path,\@builds);
+        $self->status_message("Merged Maf file located at: ".$maf_file);
+}
+=cut
 
 #Ran clinical-correlation:
 #need clinical data file $clinical_data
 #get list of bams and load into tmp file named $bam_list
+#$name is project name or some other good identifier
         my $clin_corr = "gmt music clinical-correlation --genetic-data-type gene --bam-list $bam_list --maf-file $maf_file --output-file $output_dir/clin_corr_result --categorical-clinical-data-file $clinical_data";
         my $fdr_cutoff = 0.05;
         my $clin_corr_finish = "gmt germline finish-music-clinical-correlation --input-file $output_dir/clin_corr_result --output-file $output_dir/clin_corr_result_stats_FDR005.txt --output-pdf-image-file $output_dir/clin_corr_result_stats_FDR005.pdf  --clinical-data-file $clinical_data --project-name $name --fdr-cutoff $fdr_cutoff --maf-file $maf_file";
 
-#gene pathways
-#perl /gscmnt/sata424/info/medseq/Freimer-Boehnke/79_gene_pathways/groupGenes.pl 
-#Matrix:
-#/gscmnt/sata424/info/medseq/Freimer-Boehnke/79_gene_pathways/GeneConnectome.txt
-#Raw output:
-#/gscmnt/sata424/info/medseq/Freimer-Boehnke/79_gene_pathways/GenePathways.txt 
-
 #haplotype analysis
-my $haplo_cmd = "perl /gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/Vasily_to_Haploview_Format.pl"
-#haploview
-#/gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/1941samples_washuvasilyoverlap_haploview_file.txt
-#/gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/1941samples_washuvasilyoverlap_haploview_file_markers.txt
 
+#haploview (per chr)
+for my $chr (1..22,'X','Y') { #this needs to be set by the ROI or there will be empty files created where there are no variants on a chromosome (instead of chr, could be set per region)
+    #split pedigree file up and specifically for haploview -- perhaps vcftools or plink can create this file for us?
+#example script that messed around with this idea:
+my $haplo_cmd = "perl /gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/Vasily_to_Haploview_Format.pl"
+#these need to be coming from the pedigree file, if we make one
+#/gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/1941samples_washuvasilyoverlap_haploview_file.txt
+#per chromosome version of the above file
 #/gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/1941samples_washuvasilyoverlap_haploview_filechr1.haps
 #/gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/1941samples_washuvasilyoverlap_haploview_filechr2.haps
 #/gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/1941samples_washuvasilyoverlap_haploview_filechr8.haps
@@ -365,19 +371,19 @@ my $haplo_cmd = "perl /gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20
 #/gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/1941samples_washuvasilyoverlap_haploview_filechr15.haps
 #/gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/1941samples_washuvasilyoverlap_haploview_filechr16.haps
 #/gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/1941samples_washuvasilyoverlap_haploview_filechr19.haps
+    my $hap_infile = "$temp_path/$name.haploview_filechr$chr.haps";
 
-#haploview -nogui -out /gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/1941samples_washuvasilyoverlap_haploview_filechr1_output -haps /gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/1941samples_washuvasilyoverlap_haploview_filechr1.haps -png
-#haploview -nogui -out /gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/1941samples_washuvasilyoverlap_haploview_filechr2_output -haps /gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/1941samples_washuvasilyoverlap_haploview_filechr2.haps -png
-#haploview -nogui -out /gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/1941samples_washuvasilyoverlap_haploview_filechr8_output -haps /gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/1941samples_washuvasilyoverlap_haploview_filechr8.haps -png
-#haploview -nogui -out /gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/1941samples_washuvasilyoverlap_haploview_filechr9_output -haps /gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/1941samples_washuvasilyoverlap_haploview_filechr9.haps -png
-#haploview -nogui -out /gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/1941samples_washuvasilyoverlap_haploview_filechr10_output -haps /gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/1941samples_washuvasilyoverlap_haploview_filechr10.haps -png
-#haploview -nogui -out /gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/1941samples_washuvasilyoverlap_haploview_filechr11_output -haps /gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/1941samples_washuvasilyoverlap_haploview_filechr11.haps -png
-#haploview -nogui -out /gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/1941samples_washuvasilyoverlap_haploview_filechr12_output -haps /gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/1941samples_washuvasilyoverlap_haploview_filechr12.haps -png
-#haploview -nogui -out /gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/1941samples_washuvasilyoverlap_haploview_filechr15_output -haps /gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/1941samples_washuvasilyoverlap_haploview_filechr15.haps -png
-#haploview -nogui -out /gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/1941samples_washuvasilyoverlap_haploview_filechr16_output -haps /gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/1941samples_washuvasilyoverlap_haploview_filechr16.haps -png
-#haploview -nogui -out /gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/1941samples_washuvasilyoverlap_haploview_filechr19_output -haps /gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/1941samples_washuvasilyoverlap_haploview_filechr19.haps -png
+#variant name and position information can be fed into haploview somehow
+#/gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/1941samples_washuvasilyoverlap_haploview_file_markers.txt
 
-#genotype distributions by clinical variable
+    my $hap_outfile = "$temp_path/$name.haploview_filechr$chr.output";
+    my $hapview_cmd = "haploview -nogui -out $hap_outfile -haps $hap_infile -png";
+    my $haploview_png = $hap_outfile.".LD.PNG";
+}
+
+#plot genotype distributions by clinical variable
+my $clinical_variable_distribution_cmd = "perl /gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/Vasily_plus_Phenotype.pl"
+#example outputs:
 #/gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/Genotypes_bmires.pdf
 #/gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/Genotypes_crpres.pdf
 #/gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/Genotypes_diares.pdf
@@ -387,10 +393,23 @@ my $haplo_cmd = "perl /gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20
 #/gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/Genotypes_ldlres.pdf
 #/gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/Genotypes_sysres.pdf
 #/gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/Genotypes_tgres.pdf
+
+
+#find the significant gene pathways within an ROI:
+#perl /gscmnt/sata424/info/medseq/Freimer-Boehnke/79_gene_pathways/groupGenes.pl 
+#Raw output:
+#/gscmnt/sata424/info/medseq/Freimer-Boehnke/79_gene_pathways/GenePathways.txt 
+#Matrix:
+#/gscmnt/sata424/info/medseq/Freimer-Boehnke/79_gene_pathways/GeneConnectome.txt
+
     }
     elsif ($self->phenotype-analysis-strategy eq 'case-control') { #unrelated individuals, case-control -- MRSA
+#create a directory for results
+        my $temp_path = Genome::Sys->create_temp_directory;
+        $temp_path =~ s/\:/\\\:/g;
+
 # assume that the vcf is passed in as $multisample_vcf
-        my $maf_file = vcf_to_maf($multisample_vcf);
+        my $maf_file = vcf_to_maf($multisample_vcf,\$temp_path,\@builds);
 
 #start workflow to find significantly mutated genes in our set:
         #get list of bams and load into tmp file named $bam_list
@@ -468,7 +487,9 @@ my $haplo_cmd = "perl /gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20
             die;
         }
         $temp_path =~ s/\:/\\\:/g;
-        my $R_command = <<"_END_OF_R_";
+
+        #-------------------------------------------------
+#        my $R_command = <<"_END_OF_R_";
         options(error=recover)
         source("stat.lib", chdir=TRUE)
         #this should work, but I havent tested using the .csv out of mut rel -- wschierd
@@ -479,6 +500,8 @@ my $haplo_cmd = "perl /gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20
         #to do logistic regression, might need /gscuser/yyou/git/genome/lib/perl/Genome/Model/Tools/Music/stat.lib.R -- talk to Cyriac here
         cor2test(y=inf.file, x=mut.file, cov=pheno.file, outf=output.file, method="logit", sep="\t");
         _END_OF_R_
+        #-------------------------------------------------
+
         print $tfh "$R_command\n";
 
         my $cmd = "R --vanilla --slave \< $temp_path";
@@ -489,41 +512,74 @@ my $haplo_cmd = "perl /gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20
             $self->error_message("Failed to execute: Returned $return");
             die $self->error_message;
         }
+
+#find sites that are important and also of a type we like (such as all Nonsynonymous/splice_site mutations in regions of interest unique to cases vs controls
+#/gscmnt/sata809/info/medseq/MRSA/analysis/Sureselect_49_Exomes_Germline/causal_variants/pull_causal_variants.pl
+
     }
 =cut
 
     return 1;
 }
 
-=cut
 sub vcf_to_maf {
     # assume that the vcf is passed in as $multisample_vcf
-
+    my $multisample_vcf = shift;
+    my $temp_path = shift;
+    my $build_ref = shift;
+    my @builds = @{$build_ref};
+    my $single_sample_dir = "$temp_path/";
     #change vcf -> maf here, which also needs annotation files
     #make $maf_file -- might need one with everything and one that doesnt have silent variants in it
+
     #my $vcf_line = `grep -v "##" $multisample_vcf | head -n 1`;
     #chomp($vcf_line);
     #my ($chr, $pos, $id, $ref, $alt, $qual, $filter, $info, $format, @sample_names) = split(/\t/, $vcf_line);
+    
+#    my $vcf_split_cmd = "gmt vcf vcf-split-samples --vcf-input $multisample_vcf --output-dir $single_sample_dir";
+#    print "$vcf_split_cmd\n";
+#    system($vcf_split_cmd);
+    my $vcf_split_cmd = Genome::Model::Tools::Vcf::VcfSplitSamples->create(
+        vcf_input => $multisample_vcf,
+        output_dir => $single_sample_dir,
+    );
+    my $vcf_split_result;
+    unless($vcf_split_result = $vcf_split_cmd->execute){
+        die "Could not complete vcf splitting!";
+    }
 
-
-    my $vcf_split_cmd = "gmt vcf vcf-split-samples --vcf-input $multisample_vcf --output-dir $single_sample_dir";
+    print "single_sample_dir located at: ".$single_sample_dir."\n";
 
     my $maf_header;
-    my $maf_maker_cmd = "";
-    foreach $sample_id (@sample_names) {
-        my $annotation_file_per_sample = ""; #needs to get some sort of single-sample annotation file from the build or maybe there is a unified annotation file to use?
-        my $vcf_cmd = "gmt vcf convert maf vcf-2-maf --vcf-file $single_sample_dir/$sample_id.vcf --annotation-file $annotation_file_per_sample --output-file $single_sample_dir/$sample_id.maf";
-    system($vcf_cmd);
-        $maf_maker_cmd .= " $single_sample_dir/$sample_id.maf";    
+    my $maf_maker_cmd = "cat";
+    foreach my $build (@builds) {
+        my $sample_id = $build->subject_name;
+        my $annotation_output_directory = $build->data_directory."/variants";
+        my $annotation_file_per_sample = $annotation_output_directory."/filtered.variants.post_annotation"; #needs to get some sort of single-sample annotation file from the build or maybe there is a unified annotation file to use?
+#        my $vcf_cmd = "gmt vcf convert maf vcf-2-maf --vcf-file $single_sample_dir/$sample_id.vcf --annotation-file $annotation_file_per_sample --output-file $single_sample_dir/$sample_id.maf";
+#        print "$vcf_cmd\n";
+#        system($vcf_cmd);
+        my $vcf_cmd = Genome::Model::Tools::Vcf::Convert::Maf::Vcf2Maf->create(
+            vcf_file => "$single_sample_dir/$sample_id.vcf",
+            annotation_file => $annotation_file_per_sample,
+            output_file => "$single_sample_dir/$sample_id.maf",
+        );
+        my $vcf_result;
+        unless($vcf_result = $vcf_cmd->execute){
+            die "Could not complete vcf to maf creation!";
+        }
+        $maf_maker_cmd .= " $single_sample_dir/$sample_id.maf";
     }
-    my $maf_sample_id = $sample_names[0];
+    my $maf_sample_id = $builds[0]->subject_name;
     $maf_maker_cmd .= " | grep -v \"Hugo_Symbol\" > $single_sample_dir/All_Samples_noheader.maf";
-    my $final_maf = $single_sample_dir/All_Samples.maf;
+    print "$maf_maker_cmd\n";
+    system($maf_maker_cmd);
+    my $final_maf = "$single_sample_dir/All_Samples.maf";
     my $final_maf_maker_cmd = "head -n1 $single_sample_dir/$maf_sample_id.maf | cat - $single_sample_dir/All_Samples_noheader.maf > $final_maf";
+    print "$final_maf_maker_cmd\n";
     system($final_maf_maker_cmd);
     return $final_maf;
 }
-=cut
 
 sub _get_builds {
     my $self = shift;

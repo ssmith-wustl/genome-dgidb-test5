@@ -28,6 +28,7 @@ class Genome::Model::Build {
         is_input    => { is => 'Boolean', is_optional => 1, },
         is_param    => { is => 'Boolean', is_optional => 1, },
         is_output   => { is => 'Boolean', is_optional => 1, },
+        is_metric => { is => 'Boolean', is_optional => 1 },
     ],
     has => [
         subclass_name           => { is => 'VARCHAR2', len => 255, is_mutable => 0, column_name => 'SUBCLASS_NAME',
@@ -2229,11 +2230,20 @@ sub _preprocess_subclass_description {
                 to => 'value',
             );
         }
+
+        # Metrics
+        if ( exists $prop_desc->{is_metric} and $prop_desc->{is_metric} ) {
+            $prop_desc->{via} = 'metrics';
+            $prop_desc->{where} = [ name => $prop_name ];
+            $prop_desc->{to} = 'value';
+            $prop_desc->{is_delegated} = 1;
+            $prop_desc->{is_mutable} = 1;
+        }
     }
 
     my ($ext) = ($desc->{class_name} =~ /Genome::Model::Build::(.*)/);
     my $pp_subclass_name = 'Genome::ProcessingProfile::' . $ext;
-    
+
     my $pp_data = $desc->{has}{processing_profile} = {};
     $pp_data->{data_type} = $pp_subclass_name;
     $pp_data->{via} = 'model'; 

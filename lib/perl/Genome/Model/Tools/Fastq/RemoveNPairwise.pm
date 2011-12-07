@@ -13,67 +13,67 @@ class Genome::Model::Tools::Fastq::RemoveNPairwise
 {
     is => 'Genome::Model::Tools',
     has_input => [
-            forward_fastq => {
-                                    doc => 'file to read forward reads from',
-                                    is => 'Text',
-                                    is_input => 1,
-                                    is_optional => 0,
-                                },
-            reverse_fastq => {
-                                    doc => 'file to read reverse reads from',
-                                    is => 'Text',
-                                    is_input => 1,
-                                    is_optional => 0,
-                                },
-            forward_n_removed_file => {
-                                    doc => 'file to write to',
-                                    is => 'Text',
-                                    is_output => 1,
-                                    is_optional => 0,
-                                },
-            reverse_n_removed_file => {
-                                    doc => 'file to write to',
-                                    is => 'Text',
-                                    is_output => 1,
-                                    is_optional => 0,
-                                },
-            singleton_n_removed_file => {
-                                    doc => 'file to write to',
-                                    is => 'Text',
-                                    is_output => 1,
-                                    is_optional => 0,
-                                },
-            n_removal_threshold =>   {
-                                    doc => 'minimum # of N\'s to screen on.  Set to 0 to disable',
-                                    is => 'Number',
-                                    is_optional => 1,
-	                        },
-	   non_n_base_threshold =>   {
-                                    doc => 'minimum # of consecutive non-N bases to screen on.  Set to 0 to disable',
-                                    is => 'Number',
-                                    is_optional => 1,
-                                    
-                                },
+        forward_fastq => {
+            doc => 'file to read forward reads from',
+            is => 'Text',
+            is_input => 1,
+            is_optional => 0,
+        },
+        reverse_fastq => {
+            doc => 'file to read reverse reads from',
+            is => 'Text',
+            is_input => 1,
+            is_optional => 0,
+        },
+        forward_n_removed_file => {
+            doc => 'file to write to',
+            is => 'Text',
+            is_output => 1,
+            is_optional => 0,
+        },
+        reverse_n_removed_file => {
+            doc => 'file to write to',
+            is => 'Text',
+            is_output => 1,
+            is_optional => 0,
+        },
+        singleton_n_removed_file => {
+            doc => 'file to write to',
+            is => 'Text',
+            is_output => 1,
+            is_optional => 0,
+        },
+        n_removal_threshold =>   {
+            doc => 'minimum # of N\'s to screen on.  Set to 0 to disable',
+            is => 'Number',
+            is_optional => 1,
+        },
+        non_n_base_threshold =>   {
+            doc => 'minimum # of consecutive non-N bases to screen on.  Set to 0 to disable',
+            is => 'Number',
+            is_optional => 1,
+
+        },
     ],
     has_output => [
-            pairs_passed => {is=>'Number',
-                             is_optional=>1,
-                            },
-            singletons_passed => {is=>'Number',
-                                 is_optional=>1,
-                            },
+        pairs_passed => {is=>'Number',
+            is_optional=>1,
+        },
+        singletons_passed => {is=>'Number',
+            is_optional=>1,
+        },
     ]
 };
 
 sub help_brief 
 {
-     "Remove reads from file containing N or remove reads without expected number of non-N bases"; 
+    "Remove reads from file containing N or remove reads without expected number of non-N bases"; 
 }
 
 sub help_detail
 {   
-   
-     "If N removal cut=off is set, removes reads that have internal N's, or more than cutoff amount of N's on ends.  By default, removes for a single N.  Set cutoff to 0 to disable. If the non-N threshold is set, it removed reads that have lesser than the desired number of non-N bases.  "; 
+
+    "If N removal cut=off is set, removes reads that have internal N's, or more than cutoff amount of N's on ends.  By default, removes for a single N.  Set cutoff to 0 to disable. If the non-N threshold is set, it removed reads that have lesser than the desired number of non-N bases.  "; 
 }
 
 sub help_synopsis 
@@ -93,12 +93,14 @@ sub create
 sub execute 
 {
     my $self = shift;
-    
+
+    $self->status_message("Nremoving ".$self->forward_fastq." and ".$self->reverse_fastq." to ".join(", ", ($self->forward_n_removed_file, $self->reverse_n_removed_file,$self->singleton_n_removed_file)));
+
     if ($self->n_removal_threshold and $self->non_n_base_threshold){
-	$self->error_message("Both n removal and non n base thresholds are set. Only one option can be set.");
+        $self->error_message("Both n removal and non n base thresholds are set. Only one option can be set.");
         return;
     }
-    
+
     my $fwd_fh = IO::File->new($self->forward_fastq);
     unless ($fwd_fh) {
         $self->error_message("Failed to open fwd input file " . $self->forward_fastq . ": $!");
@@ -142,29 +144,29 @@ sub execute
 
         my $fcount = 0;
         my $rcount = 0;
-	my $fwdok=0;
-	my $revok=0;
-	my $cutoff;
-	if ($self->n_removal_threshold){
-	    $cutoff=$self->n_removal_threshold;
-	    $fseq->[1] =~s/(N)/$fcount++;$1/eg; # get N-count
-  	    $fwdok = ($cutoff > 0 and $fcount < $cutoff);
-	    #$fwdok = (($cutoff > 0 and $fcount < $cutoff)) or ($cutoff == 0);
-	    $rseq->[1] =~s/(N)/$rcount++;$1/eg; # get N-count
-	    $revok = ($cutoff > 0 and $rcount < $cutoff);
-	}elsif ($self->non_n_base_threshold){
-	    $cutoff=$self->non_n_base_threshold;
-	    $fseq->[1] =~s/([AGCTagct])/$fcount++;$1/eg; # get N-count
-	    $fwdok = ($cutoff > 0 and $fcount >= $cutoff);
-	    #Code for consecutive non-Ns
-	    ##Get consecutive non-N bases in the rev seq
-	    ##@array=split(/N/,uc($rseq->[1]));
-	    ##@array1= sort {length($b) <=> length($a)} (@array);
-	    ##my $rcount=length($array1[0]);
-	    $rseq->[1] =~s/([AGCTagct])/$rcount++;$1/eg; # get N-count
-	    $revok = ($cutoff > 0 and $rcount >= $cutoff);
-	}
-	
+        my $fwdok=0;
+        my $revok=0;
+        my $cutoff;
+        if ($self->n_removal_threshold){
+            $cutoff=$self->n_removal_threshold;
+            $fseq->[1] =~s/(N)/$fcount++;$1/eg; # get N-count
+            $fwdok = ($cutoff > 0 and $fcount < $cutoff);
+            #$fwdok = (($cutoff > 0 and $fcount < $cutoff)) or ($cutoff == 0);
+            $rseq->[1] =~s/(N)/$rcount++;$1/eg; # get N-count
+            $revok = ($cutoff > 0 and $rcount < $cutoff);
+        }elsif ($self->non_n_base_threshold){
+            $cutoff=$self->non_n_base_threshold;
+            $fseq->[1] =~s/([AGCTagct])/$fcount++;$1/eg; # get N-count
+            $fwdok = ($cutoff > 0 and $fcount >= $cutoff);
+            #Code for consecutive non-Ns
+            ##Get consecutive non-N bases in the rev seq
+            ##@array=split(/N/,uc($rseq->[1]));
+            ##@array1= sort {length($b) <=> length($a)} (@array);
+            ##my $rcount=length($array1[0]);
+            $rseq->[1] =~s/([AGCTagct])/$rcount++;$1/eg; # get N-count
+            $revok = ($cutoff > 0 and $rcount >= $cutoff);
+        }
+
         if ($fwdok && $revok) {
             $self->write_seq($fseq, $fwd_output_fh);
             $self->write_seq($rseq, $rev_output_fh);
@@ -182,7 +184,7 @@ sub execute
         $self->error_message("Reverse sequence file seems longer than forward.  Are these really paired, or is the forward truncated?");
         return;
     }
-    
+
     $self->pairs_passed($pairs_passed);
     $self->singletons_passed($singletons_passed);
 
@@ -217,7 +219,7 @@ sub write_seq {
     my $self = shift;
     my $seq = shift;
     my $fh = shift;
-    
+
     for (@$seq) {
         print $fh $_;
     }

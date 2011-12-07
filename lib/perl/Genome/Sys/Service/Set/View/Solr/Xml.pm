@@ -1,29 +1,31 @@
-package Genome::InstrumentData::Solexa::View::Solr::Xml;
+package Genome::Sys::Service::Set::View::Solr::Xml;
 
 use strict;
 use warnings;
 
 use Genome;
 
-class Genome::InstrumentData::Solexa::View::Solr::Xml {
+class Genome::Sys::Service::Set::View::Solr::Xml {
     is => 'Genome::View::Solr::Xml',
     has => [
         type => {
             is => 'Text',
-            default => 'solexa_instrument_data'
+            default => 'service'
         },
         display_type => {
             is  => 'Text',
-            default => 'Solexa',
+            default => 'Service',
         },
         display_icon_url => {
             is  => 'Text',
-            default => 'genome_instrumentdata_32',
+            default => '',
         },
         display_url0 => {
             is => 'Text',
             calculate_from => ['subject'],
-            calculate => sub { return join ('=', '/view/genome/instrument-data/solexa/status.html?id',$_[0]->id()); }
+            calculate => q{
+                return '/view/genome/druggable-gene/drug-name-report/set/status.html?name=' . $subject->name();
+            },
         },
         display_label1 => {
             is  => 'Text',
@@ -47,52 +49,50 @@ class Genome::InstrumentData::Solexa::View::Solr::Xml {
             is => 'ARRAY',
             default => [
                 {
-                    name => 'id',
+                    name => 'name',
                     position => 'title',
                 },
                 {
-                    name => 'id',
+                    name => 'host',
                     position => 'content',
                 },
                 {
-                    name => 'flow_cell_id',
+                    name => 'restart_command',
                     position => 'content',
                 },
                 {
-                    name => 'target_region_set_name',
+                    name => 'stop_command',
                     position => 'content',
                 },
                 {
-                    name => 'index_sequence',
+                    name => 'log_path',
                     position => 'content',
                 },
                 {
-                    name => 'subset_name',
-                    position => 'content',
-                },
-                {
-                    name => 'short_name',
+                    name => 'pid_name',
                     position => 'content',
                 },
                 {
                     name => '__display_name__',
-                    position => 'display_title',
+                    position => 'display_title',#text for display_url0
                 },
-                {
-                    name => 'library_name',
-                    position => 'display_title',
-                },
-                {
-                    name => 'project_name',
-                    position => 'display_title',
-                },
-                {
-                    name => 'species_name',
-                    position => 'display_title',
-                },
-            ]
+            ],
         },
-    ]
+    ],
 };
+
+sub _generate_id_field_data {
+    my $self = shift;
+    my $subject = $self->subject;
+
+    return $subject->__display_name__;
+}
+
+sub _generate_object_id_field_data {
+    my $self = shift;
+    my $subject = $self->subject;
+
+    return $subject->__display_name__;
+}
 
 1;
