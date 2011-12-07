@@ -38,28 +38,41 @@ class Genome::Model::SomaticVariation::Command::Loh {
     ],
 };
 
+sub shortcut {
+    my $self = shift;
+
+    return 1 if $self->should_skip_run;
+
+    my @params = $self->_params_for_result;
+    return unless @params;
+
+    my $result = Genome::Model::Tools::DetectVariants2::Classify::Loh->get_with_lock(@params);
+    return unless $result;
+
+    $self->status_message('Using existing result: ' . $result->id);
+
+    return $self->link_result_to_build($result);
+}
+
 sub execute {
     my $self = shift;
     my $build = $self->build;
-    unless(defined($build->loh_version)){
-        $self->status_message("No LOH version was found, skipping LOH detection!");
-        return 1;
-    }
-    unless ($build){
-        die $self->error_message("no build provided!");
-    }
 
-    unless(defined($build->model->snv_detection_strategy)){
-        $self->status_message("No SNV Detection Strategy, skipping LOH.");
-        return 1;
-    }
+    return 1 if $self->should_skip_run;
 
     my $normal_build = $build->normal_build;
     unless ($normal_build){
         die $self->error_message("No previous normal build found on somatic build!");
     }
+
+    my @params = $self->_params_for_result;
+    if(@params) {
+        my $result = Genome::Model::Tools::DetectVariants2::Classify::Loh->get_or_create(@params);
+        return $self->link_result_to_build($result);
+    }
+    #else using old data...fall back on running by hand
+
     #Use snvs bed for intersecting with bed style outputs from detect-variants
-    
     my $normal_snvs;
     # Wrap this call in an eval so the whole process won't die if there's no bed, 
     # we will fall back on the annotation format, and temporarily convert it
@@ -89,68 +102,31 @@ sub execute {
     my $control_aligned_reads_input = $build->normal_build->whole_rmdup_bam_file;
     my $reference_build_id = $build->reference_sequence_build->id;
 
-    $self->run_loh( $normal_snvs, $detected_snv_path, $somatic_output, $loh_output );
-    
+    Genome::Model::Tools::DetectVariants2::Classify::Loh->run_loh( $normal_snvs, $detected_snv_path, $somatic_output, $loh_output );
+
     $self->status_message("Identify LOH step completed");
     return 1;
 }
 
-sub run_loh {
+sub should_skip_run {
     my $self = shift;
-    my ($control_variant_file,$detected_snvs,$somatic_output,$loh_output) = @_;
+    my $build = $self->build;
 
-    my $somatic_fh = Genome::Sys->open_file_for_writing($somatic_output);
-    my $loh_fh = Genome::Sys->open_file_for_writing($loh_output);
-
-    my $normal_snp_fh = Genome::Sys->open_file_for_reading($control_variant_file);
-    my $input_fh = Genome::Sys->open_file_for_reading($detected_snvs);
-
-    #MAKE A HASH OF NORMAL SNPS!!!!!!!!!!!!!
-    #Assuming that we will generally be doing this on small enough files (I hope). I suck. -- preserved in time from dlarson
-    my %normal_variants;
-    while(my $line = $normal_snp_fh->getline) {
-        chomp $line;
-        my ($chr, $start, $pos2, $ref,$var) = split /\t/, $line;
-        my $var_iub;
-        #Detect if ref and var columns are combined
-        if($ref =~ m/\//){
-            ($ref,$var_iub) = split("/", $ref);
-        }
-        else {
-            $var_iub = $var;
-        }
-        #first find all heterozygous sites in normal
-        next if($var_iub =~ /[ACTG]/);
-        my @alleles = Genome::Info::IUB->iub_to_alleles($var_iub);
-        $normal_variants{$chr}{$start} = join '',@alleles;
+    unless ($build){
+        die $self->error_message("no build provided!");
     }
-    $normal_snp_fh->close;
 
-    # Go through input variants. If a variant was called in both the input set and the control set (normal samtools calls):
-    # If that variant was heterozygous in the control call and became homozygous in the input set, it is considered a loss of heterozygocity event, and goes in the LQ file
-    # Otherwise it is not filtered out, and remains in the HQ output
-    while(my $line = $input_fh->getline) {
-        chomp $line;
-
-        my ($chr, $start, $stop, $ref_and_iub) = split /\t/, $line;
-        my ($ref, $var_iub) = split("/", $ref_and_iub);
-
-        #now compare to homozygous sites in the tumor
-        if ($var_iub =~ /[ACTG]/ && exists($normal_variants{$chr}{$start})) {
-            if(index($normal_variants{$chr}{$start},$var_iub) > -1) {
-                #then they share this allele and it is LOH
-                $loh_fh->print("$line\n");
-            }
-            else {
-                $somatic_fh->print("$line\n");
-            }
-        }
-        else {
-            $somatic_fh->print("$line\n");
-        }
+    unless(defined($build->loh_version)){
+        $self->status_message("No LOH version was found, skipping LOH detection!");
+        return 1;
     }
-    $input_fh->close;
-    return 1;
+
+    unless(defined($build->model->snv_detection_strategy)){
+        $self->status_message("No SNV Detection Strategy, skipping LOH.");
+        return 1;
+    }
+
+    return;
 }
 
 # return a path to a temp file containing a bed version of the samtools style snv_file
@@ -168,6 +144,35 @@ sub get_temp_bed_snvs {
         die $self->error_message("Failed to run conversion from samtools to bed format");
     }
     return $temp_bed_file;
+}
+
+sub _params_for_result {
+    my $self = shift;
+    my $build = $self->build;
+
+    my $prior_result = $build->final_result_for_variant_type('snv');
+    my $control_result = $build->normal_build->final_result_for_variant_type('snv');
+    my $loh_version = $build->loh_version;
+
+    return unless $prior_result and $control_result; #can't create a result for old things
+
+    return (
+        prior_result_id => $prior_result->id,
+        control_result_id => $control_result->id,
+        classifier_version => $loh_version,
+        test_name => $ENV{GENOME_SOFTWARE_RESULT_TEST_NAME} || undef,
+    );
+}
+
+sub link_result_to_build {
+    my $self = shift;
+    my $result = shift;
+    my $build = $self->build;
+
+    $result->add_user(user => $build, label => 'uses');
+    Genome::Sys->create_symlink($result->output_dir, join('/', $build->data_directory, 'loh'));
+
+    return 1;
 }
 
 1;
