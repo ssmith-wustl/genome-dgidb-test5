@@ -4,7 +4,6 @@ use strict;
 use warnings;
 
 use Genome;
-use Bio::DB::Sam;
 
 class Genome::Model::Tools::RefCov::BuildReferenceFromRoi {
     is => ['Command'],
@@ -56,6 +55,15 @@ class Genome::Model::Tools::RefCov::BuildReferenceFromRoi {
         },
     ],
 };
+
+sub create {
+    my $class = shift;
+    my $self = $class->SUPER::create(@_);
+    unless ($self) { return; }
+
+    require Bio::DB::Sam;
+    return $self;
+}
 
 sub execute {
     my $self = shift;
