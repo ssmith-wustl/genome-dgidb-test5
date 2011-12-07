@@ -219,7 +219,6 @@ foreach my $positions_file (@positions_files){
   my $fb = &getFilePathBase('-path'=>$positions_file);
   my $output_file = $fb->{$positions_file}->{base} . ".readcounts" . $fb->{$positions_file}->{extension};
   my $output_stats_dir = $output_file . ".stats/";
-  my $read_counts_summary_log = "$output_stats_dir"."WGS_vs_Exome_vs_RNAseq_VAF_and_FPKM.log";
 
   unless($wgs_som_var_model_id){$wgs_som_var_model_id=0;}
   unless($exome_som_var_model_id){$exome_som_var_model_id=0;}
@@ -229,11 +228,17 @@ foreach my $positions_file (@positions_files){
 
   #WGS_vs_Exome_vs_RNAseq_VAF_and_FPKM.R  /gscmnt/sata132/techd/mgriffit/hgs/test/ /gscmnt/sata132/techd/mgriffit/hgs/all1/snv/wgs_exome/snvs.hq.tier1.v1.annotated.compact.readcounts.tsv /gscmnt/sata132/techd/mgriffit/hgs/all1/rnaseq/tumor/absolute/isoforms_merged/isoforms.merged.fpkm.expsort.tsv
   my $rc_summary_cmd;
+  my $rc_summary_stdout = "$output_stats_dir"."rc_summary.stdout";
+  my $rc_summary_stderr = "$output_stats_dir"."rc_summary.stderr";
+
   if ($tumor_rna_seq_model_id){
     my $tumor_fpkm_file = $out_paths->{'tumor_rnaseq_absolute'}->{'isoforms.merged.fpkm.expsort.tsv'}->{path};
-    $rc_summary_cmd = "$read_counts_summary_script $output_stats_dir $output_file $tumor_fpkm_file 2>&1 > $read_counts_summary_log";
+    $rc_summary_cmd = "$read_counts_summary_script $output_stats_dir $output_file $tumor_fpkm_file";
   }else{
-    $rc_summary_cmd = "$read_counts_summary_script $output_stats_dir $output_file 2>&1 > $read_counts_summary_log";
+    $rc_summary_cmd = "$read_counts_summary_script $output_stats_dir $output_file";
+  }
+  unless ($verbose){
+    $rc_summary_cmd .= " 1>$rc_summary_stdout 2>$rc_summary_stderr";
   }
   if(-e $output_file){
     if ($verbose){print YELLOW, "\n\nOutput bam read counts file already exists:\n\t$output_file", RESET;}
@@ -260,14 +265,20 @@ foreach my $positions_file (@positions_files){
 #Generate a clonality plot for this patient (if WGS data is available)
 if ($wgs){
   $step++; print MAGENTA, "\n\nStep $step. Creating clonality plot for $common_name", RESET;
-  my $test_dir = $patient_dir . "clonality/";
-  if (-e $test_dir && -d $test_dir){
+  my $clonality_dir = $patient_dir . "clonality/";
+  my $clonality_stdout = $clonality_dir . "clonality.stdout";
+  my $clonality_stderr = $clonality_dir . "clonality.stderr";
+
+  if (-e $clonality_dir && -d $clonality_dir){
     if ($verbose){print YELLOW, "\n\nClonality dir already exists - skipping", RESET;}
   }else{
     my $clonality_dir = &createNewDir('-path'=>$patient_dir, '-new_dir_name'=>'clonality', '-silent'=>1);
-    my $clonality_log = "$clonality_dir"."clonality.log";
-    my $master_clonality_cmd = "$script_dir"."snv/generateClonalityPlot.pl  --somatic_var_model_id=$wgs_som_var_model_id  --working_dir=$clonality_dir  --common_name='$common_name'  --verbose=$verbose  2>&1 > $clonality_log";
-    if ($verbose){print YELLOW, "\n\n$master_clonality_cmd", RESET;}
+    my $master_clonality_cmd = "$script_dir"."snv/generateClonalityPlot.pl  --somatic_var_model_id=$wgs_som_var_model_id  --working_dir=$clonality_dir  --common_name='$common_name'  --verbose=$verbose";
+    if ($verbose){
+      print YELLOW, "\n\n$master_clonality_cmd", RESET;
+    }else{
+      $master_clonality_cmd .= " 1>$clonality_stdout 2>$clonality_stderr";
+    }
     system($master_clonality_cmd);
   }
 }
@@ -277,12 +288,20 @@ if ($wgs){
   $step++; print MAGENTA, "\n\nStep $step. Creating single BAM CNV plots for each BAM", RESET;
   my $single_bam_cnv_dir = "$patient_dir"."cnv/single_bam_cnv/";
   mkdir ($single_bam_cnv_dir);
-  my $output_pdf = "$single_bam_cnv_dir"."CNV_SingleBAMs_TumorAndNormal.pdf";
-  my $single_bam_cnv_plot_cmd = "gmt copy-number plot-segments-from-bams-workflow  --normal-bam=$data_paths->{wgs}->{normal_bam}  --tumor-bam=$data_paths->{wgs}->{tumor_bam}  --output-directory=$single_bam_cnv_dir  --genome-build=$reference_build_ncbi_n  --output-pdf=$output_pdf";
-  if (-e $output_pdf){
+  my $output_pdf_name = "CNV_SingleBAMs_TumorAndNormal.pdf";
+  my $output_pdf_path = $single_bam_cnv_dir . $output_pdf_name;
+  my $cn_stdout = "$single_bam_cnv_dir"."CNV_SingleBAMs_TumorAndNormal.stdout";
+  my $cn_stderr = "$single_bam_cnv_dir"."CNV_SingleBAMs_TumorAndNormal.stderr";
+  my $single_bam_cnv_plot_cmd = "gmt copy-number plot-segments-from-bams-workflow  --normal-bam=$data_paths->{wgs}->{normal_bam}  --tumor-bam=$data_paths->{wgs}->{tumor_bam}  --output-directory=$single_bam_cnv_dir  --genome-build=$reference_build_ncbi_n  --output-pdf=$output_pdf_name";
+  if (-e $output_pdf_path){
     if ($verbose){print YELLOW, "\n\nSingle BAM CNV pdf already exists - skipping", RESET;}
   }else{
-    if ($verbose){print YELLOW, "\n\n$single_bam_cnv_plot_cmd", RESET;}
+    if ($verbose){
+      print YELLOW, "\n\n$single_bam_cnv_plot_cmd", RESET;
+    }else{
+      $single_bam_cnv_plot_cmd .= " 1>$cn_stdout 2>$cn_stderr";
+    }
+    system($single_bam_cnv_plot_cmd);
   }
 }
 
@@ -665,8 +684,8 @@ sub runRnaSeqAbsolute{
   my $script_dir = $args{'-script_dir'};
   my $verbose = $args{'-verbose'};
   #Skip this analysis if the directory already exists
-  my $test_dir = $rnaseq_dir . "absolute/";
-  unless (-e $test_dir && -d $test_dir){
+  my $absolute_dir = $rnaseq_dir . "absolute/";
+  unless (-e $absolute_dir && -d $absolute_dir){
     my $absolute_rnaseq_dir = &createNewDir('-path'=>$rnaseq_dir, '-new_dir_name'=>'absolute', '-silent'=>1);
     my $outliers_cmd = "$script_dir"."rnaseq/outlierGenesAbsolute.pl  --cufflinks_dir=$cufflinks_dir  --working_dir=$absolute_rnaseq_dir  --verbose=$verbose";
     if ($verbose){print YELLOW, "\n\n$outliers_cmd\n\n", RESET;}
@@ -770,7 +789,7 @@ sub annotateGeneFiles{
 
       #Replace the original file with the new file
       my $mv_cmd = "mv $new_path $path";
-      if ($verbose){print "\n\t\t $mv_cmd";}
+      if ($verbose){print YELLOW, "\n\t\t $mv_cmd", RESET;}
       system ($mv_cmd);
     }
   }
@@ -804,22 +823,25 @@ sub drugDbIntersections{
 
       #Get file path with the file extension removed:
       my $fb = &getFilePathBase('-path'=>$path);
+      
+      my $dgidb_dir = $fb->{$path}->{base_dir} . "dgidb/";
+      my $drugbank_dir = $dgidb_dir . "drugbank/";
+      
+      unless (-e $dgidb_dir && -d $dgidb_dir){
+        mkdir ($dgidb_dir);
+      }
+      unless (-e $drugbank_dir && -d $drugbank_dir){
+        mkdir ($drugbank_dir);
+      }
 
       #Run with each filtering option
       foreach my $filter (sort {$a <=> $b} keys %filter_options){
         my $filter_name = $filter_options{$filter}{name};
+        my $out = $drugbank_dir . $fb->{$path}->{file_name} . "$filter_name" . $fb->{$path}->{extension};
 
-        my $dgidb_dir = $fb->{$path}->{base_dir} . "/";
-        my $drugbank_dir = $dgidb_dir . "drugbank/";
-
-        if (-e $drugbank_dir && -d $drugbank_dir){
-          if ($verbose){print YELLOW, "\n\nDrugBank dir already exists - skipping", RESET;}
+        if (-e $out){
+          if ($verbose){print YELLOW, "\n\tFile already exists - skipping ($out)", RESET;} 
         }else{
-          #Make the main DGIdb dir if it is not already present
-          unless (-e $dgidb_dir && -d $dgidb_dir){ mkdir ($dgidb_dir);}
-          #Make the DrugBank subdir (remember there can be other sources of drug-gene interactions)
-          mkdir ($drugbank_dir);
-          my $out = $drugbank_dir . $fb->{$path}->{file_name} . "$filter_name" . $fb->{$path}->{extension};
           my $cmd = "$drugdb_script --candidates_file=$path  --name_col_1=$name_col  --interactions_file=$drugbank_interactions_dir/DrugBank_WashU_INTERACTIONS.filtered."."$filter".".tsv  --name_col_2=12 > $out";
           if ($verbose){print YELLOW, "\n\t$cmd", RESET;}
           system ("$cmd");
