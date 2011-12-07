@@ -13,7 +13,7 @@ class Genome::Sys::Service::Command {
 Genome::Command::Crud->init_sub_commands(
     target_class => 'Genome::Sys::Service',
     target_name => 'service',
-    list => { show => 'id,name,host,status,pid_status,' },
+    list => { show => 'name,host,status,pid_status,' },
     create => { do_not_init => 1 },
     update => { do_not_init => 1 },
     delete => { do_not_init => 1 },
