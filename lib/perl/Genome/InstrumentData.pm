@@ -41,11 +41,11 @@ class Genome::InstrumentData {
             where => [attribute_label => 'final_est_fragment_size'],
         },
         read_orientation => {
-            is => 'read_orientation',
+            is => 'Text',
             is_mutable => 1,
             via => 'attributes',
             to => 'attribute_value',
-            where => [attribute_value => 'read_orientation'],
+            where => [attribute_label => 'read_orientation'],
             valid_values => [qw(forward_reverse reverse_forward)],
         },
         run_name => { is => 'Text' },
