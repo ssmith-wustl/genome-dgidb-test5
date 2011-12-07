@@ -330,19 +330,18 @@ sub _execute_build {
 
     # we'll figure out what to do about the analysis_strategy next...
 
-=cut
+
 
     my $multisample_vcf = $vcf_file;
-    if ($self->phenotype-analysis-strategy eq 'quantitative') { #unrelated individuals, quantitative -- ASMS-NFBC
+    if ($self->phenotype_analysis_strategy eq 'quantitative') { #unrelated individuals, quantitative -- ASMS-NFBC
 #create a directory for results
-        my ($tfh,$temp_path) = Genome::Sys->create_temp_file;
-        unless($tfh) {
-            $self->error_message("Unable to create temporary file $!");
-            die;
-        }
+        my $temp_path = Genome::Sys->create_temp_directory;
         $temp_path =~ s/\:/\\\:/g;
 
         my $maf_file = vcf_to_maf($multisample_vcf,$temp_path,\@builds);
+        $self->status_message("Merged Maf file located at: ".$maf_file);
+}
+=cut
 
 #Ran clinical-correlation:
 #need clinical data file $clinical_data
@@ -406,15 +405,11 @@ my $clinical_variable_distribution_cmd = "perl /gscmnt/sata424/info/medseq/Freim
     }
     elsif ($self->phenotype-analysis-strategy eq 'case-control') { #unrelated individuals, case-control -- MRSA
 #create a directory for results
-        my ($tfh,$temp_path) = Genome::Sys->create_temp_file;
-        unless($tfh) {
-            $self->error_message("Unable to create temporary file $!");
-            die;
-        }
+        my $temp_path = Genome::Sys->create_temp_directory;
         $temp_path =~ s/\:/\\\:/g;
 
 # assume that the vcf is passed in as $multisample_vcf
-        my $maf_file = vcf_to_maf($multisample_vcf,$temp_path,\@builds);
+        my $maf_file = vcf_to_maf($multisample_vcf,\$temp_path,\@builds);
 
 #start workflow to find significantly mutated genes in our set:
         #get list of bams and load into tmp file named $bam_list
@@ -494,7 +489,7 @@ my $clinical_variable_distribution_cmd = "perl /gscmnt/sata424/info/medseq/Freim
         $temp_path =~ s/\:/\\\:/g;
 
         #-------------------------------------------------
-        my $R_command = <<"_END_OF_R_";
+#        my $R_command = <<"_END_OF_R_";
         options(error=recover)
         source("stat.lib", chdir=TRUE)
         #this should work, but I havent tested using the .csv out of mut rel -- wschierd
@@ -529,12 +524,11 @@ my $clinical_variable_distribution_cmd = "perl /gscmnt/sata424/info/medseq/Freim
 
 sub vcf_to_maf {
     # assume that the vcf is passed in as $multisample_vcf
-    my $self = shift;
     my $multisample_vcf = shift;
     my $temp_path = shift;
-    my @builds = shift;
-    my $single_sample_dir = $temp_path;
-
+    my $build_ref = shift;
+    my @builds = @{$build_ref};
+    my $single_sample_dir = "$temp_path/";
     #change vcf -> maf here, which also needs annotation files
     #make $maf_file -- might need one with everything and one that doesnt have silent variants in it
 
@@ -542,23 +536,47 @@ sub vcf_to_maf {
     #chomp($vcf_line);
     #my ($chr, $pos, $id, $ref, $alt, $qual, $filter, $info, $format, @sample_names) = split(/\t/, $vcf_line);
     
-    my $vcf_split_cmd = "gmt vcf vcf-split-samples --vcf-input $multisample_vcf --output-dir $single_sample_dir";
+#    my $vcf_split_cmd = "gmt vcf vcf-split-samples --vcf-input $multisample_vcf --output-dir $single_sample_dir";
+#    print "$vcf_split_cmd\n";
+#    system($vcf_split_cmd);
+    my $vcf_split_cmd = Genome::Model::Tools::Vcf::VcfSplitSamples->create(
+        vcf_input => $multisample_vcf,
+        output_dir => $single_sample_dir,
+    );
+    my $vcf_split_result;
+    unless($vcf_split_result = $vcf_split_cmd->execute){
+        die "Could not complete vcf splitting!";
+    }
+
+    print "single_sample_dir located at: ".$single_sample_dir."\n";
 
     my $maf_header;
-    my $maf_maker_cmd = "";
+    my $maf_maker_cmd = "cat";
     foreach my $build (@builds) {
         my $sample_id = $build->subject_name;
         my $annotation_output_directory = $build->data_directory."/variants";
         my $annotation_file_per_sample = $annotation_output_directory."/filtered.variants.post_annotation"; #needs to get some sort of single-sample annotation file from the build or maybe there is a unified annotation file to use?
-        my $vcf_cmd = "gmt vcf convert maf vcf-2-maf --vcf-file $single_sample_dir/$sample_id.vcf --annotation-file $annotation_file_per_sample --output-file $single_sample_dir/$sample_id.maf";
-        system($vcf_cmd);
-        $maf_maker_cmd .= " $single_sample_dir/$sample_id.maf";    
+#        my $vcf_cmd = "gmt vcf convert maf vcf-2-maf --vcf-file $single_sample_dir/$sample_id.vcf --annotation-file $annotation_file_per_sample --output-file $single_sample_dir/$sample_id.maf";
+#        print "$vcf_cmd\n";
+#        system($vcf_cmd);
+        my $vcf_cmd = Genome::Model::Tools::Vcf::Convert::Maf::Vcf2Maf->create(
+            vcf_file => "$single_sample_dir/$sample_id.vcf",
+            annotation_file => $annotation_file_per_sample,
+            output_file => "$single_sample_dir/$sample_id.maf",
+        );
+        my $vcf_result;
+        unless($vcf_result = $vcf_cmd->execute){
+            die "Could not complete vcf to maf creation!";
+        }
+        $maf_maker_cmd .= " $single_sample_dir/$sample_id.maf";
     }
     my $maf_sample_id = $builds[0]->subject_name;
     $maf_maker_cmd .= " | grep -v \"Hugo_Symbol\" > $single_sample_dir/All_Samples_noheader.maf";
+    print "$maf_maker_cmd\n";
     system($maf_maker_cmd);
     my $final_maf = "$single_sample_dir/All_Samples.maf";
     my $final_maf_maker_cmd = "head -n1 $single_sample_dir/$maf_sample_id.maf | cat - $single_sample_dir/All_Samples_noheader.maf > $final_maf";
+    print "$final_maf_maker_cmd\n";
     system($final_maf_maker_cmd);
     return $final_maf;
 }
