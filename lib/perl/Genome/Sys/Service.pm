@@ -53,6 +53,8 @@ sub __load__ {
 }
 
 # dynamically create an accessor method for the service API, and emit a warning whenever it is not overridden in subclasses
+# TODO: it would be better to check this when initializing the sub-class than when using the accessor ...but this
+# may be easier to work with while we are still getting the API stabilized.
 my @methods = (qw/host restart_command stop_command log_path status pid_status pid_name url/);
 for my $method (@methods) {
     my $sub = sub {
