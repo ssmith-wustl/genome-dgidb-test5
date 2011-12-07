@@ -77,10 +77,18 @@ sub execute {
     unless ($fai) {
         die('Failed to load fai index for fasta file '. $input_fasta_file);
     }
-
+    
     # Load ROI Regions
+    my $sorted_bed_file = Genome::Sys->create_temp_file_path;
+    unless (Genome::Model::Tools::BedTools::Sort->execute(
+        use_version => '2.14.3',
+        input_file => $self->bed_file,
+        output_file => $sorted_bed_file,
+    )) {
+        die('Failed to sort BED file'. $self->bed_file);
+    }
     my $regions = Genome::Model::Tools::RefCov::ROI::Bed->create(
-        file => $self->bed_file,
+        file => $sorted_bed_file,
     );
     unless ($regions) {
         die('Failed to load BED regions-of-interest file: '. $self->bed_file);
