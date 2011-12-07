@@ -264,6 +264,10 @@ sub modify_index {
         $error = $@;
     }
 
+    if ($error) {
+        $self->error($error);
+    }
+
     if ($rv) {
         my $display_action = ($action eq 'add' ? 'Added' : 'Deleted');
         $self->info("$display_action $display_name");

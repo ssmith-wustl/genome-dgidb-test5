@@ -111,10 +111,10 @@ sub test_priority_sorting {
     *Genome::Search::is_indexable = $text_is_indexable;
 
     # purposely out of order so that timestamps won't sort in the same order as priority
-    my @subject_ids = ('Thing 9', 'Thing', 'Thing 5', 'Thing 1', 'Thing 2');
+    my @subject_ids = ('Thing 9', 'Thing', 'Thing 5', 'Thing 1', 'Thing 0', 'Thing 2');
 
     # undef = 0, numerically ascending
-    my @sorted_subject_ids = ('Thing', 'Thing 1', 'Thing 2', 'Thing 5', 'Thing 9');
+    my @sorted_subject_ids = ('Thing 0', 'Thing 1', 'Thing 2', 'Thing 5', 'Thing 9', 'Thing');
 
     for my $subject_id (@subject_ids) {
         my ($priority) = $subject_id =~ /(\d)$/;

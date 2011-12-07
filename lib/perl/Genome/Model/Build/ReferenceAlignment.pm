@@ -569,6 +569,25 @@ sub variants_directory {
     return $expected_directory; #new builds should use current location
 }
 
+sub final_result_for_variant_type {
+    my $self = shift;
+    my $variant_type = shift;
+
+    my @users = Genome::SoftwareResult::User->get(user => $self);
+    my @results = Genome::SoftwareResult->get([map($_->software_result_id, @users)]);
+    my @dv2_results = grep($_->class =~ /Genome::Model::Tools::DetectVariants2::Result/, @results);
+    my @relevant_results = grep(scalar( @{[ glob($_->output_dir . '/' . $variant_type .'*') ]} ), @dv2_results);
+
+    if(!@relevant_results) {
+        return;
+    }
+    if(@relevant_results > 1) {
+        die $self->error_message('Found multiple results for variant type!');
+    }
+
+    return $relevant_results[0];
+}
+
 sub log_directory {
     my $self = shift;
     return $self->data_directory."/logs/";
