@@ -211,7 +211,7 @@ sub print_to_maf {
     # First one without tab
     print MAF $maf->{$maf_columns[0]};
     foreach my $column (@maf_columns[1 .. $#maf_columns]) {
-	print MAF "\t", (defined $maf->{$column} ? $maf->{$column} : "");
+	print MAF "\t", (defined $maf->{$column} ? $maf->{$column} : "--");
     }
     print MAF "\n";
 }
@@ -296,7 +296,32 @@ sub make_maf_hash {
     }
 
     $maf->{Hugo_Symbol} = $annot->{gene_name};
-    # $maf->{Entrez_Gene_Id} = 
+
+#taken from gmt annotate revise-maf
+    my $entrez_gene_ids;
+    my $Hugo_Symbol = $maf->{Hugo_Symbol};
+    my @gene_info = GSC::Gene->get(gene_name => $Hugo_Symbol);
+    if (@gene_info) {
+		for my $info (@gene_info) {
+		    my $locus_link_id = $info->locus_link_id;
+		    if ($locus_link_id) {
+			    my $id = $entrez_gene_ids->{$Hugo_Symbol};
+			    if ($id) {
+			        unless ($id =~ /$locus_link_id/) {
+        				$entrez_gene_ids->{$Hugo_Symbol}="$id:$locus_link_id";
+			        }
+			    } else {
+			        $entrez_gene_ids->{$Hugo_Symbol}=$locus_link_id;
+			    }
+		    }
+		}
+        $maf->{Entrez_Gene_Id} = $entrez_gene_ids->{$Hugo_Symbol};
+    }
+    else {
+        $maf->{Entrez_Gene_Id} = "-";
+    }
+
+
     $maf->{Center} = 'genome.wustl.edu';
     $maf->{NCBI_Build} = 'NCBI-human-build36';
     $maf->{End_Position} = $annot->{stop};
@@ -313,26 +338,27 @@ sub make_maf_hash {
     $maf->{Tumor_Seq_Allele1} = $maf->{Match_Norm_Seq_Allele1};
     $maf->{Tumor_Seq_Allele2} = $maf->{Match_Norm_Seq_Allele2};
 
-    # $maf->{dbSNP_RS} = 
-    # $maf->{dbSNP_Val_Status} = 
+    $maf->{dbSNP_RS} = "-";
+    $maf->{dbSNP_Val_Status} = "-";
 
 	# required to match correctly
     $maf->{Tumor_Sample_Barcode} = $vcf_columns[-1];
     $maf->{Matched_Norm_Sample_Barcode} = $vcf_columns[-1]; # Ex. H_MRS-6201-1025127
 
-    # $maf->{Tumor_Validation_Allele1} = 
-    # $maf->{Tumor_Validation_Allele} = 
-    # $maf->{Match_Norm_Validation_Allele1} = 
-    # $maf->{Match_Norm_Validation_Allele2} = 
-    $maf->{Verification_Status} = $vcf->{FILTER} eq "PASS" ? "Strandfilter_Passed" : "";
+    $maf->{Tumor_Validation_Allele1} = "-";
+    $maf->{Tumor_Validation_Allele} = "-";
+    $maf->{Match_Norm_Validation_Allele1} = "-";
+    $maf->{Match_Norm_Validation_Allele2} = "-";
+    $maf->{Verification_Status} = $vcf->{FILTER} eq "PASS" ? "Strandfilter_Passed" : "-";
     $maf->{Validation_Status} = "Unknown";
     $maf->{Mutation_Status} = "Germline";
     $maf->{Validation_Method} = "4";
     $maf->{Sequencing_Phase} = "Capture";
-    # $maf->{Sequence_Source} = 
-    # $maf->{Score} = 
-    # $maf->{BAM_file} = 
-    # $maf->{Sequencer} = 
+    $maf->{Sequence_Source} = "-";
+    $maf->{Score} = "-";
+    $maf->{BAM_File} = "-";
+    $maf->{Sequencer} = "GaIIx or HiSeq";
+
 
     # Below are non standard MAF columns
     # change the our declaration of @maf_colums at the top of the file to include/exclude printing these to file
@@ -343,7 +369,7 @@ sub make_maf_hash {
     $maf->{variant_WU} = $vcf->{ALT};
     $maf->{type_WU} = $maf->{Variant_Type};
     $maf->{gene_name_WU} = $maf->{Hugo_Symbol};
-    # $maf->{transcript_name_WU} = 
+    $maf->{transcript_name_WU} = $annot->{transcript_name};
     $maf->{transcript_species_WU} = $annot->{transcript_species};
     $maf->{transcript_source_WU} = $annot->{transcript_source};
     $maf->{transcript_version_WU} = $annot->{transcript_version};
