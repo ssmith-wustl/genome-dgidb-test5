@@ -7,7 +7,7 @@ use Genome;
 use List::MoreUtils qw/ uniq /;
 
 class Genome::DruggableGene::GeneNameReport {
-    is => 'Genome::Searchable',
+    is => 'UR::Object',
     id_generator => '-uuid',
     table_name => 'dgidb.gene_name_report',
     schema_name => 'dgidb',
@@ -27,6 +27,11 @@ class Genome::DruggableGene::GeneNameReport {
         gene_name_report_associations => {
             is => 'Genome::DruggableGene::GeneNameReportAssociation',
             reverse_as => 'gene_name_report',
+            is_many => 1,
+        },
+        alternate_names => {
+            via => 'gene_name_report_associations',
+            to => 'alternate_name',
             is_many => 1,
         },
         gene_name_report_category_associations => {

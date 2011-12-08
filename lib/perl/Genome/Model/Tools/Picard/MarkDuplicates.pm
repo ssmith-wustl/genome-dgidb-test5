@@ -116,4 +116,37 @@ sub execute {
     return 1;
 }
 
+
+sub parse_file_into_metrics_hashref {
+    my ($class,$metrics_file) = @_;
+    my $is_fh = Genome::Sys->open_file_for_reading($metrics_file);
+    my @headers;
+    my %data;
+    while (my $line = $is_fh->getline) {
+        chomp($line);
+        if ($line =~ /^## METRICS CLASS/) {
+            my $next_line = $is_fh->getline;
+            chomp($next_line);
+            @headers = split("\t",$next_line);
+            next;
+        }
+        if (@headers) {
+            if ($line =~ /^\s*$/) {
+                last;
+            } else {
+                my $category;
+                my @values = split("\t",$line);
+                $category = $values[0];
+                for (my $i = 0; $i < scalar(@values); $i++) {
+                    my $header = $headers[$i];
+                    my $value = $values[$i];
+                    $data{$category}{$header} = $value;
+                }
+            }
+        }
+    }
+    return \%data;
+}
+
+
 1;

@@ -600,7 +600,7 @@ sub collect_inputs_and_run_aligner {
     }
 
     # Perform N-removal if requested
-
+    
     if ($self->n_remove_threshold) {
         $self->status_message("Running N-remove.  Threshold is " . $self->n_remove_threshold);
 
@@ -708,6 +708,8 @@ sub collect_inputs_and_run_aligner {
 
     for my $pass (@passes) {
         $self->status_message("Aligning @$pass...");
+        # note that the _run_aligner method must _append_ to any existing all_sequences.sam file
+        # in case it is not being run on the first pass
         unless ($self->_run_aligner(@$pass)) {
             if (@$pass == 2) {
                 $self->error_message("Failed to run aligner on first PE pass");
@@ -1322,7 +1324,8 @@ sub _extract_input_fastq_filenames {
                 die($self->error_message);
             }
         }
-    } else {
+    } 
+    else {
         # FIXME - getting a warning about undefined string with 'eq'
         if (! defined($self->filter_name)) {
             $self->status_message('No special filter for this input');
@@ -1342,7 +1345,6 @@ sub _extract_input_fastq_filenames {
         my $temp_directory = Genome::Sys->create_temp_directory;
 
         my $trimmer_name = $self->trimmer_name;
-        undef($trimmer_name) if $trimmer_name and $trimmer_name eq 'trimq2_shortfilter';
 
         @input_fastq_pathnames = $instrument_data->dump_trimmed_fastq_files(
             segment_params => \%segment_params,
@@ -1351,6 +1353,9 @@ sub _extract_input_fastq_filenames {
             trimmer_params => $self->trimmer_params,
             directory => $temp_directory,
         );
+        if (!@input_fastq_pathnames){
+            $self->error_message("no input_fastq_pathnames returned from dump_trimmed_fastq_files");
+        }
 
         my @report_files = glob($temp_directory ."/*report*");
         my @length_distributions = glob($temp_directory ."/*.lengthdist");
@@ -1362,9 +1367,6 @@ sub _extract_input_fastq_filenames {
             unlink($report_file);
         }
 
-        # this previously happened at the beginning of _run_aligner
-        @input_fastq_pathnames = $self->run_trimq2_filter_style(@input_fastq_pathnames)
-        if $self->trimmer_name and $self->trimmer_name eq 'trimq2_shortfilter';
 
         $self->_input_fastq_pathnames(\@input_fastq_pathnames);
     }
@@ -1408,276 +1410,6 @@ sub input_bfq_filenames {
     }
     return @input_bfq_pathnames;
 }
-
-
-sub qualify_trimq2 {
-    my $self = shift;
-    my $trimmer_name = $self->trimmer_name;
-
-    return 1 unless $trimmer_name and $trimmer_name =~ /^trimq2/;
-    $self->status_message('trimq2 will be used as fastq trimmer');
-
-    my ($style) = $trimmer_name =~ /trimq2_(\S+)/;
-    unless ($style =~ /^(shortfilter|smart1|hard)$/) {
-        $self->error_message("unrecognized trimq2 trimmer name: $trimmer_name");
-        return;
-    }
-
-    my $ver = $self->instrument_data->analysis_software_version;
-    unless ($ver) {
-        $self->error_message("Unknown analysis software version for instrument data: ".$self->instrument_data->id);
-        return;
-    }
-
-    if ($ver =~ /SolexaPipeline\-0\.2\.2\.|GAPipeline\-0\.3\.|GAPipeline\-1\.[01]/) {#hardcoded Illumina piepline version for now see G::I::Solexa
-        $self->error_message ('Instrument data : '.$self->instrument_data->id.' not from newer Illumina analysis software version.');
-        return;
-    }
-    return 1;
-}
-
-
-sub _get_trimq2_params {
-    my $self = shift;
-
-    my $param = $self->trimmer_params; #for trimq2_shortfilter, input something like "32:#" (length:string) in processing profile as trimmer_params, for trimq2_smart1, input "20:#" (quality_level:string)
-    if ($param !~ /:/){
-        $param = '::';
-    }
-    my ($first_param, $string) = split /\:/, $param;
-
-    return ($first_param, $string);
-}
-
-
-sub get_trimq2_reports {
-    return glob(shift->alignment_directory."/*trimq2.report*");
-}
-
-sub _get_base_counts_from_trimq2_report {
-    my ($self, $report) = @_;
-    my $last_line = `tail -1 $report`;
-    my ($ct, $trim_ct);
-
-    my ($style) = $self->trimmer_name =~ /trimq2_(\S+)/;
-
-    if ($style =~ /^(smart1|hard)$/) {#Simple, no_filter style
-        ($ct, $trim_ct) = $last_line =~ /^\s+(\d+)\s+\d+\s+(\d+)\s+/;
-    }
-    elsif ($style eq 'shortfilter') {
-        ($ct, $trim_ct) = $last_line =~ /^\s+(\d+)\s+\d+\s+\d+\s+(\d+)\s+/;
-    }
-    else {
-        $self->error_message("unrecognized trimq2 style: $style");
-        return;
-    }
-
-    return ($ct, $trim_ct) if $ct and $trim_ct;
-    $self->error_message("Failed to get base counts after trim for report: $report");
-    return;
-}
-
-
-sub calculate_base_counts_after_trimq2 {
-    my $self    = shift;
-    my @reports = $self->get_trimq2_reports;
-    my $total_ct       = 0;
-    my $total_trim_ct  = 0;
-
-    unless (@reports == 2 or @reports == 1) {
-        $self->error_message("Incorrect trimq2 report count: ".@reports);
-        return;
-    }
-
-    #Trimq2::Simple,  trimq2_smart1, get two report
-    #Trimq2::PairEnd/Fragment, trimq2_shortfilter, get one report
-
-    for my $report (@reports) {
-        my ($ct, $trim_ct) = $self->_get_base_counts_from_trimq2_report($report);
-        return unless $ct and $trim_ct;
-        $total_ct += $ct;
-        $total_trim_ct += $trim_ct;
-    }
-    return ($total_ct, $total_trim_ct);
-}
-
-sub run_trimq2_filter_style {
-    my ($self, @fq_files) = @_;
-    my ($length, $string) = $self->_get_trimq2_params;
-
-    my $tmp_dir = File::Temp::tempdir(
-        'Trimq2_filter_styleXXXXXX',
-        DIR     => $self->temp_scratch_directory,
-        CLEANUP => 1,
-    );
-
-    my %params = (
-        output_dir  => $tmp_dir,
-        report_file => $self->temp_staging_directory.'/trimq2.report',
-    );
-
-    $params{length_limit} = $length if $length; #gmt trimq2 takes 32 as default length_limit
-    $params{trim_string}  = $string if $string; #gmt trimq2 takes #  as default trim_string
-
-    my @trimq2_files = ();
-
-    if ($self->instrument_data->is_paired_end) {
-        unless (@fq_files == 2) {
-            $self->error_message('Need 2 fastq files for pair-end trimq2. But get :',join ',',@fq_files);
-            return;
-        }
-        my ($p1, $p2);
-        #The names of temp files return from above method input_fastq_filenames
-        #will end as either 0 or 1
-        for my $file (@fq_files) {
-            if ($file =~ /\-0\.fastq$/) {   #hard coded fastq file name for now
-                $p1 = $file;
-            }
-            elsif ($file =~ /\-1\.fastq$/) {
-                $p2 = $file;
-            }
-            else {
-                $self->error_message("file names of pair end fastq do not match either -0 or -1");
-            }
-        }
-        unless ($p1 and $p2) {
-            $self->error_message("There must be both -0 and -1 fastq files existing for pair_end trimq2");
-            return;
-        }
-
-        %params = (
-            %params,
-            pair1_fastq_file => $p1,
-            pair2_fastq_file => $p2,
-        );
-
-        my $trimmer = Genome::Model::Tools::Fastq::Trimq2::PairEnd->create(%params);
-        my $rv = $trimmer->execute;
-
-        unless ($rv == 1) {
-            $self->error_message("Running Trimq2 PairEnd failed");
-            return;
-        }
-        push @trimq2_files, $trimmer->pair1_out_file, $trimmer->pair2_out_file, $trimmer->pair_as_frag_file;
-    }
-    else {
-        unless (@fq_files == 1) {
-            $self->error_message('Need 1 fastq file for fragment trimq2. But get:', join ',', @fq_files);
-            return;
-        }
-
-        %params = (
-            %params,
-            fastq_file => $fq_files[0],
-        );
-
-        my $trimmer = Genome::Model::Tools::Fastq::Trimq2::Fragment->create(%params);
-        my $rv = $trimmer->execute;
-
-        unless ($rv == 1) {
-            $self->error_message('Running Trimq2 Fragment failed');
-            return;
-        }
-        push @trimq2_files, $trimmer->out_file;
-    }
-
-    return @trimq2_files;
-}
-
-sub trimq2_filtered_to_unaligned_sam {
-    my $self = shift;
-    my $alignment_directory = shift || $self->temp_scratch_directory;
-
-    unless ($self->trimmer_name eq 'trimq2_shortfilter') {
-        $self->error_message('trimq2_filtered_to_unaligned method only applies to trimq2_shortfilter as trimmer');
-        return;
-    }
-
-    my @filtered = glob($alignment_directory."/*.filtered.fastq");
-
-    unless (@filtered) {
-        $self->warning_message('There is no trimq2.filtered.fastq under alignment directory: '. $alignment_directory);
-        return;
-    }
-
-    my $out_fh = File::Temp->new(
-        TEMPLATE => 'filtered_unaligned_XXXXXX',
-        DIR      => $alignment_directory,
-        SUFFIX   => '.sam',
-    );
-
-    my $filler = "\t*\t0\t0\t*\t*\t0\t0\t";
-    my $seq_id = $self->instrument_data->id;
-    my ($pair1, $pair2, $frag) = ("\t69", "\t133", "\t4");
-    my ($rg_tag, $pg_tag)      = ("\tRG:Z:", "\tPG:Z:");
-
-    FILTER: for my $file (@filtered) {#for now there are 3 types: pair_end, fragment, pair_as_fragment
-        unless (-s $file) {
-            $self->warning_message("trimq2 filtered file: $file is empty");
-            next;
-        }
-
-        my $fh = Genome::Sys->open_file_for_reading($file);
-
-        if ($file =~ /\.pair_end\./) { #filtered output from G::M::T::F::Trimq2::PairEnd
-            while (my $head1 = $fh->getline) {
-                my $seq1  = $fh->getline;
-                my $sep1  = $fh->getline;
-                my $qual1 = $fh->getline;
-
-                my $head2 = $fh->getline;
-                my $seq2  = $fh->getline;
-                my $sep2  = $fh->getline;
-                my $qual2 = $fh->getline;
-
-                chomp ($seq1, $qual1, $seq2, $qual2);
-
-                my ($name1) = $head1 =~ /^@(\S+)\/[12]\s/; # read name in sam file doesn't contain /1, /2
-                my ($name2) = $head2 =~ /^@(\S+)\/[12]\s/;
-
-                unless ($name1 eq $name2) {
-                    $self->error_message("Pair-end names conflict : $name1 , $name2");
-                    return;
-                }
-
-                $out_fh->print($name1.$pair1.$filler.$seq1."\t".$qual1.$rg_tag.$seq_id.$pg_tag.$seq_id."\n");
-                $out_fh->print($name2.$pair2.$filler.$seq2."\t".$qual2.$rg_tag.$seq_id.$pg_tag.$seq_id."\n");
-            }
-        }
-        else {
-            FRAG: while (my $head = $fh->getline) {
-                my $seq  = $fh->getline;
-                my $sep  = $fh->getline;
-                my $qual = $fh->getline;
-
-                chomp ($seq, $qual);
-                my $name;
-
-                if ($file =~ /\.fragment\./) { #filtered ouput from G::M::T::F::Trimq2::Fragment
-                    ($name) = $head =~ /^@(\S+?)(\/[12])?\s/;
-                }
-                elsif ($file =~ /\.pair_as_fragment\./) {
-                    #filtered output from G::M::T::F::Trimq2::PairEnd, since these are filtered pair_as_frag, their
-                    #mates are used for alignment as fragment. For now, keep their original name with /1, /2 to
-                    #differentiate
-                    ($name) = $head =~ /^@(\S+)\s/;
-                }
-                else {
-                    $self->warning_message("Unrecognized trimq2 filtered file: $file");
-                    last FRAG;
-                    $fh->close;
-                    next FILTER;
-                }
-                $out_fh->print($name.$frag.$filler.$seq."\t".$qual.$rg_tag.$seq_id."\n");
-            }
-        }
-        $fh->close;
-    }
-    $out_fh->close;
-
-    return $out_fh->filename;
-}
-
 
 sub _prepare_reference_sequences {
     my $self = shift;

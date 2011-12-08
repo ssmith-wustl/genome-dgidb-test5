@@ -11,7 +11,7 @@ class Genome::InstrumentData::Command::Align::Soap {
         aligner_name => { value => 'soap' },
     ],
     has => [
-        version => {is=>'String', default_value=>Genome::Model::Tools::Soap->default_soap_align_version}
+        version => {is=>'String', default_value=>Genome::Model::Tools::Soap::Base->default_soap_align_version}
     ],
     doc => "align instrument data using the SOAP aligner tool (see http://soap.genomics.org.cn/soapaligner.html)",
 };

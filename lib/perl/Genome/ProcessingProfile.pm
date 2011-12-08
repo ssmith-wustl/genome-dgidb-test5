@@ -49,17 +49,22 @@ sub __display_name__ {
     return $self->name . ' (' . $self->id . ')';
 }
 
-### Override When Implementing New Pipelines ###
+### Override these in the model subclass when Implementing New Pipelines ###
 
 sub _initialize_model {
-    # my ($self,$model) = @_;
-    # override in sub-classes to get custom mods to the model
+    my ($self,$model) = @_;
+    if ($model->can('_initialize_model')) {
+        return $model->_initialize_model();
+    }
     return 1;
 }
 
 sub _initialize_build {
-    # my ($self,$build) = @_;
-    # override in sub-classes to get custom mods to the build
+    my ($self,$build) = @_;
+    my $model = $build->model;
+    if ($model->can('_initialize_build')) {
+        return $model->_initialize_build($build);
+    }
     return 1;
 }
 
@@ -77,7 +82,7 @@ sub _build_success_callback {
     return 1;
 }
 
-# Override this method in subclass to use non-default resource requirement string for _execute_build method
+# Override this method in the model subclass to use non-default resource requirement string for _execute_build method
 #sub _resource_requirements_for_execute_build {
 #    my $self = shift;
 #    my $resource = "-R ...";
@@ -86,12 +91,17 @@ sub _build_success_callback {
 
 sub _resolve_workflow_for_build {
     my ($self,$build, $optional_lsf_queue) = @_;
-    
+   
+    my $model = $build->model;
+    if ($model->can('_resolve_workflow_for_build')) {
+        return $model->_resolve_workflow_for_build($build);
+    }
+
     # override in sub-classes to return the correct workflow
     # for now this is build specific, but should eventually be pp specific,
     # and hopefully pp-subclass specific.
 
-    if ($self->can('_execute_build')) {
+    if ($self->can('_execute_build') or $build->model->can('_execute_build')) {
 
         my %opts = (
             name => $build->id . ' all stages',
@@ -106,11 +116,14 @@ sub _resolve_workflow_for_build {
  
         my $workflow = Workflow::Model->create(%opts);
 
-        my $operation_type = Workflow::OperationType::Command->get('Genome::Model::Event::Build::ProcessingProfileMethodWrapper');
+        my $operation_type = Workflow::OperationType::Command->get('Genome::Model::Build::ExecuteBuildWrapper');
         #$operation_type->lsf_rusage("-R 'select[model!=Opteron250 && type==LINUX64] span[hosts=1]'");
         #$operation_type->lsf_resource("-R 'select[model!=Opteron250 && type==LINUX64] rusage[tmp=90000:mem=16000]' -M 16000000");
         if ($self->can('_resource_requirements_for_execute_build')) {
             $operation_type->lsf_resource($self->_resource_requirements_for_execute_build($build));
+        }
+        elsif ($build->model->can('_resource_requirements_for_execute_build')) {
+            $operation_type->lsf_resource($build->model->_resource_requirements_for_execute_build($build));
         }
         else {
             $operation_type->lsf_resource("-R 'select[model!=Opteron250 && type==LINUX64] rusage[tmp=10000:mem=1000]' -M 1000000");
@@ -155,11 +168,14 @@ sub _resolve_workflow_for_build {
 # override in subclasses to compose processing profile parameters and build inputs to the workflow provided above
 sub _map_workflow_inputs {
     my ($self, $build) = @_;
-    
+    my $model = $build->model;
+    if ($model->can('_map_workflow_inputs')) {
+        return $model->_map_workflow_inputs($build);
+    }
     return (build_id => $build->id);
 }
 
-# override in sub-classes if you want a non-workflow build
+# override in build sub-classes if you want a non-workflow build
 #sub _execute_build {
 #   # my ($self,$build) = @_;
 #    
@@ -171,6 +187,11 @@ sub _map_workflow_inputs {
 # Override in subclass if you want some kind of validation of the processing profile object
 sub validate_created_object {
     my $self = shift;
+    my $model_class = $self->class;
+    $model_class =~ s/Genome::ProcessingProfile/Genome::Model/;
+    if ($model_class->can("_initialize_profile")) {
+        return $model_class->_initialize_profile($self);
+    }
     return 1;
 }
 
@@ -468,5 +489,41 @@ sub _resolve_disk_group_name_for_build {
     return 'info_genome_models';
 }
 
+sub __extend_namespace__ {
+    # auto generate sub-classes for any valid processing profile
+    my ($self,$ext) = @_;
+
+    my $meta = $self->SUPER::__extend_namespace__($ext);
+    return $meta if $meta;
+
+    my $model_subclass_name = 'Genome::Model::' . $ext;
+    my $model_subclass_meta = UR::Object::Type->get($model_subclass_name);
+    if ($model_subclass_meta and $model_subclass_name->isa('Genome::Model')) {
+        my $profile_subclass_name = 'Genome::ProcessingProfile::' . $ext;
+        my @p = $model_subclass_meta->properties();
+        my @has;
+        for my $p (@p) {
+            if ($p->can("is_param") and $p->is_param) {
+                my %data = %{ UR::Util::deep_copy($p) };
+                for my $key (keys %data) {
+                    delete $data{$key} if $key =~ /^_/;
+                }
+                delete $data{id};
+                delete $data{db_committed};
+                delete $data{class_name};
+                push @has, $p->property_name, \%data;
+            }
+        }
+        my $profile_subclass_meta = UR::Object::Type->define(
+            class_name => $profile_subclass_name,
+            is => 'Genome::ProcessingProfile',
+            has_param => \@has,
+        );
+
+        die "Error defining $profile_subclass_name for $model_subclass_name!" unless $model_subclass_meta;
+        return $profile_subclass_meta;
+    }
+    return;
+}
 1;
 

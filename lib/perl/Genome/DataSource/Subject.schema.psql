@@ -37,10 +37,23 @@ CREATE TABLE subject.subject_attribute (
 CREATE INDEX subject_attribute_subject_id_index ON subject.subject_attribute(subject_id);
 CREATE INDEX subject_attribute_label_index ON subject.subject_attribute(attribute_label);
 
-CREATE TABLE subject.genome_user (
+CREATE TABLE subject.user (
     name  varchar(64),
     email varchar(255) NOT NULL,
     PRIMARY KEY (email)
+);
+
+CREATE TABLE subject.role (
+    id   varchar(32),
+    name varchar(64),
+    PRIMARY KEY (id),
+    UNIQUE (name)
+);
+
+CREATE TABLE subject.role_member (
+    user_email varchar(255) REFERENCES subject.user(email),
+    role_id   varchar(32) REFERENCES subject.user_role(id),
+    PRIMARY KEY (user_email, role_id)
 );
 
 CREATE TABLE subject.project (

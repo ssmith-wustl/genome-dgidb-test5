@@ -78,6 +78,7 @@ class Genome::Model::Command::Define::SomaticValidation {
             doc => 'model created by this command',
         },
     ],
+    doc => 'define a new somatic validation model',
 };
 
 sub help_detail {
@@ -115,14 +116,20 @@ sub execute {
             die $self->error_message('Expected one tumor sample for subject ' . $subject->__display_name__);
         }
         my $tumor_sample = Genome::Subject->get(\@tumor_sample_ids);
-        my @control_sample_ids = keys(%{ $variants_by_subject_id->{$subject->id}{$tumor_sample->id} });
-        if(@control_sample_ids != 1) {
-            die $self->error_message('Expected one control sample for subject ' . $subject->__display_name___);
-        }
-        my $control_sample = Genome::Subject->get(\@control_sample_ids);
 
-        my $variant_results = $variants_by_subject_id->{$subject->id}{$tumor_sample->id}{$control_sample->id};
-        my $variant_results_by_type = $self->resolve_variant_list_types(@$variant_results);
+        my $control_sample;
+        my $variant_results_by_type = {};
+        unless($self->tumor_sample and not $self->normal_sample) {
+            my @control_sample_ids = keys(%{ $variants_by_subject_id->{$subject->id}{$tumor_sample->id} });
+            if(@control_sample_ids != 1) {
+                die $self->error_message('Expected one control sample for subject ' . $subject->__display_name___);
+            }
+
+            $control_sample = Genome::Subject->get(\@control_sample_ids);
+
+            my $variant_results = $variants_by_subject_id->{$subject->id}{$tumor_sample->id}{$control_sample->id};
+            $variant_results_by_type = $self->resolve_variant_list_types(@$variant_results);
+        }
 
         push @params, name => $self->name
             if defined $self->name;
@@ -139,7 +146,8 @@ sub execute {
         push @params, sv_variant_list => $variant_results_by_type->{sv}
             if defined $variant_results_by_type->{sv};
         push @params, tumor_sample => $tumor_sample;
-        push @params, normal_sample => $control_sample;
+        push @params, normal_sample => $control_sample
+            if defined $control_sample;
 
         if($self->region_of_interest_set) {
             push @params, region_of_interest_set => $self->region_of_interest_set;
@@ -174,8 +182,7 @@ sub resolve_subjects {
         my $subject = $self->_resolve_subject_from_samples($self->tumor_sample, $self->normal_sample);
         $self->subjects([$subject]);
 
-        #TODO Optionally support no "normal" sample
-        return { $subject->id => { $self->tumor_sample->id => { $self->normal_sample->id => []}}};
+        return { $subject->id => { $self->tumor_sample->id => { ($self->normal_sample ? ($self->normal_sample->id => []) : ())}}};
     }
 
     my @subjects;
@@ -268,7 +275,14 @@ sub resolve_processing_profile {
 
     return 1 if $self->processing_profile;
 
-    my $pp = Genome::ProcessingProfile::SomaticValidation->get(2636889); #FIXME fill in real default
+    my $pp;
+    if($self->tumor_sample and not $self->normal_sample) {
+        #Nov 2011 Single-Bam Validation
+        $pp = Genome::ProcessingProfile::SomaticValidation->get(2658053);
+    } else {
+        #Nov 2011 default Somatic Validation
+        $pp = Genome::ProcessingProfile::SomaticValidation->get(2656116);
+    }
 
     $self->processing_profile($pp);
     return $pp;

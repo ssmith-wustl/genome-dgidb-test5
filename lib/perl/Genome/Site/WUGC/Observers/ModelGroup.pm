@@ -3,7 +3,7 @@ package Genome::Site::WUGC::Observers::ModelGroup;
 use strict;
 use warnings;
 
-our %deleted_model_groups;
+our %projects_with_deleted_model_groups;
 our %deleted_bridges;
 
 Genome::ModelGroup->add_observer(
@@ -63,11 +63,15 @@ sub model_group_create {
 
 sub model_group_delete {
     my $self = shift;
-    $deleted_model_groups{ $self->id }++;
+
+    my $project_id = $self->uuid;
+    return 1 unless $project_id;
+    $projects_with_deleted_model_groups{$project_id}++;
+
+    return 1 if $Genome::Site::WUGC::Observers::Project::groups_with_deleted_projects{$project_id};
 
     my $project = $self->project;
     return 1 if not $project;
-    return 1 if $Genome::Site::WUGC::Observers::Project::deleted_projects{ $project->id };
 
     $self->status_message('Deleting associated project: '.$project->id);
 

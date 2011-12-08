@@ -10,6 +10,7 @@ class Genome::Model::Command::Define::MetagenomicCompositionShotgun {
     has => [
         _model_class => { value => 'Genome::Model::MetagenomicCompositionShotgun', },
     ],
+    doc => 'define a new metagenomic composition shotgun model',
 };
 
 1;

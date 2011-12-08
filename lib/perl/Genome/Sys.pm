@@ -364,10 +364,17 @@ sub open_gzip_file_for_reading {
     $self->validate_file_for_reading($file)
         or return;
 
-    #check file type for gzip
-    unless($self->_file_type($file) eq "gzip"){
+    #check file type for gzip or symlink to a gzip
+    my $file_type = $self->_file_type($file);
+    if ($file_type eq "symbolic") {
+        my $symlink_target = readlink($file);
+        unless($self->_file_type($symlink_target) eq "gzip"){
+            Carp::croak("File ($file) is not a gzip file");
+        }
+    } elsif ($file_type ne "gzip") {
         Carp::croak("File ($file) is not a gzip file");
     }
+
     my $pipe = "zcat ".$file." |";
 
     # _open_file throws its own exception if it doesn't work
@@ -532,7 +539,7 @@ sub shellcmd {
                     $self->status_message("Missing file ($missing_input_file)");
                 }
                 for my $output_file (@$output_files) {
-                    my $output_dir = (File::Basename::fileparse($_))[1];
+                    my $output_dir = (File::Basename::fileparse($output_file))[1];
                     if (not -d $output_dir) {
                         $self->status_message("Missing output dir ($output_dir)");
                     } elsif (not -s $output_file) {

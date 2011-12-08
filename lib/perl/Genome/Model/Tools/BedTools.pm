@@ -39,6 +39,7 @@ EOS
 }
 
 my %BEDTOOLS_VERSIONS = (
+    '2.14.3' => '/gsc/pkg/bio/bedtools/BEDTools-2.14.3',
     '2.9.0' => '/gsc/pkg/bio/bedtools/BEDTools-2.9.0',
     '2.8.3' => '/gsc/pkg/bio/bedtools/BEDTools-2.8.3',
     '2.6.1' => '/gsc/pkg/bio/bedtools/BEDTools-2.6.1',
@@ -52,7 +53,10 @@ sub path_for_bedtools_version {
     my $path = $BEDTOOLS_VERSIONS{$version};
     if (Genome::Config->arch_os =~ /64/) {
         if ($path) {
-            $path .= '-64';
+            my $arch_path = $path .'-64';
+            if (-d $arch_path) {
+                $path = $arch_path;
+            }
         }
     }
     return $path if (defined $path && -d $path);

@@ -733,6 +733,25 @@ sub check_pse {
             );
             return;
         }
+
+        if($genome_instrument_data->target_region_set_name) {
+            my $fl = Genome::FeatureList->get(name => $genome_instrument_data->target_region_set_name);
+            unless($fl) {
+                $self->error_message('Failed to get a feature-list matching target region set name ' . $genome_instrument_data->target_region_set_name);
+                return;
+            }
+
+            unless($fl->content_type) {
+                $self->error_message('No content-type set on feature-list ' . $fl->name);
+                return;
+            } elsif ($fl->content_type eq 'roi') {
+                $self->error_message('Unexpected "roi"-typed feature-list set as target region set name: ' . $fl->name);
+                return;
+            } elsif (!grep($_ eq $fl->content_type, 'exome', 'validation', 'targeted')) {
+                $self->error_message('Unknown/unhandled content-type ' . $fl->content_type . ' on feature-list ' . $fl->name);
+                return;
+            }
+        }
     }
 
     my ($subject_class_name)   = $pse->added_param('subject_class_name');
@@ -1040,6 +1059,7 @@ sub get_build36_to_37_rois {
         '04110401 PoP32 EZ capture chip set'   => '04110401 PoP32 EZ capture chip set build37',
         'RT 49315 - AMD -- pool 1' => 'AMD-pool1-build37',
         '03110401 capture chip set' => '03110401 capture chip set - liftover_build37',
+        'CleftPalate 03110402 capture chip set' => 'CleftPalate 03110402 capture chip set - liftover_build37',
     );
 }
 
@@ -1432,10 +1452,8 @@ sub add_processing_profiles_to_pses{
                 }
             }
             elsif ($instrument_data_type =~ /solexa/i) {
-                if($instrument_data->target_region_set_name and Genome::FeatureList->get(name => $instrument_data->target_region_set_name) and Genome::FeatureList->get(name => $instrument_data->target_region_set_name)->content_type eq 'validation') {
+                if($instrument_data->target_region_set_name and Genome::FeatureList->get(name => $instrument_data->target_region_set_name)->content_type eq 'validation') {
                      #Do not create ref-align models--will try to assign to existing SomaticValidation models.
-                } elsif ($instrument_data->target_region_set_name and not Genome::FeatureList->get(name => $instrument_data->target_region_set_name)) {
-                    die $self->error_message('No feature list found for target region set name ' . $instrument_data->target_region_set_name);
                 } elsif ($taxon->species_latin_name =~ /homo sapiens/i) {
                     if ($self->_is_pcgp($pse)) {
                         my $individual = $organism_sample->patient;

@@ -24,7 +24,7 @@ class Genome::DruggableGene::GeneNameReport::Set::View::Solr::Xml {
             is => 'Text',
             calculate_from => ['subject'],
             calculate => q{
-                return '/view/genome/druggable-gene/gene-name-report/set/status.html?name=' . $subject->name();
+                return '/view/genome/druggable-gene/gene-name-report/set/status.html?name=' . ($subject->members)[0]->name;
             },
         },
         display_label1 => {
@@ -45,13 +45,23 @@ class Genome::DruggableGene::GeneNameReport::Set::View::Solr::Xml {
         display_url3 => {
             is  => 'Text',
         },
+        display_title => {
+            is => 'Text',
+            calculate_from => ['subject'],
+            calculate => q{
+                return ($subject->members)[0]->name;
+            },
+        },
+        title => {
+            is => 'Text',
+            calculate_from => ['subject'],
+            calculate => q{
+                return ($subject->members)[0]->name;
+            },
+        },
         default_aspects => {
             is => 'ARRAY',
             default => [
-                {
-                    name => 'name',
-                    position => 'title',
-                },
                 {
                     name => 'nomenclature',
                     position => 'content',
@@ -69,26 +79,26 @@ class Genome::DruggableGene::GeneNameReport::Set::View::Solr::Xml {
                     position => 'content',
                 },
                 {
-                    name => '__display_name__',
-                    position => 'display_title',
+                    name => 'alternate_names',
+                    position => 'content',
                 },
-            ]
+            ],
         },
-    ]
+    ],
 };
 
 sub _generate_id_field_data {
     my $self = shift;
     my $subject = $self->subject;
 
-    return $subject->__display_name__;
+    return ($subject->members)[0]->name;
 }
 
 sub _generate_object_id_field_data {
     my $self = shift;
     my $subject = $self->subject;
 
-    return $subject->__display_name__;
+    return ($subject->members)[0]->name;
 }
 
 1;

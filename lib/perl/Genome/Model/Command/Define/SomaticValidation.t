@@ -9,7 +9,7 @@ BEGIN {
 };
 
 use above "Genome";
-use Test::More tests => 27;
+use Test::More tests => 33;
 
 use Cwd;
 #use Carp::Always;
@@ -109,6 +109,7 @@ my @m_3 = Genome::Model->get([$define_3->result_model_ids]);
 is(scalar(@m_3), 2, 'created two models');
 isnt($m_3[0]->subject, $m_3[1]->subject, 'two models have two different subjects');
 is($m_3[1]->region_of_interest_set, $test_targets, 'roi set to default properly');
+
 my @params_for_define_4 = (
     design => $test_targets,
     target => $test_targets,
@@ -125,6 +126,27 @@ my $m_4 = Genome::Model->get($define_4->result_model_ids);
 isa_ok($m_4, 'Genome::Model::SomaticValidation', 'created fourth model with samples explicitly named');
 is($m_4->tumor_sample, $somatic_variation_build2->tumor_model->subject, 'tumor sample set properly');
 is($m_4->normal_sample, $somatic_variation_build2->normal_model->subject, 'normal sample set properly');
+
+#Test with no normal
+my @params_for_define_5 = (
+    design => $test_targets,
+    target => $test_targets,
+    tumor_sample => $somatic_variation_build2->tumor_model->subject,
+);
+
+my $define_5 = Genome::Model::Command::Define::SomaticValidation->create(@params_for_define_5);
+isa_ok($define_5, 'Genome::Model::Command::Define::SomaticValidation', 'fifth creation command');
+$define_5->dump_status_messages(1);
+
+ok($define_5->execute, 'executed fifth creation command');
+my $m_5 = Genome::Model->get($define_5->result_model_ids);
+isa_ok($m_5, 'Genome::Model::SomaticValidation', 'created fifth model with samples explicitly named');
+is($m_5->tumor_sample, $somatic_variation_build2->tumor_model->subject, 'tumor sample set properly');
+ok(!$m_5->normal_sample, 'no normal sample set');
+isnt($m_5->processing_profile, $m_4->processing_profile, 'assigned different default processing profile for single-sample case');
+
+
+
 
 # Create some test models with builds and all of their prerequisites
 sub setup_somatic_variation_build {

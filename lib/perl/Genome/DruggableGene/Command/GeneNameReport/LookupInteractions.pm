@@ -21,6 +21,12 @@ class Genome::DruggableGene::Command::GeneNameReport::LookupInteractions {
             doc => "Output interactions to specified file. Defaults to STDOUT if no file is supplied.",
             default => "STDOUT",
         },
+        filter => {
+            is => 'Text',  
+            is_optional => 1,
+            doc => 'Filter results based on the parameters.  See below for how to.',
+            shell_args_position => 2,
+        },
     ],
 };
 
@@ -92,7 +98,8 @@ sub get_interactions {
 
     my @gene_name_report_ids = map($_->id, @gene_name_reports);
     @gene_name_report_ids = uniq @gene_name_report_ids;
-    return Genome::DruggableGene::DrugGeneInteractionReport->get(gene_name_report_id => \@gene_name_report_ids);
+    my $bool_expr = $self->_resolve_boolexpr('Genome::DruggableGene::DrugGeneInteractionReport', @gene_name_report_ids);
+    return Genome::DruggableGene::DrugGeneInteractionReport->get($bool_expr);
 }
 
 sub group_interactions_by_drug_name_report {
@@ -131,11 +138,11 @@ sub print_grouped_interactions{
         }
     }
 
-    my @headers = qw/interaction_id interaction_type drug_name_report_id drug_name_report drug_nomenclature drug_source_db_name drug_source_db_version gene_name_report_id
-        gene_name_report gene_nomenclature gene_source_db_name gene_source_db_version/;
+    my @headers = qw/drug_name_report drug_nomenclature drug_source_db_name drug_source_db_version
+        gene_name_report gene_nomenclature gene_alternate_names gene_source_db_name gene_source_db_version interaction_type /;
     $output_fh->print(join("\t", @headers), "\n");
 
-    Genome::DruggableGene::DrugNameReport->get(id => [keys %grouped_interactions]);
+    my @drug_name_reports = Genome::DruggableGene::DrugNameReport->get(id => [keys %grouped_interactions]);
     for my $drug_name_report_id (keys %grouped_interactions){
         for my $interaction (@{$grouped_interactions{$drug_name_report_id}}){
             $output_fh->print($self->_build_interaction_line($interaction), "\n");
@@ -154,10 +161,11 @@ sub _build_interaction_line {
     my $interaction = shift;
     my $drug_name_report = $interaction->drug_name_report;
     my $gene_name_report = $interaction->gene_name_report;
-    my $interaction_line = join("\t", $interaction->id, $interaction->interaction_type,
-        $drug_name_report->id, $drug_name_report->name, $drug_name_report->nomenclature, $drug_name_report->source_db_name,
-        $drug_name_report->source_db_version, $gene_name_report->id, $gene_name_report->name, $gene_name_report->nomenclature,
-        $gene_name_report->source_db_name, $gene_name_report->source_db_version);
+    my $gene_alternate_names = join(":", map($_->alternate_name, $gene_name_report->gene_name_report_associations));
+    my $interaction_line = join("\t", $drug_name_report->name,
+        $drug_name_report->nomenclature, $drug_name_report->source_db_name, $drug_name_report->source_db_version,
+        $gene_name_report->name, $gene_name_report->nomenclature, $gene_alternate_names,
+        $gene_name_report->source_db_name, $gene_name_report->source_db_version, $interaction->interaction_type);
     return $interaction_line;
 }
 
@@ -185,6 +193,31 @@ sub _read_gene_file{
     }
 
     return @gene_identifiers;
+}
+
+sub _resolve_boolexpr {
+    my $self = shift;
+    my $subject_class_name = shift;
+    my @subject_class_name_ids = @_;
+    my $filter = $self->_complete_filter(@subject_class_name_ids);
+    my ($bool_expr, %extra) = UR::BoolExpr->resolve_for_string(
+        $subject_class_name,
+        $filter,
+        # $self->_hint_string,
+        # $self->order_by,
+    );
+
+    $self->error_message( sprintf('Unrecognized field(s): %s', join(', ', keys %extra)) )
+        and return if %extra;
+
+    return $bool_expr;
+}
+
+sub _complete_filter {
+    my $self = shift;
+    my @subject_class_name_ids = @_;
+    my $ids = join("/", @subject_class_name_ids);
+    return join(',', grep { defined $_ } ("gene_name_report_id:$ids", $self->filter));
 }
 
 1;

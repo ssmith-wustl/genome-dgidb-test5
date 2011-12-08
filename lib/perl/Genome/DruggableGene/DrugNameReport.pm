@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 
 class Genome::DruggableGene::DrugNameReport {
-    is => 'Genome::Searchable',
+    is => 'UR::Object',
     id_generator => '-uuid',
     table_name => 'dgidb.drug_name_report',
     schema_name => 'dgidb',
@@ -58,6 +58,18 @@ class Genome::DruggableGene::DrugNameReport {
 sub __display_name__ {
     my $self = shift;
     return $self->name . '(' . $self->source_db_name . ' ' . $self->source_db_version . ')';
+}
+
+if ($INC{"Genome/Search.pm"}) {
+    __PACKAGE__->create_subscription(
+        method => 'commit',
+        callback => \&commit_callback,
+    );
+}
+
+sub commit_callback {
+    my $self = shift;
+    Genome::Search->add(Genome::DruggableGene::DrugNameReport->define_set(name => $self->name));
 }
 
 1;

@@ -15,7 +15,7 @@ my $individual = Genome::Individual->create(name => "test-patient", common_name 
 my $sample = Genome::Sample->create(name => "test-patient", species_name => 'human', common_name => 'tumor', source => $individual);
 ok($sample, 'created sample');
 
-my $pp = Genome::ProcessingProfile::ImportedReferenceSequence->create(name => 'test_ref_pp');
+my $pp = Genome::ProcessingProfile::ReferenceSequence->create(name => 'test_ref_pp');
 my $model = Genome::Model::ReferenceSequence->create(
     name                => "test_ref_sequence",
     processing_profile  => $pp,

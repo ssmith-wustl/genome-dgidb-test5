@@ -45,12 +45,12 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
 
   <xsl:template name="genome_genenamereport_box">
 
-    <div class="span_8_box_masonry">
-      <div class="box_header span-8 last rounded-top">
+    <div class="span_12_box_masonry">
+      <div class="box_header span-12 last rounded-top">
         <div class="box_title"><h3 class="genome_genenamereport_16 span-7 last">Report</h3></div>
       </div>
 
-      <div class="box_content rounded-bottom span-8 last">
+      <div class="box_content rounded-bottom span-12 last">
         <table class="name-value">
           <tbody>
             <tr>
@@ -118,7 +118,24 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
                   </xsl:otherwise>
                 </xsl:choose>
               </td>
+              </tr>
+
+              <tr>
+              <td class="name">Alternate Names:
+              </td>
+              <td class="value">
+                  <ul>
+                      <xsl:for-each select="aspect[@name='gene_name_report_associations']/object">
+                          <li>
+                              <xsl:value-of select="normalize-space(aspect[@name='alternate_name']/value)"/>
+                              <xsl:text>  </xsl:text>
+                              (<xsl:value-of select="normalize-space(aspect[@name='nomenclature']/value)"/>)
+                          </li>
+                      </xsl:for-each>
+                  </ul>
+              </td>
             </tr>
+
           </tbody>
         </table>
       </div>

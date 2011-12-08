@@ -1,8 +1,6 @@
 package Genome::DruggableGene::DrugGeneInteractionReport::View::Solr::Xml;
-
 use strict;
 use warnings;
-
 use Genome;
 
 class Genome::DruggableGene::DrugGeneInteractionReport::View::Solr::Xml {
@@ -24,7 +22,7 @@ class Genome::DruggableGene::DrugGeneInteractionReport::View::Solr::Xml {
             is => 'Text',
             calculate_from => ['subject'],
             calculate => q{
-                return join ('?id=', '/view/genome/druggable-gene/drug-gene-interaction-report/status.html',$_->id());
+                return '/view/genome/druggable-gene/drug-gene-interaction-report/status.html?id=' . $subject->id();
             },
         },
         display_label1 => {

@@ -13,43 +13,43 @@ class Genome::Model::Tools::Fastq::RemoveN
 {
     is => 'Genome::Model::Tools::Fastq',
     has_input => [
-            n_removed_file => {
-                                    doc => 'file to write to',
-                                    is => 'Text',
-                                    is_output => 1,
-                                    is_optional => 1,
-                                }, 
+        n_removed_file => {
+            doc => 'file to write to',
+            is => 'Text',
+            is_output => 1,
+            is_optional => 1,
+        }, 
 
-	   n_removal_threshold =>   {
-                                    doc => 'minimum # of N\'s to screen on.  Set to 0 to disable',
-                                    is => 'Number',
-                                    is_optional => 1,
-	                        },
-	  non_n_base_threshold =>   {
-                                    doc => 'minimum # of consecutive non N\'s to screen on. Set to 0 to disable',
-                                    is => 'Number',
-                                    is_optional => 1,
-                                    
-                                },
-	save_screened_reads => 
-                                {
-                                    doc => 'save screened reads in separate file',
-                                    is => 'Boolean',
-                                    is_optional => 1,
-                                    default => 0,
-                                },
-         ],
+        n_removal_threshold =>   {
+            doc => 'minimum # of N\'s to screen on.  Set to 0 to disable',
+            is => 'Number',
+            is_optional => 1,
+        },
+        non_n_base_threshold =>   {
+            doc => 'minimum # of consecutive non N\'s to screen on. Set to 0 to disable',
+            is => 'Number',
+            is_optional => 1,
+
+        },
+        save_screened_reads => 
+        {
+            doc => 'save screened reads in separate file',
+            is => 'Boolean',
+            is_optional => 1,
+            default => 0,
+        },
+    ],
     has_output => [
-          passed_read_count => {
-                                    is=>'Number',
-                                    doc => 'number of reads passed screening',
-                                    is_optional => 1
-          },
-          failed_read_count => {
-                                    is=>'Number',
-                                    doc => 'number of reads failed screening',
-                                    is_optional => 1
-          },
+        passed_read_count => {
+            is=>'Number',
+            doc => 'number of reads passed screening',
+            is_optional => 1
+        },
+        failed_read_count => {
+            is=>'Number',
+            doc => 'number of reads failed screening',
+            is_optional => 1
+        },
     ]
 };
 
@@ -110,27 +110,27 @@ sub execute
         my $sep = $input_fh->getline;
         my $qual = $input_fh->getline;
         my $count = 0;
-	my $cutoff;
-	if ($self->n_removal_threshold){
-	    $cutoff=$self->n_removal_threshold;
-	    $seq=~s/(N)/$count++;$1/eg; # get N-count
-	    if($cutoff > 0 and $count >= $cutoff) {
-		$failed_reads++;
-	    }else {
-		$passed_reads++;   
-		$output_fh->print("$header$seq$sep$qual");
-	    }
-	}   
-	elsif ($self->non_n_base_threshold){
-	    $cutoff=$self->non_n_base_threshold;
-	    $seq=~s/([AGCTagct])/$count++;$1/eg; # get non=-N-count
-	    if ($cutoff > 0 and $count < $cutoff) {
-		$failed_reads++;
-	    } else {
-		$passed_reads++;   
-		$output_fh->print("$header$seq$sep$qual");
-	    }
-	}
+        my $cutoff;
+        if ($self->n_removal_threshold){
+            $cutoff=$self->n_removal_threshold;
+            $seq=~s/(N)/$count++;$1/eg; # get N-count
+            if($cutoff > 0 and $count >= $cutoff) {
+                $failed_reads++;
+            }else {
+                $passed_reads++;   
+                $output_fh->print("$header$seq$sep$qual");
+            }
+        }   
+        elsif ($self->non_n_base_threshold){
+            $cutoff=$self->non_n_base_threshold;
+            $seq=~s/([AGCTagct])/$count++;$1/eg; # get non=-N-count
+            if ($cutoff > 0 and $count < $cutoff) {
+                $failed_reads++;
+            } else {
+                $passed_reads++;   
+                $output_fh->print("$header$seq$sep$qual");
+            }
+        }
     }
     $input_fh->close;
     $output_fh->close;

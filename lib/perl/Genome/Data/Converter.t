@@ -131,6 +131,7 @@ while (my $csv_seq = $csv_reader->next()) {
 ok(!$csv_reader->next(), 'csv reader exhausted');
 ok(!$tsv_reader->next(), 'tsv reader exhausted');
 
+#TODO: test non-Sequence converter, with Mapper
 done_testing();
 
 

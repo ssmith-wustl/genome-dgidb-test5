@@ -5,7 +5,7 @@ use warnings;
 
 use Genome;
 
-use Data::Dumper 'Dumper';
+require Cwd;
 
 our %QUAKE_PARAMS = (
     k => {
@@ -143,6 +143,10 @@ sub execute {
 sub _run_quake_command {
     my ($self, $file) = @_;
 
+    my $cwd = Cwd::getcwd();
+    chdir $self->_tmpdir; # quake dumps files in the cwd!
+    $self->status_message('Chdir to: '.$self->_tmpdir);
+
     my $cmd = 'quake.py -q 33 -r '.$file;
     my $meta = $self->__meta__;
     for my $key ( $self->quake_param_names ) {
@@ -157,6 +161,8 @@ sub _run_quake_command {
         );
     }
     my $rv = eval{ Genome::Sys->shellcmd(cmd => $cmd); };
+    chdir $cwd;
+    $self->status_message('Chdir back to: '.$cwd);
     if ( not $rv ) {
         $self->error_message($@) if $@;
         $self->error_message("Failed to run quake: $cmd");

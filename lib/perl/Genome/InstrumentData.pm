@@ -24,6 +24,30 @@ class Genome::InstrumentData {
         sample_name => { via => 'sample', to => 'name' },
     ],
     has_optional => [
+        #TODO: may want to make these immutable, but needed them for
+        #backfilling purposes
+        original_est_fragment_size => { 
+            is => 'Number',
+            is_mutable => 1,
+            via => 'attributes',
+            to => 'attribute_value',
+            where => [attribute_label => 'original_est_fragment_size'],
+        },
+        final_est_fragment_size => {
+            is => 'Number',
+            is_mutable => 1,
+            via => 'attributes',
+            to => 'attribute_value',
+            where => [attribute_label => 'final_est_fragment_size'],
+        },
+        read_orientation => {
+            is => 'Text',
+            is_mutable => 1,
+            via => 'attributes',
+            to => 'attribute_value',
+            where => [attribute_label => 'read_orientation'],
+            valid_values => [qw(forward_reverse reverse_forward)],
+        },
         run_name => { is => 'Text' },
         subset_name => { is => 'Text' },
         full_name => { 
@@ -234,8 +258,8 @@ sub dump_fastqs_from_bam {
     die "cannot call bam path" if (!$self->can('bam_path'));
     
     unless (-e $self->bam_path) {
-	$self->error_message("Attempted to dump a bam but the path does not exist:" . $self->bam_path);
-	die $self->error_message;
+        $self->error_message("Attempted to dump a bam but the path does not exist:" . $self->bam_path);
+        die $self->error_message;
     }
     
     my $directory = delete $p{directory};
@@ -272,7 +296,7 @@ sub dump_fastqs_from_bam {
     if (-s $fwd_file && -s $rev_file) { 
         push @files, ($fwd_file, $rev_file);
     }
-    if (-s $fragment_file) {
+    if (-s $fragment_file && !$p{discard_fragments}) {
         push @files, $fragment_file;
     }
    

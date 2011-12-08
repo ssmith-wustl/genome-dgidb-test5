@@ -297,22 +297,25 @@ sub _gather_input_fastqs {
             trimmer_name => $self->trimmer_name,
             trimmer_version => $self->trimmer_version,
             trimmer_params => $self->trimmer_params,
+            discard_fragments => 0,
             directory => $directory,
         );
-        unless(scalar(@files) == 2) {
-            $self->error_message('Unexpected number of FASTQ files!');
+        if( scalar( @files ) == 3 ) {
+            $self->warning_message( "Discarding fragmented reads since Tophat cannot support a mix of single-end and paired-end reads" );
+        }
+        elsif( scalar( @files ) != 1 && scalar( @files ) != 2 ) {
+            $self->error_message("Unexpected number of FASTQ files (got ".scalar(@files)."):\n\t".join("\n\t", @files));
             die $self->error_message;
         }
         push @left_fastqs, $files[0];
-        push @right_fastqs, $files[1];
+        push @right_fastqs, $files[1] if( scalar(@files) == 2 );
 
         #needed for post-alignment statistics
         my $unaligned_bam = $directory .'/s_'. $instrument_data->subset_name .'_sequence.bam';
 
         if($self->trimmer_name or not $instrument_data->bam_path) {
-            unless (Genome::Model::Tools::Picard::FastqToSam->execute(
+            my %params = (
                 fastq => $files[0],
-                fastq2 => $files[1],
                 output => $unaligned_bam,
                 quality_format => 'Standard',
                 sample_name => $instrument_data->sample_name,
@@ -326,10 +329,16 @@ sub _gather_input_fastqs {
                 maximum_memory => 12,
                 maximum_permgen_memory => 256,
                 max_records_in_ram => 3000000,
-            )) {
-                die $self->error_message('Failed to create per lane, unaligned BAM file: '. $self->temp_scratch_directory .'/s_'. $instrument_data->subset_name .'_sequence.bam');
+            );
+            # If these are paired-end reads, then don't forget the second fastq file
+            $params{fastq2} = $files[1] if( scalar(@files) == 2 );
+
+            unless (Genome::Model::Tools::Picard::FastqToSam->execute( %params )) {
+                die $self->error_message('Failed to create per lane, unaligned BAM file: '
+                .$self->temp_scratch_directory .'/s_'. $instrument_data->subset_name .'_sequence.bam');
             }
-        } else {
+        }
+        else {
             my $existing_bam = $instrument_data->bam_path;
             Genome::Sys->create_symlink($existing_bam, $unaligned_bam);
         }
@@ -401,13 +410,15 @@ sub _run_aligner {
     my %params = (
         reference_path => $reference_path,
         read_1_fastq_list => $read_1_fastq_list,
-        read_2_fastq_list => $read_2_fastq_list,
         insert_size => $insert_size,
         insert_std_dev => $insert_size_std_dev,
         aligner_params => $self->aligner_params,
         alignment_directory => $self->temp_staging_directory,
         use_version => $self->aligner_version,
     );
+
+    # If these are paired-end reads, then don't forget the second fastq file
+    $params{read_2_fastq_list} = $read_2_fastq_list if( scalar( @$right_fastq_files ) > 0 );
 
     my $tophat_cmd = Genome::Model::Tools::Tophat::AlignReads->create(%params);
 

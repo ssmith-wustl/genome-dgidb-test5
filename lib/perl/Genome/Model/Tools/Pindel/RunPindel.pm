@@ -155,6 +155,7 @@ my %PINDEL_VERSIONS = (
     '0.3' => '/gscmnt/sata921/info/medseq/Pindel_test/merged_with_kai/'.$PINDEL_COMMAND,    #this version is merged with changes from KAI
     '0.4' => '/gscmnt/sata921/info/medseq/Pindel_test/version_4/'.$PINDEL_COMMAND,
     '0.5' => '/gsc/bin/'.$PINDEL_COMMAND,#/gscmnt/sata921/info/medseq/Pindel_test/r19/'.$PINDEL_COMMAND,
+    '0.2.4d' => '/gscmnt/ams1158/info/pindel/0.2.4d/'.$PINDEL_COMMAND,
 );
 
 sub help_synopsis {
@@ -184,9 +185,6 @@ sub create {
 
 sub execute {
     my $self = shift;
-    if($self->version eq 'r18'){
-        $self->window_size(10);
-    }
 
     unless($self->_verify_inputs) {
         die $self->error_message('Failed to verify inputs.');

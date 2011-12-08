@@ -12,8 +12,20 @@ use above "Genome";
 
 use Test::More;
 
-# Use, make sure it has subclasses
 use_ok('Genome::ProcessingProfile::Command::Create') or die;
+ok(Genome::ProcessingProfile::Command::Create->sub_command_classes) or die;
+is(Genome::ProcessingProfile::Command::Create->_sub_commands_from, 'Genome::Model', 'subcommands from');
+is(
+    Genome::ProcessingProfile::Command::Create->_sub_commands_inherit_from, 
+    'Genome::ProcessingProfile::Command::Create::Base',
+    'subcommands inherit from',
+);
+is(Genome::ProcessingProfile::Command::Create->_target_base_class, 'Genome::ProcessingProfile', 'target base class');
+
+test_command_subclass();
+test_processing_profile_class();
+
+# make sure it has subclasses
 ok(
     Genome::ProcessingProfile::Command::Create->sub_command_classes,
     'Sub command classes',
@@ -70,7 +82,8 @@ class Genome::ProcessingProfile::Command::Create::Tester {
     ],
 };
 Genome::ProcessingProfile::Command::Create::Tester->dump_status_messages(1);
-sub Genome::ProcessingProfile::Command::Create::Tester::_target_class_name { return 'Genome::ProcessingProfile::Tester' };
+Genome::ProcessingProfile::Command::Create->_overload_target_class_name('Genome::ProcessingProfile::Command::Create::Tester');
+is(Genome::ProcessingProfile::Command::Create::Tester->_target_class_name, 'Genome::ProcessingProfile::Tester', 'target class is Genome::ProcessingProfile::Tester');
 
 # Create a pp
 my %params = (
@@ -107,5 +120,20 @@ ok($creator, 'create w/ based on but no changes');
 ok(!$creator->execute, 'Failed as expected - tried to base on pp w/o changing params');
 
 done_testing();
-exit;
 
+sub test_command_subclass {
+    my $class = 'Genome::ProcessingProfile::Command::Create';
+    for my $subclass ('Foo', 'Foo::Bar') {
+        my $class_name = join('::', $class, $subclass);
+        is($class->_command_subclass($class_name), $subclass, '_command_subclass works for subclass (' . $subclass . ')');
+    }
+}
+
+sub test_processing_profile_class {
+    my $class = 'Genome::ProcessingProfile::Command::Create';
+    for my $subclass ('Foo', 'Foo::Bar') {
+        my $class_name = join('::', $class, $subclass);
+        my $expected_processing_profile_class = join('::', 'Genome::ProcessingProfile', $subclass);
+        is($class->_processing_profile_class($class_name), $expected_processing_profile_class, '_processing_profile_class works for subclass (' . $subclass . ')');
+    }
+}

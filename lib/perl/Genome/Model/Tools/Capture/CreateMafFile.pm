@@ -111,7 +111,7 @@ sub execute {                               # replace with real execution logic.
                 "Match_Norm_Seq_Allele2\tTumor_Validation_Allele1\tTumor_Validation_Allele2\t",
                 "Match_Norm_Validation_Allele1\tMatch_Norm_Validation_Allele2\t",
                 "Verification_Status\tValidation_Status\tMutation_Status\tSequencing_Phase\t",
-                "Sequence_Source\tValidation_Method\tScore\tBAM_file\tSequencer\n";
+                "Sequence_Source\tValidation_Method\tScore\tBAM_file\tSequencer\tchromosome_name_WU\tstart_WU\tstop_WU\treference_WU\tvariant_WU\ttype_WU\tgene_name_WU\ttranscript_name_WU\ttranscript_species_WU\ttranscript_source_WU\ttranscript_version_WU\tstrand_WU\ttranscript_status_WU\ttrv_type_WU\tc_position_WU\tamino_acid_change_WU\tucsc_cons_WU\tdomain_WU\tall_domains_WU\tdeletion_substructures_WU\tannotation_errors_WU\n";
 
   ## Load the annotations ##
   if( $snv_annotation_file ) {
@@ -133,6 +133,7 @@ sub execute {                               # replace with real execution logic.
       my $chr_stop = $lineContents[2];
       my $ref = $lineContents[3];
       my $var = $lineContents[4];
+	$var = code_to_var_allele($ref, $var) if($var ne "A" && $var ne "C" && $var ne "G" && $var ne "T");
       my $key = "$chrom\t$chr_start\t$chr_stop\t$ref\t$var";
 
       if($annotations{$key})
@@ -156,6 +157,10 @@ sub execute {                               # replace with real execution logic.
             $normal_allele2 = code_to_var_allele($ref, $normal_call);
           }
         }
+	else
+	{
+		warn "No annotation for $key\n";
+	}
 
         ## Parse the tumor genotype ##
         if($self->tumor_gt_field && $lineContents[$self->tumor_gt_field - 1])
@@ -174,6 +179,7 @@ sub execute {                               # replace with real execution logic.
         
         my ( $var_type, $gene, $trv_type ) = split( /\t/, $annotations{$key} );
         my $var_class = trv_to_mutation_type( $trv_type );
+	$annotations{$key} =~ s/$var_type\t$gene\t$trv_type\t//;
         my $maf_line = "$gene\t0\t$center\t$genome_build\t$chrom\t$chr_start\t$chr_stop\t+\t";
         $maf_line .=  "$var_class\t$var_type\t$ref\t";
         $maf_line .=  "$tumor_allele1\t$tumor_allele2\t";
@@ -185,7 +191,7 @@ sub execute {                               # replace with real execution logic.
         $maf_line .=  "\t"; # Val method
         $maf_line .=  "1\t"; # Score
         $maf_line .=  "dbGAP\t";
-        $maf_line .=  "$platform\n";
+        $maf_line .=  "$platform\t" . $annotations{$key} . "\n";
 
         print OUTFILE "$maf_line";
       }
@@ -213,6 +219,13 @@ sub execute {                               # replace with real execution logic.
       my $chr_stop = $lineContents[2];
       my $ref = $lineContents[3];
       my $var = $lineContents[4];
+
+	if($var =~ '\/')
+	{
+		my ($var1, $var2) = split(/\//, $var);
+		$var = $var1 if($var1 ne $ref);
+		$var = $var2 if($var2 ne $ref);
+	}
       $ref = "-" if($ref eq "0");
       $var = "-" if($var eq "0");
 
@@ -232,11 +245,17 @@ sub execute {                               # replace with real execution logic.
           if($self->normal_gt_field && $lineContents[$self->normal_gt_field - 1])
           {
               my $normal_call= $lineContents[$self->normal_gt_field - 1];
+		my ($a1, $a2) = split(/\//, $normal_call);
               if($normal_call =~ '\*')
               {
                   $normal_allele1 = $ref;
                   $normal_allele2 = $var;
               }
+		elsif($a1 ne $a2)
+		{
+			$normal_allele1 = $ref;
+			$normal_allele2 = $var;	
+		}
               else
               {
                   $normal_allele1 = $normal_allele2 = $var;
@@ -247,7 +266,9 @@ sub execute {                               # replace with real execution logic.
           if($self->tumor_gt_field && $lineContents[$self->tumor_gt_field - 1])
           {
               my $tumor_call= $lineContents[$self->tumor_gt_field - 1];
-              if($tumor_call =~ '\*')
+              my ($a1, $a2) = split(/\//, $tumor_call);
+
+		if($tumor_call =~ '\*' || $a1 ne $a2)
               {
                   $tumor_allele1 = $ref;
                   $tumor_allele2 = $var;
@@ -316,7 +337,7 @@ sub load_annotations
         my $gene_name = $lineContents[6];
         my $trv_type = $lineContents[13];
         my $key = "$chrom\t$chr_start\t$chr_stop\t$ref\t$var";
-        $annotations{$key} = "$var_type\t$gene_name\t$trv_type";
+        $annotations{$key} = "$var_type\t$gene_name\t$trv_type\t$line";
     }
 
     close( $input );

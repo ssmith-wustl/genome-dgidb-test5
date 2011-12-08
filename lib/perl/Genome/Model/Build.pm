@@ -20,8 +20,15 @@ class Genome::Model::Build {
     table_name => 'GENOME_MODEL_BUILD',
     is_abstract => 1,
     subclassify_by => 'subclass_name',
+    subclass_description_preprocessor => __PACKAGE__ . '::_preprocess_subclass_description',
     id_by => [
         build_id => { is => 'NUMBER', },
+    ],
+    attributes_have => [
+        is_input    => { is => 'Boolean', is_optional => 1, },
+        is_param    => { is => 'Boolean', is_optional => 1, },
+        is_output   => { is => 'Boolean', is_optional => 1, },
+        is_metric => { is => 'Boolean', is_optional => 1 },
     ],
     has => [
         subclass_name           => { is => 'VARCHAR2', len => 255, is_mutable => 0, column_name => 'SUBCLASS_NAME',
@@ -167,22 +174,45 @@ sub _resolve_subclass_name_by_sequencing_platform { # only temporary, subclass w
     return $class. '::'.Genome::Utility::Text::string_to_camel_case($sequencing_platform);
 }
 
-# auto generate sub-classes for any valid processing profile
+# auto generate sub-classes for any valid model sub-class 
 sub __extend_namespace__ {
+    # auto generate sub-classes for any valid processing profile
     my ($self,$ext) = @_;
 
     my $meta = $self->SUPER::__extend_namespace__($ext);
     return $meta if $meta;
 
-    my $pp_subclass_name = 'Genome::ProcessingProfile::' . $ext;
-    my $pp_subclass_meta = UR::Object::Type->get($pp_subclass_name);
-    if ($pp_subclass_meta and $pp_subclass_name->isa('Genome::ProcessingProfile')) {
+    my $model_subclass_name = 'Genome::Model::' . $ext;
+    my $model_subclass_meta = UR::Object::Type->get($model_subclass_name);
+    if ($model_subclass_meta and $model_subclass_name->isa('Genome::Model')) {
         my $build_subclass_name = 'Genome::Model::Build::' . $ext;
+        my @p = $model_subclass_meta->properties();
+        my @has;
+        for my $p (@p) {
+            if ($p->can("is_input") and $p->is_input) {
+                my $name = $p->property_name;
+                my %data = %{ UR::Util::deep_copy($p) };
+                my $type = $data{data_type};
+                for my $key (keys %data) {
+                    delete $data{$key} unless $key =~ /^is_/; 
+                }                
+                delete $data{is_specified_in_module_header};
+                if ($type->isa("Genome::Model")) {
+                    $type =~ s/^Genome::Model/Genome::Model::Build/;
+                    $name =~ s/_model$/_build/;
+                }
+                $data{property_name} = $name;
+                $data{data_type} = $type;
+                push @has, $name, \%data;
+            }
+        }
+        #print Data::Dumper::Dumper($build_subclass_name, \@has);
         my $build_subclass_meta = UR::Object::Type->define(
             class_name => $build_subclass_name,
             is => 'Genome::Model::Build',
+            has => \@has,
         );
-        die "Error defining $build_subclass_name for $pp_subclass_name!" unless $build_subclass_meta;
+        die "Error defining $build_subclass_name for $model_subclass_name!" unless $model_subclass_meta;
         return $build_subclass_meta;
     }
     return;
@@ -258,6 +288,11 @@ sub _copy_model_inputs {
             # Resolve inputs pointing to a model to a build.
             if($params{value_class_name}->isa('Genome::Model')) {
                 my $input_name = $input->name;
+                if ($input_name =~ /_model$/) {
+                    $input_name =~ s/_model$/_build/g;
+                    $params{name} = $input_name;
+                }
+
                 my $existing_input = $self->inputs(name => $input_name);
                 if ($existing_input) {
                     my $existing_input_value = $existing_input->value;
@@ -1005,9 +1040,13 @@ sub _lock_model_for_start {
     # create a change record so that if it is "undone" it will kill the job
     # create a commit observer to resume the job when build is committed to database
     my $process = UR::Context->process;
-    my $unlock_sub = sub { Genome::Sys->unlock_resource(resource_lock => $lock) };
+    my $commit_observer;
+    my $unlock_sub = sub {
+        Genome::Sys->unlock_resource(resource_lock => $lock);
+        $commit_observer->delete;
+    };
     my $lock_change = UR::Context::Transaction->log_change($self, 'UR::Value', $lock, 'external_change', $unlock_sub);
-    my $commit_observer = $process->add_observer(aspect => 'commit', callback => $unlock_sub);
+    $commit_observer = $process->add_observer(aspect => 'commit', callback => $unlock_sub);
     unless ($commit_observer) {
         $self->error_message("Failed to add commit observer to unlock $lock.");
     }
@@ -2140,6 +2179,77 @@ sub _get_workflow_instance_children {
     my $self = shift;
     my $parent = shift || return;
     return $parent, map($self->_get_workflow_instance_children($_), $parent->related_instances);
+}
+
+sub _preprocess_subclass_description {
+    my ($class, $desc) = @_;
+    #print "PREPROC BUILD!\n";
+    #print Data::Dumper::Dumper($desc);
+    #print Carp::longmess();
+    my @names = keys %{ $desc->{has} };
+    for my $prop_name (@names) {
+        my $prop_desc = $desc->{has}{$prop_name};
+        # skip old things for which the developer has explicitly set-up indirection
+        next if $prop_desc->{id_by};
+        next if $prop_desc->{via};
+        next if $prop_desc->{reverse_as};
+        next if $prop_desc->{implied_by};
+        
+        if ($prop_desc->{is_param} and $prop_desc->{is_input}) {
+            die "class $class has is_param and is_input on the same property! $prop_name";
+        }
+
+        if (exists $prop_desc->{'is_param'} and $prop_desc->{'is_param'}) {
+            $prop_desc->{'via'} = 'processing_profile',
+            $prop_desc->{'to'} = $prop_name;
+            $prop_desc->{'is_mutable'} = 0;
+            $prop_desc->{'is_delegated'} = 1;
+        }
+
+        if (exists $prop_desc->{'is_input'} and $prop_desc->{'is_input'}) {
+
+            my $assoc = $prop_name . '_association' . ($prop_desc->{is_many} ? 's' : '');
+            next if $desc->{has}{$assoc};
+
+            $desc->{has}{$assoc} = {
+                property_name => $assoc,
+                implied_by => $prop_name,
+                is => 'Genome::Model::Build::Input',
+                reverse_as => 'build', 
+                where => [ name => $prop_name ],
+                is_mutable => $prop_desc->{is_mutable},
+                is_optional => $prop_desc->{is_optional},
+                is_many => 1, #$prop_desc->{is_many},
+            };
+
+            # We hopefully don't need _id accessors
+            # If we do duplicate the code below for value_id
+
+            %$prop_desc = (%$prop_desc,
+                via => $assoc, 
+                to => 'value',
+            );
+        }
+
+        # Metrics
+        if ( exists $prop_desc->{is_metric} and $prop_desc->{is_metric} ) {
+            $prop_desc->{via} = 'metrics';
+            $prop_desc->{where} = [ name => $prop_name ];
+            $prop_desc->{to} = 'value';
+            $prop_desc->{is_delegated} = 1;
+            $prop_desc->{is_mutable} = 1;
+        }
+    }
+
+    my ($ext) = ($desc->{class_name} =~ /Genome::Model::Build::(.*)/);
+    my $pp_subclass_name = 'Genome::ProcessingProfile::' . $ext;
+
+    my $pp_data = $desc->{has}{processing_profile} = {};
+    $pp_data->{data_type} = $pp_subclass_name;
+    $pp_data->{via} = 'model'; 
+    $pp_data->{to} = 'processing_profile';
+
+    return $desc;
 }
 
 1;

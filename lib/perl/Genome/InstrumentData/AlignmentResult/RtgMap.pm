@@ -21,7 +21,8 @@ class Genome::InstrumentData::AlignmentResult::RtgMap{
 sub required_arch_os { 'x86_64' }
 
 sub required_rusage { 
-    "-R 'select[model!=Opteron250 && type==LINUX64 && tmp>90000 && mem>25000] span[hosts=1] rusage[tmp=90000, mem=25000]' -M 25000000 -n 8 -m hmp -q hmp";
+    #"-R 'select[model!=Opteron250 && type==LINUX64 && tmp>90000 && mem>25000] span[hosts=1] rusage[tmp=90000, mem=25000]' -M 25000000 -n 8 -m hmp -q hmp"; #HMP queue params
+    "-R 'select[model!=Opteron250 && type==LINUX64 && tmp>90000 && mem>25000] span[hosts=1] rusage[tmp=90000, mem=25000]' -M 25000000 -n 8 -q alignment";
 }
 
 sub _decomposed_aligner_params {
@@ -76,14 +77,14 @@ sub _run_aligner {
 
     if (@input_pathnames == 1) {
         $self->status_message("_run_aligner called in single-ended mode.");
-        $cmd = sprintf('%s --format=%s -o %s %s',
+        $cmd = sprintf('%s --format=%s --quality-format=sanger -o %s %s',
                         $rtg_fmt,
                         $self->_file_input_option,
                         $prechunk_input_sdf,
                         $input_pathnames[0]);
     } elsif (@input_pathnames == 2) {
         $self->status_message("_run_aligner called in paired-end mode.");
-        $cmd = sprintf('%s --format=%s -o %s -l %s -r %s', #specify paired ends as "l" and "r"
+        $cmd = sprintf('%s --format=%s --quality-format=sanger -o %s -l %s -r %s', #specify paired ends as "l" and "r"
                         $rtg_fmt,
                         $self->_file_input_option,
                         $prechunk_input_sdf,
@@ -109,14 +110,10 @@ sub _run_aligner {
     }
 
     my $chunk_path = $scratch_directory . "/chunks";
-    unless (mkpath($chunk_path)) {
-        $self->error_message("couldn't create a place to chunk the data in $chunk_path"); 
-        die $self->error_message;
-    } 
 
     $self->status_message("Chunking....");
     my $chunk_size = ($ENV{'TEST_MODE'} ? 200 : 5000000);
-    my $chunk_cmd = sprintf("%s -c %s -o %s %s", Genome::Model::Tools::Rtg->path_for_rtg_sdfsplit($self->aligner_version), $chunk_size, $chunk_path, $prechunk_input_sdf);
+    my $chunk_cmd = sprintf("%s -n %s -o %s %s", Genome::Model::Tools::Rtg->path_for_rtg_sdfsplit($self->aligner_version), $chunk_size, $chunk_path, $prechunk_input_sdf);
     Genome::Sys->shellcmd(
             cmd                 => $chunk_cmd, 
             output_directories  => [$chunk_path],
@@ -243,10 +240,11 @@ sub prepare_reference_sequence_index {
 
     my $rtg_path = Genome::Model::Tools::Rtg->path_for_rtg_format($refindex->aligner_version);
 
-    my $cmd = sprintf("%s format -o %s/all_sequences.sdf %s", $rtg_path, $staging_dir, $staged_fasta_file);
+    my $cmd = sprintf("%s -o %s/all_sequences.sdf %s", $rtg_path, $staging_dir, $staged_fasta_file);
 
     my $rv = Genome::Sys->shellcmd(
-        cmd=>$cmd
+        cmd=>$cmd,
+        output_files => ["$staging_dir/all_sequences.sdf"],
     );
 
     unless ($rv) {

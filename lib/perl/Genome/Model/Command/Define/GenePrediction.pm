@@ -8,7 +8,7 @@ use Genome;
 class Genome::Model::Command::Define::GenePrediction {
     is => 'Command::SubCommandFactory',
     is_abstract => 1,
-    doc => 'define a gene prediction model',
+    doc => 'define a new gene prediction model',
 };
 
 # All subclasses of this class have a model define command generated

@@ -31,24 +31,16 @@ class Genome::Model::Build::DeNovoAssembly {
                 return __PACKAGE__ . '::' . Genome::Utility::Text::string_to_camel_case($assembler_base_name);
             },
         },
-        #TODO - best place for this??
-        processed_reads_count => {
-            is => 'Integer',
-            is_optional => 1,
-            is_mutable => 1,
-            doc => 'Number of reads processed for assembling',
-        },
+    ],
+    has_optional => [
         (
             map { 
                 join('_', split(m#\s#)) => {
                     is => 'Number',
                     is_optional => 1,
-                    is_mutable => 1,
-                    via => 'metrics',
-                    where => [ name => $_ ],
-                    to => 'value',
+                    is_metric => 'metrics',
                 }
-            } __PACKAGE__->interesting_metric_names
+            } (__PACKAGE__->interesting_metric_names, 'processed reads count')
         )
     ],
 };
@@ -119,7 +111,7 @@ sub calculate_estimated_kb_usage {
 
     my $kb_usage;
 
-    if ( $self->processing_profile->assembler_name =~ /import/ ) {
+    if ( $self->is_imported ) {
         $self->status_message("Kb usage for imported assembly: 5GiB");
         return 5_000_000;
     }
@@ -538,9 +530,6 @@ sub placed_reads { return $_[0]->reads_assembled; }
 sub chaff_rate { return $_[0]->reads_not_assembled_pct; }
 sub total_contig_bases { return $_[0]->assembly_length; }
 #<>#
-#< make soap config file >#
 
 1;
 
-#$HeadURL: svn+ssh://svn/srv/svn/gscpan/perl_modules/trunk/Genome/Model/Build/DeNovoAssembly.pm $
-#$Id: DeNovoAssembly.pm 47126 2009-05-21 21:59:11Z ebelter $

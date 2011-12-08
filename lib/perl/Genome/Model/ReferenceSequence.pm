@@ -36,6 +36,10 @@ class Genome::Model::ReferenceSequence {
             is => 'ARRAY',
             calculate => q{ return; }
         },
+        processing_profile => {
+            is => 'Genome::ProcessingProfile',
+            id_by => 'processing_profile_id',
+        },
     ],
     doc => 'a versioned reference sequence, with cordinates suitable for annotation',
 };

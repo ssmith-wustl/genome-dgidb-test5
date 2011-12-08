@@ -9,31 +9,41 @@ class Genome::ProcessingProfile::Command::Create {
     doc => 'Create a processing profile',
 };
 
-sub _sub_commands_from { 'Genome::ProcessingProfile' }
-
+sub _sub_commands_from { 'Genome::Model' }
+sub _target_base_class { 'Genome::ProcessingProfile' }
 sub _sub_commands_inherit_from { 'Genome::ProcessingProfile::Command::Create::Base' }
+
+sub _command_subclass {
+    my ($self, $class_name) = @_;
+    my ($subclass_name) = $class_name =~ /^Genome::ProcessingProfile::Command::Create::(.*)$/;
+    return $subclass_name;
+}
+
+sub _processing_profile_class {
+    my ($self, $class_name) = @_;
+    my $subclass_name = $self->_command_subclass($class_name);
+    my $processing_profile_class = join('::', 'Genome::ProcessingProfile', $subclass_name);
+    return $processing_profile_class;
+}
+
+sub _profile_string {
+    my ($self, $class_name) = @_;
+    my $subclass_name = $self->_command_subclass($class_name);
+    my $profile_string = Genome::Utility::Text::camel_case_to_string($subclass_name);
+    $profile_string =~ s/:://;
+    return $profile_string;
+}
 
 sub _build_sub_command {
     my ($self, $class_name, @inheritance) = @_;
-    my $target_class_name = $self->_sub_commands_from;
-
-    my $subclass_name = $class_name;
-    $subclass_name =~ s/Genome::ProcessingProfile::Command::Create:://;
-    # If the create command is something like Genome::ProcesingProfile::Command::Create::Foo::Bar,
-    # then the resulting subclass will be Foo::Bar. Combine this with the target class name (as done
-    # below when making the new class) and you get Genome::ProcessingProfile::Foo::Foo::Bar. This
-    # regex fixes this by only capturing the last piece of the class (eg, Bar).
-    ($subclass_name) = $subclass_name =~ /::(\w+)$/;
-
-    my $profile_string = Genome::Utility::Text::camel_case_to_string($subclass_name);
-    $profile_string =~ s/:://;
 
     class {$class_name} {
         is => \@inheritance,
         has => [
-            $self->_sub_commands_inherit_from->_properties_for_class(join('::', $target_class_name, $subclass_name)),
+            $self->_sub_commands_inherit_from->_properties_for_class($self->_processing_profile_class($class_name)),
         ],
-        doc => "Create a new profile for $profile_string",
+        doc => "Create a new profile for " . $self->_profile_string($class_name),
     };
+
     return $class_name;
 }
