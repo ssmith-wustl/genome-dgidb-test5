@@ -18,7 +18,7 @@ class Genome::Model::Tools::Sx::Trim::Remove {
 };
 
 sub help_brief {
-    return 'Trim a set length off of a sequence';
+    return 'Remove bases from the 3 prime (right) end';
 }
 
 sub __errors__ {
@@ -40,9 +40,14 @@ sub _eval_seqs {
 
     for my $seq ( @$seqs ) {
         my $length = length($seq->{seq}) - $self->length;
-        next if $length eq 0;
-        $seq->{seq} = substr($seq->{seq}, 0, $length);
-        $seq->{qual} =substr($seq->{qual}, 0, $length);
+        if ( $length >= length($seq->{seq}) ) {
+            $seq->{seq} = '';
+            $seq->{qual} = '';
+        }
+        else {
+            $seq->{seq} = substr($seq->{seq}, 0, $length);
+            $seq->{qual} =substr($seq->{qual}, 0, $length);
+        }
     }
 
     return $seqs;

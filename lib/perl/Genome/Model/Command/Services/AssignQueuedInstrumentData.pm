@@ -1059,6 +1059,7 @@ sub get_build36_to_37_rois {
         '04110401 PoP32 EZ capture chip set'   => '04110401 PoP32 EZ capture chip set build37',
         'RT 49315 - AMD -- pool 1' => 'AMD-pool1-build37',
         '03110401 capture chip set' => '03110401 capture chip set - liftover_build37',
+        'CleftPalate 03110402 capture chip set' => 'CleftPalate 03110402 capture chip set - liftover_build37',
     );
 }
 

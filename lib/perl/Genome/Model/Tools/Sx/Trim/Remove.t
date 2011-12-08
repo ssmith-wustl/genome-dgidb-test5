@@ -18,9 +18,9 @@ ok(scalar(Genome::Model::Tools::Sx::Trim::Remove->create(length => 0)->__errors_
 
 # Files
 my $dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Sx';
-my $in_fastq = $dir.'/trimmer.in.fastq';
+my $in_fastq = $dir.'/trimmer.input.fastq';
 ok(-s $in_fastq, 'in fastq');
-my $example_fastq = $dir.'/trimmer_by_length.example.fastq';
+my $example_fastq = $dir.'/trimmer.remove.example.fastq';
 ok(-s $example_fastq, 'example fastq');
 
 my $tmp_dir = File::Temp::tempdir(CLEANUP => 1);
@@ -36,7 +36,7 @@ ok($trimmer, 'create trimmer');
 ok($trimmer->execute, 'execute trimmer');
 is(File::Compare::compare($example_fastq, $out_fastq), 0, "fastq trimmed as expected");
 
-#print $tmp_dir; <STDIN>;
+#print "gvimdiff $out_fastq $example_fastq\n"; <STDIN>;
 done_testing();
 exit;
 

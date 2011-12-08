@@ -97,7 +97,7 @@ sub convert_bed {
 
     my $self = $class->get(source_reference_build => $source_reference, destination_reference_build => $destination_reference, test_name => ($ENV{GENOME_SOFTWARE_RESULT_TEST_NAME} || undef));
     unless($self) {
-        $class->error_message('Could not find converter from ' . $source_reference->__display_name__ . ' to ' . $destination_reference->__display_name__);
+        $class->error_message('Could not find converter from ' . $source_reference->__display_name__ . ' to ' . $destination_reference->__display_name__  . '. (See `genome model reference-sequence converter list` for available conversions.)');
         return;
     }
 

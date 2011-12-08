@@ -28,6 +28,16 @@ class Genome::Model::Tools::Sam::Pileup {
             is => 'Boolean',
             doc => 'Set this to bgzip the output of pileup',
         },
+        samtools_version => {
+            is => 'Text',
+            is_optional => 1,
+            doc => 'samtools version',
+        },
+        samtools_params => {
+            is => 'Text',
+            is_optional => 1,
+            doc => 'samtools params',
+        },
     ],
     has_optional_input => [
         region_file => {
@@ -84,7 +94,8 @@ sub execute {
 
     #put the command components together
     my $samtools = $self->path_for_samtools_version($self->use_version);
-    my $cmd = "bash -c \"samtools view -u $view_region_file $bam | $samtools pileup -c -f $refseq_path $region_file - $out";
+    my $params = $self->samtools_params || undef;
+    my $cmd = "bash -c \"samtools view -u $view_region_file $bam | $samtools pileup $params -c -f $refseq_path $region_file - $out";
 
     my $result = Genome::Sys->shellcmd( cmd => $cmd); #, input_files => [$refseq_path, $bam], output_files => [$output_file], skip_if_output_is_present => 1);
     unless($result){

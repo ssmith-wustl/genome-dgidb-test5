@@ -101,34 +101,6 @@ sub execute {
         die $self->error_message("Workflow did not return correctly.");
     }
 
-=cut
-
-    #FIXME   this is all hardcoded, these need to be filled dynamically
-    my $pindel2vcf_path = "/gscmnt/ams1158/info/pindel/pindel2vcf/pindel2vcf";
-    my $refseq = $self->_refseq;
-    my $rs = $self->reference_sequence_build; 
-    my $refseq_name = $rs->name;
-    my ($sec,$min,$hour,$mday,$mon,$year) = localtime(time);
-    my $date = $year . "/" . ($mon+1) . "/" . $mday . "-" . $hour . ":" . $min . ":" . $sec;
-    my $pindel_raw = $self->input_file;
-    my $output = $self->output_file;
-    my $cmd  = $pindel2vcf_path . " -p ".$pindel_raw." -r ". $refseq . " -R " . $refseq_name . " -d " . $date . " -v " . $output; 
-    my $result = Genome::Sys->shellcmd( cmd => $cmd);
-    unless($result){
-        die $self->error_message("Could not complete pindel2vcf run: ".$result);
-    }
-    my $bgzip_cmd = "bgzip -c ".$output." > ".$output.".tmp";
-    $result = Genome::Sys->shellcmd( cmd => $bgzip_cmd );
-    unless($result){
-        die $self->error_message("Could not complete bgzip of output: ".$result);
-    }
-    unlink($output);
-    $result = Genome::Sys->copy_file($output.".tmp",$output);
-    unless($result){
-        die $self->error_message("Could not move tmp zipped output to final output_file location: ".$result);
-    }
-    unlink($output.".tmp"); 
-=cut
     return 1;
 }
 

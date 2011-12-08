@@ -562,13 +562,14 @@ sub execute
 	my $p5_gene_count = scalar(@p5_ace_objects);
 	$mgap_genome{'p5_gene_count'} = $p5_gene_count;
 
-	my ($keggscan_count, $iprscan_count, $psortb_count, $ber_naming_count, $dead_gene_count ) = 0;
+	my ($keggscan_count, $iprscan_count, $psortb_count, $ber_naming_count, $dead_gene_count, $manual_review ) = 0;
 	foreach my $gene (@p5_ace_objects) {
 		$dead_gene_count++ if $gene->Dead();
 		$keggscan_count++ if $gene->KEGG();
 		$ber_naming_count++ if $gene->BER_product();
 		$iprscan_count++ if $gene->Interpro();
 		$psortb_count++ if $gene->PSORT_B();
+		$manual_review++ if $gene->ManualReview();
 	}
 
 	$mgap_genome{'dead_gene_count'} = $dead_gene_count;
@@ -576,6 +577,7 @@ sub execute
 	$mgap_genome{'iprscan_count'} = $iprscan_count;
 	$mgap_genome{'psortb_count'} = $psortb_count;
 	$mgap_genome{'ber_naming_count'} = $ber_naming_count,;
+	$mgap_genome{'mr_count'} = $manual_review;
     
 
 	print "\n\n" . $locus_tag . "\n\n";
@@ -958,8 +960,9 @@ SQL
 	my $hit_counts_sql = <<SQL;
 	INSERT INTO hit_counts (p5_gene_count, p5_blastx_count, rnammer_count, 
 							genemark_gene_count, glimmer_gene_count,keggscan_count, 
-							iprscan_count, psortb_count, ber_naming_count, genome_id, dead_gene_count, blastx_gene_count, btab_0_size)
-	VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?);
+							iprscan_count, psortb_count, ber_naming_count, genome_id, 
+							dead_gene_count, blastx_gene_count, btab_0_size, mr_count)
+	VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?);
 SQL
 
 	my $sth3 = $dbh->prepare($hit_counts_sql);
@@ -976,6 +979,7 @@ SQL
 	$sth3->bind_param(11, $mgap_genome{'dead_gene_count'});
 	$sth3->bind_param(12, $mgap_genome{'blastx_gene_count'});
 	$sth3->bind_param(13, $mgap_genome{'btab_0_size'});
+	$sth3->bind_param(14, $mgap_genome{'mr_count'});
 
 	$sth3->execute() or confess "Couldn't execute statement: " . $sth3->errstr ;
 	$sth3->finish;

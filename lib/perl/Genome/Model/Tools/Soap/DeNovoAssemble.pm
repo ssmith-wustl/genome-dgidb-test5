@@ -7,12 +7,12 @@ use Genome;
 use File::Basename;
 
 class Genome::Model::Tools::Soap::DeNovoAssemble {
-    is => 'Genome::Model::Tools::Soap',
+    is => 'Genome::Model::Tools::Soap::Base',
     has => [
 	version => {
 	    is => 'Text',
 	    doc => 'Version of Soap DeNovo to use',
-	    valid_values => ['1.03', '1.04'],
+	    valid_values => ['1.03', '1.04', '1.05'],
 	},
 	config_file => {
 	    is => 'Text',
@@ -58,7 +58,11 @@ class Genome::Model::Tools::Soap::DeNovoAssemble {
 	min_scaffold_contig_length => { #-L
 	    is => 'Number',
 	    doc => 'Exclude contigs less than this length from scaffolding',
-	}
+	},
+    fill_gaps_in_scaffold => { #-F
+	    is => 'Boolean',
+	    doc => 'Fill gaps in scaffold',
+    },
 	#TODO .. more options to add
 	#-G gapLenDiff(default 50): allowed length difference between estimated and filled gap
 	#-u (optional): un-mask contigs with high coverage before scaffolding (default mask)
@@ -105,6 +109,7 @@ sub execute {
     $cmd .= ' -d '.$self->kmer_frequency_cutoff if $self->kmer_frequency_cutoff;
     $cmd .= ' -D '.$self->edge_coverage_cutoff if $self->edge_coverage_cutoff;
     $cmd .= ' -L '.$self->min_scaffold_contig_length if $self->min_scaffold_contig_length;
+    $cmd .= ' -F ' if $self->fill_gaps_in_scaffold;
 
     $self->status_message("Running SOAPdenovo with command: $cmd");
 

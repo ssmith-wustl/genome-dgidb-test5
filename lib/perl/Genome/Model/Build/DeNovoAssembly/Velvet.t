@@ -78,7 +78,8 @@ my $pp = Genome::ProcessingProfile::DeNovoAssembly->create(
     read_processor => 'trim remove -length 10 | rename illumina-to-pcap',
     assembler_name => 'velvet one-button',
     assembler_version => '0.7.57-64',
-    assembler_params => '-hash_sizes 31 33 35 -min_contig_length 100',
+    #assembler_params => '-hash_sizes 31 33 35 -min_contig_length 100',
+    assembler_params => '-max_gap_count 3 -max_divergence 0.2 -hash_sizes 31 33 35 -min_contig_length 100',
     post_assemble => 'standard-outputs -min_contig_length 50',
 );
 ok($pp, 'pp') or die;
@@ -155,7 +156,9 @@ is_deeply(
         '35'
         ],
         'output_dir' => $build->data_directory,
-        'genome_len' => '4500000'
+        'genome_len' => '4500000',
+        'max_divergence' => '0.2',
+        'max_gap_count'  => 3,
     },
     'assembler params',
 );

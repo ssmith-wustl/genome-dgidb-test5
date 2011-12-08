@@ -62,13 +62,13 @@ INSERT INTO "dd_fk_constraint" VALUES('Genome::DataSource::GMSchema','MG','MG','
 INSERT INTO "dd_fk_constraint" VALUES('Genome::DataSource::GMSchema','MG','MG','SOFTWARE_RESULT_USER','SOFTWARE_RESULT','SRU_SU_FK','2011-07-14 01:02:03');
 INSERT INTO "dd_fk_constraint" VALUES('Genome::DataSource::GMSchema','MG','MG','FEATURE_LIST','GENOME_MODEL_BUILD','FLR_GMBFK','2011-10-05 08:49:32');
 INSERT INTO "dd_fk_constraint" VALUES('Genome::DataSource::GMSchema','MG','MG','FEATURE_LIST','GENOME_MODEL_BUILD','FLS_GMB_FK','2011-10-05 08:49:32');
-INSERT INTO "dd_fk_constraint" VALUES('Genome::DataSource::Main','subject','subject','drug_gene_interaction_report_attribute','drug_gene_interaction_report','drug_gene_interaction_report_attribute_interaction_id_fkey','2011-10-24 14:51:28');
-INSERT INTO "dd_fk_constraint" VALUES('Genome::DataSource::Main','subject','subject','drug_gene_interaction_report','drug_name_report','drug_gene_interaction_report_drug_name_report_id_fkey','2011-10-24 14:59:50');
-INSERT INTO "dd_fk_constraint" VALUES('Genome::DataSource::Main','subject','subject','drug_gene_interaction_report','gene_name_report','drug_gene_interaction_report_gene_name_report_id_fkey','2011-10-24 14:59:50');
-INSERT INTO "dd_fk_constraint" VALUES('Genome::DataSource::Main','subject','subject','drug_name_report_association','drug_name_report','drug_name_report_association_drug_name_report_id_fkey','2011-10-24 15:05:54');
-INSERT INTO "dd_fk_constraint" VALUES('Genome::DataSource::Main','subject','subject','drug_name_report_category_association','drug_name_report','drug_name_report_category_association_drug_name_report_id_fkey','2011-10-24 15:11:28');
-INSERT INTO "dd_fk_constraint" VALUES('Genome::DataSource::Main','subject','subject','gene_name_report_association','gene_name_report','gene_name_report_association_gene_name_report_id_fkey','2011-10-24 15:16:29');
-INSERT INTO "dd_fk_constraint" VALUES('Genome::DataSource::Main','subject','subject','gene_name_report_category_association','gene_name_report','gene_name_report_category_association_gene_name_report_id_fkey','2011-10-24 15:19:35');
+INSERT INTO "dd_fk_constraint" VALUES('Genome::DataSource::Main','dgidb','dgidb','drug_gene_interaction_report_attribute','drug_gene_interaction_report','drug_gene_interaction_report_attribute_interaction_id_fkey','2011-10-24 14:51:28');
+INSERT INTO "dd_fk_constraint" VALUES('Genome::DataSource::Main','dgidb','dgidb','drug_gene_interaction_report','drug_name_report','drug_gene_interaction_report_drug_name_report_id_fkey','2011-10-24 14:59:50');
+INSERT INTO "dd_fk_constraint" VALUES('Genome::DataSource::Main','dgidb','dgidb','drug_gene_interaction_report','gene_name_report','drug_gene_interaction_report_gene_name_report_id_fkey','2011-10-24 14:59:50');
+INSERT INTO "dd_fk_constraint" VALUES('Genome::DataSource::Main','dgidb','dgidb','drug_name_report_association','drug_name_report','drug_name_report_association_drug_name_report_id_fkey','2011-10-24 15:05:54');
+INSERT INTO "dd_fk_constraint" VALUES('Genome::DataSource::Main','dgidb','dgidb','drug_name_report_category_association','drug_name_report','drug_name_report_category_association_drug_name_report_id_fkey','2011-10-24 15:11:28');
+INSERT INTO "dd_fk_constraint" VALUES('Genome::DataSource::Main','dgidb','dgidb','gene_name_report_association','gene_name_report','gene_name_report_association_gene_name_report_id_fkey','2011-10-24 15:16:29');
+INSERT INTO "dd_fk_constraint" VALUES('Genome::DataSource::Main','dgidb','dgidb','gene_name_report_category_association','gene_name_report','gene_name_report_category_association_gene_name_report_id_fkey','2011-10-24 15:19:35');
 CREATE TABLE dd_fk_constraint_column (
     fk_constraint_name varchar NOT NULL,
     data_source varchar NOT NULL,
@@ -131,13 +131,13 @@ INSERT INTO "dd_fk_constraint_column" VALUES('FK_GMV_VI','Genome::DataSource::GM
 INSERT INTO "dd_fk_constraint_column" VALUES('SRU_SU_FK','Genome::DataSource::GMSchema','MG','SOFTWARE_RESULT_USER','SOFTWARE_RESULT','SOFTWARE_RESULT_ID','ID');
 INSERT INTO "dd_fk_constraint_column" VALUES('FLS_GMB_FK','Genome::DataSource::GMSchema','MG','FEATURE_LIST','GENOME_MODEL_BUILD','SUBJECT_ID','BUILD_ID');
 INSERT INTO "dd_fk_constraint_column" VALUES('FLR_GMBFK','Genome::DataSource::GMSchema','MG','FEATURE_LIST','GENOME_MODEL_BUILD','REFERENCE_ID','BUILD_ID');
-INSERT INTO "dd_fk_constraint_column" VALUES('drug_gene_interaction_report_attribute_interaction_id_fkey','Genome::DataSource::Main','subject','drug_gene_interaction_report_attribute','drug_gene_interaction_report','interaction_id','id');
-INSERT INTO "dd_fk_constraint_column" VALUES('drug_gene_interaction_report_gene_name_report_id_fkey','Genome::DataSource::Main','subject','drug_gene_interaction_report','gene_name_report','gene_name_report_id','id');
-INSERT INTO "dd_fk_constraint_column" VALUES('drug_gene_interaction_report_drug_name_report_id_fkey','Genome::DataSource::Main','subject','drug_gene_interaction_report','drug_name_report','drug_name_report_id','id');
-INSERT INTO "dd_fk_constraint_column" VALUES('drug_name_report_association_drug_name_report_id_fkey','Genome::DataSource::Main','subject','drug_name_report_association','drug_name_report','drug_name_report_id','id');
-INSERT INTO "dd_fk_constraint_column" VALUES('drug_name_report_category_association_drug_name_report_id_fkey','Genome::DataSource::Main','subject','drug_name_report_category_association','drug_name_report','drug_name_report_id','id');
-INSERT INTO "dd_fk_constraint_column" VALUES('gene_name_report_association_gene_name_report_id_fkey','Genome::DataSource::Main','subject','gene_name_report_association','gene_name_report','gene_name_report_id','id');
-INSERT INTO "dd_fk_constraint_column" VALUES('gene_name_report_category_association_gene_name_report_id_fkey','Genome::DataSource::Main','subject','gene_name_report_category_association','gene_name_report','gene_name_report_id','id');
+INSERT INTO "dd_fk_constraint_column" VALUES('drug_gene_interaction_report_attribute_interaction_id_fkey','Genome::DataSource::Main','dgidb','drug_gene_interaction_report_attribute','drug_gene_interaction_report','interaction_id','id');
+INSERT INTO "dd_fk_constraint_column" VALUES('drug_gene_interaction_report_gene_name_report_id_fkey','Genome::DataSource::Main','dgidb','drug_gene_interaction_report','gene_name_report','gene_name_report_id','id');
+INSERT INTO "dd_fk_constraint_column" VALUES('drug_gene_interaction_report_drug_name_report_id_fkey','Genome::DataSource::Main','dgidb','drug_gene_interaction_report','drug_name_report','drug_name_report_id','id');
+INSERT INTO "dd_fk_constraint_column" VALUES('drug_name_report_association_drug_name_report_id_fkey','Genome::DataSource::Main','dgidb','drug_name_report_association','drug_name_report','drug_name_report_id','id');
+INSERT INTO "dd_fk_constraint_column" VALUES('drug_name_report_category_association_drug_name_report_id_fkey','Genome::DataSource::Main','dgidb','drug_name_report_category_association','drug_name_report','drug_name_report_id','id');
+INSERT INTO "dd_fk_constraint_column" VALUES('gene_name_report_association_gene_name_report_id_fkey','Genome::DataSource::Main','dgidb','gene_name_report_association','gene_name_report','gene_name_report_id','id');
+INSERT INTO "dd_fk_constraint_column" VALUES('gene_name_report_category_association_gene_name_report_id_fkey','Genome::DataSource::Main','dgidb','gene_name_report_category_association','gene_name_report','gene_name_report_id','id');
 CREATE TABLE dd_pk_constraint_column (
     data_source varchar NOT NULL,
     owner varchar,
@@ -225,16 +225,16 @@ INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::GMSchema','MG'
 INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::GMSchema','MG','SOFTWARE_RESULT_INPUT','INPUT_NAME',2);
 INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_VARIANT_SOURCE','SOURCE_ID',1);
 INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::GMSchema','MG','FEATURE_LIST','ID',1);
-INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::Main','subject','drug_gene_interaction_report_attribute','id',1);
-INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::Main','subject','drug_gene_interaction_report','id',1);
-INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::Main','subject','drug_name_report_association','id',1);
-INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::Main','subject','drug_name_report_category_association','id',1);
-INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::Main','subject','drug_name_report','id',1);
-INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::Main','subject','gene_name_report_association','id',1);
-INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::Main','subject','gene_name_report_category_association','id',1);
-INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::Main','subject','gene_name_report','id',1);
-INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::Main','subject','drug_name','id',1);
-INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::Main','subject','gene_name','id',1);
+INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::Main','dgidb','drug_gene_interaction_report_attribute','id',1);
+INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::Main','dgidb','drug_gene_interaction_report','id',1);
+INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::Main','dgidb','drug_name_report_association','id',1);
+INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::Main','dgidb','drug_name_report_category_association','id',1);
+INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::Main','dgidb','drug_name_report','id',1);
+INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::Main','dgidb','gene_name_report_association','id',1);
+INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::Main','dgidb','gene_name_report_category_association','id',1);
+INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::Main','dgidb','gene_name_report','id',1);
+INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::Main','dgidb','drug_name','id',1);
+INSERT INTO "dd_pk_constraint_column" VALUES('Genome::DataSource::Main','dgidb','gene_name','id',1);
 CREATE TABLE dd_table (
      data_source varchar NOT NULL,
      owner varchar,
@@ -291,16 +291,16 @@ INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','SOFTWARE_RESU
 INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','GENOME_VARIANT_SOURCE','TABLE','entity','2010-04-27 11:01:59','2010-05-03 15:59:01',null);
 INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_VARIANT_SOURCE','TABLE','bridge','2010-04-27 10:59:17','2010-05-03 15:59:08',null);
 INSERT INTO "dd_table" VALUES('Genome::DataSource::GMSchema','MG','FEATURE_LIST','TABLE','entity','2011-10-04 07:46:05','2011-10-05 08:49:32',null);
-INSERT INTO "dd_table" VALUES('Genome::DataSource::Main','subject','drug_gene_interaction_report_attribute','TABLE','entity',null,'2011-10-24 14:51:28',null);
-INSERT INTO "dd_table" VALUES('Genome::DataSource::Main','subject','drug_gene_interaction_report','TABLE','entity',null,'2011-10-24 14:59:50',null);
-INSERT INTO "dd_table" VALUES('Genome::DataSource::Main','subject','drug_name_report_association','TABLE','entity',null,'2011-10-24 15:05:54',null);
-INSERT INTO "dd_table" VALUES('Genome::DataSource::Main','subject','drug_name_report_category_association','TABLE','entity',null,'2011-10-24 15:11:28',null);
-INSERT INTO "dd_table" VALUES('Genome::DataSource::Main','subject','drug_name_report','TABLE','entity',null,'2011-10-24 15:14:49',null);
-INSERT INTO "dd_table" VALUES('Genome::DataSource::Main','subject','gene_name_report_association','TABLE','entity',null,'2011-10-24 15:16:29',null);
-INSERT INTO "dd_table" VALUES('Genome::DataSource::Main','subject','gene_name_report_category_association','TABLE','entity',null,'2011-10-24 15:19:35',null);
-INSERT INTO "dd_table" VALUES('Genome::DataSource::Main','subject','gene_name_report','TABLE','entity',null,'2011-10-24 15:28:38',null);
-INSERT INTO "dd_table" VALUES('Genome::DataSource::Main','subject','drug_name','TABLE','entity',null,'2011-10-27 12:52:51',null);
-INSERT INTO "dd_table" VALUES('Genome::DataSource::Main','subject','gene_name','TABLE','entity',null,'2011-10-27 13:01:25',null);
+INSERT INTO "dd_table" VALUES('Genome::DataSource::Main','dgidb','drug_gene_interaction_report_attribute','TABLE','entity',null,'2011-10-24 14:51:28',null);
+INSERT INTO "dd_table" VALUES('Genome::DataSource::Main','dgidb','drug_gene_interaction_report','TABLE','entity',null,'2011-10-24 14:59:50',null);
+INSERT INTO "dd_table" VALUES('Genome::DataSource::Main','dgidb','drug_name_report_association','TABLE','entity',null,'2011-10-24 15:05:54',null);
+INSERT INTO "dd_table" VALUES('Genome::DataSource::Main','dgidb','drug_name_report_category_association','TABLE','entity',null,'2011-10-24 15:11:28',null);
+INSERT INTO "dd_table" VALUES('Genome::DataSource::Main','dgidb','drug_name_report','TABLE','entity',null,'2011-10-24 15:14:49',null);
+INSERT INTO "dd_table" VALUES('Genome::DataSource::Main','dgidb','gene_name_report_association','TABLE','entity',null,'2011-10-24 15:16:29',null);
+INSERT INTO "dd_table" VALUES('Genome::DataSource::Main','dgidb','gene_name_report_category_association','TABLE','entity',null,'2011-10-24 15:19:35',null);
+INSERT INTO "dd_table" VALUES('Genome::DataSource::Main','dgidb','gene_name_report','TABLE','entity',null,'2011-10-24 15:28:38',null);
+INSERT INTO "dd_table" VALUES('Genome::DataSource::Main','dgidb','drug_name','TABLE','entity',null,'2011-10-27 12:52:51',null);
+INSERT INTO "dd_table" VALUES('Genome::DataSource::Main','dgidb','gene_name','TABLE','entity',null,'2011-10-27 13:01:25',null);
 CREATE TABLE dd_table_column (
     data_source varchar NOT NULL,
     owner varchar,
@@ -592,51 +592,53 @@ INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','FEATUR
 INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','FEATURE_LIST','REFERENCE_ID','NUMBER',10,'Y','2011-10-05 08:49:32',null);
 INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','FEATURE_LIST','DESCRIPTION','VARCHAR2',255,'Y','2011-10-05 08:49:32',null);
 INSERT INTO "dd_table_column" VALUES('Genome::DataSource::GMSchema','MG','FEATURE_LIST','CONTENT_TYPE','VARCHAR2',255,'Y','2011-10-05 08:49:32',null);
-INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','subject','drug_gene_interaction_report_attribute','interaction_id','character varying',null,'N','2011-10-24 14:51:28',null);
-INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','subject','drug_gene_interaction_report_attribute','value','character varying',null,'N','2011-10-24 14:51:28',null);
-INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','subject','drug_gene_interaction_report_attribute','id','character varying',null,'N','2011-10-24 14:51:28',null);
-INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','subject','drug_gene_interaction_report_attribute','name','character varying',null,'N','2011-10-24 14:51:28',null);
-INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','subject','drug_gene_interaction_report','interaction_type','character varying',null,'N','2011-10-24 14:59:50',null);
-INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','subject','drug_gene_interaction_report','drug_name_report_id','character varying',null,'N','2011-10-24 14:59:50',null);
-INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','subject','drug_gene_interaction_report','description','text',null,'Y','2011-10-24 14:59:50',null);
-INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','subject','drug_gene_interaction_report','gene_name_report_id','character varying',null,'N','2011-10-24 14:59:50',null);
-INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','subject','drug_gene_interaction_report','id','character varying',null,'N','2011-10-24 14:59:50',null);
-INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','subject','drug_name_report_association','nomenclature','character varying',null,'N','2011-10-24 15:05:54',null);
-INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','subject','drug_name_report_association','alternate_name','character varying',null,'N','2011-10-24 15:05:54',null);
-INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','subject','drug_name_report_association','drug_name_report_id','character varying',null,'N','2011-10-24 15:05:54',null);
-INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','subject','drug_name_report_association','id','character varying',null,'N','2011-10-24 15:05:54',null);
-INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','subject','drug_name_report_association','description','text',null,'Y','2011-10-24 15:05:54',null);
-INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','subject','drug_name_report_category_association','drug_name_report_id','character varying',null,'N','2011-10-24 15:11:28',null);
-INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','subject','drug_name_report_category_association','description','text',null,'Y','2011-10-24 15:11:28',null);
-INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','subject','drug_name_report_category_association','category_name','character varying',null,'N','2011-10-24 15:11:28',null);
-INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','subject','drug_name_report_category_association','category_value','character varying',null,'N','2011-10-24 15:11:28',null);
-INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','subject','drug_name_report_category_association','id','character varying',null,'N','2011-10-24 15:11:28',null);
-INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','subject','drug_name_report','source_db_name','character varying',null,'N','2011-10-24 15:14:49',null);
-INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','subject','drug_name_report','nomenclature','character varying',null,'N','2011-10-24 15:14:49',null);
-INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','subject','drug_name_report','description','text',null,'Y','2011-10-24 15:14:49',null);
-INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','subject','drug_name_report','name','character varying',null,'N','2011-10-24 15:14:49',null);
-INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','subject','drug_name_report','source_db_version','character varying',null,'N','2011-10-24 15:14:49',null);
-INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','subject','drug_name_report','id','character varying',null,'N','2011-10-24 15:14:49',null);
-INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','subject','gene_name_report_association','nomenclature','character varying',null,'N','2011-10-24 15:16:29',null);
-INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','subject','gene_name_report_association','alternate_name','character varying',null,'N','2011-10-24 15:16:29',null);
-INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','subject','gene_name_report_association','gene_name_report_id','character varying',null,'N','2011-10-24 15:16:29',null);
-INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','subject','gene_name_report_association','description','text',null,'Y','2011-10-24 15:16:29',null);
-INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','subject','gene_name_report_association','id','character varying',null,'N','2011-10-24 15:16:29',null);
-INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','subject','gene_name_report_category_association','description','text',null,'Y','2011-10-24 15:19:35',null);
-INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','subject','gene_name_report_category_association','category_value','character varying',null,'N','2011-10-24 15:19:35',null);
-INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','subject','gene_name_report_category_association','category_name','character varying',null,'N','2011-10-24 15:19:35',null);
-INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','subject','gene_name_report_category_association','id','character varying',null,'N','2011-10-24 15:19:35',null);
-INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','subject','gene_name_report_category_association','gene_name_report_id','character varying',null,'N','2011-10-24 15:19:35',null);
-INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','subject','gene_name_report','description','text',null,'Y','2011-10-24 15:28:38',null);
-INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','subject','gene_name_report','source_db_name','character varying',null,'N','2011-10-24 15:28:38',null);
-INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','subject','gene_name_report','id','character varying',null,'N','2011-10-24 15:28:38',null);
-INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','subject','gene_name_report','source_db_version','character varying',null,'N','2011-10-24 15:28:38',null);
-INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','subject','gene_name_report','name','character varying',null,'N','2011-10-24 15:28:38',null);
-INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','subject','gene_name_report','nomenclature','character varying',null,'N','2011-10-24 15:28:38',null);
-INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','subject','drug_name','name','character varying',null,'N','2011-10-27 12:52:51',null);
-INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','subject','drug_name','id','character varying',null,'N','2011-10-27 12:52:51',null);
-INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','subject','gene_name','id','character varying',null,'N','2011-10-27 13:01:25',null);
-INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','subject','gene_name','name','character varying',null,'N','2011-10-27 13:01:25',null);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','dgidb','drug_gene_interaction_report_attribute','interaction_id','character varying',null,'N','2011-10-24 14:51:28',null);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','dgidb','drug_gene_interaction_report_attribute','value','character varying',null,'N','2011-10-24 14:51:28',null);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','dgidb','drug_gene_interaction_report_attribute','id','character varying',null,'N','2011-10-24 14:51:28',null);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','dgidb','drug_gene_interaction_report_attribute','name','character varying',null,'N','2011-10-24 14:51:28',null);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','dgidb','drug_gene_interaction_report','interaction_type','character varying',null,'N','2011-10-24 14:59:50',null);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','dgidb','drug_gene_interaction_report','drug_name_report_id','character varying',null,'N','2011-10-24 14:59:50',null);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','dgidb','drug_gene_interaction_report','description','text',null,'Y','2011-10-24 14:59:50',null);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','dgidb','drug_gene_interaction_report','gene_name_report_id','character varying',null,'N','2011-10-24 14:59:50',null);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','dgidb','drug_gene_interaction_report','id','character varying',null,'N','2011-10-24 14:59:50',null);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','dgidb','drug_gene_interaction_report','source_db_name','character varying',null,'N','2011-10-24 14:59:50',null);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','dgidb','drug_gene_interaction_report','source_db_version','character varying',null,'N','2011-10-24 14:59:50',null);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','dgidb','drug_name_report_association','nomenclature','character varying',null,'N','2011-10-24 15:05:54',null);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','dgidb','drug_name_report_association','alternate_name','character varying',null,'N','2011-10-24 15:05:54',null);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','dgidb','drug_name_report_association','drug_name_report_id','character varying',null,'N','2011-10-24 15:05:54',null);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','dgidb','drug_name_report_association','id','character varying',null,'N','2011-10-24 15:05:54',null);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','dgidb','drug_name_report_association','description','text',null,'Y','2011-10-24 15:05:54',null);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','dgidb','drug_name_report_category_association','drug_name_report_id','character varying',null,'N','2011-10-24 15:11:28',null);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','dgidb','drug_name_report_category_association','description','text',null,'Y','2011-10-24 15:11:28',null);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','dgidb','drug_name_report_category_association','category_name','character varying',null,'N','2011-10-24 15:11:28',null);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','dgidb','drug_name_report_category_association','category_value','character varying',null,'N','2011-10-24 15:11:28',null);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','dgidb','drug_name_report_category_association','id','character varying',null,'N','2011-10-24 15:11:28',null);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','dgidb','drug_name_report','source_db_name','character varying',null,'N','2011-10-24 15:14:49',null);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','dgidb','drug_name_report','nomenclature','character varying',null,'N','2011-10-24 15:14:49',null);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','dgidb','drug_name_report','description','text',null,'Y','2011-10-24 15:14:49',null);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','dgidb','drug_name_report','name','character varying',null,'N','2011-10-24 15:14:49',null);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','dgidb','drug_name_report','source_db_version','character varying',null,'N','2011-10-24 15:14:49',null);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','dgidb','drug_name_report','id','character varying',null,'N','2011-10-24 15:14:49',null);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','dgidb','gene_name_report_association','nomenclature','character varying',null,'N','2011-10-24 15:16:29',null);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','dgidb','gene_name_report_association','alternate_name','character varying',null,'N','2011-10-24 15:16:29',null);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','dgidb','gene_name_report_association','gene_name_report_id','character varying',null,'N','2011-10-24 15:16:29',null);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','dgidb','gene_name_report_association','description','text',null,'Y','2011-10-24 15:16:29',null);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','dgidb','gene_name_report_association','id','character varying',null,'N','2011-10-24 15:16:29',null);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','dgidb','gene_name_report_category_association','description','text',null,'Y','2011-10-24 15:19:35',null);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','dgidb','gene_name_report_category_association','category_value','character varying',null,'N','2011-10-24 15:19:35',null);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','dgidb','gene_name_report_category_association','category_name','character varying',null,'N','2011-10-24 15:19:35',null);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','dgidb','gene_name_report_category_association','id','character varying',null,'N','2011-10-24 15:19:35',null);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','dgidb','gene_name_report_category_association','gene_name_report_id','character varying',null,'N','2011-10-24 15:19:35',null);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','dgidb','gene_name_report','description','text',null,'Y','2011-10-24 15:28:38',null);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','dgidb','gene_name_report','source_db_name','character varying',null,'N','2011-10-24 15:28:38',null);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','dgidb','gene_name_report','id','character varying',null,'N','2011-10-24 15:28:38',null);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','dgidb','gene_name_report','source_db_version','character varying',null,'N','2011-10-24 15:28:38',null);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','dgidb','gene_name_report','name','character varying',null,'N','2011-10-24 15:28:38',null);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','dgidb','gene_name_report','nomenclature','character varying',null,'N','2011-10-24 15:28:38',null);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','dgidb','drug_name','name','character varying',null,'N','2011-10-27 12:52:51',null);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','dgidb','drug_name','id','character varying',null,'N','2011-10-27 12:52:51',null);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','dgidb','gene_name','id','character varying',null,'N','2011-10-27 13:01:25',null);
+INSERT INTO "dd_table_column" VALUES('Genome::DataSource::Main','dgidb','gene_name','name','character varying',null,'N','2011-10-27 13:01:25',null);
 CREATE TABLE dd_unique_constraint_column (
     data_source varchar NOT NULL,
     owner varchar,
@@ -676,7 +678,7 @@ INSERT INTO "dd_unique_constraint_column" VALUES('Genome::DataSource::GMSchema',
 INSERT INTO "dd_unique_constraint_column" VALUES('Genome::DataSource::GMSchema','MG','GENOME_MODEL_VARIANT','GMV_UK','START_POS');
 INSERT INTO "dd_unique_constraint_column" VALUES('Genome::DataSource::GMSchema','MG','PROCESSING_PROFILE','PP_SN_I','SUBCLASS_NAME');
 INSERT INTO "dd_unique_constraint_column" VALUES('Genome::DataSource::GMSchema','MG','FEATURE_LIST','FL_NAME_U','NAME');
-INSERT INTO "dd_unique_constraint_column" VALUES('Genome::DataSource::Main','subject','drug_gene_interaction_report','drug_gene_interaction_report_drug_name_report_id_key','interaction_type');
-INSERT INTO "dd_unique_constraint_column" VALUES('Genome::DataSource::Main','subject','drug_gene_interaction_report','drug_gene_interaction_report_drug_name_report_id_key','gene_name_report_id');
-INSERT INTO "dd_unique_constraint_column" VALUES('Genome::DataSource::Main','subject','drug_gene_interaction_report','drug_gene_interaction_report_drug_name_report_id_key','drug_name_report_id');
+INSERT INTO "dd_unique_constraint_column" VALUES('Genome::DataSource::Main','dgidb','drug_gene_interaction_report','drug_gene_interaction_report_drug_name_report_id_key','interaction_type');
+INSERT INTO "dd_unique_constraint_column" VALUES('Genome::DataSource::Main','dgidb','drug_gene_interaction_report','drug_gene_interaction_report_drug_name_report_id_key','gene_name_report_id');
+INSERT INTO "dd_unique_constraint_column" VALUES('Genome::DataSource::Main','dgidb','drug_gene_interaction_report','drug_gene_interaction_report_drug_name_report_id_key','drug_name_report_id');
 COMMIT;

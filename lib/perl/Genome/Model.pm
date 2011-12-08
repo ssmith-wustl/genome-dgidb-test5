@@ -261,16 +261,15 @@ sub __extend_namespace__ {
     # auto generate sub-classes for any valid processing profile
     my ($self,$ext) = @_;
 
+    my $meta = $self->SUPER::__extend_namespace__($ext);
+    if ($meta) {
+        return $meta;
+    }
+
     $depth++;
     if ($depth>1) {
         $depth--;
         return;
-    }
-
-    my $meta = $self->SUPER::__extend_namespace__($ext);
-    if ($meta) {
-        $depth--;
-        return $meta;
     }
 
     my $pp_subclass_name = 'Genome::ProcessingProfile::' . $ext;
@@ -322,7 +321,7 @@ sub create {
                 #They already gave us a subject; we'll test if it's good in _verify_subject below.
                 #Just ignore the other parameters--
             } else {
-                my $subject = $class->_resolve_subject($entered_subject_name, $entered_subject_type)
+                my $subject = $class->_resolve_subject_from_name_and_type($entered_subject_name, $entered_subject_type)
                     or return;
 
                 $input_params{subject_id} = $subject->id;
@@ -342,8 +341,14 @@ sub create {
 
     # do this until we drop the subject_class_name column
     my $subject = $self->subject();
+
+    if (not $subject and $self->can("_resolve_subject")) {
+        $subject = $self->_resolve_subject();
+    }
+
     if ($subject) {
         $self->subject_class_name(ref($subject));
+        $self->subject_id($subject->id);
     }
 
     # Make sure the subject we got is really an object
@@ -501,7 +506,7 @@ sub _additional_parts_for_default_name { return; }
 # TODO This can likely be simplified once all subjects are a subclass of Genome::Subject
 #If a user defines a model with a name (and possibly type), we need to find/make sure there's an
 #appropriate subject to use based upon that name/type.
-sub _resolve_subject {
+sub _resolve_subject_from_name_and_type {
     my $class = shift;
     my $subject_name = shift;
     my $subject_type = shift;

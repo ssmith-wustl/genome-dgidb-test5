@@ -59,14 +59,20 @@ sub execute {                               # replace with real execution logic.
 	my @headerlines;
 	my @samples;
 	my %sample_hash;
-	my $inFh = IO::File->new($vcf_input) || die "can't open file\n";
+    my $inFh;
+    if(Genome::Sys->_file_type($vcf_input) eq 'gzip') {
+        $inFh = Genome::Sys->open_gzip_file_for_reading($vcf_input);
+    }
+    else {
+	    $inFh = IO::File->new($vcf_input) || die "can't open file\n";
+    }
 	while(my $line = $inFh->getline ) {
-	        chomp($line);
-	        if ($line =~ /^##/){
+        chomp($line);
+        if ($line =~ /^##/){
 			push(@headerlines,$line);
 		}
-        	elsif ($line =~ /^#/){
-			if ($line =~ /#CHROM/){
+    	elsif ($line =~ /^#/){
+    		if ($line =~ /#CHROM/){
 #				$line =~ s/#//;
 				my ($chr, $pos, $id, $ref, $alt, $qual, $filter, $info, $format, @sample_data) = split(/\t/, $line);
 				@samples = @sample_data;
@@ -83,7 +89,7 @@ sub execute {                               # replace with real execution logic.
 			else {
 				die "Header is not what we expect sample header line to look like. Please reformat your file or modify script to handle your file.\n";
 			}
-        	}
+    	}
 		else {
 			my ($chr, $pos, $id, $ref, $alt, $qual, $filter, $info, $format, @sample_data) = split(/\t/, $line);
 			my $length = @samples;

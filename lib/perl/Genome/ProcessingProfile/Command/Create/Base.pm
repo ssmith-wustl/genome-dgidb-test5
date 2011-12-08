@@ -119,11 +119,11 @@ sub _resolve_based_on {
     return $self->_based_on($other_profiles[0]);
 }
 
-#< Execute and supporters >#
 sub execute {
     my $self = shift;
 
-    my $target_class = $self->_target_class_name;
+    my $profile_class = $self->_target_class_name;
+
     my %target_params = (
         name => $self->name,
         $self->_get_target_class_params,
@@ -132,7 +132,7 @@ sub execute {
         $target_params{'supersedes'} = $self->supersedes;
     }
 
-    my $processing_profile = $target_class->create(%target_params);
+    my $processing_profile = $profile_class->create(%target_params);
 
     unless ($processing_profile) {
         $self->error_message("Failed to create processing profile.");

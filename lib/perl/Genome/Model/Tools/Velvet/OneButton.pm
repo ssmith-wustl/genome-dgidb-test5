@@ -71,6 +71,14 @@ class Genome::Model::Tools::Velvet::OneButton {
 	    doc => 'The read type that velvet is run on, default is shortPaired',
 	    valid_values => ['short', 'shortPaired', 'short2', 'shortPaired2', 'long','longPaired'],
 	},
+        max_gap_count => {
+            is => 'Number',
+            doc => 'maximum number of gaps allowed in the alignment of the two branches of a bubble in velvetg (default: 3)',
+        },
+        max_divergence => {
+            is => 'Number',
+            doc => 'maximum divergence rate between two branches in a bubble in velvetg (default: 0.2)',
+        },
     ],
 
     has_optional_transient => [
@@ -188,8 +196,10 @@ sub execute {
     }
     else {
         foreach my $h (@hash_sizes) {
-            #method return an array but it's not needed here
-            unless ($self->_run_velveth_get_opt_expcov_covcutoff($h)) {
+            #method is called in multiple places and returns a pair of numbers which
+            #are not used here but needed in other calls;
+            my @pair = $self->_run_velveth_get_opt_expcov_covcutoff($h);
+            if ( not @pair ) {
                 $self->error_message("Failed to run _run_velveth_get_opt_expcov_covcutoff with hash_size $h");
                 return;
             }
@@ -440,6 +450,10 @@ sub _do_final_velvet_runs {
 
     my $g_cmd = $velvetg.' '.$self->output_dir.' -exp_cov '.$best_exp_cov.' -cov_cutoff '.$best_cov_cf.' -ins_length '.$self->ins_length.' -ins_length_sd '.$ins_length_sd.' -read_trkg yes -min_contig_lgth '.$self->min_contig_length.' -amos_file yes';
 
+    #append optional params to command
+    $g_cmd .= ' -max_gap_count '.$self->max_gap_count if $self->max_gap_count and $self->max_gap_count ge 0;
+    $g_cmd .= ' -max_divergence '.$self->max_divergence if $self->max_divergence and $self->max_divergence ge 0;
+
     if (system("$g_cmd")) {
         $self->error_message("Failed to run final velvetg with command\n\t$g_cmd");
         return;
@@ -645,6 +659,9 @@ sub _run_velvetg_get_n50_total {
     my $screen_g_file = $self->output_dir.'/screen_g'; #capture velvetg output
 
     my $cmd = $velvetg.' '.$self->output_dir.' -exp_cov '.$exp_coverage.' -cov_cutoff '.$coverage_cutoff.' -ins_length '.$self->ins_length.' -ins_length_sd '.$ins_length_sd;
+    #append optional params to command
+    $cmd .= ' -max_gap_count '.$self->max_gap_count if $self->max_gap_count and $self->max_gap_count ge 0;
+    $cmd .= ' -max_divergence '.$self->max_divergence if $self->max_divergence and $self->max_divergence ge 0;
 
     if (system("$cmd > $screen_g_file")) { #returns 0 if successful
         $self->error_message("Failed to run velvetg with command\n\t$cmd");

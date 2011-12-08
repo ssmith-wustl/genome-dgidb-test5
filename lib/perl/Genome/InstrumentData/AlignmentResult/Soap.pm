@@ -25,7 +25,7 @@ sub _run_aligner {
     my $aligner_params = $self->aligner_params || '';
     
     # collect filepaths
-    my $soap_path = Genome::Model::Tools::Soap->path_for_soap_align_version($self->aligner_version);
+    my $soap_path = Genome::Model::Tools::Soap::Base->path_for_soap_align_version($self->aligner_version);
     my $ref_index = $self->reference_build->full_consensus_path('fa.index.amb');
     $ref_index =~ s/\.amb$//; # need the .fa.index ending
     my $output_aligned = $self->temp_scratch_directory . "/all_sequences.sam";

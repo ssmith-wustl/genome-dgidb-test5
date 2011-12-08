@@ -2,7 +2,9 @@ package Genome::Sys::User;
 
 use strict;
 use warnings;
+
 use Genome;
+use Carp;
 
 class Genome::Sys::User {
     is => 'Genome::Searchable',
@@ -27,8 +29,30 @@ class Genome::Sys::User {
         project_parts => { is => 'Genome::ProjectPart', reverse_as => 'entity', is_mutable => 1, },
         projects => { is => 'Genome::Project', via => 'project_parts', to => 'project', is_mutable => 1, },
         project_names => { is => 'Text', via => 'projects', to => 'name', },
+        user_role_bridges => {
+            is => 'Genome::Sys::User::RoleMember',
+            reverse_as => 'user',
+        },
+        user_roles => {
+            is => 'Genome::Sys::User::Role',
+            is_mutable => 1,
+            via => 'user_role_bridges',
+            to => 'role',
+        },
     ],
 };
+
+sub add_role {
+    my ($self, $role) = @_;
+    my $bridge = Genome::Sys::User::RoleMember->create(
+        user => $self,
+        role => $role,
+    );
+    unless ($bridge) {
+        Carp::confess "Could not create user role bridge entity!";
+    }
+    return 1;
+}
 
 sub fix_params_and_get {
     my ($class, @p) = @_;
@@ -52,5 +76,45 @@ sub fix_params_and_get {
     return $class->SUPER::get(%p);
 }
 
-1;
+sub __errors__ {
+    my $self = shift;
+    my @tags;
 
+    my @duplicates = eval {
+        Genome::Sys::User->get(
+            email => $self->email,
+        )
+    };
+    my $error = $@;
+    if ($error) {
+        if ($error =~ /An object of type Genome::Sys::User already exists with id/) {
+            $error = "Cannot create user with email " . $self->email .
+                ", a user with that email already exists!";
+        }
+
+        push @tags, UR::Object::Tag->create(
+            type => 'invalid',
+            properties => ['email'],
+            desc => $error,
+        );
+    }
+
+    return @tags;
+}
+
+sub delete {
+    my $self = shift;
+
+    for my $bridge ($self->user_role_bridges) {
+        my $role_name = $bridge->role->name;
+        my $user_name = $self->name;
+        my $rv = $bridge->delete;
+        unless ($rv) {
+            Carp::confess "Could not delete bridge object between user $user_name and role $role_name";
+        }
+    }
+
+    return $self->SUPER::delete(@_);
+}
+
+1;

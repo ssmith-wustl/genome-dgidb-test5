@@ -202,7 +202,7 @@ $(document).data('updatedOn', new Date(]]><xsl:copy-of select="$currentTime"/><!
       <li>
         <a id="perspective_switcher" title="Available Perspectives">
           <xsl:attribute name="alt"><xsl:value-of select="$objectId"/></xsl:attribute>
-          <xsl:attribute name="href"><xsl:text>/view/u-r/object/type/available-views.html?class_name=</xsl:text><xsl:value-of select="$objectClassName"/></xsl:attribute>
+          <xsl:attribute name="href"><xsl:text>/viewajax/u-r/object/type/available-views.html?class_name=</xsl:text><xsl:value-of select="$objectClassName"/></xsl:attribute>
           Perspectives
         </a>
       </li>

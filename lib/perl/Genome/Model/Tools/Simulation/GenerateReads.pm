@@ -10,7 +10,7 @@ our $VERSION = '0.01';
 use Cwd;
 class Genome::Model::Tools::Simulation::GenerateReads {
     is => 'Command',
-    has => [
+    has_optional_input => [
     diploid_fasta => {
         type => 'String',
         is_optional => 0,
@@ -26,6 +26,7 @@ class Genome::Model::Tools::Simulation::GenerateReads {
     output_bam_name => { 
         type => 'String',
         doc => 'the name of the output bam that will contain all your simulated reads',
+        is_optional=>1,
     },
     rename_reads=> {
         is_optional=>1,
@@ -49,6 +50,12 @@ sub help_detail {
 
 sub execute {
     my $self=shift;
+    #FIXME do this as a calc maybe
+    my $output_bam = $self->diploid_fasta;
+    $output_bam =~s/\.fasta//g;
+    $self->output_bam_name($output_bam);
+    ####
+
     $DB::single=1;
     my $mason_cmd="/gscuser/charris/bin/mason illumina " . $self->mason_parameters;  #FIXME deploy, no hardcode
     my $current_dir = getcwd;

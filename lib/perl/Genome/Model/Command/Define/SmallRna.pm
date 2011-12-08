@@ -18,21 +18,6 @@ class Genome::Model::Command::Define::SmallRna {
 
 };
 
-sub help_synopsis {
-    return <<"EOS"
-EOS
-}
-
-sub help_detail {
-    return <<"EOS"
-EOS
-}
-
-sub _shell_args_property_meta {
-    my $self = shift;
-    return $self->Genome::Command::Base::_shell_args_property_meta(@_);
-}
-
 sub _resolve_param {
     my ($self, $param) = @_;
 
@@ -83,3 +68,4 @@ sub execute {
 }
 
 1;
+

@@ -21,6 +21,11 @@ class Genome::Model::Tools::Sam::BamToUnalignedFastq {
             default => 0,
             doc => 'If set, this tool will print only the aligned reads, instead of the unaligned reads.',
         },
+        ignore_bitflags => {
+            is => 'Boolean',
+            default => 0,
+            doc => 'If set, this tool will ignore the bitflag column and instead use the RNAME column of the bam to determine if a read has been mapped',
+        },
     ],
 };
 
@@ -67,46 +72,96 @@ sub execute {
             }
         }
     }
-
+    
     my %read_pairs;
     my $bam_fh = IO::File->new('samtools view '.$self->bam_file.'|');
-    while (my $align = $bam_fh->getline) {
-        my @cols = split(/\s+/, $align);
-        my $flag = $cols[1];
-        my ($mapped, $type);
-        if ($flag & 1) { # Is this read part of a pair?
-            if ($flag & 64)  {
-                $type = 'read_1';
-            } elsif ($flag & 128) {
-                $type = 'read_2';
-            } else {
-                die('Read pair info lost for alignment of read '. $align->qname .' from BAM file '. $self->bam_file);
-            }
-
-            # if both halves of the mate do not have the same mapping status, this is a fragment
-            unless ( ($flag & 4) *2 == ($flag & 8) ){ 
-                $type = 'fragment';
-            }
-
-            if ($flag & 4) { # Is this part of the pair unmapped?
+    if ($self->ignore_bitflags){
+        #print everything out to a single file, sort, then print to correct fh
+        $self->status_message("extracting (un)aligned reads based on reference name");
+        my $temp_out = Genome::Sys->create_temp_file_path();
+        my $tfh = IO::File->new("> $temp_out");
+        while ( my $align = $bam_fh->getline) {
+            my @cols = split(/\s+/, $align);
+            my $mapped;
+            my $rname = $cols[2];
+            if ($rname eq '*'){
                 $mapped = 0;
-            } else {
+            }
+            else{
                 $mapped = 1;
             }
-        # Else the read is not a part of a pair, and treated as a fragment
-        } else {
-            # Fragment Read
-            $type = 'fragment';
-            if ($flag & 4) { # Is this read unmapped?
-                $mapped = 0;
-            } else {
-                $mapped = 1;
+
+            if ($mapped == $self->print_aligned){
+                $tfh->print($align);
             }
         }
+        $tfh->close;
+        my $temp_out_sorted = Genome::Sys->create_temp_file_path();
+        $self->status_message("sorting (un)aligned reads");
+        system("sort $temp_out > $temp_out_sorted");
+        my $sfh = IO::File->new($temp_out_sorted);
+        my $cache;
+        $self->status_message("placing (un)aligned reads in paired-end or fragment fastq files");
+        while (my $align = $sfh->getline){
+            if ( ! $cache ){
+                $cache = $align;
+                next;
+            }
+            my ($cache_read) = split(/\s+/, $cache);
+            my $cache_base = $cache_read;
+            $cache_base =~ s/\/.*$//;
+            my ($current_read) = split(/\s+/, $align);
+            my $current_base = $current_read;
+            $current_base =~ s/\/.*$//;
+            if ($cache_read eq $current_read or $cache_base eq $current_base){
+                print_align_to_fh($cache,\%fhs,'read_1');
+                print_align_to_fh($align,\%fhs,'read_2');
+                $cache = undef;
+            }else{
+                print_align_to_fh($cache,\%fhs,'fragment');
+                $cache = $align;
+            }
+        }
+    }
+    else{
+        while (my $align = $bam_fh->getline) {
+            my @cols = split(/\s+/, $align);
+            my ($mapped, $type);
+            my $flag = $cols[1];
+            if ($flag & 1) { # Is this read part of a pair?
+                if ($flag & 64)  {
+                    $type = 'read_1';
+                } elsif ($flag & 128) {
+                    $type = 'read_2';
+                } else {
+                    die('Read pair info lost for alignment of read '. $align->qname .' from BAM file '. $self->bam_file);
+                }
 
-        # If the read is mapped and we're printing mapped things, or if the read is unmapped and we're printing unaligned things... print it
-        if ( $mapped == $self->print_aligned ) {
-            print_align_to_fh($align,\%fhs,$type);
+                # if both halves of the mate do not have the same mapping status, this is a fragment
+                unless ( ($flag & 4) *2 == ($flag & 8) ){ 
+                    $type = 'fragment';
+                }
+
+                if ($flag & 4) { # Is this part of the pair unmapped?
+                    $mapped = 0;
+                } else {
+                    $mapped = 1;
+                }
+                # Else the read is not a part of a pair, and treated as a fragment
+            } else {
+                # Fragment Read
+                $type = 'fragment';
+                if ($flag & 4) { # Is this read unmapped?
+                    $mapped = 0;
+                } else {
+                    $mapped = 1;
+                }
+            }
+
+            # If the read is mapped and we're printing mapped things, or if the read is unmapped and we're printing unaligned things... print it
+            if ( $mapped == $self->print_aligned ) {
+                print_align_to_fh($align,\%fhs,$type);
+            }
         }
     }
     return 1;
@@ -117,7 +172,7 @@ sub print_align_to_fh {
     my $align = shift;
     my $fhs = shift;
     my $type = shift;
-    
+
     my @cols = split(/\s+/,$align);
 
     #print $align."\n";
@@ -131,12 +186,7 @@ sub print_align_to_fh {
     # TODO: verify orientation with original fastq
     my $seq = $cols[9];
     # TODO: verify orientation and quality conversion with original fastq
-    my @quals = map{ord($_)}split('',$cols[10]);
-    my $qual = '';
-    for my $phred_value (@quals) {
-        my $ill_value = chr($phred_value + 64);
-        $qual .= $ill_value;
-    }
+    my $qual = $cols[10];
     print $fh '@' ."$name\n$seq\n+\n$qual\n";
 }
 

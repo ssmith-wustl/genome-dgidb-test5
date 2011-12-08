@@ -63,6 +63,10 @@ class Genome::Model::Tools::FastTier::FastTier {
             default => '/gsc/bin/intersectBed-pipes',  #'/gsc/pkg/bio/bedtools/installed-64/intersectBed',
             doc => 'The path and filename of intersectBed',
         },
+        output_directory => {
+            is => 'Text',
+            doc => 'Set this to drop output files somewhere other than the location of the input',
+        },
         _tier1_bed => {
             type => 'Text',
         },
@@ -98,10 +102,24 @@ sub execute {
         $self->error_message("The variant file you supplied: " . $self->variant_bed_file . " appears to be 0 size. You need computer more better.");
         return;
     }
-    for my $tier(1..4){
-        my $output_accessor = "tier".$tier."_output";
-        unless ($self->$output_accessor){
-            $self->$output_accessor($self->variant_bed_file.".tier".$tier);
+    if($self->output_directory){
+        my $output_directory = $self->output_directory;
+        unless(-d $output_directory){
+            die $self->error_message("Could not locate output directory!");
+        }
+        my $base = basename($self->variant_bed_file);
+        for my $tier(1..4){
+            my $output_accessor = "tier".$tier."_output";
+            unless ($self->$output_accessor){
+                $self->$output_accessor($output_directory."/".$base.".tier".$tier);
+            }
+        }
+    } else {
+        for my $tier(1..4){
+            my $output_accessor = "tier".$tier."_output";
+            unless ($self->$output_accessor){
+                $self->$output_accessor($self->variant_bed_file.".tier".$tier);
+            }
         }
     }
 
@@ -222,7 +240,7 @@ sub line_count {
     unless( -e $input ) {
         die $self->error_message("Could not locate file for line count: $input");
     }
-    my $result = `wc -l $input`; 
+    my $result = `joinx sort -u $input | wc -l`; 
     my ($answer)  = split /\s/,$result;
     return $answer
 }

@@ -8,7 +8,7 @@ use Bio::SeqIO;
 use Data::Dumper;
 
 class Genome::Model::Tools::Soap::CreateSupercontigsAgpFile {
-    is => 'Genome::Model::Tools::Soap',
+    is => 'Genome::Model::Tools::Soap::Base',
     has => [
         assembly_directory => {
             is => 'Text',
