@@ -38,12 +38,7 @@ class Genome::Model::Tools::Sx::EulerEc {
 };
 
 sub help_brief {
-    'Tool to run EulerEc.pl',
-}
-
-sub help_detail {
-    return <<"EOS"
-EOS
+    'Tool to run Error correction program EulerEc.pl',
 }
 
 sub execute {
