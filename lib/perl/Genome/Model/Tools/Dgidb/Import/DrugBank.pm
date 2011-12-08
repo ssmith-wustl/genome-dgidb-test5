@@ -149,6 +149,10 @@ sub _import_drug {
         my $drug_name_category_association = $self->_create_drug_name_report_category_association($drug_name, 'drug_type', $interaction->{drug_type}, '');
     }
 
+    unless($interaction->{drug_cas_number} eq 'na'){
+        my $drug_name_cas_number = $self->_create_drug_name_report_association($drug_name, $interaction->{drug_cas_number}, 'cas_number', '');
+    }
+
     my @drug_categories = split(', ', $interaction->{drug_categories});
     for my $drug_category (@drug_categories){
         next if $drug_category eq 'na';
@@ -179,7 +183,7 @@ sub import_interactions {
     my $version = $self->version;
     my $interaction_outfile = shift;
     my @interactions;
-    my @headers = qw/ interaction_count drug_id drug_name drug_synonyms drug_brands drug_type drug_groups drug_categories partner_id known_action target_actions gene_symbol uniprot_id /;
+    my @headers = qw/ interaction_count drug_id drug_name drug_synonyms drug_cas_number drug_brands drug_type drug_groups drug_categories partner_id known_action target_actions gene_symbol uniprot_id /;
     my $parser = Genome::Utility::IO::SeparatedValueReader->create(
         input => $interaction_outfile,
         headers => \@headers,
@@ -272,10 +276,10 @@ sub input_to_tsv {
     binmode(INTERACTIONS, ":utf8");
 
     #Print out a header line foreach output file
-    my $interactions_header = "interaction_count\tdrug_id\tdrug_name\tdrug_synonyms\tdrug_brands\tdrug_type\tdrug_groups\tdrug_categories\tpartner_id\tknown_action?\ttarget_actions\tgene_symbol\tuniprot_id";
+    my $interactions_header = "interaction_count\tdrug_id\tdrug_name\tdrug_synonyms\tdrug_cas_number\tdrug_brands\tdrug_type\tdrug_groups\tdrug_categories\tpartner_id\tknown_action?\ttarget_actions\tgene_symbol\tuniprot_id";
     print INTERACTIONS "$interactions_header\n";
 
-    my $drugs_header = "drug_id\tdrug_name\tdrug_synonyms\tdrug_brands\tdrug_type\tdrug_groups\tdrug_categories\ttarget_count";
+    my $drugs_header = "drug_id\tdrug_name\tdrug_synonyms\tdrug_cas_number\tdrug_brands\tdrug_type\tdrug_groups\tdrug_categories\ttarget_count";
     print DRUGS "$drugs_header\n";
 
     my $targets_header = "partner_id\tgene_symbol\tuniprot_id";
@@ -286,6 +290,12 @@ sub input_to_tsv {
         my $drug_type = $drugs->{$drug_id}->{'type'};
         if ($verbose){
             print BLUE, "\n\n$drug_id\t$drug_type\t$drug_name", RESET;
+        }
+
+        #Get the cas_number
+        my $drug_cas_number = 'na';
+        unless(ref($drugs->{$drug_id}->{'cas-number'})){
+            $drug_cas_number = $drugs->{$drug_id}->{'cas-number'};
         }
 
         #Get the drug groups
@@ -345,6 +355,7 @@ sub input_to_tsv {
 
         #Strip <tabs> from string variables
         $drug_name =~ s/\t/ /g;
+        $drug_cas_number =~ s/\t/ /g;
         $drug_synonyms_string =~ s/\t/ /g;
         $drug_brands_string =~ s/\t/ /g;
         $drug_type =~ s/\t/ /g;
@@ -352,7 +363,7 @@ sub input_to_tsv {
         $drug_categories_string =~ s/\t/ /g;
 
         #Print out each drug
-        my $drugs_line = "$drug_id\t$drug_name\t$drug_synonyms_string\t$drug_brands_string\t$drug_type\t$drug_groups_string\t$drug_categories_string\t$t_count";
+        my $drugs_line = "$drug_id\t$drug_name\t$drug_synonyms_string\t$drug_cas_number\t$drug_brands_string\t$drug_type\t$drug_groups_string\t$drug_categories_string\t$t_count";
         print DRUGS "$drugs_line\n";
 
         #Print out each drug-gene interaction...
@@ -373,7 +384,7 @@ sub input_to_tsv {
             $target_actions =~ s/\t/ /g;
 
             $ic++;
-            my $interactions_line = "$ic\t$drug_id\t$drug_name\t$drug_synonyms_string\t$drug_brands_string\t$drug_type\t$drug_groups_string\t$drug_categories_string\t$target_pid\t$target_known_action\t$target_actions\t$gene_symbol\t$uniprotkb";
+            my $interactions_line = "$ic\t$drug_id\t$drug_name\t$drug_synonyms_string\t$drug_cas_number\t$drug_brands_string\t$drug_type\t$drug_groups_string\t$drug_categories_string\t$target_pid\t$target_known_action\t$target_actions\t$gene_symbol\t$uniprotkb";
             print INTERACTIONS "$interactions_line\n";
 
         }

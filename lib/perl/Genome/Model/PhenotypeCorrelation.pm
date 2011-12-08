@@ -330,127 +330,417 @@ sub _execute_build {
 
     # we'll figure out what to do about the analysis_strategy next...
 
+
+
+    my $multisample_vcf = $vcf_file;
+    if ($self->phenotype_analysis_strategy eq 'quantitative') { #unrelated individuals, quantitative -- ASMS-NFBC
+#create a directory for results
+        my $temp_path = Genome::Sys->create_temp_directory;
+        $temp_path =~ s/\:/\\\:/g;
+
+        my $maf_file = vcf_to_maf($multisample_vcf,$temp_path,\@builds);
+        $self->status_message("Merged Maf file located at: ".$maf_file);
+
+        ## Build temp file for bam_list ##
+        my ($tfh_bams,$bam_list) = Genome::Sys->create_temp_file;
+        unless($tfh_bams) {
+            $self->error_message("Unable to create temporary file $!");
+            die;
+        }
+        $bam_list =~ s/\:/\\\:/g;
+
+        foreach $build (@builds) {
+            my $sample_name = $build->subject_name;
+            my $bam_file = $build->whole_rmdup_bam_file;
+            print $tfh_bams "$sample_name\t$bam_file\n";
+        }
+        close($tfh_bams);
+
+
+#Ran clinical-correlation:
+#need clinical data file $clinical_data
+my $clinical_data_orig = '/gscmnt/gc2146/info/medseq/wschierd/crap_stuff_delete/Mock_Pheno_1kg.txt';
+my $clinical_data = "$temp_path/Mock_Pheno_1kg.txt";
+system("cp $clinical_data_orig $clinical_data");
+
+#get list of bams and load into tmp file named $bam_list
+#$name is project name or some other good identifier
+my $name = $self->name;
+
+        #my $clin_corr = "gmt music clinical-correlation --genetic-data-type variant --bam-list $bam_list --maf-file $maf_file --output-file $temp_path/clin_corr_result --categorical-clinical-data-file $clinical_data";
+        my $clin_corr_cmd = Genome::Model::Tools::Music::ClinicalCorrelation->create(
+            genetic_data_type => "variant",
+            bam_list => $bam_list,
+            maf_file => $maf_file,
+            output_file => "$temp_path/clin_corr_result",
+            categorical_clinical_data_file => $clinical_data,
+        );
+        my $clin_corr_result;
+        unless($clin_corr_result = $clin_corr_cmd->execute){
+            die "Could not complete clinical correlation!";
+        }
+
+        my $fdr_cutoff = 0.05;
+        #my $clin_corr_finish = "gmt germline finish-music-clinical-correlation --input-file $temp_path/clin_corr_result.categorical --output-file $temp_path/clin_corr_result_stats_FDR005.txt --output-pdf-image-file $temp_path/clin_corr_result_stats_FDR005.pdf --clinical-data-file $clinical_data --project-name $name --fdr-cutoff $fdr_cutoff --maf-file $maf_file";
+        my $clin_corr_finish_cmd = Genome::Model::Tools::Germline::FinishMusicClinicalCorrelation->create(
+            input_file => "$temp_path/clin_corr_result.categorical",
+            output_file => "$temp_path/clin_corr_result_stats_FDR005.txt",
+            output_pdf_image_file => "$temp_path/clin_corr_result_stats_FDR005.pdf",
+            clinical_data_file => $clinical_data,
+            project_name => $name,
+            fdr_cutoff => $fdr_cutoff,
+            maf_file => $maf_file,
+        );
+        my $clin_corr_finish_result;
+        unless($clin_corr_finish_result = $clin_corr_finish_cmd->execute){
+            die "Could not complete clinical correlation finisher statistics!";
+        }
+
+
+system("cp $maf_file /gscmnt/gc2146/info/medseq/wschierd/crap_stuff_delete/maf_file.maf");
+system("cp $bam_list /gscmnt/gc2146/info/medseq/wschierd/crap_stuff_delete/bam_list.txt");
+system("cp $temp_path/clin_corr_result.categorical /gscmnt/gc2146/info/medseq/wschierd/crap_stuff_delete/clin_corr_result.categorical");
+system("cp $temp_path/clin_corr_result_stats_FDR005.txt /gscmnt/gc2146/info/medseq/wschierd/crap_stuff_delete/clin_corr_result_stats_FDR005.txt");
+system("cp $temp_path/clin_corr_result_stats_FDR005.pdf /gscmnt/gc2146/info/medseq/wschierd/crap_stuff_delete/clin_corr_result_stats_FDR005.pdf");
+
+=cut
+#haplotype analysis
+
+#haploview (per chr)
+for my $chr (1..22,'X','Y') { #this needs to be set by the ROI or there will be empty files created where there are no variants on a chromosome (instead of chr, could be set per region)
+    #split pedigree file up and specifically for haploview -- perhaps vcftools or plink can create this file for us?
+#example script that messed around with this idea:
+my $haplo_cmd = "perl /gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/Vasily_to_Haploview_Format.pl"
+#these need to be coming from the pedigree file, if we make one
+#/gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/1941samples_washuvasilyoverlap_haploview_file.txt
+#per chromosome version of the above file
+#/gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/1941samples_washuvasilyoverlap_haploview_filechr1.haps
+#/gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/1941samples_washuvasilyoverlap_haploview_filechr2.haps
+#/gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/1941samples_washuvasilyoverlap_haploview_filechr8.haps
+#/gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/1941samples_washuvasilyoverlap_haploview_filechr9.haps
+#/gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/1941samples_washuvasilyoverlap_haploview_filechr10.haps
+#/gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/1941samples_washuvasilyoverlap_haploview_filechr11.haps
+#/gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/1941samples_washuvasilyoverlap_haploview_filechr12.haps
+#/gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/1941samples_washuvasilyoverlap_haploview_filechr15.haps
+#/gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/1941samples_washuvasilyoverlap_haploview_filechr16.haps
+#/gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/1941samples_washuvasilyoverlap_haploview_filechr19.haps
+    my $hap_infile = "$temp_path/$name.haploview_filechr$chr.haps";
+
+#variant name and position information can be fed into haploview somehow
+#/gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/1941samples_washuvasilyoverlap_haploview_file_markers.txt
+
+    my $hap_outfile = "$temp_path/$name.haploview_filechr$chr.output";
+    my $hapview_cmd = "haploview -nogui -out $hap_outfile -haps $hap_infile -png";
+    my $haploview_png = $hap_outfile.".LD.PNG";
+}
+
+#plot genotype distributions by clinical variable
+my $clinical_variable_distribution_cmd = "perl /gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/Vasily_plus_Phenotype.pl"
+#example outputs:
+#/gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/Genotypes_bmires.pdf
+#/gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/Genotypes_crpres.pdf
+#/gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/Genotypes_diares.pdf
+#/gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/Genotypes_glures.pdf
+#/gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/Genotypes_hdlres.pdf
+#/gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/Genotypes_insres.pdf
+#/gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/Genotypes_ldlres.pdf
+#/gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/Genotypes_sysres.pdf
+#/gscmnt/sata424/info/medseq/Freimer-Boehnke/Data_Freeze_20110207/Data_Freeze_Samples/Data_Sharing_Exercise/WashU_Vasily_Combined/Genotypes_tgres.pdf
+
+
+#find the significant gene pathways within an ROI:
+#perl /gscmnt/sata424/info/medseq/Freimer-Boehnke/79_gene_pathways/groupGenes.pl 
+#Raw output:
+#/gscmnt/sata424/info/medseq/Freimer-Boehnke/79_gene_pathways/GenePathways.txt 
+#Matrix:
+#/gscmnt/sata424/info/medseq/Freimer-Boehnke/79_gene_pathways/GeneConnectome.txt
 =cut
 
-if ($self->phenotype-analysis-strategy eq 'case-control') { #unrelated individuals, case-control -- MRSA
+    }
+    elsif ($self->phenotype_analysis_strategy eq 'case-control') { #unrelated individuals, case-control -- MRSA
+#create a directory for results
+        my $temp_path = Genome::Sys->create_temp_directory;
+        $temp_path =~ s/\:/\\\:/g;
 
+        my $maf_file = vcf_to_maf($multisample_vcf,$temp_path,\@builds);
+        $self->status_message("Merged Maf file located at: ".$maf_file);
 
-# assume that the vcf is passed in as $multisample_vcf
+        ## Build temp file for bam_list ##
+        my ($tfh_bams,$bam_list) = Genome::Sys->create_temp_file;
+        unless($tfh_bams) {
+            $self->error_message("Unable to create temporary file $!");
+            die;
+        }
+        $bam_list =~ s/\:/\\\:/g;
 
-#change vcf -> maf here, which also needs annotation files
-#make $maf_file -- might need one with everything and one that doesnt have silent variants in it
-my $vcf_line = `grep -v "##" $multisample_vcf | head -n 1`;
-chomp($vcf_line);
-my ($chr, $pos, $id, $ref, $alt, $qual, $filter, $info, $format, @sample_names) = split(/\t/, $vcf_line);
+        ## Build temp file for bam_list ##
+        my ($tfh_cmds,$cmd_list) = Genome::Sys->create_temp_file;
+        unless($tfh_cmds) {
+            $self->error_message("Unable to create temporary file $!");
+            die;
+        }
+        $cmd_list =~ s/\:/\\\:/g;
 
+        foreach $build (@builds) {
+            my $sample_name = $build->subject_name;
+            my $bam_file = $build->whole_rmdup_bam_file;
+            print $tfh_bams "$sample_name\t$bam_file\t$bam_file\n";
+        }
+        close($tfh_bams);
 
-my $vcf_split_cmd = "gmt vcf vcf-split-samples --vcf-input $multisample_vcf --output-dir $single_sample_dir";
-
-my $maf_header;
-my $maf_maker_cmd = "";
-foreach $sample_id (@sample_names) {
-    my $annotation_file_per_sample = ""; #needs to get some sort of single-sample annotation file from the build or maybe there is a unified annotation file to use?
-    my $vcf_cmd = "gmt vcf convert maf vcf-2-maf --vcf-file $single_sample_dir/$sample_id.vcf --annotation-file $annotation_file_per_sample --output-file $single_sample_dir/$sample_id.maf";
-system($vcf_cmd);
-    $maf_maker_cmd .= " $single_sample_dir/$sample_id.maf";    
-}
-my $maf_sample_id = $sample_names[0];
-$maf_maker_cmd .= " | grep -v \"Hugo_Symbol\" > $single_sample_dir/All_Samples_noheader.maf";
-my $final_maf_maker_cmd = "head -n1 $single_sample_dir/$maf_sample_id.maf | cat - $single_sample_dir/All_Samples_noheader.maf > $single_sample_dir/All_Samples.maf";
-
-system($final_maf_maker_cmd);
 
 #start workflow to find significantly mutated genes in our set:
-    #get list of bams and load into tmp file named $bam_list
-    #for exome set $target_region_set_name_bedfile to be all exons including splice sites, these files are maintained by cyriac
-    #not sure how to define $output_dir but in a workflow context this just needs to be a clean folder. Perhaps in the model build context this would be ...model/build/music/bmr/
-    my $bmr_cmd = "gmt music bmr calc-covg --bam-list $bam_list --output-dir $output_dir --reference-sequence $reference_fasta --roi-file $target_region_set_name_bedfile --cmd-prefix bsub --cmd-list-file $temp_file";
+        #get list of bams and load into tmp file named $bam_list
+        #for exome set $target_region_set_name_bedfile to be all exons including splice sites, these files are maintained by cyriac
+        #not sure how to define something here but a $temp_path but in a workflow context this just needs to be a clean folder. Perhaps in the model build context this would be ...model/build/music/bmr/
+        ## Change roi away from gz file if necessary ##
+        my $target_region_set_name_bedfile;
+        if(Genome::Sys->_file_type($self->roi_file) eq 'gzip') {
+            my $inFh = Genome::Sys->open_gzip_file_for_reading($self->roi_file);
+            my ($tfh_roi,$roi_list) = Genome::Sys->create_temp_file;
+            unless($tfh_roi) {
+                $self->error_message("Unable to create temporary file $!");
+                die;
+            }
+            $roi_list =~ s/\:/\\\:/g;
+            while(my $line = $inFh->getline ) {
+                print $tfh_roi $line;
+            }
+            $target_region_set_name_bedfile = $roi_list;
+        }
+        else {
+	        $target_region_set_name_bedfile = $self->roi_file;
+        }
+        
+        my $user = $ENV{USER};
+        #my $bmr_cmd = "gmt music bmr calc-covg --bam-list $bam_list --output-dir $temp_path --reference-sequence $reference_fasta --roi-file $target_region_set_name_bedfile --cmd-prefix bsub --cmd-list-file $cmd_list";
+        my $bmr_cmd = Genome::Model::Tools::Music::Bmr::CalcCovg->create(
+            bam_list => $bam_list,
+            output_dir => $temp_path,
+            reference_sequence => $reference_fasta,
+            roi_file => $target_region_set_name_bedfile,
+            cmd_prefix => "",
+            cmd_list_file => $cmd_list,
+        );
+        my $bmr_result;
+        unless($bmr_result = $bmr_cmd->execute){
+            die "Could not complete bmr step 1!";
+        }
 
-    #Submitted all the jobs in cmd_list_file to LSF:
-    my $submit_cmd = "bash $temp_file";
+        #Submitted all the jobs in cmd_list_file to LSF:
+        my $submit_cmd = "bash $cmd_list";
+        system($submit_cmd);
 
+#sleep(60);
 #need to wait for the above to be done......
 
-    #After the parallelized commands are all done, merged the individual results using the same tool that generated the commands: - MUST KNOW ABOVE STEP IS COMPLETE
-    my $bmr_step2_cmd = "gmt music bmr calc-covg --bam-list $bam_list --output-dir $output_dir --reference-sequence $reference_fasta --roi-file $target_region_set_name_bedfile";
+        #After the parallelized commands are all done, merged the individual results using the same tool that generated the commands: - MUST KNOW ABOVE STEP IS COMPLETE
+        #my $bmr_step2_cmd = "gmt music bmr calc-covg --bam-list $bam_list --output-dir $temp_path --reference-sequence $reference_fasta --roi-file $target_region_set_name_bedfile";
+        my $bmr_step2_cmd = Genome::Model::Tools::Music::Bmr::CalcCovg->create(
+            bam_list => $bam_list,
+            output_dir => $temp_path,
+            reference_sequence => $reference_fasta,
+            roi_file => $target_region_set_name_bedfile,
+        );
+        my $bmr_step2_result;
+        unless($bmr_step2_result = $bmr_step2_cmd->execute){
+            die "Could not complete bmr step 2!";
+        }
 
-    #Calculated mutation rates:
-    my $bmr_step3_cmd = "gmt music bmr calc-bmr --bam-list $bam_list --output-dir $output_dir --reference-sequence $reference_fasta --roi-file $target_region_set_name_bedfile --maf-file $maf_file --show-skipped"; #show skipped doesn't work in workflow context
 
-    #Ran SMG test:
-    #The smg test limits its --output-file to a --max-fdr cutoff. A full list of genes is always stored separately next to the output with prefix "_detailed".
-    my $fdr_cutoff = 0.2; #0.2 is the default -- For every gene, if the FDR for at least 2 of theses test are less than $fdr_cutoff, it is considered as an SMG.
-    my $smg_cmd = "gmt music smg --gene-mr-file $output_dir/gene_mrs --output-file $output_dir/smgs --max-fdr $fdr_cutoff";
+        #Calculated mutation rates:
+        #my $bmr_step3_cmd = "gmt music bmr calc-bmr --bam-list $bam_list --output-dir $temp_path --reference-sequence $reference_fasta --roi-file $target_region_set_name_bedfile --maf-file $maf_file --show-skipped"; #show skipped doesn't work in workflow context
+        my $bmr_step3_cmd = Genome::Model::Tools::Music::Bmr::CalcBmr->create(
+            bam_list => $bam_list,
+            output_dir => $temp_path,
+            reference_sequence => $reference_fasta,
+            roi_file => $target_region_set_name_bedfile,
+            maf_file => $maf_file,
+        );
+        my $bmr_step3_result;
+        unless($bmr_step3_result = $bmr_step3_cmd->execute){
+            die "Could not complete bmr step 2!";
+        }
 
-    my $smg_maf_cmd = "gmt capture restrict-maf-to-smgs --maf-file $maf_file --output-file $output_dir/smg_restricted_maf.maf --output-bed-smgs $output_dir/smg_restricted_bed.bed --smg-file $output_dir/smgs";
+        #Ran SMG test:
+        #The smg test limits its --output-file to a --max-fdr cutoff. A full list of genes is always stored separately next to the output with prefix "_detailed".
+        my $fdr_cutoff = 0.2; #0.2 is the default -- For every gene, if the FDR for at least 2 of theses test are less than $fdr_cutoff, it is considered as an SMG.
+        #my $smg_cmd = "gmt music smg --gene-mr-file $temp_path/gene_mrs --output-file $temp_path/smgs --max-fdr $fdr_cutoff";
+        my $smg_cmd = Genome::Model::Tools::Music::Smg->create(
+            gene_mr_file => "$temp_path/gene_mrs",
+            output_file => "$temp_path/smgs",
+            max_fdr => $fdr_cutoff,
+        );
+        my $smg_result;
+#        unless($smg_result = $smg_cmd->execute){
+#            die "Could not complete smg test!";
+#        }
+
+        #my $smg_maf_cmd = "gmt capture restrict-maf-to-smgs --maf-file $maf_file --output-file $temp_path/smg_restricted_maf.maf --output-bed-smgs $temp_path/smg_restricted_bed.bed --smg-file $temp_path/smgs";
+        my $smg_maf_cmd = Genome::Model::Tools::Capture::RestrictMafToSmgs->create(
+            output_file => "$temp_path/smg_restricted_maf.maf",
+            smg_file => "$temp_path/smgs",
+            maf_file => $maf_file,
+            output_bed_smgs => "$temp_path/smg_restricted_bed.bed",
+        );
+        my $smg_maf_result;
+#        unless($smg_maf_result = $smg_maf_cmd->execute){
+#            die "Could not complete smg test!";
+#        }
 
 #get some pathway information, not used now but we could technically choose to run only genes from certain pathways
-    #Ran PathScan on the KEGG DB (Larger DBs take longer):
-    #get KEGG DB FILE $kegg_db
-    my $pathscan_cmd = "gmt music path-scan --bam-list $bam_list --gene-covg-dir $output_dir/gene_covgs/ --maf-file $maf_file --output-file $output_dir/sm_pathways_kegg --pathway-file $kegg_db --bmr 8.9E-07 --min-mut-genes-per-path 2";
+        #Ran PathScan on the KEGG DB (Larger DBs take longer):
+        #get KEGG DB FILE $kegg_db
+#build36 kegg_db 
+my $kegg_db = '/gscmnt/gc2108/info/medseq/ckandoth/music/brc_input/pathway_dbs/KEGG_120910';
+        #my $pathscan_cmd = "gmt music path-scan --bam-list $bam_list --gene-covg-dir $temp_path/gene_covgs/ --maf-file $maf_file --output-file $temp_path/sm_pathways_kegg --pathway-file $kegg_db --bmr 8.9E-07 --min-mut-genes-per-path 2";
+        my $pathscan_cmd = Genome::Model::Tools::Music::PathScan->create(
+            bam_list => $bam_list,
+            gene_covg_dir => "$temp_path/gene_covgs/",
+            maf_file => $maf_file,
+            output_file => "$temp_path/sm_pathways_kegg",
+            pathway_file => $kegg_db,
+            bmr => "8.9E-07",
+            min_mut_genes_per_path => "2",
+        );
+        my $pathscan_result;
+        unless($pathscan_result = $pathscan_cmd->execute){
+            die "Could not complete pathscan!";
+        }
 
-    #Ran COSMIC-OMIM tool:
-    my $cosmic_cmd = "gmt music cosmic-omim --maf-file $maf_file --output-file $maf_file.cosmic_omim";
+        #Ran COSMIC-OMIM tool:
+        #my $cosmic_cmd = "gmt music cosmic-omim --maf-file $maf_file --output-file $maf_file.cosmic_omim";
+        my $cosmic_cmd = Genome::Model::Tools::Music::CosmicOmim->create(
+            maf_file => $maf_file,
+            output_file => "$maf_file.cosmic_omim",
+        );
+        my $cosmic_result;
+        unless($cosmic_result = $cosmic_cmd->execute){
+            die "Could not complete cosmic test!";
+        }
 
-    #Ran Pfam tool:
-    my $pfam_cmd = "gmt music pfam --maf-file $maf_file --output-file $maf_file.pfam";
+        #Ran Pfam tool:
+        #my $pfam_cmd = "gmt music pfam --maf-file $maf_file --output-file $maf_file.pfam";
+        my $pfam_cmd = Genome::Model::Tools::Music::Pfam->create(
+            maf_file => $maf_file,
+            output_file => "$maf_file.pfam",
+        );
+        my $pfam_result;
+        unless($pfam_result = $pfam_cmd->execute){
+            die "Could not complete pfam test!";
+        }
 
-    #Ran Proximity tool:
-    my $proximity_cmd = "gmt music proximity --maf-file $maf_file --reference-sequence $reference_fasta --output-file $output_dir/variant_proximity";
+        #Ran Proximity tool:
+        #my $proximity_cmd = "gmt music proximity --maf-file $maf_file --reference-sequence $reference_fasta --output-file $temp_path/variant_proximity";
+        my $proximity_cmd = Genome::Model::Tools::Music::Proximity->create(
+            maf_file => $maf_file,
+            output_dir => $temp_path,
+        );
+        my $proximity_result;
+        unless($proximity_result = $proximity_cmd->execute){
+            die "Could not complete proximity test!";
+        }
 
-    #Ran mutation-relation:
-    my $permutations = 1000; #the default is 100, but cyriac and yanwen used either 1000 or 10000. Not sure of the reasoning behind those choices.
-    my $mutrel_cmd = "gmt music mutation-relation --bam-list $bam_list --maf-file $maf_file --output-file $output_dir/mutation_relations.csv --permutations $permutations --gene-list $output_dir/smgs"; #number of permutations can be a variable or something
+        #Ran mutation-relation:
+        my $permutations = 1000; #the default is 100, but cyriac and yanwen used either 1000 or 10000. Not sure of the reasoning behind those choices.
+        #my $mutrel_cmd = "gmt music mutation-relation --bam-list $bam_list --maf-file $maf_file --output-file $temp_path/mutation_relations.csv --permutations $permutations --gene-list $temp_path/smgs";
+        my $mutrel_cmd = Genome::Model::Tools::Music::MutationRelation->create(
+            bam_list => $bam_list,
+            maf_file => $maf_file,
+            output_file => "$temp_path/mutation_relations.csv",
+            permutations => $permutations,
+            gene_list => "$temp_path/smgs",
+        );
+        my $mutrel_result;
+#        unless($mutrel_result = $mutrel_cmd->execute){
+#            die "Could not complete mutrel test!";
+#        }
 
 #instead of pathways, use smg test to limit maf file input into mutation relations $maf_file_smg -- no script for this step yet
 #The FDR filtered SMG list can be used as input to "gmt music mutation-relation" thru --gene-list, so it limits its tests to SMGs only. No need to make a new MAF. Something similar could be implemented for clinical-correlation.
 
 #Ran clinical-correlation:
 #need clinical data file $clinical_data
+my $clinical_data_orig = '/gscmnt/gc2146/info/medseq/wschierd/crap_stuff_delete/Mock_Pheno_1kg.txt';
+my $clinical_data = "$temp_path/Mock_Pheno_1kg.txt";
+system("cp $clinical_data_orig $clinical_data");
 #example: /gscmnt/sata809/info/medseq/MRSA/analysis/Sureselect_49_Exomes_Germline/music/input/sample_phenotypes2.csv
 #this is not the logistic regression yet, found out that yyou and ckandoth did not put logit into music, but just into the R package that music runs
-    my $clin_corr = "gmt music clinical-correlation --genetic-data-type gene --bam-list $bam_list --maf-file $output_dir/smg_restricted_maf.maf --output-file $output_dir/clin_corr_result --categorical-clinical-data-file $clinical_data";
+#$name is project name or some other good identifier
+my $name = $self->name;
+
+        #my $clin_corr = "gmt music clinical-correlation --genetic-data-type variant --bam-list $bam_list --maf-file $maf_file --output-file $temp_path/clin_corr_result --categorical-clinical-data-file $clinical_data";
+        my $clin_corr_cmd = Genome::Model::Tools::Music::ClinicalCorrelation->create(
+            genetic_data_type => "variant",
+            bam_list => $bam_list,
+            maf_file => $maf_file,
+            output_file => "$temp_path/clin_corr_result",
+            categorical_clinical_data_file => $clinical_data,
+        );
+        my $clin_corr_result;
+        unless($clin_corr_result = $clin_corr_cmd->execute){
+            die "Could not complete clinical correlation!";
+        }
+
+        $fdr_cutoff = 0.05;
+        #my $clin_corr_finish = "gmt germline finish-music-clinical-correlation --input-file $temp_path/clin_corr_result.categorical --output-file $temp_path/clin_corr_result_stats_FDR005.txt --output-pdf-image-file $temp_path/clin_corr_result_stats_FDR005.pdf --clinical-data-file $clinical_data --project-name $name --fdr-cutoff $fdr_cutoff --maf-file $maf_file";
+        my $clin_corr_finish_cmd = Genome::Model::Tools::Germline::FinishMusicClinicalCorrelation->create(
+            input_file => "$temp_path/clin_corr_result.categorical",
+            output_file => "$temp_path/clin_corr_result_stats_FDR005.txt",
+            output_pdf_image_file => "$temp_path/clin_corr_result_stats_FDR005.pdf",
+            clinical_data_file => $clinical_data,
+            project_name => $name,
+            fdr_cutoff => $fdr_cutoff,
+            maf_file => $maf_file,
+        );
+        my $clin_corr_finish_result;
+        unless($clin_corr_finish_result = $clin_corr_finish_cmd->execute){
+            die "Could not complete clinical correlation finisher statistics!";
+        }
 
 #instead of clinical correlation, we can call these stats directly
 
-    #break up clinical data into two files, one for explanatory variable and one for covariates
-    #sample_infection.csv = $expl_file
-    #Sample_Name	Levels of Infection Invasiveness (0=control, 1=case)
-    #H_MRS-6305-1025125	0
-    #H_MRS-6401-1025123	1
+        #break up clinical data into two files, one for explanatory variable and one for covariates
+        #sample_infection.csv = $expl_file
+        #Sample_Name	Levels of Infection Invasiveness (0=control, 1=case)
+        #H_MRS-6305-1025125	0
+        #H_MRS-6401-1025123	1
 
-    #sample_phenotypes.csv = $pheno_file
-    #Sample_Name	Age at Time of Infection (years)	Race (1 white 2 black 3 asian)	Gender (1 male 2 female)
-    #H_MRS-6305-1025125	10	1	1
-    #H_MRS-6401-1025123	16	1	1
+        #sample_phenotypes.csv = $pheno_file
+        #Sample_Name	Age at Time of Infection (years)	Race (1 white 2 black 3 asian)	Gender (1 male 2 female)
+        #H_MRS-6305-1025125	10	1	1
+        #H_MRS-6401-1025123	16	1	1
 
-    #make smg bed file STILL UNDONE
+        #make smg bed file STILL UNDONE
 
 
-    my $variant_matrix_cmd = "gmt vcf vcf-to-variant-matrix --output-file $output_dir/variant_matrix.txt --vcf-file $multisample_vcf --bed-roi-file $output_dir/smg_restricted_bed.bed";
-
-    #make .R file example
-        ## Build temp file for extra positions to highlight ##
-        my ($tfh,$temp_path) = Genome::Sys->create_temp_file;
-        unless($tfh) {
+        my $variant_matrix_cmd = "gmt vcf vcf-to-variant-matrix --output-file $temp_path/variant_matrix.txt --vcf-file $multisample_vcf --bed-roi-file $temp_path/smg_restricted_bed.bed";
+=cut
+        #make .R file example
+        my ($tfh_R,$R_path) = Genome::Sys->create_temp_file;
+        unless($tfh_R) {
             $self->error_message("Unable to create temporary file $!");
             die;
         }
-        $temp_path =~ s/\:/\\\:/g;
-        my $R_command = <<"_END_OF_R_";
-    options(error=recover)
-    source("stat.lib", chdir=TRUE)
-    #this should work, but I havent tested using the .csv out of mut rel -- wschierd
-    mut.file="$output_dir/variant_matrix.txt" 
-    inf.file="$expl_file";
-    pheno.file="$pheno_file";
-    output.file="$output_dir/logit_out_cor.csv";
-    #to do logistic regression, might need /gscuser/yyou/git/genome/lib/perl/Genome/Model/Tools/Music/stat.lib.R -- talk to Cyriac here
-    cor2test(y=inf.file, x=mut.file, cov=pheno.file, outf=output.file, method="logit", sep="\t");
-    _END_OF_R_
-        print $tfh "$R_command\n";
+        $R_path =~ s/\:/\\\:/g;
 
-        my $cmd = "R --vanilla --slave \< $temp_path";
+        #-------------------------------------------------
+        my $R_command = <<"_END_OF_R_";
+options(error=recover)
+source("stat.lib", chdir=TRUE)
+#this should work, but I havent tested using the .csv out of mut rel -- wschierd
+mut.file="$temp_path/variant_matrix.txt" 
+inf.file="$expl_file";
+pheno.file="$pheno_file";
+output.file="$temp_path/logit_out_cor.csv";
+#to do logistic regression, might need /gscuser/yyou/git/genome/lib/perl/Genome/Model/Tools/Music/stat.lib.R -- talk to Cyriac here
+cor2test(y=inf.file, x=mut.file, cov=pheno.file, outf=output.file, method="logit", sep="\t");
+_END_OF_R_
+        #-------------------------------------------------
+
+        print $tfh_R "$R_command\n";
+
+        my $cmd = "R --vanilla --slave \< $R_path";
         my $return = Genome::Sys->shellcmd(
             cmd => "$cmd",
         );
@@ -459,9 +749,70 @@ system($final_maf_maker_cmd);
             die $self->error_message;
         }
 
+#find sites that are important and also of a type we like (such as all Nonsynonymous/splice_site mutations in regions of interest unique to cases vs controls
+#/gscmnt/sata809/info/medseq/MRSA/analysis/Sureselect_49_Exomes_Germline/causal_variants/pull_causal_variants.pl
 =cut
+    }
+
 
     return 1;
+}
+
+sub vcf_to_maf {
+    # assume that the vcf is passed in as $multisample_vcf
+    my $multisample_vcf = shift;
+    my $temp_path = shift;
+    my $build_ref = shift;
+    my @builds = @{$build_ref};
+    my $single_sample_dir = "$temp_path/";
+    #change vcf -> maf here, which also needs annotation files
+    #make $maf_file -- might need one with everything and one that doesnt have silent variants in it
+
+    #my $vcf_line = `grep -v "##" $multisample_vcf | head -n 1`;
+    #chomp($vcf_line);
+    #my ($chr, $pos, $id, $ref, $alt, $qual, $filter, $info, $format, @sample_names) = split(/\t/, $vcf_line);
+    
+#    my $vcf_split_cmd = "gmt vcf vcf-split-samples --vcf-input $multisample_vcf --output-dir $single_sample_dir";
+#    print "$vcf_split_cmd\n";
+#    system($vcf_split_cmd);
+    my $vcf_split_cmd = Genome::Model::Tools::Vcf::VcfSplitSamples->create(
+        vcf_input => $multisample_vcf,
+        output_dir => $single_sample_dir,
+    );
+    my $vcf_split_result;
+    unless($vcf_split_result = $vcf_split_cmd->execute){
+        die "Could not complete vcf splitting!";
+    }
+
+    print "single_sample_dir located at: ".$single_sample_dir."\n";
+
+    my $maf_header;
+    my $maf_maker_cmd = "cat";
+    foreach my $build (@builds) {
+        my $sample_id = $build->subject_name;
+        my $annotation_output_directory = $build->data_directory."/variants";
+        my $annotation_file_per_sample = $annotation_output_directory."/filtered.variants.post_annotation"; #needs to get some sort of single-sample annotation file from the build or maybe there is a unified annotation file to use?
+#        my $vcf_cmd = "gmt vcf convert maf vcf-2-maf --vcf-file $single_sample_dir/$sample_id.vcf --annotation-file $annotation_file_per_sample --output-file $single_sample_dir/$sample_id.maf";
+#        print "$vcf_cmd\n";
+#        system($vcf_cmd);
+        my $vcf_cmd = Genome::Model::Tools::Vcf::Convert::Maf::Vcf2Maf->create(
+            vcf_file => "$single_sample_dir/$sample_id.vcf",
+            annotation_file => $annotation_file_per_sample,
+            output_file => "$single_sample_dir/$sample_id.maf",
+        );
+        my $vcf_result;
+        unless($vcf_result = $vcf_cmd->execute){
+            die "Could not complete vcf to maf creation!";
+        }
+        $maf_maker_cmd .= " $single_sample_dir/$sample_id.maf";
+    }
+    my $maf_sample_id = $builds[0]->subject_name;
+    $maf_maker_cmd .= " | grep -v \"Hugo_Symbol\" > $single_sample_dir/All_Samples_noheader.maf";
+    system($maf_maker_cmd);
+    my $final_maf = "$single_sample_dir/All_Samples.maf";
+    my $final_maf_maker_cmd = "head -n1 $single_sample_dir/$maf_sample_id.maf | cat - $single_sample_dir/All_Samples_noheader.maf > $final_maf";
+    system($final_maf_maker_cmd);
+    return $final_maf;
 }
 
 sub _get_builds {

@@ -51,10 +51,6 @@ class Genome::DruggableGene::DrugGeneInteractionReport {
                 return $citation;
             |,
         },
-        name => {
-            calculate_from => ['drug_name_report_name','gene_name_report_name'],
-            calculate => q| return $drug_name_report_name . $gene_name_report_name |,
-        },
     ],
     doc => 'Claim regarding an interaction between a drug name and a gene name',
 };
@@ -62,6 +58,10 @@ class Genome::DruggableGene::DrugGeneInteractionReport {
 sub __display_name__ {
     my $self = shift;
     return "Interaction of " . $self->drug_name_report_name . " and " . $self->gene_name_report_name;
+}
+
+sub search_index_queue_priority {
+    return 2;
 }
 
 if ($INC{"Genome/Search.pm"}) {

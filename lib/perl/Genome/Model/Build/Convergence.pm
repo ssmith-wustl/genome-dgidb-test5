@@ -34,12 +34,6 @@ sub create {
         return;
     }
 
-    my @member_models = $model->members;
-    unless (scalar @member_models) {
-        $self->error_message("No member models found!");
-        return;
-    }
-
     $self->_assign_members;
 
     return $self;
@@ -120,6 +114,31 @@ sub calculate_estimated_kb_usage {
 sub workflow_name {
     my $self = shift;
     return $self->build_id . ' Convergence';
+}
+
+sub validate_for_start_methods {
+    my $self = shift;
+    my @methods = $self->SUPER::validate_for_start_methods();
+    push @methods, qw(
+        model_group_has_members
+    );
+    return @methods;
+}
+
+sub model_group_has_members {
+    my $self = shift;
+    my @tags;
+
+    my @member_models = $self->model->members;
+    unless (@member_models) {
+        push @tags, UR::Object::Tag->create(
+            type => 'error',
+            properties => ['members'],
+            desc => 'Model has no memebers.',
+        );
+    }
+
+    return @tags;
 }
 
 1;

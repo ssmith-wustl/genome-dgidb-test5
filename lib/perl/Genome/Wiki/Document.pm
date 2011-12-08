@@ -19,11 +19,13 @@ class Genome::Wiki::Document {
         title => { is => 'Text' },
     ],
     doc => 'represents a page in the wiki',
-    has => {
+    has_transient => {
         revision_id   => { is => 'Number' },
         content       => { is => 'Text' },
         timestamp     => { is => 'Text' },
         user          => { is => 'Text' },
+    },
+    has => {
         environment => {
             calculate => q{
                 default_value => Genome::Config::dev_mode() ? 'dev' : 'prod'

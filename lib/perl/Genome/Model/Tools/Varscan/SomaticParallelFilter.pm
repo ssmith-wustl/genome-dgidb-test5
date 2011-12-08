@@ -157,6 +157,7 @@ sub execute {                               # replace with real execution logic.
 							my $cmd_obj = Genome::Model::Tools::Capture::FormatSnvs->create(
 							    variants_file => $output_snp,
 							    output_file => "$output_snp.formatted",
+							    append_line => 1,
 							);
 							
 							$cmd_obj->execute;                                                                                        

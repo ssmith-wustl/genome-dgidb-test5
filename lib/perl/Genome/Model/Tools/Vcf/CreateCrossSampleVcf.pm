@@ -12,6 +12,7 @@ class Genome::Model::Tools::Vcf::CreateCrossSampleVcf {
     has_input => [
         builds => {
             is => 'Genome::Model::Build',
+            require_user_verify => 0,
             is_many => 1,
             is_optional=>0,
             doc => 'The builds that you wish to create a cross-sample vcf for',
@@ -69,6 +70,12 @@ class Genome::Model::Tools::Vcf::CreateCrossSampleVcf {
         _input_files => {
             doc => 'The paths to the vcf files to be merged',
         },
+        _samtools_params => {
+            doc => 'params',
+        },
+        _samtools_version => {
+            doc => 'version',
+        },
     ],
     doc => 'All ',
 };
@@ -84,15 +91,18 @@ EOS
 sub execute {
     my $self=shift;
     my @builds = $self->builds;
-
+    my $pp = $builds[0]->model->processing_profile->id;
     unless($self->allow_multiple_processing_profiles){
-        my $pp = $builds[0]->model->processing_profile->id;
         for my $build (@builds){
             unless($build->model->processing_profile->id == $pp){
                 die $self->error_message("Inputs do not have matching processing profiles!");
             }
         }
     } 
+
+    my ($samtools_version,$samtools_params) = $self->_get_samtools_version_and_params($pp);
+    $self->_samtools_version($samtools_version);
+    $self->_samtools_params($samtools_params);
 
     my $output_directory = $self->output_directory;
 
@@ -132,6 +142,8 @@ sub execute {
     $inputs{reference_sequence_path} = $reference_sequence_build->full_consensus_path('fa');
     $inputs{merged_positions_bed} = $output_directory."/merged_positions.bed.gz";
     $inputs{use_bgzip} = 1;
+    $inputs{samtools_version} = $samtools_version if defined $samtools_version;
+    $inputs{samtools_params} = $samtools_params if defined $samtools_params;
 
     #populate the per-build inputs
     for my $build (@builds){
@@ -351,6 +363,7 @@ sub _generate_workflow {
     my @builds = $self->builds;
     my @inputs;
 
+    $DB::single=1;
     for my $build (@builds){
         my $sample = $build->model->subject->name;
         push @inputs, ($sample."_bam_file",
@@ -381,7 +394,9 @@ sub _generate_workflow {
         push @inputs, @submerged_vcfs;
         $self->_submerged_position_beds(\@merged_positions_beds);
     }
-    
+    push @inputs, 'samtools_version';
+    push @inputs, 'samtools_params';
+
     #Initialize workflow object
     my $workflow = Workflow::Model->create(
         name => 'Multi-Vcf Merge',
@@ -476,7 +491,7 @@ sub _add_position_merge {
     #create the merge operation object
     my $merge_operation = $workflow->add_operation(
         name => $op_name,
-        operation_type => Workflow::OperationType::Command->get("Genome::Model::Tools::Joinx::VcfMergeForBackfill"),
+        operation_type => Workflow::OperationType::Command->get("Genome::Model::Tools::Joinx::VcfMerge"),
     );
 
     #link the merged_positions_bed input to the output_file param
@@ -545,7 +560,7 @@ sub _merge_position_merges {
     #create the merge operation object
     my $merge_operation = $workflow->add_operation(
         name => "Final Union of Positions to Backfill",
-        operation_type => Workflow::OperationType::Command->get("Genome::Model::Tools::Joinx::UnionBedPositions"),
+        operation_type => Workflow::OperationType::Command->get("Genome::Model::Tools::Joinx::VcfMergeForBackfill"),
     );
 
     #link the merged_positions_bed input to the output_file param
@@ -554,6 +569,12 @@ sub _merge_position_merges {
         left_property => "merged_positions_bed",
         right_operation => $merge_operation,
         right_property => "output_file",
+    );
+    $workflow->add_link(
+        left_operation => $workflow->get_input_connector,
+        left_property => "use_bgzip",
+        right_operation => $merge_operation,
+        right_property => "use_bgzip",
     );
 
     $workflow->add_link(
@@ -595,6 +616,22 @@ sub _add_mpileup_and_backfill {
             right_operation => $mpileup,
             right_property => "reference_sequence_path",
         );
+        if(defined($self->_samtools_version)){
+            $workflow->add_link(
+                left_operation => $workflow->get_input_connector,
+                left_property => "samtools_version",
+                right_operation => $mpileup,
+                right_property => "samtools_version",
+            );
+        }
+        if(defined($self->_samtools_params)){
+            $workflow->add_link(
+                left_operation => $workflow->get_input_connector,
+                left_property => "samtools_params",
+                right_operation => $mpileup,
+                right_property => "samtools_params",
+            );
+        }
         $workflow->add_link(
             left_operation => $workflow->get_input_connector,
             left_property => $sample."_mpileup_output_file",
@@ -677,7 +714,6 @@ sub _add_limited_final_merge {
                 }
                 push @backfill_sub_ops, shift @backfill_ops;
             }
-            print scalar(@backfill_sub_ops)." === \n";
             push @merge_ops, $self->_add_final_merge(\$workflow,\@backfill_sub_ops,$group);
         }
         return $self->_merge_vcf_merges(\$workflow,\@merge_ops);
@@ -841,6 +877,36 @@ sub _merge_vcf_merges {
     );
 
     return $merge_operation;
+}
+
+sub _get_samtools_version_and_params {
+    my $self = shift;
+    my $pp_id = shift;
+    my ($version, $params);
+   
+    my $pp = Genome::ProcessingProfile->get($pp_id);
+    my $snv_strat = $pp->snv_detection_strategy;
+
+    my @rest;
+    $snv_strat =~ m/samtools (.*) /;
+    ($version, @rest) = split /\s+/,$1;
+
+    if($rest[0] =~ m/filtered/){
+        $params = undef;
+    } else {
+        my @params;
+        for (@rest) {
+            if($_ =~ m/filtered/){
+                last;
+            }
+            push @params, $_;
+        }
+        $params = join(" ",@params);
+        $params =~ s/\[//;
+        $params =~ s/\]//;
+    }
+
+    return ($version, $params);
 }
 
 1;

@@ -24,6 +24,30 @@ class Genome::InstrumentData {
         sample_name => { via => 'sample', to => 'name' },
     ],
     has_optional => [
+        #TODO: may want to make these immutable, but needed them for
+        #backfilling purposes
+        original_est_fragment_size => { 
+            is => 'Number',
+            is_mutable => 1,
+            via => 'attributes',
+            to => 'attribute_value',
+            where => [attribute_label => 'original_est_fragment_size'],
+        },
+        final_est_fragment_size => {
+            is => 'Number',
+            is_mutable => 1,
+            via => 'attributes',
+            to => 'attribute_value',
+            where => [attribute_label => 'final_est_fragment_size'],
+        },
+        read_orientation => {
+            is => 'Text',
+            is_mutable => 1,
+            via => 'attributes',
+            to => 'attribute_value',
+            where => [attribute_label => 'read_orientation'],
+            valid_values => [qw(forward_reverse reverse_forward)],
+        },
         run_name => { is => 'Text' },
         subset_name => { is => 'Text' },
         full_name => { 

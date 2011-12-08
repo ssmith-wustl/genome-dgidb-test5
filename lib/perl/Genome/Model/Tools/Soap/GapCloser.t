@@ -41,6 +41,8 @@ for my $file ( @assembly_files ) {
 #make temp directory
 my $temp_dir = Genome::Sys->create_temp_directory();
 ok( -d $temp_dir, 'temp dir created' );
+Genome::Sys->create_directory( $temp_dir.'/edit_dir' );
+ok( -d $temp_dir.'/edit_dir', 'Made edit_dir in temp dir' );
 
 #copy files to temp directory
 for my $file ( qw/ config_file TEST.scafSeq / ) {
@@ -80,8 +82,8 @@ ok( $tool->execute, "Executed tool" );
 
 #check/compare output
 for my $file ( qw/ gapfill gapfill.fill / ) {
-    ok( -s $temp_dir."/$file", "Created $file" );
-    ok( File::Compare::compare($temp_dir."/$file",$test_dir."/$file")==0, "$file files match" );
+    ok( -s $temp_dir."/edit_dir/$file", "Created $file" );
+    ok( File::Compare::compare($temp_dir."/edit_dir/$file",$test_dir."/$file")==0, "$file files match" );
 }
 
 #<STDIN>;

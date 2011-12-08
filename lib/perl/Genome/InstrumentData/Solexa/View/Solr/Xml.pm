@@ -54,33 +54,9 @@ class Genome::InstrumentData::Solexa::View::Solr::Xml {
                     name => 'id',
                     position => 'content',
                 },
-                {
-                    name => 'flow_cell_id',
-                    position => 'content',
-                },
-                {
-                    name => 'target_region_set_name',
-                    position => 'content',
-                },
-                {
-                    name => 'index_sequence',
-                    position => 'content',
-                },
-                {
-                    name => 'subset_name',
-                    position => 'content',
-                },
-                {
-                    name => 'short_name',
-                    position => 'content',
-                },
-                {
-                    name => '__display_name__',
-                    position => 'display_title',
-                },
-            ]
+            ],
         },
-    ]
+    ],
 };
 
 1;

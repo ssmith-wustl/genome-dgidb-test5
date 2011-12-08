@@ -1,92 +1,128 @@
-#!/usr/bin/perl
-#Written by Malachi Griffith
+package Genome::Model::ClinSeq::Command::GetBamReadCounts;
+#Written by Malachi Griffith and Scott Smith
 
 #Load modules
 use strict;
 use warnings;
-use above "Genome"; #Makes sure I am using the local genome.pm and use lib right above it (don't do this in a module)
-use Getopt::Long;
+use Genome; 
 use Term::ANSIColor qw(:constants);
 use Data::Dumper;
-use Bio::DB::Sam;
 
 my $lib_dir;
-my $script_dir;
-use Cwd 'abs_path';
-BEGIN{
-  if (abs_path($0) =~ /(.*\/)(.*\/).*\.pl/){
-    $lib_dir = $1;
-    $script_dir = $1.$2;
-  }
+BEGIN {
+    $lib_dir = __FILE__;
+    $lib_dir =~ s|Command/GetBamReadCounts.pm|original-scripts|;
 }
 use lib $lib_dir;
 use ClinSeq qw(:all);
 #use lib $lib_dir."rna-seq";
 use rnaseq::RnaSeq qw(:all);
 
-#This script takes an input file with SNV positions and determines: reference and variant allele read counts, frequencies, RNA-seq gene expression levels
-#Up to three pairs of BAMs can be specified (WGS tumor+normal, Exome tumor+normal, RNA tumor+normal)
-#Results will be appended as new columns in the input file
+sub sub_command_category { 'pipeline' }
 
-my $positions_file = '';
-my $wgs_som_var_model_id = '';
-my $exome_som_var_model_id = '';
-my $rna_seq_normal_model_id = '';
-my $rna_seq_tumor_model_id = '';
-my $data_paths_file = '';
-my $output_file = '';
-my $verbose = 0;
-my $no_fasta_check = 0;
-
-GetOptions ('positions_file=s'=>\$positions_file, 
-            'rna_seq_normal_model_id=s'=>\$rna_seq_normal_model_id, 'rna_seq_tumor_model_id=s'=>\$rna_seq_tumor_model_id,
-            'wgs_som_var_model_id=s'=>\$wgs_som_var_model_id, 'exome_som_var_model_id=s'=>\$exome_som_var_model_id, 
-            'data_paths_file=s'=>\$data_paths_file,
-            'output_file=s'=>\$output_file, 'verbose=i'=>\$verbose, 'no_fasta_check=i'=>\$no_fasta_check);
-
-
-my $usage=<<INFO;
-
-  Example usage: 
-  
-  getBamReadCounts.pl  --positions_file=snvs.hq.tier1.v1.annotated.compact.tsv  --wgs_som_var_model_id='2880644349'  --exome_som_var_model_id='2880732183'  --rna_seq_tumor_model_id='2880693923'  --output_file=snvs.hq.tier1.v1.annotated.compact.readcounts.tsv
-  
-  Intro:
-  This script attempts to get read counts, frequencies and gene expression values for a series of genome positions
-
-  Details:
-  --positions_file                PATH. File containing SNV positions of interest and ref/var bases (e.g. 5:112176318-112176318	APC	APC	p.R1676T	G	C)
-  --wgs_som_var_model_id          INT. Whole genome sequence (WGS) somatic variation model ID
-  --exome_som_var_model_id        INT. Exome capture sequence somatic variation model ID
-  --rna_seq_normal_model_id       INT. RNA-seq model id for normal
-  --rna_seq_tumor_model_id        INT. RNA-seq model id for tumor
-  --data_paths_file               PATH. Instead of models you can supply a tab delimited list of files to handle old builds that are not well tracked or custom situations
-                                  Format: patient	sample_type	data_type	bam_path	build_dir	ref_fasta	ref_name	
-  --output_file                   PATH. File where output will be written (input file values with read counts appended)
-  --verbose                       To display more output, set to 1
-  --no_fasta_check                To prevent checking of the reported reference base against the reference genome fasta set --no_fasta_check=1 [Not recommended!]
-
-  Notes:
-  Do NOT use for Indels!  SNVs only.
-
-INFO
-
-unless ($positions_file && (($wgs_som_var_model_id || $exome_som_var_model_id || $rna_seq_normal_model_id || $rna_seq_tumor_model_id) || ($data_paths_file)) && $output_file){
-  print GREEN, "$usage", RESET;
-  exit(1);
+sub help_detail {
+    return <<EOS
+ This script takes an input file with SNV positions and determines: reference and variant allele read counts, frequencies, RNA-seq gene expression levels
+ Up to three pairs of BAMs can be specified (WGS tumor+normal, Exome tumor+normal, RNA tumor+normal)
+ Results will be appended as new columns in the input file.
+ Notes: Do NOT use for Indels!  SNVs only.
+EOS
 }
 
-#Check input options
-unless (-e $positions_file){
-  print RED, "\n\nPositions file: $positions_file not found\n\n", RESET;
-  exit(1);
+class Genome::Model::ClinSeq::Command::GetBamReadCounts {
+    is => 'Command::V2',
+    has => [
+        positions_file          => { is => "FilesystemPath",
+                                    doc => "File containing SNV positions of interest and ref/var bases\n"
+                                            . "  (e.g. 5:112176318-112176318	APC	APC	p.R1676T	G	C)" },
+        
+        wgs_som_var_build       => { is => 'Genome::Model::Build::SomaticVariation', is_optional => 1,
+                                    doc => 'Whole genome sequence (WGS) somatic variation build' },
+
+        exome_som_var_build     => { is => 'Genome::Model::Build::SomaticVariation', is_optional => 1,
+                                    doc => 'Exome capture sequence somatic variation build' },
+        
+        rna_seq_normal_build    => { is => "Genome::Model::Build::RnaSeq", is_optional => 1,
+                                    doc => "RNA-seq model id for normal" },
+
+        rna_seq_tumor_build     => { is => "Genome::Model::Build::RnaSeq", is_optional => 1,
+                                    doc => 'RNA-seq model id for tumor' },
+
+        output_file             => { is => 'FilesystemPath',
+                                    doc => 'File where output will be written (input file values with read counts appended)', },
+
+        data_paths_file         => { is => 'FilesystemPath', is_optional => 1,
+                                    doc => 'Instead of supplying models/builds provide a file contain file paths', },
+
+        verbose                 => { is => 'Number',
+                                    doc => 'To display more output, set this to 1.' },
+        no_fasta_check          => { is => 'Number',
+                                     doc => 'To prevent checking of the reported reference base against the reference genome fasta set --no_fasta_check=1 [Not recommended!]' },
+
+    ],
+    doc => 'This script attempts to get read counts, frequencies and gene expression values for a series of genome positions',
+};
+
+sub help_synopsis {
+    return <<EOS
+  genome model clin-seq get-bam-read-counts \
+    --positions_file=snvs.hq.tier1.v1.annotated.compact.tsv \
+    --wgs_som_var_build='2880644349' \
+    --exome_som_var_build='2880732183' \
+    --rna_seq_tumor_build='2880693923' \
+    --output_file=snvs.hq.tier1.v1.annotated.compact.readcounts.tsv
+EOS
 }
-if ($data_paths_file){
-  unless (-e $data_paths_file){
-    print RED, "\n\nPositions file: $positions_file not found\n\n", RESET;
-    exit(1);
-  }
+
+sub __errors__ {
+    my $self = shift;
+    my @errors = $self->SUPER::__errors__(@_);
+
+    unless ($self->wgs_som_var_build || $self->exome_som_var_build || $self->rna_seq_normal_build || $self->rna_seq_tumor_build) {
+        push @errors, UR::Object::Tag->create(
+            type => 'error',
+            properties => [qw/wgs_som_var_build exome_som_var_build rna_seq_normal_build rna_seq_tumor_build/],
+            desc => 'at least one of the four build types must be specified!'
+        );
+    }
+
+    unless (-e $self->positions_file) {
+        push @errors, UR::Object::Tag->create(
+            type => 'error',
+            properties => ['positions_file'],
+            desc => RED . "Positions file: " . $self->positions_file . " not found" . RESET,
+        );
+    }
+
+    return @errors;
 }
+
+sub help_usage {
+    my $self = shift;
+    my $usage = $self->SUPER::help_usage(@_);
+    return GREEN . $usage . RESET;
+}
+
+sub execute {
+    my $self = shift;
+    
+    eval "require Bio::DB::Sam";
+    if ($@) {
+        die "Failed to use the Bio::DB::Sam module.  Use /usr/bin/perl instead of /gsc/bin/perl.:\n$@";
+    }
+
+    my $positions_file = $self->positions_file; 
+    my $wgs_som_var_build = $self->wgs_som_var_build;
+    my $exome_som_var_build = $self->exome_som_var_build;
+    my $rna_seq_normal_build = $self->rna_seq_normal_build;
+    my $rna_seq_tumor_build = $self->rna_seq_tumor_build;
+    my $data_paths_file = $self->data_paths_file;
+    my $no_fasta_check = $self->no_fasta_check;
+    my $output_file = $self->output_file;
+    my $verbose = $self->verbose;
+
+# TODO: indent this, but for now it's nice for diffing...
+
 
 #Get Entrez and Ensembl data for gene name mappings
 my $entrez_ensembl_data = &loadEntrezEnsemblData();
@@ -102,7 +138,12 @@ my $data;
 if ($data_paths_file){
   $data = &getFilePaths_Manual('-data_paths_file'=>$data_paths_file);
 }else{
-  $data = &getFilePaths_Genome('-wgs_som_var_model_id'=>$wgs_som_var_model_id, '-exome_som_var_model_id'=>$exome_som_var_model_id, '-rna_seq_normal_model_id'=>$rna_seq_normal_model_id, '-rna_seq_tumor_model_id'=>$rna_seq_tumor_model_id);
+  $data = &getFilePaths_Genome(
+      '-wgs_som_var_model_id'     => ($wgs_som_var_build      ? $wgs_som_var_build->model_id : undef), 
+      '-exome_som_var_model_id'   => ($exome_som_var_build    ? $exome_som_var_build->model_id : undef), 
+      '-rna_seq_normal_model_id'  => ($rna_seq_normal_build   ? $rna_seq_normal_build->model_id : undef), 
+      '-rna_seq_tumor_model_id'   => ($rna_seq_tumor_build    ? $rna_seq_tumor_build->model_id : undef)
+  );
 }
 #print Dumper $data;
 
@@ -192,8 +233,8 @@ close (OUT);
 
 if ($verbose){print "\n\n";}
 
-exit();
-
+return 1;
+}
 
 #########################################################################################################################################
 #Import SNVs from the specified file                                                                                                    #
@@ -433,12 +474,10 @@ sub getFilePaths_Genome{
         $d{$b}{ref_fasta} = $reference_fasta_path;
         $d{$b}{ref_name} = $reference_display_name;
       }else{
-        print RED, "\n\nAn RNA-seq model ID was specified, but a successful build could not be found!\n\n", RESET;
-        exit(1);
+        die RED . "\n\nAn RNA-seq model ID was specified, but a successful build could not be found!\n\n" . RESET;
       }
     }else{
-      print RED, "\n\nAn RNA-seq model ID was specified, but it could not be found!\n\n", RESET;
-      exit(1);
+      die RED . "\n\nAn RNA-seq model ID was specified, but it could not be found!\n\n" . RESET;
     }
   }
 
@@ -447,9 +486,8 @@ sub getFilePaths_Genome{
   foreach my $b (keys %d){
     my $ref_name = $d{$b}{ref_name};
     unless ($ref_name eq $test_ref_name){
-      print RED, "\n\nOne or more of the reference build names used to generate BAMs did not match\n\n", RESET;
       print Dumper %d;
-      exit(1);
+      die RED . "\n\nOne or more of the reference build names used to generate BAMs did not match\n\n" . RESET;
     }
   }
 

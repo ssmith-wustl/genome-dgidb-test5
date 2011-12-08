@@ -30,7 +30,24 @@ class Genome::Model::Test {
 
 class Genome::Model::Build::Test {
     is => 'Genome::Model::Build',
+    has_optional => [
+        metric1 => { is_metric => 1, },
+   ],
 };
+my $build_meta = Genome::Model::Build::Test->__meta__;
+ok($build_meta, 'build meta') or die;
+my $metric1_property = $build_meta->property_meta_for_name('metric1');
+my %expected_metric_property_names = (
+    via => 'metrics',
+    where => [ name => 'metric1', ],
+    to => 'value',
+    is_optional => 1,
+    is_delegated => 1,
+    is_mutable => 1,
+);
+for my $name ( keys %expected_metric_property_names ) {
+    is_deeply($metric1_property->{$name}, $expected_metric_property_names{$name}, "metric property $name is correct");
+}
 
 # Create sample, library, instrument data, processing profile
 my $sample = Genome::Sample->create(

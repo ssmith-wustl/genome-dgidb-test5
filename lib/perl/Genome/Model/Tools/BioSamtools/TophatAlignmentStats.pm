@@ -286,7 +286,8 @@ sub validate_query_name_format {
     my $query_name = $align->qname;
     my $align_flag = $align->flag;
     if ($align_flag & 1) {
-        unless ($query_name =~ /^\S+:\d+:\d+:\d+:\d+[#ACTG0]*$/) {
+        # HWI-ST474_108856544:6:1:10000:107184#GCCNAT
+        unless ($query_name =~ /^\S+:\d+:\d+:\d+:\d+[#ACTGN0]*$/) {
             warn('Query name '. $query_name .' is invalid!');
             return;
         }

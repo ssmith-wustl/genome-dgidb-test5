@@ -539,7 +539,7 @@ sub shellcmd {
                     $self->status_message("Missing file ($missing_input_file)");
                 }
                 for my $output_file (@$output_files) {
-                    my $output_dir = (File::Basename::fileparse($_))[1];
+                    my $output_dir = (File::Basename::fileparse($output_file))[1];
                     if (not -d $output_dir) {
                         $self->status_message("Missing output dir ($output_dir)");
                     } elsif (not -s $output_file) {

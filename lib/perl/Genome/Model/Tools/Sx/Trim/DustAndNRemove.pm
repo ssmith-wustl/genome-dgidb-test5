@@ -23,6 +23,9 @@ sub execute{
     my $self = shift;
     my @inputs = $self->input;
     my @outputs = $self->output;
+    
+    map {$_=~s/:.*$//}@outputs;#these outputs have :fwd :rev :frag on the end and need to be handled properly
+    $self->status_message("DustAndNRemove - inputs: ".join(", ", @inputs)." outputs: ".join(", ", @outputs));
 
     my $dust = $self->dust;
     my $n_removal_threshold = $self->n_removal_threshold;
@@ -75,22 +78,23 @@ sub _process_unaligned_fastq_pair {
 
     #run pairwise n-removal
     if ($self->n_removal_threshold or $self->non_n_base_threshold){
+        $DB::single = 1;
         $self->status_message("running remove-n-pairwise on $forward, $reverse");
-	my %params= (forward_fastq => $forward_dusted,
+        my %params= (forward_fastq => $forward_dusted,
             reverse_fastq => $reverse_dusted,
             forward_n_removed_file => $forward_out,
             reverse_n_removed_file => $reverse_out,
             singleton_n_removed_file => $fragment_out
-	    );
-	if ($self->n_removal_threshold){
-	    $params{n_removal_threshold}=$self->n_removal_threshold;
-	}elsif ($self->non_n_base_threshold){
-	    $params{non_n_base_threshold}=$self->non_n_base_threshold;
-	}
+        );
+        if ($self->n_removal_threshold){
+            $params{n_removal_threshold}=$self->n_removal_threshold;
+        }elsif ($self->non_n_base_threshold){
+            $params{non_n_base_threshold}=$self->non_n_base_threshold;
+        }
         my $cmd = Genome::Model::Tools::Fastq::RemoveNPairwise->create(
             %params
-	    );
-	
+        );
+
         unless ($cmd){
             die $self->error_message("couldn't create remove-n-pairwise command for $forward_dusted, $reverse_dusted!");
         }
@@ -138,14 +142,14 @@ sub _process_unaligned_fastq {
 
     if ($self->n_removal_threshold or $self->non_n_base_threshold){
         $self->status_message("Running n-removal on file $fastq_file");
-	my %params=( fastq_file => $dusted_fastq,
-		     n_removed_file => $output_path
-	    ); 
-	if ($self->n_removal_threshold){
-	    $params{n_removal_threshold}=$self->n_removal_threshold;
-	}elsif ($self->non_n_base_threshold){
-	    $params{non_n_base_threshold}=$self->non_n_base_threshold;
-	}
+        my %params=( fastq_file => $dusted_fastq,
+            n_removed_file => $output_path
+        ); 
+        if ($self->n_removal_threshold){
+            $params{n_removal_threshold}=$self->n_removal_threshold;
+        }elsif ($self->non_n_base_threshold){
+            $params{non_n_base_threshold}=$self->non_n_base_threshold;
+        }
         my $cmd = Genome::Model::Tools::Fastq::RemoveN->create(%params);
         unless ($cmd){
             die $self->error_message("couldn't create remove-n command for $dusted_fastq");
@@ -184,4 +188,3 @@ sub dust_fastq{
     return $out;
 }
 1;
-
