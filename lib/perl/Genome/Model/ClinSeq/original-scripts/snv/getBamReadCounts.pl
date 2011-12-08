@@ -33,12 +33,14 @@ my $wgs_som_var_model_id = '';
 my $exome_som_var_model_id = '';
 my $rna_seq_normal_model_id = '';
 my $rna_seq_tumor_model_id = '';
+my $data_paths_file = '';
 my $output_file = '';
 my $verbose = 0;
 
 GetOptions ('positions_file=s'=>\$positions_file, 
             'rna_seq_normal_model_id=s'=>\$rna_seq_normal_model_id, 'rna_seq_tumor_model_id=s'=>\$rna_seq_tumor_model_id,
             'wgs_som_var_model_id=s'=>\$wgs_som_var_model_id, 'exome_som_var_model_id=s'=>\$exome_som_var_model_id, 
+            'data_paths_file=s'=>\$data_paths_file,
             'output_file=s'=>\$output_file, 'verbose=i'=>\$verbose);
 
 
@@ -57,6 +59,8 @@ my $usage=<<INFO;
   --exome_som_var_model_id        INT. Exome capture sequence somatic variation model ID
   --rna_seq_normal_model_id       INT. RNA-seq model id for normal
   --rna_seq_tumor_model_id        INT. RNA-seq model id for tumor
+  --data_paths_file               PATH. Instead of models you can supply a tab delimited list of files to handle old builds that are not well tracked or custom situations
+                                  Format: patient	sample_type	data_type	bam_path	build_dir	ref_fasta	ref_name	
   --output_file                   PATH. File where output will be written (input file values with read counts appended)
   --verbose                       To display more output, set to 1
 
@@ -65,15 +69,21 @@ my $usage=<<INFO;
 
 INFO
 
-unless ($positions_file && ($wgs_som_var_model_id || $exome_som_var_model_id || $rna_seq_normal_model_id || $rna_seq_tumor_model_id) && $output_file){
+unless ($positions_file && (($wgs_som_var_model_id || $exome_som_var_model_id || $rna_seq_normal_model_id || $rna_seq_tumor_model_id) || ($data_paths_file)) && $output_file){
   print GREEN, "$usage", RESET;
-  exit();
+  exit(1);
 }
 
 #Check input options
 unless (-e $positions_file){
   print RED, "\n\nPositions file: $positions_file not found\n\n", RESET;
-  exit();
+  exit(1);
+}
+if ($data_paths_file){
+  unless (-e $data_paths_file){
+    print RED, "\n\nPositions file: $positions_file not found\n\n", RESET;
+    exit(1);
+  }
 }
 
 #Get Entrez and Ensembl data for gene name mappings
@@ -86,7 +96,12 @@ my $snv_header = $result->{'header'};
 #print Dumper $result;
 
 #Get BAM file paths from build IDs.  Perform sanity checks
-my $data = &getFilePaths('-wgs_som_var_model_id'=>$wgs_som_var_model_id, '-exome_som_var_model_id'=>$exome_som_var_model_id, '-rna_seq_normal_model_id'=>$rna_seq_normal_model_id, '-rna_seq_tumor_model_id'=>$rna_seq_tumor_model_id);
+my $data;
+if ($data_paths_file){
+  $data = &getFilePaths_Manual('-data_paths_file'=>$data_paths_file);
+}else{
+  $data = &getFilePaths_Genome('-wgs_som_var_model_id'=>$wgs_som_var_model_id, '-exome_som_var_model_id'=>$exome_som_var_model_id, '-rna_seq_normal_model_id'=>$rna_seq_normal_model_id, '-rna_seq_tumor_model_id'=>$rna_seq_tumor_model_id);
+}
 #print Dumper $data;
 
 
@@ -173,8 +188,6 @@ foreach my $snv_pos (sort {$snvs->{$a}->{order} <=> $snvs->{$b}->{order}} keys %
 }
 close (OUT);
 
-#print Dumper $data;
-
 if ($verbose){print "\n\n";}
 
 exit();
@@ -208,7 +221,7 @@ sub importPositions{
       #Make sure all neccessary columns are defined
       unless (defined($columns{'coord'}) && defined($columns{'mapped_gene_name'}) && defined($columns{'ref_base'}) && defined($columns{'var_base'})){
         print RED, "\n\nRequired column missing from file: $infile (need: coord, mapped_gene_name, ref_base, var_base)", RESET;
-        exit();
+        exit(1);
       }
       next();
     }
@@ -226,7 +239,7 @@ sub importPositions{
       $s{$coord}{end} = $3;
     }else{
       print RED, "\n\nCoord: $coord not understood\n\n", RESET;
-      exit();
+      exit(1);
     }
 
   }
@@ -238,9 +251,59 @@ sub importPositions{
 
 
 #########################################################################################################################################
-#getFilePaths - Get file paths from model IDs                                                                                           #
+#getFilePaths_Manual - Get file paths from an input file                                                                                #
 #########################################################################################################################################
-sub getFilePaths{
+sub getFilePaths_Manual{
+  my %args = @_;
+  my $data_paths_file = $args{'-data_paths_file'};
+
+  my %d;
+  my $b = 0;
+
+  open(BAMS, "$data_paths_file") || die "\n\nCould not open data paths file: $data_paths_file\n\n";
+  my $header = 1;
+  my %columns;
+  while(<BAMS>){
+    chomp($_);
+    my @line = split("\t", $_);
+    if ($header){
+      my $p = 0;
+      foreach my $col (@line){
+        $columns{$col}{position} = $p;
+        $p++;
+      }
+      $header = 0;
+      next();
+    }
+    $b++;
+    $d{$b}{build_dir} = $line[$columns{'build_dir'}{position}];
+    $d{$b}{data_type} = $line[$columns{'data_type'}{position}];
+    $d{$b}{sample_type} = $line[$columns{'sample_type'}{position}];
+    $d{$b}{bam_path} = $line[$columns{'bam_path'}{position}];
+    $d{$b}{ref_fasta} = $line[$columns{'ref_fasta'}{position}];
+    $d{$b}{ref_name} = $line[$columns{'ref_name'}{position}];
+  }
+  close(BAMS);
+
+  #Make sure the same reference build was used to create all BAM files!
+  my $test_ref_name = $d{1}{ref_name};
+  foreach my $b (keys %d){
+    my $ref_name = $d{$b}{ref_name};
+    unless ($ref_name eq $test_ref_name){
+      print RED, "\n\nOne or more of the reference build names used to generate BAMs did not match\n\n", RESET;
+      print Dumper %d;
+      exit(1);
+    }
+  }
+
+  return(\%d)
+}
+
+
+#########################################################################################################################################
+#getFilePaths_Genome - Get file paths from model IDs                                                                                    #
+#########################################################################################################################################
+sub getFilePaths_Genome{
   my %args = @_;
   my $wgs_som_var_model_id = $args{'-wgs_som_var_model_id'};
   my $exome_som_var_model_id = $args{'-exome_som_var_model_id'};
@@ -256,6 +319,7 @@ sub getFilePaths{
     if ($wgs_som_var_model){
       my $wgs_som_var_build = $wgs_som_var_model->last_succeeded_build;
       if ($wgs_som_var_build){
+
         #... /genome/lib/perl/Genome/Model/Build/SomaticVariation.pm
         my $reference_build = $wgs_som_var_build->reference_sequence_build;
         my $reference_fasta_path = $reference_build->full_consensus_path('fa');
@@ -277,11 +341,11 @@ sub getFilePaths{
         $d{$b}{ref_name} = $reference_display_name;
       }else{
         print RED, "\n\nA WGS model ID was specified, but a successful build could not be found!\n\n", RESET;
-        exit();
+        exit(1);
       }
     }else{
       print RED, "\n\nA WGS model ID was specified, but it could not be found!\n\n", RESET;
-      exit();
+      exit(1);
     }
   }
 
@@ -312,11 +376,11 @@ sub getFilePaths{
         $d{$b}{ref_name} = $reference_display_name;
       }else{
         print RED, "\n\nA Exome model ID was specified, but a successful build could not be found!\n\n", RESET;
-        exit();
+        exit(1);
       }
     }else{
       print RED, "\n\nA Exome model ID was specified, but it could not be found!\n\n", RESET;
-      exit();
+      exit(1);
     }
   }
 
@@ -340,11 +404,11 @@ sub getFilePaths{
         $d{$b}{ref_name} = $reference_display_name;
       }else{
         print RED, "\n\nAn RNA-seq model ID was specified, but a successful build could not be found!\n\n", RESET;
-        exit();
+        exit(1);
       }
     }else{
       print RED, "\n\nAn RNA-seq model ID was specified, but it could not be found!\n\n", RESET;
-      exit();
+      exit(1);
     }
   }
 
@@ -368,11 +432,11 @@ sub getFilePaths{
         $d{$b}{ref_name} = $reference_display_name;
       }else{
         print RED, "\n\nAn RNA-seq model ID was specified, but a successful build could not be found!\n\n", RESET;
-        exit();
+        exit(1);
       }
     }else{
       print RED, "\n\nAn RNA-seq model ID was specified, but it could not be found!\n\n", RESET;
-      exit();
+      exit(1);
     }
   }
 
@@ -383,7 +447,7 @@ sub getFilePaths{
     unless ($ref_name eq $test_ref_name){
       print RED, "\n\nOne or more of the reference build names used to generate BAMs did not match\n\n", RESET;
       print Dumper %d;
-      exit();
+      exit(1);
     }
   }
 
@@ -550,4 +614,4 @@ sub getExpressionValues{
   return(\%e);
 }
 
-
+  

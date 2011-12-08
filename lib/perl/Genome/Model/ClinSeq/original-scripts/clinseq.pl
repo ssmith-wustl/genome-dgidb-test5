@@ -284,6 +284,7 @@ if ($wgs){
 }
 
 #Generate single genome (i.e. single BAM) global copy number segment plots for each BAM.  These help to identify sample swaps
+#TODO: Apparently this has been added to the latest Somatic Variation Processing profile - if this seems okay, remove this step
 if ($wgs){
   $step++; print MAGENTA, "\n\nStep $step. Creating single BAM CNV plots for each BAM", RESET;
   my $single_bam_cnv_dir = "$patient_dir"."cnv/single_bam_cnv/";
