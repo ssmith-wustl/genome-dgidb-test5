@@ -31,24 +31,16 @@ class Genome::Model::Build::DeNovoAssembly {
                 return __PACKAGE__ . '::' . Genome::Utility::Text::string_to_camel_case($assembler_base_name);
             },
         },
-        #TODO - best place for this??
-        processed_reads_count => {
-            is => 'Integer',
-            is_optional => 1,
-            is_mutable => 1,
-            doc => 'Number of reads processed for assembling',
-        },
+    ],
+    has_optional => [
         (
             map { 
                 join('_', split(m#\s#)) => {
                     is => 'Number',
                     is_optional => 1,
-                    is_mutable => 1,
-                    via => 'metrics',
-                    where => [ name => $_ ],
-                    to => 'value',
+                    is_metric => 'metrics',
                 }
-            } __PACKAGE__->interesting_metric_names
+            } (__PACKAGE__->interesting_metric_names, 'processed reads count')
         )
     ],
 };
