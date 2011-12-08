@@ -36,12 +36,13 @@ my $rna_seq_tumor_model_id = '';
 my $data_paths_file = '';
 my $output_file = '';
 my $verbose = 0;
+my $no_fasta_check = 0;
 
 GetOptions ('positions_file=s'=>\$positions_file, 
             'rna_seq_normal_model_id=s'=>\$rna_seq_normal_model_id, 'rna_seq_tumor_model_id=s'=>\$rna_seq_tumor_model_id,
             'wgs_som_var_model_id=s'=>\$wgs_som_var_model_id, 'exome_som_var_model_id=s'=>\$exome_som_var_model_id, 
             'data_paths_file=s'=>\$data_paths_file,
-            'output_file=s'=>\$output_file, 'verbose=i'=>\$verbose);
+            'output_file=s'=>\$output_file, 'verbose=i'=>\$verbose, 'no_fasta_check=i'=>\$no_fasta_check);
 
 
 my $usage=<<INFO;
@@ -63,6 +64,7 @@ my $usage=<<INFO;
                                   Format: patient	sample_type	data_type	bam_path	build_dir	ref_fasta	ref_name	
   --output_file                   PATH. File where output will be written (input file values with read counts appended)
   --verbose                       To display more output, set to 1
+  --no_fasta_check                To prevent checking of the reported reference base against the reference genome fasta set --no_fasta_check=1 [Not recommended!]
 
   Notes:
   Do NOT use for Indels!  SNVs only.
@@ -114,7 +116,7 @@ foreach my $bam (sort {$a <=> $b} keys %{$data}){
   my $snv_count = keys %{$snvs};
 
   if ($verbose){print YELLOW, "\n\nSNV count = $snv_count\n$data_type\n$sample_type\n$bam_path\n$ref_fasta\n", RESET};
-  my $counts = &getBamReadCounts('-snvs'=>$snvs, '-data_type'=>$data_type, '-sample_type'=>$sample_type, '-bam_path'=>$bam_path, '-ref_fasta'=>$ref_fasta, '-verbose'=>$verbose);
+  my $counts = &getBamReadCounts('-snvs'=>$snvs, '-data_type'=>$data_type, '-sample_type'=>$sample_type, '-bam_path'=>$bam_path, '-ref_fasta'=>$ref_fasta, '-verbose'=>$verbose, '-no_fasta_check'=>$no_fasta_check);
   $data->{$bam}->{read_counts} = $counts;
 }
 
@@ -466,6 +468,7 @@ sub getBamReadCounts{
   my $bam_path = $args{'-bam_path'};
   my $ref_fasta = $args{'-ref_fasta'};
   my $verbose = $args{'-verbose'};
+  my $no_fasta_check = $args{'-no_fasta_check'};
   my %c;
 
   #Code reference needed for Bio::DB::Bam
@@ -477,9 +480,12 @@ sub getBamReadCounts{
 
     if ( ($pos == ($data->{start} - 1) ) ) {
       #print STDERR 'PILEUP:'. $data->{chr} ."\t". $tid ."\t". $pos ."\t". $data->{start} ."\t". $data->{stop}."\n";
-      my $ref_base = $fai->fetch($data->{chr} .':'. $data->{start} .'-'. $data->{stop});
-      unless ($data->{reference} eq $ref_base) {
-        die("\n\nReference base " . $ref_base .' does not match expected '. $data->{reference} .' at postion '. $pos .' for chr '. $data->{chr} . '(tid = '. $tid . ')' . "\n$bam_path");
+      unless ($no_fasta_check){
+        my $ref_base = $fai->fetch($data->{chr} .':'. $data->{start} .'-'. $data->{stop});
+        unless ($data->{reference} eq $ref_base) {
+          #print RED, "\n\nReference base " . $ref_base .' does not match expected '. $data->{reference} .' at postion '. $pos .' for chr '. $data->{chr} . '(tid = '. $tid . ')' . "\n$bam_path", RESET;
+          die("\n\nReference base " . $ref_base .' does not match expected '. $data->{reference} .' at postion '. $pos .' for chr '. $data->{chr} . '(tid = '. $tid . ')' . "\n$bam_path");
+        }
       }
       for my $pileup ( @{$pileups} ) {
         my $alignment = $pileup->alignment;
