@@ -31,95 +31,15 @@ class Genome::Model::Build::MetagenomicComposition16s {
                 $_ => { via => 'processing_profile' } 
             } Genome::ProcessingProfile::MetagenomicComposition16s->params_for_class 
         ),
-        # Metrics
-        amplicons_attempted => {
-            is => 'Number',
-            via => 'metrics',
-            is_mutable => 1,
-            where => [ name => 'amplicons attempted' ],
-            to => 'value',
-            doc => 'Number of amplicons that were attempted in this build.'
-        },
-        amplicons_processed => {
-            is => 'Number',
-            via => 'metrics',
-            is_mutable => 1,
-            where => [ name => 'amplicons processed' ],
-            to => 'value',
-            doc => 'Number of amplicons that were processed in this build.'
-        },
-        amplicons_processed_success => {
-            is => 'Number',
-            via => 'metrics',
-            is_mutable => 1,
-            where => [ name => 'amplicons processed success' ],
-            to => 'value',
-            doc => 'Ratio of amplicons that were successfully processed in this build.'
-        },
-        amplicons_classified => {
-            is => 'Number',
-            via => 'metrics',
-            is_mutable => 1,
-            where => [ name => 'amplicons classified' ],
-            to => 'value',
-            doc => 'Number of amplicons that were classified in this build.'
-        },
-        amplicons_classified_success => {
-            is => 'Number',
-            via => 'metrics',
-            is_mutable => 1,
-            where => [ name => 'amplicons classified success' ],
-            to => 'value',
-            doc => 'Ratio of amplicons that were successfully classified in this build.'
-        },
-        amplicons_classification_error => {
-            is => 'Number',
-            via => 'metrics',
-            is_mutable => 1,
-            where => [ name => 'amplicons classification error' ],
-            to => 'value',
-            doc => 'Number of amplicons that had a classification error, and did not classify.'
-        },
-        amplicons_chimeric => {
-            is => 'Number',
-            via => 'metrics',
-            is_mutable => 1,
-            where => [ name => 'amplicons chimeric' ],
-            to => 'value',
-            doc => 'Number of amplicons that were chimeric.'
-        },
-        amplicons_chimeric_percent => {
-            is => 'Number',
-            via => 'metrics',
-            is_mutable => 1,
-            where => [ name => 'amplicons chimeric percent' ],
-            to => 'value',
-            doc => 'Ratio of amplicons that were chimeric.'
-        },
-        reads_attempted => {
-            is => 'Number',
-            via => 'metrics',
-            is_mutable => 1,
-            where => [ name => 'reads attempted' ],
-            to => 'value',
-            doc => 'Number of reads attempted.'
-        },
-        reads_processed => {
-            is => 'Number',
-            via => 'metrics',
-            is_mutable => 1,
-            where => [ name => 'reads processed' ],
-            to => 'value',
-            doc => 'Number of reads that processed into amplicon sequence.'
-        },
-        reads_processed_success => {
-            is => 'Number',
-            via => 'metrics',
-            is_mutable => 1,
-            where => [ name => 'reads processed success' ],
-            to => 'value',
-            doc => 'Ratio of reads successfully processed into amplicon sequence.'
-        },
+        map ( {
+                $_ => { is => 'Number', is_metric => 1, }
+            } (qw/
+                amplicons_attempted amplicons_processed amplicons_processed_success 
+                amplicons_classified amplicons_classified_success amplicons_classification_error 
+                amplicons_chimeric amplicons_chimeric_percent 
+                reads_attempted reads_processed reads_processed_success 
+                /)
+        ),
     ],
 };
 

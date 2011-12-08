@@ -302,8 +302,18 @@ sub create_sample_gene_matrix_variant {
         }
         my $gene = $fields[$maf_columns{'Hugo_Symbol'}];
         my $chr = $fields[$maf_columns{'Chromosome'}];
-        my $start = $fields[$maf_columns{'Start_position'}];
-        my $stop = $fields[$maf_columns{'End_position'}];
+        my $start;
+        if (defined $maf_columns{'Start_position'}) {
+            $start = $fields[$maf_columns{'Start_position'}];
+        } else {
+            $start = $fields[$maf_columns{'Start_Position'}];
+        }
+        my $stop;
+        if (defined $maf_columns{'End_position'}) {
+            $stop = $fields[$maf_columns{'End_position'}];
+        } else {
+            $stop = $fields[$maf_columns{'End_Position'}];
+        }
         my $ref = $fields[$maf_columns{'Reference_Allele'}];
         my $var1 = $fields[$maf_columns{'Tumor_Seq_Allele1'}];
         my $var2 = $fields[$maf_columns{'Tumor_Seq_Allele2'}];
@@ -339,8 +349,11 @@ sub create_sample_gene_matrix_variant {
     my @variant_names = sort keys %all_variants;
 
     #write the input matrix for R code to a file #FIXME HARD CODE FILE NAME, OR INPUT OPTION
-    my $matrix_file = $clinical_data_file . ".clinical_correlation_matrix";
+    my $matrix_file = Genome::Sys->create_temp_file_path();
     my $matrix_fh = new IO::File $matrix_file,"w";
+    unless ($matrix_fh) {
+        die "Failed to create matrix file $matrix_file!: $!";
+    }
 
     #print input matrix file header
     my $header = join("\t","Sample",@variant_names);

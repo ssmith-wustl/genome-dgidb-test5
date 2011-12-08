@@ -31,25 +31,43 @@ class Genome::Model::Build::DeNovoAssembly {
                 return __PACKAGE__ . '::' . Genome::Utility::Text::string_to_camel_case($assembler_base_name);
             },
         },
-        #TODO - best place for this??
-        processed_reads_count => {
-            is => 'Integer',
-            is_optional => 1,
-            is_mutable => 1,
-            doc => 'Number of reads processed for assembling',
-        },
+    ],
+    has_optional => [
         (
             map { 
                 join('_', split(m#\s#)) => {
                     is => 'Number',
                     is_optional => 1,
-                    is_mutable => 1,
+                    is_metric => 'metrics',
+                }
+            } (
+                'major contig length', 'assembly length',
+                'contigs', 'n50 contig length', 'average contig length',
+                'average contig length gt 300', 'average contig length gt 500', 
+                'average supercontig length gt 500', 'average supercontig length gt 300', 
+                'supercontigs', 'n50 supercontig length', 'average supercontig length',
+                'average read length',
+                'reads attempted', 'reads processed', 'reads processed success',
+                'reads assembled', 'reads assembled success', 'reads not assembled pct',
+                'genome size used', 'average insert size used',
+            )
+        ),
+        ( # These metrics had underscores in them, so they cannot go through the automatic metric processing
+            map { 
+                $_ => {
                     via => 'metrics',
                     where => [ name => $_ ],
                     to => 'value',
+                    is_delegated => 1,
+                    is_mutable => 1,
                 }
-            } __PACKAGE__->interesting_metric_names
-        )
+            }
+            ( 
+                'n50_contig_length_gt_300', 'n50_contig_length_gt_500',
+                'n50_supercontig_length_gt_500', 'n50_supercontig_length_gt_300', 
+                'read_depths_ge_5x'
+            )
+        ),
     ],
 };
 
@@ -206,26 +224,6 @@ sub calculate_base_limit_from_coverage {
 }
 
 #< Metrics >#
-sub interesting_metric_names {
-    return (
-        'major contig length',
-        'assembly length',
-        'contigs', 'n50 contig length', 'average contig length',
-        'average contig length gt 300', 'n50_contig_length_gt_300', #soap
-        'average contig length gt 500', 'n50_contig_length_gt_500', #velvet
-        'average supercontig length gt 500', 'n50_supercontig_length_gt_500',
-        'average supercontig length gt 300', 'n50_supercontig_length_gt_300',
-        'supercontigs', 'n50 supercontig length', 'average supercontig length',
-        'average read length',
-        'reads attempted', 
-        'reads processed', 'reads processed success',
-        'reads assembled', 'reads assembled success', 'reads not assembled pct',
-        'read_depths_ge_5x',
-        'genome size used',
-        'average insert size used',
-    );
-}
-
 sub set_metrics {
     my $self = shift;
 

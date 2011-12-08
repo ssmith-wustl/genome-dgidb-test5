@@ -78,8 +78,6 @@ my $step = 0;
 $step++; print MAGENTA, "\n\nStep $step. Getting data paths from 'genome' for specified model ids", RESET;
 my ($data_paths, $builds) = getDataDirsAndBuilds('-wgs_som_var_data_set'=>$wgs_som_var_data_set, '-exome_som_var_data_set'=>$exome_som_var_data_set, '-tumor_rna_seq_data_set'=>$tumor_rna_seq_data_set, '-normal_rna_seq_data_set'=>$normal_rna_seq_data_set);
 
-print "BUILDS: " . Data::Dumper::Dumper($builds);
-
 my $usage=<<INFO;
 
   Example usage: 
@@ -214,7 +212,8 @@ my @positions_files;
 if ($wgs){push(@positions_files, $out_paths->{'wgs'}->{'snv'}->{path});}
 if ($exome){push(@positions_files, $out_paths->{'exome'}->{'snv'}->{path});}
 if ($wgs && $exome){push(@positions_files, $out_paths->{'wgs_exome'}->{'snv'}->{path});}
-my $read_counts_script = "$script_dir"."snv/getBamReadCounts.pl";
+#my $read_counts_script = "$script_dir"."snv/getBamReadCounts.pl";
+my $read_counts_script = "/usr/bin/perl `which genome` model clin-seq get-bam-read-counts";
 my $read_counts_summary_script = "$script_dir"."snv/WGS_vs_Exome_vs_RNAseq_VAF_and_FPKM.R";
 foreach my $positions_file (@positions_files){
   my $fb = &getFilePathBase('-path'=>$positions_file);
@@ -222,11 +221,12 @@ foreach my $positions_file (@positions_files){
   my $output_stats_dir = $output_file . ".stats/";
 
   # TODO: swith this to take build IDs.
-  my $wgs_som_var_model_id     = $builds->{wgs}             ? $builds->{wgs}->model->id : 0;
-  my $exome_som_var_model_id   = $builds->{exome}           ? $builds->{exome}->model->id : 0;
-  my $tumor_rna_seq_model_id   = $builds->{tumor_rnaseq}    ? $builds->{tumor_rnaseq}->model->id : 0;
-  my $normal_rna_seq_model_id  = $builds->{normal_rnaseq}   ? $builds->{normal_rnaseq}->model->id : 0;
-  my $bam_rc_cmd = "$read_counts_script  --positions_file=$positions_file  --wgs_som_var_model_id='$wgs_som_var_model_id'  --exome_som_var_model_id='$exome_som_var_model_id'  --rna_seq_tumor_model_id='$tumor_rna_seq_model_id'  --rna_seq_normal_model_id='$normal_rna_seq_model_id'  --output_file=$output_file  --verbose=$verbose";
+  my $bam_rc_cmd = "$read_counts_script  --positions-file=$positions_file  ";
+  $bam_rc_cmd .= " --wgs-som-var-build=" . $builds->{wgs}->id if $builds->{wgs};
+  $bam_rc_cmd .= " --exome-som-var-build=" . $builds->{exome}->id if $builds->{exome};
+  $bam_rc_cmd .= " --rna-seq-tumor-build=" . $builds->{tumor_rnaseq}->id if $builds->{tumor_rnaseq};
+  $bam_rc_cmd .= " --rna-seq-normal-build=" . $builds->{normal_rnaseq}->id if $builds->{normal_rnaseq};
+  $bam_rc_cmd .= " --output-file=$output_file  --verbose=$verbose";
 
   #WGS_vs_Exome_vs_RNAseq_VAF_and_FPKM.R  /gscmnt/sata132/techd/mgriffit/hgs/test/ /gscmnt/sata132/techd/mgriffit/hgs/all1/snv/wgs_exome/snvs.hq.tier1.v1.annotated.compact.readcounts.tsv /gscmnt/sata132/techd/mgriffit/hgs/all1/rnaseq/tumor/absolute/isoforms_merged/isoforms.merged.fpkm.expsort.tsv
   my $rc_summary_cmd;

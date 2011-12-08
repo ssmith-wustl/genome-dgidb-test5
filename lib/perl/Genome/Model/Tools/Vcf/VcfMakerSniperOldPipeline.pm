@@ -230,7 +230,7 @@ sub execute {                               # replace with real execution logic.
         #center-specific lines:
         if ($center eq "WUSTL"){
             $seqCenter = "genome.wustl.edu";
-            $reference = "ftp://ftp.ncbi.nlm.nih.gov/genomes/H_sapiens/ARCHIVE/BUILD.36.3/special_requests/assembly_variants/NCBI36_BCCAGSC_variant.fa.gz";
+            $reference = "ftp://ftp.ncbi.nlm.nih.gov/genomes/H_sapiens/ARCHIVE/BUILD.36.3/special_requests/assembly_variants/NCBI36_WUGSC_variant.fa.gz";
         }
         elsif($center eq "Broad"){
             $seqCenter = "broad.mit.edu";
@@ -257,10 +257,10 @@ sub execute {                               # replace with real execution logic.
         print OUTFILE "##INDIVIDUAL=$individual_id" . "\n";
 
         #first normal
-        print OUTFILE "##SAMPLE=<ID=" . $individual_id . $seqType . "-normal,file=" . $normal_bam . ",SeqCenter=" . $seqCenter . ",Accession=phs000178.v4.p4,FileSource=" . $file_source . ",SequenceSource=" . $file_source . ",AnalysisProfile=" . $analysis_profile . ",Type=normal_DNA>" . "\n";
+        print OUTFILE "##SAMPLE=<ID=NORMAL,file=" . $normal_bam . ",SeqCenter=" . $seqCenter . ",Type=normal_DNA>" . "\n";
 
         #then tumor
-        print OUTFILE "##SAMPLE=<ID=" . $individual_id . $seqType . "-tumor,file=" . $normal_bam . ",SeqCenter=" . $seqCenter . ",Accession=phs000178.v4.p4,FileSource=" . $file_source . ",SequenceSource=" . $file_source . ",AnalysisProfile=" . $analysis_profile . ",Type=tumor_DNA>" . "\n";
+        print OUTFILE "##SAMPLE=<ID=TUMOR,file=" . $tumor_bam . ",SeqCenter=" . $seqCenter . ",Type=tumor_DNA>" . "\n";
 
         # info lines
         print OUTFILE "##INFO=<ID=DB,Number=0,Type=Flag,Description=\"dbSNP membership, build 130\">" . "\n";
@@ -278,14 +278,14 @@ sub execute {                               # replace with real execution logic.
         print OUTFILE "##FORMAT=<ID=GT,Number=1,Type=String,Description=\"Genotype\">" . "\n";
         print OUTFILE "##FORMAT=<ID=GQ,Number=1,Type=Integer,Description=\"Genotype Quality\">" . "\n";
         print OUTFILE "##FORMAT=<ID=DP,Number=1,Type=Integer,Description=\"Total Read Depth\">" . "\n";
-        print OUTFILE "##FORMAT=<ID=BQ,Number=1,Type=Integer,Description=\"Average Base Quality corresponding to alleles 0/1/2/3... after software and quality filtering\">" . "\n";
-        print OUTFILE "##FORMAT=<ID=MQ,Number=1,Type=Integer,Description=\"Average Mapping Quality corresponding to alleles 0/1/2/3... after software and quality filtering\">" . "\n";
-        print OUTFILE "##FORMAT=<ID=AD,Number=1,Type=Integer,Description=\"Allele Depth corresponding to alleles 0/1/2/3... after software and quality filtering\">" . "\n";
+        #print OUTFILE "##FORMAT=<ID=BQ,Number=1,Type=Integer,Description=\"Average Base Quality corresponding to alleles 0/1/2/3... after software and quality filtering\">" . "\n";
+        #print OUTFILE "##FORMAT=<ID=MQ,Number=1,Type=Integer,Description=\"Average Mapping Quality corresponding to alleles 0/1/2/3... after software and quality filtering\">" . "\n";
+        #print OUTFILE "##FORMAT=<ID=AD,Number=1,Type=Integer,Description=\"Allele Depth corresponding to alleles 0/1/2/3... after software and quality filtering\">" . "\n";
         print OUTFILE "##FORMAT=<ID=VAS,Number=1,Type=Integer,Description=\"Variant  Status relative to non-adjacent normal 0=Wildtype, 1=Germline, 2=Somatic, 3=LOH, 4=Post_Transcriptional_Modification, 5=Undefined\">" . "\n";
         print OUTFILE "##FORMAT=<ID=VAQ,Number=1,Type=Integer,Description=\"Quality score - SomaticSniper score\">" . "\n";
 
         #column header:
-        print OUTFILE  "#" . join("\t", ("CHROM","POS","ID","REF","ALT","QUAL","FILTER","INFO","FORMAT","NORMAL","PRIMARY")) . "\n";
+        print OUTFILE  "#" . join("\t", ("CHROM","POS","ID","REF","ALT","QUAL","FILTER","INFO","FORMAT","NORMAL","TUMOR")) . "\n";
         OUTFILE->close();
     }
 
@@ -752,12 +752,14 @@ sub execute {                               # replace with real execution logic.
 
             #FORMAT
             # push(@outline, "GT:GQ:DP:BQ:MQ:AD:VAS:VAQ:VLS:VLQ"); 
-            push(@outline, "GT:GQ:DP:BQ:MQ:AD:VAS:VAQ");
+            #push(@outline, "GT:GQ:DP:BQ:MQ:AD:VAS:VAQ");
+            push(@outline, "GT:GQ:DP:VAS:VAQ");
 
             my @normalFormat;
             my @tumorFormat;
 
-            my @fields = ("GT","GQ","DP","BQ","MQ","AD","VAS","VAQ");
+            #my @fields = ("GT","GQ","DP","BQ","MQ","AD","VAS","VAQ");
+            my @fields = ("GT","GQ","DP","VAS","VAQ");
             #collect format fields
             foreach my $field (@fields){
                 if(exists($snvhash{$key}{"normal"}{$field})){

@@ -2234,7 +2234,7 @@ sub _preprocess_subclass_description {
         # Metrics
         if ( exists $prop_desc->{is_metric} and $prop_desc->{is_metric} ) {
             $prop_desc->{via} = 'metrics';
-            $prop_desc->{where} = [ name => $prop_name ];
+            $prop_desc->{where} = [ name => join(' ', split('_', $prop_name)) ];
             $prop_desc->{to} = 'value';
             $prop_desc->{is_delegated} = 1;
             $prop_desc->{is_mutable} = 1;

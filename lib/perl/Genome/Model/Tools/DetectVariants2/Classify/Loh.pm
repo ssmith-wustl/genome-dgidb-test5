@@ -9,26 +9,18 @@ use Genome::Info::IUB;
 class Genome::Model::Tools::DetectVariants2::Classify::Loh {
     is => 'Genome::Model::Tools::DetectVariants2::Result::Classify',
     has_input =>[
-        prior_result_id => {
-            is => 'Text',
-            doc => 'ID of the snv results considered "somatic"',
-        },
         control_result_id => {
             is => 'Text',
             doc => 'ID of the snv results considered "germline"',
         },
     ],
     has_param => [
-        classifier_version => {
-            is => 'Text',
-            doc => 'Version of the classifier to use',
-        }
+        variant_type => {
+            is_constant => 1,
+            value => 'snv',
+        },
     ],
     has => [
-        prior_result => {
-            is => 'Genome::Model::Tools::DetectVariants2::Result::Base',
-            id_by => 'prior_result_id',
-        },
         control_result => {
             is => 'Genome::Model::Tools::DetectVariants2::Result::Base',
             id_by => 'control_result_id',
@@ -36,46 +28,8 @@ class Genome::Model::Tools::DetectVariants2::Classify::Loh {
     ],
 };
 
-sub create {
-    my $class = shift;
-    my $self = $class->SUPER::create(@_);
-
-    unless($self->_validate_inputs) {
-        my $err = $self->error_message;
-        die $self->error_message('Failed to validate inputs: ' . $err);
-    }
-
-    unless($self->_prepare_staging_directory) {
-        die $self->error_message('Failed to prepare staging directory.');
-    }
-
-    unless($self->_generate_result) {
-        die $self->error_message('Failed to run LOH.');
-    }
-
-    unless($self->_prepare_output_directory) {
-        die $self->error_message('Failed to prepare output directory.');
-    }
-
-    unless($self->_promote_data) {
-        die $self->error_message('Failed to promote data.');
-    }
-
-    return $self;
-}
-
 sub _validate_inputs {
     my $self = shift;
-
-    unless($self->prior_result) {
-        $self->error_message('No Somatic SNV result found.');
-        return;
-    }
-
-    unless(-e (join('/', $self->prior_result->output_dir, 'snvs.hq.bed'))) {
-        $self->error_message('Could not find snvs file for somatic result.');
-        return;
-    }
 
     unless($self->control_result) {
         $self->error_message('No Control SNV result found.');
@@ -87,15 +41,10 @@ sub _validate_inputs {
         return;
     }
 
-    unless($self->classifier_version eq '1') {
-        $self->error_message('Unsupported classifier version passed.  Supported versions: 1');
-        return;
-    }
-
-    return 1;
+    return $self->SUPER::_validate_inputs;
 }
 
-sub _generate_result {
+sub _classify_variants {
     my $self = shift;
 
     my $version = 2;
@@ -176,40 +125,5 @@ sub resolve_allocation_subdirectory {
     my $staged_basename = File::Basename::basename($self->temp_staging_directory);
     return join('/', 'build_merged_alignments', $self->id, 'dv2-classify-loh-' . $staged_basename);
 };
-
-sub _gather_params_for_get_or_create {
-    my $class = shift;
-
-    my $bx = UR::BoolExpr->resolve_normalized_rule_for_class_and_params($class, @_);
-
-    my %params = $bx->params_list;
-    my %is_input;
-    my %is_param;
-    my $class_object = $class->__meta__;
-    for my $key ($class->property_names) {
-        my $meta = $class_object->property_meta_for_name($key);
-        if ($meta->{is_input} && exists $params{$key}) {
-            $is_input{$key} = $params{$key};
-        } elsif ($meta->{is_param} && exists $params{$key}) {
-            $is_param{$key} = $params{$key};
-        }
-    }
-
-    my $inputs_bx = UR::BoolExpr->resolve_normalized_rule_for_class_and_params($class, %is_input);
-    my $params_bx = UR::BoolExpr->resolve_normalized_rule_for_class_and_params($class, %is_param);
-
-    my %software_result_params = (
-        params_id=>$params_bx->id,
-        inputs_id=>$inputs_bx->id,
-        subclass_name=>$class,
-    );
-
-    return {
-        software_result_params => \%software_result_params,
-        subclass => $class,
-        inputs=>\%is_input,
-        params=>\%is_param,
-    };
-}
 
 1;
