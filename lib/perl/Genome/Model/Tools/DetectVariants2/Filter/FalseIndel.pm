@@ -209,7 +209,7 @@ sub _filter_variants {
     my $lq_output_file = $self->_temp_staging_directory . "/indels.lq.raw_filter";
     my $lq_fh = Genome::Sys->open_file_for_writing($lq_output_file);
     unless($lq_fh) {
-        $self->error_message("Unable to open temp output file $hq_output_file for writing.");
+        $self->error_message("Unable to open temp output file $lq_output_file for writing.");
         die;
     }
 
