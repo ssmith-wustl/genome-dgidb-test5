@@ -52,7 +52,8 @@ class Genome::Model::ClinSeq::Command::GetBamReadCounts {
                                     doc => 'File where output will be written (input file values with read counts appended)', },
 
         data_paths_file         => { is => 'FilesystemPath', is_optional => 1,
-                                    doc => 'Instead of supplying models/builds provide a file contain file paths', },
+                                     doc => "Instead of supplying models/builds supply a tab delimited list of files to handle old builds that are not well tracked or custom situations\n".
+                                            " Format: patient  sample_type  data_type  bam_path  build_dir  ref_fasta  ref_name", },
 
         verbose                 => { is => 'Number',
                                     doc => 'To display more output, set this to 1.' },
