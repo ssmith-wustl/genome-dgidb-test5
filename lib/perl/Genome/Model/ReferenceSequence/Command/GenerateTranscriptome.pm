@@ -10,23 +10,24 @@ class Genome::Model::ReferenceSequence::Command::GenerateTranscriptome{
     has_input => [
         reference_sequence_build_name => {
             is => 'Text',
-            doc => 'the reference build, specified by name.',
-            default_value => 'GRCh37-lite-build37',
+            doc => 'the reference build, specified by name: ex. GRCh37-lite-build37',
         },
         annotation_build_name => {
             is => 'Text',
-            doc => 'The annoation build, specified by name.',
-            default_value => 'NCBI-human.ensembl/58_37c_v2',
+            doc => 'The annoation build, specified by name: ex. NCBI-human.ensembl/58_37c_v2',
         },
         merge_level => {
+            doc => 'The transcriptome can consist of all transcript sequences or a squashed representation of each gene.',
             valid_values => ['gene','transcript'],
             default_value => 'gene',
         },
         output_fasta_file => {
             is => 'Text',
+            doc => 'The output FASTA file that will contain all genes or transcript references in the forward strand orientation',
         },
         junctions_bed_file => {
             is => 'Text',
+            doc => 'An output BED file that contains the splice junction positions(4bp) in the transcripts/genes.',
         },
     ],
     doc => 'Generate a transcriptome reference FASTA from a reference genome and annotation set(Ensembl-only for now).',
@@ -35,7 +36,7 @@ class Genome::Model::ReferenceSequence::Command::GenerateTranscriptome{
 sub help_synopsis {
     my $class = shift;
     return <<EOS;
-
+genome model reference-sequence generate-transcriptome --annotation-build-name='NCBI-human.ensembl/58_37c_v2' --reference-sequence-build-name=GRCh37-lite-build37 --merge-level=transcript --output-fasta-file=transcripts.fasta --junctions-bed-file=transcript_junctions.bed
 EOS
 }
 
@@ -43,6 +44,7 @@ sub help_detail {
 
     my $class = shift;
     return <<'EOS';
+This tool is designed to take an annotation build and a reference sequence build and produce a transcriptome reference FASTA file.  Also a BED file of the location of splice junctions(2bp on either side) in context of the transcript/gene sequence coordinates.  All sequences are kept in a positive strand orientation relative to the genome reference.  The names of each sequence in the output FASTA include the gene or transcript id, the chromosome, and the strand in a pipe '|' separated string.
 EOS
 }
 
