@@ -130,6 +130,12 @@ sub create {
         }
     }
 
+    # this needs to be present for legacy data sets before we add the property to the class --ssmith
+    $self->add_param(
+        param_name => 'alignment_results_count',
+        param_value => 0,
+    );
+
     return $self;
 }
 
