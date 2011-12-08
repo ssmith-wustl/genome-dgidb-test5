@@ -130,11 +130,23 @@ sub create {
         }
     }
 
-    # this needs to be present for legacy data sets before we add the property to the class --ssmith
-    $self->add_param(
+    # these needs to be present for legacy data sets before we add the property to the class --ssmith
+
+    my $c1 = $self->add_param(
         param_name => 'alignment_results_count',
         param_value => 0,
     );
+    unless ($c1) {
+        warn "error backfilling param alignment_results_count";
+    }
+    
+    my $c2 = $self->add_param(
+        param_name => 'control_alignment_results_count',
+        param_value => 0,
+    );
+    unless ($c2) {
+        warn "error backfilling param control_alignment_results_count";
+    }
 
     return $self;
 }
