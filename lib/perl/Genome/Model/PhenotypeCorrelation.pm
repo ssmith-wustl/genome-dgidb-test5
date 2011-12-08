@@ -661,7 +661,9 @@ my $kegg_db = '/gscmnt/gc2108/info/medseq/ckandoth/music/brc_input/pathway_dbs/K
 
 #Ran clinical-correlation:
 #need clinical data file $clinical_data
-my $clinical_data = '/gscmnt/gc2146/info/medseq/wschierd/crap_stuff_delete/Mock_Pheno_1kg.txt';
+my $clinical_data_orig = '/gscmnt/gc2146/info/medseq/wschierd/crap_stuff_delete/Mock_Pheno_1kg.txt';
+my $clinical_data = "$temp_path/Mock_Pheno_1kg.txt";
+system("cp $clinical_data_orig $clinical_data");
 #example: /gscmnt/sata809/info/medseq/MRSA/analysis/Sureselect_49_Exomes_Germline/music/input/sample_phenotypes2.csv
 #this is not the logistic regression yet, found out that yyou and ckandoth did not put logit into music, but just into the R package that music runs
 #$name is project name or some other good identifier
