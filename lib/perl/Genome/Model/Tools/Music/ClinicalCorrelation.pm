@@ -350,7 +350,7 @@ sub create_sample_gene_matrix_variant {
 
     #write the input matrix for R code to a file #FIXME HARD CODE FILE NAME, OR INPUT OPTION
     my $matrix_file = $clinical_data_file . ".clinical_correlation_matrix";
-    my $matrix_fh = new IO::File $matrix_file,"w";
+    my $matrix_fh = IO::File->new($matrix_file, "w") || die "Failed to open file for writing ($matrix_file)";
 
     #print input matrix file header
     my $header = join("\t","Sample",@variant_names);
