@@ -7,7 +7,6 @@ use warnings;
 use Genome; 
 use Term::ANSIColor qw(:constants);
 use Data::Dumper;
-use Bio::DB::Sam;
 
 my $lib_dir;
 BEGIN {
@@ -102,6 +101,11 @@ sub help_usage {
 sub execute {
     my $self = shift;
     
+    eval "require Bio::DB::Sam";
+    if ($@) {
+        die "Failed to use the Bio::DB::Sam module.  Use /usr/bin/perl instead of /gsc/bin/perl.:\n$@";
+    }
+
     my $positions_file = $self->positions_file; 
     my $wgs_som_var_build = $self->wgs_som_var_build;
     my $exome_som_var_build = $self->exome_som_var_build;
