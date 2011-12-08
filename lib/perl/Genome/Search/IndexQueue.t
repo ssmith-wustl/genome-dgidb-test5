@@ -131,7 +131,8 @@ sub test_priority_sorting {
     my @priority_sorted_queue = Genome::Search::IndexQueue->get(subject_id => \@subject_ids, -order_by => 'priority');
     ok(@priority_sorted_queue, 'got priority_sorted_queue') || return;
     my @priority_sorted_queue_subject_ids = map { $_->subject_id } @priority_sorted_queue;
-    is_deeply(\@priority_sorted_queue_subject_ids, \@sorted_subject_ids, 'ordering by priority matches expected results');
+    is_deeply(\@priority_sorted_queue_subject_ids, \@sorted_subject_ids, 'ordering by priority matches expected results')
+        or diag(Data::Dumper::Dumper(\@priority_sorted_queue_subject_ids, \@sorted_subject_ids));
 
     my @timestamp_sorted_queue = Genome::Search::IndexQueue->get(subject_id => \@subject_ids, -order_by => 'timestamp');
     ok(@priority_sorted_queue, 'got timestamp_sorted_queue') || return;
