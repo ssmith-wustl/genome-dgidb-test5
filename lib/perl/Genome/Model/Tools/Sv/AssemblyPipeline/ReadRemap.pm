@@ -135,6 +135,67 @@ sub getBuild36ReferenceSequences {
     } # matches 'foreach $position'
     close OUT;
 }
+sub getBuild37ReferenceSequences {
+    # Input: ref to hash with key = "$chrA.$bpA.$chrB.$bpB", output file, $buffer
+    # Use 'expiece' to write region +/- $buffer of each position
+    # Chromosome-specific reference sequences are at:
+    # /gscmnt/ams1102/info/model_data/2869585698/build106942997/$chr.fa
+
+    my ($positionRef, $outputFile, $buffer) = @_;
+    my ( $position, $remove, $chrA, $bpA, $chrB, $bpB, $start, $stop, @output, $seq, );
+    if (!defined $buffer) { $buffer = 500; }
+
+    open(OUT, "> $outputFile") || confess "Could not open '$outputFile' for output: $!";
+
+    # This is what the fasta header looks like when using 'expiece'.
+    # Want to remove the full path to the chromosome
+    $remove = "\/gscmnt\/ams1102\/info\/model_data\/2869585698\/build106942997\/";
+    #$remove = "\/gscmnt\/sata180\/info\/medseq\/biodb\/shared\/Hs_build36\/Homo_sapiens.NCBI36.45.dna.chromosome.";
+
+    foreach $position ( sort keys %{$positionRef} ) {
+        if ( $position =~ /(\w+)\.(\d+)\.(\w+)\.(\d+)/ ) {
+            $chrA = $1; $bpA = $2; $chrB = $3; $bpB = $4;
+        } else {
+            confess "Unexpected format for position: '$position'";
+        }
+
+        # Do first coordinate
+        $start = $bpA - $buffer;
+        $stop = $bpA + $buffer;
+        my $chrFile = "/gscmnt/ams1102/info/model_data/2869585698/build106942997/$chrA.fa";
+        open(EXP, "expiece $start $stop $chrFile |") || confess "Could not open pipe for 'expiece $start $stop $chrFile'";
+        @output = <EXP>;
+        close EXP;
+        foreach my $seq (@output) {
+            chomp $seq;
+            if ( $seq =~ />/ ) { 
+                $seq =~ s/$remove//;
+                $seq =~ s/fa from $start to $stop/$start.$stop/;
+            }
+            print OUT "$seq\n";
+        }
+
+        # Do second coordinate
+        $start = $bpB - $buffer;
+        $stop = $bpB + $buffer;
+        $chrFile = "/gscmnt/ams1102/info/model_data/2869585698/build106942997/$chrB.fa";
+        open(EXP, "expiece $start $stop $chrFile |") || confess "Could not open pipe for 'expiece $start $stop $chrFile'";
+        @output = <EXP>;
+        close EXP;
+        foreach my $seq (@output) {
+            chomp $seq;
+            if ( $seq =~ />/ ) { 
+                $seq =~ s/$remove//;
+                $seq =~ s/fa from $start to $stop/$start.$stop/;
+            }
+            print OUT "$seq\n";
+        }
+
+
+    } # matches 'foreach $position'
+    close OUT;
+}
+
 
 sub samReadPassesFilter {
     # Input: $read in SAM format
