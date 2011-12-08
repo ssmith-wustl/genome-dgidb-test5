@@ -310,7 +310,7 @@ sub output_files {
         push @output_files, $self->insertions_file;
         push @output_files, $self->deletions_file;
         push @output_files, $self->left_kept_reads_info;
-        push @output_files, $self->right_kept_reads_info;
+        #push @output_files, $self->right_kept_reads_info; # This won't exist for single-end reads
     }
     return @output_files;
 }
