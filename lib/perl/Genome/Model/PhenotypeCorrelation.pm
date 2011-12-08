@@ -359,7 +359,10 @@ sub _execute_build {
 
 #Ran clinical-correlation:
 #need clinical data file $clinical_data
-my $clinical_data = '/gscmnt/gc2146/info/medseq/wschierd/crap_stuff_delete/Mock_Pheno_1kg.txt';
+my $clinical_data_orig = '/gscmnt/gc2146/info/medseq/wschierd/crap_stuff_delete/Mock_Pheno_1kg.txt';
+my $clinical_data = "$temp_path/Mock_Pheno_1kg.txt";
+system("cp $clinical_data_orig $clinical_data");
+
 #get list of bams and load into tmp file named $bam_list
 #$name is project name or some other good identifier
 my $name = $self->name;
