@@ -206,8 +206,11 @@ sub supercontigs_agp_file {
 
 sub stats_file {
     my $self = shift;
-
-    return $self->assembly_directory.'/edit_dir/stats.txt';
+    return $self->_resolve_stats_file;
+}
+sub _resolve_stats_file {
+    my $self = shift;
+     return $self->resolve_edit_dir.'/stats.txt';
 }
 
 sub _resolve_gapfill_file {
