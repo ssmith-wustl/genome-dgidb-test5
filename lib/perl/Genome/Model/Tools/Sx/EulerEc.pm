@@ -68,8 +68,10 @@ sub execute {
         $self->error_message("Failed to create Euler input writer");
         return;
     }
-    while ( my $seq = $reader->read ) {
-        $euler_input_writer->write( @$seq[0] );
+    while ( my $seqs = $reader->read ) {
+        for my $seq ( @$seqs ) {
+            $euler_input_writer->write( $seq );
+        }
     }
 
     #build command
@@ -107,9 +109,23 @@ sub execute {
         file => $euler_output_file,
         qual_file => $euler_input_file.'.qual', #no new qual file created by euler
     );
-    my $writer = $self->_output;
+
+    #write temp intermediate fastq
+    my $tmp_fastq = $euler_dir.'/euler.fastq';
+    my $tmp_fastq_writer = Genome::Model::Tools::Sx::Writer->create(
+        config => [ $tmp_fastq.':type=sanger' ],
+    );
     while ( my $seqs = $euler_output_reader->read ) {
-        $writer->write( [$seqs] );
+        $tmp_fastq_writer->write( [$seqs] );
+    }
+    
+    #read tmp int fastq and write final
+    my $tmp_reader = Genome::Model::Tools::Sx::Reader->create(
+        config => [ $tmp_fastq.':type=sanger:cnt=2' ],
+    );
+    my $writer = $self->_output;
+    while ( my $seqs = $tmp_reader->read ) {
+        $writer->write( $seqs );
     }
     $self->status_message("Created Euler output: $euler_output_file");
 
