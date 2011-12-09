@@ -55,9 +55,9 @@ class Genome::Model::ClinSeq::Command::GetBamReadCounts {
                                      doc => "Instead of supplying models/builds supply a tab delimited list of files to handle old builds that are not well tracked or custom situations\n".
                                             " Format: patient  sample_type  data_type  bam_path  build_dir  ref_fasta  ref_name", },
 
-        verbose                 => { is => 'Number',
+        verbose                 => { is => 'Number', is_optional => 1,
                                     doc => 'To display more output, set this to 1.' },
-        no_fasta_check          => { is => 'Number',
+        no_fasta_check          => { is => 'Number', is_optional => 1,
                                      doc => 'To prevent checking of the reported reference base against the reference genome fasta set --no_fasta_check=1 [Not recommended!]' },
 
     ],
