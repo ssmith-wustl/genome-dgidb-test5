@@ -326,6 +326,7 @@ sub calculate_average_insert_size {
 
     my $average_insert_size = $sum / scalar(@insert_sizes);
 
+    $average_insert_size = POSIX::floor($average_insert_size);
     $self->average_insert_size_used( $average_insert_size );
 
     return $average_insert_size;
