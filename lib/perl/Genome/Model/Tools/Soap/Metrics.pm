@@ -44,14 +44,41 @@ sub help_detail {
     return;
 }
 
+sub __errors__ {
+    my $self = shift;
+
+    my @errors = $self->SUPER::__errors__(@_);
+    return @errors if @errors;
+
+    if ( $self->assembly_directory ) {
+        if ( not -d $self->assembly_directory ) {
+            push @errors, UR::Object::Tag->create(
+                type => 'invalid',
+                properties => [qw/ assembly_directory /],
+                desc => 'The assembly_directory is not a directory!',
+            );
+            return @errors;
+        }
+        if ( not defined $self->output_file ) {
+            my $create_edit_dir = $self->create_edit_dir;
+            return if not $create_edit_dir;
+            $self->output_file( $self->_resolve_stats_file );
+        }
+    }
+    elsif ( not $self->output_file ) { 
+        push @errors, UR::Object::Tag->create(
+            type => 'invalid',
+            properties => [qw/ output_file /],
+            desc => 'No output file given and no assembly_directory given to determine the output file!',
+        );
+    }
+
+    return @errors;
+}
+
 sub execute {
     my $self = shift;
     $self->status_message('Soap metrics...');
-
-    unless ( $self->create_edit_dir ) {
-        $self->error_message("Failed to create edit_dir");
-        return;
-    }
 
     # resolve/create contigs file
     my $contigs_file = $self->_resolve_contigs_bases_file;
@@ -103,7 +130,6 @@ sub execute {
     }
 
     # write file
-    $self->output_file( $self->_resolve_stats_file ) if not defined $self->output_file;
     my $output_file = $self->output_file;
     unlink $output_file if -e $output_file;
     $self->status_message('Write output file: '.$output_file);

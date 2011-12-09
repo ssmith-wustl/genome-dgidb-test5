@@ -61,11 +61,7 @@ sub __errors__ {
             last if -s $input_file;
         }
         $self->input_file($input_file);
-        if ( not defined $self->output_file ) {
-            my $create_edit_dir = $self->create_edit_dir;
-            return if not $create_edit_dir;
-            $self->output_file( $self->_resolve_contigs_bases_file );
-        }
+        $self->output_file( $self->_resolve_contigs_bases_file ) if not defined $self->output_file;
     }
     elsif ( not $self->output_file ) { 
         push @errors, UR::Object::Tag->create(
