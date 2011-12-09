@@ -10,7 +10,7 @@ use Data::Dumper;
 
 #TODO - make an assembly-directory param and everything else optional 
 class Genome::Model::Tools::Velvet::ToConsed {
-    is           => 'Command',
+    is           => 'Command::V2',
     has          => [
         assembly_directory => {
             is      => 'String',
