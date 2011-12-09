@@ -12,7 +12,7 @@ use Bio::Seq::Quality;
 use Bio::SeqIO;
 
 class Genome::Model::Tools::Velvet::CreateContigsFiles {
-    is => 'Genome::Model::Tools::Velvet',
+    is => 'Genome::Model::Tools::Velvet::Base',
     has => [
         assembly_directory => {
             is => 'Text',

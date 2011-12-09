@@ -11,7 +11,7 @@ use AMOS::AmosLib;
 use Bio::SeqIO;
 
 class Genome::Model::Tools::Velvet::Stats {
-    is => ['Genome::Model::Tools::Velvet'],
+    is => 'Genome::Model::Tools::Velvet::Base',
     has => [
 	first_tier => {
 	    type => 'Integer',
