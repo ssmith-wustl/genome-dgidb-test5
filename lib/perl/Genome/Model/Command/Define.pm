@@ -11,7 +11,7 @@ class Genome::Model::Command::Define {
     is_abstract => 1,
 };
 
-# Compiling this class autogenerates one sub-command per processing profile.
+# Compiling this class autogenerates one sub-command per model type.
 # These are the commands which actually execute, and either inherit from this
 # class or from those returned by _sub_commands_inherit_from.
 sub _sub_commands_from { 'Genome::Model' }
