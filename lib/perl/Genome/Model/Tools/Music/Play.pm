@@ -133,16 +133,16 @@ class Genome::Model::Tools::Music::Play {
         },
         processors => {
             is => 'Integer',
-            doc => 'Number of processors to use in SMG (requires 'foreach' and 'doMC' R packages)',
+            doc => "Number of processors to use in SMG (requires 'foreach' and 'doMC' R packages)",
         },
         aa_range => {
             is => 'Text',
-            doc => 'Set how close a 'near' match is when searching for amino acid near hits',
+            doc => "Set how close a 'near' match is when searching for amino acid near hits",
             default => '2',
         },
         nuc_range => {
             is => 'Text',
-            doc => 'Set how close a 'near' match is when searching for nucleotide position near hits',
+            doc => "Set how close a 'near' match is when searching for nucleotide position near hits",
             default => '5',
         },
         reference_build => {
