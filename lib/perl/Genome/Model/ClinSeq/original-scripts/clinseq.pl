@@ -76,7 +76,7 @@ my $step = 0;
 
 #Get build directories for the three datatypes: $data_paths->{'wgs'}->*, $data_paths->{'exome'}->*, $data_paths->{'tumor_rnaseq'}->*
 $step++; print MAGENTA, "\n\nStep $step. Getting data paths from 'genome' for specified model ids", RESET;
-my ($data_paths, $builds) = getDataDirsAndBuilds('-wgs_som_var_data_set'=>$wgs_som_var_data_set, '-exome_som_var_data_set'=>$exome_som_var_data_set, '-tumor_rna_seq_data_set'=>$tumor_rna_seq_data_set, '-normal_rna_seq_data_set'=>$normal_rna_seq_data_set);
+my ($data_paths, $builds) = &getDataDirsAndBuilds('-wgs_som_var_data_set'=>$wgs_som_var_data_set, '-exome_som_var_data_set'=>$exome_som_var_data_set, '-tumor_rna_seq_data_set'=>$tumor_rna_seq_data_set, '-normal_rna_seq_data_set'=>$normal_rna_seq_data_set);
 
 my $usage=<<INFO;
 
@@ -101,7 +101,7 @@ INFO
 
 unless (($wgs_som_var_data_set || $exome_som_var_data_set || $tumor_rna_seq_data_set || $normal_rna_seq_data_set) && $working_dir && $common_name){
   print GREEN, "$usage", RESET;
-  exit(1);
+  exit 1;
 }
 
 
@@ -316,14 +316,14 @@ print "\n\n";
 
 #print Dumper $out_paths;
 
-exit(1);
+exit();
 
 
 ###############################################################################################################################
 #Get build directories for the three datatypes                                                                                #
 ###############################################################################################################################
 sub getDataDirsAndBuilds{
-  my %args = @_;
+  my %args = @_; #Contains a hash of wgs/exome/rna model or build ids and names for these
 
   my %data_paths;
   my %builds;
@@ -336,6 +336,8 @@ sub getDataDirsAndBuilds{
   );
 
   for my $arg_name (keys %arg_dt) {
+    # arg name is one of those defined in the hash above - if that particular arg name was not used in that call, skip
+    # arg value is the actual model/build number
     my $arg_value = $args{$arg_name};
     next unless $arg_value;
 
@@ -401,7 +403,6 @@ sub getDataDirsAndBuilds{
   }
 
   #print Dumper \%data_paths;
-  #exit;
   return(\%data_paths, \%builds);
 }
 
@@ -430,6 +431,7 @@ sub summarizeSNVs{
   my $indel_wgs_exome_dir = &createNewDir('-path'=>$indel_dir, '-new_dir_name'=>'wgs_exome', '-silent'=>1);
 
   #Define variant effect type filters
+  #TODO: Allow different filters to be used as a parameter
   my $snv_filter = "missense|nonsense|splice_site";
   my $indel_filter = "in_frame_del|in_frame_ins|frame_shift_del|frame_shift_ins|splice_site_ins|splice_site_del";
 
@@ -723,7 +725,7 @@ sub annotateGeneFiles{
           $header = 0;
           unless ($cols{'mapped_gene_name'}){
             print RED, "\n\nFile has no 'mapped_gene_name' column: $path\n\n", RESET;
-            exit(1);
+            exit 1;
           }
           next();
         }
