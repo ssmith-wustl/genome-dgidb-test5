@@ -11,7 +11,7 @@ use AMOS::AmosLib;
 use Data::Dumper 'Dumper';
 
 class Genome::Model::Tools::Velvet::CreateReadsFiles {
-    is => 'Genome::Model::Tools::Velvet',
+    is => 'Genome::Model::Tools::Velvet::Base',
     has => [
 	assembly_directory => {
 	    is => 'Text',

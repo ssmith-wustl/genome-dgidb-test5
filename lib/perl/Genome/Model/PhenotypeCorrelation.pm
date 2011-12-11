@@ -333,6 +333,29 @@ sub _execute_build {
 
 
     my $multisample_vcf = $vcf_file;
+
+    #get list of bams and load into tmp file named $bam_list
+    #for exome set $target_region_set_name_bedfile to be all exons including splice sites, these files are maintained by cyriac
+    ## Change roi away from gz file if necessary ##
+    my $target_region_set_name_bedfile;
+    if(Genome::Sys->_file_type($self->roi_file) eq 'gzip') {
+        my $inFh = Genome::Sys->open_gzip_file_for_reading($self->roi_file);
+        my ($tfh_roi,$roi_list) = Genome::Sys->create_temp_file;
+        unless($tfh_roi) {
+            $self->error_message("Unable to create temporary file $!");
+            die;
+        }
+        $roi_list =~ s/\:/\\\:/g;
+        while(my $line = $inFh->getline ) {
+            print $tfh_roi $line;
+        }
+        $target_region_set_name_bedfile = $roi_list;
+    }
+    else {
+        $target_region_set_name_bedfile = $self->roi_file;
+    }
+
+
     if ($self->phenotype_analysis_strategy eq 'quantitative') { #unrelated individuals, quantitative -- ASMS-NFBC
 #create a directory for results
         my $temp_path = Genome::Sys->create_temp_directory;
@@ -396,12 +419,36 @@ my $name = $self->name;
             die "Could not complete clinical correlation finisher statistics!";
         }
 
+        #vcf to mutation matrix
+        my $vcf_mutmatrix_cmd = Genome::Model::Tools::Vcf::VcfToVariantMatrix->create(
+            vcf_file => $multisample_vcf,
+            project_name => $name,
+            bed_roi_file => $target_region_set_name_bedfile,
+            output_file => "$temp_path/$name"."_variant_matrix.txt",
+            #positions_file
+        );
+        my $vcf_mutmatrix_result;
+        unless($vcf_mutmatrix_result = $vcf_mutmatrix_cmd->execute){
+            die "Could not complete burden analysis!";
+        }
 
-system("cp $maf_file /gscmnt/gc2146/info/medseq/wschierd/crap_stuff_delete/maf_file.maf");
-system("cp $bam_list /gscmnt/gc2146/info/medseq/wschierd/crap_stuff_delete/bam_list.txt");
-system("cp $temp_path/clin_corr_result.categorical /gscmnt/gc2146/info/medseq/wschierd/crap_stuff_delete/clin_corr_result.categorical");
-system("cp $temp_path/clin_corr_result_stats_FDR005.txt /gscmnt/gc2146/info/medseq/wschierd/crap_stuff_delete/clin_corr_result_stats_FDR005.txt");
-system("cp $temp_path/clin_corr_result_stats_FDR005.pdf /gscmnt/gc2146/info/medseq/wschierd/crap_stuff_delete/clin_corr_result_stats_FDR005.pdf");
+system ("cp $temp_path/$name"."_variant_matrix.txt /gscmnt/gc2146/info/medseq/wschierd/crap_stuff_delete/variant_matrix.txt");
+
+=cut
+#burden analysis
+        my $burden_cmd = Genome::Model::Tools::Germline::BurdenAnalysis->create(
+            mutation_file => "$temp_path/$name"."_variant_matrix.txt",
+            phenotype_file => $clinical_data,
+            marker_file => "",
+            project_name => $name,
+#            base_R_commands => { is => 'Text', doc => "The base R command library", default => '/gscuser/qzhang/ASMS/rarelib20111003.R' },
+            output_file => "$temp_path/$name"."_burden_analysis.txt",
+        );
+        my $burden_result;
+        unless($burden_result = $burden_cmd->execute){
+            die "Could not complete burden analysis!";
+        }
+=cut
 
 =cut
 #haplotype analysis
@@ -490,27 +537,6 @@ my $clinical_variable_distribution_cmd = "perl /gscmnt/sata424/info/medseq/Freim
 
 
 #start workflow to find significantly mutated genes in our set:
-        #get list of bams and load into tmp file named $bam_list
-        #for exome set $target_region_set_name_bedfile to be all exons including splice sites, these files are maintained by cyriac
-        #not sure how to define something here but a $temp_path but in a workflow context this just needs to be a clean folder. Perhaps in the model build context this would be ...model/build/music/bmr/
-        ## Change roi away from gz file if necessary ##
-        my $target_region_set_name_bedfile;
-        if(Genome::Sys->_file_type($self->roi_file) eq 'gzip') {
-            my $inFh = Genome::Sys->open_gzip_file_for_reading($self->roi_file);
-            my ($tfh_roi,$roi_list) = Genome::Sys->create_temp_file;
-            unless($tfh_roi) {
-                $self->error_message("Unable to create temporary file $!");
-                die;
-            }
-            $roi_list =~ s/\:/\\\:/g;
-            while(my $line = $inFh->getline ) {
-                print $tfh_roi $line;
-            }
-            $target_region_set_name_bedfile = $roi_list;
-        }
-        else {
-	        $target_region_set_name_bedfile = $self->roi_file;
-        }
         
         my $user = $ENV{USER};
         #my $bmr_cmd = "gmt music bmr calc-covg --bam-list $bam_list --output-dir $temp_path --reference-sequence $reference_fasta --roi-file $target_region_set_name_bedfile --cmd-prefix bsub --cmd-list-file $cmd_list";
@@ -556,11 +582,18 @@ my $clinical_variable_distribution_cmd = "perl /gscmnt/sata424/info/medseq/Freim
             reference_sequence => $reference_fasta,
             roi_file => $target_region_set_name_bedfile,
             maf_file => $maf_file,
+            skip_non_coding => 0,
+            skip_silent => 0,
+#case-control is 2 groups?  --bmr-groups
         );
         my $bmr_step3_result;
         unless($bmr_step3_result = $bmr_step3_cmd->execute){
             die "Could not complete bmr step 2!";
         }
+
+system("cp $maf_file /gscmnt/gc2146/info/medseq/wschierd/crap_stuff_delete/maf_file.maf");
+system("cp $bam_list /gscmnt/gc2146/info/medseq/wschierd/crap_stuff_delete/bam_list.txt");
+system("cp $temp_path/* /gscmnt/gc2146/info/medseq/wschierd/crap_stuff_delete/");
 
         #Ran SMG test:
         #The smg test limits its --output-file to a --max-fdr cutoff. A full list of genes is always stored separately next to the output with prefix "_detailed".
@@ -573,6 +606,7 @@ my $clinical_variable_distribution_cmd = "perl /gscmnt/sata424/info/medseq/Freim
         );
         my $smg_result;
 #        unless($smg_result = $smg_cmd->execute){
+#            system("cp $temp_path/* /gscmnt/gc2146/info/medseq/wschierd/crap_stuff_delete/");
 #            die "Could not complete smg test!";
 #        }
 

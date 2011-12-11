@@ -28,6 +28,7 @@ my $create = Genome::Model::Tools::Soap::CreateContigsBasesFile->create(
     min_contig_length => 50,
     );
 ok($create, "Created gmt soap create-contigs-fasta-file");
+$create->dump_status_messages(1);
 ok( ($create->execute) == 1, "Create executed successfully");
 
 #check

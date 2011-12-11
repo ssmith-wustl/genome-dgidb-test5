@@ -7,7 +7,7 @@ use Genome;
 use Data::Dumper;
 
 class Genome::Model::Tools::Velvet::StandardOutputs {
-    is => 'Genome::Model::Tools::Velvet',
+    is => 'Genome::Model::Tools::Velvet::Base',
     has => [
 	assembly_directory => {
 	    is => 'Text',

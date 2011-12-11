@@ -131,12 +131,6 @@ class Genome::Model::ReferenceAlignment {
         reference_sequence_name      => { via => 'reference_sequence_build', to => 'name' },
         annotation_reference_name    => { via => 'annotation_reference_build', to => 'name' },
         coverage_stats_params        => { via => 'processing_profile'},
-        assignment_events => {
-            is => 'Genome::Model::Event::Build::ReferenceAlignment::AssignRun',
-            is_many => 1,
-            reverse_id_by => 'model',
-            doc => 'each case of an instrument datum being assigned to the model',
-        },
         alignment_events => {
             is => 'Genome::Model::Event::Build::ReferenceAlignment::AlignReads',
             is_many => 1,
