@@ -74,6 +74,27 @@ class Genome::Disk::Volume {
             calculate_from => 'allocatable_kb',
             calculate => q{ return int($allocatable_kb / (2**20)) },
         },
+        unallocatable_volume_percent => {
+            is => 'Text',
+            is_constant => 1,
+            is_classwide => 1,
+            column_name => '',
+            value => '.05',
+        },
+        unusable_volume_percent => {
+            is => 'Text',
+            is_constant => 1,
+            is_classwide => 1,
+            column_name => '',
+            value => '.02',
+        },
+        maximum_reserve_size => {
+            is => 'Text',
+            is_constant => 1,
+            is_classwide => 1,
+            column_name => '',
+            value => '1_073_741_824',
+        },
     ],
     has_many_optional => [
         disk_group_names => {
@@ -98,10 +119,6 @@ class Genome::Disk::Volume {
     data_source => 'Genome::DataSource::Oltp',
     doc => 'Represents a particular disk volume (eg, sata483)',
 };
-
-sub unallocatable_volume_percent { return .05 } # 5% can't be allocated to, but can be used by reallocates
-sub unusable_volume_percent { return .02 } # 2% can't be used at all
-sub maximum_reserve_size { return 1_073_741_824 } # maximum size of unallocatable disk
 
 sub get_lock {
     my ($class, $mount_path, $tries) = @_;
