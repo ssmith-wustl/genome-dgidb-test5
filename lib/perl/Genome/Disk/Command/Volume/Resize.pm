@@ -25,12 +25,11 @@ sub execute {
     my $volume = $self->volume;
 
     my $mount_path = $volume->mount_path;
-    my @df_output = qx(df -k $mount_path);
+    my @df_output = qx(df -Pk $mount_path);
     unless (@df_output == 2) {
         $self->error_message('\'df\' output does not match expected pattern, exiting');
         return;
     }
-
     my $df_total_kb = (split(/\s+/, $df_output[1]))[1];
     my $volume_total_kb = $volume->total_kb;
     my $delta_total_kb = $df_total_kb - $volume_total_kb;
