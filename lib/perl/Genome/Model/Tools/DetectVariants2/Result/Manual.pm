@@ -106,7 +106,7 @@ sub _gather_params_for_get_or_create {
                     die('file_content_hash does not match md5sum output for the original file.');
                 }
             } else {
-                $bx = $bx->add_filter('file_content_hash', $val);
+                $bx = $bx->add_filter('file_content_hash', Genome::Sys->md5sum($val));
             }
         }
     }
@@ -158,6 +158,7 @@ sub create {
 
     my $symlink_dest = join('/', $self->temp_staging_directory, $self->variant_type . 's.hq');
     Genome::Sys->create_symlink($self->original_file_path, $symlink_dest);
+    $self->file_content_hash(Genome::Sys->md5sum($self->original_file_path));
 
     $self->generate_standard_files($symlink_dest);
 
