@@ -9,7 +9,7 @@ BEGIN {
 };
 
 use above "Genome";
-use Test::More tests => 11;
+use Test::More tests => 13;
 
 use_ok('Genome::Model::Tools::DetectVariants2::Result::Manual');
 
@@ -46,12 +46,16 @@ ok(!$diff, 'bed file is copied straight as "detector-style" file') or diag('diff
 $diff = Genome::Sys->diff_file_vs_file($bed_hq_bed_file, $test_bed_file);
 ok(!$diff, 'hq.bed file is the same as the original bed file') or diag('diff: ' . $diff);
 
-my $samtools_result = Genome::Model::Tools::DetectVariants2::Result::Manual->create(
+my %params = (
     original_file_path => $test_samtools_file,
     variant_type => 'snv',
     sample_id => $sample->id,
     reference_build_id => $reference->id,
     format => 'samtools',
+);
+
+my $samtools_result = Genome::Model::Tools::DetectVariants2::Result::Manual->create(
+    %params,
 );
 isa_ok($samtools_result, 'Genome::Model::Tools::DetectVariants2::Result::Manual', 'created manual result for a samtools file');
 my $samtools_output = $samtools_result->output_dir;
@@ -67,7 +71,12 @@ ok(!$diff, 'samtools file is copied straight as "detector-style" file') or diag(
 $diff = Genome::Sys->diff_file_vs_file($samtools_hq_bed_file, $test_bed_file);
 ok(!$diff, 'hq.bed file is appropriately converted from samtools file') or diag('diff: ' . $diff);
 
+is($samtools_result->file_content_hash, Genome::Sys->md5sum($test_samtools_file), 'created hash correctly');
 
+my $get_test = Genome::Model::Tools::DetectVariants2::Result::Manual->get_or_create(
+    %params
+);
+is($get_test, $samtools_result, 'got same result on subsequent get_or_create call');
 
 sub setup_test_bed_file {
     my $dir = shift;
