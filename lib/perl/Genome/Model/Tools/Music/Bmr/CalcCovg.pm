@@ -246,6 +246,8 @@ sub execute {
     next if( $line =~ m/^#/ );
     chomp( $line );
     my ( $sample, $normal_bam, $tumor_bam ) = split( /\t/, $line );
+    $normal_bam = '' unless( defined $normal_bam );
+    $tumor_bam = '' unless( defined $tumor_bam );
     print STDERR "Normal BAM for $sample not found: \"$normal_bam\"\n" unless( -e $normal_bam );
     print STDERR "Tumor BAM for $sample not found: \"$tumor_bam\"\n" unless( -e $tumor_bam );
     next unless( -e $normal_bam && -e $tumor_bam );

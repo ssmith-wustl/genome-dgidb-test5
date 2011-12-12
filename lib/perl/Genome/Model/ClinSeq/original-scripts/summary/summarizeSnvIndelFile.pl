@@ -6,6 +6,16 @@ use Getopt::Long;
 use Term::ANSIColor qw(:constants);
 use Data::Dumper;
 
+my $script_dir;
+use Cwd 'abs_path';
+BEGIN{
+  if (abs_path($0) =~ /(.*\/).*\/.*\.pl/){
+    $script_dir = $1;
+  }
+}
+use lib $script_dir;
+use ClinSeq qw(:all);
+
 my $infile = '';
 my $option = '';
 
@@ -18,7 +28,8 @@ unless ($infile && $option){
   print GREEN, "\n\nOptions:", RESET;
   print GREEN, "\n1 -> SNVs.  Missense/nonsense/splice.  Unique on coord with gene names and amino acid effects concatenated for multiple transcripts", RESET;
   print GREEN, "\n2 -> SNVs.  Missense/nonsense/splice.  Unique on coord with gene names and amino acid effects and sift/polyphen results concatenated for multiple transcripts", RESET;
-  print GREEN, "\n3 -> Indels.  Gene affecting.  Unique on coord with gene names, amino acid effects and indel types concatenated for multiple transcripts", RESET;
+  print GREEN, "\n3 -> SNVs.  All.  Unique on coord with gene names and amino acid effects concatenated for multiple transcripts", RESET;
+  print GREEN, "\n4 -> Indels.  Gene affecting.  Unique on coord with gene names, amino acid effects and indel types concatenated for multiple transcripts", RESET;
 
   print GREEN, "\n\n", RESET;
   exit();
@@ -141,10 +152,53 @@ if ($option == 2){
 }
 
 
-#Option 3.  Produce a simple TSV with the location of each Indel, and the gene symbols associated with that location.  Ignore: 5prime, 3prime, intronic indels
+#Option 3.  Produce a simple TSV with the location of each SNV, and the gene symbols associated with that location.  No filtering of SNV mutations
+#Make unique on coordinate position and supply a comma separated list of genes/transcripts reported for that coord
+#Similarly concatenate the amino acid effects reported
+if ($option == 3){
+  open (IN, "$infile") || die "\n\nCould not open input file: $infile\n\n";
+  my %data;
+  my $d = 0;
+  while(<IN>){
+    chomp($_);
+    $d++;
+    my @line = split("\t", $_);
+    my $coord = "$line[0]:$line[1]";
+    my $symbol = $line[6];
+    my $aa_change = $line[15];
+
+    $data{$coord}{order} = $d;
+    if ($data{$coord}{symbols}){
+      my $symbol_ref = $data{$coord}{symbols};
+      $symbol_ref->{$symbol}=1;
+      my $aa_ref = $data{$coord}{aa_changes};
+      $aa_ref->{$aa_change}=1;
+    }else{
+      my %sym;
+      my %aa;
+      $sym{$symbol}=1;
+      $aa{$aa_change}=1;
+      $data{$coord}{symbols} = \%sym;
+      $data{$coord}{aa_changes} = \%aa;
+    }
+  }
+  close(IN);
+  foreach my $pos (sort {$data{$a}->{order} <=> $data{$b}->{order}} keys %data){
+    my %symbols = %{$data{$pos}{symbols}};
+    my @symbols = keys %symbols;
+    my $symbol_string = join(", ", @symbols);
+    my %aa_changes = %{$data{$pos}{aa_changes}};
+    my @aa_changes = sort keys %aa_changes;
+    my $aa_changes_string = join(", ", @aa_changes);
+    print "$pos\t$symbol_string\t$aa_changes_string\n";
+  }
+}
+
+
+#Option 4.  Produce a simple TSV with the location of each Indel, and the gene symbols associated with that location.  Ignore: 5prime, 3prime, intronic indels
 #Make unique on coordinate position and supply a comma separated list of genes/transcripts reported for that coord
 #Similarly concatenate the amino acid effects reported, and the type of mutation
-if ($option == 3){
+if ($option == 4){
   open (IN, "$infile") || die "\n\nCould not open input file: $infile\n\n";
   my %data;
   my $d = 0;

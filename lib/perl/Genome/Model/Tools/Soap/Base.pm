@@ -56,15 +56,22 @@ sub path_for_soap_denovo_version {
 }
 
 #create edit_dir
+sub resolve_edit_dir {
+    my $self = shift;
+    return $self->assembly_directory.'/edit_dir';
+}
 
 sub create_edit_dir {
     my $self = shift;
 
-    unless ( -d $self->assembly_directory.'/edit_dir' ) {
-        Genome::Sys->create_directory( $self->assembly_directory.'/edit_dir' );
-    }
+    my $edit_dir = $self->resolve_edit_dir;
+    return 1 if -d $edit_dir;
 
-    return 1;
+    my $rv = eval { Genome::Sys->create_directory($edit_dir); };
+    return 1 if $rv;
+
+    $self->error_message("Failed to create edit_dir ($edit_dir): $@");
+    return;
 }
 
 #derive soap assembly file prefix
@@ -176,11 +183,13 @@ sub assembly_file_prefix {
 }
 
 #post assemble output file names
-
 sub contigs_bases_file {
     my $self = shift;
-
-    return $self->assembly_directory.'/edit_dir/contigs.bases';
+    return $self->_resolve_contigs_bases_file;
+}
+sub _resolve_contigs_bases_file {
+    my $self = shift;
+    return $self->resolve_edit_dir.'/contigs.bases';
 }
 
 sub supercontigs_fasta_file {
@@ -197,8 +206,18 @@ sub supercontigs_agp_file {
 
 sub stats_file {
     my $self = shift;
+    return $self->_resolve_stats_file;
+}
+sub _resolve_stats_file {
+    my $self = shift;
+     return $self->resolve_edit_dir.'/stats.txt';
+}
 
-    return $self->assembly_directory.'/edit_dir/stats.txt';
+sub _resolve_gapfill_file {
+    my $self = shift;
+    my $create_edit_dir = $self->create_edit_dir;
+    return if not $create_edit_dir;
+    return $self->assembly_directory.'/edit_dir/gapfill';
 }
 
 1;

@@ -28,13 +28,13 @@ else {
 use_ok('Genome::Model::Tools::DetectVariants2::Filter::FalseIndel');
 
 my $test_base_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants2-Filter-FalseIndel';
-my $test_data_dir = $test_base_dir. "/input.v2";
+my $test_data_dir = $test_base_dir. "/input.v3";
 
 #These aren't very good test files.
 my $bam_file = join('/', $test_data_dir, 'tumor.tiny.bam');
 my $variant_file = join('/', $test_data_dir, 'indels.hq.bed');
 
-my $expected_result_dir = join('/', $test_base_dir, '2');
+my $expected_result_dir = join('/', $test_base_dir, '3');
 my $expected_output_file = join('/', $expected_result_dir, 'indels.hq.bed');
 my $expected_filtered_file = join('/', $expected_result_dir, 'indels.lq.bed');
 

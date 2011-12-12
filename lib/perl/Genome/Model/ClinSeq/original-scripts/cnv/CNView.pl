@@ -90,9 +90,9 @@ my $entrez_ensembl_data = &loadEntrezEnsemblData();
 #If the user is supplying a pre-computed CNV file, the following steps will be skipped
 my ($gt_map, $t_coords, $window_size, $cnvs, $targets);
 if ($cnv_results_file){
-  print BLUE, "\n\nUsing user supplied CNV results file: $cnv_results_file", RESET;
+  if($verbose){ print BLUE, "\n\nUsing user supplied CNV results file: $cnv_results_file", RESET; }
 }else{
-  print BLUE, "\n\nGenerating CNV results file: $cnv_results_file", RESET;
+  if($verbose){ print BLUE, "\n\nGenerating CNV results file: $cnv_results_file", RESET; }
 
   #Load the gene to transcript name mappings.
   #Key on unique gene ID - reference to a hash containing all transcript IDs associated with that gene
@@ -121,10 +121,11 @@ if ($cnv_results_file){
 #Execute the R script that generates the CNV plots
 my $rscript = "$script_dir/"."CNView.R";
 my $r_cmd = "$rscript '$name' $cnv_file $cnv_results_file $ideogram_file $subdir $chr $chr_start $chr_end $image_type";
-unless ($verbose){
+if ($verbose){
+  print BLUE, "\n\nExecuting R code:\n$r_cmd\n", RESET;
+}else{
   $r_cmd .= " 1>/dev/null";
 }
-print BLUE, "\n\nExecuting R code:\n$r_cmd\n", RESET;
 system($r_cmd);
 
 #Annotate all gene entries in the output file with a cytoband label using the coordinates in the ideogram data file, and the coordinates of the gene
@@ -186,8 +187,7 @@ foreach my $results_file (@results_files){
   }
 }
 
-
-print BLUE, "\n\nResults written to:\n$subdir\n\n", RESET;
+if ($verbose){ print BLUE, "\n\nResults written to:\n$subdir\n\n", RESET; }
 
 exit();
 

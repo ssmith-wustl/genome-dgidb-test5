@@ -59,6 +59,8 @@ is($w->mode, 'a', 'mode is (a)ppend');
 ok($w->write, 'write');
 ok($r->read, 'read after append');
 
+ok($w->close, 'close writer');
+
 done_testing();
 exit;
 

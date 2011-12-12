@@ -10,7 +10,7 @@ use Bio::SeqIO;
 use AMOS::AmosLib;
 
 class Genome::Model::Tools::Velvet::CreateSupercontigsFiles {
-    is => 'Genome::Model::Tools::Velvet',
+    is => 'Genome::Model::Tools::Velvet::Base',
     has => [
         assembly_directory => {
             is => 'Text',

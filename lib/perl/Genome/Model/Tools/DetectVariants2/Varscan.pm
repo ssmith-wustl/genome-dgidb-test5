@@ -144,40 +144,21 @@ sub _parse_indel_for_bed_intersection {
 
     my ($chromosome, $position, $_reference, $consensus, @extra) = split "\t",  $line;
     
-    #TODO clean all of this up. It is based on logic from Genome::Model::Tools::Bed::Convert::Indel::VarscanToBed in process_source... 
-    # this should be smarter about using that work ... perhaps process_source should call a method that just parses one line, and this method can be replaced by a call to that instead
-    my ($indel_call_1, $indel_call_2) = split('/', $consensus);
-    if(defined($indel_call_2)){
-        if($indel_call_1 eq $indel_call_2) {
-            undef $indel_call_2;
-        }
-    }
-    my ($reference, $variant, $start, $stop);
-    for my $indel ($indel_call_1, $indel_call_2) {
-        next unless defined $indel;
-        next if $indel eq '*'; #Indicates only one indel call...and this isn't it!
+    my @variants;
+    my @indels = Genome::Model::Tools::Bed::Convert::Indel::VarscanToBed->convert_indel($line);
 
-        $start = $position;
-        if(substr($indel,0,1) eq '+') {
-            $reference = '*';
-            $variant = substr($indel,1);
-            $stop = $start; #Two positions are included-- but an insertion has no "length" so stop and start are the same
-        } elsif(substr($indel,0,1) eq '-') {
-            $reference = substr($indel,1);
-            $variant = '*';
-            $stop = $start + length($reference);
-        } else {
-            $class->warning_message("Unexpected indel format encountered ($indel) on line:\n$line");
-            return;
+    for my $indel (@indels) {
+        my ($reference, $variant, $start, $stop) = @$indel;
+        if (defined $chromosome && defined $position && defined $reference && defined $variant) {
+            push @variants, [$chromosome, $stop, $reference, $variant];
         }
     }
 
-    unless (defined $chromosome && defined $position && defined $reference && defined $variant) {
+    unless(@variants){
         die $class->error_message("Could not get chromosome, position, reference, or variant for line: $line");
     }
 
-    return [$chromosome, $stop, $reference, $variant];
-
+    return @variants;
 }
 
 sub _parse_snv_for_bed_intersection {
