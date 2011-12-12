@@ -16,12 +16,12 @@ class Genome::Model::View::Status::Xml {
                 'subject_id',
                 'subject_name',
                 'subject_class_name',
-                # {
-                #     name => 'subject',
-                #     aspects => [ '__display_name__' ],
-                #     perspective => 'default',
-                #     toolkit => 'xml'
-                # },
+                {
+                    name => '_sample_subject',
+                    aspects => [ '__display_name__' ],
+                    perspective => 'default',
+                    toolkit => 'xml'
+                },
                 'is_default',
                 'creation_date',
                 'user_name',
