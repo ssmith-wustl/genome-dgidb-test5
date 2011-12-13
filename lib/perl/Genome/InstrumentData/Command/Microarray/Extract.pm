@@ -316,17 +316,16 @@ sub _annotate_genotypes {
     $self->status_message('Variant list name: '.$variation_list_build->model_name);
     $self->status_message('Variant list version: '.$variation_list_build->version);
 
-    my $feature_list = Genome::FeatureList->get(id => $variation_list_build->snv_feature_list_id);
-    my $feature_list_file = $feature_list->file_path;
-    if ( not $feature_list_file ) {
-        $self->error_message('No file for feature list: '.$feature_list->__display_name__);
+    my $snvs_file = $variation_list_build->snvs_bed;
+    if ( not $snvs_file ) {
+        $self->error_message('No snvs file for build: '.$variation_list_build->__display_name__);
         return;
     }
-    $self->status_message('Feature list file: '.$feature_list_file);
+    $self->status_message('snvs file: '.$snvs_file);
 
-    my $dbsnp_fh = eval{ Genome::Sys->open_file_for_reading($feature_list_file); };
+    my $dbsnp_fh = eval{ Genome::Sys->open_file_for_reading($snvs_file); };
     if ( not $dbsnp_fh ) {
-        $self->error_message("Failed to open file: $feature_list_file");
+        $self->error_message("Failed to open file: $snvs_file");
         return;
     }
 

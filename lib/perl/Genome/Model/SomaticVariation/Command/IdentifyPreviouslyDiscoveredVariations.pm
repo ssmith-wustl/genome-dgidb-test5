@@ -35,7 +35,7 @@ sub execute{
 
     $self->status_message("Comparing detected variants to previously discovered variations");
 
-    my ($snv_feature_list, $indel_feature_list, $skip_flag);
+    my ($snv_result, $indel_result, $skip_flag);
 
     my $prev_variations_build = $build->previously_discovered_variations_build;
     unless ($prev_variations_build) {
@@ -45,11 +45,11 @@ sub execute{
 
 
     unless ($skip_flag) {
-        $snv_feature_list   = $prev_variations_build->snv_feature_list;
-        $indel_feature_list = $prev_variations_build->indel_feature_list;
+        $snv_result   = $prev_variations_build->snv_result;
+        $indel_result = $prev_variations_build->indel_result;
 
-        unless ($indel_feature_list or $snv_feature_list) {
-            die $self->error_message("No indel or snv feature list found on previously discovered variations build. This is unsupported!  Failing.");
+        unless ($indel_result or $snv_result) {
+            die $self->error_message("No indel or snv result found on previously discovered variations build. This is unsupported!  Failing.");
         }
     }
 
@@ -61,10 +61,10 @@ sub execute{
         my $novel_detected_snv_path = $build->data_set_path("novel/snvs.hq.novel",$version,'bed');
         my $previously_detected_snv_path = $build->data_set_path("novel/snvs.hq.previously_detected",$version,'bed');
 
-        if ($snv_feature_list) {
-            my $snv_feature_list_path = $snv_feature_list->file_path;
+        if ($snv_result) {
+            my $snv_result_path = join('/', $snv_result->output_dir, 'snvs.hq.bed');
 
-            unless (-e $snv_feature_list_path){
+            unless (-e $snv_result_path){
                 die $self->error_message("Snv feature list does not have an associated file!");
             }
 
@@ -77,7 +77,7 @@ sub execute{
                 my $previously_detected_output_tmp_file = Genome::Sys->create_temp_file_path();
                 my $snv_compare = Genome::Model::Tools::Joinx::Intersect->create(
                     input_file_a => $detected_snv_path,
-                    input_file_b => $snv_feature_list_path,
+                    input_file_b => $snv_result_path,
                     miss_a_file => $snv_output_tmp_file,
                     output_file => $previously_detected_output_tmp_file,
                     dbsnp_match => 1,
@@ -113,10 +113,10 @@ sub execute{
         my $novel_detected_indel_path      = $build->data_set_path("novel/indels.hq.novel",$version,"bed");
         my $previously_detected_indel_path = $build->data_set_path("novel/indels.hq.previously_detected", $version, "bed");
 
-        if ($indel_feature_list) {
-            my $indel_feature_list_path = $indel_feature_list->file_path;
+        if ($indel_result) {
+            my $indel_result_path = join('/', $indel_result->output_dir, 'indels.hq.bed');
 
-            unless (-e $indel_feature_list_path){
+            unless (-e $indel_result_path){
                 die $self->error_message("Indel feature list does not have an associated file!");
             }
 
@@ -129,7 +129,7 @@ sub execute{
                 my $previously_detected_output_tmp_file = Genome::Sys->create_temp_file_path();
                 my $indel_compare = Genome::Model::Tools::Joinx::Intersect->create(
                     input_file_a => $detected_indel_path,
-                    input_file_b => $indel_feature_list_path,
+                    input_file_b => $indel_result_path,
                     miss_a_file => $indel_output_tmp_file,
                     output_file => $previously_detected_output_tmp_file,
                     exact_allele => 1,

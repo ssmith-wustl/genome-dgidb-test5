@@ -50,8 +50,7 @@ sub execute {
 
     #get the appropiate dbSNP build
     my $dbsnp_build = defined($self->dbsnp_build) ? $self->dbsnp_build : $build->dbsnp_build;
-    my $dbsnp_feature_list =  $dbsnp_build->snv_feature_list;
-    my $dbsnp_file = $dbsnp_feature_list->file_path;
+    my $dbsnp_file =  $dbsnp_build->snvs_bed;
     unless(defined($dbsnp_build)){
         $self->status_message("No dbsnp build found, nothing to do. Exiting.");
         return 1;

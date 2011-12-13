@@ -9,21 +9,11 @@ use Genome;
 my $pp_name = "imported-variation-list";
 
 class Genome::Model::Command::Define::ImportedVariationList {
-    is => 'Genome::Model::Command::Define::HelperDeprecated', 
+    is => 'Genome::Model::Command::Define::Helper',
     has_input => [
         version => {
             is => 'Text',
             doc => 'The version of the build to create or update',
-        },
-        snv_feature_list => {
-            is_optional => 1,
-            is => 'Genome::FeatureList',
-            doc => 'The FeatureList containing imported SNVs',
-        },
-        indel_feature_list => {
-            is_optional => 1,
-            is => 'Genome::FeatureList',
-            doc => 'The FeatureList containing imported indels',
         },
         prefix => {
             is_optional => 1,
@@ -35,13 +25,24 @@ class Genome::Model::Command::Define::ImportedVariationList {
             is => 'Text',
             doc => 'Override the default model name ({prefix}-{reference sequence model} by default)',
         },
-        subject_name => {
-            is_optional => 1,
-            is_optional => 1,
-            doc => 'Copied from reference.'
-        },
     ],
     has_optional => [
+        snv_result => {
+            is => 'Genome::Model::Tools::DetectVariants2::Result::Base',
+            doc => 'The result for snvs to import',
+        },
+        indel_result => {
+            is => 'Genome::Model::Tools::DetectVariants2::Result::Base',
+            doc => 'The result for indels to import',
+        },
+        sv_result => {
+            is => 'Genome::Model::Tools::DetectVariants2::Result::Base',
+            doc => 'The result for svs to import',
+        },
+        cnv_result => {
+            is => 'Genome::Model::Tools::DetectVariants2::Result::Base',
+            doc => 'The result for cnvs to import',
+        },
         job_dispatch => {
             default_value => 'inline',
             doc => 'dispatch specification: an LSF queue or "inline"',
@@ -50,78 +51,53 @@ class Genome::Model::Command::Define::ImportedVariationList {
             default_value => 'inline',
             doc => 'dispatch specification: an LSF queue or "inline"',
         },
+        processing_profile => {
+            is => 'Genome::ProcessingProfile',
+            id_by => 'processing_profile_id',
+            doc => 'the processing profile to use (normally selected automatically)',
+        },
+    ],
+    has_transient_optional => [
         _reference => {
-            is => 'Genome::Model::Build::ImportedReferenceSequence',
-        }
+            is => 'Genome::Model::Build::ReferenceSequence',
+        },
+        _subject => {
+            is => 'Genome::Subject',
+        },
+    ],
+    has_transient_optional_output => [
+        build => {
+            is => 'Genome::Model::Build::ImportedVariationList',
+            doc => 'the build created by this command',
+        },
     ],
 };
 
-sub resolve_class_and_params_for_argv {
-    my $self = shift;
-    return $self->Genome::Command::Base::resolve_class_and_params_for_argv(@_);
-}
-
-sub _shell_args_property_meta {
-    my $self = shift;
-    return $self->Genome::Command::Base::_shell_args_property_meta(@_);
-}
-
-sub help_synopsis {
-    return "genome model define imported-variation-list --model-name=dbSNP-human --version=130 --feature-list='dbSNP 130 hs37 bed'";
-}
-
-sub help_detail {
-    return "Creates an imported variation list build (defining a new model if needed).";
-}
-
-# if the function returns true, then we got satisfactory input for snv/indel feature list(s)
-# and $self->_reference is set to the proper reference sequence
-sub _validate_feature_lists_and_reference {
+sub _resolve_and_validate_variant_reference_and_subject {
     my $self = shift;
 
-    my @flists;
-    my %refs_hash;
-    for my $type ("snv", "indel") {
-        my $var = "${type}_feature_list";
-        next if (!defined $self->$var);
-        if (ref($self->$var) ne 'Genome::FeatureList') {
-            $self->error_message("$var='".$self->$var."' is not a valid FeatureList object.");
-            return;
+    my $reference;
+    for my $type ('snv', 'indel', 'sv', 'cnv') {
+        my $result_accessor = $type . '_result';
+        my $result = $self->$result_accessor;
+        next unless $result;
+
+        unless($reference) {
+            $reference = $result->reference_build;
+        } else {
+            unless($reference->is_compatible_with($result->reference_build)) {
+                die $self->error_message('The provided variants were not all based on the same reference sequence.');
+            }
         }
-
-        my $dname = $self->$var->__display_name__;
-        if (!defined $self->$var->reference) {
-            $self->error_message("$var='".$dname."' does not specify a reference sequence, which is required for ImportedVariationList");
-            return;
-        }
-
-        push @flists, $self->$var;
-        $refs_hash{$self->$var->reference} = 1;
     }
 
-    if (@flists == 0) {
-        $self->error_message("Please specify at least one of --snv-feature-list, --indel-feature-list");
-        return;
+    unless($reference) {
+        die $self->error_message('At least one result must be supplied to create an imported variation list build.');
     }
 
-    if (keys %refs_hash != 1) {
-        $self->error_message("The feature lists specified contain different reference sequences: " . join(",", keys %refs_hash));
-        return;
-    }
-
-    $self->_reference($flists[0]->reference);
+    $self->_reference($reference);
+    $self->_subject($reference->model->subject);
     return 1;
-}
-
-# copy subject_{name,id,class_name,type} from $self->_reference
-sub _copy_subject_properties_from_refmodel {
-    my $self = shift;
-    my $refmodel = $self->_reference->model;
-    for my $subj_prop ('name', 'id', 'class_name', 'type') {
-        my $p = "subject_$subj_prop";
-        $self->$p($refmodel->$p);
-        $self->status_message("Copied $p '" . $self->$p . "' from reference");
-    }
 }
 
 sub execute {
@@ -139,10 +115,7 @@ sub execute {
 
     # make sure we got at least one of --snv-feature-list, --indel-feature-list and 
     # verify that reference sequences are defined and match
-    return unless $self->_validate_feature_lists_and_reference;
-
-    # set subject_* properties 
-    $self->_copy_subject_properties_from_refmodel();
+    $self->_resolve_and_validate_variant_reference_and_subject;
 
     my $model = $self->_get_or_create_model();
     unless ($model) {
@@ -213,9 +186,8 @@ sub _get_or_create_model {
         my %create_params = (
             name => $self->model_name,
             reference => $self->_reference,
-            subject_name => $self->subject_name,
-            subject_class_name => $self->subject_class_name,
-            subject_id => $self->subject_id,
+            subject_class_name => $self->_subject->class,
+            subject_id => $self->_subject->id,
             processing_profile_id => $ivl_pp->id,
         );
 
@@ -245,12 +217,19 @@ sub _create_build {
         model_id => $model->id,
         version => $self->version,
     );
-    $build_parameters{snv_feature_list} = $self->snv_feature_list if $self->snv_feature_list;
-    $build_parameters{indel_feature_list} = $self->indel_feature_list if $self->indel_feature_list;
+
+    for my $type ('snv', 'indel', 'sv', 'cnv') {
+        my $result_accessor = $type . '_result';
+        my $result = $self->$result_accessor;
+        next unless $result;
+
+        $build_parameters{$result_accessor} = $result;
+    }
 
     my $build = Genome::Model::Build::ImportedVariationList->create(%build_parameters);
     if($build) {
         $self->status_message('Created build of id ' . $build->build_id . ' with data directory "' . $build->data_directory . '".');
+        $self->build($build);
     } else {
         $self->error_message("Failed to create build for model " . $model->genome_model_id . ".");
         return;
@@ -277,6 +256,4 @@ sub _create_build {
 
     return 1;
 }
-
 1;
-
