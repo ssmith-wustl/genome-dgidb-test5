@@ -14,6 +14,7 @@ class Genome::Model::Tools::DetectVariants2::Result::Manual {
         },
         sample_id => {
             is => 'Number',
+            is_optional => 1, #things like dbSNP don't map to a sample
             doc => 'ID of the "tumor" sample for these variants',
         },
         reference_build_id => {
