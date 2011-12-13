@@ -162,7 +162,7 @@ sub assembler_params {
 sub assembler_rusage {
     my $self = shift;
     my $mem = 92000;
-    my $queue = 'alignment-pd';
+    my $queue = 'apipe';
     $queue = 'alignment-pd' if $self->run_by eq 'apipe-tester';
     return "-q $queue -n 4 -R 'span[hosts=1] select[type==LINUX64 && mem>$mem] rusage[mem=$mem]' -M $mem".'000';
 }
