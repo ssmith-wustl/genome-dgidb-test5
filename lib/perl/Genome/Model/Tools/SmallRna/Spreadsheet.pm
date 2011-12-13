@@ -3,9 +3,12 @@ package Genome::Model::Tools::SmallRna::Spreadsheet;
 #08.25.2011
 # import new annotation features
 
+#10/13/2011
+# added two additional column names for normalization in column header
 
 use strict;
 use warnings;
+use Bio::DB::Sam;
 use Statistics::Descriptive;
 use Data::Dumper;
 use Genome;
@@ -68,6 +71,8 @@ sub execute {
 				"Avg Depth",
 				"Zenith Depth",
 				"Length of Raw Cluster",
+				"Normalization -17_70",
+				"Normalization -per bin",
 				"% Mismatches",
 				"ZeroMM",
 				"1MM",
