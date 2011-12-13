@@ -209,5 +209,5 @@ sub resolve_allocation_disk_group_name { return 'info_genome_models'; }
 
 sub _needs_symlinks_followed_when_syncing { return 1; }
 
-sub _staging_disk_usage { return 2 * (-s $_[0]->original_file_path); }
+sub _staging_disk_usage { int((-s $_[0]->original_file_path) / 1024) + $_[0]->SUPER::_staging_disk_usage; }
 
