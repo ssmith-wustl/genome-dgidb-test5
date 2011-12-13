@@ -104,6 +104,8 @@ sub copy_snp_array_file {
 
     $self->status_message('Copy...OK');
 
+    $self->create_gold2geno_file_from_genotype_file();
+
     my $gold_snp_bed = $self->snvs_bed;
     my $cmd = Genome::Model::GenotypeMicroarray::Command::CreateGoldSnpBed->create(
         input_file => $file,
@@ -116,6 +118,42 @@ sub copy_snp_array_file {
     }
 
     return 1;
+}
+
+sub create_gold2geno_file_from_genotype_file {
+    my $self = shift;
+    my $genotype_file = $self->formatted_genotype_file_path;
+    my $gold2geno_file = $self->gold2geno_file_path;
+
+    if ( -s $gold2geno_file ) {
+        my ($genotype_file_line_count) = qx(wc -l $genotype_file) =~ /^(\d+)/;
+        my ($gold2geno_file_line_count) = qx(wc -l $gold2geno_file) =~ /^(\d+)/;
+        if ($genotype_file_line_count == $gold2geno_file_line_count) {
+            $self->status_message("gold2geno file ($gold2geno_file) already exists, skipping generation.");
+            return 1;
+        } else {
+            die $self->error_message("Line counts in genotype file and gold2geno file do not match!");
+        }
+    }
+
+    my $genotype_reader = Genome::Sys->open_file_for_reading($genotype_file);
+    my $gold2geno_writer = Genome::Sys->open_file_for_writing($gold2geno_file);
+    while (my $line = $genotype_reader->getline) {
+        my @field = split("\t", $line);
+        if ($field[1] ne $field[2]) {
+            die $self->error_message("Sample ID differs in Gold SNP file: " . $field[1] . " vs. " . $field[2]);
+        }
+        $gold2geno_writer->print($field[0] . "\t" . $field[1] . "\t" . $field[3] . $field[4] . "\n");
+    }
+    unless ( -s $gold2geno_file ) {
+        die $self->error_message("gold2geno file is empty after conversion.");
+    }
+
+    return 1;
+}
+
+sub gold2geno_file_path {
+    shift->formatted_genotype_file_path . '.gold2geno';
 }
 
 sub formatted_genotype_file_path {
