@@ -562,7 +562,7 @@ sub execute
 	my $p5_gene_count = scalar(@p5_ace_objects);
 	$mgap_genome{'p5_gene_count'} = $p5_gene_count;
 
-	my ($keggscan_count, $iprscan_count, $psortb_count, $ber_naming_count, $dead_gene_count, $manual_review ) = 0;
+	$_ = 0 for my ($keggscan_count, $iprscan_count, $psortb_count, $ber_naming_count, $dead_gene_count, $manual_review );
 	foreach my $gene (@p5_ace_objects) {
 		$dead_gene_count++ if $gene->Dead();
 		$keggscan_count++ if $gene->KEGG();
@@ -576,9 +576,8 @@ sub execute
 	$mgap_genome{'keggscan_count'} = $keggscan_count;
 	$mgap_genome{'iprscan_count'} = $iprscan_count;
 	$mgap_genome{'psortb_count'} = $psortb_count;
-	$mgap_genome{'ber_naming_count'} = $ber_naming_count,;
+	$mgap_genome{'ber_naming_count'} = $ber_naming_count;
 	$mgap_genome{'mr_count'} = $manual_review;
-    
 
 	print "\n\n" . $locus_tag . "\n\n";
 	print $acefilecount
@@ -829,7 +828,7 @@ sub execute
 	}
     
     print $rtfile_fh qq{\nLocation of this file: $rtfullname\n\n};
-    print $rtfile_fh qq{I am transferring ownership to Veena/Joanne.\n\n};
+    print $rtfile_fh qq{I am transferring ownership to Veena.\n\n};
     print $rtfile_fh qq{Thanks,\n\n};
     print $rtfile_fh qq{Sasi\n};
 

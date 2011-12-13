@@ -76,7 +76,7 @@ my $step = 0;
 
 #Get build directories for the three datatypes: $data_paths->{'wgs'}->*, $data_paths->{'exome'}->*, $data_paths->{'tumor_rnaseq'}->*
 $step++; print MAGENTA, "\n\nStep $step. Getting data paths from 'genome' for specified model ids", RESET;
-my ($data_paths, $builds) = getDataDirsAndBuilds('-wgs_som_var_data_set'=>$wgs_som_var_data_set, '-exome_som_var_data_set'=>$exome_som_var_data_set, '-tumor_rna_seq_data_set'=>$tumor_rna_seq_data_set, '-normal_rna_seq_data_set'=>$normal_rna_seq_data_set);
+my ($data_paths, $builds) = &getDataDirsAndBuilds('-wgs_som_var_data_set'=>$wgs_som_var_data_set, '-exome_som_var_data_set'=>$exome_som_var_data_set, '-tumor_rna_seq_data_set'=>$tumor_rna_seq_data_set, '-normal_rna_seq_data_set'=>$normal_rna_seq_data_set);
 
 my $usage=<<INFO;
 
@@ -101,7 +101,7 @@ INFO
 
 unless (($wgs_som_var_data_set || $exome_som_var_data_set || $tumor_rna_seq_data_set || $normal_rna_seq_data_set) && $working_dir && $common_name){
   print GREEN, "$usage", RESET;
-  exit();
+  exit 1;
 }
 
 
@@ -197,17 +197,17 @@ if ($normal_rnaseq){
 #Read in file, get gene name column, fix gene name, compare to list, set answer to 1/0, overwrite old file
 #Repeat this process for each gene symbol list defined
 $step++; print MAGENTA, "\n\nStep $step. Annotating gene files", RESET;
-&annotateGeneFiles('-gene_symbol_lists'=>$gene_symbol_lists1, '-out_paths'=>$out_paths);
+&annotateGeneFiles('-gene_symbol_lists'=>$gene_symbol_lists1, '-out_paths'=>$out_paths, '-verbose'=>$verbose);
 
 
 #Create drugDB interaction files
 $step++; print MAGENTA, "\n\nStep $step. Intersecting gene lists with druggable genes of various categories", RESET;
-&drugDbIntersections('-script_dir'=>$script_dir, '-out_paths'=>$out_paths);
+&drugDbIntersections('-script_dir'=>$script_dir, '-out_paths'=>$out_paths, '-verbose'=>$verbose);
 
 
 #For each of the following: WGS SNVs, Exome SNVs, and WGS+Exome SNVs, do the following:
 #Get BAM readcounts for WGS (tumor/normal), Exome (tumor/normal), RNAseq (tumor), RNAseq (normal) - as available of course
-$step++; print MAGENTA, "\n\nStep $step. Getting BAM read counts for all BAMs associated with input models (and expression values if available) - for candidate SNVs", RESET;
+$step++; print MAGENTA, "\n\nStep $step. Getting BAM read counts for all BAMs associated with input models (and expression values if available) - for candidate SNVs only", RESET;
 my @positions_files;
 if ($wgs){push(@positions_files, $out_paths->{'wgs'}->{'snv'}->{path});}
 if ($exome){push(@positions_files, $out_paths->{'exome'}->{'snv'}->{path});}
@@ -215,6 +215,7 @@ if ($wgs && $exome){push(@positions_files, $out_paths->{'wgs_exome'}->{'snv'}->{
 #my $read_counts_script = "$script_dir"."snv/getBamReadCounts.pl";
 my $read_counts_script = "/usr/bin/perl `which genome` model clin-seq get-bam-read-counts";
 my $read_counts_summary_script = "$script_dir"."snv/WGS_vs_Exome_vs_RNAseq_VAF_and_FPKM.R";
+
 foreach my $positions_file (@positions_files){
   my $fb = &getFilePathBase('-path'=>$positions_file);
   my $output_file = $fb->{$positions_file}->{base} . ".readcounts" . $fb->{$positions_file}->{extension};
@@ -230,19 +231,25 @@ foreach my $positions_file (@positions_files){
 
   #WGS_vs_Exome_vs_RNAseq_VAF_and_FPKM.R  /gscmnt/sata132/techd/mgriffit/hgs/test/ /gscmnt/sata132/techd/mgriffit/hgs/all1/snv/wgs_exome/snvs.hq.tier1.v1.annotated.compact.readcounts.tsv /gscmnt/sata132/techd/mgriffit/hgs/all1/rnaseq/tumor/absolute/isoforms_merged/isoforms.merged.fpkm.expsort.tsv
   my $rc_summary_cmd;
+  my $rc_summary_stdout = "$output_stats_dir"."rc_summary.stdout";
+  my $rc_summary_stderr = "$output_stats_dir"."rc_summary.stderr";
+
   if ($builds->{tumor_rnaseq}){
     my $tumor_fpkm_file = $out_paths->{'tumor_rnaseq_absolute'}->{'isoforms.merged.fpkm.expsort.tsv'}->{path};
     $rc_summary_cmd = "$read_counts_summary_script $output_stats_dir $output_file $tumor_fpkm_file";
   }else{
     $rc_summary_cmd = "$read_counts_summary_script $output_stats_dir $output_file";
   }
-  print RED, "\n\n$rc_summary_cmd", RESET;
+  unless ($verbose){
+    $rc_summary_cmd .= " 1>$rc_summary_stdout 2>$rc_summary_stderr";
+  }
   if(-e $output_file){
     if ($verbose){print YELLOW, "\n\nOutput bam read counts file already exists:\n\t$output_file", RESET;}
     if (-e $output_stats_dir && -d $output_stats_dir){
       if ($verbose){print YELLOW, "\n\nOutput read count stats dir already exists:\n\t$output_stats_dir", RESET;}
     }else{
       #Summarize the BAM readcounts results for candidate variants - produce descriptive statistics, figures etc.
+      if ($verbose){print YELLOW, "\n\n$rc_summary_cmd", RESET;}
       mkdir($output_stats_dir);
       system($rc_summary_cmd);
     }
@@ -251,34 +258,59 @@ foreach my $positions_file (@positions_files){
     if ($verbose){print YELLOW, "\n\n$bam_rc_cmd", RESET;}
     system($bam_rc_cmd);
     #Summarize the BAM readcounts results for candidate variants - produce descriptive statistics, figures etc.
+    if ($verbose){print YELLOW, "\n\n$rc_summary_cmd", RESET;}
     mkdir($output_stats_dir);
     system($rc_summary_cmd);
   }
 }
 
 
-
 #Generate a clonality plot for this patient (if WGS data is available)
 if ($wgs){
   $step++; print MAGENTA, "\n\nStep $step. Creating clonality plot for $common_name", RESET;
-  my $test_dir = $patient_dir . "clonality/";
-  if (-e $test_dir && -d $test_dir){
+  my $clonality_dir = $patient_dir . "clonality/";
+  my $clonality_stdout = $clonality_dir . "clonality.stdout";
+  my $clonality_stderr = $clonality_dir . "clonality.stderr";
+
+  if (-e $clonality_dir && -d $clonality_dir){
     if ($verbose){print YELLOW, "\n\nClonality dir already exists - skipping", RESET;}
   }else{
     my $clonality_dir = &createNewDir('-path'=>$patient_dir, '-new_dir_name'=>'clonality', '-silent'=>1);
-
-    # TODO: switch this to take build IDs
     my $wgs_som_var_model_id = $builds->{wgs}->model->id;
-    my $master_clonality_cmd = "$script_dir"."snv/generateClonalityPlot.pl  --somatic_var_model_id=$wgs_som_var_model_id  --working_dir=$clonality_dir  --common_name='$common_name'  --verbose=1";
-
-    if ($verbose){print YELLOW, "\n\n$master_clonality_cmd", RESET;}
+    
+    # TODO: switch this to take build IDs
+    my $master_clonality_cmd = "$script_dir"."snv/generateClonalityPlot.pl  --somatic_var_model_id=$wgs_som_var_model_id  --working_dir=$clonality_dir  --common_name='$common_name'  --verbose=$verbose";
+    if ($verbose){
+      print YELLOW, "\n\n$master_clonality_cmd", RESET;
+    }else{
+      $master_clonality_cmd .= " 1>$clonality_stdout 2>$clonality_stderr";
+    }
     system($master_clonality_cmd);
   }
 }
 
-#TODO: Generate single genome (i.e. single BAM) global copy number segment plots for each BAM.  These help to identify sample swaps
-#gmt copy-number plot-segments-from-bams-workflow --normal-bam=/gscmnt/gc7001/info/model_data/2880820353/build115943750/alignments/115955253.bam  --tumor-bam=/gscmnt/gc7001/info/model_data/2880820341/build115943568/alignments/115955703.bam  --output-directory=/gscmnt/sata132/techd/mgriffit/hgs/temp/seg_plots/normal_vs_primary/  --genome-build=37  --output-pdf='CNV_SingleBAMs_TumorAndNormal.pdf'
-
+#Generate single genome (i.e. single BAM) global copy number segment plots for each BAM.  These help to identify sample swaps
+#TODO: Apparently this has been added to the latest Somatic Variation Processing profile - if this seems okay, remove this step
+if ($wgs){
+  $step++; print MAGENTA, "\n\nStep $step. Creating single BAM CNV plots for each BAM", RESET;
+  my $single_bam_cnv_dir = "$patient_dir"."cnv/single_bam_cnv/";
+  mkdir ($single_bam_cnv_dir);
+  my $output_pdf_name = "CNV_SingleBAMs_TumorAndNormal.pdf";
+  my $output_pdf_path = $single_bam_cnv_dir . $output_pdf_name;
+  my $cn_stdout = "$single_bam_cnv_dir"."CNV_SingleBAMs_TumorAndNormal.stdout";
+  my $cn_stderr = "$single_bam_cnv_dir"."CNV_SingleBAMs_TumorAndNormal.stderr";
+  my $single_bam_cnv_plot_cmd = "gmt copy-number plot-segments-from-bams-workflow  --normal-bam=$data_paths->{wgs}->{normal_bam}  --tumor-bam=$data_paths->{wgs}->{tumor_bam}  --output-directory=$single_bam_cnv_dir  --genome-build=$reference_build_ncbi_n  --output-pdf=$output_pdf_name";
+  if (-e $output_pdf_path){
+    if ($verbose){print YELLOW, "\n\nSingle BAM CNV pdf already exists - skipping", RESET;}
+  }else{
+    if ($verbose){
+      print YELLOW, "\n\n$single_bam_cnv_plot_cmd", RESET;
+    }else{
+      $single_bam_cnv_plot_cmd .= " 1>$cn_stdout 2>$cn_stderr";
+    }
+    system($single_bam_cnv_plot_cmd);
+  }
+}
 
 print "\n\n";
 
@@ -291,7 +323,7 @@ exit();
 #Get build directories for the three datatypes                                                                                #
 ###############################################################################################################################
 sub getDataDirsAndBuilds{
-  my %args = @_;
+  my %args = @_; #Contains a hash of wgs/exome/rna model or build ids and names for these
 
   my %data_paths;
   my %builds;
@@ -304,6 +336,8 @@ sub getDataDirsAndBuilds{
   );
 
   for my $arg_name (keys %arg_dt) {
+    # arg name is one of those defined in the hash above - if that particular arg name was not used in that call, skip
+    # arg value is the actual model/build number
     my $arg_value = $args{$arg_name};
     next unless $arg_value;
 
@@ -369,7 +403,6 @@ sub getDataDirsAndBuilds{
   }
 
   #print Dumper \%data_paths;
-  #exit;
   return(\%data_paths, \%builds);
 }
 
@@ -398,6 +431,7 @@ sub summarizeSNVs{
   my $indel_wgs_exome_dir = &createNewDir('-path'=>$indel_dir, '-new_dir_name'=>'wgs_exome', '-silent'=>1);
 
   #Define variant effect type filters
+  #TODO: Allow different filters to be used as a parameter
   my $snv_filter = "missense|nonsense|splice_site";
   my $indel_filter = "in_frame_del|in_frame_ins|frame_shift_del|frame_shift_ins|splice_site_ins|splice_site_del";
 
@@ -625,8 +659,8 @@ sub runRnaSeqAbsolute{
   my $script_dir = $args{'-script_dir'};
   my $verbose = $args{'-verbose'};
   #Skip this analysis if the directory already exists
-  my $test_dir = $rnaseq_dir . "absolute/";
-  unless (-e $test_dir && -d $test_dir){
+  my $absolute_dir = $rnaseq_dir . "absolute/";
+  unless (-e $absolute_dir && -d $absolute_dir){
     my $absolute_rnaseq_dir = &createNewDir('-path'=>$rnaseq_dir, '-new_dir_name'=>'absolute', '-silent'=>1);
     my $outliers_cmd = "$script_dir"."rnaseq/outlierGenesAbsolute.pl  --cufflinks_dir=$cufflinks_dir  --working_dir=$absolute_rnaseq_dir  --verbose=$verbose";
     if ($verbose){print YELLOW, "\n\n$outliers_cmd\n\n", RESET;}
@@ -661,12 +695,14 @@ sub annotateGeneFiles{
   my %args = @_;
   my $gene_symbol_lists = $args{'-gene_symbol_lists'};
   my $out_paths = $args{'-out_paths'};
+  my $verbose = $args{'-verbose'};
 
   foreach my $type (keys %{$out_paths}){
     my $sub_types = $out_paths->{$type};
     foreach my $sub_type (keys %{$sub_types}){
       #Store the file input data for this file
       my $path = $sub_types->{$sub_type}->{'path'};
+      if ($verbose){print "\n\tProcessing: $path";}
       my $new_path = $path.".tmp";
       open (INDATA, "$path") || die "\n\nCould not open input datafile: $path\n\n";
       my %data;
@@ -689,7 +725,7 @@ sub annotateGeneFiles{
           $header = 0;
           unless ($cols{'mapped_gene_name'}){
             print RED, "\n\nFile has no 'mapped_gene_name' column: $path\n\n", RESET;
-            exit();
+            exit 1;
           }
           next();
         }
@@ -728,8 +764,8 @@ sub annotateGeneFiles{
 
       #Replace the original file with the new file
       my $mv_cmd = "mv $new_path $path";
+      if ($verbose){print YELLOW, "\n\t\t $mv_cmd", RESET;}
       system ($mv_cmd);
-
     }
   }
   return();
@@ -743,6 +779,14 @@ sub drugDbIntersections{
   my %args = @_;
   my $script_dir = $args{'-script_dir'};
   my $out_paths = $args{'-out_paths'};
+  my $verbose = $args{'-verbose'};
+
+  my $drugbank_interactions_dir = "/gscmnt/sata132/techd/mgriffit/DruggableGenes/KnownDruggable/DrugBank/query_files/";
+  my %filter_options;
+  $filter_options{'3'}{name} = ".dgidb.default";   #Default filter
+  $filter_options{'4'}{name} = ".dgidb.antineo";   #Anti-neoplastic only
+  $filter_options{'5'}{name} = ".dgidb.inhibitor"; #Inhibitor only
+  $filter_options{'6'}{name} = ".dgidb.kinase";    #Kinases only
 
   foreach my $type (keys %{$out_paths}){
     my $sub_types = $out_paths->{$type};
@@ -754,36 +798,33 @@ sub drugDbIntersections{
 
       #Get file path with the file extension removed:
       my $fb = &getFilePathBase('-path'=>$path);
-
-      #Default filter
-      my $out1 = $fb->{$path}->{base} . ".dgidb.default" . $fb->{$path}->{extension};
-      my $cmd1 = "$drugdb_script --candidates_file=$path  --name_col_1=$name_col  --interactions_file=/gscmnt/sata132/techd/mgriffit/DruggableGenes/KnownDruggable/DrugBank/query_files/DrugBank_WashU_INTERACTIONS.filtered.3.tsv  --name_col_2=12 > $out1";
-      unless (-e $out1){
-        system ("$cmd1");
+      
+      my $dgidb_dir = $fb->{$path}->{base_dir} . "dgidb/";
+      my $drugbank_dir = $dgidb_dir . "drugbank/";
+      
+      unless (-e $dgidb_dir && -d $dgidb_dir){
+        mkdir ($dgidb_dir);
+      }
+      unless (-e $drugbank_dir && -d $drugbank_dir){
+        mkdir ($drugbank_dir);
       }
 
-      #Anti-neoplastic only
-      my $out2 = $fb->{$path}->{base} . ".dgidb.antineo" . $fb->{$path}->{extension};
-      my $cmd2 = "$drugdb_script --candidates_file=$path  --name_col_1=$name_col  --interactions_file=/gscmnt/sata132/techd/mgriffit/DruggableGenes/KnownDruggable/DrugBank/query_files/DrugBank_WashU_INTERACTIONS.filtered.4.tsv  --name_col_2=12 > $out2";
-      unless (-e $out2){
-        system ("$cmd2");
-      }
+      #Run with each filtering option
+      foreach my $filter (sort {$a <=> $b} keys %filter_options){
+        my $filter_name = $filter_options{$filter}{name};
+        my $out = $drugbank_dir . $fb->{$path}->{file_name} . "$filter_name" . $fb->{$path}->{extension};
 
-      #Inhibitor only
-      my $out3 = $fb->{$path}->{base} . ".dgidb.inhibitor" . $fb->{$path}->{extension};
-      my $cmd3 = "$drugdb_script --candidates_file=$path  --name_col_1=$name_col  --interactions_file=/gscmnt/sata132/techd/mgriffit/DruggableGenes/KnownDruggable/DrugBank/query_files/DrugBank_WashU_INTERACTIONS.filtered.5.tsv  --name_col_2=12 > $out3";
-      unless (-e $out3){
-        system ("$cmd3");
-      }
-
-      #Kinases only
-      my $out4 = $fb->{$path}->{base} . ".dgidb.kinase" . $fb->{$path}->{extension};
-      my $cmd4 = "$drugdb_script --candidates_file=$path  --name_col_1=$name_col  --interactions_file=/gscmnt/sata132/techd/mgriffit/DruggableGenes/KnownDruggable/DrugBank/query_files/DrugBank_WashU_INTERACTIONS.filtered.6.tsv  --name_col_2=12 > $out4";
-      unless (-e $out4){
-        system ("$cmd4");
+        if (-e $out){
+          if ($verbose){print YELLOW, "\n\tFile already exists - skipping ($out)", RESET;} 
+        }else{
+          my $cmd = "$drugdb_script --candidates_file=$path  --name_col_1=$name_col  --interactions_file=$drugbank_interactions_dir/DrugBank_WashU_INTERACTIONS.filtered."."$filter".".tsv  --name_col_2=12 > $out";
+          if ($verbose){print YELLOW, "\n\t$cmd", RESET;}
+          system ("$cmd");
+        }
       }
     }
   }
+
   return();
 }
 

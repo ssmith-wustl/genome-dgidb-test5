@@ -63,7 +63,15 @@ sub parseFpkmFile{
     my $FPKM = $line[$columns{'FPKM'}{position}];
     my $FPKM_conf_lo = $line[$columns{'FPKM_conf_lo'}{position}];
     my $FPKM_conf_hi = $line[$columns{'FPKM_conf_hi'}{position}];
-    my $FPKM_status = $line[$columns{'FPKM_status'}{position}];
+    my $FPKM_status;
+    if ($columns{'FPKM_status'}){
+      $FPKM_status = $line[$columns{'FPKM_status'}{position}];
+    }elsif($columns{'status'}){
+      $FPKM_status = $line[$columns{'status'}{position}];
+    }else{
+      print RED, "\n\nRequired column not found: 'FPKM_status' or 'status'", RESET;
+      exit();
+    }
 
     #Fix gene name and create a new column for this name
     my $fixed_gene_name = &fixGeneName('-gene'=>$gene_id, '-entrez_ensembl_data'=>$entrez_ensembl_data, '-verbose'=>0);
@@ -149,8 +157,16 @@ sub mergeIsoformsFile{
     my $FPKM = $line[$columns{'FPKM'}{position}];
     my $FPKM_conf_lo = $line[$columns{'FPKM_conf_lo'}{position}];
     my $FPKM_conf_hi = $line[$columns{'FPKM_conf_hi'}{position}];
-    my $FPKM_status = $line[$columns{'FPKM_status'}{position}];
-  
+    my $FPKM_status;
+    if ($columns{'FPKM_status'}){
+      $FPKM_status = $line[$columns{'FPKM_status'}{position}];
+    }elsif($columns{'status'}){
+      $FPKM_status = $line[$columns{'status'}{position}];
+    }else{
+      print RED, "\n\nRequired column not found: 'FPKM_status' or 'status'", RESET;
+      exit();
+    }
+ 
     #Fix gene name and create a new column for this name
     my $fixed_gene_name = &fixGeneName('-gene'=>$gene_id, '-entrez_ensembl_data'=>$entrez_ensembl_data, '-verbose'=>0);
 

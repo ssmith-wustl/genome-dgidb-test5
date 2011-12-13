@@ -8,7 +8,7 @@ use Genome;
 use Data::Dumper;
 
 class Genome::Model::Tools::Velvet::Run {
-    is => 'Genome::Model::Tools::Velvet',
+    is => 'Genome::Model::Tools::Velvet::Base',
     has => [
 	    file_name => {
 		is => 'String',

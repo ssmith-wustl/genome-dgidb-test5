@@ -10,7 +10,7 @@ use POSIX;
 require File::Copy;
 
 class Genome::Model::Tools::Velvet::OneButton {
-    is => 'Command',
+    is => 'Command::V2',
     has => [
 	file => {
 	    shell_args_position => 1,

@@ -54,6 +54,10 @@ class Genome::InstrumentData::Solexa::View::Solr::Xml {
                     name => 'id',
                     position => 'content',
                 },
+                {
+                    name => '__display_name__',
+                    position => 'display_title',
+                },
             ],
         },
     ],
