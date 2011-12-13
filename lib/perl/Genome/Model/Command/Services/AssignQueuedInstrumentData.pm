@@ -331,7 +331,7 @@ sub execute {
                 }
             } else {
                 push @process_errors,
-                    $self->error_message('No validation models found to assign data.');
+                    $self->error_message('No validation models found to assign data (target ' . $genome_instrument_data->target_region_set_name . ' on instrument data ' . $genome_instrument_data->id . '.)');
             }
         } else {
             #record that the above code was skipped so we could reattempt it if more information gained later
