@@ -102,11 +102,11 @@ sub _gather_params_for_get_or_create {
         if(-e $val) {
             my $checksum = Genome::Sys->md5sum($val);
             if($bx->specifies_value_for('file_content_hash')) {
-                unless($bx->value_for('file_content_hash') eq $val) {
+                unless($bx->value_for('file_content_hash') eq $checksum) {
                     die('file_content_hash does not match md5sum output for the original file.');
                 }
             } else {
-                $bx = $bx->add_filter('file_content_hash', Genome::Sys->md5sum($val));
+                $bx = $bx->add_filter('file_content_hash', $checksum);
             }
         }
     }
