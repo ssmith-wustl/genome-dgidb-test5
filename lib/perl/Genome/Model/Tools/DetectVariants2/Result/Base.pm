@@ -11,4 +11,11 @@ class Genome::Model::Tools::DetectVariants2::Result::Base {
     doc => 'This class represents the result of a detect-variants operation. This base class just unites the various result types',
 };
 
+sub path {
+    my $self = shift;
+    my ($str) = @_;
+
+    return join('/', $self->output_dir, $str);
+}
+
 1;
