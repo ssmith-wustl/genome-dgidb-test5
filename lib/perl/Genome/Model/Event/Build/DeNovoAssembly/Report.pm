@@ -7,16 +7,32 @@ use Genome;
 
 class Genome::Model::Event::Build::DeNovoAssembly::Report {
     is => 'Genome::Model::Event::Build::DeNovoAssembly',
-    #is_abstract => 1,
 };
 
 sub execute {
     my $self = shift;
 
     #run stats
-    unless( $self->processing_profile->generate_stats( $self->build ) ) {
-	$self->error_message("Failed to generate stats for report");
-	return;
+    my $tools_base_class = $self->processing_profile->tools_base_class;
+    my $metrics_class;
+    for my $subclass_name (qw/ Metrics Stats /) {
+        $metrics_class = $tools_base_class.'::'.$subclass_name;
+        my $meta = eval{ $metrics_class->__meta__; };
+        last if $meta;
+        undef $metrics_class;
+    }
+    if ( not $metrics_class ) {
+        $self->error_message('Failed to find metrics/stats class for assembler: '.$self->processing_profile->assembler);
+        return;
+    }
+    my $metrics = $metrics_class->create(assembly_directory => $self->build->data_directory);
+    if ( not $metrics ) {
+        $self->error_message('Failed to create metrics tool: '.$metrics_class);
+        return;
+    }
+    unless( $metrics->execute ) {
+        $self->error_message("Failed to create stats");
+        return;
     }
 
     # generate
@@ -59,5 +75,3 @@ sub execute {
 
 1;
 
-#$HeadURL$
-#$Id$
