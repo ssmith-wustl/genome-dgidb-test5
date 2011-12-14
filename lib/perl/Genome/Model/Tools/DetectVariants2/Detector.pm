@@ -240,6 +240,9 @@ sub _generate_result {
         die $self->error_message('Failed to create directories.');
     }
 
+    #disconnect database before long-running commands
+    Genome::DataSource::GMSchema->disconnect_default_dbh if Genome::DataSource::GMSchema->has_default_dbh;
+
     unless($self->_detect_variants) {
         die $self->error_message('Failed in main execution logic.');
     }
