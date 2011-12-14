@@ -87,19 +87,11 @@ sub perform_post_success_actions {
 
 sub create_gold2geno_file_from_genotype_file {
     my $self = shift;
+
     my $genotype_file = $self->formatted_genotype_file_path;
     my $gold2geno_file = $self->gold2geno_file_path;
 
-    if ( -s $gold2geno_file ) {
-        my ($genotype_file_line_count) = qx(wc -l $genotype_file) =~ /^(\d+)/;
-        my ($gold2geno_file_line_count) = qx(wc -l $gold2geno_file) =~ /^(\d+)/;
-        if ($genotype_file_line_count == $gold2geno_file_line_count) {
-            $self->status_message("gold2geno file ($gold2geno_file) already exists, skipping generation.");
-            return 1;
-        } else {
-            die $self->error_message("Line counts in genotype file and gold2geno file do not match!");
-        }
-    }
+    return 1 if (-e $gold2geno_file && $self->validate_gold2geno_file);
 
     my $genotype_reader = Genome::Sys->open_file_for_reading($genotype_file);
     my $gold2geno_writer = Genome::Sys->open_file_for_writing($gold2geno_file);
@@ -110,11 +102,30 @@ sub create_gold2geno_file_from_genotype_file {
         }
         $gold2geno_writer->print($field[0] . "\t" . $field[1] . "\t" . $field[3] . $field[4] . "\n");
     }
-    unless ( -s $gold2geno_file ) {
-        die $self->error_message("gold2geno file is empty after conversion.");
+    if ( -e $gold2geno_file ) {
+        $self->validate_gold2geno_file;
+    } else {
+        die $self->error_message("gold2geno file is missing after conversion.");
     }
 
     return 1;
+}
+
+sub validate_gold2geno_file {
+    my $self = shift;
+
+    my $genotype_file = $self->formatted_genotype_file_path;
+    my $gold2geno_file = $self->gold2geno_file_path;
+
+    my ($genotype_file_line_count) = qx(wc -l $genotype_file) =~ /^(\d+)/;
+    my ($gold2geno_file_line_count) = qx(wc -l $gold2geno_file) =~ /^(\d+)/;
+
+    my $valid_gold2geno_file = ($genotype_file_line_count == $gold2geno_file_line_count);
+    if ($valid_gold2geno_file) {
+        return 1;
+    } else {
+        die $self->error_message('gold2geno file exists but line count does not match formatted_genotype_file_path');
+    }
 }
 
 sub gold2geno_file_path {
