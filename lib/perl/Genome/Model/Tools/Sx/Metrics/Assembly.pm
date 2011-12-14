@@ -55,7 +55,7 @@ class Genome::Model::Tools::Sx::Metrics::Assembly {
 class Sx::Metrics::Assembly {
     has => [
         map(
-            { $_ => { is => 'Number' }, } 
+            { $_ => { is => 'Number', default_value => 'NA', }, } 
             (qw/
                 tier_one tier_two major_contig_threshold
                 contigs_average_length
@@ -166,6 +166,11 @@ class Sx::Metrics::Assembly {
     ],
 };
 
+sub add_scaffolds_file {
+    my $self = shift;
+    return $self->_add_file('scaffold', @_);
+}
+
 sub add_contigs_file {
     my $self = shift;
     return $self->_add_file('contig', @_);
@@ -198,18 +203,36 @@ sub _add_file {
     return 1;
 }
 
+sub add_scaffold {
+    my ($self, $scaffold) = @_;
+
+    Carp::confess('No scaffold to add!') if not $scaffold;
+
+    my $contig_id = 1;
+    for my $seq ( split(/n+/i, $scaffold->{seq}) ) {
+        #$seq =~ s#{(\w*),([\w,])+}#Q#g;
+        $self->add_contig({
+                id => $scaffold->{id}.'.'.$contig_id,
+                seq => $seq,
+            });
+        $contig_id++;
+    }
+
+    return 1;
+}
+
 sub add_contig {
     my ($self, $contig) = @_;
 
     my $id = $contig->{id};
     $id =~ s/^contig//i;
-    my ($supercontig_number, $contig_number) = split(/\./, $id);
+    my ($supercontig_id, $contig_number) = split(/\./, $id);
     $contig_number = 0 if not defined $contig_number;
-    $contig_number = $supercontig_number.'.'.$contig_number;
+    $contig_number = $supercontig_id.'.'.$contig_number;
 
-    $self->_metrics->{supercontigs_count}++ if not exists $self->supercontigs->{$supercontig_number};
+    $self->_metrics->{supercontigs_count}++ if not exists $self->supercontigs->{$supercontig_id};
     $self->_metrics->{supercontigs_length} += length $contig->{seq};
-    $self->supercontigs->{$supercontig_number} += length $contig->{seq};
+    $self->supercontigs->{$supercontig_id} += length $contig->{seq};
 
     $self->_metrics->{contigs_count}++;
     $self->_metrics->{contigs_length} += length $contig->{seq};
@@ -291,7 +314,7 @@ sub calculate_metrics {
             $total_q20_bases += $q20_metrics->{$c}->{q20_bases} if exists $q20_metrics->{$c};
             $cumulative_length += $metrics->{$c};
 
-            if ($metrics->{$c} > $major_contig_length) {
+            if ($metrics->{$c} >= $major_contig_length) {
                 $major_contig_bases += $metrics->{$c};
                 $major_contig_q20_bases += $q20_metrics->{$c}->{q20_bases}if exists $q20_metrics->{$c};
                 $major_contig_number++;
