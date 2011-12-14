@@ -82,6 +82,8 @@ sub _execute_build {
     }
     $self->status_message("Create snp array (gold) file...OK");
 
+    $build->create_gold2geno_file_from_genotype_file();
+
     my $snvs_bed = $build->snvs_bed;
     $self->status_message('Create gold snp bed file: '.$snvs_bed);
     my $gold_snp_bed = Genome::Model::GenotypeMicroarray::Command::CreateGoldSnpBed->create(
