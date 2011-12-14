@@ -17,7 +17,7 @@ class Genome::Model::Build::SomaticVariation {
             is => 'Text',
             via => 'inputs',
             to => 'value_id',
-            where => [ name => 'tumor_build', value_class_name => 'Genome::Model::Build::ReferenceAlignment' ],
+            where => [ name => 'tumor_build', ],
             is_mutable => 1,
         },
         tumor_build => {
@@ -33,7 +33,7 @@ class Genome::Model::Build::SomaticVariation {
             via => 'inputs',
             is_many => 0,
             to => 'value',
-            where => [ name => 'normal_build', value_class_name => 'Genome::Model::Build::ReferenceAlignment' ],
+            where => [ name => 'normal_build', ],
             is_mutable => 1,
         },
         annotation_build => {
