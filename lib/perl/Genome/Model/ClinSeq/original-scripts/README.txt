@@ -82,7 +82,13 @@
 #  - Run the Ensembl variant effect predictor on all variants
 #- Summary of TopHat RNA-seq alignment results
 #  - Summarize read mapping, known vs. novel junctions, proportion of reads mapping across junctions, proportion of MT mapping reads
-
+#- Druggable genes analysis
+#  - 
+#  - Are there any mutations that are in a kinase where that kinase itself is not druggable but:
+#    - the region mutated is homologous to a mutation site in another kinase
+#    - e.g. A HER2 mutation in a kinase domain and the corresponding region of that kinase domain is mutated in EGFR in another cancer type etc.
+#    - Suggests that we could use an EGFR inhibitor to treat patients with this HER2 mutation.
+#    - In general establish the cross-reactivity of kinase inhibitors or links that can be made between kinases by recurrence of mutation sites.
 
 #SUMMARY STATS
 #A descriptive stats, question/answer table
