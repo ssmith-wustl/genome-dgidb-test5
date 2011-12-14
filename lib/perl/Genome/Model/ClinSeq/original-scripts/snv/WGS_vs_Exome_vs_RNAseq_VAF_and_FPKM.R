@@ -348,7 +348,7 @@ plotCoverageHist = function(data, ref_rc, var_rc, filename, title_name){
   z[,"coverage"] = z[,ref_rc]+z[,var_rc]
   median_cov = median(z[,"coverage"], na.rm=TRUE)
   x_label = paste("Read coverage (median X = ", round(median_cov, digits=1), ")", sep="")
-  y_label = paste("Density (n = ", dim(z)[1], "variant positions)", sep="")
+  y_label = paste("Density (n = ", dim(z)[1], " variant positions)", sep="")
   pdf(filename1)
   print({
     m <- ggplot(z, aes(x=coverage)); m + geom_histogram(aes(y = ..density.., fill= ..count..)) + geom_density() + 

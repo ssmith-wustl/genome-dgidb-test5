@@ -4,6 +4,7 @@ use warnings;
 use Getopt::Long;
 use Term::ANSIColor qw(:constants);
 use Data::Dumper;
+use above "Genome";
 
 use lib "/gscmnt/sata206/techd/git/genome/lib/perl/Genome/Model/ClinSeq/original-scripts";
 use ClinSeq qw(:all);
@@ -376,14 +377,22 @@ foreach my $c (sort {$infiles{$a}->{patient} cmp $infiles{$b}->{patient}} keys %
     my $wgs_data_paths_file = $infiles{$c}{wgs_bam_locations_file};
     my $readcounts_path_hg18 = $infiles{$c}{readcounts_path_hg18};
     #my $wgs_readcounts_cmd = "/gscmnt/sata206/techd/git/genome/lib/perl/Genome/Model/ClinSeq/original-scripts/snv/getBamReadCounts.pl  --positions_file=$hg18_path  --data_paths_file=$wgs_data_paths_file  --output_file=$readcounts_path_hg18  --no_fasta_check=1";
-    my $wgs_readcounts_cmd = "genome model clin-seq get-bam-read-counts  --positions-file=$hg18_path  --data-paths-file=$wgs_data_paths_file  --output-file=$readcounts_path_hg18  --no-fasta-check=1";
+    
+    #Call BamReadCounts tools from genome model clin-seq - since it uses Bio::Db:Sam we need a hack to deal with genome versions...
+    my $wgs_readcounts_cmd = "genome5.10.1 model clin-seq get-bam-read-counts  --positions-file=$hg18_path  --data-paths-file=$wgs_data_paths_file  --output-file=$readcounts_path_hg18  --no-fasta-check=1";
 
     print BLUE, "\n\tWGS", RESET;
     #print YELLOW, "\n\t$wgs_readcounts_cmd", RESET;
     if (-e $readcounts_path_hg18){
       print YELLOW, "\n\t\tFile already exists - skipping", RESET;
     }else{
-      system($wgs_readcounts_cmd);
+      #System call to ClinSeq GetBamReadCounts tool
+      #print YELLOW, "\n\t$wgs_readcounts_cmd", RESET;
+      #system($wgs_readcounts_cmd);
+
+      #Or call directly using a Genome API call...
+      Genome::Model::ClinSeq::Command::GetBamReadCounts->execute('positions_file'=>$hg18_path, 'data_paths_file'=>$wgs_data_paths_file, 'output_file'=>$readcounts_path_hg18, 'no_fasta_check'=>1);
+
     }
 
   }
@@ -394,14 +403,18 @@ foreach my $c (sort {$infiles{$a}->{patient} cmp $infiles{$b}->{patient}} keys %
     my $rnaseq_data_paths_file = $infiles{$c}{rnaseq_bam_locations_file};
     my $readcounts_path_hg19 = $infiles{$c}{readcounts_path_hg19};
     #my $rnaseq_readcounts_cmd = "/gscmnt/sata206/techd/git/genome/lib/perl/Genome/Model/ClinSeq/original-scripts/snv/getBamReadCounts.pl  --positions_file=$hg19_path  --data_paths_file=$rnaseq_data_paths_file  --output_file=$readcounts_path_hg19  --no_fasta_check=1";
-    my $rnaseq_readcounts_cmd = "genome model clin-seq get-bam-read-counts  --positions-file=$hg19_path  --data-paths-file=$rnaseq_data_paths_file  --output-file=$readcounts_path_hg19  --no-fasta-check=1";
+    my $rnaseq_readcounts_cmd = "genome5.10.1 model clin-seq get-bam-read-counts  --positions-file=$hg19_path  --data-paths-file=$rnaseq_data_paths_file  --output-file=$readcounts_path_hg19  --no-fasta-check=1";
 
     print BLUE, "\n\tRNAseq", RESET;
-    print YELLOW, "\n\t$rnaseq_readcounts_cmd", RESET;
     if (-e $readcounts_path_hg19){
       print YELLOW, "\n\t\tFile already exists - skipping", RESET;
     }else{
-      system($rnaseq_readcounts_cmd);
+      #print YELLOW, "\n\t$rnaseq_readcounts_cmd", RESET;
+      #system($rnaseq_readcounts_cmd);
+
+      #Or call directly using a Genome API call...
+      Genome::Model::ClinSeq::Command::GetBamReadCounts->execute('positions_file'=>$hg19_path, 'data_paths_file'=>$rnaseq_data_paths_file, 'output_file'=>$readcounts_path_hg19, 'no_fasta_check'=>1);
+
     }
   }
 }
@@ -510,6 +523,7 @@ foreach my $c (sort {$infiles{$a}->{patient} cmp $infiles{$b}->{patient}} keys %
 print BLUE, "\n\nGetting RNAseq expression data", RESET;
 foreach my $c (sort {$infiles{$a}->{patient} cmp $infiles{$b}->{patient}} keys %infiles){
   my $patient = $infiles{$c}{patient};
+  $infiles{$c}{rnaseq_data_name} = $patient."_T";
   print BLUE, "\n\t$patient", RESET;
   if ($infiles{$c}{rnaseq_bam_locations_file}){
     my $rnaseq_locations_file = $infiles{$c}{rnaseq_bam_locations_file};
@@ -527,7 +541,7 @@ foreach my $c (sort {$infiles{$a}->{patient} cmp $infiles{$b}->{patient}} keys %
     }
     close(IN);
 
-    my $rnaseq_results_dir = "$rnaseq_data_dir"."$patient/";
+    my $rnaseq_results_dir = "$rnaseq_data_dir"."$patient"."_T/";
     $infiles{$c}{rnaseq_data_dir} = $rnaseq_results_dir;
     my $rnaseq_data_cmd = "/gscmnt/sata206/techd/git/genome/lib/perl/Genome/Model/ClinSeq/original-scripts/rnaseq/outlierGenesAbsolute.pl  --cufflinks_dir=$expression_dir  --working_dir=$rnaseq_results_dir";
 
@@ -566,17 +580,23 @@ foreach my $c (sort {$infiles{$a}->{patient} cmp $infiles{$b}->{patient}} keys %
   }
 }
 
+#Inject the LUC9 Normal sample into the hash of samples
+my $c_count = keys %infiles;
+$c = $c_count+1;
+$infiles{$c}{rnaseq_expression_matrix} = "/gscmnt/sata132/techd/mgriffit/luc/rnaseq_vs_snv/rnaseq_data/LUC9_N/isoforms_merged/isoforms.merged.fpkm.expsort.tsv";
+$infiles{$c}{rnaseq_data_name} = "LUC9_N";
+
 #Build an expression matrix for all RNA-seq libraries that are currently available...
-print BLUE, "\n\nBuild expression matrix for all patients", RESET;
+print BLUE, "\n\nBuild expression matrix for all RNAseq libraries", RESET;
 my $first_file = 1;
 my %exp;
 my %gene_map;
-my %patient_list;
-foreach my $c (sort {$infiles{$a}->{patient} cmp $infiles{$b}->{patient}} keys %infiles){
-  my $patient = $infiles{$c}{patient};
-  print BLUE, "\n\t$patient", RESET;
+my %name_list;
+foreach my $c (sort {$infiles{$a}->{rnaseq_data_name} cmp $infiles{$b}->{rnaseq_data_name}} keys %infiles){
+  my $rnaseq_data_name = $infiles{$c}{rnaseq_data_name};
+  print BLUE, "\n\t$rnaseq_data_name", RESET;
   if ($infiles{$c}{rnaseq_expression_matrix}){
-    $patient_list{$patient}=1;
+    $name_list{$rnaseq_data_name}=1;
     my $fpkm_file = $infiles{$c}{rnaseq_expression_matrix};
 
     my $header = 1;
@@ -600,14 +620,14 @@ foreach my $c (sort {$infiles{$a}->{patient} cmp $infiles{$b}->{patient}} keys %
         my $fpkm = $line[$columns{'FPKM'}{position}];
         my $rank = $line[$columns{'rank'}{position}];
         $gene_map{$tracking_id}{mapped_gene_name} = $mapped_gene_name;
-        $exp{$tracking_id}{$patient}{fpkm} = $fpkm;
-        $exp{$tracking_id}{$patient}{rank} = $rank;
+        $exp{$tracking_id}{$rnaseq_data_name}{fpkm} = $fpkm;
+        $exp{$tracking_id}{$rnaseq_data_name}{rank} = $rank;
       }else{
         my $tracking_id = $line[$columns{'tracking_id'}{position}];
         my $fpkm = $line[$columns{'FPKM'}{position}];
         my $rank = $line[$columns{'rank'}{position}];
-        $exp{$tracking_id}{$patient}{fpkm} = $fpkm;
-        $exp{$tracking_id}{$patient}{rank} = $rank;
+        $exp{$tracking_id}{$rnaseq_data_name}{fpkm} = $fpkm;
+        $exp{$tracking_id}{$rnaseq_data_name}{rank} = $rank;
       }
     }
     close(FPKM);
@@ -615,11 +635,11 @@ foreach my $c (sort {$infiles{$a}->{patient} cmp $infiles{$b}->{patient}} keys %
   }
 }
 my $gene_count = keys %exp;
-my $patient_count = keys %patient_list;
-print BLUE, "\nFound expression values for $gene_count genes for $patient_count patients", RESET;
+my $name_count = keys %name_list;
+print BLUE, "\nFound expression values for $gene_count genes for $name_count libraries", RESET;
 
-my @patient_list = sort keys %patient_list;
-my $patient_list_string = join("\t", @patient_list);
+my @name_list = sort keys %name_list;
+my $name_list_string = join("\t", @name_list);
 
 my $fpkm_matrix_file = "$rnaseq_data_dir"."fpkm_matrix.tsv";
 my $rank_matrix_file = "$rnaseq_data_dir"."rank_matrix.tsv";
@@ -627,7 +647,7 @@ my $rank_matrix_file = "$rnaseq_data_dir"."rank_matrix.tsv";
 open(FPKM, ">$fpkm_matrix_file") || die "\n\nCould not open: $fpkm_matrix_file\n\n";
 open(RANK, ">$rank_matrix_file") || die "\n\nCould not open: $rank_matrix_file\n\n";
 
-my $exp_header = "tracking_id\tmapped_gene_name\t$patient_list_string";
+my $exp_header = "tracking_id\tmapped_gene_name\t$name_list_string";
 print FPKM "$exp_header\n";
 print RANK "$exp_header\n";
 
@@ -635,7 +655,7 @@ foreach my $g (sort keys %exp){
   my $mapped_gene_name = $gene_map{$g}{mapped_gene_name};
   my @fpkms;
   my @ranks;
-  foreach my $p (sort keys %patient_list){
+  foreach my $p (sort keys %name_list){
     push (@fpkms, $exp{$g}{$p}{fpkm});
     push (@ranks, $exp{$g}{$p}{rank});
   }

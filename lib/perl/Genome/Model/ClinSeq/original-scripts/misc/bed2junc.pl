@@ -7,13 +7,16 @@ use strict;
 my $BED_FILE = $ARGV[0] || "-";
 my $line_number = 0;
 open(BED, "<$BED_FILE") || die("ERROR: could not open junction bed file: '$BED_FILE'\n");
+print "chr:start-end\tread_count\n";
 while(<BED>) {
   chomp; s///;
   #chr3	189881601	189888428	JUNC00064306	4	+	189881601	189888428	255,0,0	2	20,29	0,6798
   my @f = split(/\t/, $_);
   $line_number++;
 
-  if(!($f[0] =~ m/^chr/)) {next; }
+  unless (scalar(@f) > 3){next();}
+  unless (($f[0] =~ /\w+/) && ($f[1] =~ /\d+/) && ($f[2] =~ /\d+/)) {next();}
+  
   my $blocks = $f[9];
   if($blocks == 1) { next; }
   my $start = $f[1];

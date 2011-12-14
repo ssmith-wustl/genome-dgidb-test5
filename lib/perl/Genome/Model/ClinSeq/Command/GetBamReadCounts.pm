@@ -79,11 +79,11 @@ sub __errors__ {
     my $self = shift;
     my @errors = $self->SUPER::__errors__(@_);
 
-    unless ($self->wgs_som_var_build || $self->exome_som_var_build || $self->rna_seq_normal_build || $self->rna_seq_tumor_build) {
+    unless (($self->wgs_som_var_build || $self->exome_som_var_build || $self->rna_seq_normal_build || $self->rna_seq_tumor_build) || ($self->data_paths_file)) {
         push @errors, UR::Object::Tag->create(
             type => 'error',
             properties => [qw/wgs_som_var_build exome_som_var_build rna_seq_normal_build rna_seq_tumor_build/],
-            desc => 'at least one of the four build types must be specified!'
+            desc => 'at least one of the four build types (or --data_paths_file) must be specified!'
         );
     }
 
@@ -109,7 +109,7 @@ sub execute {
     
     eval "require Bio::DB::Sam";
     if ($@) {
-        die "Failed to use the Bio::DB::Sam module.  Use /usr/bin/perl instead of /gsc/bin/perl.:\n$@";
+        die "Failed to use the Bio::DB::Sam module.  Use /usr/bin/perl (5.10 or greater!) instead of /gsc/bin/perl.:\n$@";
     }
 
     my $positions_file = $self->positions_file; 
