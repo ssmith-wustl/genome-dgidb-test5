@@ -85,39 +85,6 @@ sub perform_post_success_actions {
     return $self->model->request_builds_for_dependent_cron_ref_align;
 }
 
-sub copy_snp_array_file {
-    my ($self, $file) = @_;
-
-    my $formatted_genotype_file_path = $self->formatted_genotype_file_path;
-    $self->status_message("Copy $file to $formatted_genotype_file_path");
-
-    my $copy = Genome::Sys->copy_file($file, $formatted_genotype_file_path);
-    if (not $copy) {
-        $self->error_message("Copy failed");
-        return;
-    }
-
-    if (not -s $formatted_genotype_file_path) {
-        $self->error_message("Copy succeeded, but file does not exist: $formatted_genotype_file_path");
-        return;
-    }
-
-    $self->status_message('Copy...OK');
-
-    my $gold_snp_bed = $self->snvs_bed;
-    my $cmd = Genome::Model::GenotypeMicroarray::Command::CreateGoldSnpBed->create(
-        input_file => $file,
-        output_file => $gold_snp_bed,
-        reference => $self->model->reference_sequence_build,
-    );
-    if (!$cmd->execute) {
-        $self->error_message("Failed to create Gold SNP bed file at $gold_snp_bed");
-        return;
-    }
-
-    return 1;
-}
-
 sub create_gold2geno_file_from_genotype_file {
     my $self = shift;
     my $genotype_file = $self->formatted_genotype_file_path;
