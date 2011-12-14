@@ -15,14 +15,17 @@ class Genome::Model::Build::SomaticVariation {
         },
         tumor_build_id => {
             is => 'Text',
-            via => 'inputs',
-            to => 'value_id',
-            where => [ name => 'tumor_build', ],
+            via => 'tumor_build',
+            to => 'id',
             is_mutable => 1,
         },
         tumor_build => {
             is => 'Genome::Model::Build::ReferenceAlignment',
-            id_by => 'tumor_build_id',
+            via => 'inputs',
+            is_many => 0,
+            to => 'value',
+            where => [ name => 'tumor_build', ],
+            is_mutable => 1,
         },
         normal_model => {
             is => 'Genome::Model::ReferenceAlignment',
