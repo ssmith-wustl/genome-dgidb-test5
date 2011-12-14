@@ -16,6 +16,16 @@ sub calculate_metrics {
     return $_[0]->_metrics;
 }
 
+sub get_metric {
+    return $_[0]->_metrics->{$_[1]};
+}
+
+sub set_metric {
+    my ($self, $name, $value) = @_;
+    $self->_metrics->{$name} = $value;
+    return 1;
+}
+
 sub metrics {
     my $self = shift;
     my $metrics_class = $self->metrics_class;
