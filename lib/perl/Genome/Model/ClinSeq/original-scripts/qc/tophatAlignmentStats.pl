@@ -222,7 +222,7 @@ sub inferStrand{
   print OUT "$header_line\tintron_size\tsplice_site\n";
   foreach my $j (sort {$junctions{$a}{order} <=> $junctions{$b}{order}} keys %junctions){
     my $jid = $j."($junctions{$j}{strand})";
-    print OUT "$jid\t$junctions{$j}{read_count}\t$junctions{$j}{splice_site}\n";
+    print OUT "$jid\t$junctions{$j}{read_count}\t$junctions{$j}{intron_size}\t$junctions{$j}{splice_site}\n";
 
   }
   close(OUT);
