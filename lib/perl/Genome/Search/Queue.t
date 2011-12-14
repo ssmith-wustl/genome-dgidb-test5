@@ -6,7 +6,7 @@ use warnings;
 use Test::More;
 
 use above "Genome";
-use_ok('Genome::Search::IndexQueue') || die;
+use_ok('Genome::Search::Queue') || die;
 
 require Genome::Search;
 my $orig_is_indexable = \&Genome::Search::is_indexable;
@@ -32,7 +32,7 @@ sub test_create_missing_subject {
     my $tx = UR::Context::Transaction->begin();
 
     my $index_queue = eval {
-        Genome::Search::IndexQueue->create();
+        Genome::Search::Queue->create();
     };
     my $error = $@;
 
@@ -48,7 +48,7 @@ sub test_create_missing_timestamp {
     *Genome::Search::is_indexable = $text_is_indexable;
 
     my $subject = UR::Value::Text->get('Hello, world.');
-    my $index_queue = Genome::Search::IndexQueue->create(
+    my $index_queue = Genome::Search::Queue->create(
         subject_id => $subject->id,
         subject_class => $subject->class,
     );
@@ -67,14 +67,14 @@ sub test_create_existing_subject {
     *Genome::Search::is_indexable = $text_is_indexable;
 
     my $subject = UR::Value::Text->get('Hello, world.');
-    my $index_queue = Genome::Search::IndexQueue->create(
+    my $index_queue = Genome::Search::Queue->create(
         subject_id => $subject->id,
         subject_class => $subject->class,
     );
 
     isa_ok($index_queue, 'UR::Object', 'create returned an object');
 
-    my $index_queue_2 = Genome::Search::IndexQueue->create(
+    my $index_queue_2 = Genome::Search::Queue->create(
         subject_id => $subject->id,
         subject_class => $subject->class,
     );
@@ -92,7 +92,7 @@ sub test_create_non_indexable_subject {
 
     my $subject = UR::Value::Text->get('Hello, world.');
     my $index_queue = eval {
-        Genome::Search::IndexQueue->create(
+        Genome::Search::Queue->create(
             subject_id => $subject->id,
             subject_class => $subject->class,
         );
@@ -119,22 +119,22 @@ sub test_priority_sorting {
     for my $subject_id (@subject_ids) {
         my ($priority) = $subject_id =~ /(\d)$/;
         my $subject = UR::Value::Text->get($subject_id);
-        my $index_queue = Genome::Search::IndexQueue->create(
+        my $index_queue = Genome::Search::Queue->create(
             subject_id => $subject->id,
             subject_class => $subject->class,
             priority => $priority,
         );
-        isa_ok($index_queue, 'Genome::Search::IndexQueue', "created queue object for $subject_id");
+        isa_ok($index_queue, 'Genome::Search::Queue', "created queue object for $subject_id");
         sleep 1;
     }
 
-    my @priority_sorted_queue = Genome::Search::IndexQueue->get(subject_id => \@subject_ids, -order_by => 'priority');
+    my @priority_sorted_queue = Genome::Search::Queue->get(subject_id => \@subject_ids, -order_by => 'priority');
     ok(@priority_sorted_queue, 'got priority_sorted_queue') || return;
     my @priority_sorted_queue_subject_ids = map { $_->subject_id } @priority_sorted_queue;
     is_deeply(\@priority_sorted_queue_subject_ids, \@sorted_subject_ids, 'ordering by priority matches expected results')
         or diag(Data::Dumper::Dumper(\@priority_sorted_queue_subject_ids, \@sorted_subject_ids));
 
-    my @timestamp_sorted_queue = Genome::Search::IndexQueue->get(subject_id => \@subject_ids, -order_by => 'timestamp');
+    my @timestamp_sorted_queue = Genome::Search::Queue->get(subject_id => \@subject_ids, -order_by => 'timestamp');
     ok(@priority_sorted_queue, 'got timestamp_sorted_queue') || return;
     my @timestamp_sorted_queue_subject_ids = map { $_->subject_id } @timestamp_sorted_queue;
     isnt(join('', @timestamp_sorted_queue_subject_ids), join('', @sorted_subject_ids), 'ordering by timestamp does not match priorty sort');
