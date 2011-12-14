@@ -1190,6 +1190,7 @@ sub output_germline_files
     $cmd .= "--variant-file $output_snp_varscan --bam-file $normal_bam --output-file $output_snp_varscan.fpfilter --filtered-file $output_snp_varscan.fpfilter.removed ";
     $cmd .= "--max-mm-qualsum-diff 100 ";
     system($cmd);
+    $output_snp_varscan .= ".fpfilter";
 
     ## Also run transcript-annotation ##
 
