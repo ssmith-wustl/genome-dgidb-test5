@@ -443,7 +443,7 @@ sub calculate_metrics {
         : 0;
         $main_metrics->{$type.'_major_length_q20'} = 'NA';
         $main_metrics->{$type.'_major_length_q20_percent'} = 'NA';
-        $main_metrics->{$type.'_major_n50_length'} = $n50_contig_length;
+        $main_metrics->{$type.'_major_n50_length'} = $n50_major_contig_length;
         $main_metrics->{$type.'_major_n50_count'} = $n50_major_contig_number;
 
         $main_metrics->{$type.'_t1_length'} = $total_t1_bases;
