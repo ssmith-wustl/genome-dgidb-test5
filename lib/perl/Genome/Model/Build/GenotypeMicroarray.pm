@@ -104,8 +104,6 @@ sub copy_snp_array_file {
 
     $self->status_message('Copy...OK');
 
-    $self->create_gold2geno_file_from_genotype_file();
-
     my $gold_snp_bed = $self->snvs_bed;
     my $cmd = Genome::Model::GenotypeMicroarray::Command::CreateGoldSnpBed->create(
         input_file => $file,
