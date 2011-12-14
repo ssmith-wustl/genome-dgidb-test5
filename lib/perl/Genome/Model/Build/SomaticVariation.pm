@@ -79,7 +79,6 @@ sub create {
     my $bx = $class->define_boolexpr(@_);
     my $model_id = $bx->value_for('model_id');
     my $model = Genome::Model->get($model_id);
-    $model->update_tumor_and_normal_build_inputs;
 
     my $self = $class->SUPER::create(@_);
 

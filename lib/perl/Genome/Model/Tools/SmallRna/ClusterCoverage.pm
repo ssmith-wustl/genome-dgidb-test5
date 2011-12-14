@@ -41,6 +41,15 @@ class Genome::Model::Tools::SmallRna::ClusterCoverage {
             doc => 'Output "Regions" BED file containing CLUSTERS from MERGED BED entries',
         },
     ],
+
+    has_optional_param => [
+        lsf_queue => {
+            default_value => 'workflow',
+        },
+        lsf_resource => {
+            default_value => '-R \'select[mem>16000] rusage[mem=16000]\' -M 16000000 ',
+        },
+    ],
 };
 
 

@@ -7,7 +7,7 @@ package Genome::Model::Tools::SmallRna::StatsGenerator;
 	#a) added new parameter for taking in flagstat from 17-70 bp bam
 	#b) Other flagstat for the respective size-fraction will be intuitively determined
 
-
+## 11/7 Added LSF PARAMS as well as multiplication factor of 1million for normalization stats
 use strict;
 use warnings;
 
@@ -70,7 +70,17 @@ class Genome::Model::Tools::SmallRna::StatsGenerator {
 
 		},
 	],
+
+    has_optional_param => [
+        lsf_queue => {
+            default_value => 'workflow',
+        },
+        lsf_resource => {
+            default_value => '-R \'select[mem>16000] rusage[mem=16000]\' -M 16000000 ',
+        },
+    ],
 };
+
 
 sub execute {
 	my $self     = 	shift;
@@ -106,9 +116,9 @@ sub execute {
 	
 	my $index    =  Bio::DB::Bam->index_open($bamfile);
 	
-	my	$output_cluster_bed = $self->output_clusters_file;
-    my  $output_cluster_fh = Genome::Sys->open_file_for_writing($output_cluster_bed);
-    my 	$sub_output_fh = Genome::Sys->open_file_for_writing($sub_output);
+	my $output_cluster_bed = $self->output_clusters_file;
+    	my $output_cluster_fh = Genome::Sys->open_file_for_writing($output_cluster_bed);
+    	my $sub_output_fh = Genome::Sys->open_file_for_writing($sub_output);
     
     ###  SORTING CLUSTERS FROM CLUSTER-COVERAGE STATS FILE AND WRITING ENTRIES TO A NEW "SORTED" FILE##
     
@@ -155,8 +165,8 @@ sub execute {
 	my ( $bed_temp_fh, $bed_temp_name ) = Genome::Sys->create_temp_file();
 		
 	#####OPENING BAM FILE AND MATCHING TID TO CHR######
-	my %chr_to_id;
-    my $bam           = Bio::DB::Bam->open($bamfile); 
+ 	my %chr_to_id;
+        my $bam           = Bio::DB::Bam->open($bamfile); 
 	my $header        = $bam->header();                     # TODO : use the name ->tid method
 	my $name_arrayref = $header->target_name;
 
@@ -184,7 +194,7 @@ sub execute {
 		my $zenith_depth = $cov_arr[5];
 		my @line_arr = split ("-", $id);
 		my $chrom_start = $line_arr[0];
-	    $stop = $line_arr[1];
+	   	$stop = $line_arr[1];
 		
 		my @name_arr = split (':', $chrom_start);
 		my $chr  = $name_arr[0];
@@ -209,11 +219,11 @@ sub execute {
 		####FIRST CALLBACK SUB-ROUTINE FOR ALIGNMENT STATS###	
 			
 		my $callback = sub {
-			my $alignment = shift;
-            my $flag = $alignment->flag;
+		my $alignment = shift;
+            	my $flag = $alignment->flag;
 			
-			#### LOOKING AT ONLY MAPPED ALIGNMENTS FOR ALIGNMENT STATISTICS #####	
-			if ($flag != 4) 		
+		#### LOOKING AT ONLY MAPPED ALIGNMENTS FOR ALIGNMENT STATISTICS #####	
+		if ($flag != 4) 		
 			{
 				$count_of{ $alignment->aux_get("XM") }++;
 				$cluster_stats{mismatches}->add_data( $alignment->aux_get("XM") );
@@ -255,16 +265,16 @@ sub execute {
 		my $mean_mapQ  = $cluster_stats{mapping_quality}->mean();
 		my $stdev_mapQ = $cluster_stats{mapping_quality}->standard_deviation();
 		my $mean_baseQ = $cluster_stats{base_quality}->mean();
-	    my $total_alignments = $cluster_stats{mapping_quality}->count();
+	    	my $total_alignments = $cluster_stats{mapping_quality}->count();
 	   
-	    my $Percent_map_z = ($CountZeroMapQ / $total_alignments) * 100;
+	    	my $Percent_map_z = ($CountZeroMapQ / $total_alignments) * 100;
 		my $Percent_map_z_rounded = sprintf("%.2f", $Percent_map_z);
 	   
 		my $min_mismatch     = $cluster_stats{mismatches}->min();
 		my $max_mismatch     = $cluster_stats{mismatches}->max();
 
-		my $normalization_17_70 = $zenith_depth/$flagstat_mapped_17_70 ; 
-		my $normalization_bin = $zenith_depth/$flagstat_mapped ; 
+		my $normalization_17_70 = $zenith_depth/$flagstat_mapped_17_70; 
+		my $normalization_bin = $zenith_depth/$flagstat_mapped; 
 		
 		print $output_fh join("\t",$name,$chr,$start,$stop,$depth,$zenith_depth,$cluster_length,$normalization_17_70,$normalization_bin). "\t";
 		

@@ -131,9 +131,9 @@ sub execute {
     Genome::Sys->create_directory($dbsnp_dir);
 
     my $pdv = $build->previously_discovered_variations_build;
-    my $snv_feature_list = $pdv->snv_feature_list;
+    my $snv_result = $pdv->snv_result;
 
-    my $dbsnp_file = defined($self->dbsnp_bed_file) ? $self->dbsnp_bed_file: $snv_feature_list->file_path ;
+    my $dbsnp_file = defined($self->dbsnp_bed_file) ? $self->dbsnp_bed_file: $snv_result->snvs_bed;
     unless(-e $dbsnp_file){
         die $self->error_message("DbSNP bed file does not exist at: ".$dbsnp_file);
     }

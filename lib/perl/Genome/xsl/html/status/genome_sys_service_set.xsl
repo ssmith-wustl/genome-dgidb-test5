@@ -44,10 +44,20 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
           <tbody>
 
             <tr>
-              <td class="name">Name:
+              <td class="name">
+                  <button class="restart">Restart</button>
               </td>
               <td class="value">
-                  <xsl:value-of select="normalize-space(aspect[@name='name']/value)"/>
+                  <xsl:value-of select="normalize-space(aspect[@name='restart_command']/value)"/>
+              </td>
+            </tr>
+
+            <tr>
+              <td class="name">
+                  <button class="stop">Stop</button>
+              </td>
+              <td class="value">
+                  <xsl:value-of select="normalize-space(aspect[@name='stop_command']/value)"/>
               </td>
             </tr>
 
@@ -56,23 +66,6 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
               </td>
               <td class="value">
                   <xsl:value-of select="normalize-space(aspect[@name='host']/value)"/>
-              </td>
-            </tr>
-
-            <tr>
-              <td class="name">Restart Command:
-              </td>
-              <td class="value">
-                  <xsl:value-of select="normalize-space(aspect[@name='restart_command']/value)"/>
-                  <button class="restart">Restart</button>
-              </td>
-            </tr>
-
-            <tr>
-              <td class="name">Stop Command:
-              </td>
-              <td class="value">
-                  <xsl:value-of select="normalize-space(aspect[@name='stop_command']/value)"/>
               </td>
             </tr>
 

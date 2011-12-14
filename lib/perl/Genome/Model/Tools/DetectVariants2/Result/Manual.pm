@@ -186,17 +186,6 @@ sub generate_standard_files {
         die($self->error_message('Conversion to bed failed')) unless Genome::Model::Tools::DetectVariants2::Base::_run_bed_converter($self, $converters{bed}, $source);
     }
 
-    if(lc($self->format) eq 'vcf') {
-        Genome::Sys->shellcmd(
-            cmd => 'bgzip -c ' . $source . ' > ' . $source . '.vcf.gz',
-            input_files => [$source],
-            output_files => [$source . '.vcf.gz']
-        );
-    } elsif($converters{vcf}->isa('Command')) {
-        Genome::Model::Tools::DetectVariants2::Base->class; #autoload
-        die($self->error_message('Conversion to bed failed')) unless Genome::Model::Tools::DetectVariants2::Base::_run_vcf_converter($self, $converters{vcf}, $source, $self->variant_type .'s');
-    }
-
     return 1;
 }
 
