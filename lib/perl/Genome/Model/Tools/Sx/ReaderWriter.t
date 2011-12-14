@@ -78,6 +78,7 @@ is(Genome::Model::Tools::Sx::Reader->_type_for_file('file.fq'), 'sanger', 'type 
 is(Genome::Model::Tools::Sx::Reader->_type_for_file('file.fasta'), 'phred', 'type for fasta');
 is(Genome::Model::Tools::Sx::Reader->_type_for_file('file.fa'), 'phred', 'type for fa');
 is(Genome::Model::Tools::Sx::Reader->_type_for_file('file.fna'), 'phred', 'type for fna');
+is(Genome::Model::Tools::Sx::Reader->_type_for_file('file.efasta'), 'ephred', 'type for efasta');
 is(Genome::Model::Tools::Sx::Reader->_type_for_file('file.sam'), 'sam', 'type for sam');
 is(Genome::Model::Tools::Sx::Reader->_type_for_file('file.bam'), 'bam', 'type for bam');
 is(Genome::Model::Tools::Sx::Reader->_type_for_file('file.sff'), 'sff', 'type for sff');
@@ -100,6 +101,7 @@ ok(!Genome::Model::Tools::Sx::Reader->_reader_class_for_type('unknown'), 'class 
 is(Genome::Model::Tools::Sx::Reader->_reader_class_for_type('sanger'), 'Genome::Model::Tools::Sx::FastqReader', 'class for sanger');
 is(Genome::Model::Tools::Sx::Reader->_reader_class_for_type('illumina'), 'Genome::Model::Tools::Sx::IlluminaFastqReader', 'class for illumina');
 is(Genome::Model::Tools::Sx::Reader->_reader_class_for_type('phred'), 'Genome::Model::Tools::Sx::PhredReader', 'class for phred');
+is(Genome::Model::Tools::Sx::Reader->_reader_class_for_type('ephred'), 'Genome::Model::Tools::Sx::PhredEnhancedSeqReader', 'class for ephred');
 
 ok(!eval{ Genome::Model::Tools::Sx::Writer->_writer_class_for_type() }, 'class for undef file failed: '.$@);
 ok(!Genome::Model::Tools::Sx::Writer->_writer_class_for_type('unknown'), 'class for unknown file failed');
