@@ -1173,8 +1173,7 @@ sub _process_sam_files {
     }
 
     my $per_lane_bam_file = $self->temp_staging_directory . "/all_sequences.bam";
-
-    my $to_bam = Genome::Model::Tools::Sam::SamToBam->create(
+    my %params = (
         bam_file => $per_lane_bam_file,
         sam_file => $final_sam_file,
         keep_sam => 0,
@@ -1183,6 +1182,16 @@ sub _process_sam_files {
         ref_list => $ref_list,
         use_version => $self->samtools_version,
     );
+    
+    if ($self->aligner_name =~ /rtg/){
+        #adukes - fix_mate screws up bitflags with rtg alignment, this is probably not the ideal spot for this...
+        $params{fix_mate} = 0;
+    }
+
+    my $to_bam = Genome::Model::Tools::Sam::SamToBam->create(
+        %params,
+    );
+
     unless($to_bam->execute) {
         $self->error_message("There was an error converting the Sam file $final_sam_file to $per_lane_bam_file.");
         die $self->error_message;
