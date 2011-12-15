@@ -260,7 +260,6 @@ my %expected_metrics = (
     'average_insert_size_used' => '260',
     'n50_contig_length' => '101',
     'genome_size_used' => '4500000',
-    'reads_not_assembled_pct' => 'nan',
     'supercontigs' => '1407',
     'average_supercontig_length' => '115',
     'contigs' => '1411',
