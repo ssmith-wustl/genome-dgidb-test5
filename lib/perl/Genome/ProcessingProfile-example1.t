@@ -44,8 +44,6 @@ class Genome::ProcessingProfile::Foo {
 
 # these key methods in the class are configured to just log that they've been run...
 my ($init_model,$init_build,$execute_build) = (0,0,0);
-sub Genome::ProcessingProfile::Foo::_initialize_model { $init_model = pop; 1; };
-sub Genome::ProcessingProfile::Foo::_initialize_build { $init_build = pop; 1; };
 sub Genome::ProcessingProfile::Foo::_execute_build { $execute_build = $_[1]; 1; };
 
 ok(Genome::ProcessingProfile::Foo->can("get"), "defined a new class of processing profile");
