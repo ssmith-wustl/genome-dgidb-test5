@@ -18,8 +18,7 @@ use_ok('Genome::Model::DeNovoAssembly::Report::Summary') or die;
 my $base_dir = '/gsc/var/cache/testsuite/data/Genome-Model/DeNovoAssembly';
 my $archive_path = $base_dir.'/inst_data/-7777/archive.tgz';
 ok(-s $archive_path, 'inst data archive path') or die;
-my $example_version = '4';
-my $example_dir = $base_dir.'/velvet_v'.$example_version;
+my $example_dir = $base_dir.'/velvet_v10';
 ok(-d $example_dir, 'example dir') or die;
 my $tmpdir = File::Temp::tempdir(CLEANUP => 1);
 
