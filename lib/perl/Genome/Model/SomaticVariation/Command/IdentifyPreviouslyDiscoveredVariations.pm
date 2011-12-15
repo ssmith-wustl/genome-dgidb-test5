@@ -240,7 +240,7 @@ sub skip_run {
         $detected_path = $r->path($variant_type . '.hq.bed');
     } else {
         my $version = '2';
-        $detected_path = ($variant_type eq 'snv' && defined($build->loh_version)) ? $build->data_set_path("loh/snvs.somatic",$version,'bed') : $build->data_set_path("variants/snvs.hq",$version,"bed");
+        $detected_path = ($variant_type eq 'snv' && defined($build->loh_version)) ? $build->data_set_path("loh/snvs.somatic",$version,'bed') : $build->data_set_path("variants/" . $variant_type . "s.hq",$version,"bed");
     }
     File::Copy::copy($detected_path, $novel);
     system("touch $previously_detected");
