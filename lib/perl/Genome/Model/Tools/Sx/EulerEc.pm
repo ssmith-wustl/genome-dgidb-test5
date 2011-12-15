@@ -5,7 +5,6 @@ use warnings;
 
 use Genome;
 
-use Data::Dumper 'Dumper';
 use Cwd;
 
 class Genome::Model::Tools::Sx::EulerEc {
@@ -34,18 +33,6 @@ class Genome::Model::Tools::Sx::EulerEc {
             doc => 'Show output from subprocesses. Output is suppressed without this option.',
             is_optional => 1,
         },
-        _tmp_pre_fwd_fastq => {
-            is_transient => 1, is_optional => 1,
-        },
-        _tmp_pre_rev_fastq => {
-            is_transient => 1, is_optional => 1,
-        },
-        _tmp_post_fwd_fastq => {
-            is_transient => 1, is_optional => 1,
-        },
-        _tmp_post_rev_fastq => {
-            is_transient => 1, is_optional => 1,
-        },
     ],
 };
 
@@ -59,132 +46,146 @@ sub execute {
     $self->_init;
     my $cwd = cwd();
 
-    #temp dir to run EulerEC
+    #tmp dir to run EulerEC
     my $euler_dir = Genome::Sys->base_temp_directory;
+    for my $set ( 1 .. 2 ) { #run fwd/rev in separate dirs
+        Genome::Sys->create_directory( $euler_dir."/$set" );
+    }
     $self->status_message("Running EulerEC in $euler_dir");
 
-    #input reader from sx cmd
+    #Input reader
     my $reader = $self->_input;
-    if ( not $reader ) {
-        $self->error_message("Failed to get reader for input file");
-    }
+    $self->error_message("Failed to get input file to process") and return
+        if not $reader;
 
-    #split bam into fwd/rev fastqs
-    my $fwd_fastq = 'euler.pre.fwd.fastq';
-    my $rev_fastq = 'euler.pre.rev.fastq';
-    my $fwd_fastq_file = $euler_dir.'/'.$fwd_fastq;
-    my $rev_fastq_file = $euler_dir.'/'.$rev_fastq;
-    my $fwd_rev_writer = Genome::Model::Tools::Sx::Writer->create(
-        config => [$fwd_fastq_file.':name=fwd:type=sanger',$rev_fastq_file.':name=rev:type=sanger'],
+    #Euler fasta writer 1
+    my $fasta = 'euler.fasta';
+    my $one_fasta = $euler_dir.'/1/'.$fasta;
+    my $one_writer = Genome::Model::Tools::Sx::PhredWriter->create(
+        file => $one_fasta,
+        qual_file => $one_fasta.'.qual',
     );
+    $self->error_message("Failed to create gmt sx phred-writer for 1 sequences") and return
+        if not $one_writer;
+
+    #Euler fasta writer 2 .. only write to if paired
+    my $two_fasta = $euler_dir.'/2/'.$fasta;
+    my $two_writer = Genome::Model::Tools::Sx::PhredWriter->create(
+        file => $two_fasta,
+        qual_file => $two_fasta.'.qual',
+    );
+    $self->error_message("Failed to create gmt sx phred-writer to 2 sequences") and return
+        if not $two_writer;
+
+    #write input to writer
     while ( my $seqs = $reader->read ) {
-        $fwd_rev_writer->write( $seqs );
+        $one_writer->write( @$seqs[0] );
+        $two_writer->write( @$seqs[1] ) if @$seqs[1];
     }
-    unless ( -s $fwd_fastq_file ) {
-        $self->error_message("Failed to create fwd fastq file or file is zero size: ".$fwd_fastq_file);
-        return;
-    }
-    $self->_tmp_pre_fwd_fastq( $fwd_fastq_file );
-    unless ( -s $rev_fastq_file ) {
-        $self->error_message("Failed to create rev fastq file or file is zero size: ".$rev_fastq_file);
-        return;
-    }
-    $self->_tmp_pre_rev_fastq( $rev_fastq_file );
 
-    #run EulerEC separately on fwd and rev fastqs
-    for my $type ( qw/ fwd rev / ) {
-        Genome::Sys->create_directory( $euler_dir.'/'.$type );
-        #sx reader
-        my $file_method = '_tmp_pre_'.$type.'_fastq';
-        if ( not -s $self->$file_method ) {
-            $self->error_message("Failed to find file or file is zero size or did not get set: ".$self->$file_method);
-            return;
+    #run EulerEC
+    for my $set ( 1 .. 2 ) {
+        #EulerEC outputs to cwd
+        chdir $euler_dir."/$set";
+        $self->status_message("chdir to ".$euler_dir."/$set to run EulerEC");
+        if ( -s 'euler.fasta' ) {
+            my $env_var = 'EUSRC=/gsc/pkg/bio/euler/euler-sr-ec-2.0.2 MACHTYPE=x86_64';#set env
+            my $cmd = $env_var.' EulerEC.pl euler.fasta '.$self->_euler_cmd_params;
+            $self->status_message("Running EulerEC for set $set with command: $cmd");
+            ### THS IS DOESN'T SEEM WORK WITH STRINGS OF MULTIPLE SX CMDS WILL LOOK INTO IT ###
+            #my $rv = eval{ Genome::Sys->shellcmd(cmd => $cmd); };
+            #if (! $rv ) {
+            #    $self->error_message("Failed to run EulerEc.pl with command: $cmd");
+            #    return;
+            #}
+            my $rv = `$cmd`;
+            chdir $cwd;
+            $self->status_message("EulerEC output message:\n$rv");
+        } else {
+            $self->status_message("Skipping running EulerEC for set $set, input fasta is empty");
         }
-        my $reader = Genome::Model::Tools::Sx::Reader->create(
-            config => [ $self->$file_method ],
-        );
-        if ( not $reader ) {
-            $self->error_message("Failed to create sx reader for file: ".$self->$file_method);
-            return;
-        }
-        #sx fasta writer
-        my $fasta_name = 'euler.pre.'.$type.'.fasta';
-        my $fasta_file = $euler_dir."/$type/".$fasta_name;
-        my $writer = Genome::Model::Tools::Sx::PhredWriter->create(
-            file => $fasta_file,
-            qual_file => $fasta_file.'.qual',
-        );
-        if ( not $writer ) {
-            $self->error_message("Failed to create writer to write EulerEC input fasta file");
-            return;
-        }
-        while ( my $seqs = $reader->read ) {
-            $writer->write( @$seqs[0] );
-        }
-        #build EulerEC command
-        my $cmd = 'EUSRC=/gsc/pkg/bio/euler/euler-sr-ec-2.0.2 MACHTYPE=x86_64 '; #set env
-        $cmd .= 'EulerEC.pl '.$fasta_name.' '.$self->kmer_size.' -minMult '.$self->min_multi;
-        $cmd .= ' -script' if $self->script;
-        $cmd .= ' -verbose' if $self->verbose;
-        $cmd .= ' -debug' if $self->debug;
-        #run command
-        $self->status_message("Running EulerEc.pl with CMD: $cmd");
-        chdir $euler_dir.'/'.$type; #Euler output files to cwd
-        $self->status_message("Switching to $euler_dir/".$type." to run Euler");
-        ### THS IS DOESN'T WORK WITH STRINGS OF MULTIPLE SX CMDS WILL LOOK INTO IT ###
-        #my $rv = eval{ Genome::Sys->shellcmd(cmd => $cmd); };
-        #if (! $rv ) {
-        #    $self->error_message("Failed to run EulerEc.pl with command: $cmd");
-        #    return;
-        #}
-        my $rv = `$cmd`;
         chdir $cwd;
-        $self->status_message("EulerEC output message:\n$rv");
         $self->status_message("Switching back to original dir: $cwd");
-        #check EulerEC output files
-        if ( not -d $euler_dir."/$type/fixed" ) {
-            $self->error_message("Euler did not create fixed dir for run: ".$euler_dir."/$type/fixed");
-            return;
-        }
-        if ( not -s $euler_dir."/$type/fixed/$fasta_name" ) {
-            $self->error_message("Failed to find Euler output file or file is zero size: ".$euler_dir."/$type/fixed/$fasta_name");
-            return;
-        }
-        $self->status_message("Successfully ran EulerEc");
-        #writer post EulerEC fwd/rev fastq
-        my $post_reader = Genome::Model::Tools::Sx::PhredReader->create(
-            file => $euler_dir.'/'.$type.'/fixed/'.$fasta_name,
-            qual_file => $euler_dir.'/'.$type.'/'.$fasta_name.'.qual',
-        );
-        my $post_file = $euler_dir.'/euler.post.'.$type.'.fastq';
-        my $post_writer = Genome::Model::Tools::Sx::Writer->create(
-            config => [ $post_file ],
-        );
-        if ( not $post_writer ) {
-            $self->error_message("Failed to create post EulerEC fastq writer");
-            return;
-        }
-        while ( my $seq = $post_reader->read ) {
-            $post_writer->write([$seq]);
-        }
-        if ( not -s $post_file ) {
-            $self->error_message("Failed to create post EulerEC fastq file: $post_file");
-            return;
-        }
-        my $post_file_method = '_tmp_post_'.$type.'_fastq';
-        $self->$post_file_method( $post_file );
     }
 
-    #writer final fastq
-    my $final_reader = Genome::Model::Tools::Sx::Reader->create(
-        config => [$self->_tmp_post_fwd_fastq.':type=sanger',$self->_tmp_post_rev_fastq.':type=sanger'],
+    #euler 1 output reader
+    my $euler_1_seq = $euler_dir."/1/fixed/euler.fasta";
+    $self->error_message("Euler output is empty or does not exist: ".$euler_1_seq) and return
+        if not -s $euler_1_seq;
+    my $euler_1_seq_reader = Genome::Model::Tools::Sx::PhredSeqReader->create(
+        file => $euler_1_seq,
     );
-    my $writer = $self->_output;
-    while ( my $seqs = $final_reader->read ) {
-        $writer->write( $seqs );
+    my $one_qual_reader = Genome::Model::Tools::Sx::PhredQualReader->create(
+        file => $euler_dir.'/1/euler.fasta.qual',
+    );
+
+    #euler 2 output reader if written to
+    my $euler_2_seq_reader;
+    my $two_qual_reader;
+    if ( -s $euler_dir."/2/fixed/euler.fasta" ) {
+        $self->status_message("Creating set 2 EulerEC output reader");
+        $euler_2_seq_reader = Genome::Model::Tools::Sx::PhredSeqReader->create(
+            file => $euler_dir."/2/fixed/euler.fasta",
+        );
+        $two_qual_reader = Genome::Model::Tools::Sx::PhredQualReader->create(
+            file => $euler_dir.'/2/euler.fasta.qual',
+        ); 
     }
+
+    #output writer
+    my $output_writer = $self->_output;
+    $self->error_message("Failed to set output writer") and return if
+        not $output_writer;
     
+    #write to output .. clean up trimmed/appended reads
+    while ( my $seq = $euler_1_seq_reader->read ) {
+        my $qual = $one_qual_reader->read;
+        my $fastq = $self->_fastq_from_seq_qual($seq,$qual);
+        $self->error_message("Failed to get fastq from seq and qual") and return
+            if not $fastq;
+        my @fastqs;
+        push @fastqs, $fastq;
+
+        if ( $euler_2_seq_reader ) {
+            $seq = $euler_2_seq_reader->read;
+            $qual = $two_qual_reader->read;
+            $fastq = $self->_fastq_from_seq_qual($seq,$qual);
+            $self->error_message("Failed to get fastq from seq and qual") and return
+                if not $fastq;
+            push @fastqs, $fastq;
+        }
+        $output_writer->write( \@fastqs );
+    }
+
     return 1;
+}
+
+sub _euler_cmd_params {
+    my $self = shift;
+
+    my $cmd = $self->kmer_size.' -minMult '.$self->min_multi;
+    $cmd .= ' -script' if $self->script;
+    $cmd .= ' -verbose' if $self->verbose;
+    $cmd .= ' -debug' if $self->debug;
+
+    return $cmd;
+}
+
+sub _fastq_from_seq_qual {
+    my ( $self, $seq, $qual ) = @_;
+
+    #check seq/qual from same read
+    $self->status_message('Got read '.$seq->{id}.' from fasta but read '.$qual->{id}.' from qual') and return
+        if not $seq->{id} eq $qual->{id};
+
+    #check seq length == qual length
+    if ( length($seq->{seq}) != length($qual->{qual}) ) {
+        $self->status_message("Fasta and qual lengths do not match for read id: ".$seq->{id});
+        #make all sanger 33/phred 0
+        $qual->{qual} = '!' x (length($seq->{seq}));
+    }
+    $seq->{qual} = $qual->{qual}; 
+    return $seq;
 }
 
 1;
