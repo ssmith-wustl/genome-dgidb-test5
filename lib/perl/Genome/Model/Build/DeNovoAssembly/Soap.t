@@ -23,7 +23,7 @@ use_ok('Genome::Model::Build::DeNovoAssembly::Soap') or die;
 my $base_dir = '/gsc/var/cache/testsuite/data/Genome-Model/DeNovoAssembly';
 my $archive_path = $base_dir.'/inst_data/-7777/archive.tgz';
 ok(-s $archive_path, 'inst data archive path') or die;
-my $example_dir = $base_dir.'/soap_v9';
+my $example_dir = $base_dir.'/soap_v10';
 ok(-d $example_dir, 'example dir') or die;
 my $tmpdir = File::Temp::tempdir(CLEANUP => 1);
 
@@ -170,7 +170,7 @@ $pp->assembler_name($assembler_name); # reset
 # ASSEMBLE
 $assembler_rusage = $build->assembler_rusage;
 my $queue = ( $build->run_by eq 'apipe-tester' ) ? 'alignment-pd' : 'apipe';
-is($assembler_rusage, "-q $queue -n 4 -R 'span[hosts=1] select[type==LINUX64 && mem>92000] rusage[mem=92000]' -M 92000000", 'assembler rusage');
+is($assembler_rusage, "-q $queue -n 4 -R 'span[hosts=1] select[type==LINUX64 && mem>30000] rusage[mem=30000]' -M 30000000", 'assembler rusage');
 %assembler_params = $build->assembler_params;
 #print Data::Dumper::Dumper(\%assembler_params);
 is_deeply(
@@ -246,6 +246,7 @@ ok( $metrics->execute, 'Executed report' );
 ok( -s $example_build->stats_file, 'Example build stats file exists' );
 ok( -s $build->stats_file, 'Test created stats file' );
 is(File::Compare::compare($example_build->stats_file,$build->stats_file), 0, 'Stats files match' );
+#print 'gvimdiff '.join(' ', $example_build->stats_file,$build->stats_file)."\n"; <STDIN>;
 #check build metrics
 my %expected_metrics = (
     'n50_supercontig_length' => '101',
@@ -259,7 +260,7 @@ my %expected_metrics = (
     'average_insert_size_used' => '260',
     'n50_contig_length' => '101',
     'genome_size_used' => '4500000',
-    'reads_not_assembled_pct' => 'NA',
+    'reads_not_assembled_pct' => 'nan',
     'supercontigs' => '1407',
     'average_supercontig_length' => '115',
     'contigs' => '1411',
@@ -272,10 +273,10 @@ my %expected_metrics = (
     'read_depths_ge_5x' => 'NA'
 );
 for my $metric_name ( keys %expected_metrics ) {
-    ok( $expected_metrics{$metric_name} eq $build->$metric_name, "$metric_name matches" );
+    is($expected_metrics{$metric_name}, $build->$metric_name, "$metric_name matches" );
 }
 
 #print $build->data_directory."\n"; <STDIN>;
-
 done_testing();
 exit;
+
