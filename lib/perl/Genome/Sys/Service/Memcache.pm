@@ -19,3 +19,11 @@ sub log_path { "/var/log/memcached.log" }
 sub pid_name { "memcached" }
 
 sub url {}
+
+sub status {
+    if(Genome::Memcache->server->stats->{total}) {
+        return 'running';
+    } else {
+        return 'stopped';
+    }
+}
