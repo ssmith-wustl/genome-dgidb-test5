@@ -110,6 +110,7 @@ class Sx::Metrics::Assembly {
                 coverage_3x
                 coverage_2x
                 coverage_1x
+                coverage_0x
                 reads_average_length
                 reads_chaff_rate
                 reads_count
