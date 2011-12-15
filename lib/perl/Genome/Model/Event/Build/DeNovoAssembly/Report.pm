@@ -11,6 +11,7 @@ class Genome::Model::Event::Build::DeNovoAssembly::Report {
 
 sub execute {
     my $self = shift;
+    $self->status_message('De novo assembly report...');
 
     #run stats
     my $tools_base_class = $self->processing_profile->tools_base_class;
@@ -25,7 +26,13 @@ sub execute {
         $self->error_message('Failed to find metrics/stats class for assembler: '.$self->processing_profile->assembler);
         return;
     }
-    my $metrics = $metrics_class->create(assembly_directory => $self->build->data_directory);
+    my $major_contig_length = ( $self->build->processing_profile->name =~ /PGA/ ? 300 : 500 );
+    $self->status_message('Assembly directory: '.$self->build->data_directory);
+    $self->status_message('Major contig length: '.$major_contig_length);
+    my $metrics = $metrics_class->create(
+        assembly_directory => $self->build->data_directory,
+        major_contig_length => $major_contig_length,
+    );
     if ( not $metrics ) {
         $self->error_message('Failed to create metrics tool: '.$metrics_class);
         return;
@@ -70,6 +77,7 @@ sub execute {
     $fh->print( $xslt->{content} );
     $fh->close;
 
+    $self->status_message('De novo assembly report...OK');
     return 1;
 }
 

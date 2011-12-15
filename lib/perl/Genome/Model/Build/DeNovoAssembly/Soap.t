@@ -75,7 +75,7 @@ ok($instrument_data->is_paired_end, 'inst data is paired');
 ok(-s $instrument_data->archive_path, 'inst data archive path');
 
 my $pp = Genome::ProcessingProfile::DeNovoAssembly->create(
-    name => 'De Novo Assembly Soap Test',
+    name => 'De Novo Assembly Soap PGA Test',
     assembler_name => 'soap de-novo-assemble',
     assembler_version => '1.04',
     assembler_params => '-kmer_size 31 -resolve_repeats -kmer_frequency_cutoff 1',

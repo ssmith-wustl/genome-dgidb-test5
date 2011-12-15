@@ -103,6 +103,20 @@ my $example_build = Genome::Model::Build->create(
 );
 ok($example_build, 'create example build');
 
+if(0){
+
+$build->data_directory('velvet_v11');
+my $metrics = Genome::Model::Event::Build::DeNovoAssembly::Report->create( build => $build, model => $model );
+ok( $metrics, 'Created report' );
+$metrics->dump_status_messages(1);
+ok( $metrics->execute, 'Executed report' );
+is(File::Compare::compare($build->stats_file,$example_build->stats_file), 0, 'Stats files match' );
+print 'gvimdiff '.join(' ', $example_build->stats_file,$build->stats_file)."\n"; <STDIN>;
+exit;
+}
+
+
+
 # MISC 
 is($build->center_name, $build->model->center_name, 'center name');
 is($build->genome_size, 4500000, 'Genome size');
@@ -202,6 +216,7 @@ ok( $metrics->execute, 'Executed report' );
 ok( -s $example_build->stats_file, 'Example build stats file exists' );
 ok( -s $build->stats_file, 'Test created stats file' );
 is(File::Compare::compare($example_build->stats_file,$build->stats_file), 0, 'Stats files match' );
+#print 'gvimdiff '.join(' ', $example_build->stats_file,$build->stats_file)."\n"; <STDIN>;
 #check build metrics
 my %expected_metrics = (
     'n50_supercontig_length' => '141',
@@ -228,11 +243,10 @@ my %expected_metrics = (
     'read_depths_ge_5x' => '1.1'
 );
 for my $metric_name ( keys %expected_metrics ) {
-    ok( $expected_metrics{$metric_name} eq $build->$metric_name, "$metric_name metrics match" );
+    is($expected_metrics{$metric_name}, $build->$metric_name, "$metric_name metrics match" );
 }
 
 #print $build->data_directory."\n"; <STDIN>;
-
 done_testing();
 exit;
 
