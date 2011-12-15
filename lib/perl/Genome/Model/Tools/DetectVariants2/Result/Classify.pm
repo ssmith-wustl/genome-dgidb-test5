@@ -123,7 +123,7 @@ sub _validate_inputs {
 
     my $version = $self->classifier_version;
     unless(grep($_ eq $version, $self->available_versions)) {
-        $self->error_message('Unsupported classifier version passed.  Supported versions: ' . join(', ', $self->classifier_versions));
+        $self->error_message('Unsupported classifier version passed.  Supported versions: ' . join(', ', $self->available_versions));
         return;
     }
 
