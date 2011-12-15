@@ -4,7 +4,6 @@ use strict;
 use warnings;
 
 use Genome;
-use Genome::Info::IUB;
 
 class Genome::Model::Tools::DetectVariants2::Classify::PreviouslyDiscovered {
     is => 'Genome::Model::Tools::DetectVariants2::Result::Classify',
@@ -26,7 +25,7 @@ sub _validate_inputs {
     my $self = shift;
 
     unless($self->previously_discovered_result) {
-        $self->error_message('No Control SNV result found.');
+        $self->error_message('No previously discovered result found.');
         return;
     }
 
@@ -90,8 +89,12 @@ sub path {
     my $self = shift;
     my ($str) = @_;
 
-    if($str eq 'snvs.hq.bed') {
-        return $self->SUPER::path('snvs.hq.novel.v2.bed');
+    my $type = $self->variant_type;
+
+    if($str eq $type . 's.hq.bed') {
+        return $self->path($type . 's.hq.novel.v2.bed');
+    } elsif($str eq $type . 's.lq.bed') {
+        return $self->path($type . 's.hq.previously_detected.v2.bed');
     } else {
         return $self->SUPER::path(@_);
     }
