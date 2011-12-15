@@ -2,24 +2,28 @@
   <xsl:output method="text"/>
   <xsl:output doctype-system="http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"/>
   <xsl:output doctype-public="-//W3C//DTD XHTML 1.0 Transitional//EN"/>
+  <xsl:variable name="contigs_length" select="//aspect[@name='contigs_length']/value"/>
+  <xsl:variable name='reads_unplaced' select="//aspect[@name='reads_unplaced']/value"/>
+  <xsl:variable name="reads_count" select="//aspect[@name='reads_count']/value"/>
+  <xsl:variable name="reads_length_q20" select="//aspect[@name='reads_length_q20']/value"/>
   <xsl:template match="/">*** SIMPLE READ STATS ***
-Total input reads: <xsl:value-of select="//aspect[@name='reads_count']/value"/>
+Total input reads: <xsl:value-of select="$reads_count"/>
 Total input bases: <xsl:value-of select="//aspect[@name='reads_length']/value"/> bp
 Total Q20 bases: <xsl:value-of select="//aspect[@name='reads_length_q20']/value"/> bp
-Average Q20 bases per read: <xsl:value-of select="//aspect[@name='reads_length_q20_per_read']/value"/> bp
+Average Q20 bases per read: <xsl:value-of select="format-number(($reads_length_q20 div $reads_count), '#')"/> bp
 Average read length: <xsl:value-of select="//aspect[@name='reads_average_length']/value"/> bp
-Placed reads: <xsl:value-of select="//aspect[@name='reads_placed']/value"/>
-(reads in scaffolds: <xsl:value-of select="//aspect[@name='reads_placed_in_scaffolds']/value"/>)
-(unique reads: <xsl:value-of select="//aspect[@name='reads_placed_unique']/value"/>)
-(duplicate reads: <xsl:value-of select="//aspect[@name='reads_placed_duplicate']/value"/>)
-Unplaced reads: <xsl:value-of select="//aspect[@name='reads_unplaced']/value"/>
-Chaff rate: <xsl:value-of select="//aspect[@name='reads_chaff_rate']/value"/>
-Q20 base redundancy: <xsl:value-of select="//aspect[@name='reads_length_q20_redundancy']/value"/>
+Placed reads: <xsl:value-of select="//aspect[@name='reads_placed_unique']/value"/>
+  (reads in scaffolds: <xsl:value-of select="//aspect[@name='reads_placed']/value"/>)
+  (unique reads: <xsl:value-of select="//aspect[@name='reads_placed_unique']/value"/>)
+  (duplicate reads: <xsl:value-of select="//aspect[@name='reads_placed_duplicate']/value"/>)
+Unplaced reads: <xsl:value-of select="$reads_unplaced"/>
+Chaff rate: <xsl:value-of select="format-number(($reads_unplaced div $reads_count), '#.##%')"/>
+Q20 base redundancy: <xsl:value-of select="format-number(($reads_length_q20 div $contigs_length), '#.#')"/>X
 
 
 *** Contiguity: Contig ***
 Total Contig number: <xsl:value-of select="//aspect[@name='contigs_count']/value"/>
-Total Contig bases: <xsl:value-of select="//aspect[@name='contigs_length']/value"/> bp
+Total Contig bases: <xsl:value-of select="$contigs_length"/> bp
 Total Q20 bases: <xsl:value-of select="//aspect[@name='contigs_length_q20']/value"/> bp
 Q20 bases %: <xsl:value-of select="//aspect[@name='contigs_length_q20_percent']/value"/> %
 Average Contig length: <xsl:value-of select="//aspect[@name='contigs_average_length']/value"/> bp
@@ -119,5 +123,46 @@ Bottom tier (<xsl:value-of select="//aspect[@name='tier_two']/value"/> bp -- end
   Bottom tier N50 contig number: <xsl:value-of select="//aspect[@name='supercontigs_t3_n50_count']/value"/>
   <xsl:text>&#10;</xsl:text>
   <xsl:text>&#10;</xsl:text>
+  <xsl:variable name="content_gc" select="//aspect[@name='content_gc']/value"/>
+  <xsl:if test="$content_gc !='NA'">
+    <xsl:variable name="content_at" select="//aspect[@name='content_at']/value"/>
+    <xsl:variable name="content_nx" select="//aspect[@name='content_nx']/value"/>
+*** Genome Contents ***
+Total GC count: <xsl:value-of select="$content_gc"/>, (<xsl:value-of select="format-number(($content_gc div $contigs_length), '#.0%')"/>)
+Total AT count: <xsl:value-of select="$content_at"/>, (<xsl:value-of select="format-number(($content_at div $contigs_length), '#.0%')"/>)
+Total NX count: <xsl:value-of select="$content_nx"/>, (<xsl:value-of select="format-number(($content_nx div $contigs_length), '#.#%')"/>)
+Total: <xsl:value-of select="$contigs_length"/>
+  <xsl:text>&#10;</xsl:text>
+  <xsl:text>&#10;</xsl:text>
+  </xsl:if>
+  <xsl:variable name="coverage_1x" select="//aspect[@name='coverage_1x']/value"/>
+  <xsl:if test="$coverage_1x !='NA'">
+  <xsl:variable name="coverage_2x" select="//aspect[@name='coverage_2x']/value"/>
+  <xsl:variable name="coverage_3x" select="//aspect[@name='coverage_3x']/value"/>
+  <xsl:variable name="coverage_4x" select="//aspect[@name='coverage_4x']/value"/>
+  <xsl:variable name="coverage_5x" select="//aspect[@name='coverage_5x']/value"/>
+  <xsl:variable name="coverage_0x" select="//aspect[@name='coverage_0x']/value"/>
+*** Read Depth Info ***
+Total consensus bases: <xsl:value-of select="$contigs_length"/>
+Depth >= 5: <xsl:value-of select="$coverage_5x"/><xsl:text>&#9;</xsl:text><xsl:value-of select="format-number(($coverage_5x div $contigs_length), '#.###############')"/>
+Depth >= 4: <xsl:value-of select="$coverage_4x"/><xsl:text>&#9;</xsl:text><xsl:value-of select="format-number(($coverage_4x div $contigs_length), '#.###############')"/>
+Depth >= 3: <xsl:value-of select="$coverage_3x"/><xsl:text>&#9;</xsl:text><xsl:value-of select="format-number(($coverage_3x div $contigs_length), '#.###############')"/>
+Depth >= 2: <xsl:value-of select="$coverage_2x"/><xsl:text>&#9;</xsl:text><xsl:value-of select="format-number(($coverage_2x div $contigs_length), '#.###############')"/>
+Depth >= 1: <xsl:value-of select="$coverage_1x"/><xsl:text>&#9;</xsl:text><xsl:value-of select="format-number(($coverage_1x div $contigs_length), '#.###############')"/>
+  <xsl:if test="$coverage_0x !='NA'">
+Uncovered:  <xsl:value-of select="$coverage_0x"/>
+  </xsl:if>
+  <xsl:text>&#10;</xsl:text>
+  <xsl:text>&#10;</xsl:text>
+  </xsl:if>
+  <xsl:variable name="contigs_length_5k" select="//aspect[@name='contigs_length_5k']/value"/>
+  <xsl:if test="$contigs_length_5k !='NA'">
+*** 5 Kb and Greater Contigs Info ***
+Total lengths of all contigs: <xsl:value-of select="$contigs_length"/>
+Total lengths of contigs 5 Kb and greater: <xsl:value-of select="$contigs_length_5k"/>
+Percentage of genome: <xsl:value-of select="format-number(($contigs_length_5k div $contigs_length), '#.#%')"/>
+  <xsl:text>&#10;</xsl:text>
+  <xsl:text>&#10;</xsl:text>
+  </xsl:if>
   </xsl:template>
 </xsl:stylesheet>
