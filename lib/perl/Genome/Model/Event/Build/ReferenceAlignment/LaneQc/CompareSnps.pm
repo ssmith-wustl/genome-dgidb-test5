@@ -32,7 +32,7 @@ sub execute {
         die $self->error_message("Failed to create output_dir ($output_dir).");
     }
 
-    my $gold2geno_file = $build->gold_snp_build->gold2geno_file;
+    my $gold2geno_file = $build->gold_snp_build->gold2geno_file_path;
     unless ( -s $gold2geno_file ) {
         die $self->error_message("Genotype file missing/empty: $gold2geno_file");
     }
