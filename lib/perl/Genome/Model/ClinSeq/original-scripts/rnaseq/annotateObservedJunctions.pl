@@ -25,65 +25,82 @@ use File::Basename;
 use IO::File;
 use Benchmark;
 
+my $script_dir;
+use Cwd 'abs_path';
+BEGIN{
+  if (abs_path($0) =~ /(.*\/).*\/.*\.pl/){
+    $script_dir = $1;
+  }
+}
+use lib $script_dir;
+use ClinSeq qw(:all);
+
+my $gene_annotation_dir = '';
+my $gene_annotation_set = '';
+my $gene_name_type = '';
 my $obs_junction_file = '';
 my $bedtools_bin_dir = '';
 my $working_dir = '';
-my $ref_junction_file = '';
-my $ref_ec_file = '';
+my $verbose = 0;
 
-GetOptions ('obs_junction_file=s'=>\$obs_junction_file, 
+GetOptions ('obs_junction_file=s'=>\$obs_junction_file, 'verbose=i'=>\$verbose, 
             'bedtools_bin_dir=s'=>\$bedtools_bin_dir, 'working_dir=s'=>\$working_dir,
-            'ref_junction_file=s'=>\$ref_junction_file, 'ref_ec_file=s'=>\$ref_ec_file);
+            'gene_annotation_dir=s'=>\$gene_annotation_dir, 'gene_annotation_set=s'=>\$gene_annotation_set, 'gene_name_type=s'=>\$gene_name_type);
 
 my $usage=<<INFO;
 
   Example usage: 
   
-  annotateObservedJunctions.pl  --obs_junction_file='/gscmnt/sata132/techd/mgriffit/hgs/hg1/qc/tophat/junctions.strand.junc'  --bedtools_bin_dir='/gsc/bin/'  --working_dir='/gscmnt/sata132/techd/mgriffit/hgs/hg1/qc/tophat/'  --ref_junction_file='/gscmnt/sata132/techd/mgriffit/reference_annotations/hg19/ALL.Genes.junc'  --ref_ec_file='/gscmnt/sata132/techd/mgriffit/reference_annotations/hg19/ALL.ExonContent.bed'
+  annotateObservedJunctions.pl  --obs_junction_file='/gscmnt/sata132/techd/mgriffit/hgs/hg1/qc/tophat/junctions.strand.junc'  --bedtools_bin_dir='/gsc/bin/'  --working_dir='/gscmnt/sata132/techd/mgriffit/hgs/hg1/qc/tophat/'  --gene_annotation_dir='/gscmnt/sata132/techd/mgriffit/reference_annotations/hg19/'  --gene_annotation_set='ALL'  --gene_name_type='symbol'
 
-
-  Specify the path to the BEDTools binary dir using: --bedtools_bin_dir
-  Specify the base analysis dir using: --working_dir
-  Specify the reference junction file using: --ref_junction_file
-  Specify the reference exon content file (merge of overlapping exons on each strand) exons: --ref_ec_file
+  --gene_annotation_dir   Specify the path to gene annotation files
+  --gene_annotation_set   Specify name of the gene annotation set within this dir
+  --gene_name_type        Specify the type of gene names to be used (determines with reference junction file will be used) using: --gene_name_type=symbol OR --gene_name_type=id
+  --bedtools_bin_dir      Specify the path to the BEDTools binary dir
+  --working_dir           Specify the base analysis dir.
+  --verbose               To display more output, set to 1
 
 INFO
 
 
-unless ($obs_junction_file && $bedtools_bin_dir && $working_dir && $ref_junction_file && $ref_ec_file){
+unless ($obs_junction_file && $bedtools_bin_dir && $working_dir && $gene_annotation_dir && $gene_annotation_set && $gene_name_type){
   print GREEN, "$usage", RESET;
   exit(1);
 }
-unless ($working_dir =~ /\/$/){
-  $working_dir .= "/";
+
+#Check input dirs
+$working_dir = &checkDir('-dir'=>$working_dir, '-clear'=>"no");
+$gene_annotation_dir = &checkDir('-dir'=>$gene_annotation_dir, '-clear'=>"no");
+$bedtools_bin_dir = &checkDir('-dir'=>$bedtools_bin_dir, '-clear'=>"no");
+
+#Set reference annotation files paths
+my $ref_ec_file = "$gene_annotation_dir"."$gene_annotation_set".".ExonContent.bed";
+unless (-e $ref_ec_file){
+  print RED, "\n\nCould not find ref_ec_file: $ref_ec_file\n\n", RESET;
+  exit(1);
 }
-unless (-e $working_dir && -d $working_dir){
-  print RED, "\n\nAnalysis dir: $working_dir not found\n\n", RESET;
-  exit();
-}
-unless ($bedtools_bin_dir =~ /\/$/){
-  $bedtools_bin_dir .= "/";
-}
-unless (-e $bedtools_bin_dir && -d $bedtools_bin_dir){
-  print RED, "\n\nBEDTools binary dir: $bedtools_bin_dir not found\n\n", RESET;
-  exit();
+my $ref_junction_file;
+my $outfile;
+if ($gene_name_type =~ /symbol/i){
+  $ref_junction_file = "$gene_annotation_dir"."$gene_annotation_set".".Genes.junc";
+  $outfile = $working_dir . "junctions.anno."."$gene_annotation_set".".bed";
+}elsif($gene_name_type =~ /id/i){
+  $ref_junction_file = "$gene_annotation_dir"."$gene_annotation_set".".Genes.gid.junc";
+  $outfile = $working_dir . "junctions.anno."."$gene_annotation_set".".gid.bed";
+}else{
+  print RED, "\n\nGene name type not recognized: $gene_name_type (must be 'symbol' or 'id')", RESET;
+  exit(1);
 }
 unless (-e $ref_junction_file){
   print RED, "\n\nCould not find ref_junction_file: $ref_junction_file\n\n", RESET;
-  exit();
+  exit(1);
 }
-unless (-e $ref_ec_file){
-  print RED, "\n\nCould not find ref_ec_file: $ref_ec_file\n\n", RESET;
-  exit();
-}
+
 #Make sure the observed junction file can be found
 unless (-e $obs_junction_file){
   print RED, "\n\nObserved junction file ($obs_junction_file) could not be found\n\n", RESET;
-  exit();
+  exit(1);
 }
-
-my $outfile = $working_dir . "junctions.anno.bed";
-
 
 #Import the reference junctions (from Ensembl + UCSC + MGC + Refseq + Vega + CCDS)
 my %known_junctions;
@@ -113,9 +130,9 @@ foreach my $jid (sort {$observed_junctions{$a}{order} <=> $observed_junctions{$b
 }
 close(OUT);
 
-print BLUE, "\n\nPrinted resulting annotated junctions to: $outfile", RESET;
+if ($verbose){ print BLUE, "\n\nPrinted resulting annotated junctions to: $outfile", RESET; }
 
-print "\n\n";
+if ($verbose){ print "\n\n"; }
 
 exit();
 
@@ -127,7 +144,7 @@ sub importRefJunctions{
   my %args = @_;
   my $infile = $args{'-ref_junction_file'};
 
-  print BLUE, "\n\nImporting reference junctions", RESET;
+  if ($verbose){ print BLUE, "\n\nImporting reference junctions", RESET; }
   #Inport the ref junction file.  In this file, the coordinates are always ordered regardless of strand
   #i.e. the 'left' coordinate is always a smaller number than the 'right' coordinate
   #If the strand is '+' then Donor=left and Acceptor=right
@@ -157,17 +174,12 @@ sub importRefJunctions{
       $known_acceptors{$chr}{$strand}{$left}=$gid_list;
     }else{
       print RED, "\n\nUnknown strand in reference junctions file", RESET;
-      exit();
+      exit(1);
     }
   }
   close(JUNC);
 
-  print BLUE, "\n\tImported $c known junctions and associated acceptor/donor pairs\n", RESET;
-
-  #foreach my $pos (sort {$a <=> $b} keys %{$test{'chr1'}{'+'}}){
-  #  print "\n$pos";
-  #}
-  #exit();
+  if ($verbose){ print BLUE, "\n\tImported $c known junctions and associated acceptor/donor pairs\n", RESET; }
 
   return();
 }
@@ -180,7 +192,7 @@ sub importEcBlocks{
   my %args = @_;
   my $infile = $args{'-ref_ec_file'};
 
-  print BLUE, "\n\nImporting reference exon content blocks", RESET;
+  if ($verbose){ print BLUE, "\n\nImporting reference exon content blocks", RESET; }
 
   #Import the ref exon content block file.  In this file, the coordinates are always ordered regardless of strand
   #i.e. the 'left' coordinate is always a smaller number than the 'right' coordinate
@@ -211,7 +223,7 @@ sub importEcBlocks{
     }
   }
   close(EXON);
-  print BLUE, "\n\tImported $c known exon content blocks\n", RESET;
+  if ($verbose) { print BLUE, "\n\tImported $c known exon content blocks\n", RESET; }
 
   return();
 }
@@ -224,7 +236,7 @@ sub importObsJunctions{
   my %args = @_;
   my $infile = $args{'-obs_junction_file'};
 
-  print BLUE, "\n\nImporting observed junctions", RESET;
+  if ($verbose) { print BLUE, "\n\nImporting observed junctions", RESET; }
   #Inport the obs junction file.  In this file, the coordinates are always ordered regardless of strand
   #i.e. the 'left' coordinate is always a smaller number than the 'right' coordinate
   #The strand is unknown...
@@ -263,7 +275,7 @@ sub importObsJunctions{
       $strand = $4;
     }else{
       print RED, "\n\nObserved junction not understood\n\n", RESET;
-      exit();
+      exit(1);
     }
 
     $observed_junctions{$jid}{read_count} = $read_count;
@@ -325,7 +337,7 @@ sub importObsJunctions{
   }
   close(JUNC);
 
-  print BLUE, "\n\tImported $c observed junctions\n", RESET;
+  if ($verbose) { print BLUE, "\n\tImported $c observed junctions\n", RESET; }
   return();
 }
 
@@ -337,7 +349,7 @@ sub annotateSkippingBT{
   my %args = @_;
   my $working_dir = $args{'-working_dir'};
 
-  print BLUE, "\n\nAnnotating skipping of each junction - exons, then acceptors, then donors - Using BEDTools\n", RESET;
+  if ($verbose) { print BLUE, "\n\nAnnotating skipping of each junction - exons, then acceptors, then donors - Using BEDTools\n", RESET; }
 
   #Use BEDTools to determine the exons, acceptors, or donors contained within each exon-exon observed junction (i.e. intron)
   #Do this by writing a temp BED file for each pair of coordinates (of the form: chr, start, end, strand) and then parsing the results file
@@ -361,7 +373,7 @@ sub annotateSkippingBT{
   my $temp_result = "$working_dir"."Result.tmp.txt";
 
   #OBSERVED JUNCTIONS
-  print BLUE, "\n\tLooking for entire exons skipped", RESET;
+  if ($verbose) { print BLUE, "\n\tLooking for entire exons skipped", RESET; }
   open (TMP_OJ, ">$temp_obs_junctions") || die "\n\nCould not open output file: $temp_obs_junctions";
   #Print print out the observed hmmSplicer junctions (i.e. introns as a temp bed file
   foreach my $jid (sort {$observed_junctions{$a}{order} <=> $observed_junctions{$b}{order}} keys %observed_junctions){
@@ -376,7 +388,7 @@ sub annotateSkippingBT{
       $strand = $4;
     }else{
       print RED, "\n\nObserved junction not understood\n\n", RESET;
-      exit();
+      exit(1);
     }
     print TMP_OJ "$chr\t$left\t$right\t$jid\t.\t$strand\n";
   }
@@ -400,7 +412,7 @@ sub annotateSkippingBT{
   close (TMP_KE);
 
   my $bed_cmd1 = "$bedtools_bin_dir"."intersectBed -a $temp_known_exons -b $temp_obs_junctions -f 1.0 -s -wa -wb | cut -f 10 | sort | uniq -c > $temp_result";
-  print BLUE, "\n\t$bed_cmd1", RESET;
+  if ($verbose) { print BLUE, "\n\t$bed_cmd1", RESET; }
   system($bed_cmd1);
   open (COUNTS, "$temp_result") || die "\n\nCould not open temp results file: $temp_result\n\n";
   while(<COUNTS>){
@@ -415,18 +427,18 @@ sub annotateSkippingBT{
         }
       }else{
         print RED, "\n\nUnrecognized junction id: $jid\n\n", RESET;
-        exit();
+        exit(1);
       }
     }else{
       print RED, "\n\nEntry in results file not understood: $_\n\n", RESET;
-      exit();
+      exit(1);
     }
   }
   close(COUNTS);
 
 
   #DONORS
-  print BLUE, "\n\tLooking for donors skipped", RESET;
+  if ($verbose){ print BLUE, "\n\tLooking for donors skipped", RESET; }
   open (TMP_KD, ">$temp_known_donors") || die "\n\nCould not open output file: $temp_known_donors";
   foreach my $chr (sort keys %known_donors){
     foreach my $strand (sort keys %{$known_donors{$chr}}){
@@ -439,7 +451,7 @@ sub annotateSkippingBT{
   close (TMP_KD);
 
   my $bed_cmd2 = "$bedtools_bin_dir"."intersectBed -a $temp_known_donors -b $temp_obs_junctions -f 1.0 -s -wa -wb | cut -f 10 | sort | uniq -c > $temp_result";
-  print BLUE, "\n\t$bed_cmd2", RESET;
+  if ($verbose){ print BLUE, "\n\t$bed_cmd2", RESET; }
   system($bed_cmd2);
   open (COUNTS, "$temp_result") || die "\n\nCould not open temp results file: $temp_result\n\n";
   while(<COUNTS>){
@@ -454,18 +466,18 @@ sub annotateSkippingBT{
         }
       }else{
         print RED, "\n\nUnrecognized junction id: $jid\n\n", RESET;
-        exit();
+        exit(1);
       }
     }else{
       print RED, "\n\nEntry in results file not understood: $_\n\n", RESET;
-      exit();
+      exit(1);
     }
   }
   close(COUNTS);
 
 
   #ACCEPTORS
-  print BLUE, "\n\tLooking for acceptors skipped", RESET;
+  if ($verbose){ print BLUE, "\n\tLooking for acceptors skipped", RESET; }
   open (TMP_KA, ">$temp_known_acceptors") || die "\n\nCould not open output file: $temp_known_acceptors";
   foreach my $chr (sort keys %known_acceptors){
     foreach my $strand (sort keys %{$known_acceptors{$chr}}){
@@ -478,7 +490,7 @@ sub annotateSkippingBT{
   close (TMP_KA);
 
   my $bed_cmd3 = "$bedtools_bin_dir"."intersectBed -a $temp_known_acceptors -b $temp_obs_junctions -f 1.0 -s -wa -wb | cut -f 10 | sort | uniq -c > $temp_result";
-  print BLUE, "\n\t$bed_cmd3", RESET;
+  if ($verbose){ print BLUE, "\n\t$bed_cmd3", RESET; }
   system($bed_cmd3);
   open (COUNTS, "$temp_result") || die "\n\nCould not open temp results file: $temp_result\n\n";
   while(<COUNTS>){
@@ -493,11 +505,11 @@ sub annotateSkippingBT{
         }
       }else{
         print RED, "\n\nUnrecognized junction id: $jid\n\n", RESET;
-        exit();
+        exit(1);
       }
     }else{
       print RED, "\n\nEntry in results file not understood: $_\n\n", RESET;
-      exit();
+      exit(1);
     }
   }
   close(COUNTS);
@@ -507,9 +519,8 @@ sub annotateSkippingBT{
   
   #Clean up the temp files
   my $rm_cmd = "rm -f $temp_obs_junctions $temp_known_exons $temp_known_donors $temp_known_acceptors $temp_result";
-  print BLUE, "\n\nCleaning up ...\n$rm_cmd", RESET;
+  if ($verbose){ print BLUE, "\n\nCleaning up ...\n$rm_cmd", RESET; }
   system ($rm_cmd);
-
 
   return();
 }
