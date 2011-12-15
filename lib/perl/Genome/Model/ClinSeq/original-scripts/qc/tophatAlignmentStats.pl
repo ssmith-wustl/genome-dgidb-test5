@@ -38,12 +38,12 @@ use ClinSeq qw(:all);
 #Input parameters
 my $reference_fasta_file = '';
 my $tophat_alignment_dir = '';
-my $reference_junctions_file = '';
+my $reference_annotations_dir = '';
 my $working_dir = '';
 my $verbose = 0;
 my $clean = 0;
 
-GetOptions ('reference_fasta_file=s'=>\$reference_fasta_file, 'tophat_alignment_dir=s'=>\$tophat_alignment_dir, 'reference_junctions_file=s'=>\$reference_junctions_file, 
+GetOptions ('reference_fasta_file=s'=>\$reference_fasta_file, 'tophat_alignment_dir=s'=>\$tophat_alignment_dir, 'reference_annotations_dir=s'=>\$reference_annotations_dir, 
  	    'working_dir=s'=>\$working_dir, 'verbose=i'=>\$verbose, 'clean=i'=>\$clean);
 
 
@@ -51,7 +51,7 @@ my $usage=<<INFO;
 
   Example usage: 
   
-  tophatAlignmentStats.pl  --reference_fasta_file='/gscmnt/sata420/info/model_data/2857786885/build102671028/all_sequences.fa'  --tophat_alignment_dir='/gscmnt/gc2014/info/model_data/2880794541/build115909743/alignments/'  --reference_junctions_file='/gscmnt/sata132/techd/mgriffit/reference_annotations/hg19/ALL.Genes.junc'  --working_dir='/gscmnt/sata132/techd/mgriffit/hgs/hg1/qc/tophat/'
+  tophatAlignmentStats.pl  --reference_fasta_file='/gscmnt/sata420/info/model_data/2857786885/build102671028/all_sequences.fa'  --tophat_alignment_dir='/gscmnt/gc2014/info/model_data/2880794541/build115909743/alignments/'  --reference_annotations_dir='/gscmnt/sata132/techd/mgriffit/reference_annotations/hg19/'  --working_dir='/gscmnt/sata132/techd/mgriffit/hgs/hg1/qc/tophat/'
   
   Intro:
   This script summarizes results from a tophat alignment directory and writes resulting stats and figures to a working directory
@@ -59,7 +59,7 @@ my $usage=<<INFO;
   Details:
   --reference_fasta_file          Reference fasta file that was used for Tophat mapping
   --tophat_alignment_dir          The 'alignment' dir created by a Tophat run
-  --reference_junctions_file      The reference junctions to be compared against
+  --reference_annotations_dir     Directory containing the reference junctions to be compared against
                                   For example: /gscmnt/sata132/techd/mgriffit/reference_annotations/hg19/ALL.Genes.junc                                
   --working_dir                   Directory where results will be stored
   --verbose                       To display more output, set to 1
@@ -67,17 +67,21 @@ my $usage=<<INFO;
 
 INFO
 
-unless ($reference_fasta_file && $tophat_alignment_dir && $reference_junctions_file && $working_dir){
+unless ($reference_fasta_file && $tophat_alignment_dir && $reference_annotations_dir && $working_dir){
   print GREEN, "$usage", RESET;
   exit(1);
 }
 
 #Check input directories and files
 $tophat_alignment_dir = &checkDir('-dir'=>$tophat_alignment_dir, '-clear'=>"no");
-$working_dir = &checkDir('-dir'=>$working_dir, '-clear'=>"no");
+if ($clean){
+  $working_dir = &checkDir('-dir'=>$working_dir, '-clear'=>"yes");
+}else{
+  $working_dir = &checkDir('-dir'=>$working_dir, '-clear'=>"no");
+}
 
-unless (-e $reference_junctions_file){
-  print RED, "\n\nCould not find reference junctions file: $reference_junctions_file\n\n", RESET;
+unless (-e $reference_annotations_dir){
+  print RED, "\n\nCould not find reference junctions file: $reference_annotations_dir\n\n", RESET;
   exit(1);
 }
 
@@ -86,26 +90,60 @@ my $new_tophat_junctions_bed_file = $working_dir . "junctions.bed";
 my $tophat_junctions_junc_file = $working_dir . "junctions.junc";
 my $tophat_junctions_anno_file = $working_dir . "junctions.strand.junc";
 
-#Make a copy of the junctions file
+#Make a copy of the junctions file and alignment stats file
 my $cp_cmd = "cp $tophat_junctions_bed_file $new_tophat_junctions_bed_file";
-if ($verbose){
-  print YELLOW, "\n\n$cp_cmd", RESET;
-}
+if ($verbose){ print YELLOW, "\n\n$cp_cmd", RESET; }
 system($cp_cmd);
+
+#Summarize the alignment stats file using an R script
 
 
 #Convert junctions.bed to a .junc file
 my $bed_to_junc_cmd = "cat $new_tophat_junctions_bed_file | "."$script_dir"."misc/bed2junc.pl > $tophat_junctions_junc_file";
-if ($verbose){
-  print YELLOW, "\n\n$bed_to_junc_cmd", RESET;
-}
+if ($verbose){ print YELLOW, "\n\n$bed_to_junc_cmd", RESET; }
 system($bed_to_junc_cmd);
 
 
 #Go through the .junc file and infer the strand of each observed junction
-&inferStrand('-infile'=>$tophat_junctions_junc_file, '-outfile'=>$tophat_junctions_anno_file, '-reference_fasta_file'=>$reference_fasta_file);
+&inferSpliceSite('-infile'=>$tophat_junctions_junc_file, '-outfile'=>$tophat_junctions_anno_file, '-reference_fasta_file'=>$reference_fasta_file);
 
 
+#Now annotate observed exon-exon junctions against databases of known junctions
+#annotateObservedJunctions.pl  --obs_junction_file='/gscmnt/sata132/techd/mgriffit/hgs/hg1/qc/tophat/junctions.strand.junc'  --bedtools_bin_dir='/gsc/bin/'  --working_dir='/gscmnt/sata132/techd/mgriffit/hgs/hg1/qc/tophat/'  --gene_annotation_dir='/gscmnt/sata132/techd/mgriffit/reference_annotations/hg19/'  --gene_annotation_set='Ensembl'  --gene_name_type='id'
+my @gene_name_type = qw ( symbol id );
+my @gene_annotation_sets = qw (ALL Ensembl);
+foreach my $gene_name_type (@gene_name_type){
+  foreach my $gene_annotation_set (@gene_annotation_sets){
+    my $cmd = "$script_dir/rnaseq/annotateObservedJunctions.pl  --obs_junction_file=$tophat_junctions_anno_file  --bedtools_bin_dir='/gsc/bin/'  --working_dir=$working_dir  --gene_annotation_dir=$reference_annotations_dir  --gene_annotation_set='$gene_annotation_set'  --gene_name_type='$gene_name_type'  --verbose=$verbose";
+    if ($verbose){ print YELLOW, "\n\n$cmd", RESET };
+    system($cmd);
+  }
+}
+
+#Calculate gene level read counts and expression estimates from exon-exon junction counts
+#Gene level expression = sum of exon junction read counts for a gene / number of exon-exon junctions of that gene
+#Only known junctions 'DA' will be used for these calculations
+#Store the proportion of junctions of the gene that were observed at least 1X, 5X, 10X, etc.
+#Make sure the output file has both ENSG ID, Gene Symbol, and Mapped Gene Symbol
+
+
+#Feed resulting files into R and generate statistics (also supply known junctions file used for the analysis)
+#- Basic stats: 
+#  - Total junctions observed, 
+#  - Total known junctions observed
+#  - Proportion of all known junctions observed
+#  - Total exon skipping junctions observed (and proportion of the library)
+#  - Total novel exon skipping junctions observed (and proportion of the library)
+#- Pie chart of splice sites observed (GC-AG, GC-AG, etc.)
+#- Pie chart of anchor types (DA, NDA, D, A, N) - Number and Percentage of reads corresponding to each type
+#- Percentage of all junction mapping reads with corresponding to known junctions
+#- Distribution of exon-exon junction read counts
+#- Expression distribution bias.  Percentage of all reads consumed by top N .. M % of junctions/genes
+#- Display read count distribution at both the gene and junction level
+#- For known exon-skipping events, display the proportion that are 1S, 2S, 3S, etc. - repeat for novel exon skipping
+#- How many genes are covered over the majority of their junctions (25%, 50%, 75%, 90%, 95%, 100%)?
+#- Produce ranked gene expression lists based on exon-junction values
+#- Produce a Top N% expressed file
 
 
 if ($verbose){print "\n\n"};
@@ -117,7 +155,7 @@ exit();
 ############################################################################################################################
 #Infer strand from alignment to reference genome                                                                           #
 ############################################################################################################################
-sub inferStrand{
+sub inferSpliceSite{
   my %args = @_; 
   my $infile = $args{'-infile'};
   my $outfile = $args{'-outfile'};
@@ -152,7 +190,8 @@ sub inferStrand{
   close(JUNC);
 
   #Determine strand by comparison back to the reference genome...
-  print BLUE, "\n\nAttempting to determine correct strand for each junction", RESET;
+  if ($verbose){print BLUE, "\n\nAttempting to determine splice site and strand for each junction", RESET;}
+
   open (REF, "$reference_fasta_file") || die "\n\nCould not open fasta file: $reference_fasta_file";
   my $tmp = $/;
   $/ = "\n>";  # read by FASTA record
@@ -160,12 +199,13 @@ sub inferStrand{
   while (<REF>){
     chomp $_;
     my $chr_seq = $_;
-    my ($chr) = $chr_seq =~ /^>*(\S+)/;  # parse ID as first word in FASTA header
+    my ($chr) = $chr_seq =~ /^>*(\S+)/;  # p  arse ID as first word in FASTA header
+    $chr = "chr".$chr;
     $chr_seq =~ s/^>*.+\n//;  # remove FASTA header
     $chr_seq =~ s/\n//g;  # remove endlines
 
     my $chr_length = length($_);
-    print BLUE, "\n\tFound $chr sequence (length = $chr_length)", RESET;
+    if ($verbose){print BLUE, "\n\tFound $chr sequence (length = $chr_length)", RESET;}
 
     #Now go through the junctions found for this chromosome and look for donor/acceptor splice sites at the coordinates reported
     #SPLICE_SITES = ["GT-AG", "CT-AC", "GC-AG", "CT-GC", "AT-AC", "GT-AT"]
@@ -184,27 +224,27 @@ sub inferStrand{
         my $right_dn = uc(substr($chr_seq, $right-3, 2));
 
         #print "\n\t\tDEBUG: $left_dn ... $right_dn";
-        #Assign strand...
+        #Strand is assigned by Tophat...
         if ($left_dn eq "GT" && $right_dn eq "AG"){
-          $junctions{$j}{strand} = "+";
+          #$junctions{$j}{strand} = "+";
           $junctions{$j}{splice_site} = "GT-AG";
         }elsif($left_dn eq "CT" && $right_dn eq "AC"){
-          $junctions{$j}{strand} = "-";
+          #$junctions{$j}{strand} = "-";
           $junctions{$j}{splice_site} = "GT-AG";
         }elsif($left_dn eq "GC" && $right_dn eq "AG"){
-          $junctions{$j}{strand} = "+";
+          #$junctions{$j}{strand} = "+";
           $junctions{$j}{splice_site} = "GC-AG";
         }elsif($left_dn eq "CT" && $right_dn eq "GC"){
-          $junctions{$j}{strand} = "-";
+          #$junctions{$j}{strand} = "-";
           $junctions{$j}{splice_site} = "GC-AG";
         }elsif($left_dn eq "AT" && $right_dn eq "AC"){
-          $junctions{$j}{strand} = "+";
+          #$junctions{$j}{strand} = "+";
           $junctions{$j}{splice_site} = "AT-AC";     
         }elsif($left_dn eq "GT" && $right_dn eq "AT"){
-          $junctions{$j}{strand} = "-";
+          #$junctions{$j}{strand} = "-";
           $junctions{$j}{splice_site} = "AT-AC";
         }else{
-          $junctions{$j}{strand} = ".";
+          #$junctions{$j}{strand} = ".";
           $junctions{$j}{splice_site} = "NA";
         }
       }else{
@@ -221,8 +261,7 @@ sub inferStrand{
   open (OUT, ">$outfile") || die "\n\nCould not open output file: $outfile\n\n";
   print OUT "$header_line\tintron_size\tsplice_site\n";
   foreach my $j (sort {$junctions{$a}{order} <=> $junctions{$b}{order}} keys %junctions){
-    my $jid = $j."($junctions{$j}{strand})";
-    print OUT "$jid\t$junctions{$j}{read_count}\t$junctions{$j}{intron_size}\t$junctions{$j}{splice_site}\n";
+    print OUT "$j\t$junctions{$j}{read_count}\t$junctions{$j}{intron_size}\t$junctions{$j}{splice_site}\n";
 
   }
   close(OUT);
