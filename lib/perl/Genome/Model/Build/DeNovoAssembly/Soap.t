@@ -170,7 +170,7 @@ $pp->assembler_name($assembler_name); # reset
 # ASSEMBLE
 $assembler_rusage = $build->assembler_rusage;
 my $queue = ( $build->run_by eq 'apipe-tester' ) ? 'alignment-pd' : 'apipe';
-is($assembler_rusage, "-q $queue -n 4 -R 'span[hosts=1] select[type==LINUX64 && mem>30000] rusage[mem=30000]' -M 30000000", 'assembler rusage');
+is($assembler_rusage, "-q $queue -n 4 -R 'span[hosts=1] select[type==LINUX64 && mem>92000] rusage[mem=92000]' -M 92000000", 'assembler rusage');
 %assembler_params = $build->assembler_params;
 #print Data::Dumper::Dumper(\%assembler_params);
 is_deeply(
@@ -202,14 +202,13 @@ max_rd_len=120
 [LIB]
 map_len=60
 asm_flags=3
-reverse_seq=0
 pair_num_cutoff=2
+reverse_seq=0
 avg_ins=260
 CONFIG
 $expected_config .= 'q1='.$build->data_directory.'/'.$build->file_prefix.".$library_id.forward.fastq\n";
 $expected_config .= 'q2='.$build->data_directory.'/'.$build->file_prefix.".$library_id.reverse.fastq\n";
 is($config, $expected_config, 'config matches');
-
 my @file_exts = qw/ contig         gapSeq        links     peGrads
                     preGraphBasic  readOnContig  scafSeq   updated.edge
                     ContigIndex    edge          kmerFreq  newContigIndex

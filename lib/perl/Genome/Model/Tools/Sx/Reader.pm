@@ -135,6 +135,7 @@ sub _type_for_file {
         fasta => 'phred',
         fna => 'phred',
         fa => 'phred',
+        efasta => 'ephred',
         sam => 'sam',
         bam => 'bam',
         sff => 'sff',
@@ -156,6 +157,7 @@ sub _reader_class_for_type {
     my %types_and_classes = (
         fasta => 'PhredReader',
         phred => 'PhredReader',
+        ephred => 'PhredEnhancedSeqReader',
         sanger => 'FastqReader',
         illumina => 'IlluminaFastqReader',
         sam => 'SamReader',

@@ -10,68 +10,48 @@ class Genome::Model::Tools::Sx::PhredReader {
     has => [ qual_file => { is => 'Text', is_optional => 1, }, ],
 };
 
+sub create {
+    my $class = shift;
+
+    my $self = $class->SUPER::create(@_);
+    return if not $self;
+
+    $self->{_seq_reader} = Genome::Model::Tools::Sx::PhredSeqReader->create(
+        file => $self->file,
+    );
+    return if not $self->{_seq_reader};
+
+    return $self if not $self->qual_file;
+
+    $self->{_qual_reader} = Genome::Model::Tools::Sx::PhredQualReader->create(
+        file => $self->qual_file,
+    );
+    return if not $self->{_qual_reader};
+
+    return $self;
+}
+
 sub read {
     my $self = shift;
 
-    my %seq;
-    @seq{qw/ id desc seq /} = $self->_parse_io($self->{_file});
-    return if not $seq{seq};
-    $seq{seq} =~ tr/ \t\n\r//d;	# Remove whitespace
+    my $seq = $self->{_seq_reader}->read;
+    return if not $seq;
 
-    return \%seq if not $self->{_qual_file};
+    return $seq if not $self->{_qual_reader};
 
-    my ($id, $desc, $data) = $self->_parse_io($self->{_qual_file});
-    if ( not defined $id ) {
-        Carp::confess("No qualities found for fasta: ".$seq{id});
+    my $qual = $self->{_qual_reader}->read;
+    if ( not $qual ) {
+        Carp::confess('No quality for sequence: '.$seq->{id});
     }
-    if ( $seq{id} ne $id ) {
-        Carp::confess('Fasta and quality ids do not match: '.$seq{id}." <=> $id");
+    if ( $seq->{id} ne $qual->{id} ) {
+        Carp::confess('Fasta and quality ids do not match: '.$seq->{id}.' <=> '.$qual->{id});
     }
-
-    for my $line ( split("\n", $data) ){
-        $line =~ s/^\s+//;
-        $line =~ s/\s+$//;
-        $seq{qual} .= join('', map { chr($_ + 33) } split(/\s+/, $line));
+    if ( length($seq->{seq}) != length($qual->{qual}) ) {
+        Carp::confess('Number of qualities does not match number of bases for fasta for '.$seq->{id}.'. Seq length: '.length($seq->{seq}).'. Qual length: '.length($qual->{qual}));
     }
-    if ( not $seq{qual} ) {
-        Carp::confess("Could not convert phred quality to sanger: $data");
-    }
-    if ( length($seq{seq}) != length($seq{qual}) ) {
-        Carp::confess("Number of qualities does not match number of bases for fasta $id. Have ".length($seq{seq}).' bases and '.length($seq{qual})." qualities.\nSeq: ".$seq{seq}."\nQual: '".$data."'");
-    }
+    $seq->{qual} = $qual->{qual};
 
-    return \%seq;
-}
-
-sub _parse_io {
-    my ($self, $io) = @_;
-
-    local $/ = "\n>";
-
-    my $entry = $io->getline;
-    return unless defined $entry;
-    chomp $entry;
-
-    if ( $entry eq '>' )  { # very first one
-        $entry = $io->getline;
-        return unless $entry;
-        chomp $entry;
-    }
-
-    my ($header, $data) = split(/\n/, $entry, 2);
-    defined $data && $data =~ s/>//g;
-
-    my ($id, $desc) = split(/\s+/, $header, 2);
-    if ( not defined $id or $id eq '' ) {
-        Carp::confess("Cannot get id from header ($header) for entry:\n$entry");
-    }
-    $id =~ s/>//;
-
-    if ( not defined $data ) {
-        Carp::confess("No data found for $id entry:\n$entry");
-    }
-
-    return ($id, $desc, $data);
+    return $seq;
 }
 
 1;

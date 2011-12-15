@@ -9,7 +9,7 @@ if (Genome::Config->arch_os ne 'x86_64') {
     plan skip_all => 'requires 64-bit machine';
 }
 else { 
-    plan tests => 30;
+    plan tests => 29;
 }
 
 BEGIN {
@@ -134,16 +134,15 @@ sub setup_test_builds {
         );
     ok($dbsnp_model, "created dbsnp model");
 
-    my $feature_list_cmd = Genome::FeatureList::Command::Create->create(
-        name => "dbsnp-test-$$",
-        file_path => $dbsnp_file,
-        format => 'true-BED',
+    my $result = Genome::Model::Tools::DetectVariants2::Result::Manual->create(
+        description => "dbsnp-test-$$",
+        original_file_path => $dbsnp_file,
+        format => 'bed',
+        variant_type => 'snv',
     );
-    ok($feature_list_cmd, 'created test feature list command');
-    my $test_feature_list = $feature_list_cmd->execute;
-    ok($test_feature_list, 'created test feature list');
+    ok($result, 'created test result');
 
-    my $dbsnp_build = Genome::Model::Build::ImportedVariationList->create(model => $dbsnp_model, snv_feature_list => $test_feature_list);
+    my $dbsnp_build = Genome::Model::Build::ImportedVariationList->create(model => $dbsnp_model, snv_result => $result);
     ok($dbsnp_build, "created dbsnp build");
 
     $test_build->model->dbsnp_build($dbsnp_build);

@@ -68,7 +68,7 @@ sub validate_gold_snp_path {
 
     my $head    = `head -1 $gold_snp_path`;
     my @columns = split /\s+/, $head;
-    
+
     unless (@columns and @columns == 9) {
         $self->status_message("Gold snp file: $gold_snp_path is not 9-column format");
         return;

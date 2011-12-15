@@ -21,7 +21,6 @@ class Genome::Model::Tools::SmallRna::FilterNewBam {
 		read_size_bin => {
 			is => 'Text',
 			doc =>'Min_max read length bin separated by \'_\' : eg 17_75',
-			is_optional => 1,
 		},
 		
 		xa_tag => {
@@ -63,6 +62,7 @@ sub execute {
     	
     	if (defined($self->read_size_bin)) {
     		my $bin 			= $self->read_size_bin;
+
     		my ($min,$max) = split('_',$bin);
     		
 			if ( $read_length > ($min-1) && $read_length < ($max + 1) && $in_flag != 4) 

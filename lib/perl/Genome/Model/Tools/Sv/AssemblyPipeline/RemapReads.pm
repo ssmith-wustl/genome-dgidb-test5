@@ -24,6 +24,7 @@ class Genome::Model::Tools::Sv::AssemblyPipeline::RemapReads {
     max_percent_subs => { is => 'Number', doc => "", is_optional => 1, default => 1 },
     max_percent_indels => { is => 'Number', doc => "", is_optional => 1, default => 1 },
     min_score => { is => 'Integer', doc => "", is_optional => 1, default => 50 },
+	build => { is => 'Integer', doc => "Build number (36 or 37)", is_optional => 1, default => 37 },
     ],
 };
 
@@ -67,6 +68,7 @@ sub execute {
     my $buffer = $self->buffer;
     my $minFractionDiff = $self->min_fraction_diff;
     my $patientId = $self->patient_id;
+    my $build = $self->build;
 
     # Use -masklevel 101 to get all hits, but ReadRemap::createHitObjects only returns one hit per query
     # Ken's parameters do not give a complete alignment. Seems to penalize too much for mismatches at ends of reads
@@ -84,6 +86,7 @@ sub execute {
     $error .= "\n  Sv file was not found" unless( -s $svFile );
     $error .= "\n  Tumor bam file not found" unless (-s $tumorBam);
     $error .= "\n  Normal bam file not found" unless (-s $normalBam);
+    $error .= "\n  Build number should be '36' or '37'" unless ($build == 37 || $build == 36);
     ( $error eq "" ) or die "Halted execution due to following:$error\n";
 
     # Parse SV file to get hash of regions and hash of fasta header IDs
@@ -122,8 +125,12 @@ sub execute {
     # to the assembly contigs of interest. At the same time, the fasta header to ID look-up hash is made
     $idRef = Genome::Model::Tools::Sv::AssemblyPipeline::ReadRemap::getAssemblySequences( $idRef, $assemblyFastaFile, $contigSequenceFile );
 
-    # Get regions surrounding each SV breakpoint from Build36 reference and put into a fasta file
-    Genome::Model::Tools::Sv::AssemblyPipeline::ReadRemap::getBuild36ReferenceSequences( $regionsRef, $refSequenceFile, 2*$buffer );
+    # Get regions surrounding each SV breakpoint and put into a fasta file
+    if ( $build == 36 ) {
+	Genome::Model::Tools::Sv::AssemblyPipeline::ReadRemap::getBuild36ReferenceSequences( $regionsRef, $refSequenceFile, 2*$buffer );
+    } elsif ( $build == 37 ) {
+	Genome::Model::Tools::Sv::AssemblyPipeline::ReadRemap::getBuild37ReferenceSequences( $regionsRef, $refSequenceFile, 2*$buffer );
+    }
 
     # Make sure the sequences files exist with non-zero size
     ( -s $contigSequenceFile && -s $refSequenceFile ) or die "Did not get contig sequence and/or reference sequence file";

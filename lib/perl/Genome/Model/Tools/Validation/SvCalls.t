@@ -26,8 +26,6 @@ my @input_filenames = qw(bd_del_call sd_del_call test.t.9.bam test.n.9.bam test.
 my $temp_dir = Genome::Sys->create_temp_directory() . "/";
 for my $input (@input_filenames) { system("cp $input $temp_dir"); }
 
-
-
 my $input_bd_call = $test_dir . "bd_del_call";
 my $input_sd_call = $test_dir . "sd_del_call";
 my $input_t_bam = $test_dir . "test.t.9.bam";
@@ -51,6 +49,7 @@ my $sv_calls = Genome::Model::Tools::Validation::SvCalls->create(
     tumor_wgs_bam => 'test.t.9.bam',
     output_filename_prefix => "test",
     patient_id => 'TEST',
+    build => '36',
 );
 
 #test that object was created successfully

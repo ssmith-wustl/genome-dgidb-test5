@@ -21,7 +21,8 @@ Standard options:
  file => The file to read. The use of the preceding 'file=' is optional.
           It is assumed that the bare option is the file. Use '-' to read from STDIN. The file can be gzipped.
  type => The type of input. Not required if type can be determined from the file.
-          Required when reading from STDIN. Valid types: sanger, bam, sam, sff, illumina, phred (fasta), fasta.
+          Required when reading from STDIN. Valid types: sanger, bam, sam, sff, illumina, phred (fasta), fasta,
+          efasta (enhanced asta).
  cnt => The number of sequences to read from the input. If the input is paired, use 2.
 
 Additional options, by type:
@@ -96,6 +97,10 @@ sub help_synopsis {
     * sanger => fastq w/ snager quality values
     * illumina => fastq w/ illumina quality values
     * phred => fasta/quality
+    * efasta => enhanced fasta w/ ambiguous bases (input only, no qual)
+    * bam/sam
+    * sff
+    * gzipped fastq, fasta
 
     Things The Base Command Can Do
     * collate two inputs into one (sanger, illumina only)

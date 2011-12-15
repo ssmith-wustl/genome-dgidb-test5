@@ -81,6 +81,6 @@ sub test_index_queue_callback {
     );
     ok($taxon, "created a new taxon");
 
-    my $index_queue = Genome::Search::IndexQueue->get(subject_id => $taxon->id, subject_class => $taxon->class);
-    isa_ok($index_queue, 'Genome::Search::IndexQueue', 'got an IndexQueue object for taxon') || die;
+    my $index_queue = Genome::Search::Queue->get(subject_id => $taxon->id, subject_class => $taxon->class);
+    isa_ok($index_queue, 'Genome::Search::Queue', 'got an IndexQueue object for taxon') || die;
 }

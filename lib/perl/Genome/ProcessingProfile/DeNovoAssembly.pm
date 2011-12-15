@@ -18,7 +18,7 @@ class Genome::ProcessingProfile::DeNovoAssembly{
 	# Assembler
 	assembler_name => {
 	    doc => 'Name of the assembler.',
-	    valid_values => ['abyss parallel', 'velvet one-button', 'soap de-novo-assemble', 'soap import', 'newbler de-novo-assemble'],
+	    valid_values => ['abyss parallel', 'velvet one-button', 'soap de-novo-assemble', 'soap import', 'newbler de-novo-assemble', 'allpaths de-novo-assemble'],
 	},
 	assembler_version => {
 	    doc => 'Version of assembler.',

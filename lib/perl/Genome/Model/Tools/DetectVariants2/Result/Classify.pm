@@ -109,7 +109,14 @@ sub _validate_inputs {
         return;
     }
 
-    unless(-e (join('/', $self->prior_result->output_dir, $self->variant_type . 's.hq.bed'))) {
+    my $path;
+    if($self->prior_result->can('path')) {
+        $path = $self->prior_result->path($self->variant_type . 's.hq.bed');
+    } else {
+        $path = join('/', $self->prior_result->output_dir, $self->variant_type . 's.hq.bed');
+    }
+
+    unless(-e $path) {
         $self->error_message('Could not find ' . $self->variant_type . ' file for prior result.');
         return;
     }

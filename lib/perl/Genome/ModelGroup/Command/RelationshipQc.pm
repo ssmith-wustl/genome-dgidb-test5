@@ -4,7 +4,10 @@ use strict;
 use warnings;
 use File::Basename;
 use Genome;
+use Workflow;
+use Workflow::Simple;
 
+use List::MoreUtils qw/ uniq /;
 class Genome::ModelGroup::Command::RelationshipQc {
     is => 'Genome::Command::Base',
     has => [
@@ -61,19 +64,124 @@ sub execute {
     else {
         $bed_file = $self->assemble_list_of_snvs(\@sorted_models);
     }
-#    my $pileup_file = "/gscmnt/sata921/info/medseq/fastIBD_Beagle/stricter_input_for_solved_family/VCH026_germline_pipeline.vcf.gz";
-    my $pileup_file = $self->run_mpileup(\@sorted_models, $bed_file);
-    unless($pileup_file) {
-        return;
-    }
+    my @pileup_files = $self->run_n_models_per_pileup(\@sorted_models, $bed_file,25);
+#    my $pileup_file = $self->run_mpileup(\@sorted_models, $bed_file);
+#    unless($pileup_file) {
+#        return;
+#    }
 
-    my $beagle_input = $self->convert_mpileup_to_beagle($pileup_file, $self->min_coverage);
+#    my $beagle_input = $self->convert_mpileup_to_beagle($pileup_file, $self->min_coverage);
+    my @bgl_inputs = map {$self->convert_mpileup_to_beagle($_, $self->min_coverage) } @pileup_files;
+ 
+    my $beagle_input = $self->merge_bgl_outputs(@bgl_inputs);
     my $beagle_output = $self->run_beagle($beagle_input);
     $self->generate_relationship_table($beagle_output, $beagle_input);
     return 1;
     #TODO:$self->generate_ibd_per_patient($output_dir);
 
 }
+sub merge_bgl_outputs {
+    my $self = shift;
+    my @files = @_;
+    my @fhs = map { IO::File->new($_) } @files;
+    my $name = $self->model_group->name;
+    $name =~ s/ /_/g;
+    my $of_name = $self->output_dir . "/" . $name . ".bgl.input";
+    my $ofh = IO::File->new($of_name, ">");
+    my @headers = map { $_->getline } @fhs;
+    $ofh->print("I\tID");
+    for my $line(@headers) {
+        chomp($line);
+        my @fields = split "\t", $line;
+        shift @fields;
+        shift @fields;
+        $ofh->print("\t" . join("\t", @fields));
+    }
+    $ofh->print("\n");
+
+    my @lines = map{$_->getline} @fhs;
+    while(my $id = find_matching_line(\@fhs, \@lines)) {
+        $ofh->print("M\t$id");
+        for my $line(@lines) {
+            chomp($line);
+            my @fields = split "\t", $line;
+            shift @fields;
+            shift @fields;
+            $ofh->print("\t" . join("\t", @fields));
+        }
+        $ofh->print("\n");
+
+        @lines = map{$_->getline} @fhs;
+    }
+    $ofh->close;
+    return $of_name;
+}
+
+sub all_files_open {
+    my $fh = shift;
+    for my $handle (@{$fh}) {
+        if($handle->eof) {
+            return 0;
+        }
+    }
+    return 1;
+}
+sub find_matching_line {
+    my $fh_ref = shift;
+    my $line_ref = shift;
+    my $not_synced = 1;
+    while(all_files_open($fh_ref)) {
+        my @chrs;
+        my @positions;
+        for my $line (@{$line_ref}) {
+            my ($m, $id, undef)  = split "\t", $line;
+
+            my ($chr, $pos) = split ":", $id;
+            $DB::single=1 if $chr eq '2';
+            push @chrs, $chr;
+            push @positions, $pos;
+        }
+
+        my $i = find_lowest_pos(@chrs);
+        my $j = find_lowest_pos(@positions);
+        if($i != -1) {
+            $line_ref->[$i]=$fh_ref->[$i]->getline;
+            next;
+        }
+        if($j !=-1) {
+            $line_ref->[$j]=$fh_ref->[$j]->getline;
+            next;
+        }
+        if(($i==-1) && ($j==-1)) {
+            return $chrs[0] . ":".  $positions[0];
+        }
+    }
+    return 0;
+}
+
+sub find_lowest_pos {
+    my @positions = @_; 
+    s/X/23/ for @positions;
+    s/Y/24/ for @positions;
+    my $least_position;
+    my $least_idx;
+    if(scalar(uniq @positions) ==1) {
+        return -1; 
+    }   
+    for (my $i=0; $i < @positions; $i++) {
+        if($positions[$i]=~m/[MGL]/) {
+            return $i;
+        }
+        if (!$least_position || $least_position > $positions[$i]) {
+            $least_position = $positions[$i];
+            $least_idx = $i; 
+        }   
+    }
+    return $least_idx;
+}
+
+
+
 
 sub assemble_list_of_snvs {
     my $self=shift;
@@ -85,7 +193,7 @@ sub assemble_list_of_snvs {
         while(my $line = $snp_fh->getline) {
             chomp($line);
             my ($chr, $start, $stop, $ref_var) = split "\t", $line;
-            $snvs{$chr}{$stop}=1;
+            $snvs{$chr}{$stop}+=1;
         }
         $snp_fh->close;
     }
@@ -96,14 +204,119 @@ sub assemble_list_of_snvs {
     my $union_snv_fh = Genome::Sys->open_file_for_writing($output_snvs);
     for my $chr (sort keys %snvs) {
         for my $pos (sort keys %{$snvs{$chr}}) {
+            
             my $start = $pos -1;
             my $stop = $pos;
-            $union_snv_fh->print("$chr\t$start\t$stop\n");
+            if((scalar(@snp_files) / 4) < $snvs{$chr}{$pos}) { ###only accept snps that appear in at least some of the samples
+                $union_snv_fh->print("$chr\t$start\t$stop\n");
+            }
         }
     }
     $union_snv_fh->close;
     return $output_snvs;
 }
+
+
+sub run_n_models_per_pileup {
+    my $self = shift;
+    my $models_ref=shift;
+    my $bed_file=shift;
+    my $n = shift || 50;
+    my @fifty_model_array_refs;
+    my %input_props;
+    $input_props{bed_file}=$bed_file;
+    $input_props{ref_fasta}=$models_ref->[0]->reference_sequence_build->full_consensus_path("fa");
+    my @bams = map {$_->last_succeeded_build->whole_rmdup_bam_file} @{$models_ref};
+    my @output_files;
+    my $count=0;
+    my @inputs;
+    while(@bams) {
+        my @temp_bams;
+        while(scalar(@temp_bams) < $n && (scalar(@bams) >0)){
+            push @temp_bams, shift @bams;
+        }
+        my @bam_group = @temp_bams;
+        $input_props{"bams_$count"}=\@bam_group;
+        my $output_file = $self->output_dir . "/group_$count/group_$count.vcf.gz";
+        push @output_files, $output_file;
+        $input_props{"output_$count"}=$output_file;
+        push @inputs, "output_$count";
+        push @inputs, "bams_$count";
+        @temp_bams=();
+        $count++;
+    }
+    my $workflow = Workflow::Model->create(
+        name=> "$n sample parallel mpileup for qc",
+        input_properties => [
+        'bed_file',
+        'ref_fasta',
+        @inputs,
+        ],
+        output_properties => [
+        'output',
+        ],
+    );
+    $workflow->log_dir($self->output_dir);
+    for(my $i=0; $i< $count; $i++) {
+        my $mpileup_op = $workflow->add_operation(
+            name=>"50 sample mpileup $i",
+            operation_type=>Workflow::OperationType::Command->get("Genome::Model::Tools::Samtools::Mpileup"),
+        );
+        $workflow->add_link(
+            left_operation=>$workflow->get_input_connector,
+            left_property=>"bed_file",
+            right_operation=>$mpileup_op,
+            right_property=>"bed_file",
+        );
+        $workflow->add_link(
+            left_operation=>$workflow->get_input_connector,
+            left_property=>"ref_fasta",
+            right_operation=>$mpileup_op,
+            right_property=>"ref_fasta",
+        );
+
+        $workflow->add_link(
+            left_operation=>$workflow->get_input_connector,
+            left_property=>"bams_$i",
+            right_operation=>$mpileup_op,
+            right_property=>"bams",
+        );
+        $workflow->add_link(
+            left_operation=>$workflow->get_input_connector,
+            left_property=>"output_$i",
+            right_operation=>$mpileup_op,
+            right_property=>"output_vcf",
+        );
+        $workflow->add_link(
+            left_operation=>$mpileup_op,
+            left_property=>"output_vcf",
+            right_operation=>$workflow->get_output_connector,
+            right_property=>"output",
+        );
+    }
+    my @errors = $workflow->validate;
+    if (@errors) {
+        $self->error_message(@errors);
+        die "Errors validating workflow\n";
+    }
+    $self->status_message("Now launching $count mpileup jobs");
+    $DB::single=1;
+    my $result = Workflow::Simple::run_workflow_lsf( $workflow, %input_props);
+    unless($result) {
+        $self->error_message( join("\n", map($_->name . ': ' . $_->error, @Workflow::Simple::ERROR)) );
+        die $self->error_message("parallel mpileup workflow did not return correctly.");
+    }
+    return @output_files;
+}
+
+
+
+
+
+
+
+
+
 
 sub run_mpileup {
     my $self=shift;
@@ -115,7 +328,7 @@ sub run_mpileup {
     my $name = $self->model_group->name;
     $name =~ s/ /_/g;
     my $output_vcf_gz = $self->output_dir . "/" . $name . ".vcf.gz";
-   #samtools mpileup<BAMS>  -uf<REF>   -Dl<SITES.BED>  | bcftools view -g - | bgzip -c>  <YOUR GZIPPED VCF-LIKE OUTPUT> 
+    #samtools mpileup<BAMS>  -uf<REF>   -Dl<SITES.BED>  | bcftools view -g - | bgzip -c>  <YOUR GZIPPED VCF-LIKE OUTPUT> 
     my $cmd = "samtools mpileup @bams -uf $ref -Dl $bed_file | bcftools view -g - | bgzip -c > $output_vcf_gz";
     my $rv = Genome::Sys->shellcmd( cmd => $cmd, input_files => [$bed_file, $ref, @bams]);
     if($rv != 1) {
@@ -129,9 +342,8 @@ sub convert_mpileup_to_beagle {
     my $pileup_vcf_gz = shift;
     my $min_depth=shift;
     #TODO: move output files into class def
-
-    my $output_bgl_file = $self->output_dir . "/" . $self->model_group->name . ".bgl.input";
-    $output_bgl_file =~ s/ /_/g;
+    my ($file, $path, $suffix) = fileparse($pileup_vcf_gz, ".vcf.gz");
+    my $output_bgl_file = $path . "/" . $file . ".bgl.input";
     my $output_fh = Genome::Sys->open_file_for_writing($output_bgl_file);
     my $vcf_fh = IO::File->new("zcat $pileup_vcf_gz|");
     my @header;
@@ -152,7 +364,7 @@ sub convert_mpileup_to_beagle {
         $output_fh->print("\t$sample_name\t$sample_name");
     }
     $output_fh->print("\n");
-    
+
     while($line= $vcf_fh->getline) {
         my $enough_depth=1;
         next if ($line =~m/INDEL/);
@@ -193,7 +405,7 @@ sub run_beagle {
     my $self = shift;
     my $beagle_input = shift;
     my $output_dir = $self->output_dir;
-  
+
     #./beagle.sh  fastibd=true unphased=cleft_lip/mpileup/bgl_from_vcf.test_input out=cleft_lip/mpileup/cleft_lip.out missing=?
     my $cmd = "java -Xmx14000m -jar /gsc/pkg/bio/beagle/installed/beagle.jar fastibd=true unphased=$beagle_input out=$output_dir/beagle missing=?";
     my $rv = Genome::Sys->shellcmd(cmd=>$cmd, input_files=>[$beagle_input]);
@@ -273,4 +485,4 @@ sub generate_relationship_table {
     return 1;
 }
 
-    1;
+1;
