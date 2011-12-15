@@ -142,6 +142,17 @@ sub iub_to_string {
     return;
 }
 
+
+sub string_to_iub {
+    my $string = pop;
+    $string    = uc $string if $string;
+    my %str_as_iub = reverse %iub_as_string;
+
+    return $str_as_iub{$string} if $string and $str_as_iub{$string};
+    return;
+}
+
+
 sub reference_iub_to_base {
     my $class;
     if ((defined($_[0]))&&($_[0] eq __PACKAGE__)) {
