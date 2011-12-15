@@ -257,6 +257,7 @@ my %expected_metrics = (
     'reads_assembled' => 'NA',
     'average_read_length' => '94',
     'reads_attempted' => 30000,
+    'reads_not_assembled_pct' => 'NaN',
     'average_insert_size_used' => '260',
     'n50_contig_length' => '101',
     'genome_size_used' => '4500000',

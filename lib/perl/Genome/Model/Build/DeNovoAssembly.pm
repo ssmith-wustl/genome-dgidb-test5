@@ -488,7 +488,7 @@ sub calculate_metrics {
 
     #further processing of metric values
     #unused reads .. NA for soap assemblies, a number for others
-    unless ($metrics{reads_not_assembled_pct} eq 'NA') {
+    unless ($metrics{reads_not_assembled_pct} eq 'NaN') {
         $metrics{reads_not_assembled_pct} =~ s/%//;
         $metrics{reads_not_assembled_pct} = sprintf('%0.3f', $metrics{reads_not_assembled_pct} / 100);
     }
