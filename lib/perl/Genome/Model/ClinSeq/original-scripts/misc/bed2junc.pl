@@ -25,7 +25,8 @@ while(<BED>) {
   for(my $b = 1; $b < $blocks; $b++) {
     my $left = $start + $b_offsets[$b-1] + $b_sizes[$b-1];
     my $right = $start + $b_offsets[$b] + 1;
-    print "$f[0]:$left-$right\t$f[4]\n";
+    my $strand = $f[5];
+    print "chr$f[0]:$left-$right($strand)\t$f[4]\n";
   }
 }
 close(BED);
