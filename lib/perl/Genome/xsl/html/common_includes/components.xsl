@@ -99,8 +99,7 @@
                cache.push(cacheImage);
                }
                }
-
-$(document).data('updatedOn', new Date(]]><xsl:copy-of select="$currentTime"/><![CDATA[));
+$(document).data('updatedOn', new Date("]]><xsl:copy-of select="$currentTime"/><![CDATA["));
 })(jQuery)
 
 ]]>
@@ -115,6 +114,7 @@ $(document).data('updatedOn', new Date(]]><xsl:copy-of select="$currentTime"/><!
   <xsl:template name="app_header">
     <xsl:param name="app_name"/>
     <xsl:param name="icon"/>
+    <span id="authUser" style="visibility:hidden"><xsl:value-of select="$username"/></span>
 
     <xsl:comment>template: /html/common_includes/components.xsl:app_header</xsl:comment>
 
@@ -198,26 +198,40 @@ $(document).data('updatedOn', new Date(]]><xsl:copy-of select="$currentTime"/><!
   <xsl:template name="control_bar_menu">
     <xsl:comment>template: /html/common_includes/components.xsl name:control_bar_menu</xsl:comment>
 
-    <ul class="app_menu">
-      <li>
-        <a id="perspective_switcher" title="Available Perspectives">
-          <xsl:attribute name="alt"><xsl:value-of select="$objectId"/></xsl:attribute>
-          <xsl:attribute name="href"><xsl:text>/viewajax/u-r/object/type/available-views.html?class_name=</xsl:text><xsl:value-of select="$objectClassName"/></xsl:attribute>
-          Perspectives
-        </a>
+    <ul class="app_menu" style="width: 450px">
+      <li style="width: 50px; float: right">
+        <div id="userLogin" style="color: white"><xsl:value-of select="$username"/></div>
       </li>
-      <li>
-        <a href="/view/genome/status.html" class="app btn shadow">
-          <div class="icon"><img src="/res/img/icons/app_deprecated_search_16.png" width="16" height="16"/></div>
-          Deprecated Search
-        </a>
-      </li>
-      <li>
-        <a href="/view/genome/search/status.html" class="app btn shadow">
-          <div class="icon"><img src="/res/img/icons/app_analysis_search_16.png" width="16" height="16"/></div>
-          Analysis Search
-        </a>
-      </li>
+    <xsl:choose>
+        <xsl:when test="$objectClassName='Genome::Search'">
+        </xsl:when>
+        <xsl:when test="$objectClassName='Genome::Search::Query'">
+            <li style="width: 30px; float: right">
+                <a id="home_link" href="/view/genome/search/status.html">Main</a>
+            </li>
+        </xsl:when>
+        <xsl:otherwise><xsl:comment>items in control bar when not the search main page</xsl:comment>
+            <li style="width: 190px; float: right">
+            <form id="search" action="/view/genome/search/query/status.html">
+                <input name="query"/>
+                <a id="search_submit" style="padding: 0px 5px 0px 5px" class="app btn shadow" onClick="javascript:$('#search').submit();">
+                Search</a>
+            </form>
+            </li>
+
+            <li style="width: 30px; float: right">
+                <a id="home_link" href="/view/genome/search/status.html">Main</a>
+            </li>
+
+            <li style="width: 70px; float: right">
+              <a id="perspective_switcher" title="Available Perspectives">
+                <xsl:attribute name="alt"><xsl:value-of select="$objectId"/></xsl:attribute>
+                <xsl:attribute name="href"><xsl:text>/viewajax/u-r/object/type/available-views.html?class_name=</xsl:text><xsl:value-of select="$objectClassName"/></xsl:attribute>
+              Perspectives
+              </a>
+            </li>
+        </xsl:otherwise>
+    </xsl:choose>
     </ul>
   </xsl:template>
 

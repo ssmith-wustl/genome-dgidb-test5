@@ -59,9 +59,9 @@ sub create {
     
     my $self = eval { $class->SUPER::create(@_) };
     if ($@ or not $self) {
-        $class->error_message("Could not create new object of type $class!" .
-            ($@ ? " Reason: $@" : ""));
-        return;
+        my $msg = "Could not create new object of type $class!" .  ($@ ? " Reason: $@" : '');
+        $class->error_message($msg);
+        die $msg;
     }
 
     # Set creator
