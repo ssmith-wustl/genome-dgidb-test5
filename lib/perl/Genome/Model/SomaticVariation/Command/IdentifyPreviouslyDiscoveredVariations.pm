@@ -231,6 +231,10 @@ sub skip_run {
     my $build = $self->build;
 
     Genome::Sys->create_directory($build->data_directory."/novel");
+
+    my $accessor = join('_', $variant_type, 'detection_strategy');
+    return 1 unless $build->model->$accessor; #don't make empty files if we're not running this
+
     my $novel = join('/', $build->data_directory, 'novel', $variant_type . 's.hq.novel.v2.bed');
     my $previously_detected = join('/', $build->data_directory, 'novel', $variant_type . 's.hq.previously_detected.v2.bed');
 
