@@ -1,4 +1,4 @@
-package Genome::Model::Tools::Pcap::PhdDB;
+package Genome::Model::Tools::Lims::PhdDB;
 our $VERSION = 0.01;
 
 use strict;
@@ -13,15 +13,15 @@ use Storable;
 use Genome::Model::Tools::Pcap::Phd::Reader;
 use Genome::Model::Tools::Pcap::Phd::Writer;
 
-Genome::Model::Tools::Pcap::PhdDB->mk_accessors(qw(assembly_name assembly _reader _writer));
+Genome::Model::Tools::Lims::PhdDB->mk_accessors(qw(assembly_name assembly _reader _writer));
 
-my $pkg = 'Genome::Model::Tools::Pcap::PhdDB';
+my $pkg = 'Genome::Model::Tools::Lims::PhdDB';
 
 =pod
 
 =head1 new 
 
-my $phd_object = new Genome::Model::Tools::Pcap::PhdDB::PhdDB(project_name => "my_project");
+my $phd_object = new Genome::Model::Tools::Lims::PhdDB::PhdDB(project_name => "my_project");
 
 =cut
 
