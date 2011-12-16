@@ -1,19 +1,15 @@
 package Genome::Model::Tools::CopyNumber::BamWindow;
 
 ##############################################################################
-#
-#
 #	AUTHOR:		Chris Miller (cmiller@genome.wustl.edu)
 #	CREATED:	11/30/2011 by CAM.
 #	NOTES:
-#
 ##############################################################################
 
 use strict;
 use Genome;
 use IO::File;
 use warnings;
-use Digest::MD5 qw(md5_hex);
 use FileHandle;
 
 class Genome::Model::Tools::CopyNumber::BamWindow {
@@ -66,6 +62,21 @@ class Genome::Model::Tools::CopyNumber::BamWindow {
             default => 10000,
         },
 
+        per_read_length => {
+            is => 'Boolean',
+	    is_optional => 1,
+	    doc => 'split different read lengths out into columns',
+            default => 0,
+        },
+
+        read_lengths => {
+            is => 'String',
+	    is_optional => 1,
+	    doc => '(only with per-read-length) comma seperated list of read lengths to consider. If not provided, the script will have to read through the bam, get the read lengths and then launch the c program.',
+        },
+
+
+
         ]
 };
 
@@ -83,6 +94,23 @@ sub execute {
     my $self = shift;
     my $temp_output_file;
 
+    my %lengths;
+    my @read_lengths;
+
+    if($self->per_read_length){
+        if(defined($self->read_lengths)){
+            @read_lengths = sort(split(",",$self->read_lengths));
+        } else {
+            print STDERR "Schlepping through the bam to retrieve the read lengths. This may take a while...\n";
+            my $cmd="samtools view " . $self->bam_file;
+            open(MAP,"$cmd |") || die "unable to open " . $self->bam_file . "\n";
+            while(<MAP>){
+                my @F = split("\t",$_);
+                $lengths{length($F[9])} = 0;            
+            }
+            @read_lengths = sort(keys(%lengths));
+        }
+    }    
 
     if($self->per_lib){
         #create a temp file
@@ -98,7 +126,7 @@ sub execute {
         if(!($self->lib_as_readgroup)){        
             #simple way - get them from the header            
             my $cmd="samtools view -H " . $self->bam_file;       
-            open(HEADER, "$cmd |") || die "can't open file $ARGV[0]\n";
+            open(HEADER, "$cmd |") || die "can't open file $self->bam_file\n";
             my $count = 0;
             while(<HEADER>)
             {
@@ -108,7 +136,7 @@ sub execute {
                 if ($F[4] =~ /LB:(.+)/){
                     my $lib = $1;
                     if ($F[1] =~ /ID:(.+)/){
-                        print $ofh $lib . "\t" . $1 . "\t" . md5_hex($1) . "\n";
+                        print $ofh $lib . "\t" . $1 . "\n";
                         $count++;
                     }
                 }            
@@ -128,7 +156,7 @@ sub execute {
                 if($_ =~ /RG:Z:([^\s]+)\s/){
                     my $lib = $1;
                     unless(exists($libHash{$lib})){
-                        print $ofh $lib . "\t" . $lib . "\t" . md5_hex($lib) . "\n";
+                        print $ofh $lib . "\t" . $lib . "\n";
                         $count++;
                         $libHash{$lib} = 0;
                     }
@@ -141,15 +169,18 @@ sub execute {
     }
 
     my $a = "cp " . $temp_output_file . " " . $self->output_file . ".libs";
-    print STDERR "$a";
     `$a`;
 
-    my $cmd = "~/usr/src/bamwindow-v0.2/bam-window";
+    my $cmd = "~/usr/src/bamwindow-v0.3/bam-window";
     $cmd .= " -q " . $self->minimum_mapping_quality;
     $cmd .= " -w " . $self->window_size;
 
     if($self->per_lib){
-        $cmd .= " -r " . $temp_output_file;
+        $cmd .= " -l " . $temp_output_file;
+    }
+
+    if($self->per_read_length){
+        $cmd .= " -r " . join(",",@read_lengths);
     }
 
     $cmd .= " " . $self->extra_params;
