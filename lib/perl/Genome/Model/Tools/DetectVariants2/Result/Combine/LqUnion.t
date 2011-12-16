@@ -19,19 +19,21 @@ my $test_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants2
 #This is from the somatic-variation short test. Consider creating dummy data!
 my $hq_result = Genome::SoftwareResult->get(116186269);
 
-my @results;
+ my %results;
 my @to_process = ($hq_result);
 while(my $r = shift @to_process) {
-    push @results, $r;
+    $results{$r->id}++;
     my @u = map($_->software_result, Genome::SoftwareResult::User->get(user_id => $r->id, user_class_name => $r->class));
     push @to_process, grep($_->isa('Genome::Model::Tools::DetectVariants2::Result::Base'), @u);
 }
 
-is(scalar(@results), 6, 'found all expected results for union')
-    or diag('found: ' . join(' ' , map($_->class . ':' . $_->id, @results)));
+
+
+is(scalar(keys %results), 6, 'found all expected results for union')
+    or diag('found: ' . join(' ' , keys %results));
 
 my $lq = Genome::Model::Tools::DetectVariants2::Result::Combine::LqUnion->create(
-    result_ids => [map($_->id, @results)],
+    result_ids => [keys %results],
     variant_type => 'snv',
     test_name => $ENV{GENOME_SOFTWARE_RESULT_TEST_NAME} || undef,
 );

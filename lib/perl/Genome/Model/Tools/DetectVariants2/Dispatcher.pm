@@ -972,20 +972,20 @@ sub _generate_standard_files {
             my $hq_accessor = $variant_type . '_result';
             my $hq_result = $self->$hq_accessor;
 
-            my @results;
+            my %results;
             my @to_process = ($hq_result);
             while(my $r = shift @to_process) {
-                push @results, $r;
+                $results{$r->id}++;
                 my @u = map($_->software_result, Genome::SoftwareResult::User->get(user_id => $r->id, user_class_name => $r->class));
                 push @to_process, grep($_->isa('Genome::Model::Tools::DetectVariants2::Result::Base'), @u);
             }
 
-            unless(@results) {
+            unless(keys %results) {
                 $self->error_message('Could not find any results for ' . $variant_type);
             }
 
             my $lq_result = Genome::Model::Tools::DetectVariants2::Result::Combine::LqUnion->get_or_create(
-                result_ids => [map($_->id, @results)],
+                result_ids => [keys %results],
                 variant_type => $variant_type,
                 test_name => $ENV{GENOME_SOFTWARE_RESULT_TEST_NAME} || undef,
             );
