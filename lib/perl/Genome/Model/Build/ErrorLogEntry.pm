@@ -5,8 +5,7 @@ use Genome;
 use Workflow;
 
 class Genome::Model::Build::ErrorLogEntry {
-    table_name => 'error_log_entry',
-    schema_name => 'public',
+    table_name => 'model.error_log_entry',
     data_source => 'Genome::DataSource::Main',
     id_generator => '-uuid',
     id_by => [
