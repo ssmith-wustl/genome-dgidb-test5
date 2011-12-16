@@ -59,6 +59,7 @@ sub no_auto_truncate_body_text_does_not_truncates_long_text {
         subject => $subject,
         header_text => 'Test Note',
         body_text => $body_text,
+        auto_truncate_body_text => 0,
     );
     isa_ok($note, 'Genome::MiscNote', 'note');
     is(length($note->body_text), ($max_length + 1), "body_text was not truncated to $max_length");
