@@ -2108,8 +2108,8 @@ sub input_allocation{
     my @input_values = map { $_->value } $self->inputs;
     for my $input ($self->inputs) {
         my $value = $input->value;
-        my $allocation = Genome::Disk::Allocation->get(owner_id => $value->id, owner_class_name => $value->class);
-        if ($allocation){
+        next unless ($value);
+        foreach my $allocation ( Genome::Disk::Allocation->get(owner_id => $value->id, owner_class_name => $value->class) ) {
             push @allocations, $allocation;
         }
     }
@@ -2122,6 +2122,7 @@ sub software_result_allocations{
     my @sru = Genome::SoftwareResult::User->get( user_id => $self->id, user_class_name => $self->subclass_name );
     foreach my $sru (@sru) {
         my $sr = $sru->software_result;
+        next unless ($sr);
         my $allocation = Genome::Disk::Allocation->get(owner_id => $sr->id, owner_class_name => $sr->class);
         if ($allocation){
             push @allocations, $allocation;
@@ -2136,7 +2137,7 @@ sub all_allocations {
     #get self allocation
     push @allocations, $self->disk_allocation;
     #get input allocations
-    push @allocations, $self->input_allocations;
+    push @allocations, $self->input_allocation;
     #get sr allocations
     push @allocations, $self->software_result_allocations;
     #get all allocations from from_builds
