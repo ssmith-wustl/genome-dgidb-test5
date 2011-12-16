@@ -4,7 +4,7 @@ use strict ;
 use warnings;
 use Genome;
 use Tie::File;
-
+use POSIX 'strftime';
 
 class Genome::Model::Tools::DetectVariants2::Samtools {
     is => ['Genome::Model::Tools::DetectVariants2::Detector'],
@@ -220,7 +220,7 @@ sub _detect_variants {
 #file (removing "N" and "." lines) 
 sub create_snv_indel_output_file {
     my $self = shift;
-    my $vcf_file    = $self->_vcf_scratch_output;
+    my $vcf_file    = $self->_vcf_staging_output;
     my $header_file = $self->_header_scratch_output;
     my $sani_file   = $self->_vcf_sani_staging_output;
     my $snv_tmp     = $self->_snv_scratch_output;
