@@ -53,6 +53,11 @@ class Genome::Model::Tools::DetectVariants2::Filter::FalseIndel {
             is_optional => 1,
             doc => 'Maximum difference of mismatch quality sum between variant and reference reads (paralog filter)',
        },
+       'max_var_mmqs' => {
+            type => 'String',
+            is_optional => 1,
+            doc => 'Maximum mismatch quality sum for variant-supporting reads (paralog filter) [opt:100]',
+       },
        'max_mapqual_diff' => {
             type => 'String',
             default => '30',
@@ -71,6 +76,11 @@ class Genome::Model::Tools::DetectVariants2::Filter::FalseIndel {
             is_optional => 1,
             doc => 'Minimum average distance to effective 3prime end of read (real end or Q2) for variant-supporting reads',
        },
+       'min_var_readlen' => {
+            type => 'String',
+            is_optional => 1,
+            doc => 'Minimum average aligned read length of variant-supporting reads [recommended: 75]',
+       },       
        bam_readcount_version => {
            is => 'Text',
            is_optional => 1,
@@ -209,7 +219,7 @@ sub _filter_variants {
     my $lq_output_file = $self->_temp_staging_directory . "/indels.lq.raw_filter";
     my $lq_fh = Genome::Sys->open_file_for_writing($lq_output_file);
     unless($lq_fh) {
-        $self->error_message("Unable to open temp output file $hq_output_file for writing.");
+        $self->error_message("Unable to open temp output file $lq_output_file for writing.");
         die;
     }
 
@@ -329,6 +339,11 @@ sub _filter_variants {
                             $FilterResult = "MMQSdiff:$var_mmqs-$ref_mmqs=$mismatch_qualsum_diff>$max_mm_qualsum_diff";
                             $stats{'num_fail_mmqs'}++;
                         }
+                        ## FAILURE 3B: Var MMQS ##
+                        elsif($self->max_var_mmqs && $var_mmqs > $self->max_var_mmqs) {
+                            $FilterResult = "VarMMQS:$var_mmqs\n" if ($self->verbose);
+                            $stats{'num_fail_var_mmqs'}++;					
+                        }
 
                         ## FAILURE 4: Mapping quality difference exceeds allowable maximum ##
                         elsif($mapqual_diff > $max_mapqual_diff) {
@@ -341,7 +356,11 @@ sub _filter_variants {
                             $FilterResult = "ReadLen:$ref_avg_rl-$var_avg_rl=$readlen_diff>$max_readlen_diff";
                             $stats{'num_fail_readlen'}++;
                         }
-
+                        ## FAILURE 6: Var read len below minimum ##
+                        elsif($self->min_var_readlen && $var_avg_rl < $self->min_var_readlen) {
+                            $FilterResult = "VarReadLen:$var_avg_rl\n" if ($self->verbose);
+                            $stats{'num_fail_var_readlen'}++;
+                        }
                         ## SUCCESS: Pass Filter ##
                         else {                         
                             $FilterResult = "Pass";

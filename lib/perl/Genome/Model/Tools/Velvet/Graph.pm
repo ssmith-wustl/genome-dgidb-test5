@@ -89,7 +89,7 @@ my %properties = (
 
 
 class Genome::Model::Tools::Velvet::Graph {
-    is           => 'Genome::Model::Tools::Velvet',
+    is           => 'Genome::Model::Tools::Velvet::Base',
     has_optional => [%properties],
 };        
 

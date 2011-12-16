@@ -9,7 +9,7 @@ use Bio::SeqIO;
 use AMOS::AmosLib;
 
 class Genome::Model::Tools::Velvet::CreateUnplacedReadsFiles {
-    is => 'Genome::Model::Tools::Velvet',
+    is => 'Genome::Model::Tools::Velvet::Base',
     has => [
 	assembly_directory => {
 	    is => 'Text',

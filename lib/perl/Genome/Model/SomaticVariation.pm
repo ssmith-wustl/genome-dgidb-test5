@@ -49,20 +49,6 @@ class Genome::Model::SomaticVariation {
             is => 'Genome::Model::ReferenceAlignment',
             id_by => 'tumor_model_id',
         },
-        tumor_build_id => {
-            is => 'Text',
-            via => 'inputs',
-            to => 'value_id',
-            where => [ name => 'tumor_build', value_class_name => 'Genome::Model::Build::ReferenceAlignment'],
-            is_many => 0,
-            is_mutable => 1,
-            is_optional => 1,
-            doc => 'last complete tumor build, updated when a new SomaticVariation build is created',
-        },
-        tumor_build => {
-            is => 'Genome::Model::Build::ReferenceAlignment',
-            id_by => 'tumor_build_id',
-        },
         normal_model_id => {
             is => 'Text',
             via => 'inputs',
@@ -76,20 +62,6 @@ class Genome::Model::SomaticVariation {
         normal_model => {
             is => 'Genome::Model::ReferenceAlignment',
             id_by => 'normal_model_id',
-        },
-        normal_build_id => {
-            is => 'Text',
-            via => 'inputs',
-            to => 'value_id',
-            where => [ name => 'normal_build', value_class_name => 'Genome::Model::Build::ReferenceAlignment'],
-            is_many => 0,
-            is_mutable => 1,
-            is_optional => 1,
-            doc => 'last complete normal build, updated when a new SomaticVariation build is created',
-        },
-        normal_build => {
-            is => 'Genome::Model::Build::ReferenceAlignment',
-            id_by => 'normal_build_id',
         },
         annotation_build_id => {
             is => 'Text',
@@ -227,24 +199,6 @@ sub create {
     }
 
     return $self;
-}
-
-sub update_tumor_and_normal_build_inputs {
-    my $self = shift;
-    
-    my $tumor_model = $self->tumor_model;
-    my $tumor_build = $tumor_model->last_complete_build;
-    if ($tumor_build && (!$self->tumor_build_id || $self->tumor_build_id ne $tumor_build->id)) {
-        $self->tumor_build_id($tumor_build->id);
-    }
-
-    my $normal_model = $self->normal_model;
-    my $normal_build = $normal_model->last_complete_build;
-    if ($normal_build && (!$self->normal_build_id || $self->normal_build_id ne $normal_build->id)) {
-        $self->normal_build_id($normal_build->id);
-    }
-
-    return 1;
 }
 
 sub _input_differences_are_ok {

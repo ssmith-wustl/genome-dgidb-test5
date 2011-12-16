@@ -845,7 +845,7 @@
 
       <div class="box_header_details rounded-bottom-left">
         <div class="rounded" style="float: left; width: 29%;">
-          <table class="name-value" cellpadding="0" cellspacing="0" border="0" style="margin-left: 27px;">
+          <table class="name-value" cellpadding="0" cellspacing="0" border="0" style="margin-left: 10px;">
             <tr>
               <td class="name">
                 model id:
@@ -871,6 +871,24 @@
                 <xsl:value-of select="aspect[@name='creation_date']/value"/>
               </td>
             </tr>
+            <xsl:if test="count(aspect[@name='_sample_subject']/object) > 0">
+              <tr>
+                <td class="name" colspan="2" style="text-align: left">
+                  subject sample:
+                </td>
+              </tr>
+              <tr>
+                <td class="value" colspan="2">
+                  <xsl:for-each select="aspect[@name='_sample_subject']/object">
+                    <xsl:call-template name="object_link_button">
+                      <xsl:with-param name="linktext" select="display_name" />
+                      <xsl:with-param name="icon" select="'sm-icon-extlink'" />
+                    </xsl:call-template>
+                  </xsl:for-each>
+                </td>
+              </tr>
+            </xsl:if>
+
             <xsl:if test="normalize-space(aspect[@name='build_requested']/value) != '' and normalize-space(aspect[@name='build_requested']/value) != '0'">
               <tr>
 

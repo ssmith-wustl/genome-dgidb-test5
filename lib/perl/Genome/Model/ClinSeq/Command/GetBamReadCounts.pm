@@ -1,5 +1,5 @@
 package Genome::Model::ClinSeq::Command::GetBamReadCounts;
-#Written by Malachi Griffith
+#Written by Malachi Griffith and Scott Smith
 
 #Load modules
 use strict;
@@ -29,7 +29,6 @@ sub help_detail {
 EOS
 }
 
-
 class Genome::Model::ClinSeq::Command::GetBamReadCounts {
     is => 'Command::V2',
     has => [
@@ -52,8 +51,15 @@ class Genome::Model::ClinSeq::Command::GetBamReadCounts {
         output_file             => { is => 'FilesystemPath',
                                     doc => 'File where output will be written (input file values with read counts appended)', },
 
-        verbose                 => { is => 'Number',
+        data_paths_file         => { is => 'FilesystemPath', is_optional => 1,
+                                     doc => "Instead of supplying models/builds supply a tab delimited list of files to handle old builds that are not well tracked or custom situations\n".
+                                            " Format: patient  sample_type  data_type  bam_path  build_dir  ref_fasta  ref_name", },
+
+        verbose                 => { is => 'Number', is_optional => 1,
                                     doc => 'To display more output, set this to 1.' },
+        no_fasta_check          => { is => 'Number', is_optional => 1,
+                                     doc => 'To prevent checking of the reported reference base against the reference genome fasta set --no_fasta_check=1 [Not recommended!]' },
+
     ],
     doc => 'This script attempts to get read counts, frequencies and gene expression values for a series of genome positions',
 };
@@ -111,6 +117,8 @@ sub execute {
     my $exome_som_var_build = $self->exome_som_var_build;
     my $rna_seq_normal_build = $self->rna_seq_normal_build;
     my $rna_seq_tumor_build = $self->rna_seq_tumor_build;
+    my $data_paths_file = $self->data_paths_file;
+    my $no_fasta_check = $self->no_fasta_check;
     my $output_file = $self->output_file;
     my $verbose = $self->verbose;
 
@@ -127,12 +135,17 @@ my $snv_header = $result->{'header'};
 #print Dumper $result;
 
 #Get BAM file paths from build IDs.  Perform sanity checks
-my $data = &getFilePaths(
-    '-wgs_som_var_model_id'     => ($wgs_som_var_build      ? $wgs_som_var_build->model_id : undef), 
-    '-exome_som_var_model_id'   => ($exome_som_var_build    ? $exome_som_var_build->model_id : undef), 
-    '-rna_seq_normal_model_id'  => ($rna_seq_normal_build   ? $rna_seq_normal_build->model_id : undef), 
-    '-rna_seq_tumor_model_id'   => ($rna_seq_tumor_build    ? $rna_seq_tumor_build->model_id : undef)
-);
+my $data;
+if ($data_paths_file){
+  $data = &getFilePaths_Manual('-data_paths_file'=>$data_paths_file);
+}else{
+  $data = &getFilePaths_Genome(
+      '-wgs_som_var_model_id'     => ($wgs_som_var_build      ? $wgs_som_var_build->model_id : undef), 
+      '-exome_som_var_model_id'   => ($exome_som_var_build    ? $exome_som_var_build->model_id : undef), 
+      '-rna_seq_normal_model_id'  => ($rna_seq_normal_build   ? $rna_seq_normal_build->model_id : undef), 
+      '-rna_seq_tumor_model_id'   => ($rna_seq_tumor_build    ? $rna_seq_tumor_build->model_id : undef)
+  );
+}
 #print Dumper $data;
 
 
@@ -145,7 +158,7 @@ foreach my $bam (sort {$a <=> $b} keys %{$data}){
   my $snv_count = keys %{$snvs};
 
   if ($verbose){print YELLOW, "\n\nSNV count = $snv_count\n$data_type\n$sample_type\n$bam_path\n$ref_fasta\n", RESET};
-  my $counts = &getBamReadCounts('-snvs'=>$snvs, '-data_type'=>$data_type, '-sample_type'=>$sample_type, '-bam_path'=>$bam_path, '-ref_fasta'=>$ref_fasta, '-verbose'=>$verbose);
+  my $counts = &getBamReadCounts('-snvs'=>$snvs, '-data_type'=>$data_type, '-sample_type'=>$sample_type, '-bam_path'=>$bam_path, '-ref_fasta'=>$ref_fasta, '-verbose'=>$verbose, '-no_fasta_check'=>$no_fasta_check);
   $data->{$bam}->{read_counts} = $counts;
 }
 
@@ -219,8 +232,6 @@ foreach my $snv_pos (sort {$snvs->{$a}->{order} <=> $snvs->{$b}->{order}} keys %
 }
 close (OUT);
 
-#print Dumper $data;
-
 if ($verbose){print "\n\n";}
 
 return 1;
@@ -254,7 +265,7 @@ sub importPositions{
       #Make sure all neccessary columns are defined
       unless (defined($columns{'coord'}) && defined($columns{'mapped_gene_name'}) && defined($columns{'ref_base'}) && defined($columns{'var_base'})){
         print RED, "\n\nRequired column missing from file: $infile (need: coord, mapped_gene_name, ref_base, var_base)", RESET;
-        exit();
+        exit(1);
       }
       next();
     }
@@ -272,7 +283,7 @@ sub importPositions{
       $s{$coord}{end} = $3;
     }else{
       print RED, "\n\nCoord: $coord not understood\n\n", RESET;
-      exit();
+      exit(1);
     }
 
   }
@@ -284,9 +295,59 @@ sub importPositions{
 
 
 #########################################################################################################################################
-#getFilePaths - Get file paths from model IDs                                                                                           #
+#getFilePaths_Manual - Get file paths from an input file                                                                                #
 #########################################################################################################################################
-sub getFilePaths{
+sub getFilePaths_Manual{
+  my %args = @_;
+  my $data_paths_file = $args{'-data_paths_file'};
+
+  my %d;
+  my $b = 0;
+
+  open(BAMS, "$data_paths_file") || die "\n\nCould not open data paths file: $data_paths_file\n\n";
+  my $header = 1;
+  my %columns;
+  while(<BAMS>){
+    chomp($_);
+    my @line = split("\t", $_);
+    if ($header){
+      my $p = 0;
+      foreach my $col (@line){
+        $columns{$col}{position} = $p;
+        $p++;
+      }
+      $header = 0;
+      next();
+    }
+    $b++;
+    $d{$b}{build_dir} = $line[$columns{'build_dir'}{position}];
+    $d{$b}{data_type} = $line[$columns{'data_type'}{position}];
+    $d{$b}{sample_type} = $line[$columns{'sample_type'}{position}];
+    $d{$b}{bam_path} = $line[$columns{'bam_path'}{position}];
+    $d{$b}{ref_fasta} = $line[$columns{'ref_fasta'}{position}];
+    $d{$b}{ref_name} = $line[$columns{'ref_name'}{position}];
+  }
+  close(BAMS);
+
+  #Make sure the same reference build was used to create all BAM files!
+  my $test_ref_name = $d{1}{ref_name};
+  foreach my $b (keys %d){
+    my $ref_name = $d{$b}{ref_name};
+    unless ($ref_name eq $test_ref_name){
+      print RED, "\n\nOne or more of the reference build names used to generate BAMs did not match\n\n", RESET;
+      print Dumper %d;
+      exit(1);
+    }
+  }
+
+  return(\%d)
+}
+
+
+#########################################################################################################################################
+#getFilePaths_Genome - Get file paths from model IDs                                                                                    #
+#########################################################################################################################################
+sub getFilePaths_Genome{
   my %args = @_;
   my $wgs_som_var_model_id = $args{'-wgs_som_var_model_id'};
   my $exome_som_var_model_id = $args{'-exome_som_var_model_id'};
@@ -302,6 +363,7 @@ sub getFilePaths{
     if ($wgs_som_var_model){
       my $wgs_som_var_build = $wgs_som_var_model->last_succeeded_build;
       if ($wgs_som_var_build){
+
         #... /genome/lib/perl/Genome/Model/Build/SomaticVariation.pm
         my $reference_build = $wgs_som_var_build->reference_sequence_build;
         my $reference_fasta_path = $reference_build->full_consensus_path('fa');
@@ -323,11 +385,11 @@ sub getFilePaths{
         $d{$b}{ref_name} = $reference_display_name;
       }else{
         print RED, "\n\nA WGS model ID was specified, but a successful build could not be found!\n\n", RESET;
-        exit();
+        exit(1);
       }
     }else{
       print RED, "\n\nA WGS model ID was specified, but it could not be found!\n\n", RESET;
-      exit();
+      exit(1);
     }
   }
 
@@ -358,11 +420,11 @@ sub getFilePaths{
         $d{$b}{ref_name} = $reference_display_name;
       }else{
         print RED, "\n\nA Exome model ID was specified, but a successful build could not be found!\n\n", RESET;
-        exit();
+        exit(1);
       }
     }else{
       print RED, "\n\nA Exome model ID was specified, but it could not be found!\n\n", RESET;
-      exit();
+      exit(1);
     }
   }
 
@@ -386,11 +448,11 @@ sub getFilePaths{
         $d{$b}{ref_name} = $reference_display_name;
       }else{
         print RED, "\n\nAn RNA-seq model ID was specified, but a successful build could not be found!\n\n", RESET;
-        exit();
+        exit(1);
       }
     }else{
       print RED, "\n\nAn RNA-seq model ID was specified, but it could not be found!\n\n", RESET;
-      exit();
+      exit(1);
     }
   }
 
@@ -445,6 +507,7 @@ sub getBamReadCounts{
   my $bam_path = $args{'-bam_path'};
   my $ref_fasta = $args{'-ref_fasta'};
   my $verbose = $args{'-verbose'};
+  my $no_fasta_check = $args{'-no_fasta_check'};
   my %c;
 
   #Code reference needed for Bio::DB::Bam
@@ -456,9 +519,12 @@ sub getBamReadCounts{
 
     if ( ($pos == ($data->{start} - 1) ) ) {
       #print STDERR 'PILEUP:'. $data->{chr} ."\t". $tid ."\t". $pos ."\t". $data->{start} ."\t". $data->{stop}."\n";
-      my $ref_base = $fai->fetch($data->{chr} .':'. $data->{start} .'-'. $data->{stop});
-      unless ($data->{reference} eq $ref_base) {
-        die("\n\nReference base " . $ref_base .' does not match expected '. $data->{reference} .' at postion '. $pos .' for chr '. $data->{chr} . '(tid = '. $tid . ')' . "\n$bam_path");
+      unless ($no_fasta_check){
+        my $ref_base = $fai->fetch($data->{chr} .':'. $data->{start} .'-'. $data->{stop});
+        unless ($data->{reference} eq $ref_base) {
+          #print RED, "\n\nReference base " . $ref_base .' does not match expected '. $data->{reference} .' at postion '. $pos .' for chr '. $data->{chr} . '(tid = '. $tid . ')' . "\n$bam_path", RESET;
+          die("\n\nReference base " . $ref_base .' does not match expected '. $data->{reference} .' at postion '. $pos .' for chr '. $data->{chr} . '(tid = '. $tid . ')' . "\n$bam_path");
+        }
       }
       for my $pileup ( @{$pileups} ) {
         my $alignment = $pileup->alignment;
@@ -593,4 +659,4 @@ sub getExpressionValues{
   return(\%e);
 }
 
-
+  

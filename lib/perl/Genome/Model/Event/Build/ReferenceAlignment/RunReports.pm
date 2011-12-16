@@ -102,15 +102,16 @@ sub execute {
     ###################################################
     #Send user email
 
-    my $mail_dest = ($build->id < 0 ? Genome::Config->user_email() . ',jpeck@genome.wustl.edu' : 'apipe-run@genome.wustl.edu');
-    $self->status_message('Sending summary e-mail to ' . $mail_dest);
-    my $mail_rv = Genome::Model::Command::Report::Mail->execute(
-        model => $self->model,
-        build => $build,
-        report_name => "Summary",
-        to => $mail_dest,
-    );
-    $self->status_message("E-mail command executed.  Return value: $mail_rv");
+    #adukes TURNING THIS OFF because no one needs 10000 emails a week
+    #my $mail_dest = ($build->id < 0 ? Genome::Config->user_email() . ',jpeck@genome.wustl.edu' : 'apipe-run@genome.wustl.edu');
+    #$self->status_message('Sending summary e-mail to ' . $mail_dest);
+    #my $mail_rv = Genome::Model::Command::Report::Mail->execute(
+    #    model => $self->model,
+    #    build => $build,
+    #    report_name => "Summary",
+    #    to => $mail_dest,
+    #);
+    #$self->status_message("E-mail command executed.  Return value: $mail_rv");
 
 =cut
 

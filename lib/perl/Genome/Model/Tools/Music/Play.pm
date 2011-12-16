@@ -68,19 +68,19 @@ class Genome::Model::Tools::Music::Play {
         },
         normal_min_depth => {
             is => 'Integer',
-            doc => "The minimum read depth to consider a Normal BAM base as covered",
+            doc => 'The minimum read depth to consider a Normal BAM base as covered',
         },
         tumor_min_depth => {
             is => 'Integer',
-            doc => "The minimum read depth to consider a Tumor BAM base as covered",
+            doc => 'The minimum read depth to consider a Tumor BAM base as covered',
         },
         min_mapq => {
             is => 'Integer',
-            doc => "The minimum mapping quality of reads to consider towards read depth counts",
+            doc => 'The minimum mapping quality of reads to consider towards read depth counts',
         },
         show_skipped => {
             is => 'Boolean',
-            doc => "Report each skipped mutation, not just how many",
+            doc => 'Report each skipped mutation, not just how many',
             default => 0,
         },
         genes_to_ignore => {
@@ -112,6 +112,11 @@ class Genome::Model::Tools::Music::Play {
             doc => 'Number of clusters of samples with comparable BMRs',
             default_value => 1,
         },
+        separate_truncations => {
+            is => 'Boolean',
+            doc => 'Group truncational mutations as a separate category',
+            default => 0,
+        },
         skip_non_coding => {
             is => 'Boolean',
             doc => 'Skip non-coding mutations from the provided MAF file',
@@ -128,7 +133,7 @@ class Genome::Model::Tools::Music::Play {
         },
         processors => {
             is => 'Integer',
-            doc => "number of processors to use in SMG (requires 'foreach' and 'doMC' R packages)",
+            doc => "Number of processors to use in SMG (requires 'foreach' and 'doMC' R packages)",
         },
         aa_range => {
             is => 'Text',
@@ -158,7 +163,7 @@ class Genome::Model::Tools::Music::Play {
         },
         gene_list => {
             is => 'Text',
-            doc => "List of genes to test in B<genome-music-mutation-relation>(1), typically SMGs. (Uses output from running B<genome-music-smg>(1).)",
+            doc => 'List of genes to test in B<genome-music-mutation-relation>(1), typically SMGs. (Uses output from running B<genome-music-smg>(1).)',
             calculate_from => ['output_dir'],
             calculate => q{ $output_dir . '/smg'; },
         },

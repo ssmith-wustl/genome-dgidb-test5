@@ -12,6 +12,12 @@ class Genome::Model::ReferenceAlignment::Command::Convert37To36 {
             doc => 'use these build37 models',
         },
     ],
+    has_optional_input => [
+        region_of_interest_set_name => {
+            is => 'Text',
+            doc => 'New build36 models will use this ROI',
+        },
+    ],
     doc => 'Copy models based on build37 to new ones based on build36',
 };
 
@@ -41,20 +47,28 @@ sub execute {
                 'dbsnp_build=106227442',
                 'annotation_reference_build=113115679',#Model/ImportedAnnotation.pm for build36
             ],
-        );
-        map{$_->delete}grep{$_->name eq 'genotype_microarray'}$result->_new_model->inputs;
-        if($model->region_of_interest_set_name and exists $roi37to36{$model->region_of_interest_set_name}) {
-            print $result->_new_model->id . " updating region of interest set name to " . $roi37to36{$model->region_of_interest_set_name} . "\n";
-            $result->_new_model->region_of_interest_set_name($roi37to36{$model->region_of_interest_set_name});
+        )->_new_model;
+
+        #Genotype microarray will auto-generate on first build
+        map{$_->delete}grep{$_->name eq 'genotype_microarray'}$result->inputs;
+
+        #Set ROI
+        if($self->region_of_interest_set_name) {
+            $result->region_of_interest_set_name($self->region_of_interest_set_name);
+        } elsif ($model->region_of_interest_set_name and exists $roi37to36{$model->region_of_interest_set_name}) {
+            print $result->id . " updating region of interest set name to " . $roi37to36{$model->region_of_interest_set_name} . "\n";
+            $result->region_of_interest_set_name($roi37to36{$model->region_of_interest_set_name});
         }
 
+        #Track groups to more efficiently add models to groups later
         for my $group_id ($model->group_ids){
-            push @{$group_to_models{$group_id}}, $result->_new_model;
+            push @{$group_to_models{$group_id}}, $result;
         }
 
         $model->build_requested(1);
-        push @build36_model_ids, $result->_new_model->id;
+        push @build36_model_ids, $result->id;
     }
+
     while(my ($group_id,$models) = each %group_to_models){
         my $group = Genome::ModelGroup->get($group_id);
         $group->assign_models(@$models);

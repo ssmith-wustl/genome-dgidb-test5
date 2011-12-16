@@ -22,8 +22,7 @@ use_ok('Genome::Model::Build::DeNovoAssembly::Velvet') or die;
 my $base_dir = '/gsc/var/cache/testsuite/data/Genome-Model/DeNovoAssembly';
 my $archive_path = $base_dir.'/inst_data/-7777/archive.tgz';
 ok(-s $archive_path, 'inst data archive path') or die;
-my $example_version = '9';
-my $example_dir = $base_dir.'/velvet_v'.$example_version;
+my $example_dir = $base_dir.'/velvet_v10';
 ok(-d $example_dir, 'example dir') or die;
 my $tmpdir = File::Temp::tempdir(CLEANUP => 1);
 
@@ -103,6 +102,20 @@ my $example_build = Genome::Model::Build->create(
     data_directory => $example_dir,
 );
 ok($example_build, 'create example build');
+
+if(0){
+
+$build->data_directory('velvet_v11');
+my $metrics = Genome::Model::Event::Build::DeNovoAssembly::Report->create( build => $build, model => $model );
+ok( $metrics, 'Created report' );
+$metrics->dump_status_messages(1);
+ok( $metrics->execute, 'Executed report' );
+is(File::Compare::compare($build->stats_file,$example_build->stats_file), 0, 'Stats files match' );
+print 'gvimdiff '.join(' ', $example_build->stats_file,$build->stats_file)."\n"; <STDIN>;
+exit;
+}
+
+
 
 # MISC 
 is($build->center_name, $build->model->center_name, 'center name');
@@ -203,6 +216,7 @@ ok( $metrics->execute, 'Executed report' );
 ok( -s $example_build->stats_file, 'Example build stats file exists' );
 ok( -s $build->stats_file, 'Test created stats file' );
 is(File::Compare::compare($example_build->stats_file,$build->stats_file), 0, 'Stats files match' );
+#print 'gvimdiff '.join(' ', $example_build->stats_file,$build->stats_file)."\n"; <STDIN>;
 #check build metrics
 my %expected_metrics = (
     'n50_supercontig_length' => '141',
@@ -229,11 +243,10 @@ my %expected_metrics = (
     'read_depths_ge_5x' => '1.1'
 );
 for my $metric_name ( keys %expected_metrics ) {
-    ok( $expected_metrics{$metric_name} eq $build->$metric_name, "$metric_name metrics match" );
+    is($expected_metrics{$metric_name}, $build->$metric_name, "$metric_name metrics match" );
 }
 
 #print $build->data_directory."\n"; <STDIN>;
-
 done_testing();
 exit;
 

@@ -10,7 +10,7 @@ use Bio::SeqIO;
 use Genome::Model::Tools::Pcap::Ace::Reader;
 
 class Genome::Model::Tools::Velvet::ToReadFasta {
-    is           => 'Command',
+    is           => 'Command::V2',
     has          => [
         ace_file    => {
             is      => 'String', 

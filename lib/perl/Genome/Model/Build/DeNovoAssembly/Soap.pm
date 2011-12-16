@@ -280,6 +280,7 @@ sub assembler_params {
         for my $param ( keys %default_config_params ) {
             delete $params{$param};
         }
+        delete $params{"reverse_seq"};
         my $cpus = $self->processing_profile->get_number_of_cpus;
         $params{cpus} = $cpus;
     }
@@ -290,7 +291,6 @@ sub assembler_params {
 sub _assembler_config_params_and_defaults {
     return (
         max_rd_len => 120,
-        reverse_seq => 0,
         asm_flags => 3,
         pair_num_cutoff => 2,
         map_len => 60,
@@ -328,12 +328,47 @@ sub before_assemble {
     my $lib_config = join("\n", '[LIB]', map { $_.'='.$config_params{$_} } keys %config_params);
     $lib_config .= "\n";
 
+    #Check for reverse orientation libraries
+    my %jumping_libs;
+    my @instrument_data = $self->instrument_data;
+    foreach my $i_d(@instrument_data) {
+        my $read_orientation = $i_d->read_orientation;
+        if ($read_orientation and $read_orientation eq "reverse_forward") {
+            $jumping_libs{$i_d->library_id} = 1;
+        }
+    }
+    #Check for instrument data with original fragment length set
+    my %original_fragment_length_set;
+    foreach my $i_d(@instrument_data) {
+        my $original_est_fragment_length = $i_d->original_est_fragment_size;
+        if ($original_est_fragment_length) {
+            $original_fragment_length_set{$i_d->library_id} = $original_est_fragment_length;
+        }
+    }
+
     $self->status_message('Add libraries to config');
     for my $library ( @libraries ) {
     $self->status_message('Library: '.$library->{library_id});
         $config .= $lib_config;
+        $config .= 'reverse_seq=';
+        if ($jumping_libs{$library->{library_id}}) {
+            $config .="1\n";
+        }
+        else {
+            $config .="0\n";
+        }
         $config .= 'avg_ins=';
-        $config .= ( defined $avg_ins ) ? $avg_ins : $library->{insert_size}; # use given avg_ins or from lib
+        my $insert_size .= ( defined $avg_ins ) ? $avg_ins : $library->{insert_size}; # use given avg_ins or from lib
+        if ($original_fragment_length_set{$library->{library_id}}) {
+            $insert_size = $original_fragment_length_set{$library->{library_id}};
+        }
+        elsif (defined $avg_ins) {
+            $insert_size = $avg_ins;
+        }
+        else {
+            $insert_size = $library->{insert_size};
+        }
+        $config .= $insert_size;
         $config .= "\n";
         if ( exists $library->{paired_fastq_files} ) { 
             $config .= 'q1='.$library->{paired_fastq_files}->[0]."\n";

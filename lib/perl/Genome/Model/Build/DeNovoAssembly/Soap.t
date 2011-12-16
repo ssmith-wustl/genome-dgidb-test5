@@ -23,7 +23,7 @@ use_ok('Genome::Model::Build::DeNovoAssembly::Soap') or die;
 my $base_dir = '/gsc/var/cache/testsuite/data/Genome-Model/DeNovoAssembly';
 my $archive_path = $base_dir.'/inst_data/-7777/archive.tgz';
 ok(-s $archive_path, 'inst data archive path') or die;
-my $example_dir = $base_dir.'/soap_v9';
+my $example_dir = $base_dir.'/soap_v10';
 ok(-d $example_dir, 'example dir') or die;
 my $tmpdir = File::Temp::tempdir(CLEANUP => 1);
 
@@ -75,7 +75,7 @@ ok($instrument_data->is_paired_end, 'inst data is paired');
 ok(-s $instrument_data->archive_path, 'inst data archive path');
 
 my $pp = Genome::ProcessingProfile::DeNovoAssembly->create(
-    name => 'De Novo Assembly Soap Test',
+    name => 'De Novo Assembly Soap PGA Test',
     assembler_name => 'soap de-novo-assemble',
     assembler_version => '1.04',
     assembler_params => '-kmer_size 31 -resolve_repeats -kmer_frequency_cutoff 1',
@@ -202,14 +202,13 @@ max_rd_len=120
 [LIB]
 map_len=60
 asm_flags=3
-reverse_seq=0
 pair_num_cutoff=2
+reverse_seq=0
 avg_ins=260
 CONFIG
 $expected_config .= 'q1='.$build->data_directory.'/'.$build->file_prefix.".$library_id.forward.fastq\n";
 $expected_config .= 'q2='.$build->data_directory.'/'.$build->file_prefix.".$library_id.reverse.fastq\n";
 is($config, $expected_config, 'config matches');
-
 my @file_exts = qw/ contig         gapSeq        links     peGrads
                     preGraphBasic  readOnContig  scafSeq   updated.edge
                     ContigIndex    edge          kmerFreq  newContigIndex
@@ -247,6 +246,7 @@ ok( $metrics->execute, 'Executed report' );
 ok( -s $example_build->stats_file, 'Example build stats file exists' );
 ok( -s $build->stats_file, 'Test created stats file' );
 is(File::Compare::compare($example_build->stats_file,$build->stats_file), 0, 'Stats files match' );
+#print 'gvimdiff '.join(' ', $example_build->stats_file,$build->stats_file)."\n"; <STDIN>;
 #check build metrics
 my %expected_metrics = (
     'n50_supercontig_length' => '101',
@@ -257,10 +257,10 @@ my %expected_metrics = (
     'reads_assembled' => 'NA',
     'average_read_length' => '94',
     'reads_attempted' => 30000,
+    'reads_not_assembled_pct' => 'NaN',
     'average_insert_size_used' => '260',
     'n50_contig_length' => '101',
     'genome_size_used' => '4500000',
-    'reads_not_assembled_pct' => 'NA',
     'supercontigs' => '1407',
     'average_supercontig_length' => '115',
     'contigs' => '1411',
@@ -273,10 +273,10 @@ my %expected_metrics = (
     'read_depths_ge_5x' => 'NA'
 );
 for my $metric_name ( keys %expected_metrics ) {
-    ok( $expected_metrics{$metric_name} eq $build->$metric_name, "$metric_name matches" );
+    is($expected_metrics{$metric_name}, $build->$metric_name, "$metric_name matches" );
 }
 
 #print $build->data_directory."\n"; <STDIN>;
-
 done_testing();
 exit;
+

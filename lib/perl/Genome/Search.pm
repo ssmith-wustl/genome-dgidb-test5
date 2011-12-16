@@ -524,7 +524,7 @@ sub _index_queue_callback {
         if ($object->class->can('search_index_queue_priority')) {
             $create_params{priority} = $object->class->search_index_queue_priority;
         }
-        $index_queue = Genome::Search::IndexQueue->create(%create_params);
+        $index_queue = Genome::Search::Queue->create(%create_params);
     }
 
     return $index_queue;

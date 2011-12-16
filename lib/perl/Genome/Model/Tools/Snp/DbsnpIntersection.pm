@@ -53,15 +53,14 @@ sub execute {
         $self->error_message("Snps file is not a file: " . $self->snv_bed_file);
         return;
     }
-    my $snv_feature_list_path = $self->dbsnp_bed_file;
+    my $snv_bed_path = $self->dbsnp_bed_file;
     my $snv_input_path = $self->sort_bed($self->snv_bed_file);
     if(defined($self->dbsnp_build_id)){
         my $dbsnp_build_id = $self->dbsnp_build_id;
         my $dbsnp_build = Genome::Model::Build->get($dbsnp_build_id);
-        my $feature_list = $dbsnp_build->snv_feature_list;
-        $snv_feature_list_path = $feature_list->file_path;
+        $snv_bed_path = $dbsnp_build->snvs_bed;
     }
-    unless(defined($snv_feature_list_path)){
+    unless(defined($snv_bed_path)){
         die $self->error_message("Could not locate a path to dbsnp bed file.");
     }
     my $novel_snvs_file = $self->novel_snvs_file;
@@ -69,7 +68,7 @@ sub execute {
 
     my $snv_compare = Genome::Model::Tools::Joinx::Intersect->create(
         input_file_a => $snv_input_path,
-        input_file_b => $snv_feature_list_path,
+        input_file_b => $snv_bed_path,
         miss_a_file => $novel_snvs_file,
         output_file => $dbsnp_snvs_file,
         exact_pos => 1,

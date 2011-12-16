@@ -47,6 +47,19 @@ sub _init_created_dbh {
     return $dbh;
 }
 
+sub _sync_database {
+    my $self = shift;
+
+    my $dbh = $self->get_default_handle;
+    unless ($dbh->do("alter session set NLS_DATE_FORMAT = 'YYYY-MM-DD HH24:MI:SS'")
+            and
+            $dbh->do("alter session set NLS_TIMESTAMP_FORMAT = 'YYYY-MM-DD HH24:MI:SSXFF'"))
+    {
+        Carp::croak("Can't set date format: $DBI::errstr");
+    }
+    $self->SUPER::_sync_database(@_);
+}
+
 
 sub _get_sequence_name_for_table_and_column {
     my ($self, $table_name, $column_name) = @_;

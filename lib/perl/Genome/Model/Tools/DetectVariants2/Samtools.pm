@@ -2,9 +2,9 @@ package Genome::Model::Tools::DetectVariants2::Samtools;
 
 use strict ;
 use warnings;
-use File::Copy;
 use Genome;
-use IO::File;
+use Tie::File;
+use POSIX 'strftime';
 
 class Genome::Model::Tools::DetectVariants2::Samtools {
     is => ['Genome::Model::Tools::DetectVariants2::Detector'],
@@ -13,32 +13,55 @@ class Genome::Model::Tools::DetectVariants2::Samtools {
             default => "-R 'select[model!=Opteron250 && type==LINUX64 && tmp>1000 && mem>16000] span[hosts=1] rusage[tmp=1000:mem=16000]' -M 1610612736",
         }
     ],
-    has => [
+    has_optional => [
         _genotype_detail_base_name => {
             is => 'Text',
             default_value => 'report_input_all_sequences',
             is_input => 1,
         },
-        genotype_detail_output => {
-            calculate_from => ['_genotype_detail_base_name', 'output_directory'],
-            calculate => q{ join("/", $output_directory, $_genotype_detail_base_name); },
-            is_output => 1,
-        },
         _genotype_detail_staging_output => {
             calculate_from => ['_temp_staging_directory', '_genotype_detail_base_name'],
             calculate => q{ join("/", $_temp_staging_directory, $_genotype_detail_base_name); },
+        },
+        _vcf_staging_output => {
+            calculate_from => ['_temp_staging_directory'],
+            calculate => q{ join("/", $_temp_staging_directory, 'vars.vcf'); },
+        },
+        _vcf_sani_staging_output => {
+            calculate_from => ['_temp_staging_directory'],
+            calculate => q { join("/", $_temp_staging_directory, 'vars.vcf.sanitized'); },
+        },
+        _header_scratch_output => {
+            calculate_from => ['_temp_scratch_directory'],
+            calculate => q { join("/", $_temp_scratch_directory, 'vars.vcf.header'); },
+        },
+        _snv_scratch_output => {
+            calculate_from => ['_temp_scratch_directory'],
+            calculate => q { join("/", $_temp_scratch_directory, 'snvs.vcf'); },
+        },
+        _indel_scratch_output => {
+            calculate_from => ['_temp_scratch_directory'],
+            calculate => q { join("/", $_temp_scratch_directory, 'indels.vcf'); },
+        },
+        _snv_vcf_gz_staging_output => {
+            calculate_from => ['_temp_staging_directory'],
+            calculate => q { join("/", $_temp_staging_directory, 'snvs.vcf.gz'); },
+        },
+        _indel_vcf_gz_staging_output => {
+            calculate_from => ['_temp_staging_directory'],
+            calculate => q { join("/", $_temp_staging_directory, 'indels.vcf.gz'); },
         },
     ]
 };
 
 sub help_brief {
-    "Use samtools for variant detection.",
+    "Use ,samtools for variant detection.",
 }
 
 sub help_synopsis {
     my $self = shift;
     return <<"EOS"
-gmt detect-variants2 samtools --version r963 --aligned_reads_input input.bam --reference_sequence_input reference.fa --working-directory ~/example/
+gmt detec,t-variants2 samtools --version r963 --aligned_reads_input input.bam --reference_sequence_input reference.fa --working-directory ~/example/
 EOS
 }
 
@@ -67,54 +90,67 @@ sub _detect_variants {
     my $self = shift;
 
     my $ref_seq_file = $self->reference_sequence_input;
-    my $bam_file = $self->aligned_reads_input;
-    my $sam_pathname = Genome::Model::Tools::Sam->path_for_samtools_version($self->version);
-    my $parameters = $self->params;
-    my $snv_output_file = $self->_snv_staging_output;
-    my $indel_output_file = $self->_indel_staging_output;
+    my $bam_file     = $self->aligned_reads_input;
+    my $snv_output_file     = $self->_snv_staging_output;
+    my $indel_output_file   = $self->_indel_staging_output;
+    my $vcf_output_file     = $self->_vcf_staging_output;
     my $filtered_indel_file = $self->_filtered_indel_staging_output;
-    #two %s are switch to indicate snvs or indels and output file name
 
-    my $samtools_cmd;
-    if($self->is_mpileup_compatible) { 
-        $samtools_cmd = "$sam_pathname mpileup -u $parameters -f $ref_seq_file $bam_file | bcftools view -Acg - > $snv_output_file";
-    } else {
-        $samtools_cmd = "$sam_pathname pileup -c $parameters -f $ref_seq_file %s $bam_file > %s";
+    my $bed_file = $self->region_of_interest->merged_bed_file if $self->region_of_interest;
+    my ($is_mpileup, $parameters) = $self->_mpileup_or_pileup;
+
+    #two %s are switch to indicate snvs or indels and output file
+    #name, snv and indel share the same parameter
+    my $samtools_path   = Genome::Model::Tools::Sam->path_for_samtools_version($self->version);
+    my $samtools_pu_cmd = "$samtools_path pileup -c $parameters -f $ref_seq_file %s $bam_file > %s";
+    my ($samtools_cmd, $snv_cmd, $check_out);
+
+    if ($is_mpileup) { #mpileup params contain the word mpileup
+        my $bcftools_path = Genome::Model::Tools::Sam->path_for_bcftools($self->version);
+        $parameters .= " -l $bed_file" if $self->region_of_interest;
+        $snv_cmd   = "$samtools_path $parameters -f $ref_seq_file $bam_file | $bcftools_path view -Avcg - > $vcf_output_file";
+        $check_out = $vcf_output_file;
+    } 
+    else {
+        $snv_cmd   = sprintf($samtools_pu_cmd, '-v', $snv_output_file);
+        $check_out = $snv_output_file;
     }
 
-    my $snv_cmd = sprintf($samtools_cmd, '-v', $snv_output_file);
-
     my $rv = Genome::Sys->shellcmd(
-        cmd => $snv_cmd,
-        input_files => [$bam_file, $ref_seq_file],
-        output_files => [$snv_output_file],
+        cmd          => $snv_cmd,
+        input_files  => [$bam_file, $ref_seq_file],
+        output_files => [$check_out],
         allow_zero_size_output_files => 1,
     );
-    unless($rv) {
+    unless ($rv) {
         $self->error_message("Running samtools SNP failed.\nCommand: $snv_cmd");
         return;
     }
 
-    if (-e $snv_output_file and not -s $snv_output_file) {
-        $self->warning_message("No SNVs detected.");
-    }
-    else {
-        if(!($self->is_mpileup_compatible)) {
-            my $snp_sanitizer = Genome::Model::Tools::Sam::SnpSanitizer->create(snp_file => $snv_output_file);
-            $rv = $snp_sanitizer->execute;
-            unless($rv and $rv == 1) {
-                $self->error_message("Running samtools snp-sanitizer failed with exit code $rv");
-                return;
-            }
+    #steps needed with pileup that mpileup doesn't use -i only shows lines/consensus with indels
+    if ($is_mpileup) {
+        $self->warning_message("No vars detected.") if -z $vcf_output_file;
+        #want to make sure  the headers from the VCF form aren't used because if they are
+        #the test to compare the line counts will fail everytime
+        #we also want to just look at the indels in the indels.hq.v2.bed file
+        unless ($self->create_snv_indel_output_file) {
+            $self->error_message("Failed to create snv and indel files from vcf file: $vcf_output_file");
+            return;
         }
     }
-    #steps needed with pileup that mpileup doesn't use
-    #-i only shows lines/consensus with indels
-    if(!($self->is_mpileup_compatible)) {
-        my $indel_cmd = sprintf($samtools_cmd, '-i', $indel_output_file);
+    else { #pileup
+        $self->warning_message("No snvs detected.") if -z $snv_output_file;
+        my $snp_sanitizer = Genome::Model::Tools::Sam::SnpSanitizer->create(snp_file => $snv_output_file);
+        $rv = $snp_sanitizer->execute;
+        unless ($rv and $rv == 1) {
+            $self->error_message("Running samtools snp-sanitizer failed with exit code $rv");
+            return;
+        }
+
+        my $indel_cmd = sprintf($samtools_pu_cmd, '-i', $indel_output_file);
         $rv = Genome::Sys->shellcmd(
-            cmd => $indel_cmd,
-            input_files => [$bam_file, $ref_seq_file],
+            cmd          => $indel_cmd,
+            input_files  => [$bam_file, $ref_seq_file],
             output_files => [$indel_output_file],
             allow_zero_size_output_files => 1,
         );
@@ -122,99 +158,145 @@ sub _detect_variants {
             $self->error_message("Running samtools indel failed.\nCommand: $indel_cmd");
             return;
         }
-
-        if (-e $indel_output_file and not -s $indel_output_file) {
-            $self->warning_message("No indels detected.");
-        }
-    }
-
-    #for capture models we need to limit the snvs and indels to within the defined target regions
-    if ($self->region_of_interest) {
-        my $bed_file = $self->region_of_interest->merged_bed_file;
-        for my $var_file ($snv_output_file, $indel_output_file) {
-            unless (-s $var_file) {
-                $self->warning_message("Skip limiting $var_file to target regions because it is empty.");
-                next;
-            }
-            my $tmp_limited_file = $var_file .'_limited';
-            my $no_limit_file = $var_file .'.no_bed_limit';
-            unless (Genome::Model::Tools::Sam::LimitVariants->execute(
-                    variants_file => $var_file,
-                    bed_file => $bed_file,
-                    output_file => $tmp_limited_file,
-                )) {
-                $self->error_message('Failed to limit samtools variants '. $var_file .' to within capture target regions '. $bed_file);
-                die($self->error_message);
-            }
-            unless (move($var_file,$no_limit_file)) {
-                $self->error_message('Failed to move all variants from '. $var_file .' to '. $no_limit_file);
-                die($self->error_message);
-            }
-            unless (move($tmp_limited_file,$var_file)) {
-                $self->error_message('Failed to move limited variants from '. $tmp_limited_file .' to '. $var_file);
-                die($self->error_message);
-            }
-        }
-    }
-
-
-    if (-s $indel_output_file) {
-        my %indel_filter_params = ( indel_file => $indel_output_file, out_file => $filtered_indel_file );
-        # for capture data we do not know the proper ceiling for depth
+        $self->warning_message("No indels detected.") if -z $indel_output_file;
+    
+        #for capture models we need to limit the snvs and indels to within the defined target regions
         if ($self->region_of_interest) {
-            $indel_filter_params{max_read_depth} = 1000000;
+            for my $var_file ($snv_output_file, $indel_output_file) {
+                unless (-s $var_file) {
+                    $self->warning_message("Skip limiting $var_file to target regions because it is empty.");
+                    next;
+                }
+                my $tmp_limited_file = $var_file .'_limited';
+                my $no_limit_file    = $var_file .'.no_bed_limit';
+                unless (Genome::Model::Tools::Sam::LimitVariants->execute(
+                    variants_file => $var_file,
+                    bed_file      => $bed_file,
+                    output_file   => $tmp_limited_file,
+                )) {
+                    $self->error_message('Failed to limit samtools variants '. $var_file .' to within capture target regions '. $bed_file);
+                    die $self->error_message;
+                }
+                unless (move($var_file, $no_limit_file)) {
+                    $self->error_message('Failed to move all variants from '. $var_file .' to '. $no_limit_file);
+                    die $self->error_message;
+                }
+                unless (move($tmp_limited_file, $var_file)) {
+                    $self->error_message('Failed to move limited variants from '. $tmp_limited_file .' to '. $var_file);
+                    die $self->error_message;
+                }
+            }
         }
-        my $indel_filter = Genome::Model::Tools::Sam::IndelFilter->create(%indel_filter_params);
+        if (-s $indel_output_file) {
+            my %indel_filter_params = ( 
+                indel_file => $indel_output_file, 
+                out_file   => $filtered_indel_file, 
+            );
+            # for capture data we do not know the proper ceiling for depth
+            $indel_filter_params{max_read_depth} = 1000000 if $self->region_of_interest;
 
-        unless($indel_filter->execute) {
-            $self->error_message("Running sam indel-filter failed.");
-            return;
+            my $indel_filter = Genome::Model::Tools::Sam::IndelFilter->create(%indel_filter_params);
+
+            unless ($indel_filter->execute) {
+                $self->error_message("Running sam indel-filter failed.");
+                return;
+            }
+        }
+        else {
+            Genome::Sys->write_file($filtered_indel_file);
+        }
+        #For now run genotype_detail only on pileup output
+        $rv = $self->generate_genotype_detail_file($snv_output_file);
+        unless ($rv) {
+            $self->error_message('Generating genotype detail file errored out');
+            die $self->error_message;
         }
     }
-    else {
-        Genome::Sys->write_file($filtered_indel_file);
-    }
-
-    $rv = $self->generate_genotype_detail_file($snv_output_file);
-    unless($rv) {
-        $self->error_message('Generating genotype detail file errored out');
-        die($self->error_message);
-    }
-    #if the file is being ran on a version thats r963 or higher
-    if($self->is_mpileup_compatible)  {
-        Genome::Sys->copy_file($snv_output_file, $indel_output_file);
-        #want to make sure  the headers from the VCF form aren't used because if they are
-        #the test to compare the line counts will fail everytime
-        #we also want to just look at the indels in the indels.hq.v2.bed file
-        $self->strip_extra_lines_from_output_file($snv_output_file, remove_indel=>1);
-        $self->strip_extra_lines_from_output_file($indel_output_file, remove_snv=>1);
-    }
-
     return $self->verify_successful_completion($snv_output_file, $indel_output_file);
 }
 
-#this sub removes the header lines from vcf format file, and removes non-snv lines or non-indel lines
-sub strip_extra_lines_from_output_file{
+
+#need separate indel and snv by "INDEL", also need sanitize the vcf
+#file (removing "N" and "." lines) 
+sub create_snv_indel_output_file {
     my $self = shift;
-    my ($file, %params) = @_;
-    my $fh = IO::File->new($file);
-    my $ofh = IO::File->new("> $file.tmp");
-    if($params{remove_indel}) {
-        while (my $line = $fh->getline){
-            next if $line =~ /^#/;
-            next if $line =~ /INDEL/;
-            $ofh->print($line);
+    my $vcf_file    = $self->_vcf_staging_output;
+    my $header_file = $self->_header_scratch_output;
+    my $sani_file   = $self->_vcf_sani_staging_output;
+    my $snv_tmp     = $self->_snv_scratch_output;
+    my $indel_tmp   = $self->_indel_scratch_output;
+    my $snv_file    = $self->_snv_staging_output;
+    my $indel_file  = $self->_indel_staging_output;
+
+    unless (-s $vcf_file) {
+        $self->error_message("Invalid vcf file: $vcf_file");
+        return;
+    }
+
+    my $vcf_fh   = Genome::Sys->open_file_for_reading($vcf_file) or return;
+    my $snv_fh   = Genome::Sys->open_file_for_writing($snv_tmp) or return;
+    my $indel_fh = Genome::Sys->open_file_for_writing($indel_tmp) or return;
+    my $head_fh  = Genome::Sys->open_file_for_writing($header_file) or return;
+    my $sani_fh  = Genome::Sys->open_file_for_writing($sani_file) or return;
+
+    while (my $line = $vcf_fh->getline) {
+        if ($line =~ /^#/) {
+            $head_fh->print($line);
+            next;
         }
-    } else {
-        while (my $line = $fh->getline){
-            next if $line =~ /^#/;
-            next if $line !~ /INDEL/;
-            $ofh->print($line);
+        my @columns = split /\s+/, $line;
+        if ($columns[3] eq 'N' or $columns[4] eq '.') {
+            $sani_fh->print($line);
+            next;
+        }
+        if ($columns[7] =~ /INDEL/) {
+            $indel_fh->print($line);
+        }
+        else {
+            $snv_fh->print($line);
         }
     }
-    $fh->close;
-    $ofh->close;
-    move("$file.tmp",$file);
+    map{$_->close}($vcf_fh, $snv_fh, $indel_fh, $head_fh, $sani_fh);
+
+    my @extra_info = $self->_extra_header_info;
+    tie my @header, 'Tie::File', $header_file;
+    my $column_name = pop @header;
+    push @header, @extra_info, $column_name;
+    untie @header;
+    
+    Genome::Sys->cat(input_files => [$header_file, $snv_tmp],   output_file => $snv_file);
+    Genome::Sys->cat(input_files => [$header_file, $indel_tmp], output_file => $indel_file);
+
+    return 1;
+}
+
+
+#hard-code extra vcf header info for now based on G/M/T/Vcf/Convert/Base
+sub _extra_header_info {
+    my $self = shift;
+    my $date = strftime("%Y%m%d", localtime);
+    my $ref_build   = Genome::Model::Build->get($self->reference_build_id);
+    my $ref_version = $ref_build->version;
+    my $subject     = $ref_build->subject_name;
+
+    my $public_ref;
+
+    if ($subject eq 'human') {
+        if ($ref_version == 37) {
+            $public_ref = 'ftp://ftp.ncbi.nih.gov/genbank/genomes/Eukaryotes/vertebrates_mammals/Homo_sapiens/GRCh37/special_requests/GRCh37-lite.fa.gz';
+        } 
+        elsif ($ref_version == 36) {
+            $public_ref = 'ftp://ftp.ncbi.nlm.nih.gov/genomes/H_sapiens/ARCHIVE/BUILD.36.3/special_requests/assembly_variants/NCBI36_WUGSC_variant.fa.gz';
+        } 
+        else {
+            die $self->error_message("Unknown reference sequence version ($ref_version) from reference sequence build " . $self->reference_build_id);
+        }
+    } 
+    else {
+        # TODO We need a map from internal reference to external references... until then just put our reference in there
+        $public_ref = $self->reference_sequence_input;
+    }
+    return ("##fileDate=$date", "##reference=$public_ref", "##phasing=none");
 }
 
 
@@ -231,20 +313,49 @@ sub verify_successful_completion {
     return 1;
 }
 
-#making sure that the version is an mpileup or pileup 
+# decide which of mpileup or pileup will be used
+# specify mpileup in snv(indel)_detection_strategy like:
+# samtools r963 [mpileup]  or  samtools r963 [mpileup -u]
+sub _mpileup_or_pileup {
+    my $self    = shift;
+    my $param   = $self->params;
+    my $version = $self->version;
+    my $message = "is not compatible with samtools version $version";
+
+    if ($param =~ /^mpileup/) {
+        unless ($self->is_mpileup_compatible) {
+            $self->error_message("mpileup $message");
+            die;
+        }
+        return (1, $param);
+    }
+    else { #for now treat all non mpileup as pileup
+        unless ($self->is_pileup_compatible) {
+            $self->error_message("pileup $message");
+            die;
+        }
+        return (0, $param);
+    }
+}
+
 sub is_mpileup_compatible {
-    my $self = shift;
-    return $self->version ge 'r973';
+    my ($ver_num) = shift->version =~ /r(\d+)/;
+    return $ver_num >= 599;   #samtools r599 is the first version to have mpileup
+}
+
+
+sub is_pileup_compatible {
+    my ($ver_num) = shift->version =~ /r(\d+)/;
+    return $ver_num <= 963;   #samtools r963 is the last version to have pileup
 }
 
 
 sub generate_genotype_detail_file {
-    my $self = shift; 
-    my $snv_output_file = shift;
+    my ($self, $snv_output_file) = @_; 
 
-    unless(-f $snv_output_file) { # and -s $snv_output_file) {
+    unless (-f $snv_output_file) { # and -s $snv_output_file) {
         $self->error_message("SNV output File: $snv_output_file is invalid.");
-        die($self->error_message);
+        die $self->error_message;
     }
 
     if (not -s $snv_output_file) {
@@ -254,53 +365,22 @@ sub generate_genotype_detail_file {
 
     my $report_input_file = $self->_genotype_detail_staging_output;
 
-    my %params=( 
+    my %params = ( 
         snp_file => $snv_output_file,
         out_file => $report_input_file,
     );
-    if($self->is_mpileup_compatible) {
+
+    my ($is_mpileup, undef) = $self->_mpileup_or_pileup;
+
+    if ($is_mpileup) {
         $params{snp_format} = 'vcf';
-    }else {
+    }
+    else {
         $params{snp_format} = 'sam';
     }
 
     my $snp_gd = Genome::Model::Tools::Snp::GenotypeDetail->create(%params);
-
     return $snp_gd->execute;
-}
-
-sub generate_metrics {
-    my $self = shift;
-
-    my $metrics = {};
-
-    if($self->detect_snvs) {
-        my $snp_count      = 0;
-        my $snp_count_good = 0;
-
-        my $snv_output = $self->_snv_staging_output;
-        my $snv_fh = Genome::Sys->open_file_for_reading($snv_output);
-        while (my $row = $snv_fh->getline) {
-            $snp_count++;
-            my @columns = split /\s+/, $row;
-            $snp_count_good++ if $columns[4] >= 15 and $columns[7] > 2;
-        }
-        $metrics->{'total_snp_count'} = $snp_count;
-        $metrics->{'confident_snp_count'} = $snp_count_good;
-    }
-
-    if($self->detect_indels) {
-        my $indel_count    = 0;
-
-        my $indel_output = $self->_indel_staging_output;
-        my $indel_fh = Genome::Sys->open_file_for_reading($indel_output);
-        while (my $row = $indel_fh->getline) {
-            $indel_count++;
-        }
-        $metrics->{'total indel count'} = $indel_count;
-    }
-
-    return $metrics;
 }
 
 
@@ -308,15 +388,15 @@ sub params_for_result {
     my $self = shift;
 
     my %params = (
-        detector_name => $self->class,
-        detector_params => $self->params,
-        detector_version => $self->version,
-        aligned_reads => $self->aligned_reads_input,
+        detector_name         => $self->class,
+        detector_params       => $self->params,
+        detector_version      => $self->version,
+        aligned_reads         => $self->aligned_reads_input,
         control_aligned_reads => undef,
-        reference_build_id => $self->reference_build_id,
+        reference_build_id    => $self->reference_build_id,
         region_of_interest_id => $self->region_of_interest_id,
-        test_name => $ENV{GENOME_SOFTWARE_RESULT_TEST_NAME} || undef,
-        chromosome_list => undef,
+        test_name             => $ENV{GENOME_SOFTWARE_RESULT_TEST_NAME} || undef,
+        chromosome_list       => undef,
     );
 
     return \%params;
@@ -375,6 +455,38 @@ sub parse_line_for_bed_intersection {
     }
 
     return @parsed_variants;
+}
+
+
+sub _generate_vcf { #overwrite the base class method to avoid remake vcf file for mpileup
+    my $self = shift;
+    my ($is_mpileup, undef) = $self->_mpileup_or_pileup;
+
+    my $snv_vcf_out      = $self->_snv_staging_output;    #svs.hq
+    my $indel_vcf_out    = $self->_indel_staging_output;  #indels.hq
+    my $snv_vcf_gz_out   = $self->_snv_vcf_gz_staging_output;
+    my $indel_vcf_gz_out = $self->_indel_vcf_gz_staging_output;
+
+    if ($is_mpileup) {
+        $self->_create_gz_file($snv_vcf_out, $snv_vcf_gz_out);
+        $self->_create_gz_file($indel_vcf_out, $indel_vcf_gz_out); 
+        return 1;
+    }
+    else { # pileup still need vcf conversion
+        return $self->SUPER::_generate_vcf;
+    }
+}
+
+
+sub _create_gz_file {
+    my ($self, $source, $out) = @_;
+
+    my $cmd = "bgzip -c $source > $out";
+    my $rv  = Genome::Sys->shellcmd(cmd => $cmd);
+    unless ($rv) {
+        die $self->error_message("Failed to bgzip vcf output: $out from $source!");
+    }
+    return 1;
 }
 
 

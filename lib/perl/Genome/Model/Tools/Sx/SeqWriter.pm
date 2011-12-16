@@ -82,6 +82,17 @@ sub flush {
     return 1;
 }
 
+sub close {
+    my $self = shift;
+
+    for my $property ( $self->_file_properties ) {
+        next if not $self->{'_'.$property->property_name};
+        $self->{'_'.$property->property_name}->close;
+    }
+
+    return 1;
+}
+
 sub _file_properties {
     my $self = shift;
 

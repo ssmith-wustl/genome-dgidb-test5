@@ -133,7 +133,7 @@ sub daemon {
 sub list {
     my $self = shift;
 
-    my $index_queue_iterator = Genome::Search::IndexQueue->queue_iterator();
+    my $index_queue_iterator = Genome::Search::Queue->queue_iterator();
 
     print join("\t", 'PRIORITY', 'TIMESTAMP', 'SUBJECT_CLASS', 'SUBJECT_ID') . "\n";
     print join("\t", '--------', '---------', '-------------', '----------') . "\n";
@@ -156,8 +156,9 @@ sub index_queued {
     my $max_changes_count = delete $params{max_changes_count};
 
     # TODO Should optimize this by grouping by subject id and class and removing all related rows
-    my $index_queue_iterator = Genome::Search::IndexQueue->queue_iterator();
+    my $index_queue_iterator = Genome::Search::Queue->queue_iterator();
 
+    my $subject_seen = {};
     my $modified_count = 0;
     while (
         !$signaled_to_quit
@@ -167,11 +168,19 @@ sub index_queued {
         my $subject_class = $index_queue_item->subject_class;
         my $subject_id = $index_queue_item->subject_id;
         last if $signaled_to_quit;
-        my $action = ($subject_class->get($subject_id) ? 'add' : 'delete');
-        last if $signaled_to_quit;
-        if ($self->modify_index($action, $subject_class, $subject_id)) {
+
+        # if we've already seen this subject during this iterator then we do not need to re-index it
+        if ($subject_seen->{$subject_class}->{$subject_id}) {
             $index_queue_item->delete();
-            $modified_count++;
+        }
+        else {
+            my $action = ($subject_class->get($subject_id) ? 'add' : 'delete');
+            last if $signaled_to_quit;
+            if ($self->modify_index($action, $subject_class, $subject_id)) {
+                $subject_seen->{$subject_class}->{$subject_id}++;
+                $index_queue_item->delete();
+                $modified_count++;
+            }
         }
     }
 

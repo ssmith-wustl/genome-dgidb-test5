@@ -23,6 +23,9 @@ sub import {
             my $position = length($File::Find::name) - 3;
             return if (index($File::Find::name, '.pm', $position) != $position);
             return if (index($File::Find::name, 'Genome/Model/Tools') >= 0);
+            if (index($File::Find::name, 'Genome/InstrumentData/Command/AlignReads.pm') >= 0) {
+                return;
+            }
             return if (index($File::Find::name, 'Test.pm') >= 0);
             return if (index($File::Find::name, 'Test2.pm') >= 0);
             return if (index($File::Find::dir, '.d') >= 0);

@@ -9,7 +9,7 @@ use Genome;
 use Bio::SeqIO;
 
 class Genome::Model::Tools::Velvet::ReadNamesDatabase {
-    is => 'Genome::Model::Tools::Velvet',
+    is => 'Genome::Model::Tools::Velvet::Base',
     has => [
 	sequences_file => {
 	    is => 'Text',

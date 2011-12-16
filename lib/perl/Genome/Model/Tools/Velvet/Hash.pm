@@ -7,7 +7,7 @@ use POSIX;
 use Genome;
 
 class Genome::Model::Tools::Velvet::Hash {
-    is           => 'Genome::Model::Tools::Velvet',
+    is           => 'Genome::Model::Tools::Velvet::Base',
     has => [
          file_name  => {
             is      => 'String', 

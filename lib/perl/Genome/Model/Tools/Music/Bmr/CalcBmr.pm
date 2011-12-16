@@ -10,7 +10,7 @@ our $VERSION = $Genome::Model::Tools::Music::VERSION;
 
 # These constants let us use memory saving arrays instead of hashes, while keeping the code fairly readable
 use constant { AT_Transitions => 0, AT_Transversions => 1, CG_Transitions => 2, CG_Transversions => 3,
-               CpG_Transitions => 4, CpG_Transversions => 5, Indels => 6, Overall => 7,
+               CpG_Transitions => 4, CpG_Transversions => 5, Indels => 6, Truncations => 7, Overall => 8,
                covd_bases => 0, mutations => 1, bmr => 2 };
 
 class Genome::Model::Tools::Music::Bmr::CalcBmr {
@@ -23,6 +23,7 @@ class Genome::Model::Tools::Music::Bmr::CalcBmr {
     maf_file => { is => 'Text', doc => "List of mutations using TCGA MAF specifications v2.2" },
     show_skipped => { is => 'Boolean', doc => "Report each skipped mutation, not just how many", is_optional => 1, default => 0 },
     bmr_groups => { is => 'Integer', doc => "Number of clusters of samples with comparable BMRs (See DESCRIPTION)", is_optional => 1, default => 1 },
+    separate_truncations => { is => 'Boolean', doc => "Group truncational mutations as a separate category", is_optional => 1, default => 0 },
     genes_to_ignore => { is => 'Text', doc => "Comma-delimited list of genes to ignore for background mutation rates", is_optional => 1 },
     skip_non_coding => { is => 'Boolean', doc => "Skip non-coding mutations from the provided MAF file", is_optional => 1, default => 1 },
     skip_silent => { is => 'Boolean', doc => "Skip silent mutations from the provided MAF file", is_optional => 1, default => 1 },
@@ -53,8 +54,9 @@ sub help_detail {
   return <<HELP;
 Given a mutation list (MAF), and per-gene coverage data calculated using \"music bmr calc-covg\"),
 this script calculates overall Background Mutation Rate (BMR) and BMRs in the categories of
-AT/CG/CpG Transitions, AT/CG/CpG Transversions, and Indels. It also generates a file with per-gene
-mutation rates that can be used for significantly mutated gene tests (music smg).
+AT/CG/CpG Transitions, AT/CG/CpG Transversions, and Indels. An optional category for truncational
+mutations can also be specified. The script generates a file with per-gene mutation rates that can
+be used with the tool that tests for significantly mutated genes (music smg).
 HELP
 }
 
@@ -158,6 +160,7 @@ sub execute {
   my $maf_file = $self->maf_file;
   my $show_skipped = $self->show_skipped;
   my $bmr_groups = $self->bmr_groups;
+	my $separate_truncations = $self->separate_truncations;
   my $genes_to_ignore = $self->genes_to_ignore;
   my $skip_non_coding = $self->skip_non_coding;
   my $skip_silent = $self->skip_silent;
@@ -221,13 +224,16 @@ sub execute {
 
   # These are the various categories that each mutation will be classified into
   my @mut_classes = ( AT_Transitions, AT_Transversions, CG_Transitions, CG_Transversions, CpG_Transitions, CpG_Transversions, Indels );
+	push( @mut_classes, Truncations ) if( $separate_truncations );
   # Save the actual class names for reporting purposes, because the elements above are really just numerical constants
   my @mut_class_names = qw( AT_Transitions AT_Transversions CG_Transitions CG_Transversions CpG_Transitions CpG_Transversions Indels );
+	push( @mut_class_names, 'Truncations' ) if( $separate_truncations );
 
   my %sample_mr; # Stores per sample covg and mutation information
   foreach my $sample ( @all_sample_names )
   {
     $sample_mr{$sample}[$_][mutations] = 0 foreach( @mut_classes );
+    $sample_mr{$sample}[$_][covd_bases] = 0 foreach( @mut_classes );
   }
 
   # Load the covered base-counts per sample from the output of "music bmr calc-covg"
@@ -247,6 +253,7 @@ sub execute {
     $sample_mr{$sample}[CpG_Transitions][covd_bases] = $covd_cpg_bases;
     $sample_mr{$sample}[CpG_Transversions][covd_bases] = $covd_cpg_bases;
     $sample_mr{$sample}[Indels][covd_bases] = $covd_bases;
+    $sample_mr{$sample}[Truncations][covd_bases] = $covd_bases if( $separate_truncations );
   }
   $totCovgFh->close;
 
@@ -262,6 +269,7 @@ sub execute {
     foreach my $sample ( @all_sample_names )
     {
       $gene_mr{$sample}{$gene}[$_][mutations] = 0 foreach( @mut_classes );
+      $gene_mr{$sample}{$gene}[$_][covd_bases] = 0 foreach( @mut_classes );
     }
   }
 
@@ -283,6 +291,7 @@ sub execute {
       $gene_mr{$sample}{$gene}[CpG_Transitions][covd_bases] += $covd_cpg_bases;
       $gene_mr{$sample}{$gene}[CpG_Transversions][covd_bases] += $covd_cpg_bases;
       $gene_mr{$sample}{$gene}[Indels][covd_bases] += $covd_bases;
+      $gene_mr{$sample}{$gene}[Truncations][covd_bases] += $covd_bases if( $separate_truncations );
     }
     $sampleCovgFh->close;
   }
@@ -367,9 +376,14 @@ sub execute {
       next;
     }
 
-    # Classify the mutation as AT/CG/CpG Transition, AT/CG/CpG Transversion, or Indel
     my $class = '';
-    if( $mutation_type =~ m/^(SNP|DNP|ONP|TNP)$/ )
+    # Check if the mutation is the truncating type, if the user wanted a separate category of those
+    if( $separate_truncations && $mutation_class =~ m/^(Nonsense_Mutation|Splice_Site|Frame_Shift_Del|Frame_Shift_Ins)/ )
+    {
+      $class = Truncations;
+    }
+    # Classify the mutation as AT/CG/CpG Transition, AT/CG/CpG Transversion
+    elsif( $mutation_type =~ m/^(SNP|DNP|ONP|TNP)$/ )
     {
       # ::TBD:: For DNPs and TNPs, we use only the first base for mutation classification
       $ref = substr( $ref, 0, 1 );
@@ -414,7 +428,7 @@ sub execute {
         }
       }
     }
-    # Handle Indels
+    # Classify it as an indel (excludes splice-site and frame-shift if user wanted truncations separately)
     elsif( $mutation_type =~ m/^(INS|DEL)$/ )
     {
       $class = Indels;

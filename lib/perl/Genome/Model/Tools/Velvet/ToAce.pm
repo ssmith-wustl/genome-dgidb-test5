@@ -28,7 +28,7 @@ use Data::Dumper;
 
 
 class Genome::Model::Tools::Velvet::ToAce {
-    is           => 'Command',
+    is           => 'Command::V2',
     has          => [
         assembly_directory => {
 	    is => 'Text',

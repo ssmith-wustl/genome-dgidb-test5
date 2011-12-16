@@ -60,6 +60,22 @@ class Genome::Model::Tools::DetectVariants2::Dispatcher {
         },
     ],
     has_transient_optional => [
+        snv_lq_result => {
+            is => 'Genome::Model::Tools::DetectVariants2::Result::Combine::LqUnion',
+            doc => 'union of all snv lq files',
+        },
+        indel_lq_result => {
+            is => 'Genome::Model::Tools::DetectVariants2::Result::Combine::LqUnion',
+            doc => 'union of all snv lq files',
+        },
+        cnv_lq_result => {
+            is => 'Genome::Model::Tools::DetectVariants2::Result::Combine::LqUnion',
+            doc => 'union of all snv lq files',
+        },
+        sv_lq_result => {
+            is => 'Genome::Model::Tools::DetectVariants2::Result::Combine::LqUnion',
+            doc => 'union of all snv lq files',
+        },
         _workflow_result => {
             doc => 'hand the workflow result down to the _promote_staged_data dir',
         },
@@ -947,38 +963,42 @@ sub _generate_standard_files {
 
     # For each variant type that is expected, gather all the lq files that exist for that variant type and sort them into the dispatcher output directory
     for my $variant_type (@{ $self->variant_types }) {
+        next unless grep(
+            $_ eq $variant_type,
+            @{ Genome::Model::Tools::DetectVariants2::Result::Combine::LqUnion->__meta__->property('variant_type')->valid_values }
+        );
         my $strategy = $variant_type."_detection_strategy";
         if(defined( $self->$strategy)){
-            my @lq_files;
-            my @output_directories = @{$self->{_expected_output_directories}->{$variant_type}};
+            my $hq_accessor = $variant_type . '_result';
+            my $hq_result = $self->$hq_accessor;
 
-            # For each output directory the workflow knows about, look to see if there is an lq file there (there will not be if it was a detector)
-            for my $output_directory (@output_directories) {
-                my $lq_file = $output_directory . "/$variant_type" . "s.lq.bed";
-                if (-e $lq_file) {
-                    push @lq_files, $lq_file;
-                }
+            my %results;
+            my @to_process = ($hq_result);
+            while(my $r = shift @to_process) {
+                $results{$r->id}++;
+                my @u = map($_->software_result, Genome::SoftwareResult::User->get(user_id => $r->id, user_class_name => $r->class));
+                push @to_process, grep($_->isa('Genome::Model::Tools::DetectVariants2::Result::Base'), @u);
             }
 
-            # If we have no lq files, just skip this variant type. This means we only ran detectors (no filtering, or intersecting) and thus have no LQ files to merge/sort.
-            unless (@lq_files) {
-                next;
+            unless(keys %results) {
+                $self->error_message('Could not find any results for ' . $variant_type);
             }
 
-            # Sort the files so they will go into joinx in a predictable order to produce results that will not vary
-            my @sorted_lq_files = sort(@lq_files);
-
-            my $output_file = $self->output_directory . "/$variant_type" . "s.lq.bed";
-            my $sort_command = Genome::Model::Tools::Joinx::Sort->create(
-                input_files => \@sorted_lq_files,
-                merge_only => 1,
-                output_file => $output_file,
+            my $lq_result = Genome::Model::Tools::DetectVariants2::Result::Combine::LqUnion->get_or_create(
+                result_ids => [keys %results],
+                variant_type => $variant_type,
+                test_name => $ENV{GENOME_SOFTWARE_RESULT_TEST_NAME} || undef,
             );
 
-            unless ($sort_command->execute) {
-                $self->error_message("Error executing lq sort command");
-                die $self->error_message;
+            unless($lq_result) {
+                die $self->error_message('Failed to generate LQ file for ' . $variant_type);
             }
+
+            my $lq_accessor = $variant_type . '_lq_result';
+            $self->$lq_accessor($lq_result);
+
+            my $f = $lq_result->_file_for_type($variant_type);
+            Genome::Sys->create_symlink($lq_result->path($f), $self->output_directory . "/$f");
         }
     }
 
@@ -1032,6 +1052,16 @@ sub results {
     my @results;
     for my $type ('snv', 'indel', 'sv', 'cnv') {
         my $result_method = $type . '_result';
+        push @results, $self->$result_method if $self->$result_method;
+    }
+    return @results;
+}
+
+sub lq_results {
+    my $self = shift;
+    my @results;
+    for my $type ('snv', 'indel', 'sv', 'cnv') {
+        my $result_method = $type . '_lq_result';
         push @results, $self->$result_method if $self->$result_method;
     }
     return @results;

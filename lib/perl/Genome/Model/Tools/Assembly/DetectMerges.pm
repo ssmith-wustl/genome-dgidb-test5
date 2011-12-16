@@ -47,7 +47,7 @@ sub execute {
     
     my $ct = Genome::Model::Tools::Pcap::ContigTools->new;
     my $ao = Genome::Model::Tools::Pcap::Ace->new(input_file => $ace_file,using_db => 1,db_type =>'mysql');
-    my $po = Genome::Model::Tools::Pcap::PhdDB->new;
+    my $po = Genome::Model::Tools::Lims::PhdDB->new;
 
     my @contig_names = @{$ao->get_contig_names};
 

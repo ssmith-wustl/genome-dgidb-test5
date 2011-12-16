@@ -8,6 +8,7 @@ use Genome;
 class Genome::Model::RnaSeq {
     is => 'Genome::Model',
     has => [
+        subject                      => { is => 'Genome::Sample', id_by => 'subject_id' },
         dna_type                     => { via => 'processing_profile'},
         read_aligner_name            => { via => 'processing_profile'},
         read_aligner_version         => { via => 'processing_profile'},

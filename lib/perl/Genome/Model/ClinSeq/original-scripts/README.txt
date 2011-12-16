@@ -80,6 +80,9 @@
 #  - Overlap of observed mutations with TGI recurrent sites
 #  - Run snpEff on all variants
 #  - Run the Ensembl variant effect predictor on all variants
+#- Summary of TopHat RNA-seq alignment results
+#  - Summarize read mapping, known vs. novel junctions, proportion of reads mapping across junctions, proportion of MT mapping reads
+
 
 #SUMMARY STATS
 #A descriptive stats, question/answer table
@@ -92,6 +95,8 @@
 #- Overall coverage of the genome or exome for both Tumor and Normal
 #- Number and proportion of TopHat mapped reads for RNA-seq library
 #- Number and Proportion of TopHat mapped reads for RNA-seq library that mapped to splice junctions
+#- Number and Proportion of TopHat mapped reads for RNA-seq library that mapped to known splice junctions
+
 
 #Figures
 #- Scatter plot of Variant Allele Frequency in WGS Tumor vs Exome Tumor - report the R^2 and n

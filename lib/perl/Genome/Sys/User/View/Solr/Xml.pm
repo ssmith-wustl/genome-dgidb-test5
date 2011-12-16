@@ -18,7 +18,7 @@ class Genome::Sys::User::View::Solr::Xml {
         },
         display_icon_url => {
             is  => 'Text',
-            default => 'genome_sys_user_32',
+            default => 'genome_sys_user_16',
         },
         display_url0 => {
             is => 'Text',
@@ -36,9 +36,12 @@ class Genome::Sys::User::View::Solr::Xml {
         },
         display_label2 => {
             is  => 'Text',
+            default => 'wiki',
         },
         display_url2 => {
             is  => 'Text',
+            calculate_from => ['subject'],
+            calculate => sub { return 'https://gscweb.gsc.wustl.edu/wiki/User:' . $_[0]->username(); },
         },
         display_label3 => {
             is  => 'Text',

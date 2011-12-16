@@ -82,6 +82,25 @@ sub execute {                               # replace with real execution logic.
         }
     }
 
+    my $vcf_file_input;
+    my ($tfh_vcf,$temp_vcf);
+    if(Genome::Sys->_file_type($vcf_file) eq 'gzip') {
+        my $inFh_gzip = Genome::Sys->open_gzip_file_for_reading($vcf_file);
+        ($tfh_vcf,$temp_vcf) = Genome::Sys->create_temp_file;
+        unless($tfh_vcf) {
+            $self->error_message("Unable to create temporary file $!");
+            die;
+        }
+        $temp_vcf =~ s/\:/\\\:/g;
+        while(my $line = $inFh_gzip->getline ) {
+            print $tfh_vcf $line;
+        }
+        $vcf_file_input = $temp_vcf;
+    }
+    else {
+        $vcf_file_input = $vcf_file;
+    }
+
     my ($tfh,$temp_path);
     if ($self->bed_roi_file) {
         ## Build temp file for vcf limited to roi ##
@@ -94,9 +113,9 @@ sub execute {                               # replace with real execution logic.
 
         print "Loading Position Restriction File\n";
 
-        my $header = `grep '^#' $vcf_file`;
+        my $header = `grep '^#' $vcf_file_input`;
         print $tfh "$header";
-        my $intersect_bed_vcf = `intersectBed -a $vcf_file -b $roi_bed`;
+        my $intersect_bed_vcf = `intersectBed -a $vcf_file_input -b $roi_bed`;
         print $tfh "$intersect_bed_vcf";
         close ($tfh);
     }
@@ -106,7 +125,7 @@ sub execute {                               # replace with real execution logic.
         $inFh = IO::File->new( $temp_path ) || die "can't open file\n";
     }
     else {
-        $inFh = IO::File->new( $vcf_file ) || die "can't open file\n";
+        $inFh = IO::File->new( $vcf_file_input ) || die "can't open file\n";
     }
 
     print "Loading Genotype Positions from Vcf\n";

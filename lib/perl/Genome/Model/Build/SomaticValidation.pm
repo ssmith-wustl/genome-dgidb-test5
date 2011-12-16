@@ -89,16 +89,6 @@ class Genome::Model::Build::SomaticValidation {
             to => 'software_result',
             where => [label => 'control_merged_alignment'],
         },
-        whole_rmdup_bam_file => {
-            is => 'Text',
-            via => 'merged_alignment_result',
-            to => 'merged_alignment_bam_path',
-        },
-        control_whole_rmdup_bam_file => {
-            is => 'Text',
-            via => 'contlo_merged_alignment_result',
-            to => 'merged_alignment_bam_path',
-        },
     ],
 };
 

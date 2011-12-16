@@ -55,6 +55,9 @@ sub _classify_variants {
     my $somatic_output = $output_dir."/snvs.somatic.v".$version.".bed";
     my $loh_output = $output_dir."/snvs.loh.v".$version.".bed";
 
+    $self->control_result->add_user(label => 'uses', user => $self);
+    $self->prior_result->add_user(label => 'uses', user => $self);
+
     return $self->run_loh($control_variant_file, $detected_snvs, $somatic_output, $loh_output);
 }
 
@@ -125,5 +128,16 @@ sub resolve_allocation_subdirectory {
     my $staged_basename = File::Basename::basename($self->temp_staging_directory);
     return join('/', 'build_merged_alignments', $self->id, 'dv2-classify-loh-' . $staged_basename);
 };
+
+sub path {
+    my $self = shift;
+    my ($str) = @_;
+
+    if($str eq 'snvs.hq.bed') {
+        return $self->SUPER::path('snvs.somatic.v2.bed');
+    } else {
+        return $self->SUPER::path(@_);
+    }
+}
 
 1;
