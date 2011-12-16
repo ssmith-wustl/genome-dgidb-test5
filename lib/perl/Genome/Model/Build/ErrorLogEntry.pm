@@ -30,6 +30,7 @@ class Genome::Model::Build::ErrorLogEntry {
 
         build => { is => 'Genome::Model::Build', id_by => 'build_id' },
         build_id => { is => 'NUMBER', implied_by => 'build'},
+        model => { is => 'Genome::Model', via => 'build' },
         username        => { is => 'Text' },
         sudo_username   => { is => 'Text' },
     ],
