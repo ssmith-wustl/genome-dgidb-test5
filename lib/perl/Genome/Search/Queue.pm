@@ -1,9 +1,9 @@
-package Genome::Search::IndexQueue;
+package Genome::Search::Queue;
 
 use Carp;
 use Genome;
 
-class Genome::Search::IndexQueue {
+class Genome::Search::Queue {
     id_generator => '-uuid',
     id_by => [
         id => {

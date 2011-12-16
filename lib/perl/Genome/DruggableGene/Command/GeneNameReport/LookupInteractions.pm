@@ -27,6 +27,12 @@ class Genome::DruggableGene::Command::GeneNameReport::LookupInteractions {
             doc => 'Filter results based on the parameters.  See below for how to.',
             shell_args_position => 2,
         },
+        noheaders => {
+            is => 'Boolean',
+            is_optional => 1,
+            default => 0,
+            doc => 'Do not include headers',
+        },
     ],
 };
 
@@ -140,7 +146,9 @@ sub print_grouped_interactions{
 
     my @headers = qw/drug_name_report drug_nomenclature drug_source_db_name drug_source_db_version
         gene_name_report gene_nomenclature gene_alternate_names gene_source_db_name gene_source_db_version interaction_type /;
-    $output_fh->print(join("\t", @headers), "\n");
+    unless($self->noheaders){
+        $output_fh->print(join("\t", @headers), "\n");
+    }
 
     my @drug_name_reports = Genome::DruggableGene::DrugNameReport->get(id => [keys %grouped_interactions]);
     for my $drug_name_report_id (keys %grouped_interactions){

@@ -14,6 +14,7 @@ class Genome::Model::Tools::DetectVariants2::Result::Manual {
         },
         sample_id => {
             is => 'Number',
+            is_optional => 1, #things like dbSNP don't map to a sample
             doc => 'ID of the "tumor" sample for these variants',
         },
         reference_build_id => {
@@ -102,11 +103,11 @@ sub _gather_params_for_get_or_create {
         if(-e $val) {
             my $checksum = Genome::Sys->md5sum($val);
             if($bx->specifies_value_for('file_content_hash')) {
-                unless($bx->value_for('file_content_hash') eq $val) {
+                unless($bx->value_for('file_content_hash') eq $checksum) {
                     die('file_content_hash does not match md5sum output for the original file.');
                 }
             } else {
-                $bx = $bx->add_filter('file_content_hash', Genome::Sys->md5sum($val));
+                $bx = $bx->add_filter('file_content_hash', $checksum);
             }
         }
     }
@@ -185,17 +186,6 @@ sub generate_standard_files {
         die($self->error_message('Conversion to bed failed')) unless Genome::Model::Tools::DetectVariants2::Base::_run_bed_converter($self, $converters{bed}, $source);
     }
 
-    if(lc($self->format) eq 'vcf') {
-        Genome::Sys->shellcmd(
-            cmd => 'bgzip -c ' . $source . ' > ' . $source . '.vcf.gz',
-            input_files => [$source],
-            output_files => [$source . '.vcf.gz']
-        );
-    } elsif($converters{vcf}->isa('Command')) {
-        Genome::Model::Tools::DetectVariants2::Base->class; #autoload
-        die($self->error_message('Conversion to bed failed')) unless Genome::Model::Tools::DetectVariants2::Base::_run_vcf_converter($self, $converters{vcf}, $source, $self->variant_type .'s');
-    }
-
     return 1;
 }
 
@@ -209,5 +199,5 @@ sub resolve_allocation_disk_group_name { return 'info_genome_models'; }
 
 sub _needs_symlinks_followed_when_syncing { return 1; }
 
-sub _staging_disk_usage { return 2 * (-s $_[0]->original_file_path); }
+sub _staging_disk_usage { int((-s $_[0]->original_file_path) / 1024) + $_[0]->SUPER::_staging_disk_usage; }
 

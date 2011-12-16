@@ -23,36 +23,42 @@ class Genome::Model::Build::ImportedVariationList {
             to => 'reference',
         },
     ],
-    has_optional => {
-        indel_feature_list => {
-            is => 'Genome::FeatureList',
-            id_by => 'indel_feature_list_id',
-        },
-        indel_feature_list_id => {
+    has_optional_mutable => {
+        snv_result => {
+            is => 'Genome::Model::Tools::DetectVariants2::Result::Base',
+            doc => 'The result for snvs to import',
             via => 'inputs',
-            is => 'Text',
-            to => 'value_id',
+            to => 'value',
             where => [
-                name => 'indel_feature_list_id',
-                value_class_name => 'Genome::FeatureList'
-            ], 
-            is_mutable => 1,
-            doc => 'The feature list containing the imported variations',
+                name => 'snv_result',
+            ],
         },
-        snv_feature_list => {
-            is => 'Genome::FeatureList',
-            id_by => 'snv_feature_list_id',
-        },
-        snv_feature_list_id => {
+        indel_result => {
+            is => 'Genome::Model::Tools::DetectVariants2::Result::Base',
+            doc => 'The result for indels to import',
             via => 'inputs',
-            is => 'Text',
-            to => 'value_id',
+            to => 'value',
             where => [
-                name => 'snv_feature_list_id',
-                value_class_name => 'Genome::FeatureList'
-            ], 
-            is_mutable => 1,
-            doc => 'The feature list containing the imported variations',
+                name => 'indel_result',
+            ],
+        },
+        sv_result => {
+            is => 'Genome::Model::Tools::DetectVariants2::Result::Base',
+            doc => 'The result for svs to import',
+            via => 'inputs',
+            to => 'value',
+            where => [
+                name => 'sv_result',
+            ],
+        },
+        cnv_result => {
+            is => 'Genome::Model::Tools::DetectVariants2::Result::Base',
+            doc => 'The result for cnvs to import',
+            via => 'inputs',
+            to => 'value',
+            where => [
+                name => 'cnv_result',
+            ],
         },
     },
 };
@@ -65,7 +71,7 @@ sub snvs_bed {
         die "No version of snvs .bed file version $version available for $name";
     }
 
-    return $self->snv_feature_list->file_path if $self->snv_feature_list;
+    return join('/', $self->snv_result->output_dir, 'snvs.hq.bed') if $self->snv_result;
 }
 
 1;

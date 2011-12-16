@@ -112,7 +112,7 @@ sub _run_aligner {
     my $chunk_path = $scratch_directory . "/chunks";
 
     $self->status_message("Chunking....");
-    my $chunk_size = ($ENV{'TEST_MODE'} ? 200 : 5000000);
+    my $chunk_size = ($ENV{'TEST_MODE'} ? 200 : 1000000);
     my $chunk_cmd = sprintf("%s -n %s -o %s %s", Genome::Model::Tools::Rtg->path_for_rtg_sdfsplit($self->aligner_version), $chunk_size, $chunk_path, $prechunk_input_sdf);
     Genome::Sys->shellcmd(
             cmd                 => $chunk_cmd, 

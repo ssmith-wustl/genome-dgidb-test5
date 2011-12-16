@@ -11,12 +11,46 @@
         <xsl:with-param name="icon" select="'app_analysis_search_32'"/>
       </xsl:call-template>
 
+<!--    <script type="text/javascript" src="/res/js/pkg/jquery.js"></script> -->
+<!-- <script src="/res/js/pkg/jquery-1.5.1.min.js" type="text/javascript"></script>
+<script src="/res/js/pkg/jquery-ui-1.8.11.custom.min.js" type="text/javascript"></script>
+-->
+
+<script type="text/javascript" src="/res/js/app/genome_search_query.js"></script>
+<script type="text/javascript" src="/res/js/app/genome_projectbox.js"></script>
+
+
+<style>
+    .projectContainer {
+        text-align: left;
+        text-indent: 10px;
+    }
+
+    .clickable {
+        cursor: pointer;
+    }
+
+    .ui-accordion-content {
+        background: #CCCCCC;
+        width: 400px;
+        height: 200px;
+    }
+
+    .ui-accordion-header {
+        background: #FAAFBA;
+        width: 400px;
+    }
+</style>
+
+        <!-- background-color: #CBE0FF; -->
+
+
       <div class="container">
         <div class="span-5">
           <br/>
         </div>
         <div class="span-19 last">
-          <div class="main_search" style="margin-left: 15px; margin-bottom: 15px;">
+          <div id="search_box" class="main_search" style="margin-left: 15px; margin-bottom: 15px;">
             <form action="">
               <table cellpadding="0" cellspacing="0" border="0" class="search_elements">
                 <tr>
@@ -30,6 +64,11 @@
               </table>
             </form>
             <p class="small" style="margin: 0 0 0 5px;"> Found <xsl:value-of select="//@facet-total"/> records. <br/> </p>
+            <div id="errorAccordion" class="errorAccordion">
+                <h3><a href="#">Error Messages</a></h3>
+                <div id="errorMsg">Something went wrong.</div>
+            </div>
+
           </div>
         </div>
 
@@ -80,7 +119,28 @@
               <br/>
             </xsl:otherwise>
           </xsl:choose>
+
+<br/>
+
+            <div id="myProjectBox" class="sidebar_search rounded-right">
+                <h4 style="float: left" id="myProjectsCount"></h4>
+                <div style="margin: 2px 0px 0px 10px; float: left; color: red" id="loadingStatus"></div>
+                <br/>
+
+                <ul id="projectBox"> </ul>
+
+                <a class="clickable" id="createProjectLink">Create a new project</a> <br/>
+
+                <div id="createProjectDiv">
+                    <form id="createProject">
+                    New project name:<br/>
+                    <input id="createProjectName" name="name" type="text"/> <input id="submitCreateProject" type="submit" value="create"/>
+                    </form>
+                </div>
+            </div>
+
         </div>
+
 
         <div class="span-19 last">
           <div style="margin: 0 15px;">

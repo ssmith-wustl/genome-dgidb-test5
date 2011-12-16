@@ -4,8 +4,12 @@
 
   <xsl:template name="universal_search_result" match="/solr-results/doc">
 
+
     <div class="search_result">
-      <div class="icon_grip" style="display: none;">
+      <div class="icon_grip">
+            <xsl:attribute name="object_id">
+                <xsl:value-of select="field[@name='id']"/>
+            </xsl:attribute>
         <br/>
       </div>
       <div>

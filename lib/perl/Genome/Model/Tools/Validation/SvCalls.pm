@@ -49,10 +49,10 @@ class Genome::Model::Tools::Validation::SvCalls {
         is => 'String',
         doc => 'Comma-delimited list of SquareDancer files to assemble',
     },
-    ref_seq => {
-        is => 'String',
-        doc => 'Optional reference sequence path (default: NCBI-human-build36)',
-        default => '/gscmnt/gc4096/info/model_data/2741951221/build101947881/all_sequences.fa'
+    build => {
+        is => 'Integer',
+        doc => 'Human build number; either \'36\' (for NCBI-human-build36) or \'37\' (for GRCh37-lite-build37)',
+        default => '36',
     },
     tumor_purity_file => { 
         is => 'Text',
@@ -82,7 +82,18 @@ sub execute {
     #parse input params
     my @assembled_call_files = split(",",$self->assembled_call_files) if $self->assembled_call_files;
     my @sd_files = split(",",$self->squaredancer_files) if $self->squaredancer_files;
-    my $ref_seq = $self->ref_seq;
+    my $ref_build = $self->build;
+    my $ref_seq;
+    if ($ref_build eq '36') {
+        $ref_seq = '/gscmnt/gc4096/info/model_data/2741951221/build101947881/all_sequences.fa';
+    }
+    elsif ($ref_build eq '37') {
+        $ref_seq = '/gscmnt/ams1102/info/model_data/2869585698/build106942997/all_sequences.fa';
+    }
+    else {
+        $self->error_message('Please input either "36" or "37" for the --build parameter.');
+        return;
+    }
     my $file_prefix = $self->output_filename_prefix;
     my $assembly_input = $file_prefix . ".assembly_input";
     my $patient_id = $self->patient_id;
@@ -194,6 +205,7 @@ sub execute {
         normal_bam => $normal_val_bam,
         patient_id => $val_patient_id,
         output_file => $rc_output,
+        build => $ref_build,
     );
     $val_remap_cmd->execute;
     $val_remap_cmd->delete;
@@ -224,6 +236,7 @@ sub execute {
             normal_bam => $normal_wgs_bam,
             patient_id => $wgs_patient_id,
             output_file => $wgs_rc_output,
+            build => $ref_build,
         );
         $wgs_remap_cmd->execute;
         $wgs_remap_cmd->delete;

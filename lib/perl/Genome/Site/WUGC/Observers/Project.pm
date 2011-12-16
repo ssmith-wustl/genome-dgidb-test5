@@ -127,7 +127,7 @@ sub delete_callback {
 sub project_part_create {
     my $self = shift;
 
-    return 1 if $self->entity_class_name !~ /^Genome::Model/;
+    return 1 unless $self->entity_class_name->isa('Genome::Model');
 
     my ($model_group) = Genome::ModelGroup->get(uuid => $self->project_id);
     return 1 if not $model_group;
@@ -147,7 +147,7 @@ sub project_part_create {
 sub project_part_delete {
     my $self = shift;
 
-    return 1 if $self->entity_class_name !~ /^Genome::Model/;
+    return 1 unless $self->entity_class_name->isa('Genome::Model');
 
     $deleted_parts{ $self->id }++;
 

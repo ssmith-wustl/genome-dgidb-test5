@@ -27,29 +27,65 @@ sub load_modules {
     Genome::Search->unregister_callbacks();
 }
 
+
+
+my $new_print = sub { 
+
+# this attempt to make it do a smarter "print" doesn't work so just make a no-op right now
+=cut
+    my $self = shift; 
+    $DB::single = 1;
+    # 6 = FCGI::Stream::FCGI_STDOUT constant
+    if ($self->{type} eq 6) {
+        STDERR->print("BAD STDOUT:", @_);
+    }
+    else {
+        $old_print->($self,@_);
+    }
+=cut
+};
+
 sub dispatch_request {
+    
 
     sub (PUT + /** + %*) {
+
         load_modules();
+
         my ($self, $url, $params) = @_;
         my ($code, $obj);
         my $class = url_to_type($url); # UR::Object::View::Default::Xsl
+
+        my $status;
         eval { 
-            $obj = $class->create(%$params); 
-            UR::Context->commit();
+            local *FCGI::Stream::PRINT = $new_print;
+            $obj = $class->create(%$params);
+            $status = UR::Context->commit();
         };
 
-        if ($@) {
+        my $body;
+        if ($@ || !$status) {
+            $params->{'error'} = substr(UR::Context->error_message() || $@,0,5000);
             $code = 200; # OK (didnt work)
-        } else {
-            $code = 201; # CREATED
-            $params->{'id'} = $obj->id();
-        }
-
-        my $body = to_json( $params, { 
+            $params->{'code'} = $code;
+            $body = to_json( $params, { 
                                 ascii => 1,
                                 allow_nonref => 1,
                     });
+        } else {
+            $code = 201; # CREATED
+            $params->{'code'} = $code;
+            $params->{'id'} = $obj->id();
+            $body = to_json( $params, { 
+                                ascii => 1,
+                                allow_nonref => 1,
+                    });
+
+        }
+
+#        my $size; { use bytes; $size = length($body); }
+#                'Content-Length' => $size
+
         return [
             $code,
             [
@@ -59,6 +95,7 @@ sub dispatch_request {
         ];
 
     },
+
     sub (POST + /** + %*) {
         load_modules();
         my ($self, $url, $params) = @_;
@@ -106,11 +143,6 @@ sub dispatch_request {
         ];
 
     },
-
-    # Matcher for Static content related to a view
-    # **/ = class name
-    # */ = perspective.toolkit
-    # * + .* = filename & extension
 
     # Matcher for Static content related to a view
     # **/ = class name
@@ -218,7 +250,7 @@ sub dispatch_request {
         my ( $self, $class, $perspective, $toolkit, $args ) = @_;
 
         load_modules();
-$DB::single = 1;
+
         $class = url_to_type($class);
         $perspective =~ s/\.$toolkit$//g;
 
@@ -283,6 +315,7 @@ $DB::single = 1;
             $view_args{'xsl_path'} = '/static/xsl';
             $view_args{'html_root'} =
               Genome->base_dir . '/View/Resource/Html/html';
+
 
             #            $view_args{'rest_variable'} = '/view';
 

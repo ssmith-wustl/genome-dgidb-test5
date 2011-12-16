@@ -85,37 +85,51 @@ sub perform_post_success_actions {
     return $self->model->request_builds_for_dependent_cron_ref_align;
 }
 
-sub copy_snp_array_file {
-    my ($self, $file) = @_;
+sub create_gold2geno_file_from_genotype_file {
+    my $self = shift;
 
-    my $formatted_genotype_file_path = $self->formatted_genotype_file_path;
-    $self->status_message("Copy $file to $formatted_genotype_file_path");
+    my $genotype_file = $self->formatted_genotype_file_path;
+    my $gold2geno_file = $self->gold2geno_file_path;
 
-    my $copy = Genome::Sys->copy_file($file, $formatted_genotype_file_path);
-    if (not $copy) {
-        $self->error_message("Copy failed");
-        return;
+    return 1 if (-e $gold2geno_file && $self->validate_gold2geno_file);
+
+    my $genotype_reader = Genome::Sys->open_file_for_reading($genotype_file);
+    my $gold2geno_writer = Genome::Sys->open_file_for_writing($gold2geno_file);
+    while (my $line = $genotype_reader->getline) {
+        my @field = split("\t", $line);
+        if ($field[1] ne $field[2]) {
+            die $self->error_message("Sample ID differs in Gold SNP file: " . $field[1] . " vs. " . $field[2]);
+        }
+        $gold2geno_writer->print($field[0] . "\t" . $field[1] . "\t" . $field[3] . $field[4] . "\n");
     }
-
-    if (not -s $formatted_genotype_file_path) {
-        $self->error_message("Copy succeeded, but file does not exist: $formatted_genotype_file_path");
-        return;
-    }
-
-    $self->status_message('Copy...OK');
-
-    my $gold_snp_bed = $self->snvs_bed;
-    my $cmd = Genome::Model::GenotypeMicroarray::Command::CreateGoldSnpBed->create(
-        input_file => $file,
-        output_file => $gold_snp_bed,
-        reference => $self->model->reference_sequence_build,
-    );
-    if (!$cmd->execute) {
-        $self->error_message("Failed to create Gold SNP bed file at $gold_snp_bed");
-        return;
+    if ( -e $gold2geno_file ) {
+        $self->validate_gold2geno_file;
+    } else {
+        die $self->error_message("gold2geno file is missing after conversion.");
     }
 
     return 1;
+}
+
+sub validate_gold2geno_file {
+    my $self = shift;
+
+    my $genotype_file = $self->formatted_genotype_file_path;
+    my $gold2geno_file = $self->gold2geno_file_path;
+
+    my ($genotype_file_line_count) = qx(wc -l $genotype_file) =~ /^(\d+)/;
+    my ($gold2geno_file_line_count) = qx(wc -l $gold2geno_file) =~ /^(\d+)/;
+
+    my $valid_gold2geno_file = ($genotype_file_line_count == $gold2geno_file_line_count);
+    if ($valid_gold2geno_file) {
+        return 1;
+    } else {
+        die $self->error_message('gold2geno file exists but line count does not match formatted_genotype_file_path');
+    }
+}
+
+sub gold2geno_file_path {
+    shift->formatted_genotype_file_path . '.gold2geno';
 }
 
 sub formatted_genotype_file_path {

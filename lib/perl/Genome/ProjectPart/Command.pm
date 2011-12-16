@@ -15,7 +15,6 @@ Genome::Command::Crud->init_sub_commands(
     target_name => 'project-part',
     list => { show => 'project_id,entity_class_name,entity_id,label,role' },
     update => { only_if_null => 1, },
-    delete => { do_not_init => 1, },
 );
 
 1;

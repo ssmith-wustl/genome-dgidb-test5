@@ -28,6 +28,7 @@ sub _generate_content {
     my $root = $genomepm->dir();
     my $now = localtime();
 
+    my $username = $ENV{'REMOTE_USER'};
     my $xsl_template = <<STYLE;
 <?xml version="1.0" encoding="ISO-8859-1"?>
 <xsl:stylesheet version="1.0"
@@ -39,6 +40,8 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
 <xsl:variable name="currentTime">now</xsl:variable>
 <xsl:variable name="currentPerspective">status</xsl:variable>
 <xsl:variable name="currentToolkit">html</xsl:variable>
+<xsl:variable name="username">$username</xsl:variable>
+<xsl:variable name="noSearchBox">true</xsl:variable>
 <xsl:variable name="resources">/view/genome/resource.html</xsl:variable>
 <xsl:variable name="rest">/view</xsl:variable>
 

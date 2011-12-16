@@ -7,7 +7,6 @@ use Genome;
 
 my %versions = (
     39099 => { version_path => "allpathslg-39099/bin"},
-    36892 => { version_path => "allpathslg-36892/bin"},
 );
 
 class Genome::Model::Tools::Allpaths::Base {

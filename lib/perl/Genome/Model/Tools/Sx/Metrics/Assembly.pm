@@ -55,12 +55,17 @@ class Genome::Model::Tools::Sx::Metrics::Assembly {
 class Sx::Metrics::Assembly {
     has => [
         map(
-            { $_ => { is => 'Number' }, } 
+            { $_ => { is => 'Number', default_value => 'NA', }, } 
             (qw/
                 tier_one tier_two major_contig_threshold
+                chaff_rate
+                content_at
+                content_gc
+                content_nx
                 contigs_average_length
                 contigs_count
                 contigs_length
+                contigs_length_5k
                 contigs_length_q20
                 contigs_length_q20_percent
                 contigs_major_average_length
@@ -100,6 +105,12 @@ class Sx::Metrics::Assembly {
                 contigs_t3_n50_count
                 contigs_t3_n50_length
                 contigs_t3_n50_not_reached
+                coverage_5x
+                coverage_4x
+                coverage_3x
+                coverage_2x
+                coverage_1x
+                coverage_0x
                 reads_average_length
                 reads_chaff_rate
                 reads_count
@@ -166,21 +177,36 @@ class Sx::Metrics::Assembly {
     ],
 };
 
+sub add_scaffolds_file {
+    my $self = shift;
+    return $self->_add_file('add_scaffold', @_);
+}
+
 sub add_contigs_file {
     my $self = shift;
-    return $self->_add_file('contig', @_);
+    return $self->_add_file('add_contig', @_);
+}
+
+sub add_contigs_file_with_contents {
+    my $self = shift;
+    return $self->_add_file('add_contig_with_contents', @_);
 }
 
 sub add_reads_file {
     my $self = shift;
-    return $self->_add_file('read', @_);
+    return $self->_add_file('add_read', @_);
+}
+
+sub add_reads_file_with_q20 {
+    my $self = shift;
+    return $self->_add_file('add_read_with_q20', @_);
 }
 
 sub _add_file {
-    my ($self, $type, $file_config) = @_;
+    my ($self, $method, $file_config) = @_;
 
-    Carp::confess('No type to add file!') if not $type;
-    Carp::confess("No file config to add $type file!") if not $file_config;
+    Carp::confess('No method for sequence to add file!') if not $method;
+    Carp::confess("No file config to add file!") if not $file_config;
 
     my $reader = Genome::Model::Tools::Sx::Reader->create(config => [ $file_config ]);
     if ( not $reader ) {
@@ -188,7 +214,6 @@ sub _add_file {
         return;
     }
 
-    my $method = 'add_'.$type;
     while ( my $seqs = $reader->read ) {
         for my $seq ( @$seqs ) {
             $self->$method($seq);
@@ -198,6 +223,22 @@ sub _add_file {
     return 1;
 }
 
+sub add_scaffold {
+    my ($self, $scaffold) = @_;
+
+    Carp::confess('No scaffold to add!') if not $scaffold;
+
+    my $contig_id = 1;
+    for my $seq ( split(/n+/i, $scaffold->{seq}) ) {
+        $self->add_contig({
+                id => $scaffold->{id}.'.'.$contig_id,
+                seq => $seq,
+            });
+        $contig_id++;
+    }
+
+    return 1;
+}
 sub add_contig {
     my ($self, $contig) = @_;
 
@@ -218,11 +259,43 @@ sub add_contig {
     return 1;
 }
 
+#$self->_metrics->{contigs_length_5000} += length $contig->{seq} if length $contig->{seq} >= 5000;
+sub add_contig_with_contents {
+    my ($self, $contig) = @_;
+
+    my $add_contig = $self->add_contig($contig);
+    return if not $add_contig;
+
+    my %base_counts = ( a => 0, t => 0, g => 0, C => 0, n => 0, x => 0 );
+    foreach my $base ( split('', $contig->{seq}) ) {
+        $base_counts{lc $base}++;
+    }
+
+    $self->_metrics->{content_at} += $base_counts{a} + $base_counts{t};
+    $self->_metrics->{content_gc} += $base_counts{g} + $base_counts{c};
+    $self->_metrics->{content_nx} += $base_counts{n} + $base_counts{x};
+
+    $self->_metrics->{contigs_length_5k} = 0 if not $self->_metrics->{contigs_length_5k};
+    $self->_metrics->{contigs_length_5k} += length $contig->{seq} if length $contig->{seq} >= 5000;
+
+    return 1;
+}
+
 sub add_read {
     my ($self, $read) = @_;
 
     $self->_metrics->{reads_count}++;
     $self->_metrics->{reads_length} += length $read->{seq};
+
+    return 1;
+}
+
+sub add_read_with_q20 {
+    my ($self, $read) = @_;
+
+    $self->_metrics->{reads_count}++;
+    $self->_metrics->{reads_length} += length $read->{seq};
+    $self->_metrics->{reads_length_q20} += Genome::Model::Tools::Sx::Base->calculate_qualities_over_minumum($read->{qual}, 20);
 
     return 1;
 }
@@ -239,15 +312,6 @@ sub calculate_metrics {
 
     # Reads
     $main_metrics->{reads_average_length} = int($main_metrics->{reads_length} / $main_metrics->{reads_count});
-    $main_metrics->{reads_length_q20} = 'NA';
-    $main_metrics->{reads_length_q20_per_read} = 'NA';
-    $main_metrics->{reads_placed} = 'NA';
-    $main_metrics->{reads_placed_in_scaffolds} = 'NA';
-    $main_metrics->{reads_placed_unique} = 'NA';
-    $main_metrics->{reads_placed_duplicate} = 'NA';
-    $main_metrics->{reads_unplaced} = 'NA';
-    $main_metrics->{reads_chaff_rate} = 'NA';
-    $main_metrics->{reads_length_q20_redundancy} = 'NA';
 
     my $t1 = $self->tier_one;
     my $t2 = $self->tier_two;
@@ -291,7 +355,7 @@ sub calculate_metrics {
             $total_q20_bases += $q20_metrics->{$c}->{q20_bases} if exists $q20_metrics->{$c};
             $cumulative_length += $metrics->{$c};
 
-            if ($metrics->{$c} > $major_contig_length) {
+            if ($metrics->{$c} >= $major_contig_length) {
                 $major_contig_bases += $metrics->{$c};
                 $major_contig_q20_bases += $q20_metrics->{$c}->{q20_bases}if exists $q20_metrics->{$c};
                 $major_contig_number++;
@@ -420,7 +484,7 @@ sub calculate_metrics {
         : 0;
         $main_metrics->{$type.'_major_length_q20'} = 'NA';
         $main_metrics->{$type.'_major_length_q20_percent'} = 'NA';
-        $main_metrics->{$type.'_major_n50_length'} = $n50_contig_length;
+        $main_metrics->{$type.'_major_n50_length'} = $n50_major_contig_length;
         $main_metrics->{$type.'_major_n50_count'} = $n50_major_contig_number;
 
         $main_metrics->{$type.'_t1_length'} = $total_t1_bases;
