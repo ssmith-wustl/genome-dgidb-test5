@@ -120,10 +120,12 @@ sub validate_instrument_data_and_insert_size {
     my @tags;
     for my $instrument_data ( @instrument_data ) {
         my $library = $instrument_data->library;
-        next if defined $library->fragment_size_range;
-        next if $instrument_data->median_insert_size;
+        my $insert_size = $library->fragment_size_range;
+        next if defined $insert_size;
+        $insert_size = eval{ $instrument_data->median_insert_size; };
+        next if defined $insert_size;
         push @tags, UR::Object::Tag->create(
-            properties => ['instrument_data'],
+            properties => [ 'instrument_data' ],
             desc => 'No insert size for instrument data ('.$instrument_data->id.') or library ('.$library->id.'). Please correct.',
         );
     }
