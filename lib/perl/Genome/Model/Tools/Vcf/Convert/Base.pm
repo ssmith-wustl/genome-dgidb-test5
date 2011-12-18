@@ -190,8 +190,7 @@ sub print_header{
 
     $self->print_tag_meta;
 
-    my @header_columns = ("CHROM","POS","ID","REF","ALT","QUAL","FILTER","INFO","FORMAT");
-    push @header_columns, ( defined $self->control_aligned_reads_sample ) ? ($self->control_aligned_reads_sample, $self->aligned_reads_sample) : ($self->aligned_reads_sample);
+    my @header_columns = $self->_get_header_columns;
 
     #column header:
     $output_fh->print( "#" . join("\t", @header_columns) . "\n");
