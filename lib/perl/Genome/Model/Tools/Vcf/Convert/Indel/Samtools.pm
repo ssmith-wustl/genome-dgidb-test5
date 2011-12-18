@@ -29,7 +29,6 @@ sub source {
 sub _get_header_columns {
     my $self = shift;
     my @header_columns = ("CHROM","POS","ID","REF","ALT","QUAL","FILTER","INFO","FORMAT",$self->aligned_reads_sample);
-    push @header_columns, ( defined $self->control_aligned_reads_sample ) ? ($self->control_aligned_reads_sample, $self->aligned_reads_sample) : ($self->aligned_reads_sample)+;
     return @header_columns;
 }
 
