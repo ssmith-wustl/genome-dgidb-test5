@@ -11,6 +11,7 @@
   <link fromOperation="input connector"                   fromProperty="dev flag"             toOperation="database upload"                   toProperty="dev_flag" />
   <link fromOperation="input connector"                   fromProperty="biosql namespace"     toOperation="database upload"                   toProperty="biosql_namespace" />
   <link fromOperation="input connector"                   fromProperty="psortb archive dir"   toOperation="inner protein annotation pipeline" toProperty="psortb archive dir" />
+  <link fromOperation="input connector"                   fromProperty="skip db upload"       toOperation="database upload"                   toProperty="skip" />
   <link fromOperation="interproscan"                      fromProperty="bio_seq_feature"      toOperation="outer cat seq feature"             toProperty="interproscan feature" />
   <link fromOperation="keggscan"                          fromProperty="bio_seq_feature"      toOperation="outer cat seq feature"             toProperty="keggscan feature" />
   <link fromOperation="split fasta file"                  fromProperty="fasta_files"          toOperation="inner protein annotation pipeline" toProperty="fasta file" />
@@ -69,6 +70,7 @@
     <inputproperty>keggscan archive dir</inputproperty>
     <inputproperty>dev flag</inputproperty>
     <inputproperty>biosql namespace</inputproperty>
+    <inputproperty>skip db upload</inputproperty>
     <outputproperty>result</outputproperty>
   </operationtype>
 </workflow>
