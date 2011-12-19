@@ -157,7 +157,7 @@ sub get_summary_information
 
     ##match goldsnp report
     my %gold_snp_metrics = $self->format_gold_snp_metrics($build);
-    unless (%gold_snp_metrics) {
+    if (!%gold_snp_metrics and $build->gold_snp_build) {
         $self->status_message("Could not generate gold snp metrics, regenerating gold snp concordance and trying again");
         Genome::Model::ReferenceAlignment::Command::CreateMetrics::GoldSnpConcordance->execute(build => $build);
         %gold_snp_metrics = $self->format_gold_snp_metrics($build);

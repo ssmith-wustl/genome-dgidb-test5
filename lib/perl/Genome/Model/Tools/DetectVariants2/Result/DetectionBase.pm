@@ -173,6 +173,9 @@ sub _gather_params_for_get_or_create {
     my $params_bx = UR::BoolExpr->resolve_normalized_rule_for_class_and_params($class, %is_param);
 
     my $subclass_name = (exists $is_param{filter_name} ? 'Genome::Model::Tools::DetectVariants2::Result::Filter' : 'Genome::Model::Tools::DetectVariants2::Result');
+    if(exists($is_param{vcf_version})){
+        $subclass_name = 'Genome::Model::Tools::DetectVariants2::Result::DetectorVcf';
+    }
 
     my %software_result_params = (#software_version=>$params_bx->value_for('aligner_version'),
                                   params_id=>$params_bx->id,
