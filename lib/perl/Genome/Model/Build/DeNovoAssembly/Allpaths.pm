@@ -39,6 +39,12 @@ sub create {
     return $self;
 }
 
+#Override base class method
+sub stats_file {
+    my $self = shift;
+    return $self->data_directory."/metrics.out";
+}
+
 sub _instrument_data_is_jumping {
     my ($self, $instrument_data) = @_;
     if ($instrument_data->read_orientation and $instrument_data->original_est_fragment_size
