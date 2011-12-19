@@ -76,6 +76,9 @@ sub __errors__ {
             );
             return @errors;
         }
+        if ( not -d $self->assembly_directory.'/edit_dir' ) {
+            Genome::Sys->create_directory( $self->assembly_directory.'/edit_dir' );
+        }
         $self->a( $self->_resolve_scaffold_sequence_file ) unless $self->a;
         $self->b( $self->_resolve_config_file ) unless $self->b;
         $self->o( $self->assembly_directory.'/edit_dir/gapfill' ) unless $self->o;
