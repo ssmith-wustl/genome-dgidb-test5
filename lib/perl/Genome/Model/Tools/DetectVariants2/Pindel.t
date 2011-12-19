@@ -43,11 +43,14 @@ my $normal = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants2-P
 my $tmpbase = File::Temp::tempdir('PindelXXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites/', CLEANUP => 1);
 my $tmpdir = "$tmpbase/output";
 
-my $pindel = Genome::Model::Tools::DetectVariants2::Pindel->create(aligned_reads_input=>$tumor, 
-                                                                   control_aligned_reads_input=>$normal,
-                                                                   reference_build_id => $refbuild_id,
-                                                                   output_directory => $tmpdir, 
-                                                                   version => '0.5',);
+my $pindel = Genome::Model::Tools::DetectVariants2::Pindel->create(
+    aligned_reads_input=>$tumor, 
+    control_aligned_reads_input=>$normal,
+    reference_build_id => $refbuild_id,
+    output_directory => $tmpdir, 
+    aligned_reads_sample => "TEST",                            
+    version => '0.5',
+);
 ok($pindel, 'pindel command created');
 
 ok($pindel->default_chromosomes_as_string =~ /^1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,X,Y,MT/, 'chromosomes are sorted correctly') || die;

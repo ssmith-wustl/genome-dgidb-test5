@@ -145,6 +145,13 @@ sub get_base_at_position {
     return $sequence;
 }
 
+sub _get_header_columns {
+    my $self = shift;
+    my @header_columns = ("CHROM","POS","ID","REF","ALT","QUAL","FILTER","INFO","FORMAT");
+    push @header_columns, ( defined $self->control_aligned_reads_sample ) ? ($self->control_aligned_reads_sample, $self->aligned_reads_sample) : ($self->aligned_reads_sample);
+    return @header_columns;
+}
+
 # Print the header to the output file... currently assumes "standard" columns of GT,GQ,DP,BQ,MQ,AD,FA,VAQ in the FORMAT field and VT in the INFO field.
 sub print_header{
     my $self = shift;
@@ -190,8 +197,7 @@ sub print_header{
 
     $self->print_tag_meta;
 
-    my @header_columns = ("CHROM","POS","ID","REF","ALT","QUAL","FILTER","INFO","FORMAT");
-    push @header_columns, ( defined $self->control_aligned_reads_sample ) ? ($self->control_aligned_reads_sample, $self->aligned_reads_sample) : ($self->aligned_reads_sample);
+    my @header_columns = $self->_get_header_columns;
 
     #column header:
     $output_fh->print( "#" . join("\t", @header_columns) . "\n");
