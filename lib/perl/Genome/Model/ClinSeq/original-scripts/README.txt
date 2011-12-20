@@ -50,6 +50,9 @@
 #      - haploid coverage: 	75.281 
 #      - dbSNP % Concordance:   93.6585 	samtools r599 filtered by snp-filter v1 
 #  - #SNVs, #tier 1,2,3, WGS. vs. Exome, etc.
+#  - What is the non-synonymous to synonymous mutation rate in somatically mutated gene (i.e. tier1 mutations)
+#    - i.e. what is the mutation rate per megabase: total tier 1, non-synonymous tier1, synonymous tier 1, total all tiers, etc
+
 
 #- Create vcf formatted version of all SNVs combined, then tier 1,2,3 individually
 #- Get all BAM read counts for all SNVs for convenience in downstream analysis (WGS, Exome & RNAseq) (Tumor and Normal)
