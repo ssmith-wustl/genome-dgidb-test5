@@ -33,12 +33,26 @@ class Genome::InstrumentData {
             to => 'attribute_value',
             where => [attribute_label => 'original_est_fragment_size'],
         },
+        original_est_fragment_std_dev => {
+            is => 'Number',
+            is_mutable => 1,
+            via => 'attributes',
+            to => 'attribute_value',
+            where => [attribute_label => 'original_est_fragment_std_dev'],
+        },
         final_est_fragment_size => {
             is => 'Number',
             is_mutable => 1,
             via => 'attributes',
             to => 'attribute_value',
             where => [attribute_label => 'final_est_fragment_size'],
+        },
+        final_est_fragment_std_dev => {
+            is => 'Number',
+            is_mutable => 1,
+            via => 'attributes',
+            to => 'attribute_value',
+            where => [attribute_label => 'final_est_fragment_std_dev'],
         },
         read_orientation => {
             is => 'Text',
