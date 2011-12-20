@@ -294,12 +294,13 @@ plotVafHist = function(dataset, sample_type, data_type){
   filename = paste(sample_type, "_VAF_", data_type, "_hist.pdf", sep="")
   title_text = paste("Distribution of variant allele frequencies (", sample_type, " tissue, ", data_type, ")", sep="")
   x_label = paste(data_type, " ", sample_type, " variant allele frequency", sep="")
+  y_label = paste("Density (n = ", length(dataset[,colname]), " variants)", sep="")
   if (length(which(names(dataset)==colname))){
     dataset[,"VAF"] = dataset[,colname]
     pdf(filename)
     print({
       m <- ggplot(dataset, aes(x=VAF)); m + geom_histogram(aes(y = ..density.., fill= ..count..)) + geom_density() + 
-      opts(title=title_text) + xlab(x_label)
+      opts(title=title_text) + xlab(x_label) + ylab(y_label)
     })
     dev.off()
   }
