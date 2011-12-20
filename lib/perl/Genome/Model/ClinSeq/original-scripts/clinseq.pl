@@ -151,11 +151,11 @@ if ($clean){
 #Create a summarized file of SNVs for: WGS, exome, and WGS+exome merged
 #Grab the gene name used in the 'annotation.top' file, but grab the AA changes from the '.annotation' file
 #Fix the gene name if neccessary...
-#Perform druggable genes analysis on each list (filtered, kinase-only, inhibitor-only, antineoplastic-only)
 $step++; print MAGENTA, "\n\nStep $step. Summarizing SNVs and Indels", RESET;
-&summarizeSNVs('-data_paths'=>$data_paths, '-out_paths'=>$out_paths, '-patient_dir'=>$patient_dir, '-entrez_ensembl_data'=>$entrez_ensembl_data, '-verbose'=>$verbose);
-#TODO: when merging SNVs/Indels from WGS + Exome, add a column that indicates (1|0) whether each was called by WGS or Exome, 1+1 = BOTH
+&importSNVs('-data_paths'=>$data_paths, '-out_paths'=>$out_paths, '-patient_dir'=>$patient_dir, '-entrez_ensembl_data'=>$entrez_ensembl_data, '-verbose'=>$verbose);
 
+#TODO: when merging SNVs/Indels from WGS + Exome, add a column that indicates (1|0) whether each was called by WGS or Exome, 1+1 = BOTH
+#TODO: when importing SNVs/Indels to the compact format, allow option to eliminate MT/chrM positions
 
 #Run CNView analyses on the CNV data to identify amplified/deleted genes
 $step++; print MAGENTA, "\n\nStep $step. Identifying CNV altered genes", RESET;
@@ -201,6 +201,7 @@ $step++; print MAGENTA, "\n\nStep $step. Annotating gene files", RESET;
 
 
 #Create drugDB interaction files
+#Perform druggable genes analysis on each list (filtered, kinase-only, inhibitor-only, antineoplastic-only)
 $step++; print MAGENTA, "\n\nStep $step. Intersecting gene lists with druggable genes of various categories", RESET;
 &drugDbIntersections('-script_dir'=>$script_dir, '-out_paths'=>$out_paths, '-verbose'=>$verbose);
 
@@ -410,7 +411,7 @@ sub getDataDirsAndBuilds{
 ###################################################################################################################
 #Summarize SNVs/Indels                                                                                            #
 ###################################################################################################################
-sub summarizeSNVs{
+sub importSNVs{
   my %args = @_;
   my $data_paths = $args{'-data_paths'};
   my $out_paths = $args{'-out_paths'};
@@ -509,9 +510,18 @@ sub summarizeSNVs{
     while (my $data = $reader->next) {
       my $coord = $data->{chr} .':'. $data->{start} .'-'. $data->{stop};
       $data->{coord} = $coord;
+
+      #Apply the AA effect filter
       unless ($data->{var_effect_type} =~ /$aa_effect_filter/){
         next();
       }
+
+      #Apply the MT/chrM filter
+      my $chr = $data->{chr};
+      if ($chr =~ /^MT$|^chrMT$|^M$|^chrM$/i){
+        next();
+      }
+
       $aa_changes{$coord}{$data->{aa_change}}=1;
     }
 
