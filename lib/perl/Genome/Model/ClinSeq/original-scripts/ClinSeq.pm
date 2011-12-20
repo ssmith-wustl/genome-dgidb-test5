@@ -1047,7 +1047,7 @@ sub getFilePathBase{
 
   my %fb;
 
-  my ($base, $extension, $base_dir, $file_name);
+  my ($base, $extension, $base_dir, $file_name, $file_base);
 
   if ($path =~ /(.*)(\.\w+)$/){
     $base = $1;      #Full path without extension
@@ -1056,20 +1056,25 @@ sub getFilePathBase{
     print RED, "\n\n&getFileBasePath could not determine base and extension of a file path: $path\n\n", RESET;
     exit();
   }
-
   if ($path =~ /(.*)\/(.*)$/){
-    $base_dir = "$1"."/";
-    $file_name = $2;
+    $base_dir = "$1"."/"; #Full directory path
+    $file_name = $2;      #Full file name
   }else{
     print RED, "\n\n&getFileBasePath could not determine base_dir and file_name of a file path: $path\n\n", RESET;
     exit();
   }
+  if ($file_name =~ /(.*)(\.\w+)$/){
+    $file_base = $1;      #File name only without extension
+  }else{
+    print RED, "\n\n&getFileBasePath could not determine file base from file_name: $file_name\n\n", RESET;
+    exit();
+  }
 
-
-  $fb{$path}{base} = $base;
-  $fb{$path}{extension} = $extension;
-  $fb{$path}{base_dir} = $base_dir;
-  $fb{$path}{file_name} = $file_name;
+  $fb{$path}{base} = $base;            #Full path without extension
+  $fb{$path}{extension} = $extension;  #Extension only
+  $fb{$path}{base_dir} = $base_dir;    #Full directory path with out filename
+  $fb{$path}{file_name} = $file_name;  #Full file name without path
+  $fb{$path}{file_base} = $file_base;
 
   return(\%fb);
 }

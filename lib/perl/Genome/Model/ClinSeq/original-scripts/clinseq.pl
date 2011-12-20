@@ -812,7 +812,7 @@ sub drugDbIntersections{
       #Run with each filtering option
       foreach my $filter (sort {$a <=> $b} keys %filter_options){
         my $filter_name = $filter_options{$filter}{name};
-        my $out = $drugbank_dir . $fb->{$path}->{file_name} . "$filter_name" . $fb->{$path}->{extension};
+        my $out = $drugbank_dir . $fb->{$path}->{file_base} . "$filter_name" . $fb->{$path}->{extension};
 
         if (-e $out){
           if ($verbose){print YELLOW, "\n\tFile already exists - skipping ($out)", RESET;} 
