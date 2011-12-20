@@ -229,9 +229,13 @@ foreach my $c (keys %infiles){
 
 #Thin down the SNV files to remove undeeded columns - repeat this process for both the original hg18 files and the new hg19 files
 print BLUE, "\n\nCreate new summarized SNV files with mapped gene names - hg18", RESET;
+#Get a complete list of mutated genes, and the number of times each gene was mutated.   Use mapped gene names to allow them to be paired up with the RNA-seq analysis
+my %mutant_genes;
+my %mutant_patients;
 foreach my $c (keys %infiles){
   my $path = $infiles{$c}{new_path};
   my $summary_path_hg18 = $infiles{$c}{summary_path_hg18};
+  my $patient = $infiles{$c}{patient};
   #coord	        gene_name	mapped_gene_name	aa_changes	ref_base	var_base
   #7:36698835-36698835	AOAH	        AOAH	                p.H109L,p.H77L	T               A	
   open (IN, "$path") || die "\n\nCould not open input file: $path\n\n";
@@ -253,10 +257,29 @@ foreach my $c (keys %infiles){
     #Fix gene name
     my $mapped_gene_name = &fixGeneName('-gene'=>$gene_name, '-entrez_ensembl_data'=>$entrez_ensembl_data, '-verbose'=>0);
     print OUT "$coord\t$gene_name\t$mapped_gene_name\t$aa_changes\t$ref_base\t$var_base\n";
+
+    my $sample = "$patient"."_T";
+    $mutant_patients{$sample}{$mapped_gene_name}{status}=1;
+    $mutant_patients{$sample}{$mapped_gene_name}{count}++;
+
+    #Store the mutations in a unified mutation hash
+    if ($mutant_genes{$mapped_gene_name}){
+      my $patients = $mutant_genes{$mapped_gene_name}{patients};
+      $patients->{$patient}=1;
+      $mutant_genes{$mapped_gene_name}{patient_count}++;
+    }else{
+      $mutant_genes{$mapped_gene_name}{gene_name} = $gene_name;
+      $mutant_genes{$mapped_gene_name}{patient_count} = 1;
+      my %patients;
+      $patients{$patient}=1;
+      $mutant_genes{$mapped_gene_name}{patients} = \%patients;
+    }
+  
   }
   close (IN);
   close (OUT);
 }
+
 print BLUE, "\n\nCreate new summarized SNV files with mapped gene names - hg19", RESET;
 foreach my $c (keys %infiles){
   my $path = $infiles{$c}{liftover_path};
@@ -580,11 +603,15 @@ foreach my $c (sort {$infiles{$a}->{patient} cmp $infiles{$b}->{patient}} keys %
   }
 }
 
+
+
+
 #Inject the LUC9 Normal sample into the hash of samples
 my $c_count = keys %infiles;
 $c = $c_count+1;
 $infiles{$c}{rnaseq_expression_matrix} = "/gscmnt/sata132/techd/mgriffit/luc/rnaseq_vs_snv/rnaseq_data/LUC9_N/isoforms_merged/isoforms.merged.fpkm.expsort.tsv";
 $infiles{$c}{rnaseq_data_name} = "LUC9_N";
+$infiles{$c}{patient} = "LUC9";
 
 #Build an expression matrix for all RNA-seq libraries that are currently available...
 print BLUE, "\n\nBuild expression matrix for all RNAseq libraries", RESET;
@@ -594,9 +621,10 @@ my %gene_map;
 my %name_list;
 foreach my $c (sort {$infiles{$a}->{rnaseq_data_name} cmp $infiles{$b}->{rnaseq_data_name}} keys %infiles){
   my $rnaseq_data_name = $infiles{$c}{rnaseq_data_name};
+  my $patient = $infiles{$c}{patient};
   print BLUE, "\n\t$rnaseq_data_name", RESET;
   if ($infiles{$c}{rnaseq_expression_matrix}){
-    $name_list{$rnaseq_data_name}=1;
+    $name_list{$rnaseq_data_name}=$patient;
     my $fpkm_file = $infiles{$c}{rnaseq_expression_matrix};
 
     my $header = 1;
@@ -643,35 +671,65 @@ my $name_list_string = join("\t", @name_list);
 
 my $fpkm_matrix_file = "$rnaseq_data_dir"."fpkm_matrix.tsv";
 my $rank_matrix_file = "$rnaseq_data_dir"."rank_matrix.tsv";
+my $categorical_file = "$rnaseq_data_dir"."expression_categorical.tsv";
 
-open(FPKM, ">$fpkm_matrix_file") || die "\n\nCould not open: $fpkm_matrix_file\n\n";
-open(RANK, ">$rank_matrix_file") || die "\n\nCould not open: $rank_matrix_file\n\n";
+open(FPKM_MATRIX, ">$fpkm_matrix_file") || die "\n\nCould not open: $fpkm_matrix_file\n\n";
+open(RANK_MATRIX, ">$rank_matrix_file") || die "\n\nCould not open: $rank_matrix_file\n\n";
+open(CAT, ">$categorical_file") || die "\n\nCould not open: $categorical_file\n\n";
 
-my $exp_header = "tracking_id\tmapped_gene_name\t$name_list_string";
-print FPKM "$exp_header\n";
-print RANK "$exp_header\n";
+my $matrix_header = "tracking_id\tmapped_gene_name\tmutation_status\tmutation_count\tmutated_patient_list\t$name_list_string";
+print FPKM_MATRIX "$matrix_header\n";
+print RANK_MATRIX "$matrix_header\n";
+my $categorical_header = "tracking_id\tmapped_gene_name\tpatient\tsample\tmutation_status\tmutation_count\tFPKM\tRANK";
+print CAT "$categorical_header\n";
 
 foreach my $g (sort keys %exp){
   my $mapped_gene_name = $gene_map{$g}{mapped_gene_name};
+  my $mutation_count = 0;
+  my $mutation_status = 0;
+  my $patient_list = "na";
+  if ($mutant_genes{$mapped_gene_name}){
+    $mutation_status = 1;
+    $mutation_count = $mutant_genes{$mapped_gene_name}{patient_count};
+    my $pt = $mutant_genes{$mapped_gene_name}{patients};
+    my @pt = keys %{$pt};
+    $patient_list = join(",", @pt);
+  }
   my @fpkms;
   my @ranks;
   foreach my $p (sort keys %name_list){
     push (@fpkms, $exp{$g}{$p}{fpkm});
     push (@ranks, $exp{$g}{$p}{rank});
+
+    #Print out categorical entry to file
+    my $mutation_status = 0;
+    my $mutation_count = 0;
+    if ($mutant_patients{$p}{$mapped_gene_name}){
+      $mutation_status = $mutant_patients{$p}{$mapped_gene_name}{status};
+      $mutation_count = $mutant_patients{$p}{$mapped_gene_name}{count};
+    }
+    print CAT "$g\t$mapped_gene_name\t$name_list{$p}\t$p\t$mutation_status\t$mutation_count\t$exp{$g}{$p}{fpkm}\t$exp{$g}{$p}{rank}\n";
+
   }
   my $fpkms_string = join("\t", @fpkms);
   my $ranks_string = join("\t", @ranks);
   
-  my $exp_fpkm_string = "$g\t$mapped_gene_name\t$fpkms_string";
-  my $exp_rank_string = "$g\t$mapped_gene_name\t$ranks_string";
+  my $exp_fpkm_string = "$g\t$mapped_gene_name\t$mutation_status\t$mutation_count\t$patient_list\t$fpkms_string";
+  my $exp_rank_string = "$g\t$mapped_gene_name\t$mutation_status\t$mutation_count\t$ranks_string";
 
-  print FPKM "$exp_fpkm_string\n";
-  print RANK "$exp_rank_string\n";
+  print FPKM_MATRIX "$exp_fpkm_string\n";
+  print RANK_MATRIX "$exp_rank_string\n";
 
 }
-close(FPKM);
-close(RANK);
+close(FPKM_MATRIX);
+close(RANK_MATRIX);
+close(CAT);
+
 print "\n\n";
+
+
+
+
 
 exit();
 
