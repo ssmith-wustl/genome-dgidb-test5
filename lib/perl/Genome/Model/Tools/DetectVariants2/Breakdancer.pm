@@ -343,9 +343,9 @@ sub has_version {
     return 0;  
 }
 
-sub params_for_result {
+sub params_for_detector_result {
     my $self = shift;
-    my ($params) = $self->SUPER::params_for_result;
+    my ($params) = $self->SUPER::params_for_detector_result;
 
     $params->{chromosome_list} = $self->chromosome;
     return $params;

@@ -12,6 +12,7 @@ package Genome::Model::Tools::Vcf::Convert::Maf::Vcf2Maf;
 use strict;
 use warnings;
 use Genome;
+use Data::Dumper;
 
 # Debugging
 # use diagnostics;
@@ -63,15 +64,6 @@ sub help_detail {
 EOS
 }
 
-# Global variables
-our @vcf_columns;
-our @annot_columns;
-# Standard Maf column names
-# BEWARE OF CAPITALIZATION when using these!
-our @maf_standard_columns = qw(Hugo_Symbol Entrez_Gene_Id Center NCBI_Build Chromosome Start_Position End_Position Strand Variant_Classification Variant_Type Reference_Allele Tumor_Seq_Allele1 Tumor_Seq_Allele2 dbSNP_RS dbSNP_Val_Status Tumor_Sample_Barcode Matched_Norm_Sample_Barcode Match_Norm_Seq_Allele1 Match_Norm_Seq_Allele2 Tumor_Validation_Allele1 Tumor_Validation_Allele2 Match_Norm_Validation_Allele1 Match_Norm_Validation_Allele2 Verification_Status Validation_Status Mutation_Status Sequencing_Phase Sequence_Source Validation_Method Score BAM_File Sequencer);
-our @maf_nonstandard_columns = qw(chromosome_name_WU start_WU stop_WU reference_WU variant_WU type_WU gene_name_WU transcript_name_WU transcript_species_WU transcript_source_WU transcript_version_WU strand_WU transcript_status_WU trv_type_WU c_position_WU amino_acid_change_WU ucsc_cons_WU domain_WU all_domains_WU deletion_substructures_WU transcript_error_WU);
-our @maf_columns = (@maf_standard_columns, @maf_nonstandard_columns);
-
 sub execute {
     my $self = shift;
 
@@ -98,17 +90,19 @@ sub execute {
         die $self->error_message;
     }
 
-    # Skip the metadata and find the line in VCF with the headers
-    my $vcf_line;
-    do {
-    	$vcf_line = <VCF>;
-    } while($vcf_line !~ /^#[^#]/); # match only one hash symbol
-    chomp $vcf_line;
-    $vcf_line =~ s/^#//; # remove leading '#' symbol
-    @vcf_columns = split(/\t/, $vcf_line);
+    # Standard Maf column names
+    my @maf_standard_columns = qw(Hugo_Symbol Entrez_Gene_Id Center NCBI_Build Chromosome Start_Position End_Position Strand Variant_Classification Variant_Type Reference_Allele Tumor_Seq_Allele1 Tumor_Seq_Allele2 dbSNP_RS dbSNP_Val_Status Tumor_Sample_Barcode Matched_Norm_Sample_Barcode Match_Norm_Seq_Allele1 Match_Norm_Seq_Allele2 Tumor_Validation_Allele1 Tumor_Validation_Allele2 Match_Norm_Validation_Allele1 Match_Norm_Validation_Allele2 Verification_Status Validation_Status Mutation_Status Sequencing_Phase Sequence_Source Validation_Method Score BAM_File Sequencer);
+    my @maf_nonstandard_columns = qw(chromosome_name_WU start_WU stop_WU reference_WU variant_WU type_WU gene_name_WU transcript_name_WU transcript_species_WU transcript_source_WU transcript_version_WU strand_WU transcript_status_WU trv_type_WU c_position_WU amino_acid_change_WU ucsc_cons_WU domain_WU all_domains_WU deletion_substructures_WU transcript_error_WU);
+    my @maf_columns = (@maf_standard_columns, @maf_nonstandard_columns);
+
+    # Make the MAF header
+    print MAF join("\t", @maf_columns), "\n";
+
+#	my ($Hugo_Symbol, $Entrez_Gene_Id, $GSC_Center, $NCBI_Build, $Chromosome, $Start_position, $End_position, $Strand, $Variant_Classification, $Variant_Type, $Reference_Allele, $Variant_Allele1, $Variant_Allele2, $dbSNP_RS, $dbSNP_Val_Status, $Sample_Barcode1, $Sample_Barcode2, $Match_Norm_Seq_Allele1, $Match_Norm_Seq_Allele2, $Validation_Allele1, $Validation_Allele2, $Match_Norm_Validation_Allele1, $Match_Norm_Validation_Allele2, $Verification_Status, $Validation_Status, $Mutation_Status, $Validation_Method, $Sequencing_Phase, $Sequence_Source, $Score, $BAM_file, $Sequencer, $chromosome_name, $start, $stop, $reference, $variant, $type, $gene_name, $transcript_name, $transcript_species, $transcript_source, $transcript_version, $strand, $transcript_status, $trv_type, $c_position, $amino_acid_change, $ucsc_cons, $domain, $all_domains, $deletion_substructures, $transcript_error) = split(/\t/, $line);
 
     # Find annotation file headers
     my $annot_line;
+    my @annot_columns;
     if ($self->annotation_has_header) {
         $annot_line = <ANNOT>; chomp $annot_line;
         @annot_columns = split(/\t/, $annot_line);
@@ -117,29 +111,347 @@ sub execute {
         @annot_columns = qw(chromosome_name start stop reference variant type gene_name transcript_name transcript_species transcript_source transcript_version strand transcript_status trv_type c_position amino_acid_change ucsc_cons domain all_domains deletion_substructures transcript_error);
     }
 
-    # Make the MAF header
-    print MAF join("\t", @maf_columns), "\n";
-
-    # Loop through both files line by line to generate the MAF file
-    while(1) {
-	    $vcf_line = <VCF>;
-	    last unless($vcf_line); # stop when EOF is reached
-	    $annot_line = <ANNOT>;
-	    last unless($annot_line);
-	    chomp $vcf_line; chomp $annot_line;
-
-	    # Store vcf fields in a hash
-	    my $vcf = $self->make_vcf_hash($vcf_line);
-	    # Store annotation fields in hash
-	    my $annot = $self->make_annot_hash($annot_line);
-
-	    # convert to maf hash
-	    my $maf = $self->make_maf_hash($vcf, $annot);
-
-	    # print it out to the file
-	    $self->print_to_maf($maf);
+    my %annotation_hash;
+    while (my $line = <ANNOT>) {
+    	chomp($line);
+        my ($chromosome_name, $start, $stop, $reference, $variant, $type, $gene_name, $transcript_name, $transcript_species, $transcript_source, $transcript_version, $strand, $transcript_status, $trv_type, $c_position, $amino_acid_change, $ucsc_cons, $domain, $all_domains, $deletion_substructures, $transcript_error) = split(/\t/, $line);
+	    #my $variant_name = $gene_name."_".$chromosome_name."_".$start."_".$stop."_".$reference."_".$variant;
+	    my $variant_name = $chromosome_name."_".$start."_".$stop."_".$reference."_".$variant; #this only matched vcf format for SNVs
+    	$annotation_hash{$variant_name} = "$line";
     }
 
+    my @sample_names;
+    my $ref_build;
+    while (my $line = <VCF>) {
+        chomp($line);
+        if ($line =~ /^\#\#/) {
+            if ($line =~ /^\#\#reference=/) {
+                ($ref_build) = $line =~ /^\#\#reference=(.+$)/;
+            }
+            next;
+        }
+        elsif ($line =~ /^\#CHROM/) { #grab sample names off of the header line
+            my ($chr, $pos, $id, $ref, $alt, $qual, $filter, $info, $format, @samples) = split(/\t/, $line);
+            @sample_names = @samples;
+            next;
+        }
+
+        my ($chr, $pos, $id, $ref, $alt, $qual, $filter, $info, $format, @samples) = split(/\t/, $line);
+
+        #parse format line to find out where our pattern of interest is in the ::::: system
+        my (@format_fields) = split(/:/, $format);
+        my $gt_location; #genotype
+        my $dp_location; #depth - this is not filled for vasily ucla files - this is currently unused down below
+        my $gq_location; #genotype quality - this is only filled in washu vcf for samtools variants, not varscan and not homo ref - this is currrently unused down below
+        my $count = 0;
+        foreach my $format_info (@format_fields) {
+            if ($format_info eq 'GT') {
+                $gt_location = $count;
+            }
+            elsif ($format_info eq 'DP') {
+                $dp_location = $count;
+            }
+            elsif ($format_info eq 'GQ') {
+                $gq_location = $count;
+            }
+            $count++;
+        }
+
+        #this file doesn't work if there are unknown genotype locations
+        unless ($gt_location || $gt_location == 0) {
+            die "Format field doesn't have a GT entry, failed to get genotype for $line\n";
+        }
+
+        #check to see if line has 0,1,2,etc as genotype numbering, store those in a hash for future reference
+
+        my %alleles_hash;
+        foreach my $sample_info (@samples) {                    
+            my (@sample_fields) = split(/:/, $sample_info);
+            my $genotype = $sample_fields[$gt_location];
+            my $allele1 = my $allele2 = ".";
+            ($allele1, $allele2) = split(/\//, $genotype);
+            if ($allele1 =~ m/\d+/) {
+                $alleles_hash{$allele1}++;
+                if ($allele2 =~ m/\d+/) {
+                    $alleles_hash{$allele2}++;
+                }
+            }
+        }
+
+        my @allele_options = (sort { $a <=> $b } keys %alleles_hash);
+        $count = 0;
+        foreach my $sample_info (@samples) {
+            my $maf = {};
+            my (@sample_fields) = split(/:/, $sample_info);
+            my $genotype = $sample_fields[$gt_location];
+            if ($genotype eq '0/0') { #MAF DOESN'T HAVE SPOTS FOR REFERENCE GENOTYPES
+                next;
+            }
+            my $allele1 = my $allele2 = ".";
+            my $allele_count;
+            ($allele1, $allele2) = split(/\//, $genotype);
+
+            my $variant_name;
+            my $pos_stop;
+            my $variant_type;
+            if(length($ref) == 1 and length($alt) == 1) {
+                #SNV case
+                $variant_type = "SNP";
+                $pos_stop = $pos;
+                if ($allele1 =~ m/\D+/) {
+                    $allele_count = '.';
+                }
+                elsif ($allele1 == $allele2) { #homo
+                    if ($allele1 == $allele_options[0]) { #homo first variant
+                    	$maf->{Match_Norm_Seq_Allele1} = $ref;
+                    	$maf->{Match_Norm_Seq_Allele2} = $ref;
+                        $allele_count = 0;
+                        $variant_name = "$chr"."_"."$pos"."_"."$pos_stop"."_"."$ref"."_"."$alt";
+                    }
+                    elsif ($allele1 == $allele_options[1]) { #homo second variant
+                    	$maf->{Match_Norm_Seq_Allele1} = $alt;
+                    	$maf->{Match_Norm_Seq_Allele2} = $alt;
+                        $allele_count = 2;
+                        $variant_name = "$chr"."_"."$pos"."_"."$pos_stop"."_"."$ref"."_"."$alt";
+                    }
+                }
+                else { #heterozygous
+                    if ($alt =~ /,/) { #THIS WON'T WORK
+                        my ($alt_ref, $alt_alt) = split(/,/, $alt);
+                    	$maf->{Match_Norm_Seq_Allele1} = $alt_ref;
+                    	$maf->{Match_Norm_Seq_Allele2} = $alt_alt;
+                        $variant_name = "$chr"."_"."$pos"."_"."$pos_stop"."_"."$ref"."_"."$alt_ref";
+                        $variant_name = "$chr"."_"."$pos"."_"."$pos_stop"."_"."$ref"."_"."$alt_alt";
+                    }
+                    else {
+                    	$maf->{Match_Norm_Seq_Allele1} = $ref;
+                    	$maf->{Match_Norm_Seq_Allele2} = $alt;
+                        $variant_name = "$chr"."_"."$pos"."_"."$pos_stop"."_"."$ref"."_"."$alt";
+                    }
+                    $allele_count = 1;
+                }
+            } elsif (length($ref) == 1 and length($alt) > 1) {
+                #insertion case
+                $variant_type = "INS";
+                $pos_stop = $pos + 1; #VCF uses 1-based position of base before the insertion (which is the same as 0-based position of first inserted base), insertions have no length -- +1 for annotation format
+                $ref = '-';
+                $alt = substr($alt, 1);
+                if ($allele1 =~ m/\D+/) {
+                    $allele_count = '.';
+                }
+                elsif ($allele1 == $allele2) { #homo
+                    if ($allele1 == $allele_options[0]) { #homo first variant
+                    	$maf->{Match_Norm_Seq_Allele1} = $ref;
+                    	$maf->{Match_Norm_Seq_Allele2} = $ref;
+                        $allele_count = 0;
+                        $variant_name = "$chr"."_"."$pos"."_"."$pos_stop"."_"."$ref"."_"."$alt";
+                    }
+                    elsif ($allele1 == $allele_options[1]) { #homo second variant
+                    	$maf->{Match_Norm_Seq_Allele1} = $alt;
+                    	$maf->{Match_Norm_Seq_Allele2} = $alt;
+                        $allele_count = 2;
+                        $variant_name = "$chr"."_"."$pos"."_"."$pos_stop"."_"."$ref"."_"."$alt";
+                    }
+                }
+                else { #heterozygous
+                    if ($alt =~ /,/) { #THIS WON'T WORK
+                        my ($alt_ref, $alt_alt) = split(/,/, $alt);
+                    	$maf->{Match_Norm_Seq_Allele1} = $alt_ref;
+                    	$maf->{Match_Norm_Seq_Allele2} = $alt_alt;
+                        $variant_name = "$chr"."_"."$pos"."_"."$pos_stop"."_"."$ref"."_"."$alt_ref";
+                        $variant_name = "$chr"."_"."$pos"."_"."$pos_stop"."_"."$ref"."_"."$alt_alt";
+                    }
+                    else {
+                    	$maf->{Match_Norm_Seq_Allele1} = $ref;
+                    	$maf->{Match_Norm_Seq_Allele2} = $alt;
+                        $variant_name = "$chr"."_"."$pos"."_"."$pos_stop"."_"."$ref"."_"."$alt";
+                    }
+                    $allele_count = 1;
+                }
+            } elsif (length($ref) > 1 and length($alt) == 1) {
+                #deletion case
+                $variant_type = "DEL";
+                $ref = substr($ref, 1);
+                $pos++;
+                $pos_stop = $pos + length($ref);
+                $alt = '-';
+                if ($allele1 =~ m/\D+/) {
+                    $allele_count = '.';
+                }
+                elsif ($allele1 == $allele2) { #homo
+                    if ($allele1 == $allele_options[0]) { #homo first variant
+                    	$maf->{Match_Norm_Seq_Allele1} = $ref;
+                    	$maf->{Match_Norm_Seq_Allele2} = $ref;
+                        $allele_count = 0;
+                        $variant_name = "$chr"."_"."$pos"."_"."$pos_stop"."_"."$ref"."_"."$alt";
+                    }
+                    elsif ($allele1 == $allele_options[1]) { #homo second variant
+                    	$maf->{Match_Norm_Seq_Allele1} = $alt;
+                    	$maf->{Match_Norm_Seq_Allele2} = $alt;
+                        $allele_count = 2;
+                        $variant_name = "$chr"."_"."$pos"."_"."$pos_stop"."_"."$ref"."_"."$alt";
+                    }
+                }
+                else { #heterozygous
+                    if ($alt =~ /,/) { #THIS WON'T WORK
+                        my ($alt_ref, $alt_alt) = split(/,/, $alt);
+                    	$maf->{Match_Norm_Seq_Allele1} = $alt_ref;
+                    	$maf->{Match_Norm_Seq_Allele2} = $alt_alt;
+                        $variant_name = "$chr"."_"."$pos"."_"."$pos_stop"."_"."$ref"."_"."$alt_ref";
+                        $variant_name = "$chr"."_"."$pos"."_"."$pos_stop"."_"."$ref"."_"."$alt_alt";
+                    }
+                    else {
+                    	$maf->{Match_Norm_Seq_Allele1} = $ref;
+                    	$maf->{Match_Norm_Seq_Allele2} = $alt;
+                        $variant_name = "$chr"."_"."$pos"."_"."$pos_stop"."_"."$ref"."_"."$alt";
+                    }
+                    $allele_count = 1;
+                }
+            } else {
+                die $self->error_message('Unhandled variant type encountered');
+            }
+
+            my @alts;
+            if ($alt =~ /,/) {
+                @alts = split(/,/, $alt);
+            }
+            else {
+                @alts = ($alt);
+            }
+
+            foreach my $alt_allele (@alts) { #THIS WONT WORK FOR SPLIT ALTS WHERE THE REF DOESN'T EXIST
+            	$maf->{Match_Norm_Seq_Allele2} = $alt_allele;
+                # Temporary additions to make the SMG test work for MRSA data (HG Data doesn't have a tumor allele)
+                $maf->{Tumor_Seq_Allele1} = $maf->{Match_Norm_Seq_Allele1};
+                $maf->{Tumor_Seq_Allele2} = $maf->{Match_Norm_Seq_Allele2};
+
+                my $sample_name = $sample_names[$count];
+                my ($chromosome_name, $start, $stop, $reference, $variant, $type, $gene_name, $transcript_name, $transcript_species, $transcript_source, $transcript_version, $strand, $transcript_status, $trv_type, $c_position, $amino_acid_change,  $ucsc_cons, $domain, $all_domains, $deletion_substructures, $transcript_error);
+                if (defined $annotation_hash{$variant_name}) {
+                    ($chromosome_name, $start, $stop, $reference, $variant, $type, $gene_name, $transcript_name, $transcript_species, $transcript_source, $transcript_version, $strand, $transcript_status, $trv_type, $c_position, $amino_acid_change, $ucsc_cons, $domain, $all_domains, $deletion_substructures, $transcript_error) = split(/\t/,$annotation_hash{$variant_name});
+                }
+                else { 
+                    warn "Variant $variant_name does not have annotation, skipping this variant\n";
+                    next; #Skip variants with no annotation -- MAYBE RUN ANNOTATION AGAIN???
+                    $chromosome_name = $chr;
+                    $start = $pos;
+                    $stop = $pos_stop;
+                    $reference = $ref;
+                    $variant = $alt;
+                    $type = $variant_type;
+                    $gene_name = $transcript_name = $transcript_species = $transcript_source = $transcript_version = $strand = $transcript_status = $trv_type = $c_position = $amino_acid_change = $ucsc_cons = $domain = $all_domains = $deletion_substructures = $transcript_error = "-";
+                }
+
+            	$maf->{Chromosome} = $chromosome_name;
+                $maf->{Start_Position} = $start;
+                $maf->{End_Position} = $stop;
+
+                $maf->{Reference_Allele} = $reference;
+
+                $maf->{Variant_Type} = $type; # SNP, INS, DEL, etc.
+                $maf->{Hugo_Symbol} = $gene_name;
+    #taken from gmt annotate revise-maf
+                my $entrez_gene_ids;
+                my $Hugo_Symbol = $maf->{Hugo_Symbol};
+                my @gene_info = GSC::Gene->get(gene_name => $Hugo_Symbol);
+                if (@gene_info) {
+		            for my $info (@gene_info) {
+		                my $locus_link_id = $info->locus_link_id;
+		                if ($locus_link_id) {
+			                my $id = $entrez_gene_ids->{$Hugo_Symbol};
+			                if ($id) {
+			                    unless ($id =~ /$locus_link_id/) {
+                    				$entrez_gene_ids->{$Hugo_Symbol}="$id:$locus_link_id";
+			                    }
+			                } else {
+			                    $entrez_gene_ids->{$Hugo_Symbol}=$locus_link_id;
+			                }
+		                }
+		            }
+                    $maf->{Entrez_Gene_Id} = $entrez_gene_ids->{$Hugo_Symbol};
+                }
+                else {
+                    $maf->{Entrez_Gene_Id} = "-";
+                }
+
+                $maf->{Strand} = $strand;
+                $maf->{Variant_Classification} = &trv_to_mutation_type($trv_type);
+                warn "Unrecognized trv_type \"$trv_type\" in $sample_name data $sample_info annotation file $annotation_hash{$variant_name}: $maf->{Hugo_Symbol}, chr$maf->{Chromosome}:$maf->{Start_Position}-$maf->{End_Position}\n" if ! $maf->{Variant_Classification};
+
+                $maf->{NCBI_Build} = $ref_build;
+
+                if (defined ($id)) {
+                    $maf->{dbSNP_RS} = $id;
+                    $maf->{dbSNP_Val_Status} = $id;
+                }
+                else {
+                    $maf->{dbSNP_RS} = "-";
+                    $maf->{dbSNP_Val_Status} = "-";
+                }
+
+	            # required to match correctly
+                $maf->{Tumor_Sample_Barcode} = $sample_name;
+                $maf->{Matched_Norm_Sample_Barcode} = $sample_name; # Ex. H_MRS-6201-1025127
+
+                #did we pass filters?
+                if ($filter eq "PASS" || $filter eq "-" || !defined($filter)) {
+                    $maf->{Verification_Status} = "Strandfilter_Passed";
+                }
+                else {
+                    $maf->{Verification_Status} = $filter;
+                }
+
+                #load maf with default names
+                $maf->{Center} = 'genome.wustl.edu';
+                $maf->{Tumor_Validation_Allele1} = "-";
+                $maf->{Tumor_Validation_Allele2} = "-";
+                $maf->{Match_Norm_Validation_Allele1} = "-";
+                $maf->{Match_Norm_Validation_Allele2} = "-";
+                $maf->{Validation_Status} = "Unknown";
+                $maf->{Mutation_Status} = "Germline";
+                $maf->{Validation_Method} = "4";
+                $maf->{Sequencing_Phase} = "Capture";
+                $maf->{Sequence_Source} = "-";
+                $maf->{Score} = "-";
+                $maf->{BAM_File} = "-";
+                $maf->{Sequencer} = "GaIIx or HiSeq";
+
+                #fill out non-standard maf fields with our annotation
+                $maf->{chromosome_name_WU} = $maf->{Chromosome};
+                $maf->{start_WU} = $maf->{Start_Position};
+                $maf->{stop_WU} = $maf->{End_Position};
+                $maf->{reference_WU} = $maf->{Reference_Allele};
+                $maf->{variant_WU} = $alt;
+                $maf->{type_WU} = $maf->{Variant_Type};
+                $maf->{gene_name_WU} = $maf->{Hugo_Symbol};
+                $maf->{transcript_name_WU} = $transcript_name;
+                $maf->{transcript_species_WU} = $transcript_species;
+                $maf->{transcript_source_WU} = $transcript_source;
+                $maf->{transcript_version_WU} = $transcript_version;
+                $maf->{strand_WU} = $strand;
+                $maf->{transcript_status_WU} = $transcript_status;
+                $maf->{trv_type_WU} = $maf->{Variant_Classification};
+                $maf->{c_position_WU} = $c_position;
+                $maf->{amino_acid_change_WU} = $amino_acid_change;
+                $maf->{ucsc_cons_WU} = $ucsc_cons;
+                $maf->{domain_WU} = $domain;
+                $maf->{all_domains_WU} = $all_domains;
+                $maf->{deletion_substructures_WU} = $deletion_substructures;
+                $maf->{transcript_error_WU} = $transcript_error;
+
+                # print it out to the file
+                if ($self->remove_silent && $maf->{Variant_Classification} eq 'Silent') {
+                    next;
+                }
+                # First one without tab
+                print MAF (defined $maf->{$maf_columns[0]} ? $maf->{$maf_columns[0]} : "--");
+                foreach my $column (@maf_columns[1 .. $#maf_columns]) {
+                	print MAF "\t", (defined $maf->{$column} ? $maf->{$column} : "--");
+                }
+                print MAF "\n";
+            }
+        }
+    }
     return 1; # No error
 }
 
@@ -148,244 +460,6 @@ sub execute {
 # subroutines                                                                  #
 ################################################################################
 
-
-#
-# Takes a line from a VCF file and puts the fields into a hash
-#
-# The keys of the hash are the column names (remember, case sensitive)
-# and the values of the hash are the value in that column
-# In the case that the columns are empty, the values will be the empty string
-#
-# ex. $self->make_vcf_hash($vcf_line);
-#
-sub make_vcf_hash {
-    my $self = shift;
-    my ($vcf_line) = @_;
-
-    my $vcf_hash = {};
-    my @vcf = split(/\t/, $vcf_line);
-    foreach my $column (@vcf_columns) {
-	$vcf_hash->{$column} = shift @vcf;
-    }
-    return $vcf_hash;
-}
-
-#
-# Takes a line from a annotation file and puts the fields into a hash
-#
-# The keys of the hash are the column names (remember, case sensitive)
-# and the values of the hash are the value in that column
-# In the case that the columns are empty, the values will be the empty string
-#
-# ex. $self->make_annot_hash($annot_line);
-#
-
-sub make_annot_hash {
-    my $self = shift;
-    my ($annot_line) = @_;
-
-    my $annot_hash = {};
-    my @annot = split(/\t/, $annot_line);
-    foreach my $column (@annot_columns) {
-	$annot_hash->{$column} = shift @annot;
-    }
-    return $annot_hash;
-}
-
-#
-# Prints a line to the MAF file, given the maf hash
-#
-# The columns to be printed are taken from @maf_columns,
-# which may or may not include the nonstandard columns.
-#
-# If a key does not exist in the hash, the value will not be printed
-#
-# ex. $self->print_to_maf($maf_hash);
-#
-sub print_to_maf {
-    my $self = shift;
-    my ($maf) = @_;
-    if ($self->remove_silent && $maf->{Variant_Classification} eq 'Silent') {
-        next;
-    }
-    # First one without tab
-    print MAF $maf->{$maf_columns[0]};
-    foreach my $column (@maf_columns[1 .. $#maf_columns]) {
-	print MAF "\t", (defined $maf->{$column} ? $maf->{$column} : "--");
-    }
-    print MAF "\n";
-}
-
-#
-# Take the $vcf and $annot hashes and make the $maf hash
-#
-# Most fields are converted simply by copying over the data to the corresponding column
-#
-# The conversion isn't perfect
-# Some MAF fields are unused, because there is no such
-# corresponding data in the VCF and annotation files
-#
-# If, in the future, such data is found, please implement them
-# The unused fields are the commented assignemennt statements
-#
-# Usage: $self->make_maf_hash($vcf_hash, $annot_hash);
-#
-sub make_maf_hash {
-    my $self = shift;
-    my ($vcf, $annot) = @_;
-    my $maf = {};
-
-    # if there are two distinct variants at the same location e.g. C,T on corresponding alleles
-    if($vcf->{ALT} =~ /,/) {
-	<ANNOT>; # throw away a line in the annotation file, because it will have the same info anyways
-	@_ = split(/,/, $vcf->{ALT});
-	$maf->{Match_Norm_Seq_Allele1} = $_[0];
-	$maf->{Match_Norm_Seq_Allele2} = $_[1];
-    } else {
-	@_ = split(/:/, $vcf->{$vcf_columns[-1]}); # split 0/1:.:27:38:1:12:0.4444:42.95
-	my @genotype = split(/\//, $_[0]); # get the genotype e.g. "0/1" and split it
-   	$maf->{Match_Norm_Seq_Allele1} = $genotype[0] ? $vcf->{ALT} : $vcf->{REF};
-	$maf->{Match_Norm_Seq_Allele2} = $genotype[1] ? $vcf->{ALT} : $vcf->{REF};
-    }
-
-    # Check for consistency in chromosome number
-    if ($vcf->{CHROM} eq $annot->{chromosome_name}) {
-	$maf->{Chromosome} = $vcf->{CHROM};
-    } else {
-	# this should not happen, so die
-	die "VCF and Annotation files have different chromosome numbers!\n",
-	    "VCF: Chromosome $vcf->{CHROM}, Position $vcf->{POS}\n",
-	    "Annotation: Chromosome $annot->{chromosome_name}, Position $annot->{start}";
-	# Alternatively: don't die, and try to skip the inconsistent lines
-	# Replace the die statement above with the following to implement this
-	#
-	# warn "VCF and Annotation files have different chromosome numbers!\n",
-	#      "VCF: Chromosome $vcf->{CHROM}, Position $vcf->{POS}\n",
-	#      "Annotation: Chromosome $annot->{chromosome_name}, Position $annot->{start}";
-	# # if vcf is ahead of the annotation
-	# if($vcf->{CHROM} ge $annot->{chromosome_name}) {
-	#     # skip a line in the annotation file to catch up
-	#     <ANNOT>;
-	#     next;
-	# } else { # annotation is ahead of the vcf
-	#     # skip a line in the vcf file to catch up
-	#     <VCF>;
-	#     next;
-	# }
-    }
-
-    # Check for consistency in chromosome position
-    if ($vcf->{POS} == $annot->{start}) {
-    	$maf->{Start_Position} = $vcf->{POS};
-    } else {
-	    #die "VCF and Annotation files have different position numbers!\n","VCF: Chromosome $vcf->{CHROM}, Position $vcf->{POS}\n","Annotation: Chromosome $annot->{chromosome_name}, Position $annot->{start}\n";
-	    #Don't die, and try to skip the inconsistent lines
-        warn "VCF and Annotation files have different position numbers!\n",
-          "VCF: Chromosome $vcf->{CHROM}, Position $vcf->{POS}\n",
-          "Annotation: Chromosome $annot->{chromosome_name}, Position $annot->{start}";
-        # if vcf is ahead of annotation
-        if($vcf->{POS} ge $annot->{start}) {
-            # skip a line in the annotation file to catch up
-            <ANNOT>;
-            next;
-        } else { # annotation is ahead of vcf
-            # skip a line in the vcf file to catch up
-            <VCF>;
-            next;
-        }
-    }
-
-    $maf->{Hugo_Symbol} = $annot->{gene_name};
-
-#taken from gmt annotate revise-maf
-    my $entrez_gene_ids;
-    my $Hugo_Symbol = $maf->{Hugo_Symbol};
-    my @gene_info = GSC::Gene->get(gene_name => $Hugo_Symbol);
-    if (@gene_info) {
-		for my $info (@gene_info) {
-		    my $locus_link_id = $info->locus_link_id;
-		    if ($locus_link_id) {
-			    my $id = $entrez_gene_ids->{$Hugo_Symbol};
-			    if ($id) {
-			        unless ($id =~ /$locus_link_id/) {
-        				$entrez_gene_ids->{$Hugo_Symbol}="$id:$locus_link_id";
-			        }
-			    } else {
-			        $entrez_gene_ids->{$Hugo_Symbol}=$locus_link_id;
-			    }
-		    }
-		}
-        $maf->{Entrez_Gene_Id} = $entrez_gene_ids->{$Hugo_Symbol};
-    }
-    else {
-        $maf->{Entrez_Gene_Id} = "-";
-    }
-
-
-    $maf->{Center} = 'genome.wustl.edu';
-    $maf->{NCBI_Build} = 'NCBI-human-build36';
-    $maf->{End_Position} = $annot->{stop};
-    $maf->{Strand} = 0; # Unsure whether this is OK? Just assumed 0 for all inputs
-
-    $maf->{Variant_Classification} = &trv_to_mutation_type($annot->{trv_type});
-
-    warn "Unrecognized trv_type \"$annot->{trv_type}\" in annotation file: $maf->{Hugo_Symbol}, chr$maf->{Chromosome}:$maf->{Start_Position}-$maf->{End_Position}\n" if ! $maf->{Variant_Classification};
-
-    $maf->{Variant_Type} = $annot->{type}; # SNP, INS, DEL, etc.
-    $maf->{Reference_Allele} = $vcf->{REF};
-
-    # Temporary additions to make the SMG test work for MRSA data
-    $maf->{Tumor_Seq_Allele1} = $maf->{Match_Norm_Seq_Allele1};
-    $maf->{Tumor_Seq_Allele2} = $maf->{Match_Norm_Seq_Allele2};
-
-    $maf->{dbSNP_RS} = "-";
-    $maf->{dbSNP_Val_Status} = "-";
-
-	# required to match correctly
-    $maf->{Tumor_Sample_Barcode} = $vcf_columns[-1];
-    $maf->{Matched_Norm_Sample_Barcode} = $vcf_columns[-1]; # Ex. H_MRS-6201-1025127
-
-    $maf->{Tumor_Validation_Allele1} = "-";
-    $maf->{Tumor_Validation_Allele} = "-";
-    $maf->{Match_Norm_Validation_Allele1} = "-";
-    $maf->{Match_Norm_Validation_Allele2} = "-";
-    $maf->{Verification_Status} = $vcf->{FILTER} eq "PASS" ? "Strandfilter_Passed" : "-";
-    $maf->{Validation_Status} = "Unknown";
-    $maf->{Mutation_Status} = "Germline";
-    $maf->{Validation_Method} = "4";
-    $maf->{Sequencing_Phase} = "Capture";
-    $maf->{Sequence_Source} = "-";
-    $maf->{Score} = "-";
-    $maf->{BAM_File} = "-";
-    $maf->{Sequencer} = "GaIIx or HiSeq";
-
-
-    # Below are non standard MAF columns
-    # change the our declaration of @maf_colums at the top of the file to include/exclude printing these to file
-    $maf->{chromosome_name_WU} = $maf->{Chromosome};
-    $maf->{start_WU} = $maf->{Start_Position};
-    $maf->{stop_WU} = $maf->{End_Position};
-    $maf->{reference_WU} = $maf->{Reference_Allele};
-    $maf->{variant_WU} = $vcf->{ALT};
-    $maf->{type_WU} = $maf->{Variant_Type};
-    $maf->{gene_name_WU} = $maf->{Hugo_Symbol};
-    $maf->{transcript_name_WU} = $annot->{transcript_name};
-    $maf->{transcript_species_WU} = $annot->{transcript_species};
-    $maf->{transcript_source_WU} = $annot->{transcript_source};
-    $maf->{transcript_version_WU} = $annot->{transcript_version};
-    $maf->{strand_WU} = $annot->{strand};
-    $maf->{transcript_status_WU} = $annot->{transcript_status};
-    $maf->{trv_type_WU} = $annot->{trv_type};
-    $maf->{c_position_WU} = $annot->{c_position};
-    $maf->{amino_acid_change_WU} = $annot->{amino_acid_change};
-    $maf->{ucsc_cons_WU} = $annot->{ucsc_cons};
-    $maf->{domain_WU} = $annot->{domain};
-    $maf->{all_domains_WU} = $annot->{all_domains};
-    $maf->{deletion_substructures_WU} = $annot->{deletion_substructures};
-    $maf->{transcript_error_WU} = $annot->{transcript_error};
-    return $maf;
-}
-# Translate from annotation to maf. Somre are left blank and untranslated. Do they even exist in MAF?
 #############################################################
 # trv_to_mutation_type - Converts WU var types to MAF variant classifications
 #

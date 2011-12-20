@@ -194,7 +194,7 @@ sub execute {
     Genome::Model::Tools::PooledBac::GeneratePostAssemblyReports->execute( project_dir => $project_dir);
 
 #    $self->error_message("Error updating seqmgr") unless
-#    Genome::Model::Tools::PooledBac::UpdateSeqMgr->execute(project_dir => $project_dir);
+#    Genome::Model::Tools::Lims::UpdateSeqMgr->execute(project_dir => $project_dir);
 
     chdir( $orig_dir );
 
