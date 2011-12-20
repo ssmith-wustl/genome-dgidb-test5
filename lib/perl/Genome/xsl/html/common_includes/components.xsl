@@ -99,7 +99,7 @@
                cache.push(cacheImage);
                }
                }
-$(document).data('updatedOn', new Date("]]><xsl:copy-of select="$currentTime"/><![CDATA["));
+$(document).data('updatedOn', new Date(]]><xsl:copy-of select="$currentTime"/><![CDATA[));
 })(jQuery)
 
 ]]>
