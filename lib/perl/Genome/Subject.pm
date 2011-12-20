@@ -72,7 +72,10 @@ sub attributes_for_nomenclature {
     die "$name is not the name of a nomenclature" if !$n;
 
     my @fields = $n->fields();
-    my @attr = Genome::SubjectAttribute->get( nomenclature => [ map {$_->id} @fields ] );
+    my @attr = Genome::SubjectAttribute->get( 
+        nomenclature => [ map {$_->id} @fields ], 
+        subject_id => $self->id 
+    );
 
     return @attr;
 }
