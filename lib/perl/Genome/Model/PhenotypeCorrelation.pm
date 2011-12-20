@@ -382,9 +382,37 @@ sub _execute_build {
 
 #Ran clinical-correlation:
 #need clinical data file $clinical_data
-my $clinical_data_orig = '/gscmnt/gc2146/info/medseq/wschierd/crap_stuff_delete/Mock_Pheno_1kg.txt'; #comma or tab delim?
-my $clinical_data = "$temp_path/Mock_Pheno_1kg.txt";
-system("cp $clinical_data_orig $clinical_data");
+#my $clinical_data_orig = '/gscmnt/gc2146/info/medseq/wschierd/crap_stuff_delete/Mock_Pheno_1kg.txt'; #comma or tab delim?
+
+        my %pheno_hash;
+        foreach my $sample (@samples) {
+            my $sample_id = $sample->id;
+            my $sample_name = $sample->name;
+            my @sample_attributes = get_sample_attributes($sample_id);
+            for my $attr (@sample_attributes) {
+                $pheno_hash{$sample_name}{$attr->attribute_label} = $attr->attribute_value;
+            }
+        }
+
+        my $clinical_data = "$temp_path/Mock_Pheno_1kg.txt";
+        my $clinical_inFh = Genome::Sys->open_file_for_writing($clinical_data);
+        for my $sample_name (sort keys %pheno_hash) {
+            print $clinical_inFh "Sample_name";
+            for my $pheno_category (sort keys %{$pheno_hash{$sample_name}}) {
+                print $clinical_inFh "\t$pheno_category";
+            }
+            print $clinical_inFh "\n";
+            last;
+        }
+        for my $sample_name (sort keys %pheno_hash) {
+            print $clinical_inFh "$sample_name";
+            for my $pheno_category (sort keys %{$pheno_hash{$sample_name}}) {
+                my $pheno_value = $pheno_hash{$sample_name}{$pheno_category};
+                print $clinical_inFh "\t$pheno_value";
+            }
+            print $clinical_inFh "\n";
+        }
+        close($clinical_inFh);
 
         #$name is project name or some other good identifier
         my $name = $self->name;
@@ -719,9 +747,37 @@ my $kegg_db = '/gscmnt/gc2108/info/medseq/ckandoth/music/brc_input/pathway_dbs/K
 
 #Ran clinical-correlation:
 #need clinical data file $clinical_data
-my $clinical_data_orig = '/gscmnt/gc2146/info/medseq/wschierd/crap_stuff_delete/Mock_Pheno_1kg.txt';
-my $clinical_data = "$temp_path/Mock_Pheno_1kg.txt";
-system("cp $clinical_data_orig $clinical_data");
+#my $clinical_data_orig = '/gscmnt/gc2146/info/medseq/wschierd/crap_stuff_delete/Mock_Pheno_1kg.txt';
+        my %pheno_hash;
+        foreach my $sample (@samples) {
+            my $sample_id = $sample->id;
+            my $sample_name = $sample->name;
+            my @sample_attributes = get_sample_attributes($sample_id);
+            for my $attr (@sample_attributes) {
+                $pheno_hash{$sample_name}{$attr->attribute_label} = $attr->attribute_value;
+            }
+        }
+
+        my $clinical_data = "$temp_path/Mock_Pheno_1kg.txt";
+        my $clinical_inFh = Genome::Sys->open_file_for_writing($clinical_data);
+        for my $sample_name (sort keys %pheno_hash) {
+            print $clinical_inFh "Sample_name";
+            for my $pheno_category (sort keys %{$pheno_hash{$sample_name}}) {
+                print $clinical_inFh "\t$pheno_category";
+            }
+            print $clinical_inFh "\n";
+            last;
+        }
+        for my $sample_name (sort keys %pheno_hash) {
+            print $clinical_inFh "$sample_name";
+            for my $pheno_category (sort keys %{$pheno_hash{$sample_name}}) {
+                my $pheno_value = $pheno_hash{$sample_name}{$pheno_category};
+                print $clinical_inFh "\t$pheno_value";
+            }
+            print $clinical_inFh "\n";
+        }
+        close($clinical_inFh);
+
 #example: /gscmnt/sata809/info/medseq/MRSA/analysis/Sureselect_49_Exomes_Germline/music/input/sample_phenotypes2.csv
 #this is not the logistic regression yet, found out that yyou and ckandoth did not put logit into music, but just into the R package that music runs
 #$name is project name or some other good identifier
@@ -872,6 +928,13 @@ sub vcf_to_maf {
     my $final_maf_maker_cmd = "head -n1 $single_sample_dir/$maf_sample_id.maf | cat - $single_sample_dir/All_Samples_noheader.maf > $final_maf";
     system($final_maf_maker_cmd);
     return $final_maf;
+}
+
+sub get_sample_attributes {
+    my $sample_id = shift;
+    my $s = Genome::Sample->get($sample_id);
+    my @attr = $s->attributes_for_nomenclature('ASMS residuals');
+    return @attr;
 }
 
 sub _get_builds {
