@@ -6,7 +6,6 @@ use warnings;
 use Carp;
 use base qw(Class::Accessor::Fast);
 
-App::DBI->no_commit(1);
 use IO::File;
 use IO::String;
 use Storable;
@@ -27,6 +26,7 @@ my $phd_object = new Genome::Model::Tools::Lims::PhdDB::PhdDB(project_name => "m
 
 sub new {
     croak("$pkg:new:no class given, quitting") if @_ < 1;
+    App::DBI->no_commit(1);
     my ($caller, %params) = @_;
 	my $caller_is_obj = ref($caller);
     my $class = $caller_is_obj || $caller;
