@@ -541,7 +541,6 @@ sub _resolve_subject_from_name_and_type {
     #Only resort to a GSC::DNA if nothing else so far has worked
     if (($try_all_types and not scalar(@subjects)) or $subject_type eq 'dna_resource_item_name') {
         #If they specified dna_resource_item_name, they might actually have meant some other sort of "DNA"
-        #This will get the GSC::DNAResourceItem if that's what they asked for.
         push @subjects, GSC::DNA->get(dna_name => $subject_name);
     }
 
