@@ -20,7 +20,7 @@ my $pkg = 'Genome::Model::Tools::Lims::PhdDB';
 
 =head1 new 
 
-my $phd_object = new Genome::Model::Tools::Lims::PhdDB::PhdDB(project_name => "my_project");
+my $phd_object = new Genome::Model::Tools::Lims::PhdDB::PhdDB();
 
 =cut
 
@@ -34,25 +34,9 @@ sub new {
     bless ($self, $class);
 	$self->_reader( Genome::Model::Tools::Pcap::Phd::Reader->new );
 	$self->_writer( Genome::Model::Tools::Pcap::Phd::Writer->new );
-	if(exists $params{project_name})
-	{
-		$self->project_name($params{project_name});
-		$self->project(GSC::Setup::Project::Finishing->get(name => $self->project_name));
-	}    
     
     return $self;
 }
-
-#this doesn't make much sense in the context of the database
-#sub get_phd_names
-#{
-#	my ($self) = @_;
-#	if(defined $self->project)
-#	{
-#		$self->project->
-#	
-#	}
-#}
 
 sub get_latest_phd
 {
