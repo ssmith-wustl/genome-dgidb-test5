@@ -431,7 +431,7 @@ sub metrics_ignored_by_diff {
     return ('assembly length', 'average contig length', 'average contig length gt 300',
 	    'average supercontig length', 'average supercontig length gt 300',
 	    'config_file', 'contigs', 'n50 contig length', 'n50 supercontig length',
-	    'n50_contig_length_gt_300', 'n50_supercontig_length_gt_300');
+	    'n50_contig_length_gt_500', 'n50_supercontig_length_gt_500');
 }
 
 sub dirs_ignored_by_diff {
