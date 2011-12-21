@@ -16,18 +16,18 @@ my $DEFAULT_MEMORY = 402653184;
 class Genome::Model::Tools::Sam {
     is  => 'Command',
     has => [
-    use_version => { 
-        is  => 'Version', 
-        doc => "samtools version to be used, default is $DEFAULT. ", 
-        is_optional   => 1, 
-        default_value => $DEFAULT,   
-    },
-    maximum_memory => {
-        is => 'Integer',
-        doc => "the maximum memory available, default is $DEFAULT_MEMORY",
-        is_optional => 1,
-        default_value => $DEFAULT_MEMORY,
-    },
+        use_version => { 
+            is  => 'Version', 
+            doc => "samtools version to be used, default is $DEFAULT. ", 
+            is_optional   => 1, 
+            default_value => $DEFAULT,   
+        },
+        maximum_memory => {
+            is  => 'Integer',
+            doc => "the maximum memory available, default is $DEFAULT_MEMORY",
+            is_optional   => 1,
+            default_value => $DEFAULT_MEMORY,
+        },
     ],
 };
 
@@ -54,34 +54,77 @@ EOS
 
 
 my %SAMTOOLS_VERSIONS = (
-    r982    => '/gsc/pkg/bio/samtools/samtools-0.1.18/samtools', #newest version 0.1.18
-    r973    => '/gsc/pkg/bio/samtools/samtools-0.1.17/samtools',
-    r963    => '/gsc/pkg/bio/samtools/samtools-0.1.16/samtools',
-    r868    => '/gsc/pkg/bio/samtools/samtools-0.1.12a/samtools',
-    r783    => '/gsc/pkg/bio/samtools/samtools-0.1.9/samtools',
-    r613    => '/gsc/pkg/bio/samtools/samtools-0.1.8/samtools',
-    r599    => '/gsc/pkg/bio/samtools/samtools-0.1.7ar599/samtools',
-    r544    => '/gsc/pkg/bio/samtools/samtools-0.1.7ar544/samtools',
-    r510    => '/gsc/pkg/bio/samtools/samtools-0.1.7a/samtools',
-    r453    => '/gsc/pkg/bio/samtools/samtools-0.1.6/samtools',
-    r449    => '/gsc/pkg/bio/samtools/samtools-0.1.5-32/samtools',
-    r301wu1 => '/gscuser/dlarson/samtools/r301wu1/samtools',
-    r320wu1 => '/gscuser/dlarson/samtools/r320wu1/samtools',
-    r320wu2 => '/gscuser/dlarson/samtools/r320wu2/samtools',
-    r350wu1 => '/gscuser/dlarson/samtools/r350wu1/samtools',
+    r982    => '/gsc/pkg/bio/samtools/samtools-0.1.18', #newest version 0.1.18
+    r973    => '/gsc/pkg/bio/samtools/samtools-0.1.17',
+    r963    => '/gsc/pkg/bio/samtools/samtools-0.1.16',
+    r868    => '/gsc/pkg/bio/samtools/samtools-0.1.12a',
+    r783    => '/gsc/pkg/bio/samtools/samtools-0.1.9',
+    r613    => '/gsc/pkg/bio/samtools/samtools-0.1.8',
+    r599    => '/gsc/pkg/bio/samtools/samtools-0.1.7ar599',
+    r544    => '/gsc/pkg/bio/samtools/samtools-0.1.7ar544',
+    r510    => '/gsc/pkg/bio/samtools/samtools-0.1.7a',
+    r453    => '/gsc/pkg/bio/samtools/samtools-0.1.6',
+    r449    => '/gsc/pkg/bio/samtools/samtools-0.1.5-32',
+    r301wu1 => '/gscuser/dlarson/samtools/r301wu1',
+    r320wu1 => '/gscuser/dlarson/samtools/r320wu1',
+    r320wu2 => '/gscuser/dlarson/samtools/r320wu2',
+    r350wu1 => '/gscuser/dlarson/samtools/r350wu1',
 );
+
 
 sub available_samtools_versions {
     my $self = shift;
     return keys(%SAMTOOLS_VERSIONS);
 }
 
-sub path_for_samtools_version {
-    my ($class, $version) = @_;
-    $version ||= $DEFAULT;
+sub verify_sam_path {
+    my ($proto, $version) = @_;
+
+    unless ($version) {
+        die 'No samtools version provided';
+    }
+
     my $path = $SAMTOOLS_VERSIONS{$version};
-    return $path if defined $path;
-    die 'No path found for samtools version: '.$version;
+
+    unless ($path and -d $path) {
+        die 'No path found for samtools version: '. $version;
+    }
+    return $path;
+}
+
+sub path_for_samtools_version {
+    my ($proto, $version) = @_;
+    $version ||= $DEFAULT;
+    my $path      = $proto->verify_sam_path($version);
+    my $tool_path = $path . '/samtools';
+
+    unless (-x $tool_path) {
+        die 'No samtools path found for samtools version: '. $version;
+    }
+    return $tool_path;
+}
+
+#each samtools release version contains a bcftools
+sub path_for_bcftools {
+    my ($proto, $version) = @_;
+    my $path      = $proto->verify_sam_path($version);
+    my $tool_path = "$path/bcftools/bcftools";
+
+    unless (-x $tool_path) {
+        die $proto->error_message("bcftools: $tool_path is not executable");
+    }
+    return $tool_path;
+}
+
+sub path_for_vcfutils {
+    my ($proto, $version) = @_;
+    my $path      = $proto->verify_sam_path($version);
+    my $tool_path = "$path/bcftools/vcfutils.pl";
+
+    unless (-x $tool_path) {
+        die $proto->error_message("vcfutils.pl: $tool_path is not executable");
+    }
+    return $tool_path;
 }
 
 sub default_samtools_version {
@@ -187,9 +230,11 @@ sub read_count {
     my $count_cmd;
     if ($type =~ /SAM/i) {
         $count_cmd = "grep -cv '^\@' $filename";
-    } elsif ($type =~ /BAM/i) {
+    } 
+    elsif ($type =~ /BAM/i) {
         $count_cmd = "$samtools view $filename | wc -l";
-    } else {
+    } 
+    else {
         $self->error_message("Unknown type ($type) from filename ($filename).");
         return;
     }

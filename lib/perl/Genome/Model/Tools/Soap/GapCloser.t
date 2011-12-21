@@ -49,15 +49,6 @@ for my $file ( qw/ config_file TEST.scafSeq / ) {
     ok( File::Copy::copy($test_dir."/$file",$temp_dir), "Copied $file to temp dir" );
 }
 
-#FAIL tests create/execute tool
-my $fail_1 = Genome::Model::Tools::Soap::GapCloser->create(
-    assembly_directory => $temp_dir,
-    a => $temp_dir.'/TEST.scafSeq',
-    version => '1.10',
-    p => 25,
-);
-ok( ! $fail_1->execute, 'Failed execute with assembly_directory and scaffold_sequences_file specified');
-
 my $fail_2 = Genome::Model::Tools::Soap::GapCloser->create(
     assembly_directory => $temp_dir,
     version => '1.10',
@@ -77,6 +68,7 @@ my $tool = Genome::Model::Tools::Soap::GapCloser->create(
     version => '1.10',
     p => 25,
 );
+$tool->dump_status_messages(1);
 ok( $tool, "Created tool" );
 ok( $tool->execute, "Executed tool" );
 

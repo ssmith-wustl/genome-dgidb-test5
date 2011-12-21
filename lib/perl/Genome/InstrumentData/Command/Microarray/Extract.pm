@@ -278,7 +278,6 @@ sub _load_genotyopes {
 
     my %genotypes;
     my $total = 0;
-    my $cnt = 0;
     my $filters = $self->_filters;
     GENOTYPE: while ( my $line = $genotype_fh->getline ) {
         $total++;
@@ -303,7 +302,7 @@ sub _load_genotyopes {
         return;
     }
 
-    $self->status_message("Load $cnt of $total genotypes...OK");
+    $self->status_message("Kept ".keys(%genotypes)." of $total genotypes. Load...OK");
     return \%genotypes;
 }
 

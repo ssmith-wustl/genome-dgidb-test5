@@ -35,7 +35,7 @@ my %iub_as_string = (
     Y => 'CT',
     R => 'AG',
     W => 'AT',
-    S => 'GC',
+    S => 'CG',
     D => 'AGT',
     B => 'CGT',
     H => 'ACT',
@@ -141,6 +141,17 @@ sub iub_to_string {
     return $iub_as_string{$base} if $base and $iub_as_string{$base};
     return;
 }
+
+
+sub string_to_iub {
+    my $string = pop;
+    $string    = uc $string if $string;
+    my %str_as_iub = reverse %iub_as_string;
+
+    return $str_as_iub{$string} if $string and $str_as_iub{$string};
+    return;
+}
+
 
 sub reference_iub_to_base {
     my $class;

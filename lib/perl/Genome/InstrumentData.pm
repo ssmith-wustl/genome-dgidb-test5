@@ -33,12 +33,26 @@ class Genome::InstrumentData {
             to => 'attribute_value',
             where => [attribute_label => 'original_est_fragment_size'],
         },
+        original_est_fragment_std_dev => {
+            is => 'Number',
+            is_mutable => 1,
+            via => 'attributes',
+            to => 'attribute_value',
+            where => [attribute_label => 'original_est_fragment_std_dev'],
+        },
         final_est_fragment_size => {
             is => 'Number',
             is_mutable => 1,
             via => 'attributes',
             to => 'attribute_value',
             where => [attribute_label => 'final_est_fragment_size'],
+        },
+        final_est_fragment_std_dev => {
+            is => 'Number',
+            is_mutable => 1,
+            via => 'attributes',
+            to => 'attribute_value',
+            where => [attribute_label => 'final_est_fragment_std_dev'],
         },
         read_orientation => {
             is => 'Text',
@@ -263,7 +277,7 @@ sub dump_fastqs_from_bam {
     }
     
     my $directory = delete $p{directory};
-    $directory ||= Genome::Sys->create_temp_directory('unpacked_bam');
+    $directory ||= Genome::Sys->create_temp_directory('unpacked_bam_'.$self->id);
 
     my $subset = (defined $self->subset_name ? $self->subset_name : 0);
 

@@ -38,7 +38,8 @@ is($model_group->uuid, $project->id, 'model group uuid matches project id');
 is($model_group->user_name, $creator->email, 'model group user_name matches project creator email');
 
 # create again fails
-ok(!Genome::Project->create(name => 'TEST AML'), 'failed to create project with the same name');
+eval { Genome::Project->create(name => 'TEST AML'); };
+ok($@, 'failed to create project with the same name');
 
 # create again, but since we are apipe-builder, it will rename the other project
 no warnings;

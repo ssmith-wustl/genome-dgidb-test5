@@ -1,4 +1,4 @@
-package Genome::Model::Tools::PooledBac::UpdateSeqMgr;
+package Genome::Model::Tools::Lims::UpdateSeqMgr;
 
 use strict;
 use warnings;
@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 use Bio::SeqIO;
 
-class Genome::Model::Tools::PooledBac::UpdateSeqMgr {
+class Genome::Model::Tools::Lims::UpdateSeqMgr {
     is => 'Command',
     has => [        
         project_dir => {
@@ -23,7 +23,7 @@ sub help_brief {
 
 sub help_synopsis {
     return <<"EOS"
-gmt pooled-bac update-seq-mgr --project-dir /gscmnt/111/New_Pipeline_Pooled_BAC_Fosmid_Testing/Human_Pool_10_101119
+gmt lims update-seq-mgr --project-dir /gscmnt/111/New_Pipeline_Pooled_BAC_Fosmid_Testing/Human_Pool_10_101119
 EOS
 }
 sub help_detail {
@@ -33,13 +33,15 @@ linked GSC project directories for finishing and manual sequencing improvement
 EOS
 }
 
-if ( not App::Init->initialized ) {
-    App::DB->db_access_level('rw');
-    App->init;
-}
 
 sub execute { 
     my ($self) = @_;
+
+    if ( not App::Init->initialized ) {
+        App::DB->db_access_level('rw');
+        App->init;
+    }
+
     $self->status_message ("Updating Seqmgr Projects ..");
     my $project_dir = $self->project_dir;
 

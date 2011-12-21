@@ -382,13 +382,40 @@ sub _execute_build {
 
 #Ran clinical-correlation:
 #need clinical data file $clinical_data
-my $clinical_data_orig = '/gscmnt/gc2146/info/medseq/wschierd/crap_stuff_delete/Mock_Pheno_1kg.txt';
-my $clinical_data = "$temp_path/Mock_Pheno_1kg.txt";
-system("cp $clinical_data_orig $clinical_data");
+#my $clinical_data_orig = '/gscmnt/gc2146/info/medseq/wschierd/crap_stuff_delete/Mock_Pheno_1kg.txt'; #comma or tab delim?
 
-#get list of bams and load into tmp file named $bam_list
-#$name is project name or some other good identifier
-my $name = $self->name;
+        my %pheno_hash;
+        foreach my $sample (@samples) {
+            my $sample_id = $sample->id;
+            my $sample_name = $sample->name;
+            my @sample_attributes = get_sample_attributes($sample_id);
+            for my $attr (@sample_attributes) {
+                $pheno_hash{$sample_name}{$attr->attribute_label} = $attr->attribute_value;
+            }
+        }
+
+        my $clinical_data = "$temp_path/Mock_Pheno_1kg.txt";
+        my $clinical_inFh = Genome::Sys->open_file_for_writing($clinical_data);
+        for my $sample_name (sort keys %pheno_hash) {
+            print $clinical_inFh "Sample_name";
+            for my $pheno_category (sort keys %{$pheno_hash{$sample_name}}) {
+                print $clinical_inFh "\t$pheno_category";
+            }
+            print $clinical_inFh "\n";
+            last;
+        }
+        for my $sample_name (sort keys %pheno_hash) {
+            print $clinical_inFh "$sample_name";
+            for my $pheno_category (sort keys %{$pheno_hash{$sample_name}}) {
+                my $pheno_value = $pheno_hash{$sample_name}{$pheno_category};
+                print $clinical_inFh "\t$pheno_value";
+            }
+            print $clinical_inFh "\n";
+        }
+        close($clinical_inFh);
+
+        #$name is project name or some other good identifier
+        my $name = $self->name;
 
         #my $clin_corr = "gmt music clinical-correlation --genetic-data-type variant --bam-list $bam_list --maf-file $maf_file --output-file $temp_path/clin_corr_result --categorical-clinical-data-file $clinical_data";
         my $clin_corr_cmd = Genome::Model::Tools::Music::ClinicalCorrelation->create(
@@ -402,7 +429,6 @@ my $name = $self->name;
         unless($clin_corr_result = $clin_corr_cmd->execute){
             die "Could not complete clinical correlation!";
         }
-
         my $fdr_cutoff = 0.05;
         #my $clin_corr_finish = "gmt germline finish-music-clinical-correlation --input-file $temp_path/clin_corr_result.categorical --output-file $temp_path/clin_corr_result_stats_FDR005.txt --output-pdf-image-file $temp_path/clin_corr_result_stats_FDR005.pdf --clinical-data-file $clinical_data --project-name $name --fdr-cutoff $fdr_cutoff --maf-file $maf_file";
         my $clin_corr_finish_cmd = Genome::Model::Tools::Germline::FinishMusicClinicalCorrelation->create(
@@ -420,26 +446,53 @@ my $name = $self->name;
         }
 
         #vcf to mutation matrix
+        my $mutation_matrix = "$temp_path/$name"."_variant_matrix.txt";
         my $vcf_mutmatrix_cmd = Genome::Model::Tools::Vcf::VcfToVariantMatrix->create(
             vcf_file => $multisample_vcf,
             project_name => $name,
             bed_roi_file => $target_region_set_name_bedfile,
-            output_file => "$temp_path/$name"."_variant_matrix.txt",
+            output_file => $mutation_matrix,
             #positions_file
         );
         my $vcf_mutmatrix_result;
         unless($vcf_mutmatrix_result = $vcf_mutmatrix_cmd->execute){
-            die "Could not complete burden analysis!";
+            die "Could not complete mutation matrix creation!";
         }
 
-system ("cp $temp_path/$name"."_variant_matrix.txt /gscmnt/gc2146/info/medseq/wschierd/crap_stuff_delete/variant_matrix.txt");
+#system ("cp $maf_file /gscmnt/gc2146/info/medseq/wschierd/crap_stuff_delete/vcf_2_maf.txt");
+#system ("cp $temp_path/$name"."_variant_matrix.txt /gscmnt/gc2146/info/medseq/wschierd/crap_stuff_delete/variant_matrix.txt");
+
+        my %annotation_hash;
+        foreach my $build (@builds) {
+            my $annotation_output_directory = $build->data_directory."/variants";
+            my $annotation_file_per_sample = $annotation_output_directory."/filtered.variants.post_annotation";
+            my $inFh_annotation = Genome::Sys->open_file_for_reading($annotation_file_per_sample);
+            while (my $line = <$inFh_annotation>) {
+            	chomp($line);
+                my ($chromosome_name, $start, $stop, $reference, $variant, $mut_type, $gene_name, @everything_else) = split(/\t/, $line);
+        	    #my $variant_name = $gene_name."_".$chromosome_name."_".$start."_".$stop."_".$reference."_".$variant;
+        	    my $variant_name = $chromosome_name."_".$start."_".$reference."_".$variant; #this only matched vcf format for SNVs
+            	$annotation_hash{$variant_name} = "$line";
+            }
+        }
+
+        my ($tfh_annotation,$annotation_file_path) = Genome::Sys->create_temp_file;
+        unless($tfh_annotation) {
+            $self->error_message("Unable to create temporary file $!");
+            die;
+        }
+        $annotation_file_path =~ s/\:/\\\:/g;
+
+        foreach my $variant (sort keys %annotation_hash) {
+        	print $tfh_annotation "$variant\t$annotation_hash{$variant}\n";
+        }
 
 =cut
-#burden analysis
+        #burden analysis
         my $burden_cmd = Genome::Model::Tools::Germline::BurdenAnalysis->create(
-            mutation_file => "$temp_path/$name"."_variant_matrix.txt",
+            mutation_file => $mutation_matrix,
             phenotype_file => $clinical_data,
-            marker_file => "",
+            marker_file => $annotation_file_path,
             project_name => $name,
 #            base_R_commands => { is => 'Text', doc => "The base R command library", default => '/gscuser/qzhang/ASMS/rarelib20111003.R' },
             output_file => "$temp_path/$name"."_burden_analysis.txt",
@@ -449,7 +502,6 @@ system ("cp $temp_path/$name"."_variant_matrix.txt /gscmnt/gc2146/info/medseq/ws
             die "Could not complete burden analysis!";
         }
 =cut
-
 =cut
 #haplotype analysis
 
@@ -695,9 +747,37 @@ my $kegg_db = '/gscmnt/gc2108/info/medseq/ckandoth/music/brc_input/pathway_dbs/K
 
 #Ran clinical-correlation:
 #need clinical data file $clinical_data
-my $clinical_data_orig = '/gscmnt/gc2146/info/medseq/wschierd/crap_stuff_delete/Mock_Pheno_1kg.txt';
-my $clinical_data = "$temp_path/Mock_Pheno_1kg.txt";
-system("cp $clinical_data_orig $clinical_data");
+#my $clinical_data_orig = '/gscmnt/gc2146/info/medseq/wschierd/crap_stuff_delete/Mock_Pheno_1kg.txt';
+        my %pheno_hash;
+        foreach my $sample (@samples) {
+            my $sample_id = $sample->id;
+            my $sample_name = $sample->name;
+            my @sample_attributes = get_sample_attributes($sample_id);
+            for my $attr (@sample_attributes) {
+                $pheno_hash{$sample_name}{$attr->attribute_label} = $attr->attribute_value;
+            }
+        }
+
+        my $clinical_data = "$temp_path/Mock_Pheno_1kg.txt";
+        my $clinical_inFh = Genome::Sys->open_file_for_writing($clinical_data);
+        for my $sample_name (sort keys %pheno_hash) {
+            print $clinical_inFh "Sample_name";
+            for my $pheno_category (sort keys %{$pheno_hash{$sample_name}}) {
+                print $clinical_inFh "\t$pheno_category";
+            }
+            print $clinical_inFh "\n";
+            last;
+        }
+        for my $sample_name (sort keys %pheno_hash) {
+            print $clinical_inFh "$sample_name";
+            for my $pheno_category (sort keys %{$pheno_hash{$sample_name}}) {
+                my $pheno_value = $pheno_hash{$sample_name}{$pheno_category};
+                print $clinical_inFh "\t$pheno_value";
+            }
+            print $clinical_inFh "\n";
+        }
+        close($clinical_inFh);
+
 #example: /gscmnt/sata809/info/medseq/MRSA/analysis/Sureselect_49_Exomes_Germline/music/input/sample_phenotypes2.csv
 #this is not the logistic regression yet, found out that yyou and ckandoth did not put logit into music, but just into the R package that music runs
 #$name is project name or some other good identifier
@@ -826,6 +906,7 @@ sub vcf_to_maf {
         my $sample_id = $build->subject_name;
         my $annotation_output_directory = $build->data_directory."/variants";
         my $annotation_file_per_sample = $annotation_output_directory."/filtered.variants.post_annotation"; #needs to get some sort of single-sample annotation file from the build or maybe there is a unified annotation file to use?
+
 #        my $vcf_cmd = "gmt vcf convert maf vcf-2-maf --vcf-file $single_sample_dir/$sample_id.vcf --annotation-file $annotation_file_per_sample --output-file $single_sample_dir/$sample_id.maf";
 #        print "$vcf_cmd\n";
 #        system($vcf_cmd);
@@ -847,6 +928,13 @@ sub vcf_to_maf {
     my $final_maf_maker_cmd = "head -n1 $single_sample_dir/$maf_sample_id.maf | cat - $single_sample_dir/All_Samples_noheader.maf > $final_maf";
     system($final_maf_maker_cmd);
     return $final_maf;
+}
+
+sub get_sample_attributes {
+    my $sample_id = shift;
+    my $s = Genome::Sample->get($sample_id);
+    my @attr = $s->attributes_for_nomenclature('ASMS residuals');
+    return @attr;
 }
 
 sub _get_builds {

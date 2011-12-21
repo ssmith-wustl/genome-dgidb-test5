@@ -118,11 +118,17 @@ sub get_contig_lengths {
     return \%contig_lengths;
 }
 
+sub resolve_edit_dir {
+    my $self = shift;
+    return $self->assembly_directory.'/edit_dir';
+}
+
 sub create_edit_dir {
     my $self = shift;
 
-    unless ( -d $self->assembly_directory.'/edit_dir' ) {
-	Genome::Sys->create_directory( $self->assembly_directory.'/edit_dir' );
+    my $edit_dir = $self->resolve_edit_dir;
+    unless ( -d $edit_dir ) {
+        Genome::Sys->create_directory($edit_dir);
     }
 
     return 1;
@@ -210,23 +216,47 @@ sub get_scaffold_info_from_contigs_fa_file { #not used remove
 
 #post assemble standard output files
 sub contigs_bases_file {
-    return $_[0]->assembly_directory.'/edit_dir/contigs.bases';
+    my $self = shift;
+    return $self->resolve_contigs_bases_file;
+}
+sub resolve_contigs_bases_file {
+    my $self = shift;
+    return $self->resolve_edit_dir.'/contigs.bases';
 }
 
 sub contigs_quals_file {
-    return $_[0]->assembly_directory.'/edit_dir/contigs.quals';
+    my $self = shift;
+    return $self->resolve_contigs_quals_file;
+}
+sub resolve_contigs_quals_file {
+    return $_[0]->resolve_edit_dir.'/contigs.quals';
 }
 
 sub gap_sizes_file {
-    return $_[0]->assembly_directory.'/edit_dir/gap.txt';
+    my $self = shift;
+    return $self->resolve_gap_sizes_file;
+}
+sub resolve_gap_sizes_file {
+    my $self = shift;
+    return $self->resolve_edit_dir.'/gap.txt';
 }
 
 sub read_info_file {
-    return $_[0]->assembly_directory.'/edit_dir/readinfo.txt';
+    my $self = shift;
+    return $self->resolve_read_info_file;
+}
+sub resolve_read_info_file {
+    my $self = shift;
+    return $self->resolve_edit_dir.'/readinfo.txt';
 }
 
 sub reads_placed_file {
-    return $_[0]->assembly_directory.'/edit_dir/reads.placed';
+    my $self = shift;
+    return $self->resolve_reads_placed_file;
+}
+sub resolve_reads_placed_file {
+    my $self = shift;
+    return $self->resolve_edit_dir.'/reads.placed';
 }
 
 sub reads_unplaced_file {
@@ -273,7 +303,12 @@ sub input_collated_fastq_file {
 
 #velvet generated files
 sub velvet_afg_file {
-    return $_[0]->assembly_directory.'/velvet_asm.afg';
+    my $self = shift;
+    return $self->resolve_afg_file;
+}
+sub resolve_afg_file {
+    my $self = shift;
+    return $self->assembly_directory.'/velvet_asm.afg';
 }
 
 sub velvet_contigs_fa_file {

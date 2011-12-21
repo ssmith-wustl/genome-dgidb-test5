@@ -1955,42 +1955,51 @@ sub compare_output {
     }
 
     # Now compare metrics of both builds
+    my %metric_diffs = $self->diff_metrics($other_build);
+    @diffs{ keys %metric_diffs } = values %metric_diffs if %metric_diffs;
+
+    return %diffs;
+}
+
+sub diff_metrics {
+    my ($build1, $build2) = @_;
+
+    my %diffs;
     my %metrics;
-    map { $metrics{$_->name} = $_ } $self->metrics;
+    map { $metrics{$_->name} = $_ } $build1->metrics;
     my %other_metrics;
-    map { $other_metrics{$_->name} = $_ } $other_build->metrics;
+    map { $other_metrics{$_->name} = $_ } $build2->metrics;
 
     METRIC: for my $metric_name (sort keys %metrics) {
         my $metric = $metrics{$metric_name};
 
-        if ( grep { $metric_name =~ /$_/ } $self->metrics_ignored_by_diff ) {
+        if ( grep { $metric_name =~ /$_/ } $build1->metrics_ignored_by_diff ) {
             delete $other_metrics{$metric_name} if exists $other_metrics{$metric_name};
             next METRIC;
         }
 
         my $other_metric = delete $other_metrics{$metric_name};
         unless ($other_metric) {
-            $diffs{$metric_name} = "no build metric with name $metric_name found for build $other_build_id";
+            $diffs{$metric_name} = "no build metric with name $metric_name found for build ".$build2->id;
             next METRIC;
         }
 
         my $metric_value = $metric->value;
         my $other_metric_value = $other_metric->value;
         unless ($metric_value eq $other_metric_value) {
-            $diffs{$metric_name} = "metric $metric_name has value $metric_value for build $build_id and value " .
-            "$other_metric_value for build $other_build_id";
+            $diffs{$metric_name} = "metric $metric_name has value $metric_value for build ".$build1->id." and value " .
+            "$other_metric_value for build ".$build2->id;
             next METRIC;
         }
     }
 
     # Catch any extra metrics that the other build has
     for my $other_metric_name (sort keys %other_metrics) {
-        $diffs{$other_metric_name} = "no build metric with name $other_metric_name found for build $build_id";
+        $diffs{$other_metric_name} = "no build metric with name $other_metric_name found for build ".$build1->id;
     }
 
     return %diffs;
 }
-
 
 sub snapshot_revision {
     my $self = shift;
@@ -2108,8 +2117,8 @@ sub input_allocation{
     my @input_values = map { $_->value } $self->inputs;
     for my $input ($self->inputs) {
         my $value = $input->value;
-        my $allocation = Genome::Disk::Allocation->get(owner_id => $value->id, owner_class_name => $value->class);
-        if ($allocation){
+        next unless ($value);
+        foreach my $allocation ( Genome::Disk::Allocation->get(owner_id => $value->id, owner_class_name => $value->class) ) {
             push @allocations, $allocation;
         }
     }
@@ -2122,6 +2131,7 @@ sub software_result_allocations{
     my @sru = Genome::SoftwareResult::User->get( user_id => $self->id, user_class_name => $self->subclass_name );
     foreach my $sru (@sru) {
         my $sr = $sru->software_result;
+        next unless ($sr);
         my $allocation = Genome::Disk::Allocation->get(owner_id => $sr->id, owner_class_name => $sr->class);
         if ($allocation){
             push @allocations, $allocation;
@@ -2136,7 +2146,7 @@ sub all_allocations {
     #get self allocation
     push @allocations, $self->disk_allocation;
     #get input allocations
-    push @allocations, $self->input_allocations;
+    push @allocations, $self->input_allocation;
     #get sr allocations
     push @allocations, $self->software_result_allocations;
     #get all allocations from from_builds

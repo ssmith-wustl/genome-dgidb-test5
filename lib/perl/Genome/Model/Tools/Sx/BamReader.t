@@ -20,12 +20,12 @@ ok(-d $tmpdir, 'Created temp dir');
 my $fasta = $tmpdir.'/out.fasta';
 my $qual = $tmpdir.'/out.qual';
 
-my $dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Sx/';
-my $bam = $dir.'/reader_writer.bam';
+my $dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Sx/Sam/v1';
+my $bam = $dir.'/rw.bam';
 ok(-s $bam, 'bam exists') or die;
-my $example_fasta = $dir.'/reader_writer.sam.fasta';
+my $example_fasta = $dir.'/example.fasta';
 ok(-s $example_fasta, 'example fasta exists') or die;
-my $example_qual = $example_fasta.'.qual';
+my $example_qual = $dir.'/example.qual';
 ok(-s $example_qual, 'example qual exists') or die;
 
 my $cmd = "gmt sx -input $bam -output file=$fasta:qual_file=$qual";

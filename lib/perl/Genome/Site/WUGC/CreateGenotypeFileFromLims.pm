@@ -3,13 +3,6 @@ package Genome::Site::WUGC::CreateGenotypeFileFromLims;
 use strict;
 use warnings;
 
-use GSCApp;
-
-if ( not App::Init->initialized ) {
-    App::DB->db_access_level('rw');
-    App->init;
-}
-
 use Genome;
 
 use Data::Dumper 'Dumper';
@@ -35,6 +28,12 @@ class Genome::Site::WUGC::CreateGenotypeFileFromLims {
 
 sub execute {
     my $self = shift;
+
+    use GSCApp;
+    if ( not App::Init->initialized ) {
+        App::DB->db_access_level('rw');
+        App->init;
+    }
 
     # dbSNP
     my $db_snp = GSC::SNP::DB::Info->get(snp_db_build => $self->db_snp_version);

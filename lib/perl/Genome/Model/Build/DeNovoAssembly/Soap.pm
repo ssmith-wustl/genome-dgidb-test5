@@ -256,7 +256,7 @@ sub assembler_rusage {
         return "-R 'select[type==LINUX64] rusage[internet_download_mbps=100] span[hosts=1]'";
     }
 
-    my $mem = 92000;
+    my $mem = 30000;
     my $queue = 'apipe';
     $queue = 'alignment-pd' if $self->run_by eq 'apipe-tester';
     return "-q $queue -n 4 -R 'span[hosts=1] select[type==LINUX64 && mem>$mem] rusage[mem=$mem]' -M $mem".'000';
@@ -431,7 +431,7 @@ sub metrics_ignored_by_diff {
     return ('assembly length', 'average contig length', 'average contig length gt 300',
 	    'average supercontig length', 'average supercontig length gt 300',
 	    'config_file', 'contigs', 'n50 contig length', 'n50 supercontig length',
-	    'n50_contig_length_gt_300', 'n50_supercontig_length_gt_300');
+	    'n50_contig_length_gt_500', 'n50_supercontig_length_gt_500');
 }
 
 sub dirs_ignored_by_diff {

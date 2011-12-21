@@ -18,6 +18,18 @@ sub calculate_average_quality {
     }
     return sprintf('%.0f', $total / length($quality_string));
 }
+
+sub calculate_qualities_over_minumum {
+    my ($self, $quality_string, $min) = @_;
+    Carp::confess('No quality string to calculate qualities over minimum.') if not defined $quality_string and not length $quality_string;
+    Carp::confess('No minimum calculate qualities over minimum.') if not defined $min;
+    my $total = 0;
+    for my $q ( split('', $quality_string) ) {
+        next if ord($q) < $min;
+        $total++;
+    }
+    return $total;
+}
 #<>#
 
 1;

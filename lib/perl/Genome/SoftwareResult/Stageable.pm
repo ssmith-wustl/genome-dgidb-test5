@@ -159,7 +159,7 @@ sub _reallocate_disk_allocation {
     $self->status_message('Resizing the disk allocation...');
     my $rv = eval { $allocation->reallocate };
     my $error = $@;
-    if ($rv != 1) {
+    if (!$rv) {
         my $warning_message = 'Failed to reallocate disk allocation (' . $allocation->__display_name__ . ').';
         $warning_message   .= " Error: '$error'." if $error;
         $self->warning_message($warning_message);

@@ -12,9 +12,17 @@ class Genome::Model::Metric::Command::Show {
             is => 'Genome::Model',
             is_many => 1,
             is_input => 1,
-            shell_args_position => 1,
+            is_optional => 1,
             require_user_verify => 0,
             doc => 'Models to show metrics. Uses last complete build. Resolved via string from the command line.',
+        },
+        builds => {
+            is => 'Genome::Model::Build',
+            is_many => 1,
+            is_input => 1,
+            is_optional => 1,
+            require_user_verify => 0,
+            doc => 'Builds to show metrics. Resolved via string from the command line.',
         },
         build_attributes => {
             is => 'Text',
@@ -41,22 +49,28 @@ sub help_detail {
 sub execute {
     my $self = shift;
 
-    my @models = $self->models;
-    if ( not @models ) {
-        $self->error_message('No models given!');
+    my %builds;
+    for my $model ( $self->models ) {
+        my $build = $model->last_complete_build;
+        next if not $build;
+        $builds{ $build->id } = $build;
+    }
+
+    for my $build ( $self->builds ) {
+        $builds{ $build->id } = $build;
+    }
+
+    if ( not %builds ) {
+        $self->error_message('No builds given!');
         return;
     }
-    $self->status_message('Models: '.@models);
-
-    my @builds = map { $_->last_complete_build } @models;
-    $self->status_message('Builds: '.@builds);
-    return if not @builds;
+    $self->status_message('Builds: '.keys(%builds));
 
     $self->build_attributes([qw/ model_name /]) if not $self->build_attributes;
     my @build_attributes = $self->build_attributes;
 
     my @metrics;
-    for my $build ( @builds ) {
+    for my $build ( map { $builds{$_} } sort { $a <=> $b } keys %builds ) {
         my @build_metrics = $build->metrics;
         push @metrics, { 
             map({ $_, $build->$_ } @build_attributes),

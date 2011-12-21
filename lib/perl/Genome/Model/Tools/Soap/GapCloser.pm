@@ -76,17 +76,12 @@ sub __errors__ {
             );
             return @errors;
         }
-        if ( my @defined_inputs = grep { defined $self->$_ } @input_file_methods ) {
-            push @errors, UR::Object::Tag->create(
-                type => 'invalid',
-                properties => [qw/ assembly_directory /],
-                desc => "Gave inputs (@defined_inputs) and assembly_directory. Please only give assembly_directory or the inputs files!",
-            );
-            return @errors;
+        if ( not -d $self->assembly_directory.'/edit_dir' ) {
+            Genome::Sys->create_directory( $self->assembly_directory.'/edit_dir' );
         }
-        $self->a( $self->_resolve_scaffold_sequence_file );
-        $self->b( $self->_resolve_config_file );
-        $self->o( $self->assembly_directory.'/edit_dir/gapfill' );
+        $self->a( $self->_resolve_scaffold_sequence_file ) unless $self->a;
+        $self->b( $self->_resolve_config_file ) unless $self->b;
+        $self->o( $self->assembly_directory.'/edit_dir/gapfill' ) unless $self->o;
     }
     elsif ( not $self->o ) { 
         push @errors, UR::Object::Tag->create(
@@ -133,12 +128,20 @@ sub execute {
         $self->b,
         $self->p,
     );
-    $self->status_message("Running GapCloser with command: $cmd");
+    $self->status_message("Run GapCloser command: $cmd");
     my $rv = eval{ Genome::Sys->shellcmd( cmd => $cmd ) };
     if ( $rv ) {
         $self->error_message('GapCloser shell command failed!');
         return;
     }
+    $self->status_message('Run GapCloser command...OK');
+
+    my $output = $self->o;
+    if ( not -s $output ) {
+        $self->error_message("GapCloaser ran ok, but output file ($output) was not created!");
+        return;
+    }
+    $self->status_message("Output file exists: $output");
 
     $self->status_message('SOAP GapCloser...DONE');
 

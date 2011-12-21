@@ -10,7 +10,7 @@ use Test::More;
 
 use_ok('Genome::Model::Tools::Allpaths::Metrics') or die;
 
-my $test_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Allpaths/Metrics/v1';
+my $test_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Allpaths/Metrics/v2';
 my $example_metrics_file = $test_dir.'/metrics.txt';
 
 my $temp_dir = Genome::Sys->create_temp_directory();
@@ -26,6 +26,6 @@ ok($metrics->execute, "execute") or die;
 
 is(File::Compare::compare($metrics_file, $example_metrics_file), 0, "files match");
 
-#print "gvimdiff $metrics_file $example_metrics_file\n"; <STDIN>;
+#print "gvimdiff $metrics_file $example_metrics_file\n"; system "gvimdiff $metrics_file $example_metrics_file"; <STDIN>;
 done_testing();
 exit;

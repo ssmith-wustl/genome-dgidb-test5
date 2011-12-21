@@ -64,12 +64,11 @@ sub _generate_content {
     $results_node->addChild( $doc->createAttribute( "query",        $query ) );
     $results_node->addChild( $doc->createAttribute( "params",        $param_str) );
     $results_node->addChild( $doc->createAttribute( "num-found", $response->content->{'response'}->{'numFound'} ));
-
+#    $results_node->addChild( $doc->createAttribute( "auth-user", $ENV{'REMOTE_USER'} || Genome::Sys->username() ));
 
 #   HIGHLIGHTING XML
 
     my $highlights_node = $doc->createElement('highlights');
-
 
     my $highlights_raw = $response->content->{'highlighting'};
     for my $found_id (keys %$highlights_raw) {
@@ -176,21 +175,22 @@ sub icon_prefix {
     my ($type) = @_;
 
     my $icon_prefix = {
-        'work-order'             => 'genome_workorder',
-        'project'                => 'genome_project',
-        'mail'                   => 'genome_sys_email',
-        'wiki-page'              => 'genome_wiki_document',
-        'model'                  => 'genome_model',
-        'modelgroup'             => 'genome_modelgroup',
-        'population_group'       => 'genome_populationgroup',
-        'disk_group'             => 'genome_disk_group',
-        'disk_volume'            => 'genome_disk_volume',
-        'illumina_run'           => 'genome_instrumentdata_flowcell',
-        'individual'             => 'genome_individual',
-        'library'                => 'genome_library',
-        'processing_profile'     => 'genome_processingprofile',
-        'sample'                 => 'genome_sample',
-        'taxon'                  => 'genome_taxon',
+        'work-order'         => 'genome_workorder',
+        'project'            => 'genome_project',
+        'mail'               => 'genome_sys_email',
+        'wiki-page'          => 'genome_wiki_document',
+        'model'              => 'genome_model',
+        'modelgroup'         => 'genome_modelgroup',
+        'population_group'   => 'genome_populationgroup',
+        'disk_group'         => 'genome_disk_group',
+        'disk_volume'        => 'genome_disk_volume',
+        'illumina_run'       => 'genome_instrumentdata_flowcell',
+        'individual'         => 'genome_individual',
+        'library'            => 'genome_library',
+        'processing_profile' => 'genome_processingprofile',
+        'sample'             => 'genome_sample',
+        'taxon'              => 'genome_taxon',
+        'user'               => 'genome_sys_user',
         'solexa_instrument_data' => 'genome_instrumentdata',
     };
 

@@ -22,10 +22,21 @@ sub read {
         id => $tokens[0],
         seq => $tokens[9],
         qual => $tokens[10],
+        flag => $tokens[1],
     };
 
     for my $attr (qw/ id seq qual /) {
         Carp::confess("No $attr on line: $line") if not defined $seq->{$attr};
+    }
+
+    if ( $seq->{flag} & 0x40 ) { # forward
+        $seq->{id} .= '/1';
+    }
+    elsif ( $seq->{flag} & 0x80 ) { # forward
+        $seq->{id} .= '/2';
+    }
+    else {
+        Carp::confess('Invalid bit flag in sequence: '.Data::Dumper::Dumper($seq));
     }
 
     if ( length $seq->{seq} != length $seq->{qual} ) {

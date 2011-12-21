@@ -42,6 +42,17 @@ sub base_web_uri {
     }
 }
 
+my $auth_user = Genome::Sys->username();
+sub auth_user {
+
+    my ($class, $u) = @_;
+    if (defined($u)) {
+        $auth_user = $u;
+    }
+
+    return $auth_user;
+}
+
 sub domain {
     return 'genome.wustl.edu';
 }
@@ -49,7 +60,7 @@ sub domain {
 sub user_email {
     my $self = shift;
     my $user = shift;
-    $user ||= Genome::Sys->username;
+    $user ||= $ENV{REMOTE_USER} || Genome::Sys->username();
     return join('@', $user, Genome::Config::domain());
 }
 

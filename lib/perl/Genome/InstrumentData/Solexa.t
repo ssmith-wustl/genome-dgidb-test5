@@ -24,8 +24,5 @@ is($pe2->total_bases_read('reverse-only'),51200, 'reverse only total_bases_read 
 is($pe2->total_bases_read('forward-only') + $pe2->total_bases_read('reverse-only'), $pe2->total_bases_read,
    'forward and reverse pairs add up to total bases');
 
-my $ii = $pe2->index_illumina;
-ok($ii, 'index illumina');
-
 done_testing();
 exit;

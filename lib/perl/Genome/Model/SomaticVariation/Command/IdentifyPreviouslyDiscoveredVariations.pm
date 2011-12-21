@@ -231,6 +231,10 @@ sub skip_run {
     my $build = $self->build;
 
     Genome::Sys->create_directory($build->data_directory."/novel");
+
+    my $accessor = join('_', $variant_type, 'detection_strategy');
+    return 1 unless $build->model->$accessor; #don't make empty files if we're not running this
+
     my $novel = join('/', $build->data_directory, 'novel', $variant_type . 's.hq.novel.v2.bed');
     my $previously_detected = join('/', $build->data_directory, 'novel', $variant_type . 's.hq.previously_detected.v2.bed');
 
@@ -240,7 +244,7 @@ sub skip_run {
         $detected_path = $r->path($variant_type . '.hq.bed');
     } else {
         my $version = '2';
-        $detected_path = ($variant_type eq 'snv' && defined($build->loh_version)) ? $build->data_set_path("loh/snvs.somatic",$version,'bed') : $build->data_set_path("variants/snvs.hq",$version,"bed");
+        $detected_path = ($variant_type eq 'snv' && defined($build->loh_version)) ? $build->data_set_path("loh/snvs.somatic",$version,'bed') : $build->data_set_path("variants/" . $variant_type . "s.hq",$version,"bed");
     }
     File::Copy::copy($detected_path, $novel);
     system("touch $previously_detected");
