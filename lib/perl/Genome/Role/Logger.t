@@ -24,7 +24,7 @@ sub test_stderr_tie {
     $logger->log_dispatch();
 
     my $test_message = "Test.\n";
-    my $expected_file_content = "NOTICE: $test_message";
+    my $expected_file_content = "STDERR: $test_message";
     print STDERR $test_message;
 
     my $tmp_file_content = <$tmp_file>;

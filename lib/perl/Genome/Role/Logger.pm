@@ -96,6 +96,13 @@ for my $log_level (@log_levels) {
     *$log_level = $sub_ref;
 }
 
+sub stderror {
+    my ($self, $message) = @_;
+    chomp $message;
+    $message = uc('stderr') . ": $message\n";
+    return $self->log_dispatch->error($message);
+}
+
 # Thanks "socket puppet"
 # http://stackoverflow.com/questions/8393667/is-there-a-way-to-redirect-prints-to-stderr-so-they-go-to-logdispatch
 
@@ -107,7 +114,7 @@ sub TIEHANDLE {
 
 sub PRINT {
     my $self = shift;
-    $self->notice(@_);
+    $self->stderror(@_);
 }
 
 1;
