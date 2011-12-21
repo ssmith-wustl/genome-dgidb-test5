@@ -277,11 +277,10 @@ sub resolve_processing_profile {
 
     my $pp;
     if($self->tumor_sample and not $self->normal_sample) {
-        #Nov 2011 Single-Bam Validation
-        $pp = Genome::ProcessingProfile::SomaticValidation->get(2658053);
+        $pp = Genome::ProcessingProfile::SomaticValidation->default_single_bam_profile();
     } else {
         #Nov 2011 default Somatic Validation
-        $pp = Genome::ProcessingProfile::SomaticValidation->get(2656116);
+        $pp = Genome::ProcessingProfile::SomaticValidation->default_profile();
     }
 
     $self->processing_profile($pp);
