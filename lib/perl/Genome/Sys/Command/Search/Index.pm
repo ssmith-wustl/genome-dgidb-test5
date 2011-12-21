@@ -26,11 +26,19 @@ class Genome::Sys::Command::Search::Index {
             is => 'Number',
             default => 10,
         },
+        tie_stderr => {
+            is => 'Boolean',
+            default => 1,
+            doc => '(warning) globally tie STDERR to this logger',
+        },
     ],
 };
 
 sub execute {
     my $self = shift;
+
+    # Manually init logger so it ties STDERR.
+    $self->log_dispatch();
 
     if ($self->subject_text ne 'list') {
         my $confirmed = $self->prompt_for_confirmation() if $self->confirm;
