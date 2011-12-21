@@ -87,6 +87,12 @@ sub dispatch_request {
         };
 
     },
+    sub (/view/whoami) {
+        my $c = { username => $ENV{'REMOTE_USER'} || Genome::Sys->username() };
+        use JSON;
+        my $body = to_json( $c, { ascii => 1, allow_nonref => 1, });
+        return [ 200, [ 'Content-type'   => "text/plain" ], [$body] ];
+    },
     sub (/view/x/...) {
         redispatch_psgi($app{'File.psgi'}, $request);
     },

@@ -648,7 +648,7 @@ td.stage_name {
 }
 
 .project_box {
-    margin: 0 0 0 0;
+    margin: 0px 0px 0px 0px;
     padding: 10px;
     background: #FFF;
     border-top: 1px solid #CCC;
@@ -699,7 +699,7 @@ td.stage_name {
     margin: 10px 0 10px 0;
     padding: 0;
     list-style: none;
-    margin-left: 22px;
+    margin-left: 7px;
 }
 
 .sidebar_search ul li a {
