@@ -65,7 +65,7 @@ class Genome::Model::ClinSeq::Command::GetBamReadCounts {
 };
 
 sub help_synopsis {
-    return <<EOS
+  return <<EOS
   genome model clin-seq get-bam-read-counts \
     --positions_file=snvs.hq.tier1.v1.annotated.compact.tsv \
     --wgs_som_var_build='2880644349' \
@@ -76,26 +76,25 @@ EOS
 }
 
 sub __errors__ {
-    my $self = shift;
-    my @errors = $self->SUPER::__errors__(@_);
+  my $self = shift;
+  my @errors = $self->SUPER::__errors__(@_);
 
-    unless (($self->wgs_som_var_build || $self->exome_som_var_build || $self->rna_seq_normal_build || $self->rna_seq_tumor_build) || ($self->data_paths_file)) {
-        push @errors, UR::Object::Tag->create(
-            type => 'error',
-            properties => [qw/wgs_som_var_build exome_som_var_build rna_seq_normal_build rna_seq_tumor_build/],
-            desc => 'at least one of the four build types (or --data_paths_file) must be specified!'
-        );
-    }
+  unless (($self->wgs_som_var_build || $self->exome_som_var_build || $self->rna_seq_normal_build || $self->rna_seq_tumor_build) || ($self->data_paths_file)) {
+      push @errors, UR::Object::Tag->create(
+	  type => 'error',
+	  properties => [qw/wgs_som_var_build exome_som_var_build rna_seq_normal_build rna_seq_tumor_build/],
+	  desc => 'at least one of the four build types (or --data_paths_file) must be specified!'
+      );
+  }
 
-    unless (-e $self->positions_file) {
-        push @errors, UR::Object::Tag->create(
-            type => 'error',
-            properties => ['positions_file'],
-            desc => RED . "Positions file: " . $self->positions_file . " not found" . RESET,
-        );
-    }
-
-    return @errors;
+  unless (-e $self->positions_file) {
+      push @errors, UR::Object::Tag->create(
+	  type => 'error',
+	  properties => ['positions_file'],
+	  desc => RED . "Positions file: " . $self->positions_file . " not found" . RESET,
+      );
+  }
+  return @errors;
 }
 
 sub help_usage {
@@ -105,136 +104,132 @@ sub help_usage {
 }
 
 sub execute {
-    my $self = shift;
-    
-    eval "require Bio::DB::Sam";
-    if ($@) {
-        die "Failed to use the Bio::DB::Sam module.  Use /usr/bin/perl (5.10 or greater!) instead of /gsc/bin/perl.:\n$@";
-    }
+  my $self = shift;
+  
+  eval "require Bio::DB::Sam";
+  if ($@) {
+      die "Failed to use the Bio::DB::Sam module.  Use /usr/bin/perl (5.10 or greater!) instead of /gsc/bin/perl.:\n$@";
+  }
 
-    my $positions_file = $self->positions_file; 
-    my $wgs_som_var_build = $self->wgs_som_var_build;
-    my $exome_som_var_build = $self->exome_som_var_build;
-    my $rna_seq_normal_build = $self->rna_seq_normal_build;
-    my $rna_seq_tumor_build = $self->rna_seq_tumor_build;
-    my $data_paths_file = $self->data_paths_file;
-    my $no_fasta_check = $self->no_fasta_check;
-    my $output_file = $self->output_file;
-    my $verbose = $self->verbose;
-
-# TODO: indent this, but for now it's nice for diffing...
+  my $positions_file = $self->positions_file; 
+  my $wgs_som_var_build = $self->wgs_som_var_build;
+  my $exome_som_var_build = $self->exome_som_var_build;
+  my $rna_seq_normal_build = $self->rna_seq_normal_build;
+  my $rna_seq_tumor_build = $self->rna_seq_tumor_build;
+  my $data_paths_file = $self->data_paths_file;
+  my $no_fasta_check = $self->no_fasta_check;
+  my $output_file = $self->output_file;
+  my $verbose = $self->verbose;
 
 
-#Get Entrez and Ensembl data for gene name mappings
-my $entrez_ensembl_data = &loadEntrezEnsemblData();
+  #Get Entrez and Ensembl data for gene name mappings
+  my $entrez_ensembl_data = &loadEntrezEnsemblData();
+  #Import SNVs from the specified file
 
-#Import SNVs from the specified file
-my $result = &importPositions('-positions_file'=>$positions_file);
-my $snvs = $result->{'snvs'};
-my $snv_header = $result->{'header'};
-#print Dumper $result;
+  my $result = &importPositions('-positions_file'=>$positions_file);
+  my $snvs = $result->{'snvs'};
+  my $snv_header = $result->{'header'};
+  #print Dumper $result;
 
-#Get BAM file paths from build IDs.  Perform sanity checks
-my $data;
-if ($data_paths_file){
-  $data = &getFilePaths_Manual('-data_paths_file'=>$data_paths_file);
-}else{
-  $data = &getFilePaths_Genome(
+  #Get BAM file paths from build IDs.  Perform sanity checks
+  my $data;
+  if ($data_paths_file){
+    $data = &getFilePaths_Manual('-data_paths_file'=>$data_paths_file);
+  }else{
+    $data = &getFilePaths_Genome(
       '-wgs_som_var_model_id'     => ($wgs_som_var_build      ? $wgs_som_var_build->model_id : undef), 
       '-exome_som_var_model_id'   => ($exome_som_var_build    ? $exome_som_var_build->model_id : undef), 
       '-rna_seq_normal_model_id'  => ($rna_seq_normal_build   ? $rna_seq_normal_build->model_id : undef), 
       '-rna_seq_tumor_model_id'   => ($rna_seq_tumor_build    ? $rna_seq_tumor_build->model_id : undef)
-  );
-}
-#print Dumper $data;
-
-
-#For each mutation get BAM read counts for a tumor/normal pair of BAM files
-foreach my $bam (sort {$a <=> $b} keys %{$data}){
-  my $data_type = $data->{$bam}->{data_type};
-  my $sample_type = $data->{$bam}->{sample_type};
-  my $bam_path = $data->{$bam}->{bam_path};
-  my $ref_fasta = $data->{$bam}->{ref_fasta};
-  my $snv_count = keys %{$snvs};
-
-  if ($verbose){print YELLOW, "\n\nSNV count = $snv_count\n$data_type\n$sample_type\n$bam_path\n$ref_fasta\n", RESET};
-  my $counts = &getBamReadCounts('-snvs'=>$snvs, '-data_type'=>$data_type, '-sample_type'=>$sample_type, '-bam_path'=>$bam_path, '-ref_fasta'=>$ref_fasta, '-verbose'=>$verbose, '-no_fasta_check'=>$no_fasta_check);
-  $data->{$bam}->{read_counts} = $counts;
-}
-
-
-#Get the FPKM and calculate a percentile value from the RNAseq build dir - do this for tumor and normal if available
-foreach my $bam (sort {$a <=> $b} keys %{$data}){
-  my $data_type = $data->{$bam}->{data_type};
-  my $sample_type = $data->{$bam}->{sample_type};
-  unless ($data_type eq "RNAseq"){
-    next();
+     );
   }
-  my $build_dir = $data->{$bam}->{build_dir};
-  my $exp = &getExpressionValues('-snvs'=>$snvs, '-build_dir'=>$build_dir, '-entrez_ensembl_data'=>$entrez_ensembl_data, '-verbose'=>$verbose);
-  $data->{$bam}->{gene_expression} = $exp;
-}
+
+  #For each mutation get BAM read counts for a tumor/normal pair of BAM files
+  foreach my $bam (sort {$a <=> $b} keys %{$data}){
+    my $data_type = $data->{$bam}->{data_type};
+    my $sample_type = $data->{$bam}->{sample_type};
+    my $bam_path = $data->{$bam}->{bam_path};
+    my $ref_fasta = $data->{$bam}->{ref_fasta};
+    my $snv_count = keys %{$snvs};
+
+    if ($verbose){print YELLOW, "\n\nSNV count = $snv_count\n$data_type\n$sample_type\n$bam_path\n$ref_fasta\n", RESET};
+    my $counts = &getBamReadCounts('-snvs'=>$snvs, '-data_type'=>$data_type, '-sample_type'=>$sample_type, '-bam_path'=>$bam_path, '-ref_fasta'=>$ref_fasta, '-verbose'=>$verbose, '-no_fasta_check'=>$no_fasta_check);
+    $data->{$bam}->{read_counts} = $counts;
+  }
 
 
-#Create an output file that is the same as the input file with new columns appended:
-#All of the following are optional
-#1.) WGS Normal Ref Count, WGS Normal Var Count, WGS Normal Var Frequency
-#2.) WGS Tumor Ref Count, WGS Tumor Var Count, WGS Tumor Var Frequency
-#3.) Exome Normal Ref Count, Exome Normal Var Count, Exome Normal Var Frequency
-#4.) Exome Tumor Ref Count, Exome Tumor Var Count, Exome Tumor Var Frequency
-#5.) RNAseq Normal Ref Count, RNAseq Normal Var Count, RNAseq Normal Var Frequency - usually not available
-#6.) RNAseq Normal Gene FPKM, RNAseq Normal Gene Percentile
-#7.) RNAseq Tumor Ref Count, RNAseq Tumor Var Count, RNAseq Tumor Var Frequency
-#8.) RNAseq Tumor Gene FPKM, RNAseq Tumor Gene Percentile
-
-my %new_snv;
-foreach my $bam (sort {$a <=> $b} keys %{$data}){
-  my $data_type = $data->{$bam}->{data_type};
-  my $sample_type = $data->{$bam}->{sample_type};
-  my $read_counts = $data->{$bam}->{read_counts};
-
-  my $new_header = "\t$data_type"."_"."$sample_type"."_ref_rc\t"."$data_type"."_"."$sample_type"."_var_rc\t"."$data_type"."_"."$sample_type"."_VAF";
-  $snv_header .= $new_header;
-  foreach my $snv_pos (keys %{$read_counts}){
-    my $total_rc = $read_counts->{$snv_pos}->{total_rc};
-    my $ref_rc = $read_counts->{$snv_pos}->{ref_rc};
-    my $var_rc = $read_counts->{$snv_pos}->{var_rc};
-    my $var_allele_frequency = $read_counts->{$snv_pos}->{var_allele_frequency};
-    if ($new_snv{$snv_pos}){
-      $new_snv{$snv_pos}{read_count_string} .= "\t$ref_rc\t$var_rc\t$var_allele_frequency";
-    }else{
-      $new_snv{$snv_pos}{read_count_string} = "\t$ref_rc\t$var_rc\t$var_allele_frequency";
+  #Get the FPKM and calculate a percentile value from the RNAseq build dir - do this for tumor and normal if available
+  foreach my $bam (sort {$a <=> $b} keys %{$data}){
+    my $data_type = $data->{$bam}->{data_type};
+    my $sample_type = $data->{$bam}->{sample_type};
+    unless ($data_type eq "RNAseq"){
+      next();
     }
+    my $build_dir = $data->{$bam}->{build_dir};
+    my $exp = &getExpressionValues('-snvs'=>$snvs, '-build_dir'=>$build_dir, '-entrez_ensembl_data'=>$entrez_ensembl_data, '-verbose'=>$verbose);
+    $data->{$bam}->{gene_expression} = $exp;
   }
 
-  if (defined($data->{$bam}->{gene_expression})){
-    my $gene_exp = $data->{$bam}->{gene_expression};
-    my $new_header = "\t$data_type"."_"."$sample_type"."_gene_FPKM\t"."$data_type"."_"."$sample_type"."_gene_FPKM_percentile";
+
+  #Create an output file that is the same as the input file with new columns appended:
+  #All of the following are optional
+  #1.) WGS Normal Ref Count, WGS Normal Var Count, WGS Normal Var Frequency
+  #2.) WGS Tumor Ref Count, WGS Tumor Var Count, WGS Tumor Var Frequency
+  #3.) Exome Normal Ref Count, Exome Normal Var Count, Exome Normal Var Frequency
+  #4.) Exome Tumor Ref Count, Exome Tumor Var Count, Exome Tumor Var Frequency
+  #5.) RNAseq Normal Ref Count, RNAseq Normal Var Count, RNAseq Normal Var Frequency - usually not available
+  #6.) RNAseq Normal Gene FPKM, RNAseq Normal Gene Percentile
+  #7.) RNAseq Tumor Ref Count, RNAseq Tumor Var Count, RNAseq Tumor Var Frequency
+  #8.) RNAseq Tumor Gene FPKM, RNAseq Tumor Gene Percentile
+
+  my %new_snv;
+  foreach my $bam (sort {$a <=> $b} keys %{$data}){
+    my $data_type = $data->{$bam}->{data_type};
+    my $sample_type = $data->{$bam}->{sample_type};
+    my $read_counts = $data->{$bam}->{read_counts};
+
+    my $new_header = "\t$data_type"."_"."$sample_type"."_ref_rc\t"."$data_type"."_"."$sample_type"."_var_rc\t"."$data_type"."_"."$sample_type"."_VAF";
     $snv_header .= $new_header;
-    foreach my $snv_pos (keys %{$gene_exp}){
-      my $fpkm = $gene_exp->{$snv_pos}->{FPKM};
-      my $percentile = $gene_exp->{$snv_pos}->{percentile};
-      my $rank = $gene_exp->{$snv_pos}->{rank};
+    foreach my $snv_pos (keys %{$read_counts}){
+      my $total_rc = $read_counts->{$snv_pos}->{total_rc};
+      my $ref_rc = $read_counts->{$snv_pos}->{ref_rc};
+      my $var_rc = $read_counts->{$snv_pos}->{var_rc};
+      my $var_allele_frequency = $read_counts->{$snv_pos}->{var_allele_frequency};
       if ($new_snv{$snv_pos}){
-        $new_snv{$snv_pos}{read_count_string} .= "\t$fpkm\t$percentile";
+	$new_snv{$snv_pos}{read_count_string} .= "\t$ref_rc\t$var_rc\t$var_allele_frequency";
       }else{
-        $new_snv{$snv_pos}{read_count_string} = "\t$fpkm\t$percentile";
+	$new_snv{$snv_pos}{read_count_string} = "\t$ref_rc\t$var_rc\t$var_allele_frequency";
+      }
+    }
+
+    if (defined($data->{$bam}->{gene_expression})){
+      my $gene_exp = $data->{$bam}->{gene_expression};
+      my $new_header = "\t$data_type"."_"."$sample_type"."_gene_FPKM\t"."$data_type"."_"."$sample_type"."_gene_FPKM_percentile";
+      $snv_header .= $new_header;
+      foreach my $snv_pos (keys %{$gene_exp}){
+	my $fpkm = $gene_exp->{$snv_pos}->{FPKM};
+	my $percentile = $gene_exp->{$snv_pos}->{percentile};
+	my $rank = $gene_exp->{$snv_pos}->{rank};
+	if ($new_snv{$snv_pos}){
+	  $new_snv{$snv_pos}{read_count_string} .= "\t$fpkm\t$percentile";
+	}else{
+	  $new_snv{$snv_pos}{read_count_string} = "\t$fpkm\t$percentile";
+	}
       }
     }
   }
-}
 
-open (OUT, ">$output_file") || die "\n\nCould not open output file: $output_file\n\n";
-print OUT "$snv_header\n";
-foreach my $snv_pos (sort {$snvs->{$a}->{order} <=> $snvs->{$b}->{order}} keys %{$snvs}){
-  my $read_count_string = $new_snv{$snv_pos}{read_count_string};
-  print OUT "$snvs->{$snv_pos}->{line}"."$read_count_string\n";  
-}
-close (OUT);
+  open (OUT, ">$output_file") || die "\n\nCould not open output file: $output_file\n\n";
+  print OUT "$snv_header\n";
+  foreach my $snv_pos (sort {$snvs->{$a}->{order} <=> $snvs->{$b}->{order}} keys %{$snvs}){
+    my $read_count_string = $new_snv{$snv_pos}{read_count_string};
+    print OUT "$snvs->{$snv_pos}->{line}"."$read_count_string\n";  
+  }
+  close (OUT);
 
-if ($verbose){print "\n\n";}
+  if ($verbose){print "\n\n";}
 
-return 1;
+  return 1;
 }
 
 #########################################################################################################################################
