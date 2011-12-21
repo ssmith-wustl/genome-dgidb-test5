@@ -74,8 +74,10 @@ sub log_dispatch_init {
         );
     }
 
-    if ($self->tie_stderr) {
+    if ($self->tie_stderr && !$self->screen) {
         tie(*STDERR, $self);
+    } elsif ($self->tie_stderr && $self->screen) {
+        die 'Cannot tie stderr to logger and display to screen';
     }
 
     return $log;
