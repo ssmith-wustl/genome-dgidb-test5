@@ -23,7 +23,6 @@
 <style>
     .projectContainer {
         text-align: left;
-        text-indent: 10px;
     }
 
     .clickable {
