@@ -85,17 +85,20 @@ unless (-e $reference_annotations_dir){
   exit(1);
 }
 
+my $tophat_stats_file = $tophat_alignment_dir . "alignment_stats.txt";
 my $tophat_junctions_bed_file = $tophat_alignment_dir . "junctions.bed";
 my $new_tophat_junctions_bed_file = $working_dir . "junctions.bed";
 my $tophat_junctions_junc_file = $working_dir . "junctions.junc";
 my $tophat_junctions_anno_file = $working_dir . "junctions.strand.junc";
 
 #Make a copy of the junctions file and alignment stats file
-my $cp_cmd = "cp $tophat_junctions_bed_file $new_tophat_junctions_bed_file";
-if ($verbose){ print YELLOW, "\n\n$cp_cmd", RESET; }
-system($cp_cmd);
+my $cp_cmd1 = "cp $tophat_junctions_bed_file $new_tophat_junctions_bed_file";
+if ($verbose){ print YELLOW, "\n\n$cp_cmd1", RESET; }
+system($cp_cmd1);
 
-#Summarize the alignment stats file using an R script
+my $cp_cmd2 = "cp $tophat_stats_file $working_dir";
+if ($verbose){ print YELLOW, "\n\n$cp_cmd2", RESET; }
+system($cp_cmd2);
 
 
 #Convert junctions.bed to a .junc file
@@ -120,11 +123,15 @@ foreach my $gene_name_type (@gene_name_type){
   }
 }
 
+
 #Calculate gene level read counts and expression estimates from exon-exon junction counts
 #Gene level expression = sum of exon junction read counts for a gene / number of exon-exon junctions of that gene
 #Only known junctions 'DA' will be used for these calculations
 #Store the proportion of junctions of the gene that were observed at least 1X, 5X, 10X, etc.
 #Make sure the output file has both ENSG ID, Gene Symbol, and Mapped Gene Symbol
+
+
+#Summarize the alignment stats file using an R script
 
 
 #Feed resulting files into R and generate statistics (also supply known junctions file used for the analysis)
