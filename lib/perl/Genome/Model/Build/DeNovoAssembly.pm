@@ -540,11 +540,5 @@ sub chaff_rate { return $_[0]->reads_not_assembled_pct; }
 sub total_contig_bases { return $_[0]->assembly_length; }
 #<>#
 
-#< DIFF >#
-sub metrics_ignored_by_diff {
-    return (qw/ n50_contig_length_gt_500 n50_supercontig_length_gt_500 /);
-}
-#<>#
-
 1;
 
