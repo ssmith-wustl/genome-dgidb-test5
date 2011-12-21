@@ -148,4 +148,12 @@ sub default_filenames{
     return %default_filenames;
 }
 
+sub default_profile {
+    return __PACKAGE__->get(name => 'Dec 2011 default Somatic Validation Extension and Targeted Discovery');
+}
+
+sub default_single_bam_profile {
+    return __PACKAGE__->get(name => 'Dec 2011 Single-Bam Validation');
+}
+
 1;
