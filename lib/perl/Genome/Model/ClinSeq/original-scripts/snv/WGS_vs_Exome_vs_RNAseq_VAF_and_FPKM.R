@@ -299,8 +299,8 @@ plotVafHist = function(dataset, sample_type, data_type){
   filename = paste(sample_type, "_VAF_", data_type, "_hist.pdf", sep="")
   title_text = paste("Distribution of variant allele frequencies (", sample_type, " tissue, ", data_type, ")", sep="")
   x_label = paste(data_type, " ", sample_type, " variant allele frequency", sep="")
-  y_label = paste("Density (n = ", length(dataset[,colname]), " variants)", sep="")
   if (length(which(names(dataset)==colname))){
+    y_label = paste("Density (n = ", length(dataset[,colname]), " variants)", sep="")
     dataset[,"VAF"] = dataset[,colname]
     pdf(filename)
     print({
@@ -652,10 +652,10 @@ if (length(which(names(readcounts)=="RNAseq_Tumor_VAF")) & length(which(names(re
 
 #Write out the stats to a tsv file
 filename = "Stats.tsv"
-write.table(stats, file=filename, sep="\t", row.names=FALSE)
+write.table(stats, file=filename, sep="\t", row.names=FALSE, quote=FALSE)
 
 #Write out the amended data.frame so that the user can identify Mutant biased gene expression etc.
 filename = "ProcessedData.tsv"
-write.table(readcounts, file=filename, sep="\t", row.names=FALSE)
+write.table(readcounts, file=filename, sep="\t", row.names=FALSE, quote=FALSE)
 
 
