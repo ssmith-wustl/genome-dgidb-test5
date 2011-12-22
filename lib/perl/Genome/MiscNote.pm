@@ -17,7 +17,7 @@ class Genome::MiscNote {
         subject            => { is => 'UR::Object', id_class_by => 'subject_class_name', id_by => 'subject_id' },
         editor_id          => { is => 'Text' },
         entry_date         => { is => 'DateTime' },
-        auto_truncate_body_text => { is => 'Boolean', default => '0', is_transient => 1},
+        auto_truncate_body_text => { is => 'Boolean', default => '1', is_transient => 1},
     ],
     has_optional => [
         body_text          => { is => 'VARCHAR2', len => 4000, default => '' },

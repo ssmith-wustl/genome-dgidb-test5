@@ -4,7 +4,7 @@ use strict ;
 use warnings;
 use Genome;
 use Tie::File;
-
+use POSIX 'strftime';
 
 class Genome::Model::Tools::DetectVariants2::Samtools {
     is => ['Genome::Model::Tools::DetectVariants2::Detector'],
@@ -220,7 +220,7 @@ sub _detect_variants {
 #file (removing "N" and "." lines) 
 sub create_snv_indel_output_file {
     my $self = shift;
-    my $vcf_file    = $self->_vcf_scratch_output;
+    my $vcf_file    = $self->_vcf_staging_output;
     my $header_file = $self->_header_scratch_output;
     my $sani_file   = $self->_vcf_sani_staging_output;
     my $snv_tmp     = $self->_snv_scratch_output;
@@ -383,24 +383,6 @@ sub generate_genotype_detail_file {
     return $snp_gd->execute;
 }
 
-
-sub params_for_result {
-    my $self = shift;
-
-    my %params = (
-        detector_name         => $self->class,
-        detector_params       => $self->params,
-        detector_version      => $self->version,
-        aligned_reads         => $self->aligned_reads_input,
-        control_aligned_reads => undef,
-        reference_build_id    => $self->reference_build_id,
-        region_of_interest_id => $self->region_of_interest_id,
-        test_name             => $ENV{GENOME_SOFTWARE_RESULT_TEST_NAME} || undef,
-        chromosome_list       => undef,
-    );
-
-    return \%params;
-}
 
 #TODO clean all of this up. It is usually/should be based on logic from Genome::Model::Tools::Bed::Convert logic in process_source... 
 # this should be smarter about using that work ... perhaps process_source should call a method that just parses one line, and this method can be replaced by a call to that instead

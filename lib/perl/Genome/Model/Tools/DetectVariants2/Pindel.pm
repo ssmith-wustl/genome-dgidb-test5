@@ -226,9 +226,9 @@ sub default_chromosomes_as_string {
     return join(',', $_[0]->default_chromosomes);
 }
 
-sub params_for_result {
+sub params_for_detector_result {
     my $self = shift;
-    my ($params) = $self->SUPER::params_for_result;
+    my ($params) = $self->SUPER::params_for_detector_result;
 
     $params->{chromosome_list} = $self->default_chromosomes_as_string;
 

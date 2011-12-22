@@ -9,6 +9,7 @@ class Genome::ProcessingProfile::RnaSeq::Solexa {
     is => 'Genome::ProcessingProfile::RnaSeq',
 };
 
+__END__
 sub stages {
     my @stages = qw/
         alignment

@@ -13,7 +13,7 @@ class Genome::Project::Set::View::Status::Json {
                     name => 'members',
                     perspective => 'default',
                     toolkit => 'json',
-                    aspects => ['id', 'name', 'parts_count'],
+                    aspects => ['id', 'name', 'fixed_size_name','parts_count'],
                 }
             ]
         }

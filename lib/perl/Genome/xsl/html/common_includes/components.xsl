@@ -99,7 +99,7 @@
                cache.push(cacheImage);
                }
                }
-$(document).data('updatedOn', new Date("]]><xsl:copy-of select="$currentTime"/><![CDATA["));
+$(document).data('updatedOn', new Date(]]><xsl:copy-of select="$currentTime"/><![CDATA[));
 })(jQuery)
 
 ]]>
@@ -114,7 +114,7 @@ $(document).data('updatedOn', new Date("]]><xsl:copy-of select="$currentTime"/><
   <xsl:template name="app_header">
     <xsl:param name="app_name"/>
     <xsl:param name="icon"/>
-    <span id="authUser" style="visibility:hidden"><xsl:value-of select="$username"/></span>
+    <span id="authUser" style="visibility:hidden">-</span>
 
     <xsl:comment>template: /html/common_includes/components.xsl:app_header</xsl:comment>
 
@@ -200,7 +200,7 @@ $(document).data('updatedOn', new Date("]]><xsl:copy-of select="$currentTime"/><
 
     <ul class="app_menu" style="width: 450px">
       <li style="width: 50px; float: right">
-        <div id="userLogin" style="color: white"><xsl:value-of select="$username"/></div>
+        <div id="authUser" style="color: white">-</div>
       </li>
     <xsl:choose>
         <xsl:when test="$objectClassName='Genome::Search'">

@@ -448,7 +448,7 @@ sub execute {                               # replace with real execution logic.
             {
               print "MAF File not found, so generating one...\n";
               my $cmd_obj = Genome::Model::Tools::Capture::BuildMafFile->create(
-                data_dir => , $last_build_dir,
+                data_dir => $last_build_dir,
                 normal_sample => $normal_subject_name,
                 tumor_sample => $tumor_subject_name,
                 output_file => $sample_maf_file,
@@ -1214,16 +1214,23 @@ sub output_germline_files
     my $output_indel_gatk = $germline_dir . "/gatk.germline.indel";
     system("grep GERMLINE $gatk_germline_indels >$output_indel_gatk");
 
+    # If ROIs are defined, select only the indels within
     if($self->germline_roi_file)
     {
       system("java -jar /gsc/scripts/lib/java/VarScan/VarScan.jar limit $output_indel_gatk --regions-file " . $self->germline_roi_file . " --output-file $output_indel_gatk.roi");
       $output_indel_gatk .= ".roi";
     }
 
-    ## Also run transcript-annotation ##
+    # Convert the GATK output format to something that the annotator can parse
+    my $cmd_obj = Genome::Model::Tools::Gatk::FormatIndels->create(
+      variants_file => $output_indel_gatk,
+      output_file => "$output_indel_gatk.bed",
+    );
+    $cmd_obj->execute;
 
+    # Annotate the GATK germline indels since the somatic pipeline doesn't usually do it
     $cmd = "bsub -q long gmt annotate transcript-variants --annotation-filter top --reference-transcripts " . $self->reference_transcripts . " ";
-    $cmd .= "--variant-file $output_indel_gatk --output-file $output_indel_gatk.transcript-annotation";
+    $cmd .= "--variant-file $output_indel_gatk.bed --output-file $output_indel_gatk.transcript-annotation";
     system($cmd);
   }
   else

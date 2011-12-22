@@ -14,7 +14,7 @@ use Genome::Model::Tools::Pcap::Ace::Writer;
 use Genome::Model::Tools::Pcap::Ace::Reader;
 use Genome::Model::Tools::Pcap::Ace;
 use List::Util qw(min max);
-#use Genome::Model::Tools::Pcap::PhdDB;
+#use Genome::Model::Tools::Lims::PhdDB;
 use Genome::Model::Tools::Pcap::Phd;
 use GSC::Sequence::Assembly::AceAdaptor;
 my $pkg = "Genome::Model::Tools::Pcap::ContigTools";
@@ -703,7 +703,7 @@ sub _get_phd_object
     my ($self, $data_source) = @_;
     if(!($data_source =~ /\.ace/))
     {		
-        return Genome::Model::Tools::Pcap::PhdDB->new;
+        return Genome::Model::Tools::Lims::PhdDB->new;
     }
     else		
     {

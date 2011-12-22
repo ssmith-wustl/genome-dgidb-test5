@@ -100,7 +100,7 @@ sub execute {
 
     my $quake_input = $tmpdir.'/quake.fastq';
     my $quake_intput_writer = Genome::Model::Tools::Sx::Writer->create(
-        config => [ $quake_input.':type=sanger' ],
+        config => [ $quake_input.':type=sanger', ],
     );
     if ( not $quake_intput_writer ) {
         $self->error_message('Failed to open temp quake input!');
@@ -110,7 +110,7 @@ sub execute {
     $self->status_message('Write quake input: '.$quake_input);
     my $reader = $self->_input;
     my $seqs = $reader->read;
-    my $cnt = scalar @$seqs; 
+    my $cnt = @$seqs; 
     do {
         $quake_intput_writer->write($seqs);
     } while $seqs = $reader->read;
@@ -122,8 +122,9 @@ sub execute {
     $self->status_message('Run quake..OK');
 
     my $quake_output = $tmpdir.'/quake.cor.fastq';
-    my $quake_output_reader = Genome::Model::Tools::Sx::Reader->create(
-        config => [ "$quake_output:type=sanger:cnt=$cnt" ],
+
+    my $quake_output_reader = Genome::Model::Tools::Sx::FastqReader->create(
+        file => $quake_output,
     );
     if ( not $quake_output_reader ) {
         $self->error_message('Failed to open reader for quake output!');
@@ -132,8 +133,31 @@ sub execute {
 
     $self->status_message('Read quake output: '.$quake_output);
     my $writer = $self->_output;
-    while ( my $seqs = $quake_output_reader->read ) {
-        $writer->write($seqs);
+    if ( $cnt == 1 ) { 
+        $self->status_message('Writing as singles');
+        while ( my $seq = $quake_output_reader->read ) {
+            $writer->write([ $seq ]);
+        }
+    }
+    else { # collect sets
+        $self->status_message('Writing as sets');
+        my $regexp = qr{/\d+$|\.[bg]\d+$};
+        my @seqs = ( $quake_output_reader->read );
+        my $set_id = $seqs[0]->{id};
+        $set_id =~ s/$regexp//;
+        while ( my $seq = $quake_output_reader->read ) {
+            my $seq_id = $seq->{id};
+            $seq_id =~ s/$regexp//;
+            if ( $seq_id ne $set_id ) {
+                $writer->write(\@seqs);
+                # reset the set
+                @seqs = (); 
+                $set_id = $seq->{id};
+                $set_id =~ s/$regexp//;
+            }
+            push @seqs, $seq;
+        }
+        $writer->write(\@seqs) if @seqs;
     }
     $self->status_message('Read quake output...OK');
 
