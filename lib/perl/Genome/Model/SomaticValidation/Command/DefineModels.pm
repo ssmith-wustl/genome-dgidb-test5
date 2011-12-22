@@ -55,6 +55,8 @@ class Genome::Model::SomaticValidation::Command::DefineModels {
     doc => 'define models based on an existing model-group',
 };
 
+sub sub_command_category { 'analyst tools' }
+
 sub execute {
     my $self = shift;
 

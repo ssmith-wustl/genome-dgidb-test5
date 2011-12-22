@@ -25,6 +25,7 @@ class Genome::Model::SomaticValidation::Command::ImportVariants {
             doc => 'The results from running this command',
         },
     ],
+    doc => 'enter the variants for validation from many previous somatic-variation runs at once',
 };
 
 sub sub_command_category { 'analyst tools' }
