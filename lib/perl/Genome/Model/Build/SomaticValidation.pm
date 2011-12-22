@@ -89,6 +89,19 @@ class Genome::Model::Build::SomaticValidation {
             to => 'software_result',
             where => [label => 'control_merged_alignment'],
         },
+
+        coverage_stats_result => {
+            is => 'Genome::InstrumentData::AlignmentResult::Merged',
+            via => 'result_users',
+            to => 'software_result',
+            where => [label => 'coverage_stats_tumor'],
+        },
+        control_coverage_stats_result  => {
+            is => 'Genome::InstrumentData::AlignmentResult::Merged',
+            via => 'result_users',
+            to => 'software_result',
+            where => [label => 'coverage_stats_normal'],
+        },
     ],
 };
 
