@@ -309,11 +309,7 @@ sub _unload_transcripts {
     my $class_name = 'Genome::Transcript';
     for my $obj ($UR::Context::current->all_objects_loaded_unsubclassed($class_name)) {
         # Check the type against %local_dont_unload again, because all_objects_loaded()
-        # will return child class objects, as well as the class you asked for.  For example,
-        # GSC::DNA->a_o_l() will also return GSC::ReadExp objects, and the user may have wanted
-        # to save those.  We also check whether the $obj type isa one of the requested classes
-        # because, for example, GSC::Sequence->a_o_l returns GSC::ReadExp types, and the user
-        # may have wanted to save all GSC::DNAs
+        # will return child class objects, as well as the class you asked for.
         my $obj_type = ref $obj;
 #        next if ($local_dont_unload{$obj_type} ||
 #                 grep {$obj_type->isa($_) } @{$args{'dont_unload'}});

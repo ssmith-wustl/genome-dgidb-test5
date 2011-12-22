@@ -16,11 +16,10 @@ class Genome::InstrumentData {
         seq_id => { calculate_from => [ 'id' ], calculate => q{ return $id }, },
         subclass_name => { is => 'Text' },
         sequencing_platform => { is => 'Text' },
-        library_id => { is => 'Number' },
         library => { is => 'Genome::Library', id_by => 'library_id' },
         library_name => { via => 'library', to => 'name' },
-        sample_id => { is => 'Number', via => 'library' }, 
-        sample => { is => 'Genome::Sample', via => 'library' },
+        sample_id => { is => 'Number', is_delegated => 1, via => 'library', to => 'sample_id' }, 
+        sample => { is => 'Genome::Sample', id_by => 'sample_id' },
         sample_name => { via => 'sample', to => 'name' },
     ],
     has_optional => [

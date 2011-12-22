@@ -12,12 +12,6 @@ class Genome::Site::WUGC::InstrumentData::Sanger {
     ],
     has => [
         #< Run from OLTP Attrs >#
-        _gsc_run => {
-                     doc => 'GSC Run from LIMS',
-                     is => 'GSC::Run',
-                     calculate_from => [qw/ id /],
-                     calculate => q| GSC::Run->get($id); |,
-        },
         sample_name => {
                         via   => 'attributes',
                         to    => 'value',
