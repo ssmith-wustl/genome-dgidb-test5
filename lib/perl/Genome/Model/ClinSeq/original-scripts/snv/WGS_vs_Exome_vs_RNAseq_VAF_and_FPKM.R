@@ -8,6 +8,10 @@ gene_expression_file = args[3];  #isoforms.merged.fpkm.expsort.tsv
 #Example execution
 #WGS_vs_Exome_vs_RNAseq_VAF_and_FPKM.R  /gscmnt/sata132/techd/mgriffit/hgs/test/ /gscmnt/sata132/techd/mgriffit/hgs/all1/snv/wgs_exome/snvs.hq.tier1.v1.annotated.compact.readcounts.tsv /gscmnt/sata132/techd/mgriffit/hgs/all1/rnaseq/tumor/absolute/isoforms_merged/isoforms.merged.fpkm.expsort.tsv
 
+#working_dir = "/gscmnt/sata132/techd/mgriffit/luc/rnaseq_vs_snv/readcounts_merge_hg19/LUC1/summary/"
+#readcounts_file = "/gscmnt/sata132/techd/mgriffit/hgs/all1/snv/wgs_exome/snvs.hq.tier1.v1.annotated.compact.readcounts.tsv"
+#gene_expression_file = "/gscmnt/sata132/techd/mgriffit/hgs/all1/rnaseq/tumor/absolute/isoforms_merged/isoforms.merged.fpkm.expsort.tsv"
+
 #Load libraries
 library(ggplot2)
 
@@ -33,6 +37,7 @@ setwd(working_dir)
 
 #Define some arbitrary cutoffs (TODO: be more systematic / rationalized)
 var_stabilization = 0.1
+min_support_cutoff = 1
 rc_cutoff = 5
 fpkm_cutoff = 1
 vaf_diff_cutoff_pos = 20
@@ -541,48 +546,87 @@ if (length(which(names(readcounts)=="RNAseq_Tumor_var_rc")) & length(which(names
 
 
 #Summarize variants in various categories:
-#'expressed' variants.               -> RNA-seq Read Count > rc_cutoff && RNA-seq Gene FPKM > fpkm_cutoff
-#'mutant allele biased' variants.    -> 'expressed' && VAF Difference > +vaf_diff_cutoff
-#'wild type allele biased' variants. -> 'expressed' && VAF Difference < -vaf_diff_cutoff
+#'supported' variants                -> (RNA-seq Variant Read Count >= 1)
+#'missed' variants                   -> (RNA-seq Variant Read Count == 0) && (RNA-seq Total Read Count < rc_cutoff) && (RNA-seq Gene FPKM >= fpkm_cutoff)
+#'expressed' variants.               -> (RNA-seq Total Read Count >= rc_cutoff) && (RNA-seq Variant Read Count >=1) && (RNA-seq Gene FPKM >= fpkm_cutoff)
+#'mutant allele biased' variants.    -> ('expressed') && (VAF Difference > +vaf_diff_cutoff)
+#'wild type allele biased' variants. -> ('expressed') && (VAF Difference < -vaf_diff_cutoff)
 #'silent gene' variants              -> RNA-seq Read Count < rc_cutoff && Gene FPKM < fpkm_cutoff
+
+#Description of categories
+#'supported' variants                -> At least the minimal support for the variant found in RNA-seq
+#'missed' variants                   -> Gene was expressed but variant position was not well covered AND mutation was not observed above minimal level
+#'expressed' variants.               -> Variant had at least minimal support AND the variant position was well covered AND the gene was expressed
+#'mutant allele biased' variants.    -> Variant position was well covered in WGS/Exome AND Variant position was well covered in RNA-seq AND Gene was expressed AND Variant allele frequency in RNA is skewed towards mutant allele
+#'wild type allele biased' variants. -> Variant position was well covered in WGS/Exome AND Variant position was well covered in RNA-seq AND Gene was expressed AND Variant allele frequency in RNA is skewed towards wild type allele
+#'silent gene' variants              -> Variant position was not well covered AND Gene was not expressed 
+
+min_support_cutoff_text = paste(" (Variant Min. Support Cutoff = ", min_support_cutoff, ") ", sep="")
+rc_cutoff_text = paste(" (Variant RC Cutoff = ", rc_cutoff, ") ", sep="")
+fpkm_cutoff_text = paste(" (Gene FPKM Cutoff = ", fpkm_cutoff, ") ", sep="")
+vaf_diff_cutoff_pos_text = paste(" (Variant allele frequency diff cutoff = ", vaf_diff_cutoff_pos, ") " , sep="")
+vaf_diff_cutoff_neg_text = paste(" (Variant allele frequency diff cutoff = ", vaf_diff_cutoff_neg, ") " , sep="")
+
+supported_variants_desc = paste("Variants from WGS/Exome at least minimal support in RNA-seq", min_support_cutoff_text, sep="")
+expressed_variants_desc = paste("Variants from WGS/Exome exceeding a read cutoff with RNA-seq support", min_support_cutoff_text, rc_cutoff_text, fpkm_cutoff_text, sep="")
+missed_variants_desc = paste("Variants from WGS/Exome NOT detected in RNAseq even though the gene was expressed", min_support_cutoff_text, rc_cutoff_text, fpkm_cutoff_text, sep="")
+silent_gene_variants_desc = paste("Variants that appear to be in a gene that is not expressed", rc_cutoff_text, fpkm_cutoff_text, sep="")
+mutant_biased_variants_desc = paste("Variants that appear to be preferentially expressed from the mutant allele", rc_cutoff_text, fpkm_cutoff_text, vaf_diff_cutoff_pos_text, sep="")
+wildtype_biased_variants_desc = paste("Variants that appear to be preferentially expressed from the wild type allele", rc_cutoff_text, fpkm_cutoff_text, vaf_diff_cutoff_neg_text, sep="")
+
 readcounts[,"MutantExpressionClass"] = "Other"
 if (length(which(names(readcounts)=="RNAseq_Tumor_var_rc")) & length(which(names(readcounts)=="RNAseq_Tumor_gene_FPKM"))){
-  i = which(readcounts[,"RNAseq_Tumor_var_rc"] > 0)
+  i = which(readcounts[,"RNAseq_Tumor_var_rc"] >= min_support_cutoff)
+  if(length(i)){readcounts[i,"MutantExpressionClass"] = "Supported"}
   supported_variants = length(i)
   supported_variants_p = round(((supported_variants/total_variants)*100), digits=2)
-  if(length(i)){readcounts[i,"MutantExpressionClass"] = "Supported"}
-  i = which(((readcounts[,"RNAseq_Tumor_ref_rc"] + readcounts[,"RNAseq_Tumor_var_rc"]) > rc_cutoff) & readcounts[,"RNAseq_Tumor_gene_FPKM"] > fpkm_cutoff)
+
+  i = which(((readcounts[,"RNAseq_Tumor_ref_rc"] + readcounts[,"RNAseq_Tumor_var_rc"]) >= rc_cutoff) & readcounts[,"RNAseq_Tumor_var_rc"] >= min_support_cutoff & readcounts[,"RNAseq_Tumor_gene_FPKM"] >= fpkm_cutoff)
   if(length(i)){readcounts[i,"MutantExpressionClass"] = "Expressed"}
   expressed_variants = length(i)
   expressed_variants_p = round(((expressed_variants/total_variants)*100), digits=2)
+
+  i = which(((readcounts[,"RNAseq_Tumor_ref_rc"] + readcounts[,"RNAseq_Tumor_var_rc"]) < rc_cutoff) & readcounts[,"RNAseq_Tumor_var_rc"] < min_support_cutoff & readcounts[,"RNAseq_Tumor_gene_FPKM"] >= fpkm_cutoff)
+  if(length(i)){readcounts[i,"MutantExpressionClass"] = "Missed"}
+  missed_variants = length(i)
+  missed_variants_p = round(((missed_variants/total_variants)*100), digits=2)
+
   i = which(((readcounts[,"RNAseq_Tumor_ref_rc"] + readcounts[,"RNAseq_Tumor_var_rc"]) < rc_cutoff) & readcounts[,"RNAseq_Tumor_gene_FPKM"] < fpkm_cutoff)
   if(length(i)){readcounts[i,"MutantExpressionClass"] = "SilentGene"}
   silent_gene_variants = length(i)
   silent_gene_variants_p = round(((silent_gene_variants/total_variants)*100), digits=2)
-  stats[dim(stats)[1]+1,] = c("Number of supported variants", supported_variants,"RNA-seq","SNV","Count","Variants from WGS/Exome at least one supporting read in RNA-seq")
-  stats[dim(stats)[1]+1,] = c("Percent of supported variants", supported_variants_p,"RNA-seq","SNV","Percent","Variants from WGS/Exome at least one supporting read in RNA-seq")
-  stats[dim(stats)[1]+1,] = c("Number of expressed variants", expressed_variants,"RNA-seq","SNV","Count", paste("Variants from WGS/Exome exceeding a read cutoff with RNA-seq support (Cutoff = ", rc_cutoff, ")", sep=""))
-  stats[dim(stats)[1]+1,] = c("Percent of expressed variants", expressed_variants_p,"RNA-seq","SNV","Percent", paste("Variants from WGS/Exome exceeding a read cutoff with RNA-seq support (Cutoff = ", rc_cutoff, ")", sep=""))
-  stats[dim(stats)[1]+1,] = c("Number of variants in non-expressed genes", silent_gene_variants,"RNA-seq","SNV","Count","Variants that appear to be in a gene that is not expressed")
-  stats[dim(stats)[1]+1,] = c("Percent of variants in non-expressed genes", silent_gene_variants_p,"RNA-seq","SNV","Percent","Variants that appear to be in a gene that is not expressed")
+
+  stats[dim(stats)[1]+1,] = c("Number of supported variants", supported_variants, "RNA-seq", "SNV", "Count", supported_variants_desc)
+  stats[dim(stats)[1]+1,] = c("Percent of supported variants", supported_variants_p, "RNA-seq", "SNV", "Percent", supported_variants_desc)
+
+  stats[dim(stats)[1]+1,] = c("Number of expressed variants", expressed_variants, "RNA-seq", "SNV", "Count", expressed_variants_desc)
+  stats[dim(stats)[1]+1,] = c("Percent of expressed variants", expressed_variants_p, "RNA-seq", "SNV", "Percent", expressed_variants_desc)
+
+  stats[dim(stats)[1]+1,] = c("Number of missed variants", missed_variants, "RNA-seq", "SNV", "Count", missed_variants_desc)
+  stats[dim(stats)[1]+1,] = c("Percent of missed variants", missed_variants_p, "RNA-seq", "SNV", "Percent", missed_variants_desc)
+
+  stats[dim(stats)[1]+1,] = c("Number of variants in non-expressed genes", silent_gene_variants, "RNA-seq", "SNV", "Count", silent_gene_variants_desc)
+  stats[dim(stats)[1]+1,] = c("Percent of variants in non-expressed genes", silent_gene_variants_p, "RNA-seq", "SNV", "Percent", silent_gene_variants_desc)
 }
 
 #WGS vs RNAseq
 if (length(which(names(readcounts)=="RNAseq_Tumor_VAF")) & length(which(names(readcounts)=="WGS_Tumor_VAF")) & length(which(names(readcounts)=="RNAseq_Tumor_gene_FPKM"))){
   #Calculate the variant allele frequency difference between WGS and RNAseq
   readcounts[,"WGS_Tumor_VAF_Diff"]=(readcounts[,"RNAseq_Tumor_VAF"] - readcounts[,"WGS_Tumor_VAF"])
-  i = which(((readcounts[,"RNAseq_Tumor_ref_rc"] + readcounts[,"RNAseq_Tumor_var_rc"]) > rc_cutoff) & ((readcounts[,"WGS_Tumor_ref_rc"] + readcounts[,"WGS_Tumor_var_rc"]) > rc_cutoff) & (readcounts[,"RNAseq_Tumor_gene_FPKM"] > fpkm_cutoff) & (readcounts[,"WGS_Tumor_VAF_Diff"] > vaf_diff_cutoff_pos))
+  i = which(((readcounts[,"RNAseq_Tumor_ref_rc"] + readcounts[,"RNAseq_Tumor_var_rc"]) >= rc_cutoff) & ((readcounts[,"WGS_Tumor_ref_rc"] + readcounts[,"WGS_Tumor_var_rc"]) >= rc_cutoff) & (readcounts[,"RNAseq_Tumor_gene_FPKM"] >= fpkm_cutoff) & (readcounts[,"WGS_Tumor_VAF_Diff"] > vaf_diff_cutoff_pos))
   if(length(i)){readcounts[i,"MutantExpressionClass"] = "MutantBiased"}
   mutant_biased_variants = length(i)
   mutant_biased_variants_p = round(((mutant_biased_variants/total_variants)*100), digits=2)
-  i = which(((readcounts[,"RNAseq_Tumor_ref_rc"] + readcounts[,"RNAseq_Tumor_var_rc"]) > rc_cutoff) & ((readcounts[,"WGS_Tumor_ref_rc"] + readcounts[,"WGS_Tumor_var_rc"]) > rc_cutoff) & (readcounts[,"RNAseq_Tumor_gene_FPKM"] > fpkm_cutoff) & (readcounts[,"WGS_Tumor_VAF_Diff"] < vaf_diff_cutoff_neg))
+  i = which(((readcounts[,"RNAseq_Tumor_ref_rc"] + readcounts[,"RNAseq_Tumor_var_rc"]) >= rc_cutoff) & ((readcounts[,"WGS_Tumor_ref_rc"] + readcounts[,"WGS_Tumor_var_rc"]) >= rc_cutoff) & (readcounts[,"RNAseq_Tumor_gene_FPKM"] >= fpkm_cutoff) & (readcounts[,"WGS_Tumor_VAF_Diff"] < vaf_diff_cutoff_neg))
   if(length(i)){readcounts[i,"MutantExpressionClass"] = "WildTypeBiased"}
   wildtype_biased_variants = length(i)
   wildtype_biased_variants_p = round(((wildtype_biased_variants/total_variants)*100), digits=2)
-  stats[dim(stats)[1]+1,] = c("Number of WGS variants with mutant biased expression", mutant_biased_variants,"RNA-seq and WGS","SNV","Count","WGS called variants that appear to be preferentially expressed from the mutant allele")
-  stats[dim(stats)[1]+1,] = c("Percent of WGS variants with mutant biased expression", mutant_biased_variants_p,"RNA-seq and WGS","SNV","Percent","WGS called variants that appear to be preferentially expressed from the mutant allele")
-  stats[dim(stats)[1]+1,] = c("Number of WGS variants with wild-type biased expression", wildtype_biased_variants,"RNA-seq and WGS","SNV","Count","WGS called variants that appear to be preferentially expressed from the wild type allele")	
-  stats[dim(stats)[1]+1,] = c("Percent of WGS variants with wild-type biased expression", wildtype_biased_variants_p,"RNA-seq and WGS","SNV","Percent","WGS called variants that appear to be preferentially expressed from the wild type allele")	
+
+  stats[dim(stats)[1]+1,] = c("Number of WGS variants with mutant biased expression", mutant_biased_variants, "RNA-seq and WGS", "SNV", "Count", mutant_biased_variants_desc)
+  stats[dim(stats)[1]+1,] = c("Percent of WGS variants with mutant biased expression", mutant_biased_variants_p, "RNA-seq and WGS", "SNV", "Percent", mutant_biased_variants_desc)
+
+  stats[dim(stats)[1]+1,] = c("Number of WGS variants with wild-type biased expression", wildtype_biased_variants, "RNA-seq and WGS", "SNV", "Count", wildtype_biased_variants_desc)    
+  stats[dim(stats)[1]+1,] = c("Percent of WGS variants with wild-type biased expression", wildtype_biased_variants_p, "RNA-seq and WGS", "SNV", "Percent", wildtype_biased_variants_desc)    
 }
 
 #Exome vs RNAseq
@@ -597,11 +641,14 @@ if (length(which(names(readcounts)=="RNAseq_Tumor_VAF")) & length(which(names(re
   if(length(i)){readcounts[i,"MutantExpressionClass"] = "WildTypeBiased"}
   wildtype_biased_variants = length(i)
   wildtype_biased_variants_p = round(((wildtype_biased_variants/total_variants)*100), digits=2)
-  stats[dim(stats)[1]+1,] = c("Number of Exome variants with mutant biased expression", mutant_biased_variants,"RNA-seq and Exome","SNV","Count","Exome called variants that appear to be preferentially expressed from the mutant allele")
-  stats[dim(stats)[1]+1,] = c("Percent of WGS variants with mutant biased expression", mutant_biased_variants_p,"RNA-seq and WGS","SNV","Percent","WGS called variants that appear to be preferentially expressed from the mutant allele")
-  stats[dim(stats)[1]+1,] = c("Number of Exome variants with wild-type biased expression", wildtype_biased_variants,"RNA-seq and Exome","SNV","Count","Exome called variants that appear to be preferentially expressed from the wild type allele")	
-  stats[dim(stats)[1]+1,] = c("Percent of WGS variants with wild-type biased expression", wildtype_biased_variants_p,"RNA-seq and WGS","SNV","Percent","WGS called variants that appear to be preferentially expressed from the wild type allele")	
+  stats[dim(stats)[1]+1,] = c("Number of Exome variants with mutant biased expression", mutant_biased_variants, "RNA-seq and Exome", "SNV", "Count", mutant_biased_variants_desc)
+  stats[dim(stats)[1]+1,] = c("Percent of Exome variants with mutant biased expression", mutant_biased_variants_p, "RNA-seq and Exome", "SNV", "Percent", mutant_biased_variants_desc)
+  
+  stats[dim(stats)[1]+1,] = c("Number of Exome variants with wild-type biased expression", wildtype_biased_variants, "RNA-seq and Exome", "SNV", "Count", wildtype_biased_variants_desc)	
+  stats[dim(stats)[1]+1,] = c("Percent of Exome variants with wild-type biased expression", wildtype_biased_variants_p, "RNA-seq and Exome", "SNV", "Percent", wildtype_biased_variants_desc)    
+
 }
+
 
 #Write out the stats to a tsv file
 filename = "Stats.tsv"
