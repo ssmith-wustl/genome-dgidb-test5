@@ -410,8 +410,8 @@ sub get_irx_primer_design_seq {
 							 end_position         => $seq2_pp_end,
 							 sequence_base_string => $seq2_pp);
 	my $class = q(GSC::Sequence);
-	my $masked_rev_seq2_pp = GSC::Sequence::reverse_complement($class, $masked_seq2_pp);
-	my $rev_seq2_pp = GSC::Sequence::reverse_complement($class, $seq2_pp);
+	my $masked_rev_seq2_pp = reverse_complement($masked_seq2_pp);
+	my $rev_seq2_pp = reverse_complement($seq2_pp);
 
 	my $seq_pp = "$masked_seq1_pp$masked_rev_seq2_pp";
 
@@ -491,8 +491,6 @@ sub get_irx_primer_design_seq {
 							 end_position         => $seq2_mp_end,
 							 sequence_base_string => $seq2_mp);
 
-	#my $class = q(GSC::Sequence);
-	#my $masked_rev_seq1_mp = GSC::Sequence::reverse_complement($class, $masked_seq1_mp);
 	my $seq_mp = "$masked_seq2_mp$masked_seq1_mp";
 
 	my $no_masked_primer_seq = $self->no_masked_primer_seq;
@@ -525,8 +523,8 @@ sub get_irx_primer_design_seq {
 							 sequence_base_string => $seq2_mm);
 
 	my $class = q(GSC::Sequence);
-	my $masked_rev_seq2_mm = GSC::Sequence::reverse_complement($class, $masked_seq2_mm);
-	my $rev_seq2_mm = GSC::Sequence::reverse_complement($class, $seq2_mm);
+	my $masked_rev_seq2_mm = reverse_complement($masked_seq2_mm);
+	my $rev_seq2_mm = reverse_complement($seq2_mm);
 
 	my $seq_mm = "$masked_rev_seq2_mm$masked_seq1_mm";
 
@@ -595,8 +593,8 @@ sub get_inv_primer_design_seq {
 							      sequence_base_string => $g34_inv_seq_base);
     
     my $class = q(GSC::Sequence);
-    my $masked_rev_g34_inv_seq_base = GSC::Sequence::reverse_complement($class, $masked_g34_inv_seq_base);
-    my $rev_g34_inv_seq_base = GSC::Sequence::reverse_complement($class, $g34_inv_seq_base);
+    my $masked_rev_g34_inv_seq_base = reverse_complement($masked_g34_inv_seq_base);
+    my $rev_g34_inv_seq_base = reverse_complement($g34_inv_seq_base);
         
     my $seq1_g3_start = $breakpoint1 - $breakpoint_depth;
     my $seq1_g3_end = $breakpoint1;
@@ -617,10 +615,10 @@ sub get_inv_primer_design_seq {
     my $seq2_g3 = substr($rev_g34_inv_seq_base,1,$breakpoint_depth);
 
     my $masked_seq1_g4 = substr($masked_g34_inv_seq_base,1,$breakpoint_depth);
-    my $masked_revseq1_g4 = GSC::Sequence::reverse_complement($class, $masked_seq1_g4);
+    my $masked_revseq1_g4 = reverse_complement($masked_seq1_g4);
 
     my $seq1_g4 = substr($g34_inv_seq_base,1,$breakpoint_depth);
-    my $revseq1_g4 = GSC::Sequence::reverse_complement($class, $seq1_g4);
+    my $revseq1_g4 = reverse_complement($seq1_g4);
 
     
     my $masked_seq_g3 = "$masked_seq1_g3$masked_seq2_g3";
@@ -839,4 +837,12 @@ sub count_blast_hits {
     return ($blast_hit_counts,$location);
 }
 
+sub reverse_complement {
+    my ($sequence) = @_;
+    $sequence = reverse $sequence;
+    $sequence =~ tr/aAcCtTgG/tTgGaAcC/;
+    return $sequence;
+}
+
 1;
+
