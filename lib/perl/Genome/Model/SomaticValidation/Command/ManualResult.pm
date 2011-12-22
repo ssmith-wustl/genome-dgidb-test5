@@ -9,7 +9,7 @@ class Genome::Model::SomaticValidation::Command::ManualResult {
     is => 'Command::V2',
     has_input => [
         source_build => {
-            is => 'Genome::Model::Build::SomaticVariation',
+            is => 'Genome::Model::Build',
             doc => 'The build on which these variants are based',
         },
         variant_file => {
