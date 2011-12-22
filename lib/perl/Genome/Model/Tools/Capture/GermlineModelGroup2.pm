@@ -372,7 +372,7 @@ sub subject_summary {
         #  on how to handle per-sample data, when per-instrument-data data is unavailable
         my $index = (map{$_->index_sequence}$model->instrument_data)[0];
         my $pool = Genome::Model::Command::Services::AssignQueuedInstrumentData->_resolve_pooled_sample_name_for_instrument_data((),$model->instrument_data);
-        my $libraries = join(',', map{$_->name} grep{$_->name !~ /microarraylib/} $model->subject->libraries);
+        my $libraries = $build->instrument_data->library->name;
 
         #add model->instrument_data->lane
         print $fh join("\t", (
