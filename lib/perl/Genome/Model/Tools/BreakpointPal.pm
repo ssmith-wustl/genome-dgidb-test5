@@ -409,7 +409,6 @@ sub get_irx_primer_design_seq {
 	my $masked_seq2_pp = $chr->mask_snps_and_repeats(begin_position       => $seq2_pp_start, 
 							 end_position         => $seq2_pp_end,
 							 sequence_base_string => $seq2_pp);
-	my $class = q(GSC::Sequence);
 	my $masked_rev_seq2_pp = reverse_complement($masked_seq2_pp);
 	my $rev_seq2_pp = reverse_complement($seq2_pp);
 
@@ -522,7 +521,6 @@ sub get_irx_primer_design_seq {
 							 end_position         => $seq2_mm_end,
 							 sequence_base_string => $seq2_mm);
 
-	my $class = q(GSC::Sequence);
 	my $masked_rev_seq2_mm = reverse_complement($masked_seq2_mm);
 	my $rev_seq2_mm = reverse_complement($seq2_mm);
 
@@ -592,7 +590,6 @@ sub get_inv_primer_design_seq {
 							      end_position         => $breakpoint2,
 							      sequence_base_string => $g34_inv_seq_base);
     
-    my $class = q(GSC::Sequence);
     my $masked_rev_g34_inv_seq_base = reverse_complement($masked_g34_inv_seq_base);
     my $rev_g34_inv_seq_base = reverse_complement($g34_inv_seq_base);
         
