@@ -25,13 +25,6 @@ class Genome::InstrumentData::Sanger {
             calculate_from => [ 'subclass_name', 'id' ],
             calculate => q{ return Genome::Disk::Allocation->get(owner_id => $id, owner_class_name => $subclass_name); },
         },
-        # TODO Need to refactor this away
-        _gsc_run => {
-            is => 'GSC::Run',
-            calculate_from => [qw/ id /],
-            calculate => q| GSC::Run->get($id); |,
-            doc => 'GSC Run from LIMS',
-        },
     ],
 };
 
