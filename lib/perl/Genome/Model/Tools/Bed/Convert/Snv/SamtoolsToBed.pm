@@ -34,26 +34,27 @@ sub process_source {
     while (my $line = <$input_fh>) {
         next if $line =~ /^#/;  #mpileup vcf file contains header while pileip output not
         my @tokens = split /\s+/, $line;
-        my ($chromosome, $position, $reference, $consensus, $quality, $depth);
+        my ($chromosome, $position, $reference, $consensus, $quality, $depth, $gt_info);
 
         if ($tokens[4] =~ /^[A-Z]+/) {   # 5th column, mpileup is alt variant bases, while pileup is consensus quality 
-            ($chromosome, $position, $reference, $consensus) = map{$tokens[$_]}qw(0 1 3 4);
-
-            if ($consensus =~ /,/) { #mpileup use -A option to spit out alternative variant calls
-                my @vars = split /,/, $consensus;
-                my @real_vars;
-                for my $var (@vars) {
-                    $var = uc $var;
-                    next if $var eq 'X';
-                    push @real_vars, $var;
-                }
-                my $str = join '', sort @real_vars;
-                $str .= $str if length $str == 1;
-                $consensus = Genome::Info::IUB->string_to_iub($str);
-                unless ($consensus) {
-                    $self->warning_message("Failed to get proper variant call from line: $line");
-                    next;
-                }
+            ($chromosome, $position, $reference, $consensus, $gt_info) = map{$tokens[$_]}qw(0 1 3 4 9);
+            my @vars = split /,/, $consensus; #mpileup use -A option to spit out alternative variant calls
+            my $id = 0;
+            my %id_vars = (0 => $reference);
+            for my $var (@vars) {
+                $id++;
+                $var = uc $var;
+                next if $var eq 'X';  # X should always be the last one in the list
+                $id_vars{$id} = $var;
+            }
+            # 10th column in mpileup vcf output includes allele genotype info 0/1 and 1/1,
+            # 0 -> ref, 1 -> 1st in ALT colum, 2 -> 2nd in ALT column
+            my ($a1, $a2) = $gt_info =~ /^(\d)\/(\d):/;
+            my $str = join '', sort ($id_vars{$a1}, $id_vars{$a2});
+            $consensus = Genome::Info::IUB->string_to_iub($str);
+            unless ($consensus) {
+                $self->warning_message("Failed to get proper variant call from line: $line");
+                next;
             }
                 
             $quality = sprintf "%2.f", $tokens[5];
