@@ -354,6 +354,17 @@ sub _filter_variants {
         Carp::confess 'Could not execute breakdancer split file command!' unless defined $rv and $rv == 1;
 
         my @use_chr_list = $self->_use_chr_list;
+        unless(@use_chr_list) {
+            #squaredancer includes a header even when no results, so the -z above doesn't catch this case
+            $self->warning_message('0 size of breakdancer input (excluding header): '.$variant_file.'.');
+            my $pass_out = $self->pass_output;
+            `touch $pass_out`;
+            my @output_files = map{$self->_temp_staging_directory .'/'.$self->_variant_type.'.merge.'.$_}qw(file out fasta);
+            `touch @output_files`;
+            return 1;
+        }
+        
+        
         my $skip_libs    = $self->skip_libraries || $self->_get_skip_libs;
 
         $self->status_message("Creating workflow to parallelize by chromosome");
