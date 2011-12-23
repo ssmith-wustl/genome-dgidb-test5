@@ -175,7 +175,7 @@ sub _get_read_iterator {
 
 sub get_library_summary {
     my $self = shift;
-    return GSC::LibrarySummary->get(full_name => $self->library_name);
+    return Genome::Library->get(name => $self->library_name);
 }
 
 sub get_source_sample {
@@ -210,5 +210,3 @@ sub get_organism_taxon {
 
 1;
 
-#$HeadURL$
-#$Id$
