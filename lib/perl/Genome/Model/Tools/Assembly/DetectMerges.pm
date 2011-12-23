@@ -6,6 +6,7 @@ use warnings;
 use Genome;
 
 use FindBin;
+use File::Basename;
 use Carp::Assert;
 use Carp;
 use Cwd;
@@ -46,8 +47,20 @@ sub execute {
     }
     
     my $ct = Genome::Model::Tools::Pcap::ContigTools->new;
-    my $ao = Genome::Model::Tools::Pcap::Ace->new(input_file => $ace_file,using_db => 1,db_type =>'mysql');
-    my $po = Genome::Model::Tools::Lims::PhdDB->new;
+    my $ao = Genome::Model::Tools::Pcap::Ace->new(input_file => $ace_file);
+    my $dir = File::Basename::dirname($ace_file);
+    $dir =~ s/edit_dir//;
+    my $po;
+    if(-e $dir."phdball_dir/phd.ball.1") {
+        $po = Genome::Model::Tools::Pcap::Phd->new(input_file => $dir."/phdball_dir/phd.ball.1");
+    }
+    elsif(-e $dir."/phd_dir/") {
+        $po = Genome::Model::Tools::Pcap::Phd->new(input_directory => $dir."/phd_dir/");
+    }
+    else {
+        $self->error_message("Need to either have a ../phd_dir or a phdball file named ../phdball_dir/phd.ball.1");
+        return;
+    }    
 
     my @contig_names = @{$ao->get_contig_names};
 
