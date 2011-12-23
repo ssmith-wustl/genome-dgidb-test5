@@ -59,10 +59,6 @@ sub execute {
     my %samples;
 
     for my $line (@srrs) {
-
-
-
-
 ##_______This does not work as of 110927...jmartin
 #        my $sample = Genome::Sample->get(sql=>qq/
 #            select os.*
@@ -75,31 +71,29 @@ sub execute {
 #            where ruacc.accession='$line'
 #        /);
 #_______Modified to use a 'workaround' to deal with 'deprecated Genome gets'...jmartin 110927
-	my $sample = GSC::Organism::Sample->get(sql=>qq/
-						select os.organism_sample_id from gsc.organism_sample\@dw os 
-						join gsc.sra_organism_sample\@dw sos 
-						on sos.organism_sample_id=os.organism_sample_id 
-						join gsc.sra_experiment\@dw ex 
-						on ex.sra_sample_id=sos.sra_sample_id 
-						join gsc.sra_run\@dw ru 
-						on ru.sra_experiment_id=ex.sra_item_id 
-						join gsc.sra_item\@dw rui 
-						on rui.sra_item_id=ru.sra_item_id 
-						join gsc.sra_accession\@dw ruacc 
-						on ruacc.alias=rui.alias where ruacc.accession='$line'
-						/);
-
-
-
+        my $dbh = Genome::DataSource::GMSchema->get_default_handle();
+        my ($sample) = $dbh->selectrow_array(qq/
+            select os.organism_sample_id from gsc.organism_sample\@dw os 
+            join gsc.sra_organism_sample\@dw sos 
+            on sos.organism_sample_id=os.organism_sample_id 
+            join gsc.sra_experiment\@dw ex 
+            on ex.sra_sample_id=sos.sra_sample_id 
+            join gsc.sra_run\@dw ru 
+            on ru.sra_experiment_id=ex.sra_item_id 
+            join gsc.sra_item\@dw rui 
+            on rui.sra_item_id=ru.sra_item_id 
+            join gsc.sra_accession\@dw ruacc 
+            on ruacc.alias=rui.alias where ruacc.accession='$line'
+            /);
 
         unless ($sample) {
             $self->error_message("Failed to get a sample object from the warehouse for SRR ID $line.");
             return;
         }
-        
+
 #_______The 'name' attribute doesn't seem to exist, but full_name does, and this value seems only used for the sanity check immediately below, so this change should be OK ... jmartin 110929
         ####$samples{$sample->name} = 1;
-	$samples{$sample->full_name} = 1;
+        $samples{$sample->full_name} = 1;
     }
 
     unless (scalar keys %samples == 1) {
@@ -110,14 +104,14 @@ sub execute {
     # grab import parameters
     my $dbh = Genome::DataSource::GMSchema->get_default_handle();
     my ($fc_id, $lane) = $dbh->selectrow_array(qq/select ii.flow_cell_id, ii.lane
-    from gsc.organism_sample os 
-    join gsc.sra_organism_sample sos on sos.organism_sample_id=os.organism_sample_id
-    join gsc.sra_experiment ex on ex.sra_sample_id=sos.sra_sample_id
-    join gsc.sra_run ru on ru.sra_experiment_id=ex.sra_item_id 
-    join gsc.sra_item rui on rui.sra_item_id=ru.sra_item_id 
-    join gsc.sra_accession ruacc on ruacc.alias=rui.alias
-    join gsc.index_illumina ii on ii.seq_id=rui.source_entity_id and rui.source_entity_type='index illumina' 
-    where ruacc.accession='$srrs[0]'/);
+        from gsc.organism_sample os 
+        join gsc.sra_organism_sample sos on sos.organism_sample_id=os.organism_sample_id
+        join gsc.sra_experiment ex on ex.sra_sample_id=sos.sra_sample_id
+        join gsc.sra_run ru on ru.sra_experiment_id=ex.sra_item_id 
+        join gsc.sra_item rui on rui.sra_item_id=ru.sra_item_id 
+        join gsc.sra_accession ruacc on ruacc.alias=rui.alias
+        join gsc.index_illumina ii on ii.seq_id=rui.source_entity_id and rui.source_entity_type='index illumina' 
+        where ruacc.accession='$srrs[0]'/);
 
     unless (defined $fc_id && defined $lane) {
         $self->error_message("Couldn't recover original flow cell id and lane for this SRR id $srrs[0]");
