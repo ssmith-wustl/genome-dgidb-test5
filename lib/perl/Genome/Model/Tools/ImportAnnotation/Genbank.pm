@@ -161,7 +161,7 @@ sub execute {
         my $transcript_version = $record->[2];
 
         # sometimes we get an odd error here, and this hangs, because
-        # the bioperl interface way deep in GSC::ImportExport::GenBank::Gene
+        # the bioperl interface way deep in GSC ImportExport::GenBank::Gene
         # has this odd notion that it wants to rebuild the index, and tries
         # to remove it...  I changed that little bit, so hopefully that won't
         # happen again.

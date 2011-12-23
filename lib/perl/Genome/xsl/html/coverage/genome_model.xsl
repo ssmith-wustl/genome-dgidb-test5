@@ -99,7 +99,7 @@
               "unique_off_target_aligned_bp": <xsl:value-of select="unique_off_target_aligned_bp"/>,
             </xsl:otherwise>
           </xsl:choose>
-          "unique_target_aligned_bp": <xsl:value-of select="unique_target_aligned_bp"/>,
+          "unique_target_aligned_bp": <xsl:choose><xsl:when test="unique_target_aligned_bp"><xsl:value-of select="unique_target_aligned_bp"/></xsl:when><xsl:otherwise>0</xsl:otherwise></xsl:choose>,
           }<xsl:if test="position() != last()"><xsl:text>,</xsl:text></xsl:if>
         </xsl:if>
       </xsl:for-each>
