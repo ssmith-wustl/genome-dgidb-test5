@@ -291,7 +291,6 @@ sub execute {
 
 sub _summon_vcf_result {
     my $self = shift;
-    $DB::single=1;
 
     my ($params) = $self->params_for_vcf_result;
     my $result = Genome::Model::Tools::DetectVariants2::Result::Vcf::Detector->get_or_create(%$params); #, _instance => $self);
