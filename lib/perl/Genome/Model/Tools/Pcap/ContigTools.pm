@@ -14,14 +14,8 @@ use Genome::Model::Tools::Pcap::Ace::Writer;
 use Genome::Model::Tools::Pcap::Ace::Reader;
 use Genome::Model::Tools::Pcap::Ace;
 use List::Util qw(min max);
-#use Genome::Model::Tools::Lims::PhdDB;
-use Genome::Model::Tools::Pcap::Phd;
-my $pkg = "Genome::Model::Tools::Pcap::ContigTools";
-
-my $DEBUG = 0;
 
 our $initialized = 0;
-
 sub init_gtk {
     return if $initialized;
     eval {
