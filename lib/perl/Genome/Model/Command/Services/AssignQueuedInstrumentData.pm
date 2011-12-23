@@ -1334,8 +1334,23 @@ sub request_builds {
 
     $self->status_message("Requesting builds...");
 
-    for my $model_and_reason (values %models_to_build) {
+    MODEL: for my $model_and_reason (values %models_to_build) {
         my ($model, $reason) = @$model_and_reason;
+
+        #TODO generalize via model->notify_input_build_success to make is_ready_to_build or the like
+        if($model->isa('Genome::Model::SomaticValidation')) {
+            if($model->tumor_sample and $model->normal_sample) {
+                my @i = $model->instrument_data;
+
+                my ($t, $n) = (0,0);
+                for my $i (@i) {
+                    if($i->sample eq $model->tumor_sample) { $t++; }
+                    if($i->sample eq $model->normal_sample) { $n++; }
+                }
+
+                next MODEL unless ($t > 0 and $n > 0);
+            }
+        }
 
         #Will be picked up by next run of `genome model services build-queued-models`
         $model->build_requested(1, 'AQID: ' .$reason);

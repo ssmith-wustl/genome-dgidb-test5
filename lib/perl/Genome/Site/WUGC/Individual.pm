@@ -1,6 +1,6 @@
 package Genome::Site::WUGC::Individual;
 
-# Adaptor for GSC::Organism::Individual
+# Adaptor for GSC Organism Individual
 
 # Do NOT use this module from anything in the GSC schema,
 # though the converse will work just fine.

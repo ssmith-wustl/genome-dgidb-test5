@@ -55,6 +55,8 @@ class Genome::Model::SomaticValidation::Command::DefineModels {
     doc => 'define models based on an existing model-group',
 };
 
+sub sub_command_category { 'analyst tools' }
+
 sub execute {
     my $self = shift;
 
@@ -97,9 +99,9 @@ sub execute {
             $tumor_sample = $model->tumor_sample;
         }
         if($model->can('normal_model')) {
-            $tumor_sample = $model->normal_model->subject;
+            $normal_sample = $model->normal_model->subject;
         } else {
-            $tumor_sample = $model->normal_sample;
+            $normal_sample = $model->normal_sample;
         }
 
         my $define_cmd = Genome::Model::Command::Define::SomaticValidation->create(

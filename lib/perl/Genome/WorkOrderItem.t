@@ -24,10 +24,10 @@ use_ok('Genome::WorkOrderItem');
 # woi_id
 #  141
 # inst data ids 
-#  2737764362 GSC::RunRegion454
-#  2737764363 GSC::RunRegion454
-#  2852539831 GSC::RegionIndex454
-#  2852539832 GSC::RegionIndex454
+#  2737764362 RunRegion454
+#  2737764363 RunRegion454
+#  2852539831 RegionIndex454
+#  2852539832 RegionIndex454
 # model
 #  2744704120
 my $woi = Genome::WorkOrderItem->get(141);

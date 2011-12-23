@@ -9,66 +9,58 @@ use Data::Dumper;
 
 class Genome::InstrumentData::Command::Microarray::Extract {
     is => 'Command::V2',
-    has => [
+    has_optional => [
         output => {
             is => 'Text',
-            is_optional => 1,
             default_value => '-',
             doc => 'The output. Defaults to STDOUT.',
         },
         fields => {
             is => 'Text',
             is_many => 1,
-            is_optional => 1,
             default_value => [qw/ chromosome position alleles /],
-            valid_values => [qw/ 
-                chromosome position alleles id sample_id log_r_ratio gc_score cnv_value cnv_confidence allele1 allele2 
-            /],
+            valid_values => [qw/ chromosome position alleles id sample_id log_r_ratio gc_score cnv_value cnv_confidence allele1 allele2 /],
             doc => 'The fields to output in the genotype file.',
         },
         separator => {
             is => 'Text',
-            is_optional => 1,
             default_value => 'tab',
             doc => 'Field separator of the output. Use "tab" for tab delineated.',
         },
         instrument_data => {
             is => 'Genome::InstrumentData',
-            is_optional => 1,
             doc => 'The genotype instrument data to work with.',
         },
         sample => {
             is => 'Genome::Sample',
-            is_optional => 1,
             doc => 'The sample instrument data to work with.',
         },
         use_default => {
             is => 'Boolean',
-            is_optional => 1,
             default_value => 0,
             doc => 'If getting by sample, get the default genotype data, if available.',
         },
         use_external => {
             is => 'Boolean',
-            is_optional => 1,
             default_value => 0,
             doc => 'If getting by sample, get the external genotype data.',
-        },
-        variation_list_build => {
-            is => 'Genome::Model::Build::ImportedVariationList',
-            doc => 'Imported variation list build. Give id from command line. Commonly used: 
- ID          REFERENCE                   VERSION
- 106227442   dbSNP-NCBI-human-build36    130
- 106375969   dbSNP-g1k-human-build37     132',
         },
         filters => {
             is => 'Text',
             is_many => 1,
-            is_optional => 1,
             doc => "Filter genotypes. Give name and parameters, if required. Filters:\n gc_scrore => filter by min gc score (Ex: gc_score:min=0.7)\n invalid_iscan_ids => list of invalid iscan snvs compiled by Nate",
         },
-        _filters => { is_transient => 1, is_optional => 1, },
-        _output_fh => { is_transient => 1, is_optional => 1, },
+        _filters => { is_transient => 1 },
+        _output_fh => { is_transient => 1 },
+    ],
+    has => [
+        variation_list_build => {
+            is => 'Genome::Model::Build::ImportedVariationList',
+            doc => 'Imported variation list build. Give id from command line. Commonly used:
+                     ID          REFERENCE                   VERSION
+                     106227442   dbSNP-NCBI-human-build36    130
+                     106375969   dbSNP-g1k-human-build37     132',
+        },
     ],
 };
 
@@ -164,7 +156,7 @@ sub _resolve_instrument_data_from_library {
 
     my %params = (
         library => $library,
-        'import_source_name in' => ( $self->use_external ) 
+        'import_source_name in' => ( $self->use_external )
                                     ? [qw/ BGI bgi Broad broad CSHL cshl external /]
                                     : [qw/ wugsc wugc wutgi tgi /],
     );
@@ -216,7 +208,7 @@ sub _create_filters {
     return 1;
 }
 
-sub _open_output { 
+sub _open_output {
       my $self = shift;
 
     $self->status_message('Open output file...');
@@ -249,7 +241,7 @@ sub _load_genotyopes {
     }
 
     my $genotype_file;
-    my @possible_file_names = ( 'snpreport/'.$instrument_data->id, $instrument_data->id.'.genotype' ); 
+    my @possible_file_names = ( 'snpreport/'.$instrument_data->id, $instrument_data->id.'.genotype', $instrument_data->sample->id.'.genotype' );
     for my $possible_file_name ( @possible_file_names ) {
         my $possible_file = $data_directory.'/'.$possible_file_name;
         next if not -e $possible_file;

@@ -1,7 +1,7 @@
 
 package Genome::Site::WUGC::Sample; 
 
-# Adaptor for GSC::Organism::Sample
+# Adaptor for GSC Organism::Sample
 
 # Do NOT use this module from anything in the GSC schema,
 # though the converse will work just fine.
