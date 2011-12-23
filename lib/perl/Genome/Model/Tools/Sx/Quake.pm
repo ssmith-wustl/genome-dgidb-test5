@@ -79,6 +79,7 @@ class Genome::Model::Tools::Sx::Quake {
     has => [ 
         %QUAKE_PARAMS,
         _tmpdir => { is_transient => 1, is_optional => 1, },
+        save_files => {is=> 'Boolean', is_optional => 1, doc => 'Save quake output files' },
     ],
 };
 
@@ -133,6 +134,7 @@ sub execute {
 
     $self->status_message('Read quake output: '.$quake_output);
     my $writer = $self->_output;
+
     if ( $cnt == 1 ) { 
         $self->status_message('Writing as singles');
         while ( my $seq = $quake_output_reader->read ) {
@@ -161,6 +163,8 @@ sub execute {
     }
     $self->status_message('Read quake output...OK');
 
+    $self->_copy_quake_files if $self->save_files;
+
     return 1;
 }
 
@@ -185,6 +189,7 @@ sub _run_quake_command {
         );
     }
     my $rv = eval{ Genome::Sys->shellcmd(cmd => $cmd); };
+
     chdir $cwd;
     $self->status_message('Chdir back to: '.$cwd);
     if ( not $rv ) {
@@ -194,6 +199,42 @@ sub _run_quake_command {
     }
 
     return $cmd;
+}
+
+sub _copy_quake_files {
+    my $self = shift;
+
+    my $output_directory = $self->_directory_from_output;
+    $self->status_message('Failed to derive assembly directory from sx output') and return
+        if not $output_directory;
+
+    Genome::Sys->create_directory( $output_directory.'/Quake' ) if
+        not -d $output_directory.'/Quake';
+    $output_directory .= '/Quake';
+
+    $self->status_message("Copying quake output files to $output_directory");
+    for my $file ( glob( $self->_tmpdir.'/*' ) ){
+        $self->status_message("Copying file: $file");
+        #prevent copying of Quake dir to itself if it runs in tmpdir or
+        #same dir as input file
+        next if File::Basename::basename($file) eq 'Quake';
+        File::Copy::copy( $file, $output_directory );
+    }
+    $self->status_message('Finished copying quake output files');
+
+    return 1;
+}
+
+sub _directory_from_output {
+    my $self = shift;
+
+    my ( $class, $params ) = $self->_output->parse_writer_config( $self->_output->config );
+    return if not $class or not $params;
+
+    my $dir = File::Basename::dirname($params->{file});
+    return if not -d $dir;
+
+    return $dir;
 }
 
 1;
