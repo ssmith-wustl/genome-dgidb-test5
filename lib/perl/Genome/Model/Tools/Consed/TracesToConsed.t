@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use above "Genome";
-use Test::More tests => 12;
+use Test::More;
 
 use_ok('Genome::Model::Tools::Consed::TracesToConsed');
 my $base_dir = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Consed-TracesToConsed";
@@ -33,11 +33,6 @@ system qq(gmt consed traces-to-consed --chromosome $chromosome --start $start --
 my $ace = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Consed-TracesToConsed/$project/edit_dir/$project.ace.1";
 ok (-s $ace ,"$project.ace.1 successfully produced");
 
-my $ace_checker = Genome::Utility::AceSupportQA->create();
-ok($ace_checker, "created ace checker");
-ok($ace_checker->ace_support_qa($ace), "$project.ace.1 passes the ace checker");
-ok($ace_checker->contig_count != 1, "More than one contig found as expected");
-
 my $assembly_traces = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Consed-TracesToConsed/10_126008345_126010576.traces.fof";
 ok (-s $assembly_traces , "assembly-traces exists");
 
@@ -63,7 +58,5 @@ system qq(gmt consed traces-to-consed --chromosome $chromosome --start $start --
 $ace = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Consed-TracesToConsed/$project/edit_dir/$project.ace.1";
 ok (-s $ace ,"$project.ace.1 successfully produced");
 
-$ace_checker = Genome::Utility::AceSupportQA->create();
-ok($ace_checker, "created ace checker");
-ok($ace_checker->ace_support_qa($ace), "$project.ace.1 passes the ace checker");
-ok($ace_checker->contig_count == 1, "Exactly one contig found as expected");
+done_testing();
+exit;
