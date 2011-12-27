@@ -7,32 +7,37 @@ use Genome;
 
 use Cwd;
 
+our %EULER_PARAMS = (
+    kmer_size => {
+        is => 'Number',
+        doc => 'Kmer size to use',
+    },
+    min_multi => {
+        is => 'Number',
+        doc => 'Minimum multiplicity to keep a k-mer (vertex) or (k+1)-mer (edge), depending on the stage of EULER.',
+    },
+    script => {
+        is => 'Boolean',
+        doc => 'Show output from subprocesses. Output is suppressed without this option.',
+        is_optional => 1,
+    },
+    debug => {
+        is => 'Boolean',
+        doc => 'Run the debug version of the code, compiled by \'make debug\'.',
+        is_optional => 1,
+    },
+    verbose => {
+        is => 'Boolean',
+        doc => 'Show output from subprocesses. Output is suppressed without this option.',
+        is_optional => 1,
+    },    
+);
+
 class Genome::Model::Tools::Sx::EulerEc {
     is => 'Genome::Model::Tools::Sx',
     has => [
-        kmer_size => {
-            is => 'Number',
-            doc => 'Kmer size to use',
-        },
-        min_multi => {
-            is => 'Number',
-            doc => 'Minimum multiplicity to keep a k-mer (vertex) or (k+1)-mer (edge), depending on the stage of EULER.',
-        },
-        script => {
-            is => 'Boolean',
-            doc => 'Show output from subprocesses. Output is suppressed without this option.',
-            is_optional => 1,
-        },
-        debug => {
-            is => 'Boolean',
-            doc => 'Run the debug version of the code, compiled by \'make debug\'.',
-            is_optional => 1,
-        },
-        verbose => {
-            is => 'Boolean',
-            doc => 'Show output from subprocesses. Output is suppressed without this option.',
-            is_optional => 1,
-        },
+        %EULER_PARAMS,
+        save_files => { is => 'Boolean', is_optional => 1, doc => 'Save euler output files' },
     ],
 };
 

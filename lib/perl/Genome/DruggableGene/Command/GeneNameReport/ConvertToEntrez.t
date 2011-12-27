@@ -15,7 +15,7 @@ my $entrez_gene_symbol_cmd = Genome::DruggableGene::Command::GeneNameReport::Con
 ok($entrez_gene_symbol_cmd->_entrez_gene_name_reports, 'Found entrez_gene_symbol: AKR1D1');
 ok(!$entrez_gene_symbol_cmd->_intermediate_gene_name_reports, 'No intermediate_gene_name_reports for AKR1D1');
 
-my $entrez_id_cmd = Genome::DruggableGene::Command::GeneNameReport::ConvertToEntrez->execute(gene_identifier => '26157');
+my $entrez_id_cmd = Genome::DruggableGene::Command::GeneNameReport::ConvertToEntrez->execute(gene_identifier => 'ENTRZ_G26157');
 ok($entrez_id_cmd->_entrez_gene_name_reports, 'Found entrez_gene_id: 26157');
 ok(!$entrez_id_cmd->_intermediate_gene_name_reports, 'No intermediate_gene_name_reports for 26157');
 
