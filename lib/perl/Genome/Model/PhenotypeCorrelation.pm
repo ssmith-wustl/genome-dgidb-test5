@@ -79,6 +79,10 @@ class Genome::Model::PhenotypeCorrelation {
             is_optional => 1,
             doc => 'the expression which matches "control" samples, typically by their attributes' 
         },
+        reference_sequence_build => {
+            is => 'Genome::Model::ReferenceSequence',
+            doc => 'the reference sequence against which alignment and variant detection are done',
+        }
     ],
 };
 
@@ -174,6 +178,8 @@ sub __profile_errors__ {
     return @errors;
 }
 
+our $USE_NEW_DISPATCHER = 0;
+
 sub _execute_build {
     my ($self,$build) = @_;
 
@@ -206,7 +212,7 @@ sub _execute_build {
     # get the reference sequence
     #
 
-    my $reference_sequence_build = $build->inputs(name => 'reference_sequence_build')->value;
+    my $reference_sequence_build = $build->reference_sequence_build;
     $build->status_message("reference sequence build: " . $reference_sequence_build->__display_name__);
     
     my $reference_fasta = $reference_sequence_build->full_consensus_path('fa');
@@ -223,7 +229,7 @@ sub _execute_build {
     
     $self->status_message('Gathering alignments...');
     $DB::single=1;
-    my $result = Genome::InstrumentData::Composite->get_or_create(
+    my $overall_alignment_result = Genome::InstrumentData::Composite->get_or_create(
         inputs => {
             instrument_data => \@instdata,
             reference_sequence_build => $reference_sequence_build,
@@ -231,17 +237,16 @@ sub _execute_build {
         strategy => $self->alignment_strategy,
         log_directory => $build->log_directory,
     );
-    my @results = $result->_merged_results;
-    for my $r (@results) {
+
+    # used by the updated DV2 API
+    my @per_sample_alignment_results = $overall_alignment_result->_merged_results;
+    for my $r (@per_sample_alignment_results) {
         $r->add_user(label => 'uses', user => $build);
     }
+    $self->status_message('Found ' . scalar(@per_sample_alignment_results) . ' per-sample alignmnet results.');
 
-    my @bams = $result->bam_paths;
-    # TODO this check is commented out until specific samples associated with individuals in the population group can be
-    # included/excluded at will
-    #unless (@bams == @samples) {
-    #    die $self->error_message("Failed to find alignment results for all samples!");
-    #}
+    # used directly by the merge tool until we switch to using the above directly
+    my @bams = $overall_alignment_result->bam_paths;
     $self->status_message('Found ' . scalar(@bams) . ' merged BAMs.');
     for my $bam (@bams){
         unless (-e $bam){
@@ -249,90 +254,118 @@ sub _execute_build {
         }
     }
 
-=cut
-    #
-    # run the DV2 API to do variant detection as we do in somatic, but let it take in N BAMs
-    # _internally_ it will (for the first pass):
-    #  notice it's running on multiple BAMs
-    #  get the single-BAM results
-    #  merge them with joinx and make a combined VCF (tolerating the fact that per-bam variants are not VCF)
-    #  run bamreadcount to fill-in the blanks
-    #
+    # this is used by the old, non-DV2 code, but is also used by vcf2maf, 
+    # which reliese on annotation having been run on the original samples
+    my @builds = $self->_get_builds(\@per_sample_alignment_results);
 
-    $self->status_message("Executing detect variants step");
+    # do/find variant detection results, and get the path to a multi-sample vcf
+    my $multisample_vcf;
+    if ($USE_NEW_DISPATCHER) {
+        
+        #
+        # run the DV2 API to do variant detection as we do in somatic, but let it take in N BAMs
+        # _internally_ it will (for the first pass):
+        #  notice it's running on multiple BAMs
+        #  get the single-BAM results
+        #  merge them with joinx and make a combined VCF (tolerating the fact that per-bam variants are not VCF)
+        #  run bamreadcount to fill-in the blanks
+        #
 
-    my %params;
-    $params{snv_detection_strategy} = $self->snv_detection_strategy if $self->snv_detection_strategy;
-    $params{indel_detection_strategy} = $self->indel_detection_strategy if $self->indel_detection_strategy;
-    $params{sv_detection_strategy} = $self->sv_detection_strategy if $self->sv_detection_strategy;
-    $params{cnv_detection_strategy} = $self->cnv_detection_strategy if $self->cnv_detection_strategy;
-    $params{reference_build_id} = $reference_sequence_build->id;
-    $params{multiple_bams} = \@bams;
+        ## begin running the DV2 dispatcher (this is out right out of the somatic validation DetectVariants step)
 
-    my $output_dir = $build->data_directory."/variants";
-    $params{output_directory} = $output_dir;
-    my $dispatcher_cmd = Genome::Model::Tools::DetectVariants2::Dispatcher->create(%params); 
-    eval { $dispatcher_cmd->execute };
-    if ($@) {
-        $self->warning_message("Failed to execute detect variants with multiple BAMs!\n");
-        #die $self->warning_message("Failed to execute detect variants dispatcher(err:$@) with params:\n" . Data::Dumper::Dumper \%params);
+        $self->status_message("Executing detect variants step");
+        my $build = $self->build;
+        unless ($build){
+            die $self->error_message("no build provided!");
+        }
+
+        my %params;
+        $params{snv_detection_strategy} = $build->snv_detection_strategy if $build->snv_detection_strategy;
+        $params{indel_detection_strategy} = $build->indel_detection_strategy if $build->indel_detection_strategy;
+        $params{sv_detection_strategy} = $build->sv_detection_strategy if $build->sv_detection_strategy;
+        $params{cnv_detection_strategy} = $build->cnv_detection_strategy if $build->cnv_detection_strategy;
+
+        my $reference_build = $build->reference_sequence_build;
+        my $reference_fasta = $reference_build->full_consensus_path('fa');
+        unless(-e $reference_fasta){
+            die $self->error_message("fasta file for reference build doesn't exist!");
+        }
+        $params{reference_build_id} = $reference_build->id;
+
+        my $output_dir = $build->data_directory."/variants";
+        $params{output_directory} = $output_dir;
+
+        # instead of setting {control_,}aligned_reads_{input,sample}
+        # set alignment_results and control_alignment_results
+
+        $params{alignment_results} = @per_sample_alignment_results;
+        $params{control_alignmnent_results} = [];
+
+        ###
+
+        my $command = Genome::Model::Tools::DetectVariants2::Dispatcher->create(%params);
+        unless ($command){
+            die $self->error_message("Couldn't create detect variants dispatcher from params:\n".Data::Dumper::Dumper \%params);
+        }
+        my $rv = $command->execute;
+        my $err = $@;
+        unless ($rv){
+            die $self->error_message("Failed to execute detect variants dispatcher(err:$@) with params:\n".Data::Dumper::Dumper \%params);
+        }
+        else {
+            #users set below
+        }
+
+        $self->status_message("detect variants command completed successfully");
+
+        ## end running the DV2 dispatcher
     }
     else {
-        $self->status_message("detect variants command completed successfully");
-        my @results = $dispatcher_cmd->results;
-        for my $result (@results) {
-            $result->add_user(user => $build, label => 'uses');
+        # old logic which will move inside of DV2
+
+        my $vcf_output_directory = $build->data_directory."/variants";
+        unless(-e $vcf_output_directory){
+            unless(mkdir $vcf_output_directory){
+                die $self->error_message("Output directory doesn't exist and can't be created at: ".$vcf_output_directory);
+            }
+            unless(mkdir $vcf_output_directory."/merge_vcfs"){
+                die $self->error_message("Output directory doesn't exist and can't be created at: ".$vcf_output_directory);
+            }
         }
-    }
-=cut
+        my %region_limiting_params = ( 
+            roi_file => $self->roi_file,
+            roi_name => $self->roi_name,
+            wingspan => $self->wingspan,
+        );
 
-    my @builds = $self->_get_builds(\@results);
 
-    my $vcf_output_directory = $build->data_directory."/variants";
-    unless(-e $vcf_output_directory){
-        unless(mkdir $vcf_output_directory){
-            die $self->error_message("Output directory doesn't exist and can't be created at: ".$vcf_output_directory);
+        my $snv_vcf_creation = Genome::Model::Tools::Vcf::CreateCrossSampleVcf->create(
+            builds => \@builds,
+            output_directory => $vcf_output_directory,
+            max_files_per_merge => 100,
+            variant_type => 'snvs',
+            %region_limiting_params,
+        );
+        my $vcf_result;
+        unless($vcf_result = $snv_vcf_creation->execute){
+            die $self->error_message("Could not complete vcf merging!");
         }
-        unless(mkdir $vcf_output_directory."/merge_vcfs"){
-            die $self->error_message("Output directory doesn't exist and can't be created at: ".$vcf_output_directory);
+        my $vcf_file; 
+        if(-s $vcf_result){
+            $vcf_file = $vcf_result;
+        } else {
+            die $self->error_message("Could not locate an output VCF");
         }
-    }
-    my %region_limiting_params = ( 
-        roi_file => $self->roi_file,
-        roi_name => $self->roi_name,
-        wingspan => $self->wingspan,
-    );
+        $self->status_message("Merged VCF file located at: ".$vcf_file);
 
-
-    my $snv_vcf_creation = Genome::Model::Tools::Vcf::CreateCrossSampleVcf->create(
-        builds => \@builds,
-        output_directory => $vcf_output_directory,
-        max_files_per_merge => 100,
-        variant_type => 'snvs',
-        %region_limiting_params,
-    );
-    my $vcf_result;
-    unless($vcf_result = $snv_vcf_creation->execute){
-        die $self->error_message("Could not complete vcf merging!");
+        $multisample_vcf = $vcf_file;
     }
-    my $vcf_file; 
-    if(-s $vcf_result){
-        $vcf_file = $vcf_result;
-    } else {
-        die $self->error_message("Could not locate an output VCF");
-    }
-    $self->status_message("Merged VCF file located at: ".$vcf_file);
-
 
     # dump pedigree data into a file
 
     # dump clinical data into a file
 
     # we'll figure out what to do about the analysis_strategy next...
-
-
-
-    my $multisample_vcf = $vcf_file;
 
     #get list of bams and load into tmp file named $bam_list
     #for exome set $target_region_set_name_bedfile to be all exons including splice sites, these files are maintained by cyriac
