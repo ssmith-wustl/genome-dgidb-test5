@@ -64,6 +64,22 @@ class Genome::Subject {
     doc => 'Contains all information about a particular subject (sample, individual, etc)',
 };
 
+sub attributes_for_nomenclature {
+
+    my ($self, $name) = @_;
+    
+    my $n = Genome::Nomenclature->get(name => $name);
+    die "$name is not the name of a nomenclature" if !$n;
+
+    my @fields = $n->fields();
+    my @attr = Genome::SubjectAttribute->get( 
+        nomenclature => [ map {$_->id} @fields ], 
+        subject_id => $self->id 
+    );
+
+    return @attr;
+}
+
 sub __display_name__ {
     my $self = shift;
     my $name = $self->name . ' ' if defined $self->name;

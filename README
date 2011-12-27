@@ -57,4 +57,19 @@ R:
 
  R libraries live next-to the Perl module which provides an interface to them
  for the rest of the system.
- 
+
+Externally developed software:
+
+ If the software has a debian package, put in an apipe-support ticket, which will
+ ultimately result in Systems adding it to the list of debian packages analysis depends-on,
+ and will cause that package to be deployed onto all blades and workstations.
+
+ If the software is not packaged, or not packaged in a way we need, at the latest version:
+
+ If the software is on github, we should fork it into github.com/genome.  
+ If it is NOT on github, we make a git repo to track our changes, and put it on github.com under "genome"
+ If you are not on the genome team on github put in an apipe-support ticket.
+
+ That repo should be linked as a submodule under the vendor/ subdirectory.  This tells us we have our own
+ fork of the package we maintain.  Hopefully it just has packaging configuration added.
+

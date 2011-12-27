@@ -99,7 +99,7 @@ sub initialize_filehandles {
     my $output = $self->output_file;
 
     eval {
-        my $input_fh = Genome::Sys->open_file_for_reading($input);
+        my $input_fh  = Genome::Sys->open_file_for_reading($input);
         my $output_fh = Genome::Sys->open_gzip_file_for_writing($output);
 
         $self->_input_fh($input_fh);
@@ -152,42 +152,48 @@ sub _get_header_columns {
     return @header_columns;
 }
 
+# Calculate the location of the public reference sequence
+sub _get_public_ref {
+    my $self = shift;
+    my $seq_center      = $self->sequencing_center;
+    my $ref_seq_version = $self->reference_sequence_build->version;
+    my $subject_name    = $self->reference_sequence_build->subject_name;
+
+    my $public_ref;
+    if ($subject_name eq 'human') {
+        if ($ref_seq_version == 37) {
+            $public_ref = "ftp://ftp.ncbi.nih.gov/genbank/genomes/Eukaryotes/vertebrates_mammals/Homo_sapiens/GRCh37/special_requests/GRCh37-lite.fa.gz";
+        } 
+        elsif ($ref_seq_version == 36) {
+            if ($seq_center eq "WUSTL"){
+                $public_ref = "ftp://ftp.ncbi.nlm.nih.gov/genomes/H_sapiens/ARCHIVE/BUILD.36.3/special_requests/assembly_variants/NCBI36_WUGSC_variant.fa.gz";
+            } 
+            elsif ($seq_center eq "BROAD") {
+                $public_ref = "ftp://ftp.ncbi.nlm.nih.gov/genomes/H_sapiens/ARCHIVE/BUILD.36.3/special_requests/assembly_variants/NCBI36-HG18_Broad_variant.fa.gz";
+            } 
+            else {
+                die $self->error_message("Unknown sequencing center: $seq_center");
+            }
+        } 
+        else {
+            die $self->error_message("Unknown reference sequence version ($ref_seq_version) from reference sequence build " . $self->reference_sequence_build_id);
+        }
+    } 
+    else {
+        # TODO We need a map from internal reference to external references... until then just put our reference in there
+        $public_ref = $self->reference_sequence_input;
+    }
+    return $public_ref;
+}
+
 # Print the header to the output file... currently assumes "standard" columns of GT,GQ,DP,BQ,MQ,AD,FA,VAQ in the FORMAT field and VT in the INFO field.
 sub print_header{
     my $self = shift;
-    my $file_date = strftime( "%Y%m%d", localtime);
+    my $source           = $self->source;
+    my $public_reference = $self->_get_public_ref;
 
-    my $source = $self->source;
-
-    my $public_reference;
-    # Calculate the location of the public reference sequence
-    my $seq_center = $self->sequencing_center;
-    my $reference_sequence_version = $self->reference_sequence_build->version;
-    my $subject = $self->reference_sequence_build->subject_name;
-
-    if ($subject eq "human") {
-        if ($reference_sequence_version == 37) {
-            $public_reference = "ftp://ftp.ncbi.nih.gov/genbank/genomes/Eukaryotes/vertebrates_mammals/Homo_sapiens/GRCh37/special_requests/GRCh37-lite.fa.gz";
-        } elsif ($reference_sequence_version == 36) {
-            if ($seq_center eq "WUSTL"){
-                $public_reference = "ftp://ftp.ncbi.nlm.nih.gov/genomes/H_sapiens/ARCHIVE/BUILD.36.3/special_requests/assembly_variants/NCBI36_WUGSC_variant.fa.gz";
-            } elsif ($seq_center eq "BROAD"){
-                $public_reference="ftp://ftp.ncbi.nlm.nih.gov/genomes/H_sapiens/ARCHIVE/BUILD.36.3/special_requests/assembly_variants/NCBI36-HG18_Broad_variant.fa.gz";
-            } else {
-                die $self->error_message("Unknown sequencing center: $seq_center");
-            }
-        } else {
-            die $self->error_message("Unknown reference sequence version ($reference_sequence_version) from reference sequence build " . $self->reference_sequence_build_id);
-        }
-    } else {
-        # TODO We need a map from internal reference to external references... until then just put our reference in there
-        $public_reference = $self->reference_sequence_input;
-    }
-
-
+    my $file_date = strftime("%Y%m%d", localtime);    
     my $output_fh = $self->_output_fh;
-
-    my $sample = $self->aligned_reads_sample;
 
     $output_fh->print("##fileformat=VCFv" . $self->vcf_version . "\n");
     $output_fh->print("##fileDate=" . $file_date . "\n");

@@ -1334,8 +1334,23 @@ sub request_builds {
 
     $self->status_message("Requesting builds...");
 
-    for my $model_and_reason (values %models_to_build) {
+    MODEL: for my $model_and_reason (values %models_to_build) {
         my ($model, $reason) = @$model_and_reason;
+
+        #TODO generalize via model->notify_input_build_success to make is_ready_to_build or the like
+        if($model->isa('Genome::Model::SomaticValidation')) {
+            if($model->tumor_sample and $model->normal_sample) {
+                my @i = $model->instrument_data;
+
+                my ($t, $n) = (0,0);
+                for my $i (@i) {
+                    if($i->sample eq $model->tumor_sample) { $t++; }
+                    if($i->sample eq $model->normal_sample) { $n++; }
+                }
+
+                next MODEL unless ($t > 0 and $n > 0);
+            }
+        }
 
         #Will be picked up by next run of `genome model services build-queued-models`
         $model->build_requested(1, 'AQID: ' .$reason);
@@ -1484,8 +1499,8 @@ sub add_processing_profiles_to_pses{
                     $reference_sequence_names_for_processing_profile_ids{$pp_id} = 'UCSC-mouse-buildmm9'
                 }
                 elsif ($taxon->domain =~ /bacteria/i) {
-                    #updated 2011 Nov 02 .. requested by Chad
-                    push @processing_profile_ids_to_add, '2628526';
+                    #updated 2011 Dec 20 .. requested by Chad
+                    push @processing_profile_ids_to_add, '2658559';
                 }
                 #process inst data with work orders 2634033 2636663 with pp 2599969 RT76069
                 elsif ( $taxon->id == 1653198763 ) { #unknow taxon normally skipped

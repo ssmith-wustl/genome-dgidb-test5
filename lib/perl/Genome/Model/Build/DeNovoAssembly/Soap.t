@@ -113,6 +113,10 @@ my $library_file_base = $build->data_directory.'/'.$file_prefix;
 
 # PREPARE INST DATA
 my $prepare = Genome::Model::Event::Build::DeNovoAssembly::PrepareInstrumentData->create(build => $build, model => $model);
+is($prepare->bsub_rusage, "-R 'select[type==LINUX64 && tmp>25000] rusage[tmp=25000] span[hosts=1]'", 'prepare inst data rsuage');
+$pp->read_processor('quake');
+is($prepare->bsub_rusage, "-R 'select[type==LINUX64 && mem>8000 && tmp>25000] rusage[mem=8000:tmp=25000] span[hosts=1]'", 'prepare inst data quake/eulr rsuage');
+$pp->read_processor('trim bwa-style -trim-qual-level 10 | filter by-length -filter-length 35 | rename illumina-to-pcap');
 ok($prepare, 'create prepare instrument data');
 $prepare->dump_status_messages(1);
 ok($prepare->execute, 'execute prepare instrument data');

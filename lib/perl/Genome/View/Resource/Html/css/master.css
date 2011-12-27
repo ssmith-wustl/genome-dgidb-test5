@@ -648,7 +648,7 @@ td.stage_name {
 }
 
 .project_box {
-    margin: 0 0 0 0;
+    margin: 0px 0px 0px 0px;
     padding: 10px;
     background: #FFF;
     border-top: 1px solid #CCC;
@@ -672,6 +672,56 @@ td.stage_name {
 
 .project_box h4 {
     margin-bottom: 5px;
+}
+
+.sidebar_project {
+    width: 190px;
+    padding: 10px;
+    margin: 0 0 15px -10px;
+    background: #FFF;
+    border-top: 1px solid #CCC;
+    border-right: 1px solid #CCC;
+    border-bottom: 1px solid #CCC;
+}
+
+.sidebar_project h4 {
+    margin-bottom: 5px;
+}
+
+.sidebar_project ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.sidebar_project ul li {
+    margin: 10px 0 10px 0;
+    padding: 0;
+    list-style: none;
+    margin-left: 5px;
+}
+
+.sidebar_project ul li a {
+    text-decoration: none;
+    font-size: 14px;
+    line-height: 14px;
+}
+
+.sidebar_project ul li.current {
+    font-weight: bold;
+}
+
+.sidebar_project ul li a:hover {
+    text-decoration: underline;
+}
+
+.sidebar_project ul li .icon16 {
+    margin-left: -22px;
+    float: left;
+}
+
+.sidebar_project ul li .category {
+
 }
 
 

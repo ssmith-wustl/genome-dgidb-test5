@@ -92,11 +92,6 @@ sub setup_test_data {
                                                   #region_id => -1,
                                                   fc_id => -2040001,
                                               );
-            my $sff454 = GSC::AnalysisSFF454->create_from_sff_file(
-                                                                   region_id => $rr454->region_id,
-                                                                   sff_file => $file,
-                                                               );
-            #push @read_sets, $rr454;
             my $instrument_data = Genome::InstrumentData::454->create_mock(
                                                                            id => $rr454->region_id,
                                                                            sequencing_platform => '454',

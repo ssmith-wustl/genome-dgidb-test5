@@ -74,6 +74,10 @@ my $callback = sub {
     return if $initialized eq 'complete' or $initialized eq 'in progress';
     return unless substr($pkg,0,5) eq 'GSC::' or substr($pkg,0,5) eq 'App::';
 
+    if ($^X eq '/usr/bin/perl') {  # only when using the LIMS interpreter is this okay 
+        Carp::confess("Attempt to use $class on the local /usr/bin/perl interpreter!  GSC::* and App::* modules must be used with the LIMS interpreter.  Contact APIPE for support!");
+    }
+
     # load and initialize GSCApp the first time something GSC:: or App:: is used.
     # since App::Init configures its own dynamic loader we dont' do anything 
     # afterward, but we do need to wrap its configuration the first time to prevent conflicts

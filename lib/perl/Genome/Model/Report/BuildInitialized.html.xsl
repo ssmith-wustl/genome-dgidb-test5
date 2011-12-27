@@ -35,7 +35,7 @@
                             Build Id:
 													</td>
 													<td style="font-family:Helvetica,Arial,sans-serif;font-size:90%;color:#36372c;white-space:nowrap;padding:5px 5px 5px 0;">
-                            <xsl:value-of select="//model-info/build-id"/><xsl:text> </xsl:text><a><xsl:attribute name="href">https://imp.gsc.wustl.edu/view/Genome/Model/Build/status.html?id=<xsl:value-of select="//model-info/build-id"/></xsl:attribute><xsl:attribute name="style"><xsl:text>text-decoration:none;font-size:85%;font-weight:bold;font-family:Helvetica,Arial,sans-serif;line-height:1.2;</xsl:text></xsl:attribute>view build status -&gt;</a>
+                            <xsl:value-of select="//model-info/build-id"/><xsl:text> </xsl:text><a><xsl:attribute name="href">https://imp.gsc.wustl.edu/view/genome/model/build/status.html?id=<xsl:value-of select="//model-info/build-id"/></xsl:attribute><xsl:attribute name="style"><xsl:text>text-decoration:none;font-size:85%;font-weight:bold;font-family:Helvetica,Arial,sans-serif;line-height:1.2;</xsl:text></xsl:attribute>view build status -&gt;</a>
 													</td>
 												</tr>
 												<tr>
@@ -75,7 +75,7 @@
                             Model Id:
 													</td>
 													<td style="font-family:Helvetica,Arial,sans-serif;font-size:90%;color:#36372c;white-space:nowrap;padding:5px 5px 5px 0;">
-                           <xsl:value-of select="//model-info/id"/><xsl:text> </xsl:text><a><xsl:attribute name="href">https://imp.gsc.wustl.edu/view/Genome/Model/status.html?id=<xsl:value-of select="//model-info/id"/></xsl:attribute><xsl:attribute name="style"><xsl:text>text-decoration:none;font-size:85%;font-weight:bold;font-family:Helvetica,Arial,sans-serif;line-height:1.2;</xsl:text></xsl:attribute>view model -&gt;</a>
+                           <xsl:value-of select="//model-info/id"/><xsl:text> </xsl:text><a><xsl:attribute name="href">https://imp.gsc.wustl.edu/view/genome/model/status.html?id=<xsl:value-of select="//model-info/id"/></xsl:attribute><xsl:attribute name="style"><xsl:text>text-decoration:none;font-size:85%;font-weight:bold;font-family:Helvetica,Arial,sans-serif;line-height:1.2;</xsl:text></xsl:attribute>view model -&gt;</a>
                           </td>
 												</tr>
 												<tr>

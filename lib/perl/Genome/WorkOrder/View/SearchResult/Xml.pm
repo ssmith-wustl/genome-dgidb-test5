@@ -28,10 +28,5 @@ class Genome::WorkOrder::View::SearchResult::Xml {
     ]
 };
 
-
-# GSC::Setup::WorkOrder
-#    my $name_string =$self->id . "-" .$name ."-" . $dna_count .$type .  "-" .$self->get_creation_event->quick_report_date;
-#
-
-
 1;
+

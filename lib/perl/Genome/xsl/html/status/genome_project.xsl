@@ -43,7 +43,15 @@
                     <tr>
                         <td><input type="checkbox"/></td>
                         <td><xsl:value-of select="aspect[@name='entity_class_name_pretty']/value"/></td>
-                        <td><xsl:value-of select="aspect[@name='entity']/object/display_name"/></td>
+                        <td>
+                                <xsl:for-each select="aspect[@name='entity']/object">
+                                    <xsl:call-template name="object_link">
+                                        <xsl:with-param name="linktext">
+                                            <xsl:value-of select="display_name"/>
+                                        </xsl:with-param>
+                                    </xsl:call-template>
+                                </xsl:for-each>
+                        </td>
                     </tr>
                 </xsl:for-each>
             </table>

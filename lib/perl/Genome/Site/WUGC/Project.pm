@@ -11,7 +11,6 @@ class Genome::Site::WUGC::Project {
     id_properties => ['setup_project_id'],
     table_name =>   "(SELECT * FROM setup_project\@oltp p JOIN setup\@oltp s ON setup_id = setup_project_id WHERE project_type != 'setup project finishing' AND setup_status != 'abandoned') project ",
     has => [
-        #_oltp_project       => { is => 'GSC::Setup::Project', id_by => 'setup_project_id' },
         
         # get these directly, since we can't join through any app objects
         name                => { is => 'Text', len => 64, column_name => 'SETUP_NAME' },
