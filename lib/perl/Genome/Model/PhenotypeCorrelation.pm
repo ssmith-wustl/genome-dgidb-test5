@@ -178,6 +178,8 @@ sub __profile_errors__ {
     return @errors;
 }
 
+our $USE_NEW_DISPATCHER = 0;
+
 sub _execute_build {
     my ($self,$build) = @_;
 
@@ -258,7 +260,6 @@ sub _execute_build {
 
     # do/find variant detection results, and get the path to a multi-sample vcf
     my $multisample_vcf;
-    our $USE_NEW_DISPATCHER = 0;
     if ($USE_NEW_DISPATCHER) {
         
         #
