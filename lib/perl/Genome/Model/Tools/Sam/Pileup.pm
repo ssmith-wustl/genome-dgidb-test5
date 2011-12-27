@@ -93,7 +93,7 @@ sub execute {
     my $out = "> ".$output_file."\"";
 
     #put the command components together
-    my $samtools = $self->path_for_samtools_version($self->use_version);
+    my $samtools = $self->path_for_samtools_version($self->samtools_version);
     my $params = $self->samtools_params || undef;
     my $cmd = "bash -c \"samtools view -u $view_region_file $bam | $samtools pileup $params -c -f $refseq_path $region_file - $out";
 
