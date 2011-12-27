@@ -73,7 +73,7 @@ sub help_brief {                            # keep this to just a few words <---
 
 sub help_synopsis {
 <<'HELP';
-    Takes a VCF and adds dbsnp annotations - recommend you use /gscmnt/sata921/info/medseq/cmiller/annotations/snp130.noDupIds.noPolyAllelicSites.txt for dbsnps
+    Takes a VCF and adds dbsnp annotations
 HELP
 }
 
@@ -102,9 +102,9 @@ sub execute {
         
     my $dbsnp_file;
     if($genome_build eq "36"){
-        $dbsnp_file = "/gscmnt/sata921/info/medseq/cmiller/annotations/snp130.txt";
+        $dbsnp_file = "/gscmnt/sata921/info/medseq/cmiller/annotations/snp130.noDupIds.noPolyAllelicSites.txt";
     } elsif ($genome_build eq "37"){
-        $dbsnp_file = "/gscmnt/sata921/info/medseq/cmiller/annotations/snp132.txt";
+        $dbsnp_file = "/gscmnt/sata921/info/medseq/cmiller/annotations/snp132.noDupIds.noPolyAllelicSites.txt";
     } elsif ( -e $genome_build) {
         $dbsnp_file = $genome_build;
     } else {
