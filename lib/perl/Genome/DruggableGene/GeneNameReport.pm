@@ -78,6 +78,18 @@ sub commit_callback {
     Genome::Search->add(Genome::DruggableGene::GeneNameReport->define_set(name => $self->name));
 }
 
+sub source_id {
+    my $self = shift;
+    my $source_id = $self->name;
+    if($source_id =~ m/^ENTRZ_G/){
+        $source_id =~ s/ENTRZ_G//;
+    }elsif($source_id =~ m/DGBNK_G/){
+        $source_id =~ s/DGBNK_G//;
+    }
+
+    return $source_id;
+}
+
 sub convert_to_entrez {
     my $class = shift;
     my @gene_identifiers = @_;
