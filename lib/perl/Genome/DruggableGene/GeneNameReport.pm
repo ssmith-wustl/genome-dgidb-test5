@@ -90,6 +90,13 @@ sub source_id {
     return $source_id;
 }
 
+sub original_data_source_url {
+    my $self = shift;
+    my $base_url = $self->citation->base_url;
+    my $source_id = $self->source_id;
+    return join("", $base_url, $source_id);
+}
+
 sub convert_to_entrez {
     my $class = shift;
     my @gene_identifiers = @_;
