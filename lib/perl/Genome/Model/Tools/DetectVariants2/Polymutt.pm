@@ -19,10 +19,6 @@ class Genome::Model::Tools::DetectVariants2::Polymutt {
     ],
 };
 
-sub help_brief {
-    "Use Polymutt for variant detection.",
-}
-
 sub help_synopsis {
     my $self = shift;
     return <<"EOS"

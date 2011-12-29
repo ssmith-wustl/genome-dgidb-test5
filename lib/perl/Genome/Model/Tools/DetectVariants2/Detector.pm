@@ -159,7 +159,11 @@ class Genome::Model::Tools::DetectVariants2::Detector {
 };
 
 sub help_brief {
-    "The base class for variant detectors.",
+    my $self = shift;
+    my $class = ref($self) || $self;
+    my ($name) = ($class =~ /Genome::Model::Tools::DetectVariants2::(.*)/);
+    my @words = map { lc($_) } split(/(?=[A-Z])/,$name);
+    return "directly run the @words variant detector";
 }
 
 sub help_synopsis {

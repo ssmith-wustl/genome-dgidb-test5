@@ -10,10 +10,6 @@ class Genome::Model::Tools::DetectVariants2::Maq {
     is => ['Genome::Model::Tools::DetectVariants2::Detector'],
 };
 
-sub help_brief {
-    "Use maq for variant detection.",
-}
-
 sub help_synopsis {
     my $self = shift;
     return <<"EOS"
