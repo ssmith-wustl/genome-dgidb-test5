@@ -172,7 +172,9 @@ sub _import_gene {
     my $self = shift;
     my $version = $self->version;
     my $interaction = shift;
-    my $gene_name = $self->_create_gene_name_report($interaction->{partner_id}, 'drugbank_partner_id', 'DrugBank', $version, '');
+    my $gene_prefix = 'DGBNK_G';
+    my $gene_partner_id_with_prefix = $gene_prefix . $interaction->{partner_id};
+    my $gene_name = $self->_create_gene_name_report($gene_partner_id_with_prefix, 'drugbank_partner_id', 'DrugBank', $version, '');
     my $gene_symbol_gene_name_association = $self->_create_gene_name_report_association($gene_name, $interaction->{gene_symbol}, 'drugbank_gene_symbol', '');
     my $uniprot_gene_name_association=$self->_create_gene_name_report_association($gene_name, $interaction->{uniprot_id}, 'uniprot_id', '');
     return $gene_name;

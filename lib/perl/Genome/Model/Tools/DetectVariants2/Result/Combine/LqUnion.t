@@ -39,7 +39,7 @@ my $lq = Genome::Model::Tools::DetectVariants2::Result::Combine::LqUnion->create
 );
 isa_ok($lq, 'Genome::Model::Tools::DetectVariants2::Result::Combine::LqUnion', 'generated_result');
 
-my $expected = join('/', $test_dir, 'snvs.lq.bed');
+my $expected = join('/', $test_dir, 'v2', 'snvs.lq.bed');
 my $actual = $lq->path('snvs.lq.bed');
 
 ok(!Genome::Sys->diff_file_vs_file($expected, $actual), 'result matches expected output')

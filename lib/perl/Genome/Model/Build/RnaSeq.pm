@@ -216,6 +216,23 @@ sub _resolve_sequencing_platform_for_subclass_name {
     return $sequencing_platform;
 }
 
+sub workflow_name {
+    my $self = shift;
+    return $self->build_id;
+}
+
+sub workflow_instances {
+    my $self = shift;
+
+    my @instances = $self->SUPER::workflow_instances;
+
+    unless(@instances) {
+        @instances = Workflow::Operation::Instance->get(
+            name => $self->SUPER::workflow_name, #older profiles were staged
+        );
+    }
+    return @instances;
+}
 
 1;
 
