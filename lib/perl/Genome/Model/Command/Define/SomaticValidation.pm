@@ -154,7 +154,7 @@ sub execute {
             if defined $control_sample;
         push @params, annotation_build => $annotation_build
             if defined $annotation_build;
-        push @params, identify_previously_discovered_build => $previously_discovered_build
+        push @params, previously_discovered_variations_build => $previously_discovered_build
             if defined $previously_discovered_build;
 
         if($self->region_of_interest_set) {
