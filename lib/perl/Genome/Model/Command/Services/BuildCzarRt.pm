@@ -7,6 +7,8 @@ use Genome;
 
 use Data::Dumper 'Dumper';
 use Error qw(:try);
+use File::Find 'find';
+use File::Grep 'fgrep';
 require IO::Prompt;
 require RT::Client::REST;
 require RT::Client::REST::Ticket;
@@ -89,6 +91,7 @@ sub execute {
     # Consolidate errors
     $self->status_message('Consolidating errors...');
     my %build_errors;
+    my %guessed_errors;
     my $models_with_errors = 0;
     for my $build ( values %models_and_builds ) {
         my @error_logs = Genome::Model::Build::ErrorLogEntry->get(build_id => $build->id);
@@ -98,6 +101,13 @@ sub execute {
             $key = $error_logs[0]->inferred_file.' '.$error_logs[0]->inferred_line;
             $msg = $error_logs[0]->inferred_message;
             $models_with_errors++;
+        }
+        elsif ( my $guessed_error = $self->_guess_build_error($build) ) {
+            if ( not $guessed_errors{$guessed_error} ) {
+                $guessed_errors{$guessed_error} = scalar(keys %guessed_errors) + 1;
+            }
+            $key = "Unknown, best guess #".$guessed_errors{$guessed_error};
+            $msg = $guessed_error;
         }
         $build_errors{$key} = "File:\n$key\nExample error:\n$msg\nModel\t\tBuild\t\tType/Failed Stage:\n" if not $build_errors{$key};
         my $type_name = $build->type_name;
@@ -117,9 +127,35 @@ sub execute {
     $self->status_message('Models with error log: '.$models_with_errors);
     $self->status_message('Models with unknown failures: '.($models_not_in_tickets - $models_with_errors));
     $self->status_message('Summerized errors: ');
-    $self->status_message(join("\n", values(%build_errors)));
+    $self->status_message(join("\n", map { $build_errors{$_} } sort keys %build_errors));
 
     return 1;
+}
+
+sub _guess_build_error {
+    my ($self, $build) = @_;
+
+    my $data_directory = $build->data_directory;
+    my $log_directory = $data_directory.'/logs';
+    my %errors;
+    find(
+        sub{
+            return unless $_ =~ /\.err$/;
+            my @grep = (fgrep { /ERROR:\s+/ } $_ );
+            return if $grep[0]->{count} == 0;
+            for my $line ( values %{$grep[0]->{matches}} ) {
+                my ($err) = (split(/ERROR:\s+/, $line))[1];
+                chomp $err;
+                next if $err eq "Can't convert workflow errors to build errors";
+                next if $err eq 'relation "error_log_entry" does not exist';
+                next if $err =~ /current transaction is aborted/;
+                $errors{$err} = 1;
+            }
+        },
+        $log_directory,
+    );
+
+    return join("\n", sort keys %errors);
 }
 
 1;
