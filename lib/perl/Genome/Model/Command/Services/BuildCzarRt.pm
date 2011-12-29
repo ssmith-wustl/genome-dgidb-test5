@@ -93,6 +93,7 @@ sub execute {
     my %build_errors;
     my %guessed_errors;
     my $models_with_errors = 0;
+    my $models_with_guessed_errors = 0;
     for my $build ( values %models_and_builds ) {
         my $key = 'Unknown';
         my $msg = 'Failure undetermined!';
@@ -108,6 +109,7 @@ sub execute {
             }
             $key = "Unknown, best guess #".$guessed_errors{$guessed_error};
             $msg = $guessed_error;
+            $models_with_guessed_errors++;
         }
         $build_errors{$key} = "File:\n$key\nExample error:\n$msg\nModel\t\tBuild\t\tType/Failed Stage:\n" if not $build_errors{$key};
         my $type_name = $build->type_name;
@@ -125,7 +127,8 @@ sub execute {
     $self->status_message('Models in RT: '.$models_in_tickets);
     $self->status_message('Models not in RT: '.$models_not_in_tickets);
     $self->status_message('Models with error log: '.$models_with_errors);
-    $self->status_message('Models with unknown failures: '.($models_not_in_tickets - $models_with_errors));
+    $self->status_message('Models with guessed errors: '.$models_with_guessed_errors);
+    $self->status_message('Models with unknown failures: '.($models_not_in_tickets - $models_with_errors - $models_with_guessed_errors));
     $self->status_message('Summerized errors: ');
     $self->status_message(join("\n", map { $build_errors{$_} } sort keys %build_errors));
 
