@@ -99,6 +99,8 @@ sub original_data_source_url {
         $url = join('/', $base_url, 'molecules', $source_id . '?as=target');
     }elsif($self->source_db_name eq 'TTD'){
         $url = $base_url . 'Detail.asp?ID=' . $source_id;
+    }elsif($self->source_db_name eq 'Ensembl'){
+        $url = $base_url . $source_id;
     }else{
         $url = join('', $base_url, $source_id);
     }
