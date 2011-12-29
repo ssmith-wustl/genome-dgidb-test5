@@ -71,7 +71,7 @@ sub run_fast_tier {
     my $self = shift;
     my ($file) =  shift;
 
-    my ($prefix, $suffix) = $file =~ /(.*?)\.((?:v\d+)?\.bed)/;
+    my ($prefix, $suffix) = $file =~ /(.*?)\.((?:v\d+\.)?bed)/;
 
     my ($tier1_path, $tier2_path, $tier3_path, $tier4_path) = map {
         my $x = join('.',$prefix, 'tier' . $_, $suffix);
