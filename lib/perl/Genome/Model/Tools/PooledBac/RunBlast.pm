@@ -4,10 +4,9 @@ use strict;
 use warnings;
 
 use Genome;
-use GSC::IO::Assembly::Ace::Reader;
-use IO::File;
-use Genome::Sys;
+
 use Cwd;
+use IO::File;
 
 class Genome::Model::Tools::PooledBac::RunBlast {
     is => 'Command',
@@ -176,18 +175,16 @@ sub ace2fasta
 {
     my ($self,$infile, $outfile) = @_;
 
-    my $infh = IO::File->new($infile);
-    $self->error_message("Error opening $infile.") and die unless defined $infile;
+    my $reader = Genome::Model::Tools::Consed::AceReader->create(file => $infile);
+    $self->error_message("Error creating ace reader for $infile.") and die unless defined $reader;
     my $outfh = IO::File->new(">$outfile");
     $self->error_message("Error opening $outfile.") and die unless defined $outfh;
-    my $reader = GSC::IO::Assembly::Ace::Reader->new($infh);
-    $self->error_message("Error creating ace reader for $infile.") and die unless defined $reader;
-    while(my $line = $infh->getline)
+    while(my $line = $reader->_fh->getline)
     {
         if($line =~ /^CO/)
         {
-            $infh->seek(-length($line),1);
-            my $item = $reader->next_object;    
+            $reader->_fh->seek(-length($line),1);
+            my $item = $reader->next;    
             if($item->{type} eq 'contig')
             {
                 $outfh->print(">",$item->{name},"\n");
