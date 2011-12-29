@@ -72,4 +72,24 @@ sub commit_callback {
     Genome::Search->add(Genome::DruggableGene::DrugNameReport->define_set(name => $self->name));
 }
 
+sub source_id {
+    my $self = shift;
+    my $source_id = $self->name;
+    return $source_id;
+}
+
+sub original_data_source_url {
+    my $self = shift;
+    my $base_url = $self->citation->base_url;
+    my $source_id = $self->source_id;
+    my $url;
+    if($self->source_db_name eq 'DrugBank'){
+        $url = join('/', $base_url, 'drugs', $source_id);
+    }else{
+        $url = join('', $base_url, $source_id);
+    }
+
+    return $url;
+}
+
 1;
