@@ -94,10 +94,10 @@ sub execute {
     my %guessed_errors;
     my $models_with_errors = 0;
     for my $build ( values %models_and_builds ) {
-        my @error_logs = Genome::Model::Build::ErrorLogEntry->get(build_id => $build->id);
         my $key = 'Unknown';
         my $msg = 'Failure undetermined!';
-        if ( @error_logs and $error_logs[0]->inferred_file ) {
+        my @error_logs = grep { $_->inferred_file } Genome::Model::Build::ErrorLogEntry->get(build_id => $build->id);
+        if ( @error_logs ) {
             $key = $error_logs[0]->inferred_file.' '.$error_logs[0]->inferred_line;
             $msg = $error_logs[0]->inferred_message;
             $models_with_errors++;
