@@ -44,6 +44,19 @@ class Genome::ProcessingProfile::SomaticValidation {
             is => 'Boolean', doc => 'include output plot in final results',
         },
 
+        loh_version => {
+            is => 'Text',
+            doc => 'Version of LOH to use. (LOH detection is not performed if not specified.)',
+        },
+        loh_snv_detection_strategy => {
+            is => 'Text',
+            doc => 'The detection to run on the control aligned reads for determining LOH',
+        },
+        tiering_version => {
+            is => 'Text',
+            doc => 'version of tiering BED files to use (tiering is not performed if not specified)',
+        },
+
         #RefCov parameters
         refcov_wingspan_values => {
             is => 'Text',

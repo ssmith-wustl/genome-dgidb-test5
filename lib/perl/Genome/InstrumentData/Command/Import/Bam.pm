@@ -87,6 +87,10 @@ class Genome::InstrumentData::Command::Import::Bam {
             is  => 'Number',
             doc => 'output instrument data id after import',
         },
+        import_allocation_id => {
+            is => 'Text',
+            doc =>'the allocation hash for the space allocated',
+        },
         _inst_data => {
             is_optional => 1,
         },
@@ -112,9 +116,9 @@ sub execute {
         $self->error_message("Unable to find the sample name based on the parameter: ".$self->sample);
         my $possible_name;
         if($self->sample =~ /TCGA/){
-            $possible_name = GSC::Organism::Sample->get(sample_name => $self->sample);
+            $possible_name = Genome::Sample->get(extraction_label => $self->sample);
             if($possible_name){
-                $self->error_message("There is an organism_sample which matches the TCGA name, which has a full_name of ".$possible_name->full_name);
+                $self->error_message("There is an organism_sample which matches the TCGA name, which has a full_name of ".$possible_name->name);
             }
         }
         die $self->error_message;
@@ -206,6 +210,7 @@ sub execute {
         return 1;
     }
     $self->status_message("Alignment allocation created for $instrument_data_id .");
+    $self->import_allocation_id($disk_alloc->id);
 
     my $bam_destination = $disk_alloc->absolute_path . "/all_sequences.bam";
     $self->status_message("Now calculating the MD5sum of the bam file to be imported, this will take a long time (many minutes) for larger (many GB) files.");

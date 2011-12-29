@@ -29,6 +29,34 @@ class Genome::Model::SomaticVariation::Command::TierVariants{
     ],
 };
 
+sub shortcut {
+    my $self = shift;
+    my $build = $self->build;
+
+    my @existing_results;
+    for my $qual ('hq', 'lq') {
+        TYPE: for my $variant_type ('snv', 'indel') {
+            my $accessor = $variant_type . '_detection_strategy';
+            next TYPE unless $build->$accessor;
+
+            my @params = $self->params_for_result($qual, $variant_type);
+            return unless @params; #can't generate result so cannot shortcut
+
+            my $existing_result = Genome::Model::Tools::DetectVariants2::Classify::Tier->get_with_lock(@params);
+            if($existing_result) {
+                push @existing_results, $existing_result;
+            } else {
+                return;
+            }
+        }
+    }
+
+    for my $existing_result (@existing_results) {
+        $self->link_result_to_build($existing_result);
+    }
+}
+
+
 sub execute {
     my $self = shift;
     my $build = $self->build;
@@ -37,6 +65,35 @@ sub execute {
     }
 
     $self->status_message("executing tier variants step on snvs and indels");
+
+    for my $qual ('hq', 'lq') {
+        TYPE: for my $variant_type ('snv', 'indel') {
+            my $accessor = $variant_type . '_detection_strategy';
+            next TYPE unless $build->$accessor;
+
+            my @params = $self->params_for_result($qual, $variant_type);
+            if(@params) {
+                my $result = Genome::Model::Tools::DetectVariants2::Classify::Tier->get_or_create(@params);
+                if($result) {
+                    $self->link_result_to_build($result);
+                } else {
+                    die $self->error_message('Failed to generate result for ' . $qual . ' ' . $variant_type);
+                }
+            } else {
+                $self->_tier_non_result_files($qual, $variant_type);
+            }
+        }
+    }
+
+    $self->status_message("Tier Variants step completed");
+    return 1;
+}
+
+sub _tier_non_result_files {
+    my $self = shift;
+    my $qual = shift;
+    my $variant_type = shift;
+    my $build = $self->build;
 
     #TODO find a better way to set this. It should perhaps come from the build?
     my $bed_version = 2;
@@ -56,24 +113,18 @@ sub execute {
         Genome::Sys->create_directory($effects_dir);
     }
 
-    if ($build->snv_detection_strategy){
-        for my $name_set (["novel","snvs.hq.novel"], ["novel","snvs.hq.previously_detected"], ["variants","snvs.lq"]){ #want to tier lq, previously_discovered, and novel snvs 
+    my @name_sets;
+    if($qual eq 'hq') {
+        @name_sets = (['novel', $variant_type . 's.hq.novel'], ['novel', $variant_type . 's.hq.previously_detected']);
+    } elsif ($qual eq 'lq') {
+        @name_sets = (['variants', $variant_type . 's.lq']);
+    } else {
+        die ('unexpected qual ' . $qual);
+    }
+
+    for my $name_set (@name_sets){
             $self->run_fast_tier($name_set,$bed_version, $tiering_version, 'bed');
-        }
-    }else{
-        $self->status_message("No snv detection strategy, skipping snv tiering");
     }
-
-    if ($build->indel_detection_strategy){
-        for my $name_set (["novel","indels.hq.novel"], ["novel","indels.hq.previously_detected"], ["variants","indels.lq"]){ #want to tier lq, previously_discovered, and novel indels 
-            $self->run_fast_tier($name_set, $bed_version, $tiering_version, 'bed');
-        }
-
-    }else{
-        $self->status_message("No indel detection strategy, skipping indel tiering");
-    }
-
-    $self->status_message("Tier Variants step completed");
 
     return 1;
 }
@@ -127,6 +178,59 @@ sub run_fast_tier {
     unless(-e "$tier1_path" and -e "$tier2_path" and -e "$tier3_path" and -e "$tier4_path"){
         die $self->error_message("SNV fast tier output not found with params:\n" . (%params?(Data::Dumper::Dumper(\%params)):''));
     }
+}
+
+
+sub params_for_result {
+    my $self = shift;
+    my $qual = shift;
+    my $variant_type = shift;
+    my $build = $self->build;
+
+    my @results = $build->results;
+    my $target_class;
+    if($qual eq 'hq') {
+        $target_class = 'Genome::Model::Tools::DetectVariants2::Classify::PreviouslyDiscovered';
+    } elsif($qual eq 'lq') {
+        $target_class = 'Genome::Model::Tools::DetectVariants2::Result::Combine::LqUnion';
+    } else {
+        die('Unknown quality passed to params_for_result: ' . $qual);
+    }
+    my @dv2_results = grep($_->isa($target_class), @results);
+    my ($result, @extra) = grep($_->variant_type eq $variant_type, @dv2_results);
+    return unless $result;
+    if(@extra) {
+        die $self->error_message('Multiple results unexpected for ' . $qual . ' ' . $variant_type);
+    }
+
+    return (
+        variant_type => $variant_type,
+        prior_result_id => $result->id,
+        annotation_build_id => $build->annotation_build->id,
+        classifier_version => $build->tiering_version,
+        test_name => $ENV{GENOME_SOFTWARE_RESULT_TEST_NAME} || undef,
+    );
+}
+
+sub link_result_to_build {
+    my $self = shift;
+    my $result = shift;
+    my $build = $self->build;
+
+    $result->add_user(label => 'uses', user => $build);
+
+    my $effects_dir = $build->data_directory."/effects";
+    unless(-d $effects_dir){
+        Genome::Sys->create_directory($effects_dir);
+    }
+
+    for my $f (glob($result->output_dir . '/*')) {
+        my $name = File::Basename::fileparse($f);
+
+        Genome::Sys->create_symlink($f, join('/', $effects_dir, $name));
+    }
+
+    return 1;
 }
 
 1;

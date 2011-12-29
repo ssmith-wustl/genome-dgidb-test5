@@ -28,7 +28,8 @@ class Genome::Model::SomaticValidation::Command::DefineModels {
         },
         region_of_interest_set => {
             is => 'Genome::FeatureList',
-            doc => 'The regions on which to perform refcov analysis',
+            is_optional => 1,
+            doc => 'The regions on which to perform refcov analysis (defaults to the target)',
         },
         processing_profile => {
             is => 'Genome::ProcessingProfile',
@@ -55,6 +56,8 @@ class Genome::Model::SomaticValidation::Command::DefineModels {
     doc => 'define models based on an existing model-group',
 };
 
+sub sub_command_category { 'analyst tools' }
+
 sub execute {
     my $self = shift;
 
@@ -67,9 +70,12 @@ sub execute {
             if $self->$param;
     }
 
-    if($self->region_of_interest_set) {
-        push @params, reference_sequence_build => $self->region_of_interest_set->reference;
+    if(!$self->region_of_interest_set and $self->target) {
+        $self->region_of_interest_set($self->target);
     }
+
+    my $reference_sequence_build = $self->region_of_interest_set->reference;
+    push @params, reference_sequence_build => $reference_sequence_build;
 
     my %variants = $self->_generate_variant_mapping;
         $DB::single = 1;
@@ -97,9 +103,9 @@ sub execute {
             $tumor_sample = $model->tumor_sample;
         }
         if($model->can('normal_model')) {
-            $tumor_sample = $model->normal_model->subject;
+            $normal_sample = $model->normal_model->subject;
         } else {
-            $tumor_sample = $model->normal_sample;
+            $normal_sample = $model->normal_sample;
         }
 
         my $define_cmd = Genome::Model::Command::Define::SomaticValidation->create(

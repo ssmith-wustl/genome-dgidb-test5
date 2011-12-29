@@ -106,6 +106,7 @@ sub import_genes {
     my $self = shift;
     my $version = $self->version;
     my $gene_outfile = shift;
+    my $gene_name_prefix = 'ENTRZ_G';
     my @gene_name_reports;
     my @headers = qw/ entrez_id entrez_gene_symbol entrez_gene_synonyms /;
     my $parser = Genome::Utility::IO::SeparatedValueReader->create(
@@ -117,7 +118,8 @@ sub import_genes {
 
     $parser->next; #eat the headers
     while(my $gene = $parser->next){
-        my $gene_name_report = $self->_create_gene_name_report($gene->{entrez_id}, 'entrez_id', 'Entrez', $version, '');
+        my $gene_name = join("", $gene_name_prefix, $gene->{entrez_id});
+        my $gene_name_report = $self->_create_gene_name_report($gene_name, 'entrez_id', 'Entrez', $version, '');
         push @gene_name_reports, $gene_name_report;
         my $gene_symbol_association = $self->_create_gene_name_report_association($gene_name_report, $gene->{entrez_gene_symbol}, 'entrez_gene_symbol', '');
         my @entrez_gene_synonyms = split(',', $gene->{entrez_gene_synonyms});

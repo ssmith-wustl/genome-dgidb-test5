@@ -297,6 +297,7 @@ sub loadEntrezEnsemblData{
       $taxon_id = '10090';
       $entrez_dir = '/gscmnt/sata132/techd/solexa/jwalker/RNAseq/annotation/mm9/entrez';
       $ensembl_dir = '/gscmnt/sata132/techd/solexa/jwalker/RNAseq/annotation/mm9/ensembl';
+      $ucsc_dir = '/gscmnt/sata132/techd/solexa/jwalker/RNAseq/annotation/mm9/ucsc/';
       @files = qw/
                      ensembl_v64_id_to_gene_name.txt
                      ensembl_v63_id_to_gene_name.txt
