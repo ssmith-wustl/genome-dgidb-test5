@@ -78,11 +78,6 @@ class Genome::Model::Tools::DetectVariants2::Breakdancer{
     ],
 };
 
-
-sub help_brief {
-    "discovers structural variation using breakdancer",
-}
-
 sub help_synopsis {
     my $self = shift;
     return <<"EOS"

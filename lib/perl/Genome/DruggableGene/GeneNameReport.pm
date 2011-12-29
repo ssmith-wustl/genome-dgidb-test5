@@ -94,7 +94,16 @@ sub original_data_source_url {
     my $self = shift;
     my $base_url = $self->citation->base_url;
     my $source_id = $self->source_id;
-    return join("", $base_url, $source_id);
+    my $url;
+    if($self->source_db_name eq 'DrugBank'){
+        $url = join('/', $base_url, 'molecules', $source_id . '?as=target');
+    }elsif($self->source_db_name eq 'TTD'){
+        $url = $base_url . 'Detail.asp?ID=' . $source_id;
+    }else{
+        $url = join('', $base_url, $source_id);
+    }
+
+    return $url;
 }
 
 sub convert_to_entrez {

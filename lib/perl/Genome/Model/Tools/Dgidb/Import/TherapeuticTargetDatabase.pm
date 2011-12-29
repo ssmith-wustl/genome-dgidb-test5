@@ -83,7 +83,9 @@ sub _import_drug {
     my $self = shift;
     my $interaction = shift;
     my $version = $self->version;
-    my $drug_name = $self->_create_drug_name_report($interaction->{drug_name}, 'TTD_drug_id', 'TTD', $version, '');
+    my $drug_name = $self->_create_drug_name_report($interaction->{drug_id}, 'TTD_drug_id', 'TTD', $version, '');
+
+    my $primary_drug_name = $self->_create_drug_name_report_association($drug_name, $interaction->{drug_name}, 'TTD_primary_drug_name', '');
 
     my @drug_synonyms = split("; ", $interaction->{drug_synonyms});
     for my $drug_synonym (@drug_synonyms){

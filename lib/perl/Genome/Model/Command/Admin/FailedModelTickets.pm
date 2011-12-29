@@ -1,4 +1,4 @@
-package Genome::Model::Command::Services::BuildCzarRt;
+package Genome::Model::Command::Admin::FailedModelTickets;
 
 use strict;
 use warnings;
@@ -13,15 +13,22 @@ require IO::Prompt;
 require RT::Client::REST;
 require RT::Client::REST::Ticket;
 
-class Genome::Model::Command::Services::BuildCzarRt { 
+class Genome::Model::Command::Admin::FailedModelTickets { 
     is => 'Command::V2',
+    doc => 'find failed cron models, check that they are in a ticket',
 };
+
+sub help_detail {
+    return <<HELP;
+This command collects cron models by failed build events and scours tickets for them. If they are not found, the models are summaraized first by the error entry log and then by grepping the error log files. The summary is the printed to STDOUT.
+HELP
+}
 
 sub execute {
     my $self = shift;
 
-    # Connect to RT
-    my $pw = IO::Prompt::prompt('RT Password: ', -e => "*");
+    # Connect
+    my $pw = IO::Prompt::prompt('Ticket Tracker Password: ', -e => "*");
     chomp $pw;
     return if not $pw;
     my $username = Genome::Sys->username;
@@ -39,7 +46,7 @@ sub execute {
     $rt->_cookie->{ignore_discard} = 1;
     $rt->_cookie->save($cookie_file);
 
-    # Find models
+    # Find cron models by failed build events
     $self->status_message('Looking for failed models...');
     my @events = Genome::Model::Event->get(
         event_status => 'Failed',
@@ -62,10 +69,10 @@ sub execute {
     $self->status_message('Found '.keys(%models_and_builds).' models');
 
     # Retrieve tickets
-    $self->status_message('Looking for build czar tickets...');
+    $self->status_message('Looking for tickets...');
     my @ticket_ids = $rt->search(
         type => 'ticket',
-        query => "Queue = 'apipe-support' AND ( Status = 'new' OR Status = 'open' ) AND Subject LIKE 'build czar'",
+        query => "Queue = 'apipe-builds' AND ( Status = 'new' OR Status = 'open' )",
     );
     $self->status_message('Found '.@ticket_ids.' tickets');
     my %tickets;
@@ -124,8 +131,8 @@ sub execute {
     my $models_in_tickets = map { @{$tickets{$_}} }keys %tickets;
     my $models_not_in_tickets = keys %models_and_builds;
     $self->status_message('Models: '.($models_in_tickets+ $models_not_in_tickets));
-    $self->status_message('Models in RT: '.$models_in_tickets);
-    $self->status_message('Models not in RT: '.$models_not_in_tickets);
+    $self->status_message('Models in tickets: '.$models_in_tickets);
+    $self->status_message('Models not in tickets: '.$models_not_in_tickets);
     $self->status_message('Models with error log: '.$models_with_errors);
     $self->status_message('Models with guessed errors: '.$models_with_guessed_errors);
     $self->status_message('Models with unknown failures: '.($models_not_in_tickets - $models_with_errors - $models_with_guessed_errors));
@@ -152,6 +159,7 @@ sub _guess_build_error {
                 next if $err eq "Can't convert workflow errors to build errors";
                 next if $err eq 'relation "error_log_entry" does not exist';
                 next if $err =~ /current transaction is aborted/;
+                next if $err =~ /run_workflow_ls/;
                 $errors{$err} = 1;
             }
         },

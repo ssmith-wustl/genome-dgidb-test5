@@ -44,10 +44,6 @@ class Genome::Model::Tools::DetectVariants2::Samtools {
     ]
 };
 
-sub help_brief {
-    "Use ,samtools for variant detection.",
-}
-
 sub help_synopsis {
     my $self = shift;
     return <<"EOS"
