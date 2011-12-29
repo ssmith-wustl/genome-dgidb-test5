@@ -106,20 +106,21 @@ sub execute {
     my $far_cmd = $self->far_path;
 
     #extract adapter from params string if supplied and set it to the adapter property.  this allows us to create an adapters.fa file if trim_reverse_complement is set
-    my @params = split(/\s+/, $self->params);
+    my @cmd_line_params = split(/\s+/, $self->params);
     my @new_params;
-    for (my $i=0; $i < scalar @params; $i++){
-        my $param = $params[$i];   
+    for (my $i=0; $i < scalar @cmd_line_params; $i++){
+        my $param = $cmd_line_params[$i];   
         if ($param eq '-as' or $param eq '--adapter'){
             $i++;
-            my $sequence = $params[$i];
+            my $sequence = $cmd_line_params[$i];
             $self->adapter($sequence);
         }else{
             push @new_params, $param;
         }
     }
     $self->params(join(" ", @new_params));
-        
+
+    $self->adapter(uc($self->adapter));
 
     #check deprecated param names and use the updated names(which are the same as the corresponding far param)  Eventually we will die here, and then remove the options
     for (['threads', 'nr_threads'], ['min_read_length', 'min_readlength'], ['adaptor_sequence', 'adapter'], ['file_format', 'format']){
