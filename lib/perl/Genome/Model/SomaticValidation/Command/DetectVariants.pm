@@ -125,6 +125,10 @@ sub execute{
             }
             symlink($unexpected_format_output, $result);
         }
+        my $lq_snv_result = $command->snv_lq_result;
+        if($lq_snv_result) {
+            $lq_snv_result->add_user(user => $build, label => 'snv_lq_result');
+        }
         my $lq_result = $build->data_set_path("variants/snvs.lq",$version,'bed');
         unless (-e $lq_result){
             #these are not set on the detect variants command, so I'm hardcoding them.
@@ -146,6 +150,10 @@ sub execute{
                 die $self->error_message("Expected hq detected indels file $result, but it does not exist!");
             }
             symlink($unexpected_filename_output, $result);
+        }
+        my $lq_indel_result = $command->indel_lq_result;
+        if($lq_indel_result) {
+            $lq_indel_result->add_user(user => $build, label => 'indel_lq_result');
         }
         my $lq_result = $build->data_set_path("variants/indels.lq",$version,'bed');
         unless (-e $lq_result){
