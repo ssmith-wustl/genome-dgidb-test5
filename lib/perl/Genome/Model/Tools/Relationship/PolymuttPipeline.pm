@@ -61,8 +61,8 @@ sub execute {
     }
     #self->verify_models_have_succeeded_builds_and_bams FIXME 
     $self->_ref_fasta($models[0]->reference_sequence_build->full_consensus_path("fa"));
-#    my @glfs = $self->generate_glfs(@models);
-    my @glfs = glob($self->output_dir . "/*vcf");
+    my @glfs = $self->generate_glfs(@models);
+#    my @glfs = glob($self->output_dir . "/*glf");  for testing
     my $dat_file = $self->generate_dat();
     my $glf_index = $self->generate_glfindex(@glfs);
     $self->run_polymutt($dat_file, $glf_index);
@@ -155,7 +155,8 @@ sub run_polymutt {
     my $result = Workflow::Simple::run_workflow_lsf( $workflow, %inputs);
     unless($result) {
         $self->error_message( join("\n", map($_->name . ': ' . $_->error, @Workflow::Simple::ERROR)) );
-        die $self->error_message("parallel polymutt did not return correctly.");
+        $self->error_message("parallel polymutt did not return correctly.");
+        die;
     }
 
 }
@@ -195,11 +196,11 @@ sub generate_glfs {
     my (@outputs, @inputs);
     $inputs{ref_fasta} = $self->_ref_fasta;
     for (my $i =0; $i < scalar(@models); $i++) {
-        my $output_name = $self->output_dir . "/" . $models[$i]->subject->name . ".vcf";
+        my $output_name = $self->output_dir . "/" . $models[$i]->subject->name . ".glf";
         push @outputs, $output_name;
         $inputs{"bam_$i"}=$models[$i]->last_succeeded_build->whole_rmdup_bam_file;
-        $inputs{"output_vcf_$i"}=$output_name;
-        push @inputs, ("bam_$i", "output_vcf_$i");
+        $inputs{"output_glf_$i"}=$output_name;
+        push @inputs, ("bam_$i", "output_glf_$i");
     }
     my $workflow = Workflow::Model->create(
         name=> "polymutt parallel glf file creation",
@@ -231,13 +232,13 @@ sub generate_glfs {
         );
         $workflow->add_link(
             left_operation=>$workflow->get_input_connector,
-            left_property=>"output_vcf_$i",
+            left_property=>"output_glf_$i",
             right_operation=>$hybridview_op,
-            right_property=>"output_vcf",
+            right_property=>"output_glf",
         );
         $workflow->add_link(
             left_operation=>$hybridview_op,
-            left_property=>"output_vcf",
+            left_property=>"output_glf",
             right_operation=>$workflow->get_output_connector,
             right_property=>"output",
         );
