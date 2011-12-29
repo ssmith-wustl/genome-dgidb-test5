@@ -40,7 +40,6 @@ sub execute {
     print "INPUT FILES:\n\t" . join("\n\t", @input_files) . "\n";
     my %params = (
         unique => 1,
-        use_version => $self->use_version || '',
         input_files => \@input_files,
         output_file => $output_file,
     );
