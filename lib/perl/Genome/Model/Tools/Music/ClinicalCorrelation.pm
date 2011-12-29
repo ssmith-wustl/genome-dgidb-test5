@@ -140,8 +140,8 @@ sub execute {
         if ($datatype =~ /numeric/i) {
             $full_output_filename = $output_file . ".numeric";
             if ($genetic_data_type =~ /^gene|variant$/i) {
-                $test_method = "cor"; # cor instead of anova because we're assuming additive effect
-                #$test_method = "wilcox"; # wilcoxon rank-sum is a better option here (for MuSiC v2)
+                #$test_method = "cor"; # cor instead of anova because we're assuming additive effect
+                $test_method = "wilcox"; # wilcoxon rank-sum is a better option here (for MuSiC v2)
             }
             else {
                 $self->error_message("Please enter either \"gene\" or \"variant\" for the --genetic-data-type parameter.");

@@ -145,8 +145,8 @@ sub create_sample_gene_matrix {
       return undef;
     }
 
-    # Skip Silent mutations and those in Introns, RNA, UTRs, Flanks, IGRs, or the ubiquitous Targeted_Region
-    if( $mutation_class =~ m/^(Silent|Intron|RNA|3'Flank|3'UTR|5'Flank|5'UTR|IGR|Targeted_Region)$/ )
+    # Skip Silent mutations and those in Introns, UTRs, Flanks, IGRs, or the ubiquitous Targeted_Region
+    if( $mutation_class =~ m/^(Silent|Intron|3'Flank|3'UTR|5'Flank|5'UTR|IGR|Targeted_Region)$/ )
     {
       print "Skipping $mutation_class mutation in gene $gene\n";
       next;
