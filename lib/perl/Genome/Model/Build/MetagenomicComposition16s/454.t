@@ -194,11 +194,11 @@ for my $amplicon_set ( @amplicon_sets ) {
 }
 
 ok($build->perform_post_success_actions, 'perform post success actions');
-is($build->{status_message}->text, 'Model is not for QC. Not sending confirmation email', 'correct status message');
+is($build->status_message, 'Model is not for QC. Not sending confirmation email', 'correct status message');
 my $model_name = $model->name;
 $model->name('ebelter-mc16s-qc');
 ok($build->perform_post_success_actions, 'perform post success actions');
-is($build->{status_message}->text, 'Sent email to Erica (esodergren) and Kathie (kmihindu)', 'correct status message');
+is($build->status_message, 'Sent email to Erica (esodergren) and Kathie (kmihindu)', 'correct status message');
 $model->name($model_name);
 
 #print $build->data_directory."\n";<STDIN>;
