@@ -6,12 +6,14 @@ use Genome;
 
 class Genome::Model::Tools::Sx::Trim::FarAndTrimq2 {
     is => 'Genome::Model::Tools::Sx',
-    has => [
-        far_params => {is => "Text", doc => "parameter string for far trimmer",
-                        default => '--adapter gtttcccagtcacgata --trim-end any --cut-off 2 --min-overlap 16 --max-uncalled 100 --nr-threads 4'
+    has_input => [
+        far_params => {
+            is => "Text", 
+            doc => "parameter string for far trimmer",
                     },
-        trimq2_params => {is => "Text", doc => "parameter string for trimq2",
-                        default => '--trim-string=#'
+        trimq2_params => {
+            is => "Text", 
+            doc => "parameter string for trimq2",
                     },
     ],
 };
