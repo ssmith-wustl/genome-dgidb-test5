@@ -227,8 +227,7 @@ sub _execute_build {
     # once Tom's new alignment thing is in place, it would actually generate them in parallel
     #
     
-    $self->status_message('Gathering alignments...');
-    $DB::single=1;
+    $self->status_message('Gathering alignments...');    
     my $overall_alignment_result = Genome::InstrumentData::Composite->get_or_create(
         inputs => {
             instrument_data => \@instdata,
@@ -262,28 +261,22 @@ sub _execute_build {
     my $multisample_vcf;
     if ($USE_NEW_DISPATCHER) {
         
-        #
         # run the DV2 API to do variant detection as we do in somatic, but let it take in N BAMs
         # _internally_ it will (for the first pass):
         #  notice it's running on multiple BAMs
         #  get the single-BAM results
         #  merge them with joinx and make a combined VCF (tolerating the fact that per-bam variants are not VCF)
         #  run bamreadcount to fill-in the blanks
-        #
 
         ## begin running the DV2 dispatcher (this is out right out of the somatic validation DetectVariants step)
 
-        $self->status_message("Executing detect variants step");
-        my $build = $self->build;
-        unless ($build){
-            die $self->error_message("no build provided!");
-        }
+        $self->status_message("Executing detect variants step");        
 
         my %params;
-        $params{snv_detection_strategy} = $build->snv_detection_strategy if $build->snv_detection_strategy;
-        $params{indel_detection_strategy} = $build->indel_detection_strategy if $build->indel_detection_strategy;
-        $params{sv_detection_strategy} = $build->sv_detection_strategy if $build->sv_detection_strategy;
-        $params{cnv_detection_strategy} = $build->cnv_detection_strategy if $build->cnv_detection_strategy;
+        $params{snv_detection_strategy} = $self->snv_detection_strategy if $self->snv_detection_strategy;
+        $params{indel_detection_strategy} = $self->indel_detection_strategy if $self->indel_detection_strategy;
+        $params{sv_detection_strategy} = $self->sv_detection_strategy if $self->sv_detection_strategy;
+        $params{cnv_detection_strategy} = $self->cnv_detection_strategy if $self->cnv_detection_strategy;
 
         my $reference_build = $build->reference_sequence_build;
         my $reference_fasta = $reference_build->full_consensus_path('fa');
@@ -298,15 +291,21 @@ sub _execute_build {
         # instead of setting {control_,}aligned_reads_{input,sample}
         # set alignment_results and control_alignment_results
 
-        $params{alignment_results} = @per_sample_alignment_results;
-        $params{control_alignmnent_results} = [];
+        $params{alignment_results} = \@per_sample_alignment_results;
+        $params{control_alignment_results} = [];
+
+        my @arids = map { $_->id } @per_sample_alignment_results;
+        print Data::Dumper::Dumper(\@arids,\%params);
 
         ###
 
         my $command = Genome::Model::Tools::DetectVariants2::Dispatcher->create(%params);
+        $DB::single = 1;
+
         unless ($command){
             die $self->error_message("Couldn't create detect variants dispatcher from params:\n".Data::Dumper::Dumper \%params);
         }
+
         my $rv = $command->execute;
         my $err = $@;
         unless ($rv){
@@ -324,20 +323,20 @@ sub _execute_build {
         # old logic which will move inside of DV2
 
         my $vcf_output_directory = $build->data_directory."/variants";
-        unless(-e $vcf_output_directory){
-            unless(mkdir $vcf_output_directory){
+        unless (-e $vcf_output_directory) {
+            unless(mkdir $vcf_output_directory) {
                 die $self->error_message("Output directory doesn't exist and can't be created at: ".$vcf_output_directory);
             }
-            unless(mkdir $vcf_output_directory."/merge_vcfs"){
+            unless(mkdir $vcf_output_directory."/merge_vcfs") {
                 die $self->error_message("Output directory doesn't exist and can't be created at: ".$vcf_output_directory);
             }
         }
+        
         my %region_limiting_params = ( 
             roi_file => $self->roi_file,
             roi_name => $self->roi_name,
             wingspan => $self->wingspan,
         );
-
 
         my $snv_vcf_creation = Genome::Model::Tools::Vcf::CreateCrossSampleVcf->create(
             builds => \@builds,
@@ -346,6 +345,7 @@ sub _execute_build {
             variant_type => 'snvs',
             %region_limiting_params,
         );
+        
         my $vcf_result;
         unless($vcf_result = $snv_vcf_creation->execute){
             die $self->error_message("Could not complete vcf merging!");

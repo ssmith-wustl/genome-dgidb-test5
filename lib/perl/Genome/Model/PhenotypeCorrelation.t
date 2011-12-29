@@ -10,15 +10,20 @@ BEGIN {
 };
 
 use above "Genome";
-use Test::More;# tests => 14; #skip_all => "This is incomplete.";
+use Test::More;
+
 my $archos = `uname -a`;
 if ($archos !~ /64/) {
     plan skip_all => "Must run from 64-bit machine";
 } else {
-    plan  tests => 13;
+    plan  tests => 15;
 }
 
-my $test_data_directory = "/gsc/var/cache/testsuite/data/Genome-Model-PhenotypeCorrelation";
+my $test_data_directory = "/gsc/var/cache/testsuite/data/Genome-Model-PhenotypeCorrelation/2011-12-29/";
+
+my $tmp_dir = File::Temp::tempdir('Genome-Model-Build-PhenotypeCorrelation-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
+#$tmp_dir = "/home/archive/pcbuild-$$/";
+#mkdir $tmp_dir;
 
 my $group = Genome::PopulationGroup->create(name => 'TEST-phenotype-correlation');
 for my $member_id (2874846805,2874846807,2874846809) {
@@ -44,9 +49,9 @@ my $p = Genome::ProcessingProfile::PhenotypeCorrelation->create(
     #cnv_detection_strategy          => undef,
     group_samples_for_genotyping_by => 'each',
     phenotype_analysis_strategy     => 'quantitative',
-    roi_file                        => $roi_file,
-    roi_name                        => $roi_name,
-    wingspan                        => $wingspan,
+    roi_file                        => $roi_file,   # TODO: this is an input, not pp param
+    roi_name                        => $roi_name,   # TODO: this is an input, not pp param
+    wingspan                        => $wingspan,   
 );
 ok($p, "created a processing profile") or diag(Genome::ProcessingProfile::PhenotypeCorrelation->error_message);
 
@@ -74,21 +79,10 @@ ok(scalar(@patients), scalar(@patients) . " patients");
 
 my @samples = Genome::Sample->get(id => [ (2880837135,2880837162,2880837289)]);
 #my @samples = Genome::Sample->get(source_id => [ map { $_->id } @patients ]);
-#ok(scalar(@samples), scalar(@samples) . " samples");
+ok(scalar(@samples), scalar(@samples) . " samples");
 
-#my @i = Genome::InstrumentData::Solexa->get('sample_id' => [ map { $_->id } @samples ], target_region_set_name => $asms_target_region_set_name);
-
-#unless(@i){
 my @i = Genome::InstrumentData::Imported->get('sample_id' => [ map { $_->id } @samples ]);
-$DB::single=1;
-#}
-=cut
-
-
-my @i = Genome::InstrumentData::Imported->get('sample_id' => [ map { $_->id } @samples ] );
-=cut
-
-
+#my @i = Genome::InstrumentData::Solexa->get('sample_id' => [ map { $_->id } @samples ], target_region_set_name => $asms_target_region_set_name);
 ok(scalar(@i), scalar(@i) . " instdata");
 
 my @ii;
@@ -100,8 +94,6 @@ for my $i (@i) {
     push @ii, $ii if $ii;
 }
 is(scalar(@ii), scalar(@i), "assigned " . scalar(@i) . " instrument data");
-
-my $tmp_dir = File::Temp::tempdir('Genome-Model-Build-PhenotypeCorrelation-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
 
 my $b = $m->add_build(
     subclass_name => 'Genome::Model::Build::PhenotypeCorrelation',
@@ -119,6 +111,14 @@ ok($b, "created a build") or diag(Genome::Model->error_message);
 my $retval = eval { $m->_execute_build($b); };
 is($retval, 1, 'execution of the build returned true');
 is($@, '', 'no exceptions thrown during build process') or diag $@;
+
+# diff the output
+my $expected_data_directory = $test_data_directory . '/expected-output/build-directory/';
+my $cmd = "diff -r --brief $expected_data_directory " . $b->data_directory;
+note("diff command: $cmd");
+my @diff = `$cmd`;
+is(scalar(@diff), 6, "there are six differences, accounted for by an empty subdirectory with a negative ID number which differs per run, and a different build directory path")
+    or diag(@diff);
 
 __END__
 
