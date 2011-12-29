@@ -44,6 +44,7 @@ sub execute{
         source => $inputs[0],
         source2 => $inputs[1],
         target => $target,
+        trim_reverse_complement => 1,
         far_output => $far_output_dir .'/far_output_report.txt',
     );
     unless ($trimmer) {
