@@ -36,7 +36,19 @@ sub _validate_inputs {
         die $self->error_message("Couldn't find tiering bed files from annotation build");
     }
 
-    return $self->SUPER::_validate_inputs;
+    unless($self->prior_result) {
+        $self->error_message('No prior result found.');
+        return;
+    }
+
+    my $version = $self->classifier_version;
+    unless(grep($_ eq $version, $self->available_versions)) {
+        $self->error_message('Unsupported classifier version passed.  Supported versions: ' . join(', ', $self->available_versions));
+        return;
+    }
+
+    #don't call super--it checks for an .hq file which doesn't exist for LQ union
+    return 1; # $self->SUPER::_validate_inputs;
 }
 
 sub _classify_variants {
