@@ -37,6 +37,7 @@ class Genome::Model::Tools::Sx::EulerEc {
     is => 'Genome::Model::Tools::Sx',
     has => [
         %EULER_PARAMS,
+        _tmpdir => { is_transient => 1, is_optional => 1 },
         save_files => { is => 'Boolean', is_optional => 1, doc => 'Save euler output files' },
     ],
 };
@@ -51,35 +52,35 @@ sub execute {
     $self->_init;
     my $cwd = cwd();
 
-    #tmp dir to run EulerEC
-    my $euler_dir = Genome::Sys->base_temp_directory;
+    #run in tmp directory
+    $self->_tmpdir( Genome::Sys->base_temp_directory );
     for my $set ( 1 .. 2 ) { #run fwd/rev in separate dirs
-        Genome::Sys->create_directory( $euler_dir."/$set" );
+        Genome::Sys->create_directory( $self->_tmpdir."/$set" );
     }
-    $self->status_message("Running EulerEC in $euler_dir");
+    $self->status_message('Running EulerEC in '.$self->_tmpdir );
 
     #Input reader
     my $reader = $self->_input;
-    $self->error_message("Failed to get input file to process") and return
+    $self->error_message('Failed to get input file to process') and return
         if not $reader;
 
     #Euler fasta writer 1
     my $fasta = 'euler.fasta';
-    my $one_fasta = $euler_dir.'/1/'.$fasta;
+    my $one_fasta = $self->_tmpdir.'/1/'.$fasta;
     my $one_writer = Genome::Model::Tools::Sx::PhredWriter->create(
         file => $one_fasta,
         qual_file => $one_fasta.'.qual',
     );
-    $self->error_message("Failed to create gmt sx phred-writer for 1 sequences") and return
+    $self->error_message('Failed to create gmt sx phred-writer for 1 sequences') and return
         if not $one_writer;
 
     #Euler fasta writer 2 .. only write to if paired
-    my $two_fasta = $euler_dir.'/2/'.$fasta;
+    my $two_fasta = $self->_tmpdir.'/2/'.$fasta;
     my $two_writer = Genome::Model::Tools::Sx::PhredWriter->create(
         file => $two_fasta,
         qual_file => $two_fasta.'.qual',
     );
-    $self->error_message("Failed to create gmt sx phred-writer to 2 sequences") and return
+    $self->error_message('Failed to create gmt sx phred-writer to 2 sequences') and return
         if not $two_writer;
 
     #write input to writer
@@ -91,8 +92,8 @@ sub execute {
     #run EulerEC
     for my $set ( 1 .. 2 ) {
         #EulerEC outputs to cwd
-        chdir $euler_dir."/$set";
-        $self->status_message("chdir to ".$euler_dir."/$set to run EulerEC");
+        chdir $self->_tmpdir."/$set";
+        $self->status_message('chdir to '.$self->_tmpdir."/$set to run EulerEC");
         if ( -s 'euler.fasta' ) {
             my $env_var = 'EUSRC=/gsc/pkg/bio/euler/euler-sr-ec-2.0.2 MACHTYPE=x86_64';#set env
             my $cmd = $env_var.' EulerEC.pl euler.fasta '.$self->_euler_cmd_params;
@@ -114,39 +115,39 @@ sub execute {
     }
 
     #euler 1 output reader
-    my $euler_1_seq = $euler_dir."/1/fixed/euler.fasta";
+    my $euler_1_seq = $self->_tmpdir.'/1/fixed/euler.fasta';
     $self->error_message("Euler output is empty or does not exist: ".$euler_1_seq) and return
         if not -s $euler_1_seq;
     my $euler_1_seq_reader = Genome::Model::Tools::Sx::PhredSeqReader->create(
         file => $euler_1_seq,
     );
     my $one_qual_reader = Genome::Model::Tools::Sx::PhredQualReader->create(
-        file => $euler_dir.'/1/euler.fasta.qual',
+        file => $self->_tmpdir.'/1/euler.fasta.qual',
     );
 
     #euler 2 output reader if written to
     my $euler_2_seq_reader;
     my $two_qual_reader;
-    if ( -s $euler_dir."/2/fixed/euler.fasta" ) {
+    if ( -s $self->_tmpdir.'/2/fixed/euler.fasta' ) {
         $self->status_message("Creating set 2 EulerEC output reader");
         $euler_2_seq_reader = Genome::Model::Tools::Sx::PhredSeqReader->create(
-            file => $euler_dir."/2/fixed/euler.fasta",
+            file => $self->_tmpdir.'/2/fixed/euler.fasta',
         );
         $two_qual_reader = Genome::Model::Tools::Sx::PhredQualReader->create(
-            file => $euler_dir.'/2/euler.fasta.qual',
+            file => $self->_tmpdir.'/2/euler.fasta.qual',
         ); 
     }
 
     #output writer
     my $output_writer = $self->_output;
-    $self->error_message("Failed to set output writer") and return if
+    $self->error_message('Failed to set output writer') and return if
         not $output_writer;
     
     #write to output .. clean up trimmed/appended reads
     while ( my $seq = $euler_1_seq_reader->read ) {
         my $qual = $one_qual_reader->read;
         my $fastq = $self->_fastq_from_seq_qual($seq,$qual);
-        $self->error_message("Failed to get fastq from seq and qual") and return
+        $self->error_message('Failed to get fastq from seq and qual') and return
             if not $fastq;
         my @fastqs;
         push @fastqs, $fastq;
@@ -155,11 +156,17 @@ sub execute {
             $seq = $euler_2_seq_reader->read;
             $qual = $two_qual_reader->read;
             $fastq = $self->_fastq_from_seq_qual($seq,$qual);
-            $self->error_message("Failed to get fastq from seq and qual") and return
+            $self->error_message('Failed to get fastq from seq and qual') and return
                 if not $fastq;
             push @fastqs, $fastq;
         }
         $output_writer->write( \@fastqs );
+    }
+
+    if ( $self->save_files ) {
+        if ( not $self->save_read_processor_output_files ) {
+            $self->error_message('Attempted to save EulerEC output files but failed');
+        }
     }
 
     return 1;
@@ -185,7 +192,7 @@ sub _fastq_from_seq_qual {
 
     #check seq length == qual length
     if ( length($seq->{seq}) != length($qual->{qual}) ) {
-        $self->status_message("Fasta and qual lengths do not match for read id: ".$seq->{id});
+        $self->status_message('Fasta and qual lengths do not match for read id: '.$seq->{id});
         #make all sanger 33/phred 0
         $qual->{qual} = '!' x (length($seq->{seq}));
     }
