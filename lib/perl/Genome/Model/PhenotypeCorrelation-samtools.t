@@ -19,7 +19,7 @@ if ($archos !~ /64/) {
     plan  tests => 15;
 }
 
-my $test_data_directory = "/gsc/var/cache/testsuite/data/Genome-Model-PhenotypeCorrelation/2011-12-30/";
+my $test_data_directory = "/gsc/var/cache/testsuite/data/Genome-Model-PhenotypeCorrelation/2011-12-30-2/";
 
 my $tmp_dir = File::Temp::tempdir('Genome-Model-Build-PhenotypeCorrelation-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
 
@@ -128,9 +128,13 @@ my $expected_data_directory = $test_data_directory . '/expected-output/build-dir
 my $cmd = "diff -r --brief $expected_data_directory " . $b->data_directory;
 note("diff command: $cmd");
 my @diff = `$cmd`;
-ok( (scalar(@diff) == 6 or scalar(@diff) == 8), "there are eight differences, accounted for by an empty subdirectory with a negative ID number which differs per run, and a different build directory path")
+
+print "diffs = ".scalar(@diff)."\n";
+
+ok( (scalar(@diff) == 5 ), "there are five differences, accounted for by an empty subdirectory with a negative ID number which differs per run, and a different build directory path")
     or diag(@diff);
 
+$DB::single=1;
 
 __END__
 

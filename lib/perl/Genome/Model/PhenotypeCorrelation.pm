@@ -3,6 +3,7 @@ package Genome::Model::PhenotypeCorrelation;
 use strict;
 use warnings;
 use Genome;
+use Math::Complex;
 
 class Genome::Model::PhenotypeCorrelation {
     is => 'Genome::Model',
@@ -337,11 +338,14 @@ sub _execute_build {
             roi_name => $self->roi_name,
             wingspan => $self->wingspan,
         );
+        
+        my $max_merge = (scalar(@builds) <= 50) ? 50 : int(sqrt(scalar(@builds))+1);
+        $self->status_message("Chose max_files_per_merge of: ".$max_merge);
 
         my $snv_vcf_creation = Genome::Model::Tools::Vcf::CreateCrossSampleVcf->create(
             builds => \@builds,
             output_directory => $vcf_output_directory,
-            max_files_per_merge => 2,
+            max_files_per_merge => $max_merge,
             variant_type => 'snvs',
             %region_limiting_params,
         );
