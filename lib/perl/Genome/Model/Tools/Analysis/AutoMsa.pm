@@ -287,48 +287,46 @@ sub set_up_and_run {
     unless ($refseq_id) { $get_ref_id = 1; }
 
     if ($get_ref_id) {
-	my $Contig_number;
-	
-	use GSC::IO::Assembly::Ace;
-	my $ao = GSC::IO::Assembly::Ace->new(input_file => "$ed/$ace_file");
-	
-	foreach my $name (@{ $ao->get_contig_names }) {
-	    my $contig = $ao->get_contig($name);
-	    
-	    if (grep { /\.c1$/ } keys %{ $contig->reads }) {
-		$Contig_number=$name;
-	    }
-	    foreach my $read_name (keys %{ $contig->reads }) {
-		if ($read_name =~ /(\S+\.c1)$/) {
-		    if ($refseq_id) {
-			$send_it =  qq(echo "More than one refseq_id was found. Please stipulate refseq_id as a command line option and restart your analysis of $ed/$ace_file." | mailx -s 'Anaysis did not start for $ed/$ace_file. More than one refseq_id was found.' $handle);
-			if ($mail_me) {`$send_it`;}
-			$self->error_message( "\n\nMore than one refseq_id was found. Please stipulate refseq_id as a command line option. See "
-					    . App::Name->prog_name
-					    . " --help for more command line parameters.\n\n" );
-			return;
-		    } else {
-			$refseq_id=$read_name;
-		    }
-		}
-	    }
-	}
+        my $Contig_number;
+
+        my $ao = Genome::Model::Tools::Consed::AceReader->create(file => "$ed/$ace_file");
+        die $self->error_message("Failed to create ace reader for file: $ed/$ace_file") if not $ao;
+
+        while ( my $contig = $ao->next_contig ) {
+            if (grep { /\.c1$/ } keys %{ $contig->{reads} }) {
+                $Contig_number=$contig->{name};
+            }
+            foreach my $read_name (keys %{ $contig->reads }) {
+                if ($read_name =~ /(\S+\.c1)$/) {
+                    if ($refseq_id) {
+                        $send_it =  qq(echo "More than one refseq_id was found. Please stipulate refseq_id as a command line option and restart your analysis of $ed/$ace_file." | mailx -s 'Anaysis did not start for $ed/$ace_file. More than one refseq_id was found.' $handle);
+                        if ($mail_me) {`$send_it`;}
+                        $self->error_message( "\n\nMore than one refseq_id was found. Please stipulate refseq_id as a command line option. See "
+                            . App::Name->prog_name
+                            . " --help for more command line parameters.\n\n" );
+                        return;
+                    } else {
+                        $refseq_id=$read_name;
+                    }
+                }
+            }
+        }
     }
 
     unless ($refseq_id) {
-	$send_it =  qq(echo "Could not identify the refseq_id. Please check the Ace file and stipulate refseq_id as a command line option and restart your analysis of $ed/$ace_file." | mailx -s 'Anaysis did not start for $ed/$ace_file. Could not identify the refseq_id.' $handle);
-	if ($mail_me) {`$send_it`;}
-	print qq(\nCould not identify the refseq_id. Please check the Ace file and stipulate refseq_id as a command line option and restart your analysis of $ed/$ace_file.\n\n);
-	return;
+        $send_it =  qq(echo "Could not identify the refseq_id. Please check the Ace file and stipulate refseq_id as a command line option and restart your analysis of $ed/$ace_file." | mailx -s 'Anaysis did not start for $ed/$ace_file. Could not identify the refseq_id.' $handle);
+        if ($mail_me) {`$send_it`;}
+        print qq(\nCould not identify the refseq_id. Please check the Ace file and stipulate refseq_id as a command line option and restart your analysis of $ed/$ace_file.\n\n);
+        return;
     }
-    
+
     print "$refseq_id\n";
-    
+
 ######################################################################################
 ######################################################################################
-    
+
     #--- Check Current directory and verify the existance of files--- 
-    
+
     my $cwd=`pwd`;
     chomp($cwd);
     
