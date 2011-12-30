@@ -341,7 +341,7 @@ sub _execute_build {
         my $snv_vcf_creation = Genome::Model::Tools::Vcf::CreateCrossSampleVcf->create(
             builds => \@builds,
             output_directory => $vcf_output_directory,
-            max_files_per_merge => 100,
+            max_files_per_merge => 2,
             variant_type => 'snvs',
             %region_limiting_params,
         );
