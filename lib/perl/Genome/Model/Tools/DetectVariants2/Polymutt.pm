@@ -14,7 +14,7 @@ class Genome::Model::Tools::DetectVariants2::Polymutt {
     #],
     has_param => [
         lsf_resource => {
-            default => "-R 'select[ncpus>=4] span[hosts=1] rusage[mem=16000]' -M 1610612736 -n 4",
+            default => "-q workflow ", #hope that works
         }
     ],
 };
@@ -37,6 +37,20 @@ sub _supports_cross_sample_detection {
     return 1;
 };
 
+sub output_dir {
+    my $self = shift;
+    #FIXME
+    die "where am i getting output directory from";
+    #FIXME
+}
+
+sub ped_file {
+    my $self = shift;
+    #FIXME
+    die "implement passthrough pedfile";
+    #FIXME
+}
+
 sub _detect_variants {
     my $self = shift;
 
@@ -44,40 +58,212 @@ sub _detect_variants {
     unless ($version) {
         die $self->error_message("A version of Polymutt must be specified");
     }
+    my @alignments = $self->alignment_results;
+    my @glfs = $self->generate_glfs(@alignments);
+    my $dat_file = $self->generate_dat();
+    #FIXME ensure glfindex matches index number in ped.  the current code expects both alphabetical by sample name, but does not check or enforce it.  
+    my $glf_index = $self->generate_glfindex(@glfs);
+    #FIXME
+    $self->run_polymutt($dat_file, $glf_index);
+   return 1;
+}
 
-    # once this is deployed as a Debian package, this is removed
-    #my $polymutt_path = Genome::Sys->swpath("polymutt",$version);
-    my $polymutt_path = '/gscuser/dlarson/src/polymutt.0.01/bin/polymutt';
 
-    # once this is deployed as a Debian package, this is removed
-    #my $samtools_hybrid_path = Genome::Sys->swpath("samtools-hybrid",$version);
-    my $samtools_hybrid_path = '/gscuser/dlarson/src/samtools-0.1.7a-hybrid/samtools-hybrid';
-
-    my $refseq_fasta_path = '/gscmnt/ams1102/info/model_data/2869585698/build106942997/all_sequences.fa';
-
-    my @a = $self->alignment_results;
-    die "TODO: plug in Harris' workflow here\nPOLYMUTT RUN ON @a\n";
-
-    for my $a (@a) {
-        my $output_glf_path = $self->_temp_staging_directory . '/' . $a->id . '.glf';
-        my $bam_path = $a->merged_alignment_bam_path;
-        my $cmd = "$samtools_hybrid_path view -uh $bam_path | $samtools_hybrid_path calmd -Aur - $refseq_fasta_path 2> /dev/null | $samtools_hybrid_path pileup - -g -f  $refseq_fasta_path > $output_glf_path";
-        Genome::Sys->shellcmd(
-            cmd => $cmd,
-            input_files => [$bam_path, $refseq_fasta_path],
-            ouput_files => [$output_glf_path],
+sub run_polymutt {
+    my($self, $dat_file, $glf_index) = @_;
+    my $ped_file = $self->ped_file;
+    my %inputs;
+    $inputs{dat_file}=$dat_file;
+    $inputs{ped_file}=$ped_file;
+    $inputs{denovo}=1;
+    $inputs{glf_index}=$glf_index;
+    #FIXME: if we intend to make one ped per project and just run subsets with it, this could would need to be more complex
+    #i.e. if 10 families reside in one pedfile, and we supply a glfindex for just one of those families, this code is bad
+    chomp(my $family_id = `head -n 1 $ped_file | cut -f 1`); 
+    #FIXME:
+    $inputs{output_denovo} = $self->output_dir . "/$family_id.denovo.vcf";
+    $inputs{output_standard} = $self->output_dir . "/$family_id.standard.vcf";
+    my $workflow = Workflow::Model->create(
+        name=> "Run polymutt standard and denov",
+        input_properties => [
+        'dat_file',
+        'glf_index',
+        'ped_file',
+        'output_denovo',
+        'output_standard',
+        'denovo',
+        ],
+        output_properties => [
+        'output',
+        ],
+    );
+    my $denovo_op = $workflow->add_operation(
+        name=>"denovo polymutt",
+        operation_type=>Workflow::OperationType::Command->get("Genome::Model::Tools::Relationship::RunPolymutt"),
+    );
+    my $standard_op = $workflow->add_operation(
+        name=>"standard polymutt",
+        operation_type=>Workflow::OperationType::Command->get("Genome::Model::Tools::Relationship::RunPolymutt"),
+    );
+    for my $op ($denovo_op, $standard_op) {
+        $workflow->add_link(
+            left_operation=>$workflow->get_input_connector,
+            left_property=>"dat_file",
+            right_operation=>$op,
+            right_property=>"dat_file",
+        );
+        $workflow->add_link(
+            left_operation=>$workflow->get_input_connector,
+            left_property=>"glf_index",
+            right_operation=>$op,
+            right_property=>"glf_index",
+        );
+        $workflow->add_link(
+            left_operation=>$workflow->get_input_connector,
+            left_property=>"ped_file",
+            right_operation=>$op,
+            right_property=>"ped_file",
+        );
+        $workflow->add_link(
+            left_operation=>$op,
+            left_property=>"output_vcf",
+            right_operation=>$workflow->get_output_connector,
+            right_property=>"output",
         );
     }
+    $workflow->add_link(
+        left_operation=>$workflow->get_input_connector,
+        left_property=>"output_denovo",
+        right_operation=>$denovo_op,
+        right_property=>"output_vcf",
+    );
+    $workflow->add_link(
+        left_operation=>$workflow->get_input_connector,
+        left_property=>"output_standard",
+        right_operation=>$standard_op,
+        right_property=>"output_vcf",
+    );
+    $workflow->add_link(
+        left_operation=>$workflow->get_input_connector,
+        left_property=>"denovo",
+        right_operation=>$denovo_op,
+        right_property=>"denovo",
+    );
+    my @errors = $workflow->validate;
+    $workflow->log_dir($self->output_dir);
+    if (@errors) {
+        $self->error_message(@errors);
+        die "Errors validating workflow\n";
+    }
+    $self->status_message("Now launching 2 polymutt jobs");
+    my $result = Workflow::Simple::run_workflow_lsf( $workflow, %inputs);
+    unless($result) {
+        $self->error_message( join("\n", map($_->name . ': ' . $_->error, @Workflow::Simple::ERROR)) );
+        $self->error_message("parallel polymutt did not return correctly.");
+        die;
+    }
 
-
-    ## Get required parameters ##
-    my $output_snp = $self->_temp_staging_directory."/snvs.hq";
-
-    # Grab the map_quality param and pass it separately
-    my $params = $self->params;
-
-    return 1;
 }
+
+
+
+
+sub generate_dat {
+    my $self = shift;
+    my $out_file_name = $self->output_dir . "/" . "polymutt.dat";
+    my $dat_fh = IO::File->new($out_file_name, ">");
+    $dat_fh->print("T\tGLF_Index\n"); #this is required because the pedfile may have arbitrarily many attributes after the first 5 columns, which you can label and polymutt will ignore. but we never do that, so it always looks like this
+    $dat_fh->close;
+    return $out_file_name;
+}
+
+sub generate_glfindex {
+    my $self=shift;
+    my @glfs = @_;
+    my $glf_name = $self->output_dir ."/" . "polymutt.glfindex";
+    my $glf_fh = IO::File->new($glf_name, ">");
+    my $count =1;
+    for my $glf (sort @glfs) {  #again we just assume the incoming ped file is alpha sorted, so we alpha sort
+        $glf_fh->print("$count\t$glf\n");
+        $count++;
+    }
+    $glf_fh->close;
+    return $glf_name;
+}
+
+
+
+sub generate_glfs {
+    my $self = shift;
+    my @alignments = @_;
+    my %inputs;
+    my (@outputs, @inputs);
+    $inputs{ref_fasta} = $alignments[0]->reference_sequence_build->full_consensus_path("fa");
+
+#    my $bam_path = $a->merged_alignment_bam_path;
+    for (my $i =0; $i < scalar(@alignments); $i++) {
+        my $output_name = $self->output_dir . "/" . $alignments[$i]->instrument_data->sample_name . ".glf";
+        push @outputs, $output_name;
+        $inputs{"bam_$i"}=$alignments[$i]->merged_alignment_bam_path;
+        $inputs{"output_glf_$i"}=$output_name;
+        push @inputs, ("bam_$i", "output_glf_$i");
+    }
+    my $workflow = Workflow::Model->create(
+        name=> "polymutt parallel glf file creation",
+        input_properties => [
+        'ref_fasta',
+        @inputs,
+        ],
+        output_properties => [
+        'output',
+        ],
+    );
+    for(my $i=0; $i< scalar(@alignments); $i++) {
+        my $hybridview_op = $workflow->add_operation(
+            name=>"glf creation $i",
+            operation_type=>Workflow::OperationType::Command->get("Genome::Model::Tools::Samtools::HybridView"),
+        );
+
+        $workflow->add_link(
+            left_operation=>$workflow->get_input_connector,
+            left_property=>"ref_fasta",
+            right_operation=>$hybridview_op,
+            right_property=>"ref_fasta",
+        );
+        $workflow->add_link(
+            left_operation=>$workflow->get_input_connector,
+            left_property=>"bam_$i",
+            right_operation=>$hybridview_op,
+            right_property=>"bam",
+        );
+        $workflow->add_link(
+            left_operation=>$workflow->get_input_connector,
+            left_property=>"output_glf_$i",
+            right_operation=>$hybridview_op,
+            right_property=>"output_glf",
+        );
+        $workflow->add_link(
+            left_operation=>$hybridview_op,
+            left_property=>"output_glf",
+            right_operation=>$workflow->get_output_connector,
+            right_property=>"output",
+        );
+    }
+    my @errors = $workflow->validate;
+    $workflow->log_dir($self->output_dir);
+    if (@errors) {
+        $self->error_message(@errors);
+        die "Errors validating workflow\n";
+    }
+    $self->status_message("Now launching glf generation jobs");
+    my $result = Workflow::Simple::run_workflow_lsf( $workflow, %inputs);
+    unless($result) {
+        $self->error_message( join("\n", map($_->name . ': ' . $_->error, @Workflow::Simple::ERROR)) );
+        die $self->error_message("parallel glf generation workflow did not return correctly.");
+    }
+    return @outputs;
+}
+
 
 sub generate_metrics {
     my $self = shift;
