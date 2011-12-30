@@ -16,7 +16,7 @@ my $archos = `uname -a`;
 if ($archos !~ /64/) {
     plan skip_all => "Must run from 64-bit machine";
 } else {
-    plan  tests => 15;
+    plan  tests => 16;
 }
 
 my $test_data_directory = "/gsc/var/cache/testsuite/data/Genome-Model-PhenotypeCorrelation/2011-12-30-2/";
@@ -37,11 +37,6 @@ for my $member_id (2874846805,2874846807,2874846809) {
 my @members = $group->members();
 is(scalar(@members), 3, "got the expected number of patients");
 
-my $roi_list = Genome::FeatureList->get('3fd525e8de924f87862312cf4f2fc9dd');
-my $roi_file = $roi_list->file_path;
-my $roi_name = $roi_list->name;
-
-my $wingspan = 500;
 
 my $p = Genome::ProcessingProfile::PhenotypeCorrelation->create(
     id                              => -10001,
@@ -64,21 +59,12 @@ my $m = $p->add_model(
 );
 ok($m, "created a model") or diag(Genome::Model->error_message);
 
-my $i1 = $m->add_input(
-    name => 'reference_sequence_build',
-    value => Genome::Model::Build->get('101947881'),
-);
-ok($i1, "add a reference sequence build to it");
-
-$m->roi_list($roi_list);
-
-print "ROI: " . $m->roi_list,"\n";
+my $refseq = Genome::Model::Build->get(101947881);
+ok($m->reference_sequence_build($refseq), "add a reference sequence build to it");
 
 #my $asms_target_region_set_name = 'Freimer Pool of original (4k001L) plus gapfill (4k0026)';
-#my $i2 = $m->add_input(
-#    name => 'target_region_set_name',
-#    value => UR::Value->get($asms_target_region_set_name),
-#);
+my $roi_list = Genome::FeatureList->get('3fd525e8de924f87862312cf4f2fc9dd');
+ok($m->roi_list($roi_list), "add an roi_list to the model");
 
 my @patients = $group->members;
 ok(scalar(@patients), scalar(@patients) . " patients");
@@ -109,8 +95,6 @@ my $b = $m->add_build(
 );
 ok($b, "created a build") or diag(Genome::Model->error_message);
 
-print "R: " . $b->roi_list,"\n";
-
 # we would normally do $build->start() but this is easier to debug minus workflow guts...
 #$b->start(
 #    server_dispatch => 'inline',
@@ -131,12 +115,10 @@ my $cmd = "diff -r --brief $expected_data_directory " . $b->data_directory;
 note("diff command: $cmd");
 my @diff = `$cmd`;
 
-print "diffs = ".scalar(@diff)."\n";
+note("diffs = ".scalar(@diff));
 
 ok( (scalar(@diff) == 5 ), "there are five differences, accounted for by an empty subdirectory with a negative ID number which differs per run, and a different build directory path")
     or diag(@diff);
-
-$DB::single=1;
 
 __END__
 
