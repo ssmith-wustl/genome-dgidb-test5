@@ -296,7 +296,7 @@ sub set_up_and_run {
             if (grep { /\.c1$/ } keys %{ $contig->{reads} }) {
                 $Contig_number=$contig->{name};
             }
-            foreach my $read_name (keys %{ $contig->reads }) {
+            foreach my $read_name (keys %{ $contig->{reads} }) {
                 if ($read_name =~ /(\S+\.c1)$/) {
                     if ($refseq_id) {
                         $send_it =  qq(echo "More than one refseq_id was found. Please stipulate refseq_id as a command line option and restart your analysis of $ed/$ace_file." | mailx -s 'Anaysis did not start for $ed/$ace_file. More than one refseq_id was found.' $handle);
