@@ -222,7 +222,6 @@ sub execute {
         $self->error_message( join("\n", map($_->name . ': ' . $_->error, @Workflow::Simple::ERROR)) );
         die $self->error_message("Workflow did not return correctly.");
     }
-    $DB::single=1;
     return $inputs{final_output};
 
 }
@@ -363,7 +362,6 @@ sub _generate_workflow {
     my @builds = $self->builds;
     my @inputs;
 
-    $DB::single=1;
     for my $build (@builds){
         my $sample = $build->model->subject->name;
         push @inputs, ($sample."_bam_file",
