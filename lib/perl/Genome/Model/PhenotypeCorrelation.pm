@@ -38,6 +38,11 @@ class Genome::Model::PhenotypeCorrelation {
             is_optional =>1,
             doc => "Strategy to be used to detect cnvs.",
         },
+        roi_wingspan => {
+            is => 'Text',
+            doc => 'Area to include before and after ROI regions',
+            is_optional => 1,
+        },
         group_samples_for_genotyping_by => {
             is => "Text",
             is_many => 0,
@@ -53,13 +58,23 @@ class Genome::Model::PhenotypeCorrelation {
             valid_values => ['case-control','quantitative'],
             doc => "Strategy to use to look at phenotypes.",
         },
-        roi_wingspan => {
-            is => 'Text',
-            doc => 'Area to include before and after ROI regions',
-            is_optional => 1,
-        },
     ],
     has_input => [
+        reference_sequence_build => {
+            is => 'Genome::Model::ReferenceSequence',
+            doc => 'the reference sequence against which alignment and variant detection are done',
+        },
+    ],
+    has_optional_input => [
+        roi_list => {
+            is => 'Genome::FeatureList',
+            is_optional => 1,
+            doc => 'only variants in these regions will be included in the final VCF',
+        },
+        pedigree_file_path => {
+            is => 'FilePath',
+            doc => 'when supplied overrides the automatic lookup of familial relationships'
+        },
         identify_cases_by => { 
             is => 'Text', 
             is_optional => 1,
@@ -69,15 +84,6 @@ class Genome::Model::PhenotypeCorrelation {
             is => 'Text', 
             is_optional => 1,
             doc => 'the expression which matches "control" samples, typically by their attributes' 
-        },
-        reference_sequence_build => {
-            is => 'Genome::Model::ReferenceSequence',
-            doc => 'the reference sequence against which alignment and variant detection are done',
-        },
-        roi_list => {
-            is => 'Genome::FeatureList',
-            is_optional => 1,
-            doc => 'only variants in these regions will be included in the final VCF',
         },
     ],
 };
@@ -103,6 +109,7 @@ sub help_synopsis_for_create_profile {
         --subject                   'ASMS-cohort-WUTGI-2011' \
         --processing-profile        'September 2011 Quantitative Phenotype Correlation' \
 
+
   # case-control
 
     genome processing-profile create phenotype-correlation \
@@ -111,6 +118,7 @@ sub help_synopsis_for_create_profile {
       --snv-detection-strategy          'samtools r599 filtered by snp-filter v1' \
       --indel-detection-strategy        'samtools r599 filtered by indel-filter v1' \
       --group-samples-for-genotyping-by 'trio', \
+      --roi_wingspan                    500 \
       --phenotype-analysis-strategy     'case-control'
 
     genome propulation-group define 'Ceft-Lip-cohort-WUTGI-2011' CL001 CL002 CL003
@@ -119,8 +127,11 @@ sub help_synopsis_for_create_profile {
         --name                  'Cleft-Lip-v1' \
         --subject               'Cleft-Lip-cohort-WUTGI-2011' \
         --processing-profile    'September 2011 Case-Control Phenotype Correlation' \
+        --roi_list              'TEST_ROI' \
+        --pedigree-file-path    /somedir/somesubdir/thisfamily.ped
         --identify-cases-by     'some_nomenclature.has_cleft_lip = "yes"' \
         --identify-controls-by  'some_nomenclature.has_cleft_lip = "no"' \
+
 
     # If you leave off the subject, it would find all patients matching the case/control logic
     # and make a population group called ASMS-v1-cohort automatically???
@@ -218,7 +229,7 @@ sub _execute_build {
     $build->status_message("reference sequence fasta: " . $reference_fasta);
 
     #
-    # get the bam for each sample
+    # get the alignment results for each sample
     # this will only work right now if the per-sample model has already run
     # once Tom's new alignment thing is in place, it would actually generate them in parallel
     #
