@@ -53,17 +53,7 @@ class Genome::Model::PhenotypeCorrelation {
             valid_values => ['case-control','quantitative'],
             doc => "Strategy to use to look at phenotypes.",
         },
-        roi_file => {
-            is => 'Text',
-            doc => 'Bed format  file containing the ROI set',
-            is_optional => 1,
-        },
-        roi_name => {
-            is => 'Text',
-            doc => 'ROI set name',
-            is_optional => 1,
-        },
-        wingspan => {
+        roi_wingspan => {
             is => 'Text',
             doc => 'Area to include before and after ROI regions',
             is_optional => 1,
@@ -83,7 +73,12 @@ class Genome::Model::PhenotypeCorrelation {
         reference_sequence_build => {
             is => 'Genome::Model::ReferenceSequence',
             doc => 'the reference sequence against which alignment and variant detection are done',
-        }
+        },
+        roi_list => {
+            is => 'Genome::FeatureList',
+            is_optional => 1,
+            doc => 'only variants in these regions will be included in the final VCF',
+        },
     ],
 };
 
@@ -332,12 +327,15 @@ sub _execute_build {
                 die $self->error_message("Output directory doesn't exist and can't be created at: ".$vcf_output_directory);
             }
         }
-        
-        my %region_limiting_params = ( 
-            roi_file => $self->roi_file,
-            roi_name => $self->roi_name,
-            wingspan => $self->wingspan,
-        );
+       
+        my %region_limiting_params;
+        if (my $roi_list = $build->roi_list) {
+            %region_limiting_params = ( 
+                roi_file => $roi_list->file_path,
+                roi_name => $roi_list->name,
+                wingspan => $self->processing_profile->roi_wingspan,
+            );
+        }
         
         my $max_merge = (scalar(@builds) <= 50) ? 50 : int(sqrt(scalar(@builds))+1);
         $self->status_message("Chose max_files_per_merge of: ".$max_merge);
@@ -374,23 +372,7 @@ sub _execute_build {
     #get list of bams and load into tmp file named $bam_list
     #for exome set $target_region_set_name_bedfile to be all exons including splice sites, these files are maintained by cyriac
     ## Change roi away from gz file if necessary ##
-    my $target_region_set_name_bedfile;
-    if(Genome::Sys->_file_type($self->roi_file) eq 'gzip') {
-        my $inFh = Genome::Sys->open_gzip_file_for_reading($self->roi_file);
-        my ($tfh_roi,$roi_list) = Genome::Sys->create_temp_file;
-        unless($tfh_roi) {
-            $self->error_message("Unable to create temporary file $!");
-            die;
-        }
-        $roi_list =~ s/\:/\\\:/g;
-        while(my $line = $inFh->getline ) {
-            print $tfh_roi $line;
-        }
-        $target_region_set_name_bedfile = $roi_list;
-    }
-    else {
-        $target_region_set_name_bedfile = $self->roi_file;
-    }
+    my $target_region_set_name_bedfile = $build->roi_list->file_path;
 
 
     if ($self->phenotype_analysis_strategy eq 'quantitative') { #unrelated individuals, quantitative -- ASMS-NFBC

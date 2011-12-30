@@ -53,9 +53,7 @@ my $p = Genome::ProcessingProfile::PhenotypeCorrelation->create(
     #cnv_detection_strategy          => undef,
     group_samples_for_genotyping_by => 'each',
     phenotype_analysis_strategy     => 'quantitative',
-    roi_file                        => $roi_file,   # TODO: this is an input, not pp param
-    roi_name                        => $roi_name,   # TODO: this is an input, not pp param
-    wingspan                        => $wingspan,   
+    roi_wingspan                    => 500,   
 );
 ok($p, "created a processing profile") or diag(Genome::ProcessingProfile::PhenotypeCorrelation->error_message);
 
@@ -71,6 +69,10 @@ my $i1 = $m->add_input(
     value => Genome::Model::Build->get('101947881'),
 );
 ok($i1, "add a reference sequence build to it");
+
+$m->roi_list($roi_list);
+
+print "ROI: " . $m->roi_list,"\n";
 
 #my $asms_target_region_set_name = 'Freimer Pool of original (4k001L) plus gapfill (4k0026)';
 #my $i2 = $m->add_input(
@@ -99,11 +101,15 @@ for my $i (@i) {
 }
 is(scalar(@ii), scalar(@i), "assigned " . scalar(@i) . " instrument data");
 
+$DB::single = 1;
+
 my $b = $m->add_build(
     subclass_name => 'Genome::Model::Build::PhenotypeCorrelation',
     data_directory => $tmp_dir,
 );
 ok($b, "created a build") or diag(Genome::Model->error_message);
+
+print "R: " . $b->roi_list,"\n";
 
 # we would normally do $build->start() but this is easier to debug minus workflow guts...
 #$b->start(
