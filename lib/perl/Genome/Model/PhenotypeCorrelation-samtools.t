@@ -119,13 +119,14 @@ is($@, '', 'no exceptions thrown during build process') or diag $@;
 # sanitize the build directory files which contain dates
 Genome::Sys->shellcmd(cmd => "gunzip " . $b->data_directory . "/variants/merged_positions.bed.gz -c | sed 's/fileDate=......../fileDate=XXXXXXXX/' >" . $b->data_directory . "/variants/merged_positions.bed.sanitized");
 
-# diff the output
+# diff the output there will be 8 differences normally, only 6 on the date on which new test data is staged
 my $expected_data_directory = $test_data_directory . '/expected-output/build-directory/';
 my $cmd = "diff -r --brief $expected_data_directory " . $b->data_directory;
 note("diff command: $cmd");
 my @diff = `$cmd`;
-is(scalar(@diff), 8, "there are six differences, accounted for by an empty subdirectory with a negative ID number which differs per run, and a different build directory path")
+is( (scalar(@diff) == 6 or scalar(@diff) == 8), "there are eight differences, accounted for by an empty subdirectory with a negative ID number which differs per run, and a different build directory path")
     or diag(@diff);
+
 
 __END__
 
