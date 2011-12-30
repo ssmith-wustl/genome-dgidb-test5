@@ -50,7 +50,6 @@ my $cmd2 = Genome::Model::Tools::Far::Trimmer->create(
     min_overlap => 16,
     max_uncalled => 100,
     nr_threads => 4,
-    format => 'fastq',
     use_version => '2.0',
     far_output => '/dev/null',
 );

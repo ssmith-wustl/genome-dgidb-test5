@@ -105,7 +105,7 @@ sub execute {
     my $self = shift;
     my $far_cmd = $self->far_path;
 
-    #extract adapter from params string if supplied and set it to the adapter property.  this allows us to create an adapters.fa file if trim_reverse_complement is set
+    #extract adapter and format from params string if supplied and set it to the adapter property.  this allows us to create an adapters.fa file if trim_reverse_complement is set and set format to default fastq
     my @cmd_line_params = split(/\s+/, $self->params);
     my @new_params;
     for (my $i=0; $i < scalar @cmd_line_params; $i++){
@@ -114,13 +114,23 @@ sub execute {
             $i++;
             my $sequence = $cmd_line_params[$i];
             $self->adapter($sequence);
+        }elsif ($param eq '-f' or $param eq '--format'){
+            $i++;
+            my $format = $cmd_line_params[$i];
+            if (defined $self->format){
+                die $self->error_message("format specified in params string and also provided as property, only use one!");
+            }
+            $self->format($format);
         }else{
             push @new_params, $param;
         }
     }
     $self->params(join(" ", @new_params));
 
+    #make sure adapter is uppercase and that a format is set
     $self->adapter(uc($self->adapter));
+    $self->format("fastq") unless defined $self->format;
+
 
     #check deprecated param names and use the updated names(which are the same as the corresponding far param)  Eventually we will die here, and then remove the options
     for (['threads', 'nr_threads'], ['min_read_length', 'min_readlength'], ['adaptor_sequence', 'adapter'], ['file_format', 'format']){
