@@ -187,7 +187,7 @@ sub _execute_build {
     # Version 1 of this pipeline will run in a linear way only if the underlying samples have already
     # had independent alignment and variant detection completed in other models.
 
-    warn "The logic for building this is not yet in place!  The following is initial data gathering...";
+    warn "The logic for building this model is only partly functional!  Contact Human Genomics or put in an APIPE-support ticket..";
 
     #
     # get the subject (population group), the individual members and their samples
