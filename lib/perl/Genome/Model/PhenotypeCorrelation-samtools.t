@@ -19,11 +19,13 @@ if ($archos !~ /64/) {
     plan  tests => 15;
 }
 
-my $test_data_directory = "/gsc/var/cache/testsuite/data/Genome-Model-PhenotypeCorrelation/2011-12-29/";
+my $test_data_directory = "/gsc/var/cache/testsuite/data/Genome-Model-PhenotypeCorrelation/2011-12-30/";
 
 my $tmp_dir = File::Temp::tempdir('Genome-Model-Build-PhenotypeCorrelation-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
-#$tmp_dir = "/home/archive/pcbuild-$$/";
-#mkdir $tmp_dir;
+
+# un-comment these lines to generate test data in a directory which will not be deleted!
+# $tmp_dir = "/home/archive/pcbuild-$$/";
+# mkdir $tmp_dir;
 
 my $group = Genome::PopulationGroup->create(name => 'TEST-phenotype-correlation');
 for my $member_id (2874846805,2874846807,2874846809) {
@@ -35,8 +37,10 @@ for my $member_id (2874846805,2874846807,2874846809) {
 my @members = $group->members();
 is(scalar(@members), 3, "got the expected number of patients");
 
+# TODO: convert to use feature list 3fd525e8de924f87862312cf4f2fc9dd
 my $roi_file = $test_data_directory."/input/feature_list_3.bed.gz";
 my $roi_name = "TEST_REGION";
+
 my $wingspan = 500;
 
 my $p = Genome::ProcessingProfile::PhenotypeCorrelation->create(
@@ -112,12 +116,15 @@ my $retval = eval { $m->_execute_build($b); };
 is($retval, 1, 'execution of the build returned true');
 is($@, '', 'no exceptions thrown during build process') or diag $@;
 
+# sanitize the build directory files which contain dates
+Genome::Sys->shellcmd(cmd => "gunzip " . $b->data_directory . "/variants/merged_positions.bed.gz -c | sed 's/fileDate=......../fileDate=XXXXXXXX/' >" . $b->data_directory . "/variants/merged_positions.bed.sanitized");
+
 # diff the output
 my $expected_data_directory = $test_data_directory . '/expected-output/build-directory/';
 my $cmd = "diff -r --brief $expected_data_directory " . $b->data_directory;
 note("diff command: $cmd");
 my @diff = `$cmd`;
-is(scalar(@diff), 6, "there are six differences, accounted for by an empty subdirectory with a negative ID number which differs per run, and a different build directory path")
+is(scalar(@diff), 8, "there are six differences, accounted for by an empty subdirectory with a negative ID number which differs per run, and a different build directory path")
     or diag(@diff);
 
 __END__
