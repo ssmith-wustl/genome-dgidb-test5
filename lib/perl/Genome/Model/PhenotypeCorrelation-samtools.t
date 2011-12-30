@@ -38,12 +38,8 @@ my @members = $group->members();
 is(scalar(@members), 3, "got the expected number of patients");
 
 my $roi_list = Genome::FeatureList->get('3fd525e8de924f87862312cf4f2fc9dd');
-
-my $roi_file = $test_data_directory."/input/feature_list_3.bed.gz";
-$roi_file = $roi_list->file_path;
-
-my $roi_name = "TEST_REGION";
-$roi_name = $roi_list->name;
+my $roi_file = $roi_list->file_path;
+my $roi_name = $roi_list->name;
 
 my $wingspan = 500;
 
