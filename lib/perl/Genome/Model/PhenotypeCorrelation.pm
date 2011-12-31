@@ -300,6 +300,9 @@ sub _execute_build {
 
         $params{alignment_results} = \@per_sample_alignment_results;
         $params{control_alignment_results} = [];
+        $params{pedigree_file_path} = $build->pedigree_file_path;
+        $params{roi_list} = $build->roi_list;
+        $params{roi_wingspan} = $self->roi_wingspan;
 
         my @arids = map { $_->id } @per_sample_alignment_results;
         print Data::Dumper::Dumper(\@arids,\%params);
