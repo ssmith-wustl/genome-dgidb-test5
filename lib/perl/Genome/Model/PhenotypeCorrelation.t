@@ -128,7 +128,7 @@ for my $p ($p1) {
 
     my $cmd = "diff -r --brief $expected_data_directory " . $b->data_directory;
     note("diff command: $cmd");
-    my @diff = `$cmd`;
+    my @diff = `$cmd | grep -v snvs.merged.vcf.gz`;
 
     note("diffs = ".scalar(@diff));
 
