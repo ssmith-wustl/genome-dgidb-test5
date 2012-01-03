@@ -478,7 +478,6 @@ sub get_or_create_lane_qc_models {
             auto_build_alignments => 0,
             build_requested => 0,
             reference_sequence_build => $self->reference_sequence_build,
-            dbsnp_build => $self->dbsnp_build,
         );
         unless ($qc_model) {
             $self->error_message("Could not create lane qc model for instrument data " . $instrument_data->id);
