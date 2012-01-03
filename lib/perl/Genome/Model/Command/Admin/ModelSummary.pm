@@ -1,6 +1,6 @@
-package Genome::Model::Command::Services::Review::Models;
+package Genome::Model::Command::Admin::ModelSummary;
 
-class Genome::Model::Command::Services::Review::Models {
+class Genome::Model::Command::Admin::ModelSummary {
     is => 'Genome::Command::Base',
     doc => 'Tool for the Cron Tzar to review builds, e.g. missing builds, failed builds, etc.',
     has => [
@@ -76,7 +76,7 @@ sub execute {
     my $cleanup_build = sub {
         my $model = shift;
         if ($synchronous) {
-            my $cmd = Genome::Model::Command::Services::Review::CleanupSucceeded->create(models => [$model]);
+            my $cmd = Genome::Model::Command::Admin::CleanupSucceeded->create(models => [$model]);
             $cleanup_rv{$cmd->execute}++;
             if ($self->auto_batch_size and ++$models_changed_count > $self->auto_batch_size) {
                 $self->status_message("\n\nCommitting progress so far...");

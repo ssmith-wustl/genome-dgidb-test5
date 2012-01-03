@@ -1,6 +1,6 @@
-package Genome::Model::Command::Services::Review::CleanupSucceeded;
+package Genome::Model::Command::Admin::CleanupSucceeded;
 
-class Genome::Model::Command::Services::Review::CleanupSucceeded {
+class Genome::Model::Command::Admin::CleanupSucceeded {
     is => 'Genome::Command::Base',
     doc => 'Abandon failed builds for models with latest build succeeded.',
     has => [
