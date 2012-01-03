@@ -493,18 +493,24 @@ sub importSNVs{
     my $aa_effect_filter = $dataset{$ds}{aa_effect_filter};
     my $target_dir = $dataset{$ds}{target_dir};
 
-    #system ("cp $t1_hq_annotated $t1_hq_annotated_top $target_dir");
-    system ("cp $effects_dir$t1_hq_annotated $target_dir$t1_hq_annotated".".tsv");
-    system ("cp $effects_dir$t1_hq_annotated_top $target_dir$t1_hq_annotated_top".".tsv");
+    my $new_annotated_file = "$target_dir$t1_hq_annotated".".tsv";
+    my $new_annotated_top_file = "$target_dir$t1_hq_annotated_top".".tsv";
+    my $cp_cmd1 = "cp $effects_dir$t1_hq_annotated $new_annotated_file";
+    my $cp_cmd2 = "cp $effects_dir$t1_hq_annotated_top $new_annotated_top_file";
+    if ($verbose){print YELLOW, "\n\n$cp_cmd1", RESET;}
+    system ($cp_cmd1);
+    if ($verbose){print YELLOW, "\n\n$cp_cmd2", RESET;}
+    system ($cp_cmd2);
 
     #Define headers in a variant file
     my @input_headers = qw (chr start stop ref_base var_base var_type gene_name transcript_id species transcript_source transcript_version strand transcript_status var_effect_type coding_pos aa_change score domains1 domains2 unk_1 unk_2);
     
     #Get AA changes from full .annotated file
     my %aa_changes;
+    if ($verbose){print YELLOW, "\n\nReading: $new_annotated_file", RESET;}
     my $reader = Genome::Utility::IO::SeparatedValueReader->create(
       headers => \@input_headers,
-      input => "$target_dir$t1_hq_annotated".".tsv",
+      input => "$new_annotated_file",
       separator => "\t",
     );
     while (my $data = $reader->next) {
@@ -526,17 +532,27 @@ sub importSNVs{
     }
 
     #Get compact SNV info from the '.top' file but grab the complete list of AA changes from the '.annotated' file
+    if ($verbose){print YELLOW, "\n\nReading: $new_annotated_top_file", RESET;}
     $reader = Genome::Utility::IO::SeparatedValueReader->create(
       headers => \@input_headers,
-      input => "$target_dir$t1_hq_annotated_top".".tsv",
+      input => "$new_annotated_top_file",
       separator => "\t",
     );
 
     while (my $data = $reader->next){
       my $coord = $data->{chr} .':'. $data->{start} .'-'. $data->{stop};
+
+      #Apply the AA effect filter
       unless ($data->{var_effect_type} =~ /$aa_effect_filter/){
         next();
       }
+      
+      #Apply the MT/chrM filter
+      my $chr = $data->{chr};
+      if ($chr =~ /^MT$|^chrMT$|^M$|^chrM$/i){
+        next();
+      }
+
       my %aa = %{$aa_changes{$coord}};
       my $aa_string = join(",", sort keys %aa);
       $data_out{$coord}{gene_name} = $data->{gene_name};
