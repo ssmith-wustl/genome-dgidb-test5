@@ -3,8 +3,6 @@ package Genome::Model::Tools::DetectVariants2::Samtools;
 use strict ;
 use warnings;
 use Genome;
-use Tie::File;
-use POSIX 'strftime';
 
 class Genome::Model::Tools::DetectVariants2::Samtools {
     is => ['Genome::Model::Tools::DetectVariants2::Detector'],
@@ -43,20 +41,8 @@ class Genome::Model::Tools::DetectVariants2::Samtools {
             calculate_from => ['_temp_scratch_directory'],
             calculate => q { join("/", $_temp_scratch_directory, 'indels.vcf'); },
         },
-        _snv_vcf_gz_staging_output => {
-            calculate_from => ['_temp_staging_directory'],
-            calculate => q { join("/", $_temp_staging_directory, 'snvs.vcf.gz'); },
-        },
-        _indel_vcf_gz_staging_output => {
-            calculate_from => ['_temp_staging_directory'],
-            calculate => q { join("/", $_temp_staging_directory, 'indels.vcf.gz'); },
-        },
     ]
 };
-
-sub help_brief {
-    "Use ,samtools for variant detection.",
-}
 
 sub help_synopsis {
     my $self = shift;
@@ -258,47 +244,11 @@ sub create_snv_indel_output_file {
     }
     map{$_->close}($vcf_fh, $snv_fh, $indel_fh, $head_fh, $sani_fh);
 
-    my @extra_info = $self->_extra_header_info;
-    tie my @header, 'Tie::File', $header_file;
-    my $column_name = pop @header;
-    push @header, @extra_info, $column_name;
-    untie @header;
-    
     Genome::Sys->cat(input_files => [$header_file, $snv_tmp],   output_file => $snv_file);
     Genome::Sys->cat(input_files => [$header_file, $indel_tmp], output_file => $indel_file);
 
     return 1;
 }
-
-
-#hard-code extra vcf header info for now based on G/M/T/Vcf/Convert/Base
-sub _extra_header_info {
-    my $self = shift;
-    my $date = strftime("%Y%m%d", localtime);
-    my $ref_build   = Genome::Model::Build->get($self->reference_build_id);
-    my $ref_version = $ref_build->version;
-    my $subject     = $ref_build->subject_name;
-
-    my $public_ref;
-
-    if ($subject eq 'human') {
-        if ($ref_version == 37) {
-            $public_ref = 'ftp://ftp.ncbi.nih.gov/genbank/genomes/Eukaryotes/vertebrates_mammals/Homo_sapiens/GRCh37/special_requests/GRCh37-lite.fa.gz';
-        } 
-        elsif ($ref_version == 36) {
-            $public_ref = 'ftp://ftp.ncbi.nlm.nih.gov/genomes/H_sapiens/ARCHIVE/BUILD.36.3/special_requests/assembly_variants/NCBI36_WUGSC_variant.fa.gz';
-        } 
-        else {
-            die $self->error_message("Unknown reference sequence version ($ref_version) from reference sequence build " . $self->reference_build_id);
-        }
-    } 
-    else {
-        # TODO We need a map from internal reference to external references... until then just put our reference in there
-        $public_ref = $self->reference_sequence_input;
-    }
-    return ("##fileDate=$date", "##reference=$public_ref", "##phasing=none");
-}
-
 
 sub verify_successful_completion {
     my $self = shift;
@@ -438,39 +388,6 @@ sub parse_line_for_bed_intersection {
 
     return @parsed_variants;
 }
-
-
-sub _generate_vcf { #overwrite the base class method to avoid remake vcf file for mpileup
-    my $self = shift;
-    my ($is_mpileup, undef) = $self->_mpileup_or_pileup;
-
-    my $snv_vcf_out      = $self->_snv_staging_output;    #svs.hq
-    my $indel_vcf_out    = $self->_indel_staging_output;  #indels.hq
-    my $snv_vcf_gz_out   = $self->_snv_vcf_gz_staging_output;
-    my $indel_vcf_gz_out = $self->_indel_vcf_gz_staging_output;
-
-    if ($is_mpileup) {
-        $self->_create_gz_file($snv_vcf_out, $snv_vcf_gz_out);
-        $self->_create_gz_file($indel_vcf_out, $indel_vcf_gz_out); 
-        return 1;
-    }
-    else { # pileup still need vcf conversion
-        return $self->SUPER::_generate_vcf;
-    }
-}
-
-
-sub _create_gz_file {
-    my ($self, $source, $out) = @_;
-
-    my $cmd = "bgzip -c $source > $out";
-    my $rv  = Genome::Sys->shellcmd(cmd => $cmd);
-    unless ($rv) {
-        die $self->error_message("Failed to bgzip vcf output: $out from $source!");
-    }
-    return 1;
-}
-
 
 
 1;

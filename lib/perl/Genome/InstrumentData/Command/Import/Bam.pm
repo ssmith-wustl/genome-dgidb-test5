@@ -87,6 +87,10 @@ class Genome::InstrumentData::Command::Import::Bam {
             is  => 'Number',
             doc => 'output instrument data id after import',
         },
+        import_allocation_id => {
+            is => 'Text',
+            doc =>'the allocation hash for the space allocated',
+        },
         _inst_data => {
             is_optional => 1,
         },
@@ -206,6 +210,7 @@ sub execute {
         return 1;
     }
     $self->status_message("Alignment allocation created for $instrument_data_id .");
+    $self->import_allocation_id($disk_alloc->id);
 
     my $bam_destination = $disk_alloc->absolute_path . "/all_sequences.bam";
     $self->status_message("Now calculating the MD5sum of the bam file to be imported, this will take a long time (many minutes) for larger (many GB) files.");

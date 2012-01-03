@@ -112,7 +112,7 @@ sub _resolve_workflow_for_build {
     }
 
     my $workflow = Workflow::Model->create(
-        name => $build->id,
+        name => $build->workflow_name,
         input_properties => ['build_id',],
         output_properties => ['coverage_result','expression_result']
     );

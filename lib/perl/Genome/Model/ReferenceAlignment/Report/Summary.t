@@ -26,7 +26,7 @@ if (-e $tmp) {
 
 mkdir($tmp) or die "Failed to create directory $tmp: $!";
 
-my $model = Genome::Model->get('name like' => 'apipe-test-04%');
+my $model = Genome::Model->get('id' => '2862809551');
 unless ($model) {
     die "Can't find a model to work with";
 }

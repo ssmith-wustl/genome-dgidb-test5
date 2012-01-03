@@ -40,6 +40,12 @@ class Genome::Model::Tools::Analysis::Coverage::BamReadcount{
             default => '1',
         },
 
+        chrom => {
+            is => 'String',
+            is_optional => 1,
+	    doc => 'only process this chromosome.  Useful for enormous files',
+        }
+
         ]
 };
 
@@ -60,7 +66,7 @@ sub execute {
     my $output_file = $self->output_file;
     my $genome_build = $self->genome_build;
     my $min_quality_score = $self->min_quality_score;
-
+    my $chrom = $self->chrom;
 
     my $fasta;
     if ($genome_build eq "36") {
@@ -90,10 +96,21 @@ sub execute {
         die;
     }
 
-    
+    #split out the chromosome we're working on, if necessary
+    if (defined $chrom){
+        my $cmd = "grep \"" . $chrom . "[[:space:]]\" $snv_file>$tempdir/snvfile";
+        my $return = Genome::Sys->shellcmd(
+            cmd => "$cmd",
+            );
+        unless($return) {
+            $self->error_message("Failed to execute: Returned $return");
+            die $self->error_message;
+        }
+        $snv_file = "$tempdir/snvfile"
+    }
+
+
     #now run the readcounting
-    
-    `cp -r $snv_file /tmp/clu`;
     my $cmd = "bam-readcount -q $min_quality_score -f $fasta -l $snv_file $bam_file >$tempdir/readcounts";
     my $return = Genome::Sys->shellcmd(
 	cmd => "$cmd",

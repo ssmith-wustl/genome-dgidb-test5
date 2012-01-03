@@ -43,8 +43,8 @@ class Genome::Model::Tools::Vcf::VcfAnnotateDbsnp {
         },
 
         genome_build => {
-            is => 'Integer',
-            doc => "genome build to use (36 or 37)",
+            is => 'String',
+            doc => "genome build to use (36, 37, or path to snp file in ucsc format)",
             is_optional => 0,            
         },
 
@@ -101,12 +101,14 @@ sub execute {
 
         
     my $dbsnp_file;
-    if($genome_build == 36){
-        $dbsnp_file = "/gscmnt/sata921/info/medseq/cmiller/annotations/snp130.txt";
-    } elsif ($genome_build == 37){
-        $dbsnp_file = "/gscmnt/sata921/info/medseq/cmiller/annotations/snp132.txt";
+    if($genome_build eq "36"){
+        $dbsnp_file = "/gscmnt/sata921/info/medseq/cmiller/annotations/snp130.noDupIds.noPolyAllelicSites.txt";
+    } elsif ($genome_build eq "37"){
+        $dbsnp_file = "/gscmnt/sata921/info/medseq/cmiller/annotations/snp132.noDupIds.noPolyAllelicSites.txt";
+    } elsif ( -e $genome_build) {
+        $dbsnp_file = $genome_build;
     } else {
-        die("genome build must be either 36 or 37")
+        die("genome build must be either 36, 37, or a path to a ucsc snp file")
     }
 
 
@@ -173,13 +175,29 @@ sub execute {
 
                 #if the line matches this dbsnp position
                 if(exists($posHash{$key})){
-                    #add to id field
-                    if (@{$posHash{$key}}[2] eq "."){
-                        @{$posHash{$key}}[2] = "";
-                    } elsif (!(@{$posHash{$key}}[2] eq "")) {
-                        @{$posHash{$key}}[2] = @{$posHash{$key}}[2] . ";";
+
+                    #check the variant snps to see if they match
+                    my @snpalts = split(/\//,$fields[9]);
+                    my @alts = split(/,/, @{$posHash{$key}}[4]);
+                    my $match=0;
+
+                    foreach my $alt (@alts){
+                        foreach my $snpalt (@snpalts){
+                            if ($alt eq $snpalt){                                
+                                $match = 1;
+                            }
+                        }
                     }
-                    @{$posHash{$key}}[2] = @{$posHash{$key}}[2] . $fields[4];
+                    
+                    if($match){
+                        #add to id field
+                        if (@{$posHash{$key}}[2] eq "."){
+                            @{$posHash{$key}}[2] = "";
+                        } elsif (!(@{$posHash{$key}}[2] eq "")) {
+                            @{$posHash{$key}}[2] = @{$posHash{$key}}[2] . ";";
+                        }
+                        @{$posHash{$key}}[2] = @{$posHash{$key}}[2] . $fields[4];
+                    }
                 }
             }
         }
