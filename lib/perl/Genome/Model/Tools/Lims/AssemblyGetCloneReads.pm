@@ -1,4 +1,4 @@
-package Genome::Model::Tools::Assembly::GetCloneReads;
+package Genome::Model::Tools::Lims::AssemblyGetCloneReads;
 
 use strict;
 use warnings;
@@ -12,7 +12,7 @@ use Bio::SeqIO::fastq;
 use Cwd;
 
 
-class Genome::Model::Tools::Assembly::GetCloneReads {
+class Genome::Model::Tools::Lims::AssemblyGetCloneReads {
     is => 'Command',
     has => [
 	clone => {

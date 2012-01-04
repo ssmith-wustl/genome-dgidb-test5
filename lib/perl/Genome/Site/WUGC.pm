@@ -56,7 +56,6 @@ $ENV{GENOME_DB_ENSEMBL_PORT} ||= '3306';
 
 # ensure we can get to legacy modules 
 use Class::Autouse;
-Class::Autouse->autouse(qr/Finishing.*/);
 Class::Autouse->autouse(qr/Finfo.*/);
 Class::Autouse->autouse(qr/Bio.*/);
 

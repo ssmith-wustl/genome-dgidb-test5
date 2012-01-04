@@ -27,7 +27,7 @@ sub bsub_rusage {
     my $read_processor = $self->processing_profile->read_processor;
     if ( $read_processor and $read_processor =~ /quake|eulr/i ) {
         # Request memory for quake and eulr
-        return "-R 'select[type==LINUX64 && mem>8000 && tmp>25000] rusage[mem=8000:tmp=25000] span[hosts=1]'"
+        return "-R 'select[type==LINUX64 && mem>8000 && tmp>50000] rusage[mem=8000:tmp=50000] span[hosts=1]'"
     }
 
     return "-R 'select[type==LINUX64 && tmp>25000] rusage[tmp=25000] span[hosts=1]'"
