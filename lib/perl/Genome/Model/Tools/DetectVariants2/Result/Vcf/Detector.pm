@@ -29,7 +29,10 @@ sub _remove_existing_vcf {
                     die $self->error_message("Could not unlink existing vcf at: ".$file);
                 }
             } else {
-                die $self->error_message("Found previous vcf to be a link at: ".$file);
+                $self->status_message("Removing existing symlink to vcf at: ".$file);
+                unless(unlink ( $file )){
+                    die $self->error_message("Could not unlink existing vcf at: ".$file);
+                }
             }
         }
     } else {
