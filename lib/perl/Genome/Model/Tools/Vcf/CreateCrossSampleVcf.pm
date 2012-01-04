@@ -222,7 +222,6 @@ sub execute {
         $self->error_message( join("\n", map($_->name . ': ' . $_->error, @Workflow::Simple::ERROR)) );
         die $self->error_message("Workflow did not return correctly.");
     }
-    $DB::single=1;
     return $inputs{final_output};
 
 }
@@ -363,7 +362,6 @@ sub _generate_workflow {
     my @builds = $self->builds;
     my @inputs;
 
-    $DB::single=1;
     for my $build (@builds){
         my $sample = $build->model->subject->name;
         push @inputs, ($sample."_bam_file",
@@ -423,7 +421,7 @@ sub _generate_workflow {
     
     #if max_files_per_merge was set, consider creating sub-merge operations, else run with a single merge operation
     if(defined($self->max_files_per_merge)){
-        $merge_operation = $self->_add_limited_position_merge($self->max_files_per_merge, \$workflow);
+        $merge_operation = $self->_add_limited_position_merge(\$workflow,$self->max_files_per_merge) ;
     } else {
         $merge_operation = $self->_add_position_merge(\$workflow);
     }
@@ -452,8 +450,8 @@ sub _generate_workflow {
 
 sub _add_limited_position_merge {
     my $self = shift;
-    my $max_ops = shift;
     my $workflow = shift;
+    my $max_ops = shift;
     $workflow = $$workflow;
 
     my $num_inputs = $self->_num_inputs;
@@ -488,10 +486,11 @@ sub _add_position_merge {
     my $op_name  = defined($op_number) ? "Merge Positions Group ".$op_number : "Merge Positions";
     my $output_file_prop = defined($op_number) ? "merged_positions_bed_".$op_number : "merged_positions_bed";
 
+    my $op_class  = defined($op_number) ? "Genome::Model::Tools::Joinx::VcfMerge" : "Genome::Model::Tools::Joinx::VcfMergeForBackfill";
     #create the merge operation object
     my $merge_operation = $workflow->add_operation(
         name => $op_name,
-        operation_type => Workflow::OperationType::Command->get("Genome::Model::Tools::Joinx::VcfMerge"),
+        operation_type => Workflow::OperationType::Command->get($op_class),
     );
 
     #link the merged_positions_bed input to the output_file param

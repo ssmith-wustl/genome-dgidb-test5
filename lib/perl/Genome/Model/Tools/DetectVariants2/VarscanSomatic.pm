@@ -21,10 +21,6 @@ class Genome::Model::Tools::DetectVariants2::VarscanSomatic {
 };
 
 
-sub help_brief {
-    "Run the Varscan somatic variant detection"
-}
-
 sub help_synopsis {
     return <<EOS
 Runs Varscan from BAM files

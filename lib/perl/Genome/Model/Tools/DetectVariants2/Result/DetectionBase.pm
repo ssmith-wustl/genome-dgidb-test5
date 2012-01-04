@@ -108,8 +108,25 @@ sub create {
                 system("cd $parent_dir && tar -zcvf $archive_name $sub_dir && rm -rf $sub_dir");
             }
             else {
-                die $self->error_message('Instance output directory (' . $instance_output . ') already exists!');
+                $self->warning_message('Instance output directory (' . $instance_output . ') already exists!');
+                $self->warning_message("Deleting the allocation that is in the way");
+                my $allocation_dir = readlink $instance_output;
+                my @parts = split "-", $allocation_dir;
+                my $allocation_owner_id = $parts[-1];
+                my $allocation = Genome::Disk::Allocation->get(owner_id=>$allocation_owner_id);
+                unless ($allocation) {
+                    die $self->error_message("Could not get a disk allocation for owner id $allocation_owner_id and allocation dir $allocation_dir");
+                }
+                unless ($allocation->delete) {
+                    die $self->error_message("Failed to delete allocation at $allocation_dir");
+                }
+                $self->warning_message("Removing link $instance_output");
+                unlink $instance_output;
             }
+        # Otherwise we have a link that no longer points to an allocation, remove it
+        } elsif (-l $instance_output && !-e $instance_output) {
+            $self->warning_message("Removing link $instance_output that points to an allocation that is no longer present");
+            unlink $instance_output;
         }
 
         Genome::Sys->create_symlink_and_log_change($self, $self->output_dir, $instance_output);

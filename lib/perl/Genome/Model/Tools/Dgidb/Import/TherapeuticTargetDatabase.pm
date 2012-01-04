@@ -83,7 +83,9 @@ sub _import_drug {
     my $self = shift;
     my $interaction = shift;
     my $version = $self->version;
-    my $drug_name = $self->_create_drug_name_report($interaction->{drug_name}, 'TTD_drug_id', 'TTD', $version, '');
+    my $drug_name = $self->_create_drug_name_report($interaction->{drug_id}, 'TTD_drug_id', 'TTD', $version, '');
+
+    my $primary_drug_name = $self->_create_drug_name_report_association($drug_name, $interaction->{drug_name}, 'TTD_primary_drug_name', '');
 
     my @drug_synonyms = split("; ", $interaction->{drug_synonyms});
     for my $drug_synonym (@drug_synonyms){
@@ -143,7 +145,7 @@ sub input_to_tsv {
     my $synonyms_path = $self->download_file($drug_synonyms_url);
 
     my ($targets, $version) = $self->_parse_targets_file($targets_path);
-    $self->version($version) if $version;
+    $self->version($version) if $version; #This explicitly ignores the specified version param for the one in the file if it exists.  Its pretty sketchy
     my $drugs = $self->_parse_crossmatch_file($crossmatch_path);
     $self->_parse_synonyms_file($synonyms_path, $drugs);
     

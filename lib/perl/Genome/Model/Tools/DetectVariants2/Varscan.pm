@@ -21,10 +21,6 @@ class Genome::Model::Tools::DetectVariants2::Varscan {
     ],
 };
 
-sub help_brief {
-    "Use Varscan for variant detection.",
-}
-
 sub help_synopsis {
     my $self = shift;
     return <<"EOS"

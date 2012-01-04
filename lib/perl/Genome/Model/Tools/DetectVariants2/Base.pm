@@ -12,6 +12,7 @@ use Genome;
 
 class Genome::Model::Tools::DetectVariants2::Base {
     is => ['Genome::Command::Base'],
+    is_abstract => 1,
     has => [
         reference_build_id => {
             is => 'Text',

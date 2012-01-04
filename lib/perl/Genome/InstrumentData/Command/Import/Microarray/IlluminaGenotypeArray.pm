@@ -67,10 +67,10 @@ sub _resolve_call_and_manifest_files {
         $self->error_message("Failed to open instrument data directory ($data_directory): $!");
         return;
     }
-    $io_dir->read; $io_dir->read; # . & ..
 
     my ($call_file, $manifest_file);
-    while ( my $file = $io_dir->read ) {
+    while (my $file = $io_dir->read) {
+        next if $file eq '.' or $file eq '..';
         if ( -d "$data_directory/$file" or -b "$data_directory/$file" ) {
             next;
         }

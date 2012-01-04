@@ -1,6 +1,6 @@
-package Genome::Model::Command::Services::Review::MissingBuilds;
+package Genome::Model::Command::Admin::MissingBuilds;
 
-class Genome::Model::Command::Services::Review::MissingBuilds {
+class Genome::Model::Command::Admin::MissingBuilds {
     is => 'Genome::Command::Base',
     doc => 'Identify models that are missing builds.',
     has => [

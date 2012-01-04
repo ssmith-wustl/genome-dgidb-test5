@@ -103,11 +103,11 @@ class Genome::Model::Tools::DetectVariants2::Dispatcher {
             default_value => 'workflow'
         },
     ],
+    doc => 'generate complex variant detection results'
 };
 
-sub help_brief {
-    "A dispatcher for variant detectors.",
-}
+sub sub_command_sort_position { -1 }
+
 
 sub help_synopsis {
     my $self = shift;

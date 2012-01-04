@@ -103,7 +103,11 @@ sub _process {
 
     if (@errors) {
         $self->error_message(join("\n",@errors));
-        return 0;
+        if($mode eq 'get') {
+            return 0;
+        } else {
+            die $self->error_message;
+        }
     }
 
     my $link = $reference_sequence_index->add_user(user => $build, label => 'uses');
