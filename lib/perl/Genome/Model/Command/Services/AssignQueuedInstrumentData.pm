@@ -1561,14 +1561,7 @@ sub _instrument_data {
     if($instrument_data_type =~ /sanger/i) {
         #sanger data doesn't store the instrument_data_id directly
         my $at_pse = GSC::PSE::AnalyzeTraces->get($instrument_data_id);
-        my $run_name = $at_pse->run_name();
-        my $run = GSC::Run->get(run_name => $run_name);
-        unless (defined($run)) {
-            $self->error_message("failed to get GSC::Run with run_name $run_name");
-            die $self->error_message;
-        }
-
-        $instrument_data_id = $run_name;
+        $instrument_data_id = $at_pse->run_name();
     }
 
     $instrument_data = Genome::InstrumentData->get($instrument_data_id);
