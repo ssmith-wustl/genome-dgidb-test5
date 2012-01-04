@@ -249,20 +249,6 @@ class Genome::InstrumentData::Solexa {
             is => "Genome::Site::WUGC::Project",
             calculate => q|Genome::Site::WUGC::Project->get(name => $self->project_name)|
         },
-        # TODO Refactor this away
-        _run_lane_solexa => {
-            is => 'GSC::RunLaneSolexa',
-            calculate_from => ['id'],
-            calculate => q| GSC::RunLaneSolexa->get($id); |,
-            doc => 'Solexa Lane Summary from LIMS.',
-        },
-        # TODO Refactor this away
-        index_illumina => {
-            doc => 'Index Illumina from LIMS.',
-            is => 'GSC::IndexIllumina',
-            calculate => q| GSC::IndexIllumina->get(analysis_id=>$id); |,
-            calculate_from => [ 'id' ]
-        },
     ],
 };
 
@@ -1064,13 +1050,6 @@ sub total_bases_read {
     return $count;
 }
 
-sub summary_xml_content {
-    my $self = shift;
-    my $rls = $self->_run_lane_solexa;
-    unless ($rls) { return; }
-    return $rls->summary_xml_content;
-}
-
 sub run_identifier {
     my $self = shift;
     return $self->flow_cell_id;
@@ -1078,5 +1057,3 @@ sub run_identifier {
 
 1;
 
-#$HeaderURL$
-#$Id: Solexa.pm 61055 2010-07-16 19:30:48Z boberkfe $

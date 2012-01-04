@@ -722,7 +722,7 @@ sub check_pse {
 
     if ( $instrument_data_type eq 'solexa' ) {
         # solexa inst data nee to have the copy sequence file pse successful
-        my $index_illumina = $genome_instrument_data->index_illumina;
+        my $index_illumina = GSC::IndexIllumina->get($instrument_data_id);
         if ( not $index_illumina ) {
             $self->error_message('No index illumina for solexa instrument data '.$instrument_data_id);
             return;
