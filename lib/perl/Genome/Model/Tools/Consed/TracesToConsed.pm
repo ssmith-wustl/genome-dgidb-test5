@@ -552,14 +552,13 @@ sub execute {                               # replace with real execution logic.
 	    if ($consensus_start_pos) {
 		
 		my $ace = "$project.ace.1";
-		my $ao = GSC::IO::Assembly::Ace->new(input_file => "$ace");
+        my $ao = Genome::Model::Tools::Consed::AceReader->create(file => $ace);
+        unless ($ao) { $self->error_message( "\n\ndidn't get the ace object\n\n") && return;}
 		my $contig_name;
 		
-		foreach my $name (@{ $ao->get_contig_names }) {
-		    my $contig = $ao->get_contig($name);
-		    
-		    if (grep { /\.c1$/ } keys %{ $contig->reads }) {
-			$contig_name=$name;
+        while ( my $contig = $ao->next_contig ) {
+		    if (grep { /\.c1$/ } keys %{ $contig->{reads} }) {
+			$contig_name=$contig->{name};
 		    }
 		}
 		
