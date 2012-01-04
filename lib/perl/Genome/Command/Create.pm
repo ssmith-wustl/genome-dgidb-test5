@@ -52,9 +52,9 @@ sub execute {
     $self->status_message(join("\n", map { $_.' => '.$self->display_name_for_value($attrs{$_}) } keys %attrs));
 
     my $target_class = $self->_target_class;
-    my $obj = $target_class->create(%attrs);
+    my $obj = eval { $target_class->create(%attrs) };
     if ( not $obj ) {
-        $self->error_message('Could not create '.$target_class);
+        $self->error_message('Could not create ' . $target_class . ": $@");
         return;
     }
 
