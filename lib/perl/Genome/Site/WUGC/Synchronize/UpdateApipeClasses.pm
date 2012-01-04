@@ -375,6 +375,11 @@ sub _create_instrumentdata_454 {
     confess "Could not create new object of type $new_object_class based on object of type " .
         $original_object->class . " with id " . $original_object->id . ":\n$!" unless $object;
 
+    # SFF this will soon be a indirect prop, and will then be resolved above.
+    if ( not $indirect_properties->{sff_file} ) {
+        $indirect_properties->{sff_file} = eval{ $original_object->sff_file; };
+    }
+
     for my $name (sort keys %{$indirect_properties}) {
         Genome::InstrumentDataAttribute->create(
             instrument_data_id => $object->id,
