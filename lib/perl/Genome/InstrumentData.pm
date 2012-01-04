@@ -16,11 +16,10 @@ class Genome::InstrumentData {
         seq_id => { calculate_from => [ 'id' ], calculate => q{ return $id }, },
         subclass_name => { is => 'Text' },
         sequencing_platform => { is => 'Text' },
-        library_id => { is => 'Number' },
         library => { is => 'Genome::Library', id_by => 'library_id' },
         library_name => { via => 'library', to => 'name' },
-        sample_id => { is => 'Number', via => 'library' }, 
-        sample => { is => 'Genome::Sample', via => 'library' },
+        sample_id => { is => 'Number', is_delegated => 1, via => 'library', to => 'sample_id' }, 
+        sample => { is => 'Genome::Sample', id_by => 'sample_id' },
         sample_name => { via => 'sample', to => 'name' },
     ],
     has_optional => [
@@ -33,12 +32,26 @@ class Genome::InstrumentData {
             to => 'attribute_value',
             where => [attribute_label => 'original_est_fragment_size'],
         },
+        original_est_fragment_std_dev => {
+            is => 'Number',
+            is_mutable => 1,
+            via => 'attributes',
+            to => 'attribute_value',
+            where => [attribute_label => 'original_est_fragment_std_dev'],
+        },
         final_est_fragment_size => {
             is => 'Number',
             is_mutable => 1,
             via => 'attributes',
             to => 'attribute_value',
             where => [attribute_label => 'final_est_fragment_size'],
+        },
+        final_est_fragment_std_dev => {
+            is => 'Number',
+            is_mutable => 1,
+            via => 'attributes',
+            to => 'attribute_value',
+            where => [attribute_label => 'final_est_fragment_std_dev'],
         },
         read_orientation => {
             is => 'Text',
@@ -263,7 +276,7 @@ sub dump_fastqs_from_bam {
     }
     
     my $directory = delete $p{directory};
-    $directory ||= Genome::Sys->create_temp_directory('unpacked_bam');
+    $directory ||= Genome::Sys->create_temp_directory('unpacked_bam_'.$self->id);
 
     my $subset = (defined $self->subset_name ? $self->subset_name : 0);
 

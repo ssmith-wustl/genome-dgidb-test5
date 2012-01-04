@@ -12,6 +12,7 @@ use Genome;
 
 class Genome::Model::Tools::DetectVariants2::Base {
     is => ['Genome::Command::Base'],
+    is_abstract => 1,
     has => [
         reference_build_id => {
             is => 'Text',
@@ -40,6 +41,14 @@ class Genome::Model::Tools::DetectVariants2::Base {
             is_output => 1,
         },
     ],
+    has_many_optional_input => {
+        alignment_results => {
+            is => 'Genome::InstrumentData::AlignmentResult::Merged',
+        },
+        control_alignmnet_results => {
+            is => 'Genome::InstrumentData::AlignmentResult::Merged',            
+        },
+    },
     has_optional => [
         aligned_reads_input => {
             is => 'Text',

@@ -11,6 +11,17 @@ class Genome::Model::Build::SomaticValidation {
         reference_sequence_build => {
             is => 'Genome::Model::Build::ReferenceSequence', via => 'inputs', to => 'value', where => [name => 'reference_sequence_build'],
         },
+        annotation_build => {
+            is => 'Genome::Model::Build::ImportedAnnotation',
+            via => 'inputs', to => 'value', where => [ name => 'annotation_build' ],
+            is_mutable => 1,
+        },
+        previously_discovered_variations_build => {
+            is => 'Genome::Model::Build::ImportedVariationList',
+            via => 'inputs', to => 'value', where => [ name => 'previously_discovered_variations_build' ],
+            is_mutable => 1,
+            doc => 'build of variants to screen out from consideration (such as from dbSNP)',
+        },
         snv_variant_list => {
             is => 'Genome::SoftwareResult',
             via => 'inputs', to => 'value', where => [ name => 'snv_variant_list' ],
@@ -88,6 +99,26 @@ class Genome::Model::Build::SomaticValidation {
             via => 'result_users',
             to => 'software_result',
             where => [label => 'control_merged_alignment'],
+        },
+
+        coverage_stats_result => {
+            is => 'Genome::InstrumentData::AlignmentResult::Merged',
+            via => 'result_users',
+            to => 'software_result',
+            where => [label => 'coverage_stats_tumor'],
+        },
+        control_coverage_stats_result  => {
+            is => 'Genome::InstrumentData::AlignmentResult::Merged',
+            via => 'result_users',
+            to => 'software_result',
+            where => [label => 'coverage_stats_normal'],
+        },
+
+        loh_version => {
+            via => 'model',
+        },
+        tiering_version => {
+            via => 'model',
         },
     ],
 };

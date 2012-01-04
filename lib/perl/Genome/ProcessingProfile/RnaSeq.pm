@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 
 class Genome::ProcessingProfile::RnaSeq {
-    is => 'Genome::ProcessingProfile::Staged',
+    is => 'Genome::ProcessingProfile',
     is_abstract => 1,
     subclassify_by => 'subclass_name',
     has => [
@@ -19,7 +19,6 @@ class Genome::ProcessingProfile::RnaSeq {
                                           }
                          },
     ],
-
     has_param => [
         sequencing_platform => {
             doc => 'The sequencing platform from whence the model data was generated',
@@ -85,61 +84,116 @@ class Genome::ProcessingProfile::RnaSeq {
     ],
 };
 
-sub _resolve_type_name_for_class {
-    return 'rna seq';
+sub _map_workflow_inputs {
+    my $self = shift;
+    my $build = shift;
+
+    my @inputs = ();
+
+    push @inputs, build_id => $build->id;
+
+    return @inputs;
 }
 
-#< SUBCLASSING >#
-#
-# This is called by the infrastructure to appropriately classify abstract processing profiles
-# according to their type name because of the "sub_classification_method_name" setting
-# in the class definiton...
-sub _X_resolve_subclass_name {
-    my $class = shift;
+sub _resolve_workflow_for_build {
+    # This is called by Genome::Model::Build::start()
+    # Returns a Workflow::Operation
+    # By default, builds this from stages(), but can be overridden for custom workflow.
+    my $self = shift;
+    my $build = shift;
+    my $lsf_queue = shift; # TODO: the workflow shouldn't need this yet
+    my $lsf_project = shift;
 
-    my $sequencing_platform;
-    if ( ref($_[0]) and $_[0]->can('params') ) {
-        my @params = $_[0]->params;
-        my @seq_plat_param = grep { $_->name eq 'sequencing_platform' } @params;
-        if (scalar(@seq_plat_param) == 1) {
-            $sequencing_platform = $seq_plat_param[0]->value;
-        }
-    }  else {
-        my %params = @_;
-        $sequencing_platform = $params{sequencing_platform};
+    if (!defined $lsf_queue || $lsf_queue eq '' || $lsf_queue eq 'inline') {
+        $lsf_queue = 'apipe';
+    }
+    if (!defined $lsf_project || $lsf_project eq '') {
+        $lsf_project = 'build' . $build->id;
     }
 
-    unless ( $sequencing_platform ) {
-        my $rule = $class->get_rule_for_params(@_);
-        $sequencing_platform = $rule->specified_value_for_property_name('sequencing_platform');
-    }
+    my $workflow = Workflow::Model->create(
+        name => $build->workflow_name,
+        input_properties => ['build_id',],
+        output_properties => ['coverage_result','expression_result']
+    );
 
-    return ( defined $sequencing_platform ) 
-    ? $class->_resolve_subclass_name_for_sequencing_platform($sequencing_platform)
-    : undef;
-}
+    my $log_directory = $build->log_directory;
+    $workflow->log_dir($log_directory);
 
-sub _resolve_subclass_name_for_sequencing_platform {
-    my ($class,$sequencing_platform) = @_;
-    my @type_parts = split(' ',$sequencing_platform);
-	
-    my @sub_parts = map { ucfirst } @type_parts;
-    my $subclass = join('',@sub_parts);
-	
-    my $class_name = join('::', 'Genome::ProcessingProfile::RnaSeq' , $subclass);
-    return $class_name;
-}
 
-sub _resolve_sequencing_platform_for_class {
-    my $class = shift;
+    my $input_connector = $workflow->get_input_connector;
+    my $output_connector = $workflow->get_output_connector;
 
-    my ($subclass) = $class =~ /^Genome::ProcessingProfile::RnaSeq::([\w\d]+)$/;
-    return unless $subclass;
+    # Tophat
 
-    return lc join(" ", ($subclass =~ /[a-z\d]+|[A-Z\d](?:[A-Z\d]+|[a-z]*)(?=$|[A-Z\d])/gx));
+    my $tophat_operation = $workflow->add_operation(
+        name => 'RnaSeq Tophat Alignment',
+        operation_type => Workflow::OperationType::Command->create(
+            command_class_name => 'Genome::Model::RnaSeq::Command::AlignReads::Tophat',
+        )
+    );
     
-    my @words = $subclass =~ /[a-z\d]+|[A-Z\d](?:[A-Z\d]+|[a-z]*)(?=$|[A-Z\d])/gx;
-    return lc(join(" ", @words));
+    $tophat_operation->operation_type->lsf_queue($lsf_queue);
+    $tophat_operation->operation_type->lsf_project($lsf_project);
+
+    my $link = $workflow->add_link(
+        left_operation => $input_connector,
+        left_property => 'build_id',
+        right_operation => $tophat_operation,
+        right_property => 'build_id'
+    );
+
+    # RefCov
+    my $coverage_operation = $workflow->add_operation(
+        name => 'RnaSeq Coverage',
+        operation_type => Workflow::OperationType::Command->create(
+            command_class_name => 'Genome::Model::RnaSeq::Command::Coverage',
+        )
+    );
+    $coverage_operation->operation_type->lsf_queue($lsf_queue);
+    $coverage_operation->operation_type->lsf_project($lsf_project);
+
+    $workflow->add_link(
+        left_operation => $tophat_operation,
+        left_property => 'build_id',
+        right_operation => $coverage_operation,
+        right_property => 'build_id'
+    );
+    
+
+    # Cufflinks
+    
+    my $cufflinks_operation = $workflow->add_operation(
+        name => 'RnaSeq Cufflinks Expression',
+        operation_type => Workflow::OperationType::Command->create(
+            command_class_name => 'Genome::Model::RnaSeq::Command::Expression::Cufflinks',
+        )
+    );
+    $cufflinks_operation->operation_type->lsf_queue($lsf_queue);
+    $cufflinks_operation->operation_type->lsf_project($lsf_project);
+    
+    $workflow->add_link(
+        left_operation => $tophat_operation,
+        left_property => 'build_id',
+        right_operation => $cufflinks_operation,
+        right_property => 'build_id'
+    );
+
+    # Define output connector results from coverage and expression
+    $workflow->add_link(
+        left_operation => $coverage_operation,
+        left_property => 'result',
+        right_operation => $output_connector,
+        right_property => 'coverage_result'
+    );
+    $workflow->add_link(
+        left_operation => $cufflinks_operation,
+        left_property => 'result',
+        right_operation => $output_connector,
+        right_property => 'expression_result'
+    );
+
+    return $workflow;
 }
 
 sub params_for_alignment {
@@ -199,6 +253,35 @@ sub params_for_alignment {
     #$self->status_message('The AlignmentResult parameters are: '. Data::Dumper::Dumper(%params));
     my @param_set = (\%params);
     return @param_set;
+}
+
+sub _resolve_type_name_for_class {
+    return 'rna seq';
+}
+
+#< SUBCLASSING >#
+
+sub _resolve_subclass_name_for_sequencing_platform {
+    my ($class,$sequencing_platform) = @_;
+    my @type_parts = split(' ',$sequencing_platform);
+	
+    my @sub_parts = map { ucfirst } @type_parts;
+    my $subclass = join('',@sub_parts);
+	
+    my $class_name = join('::', 'Genome::ProcessingProfile::RnaSeq' , $subclass);
+    return $class_name;
+}
+
+sub _resolve_sequencing_platform_for_class {
+    my $class = shift;
+
+    my ($subclass) = $class =~ /^Genome::ProcessingProfile::RnaSeq::([\w\d]+)$/;
+    return unless $subclass;
+
+    return lc join(" ", ($subclass =~ /[a-z\d]+|[A-Z\d](?:[A-Z\d]+|[a-z]*)(?=$|[A-Z\d])/gx));
+    
+    my @words = $subclass =~ /[a-z\d]+|[A-Z\d](?:[A-Z\d]+|[a-z]*)(?=$|[A-Z\d])/gx;
+    return lc(join(" ", @words));
 }
 
 1;

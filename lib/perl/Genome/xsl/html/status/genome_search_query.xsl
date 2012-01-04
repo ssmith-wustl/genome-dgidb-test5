@@ -23,7 +23,6 @@
 <style>
     .projectContainer {
         text-align: left;
-        text-indent: 10px;
     }
 
     .clickable {
@@ -122,7 +121,7 @@
 
 <br/>
 
-            <div id="myProjectBox" class="sidebar_search rounded-right">
+            <div id="myProjectBox" class="sidebar_project rounded-right">
                 <h4 style="float: left" id="myProjectsCount"></h4>
                 <div style="margin: 2px 0px 0px 10px; float: left; color: red" id="loadingStatus"></div>
                 <br/>

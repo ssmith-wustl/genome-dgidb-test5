@@ -10,8 +10,9 @@ BEGIN {
 
 use Test::More tests => 6;
 use above 'Genome';
+
 SKIP: {
-    skip "disable test while compensating for TTD", 6;
+    skip 'test data in flux', 6;
 use_ok('Genome::DruggableGene::Command::GeneNameReport::LookupInteractions');
 
 my $test_input_file = __FILE__ . '.d/input.tsv';

@@ -94,6 +94,12 @@ class Genome::Model::Tools::Validation::ClonalityPlot {
             doc => "only label the highest peak",
             is_optional => 1,
             default => 0},        
+
+        plot_only_cn2 => {
+            is => 'Boolean',
+            doc => "only plot the CN2 data",
+            is_optional => 1,
+            default => 0},        
         ],
 };
 
@@ -138,6 +144,7 @@ sub execute {
     my $analysis_type = $self->analysis_type;
     my $minimum_labelled_peak_height = $self->minimum_labelled_peak_height;
     my $only_label_highest_peak = $self->only_label_highest_peak;
+    my $plot_only_CN2 = $self->plot_only_cn2;
 
     #set readcount cutoffs
     if ($analysis_type eq 'wgs') {
@@ -426,7 +433,7 @@ _END_OF_R_
          cn2peaks = peaks(den2factor);
          cn2peaks = append(cn2peaks,c("FALSE","FALSE"),after=length(cn2peaks)); 
          cn2peakpos = subset(den2\$x,cn2peaks==TRUE & den2\$y > 0.001); 
-         print(cn2peakpos);
+         ###print(cn2peakpos);
          cn2peakheight = subset(den2factor,cn2peaks==TRUE & den2\$y > 0.001);
     }
 
@@ -517,43 +524,48 @@ _END_OF_R_
     #lines(c(10,100),c(25,25),lty=2,col="black");
     axis(side=2,at=c(0,25),labels=c(0,sprintf("%.3f", maxden100)),las=1,cex.axis=0.6,hadj=0.6,lwd=0.5,lwd.ticks=0.5,tck=-0.01);
     lines(den2100x\$x,(finalfactor * den2factor100),col="#67B32EAA",lwd=2);
-    lines(den1100x\$x,(finalfactor * den1factor100),col="#1C3660AA",lwd=2);
-    lines(den3100x\$x,(finalfactor * den3factor100),col="#F49819AA",lwd=2);
-    lines(den4100x\$x,(finalfactor * den4factor100),col="#E52420AA",lwd=2);
+    if(!($plot_only_CN2)){
+        lines(den1100x\$x,(finalfactor * den1factor100),col="#1C3660AA",lwd=2)\n;
+        lines(den3100x\$x,(finalfactor * den3factor100),col="#F49819AA",lwd=2)\n;
+        lines(den4100x\$x,(finalfactor * den4factor100),col="#E52420AA",lwd=2)\n;
+    }
 
-    ppos = c();
-    if($only_label_highest_peak){
-        ppos = which((cn1peakheight100 == max(cn1peakheight100)) & (cn1peakheight100 > $minimum_labelled_peak_height));
-    } else {
-        ppos = which(cn1peakheight100 > $minimum_labelled_peak_height);
-    }
-    if(!(length(ppos) == 0)){
-        text(x=cn1peakpos100[ppos],
-             y=(finalfactor * cn1peakheight100[ppos])+1.7,
+    if(!($plot_only_CN2)){
+        ppos = c();
+        if($only_label_highest_peak){
+            ppos = which((cn1peakheight100 == max(cn1peakheight100)) & (cn1peakheight100 > $minimum_labelled_peak_height));
+        } else {
+            ppos = which(cn1peakheight100 > $minimum_labelled_peak_height);
+        }
+        if(!(length(ppos) == 0)){
+            text(x=cn1peakpos100[ppos],
+                 y=(finalfactor * cn1peakheight100[ppos])+1.7,
              labels=signif(cn1peakpos100[ppos],3),cex=0.7,srt=0,col="#1C3660AA");
-    }
-    ppos = c();
-    if($only_label_highest_peak){
-        ppos = which((cn3peakheight100 == max(cn3peakheight100)) & (cn3peakheight100 > $minimum_labelled_peak_height));
-    } else {
-        ppos = which(cn3peakheight100 > $minimum_labelled_peak_height);
-    }
-    if(!(length(ppos) == 0)){
-        text(x=cn3peakpos100[ppos],
-             y=(finalfactor * cn3peakheight100[ppos])+1.7,
+        }
+        ppos = c();
+        if($only_label_highest_peak){
+            ppos = which((cn3peakheight100 == max(cn3peakheight100)) & (cn3peakheight100 > $minimum_labelled_peak_height));
+        } else {
+            ppos = which(cn3peakheight100 > $minimum_labelled_peak_height);
+        }
+        if(!(length(ppos) == 0)){
+            text(x=cn3peakpos100[ppos],
+                 y=(finalfactor * cn3peakheight100[ppos])+1.7,
              labels=signif(cn3peakpos100[ppos],3),cex=0.7,srt=0,col="#F49819AA");
-    }
-    ppos = c();
-    if($only_label_highest_peak){
-        ppos = which((cn4peakheight100 == max(cn4peakheight100)) & (cn4peakheight100 > $minimum_labelled_peak_height));
-    } else {
-        ppos = which(cn4peakheight100 > $minimum_labelled_peak_height);
-    }
-    if(!(length(ppos) == 0)){
-        text(x=cn4peakpos100[ppos],
-             y=(finalfactor * cn4peakheight100[ppos])+1.7,
+        }
+        ppos = c();
+        if($only_label_highest_peak){
+            ppos = which((cn4peakheight100 == max(cn4peakheight100)) & (cn4peakheight100 > $minimum_labelled_peak_height));
+        } else {
+            ppos = which(cn4peakheight100 > $minimum_labelled_peak_height);
+        }
+        if(!(length(ppos) == 0)){
+            text(x=cn4peakpos100[ppos],
+                 y=(finalfactor * cn4peakheight100[ppos])+1.7,
              labels=signif(cn4peakpos100[ppos],3),cex=0.7,srt=0,col="#E52420AA");
+        }
     }
+
     ppos = c();
     if($only_label_highest_peak){
         ppos = which((cn2peakheight100 == max(cn2peakheight100)) & (cn2peakheight100 > $minimum_labelled_peak_height));
@@ -576,7 +588,7 @@ _END_OF_R_
 
 
         #if cn is being plotted
-        if(defined($copynumber_file)){
+        if(defined($copynumber_file) && !($plot_only_CN2)){
             print R_COMMANDS 'drawPlot(z1, cn1minus, cn1xchr, additional_plot_points_cn1, "#1C366044", "#1C3660", cncircle=1)' . "\n";
             print R_COMMANDS 'drawPlot(z1, cn2, cn2xchr, additional_plot_points_cn2, "#67B32E44", "#67B32E", cncircle=2)' . "\n";
             print R_COMMANDS 'drawPlot(z1, cn3, cn3xchr, additional_plot_points_cn3, "#F4981955", "#F49819", cncircle=3)' . "\n";
@@ -645,11 +657,11 @@ _END_OF_R_
              labels=signif(cn4peakpos[ppos],3),
              cex=0.7,srt=0,col="#E52420AA");
     }
-    print(cn2peakpos);
+    ##print(cn2peakpos);
     ppos = c();
     if($only_label_highest_peak){
         ppos = which((cn2peakheight == max(cn2peakheight)) & (cn2peakheight > $minimum_labelled_peak_height));
-        cat(max(cn2peakheight),"--",cn2peakheight[ppos],"--",cn2peakpos[ppos])
+        ##cat(max(cn2peakheight),"--",cn2peakheight[ppos],"--",cn2peakpos[ppos])
     } else {
         ppos = which(cn2peakheight > $minimum_labelled_peak_height);
     }
@@ -671,7 +683,7 @@ _END_OF_R_
         print R_COMMANDS "$R_command\n";
 
         #if cn is being plotted
-        if(defined($copynumber_file)){
+        if(defined($copynumber_file) && !($plot_only_CN2)){
             print R_COMMANDS 'drawPlot(z1, cn1minus, cn1xchr, additional_plot_points_cn1, "#1C366044", "#1C3660", cncircle=1)' . "\n";
             print R_COMMANDS 'drawPlot(z1, cn2, cn2xchr, additional_plot_points_cn2, "#67B32E44", "#67B32E", cncircle=2)' . "\n";        
             print R_COMMANDS 'drawPlot(z1, cn3, cn3xchr, additional_plot_points_cn3, "#F4981955", "#F49819", cncircle=3)' . "\n";

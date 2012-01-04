@@ -159,7 +159,11 @@ class Genome::Model::Tools::DetectVariants2::Detector {
 };
 
 sub help_brief {
-    "The base class for variant detectors.",
+    my $self = shift;
+    my $class = ref($self) || $self;
+    my ($name) = ($class =~ /Genome::Model::Tools::DetectVariants2::(.*)/);
+    my @words = map { lc($_) } split(/(?=[A-Z])/,$name);
+    return "directly run the @words variant detector";
 }
 
 sub help_synopsis {
@@ -291,7 +295,6 @@ sub execute {
 
 sub _summon_vcf_result {
     my $self = shift;
-    $DB::single=1;
 
     my ($params) = $self->params_for_vcf_result;
     my $result = Genome::Model::Tools::DetectVariants2::Result::Vcf::Detector->get_or_create(%$params); #, _instance => $self);

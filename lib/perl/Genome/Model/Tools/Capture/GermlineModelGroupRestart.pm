@@ -109,6 +109,16 @@ sub execute {                               # replace with real execution logic.
             }
             else {
 		        $build = $model->latest_build;
+                if (!defined $build && $rebuild_set) {
+                    print OUTPUT join("\t", $model_id, "No_Build_Found", $subject_name, "No_Build_Found", "No_Build_Found") . "\n";
+                    my $restart_command = "bsub -q short \'perl -I /gsc/scripts/opt/genome/current/pipeline/lib/perl/ `which genome` model build start $model_id\'";
+                    system($restart_command);
+                    my $shortqueue_pending=`bjobs -q short | wc -l`; chomp $shortqueue_pending;
+                    if ($shortqueue_pending > 20) {
+                        sleep(30);
+                    }
+                    next;
+                }
 		        $build_id = $build->id;
                 $build_status = $build->status;
             }

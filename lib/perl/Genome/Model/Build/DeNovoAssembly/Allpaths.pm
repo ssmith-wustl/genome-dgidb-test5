@@ -104,11 +104,11 @@ sub before_assemble {
         if (! $libs_seen{$instrument_data->library_id}){
             my $lib = Genome::Library->get($instrument_data->library_id);
             if ($self->_instrument_data_is_sloptig($instrument_data)) {
-                my $fragment_std_dev = .1*$instrument_data->final_est_fragment_size;
+                my $fragment_std_dev = $instrument_data->final_est_fragment_std_dev;
                 $in_libs = $in_libs."\n".$lib->name.",\tproject_name,\t".$lib->species_name.",\tfragment,\t1,\t".$instrument_data->final_est_fragment_size.",\t".$fragment_std_dev.",\t,\t,\tinward,\t0,\t0";
             }
             elsif ($self->_instrument_data_is_jumping($instrument_data)){
-                my $fragment_std_dev = .1*$instrument_data->original_est_fragment_size;
+                my $fragment_std_dev = $instrument_data->original_est_fragment_std_dev;
                 $in_libs = $in_libs."\n".$lib->name.",\tproject_name,\t".$lib->species_name.",\tjumping,\t1,\t,\t,\t".$instrument_data->original_est_fragment_size.",\t".$fragment_std_dev.",\toutward,\t0,\t0";
             
             }
@@ -167,8 +167,9 @@ sub assembler_params {
 
 sub assembler_rusage {
     my $self = shift;
-    my $mem = 30000;
-    my $queue = 'apipe';
+    my $mem = 494000;
+    $mem = 92000 if $self->run_by eq 'apipe-tester';
+    my $queue = 'assembly';
     $queue = 'alignment-pd' if $self->run_by eq 'apipe-tester';
     return "-q $queue -n 4 -R 'span[hosts=1] select[type==LINUX64 && mem>$mem] rusage[mem=$mem]' -M $mem".'000';
 }

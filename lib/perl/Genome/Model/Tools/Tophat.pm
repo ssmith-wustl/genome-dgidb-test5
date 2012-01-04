@@ -6,6 +6,7 @@ use warnings;
 
 use Genome;
 use File::Basename;
+use IPC::Cmd;
 
 my $DEFAULT = '1.3.1';
 
@@ -61,12 +62,18 @@ sub tophat_path {
 
 sub available_tophat_versions {
     my $self = shift;
-    return keys %TOPHAT_VERSIONS;
+    my @legacy_versions = keys %TOPHAT_VERSIONS;
+    my @local_versions = qx/ update_alternatives --list tophat /;
+    @local_versions = map { /^.*tophat(.*)/; $1; } @local_versions;
+    return @legacy_versions, @local_versions;
 }
 
 sub path_for_tophat_version {
     my $class = shift;
     my $version = shift;
+
+    my $path = IPC::Cmd::can_run("tophat" . $version);
+    return $path if ($path);
 
     if (defined $TOPHAT_VERSIONS{$version}) {
         return $TOPHAT_VERSIONS{$version};

@@ -3,6 +3,7 @@ package Genome::Model::Tools::Vcf::Convert::Snv::Samtools;
 use strict;
 use warnings;
 use Genome;
+use POSIX 'strftime';
 use Genome::Info::IUB;
 
 class Genome::Model::Tools::Vcf::Convert::Snv::Samtools {
@@ -33,12 +34,64 @@ sub _get_header_columns {
     return @header_columns;
 }
 
-sub parse_line {
+sub print_header {
     my $self = shift;
-    my $line = shift;
+    my $input_file = $self->input_file;
 
-    my ($chr, $pos, $ref, $genotype, $gq, $vaq, $mq, $dp, $read_bases, $base_quality) = split("\t", $line);
+    my $token = `head -1 $input_file`;
 
+    if ($token =~ /^#/) {  #mpileup
+        my (@header, @new_header);
+        my $input_fh = $self->_input_fh;
+        while (my $line = $input_fh->getline) {
+            push @header, $line if $line =~ /^#/;
+        }
+        $input_fh->close;
+
+        #reintialized the file handle to be used next step
+        my $new_fh = Genome::Sys->open_file_for_reading($input_file) or die "Failed to open $input_file\n";
+        $self->_input_fh($new_fh); 
+
+        while (@header) {
+            last if $header[0] =~ /^##INFO/; #split original vcf header
+            push @new_header, shift @header;
+        }
+
+        my @extra_info  = $self->_extra_header_info;
+        push @new_header, @extra_info, @header;
+        
+        my $output_fh = $self->_output_fh;
+        map{$output_fh->print($_)}@new_header;
+    }
+    else { #pileup
+        return $self->SUPER::print_header;
+    }
+
+    return 1;
+}
+
+sub _extra_header_info {
+    my $self = shift;
+    my $date = strftime("%Y%m%d", localtime);
+    my $source     = $self->source;
+    my $public_ref = $self->_get_public_ref;
+
+    return ("##fileDate=$date\n", "##source=$source\n", "##reference=$public_ref\n", "##phasing=none\n");
+}
+
+
+sub parse_line {
+    my ($self, $line) = @_;
+    return if $line =~ /^#/; # no mpileup vcf header here
+    my @columns = split("\t", $line);
+
+    if ($columns[4] =~ /^[A-Z]+/) { #mpileup output vcf format already
+        $columns[6] = 'PASS';
+        my $new_line = join "\t", @columns;
+        return $new_line;
+    }
+
+    my ($chr, $pos, $ref, $genotype, $gq, $vaq, $mq, $dp, $read_bases, $base_quality) = @columns;
     #replace ambiguous/IUPAC bases with N in ref
     $ref =~ s/[^ACGTN\-]/N/g;
 

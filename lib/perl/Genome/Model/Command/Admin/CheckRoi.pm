@@ -1,6 +1,6 @@
-package Genome::Model::Command::Services::Review::CheckRoi;
+package Genome::Model::Command::Admin::CheckRoi;
 
-class Genome::Model::Command::Services::Review::CheckRoi {
+class Genome::Model::Command::Admin::CheckRoi {
     is => 'Genome::Command::Base',
     has => [
         models => {

@@ -26,6 +26,11 @@ class Genome::Role::Logger {
             valid_values => \@log_levels,
             doc => 'The minimum level to display in the log.',
         },
+        tie_stderr => {
+            is => 'Boolean',
+            default => 0,
+            doc => '(warning) globally tie STDERR to this logger',
+        },
     ],
     has_optional => [
         log_file => {
@@ -69,6 +74,13 @@ sub log_dispatch_init {
         );
     }
 
+    if ($self->tie_stderr && !$self->screen) {
+        tie(*STDERR, $self);
+    } elsif ($self->tie_stderr && $self->screen) {
+        $log->warning("WARNING: Disabling --tie_stderr since --screen is true.\n");
+        $self->tie_stderr(0);
+    }
+
     return $log;
 }
 
@@ -83,6 +95,27 @@ for my $log_level (@log_levels) {
         return $self->log_dispatch->$log_level($message);
     };
     *$log_level = $sub_ref;
+}
+
+sub stderror {
+    my ($self, $message) = @_;
+    chomp $message;
+    $message = uc('stderr') . ": $message\n";
+    return $self->log_dispatch->error($message);
+}
+
+# Thanks "socket puppet"
+# http://stackoverflow.com/questions/8393667/is-there-a-way-to-redirect-prints-to-stderr-so-they-go-to-logdispatch
+
+sub TIEHANDLE {
+    my $logger = shift;
+    die unless $logger->isa('Genome::Role::Logger');
+    return $logger;
+}
+
+sub PRINT {
+    my $self = shift;
+    $self->stderror(@_);
 }
 
 1;

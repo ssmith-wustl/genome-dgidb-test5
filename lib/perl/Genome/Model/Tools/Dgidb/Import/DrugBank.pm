@@ -125,7 +125,9 @@ sub _import_drug {
     my $self = shift;
     my $version = $self->version;
     my $interaction = shift;
-    my $drug_name = $self->_create_drug_name_report($interaction->{drug_name}, 'Primary DrugBank drug name', 'DrugBank', $version, '');
+    my $drug_name = $self->_create_drug_name_report($interaction->{drug_id}, 'DrugBank drug identifier', 'DrugBank', $version, '');
+
+    my $primary_name = $self->_create_drug_name_report_association($drug_name, $interaction->{drug_name}, 'Primary DrugBank drug name', '');
 
     my @drug_synonyms = split(', ', $interaction->{drug_synonyms});
     for my $drug_synonym (@drug_synonyms){
@@ -172,7 +174,9 @@ sub _import_gene {
     my $self = shift;
     my $version = $self->version;
     my $interaction = shift;
-    my $gene_name = $self->_create_gene_name_report($interaction->{partner_id}, 'drugbank_partner_id', 'DrugBank', $version, '');
+    my $gene_prefix = 'DGBNK_G';
+    my $gene_partner_id_with_prefix = $gene_prefix . $interaction->{partner_id};
+    my $gene_name = $self->_create_gene_name_report($gene_partner_id_with_prefix, 'drugbank_partner_id', 'DrugBank', $version, '');
     my $gene_symbol_gene_name_association = $self->_create_gene_name_report_association($gene_name, $interaction->{gene_symbol}, 'drugbank_gene_symbol', '');
     my $uniprot_gene_name_association=$self->_create_gene_name_report_association($gene_name, $interaction->{uniprot_id}, 'uniprot_id', '');
     return $gene_name;

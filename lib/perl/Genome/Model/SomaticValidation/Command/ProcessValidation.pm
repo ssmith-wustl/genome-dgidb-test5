@@ -82,7 +82,8 @@ sub execute {
     my $filtered_original_file = Cwd::abs_path($filtered_bed);
     $filtered_original_file =~ s/(?:\.v\d+)?\.bed$//;
     unless(Genome::Sys->check_for_path_existence($filtered_original_file)) {
-        die $self->error_message('Failed to find original filtered file to use for ProcessValidation run.');
+        $self->error_message('Failed to find original filtered file to use for ProcessValidation run. This step requires that the final SNV result contain a Varscan output.');
+        return 1;
     }
 
     my $process_validation = Genome::Model::Tools::Varscan::ProcessValidation->create(

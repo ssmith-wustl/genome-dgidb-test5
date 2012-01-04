@@ -11,7 +11,7 @@ BEGIN {
 use above 'Genome';
 
 require Genome::InstrumentData::Solexa;
-use Test::More tests => 18;
+use Test::More tests => 19;
 use Test::MockObject;
 
 use_ok('Genome::Model::Command::Services::AssignQueuedInstrumentData');
@@ -133,7 +133,7 @@ is(scalar(keys %$new_models), 0, 'the cron created no models for validation');
 is($sv_model->instrument_data, $instrument_data_1, 'the cron added the instrument data to the validation model');
 my $models_changed_1 = $command_1->_existing_models_assigned_to;
 is(scalar(keys %$models_changed_1), 1, 'data was reported assigned to an existing model');
-
+is((values(%$models_changed_1))[0]->build_requested, 1, 'requested build');
 
 
 my $fl2 = Genome::FeatureList->__define__(

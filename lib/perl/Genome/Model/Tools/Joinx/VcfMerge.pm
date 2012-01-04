@@ -88,7 +88,7 @@ sub execute {
     }
 
     unless($self->joinx_bin_path){
-        $self->joinx_bin_path("joinx");
+        $self->joinx_bin_path($self->joinx_path);
     }
     my $flags = "";
     if ($self->clear_filters) {

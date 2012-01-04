@@ -106,10 +106,7 @@ sub execute{
         die $self->error_message("Failed to execute detect variants dispatcher(err:$@) with params:\n".Data::Dumper::Dumper \%params);
     }
     else {
-        my @results = $command->results;
-        for my $result (@results) {
-            $result->add_user(user => $build, label => 'uses');
-        }
+        #users set below
     }
 
     $self->status_message("detect variants command completed successfully");
@@ -118,6 +115,8 @@ sub execute{
     #my $version = GMT:BED:CONVERT::version();  TODO, something like this instead of hardcoding
 
     if ($build->snv_detection_strategy){
+        my $snv_result = $command->snv_result;
+        $snv_result->add_user(user => $build, label => 'snv_result');
         my $result = $build->data_set_path("variants/snvs.hq",$version,'bed');
         unless (-e $result){
             my $unexpected_format_output = $command->_snv_hq_output_file;
@@ -125,6 +124,10 @@ sub execute{
                 die $self->error_message("Expected hq detected snvs file $result, but it does not exist!");
             }
             symlink($unexpected_format_output, $result);
+        }
+        my $lq_snv_result = $command->snv_lq_result;
+        if($lq_snv_result) {
+            $lq_snv_result->add_user(user => $build, label => 'snv_lq_result');
         }
         my $lq_result = $build->data_set_path("variants/snvs.lq",$version,'bed');
         unless (-e $lq_result){
@@ -138,6 +141,8 @@ sub execute{
     }
 
     if ($build->indel_detection_strategy){
+        my $indel_result = $command->indel_result;
+        $indel_result->add_user(user => $build, label => 'indel_result');
         my $result = $build->data_set_path("variants/indels.hq",$version,'bed');
         unless (-e $result){
             my $unexpected_filename_output = $command->_indel_hq_output_file;
@@ -145,6 +150,10 @@ sub execute{
                 die $self->error_message("Expected hq detected indels file $result, but it does not exist!");
             }
             symlink($unexpected_filename_output, $result);
+        }
+        my $lq_indel_result = $command->indel_lq_result;
+        if($lq_indel_result) {
+            $lq_indel_result->add_user(user => $build, label => 'indel_lq_result');
         }
         my $lq_result = $build->data_set_path("variants/indels.lq",$version,'bed');
         unless (-e $lq_result){
@@ -160,6 +169,8 @@ sub execute{
     }
 
     if ($build->sv_detection_strategy){
+        my $sv_result = $command->sv_result;
+        $sv_result->add_user(user => $build, label => 'sv_result');
         my $result = $build->data_set_path("variants/svs.hq",$version,'bed');
         unless (-e $result){
             my $unexpected_filename_output = $command->_sv_hq_output_file;
@@ -171,6 +182,8 @@ sub execute{
     }
 
     if ($build->cnv_detection_strategy){
+        my $cnv_result = $command->cnv_result;
+        $cnv_result->add_user(user => $build, label => 'cnv_result');
         my $result = $build->data_set_path("variants/cnvs.hq",$version,'bed');
         unless (-e $result){
             my $unexpected_filename_output = $command->_cnv_hq_output_file;

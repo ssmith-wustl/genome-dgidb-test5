@@ -49,7 +49,7 @@ sub execute {
 sub import_tsv {
     my $self = shift;
     my $interactions_outfile = $self->interactions_outfile;
-    # $self->preload_objects; #TODO: do we need this?
+    $self->preload_objects;
     my @interactions = $self->import_interactions($interactions_outfile);
     return 1;
 }
@@ -83,7 +83,9 @@ sub _import_drug {
     my $self = shift;
     my $interaction = shift;
     my $version = $self->version;
-    my $drug_name = $self->_create_drug_name_report($interaction->{drug_name}, 'TTD_drug_id', 'TTD', $version, '');
+    my $drug_name = $self->_create_drug_name_report($interaction->{drug_id}, 'TTD_drug_id', 'TTD', $version, '');
+
+    my $primary_drug_name = $self->_create_drug_name_report_association($drug_name, $interaction->{drug_name}, 'TTD_primary_drug_name', '');
 
     my @drug_synonyms = split("; ", $interaction->{drug_synonyms});
     for my $drug_synonym (@drug_synonyms){
@@ -143,7 +145,7 @@ sub input_to_tsv {
     my $synonyms_path = $self->download_file($drug_synonyms_url);
 
     my ($targets, $version) = $self->_parse_targets_file($targets_path);
-    $self->version($version) if $version;
+    $self->version($version) if $version; #This explicitly ignores the specified version param for the one in the file if it exists.  Its pretty sketchy
     my $drugs = $self->_parse_crossmatch_file($crossmatch_path);
     $self->_parse_synonyms_file($synonyms_path, $drugs);
     
@@ -202,6 +204,31 @@ sub input_to_tsv {
     }
 
     $interactions_fh->close;
+    return 1;
+}
+
+sub preload_objects {
+    my $self = shift;
+    my $source_db_name = 'TTD';
+    my $source_db_version = $self->version;
+
+    #Let's preload anything for this database name and version so that we can avoid death by 1000 queries
+    my @gene_names = Genome::DruggableGene::GeneNameReport->get(source_db_name => $source_db_name, source_db_version => $source_db_version);
+    for my $gene_name (@gene_names){
+        $gene_name->gene_name_report_associations;
+        $gene_name->gene_name_category_report_associations;
+    }
+    my @drug_names = Genome::DruggableGene::DrugNameReport->get(source_db_name => $source_db_name, source_db_version => $source_db_version);
+    for my $drug_name (@drug_names){
+        $drug_name->drug_name_report_associations;
+        $drug_name->drug_name_report_category_associations;
+    }
+    my @gene_ids = map($_->id, @gene_names);
+    my @interactions = Genome::DruggableGene::DrugGeneInteractionReport->get(gene_name_report_id => \@gene_ids);
+    for my $interaction (@interactions){
+        $interaction->drug_gene_interaction_report_attributes;
+    }
+
     return 1;
 }
 

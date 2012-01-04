@@ -575,7 +575,7 @@ sub shellcmd {
                 @missing_output_files = 
                     grep { not -e $_ }  grep { not -p $_ } @$output_files; # rescan for only missing files
             } else {
-                for my $output_file (@$output_files) {
+                for my $output_file (@missing_output_files) {
                     Carp::carp("ALLOWING zero size output file '$output_file' for command: $cmd");
                     my $fh = $self->open_file_for_writing($output_file);
                     unless ($fh) {

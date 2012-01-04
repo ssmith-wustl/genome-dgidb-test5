@@ -16,6 +16,17 @@ class Genome::Project {
             is => 'Text',
             doc => 'Name of the project',
         },
+        fixed_size_name => {
+            is => 'Text',
+            is_calculated => 1,
+            calculate_from => ['name'],
+            calculate => sub {
+                my ($n) = @_;
+                return $n if (length($n) <= 20);
+                return substr($n, 0, 12) . '..' . substr($n, length($n) - 6);
+            },
+            doc => 'Name of the project, fixed in size for project box on webpages',
+        },
         user_ids => {
             is => 'Genome::Sys::User',
             via => 'parts',

@@ -131,6 +131,10 @@ sub execute {
             $variant_results_by_type = $self->resolve_variant_list_types(@$variant_results);
         }
 
+        #for now, use defaults and don't allow customization at definition time
+        my $annotation_build = Genome::Model::ImportedAnnotation->annotation_build_for_reference($self->reference_sequence_build);
+        my $previously_discovered_build = Genome::Model::ImportedVariationList->dbsnp_build_for_reference($self->reference_sequence_build);
+
         push @params, name => $self->name
             if defined $self->name;
         push @params, reference_sequence_build => $self->reference_sequence_build
@@ -148,6 +152,10 @@ sub execute {
         push @params, tumor_sample => $tumor_sample;
         push @params, normal_sample => $control_sample
             if defined $control_sample;
+        push @params, annotation_build => $annotation_build
+            if defined $annotation_build;
+        push @params, previously_discovered_variations_build => $previously_discovered_build
+            if defined $previously_discovered_build;
 
         if($self->region_of_interest_set) {
             push @params, region_of_interest_set => $self->region_of_interest_set;
@@ -277,11 +285,10 @@ sub resolve_processing_profile {
 
     my $pp;
     if($self->tumor_sample and not $self->normal_sample) {
-        #Nov 2011 Single-Bam Validation
-        $pp = Genome::ProcessingProfile::SomaticValidation->get(2658053);
+        $pp = Genome::ProcessingProfile::SomaticValidation->default_single_bam_profile();
     } else {
         #Nov 2011 default Somatic Validation
-        $pp = Genome::ProcessingProfile::SomaticValidation->get(2656116);
+        $pp = Genome::ProcessingProfile::SomaticValidation->default_profile();
     }
 
     $self->processing_profile($pp);

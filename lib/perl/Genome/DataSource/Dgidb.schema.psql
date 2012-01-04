@@ -95,5 +95,6 @@ create table citation (
         source_db_name varchar NOT NULL,
         source_db_version varchar NOT NULL,
         citation text,
+        base_url varchar,
         PRIMARY KEY (id)
 );

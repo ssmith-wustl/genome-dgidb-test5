@@ -68,6 +68,7 @@ my $tool = Genome::Model::Tools::Soap::GapCloser->create(
     version => '1.10',
     p => 25,
 );
+$tool->dump_status_messages(1);
 ok( $tool, "Created tool" );
 ok( $tool->execute, "Executed tool" );
 

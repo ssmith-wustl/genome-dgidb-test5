@@ -33,13 +33,15 @@ linked GSC project directories for finishing and manual sequencing improvement
 EOS
 }
 
-if ( not App::Init->initialized ) {
-    App::DB->db_access_level('rw');
-    App->init;
-}
 
 sub execute { 
     my ($self) = @_;
+
+    if ( not App::Init->initialized ) {
+        App::DB->db_access_level('rw');
+        App->init;
+    }
+
     $self->status_message ("Updating Seqmgr Projects ..");
     my $project_dir = $self->project_dir;
 
