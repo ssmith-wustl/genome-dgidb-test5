@@ -377,7 +377,8 @@ sub _create_instrumentdata_454 {
 
     # SFF this will soon be a indirect prop, and will then be resolved above.
     if ( not $indirect_properties->{sff_file} ) {
-        $indirect_properties->{sff_file} = eval{ $original_object->sff_file; };
+        my $sff_file = eval{ $original_object->sff_file; };
+        $indirect_properties->{sff_file} = $sff_file if $sff_file;
     }
 
     for my $name (sort keys %{$indirect_properties}) {
