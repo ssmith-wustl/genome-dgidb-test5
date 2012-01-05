@@ -11,7 +11,6 @@ class Genome::Sys::Command::Search::Queue {
 };
 
 use Genome::Command::Crud;
-$DB::single = 1;
 Genome::Command::Crud->init_sub_commands(
     target_class => 'Genome::Search::Queue',
     namespace => 'Genome::Sys::Command::Search::Queue',
