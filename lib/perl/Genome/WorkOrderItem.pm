@@ -154,6 +154,8 @@ sub event_statuses {
         my $status = {};
 
         # get event statuses from LIMS
+        # FIXME this will not work b/c the seq items (Genome::Site::WUGC::SequenceItem) here do not have the code to get the creation pse
+        #  if adding this functionality, DO NOT add GSC classes, use a view in Genome::Site::WUGC.
         if ($sp->sequence_item_type eq 'index illumina') {
 
             my $creation_pse = $sp->get_creation_event();
@@ -189,11 +191,6 @@ sub event_statuses {
 
             # queue inst data
             $events->{'production'}->{_summarize($queue_pse->process_to)}->{$status->{$queue_pse->pse_id}} = _hash_up($events, $queue_pse, 4);
-
-        } elsif ($sp->isa('GSC::RegionIndex454')) {
-
-        } else {
-
         }
 
         # get statuses of latest builds from canonical models
