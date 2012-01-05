@@ -753,9 +753,28 @@ sub latest_build_id {
     return $build->id;
 }
 
+sub build_for_status {
+    my $self = shift;
+    if ($self->build_requested || $self->build_needed) {
+        return;
+    }
+    return $self->latest_build('status not like' => 'Abandoned');
+}
+
 sub status {
     my $self = shift;
-    return $self->latest_build_status;
+
+    my $status;
+    if ($self->build_requested) {
+        $status = 'Build Requested';
+    } elsif ($self->build_needed) {
+        $status = 'Build Needed';
+    } else {
+        $status = $self->build_for_status->status;
+    }
+    $status ||= 'Buildless';
+
+    return $status;
 }
 
 sub latest_build_status {
