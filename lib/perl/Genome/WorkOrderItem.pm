@@ -45,11 +45,6 @@ class Genome::WorkOrderItem {
             is => 'Genome::Sample',
             id_by => 'dna_id',
         },
-        models => {
-            is => 'Genome::Model',
-            calculate_from => ['dna_id'],
-            calculate => q|Genome::Model->get(subject_id => $dna_id)| 
-        },
         parent_woi_id => {
             is => 'Integer',
             len => 10,
@@ -59,86 +54,38 @@ class Genome::WorkOrderItem {
             len => 10,
         },
     ],
+    has_many_optional => [
+        sequence_products => {
+            is => 'Genome::Site::WUGC::WorkOrderItemSequenceProduct',
+            reverse_as => 'work_order_item',
+        },
+        sequence_items => {
+            is => 'Genome::Site::WUGC::SequenceItem',
+            via => 'sequence_products',
+            to => 'sequence_item',
+        },
+        instrument_data => {
+            is => 'Genome::InstrumentData',
+            via => 'sequence_products',
+            to => 'instrument_data',
+        },
+    ],
     schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',
 };
-
-sub sequence_products {
-    my $self = shift;
-
-    my @woi_sp = GSC::WoiSequenceProduct->get(woi_id => $self->id)
-        or return;
-
-    my @seq_items;
-    for my $woi_sp ( @woi_sp ) {
-        my $seq_item = GSC::Sequence::Item->get(seq_id => $woi_sp->seq_id);
-
-        # woi_sequence_product contains all the info twice right now-
-        # once the old way (solexa run lane) that maps to solexa_lane_summary
-        # second the new way (index illumina) maps to index_illumina
-        next if $seq_item->sequence_item_type eq 'solexa run lane';
-
-        unless ( $seq_item ) { # very bad
-            confess "Can't get sequence item (".$woi_sp->seq_id.") for work order item (".$self->id.").";
-        }
-        push @seq_items, $seq_item;
-    }
-
-    return @seq_items;
-}
-
-sub instrument_data {
-    my $self = shift;
-
-    my @instrument_data_ids = $self->instrument_data_ids
-        or return;
-
-    my @instrument_data = Genome::InstrumentData->get(\@instrument_data_ids);
-    return @instrument_data;
-}
-
-sub instrument_data_ids {
-
-    my $self = shift;
-
-    my @sequence_products = $self->sequence_products
-        or return;
-
-    my %instrument_data_ids;
-    for my $sequence_product ( @sequence_products ) {
-        if ( $sequence_product->isa('GSC::Sequence::Read') ) {
-            $instrument_data_ids{ $sequence_product->prep_group_id } = 1;
-        } elsif ($sequence_product->isa('GSC::IndexIllumina')) {
-            $instrument_data_ids{ $sequence_product->analysis_id } = 1;
-        } else {
-            $instrument_data_ids{ $sequence_product->seq_id } = 1;
-        }
-    }
-
-    return sort keys %instrument_data_ids;
-}
 
 sub models {
     my $self = shift;
 
     # Strategy
-    # 1 - Real way.
-    #      This will work for 454 and Solexa now, and
-    #      eventually for sanger.  For sanger, the reads will be tracked,
-    #      so we'll need to get the 'prep_group_id' for each read, then
-    #      get the inst data assignment
-    #  a - get work order seq products 
-    #  b - if seq prod is a read get it's prep_group_id else (solexa/454) 
-    #       use seq_id
-    #  c - get models via inst data inputs 
-    #  
-
-    my @instrument_data_ids = $self->instrument_data_ids();
-    if (@instrument_data_ids) {
+    # 1 - via instrument data inputs.
+    #   a - Only works for solexa and 454
+    #
+    my @instrument_data = $self->instrument_data();
+    if ( @instrument_data ) {
         my @instrument_data_inputs = Genome::Model::Input->get(
             name => 'instrument_data',
-            value_id => \@instrument_data_ids,
-#            value_class_name => 'Genome::InstrumentData', #FIXME this won't work as is--they are subclassed in the input
+            value_id => [ map { $_->id } @instrument_data ],
         );
         return unless @instrument_data_inputs;
         my %model_ids = map { $_->model_id => 1 } @instrument_data_inputs;
@@ -202,12 +149,12 @@ sub event_statuses {
     my ($self) = @_;
 
     my $events = {};
-    for my $sp ($self->sequence_products()) {
+    for my $sp ($self->sequence_items()) {
 
         my $status = {};
 
         # get event statuses from LIMS
-        if ($sp->isa('GSC::IndexIllumina')) {
+        if ($sp->sequence_item_type eq 'index illumina') {
 
             my $creation_pse = $sp->get_creation_event();
             my $setup_pse = $creation_pse->get_first_prior_pse_with_process_to('set up flow cell');
@@ -256,6 +203,7 @@ sub event_statuses {
 
         if ($model) {
             my $build = $model->latest_build();
+            next if not $build;
             my $build_status = $build->master_event_status();
 
             # same status buckets as pses- pending, completed, failed
