@@ -256,8 +256,8 @@ sub assembler_rusage {
         return "-R 'select[type==LINUX64] rusage[internet_download_mbps=100] span[hosts=1]'";
     }
 
-    my $mem = 30000;
-    my $queue = 'apipe';
+    my $mem = 92000;
+    my $queue = 'assembly';
     $queue = 'alignment-pd' if $self->run_by eq 'apipe-tester';
     return "-q $queue -n 4 -R 'span[hosts=1] select[type==LINUX64 && mem>$mem] rusage[mem=$mem]' -M $mem".'000';
 }
