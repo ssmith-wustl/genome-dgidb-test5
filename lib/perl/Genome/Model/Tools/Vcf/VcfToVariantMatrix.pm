@@ -37,6 +37,13 @@ class Genome::Model::Tools::Vcf::VcfToVariantMatrix {
             doc => "Name of the project, will be inserted into output file cell A1",
             default => "Variant_Matrix",
         },
+        matrix_genotype_version => {
+            is => 'Text',
+            is_optional => 1,
+            doc => "\"Bases\" or \"Numerical\"",
+            default => "Bases",
+        },
+
     ],
 };
 
@@ -182,60 +189,103 @@ sub execute {                               # replace with real execution logic.
         }
 
         #check to see if line has 0,1,2,etc as genotype numbering, store those in a hash for future reference
-
         my %alleles_hash;
-        foreach my $sample_info (@samples) {                    
-            my (@sample_fields) = split(/:/, $sample_info);
-            my $genotype = $sample_fields[$gt_location];
-            my $allele1 = my $allele2 = ".";
-            ($allele1, $allele2) = split(/\//, $genotype);
-            if ($allele1 =~ m/\d+/) {
-                $alleles_hash{$allele1}++;
-                if ($allele2 =~ m/\d+/) {
-                    $alleles_hash{$allele2}++;
+        my @allele_options;
+        my @allele_option_bases;
+        if ($self->matrix_genotype_version =~ m/numerical/i) { #don't need this section if we're using letters instead of numbering
+            foreach my $sample_info (@samples) {                    
+                my (@sample_fields) = split(/:/, $sample_info);
+                my $genotype = $sample_fields[$gt_location];
+                my $allele1 = my $allele2 = ".";
+                ($allele1, $allele2) = split(/\//, $genotype);
+                if ($allele1 =~ m/\d+/) {
+                    $alleles_hash{$allele1}++;
+                    if ($allele2 =~ m/\d+/) {
+                        $alleles_hash{$allele2}++;
+                    }
                 }
             }
+            @allele_options = (sort { $a <=> $b } keys %alleles_hash);
+        }
+        elsif ($self->matrix_genotype_version =~ m/bases/i) { #don't need this section if we're using numbering instead of letters
+            push(@allele_option_bases,$ref);
+            if ($alt =~ m/,/) {
+                my @alt_bases = split(/,/, $alt);
+                foreach my $alt_option (@alt_bases) {
+                    push(@allele_option_bases,$alt_option);
+                }
+            }
+            else {
+                push(@allele_option_bases,$alt);
+            }
+        }
+        else {
+            die "Please specify a proper matrix_genotype_version of either \"Bases\" or \"Numerical\"";
         }
 
-        my @allele_options = (sort { $a <=> $b } keys %alleles_hash);
         $count = 0;
         foreach my $sample_info (@samples) {
             my (@sample_fields) = split(/:/, $sample_info);
             my $genotype = $sample_fields[$gt_location];
             my $allele1 = my $allele2 = ".";
-            my $allele_count;
             ($allele1, $allele2) = split(/\//, $genotype);
-
-            if ($allele1 =~ m/\D+/) {
-                $allele_count = '.';
-            }
-            elsif ($allele1 == $allele2) { #homo
-                if ($allele1 == $allele_options[0]) { #homo first variant
-                    $allele_count = 0;
+            if ($self->matrix_genotype_version =~ m/numerical/i) { #don't need this section if we're using letters instead of numbering
+                my $allele_count;
+                if ($allele1 =~ m/\D+/) {
+                    $allele_count = '.';
                 }
-                elsif ($allele1 == $allele_options[1]) { #homo second variant
-                    $allele_count = 2;
+                elsif ($allele1 == $allele2) { #homo
+                    if ($allele1 == $allele_options[0]) { #homo first variant
+                        $allele_count = 0;
+                    }
+                    elsif ($allele1 == $allele_options[1]) { #homo second variant
+                        $allele_count = 2;
+                    }
                 }
-            }
-            else { #heterozygous
-                $allele_count = 1;
-            }
+                else { #heterozygous
+                    $allele_count = 1;
+                }
 
-            my $variant_name;
-            if ($allele_options[0] == 0) {
-                $variant_name = "$chr"."_"."$pos"."_"."$ref"."_"."$alt";
+                my $variant_name;
+                if ($allele_options[0] == 0) {
+                    $variant_name = "$chr"."_"."$pos"."_"."$ref"."_"."$alt";
+                }
+                elsif (defined $allele_options[1]) { 
+                    my ($alt_ref, $alt_alt) = split(/,/, $alt);
+                    print "1:$alt_ref,2:$alt_alt,3:$alt,4:$allele_options[0],$allele_options[1]\n";
+                    $variant_name = "$chr"."_"."$pos"."_"."$alt_ref"."_"."$alt_alt";
+                }
+                else { #for those cases where the line is 100% homo variant
+                    $variant_name = "$chr"."_"."$pos"."_"."$ref"."_"."$alt";
+                }
+                my $sample_name = $sample_names[$count];
+                $variant_hash{$variant_name}++;
+                $sample_hash{$sample_name}{$variant_name} = $allele_count;
             }
-            elsif (defined $allele_options[1]) { 
-                my ($alt_ref, $alt_alt) = split(/,/, $alt);
-                print "1:$alt_ref,2:$alt_alt,3:$alt,4:$allele_options[0],$allele_options[1]\n";
-                $variant_name = "$chr"."_"."$pos"."_"."$alt_ref"."_"."$alt_alt";
+            elsif ($self->matrix_genotype_version =~ m/bases/i) { #don't need this section if we're using numbering instead of letters
+                my $allele_type;
+                if ($allele1 =~ m/^\D+/) { #if allele1 isn't numerical, then it's not vcf spec and must mean a missing value
+                    $allele_type = 'NA';
+                }
+                else { #switch numerical genotypes to the ACTG genotypes
+                    my $a1 = $allele_option_bases[$allele1]; 
+                    my $a2 = $allele_option_bases[$allele2];
+                    $allele_type = "$a1/$a2"; #might need to change this to an alpha-sorted genotype for perfection, but it won't affect anything if this isn't sorted
+                }
+
+                my $variant_name;
+                if ($alt =~ m/,/) { #lines with multiple alt alleles should be handled differently
+                    my ($alt_ref, $alt_alt) = split(/,/, $alt);
+#                    print "1:$alt_ref,2:$alt_alt,3:$alt,4:$allele_option_bases[0],$allele_option_bases[1],$allele_option_bases[2]\n";
+                    $variant_name = "$chr"."_"."$pos"."_"."$ref"."_"."$alt"; #for now, just call the variant as we see it, with the comma in the alt
+                }
+                else { 
+                    $variant_name = "$chr"."_"."$pos"."_"."$ref"."_"."$alt";
+                }
+                my $sample_name = $sample_names[$count];
+                $variant_hash{$variant_name}++;
+                $sample_hash{$sample_name}{$variant_name} = $allele_type;
             }
-            else { #for those cases where the line is 100% homo variant
-                $variant_name = "$chr"."_"."$pos"."_"."$ref"."_"."$alt";
-            }
-            my $sample_name = $sample_names[$count];
-            $variant_hash{$variant_name}++;
-            $sample_hash{$sample_name}{$variant_name} = $allele_count;
             $count++;
         }
     }
@@ -263,7 +313,7 @@ sub execute {                               # replace with real execution logic.
                         print $fh "\t$sample_hash{$sample_name}{$variant_name}";
                     }
                     else {
-                        print $fh "\t.";
+                        print $fh "\tNA";
                     }
                 }
             }
@@ -272,7 +322,7 @@ sub execute {                               # replace with real execution logic.
                     print $fh "\t$sample_hash{$sample_name}{$variant_name}";
                 }
                 else {
-                    print $fh "\t.";
+                    print $fh "\tNA";
                 }
             }
         }
