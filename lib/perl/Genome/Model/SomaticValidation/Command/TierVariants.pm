@@ -30,6 +30,8 @@ sub shortcut {
     my $self = shift;
     my $build = $self->build;
 
+    return 1 unless($self->tiering_version);
+
     my @existing_results;
     for my $qual ('hq', 'lq') {
         TYPE: for my $variant_type ('snv', 'indel') {
@@ -63,6 +65,8 @@ sub execute {
     unless ($build){
         die $self->error_message("no build provided!");
     }
+
+    return 1 unless($self->tiering_version);
 
     $self->status_message("executing tier variants step on snvs and indels");
 
