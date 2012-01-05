@@ -5,6 +5,7 @@ use warnings;
 use Carp;
 use File::Temp;
 use File::Basename;
+require Test::MockObject;
 use Test::More;
 use Cwd;
 
@@ -42,7 +43,6 @@ my %pp_params = (
              );
 
 my @instrument_data = setup_test_data($subject_name);
-#GSC::RunRegion454->get(sample_name => $subject_name);
 my $build_test = Genome::Model::Event::Build::ReferenceAlignment::Test->new(
                                                                                   model_name => $model_name,
                                                                                   subject_name => $subject_name,
@@ -78,31 +78,19 @@ sub setup_test_data {
         for my $file (@files) {
             $file =~ /(\d+)\.sff/;
             my $region_number = $1;
-            my $rr454 = GSC::RunRegion454->create(
-                                                  analysis_name   => $analysis_name,
-                                                  incoming_dna_name => $subject_name,
-                                                  region_number  => $region_number,
-                                                  run_name       => $run_name,
-                                                  sample_name    => $subject_name,
-                                                  total_key_pass => -1,
-                                                  total_raw_wells => -1,
-                                                  copies_per_bead => -1,
-                                                  key_pass_wells => -1,
-                                                  library_name => 'TESTINGLIBRARY',
-                                                  #region_id => -1,
-                                                  fc_id => -2040001,
-                                              );
+            # FIXME removed run region gsc class. probably won't work right off the bat. Test has been skipped since Mar 2010
             my $instrument_data = Genome::InstrumentData::454->create_mock(
-                                                                           id => $rr454->region_id,
+                                                                           id => -1111,
                                                                            sequencing_platform => '454',
-                                                                           sample_name => $rr454->sample_name,
-                                                                           run_name => $rr454->run_name,
-                                                                           subset_name => $rr454->region_number,
+                                                                           sample_name => $subject_name,
+                                                                           analysis_name => $analysis_name,
+                                                                           run_name => $run_name,
+                                                                           subset_name => $region_number,
                                                                        );
             $instrument_data->set_always('class', 'Genome::InstrumentData::454');
             $instrument_data->mock('__meta__', \&Genome::InstrumentData::454::__meta__);
             unless ($instrument_data) {
-                die ('Failed to create instrument data object for '. $rr454->run_name);
+                die ('Failed to create instrument data object for '. $run_name);
             }
 my $allocation_path = sprintf('alignment_data/%s/%s/%s/%s_%s',
                               'blat',
