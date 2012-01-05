@@ -2267,4 +2267,107 @@ sub _preprocess_subclass_description {
     return $desc;
 }
 
+sub heartbeat {
+    my $self = shift;
+    my %options = @_;
+
+    my $verbose = delete $options{verbose};
+
+    unless (grep { $self->status eq $_ } ('Running', 'Scheduled')) {
+        $self->status_message('Build is not running/scheduled.') if $verbose;
+        return;
+    }
+
+    my @wf_instances = ($self->newest_workflow_instance, $self->child_workflow_instances);
+    my @wf_instance_execs = map { $_->current } @wf_instances;
+
+    for my $wf_instance_exec (@wf_instance_execs) {
+        my $lsf_job_id = $wf_instance_exec->dispatch_identifier;
+        my $wf_instance_exec_status = $wf_instance_exec->status;
+        my $wf_instance_exec_id = $wf_instance_exec->execution_id;
+        unless ($lsf_job_id) {
+            next;
+        }
+        if ($lsf_job_id =~ /^P/) {
+            next;
+        }
+
+        if (grep { $wf_instance_exec_status eq $_ } ('new', 'done')) {
+            next;
+        }
+
+        my $bjobs_output = qx(bjobs -l $lsf_job_id 2> /dev/null | tr '\\n' '\\0' | sed -r -e 's/\\x0\\s{21}//g' -e 's/\\x0/\\n\\n/g');
+        chomp $bjobs_output;
+        unless($bjobs_output) {
+            $self->status_message('Expected bjobs output but received none.') if $verbose;
+            return;
+        }
+
+        my $lsf_status = $self->status_from_bjobs_output($bjobs_output);
+        if ($wf_instance_exec_status eq 'scheduled' && $lsf_status ne 'pend') {
+            $self->status_message("Workflow Instance Execution (ID: $wf_instance_exec_id) status ($wf_instance_exec_status) does not match LSF status ($lsf_status)") if $verbose;
+            return;
+        }
+        elsif ($wf_instance_exec_status eq 'scheduled' && $lsf_status eq 'pend') {
+            next;
+        }
+
+        if ($wf_instance_exec_status eq 'running' && $lsf_status ne 'run') {
+            $self->status_message("Workflow Instance Execution (ID: $wf_instance_exec_id) status ($wf_instance_exec_status) does not match LSF status ($lsf_status)") if $verbose;
+            return;
+        }
+
+        if ($wf_instance_exec_status ne 'running' || $lsf_status ne 'run') {
+            die "Missing state ($wf_instance_exec_status/$lsf_status) condition, only running/run should reach this point";
+        }
+
+        my @pids = $self->pids_from_bjobs_output($bjobs_output);
+        my $execution_host = $self->execution_host_from_bjobs_output($bjobs_output);
+        my $ps_cmd = "ssh $execution_host ps -o pid= -o stat= -p " . join(" -p ", @pids) . ' 2> /dev/null';
+        my @ps_output = qx($ps_cmd);
+        chomp(@ps_output);
+
+        if (@ps_output != @pids) {
+            $self->status_message('Expected ps output for' . @pids . ' PIDs.') if $verbose;
+            return;
+        }
+
+        for my $ps_output (@ps_output) {
+            my ($stat) = $ps_output =~ /\d+\s+(.*)/;
+            unless($stat =~ /^(R|S)/) {
+                $self->status_message('Expected PID to be in a R or S stat.') if $verbose;
+                return;
+            }
+        }
+    }
+
+    return 1;
+}
+
+sub status_from_bjobs_output {
+    my $self = shift;
+    my $bjobs_output = shift;
+    my ($status) = $bjobs_output =~ /Status <(.*?)>/;
+    unless ($status) {
+        die $self->error_message('Failed to parse status from bjobs output');
+    }
+    return lc($status);
+}
+
+sub pids_from_bjobs_output {
+    my $self = shift;
+    my $bjobs_output = shift;
+    my ($pids) = $bjobs_output =~ /PIDs:([\d\s]+)/;
+    return unless $pids;
+    my @pids = $pids =~ /(\d+)/;
+    return @pids;
+}
+
+sub execution_host_from_bjobs_output {
+    my $self = shift;
+    my $bjobs_output = shift;
+    my ($execution_host) = $bjobs_output =~ /Started on <(.*?)>/;
+    return $execution_host;
+}
+
 1;
