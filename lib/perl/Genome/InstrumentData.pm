@@ -9,6 +9,10 @@ class Genome::InstrumentData {
     is => 'Genome::Notable',
     is_abstract => 1,
     subclassify_by => 'subclass_name',
+    subclass_description_preprocessor => __PACKAGE__ . '::_preprocess_subclass_description',
+    attributes_have => [
+        is_attribute => { is => 'Boolean', is_optional => 1, },
+    ],
     id_by => [
         id => { is => 'Text' },
     ],
@@ -107,6 +111,22 @@ class Genome::InstrumentData {
     data_source => 'Genome::DataSource::GMSchema',
     doc => 'Contains information common to all types of instrument data',
 };
+
+sub _preprocess_subclass_description {
+    my ($class, $desc) = @_;
+
+    for my $prop_name ( keys %{$desc->{has}} ) {
+        my $prop_desc = $desc->{has}{$prop_name};
+        next if not $prop_desc->{is_attribute};
+        $prop_desc->{via} = 'attributes';
+        $prop_desc->{where} = [ attribute_label => $prop_name ];
+        $prop_desc->{to} = 'attribute_value';
+        $prop_desc->{is_delegated} = 1;
+        $prop_desc->{is_mutable} = 1;
+    }
+
+    return $desc;
+}
 
 sub create {
     my ($class) = @_;
