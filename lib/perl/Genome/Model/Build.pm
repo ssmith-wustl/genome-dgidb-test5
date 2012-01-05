@@ -2176,9 +2176,14 @@ sub is_used_as_model_or_build_input {
     return (scalar @inputs) ? 1 : 0;
 }
 
+sub child_workflow_instances {
+    my $self = shift;
+    return $self->_get_workflow_instance_children($self->newest_workflow_instance);
+}
+
 sub child_lsf_jobs {
     my $self = shift;
-    my @workflow_instances = $self->_get_workflow_instance_children($self->newest_workflow_instance);
+    my @workflow_instances = $self->child_workflow_instances;
     return unless @workflow_instances;
     my @dispatch_ids = grep {defined $_} map($_->current->dispatch_identifier, @workflow_instances);
     my @valid_ids = grep {$_ !~ /^P/} @dispatch_ids;
