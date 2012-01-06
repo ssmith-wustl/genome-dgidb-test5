@@ -70,36 +70,8 @@ sub execute {
         elsif ($pid == 0) {
             # CHILD
             $start_time = time;
-
-            # batch by class
-            my %docs;
-            for my $doc (@docs) {
-                my $class = $doc->value_for('class');
-
-                # filter "transient" classes
-                next if $class =~ /^Genome::Sys::Email/;
-                next if $class =~ /^Genome::Wiki::Document/;
-
-                push @{$docs{$class}}, $doc;
-            }
-
-            # find orphaned documents
-            my @docs_to_purge;
-            for my $class (keys %docs) {
-                my @docs = @{$docs{$class}};
-                if ($class->can('get')) {
-                    my @object_ids_from_solr = map { $_->value_for('object_id') } @docs;
-                    my @objects = $class->get(\@object_ids_from_solr);
-                    for my $doc (@docs) {
-                        my $id_from_solr = $doc->value_for('object_id');
-                        unless (grep { $id_from_solr eq $_->id } @objects) {
-                            push @docs_to_purge, $doc;
-                        }
-                    }
-                } else {
-                    @docs_to_purge = @docs;
-                }
-            }
+            my %docs = $self->batch_docs_by_class(@docs);
+            my @docs_to_purge = $self->find_orphaned_docs(%docs);
             $self->status_message("Processed " . @docs . " search documents in " . (time - $start_time) . " seconds and found " . @docs_to_purge . " to remove.");
 
             if (@docs_to_purge) {
@@ -120,6 +92,47 @@ sub execute {
         }
     }
     return 1;
+}
+
+sub find_orphaned_docs {
+    my $self = shift;
+    my %docs = @_;
+
+    my @docs_to_purge;
+    for my $class (keys %docs) {
+        my @docs = @{$docs{$class}};
+        if ($class->can('get')) {
+            my @object_ids_from_solr = map { $_->value_for('object_id') } @docs;
+            my @objects = $class->get(\@object_ids_from_solr);
+            for my $doc (@docs) {
+                my $id_from_solr = $doc->value_for('object_id');
+                unless (grep { $id_from_solr eq $_->id } @objects) {
+                    push @docs_to_purge, $doc;
+                }
+            }
+        } else {
+            @docs_to_purge = @docs;
+        }
+    }
+
+    return @docs_to_purge;
+}
+
+sub batch_docs_by_class {
+    my $self = shift;
+    my @docs = @_;
+
+    my %docs;
+    for my $doc (@docs) {
+        my $class = $doc->value_for('class');
+
+        # filter "transient" classes
+        next if $class =~ /^Genome::Sys::Email/;
+        next if $class =~ /^Genome::Wiki::Document/;
+
+        push @{$docs{$class}}, $doc;
+    }
+    return %docs;
 }
 
 1;
