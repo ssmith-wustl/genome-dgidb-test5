@@ -63,31 +63,25 @@ sub execute {
     Genome::Sys->create_directory($lq_tiers);
     
     my $variants_dir = $build->data_directory."/variants";
-
-    my @possible_ssmq_directories = qw(
-        /snv/sniper-0.7.2--q_1_-Q_15/false-positive-v1-/somatic-score-mapping-quality-v1---min-mapping-score_40_--min-somatic-quality_40
-        /snv/sniper-0.7.3--q_1_-Q_15/false-positive-v1-/somatic-score-mapping-quality-v1---min-mapping-score_40_--min-somatic-quality_40
-        /snv/sniper-0.7.2--q_1_-Q_15/false-positive-v1-/somatic-score-mapping-quality-v1---min-mapping-quality_40_--min-somatic-score_40
-        /snv/sniper-0.7.3--q_1_-Q_15/false-positive-v1-/somatic-score-mapping-quality-v1---min-mapping-quality_40_--min-somatic-score_40
-    );
-
-    my $ssmq_dir;
-    for my $possible_subdirectory (@possible_ssmq_directories) {
-        my $possible_path = $variants_dir.$possible_subdirectory;
-        if (-d $possible_path) {
-            $ssmq_dir = $possible_path;
-            $self->status_message("Found somatic-score-mapping-quality directory at $ssmq_dir");
-            last;
-        }
-    }
-    unless($ssmq_dir){
-        die $self->error_message("Could not locate somatic-score-mapping-quality filter directory!");
+    my @possible_ssmq_directories = glob( $variants_dir."/snv/sniper*/false-positive-*/somatic-score-mapping-quality-*");
+    unless(@possible_ssmq_directories == 1){
+        die $self->status_message("Found ".scalar(@possible_ssmq_directories)." results when looking for somatic-score-mapping-quality directory!");
     }
 
-    my $filtered_samtools = $variants_dir."/snv/samtools-r599-/snp-filter-v1-/snvs.hq.bed";
+    my $ssmq_dir=$possible_ssmq_directories[0];
+    unless(-d $ssmq_dir){
+        die $self->error_message("Could not locate somatic-score-mapping-quality filter directory at: ".$ssmq_dir);
+    }
+
+    my @filtered_samtools = glob($variants_dir."/snv/samtools-*/snp-filter-*/snvs.hq.bed");
+    unless(@filtered_samtools == 1){
+        die $self->error_message("Found ".scalar(@filtered_samtools)." results when searching for snp-filter'ed samtools results");
+    }
+    my $filtered_samtools = $filtered_samtools[0];
     unless(-e $filtered_samtools){
         die $self->error_message("Could not locate samtools filtered output at: ".$filtered_samtools);
     }
+
     Genome::Sys->copy_file($ssmq_dir."/snvs.lq.bed",$lq_tiers."/snvs.lq.bed");
 
     $self->status_message("Now running fast-tier on somatic-score-mapping-quality lq output.");
@@ -133,7 +127,7 @@ sub execute {
     my $pdv = $build->previously_discovered_variations_build;
     my $snv_result = $pdv->snv_result;
 
-    my $dbsnp_file = defined($self->dbsnp_bed_file) ? $self->dbsnp_bed_file: $snv_result->snvs_bed;
+    my $dbsnp_file = defined($self->dbsnp_bed_file) ? $self->dbsnp_bed_file: $snv_result->output_dir."/snvs.hq.bed";
     unless(-e $dbsnp_file){
         die $self->error_message("DbSNP bed file does not exist at: ".$dbsnp_file);
     }
