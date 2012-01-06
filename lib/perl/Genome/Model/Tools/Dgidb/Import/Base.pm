@@ -43,6 +43,9 @@ sub _create_drug_name_report_association {
         nomenclature => $nomenclature,
         description => $description,
     );
+
+    my $drug_name_report_association = Genome::DruggableGene::DrugNameReportAssociation->get(%params);
+    return $drug_name_report_association if $drug_name_report_association;
     return Genome::DruggableGene::DrugNameReportAssociation->create(%params);    
 }
 
@@ -55,6 +58,8 @@ sub _create_drug_name_report_category_association {
         category_value => $category_value,
         description => $description,
     );
+    my $drug_name_report_category_association = Genome::DruggableGene::DrugNameReportCategoryAssociation->get(%params);
+    return $drug_name_report_category_association if $drug_name_report_category_association;
     return Genome::DruggableGene::DrugNameReportCategoryAssociation->create(%params);
 }
 
@@ -99,6 +104,8 @@ sub _create_gene_name_report_category_association {
         category_value => $category_value,
         description => $description,
     );
+    my $gene_name_report_category_association = Genome::DruggableGene::GeneNameReportCategoryAssociation->get(%params);
+    return $gene_name_report_category_association if $gene_name_report_category_association;
     return Genome::DruggableGene::GeneNameReportCategoryAssociation->create(%params);
 }
 
@@ -127,6 +134,8 @@ sub _create_interaction_report_attribute {
         name => $name,
         value => $value,
     );
+    my $attribute = Genome::DruggableGene::DrugGeneInteractionReportAttribute->get(%params);
+    return $attribute if $attribute;
     return Genome::DruggableGene::DrugGeneInteractionReportAttribute->create(%params);
 }
 

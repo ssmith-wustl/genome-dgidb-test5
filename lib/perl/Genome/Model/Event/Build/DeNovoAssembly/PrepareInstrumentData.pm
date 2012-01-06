@@ -25,12 +25,15 @@ class Genome::Model::Event::Build::DeNovoAssembly::PrepareInstrumentData {
 sub bsub_rusage {
     my $self = shift;
     my $read_processor = $self->processing_profile->read_processor;
+    my $tmp_space = 25000;
     if ( $read_processor and $read_processor =~ /quake|eulr/i ) {
         # Request memory for quake and eulr
-        return "-R 'select[type==LINUX64 && mem>8000 && tmp>25000] rusage[mem=8000:tmp=25000] span[hosts=1]'"
+        my $mem = 16000;
+        $tmp_space = 100000;
+        return "-R 'select[type==LINUX64 && mem>$mem && tmp>$tmp_space] rusage[mem=$mem:tmp=$tmp_space] span[hosts=1]' -M $mem"."000";
     }
 
-    return "-R 'select[type==LINUX64 && tmp>25000] rusage[tmp=25000] span[hosts=1]'"
+    return "-R 'select[type==LINUX64 && tmp>$tmp_space] rusage[tmp=$tmp_space] span[hosts=1]'"
 }
 
 sub _tempdir {

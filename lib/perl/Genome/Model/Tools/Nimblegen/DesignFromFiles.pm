@@ -248,8 +248,9 @@ sub execute {
     span => $snv_indel_span,
     annotation_file=>$snv_indel_file,
     output_file=>"$snv_indel_file.nimblegen",
-    include_y=>$include_y_chrom_sites,
-    exclude_non_canonical_sites => 0, # Let this script handle this part
+    include_mitochondrial_sites=>$include_mitochondrial_sites,
+    include_unplaced_contig_sites=>$include_unplaced_contig_sites,
+    include_y_chrom_sites=>$include_y_chrom_sites,
     reference_index => $reference_index,
   );
   ( $designSnvIndel->execute ) or die "Error running \"gmt nimblegen design-from-annotation\"!\n";
@@ -303,8 +304,9 @@ sub execute {
     span => $sv_span,
     sv_file => $sv_file,
     output_file => "$sv_file.nimblegen",
-    include_y=>$include_y_chrom_sites,
-    exclude_non_canonical_sites => 0, # Let this script handle this part
+    include_mitochondrial_sites=>$include_mitochondrial_sites,
+    include_unplaced_contig_sites=>$include_unplaced_contig_sites,
+    include_y_chrom_sites=>$include_y_chrom_sites,
     reference_index => $reference_index,
   );
   ( $designSv->execute ) or die "Error running \"gmt nimblegen design-from-sv\"!\n";

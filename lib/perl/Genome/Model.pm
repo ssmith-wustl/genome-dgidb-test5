@@ -20,6 +20,7 @@ class Genome::Model {
         is_input    => { is => 'Boolean', is_optional => 1, },
         is_param    => { is => 'Boolean', is_optional => 1, },
         is_output   => { is => 'Boolean', is_optional => 1, },
+        _profile_default_value => { is => 'Text', is_optional => 1, },
     ],
     has => [
         name => { is => 'Text' },
@@ -740,28 +741,46 @@ sub completed_builds {
 }
 
 sub latest_build {
-    # this is the latest build with no filtering on status, etc.
-    my ($self) = @_;
-    my @builds = $self->builds();
+    my $self = shift;
+    my @builds = $self->builds(@_);
     return $builds[-1] if @builds;
     return;
 }
 
 sub latest_build_id {
     my $self = shift;
-    my $build = $self->latest_build;
+    my $build = $self->latest_build(@_);
     unless ($build) { return; }
     return $build->id;
 }
 
+sub build_for_status {
+    my $self = shift;
+    if ($self->build_requested || $self->build_needed) {
+        return;
+    }
+    return $self->latest_build('status not like' => 'Abandoned');
+}
+
 sub status {
     my $self = shift;
-    return $self->latest_build_status;
+
+    my $status;
+    if ($self->build_requested) {
+        $status = 'Build Requested';
+    } elsif ($self->build_needed) {
+        $status = 'Build Needed';
+    } else {
+        $status = $self->build_for_status->status;
+    }
+    $status ||= 'Buildless';
+
+    return $status;
 }
 
 sub latest_build_status {
     my $self = shift;
-    my $build = $self->latest_build;
+    my $build = $self->latest_build(@_);
     unless ($build) { return; }
     return $build->status;
 }
@@ -1423,6 +1442,9 @@ sub _preprocess_subclass_description {
             $prop_desc->{'to'} = $prop_name;
             $prop_desc->{'is_mutable'} = 0;
             $prop_desc->{'is_delegated'} = 1;
+            if ($prop_desc->{'default_value'}) {
+                $prop_desc->{'_profile_default_value'} = delete $prop_desc->{'default_value'};
+            }
         }
 
         if (exists $prop_desc->{'is_input'} and $prop_desc->{'is_input'}) {

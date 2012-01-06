@@ -223,6 +223,9 @@ sub _build_list_sub_class {
     if ( $config{show} ) {
         push @has, show => { default_value => $config{show}, };
     }
+    if ( $config{order_by} ) {
+        push @has, order_by => { default_value => $config{order_by}, };
+    }
 
     my $sub_class = $config{namespace}.'::List';
     UR::Object::Type->define(

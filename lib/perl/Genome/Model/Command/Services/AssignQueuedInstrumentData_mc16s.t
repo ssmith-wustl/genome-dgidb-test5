@@ -11,54 +11,41 @@ BEGIN {
 use above 'Genome';
 
 use Data::Dumper;
+use Test::MockObject;
 use Test::More;
 
 use_ok('Genome::Model::Command::Services::AssignQueuedInstrumentData') or die;
 
 my $qidfgm_cnt = 0;
 my $sample_cnt = 0;
+my (@samples, @instrument_data, @pses, @pse_params);
+no warnings;
+sub GSC::PSE::get { return @pses; }
+sub GSC::PSEParam::get { return @pse_params; }
+use warnings;
 
 my $taxon = Genome::Taxon->get(name => 'Human Metagenome');
 ok($taxon, 'got human metagenome taxon');
-my $ps = GSC::ProcessStep->get( process_to => 'queue instrument data for genome modeling' );
-ok($ps, 'got qidfgm process step');
 my $pp = Genome::ProcessingProfile->get(2571784);
 ok($pp, 'got mc16s pp');
-my (@samples, @instrument_data, @pses);
 for my $i (1..2) {
     ok(_qidfgm(), 'create qidfgm');
 }
 is(@instrument_data, $qidfgm_cnt, "create $qidfgm_cnt inst data");
 is(@pses, $qidfgm_cnt, "create $qidfgm_cnt pses");
 
-my $gsc_workorder = GSC::Setup::WorkOrder->create(
-    setup_name => 'AQID-TEST-WORKORDER',
-    project_id => '-4',
-    pse_id => '-10000000',
-    pipeline => '16S 454',
-);
-isa_ok($gsc_workorder, 'GSC::Setup::WorkOrder');
-my $gsc_project = GSC::Setup::Project::Research->create(
-    id => -4,
-    setup_name => 'AQID-TEST-PROJECT',
-    pse_id => '-10000001',
-);
-isa_ok($gsc_project, 'GSC::Setup::Project::Research');
-no warnings;
-sub GSC::PSE::QueueInstrumentDataForGenomeModeling::get_inherited_assigned_directed_setups_filter_on {
-    my $self = shift;
-    my $filter = shift;
-    my @a;
-    push @a, $gsc_workorder if $filter eq 'setup work order';
-    push @a, $gsc_project if $filter eq 'setup project';
-    return @a;
-}
-
-sub GSC::Setup::WorkOrder::get_project {
-    my $self = shift;
-    return $gsc_project;
-}
-use warnings;
+my $gsc_project = Test::MockObject->new();
+$gsc_project->set_isa('Genome::Site::WUGC::SetupProjectResearch');
+$gsc_project->set_always(id => -111);
+$gsc_project->set_always(name => 'AQID-TEST-PROJECT');
+$gsc_project->set_always(setup_name => 'AQID-TEST-PROJECT');
+my $gsc_workorder = Test::MockObject->new();
+$gsc_workorder->set_isa('Genome::Site::WUGC::SetupWorkOrder');
+$gsc_workorder->set_always(id => -222);
+$gsc_workorder->set_always(name => 'AQID-TEST-WORKORDER');
+$gsc_workorder->set_always(setup_name => 'AQID-TEST-WORKORDER');
+$gsc_workorder->set_always(get_project => $gsc_project);
+$gsc_workorder->set_always(pipeline => '16S 454');
 
 my $cmd = Genome::Model::Command::Services::AssignQueuedInstrumentData->create(
     test => 1,
@@ -184,18 +171,50 @@ sub _qidfgm {
     ok($instrument_data, 'created instrument data '.$qidfgm_cnt);
     push @instrument_data, $instrument_data;
 
-    my $pse = GSC::PSE::QueueInstrumentDataForGenomeModeling->create(
-        pse_status => 'inprogress',
-        pse_id => $qidfgm_cnt - 10000,
-        ps_id => $ps->ps_id,
-        ei_id => '464681',
-    );
+    my $pse = Test::MockObject->new();
+    $pse->set_always(pse_status => 'inprogress');
+    $pse->set_always(id => $qidfgm_cnt - 10000);
+    $pse->set_always(pse_id => $qidfgm_cnt - 10000);
+    $pse->set_always(ps_id => 3733);
+    $pse->set_always(ei_id => '464681');
     ok($pse, 'create pse '.$qidfgm_cnt);
-    $pse->add_param('instrument_data_type', '454');
-    $pse->add_param('instrument_data_id', $instrument_data->id);
-    $pse->add_param('subject_class_name', 'Genome::Sample');
-    $pse->add_param('subject_id', $sample->id);
-    $pse->add_param('processing_profile_id', $pp->id);
+    my %params = (
+        instrument_data_type => '454',
+        instrument_data_id => $instrument_data->id,
+        subject_class_name => 'Genome::Sample',
+        subject_id => $sample->id,
+        processing_profile_id => $pp->id,
+    );
+    $pse->mock(
+        add_param => sub{
+            my ($pse, $key, $value) = @_;
+            my $param = Test::MockObject->new();
+            push @pse_params, $param;
+            $param->set_always(pse_id => $pse->id);
+            $param->set_always(param_name => $key);
+            $param->set_always(param_value => $params{$key});
+            return $param;
+        }
+    );
+    for my $key ( keys %params ) {
+        $pse->add_param($key, $params{$key});
+    }
+    $pse->mock(
+        added_param => sub{
+            my ($pse, $key) = @_;
+            return $params{$key};
+        }
+    );
+    $pse->mock(
+        get_inherited_assigned_directed_setups_filter_on => sub{
+            my $self = shift;
+            my $filter = shift;
+            my @a;
+            push @a, $gsc_workorder if $filter eq 'setup work order';
+            push @a, $gsc_project if $filter eq 'setup project';
+            return @a;
+        },
+    );
     push @pses, $pse;
     return 1;
 }

@@ -84,12 +84,10 @@ my $processing_profile = Genome::ProcessingProfile::ReferenceAlignment->create(
 );
 ok($processing_profile, 'Created a processing_profile');
 
-my $ps = GSC::ProcessStep->get( process_to => 'queue instrument data for genome modeling' );
-
 my $pse_1 = GSC::PSE::QueueInstrumentDataForGenomeModeling->create(
     pse_status => 'inprogress',
     pse_id => '-12345',
-    ps_id => $ps->ps_id,
+    ps_id => 3733,
     ei_id => '464681',
 );
 
@@ -147,7 +145,7 @@ my $fl2 = Genome::FeatureList->__define__(
 my $pse_2 = GSC::PSE::QueueInstrumentDataForGenomeModeling->create(
     pse_status => 'inprogress',
     pse_id => '-12346',
-    ps_id => $ps->ps_id,
+    ps_id => 3733,
     ei_id => '464681',
 );
 
@@ -191,6 +189,6 @@ isa_ok($command_3, 'Genome::Model::Command::Services::AssignQueuedInstrumentData
 $command_3->dump_status_messages(1);
 ok($command_3->execute(), 'assign-queued-instrument-data executed successfully.');
 
-my $err = $command_3->error_message;
+$err = $command_3->error_message;
 ok($err =~ 'validation-test-roi', 'reported error about feature-list');
 
