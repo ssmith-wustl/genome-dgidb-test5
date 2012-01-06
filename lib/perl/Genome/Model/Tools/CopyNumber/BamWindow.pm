@@ -22,7 +22,7 @@ class Genome::Model::Tools::CopyNumber::BamWindow {
 	},
         
         per_lib => {
-	    is => 'String',
+	    is => 'Boolean',
 	    is_optional => 1,
             default => 1,
 	    doc => 'do counts on a per-library basis',
