@@ -74,7 +74,7 @@ sub task_loop {
            exit(0);
         } else {
            $task->unload; 
-            waitpid($pid);
+           waitpid($pid, 0);
         }
     }
      
