@@ -1,11 +1,11 @@
-package Genome::Model::Tools::SmallRna::FilterBamFlagstat;
+package Genome::Model::SmallRna::Command::FilterBamFlagstat;
 
 use strict;
 use warnings;
 
 use Genome;
 
-class Genome::Model::Tools::SmallRna::FilterBamFlagstat {
+class Genome::Model::SmallRna::Command::FilterBamFlagstat {
 	is        => 'Genome::Model::Tools::BioSamtools',
 	has_input => [
 		bam_file => {
@@ -33,7 +33,7 @@ sub execute {
 	my $new_bam	 	= $self->filtered_bam_file;
 	
 	
-	unless (Genome::Model::Tools::SmallRna::FilterNewBam->execute
+	unless (Genome::Model::SmallRna::Command::FilterNewBam->execute
 	(
 				bam_file 		  => $bam_file,
 				filtered_bam_file => $new_bam,

@@ -508,6 +508,9 @@ sub __extend_namespace__ {
                 for my $key (keys %data) {
                     delete $data{$key} if $key =~ /^_/;
                 }
+                if (exists $data{_profile_default_value}) {
+                    $data{default_value} = delete $data{_profile_default_value};
+                }
                 delete $data{id};
                 delete $data{db_committed};
                 delete $data{class_name};

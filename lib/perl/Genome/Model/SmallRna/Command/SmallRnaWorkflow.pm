@@ -1,4 +1,4 @@
-package Genome::Model::Tools::SmallRna::SmallRnaWorkflow;
+package Genome::Model::SmallRna::Command::SmallRnaWorkflow;
 
 use strict;
 use warnings;
@@ -11,8 +11,8 @@ my $DEFAULT_CUTOFF = '2';
 my $DEFAULT_ZENITH = '5';
 my $DEFAULT_MIN_DEPTH = '1';
 
-class Genome::Model::Tools::SmallRna::SmallRnaWorkflow {
-	is        => ['Genome::Model::Tools::SmallRna::Base'],
+class Genome::Model::SmallRna::Command::SmallRnaWorkflow {
+	is        => ['Genome::Model::SmallRna::Command::Base'],
 	has_input => [
 		bam_file => {
 			is  => 'Text',

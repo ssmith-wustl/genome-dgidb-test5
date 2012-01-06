@@ -20,6 +20,7 @@ class Genome::Model {
         is_input    => { is => 'Boolean', is_optional => 1, },
         is_param    => { is => 'Boolean', is_optional => 1, },
         is_output   => { is => 'Boolean', is_optional => 1, },
+        _profile_default_value => { is => 'Text', is_optional => 1, },
     ],
     has => [
         name => { is => 'Text' },
@@ -1441,6 +1442,9 @@ sub _preprocess_subclass_description {
             $prop_desc->{'to'} = $prop_name;
             $prop_desc->{'is_mutable'} = 0;
             $prop_desc->{'is_delegated'} = 1;
+            if ($prop_desc->{'default_value'}) {
+                $prop_desc->{'_profile_default_value'} = delete $prop_desc->{'default_value'};
+            }
         }
 
         if (exists $prop_desc->{'is_input'} and $prop_desc->{'is_input'}) {

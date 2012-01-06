@@ -1,4 +1,4 @@
-package Genome::Model::Tools::SmallRna::Base;
+package Genome::Model::SmallRna::Command::Base;
 
 use strict;
 use warnings;
@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 
 
-class Genome::Model::Tools::SmallRna::Base {
+class Genome::Model::SmallRna::Command::Base {
 	is          => 'Command::V2',
 	is_abstract => 1,
 	

@@ -1,4 +1,4 @@
-package Genome::Model::Tools::SmallRna::ClusterCoverage;
+package Genome::Model::SmallRna::Command::ClusterCoverage;
 
 use strict;
 use warnings;
@@ -11,8 +11,8 @@ use Workflow;
 my $DEFAULT_ZENITH = '5';
 my $DEFAULT_MIN_DEPTH = '1';
 
-class Genome::Model::Tools::SmallRna::ClusterCoverage {
-    is => ['Genome::Model::Tools::SmallRna::Base'],
+class Genome::Model::SmallRna::Command::ClusterCoverage {
+    is => ['Genome::Model::SmallRna::Command::Base'],
     has_input => [
         bam_file => {
         	is => 'Text',

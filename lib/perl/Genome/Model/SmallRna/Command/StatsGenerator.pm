@@ -1,4 +1,4 @@
-package Genome::Model::Tools::SmallRna::StatsGenerator;
+package Genome::Model::SmallRna::Command::StatsGenerator;
 
 #based on input from ClusterCoverage(JW) instead of ClusterGenerator(JH)#
 #also merged sub-clustering
@@ -17,8 +17,8 @@ use Genome;
 
 my $DEFAULT_CUTOFF = '2';
 
-class Genome::Model::Tools::SmallRna::StatsGenerator {
-	is        => ['Genome::Model::Tools::SmallRna::Base'],
+class Genome::Model::SmallRna::Command::StatsGenerator {
+	is        => ['Genome::Model::SmallRna::Command::Base'],
 	has_input => [
 		coverage_stats_file => {
 			is_output=> 1,

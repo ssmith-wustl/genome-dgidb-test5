@@ -1,4 +1,4 @@
-package Genome::Model::Tools::SmallRna::ParallelWorkflow;
+package Genome::Model::SmallRna::Command::ParallelWorkflow;
 
 use strict;
 use warnings;
@@ -9,8 +9,8 @@ my $DEFAULT_CLUSTERS = '5000';
 my $DEFAULT_CUTOFF = '2';
 my $DEFAULT_ZENITH = '5';
 
-class Genome::Model::Tools::SmallRna::ParallelWorkflow {
-	is        => ['Genome::Model::Tools::SmallRna::Base'],
+class Genome::Model::SmallRna::Command::ParallelWorkflow {
+	is        => ['Genome::Model::SmallRna::Command::Base'],
 	has_input => [
 		bam_file => {
 			is  => 'Text',

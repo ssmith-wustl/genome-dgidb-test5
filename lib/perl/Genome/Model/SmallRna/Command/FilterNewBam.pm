@@ -1,11 +1,11 @@
-package Genome::Model::Tools::SmallRna::FilterNewBam;
+package Genome::Model::SmallRna::Command::FilterNewBam;
 
 use strict;
 use warnings;
 
 use Genome;
 
-class Genome::Model::Tools::SmallRna::FilterNewBam {
+class Genome::Model::SmallRna::Command::FilterNewBam {
 	is        => 'Genome::Model::Tools::BioSamtools',
 	has_input => [
 		bam_file => {

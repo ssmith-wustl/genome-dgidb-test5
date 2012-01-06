@@ -1,4 +1,4 @@
-package Genome::Model::Tools::SmallRna::Spreadsheet;
+package Genome::Model::SmallRna::Command::Spreadsheet;
 
 #08.25.2011
 # import new annotation features
@@ -14,8 +14,8 @@ use Genome;
 
 my $DEFAULT_CLUSTERS = '5000';
 
-class Genome::Model::Tools::SmallRna::Spreadsheet {
-	is        => ['Genome::Model::Tools::SmallRna::Base'],
+class Genome::Model::SmallRna::Command::Spreadsheet {
+	is        => ['Genome::Model::SmallRna::Command::Base'],
 	has_input => [
 		input_stats_file => {
 			is  => 'Text',

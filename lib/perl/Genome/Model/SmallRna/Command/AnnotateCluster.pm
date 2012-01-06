@@ -1,4 +1,4 @@
-package Genome::Model::Tools::SmallRna::AnnotateCluster;
+package Genome::Model::SmallRna::Command::AnnotateCluster;
 
 ## add curated cluster
 ## separate annotation in diff columns
@@ -8,8 +8,8 @@ use warnings;
 use Data::Dumper;
 use Genome;
 
-class Genome::Model::Tools::SmallRna::AnnotateCluster {
-    is => ['Genome::Model::Tools::SmallRna::Base'],
+class Genome::Model::SmallRna::Command::AnnotateCluster {
+    is => ['Genome::Model::SmallRna::Command::Base'],
     has_input => [
         cluster_bed_file => {
         	is => 'Text',
