@@ -176,7 +176,7 @@ sub _build_sql_query {
             $self->error_message("Work order id ($wo_id) is not an integer.");
             return;
         }
-        my $wo = GSC::Setup::WorkOrder->get(id => $wo_id);
+        my $wo = Genome::Site::WUGC::SetupWorkOrder->get(id => $wo_id);
         unless ( $wo ) {
             $self->error_message("Can't get work order for id ($wo_id).");
             return;

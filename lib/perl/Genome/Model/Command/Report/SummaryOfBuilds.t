@@ -21,7 +21,7 @@ no warnings 'redefine'; # commant out to see real data
 use warnings;
 
 my $sob = Genome::Model::Command::Report::SummaryOfBuilds->create(
-    work_order_id => 2196657, 
+    work_order_id => 2588403, 
     #email => Genome::Config->user_email,
     #all_datasets => 1,
 );
@@ -31,7 +31,7 @@ ok($sob->execute, 'execute');
 is($sob->were_builds_found, 5, 'Got all 5 builds for 2 models');
 
 $sob = Genome::Model::Command::Report::SummaryOfBuilds->create(
-    work_order_id => 2196657, 
+    work_order_id => 2588403, 
     most_recent_build_only => 1,
 );
 ok($sob, 'create');
@@ -75,9 +75,7 @@ ok($sob, 'create');
 $sob->dump_status_messages(1);
 ok(!$sob->execute, 'execute');
 
-$sob = Genome::Model::Command::Report::SummaryOfBuilds->create(
-    days => 'pp',
-);
+$sob = Genome::Model::Command::Report::SummaryOfBuilds->create();
 ok($sob, 'create');
 $sob->dump_status_messages(1);
 ok(!$sob->execute, 'execute');
