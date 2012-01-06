@@ -4,7 +4,6 @@ use strict;
 use warnings;
 
 use Genome;
-use WebService::Solr;
 
 class Genome::Sys::Command::Search::PurgeOrphans {
     is => 'Command::V2',
@@ -54,7 +53,7 @@ sub execute {
     }
 
     my @all_docs = $response->docs;
-    print("Got " . @all_docs . " objects from Solr in " . (time - $start_time) . " seconds.\n");
+    $self->status_message("Got " . @all_docs . " objects from Solr in " . (time - $start_time) . " seconds.");
 
     while (@all_docs) {
         # loops over batches of documents
@@ -101,15 +100,15 @@ sub execute {
                     @docs_to_purge = @docs;
                 }
             }
-            print("Processed " . @docs . " search documents in " . (time - $start_time) . " seconds and found " . @docs_to_purge . " to remove.\n");
+            $self->status_message("Processed " . @docs . " search documents in " . (time - $start_time) . " seconds and found " . @docs_to_purge . " to remove.");
 
             if (@docs_to_purge) {
                 $start_time = time;
                 my $response = Genome::Search->delete_by_doc(@docs_to_purge);
                 if ($response->ok) {
-                    print("Removed those " . @docs_to_purge . "documents in " . (time - $start_time) . " seconds.\n");
+                    print("Removed " . @docs_to_purge . "documents in " . (time - $start_time) . " seconds.\n");
                 } else {
-                    print("Failed to remove those " . @docs_to_purge . " documents.\n");
+                    print("Failed to remove " . @docs_to_purge . " documents.\n");
                 }
             }
 
