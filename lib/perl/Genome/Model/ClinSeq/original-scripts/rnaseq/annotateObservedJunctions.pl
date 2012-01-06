@@ -83,10 +83,10 @@ my $ref_junction_file;
 my $outfile;
 if ($gene_name_type =~ /symbol/i){
   $ref_junction_file = "$gene_annotation_dir"."$gene_annotation_set".".Genes.junc";
-  $outfile = $working_dir . "junctions.anno."."$gene_annotation_set".".bed";
+  $outfile = $working_dir . "observed.junctions.anno."."$gene_annotation_set".".tsv";
 }elsif($gene_name_type =~ /id/i){
   $ref_junction_file = "$gene_annotation_dir"."$gene_annotation_set".".Genes.gid.junc";
-  $outfile = $working_dir . "junctions.anno."."$gene_annotation_set".".gid.bed";
+  $outfile = $working_dir . "observed.junctions.anno."."$gene_annotation_set".".gid.tsv";
 }else{
   print RED, "\n\nGene name type not recognized: $gene_name_type (must be 'symbol' or 'id')", RESET;
   exit(1);
@@ -260,10 +260,18 @@ sub importObsJunctions{
     }
 
     my $jid = $line[$columns{'chr:start-end'}{pos}];
-    my $read_count = $line[$columns{'read_count'}{pos}];
+    my $read_count;
+    if ($columns{'read_count'}){
+      $read_count = $line[$columns{'read_count'}{pos}];
+    }elsif($columns{'transcript_count'}){
+      $read_count = $line[$columns{'transcript_count'}{pos}];
+    }else{
+      print RED, "\n\nCould not identify count column\n\n", RESET;
+      exit();
+    }
     my $intron_size = $line[$columns{'intron_size'}{pos}];
     my $splice_site = $line[$columns{'splice_site'}{pos}];
-
+    
     my $chr;
     my $left;
     my $right;
