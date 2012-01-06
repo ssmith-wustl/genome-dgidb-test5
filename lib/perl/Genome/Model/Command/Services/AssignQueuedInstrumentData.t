@@ -17,21 +17,20 @@ use Test::MockObject;
 
 use_ok('Genome::Model::Command::Services::AssignQueuedInstrumentData');
 
-my $gsc_workorder = GSC::Setup::WorkOrder->create(
-    setup_name => 'AQID-Test-Workorder',
-    project_id => '-4',
-    pse_id => '-10000000',
-);
-
-isa_ok($gsc_workorder, 'GSC::Setup::WorkOrder');
-
 my $gsc_project = GSC::Setup::Project::Research->create(
-    id => -4,
+    id => -4444,
     setup_name => 'AQID-test-project',
     pse_id => '-10000001',
 );
-print $gsc_workorder, "\n";
 isa_ok($gsc_project, 'GSC::Setup::Project::Research');
+
+my $gsc_workorder = Test::MockObject->new();
+ok($gsc_workorder, 'create mock work order');
+$gsc_workorder->set_isa('Genome::Site::WUGC::SetupWorkOrder');
+$gsc_workorder->set_always(id => -1111);
+$gsc_workorder->set_always(name => 'AQID-Test-Workorder');
+$gsc_workorder->set_always(setup_name => 'AQID-Test-Workorder');
+$gsc_workorder->set_always(get_project => $gsc_project);
 
 my $taxon = Genome::Taxon->get( species_name => 'human' );
 my $individual = Genome::Individual->create(
