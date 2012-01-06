@@ -70,3 +70,6 @@
 [submodule "alignment_summary"]
 	path = alignment_summary
 	url = ssh://git//srv/git/alignment_summary.git
+[submodule "vendor/tophat"]
+	path = vendor/tophat
+	url = git@github.com:genome/tophat.git

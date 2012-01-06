@@ -236,7 +236,14 @@ class Genome::Sample {
         libraries => { 
             is => 'Genome::Library', 
             reverse_as => 'sample',
+            is_many => 1,
             doc => 'Libraries that were created from the sample',
+        },
+        instrument_data => {
+            is => 'Genome::InstrumentData',
+            via => 'libraries',
+            is_many => 1,
+            doc => 'Instrument data from all DNA libraries from this sample',
         },
     ],
     doc => 'A single specimen of DNA or RNA extracted from some tissue sample',
