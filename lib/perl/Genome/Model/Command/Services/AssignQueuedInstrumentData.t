@@ -90,12 +90,10 @@ ok($processing_profile, 'Created a processing_profile');
 my $ref_seq_build = Genome::Model::Build::ImportedReferenceSequence->get(name => 'NCBI-human-build36');
 isa_ok($ref_seq_build, 'Genome::Model::Build::ImportedReferenceSequence') or die;
 
-my $ps = GSC::ProcessStep->get( process_to => 'queue instrument data for genome modeling' );
-
 my $pse_1 = GSC::PSE::QueueInstrumentDataForGenomeModeling->create(
     pse_status => 'inprogress',
     pse_id => '-12345',
-    ps_id => $ps->ps_id,
+    ps_id => 3733,
     ei_id => '464681',
 );
 
@@ -121,7 +119,7 @@ my $instrument_data_2 = Genome::InstrumentData::Solexa->create(
 my $pse_2 = GSC::PSE::QueueInstrumentDataForGenomeModeling->create(
     pse_status => 'inprogress',
     pse_id => '-12346',
-    ps_id => $ps->ps_id,
+    ps_id => 3733,
     ei_id => '464681',
 );
 
@@ -221,7 +219,7 @@ my $instrument_data_ignored = Genome::InstrumentData::Solexa->create(
 my $pse_ignored = GSC::PSE::QueueInstrumentDataForGenomeModeling->create(
     pse_status => 'inprogress',
     pse_id => '-123456',
-    ps_id => $ps->ps_id,
+    ps_id => 3733,
     ei_id => '464681',
 );
 
@@ -264,7 +262,7 @@ ok($aml_instrument_data, 'Created instrument data');
 my $aml_pse = GSC::PSE::QueueInstrumentDataForGenomeModeling->create(
     pse_status => 'inprogress',
     pse_id => '-765431235235',
-    ps_id => $ps->ps_id,
+    ps_id => 3733,
     ei_id => '464681',
 );
 $aml_pse->add_param('instrument_data_type', 'solexa');
@@ -305,7 +303,7 @@ ok($aml_instrument_data, 'Created instrument data');
 my $aml_pse = GSC::PSE::QueueInstrumentDataForGenomeModeling->create(
     pse_status => 'inprogress',
     pse_id => '-7654312352355',
-    ps_id => $ps->ps_id,
+    ps_id => 3733,
     ei_id => '464681',
 );
 $aml_pse->add_param('instrument_data_type', 'solexa');
@@ -365,7 +363,7 @@ ok($mouse_instrument_data, 'Created an instrument data');
 my $mouse_pse = GSC::PSE::QueueInstrumentDataForGenomeModeling->create(
     pse_status => 'inprogress',
     pse_id => '-765431',
-    ps_id => $ps->ps_id,
+    ps_id => 3733,
     ei_id => '464681',
 );
 
@@ -436,7 +434,7 @@ isa_ok($rna_454_instrument_data, 'Genome::InstrumentData::454');
 my $rna_pse = GSC::PSE::QueueInstrumentDataForGenomeModeling->create(
     pse_status => 'inprogress',
     pse_id => '-765432',
-    ps_id => $ps->ps_id,
+    ps_id => 3733,
     ei_id => '464681',
 );
 
@@ -448,7 +446,7 @@ $rna_pse->add_param('subject_id', $rna_sample->id);
 my $rna_454_pse = GSC::PSE::QueueInstrumentDataForGenomeModeling->create(
     pse_status => 'inprogress',
     pse_id => '-12314',
-    ps_id => $ps->ps_id,
+    ps_id => 3733,
     ei_id => '464681',
 );
 
@@ -483,7 +481,7 @@ my $instrument_data_3 = Genome::InstrumentData::Solexa->create(
 my $pse_3 = GSC::PSE::QueueInstrumentDataForGenomeModeling->create(
     pse_status => 'inprogress',
     pse_id => '-12347',
-    ps_id => $ps->ps_id,
+    ps_id => 3733,
     ei_id => '464681',
 );
 $pse_3->add_param('instrument_data_type', 'solexa');
@@ -547,7 +545,7 @@ my $instrument_data_pool = Genome::InstrumentData::Solexa->create(
 my $pse_4 = GSC::PSE::QueueInstrumentDataForGenomeModeling->create(
     pse_status => 'inprogress',
     pse_id => '-12348',
-    ps_id => $ps->ps_id,
+    ps_id => 3733,
     ei_id => '464681',
 );
 $pse_4->add_param('instrument_data_type', 'solexa');
@@ -641,7 +639,7 @@ my $instrument_data_5 = Genome::InstrumentData::Solexa->create(
 my $pse_5 = GSC::PSE::QueueInstrumentDataForGenomeModeling->create(
     pse_status => 'inprogress',
     pse_id => '-12349',
-    ps_id => $ps->ps_id,
+    ps_id => 3733,
     ei_id => '464681',
 );
 $pse_5->add_param('instrument_data_type', 'solexa');
@@ -692,7 +690,7 @@ my $de_novo_processing_profile = Genome::ProcessingProfile::DeNovoAssembly->get(
 my $pse_6 = GSC::PSE::QueueInstrumentDataForGenomeModeling->create(
     pse_status => 'inprogress',
     pse_id => '-12350',
-    ps_id => $ps->ps_id,
+    ps_id => 3733,
     ei_id => '464681',
 );
 $pse_6->add_param('instrument_data_type', 'solexa');
@@ -789,7 +787,7 @@ ok($instrument_data_7, 'Created an instrument data');
 my $pse_7 = GSC::PSE::QueueInstrumentDataForGenomeModeling->create(
     pse_status => 'inprogress',
     pse_id => '-7675309',
-    ps_id => $ps->ps_id,
+    ps_id => 3733,
     ei_id => '464681',
 );
 
@@ -849,7 +847,7 @@ ok($instrument_data_8, 'Created an instrument data');
 my $pse_8 = GSC::PSE::QueueInstrumentDataForGenomeModeling->create(
     pse_status => 'inprogress',
     pse_id => '-7775309',
-    ps_id => $ps->ps_id,
+    ps_id => 3733,
     ei_id => '464681',
 );
 
@@ -934,7 +932,7 @@ ok($instrument_data_10, 'Created an instrument data');
 my $pse_9 = GSC::PSE::QueueInstrumentDataForGenomeModeling->create(
     pse_status => 'inprogress',
     pse_id => '-7600000',
-    ps_id => $ps->ps_id,
+    ps_id => 3733,
     ei_id => '464681',
 );
 $pse_9->add_param('instrument_data_type', 'solexa');
@@ -947,7 +945,7 @@ $pse_9->add_reference_sequence_build_param_for_processing_profile( $processing_p
 my $pse_10 = GSC::PSE::QueueInstrumentDataForGenomeModeling->create(
     pse_status => 'inprogress',
     pse_id => '-7600001',
-    ps_id => $ps->ps_id,
+    ps_id => 3733,
     ei_id => '464681',
 );
 $pse_10->add_param('instrument_data_type', 'solexa');
