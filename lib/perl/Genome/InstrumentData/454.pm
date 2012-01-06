@@ -120,13 +120,6 @@ class Genome::InstrumentData::454 {
             where => [ attribute_label => 'paired_end' ],
             is_mutable => 1,
         },
-        # TODO Need to refactor these objects away
-        run_region_454 => {
-            is => 'GSC::RunRegion454',
-            calculate_from => ['region_id'],
-            calculate => q| GSC::RunRegion454->get($region_id); |,
-            doc => '454 Run Region from LIMS.',
-        },
     ],
     has_optional_transient => [
         _fasta_file => { is => 'FilePath', is_mutable => 1, },
@@ -276,15 +269,8 @@ sub _run_sffinfo {
 
 #< Run Info >#
 sub run_identifier {
-my $self = shift;
-
-my $ar_454 = $self->run_region_454->get_analysis_run_454;
-
-my $pse = GSC::PSE->get($ar_454->pse_id);
-my $loadpse = $pse->get_load_pse;
-my $barcode = $loadpse->picotiter_plate;
-
-return $barcode->barcode->barcode;
+    my $self = shift;
+    return sprintf('%s.%s%s', $self->run_name, $self->region_number, ( $self->index_sequence ? '-'.$self->index_sequence : '' ));
 }
 
 sub run_start_date_formatted {
