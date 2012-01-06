@@ -63,6 +63,9 @@ sub execute {
         next if not $event->build_id;
         my $build = Genome::Model::Build->get(id => $event->build_id, -hint => [qw/ model events /]);
         my $model = $build->model;
+        #If the latest build of the model succeeds, ignore those old
+        #failing ones that will be cleaned by admin "cleanup-succeeded".
+        next if $model->status eq 'Succeeded'; 
         next if $models_and_builds{ $model->id } and $models_and_builds{ $model->id }->id > $build->id;
         $models_and_builds{ $model->id } = $build;
     }
