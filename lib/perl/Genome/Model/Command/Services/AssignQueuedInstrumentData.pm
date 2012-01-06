@@ -586,18 +586,16 @@ sub load_pses {
         $pse_sorter = sub { $a->id <=> $b->id };
     }
 
-    my $ps = GSC::ProcessStep->get( process_to => 'queue instrument data for genome modeling' );
-
     my @pses;
     if($self->pse_id) { #process a specific PSE
         @pses = GSC::PSE->get(
-            ps_id => $ps->ps_id,
+            ps_id => 3733,
             pse_status => 'inprogress',
             id => $self->pse_id,
         );
     } else {
         @pses = GSC::PSE->get(
-            ps_id      => $ps->ps_id,
+            ps_id      => 3733,
             pse_status => 'inprogress',
         );
 
