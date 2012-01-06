@@ -17,12 +17,13 @@ use Test::MockObject;
 
 use_ok('Genome::Model::Command::Services::AssignQueuedInstrumentData');
 
-my $gsc_project = GSC::Setup::Project::Research->create(
-    id => -4444,
-    setup_name => 'AQID-test-project',
-    pse_id => '-10000001',
-);
-isa_ok($gsc_project, 'GSC::Setup::Project::Research');
+my $gsc_project = Test::MockObject->new();
+ok($gsc_project, 'create mock gsc project');
+$gsc_project->set_isa('Genome::Site::WUGC::SetupProjectResearch');
+$gsc_project->set_always(id => -4444);
+$gsc_project->set_always(name => 'AQID-test-project');
+$gsc_project->set_always(setup_name => 'AQID-test-project');
+$gsc_project->set_always( pse_id => '-10000001');
 
 my $gsc_workorder = Test::MockObject->new();
 ok($gsc_workorder, 'create mock work order');
@@ -144,11 +145,6 @@ sub GSC::PSE::QueueInstrumentDataForGenomeModeling::get_inherited_assigned_direc
 sub GSC::IndexIllumina::get {
     my $self = shift;
     return $ii;
-}
-
-sub GSC::Setup::WorkOrder::get_project {
-    my $self = shift;
-    return $gsc_project;
 }
 use warnings;
 
