@@ -740,28 +740,46 @@ sub completed_builds {
 }
 
 sub latest_build {
-    # this is the latest build with no filtering on status, etc.
-    my ($self) = @_;
-    my @builds = $self->builds();
+    my $self = shift;
+    my @builds = $self->builds(@_);
     return $builds[-1] if @builds;
     return;
 }
 
 sub latest_build_id {
     my $self = shift;
-    my $build = $self->latest_build;
+    my $build = $self->latest_build(@_);
     unless ($build) { return; }
     return $build->id;
 }
 
+sub build_for_status {
+    my $self = shift;
+    if ($self->build_requested || $self->build_needed) {
+        return;
+    }
+    return $self->latest_build('status not like' => 'Abandoned');
+}
+
 sub status {
     my $self = shift;
-    return $self->latest_build_status;
+
+    my $status;
+    if ($self->build_requested) {
+        $status = 'Build Requested';
+    } elsif ($self->build_needed) {
+        $status = 'Build Needed';
+    } else {
+        $status = $self->build_for_status->status;
+    }
+    $status ||= 'Buildless';
+
+    return $status;
 }
 
 sub latest_build_status {
     my $self = shift;
-    my $build = $self->latest_build;
+    my $build = $self->latest_build(@_);
     unless ($build) { return; }
     return $build->status;
 }

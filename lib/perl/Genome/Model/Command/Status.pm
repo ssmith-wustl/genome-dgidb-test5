@@ -24,19 +24,10 @@ sub execute {
 
     my %status;
     for my $model ($self->models) {
-        my $build = $model->latest_build;
         my $model_name = $model->name;
-        my $build_id = ($build ? $build->id : 'N/A      ');
-        my $status;
-        if ($model->build_requested) {
-            $status = 'Build Requested';
-        }
-        elsif ($build) {
-            $status = $build->status;
-        }
-        else {
-            $status = 'Buildless';
-        }
+        my $build = $model->build_for_status;
+        my $status = $model->status;
+        my $build_id = ($build ? $build->id : 'N/A');
         $status{$status}++;
         print join("\t", $model_name, $build_id, $status) . "\n";
     }
