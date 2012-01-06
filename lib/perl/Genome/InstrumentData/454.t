@@ -41,6 +41,7 @@ my $id454 = Genome::InstrumentData::454->__define__(
 my $sff_file = $id454->sff_file;
 ok(-s $sff_file, 'sff file exists');
 is($sff_file, $dir."/2852582718.sff", 'sff file named correctly');
+is($id454->run_identifier, $id454->run_name.'.'.$id454->region_number.'-'.$id454->index_sequence, 'run identifier');
 
 # test fasta, qual, fastq files and names w/ this real sff
 my %types_methods = (

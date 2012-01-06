@@ -1,0 +1,35 @@
+package Genome::Model::Build::Command::HeartbeatCheck;
+
+use strict;
+use warnings;
+
+class Genome::Model::Build::Command::HeartbeatCheck {
+    is => 'Genome::Command::Base',
+    has => [
+        builds => {
+            is => 'Genome::Model::Build',
+            is_many => 1,
+            shell_args_position => 1,
+            doc => 'Builds to check heartbeat.',
+        },
+    ],
+};
+
+sub help_detail {
+    "Check supplied builds' heartbeat."
+}
+
+sub execute {
+    my $self = shift;
+
+    my @builds = $self->builds;
+    for my $build (@builds) {
+        my $heartbeat = ($build->heartbeat || '0');
+        print join("\t", $build->id, $heartbeat) . "\n";
+    }
+
+    return 1;
+}
+
+1;
+
