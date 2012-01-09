@@ -37,6 +37,9 @@ class Genome::Model::Tools::Velvet::Metrics {
             doc => 'Stats output file',
         },
     ],
+    has_optional => [
+        _metrics => { is_transient => 1, },
+    ],
 };
 
 sub help_brief {
@@ -113,6 +116,7 @@ sub execute {
         tier_one => $t1,
         tier_two => $t2,
     );
+    $self->_metrics($metrics);
 
     # add contigs
     $self->status_message('Add contigs bases file: '.$contigs_bases_file);
@@ -125,12 +129,12 @@ sub execute {
     my $add_reads = $metrics->add_reads_file_with_q20($reads_file);
     return if not $add_reads;
 
-    # reads placed
-    $self->status_message('Add reads placed: '.$self->resolve_reads_placed_file);
-    my $add_reads_placed = $self->_add_reads_placed_to_metrics($metrics);
-    return if not $add_reads_placed;
+    # reads assembled (placed)
+    $self->status_message('Add reads assembled: '.$self->resolve_reads_placed_file);
+    my $add_reads_assembled = $self->_add_reads_assembled_to_metrics($metrics);
+    return if not $add_reads_assembled;
 
-    # reads placed
+    # reads assembled
     $self->status_message('Add read depths: '.$self->resolve_afg_file);
     my $add_read_depth = $self->_add_read_depth_to_metrics($metrics);
     return if not $add_read_depth;
@@ -195,13 +199,13 @@ sub _validate_or_create_post_assembly_files {
 
     #reads files
     my $reads_info_file = $self->resolve_read_info_file;
-    my $reads_placed_file = $self->resolve_reads_placed_file;
-    unless ( -s $reads_info_file and -s $reads_placed_file ) {
+    my $reads_assembled_file = $self->resolve_reads_placed_file;
+    unless ( -s $reads_info_file and -s $reads_assembled_file ) {
         my $tool = Genome::Model::Tools::Velvet::CreateReadsFiles->create(
             assembly_directory => $self->assembly_directory,
         );
         unless( $tool->execute ) {
-            $self->error_message("Failed to create readinfo and reads.placed files for stats");
+            $self->error_message("Failed to create readinfo and reads.assembled files for stats");
             return;
         }
     }
@@ -209,31 +213,31 @@ sub _validate_or_create_post_assembly_files {
     return 1;
 }
 
-sub _add_reads_placed_to_metrics {
+sub _add_reads_assembled_to_metrics {
     my ($self, $metrics) = @_;
 
     my $fh = eval{ Genome::Sys->open_file_for_reading($self->resolve_reads_placed_file); };
     return if not $fh;
 
     my %uniq_reads;
-    my $reads_placed_in_scaffolds = 0;
+    my $reads_assembled_in_scaffolds = 0;
     while ( my $line = $fh->getline ) {
-        $reads_placed_in_scaffolds++;
+        $reads_assembled_in_scaffolds++;
         my ($read_name) = $line =~ /^\*\s+(\S+)\s+/;
         $read_name =~ s/\-\d+$//;
         $uniq_reads{$read_name}++;
     }
     $fh->close;
 
-    $metrics->set_metric('reads_placed', $reads_placed_in_scaffolds);
+    $metrics->set_metric('reads_assembled', $reads_assembled_in_scaffolds);
 
-    my $reads_placed_unique = keys %uniq_reads;
-    $metrics->set_metric('reads_placed_unique', $reads_placed_unique);
-    $metrics->set_metric('reads_placed_duplicate', ($reads_placed_in_scaffolds - $reads_placed_unique));
+    my $reads_assembled_unique = keys %uniq_reads;
+    $metrics->set_metric('reads_assembled_unique', $reads_assembled_unique);
+    $metrics->set_metric('reads_assembled_duplicate', ($reads_assembled_in_scaffolds - $reads_assembled_unique));
 
-    my $reads_count = $metrics->get_metric('reads_count');
-    my $reads_unplaced = $reads_count - $reads_placed_unique;
-    $metrics->set_metric('reads_unplaced', $reads_unplaced);
+    my $reads_count = $metrics->get_metric('reads_processed');
+    my $reads_not_assembled = $reads_count - $reads_assembled_unique;
+    $metrics->set_metric('reads_not_assembled', $reads_not_assembled);
 
     return 1;
 }

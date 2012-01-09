@@ -31,8 +31,8 @@ class Genome::Model::Tools::Sx::Metrics::Assembly {
                 supercontigs_count => 0,
                 contigs_length => 0,
                 contigs_count => 0,
-                reads_length => 0,
-                reads_count => 0,
+                reads_processed_length => 0,
+                reads_processed => 0,
             },
         },
         supercontigs => {
@@ -111,18 +111,21 @@ class Sx::Metrics::Assembly {
                 coverage_2x
                 coverage_1x
                 coverage_0x
-                reads_average_length
-                reads_chaff_rate
-                reads_count
-                reads_length
-                reads_length_q20
-                reads_length_q20_per_read
-                reads_length_q20_redundancy
-                reads_placed
-                reads_placed_duplicate
-                reads_placed_in_scaffolds
-                reads_placed_unique
-                reads_unplaced
+                reads_attempted
+                reads_processed
+                reads_processed_length
+                reads_processed_success
+                reads_processed_average_length
+                reads_processed_length_q20
+                reads_processed_length_q20_per_read
+                reads_processed_length_q20_redundancy
+                reads_assembled
+                reads_assembled_success
+                reads_assembled_chaff_rate
+                reads_assembled_duplicate
+                reads_assembled_in_scaffolds
+                reads_assembled_unique
+                reads_not_assembled
                 scaffolds_1M
                 scaffolds_250K_1M
                 scaffolds_100K_250K
@@ -174,6 +177,7 @@ class Sx::Metrics::Assembly {
                 supercontigs_t3_n50_not_reached
                 /)
         ),
+        assembly_length => { calculate => q| return $self->contigs_length; |, },
     ],
 };
 
@@ -284,8 +288,8 @@ sub add_contig_with_contents {
 sub add_read {
     my ($self, $read) = @_;
 
-    $self->_metrics->{reads_count}++;
-    $self->_metrics->{reads_length} += length $read->{seq};
+    $self->_metrics->{reads_processed}++;
+    $self->_metrics->{reads_processed_length} += length $read->{seq};
 
     return 1;
 }
@@ -293,9 +297,9 @@ sub add_read {
 sub add_read_with_q20 {
     my ($self, $read) = @_;
 
-    $self->_metrics->{reads_count}++;
-    $self->_metrics->{reads_length} += length $read->{seq};
-    $self->_metrics->{reads_length_q20} += Genome::Model::Tools::Sx::Base->calculate_qualities_over_minumum($read->{qual}, 20);
+    $self->_metrics->{reads_processed}++;
+    $self->_metrics->{reads_processed_length} += length $read->{seq};
+    $self->_metrics->{reads_processed_length_q20} += Genome::Model::Tools::Sx::Base->calculate_qualities_over_minumum($read->{qual}, 20);
 
     return 1;
 }
@@ -311,7 +315,7 @@ sub calculate_metrics {
     $main_metrics->{major_contig_threshold} = $self->major_contig_threshold;
 
     # Reads
-    $main_metrics->{reads_average_length} = int($main_metrics->{reads_length} / $main_metrics->{reads_count});
+    $main_metrics->{reads_processed_average_length} = int($main_metrics->{reads_processed_length} / $main_metrics->{reads_processed});
 
     my $t1 = $self->tier_one;
     my $t2 = $self->tier_two;
