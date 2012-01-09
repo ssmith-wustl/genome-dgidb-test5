@@ -10,7 +10,7 @@ class Genome::Model::Tools::Sx::Metrics::Assembly {
     has => [
         major_contig_threshold => {
             is => 'Number',
-            default_value => 300,
+            default_value => 500,
             doc => ' one base threshold.',
         },
         tier_one => {
