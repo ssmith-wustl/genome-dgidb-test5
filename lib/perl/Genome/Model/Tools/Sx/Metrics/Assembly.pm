@@ -66,13 +66,9 @@ class Sx::Metrics::Assembly {
                 contigs_count
                 contigs_length
                 contigs_length_5k
-                contigs_length_q20
-                contigs_length_q20_percent
                 contigs_major_average_length
                 contigs_major_count
                 contigs_major_length
-                contigs_major_length_q20
-                contigs_major_length_q20_percent
                 contigs_major_n50_count
                 contigs_major_n50_length
                 contigs_maximum_length
@@ -81,8 +77,6 @@ class Sx::Metrics::Assembly {
                 contigs_t1_count
                 contigs_t1_length
                 contigs_t1_average_length
-                contigs_t1_length_q20
-                contigs_t1_length_q20_percent
                 contigs_t1_maximum_length
                 contigs_t1_n50_count
                 contigs_t1_n50_length
@@ -90,8 +84,6 @@ class Sx::Metrics::Assembly {
                 contigs_t2_count
                 contigs_t2_length
                 contigs_t2_average_length
-                contigs_t2_length_q20
-                contigs_t2_length_q20_percent
                 contigs_t2_maximum_length
                 contigs_t2_n50_count
                 contigs_t2_n50_length
@@ -99,8 +91,6 @@ class Sx::Metrics::Assembly {
                 contigs_t3_count
                 contigs_t3_length
                 contigs_t3_average_length
-                contigs_t3_length_q20
-                contigs_t3_length_q20_percent
                 contigs_t3_maximum_length
                 contigs_t3_n50_count
                 contigs_t3_n50_length
@@ -136,13 +126,9 @@ class Sx::Metrics::Assembly {
                 supercontigs_average_length
                 supercontigs_count
                 supercontigs_length
-                supercontigs_length_q20
-                supercontigs_length_q20_percent
                 supercontigs_major_average_length
                 supercontigs_major_count
                 supercontigs_major_length
-                supercontigs_major_length_q20
-                supercontigs_major_length_q20_percent
                 supercontigs_major_n50_count
                 supercontigs_major_n50_length
                 supercontigs_maximum_length
@@ -151,8 +137,6 @@ class Sx::Metrics::Assembly {
                 supercontigs_t1_count
                 supercontigs_t1_length
                 supercontigs_t1_average_length
-                supercontigs_t1_length_q20
-                supercontigs_t1_length_q20_percent
                 supercontigs_t1_maximum_length
                 supercontigs_t1_n50_count
                 supercontigs_t1_n50_length
@@ -160,8 +144,6 @@ class Sx::Metrics::Assembly {
                 supercontigs_t2_count
                 supercontigs_t2_length
                 supercontigs_t2_average_length
-                supercontigs_t2_length_q20
-                supercontigs_t2_length_q20_percent
                 supercontigs_t2_maximum_length
                 supercontigs_t2_n50_count
                 supercontigs_t2_n50_length
@@ -169,8 +151,6 @@ class Sx::Metrics::Assembly {
                 supercontigs_t3_count
                 supercontigs_t3_length
                 supercontigs_t3_average_length
-                supercontigs_t3_length_q20
-                supercontigs_t3_length_q20_percent
                 supercontigs_t3_maximum_length
                 supercontigs_t3_n50_count
                 supercontigs_t3_n50_length
@@ -319,7 +299,6 @@ sub calculate_metrics {
 
     my $t1 = $self->tier_one;
     my $t2 = $self->tier_two;
-    my $q20_metrics = {};
     my $total_contig_length = $self->_metrics->{contigs_length};
     for my $type (qw/ contigs supercontigs /) {
         my $metrics = $self->$type;
@@ -330,21 +309,21 @@ sub calculate_metrics {
         #TOTAL CONTIG VARIABLES
         my $total_contig_number = 0;    my $cumulative_length = 0;
         my $maximum_contig_length = 0;  my $major_contig_number = 0;
-        my $major_contig_bases = 0;     my $major_contig_q20_bases = 0;
+        my $major_contig_bases = 0;     
         my $n50_contig_number = 0;      my $n50_contig_length = 0;
-        my $not_reached_n50 = 1;        my $total_q20_bases = 0;
+        my $not_reached_n50 = 1;        
         #TIER 1 VARIABLES
-        my $total_t1_bases = 0;         my $total_t1_q20_bases = 0;
+        my $total_t1_bases = 0;
         my $t1_n50_contig_number = 0;   my $t1_n50_contig_length = 0;
         my $t1_not_reached_n50 = 1;     my $t1_max_length = 0;
         my $t1_count = 0;
         #TIER 2 VARIABLES
-        my $total_t2_bases = 0;         my $total_t2_q20_bases = 0;
+        my $total_t2_bases = 0;
         my $t2_n50_contig_number = 0;   my $t2_n50_contig_length = 0;
         my $t2_not_reached_n50 = 1;     my $t2_max_length = 0;
         my $t2_count = 0;
         #TIER 3 VARIABLES
-        my $total_t3_bases = 0;         my $total_t3_q20_bases = 0;
+        my $total_t3_bases = 0;
         my $t3_n50_contig_number = 0;   my $t3_n50_contig_length = 0;
         my $t3_not_reached_n50 = 1;     my $t3_max_length = 0;
         my $t3_count = 0;
@@ -356,12 +335,10 @@ sub calculate_metrics {
 
         foreach my $c (sort {$metrics->{$b} <=> $metrics->{$a}} keys %{$metrics}) {
             $total_contig_number++;
-            $total_q20_bases += $q20_metrics->{$c}->{q20_bases} if exists $q20_metrics->{$c};
             $cumulative_length += $metrics->{$c};
 
             if ($metrics->{$c} >= $major_contig_length) {
                 $major_contig_bases += $metrics->{$c};
-                $major_contig_q20_bases += $q20_metrics->{$c}->{q20_bases}if exists $q20_metrics->{$c};
                 $major_contig_number++;
             }
             if ($not_reached_n50) {
@@ -377,7 +354,6 @@ sub calculate_metrics {
             #TIER 1
             if ($total_t1_bases < $t1) {
                 $total_t1_bases += $metrics->{$c};
-                $total_t1_q20_bases += $q20_metrics->{$c}->{q20_bases} if exists $q20_metrics->{$c};
                 if ($t1_not_reached_n50) {
                     $t1_n50_contig_number++;
                     if ($cumulative_length >= ($t1 * 0.50)) {
@@ -393,7 +369,6 @@ sub calculate_metrics {
             #TIER 2
             elsif ($total_t2_bases < $t2) {
                 $total_t2_bases += $metrics->{$c};
-                $total_t2_q20_bases += $q20_metrics->{$c}->{q20_bases} if exists $q20_metrics->{$c};
                 if ($t2_not_reached_n50) {
                     $t2_n50_contig_number++;
                     if ($cumulative_length >= ($t2 * 0.50)) {
@@ -409,7 +384,6 @@ sub calculate_metrics {
             #TIER 3
             else {
                 $total_t3_bases += $metrics->{$c};
-                $total_t3_q20_bases += $q20_metrics->{$c}->{q20_bases} if exists $q20_metrics->{$c};
                 if ($t3_not_reached_n50) {
                     $t3_n50_contig_number++;
                     if ($cumulative_length >= ($t3 * 0.50)) {
@@ -464,19 +438,6 @@ sub calculate_metrics {
             }
         }
 
-        my $q20_ratio = 0;                  my $t1_q20_ratio = 0;
-        my $t2_q20_ratio = 0;               my $t3_q20_ratio = 0;
-        my $major_contig_q20_ratio = 0;
-
-        $total_t1_q20_bases = 'NA';
-        $total_t2_q20_bases = 'NA';
-        $total_t3_q20_bases = 'NA';
-        $t1_q20_ratio = 'NA';
-        $t2_q20_ratio = 'NA';
-        $t3_q20_ratio = 'NA';
-
-        $main_metrics->{$type.'_length_q20'} = 'NA';
-        $main_metrics->{$type.'_length_q20_percent'} = 'NA';
         $main_metrics->{$type.'_average_length'} = int ($cumulative_length / $total_contig_number + 0.50);
         $main_metrics->{$type.'_maximum_length'} = $maximum_contig_length;
         $main_metrics->{$type.'_n50_length'} = $n50_contig_length;
@@ -486,16 +447,12 @@ sub calculate_metrics {
         $main_metrics->{$type.'_major_average_length'} = ($major_contig_number > 0) 
         ?  int ($major_contig_bases / $major_contig_number + 0.50) 
         : 0;
-        $main_metrics->{$type.'_major_length_q20'} = 'NA';
-        $main_metrics->{$type.'_major_length_q20_percent'} = 'NA';
         $main_metrics->{$type.'_major_n50_length'} = $n50_major_contig_length;
         $main_metrics->{$type.'_major_n50_count'} = $n50_major_contig_number;
 
         $main_metrics->{$type.'_t1_length'} = $total_t1_bases;
         $main_metrics->{$type.'_t1_count'} = $t1_count;
         $main_metrics->{$type.'_t1_average_length'} = ($t1_count > 0) ? int ($total_t1_bases/$t1_count + 0.5) : 0;
-        $main_metrics->{$type.'_t1_length_q20'} = $total_t1_q20_bases;
-        $main_metrics->{$type.'_t1_length_q20_percent'} = $t1_q20_ratio;
         $main_metrics->{$type.'_t1_n50_count'} = $t1_n50_contig_number;
         $main_metrics->{$type.'_t1_n50_length'} = $t1_n50_contig_length;
         $main_metrics->{$type.'_t1_n50_not_reached'} = $t1_not_reached_n50; 
@@ -504,8 +461,6 @@ sub calculate_metrics {
         $main_metrics->{$type.'_t2_length'} = $total_t2_bases;
         $main_metrics->{$type.'_t2_count'} = $t2_count;
         $main_metrics->{$type.'_t2_average_length'} = ($t2_count > 0) ? int ($total_t2_bases/$t2_count + 0.5) : 0;
-        $main_metrics->{$type.'_t2_length_q20'} = $total_t1_q20_bases;
-        $main_metrics->{$type.'_t2_length_q20_percent'} = $t1_q20_ratio;
         $main_metrics->{$type.'_t2_n50_count'} = $t2_n50_contig_number;
         $main_metrics->{$type.'_t2_n50_length'} = $t2_n50_contig_length;
         $main_metrics->{$type.'_t2_n50_not_reached'} = $t2_not_reached_n50; 
@@ -514,8 +469,6 @@ sub calculate_metrics {
         $main_metrics->{$type.'_t3_length'} = $total_t3_bases;
         $main_metrics->{$type.'_t3_count'} = $t3_count;
         $main_metrics->{$type.'_t3_average_length'} = ($t3_count > 0) ? int ($total_t3_bases/$t3_count + 0.5) : 0;
-        $main_metrics->{$type.'_t3_length_q20'} = $total_t1_q20_bases;
-        $main_metrics->{$type.'_t3_length_q20_percent'} = $t1_q20_ratio;
         $main_metrics->{$type.'_t3_n50_count'} = $t3_n50_contig_number;
         $main_metrics->{$type.'_t3_n50_length'} = $t3_n50_contig_length;
         $main_metrics->{$type.'_t3_n50_not_reached'} = $t3_not_reached_n50; 
