@@ -4,7 +4,6 @@ use warnings;
 
 BEGIN {
     if ($ENV{GENOME_DEV_MODE}) {
-        $ENV{GENOME_SYS_SERVICES_MEMCACHE} = 'aims-dev.gsc.wustl.edu:11211';
         $ENV{GENOME_SYS_SERVICES_SOLR} = 'http://solr-dev:8080/solr';
     }
     else {
