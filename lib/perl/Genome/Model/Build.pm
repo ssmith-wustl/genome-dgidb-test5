@@ -2317,12 +2317,21 @@ sub heartbeat {
             return;
         }
 
+        if ($wf_instance_exec_status eq 'crashed' && ($lsf_status eq 'done' || $lsf_status eq 'exit')) {
+            $self->status_message("Workflow Instance Execution (ID: $wf_instance_exec_id) crashed.");
+            return;
+        }
+
         if ($wf_instance_exec_status ne 'running' || $lsf_status ne 'run') {
             die "Missing state ($wf_instance_exec_status/$lsf_status) condition, only running/run should reach this point";
         }
 
         my @pids = $self->pids_from_bjobs_output($bjobs_output);
         my $execution_host = $self->execution_host_from_bjobs_output($bjobs_output);
+        unless ($execution_host) {
+            $self->status_message('Expected execution host.') if $verbose;
+            return;
+        }
         my $ps_cmd = "ssh $execution_host ps -o pid= -o stat= -p " . join(" -p ", @pids) . ' 2> /dev/null';
         my @ps_output = qx($ps_cmd);
         chomp(@ps_output);
@@ -2349,7 +2358,7 @@ sub status_from_bjobs_output {
     my $bjobs_output = shift;
     my ($status) = $bjobs_output =~ /Status <(.*?)>/;
     unless ($status) {
-        die $self->error_message('Failed to parse status from bjobs output');
+        die $self->error_message("Failed to parse status from bjobs output:\n$bjobs_output\n");
     }
     return lc($status);
 }
@@ -2358,7 +2367,9 @@ sub pids_from_bjobs_output {
     my $self = shift;
     my $bjobs_output = shift;
     my ($pids) = $bjobs_output =~ /PIDs:([\d\s]+)/;
-    return unless $pids;
+    unless ($pids) {
+        die $self->error_message("Failed to parse PIDs from bjobs output:\n$bjobs_output\n");
+    }
     my @pids = $pids =~ /(\d+)/;
     return @pids;
 }
@@ -2367,6 +2378,13 @@ sub execution_host_from_bjobs_output {
     my $self = shift;
     my $bjobs_output = shift;
     my ($execution_host) = $bjobs_output =~ /Started on <(.*?)>/;
+    unless ($execution_host) {
+        if ($bjobs_output =~ /Started on \d+ Hosts\/Processors </) {
+            $self->error_message("Not yet able to parse multiple execution hosts.");
+        } else {
+            die $self->error_message("Failed to parse execution host from bjobs output:\n$bjobs_output\n");
+        }
+    }
     return $execution_host;
 }
 
