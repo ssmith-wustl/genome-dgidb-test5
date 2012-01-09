@@ -54,6 +54,14 @@ my $HugoUrl = "http://www.genenames.org/cgi-bin/hgnc_downloads.cgi?".
     "format=text&".   
     "submit=submit&.cgifields=&.cgifields=level&.cgifields=chr&.cgifields=status&.cgifields=hgnc_dbtag";
 
+sub getHugoUrlContent {
+    my $class = shift;
+    my $content = LWP::Simple::get($HugoUrl);
+    unless ($content) {
+        die('Failed to get content from HugoUrl. Check that the site is available.');
+    }
+    return $content;
+}
 
 # 0. HGNC ID
 # 1. Approved Symbol
@@ -115,7 +123,7 @@ sub makeHugoGeneObjects {
 
     my %hugoObjects;
 
-    my $page = get($HugoUrl);
+    my $page = getHugoUrlContent();
     
     foreach my $line (split /\n/, $page) {
 	if ( $line =~ /withdrawn/i || $line =~ /HGNC ID\s+Approved\s+Symbol\s+/ ) {  next; }
@@ -182,7 +190,7 @@ sub downloadPreviousHugoSymbols {
     # The previous symbol(s) are in $entries[6]
     
     my ( %previousToHugo, %hugoToPrevious, $previous, );
-    my $page = get($HugoUrl);
+    my $page = getHugoUrlContent();
     
     foreach my $line (split /\n/, $page) {
 	if ( $line =~ /withdrawn/i || $line =~ /HGNC ID\s+Approved\s+Symbol\s+/ ) {  next; }
@@ -235,7 +243,7 @@ sub downloadHugoAlias {
     # The aliases are in $entries[7], the Hugo name is in $entries[1]
 
     my ( %aliasToHugo, %hugoToAlias, $alias );
-    my $page = get($HugoUrl);
+    my $page = getHugoUrlContent();
     
     foreach my $line (split /\n/, $page) {
 	if ( $line =~ /withdrawn/i || $line =~ /HGNC ID\s+Approved\s+Symbol\s+/ ) {  next; }
