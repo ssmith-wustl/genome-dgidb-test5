@@ -8,7 +8,7 @@
     <xsl:call-template name="control_bar_view"/>
 
     <xsl:call-template name="set_header">
-      <xsl:with-param name="display_name" select="'Listing Nomenclatures'" />
+      <xsl:with-param name="display_name" select="'Nomenclatures'" />
     </xsl:call-template>
 
     <div class="content rounded shadow">

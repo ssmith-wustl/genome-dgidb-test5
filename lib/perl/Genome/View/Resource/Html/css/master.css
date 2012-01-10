@@ -643,6 +643,10 @@ td.stage_name {
     width: 100%;
 }
 
+.action_box {
+    padding: 5px 5px 5px 5px;
+}
+
 .project_container {
     padding-bottom: 10px;
 }
@@ -1051,4 +1055,8 @@ a.btn_cache_refresh {
 	 float: left;
 	 font-weight: normal;
 	 line-height: 35px;
+}
+
+p.help_text {
+    width: 650px;
 }

@@ -16,20 +16,7 @@
     <script type="text/javascript" src="https://imp.gsc.wustl.edu/resources/report_resources/jquery/dataTables-1.5/media/js/jquery.dataTables.plugin.formatted-num.js"></script>
     <link rel="stylesheet" href="https://imp.gsc.wustl.edu/resources/report_resources/jquery/dataTables-1.5/media/css/gc_table.css" type="text/css" media="screen"></link>
 
-    <script type="text/javascript" charset="utf-8">
-        $(document).ready( function() {
-            $('#parts_table').dataTable( {
-                "bAutoWidth": false,
-                "bStateSave": true,
-                "bJQueryUI": true,
-                "aoColumns": [
-                    null,
-                    null,
-                    null
-                ]
-            } );
-        } );
-    </script>
+    <script type='text/javascript' src='/res/js/app/genome_project.js'></script>
 
     <div class="content rounded shadow">
       <div class="container">
@@ -37,11 +24,22 @@
 
           <!-- details for this project -->
 
+        <div id="dialog-confirm" title="Removing selected items">
+            <p><span class="ui-icon ui-icon-alert" style="float:left; margin:0 7px 20px 0;"></span>
+            You are about to remove the selected items from this project (the items will
+            not be deleted).
+            </p>
+        </div>
+
           <div class="container">
             <table id="parts_table" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin-top: 0;" class="list display">
                 <xsl:for-each select="aspect[@name='parts']/object">
                     <tr>
-                        <td><input type="checkbox"/></td>
+                        <td>
+                            <input class="partCheckbox" type="checkbox">
+                            <xsl:attribute name="id"><xsl:value-of select="@id"/></xsl:attribute>
+                            </input>
+                        </td>
                         <td><xsl:value-of select="aspect[@name='entity_class_name_pretty']/value"/></td>
                         <td>
                                 <xsl:for-each select="aspect[@name='entity']/object">

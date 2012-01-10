@@ -46,8 +46,41 @@ my $new_print = sub {
 };
 
 sub dispatch_request {
-    
 
+    sub (DELETE + /** + %@*) {
+
+        load_modules();
+        my ($self, $url, $params) = @_;
+        my $class = url_to_type($url);
+        my @ids = $params->{'ids[]'};
+
+        my $status;
+        eval {
+            local *FCGI::Stream::PRINT = $new_print;
+            my @objs = $class->get(@ids);
+            if (@objs > 200) { die 'remove this when youre ready to delete lots of stuff from a url ;)'; }
+            for my $obj (@objs) {
+                $obj->delete();
+            }
+            $status = UR::Context->commit();
+        };
+
+        my ($code, $body);
+        my $r = {};
+        if ($@ || !$status) {
+            $r->{'error'} = substr(UR::Context->error_message() || $@,0,5000);
+            $code = 200;
+            $body = to_json( $params, { ascii => 1, allow_nonref => 1, });
+        } else { 
+            # worked- later this could be 202 for asyncronous (via task) deletion
+            $code = 200;
+            $r->{'deleted_class'} = $class;
+            $r->{'deleted_ids'} = \@ids;
+            $body = to_json( $r, { ascii => 1, allow_nonref => 1, });
+        }
+
+        return [$code, ['Content-type' => 'text/plain'], [$body]];
+    }, 
     sub (PUT + /** + %*) {
 
         load_modules();
