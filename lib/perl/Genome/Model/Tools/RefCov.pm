@@ -10,6 +10,7 @@ use Devel::Size qw/size total_size/;
 # Input Parameters
 my $DEFAULT_ALIGNMENT_FILE_FORMAT = 'bam';
 my $DEFAULT_ROI_FILE_FORMAT = 'bed';
+my $DEFAULT_VALIDATE_CHROMOSOMES = 1;
 
 # Output Parameters
 my $DEFAULT_EVALUATE_GC_CONTENT = 0;
@@ -18,12 +19,14 @@ my $DEFAULT_ROI_NORMALIZED_COVERAGE = 0;
 my $DEFAULT_ALIGNMENT_COUNT = 0;
 my $DEFAULT_PRINT_MIN_MAX = 0;
 my $DEFAULT_PRINT_HEADERS = 0;
+my $DEFAULT_RELATIVE_COVERAGE = 0;
 
 # Coverage Parameters
 my $DEFAULT_MINIMUM_MAPPING_QUALITY = 0;
 my $DEFAULT_MINIMUM_BASE_QUALITY = 0;
 my $DEFAULT_MINIMUM_DEPTH = 1;
 my $DEFAULT_WINGSPAN = 0;
+my $DEFAULT_RELATIVE_COVERAGE_BINS = [500,500,1000,1000,1000,1000,5000,5000,5000];
 
 # Memory/CPU Parameters
 my $DEFAULT_MAXIMUM_DEPTH = 100_000_000;
@@ -66,6 +69,8 @@ my %MERGE_STATS_OPERATION = (
     genome_normalized_depth => 'weighted_mean',
     intervals => 'intervals',
     alignment_count => '+',
+    fwd_strand => '+',
+    rev_strand => '+',
     minimum_coverage_depth => '<',
     maximum_coverage_depth => '>',
 );
@@ -150,6 +155,28 @@ class Genome::Model::Tools::RefCov {
             default_value => $DEFAULT_ALIGNMENT_COUNT,
             is_optional => 1,
         },
+        relative_coverage => {
+            is => 'Boolean',
+            doc => 'Determine relative coverage by position along the length of the ROI',
+            default_value => $DEFAULT_RELATIVE_COVERAGE,
+            is_optional => 1,
+        },
+        validate_chromosomes => {
+            is => 'Boolean',
+            doc => 'Validate the chromosome names from the ROI and that they exist in the BAM.',
+            default_value => $DEFAULT_VALIDATE_CHROMOSOMES,
+            is_optional => 1,
+        },
+        relative_coverage_bins => {
+            doc => 'The size in bp of each bin increment.  The default settings result in bins <= 500, 1000, 2000, 3000, 4000, 5000, 10000, 15000, 20000,',
+            default_value => $DEFAULT_RELATIVE_COVERAGE_BINS,
+            is_optional => 1,
+        },
+        relative_coverage_file_basename => {
+            is => 'Text',
+            doc => 'An output file to print a summary of relative coverage by size bin',
+            is_optional => 1,
+        },
         print_min_max => {
             is => 'Boolean',
             doc => 'Print the minimum and maximum depth of coverage.',
@@ -226,6 +253,8 @@ class Genome::Model::Tools::RefCov {
         _nuc_cov => {},
         _roi_cov => {},
         _brief_roi_cov => {},
+        _relative_coverage_hash_ref => {},
+        _relative_coverage_object => {},
     ],
 };
 
@@ -559,6 +588,22 @@ sub genome_stats {
     return $self->_genome_stats;
 }
 
+
+sub _load_relative_coverage_object {
+    my $self = shift;
+    my $relative_coverage = Genome::Model::Tools::RefCov::RelativeCoverage->create();
+    $self->_relative_coverage_object($relative_coverage);
+    return $relative_coverage;
+}
+
+sub relative_coverage_object {
+    my $self = shift;
+    unless ($self->_relative_coverage_object) {
+        $self->_load_relative_coverage_object;
+    }
+    return $self->_relative_coverage_object;
+}
+
 # This is only necessary when running in parallel as a part of a workflow
 # There is probably a better way of doing this
 sub resolve_final_directory {
@@ -627,12 +672,25 @@ sub region_alignment_count {
     my $index = $alignments->bio_db_index;
     my $tid = $alignments->tid_for_chr($region->{chrom});
     my $alignment_count = 0;
+    my $forward_strand = 0;
+    my $reverse_strand = 0;
     my $alignment_count_callback = sub {
         my ($alignment,$data) = @_;
-        $alignment_count++;
+        my $flag = $alignment->flag;
+        # Only count mapped reads
+        unless ($flag & 4) {
+            if ($flag & 16) {
+                # Reverse strand
+                $reverse_strand++;
+            } else {
+                # Positive Strand
+                $forward_strand++;
+            }
+            $alignment_count++;
+        }
     };
     $index->fetch( $bam, $tid, ($region->{start} - 1), $region->{end},$alignment_count_callback);
-    return $alignment_count;
+    return ($alignment_count,$forward_strand,$reverse_strand);
 }
 
 sub region_coverage_array_ref {
@@ -896,6 +954,8 @@ sub resolve_stats_file_headers {
     }
     if ($self->alignment_count) {
         push @headers, 'alignment_count';
+        push @headers, 'fwd_strand';
+        push @headers, 'rev_strand';
     }
     if ($self->print_min_max) {
         push @headers, 'minimum_coverage_depth';
@@ -904,7 +964,7 @@ sub resolve_stats_file_headers {
     return @headers;
 }
 
-sub validate_chromosomes {
+sub validate_chromosome_names {
     my $self = shift;
     $self->status_message('Validate chromosomes...');
     my $roi = $self->roi;
@@ -925,7 +985,7 @@ sub generate_coverage_stats {
     my $self = shift;
     my $region = shift;
     my $min_depth = shift;
-
+    
     my $stat = $self->region_coverage_stat;
     my $length = $region->{length};
     if ($length < $self->maximum_roi_length) {
@@ -935,6 +995,35 @@ sub generate_coverage_stats {
             min_depth => $min_depth,
             name => $region->{name},
         );
+        if ($self->relative_coverage) {
+            my $relative_coverage = $self->relative_coverage_object;
+            $relative_coverage->min_depth($min_depth);
+            $relative_coverage->coverage($coverage_array_ref);
+            $relative_coverage->_revise_relative_coverage;
+
+            my $size_bin;
+            my $total_size = 0;
+            for my $bin (@{$self->relative_coverage_bins}) {
+                $total_size += $bin;
+                if ($length <= $total_size) {
+                    $size_bin = $total_size;
+                    last;
+                }
+            }
+            unless ($size_bin) {
+                $size_bin = 'gt_'. $total_size;
+            }
+            
+            my $relative_coverage_hash_ref = $self->_relative_coverage_hash_ref;
+            unless (defined($relative_coverage_hash_ref)) {
+                $relative_coverage_hash_ref = {};
+            }
+            my $hash_ref = $relative_coverage->relative_coverage;
+            for my $relative_position (keys %{$hash_ref}) {
+                $relative_coverage_hash_ref->{$size_bin}->{$relative_position} += $hash_ref->{$relative_position};
+            }
+            $self->_relative_coverage_hash_ref($relative_coverage_hash_ref);
+        }
     } else {
         $self->status_message('Region '. $region->{name} .' for chr/reference '. $region->{chrom} .' is longer than the defined maximum_roi_length '. $self->maximum_roi_length. '!  A window approach will be used with a '. $self->window_size .' offset.');
         my @region_gaps;
@@ -1063,8 +1152,10 @@ sub print_roi_coverage {
     my $self = shift;
     $self->status_message('Printing ROI Coverage...');
 
-    $self->validate_chromosomes;
-
+    if ($self->validate_chromosomes) {
+        $self->validate_chromosome_names;
+    }
+    
     my $temp_stats_file = Genome::Sys->create_temp_file_path;
     my @headers = $self->resolve_stats_file_headers;
     my $writer = Genome::Utility::IO::SeparatedValueWriter->create(
@@ -1126,7 +1217,10 @@ sub print_roi_coverage {
                 $data->{'genome_normalized_depth'} = $genome_normalized_depth;
             }
             if ($self->alignment_count) {
-                $data->{'alignment_count'} = $self->region_alignment_count($region);
+                my @values = $self->region_alignment_count($region);
+                 $data->{'alignment_count'} = $values[0];
+                 $data->{'fwd_strand'} = $values[1];
+                 $data->{'rev_strand'} = $values[2];
             }
             if ($self->print_min_max) {
                 $data->{'minimum_coverage_depth'} = $stat->minimum_coverage_depth;
@@ -1140,10 +1234,37 @@ sub print_roi_coverage {
     $writer->output->close;
     $self->status_message('Copying Temporary Coverage File...');
     Genome::Sys->copy_file($temp_stats_file, $self->stats_file);
+
     if ($self->merge_by && $self->merged_stats_file) {
         $self->merge_stats_by($self->merge_by,$self->merged_stats_file);
     }
-
+    if ($self->relative_coverage) {
+        my $relative_coverage_hash_ref = $self->_relative_coverage_hash_ref();
+        my %total;
+        for my $bin (keys %{$relative_coverage_hash_ref}) {
+            for my $position (sort {$a <=> $b} keys %{$relative_coverage_hash_ref->{$bin}}) {
+                $total{$position} += $relative_coverage_hash_ref->{$bin}->{$position};
+            }
+        }
+        for my $bin (keys %{$relative_coverage_hash_ref}) {
+            my $relative_coverage_file = $self->relative_coverage_file_basename .'_'. $bin .'.tsv';
+            my $relative_coverage_fh = Genome::Sys->open_file_for_writing($relative_coverage_file);
+            unless ($relative_coverage_fh) {
+                die('Failed to open output file handle for writing: '. $relative_coverage_file);
+            }
+            print $relative_coverage_fh "relative_position\trelative_depth\ttotal_depth\n";
+            for my $position (sort {$a <=> $b} keys %{$relative_coverage_hash_ref->{$bin}}) {
+                my $relative_depth;
+                if ($relative_coverage_hash_ref->{$bin}->{$position}) {
+                    # TODO: This may or may not be useful....
+                    $relative_depth = $relative_coverage_hash_ref->{$bin}->{$position} / $total{$position};
+                }
+                print $relative_coverage_fh $position ."\t". $relative_depth ."\t". $relative_coverage_hash_ref->{$bin}->{$position} ."\n";
+            }
+            $relative_coverage_fh->close;
+        }
+        # TODO: print a total depth per relative_position file
+    }
     $self->status_message('Print ROI Coverage...OK');
     return 1;
 }
