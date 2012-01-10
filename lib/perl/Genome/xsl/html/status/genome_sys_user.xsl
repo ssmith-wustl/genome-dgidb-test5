@@ -73,7 +73,8 @@
                 </xsl:for-each>
             </tbody>
         </table>
-
+<br/>
+<a href="/view/genome/project/set/help.html">How do I use projects?</a>
 
       </div> <!-- end container -->
     </div> <!-- end content -->

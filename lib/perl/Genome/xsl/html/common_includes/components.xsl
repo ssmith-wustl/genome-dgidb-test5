@@ -200,7 +200,7 @@ $(document).data('updatedOn', new Date(]]><xsl:copy-of select="$currentTime"/><!
 
     <ul class="app_menu" style="width: 450px">
       <li style="width: 50px; float: right">
-        <div id="authUser" style="color: white">-</div>
+        <a id="authUserLink"><div id="authUser" style="color: white">-</div></a>
       </li>
     <xsl:choose>
         <xsl:when test="$objectClassName='Genome::Search'">
