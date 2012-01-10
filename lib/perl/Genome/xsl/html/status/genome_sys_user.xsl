@@ -8,31 +8,71 @@
     <xsl:call-template name="control_bar_view"/>
 
     <xsl:call-template name="view_header">
-      <xsl:with-param name="label_name" select="'User'" />
-      <xsl:with-param name="display_name" select="aspect[@name='username']/value" />
+      <xsl:with-param name="label_name" select="'User:'" />
+      <xsl:with-param name="display_name" select="aspect[@name='name']/value" />
       <xsl:with-param name="icon" select="'genome_sys_user_32'" />
     </xsl:call-template>
 
-    <script type="text/javascript" src="/res/js/app/genome_projectbox.js"></script>
-    <script>
-       $(document).ready(function() {
-            updateProjectBox("adukes");
-       });
+    <script type="text/javascript" src="/res/js/app/genome_sys_user.js"></script>
+
+    <link rel="stylesheet" href="/res/js/pkg/TableTools/media/css/TableTools.css" media="screen"/>
+    <script type="text/javascript" src="/res/js/pkg/dataTables/media/js/jquery.dataTables.min.js"></script>
+    <script type="text/javascript" src="/res/js/pkg/TableTools/media/js/TableTools.min.js"></script>
+
+    <script type="text/javascript" charset="utf-8">
+        window.username = "<xsl:value-of select="aspect[@name='username']/value"/>";
+        window.email = "<xsl:value-of select="aspect[@name='email']/value"/>";
     </script>
 
     <div class="content rounded shadow">
       <div class="project_container container">
 
-          <!-- details for user's projects -->
+          <div id="user_data" class="box_content rounded-bottom last" style="width: 35%">
+              <div class="padding10">
 
-            <div id="myProjectBox" class="project_box rounded-right">
-                <h4 style="float: left" id="myProjectsCount"></h4>
-                <div style="margin: 2px 0px 0px 10px; float: left; color: red" id="loadingStatus"></div>
+                <img alt="No photo available" style="width: 160px; height: 120px;">
+                    <xsl:attribute name="src">http://gscweb.gsc.wustl.edu/p/<xsl:value-of select="aspect[@name='username']/value"/>.jpg
+                    </xsl:attribute>
+                </img>
+                <br/><br/>
+
+                Send mail to 
+                <a>
+                    <xsl:attribute name="href">
+                    http://mailto:<xsl:value-of select="/object/aspect[@name='email']/value"/>
+                    </xsl:attribute>
+                <xsl:value-of select="/object/aspect[@name='email']/value"/>
+                </a>
                 <br/>
 
-                <ul id="projectBox"> </ul>
+              </div><!-- end .padding10 -->
+          </div> <!-- end user_data .box_content -->
 
-            </div>
+       
+        <br/> 
+        <div> <h3>Projects:</h3> </div>
+
+        <table id="projects" class="lister datatable">
+            <thead><tr id="table-header"><th></th><th>Name</th><th># Items</th></tr></thead>
+            <tbody>
+                <xsl:for-each select="/object/aspect[@name='projects']/object">
+                    <tr>
+                        <td><input class="selectionCheckbox" type="checkbox"/></td>
+                        <td>
+                            <a>
+                                <xsl:attribute name="href">
+                                    /view/genome/project/status.html?id=<xsl:value-of select="@id"/>
+                                </xsl:attribute>
+                            <xsl:value-of select="aspect[@name='name']/value"/>
+                            </a>
+                        </td>
+                        <td>
+                            <xsl:value-of select="aspect[@name='parts_count']/value"/>
+                        </td>
+                    </tr>
+                </xsl:for-each>
+            </tbody>
+        </table>
 
 
       </div> <!-- end container -->
@@ -41,3 +81,6 @@
   </xsl:template>
 
 </xsl:stylesheet>
+
+
+

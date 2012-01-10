@@ -43,6 +43,20 @@ class Genome::Project {
             reverse_as => 'project',
             doc => 'All the parts that compose this project',
         },
+        creator => {
+            is => 'Genome::Sys::Username',
+            is_calculated => 1,
+            calculate_from => ['parts'],
+            calculate => sub {
+                my (@parts) = @_;
+                for my $p (@parts) {
+                    if ($p->role && $p->role eq 'creator') {
+                        return $p->entity();
+                    }
+                }
+                return undef;
+            }
+        },
         part_set => {
             is => 'Genome::ProjectPart::Set',
             is_calculated => 1,
