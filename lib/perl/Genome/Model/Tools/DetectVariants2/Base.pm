@@ -14,11 +14,19 @@ class Genome::Model::Tools::DetectVariants2::Base {
     is => ['Genome::Command::Base'],
     is_abstract => 1,
     has => [
+        # TODO: update the workflow to be smart enough to let reference_build be an input, so we don't need to independently declare the _id
         reference_build_id => {
-            is => 'Text',
+            is => 'Number',
             doc => 'The build-id of a reference sequence build',
+            implied_by => 'reference_build',
             is_input => 1,
         },
+        reference_build => {
+            is => 'Genome::Model::Build::ImportedReferenceSequence',
+            id_by => 'reference_build_id',
+            doc => 'the reference sequence to use, i.e. NCBI-human-build37 or GRCh37-lite-build37', 
+        },
+
         reference_sequence_input => {
             is_constant => 1,
             calculate_from => ['reference_build_id'],
@@ -39,17 +47,35 @@ class Genome::Model::Tools::DetectVariants2::Base {
             doc => 'Location to save to the detector-specific files generated in the course of running',
             is_input => 1,
             is_output => 1,
-        },
+        },        
     ],
-    has_many_optional_input => {
+    has_optional => [
         alignment_results => {
             is => 'Genome::InstrumentData::AlignmentResult::Merged',
+            is_optional => 1,
+            is_many => 1,
         },
-        control_alignmnet_results => {
+        control_alignment_results => {
             is => 'Genome::InstrumentData::AlignmentResult::Merged',            
+            is_optional => 1,
+            is_many => 1,
         },
-    },
-    has_optional => [
+        roi_list => {
+            is => 'Genome::FeatureList',
+            is_optional => 1,
+            doc => 'only variants in these regions will be included in the final VCF',
+        },
+        roi_wingspan => {
+            is => 'Number',
+            is_optional => 1,
+            doc => 'include variants within N nucleotides of a region of interest'
+        },
+        pedigree_file_path => {
+            is => 'FilePath',
+            is_optional => 1,
+            doc => 'when supplied overrides the automatic lookup of familial relationships'
+        },
+        #old
         aligned_reads_input => {
             is => 'Text',
             doc => 'Location of the aligned reads input file',
@@ -62,13 +88,6 @@ class Genome::Model::Tools::DetectVariants2::Base {
             shell_args_position => '2',
             is_input => 1,
             is_output => 1,
-        },
-        multiple_bams => {
-            is => 'Text',
-            is_many => 1,
-            doc => 'run on many bams',
-            is_input =>1,
-            is_output=>1,
         },
         aligned_reads_sample => {
             is => 'Text',
@@ -107,12 +126,8 @@ This is just an abstract base class for variant detector modules.
 EOS
 }
 
-sub execute {
-    
+sub execute {    
     my $self = shift;
-    unless($self->_check_for_multiple_bams){
-        die $self->error_message('Failed to find proper bam inputs.');
-    }
 
     unless($self->_verify_inputs) {
         die $self->error_message('Failed to verify inputs.');
@@ -125,7 +140,15 @@ sub execute {
     unless($self->_detect_variants) {
         die $self->error_message('Failed in main execution logic.');
     }
-    
+
+    if (-e $self->output_directory . '/snvs.merged.vcf.gz') {
+        # the subsequent steps are not used when there is a merged VCF
+        # that logic in _detect_variants in which makes a merged VCF should be 
+        # a variation of the regular (new) VCF generation logic for single-sample detectors
+        # and since those VCF generation commands will inherit from this, we will have common cleanup
+        return 1;
+    }
+
     unless($self->_generate_standard_files) {
         die $self->error_message('Failed to generate standard files from detector-specific files');
     }
@@ -134,34 +157,6 @@ sub execute {
         die $self->error_message('Failed to promote staged data.');
     }
     
-    return 1;
-}
-
-sub _check_for_multiple_bams {
-    my $self = shift;
-    if(defined($self->multiple_bams)){
-        die $self->error_message("This pipeline does not currently support multiple bams.");
-    }else {
-        return 1;
-    }
-    
-    
-    unless(defined $self->multiple_bams ){
-        if(defined($self->aligned_reads_input)){
-            return 1;
-        }else{
-            return undef;
-        }
-    }
-    warn "This pipeline does not currently support running on multiple bams. It will proceed only with the first bam in the list.\n";
-
-    if(defined $self->aligned_reads_input){
-        return undef;
-    }
-
-    my @bams = $self->multiple_bams;
-    $self->aligned_reads_input($bams[0]);
-
     return 1;
 }
 
@@ -185,18 +180,22 @@ sub _verify_inputs {
         return;
     }
 
+    # OLD API
+
     my $aligned_reads_file = $self->aligned_reads_input;
-    unless(Genome::Sys->validate_file_for_reading($aligned_reads_file)) {
-        $self->error_message("aligned reads input $aligned_reads_file was not found.");
-        return;
+    if (defined $aligned_reads_file) {
+        unless(Genome::Sys->validate_file_for_reading($aligned_reads_file)) {
+            $self->error_message("aligned reads input $aligned_reads_file was not found.");
+            return;
+        }
+        unless(Genome::Sys->validate_file_for_reading($aligned_reads_file.".bai")) {
+            $self->error_message("aligned reads input index ".$aligned_reads_file.".bai was not found.");
+            return;
+        }
     }
-    unless(Genome::Sys->validate_file_for_reading($aligned_reads_file.".bai")) {
-        $self->error_message("aligned reads input index ".$aligned_reads_file.".bai was not found.");
-        return;
-    }
-    
-    if(defined($self->control_aligned_reads_input)){
-        my $control_aligned_reads_file = $self->control_aligned_reads_input;
+
+    my $control_aligned_reads_file = $self->control_aligned_reads_input;
+    if(defined $control_aligned_reads_file) {        
         unless(Genome::Sys->validate_file_for_reading($control_aligned_reads_file)) {
             $self->error_message("control aligned reads input $control_aligned_reads_file was not found.");
             return;
@@ -206,6 +205,35 @@ sub _verify_inputs {
             return;
         }
     }
+
+    # NEW API
+
+    my @alignment_results = $self->alignment_results;
+    my @control_alignment_results = $self->control_alignment_results;
+
+    my $errors = 0;
+    for my $result (@alignment_results,@control_alignment_results) { 
+        my $bam = $result->merged_alignment_bam_path; 
+        unless (Genome::Sys->validate_file_for_reading($bam)) {
+            $self->error_message("BAM file unreadable: $bam for " . $result->__display_name__);
+            $errors++;
+        }
+        unless (Genome::Sys->validate_file_for_reading($bam . '.bai')) {
+            $self->error_message("BAM index unreadable: $bam.bai for " . $result->__display_name__); 
+            $errors++;
+        }
+    }
+    if (@control_alignment_results and @control_alignment_results != @alignment_results) {
+        $self->error_message(
+            "Got " . scalar(@control_alignment_results) 
+            . " control alignment results with "
+            . scalar(@alignment_results) 
+            . " regular results.  Expected the same number or zero!"
+        );
+        $errors++;
+    }
+    return if $errors;
+
     return 1;
 }
 

@@ -185,7 +185,7 @@ sub __profile_errors__ {
     return @errors;
 }
 
-our $USE_NEW_DISPATCHER = 0;
+our $SHORTCUT_ALIGNMENT_QUERY = 0;
 
 sub _execute_build {
     my ($self,$build) = @_;
@@ -219,10 +219,10 @@ sub _execute_build {
     # get the reference sequence
     #
 
-    my $reference_sequence_build = $build->reference_sequence_build;
-    $build->status_message("reference sequence build: " . $reference_sequence_build->__display_name__);
+    my $reference_build = $build->reference_sequence_build;
+    $build->status_message("reference sequence build: " . $reference_build->__display_name__);
     
-    my $reference_fasta = $reference_sequence_build->full_consensus_path('fa');
+    my $reference_fasta = $reference_build->full_consensus_path('fa');
     unless(-e $reference_fasta){
         die $self->error_message("fasta file for reference build doesn't exist!");
     }
@@ -234,148 +234,123 @@ sub _execute_build {
     # once Tom's new alignment thing is in place, it would actually generate them in parallel
     #
     
-    $self->status_message('Gathering alignments...');    
-    my $overall_alignment_result = Genome::InstrumentData::Composite->get_or_create(
-        inputs => {
-            instrument_data => \@instdata,
-            reference_sequence_build => $reference_sequence_build,
-        },
-        strategy => $self->alignment_strategy,
-        log_directory => $build->log_directory,
-    );
+    my $actually_gather_alignment_results = 1;
 
-    # used by the updated DV2 API
-    my @per_sample_alignment_results = $overall_alignment_result->_merged_results;
-    for my $r (@per_sample_alignment_results) {
-        $r->add_user(label => 'uses', user => $build);
-    }
-    $self->status_message('Found ' . scalar(@per_sample_alignment_results) . ' per-sample alignmnet results.');
-
-    # used directly by the merge tool until we switch to using the above directly
-    my @bams = $overall_alignment_result->bam_paths;
-    $self->status_message('Found ' . scalar(@bams) . ' merged BAMs.');
-    for my $bam (@bams){
-        unless (-e $bam){
-            die $self->error_message("Bam file could not be reached at: ".$bam);
-        }
-    }
-
-    # this is used by the old, non-DV2 code, but is also used by vcf2maf, 
-    # which reliese on annotation having been run on the original samples
-    my @builds = $self->_get_builds(\@per_sample_alignment_results);
-
-    # do/find variant detection results, and get the path to a multi-sample vcf
-    my $multisample_vcf;
-    if ($USE_NEW_DISPATCHER) {
-        
-        # run the DV2 API to do variant detection as we do in somatic, but let it take in N BAMs
-        # _internally_ it will (for the first pass):
-        #  notice it's running on multiple BAMs
-        #  get the single-BAM results
-        #  merge them with joinx and make a combined VCF (tolerating the fact that per-bam variants are not VCF)
-        #  run bamreadcount to fill-in the blanks
-
-        ## begin running the DV2 dispatcher (this is out right out of the somatic validation DetectVariants step)
-
-        $self->status_message("Executing detect variants step");        
-
-        my %params;
-        $params{snv_detection_strategy} = $self->snv_detection_strategy if $self->snv_detection_strategy;
-        $params{indel_detection_strategy} = $self->indel_detection_strategy if $self->indel_detection_strategy;
-        $params{sv_detection_strategy} = $self->sv_detection_strategy if $self->sv_detection_strategy;
-        $params{cnv_detection_strategy} = $self->cnv_detection_strategy if $self->cnv_detection_strategy;
-
-        my $reference_build = $build->reference_sequence_build;
-        my $reference_fasta = $reference_build->full_consensus_path('fa');
-        unless(-e $reference_fasta){
-            die $self->error_message("fasta file for reference build doesn't exist!");
-        }
-        $params{reference_build_id} = $reference_build->id;
-
-        my $output_dir = $build->data_directory."/variants";
-        $params{output_directory} = $output_dir;
-
-        # instead of setting {control_,}aligned_reads_{input,sample}
-        # set alignment_results and control_alignment_results
-
-        $params{alignment_results} = \@per_sample_alignment_results;
-        $params{control_alignment_results} = [];
-        $params{pedigree_file_path} = $build->pedigree_file_path;
-        $params{roi_list} = $build->roi_list;
-        $params{roi_wingspan} = $self->roi_wingspan;
-
-        my @arids = map { $_->id } @per_sample_alignment_results;
-        print Data::Dumper::Dumper(\@arids,\%params);
-
-        ###
-
-        my $command = Genome::Model::Tools::DetectVariants2::Dispatcher->create(%params);
-        $DB::single = 1;
-
-        unless ($command){
-            die $self->error_message("Couldn't create detect variants dispatcher from params:\n".Data::Dumper::Dumper \%params);
-        }
-
-        my $rv = $command->execute;
-        my $err = $@;
-        unless ($rv){
-            die $self->error_message("Failed to execute detect variants dispatcher(err:$@) with params:\n".Data::Dumper::Dumper \%params);
-        }
-        else {
-            #users set below
-        }
-
-        $self->status_message("detect variants command completed successfully");
-
-        ## end running the DV2 dispatcher
-    }
-    else {
-        # old logic which will move inside of DV2
-
-        my $vcf_output_directory = $build->data_directory."/variants";
-        unless (-e $vcf_output_directory) {
-            unless(mkdir $vcf_output_directory) {
-                die $self->error_message("Output directory doesn't exist and can't be created at: ".$vcf_output_directory);
-            }
-            unless(mkdir $vcf_output_directory."/merge_vcfs") {
-                die $self->error_message("Output directory doesn't exist and can't be created at: ".$vcf_output_directory);
-            }
-        }
-       
-        my %region_limiting_params;
-        if (my $roi_list = $build->roi_list) {
-            %region_limiting_params = ( 
-                roi_file => $roi_list->file_path,
-                roi_name => $roi_list->name,
-                wingspan => $self->processing_profile->roi_wingspan,
-            );
-        }
-        
-        my $max_merge = (scalar(@builds) <= 50) ? 50 : int(sqrt(scalar(@builds))+1);
-        $self->status_message("Chose max_files_per_merge of: ".$max_merge);
-
-        my $snv_vcf_creation = Genome::Model::Tools::Vcf::CreateCrossSampleVcf->create(
-            builds => \@builds,
-            output_directory => $vcf_output_directory,
-            max_files_per_merge => $max_merge,
-            variant_type => 'snvs',
-            %region_limiting_params,
+    my @per_sample_alignment_results;
+    my @bams;
+    my @builds;
+    
+    if ($SHORTCUT_ALIGNMENT_QUERY) {
+        # shortcut to speed testing
+        @per_sample_alignment_results = Genome::SoftwareResult->get(
+            [
+                '116553088',
+                '116553238',
+                '116553281'
+            ]
         );
         
-        my $vcf_result;
-        unless($vcf_result = $snv_vcf_creation->execute){
-            die $self->error_message("Could not complete vcf merging!");
-        }
-        my $vcf_file; 
-        if(-s $vcf_result){
-            $vcf_file = $vcf_result;
-        } else {
-            die $self->error_message("Could not locate an output VCF");
-        }
-        $self->status_message("Merged VCF file located at: ".$vcf_file);
+        @builds = Genome::Model::Build->get(
+            [
+                '116552788',
+                '116552996',
+                '116553031'
+            ]
+        );
 
-        $multisample_vcf = $vcf_file;
+        @bams = (
+          '/gscmnt/gc7001/info/build_merged_alignments/merged-alignment-blade13-4-10.gsc.wustl.edu-rlong-14103-116553088/116553088.bam',
+          '/gscmnt/gc7001/info/build_merged_alignments/merged-alignment-blade13-4-10.gsc.wustl.edu-rlong-17210-116553238/116553238.bam',
+          '/gscmnt/ams1152/info/build_merged_alignments/merged-alignment-blade13-4-7.gsc.wustl.edu-rlong-12110-116553281/116553281.bam'
+        );
     }
+    else {
+        $self->status_message('Gathering alignments...');    
+        my $overall_alignment_result = Genome::InstrumentData::Composite->get_or_create(
+            inputs => {
+                instrument_data => \@instdata,
+                reference_sequence_build => $reference_build,
+            },
+            strategy => $self->alignment_strategy,
+            log_directory => $build->log_directory,
+        );
+
+        # used by the updated DV2 API
+        @per_sample_alignment_results = $overall_alignment_result->_merged_results;
+        for my $r (@per_sample_alignment_results) {
+            $r->add_user(label => 'uses', user => $build);
+        }
+        $self->status_message('Found ' . scalar(@per_sample_alignment_results) . ' per-sample alignmnet results.');
+
+        # used directly by the merge tool until we switch to using the above directly
+        @bams = $overall_alignment_result->bam_paths;
+        $self->status_message('Found ' . scalar(@bams) . ' merged BAMs.');
+        for my $bam (@bams){
+            unless (-e $bam){
+                die $self->error_message("Bam file could not be reached at: ".$bam);
+            }
+        }
+
+        # this is used by the old, non-DV2 code, but is also used by vcf2maf, 
+        # which reliese on annotation having been run on the original samples
+        @builds = $self->_get_builds(\@per_sample_alignment_results);
+    
+        my @ar_ids = map { $_->id } @per_sample_alignment_results;
+        my @build_ids = map { $_->id } @builds; 
+        print Data::Dumper::Dumper(\@ar_ids, \@build_ids, \@bams);
+    }
+
+    #
+    # Detect Variants
+    #
+    # run the DV2 API to do variant detection as we do in somatic, but let it take in N BAMs
+    # _internally_ it will (for the first pass):
+    #  notice it's running on multiple BAMs
+    #  get the single-BAM results
+    #  merge them with joinx and make a combined VCF (tolerating the fact that per-bam variants are not VCF)
+    #  run bamreadcount to fill-in the blanks
+    #
+
+    $self->status_message("Executing detect variants step");        
+
+    my %params;
+    $params{snv_detection_strategy} = $self->snv_detection_strategy if $self->snv_detection_strategy;
+    $params{indel_detection_strategy} = $self->indel_detection_strategy if $self->indel_detection_strategy;
+    $params{sv_detection_strategy} = $self->sv_detection_strategy if $self->sv_detection_strategy;
+    $params{cnv_detection_strategy} = $self->cnv_detection_strategy if $self->cnv_detection_strategy;
+
+    $params{reference_build_id} = $reference_build->id;
+
+    my $output_dir = $build->data_directory."/variants";
+    $params{output_directory} = $output_dir;
+
+    # instead of setting {control_,}aligned_reads_{input,sample}
+    # set alignment_results and control_alignment_results
+
+    $params{alignment_results} = \@per_sample_alignment_results;
+    $params{control_alignment_results} = [];
+    $params{pedigree_file_path} = $build->pedigree_file_path;
+    $params{roi_list} = $build->roi_list;
+    $params{roi_wingspan} = $self->roi_wingspan;
+
+    my $command = Genome::Model::Tools::DetectVariants2::Dispatcher->create(%params);
+    unless ($command){
+        die $self->error_message("Couldn't create detect variants dispatcher from params:\n".Data::Dumper::Dumper \%params);
+    }
+
+    my $rv = $command->execute;
+    my $err = $@;
+    unless ($rv){
+        die $self->error_message("Failed to execute detect variants dispatcher(err:$@) with params:\n".Data::Dumper::Dumper \%params);
+    }
+
+    $self->status_message("detect variants command completed successfully");
+
+    my $multisample_vcf = $output_dir . '/snvs.merged.vcf.gz';
+
+    #
+    # Continue with analysis of the multisample_vcf
+    #
 
     # dump pedigree data into a file
 
