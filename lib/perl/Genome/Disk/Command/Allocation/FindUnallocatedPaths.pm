@@ -9,19 +9,22 @@ use IO::Dir;
 class Genome::Disk::Command::Allocation::FindUnallocatedPaths{
     is => 'Command::V2',
     has_input => [
-        disk_volume => {
+        volume => {
             is => 'Genome::Disk::Volume',
+            shell_args_position => 1,
             doc => 'Identifier for disk volume on which to find unallocated paths.',
         },
     ],
     has_optional => [
         _allocated_paths => {
             is => 'HashRef',
+            is_transient => 1,
         },
         _unallocated_paths => {
             is => 'Text',
             is_many => 1,
             is_output => 1,
+            is_transient => 1,
         },
     ],
     doc => 'Finds unallocated paths on the provided volume',
