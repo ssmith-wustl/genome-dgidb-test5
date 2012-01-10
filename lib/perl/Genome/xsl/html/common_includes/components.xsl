@@ -211,7 +211,7 @@ $(document).data('updatedOn', new Date(]]><xsl:copy-of select="$currentTime"/><!
             </li>
         </xsl:when>
         <xsl:otherwise><xsl:comment>items in control bar when not the search main page</xsl:comment>
-            <li style="width: 190px; float: right">
+            <li style="width: 210px; float: right">
             <form id="search" action="/view/genome/search/query/status.html">
                 <input name="query"/>
                 <a id="search_submit" style="padding: 0px 5px 0px 5px" class="app btn shadow" onClick="javascript:$('#search').submit();">
