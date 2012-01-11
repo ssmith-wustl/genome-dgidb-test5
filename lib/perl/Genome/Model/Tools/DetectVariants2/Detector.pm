@@ -179,6 +179,11 @@ This is just an abstract base class for variant detector modules.
 EOS
 }
 
+sub _supports_cross_sample_detection {
+    my ($class, $version, $vtype, $params) = @_;
+    return 0; # not by default
+}
+
 sub create {
     my $class = shift;
 

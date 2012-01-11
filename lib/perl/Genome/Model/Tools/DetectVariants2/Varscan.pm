@@ -25,6 +25,13 @@ sub help_synopsis {
     my $self = shift;
     return <<"EOS"
 gmt detect-variants2 varscan --aligned_reads_input input.bam --reference_sequence_input reference.fa --output-directory ~/example/
+
+gmt detect-variants2 varscan \
+    --version 2.2.6
+    --reference-build NCBI-human-build36 \ 
+    --output-directory /gscuser/ssmith/od \ 
+    --aligned-reads-input /gscmnt/gc7001/info/build_merged_alignments/merged-alignment-blade13-4-10.gsc.wustl.edu-rlong-14103-116553088/116553088.bam \
+    --aligned-reads-sample Indel_Validation_H_IJ-NA19238-NA19238
 EOS
 }
 

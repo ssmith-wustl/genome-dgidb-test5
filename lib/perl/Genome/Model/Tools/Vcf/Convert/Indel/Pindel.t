@@ -12,6 +12,11 @@ use warnings;
 use above "Genome";
 use Test::More;
 
+my $total_mem_kb = Genome::Sys->mem_limit_kb;
+if ($total_mem_kb < 2097152) { # Pindel requires about 2 gigs of memory
+    plan skip_all => 'must be run on a machine with at least 2 gigabytes of memory';
+}
+
 plan tests => 5;
 
 use_ok('Genome::Model::Tools::Vcf::Convert::Indel::Pindel');
