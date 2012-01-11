@@ -111,6 +111,9 @@ my $prepare = Genome::Model::Event::Build::DeNovoAssembly::PrepareInstrumentData
 ok($prepare, 'create prepare instrument data');
 $prepare->dump_status_messages(1);
 ok($prepare->execute, 'execute prepare instrument data');
+is($build->reads_attempted, 30000, 'reads attempted');
+is($build->reads_processed, 30000, 'reads processed');
+is($build->reads_processed_success, '1.000', 'reads processed success');
 
 @existing_assembler_input_files = $build->existing_assembler_input_files;
 is(@existing_assembler_input_files, 1, 'assembler input files exist');

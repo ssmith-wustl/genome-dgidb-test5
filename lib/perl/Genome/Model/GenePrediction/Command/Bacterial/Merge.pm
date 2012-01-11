@@ -1129,24 +1129,15 @@ sub iprscan
 
     while ( my $seq = $seqio->next_seq() )
     {
-        eval { 
-            my $accession = $seq->accession();
 
-            unless ( defined($accession) ) { next; }
+        my $accession = $seq->accession();
 
-            my @features = $seq->get_SeqFeatures();
+        unless ( defined($accession) ) { next; }
 
-            if (@features) { $evidence{$accession} = 1; }
-        };
-        if ($@) {
-            if ($@ =~ /ERROR: not well-formed \(invalid token\)/) {
-                # TODO May want to put some kind of message here, write to file, etc
-                next;
-            }
-            else {
-                die $@;
-            }
-        }
+        my @features = $seq->get_SeqFeatures();
+
+        if (@features) { $evidence{$accession} = 1; }
+
     }
     unlink $temp_fn;
 
