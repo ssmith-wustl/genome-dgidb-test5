@@ -169,8 +169,16 @@ sub link_result_to_build {
     my $result = shift;
     my $build = $self->build;
 
-    $result->add_user(user => $build, label => 'uses');
-    Genome::Sys->create_symlink($result->output_dir, join('/', $build->data_directory, 'loh'));
+    # If an output directory has been provided (not going to the build dir), the build is not a user
+    my $symlink_target;
+    if ($self->output_directory) {
+        $symlink_target = $self->output_directory;
+    } else {
+        $result->add_user(user => $build, label => 'uses');
+        $symlink_target = join('/', $self->build_directory, 'loh')
+    }
+
+    Genome::Sys->create_symlink($result->output_dir, $symlink_target);
 
     return 1;
 }
