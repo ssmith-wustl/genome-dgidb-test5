@@ -873,6 +873,10 @@ sub add_detectors_and_filters {
                     $inputs_to_store->{$unique_filter_name."_params"}->{right_property_name} = 'params';
                     $inputs_to_store->{$unique_filter_name."_params"}->{right_operation} = $filter->{operation};
 
+                    $inputs_to_store->{$unique_filter_name."_version"}->{value} = $filter->{version};
+                    $inputs_to_store->{$unique_filter_name."_version"}->{right_property_name} = 'version';
+                    $inputs_to_store->{$unique_filter_name."_version"}->{right_operation} = $filter->{operation};
+
                     $inputs_to_store->{$unique_filter_name."_output_directory"}->{value} = $filter_output_directory;
                     $inputs_to_store->{$unique_filter_name."_output_directory"}->{right_property_name} = 'output_directory';
                     $inputs_to_store->{$unique_filter_name."_output_directory"}->{right_operation} = $filter->{operation};

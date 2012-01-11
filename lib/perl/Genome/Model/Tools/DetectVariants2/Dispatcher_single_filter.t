@@ -25,9 +25,9 @@ ok($ref_seq_build, 'human36 reference sequence build') or die;
 
 no warnings;
 # Override lock name because if people cancel tests locks don't get cleaned up.
-*Genome::SoftwareResult::_resolve_lock_name = sub {
-    return Genome::Sys->create_temp_file_path;
-};
+#*Genome::SoftwareResult::_resolve_lock_name = sub {
+#    return Genome::Sys->create_temp_file_path;
+#};
 use warnings;
 
 #Parsing tests

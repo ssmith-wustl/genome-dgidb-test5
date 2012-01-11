@@ -60,7 +60,6 @@ sub create {
     my $class = shift;
 
     my $self = $class->SUPER::create(@_);
-    $DB::single=1;
 
     unless ($self){
         die $self->error_message("Failed to create software-result!");
@@ -238,6 +237,18 @@ sub _validate_input {
     }
 
     return 1;
+}
+
+sub get_module_name_from_class_name {
+    my $self = shift;
+    my $class = shift;
+    my @words = split('::', $class);
+    my $retval = 1;
+
+    unless(scalar(@words) > 2 and $words[0] eq 'Genome') {
+        die('Could not determine proper class-name automatically.');
+    }
+    return $words[-1];
 }
 
 sub line_count {

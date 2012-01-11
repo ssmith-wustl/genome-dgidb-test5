@@ -1126,9 +1126,9 @@ sub _create_bed_file {
     return 1;
 }
 
-sub params_for_result {
+sub params_for_filter_result {
     my $self = shift;
-    my ($params) = $self->SUPER::params_for_result;
+    my ($params) = $self->SUPER::params_for_filter_result;
 
     $params->{chromosome_list} = $self->specify_chr;
     return $params;

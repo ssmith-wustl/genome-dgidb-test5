@@ -119,7 +119,6 @@ sub _run_vcf_converter {
         filter_description => $filter_description,
         bed_input => 1,
     );
-    $params{control_aligned_reads_sample} = $self->control_aligned_reads_sample if defined $self->control_aligned_reads_sample;
 
     my $vcf_filter_cmd = Genome::Model::Tools::Vcf::VcfFilter->create(%params);
     unless($vcf_filter_cmd->execute){

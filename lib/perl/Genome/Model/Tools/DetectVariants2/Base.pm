@@ -336,6 +336,25 @@ sub _run_bed_converter {
 }
 
 
+sub _try_vcf {
+    my $self = shift;
+    my @types;
+    for ("snvs","indels"){
+        my $func = "detect_".$_;
+        if($self->$func){
+            push @types,$_;
+        }
+    }
+
+    my $try_vcf=undef;
+
+    for (@types){
+        if(Genome::Model::Tools::DetectVariants2::Result::Vcf->conversion_class_name($self->class,$_)){
+            return 1;
+        }
+    }
+    return 0;
+}
 
 
 sub _promote_staged_data {

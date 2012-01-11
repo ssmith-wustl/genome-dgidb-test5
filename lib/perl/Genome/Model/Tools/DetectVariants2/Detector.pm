@@ -449,9 +449,15 @@ sub _link_vcf_output_directory_to_result {
     for my $vcf (@vcfs){
         my $target = $output_directory . "/" . basename($vcf);
         $self->status_message("Attempting to link : " .$vcf."  to  ". $target);
-        unless(-e $target) {
-            Genome::Sys->create_symlink($vcf, $target);
+        if(-l $target) {
+            $self->status_message("Already found a vcf linked in here.");
+            return 1;
+        } elsif(-e $target) {
+            die $self->error_message("Found something in place of the vcf symlink.");
         }
+        
+        Genome::Sys->create_symlink($vcf, $target);
+        
     }
 
     return 1;
