@@ -22,7 +22,7 @@ use_ok('Genome::Model::Build::DeNovoAssembly::Newbler') or die;
 my $base_dir = '/gsc/var/cache/testsuite/data/Genome-Model/DeNovoAssembly';
 my $archive_path = $base_dir.'/inst_data/-7777/archive.tgz';
 ok(-s $archive_path, 'inst data archive path') or die;
-my $example_dir = $base_dir.'/newbler_v2';
+my $example_dir = $base_dir.'/newbler_v4';
 ok(-d $example_dir, 'example dir') or die;
 my $tmpdir = File::Temp::tempdir(CLEANUP => 1);
 
@@ -195,7 +195,7 @@ my %expected_metrics = (
     'average_insert_size_used' => '260',
     'n50_contig_length' => '208',
     'genome_size_used' => '4500000',
-    'reads_not_assembled_pct' => '0.945',
+    'reads_not_assembled_pct' => '0.940',
     'supercontigs' => '314',
     'average_supercontig_length' => '210',
     'contigs' => '314',
@@ -210,7 +210,7 @@ my %expected_metrics = (
     'read_depths_ge_5x' => '13.6'
 );
 for my $metric_name ( keys %expected_metrics ) {
-    ok( $expected_metrics{$metric_name} eq $build->$metric_name, "$metric_name metrics match" );
+    is($build->$metric_name, $expected_metrics{$metric_name}, $metric_name);
 }
 
 #print $build->data_directory."\n"; <STDIN>;
