@@ -120,6 +120,10 @@ $pp->read_processor('trim bwa-style -trim-qual-level 10 | filter by-length -filt
 ok($prepare, 'create prepare instrument data');
 $prepare->dump_status_messages(1);
 ok($prepare->execute, 'execute prepare instrument data');
+# metrics
+is($build->reads_attempted, 30000, 'reads attempted');
+is($build->reads_processed, 28028, 'reads processed');
+is($build->reads_processed_success, .934, 'reads processed success');
 
 my ($inst_data) = $build->instrument_data;
 ok($inst_data, 'instrument data for build');
