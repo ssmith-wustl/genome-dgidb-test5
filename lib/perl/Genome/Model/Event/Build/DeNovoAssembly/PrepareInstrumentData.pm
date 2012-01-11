@@ -13,7 +13,7 @@ class Genome::Model::Event::Build::DeNovoAssembly::PrepareInstrumentData {
         _metrics => {
             is => 'Hash',
             is_optional => 1,
-            default_value => { bases => 0, count => 0 },
+            default_value => { input => { bases => 0, count => 0}, output => { bases => 0, count => 0}, },
         },
         _base_limit => {
             is => 'Integer',
@@ -46,11 +46,14 @@ sub _tempdir {
     return $self->{_tempdir};
 }
 
-sub _metrics_file { 
-    return $_[0]->_tempdir.'/metrics.txt';
+sub _input_metrics_file { 
+    return $_[0]->_tempdir.'/metrics.input.txt';
 }
 
-#< Execute >#
+sub _output_metrics_file { 
+    return $_[0]->_tempdir.'/metrics.output.txt';
+}
+
 sub execute {
     my $self = shift;
 
@@ -64,9 +67,7 @@ sub execute {
     }
     $self->status_message('Verify instrument data...OK');
 
-    $self->status_message('Setup base limit');
     $self->_setup_base_limit;
-    $self->status_message('OK...setup base limit');
 
     my @existing_assembler_input_files = $self->build->existing_assembler_input_files;
     if ( @existing_assembler_input_files ) { 
@@ -84,10 +85,9 @@ sub execute {
     INST_DATA: for my $instrument_data ( @instrument_data ) {
         my $process_ok = $self->_process_instrument_data($instrument_data);
         return if not $process_ok;
-        if ( $self->_is_there_a_base_limit_and_has_it_been_exceeded ) {
-            $self->status_message('Reached base limit: '.$self->_base_limit);
-            last INST_DATA;
-        }
+        my $update_metrics = $self->_update_metrics;
+        return if not $update_metrics;
+        last INST_DATA if $self->_has_base_limit_been_reached;
     }
     $self->status_message('Process instrument data...OK');
 
@@ -99,70 +99,80 @@ sub execute {
     }
     $self->status_message('Verify assembler input files...OK');
 
-    $self->status_message('Prepare instrument data...OK');
+    my $reads_attempted = $self->_metrics->{input}->{count};
+    my $reads_processed = $self->_metrics->{output}->{count};
+    my $reads_processed_success = ( $reads_attempted ? sprintf('%0.3f', $reads_processed / $reads_attempted) : 0);
+    $self->build->add_metric(name => 'reads attempted', value => $reads_attempted);
+    $self->build->add_metric(name => 'reads processed', value => $reads_processed);
+    $self->build->add_metric(name => 'reads processed success', value => $reads_processed_success);
+    $self->status_message('Reads attempted: '.$reads_attempted);
+    $self->status_message('Reads processed: '.$reads_processed);
+    $self->status_message('Reads processed success: '.($reads_processed_success * 100).'%');
 
+    $self->status_message('Prepare instrument data...OK');
     return 1;
 }
-#<>#
 
-#< Base Limit >#
 sub _setup_base_limit {
     my $self = shift;
 
     my $base_limit = $self->build->calculate_base_limit_from_coverage;
     if ( defined $base_limit ) {
+        $self->status_message('Base limit: '.$base_limit);
         $self->_base_limit($base_limit);
     }
 
     return 1;
 }
 
-sub _is_there_a_base_limit_and_has_it_been_exceeded {
+sub _update_metrics {
     my $self = shift;
-
-    return if not defined $self->_base_limit; # ok
-
-    $self->status_message('Current base limit: '.$self->_base_limit);
-
     $self->status_message('Updating metrics...');
-    my $metrics_file = $self->_metrics_file;
-    $self->status_message("Metrics file: $metrics_file");
-    if ( not -s $metrics_file ) {
-        $self->error_message("No metrics file ($metrics_file) from read processor command.");
-        return;
-    }
-
-    my  $fh = eval { Genome::Sys->open_file_for_reading($metrics_file); };
-    if ( not $fh ) {
-        $self->error_message("Failed to open metrics file ($metrics_file): $@");
-        return;
-    }
 
     my $metrics = $self->_metrics;
-    my %metrics_from_file;
-    while ( my $line = $fh->getline ) {
-        chomp $line;
-        my ($metric, $val) = split('=', $line);
-        $self->status_message($metric.' from metrics file is '.$val);
-        $metrics_from_file{$metric} = $val;
-        $metrics->{$metric} += $metrics_from_file{$metric};
-        $self->status_message("Updated $metric to ".$metrics->{$metric});
+    for my $type (qw/ input output /) {
+        my $metrics_file_method = '_'.$type.'_metrics_file';
+        my $metrics_file = $self->$metrics_file_method;
+        $self->status_message(ucfirst($type)." file: $metrics_file");
+        if ( not -s $metrics_file ) {
+            Carp::confess("No metrics file ($metrics_file) from read processor command.");
+        }
+
+        my  $fh = eval { Genome::Sys->open_file_for_reading($metrics_file); };
+        if ( not $fh ) {
+            Carp::confess("Failed to open metrics file ($metrics_file): $@");
+        }
+
+        my %metrics_from_file;
+        while ( my $line = $fh->getline ) {
+            chomp $line;
+            my ($name, $val) = split('=', $line);
+            $metrics_from_file{$name} = $val;
+            $metrics->{$type}->{$name} += $metrics_from_file{$name};
+            $self->status_message("Updated $type $name to ".$metrics->{$type}->{$name});
+        }
     }
 
-    if ( not defined $metrics->{bases} ) {
-        Carp::confess('No bases found in metrics');
-    }
+    $self->status_message('Updating metrics...OK');
+    return 1;
+}
 
-    $self->_metrics($metrics);
-    $self->status_message('OK...Updated metrics');
+sub _has_base_limit_been_reached {
+    my $self = shift;
 
-    if ( ($self->_base_limit - $metrics->{bases}) <= 0 ) {
+    return if not defined $self->_base_limit;
+
+    $self->status_message('Base limit: '.$self->_base_limit);
+    my $bases_processed = $self->_metrics->{output}->{bases};
+    $self->status_message('Bases processed: '.$bases_processed);
+    if ( ($self->_base_limit - $bases_processed) <= 0 ) {
+        $self->status_message('Reached base limit. Stop processing!');
         return 1;
     }
 
+    $self->status_message('Base limit not reached. Continue processing.');
     return;
 }
-#<>#
 
 sub _process_instrument_data {
     my ($self, $instrument_data) = @_;
@@ -237,7 +247,6 @@ sub _process_instrument_data {
 
     if ( defined $self->_base_limit ) { # coverage limit by bases
         my $metrics = $self->_metrics;
-        #my $current_base_limit = $self->_base_limit - $metrics->{bases};
         my $current_base_limit = $self->_base_limit;
         $current_base_limit -= $metrics->{bases} if exists $metrics->{bases};
         $self->status_message("Limiting bases by base count of $current_base_limit");
@@ -250,8 +259,9 @@ sub _process_instrument_data {
 
     my @sx_cmd_parts = map { 'gmt sx '.$_ } @read_processor_parts;
     $sx_cmd_parts[0] .= ' --input '.join(',', @inputs);
+    $sx_cmd_parts[0] .= ' --input-metrics '.$self->_input_metrics_file;
     $sx_cmd_parts[$#read_processor_parts] .= ' --output '.$output;
-    $sx_cmd_parts[$#read_processor_parts] .= ' --output-metrics '.$self->_metrics_file;
+    $sx_cmd_parts[$#read_processor_parts] .= ' --output-metrics '.$self->_output_metrics_file;
 
     # Run
     my $sx_cmd = join(' | ', @sx_cmd_parts);
