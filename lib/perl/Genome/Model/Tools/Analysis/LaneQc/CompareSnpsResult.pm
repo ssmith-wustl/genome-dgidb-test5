@@ -22,10 +22,6 @@ use Genome;
 class Genome::Model::Tools::Analysis::LaneQc::CompareSnps {
     is => 'Genome::SoftwareResult::Stageable',
 
-    has_optional => [
-        scratch_directory => { is => 'Text' },
-    ],
-
     has_param => [
         verbose       => { is => 'Text', doc => "Turns on verbose output [0]", is_optional => 1},
         min_depth_het => { is => 'Text', doc => "Minimum depth to compare a het call", is_optional => 1, default => 8},
@@ -76,7 +72,6 @@ sub create {
     return unless $self;
 
     my $rv = eval {
-        $self->_prepare_scratch_directory;
         $self->_prepare_staging_directory;
         $self->_generate_data($self->temp_staging_directory);
         $self->_prepare_output_directory;
@@ -96,25 +91,6 @@ sub create {
     $self->status_message('All processes completed.');
 
     return $self;
-}
-
-sub _prepare_scratch_directory {
-    my $self = shift;
-
-    return $self->scratch_directory if ($self->scratch_directory);
-
-    my $base_temp_dir = Genome::Sys->base_temp_directory();
-
-    my $hostname = hostname;
-    my $user = $ENV{'USER'};
-    my $basedir = sprintf("%s-%s-%s-%s-%s", $self->_working_dir_prefix, $hostname, $user, $$, $self->id);
-    my $tempdir = Genome::Sys->create_temp_directory($basedir);
-    unless($tempdir) {
-        die "failed to create a temp staging directory for completed files";
-    }
-    $self->scratch_directory($tempdir);
-
-    return 1;
 }
 
 sub _generate_data {
