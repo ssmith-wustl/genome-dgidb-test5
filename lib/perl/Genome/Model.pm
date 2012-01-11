@@ -1310,8 +1310,8 @@ sub set_apipe_cron_status {
 sub build_needed {
     my $self = shift;
 
-    my $build = $self->last_complete_build;
-    $build ||= $self->current_running_build;
+    my $build = $self->current_running_build;
+    $build ||= $self->last_complete_build;
 
     return 1 unless $build;
 
