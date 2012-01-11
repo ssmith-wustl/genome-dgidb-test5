@@ -8,10 +8,16 @@ use Data::Dumper;
 # don't cache static things.
 # every url gets matched against this, so it shouldn't be a long list
 # if it becomes long, consider a redesign.
-our @never_cache = (
-    qr{(?<!html)$},
-    qr{Genome::Search::Query}i,
-    qr{genome/search}i
+
+#our @never_cache = (
+#    qr{(?<!html)$},
+#    qr{Genome::Search::Query}i,
+#    qr{genome/search}i
+#);
+
+our @always_cache = (
+    qr{genome/model}i,
+    qr{genome/sample/}i
 );
 
 use Plack::Util;
@@ -230,10 +236,11 @@ sub {
 
         return [@$resp[0,1,2]];
     } else {
-        my $skip_cache = 0;
-        for my $re (@never_cache) {
+        my $skip_cache = 1;
+        
+        for my $re (@always_cache) {
             if ($env->{'PATH_INFO'} =~ $re) {
-                $skip_cache = 1;
+                $skip_cache = 0;
                 last;
             }
         }
