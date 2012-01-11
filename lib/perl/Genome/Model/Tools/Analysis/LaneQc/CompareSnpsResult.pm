@@ -20,7 +20,7 @@ use FileHandle;
 use Genome;
 
 class Genome::Model::Tools::Analysis::LaneQc::CompareSnpsResult {
-	is => 'Command',
+	is => 'Genome::SoftwareResult::Stageable',
 
     #TODO: Use class pre-processor to sync the result class and the command class
     has => [
