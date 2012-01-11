@@ -9,16 +9,13 @@ require File::Temp;
 
 class Genome::Model::Event::Build::DeNovoAssembly::PrepareInstrumentData {
     is => 'Genome::Model::Event::Build::DeNovoAssembly',
-    has => [
-        _metrics => {
-            is => 'Hash',
-            is_optional => 1,
-            default_value => { input => { bases => 0, count => 0}, output => { bases => 0, count => 0}, },
-        },
-        _base_limit => {
-            is => 'Integer',
-            is_optional => 1,
-        },
+    has_optional => [
+        _input_count => { is => 'Number', default_value => 0, },
+        _input_bases => { is => 'Number', default_value => 0, },
+        _output_count => { is => 'Number', default_value => 0, },
+        _output_bases => { is => 'Number', default_value => 0, },
+        _original_base_limit => { is => 'Number', },
+        _base_limit => { is => 'Number', },
     ],
 };
 
@@ -99,8 +96,8 @@ sub execute {
     }
     $self->status_message('Verify assembler input files...OK');
 
-    my $reads_attempted = $self->_metrics->{input}->{count};
-    my $reads_processed = $self->_metrics->{output}->{count};
+    my $reads_attempted = $self->_input_count;
+    my $reads_processed = $self->_output_count;
     my $reads_processed_success = ( $reads_attempted ? sprintf('%0.3f', $reads_processed / $reads_attempted) : 0);
     $self->build->add_metric(name => 'reads attempted', value => $reads_attempted);
     $self->build->add_metric(name => 'reads processed', value => $reads_processed);
@@ -117,19 +114,19 @@ sub _setup_base_limit {
     my $self = shift;
 
     my $base_limit = $self->build->calculate_base_limit_from_coverage;
-    if ( defined $base_limit ) {
-        $self->status_message('Base limit: '.$base_limit);
-        $self->_base_limit($base_limit);
-    }
+    return 1 if not defined $base_limit;
+
+    $self->status_message('Setting base limit to: '.$base_limit);
+    $self->_original_base_limit($base_limit);
+    $self->_base_limit($base_limit);
 
     return 1;
 }
 
 sub _update_metrics {
     my $self = shift;
-    $self->status_message('Updating metrics...');
+    $self->status_message('Update metrics...');
 
-    my $metrics = $self->_metrics;
     for my $type (qw/ input output /) {
         my $metrics_file_method = '_'.$type.'_metrics_file';
         my $metrics_file = $self->$metrics_file_method;
@@ -143,17 +140,18 @@ sub _update_metrics {
             Carp::confess("Failed to open metrics file ($metrics_file): $@");
         }
 
-        my %metrics_from_file;
         while ( my $line = $fh->getline ) {
             chomp $line;
             my ($name, $val) = split('=', $line);
-            $metrics_from_file{$name} = $val;
-            $metrics->{$type}->{$name} += $metrics_from_file{$name};
-            $self->status_message("Updated $type $name to ".$metrics->{$type}->{$name});
+            my $metric_method = '_'.$type.'_'.$name;
+            my $metric = $self->$metric_method;
+            my $new_metric = $metric + $val;
+            $self->$metric_method($new_metric);
+            $self->status_message("Update $type $name from $metric to $new_metric");
         }
     }
 
-    $self->status_message('Updating metrics...OK');
+    $self->status_message('Update metrics...OK');
     return 1;
 }
 
@@ -162,13 +160,15 @@ sub _has_base_limit_been_reached {
 
     return if not defined $self->_base_limit;
 
-    $self->status_message('Base limit: '.$self->_base_limit);
-    my $bases_processed = $self->_metrics->{output}->{bases};
-    $self->status_message('Bases processed: '.$bases_processed);
-    if ( ($self->_base_limit - $bases_processed) <= 0 ) {
+    $self->status_message('Original base limit: '.$self->_original_base_limit);
+    $self->status_message('Bases processed: '.$self->_output_bases);
+    my $current_base_limit = $self->_original_base_limit - $self->_output_bases;
+    $self->_base_limit($current_base_limit);
+    if ( $current_base_limit <= 0 ) {
         $self->status_message('Reached base limit. Stop processing!');
         return 1;
     }
+    $self->status_message('New base limit: '.$self->_base_limit);
 
     $self->status_message('Base limit not reached. Continue processing.');
     return;
@@ -246,9 +246,7 @@ sub _process_instrument_data {
     my @read_processor_parts = split(/\s+\|\s+/, $read_processor);
 
     if ( defined $self->_base_limit ) { # coverage limit by bases
-        my $metrics = $self->_metrics;
         my $current_base_limit = $self->_base_limit;
-        $current_base_limit -= $metrics->{output}->{bases};
         $self->status_message("Limiting bases by base count of $current_base_limit");
         push @read_processor_parts, 'limit by-bases --bases '.$current_base_limit;
     }
