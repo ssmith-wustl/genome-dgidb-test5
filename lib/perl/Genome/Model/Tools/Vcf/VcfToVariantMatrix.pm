@@ -168,7 +168,7 @@ sub execute {                               # replace with real execution logic.
            $line = $self->format_basic_output($chr, $pos, $ref, $alt, $gt_location, \@samples);   
         }
         else {
-            die 'wtfbbq';
+            die "Please specify a proper matrix_genotype_version of either \"Bases\" or \"Numerical\"";
         }
         if($self->transpose) {
             push @finished_file, $line;
