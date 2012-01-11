@@ -9,6 +9,7 @@ class Genome::Model::Tools::RefCov::RelativeCoverage {
     has => [
         coverage => {
             is => 'ArrayRef',
+            is_optional => 1,
         },
         min_depth => {
             is => 'Integer',

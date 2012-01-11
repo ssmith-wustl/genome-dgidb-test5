@@ -132,7 +132,7 @@ for my $p ($p1) {
 
     note("diffs = ".scalar(@diff));
 
-    ok( (scalar(@diff) == 5 ), "there are five differences, accounted for by an empty subdirectory with a negative ID number which differs per run, and a different build directory path")
+    ok( (scalar(@diff) == 8 ), "there are eight differences, accounted for by an empty subdirectory with a negative ID number which differs per run, and a different build directory path")
         or diag(@diff);
 
 }

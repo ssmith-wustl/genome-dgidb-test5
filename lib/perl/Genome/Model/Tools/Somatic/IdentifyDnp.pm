@@ -169,7 +169,7 @@ sub _determine_dnp_from_bam_reads {
         return -1;
     }
 
-    if($reads_supporting_dnp/$reads > $self->proportion) {
+    if($reads > 0 and $reads_supporting_dnp/$reads > $self->proportion) {
         return 1;
     }
     else {
