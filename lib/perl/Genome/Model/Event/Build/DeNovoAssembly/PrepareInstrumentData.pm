@@ -248,7 +248,7 @@ sub _process_instrument_data {
     if ( defined $self->_base_limit ) { # coverage limit by bases
         my $metrics = $self->_metrics;
         my $current_base_limit = $self->_base_limit;
-        $current_base_limit -= $metrics->{bases} if exists $metrics->{bases};
+        $current_base_limit -= $metrics->{output}->{bases};
         $self->status_message("Limiting bases by base count of $current_base_limit");
         push @read_processor_parts, 'limit by-bases --bases '.$current_base_limit;
     }
