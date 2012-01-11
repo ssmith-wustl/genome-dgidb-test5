@@ -140,7 +140,7 @@ sub execute
 	$mgap_genome{ 'ssid' } = $ssid;
 	$mgap_genome { 'acedb_ver' } = $acedb_ver;
 
-	if ($locus_tag =~ m /(DFT|FNL|MSI)$/) {
+	if ($locus_tag =~ m /(DFT|DFT2|FNL|MSI|MSI2)$/) {
 		$mgap_genome{ 'run_type' } = 1;
 	} 
 
