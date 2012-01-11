@@ -1125,23 +1125,20 @@ sub iprscan
     #    croak "iprscan is not happy: $err_text";
     #}
 
-	my $seqio = Bio::SeqIO->new( -file => $temp_fn, -format => 'interpro' );
+    my $seqio = Bio::SeqIO->new( -file => $temp_fn, -format => 'interpro' );
 
-	my $seq;
-	while (1)
-	{
-		$seq = eval { $seqio->next_seq() };
-		next if ($@ =~ m/not well-formed \(invalid token\)/);
-		last unless $seq;
+    while ( my $seq = $seqio->next_seq() )
+    {
 
-		my $accession = $seq->accession();
+        my $accession = $seq->accession();
 
-		unless ( defined($accession) ) { next; }
+        unless ( defined($accession) ) { next; }
 
-		my @features = $seq->get_SeqFeatures();
+        my @features = $seq->get_SeqFeatures();
 
-		if (@features) { $evidence{$accession} = 1; }
-	}
+        if (@features) { $evidence{$accession} = 1; }
+
+    }
     unlink $temp_fn;
 
     return \%evidence;
