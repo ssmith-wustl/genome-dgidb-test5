@@ -3,12 +3,12 @@ package Genome::Model::Tools::Capture::GermlineModelGroupQcIterative;     # rena
 #####################################################################################################################################
 # ModelGroup - Build Genome Models for Germline Capture Datasets
 #
-#	AUTHOR:		Will Schierding
+#    AUTHOR:        Will Schierding
 #
-#	CREATED:	2/09/2011 by W.S.
-#	MODIFIED:	2/09/2011 by W.S.
+#    CREATED:    2/09/2011 by W.S.
+#    MODIFIED:    2/09/2011 by W.S.
 #
-#	NOTES:
+#    NOTES:
 #
 #####################################################################################################################################
 
@@ -35,16 +35,14 @@ class Genome::Model::Tools::Capture::GermlineModelGroupQcIterative {
     ],
 };
 
-sub sub_command_sort_position { 12 }
-
-sub help_brief {                            # keep this to just a few words <---
+sub help_brief {
     "Operate on germline capture model groups"
 }
 
 sub help_synopsis {
     return <<EOS
 Operate on capture somatic model groups
-EXAMPLE:	gmt capture germline-model-group-qc --group-id XXXX --output-dir --dbsnp-build
+EXAMPLE:    gmt capture germline-model-group-qc --group-id XXXX --output-dir --dbsnp-build
 EOS
 }
 
@@ -69,6 +67,7 @@ sub execute {                               # replace with real execution logic.
             die "Could not open input file '$summary_file' for reading";
         }
         print ALL_MODELS join("\t",qw(
+            Dbsnp_Build
             Sample_id
             SNPsCalled
             WithGenotype
@@ -104,6 +103,21 @@ sub execute {                               # replace with real execution logic.
         $db_snp_build = 132;
     } else {
         die "$ref_name isn't NCBI-human-build36 or GRCh37-lite-build37\n";
+    }
+
+    my %snp_limit_hash;
+    if($self->limit_snps_file) {
+        my $snp_input = new FileHandle ($self->limit_snps_file);
+        unless($snp_input) {
+            $self->error_message("Unable to open ".$self->limit_snps_file);
+            return;
+        }
+
+        while (my $line = <$snp_input>) {
+            chomp($line);
+            my ($id) = split(/\t/, $line);
+            $snp_limit_hash{$id}++;
+        }
     }
 
     my %qc_iteration_hash_genotype;
@@ -243,12 +257,12 @@ sub execute {                               # replace with real execution logic.
 
 sub byChrPos
 {
-	my ($chr_a, $pos_a) = split(/\t/, $a);
-	my ($chr_b, $pos_b) = split(/\t/, $b);
+    my ($chr_a, $pos_a) = split(/\t/, $a);
+    my ($chr_b, $pos_b) = split(/\t/, $b);
 
-	$chr_a cmp $chr_b
-	or
-	$pos_a <=> $pos_b;
+    $chr_a cmp $chr_b
+        or
+    $pos_a <=> $pos_b;
 }
 
 1;

@@ -46,24 +46,17 @@ sub execute {
         die $self->error_message("Variant file missing/empty: $variant_file");
     }
 
-    my $cmd = Genome::Model::Tools::Analysis::LaneQc::CompareSnps->create(
+    my $result = Genome::Model::Tools::Analysis::LaneQc::CompareSnpsResult->get_or_create(
         genotype_file => $gold2geno_file,
-        output_file => $build->compare_snps_file,
         variant_file => $variant_file,
     );
-    unless ($cmd) {
-        die $self->error_message("Failed to create Genome::Model::Tools::Analysis::LaneQc::CompareSnps command.");
+    unless ($result) {
+        die $self->error_message("Failed to create Genome::Model::Tools::Analysis::LaneQc::CompareSnpsResult command.");
     }
 
-    my $cmd_executed = eval { $cmd->execute };
-    unless ($cmd_executed) {
-        if ($@) {
-            die $self->error_message("Failed to execute CompareSnps QC analysis! Received error: $@");
-        }
-        else {
-            die $self->error_message("Failed to execute CompareSnps QC analysis!");
-        }
-    }
+    $result->add_user( user_id => $build->id, user_class_name => $build->class, label => 'uses' );
+
+    Genome::Sys->create_symlink_and_log_change($self, $result->output_file, $build->compare_snps_file);
 
     my $metrics_rv = Genome::Model::ReferenceAlignment::Command::CreateMetrics::CompareSnps->execute(
         build_id => $self->build_id,

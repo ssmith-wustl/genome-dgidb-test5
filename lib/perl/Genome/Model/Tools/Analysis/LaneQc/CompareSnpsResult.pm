@@ -1,4 +1,4 @@
-package Genome::Model::Tools::Analysis::LaneQc::CompareSnps;
+package Genome::Model::Tools::Analysis::LaneQc::CompareSnpsResult;
 
 #####################################################################################################################################
 # SearchRuns - Search the database for runs
@@ -19,7 +19,7 @@ use FileHandle;
 
 use Genome;
 
-class Genome::Model::Tools::Analysis::LaneQc::CompareSnps {
+class Genome::Model::Tools::Analysis::LaneQc::CompareSnpsResult {
     is => 'Genome::SoftwareResult::Stageable',
 
     has_param => [
@@ -36,6 +36,7 @@ class Genome::Model::Tools::Analysis::LaneQc::CompareSnps {
         bam_file        => { is => 'Text', doc => "Alternatively, provide a BAM file", is_optional => 1 },
         sample_name     => { is => 'Text', doc => "Sample Name Used in QC", is_optional => 1 },
         reference_build => { is => 'Text', doc => "36 or 37", is_optional => 1, default => 36},
+        output_file     => { is => 'Text', is_output => 1 },
     ],
 
 };
@@ -69,7 +70,7 @@ sub create {
 
     my $rv = eval {
         $self->_prepare_staging_directory;
-        $self->_generate_data($self->temp_staging_directory);
+        $self->_generate_data($self->temp_staging_directory . '/output');
         $self->_prepare_output_directory;
         $self->_promote_data;
         $self->_reallocate_disk_allocation;
@@ -91,9 +92,8 @@ sub create {
 
 sub _generate_data {
     my $self = shift;
-    my $output_dir = shift;
-
-    my $output_file = $output_dir . '/output';
+    $self->output_file(shift);
+    my $output_file = $self->output_file;
 
     my $sample_name = "Sample";
 
