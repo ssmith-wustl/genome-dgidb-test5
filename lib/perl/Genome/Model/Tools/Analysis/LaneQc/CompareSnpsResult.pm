@@ -38,10 +38,6 @@ class Genome::Model::Tools::Analysis::LaneQc::CompareSnps {
         reference_build => { is => 'Text', doc => "36 or 37", is_optional => 1, default => 36},
     ],
 
-    has_transient_optional => [
-        output_file     => { is => 'Text', doc => "Output file for QC result" }
-    ],
-
 };
 
 sub output_columns {
@@ -96,10 +92,10 @@ sub create {
 sub _generate_data {
     my $self = shift;
     my $output_dir = shift;
-    ## Get required parameters ##
-    my $sample_name = "Sample";
 
     my $output_file = $output_dir . '/output';
+
+    my $sample_name = "Sample";
 
     if($self->sample_name)
     {
