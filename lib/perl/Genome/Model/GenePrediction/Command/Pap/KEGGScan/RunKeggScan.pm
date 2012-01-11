@@ -15,7 +15,6 @@ use Carp qw(confess);
 use Cwd;
 use File::Copy;
 use File::Basename;
-use App::DBI;
 use File::Path qw(make_path);
 
 # FIXME Really need to remove this dependency, but porting this script
