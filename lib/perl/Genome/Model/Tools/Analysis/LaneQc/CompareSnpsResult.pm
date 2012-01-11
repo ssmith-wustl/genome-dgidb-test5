@@ -36,7 +36,7 @@ class Genome::Model::Tools::Analysis::LaneQc::CompareSnpsResult {
         bam_file        => { is => 'Text', doc => "Alternatively, provide a BAM file", is_optional => 1 },
         sample_name     => { is => 'Text', doc => "Sample Name Used in QC", is_optional => 1 },
         reference_build => { is => 'Text', doc => "36 or 37", is_optional => 1, default => 36},
-        output_file     => { is => 'Text', is_output => 1 },
+        output_file     => { is => 'Text' },
     ],
 
 };
