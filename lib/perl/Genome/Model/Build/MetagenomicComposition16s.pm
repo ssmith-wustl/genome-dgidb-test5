@@ -116,6 +116,10 @@ sub amplicon_set_names_and_primers {
     return; 
 }
 
+sub amplicon_set_names_and_primers_sanger {
+    return ( '' => [], );
+}
+
 sub amplicon_set_names_and_primers_454 {
     return (
         V1_V3 => [qw/
@@ -643,31 +647,24 @@ sub prepare_instrument_data {
 
     my @cmd_parts = ( 'gmt sx rm-desc' );
     my @output;
-    if ( my %primers = $self->amplicon_set_names_and_primers ) {
-        my @primers;
-        for my $set_name ( keys %primers ) {
-            for my $primer ( @{$primers{$set_name}} ) {
-                push @primers, $set_name.'='.$primer;
-            }
-            my $root_set_name = $set_name;
-            $root_set_name =~ s/\.[FR]$//; #strip off .F/.R for paired sets
-            my $fasta_file = $self->processed_fasta_file_for_set_name($root_set_name);
-            my $qual_file = $self->processed_qual_file_for_set_name($root_set_name);
-            unlink $fasta_file, $fasta_file;
-            push @output, 'name='.$root_set_name.':file='.$fasta_file.':qual_file='.$qual_file.':type=phred';
+    my %primers = $self->amplicon_set_names_and_primers;
+    my @primers;
+    for my $set_name ( keys %primers ) {
+        for my $primer ( @{$primers{$set_name}} ) {
+            push @primers, $set_name.'='.$primer;
         }
-        my $none_fasta_file = $self->processed_fasta_file_for_set_name('none');
-        my $none_qual_file = $self->processed_qual_file_for_set_name( 'none' );
-        unlink $none_fasta_file, $none_qual_file;
-        push @output, 'name=discard:file='.$none_fasta_file.':qual_file='.$none_qual_file.':type=phred';
-        push @cmd_parts, 'gmt sx bin by-primer --remove --primers '.join(',', @primers);
+        my $root_set_name = $set_name;
+        $root_set_name =~ s/\.[FR]$//; #strip off .F/.R for paired sets
+        my $fasta_file = $self->processed_fasta_file_for_set_name($root_set_name);
+        my $qual_file = $self->processed_qual_file_for_set_name($root_set_name);
+        unlink $fasta_file, $fasta_file;
+        push @output, 'name='.$root_set_name.':file='.$fasta_file.':qual_file='.$qual_file.':type=phred';
     }
-    else {
-        my $processed_fasta_file = $self->processed_fasta_file_for_set_name('');
-        my $processed_qual_file = $self->processed_qual_file_for_set_name('');
-        unlink $processed_fasta_file, $processed_qual_file;
-        push @output, 'file='.$processed_fasta_file.':qual_file='.$processed_qual_file.':type=phred'; 
-    }
+    my $none_fasta_file = $self->processed_fasta_file_for_set_name('none');
+    my $none_qual_file = $self->processed_qual_file_for_set_name( 'none' );
+    unlink $none_fasta_file, $none_qual_file;
+    push @output, 'name=discard:file='.$none_fasta_file.':qual_file='.$none_qual_file.':type=phred';
+    push @cmd_parts, 'gmt sx bin by-primer --remove --primers '.join(',', @primers);
 
     #add amplicon processing sx commands
     if ( $self->processing_profile->amplicon_processor ) {
