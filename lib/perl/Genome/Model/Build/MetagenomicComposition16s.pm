@@ -111,10 +111,12 @@ sub amplicon_set_names_and_primers {
 sub amplicon_sets {
     my $self = shift;
 
+    my %amplicon_set_names_and_primers = $self->amplicon_set_names_and_primers;
     my @amplicon_sets;
-    for my $set_name ( $self->amplicon_set_names ) {
+    for my $set_name ( sort { $a cmp $b } keys %amplicon_set_names_and_primers ) {
         push @amplicon_sets, Genome::Model::Build::MetagenomicComposition16s::AmpliconSet->create(
             name => $set_name,
+            primers => $amplicon_set_names_and_primers{$set_name},
             classification_dir => $self->classification_dir,
             classification_file => $self->classification_file_for_set_name($set_name),
             processed_fasta_file => $self->processed_fasta_file_for_set_name($set_name),
@@ -359,6 +361,7 @@ sub classification_files {
 #< Prepare instrument data >#
 sub prepare_instrument_data {
     my $self = shift;
+    $self->status_message('Prepare instrument data...');
 
     #call a separate command for sanger
     if ( $self->sequencing_platform eq 'sanger' ) {
@@ -373,6 +376,7 @@ sub prepare_instrument_data {
     }
 
     my @instrument_data = $self->instrument_data;
+    $self->status_message('Instrument data count: '.@instrument_data);
     unless ( @instrument_data ) {
         $self->error_message("No instrument data found for ".$self->description);
         return;
@@ -389,25 +393,30 @@ sub prepare_instrument_data {
     }
 
     my @cmd_parts = ( 'gmt sx rm-desc' );
-    my @output;
-    my %primers = $self->amplicon_set_names_and_primers;
-    my @primers;
-    for my $set_name ( keys %primers ) {
-        for my $primer ( @{$primers{$set_name}} ) {
-            push @primers, $set_name.'='.$primer;
+    my @amplicon_sets = $self->amplicon_sets;
+    my (@output, @primers);
+    for my $amplicon_set ( @amplicon_sets ) {
+        my @set_primers = $amplicon_set->primers;
+        for my $primer ( @set_primers ) {
+            push @primers, $amplicon_set->name.'='.$primer;
         }
-        my $root_set_name = $set_name;
+        my $root_set_name = $amplicon_set->name;
         $root_set_name =~ s/\.[FR]$//; #strip off .F/.R for paired sets
-        my $fasta_file = $self->processed_fasta_file_for_set_name($root_set_name);
-        my $qual_file = $self->processed_qual_file_for_set_name($root_set_name);
+        my $fasta_file = $amplicon_set->processed_fasta_file;
+        my $qual_file = $amplicon_set->processed_qual_file;
         unlink $fasta_file, $fasta_file;
-        push @output, 'name='.$root_set_name.':file='.$fasta_file.':qual_file='.$qual_file.':type=phred';
+        my $output = 'file='.$fasta_file.':qual_file='.$qual_file.':type=phred';
+        $output .= ':name='.$root_set_name if @set_primers;
+        push @output, $output;
     }
-    my $none_fasta_file = $self->processed_fasta_file_for_set_name('none');
-    my $none_qual_file = $self->processed_qual_file_for_set_name( 'none' );
-    unlink $none_fasta_file, $none_qual_file;
-    push @output, 'name=discard:file='.$none_fasta_file.':qual_file='.$none_qual_file.':type=phred';
-    push @cmd_parts, 'gmt sx bin by-primer --remove --primers '.join(',', @primers);
+
+    if ( @primers ) {
+        my $none_fasta_file = $self->processed_fasta_file_for_set_name('none');
+        my $none_qual_file = $self->processed_qual_file_for_set_name( 'none' );
+        unlink $none_fasta_file, $none_qual_file;
+        push @output, 'name=discard:file='.$none_fasta_file.':qual_file='.$none_qual_file.':type=phred';
+        push @cmd_parts, 'gmt sx bin by-primer --remove --primers '.join(',', @primers);
+    }
 
     #add amplicon processing sx commands
     if ( $self->processing_profile->amplicon_processor ) {
@@ -426,27 +435,28 @@ sub prepare_instrument_data {
 
     # Create, execute, check return
     my $cmd = join(' | ', @cmd_parts);
+    $self->status_message('Run SX...');
+    $self->status_message("SX comand: $cmd");
     my $rv = eval{ Genome::Sys->shellcmd(cmd => $cmd); };
     if ( not $rv ) {
         $self->error_message('Failed to run sx command to create amplicon files.');
         return;
     }
-
-    $self->status_message('DONE processing original fasta file');
+    $self->status_message('Run SX...OK');
 
     # Rm empty output files
-    if ( my %primers = $self->amplicon_set_names_and_primers ) {
-        for my $set_name ( keys %primers ) {
-            my $fasta_file = $self->processed_fasta_file_for_set_name($set_name);
-            my $sz = -s $fasta_file;
-            unlink $fasta_file if not $sz or $sz == 0;
-            my $qual_file = $self->processed_qual_file_for_set_name( $set_name );
-            my $qual_sz = -s $qual_file;
-            unlink $qual_file if not $qual_sz or $qual_sz == 0;
+    $self->status_message('Remove empty otuput files...');
+    for my $amplicon_set ( @amplicon_sets ) {
+        for my $file_method (qw/ processed_fasta_file processed_qual_file /) {
+            my $file = $amplicon_set->$file_method;
+            my $sz = -s $file;
+            unlink $file if not $sz or $sz == 0;
         }
     }
+    $self->status_message('Remove empty otuput files...OK');
 
     # Set metrics
+    $self->status_message('Get metrics...');
     my $input_metrics = Genome::Model::Tools::Sx::Metrics->read_from_file($input_metrics_file);
     if ( not $input_metrics ) {
         $self->error_message('Failed to get metrcis from file: '.$input_metrics_file);
@@ -463,6 +473,7 @@ sub prepare_instrument_data {
     }
     my $processed = $output_metrics->count;
     $processed = 0 if not defined $processed;
+    $self->status_message('Get metrics...OK');
 
     $self->amplicons_attempted($attempted);
     $self->amplicons_processed($processed);
@@ -477,7 +488,6 @@ sub prepare_instrument_data {
     $self->status_message('Success:    '.($self->amplicons_processed_success * 100).'%');
 
     $self->status_message('Prepare instrument data...OK');
-
     return 1;
 }
 
