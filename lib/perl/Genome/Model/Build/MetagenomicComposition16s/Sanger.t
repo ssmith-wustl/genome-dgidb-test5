@@ -86,7 +86,7 @@ ok($model->add_instrument_data($instrument_data), 'add inst data to model');
 
 my $example_build = Genome::Model::Build->create(
     model=> $model,
-    data_directory => '/gsc/var/cache/testsuite/data/Genome-Model/MetagenomicComposition16sSanger/build',
+    data_directory => '/gsc/var/cache/testsuite/data/Genome-Model/MetagenomicComposition16sSanger/build_v2',
     id => -2288
 );
 ok($example_build, 'example build') or die;
@@ -169,10 +169,11 @@ while ( my $amplicon = $amplicon_set->next_amplicon ) {
     ok(-s $build->ace_file_for_amplicon($amplicon), 'ace file');
     push @amplicon_names, $amplicon->{name};
 }
+print Data::Dumper::Dumper(\@amplicon_names);
 is_deeply(
     \@amplicon_names,
-    [qw/ HMPB-aad13a05 HMPB-aad13e12 HMPB-aad15e03 HMPB-aad16a01 HMPB-aad16c10 /],
-    'Got 5 amplicons',
+    [qw/ HMPB-aad13a05 HMPB-aad13e12 HMPB-aad16a01 HMPB-aad16c10 /],
+    'Got 4 amplicons',
 );
 
 ok(-s $build->raw_reads_fasta_file, 'Created the raw reads fasta file');

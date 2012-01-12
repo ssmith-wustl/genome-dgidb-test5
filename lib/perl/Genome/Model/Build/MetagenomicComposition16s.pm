@@ -114,17 +114,12 @@ sub amplicon_sets {
     my @amplicon_sets;
     for my $set_name ( $self->amplicon_set_names ) {
         my $amplicon_set;
-        if ( $self->sequencing_platform eq 'sanger' ) { #TODO - make it so it auto recognizes sanger
-            my $cmd = Genome::Model::MetagenomicComposition16s::Command::ProcessSangerInstrumentData->create(build => $self);
-            $amplicon_set = $cmd->amplicon_set_for_name( $set_name );
-        } else {
-            $amplicon_set = $self->amplicon_set_for_name($set_name); #call command for sanger
-        }
-        next unless $amplicon_set; # undef ok, dies on error
+        $amplicon_set = $self->amplicon_set_for_name($set_name);
+        next unless $amplicon_set;
         push @amplicon_sets, $amplicon_set;
     }
 
-    unless ( @amplicon_sets ) { # bad
+    unless ( @amplicon_sets ) {
         $self->error_message("No amplicon sets found for ".$self->description);
         return;
     }
