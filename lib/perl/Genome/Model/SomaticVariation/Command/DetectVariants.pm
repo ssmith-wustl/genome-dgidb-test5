@@ -20,7 +20,7 @@ class Genome::Model::SomaticVariation::Command::DetectVariants{
     ],
     has_param => [
         lsf_queue => {
-            default => 'apipe',
+            default => 'workflow',
         },
     ],
 };
