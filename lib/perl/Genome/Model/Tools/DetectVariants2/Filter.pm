@@ -653,6 +653,8 @@ sub params_for_filter_result {
     }
     $self->_previous_filter_strategy($previous_filter_strategy);
 
+    my $vcf_version = Genome::Model::Tools::Vcf->get_vcf_version;
+    
     my %params = (
         detector_name => $self->detector_name,
         detector_params => $self->detector_params,
@@ -703,6 +705,7 @@ sub params_for_vcf_result {
         filter_params => $self->params,
         filter_version => $self->version,
         filter_description => $self->filter_description,
+        vcf_version => $vcf_version,
         previous_filter_strategy => $self->_previous_filter_strategy,
         
     );

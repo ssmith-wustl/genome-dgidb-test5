@@ -414,10 +414,11 @@ sub params_for_detector_result {
 
 sub params_for_vcf_result {
     my $self = shift;
-
+    my $vcf_version = Genome::Model::Tools::Vcf->get_vcf_version;
     my %params = (
         test_name => $ENV{GENOME_SOFTWARE_RESULT_TEST_NAME} || undef,
         input_id => $self->_result->id,
+        vcf_version => $vcf_version,
         aligned_reads_sample => $self->aligned_reads_sample,
     );
     $params{control_aligned_reads_sample} = $self->control_aligned_reads_sample if defined $self->control_aligned_reads_sample;
@@ -450,8 +451,10 @@ sub _link_vcf_output_directory_to_result {
         my $target = $output_directory . "/" . basename($vcf);
         $self->status_message("Attempting to link : " .$vcf."  to  ". $target);
         if(-l $target) {
-            $self->status_message("Already found a vcf linked in here.");
-            return 1;
+            $self->status_message("Already found a vcf linked in here, unlinking that for you.");
+            unless(unlink($target)){
+                die $self->error_message("Failed to unlink a link to a vcf at: ".$target);
+            }    
         } elsif(-e $target) {
             die $self->error_message("Found something in place of the vcf symlink.");
         }
