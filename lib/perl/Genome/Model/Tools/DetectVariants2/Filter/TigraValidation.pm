@@ -738,7 +738,7 @@ sub _get_sr_dirs {
     my %sr_dirs;
 
     for my $chr_name (@use_chr_list) {
-        my $sr_params = $self->params_for_result;
+        my $sr_params = $self->params_for_filter_result;
         $sr_params->{chromosome_list} = $chr_name;
         my $sr = Genome::Model::Tools::DetectVariants2::Result::Filter->get(%$sr_params);
         unless ($sr) {
