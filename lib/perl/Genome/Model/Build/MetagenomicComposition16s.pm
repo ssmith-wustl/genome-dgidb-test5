@@ -98,22 +98,14 @@ sub description {
 #< Amplicons >#
 sub amplicon_set_names {
     my $self = shift;
-    my $method = 'amplicon_set_names_and_primers_'.$self->processing_profile->sequencing_platform;
-    if ( $self->can( $method ) ) {
-        my %set_names_and_primers = $self->$method;
-        return sort keys %set_names_and_primers;
-    }
-    return ( '' );
+    my %set_names_and_primers = $self->amplicon_set_names_and_primers;
+    return sort keys %set_names_and_primers;
 }
 
 sub amplicon_set_names_and_primers {
     my $self = shift;
-    my $method = 'amplicon_set_names_and_primers_'.$self->processing_profile->sequencing_platform;
-    if ( $self->can( $method ) ) {
-        return $self->$method;
-    }
-    $self->warning_message( "No amplicon set primers for sequencing platform: ".$self->processing_profile->sequencing_platform );
-    return; 
+    my $sequencing_platform = $self->processing_profile->sequencing_platform;
+    return Genome::Model::Build::MetagenomicComposition16s::SetNamesAndPrimers->set_names_and_primers_for($sequencing_platform);
 }
 
 sub amplicon_set_names_and_primers_sanger {
