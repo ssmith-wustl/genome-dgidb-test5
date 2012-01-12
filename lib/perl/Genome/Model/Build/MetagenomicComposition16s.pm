@@ -113,10 +113,15 @@ sub amplicon_sets {
 
     my @amplicon_sets;
     for my $set_name ( $self->amplicon_set_names ) {
-        my $amplicon_set;
-        $amplicon_set = $self->amplicon_set_for_name($set_name);
-        next unless $amplicon_set;
-        push @amplicon_sets, $amplicon_set;
+        push @amplicon_sets, Genome::Model::Build::MetagenomicComposition16s::AmpliconSet->create(
+            name => $set_name,
+            classification_dir => $self->classification_dir,
+            classification_file => $self->classification_file_for_set_name($set_name),
+            processed_fasta_file => $self->processed_fasta_file_for_set_name($set_name),
+            processed_qual_file => $self->processed_qual_file_for_set_name($set_name),
+            oriented_fasta_file => $self->oriented_fasta_file_for_set_name($set_name),
+            oriented_qual_file => $self->oriented_qual_file_for_set_name( $set_name ),
+        );
     }
 
     unless ( @amplicon_sets ) {
@@ -125,24 +130,6 @@ sub amplicon_sets {
     }
 
     return @amplicon_sets;
-}
-
-sub amplicon_set_for_name {
-    my ($self, $set_name) = @_;
-
-    Carp::confess('No amplicon set name to get amplicon iterator') if not defined $set_name;
-
-    my %params = (
-        name => $set_name,
-        classification_dir => $self->classification_dir,
-        classification_file => $self->classification_file_for_set_name($set_name),
-        processed_fasta_file => $self->processed_fasta_file_for_set_name($set_name),
-        processed_qual_file => $self->processed_qual_file_for_set_name($set_name),
-        oriented_fasta_file => $self->oriented_fasta_file_for_set_name($set_name),
-        oriented_qual_file => $self->oriented_qual_file_for_set_name( $set_name ),
-    );
-    
-    return Genome::Model::Build::MetagenomicComposition16s::AmpliconSet->create(%params);
 }
 
 sub get_writer_for_set_name {
@@ -723,9 +710,9 @@ sub classify_amplicons {
         return;
     }
 
-    my @amplicon_set_names = $self->amplicon_set_names;
-    if ( not @amplicon_set_names ) {
-        $self->error_message('No amplicon set names for '.$self->description);
+    my @amplicon_sets = $self->amplicon_sets;
+    if ( not @amplicon_sets ) {
+        $self->error_message('No amplicon sets for '.$self->description);
         return;
     }
 
@@ -753,10 +740,7 @@ sub classify_amplicons {
 
     my %metrics;
     @metrics{qw/ attempted success error total /} = (qw/ 0 0 0 0 /);
-    for my $name ( @amplicon_set_names ) {
-        my $amplicon_set = $self->amplicon_set_for_name($name);
-        next if not $amplicon_set;
-
+    for my $amplicon_set ( @amplicon_sets ) {
         my $fasta_file = $amplicon_set->processed_fasta_file;
         next if not -s $fasta_file;
 

@@ -5,7 +5,6 @@ use warnings;
 
 use above 'Genome';
 
-use Data::Dumper 'Dumper';
 require File::Compare;
 use Test::More;
 use Test::MockObject;
@@ -169,7 +168,6 @@ while ( my $amplicon = $amplicon_set->next_amplicon ) {
     ok(-s $build->ace_file_for_amplicon($amplicon), 'ace file');
     push @amplicon_names, $amplicon->{name};
 }
-print Data::Dumper::Dumper(\@amplicon_names);
 is_deeply(
     \@amplicon_names,
     [qw/ HMPB-aad13a05 HMPB-aad13e12 HMPB-aad16a01 HMPB-aad16c10 /],
