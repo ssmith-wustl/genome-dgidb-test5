@@ -8,10 +8,15 @@ use Command;
 use Data::Dumper;
 
 class Genome::Model::SomaticValidation::Command::UpdateSamples {
-    is => 'UR::Object::Command::List',
+    is => 'Command::V2',
     has => [
-        models => { is => 'Genome::Model::SomaticValidation', is_many => 1,
-                    doc => 'the models to update', }
+        models => { 
+            is => 'Genome::Model::SomaticValidation', 
+            is_many => 1,
+            doc => 'the models to update',
+            shell_args_position => 1,
+
+        },
     ],
     doc => 'switch the sample on a model to an equivalent sample based on available instrument data (and eventually pending workorders)',
 };
@@ -33,7 +38,8 @@ EOS
 
 sub execute {
     my $self = shift;
-    my @models;
+    my @models = $self->models;
+    my @changes;
     for my $model (@models) {
         my $tumor_sample = $model->tumor_sample;
         my $normal_sample = $model->normal_sample;
@@ -80,20 +86,39 @@ sub execute {
                 tissue_label => $tumor_sample->tissue_label,
                 tissue_desc => $tumor_sample->tissue_desc,
             );
-        
+
             if (%tumor_equiv_samples) {
-                my @has_instdata = grep { $tumor_equiv_samples{$_->id} } @instdata_unknown;
+                my @has_instdata = grep { $tumor_equiv_samples{$_->sample->id} } @instdata_unknown;
                 if (@has_instdata == 0) {
                     $self->status_message("unknown instrument data in are not suitable swaps for the tumor");
                 }
                 else {
                     my %sample_ids = map { $_->sample_id => 1 } @has_instdata;
                     if (keys(%sample_ids) > 1) {
-                        $self->status_message("ambiguous replacement instdata for the tumor");
+                        $self->status_message("ambiguous replacement inst data for the tumor");
                     }
                     else {
-                        # TODO: switch to this sample for the tumor_sample on this model
                         # probably add the instrument data too
+                        my ($new_sample_id) = keys(%sample_ids);
+                        my $new_sample = Genome::Sample->get($new_sample_id);
+                        $model->tumor_sample($new_sample);
+
+                        for my $instdata (@has_instdata){
+                            my $assign = Genome::Model::Command::InstrumentData::Assign->create(
+                                instrument_data_id => $instdata->id, 
+                                model_id => $model->id,
+                                );
+                            unless($assign->execute){
+                                $self->error_message('Failed to execute instrument data assign for model ' . $model->id . ' and instrument data ' . $instdata->id);
+                            }
+                        }
+
+                        my %change = (old_sample => $tumor_sample, 
+                                      new_sample => $new_sample,
+                                      instrument_data => \@has_instdata,
+                                      model => $model,
+                                      );
+                        push @changes, \%change;
                     }
                 }
             }
@@ -101,11 +126,77 @@ sub execute {
                 $self->status_message("No equivalent tumor data found for model " . $model->__display_name__);
             }
         }
-    
-        # TODO: repeat the above for the normal model
 
+        if (@instdata_normal == 0) {
+            my %normal_equiv_samples = map { $_->id => $_ } Genome::Sample->get(
+                source => $patient,
+                common_name => $normal_sample->common_name,
+                tissue_label => $normal_sample->tissue_label,
+                tissue_desc => $normal_sample->tissue_desc,
+            );
+
+            if (%normal_equiv_samples) {
+                my @has_instdata = grep { $normal_equiv_samples{$_->sample->id} } @instdata_unknown;
+                if (@has_instdata == 0) {
+                    $self->status_message("unknown instrument data in are not suitable swaps for the normal");
+                }
+                else {
+                    my %sample_ids = map { $_->sample_id => 1 } @has_instdata;
+                    if (keys(%sample_ids) > 1) {
+                        $self->status_message("ambiguous replacement instdata for the normal");
+                    }
+                    else {
+                        my ($new_sample_id) = keys(%sample_ids);
+                        my $new_sample = Genome::Sample->get($new_sample_id);
+                        $model->normal_sample($new_sample);
+                        for my $instdata (@has_instdata){
+                            my $assign = Genome::Model::Command::InstrumentData::Assign->create(
+                                instrument_data_id => $instdata->id, 
+                                model_id => $model->id,
+                                );
+                            unless($assign->execute){
+                                $self->error_message('Failed to execute instrument data assign for model ' . $model->id . ' and instrument data ' . $instdata->id);
+                            }
+                        }
+
+                        my %change = (old_sample => $normal_sample, 
+                                      new_sample => $new_sample,
+                                      instrument_data => \@has_instdata,
+                                      model => $model,
+                                      );
+                        push @changes, \%change;
+                    }
+                }
+            }
+            else {
+                $self->status_message("No equivalent normal data found for model " . $model->__display_name__);
+            }
+        }
     }
+    $self->print_report(@changes);
 
+    return 1;
+}
+
+sub print_report {
+    my $self = shift;
+    my @changes = @_;
+    $self->_print_headers();
+    for my $change_ref (@changes){
+        my %change = %$change_ref;
+        my $model = $change{model};
+        my $old_sample = $change{old_sample};
+        my $new_sample = $change{new_sample};
+        my @instrument_data = @{$change{instrument_data}};
+        my $output = join("\t", $model->id, $model->name, $old_sample->name, $new_sample->name, join('/', map($_->id, @instrument_data))); 
+        print $output, "\n";
+    }
+    return 1;
+}
+
+sub _print_headers {
+    my $self = shift;
+    print join("\t", 'MODEL_ID', 'MODEL_NAME', 'OLD SAMPLE NAME', 'NEW SAMPLE NAME', 'INSTRUMENT DATA ASSIGNED'), "\n";
     return 1;
 }
 
