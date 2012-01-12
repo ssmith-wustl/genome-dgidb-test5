@@ -206,7 +206,7 @@ sub make_label {
 
     my ($text) = @_;
 
-    $text =~ s/[-_]/ /g;
+    $text =~ s/[_]/ /g;
 
     my @words;
     for my $w (split(/\s+/,$text)) {
