@@ -3,19 +3,21 @@
   <xsl:output doctype-system="http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"/>
   <xsl:output doctype-public="-//W3C//DTD XHTML 1.0 Transitional//EN"/>
   <xsl:variable name="contigs_length" select="//aspect[@name='contigs_length']/value"/>
-  <xsl:variable name='reads_not_assembled' select="//aspect[@name='reads_not_assembled']/value"/>
   <xsl:variable name="reads_processed" select="//aspect[@name='reads_processed']/value"/>
   <xsl:variable name="reads_processed_length_q20" select="//aspect[@name='reads_processed_length_q20']/value"/>
+  <xsl:variable name='reads_assembled' select="//aspect[@name='reads_assembled']/value"/>
+  <xsl:variable name='reads_assembled_duplicate' select="//aspect[@name='reads_assembled_duplicate']/value"/>
+  <xsl:variable name='reads_not_assembled' select="$reads_processed - $reads_assembled"/>
   <xsl:template match="/">*** SIMPLE READ STATS ***
 Total input reads: <xsl:value-of select="$reads_processed"/>
 Total input bases: <xsl:value-of select="//aspect[@name='reads_processed_length']/value"/> bp
 Total Q20 bases: <xsl:value-of select="//aspect[@name='reads_processed_length_q20']/value"/> bp
 Average Q20 bases per read: <xsl:value-of select="format-number(($reads_processed_length_q20 div $reads_processed), '#')"/> bp
 Average read length: <xsl:value-of select="//aspect[@name='reads_processed_average_length']/value"/> bp
-Placed reads: <xsl:value-of select="//aspect[@name='reads_assembled_unique']/value"/>
-  (reads in scaffolds: <xsl:value-of select="//aspect[@name='reads_assembled']/value"/>)
-  (unique reads: <xsl:value-of select="//aspect[@name='reads_assembled_unique']/value"/>)
-  (duplicate reads: <xsl:value-of select="//aspect[@name='reads_assembled_duplicate']/value"/>)
+Placed reads: <xsl:value-of select="$reads_assembled + $reads_assembled_duplicate"/>
+  (reads in scaffolds: <xsl:value-of select="$reads_assembled + $reads_assembled_duplicate"/>)
+  (unique reads: <xsl:value-of select="$reads_assembled"/>)
+  (duplicate reads: <xsl:value-of select="$reads_assembled_duplicate"/>)
 Unplaced reads: <xsl:value-of select="$reads_not_assembled"/>
 Chaff rate: <xsl:value-of select="format-number(($reads_not_assembled div $reads_processed), '#.##%')"/>
 Q20 base redundancy: <xsl:value-of select="format-number(($reads_processed_length_q20 div $contigs_length), '#.#')"/>X

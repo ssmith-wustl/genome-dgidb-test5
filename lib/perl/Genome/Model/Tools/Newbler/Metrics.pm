@@ -184,11 +184,6 @@ sub _add_reads_assembled_to_metrics {
     }
 
     $metrics->set_metric('reads_assembled', $reads_assembled);
-    $metrics->set_metric('reads_assembled_unique', $reads_assembled);
-    my $reads_processed = $metrics->get_metric('reads_processed');
-    $metrics->set_metric('reads_assembled_success', sprintf('%.3f', $reads_assembled / $reads_processed));
-    my $reads_not_assembled = $reads_processed - $reads_assembled;
-    $metrics->set_metric('reads_not_assembled', $reads_not_assembled);
 
     return 1;
 }

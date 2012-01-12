@@ -34,6 +34,9 @@ class Genome::Model::Tools::Soap::Metrics {
             doc => 'Stats output file',
         },
     ],
+    has_optional => [
+        _metrics => { is_transient => 1, },
+    ],
 };
 
 sub help_brief {
@@ -109,6 +112,7 @@ sub execute {
         tier_one => $t1,
         tier_two => $t2,
     );
+    $self->_metrics($metrics);
 
     # add reads files
     for my $fastq ( @{$self->assembly_input_fastq_files} ) {

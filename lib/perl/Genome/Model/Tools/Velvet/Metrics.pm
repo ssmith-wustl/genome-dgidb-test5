@@ -229,15 +229,9 @@ sub _add_reads_assembled_to_metrics {
     }
     $fh->close;
 
-    $metrics->set_metric('reads_assembled', $reads_assembled_in_scaffolds);
-
     my $reads_assembled_unique = keys %uniq_reads;
-    $metrics->set_metric('reads_assembled_unique', $reads_assembled_unique);
     $metrics->set_metric('reads_assembled_duplicate', ($reads_assembled_in_scaffolds - $reads_assembled_unique));
-
-    my $reads_count = $metrics->get_metric('reads_processed');
-    my $reads_not_assembled = $reads_count - $reads_assembled_unique;
-    $metrics->set_metric('reads_not_assembled', $reads_not_assembled);
+    $metrics->set_metric('reads_assembled', $reads_assembled_unique);
 
     return 1;
 }

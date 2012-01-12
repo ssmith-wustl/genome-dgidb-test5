@@ -58,10 +58,11 @@ class Sx::Metrics::Assembly {
             { $_ => { is => 'Number', default_value => 'NA', }, } 
             (qw/
                 tier_one tier_two major_contig_threshold
+                assembler_name assembler_version assembler_params assembler_kmer
+                assembly_length
+                coverage genome_size insert_size read_processor subject_name
                 chaff_rate
-                content_at
-                content_gc
-                content_nx
+                content_at content_gc content_nx
                 contigs_average_length
                 contigs_count
                 contigs_length
@@ -114,7 +115,6 @@ class Sx::Metrics::Assembly {
                 reads_assembled_chaff_rate
                 reads_assembled_duplicate
                 reads_assembled_in_scaffolds
-                reads_assembled_unique
                 reads_not_assembled
                 scaffolds_1M
                 scaffolds_250K_1M
@@ -157,7 +157,6 @@ class Sx::Metrics::Assembly {
                 supercontigs_t3_n50_not_reached
                 /)
         ),
-        assembly_length => { calculate => q| return $self->contigs_length; |, },
     ],
 };
 
@@ -237,6 +236,7 @@ sub add_contig {
     $self->supercontigs->{$supercontig_number} += length $contig->{seq};
 
     $self->_metrics->{contigs_count}++;
+    $self->_metrics->{assembly_length} += length $contig->{seq};
     $self->_metrics->{contigs_length} += length $contig->{seq};
     $self->contigs->{$contig_number} = length $contig->{seq};
 
@@ -284,8 +284,16 @@ sub add_read_with_q20 {
     return 1;
 }
 
+sub recalculate_metrics {
+    my $self = shift;
+    $self->_are_metrics_calculated(0);
+    return $self->calculate_metrics;
+}
+
 sub calculate_metrics {
     my $self = shift;
+
+    return $self->_metrics if $self->_are_metrics_calculated;
 
     my $main_metrics = $self->_metrics;
 
@@ -485,6 +493,19 @@ sub calculate_metrics {
         }
     }
 
+    if ( $main_metrics->{reads_processed} and $main_metrics->{reads_attempted} ) {
+        $main_metrics->{reads_processed_success} = sprintf('%0.3f', $main_metrics->{reads_processed} / $main_metrics->{reads_attempted});
+    }
+
+    if ( $main_metrics->{reads_assembled} and $main_metrics->{reads_processed} ) {
+        $main_metrics->{reads_assembled_duplicate} = 0 if not defined $main_metrics->{reads_assembled_duplicate};
+        $main_metrics->{reads_assembled_success} = sprintf(
+            '%0.3f', $main_metrics->{reads_assembled} / $main_metrics->{reads_processed}
+        );
+        $main_metrics->{reads_not_assembled} = $main_metrics->{reads_assembled} - $main_metrics->{reads_processed};
+    }
+
+    $self->_are_metrics_calculated(1);
     return $self->_metrics;
 }
 
