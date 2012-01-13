@@ -56,6 +56,10 @@ sub execute {
 
     $result->add_user( user_id => $build->id, user_class_name => $build->class, label => 'uses' );
 
+    $self->status_message("Symlinking:");
+    $self->status_message($result->output_file);
+    $self->status_message($build->compare_snps_file);
+    die unless $result->output_file and $build->compare_snps_file;
     Genome::Sys->create_symlink_and_log_change($self, $result->output_file, $build->compare_snps_file);
 
     my $metrics_rv = Genome::Model::ReferenceAlignment::Command::CreateMetrics::CompareSnps->execute(

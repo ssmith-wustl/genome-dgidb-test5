@@ -62,9 +62,11 @@ sub create {
 
     my $rv = eval {
         $self->_prepare_staging_directory;
+        $self->output_file($self->temp_staging_directory . '/output');
         $self->_generate_data;
         $self->_prepare_output_directory;
         $self->_promote_data;
+        $self->output_file($self->output_dir . '/output');
         $self->_reallocate_disk_allocation;
         return 1;
     };
@@ -85,7 +87,7 @@ sub create {
 sub _generate_data {
     my $self = shift;
     die 'Command failed' unless Genome::Model::Tools::Analysis::LaneQc::CompareSnps->execute(
-        output_file => $self->temp_staging_directory . '/output',
+        output_file => $self->output_file,
         verbose => $self->verbose,
         min_depth_het => $self->min_depth_het,
         min_depth_hom => $self->min_depth_hom,
@@ -98,5 +100,48 @@ sub _generate_data {
         reference_build => $self->reference_build,
     );
 }
+
+sub _gather_params_for_get_or_create {
+    my $class = shift;
+
+    my $bx = UR::BoolExpr->resolve_normalized_rule_for_class_and_params($class, @_);
+
+    my %params = $bx->params_list;
+    my %is_input;
+    my %is_param;
+    my $class_object = $class->__meta__;
+    for my $key ($class->property_names) {
+        my $meta = $class_object->property_meta_for_name($key);
+        if ($meta->{is_input} && exists $params{$key}) {
+            $is_input{$key} = $params{$key};
+        } elsif ($meta->{is_param} && exists $params{$key}) {
+            $is_param{$key} = $params{$key};
+        }
+    }
+
+    my $inputs_bx = UR::BoolExpr->resolve_normalized_rule_for_class_and_params($class, %is_input);
+    my $params_bx = UR::BoolExpr->resolve_normalized_rule_for_class_and_params($class, %is_param);
+
+    my %software_result_params = (
+        params_id=>$params_bx->id,
+        inputs_id=>$inputs_bx->id,
+        subclass_name=>$class,
+    );
+
+    return {
+        software_result_params => \%software_result_params,
+        subclass => $class,
+        inputs=>\%is_input,
+        params=>\%is_param,
+    };
+}
+
+sub resolve_allocation_subdirectory {
+    my $self = shift;
+    my $staged_basename = File::Basename::basename($self->temp_staging_directory);
+    return join('/', 'build_merged_alignments', $self->id, 'compare-snps-' . $staged_basename);
+};
+
+sub resolve_allocation_disk_group_name { 'info_genome_models' };
 
 1;
