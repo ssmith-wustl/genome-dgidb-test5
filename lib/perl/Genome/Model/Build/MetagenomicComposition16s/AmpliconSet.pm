@@ -9,7 +9,7 @@ class Genome::Model::Build::MetagenomicComposition16s::AmpliconSet {
     is => 'UR::Object',
     has => [
         name => { is => 'Text', },
-        primers => { is => 'Text', is_many => 1, },
+        primers => { is => 'Text', is_many => 1, is_optional => 1, },
         classification_dir => { 
             is => 'Text',
         },
