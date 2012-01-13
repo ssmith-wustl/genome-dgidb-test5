@@ -52,7 +52,7 @@ sub execute {
     my %probes;
     my $probe_fh = new IO::File $probe_bed,"r";
     my $track_found = 0;
-
+    
     while (my $line = $probe_fh->getline) {
         if (($line =~ /track name=tiled_region description="NimbleGen Tiled Regions"/i) ||
             ($line =~ /track name=hg18_tiled_region description="hg18 NimbleGen Tiled Regions"/ )) {
@@ -148,7 +148,7 @@ sub process_design_file_list {
     my @list=();
     while(my $line = $fh->getline) {
 	chomp $line;
-	next if($line =~ /^\s+$/ || $line =~ /^\#/); #ignore comment and blank lines
+	next if($line =~ /^\s+$/ || $line =~ /^\#/ || $line =~ /^$/); #ignore comment and blank lines
 	push(@list,$line);
     }
     $fh->close;
