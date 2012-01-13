@@ -15,11 +15,18 @@ CREATE TABLE result.software_result (
 );
 
 CREATE TABLE result.input (
-    result_id   varchar(32) NOT NULL REFERENCES result.software_result(id),
-    input_name  varchar(100) NOT NULL,
-    input_value varchar(1000) NOT NULL,
+    result_id        varchar(32) NOT NULL REFERENCES result.software_result(id),
+    input_name       varchar(100) NOT NULL,
+    input_value      varchar(1000) NOT NULL,
+    name             varchar(255),
+    value_class_name varchar(255),
+    value_id         varchar(1000),
     PRIMARY KEY (result_id, input_name)
 );
+CREATE INDEX result_input_value_id_index ON result.input(value_id);
+CREATE INDEX result_input_name_index ON result.input(name);
+CREATE INDEX result_input_value_class_id_index ON result.input(value_class_name, value_id);
+CREATE INDEX result_input_id_name ON result.input(result_id, name);
 
 CREATE TABLE result.metric (
     result_id    varchar(32) NOT NULL REFERENCES result.software_result(id),
@@ -34,6 +41,10 @@ CREATE TABLE result.param (
     param_value varchar(1000) NOT NULL,
     PRIMARY KEY (result_id, param_name)
 );
+CREATE INDEX result_param_value_id_index ON result.param(value_id);
+CREATE INDEX result_param_name_index ON result.param(name);
+CREATE INDEX result_param_value_class_id_index ON result.param(value_class_name, value_id);
+CREATE INDEX result_param_id_name ON result.param(result_id, name);
 
 CREATE TABLE result.user (
     id              varchar(32) NOT NULL,
