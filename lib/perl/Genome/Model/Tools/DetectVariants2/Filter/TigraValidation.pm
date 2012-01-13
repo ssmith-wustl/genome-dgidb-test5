@@ -740,6 +740,8 @@ sub _get_sr_dirs {
     for my $chr_name (@use_chr_list) {
         my $sr_params = $self->params_for_filter_result;
         $sr_params->{chromosome_list} = $chr_name;
+        delete $sr_params->{filter_version};
+
         my $sr = Genome::Model::Tools::DetectVariants2::Result::Filter->get(%$sr_params);
         unless ($sr) {
             $self->error_message('Failed to find software result for chromosome '.$chr_name);
