@@ -351,6 +351,7 @@ sub amplicon_set_for_name { #moved from g:m:b:mc16s base class
 
     my %params = (
         name => $set_name,
+        primers => [],
         _amplicon_iterator => $amplicon_iterator,
         classification_dir => $self->build->classification_dir,
         classification_file => $self->build->classification_file_for_set_name($set_name),
