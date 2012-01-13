@@ -1,4 +1,4 @@
-apackage Genome::Model::Tools::CopyNumber::ReadDepthPaired;
+package Genome::Model::Tools::CopyNumber::ReadDepthPaired;
 
 use strict;
 use Genome;
