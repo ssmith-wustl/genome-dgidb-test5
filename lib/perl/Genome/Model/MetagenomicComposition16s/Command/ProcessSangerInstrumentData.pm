@@ -48,7 +48,7 @@ sub prepare_instrument_data {
         my $amplicon_set = $self->amplicon_set_for_name($name);
         next if not $amplicon_set; # ok
 
-        my $writer = $self->build->fasta_and_qual_writer_for_type_and_set_name('processed', $amplicon_set->name);
+        my $writer = $amplicon_set->seq_writer_for('processed');
         return if not $writer;
 
         while ( my $amplicon = $amplicon_set->next_amplicon ) {
@@ -352,11 +352,11 @@ sub amplicon_set_for_name { #moved from g:m:b:mc16s base class
     my %params = (
         name => $set_name,
         primers => [],
+        directory => $self->build->data_directory,
+        file_base_name => $self->build->file_base_name,
         _amplicon_iterator => $amplicon_iterator,
         classification_dir => $self->build->classification_dir,
         classification_file => $self->build->classification_file_for_set_name($set_name),
-        processed_fasta_file => $self->build->processed_fasta_file_for_set_name($set_name),
-        processed_qual_file => $self->build->processed_fasta_file_for_set_name($set_name),
         oriented_fasta_file => $self->build->oriented_fasta_file_for_set_name($set_name),
         oriented_qual_file => $self->build->oriented_qual_file_for_set_name($set_name),
     );

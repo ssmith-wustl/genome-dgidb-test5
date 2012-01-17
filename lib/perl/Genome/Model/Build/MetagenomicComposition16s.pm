@@ -117,10 +117,10 @@ sub amplicon_sets {
         push @amplicon_sets, Genome::Model::Build::MetagenomicComposition16s::AmpliconSet->create(
             name => $set_name,
             primers => $amplicon_set_names_and_primers{$set_name},
+            file_base_name => $self->file_base_name,
+            directory => $self->data_directory,
             classification_dir => $self->classification_dir,
             classification_file => $self->classification_file_for_set_name($set_name),
-            processed_fasta_file => $self->processed_fasta_file_for_set_name($set_name),
-            processed_qual_file => $self->processed_qual_file_for_set_name($set_name),
             oriented_fasta_file => $self->oriented_fasta_file_for_set_name($set_name),
             oriented_qual_file => $self->oriented_qual_file_for_set_name( $set_name ),
         );
@@ -133,21 +133,6 @@ sub amplicon_sets {
 
     return @amplicon_sets;
 }
-
-sub get_writer_for_set_name {
-    my ($self, $set_name) = @_;
-
-    unless ( $self->{$set_name} ) {
-        my $fasta_file = $self->processed_fasta_file_for_set_name($set_name);
-        unlink $fasta_file if -e $fasta_file;
-        my $writer = Genome::Model::Tools::Sx::PhredWriter->create(file => $fasta_file);
-        Carp::confess("Failed to create phred reader for amplicon set ($set_name)") if not $writer;
-        $self->{$set_name} = $writer;
-    }
-
-    return $self->{$set_name};
-}
-
 
 #< Dirs >#
 sub sub_dirs {
@@ -268,12 +253,10 @@ sub processed_fasta_file { # returns them as a string (legacy)
 }
 
 sub processed_fasta_files {
-    return $_[0]->_files_for_amplicon_sets('processed_fasta');
-}
-
-sub processed_fasta_file_for_set_name {
-    my ($self, $set_name) = @_;
-    return $self->_fasta_file_for_type_and_set_name('processed', $set_name);
+    my $self = shift;
+    my @amplicon_sets = $self->amplicon_sets;
+    return if not @amplicon_sets;
+    return map { $_->processed_fasta_file } @amplicon_sets;
 }
 
 sub processed_qual_file { # returns them as a string (legacy)
@@ -282,11 +265,6 @@ sub processed_qual_file { # returns them as a string (legacy)
 
 sub processed_qual_files {
     return $_[0]->_files_for_amplicon_sets('processed_qual');
-}
-
-sub processed_qual_file_for_set_name {
-    my ($self, $set_name) = @_;
-    return $self->processed_fasta_file_for_set_name($set_name).'.qual';
 }
 
 sub processed_reads_fasta_file { #sanger
@@ -411,8 +389,16 @@ sub prepare_instrument_data {
     }
 
     if ( @primers ) {
-        my $none_fasta_file = $self->processed_fasta_file_for_set_name('none');
-        my $none_qual_file = $self->processed_qual_file_for_set_name( 'none' );
+        my $none_amplicon_set = Genome::Model::Build::MetagenomicComposition16s::AmpliconSet->create(
+            name => 'none',
+            directory => $self->data_directory,
+            file_base_name => $self->file_base_name,
+            classification_dir => $self->classification_dir,
+            classification_file => $self->classification_file_for_set_name('none'),
+            oriented_fasta_file => $self->oriented_fasta_file_for_set_name('none'),
+        );
+        my $none_fasta_file = $none_amplicon_set->processed_fasta_file;
+        my $none_qual_file = $none_amplicon_set->processed_qual_file;
         unlink $none_fasta_file, $none_qual_file;
         push @output, 'name=discard:file='.$none_fasta_file.':qual_file='.$none_qual_file.':type=phred';
         push @cmd_parts, 'gmt sx bin by-primer --remove --primers '.join(',', @primers);
