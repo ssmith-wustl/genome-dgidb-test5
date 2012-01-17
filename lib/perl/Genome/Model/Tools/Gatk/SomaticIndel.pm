@@ -146,14 +146,20 @@ sub execute {
         if ($self->somatic_file) {
             system("touch " . $self->somatic_file);
         }
+
         $return = Genome::Sys->shellcmd(
                 cmd => "$cmd",
                 output_files => [$output_file],
                 skip_if_output_is_present => 0,
+                allow_zero_size_output_files => 1,
         );
-        unless($return) { 
+        unless($return) {
             $self->error_message("Failed to execute GATK: GATK Returned $return");
             die $self->error_message;
+        }
+
+        unless(-s $output_file) {
+            $self->warning_message('No indels returned by GATK.');
         }
     }
 
