@@ -60,11 +60,7 @@ sub _instrument_data_is_jumping {
 
 sub _instrument_data_is_sloptig {
     my ($self, $instrument_data) = @_;
-    if ($instrument_data->final_est_fragment_size and $instrument_data->read_length 
-        and $instrument_data->final_est_fragment_std_dev
-        and $instrument_data->read_orientation 
-        and $instrument_data->final_est_fragment_size - 2*$instrument_data->final_est_fragment_std_dev < 2*$instrument_data->read_length
-        and $instrument_data->read_orientation eq "forward_reverse") {
+     if (!$self->_instrument_data_is_jumping($instrument_data)) {
         return 1;
     }
     else {
