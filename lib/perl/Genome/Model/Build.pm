@@ -2388,4 +2388,31 @@ sub execution_host_from_bjobs_output {
     return $execution_host;
 }
 
+sub is_current {
+    my $self = shift;
+    my $model = $self->model;
+
+    my @build_inputs = $self->inputs;
+    my @model_inputs = $model->inputs;
+    unless ($model->_input_counts_are_ok(scalar(@model_inputs), scalar(@build_inputs))) {
+        return;
+    }
+
+    my ($model_inputs_not_found, $build_inputs_not_found) = $self->input_differences_from_model;
+    if (@$model_inputs_not_found || @$build_inputs_not_found) {
+        unless ($model->_input_differences_are_ok($model_inputs_not_found, $build_inputs_not_found)) {
+            return;
+        }
+    }
+
+    my @from_builds = $self->from_builds;
+    for my $from_build (@from_builds) {
+        unless ($from_build->is_current) {
+            return;
+        }
+    }
+
+    return 1;
+}
+
 1;

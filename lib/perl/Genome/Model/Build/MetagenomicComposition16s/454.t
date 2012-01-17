@@ -91,7 +91,7 @@ ok($build->get_or_create_data_directory, 'resolved data dir');
 my $example_build = Genome::Model::Build->create(
     model=> $model,
     id => -2288,
-    data_directory => '/gsc/var/cache/testsuite/data/Genome-Model/MetagenomicComposition16s454/build',
+    data_directory => '/gsc/var/cache/testsuite/data/Genome-Model/MetagenomicComposition16s454/build_v2',
 );
 ok($example_build, 'example build') or die;
 
@@ -99,9 +99,6 @@ ok($example_build, 'example build') or die;
 is($build->calculate_estimated_kb_usage, 1024, 'estimated kb usage');
 
 # dirs
-my $existing_build_dir = '/gsc/var/cache/testsuite/data/Genome-Model/MetagenomicComposition16s454/build';
-ok(-d $existing_build_dir, 'existing build dir exists');
-
 ok($build->create_subdirectories, 'created subdirectories');
 
 my $classification_dir = $build->classification_dir;
@@ -116,14 +113,32 @@ ok(-d $fasta_dir, 'fasta_dir exists');
 my $file_base = $build->file_base_name;
 is($file_base, $build->subject_name, 'file base');
 
+#< AMPLICON SETS >#
+my @standards = (
+    { name => 'V1_V3', amplicons => [qw/ FZ0V7MM01A01AQ FZ0V7MM01A01O4 FZ0V7MM01A02JE FZ0V7MM01A02T9 FZ0V7MM01A0327 /] },
+    { name => 'V3_V5', amplicons => [qw/ FZ0V7MM01A00L3 FZ0V7MM01A00YG FZ0V7MM01A02O2 FZ0V7MM01A03HG /] },
+    { name => 'V6_V9', amplicons => [qw/ FZ0V7MM01A004O FZ0V7MM01A00FU FZ0V7MM01A00G0 FZ0V7MM01A00IA FZ0V7MM01A00XH /] },
+    { name => 'none', amplicons => [qw/ FZ0V7MM01A00CR FZ0V7MM01A023X FZ0V7MM01A032H FZ0V7MM01A0QNB FZ0V7MM01A0R82 /] },
+);
+my @set_names = $build->amplicon_set_names;
+is_deeply(\@set_names, [ sort grep { $_ ne 'none' } map { $_->{name} } @standards ], 'amplicon set names');
+my @amplicon_sets = $build->amplicon_sets;
+is(@amplicon_sets, 3, 'got 3 amplicon sets');
+my @example_amplicon_sets = $example_build->amplicon_sets;
+is(@example_amplicon_sets, 3, 'got 3 example amplicon sets');
+
 #< PREPARE >#
 ok($build->prepare_instrument_data, 'prepare instrument data');
-for my $set_name ( $build->amplicon_set_names, 'none' ) {
-    my $fasta_file = $build->processed_fasta_file_for_set_name($set_name);
+for ( my $i = 0; $i < @amplicon_sets; $i++ ) { 
+    my $set_name = $amplicon_sets[$i]->name;
+    my $example_set_name = $example_amplicon_sets[$i]->name;
+    is($set_name, $example_set_name, 'set name mathces');
+    my $fasta_file = $amplicon_sets[$i]->processed_fasta_file;
     ok(-s $fasta_file, "fasta file for $set_name was created");
-    my $example_fasta_file = $build->processed_fasta_file_for_set_name($set_name);
+    my $example_fasta_file = $example_amplicon_sets[$i]->processed_fasta_file;
     ok(-s $example_fasta_file, "example fasta file for $set_name");
     is(File::Compare::compare($fasta_file, $example_fasta_file), 0, "fasta file matches example");
+    #print join(' ', 'gvimdiff', $fasta_file, $example_fasta_file, "\n");<STDIN>;
 }
 
 # metrics
@@ -143,27 +158,15 @@ is($build->amplicons_classification_error, 0, 'amplicons classified error');
 #< ORIENT >#
 ok($build->orient_amplicons, 'orient amplicons');
 
-my @standards = (
-    { name => 'V1_V3', amplicons => [qw/ FZ0V7MM01A01AQ FZ0V7MM01A01O4 FZ0V7MM01A02JE FZ0V7MM01A02T9 FZ0V7MM01A0327 /] },
-    { name => 'V3_V5', amplicons => [qw/ FZ0V7MM01A00L3 FZ0V7MM01A00YG FZ0V7MM01A02O2 FZ0V7MM01A03HG /] },
-    { name => 'V6_V9', amplicons => [qw/ FZ0V7MM01A004O FZ0V7MM01A00FU FZ0V7MM01A00G0 FZ0V7MM01A00IA FZ0V7MM01A00XH /] },
-    { name => 'none', amplicons => [qw/ FZ0V7MM01A00CR FZ0V7MM01A023X FZ0V7MM01A032H FZ0V7MM01A0QNB FZ0V7MM01A0R82 /] },
-);
-
-#< Amplicon Set Names >#
-my @set_names = $build->amplicon_set_names;
-is_deeply(\@set_names, [ sort grep { $_ ne 'none' } map { $_->{name} } @standards ], 'amplicon set names');
-my @amplicon_sets = $build->amplicon_sets;
-is(scalar(@amplicon_sets), 3, 'got 3 amplicon sets');
-my $cnt = 0;
-for my $amplicon_set ( @amplicon_sets ) {
+#< AMPLICON SETS >#
+for ( my $i = 0; $i < @amplicon_sets; $i++ ) { 
     # name
-    my $set_name = $amplicon_set->name;
-    is($set_name, $standards[$cnt]->{name}, 'amplicon set name');
+    my $set_name = $amplicon_sets[$i]->name;
+    is($set_name, $standards[$i]->{name}, 'amplicon set name');
     # fastas
     for my $type (qw/ processed oriented /) {
-        my $method = $type.'_fasta_file_for_set_name';
-        my $fasta_file = $build->$method($set_name);
+        my $method = $type.'_fasta_file';
+        my $fasta_file = $amplicon_sets[$i]->$method;
         is(
             $fasta_file,
             $fasta_dir.'/'.$file_base.'.'.$set_name.'.'.$type.'.fasta',
@@ -173,27 +176,26 @@ for my $amplicon_set ( @amplicon_sets ) {
         #is(File::Compare::compare($fasta_file, $EXAMPLE), 0, "$type fasta file name exists for set $set_name");
     }
     # classification
-    my $classification_file = $build->classification_file_for_set_name($set_name);
+    my $classification_file = $amplicon_sets[$i]->classification_file;
     is(
         $classification_file,
         $classification_dir.'/'.$file_base.'.'.$set_name.'.'.$build->classifier,
         "classification file name for set name: $set_name"
     );
     my $diff_ok = Genome::Model::Build::MetagenomicComposition16s->diff_rdp(
-        $example_build->classification_file_for_set_name($set_name),
+        $example_amplicon_sets[$i]->classification_file,
         $classification_file,
     );
     ok($diff_ok, 'diff rdp files');
     # amplicons
     my @amplicon_names;
-    while ( my $amplicon = $amplicon_set->next_amplicon ) {
+    while ( my $amplicon = $amplicon_sets[$i]->next_amplicon ) {
         ok($amplicon->{classification}, $amplicon->{name}.' has a classification');
         is($amplicon->{classification}->[0], $amplicon->{name}, 'classification name matches');
         is($amplicon->{classification}->[1], '-', 'is complemented');
         push @amplicon_names, $amplicon->{name};
     }
-    is_deeply(\@amplicon_names, $standards[$cnt]->{amplicons}, "amplicons match for $set_name");
-    $cnt++;
+    is_deeply(\@amplicon_names, $standards[$i]->{amplicons}, "amplicons match for $set_name");
 }
 
 ok($build->perform_post_success_actions, 'perform post success actions');
