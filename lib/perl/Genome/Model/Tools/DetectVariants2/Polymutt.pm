@@ -34,7 +34,7 @@ gmt detect-variants2 polymutt \\
 gmt detect-variants2 polymutt \\
     --version 0.01 \\
     --reference-build GRCh37-lite-build37 \\
-    --pedigree-file-path /gscmnt/gc2146/info/medseq/test_polymutt_pipeline/13211.ped \\ 
+    --pedigree-file-path /gscmnt/gc2146/info/medseq/test_polymutt_pipeline/13211.ped \\
     --alignment-results id:116159911/116159901/116160033/116159884 \\
     --output-directory /gscmnt/gc4095/info/polymutt-test/t1
     

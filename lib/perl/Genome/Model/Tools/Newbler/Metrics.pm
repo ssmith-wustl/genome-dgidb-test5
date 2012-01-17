@@ -85,9 +85,9 @@ sub execute {
     $self->status_message('Newbler metrics...');
 
     # input files
-    #my $resolve_post_assembly_files = $self->_validate_or_create_post_assembly_files;
-    #return if not $resolve_post_assembly_files;
-    my $contigs_bases_file = $self->contigs_bases_file;
+    my $validate_assembly_files = $self->_validate_assembly_files;
+    return if not $validate_assembly_files;
+    my $contigs_bases_file = $self->all_contigs_fasta_file;
 
     # tier values
     my ($t1, $t2);
@@ -112,27 +112,22 @@ sub execute {
     $self->_metrics($metrics);
 
     # add contigs
-    $self->status_message('Add contigs bases file: '.$contigs_bases_file);
-    my $add_contigs_ok = $metrics->add_contigs_file_with_contents($contigs_bases_file.':type=fasta');
+    $self->status_message('Add metrics from 454AllContigs.fna file');
+    my $add_contigs_ok = $self->_metrics_from_newbler_contigs_file( $metrics );
     return if not $add_contigs_ok;
 
-    # reads
+    # input reads
     for my $reads_file ( $self->input_fastq_files ) {
         $self->status_message('Add reads file: '.$reads_file);
         my $add_reads = $metrics->add_reads_file_with_q20($reads_file);
         return if not $add_reads;
     }
 
-    # reads assembled (placed)
-    $self->status_message('Add reads assembled: '.$self->newb_metrics_file);
-    my $add_reads_assembled = $self->_add_reads_assembled_to_metrics($metrics);
-    return if not $add_reads_assembled;
-
-    # reads assembled
-    $self->status_message('Add read depths: '.$self->read_info_file);
-    my $add_read_depth = $self->_add_read_depth_to_metrics($metrics);
+    # assembled reads
+    $self->status_message('Add read status metrics: ');
+    my $add_read_depth = $self->_metrics_from_newb_read_status_file($metrics);
     return if not $add_read_depth;
-    
+
     # transform metrics
     my $text = $metrics->transform_xml_to('txt');
     if ( not $text ) {
@@ -156,83 +151,230 @@ sub execute {
     return 1;
 }
 
-sub _add_reads_assembled_to_metrics {
-    my ($self, $metrics) = @_;
+sub _scaffolding_info_from_newbler {
+    my $self = shift;
 
-    unless( -s $self->newb_metrics_file ) {
-        $self->error_message( "Failed to find newbler read stats file: ".$self->newb_metrics_file );
-        return;
+    my %scaffolds;
+    if ( not -s $self->scaffolds_agp_file ) { 
+        $self->status_message('No newbler scaffolds file found, assuming assembly is not scaffolded');
+        return \%scaffolds;
     }
 
-    my $reads_assembled;
-    my $fh = eval{ Genome::Sys->open_file_for_reading( $self->newb_metrics_file ); };
-    if ( not $fh ) {
-        $self->error_message('Failed to open newbler metrics file: '.$self->newb_metrics_file);
-        return;
-    }
+    my $fh = Genome::Sys->open_file_for_reading( $self->scaffolds_agp_file );
     while ( my $line = $fh->getline ) {
-        if ( $line =~ /\s+numberAssembled\s+\=\s+(\d+)/ ) {
-            $reads_assembled = $1;
-            last;
-        }
+        next if $line =~ /\s+fragment\s+/;
+        chomp $line;
+        my @tmp = split( /\s+/, $line );
+        #tmp[0] = scaffold name
+        #tmp[5] = contig name
+        #tmp[7] = contig length
+        my $scaffold_number = $tmp[0];
+        $scaffold_number =~ s/scaffold//;
+        $scaffold_number =~ s/^0+//;
+        $scaffolds{$tmp[5]} = $scaffold_number;
     }
     $fh->close;
 
-    if ( not $reads_assembled ) {
-        $self->error_message("Failed to get assembled reads from metrics file. Expected a line like this: 'numberAssembled = 3200' in file but did't find one" );
-        return;
+    $self->{_SCAFFOLDS} = \%scaffolds;
+
+    return \%scaffolds;
+}
+
+sub _metrics_from_newbler_contigs_file {
+    my ( $self, $metrics ) = @_;
+
+    #empty hashref if not scaffolds in assembly
+    my $scaffolds = $self->_scaffolding_info_from_newbler;
+
+    my ( $content_at, $content_gc, $content_nx, $contigs_5k, $assembly_length ) = ( 0,0,0,0,0 );
+
+    my $reader = Genome::Model::Tools::Sx::Reader->create(config => [$self->all_contigs_fasta_file.':type=fasta']);
+    while (my $seqs = $reader->read ) {
+        for my $seq ( @$seqs ) {
+            # contigs lengths
+            $self->_metrics->contigs->{$seq->{id}} = length $seq->{seq};
+            $assembly_length += length $seq->{seq};
+
+            # supercontigs lengths
+            my $supercontig_id = ( exists $scaffolds->{$seq->{id}} ) ?
+                $scaffolds->{$seq->{id}} : #part of scaffold
+                $seq->{id};                #it's own scaffold
+            $self->_metrics->supercontigs->{$supercontig_id} += length $seq->{seq};
+
+            # gt 5k contigs
+            $contigs_5k += length $seq->{seq} if length $seq->{seq} >= 5000;
+
+            # genome content metrics
+            my %base_counts = ( a => 0, t => 0, g => 0, C => 0, n => 0, x => 0 );
+            foreach my $base ( split('', $seq->{seq}) ) {
+                $base_counts{lc $base}++;
+            }
+            $content_at += $base_counts{a} + $base_counts{t};
+            $content_gc += $base_counts{g} + $base_counts{c};
+            $content_nx += $base_counts{n} + $base_counts{x};
+        }
     }
 
-    $metrics->set_metric('reads_assembled', $reads_assembled);
+    #set major/minor lengths
+    for my $type ( 'contigs', 'supercontigs' ) {
+        my ( $major, $minor, $count ) = ( 0,0,0 );
+        for my $type_name ( keys %{$self->_metrics->{$type}} ) {
+            $count++;
+            my $length = $self->_metrics->{$type}->{$type_name};
+            if ( $length >= $self->major_contig_length ) {
+                $major += $length;
+            } else {
+                $minor += $length;
+            }
+        }
+        $metrics->set_metric($type.'_count', $count);
+        $metrics->set_metric($type.'_length', $major + $minor);
+        $metrics->set_metric($type.'_major_length', $major);
+        $metrics->set_metric($type.'_minor_length', $minor);
+    }
+
+    # set at/gc/nx contents
+    $metrics->set_metric('content_at', $content_at);
+    $metrics->set_metric('content_gc', $content_gc);
+    $metrics->set_metric('content_nx', $content_nx);
+
+    # set 5k contigs
+    $metrics->set_metric('contigs_length_5k', $contigs_5k);
+
+    # assembly length
+    $metrics->set_metric('assembly_length', $assembly_length);
 
     return 1;
 }
 
-sub _add_read_depth_to_metrics {
-    my ($self, $metrics) = @_;
+sub _metrics_from_newb_read_status_file {
+    my ( $self, $metrics ) = @_;
 
-    my %coverage;
-
-    my $total_covered_pos = 0;
-    my $five_x_cov = 0;
-    my $four_x_cov = 0;
-    my $three_x_cov = 0;
-    my $two_x_cov = 0;
-    my $one_x_cov = 0;
-
-    my $fh = Genome::Sys->open_file_for_reading( $self->read_info_file );
+    my %covered;
+    my %reads_in_contigs;
+    my $reads_assembled = 0;
+    
+    my $fh = Genome::Sys->open_file_for_reading( $self->newb_read_status_file );
+    # exclude header
+    my $header = $fh->getline;
     while ( my $line = $fh->getline ) {
+        chomp $line;
         my @tmp = split( /\s+/, $line );
         #$tmp[0] = read name
-        #$tmp[1] = contig name
-        #$tmp[3] = read start position
-        #$tmp[4] = read length
-        my $from = $tmp[3];               #coverage start
-        my $to = $tmp[3] + $tmp[4] - 1;   #coverage end
-        for my $pos ( $from .. $to ) {
-            $pos -= 1;
-            @{ $coverage{$tmp[1]} }[$pos]++;
+        #$tmp[1] = status, assembled or not
+        #$tmp[2] = contig name
+        #$tmp[3] = 3' position
+        #$tmp[4] = 3' complimented or uncomp
+        #$tmp[5] = contig name
+        #$tmp[6] = 5' position
+        #$tmp[7] = 5' complimented or uncomp
+        if ( $tmp[1] eq 'Assembled' or $tmp[1] eq 'PartiallyAssembled' ) {
+            # no split reads .. shouldn't happend anymore
+            next if not $tmp[2] eq $tmp[5];
+            # mal-formed line die?
+            next if not $tmp[3] =~ /^\d+$/ and not $tmp[6] =~ /^\d+$/;
+            # ignore contigs not part of main assembly
+            next if not exists $self->_metrics->contigs->{$tmp[2]};
+
+            my $start = ( $tmp[3] >= $tmp[6] ) ? $tmp[6] : $tmp[3];
+            my $stop = ( $tmp[3] > $tmp[6] ) ? $tmp[3] : $tmp[6];
+            for ( $start .. $stop ) {
+                @{$covered{$tmp[2]}}[$_]++;
+            }
+            
+            #track # of reads in contigs
+            $reads_in_contigs{$tmp[2]}++;
+            $reads_assembled++;
         }
     }
     $fh->close;
-    
-    for my $contig ( keys %coverage ) {
-        $total_covered_pos += scalar @{$coverage{$contig}};
-        for my $pos ( @{$coverage{$contig}} ) {
-            $one_x_cov++ if $pos > 0;
-            $two_x_cov++ if $pos > 1;
-            $three_x_cov++ if $pos > 2;
-            $four_x_cov++ if $pos > 3;
-            $five_x_cov++ if $pos > 4;
+
+    # determine coverage
+    my ( $zero_x, $one_x, $two_x, $three_x, $four_x, $five_x ) = ( 0,0,0,0,0,0 );
+    for my $contig ( keys %covered ) {
+        # ignore contigs not in assembly
+        #next if not exists $self->_metrics->contigs->{$contig};
+        shift @{$covered{$contig}}; #[0] is always undef
+        for ( @{$covered{$contig}} ) {
+            if ( not defined $_ ) {
+                $zero_x++;
+                next;
+            }
+            $one_x++   if $_ > 0;
+            $two_x++   if $_ > 1;
+            $three_x++ if $_ > 2;
+            $four_x++  if $_ > 3;
+            $five_x++  if $_ > 4;
+        }
+    }
+    $metrics->set_metric('coverage_5x', $five_x);
+    $metrics->set_metric('coverage_4x', $four_x);
+    $metrics->set_metric('coverage_3x', $three_x);
+    $metrics->set_metric('coverage_2x', $two_x);
+    $metrics->set_metric('coverage_1x', $one_x);
+    $metrics->set_metric('coverage_0x', $zero_x);
+
+    # major/minor contigs/supercontigs read counts
+    my $scaffolds = $self->{_SCAFFOLDS};
+
+    my $major_contigs_read_count = 0;
+    my $major_supercontigs_read_count = 0;
+
+    for my $contig_id ( keys %reads_in_contigs ) {
+        # ignore contigs not in final assembly
+        if ( exists $self->_metrics->contigs->{$contig_id} ) {
+            my $read_count = $reads_in_contigs{$contig_id};
+
+            # contigs read count
+            my $contig_length = $self->_metrics->contigs->{$contig_id};
+            $major_contigs_read_count += $read_count if
+                $contig_length >= $self->major_contig_length;
+
+            # supercontig read count
+            my $supercontig_id = ( exists $scaffolds->{$contig_id} ) ?
+                $scaffolds->{$contig_id} :
+                $contig_id;
+
+            my $supercontig_length = $self->_metrics->supercontigs->{$supercontig_id};
+            $major_supercontigs_read_count += $read_count if
+                $supercontig_length >= $self->major_contig_length;
         }
     }
 
-    $metrics->set_metric('coverage_5x', $five_x_cov);
-    $metrics->set_metric('coverage_4x', $four_x_cov);
-    $metrics->set_metric('coverage_3x', $three_x_cov);
-    $metrics->set_metric('coverage_2x', $two_x_cov);
-    $metrics->set_metric('coverage_1x', $one_x_cov);
-    $metrics->set_metric('coverage_0x', 0);
+    $metrics->set_metric('contigs_major_read_count', $major_contigs_read_count);
+    $metrics->set_metric('supercontigs_major_read_count', $major_supercontigs_read_count);
+    my $major_contigs_read_percent = sprintf( "%.1f", $major_contigs_read_count/ $reads_assembled * 100);
+    $metrics->set_metric('contigs_major_read_percent', $major_contigs_read_percent);
+    my $major_supercontigs_read_percent = sprintf( "%.1f", $major_supercontigs_read_count/ $reads_assembled * 100);
+    $metrics->set_metric('supercontigs_major_read_percent', $major_supercontigs_read_percent);
+
+    # all contigs read counts
+    $metrics->set_metric('reads_assembled', $reads_assembled);
+    $metrics->set_metric('reads_assembled_unique', $reads_assembled);
+    my $reads_processed = $metrics->get_metric('reads_processed');
+    $metrics->set_metric('reads_assembled_success', sprintf('%.3f', $reads_assembled / $reads_processed));
+    my $reads_not_assembled = $reads_processed - $reads_assembled;
+    $metrics->set_metric('reads_not_assembled', $reads_not_assembled);
+
+    return 1;
+}
+
+sub _validate_assembly_files {
+    my $self = shift;
+
+    # 454AllContigs.fna
+    if( not -s $self->all_contigs_fasta_file ) {
+        $self->error_message('No 454AllContigs.fna file in assembly dir: '.$self->assembly_directory);
+        return;
+    }
+    #454ReadStatus.txt
+    if( not -s $self->newb_read_status_file ) {
+        $self->error_message('No 454ReadStatus.txt file in assembly dir: '.$self->assembly_directory);
+        return;
+    }
+
+    # 454Scaffolds.txt 
+    # assembly not scaffolded if missing
 
     return 1;
 }
