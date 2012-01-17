@@ -156,11 +156,15 @@ sub _get_header_columns {
 sub _get_public_ref {
     my $self = shift;
     my $seq_center      = $self->sequencing_center;
-    my $ref_seq_version = $self->reference_sequence_build->version;
-    my $subject_name    = $self->reference_sequence_build->subject_name;
+    my $ref_seq         = $self->reference_sequence_build;
+    my $ref_seq_version = $ref_seq->version;
+    my $subject_name    = $ref_seq->subject_name;
 
     my $public_ref;
-    if ($subject_name eq 'human') {
+
+    if($ref_seq->sequence_uri) {
+        $public_ref = $ref_seq->sequence_uri;
+    } elsif ($subject_name eq 'human') {
         if ($ref_seq_version == 37) {
             $public_ref = "ftp://ftp.ncbi.nih.gov/genbank/genomes/Eukaryotes/vertebrates_mammals/Homo_sapiens/GRCh37/special_requests/GRCh37-lite.fa.gz";
         } 
