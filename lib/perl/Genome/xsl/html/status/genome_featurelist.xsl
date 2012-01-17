@@ -17,14 +17,14 @@
 
         <!-- details for this library -->
         <div class="span_8_box_masonry">
-          <div class="box_header span-8 last rounded-top">
+          <div class="box_header span-12 last rounded-top">
             <div class="box_title"><h3 class="nontyped span-7 last">Feature List Attributes</h3></div>
             <div class="box_button">
 
             </div>
           </div>
 
-          <div class="box_content rounded-bottom span-8 last">
+          <div class="box_content rounded-bottom span-12 last">
             <table class="name-value">
               <tbody>
                 <tr>
@@ -49,6 +49,12 @@
                   <td class="name">MD5:
                   </td>
                   <td class="value"><xsl:value-of select="aspect[@name='file_content_hash']/value"/>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="name">File Path:
+                  </td>
+                  <td class="value"><xsl:value-of select="aspect[@name='file_path']/value"/>
                   </td>
                 </tr>
               </tbody>
