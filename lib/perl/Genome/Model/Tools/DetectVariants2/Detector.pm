@@ -288,7 +288,7 @@ sub execute {
     my $self = shift;
 
     $self->_resolve_output_directory;
-
+$DB::single = 1;
     $self->_summon_detector_result;
 
     if($self->_try_vcf){
@@ -401,8 +401,18 @@ sub params_for_detector_result {
         detector_name => $self->class,
         detector_params => $self->params,
         detector_version => $self->version,
+
+        # old
         aligned_reads => $self->aligned_reads_input,
         control_aligned_reads => $self->control_aligned_reads_input,
+
+        #new
+        alignment_results => [$self->alignment_results],
+        control_alignment_results => [$self->control_alignment_results],
+        pedigree_file_path => $self->pedigree_file_path,
+        roi_list => $self->roi_list,
+        roi_wingspan => $self->roi_wingspan,
+
         reference_build_id => $self->reference_build_id,
         region_of_interest_id => $self->region_of_interest_id,
         test_name => $ENV{GENOME_SOFTWARE_RESULT_TEST_NAME} || undef,
