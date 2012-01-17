@@ -754,28 +754,24 @@ sub latest_build_id {
     return $build->id;
 }
 
-sub build_for_status {
-    my $self = shift;
-    if ($self->build_requested || $self->build_needed) {
-        return;
-    }
-    return $self->latest_build('status not like' => 'Abandoned');
-}
-
 sub status {
     my $self = shift;
 
-    my $status;
+    my ($status, $build);
     if ($self->build_requested) {
         $status = 'Build Requested';
     } elsif ($self->build_needed) {
         $status = 'Build Needed';
     } else {
-        $status = $self->build_for_status->status;
+        $build = $self->current_build;
+        $status = $build->status;
     }
-    $status ||= 'Buildless';
 
-    return $status;
+    if (wantarray) {
+        return ($status, $build);
+    } else {
+        return $status;
+    }
 }
 
 sub latest_build_status {
@@ -1306,36 +1302,41 @@ sub set_apipe_cron_status {
     $self->add_note(@header, body_text => $body_text);
 }
 
-#The companion to build_requested--based on the model's state versus the last build, does this model need to be built?
-sub build_needed {
+sub build_is_current {
     my $self = shift;
-
-    my $build = $self->current_running_build;
-    $build ||= $self->last_complete_build;
-
-    return 1 unless $build;
+    my $build = shift;
 
     my @inputs = $self->inputs;
     my @build_inputs = $build->inputs;
-
-    return 1 unless $self->_input_counts_are_ok(scalar(@inputs), scalar(@build_inputs));
-
-    #check that build links on the build are the last complete build for the models in question
-    my @from_builds = $build->from_builds;
-    for my $from_build (@from_builds) {
-        if($from_build->model->last_complete_build ne $from_build) {
-            return 1;
-        }
-    }
+    return unless $self->_input_counts_are_ok(scalar(@inputs), scalar(@build_inputs));
 
     my ($inputs_not_found, $build_inputs_not_found) = $build->input_differences_from_model;
-
-    if(scalar(@$inputs_not_found) or scalar(@$build_inputs_not_found)) {
-        #if the differences are not okay, then we need to rebuild)
-        return (not $self->_input_differences_are_ok($inputs_not_found, $build_inputs_not_found));
-    } else {
-        return; #everything's fine
+    if (@$inputs_not_found || @$build_inputs_not_found) {
+        return unless $self->_input_differences_are_ok($inputs_not_found, $build_inputs_not_found);
     }
+
+    my @from_builds = $build->from_builds;
+    for my $from_build (@from_builds) {
+        my $from_model = $from_build->model;
+        return unless $from_model->build_is_current($from_build);
+    }
+
+    return 1;
+}
+
+sub current_build {
+    my $self = shift;
+    my @builds = $self->builds('status not like' => 'Abandoned');
+    for my $build (reverse @builds) {
+        if ($self->build_is_current($build)) {
+            return $build;
+        }
+    }
+    return;
+}
+
+sub build_needed {
+    return not shift->current_build;
 }
 
 #To be overridden by subclasses--if there is a case where the build and model are expected to differ
