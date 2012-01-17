@@ -1302,33 +1302,11 @@ sub set_apipe_cron_status {
     $self->add_note(@header, body_text => $body_text);
 }
 
-sub build_is_current {
-    my $self = shift;
-    my $build = shift;
-
-    my @inputs = $self->inputs;
-    my @build_inputs = $build->inputs;
-    return unless $self->_input_counts_are_ok(scalar(@inputs), scalar(@build_inputs));
-
-    my ($inputs_not_found, $build_inputs_not_found) = $build->input_differences_from_model;
-    if (@$inputs_not_found || @$build_inputs_not_found) {
-        return unless $self->_input_differences_are_ok($inputs_not_found, $build_inputs_not_found);
-    }
-
-    my @from_builds = $build->from_builds;
-    for my $from_build (@from_builds) {
-        my $from_model = $from_build->model;
-        return unless $from_model->build_is_current($from_build);
-    }
-
-    return 1;
-}
-
 sub current_build {
     my $self = shift;
     my @builds = $self->builds('status not like' => 'Abandoned');
     for my $build (reverse @builds) {
-        if ($self->build_is_current($build)) {
+        if ($build->is_current) {
             return $build;
         }
     }
