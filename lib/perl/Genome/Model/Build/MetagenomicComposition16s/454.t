@@ -159,15 +159,14 @@ is($build->amplicons_classification_error, 0, 'amplicons classified error');
 ok($build->orient_amplicons, 'orient amplicons');
 
 #< AMPLICON SETS >#
-my $cnt = 0;
-for my $amplicon_set ( @amplicon_sets ) {
+for ( my $i = 0; $i < @amplicon_sets; $i++ ) { 
     # name
-    my $set_name = $amplicon_set->name;
-    is($set_name, $standards[$cnt]->{name}, 'amplicon set name');
+    my $set_name = $amplicon_sets[$i]->name;
+    is($set_name, $standards[$i]->{name}, 'amplicon set name');
     # fastas
     for my $type (qw/ processed oriented /) {
         my $method = $type.'_fasta_file';
-        my $fasta_file = $amplicon_set->$method;
+        my $fasta_file = $amplicon_sets[$i]->$method;
         is(
             $fasta_file,
             $fasta_dir.'/'.$file_base.'.'.$set_name.'.'.$type.'.fasta',
@@ -177,27 +176,26 @@ for my $amplicon_set ( @amplicon_sets ) {
         #is(File::Compare::compare($fasta_file, $EXAMPLE), 0, "$type fasta file name exists for set $set_name");
     }
     # classification
-    my $classification_file = $build->classification_file_for_set_name($set_name);
+    my $classification_file = $amplicon_sets[$i]->classification_file;
     is(
         $classification_file,
         $classification_dir.'/'.$file_base.'.'.$set_name.'.'.$build->classifier,
         "classification file name for set name: $set_name"
     );
     my $diff_ok = Genome::Model::Build::MetagenomicComposition16s->diff_rdp(
-        $example_build->classification_file_for_set_name($set_name),
+        $example_amplicon_sets[$i]->classification_file,
         $classification_file,
     );
     ok($diff_ok, 'diff rdp files');
     # amplicons
     my @amplicon_names;
-    while ( my $amplicon = $amplicon_set->next_amplicon ) {
+    while ( my $amplicon = $amplicon_sets[$i]->next_amplicon ) {
         ok($amplicon->{classification}, $amplicon->{name}.' has a classification');
         is($amplicon->{classification}->[0], $amplicon->{name}, 'classification name matches');
         is($amplicon->{classification}->[1], '-', 'is complemented');
         push @amplicon_names, $amplicon->{name};
     }
-    is_deeply(\@amplicon_names, $standards[$cnt]->{amplicons}, "amplicons match for $set_name");
-    $cnt++;
+    is_deeply(\@amplicon_names, $standards[$i]->{amplicons}, "amplicons match for $set_name");
 }
 
 ok($build->perform_post_success_actions, 'perform post success actions');
