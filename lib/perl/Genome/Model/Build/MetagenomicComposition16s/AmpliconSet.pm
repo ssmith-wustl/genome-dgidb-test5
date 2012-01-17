@@ -13,13 +13,8 @@ class Genome::Model::Build::MetagenomicComposition16s::AmpliconSet {
         file_base_name => { is => 'Text', },
         directory => { is => 'Text', },
         fasta_dir => { calculate => q| return $self->directory.'/fasta'; |, },
-        classification_dir => { 
-            is => 'Text',
-        },
-        classification_file => { 
-            is => 'Text',
-        },
-        oriented_fasta_file => { is => 'Text', },
+        classifier => { is => 'Text', },
+        classification_dir => { calculate => q| return $self->directory.'/classification'; |, },
     ],
     has_optional => [
         oriented_qual_file => { is => 'Text', },
@@ -27,6 +22,7 @@ class Genome::Model::Build::MetagenomicComposition16s::AmpliconSet {
     ],
 };
 
+#< Amplicons >#
 sub has_amplicons {
     my $self = shift;
 
@@ -107,6 +103,7 @@ sub amplicon_iterator {
 
     return $self->{_amplicon_iterator} = $amplicon_iterator;
 }
+#<>#
 
 #< FILES >#
 sub _fasta_file_for {
@@ -123,21 +120,46 @@ sub _fasta_file_for {
     );
 }
 
+sub _qual_file_for {
+    my ($self, $type) = @_;
+    my $fasta_file = $self->_fasta_file_for($type);
+    return $fasta_file.'.qual';
+}
+
+sub seq_reader_for {
+    my ($self, $type, $set_name) = @_;
+    
+    # Sanity checks - should not happen
+    Carp::confess("No type given to get seq reader") unless defined $type;
+        Carp::confess("Invalid type ($type) given to get seq reader") unless grep { $type eq $_ } (qw/ processed oriented /);
+
+    my $fasta_file = $self->_fasta_file_for($type);
+    my $qual_file = $self->_qual_file_for($type);
+    return unless -e $fasta_file and -e $qual_file; # ok
+
+    my %params = (
+        file => $fasta_file,
+        qual_file => $qual_file,
+    );
+    my $reader =  Genome::Model::Tools::Sx::PhredReader->create(%params);
+    if ( not  $reader ) {
+        $self->error_message("Failed to create phred reader for $type fasta file and amplicon set name ($set_name) for ".$self->description);
+        return;
+    }
+
+    return $reader;
+}
+
 sub seq_writer_for {
     my ($self, $type) = @_;
 
-    # Sanity checks - should not happen
-    die "No type given to get fasta and qual writer" unless defined $type;
-    die "Invalid type ($type) given to get fasta and qual writer" unless grep { $type eq $_ } (qw/ processed oriented /);
+    Carp::confess("No type given to get fasta and qual writer") unless defined $type;
+    Carp::confess("Invalid type ($type) given to get fasta and qual writer") unless grep { $type eq $_ } (qw/ processed oriented /);
 
-    # Get method and fasta file
-    my $fasta_method = $type.'_fasta_file';
-    my $fasta_file = $self->$fasta_method;
-    my $qual_method = $type.'_qual_file';
-    my $qual_file = $self->$qual_method;
+    my $fasta_file = $self->_fasta_file_for($type);
+    my $qual_file = $self->_qual_file_for($type);
     unlink $fasta_file, $qual_file;
 
-    # Create writer, return
     my $writer =  Genome::Model::Tools::Sx::PhredWriter->create(
         file => $fasta_file,
         qual_file => $qual_file,
@@ -155,9 +177,31 @@ sub processed_fasta_file {
     return $self->_fasta_file_for('processed');
 }
 
-sub processed_qual_file { # returns them as a string (legacy)
+sub processed_qual_file {
     my $self = shift;
-    return $self->processed_fasta_file.'.qual';
+    return $self->_qual_file_for('processed');
+}
+
+sub oriented_fasta_file {
+    my $self = shift;
+    return $self->_fasta_file_for('oriented');
+}
+
+sub oriented_qual_file {
+    my $self = shift;
+    return $self->_qual_file_for('oriented');
+}
+
+sub classification_file {
+    my $self = shift;
+
+    return sprintf(
+        '%s/%s%s.%s',
+        $self->classification_dir,
+        $self->file_base_name,
+        ( $self->name eq '' ? '' : '.'.$self->name ),
+        $self->classifier,
+    );
 }
 #<>#
 

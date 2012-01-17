@@ -346,28 +346,22 @@ sub amplicon_set_for_name { #moved from g:m:b:mc16s base class
 
     Carp::confess('No amplicon set name to get amplicon iterator') if not defined $set_name;
 
-    my $amplicon_iterator = $self->_amplicon_iterator_for_name($set_name);
-    return if not $amplicon_iterator;
-
-    my %params = (
+    my $amplicon_set = Genome::Model::Build::MetagenomicComposition16s::AmpliconSet->create(
         name => $set_name,
-        primers => [],
         directory => $self->build->data_directory,
         file_base_name => $self->build->file_base_name,
-        _amplicon_iterator => $amplicon_iterator,
-        classification_dir => $self->build->classification_dir,
-        classification_file => $self->build->classification_file_for_set_name($set_name),
-        oriented_fasta_file => $self->build->oriented_fasta_file_for_set_name($set_name),
-        oriented_qual_file => $self->build->oriented_qual_file_for_set_name($set_name),
+        classifier => $self->build->classifier,
     );
 
-    return Genome::Model::Build::MetagenomicComposition16s::AmpliconSet->create(%params);
+    my $amplicon_iterator = $self->_amplicon_iterator_for_set($amplicon_set);
+    return if not $amplicon_iterator;
+    $amplicon_set->_amplicon_iterator($amplicon_iterator);
+
+    return $amplicon_set;
 }
 
-sub _amplicon_iterator_for_name {
-    my ($self, $set_name) = @_;
-
-    #print "iterator from command\n"; <STDIN>;
+sub _amplicon_iterator_for_set {
+    my ($self, $amplicon_set) = @_;
 
     # open chromt_dir
     my $dh = Genome::Sys->open_directory( $self->chromat_dir );
@@ -396,7 +390,7 @@ sub _amplicon_iterator_for_name {
     #sort
     @all_read_names = sort { $a cmp $b } @all_read_names;
 
-    my $classification_file = $self->build->classification_file_for_set_name($set_name);
+    my $classification_file = $amplicon_set->classification_file;
     my ($classification_io, $classification_line);
     if ( -s $classification_file ) {
         $classification_io = eval{ Genome::Sys->open_file_for_reading($classification_file); };
@@ -408,7 +402,7 @@ sub _amplicon_iterator_for_name {
         chomp $classification_line;
     }
 
-    my $amplicon_name_for_read_name = '_get_amplicon_name_for_'.$self->build->sequencing_center.'_read_name';
+    my $amplicon_name_for_read_name = '_get_amplicon_name_for_gsc_read_name';
     my $pos = 0;
     return sub{
         AMPLICON: while ( $pos < $#all_read_names ) {

@@ -82,7 +82,6 @@ sub instrument_data_assigned {
     return @tags;
 }
 
-#< Description >#
 sub description {
     my $self = shift;
 
@@ -95,7 +94,7 @@ sub description {
     );
 }
 
-#< Amplicons >#
+#< Amplicon Sets >#
 sub amplicon_set_names {
     my $self = shift;
     my %set_names_and_primers = $self->amplicon_set_names_and_primers;
@@ -119,10 +118,7 @@ sub amplicon_sets {
             primers => $amplicon_set_names_and_primers{$set_name},
             file_base_name => $self->file_base_name,
             directory => $self->data_directory,
-            classification_dir => $self->classification_dir,
-            classification_file => $self->classification_file_for_set_name($set_name),
-            oriented_fasta_file => $self->oriented_fasta_file_for_set_name($set_name),
-            oriented_qual_file => $self->oriented_qual_file_for_set_name( $set_name ),
+            classifier => $self->classifier,
         );
     }
 
@@ -133,6 +129,7 @@ sub amplicon_sets {
 
     return @amplicon_sets;
 }
+#<>#
 
 #< Dirs >#
 sub sub_dirs {
@@ -165,34 +162,6 @@ sub chromat_dir {
 #< Files >#
 sub file_base_name {
     return Genome::Utility::Text::sanitize_string_for_filesystem( $_[0]->subject_name );
-}
-
-sub _files_for_amplicon_sets {
-    my ($self, $type) = @_;
-    die "No type given to get files for ".$self->description unless defined $type;
-    my $method = $type.'_file_for_set_name';
-    return grep { -s } map { $self->$method($_) } $self->amplicon_set_names;
-}
-
-sub _fasta_file_for_type_and_set_name {
-    my ($self, $type, $set_name) = @_;
-
-    # Sanity check - should not happen
-    die "No type given to get fasta (qual) file for ".$self->description unless defined $type;
-    die "No set name given to get $type fasta (qual) file for ".$self->description unless defined $set_name;
-    
-    return sprintf(
-        '%s/%s%s.%s.fasta',
-        $self->fasta_dir,
-        $self->file_base_name,
-        ( $set_name eq '' ? '' : ".$set_name" ),
-        $type,
-    );
-}
-
-sub _qual_file_for_type_and_set_name{
-    my ($self, $type, $set_name) = @_;
-    return $self->_fasta_file_for_type_and_set_name($type, $set_name).'.qual';
 }
 
 sub combined_input_fasta_file {
@@ -247,7 +216,6 @@ sub create_scfs_file_for_amplicon {
     }
 }
 
-# processsed
 sub processed_fasta_file { # returns them as a string (legacy)
     return join(' ', $_[0]->processed_fasta_files);
 }
@@ -264,7 +232,8 @@ sub processed_qual_file { # returns them as a string (legacy)
 }
 
 sub processed_qual_files {
-    return $_[0]->_files_for_amplicon_sets('processed_qual');
+    my $self = shift;
+    return map { $_->processed_qual_file } $self->amplicon_sets;
 }
 
 sub processed_reads_fasta_file { #sanger
@@ -275,7 +244,6 @@ sub processed_reads_qual_file { #sanger
     return $_[0]->processed_reads_fasta_file.'.qual';
 }
 
-# original/unprocessed file .. maybe name it unprocessed
 sub combined_original_fasta_file {
     my $self = shift;
     return sprintf(
@@ -300,18 +268,13 @@ sub combined_original_fastq_file {
     );
 }
 
-# oriented
 sub oriented_fasta_file { # returns them as a string
     return join(' ', $_[0]->oriented_fasta_files);
 }
 
 sub oriented_fasta_files {
-    return $_[0]->_files_for_amplicon_sets('oriented_fasta');
-}
-
-sub oriented_fasta_file_for_set_name {
-    my ($self, $set_name) = @_;
-    return $self->_fasta_file_for_type_and_set_name('oriented', $set_name);
+    my $self = shift;
+    return map { $_->oriented_fasta_file } $self->amplicon_sets;
 }
 
 sub oriented_qual_file { # returns them as a string (legacy)
@@ -319,22 +282,19 @@ sub oriented_qual_file { # returns them as a string (legacy)
 }
 
 sub oriented_qual_files {
-    return $_[0]->_files_for_amplicon_sets('oriented_qual');
+    my $self = shift;
+    return map { $_->oriented_qual_file } $self->amplicon_sets;
 }
 
-sub oriented_qual_file_for_set_name {
-    my ($self, $set_name) = @_;
-    return $self->oriented_fasta_file_for_set_name($set_name).'.qual';
-}
-
-# classification
 sub classification_files_as_string {
     return join(' ', $_[0]->classification_files);
 }
 
 sub classification_files {
-    return $_[0]->_files_for_amplicon_sets('classification');
+    my $self = shift;
+    return map { $_->classification_file } $self->amplicon_sets;
 }
+#<>#
 
 #< Prepare instrument data >#
 sub prepare_instrument_data {
@@ -393,9 +353,7 @@ sub prepare_instrument_data {
             name => 'none',
             directory => $self->data_directory,
             file_base_name => $self->file_base_name,
-            classification_dir => $self->classification_dir,
-            classification_file => $self->classification_file_for_set_name('none'),
-            oriented_fasta_file => $self->oriented_fasta_file_for_set_name('none'),
+            classifier => $self->classifier,
         );
         my $none_fasta_file = $none_amplicon_set->processed_fasta_file;
         my $none_qual_file = $none_amplicon_set->processed_qual_file;
@@ -561,65 +519,6 @@ sub append_fastq_to_orig_fastq_file {
     return 1;
 }
 
-sub fasta_and_qual_reader_for_type_and_set_name {
-    my ($self, $type, $set_name) = @_;
-    
-    # Sanity checks - should not happen
-    die "No type given to get fasta and qual reader" unless defined $type;
-    die "Invalid type ($type) given to get fasta and qual reader" unless grep { $type eq $_ } (qw/ processed oriented /);
-    die "No set name given to get $type fasta and qual reader for set name ($set_name)" unless defined $set_name;
-
-    # Get method and fasta file
-    my $fasta_method = $type.'_fasta_file_for_set_name';
-    my $fasta_file = $self->$fasta_method($set_name);
-    my $qual_method = $type.'_qual_file_for_set_name';
-    my $qual_file = $self->$qual_method($set_name);
-
-    return unless -e $fasta_file and -e $qual_file; # ok
-    my %params = (
-        file => $fasta_file,
-        qual_file => $qual_file,
-    );
-    my $reader =  Genome::Model::Tools::Sx::PhredReader->create(%params);
-    if ( not  $reader ) {
-        $self->error_message("Failed to create phred reader for $type fasta file and amplicon set name ($set_name) for ".$self->description);
-        return;
-    }
-
-    return $reader;
-}
-
-sub fasta_and_qual_writer_for_type_and_set_name {
-    my ($self, $type, $set_name) = @_;
-
-    # Sanity checks - should not happen
-    die "No type given to get fasta and qual writer" unless defined $type;
-    die "Invalid type ($type) given to get fasta and qual writer" unless grep { $type eq $_ } (qw/ processed oriented /);
-    die "No set name given to get $type fasta and qual writer for set name ($set_name)" unless defined $set_name;
-
-    # Get method and fasta file
-    my $fasta_method = $type.'_fasta_file_for_set_name';
-    my $fasta_file = $self->$fasta_method($set_name);
-    my $qual_method = $type.'_qual_file_for_set_name';
-    my $qual_file = $self->$qual_method($set_name);
-
-    # Remove existing files if there
-    unlink $fasta_file, $qual_file;
-    my %params = ( 
-        file => $fasta_file,
-        qual_file => $qual_file,
-    );
-
-    # Create writer, return
-    my $writer =  Genome::Model::Tools::Sx::PhredWriter->create(%params);
-    unless ( $writer ) {
-        $self->error_message("Can't create phred writer for $type fasta file and amplicon set name ($set_name) for ".$self->description);
-        return;
-    }
-
-    return $writer;
-}
-
 #< Orient >#
 sub orient_amplicons {
     my $self = shift;
@@ -643,8 +542,8 @@ sub orient_amplicons {
     my $no_classification = 0;
     for my $amplicon_set ( @amplicon_sets ) {
         next if not $amplicon_set->amplicon_iterator;
-        my $writer = $self->fasta_and_qual_writer_for_type_and_set_name('oriented', $amplicon_set->name)
-            or return;
+        my $writer = $amplicon_set->seq_writer_for('oriented');
+        return if not $writer;
 
         while ( my $amplicon = $amplicon_set->next_amplicon ) {
             my $seq = $amplicon->{seq};
@@ -675,26 +574,6 @@ sub orient_amplicons {
 }
 
 #< Classify >#
-sub classification_file_for_set_name {
-    my ($self, $set_name) = @_;
-    
-    die "No set name given to get classification file for ".$self->description unless defined $set_name;
-
-    my $classifier = $self->classifier;
-    my %classifier_params = $self->processing_profile->classifier_params_as_hash;
-    if ( $classifier_params{version} ) {
-        $classifier .= $classifier_params{version};
-    }
-
-    return sprintf(
-        '%s/%s%s.%s',
-        $self->classification_dir,
-        $self->file_base_name,
-        ( $set_name eq '' ? '' : ".$set_name" ),
-        lc($classifier),
-    );
-}
-
 sub classify_amplicons {
     my $self = shift;
 

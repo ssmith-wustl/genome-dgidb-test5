@@ -196,7 +196,7 @@ is($build->reads_processed, 17, 'reads processed is 17');
 is($build->reads_processed_success, '0.57', 'reads processed success is 0.57');
 
 #< CLASSIFY >#
-my $classification_file = $build->classification_file_for_set_name( $amplicon_set->name );
+my $classification_file = $amplicon_set->classification_file;
 my $classification_dir = $build->classification_dir;
 is(
     $classification_file, 
@@ -224,8 +224,8 @@ is($build->amplicons_classified, $classified_cnt, 'amplicons classified correct'
 is($build->amplicons_classified_success, '1.00', 'amplicons classified success');
 is($build->amplicons_classification_error, 0, 'amplicons classified error');
 my $diff_ok = Genome::Model::Build::MetagenomicComposition16s->diff_rdp(
-    $example_build->classification_file_for_set_name(''),
-    $build->classification_file_for_set_name(''),
+    $amplicon_set->classification_file,
+    $example_amplicon_set->classification_file,
 );
 ok($diff_ok, 'diff rdp files');
 

@@ -33,6 +33,11 @@ class Genome::Search::Queue {
     table_name => 'SEARCH_INDEX_QUEUE',
 };
 
+sub __display_name__ {
+    my $self = shift;
+    return $self->id . ' (' . $self->subject_class . ' ' . $self->subject_id . ')';
+}
+
 sub queue_iterator {
     my $class = shift;
     return $class->create_iterator(-order_by => ['priority', 'timestamp']);
