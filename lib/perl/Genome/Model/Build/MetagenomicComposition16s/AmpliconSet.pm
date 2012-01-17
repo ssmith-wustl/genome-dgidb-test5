@@ -10,30 +10,20 @@ class Genome::Model::Build::MetagenomicComposition16s::AmpliconSet {
     has => [
         name => { is => 'Text', },
         primers => { is => 'Text', is_many => 1, is_optional => 1, },
+        file_base_name => { is => 'Text', },
+        directory => { is => 'Text', },
+        fasta_dir => { calculate => q| return $self->directory.'/fasta'; |, },
         classification_dir => { 
             is => 'Text',
         },
         classification_file => { 
             is => 'Text',
         },
-        processed_fasta_file => { 
-            is => 'Text',
-        },
-        processed_qual_file => { 
-            is_optional => 1,
-            is => 'Text',
-        },
-        oriented_fasta_file => { 
-            is => 'Text',
-        },
-        oriented_qual_file => { 
-            is_optional => 1,
-            is => 'Text',
-        },
-        _amplicon_iterator => {
-            is => 'Code',
-            is_optional => 1,
-        },
+        oriented_fasta_file => { is => 'Text', },
+    ],
+    has_optional => [
+        oriented_qual_file => { is => 'Text', },
+        _amplicon_iterator => { is => 'Code', },
     ],
 };
 
@@ -117,6 +107,59 @@ sub amplicon_iterator {
 
     return $self->{_amplicon_iterator} = $amplicon_iterator;
 }
+
+#< FILES >#
+sub _fasta_file_for {
+    my ($self, $type) = @_;
+
+    Carp::confess("No type given to get fasta (qual) file") unless defined $type;
+    
+    return sprintf(
+        '%s/%s%s.%s.fasta',
+        $self->fasta_dir,
+        $self->file_base_name,
+        ( $self->name eq '' ? '' : '.'.$self->name ),
+        $type,
+    );
+}
+
+sub seq_writer_for {
+    my ($self, $type) = @_;
+
+    # Sanity checks - should not happen
+    die "No type given to get fasta and qual writer" unless defined $type;
+    die "Invalid type ($type) given to get fasta and qual writer" unless grep { $type eq $_ } (qw/ processed oriented /);
+
+    # Get method and fasta file
+    my $fasta_method = $type.'_fasta_file';
+    my $fasta_file = $self->$fasta_method;
+    my $qual_method = $type.'_qual_file';
+    my $qual_file = $self->$qual_method;
+    unlink $fasta_file, $qual_file;
+
+    # Create writer, return
+    my $writer =  Genome::Model::Tools::Sx::PhredWriter->create(
+        file => $fasta_file,
+        qual_file => $qual_file,
+    );
+    unless ( $writer ) {
+        $self->error_message("Can't create phred writer for $type fasta file and amplicon set name (".$self->name.')');
+        return;
+    }
+
+    return $writer;
+}
+
+sub processed_fasta_file {
+    my $self = shift;
+    return $self->_fasta_file_for('processed');
+}
+
+sub processed_qual_file { # returns them as a string (legacy)
+    my $self = shift;
+    return $self->processed_fasta_file.'.qual';
+}
+#<>#
 
 1;
 
