@@ -111,7 +111,7 @@ sub execute {
     my $reglim=0;
     if($roi_file && $roi_name){
         $reglim = 1;
-    } else {
+    } elsif($roi_file xor $roi_name) {
         die $self->error_message("You must define both roi_name and roi_file or neither.");
     }
 
