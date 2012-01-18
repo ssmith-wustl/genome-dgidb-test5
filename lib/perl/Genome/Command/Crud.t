@@ -112,6 +112,18 @@ sub Person::__display_name__ {
     return $_[0]->name;
 }
 
+class BionicPerson {
+    is => 'UR::Object',
+    has => [
+        base_person => {
+            is => 'Person',
+        },
+        robot_suit => {
+            is => 'String',
+        },
+    ],
+};
+
 # INIT
 my %config = (
     target_class => 'Person',
@@ -119,6 +131,12 @@ my %config = (
 );
 ok(Genome::Command::Crud->init_sub_commands(%config), 'init crud commands') or die;
 
+my %config2 = (
+    target_class => 'BionicPerson',
+    update => { only_if_null => 1},
+);
+
+ok(Genome::Command::Crud->init_sub_commands(%config2), 'init crud commands') or die;
 # MAIN TREE
 my $main_tree_meta = Person::Command->__meta__;
 ok($main_tree_meta, 'MAIN TREE meta');
@@ -210,6 +228,9 @@ print Person::Command::Create->help_usage_complete_text;
 is(Person::Command::Update->_target_name_pl, 'persons', 'UPDATE: _target_name_pl');
 is(Person::Command::Update->_target_name_pl_ub, 'persons', 'UPDATE: _target_name_pl_ub');
 is_deeply(Person::Command::Update->_only_if_null, [qw/ job title mom /], 'UPDATE: _only_if_null');
+
+is(BionicPerson::Command::Update->_target_name_pl, 'bionic persons', 'UPDATE: _target_name_pl');
+is(BionicPerson::Command::Update->_target_name_pl_ub, 'bionic_persons', 'UPDATE: _target_name_pl_ub');
 
 # fail w/o objects
 my $update_fail = Person::Command::Update->create();
@@ -317,6 +338,9 @@ ok($delete_meta, 'DELETE meta');
 
 is(Person::Command::Delete->_target_name_pl, 'persons', 'DELETE: _target_name_pl');
 is(Person::Command::Delete->_target_name_pl_ub, 'persons', 'DELETE: _target_name_pl_ub');
+
+is(BionicPerson::Command::Delete->_target_name_pl, 'bionic persons', 'DELETE: _target_name_pl');
+is(BionicPerson::Command::Delete->_target_name_pl_ub, 'bionic_persons', 'DELETE: _target_name_pl_ub');
 
 # fail w/o objects
 my $delete_fail = Person::Command::Delete->create();
