@@ -14,11 +14,11 @@ Total input bases: <xsl:value-of select="//aspect[@name='reads_processed_length'
 Total Q20 bases: <xsl:value-of select="//aspect[@name='reads_processed_length_q20']/value"/> bp
 Average Q20 bases per read: <xsl:value-of select="format-number(($reads_processed_length_q20 div $reads_processed), '#')"/> bp
 Average read length: <xsl:value-of select="//aspect[@name='reads_processed_average_length']/value"/> bp
-Placed reads: <xsl:value-of select="$reads_assembled + $reads_assembled_duplicate"/>
+Placed reads: <xsl:value-of select="$reads_assembled + $reads_assembled_duplicate"/>     % of total input reads: <xsl:value-of select="//aspect[@name='reads_assembled_success_percent']/value"/>
   (reads in scaffolds: <xsl:value-of select="$reads_assembled + $reads_assembled_duplicate"/>)
   (unique reads: <xsl:value-of select="$reads_assembled"/>)
   (duplicate reads: <xsl:value-of select="$reads_assembled_duplicate"/>)
-Unplaced reads: <xsl:value-of select="$reads_not_assembled"/>
+Unplaced reads: <xsl:value-of select="$reads_not_assembled"/>     % of total input reads: <xsl:value-of select="//aspect[@name='reads_not_assembled_percent']/value"/>
 Chaff rate: <xsl:value-of select="format-number(($reads_not_assembled div $reads_processed), '#.##%')"/>
 Q20 base redundancy: <xsl:value-of select="format-number(($reads_processed_length_q20 div $contigs_length), '#.#')"/>X
 
@@ -31,11 +31,20 @@ Maximum Contig length: <xsl:value-of select="//aspect[@name='contigs_maximum_len
 N50 Contig length: <xsl:value-of select="//aspect[@name='contigs_n50_length']/value"/> bp
 N50 contig number: <xsl:value-of select="//aspect[@name='contigs_n50_count']/value"/>
 
-Major Contig (> <xsl:value-of select="//aspect[@name='major_contig_threshold']/value"/> bp) number: <xsl:value-of select="//aspect[@name='contigs_major_count']/value"/>
+Major Contig (>= <xsl:value-of select="//aspect[@name='major_contig_threshold']/value"/> bp) number: <xsl:value-of select="//aspect[@name='contigs_major_count']/value"/>
 Major Contig bases: <xsl:value-of select="//aspect[@name='contigs_major_length']/value"/> bp
 Major_Contig avg contig length: <xsl:value-of select="//aspect[@name='contigs_major_average_length']/value"/> bp
 Major_Contig N50 contig length: <xsl:value-of select="//aspect[@name='contigs_major_n50_length']/value"/> bp
 Major_Contig N50 contig number: <xsl:value-of select="//aspect[@name='contigs_major_n50_count']/value"/>
+
+% of assembly in major contig: <xsl:value-of select="//aspect[@name='contigs_major_percent']/value"/>
+Placed reads in major contig: <xsl:value-of select="//aspect[@name='contigs_major_read_count']/value"/>, <xsl:value-of select="//aspect[@name='contigs_major_read_percent']/value"/>%
+
+Minor Contig (up to <xsl:value-of select="//aspect[@name='major_contig_threshold']/value"/> bp) number: <xsl:value-of select="//aspect[@name='contigs_minor_count']/value"/>
+Minor Contig bases: <xsl:value-of select="//aspect[@name='contigs_minor_length']/value"/> bp
+Minor Contig avg contig length: <xsl:value-of select="//aspect[@name='contigs_minor_average_length']/value"/>
+Minor Contig N50 contig length: <xsl:value-of select="//aspect[@name='contigs_minor_n50_length']/value"/>
+Minor Contig N50 contig number: <xsl:value-of select="//aspect[@name='contigs_minor_n50_count']/value"/>
 
 Top tier (up to <xsl:value-of select="//aspect[@name='tier_one']/value"/> bp): 
   Contig number: <xsl:value-of select="//aspect[@name='contigs_t1_count']/value"/>
@@ -68,11 +77,20 @@ Maximum Supercontig length: <xsl:value-of select="//aspect[@name='supercontigs_m
 N50 Supercontig length: <xsl:value-of select="//aspect[@name='supercontigs_n50_length']/value"/> bp
 N50 contig number: <xsl:value-of select="//aspect[@name='supercontigs_n50_count']/value"/>
 
-Major Supercontig (> <xsl:value-of select="//aspect[@name='major_contig_threshold']/value"/> bp) number: <xsl:value-of select="//aspect[@name='supercontigs_major_count']/value"/>
+Major Supercontig (>= <xsl:value-of select="//aspect[@name='major_contig_threshold']/value"/> bp) number: <xsl:value-of select="//aspect[@name='supercontigs_major_count']/value"/>
 Major Supercontig bases: <xsl:value-of select="//aspect[@name='supercontigs_major_length']/value"/> bp
 Major_Supercontig avg contig length: <xsl:value-of select="//aspect[@name='supercontigs_major_average_length']/value"/> bp
 Major_Supercontig N50 contig length: <xsl:value-of select="//aspect[@name='supercontigs_major_n50_length']/value"/> bp
 Major_Supercontig N50 contig number: <xsl:value-of select="//aspect[@name='supercontigs_major_n50_count']/value"/>
+
+% of assembly in major supercontig: <xsl:value-of select="//aspect[@name='supercontigs_major_percent']/value"/>
+Placed reads in major supercontig: <xsl:value-of select="//aspect[@name='supercontigs_major_read_count']/value"/>, <xsl:value-of select="//aspect[@name='supercontigs_major_read_percent']/value"/>%
+
+Minor Supercontig (up to <xsl:value-of select="//aspect[@name='major_contig_threshold']/value"/> bp) number: <xsl:value-of select="//aspect[@name='supercontigs_minor_count']/value"/>
+Minor Supercontig bases: <xsl:value-of select="//aspect[@name='supercontigs_minor_length']/value"/> bp
+Minor Supercontig avg contig length: <xsl:value-of select="//aspect[@name='supercontigs_minor_average_length']/value"/>
+Minor Supercontig N50 contig length: <xsl:value-of select="//aspect[@name='supercontigs_minor_n50_length']/value"/>
+Minor Supercontig N50 contig number: <xsl:value-of select="//aspect[@name='supercontigs_minor_n50_count']/value"/>
 
 Scaffolds > 1M: <xsl:value-of select="//aspect[@name='scaffolds_1M']/value"/>
 Scaffold 250K--1M: <xsl:value-of select="//aspect[@name='scaffolds_250K_1M']/value"/>

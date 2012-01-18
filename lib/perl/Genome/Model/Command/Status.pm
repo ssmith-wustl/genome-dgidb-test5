@@ -25,8 +25,7 @@ sub execute {
     my %status;
     for my $model ($self->models) {
         my $model_name = $model->name;
-        my $build = $model->build_for_status;
-        my $status = $model->status;
+        my ($status, $build) = $model->status;
         my $build_id = ($build ? $build->id : 'N/A');
         $status{$status}++;
         print join("\t", $model_name, $build_id, $status) . "\n";

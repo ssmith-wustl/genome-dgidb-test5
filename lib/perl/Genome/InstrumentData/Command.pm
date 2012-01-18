@@ -14,4 +14,14 @@ class Genome::InstrumentData::Command {
     doc => 'work with instrument data',
 };
 
+use Genome::Command::Crud;
+Genome::Command::Crud->init_sub_commands(
+    target_class => 'Genome::InstrumentData',
+    target_name => 'instrument_data',
+    create => {do_not_init => 1},
+    delete => {do_not_init => 1},
+    list => {do_not_init => 1},
+    update => {only_if_null => 1},
+);
+
 1;

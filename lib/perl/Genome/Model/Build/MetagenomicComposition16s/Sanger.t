@@ -132,6 +132,12 @@ for my $subdir ( $build->sub_dirs ) {
 my $file_base_name = $build->file_base_name;
 is($file_base_name, 'H_GV-933124G-S.MOCK', 'build file base name');
 
+# amplicon set
+my @amplicon_sets = $build->amplicon_sets;
+is(@amplicon_sets, 1, 'amplicon sets');
+my $amplicon_set = $amplicon_sets[0];
+my ($example_amplicon_set) = $example_build->amplicon_sets;
+
 # fastas
 my $fasta_base = $build->fasta_dir."/$file_base_name";
 my %file_methods_and_results = (
@@ -141,17 +147,11 @@ my %file_methods_and_results = (
     oriented_qual_file => $fasta_base.'.oriented.fasta.qual',
 );
 for my $file_name ( keys %file_methods_and_results ) {
-    my $method = $file_name.'_for_set_name';
-    is($build->$method(''), $file_methods_and_results{$file_name}, $file_name);
+    is($amplicon_set->$file_name, $file_methods_and_results{$file_name}, $file_name);
 }
 
 #< PREPARE >#
 ok($build->prepare_instrument_data, 'prepare instrument data');
-my @amplicon_sets = $build->amplicon_sets;
-is(@amplicon_sets, 1, 'amplicon sets');
-my $amplicon_set = $amplicon_sets[0];
-my ($example_amplicon_set) = $example_build->amplicon_sets;
-
 ok(-s $amplicon_set->processed_fasta_file, 'processed fasta file');
 is(
     File::Compare::compare($amplicon_set->processed_fasta_file, $example_amplicon_set->processed_fasta_file), 
@@ -196,7 +196,7 @@ is($build->reads_processed, 17, 'reads processed is 17');
 is($build->reads_processed_success, '0.57', 'reads processed success is 0.57');
 
 #< CLASSIFY >#
-my $classification_file = $build->classification_file_for_set_name( $amplicon_set->name );
+my $classification_file = $amplicon_set->classification_file;
 my $classification_dir = $build->classification_dir;
 is(
     $classification_file, 
@@ -224,8 +224,8 @@ is($build->amplicons_classified, $classified_cnt, 'amplicons classified correct'
 is($build->amplicons_classified_success, '1.00', 'amplicons classified success');
 is($build->amplicons_classification_error, 0, 'amplicons classified error');
 my $diff_ok = Genome::Model::Build::MetagenomicComposition16s->diff_rdp(
-    $example_build->classification_file_for_set_name(''),
-    $build->classification_file_for_set_name(''),
+    $amplicon_set->classification_file,
+    $example_amplicon_set->classification_file,
 );
 ok($diff_ok, 'diff rdp files');
 
