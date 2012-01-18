@@ -506,7 +506,15 @@ sub generate_workflow {
             push @output_properties, @new_output_properties;
         }
     }
-
+=cut
+    for my $type ('snv') {
+        my $detection_strategy = $type . '_detection_strategy';
+        if (defined $self->$detection_strategy) {
+            my @new_output_properties = map { $type . '_' . $_ } ('output_directory', 'vcf_result_id', 'vcf_result_class');
+            push @output_properties, @new_output_properties;
+        }
+    }
+=cut
     my $workflow_model = Workflow::Model->create(
         name => 'Somatic Variation Pipeline',
         input_properties => [
@@ -562,6 +570,22 @@ sub generate_workflow {
             right_operation => $workflow_model->get_output_connector,
             right_property => $variant_type."_result_class",
         );
+=cut
+        if($variant_type =~ m/snv/){
+            $workflow_model->add_link(
+                left_operation => $last_operation,
+                left_property => '_vcf_result_id',
+                right_operation => $workflow_model->get_output_connector,
+                right_property => $variant_type."_vcf_result_id",
+            );
+            $workflow_model->add_link(
+                left_operation => $last_operation,
+                left_property => '_vcf_result_class',
+                right_operation => $workflow_model->get_output_connector,
+                right_property => $variant_type."_vcf_result_class",
+            );
+        }
+=cut
     }
     return $workflow_model;
 }
@@ -1165,6 +1189,24 @@ for my $type ('snv', 'indel', 'sv', 'cnv') {
     };
     use strict 'refs';
 }
+=cut
+for my $type ('snv') {
+    no strict 'refs';
+    my $detection_strategy = $type . '_detection_strategy';
+    my $result_id_method = $type . '_vcf_result_id';
+    my $result_class_method = $type . '_vcf_result_class';
+    my $result_method = $type . '_vcf_result';
+    *{ $result_method } = sub {
+        my $self = shift;
+        return unless $self->$detection_strategy;
+        return unless $self->_workflow_result;
+        my $result_id = $self->_workflow_result->{$result_id_method};
+        my $result_class = $self->_workflow_result->{$result_class_method};
+        return $result_class->get($result_id);
+    };
+    use strict 'refs';
+}
+=cut
 
 sub results {
     my $self = shift;
@@ -1175,6 +1217,18 @@ sub results {
     }
     return @results;
 }
+
+=cut
+sub vcf_results {
+    my $self = shift;
+    my @results;
+    for my $type ('snv') {
+        my $result_method = $type . '_result';
+        push @results, $self->$result_method if $self->$result_method;
+    }
+    return @results;
+}
+=cut
 
 sub lq_results {
     my $self = shift;
