@@ -158,6 +158,7 @@ sub edit_dir {
 sub chromat_dir {
     return $_[0]->data_directory.'/chromat_dir';
 }
+#<>#
 
 #< Files >#
 sub file_base_name {
@@ -166,54 +167,6 @@ sub file_base_name {
 
 sub combined_input_fasta_file {
     return $_[0]->fasta_dir.'/'.$_[0]->file_base_name.'.'.'input.fasta';
-}
-
-# sanger files
-sub raw_reads_fasta_file {
-    return $_[0]->fasta_dir.'/'.$_[0]->file_base_name.'.reads.raw.fasta';
-}
-
-sub raw_reads_qual_file {
-    return $_[0]->raw_reads_fasta_file.'.qual';
-}
-
-sub reads_fasta_file_for_amplicon { 
-    my ($self, $amplicon) = @_;
-    return $self->edit_dir.'/'.$amplicon->{name}.'.fasta';
-}
-
-sub reads_qual_file_for_amplicon {
-    return reads_fasta_file_for_amplicon(@_).'.qual';
-}
-
-sub ace_file_for_amplicon { 
-    my ($self, $amplicon) = @_;
-    return $self->edit_dir.'/'.$amplicon->{name}.'.fasta.ace';
-}
-sub scfs_file_for_amplicon {
-    my ($self, $amplicon) = @_;
-    return $self->edit_dir.'/'.$amplicon->{name}.'.scfs';
-}
-
-sub create_scfs_file_for_amplicon {
-    my ($self, $amplicon) = @_;
-
-    my $scfs_file = $self->scfs_file_for_amplicon($amplicon);
-    unlink $scfs_file if -e $scfs_file;
-    my $scfs_fh = Genome::Sys->open_file_for_writing($scfs_file)
-        or return;
-    for my $scf ( @{$amplicon->{reads}} ) { 
-        $scfs_fh->print("$scf\n");
-    }
-    $scfs_fh->close;
-
-    if ( -s $scfs_file ) {
-        return $scfs_file;
-    }
-    else {
-        unlink $scfs_file;
-        return;
-    }
 }
 
 sub processed_fasta_file { # returns them as a string (legacy)
@@ -234,14 +187,6 @@ sub processed_qual_file { # returns them as a string (legacy)
 sub processed_qual_files {
     my $self = shift;
     return map { $_->processed_qual_file } $self->amplicon_sets;
-}
-
-sub processed_reads_fasta_file { #sanger
-    return $_[0]->fasta_dir.'/'.$_[0]->file_base_name.'.reads.processed.fasta';
-}
-
-sub processed_reads_qual_file { #sanger
-    return $_[0]->processed_reads_fasta_file.'.qual';
 }
 
 sub combined_original_fasta_file {
@@ -794,41 +739,6 @@ sub calculate_estimated_kb_usage_sanger {
 }
 
 
-#< instrument data processing >#
-sub fastqs_from_solexa {
-    my ( $self, $inst_data ) = @_;
-
-    my @fastq_files;
-
-    if ( $inst_data->bam_path ) { #fastq from bam
-        $self->error_message("Bam file is zero size or does not exist: ".$inst_data->bam_path ) and return
-            if not -s $inst_data->bam_path;
-        my $temp_dir = Genome::Sys->create_temp_directory;
-        @fastq_files = $inst_data->dump_fastqs_from_bam( directory => $temp_dir );
-        $self->status_message( "Got fastq files from bam: ".join( ', ', @fastq_files ) );
-    }
-    elsif ( $inst_data->archive_path ) { #dump fastqs from archive
-        $self->error_message( "Archive file is missing or is zero size: ".$inst_data->archive_path ) and return
-            if not -s $inst_data->archive_path;
-        my $temp_dir = Genome::Sys->create_temp_directory;
-        my $tar_cmd = "tar zxf " . $inst_data->archive_path ." -C $temp_dir";
-        $self->status_message( "Running tar: $tar_cmd" );
-        unless ( Genome::Sys->shellcmd( cmd => $tar_cmd ) ) {
-            $self->error_message( "Failed to dump fastq files from archive path using cmd: $tar_cmd" );
-            return;
-        }
-        @fastq_files = glob $temp_dir .'/*';
-        $self->status_message( "Got fastq files from archive path: ".join (', ', @fastq_files) );
-    }
-    else {
-        $self->error_message( "Could not get neither bam_path nor archive path for instrument data: ".$inst_data->id );
-        return; #die here
-    }
-
-    return @fastq_files;
-}
-
-
 #< Diff >#
 sub dirs_ignored_by_diff {
     return (qw{
@@ -893,6 +803,7 @@ sub diff_rdp {
 
     return 1;
 }
+#<>#
 
 1;
 
