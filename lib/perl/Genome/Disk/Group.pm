@@ -18,14 +18,14 @@ class Genome::Disk::Group {
         user_name => {
             calculate_from => 'unix_uid',
             calculate => q|
-                my ($user_name) = getpwuid($unix_uid);
+                my ($user_name) = $self->_resolve_user_name($unix_uid);
                 return $user_name;
             |,
         },
         group_name => {
             calculate_from => 'unix_gid',
             calculate => q| 
-                my ($group_name) = getgrgid($unix_gid);
+                my ($group_name) = $self->_resolve_group_name($unix_gid);
                 return $group_name;
             |,
         },
@@ -48,5 +48,29 @@ class Genome::Disk::Group {
     data_source => 'Genome::DataSource::Oltp',
     doc => 'Represents a disk group (eg, info_apipe), which contains any number of disk volumes',
 };
+
+
+my %user_name_cache;
+my %group_name_cache;
+
+# memoizing frontends for user_name and group_name
+sub _resolve_user_name {
+    my($self, $uid) = @_;
+
+    unless (exists $user_name_cache{$uid}) {
+        ($user_name_cache{$uid}) = getpwuid($uid);
+    }
+    return $user_name_cache{$uid};
+}
+
+sub _resolve_group_name {
+    my($self,$gid) = @_;
+
+    unless (exists $group_name_cache{$gid}) {
+        ($group_name_cache{$gid}) = getgrgid($gid);
+    }
+    return $group_name_cache{$gid};
+}
+
 
 1;
