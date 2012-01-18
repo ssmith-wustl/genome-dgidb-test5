@@ -33,6 +33,7 @@ my $expected_dir = join('/', $test_data_dir, 'expected.v3');
 
 my $bam_file = join('/', $test_data_dir, 'tumor.tiny.bam');
 my $detector_directory = join('/', $test_data_dir, 'varscan-somatic-2.2.4-.v2');
+my $detector_vcf_directory = join('/', $test_data_dir, 'detector_vcf_result');
 my $input_directory = join('/', $test_data_dir, "input");
 
 my $expected_hq_file = join('/', $expected_dir, 'snvs.hq');
@@ -59,6 +60,16 @@ my $detector_result = Genome::Model::Tools::DetectVariants2::Result->__define__(
     aligned_reads => $bam_file,
     reference_build_id => $reference->id,
 );
+
+my $detector_vcf_result = Genome::Model::Tools::DetectVariants2::Result::Vcf::Detector->__define__(
+    input => $detector_result,
+    output_dir => $detector_vcf_directory,
+    aligned_reads_sample => "TEST",
+    control_aligned_reads_sample => "TEST-normal",
+    vcf_version => "1",
+);
+
+$detector_result->add_user(user => $detector_vcf_result, label => 'uses');
 
 my $filter_command = Genome::Model::Tools::DetectVariants2::Filter::FalsePositive->create(
     previous_result_id => $detector_result->id,

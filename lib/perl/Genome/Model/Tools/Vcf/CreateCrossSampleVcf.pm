@@ -109,9 +109,9 @@ sub execute {
     my $roi_file = defined($self->roi_file);
     my $roi_name = defined($self->roi_name);
     my $reglim=0;
-    if($roi_file == $roi_name){
+    if($roi_file && $roi_name){
         $reglim = 1;
-    } else {
+    } elsif($roi_file xor $roi_name) {
         die $self->error_message("You must define both roi_name and roi_file or neither.");
     }
 

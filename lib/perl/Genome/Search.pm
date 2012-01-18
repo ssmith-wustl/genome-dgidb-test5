@@ -530,6 +530,7 @@ sub _index_queue_callback {
     my $meta = $object->__meta__;
     my @trigger_properties = ('create', 'delete', $meta->all_property_names);
     if (grep { $aspect eq $_ } @trigger_properties) {
+        # TODO try using is_loaded insteaf of get to reduce redundancy in the queue
         my %create_params = (
             subject_id => $object->id,
             subject_class => $object->class,

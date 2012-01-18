@@ -7,6 +7,8 @@ use Genome::Model::Tools::Analysis;
 use IO::File;
 use List::Util qw(max);
 
+open MYFILE, ">telomere_out.csv";
+select MYFILE; 
 
 class Genome::Model::Tools::Analysis::TelomereDepth {
   is => 'Command',
@@ -57,9 +59,10 @@ sub execute {
   my @ROIs = getROI($roi_file); 
   my $hap_coverage = get_hap_coverage();
   grab_read_depth(\@models, \@ROIs, $hap_coverage); 
-
+  telomere();
   return 1;
 }
+
 
 sub grab_read_depth {
 
@@ -166,3 +169,75 @@ sub getROI {
 
   return @ROIs;
 }
+
+
+#telomere();
+
+sub telomere
+
+{
+
+my (@colSum,$ratio,@colSum1,$ratio1);
+my $logfile = 'telomere_out.csv';
+
+open(FILE, $logfile) || die "Couldn't open $logfile: $!\n";
+open (OUT, ">test_out_tumor.csv");
+open (OUT1,">test_out_normal.csv");
+
+my $cnt = 0;
+while (<FILE>) {
+  $cnt++;
+  my (@fields1) = split /;/;
+  print OUT1 "$fields1[0]" if $cnt <= 8;
+  print OUT "$fields1[0]" if $cnt > 8;
+}
+
+close OUT;
+close OUT1;
+close (FILE);
+
+open IN, 'test_out_tumor.csv' or die$!;
+open IN1, 'test_out_normal.csv' or die$!;
+
+open (OUT2, ">telomere_ratio_OUT.csv");
+
+
+
+while(<IN>){
+    chomp($_);
+    my @colArray = split(/\s/,$_);
+     
+ $colSum[4] += $colArray[4];   
+ #print "Normal \n"  
+ }
+
+
+while(<IN1>){
+chomp($_); #print "test = $_\n";
+    my @colArray1 = split(/\s/,$_);
+    $colSum1[4] += $colArray1[4];     
+
+
+}
+
+
+$ratio = $colSum[4] / $colSum1[4];
+$ratio1 = $colSum1[4] / $colSum[4];
+#print OUT2 "$colSum[4] :Tumor \t$colSum1[4] :Normal\t$ratio :Ratio(Tumor/Normal) \t$ratio1 :Ratio(Normal/Tumor)";
+
+print OUT2 "$colSum[4] :Tumor \n";
+print OUT2 "$colSum1[4] :Normal\n";
+print OUT2 "$ratio :Ratio(Tumor/Normal)\n";
+print OUT2 "$ratio1 :Ratio(Normal/Tumor)\n";
+print OUT2 "\n";
+
+
+close IN;
+close IN1;
+close OUT2;
+
+
+
+
+}
+

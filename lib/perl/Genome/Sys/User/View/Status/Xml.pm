@@ -12,8 +12,15 @@ class Genome::Sys::User::View::Status::Xml {
             is => 'ARRAY',
             value => [
                 'id',
+                'name',
                 'username',
-                'email'
+                'email',
+                {
+                    name => 'projects',
+                    toolkit => 'xml',
+                    perspective => 'default',
+                    aspects => [ 'id', 'name', 'parts_count' ]
+                }
             ]
         }
     ]

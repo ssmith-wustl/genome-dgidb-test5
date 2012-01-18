@@ -20,11 +20,6 @@ else {
 
 use_ok('Genome::Model::Tools::DetectVariants2::Result::Filter');
 
-# Override lock name because if people cancel tests locks don't get cleaned up.
-*Genome::SoftwareResult::_resolve_lock_name = sub {
-    return Genome::Sys->create_temp_file_path;
-};
-
 #TODO this could really use its own very tiny dataset--we don't care about the results in this test so much as the process
 my $test_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants2-Samtools/';
 my $test_working_dir = File::Temp::tempdir('DetectVariants2-ResultXXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites/', CLEANUP => 1);
@@ -111,6 +106,10 @@ is($filter_result4->previous_filter_strategy, 'Genome::Model::Tools::DetectVaria
 
 my $delete_ok3 = eval { $filter_result3->delete };
 ok(!$delete_ok3, 'prevented from deleting a filter result that is used by another result');
+
+#Remove the filter_vcf_result from this filter_result so it can be removed
+my @users = $filter_result4->users;
+$users[0]->delete;
 my $delete_ok4 = eval { $filter_result4->delete };
 my $error = $@;
 ok($delete_ok4, 'can delete a filter result not subsequently used') or diag('error: ' . $error);

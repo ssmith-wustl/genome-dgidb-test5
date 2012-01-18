@@ -6,7 +6,9 @@ use warnings;
 use FileHandle;
 
 use Genome;
-
+use Workflow;
+use Workflow::Simple;
+use File::Basename;
 class Genome::Model::Tools::DetectVariants2::Polymutt {
     is => ['Genome::Model::Tools::DetectVariants2::Detector'],
     #has => [
@@ -22,7 +24,20 @@ class Genome::Model::Tools::DetectVariants2::Polymutt {
 sub help_synopsis {
     my $self = shift;
     return <<"EOS"
-gmt detect-variants2 polymutt --alignment-results input.bam --reference_sequence_input reference.fa --output-directory ~/example/
+gmt detect-variants2 polymutt \\
+    --version 0.01 \\
+    --reference-build NCBI-human-build36 \\
+    --pedigree-file-path /tmp/my.ped \\
+    --alignment-results id:116553088/116553238/116553281 \\
+    --output-directory /tmp/myresults 
+
+gmt detect-variants2 polymutt \\
+    --version 0.01 \\
+    --reference-build GRCh37-lite-build37 \\
+    --pedigree-file-path /gscmnt/gc2146/info/medseq/test_polymutt_pipeline/13211.ped \\
+    --alignment-results id:116159911/116159901/116160033/116159884 \\
+    --output-directory /gscmnt/gc4095/info/polymutt-test/t1
+    
 EOS
 }
 
@@ -37,41 +52,40 @@ sub _supports_cross_sample_detection {
     return 1;
 };
 
-sub output_dir {
-    my $self = shift;
-    #FIXME
-    die "where am i getting output directory from";
-    #FIXME
-}
+#sub output_dir {
+#    # Q: "where am i getting output directory from";
+#    # A: the base class 2 up ::Base has output_directory
+#}
 
-sub ped_file {
-    my $self = shift;
-    #FIXME
-    die "implement passthrough pedfile";
-    #FIXME
-}
+#sub ped_file {
+#    Q: "implement passthrough pedfile";
+#    A: pedigree_file_path is in the ::Base now
+#}
 
 sub _detect_variants {
     my $self = shift;
+
+    $DB::single = 1;
 
     my $version = $self->version;
     unless ($version) {
         die $self->error_message("A version of Polymutt must be specified");
     }
     my @alignments = $self->alignment_results;
-    my @glfs = $self->generate_glfs(@alignments);
+    #my @glfs = $self->generate_glfs(@alignments);
+      my @glfs = glob("/gscmnt/gc2146/info/medseq/test_polymutt_pipeline/partial*");
     my $dat_file = $self->generate_dat();
     #FIXME ensure glfindex matches index number in ped.  the current code expects both alphabetical by sample name, but does not check or enforce it.  
     my $glf_index = $self->generate_glfindex(@glfs);
     #FIXME
     $self->run_polymutt($dat_file, $glf_index);
-   return 1;
+    return 1;
 }
 
 
 sub run_polymutt {
     my($self, $dat_file, $glf_index) = @_;
-    my $ped_file = $self->ped_file;
+    my $ped_file = $self->pedigree_file_path;
     my %inputs;
     $inputs{dat_file}=$dat_file;
     $inputs{ped_file}=$ped_file;
@@ -81,8 +95,8 @@ sub run_polymutt {
     #i.e. if 10 families reside in one pedfile, and we supply a glfindex for just one of those families, this code is bad
     chomp(my $family_id = `head -n 1 $ped_file | cut -f 1`); 
     #FIXME:
-    $inputs{output_denovo} = $self->output_dir . "/$family_id.denovo.vcf";
-    $inputs{output_standard} = $self->output_dir . "/$family_id.standard.vcf";
+    $inputs{output_denovo} = $self->output_directory . "/$family_id.denovo.vcf";
+    $inputs{output_standard} = $self->output_directory . "/$family_id.standard.vcf";
     my $workflow = Workflow::Model->create(
         name=> "Run polymutt standard and denov",
         input_properties => [
@@ -150,7 +164,7 @@ sub run_polymutt {
         right_property=>"denovo",
     );
     my @errors = $workflow->validate;
-    $workflow->log_dir($self->output_dir);
+    $workflow->log_dir($self->output_directory);
     if (@errors) {
         $self->error_message(@errors);
         die "Errors validating workflow\n";
@@ -170,7 +184,7 @@ sub run_polymutt {
 
 sub generate_dat {
     my $self = shift;
-    my $out_file_name = $self->output_dir . "/" . "polymutt.dat";
+    my $out_file_name = $self->output_directory . "/" . "polymutt.dat";
     my $dat_fh = IO::File->new($out_file_name, ">");
     $dat_fh->print("T\tGLF_Index\n"); #this is required because the pedfile may have arbitrarily many attributes after the first 5 columns, which you can label and polymutt will ignore. but we never do that, so it always looks like this
     $dat_fh->close;
@@ -180,15 +194,33 @@ sub generate_dat {
 sub generate_glfindex {
     my $self=shift;
     my @glfs = @_;
-    my $glf_name = $self->output_dir ."/" . "polymutt.glfindex";
+    my $glf_name = $self->output_directory ."/" . "polymutt.glfindex";
+    my %sample_index = $self->parse_ped();
     my $glf_fh = IO::File->new($glf_name, ">");
-    my $count =1;
     for my $glf (sort @glfs) {  #again we just assume the incoming ped file is alpha sorted, so we alpha sort
-        $glf_fh->print("$count\t$glf\n");
-        $count++;
+        my ($file, $path, $suffix) = fileparse($glf, ".glf");
+        my $index = $sample_index{$file}; 
+        unless($index) {
+            $self->error_message("I am unable to match up the generated glfs with the supplied ped file. Please assist.  I was searching for a sample name match for this file: $glf\n");
+            die;
+        }
+        $glf_fh->print("$index\t$glf\n");
     }
     $glf_fh->close;
     return $glf_name;
+}
+
+sub parse_ped {
+    my $self = shift;
+    my $ped_fh = Genome::Sys->open_file_for_reading($self->pedigree_file_path);
+    my %sample_index;
+    while(my $ped_line = $ped_fh->getline) {
+        chomp($ped_line);
+        my ($family_id, $individual, $mother, $father, $sex, $glf_index) = split "\t", $ped_line;
+        $sample_index{"$individual"}=$glf_index; 
+    }
+    $DB::single=1;
+    return %sample_index;
 }
 
 
@@ -198,11 +230,13 @@ sub generate_glfs {
     my @alignments = @_;
     my %inputs;
     my (@outputs, @inputs);
-    $inputs{ref_fasta} = $alignments[0]->reference_sequence_build->full_consensus_path("fa");
+    $inputs{ref_fasta} = $alignments[0]->reference_build->full_consensus_path("fa");
 
 #    my $bam_path = $a->merged_alignment_bam_path;
     for (my $i =0; $i < scalar(@alignments); $i++) {
-        my $output_name = $self->output_dir . "/" . $alignments[$i]->instrument_data->sample_name . ".glf";
+        $DB::single=1;
+        my @instrument_data = $alignments[$i]->instrument_data;
+        my $output_name = $self->output_directory . "/" . $instrument_data[0]->sample_name . ".glf";
         push @outputs, $output_name;
         $inputs{"bam_$i"}=$alignments[$i]->merged_alignment_bam_path;
         $inputs{"output_glf_$i"}=$output_name;
@@ -250,7 +284,7 @@ sub generate_glfs {
         );
     }
     my @errors = $workflow->validate;
-    $workflow->log_dir($self->output_dir);
+    $workflow->log_dir($self->output_directory);
     if (@errors) {
         $self->error_message(@errors);
         die "Errors validating workflow\n";
@@ -357,6 +391,12 @@ sub _parse_snv_for_bed_intersection {
     my ($chromosome, $position, $reference, $consensus, @extra) = split("\t", $line);
 
     return [$chromosome, $position, $reference, $consensus];
+}
+
+# this is a no-op, because we're not using local tmp. 
+# this runs as a workflow on LSF and we need network scratch space
+sub _promote_staged_data {
+    return 1;
 }
 
 1;

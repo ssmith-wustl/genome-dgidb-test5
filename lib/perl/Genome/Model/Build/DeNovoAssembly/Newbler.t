@@ -22,7 +22,7 @@ use_ok('Genome::Model::Build::DeNovoAssembly::Newbler') or die;
 my $base_dir = '/gsc/var/cache/testsuite/data/Genome-Model/DeNovoAssembly';
 my $archive_path = $base_dir.'/inst_data/-7777/archive.tgz';
 ok(-s $archive_path, 'inst data archive path') or die;
-my $example_dir = $base_dir.'/newbler_v2';
+my $example_dir = $base_dir.'/newbler_v6';
 ok(-d $example_dir, 'example dir') or die;
 my $tmpdir = File::Temp::tempdir(CLEANUP => 1);
 
@@ -111,6 +111,9 @@ my $prepare = Genome::Model::Event::Build::DeNovoAssembly::PrepareInstrumentData
 ok($prepare, 'create prepare instrument data');
 $prepare->dump_status_messages(1);
 ok($prepare->execute, 'execute prepare instrument data');
+is($build->reads_attempted, 30000, 'reads attempted');
+is($build->reads_processed, 30000, 'reads processed');
+is($build->reads_processed_success, '1.000', 'reads processed success');
 
 @existing_assembler_input_files = $build->existing_assembler_input_files;
 is(@existing_assembler_input_files, 1, 'assembler input files exist');
@@ -172,42 +175,55 @@ foreach my $file_name (qw/
     is(File::Compare::compare($file, $example_file), 0, "$file_name files match");
 }
 
-#METRICS/REPORT
-my $metrics = Genome::Model::Event::Build::DeNovoAssembly::Report->create( build => $build, model => $model );
-ok( $metrics, 'Created report' );
-ok( $metrics->execute, 'Executed report' );
-#check stats file
+# Report and Metrics
+my $report = Genome::Model::Event::Build::DeNovoAssembly::Report->create( build => $build, model => $model );
+ok( $report, 'Created report' );
+$report->dump_status_messages(1);
+ok( $report->execute, 'Executed report' );
 ok( -s $example_build->stats_file, 'Example build stats file exists' );
 ok( -s $build->stats_file, 'Test created stats file' );
 is(File::Compare::compare($example_build->stats_file,$build->stats_file), 0, 'Stats files match' );
 print 'gvimdiff '.$example_build->stats_file.' '.$build->stats_file."\n";
-#check build metrics
 my %expected_metrics = (
-    'n50_supercontig_length' => '208',
-    'reads_processed_success' => '1.000',
-    'reads_assembled_success' => '0.060',
-    'reads_assembled' => '1813',
-    'average_read_length' => '100',
+    'assembly_length' => 65818,
+    'contigs_average_length' => 210,
+    'contigs_count' => 314,
+    'contigs_lengths' => 65818,
+    'contigs_major_average_length' => 603,
+    'contigs_major_count' => 4,
+    'contigs_major_length' => 2411,
+    'contigs_major_n50_count' => 2,
+    'contigs_major_n50_length' => 591,
+    'contigs_n50_count' => 125,
+    'contigs_n50_length' => 208,
+    'genome_size' => '4500000',
+    'insert_size' => '260',
+    'major_contig_threshold' => '500',
+    'reads attempted' => 30000,
+    'reads processed success' => '1.000',
+    'reads processed' => 30000,
+    'reads_assembled' => 2412,
+    'reads_assembled_duplicate' => 0,
+    'reads_assembled_success' => '0.080',
     'reads_attempted' => 30000,
-    'average_insert_size_used' => '260',
-    'n50_contig_length' => '208',
-    'genome_size_used' => '4500000',
-    'reads_not_assembled_pct' => '0.945',
-    'supercontigs' => '314',
-    'average_supercontig_length' => '210',
-    'contigs' => '314',
-    'n50_supercontig_length_gt_500' => '591',
-    'n50_contig_length_gt_500' => '591',
-    'major_contig_length' => '500',
-    'average_contig_length' => '210',
-    'average_supercontig_length_gt_500' => '603',
-    'average_contig_length_gt_500' => '603',
-    'reads_processed' => '30000',
-    'assembly_length' => '65818',
-    'read_depths_ge_5x' => '13.6'
+    'reads_processed' => 30000,
+    'reads_processed_success' => '1.000',
+    'supercontigs_average_length' => 210,
+    'supercontigs_count' => 314,
+    'supercontigs_length' => 65818,
+    'supercontigs_major_average_length' => 603,
+    'supercontigs_major_count' => 4,
+    'supercontigs_major_length' => 2411,
+    'supercontigs_major_n50_count' => 2,
+    'supercontigs_major_n50_length' => 591,
+    'supercontigs_n50_count' => 125,
+    'supercontigs_n50_length' => 208,
+    'contigs_length' => 65818,
 );
-for my $metric_name ( keys %expected_metrics ) {
-    ok( $expected_metrics{$metric_name} eq $build->$metric_name, "$metric_name metrics match" );
+my %build_metrics = map { $_->name => $_->value } $build->metrics;
+#print Data::Dumper::Dumper(\%build_metrics);
+for my $metric_name ( $build->metric_names ) {
+    is($build_metrics{$metric_name}, $expected_metrics{$metric_name}, "$metric_name matches" );
 }
 
 #print $build->data_directory."\n"; <STDIN>;

@@ -10,7 +10,7 @@ use Test::More;
 
 use_ok( 'Genome::Model::Tools::Velvet::Metrics' ) or die;
 
-my $data_dir = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Velvet/Metrics/v1";
+my $data_dir = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Velvet/Metrics/v5";
 my $example_metrics = $data_dir.'/metrics.txt';
 
 #create temp test dir

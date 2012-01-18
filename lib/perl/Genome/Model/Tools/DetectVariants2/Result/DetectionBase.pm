@@ -50,16 +50,50 @@ class Genome::Model::Tools::DetectVariants2::Result::DetectionBase {
             doc => 'The chromosome(s) on which the detection was run',
         },
     ],
-    has_input => [
+    has_optional => [
+        # old API
         aligned_reads => {
             is => 'Text',
+            is_optional => 1,
+            is_input => 1,
             doc => 'The path to the aligned reads file',
         },
         control_aligned_reads => {
             is => 'Text',
-            doc => 'The path to the control aligned reads file',
             is_optional => 1,
+            is_input => 1,
+            doc => 'The path to the control aligned reads file',
         },
+        # new API
+        alignment_results => {
+            is => 'Genome::InstrumentData::AlignmentResults::Merged',
+            is_optional => 1,
+            is_many => 1,
+            doc => 'The path to the aligned reads file',
+        },
+        control_alignment_results => {
+            is => 'Genome::InstrumentData::AlignmentResults::Merged',
+            is_optional => 1,            
+            is_many => 1,
+            doc => 'The path to the control aligned reads file',
+        },
+        roi_list => {
+            is => 'Genome::FeatureList',
+            is_optional => 1,
+            doc => 'only variants in these regions will be included in the final VCF',
+        },
+        roi_wingspan => {
+            is => 'Number',
+            is_optional => 1,
+            doc => 'include variants within N nucleotides of a region of interest'
+        },
+        pedigree_file_path => {
+            is => 'FilePath',
+            is_optional => 1,
+            doc => 'when supplied overrides the automatic lookup of familial relationships'
+        },
+    ],
+    has_input => [
         reference_build_id => {
             is => 'Number',
             doc => 'the reference to use by id',
@@ -297,6 +331,9 @@ sub _resolve_subclass_name {
 sub _set_result_file_permissions {
     my $self = shift;
     my $output_dir = $self->output_dir;
+    if($output_dir =~ m/\/$/){
+        $output_dir =~ s/\/$//;
+    }
 
     chmod 02775, $output_dir;
     for my $subdir (grep { -d $_  } glob("$output_dir/*")) {

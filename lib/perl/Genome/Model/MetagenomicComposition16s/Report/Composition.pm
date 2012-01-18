@@ -39,16 +39,15 @@ sub _add_to_report_xml {
         confidence_threshold => $self->confidence_threshold,
     );
 
-    my @amplicon_set_names = $self->build->amplicon_set_names;
-    Carp::confess('No amplicon set names for '.$self->build) if not @amplicon_set_names; # bad
+    my @amplicon_sets = $self->build->amplicon_sets;
+    Carp::confess('No amplicon sets for '.$self->build->description) if not @amplicon_sets;
 
     my @domains = grep { $_ ne 'anamalia' } Genome::Utility::MetagenomicClassifier->domains;
     my @ranks = grep { $_ ne 'kingdom' } Genome::Utility::MetagenomicClassifier->taxonomic_ranks;
     pop @ranks; # remove species
 
-    for my $name ( @amplicon_set_names ) {
-        my $amplicon_set = $self->build->amplicon_set_for_name($name);
-        next if not $amplicon_set or not $amplicon_set->amplicon_iterator; # ok
+    for my $amplicon_set ( @amplicon_sets ) {
+        next if not $amplicon_set->amplicon_iterator; # ok
         while ( my $amplicon = $amplicon_set->next_amplicon ) {
             next if not $amplicon->{classification}; # ok
             my $classification = Genome::Utility::MetagenomicClassifier::SequenceClassification->new_from_classification_array(

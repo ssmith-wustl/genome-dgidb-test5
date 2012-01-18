@@ -8,36 +8,21 @@ use Genome;
 class Genome::Model::Build::MetagenomicComposition16s::AmpliconSet {
     is => 'UR::Object',
     has => [
-        name => {
-            is => 'Text',
-        },
-        classification_dir => { 
-            is => 'Text',
-        },
-        classification_file => { 
-            is => 'Text',
-        },
-        processed_fasta_file => { 
-            is => 'Text',
-        },
-        processed_qual_file => { 
-            is_optional => 1,
-            is => 'Text',
-        },
-        oriented_fasta_file => { 
-            is => 'Text',
-        },
-        oriented_qual_file => { 
-            is_optional => 1,
-            is => 'Text',
-        },
-        _amplicon_iterator => {
-            is => 'Code',
-            is_optional => 1,
-        },
+        name => { is => 'Text', },
+        primers => { is => 'Text', is_many => 1, is_optional => 1, },
+        file_base_name => { is => 'Text', },
+        directory => { is => 'Text', },
+        fasta_dir => { calculate => q| return $self->directory.'/fasta'; |, },
+        classifier => { is => 'Text', },
+        classification_dir => { calculate => q| return $self->directory.'/classification'; |, },
+    ],
+    has_optional => [
+        oriented_qual_file => { is => 'Text', },
+        _amplicon_iterator => { is => 'Code', },
     ],
 };
 
+#< Amplicons >#
 sub has_amplicons {
     my $self = shift;
 
@@ -118,6 +103,107 @@ sub amplicon_iterator {
 
     return $self->{_amplicon_iterator} = $amplicon_iterator;
 }
+#<>#
+
+#< FILES >#
+sub _fasta_file_for {
+    my ($self, $type) = @_;
+
+    Carp::confess("No type given to get fasta (qual) file") unless defined $type;
+    
+    return sprintf(
+        '%s/%s%s.%s.fasta',
+        $self->fasta_dir,
+        $self->file_base_name,
+        ( $self->name eq '' ? '' : '.'.$self->name ),
+        $type,
+    );
+}
+
+sub _qual_file_for {
+    my ($self, $type) = @_;
+    my $fasta_file = $self->_fasta_file_for($type);
+    return $fasta_file.'.qual';
+}
+
+sub seq_reader_for {
+    my ($self, $type, $set_name) = @_;
+    
+    # Sanity checks - should not happen
+    Carp::confess("No type given to get seq reader") unless defined $type;
+        Carp::confess("Invalid type ($type) given to get seq reader") unless grep { $type eq $_ } (qw/ processed oriented /);
+
+    my $fasta_file = $self->_fasta_file_for($type);
+    my $qual_file = $self->_qual_file_for($type);
+    return unless -e $fasta_file and -e $qual_file; # ok
+
+    my %params = (
+        file => $fasta_file,
+        qual_file => $qual_file,
+    );
+    my $reader =  Genome::Model::Tools::Sx::PhredReader->create(%params);
+    if ( not  $reader ) {
+        $self->error_message("Failed to create phred reader for $type fasta file and amplicon set name ($set_name) for ".$self->description);
+        return;
+    }
+
+    return $reader;
+}
+
+sub seq_writer_for {
+    my ($self, $type) = @_;
+
+    Carp::confess("No type given to get fasta and qual writer") unless defined $type;
+    Carp::confess("Invalid type ($type) given to get fasta and qual writer") unless grep { $type eq $_ } (qw/ processed oriented /);
+
+    my $fasta_file = $self->_fasta_file_for($type);
+    my $qual_file = $self->_qual_file_for($type);
+    unlink $fasta_file, $qual_file;
+
+    my $writer =  Genome::Model::Tools::Sx::PhredWriter->create(
+        file => $fasta_file,
+        qual_file => $qual_file,
+    );
+    unless ( $writer ) {
+        $self->error_message("Can't create phred writer for $type fasta file and amplicon set name (".$self->name.')');
+        return;
+    }
+
+    return $writer;
+}
+
+sub processed_fasta_file {
+    my $self = shift;
+    return $self->_fasta_file_for('processed');
+}
+
+sub processed_qual_file {
+    my $self = shift;
+    return $self->_qual_file_for('processed');
+}
+
+sub oriented_fasta_file {
+    my $self = shift;
+    return $self->_fasta_file_for('oriented');
+}
+
+sub oriented_qual_file {
+    my $self = shift;
+    return $self->_qual_file_for('oriented');
+}
+
+sub classification_file {
+    my $self = shift;
+
+    return sprintf(
+        '%s/%s%s.%s',
+        $self->classification_dir,
+        $self->file_base_name,
+        ( $self->name eq '' ? '' : '.'.$self->name ),
+        $self->classifier,
+    );
+}
+#<>#
 
 1;
 

@@ -162,7 +162,6 @@ use warnings;
 # FAIL
 ok($build->fail(), 'Fail');
 is($build->status, 'Failed', 'Status is Failed');
-ok($model->build_needed, 'This failed build does not satisfy the model');
 
 # SUCCESS
 ok($build->success, 'Success');

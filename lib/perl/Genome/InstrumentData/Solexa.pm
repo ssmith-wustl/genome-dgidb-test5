@@ -559,8 +559,26 @@ sub dump_trimmed_fastq_files {
                 unlink($input_fastq_pathname);
             }
         }
-
-        return @trimmed_fastq_pathnames;
+        #in paired end trimming, only return trimmed files with reads, check for errors
+        my @paths;
+        if (@trimmed_fastq_pathnames == 3){
+            my $paired_with_size = grep { -s $_ } @trimmed_fastq_pathnames[0,1];
+            if ($paired_with_size == 0){
+                $self->status_message("paired end trimmed files have no size, skipping");
+            }elsif($paired_with_size == 1){
+                die $self->error_message("only one trimmed pair file with size, trimming produced bad result!");
+            }else{
+                push @paths, @trimmed_fastq_pathnames[0,1];
+            }
+            if (-s $trimmed_fastq_pathnames[2]){
+                push @paths, $trimmed_fastq_pathnames[2];
+            }else{
+                $self->status_message("fragment trimmed file has no size, skipping");
+            }
+        }else{
+            @paths = @trimmed_fastq_pathnames;
+        }
+        return @paths;
     }
     
     # if the above did not work, we have a legacy trimmer.

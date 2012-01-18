@@ -18,7 +18,7 @@ class Genome::Model::Tools::Samtools::HybridView {
         is=>'Text',
         is_optional=>0,
     },
-    output_vcf => {
+    output_glf => {
         is=>'Text',
         is_optional=>0,
         is_output=>1,
@@ -48,7 +48,7 @@ sub execute {
     my $view_cmd = "$samtools_cmd view -uh $bam";
     my $calmd_cmd = "$samtools_cmd calmd -Aur - $ref 2> /dev/null";
     my $pileup_cmd = "$samtools_cmd pileup - -g -f $ref";
-    my $output = $self->output_vcf;
+    my $output = $self->output_glf;
     my $cmd = "$view_cmd | $calmd_cmd | $pileup_cmd > $output";
     my $rv = Genome::Sys->shellcmd(cmd=> $cmd, input_files=>[$bam, $ref]);
     if($rv != 1) {

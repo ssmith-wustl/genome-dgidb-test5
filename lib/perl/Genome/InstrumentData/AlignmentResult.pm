@@ -252,6 +252,8 @@ class Genome::InstrumentData::AlignmentResult {
         _input_bfq_pathnames   => { is => 'ARRAY', is_optional => 1 },
         _fastq_read_count      => { is => 'Number',is_optional => 1 },
         _sam_output_fh         => { is => 'IO::File',is_optional => 1 },
+        _is_inferred_paired_end => { is => 'Boolean', is_optional=>1},
+        _extracted_bam_path    => { is => 'String', is_optional=>1},
     ],
 };
 
@@ -554,20 +556,54 @@ sub prepare_scratch_sam_file {
 
 sub requires_fastqs_to_align {
     my $self = shift;
+    # disqualify if the aligner can't take a bam
+    return 1 unless ($self->accepts_bam_input);
+
+    # read groups are ok here.
+    return 1 if (defined $self->instrument_data_segment_id && !$self->instrument_data_segment_type eq 'read_group');
 
     # n-remove, complex filters, trimmers, instrument data disqualify bam processing
     return 1 if ($self->n_remove_threshold);
     return 1 if ($self->filter_name && ($self->filter_name ne 'forward-only' && $self->filter_name ne 'reverse-only'));
     return 1 if ($self->trimmer_name);
-    return 1 if (defined $self->instrument_data_segment_id);
 
     # obviously we need fastq if we don't have a bam
     return 1 unless (defined $self->instrument_data->bam_path && -e $self->instrument_data->bam_path);
 
-    # disqualify if the aligner can't take a bam
-    return 1 unless ($self->accepts_bam_input);
 
     return 0;
+}
+
+sub _extract_input_read_group_bam {
+    my $self = shift;
+   
+    my $file = sprintf("%s/%s.rg_extracted_%s.bam", $self->temp_scratch_directory,  $self->instrument_data_id, $self->instrument_data_segment_id);
+    
+    my $cmd = Genome::Model::Tools::Sam::ExtractReadGroup->create(input=>$self->instrument_data->bam_path,
+                                                                  output=>$file,
+                                                                  read_group_id=>$self->instrument_data_segment_id);
+
+    unless ($cmd->execute) {
+        $self->error_message($cmd->error_mesage);
+        return;
+    }
+     
+    $self->_extracted_bam_path($file);         
+    my $paired_checker = Genome::Model::Tools::Sam::InferPairedStatus->create(input=>$file);
+    unless ($paired_checker->execute) {
+       $self->error_message("Couldn't determine paired end status of $file; errors were" . $paired_checker->error_message);
+       return
+    }
+
+    my @out = ();
+    if ($paired_checker->is_paired_end) {
+        push @out, $file . ":1";
+        push @out, $file . ":2";
+    } else {
+        push @out, $file . ":0";
+    }
+
+    return @out;
 }
 
 sub collect_inputs_and_run_aligner {
@@ -580,6 +616,8 @@ sub collect_inputs_and_run_aligner {
 
     if ($self->requires_fastqs_to_align) {
         @inputs = $self->_extract_input_fastq_filenames;
+    } elsif ($self->instrument_data_segment_id) {
+        @inputs = $self->_extract_input_read_group_bam;
     } else {
         if ($self->instrument_data->is_paired_end) {
             push @inputs, $self->instrument_data->bam_path . ":1";
@@ -746,7 +784,7 @@ sub determine_input_read_count_from_bam {
     my $self = shift;
 
 
-    my $bam_file = $self->instrument_data->bam_path;
+    my $bam_file = $self->_extracted_bam_path || $self->instrument_data->bam_path;
     my $output_file = $self->temp_scratch_directory . "/input_bam.flagstat";
 
     my $cmd = Genome::Model::Tools::Sam::Flagstat->create(

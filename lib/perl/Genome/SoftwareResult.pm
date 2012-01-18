@@ -15,7 +15,7 @@ class Genome::SoftwareResult {
     subclass_description_preprocessor => 'Genome::SoftwareResult::_expand_param_and_input_properties',
     subclassify_by => 'subclass_name',
     id_by => [
-        id => { is => 'NUMBER', len => 20 },
+        id => { is => 'Number', len => 20 },
     ],
     attributes_have => [
         is_param => { is => 'Boolean', is_optional=>'1' },
@@ -23,13 +23,13 @@ class Genome::SoftwareResult {
         is_metric => { is => 'Boolean', is_optional=>'1' }
     ],
     has => [
-        module_version      => { is => 'VARCHAR2', len => 64, column_name => 'VERSION', is_optional => 1 },
-        subclass_name       => { is => 'VARCHAR2', len => 255, column_name => 'CLASS_NAME' },
+        module_version      => { is => 'Text', len => 64, column_name => 'VERSION', is_optional => 1 },
+        subclass_name       => { is => 'Text', len => 255, column_name => 'CLASS_NAME' },
         inputs_bx           => { is => 'UR::BoolExpr', id_by => 'inputs_id', is_optional => 1 },
-        inputs_id           => { is => 'VARCHAR2', len => 4000, column_name => 'INPUTS_ID', implied_by => 'inputs_bx', is_optional => 1 },
+        inputs_id           => { is => 'Text', len => 4000, column_name => 'INPUTS_ID', implied_by => 'inputs_bx', is_optional => 1 },
         params_bx           => { is => 'UR::BoolExpr', id_by => 'params_id', is_optional => 1 },
-        params_id           => { is => 'VARCHAR2', len => 4000, column_name => 'PARAMS_ID', implied_by => 'params_bx', is_optional => 1 },
-        output_dir          => { is => 'VARCHAR2', len => 1000, column_name => 'OUTPUTS_PATH', is_optional => 1 },
+        params_id           => { is => 'Text', len => 4000, column_name => 'PARAMS_ID', implied_by => 'params_bx', is_optional => 1 },
+        output_dir          => { is => 'Text', len => 1000, column_name => 'OUTPUTS_PATH', is_optional => 1 },
         test_name           => { is_param => 1, is_delegated => 1, is_mutable => 1, via => 'params', to => 'param_value', where => ['param_name' => 'test_name'], is => 'Text', doc => 'Assigns a testing tag to the result.  These will not be used in default processing', is_optional => 1 },
     ],
     has_many_optional => [
