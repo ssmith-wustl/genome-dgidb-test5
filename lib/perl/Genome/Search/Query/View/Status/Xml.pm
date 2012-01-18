@@ -208,6 +208,10 @@ sub make_label {
 
     $text =~ s/[_]/ /g;
 
+    if ($text =~ /^Model\s\w+/) {
+        $text =~ s/^Model/Model -/;
+    }
+
     my @words;
     for my $w (split(/\s+/,$text)) {
         push @words, ucfirst($w);

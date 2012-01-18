@@ -50,7 +50,39 @@ class Genome::DruggableGene::DrugNameReport {
                 my $citation = Genome::DruggableGene::Citation->get(source_db_name => $source_db_name, source_db_version => $source_db_version);
                 return $citation;
             |,
-        }
+        },
+        _withdrawn_cat => {
+            via => 'drug_name_report_category_associations',
+            to => 'category_value',
+            where => [category_value => 'withdrawn'],
+            is_optional => 1,
+            is_many => 1,
+        },
+        is_withdrawn => {
+            calculate_from => ['_withdrawn_cat'],
+            calculate => q|
+                return 1 if $_withdrawn_cat; return 0;
+            |,
+            # calc_sql => q|
+
+            # |
+        },
+        _nutraceutical_cat => {
+            via => 'drug_name_report_category_associations',
+            to => 'category_value',
+            where => [category_value => 'nutraceutical'],
+            is_optional => 1,
+            is_many => 1,
+        },
+        is_nutraceutical => {
+            calculate_from => ['_nutraceutical_cat'],
+            calculate => q|
+                return 1 if $_nutraceutical_cat; return 0;
+            |,
+            # calc_sql => q|
+
+            # |
+        },
     ],
     doc => 'Claim regarding the name of a drug',
 };
