@@ -11,8 +11,6 @@ BEGIN {
 use Test::More tests => 6;
 use above 'Genome';
 
-SKIP: {
-    skip 'test data in flux', 6;
 use_ok('Genome::DruggableGene::Command::GeneNameReport::LookupInteractions');
 
 my $test_input_file = __FILE__ . '.d/input.tsv';
@@ -27,6 +25,6 @@ isa_ok($command, 'Genome::DruggableGene::Command::GeneNameReport::LookupInteract
 ok($command->execute, 'Successfully excuted lookup interactions command');
 
 system("sort $output_file -o $output_file");
+$DB::single = 1; #TODO: remove me
 my $output = `diff $test_output_file $output_file`;
 ok(!$output, 'Command output and expected output are identical');
-}
