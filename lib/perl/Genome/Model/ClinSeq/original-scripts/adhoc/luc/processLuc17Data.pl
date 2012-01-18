@@ -553,6 +553,7 @@ foreach my $c (sort {$infiles{$a}->{patient} cmp $infiles{$b}->{patient}} keys %
     open(IN, "$rnaseq_locations_file") || die "\n\nCould not open rnaseq_locations_file: $rnaseq_locations_file";
     my $header = 1;
     my $expression_dir;
+    my $alignments_dir;
     while(<IN>){
       chomp($_);
       my @line = split("\t", $_);
@@ -561,6 +562,9 @@ foreach my $c (sort {$infiles{$a}->{patient} cmp $infiles{$b}->{patient}} keys %
         next();
       }
       $expression_dir = "$line[4]"."expression/";
+      $alignments_dir = "$line[4]"."alignments/";
+      $infiles{$c}{rnaseq_expression_dir} = $expression_dir;
+      $infiles{$c}{rnaseq_alignments_dir} = $alignments_dir;
     }
     close(IN);
 
@@ -611,7 +615,10 @@ my $c_count = keys %infiles;
 $c = $c_count+1;
 $infiles{$c}{rnaseq_expression_matrix} = "/gscmnt/sata132/techd/mgriffit/luc/rnaseq_vs_snv/rnaseq_data/LUC9_N/isoforms_merged/isoforms.merged.fpkm.expsort.tsv";
 $infiles{$c}{rnaseq_data_name} = "LUC9_N";
+$infiles{$c}{rnaseq_data_dir} = "/gscmnt/sata132/techd/mgriffit/luc/rnaseq_vs_snv/rnaseq_data/LUC9_N/";
 $infiles{$c}{patient} = "LUC9";
+$infiles{$c}{rnaseq_alignments_dir} = "/gscmnt/gc7001/info/model_data/2880885516/build116087250/alignments/";
+
 
 #Build an expression matrix for all RNA-seq libraries that are currently available...
 print BLUE, "\n\nBuild expression matrix for all RNAseq libraries", RESET;
@@ -715,7 +722,7 @@ foreach my $g (sort keys %exp){
   my $ranks_string = join("\t", @ranks);
   
   my $exp_fpkm_string = "$g\t$mapped_gene_name\t$mutation_status\t$mutation_count\t$patient_list\t$fpkms_string";
-  my $exp_rank_string = "$g\t$mapped_gene_name\t$mutation_status\t$mutation_count\t$ranks_string";
+  my $exp_rank_string = "$g\t$mapped_gene_name\t$mutation_status\t$mutation_count\t$patient_list\t$ranks_string";
 
   print FPKM_MATRIX "$exp_fpkm_string\n";
   print RANK_MATRIX "$exp_rank_string\n";
@@ -724,6 +731,27 @@ foreach my $g (sort keys %exp){
 close(FPKM_MATRIX);
 close(RANK_MATRIX);
 close(CAT);
+
+
+print BLUE, "\n\nSummarizing Tophat alignment dirs", RESET;
+foreach my $c (sort {$infiles{$a}->{patient} cmp $infiles{$b}->{patient}} keys %infiles){
+  my $patient = $infiles{$c}{patient};
+  print BLUE, "\n\t$patient", RESET;
+
+  my $rnaseq_results_dir = $infiles{$c}{rnaseq_data_dir};
+  my $rnaseq_alignments_dir = $infiles{$c}{rnaseq_alignments_dir};
+  my $tophat_summary_dir = $rnaseq_results_dir ."tophat_summary/";
+
+  if (-e $tophat_summary_dir && -d $tophat_summary_dir){
+    print YELLOW, "\n\tTophat summary dir already exists - skipping this step", RESET;    
+  }else{
+    mkdir($tophat_summary_dir);
+    my $summary_cmd = "/gscmnt/sata206/techd/git/genome/lib/perl/Genome/Model/ClinSeq/original-scripts/qc/tophatAlignmentSummary.pl  --reference_fasta_file='/gscmnt/sata420/info/model_data/2857786885/build102671028/all_sequences.fa'  --reference_annotations_dir='/gscmnt/sata132/techd/mgriffit/reference_annotations/hg19/'  --working_dir=$tophat_summary_dir  --tophat_alignment_dir='$rnaseq_alignments_dir'  --verbose=1";
+    print YELLOW, "\n\t$summary_cmd", RESET;
+    system($summary_cmd);
+  }
+}
+
 
 print "\n\n";
 
