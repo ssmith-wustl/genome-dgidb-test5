@@ -521,29 +521,69 @@ if (length(which(names(readcounts)=="RNAseq_Tumor_VAF")) & length(which(names(re
 }
 
 # - Median coverage of variant positions in 
-# - WGS
+# - WGS Tumor
 if (length(which(names(readcounts)=="WGS_Tumor_var_rc"))){
-  wgs_median_coverage = median(readcounts[,"WGS_Tumor_ref_rc"] + readcounts[,"WGS_Tumor_var_rc"])
-  stats[dim(stats)[1]+1,] = c("WGS median read coverage", wgs_median_coverage, "WGS","SNV", "Median", "Median coverage (reads supporting reference and variant bases)") 
+  wgs_median_tumor_coverage = median(readcounts[,"WGS_Tumor_ref_rc"] + readcounts[,"WGS_Tumor_var_rc"])
+  wgs_median_tumor_vaf = median(readcounts[,"WGS_Tumor_VAF"])
+  stats[dim(stats)[1]+1,] = c("WGS median tumor read coverage", wgs_median_tumor_coverage, "WGS","SNV", "Median", "Median tumor coverage (reads supporting reference and variant bases)") 
+  stats[dim(stats)[1]+1,] = c("WGS median tumor VAF", wgs_median_tumor_vaf, "WGS","SNV", "Median", "Median tumor variant allele frequency") 
 }
-# - Exome
+# - WGS Normal
+if (length(which(names(readcounts)=="WGS_Normal_var_rc"))){
+  wgs_median_normal_coverage = median(readcounts[,"WGS_Normal_ref_rc"] + readcounts[,"WGS_Normal_var_rc"])
+  wgs_median_normal_vaf = median(readcounts[,"WGS_Normal_VAF"])
+  stats[dim(stats)[1]+1,] = c("WGS median normal read coverage", wgs_median_normal_coverage, "WGS","SNV", "Median", "Median normal coverage (reads supporting reference and variant bases)")
+  stats[dim(stats)[1]+1,] = c("WGS median normal VAF", wgs_median_normal_vaf, "WGS","SNV", "Median", "Median normal variant allele frequency")
+}
+# - Exome Tumor
 if (length(which(names(readcounts)=="Exome_Tumor_var_rc"))){
-  exome_median_coverage = median(readcounts[,"Exome_Tumor_ref_rc"] + readcounts[,"Exome_Tumor_var_rc"])
-  stats[dim(stats)[1]+1,] = c("Exome median read coverage", exome_median_coverage, "Exome","SNV", "Median", "Median coverage (reads supporting reference and variant bases)") 
+  exome_median_tumor_coverage = median(readcounts[,"Exome_Tumor_ref_rc"] + readcounts[,"Exome_Tumor_var_rc"])
+  exome_median_tumor_vaf = median(readcounts[,"Exome_Tumor_VAF"])
+  stats[dim(stats)[1]+1,] = c("Exome median tumor read coverage", exome_median_tumor_coverage, "Exome","SNV", "Median", "Median tumor coverage (reads supporting reference and variant bases)") 
+  stats[dim(stats)[1]+1,] = c("Exome median tumor VAF", exome_median_tumor_vaf, "Exome","SNV", "Median", "Median tumor variant allele frequency") 
+}
+# - Exome Normal
+if (length(which(names(readcounts)=="Exome_Normal_var_rc"))){
+  exome_median_normal_coverage = median(readcounts[,"Exome_Normal_ref_rc"] + readcounts[,"Exome_Normal_var_rc"])
+  exome_median_normal_vaf = median(readcounts[,"Exome_Normal_VAF"])
+  stats[dim(stats)[1]+1,] = c("Exome median normal read coverage", exome_median_normal_coverage, "Exome","SNV", "Median", "Median normal coverage (reads supporting reference and variant bases)") 
+  stats[dim(stats)[1]+1,] = c("Exome median normal VAF", exome_median_normal_vaf, "Exome","SNV", "Median", "Median normal variant allele frequency") 
 }
 
-# - RNAseq (all, variant observed only, expressed gene only)
+# - RNAseq Tumor (all, variant observed only, expressed gene only)
 if (length(which(names(readcounts)=="RNAseq_Tumor_var_rc")) & length(which(names(readcounts)=="RNAseq_Tumor_gene_FPKM"))){
-  rnaseq_median_coverage = median(readcounts[,"RNAseq_Tumor_ref_rc"] + readcounts[,"RNAseq_Tumor_var_rc"])
+  rnaseq_median_tumor_coverage = median(readcounts[,"RNAseq_Tumor_ref_rc"] + readcounts[,"RNAseq_Tumor_var_rc"])
+  rnaseq_median_tumor_vaf = median(readcounts[,"RNAseq_Tumor_VAF"])
   i = which(readcounts[,"RNAseq_Tumor_var_rc"] > 0)
-  rnaseq_median_coverage_obs = median(readcounts[i,"RNAseq_Tumor_ref_rc"] + readcounts[i,"RNAseq_Tumor_var_rc"])
+  rnaseq_median_tumor_coverage_obs = median(readcounts[i,"RNAseq_Tumor_ref_rc"] + readcounts[i,"RNAseq_Tumor_var_rc"])
+  rnaseq_median_tumor_vaf_obs = median(readcounts[i,"RNAseq_Tumor_VAF"])
   i = which(readcounts[,"RNAseq_Tumor_gene_FPKM"] > fpkm_cutoff)
-  rnaseq_median_coverage_exp = median(readcounts[i,"RNAseq_Tumor_ref_rc"] + readcounts[i,"RNAseq_Tumor_var_rc"])
-  stats[dim(stats)[1]+1,] = c("RNAseq median read coverage", rnaseq_median_coverage, "RNAseq","SNV", "Median", "Median coverage (reads supporting reference and variant bases)")
-  stats[dim(stats)[1]+1,] = c("RNAseq median read coverage - observed variants only", rnaseq_median_coverage_obs, "RNAseq","SNV", "Median", "Median coverage (reads supporting reference and variant bases) of variants with at least one RNAseq read")  
-  stats[dim(stats)[1]+1,] = c("RNAseq median read coverage - expressed genes only", rnaseq_median_coverage_exp, "RNAseq","SNV", "Median", "Median coverage (reads supporting reference and variant bases) of variants in a gene that is expressed")  
+  rnaseq_median_tumor_coverage_exp = median(readcounts[i,"RNAseq_Tumor_ref_rc"] + readcounts[i,"RNAseq_Tumor_var_rc"])
+  rnaseq_median_tumor_vaf_exp = median(readcounts[i,"RNAseq_Tumor_VAF"])
+  stats[dim(stats)[1]+1,] = c("RNAseq median tumor read coverage", rnaseq_median_tumor_coverage, "RNAseq","SNV", "Median", "Median tumor coverage (reads supporting reference and variant bases)")
+  stats[dim(stats)[1]+1,] = c("RNAseq median tumor read coverage - observed variants only", rnaseq_median_tumor_coverage_obs, "RNAseq","SNV", "Median", "Median tumor coverage (reads supporting reference and variant bases) of variants with at least one RNAseq read")  
+  stats[dim(stats)[1]+1,] = c("RNAseq median tumor read coverage - expressed genes only", rnaseq_median_tumor_coverage_exp, "RNAseq","SNV", "Median", "Median tumor coverage (reads supporting reference and variant bases) of variants in a gene that is expressed")
+  stats[dim(stats)[1]+1,] = c("RNAseq median tumor VAF", rnaseq_median_tumor_vaf, "RNAseq","SNV", "Median", "Median tumor variant allele frequency")
+  stats[dim(stats)[1]+1,] = c("RNAseq median tumor VAF - observed variants only", rnaseq_median_tumor_vaf_obs, "RNAseq","SNV", "Median", "Median tumor variant allele frequency of variants with at least one RNAseq read")  
+  stats[dim(stats)[1]+1,] = c("RNAseq median tumor VAF - expressed genes only", rnaseq_median_tumor_vaf_exp, "RNAseq","SNV", "Median", "Median tumor variant allele frequency of variants in a gene that is expressed")
 }
-
+# - RNAseq Normal (all, variant observed only, expressed gene only)
+if (length(which(names(readcounts)=="RNAseq_Normal_var_rc")) & length(which(names(readcounts)=="RNAseq_Normal_gene_FPKM"))){
+  rnaseq_median_normal_coverage = median(readcounts[,"RNAseq_Normal_ref_rc"] + readcounts[,"RNAseq_Normal_var_rc"])
+  rnaseq_median_normal_vaf = median(readcounts[,"RNAseq_Normal_VAF"])
+  i = which(readcounts[,"RNAseq_Normal_var_rc"] > 0)
+  rnaseq_median_normal_coverage_obs = median(readcounts[i,"RNAseq_Normal_ref_rc"] + readcounts[i,"RNAseq_Normal_var_rc"])
+  rnaseq_median_normal_vaf_obs = median(readcounts[i,"RNAseq_Normal_VAF"])
+  i = which(readcounts[,"RNAseq_Normal_gene_FPKM"] > fpkm_cutoff)
+  rnaseq_median_normal_coverage_exp = median(readcounts[i,"RNAseq_Normal_ref_rc"] + readcounts[i,"RNAseq_Normal_var_rc"])
+  rnaseq_median_normal_vaf_exp = median(readcounts[i,"RNAseq_Normal_VAF"])
+  stats[dim(stats)[1]+1,] = c("RNAseq median normal read coverage", rnaseq_median_normal_coverage, "RNAseq","SNV", "Median", "Median normal coverage (reads supporting reference and variant bases)")
+  stats[dim(stats)[1]+1,] = c("RNAseq median normal read coverage - observed variants only", rnaseq_median_normal_coverage_obs, "RNAseq","SNV", "Median", "Median normal coverage (reads supporting reference and variant bases) of variants with at least one RNAseq read")  
+  stats[dim(stats)[1]+1,] = c("RNAseq median normal read coverage - expressed genes only", rnaseq_median_normal_coverage_exp, "RNAseq","SNV", "Median", "Median normal coverage (reads supporting reference and variant bases) of variants in a gene that is expressed")
+  stats[dim(stats)[1]+1,] = c("RNAseq median normal VAF", rnaseq_median_normal_vaf, "RNAseq","SNV", "Median", "Median normal variant allele frequency")
+  stats[dim(stats)[1]+1,] = c("RNAseq median normal VAF - observed variants only", rnaseq_median_normal_vaf_obs, "RNAseq","SNV", "Median", "Median normal variant allele frequency of variants with at least one RNAseq read")  
+  stats[dim(stats)[1]+1,] = c("RNAseq median normal VAF - expressed genes only", rnaseq_median_normal_vaf_exp, "RNAseq","SNV", "Median", "Median normal variant allele frequency of variants in a gene that is expressed")
+}
 
 #Summarize variants in various categories:
 #'supported' variants                -> (RNA-seq Variant Read Count >= 1)
