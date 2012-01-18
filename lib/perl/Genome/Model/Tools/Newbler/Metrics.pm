@@ -318,7 +318,9 @@ sub _metrics_from_newb_read_status_file {
     my $scaffolds = $self->{_SCAFFOLDS};
 
     my $major_contigs_read_count = 0;
+    my $minor_contigs_read_count = 0;
     my $major_supercontigs_read_count = 0;
+    my $minor_supercontigs_read_count = 0;
 
     for my $contig_id ( keys %reads_in_contigs ) {
         # ignore contigs not in final assembly
@@ -327,17 +329,23 @@ sub _metrics_from_newb_read_status_file {
 
             # contigs read count
             my $contig_length = $self->_metrics->contigs->{$contig_id};
-            $major_contigs_read_count += $read_count if
-                $contig_length >= $self->major_contig_length;
-
+            if ( $contig_length >= $self->major_contig_length ) {
+                $major_contigs_read_count += $read_count;
+            } else {
+                $minor_contigs_read_count += $read_count
+            }
+            
             # supercontig read count
             my $supercontig_id = ( exists $scaffolds->{$contig_id} ) ?
                 $scaffolds->{$contig_id} :
                 $contig_id;
 
             my $supercontig_length = $self->_metrics->supercontigs->{$supercontig_id};
-            $major_supercontigs_read_count += $read_count if
-                $supercontig_length >= $self->major_contig_length;
+            if ( $supercontig_length >= $self->major_contig_length ) {
+                $major_supercontigs_read_count += $read_count;
+            } else {
+                $minor_supercontigs_read_count += $read_count;
+            }
         }
     }
 
@@ -347,6 +355,16 @@ sub _metrics_from_newb_read_status_file {
     $metrics->set_metric('contigs_major_read_percent', $major_contigs_read_percent);
     my $major_supercontigs_read_percent = sprintf( "%.1f", $major_supercontigs_read_count/ $reads_assembled * 100);
     $metrics->set_metric('supercontigs_major_read_percent', $major_supercontigs_read_percent);
+
+    
+    $metrics->set_metric('contigs_minor_read_count', $minor_contigs_read_count);
+    $metrics->set_metric('supercontigs_minor_read_count', $minor_supercontigs_read_count);
+    my $minor_contigs_read_percent = sprintf( "%.1f", $minor_contigs_read_count/ $reads_assembled * 100);
+    $metrics->set_metric('contigs_minor_read_percent', $minor_contigs_read_percent);
+    my $minor_supercontigs_read_percent = sprintf( "%.1f", $minor_supercontigs_read_count/ $reads_assembled * 100);
+    $metrics->set_metric('supercontigs_minor_read_percent', $minor_supercontigs_read_percent);
+
+
 
     # all contigs read counts
     $metrics->set_metric('reads_assembled', $reads_assembled);
