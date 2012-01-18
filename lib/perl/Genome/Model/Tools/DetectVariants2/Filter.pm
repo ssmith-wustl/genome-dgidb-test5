@@ -366,6 +366,13 @@ sub _link_filter_output_directory_to_result {
         Genome::Sys->create_symlink($result->output_dir, $self->output_directory);
     }
 
+    my $previous_result = $self->previous_result;
+    my @users = $previous_result->users;
+    unless(grep($_->user eq $result, @users)) {
+        $previous_result->add_user(user => $result, label => 'uses');
+    }
+
+
     return 1;
 }
 
