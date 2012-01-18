@@ -52,15 +52,6 @@ sub post_allocation_initialization {
     return $self->create_subdirectories;
 }
 
-sub create_subdirectories {
-    my $self = shift;
-    for my $dir ( $self->sub_dirs ) {
-        Genome::Sys->create_directory( $self->data_directory."/$dir" )
-            or return;
-    }
-    return 1;
-}
-
 sub validate_for_start_methods {
     my $self = shift;
     my @methods = $self->SUPER::validate_for_start_methods;
@@ -132,11 +123,25 @@ sub amplicon_sets {
 #<>#
 
 #< Dirs >#
-sub sub_dirs {
+sub create_subdirectories {
     my $self = shift;
-    my @sub_dirs = (qw| classification fasta reports |);
-    push @sub_dirs, (qw/ chromat_dir edit_dir /) if $self->sequencing_platform eq 'sanger';
-    return @sub_dirs;
+    my @methods = (qw| classification_dir fasta_dir reports_dir |);
+    push @methods, (qw/ chimera_dir /) if $self->processing_profile->chimera_detector;
+    push @methods, (qw/ chromat_dir edit_dir /) if $self->sequencing_platform eq 'sanger';
+    for my $method ( @methods ) {
+        my $directory =  $self->$method;
+        my $create_directory = eval{ Genome::Sys->create_directory($directory); };
+        if ( not $create_directory or not -d $directory ) {
+            $self->error_message($@) if $@;
+            $self->error_message('Failed to create directory: '.$directory);
+            return;
+        }
+    }
+    return 1;
+}
+
+sub chimera_dir {
+    return $_[0]->data_directory.'/chimera';
 }
 
 sub classification_dir {
@@ -158,6 +163,7 @@ sub edit_dir {
 sub chromat_dir {
     return $_[0]->data_directory.'/chromat_dir';
 }
+#<>#
 
 #< Files >#
 sub file_base_name {
@@ -166,54 +172,6 @@ sub file_base_name {
 
 sub combined_input_fasta_file {
     return $_[0]->fasta_dir.'/'.$_[0]->file_base_name.'.'.'input.fasta';
-}
-
-# sanger files
-sub raw_reads_fasta_file {
-    return $_[0]->fasta_dir.'/'.$_[0]->file_base_name.'.reads.raw.fasta';
-}
-
-sub raw_reads_qual_file {
-    return $_[0]->raw_reads_fasta_file.'.qual';
-}
-
-sub reads_fasta_file_for_amplicon { 
-    my ($self, $amplicon) = @_;
-    return $self->edit_dir.'/'.$amplicon->{name}.'.fasta';
-}
-
-sub reads_qual_file_for_amplicon {
-    return reads_fasta_file_for_amplicon(@_).'.qual';
-}
-
-sub ace_file_for_amplicon { 
-    my ($self, $amplicon) = @_;
-    return $self->edit_dir.'/'.$amplicon->{name}.'.fasta.ace';
-}
-sub scfs_file_for_amplicon {
-    my ($self, $amplicon) = @_;
-    return $self->edit_dir.'/'.$amplicon->{name}.'.scfs';
-}
-
-sub create_scfs_file_for_amplicon {
-    my ($self, $amplicon) = @_;
-
-    my $scfs_file = $self->scfs_file_for_amplicon($amplicon);
-    unlink $scfs_file if -e $scfs_file;
-    my $scfs_fh = Genome::Sys->open_file_for_writing($scfs_file)
-        or return;
-    for my $scf ( @{$amplicon->{reads}} ) { 
-        $scfs_fh->print("$scf\n");
-    }
-    $scfs_fh->close;
-
-    if ( -s $scfs_file ) {
-        return $scfs_file;
-    }
-    else {
-        unlink $scfs_file;
-        return;
-    }
 }
 
 sub processed_fasta_file { # returns them as a string (legacy)
@@ -234,14 +192,6 @@ sub processed_qual_file { # returns them as a string (legacy)
 sub processed_qual_files {
     my $self = shift;
     return map { $_->processed_qual_file } $self->amplicon_sets;
-}
-
-sub processed_reads_fasta_file { #sanger
-    return $_[0]->fasta_dir.'/'.$_[0]->file_base_name.'.reads.processed.fasta';
-}
-
-sub processed_reads_qual_file { #sanger
-    return $_[0]->processed_reads_fasta_file.'.qual';
 }
 
 sub combined_original_fasta_file {
@@ -519,10 +469,91 @@ sub append_fastq_to_orig_fastq_file {
     return 1;
 }
 
+#< Remove Chimeras >#
+sub remove_chimeras_from_amplicons {
+    my $self = shift;
+    $self->status_message('Remove chimeras...');
+
+    my $attempted = $self->amplicons_attempted;
+    if ( not defined $attempted ) {
+        $self->error_message('No value for amplicons attempted set. Cannot remove chimeras!');
+        return;
+    }
+
+    my @amplicon_sets = $self->amplicon_sets;
+    if ( not @amplicon_sets ) {
+        $self->error_message('No amplicon sets for '.$self->description);
+        return;
+    }
+
+    $self->status_message('Chimera detector: '.$self->processing_profile->chimera_detector);
+    $self->status_message('Chimera detector params: '.$self->processing_profile->chimera_detector_params);
+    my $detector_class = 'Genome::Model::Tools::'.Genome::Utility::Text::string_to_camel_case($self->chimera_detector);
+    my %detector_params = $self->processing_profile->chimera_detector_params_as_hash;
+    my $remove_class = $detector_class.'::RemoveChimeras';
+
+    my ($sequences, $chimeras, $output) = (qw/ 0 0 0 /);
+    for my $amplicon_set ( @amplicon_sets ) {
+        next if not -s $amplicon_set->processed_fasta_file;
+        $self->status_message('Amplicon set'.($amplicon_set->name ? ' '.$amplicon_set->name : ''));
+
+        # DETECT
+        $self->status_message('Detect chimeras...');
+        my $detector = $detector_class->create(
+            input => $amplicon_set->processed_fasta_file.':qual_file='.$amplicon_set->processed_qual_file,
+            chimeras => $amplicon_set->chimera_file,
+            %detector_params,
+        );
+        if ( not $detector ) {
+            $self->error_message('Failed to create chimera detector');
+            return;
+        }
+        my $execute = $detector->execute;
+        $detector->dump_status_messages(1);
+        if ( not $execute ) {
+            $self->error_message('Failed to execute chimera detector');
+            return;
+        }
+        $self->status_message('Detect chimeras...OK');
+
+        # REMOVE
+        $self->status_message('Remove chimeras...');
+        my $remover = $remove_class->create(
+            sequences => $amplicon_set->processed_fasta_file.':qual_file='.$amplicon_set->processed_qual_file,
+            chimeras => $amplicon_set->chimera_file,
+            output => $amplicon_set->chimera_free_fasta_file.':qual_file='.$amplicon_set->chimera_free_qual_file,
+        );
+        if ( not $remover ) {
+            $self->error_message('Failed to create chimera remove gmt.');
+            return;
+        }
+        $remover->dump_status_messages(1);
+        $execute = $remover->execute;
+        if ( not $execute ) {
+            $self->error_message('Failed to execute chimera remove gmt.');
+            return;
+        }
+        $sequences += $remover->_metrics->{sequences};
+        $chimeras += $remover->_metrics->{chimeras};
+        $output += $remover->_metrics->{output};
+        $self->status_message('Remove chimeras...OK');
+    }
+
+    $self->amplicons_chimeric($chimeras);
+    $self->amplicons_chimeric_percent( sprintf('%.2f', $chimeras / $self->amplicons_processed) );
+
+    $self->status_message('Processed:  '.$self->amplicons_processed);
+    $self->status_message('Chimeric: '.$self->amplicons_chimeric);
+    $self->status_message('Chimeric percent:    '.($self->amplicons_chimeric_percent * 100).'%');
+
+    $self->status_message('Remove chimeras...OK');
+    return 1;
+}
+#<>#
+
 #< Orient >#
 sub orient_amplicons {
     my $self = shift;
-
     $self->status_message('Orient amplicons...');
 
     my $amplicons_classified = $self->amplicons_classified;
@@ -537,7 +568,10 @@ sub orient_amplicons {
     }
 
     my @amplicon_sets = $self->amplicon_sets;
-    return if not @amplicon_sets;
+    if ( not @amplicon_sets ) {
+        $self->error_message('No amplicon sets for '.$self->description);
+        return;
+    }
 
     my $no_classification = 0;
     for my $amplicon_set ( @amplicon_sets ) {
@@ -794,41 +828,6 @@ sub calculate_estimated_kb_usage_sanger {
 }
 
 
-#< instrument data processing >#
-sub fastqs_from_solexa {
-    my ( $self, $inst_data ) = @_;
-
-    my @fastq_files;
-
-    if ( $inst_data->bam_path ) { #fastq from bam
-        $self->error_message("Bam file is zero size or does not exist: ".$inst_data->bam_path ) and return
-            if not -s $inst_data->bam_path;
-        my $temp_dir = Genome::Sys->create_temp_directory;
-        @fastq_files = $inst_data->dump_fastqs_from_bam( directory => $temp_dir );
-        $self->status_message( "Got fastq files from bam: ".join( ', ', @fastq_files ) );
-    }
-    elsif ( $inst_data->archive_path ) { #dump fastqs from archive
-        $self->error_message( "Archive file is missing or is zero size: ".$inst_data->archive_path ) and return
-            if not -s $inst_data->archive_path;
-        my $temp_dir = Genome::Sys->create_temp_directory;
-        my $tar_cmd = "tar zxf " . $inst_data->archive_path ." -C $temp_dir";
-        $self->status_message( "Running tar: $tar_cmd" );
-        unless ( Genome::Sys->shellcmd( cmd => $tar_cmd ) ) {
-            $self->error_message( "Failed to dump fastq files from archive path using cmd: $tar_cmd" );
-            return;
-        }
-        @fastq_files = glob $temp_dir .'/*';
-        $self->status_message( "Got fastq files from archive path: ".join (', ', @fastq_files) );
-    }
-    else {
-        $self->error_message( "Could not get neither bam_path nor archive path for instrument data: ".$inst_data->id );
-        return; #die here
-    }
-
-    return @fastq_files;
-}
-
-
 #< Diff >#
 sub dirs_ignored_by_diff {
     return (qw{
@@ -893,6 +892,7 @@ sub diff_rdp {
 
     return 1;
 }
+#<>#
 
 1;
 

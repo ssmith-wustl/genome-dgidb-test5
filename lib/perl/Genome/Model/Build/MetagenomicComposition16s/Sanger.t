@@ -120,12 +120,9 @@ is($build->calculate_estimated_kb_usage, 30000, 'Estimated kb usage');
 my $existing_build_dir = '/gsc/var/cache/testsuite/data/Genome-Model/MetagenomicComposition16sSanger/build';
 ok(-d $existing_build_dir, 'existing build dir exists');
 ok($build->create_subdirectories, 'created subdirectories');
-for my $subdir ( $build->sub_dirs ) {
-    my $method = $subdir;
-    $method .= '_dir' if $subdir !~ /_dir$/;
-    my $dir = $build->$method;
-    is($dir, $build->data_directory.'/'.$subdir, "$method is correct");
-    ok(-d $dir, "$method was created");
+for my $subdir (qw/ chromat_dir edit_dir /) {
+    my $dir = $build->$subdir;
+    ok(-d $dir, "$subdir was created");
 }
 
 # file base
@@ -166,9 +163,6 @@ is(
 );
 my @amplicon_names;
 while ( my $amplicon = $amplicon_set->next_amplicon ) {
-    ok(-s $build->reads_fasta_file_for_amplicon($amplicon), 'fasta file');
-    ok(-s $build->reads_qual_file_for_amplicon($amplicon), 'qual file');
-    ok(-s $build->ace_file_for_amplicon($amplicon), 'ace file');
     push @amplicon_names, $amplicon->{name};
 }
 is_deeply(
@@ -177,15 +171,15 @@ is_deeply(
     'Got 4 amplicons',
 );
 
-ok(-s $build->raw_reads_fasta_file, 'Created the raw reads fasta file');
+ok(-s $build->fasta_dir.'/'.$build->file_base_name.'.reads.raw.fasta', 'Created the raw reads fasta file');
 # Time diffs prevent comparing files. Maybe update the desc for these reads
 #is(File::Compare::compare($build->raw_reads_fasta_file, $example_build->raw_reads_fasta_file), 0, 'raw reads fasta file matches');
-ok(-s $build->raw_reads_qual_file, 'Created the raw reads qual file');
+ok(-s $build->fasta_dir.'/'.$build->file_base_name.'.reads.raw.fasta.qual', 'Created the raw reads qual file');
 
-ok(-s $build->processed_reads_fasta_file, 'Created the processed reads fasta file');
+ok(-s $build->fasta_dir.'/'.$build->file_base_name.'.reads.processed.fasta', 'Created the processed reads fasta file');
 # Time diffs prevent comparing files. Maybe update the desc for these reads
 #is(File::Compare::compare($build->processed_reads_fasta_file, $example_build->processed_reads_fasta_file), 0, 'processed reads fasta file matches');
-ok(-s $build->processed_reads_qual_file, 'Created the processed reads qual file');
+ok(-s $build->fasta_dir.'/'.$build->file_base_name.'.reads.processed.fasta.qual', 'Created the processed reads qual file');
 
 # metrics
 is($build->amplicons_attempted, 5, 'amplicons attempted is 5');

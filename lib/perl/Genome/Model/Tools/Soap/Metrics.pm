@@ -25,7 +25,7 @@ class Genome::Model::Tools::Soap::Metrics {
         major_contig_length => {
             is => 'Number',
             is_optional => 1,
-            default_value => 300,
+            default_value => 500,
             doc => 'Cutoff value for major contig length',
         },
         output_file => {
