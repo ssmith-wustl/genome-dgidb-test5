@@ -177,6 +177,9 @@ my $ensembl_gene_info_file = "$reference_annotations_dir"."transcript_to_gene/En
 #- Produce ranked gene expression lists based on exon-junction values
 #- What is the distribution of observed intron sizes versus known intron sizes
 #- Produce a Top N% expressed file
+my $r_cmd = "$script_dir/qc/tophatAlignmentSummary.R $working_dir";
+if ($verbose){ print YELLOW, "\n\n$r_cmd", RESET };
+system($r_cmd);
 
 
 if ($verbose){print "\n\n"};
