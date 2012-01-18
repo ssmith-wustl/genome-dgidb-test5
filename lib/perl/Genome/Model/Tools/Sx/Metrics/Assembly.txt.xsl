@@ -46,6 +46,8 @@ Minor Contig avg contig length: <xsl:value-of select="//aspect[@name='contigs_mi
 Minor Contig N50 contig length: <xsl:value-of select="//aspect[@name='contigs_minor_n50_length']/value"/>
 Minor Contig N50 contig number: <xsl:value-of select="//aspect[@name='contigs_minor_n50_count']/value"/>
 
+Placed reads in Minor contig: <xsl:value-of select="//aspect[@name='contigs_minor_read_count']/value"/>, <xsl:value-of select="//aspect[@name='contigs_minor_read_percent']/value"/>%
+
 Top tier (up to <xsl:value-of select="//aspect[@name='tier_one']/value"/> bp): 
   Contig number: <xsl:value-of select="//aspect[@name='contigs_t1_count']/value"/>
   Average length: <xsl:value-of select="//aspect[@name='contigs_t1_average_length']/value"/> bp
@@ -91,6 +93,8 @@ Minor Supercontig bases: <xsl:value-of select="//aspect[@name='supercontigs_mino
 Minor Supercontig avg contig length: <xsl:value-of select="//aspect[@name='supercontigs_minor_average_length']/value"/>
 Minor Supercontig N50 contig length: <xsl:value-of select="//aspect[@name='supercontigs_minor_n50_length']/value"/>
 Minor Supercontig N50 contig number: <xsl:value-of select="//aspect[@name='supercontigs_minor_n50_count']/value"/>
+
+Placed reads in minor supercontig: <xsl:value-of select="//aspect[@name='supercontigs_minor_read_count']/value"/>, <xsl:value-of select="//aspect[@name='supercontigs_minor_read_percent']/value"/>%
 
 Scaffolds > 1M: <xsl:value-of select="//aspect[@name='scaffolds_1M']/value"/>
 Scaffold 250K--1M: <xsl:value-of select="//aspect[@name='scaffolds_250K_1M']/value"/>
