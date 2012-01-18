@@ -44,7 +44,10 @@ class Genome::Model::SomaticValidation::Command::CoverageStats {
             doc => 'The result from running this step',
         },
     ],
+    doc => 'runs ref-cov on the bam(s) produced in the alignment step',
 };
+
+sub sub_command_category { 'pipeline steps' }
 
 sub shortcut {
     my $self = shift;

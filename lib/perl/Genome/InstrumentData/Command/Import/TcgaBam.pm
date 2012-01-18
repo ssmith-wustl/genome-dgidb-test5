@@ -537,8 +537,15 @@ sub _create_model_and_request_build {
     my $refseq = $self->reference_sequence_build;
     $self->status_message('Reference build: '.$refseq->__display_name__);
 
+    my $base_name = $sample->name.'.'.$refseq->version.'.refalign';
+    my $name = $base_name;
+    my $i = 0;
+    while ( my $model = Genome::Model::ReferenceAlignment->get(name => $name) ) {
+        $name = $base_name.'-'.++$i;
+    }
+
     my $model = Genome::Model::ReferenceAlignment->create(
-        name => 'TCGA_BAM_PLACE_HOLDER',
+        name => $name,
         processing_profile => $pp,
         reference_sequence_build => $refseq,
         subject_id => $sample->id,
@@ -551,6 +558,8 @@ sub _create_model_and_request_build {
         return;
     }
     $self->_model($model);
+    $self->status_message('Model id: '.$model->id);
+    $self->status_message('Model name: '.$model->name);
 
     my $dbsnp = Genome::Model::ImportedVariationList->dbsnp_build_for_reference($refseq);
     if ( $dbsnp ) {
@@ -563,13 +572,6 @@ sub _create_model_and_request_build {
         $self->status_message('Annotation build: '.$annotation->__display_name__);
         $model->annotation_reference_build($annotation);
     }
-
-    my $name = $sample->name.'.'.$refseq->version.'.refalign';
-    my $i = 0;
-    while ( my $model = Genome::Model::ReferenceAlignment->get(name => $name) ) {
-        $name .= '-'.++$i;
-    }
-    $model->name($name);
 
     my $add = $model->add_instrument_data( $self->_inst_data );
     if ( not $add ) {

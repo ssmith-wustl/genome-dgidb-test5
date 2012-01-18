@@ -26,11 +26,23 @@ class Genome::Sys::Command::Search::Index {
             is => 'Number',
             default => 10,
         },
+        tie_stderr => {
+            is => 'Boolean',
+            default => 1,
+            doc => '(warning) globally tie STDERR to this logger',
+        },
+        commited_changes => {
+            is => 'Number',
+            default => 0,
+        },
     ],
 };
 
 sub execute {
     my $self = shift;
+
+    # Manually init logger so it ties STDERR.
+    $self->log_dispatch();
 
     if ($self->subject_text ne 'list') {
         my $confirmed = $self->prompt_for_confirmation() if $self->confirm;
@@ -101,27 +113,40 @@ sub daemon {
         my $pid = fork();
         if (not defined $pid) {
             die "Failed to fork";
+            exit if $signaled_to_quit;
         }
         elsif ($pid == 0) {
+            # CHILD
             local $SIG{INT} = sub { $signaled_to_quit = 1 };
             local $SIG{TERM} = sub { $signaled_to_quit = 1 };
 
-            exit if $signaled_to_quit;
-            $self->info("Processing index queue...");
-            $self->index_queued(max_changes_count => $self->max_changes_per_commit);
+            if ($signaled_to_quit) {
+                $self->inf("CHILD($$): signaled to quit");
+                exit;
+            }
 
-            exit if $signaled_to_quit;
-            $self->info("Commiting...");
+            my $max = $self->max_changes_per_commit;
+            $self->info("CHILD($$): Processing index queue max=$max)");
+            eval { $self->index_queued(max_changes_count => $max); };
+            if ($@) { $self->info("CHILD($$): ahh shit: $@"); } 
+
+            if ($signaled_to_quit) {
+                $self->inf("CHILD($$): signaled to quit");
+                exit;
+            }
+
+            $self->info("CHILD($$): Commiting...");
             UR::Context->commit;
 
             exit;
         }
         else {
+            # PARENT
             waitpid($pid, 0);
 
             last if $signaled_to_quit;
             my $loop_sleep = $self->loop_sleep;
-            $self->info("Sleeping for $loop_sleep seconds...");
+            $self->info("PARENT($$): Sleeping for $loop_sleep seconds...");
             sleep $loop_sleep;
         }
     }
@@ -174,7 +199,13 @@ sub index_queued {
             $index_queue_item->delete();
         }
         else {
-            my $action = ($subject_class->get($subject_id) ? 'add' : 'delete');
+            my $action;
+            if (not $subject_class->can('get')) {
+                $self->warning_message("Class ($subject_class) cannot 'get'. Deleting item (ID: $subject_id) from queue.");
+                $action = 'delete';
+            } else {
+                $action = ($subject_class->get($subject_id) ? 'add' : 'delete');
+            }
             last if $signaled_to_quit;
             if ($self->modify_index($action, $subject_class, $subject_id)) {
                 $subject_seen->{$subject_class}->{$subject_id}++;

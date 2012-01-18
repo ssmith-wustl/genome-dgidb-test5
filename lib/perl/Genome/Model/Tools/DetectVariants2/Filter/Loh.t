@@ -28,6 +28,7 @@ my $tumor_snp_file      = $test_input_dir . '/snvs.hq.bed';
 my $tumor_bam_file      = $test_input_dir. '/tumor.tiny.bam';
 my $normal_bam_file     = $test_input_dir. '/normal.tiny.bam';
 my $detector_directory  = $test_input_dir. '/varscan-somatic-2.2.4-';
+my $detector_vcf_directory  = $test_input_dir. '/detector_vcf_result';
 
 my $test_output_base     = File::Temp::tempdir('Genome-Model-Tools-Somatic-FilterLoh-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
 my $test_output_dir = $test_output_base . '/filter';
@@ -59,6 +60,15 @@ my $detector_result = Genome::Model::Tools::DetectVariants2::Result->__define__(
     control_aligned_reads => $normal_bam_file,
     reference_build_id => $refbuild_id,
 );
+
+my $detector_vcf_result = Genome::Model::Tools::DetectVariants2::Result::Vcf::Detector->__define__(
+    input => $detector_result,
+    output_dir => $detector_vcf_directory,
+    aligned_reads_sample => "TEST",
+    vcf_version => "1",
+);
+
+$detector_result->add_user(user => $detector_vcf_result, label => 'uses');
 
 my $loh = Genome::Model::Tools::DetectVariants2::Filter::Loh->create(
     previous_result_id => $detector_result->id,

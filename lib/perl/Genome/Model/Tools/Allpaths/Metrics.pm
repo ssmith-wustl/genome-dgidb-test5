@@ -26,7 +26,7 @@ class Genome::Model::Tools::Allpaths::Metrics {
         major_contig_length => {
             is => 'Number',
             is_optional => 1,
-            default_value => 300,
+            default_value => 500,
             doc => 'Cutoff value for major contig length',
         },
         output_file => {
@@ -61,9 +61,7 @@ sub __errors__ {
             return @errors;
         }
         if ( not defined $self->output_file ) {
-            my $create_edit_dir = $self->create_edit_dir;
-            return if not $create_edit_dir;
-            $self->output_file( $self->_resolve_stats_file );
+            $self->output_file( $self->assembly_directory."/metrics.out" );
         }
     }
     elsif ( not $self->output_file ) { 

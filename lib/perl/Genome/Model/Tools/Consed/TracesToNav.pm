@@ -188,20 +188,18 @@ sub get_reads_to_nav {
 
     my ($self, $ace,$sites_to_nav) = @_;
 
-    use GSC::IO::Assembly::Ace;
-    my $ao = GSC::IO::Assembly::Ace->new(input_file => $ace);
+    my $ao = Genome::Model::Tools::Consed::AceReader->create(file => $ace);
     unless ($ao) { $self->error_message( "\n\ndidn't get the ace object\n\n") && return;}
     my ($reads_to_nav,$main_contig);
-    foreach my $name (@{ $ao->get_contig_names }) {
-	my $contig = $ao->get_contig($name);
-	if (grep { /\.c1$/ } keys %{ $contig->reads }) {
-	    $main_contig = $name;
-	}
+    while ( my $contig = $ao->next_contig ) {
+        if (grep { /\.c1$/ } keys %{ $contig->{reads} }) {
+            $main_contig = $contig->{name};
+        }
     }
-    
+
     my %base_pad_count;
     my @hhh;
-    
+
     my $p;
     my $q;
     my @con_seq;
@@ -253,13 +251,14 @@ sub get_reads_to_nav {
     
     foreach my $pos (sort {$a<=>$b} keys %{$sites_to_nav}) {
 	
-	foreach my $name (@{ $ao->get_contig_names }) {
+            $ao->_fh->seek(0, 0);
+    while ( my $contig = $ao->next_contig ) {
 	    
+        my $name = $contig->{name};
 	    if ($name eq $main_contig) {
-		my $contig = $ao->get_contig($name);
-		my $info = $contig->reads;
+		my $info = $contig->{reads};
 		
-		foreach my $read (keys %{ $contig->reads }) {
+		foreach my $read (keys %{ $contig->{reads} }) {
 		    unless ($read =~ /\.c1$/) {
 			
 			my ($id);
@@ -276,15 +275,15 @@ sub get_reads_to_nav {
 			if ($id) {
 			    if ($sites_to_nav->{$pos}->{$id}) {
 				
-				my $q1 = $info->{$read}->qual_clip_start;
-				my $q2 = $info->{$read}->qual_clip_end;
-				my $position = $info->{$read}->position;
+				my $q1 = $info->{$read}->{qual_clip_start};
+				my $q2 = $info->{$read}->{qual_clip_end};
+				my $position = $info->{$read}->{position};
 				
 				if ($position) {
 				    
-				    my $length = $info->{$read}->length;
-				    my $align_clip_start = $info->{$read}->align_clip_start;
-				    my $align_clip_end = $info->{$read}->align_clip_end;
+				    my $length = length $info->{$read}->{sequence};
+				    my $align_clip_start = $info->{$read}->{align_clip_start};
+				    my $align_clip_end = $info->{$read}->{align_clip_end};
 				    my $position2 = $position + $length - 1;
 				    my $p1 = ($position  - $base_pad_count{$position});
 				    my $p2 = $p1 + $length;

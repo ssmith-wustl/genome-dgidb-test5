@@ -60,6 +60,22 @@ class Genome::Model::Tools::DetectVariants2::Dispatcher {
         },
     ],
     has_transient_optional => [
+        snv_lq_result => {
+            is => 'Genome::Model::Tools::DetectVariants2::Result::Combine::LqUnion',
+            doc => 'union of all snv lq files',
+        },
+        indel_lq_result => {
+            is => 'Genome::Model::Tools::DetectVariants2::Result::Combine::LqUnion',
+            doc => 'union of all snv lq files',
+        },
+        cnv_lq_result => {
+            is => 'Genome::Model::Tools::DetectVariants2::Result::Combine::LqUnion',
+            doc => 'union of all snv lq files',
+        },
+        sv_lq_result => {
+            is => 'Genome::Model::Tools::DetectVariants2::Result::Combine::LqUnion',
+            doc => 'union of all snv lq files',
+        },
         _workflow_result => {
             doc => 'hand the workflow result down to the _promote_staged_data dir',
         },
@@ -87,11 +103,11 @@ class Genome::Model::Tools::DetectVariants2::Dispatcher {
             default_value => 'workflow'
         },
     ],
+    doc => 'generate complex variant detection results'
 };
 
-sub help_brief {
-    "A dispatcher for variant detectors.",
-}
+sub sub_command_sort_position { -1 }
+
 
 sub help_synopsis {
     my $self = shift;
@@ -155,6 +171,115 @@ sub _detect_variants {
     }
 
     my ($trees, $plan) = $self->plan;
+
+    # single/pair of BAMs               : run the regular workflow
+    # list of BAMs
+    #   one item in list                : set the legacy params & run the regular workflow
+    #   multiple items
+    #       single/pair detectors       : run the merge VCF workflow
+    #       multi-sample detectors      : run the regular workflow: modules will use the list
+    #       mix                         : error, for now
+
+    # print "\nTREES:\n" . Dumper($trees) . "\nPLAN:\n" . Dumper($plan);
+
+    my @alignment_results = $self->alignment_results;
+    my @control_alignment_results = $self->control_alignment_results;
+
+    # see if we are doing single or multi sample variant detection
+
+    my $single_sample_detector_count = 0;
+    my $multi_sample_detector_count = 0;
+
+    for my $detector (keys %$plan) {
+        for my $version (keys %{$plan->{$detector}}) {
+            for my $variant_type (keys %{ $plan->{$detector}{$version} }) {
+                my $details = $plan->{$detector}{$version}{$variant_type}[0];
+                my $detector_class = $details->{class};
+                if ($detector_class->_supports_cross_sample_detection($version,$variant_type,$details->{params})) {
+                    $self->status_message("detector $detector supports MULTI-sample detection with $details->{version} [$details->{params}]\n");
+                    $multi_sample_detector_count++;
+                }
+                else {
+                    $self->status_message("detector $detector supports SINGLE-sample detection with $details->{version} [$details->{params}]\n");
+                    $single_sample_detector_count++;
+                }
+            }
+        }
+    }
+
+    if ($single_sample_detector_count and $multi_sample_detector_count) {
+        die $self->error_message("We cannot currently mix single-sample and multi-sample variant detectors!  Contact Informatics...");
+    }
+
+    # handle the case of doing multi-sample detection on single-sample detectors, where we need a merge
+
+    if ($single_sample_detector_count and scalar(@alignment_results)) {
+        # TODO: instead of running this command, we should be running something like the new DV2 API VCF generation commands/software-results.
+        # This will need to be refactored to merge with that, and all dispatchers should be able to return a terminal SR whether for one or many samples.
+
+        $self->status_message("attempting to use single-sample detectors on multiple samples ...wrapping everything in a cross-sample workflow");
+
+        if (@control_alignment_results) {
+            die $self->error_message("no support for somatic multi-sample variant detection: cannot handle a the control_alignment_results value yet!");
+        }
+
+        my $vcf_output_directory = $self->output_directory;
+        unless (-e $vcf_output_directory) {
+            unless(mkdir $vcf_output_directory) {
+                die $self->error_message("Output directory doesn't exist and can't be created at: ".$vcf_output_directory);
+            }
+            unless(mkdir $vcf_output_directory."/merge_vcfs") {
+                die $self->error_message("Output directory doesn't exist and can't be created at: ".$vcf_output_directory);
+            }
+        }
+       
+        my %region_limiting_params;
+        if (my $roi_list = $self->roi_list) {
+            %region_limiting_params = ( 
+                roi_file => $roi_list->file_path,
+                roi_name => $roi_list->name,
+                wingspan => $self->roi_wingspan,
+            );
+        }
+        
+        my $max_merge = (scalar(@alignment_results) <= 50) ? 50 : int(sqrt(scalar(@alignment_results))+1);
+        $self->status_message("Chose max_files_per_merge of: ".$max_merge);
+
+
+        $DB::single = 1;
+
+        # TODO: the tool below shouldn't rely on there being individual builds for each of these software results!
+        my @builds;
+        for my $result (@alignment_results) {
+            my @users_who_are_builds = grep { $_->user_class_name =~ m/Genome\:\:Model\:\:Build\:\:ReferenceAlignment/ } $result->users;
+            push @builds, Genome::Model::Build->get($users_who_are_builds[0]->user_id);
+        }
+
+        my $snv_vcf_creation = Genome::Model::Tools::Vcf::CreateCrossSampleVcf->create(
+            builds => \@builds,
+            output_directory => $vcf_output_directory,
+            max_files_per_merge => $max_merge,
+            variant_type => 'snvs',
+            %region_limiting_params,
+        );
+        
+        my $vcf_result;
+        unless($vcf_result = $snv_vcf_creation->execute){
+            die $self->error_message("Could not complete vcf merging!");
+        }
+        my $vcf_file; 
+        if(-s $vcf_result){
+            $vcf_file = $vcf_result;
+        } else {
+            die $self->error_message("Could not locate an output VCF");
+        }
+        $self->status_message("Merged VCF file located at: ".$vcf_file);
+
+        return 1;
+    } 
+
+    # proceed normally with either single-sample detectors used on a single sample, or multi-sample detectors used on any number of samples
+
     my $workflow = $self->generate_workflow($trees, $plan);
 
     my @errors = $workflow->validate;
@@ -166,12 +291,13 @@ sub _detect_variants {
     my $input;
     my $workflow_inputs = $self->_workflow_inputs;
     map { $input->{$_} = $workflow_inputs->{$_}->{value}} keys(%{$workflow_inputs});
+    $input->{reference_build_id} = $self->reference_build_id;
+    $input->{output_directory} = $self->_temp_staging_directory;
+    
     $input->{aligned_reads_input}= $self->aligned_reads_input;
     $input->{control_aligned_reads_input} = $self->control_aligned_reads_input;
-    $input->{reference_build_id} = $self->reference_build_id;
     $input->{aligned_reads_sample} = $self->aligned_reads_sample;
     $input->{control_aligned_reads_sample} = $self->control_aligned_reads_sample;
-    $input->{output_directory} = $self->_temp_staging_directory;
 
     $self->_dump_workflow($workflow);
     $self->_dump_dv_cmd;
@@ -205,12 +331,17 @@ sub _dump_workflow {
 sub _dump_dv_cmd {
     my $self = shift;
     my $cmd = join(" ",@INC)."\n===============================================\n";
-    $cmd .=   "gmt detect-variants2 dispatcher --output-directory ".$self->output_directory
-                ." --aligned-reads-input ".$self->aligned_reads_input;
+    $cmd .=   "gmt detect-variants2 dispatcher --output-directory ".$self->output_directory;
+    $cmd .=     " --reference-build-id " . $self->reference_build_id;
+    #new
+    $cmd .=     " --alignment-results " . join(',', map {$_->id} $self->alignment_results) if $self->alignment_results;
+    $cmd .=     " --control-alignment-results " . join(',', map {$_->id} $self->control_alignment_results) if $self->control_alignment_results;
+    #old
+    $cmd .=     " --aligned-reads-input ".$self->aligned_reads_input if $self->aligned_reads_input;
     $cmd .=     " --control-aligned-reads-input ".$self->control_aligned_reads_input if $self->control_aligned_reads_input;
-    $cmd .=     " --reference-build-id ".$self->reference_build_id;
-    $cmd .=     " --aligned-reads-sample ".$self->aligned_reads_sample;
+    $cmd .=     " --aligned-reads-sample ".$self->aligned_reads_sample if $self->aligned_reads_sample;
     $cmd .=     " --control-aligned-reads-sample ".$self->control_aligned_reads_sample if $self->control_aligned_reads_sample;
+    
     for my $var ('snv','sv','indel'){
         my $strat = $var."_detection_strategy";
         if(defined($self->$strat)){
@@ -742,6 +873,10 @@ sub add_detectors_and_filters {
                     $inputs_to_store->{$unique_filter_name."_params"}->{right_property_name} = 'params';
                     $inputs_to_store->{$unique_filter_name."_params"}->{right_operation} = $filter->{operation};
 
+                    $inputs_to_store->{$unique_filter_name."_version"}->{value} = $filter->{version};
+                    $inputs_to_store->{$unique_filter_name."_version"}->{right_property_name} = 'version';
+                    $inputs_to_store->{$unique_filter_name."_version"}->{right_operation} = $filter->{operation};
+
                     $inputs_to_store->{$unique_filter_name."_output_directory"}->{value} = $filter_output_directory;
                     $inputs_to_store->{$unique_filter_name."_output_directory"}->{right_property_name} = 'output_directory';
                     $inputs_to_store->{$unique_filter_name."_output_directory"}->{right_operation} = $filter->{operation};
@@ -947,38 +1082,42 @@ sub _generate_standard_files {
 
     # For each variant type that is expected, gather all the lq files that exist for that variant type and sort them into the dispatcher output directory
     for my $variant_type (@{ $self->variant_types }) {
+        next unless grep(
+            $_ eq $variant_type,
+            @{ Genome::Model::Tools::DetectVariants2::Result::Combine::LqUnion->__meta__->property('variant_type')->valid_values }
+        );
         my $strategy = $variant_type."_detection_strategy";
         if(defined( $self->$strategy)){
-            my @lq_files;
-            my @output_directories = @{$self->{_expected_output_directories}->{$variant_type}};
+            my $hq_accessor = $variant_type . '_result';
+            my $hq_result = $self->$hq_accessor;
 
-            # For each output directory the workflow knows about, look to see if there is an lq file there (there will not be if it was a detector)
-            for my $output_directory (@output_directories) {
-                my $lq_file = $output_directory . "/$variant_type" . "s.lq.bed";
-                if (-e $lq_file) {
-                    push @lq_files, $lq_file;
-                }
+            my %results;
+            my @to_process = ($hq_result);
+            while(my $r = shift @to_process) {
+                $results{$r->id}++;
+                my @u = map($_->software_result, Genome::SoftwareResult::User->get(user_id => $r->id, user_class_name => $r->class));
+                push @to_process, grep($_->isa('Genome::Model::Tools::DetectVariants2::Result::Base'), @u);
             }
 
-            # If we have no lq files, just skip this variant type. This means we only ran detectors (no filtering, or intersecting) and thus have no LQ files to merge/sort.
-            unless (@lq_files) {
-                next;
+            unless(keys %results) {
+                $self->error_message('Could not find any results for ' . $variant_type);
             }
 
-            # Sort the files so they will go into joinx in a predictable order to produce results that will not vary
-            my @sorted_lq_files = sort(@lq_files);
-
-            my $output_file = $self->output_directory . "/$variant_type" . "s.lq.bed";
-            my $sort_command = Genome::Model::Tools::Joinx::Sort->create(
-                input_files => \@sorted_lq_files,
-                merge_only => 1,
-                output_file => $output_file,
+            my $lq_result = Genome::Model::Tools::DetectVariants2::Result::Combine::LqUnion->get_or_create(
+                result_ids => [keys %results],
+                variant_type => $variant_type,
+                test_name => $ENV{GENOME_SOFTWARE_RESULT_TEST_NAME} || undef,
             );
 
-            unless ($sort_command->execute) {
-                $self->error_message("Error executing lq sort command");
-                die $self->error_message;
+            unless($lq_result) {
+                die $self->error_message('Failed to generate LQ file for ' . $variant_type);
             }
+
+            my $lq_accessor = $variant_type . '_lq_result';
+            $self->$lq_accessor($lq_result);
+
+            my $f = $lq_result->_file_for_type($variant_type);
+            Genome::Sys->create_symlink($lq_result->path($f), $self->output_directory . "/$f");
         }
     }
 
@@ -1032,6 +1171,16 @@ sub results {
     my @results;
     for my $type ('snv', 'indel', 'sv', 'cnv') {
         my $result_method = $type . '_result';
+        push @results, $self->$result_method if $self->$result_method;
+    }
+    return @results;
+}
+
+sub lq_results {
+    my $self = shift;
+    my @results;
+    for my $type ('snv', 'indel', 'sv', 'cnv') {
+        my $result_method = $type . '_lq_result';
         push @results, $self->$result_method if $self->$result_method;
     }
     return @results;

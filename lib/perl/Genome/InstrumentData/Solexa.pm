@@ -249,20 +249,6 @@ class Genome::InstrumentData::Solexa {
             is => "Genome::Site::WUGC::Project",
             calculate => q|Genome::Site::WUGC::Project->get(name => $self->project_name)|
         },
-        # TODO Refactor this away
-        _run_lane_solexa => {
-            is => 'GSC::RunLaneSolexa',
-            calculate_from => ['id'],
-            calculate => q| GSC::RunLaneSolexa->get($id); |,
-            doc => 'Solexa Lane Summary from LIMS.',
-        },
-        # TODO Refactor this away
-        index_illumina => {
-            doc => 'Index Illumina from LIMS.',
-            is => 'GSC::IndexIllumina',
-            calculate => q| GSC::IndexIllumina->get(analysis_id=>$id); |,
-            calculate_from => [ 'id' ]
-        },
     ],
 };
 
@@ -573,8 +559,26 @@ sub dump_trimmed_fastq_files {
                 unlink($input_fastq_pathname);
             }
         }
-
-        return @trimmed_fastq_pathnames;
+        #in paired end trimming, only return trimmed files with reads, check for errors
+        my @paths;
+        if (@trimmed_fastq_pathnames == 3){
+            my $paired_with_size = grep { -s $_ } @trimmed_fastq_pathnames[0,1];
+            if ($paired_with_size == 0){
+                $self->status_message("paired end trimmed files have no size, skipping");
+            }elsif($paired_with_size == 1){
+                die $self->error_message("only one trimmed pair file with size, trimming produced bad result!");
+            }else{
+                push @paths, @trimmed_fastq_pathnames[0,1];
+            }
+            if (-s $trimmed_fastq_pathnames[2]){
+                push @paths, $trimmed_fastq_pathnames[2];
+            }else{
+                $self->status_message("fragment trimmed file has no size, skipping");
+            }
+        }else{
+            @paths = @trimmed_fastq_pathnames;
+        }
+        return @paths;
     }
     
     # if the above did not work, we have a legacy trimmer.
@@ -1064,13 +1068,6 @@ sub total_bases_read {
     return $count;
 }
 
-sub summary_xml_content {
-    my $self = shift;
-    my $rls = $self->_run_lane_solexa;
-    unless ($rls) { return; }
-    return $rls->summary_xml_content;
-}
-
 sub run_identifier {
     my $self = shift;
     return $self->flow_cell_id;
@@ -1078,5 +1075,3 @@ sub run_identifier {
 
 1;
 
-#$HeaderURL$
-#$Id: Solexa.pm 61055 2010-07-16 19:30:48Z boberkfe $

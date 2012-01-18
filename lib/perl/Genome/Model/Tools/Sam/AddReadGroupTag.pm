@@ -61,7 +61,7 @@ sub execute {
         $input_fh = $self->input_filehandle;
     } else {
         $self->error_message("You must pass in either an input file or input filehandle.");
-        return; 
+        return;
     }
 
     my $output_fh;
@@ -70,25 +70,25 @@ sub execute {
            $self->error_message("The target file already exists at: " . $self->output_file . ". Please remove this file and rerun to generate a new merged file.");
            return;
         }
-    
+
         $output_fh = Genome::Sys->open_file_for_writing($self->output_file);
     } elsif ($self->output_filehandle) {
         $output_fh = $self->output_filehandle;
     } else {
         $self->error_message("You must pass in either an output file or output filehandle.");
-        return; 
+        return;
     }
-    
 
-    my $read_group_tag = $self->read_group_tag; 
-    
+
+    my $read_group_tag = $self->read_group_tag;
+
     $self->status_message("Attempting to add read group tag $read_group_tag.");
-   
+
     my $now = UR::Time->now;
     $self->status_message(">>> Beginning add read tag at $now");
-    
+
     my $rg_added_records = 0;
-    
+
     while (my $line = $input_fh->getline) {
         my $first_char = substr($line, 0, 1);
         if ( $first_char ne '@') {
@@ -107,7 +107,7 @@ sub execute {
             $rg_added_records++;
         } else {
             print $output_fh $line if ($self->pass_sam_headers);
-        }    
+        }
     }
 
     # don't close the file if we didn't open it!
@@ -116,7 +116,7 @@ sub execute {
     }
     $now = UR::Time->now;
     $self->status_message("<<< Completed add read tag at $now.  Processed $rg_added_records SAM records.");
- 
+
     return 1;
 }
 

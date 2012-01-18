@@ -14,15 +14,8 @@ use Genome::Model::Tools::Pcap::Ace::Writer;
 use Genome::Model::Tools::Pcap::Ace::Reader;
 use Genome::Model::Tools::Pcap::Ace;
 use List::Util qw(min max);
-#use Genome::Model::Tools::Pcap::PhdDB;
-use Genome::Model::Tools::Pcap::Phd;
-use GSC::Sequence::Assembly::AceAdaptor;
-my $pkg = "Genome::Model::Tools::Pcap::ContigTools";
-
-my $DEBUG = 0;
 
 our $initialized = 0;
-
 sub init_gtk {
     return if $initialized;
     eval {
@@ -35,7 +28,7 @@ sub init_gtk {
 
 sub new 
 {
-    croak("$pkg:new:no class given, quitting") if @_ < 1;
+    croak("no class given, quitting") if @_ < 1;
     my ($caller, %params) = @_; 
     my $caller_is_obj = ref($caller);
     my $class = $caller_is_obj || $caller;
@@ -657,59 +650,12 @@ sub merge
 
 sub _get_ace_object
 {
-    my ($self, $data_source, @contig_names) = @_;
-    my $in_fh;
-    if(!($data_source =~ /\.ace/))
-    {
-        my $assembly = GSC::Sequence::Assembly->get( sequence_item_name => $data_source);
-
-        foreach (@contig_names)
-        {
-            $_ = "$data_source.$_";
-        }
-        my @ctgs = GSC::Sequence::Contig->get( sequence_item_name => [@contig_names]);
-        foreach my $ctg (@ctgs) {
-            $ctg->lock;
-            #print $ctg->sequence_item_name,"\n";
-        }
-        my $contig_names = join ' ', @contig_names;
-
-        print "Grabbing $contig_names from the database\n";
-
-        my $in_fs;
-        $in_fh = new IO::String($in_fs);
-        my $ace_writer = Genome::Model::Tools::Pcap::Ace::Writer->new($in_fh);
-        my $ace_adapter = GSC::Sequence::Assembly::AceAdaptor->new();
-
-        $ace_adapter->export_assembly(
-            assembly => $assembly,
-            writer => $ace_writer,
-            contigs => \@ctgs
-        );
-
-        $in_fh->setpos(0);	
-
-    }
-    else
-    {
-        $in_fh = new IO::File($data_source);
-
-    }
-    return Genome::Model::Tools::Pcap::Ace->new(input => $in_fh);
+    Carp::confess('This method (_get_ace_object) was removed because it interacted with GSC classes. Contact apipe@genome.wustl.edu if you need this functionality.');
 }
 
 sub _get_phd_object
 {
-    my ($self, $data_source) = @_;
-    if(!($data_source =~ /\.ace/))
-    {		
-        return Genome::Model::Tools::Pcap::PhdDB->new;
-    }
-    else		
-    {
-        my $cwd = getcwd;
-        return Genome::Model::Tools::Pcap::Phd->new(input_directory => "$cwd/../phd_dir/");		
-    }
+    Carp::confess('This method (_get_phd_object) was removed because it interacted with GSC classes. Contact apipe@genome.wustl.edu if you need this functionality.');
 }
 
 sub _calculate_split_region
@@ -1446,95 +1392,7 @@ sub _transfer_consensus_tags
 #This split functions handles all fileio, PSE creation, etc.
 sub read_data_and_split_contig
 {
-    my ($self, $data_source, $split_contig_name, $split_position, $no_gui, $out_file_name) = @_;
-
-    my $cwd = getcwd;
-
-    my $out_fh;
-    my $bUsingDB=0;
-
-    if(!($data_source =~ /\.ace/))
-    {
-        $bUsingDB=1
-    }
-    my $ace_object = $self->_get_ace_object($data_source, $split_contig_name);
-    my $phd_object = $self->_get_phd_object($data_source);		
-
-    my $rContig = $ace_object->get_contig($split_contig_name,1);
-
-    my ($rLeftContig, $rRightContig) = $self->split($rContig, $phd_object, split_position => $split_position, no_gui => $no_gui);
-
-    $ace_object->remove_contig($rContig->name);
-    $ace_object->add_contig($rLeftContig);
-    $ace_object->add_contig($rRightContig);
-
-    if(!defined ($out_file_name))
-    {	
-        opendir THISDIR, ".";
-        my @allFiles = readdir THISDIR;
-
-        my $nMax = 1;
-        for(my $i = 0;$i<@allFiles;$i++)
-        {
-            if($allFiles[$i] =~ /$data_source/)
-            {
-                my ( $Name, $Ext ) = $allFiles[$i] =~ /^(.+\.)(.+)$/;
-                if(int($Ext)>$nMax)
-                {
-                    $nMax=int($Ext);
-                }
-            }
-        }
-        $nMax++;
-        $out_file_name = $data_source.".".$nMax;
-    }
-    my $file;
-    if($bUsingDB)
-    {
-        $file = IO::String->new;
-    }
-    else
-    {
-        $file = IO::File->new(">$out_file_name");
-    }
-    $ace_object->write_file(output => $file);
-
-    if($bUsingDB)
-    {
-        $file->setpos(0);
-        my $split_contig;		
-
-        my $assembly_name = $data_source;
-
-        my $assembly = GSC::Sequence::Assembly->get(
-            sequence_item_name => $assembly_name,
-        );
-
-        $split_contig = GSC::Sequence::Contig->get(	sequence_item_name => "$assembly_name.$split_contig_name");		
-
-        my $ps = GSC::ProcessStep->get(process_to => 'split contigs'); # grab the 
-
-        my $pse = $ps->execute(
-            contig => [$split_contig],
-            ace_fh => $file,
-            assembly     => $assembly,    	
-            control_pse_id => 0,
-        );
-
-        unless ($pse){ # executes the pse, loads the new data into the 
-            # database
-            # it didn't work for some reason;
-            print $ps->error_message;
-        }
-
-        $split_contig->unlock;
-
-
-        print "Commit of $assembly_name.$split_contig_name succeeded.\n\n";
-        App::DB->sync_database;
-        App::DB->commit;
-
-    }
+    Carp::confess('This method (read_data_and_split_contig) was removed because it interacted with GSC classes. Contact apipe@genome.wustl.edu if you need this functionality.');
 }
 
 sub complement
@@ -1611,144 +1469,12 @@ sub complement
 
 sub read_data_and_complement_contig
 {
-    my ($self, $data_source, $contig_name, %params) = @_;
-
-    my $output_file_name = delete $params{output_file_name};
-    my $using_db = 0;
-    if(!($data_source =~ /\.ace/))
-    {
-        $using_db=1
-    }
-
-    my $ace_object = $self->_get_ace_object($data_source, $contig_name);
-    my $phd_object = $self->_get_phd_object($data_source);
-
-    my $contig = $ace_object->get_contig($contig_name);
-    $self->complement($contig);
-    $ace_object->add_contig($contig);
-
-    my $file;
-    if($using_db)
-    {
-        $file = IO::String->new;
-    }
-    else
-    {
-        $file = IO::File->new(">$output_file_name");
-    }
-
-    $ace_object->write_file(output => $file);
-
-    if($using_db)
-    {
-        $file->setpos(0);
-        my $merge_contig;		
-
-        my $assembly_name = $data_source;
-
-        my $assembly = GSC::Sequence::Assembly->get(
-            sequence_item_name => $assembly_name,
-        );		
-
-        my $db_contig = GSC::Sequence::Contig->get(	sequence_item_name => "$assembly_name.$contig_name");		
-        my $ps = GSC::ProcessStep->get(process_to => 'complement contig'); # grab the process step
-
-        my $pse = $ps->execute(
-            old_contig => [$db_contig],
-            ace_fh => $file,
-            assembly => $assembly,    	
-            control_pse_id => 0,
-        );
-
-        unless ($pse){ # executes the pse, loads the new data into the 
-            # database
-            # it didn't work for some reason;
-            print $ps->error_message;
-        }
-
-        $db_contig->unlock;
-
-        print "Commit of $assembly_name.$contig_name succeeded.\n\n";
-        App::DB->sync_database;
-        App::DB->commit;
-
-    }
-
+    Carp::confess('This method (read_data_and_complement_contig) was removed because it interacted with GSC classes. Contact apipe@genome.wustl.edu if you need this functionality.');
 }
 
 sub read_data_and_merge_contigs
 {
-    my ($self, $data_source, $left_contig_name, $right_contig_name, %params) = @_;
-
-    my $bUsingDB=0;
-
-    if(!($data_source =~ /\.ace/))
-    {
-        $bUsingDB=1
-    }
-
-    my $output_file_name = delete $params{output_file_name};
-    my $ace_object = $self->_get_ace_object($data_source, $left_contig_name, $right_contig_name);
-    my $phd_object = $self->_get_phd_object($data_source);
-
-    my $left_contig = $ace_object->get_contig($left_contig_name);
-    my $right_contig = $ace_object->get_contig($right_contig_name);
-    my $merge_contig = $self->merge($left_contig, $right_contig, $phd_object, %params);
-
-    $ace_object->remove_contig($left_contig_name);
-    $ace_object->remove_contig($right_contig_name);
-    $ace_object->add_contig($merge_contig);
-
-    my $file;
-    if($bUsingDB)
-    {
-        $file = IO::String->new;
-    }
-    else
-    {
-        $file = IO::File->new(">$output_file_name");
-    }
-
-    $ace_object->write_file(output => $file);
-
-    if($bUsingDB)
-    {
-        $file->setpos(0);
-        my $merge_contig;		
-
-        my $assembly_name = $data_source;
-
-        my $assembly = GSC::Sequence::Assembly->get(
-            sequence_item_name => $assembly_name,
-        );
-
-        my $db_left_contig = GSC::Sequence::Contig->get(	sequence_item_name => "$assembly_name.$left_contig_name");		
-        my $db_right_contig = GSC::Sequence::Contig->get(	sequence_item_name => "$assembly_name.$right_contig_name");		
-        my $ps = GSC::ProcessStep->get(process_to => 'merge contigs'); # grab the 
-
-        my $pse = $ps->execute(
-            old_contigs => [$left_contig, $right_contig],
-            ace_fh => $file,
-            assembly => $assembly,    	
-            control_pse_id => 0,
-        );
-
-        unless ($pse){ # executes the pse, loads the new data into the 
-            # database
-            # it didn't work for some reason;
-            print $ps->error_message;
-        }
-
-        $db_left_contig->unlock;
-        $db_right_contig->unlock;
-
-        print "Commit of $assembly_name.$left_contig_name and $assembly_name.$right_contig_name succeeded.\n\n";
-        App::DB->sync_database;
-        App::DB->commit;
-
-    }
-
-
+    Carp::confess('This method (read_data_and_merge_contigs) was removed because it interacted with GSC classes. Contact apipe@genome.wustl.edu if you need this functionality.');
 }
 
 sub remove_reads
@@ -1790,24 +1516,6 @@ sub remove_reads
 
     my $start_pos = 1;
     my $end_pos = $region->{length};
-    #my @db_read_names;
-    #my @read_names = keys %reads;
-    #foreach my $read_name (@read_names)
-    #{
-    #    my ($version) = ($reads{$read_name}->phd_file =~ /\.(\d+)$/); 
-    #    $read_name .= "-$version";
-    #}	
-    #my @reads = GSC::Sequence::Item->get(sequence_item_name => \@read_names);
-    #foreach my $read ( @reads)
-    #{
-    #    my @quality = @{$read->sequence_quality_arrayref};
-    #    die "Couldln't load $read->sequence_item_name quality.\n" if ((scalar @quality) == 0);
-    #    my ($read_name) = $read->sequence_item_name =~ /(.+)-\d+/;
-    #    die "Couldn't resolve read name\n" if ! exists $reads{$read_name}; 
-    #    @quality = reverse @quality if ($reads{$read_name}->complemented);#print $read_name."\n";		
-    #    $reads{$read_name}->unpadded_base_quality( \@quality);				
-    #}
-
     foreach( values %reads)
     {
     	my $phd = $phd_object->get_phd($_->phd_file);
@@ -2136,5 +1844,3 @@ This module was written and is maintained by Jon Schindler <jschindl@wugsc.wustl
 =cut
 
 1;
-#$HeadURL$
-#$Id$

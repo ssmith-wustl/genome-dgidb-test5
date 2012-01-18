@@ -10,11 +10,47 @@ class Genome::Model::View::Solr::Xml {
     has => [
         type => {
             is => 'Text',
-            default => 'model'
+            calculate_from => ['subject'],
+            calculate => sub { 
+                my ($model) = @_;
+                my $pp_type = $model->type_name();
+                my $solr_type;
+                
+                if ($pp_type eq 'reference alignment') {
+                    $solr_type = 'model - alignment';
+                } elsif ($pp_type =~ /somatic/i) {
+                    $solr_type = 'model - somatic';
+                } elsif ($pp_type =~ /rna/i) {
+                    $solr_type = 'model - rna';   
+                } elsif ($pp_type =~ /microarray/i) {
+                    $solr_type = 'model - microarray';
+                } else {
+                    $solr_type = 'model - other';
+                }
+            },
         },
         display_type => {
             is  => 'Text',
-            default => 'Model',
+            calculate_from => ['subject'],
+            calculate => sub { 
+                my ($model) = @_;
+                my $pp_type = $model->type_name();
+                my $solr_type;
+                
+                if ($pp_type eq 'reference alignment') {
+                    $solr_type = 'Alignment Model';
+                } elsif ($pp_type =~ /somatic/i) {
+                    $pp_type =~ s/\b(\w)/\U$1/g; # capitalize words
+                    $solr_type = $pp_type . ' Model';
+                } elsif ($pp_type =~ /rna/i) {
+                    $solr_type = 'RNA Model';
+                } elsif ($pp_type =~ /microarray/i) {
+                    $solr_type = 'Microarray Model';
+                } else {
+                    $solr_type = 'Model';
+                }
+                return $solr_type;
+            },
         },
         display_icon_url => {
             is  => 'Text',

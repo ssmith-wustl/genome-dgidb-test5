@@ -10,16 +10,24 @@ BEGIN {
 };
 
 use above "Genome";
-use Test::More;# tests => 14; #skip_all => "This is incomplete.";
+use Test::More;
+
 my $archos = `uname -a`;
 if ($archos !~ /64/) {
     plan skip_all => "Must run from 64-bit machine";
 } else {
-    plan  tests => 13;
+    plan  tests => 16;
 }
 
-my $test_data_directory = "/gsc/var/cache/testsuite/data/Genome-Model-PhenotypeCorrelation";
+my $test_data_directory = "/gsc/var/cache/testsuite/data/Genome-Model-PhenotypeCorrelation/2011-12-30.3/";
 
+my $tmp_dir = File::Temp::tempdir('Genome-Model-Build-PhenotypeCorrelation-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
+
+# un-comment these lines to generate test data in a directory which will not be deleted!
+# $tmp_dir = "/home/archive/pcbuild-$$/";
+# mkdir $tmp_dir;
+
+# create a population group to be the subject of the model(s)
 my $group = Genome::PopulationGroup->create(name => 'TEST-phenotype-correlation');
 for my $member_id (2874846805,2874846807,2874846809) {
     my $member = Genome::Individual->get($member_id);
@@ -27,16 +35,20 @@ for my $member_id (2874846805,2874846807,2874846809) {
     $group->add_member($member);
 }
 
-my @members = $group->members();
-is(scalar(@members), 3, "got the expected number of patients");
+my @patients = $group->members;
+is(scalar(@patients), 3, "got the expected number of patients");
 
-my $roi_file = $test_data_directory."/input/feature_list_3.bed.gz";
-my $roi_name = "TEST_REGION";
-my $wingspan = 500;
+my @samples = Genome::Sample->get(id => [ (2880837135,2880837162,2880837289)]);
+#my @samples = Genome::Sample->get(source_id => [ map { $_->id } @patients ]);
+ok(scalar(@samples), scalar(@samples) . " samples");
 
-my $p = Genome::ProcessingProfile::PhenotypeCorrelation->create(
+my @instdata = Genome::InstrumentData::Imported->get('sample_id' => [ map { $_->id } @samples ]);
+#my @instdata = Genome::InstrumentData::Solexa->get('sample_id' => [ map { $_->id } @samples ], target_region_set_name => $asms_target_region_set_name);
+ok(scalar(@instdata), scalar(@instdata) . " instdata");
+
+my $p1 = Genome::ProcessingProfile::PhenotypeCorrelation->create(
     id                              => -10001,
-    name                            => 'TESTSUITE Quantitative Population Phenotype Correlation',
+    name                            => 'TESTSUITE SAMTOOLS Quantitative Population Phenotype Correlation',
     alignment_strategy              => 'instrument_data aligned to reference_sequence_build using bwa 0.5.9 [-t 4 -q 5::] then merged using picard 1.29 then deduplicated using picard 1.29 api v1',
     snv_detection_strategy          => 'samtools r599 filtered by snp-filter v1',
     indel_detection_strategy        => 'samtools r599 filtered by indel-filter v1',
@@ -44,81 +56,86 @@ my $p = Genome::ProcessingProfile::PhenotypeCorrelation->create(
     #cnv_detection_strategy          => undef,
     group_samples_for_genotyping_by => 'each',
     phenotype_analysis_strategy     => 'quantitative',
-    roi_file                        => $roi_file,
-    roi_name                        => $roi_name,
-    wingspan                        => $wingspan,
+    roi_wingspan                    => 500,   
 );
-ok($p, "created a processing profile") or diag(Genome::ProcessingProfile::PhenotypeCorrelation->error_message);
+ok($p1, "created a processing profile for samtools") or diag(Genome::ProcessingProfile::PhenotypeCorrelation->error_message);
 
-my $m = $p->add_model(
-    name    => 'TESTSUITE-Indel-test1',
-    subclass_name => 'Genome::Model::PhenotypeCorrelation',
-    subject => $group,
+# /gscuser/dlarson/src/polymutt.0.01/bin/polymutt -p 20000492.ped -d 20000492.dat -g 20000492.glfindex --minMapQuality 1 --nthreads 4 --vcf 20000492.standard.vcf
+my $p2 = Genome::ProcessingProfile::PhenotypeCorrelation->create(
+    id                              => -10002,
+    name                            => 'TESTSUITE POLYMUTT Quantitative Population Phenotype Correlation',
+    alignment_strategy              => 'instrument_data aligned to reference_sequence_build using bwa 0.5.9 [-t 4 -q 5::] then merged using picard 1.29 then deduplicated using picard 1.29 api v1',
+    snv_detection_strategy          => 'polymutt 0.01 [--minMapQuality 1 -nthreads 4]',  
+    #indel_detection_strategy        => undef 
+    #sv_detection_strategy           => undef,
+    #cnv_detection_strategy          => undef,
+    group_samples_for_genotyping_by => 'each',
+    phenotype_analysis_strategy     => 'quantitative',
+    roi_wingspan                    => 500,   
 );
-ok($m, "created a model") or diag(Genome::Model->error_message);
+ok($p2, "created a processing profile for samtools") or diag(Genome::ProcessingProfile::PhenotypeCorrelation->error_message);
 
-my $i1 = $m->add_input(
-    name => 'reference_sequence_build',
-    value => Genome::Model::Build->get('101947881'),
-);
-ok($i1, "add a reference sequence build to it");
 
 #my $asms_target_region_set_name = 'Freimer Pool of original (4k001L) plus gapfill (4k0026)';
-#my $i2 = $m->add_input(
-#    name => 'target_region_set_name',
-#    value => UR::Value->get($asms_target_region_set_name),
-#);
+my $roi_list = Genome::FeatureList->get('3fd525e8de924f87862312cf4f2fc9dd');
+my $refseq = Genome::Model::Build->get(101947881);
 
-my @patients = $group->members;
-ok(scalar(@patients), scalar(@patients) . " patients");
+for my $p ($p1) {
 
-my @samples = Genome::Sample->get(id => [ (2880837135,2880837162,2880837289)]);
-#my @samples = Genome::Sample->get(source_id => [ map { $_->id } @patients ]);
-#ok(scalar(@samples), scalar(@samples) . " samples");
-
-#my @i = Genome::InstrumentData::Solexa->get('sample_id' => [ map { $_->id } @samples ], target_region_set_name => $asms_target_region_set_name);
-
-#unless(@i){
-my @i = Genome::InstrumentData::Imported->get('sample_id' => [ map { $_->id } @samples ]);
-$DB::single=1;
-#}
-=cut
-
-
-my @i = Genome::InstrumentData::Imported->get('sample_id' => [ map { $_->id } @samples ] );
-=cut
-
-
-ok(scalar(@i), scalar(@i) . " instdata");
-
-my @ii;
-for my $i (@i) {
-    my $ii = $m->add_input(
-        name => 'instrument_data',
-        value => $i
+    my $m = $p->add_model(
+        name    => 'TESTSUITE-Indel-test1',
+        subclass_name => 'Genome::Model::PhenotypeCorrelation',
+        subject => $group,
     );
-    push @ii, $ii if $ii;
+    ok($m, "created a model") or diag(Genome::Model->error_message);
+
+    ok($m->reference_sequence_build($refseq), "set the reference sequence");
+    ok($m->roi_list($roi_list), "set the roi_list");
+
+    my @instrument_data_assigned;
+    for my $instdata (@instdata) {
+        my $instrument_data_assigned = $m->add_input(
+            name => 'instrument_data',
+            value => $instdata
+        );
+        push @instrument_data_assigned, $instrument_data_assigned if $instrument_data_assigned;
+    }
+    is(scalar(@instrument_data_assigned), scalar(@instdata), "assigned " . scalar(@instdata) . " instrument data");
+
+    my $b = $m->add_build(
+        subclass_name => 'Genome::Model::Build::PhenotypeCorrelation',
+        data_directory => $tmp_dir,
+    );
+    ok($b, "created a build") or diag(Genome::Model->error_message);
+
+    # we would normally do $build->start() but this is easier to debug minus workflow guts...
+    #$b->start(
+    #    server_dispatch => 'inline',
+    #    job_dispatch    => 'inline',
+    #);
+    #is($b->status, 'Succeeded', "build succeeded!");
+
+    my $retval = eval { $m->_execute_build($b); };
+    is($retval, 1, 'execution of the build returned true');
+    is($@, '', 'no exceptions thrown during build process') or diag $@;
+
+    # sanitize the build directory file which contains a date
+    Genome::Sys->shellcmd(cmd => "gunzip " . $b->data_directory . "/variants/merged_positions.bed.gz -c | sed 's/fileDate=......../fileDate=XXXXXXXX/' >" . $b->data_directory . "/variants/merged_positions.bed.sanitized");
+
+    # diff the output
+    my $expected_data_directory = $test_data_directory . '/expected-output/build-directories/';
+    $expected_data_directory .= (split(/ /,$p->snv_detection_strategy))[0];
+
+    my $cmd = "diff -r --brief $expected_data_directory " . $b->data_directory;
+    note("diff command: $cmd");
+    my @diff = `$cmd | grep -v snvs.merged.vcf.gz`;
+
+    note("diffs = ".scalar(@diff));
+
+    ok( (scalar(@diff) == 8 ), "there are eight differences, accounted for by an empty subdirectory with a negative ID number which differs per run, and a different build directory path")
+        or diag(@diff);
+
 }
-is(scalar(@ii), scalar(@i), "assigned " . scalar(@i) . " instrument data");
-
-my $tmp_dir = File::Temp::tempdir('Genome-Model-Build-PhenotypeCorrelation-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
-
-my $b = $m->add_build(
-    subclass_name => 'Genome::Model::Build::PhenotypeCorrelation',
-    data_directory => $tmp_dir,
-);
-ok($b, "created a build") or diag(Genome::Model->error_message);
-
-# we would normally do $build->start() but this is easier to debug minus workflow guts...
-#$b->start(
-#    server_dispatch => 'inline',
-#    job_dispatch    => 'inline',
-#);
-#is($b->status, 'Succeeded', "build succeeded!");
-
-my $retval = eval { $m->_execute_build($b); };
-is($retval, 1, 'execution of the build returned true');
-is($@, '', 'no exceptions thrown during build process') or diag $@;
 
 __END__
 

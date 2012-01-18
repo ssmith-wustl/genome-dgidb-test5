@@ -166,6 +166,15 @@ sub _filter_variants {
 
     #First, need to create a variant list file to use for generating the readcounts.
     my $input_file = $self->input_directory . "/indels.hq.bed";
+
+    unless(-s $input_file) {
+        $self->warning_message('Empty input file! Skipping out.');
+        for my $f ('indels.hq', 'indels.lq', 'indels.hq.bed', 'indels.lq.bed') {
+            Genome::Sys->write_file($self->_temp_staging_directory . '/' . $f, '');
+        }
+        return 1;
+    }
+
     my $input_fh = Genome::Sys->open_file_for_reading($input_file);
 
     ## Build temp file for positions where readcounts are needed ##

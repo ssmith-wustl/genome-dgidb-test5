@@ -8,8 +8,8 @@ use Genome;
 class Genome::DruggableGene::Citation {
     is => 'UR::Object',
     id_generator => '-uuid',
-    table_name => 'subject.citation',
-    schema_name => 'subject',
+    table_name => 'dgidb.citation',
+    schema_name => 'dgidb',
     data_source => 'Genome::DataSource::Main',
     id_by => [
         id => {is => 'Text'},
@@ -18,6 +18,7 @@ class Genome::DruggableGene::Citation {
         source_db_name => {is => 'Text'},
         source_db_version => {is => 'Text'},
         citation => {is => 'Text'},
+        base_url => {is => 'Text'},
     ],
     doc => 'Citation for druggable gene object',
 };

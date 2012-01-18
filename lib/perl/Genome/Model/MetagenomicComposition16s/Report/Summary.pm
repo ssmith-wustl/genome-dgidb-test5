@@ -24,12 +24,11 @@ sub _add_to_report_xml {
 
     $self->_create_metrics;
 
-    my @amplicon_set_names = $self->build->amplicon_set_names;
-    Carp::confess('No amplicon set names for '.$self->build) if not @amplicon_set_names; # bad
+    my @amplicon_sets = $self->build->amplicon_sets;
+    Carp::confess('No amplicon sets for '.$self->build) if not @amplicon_sets;
 
-    for my $name ( @amplicon_set_names ) {
-        my $amplicon_set = $self->build->amplicon_set_for_name($name);
-        next if not $amplicon_set or not $amplicon_set->amplicon_iterator; # ok
+    for my $amplicon_set ( @amplicon_sets ) {
+        next if not $amplicon_set->amplicon_iterator;
         while ( my $amplicon = $amplicon_set->next_amplicon ) {
             $self->_add_amplicon($amplicon);
         }

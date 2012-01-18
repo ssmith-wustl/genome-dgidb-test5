@@ -38,35 +38,9 @@ class Genome::Model::Build::DeNovoAssembly {
                 join('_', split(m#\s#)) => {
                     is => 'Number',
                     is_optional => 1,
-                    is_metric => 'metrics',
+                    is_metric => 1,
                 }
-            } (
-                'major contig length', 'assembly length',
-                'contigs', 'n50 contig length', 'average contig length',
-                'average contig length gt 300', 'average contig length gt 500', 
-                'average supercontig length gt 500', 'average supercontig length gt 300', 
-                'supercontigs', 'n50 supercontig length', 'average supercontig length',
-                'average read length',
-                'reads attempted', 'reads processed', 'reads processed success',
-                'reads assembled', 'reads assembled success', 'reads not assembled pct',
-                'genome size used', 'average insert size used',
-            )
-        ),
-        ( # These metrics had underscores in them, so they cannot go through the automatic metric processing
-            map { 
-                $_ => {
-                    via => 'metrics',
-                    where => [ name => $_ ],
-                    to => 'value',
-                    is_delegated => 1,
-                    is_mutable => 1,
-                }
-            }
-            ( 
-                'n50_contig_length_gt_300', 'n50_contig_length_gt_500',
-                'n50_supercontig_length_gt_500', 'n50_supercontig_length_gt_300', 
-                'read_depths_ge_5x'
-            )
+            } __PACKAGE__->metric_names
         ),
     ],
 };
@@ -120,10 +94,12 @@ sub validate_instrument_data_and_insert_size {
     my @tags;
     for my $instrument_data ( @instrument_data ) {
         my $library = $instrument_data->library;
-        next if defined $library->fragment_size_range;
-        next if $instrument_data->median_insert_size;
+        my $insert_size = $library->fragment_size_range;
+        next if defined $insert_size;
+        $insert_size = eval{ $instrument_data->median_insert_size; };
+        next if defined $insert_size;
         push @tags, UR::Object::Tag->create(
-            properties => ['instrument_data'],
+            properties => [ 'instrument_data' ],
             desc => 'No insert size for instrument data ('.$instrument_data->id.') or library ('.$library->id.'). Please correct.',
         );
     }
@@ -173,8 +149,6 @@ sub calculate_estimated_kb_usage {
 sub genome_size {
     my $self = shift;
 
-    return $self->genome_size_used if $self->genome_size_used;
-
     my $model = $self->model;
     my $subject = $model->subject;
     unless ( $subject ) { # Should not happen
@@ -189,27 +163,20 @@ sub genome_size {
         $taxon = $subject->taxon;
         $taxon = $subject->source->taxon unless $taxon;
     }
-    # TODO add more...
 
     unless ( $taxon ) {
         Carp::confess('De Novo Assembly model ('.$self->model->id.' '.$self->model->name.') does not have a taxon associated with it\'s subject ('.$subject->id.' '.$subject->name.').');
     }
 
     if ( defined $taxon->estimated_genome_size ) {
-        $self->genome_size_used( $taxon->estimated_genome_size );
         return $taxon->estimated_genome_size;
     }
     #elsif ( defined $taxon->domain and $taxon->domain =~ /bacteria/i ) {
     else {
-        $self->genome_size_used( 4000000 );
         return 4000000;
     }
 
-    # TODO add more
-    print Dumper($taxon);
-
     Carp::confess('Cannot determine genom size for De Novo Assembly model\'s ('.$self->model->id.' '.$self->model->name.') associated taxon ('.$taxon->id.')');
-
 }
 
 sub calculate_base_limit_from_coverage {
@@ -224,21 +191,20 @@ sub calculate_base_limit_from_coverage {
 }
 
 #< Metrics >#
-sub set_metrics {
-    my $self = shift;
-
-    my %metrics = $self->calculate_metrics
-        or return;
-
-    print Dumper \%metrics;
-
-    for my $name ( keys %metrics ) {
-        $self->$name( $metrics{$name} );
-    }
-
-    eval{ $self->_additional_metrics(\%metrics); };
-
-    return %metrics;
+sub metric_names {
+    return (qw/
+        assembly_length major_contig_threshold
+        contigs_count contigs_length contigs_average_length
+        contigs_major_count contigs_major_length contigs_major_average_length 
+        contigs_n50_count contigs_n50_length
+        contigs_major_n50_count contigs_major_n50_length
+        genome_size insert_size
+        supercontigs_count supercontigs_length supercontigs_average_length
+        supercontigs_major_count supercontigs_major_length supercontigs_major_average_length 
+        supercontigs_n50_count supercontigs_n50_length
+        supercontigs_major_n50_count supercontigs_major_n50_length
+        reads_attempted reads_processed reads_processed_success reads_assembled reads_assembled_duplicate reads_assembled_success
+        /);
 }
 
 #< Inst Data Info >#
@@ -274,14 +240,11 @@ sub calculate_reads_attempted {
 sub calculate_average_insert_size {
     my $self = shift;
 
-    return $self->average_insert_size_used if $self->average_insert_size_used;
-
     #check if insert size is set in processing-profile
     my %assembler_params = $self->processing_profile->assembler_params_as_hash;
     if ( exists $assembler_params{'insert_size'} and $self->processing_profile->assembler_base_name eq 'soap') { #bad
         $self->status_message("Using insert size set in assembler params");
         my $insert_size = $assembler_params{'insert_size'};
-        $self->average_insert_size_used( $insert_size );
         return $insert_size;
     }
 
@@ -302,7 +265,7 @@ sub calculate_average_insert_size {
                     $self->error_message("Failed to get median insert size from inst data nor frag size range from library for inst data")
                 );
             }
-            unless ( $insert_size =~ /^\d+$/ or $insert_size =~ /^\d+\s+\d+$/ or $insert_size =~ /^\d+-\d+$/) {
+            unless ( $insert_size =~ /^\d+$/ or $insert_size =~ /^\d+\s+\d+$/ or $insert_size =~ /^\d+-\d+$/ or $insert_size =~ /^\d+\.\d+$/ ) {
                 Carp::confess(
                     $self->status_message("Expected a number or two numbers separated by blank space but got: $insert_size")
                 );
@@ -323,12 +286,8 @@ sub calculate_average_insert_size {
     }
 
     my $sum = List::Util::sum(@insert_sizes);
-
     my $average_insert_size = $sum / scalar(@insert_sizes);
-
     $average_insert_size = POSIX::floor($average_insert_size);
-    $self->average_insert_size_used( $average_insert_size );
-
     return $average_insert_size;
 }
 
@@ -392,151 +351,6 @@ sub center_name {
 sub assembler_rusage { return; }
 sub before_assemble { return 1; }
 sub after_assemble { return 1; }
-
-#< Metrics >#
-sub calculate_metrics {
-    my  $self = shift;
-
-    my $stats_file = $self->stats_file;
-    my $stats_fh = eval{ Genome::Sys->open_file_for_reading($stats_file); };
-    unless ( $stats_fh ) {
-        $self->error_message("Can't set metrics because can't open stats file ($stats_file).");
-        return;
-    }
-
-    my %stat_to_metric_names = ( # old names to new
-        'major contig length' => 'major_contig_length',			 
-        # contig
-        'total contig number' => 'contigs',
-        'n50 contig length' => 'n50_contig_length',
-        'major_contig n50 contig length' => 'n50_contig_length_gt_MCL',
-        'average contig length' => 'average_contig_length',
-        'major_contig avg contig length' => 'average_contig_length_gt_MCL',	 
-        # supercontig
-        'total supercontig number' => 'supercontigs',
-        'n50 supercontig length' => 'n50_supercontig_length',
-        'major_supercontig n50 contig length' => 'n50_supercontig_length_gt_MCL',
-        'average supercontig length' => 'average_supercontig_length',
-        'major_supercontig avg contig length' => 'average_supercontig_length_gt_MCL',
-        # reads
-        'total input reads' => 'reads_processed',
-        'placed reads' => 'reads_assembled',
-        'chaff rate' => 'reads_not_assembled_pct',
-        'average read length' => 'average_read_length',
-        # bases
-        'total contig bases' => 'assembly_length',
-        # read depths
-        'depth >= 5' => 'read_depths_ge_5x',
-        #add'l metrics .. really not part of stats but is build metrics			 
-        'genome size used' => 'genome_size_used',
-        'average insert size used' => 'average_insert_size_used',
-    );
-
-    my %metrics;
-    my $major_contig_length;
-    while ( my $line = $stats_fh->getline ) { #reading stats file
-        #get metrics
-        next unless $line =~ /\:/;
-        chomp $line;
-
-        #get major contig length .. slightly different than getting rest of values
-        if ($line =~ /^Major\s+Contig\s+\(/) {
-            ($major_contig_length) = $line =~ /^Major\s+Contig\s+\(>\s+(\d+)\s+/;
-            $metrics{'major_contig_length'} = $major_contig_length; #300 for soap, 500 for velvet
-            delete $stat_to_metric_names{'major contig length'};
-            next;
-        }
-
-        my ($stat, $values) = split(/\:\s+/, $line);
-        $stat = lc $stat;
-        next unless grep { $stat eq $_ } keys %stat_to_metric_names;
-
-        unless ( defined $values ) {
-            $self->error_message("Found '$stat' in stats file, but it does not have a value on line ($line)");
-            return;
-        }
-
-        my @tmp = split (/\s+/, $values);
-
-        #in most value we want is $tmp[0] which in most cases is a number but can be NA
-        my $value = $tmp[0];
-
-        # Addl processing of values needed
-        if ($stat eq 'depth >= 5') {
-            unless (defined $tmp[1]) {
-                $self->error_message("Failed to derive >= 5x depth from line: $values\n\t".
-                    "Expected line like: 3760	0.0105987146239711");
-                return;
-            }
-            $value = $tmp[1];
-        }
-
-        my $metric = delete $stat_to_metric_names{$stat};
-        #to account differences in major contig length among assemblers
-        $metric =~ s/MCL$/$major_contig_length/ if $metric =~ /length_gt_MCL/;
-
-        $metrics{$metric} = $value;
-    }
-
-    #warn about any metrics not defined in stats file
-    if ( %stat_to_metric_names ) {
-        $self->status_message(
-            'Missing these metrics ('.join(', ', keys %stat_to_metric_names).') in stats file ($stats_file)'
-        );
-        #return; okay .. could vary by assembler
-    }
-
-    #further processing of metric values
-    #unused reads .. NA for soap assemblies, a number for others
-    unless ($metrics{reads_not_assembled_pct} eq 'NA') {
-        $metrics{reads_not_assembled_pct} =~ s/%//;
-        $metrics{reads_not_assembled_pct} = sprintf('%0.3f', $metrics{reads_not_assembled_pct} / 100);
-    }
-
-    #additional calculations needed to derive metric values
-
-    #reads attempted, total input reads
-    $metrics{reads_attempted} = $self->calculate_reads_attempted
-        or return; # error in sub
-
-    #reads that pass filtering
-    $metrics{reads_processed_success} =  sprintf(
-        '%0.3f', $metrics{reads_processed} / $metrics{reads_attempted}
-    );
-
-    #assembled reads - NA for soap ..currently don't know now many of input reads actually assemble
-    $metrics{reads_assembled_success} = ( $metrics{reads_assembled} eq 'NA' ) ? 'NA' :
-    sprintf( '%0.3f', $metrics{reads_assembled} / $metrics{reads_processed} );
-
-    #5x coverage stats - not defined for soap assemblies
-    $metrics{read_depths_ge_5x} = ( $metrics{read_depths_ge_5x} ) ? sprintf ('%0.1f', $metrics{read_depths_ge_5x} * 100) : 'NA';
-
-    #genome and average insert size used
-    my $genome_size_used;
-
-    eval { $genome_size_used = $self->genome_size; };
-    if ( $@ ) { #okay for this to fail for soap assemblies for now .. 
-        $genome_size_used = 'NA';
-    }
-
-    $metrics{genome_size_used} = $genome_size_used;
-    $metrics{average_insert_size_used} = $self->calculate_average_insert_size;
-
-    return %metrics;
-}
-
-sub _add_metrics { return 1; }
-
-# Old metrics
-sub total_contig_number { return $_[0]->contigs; }
-#sub n50_contig_length { return $_[0]->n50_contig_length; }
-sub total_supercontig_number { return $_[0]->supercontigs; }
-#sub n50_supercontig_length { return $_[0]->n50_supercontig_length; }
-sub total_input_reads { return $_[0]->reads_processed; }
-sub placed_reads { return $_[0]->reads_assembled; }
-sub chaff_rate { return $_[0]->reads_not_assembled_pct; }
-sub total_contig_bases { return $_[0]->assembly_length; }
-#<>#
 
 1;
 

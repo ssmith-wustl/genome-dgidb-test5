@@ -124,7 +124,7 @@ sub setup_test_data {
     my $mock_id = -10;
     my $library = 'TESTINGLIBRARY'; 
     for my $run_dir (@run_dirs) {
-        my $run_dir_params = GSC::PSE::SolexaSequencing::SolexaRunDirectory->parse_regular_run_directory($run_dir);
+        my $run_dir_params = parse_regular_run_directory($run_dir);
         my $read_length = int($$run_dir_params{'run_id'});
         my $paired_end = 0;
         if ($$run_dir_params{'flow_cell_id'} eq '30LN0') {
@@ -187,4 +187,26 @@ sub setup_test_data {
     return @instrument_data;
 }
 
+sub parse_regular_run_directory {
+    my ($run_directory) = @_;
+
+    if (!$run_directory) {
+        Carp::confess("Could not parse run directory: (undef)");
+    }
+
+    # The standard run directory format is: date_machine_runid_flowcellid
+    if ( $run_directory =~ /(\d\d\d\d\d\d_([^_\\\/]+)_([^_\\\/]+)_([^_\\\/]+))$/ ) {
+        return {
+            'run_name'   => $1,
+            machine_name => $2,
+            run_id       => $3,
+            flow_cell_id => $4,
+        };
+    }
+    else {
+        Carp::confess("Could not parse run directory: $run_directory");
+    }
+}
+
 1;
+

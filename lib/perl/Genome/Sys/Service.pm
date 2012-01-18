@@ -73,7 +73,7 @@ sub pid_status {
     my $self = shift;
     my $pid_name = $self->pid_name();
 
-    my $cmd = 'ssh ' . $self->host() . " 'ps aux | grep $pid_name | grep -v grep'";
+    my $cmd = 'ssh ' . $self->host() . " 'ps aux | grep \"$pid_name\" | grep -v grep'";
     my $o = `$cmd`;
 
     if ($o) {

@@ -4,7 +4,7 @@ use warnings;
 
 BEGIN {
     if ($ENV{GENOME_DEV_MODE}) {
-        $ENV{GENOME_SYS_SERVICES_MEMCACHE} = 'aims-dev.gsc.wustl.edu:11211';
+        $ENV{GENOME_SYS_SERVICES_MEMCACHE} = 'apipe-dev.gsc.wustl.edu:11211';
         $ENV{GENOME_SYS_SERVICES_SOLR} = 'http://solr-dev:8080/solr';
     }
     else {
@@ -56,7 +56,6 @@ $ENV{GENOME_DB_ENSEMBL_PORT} ||= '3306';
 
 # ensure we can get to legacy modules 
 use Class::Autouse;
-Class::Autouse->autouse(qr/Finishing.*/);
 Class::Autouse->autouse(qr/Finfo.*/);
 Class::Autouse->autouse(qr/Bio.*/);
 
@@ -73,6 +72,10 @@ my $callback = sub {
 
     return if $initialized eq 'complete' or $initialized eq 'in progress';
     return unless substr($pkg,0,5) eq 'GSC::' or substr($pkg,0,5) eq 'App::';
+
+    if ($^X eq '/usr/bin/perl') {  # only when using the LIMS interpreter is this okay 
+        Carp::confess("Attempt to use $class on the local /usr/bin/perl interpreter!  GSC::* and App::* modules must be used with the LIMS interpreter.  Contact APIPE for support!");
+    }
 
     # load and initialize GSCApp the first time something GSC:: or App:: is used.
     # since App::Init configures its own dynamic loader we dont' do anything 

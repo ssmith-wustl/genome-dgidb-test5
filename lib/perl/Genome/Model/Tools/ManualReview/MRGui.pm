@@ -18,7 +18,6 @@ sub init_gtk {
 }
 
 use IO::File;
-use GSC::IO::Assembly::Ace::Reader;
 use Genome::Utility::VariantReviewListReader;
 
 use File::Basename ('fileparse','basename');
@@ -234,15 +233,14 @@ sub set_project_consedrc {
 sub get_contig_start_pos
 {
     my ($self,$ace_file_name) = @_;
-    my $fh = IO::File->new($ace_file_name);
-    
-    my $reader = GSC::IO::Assembly::Ace::Reader->new($fh);
-    while(my $line = <$fh>)
+    my $reader = Genome::Model::Tools::Consed::AceReader->create(file => $ace_file_name);
+    die $self->error_message('Failed to create ace reader for '.$ace_file_name) if not $reader;
+    while(my $line = $reader->_fh->getline)
     {
         if($line =~ /CT\{/)
         {
-            $fh->seek(-length($line),1);
-            my $tag = $reader->next_object;
+            $reader->_fh->seek(-length($line),1);
+            my $tag = $reader->next;
             if($tag->{type} eq 'startNumberingConsensus')
             {
                 my ($pos) = split (/\n/,$tag->{data});

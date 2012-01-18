@@ -21,6 +21,8 @@ my %model_files = (
 	'Namericanus_4.2.2.ec.mkrd.v3.hmm' => 'sn_namkrd422ecv3',
 	'Namericanus_4.2.2.ec.mkis.v3.hmm' => 'sn_namkis422ecv3',
 	'Namericanus_4.2.2.ec.mkcb.v3.hmm' => 'sn_namkcb422ecv3',
+	'Acaninum.9.3.2.cgv2.hmm'	=>	'sn_accg932v2',
+	'Acaninum.9.3.2.mkv2.hmm'	=>	'sn_acmk932v2',
 );
 
 sub abbreviation_for_model_file {

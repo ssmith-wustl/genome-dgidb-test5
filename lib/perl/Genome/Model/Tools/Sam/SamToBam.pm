@@ -127,6 +127,8 @@ sub execute {
         unlink $bam_file;
 
         move "$tmp_file.fix.bam", $bam_file;
+    }else{
+        $self->is_sorted(0);
     }
 
     if ($self->index_bam) {

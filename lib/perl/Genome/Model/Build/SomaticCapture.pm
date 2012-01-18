@@ -12,10 +12,12 @@ class Genome::Model::Build::SomaticCapture {
                                                doc => 'The bridge table entry for the links to tumor builds (should only be one)' },
         tumor_build                     => { is => 'Genome::Model::Build', via => 'tumor_build_links', to => 'from_build', 
                                                doc => 'The tumor build with which this build is associated' },
-        normal_build_links                  => { is => 'Genome::Model::Build::Link', reverse_as => 'to_build', where => [ role => 'normal'], is_many => 1,
+        tumor_model                     => { is => 'Genome::Model', via => 'tumor_build', to => 'model' },
+                                           normal_build_links                  => { is => 'Genome::Model::Build::Link', reverse_as => 'to_build', where => [ role => 'normal'], is_many => 1,
                                                doc => 'The bridge table entry for the links to normal builds (should only be one)' },
         normal_build                     => { is => 'Genome::Model::Build', via => 'normal_build_links', to => 'from_build', 
                                                doc => 'The tumor build with which this build is associated' },
+        normal_model                     => { is => 'Genome::Model', via => 'normal_build', to => 'model' },
     ],
 };
 

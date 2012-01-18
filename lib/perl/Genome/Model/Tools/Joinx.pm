@@ -5,8 +5,9 @@ use warnings;
 
 use Genome;
 use Carp qw/confess/;
+use Sys::Hostname;
 
-my $DEFAULT_VER = '1.2';
+my $DEFAULT_VER = '1.3';
 
 class Genome::Model::Tools::Joinx {
     is  => 'Command',
@@ -38,8 +39,9 @@ sub joinx_path {
     my $self = shift;
     my $ver = $self->use_version || "";
     my $path = "/usr/bin/joinx$ver";
+    my $hostname = Sys::Hostname::hostname();
     if (! -x $path) {
-        confess "Failed to find executable joinx version $ver at $path!";
+        confess "Failed to find executable joinx version $ver at $hostname:$path!";
     }
     return $path;
 }

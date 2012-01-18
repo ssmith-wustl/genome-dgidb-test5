@@ -69,63 +69,16 @@ sub execute {
 
     if (defined $self->read_group_id) {
         $unlink_input_bam_on_end = 1;
-        my $samtools_path = Genome::Model::Tools::Sam->path_for_samtools_version($self->samtools_version);
 
         my $temp = Genome::Sys->base_temp_directory;
-        my $temp_bam_file = $temp . "/temp_rg." . $$ . ".bam";
-        my $samtools_check_cmd = sprintf("%s view -r%s %s | head -1", $samtools_path, $self->read_group_id, $input_file);
-        my $samtools_check_output = `$samtools_check_cmd`;
-
-        if (length($samtools_check_output) == 0) {
-            $self->error_message ("Read Group X identified in the imported BAM header seems to have zero reads in the BAM file.  The BAM file header should be repaired in-place.  Subsequent re-runs of this pipeline will then not fail, and will shortcut past the alignments for other read groups.");
-            die $self->error_message;
-        } 
-
-        my $samtools_strip_cmd = sprintf(
-            "%s view -h -r%s %s | %s view -S -b -o %s -",
-            $samtools_path,
-            $self->read_group_id,
-            $input_file, 
-            $samtools_path,
-            $temp_bam_file,
-        );
-
-        Genome::Sys->shellcmd(
-            cmd=>$samtools_strip_cmd, 
-            output_files=>[$temp_bam_file],
-            skip_if_output_is_present=>0,
-        );
-
         my $sorted_temp_bam_file = $temp . "/temp_rg.sorted." . $$ . ".bam";
-
-        my $sort_cmd = Genome::Model::Tools::Sam::SortBam->create(
-            file_name=>$temp_bam_file,
-            name_sort=>1, 
-            output_file=>$sorted_temp_bam_file,
-            use_version => $self->samtools_version,
-        );
-
-        unless ($sort_cmd->execute) {
-            $self->error_message("Failed sorting reads into name order for iterating");
+        my $extract_rg_cmd = Genome::Model::Tools::Sam::ExtractReadGroup->create(input=>$input_file, output=>$sorted_temp_bam_file, read_group_id=>$self->read_group_id);
+        unless ($extract_rg_cmd->execute()) {
+            $self->error_message("Failed to extract read group.");
             return;
         }
-
-        # VERIFY READ COUNTS: READ GROUP BAM v. SORTED READ GROUP BAM
-        my $temp_bam_read_count = $self->_read_count_for_bam($temp_bam_file);
-        return if not $temp_bam_read_count;
-        my $sorted_temp_bam_read_count = $self->_read_count_for_bam($sorted_temp_bam_file);
-        return if not $sorted_temp_bam_read_count;
-        $self->status_message('VERIFY READ COUNTS: READ GROUP BAM v. SORTED READ GROUP BAM');
-        $self->status_message("$temp_bam_read_count reads in READ GROUP BAM: $temp_bam_file");
-        $self->status_message("$sorted_temp_bam_read_count reads in SORTED READ GROUP BAM: $sorted_temp_bam_file");
-        if ( $temp_bam_read_count ne $sorted_temp_bam_read_count ) {
-            $self->error_message("Sort of read group BAM resulted in different number of reads in the sorted file! $temp_bam_read_count <=> $sorted_temp_bam_read_count");
-            return;
-        }
-
-        unlink($temp_bam_file);        
         $input_file = $sorted_temp_bam_file;
-        $bam_read_count = $sorted_temp_bam_read_count
+        $bam_read_count = $extract_rg_cmd->read_count;
     }
 
     my $picard_dir = $self->picard_path;

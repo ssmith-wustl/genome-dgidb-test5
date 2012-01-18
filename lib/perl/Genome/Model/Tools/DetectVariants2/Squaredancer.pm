@@ -49,11 +49,6 @@ class Genome::Model::Tools::DetectVariants2::Squaredancer{
     ],
 };
 
-
-sub help_brief {
-    "discovers structural variation using squaredancer",
-}
-
 sub help_synopsis {
     my $self = shift;
     return <<"EOS"

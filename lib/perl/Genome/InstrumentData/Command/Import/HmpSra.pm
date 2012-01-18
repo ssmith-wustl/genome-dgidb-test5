@@ -63,7 +63,6 @@ sub execute {
 
     # validate
     for my $id (@srr_ids) {
-
 ##_______This does not work as of 110927...jmartin
 #        my $sample = Genome::Sample->get(sql=>qq/
 #            select os.*
@@ -76,20 +75,17 @@ sub execute {
 #            where ruacc.accession='$id'
 #        /);
 #_______Modified to use a 'workaround' to deal with 'deprecated Genome gets'...jmartin 110927
-	my $sample = GSC::Organism::Sample->get(sql=>qq/
-						select os.organism_sample_id from gsc.organism_sample\@dw os 
-						join gsc.sra_organism_sample\@dw sos 
-						on sos.organism_sample_id=os.organism_sample_id 
-						join gsc.sra_experiment\@dw ex 
-						on ex.sra_sample_id=sos.sra_sample_id 
-						join gsc.sra_run\@dw ru 
-						on ru.sra_experiment_id=ex.sra_item_id 
-						join gsc.sra_item\@dw rui 
-						on rui.sra_item_id=ru.sra_item_id 
-						join gsc.sra_accession\@dw ruacc 
-						on ruacc.alias=rui.alias where ruacc.accession='$id'
-						/);
 
+        my $dbh = Genome::DataSource::GMSchema->get_default_handle();
+        my ($sample) = $dbh->selectrow_array(qq/
+            select os.organism_sample_id from gsc.organism_sample\@dw os 
+            join gsc.sra_organism_sample\@dw sos on sos.organism_sample_id=os.organism_sample_id 
+            join gsc.sra_experiment\@dw ex on ex.sra_sample_id=sos.sra_sample_id 
+            join gsc.sra_run\@dw ru on ru.sra_experiment_id=ex.sra_item_id 
+            join gsc.sra_item\@dw rui on rui.sra_item_id=ru.sra_item_id 
+            join gsc.sra_accession\@dw ruacc on ruacc.alias=rui.alias
+            where ruacc.accession='$id'
+            /);
 
         unless ($sample) {
             $self->error_message("Failed to get a sample object from the warehouse for SRR ID $id.");

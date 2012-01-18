@@ -586,18 +586,16 @@ sub load_pses {
         $pse_sorter = sub { $a->id <=> $b->id };
     }
 
-    my $ps = GSC::ProcessStep->get( process_to => 'queue instrument data for genome modeling' );
-
     my @pses;
     if($self->pse_id) { #process a specific PSE
         @pses = GSC::PSE->get(
-            ps_id => $ps->ps_id,
+            ps_id => 3733,
             pse_status => 'inprogress',
             id => $self->pse_id,
         );
     } else {
         @pses = GSC::PSE->get(
-            ps_id      => $ps->ps_id,
+            ps_id      => 3733,
             pse_status => 'inprogress',
         );
 
@@ -722,7 +720,7 @@ sub check_pse {
 
     if ( $instrument_data_type eq 'solexa' ) {
         # solexa inst data nee to have the copy sequence file pse successful
-        my $index_illumina = $genome_instrument_data->index_illumina;
+        my $index_illumina = GSC::IndexIllumina->get($instrument_data_id);
         if ( not $index_illumina ) {
             $self->error_message('No index illumina for solexa instrument data '.$instrument_data_id);
             return;
@@ -1334,8 +1332,23 @@ sub request_builds {
 
     $self->status_message("Requesting builds...");
 
-    for my $model_and_reason (values %models_to_build) {
+    MODEL: for my $model_and_reason (values %models_to_build) {
         my ($model, $reason) = @$model_and_reason;
+
+        #TODO generalize via model->notify_input_build_success to make is_ready_to_build or the like
+        if($model->isa('Genome::Model::SomaticValidation')) {
+            if($model->tumor_sample and $model->normal_sample) {
+                my @i = $model->instrument_data;
+
+                my ($t, $n) = (0,0);
+                for my $i (@i) {
+                    if($i->sample eq $model->tumor_sample) { $t++; }
+                    if($i->sample eq $model->normal_sample) { $n++; }
+                }
+
+                next MODEL unless ($t > 0 and $n > 0);
+            }
+        }
 
         #Will be picked up by next run of `genome model services build-queued-models`
         $model->build_requested(1, 'AQID: ' .$reason);
@@ -1484,8 +1497,8 @@ sub add_processing_profiles_to_pses{
                     $reference_sequence_names_for_processing_profile_ids{$pp_id} = 'UCSC-mouse-buildmm9'
                 }
                 elsif ($taxon->domain =~ /bacteria/i) {
-                    #updated 2011 Nov 02 .. requested by Chad
-                    push @processing_profile_ids_to_add, '2628526';
+                    #updated 2011 Dec 20 .. requested by Chad
+                    push @processing_profile_ids_to_add, '2658559';
                 }
                 #process inst data with work orders 2634033 2636663 with pp 2599969 RT76069
                 elsif ( $taxon->id == 1653198763 ) { #unknow taxon normally skipped
@@ -1546,14 +1559,7 @@ sub _instrument_data {
     if($instrument_data_type =~ /sanger/i) {
         #sanger data doesn't store the instrument_data_id directly
         my $at_pse = GSC::PSE::AnalyzeTraces->get($instrument_data_id);
-        my $run_name = $at_pse->run_name();
-        my $run = GSC::Run->get(run_name => $run_name);
-        unless (defined($run)) {
-            $self->error_message("failed to get GSC::Run with run_name $run_name");
-            die $self->error_message;
-        }
-
-        $instrument_data_id = $run_name;
+        $instrument_data_id = $at_pse->run_name();
     }
 
     $instrument_data = Genome::InstrumentData->get($instrument_data_id);

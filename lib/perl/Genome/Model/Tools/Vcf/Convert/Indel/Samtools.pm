@@ -3,10 +3,18 @@ package Genome::Model::Tools::Vcf::Convert::Indel::Samtools;
 use strict;
 use warnings;
 use Genome;
+use POSIX 'strftime';
 
 class Genome::Model::Tools::Vcf::Convert::Indel::Samtools {
-    is => 'Genome::Model::Tools::Vcf::Convert::Base',
-    doc => 'Generate a VCF file from Samtools indel output'
+    is  => 'Genome::Model::Tools::Vcf::Convert::Base',
+    doc => 'Generate a VCF file from Samtools indel output',
+    has => [
+        is_mpileup => {
+            type          => 'Boolean',
+            is_transient  => 1,
+            default_value => 0,
+        },
+    ],
 };
 
 sub help_synopsis {
@@ -26,14 +34,72 @@ sub source {
     return "Samtools";
 }
 
-sub parse_line {
+sub _get_header_columns {
     my $self = shift;
-    my $lines = shift;
+    my @header_columns = ("CHROM","POS","ID","REF","ALT","QUAL","FILTER","INFO","FORMAT",$self->aligned_reads_sample);
+    return @header_columns;
+}
+
+sub print_header {
+    my $self = shift;
+    my $input_file = $self->input_file;
+
+    my $token = `head -1 $input_file`;
+
+    if ($token =~ /^#/) {  #mpileup
+        $self->is_mpileup(1);
+        my (@header, @new_header);
+        my $input_fh = $self->_input_fh;
+        while (my $line = $input_fh->getline) {
+            push @header, $line if $line =~ /^#/;
+        }
+        $input_fh->close;
+
+        #reintialized the file handle to be used next step
+        my $new_fh = Genome::Sys->open_file_for_reading($input_file) or die "Failed to open $input_file\n";
+        $self->_input_fh($new_fh); 
+
+        while (@header) {
+            last if $header[0] =~ /^##INFO/; #split original vcf header
+            push @new_header, shift @header;
+        }
+
+        my @extra_info  = $self->_extra_header_info;
+        push @new_header, @extra_info, @header;
+        
+        my $output_fh = $self->_output_fh;
+        map{$output_fh->print($_)}@new_header;
+    }
+    else { #pileup
+        return $self->SUPER::print_header;
+    }
+
+    return 1;
+}
+
+sub _extra_header_info {
+    my $self = shift;
+    my $date = strftime("%Y%m%d", localtime);
+    my $source     = $self->source;
+    my $public_ref = $self->_get_public_ref;
+
+    return ("##fileDate=$date\n", "##source=$source\n", "##reference=$public_ref\n", "##phasing=none\n");
+}
+
+sub parse_line {
+    my ($self, $lines) = @_;
+    
+    if ($self->is_mpileup) {
+        return if $lines =~ /^#/;
+        my @columns = split("\t", $lines);
+        $columns[6] = 'PASS';
+        my $new_line = join "\t", @columns;
+        return $new_line;
+    }
 
     my @lines = split "\n", $lines;
 
-    my @first_line = split "\t", $lines[0];
-
+    my @first_line  = split "\t", $lines[0];
     my @second_line = split "\t", $lines[1];
 
     my $ref = $first_line[2];
@@ -137,9 +203,11 @@ sub parse_line {
 }
 
 sub get_record {
-    my $self = shift;
-    my $input_fh = shift;
+    my ($self, $input_fh) = @_;
 
+    if ($self->is_mpileup) { #for mpileup just need return one vcf line
+        return $self->SUPER::get_record($input_fh);
+    }
     #For samtools indel, we need to get two lines at a time.
     my $lines;
     my $line1 = $input_fh->getline; 

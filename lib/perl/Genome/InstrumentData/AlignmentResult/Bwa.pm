@@ -167,7 +167,15 @@ sub _intermediate_result {
         unless ($intermediate_result) {
             confess "Failed to generate IntermediateAlignmentResult for $path, params were: " . Dumper(\%intermediate_params);
         }
+
+        $self->status_message(sprintf("Got/created an intermediate alignment result %s with file path %s", $intermediate_result->id, $intermediate_result->sai_file));
         push(@results, $intermediate_result);
+    }
+
+    my @bad_results = grep {!-e $_->sai_file || !-s $_->sai_file} @results;
+    if (@bad_results > 0) {
+        my $str_bad_ids = join " ", map {$_->id} @bad_results;
+        confess sprintf("The following intermediate alignment result(s) have nonexistent or zero-length SAI files -- cannot proceed: %s", $str_bad_ids);
     }
 
     for my $result (@results) {

@@ -60,18 +60,11 @@ sub params_for_result {
     my $tumor_aligment_result_id = $tumor_alignment_result->id;
     my @software_result_users = Genome::SoftwareResult::User->get(user => $self->build);
     my @software_results = map { $_->software_result } @software_result_users;
-    # TODO any way to identify DV2 results better? multiple checks with isa?
-    my @dv2_results = grep { $_->class =~ /Genome::Model::Tools::DetectVariants2/ } @software_results;
-    @dv2_results = grep { $_ ne $build->snv_variant_list} @dv2_results; # don't find our input variant set
-    # TODO filesystem to detect SNV result sucks
-    my @snv_results = grep { -e $_->output_dir . '/snvs.hq' } @dv2_results;
-    if (@snv_results > 1) {
-        die $self->error_message('Multiple SNV results found');
-    }
-    elsif (@snv_results == 0) {
-        die $self->error_message('No SNV results found');
-    }
-    my $dv2_result_id = $snv_results[0]->id;
+
+    my $snv_result_user = Genome::SoftwareResult::User->get(label => 'snv_result', user => $build);
+    my $snv_result = $snv_result_user->software_result;
+
+    my $dv2_result_id = $snv_result->id;
 
     my $test_name = $ENV{GENOME_SOFTWARE_RESULT_TEST_NAME};
 

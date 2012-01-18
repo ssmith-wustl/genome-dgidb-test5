@@ -71,8 +71,9 @@ sub execute {                               # replace with real execution logic.
 
     while(my $line = $status_fh->getline) {
         chomp $line;
+        next if $line =~/^#/;
         my ($chr, $pos, $ref, $var, $status) = split /\t/, $line;
-        $statuses{$chr}{$pos}{$ref}{$var} = $status;
+        $statuses{$chr}{$pos}{$ref}{$var} = $status;        
     }
     $status_fh->close;
 
@@ -114,13 +115,13 @@ sub execute {                               # replace with real execution logic.
                 my $status = "";
                 for my $ref (keys %{$statuses{$chr}{$pos}}) {
                     for my $var (keys %{$statuses{$chr}{$pos}{$ref}}) {
-                        unless($status) {
+                        #unless($status) {
                             $status = $statuses{$chr}{$pos}{$ref}{$var};
-                        }
-                        else {
-                            $self->error_message("Multiple variant alleles with validation results at $chr $pos. Not sure what to do.");
-                            return;
-                        }
+                        #}
+                        #else {
+                        #    $self->error_message("Multiple variant alleles with validation results at $chr $pos. Not sure what to do.");
+                        #    return;
+                        #}
                     }
                 }
                 if($status =~ /^\s*Somatic\s*$/i) {

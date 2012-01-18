@@ -5,7 +5,7 @@ use warnings;
 
 use above "Genome";
 use File::Temp;
-use Test::More tests => 11;
+use Test::More tests => 12;
 use Data::Dumper;
 use File::Compare;
 
@@ -27,6 +27,7 @@ my $test_data_directory = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Dete
 # Updated to .v2 for correcting an error with newlines
 my $expected_directory = $test_data_directory . "/expected";
 my $detector_directory = $test_data_directory . "/samtools-r599-";
+my $detector_vcf_directory = $test_data_directory . "/detector_vcf_result";
 my $tumor_bam_file  = $test_data_directory. '/flank_tumor_sorted.bam';
 my $normal_bam_file  = $test_data_directory. '/flank_normal_sorted.bam';
 my $test_output_base = File::Temp::tempdir('Genome-Model-Tools-DetectVariants2-Filter-SnpFilter-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
@@ -41,7 +42,6 @@ my @expected_output_files = qw| snvs.hq
                                 snvs.lq.v1.bed
                                 snvs.lq.v2.bed | ;
 
-
 my $detector_result = Genome::Model::Tools::DetectVariants2::Result->__define__(
     output_dir => $detector_directory,
     detector_name => 'Genome::Model::Tools::DetectVariants2::Samtools',
@@ -51,6 +51,15 @@ my $detector_result = Genome::Model::Tools::DetectVariants2::Result->__define__(
     control_aligned_reads => $normal_bam_file,
     reference_build_id => $refbuild_id,
 );
+
+my $detector_vcf_result = Genome::Model::Tools::DetectVariants2::Result::Vcf::Detector->__define__(
+    input => $detector_result,
+    output_dir => $detector_vcf_directory,
+    aligned_reads_sample => "TEST",
+    vcf_version => "1",
+);
+
+$detector_result->add_user(user => $detector_vcf_result, label => 'uses');
 
 my $snp_filter_high_confidence = Genome::Model::Tools::DetectVariants2::Filter::SnpFilter->create(
     previous_result_id => $detector_result->id,
@@ -65,3 +74,4 @@ for my $output_file (@expected_output_files){
     my $actual_file = $test_output_dir."/".$output_file;
     is(compare($actual_file, $expected_file), 0, "$actual_file output matched expected output");
 }
+ok(-s $test_output_dir."/snvs.vcf.gz", " found a meaty vcf");

@@ -317,20 +317,19 @@ sub execute {
     my @cols = split( /\t/, $line );
     my ( $gene, $chr, $start, $stop, $mutation_class, $mutation_type, $ref, $var1, $var2, $sample ) =
     ( $cols[0], $cols[4], $cols[5], $cols[6], $cols[8], $cols[9], $cols[10], $cols[11], $cols[12], $cols[15] );
-    $chr =~ s/^chr//; # Remove chr prefixes from chrom names if any
 
     # Skip mutations in samples that are not in the provided bam list
     unless( defined $sample_names{$sample} )
     {
       $skip_cnts{"belong to unrecognized samples"}++;
-      print "Skipping unrecognized sample ($sample not in BAM list): $gene, chr$chr:$start-$stop\n" if( $show_skipped );
+      print "Skipping unrecognized sample ($sample not in BAM list): $gene, $chr:$start-$stop\n" if( $show_skipped );
       next;
     }
 
     # If the mutation classification is odd, quit with error
     if( $mutation_class !~ m/^(Missense_Mutation|Nonsense_Mutation|Nonstop_Mutation|Splice_Site|Translation_Start_Site|Frame_Shift_Del|Frame_Shift_Ins|In_Frame_Del|In_Frame_Ins|Silent|Intron|RNA|3'Flank|3'UTR|5'Flank|5'UTR|IGR|Targeted_Region)$/ )
     {
-      print STDERR "Unrecognized Variant_Classification \"$mutation_class\" in MAF file: $gene, chr$chr:$start-$stop\n";
+      print STDERR "Unrecognized Variant_Classification \"$mutation_class\" in MAF file: $gene, $chr:$start-$stop\n";
       print STDERR "Please use TCGA MAF Specification v2.2.\n";
       return undef;
     }
@@ -340,14 +339,14 @@ sub execute {
        ( $skip_silent && $mutation_class =~ m/^Silent$/ ))
     {
       $skip_cnts{"are classified as $mutation_class"}++;
-      print "Skipping $mutation_class mutation: $gene, chr$chr:$start-$stop\n" if( $show_skipped );
+      print "Skipping $mutation_class mutation: $gene, $chr:$start-$stop\n" if( $show_skipped );
       next;
     }
 
     # If the mutation type is odd, quit with error
     if( $mutation_type !~ m/^(SNP|DNP|TNP|ONP|INS|DEL|Consolidated)$/ )
     {
-      print STDERR "Unrecognized Variant_Type \"$mutation_type\" in MAF file: $gene, chr$chr:$start-$stop\n";
+      print STDERR "Unrecognized Variant_Type \"$mutation_type\" in MAF file: $gene, $chr:$start-$stop\n";
       print STDERR "Please use TCGA MAF Specification v2.2.\n";
       return undef;
     }
@@ -356,7 +355,7 @@ sub execute {
     if( $mutation_type =~ m/^Consolidated$/ )
     {
       $skip_cnts{"are consolidated into another"}++;
-      print "Skipping consolidated mutation: $gene, chr$chr:$start-$stop\n" if( $show_skipped );
+      print "Skipping consolidated mutation: $gene, $chr:$start-$stop\n" if( $show_skipped );
       next;
     }
 
@@ -364,7 +363,7 @@ sub execute {
     if( $self->count_bits( $roi_bitmask->{$chr}, $start, $stop ) == 0 )
     {
       $skip_cnts{"are outside any ROIs"}++;
-      print "Skipping mutation that falls outside ROIs: $gene, chr$chr:$start-$stop\n" if( $show_skipped );
+      print "Skipping mutation that falls outside ROIs: $gene, $chr:$start-$stop\n" if( $show_skipped );
       next;
     }
 
@@ -372,7 +371,7 @@ sub execute {
     unless( defined $genes{$gene} )
     {
       $skip_cnts{"have unrecognized gene names"}++;
-      print "Skipping unrecognized gene name (not in ROI file): $gene, chr$chr:$start-$stop\n" if( $show_skipped );
+      print "Skipping unrecognized gene name (not in ROI file): $gene, $chr:$start-$stop\n" if( $show_skipped );
       next;
     }
 
@@ -393,7 +392,7 @@ sub execute {
       # If the alleles are anything but A, C, G, or T then quit with error
       if( $ref !~ m/[ACGT]/ || $var1 !~ m/[ACGT]/ || $var2 !~ m/[ACGT]/ )
       {
-        print STDERR "Unrecognized allele in column Reference_Allele, Tumor_Seq_Allele1, or Tumor_Seq_Allele2: $gene, chr$chr:$start-$stop\n";
+        print STDERR "Unrecognized allele in column Reference_Allele, Tumor_Seq_Allele1, or Tumor_Seq_Allele2: $gene, $chr:$start-$stop\n";
         print STDERR "Please use TCGA MAF Specification v2.2.\n";
         return undef;
       }
@@ -416,13 +415,13 @@ sub execute {
       # Check if the ref base in the MAF matched what we fetched from the ref-seq
       if( defined $fetched_ref && $fetched_ref ne $ref )
       {
-        print STDERR "Reference allele $ref for mutation in $gene at chr$chr:$start-$stop is $fetched_ref in the reference sequence. Using it anyway.\n";
+        print STDERR "Reference allele $ref for mutation in $gene at $chr:$start-$stop is $fetched_ref in the reference sequence. Using it anyway.\n";
       }
 
       # Check if a C or G reference allele belongs to a CpG pair in the refseq
       if(( $ref eq 'C' || $ref eq 'G' ) && defined $ref_and_flanks )
       {
-        if( $ref_and_flanks =~ m/CG/ )
+        if( $ref_and_flanks =~ m/CG/i )
         {
           $class = (( $class == CG_Transitions ) ? CpG_Transitions : CpG_Transversions );
         }

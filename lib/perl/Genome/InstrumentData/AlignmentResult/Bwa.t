@@ -9,7 +9,7 @@ use above 'Genome';
 
 BEGIN {
     if (`uname -a` =~ /x86_64/) {
-        plan tests => 31;
+        plan tests => 38;
     } else {
         plan skip_all => 'Must run on a 64 bit machine';
     }
@@ -83,6 +83,10 @@ test_alignment(validate_against_shortcut => 1, instrument_data=>$instrument_data
 $FAKE_INSTRUMENT_DATA_ID--;
 $instrument_data = generate_fake_instrument_data();
 test_alignment(force_fragment => 1, instrument_data=>$instrument_data);
+
+$FAKE_INSTRUMENT_DATA_ID--;
+my $imp_instrument_data = generate_fake_imported_instrument_data();
+test_alignment(instrument_data=>$imp_instrument_data, instrument_data_segment_id=>'Z', instrument_data_segment_type=>'read_group');
 
 sub test_alignment {
     my %p = @_;
@@ -250,5 +254,33 @@ sub generate_fake_instrument_data {
     ok($instrument_data->is_paired_end, 'instrument data is paired end');
 
     return $instrument_data;
+}
 
+sub generate_fake_imported_instrument_data {
+
+    if ( not $library or not $sample ) {
+        $sample = Genome::Sample->create(
+            name => 'test_sample_name',
+        );
+        ok($sample, 'create sample') or die;
+        $library = Genome::Library->create(
+            name => $sample->name.'-lib1',
+            sample => $sample,
+        );
+        ok($library, 'create library');
+    }
+    
+    my $cmd = Genome::InstrumentData::Command::Import::Bam->create(
+            original_data_path=>'/gscuser/boberkfe/input_rg.bam',
+            sample=>$sample->id,
+            library=>$library->id,
+            target_region=>'none',
+            sequencing_platform=>'solexa');
+          
+    ok($cmd->execute, 'imported a bam'); 
+    my $instrument_data=$cmd->_inst_data; 
+
+    ok($instrument_data, 'create imported instrument data: '.$instrument_data->id);
+
+    return $instrument_data;
 }

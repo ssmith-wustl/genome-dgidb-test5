@@ -20,7 +20,7 @@ class Genome::Model::SomaticVariation::Command::DetectVariants{
     ],
     has_param => [
         lsf_queue => {
-            default => 'apipe',
+            default => 'workflow',
         },
     ],
 };
@@ -79,7 +79,7 @@ sub execute{
         die $self->error_message("Failed to execute detect variants dispatcher(err:$@) with params:\n".Data::Dumper::Dumper \%params);
     }
     else {
-        my @results = $command->results;
+        my @results = $command->results, $command->lq_results;
         for my $result (@results) {
             $result->add_user(user => $build, label => 'uses');
         }

@@ -354,6 +354,17 @@ sub _filter_variants {
         Carp::confess 'Could not execute breakdancer split file command!' unless defined $rv and $rv == 1;
 
         my @use_chr_list = $self->_use_chr_list;
+        unless(@use_chr_list) {
+            #squaredancer includes a header even when no results, so the -z above doesn't catch this case
+            $self->warning_message('0 size of breakdancer input (excluding header): '.$variant_file.'.');
+            my $pass_out = $self->pass_output;
+            `touch $pass_out`;
+            my @output_files = map{$self->_temp_staging_directory .'/'.$self->_variant_type.'.merge.'.$_}qw(file out fasta);
+            `touch @output_files`;
+            return 1;
+        }
+        
+        
         my $skip_libs    = $self->skip_libraries || $self->_get_skip_libs;
 
         $self->status_message("Creating workflow to parallelize by chromosome");
@@ -727,8 +738,10 @@ sub _get_sr_dirs {
     my %sr_dirs;
 
     for my $chr_name (@use_chr_list) {
-        my $sr_params = $self->params_for_result;
+        my $sr_params = $self->params_for_filter_result;
         $sr_params->{chromosome_list} = $chr_name;
+        delete $sr_params->{filter_version};
+
         my $sr = Genome::Model::Tools::DetectVariants2::Result::Filter->get(%$sr_params);
         unless ($sr) {
             $self->error_message('Failed to find software result for chromosome '.$chr_name);
@@ -1115,9 +1128,9 @@ sub _create_bed_file {
     return 1;
 }
 
-sub params_for_result {
+sub params_for_filter_result {
     my $self = shift;
-    my ($params) = $self->SUPER::params_for_result;
+    my ($params) = $self->SUPER::params_for_filter_result;
 
     $params->{chromosome_list} = $self->specify_chr;
     return $params;

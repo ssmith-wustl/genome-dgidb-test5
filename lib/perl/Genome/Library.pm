@@ -69,10 +69,17 @@ class Genome::Library {
             doc => 'ID of the sample\'s source' 
         },
         models => {
+            is => 'Genome::Model',
             via => 'sample',
-            is_many => 1,
             to => 'models',
+            is_many => 1,
         },
+        instrument_data => {
+            is => 'Genome::InstrumentData',
+            reverse_as => 'library',
+            is_many => 1,
+        },
+        # what is this??? -ss
         protocol_name           => { is_transient => 1, is => 'Text', },
     ],
     table_name => 'FRAGMENT_LIBRARY',

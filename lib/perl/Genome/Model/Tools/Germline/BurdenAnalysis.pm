@@ -14,7 +14,8 @@ class Genome::Model::Tools::Germline::BurdenAnalysis {
     phenotype_file => { is => 'Text', doc => "Phenotype File" },
     marker_file => { is => 'Text', doc => "List of mutations in MAF format" },
     project_name => { is => 'Text', doc => "The name of the project" },
-    base_R_commands => { is => 'Text', doc => "The base R command library", default => '/gscuser/qzhang/ASMS/rarelib20111003.R' },
+#    base_R_commands => { is => 'Text', doc => "The base R command library", default => '/gsc/scripts/opt/genome/current/pipeline/lib/perl/Genome/Model/Tools/Germline/BurdenAnalysis.R' },
+    base_R_commands => { is => 'Text', doc => "The base R command library", default => '~/git-dir/Genome/Model/Tools/Germline/BurdenAnalysis.R' },
     output_file => { is => 'Text', doc => "Results of the Burden Analysis" },
   ],
 };
@@ -84,25 +85,19 @@ sub execute {                               # replace with real execution logic.
     my @pheno_headers = split(/\t/, $pheno_header);
     my $subject_column_header = $pheno_headers[0];
 
-#    while(my $line = $inFh->getline ) {
-#        chomp($line);
-#        my ($chr, $pos, $id, $ref, $alt, $qual, $filter, $info, $format, @sample_data) = split(/\t/, $line);
-#    }
+    #make .R file
+    my ($tfh_R_option,$R_path_option) = Genome::Sys->create_temp_file;
+    unless($tfh_R_option) {
+        $self->error_message("Unable to create temporary file $!");
+        die;
+    }
+    $R_path_option =~ s/\:/\\\:/g;
 
+    my $temp_path_output = Genome::Sys->create_temp_directory;
+    $temp_path_output =~ s/\:/\\\:/g;
 
-        #make .R file
-        my ($tfh_R_option,$R_path_option) = Genome::Sys->create_temp_file;
-        unless($tfh_R_option) {
-            $self->error_message("Unable to create temporary file $!");
-            die;
-        }
-        $R_path_option =~ s/\:/\\\:/g;
-
-        my $temp_path_output = Genome::Sys->create_temp_directory;
-        $temp_path_output =~ s/\:/\\\:/g;
-
-        #-------------------------------------------------
-        my $R_command_option = <<"_END_OF_R_";
+    #-------------------------------------------------
+    my $R_command_option = <<"_END_OF_R_";
 out.dir="$temp_path_output"
 if (!file.exists(out.dir)==T) dir.create(out.dir)
 
@@ -122,17 +117,15 @@ permun=10000
 read.table(marker.file,sep="\t")->m
 read.table(genotype.file,header=T,sep="\t")->x
 read.table(phenotype.file,header=T,sep="\t")->y
-names(m)[c(1,4,16)]=c("variant","gene_name","trv_type")
-gsub("chr","X",m[,vid])->m[,vid]
-gsub("[:]","_",m[,vid])->m[,vid]
-gsub("[/]","_",m[,vid])->m[,vid]
+names(m)[c(1,8,15)]=c("variant","gene_name","trv_type")
+#gsub("chr","X",m[,vid])->m[,vid] #changed Vasily annotation to our variant names
+#gsub("[:]","_",m[,vid])->m[,vid] #changed Vasily annotation to our variant names
+#gsub("[/]","_",m[,vid])->m[,vid] #changed Vasily annotation to our variant names
 
-#save(x,y,m,file="asms20111003.rdata")
-#(load("asms20111003.rdata"))
-
-m=m[ !(m\$trv_type \%in% c("coding-synon","intron")), ]
+m=m[ !(m\$trv_type \%in\% c("silent","intronic")), ]
 gsub(" variant protein","",as.character(m\$gene_name))->m\$gene_name
-#coding-synon       intron     missense     nonsense        utr-3        utr-5
+#coding-synon       intron     missense     nonsense        utr-3        utr-5 #####################Vasily annotation options
+#frame_shift_del    frame_shift_ins    in_frame_del    in_frame_ins    missense    nonsense    nonstop    silent    splice_site    splice_site_del    splice_site_ins    -    3_prime_flanking_region    3_prime_untranslated_region    5_prime_flanking_region    5_prime_untranslated_region    intronic    splice_region    #####################WU annotation options
 
 for (i in c(2:ncol(x))) {if (class(x[,i])!="integer")  {x[,i]=as.integer(as.character(x[,i]))} }
 
@@ -145,30 +138,30 @@ rowSums(is.na(x1[,cid]))/ncol(x1[,cid])==0 -> rid
 x=x[rid,c(TRUE,cid)]
 dim(x)
 _END_OF_R_
-        #-------------------------------------------------
+    #-------------------------------------------------
 
-        print $tfh_R_option "$R_command_option\n";
+    print $tfh_R_option "$R_command_option\n";
 
-        my $cmd_option = "R --vanilla --slave \< $R_path_option";
-        my $return_option = Genome::Sys->shellcmd(
-            cmd => "$cmd_option",
-        );
-        unless($return_option) { 
-            $self->error_message("Failed to execute: Returned $return_option");
-            die $self->error_message;
-        }
+    my $cmd_option = "R --vanilla --slave \< $R_path_option";
+    my $return_option = Genome::Sys->shellcmd(
+        cmd => "$cmd_option",
+    );
+    unless($return_option) { 
+        $self->error_message("Failed to execute: Returned $return_option");
+        die $self->error_message;
+    }
 
 
-        #make .R file
-        my ($tfh_R_project,$R_path_project) = Genome::Sys->create_temp_file;
-        unless($tfh_R_project) {
-            $self->error_message("Unable to create temporary file $!");
-            die;
-        }
-        $R_path_project =~ s/\:/\\\:/g;
+    #make .R file
+    my ($tfh_R_project,$R_path_project) = Genome::Sys->create_temp_file;
+    unless($tfh_R_project) {
+        $self->error_message("Unable to create temporary file $!");
+        die;
+    }
+    $R_path_project =~ s/\:/\\\:/g;
 
-        #-------------------------------------------------
-        my $R_command_project = <<"_END_OF_R_";
+    #-------------------------------------------------
+    my $R_command_project = <<"_END_OF_R_";
 
 
 source("$R_path_option")
@@ -178,12 +171,6 @@ trait=commandArgs()[3]
 gene=commandArgs()[4]
 
 #[688] "bsub 'R --no-save < asms.R diares DYNC2LI1 '"
-#[689] "bsub 'R --no-save < asms.R diares ABCG5 '"
-#[690] "bsub 'R --no-save < asms.R diares ABCG8 '"
-#[691] "bsub 'R --no-save < asms.R diares LRPPRC '"
-#[692] "bsub 'R --no-save < asms.R diares LPL '"
-#trait="diares";gene="ABCA1"
-#trait="tgres";gene="SLC35C1"
 
 
 ########################################## functions
@@ -211,7 +198,7 @@ if (length(xs)>1)
 {
 
 xs=gsub("-",".",xs)
-xy=merge(y[,c(psubid,trait)],x[,colnames(x) %in% c(gsubid,xs)], by.x=psubid,by.y=gsubid)
+xy=merge(y[,c(psubid,trait)],x[,colnames(x) \%in\% c(gsubid,xs)], by.x=psubid,by.y=gsubid)
 xs=intersect(xs,colnames(xy))
 xy=xy[!is.na(xy[,trait]),]
 
@@ -242,30 +229,78 @@ if (!is.null(rst)) save(rst,file=paste(out.dir,"/",trait,"_",gene,"_",".rdata",s
 
 }
 _END_OF_R_
-        #-------------------------------------------------
+    #-------------------------------------------------
 
-        print $tfh_R_project "$R_command_project\n";
+    print $tfh_R_project "$R_command_project\n";
 
-        my $cmd_project = "R --vanilla --slave \< $R_path_project";
-        my $return_project = Genome::Sys->shellcmd(
-            cmd => "$cmd_project",
-        );
-        unless($return_project) { 
-            $self->error_message("Failed to execute: Returned $return_project");
-            die $self->error_message;
-        }
+    my $cmd_project = "R --vanilla --slave \< $R_path_project";
+    my $return_project = Genome::Sys->shellcmd(
+        cmd => "$cmd_project",
+    );
+    unless($return_project) { 
+        $self->error_message("Failed to execute: Returned $return_project");
+        die $self->error_message;
+    }
+
+    #make .R file
+    my ($tfh_R_bsub,$R_path_bsub) = Genome::Sys->create_temp_file;
+    unless($tfh_R_bsub) {
+        $self->error_message("Unable to create temporary file $!");
+        die;
+    }
+    $R_path_bsub =~ s/\:/\\\:/g;
+
+    #-------------------------------------------------
+    my $R_command_bsub = <<"_END_OF_R_";
+source("$R_path_option")
+
+gs=unique(m\$gene_name)
+ys=unique(colnames(y)); ys=ys[ys!=psubid]
+
+cmd=NULL
+outs=dir(out.dir)
+for (yi in ys) {
+for (gi in gs) {
+
+if (length(grep(paste(yi,gi,sep="_"),outs))==0)
+{
+cmd=c(cmd,paste("bsub 'R --no-save < $R_path_project",yi,gi,"'"))
+}
+
+}}
 
 
-        #make .R file
-        my ($tfh_R_summary,$R_path_summary) = Genome::Sys->create_temp_file;
-        unless($tfh_R_summary) {
-            $self->error_message("Unable to create temporary file $!");
-            die;
-        }
-        $R_path_summary =~ s/\:/\\\:/g;
+for (i in 1:length(cmd))
+{
+print(cmd[i])
+print(paste(i,"of",length(cmd),"submitted") )
+system(cmd[i])
+}
+_END_OF_R_
+    #-------------------------------------------------
 
-        #-------------------------------------------------
-        my $R_command_summary = <<"_END_OF_R_";
+    print $tfh_R_bsub "$R_command_bsub\n";
+
+    my $cmd_bsub = "R --vanilla --slave \< $R_path_bsub";
+    my $return_bsub = Genome::Sys->shellcmd(
+        cmd => "$cmd_bsub",
+    );
+    unless($return_bsub) { 
+        $self->error_message("Failed to execute: Returned $return_bsub");
+        die $self->error_message;
+    }
+
+
+    #make .R file
+    my ($tfh_R_summary,$R_path_summary) = Genome::Sys->create_temp_file;
+    unless($tfh_R_summary) {
+        $self->error_message("Unable to create temporary file $!");
+        die;
+    }
+    $R_path_summary =~ s/\:/\\\:/g;
+
+    #-------------------------------------------------
+    my $R_command_summary = <<"_END_OF_R_";
 in.dir="$temp_path_output"
 dir(in.dir)->fs
 
@@ -377,70 +412,18 @@ barplot(xj,main=paste(ci,mts[j]),cex.main=2,horiz=F,ylim=c(0,3.5))
 dev.off()
 }
 _END_OF_R_
-        #-------------------------------------------------
+    #-------------------------------------------------
 
-        print $tfh_R_summary "$R_command_summary\n";
+    print $tfh_R_summary "$R_command_summary\n";
 
-        my $cmd_summary = "R --vanilla --slave \< $R_path_summary";
-        my $return_summary = Genome::Sys->shellcmd(
-            cmd => "$cmd_summary",
-        );
-        unless($return_summary) { 
-            $self->error_message("Failed to execute: Returned $return_summary");
-            die $self->error_message;
-        }
-
-
-        #make .R file
-        my ($tfh_R_bsub,$R_path_bsub) = Genome::Sys->create_temp_file;
-        unless($tfh_R_bsub) {
-            $self->error_message("Unable to create temporary file $!");
-            die;
-        }
-        $R_path_bsub =~ s/\:/\\\:/g;
-
-        #-------------------------------------------------
-        my $R_command_bsub = <<"_END_OF_R_";
-source("option.R")
-
-gs=unique(m\$gene_name)
-ys=unique(colnames(y)); ys=ys[ys!=psubid]
-
-cmd=NULL
-outs=dir(out.dir)
-for (yi in ys) {
-for (gi in gs) {
-
-if (length(grep(paste(yi,gi,sep="_"),outs))==0)
-{
-cmd=c(cmd,paste("bsub 'R --no-save < asms20111003.R",yi,gi,"'"))
-}
-
-}}
-
-
-for (i in 1:length(cmd))
-{
-print(cmd[i])
-print(paste(i,"of",length(cmd),"submitted") )
-system(cmd[i])
-}
-_END_OF_R_
-        #-------------------------------------------------
-
-        print $tfh_R_bsub "$R_command_bsub\n";
-
-        my $cmd_bsub = "R --vanilla --slave \< $R_path_bsub";
-        my $return_bsub = Genome::Sys->shellcmd(
-            cmd => "$cmd_bsub",
-        );
-        unless($return_bsub) { 
-            $self->error_message("Failed to execute: Returned $return_bsub");
-            die $self->error_message;
-        }
-
-
-
+    my $cmd_summary = "R --vanilla --slave \< $R_path_summary";
+    my $return_summary = Genome::Sys->shellcmd(
+        cmd => "$cmd_summary",
+    );
+    unless($return_summary) { 
+        $self->error_message("Failed to execute: Returned $return_summary");
+        die $self->error_message;
+    }
 
 
 

@@ -183,8 +183,8 @@ sub execute
     }
     else
     {
-        $phd_object = Genome::Model::Tools::Pcap::PhdDB->new;
-        #$self->error_message("Need to either have a ../phd_dir or a phdball file named ../phdball_dir/phd.ball.1") and return;
+        $self->error_message("Need to either have a ../phd_dir or a phdball file named ../phdball_dir/phd.ball.1");
+        return;
     }    
     my $ct = Genome::Model::Tools::Pcap::ContigTools->new;
 

@@ -372,7 +372,7 @@ sub subject_summary {
         #  on how to handle per-sample data, when per-instrument-data data is unavailable
         my $index = (map{$_->index_sequence}$model->instrument_data)[0];
         my $pool = Genome::Model::Command::Services::AssignQueuedInstrumentData->_resolve_pooled_sample_name_for_instrument_data((),$model->instrument_data);
-        my $libraries = join(',', map{$_->name} grep{$_->name !~ /microarraylib/} $model->subject->libraries);
+        my $libraries = $build->instrument_data->library->name;
 
         #add model->instrument_data->lane
         print $fh join("\t", (
@@ -502,21 +502,21 @@ sub create_model_metrics_for_qc_data {
         my $build = $model->last_succeeded_build;
         my %metrics = map{$_->name,$_->value}$build->metrics;
 
-        $build->add_metric(name => 'snps_called', value => $values[1]);
-        $build->add_metric(name => 'with_genotype', value => $values[2]);
-        $build->add_metric(name => 'met_min_depth', value => $values[3]);
-        $build->add_metric(name => 'reference', value => $values[4]);
-        $build->add_metric(name => 'ref_match', value => $values[5]);
-        $build->add_metric(name => 'ref_was_het', value => $values[6]);
-        $build->add_metric(name => 'ref_was_hom', value => $values[7]);
-        $build->add_metric(name => 'variant', value => $values[8]);
-        $build->add_metric(name => 'var_match', value => $values[9]);
-        $build->add_metric(name => 'hom_was_het', value => $values[10]);
-        $build->add_metric(name => 'het_was_hom', value => $values[11]);
-        $build->add_metric(name => 'var_mismatch', value => $values[12]);
-        $build->add_metric(name => 'var_concordance', value => $values[13]);
-        $build->add_metric(name => 'rare_hom_concordance', value => $values[14]);
-        $build->add_metric(name => 'overall_concordance', value => $values[15]);
+        $build->add_metric(name => 'snps_called', value => $values[1] || 0);
+        $build->add_metric(name => 'with_genotype', value => $values[2] || 0);
+        $build->add_metric(name => 'met_min_depth', value => $values[3] || 0);
+        $build->add_metric(name => 'reference', value => $values[4] || 0);
+        $build->add_metric(name => 'ref_match', value => $values[5] || 0);
+        $build->add_metric(name => 'ref_was_het', value => $values[6] || 0);
+        $build->add_metric(name => 'ref_was_hom', value => $values[7] || 0);
+        $build->add_metric(name => 'variant', value => $values[8] || 0);
+        $build->add_metric(name => 'var_match', value => $values[9] || 0);
+        $build->add_metric(name => 'hom_was_het', value => $values[10] || 0);
+        $build->add_metric(name => 'het_was_hom', value => $values[11] || 0);
+        $build->add_metric(name => 'var_mismatch', value => $values[12] || 0);
+        $build->add_metric(name => 'var_concordance', value => $values[13] || 0);
+        $build->add_metric(name => 'rare_hom_concordance', value => $values[14] || 0);
+        $build->add_metric(name => 'overall_concordance', value => $values[15] || 0);
     }
 }
 

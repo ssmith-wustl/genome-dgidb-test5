@@ -11,6 +11,7 @@ class Genome::InstrumentData::454 {
         sequencing_platform => { value => '454' },
     ],
     has_optional => [
+        sff_file => { is_attribute => 1, },
         beads_loaded => {
             via => 'attributes',
             to => 'attribute_value',
@@ -118,19 +119,6 @@ class Genome::InstrumentData::454 {
             to => 'attribute_value',
             where => [ attribute_label => 'paired_end' ],
             is_mutable => 1,
-        },
-        # TODO Need to refactor these objects away
-        run_region_454 => {
-            is => 'GSC::RunRegion454',
-            calculate_from => ['region_id'],
-            calculate => q| GSC::RunRegion454->get($region_id); |,
-            doc => '454 Run Region from LIMS.',
-        },
-        region_index_454 => {
-            is => 'GSC::RegionIndex454',
-            calculate_from => ['id'],
-            calculate => q| GSC::RegionIndex454->get($id); |,
-            doc => 'Region Index 454 from LIMS.',
         },
     ],
     has_optional_transient => [
@@ -279,110 +267,10 @@ sub _run_sffinfo {
     return $file;
 }
 
-#< SFF >#
-sub sff_file {
-    # FIXME this was updated, but legacy code automatically dumped the region
-    #  sff if it didn't exist
-    my $self = shift;
-
-    # Use the region index first.
-    my $region_index_454 = $self->region_index_454;
-    # If the region index has an index sequence, it's indexed. Use its sff file
-    if ( $region_index_454 and $region_index_454->index_sequence ) {
-        my $sff_file_object = $region_index_454->get_index_sff;
-        return unless $sff_file_object;
-        return $sff_file_object->stringify;
-        # get_index_sff does 2 checks:
-        #  is there an index sequence?  we know this is true here
-        #  are there reads?
-        #  If there aren't any reads, this method reurns undef, and that is ok.
-        #  If there are reads, the sff file should exist. If it doesn't, it dies
-    }
-
-    # If no index sequence, this is the 'parent' region
-    my $sff_file;
-    eval {
-        $sff_file = $self->run_region_454->sff_filesystem_location_string;
-    };
-
-    # It this is defined, the file should exist
-    return $sff_file if defined $sff_file;
-
-    # Check if it is dumped
-    my $disk_allocation = Genome::Disk::Allocation->get(
-        owner_id => $self->id,
-        owner_class_name => $self->class,
-    );
-    if ( $disk_allocation ) {
-        $sff_file = $disk_allocation->absolute_path.'/'.$self->id.'.sff';
-        return $sff_file if -s $sff_file;
-    }
-
-    # Gotta dump...lock, creat allocation (if needed), dump, unlock
-    # lock
-    my $lock_id = '/gsc/var/lock/inst_data_454/'.$self->id;
-    my $lock = Genome::Sys->lock_resource(
-        resource_lock => $lock_id, 
-        max_try => 1,
-    );
-    unless ( $lock ) {
-        $self->error_message(
-            "Failed to get a lock for 454 instrument data ".$self->id.". This means someone|thing else is already attempting to dump the sff file. Please wait a moment, and try again. If you think that this model is incorrectly locked, please put a ticket into the apipe support queue."
-        );
-        return;
-    }
-
-    # create disk allocation if needed
-    unless ( $disk_allocation ) {
-        $disk_allocation = Genome::Disk::Allocation->allocate(
-            disk_group_name => 'info_alignments',
-            allocation_path => '/instrument_data/454_'.$self->id,
-            kilobytes_requested => 10240, # 10 Mb TODO
-            owner_class_name => $self->class,
-            owner_id => $self->id
-        );
-        unless ( $disk_allocation ) {
-            Carp::confess(
-                $self->error_message('Failed to create disk allocation for 454 instrument data '.$self->id)
-            );
-        }
-    }
-
-    # dump
-    $sff_file = $disk_allocation->absolute_path.'/'.$self->id.'.sff';
-    unless ( $self->run_region_454->dump_sff(filename => $sff_file) ) {
-        $self->error_message('Failed to dump sff file to '. $sff_file.' for 454 instrument data '.$self->id);
-        return;
-    }
-    unless ( -s $sff_file ) {
-        $self->error_message("Successfully dumped sff from run region 454, but sff file ($sff_file) is empty for 454 instrument data ".$self->id);
-        return;
-    }
-
-    # unlock
-    my $unlock = Genome::Sys->unlock_resource(
-        resource_lock => $lock_id,
-    );
-    unless ( $unlock ) {
-        $self->error_message('Failed to unlock resource '. $self->id);
-        return;
-    }
-
-    return $sff_file;
-}
-#<>#
-
 #< Run Info >#
 sub run_identifier {
-my $self = shift;
-
-my $ar_454 = $self->run_region_454->get_analysis_run_454;
-
-my $pse = GSC::PSE->get($ar_454->pse_id);
-my $loadpse = $pse->get_load_pse;
-my $barcode = $loadpse->picotiter_plate;
-
-return $barcode->barcode->barcode;
+    my $self = shift;
+    return sprintf('%s.%s%s', $self->run_name, $self->region_number, ( $self->index_sequence ? '-'.$self->index_sequence : '' ));
 }
 
 sub run_start_date_formatted {

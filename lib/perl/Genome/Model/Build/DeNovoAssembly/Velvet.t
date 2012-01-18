@@ -22,7 +22,7 @@ use_ok('Genome::Model::Build::DeNovoAssembly::Velvet') or die;
 my $base_dir = '/gsc/var/cache/testsuite/data/Genome-Model/DeNovoAssembly';
 my $archive_path = $base_dir.'/inst_data/-7777/archive.tgz';
 ok(-s $archive_path, 'inst data archive path') or die;
-my $example_dir = $base_dir.'/velvet_v10';
+my $example_dir = $base_dir.'/velvet_v15';
 ok(-d $example_dir, 'example dir') or die;
 my $tmpdir = File::Temp::tempdir(CLEANUP => 1);
 
@@ -125,6 +125,9 @@ my $prepare = Genome::Model::Event::Build::DeNovoAssembly::PrepareInstrumentData
 ok($prepare, 'create prepare instrument data');
 $prepare->dump_status_messages(1);
 ok($prepare->execute, 'execute prepare instrument data');
+is($build->reads_attempted, 30000, 'reads attempted');
+is($build->reads_processed, 25000, 'reads processed');
+is($build->reads_processed_success, .833, 'reads processed success');
 
 @existing_assembler_input_files = $build->existing_assembler_input_files;
 is(@existing_assembler_input_files, 1, 'assembler input files exist');
@@ -194,45 +197,54 @@ foreach my $file_name (qw/
     is(File::Compare::compare($file, $example_file), 0, "$file_name files match");
 }
 
-# METRICS TODO
-my $metrics = Genome::Model::Event::Build::DeNovoAssembly::Report->create( build => $build, model => $model );
-ok( $metrics, 'Created report' );
-ok( $metrics->execute, 'Executed report' );
-#check stats file
-ok( -s $example_build->stats_file, 'Example build stats file exists' );
-ok( -s $build->stats_file, 'Test created stats file' );
+# Report and Metrics
+my $report = Genome::Model::Event::Build::DeNovoAssembly::Report->create( build => $build, model => $model );
+ok( $report, 'Created report' );
+$report->dump_status_messages(1);
+ok( $report->execute, 'Executed report' );
+ok(-s $build->reports_directory.'/Summary/report.html', 'create summary html');
+ok( -s $build->stats_file, 'created stats file' );
+ok( -s $example_build->stats_file, 'example build stats file exists' );
 is(File::Compare::compare($example_build->stats_file,$build->stats_file), 0, 'Stats files match' );
-#check build metrics
+#print 'gvimdiff '.join(' ', $example_build->stats_file,$build->stats_file)."\n"; <STDIN>;
 my %expected_metrics = (
-    'n50_supercontig_length' => '141',
-    'reads_processed_success' => '0.833',
+    'assembly_length' => 354779,
+    'contigs_average_length' => 146,
+    'contigs_count' => 2424,
+    'contigs_length' => 354779,
+    'contigs_major_average_length' => 0,
+    'contigs_major_count' => 0,
+    'contigs_major_length' => 0,
+    'contigs_major_n50_count' => 0,
+    'contigs_major_n50_length' => 0,
+    'contigs_n50_count' => 1013,
+    'contigs_n50_length' => 141,
+    'insert_size' => '260',
+    'genome_size' => '4500000',
+    'major_contig_threshold' => '500',
+    'reads_assembled' => 7460,
+    'reads_assembled_duplicate' => 1,
     'reads_assembled_success' => '0.298',
-    'reads_assembled' => '7459',
-    'average_read_length' => '90',
     'reads_attempted' => 30000,
-    'average_insert_size_used' => '260',
-    'n50_contig_length' => '141',
-    'genome_size_used' => '4500000',
-    'reads_not_assembled_pct' => '0.702',
-    'supercontigs' => '2424',
-    'average_supercontig_length' => '146',
-    'contigs' => '2424',
-    'n50_supercontig_length_gt_500' => '0',
-    'n50_contig_length_gt_500' => '0',
-    'major_contig_length' => '500',
-    'average_contig_length' => '146',
-    'average_supercontig_length_gt_500' => '0',
-    'average_contig_length_gt_500' => '0',
-    'reads_processed' => '25000',
-    'assembly_length' => '354779',
-    'read_depths_ge_5x' => '1.1'
+    'reads_processed' => 25000,
+    'reads_processed_success' => '0.833',
+    'supercontigs_average_length' => 146,
+    'supercontigs_count' => 2424,
+    'supercontigs_length' => 354779,
+    'supercontigs_major_average_length' => 0,
+    'supercontigs_major_count' => 0,
+    'supercontigs_major_length' => 0,
+    'supercontigs_major_n50_count' => 0,
+    'supercontigs_major_n50_length' => 0,
+    'supercontigs_n50_count' => 1013,
+    'supercontigs_n50_length' => 141,
 );
-for my $metric_name ( keys %expected_metrics ) {
-    ok( $expected_metrics{$metric_name} eq $build->$metric_name, "$metric_name metrics match" );
+my %build_metrics = map { $_->name => $_->value } $build->metrics;
+for my $metric_name ( $build->metric_names ) {
+    is($build_metrics{$metric_name}, $expected_metrics{$metric_name}, "$metric_name matches" );
 }
 
 #print $build->data_directory."\n"; <STDIN>;
-
 done_testing();
 exit;
 
