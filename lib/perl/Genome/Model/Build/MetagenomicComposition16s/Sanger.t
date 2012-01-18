@@ -120,12 +120,9 @@ is($build->calculate_estimated_kb_usage, 30000, 'Estimated kb usage');
 my $existing_build_dir = '/gsc/var/cache/testsuite/data/Genome-Model/MetagenomicComposition16sSanger/build';
 ok(-d $existing_build_dir, 'existing build dir exists');
 ok($build->create_subdirectories, 'created subdirectories');
-for my $subdir ( $build->sub_dirs ) {
-    my $method = $subdir;
-    $method .= '_dir' if $subdir !~ /_dir$/;
-    my $dir = $build->$method;
-    is($dir, $build->data_directory.'/'.$subdir, "$method is correct");
-    ok(-d $dir, "$method was created");
+for my $subdir (qw/ chromat_dir edit_dir /) {
+    my $dir = $build->$subdir;
+    ok(-d $dir, "$subdir was created");
 }
 
 # file base
