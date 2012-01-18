@@ -25,6 +25,5 @@ isa_ok($command, 'Genome::DruggableGene::Command::GeneNameReport::LookupInteract
 ok($command->execute, 'Successfully excuted lookup interactions command');
 
 system("sort $output_file -o $output_file");
-$DB::single = 1; #TODO: remove me
 my $output = `diff $test_output_file $output_file`;
 ok(!$output, 'Command output and expected output are identical');
