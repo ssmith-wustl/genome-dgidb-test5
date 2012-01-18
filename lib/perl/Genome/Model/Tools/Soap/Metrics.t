@@ -18,6 +18,7 @@ my $metrics_file = $temp_dir.'/metrics.txt';
 
 my $metrics = Genome::Model::Tools::Soap::Metrics->create(
     assembly_directory => $data_dir,
+    major_contig_length => 300,
     output_file => $metrics_file,
 );
 ok($metrics, "create") or die;
