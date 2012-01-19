@@ -67,7 +67,7 @@ ok(-s $instrument_data->dump_fasta_file, 'fasta file');
 ok(-s $instrument_data->dump_sanger_fastq_files, 'fastq file');
 
 # pp MC16s-WashU-454-RDP2.1
-my $pp = Genome::ProcessingProfile->get(2278045);
+my $pp = Genome::ProcessingProfile->get(2678723);
 ok($pp, 'got 454 pp') or die;
 
 # model
@@ -91,7 +91,7 @@ ok($build->get_or_create_data_directory, 'resolved data dir');
 my $example_build = Genome::Model::Build->create(
     model=> $model,
     id => -2288,
-    data_directory => '/gsc/var/cache/testsuite/data/Genome-Model/MetagenomicComposition16s454/build_v2',
+    data_directory => '/gsc/var/cache/testsuite/data/Genome-Model/MetagenomicComposition16s454/build_v3.2chimeras', # start w/ 2 chimeras
 );
 ok($example_build, 'example build') or die;
 
@@ -149,11 +149,29 @@ is($build->reads_attempted, 20, 'reads attempted is 20');
 is($build->reads_processed, 14, 'reads processed is 14');
 is($build->reads_processed_success, '0.70', 'reads processed success is 0.70');
 
+#< DETECT CHIMERAS ># this is not deterministic!
+ok($build->detect_and_remove_chimeras, 'detect and remove chimeras');
+my $amplicons_chimeric = 2;
+if ( $build->amplicons_chimeric == 3 ) { # switch to 3 chimeras if necessary
+    $example_build->data_directory('/gsc/var/cache/testsuite/data/Genome-Model/MetagenomicComposition16s454/build_v3.3chimeras');
+    $amplicons_chimeric = 3;
+}
+for ( my $i = 0; $i < @amplicon_sets; $i++ ) { 
+    ok(-s $amplicon_sets[$i]->chimera_file, 'chimera file');
+    is(File::Compare::compare($amplicon_sets[$i]->chimera_free_fasta_file, $example_amplicon_sets[$i]->chimera_free_fasta_file), 0, 'chimera free fasta file matches',);
+    is(File::Compare::compare($amplicon_sets[$i]->chimera_free_qual_file, $example_amplicon_sets[$i]->chimera_free_qual_file), 0, 'chimera free qaul file matches',);
+}
+# metrics
+is($build->amplicons_processed, 14, 'amplicons processed is 14');
+is($build->amplicons_chimeric, $amplicons_chimeric, 'amplicons chimeric is '.$amplicons_chimeric);
+my $chimeric_pct = sprintf('%.2f', $build->amplicons_chimeric / $build->amplicons_processed);
+is($build->amplicons_chimeric_percent, $chimeric_pct, 'amplicons chimeric percent is '.$chimeric_pct);
+
 #< CLASSIFY >#
 ok($build->classify_amplicons, 'classify amplicons');
-is($build->amplicons_classified, '14', 'amplicons classified');
-is($build->amplicons_classified_success, '1.00', 'amplicons classified success');
-is($build->amplicons_classification_error, 0, 'amplicons classified error');
+is($build->amplicons_classified, $build->amplicons_processed, 'amplicons classified matches processed: '.$build->amplicons_processed);
+is($build->amplicons_classified_success, '1.00', 'amplicons classified success is 1.00');
+is($build->amplicons_classification_error, 0, 'amplicons classified error is 0');
 
 #< ORIENT >#
 ok($build->orient_amplicons, 'orient amplicons');
@@ -162,7 +180,7 @@ ok($build->orient_amplicons, 'orient amplicons');
 for ( my $i = 0; $i < @amplicon_sets; $i++ ) { 
     # name
     my $set_name = $amplicon_sets[$i]->name;
-    is($set_name, $standards[$i]->{name}, 'amplicon set name');
+    is($set_name, $example_amplicon_sets[$i]->{name}, 'amplicon set name');
     # fastas
     for my $type (qw/ processed oriented /) {
         my $method = $type.'_fasta_file';
@@ -188,14 +206,14 @@ for ( my $i = 0; $i < @amplicon_sets; $i++ ) {
     );
     ok($diff_ok, 'diff rdp files');
     # amplicons
-    my @amplicon_names;
     while ( my $amplicon = $amplicon_sets[$i]->next_amplicon ) {
+        my $example_amplicon = $example_amplicon_sets[$i]->next_amplicon;
+        is($amplicon->{name}, $example_amplicon->{name}, 'matches example amplicon');
         ok($amplicon->{classification}, $amplicon->{name}.' has a classification');
         is($amplicon->{classification}->[0], $amplicon->{name}, 'classification name matches');
         is($amplicon->{classification}->[1], '-', 'is complemented');
-        push @amplicon_names, $amplicon->{name};
+        is_deeply([@{$amplicon->{classification}}[0..6]], [@{$example_amplicon->{classification}}[0..6]], 'classification matches');
     }
-    is_deeply(\@amplicon_names, $standards[$i]->{amplicons}, "amplicons match for $set_name");
 }
 
 ok($build->perform_post_success_actions, 'perform post success actions');
