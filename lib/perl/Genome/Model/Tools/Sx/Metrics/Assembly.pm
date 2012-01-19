@@ -72,6 +72,8 @@ class Sx::Metrics::Assembly {
                 contigs_minor_average_length
                 contigs_minor_n50_count
                 contigs_minor_n50_length
+                contigs_minor_read_count
+                contigs_minor_read_percent
                 contigs_major_average_length
                 contigs_major_count
                 contigs_major_length
@@ -142,6 +144,8 @@ class Sx::Metrics::Assembly {
                 supercontigs_minor_average_length
                 supercontigs_minor_n50_count
                 supercontigs_minor_n50_length
+                supercontigs_minor_read_count
+                supercontigs_minor_read_percent
                 supercontigs_major_read_count
                 supercontigs_major_read_percent
                 supercontigs_major_average_length

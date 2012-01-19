@@ -142,7 +142,7 @@ sub _file_for {
 }
 
 sub seq_reader_for {
-    my ($self, $type, $set_name) = @_;
+    my ($self, $type) = @_;
     
     Carp::confess("No type given to get seq reader") unless defined $type;
 
@@ -156,7 +156,7 @@ sub seq_reader_for {
     );
     my $reader =  Genome::Model::Tools::Sx::PhredReader->create(%params);
     if ( not  $reader ) {
-        $self->error_message("Failed to create phred reader for $type fasta file and amplicon set name ($set_name) for ".$self->description);
+        $self->error_message("Failed to create $type seq reader for amplicon set name (".$self->name.')');
         return;
     }
 
@@ -178,7 +178,7 @@ sub seq_writer_for {
         qual_file => $qual_file,
     );
     unless ( $writer ) {
-        $self->error_message("Can't create phred writer for $type fasta file and amplicon set name (".$self->name.')');
+        $self->error_message("Failed to create $type seq writer for amplicon set name (".$self->name.')');
         return;
     }
 

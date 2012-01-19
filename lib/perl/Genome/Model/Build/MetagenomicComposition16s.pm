@@ -650,8 +650,9 @@ sub classify_amplicons {
     my %metrics;
     @metrics{qw/ attempted success error total /} = (qw/ 0 0 0 0 /);
     for my $amplicon_set ( @amplicon_sets ) {
-        my $fasta_file = $amplicon_set->processed_fasta_file;
-        next if not -s $fasta_file;
+        my %inputs = $amplicon_set->amplicon_iterator_input_fasta_and_qual;
+        my $fasta_file = $inputs{file};
+        next if not $fasta_file or not -s $fasta_file;
 
         my $classification_file = $amplicon_set->classification_file;
         unlink $classification_file if -e $classification_file;
