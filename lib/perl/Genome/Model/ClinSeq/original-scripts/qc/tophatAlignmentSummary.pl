@@ -75,7 +75,7 @@ unless ($reference_fasta_file && $tophat_alignment_dir && $reference_annotations
 #Check input directories and files
 $tophat_alignment_dir = &checkDir('-dir'=>$tophat_alignment_dir, '-clear'=>"no");
 if ($clean){
-  $working_dir = &checkDir('-dir'=>$working_dir, '-clear'=>"yes", '-force'=>"yes");
+  $working_dir = &checkDir('-dir'=>$working_dir, '-clear'=>"yes", '-recursive'=>"yes");
 }else{
   $working_dir = &checkDir('-dir'=>$working_dir, '-clear'=>"no");
 }
@@ -181,6 +181,40 @@ my $r_cmd = "$script_dir/qc/tophatAlignmentSummary.R $working_dir";
 if ($verbose){ print YELLOW, "\n\n$r_cmd", RESET };
 system($r_cmd);
 
+
+#Get some basic info from the Tophat stats file and append to the existing Stats.tsv file
+#- Total and percent of total for the following: reads, reads mapped, unmapped reads, multiple hit reads
+open (TOPHAT, "$tophat_stats_file") || die "\n\nCould not open tophat stats file\n\n";
+my $total_reads=1;
+my $unmapped_reads=0;
+my $multimap_reads=0;
+my $mapped_reads=0;
+my $percent_mapped=0;
+my $percent_unmapped=0;
+my $percent_multimap=0;
+while(<TOPHAT>){
+  chomp($_);
+  unless ($_ =~ /^\#/){next();}
+  if ($_ =~ /Total\s+Reads\:\s+(\d+)/){$total_reads=$1;}
+  if ($_ =~ /Unmapped\s+Reads\:\s+(\d+)/){$unmapped_reads=$1;}
+  if ($_ =~ /Multiple\s+Hit\s+Reads\:\s+(\d+)/){$multimap_reads=$1;}
+  if ($_ =~ /Total\s+Reads\s+Mapped\:\s+(\d+)/){$mapped_reads=$1;}
+  $percent_mapped = sprintf("%.2f", (($mapped_reads/$total_reads)*100));
+  $percent_unmapped = sprintf("%.2f", (($unmapped_reads/$total_reads)*100));
+  $percent_multimap = sprintf("%.2f", (($multimap_reads/$total_reads)*100));
+}
+close(TOPHAT);
+
+my $new_stats_file = $working_dir . "summary_stats/Stats.tsv";
+open (STATS, ">>$new_stats_file") || die "\n\nCould not open new Stats.tsv file\n\n";
+print STATS "Total Reads\t$total_reads\tRNA-seq\tAlignments\tCount\tTotal reads used for Tophat alignments\n";
+print STATS "Mapped Reads\t$mapped_reads\tRNA-seq\tAlignments\tCount\tTotal reads with at least one mapping by Tophat\n";
+print STATS "Percent Mapped Reads\t$percent_mapped\tRNA-seq\tAlignments\tPercent\tPercent of reads with at least one mapping by Tophat\n";
+print STATS "MultiMap Reads\t$multimap_reads\tRNA-seq\tAlignments\tCount\tTotal reads with more than one mapping by Tophat\n";
+print STATS "Percent MultiMap Reads\t$percent_multimap\tRNA-seq\tAlignments\tPercent\tPercent of reads with more than one mapping by Tophat\n";
+print STATS "Unmapped Reads\t$unmapped_reads\tRNA-seq\tAlignments\tCount\tTotal reads with NO mappings by Tophat\n";
+print STATS "Percent Unmapped Reads\t$percent_unmapped\tRNA-seq\tAlignments\tPercent\tPercent of reads with NO mappings by Tophat\n";
+close(STATS);
 
 if ($verbose){print "\n\n"};
 
