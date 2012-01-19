@@ -428,7 +428,13 @@ sub files_ignored_by_diff { #all output files .. will differ slightly each time 
 }
 
 sub metrics_ignored_by_diff {
-    return (qw/ assembly_length /);
+    return (qw/
+        assembly_length
+        contigs_count contigs_length contigs_major_average_length contigs_major_count
+        contigs_major_length contigs_major_n50_length contigs_n50_length
+        supercontigs_average_length supercontigs_length supercontigs_major_average_length
+        supercontigs_major_length supercontigs_major_n50_length supercontigs_n50_length
+        /);
 }
 
 sub dirs_ignored_by_diff {
