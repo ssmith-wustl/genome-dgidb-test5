@@ -22,8 +22,12 @@ use Genome;
 class Genome::Model::Tools::Analysis::LaneQc::CompareSnpsResult {
 	is => 'Genome::SoftwareResult::Stageable',
 
-    #TODO: Use class pre-processor to sync the result class and the command class
     has => [
+        output_file   => { is => 'Text' },
+    ],
+
+    #TODO: Use class pre-processor to sync the result class and the command class
+    has_param => [
         verbose       => { is => 'Text', doc => "Turns on verbose output [0]", is_optional => 1},
         min_depth_het => { is => 'Text', doc => "Minimum depth to compare a het call", is_optional => 1, default => 8},
         min_depth_hom => { is => 'Text', doc => "Minimum depth to compare a hom call", is_optional => 1, default => 4},
@@ -37,13 +41,10 @@ class Genome::Model::Tools::Analysis::LaneQc::CompareSnpsResult {
         bam_file        => { is => 'Text', doc => "Alternatively, provide a BAM file", is_optional => 1 },
         sample_name     => { is => 'Text', doc => "Sample Name Used in QC", is_optional => 1 },
         reference_build => { is => 'Text', doc => "36 or 37", is_optional => 1, default => 36},
-        output_file     => { is => 'Text' },
     ],
 };
 
-sub help_brief {                            # keep this to just a few words <---
-    "Compares SAMtools variant calls to array genotypes"
-}
+sub help_brief { "Compares SAMtools variant calls to array genotypes" }
 
 sub help_synopsis {
     return <<EOS
@@ -54,6 +55,15 @@ EOS
 
 sub help_detail { }
 
+sub output_file_name {
+    return 'output';
+}
+
+sub output_file {
+    my $self = shift;
+    return join('/', $self->output_dir, $self->output_file_name);
+}
+
 sub create {
     my $class = shift;
 
@@ -62,11 +72,9 @@ sub create {
 
     my $rv = eval {
         $self->_prepare_staging_directory;
-        $self->output_file($self->temp_staging_directory . '/output');
         $self->_generate_data;
         $self->_prepare_output_directory;
         $self->_promote_data;
-        $self->output_file($self->output_dir . '/output');
         $self->_reallocate_disk_allocation;
         return 1;
     };
@@ -87,7 +95,7 @@ sub create {
 sub _generate_data {
     my $self = shift;
     die 'Command failed' unless Genome::Model::Tools::Analysis::LaneQc::CompareSnps->execute(
-        output_file => $self->output_file,
+        output_file => join('/', $self->temp_staging_directory, $self->output_file_name),
         verbose => $self->verbose,
         min_depth_het => $self->min_depth_het,
         min_depth_hom => $self->min_depth_hom,

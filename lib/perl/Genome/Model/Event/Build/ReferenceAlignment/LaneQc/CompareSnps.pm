@@ -5,6 +5,7 @@ use warnings;
 
 use Genome;
 require File::Path;
+use Cwd;
 
 class Genome::Model::Event::Build::ReferenceAlignment::LaneQc::CompareSnps {
     is => [ 'Genome::Model::Event' ],
@@ -37,6 +38,7 @@ sub execute {
         die $self->error_message("Genotype file missing/empty: $gold2geno_file");
     }
 
+    #TODO: Remove Over-Ambiguous Glob
     my @variant_files = glob($build->variants_directory . '/snv/samtools-*/snvs.hq');
     unless(scalar @variant_files eq 1) {
         die $self->error_message("Could not find samtools output for run.");
@@ -45,6 +47,7 @@ sub execute {
     unless ( -s $variant_file ) {
         die $self->error_message("Variant file missing/empty: $variant_file");
     }
+    $variant_file = Cwd::abs_path($variant_file);
 
     my $result = Genome::Model::Tools::Analysis::LaneQc::CompareSnpsResult->get_or_create(
         genotype_file => $gold2geno_file,
@@ -56,10 +59,7 @@ sub execute {
 
     $result->add_user( user_id => $build->id, user_class_name => $build->class, label => 'uses' );
 
-    $self->status_message("Symlinking:");
-    $self->status_message($result->output_file);
-    $self->status_message($build->compare_snps_file);
-    die unless $result->output_file and $build->compare_snps_file;
+    die 'Missing args for creating symlink' unless $result->output_file and $build->compare_snps_file;
     Genome::Sys->create_symlink_and_log_change($self, $result->output_file, $build->compare_snps_file);
 
     my $metrics_rv = Genome::Model::ReferenceAlignment::Command::CreateMetrics::CompareSnps->execute(
