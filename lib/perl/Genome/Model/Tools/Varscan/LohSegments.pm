@@ -23,6 +23,7 @@ class Genome::Model::Tools::Varscan::LohSegments {
 
     has => [                                # specify the command's single-value properties (parameters) <---
         variant_file     => { is => 'Text', doc => "File containing LOH and Germline calls in VarScan-annotation format" , is_optional => 0, is_input => 1},
+        min_coverage     => { is => 'Text', doc => "Minimum coverage required to include a site" , is_optional => 0, is_input => 1, default => 20},        
         min_freq_for_het     => { is => 'Text', doc => "Minimum variant allele frequency in normal to consider a heterozygote" , is_optional => 0, is_input => 1, default => 40},
         max_freq_for_het     => { is => 'Text', doc => "Maximum variant allele frequency in normal to consider a heterozygote" , is_optional => 0, is_input => 1, default => 60},
         output_basename  => { is => 'Number', doc => "Basename for creating output files", is_optional => 1, is_input => 1, default_value => '0.07'},
@@ -96,16 +97,23 @@ sub execute {                               # replace with real execution logic.
             my @lineContents = split(/\t/, $line);
             my $chrom = $lineContents[0];
             my $pos = $lineContents[1];
+            my $nreads1 = $lineContents[5];
+            my $nreads2 = $lineContents[6];
             my $nfreq = $lineContents[7];
+            my $treads1 = $lineContents[9];
+            my $treads2 = $lineContents[10];
             my $tfreq = $lineContents[11];
             my $status = $lineContents[13];
+
+            my $normal_cov = $nreads1 + $nreads2;
+            my $tumor_cov = $treads1 + $treads2;
             
             $stats{'num_snps'}++;
 
             $nfreq =~ s/\%//;
             $tfreq =~ s/\%//;
             
-            if($nfreq >= $min_freq_for_het && $nfreq <= $max_freq_for_het)
+            if($normal_cov >= $self->min_coverage && $tumor_cov >= $self->min_coverage && $nfreq >= $min_freq_for_het && $nfreq <= $max_freq_for_het)
             {
                 $stats{'num_het'}++;
                 print OUTFILE join("\t", $chrom, $pos, $nfreq, $tfreq, $status) . "\n";

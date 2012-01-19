@@ -25,17 +25,18 @@ my $cmd = Genome::Model::Tools::ChimeraSlayer::DetectChimeras->create(
     sequences => $temp_test_dir.'/chims.NAST',
     nastier_params => '-num_top_hits 10',
     chimera_slayer_params => '-windowSize 50 -printCSalignments -windowStep 5',
+    chimeras => $temp_test_dir.'/chimeras',
 );
 ok( $cmd, 'Created tool' );
 ok( $cmd->execute, 'Executed tool' );
-
-
 #check outputs
 #files that should consistantly match
 for my $file ( qw/ chims.NAST.out.CPS chims.NAST.out.CPS_RENAST / ) {
     ok( -s $temp_test_dir.'/'.$file, "Created file: $file" );
     ok( File::Compare::compare( $temp_test_dir.'/'.$file, $test_data_dir.'/'.$file ) == 0, "Test $file files match" );
 }
+ok(-l $temp_test_dir.'/chimeras', 'linked output file to chimeras file');
+
 #files that differ sometimes
  #chims.out.NAST.CPS.CPC.align
  #chims.out.NAST.CPS.CPC
@@ -50,3 +51,4 @@ for my $file ( qw/ chims.NAST.out.CPS chims.NAST.out.CPS_RENAST / ) {
 done_testing();
 
 exit;
+
