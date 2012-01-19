@@ -167,7 +167,6 @@ sub seq_writer_for {
     my ($self, $type) = @_;
 
     Carp::confess("No type given to get fasta and qual writer") unless defined $type;
-    Carp::confess("Invalid type ($type) given to get fasta and qual writer") unless grep { $type eq $_ } (qw/ processed oriented /);
 
     my $fasta_file = $self->_file_for($type.'_fasta');
     my $qual_file = $self->_file_for($type.'_qual');
