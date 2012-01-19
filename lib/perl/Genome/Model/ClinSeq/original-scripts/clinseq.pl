@@ -104,6 +104,8 @@ unless (($wgs_som_var_data_set || $exome_som_var_data_set || $tumor_rna_seq_data
   exit 1;
 }
 
+#Option to remove MT chr snvs/indels
+my $filter_mt = 1;
 
 #Set flags for each datatype
 my $wgs = exists $builds->{wgs} || 0;
@@ -152,9 +154,8 @@ if ($clean){
 #Grab the gene name used in the 'annotation.top' file, but grab the AA changes from the '.annotation' file
 #Fix the gene name if neccessary...
 $step++; print MAGENTA, "\n\nStep $step. Summarizing SNVs and Indels", RESET;
-&importSNVs('-data_paths'=>$data_paths, '-out_paths'=>$out_paths, '-patient_dir'=>$patient_dir, '-entrez_ensembl_data'=>$entrez_ensembl_data, '-verbose'=>$verbose);
+&importSNVs('-data_paths'=>$data_paths, '-out_paths'=>$out_paths, '-patient_dir'=>$patient_dir, '-entrez_ensembl_data'=>$entrez_ensembl_data, '-verbose'=>$verbose, '-filter_mt'=>$filter_mt);
 
-#TODO: when merging SNVs/Indels from WGS + Exome, add a column that indicates (1|0) whether each was called by WGS or Exome, 1+1 = BOTH
 #TODO: when importing SNVs/Indels to the compact format, allow option to eliminate MT/chrM positions
 
 #Run CNView analyses on the CNV data to identify amplified/deleted genes
@@ -189,8 +190,6 @@ if ($normal_rnaseq){
   #Perform the multi-normal differential outlier analysis
 
 }
-
-#TODO: IF both tumor and normal RNA-seq are defined - run Cuffdiff on the comparison
 
 
 #Annotate gene lists to deal with commonly asked questions like: is each gene a kinase?
@@ -417,7 +416,9 @@ sub importSNVs{
   my $out_paths = $args{'-out_paths'};
   my $patient_dir = $args{'-patient_dir'};
   my $entrez_ensembl_data = $args{'-entrez_ensembl_data'};
+  my $filter_mt = $args{'-filter_mt'};
   my $verbose = $args{'-verbose'};
+  
 
   #Create SNV dirs: 'snv', 'snv/wgs/', 'snv/exome/', 'snv/wgs_exome/'
   my $snv_dir = &createNewDir('-path'=>$patient_dir, '-new_dir_name'=>'snv', '-silent'=>1);
@@ -523,11 +524,12 @@ sub importSNVs{
       }
 
       #Apply the MT/chrM filter
-      my $chr = $data->{chr};
-      if ($chr =~ /^MT$|^chrMT$|^M$|^chrM$/i){
-        next();
+      if ($filter_mt){
+        my $chr = $data->{chr};
+        if ($chr =~ /^MT$|^chrMT$|^M$|^chrM$/i){
+          next();
+        }
       }
-
       $aa_changes{$coord}{$data->{aa_change}}=1;
     }
 
@@ -548,11 +550,12 @@ sub importSNVs{
       }
       
       #Apply the MT/chrM filter
-      my $chr = $data->{chr};
-      if ($chr =~ /^MT$|^chrMT$|^M$|^chrM$/i){
-        next();
+      if ($filter_mt){
+        my $chr = $data->{chr};
+        if ($chr =~ /^MT$|^chrMT$|^M$|^chrM$/i){
+          next();
+        }
       }
-
       my %aa = %{$aa_changes{$coord}};
       my $aa_string = join(",", sort keys %aa);
       $data_out{$coord}{gene_name} = $data->{gene_name};
@@ -563,6 +566,14 @@ sub importSNVs{
       $data_merge{$var_type}{$coord}{ref_base} = $data->{ref_base};
       $data_out{$coord}{var_base} = $data->{var_base};
       $data_merge{$var_type}{$coord}{var_base} = $data->{var_base};
+
+      #Make note of the datatype (wgs or exome) this variant was called by...
+      if ($data_type eq "wgs"){
+        $data_merge{$var_type}{$coord}{wgs} = 1;
+      }
+      if ($data_type eq "exome"){
+        $data_merge{$var_type}{$coord}{exome} = 1;
+      }
 
       #Attempt to fix the gene name:
       my $fixed_gene_name = &fixGeneName('-gene'=>$data->{gene_name}, '-entrez_ensembl_data'=>$entrez_ensembl_data, '-verbose'=>0);
@@ -592,19 +603,27 @@ sub importSNVs{
     my $indel_merge_file = "$indel_wgs_exome_dir"."indels.hq.tier1.v1.annotated.compact.tsv";
 
     open (OUT, ">$snv_merge_file") || die "\n\nCould not open output file: $snv_merge_file\n\n";
-    print OUT "coord\tgene_name\tmapped_gene_name\taa_changes\tref_base\tvar_base\n";
+    print OUT "coord\tgene_name\tmapped_gene_name\taa_changes\tref_base\tvar_base\twgs_called\texome_called\n";
     my %data_out = %{$data_merge{'snv'}};
     foreach my $coord (sort {$data_out{$a}->{mapped_gene_name} cmp $data_out{$b}->{mapped_gene_name}} keys %data_out){
-      print OUT "$coord\t$data_out{$coord}{gene_name}\t$data_out{$coord}{mapped_gene_name}\t$data_out{$coord}{aa_changes}\t$data_out{$coord}{ref_base}\t$data_out{$coord}{var_base}\n";
+      my $wgs_called = 0;
+      if (defined($data_out{$coord}{wgs})){ $wgs_called = 1; }
+      my $exome_called = 0;
+      if (defined($data_out{$coord}{exome})){ $exome_called = 1; }
+      print OUT "$coord\t$data_out{$coord}{gene_name}\t$data_out{$coord}{mapped_gene_name}\t$data_out{$coord}{aa_changes}\t$data_out{$coord}{ref_base}\t$data_out{$coord}{var_base}\t$wgs_called\t$exome_called\n";
     }
     close(OUT);
     $out_paths->{'wgs_exome'}->{'snv'}->{path} = $snv_merge_file;
 
     open (OUT, ">$indel_merge_file") || die "\n\nCould not open output file: $indel_merge_file\n\n";
-    print OUT "coord\tgene_name\tmapped_gene_name\taa_changes\tref_base\tvar_base\n";
+    print OUT "coord\tgene_name\tmapped_gene_name\taa_changes\tref_base\tvar_base\twgs_called\texome_called\n";
     %data_out = %{$data_merge{'indel'}};
     foreach my $coord (sort {$data_out{$a}->{mapped_gene_name} cmp $data_out{$b}->{mapped_gene_name}} keys %data_out){
-      print OUT "$coord\t$data_out{$coord}{gene_name}\t$data_out{$coord}{mapped_gene_name}\t$data_out{$coord}{aa_changes}\t$data_out{$coord}{ref_base}\t$data_out{$coord}{var_base}\n";
+      my $wgs_called = 0;
+      if (defined($data_out{$coord}{wgs})){ $wgs_called = 1; }
+      my $exome_called = 0;
+      if (defined($data_out{$coord}{exome})){ $exome_called = 1; }
+      print OUT "$coord\t$data_out{$coord}{gene_name}\t$data_out{$coord}{mapped_gene_name}\t$data_out{$coord}{aa_changes}\t$data_out{$coord}{ref_base}\t$data_out{$coord}{var_base}\t$wgs_called\t$exome_called\n";
     }
     close(OUT);
     $out_paths->{'wgs_exome'}->{'indel'}->{path} = $indel_merge_file;
