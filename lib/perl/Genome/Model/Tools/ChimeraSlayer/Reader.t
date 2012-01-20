@@ -5,7 +5,7 @@ use warnings;
 
 use above 'Genome';
 
-use Data::Dumper 'Dumper';
+require IO::String;
 use Test::More;
 
 use_ok('Genome::Model::Tools::ChimeraSlayer::Reader') or die;
@@ -44,6 +44,21 @@ while ( my $chimera = $reader->read ) {
     );
     $cnt++;
 }
+
+# fails
+my $io = IO::String->new();
+$io->print("ChimeraSlayer\tblah\n");
+$io->print("ChimeraSlayer\t1\t2\t3\t4\t5\t6\t7\t8\t9\t10\n");
+$io->seek(0, 0);
+$reader = Genome::Model::Tools::ChimeraSlayer::Reader->create(
+    input => $io,
+);
+my $rv = eval{ $reader->read; };
+ok(!$rv, 'failed to read line does not have enough fields');
+like($@, qr/Malformed chimera slayer line! Got 1 fields, but expected 10 or 12 from chimera slayer line:/, 'error message matches');
+$rv = eval{ $reader->read; };
+ok(!$rv, 'failed to read line where verdict was not YES/NO');
+like($@, qr/Malformed chimera slayer line! Verdict is expected to be YES or NO but is 10./, 'error message matches');
 
 done_testing();
 exit;
