@@ -65,7 +65,7 @@ sub execute {
 
         my $pid = fork();
         if (not defined $pid) {
-            die "Failed to fork";
+            die "Failed to fork ($!).";
         }
         elsif ($pid == 0) {
             # CHILD
