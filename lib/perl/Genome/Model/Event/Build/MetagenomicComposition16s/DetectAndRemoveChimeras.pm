@@ -1,11 +1,11 @@
-package Genome::Model::Event::Build::MetagenomicComposition16s::RemoveChimeras;
+package Genome::Model::Event::Build::MetagenomicComposition16s::DetectAndRemoveChimeras;
 
 use strict;
 use warnings;
 
 use Genome;
 
-class Genome::Model::Event::Build::MetagenomicComposition16s::RemoveChimeras {
+class Genome::Model::Event::Build::MetagenomicComposition16s::DetectAndRemoveChimeras {
     is => 'Genome::Model::Event::Build::MetagenomicComposition16s',
 };
 

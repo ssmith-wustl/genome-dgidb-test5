@@ -754,7 +754,7 @@ sub latest_build_id {
     return $build->id;
 }
 
-sub status {
+sub status_with_build {
     my $self = shift;
 
     my ($status, $build);
@@ -767,11 +767,13 @@ sub status {
         $status = $build->status;
     }
 
-    if (wantarray) {
-        return ($status, $build);
-    } else {
-        return $status;
-    }
+    return ($status, $build);
+}
+
+sub status {
+    my $self = shift;
+    my ($status) = $self->status_with_build;
+    return $status;
 }
 
 sub latest_build_status {

@@ -470,9 +470,9 @@ sub append_fastq_to_orig_fastq_file {
 }
 
 #< Remove Chimeras >#
-sub remove_chimeras_from_amplicons {
+sub detect_and_remove_chimeras {
     my $self = shift;
-    $self->status_message('Remove chimeras...');
+    $self->status_message('Detect and remove chimeras...');
 
     my $attempted = $self->amplicons_attempted;
     if ( not defined $attempted ) {
@@ -488,65 +488,83 @@ sub remove_chimeras_from_amplicons {
 
     $self->status_message('Chimera detector: '.$self->processing_profile->chimera_detector);
     $self->status_message('Chimera detector params: '.$self->processing_profile->chimera_detector_params);
-    my $detector_class = 'Genome::Model::Tools::'.Genome::Utility::Text::string_to_camel_case($self->chimera_detector);
-    my %detector_params = $self->processing_profile->chimera_detector_params_as_hash;
-    my $remove_class = $detector_class.'::RemoveChimeras';
+    my $detector = $self->processing_profile->chimera_detector;
+    my $chimera_reader_class = 'Genome::Model::Tools::'.Genome::Utility::Text::string_to_camel_case(join(' ', split('-', $detector))).'::Reader';
 
-    my ($sequences, $chimeras, $output) = (qw/ 0 0 0 /);
+    my %metrics = ( input => 0, output => 0, );
     for my $amplicon_set ( @amplicon_sets ) {
-        next if not -s $amplicon_set->processed_fasta_file;
+        my $processed_fasta = $amplicon_set->processed_fasta_file;
+        next if not -s $processed_fasta;
         $self->status_message('Amplicon set'.($amplicon_set->name ? ' '.$amplicon_set->name : ''));
 
         # DETECT
         $self->status_message('Detect chimeras...');
-        my $detector = $detector_class->create(
-            input => $amplicon_set->processed_fasta_file.':qual_file='.$amplicon_set->processed_qual_file,
-            chimeras => $amplicon_set->chimera_file,
-            %detector_params,
-        );
-        if ( not $detector ) {
-            $self->error_message('Failed to create chimera detector');
+        my $processed_fasta_base_name = File::Basename::basename($processed_fasta);
+        my $sequences = $amplicon_set->chimera_dir.'/'.$processed_fasta_base_name;
+        symlink($processed_fasta, $sequences);
+        if ( not -s $sequences ) {
+            $self->error_message("Failed to link processed fasta ($processed_fasta) to chimera dir!");
             return;
         }
-        my $execute = $detector->execute;
-        $detector->dump_status_messages(1);
-        if ( not $execute ) {
-            $self->error_message('Failed to execute chimera detector');
+        my $chimera_file = $amplicon_set->chimera_file;
+        my $cmd = "gmt $detector detect-chimeras --sequences $sequences --chimeras $chimera_file ".$self->processing_profile->chimera_detector_params;
+        $self->status_message('Detect chimeras command: '.$cmd);
+        my $rv = eval{ Genome::Sys->shellcmd(cmd => $cmd); };
+        if ( not $rv ) {
+            $self->error_message($@) if $@;
+            $self->error_message('Failed to detect chimeras!');
             return;
         }
         $self->status_message('Detect chimeras...OK');
 
-        # REMOVE
         $self->status_message('Remove chimeras...');
-        my $remover = $remove_class->create(
-            sequences => $amplicon_set->processed_fasta_file.':qual_file='.$amplicon_set->processed_qual_file,
-            chimeras => $amplicon_set->chimera_file,
-            output => $amplicon_set->chimera_free_fasta_file.':qual_file='.$amplicon_set->chimera_free_qual_file,
-        );
-        if ( not $remover ) {
-            $self->error_message('Failed to create chimera remove gmt.');
+        my $reader = $amplicon_set->seq_reader_for('processed');
+        if ( not $reader ) {
+            $self->error_message('Failed to get processed seq reader!');
             return;
         }
-        $remover->dump_status_messages(1);
-        $execute = $remover->execute;
-        if ( not $execute ) {
-            $self->error_message('Failed to execute chimera remove gmt.');
+
+        my $chimera_reader = $chimera_reader_class->create(input => $chimera_file);
+        if ( not $chimera_reader ) {
+            $self->error_message('Failed to get chimera reader!');
             return;
         }
-        $sequences += $remover->_metrics->{sequences};
-        $chimeras += $remover->_metrics->{chimeras};
-        $output += $remover->_metrics->{output};
+
+        my $writer = $amplicon_set->seq_writer_for('chimera_free');
+        if ( not $writer ) {
+            $self->error_message('Failed to get chimera free seq writer!');
+            return;
+        }
+
+        my $chimera = $chimera_reader->read;
+        while ( my $seq = $reader->read ) {
+            $metrics{input}++;
+            if ( $chimera and $seq->{id} eq $chimera->{id} ) {
+                my $verdict = $chimera->{verdict}; # store verdict
+                $chimera = $chimera_reader->read; # get next chimera
+                next if $verdict eq 'YES'; # do not write seq if it is a chimera
+            }
+            $metrics{output}++;
+            $writer->write($seq);
+        }
         $self->status_message('Remove chimeras...OK');
     }
 
-    $self->amplicons_chimeric($chimeras);
-    $self->amplicons_chimeric_percent( sprintf('%.2f', $chimeras / $self->amplicons_processed) );
+    my $amplicons_processed = $self->amplicons_processed;
+    if ( $amplicons_processed != $metrics{input} ) {
+        $self->error_message("Amplicons processed ($amplicons_processed) and amplicons put through chimera detection ($metrics{input}) do not match!");
+        return;
+    }
 
-    $self->status_message('Processed:  '.$self->amplicons_processed);
-    $self->status_message('Chimeric: '.$self->amplicons_chimeric);
-    $self->status_message('Chimeric percent:    '.($self->amplicons_chimeric_percent * 100).'%');
+    my $amplicons_chimeric = $metrics{input} - $metrics{output};
+    $self->amplicons_chimeric($amplicons_chimeric);
+    $self->amplicons_chimeric_percent( sprintf('%.2f', $amplicons_chimeric / $amplicons_processed) );
 
-    $self->status_message('Remove chimeras...OK');
+    $self->status_message('Processed:        '.$self->amplicons_processed);
+    $self->status_message('Chimeric:         '.$self->amplicons_chimeric);
+    $self->status_message('Chimeric percent: '.($self->amplicons_chimeric_percent * 100).'%');
+
+    $self->status_message('Detect and remove chimeras...OK');
     return 1;
 }
 #<>#
@@ -610,7 +628,6 @@ sub orient_amplicons {
 #< Classify >#
 sub classify_amplicons {
     my $self = shift;
-
     $self->status_message('Classify amplicons...');
 
     my $attempted = $self->amplicons_attempted;
@@ -650,8 +667,9 @@ sub classify_amplicons {
     my %metrics;
     @metrics{qw/ attempted success error total /} = (qw/ 0 0 0 0 /);
     for my $amplicon_set ( @amplicon_sets ) {
-        my $fasta_file = $amplicon_set->processed_fasta_file;
-        next if not -s $fasta_file;
+        my %inputs = $amplicon_set->amplicon_iterator_input_fasta_and_qual;
+        my $fasta_file = $inputs{file};
+        next if not $fasta_file or not -s $fasta_file;
 
         my $classification_file = $amplicon_set->classification_file;
         unlink $classification_file if -e $classification_file;

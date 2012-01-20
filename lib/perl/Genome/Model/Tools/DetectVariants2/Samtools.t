@@ -32,10 +32,13 @@ no warnings;
 };
 use warnings;
 
-my $test_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants2-Samtools/';
+my $test_dir      = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants2-Samtools/';
 my $test_base_dir = File::Temp::tempdir('DetectVariants2-SamtoolsXXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites/', CLEANUP => 1);
-my $test_working_dir = "$test_base_dir/output";
+my @test_working_dirs = map{"$test_base_dir/output".$_}qw(1 2);
 
+#Note this bam file contain 2 samples, which is different from single sample bam generated from our ref-align pipeline. 
+#tmooney made this only for testing purpose. This causes snv output different between mpileup and pileup since samtools 
+#mpileup recognizes two samples. Just use for now, the bam should be replaced by a single sample bam in the future
 my $bam_input = $test_dir . '/alignments/102922275_merged_rmdup.bam';
 
 # Updated to .v1 for addition of read depth field
@@ -46,40 +49,72 @@ my $bam_input = $test_dir . '/alignments/102922275_merged_rmdup.bam';
 my $expected_dir = $test_dir . '/expected.v5/';
 ok(-d $expected_dir, "expected results directory exists");
 
-my $version = 'r613';
+my @versions = qw(r613 r963);
 
-my $command = Genome::Model::Tools::DetectVariants2::Samtools->create(
-    reference_build_id => $refbuild_id,
-    aligned_reads_input => $bam_input,
-    version => $version,
-    params => "",
-    output_directory => $test_working_dir,
+my %params = (
+    reference_build_id   => $refbuild_id,
+    aligned_reads_input  => $bam_input,
+    version              => $versions[0],
+    params               => "",
+    output_directory     => $test_working_dirs[0],
     aligned_reads_sample => 'TEST',
 );
-ok($command, 'Created `gmt detect-variants2 samtools` command');
-$command->dump_status_messages(1);
-ok($command->execute, 'Executed `gmt detect-variants2 samtools` command');
 
-my @expected_output_files = qw|
-indels.hq
-indels.hq.bed
-indels.hq.v1.bed
-indels.hq.v2.bed
-indels_all_sequences.filtered
-report_input_all_sequences
-snvs.hq
-snvs.hq.bed
-snvs.hq.v1.bed
-snvs.hq.v2.bed |;
+run_test('pileup', \%params);
 
+#Now testing mpileup 
+$params{version} = $versions[1];
+$params{params}  = 'mpileup -uB';
+$params{output_directory} = $test_working_dirs[1];
 
-for my $output_file (@expected_output_files){
-    my $expected_file = $expected_dir."/".$output_file;
-    my $actual_file = $test_working_dir."/".$output_file;
-    is(compare($actual_file, $expected_file), 0, "$actual_file output matched expected output");
-}
-
-ok(-s $test_working_dir."/snvs.vcf.gz", "Found VCF file");
+run_test('mpileup', \%params);
 
 done_testing();
 exit;
+
+
+sub run_test {
+    my ($type, $params) = @_;
+    my $test_dir = $params->{output_directory};
+
+    my $command = Genome::Model::Tools::DetectVariants2::Samtools->create(%$params);
+    ok($command, 'Created `gmt detect-variants2 samtools` command with '. $type);
+    $command->dump_status_messages(1);
+    ok($command->execute, 'Executed `gmt detect-variants2 samtools` command with '. $type);
+
+    my @expected_output_files = qw|
+        indels.hq
+        indels.hq.bed
+        indels.hq.v1.bed
+        indels.hq.v2.bed
+        snvs.hq
+        snvs.hq.bed
+        snvs.hq.v1.bed
+        snvs.hq.v2.bed 
+    |;
+
+    if ($type eq 'mpileup') {
+        $expected_dir .= $type . '/';
+        push @expected_output_files, qw(vars.vcf vars.vcf.sanitized);
+    }
+    elsif ($type eq 'pileup') {
+        push @expected_output_files, qw(indels_all_sequences.filtered report_input_all_sequences);
+    }
+    else {
+        die "$type is not valid\n";
+    }
+
+    for my $output_file (@expected_output_files){
+        my $expected_file = $expected_dir."/".$output_file;
+        my $actual_file   = $test_dir."/".$output_file;
+        is(compare($actual_file, $expected_file), 0, "$actual_file output matched expected output");
+    }
+
+    ok(-s $test_dir.'/snvs.vcf.gz',   'Found snvs.vcf.gz');
+    ok(-s $test_dir.'/indels.vcf.gz', 'Found indels.vcf.gz') if $type eq 'mpileup';
+
+    return;
+}
+
+
+    

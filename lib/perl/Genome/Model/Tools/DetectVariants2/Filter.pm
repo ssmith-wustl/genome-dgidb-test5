@@ -245,6 +245,7 @@ sub shortcut_vcf {
     $self->_vcf_result($result);
     $self->status_message('Using existing result ' . $result->__display_name__);
     $self->_link_vcf_output_directory_to_result;
+    $self->_link_result_to_previous_result;
 
     return 1;
 }
@@ -324,6 +325,7 @@ sub _summon_filter_result {
     unless(-e $self->output_directory){
         $self->_link_output_directory_to_result;
     }
+    $self->_link_result_to_previous_result;
 
     return 1;
 }
@@ -350,6 +352,20 @@ sub _link_vcf_output_directory_to_result {
 
     return 1;
 }
+
+sub _link_result_to_previous_result {
+    my $self = shift;
+    my $result = $self->_result;
+
+    my $previous_result = $self->previous_result;
+    my @users = $previous_result->users;
+    unless(grep($_->user eq $result, @users)) {
+        $previous_result->add_user(user => $result, label => 'uses');
+    }
+
+    return 1;
+}
+
 
 sub _link_filter_output_directory_to_result {
     my $self = shift;

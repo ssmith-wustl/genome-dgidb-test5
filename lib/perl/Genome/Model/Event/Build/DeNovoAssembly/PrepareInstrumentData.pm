@@ -25,8 +25,8 @@ sub bsub_rusage {
     my $tmp_space = 25000;
     if ( $read_processor and $read_processor =~ /quake|eulr/i ) {
         # Request memory for quake and eulr
-        my $mem = 16000;
-        $tmp_space = 100000;
+        my $mem = 32000;
+        $tmp_space = 200000;
         return "-R 'select[type==LINUX64 && mem>$mem && tmp>$tmp_space] rusage[mem=$mem:tmp=$tmp_space] span[hosts=1]' -M $mem"."000";
     }
 

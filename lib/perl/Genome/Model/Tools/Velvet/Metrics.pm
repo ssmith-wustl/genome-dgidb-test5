@@ -194,10 +194,10 @@ sub _add_metrics_from_agp_file { #for velvet assemblies
     my $major_contigs_length = 0;
     my $minor_contigs_length = 0;
     my $major_contigs_read_count = 0;
+    my $minor_contigs_read_count = 0;
 
     my $major_supercontigs_length = 0;
     my $minor_supercontigs_length = 0;
-    my $major_supercontigs_read_count = 0;
 
     my %reads_in_supercontigs;
 
@@ -222,6 +222,7 @@ sub _add_metrics_from_agp_file { #for velvet assemblies
                 $major_contigs_read_count += scalar @$recs;
             } else {
                 $minor_contigs_length += $contig_length;
+                $minor_contigs_read_count += scalar @$recs;
             }
 
             $reads_in_supercontigs{$supercontig_name} += scalar @$recs;
@@ -338,15 +339,26 @@ sub _add_metrics_from_agp_file { #for velvet assemblies
     $metrics->set_metric('contigs_major_read_count', $major_contigs_read_count);
     my $contigs_major_read_percent = sprintf( "%.1f", $major_contigs_read_count / $reads_assembled_in_scaffolds * 100);
     $metrics->set_metric('contigs_major_read_percent', $contigs_major_read_percent);
+
+    $metrics->set_metric('contigs_minor_read_count', $minor_contigs_read_count);
+    my $contigs_minor_read_percent = sprintf( "%.1f", $minor_contigs_read_count / $reads_assembled_in_scaffolds * 100);
+    $metrics->set_metric('contigs_minor_read_percent', $contigs_minor_read_percent);
+
     my $supercontigs_major_read_count = 0;
+    my $supercontigs_minor_read_count = 0;
     for my $sctg ( keys %reads_in_supercontigs ) {
         if ( $metrics->{'supercontigs'}->{$sctg} >= $self->major_contig_length ) {
             $supercontigs_major_read_count += $reads_in_supercontigs{$sctg};
+        } else {
+            $supercontigs_minor_read_count += $reads_in_supercontigs{$sctg};
         }
     }
     $metrics->set_metric('supercontigs_major_read_count', $supercontigs_major_read_count);
     my $supercontigs_major_read_percent = sprintf( "%.1f", $supercontigs_major_read_count / $reads_assembled_in_scaffolds * 100);
     $metrics->set_metric('supercontigs_major_read_percent', $supercontigs_major_read_percent);
+    $metrics->set_metric('supercontigs_minor_read_count', $supercontigs_minor_read_count);
+    my $supercontigs_minor_read_percent = sprintf( "%.1f", $supercontigs_minor_read_count / $reads_assembled_in_scaffolds * 100);
+    $metrics->set_metric('supercontigs_minor_read_percent', $supercontigs_minor_read_percent);
 
     #read coverage
     $metrics->set_metric('coverage_5x', $five_x);
