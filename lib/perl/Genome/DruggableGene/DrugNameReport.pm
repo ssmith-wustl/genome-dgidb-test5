@@ -83,6 +83,22 @@ class Genome::DruggableGene::DrugNameReport {
 
             # |
         },
+        _approved_cat => {
+            via => 'drug_name_report_category_associations',
+            to => 'category_value',
+            where => [category_value => 'approved'],
+            is_optional => 1,
+            is_many => 1,
+        },
+        is_approved => {
+            calculate_from => ['_approved_cat'],
+            calculate => q|
+                return 1 if $_approved_cat; return 0;
+            |,
+            # calc_sql => q|
+
+            # |
+        },
     ],
     doc => 'Claim regarding the name of a drug',
 };
