@@ -101,6 +101,7 @@ sub _generate_content {
     push @fields, WebService::Solr::Field->new( content => $content );
     push @fields, WebService::Solr::Field->new( type => $type );
 
+    push @fields, $self->_generate_dynamic_fields();
 
 
     # WARNING! There exists code in Genome::Search that is trying to reuse objects;
@@ -292,5 +293,18 @@ sub _generate_type_field_data {
     return $self->type;
 }
 
+sub _generate_dynamic_fields {
+    
+    my ($self) = @_;
+    my @fields;
+
+    my $dyn_field = $self->dynamic_fields();
+   
+    for my $key (keys %$dyn_field) {
+        push @fields, WebService::Solr::Field->new( $key => $dyn_field->{$key} );
+    }
+
+    return @fields;
+}
 
 1;
