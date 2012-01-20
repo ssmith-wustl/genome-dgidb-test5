@@ -69,13 +69,22 @@ sub __display_name__ {
 if ($INC{"Genome/Search.pm"}) {
     __PACKAGE__->create_subscription(
         method => 'commit',
-        callback => \&commit_callback,
+        callback => \&add_to_search_index_queue,
+    );
+    __PACKAGE__->create_subscription(
+        method => 'delete',
+        callback => \&add_to_search_index_queue,
     );
 }
 
-sub commit_callback {
+sub add_to_search_index_queue {
     my $self = shift;
-    Genome::Search->add(Genome::DruggableGene::GeneNameReport->define_set(name => $self->name));
+    my $set = Genome::DruggableGene::GeneNameReport->define_set(name => $self->name);
+    Genome::Search::Queue->create(
+        subject_id => $set->id,
+        subject_class => $set->class,
+        priority => 9,
+    );
 }
 
 sub source_id {

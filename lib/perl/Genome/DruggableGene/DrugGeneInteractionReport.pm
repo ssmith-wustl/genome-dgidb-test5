@@ -60,20 +60,28 @@ sub __display_name__ {
     return "Interaction of " . $self->drug_name_report_name . " and " . $self->gene_name_report_name;
 }
 
-sub search_index_queue_priority {
-    return 2;
-}
-
 if ($INC{"Genome/Search.pm"}) {
     __PACKAGE__->create_subscription(
         method => 'commit',
-        callback => \&commit_callback,
+        callback => \&add_to_search_index_queue,
+    );
+    __PACKAGE__->create_subscription(
+        method => 'delete',
+        callback => \&add_to_search_index_queue,
     );
 }
 
-sub commit_callback {
+sub add_to_search_index_queue {
     my $self = shift;
-    Genome::Search->add(Genome::DruggableGene::DrugGeneInteractionReport->define_set(drug_name_report_name => $self->drug_name_report_name , gene_name_report_name => $self->gene_name_report_name));
+    my $set = Genome::DruggableGene::DrugGeneInteractionReport->define_set(
+        drug_name_report_name => $self->drug_name_report_name,
+        gene_name_report_name => $self->gene_name_report_name,
+    );
+    Genome::Search::Queue->create(
+        subject_id => $set->id,
+        subject_class => $set->class,
+        priority => 9,
+    );
 }
 
 1;
