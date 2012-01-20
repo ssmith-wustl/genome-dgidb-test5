@@ -33,7 +33,11 @@ no warnings;
 use warnings;
 
 my $test_dir      = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants2-Samtools/';
-my $test_base_dir = File::Temp::tempdir('DetectVariants2-SamtoolsXXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites/', CLEANUP => 1);
+my $test_base_dir = File::Temp::tempdir(
+    'DetectVariants2-SamtoolsXXXXX', 
+    DIR     => '/gsc/var/cache/testsuite/running_testsuites/', 
+    CLEANUP => 1,
+);
 my @test_working_dirs = map{"$test_base_dir/output".$_}qw(1 2);
 
 #Note this bam file contain 2 samples, which is different from single sample bam generated from our ref-align pipeline. 
@@ -107,14 +111,24 @@ sub run_test {
     for my $output_file (@expected_output_files){
         my $expected_file = $expected_dir."/".$output_file;
         my $actual_file   = $test_dir."/".$output_file;
-        is(compare($actual_file, $expected_file), 0, "$actual_file output matched expected output");
+        is(compare($actual_file, $expected_file), 0, "$output_file output matched expected output");
     }
 
-    ok(-s $test_dir.'/snvs.vcf.gz',   'Found snvs.vcf.gz');
-    ok(-s $test_dir.'/indels.vcf.gz', 'Found indels.vcf.gz') if $type eq 'mpileup';
-
-    return;
+    for my $file_name qw(snvs.vcf.gz indels.vcf.gz) {
+        ok(-s $test_dir."/$file_name",   "Found $file_name");
+        diff_vcf_gz($test_dir, $expected_dir, $file_name);
+    }
+    
+    return 1;
 }
 
 
-    
+sub diff_vcf_gz {
+    my ($t_dir, $e_dir, $file_name) = @_;
+    my ($test_vcf_gz, $expect_vcf_gz) = map{$_.'/'.$file_name}($t_dir, $e_dir);
+    my $test_md5   = qx(zcat $test_vcf_gz | grep -vP '^##fileDate' | md5sum);
+    my $expect_md5 = qx(zcat $expect_vcf_gz | grep -vP '^##fileDate' | md5sum);
+    is ($test_md5, $expect_md5, "$file_name output matched expected output");
+    return 1;
+}
+
