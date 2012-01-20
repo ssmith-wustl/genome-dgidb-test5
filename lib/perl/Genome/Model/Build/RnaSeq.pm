@@ -37,6 +37,31 @@ sub coverage_directory {
     return $self->data_directory . '/coverage';
 }
 
+sub metrics_directory {
+    my $self = shift;
+    return $self->data_directory . '/metrics';
+}
+
+sub picard_rna_seq_ribo_intervals {
+    my $self = shift;
+    return $self->metrics_directory .'/Picard_ribo.intervals';
+}
+
+sub picard_rna_seq_mRNA_ref_flat {
+    my $self = shift;
+    return $self->metrics_directory .'/Picard_mRNA.refFlat';
+}
+
+sub picard_rna_seq_metrics {
+    my $self = shift;
+    return $self->metrics_directory .'/PicardRnaSeqMetrics.txt';
+}
+
+sub picard_rna_seq_chart {
+    my $self = shift;
+    return $self->metrics_directory .'/PicardRnaSeqChart.pdf';
+}
+
 sub accumulated_alignments_disk_allocation {
     my $self = shift;
 
