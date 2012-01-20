@@ -210,9 +210,7 @@ for ( my $i = 0; $i < @amplicon_sets; $i++ ) {
         my $example_amplicon = $example_amplicon_sets[$i]->next_amplicon;
         is($amplicon->{name}, $example_amplicon->{name}, 'matches example amplicon');
         ok($amplicon->{classification}, $amplicon->{name}.' has a classification');
-        is($amplicon->{classification}->[0], $amplicon->{name}, 'classification name matches');
-        is($amplicon->{classification}->[1], '-', 'is complemented');
-        is_deeply([@{$amplicon->{classification}}[0..6]], [@{$example_amplicon->{classification}}[0..6]], 'classification matches');
+        is_deeply([@{$amplicon->{classification}}[0..5]], [@{$example_amplicon->{classification}}[0..5]], 'classification matches');
     }
 }
 
