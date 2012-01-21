@@ -298,23 +298,7 @@ sub loadEntrezEnsemblData{
       $entrez_dir = '/gscmnt/sata132/techd/solexa/jwalker/RNAseq/annotation/mm9/entrez';
       $ensembl_dir = '/gscmnt/sata132/techd/solexa/jwalker/RNAseq/annotation/mm9/ensembl';
       $ucsc_dir = '/gscmnt/sata132/techd/solexa/jwalker/RNAseq/annotation/mm9/ucsc/';
-      @files = qw/
-                     ensembl_v64_id_to_gene_name.txt
-                     ensembl_v63_id_to_gene_name.txt
-                     ensembl_v62_id_to_gene_name.txt
-                     ensembl_v61_id_to_gene_name.txt
-                     ensembl_v60_id_to_gene_name.txt
-                     ensembl_v59_id_to_gene_name.txt
-                     ensembl_v58_id_to_gene_name.txt
-                     ensembl_v57_id_to_gene_name.txt
-                     ensembl_v56_id_to_gene_name.txt
-                     ensembl_v55_id_to_gene_name.txt
-                     ensembl_v54_id_to_gene_name.txt
-                     ensembl_v53_id_to_gene_name.txt
-                     ensembl_v52_id_to_gene_name.txt
-                     ensembl_v51_id_to_gene_name.txt
-                     ensembl_v50_id_to_gene_name.txt
-                 /;
+      @files = qw (ensembl_v64_id_to_gene_name.txt ensembl_v63_id_to_gene_name.txt ensembl_v62_id_to_gene_name.txt ensembl_v61_id_to_gene_name.txt ensembl_v60_id_to_gene_name.txt ensembl_v59_id_to_gene_name.txt ensembl_v58_id_to_gene_name.txt ensembl_v57_id_to_gene_name.txt ensembl_v56_id_to_gene_name.txt ensembl_v55_id_to_gene_name.txt ensembl_v54_id_to_gene_name.txt ensembl_v53_id_to_gene_name.txt ensembl_v52_id_to_gene_name.txt ensembl_v51_id_to_gene_name.txt ensembl_v50_id_to_gene_name.txt);
   }
 
   my %edata;

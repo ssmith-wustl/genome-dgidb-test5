@@ -72,11 +72,6 @@ GetOptions ('tumor_rna_seq_data_set=s'=>\$tumor_rna_seq_data_set, 'normal_rna_se
 	    'wgs_som_var_data_set=s'=>\$wgs_som_var_data_set, 'exome_som_var_data_set=s'=>\$exome_som_var_data_set, 
  	    'working_dir=s'=>\$working_dir, 'common_name=s'=>\$common_name, 'verbose=i'=>\$verbose, 'clean=i'=>\$clean);
 
-my $step = 0;
-
-#Get build directories for the three datatypes: $data_paths->{'wgs'}->*, $data_paths->{'exome'}->*, $data_paths->{'tumor_rnaseq'}->*
-$step++; print MAGENTA, "\n\nStep $step. Getting data paths from 'genome' for specified model ids", RESET;
-my ($data_paths, $builds) = &getDataDirsAndBuilds('-wgs_som_var_data_set'=>$wgs_som_var_data_set, '-exome_som_var_data_set'=>$exome_som_var_data_set, '-tumor_rna_seq_data_set'=>$tumor_rna_seq_data_set, '-normal_rna_seq_data_set'=>$normal_rna_seq_data_set);
 
 my $usage=<<INFO;
 
@@ -104,6 +99,13 @@ unless (($wgs_som_var_data_set || $exome_som_var_data_set || $tumor_rna_seq_data
   exit 1;
 }
 
+
+my $step = 0;
+
+#Get build directories for the three datatypes: $data_paths->{'wgs'}->*, $data_paths->{'exome'}->*, $data_paths->{'tumor_rnaseq'}->*
+$step++; print MAGENTA, "\n\nStep $step. Getting data paths from 'genome' for specified model ids", RESET;
+my ($data_paths, $builds) = &getDataDirsAndBuilds('-wgs_som_var_data_set'=>$wgs_som_var_data_set, '-exome_som_var_data_set'=>$exome_som_var_data_set, '-tumor_rna_seq_data_set'=>$tumor_rna_seq_data_set, '-normal_rna_seq_data_set'=>$normal_rna_seq_data_set);
+
 #Option to remove MT chr snvs/indels
 my $filter_mt = 1;
 
@@ -125,8 +127,12 @@ my $reference_build_ucsc_n = "19";
 my $reference_build_ncbi = "build37";
 my $reference_build_ncbi_n = "37";
 
+#Reference annotations - Extra annotation files not currently part of the APIPE system...
+my $reference_annotations_dir = "/gscmnt/sata132/techd/mgriffit/reference_annotations/";
+my $reference_annotations_ucsc_dir = $reference_annotations_dir . "hg19/";
+
 #Directory of gene lists for various purposes
-my $gene_symbol_lists_dir = "/gscmnt/sata132/techd/mgriffit/reference_annotations/GeneSymbolLists/";
+my $gene_symbol_lists_dir = $reference_annotations_dir . "GeneSymbolLists/";
 $gene_symbol_lists_dir = &checkDir('-dir'=>$gene_symbol_lists_dir, '-clear'=>"no");
 
 #Import a set of gene symbol lists (these files must be gene symbols in the first column, .txt extension, tab-delimited if multiple columns, one symbol per field, no header)
@@ -170,22 +176,29 @@ if ($wgs){
 my $rnaseq_dir = createNewDir('-path'=>$patient_dir, '-new_dir_name'=>'rnaseq', '-silent'=>1);
 if ($tumor_rnaseq){
   my $tumor_rnaseq_dir = &createNewDir('-path'=>$rnaseq_dir, '-new_dir_name'=>'tumor', '-silent'=>1);
-  my $cufflinks_dir = $data_paths->{tumor_rnaseq}->{expression};
-  
-  #Perform the single-tumor outlier analysis
-  $step++; print MAGENTA, "\n\nStep $step. Summarizing RNA-seq absolute expression values", RESET;
-  &runRnaSeqAbsolute('-label'=>'tumor_rnaseq_absolute', '-cufflinks_dir'=>$cufflinks_dir, '-out_paths'=>$out_paths, '-rnaseq_dir'=>$tumor_rnaseq_dir, '-script_dir'=>$script_dir, '-verbose'=>$verbose);
+
+  #Perform QC, splice site, and junction expression analysis using the Tophat output
+  $step++; print MAGENTA, "\n\nStep $step. Summarizing RNA-seq tophat alignment results, splice sites and junction expression - Tumor", RESET;
+  &runRnaSeqTophatJunctionsAbsolute('-label'=>'tumor_rnaseq', '-data_paths'=>$data_paths, '-out_paths'=>$out_paths, '-rnaseq_dir'=>$tumor_rnaseq_dir, '-script_dir'=>$script_dir, '-reference_annotations_dir'=>$reference_annotations_ucsc_dir, '-verbose'=>$verbose);
+
+  #Perform the single-tumor outlier analysis (based on Cufflinks files)
+  $step++; print MAGENTA, "\n\nStep $step. Summarizing RNA-seq Cufflinks absolute expression values - Tumor", RESET;
+  &runRnaSeqCufflinksAbsolute('-label'=>'tumor_rnaseq', '-data_paths'=>$data_paths, '-out_paths'=>$out_paths, '-rnaseq_dir'=>$tumor_rnaseq_dir, '-script_dir'=>$script_dir, '-verbose'=>$verbose);
 
   #Perform the multi-tumor differential outlier analysis
 
 }
 if ($normal_rnaseq){
   my $normal_rnaseq_dir = &createNewDir('-path'=>$rnaseq_dir, '-new_dir_name'=>'normal', '-silent'=>1);
-  my $cufflinks_dir = $data_paths->{normal_rnaseq}->{expression};
-  
-  #Perform the single-normal outlier analysis
-  $step++; print MAGENTA, "\n\nStep $step. Summarizing RNA-seq absolute expression values", RESET;
-  &runRnaSeqAbsolute('-label'=>'normal_rnaseq_absolute', '-cufflinks_dir'=>$cufflinks_dir, '-out_paths'=>$out_paths, '-rnaseq_dir'=>$normal_rnaseq_dir, '-script_dir'=>$script_dir, '-verbose'=>$verbose);
+
+  #Perform QC, splice site, and junction expression analysis using the Tophat output
+  $step++; print MAGENTA, "\n\nStep $step. Summarizing RNA-seq tophat alignment results, splice sites and junction expression - Normal", RESET;
+  &runRnaSeqTophatJunctionsAbsolute('-label'=>'normal_rnaseq', '-data_paths'=>$data_paths, '-out_paths'=>$out_paths, '-rnaseq_dir'=>$normal_rnaseq_dir, '-script_dir'=>$script_dir, '-reference_annotations_dir'=>$reference_annotations_ucsc_dir, '-verbose'=>$verbose);
+
+
+  #Perform the single-normal outlier analysis (based on Cufflinks files)
+  $step++; print MAGENTA, "\n\nStep $step. Summarizing RNA-seq Cufflinks absolute expression values - Normal", RESET;
+  &runRnaSeqCufflinksAbsolute('-label'=>'normal_rnaseq', '-data_paths'=>$data_paths, '-out_paths'=>$out_paths, '-rnaseq_dir'=>$normal_rnaseq_dir, '-script_dir'=>$script_dir, '-verbose'=>$verbose);
 
   #Perform the multi-normal differential outlier analysis
 
@@ -212,7 +225,6 @@ my @positions_files;
 if ($wgs){push(@positions_files, $out_paths->{'wgs'}->{'snv'}->{path});}
 if ($exome){push(@positions_files, $out_paths->{'exome'}->{'snv'}->{path});}
 if ($wgs && $exome){push(@positions_files, $out_paths->{'wgs_exome'}->{'snv'}->{path});}
-#my $read_counts_script = "$script_dir"."snv/getBamReadCounts.pl";
 my $read_counts_script = "/usr/bin/perl `which genome` model clin-seq get-bam-read-counts";
 my $read_counts_summary_script = "$script_dir"."snv/WGS_vs_Exome_vs_RNAseq_VAF_and_FPKM.R";
 
@@ -221,21 +233,18 @@ foreach my $positions_file (@positions_files){
   my $output_file = $fb->{$positions_file}->{base} . ".readcounts" . $fb->{$positions_file}->{extension};
   my $output_stats_dir = $output_file . ".stats/";
 
-  # TODO: swith this to take build IDs.
   my $bam_rc_cmd = "$read_counts_script  --positions-file=$positions_file  ";
   $bam_rc_cmd .= " --wgs-som-var-build=" . $builds->{wgs}->id if $builds->{wgs};
   $bam_rc_cmd .= " --exome-som-var-build=" . $builds->{exome}->id if $builds->{exome};
   $bam_rc_cmd .= " --rna-seq-tumor-build=" . $builds->{tumor_rnaseq}->id if $builds->{tumor_rnaseq};
   $bam_rc_cmd .= " --rna-seq-normal-build=" . $builds->{normal_rnaseq}->id if $builds->{normal_rnaseq};
   $bam_rc_cmd .= " --output-file=$output_file  --verbose=$verbose";
-
-  #WGS_vs_Exome_vs_RNAseq_VAF_and_FPKM.R  /gscmnt/sata132/techd/mgriffit/hgs/test/ /gscmnt/sata132/techd/mgriffit/hgs/all1/snv/wgs_exome/snvs.hq.tier1.v1.annotated.compact.readcounts.tsv /gscmnt/sata132/techd/mgriffit/hgs/all1/rnaseq/tumor/absolute/isoforms_merged/isoforms.merged.fpkm.expsort.tsv
   my $rc_summary_cmd;
   my $rc_summary_stdout = "$output_stats_dir"."rc_summary.stdout";
   my $rc_summary_stderr = "$output_stats_dir"."rc_summary.stderr";
 
   if ($builds->{tumor_rnaseq}){
-    my $tumor_fpkm_file = $out_paths->{'tumor_rnaseq_absolute'}->{'isoforms.merged.fpkm.expsort.tsv'}->{path};
+    my $tumor_fpkm_file = $out_paths->{'tumor_rnaseq_cufflinks_absolute'}->{'isoforms.merged.fpkm.expsort.tsv'}->{path};
     $rc_summary_cmd = "$read_counts_summary_script $output_stats_dir $output_file $tumor_fpkm_file";
   }else{
     $rc_summary_cmd = "$read_counts_summary_script $output_stats_dir $output_file";
@@ -290,7 +299,7 @@ if ($wgs){
 }
 
 #Generate single genome (i.e. single BAM) global copy number segment plots for each BAM.  These help to identify sample swaps
-#TODO: Apparently this has been added to the latest Somatic Variation Processing profile - if this seems okay, remove this step
+#TODO: Apparently this has been added to the latest Somatic Variation Processing profile - if this seems okay, remove this step if the file is already present
 if ($wgs){
   $step++; print MAGENTA, "\n\nStep $step. Creating single BAM CNV plots for each BAM", RESET;
   my $single_bam_cnv_dir = "$patient_dir"."cnv/single_bam_cnv/";
@@ -379,6 +388,9 @@ sub getDataDirsAndBuilds{
     # record paths to essential data based on data type ($dt)
     if ($dt =~ /rna/i) {
         # tumor rna and normal rna
+        my $reference_build = $model->reference_sequence_build;
+        $data_paths{$dt}{reference_fasta_path} = $reference_build->full_consensus_path('fa');
+
         my $alignment_result = $build->alignment_result;
         $data_paths{$dt}{bam} = $alignment_result->bam_file;
     
@@ -390,6 +402,9 @@ sub getDataDirsAndBuilds{
     }
     else {
         # wgs and exome
+        my $reference_build = $build->reference_sequence_build;
+        $data_paths{$dt}{reference_fasta_path} = $reference_build->full_consensus_path('fa');
+
         $data_paths{$dt}{tumor_bam} = $build->tumor_bam;
         $data_paths{$dt}{normal_bam} = $build->normal_bam;
         
@@ -662,9 +677,7 @@ sub identifyCnvGenes{
     my $new_dir = "$cnv_dir"."CNView_"."$symbol_list_name"."/";
     unless (-e $new_dir && -d $new_dir){
       my $cnview_cmd = "$cnview_script  --reference_build=$reference_build_name  --cnv_file=$cnv_data_file  --working_dir=$cnv_dir  --sample_name=$common_name  --gene_targets_file=$gene_targets_file  --name='$symbol_list_name'  --force=1";
-      #print "\n\n$cnview_cmd";
       system ($cnview_cmd);
-      #  CNView.pl  --reference_build=hg19  --cnv_file=/gscmnt/ams1184/info/model_data/2875816457/build111674790/variants/cnvs.hq  --working_dir=/gscmnt/sata132/techd/mgriffit/hg1/cnvs/  --sample_name=hg1  --gene_targets_file=/gscmnt/sata132/techd/mgriffit/reference_annotations/hg19/gene_symbol_lists/CancerGeneCensusPlus.txt  --name='CancerGeneCensusPlus'  
     }
 
     #Store the gene amplification/deletion results files for the full Ensembl gene list so that these file can be annotated
@@ -695,27 +708,30 @@ sub identifyCnvGenes{
 ###################################################################################################################################
 #Run RNAseq absolute analysis to identify highly expressed genes                                                                  #
 ###################################################################################################################################
-sub runRnaSeqAbsolute{
+sub runRnaSeqCufflinksAbsolute{
   my %args = @_;
   my $label = $args{'-label'};
-  my $cufflinks_dir = $args{'-cufflinks_dir'};
+  my $data_paths = $args{'-data_paths'};
   my $out_paths = $args{'-out_paths'};
   my $rnaseq_dir = $args{'-rnaseq_dir'};
   my $script_dir = $args{'-script_dir'};
   my $verbose = $args{'-verbose'};
+
+  my $outlier_genes_absolute_script = "$script_dir"."rnaseq/outlierGenesAbsolute.pl";
+
   #Skip this analysis if the directory already exists
-  my $absolute_dir = $rnaseq_dir . "absolute/";
-  unless (-e $absolute_dir && -d $absolute_dir){
-    my $absolute_rnaseq_dir = &createNewDir('-path'=>$rnaseq_dir, '-new_dir_name'=>'absolute', '-silent'=>1);
-    my $outliers_cmd = "$script_dir"."rnaseq/outlierGenesAbsolute.pl  --cufflinks_dir=$cufflinks_dir  --working_dir=$absolute_rnaseq_dir  --verbose=$verbose";
+  my $results_dir = $rnaseq_dir . "cufflinks_absolute/";
+
+  unless (-e $results_dir && -d $results_dir){
+    my $absolute_rnaseq_dir = &createNewDir('-path'=>$rnaseq_dir, '-new_dir_name'=>'cufflinks_absolute', '-silent'=>1);
+    my $outliers_cmd = "$outlier_genes_absolute_script  --cufflinks_dir=$data_paths->{$label}->{expression}  --working_dir=$absolute_rnaseq_dir  --verbose=$verbose";
     if ($verbose){print YELLOW, "\n\n$outliers_cmd\n\n", RESET;}
     system($outliers_cmd);
   }
   #Store the file paths for later processing
-  my $absolute_rnaseq_dir = "$rnaseq_dir"."absolute/";
   my @subdirs = qw (genes isoforms isoforms_merged);
   foreach my $subdir (@subdirs){
-    my $subdir_path = "$absolute_rnaseq_dir"."$subdir/";
+    my $subdir_path = "$results_dir"."$subdir/";
     opendir(DIR, $subdir_path);
     my @files = readdir(DIR);
     closedir(DIR);
@@ -723,10 +739,56 @@ sub runRnaSeqAbsolute{
       #Only store .tsv files
       if ($file =~ /\.tsv$/){
         #Store the files to be annotated later:
-        $out_paths->{$label}->{$file}->{'path'} = $subdir_path.$file;
+        my $new_label = $label . "cufflinks_absolute";
+        $out_paths->{$new_label}->{$file}->{'path'} = $subdir_path.$file;
       }
     }
   }
+  return();
+}
+
+
+###################################################################################################################################
+#                                                                                                     
+###################################################################################################################################
+sub runRnaSeqTophatJunctionsAbsolute{
+  my %args = @_;
+  my $label = $args{'-label'};
+  my $data_paths = $args{'-data_paths'};
+  my $out_paths = $args{'-out_paths'};
+  my $rnaseq_dir = $args{'-rnaseq_dir'};
+  my $script_dir = $args{'-script_dir'};
+  my $reference_annotations_ucsc_dir = $args{'-reference_annotations_dir'};
+  my $verbose = $args{'-verbose'};
+
+  my $tophat_alignment_summary_script = $script_dir . "qc/tophatAlignmentSummary.pl";
+
+  #Skip this analysis if the directory already exists
+  my $results_dir = $rnaseq_dir . "tophat_junctions_absolute/";
+  
+  unless (-e $results_dir && -d $results_dir){
+    my $absolute_rnaseq_dir = &createNewDir('-path'=>$rnaseq_dir, '-new_dir_name'=>'tophat_junctions_absolute', '-silent'=>1);
+    my $tophat_qc_splice_cmd = "$tophat_alignment_summary_script  --reference_fasta_file=$data_paths->{$label}->{reference_fasta_path}  --tophat_alignment_dir=$data_paths->{$label}->{alignments}  --reference_annotations_dir=$reference_annotations_ucsc_dir  --working_dir=$results_dir  --verbose=$verbose";
+    if ($verbose){print YELLOW, "\n\n$tophat_qc_splice_cmd\n\n", RESET;}
+    system($tophat_qc_splice_cmd);
+  }
+
+  #Store the file paths for later processing
+  my $label_1 = $label . "tophat_junctions_absolute_genes";
+  my $label_2 = $label . "tophat_junctions_absolute_transcripts";
+
+  opendir(DIR, $results_dir);
+  my @files = readdir(DIR);
+  closedir(DIR);
+  foreach my $file (@files){
+    #Only store certain .tsv files
+    if ($file =~ /Ensembl\.Junction/){
+      #Store the files to be annotated later:
+      my $new_label = $label . "tophat_junctions_absolute";
+      $out_paths->{$new_label}->{$file}->{'path'} = $results_dir.$file;
+    }
+  }
+
   return();
 }
 

@@ -120,10 +120,21 @@ my %observed_junctions;
 #&annotateSkipping();
 &annotateSkippingBT('-working_dir'=>$working_dir);
 
-open(OUT, ">$outfile") || die "\n\nCould not open output file: $outfile\n\n";
-print OUT "JID\tRead_Count\tIntron_Size\tSplice_Site\tAnchored\tExons_Skipped\tDonors_Skipped\tAcceptors_Skipped\tGene_Name\n";
+#Calculate the junction read count per million junction reads mapped (JPM)
+my $grand_count = 0;
 foreach my $jid (sort {$observed_junctions{$a}{order} <=> $observed_junctions{$b}{order}} keys %observed_junctions){
-  my $string = "$jid\t$observed_junctions{$jid}{read_count}\t$observed_junctions{$jid}{intron_size}\t$observed_junctions{$jid}{splice_site}\t$observed_junctions{$jid}{anchored}\t$observed_junctions{$jid}{exons_skipped}\t$observed_junctions{$jid}{donors_skipped}\t$observed_junctions{$jid}{acceptors_skipped}\t$observed_junctions{$jid}{gid_list}\n";
+  $grand_count += $observed_junctions{$jid}{read_count};
+}
+foreach my $jid (sort {$observed_junctions{$a}{order} <=> $observed_junctions{$b}{order}} keys %observed_junctions){
+  my $jpm = $observed_junctions{$jid}{read_count} * (1000000 / $grand_count);
+  $observed_junctions{$jid}{jpm} = $jpm;
+}
+
+
+open(OUT, ">$outfile") || die "\n\nCould not open output file: $outfile\n\n";
+print OUT "JID\tRead_Count\tJPM\tIntron_Size\tSplice_Site\tAnchored\tExons_Skipped\tDonors_Skipped\tAcceptors_Skipped\tGene_Name\n";
+foreach my $jid (sort {$observed_junctions{$a}{order} <=> $observed_junctions{$b}{order}} keys %observed_junctions){
+  my $string = "$jid\t$observed_junctions{$jid}{read_count}\t$observed_junctions{$jid}{jpm}\t$observed_junctions{$jid}{intron_size}\t$observed_junctions{$jid}{splice_site}\t$observed_junctions{$jid}{anchored}\t$observed_junctions{$jid}{exons_skipped}\t$observed_junctions{$jid}{donors_skipped}\t$observed_junctions{$jid}{acceptors_skipped}\t$observed_junctions{$jid}{gid_list}\n";
 
   #print "$string";
   print OUT "$string";

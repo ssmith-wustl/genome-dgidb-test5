@@ -148,7 +148,8 @@ sub mergeIsoformsFile{
       next();
     }
     $rc++;
-    
+   
+    #Note.  The tracking ID in this file should be an Ensembl transcript id.  Use this ID and the specified ensembl version to look up the ENSG ID
     my $tracking_id = $line[$columns{'tracking_id'}{position}];
     my $gene_id = $line[$columns{'gene_id'}{position}];
     my $locus = $line[$columns{'locus'}{position}];
@@ -170,20 +171,7 @@ sub mergeIsoformsFile{
     #Fix gene name and create a new column for this name
     my $fixed_gene_name = &fixGeneName('-gene'=>$gene_id, '-entrez_ensembl_data'=>$entrez_ensembl_data, '-verbose'=>0);
 
-    #Key on tracking id AND locus coordinates
-    my $key = "$tracking_id"."|"."$locus";
-
-    $trans{$key}{record_count} = $rc;
-    $trans{$key}{tracking_id} = $tracking_id;
-    $trans{$key}{mapped_gene_name} = $fixed_gene_name;
-    $trans{$key}{gene_id} = $gene_id;
-    $trans{$key}{locus} = $locus;
-    $trans{$key}{length} = $length;
-    $trans{$key}{coverage} = $coverage;
-    $trans{$key}{FPKM} = $FPKM;
-    $trans{$key}{FPKM_conf_lo} = $FPKM_conf_lo;
-    $trans{$key}{FPKM_conf_hi} = $FPKM_conf_hi;
-    $trans{$key}{FPKM_status} = $FPKM_status;
+    $trans{$tracking_id}{record_count} = $rc;
 
     #Get coords from locus
     my $chr;
@@ -222,9 +210,9 @@ sub mergeIsoformsFile{
   }
   close(TRANS);
 
-  my $gc = keys %trans;
-  unless ($gc == $rc){
-    print RED, "\n\nFound $gc distinct gene|coord entries but $rc data lines - not good...\n\n", RESET;
+  my $tc = keys %trans;
+  unless ($tc == $rc){
+    print RED, "\n\nFound $tc distinct transcript entries but $rc data lines - not good...\n\n", RESET;
     exit();
   }
 
