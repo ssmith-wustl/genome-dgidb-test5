@@ -7,7 +7,7 @@ use above 'Genome';
 
 use Test::More;
 
-use_ok('Genome::Model::Event::Build::MetagenomicComposition16s::RemoveChimeras') or die;
+use_ok('Genome::Model::Event::Build::MetagenomicComposition16s::DetectAndRemoveChimeras') or die;
 
 done_testing();
 exit;

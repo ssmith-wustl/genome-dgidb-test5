@@ -86,6 +86,19 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
               </td>
             </tr>
 
+            <tr>
+              <td class="name">Source URL:
+              </td>
+              <td class="value">
+                <a>
+                  <xsl:attribute name="href">
+                    <xsl:value-of select="normalize-space(aspect[@name='original_data_source_url']/value)"/>
+                  </xsl:attribute>
+                  <xsl:value-of select="normalize-space(aspect[@name='original_data_source_url']/value)"/>
+                </a>
+              </td>
+            </tr>
+
           </tbody>
         </table>
       </div>

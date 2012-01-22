@@ -12,9 +12,21 @@ class Genome::Model::Build::MetagenomicComposition16s::AmpliconSet {
         primers => { is => 'Text', is_many => 1, is_optional => 1, },
         file_base_name => { is => 'Text', },
         directory => { is => 'Text', },
+        # fasta
         fasta_dir => { calculate => q| return $self->directory.'/fasta'; |, },
+        processed_fasta_file => { calculate => q| return $self->_file_for('processed_fasta'); |, },
+        processed_qual_file => { calculate => q| return $_[0]->_file_for('processed_qual'); |, },
+        chimera_free_fasta_file => { calculate => q| return $_[0]->_file_for('chimera_free_fasta'); |, },
+        chimera_free_qual_file => { calculate => q| return $_[0]->_file_for('chimera_free_qual'); |, },
+        oriented_fasta_file => { calculate => q| return $_[0]->_file_for('oriented_fasta'); |, },
+        oriented_qual_file => { calculate => q| return $_[0]->_file_for('oriented_qual'); |, },
+        # classifier
         classifier => { is => 'Text', },
         classification_dir => { calculate => q| return $self->directory.'/classification'; |, },
+        classification_file => { calculate => q| return $self->_file_for('classification'); |, },
+        # chimera
+        chimera_dir => {  calculate => q| return $self->directory.'/chimera'; |, }, 
+        chimera_file => {  calculate => q| return $self->_file_for('chimera'); |, }, 
     ],
     has_optional => [
         oriented_qual_file => { is => 'Text', },
@@ -49,13 +61,10 @@ sub amplicon_iterator {
 
     return $self->{_amplicon_iterator} if $self->{_amplicon_iterator};
 
-    my $fasta_file = $self->processed_fasta_file;
-    my $qual_file = $self->processed_qual_file;
-    return unless -e $fasta_file and -e $qual_file;
-    my $reader =  Genome::Model::Tools::Sx::PhredReader->create(
-        file => $fasta_file,
-        qual_file => $qual_file,
-    );
+    my %input = $self->amplicon_iterator_input_fasta_and_qual;
+    return if not %input;
+
+    my $reader =  Genome::Model::Tools::Sx::PhredReader->create(%input);
     if ( not  $reader ) {
         $self->error_message('Failed create phred reader');
         return;
@@ -105,36 +114,40 @@ sub amplicon_iterator {
 }
 #<>#
 
-#< FILES >#
-sub _fasta_file_for {
+#< FILES/READERS/WRITERS >#
+sub _file_for {
     my ($self, $type) = @_;
 
     Carp::confess("No type given to get fasta (qual) file") unless defined $type;
-    
+    my %types_and_props = (
+        processed_fasta => [qw/ fasta_dir processed.fasta /],
+        processed_qual => [qw/ fasta_dir processed.fasta.qual /],
+        chimera_free_fasta => [qw/ fasta_dir chimera_free.fasta /],
+        chimera_free_qual => [qw/ fasta_dir chimera_free.fasta.qual /],
+        oriented_fasta => [qw/ fasta_dir oriented.fasta /],
+        oriented_qual => [qw/ fasta_dir oriented.fasta.qual /],
+        chimera => [qw/ chimera_dir chimera /],
+        classification => [ 'classification_dir', $self->classifier ],
+    );
+    Carp::confess("Invalid type ($type) given to get file") unless $types_and_props{$type};
+    my ($method, $ext) = @{$types_and_props{$type}};
+
     return sprintf(
-        '%s/%s%s.%s.fasta',
-        $self->fasta_dir,
+        '%s/%s%s.%s',
+        $self->$method,
         $self->file_base_name,
         ( $self->name eq '' ? '' : '.'.$self->name ),
-        $type,
+        $ext,
     );
 }
 
-sub _qual_file_for {
-    my ($self, $type) = @_;
-    my $fasta_file = $self->_fasta_file_for($type);
-    return $fasta_file.'.qual';
-}
-
 sub seq_reader_for {
-    my ($self, $type, $set_name) = @_;
+    my ($self, $type) = @_;
     
-    # Sanity checks - should not happen
     Carp::confess("No type given to get seq reader") unless defined $type;
-        Carp::confess("Invalid type ($type) given to get seq reader") unless grep { $type eq $_ } (qw/ processed oriented /);
 
-    my $fasta_file = $self->_fasta_file_for($type);
-    my $qual_file = $self->_qual_file_for($type);
+    my $fasta_file = $self->_file_for($type.'_fasta');
+    my $qual_file = $self->_file_for($type.'_qual');
     return unless -e $fasta_file and -e $qual_file; # ok
 
     my %params = (
@@ -143,7 +156,7 @@ sub seq_reader_for {
     );
     my $reader =  Genome::Model::Tools::Sx::PhredReader->create(%params);
     if ( not  $reader ) {
-        $self->error_message("Failed to create phred reader for $type fasta file and amplicon set name ($set_name) for ".$self->description);
+        $self->error_message("Failed to create $type seq reader for amplicon set name (".$self->name.')');
         return;
     }
 
@@ -154,10 +167,9 @@ sub seq_writer_for {
     my ($self, $type) = @_;
 
     Carp::confess("No type given to get fasta and qual writer") unless defined $type;
-    Carp::confess("Invalid type ($type) given to get fasta and qual writer") unless grep { $type eq $_ } (qw/ processed oriented /);
 
-    my $fasta_file = $self->_fasta_file_for($type);
-    my $qual_file = $self->_qual_file_for($type);
+    my $fasta_file = $self->_file_for($type.'_fasta');
+    my $qual_file = $self->_file_for($type.'_qual');
     unlink $fasta_file, $qual_file;
 
     my $writer =  Genome::Model::Tools::Sx::PhredWriter->create(
@@ -165,43 +177,27 @@ sub seq_writer_for {
         qual_file => $qual_file,
     );
     unless ( $writer ) {
-        $self->error_message("Can't create phred writer for $type fasta file and amplicon set name (".$self->name.')');
+        $self->error_message("Failed to create $type seq writer for amplicon set name (".$self->name.')');
         return;
     }
 
     return $writer;
 }
 
-sub processed_fasta_file {
-    my $self = shift;
-    return $self->_fasta_file_for('processed');
-}
-
-sub processed_qual_file {
-    my $self = shift;
-    return $self->_qual_file_for('processed');
-}
-
-sub oriented_fasta_file {
-    my $self = shift;
-    return $self->_fasta_file_for('oriented');
-}
-
-sub oriented_qual_file {
-    my $self = shift;
-    return $self->_qual_file_for('oriented');
-}
-
-sub classification_file {
+sub amplicon_iterator_input_fasta_and_qual {
     my $self = shift;
 
-    return sprintf(
-        '%s/%s%s.%s',
-        $self->classification_dir,
-        $self->file_base_name,
-        ( $self->name eq '' ? '' : '.'.$self->name ),
-        $self->classifier,
-    );
+    my $fasta_file = $self->chimera_free_fasta_file;
+    my $qual_file = $self->chimera_free_qual_file;
+    if ( not -e $fasta_file or not -e $qual_file ) {
+        $fasta_file = $self->processed_fasta_file;
+        $qual_file = $self->processed_qual_file;
+        if ( not -e $fasta_file or not -e $qual_file ) {
+            return; # no amplicons to iterate
+        }
+    }
+
+    return ( file => $fasta_file, qual_file => $qual_file, );
 }
 #<>#
 

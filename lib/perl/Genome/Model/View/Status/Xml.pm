@@ -27,6 +27,7 @@ class Genome::Model::View::Status::Xml {
                 'user_name',
                 'build_requested',
                 'build_needed',
+                'status',
                 'region_of_interest_set_name',
                 {
                     name => 'processing_profile',

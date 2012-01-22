@@ -23,7 +23,7 @@ use_ok('Genome::Model::Build::DeNovoAssembly::Soap') or die;
 my $base_dir = '/gsc/var/cache/testsuite/data/Genome-Model/DeNovoAssembly';
 my $archive_path = $base_dir.'/inst_data/-7777/archive.tgz';
 ok(-s $archive_path, 'inst data archive path') or die;
-my $example_dir = $base_dir.'/soap_v13';
+my $example_dir = $base_dir.'/soap_v15';
 ok(-d $example_dir, 'example dir') or die;
 my $tmpdir = File::Temp::tempdir(CLEANUP => 1);
 
@@ -115,7 +115,7 @@ my $library_file_base = $build->data_directory.'/'.$file_prefix;
 my $prepare = Genome::Model::Event::Build::DeNovoAssembly::PrepareInstrumentData->create(build => $build, model => $model);
 is($prepare->bsub_rusage, "-R 'select[type==LINUX64 && tmp>25000] rusage[tmp=25000] span[hosts=1]'", 'prepare inst data rsuage');
 $pp->read_processor('quake');
-is($prepare->bsub_rusage, "-R 'select[type==LINUX64 && mem>16000 && tmp>100000] rusage[mem=16000:tmp=100000] span[hosts=1]' -M 16000000", 'prepare inst data quake/eulr rsuage');
+is($prepare->bsub_rusage, "-R 'select[type==LINUX64 && mem>32000 && tmp>200000] rusage[mem=32000:tmp=200000] span[hosts=1]' -M 32000000", 'prepare inst data quake/eulr rsuage');
 $pp->read_processor('trim bwa-style -trim-qual-level 10 | filter by-length -filter-length 35 | rename illumina-to-pcap');
 ok($prepare, 'create prepare instrument data');
 $prepare->dump_status_messages(1);
