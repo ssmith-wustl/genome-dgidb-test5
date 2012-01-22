@@ -120,15 +120,17 @@ sub mergeIsoformsFile{
   my %args = @_;
   my $infile = $args{'-infile'};
   my $entrez_ensembl_data = $args{'-entrez_ensembl_data'};
+  my $ensembl_map = $args{'-ensembl_map'};
   my $verbose = $args{'-verbose'};
   my $outfile;
+
   if (defined($args{'-outfile'})){
     $outfile = $args{'-outfile'};
   }
-
   if ($verbose){
     print BLUE, "\n\nParsing and merging to gene level: $infile", RESET;
   }
+
   my %trans;
   my %genes;
   my $header = 1;
@@ -151,7 +153,16 @@ sub mergeIsoformsFile{
    
     #Note.  The tracking ID in this file should be an Ensembl transcript id.  Use this ID and the specified ensembl version to look up the ENSG ID
     my $tracking_id = $line[$columns{'tracking_id'}{position}];
-    my $gene_id = $line[$columns{'gene_id'}{position}];
+    my $original_gene_id = $line[$columns{'gene_id'}{position}];
+
+    #Get the gene ID from the transcript ID
+    unless (defined($ensembl_map->{$tracking_id})){
+      print RED, "\n\nCould not map tracking id: $tracking_id to an ensembl gene via ensembl transcript ID!\n\n", RESET;
+      exit();
+    }
+    my $ensg_id = $ensembl_map->{$tracking_id}->{ensg_id};
+    my $ensg_name = $ensembl_map->{$tracking_id}->{ensg_name};
+
     my $locus = $line[$columns{'locus'}{position}];
     my $length = $line[$columns{'length'}{position}];
     my $coverage = $line[$columns{'coverage'}{position}];
@@ -169,7 +180,7 @@ sub mergeIsoformsFile{
     }
  
     #Fix gene name and create a new column for this name
-    my $fixed_gene_name = &fixGeneName('-gene'=>$gene_id, '-entrez_ensembl_data'=>$entrez_ensembl_data, '-verbose'=>0);
+    my $fixed_gene_name = &fixGeneName('-gene'=>$ensg_name, '-entrez_ensembl_data'=>$entrez_ensembl_data, '-verbose'=>0);
 
     $trans{$tracking_id}{record_count} = $rc;
 
@@ -185,27 +196,28 @@ sub mergeIsoformsFile{
       print RED, "\n\nlocus format not understood: $locus\n\n", RESET;
       exit();
     }
-
-    if ($genes{$gene_id}){
-      if ($chr_start <  $genes{$gene_id}{chr_start}){$genes{$gene_id}{chr_start} = $chr_start;}
-      if ($chr_end >  $genes{$gene_id}{chr_end}){$genes{$gene_id}{chr_end} = $chr_end;}
-      $genes{$gene_id}{coverage} += $coverage;
-      $genes{$gene_id}{FPKM} += $FPKM;
-      $genes{$gene_id}{FPKM_conf_lo} += $FPKM_conf_lo;
-      $genes{$gene_id}{FPKM_conf_hi} += $FPKM_conf_hi;
-      $genes{$gene_id}{FPKM_status} = "na";
-      $genes{$gene_id}{transcript_count}++;
+  
+    #Merge down to genes, combining the coverage and FPKM values (cumulatively), coordinates (outer coords), and calculating a new length
+    if ($genes{$ensg_id}){
+      if ($chr_start <  $genes{$ensg_id}{chr_start}){$genes{$ensg_id}{chr_start} = $chr_start;}
+      if ($chr_end >  $genes{$ensg_id}{chr_end}){$genes{$ensg_id}{chr_end} = $chr_end;}
+      $genes{$ensg_id}{coverage} += $coverage;
+      $genes{$ensg_id}{FPKM} += $FPKM;
+      $genes{$ensg_id}{FPKM_conf_lo} += $FPKM_conf_lo;
+      $genes{$ensg_id}{FPKM_conf_hi} += $FPKM_conf_hi;
+      $genes{$ensg_id}{FPKM_status} = "na";
+      $genes{$ensg_id}{transcript_count}++;
     }else{
-      $genes{$gene_id}{mapped_gene_name} = $fixed_gene_name;
-      $genes{$gene_id}{chr} = $chr;
-      $genes{$gene_id}{chr_start} = $chr_start;
-      $genes{$gene_id}{chr_end} = $chr_end;
-      $genes{$gene_id}{coverage} = $coverage;
-      $genes{$gene_id}{FPKM} = $FPKM;
-      $genes{$gene_id}{FPKM_conf_lo} = $FPKM_conf_lo;
-      $genes{$gene_id}{FPKM_conf_hi} = $FPKM_conf_hi;
-      $genes{$gene_id}{FPKM_status} = "na";
-      $genes{$gene_id}{transcript_count} = 1;
+      $genes{$ensg_id}{mapped_gene_name} = $fixed_gene_name;
+      $genes{$ensg_id}{chr} = $chr;
+      $genes{$ensg_id}{chr_start} = $chr_start;
+      $genes{$ensg_id}{chr_end} = $chr_end;
+      $genes{$ensg_id}{coverage} = $coverage;
+      $genes{$ensg_id}{FPKM} = $FPKM;
+      $genes{$ensg_id}{FPKM_conf_lo} = $FPKM_conf_lo;
+      $genes{$ensg_id}{FPKM_conf_hi} = $FPKM_conf_hi;
+      $genes{$ensg_id}{FPKM_status} = "na";
+      $genes{$ensg_id}{transcript_count} = 1;
     }
   }
   close(TRANS);
@@ -216,7 +228,6 @@ sub mergeIsoformsFile{
     exit();
   }
 
-  #Now go through the transcripts and merge down to genes, combining the coverage and FPKM values (cumulatively), coordinates (outer coords), and calculating a new length
   #Print an outfile sorted on the key
   if ($outfile){
     open (OUT, ">$outfile") || die "\n\nCould not open gene file: $infile\n\n";

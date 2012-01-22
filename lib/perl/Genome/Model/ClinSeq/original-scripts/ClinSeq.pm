@@ -322,7 +322,7 @@ sub loadEntrezEnsemblData{
   #Load data from Ensembl files
   my %entrez_map;      #Entrez_id          -> symbol, synonyms
   my %ensembl_map;     #Ensembl_id         -> entrez_id(s) - from Entrez
-  my %ensembl_map2;    #Ensembl_id         -> symbol(s) - from Ensembl
+  my %ensembl_map2;    #Ensembl_gene_id    -> symbol(s) - from Ensembl
   my %symbols_map;     #Symbols            -> entrez_id(s)
   my %synonyms_map;    #Synonyms           -> entrez_id(s)
   my %p_acc_map;       #Protein accessions -> entrez_id(s)
@@ -487,11 +487,12 @@ sub loadEntrezEnsemblData{
       chomp($_);
       my @line = split("\t", $_);
       my $ensg_id = uc($line[0]);
-      my $ensg_name = uc($line[1]);
+      my $enst_id = uc($line[1]);
+      my $ensg_name = uc($line[2]);
       if ($ensg_name =~ /(.*)\.\d+$/){
         $ensg_name = $1;
       }
-
+      #Create one hash that is simply ENSG id to associated gene name
       unless($ensembl_map2{$ensg_id}){
         $ensembl_map2{$ensg_id}{name}=$ensg_name;
         $ensembl_map2{$ensg_id}{source}=$file;

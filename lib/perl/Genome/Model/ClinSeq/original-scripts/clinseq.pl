@@ -118,6 +118,10 @@ my $normal_rnaseq = exists $builds->{normal_rnaseq} || 0;
 #Check the working dir
 $working_dir = &checkDir('-dir'=>$working_dir, '-clear'=>"no");
 
+
+#Hard code the Ensembl version to use.  TODO: This should be determined automatically from the RNA-seq builds! Ask Jason how to do that...
+my $ensembl_version = 58;
+
 #Get Entrez and Ensembl data for gene name mappings
 my $entrez_ensembl_data = &loadEntrezEnsemblData();
 
@@ -183,7 +187,7 @@ if ($tumor_rnaseq){
 
   #Perform the single-tumor outlier analysis (based on Cufflinks files)
   $step++; print MAGENTA, "\n\nStep $step. Summarizing RNA-seq Cufflinks absolute expression values - Tumor", RESET;
-  &runRnaSeqCufflinksAbsolute('-label'=>'tumor_rnaseq', '-data_paths'=>$data_paths, '-out_paths'=>$out_paths, '-rnaseq_dir'=>$tumor_rnaseq_dir, '-script_dir'=>$script_dir, '-verbose'=>$verbose);
+  &runRnaSeqCufflinksAbsolute('-label'=>'tumor_rnaseq', '-data_paths'=>$data_paths, '-out_paths'=>$out_paths, '-rnaseq_dir'=>$tumor_rnaseq_dir, '-script_dir'=>$script_dir, '-reference_annotations_dir'=>$reference_annotations_dir, '-ensembl_version'=>$ensembl_version, '-verbose'=>$verbose);
 
   #Perform the multi-tumor differential outlier analysis
 
@@ -198,7 +202,7 @@ if ($normal_rnaseq){
 
   #Perform the single-normal outlier analysis (based on Cufflinks files)
   $step++; print MAGENTA, "\n\nStep $step. Summarizing RNA-seq Cufflinks absolute expression values - Normal", RESET;
-  &runRnaSeqCufflinksAbsolute('-label'=>'normal_rnaseq', '-data_paths'=>$data_paths, '-out_paths'=>$out_paths, '-rnaseq_dir'=>$normal_rnaseq_dir, '-script_dir'=>$script_dir, '-verbose'=>$verbose);
+  &runRnaSeqCufflinksAbsolute('-label'=>'normal_rnaseq', '-data_paths'=>$data_paths, '-out_paths'=>$out_paths, '-rnaseq_dir'=>$normal_rnaseq_dir, '-script_dir'=>$script_dir, '-reference_annotations_dir'=>$reference_annotations_dir, '-ensembl_version'=>$ensembl_version, '-verbose'=>$verbose);
 
   #Perform the multi-normal differential outlier analysis
 
@@ -715,6 +719,8 @@ sub runRnaSeqCufflinksAbsolute{
   my $out_paths = $args{'-out_paths'};
   my $rnaseq_dir = $args{'-rnaseq_dir'};
   my $script_dir = $args{'-script_dir'};
+  my $reference_annotations_dir = $args{'-reference_annotations_dir'};
+  my $ensembl_version = $args{'-ensembl_version'};
   my $verbose = $args{'-verbose'};
 
   my $outlier_genes_absolute_script = "$script_dir"."rnaseq/outlierGenesAbsolute.pl";
@@ -724,7 +730,7 @@ sub runRnaSeqCufflinksAbsolute{
 
   unless (-e $results_dir && -d $results_dir){
     my $absolute_rnaseq_dir = &createNewDir('-path'=>$rnaseq_dir, '-new_dir_name'=>'cufflinks_absolute', '-silent'=>1);
-    my $outliers_cmd = "$outlier_genes_absolute_script  --cufflinks_dir=$data_paths->{$label}->{expression}  --working_dir=$absolute_rnaseq_dir  --verbose=$verbose";
+    my $outliers_cmd = "$outlier_genes_absolute_script  --cufflinks_dir=$data_paths->{$label}->{expression}  --reference_annotations_dir=$reference_annotations_dir  --ensembl_version=$ensembl_version  --working_dir=$absolute_rnaseq_dir  --verbose=$verbose";
     if ($verbose){print YELLOW, "\n\n$outliers_cmd\n\n", RESET;}
     system($outliers_cmd);
   }

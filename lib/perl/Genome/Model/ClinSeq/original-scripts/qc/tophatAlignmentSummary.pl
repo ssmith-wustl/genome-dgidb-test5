@@ -43,7 +43,7 @@ my $working_dir = '';
 my $verbose = 0;
 my $clean = 0;
 
-GetOptions ('reference_fasta_file=s'=>\$reference_fasta_file, 'tophat_alignment_dir=s'=>\$tophat_alignment_dir, 'reference_annotations_dir=s'=>\$reference_annotations_dir, 
+GetOptions ('reference_fasta_file=s'=>\$reference_fasta_file, 'tophat_alignment_dir=s'=>\$tophat_alignment_dir, 'reference_annotations_dir=s'=>\$reference_annotations_dir,
  	    'working_dir=s'=>\$working_dir, 'verbose=i'=>\$verbose, 'clean=i'=>\$clean);
 
 
@@ -60,7 +60,7 @@ my $usage=<<INFO;
   --reference_fasta_file          Reference fasta file that was used for Tophat mapping
   --tophat_alignment_dir          The 'alignment' dir created by a Tophat run
   --reference_annotations_dir     Directory containing the reference junctions to be compared against
-                                  For example: /gscmnt/sata132/techd/mgriffit/reference_annotations/hg19/ALL.Genes.junc                                
+                                  For example: /gscmnt/sata132/techd/mgriffit/reference_annotations/hg19/ALL.Genes.junc
   --working_dir                   Directory where results will be stored
   --verbose                       To display more output, set to 1
   --clean                         To clobber the top dir and create everything from scratch, set to 1
