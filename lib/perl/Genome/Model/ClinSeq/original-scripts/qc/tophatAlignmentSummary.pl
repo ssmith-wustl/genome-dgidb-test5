@@ -381,6 +381,11 @@ sub calculateGeneExpression{
     exit();
   }
 
+
+
+  my $entrez_ensembl_data = &loadEntrezEnsemblData();
+
+
   #Calculate gene/transcript level read counts and expression estimates from exon-exon junction counts
   #Gene/transcript level expression = (sum of exon junction read counts for a gene / number of exon-exon junctions of that gene) => then normalized to per million junction mapped reads (JPJM)
   #Only known 'DA' junctions among the observed junctions will be used for these calculations
@@ -595,11 +600,17 @@ sub calculateGeneExpression{
     my $features = $lists{$feature_type}{features};
     my $outfile = $lists{$feature_type}{outfile};
     my $feature_count = keys %{$features};
+
     if ($verbose){print BLUE, "\n\nProcessing $feature_count features and printing to: $outfile", RESET;}
     open (OUT, ">$outfile") || die "\n\nCould not open output file: $outfile\n\n", RESET;
-    print OUT "fid\tensg_id\tname\tchromosome\tknown_junction_count\tread_count\tjpjm\tjunctions_1x_p\tjunctions_2x_p\tjunctions_5x_p\tjunctions_10x_p\tjunctions_20x_p\tjunctions_50x_p\tjunctions_100x_p\tjunctions_500x_p\tjunctions_1000x_p\n";
+    print OUT "fid\tensg_id\tgene_name\tmapped_gene_name\tchromosome\tknown_junction_count\tread_count\tjpjm\tjunctions_1x_p\tjunctions_2x_p\tjunctions_5x_p\tjunctions_10x_p\tjunctions_20x_p\tjunctions_50x_p\tjunctions_100x_p\tjunctions_500x_p\tjunctions_1000x_p\n";
     foreach my $fid (sort {$features->{$b}->{jpjm} <=> $features->{$a}->{jpjm}} keys %{$features}){
-      print OUT "$fid\t$features->{$fid}->{ensg_id}\t$features->{$fid}->{name}\t$features->{$fid}->{chromosome}\t$features->{$fid}->{known_junction_count}\t$features->{$fid}->{read_count}\t$features->{$fid}->{jpjm}\t$features->{$fid}->{junctions_1x_p}\t$features->{$fid}->{junctions_2x_p}\t$features->{$fid}->{junctions_5x_p}\t$features->{$fid}->{junctions_10x_p}\t$features->{$fid}->{junctions_20x_p}\t$features->{$fid}->{junctions_50x_p}\t$features->{$fid}->{junctions_100x_p}\t$features->{$fid}->{junctions_500x_p}\t$features->{$fid}->{junctions_1000x_p}\n";
+
+      #Attempt to map current gene name to an entrez gene name
+      my $gene_name = $features->{$fid}->{name};
+      my $mapped_gene_name = &fixGeneName('-gene'=>$gene_name, '-entrez_ensembl_data'=>$entrez_ensembl_data, '-verbose'=>0);
+
+      print OUT "$fid\t$features->{$fid}->{ensg_id}\t$gene_name\t$mapped_gene_name\t$features->{$fid}->{chromosome}\t$features->{$fid}->{known_junction_count}\t$features->{$fid}->{read_count}\t$features->{$fid}->{jpjm}\t$features->{$fid}->{junctions_1x_p}\t$features->{$fid}->{junctions_2x_p}\t$features->{$fid}->{junctions_5x_p}\t$features->{$fid}->{junctions_10x_p}\t$features->{$fid}->{junctions_20x_p}\t$features->{$fid}->{junctions_50x_p}\t$features->{$fid}->{junctions_100x_p}\t$features->{$fid}->{junctions_500x_p}\t$features->{$fid}->{junctions_1000x_p}\n";
     }
     close(OUT);
 
