@@ -217,9 +217,8 @@ sub _process_instrument_data {
             }
             $qual_type = 'illumina';
         }
-        my $instrument_data_tempdir = $self->_tempdir.'/'.$instrument_data->id;
-        my $create_dir = Genome::Sys->create_directory($instrument_data_tempdir);
-        if ( not $create_dir or not -d $instrument_data_tempdir ) {
+        my $instrument_data_tempdir = File::Temp::tempdir(CLEANUP => 1);
+        if ( not -d $instrument_data_tempdir ) {
             $self->error_message('Failed to make temp directory for instrument data!');
             return;
         }
