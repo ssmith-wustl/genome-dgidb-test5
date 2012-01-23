@@ -46,6 +46,7 @@ EOS
 }
 
 sub _resolve_workflow_for_build {
+warn 'The logic for building a MuSiC model is not yet functional.  Contact Allison Regier';
 
     # This is called by Genome::Model::Build::start()
     # Returns a Workflow::Operation
