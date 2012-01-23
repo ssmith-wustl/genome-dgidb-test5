@@ -208,7 +208,9 @@ sub mergeIsoformsFile{
       $genes{$ensg_id}{FPKM_status} = "na";
       $genes{$ensg_id}{transcript_count}++;
     }else{
+      $genes{$ensg_id}{ensg_name} = $ensg_name;
       $genes{$ensg_id}{mapped_gene_name} = $fixed_gene_name;
+      $genes{$ensg_id}{original_gene_id} = $original_gene_id;
       $genes{$ensg_id}{chr} = $chr;
       $genes{$ensg_id}{chr_start} = $chr_start;
       $genes{$ensg_id}{chr_end} = $chr_end;
@@ -231,11 +233,11 @@ sub mergeIsoformsFile{
   #Print an outfile sorted on the key
   if ($outfile){
     open (OUT, ">$outfile") || die "\n\nCould not open gene file: $infile\n\n";
-    print OUT "tracking_id\tmapped_gene_name\tgene_id\tlocus\tlength\tcoverage\tFPKM\tFPKM_conf_lo\tFPKM_conf_hi\tFPKM_status\n";
-    foreach my $gene_id (sort {$a cmp $b} keys %genes){
+    print OUT "tracking_id\tmapped_gene_name\tensg_name\tlocus\tlength\tcoverage\tFPKM\tFPKM_conf_lo\tFPKM_conf_hi\tFPKM_status\n";
+    foreach my $gene_id (sort {$genes{$a}{ensg_name} cmp $genes{$b}{ensg_name}} keys %genes){
       my $locus = "$genes{$gene_id}{chr}:$genes{$gene_id}{chr_start}-$genes{$gene_id}{chr_end}";
       my $length = "-";
-      print OUT "$gene_id\t$genes{$gene_id}{mapped_gene_name}\t$gene_id\t$locus\t$length\t$genes{$gene_id}{coverage}\t$genes{$gene_id}{FPKM}\t$genes{$gene_id}{FPKM_conf_lo}\t$genes{$gene_id}{FPKM_conf_hi}\t$genes{$gene_id}{FPKM_status}\n";
+      print OUT "$gene_id\t$genes{$gene_id}{mapped_gene_name}\t$genes{$gene_id}{ensg_name}\t$locus\t$length\t$genes{$gene_id}{coverage}\t$genes{$gene_id}{FPKM}\t$genes{$gene_id}{FPKM_conf_lo}\t$genes{$gene_id}{FPKM_conf_hi}\t$genes{$gene_id}{FPKM_status}\n";
     }
     close(OUT);
   }
