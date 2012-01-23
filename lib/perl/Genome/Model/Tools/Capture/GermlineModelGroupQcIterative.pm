@@ -59,7 +59,6 @@ sub help_detail { '' }
 sub execute {                               # replace with real execution logic.
     my $self = shift;
     my @models = Genome::ModelGroup->get($self->group_id)->models;
-    my $limit_snps_file = $self->limit_snps_file;
     my $skip_if_output_present = $self->skip_if_output_present;
     my $empty_file_cleanup = $self->skip_if_output_present;
     my $summary_file;
@@ -105,21 +104,6 @@ sub execute {                               # replace with real execution logic.
         $db_snp_build = 132;
     } else {
         die "$ref_name isn't NCBI-human-build36 or GRCh37-lite-build37\n";
-    }
-
-    my %snp_limit_hash;
-    if($self->limit_snps_file) {
-        my $snp_input = new FileHandle ($self->limit_snps_file);
-        unless($snp_input) {
-            $self->error_message("Unable to open ".$self->limit_snps_file);
-            return;
-        }
-
-        while (my $line = <$snp_input>) {
-            chomp($line);
-            my ($id) = split(/\t/, $line);
-            $snp_limit_hash{$id}++;
-        }
     }
 
     my %qc_iteration_hash_genotype;
