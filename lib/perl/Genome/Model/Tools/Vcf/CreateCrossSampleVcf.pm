@@ -129,7 +129,8 @@ sub execute {
     $self->_input_files(\@input_files);
     my @existing_files = grep { -s $_ } @input_files;
     unless( scalar(@existing_files) == $num_inputs){
-        die $self->error_message("The number of input builds did not match the number of .vcf.gz files found. Check the input builds for completeness.");
+        die $self->error_message("The number of input builds ($num_inputs) did not match the number of .vcf.gz files found (" . scalar (@existing_files) . "). 
+            Check the input builds for completeness.");
     }
 
     #initialize the workflow inputs

@@ -506,7 +506,6 @@ sub generate_workflow {
             push @output_properties, @new_output_properties;
         }
     }
-
     my $workflow_model = Workflow::Model->create(
         name => 'Somatic Variation Pipeline',
         input_properties => [

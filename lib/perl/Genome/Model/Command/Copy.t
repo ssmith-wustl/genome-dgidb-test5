@@ -24,7 +24,7 @@ my $copy = Genome::Model::Command::Copy->create( # use 37 instead of 36
     overrides => [ 
         'name=__COPY_TEST1__',
         'subject='.$sample->id,
-        'processing_profile=name=Feb 2011 Default Reference Alignment', 
+        'processing_profile=name="Feb 2011 Default Reference Alignment"', 
         'reference_sequence_build=102671028',
         'dbsnp_build=id=106375969',
         'annotation_reference_build=',  
@@ -46,7 +46,7 @@ is($new_model->dbsnp_build->id, 106375969, 'override dbsnp build');
 ok(!$new_model->target_region_set_name, 'undef target region set name');
 is_deeply([$new_model->instrument_data], [], 'did not copy inst data');
 
-my $rv = system("genome model copy 2862809551 name=__COPY_TEST2__ processing_profile='name=Feb 2011 Default Reference Alignment' target_region_set_name='CAMBRIDGE'");
+my $rv = system(qq(genome model copy 2862809551 name=__COPY_TEST2__ processing_profile='name="Feb 2011 Default Reference Alignment"' target_region_set_name='CAMBRIDGE'));
 is($rv, 0, 'command line');
 
 done_testing();

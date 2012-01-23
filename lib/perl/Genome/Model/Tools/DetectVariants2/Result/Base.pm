@@ -18,4 +18,16 @@ sub path {
     return join('/', $self->output_dir, $str);
 }
 
+sub get_vcf_result {
+    my $self = shift;
+    my @result = Genome::Model::Tools::DetectVariants2::Result::Vcf->get(input_id => $self->id);
+    my $vcf_version = Genome::Model::Tools::Vcf->get_vcf_version;
+    @result = map{ $_->vcf_version eq $vcf_version } @result;
+    unless(@result < 2){
+        die $self->error_message("Found ".scalar(@result)." vcf results for vcf_version: ".$vcf_version);
+    }
+    my $vcf_result = (@result == 1) ? $result[0] : undef;
+    return $vcf_result;
+}
+
 1;

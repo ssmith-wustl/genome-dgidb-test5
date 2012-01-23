@@ -28,6 +28,14 @@ class Genome::Sample {
             is_mutable => 1,
             doc => 'Typically tumor, normal, etc. A very brief description of the sample',                                        
         },
+        individual_common_name => { 
+            is => 'Text',
+            via => 'attributes',
+            to => 'attribute_value',
+            where => [ attribute_label => 'individual_common_name' ],
+            is_mutable => 1,
+            doc => 'AML45, BRC1, etc'
+        },
         extraction_label => {
             is => 'Text',
             via => 'attributes',

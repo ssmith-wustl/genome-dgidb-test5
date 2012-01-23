@@ -177,6 +177,7 @@ sub icon_prefix {
     my $icon_prefix = {
         'model'                  => 'genome_model',
         'model - alignment'      => 'genome_model',
+        'model - microarray'     => 'genome_model',
         'model - somatic'        => 'genome_model',
         'model - other'          => 'genome_model',
         'model - rna'            => 'genome_model',
