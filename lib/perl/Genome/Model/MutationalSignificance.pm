@@ -16,9 +16,10 @@ my $DEFAULT_BIN 	= '17_70';
 class Genome::Model::MutationalSignificance {
     is        => 'Genome::Model',
     has_input => [
-        somatic_variation_project => {
-            is    => 'Genome::Project',
-            doc   => 'The project that contains somatic variation models to evaluate',
+        somatic_variation_model => {
+            is    => 'Genome::Model::SomaticVariation',
+            is_many => 1,
+            doc => 'somatic variation models to evaluate',
         },
     ],
     has_param => [
@@ -248,14 +249,9 @@ sub _map_workflow_inputs {
  
     my @inputs = ();
  
-    my @somatic_variation_builds;
-    my @project_parts = $build->somatic_variation_project->parts;
-    foreach my $part (@project_parts) {
-        if ($part->entity_class_name eq "Genome::Model::SomaticVariation") {
-            push @somatic_variation_builds, $part->entity->last_succeeded_build;
-        }
-    }
-    push @inputs, somatic_variation_builds => \@somatic_variation_builds;
+    my @builds = $build->somatic_variation_build;
+
+    push @inputs, somatic_variation_builds => \@builds;
     push @inputs, build_id => $build->id;
 
     return @inputs;

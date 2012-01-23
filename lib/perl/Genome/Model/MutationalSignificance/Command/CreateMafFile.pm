@@ -24,8 +24,10 @@ class Genome::Model::MutationalSignificance::Command::CreateMafFile {
 sub execute {
     my $self = shift;
 
-    $self->model_output("model_output");
-    $self->status_message('Created MAF file');
+    my $rand = rand();
+    $self->model_output($rand);
+    my $status = "Created MAF file $rand";
+    $self->status_message($status);
     return 1;
 }
 
