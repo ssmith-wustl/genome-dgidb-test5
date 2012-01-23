@@ -166,7 +166,16 @@ if ($clean){
 $step++; print MAGENTA, "\n\nStep $step. Summarizing SNVs and Indels", RESET;
 &importSNVs('-data_paths'=>$data_paths, '-out_paths'=>$out_paths, '-patient_dir'=>$patient_dir, '-entrez_ensembl_data'=>$entrez_ensembl_data, '-verbose'=>$verbose, '-filter_mt'=>$filter_mt);
 
-#TODO: when importing SNVs/Indels to the compact format, allow option to eliminate MT/chrM positions
+
+#TODO: More comprehensive processing of SNVs and InDels
+#Import SNVs and Indels in a more complete form
+#Make copies of Tier1,2,3 files
+#Make a master list of all distinct SNV/Indels - add a column that classifies them by Tier - Exclude Mt positions
+#For Tier1 and Tier2 run the annotator using the same version of Ensembl as run by the pipeline - make sure the header option is turned on
+#For Tier1 and Tier2 run the annotator using a more up to date version of Ensembl...
+#For the master list of SNVs (also for INDELS) get the BAM read counts for all positions in tumor and normal
+
+
 
 #Run CNView analyses on the CNV data to identify amplified/deleted genes
 $step++; print MAGENTA, "\n\nStep $step. Identifying CNV altered genes", RESET;
@@ -187,7 +196,7 @@ if ($tumor_rnaseq){
 
   #Perform the single-tumor outlier analysis (based on Cufflinks files)
   $step++; print MAGENTA, "\n\nStep $step. Summarizing RNA-seq Cufflinks absolute expression values - Tumor", RESET;
-  &runRnaSeqCufflinksAbsolute('-label'=>'tumor_rnaseq', '-data_paths'=>$data_paths, '-out_paths'=>$out_paths, '-rnaseq_dir'=>$tumor_rnaseq_dir, '-script_dir'=>$script_dir, '-reference_annotations_dir'=>$reference_annotations_dir, '-ensembl_version'=>$ensembl_version, '-verbose'=>$verbose);
+  &runRnaSeqCufflinksAbsolute('-label'=>'tumor_rnaseq', '-data_paths'=>$data_paths, '-out_paths'=>$out_paths, '-rnaseq_dir'=>$tumor_rnaseq_dir, '-script_dir'=>$script_dir, '-ensembl_version'=>$ensembl_version, '-verbose'=>$verbose);
 
   #Perform the multi-tumor differential outlier analysis
 
@@ -202,7 +211,7 @@ if ($normal_rnaseq){
 
   #Perform the single-normal outlier analysis (based on Cufflinks files)
   $step++; print MAGENTA, "\n\nStep $step. Summarizing RNA-seq Cufflinks absolute expression values - Normal", RESET;
-  &runRnaSeqCufflinksAbsolute('-label'=>'normal_rnaseq', '-data_paths'=>$data_paths, '-out_paths'=>$out_paths, '-rnaseq_dir'=>$normal_rnaseq_dir, '-script_dir'=>$script_dir, '-reference_annotations_dir'=>$reference_annotations_dir, '-ensembl_version'=>$ensembl_version, '-verbose'=>$verbose);
+  &runRnaSeqCufflinksAbsolute('-label'=>'normal_rnaseq', '-data_paths'=>$data_paths, '-out_paths'=>$out_paths, '-rnaseq_dir'=>$normal_rnaseq_dir, '-script_dir'=>$script_dir, '-ensembl_version'=>$ensembl_version, '-verbose'=>$verbose);
 
   #Perform the multi-normal differential outlier analysis
 
@@ -229,7 +238,7 @@ my @positions_files;
 if ($wgs){push(@positions_files, $out_paths->{'wgs'}->{'snv'}->{path});}
 if ($exome){push(@positions_files, $out_paths->{'exome'}->{'snv'}->{path});}
 if ($wgs && $exome){push(@positions_files, $out_paths->{'wgs_exome'}->{'snv'}->{path});}
-&runSnvBamReadCounts('-builds'=>$builds, '-positions_files'=>\@positions_files, '-verbose'=>$verbose);
+&runSnvBamReadCounts('-builds'=>$builds, '-positions_files'=>\@positions_files, '-ensembl_version'=>$ensembl_version, '-verbose'=>$verbose);
 
 
 #Generate a clonality plot for this patient (if WGS data is available)
@@ -657,7 +666,6 @@ sub runRnaSeqCufflinksAbsolute{
   my $out_paths = $args{'-out_paths'};
   my $rnaseq_dir = $args{'-rnaseq_dir'};
   my $script_dir = $args{'-script_dir'};
-  my $reference_annotations_dir = $args{'-reference_annotations_dir'};
   my $ensembl_version = $args{'-ensembl_version'};
   my $verbose = $args{'-verbose'};
 
@@ -668,7 +676,7 @@ sub runRnaSeqCufflinksAbsolute{
 
   unless (-e $results_dir && -d $results_dir){
     my $absolute_rnaseq_dir = &createNewDir('-path'=>$rnaseq_dir, '-new_dir_name'=>'cufflinks_absolute', '-silent'=>1);
-    my $outliers_cmd = "$outlier_genes_absolute_script  --cufflinks_dir=$data_paths->{$label}->{expression}  --reference_annotations_dir=$reference_annotations_dir  --ensembl_version=$ensembl_version  --working_dir=$absolute_rnaseq_dir  --verbose=$verbose";
+    my $outliers_cmd = "$outlier_genes_absolute_script  --cufflinks_dir=$data_paths->{$label}->{expression}  --ensembl_version=$ensembl_version  --working_dir=$absolute_rnaseq_dir  --verbose=$verbose";
     if ($verbose){print YELLOW, "\n\n$outliers_cmd\n\n", RESET;}
     system($outliers_cmd);
   }
@@ -886,6 +894,7 @@ sub runSnvBamReadCounts{
   my %args = @_;
   my $builds = $args{'-builds'};
   my @positions_files = @{$args{'-positions_files'}};
+  my $ensembl_version = $args{'-ensembl_version'};
   my $verbose = $args{'-verbose'};
 
   my $read_counts_script = "/usr/bin/perl `which genome` model clin-seq get-bam-read-counts";
@@ -901,7 +910,13 @@ sub runSnvBamReadCounts{
     $bam_rc_cmd .= " --exome-som-var-build=" . $builds->{exome}->id if $builds->{exome};
     $bam_rc_cmd .= " --rna-seq-tumor-build=" . $builds->{tumor_rnaseq}->id if $builds->{tumor_rnaseq};
     $bam_rc_cmd .= " --rna-seq-normal-build=" . $builds->{normal_rnaseq}->id if $builds->{normal_rnaseq};
-    $bam_rc_cmd .= " --output-file=$output_file  --verbose=$verbose";
+    $bam_rc_cmd .= " --ensembl-version=$ensembl_version  --output-file=$output_file  --verbose=$verbose";
+    my $bam_rc_stdout = "$fb->{$positions_file}->{base_dir}"."bam_rc.stdout";
+    my $bam_rc_stderr = "$fb->{$positions_file}->{base_dir}"."bam_rc.stderr";
+    unless ($verbose){
+      $bam_rc_cmd .= " 1>$bam_rc_stdout 2>$bam_rc_stderr";
+    }
+
     my $rc_summary_cmd;
     my $rc_summary_stdout = "$output_stats_dir"."rc_summary.stdout";
     my $rc_summary_stderr = "$output_stats_dir"."rc_summary.stderr";
@@ -915,6 +930,7 @@ sub runSnvBamReadCounts{
     unless ($verbose){
       $rc_summary_cmd .= " 1>$rc_summary_stdout 2>$rc_summary_stderr";
     }
+
     if(-e $output_file){
       if ($verbose){print YELLOW, "\n\nOutput bam read counts file already exists:\n\t$output_file", RESET;}
       if (-e $output_stats_dir && -d $output_stats_dir){

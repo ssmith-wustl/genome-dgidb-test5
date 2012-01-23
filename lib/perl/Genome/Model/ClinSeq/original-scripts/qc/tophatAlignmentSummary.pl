@@ -177,8 +177,15 @@ my $ensembl_gene_info_file = "$reference_annotations_dir"."transcript_to_gene/En
 #- Produce ranked gene expression lists based on exon-junction values
 #- What is the distribution of observed intron sizes versus known intron sizes
 #- Produce a Top N% expressed file
+
 my $r_cmd = "$script_dir/qc/tophatAlignmentSummary.R $working_dir";
-if ($verbose){ print YELLOW, "\n\n$r_cmd", RESET };
+my $r_cmd_stdout = "$working_dir"."tophatAlignmentSummary.R.stdout";
+my $r_cmd_stderr = "$working_dir"."tophatAlignmentSummary.R.stderr";
+if ($verbose){ 
+  print YELLOW, "\n\nRunning: $r_cmd", RESET;
+}else{
+  $r_cmd .= " 1>$r_cmd_stdout 2>$r_cmd_stderr";
+}
 system($r_cmd);
 
 
@@ -320,7 +327,7 @@ sub inferSpliceSite{
         }elsif($left_dn eq "GT" && $right_dn eq "AT"){
           $junctions{$j}{splice_site} = "AT-AC";
         }else{
-          $junctions{$j}{splice_site} = "NA";
+          $junctions{$j}{splice_site} = "Other";
         }
       }else{
         print RED, "\n\nObserved junction not understood\n\n", RESET;

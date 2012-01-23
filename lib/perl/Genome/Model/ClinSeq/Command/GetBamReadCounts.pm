@@ -33,30 +33,30 @@ class Genome::Model::ClinSeq::Command::GetBamReadCounts {
     is => 'Command::V2',
     has => [
         positions_file          => { is => "FilesystemPath",
-                                    doc => "File containing SNV positions of interest and ref/var bases\n"
+                                     doc => "File containing SNV positions of interest and ref/var bases\n"
                                             . "  (e.g. 5:112176318-112176318	APC	APC	p.R1676T	G	C)" },
-        
+        ensembl_version         => { is => 'Number',
+                                     doc => 'Ensembl version used in RNAseq run (e.g. 58)' },
         wgs_som_var_build       => { is => 'Genome::Model::Build::SomaticVariation', is_optional => 1,
-                                    doc => 'Whole genome sequence (WGS) somatic variation build' },
+                                     doc => 'Whole genome sequence (WGS) somatic variation build' },
 
         exome_som_var_build     => { is => 'Genome::Model::Build::SomaticVariation', is_optional => 1,
-                                    doc => 'Exome capture sequence somatic variation build' },
+                                     doc => 'Exome capture sequence somatic variation build' },
         
         rna_seq_normal_build    => { is => "Genome::Model::Build::RnaSeq", is_optional => 1,
-                                    doc => "RNA-seq model id for normal" },
+                                     doc => "RNA-seq model id for normal" },
 
         rna_seq_tumor_build     => { is => "Genome::Model::Build::RnaSeq", is_optional => 1,
-                                    doc => 'RNA-seq model id for tumor' },
+                                     doc => 'RNA-seq model id for tumor' },
 
         output_file             => { is => 'FilesystemPath',
-                                    doc => 'File where output will be written (input file values with read counts appended)', },
+                                     doc => 'File where output will be written (input file values with read counts appended)', },
 
         data_paths_file         => { is => 'FilesystemPath', is_optional => 1,
                                      doc => "Instead of supplying models/builds supply a tab delimited list of files to handle old builds that are not well tracked or custom situations\n".
                                             " Format: patient  sample_type  data_type  bam_path  build_dir  ref_fasta  ref_name", },
-
         verbose                 => { is => 'Number', is_optional => 1,
-                                    doc => 'To display more output, set this to 1.' },
+                                     doc => 'To display more output, set this to 1.' },
         no_fasta_check          => { is => 'Number', is_optional => 1,
                                      doc => 'To prevent checking of the reported reference base against the reference genome fasta set --no_fasta_check=1 [Not recommended!]' },
 
@@ -68,6 +68,7 @@ sub help_synopsis {
   return <<EOS
   genome model clin-seq get-bam-read-counts \
     --positions_file=snvs.hq.tier1.v1.annotated.compact.tsv \
+    --ensembl_version=58 \
     --wgs_som_var_build='2880644349' \
     --exome_som_var_build='2880732183' \
     --rna_seq_tumor_build='2880693923' \
@@ -119,13 +120,17 @@ sub execute {
   my $data_paths_file = $self->data_paths_file;
   my $no_fasta_check = $self->no_fasta_check;
   my $output_file = $self->output_file;
+  my $ensembl_version = $self->ensembl_version;
   my $verbose = $self->verbose;
 
 
+  #Build a map of ensembl transcript ids to gene ids and gene names
+  my $ensembl_map = &loadEnsemblMap('-ensembl_version'=>$ensembl_version);
+
   #Get Entrez and Ensembl data for gene name mappings
   my $entrez_ensembl_data = &loadEntrezEnsemblData();
-  #Import SNVs from the specified file
 
+  #Import SNVs from the specified file
   my $result = &importPositions('-positions_file'=>$positions_file);
   my $snvs = $result->{'snvs'};
   my $snv_header = $result->{'header'};
@@ -166,7 +171,7 @@ sub execute {
       next();
     }
     my $build_dir = $data->{$bam}->{build_dir};
-    my $exp = &getExpressionValues('-snvs'=>$snvs, '-build_dir'=>$build_dir, '-entrez_ensembl_data'=>$entrez_ensembl_data, '-verbose'=>$verbose);
+    my $exp = &getExpressionValues('-snvs'=>$snvs, '-build_dir'=>$build_dir, '-entrez_ensembl_data'=>$entrez_ensembl_data, '-ensembl_map'=>$ensembl_map, '-verbose'=>$verbose);
     $data->{$bam}->{gene_expression} = $exp;
   }
 
@@ -601,6 +606,7 @@ sub getExpressionValues{
   my $build_dir = $args{'-build_dir'};
   my $verbose = $args{'-verbose'};
   my $entrez_ensembl_data = $args{'-entrez_ensembl_data'};
+  my $ensembl_map = $args{'-ensembl_map'};
 
   if ($verbose){print YELLOW, "\n\nGetting expression data from: $build_dir", YELLOW;}
 
@@ -608,7 +614,7 @@ sub getExpressionValues{
 
   #Import FPKM values from the gene-level expression file created by merging the isoforms of each gene
   my $isoforms_infile = "$build_dir"."expression/isoforms.fpkm_tracking";
-  my $merged_fpkm = &mergeIsoformsFile('-infile'=>$isoforms_infile, '-entrez_ensembl_data'=>$entrez_ensembl_data, '-verbose'=>$verbose);
+  my $merged_fpkm = &mergeIsoformsFile('-infile'=>$isoforms_infile, '-entrez_ensembl_data'=>$entrez_ensembl_data, '-ensembl_map'=>$ensembl_map, '-verbose'=>$verbose);
   
   #Calculate the ranks and percentiles for all genes
   my $rank = 0;

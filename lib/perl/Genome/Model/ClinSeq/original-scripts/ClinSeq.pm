@@ -55,11 +55,11 @@ require Exporter;
 @EXPORT = qw();
 
 @EXPORT_OK = qw(
-                &createNewDir &checkDir &commify &memoryUsage &loadEntrezEnsemblData &mapGeneName &fixGeneName &importIdeogramData &getCytoband &getColumnPosition &listGeneCategories &importGeneSymbolLists &getFilePathBase
+                &createNewDir &checkDir &commify &memoryUsage &loadEnsemblMap &loadEntrezEnsemblData &mapGeneName &fixGeneName &importIdeogramData &getCytoband &getColumnPosition &listGeneCategories &importGeneSymbolLists &getFilePathBase
                );
 
 %EXPORT_TAGS = (
-                all => [qw(&createNewDir &checkDir &commify &memoryUsage &loadEntrezEnsemblData &mapGeneName &fixGeneName &importIdeogramData &getCytoband &getColumnPosition &listGeneCategories &importGeneSymbolLists &getFilePathBase)]
+                all => [qw(&createNewDir &checkDir &commify &memoryUsage &loadEnsemblMap &loadEntrezEnsemblData &mapGeneName &fixGeneName &importIdeogramData &getCytoband &getColumnPosition &listGeneCategories &importGeneSymbolLists &getFilePathBase)]
                );
 
 use strict;
@@ -268,6 +268,47 @@ sub checkDir{
   }
   return($dir);
 }
+
+
+#######################################################################################################################################################################
+#Load Ensembl Transcript ID - Gene ID - Gene Name mappings from flatfiles                                                                                             #
+#######################################################################################################################################################################
+sub loadEnsemblMap{
+  my %args = @_;
+  my $ensembl_version = $args{'-ensembl_version'};
+  my $species = $args{-species} || 'human';
+
+  my $reference_annotations_dir;
+  if ($species eq 'human') {
+    $reference_annotations_dir = "/gscmnt/sata132/techd/mgriffit/reference_annotations/";
+  }
+  my $ensembl_map_file = $reference_annotations_dir . "EnsemblGene/Ensembl_Genes_Human_v"."$ensembl_version".".txt";
+  unless (-e $ensembl_map_file){
+    print RED, "\n\nCould not file Ensembl ID map file with the specified reference annotations dir and ensembl version:\n$ensembl_map_file\n\n", RESET;
+    exit(1);
+  }
+  my %ensembl_map;
+  my $header = 1;
+  open (ENSG, "$ensembl_map_file") || die "\n\nCould not open ensembl map file: $ensembl_map_file\n\n";
+  while (<ENSG>){
+    chomp($_);
+    my @line = split("\t", $_);
+    if ($header){
+      $header = 0;
+      next();
+    }
+    my $ensg_id = $line[0];
+    my $enst_id = $line[1];
+    my $ensg_name = $line[2];
+    $ensembl_map{$enst_id}{ensg_id} = $ensg_id;
+    $ensembl_map{$enst_id}{ensg_name} = $ensg_name;
+  }
+  close(ENSG);
+
+  return(\%ensembl_map);
+}
+
+
 
 
 #######################################################################################################################################################################

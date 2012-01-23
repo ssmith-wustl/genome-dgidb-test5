@@ -51,18 +51,17 @@ use rnaseq::RnaSeq qw(:all);
 #Input parameters
 my $cufflinks_dir = '';
 my $working_dir = '';
-my $reference_annotations_dir = '';
 my $ensembl_version = '';
 my $percent_cutoff = '';
 my $verbose = 0;
 
-GetOptions ('cufflinks_dir=s'=>\$cufflinks_dir, 'working_dir=s'=>\$working_dir, 'reference_annotations_dir=s'=>\$reference_annotations_dir, 'ensembl_version=i'=>\$ensembl_version, 'percent_cutoff=f'=>\$percent_cutoff, 'verbose=i'=>\$verbose);
+GetOptions ('cufflinks_dir=s'=>\$cufflinks_dir, 'working_dir=s'=>\$working_dir, 'ensembl_version=i'=>\$ensembl_version, 'percent_cutoff=f'=>\$percent_cutoff, 'verbose=i'=>\$verbose);
 
 my $usage=<<INFO;
 
   Example usage: 
   
-  outlierGenesAbsolute.pl  --cufflinks_dir=/gscmnt/gc2016/info/model_data/2880794613/build115909698/expression/  --reference_annotations_dir=/gscmnt/sata132/techd/mgriffit/reference_annotations/  --working_dir=/gscmnt/sata132/techd/mgriffit/hgs/all1/rnaseq/absolute/  --ensembl_version=58
+  outlierGenesAbsolute.pl  --cufflinks_dir=/gscmnt/gc2016/info/model_data/2880794613/build115909698/expression/  --working_dir=/gscmnt/sata132/techd/mgriffit/hgs/all1/rnaseq/absolute/  --ensembl_version=58
   
   Intro:
   This script attempts to automate the process of running the 'clinseq' pipeline
@@ -70,14 +69,13 @@ my $usage=<<INFO;
   Details:
   --cufflinks_dir                 PATH.  'expression' directory containing Cufflinks output
   --working_dir                   PATH.  Directory where all output will be written
-  --reference_annotations_dir     Directory containing ensembl mapping files
   --ensembl_version               INT.   The version of Ensembl used to create the GTF file supplied to Tophat Cufflinks
   --percent_cutoff                FLOAT. The top N% of genes will be printed to a filtered file based on this cutoff (e.g. 1 for top 1%) [default 1]
   --verbose                       To display more output, set to 1
 
 INFO
 
-unless ($cufflinks_dir && $working_dir && $reference_annotations_dir && $ensembl_version){
+unless ($cufflinks_dir && $working_dir && $ensembl_version){
   print GREEN, "$usage", RESET;
   exit();
 }
@@ -110,28 +108,7 @@ unless (-e $genes_infile && -e $isoforms_infile){
 my $entrez_ensembl_data = &loadEntrezEnsemblData();
 
 #Build a map of ensembl transcript ids to gene ids and gene names
-my $ensembl_map_file = $reference_annotations_dir . "EnsemblGene/Ensembl_Genes_Human_v"."$ensembl_version".".txt";
-unless (-e $ensembl_map_file){
-  print RED, "\n\nCould not file Ensembl ID map file with the specified reference annotations dir and ensembl version:\n$ensembl_map_file\n\n", RESET;
-  exit(1);
-}
-my %ensembl_map;
-my $header = 1;
-open (ENSG, "$ensembl_map_file") || die "\n\nCould not open ensembl map file: $ensembl_map_file\n\n";
-while (<ENSG>){
-  chomp($_);
-  my @line = split("\t", $_);
-  if ($header){
-    $header = 0;
-    next();
-  }
-  my $ensg_id = $line[0];
-  my $enst_id = $line[1];
-  my $ensg_name = $line[2];
-  $ensembl_map{$enst_id}{ensg_id} = $ensg_id;
-  $ensembl_map{$enst_id}{ensg_name} = $ensg_name;
-}
-close(ENSG);
+my $ensembl_map = &loadEnsemblMap('-ensembl_version'=>$ensembl_version);
 
 
 #Import a set of gene symbol lists (these files must be gene symbols in the first column, .txt extension, tab-delimited if multiple columns, one symbol per field, no header)
@@ -153,14 +130,21 @@ my $fpkm = &parseFpkmFile('-infile'=>$genes_infile, '-outfile'=>$genes_file_sort
 $fpkm = &parseFpkmFile('-infile'=>$isoforms_infile, '-outfile'=>$isoforms_file_sorted, '-entrez_ensembl_data'=>$entrez_ensembl_data, '-verbose'=>$verbose);
 
 #Merge the isoforms.fpkm_tracking file to the gene level
-my $merged_fpkm = &mergeIsoformsFile('-infile'=>$isoforms_infile, '-outfile'=>$isoforms_merge_file_sorted, '-entrez_ensembl_data'=>$entrez_ensembl_data, '-ensembl_map'=>\%ensembl_map, '-verbose'=>$verbose);
+my $merged_fpkm = &mergeIsoformsFile('-infile'=>$isoforms_infile, '-outfile'=>$isoforms_merge_file_sorted, '-entrez_ensembl_data'=>$entrez_ensembl_data, '-ensembl_map'=>$ensembl_map, '-verbose'=>$verbose);
 
 #Make the genes subdir
 my $images_sub_dir = &createNewDir('-path'=>$working_dir, '-new_dir_name'=>"images", '-force'=>"yes");
 
 #Run the R code that produces filtered and sorted text files as well as plots for the whole dataset as well as individual genes of interest
 my $r_cmd = "$script_dir"."outlierGenesAbsolute.R $working_dir $images_sub_dir $percent_cutoff";
-if ($verbose){print "\n\nRunning: $r_cmd\n"}
+my $r_cmd_stdout = "$working_dir"."outlierGenesAbsolute.R.stdout";
+my $r_cmd_stderr = "$working_dir"."outlierGenesAbsolute.R.stderr";
+
+if ($verbose){
+  print "\n\nRunning: $r_cmd\n";
+}else{
+  $r_cmd .= " 1>$r_cmd_stdout 2>$r_cmd_stderr";
+}
 system($r_cmd);
 
 
