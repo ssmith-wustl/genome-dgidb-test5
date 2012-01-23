@@ -155,8 +155,6 @@ sub execute {                               # replace with real execution logic.
                 $qc_iteration_hash_bam_file{$subject_name}{$bam_file}++;
             }
         }
-        UR::Context->commit() or die 'commit failed';
-        UR::Context->clear_cache(dont_unload => ['Genome::ModelGroup', 'Genome::ModelGroupBridge']);
     }
 
     my $halt_submissions = 0;
