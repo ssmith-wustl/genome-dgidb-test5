@@ -1307,19 +1307,15 @@ sub set_apipe_cron_status {
 sub current_build {
     my $self = shift;
 
-    my $current_build;
     my $build_iterator = $self->build_iterator(
         'status not like' => 'Abandoned',
         -order_by => '-build_id',
     );
-    while(not $current_build) {
-        my $build = $build_iterator->next;
-        if ($build->is_current) {
-            $current_build = $build;
-        }
+    while( my $build = $build_iterator->next ) {
+        return $build if $build->is_current;
     }
 
-    return $current_build;
+    return;
 }
 
 sub build_needed {
