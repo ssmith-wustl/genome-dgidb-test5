@@ -229,53 +229,7 @@ my @positions_files;
 if ($wgs){push(@positions_files, $out_paths->{'wgs'}->{'snv'}->{path});}
 if ($exome){push(@positions_files, $out_paths->{'exome'}->{'snv'}->{path});}
 if ($wgs && $exome){push(@positions_files, $out_paths->{'wgs_exome'}->{'snv'}->{path});}
-my $read_counts_script = "/usr/bin/perl `which genome` model clin-seq get-bam-read-counts";
-my $read_counts_summary_script = "$script_dir"."snv/WGS_vs_Exome_vs_RNAseq_VAF_and_FPKM.R";
-
-foreach my $positions_file (@positions_files){
-  my $fb = &getFilePathBase('-path'=>$positions_file);
-  my $output_file = $fb->{$positions_file}->{base} . ".readcounts" . $fb->{$positions_file}->{extension};
-  my $output_stats_dir = $output_file . ".stats/";
-
-  my $bam_rc_cmd = "$read_counts_script  --positions-file=$positions_file  ";
-  $bam_rc_cmd .= " --wgs-som-var-build=" . $builds->{wgs}->id if $builds->{wgs};
-  $bam_rc_cmd .= " --exome-som-var-build=" . $builds->{exome}->id if $builds->{exome};
-  $bam_rc_cmd .= " --rna-seq-tumor-build=" . $builds->{tumor_rnaseq}->id if $builds->{tumor_rnaseq};
-  $bam_rc_cmd .= " --rna-seq-normal-build=" . $builds->{normal_rnaseq}->id if $builds->{normal_rnaseq};
-  $bam_rc_cmd .= " --output-file=$output_file  --verbose=$verbose";
-  my $rc_summary_cmd;
-  my $rc_summary_stdout = "$output_stats_dir"."rc_summary.stdout";
-  my $rc_summary_stderr = "$output_stats_dir"."rc_summary.stderr";
-
-  if ($builds->{tumor_rnaseq}){
-    my $tumor_fpkm_file = $out_paths->{'tumor_rnaseq_cufflinks_absolute'}->{'isoforms.merged.fpkm.expsort.tsv'}->{path};
-    $rc_summary_cmd = "$read_counts_summary_script $output_stats_dir $output_file $tumor_fpkm_file";
-  }else{
-    $rc_summary_cmd = "$read_counts_summary_script $output_stats_dir $output_file";
-  }
-  unless ($verbose){
-    $rc_summary_cmd .= " 1>$rc_summary_stdout 2>$rc_summary_stderr";
-  }
-  if(-e $output_file){
-    if ($verbose){print YELLOW, "\n\nOutput bam read counts file already exists:\n\t$output_file", RESET;}
-    if (-e $output_stats_dir && -d $output_stats_dir){
-      if ($verbose){print YELLOW, "\n\nOutput read count stats dir already exists:\n\t$output_stats_dir", RESET;}
-    }else{
-      #Summarize the BAM readcounts results for candidate variants - produce descriptive statistics, figures etc.
-      if ($verbose){print YELLOW, "\n\n$rc_summary_cmd", RESET;}
-      mkdir($output_stats_dir);
-      system($rc_summary_cmd);
-    }
-  }else{
-    #First get the read counts for the current file of SNVs (from WGS, Exome, or WGS+Exome
-    if ($verbose){print YELLOW, "\n\n$bam_rc_cmd", RESET;}
-    system($bam_rc_cmd);
-    #Summarize the BAM readcounts results for candidate variants - produce descriptive statistics, figures etc.
-    if ($verbose){print YELLOW, "\n\n$rc_summary_cmd", RESET;}
-    mkdir($output_stats_dir);
-    system($rc_summary_cmd);
-  }
-}
+&runSnvBamReadCounts('-builds'=>$builds, '-positions_files'=>\@positions_files, '-verbose'=>$verbose);
 
 
 #Generate a clonality plot for this patient (if WGS data is available)
@@ -303,26 +257,10 @@ if ($wgs){
 }
 
 #Generate single genome (i.e. single BAM) global copy number segment plots for each BAM.  These help to identify sample swaps
-#TODO: Apparently this has been added to the latest Somatic Variation Processing profile - if this seems okay, remove this step if the file is already present
 if ($wgs){
   $step++; print MAGENTA, "\n\nStep $step. Creating single BAM CNV plots for each BAM", RESET;
-  my $single_bam_cnv_dir = "$patient_dir"."cnv/single_bam_cnv/";
-  mkdir ($single_bam_cnv_dir);
-  my $output_pdf_name = "CNV_SingleBAMs_TumorAndNormal.pdf";
-  my $output_pdf_path = $single_bam_cnv_dir . $output_pdf_name;
-  my $cn_stdout = "$single_bam_cnv_dir"."CNV_SingleBAMs_TumorAndNormal.stdout";
-  my $cn_stderr = "$single_bam_cnv_dir"."CNV_SingleBAMs_TumorAndNormal.stderr";
-  my $single_bam_cnv_plot_cmd = "gmt copy-number plot-segments-from-bams-workflow  --normal-bam=$data_paths->{wgs}->{normal_bam}  --tumor-bam=$data_paths->{wgs}->{tumor_bam}  --output-directory=$single_bam_cnv_dir  --genome-build=$reference_build_ncbi_n  --output-pdf=$output_pdf_name";
-  if (-e $output_pdf_path){
-    if ($verbose){print YELLOW, "\n\nSingle BAM CNV pdf already exists - skipping", RESET;}
-  }else{
-    if ($verbose){
-      print YELLOW, "\n\n$single_bam_cnv_plot_cmd", RESET;
-    }else{
-      $single_bam_cnv_plot_cmd .= " 1>$cn_stdout 2>$cn_stderr";
-    }
-    system($single_bam_cnv_plot_cmd);
-  }
+  &runSingleGenomeCnvPlot('-patient_dir'=>$patient_dir, '-data_paths'=>$data_paths, '-reference_build_ncbi_n'=>$reference_build_ncbi_n, '-verbose'=>$verbose);
+
 }
 
 print "\n\n";
@@ -745,7 +683,7 @@ sub runRnaSeqCufflinksAbsolute{
       #Only store .tsv files
       if ($file =~ /\.tsv$/){
         #Store the files to be annotated later:
-        my $new_label = $label . "cufflinks_absolute";
+        my $new_label = $label . "_cufflinks_absolute";
         $out_paths->{$new_label}->{$file}->{'path'} = $subdir_path.$file;
       }
     }
@@ -790,7 +728,7 @@ sub runRnaSeqTophatJunctionsAbsolute{
     #Only store certain .tsv files
     if ($file =~ /Ensembl\.Junction/){
       #Store the files to be annotated later:
-      my $new_label = $label . "tophat_junctions_absolute";
+      my $new_label = $label . "_tophat_junctions_absolute";
       $out_paths->{$new_label}->{$file}->{'path'} = $results_dir.$file;
     }
   }
@@ -941,7 +879,111 @@ sub drugDbIntersections{
   return();
 }
 
+###################################################################################################################################
+#Get BAM red counts for SNV positions from WGS, Exome and RNAseq BAMS                                                             #
+###################################################################################################################################
+sub runSnvBamReadCounts{
+  my %args = @_;
+  my $builds = $args{'-builds'};
+  my @positions_files = @{$args{'-positions_files'}};
+  my $verbose = $args{'-verbose'};
+
+  my $read_counts_script = "/usr/bin/perl `which genome` model clin-seq get-bam-read-counts";
+  my $read_counts_summary_script = "$script_dir"."snv/WGS_vs_Exome_vs_RNAseq_VAF_and_FPKM.R";
+
+  foreach my $positions_file (@positions_files){
+    my $fb = &getFilePathBase('-path'=>$positions_file);
+    my $output_file = $fb->{$positions_file}->{base} . ".readcounts" . $fb->{$positions_file}->{extension};
+    my $output_stats_dir = $output_file . ".stats/";
+
+    my $bam_rc_cmd = "$read_counts_script  --positions-file=$positions_file  ";
+    $bam_rc_cmd .= " --wgs-som-var-build=" . $builds->{wgs}->id if $builds->{wgs};
+    $bam_rc_cmd .= " --exome-som-var-build=" . $builds->{exome}->id if $builds->{exome};
+    $bam_rc_cmd .= " --rna-seq-tumor-build=" . $builds->{tumor_rnaseq}->id if $builds->{tumor_rnaseq};
+    $bam_rc_cmd .= " --rna-seq-normal-build=" . $builds->{normal_rnaseq}->id if $builds->{normal_rnaseq};
+    $bam_rc_cmd .= " --output-file=$output_file  --verbose=$verbose";
+    my $rc_summary_cmd;
+    my $rc_summary_stdout = "$output_stats_dir"."rc_summary.stdout";
+    my $rc_summary_stderr = "$output_stats_dir"."rc_summary.stderr";
+
+    if ($builds->{tumor_rnaseq}){
+      my $tumor_fpkm_file = $out_paths->{'tumor_rnaseq_cufflinks_absolute'}->{'isoforms.merged.fpkm.expsort.tsv'}->{path};
+      $rc_summary_cmd = "$read_counts_summary_script $output_stats_dir $output_file $tumor_fpkm_file";
+    }else{
+      $rc_summary_cmd = "$read_counts_summary_script $output_stats_dir $output_file";
+    }
+    unless ($verbose){
+      $rc_summary_cmd .= " 1>$rc_summary_stdout 2>$rc_summary_stderr";
+    }
+    if(-e $output_file){
+      if ($verbose){print YELLOW, "\n\nOutput bam read counts file already exists:\n\t$output_file", RESET;}
+      if (-e $output_stats_dir && -d $output_stats_dir){
+        if ($verbose){print YELLOW, "\n\nOutput read count stats dir already exists:\n\t$output_stats_dir", RESET;}
+      }else{
+        #Summarize the BAM readcounts results for candidate variants - produce descriptive statistics, figures etc.
+        if ($verbose){print YELLOW, "\n\n$rc_summary_cmd", RESET;}
+        mkdir($output_stats_dir);
+        system($rc_summary_cmd);
+      }
+    }else{
+      #First get the read counts for the current file of SNVs (from WGS, Exome, or WGS+Exome)
+      if ($verbose){print YELLOW, "\n\n$bam_rc_cmd", RESET;}
+      system($bam_rc_cmd);
+      #Summarize the BAM readcounts results for candidate variants - produce descriptive statistics, figures etc.
+      if ($verbose){print YELLOW, "\n\n$rc_summary_cmd", RESET;}
+      mkdir($output_stats_dir);
+      system($rc_summary_cmd);
+    }
+  }
+
+  return();
+}
 
 
+###################################################################################################################################
+#Get BAM red counts for SNV positions from WGS, Exome and RNAseq BAMS                                                             #
+###################################################################################################################################
+sub runSingleGenomeCnvPlot{
+  my %args = @_;
+  my $patient_dir = $args{'-patient_dir'};
+  my $data_paths = $args{'-data_paths'};
+  my $reference_build_ncbi_n = $args{'-reference_build_ncbi_n'};
+  my $verbose = $args{'-verbose'};
 
+  my $single_bam_cnv_dir = "$patient_dir"."cnv/single_bam_cnv/";
+  mkdir ($single_bam_cnv_dir);
+  my $output_pdf_name = "CNV_SingleBAMs_TumorAndNormal.pdf";
+  my $output_pdf_path = $single_bam_cnv_dir . $output_pdf_name;
 
+  #First test to see if a single BAM CNV plot.pdf is already created (done by more recent versions of the somatic variation pipeline)
+  my $test_path = "$data_paths->{'wgs'}->{root}"."variants/cnv/plot-cnv*/cnv_graph.pdf";
+  my $pdf_path = `ls $test_path  2>/dev/null`;
+  chomp($pdf_path);
+  if (-e $pdf_path){  
+    if ($verbose){print YELLOW, "\n\nSingle BAM CNV pdf already exists in somatic variation results - copying it to clinseq build dir", RESET;}
+    if (-e $output_pdf_path){
+      if ($verbose){print YELLOW, "\n\tAlready there...", RESET;}
+    }else{
+      my $cp_cmd = "cp $pdf_path $output_pdf_path";
+      if ($verbose){print YELLOW, "\n\t$cp_cmd", RESET;}
+      system($cp_cmd);
+    }
+  }else{
+    #The .pdf file was not found.  Presumably this is an older somatic variation build that did not include this step. Generate it now
+    my $cn_stdout = "$single_bam_cnv_dir"."CNV_SingleBAMs_TumorAndNormal.stdout";
+    my $cn_stderr = "$single_bam_cnv_dir"."CNV_SingleBAMs_TumorAndNormal.stderr";
+    my $single_bam_cnv_plot_cmd = "gmt copy-number plot-segments-from-bams-workflow  --normal-bam=$data_paths->{wgs}->{normal_bam}  --tumor-bam=$data_paths->{wgs}->{tumor_bam}  --output-directory=$single_bam_cnv_dir  --genome-build=$reference_build_ncbi_n  --output-pdf=$output_pdf_name";
+    if (-e $output_pdf_path){
+      if ($verbose){print YELLOW, "\n\nSingle BAM CNV pdf already exists - skipping", RESET;}
+    }else{
+      if ($verbose){
+        print YELLOW, "\n\n$single_bam_cnv_plot_cmd", RESET;
+      }else{
+        $single_bam_cnv_plot_cmd .= " 1>$cn_stdout 2>$cn_stderr";
+      }
+      system($single_bam_cnv_plot_cmd);
+    }
+  }
+
+  return();
+}
