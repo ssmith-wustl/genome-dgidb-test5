@@ -39,6 +39,31 @@ sub create {
     }
 }
 
+sub _get_subject_id_from_solr_doc {
+    my $class = shift;
+    my $solr_doc = shift || die;
+
+    my $base64_object_id = $solr_doc->value_for('base64_object_id');
+    if ($base64_object_id) {
+        return decode_base64($base64_object_id);
+    }
+
+    my $object_id = $solr_doc->value_for('object_id');
+    if ($object_id) {
+        return $object_id;
+    }
+
+    my $solr_id = $solr_doc->value_for('id');
+    if ($solr_id) {
+        my ($derived_object_id) = $solr_id =~ /.*?(\d+)$/;
+        if ($derived_object_id) {
+            return $derived_object_id;
+        }
+    }
+
+    die 'Failed to determine the object ID from Solr doc.';
+}
+
 sub _reconstitute_from_doc {
     my $class = shift;
     my $solr_doc = shift;
@@ -48,13 +73,7 @@ sub _reconstitute_from_doc {
         return;
     }
 
-    my $subject_id = $solr_doc->value_for('object_id');
-    unless($subject_id) {
-        #Fall back on old way of getting id--this can be removed after all snapshots in use set object_id in Solr
-        $subject_id = $solr_doc->value_for('id');
-        ($subject_id) = $subject_id =~ m/.*?(\d+)$/;
-    }
-
+    my $subject_id = $class->_get_subject_id_from_solr_doc($solr_doc);
     my $subject_class_name = $solr_doc->value_for('class');
 
     my $self = $class->SUPER::create(subject_id => $subject_id, subject_class_name => $subject_class_name);
