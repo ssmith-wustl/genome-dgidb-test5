@@ -26,4 +26,4 @@ ok($command->execute, 'Successfully excuted lookup interactions command');
 
 system("sort $output_file -o $output_file");
 my $output = `diff $test_output_file $output_file`;
-ok(!$output, 'Command output and expected output are identical');
+ok(!$output, 'Command output and expected output are identical') || print "$output\n";
