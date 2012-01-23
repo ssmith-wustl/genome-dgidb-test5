@@ -57,21 +57,26 @@ sub execute {
 
         if ( ! defined($cache->get($key)) ) {
 
-            my $doc = Genome::Wiki::Document->get( title => $item->{'title'} )
-                || die 'cant get doc for title: ' . $item->{'title'};
+#            my $doc = Genome::Wiki::Document->get( title => $item->{'title'} )
+#                || die 'cant get doc for title: ' . $item->{'title'};
 
             # NOTE: if this is slow we could Genome::Search->add(@all_docs)
             # but for now adding one, setting cache, adding another, setting cache...
             
             # post item to solr
-            Genome::Search->add($doc) || die 'Error: failed to add doc with title ' . $doc->title();
+#            Genome::Search->add($doc) || die 'Error: failed to add doc with title ' . $doc->title();
+            Genome::Search::Queue->create(
+                subject_class => 'Genome::Wiki::Document',
+                subject_id => $item->{'title'},
+                priority => 9,
+            );
 
             # mark as done
 #            $cache->set($key, $now, $timeout ) || die "couldnt set cache for key=$key value=$now timeout=$timeout";
             # old version of Cache::Memcached was returning undef despite success
             $cache->set($key, $now, $timeout );
 
-            printf("added\t%s\t%s\n", $doc->title, $key);
+            printf("queued\t%s\t%s\n", $doc->title, $key);
         }
     }
 

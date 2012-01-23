@@ -432,6 +432,7 @@ sub metrics_ignored_by_diff {
         assembly_length
         contigs_count contigs_length contigs_major_average_length contigs_major_count
         contigs_major_length contigs_major_n50_length contigs_n50_length
+        contigs_average_length contigs_major_n50_count contigs_n50_count
         supercontigs_average_length supercontigs_length supercontigs_major_average_length
         supercontigs_major_length supercontigs_major_n50_length supercontigs_n50_length
         /);
