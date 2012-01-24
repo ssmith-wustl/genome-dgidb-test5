@@ -40,32 +40,6 @@ sub create {
     }
 }
 
-sub _get_subject_from_solr_doc {
-    my $class = shift;
-    my $solr_doc = shift || die;
-
-    my $subject_class_name = $solr_doc->value_for('class');
-    my $object_id = $solr_doc->value_for('object_id');
-    if ($object_id) {
-        if ($subject_class_name->isa('UR::Object::Set') && $object_id =~ /=$/) {
-            # Sets have invalid XML chars in their IDs so we encode them in Base64.
-            # Encoding is done in _generate_object_id_field_data so keep symmetry there.
-            $object_id = decode_base64($object_id);
-        }
-        return $subject_class_name->get($object_id);
-    }
-
-    my $solr_id = $solr_doc->value_for('id');
-    if ($solr_id) {
-        my ($derived_object_id) = $solr_id =~ /.*?(\d+)$/;
-        if ($derived_object_id) {
-            return $subject_class_name->get($derived_object_id);
-        }
-    }
-
-    die 'Failed to determine the object ID from Solr doc.';
-}
-
 sub _reconstitute_from_doc {
     my $class = shift;
     my $solr_doc = shift;
@@ -75,7 +49,10 @@ sub _reconstitute_from_doc {
         return;
     }
 
-    my $subject = $class->_get_subject_from_solr_doc($solr_doc);
+    my $subject = Genome::Search->get_subject_from_doc($solr_doc);
+    unless ($subject) {
+        die 'Failed to get subject from solr_doc.';
+    }
     my $self = $class->SUPER::create(subject_id => $subject->id, subject_class_name => $subject->class);
 
     $self->_doc($solr_doc);
@@ -241,7 +218,8 @@ sub _generate_object_id_field_data {
     my $object_id = $subject->id;
 
     # Sets have invalid XML chars in their IDs so we encode them in Base64.
-    # Decoding is done in _get_subject_from_solr_doc so keep symmetry there.
+    # Decoding is done in Genome::Search::get_subject_from_doc so keep symmetry there.
+    # TODO Encoding/decoding should probably be handled by the object itself.
     if ($subject->isa('UR::Object::Set')) {
         $object_id = encode_base64($object_id);
     }
