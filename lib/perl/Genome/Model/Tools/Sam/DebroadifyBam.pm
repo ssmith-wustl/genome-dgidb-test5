@@ -91,7 +91,7 @@ sub execute {
     }
 
     # Load chromosome order from reference file.
-    my $reference_file = IO::File->new($self->reference_file, 'r') || die;
+    my $reference_file = IO::File->new($self->reference_file, 'r') || die 'could not open file (' . $self->reference_file . "): $!\n";
     our @reference_chromosomes;
     while (my $line = $reference_file->getline) {
         my ($chromosome) = $line =~ /^(\S+)/;
