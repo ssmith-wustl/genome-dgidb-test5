@@ -53,12 +53,27 @@ sub _remove_existing_vcf {
     $self->status_message("Found no existing vcfs.") unless @existing_vcfs;
     for my $file (@existing_vcfs) {
         if( not -l $file){
+            unless(-e $file){
+                next;
+            }
             $self->status_message("Removing existing vcf at: ".$file);
             unless(unlink ( $file )){
                 die $self->error_message("Could not unlink existing vcf at: ".$file);
             }
         } else {
-            die $self->error_message("Found previous vcf to be a link at: ".$file);
+            my @vcf_results = Genome::Model::Tools::DetectVariants2::Result::Vcf::Filter->get(input_id => $self->input_id);
+            my $vcf_version = Genome::Model::Tools::Vcf->get_vcf_version;
+            if(@vcf_results > 0){
+                for my $existing_result (@vcf_results) {
+                    if($self->compare_vcf_versions($existing_result->vcf_version,$vcf_version)){
+                        die $self->error_message("Found an existing vcf result with a greater vcf_version (".$existing_result->vcf_version.") than the one I wish to make (".$vcf_version.").");
+                    }
+                }
+            }
+            unless(unlink $file){
+                die $self->error_message("Could not unlink vcf link at: ".$file);
+            }
+            $self->status_message("Unlinked vcf symlink.");
         }
     }
 
