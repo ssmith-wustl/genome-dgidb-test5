@@ -272,4 +272,23 @@ sub _add_as_user_of_inputs {
     );
 }
 
+sub compare_vcf_versions {
+    my $self = shift;
+    my $vcf_a = shift;
+    my $vcf_b = shift;
+
+    my ($vcf_a_is_int) = ( $vcf_a =~ m/^[+-]?\d+$/ );
+    my ($vcf_b_is_int) = ( $vcf_b =~ m/^[+-]?\d+$/ );
+    
+    if($vcf_a_is_int && $vcf_b_is_int){
+        return ($vcf_a > $vcf_b);
+    } elsif( $vcf_a_is_int) {
+        return 1;
+    } elsif( $vcf_b_is_int) {
+        return 0;
+    } else {
+        return ($vcf_a gt $vcf_b);
+    }
+}
+
 1;
