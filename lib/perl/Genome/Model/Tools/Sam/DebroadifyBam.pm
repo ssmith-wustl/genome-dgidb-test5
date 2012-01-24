@@ -102,9 +102,17 @@ sub execute {
     # Sort SQ so it matches chromosome order in reference file.
     @sq = sort {
         my ($a_chrom) = $a =~ /\@SQ\tSN:([^\t]+)/;
+        die "unable to match chromosome in ($a)" unless $a_chrom;
+
         my ($b_chrom) = $b =~ /\@SQ\tSN:([^\t]+)/;
+        die "unable to match chromosome in ($b)" unless $b_chrom;
+
         my $a_index = first { $reference_chromosomes[$_] eq $a_chrom } 0..$#reference_chromosomes;
+        die "unable to find $a_chrom in (" . join(' ', @reference_chromosomes) . ")" unless defined $a_index;
+
         my $b_index = first { $reference_chromosomes[$_] eq $b_chrom } 0..$#reference_chromosomes;
+        die "unable to find $b_chrom in (" . join(' ', @reference_chromosomes) . ")" unless defined $b_index;
+
         $a_index <=> $b_index;
     } @sq;
 
