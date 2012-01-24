@@ -154,6 +154,8 @@ ok($build->detect_and_remove_chimeras, 'detect and remove chimeras');
 my $amplicons_chimeric = 2;
 if ( $build->amplicons_chimeric == 3 ) { # switch to 3 chimeras if necessary
     $example_build->data_directory('/gsc/var/cache/testsuite/data/Genome-Model/MetagenomicComposition16s454/build_v3.3chimeras');
+    # Get the sets again to pickup the new data_directory otherwise the old data_directory is used.
+    @example_amplicon_sets = $example_build->amplicon_sets;
     $amplicons_chimeric = 3;
 }
 for ( my $i = 0; $i < @amplicon_sets; $i++ ) { 
