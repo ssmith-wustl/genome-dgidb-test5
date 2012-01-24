@@ -115,11 +115,6 @@ sub conversion_class_name {
     return $vcf_module;
 }
 
-sub _remove_existing_vcf {
-    my $self = shift;
-    die $self->error_message("Overload _remove_existing_vcf in the subclass!");
-}
-
 sub get_vcf {
     my $self = shift;
     my $type = shift;
@@ -272,13 +267,60 @@ sub _add_as_user_of_inputs {
     );
 }
 
+sub _remove_existing_vcf {
+    my $self = shift;
+    
+    my $path = $self->input_directory;    
+
+    my @existing_vcfs;
+    for my $type ("snvs","indels"){
+        my $file = $path."/".$type.".vcf.gz";
+        push @existing_vcfs, $file if -e $file;
+    }
+    $self->status_message("Found no existing vcfs.") unless @existing_vcfs;
+
+    map { $self->unlink_existing_vcf($_); } @existing_vcfs;
+
+    return 1;
+}
+
+sub unlink_existing_vcf {
+    my $self = shift;
+    my $file = shift;
+    if( not -l $file){
+        unless(-e $file){
+            next;
+        }
+        $self->status_message("Removing existing vcf at: ".$file);
+        unless(unlink ( $file )){
+            die $self->error_message("Could not unlink existing vcf at: ".$file);
+        }
+    } else {
+        my @vcf_results = Genome::Model::Tools::DetectVariants2::Result::Vcf->get(input_id => $self->input_id);
+        my $vcf_version = Genome::Model::Tools::Vcf->get_vcf_version;
+        if(@vcf_results > 0){
+            for my $existing_result (@vcf_results) {
+                if($self->compare_vcf_versions($existing_result->vcf_version,$vcf_version)){
+                    die $self->error_message("Found an existing vcf result with a greater vcf_version (".$existing_result->vcf_version.") than the one I wish to make (".$vcf_version.").");
+                }
+            }
+        }
+        unless(unlink $file){
+            die $self->error_message("Could not unlink vcf link at: ".$file);
+        }
+        $self->status_message("Unlinked vcf symlink.");
+    }
+    return 1;
+}
+
+
 sub compare_vcf_versions {
     my $self = shift;
     my $vcf_a = shift;
     my $vcf_b = shift;
 
-    my ($vcf_a_is_int) = ( $vcf_a =~ m/^[+-]?\d+$/ );
-    my ($vcf_b_is_int) = ( $vcf_b =~ m/^[+-]?\d+$/ );
+    my ($vcf_a_is_int) = ( $vcf_a =~ m/^\d+$/ );
+    my ($vcf_b_is_int) = ( $vcf_b =~ m/^\d+$/ );
     
     if($vcf_a_is_int && $vcf_b_is_int){
         return ($vcf_a > $vcf_b);
