@@ -72,6 +72,15 @@ sub parse_line {
     my $info = ".";
     ##need SS check in here for somatic status to come out properly..
     my $format = "GT:GQ:DP:BQ:MQ:AD:FA:VAQ:FET";
+
+    # If the variant called is N, just null out the GT and FET fields to minimize interference with cross-sample VCFs
+    if ($var_allele_iub eq "N") {
+        $GT = ".";
+        $FET = ".";
+        $alt_alleles = ".";
+        $AD = ".";
+    }
+
     my $sample_string =join (":", ($GT, $GQ, $DP, $BQ, $MQ, $AD, $FA, $VAQ, $FET));
     my $vcf_line = join("\t", $chr, $pos, $dbsnp_id, $ref_allele, $alt_alleles, $qual, $filter, $info, $format, $sample_string);
     return $vcf_line;
