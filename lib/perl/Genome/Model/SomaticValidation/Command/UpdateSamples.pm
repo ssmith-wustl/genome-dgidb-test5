@@ -36,6 +36,8 @@ genome model somatic-validation update-samples target_region_set_name="AML_KP - 
 EOS
 }
 
+sub sub_command_category { 'analyst tools' }
+
 sub execute {
     my $self = shift;
     my @models = $self->models;
