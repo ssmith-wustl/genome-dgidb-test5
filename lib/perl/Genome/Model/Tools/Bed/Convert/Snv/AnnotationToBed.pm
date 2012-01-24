@@ -20,7 +20,7 @@ sub help_synopsis {
 EOS
 }
 
-sub help_detail {                           
+sub help_detail {
     return <<EOS
     This is a small tool to take SNV calls in annotation format and convert them to a common BED format (using the first five columns).
 EOS
