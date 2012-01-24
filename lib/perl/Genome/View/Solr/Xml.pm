@@ -5,6 +5,7 @@ use warnings;
 use Genome;
 
 use WebService::Solr;
+use MIME::Base64;
 
 class Genome::View::Solr::Xml {
     is => 'UR::Object::View::Default::Xml',
@@ -39,25 +40,26 @@ sub create {
     }
 }
 
-sub _get_subject_id_from_solr_doc {
+sub _get_subject_from_solr_doc {
     my $class = shift;
     my $solr_doc = shift || die;
 
-    my $base64_object_id = $solr_doc->value_for('base64_object_id');
-    if ($base64_object_id) {
-        return decode_base64($base64_object_id);
-    }
-
+    my $subject_class_name = $solr_doc->value_for('class');
     my $object_id = $solr_doc->value_for('object_id');
     if ($object_id) {
-        return $object_id;
+        if ($subject_class_name->isa('UR::Object::Set') && $object_id =~ /=$/) {
+            # Sets have invalid XML chars in their IDs so we encode them in Base64.
+            # Encoding is done in _generate_object_id_field_data so keep symmetry there.
+            $object_id = decode_base64($object_id);
+        }
+        return $subject_class_name->get($object_id);
     }
 
     my $solr_id = $solr_doc->value_for('id');
     if ($solr_id) {
         my ($derived_object_id) = $solr_id =~ /.*?(\d+)$/;
         if ($derived_object_id) {
-            return $derived_object_id;
+            return $subject_class_name->get($derived_object_id);
         }
     }
 
@@ -73,10 +75,8 @@ sub _reconstitute_from_doc {
         return;
     }
 
-    my $subject_id = $class->_get_subject_id_from_solr_doc($solr_doc);
-    my $subject_class_name = $solr_doc->value_for('class');
-
-    my $self = $class->SUPER::create(subject_id => $subject_id, subject_class_name => $subject_class_name);
+    my $subject = $class->_get_subject_from_solr_doc($solr_doc);
+    my $self = $class->SUPER::create(subject_id => $subject->id, subject_class_name => $subject->class);
 
     $self->_doc($solr_doc);
 
@@ -107,18 +107,19 @@ sub _generate_content {
     my $class = $self->_generate_class_field_data;
     my $title = $self->_generate_title_field_data;
     my $id =    $self->_generate_id_field_data;
-    my $object_id = $self->_generate_object_id_field_data;
     my $timestamp = $self->_generate_timestamp_field_data;
     my $content = $self->_generate_content_field_data;
     my $type = $self->_generate_type_field_data;
+    my $object_id = $self->_generate_object_id_field_data;
 
     push @fields, WebService::Solr::Field->new( class => $class );
     push @fields, WebService::Solr::Field->new( title => $title );
     push @fields, WebService::Solr::Field->new( id => $id );
-    push @fields, WebService::Solr::Field->new( object_id => $object_id);
     push @fields, WebService::Solr::Field->new( timestamp => $timestamp );
     push @fields, WebService::Solr::Field->new( content => $content );
     push @fields, WebService::Solr::Field->new( type => $type );
+    push @fields, WebService::Solr::Field->new( object_id => $object_id);
+
 
     my @dyn_fields = $self->_generate_dynamic_fields();
     if (@dyn_fields) {
@@ -231,14 +232,21 @@ sub _generate_id_field_data {
 
     #TODO after all code is setting solr_id, make that field the primary id for Solr;
     #then remove the class and '---' from this field
-    return $subject->class . '---' . $subject->id;
+    return $subject->class . '---' . $self->_generate_object_id_field_data;
 }
 
 sub _generate_object_id_field_data {
     my $self = shift;
     my $subject = $self->subject;
+    my $object_id = $subject->id;
 
-    return $subject->id;
+    # Sets have invalid XML chars in their IDs so we encode them in Base64.
+    # Decoding is done in _get_subject_from_solr_doc so keep symmetry there.
+    if ($subject->isa('UR::Object::Set')) {
+        $object_id = encode_base64($object_id);
+    }
+
+    return $object_id;
 }
 
 sub _generate_timestamp_field_data {
