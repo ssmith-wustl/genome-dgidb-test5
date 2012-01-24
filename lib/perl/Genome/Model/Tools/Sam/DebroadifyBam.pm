@@ -95,6 +95,7 @@ sub execute {
     our @reference_chromosomes;
     while (my $line = $reference_file->getline) {
         my ($chromosome) = $line =~ /^(\S+)/;
+        next unless $chromosome;
         push @reference_chromosomes, $chromosome;
     }
 
