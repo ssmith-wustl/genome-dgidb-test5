@@ -158,8 +158,16 @@ if ( $build->amplicons_chimeric == 3 ) { # switch to 3 chimeras if necessary
 }
 for ( my $i = 0; $i < @amplicon_sets; $i++ ) { 
     ok(-s $amplicon_sets[$i]->chimera_file, 'chimera file');
-    is(File::Compare::compare($amplicon_sets[$i]->chimera_free_fasta_file, $example_amplicon_sets[$i]->chimera_free_fasta_file), 0, 'chimera free fasta file matches',);
-    is(File::Compare::compare($amplicon_sets[$i]->chimera_free_qual_file, $example_amplicon_sets[$i]->chimera_free_qual_file), 0, 'chimera free qaul file matches',);
+
+    my $chimera_free_fasta_file = $amplicon_sets[$i]->chimera_free_fasta_file;
+    my $example_chimera_free_fasta_file = $example_amplicon_sets[$i]->chimera_free_fasta_file;
+    my $chimera_free_fasta_file_diff = qx(diff -u $example_chimera_free_fasta_file $chimera_free_fasta_file);
+    ok(!$chimera_free_fasta_file_diff, 'no differences between chimera_free_fasta_files') || print $chimera_free_fasta_file_diff;
+
+    my $chimera_free_qual_file = $amplicon_sets[$i]->chimera_free_qual_file;
+    my $example_chimera_free_qual_file = $example_amplicon_sets[$i]->chimera_free_qual_file;
+    my $chimera_free_qual_file_diff = qx(diff -u $example_chimera_free_qual_file $chimera_free_qual_file);
+    ok(!$chimera_free_qual_file_diff, 'no differences between chimera_free_qual_files') || print $chimera_free_qual_file_diff;
 }
 # metrics
 is($build->amplicons_processed, 14, 'amplicons processed is 14');
