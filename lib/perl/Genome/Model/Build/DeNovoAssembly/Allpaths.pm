@@ -87,10 +87,10 @@ sub before_assemble {
 
     foreach my $instrument_data ($self->instrument_data) {
         if ($self->_instrument_data_is_sloptig($instrument_data)) {
-            $in_group = $in_group."\n".$self->data_directory."/".$instrument_data->id.".*.sloptig.fastq,\t".$instrument_data->library_name.",\tfrags";
+            $in_group = $in_group."\n".$self->data_directory."/".$instrument_data->id.".*.sloptig.fastq,\t".$instrument_data->library_name.",\t".$instrument_data->id;
         }
         elsif ($self->_instrument_data_is_jumping($instrument_data)) {
-            $in_group = $in_group."\n".$self->data_directory."/".$instrument_data->id.".*.jumping.fastq,\t".$instrument_data->library_name.",\tjumps";
+            $in_group = $in_group."\n".$self->data_directory."/".$instrument_data->id.".*.jumping.fastq,\t".$instrument_data->library_name.",\t$instrument_data->id";
         }
     }
 
