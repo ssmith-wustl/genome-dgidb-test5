@@ -56,6 +56,10 @@ class Genome::Model::Tools::RefCov::BuildReferenceFromRoi {
     ],
 };
 
+sub help_brief {
+    "Given regions of interest belonging to a larger sequence this command will build a smaller reference sequence limited to those regions (ex. Transcriptome).",
+}
+
 sub create {
     my $class = shift;
     my $self = $class->SUPER::create(@_);

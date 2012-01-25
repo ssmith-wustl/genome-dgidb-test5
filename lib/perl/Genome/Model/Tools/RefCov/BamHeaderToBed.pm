@@ -20,6 +20,10 @@ class Genome::Model::Tools::RefCov::BamHeaderToBed {
     ],
 };
 
+sub help_brief {
+    "A BAM header can be converted to BED coordinates for each sequence in the sequence dictionary.  (THIS CAN BE REPLACED BY USING A BAM AS THE ROI FILE!)",
+}
+
 sub execute {
     my $self = shift;
 
