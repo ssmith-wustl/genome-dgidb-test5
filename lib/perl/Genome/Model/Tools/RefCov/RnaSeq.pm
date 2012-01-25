@@ -31,7 +31,7 @@ class Genome::Model::Tools::RefCov::RnaSeq {
 };
 
 sub help_brief {
-    "The default for running RefCov on RNA-seq BAMs.  Includes merged results by transcript and normalized coverage by ROI.",
+    "Default settings customized for running ref-cov on typical RNA-seq BAMs.  Additional RNA-seq outputs over the standard mode include an alignment count with minimum and maximum depth as well as transcript-level metrics given properly formatted BED files(see gtf-to-bed).",
 }
 
 sub execute {
