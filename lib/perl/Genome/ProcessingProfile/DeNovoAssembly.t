@@ -88,25 +88,60 @@ ok(
     'Failed as expected - create w/ calculated assembler params',
 );
 
-# Stages
-my $pp = Genome::ProcessingProfile::DeNovoAssembly->get(2354215); #apipe-test-de_novo_velvet_solexa
-ok($pp, 'velvet test pp') or die;
+# all this model needs to do is return something for inst data
+my %inst_data_params = ( run_name => 'XXXXXX', subset_name => 1 );
+my @instrument_data = ( Genome::InstrumentData::Solexa->__define__(%inst_data_params), Genome::InstrumentData::Solexa->__define__(%inst_data_params), );
 
-my @stages = $pp->stages;
-is_deeply(\@stages, [qw/ assemble /], 'Stages');
-
-my @stage_classes = $pp->assemble_job_classes;
-is_deeply(
-    \@stage_classes, 
-    [ 
-        'Genome::Model::Event::Build::DeNovoAssembly::PrepareInstrumentData',
-        'Genome::Model::Event::Build::DeNovoAssembly::Assemble',
-        'Genome::Model::Event::Build::DeNovoAssembly::PostAssemble',
-        'Genome::Model::Event::Build::DeNovoAssembly::Report',
-    ], 
-    'Stage classes'
-);
-is($pp->assembler_class, 'Genome::Model::Tools::Velvet::OneButton', 'Assembler class');
+# assemblers and stages
+my $pps_and_stages = {
+    'allpaths de-novo-assemble' => [
+        [
+            'process_instrument_data',
+            [qw/ Genome::Model::Event::Build::DeNovoAssembly::ProcessInstrumentData /],
+            \@instrument_data,
+        ],
+        [
+            'assemble', 
+            [qw/ Genome::Model::Event::Build::DeNovoAssembly::Assemble Genome::Model::Event::Build::DeNovoAssembly::PostAssemble Genome::Model::Event::Build::DeNovoAssembly::Report /],
+            [ 1 ],
+        ],
+    ],
+    'velvet one-button' => [
+        [ 
+            'process_instrument_data',
+            [qw/ Genome::Model::Event::Build::DeNovoAssembly::PrepareInstrumentData /],
+            [ 1 ],
+        ],
+        [
+            'assemble', 
+            [qw/ Genome::Model::Event::Build::DeNovoAssembly::Assemble Genome::Model::Event::Build::DeNovoAssembly::PostAssemble Genome::Model::Event::Build::DeNovoAssembly::Report /],
+            [ 1 ],
+        ],
+    ],
+};
+for my $assembler ( keys %$pps_and_stages ) {
+    my $pp = Genome::ProcessingProfile::DeNovoAssembly->__define__(
+        assembler_name => $assembler,
+        post_assemble => 'blah',
+    );
+    ok($pp, "$assembler test pp") or die;
+    my $model = Genome::Model::DeNovoAssembly->__define__(name => '__TEST_MODEL__', processing_profile => $pp, instrument_data => \@instrument_data);
+    my $build = Genome::Model::Build::DeNovoAssembly->__define__(model => $model);
+    my $events = $pp->_generate_events_for_build($build);
+    for ( my $i = 0; $i < @$events; $i++ ) {
+        my $stage = $pps_and_stages->{$assembler}->[$i];
+        my $event = $events->[$i];
+        my $stage_name = $event->{name};
+        is($stage_name, $stage->[0], "$stage_name name matches");
+        my %stage_classes = map { $_->class => 1 } @{$event->{events}};
+        my @stage_classes = sort keys %stage_classes;
+        is_deeply(\@stage_classes, $stage->[1], "$assembler $stage_name job classes");
+        my $stage_objects_method = $stage_name.'_objects';
+        my @stage_objects = $pp->$stage_objects_method($model);
+        is_deeply(\@stage_objects, $stage->[2], "$assembler $stage_name objects");
+        is((@{$event->{events}}), (@{$stage->[1]} * @{$stage->[2]}), "$assembler $stage_name event count");
+    }
+}
 
 done_testing();
 exit;
