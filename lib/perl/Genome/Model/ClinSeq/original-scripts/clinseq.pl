@@ -853,6 +853,10 @@ sub drugDbIntersections{
       #Store the file input data for this file
       my $path = $sub_types->{$sub_type}->{'path'};
       my $name_col = &getColumnPosition('-path'=>$path, '-column_name'=>'mapped_gene_name');
+
+      #Note that this function returns the 0-based column position - The script below assumes 1 based
+      $name_col += 1;
+
       my $drugdb_script = "$script_dir"."summary/identifyDruggableGenes.pl";
 
       #Get file path with the file extension removed:

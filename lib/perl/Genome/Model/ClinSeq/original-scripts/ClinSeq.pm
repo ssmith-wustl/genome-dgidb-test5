@@ -1050,7 +1050,7 @@ sub getColumnPosition{
   my %columns;
   my $p = 0;
   foreach my $col (@header){
-    $columns{$col}{position} = $p;    
+    $columns{$col}{position} = $p;
     $p++;
   }
 
