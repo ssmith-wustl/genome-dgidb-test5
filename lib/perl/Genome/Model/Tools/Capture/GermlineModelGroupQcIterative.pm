@@ -141,6 +141,10 @@ sub execute {                               # replace with real execution logic.
                         return;
                     }
                     $extract->dump_status_messages(1);
+                    unless ($extract->_resolve_instrument_data){
+                        $self->status_message('Skipping due to no instrument data for sample ' . $model->subject->id);
+                        next;
+                    }
                     unless ($extract->execute()) {
                         $self->error_message("Failed to execute Extract Microarray for sample " . $model->subject_name);
                         return;
