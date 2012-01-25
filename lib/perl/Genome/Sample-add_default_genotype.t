@@ -36,7 +36,7 @@ is($genotype_model->subject, $sample, 'test genotype model subject matches expec
 
 # Add genotype data to test model
 add_instrument_data_to_model($genotype_model, $genotype_data);
-ok((grep { $genotype_data->id eq $_ } $genotype_model->instrument_data_ids), 'instrument data assigned to model');
+ok((grep { $genotype_data->id eq $_ } map { $_->id } $genotype_model->instrument_data), 'instrument data assigned to model');
 
 # Create test ref align model
 my $ref_align_model = create_ref_align_model($sample, $ref_seq_build);

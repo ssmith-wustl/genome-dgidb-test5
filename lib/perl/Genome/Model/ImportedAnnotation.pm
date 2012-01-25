@@ -7,7 +7,7 @@ use Data::Dumper;
 use Genome;
 
 class Genome::Model::ImportedAnnotation{
-    is => 'Genome::Model',
+    is => 'Genome::ModelDeprecated',
     has =>[
         annotation_source => {
             is => 'String',

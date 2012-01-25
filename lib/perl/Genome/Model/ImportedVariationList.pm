@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 
 class Genome::Model::ImportedVariationList {
-    is => 'Genome::Model',
+    is => 'Genome::ModelDeprecated',
     has => [
         reference_id => {
             is => 'Text',

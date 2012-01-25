@@ -270,9 +270,8 @@ sub execute {
 
                 }
 
-                my @models = Genome::Model->get(
+                my @models = Genome::ModelDeprecated->get(
                     subject_id            => $subject_id,
-                    subject_class_name    => $subject_class_name,
                     processing_profile_id => $processing_profile->id,
                     auto_assign_inst_data => 1,
                 );
@@ -367,9 +366,8 @@ sub execute {
                 my $subject = $genome_instrument_data->$check;
                 # Should we just hoise this check out of the loop and skip to next PSE?
                 if (defined($subject)) {
-                    my @some_models= Genome::Model->get(
+                    my @some_models= Genome::ModelDeprecated->get(
                         subject_id         => $subject->id,
-                        subject_class_name => $subject->class,
                         auto_assign_inst_data => 1,
                     );
 

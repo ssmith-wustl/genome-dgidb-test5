@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 
 class Genome::Model::RnaSeq {
-    is => 'Genome::Model',
+    is => 'Genome::ModelDeprecated',
     has => [
         subject                      => { is => 'Genome::Sample', id_by => 'subject_id' },
         dna_type                     => { via => 'processing_profile'},

@@ -24,7 +24,7 @@ my $bogus_id = 0;
 
 my $test_data_directory = File::Temp::tempdir(CLEANUP => 1);
 my $pp = Genome::ProcessingProfile->create_mock(id => --$bogus_id);
-my $model = Genome::Model->create_mock(
+my $model = Genome::ModelDeprecated->create_mock(
                                        genome_model_id => --$bogus_id,
                                        id => $bogus_id,
                                        name => 'test_model_name',

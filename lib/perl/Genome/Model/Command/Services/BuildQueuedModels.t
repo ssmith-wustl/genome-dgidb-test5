@@ -20,7 +20,7 @@ class Genome::ProcessingProfile::Tester {
 sub Genome::ProcessingProfile::Tester::sequencing_platform { return 'solexa'; };
 
 class Genome::Model::Tester {
-    is => 'Genome::Model',
+    is => 'Genome::ModelDeprecated',
 };
 
 class Genome::Model::Build::Tester {

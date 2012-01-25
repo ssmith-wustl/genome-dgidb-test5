@@ -9,18 +9,26 @@ use strict;
 use warnings;
 
 use Genome;
-
-require Carp;
-use Data::Dumper 'Dumper';
+use Carp;
 use Regexp::Common;
 
 class Genome::Model::Command {
-    is => ['Command'],
+    is => 'Command::V1',
     has => [
-        model           => { is => 'Genome::Model', id_by => 'model_id' },
-        model_id        => { is => 'Integer', doc => 'identifies the genome model by id' },
-        model_name      => { is => 'String', via => 'model', to => 'name' },
-        name_pattern    => { is => 'String', shell_args_position => 99, is_optional => 1, doc => 'like expression to match against model name' }
+        model => {
+            is => 'Genome::Model',
+            id_by => 'model_id',
+        },
+        model_name => {
+            is => 'Text',
+            via => 'model',
+            to => 'name',
+        },
+        name_pattern => {
+            is => 'Text',
+            shell_args_position => 99,
+            is_optional => 1,
+        },
     ],
     doc => "work with genome models",
 };
