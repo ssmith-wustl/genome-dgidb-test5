@@ -497,7 +497,7 @@ sub _extract_data_from_alignment_result{
         my %params = (
             %properties_from_prior,
             source_data_files => $source_data_files,
-            import_format => 'illumina fastq',
+            import_format => 'sanger fastq',
         );
         $self->status_message("importing fastq with the following params:" . Data::Dumper::Dumper(\%params));
 
