@@ -83,6 +83,22 @@ class Genome::DruggableGene::DrugNameReport {
 
             # |
         },
+        _approved_cat => {
+            via => 'drug_name_report_category_associations',
+            to => 'category_value',
+            where => [category_value => 'approved'],
+            is_optional => 1,
+            is_many => 1,
+        },
+        is_approved => {
+            calculate_from => ['_approved_cat'],
+            calculate => q|
+                return 1 if $_approved_cat; return 0;
+            |,
+            # calc_sql => q|
+
+            # |
+        },
     ],
     doc => 'Claim regarding the name of a drug',
 };
@@ -95,13 +111,22 @@ sub __display_name__ {
 if ($INC{"Genome/Search.pm"}) {
     __PACKAGE__->create_subscription(
         method => 'commit',
-        callback => \&commit_callback,
+        callback => \&add_to_search_index_queue,
+    );
+    __PACKAGE__->create_subscription(
+        method => 'delete',
+        callback => \&add_to_search_index_queue,
     );
 }
 
-sub commit_callback {
+sub add_to_search_index_queue {
     my $self = shift;
-    Genome::Search->add(Genome::DruggableGene::DrugNameReport->define_set(name => $self->name));
+    my $set = Genome::DruggableGene::DrugNameReport->define_set(name => $self->name);
+    Genome::Search::Queue->create(
+        subject_id => $set->id,
+        subject_class => $set->class,
+        priority => 9,
+    );
 }
 
 sub source_id {

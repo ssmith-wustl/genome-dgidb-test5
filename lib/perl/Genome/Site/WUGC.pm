@@ -4,12 +4,12 @@ use warnings;
 
 BEGIN {
     if ($ENV{GENOME_DEV_MODE}) {
-        $ENV{GENOME_SYS_SERVICES_MEMCACHE} = 'apipe-dev.gsc.wustl.edu:11211';
-        $ENV{GENOME_SYS_SERVICES_SOLR} = 'http://solr-dev:8080/solr';
+        $ENV{GENOME_SYS_SERVICES_MEMCACHE} ||= 'apipe-dev.gsc.wustl.edu:11211';
+        $ENV{GENOME_SYS_SERVICES_SOLR} ||= 'http://solr-dev:8080/solr';
     }
     else {
-        $ENV{GENOME_SYS_SERVICES_MEMCACHE} = 'imp.gsc.wustl.edu:11211';
-        $ENV{GENOME_SYS_SERVICES_SOLR} = 'http://solr:8080/solr';
+        $ENV{GENOME_SYS_SERVICES_MEMCACHE} ||= 'imp.gsc.wustl.edu:11211';
+        $ENV{GENOME_SYS_SERVICES_SOLR} ||= 'http://solr:8080/solr';
     }
 }
 
@@ -56,7 +56,6 @@ $ENV{GENOME_DB_ENSEMBL_PORT} ||= '3306';
 
 # ensure we can get to legacy modules 
 use Class::Autouse;
-Class::Autouse->autouse(qr/Finfo.*/);
 Class::Autouse->autouse(qr/Bio.*/);
 
 # Loads site-specific observers

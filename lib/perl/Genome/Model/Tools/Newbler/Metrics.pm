@@ -77,17 +77,27 @@ sub __errors__ {
         );
     }
 
+    for my $file_method ( qw/ all_contigs_fasta_file newb_read_status_file / ) {
+        my $file = $self->$file_method;
+        if ( not -s $file ) {
+            my $file_name = File::Basename::basename( $file );
+            push @errors, UR::Object::Tag->create(
+                type => 'invalid',
+                properties => [qw/ assembly_directory /],
+                desc => 'No newbler $file_name file found in assembly_directory: '.$self->assembly_directory,
+           ); 
+        }
+    }
+
+    # 454Scaffolds.txt 
+    # assembly not scaffolded if missing
+
     return @errors;
 }
 
 sub execute {
     my $self = shift;
     $self->status_message('Newbler metrics...');
-
-    # input files
-    my $validate_assembly_files = $self->_validate_assembly_files;
-    return if not $validate_assembly_files;
-    my $contigs_bases_file = $self->all_contigs_fasta_file;
 
     # tier values
     my ($t1, $t2);
@@ -96,7 +106,7 @@ sub execute {
         $t2 = $self->second_tier;
     }
     else {
-        my $est_genome_size = -s $contigs_bases_file;
+        my $est_genome_size = -s $self->all_contigs_fasta_file;
         $t1 = int ($est_genome_size * 0.2);
         $t2 = int ($est_genome_size * 0.2);
     }
@@ -373,26 +383,6 @@ sub _metrics_from_newb_read_status_file {
     $metrics->set_metric('reads_assembled_success', sprintf('%.3f', $reads_assembled / $reads_processed));
     my $reads_not_assembled = $reads_processed - $reads_assembled;
     $metrics->set_metric('reads_not_assembled', $reads_not_assembled);
-
-    return 1;
-}
-
-sub _validate_assembly_files {
-    my $self = shift;
-
-    # 454AllContigs.fna
-    if( not -s $self->all_contigs_fasta_file ) {
-        $self->error_message('No 454AllContigs.fna file in assembly dir: '.$self->assembly_directory);
-        return;
-    }
-    #454ReadStatus.txt
-    if( not -s $self->newb_read_status_file ) {
-        $self->error_message('No 454ReadStatus.txt file in assembly dir: '.$self->assembly_directory);
-        return;
-    }
-
-    # 454Scaffolds.txt 
-    # assembly not scaffolded if missing
 
     return 1;
 }

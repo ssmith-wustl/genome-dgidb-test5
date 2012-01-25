@@ -18,8 +18,15 @@ CREATE TABLE model.processing_profile_param (
     processing_profile_id varchar(32) NOT NULL REFERENCES model.processing_profile(id),
     param_name            varchar(100) NOT NULL,
     param_value           varchar(1000) NOT NULL,
+    name                  varchar(255),
+    value_class_name      varchar(255),
+    value_id              varchar(1000),
     PRIMARY KEY (processing_profile_id, param_name, param_value)
 );
+CREATE INDEX processing_profile_param_name_value_class_id_index ON model.processing_profile_param(value_class_name, value_id);
+CREATE INDEX processing_profile_param_value_id_index ON model.processing_profile_param(value_id);
+CREATE INDEX processing_profile_param_name_index ON model.processing_profile_param(name);
+CREATE INDEX processing_profile_param_id_name_index ON model.processing_profile_param(processing_profile_id, name);
 
 CREATE TABLE model.model (
     genome_model_id            varchar(32) NOT NULL,

@@ -59,7 +59,7 @@ sub import_interactions {
     my $interactions_outfile = shift;
     my $version = $self->version;
     my @interactions;
-    my @headers = qw( drug_id drug_name drug_synonyms drug_cas_number drug_pubchem_cid drug_pubchem_sid target_id target_name target_synonyms target_uniprot_id interaction_type );
+    my @headers = qw( drug_id drug_name drug_synonyms drug_cas_number drug_pubchem_cid drug_pubchem_sid target_id target_name target_synonyms target_uniprot_id interaction_types );
     my $parser = Genome::Utility::IO::SeparatedValueReader->create(
         input => $interactions_outfile,
         headers => \@headers,
@@ -71,9 +71,12 @@ sub import_interactions {
     while(my $interaction = $parser->next){
         my $drug_name = $self->_import_drug($interaction);
         my $gene_name = $self->_import_gene($interaction);
-        my $drug_gene_interaction = $self->_create_interaction_report($drug_name, $gene_name, $interaction->{interaction_type}, 'TTD', $version, '');
+        my $drug_gene_interaction = $self->_create_interaction_report($drug_name, $gene_name, 'TTD', $version, '');
         push @interactions, $drug_gene_interaction;
-        #TODO: create interaction attributes
+        my @interaction_types = split('; ', $interaction->{interaction_type});
+        for my $interaction_type (@interaction_types){
+            my $type_attribute = $self->_create_interaction_report_attribute($drug_gene_interaction, 'interaction_type', $interaction_type);
+        }
     }
 
     return @interactions;

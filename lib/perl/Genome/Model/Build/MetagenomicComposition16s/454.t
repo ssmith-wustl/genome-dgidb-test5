@@ -154,12 +154,22 @@ ok($build->detect_and_remove_chimeras, 'detect and remove chimeras');
 my $amplicons_chimeric = 2;
 if ( $build->amplicons_chimeric == 3 ) { # switch to 3 chimeras if necessary
     $example_build->data_directory('/gsc/var/cache/testsuite/data/Genome-Model/MetagenomicComposition16s454/build_v3.3chimeras');
+    # Get the sets again to pickup the new data_directory otherwise the old data_directory is used.
+    @example_amplicon_sets = $example_build->amplicon_sets;
     $amplicons_chimeric = 3;
 }
 for ( my $i = 0; $i < @amplicon_sets; $i++ ) { 
     ok(-s $amplicon_sets[$i]->chimera_file, 'chimera file');
-    is(File::Compare::compare($amplicon_sets[$i]->chimera_free_fasta_file, $example_amplicon_sets[$i]->chimera_free_fasta_file), 0, 'chimera free fasta file matches',);
-    is(File::Compare::compare($amplicon_sets[$i]->chimera_free_qual_file, $example_amplicon_sets[$i]->chimera_free_qual_file), 0, 'chimera free qaul file matches',);
+
+    my $chimera_free_fasta_file = $amplicon_sets[$i]->chimera_free_fasta_file;
+    my $example_chimera_free_fasta_file = $example_amplicon_sets[$i]->chimera_free_fasta_file;
+    my $chimera_free_fasta_file_diff = qx(diff -u $example_chimera_free_fasta_file $chimera_free_fasta_file);
+    ok(!$chimera_free_fasta_file_diff, 'no differences between chimera_free_fasta_files') || print $chimera_free_fasta_file_diff;
+
+    my $chimera_free_qual_file = $amplicon_sets[$i]->chimera_free_qual_file;
+    my $example_chimera_free_qual_file = $example_amplicon_sets[$i]->chimera_free_qual_file;
+    my $chimera_free_qual_file_diff = qx(diff -u $example_chimera_free_qual_file $chimera_free_qual_file);
+    ok(!$chimera_free_qual_file_diff, 'no differences between chimera_free_qual_files') || print $chimera_free_qual_file_diff;
 }
 # metrics
 is($build->amplicons_processed, 14, 'amplicons processed is 14');
@@ -210,9 +220,7 @@ for ( my $i = 0; $i < @amplicon_sets; $i++ ) {
         my $example_amplicon = $example_amplicon_sets[$i]->next_amplicon;
         is($amplicon->{name}, $example_amplicon->{name}, 'matches example amplicon');
         ok($amplicon->{classification}, $amplicon->{name}.' has a classification');
-        is($amplicon->{classification}->[0], $amplicon->{name}, 'classification name matches');
-        is($amplicon->{classification}->[1], '-', 'is complemented');
-        is_deeply([@{$amplicon->{classification}}[0..6]], [@{$example_amplicon->{classification}}[0..6]], 'classification matches');
+        is_deeply([@{$amplicon->{classification}}[0..5]], [@{$example_amplicon->{classification}}[0..5]], 'classification matches');
     }
 }
 

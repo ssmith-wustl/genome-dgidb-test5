@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use Genome;
+use version;
 
 class Genome::ProcessingProfile::RnaSeq {
     is => 'Genome::ProcessingProfile',
@@ -226,6 +227,16 @@ sub params_for_alignment {
         unless (defined($gtf_path)) {
             die('There is no annotation GTF file defined for annotation_reference_transcripts build: '. $annotation_reference_transcripts);
         }
+
+        # Test to see if this is version 1.4.0 or greater
+        if (version->parse($self->read_aligner_version) < version->parse('1.4.0')) {
+            my $transcriptome_index_prefix = $annotation_build->annotation_file('',$reference_build_id);
+            unless (-s $transcriptome_index_prefix .'.fa') {
+                # TODO: We should probably lock until the first Tophat job completes creating the transriptome index
+            }
+            $read_aligner_params .= ' --transcriptome-index '. $transcriptome_index_prefix;
+        }
+        
         if ($read_aligner_params =~ /-G/) {
             die ('This processing_profile is requesting annotation_reference_transcripts \''. $annotation_reference_transcripts .'\', but there seems to be a GTF file already defined in the read_aligner_params: '. $read_aligner_params);
         }

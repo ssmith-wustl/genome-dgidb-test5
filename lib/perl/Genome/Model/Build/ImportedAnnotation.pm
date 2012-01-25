@@ -304,7 +304,10 @@ sub _resolve_annotation_file_name {
     if ($with_strand) {
         $file_type .= '-wStrand';
     }
-    my $file_name = $self->_rna_annotation_directory .'/'. $reference_sequence_id .'-'. $file_type .'.'. $suffix;
+    my $file_name = $self->_rna_annotation_directory .'/'. $reference_sequence_id .'-'. $file_type;
+    if ($suffix && $suffix ne '') {
+        $file_name .= '.'. $suffix;
+    }
     return $file_name;
 }
 

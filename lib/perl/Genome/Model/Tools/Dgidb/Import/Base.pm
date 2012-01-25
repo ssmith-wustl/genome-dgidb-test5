@@ -111,11 +111,10 @@ sub _create_gene_name_report_category_association {
 
 sub _create_interaction_report {
     my $self = shift;
-    my ($drug_name_report, $gene_name_report, $type, $source_db_name, $source_db_version, $description) = @_;
+    my ($drug_name_report, $gene_name_report, $source_db_name, $source_db_version, $description) = @_;
     my %params = (
         gene_name_report_id => $gene_name_report->id,
         drug_name_report_id => $drug_name_report->id,
-        interaction_type => $type,
         source_db_name => $source_db_name,
         source_db_version => $source_db_version,
         description =>  $description,
