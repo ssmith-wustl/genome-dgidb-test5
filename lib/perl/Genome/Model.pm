@@ -66,7 +66,7 @@ class Genome::Model {
         builds  => { 
             is => 'Genome::Model::Build', 
             reverse_as => 'model',
-            doc => 'versions of a model over time, with varying quantities of evidence' 
+            doc => 'Versions of a model over time, with varying quantities of evidence' 
         },
         inputs => { 
             is => 'Genome::Model::Input', 
