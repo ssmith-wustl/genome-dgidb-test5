@@ -104,7 +104,7 @@ sub execute {
 
     ITERATOR:
     while (my $iterator_params = shift @iterator_params) {
-        my $models = Genome::Model->create_iterator(%{$iterator_params});
+        my $models = Genome::ModelDeprecated->create_iterator(%{$iterator_params});
 
         MODEL:
         while (my $model = $models->next) {

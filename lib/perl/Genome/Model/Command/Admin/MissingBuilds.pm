@@ -27,7 +27,6 @@ sub execute {
     unless (@m) {
         print STDERR "Using default search for models created by apipe-builder or ebelter...\n";
         @m = Genome::Model->get(
-            _last_complete_build_id => '',
             'build_requested !=' => '1',
             user_name => ['apipe-builder', 'ebelter'],
         );

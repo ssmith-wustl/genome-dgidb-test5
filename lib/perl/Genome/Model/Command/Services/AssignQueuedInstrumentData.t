@@ -51,6 +51,7 @@ my $sample = Genome::Sample->create(
 
 my $library = Genome::Library->create(
     id => '-2',
+    name => 'test library',
     sample_id => $sample->id,
 );
 
@@ -402,6 +403,7 @@ my $rna_sample = Genome::Sample->create(
 
 my $rna_library = Genome::Library->create(
     id => '-2002',
+    name => 'rna library',
     sample_id => $rna_sample->id,
 );
 

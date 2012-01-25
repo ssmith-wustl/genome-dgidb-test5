@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 
 class Genome::Model::SomaticValidation {
-    is  => 'Genome::Model',
+    is  => 'Genome::ModelDeprecated',
     has => [
         #FIXME probably remove this and fix the (potentional) report issue by having it look at model but fallback on processing profile
         map({

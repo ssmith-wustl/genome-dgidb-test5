@@ -17,7 +17,7 @@ class Genome::ProcessingProfile::Test {
 sub Genome::ProcessingProfile::Test::_execute_build { return 1 };
 
 class Genome::Model::Test {
-    is => 'Genome::Model',
+    is => 'Genome::ModelDeprecated',
     has_input => [
         input_model => {
             is => 'Genome::Model',
@@ -108,10 +108,10 @@ ok ($build3, 'created build 3') or die;
 
 my @input_builds = $build3->input_build;
 is (scalar(@input_builds), 2, 'both input builds were copied');
-@input_builds = sort by_id @input_builds;
+@input_builds = sort by_date @input_builds;
 
 my @expected_inputs = ($build1, $build2);
-@expected_inputs = sort by_id @expected_inputs;
+@expected_inputs = sort by_date @expected_inputs;
 is_deeply(\@input_builds, \@expected_inputs, 'input builds were copied correctly');
 
 my $build1a = Genome::Model::Build->create (
@@ -136,9 +136,9 @@ ok($build3a, 'created build 3a') or die;
 
 @input_builds = $build3a->input_build;
 is (scalar(@input_builds), 2, 'both input builds were copied');
-@input_builds = sort by_id @input_builds;
-@expected_inputs = ($build1, $build2);
-@expected_inputs = sort by_id @expected_inputs;
+@input_builds = sort by_date @input_builds;
+@expected_inputs = ($build1a, $build2);
+@expected_inputs = sort by_date @expected_inputs;
 is_deeply(\@input_builds, \@expected_inputs, 'newer input builds were copied correctly');
 
 #This builds should leave the user-defined build (1a) and copy the other
@@ -151,13 +151,13 @@ ok($build3b, 'created build 3b') or die;
 
 @input_builds = $build3b->input_build;
 is (scalar(@input_builds),2, 'both input builds were copied');
-@input_builds = sort by_id @input_builds;
+@input_builds = sort by_date @input_builds;
 @expected_inputs = ($build1a, $build2);
-@expected_inputs = sort by_id @expected_inputs;
+@expected_inputs = sort by_date @expected_inputs;
 is_deeply(\@input_builds, \@expected_inputs,'user-defined input build was copied correctly');
 done_testing;
 
-sub by_id {
-    $a->id <=> $b->id;
+sub by_date {
+    $a->date_scheduled cmp $b->date_scheduled
 }
 

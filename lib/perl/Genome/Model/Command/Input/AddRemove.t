@@ -18,7 +18,7 @@ use_ok('Genome::Model::Command::Input::Remove') or die;
 class Shape { is => 'UR::Object', id_by => 'name', has => [ name =>  { is => 'Text', }, ], };
 
 class Genome::Model::Tester {
-    is => 'Genome::Model',
+    is => 'Genome::ModelDeprecated',
     has => [
         colors => {
             is => 'Text',
