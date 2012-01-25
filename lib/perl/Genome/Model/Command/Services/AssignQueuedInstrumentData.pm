@@ -329,6 +329,9 @@ sub execute {
                     push @process_errors,
                         $self->error_message('Did not assign validation instrument data to any models.');
                 }
+            } elsif($genome_instrument_data->index_sequence eq 'unknown' && $genome_instrument_data->sample->name =~ /Pooled_Library/) {
+                $self->status_message('Skipping pooled library validation data.');
+                $pse->add_param('no_model_generation_attempted',1);
             } else {
                 push @process_errors,
                     $self->error_message('No validation models found to assign data (target ' . $genome_instrument_data->target_region_set_name . ' on instrument data ' . $genome_instrument_data->id . '.)');
