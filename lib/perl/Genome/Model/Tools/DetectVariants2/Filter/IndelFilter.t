@@ -39,6 +39,8 @@ my $normal_bam_file  = $test_data_directory. '/flank_normal_sorted.bam';
 my $test_output_base = File::Temp::tempdir('Genome-Model-Tools-DetectVariants2-Filter-IndelFilter-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
 my $test_output_dir = $test_output_base . '/filter';
 
+my $vcf_version = Genome::Model::Tools::Vcf->get_vcf_version;
+
 my @expected_output_files = qw| indels.hq
                                 indels.hq.bed
                                 indels.hq.v1.bed
@@ -62,7 +64,7 @@ my $detector_vcf_result = Genome::Model::Tools::DetectVariants2::Result::Vcf::De
     input => $detector_result,
     output_dir => $detector_vcf_directory,
     aligned_reads_sample => "TEST",
-    vcf_version => "1",
+    vcf_version => $vcf_version,
 );
 
 $detector_result->add_user(user => $detector_vcf_result, label => 'uses');
