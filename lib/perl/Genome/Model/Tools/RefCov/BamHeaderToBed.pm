@@ -23,7 +23,16 @@ class Genome::Model::Tools::RefCov::BamHeaderToBed {
 sub help_brief {
     "A BAM header can be converted to BED coordinates for each sequence in the sequence dictionary.  (THIS CAN BE REPLACED BY USING A BAM AS THE ROI FILE!)",
 }
-
+sub help_detail {
+return <<EOS
+A BAM file contains a sequence dictionary with the name and length of each sequence
+in the reference aligned too.  This command generates a BED format file with
+each reference sequence as an ROI.  This is no longer necessary since ref-cov
+will now accept BAM files as an roi-file-path.  Using the BAM file as an
+roi-file-path or generating a BED file to be used as ROI allows for coverage
+evaluations across entire chromosomes.
+EOS
+}
 sub execute {
     my $self = shift;
 
