@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 18;
+use Test::More tests => 16;
 
 BEGIN {
     $ENV{UR_DBI_NO_COMMIT} = 1;
@@ -42,10 +42,7 @@ class Genome::ProcessingProfile::Foo {
     ]
 };
 
-# these key methods in the class are configured to just log that they've been run...
-my ($init_model,$init_build,$execute_build) = (0,0,0);
-sub Genome::ProcessingProfile::Foo::_initialize_model { $init_model = pop; 1; };
-sub Genome::ProcessingProfile::Foo::_initialize_build { $init_build = pop; 1; };
+my $execute_build;
 sub Genome::ProcessingProfile::Foo::_execute_build { $execute_build = $_[1]; 1; };
 
 ok(Genome::ProcessingProfile::Foo->can("get"), "defined a new class of processing profile");
@@ -66,12 +63,9 @@ my $m = $p->add_model(
     name                => $tname,
     subject_id          => $s->id,
     subject_class_name  => $s->class,
-    subject_type        => 'sample_name',
-    subject_name        => $s->name,
 );
 ok($m, "made a new model");
 isa_ok($m,'Genome::Model::Foo',"the model is of the correct subclass");
-is($init_model,$m,"model is initialized");
 
 # add instrument data
 my $a = $m->add_instrument_data($i);
@@ -89,7 +83,6 @@ is(scalar(@mi),2, "found two model inputs");
 
 my $b = $m->add_build(data_directory => $temp_directory);
 ok($b, "created a new build");
-is($init_build,$b,"build created (initialized)");
 
 # start it, which in our case will run it completely...
 ok($b->start(server_dispatch => 'inline', job_dispatch => 'inline'), "build started");

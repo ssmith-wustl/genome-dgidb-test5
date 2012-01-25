@@ -30,7 +30,7 @@ my %DEPENDENT_PROPERTIES = (
 );
 
 class Genome::Model::ReferenceAlignment {
-    is => 'Genome::Model',
+    is => 'Genome::ModelDeprecated',
     has => [
         align_dist_threshold         => { via => 'processing_profile'},
         dna_type                     => { via => 'processing_profile'},

@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 
 class Genome::Model::MetagenomicComposition16s {
-    is => 'Genome::Model',
+    is => 'Genome::ModelDeprecated',
     has => [
     map({
             $_ => {

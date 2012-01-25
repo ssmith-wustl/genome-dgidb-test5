@@ -284,10 +284,11 @@ sub _update_command_properties_for_target_class {
     Carp::confess('No target class given to get properties') if not $target_class;
     my $target_name = $config{target_name};
     Carp::confess('No target name given to get properties') if not $target_name;
+    my @include_only = map { s/_id$//; $_; } @{$config{include_only}} if exists $config{include_only}; # rm the _id from the end
 
     my $target_meta = $target_class->__meta__;
     my @properties;
-    for my $target_property ( $target_meta->property_metas ) {
+    PROPERTY: for my $target_property ( $target_meta->property_metas ) {
         my $property_name = $target_property->property_name;
 
         next if $target_property->class_name eq 'UR::Object';
@@ -295,6 +296,8 @@ sub _update_command_properties_for_target_class {
         next if grep { $target_property->$_ } (qw/ is_id is_calculated is_constant is_transient /);
         next if grep { not $target_property->$_ } (qw/ is_mutable /);
         next if $target_property->is_many and $target_property->is_delegated and not $target_property->via; # direct relationship
+
+        next if @include_only and not grep { $property_name =~ /^$_(_id)?$/ } @include_only;
 
         if ( $target_property->is_many ) {
             for my $function (qw/ add remove /) { 

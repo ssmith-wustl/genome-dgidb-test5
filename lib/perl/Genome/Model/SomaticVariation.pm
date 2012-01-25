@@ -7,7 +7,7 @@ use warnings;
 use Genome;
 
 class Genome::Model::SomaticVariation {
-    is  => 'Genome::Model',
+    is  => 'Genome::ModelDeprecated',
     has => [
         snv_detection_strategy => {
             is => 'Text',
@@ -157,7 +157,6 @@ sub create {
         }
         $params{subject_id} = $tumor_subject->id;
         $params{subject_class_name} = $tumor_subject->class;
-        $params{subject_name} = $tumor_subject->common_name || $tumor_subject->name;
 
     } 
     else {

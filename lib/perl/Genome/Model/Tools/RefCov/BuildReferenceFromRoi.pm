@@ -56,6 +56,24 @@ class Genome::Model::Tools::RefCov::BuildReferenceFromRoi {
     ],
 };
 
+sub help_brief {
+    "Given regions of interest belonging to a larger sequence this command will build a smaller reference sequence limited to those regions (ex. Transcriptome).",
+}
+
+sub help_detail {
+return <<EOS
+A FASTA entry per ROI is generated based on the coordinates of the features
+in the reference sequence. The BED file must contain gene and transcript
+names as defined by the gtf-to-bed converter.  Those names allow this command
+to build full length gene or transcript sequences including a BED file of
+the splice sites.
+
+This command is intented to provide a means for producing a transcriptome file.
+Other tools or commands like BEDTools or the Cufflinks command 'gffread' also
+provide this function.
+EOS
+}
+
 sub create {
     my $class = shift;
     my $self = $class->SUPER::create(@_);

@@ -159,8 +159,7 @@ sub _match_as_entrez_gene_symbol {
     my %matched_identifiers;
     my @unmatched_identifiers;
 
-    my @escaped_gene_identifiers = $class->_escape_gene_identifiers(@gene_identifiers);
-    my @entrez_gene_name_report_associations = Genome::DruggableGene::GeneNameReportAssociation->get(nomenclature => ['entrez_gene_symbol', 'entrez_gene_synonym'], alternate_name => \@escaped_gene_identifiers);
+    my @entrez_gene_name_report_associations = Genome::DruggableGene::GeneNameReportAssociation->get(nomenclature => ['entrez_gene_symbol', 'entrez_gene_synonym'], alternate_name => \@gene_identifiers);
     return {}, @gene_identifiers unless @entrez_gene_name_report_associations;
     for my $gene_identifier(@gene_identifiers){
         my @associations_for_identifier = grep($_->alternate_name eq $gene_identifier, @entrez_gene_name_report_associations);
@@ -182,8 +181,7 @@ sub _match_as_entrez_id {
     my %matched_identifiers;
     my @unmatched_identifiers;
 
-    my @escaped_gene_identifiers = $class->_escape_gene_identifiers(@gene_identifiers);
-    my @entrez_gene_name_reports = Genome::DruggableGene::GeneNameReport->get(nomenclature => 'entrez_id', name => \@escaped_gene_identifiers);
+    my @entrez_gene_name_reports = Genome::DruggableGene::GeneNameReport->get(nomenclature => 'entrez_id', name => \@gene_identifiers);
     return {}, @gene_identifiers unless @entrez_gene_name_reports;
     for my $gene_identifier (@gene_identifiers){
         my @reports_for_identifier = grep($_->name eq $gene_identifier, @entrez_gene_name_reports);
@@ -204,8 +202,7 @@ sub _match_as_ensembl_id {
     my %matched_identifiers;
     my @unmatched_identifiers;
 
-    my @escaped_gene_identifiers = $class->_escape_gene_identifiers(@gene_identifiers);
-    my @gene_name_reports = Genome::DruggableGene::GeneNameReport->get(source_db_name => 'Ensembl', name => \@escaped_gene_identifiers);
+    my @gene_name_reports = Genome::DruggableGene::GeneNameReport->get(source_db_name => 'Ensembl', name => \@gene_identifiers);
     for my $gene_identifier(@gene_identifiers){
         my @reports_for_identifier = grep($_->name eq $gene_identifier, @gene_name_reports);
         unless(@reports_for_identifier){
@@ -232,8 +229,7 @@ sub _match_as_uniprot_id {
     my %intermediate_results_for_identifiers;
     my @unmatched_identifiers;
 
-    my @escaped_gene_identifiers = $class->_escape_gene_identifiers(@gene_identifiers);
-    my @uniprot_associations = Genome::DruggableGene::GeneNameReportAssociation->get(nomenclature => 'uniprot_id', alternate_name => @escaped_gene_identifiers);
+    my @uniprot_associations = Genome::DruggableGene::GeneNameReportAssociation->get(nomenclature => 'uniprot_id', alternate_name => @gene_identifiers);
     for my $gene_identifier(@gene_identifiers){
         my @associations_for_identifier = grep($_->alternate_name => @uniprot_associations);
         unless(@associations_for_identifier){
@@ -265,18 +261,6 @@ sub _strip_version_numbers{
         push @updated_gene_identifiers, $gene_identifier;
     }
     return @updated_gene_identifiers;
-}
-sub _escape_gene_identifiers{
-    my $class = shift;
-    my @gene_identifiers = @_;
-    my @escaped_gene_identifiers;
-    for my $gene_identifier (@gene_identifiers){
-        my $escaped_gene_identifier = $gene_identifier;
-        $escaped_gene_identifier =~ s/'/''/g;
-        push @escaped_gene_identifiers, $escaped_gene_identifier;
-    }
-
-    return @escaped_gene_identifiers;
 }
 
 sub _merge_conversion_results{

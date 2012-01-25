@@ -24,7 +24,7 @@ class Genome::ProcessingProfile::Tester {
     is => 'Genome::ProcessingProfile',
 };
 class Genome::Model::Tester {
-    is => 'Genome::Model',
+    is => 'Genome::ModelDeprecated',
     has => [
         color => {
             is => 'Text',

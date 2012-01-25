@@ -32,7 +32,7 @@ ok($reference_build, 'got reference_build');
 my $aligned_reads         = join('/', $test_data_dir, 'flank_tumor_sorted.bam');
 my $control_aligned_reads = join('/', $test_data_dir, 'flank_normal_sorted.bam');
 
-my $vcf_version = "1";
+my $vcf_version = Genome::Model::Tools::Vcf->get_vcf_version;
 my $detector_name_a = 'Genome::Model::Tools::DetectVariants2::Samtools';
 my $detector_a_vcf_directory = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants2-Combine-UnionSnv/samtools_vcf_result";
 my $detector_b_vcf_directory = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants2-Combine-UnionSnv/varscan_vcf_result";
