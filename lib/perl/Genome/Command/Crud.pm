@@ -290,7 +290,6 @@ sub _update_command_properties_for_target_class {
     my @properties;
     PROPERTY: for my $target_property ( $target_meta->property_metas ) {
         my $property_name = $target_property->property_name;
-        $class->error_message("UPDATE: $property_name");
 
         next if $target_property->class_name eq 'UR::Object';
         next if $property_name =~ /^_/;
