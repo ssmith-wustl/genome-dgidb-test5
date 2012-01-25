@@ -36,6 +36,13 @@ class Genome::Model::Tools::Dgidb::Import::TherapeuticTargetDatabase {
             doc => 'PATH.  Path to .tsv file for drug gene interactions',
         },
     ],
+    has_optional_transient => [
+        version => {
+            is => 'Text',
+            default => 'this parameter is ignored by the TTD importer',
+            doc => 'this parameter is ingored by the TTD importer--the version is taken from the input files',
+        },
+    ],
     doc => '',
 };
 
