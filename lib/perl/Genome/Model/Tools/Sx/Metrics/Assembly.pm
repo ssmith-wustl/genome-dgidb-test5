@@ -269,6 +269,9 @@ sub add_contig {
     $self->_metrics->{contigs_minor_length} += length $contig->{seq} if
         length $contig->{seq} < $self->major_contig_threshold;
 
+    $self->_metrics->{contigs_major_length} = 0 if not $self->_metrics->{contigs_major_length};
+    $self->_metrics->{contigs_minor_length} = 0 if not $self->_metrics->{contigs_minor_length};
+
     return 1;
 }
 
@@ -277,6 +280,7 @@ sub _set_supercontigs_major_minor_lengths {
     my $self = shift;
     my $supercontigs_major_length = 0;
     my $supercontigs_minor_length = 0;
+
     for my $id ( keys %{$self->supercontigs} ) {
         my $length = $self->supercontigs->{$id};
         if( $length >= $self->major_contig_threshold ) {
@@ -285,6 +289,7 @@ sub _set_supercontigs_major_minor_lengths {
             $supercontigs_minor_length += $length;
         }
     }
+
     $self->_metrics->{supercontigs_major_length} = $supercontigs_major_length;
     $self->_metrics->{supercontigs_minor_length} = $supercontigs_minor_length;
 }

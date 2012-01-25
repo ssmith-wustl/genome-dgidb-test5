@@ -293,11 +293,15 @@ sub _copy_model_inputs {
                     $params{name} = $input_name;
                 }
 
-                my $existing_input = $self->inputs(name => $input_name);
-                if ($existing_input) {
-                    my $existing_input_value = $existing_input->value;
-                    if ($existing_input_value && $existing_input_value->isa('Genome::Model::Build')) {
-                        die "Input with name $input_name already exists for build!";
+                my @existing_inputs = $self->inputs(name => $input_name);
+                if (@existing_inputs) {
+                    foreach my $existing_input (@existing_inputs) {
+                        my $existing_input_value = $existing_input->value;
+                        if ($existing_input_value 
+                            and $existing_input_value->isa('Genome::Model::Build')
+                            and $existing_input_value->model_id eq $input->value->id) {
+                            die "Input with name $input_name already exists for build!";
+                        }
                     }
                 }
 

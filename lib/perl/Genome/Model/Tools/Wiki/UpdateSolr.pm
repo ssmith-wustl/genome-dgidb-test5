@@ -80,6 +80,7 @@ sub execute {
         }
     }
 
+    UR::Context->commit();
     Genome::Sys->unlock_resource(resource_lock=>$lock);
 }
 
