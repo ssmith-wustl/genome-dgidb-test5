@@ -133,7 +133,6 @@ sub _convert_to_entrez_gene_name_reports {
     my $intermediate_gene_name_reports;
 
     @gene_identifiers = $class->_strip_version_numbers(@gene_identifiers);
-    $DB::single = 1; #TODO: remove me
 
     ($entrez_gene_symbol_matches, @gene_identifiers) = $class->_match_as_entrez_gene_symbol(@gene_identifiers);
 
