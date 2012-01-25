@@ -282,7 +282,13 @@ sub process_instrument_data_objects {
 sub assemble_job_classes {
     my $self = shift;
 
-    my @classes = 'Genome::Model::Event::Build::DeNovoAssembly::Assemble';
+    my @classes;
+
+    if ($self->process_instrument_data_can_parallelize ) {
+        push @classes, 'Genome::Model::Event::Build::DeNovoAssembly::MergeInputMetrics';
+    }
+
+    push  @classes, 'Genome::Model::Event::Build::DeNovoAssembly::Assemble';
 
     if ( $self->post_assemble ) {
         push @classes, 'Genome::Model::Event::Build::DeNovoAssembly::PostAssemble';

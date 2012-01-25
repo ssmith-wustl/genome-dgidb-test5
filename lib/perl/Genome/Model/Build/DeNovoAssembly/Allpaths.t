@@ -25,7 +25,7 @@ use_ok('Genome::Model::Build::DeNovoAssembly::Allpaths') or die;
 my $base_dir = '/gsc/var/cache/testsuite/data/Genome-Model/DeNovoAssembly';
 my $example_dir = $base_dir.'/allpaths_v1';
 ok(-d $example_dir, 'example dir') or die;
-my $tmpdir = File::Temp::tempdir(CLEANUP => 0);
+my $tmpdir = File::Temp::tempdir(CLEANUP => 1);
 ok(-d $tmpdir, 'temp dir: '.$tmpdir);
 # sample
 my $sample = Genome::Sample->__define__(
@@ -159,6 +159,22 @@ for (my $i=0; $i<$fileCount; $i++) {
     my $output_diff = Genome::Sys->diff_file_vs_file($all_output_files[$i], $all_example_output_files[$i]);
     ok(!$output_diff, 'file contents are the same as expected for '.$all_output_files[$i]) 
         or diag('diff:\n'.$output_diff);
+}
+
+# assemble events
+my @assemble_events = @{$events->[1]->{events}};
+is(@assemble_events, 3, 'got 3 assemble events');
+print Data::Dumper->Dumper(@assemble_events);
+$assemble_events[0]->execute;
+
+# check read metrics
+my $expected_metrics = {
+    reads_attempted => 178216,
+    reads_processed => 178216,
+    reads_processed_success => 1.000,
+};
+foreach my $metric_name (keys %$expected_metrics) {
+    cmp_ok($build->$metric_name,'==',$expected_metrics->{$metric_name},"$metric_name is correct");
 }
 
 done_testing();

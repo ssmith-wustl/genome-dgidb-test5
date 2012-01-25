@@ -102,7 +102,7 @@ my $pps_and_stages = {
         ],
         [
             'assemble', 
-            [qw/ Genome::Model::Event::Build::DeNovoAssembly::Assemble Genome::Model::Event::Build::DeNovoAssembly::PostAssemble Genome::Model::Event::Build::DeNovoAssembly::Report /],
+            [qw/ Genome::Model::Event::Build::DeNovoAssembly::MergeInputMetrics Genome::Model::Event::Build::DeNovoAssembly::Assemble Genome::Model::Event::Build::DeNovoAssembly::PostAssemble Genome::Model::Event::Build::DeNovoAssembly::Report /],
             [ 1 ],
         ],
     ],
@@ -135,7 +135,8 @@ for my $assembler ( keys %$pps_and_stages ) {
         is($stage_name, $stage->[0], "$stage_name name matches");
         my %stage_classes = map { $_->class => 1 } @{$event->{events}};
         my @stage_classes = sort keys %stage_classes;
-        is_deeply(\@stage_classes, $stage->[1], "$assembler $stage_name job classes");
+        my @sorted_stage_classes = sort @{$stage->[1]};
+        is_deeply(\@stage_classes, \@sorted_stage_classes, "$assembler $stage_name job classes");
         my $stage_objects_method = $stage_name.'_objects';
         my @stage_objects = $pp->$stage_objects_method($model);
         is_deeply(\@stage_objects, $stage->[2], "$assembler $stage_name objects");
