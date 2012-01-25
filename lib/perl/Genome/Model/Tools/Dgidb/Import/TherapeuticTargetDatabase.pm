@@ -288,7 +288,6 @@ sub _parse_targets_file {
             if($key eq 'Drug(s)'){
                 my $drug_id = shift @extra_fields;
                 $targets->{$id}{'drugs'}{$drug_id} = join("\t", $drug_id, $value, @extra_fields);
-                
             }else{
                 push(@{$targets->{$id}{$key}}, join("\t", $value, @extra_fields));
             }
