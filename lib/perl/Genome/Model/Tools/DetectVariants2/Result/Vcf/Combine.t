@@ -49,7 +49,7 @@ my $varscan_version = '2.2.9';
 my $samtools_version = 'r599';
 
 my $detector_parameters = '';
-my $vcf_version = "1";
+my $vcf_version = Genome::Model::Tools::Vcf->get_vcf_version;
 
 
 
