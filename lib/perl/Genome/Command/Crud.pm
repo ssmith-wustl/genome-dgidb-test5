@@ -50,7 +50,7 @@ our %inited;
 sub init_sub_commands {
     my ($class, %incoming_config) = @_;
 
-    # target class, namespace
+    # Config: target class, namespace
     Carp::confess('No target class given to init_sub_commands') if not $incoming_config{target_class};
     my %config;
     $config{target_class} = delete $incoming_config{target_class};
@@ -61,7 +61,7 @@ sub init_sub_commands {
     # Ok if we inited already
     return 1 if $inited{ $config{namespace} };
 
-    # name for objects
+    # Names for objects
     my $target_name = ( defined $incoming_config{target_name} )
     ? delete $incoming_config{target_name}
     : join(' ', map { camel_case_to_string($_) } split('::', $config{target_class}));
@@ -76,10 +76,13 @@ sub init_sub_commands {
         Carp::confess('Failed to create main tree class for '.$config{namespace});
     }
 
-    # Sub commands
+    # Get the current sub commands
+    my @namespace_sub_command_classes = $config{namespace}->sub_command_classes;
     my @namespace_sub_command_names = map {
         s/$config{namespace}:://; $_ = lc($_); $_;
-    } $config{namespace}->sub_command_classes;
+    } @namespace_sub_command_classes;
+
+    # Create the sub commands
     my @sub_commands = (qw/ create update list delete /);
     my @sub_classes;
     for my $sub_command ( @sub_commands ) {
@@ -115,11 +118,8 @@ sub init_sub_commands {
     # Check for left over config
     Carp::confess('Unknown config for CRUD commands: '.Dumper(\%incoming_config)) if %incoming_config;
 
-    # Overload sub command classes to return these in memory ones, plus ones in the directory
-    my @sub_command_classes = ( 
-        @sub_classes,
-        $config{namespace}->sub_command_classes,
-    );
+    # Overload sub command classes to return these in memory ones, plus the existing ones
+    my @sub_command_classes = ( @sub_classes, @namespace_sub_command_classes, );
     no strict;
     *{ $config{namespace}.'::sub_command_classes' } = sub{ return @sub_command_classes; };
     
