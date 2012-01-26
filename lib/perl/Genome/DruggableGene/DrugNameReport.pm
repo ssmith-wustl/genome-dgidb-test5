@@ -67,7 +67,7 @@ class Genome::DruggableGene::DrugNameReport {
         _nutraceutical_cat => {
             via => 'drug_name_report_category_associations',
             to => 'category_value',
-            where => [category_value => ['nutraceutical', 'Nutraceutical']],
+            where => [category_value => 'nutraceutical'],
             is_optional => 1,
             is_many => 1,
         },
@@ -93,7 +93,7 @@ class Genome::DruggableGene::DrugNameReport {
         _neoplastic_cat => {
             via => 'drug_name_report_category_associations',
             to => 'category_value',
-            where => ['category_value' => ['Antineoplastic', 'Antineoplastic Agents']],
+            where => ['category_value' => ['antineoplastic', 'antineoplastic agents']],
             is_optional => 1,
             is_many => 1,
         },
