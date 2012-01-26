@@ -119,7 +119,7 @@ class Genome::ModelDeprecated {
             doc => 'all events which have occurred for this model' },
         reports                 => { via => 'last_succeeded_build' },
         reports_directory       => { via => 'last_succeeded_build' },
-        
+
         # these go on refalign models
         region_of_interest_set_name => { 
             is => 'Text',
