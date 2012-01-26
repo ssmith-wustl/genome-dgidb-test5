@@ -25,8 +25,6 @@ sub execute {
     my $dir = $self->dir;
     my $sample_name = File::Basename::basename ($dir);
 
-    $self->log_event("Split reads executing for $sample_name");
-
    #DIRECTORY TO PUT SPLIT FILES INTO
     my $output_dir = $dir.'/'.$sample_name.'.fa.cdhit_out.masked.goodSeq_HGblast';
     Genome::Sys->create_directory( $output_dir ) unless -d $output_dir;
