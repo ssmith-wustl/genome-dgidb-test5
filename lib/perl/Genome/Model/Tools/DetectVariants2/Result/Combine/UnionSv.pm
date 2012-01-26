@@ -4,6 +4,7 @@ use warnings;
 use strict;
 
 use Genome;
+use Tie::File;
 use File::Basename;
 
 class Genome::Model::Tools::DetectVariants2::Result::Combine::UnionSv{
@@ -80,6 +81,54 @@ sub _combine_variants {
         }
         $self->_copy_file($dir, $dir_type);
     }        
+
+    #MG needs a final merge.annot.somatic file to only list somatic events.
+    my @merge_annots = glob($self->temp_staging_directory . "/*.file.annot");
+
+    if (@merge_annots) {
+        $base_name   .= '.merge.annot.somatic';
+        $output_file  = $self->temp_staging_directory . '/' . $base_name;
+        my $out_fh    = Genome::Sys->open_file_for_writing($output_file) 
+            or die "Failed to open $output_file for writing\n";
+        my ($temp_fh, $temp_file) = Genome::Sys->create_temp_file;
+
+        my $cat_cmd = "cat @merge_annots";
+        my $cat_fh = IO::File->new($cat_cmd . "|");
+        binmode $cat_fh;
+        my $header;
+
+        while (my $line = $cat_fh->getline) {
+            if ($line =~ /^#/) {#no header
+                $header = $line unless $header;
+                next;
+            }
+            my @columns = split /\s+/, $line;
+            unless ($columns[11] =~ /normal/) {  #no normal
+                shift @columns;   #remove the useless first column
+                $line = join "\t", @columns;
+                $temp_fh->print($line."\n");
+            }
+        }
+        map{$_->close}($temp_fh, $cat_fh);
+
+        my $sort = Genome::Model::Tools::Snp::Sort->create(
+            snp_file    => $temp_file,
+            output_file => $output_file,
+        );
+        $self->warning_message('Failed to execute sort command') unless $sort->execute;
+
+        my @header_names = split /\s+/, $header;
+        shift @header_names;
+        $header = '#' . join "\t", @header_names;
+    
+        tie my @array, 'Tie::File', $output_file or die "Failed to tie $output_file";
+        unshift @array, $header;
+        untie @array;
+    }
+    else {
+        $self->warning_message('There are no .file.annot files to make .merge.annot.somatic');
+    }
+
     return 1;
 }
 
