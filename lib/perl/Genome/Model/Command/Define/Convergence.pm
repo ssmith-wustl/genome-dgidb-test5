@@ -86,7 +86,7 @@ sub execute {
     }
     
     my $set_group_cmd = Genome::Model::Command::Input::Update->create(
-        model => $model,
+        models => [$model],
         name => 'group',
         value => $self->model_group->id,
     );

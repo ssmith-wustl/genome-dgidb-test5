@@ -92,8 +92,18 @@ my @input_value_ids = sort map { $_->value_id } $model->inputs;
 is_deeply(\@input_value_ids, [qw/ fun red square /], 'inputs match');
 ok(!eval{ $model->shape('yellow'); }, 'failed to set shape to a string');
 
+my $model2 = Genome::Model::Tester->create(
+    name => '__MODEL2__',
+    subject => $sample,
+    processing_profile => $pp,
+    color => 'orange',
+    purpose => 'fun and profit',
+    shape => $square,
+);
+ok($model, 'create second model') or die;
+
 my $update = Genome::Model::Command::Input::Update->create(
-    model => $model,
+    models => [$model, $model2],
     name => 'color',
     value => 'blue',
 );
@@ -101,10 +111,11 @@ ok($update, 'create');
 $update->dump_status_messages(1);
 ok($update->execute, 'execute - update property');
 is($model->color, 'blue', 'color is now blue');
+is($model2->color, 'blue', 'color is now blue on second model');
 
 my $tx = UR::Context::Transaction->begin();
 $update = Genome::Model::Command::Input::Update->create(
-    model => $model,
+    models => [$model],
     name => 'purpose',
 );
 ok($update, 'create');
@@ -115,7 +126,7 @@ ok($tx->commit(), 'did not produce inconsistent result'); #can't have an input o
 
 my $tx2 = UR::Context::Transaction->begin();
 $update = Genome::Model::Command::Input::Update->create(
-    model => $model,
+    models => [$model],
     name => 'purpose',
 );
 ok($update, 'create');
@@ -124,7 +135,7 @@ ok($update->execute, 'execute - update optional already NULL property to NULL');
 ok($tx2->commit(), 'did not produce inconsistent result');
 
 $update = Genome::Model::Command::Input::Update->create(
-    model => $model,
+    models => [$model],
     name => 'purpose',
     value => 'awesomeness',
 );
@@ -133,7 +144,7 @@ $update->dump_status_messages(1);
 ok($update->execute, 'execute - set value on initially undefined optional input');
 
 $update = Genome::Model::Command::Input::Update->create(
-    model => $model,
+    models => [$model],
     name => 'shape',
     value => 'name=circle',
 );
@@ -143,7 +154,7 @@ ok($update->execute, 'execute - update shape');
 is_deeply([$model->shape], [$circle], 'execute - update shape to circle');
 
 $update = Genome::Model::Command::Input::Update->create(
-    model => $model,
+    models => [$model],
     name => 'alternate_input_name',
     value => 'alternate_value',
 );
@@ -152,7 +163,7 @@ $update->dump_status_messages(1);
 ok($update->execute, 'execute - update a when input and property names do not match and input is provided');
 
 $update = Genome::Model::Command::Input::Update->create(
-    model => $model,
+    models => [$model],
     name => 'strange_property_name',
     value => 'strange_value',
 );
@@ -164,7 +175,7 @@ ok($update->execute, 'execute - update a when input and property names do not ma
 
 # fails
 $update = Genome::Model::Command::Input::Update->create(
-    model => $model,
+    models => [$model],
     name => 'shape',
     value => 'name=yellow',
 );
@@ -173,7 +184,7 @@ $update->dump_status_messages(1);
 ok(!$update->execute, 'execute failed to update where the value object does not exist');
 
 $update = Genome::Model::Command::Input::Update->create(
-    model => $model,
+    models => [$model],
     name => 'shape_id',
     value => 'name=circle',
 );
@@ -182,7 +193,7 @@ $update->dump_status_messages(1);
 ok(!$update->execute, 'execute failed to update non input');
 
 $update = Genome::Model::Command::Input::Update->create(
-    model => $model,
+    models => [$model],
     name => 'not_a_property',
 );
 ok($update, 'create');
@@ -190,7 +201,7 @@ $update->dump_status_messages(1);
 ok(!$update->execute, 'execute failed to update non property');
 
 $update = Genome::Model::Command::Input::Update->create(
-    model => $model,
+    models => [$model],
     name => 'color',
 );
 ok($update, 'create');
@@ -198,7 +209,7 @@ $update->dump_status_messages(1);
 ok(!$update->execute, 'execute failed to update required property to NULL');
 
 $update = Genome::Model::Command::Input::Update->create(
-    model => $model,
+    models => [$model],
     name => 'lots',
     value => 'Watson',
 );

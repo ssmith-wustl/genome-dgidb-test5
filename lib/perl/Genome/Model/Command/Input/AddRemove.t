@@ -127,7 +127,7 @@ $build->status('Succeeded');
 
 # add
 my $add = Genome::Model::Command::Input::Add->create(
-    model => $model,
+    models => [$model],
     name => 'colors',
     'values' => [qw/ blue /],
 );
@@ -138,7 +138,7 @@ is_deeply([$model->colors], [qw/ blue red /], 'colors are red and blue');
 
 # add colors => blue - OK already exists 
 $add = Genome::Model::Command::Input::Add->create(
-    model => $model,
+    models => [$model],
     name => 'colors',
     'values' => [qw/ blue /],
 );
@@ -149,7 +149,7 @@ is_deeply([sort { $a cmp $b } $model->colors], [qw/ blue red /], 'colors are red
 
 # remove colors => blue and abandon no builds - OK
 my $rm = Genome::Model::Command::Input::Remove->create(
-    model => $model,
+    models => [$model],
     name => 'colors',
     'values' => [qw/ blue /],
     abandon_builds => 1,
@@ -162,7 +162,7 @@ is($build->status, 'Succeeded', 'build is succeeded');
 
 # remove colors => blue - NOT OK leaves no colors, which is required
 $rm = Genome::Model::Command::Input::Remove->create(
-    model => $model,
+    models => [$model],
     name => 'colors',
     'values' => [qw/ red /],
 );
@@ -174,7 +174,7 @@ is($build->status, 'Succeeded', 'build is succeeded');
 
 # remove colors => yellow - OK does not exist
 $rm = Genome::Model::Command::Input::Remove->create(
-    model => $model,
+    models => [$model],
     name => 'colors',
     'values' => [qw/ yellow /],
 );
@@ -186,7 +186,7 @@ is($build->status, 'Succeeded', 'build is succeeded');
 
 # remove purpose => fun - leaves no values for prop, but this is OK
 $rm = Genome::Model::Command::Input::Remove->create(
-    model => $model,
+    models => [$model],
     name => 'purposes',
     'values' => [qw/ fun /],
 );
@@ -198,7 +198,7 @@ is($build->status, 'Succeeded', 'build is succeeded');
 
 # add shape => square - OK w/ name filter, already exists
 $add = Genome::Model::Command::Input::Add->create(
-    model => $model,
+    models => [$model],
     name => 'shapes',
     'values' => [qw/ name=square /],
 );
@@ -209,7 +209,7 @@ is_deeply([sort { $a->name cmp $b->name } $model->shapes], [$circle, $square], '
 
 # remove shapes => square - OK w/ id
 $rm = Genome::Model::Command::Input::Remove->create(
-    model => $model,
+    models => [$model],
     name => 'shapes',
     'values' => [ $square->id ],
 );
@@ -221,7 +221,7 @@ is($build->status, 'Succeeded', 'build is succeeded');
 
 # add shape => square - OK w/ id
 $add = Genome::Model::Command::Input::Add->create(
-    model => $model,
+    models => [$model],
     name => 'shapes',
     'values' => [ $square->id ],
 );
@@ -233,7 +233,7 @@ is_deeply([sort { $a->name cmp $b->name } $model->shapes], [$circle, $square], '
 # remove shapes => circle and abandon build - OK
 is_deeply([$build->shapes], [$model->shapes], 'model/build shapes match');
 $rm =Genome::Model::Command::Input::Remove->create(
-    model => $model,
+    models => [$model],
     name => 'shapes',
     'values' => [qw/ name=circle /],
     abandon_builds => 1,
@@ -246,7 +246,7 @@ is($build->status, 'Abandoned', 'abandoned build');
 
 # FAIL add invalid input property
 $add = Genome::Model::Command::Input::Add->create(
-    model => $model,
+    models => [$model],
     name => 'shape_ids',
     'values' => [qw/ blah /],
 );
@@ -256,7 +256,7 @@ ok(!$add->execute, 'execute failed b/c input is not found');
 
 # FAIL remove invalid input property
 $rm = Genome::Model::Command::Input::Remove->create(
-    model => $model,
+    models => [$model],
     name => 'shape_ids',
     'values' => [qw/ blah /],
 );
@@ -266,7 +266,7 @@ ok(!$rm->execute, 'execute failed b/c input is not found');
 
 # FAIL add single => blah - NOT OK b/c this is a single property
 $add = Genome::Model::Command::Input::Add->create(
-    model => $model,
+    models => [$model],
     name => 'single',
     'values' => [qw/ blah /],
 );
@@ -276,7 +276,7 @@ ok(!$add->execute, 'execute failed b/c single is not many');
 
 # FAIL remove single => blah - NOT OK b/c this is a single property
 $rm = Genome::Model::Command::Input::Remove->create(
-    model => $model,
+    models => [$model],
     name => 'single',
     'values' => [qw/ blah /],
 );
