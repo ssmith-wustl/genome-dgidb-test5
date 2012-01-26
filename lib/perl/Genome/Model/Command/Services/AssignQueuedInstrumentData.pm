@@ -1505,10 +1505,11 @@ sub add_processing_profiles_to_pses{
                 elsif ( $taxon->id == 1653198763 ) { #unknow taxon normally skipped
                     my $index_illumina = GSC::IndexIllumina->get( $instrument_data_id );
                     if ( $index_illumina ) {
-                        my @work_orders = $index_illumina->get_work_orders;
-                        for my $work_order ( @work_orders ) {
-                            push @processing_profile_ids_to_add, '2599969' if
-                                $work_order->id == 2636663 or $work_order->id == 2634033;
+                        for my $project ( $index_illumina->get_research_projects ) {
+                            if ( $project->id == 2269562 ) { # HMP Centers Grant Reference Genomes WU Strain Collection
+                                push @processing_profile_ids_to_add, '2599969';
+                                last;
+                            }
                         }
                     }
                 }
