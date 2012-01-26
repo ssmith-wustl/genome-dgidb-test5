@@ -49,6 +49,8 @@ my $hq_output = join('/', $output_dir, 'snvs.hq');
 my $lq_output = join('/', $output_dir, 'snvs.lq');
 my $readcount_file = join('/', $output_dir, 'readcounts');
 
+my $vcf_version = Genome::Model::Tools::Vcf->get_vcf_version;
+
 my $reference = Genome::Model::Build::ImportedReferenceSequence->get_by_name('NCBI-human-build36');
 is($reference->id,101947881, 'Found correct reference sequence');
 
@@ -66,7 +68,7 @@ my $detector_vcf_result = Genome::Model::Tools::DetectVariants2::Result::Vcf::De
     output_dir => $detector_vcf_directory,
     aligned_reads_sample => "TEST",
     control_aligned_reads_sample => "TEST-normal",
-    vcf_version => "1",
+    vcf_version => $vcf_version,
 );
 
 $detector_result->add_user(user => $detector_vcf_result, label => 'uses');

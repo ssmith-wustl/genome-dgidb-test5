@@ -84,25 +84,23 @@ class Person {
             where => [ name => 'friend' ],
             doc => 'Friends of this person', 
         },
-       mom => { is => 'Person', id_by => 'mom_id', },
-       mom_id => {
-           is => 'Number',
+       mom => {
+           is => 'Person',
            is_optional => 1,
            is_mutable => 1,
            is_many => 0,
            via => 'relationships', 
-           to => 'related_id',
+           to => 'related',
            where => [ name => 'mom' ],
            doc => 'The person\'s Mom', 
        },
-       best_friend => { is => 'Person', id_by => 'best_friend_id', },
-       best_friend_id => {
-           is => 'Number',
+       best_friend => {
+           is => 'Person',
            is_optional => 1,
            is_mutable => 1,
            is_many => 0,
            via => 'relationships', 
-           to => 'related_id',
+           to => 'related',
            where => [ name => 'best friend' ],
            doc => 'Best friend of this person', 
        },
@@ -115,7 +113,7 @@ sub Person::__display_name__ {
 # INIT
 my %config = (
     target_class => 'Person',
-    update => { only_if_null => [qw/ job title mom /], },
+    update => { only_if_null => [qw/ job title mom /], include_only => [qw/ name job has_pets mom friends best_friend /], },
 );
 ok(Genome::Command::Crud->init_sub_commands(%config), 'init crud commands') or die;
 
@@ -127,7 +125,7 @@ ok($main_tree_meta, 'MAIN TREE meta');
 # meta 
 my $create_meta = Person::Command::Create->__meta__;
 ok($create_meta, 'CREATE meta');
-#print Person::Command::Create->help_usage_complete_text;
+print Person::Command::Create->help_usage_complete_text;
 
 is(Person::Command::Create->_target_name, 'person', 'CREATE: _target_name');
 is(Person::Command::Create->_target_class, 'Person', 'CREATE: _target_class');
@@ -205,7 +203,7 @@ ok($list_meta, 'LIST meta');
 # meta
 my $update_meta = Person::Command::Update->__meta__;
 ok($update_meta, 'update meta');
-print Person::Command::Create->help_usage_complete_text;
+print Person::Command::Update->help_usage_complete_text;
 
 is(Person::Command::Update->_target_name_pl, 'persons', 'UPDATE: _target_name_pl');
 is(Person::Command::Update->_target_name_pl_ub, 'persons', 'UPDATE: _target_name_pl_ub');
@@ -229,15 +227,17 @@ $update_fail->delete;
 
 # fail to update non null property that is text (title)
 my $old_title = $ronnie->title;
-$update_fail = Person::Command::Update->create(
-    persons => [ $ronnie ],
-    title => 'dr',
-);
-ok($update_fail, 'UPDATE COMMAND: create attempt to update not null property (text)');
-$update_fail->dump_status_messages(1);
-ok((!$update_fail->execute && !$update_fail->result), 'UPDATE COMMAND: execute');
-is($ronnie->title, $old_title, 'Ronnie title not updated b/c it was not null');
-$update_fail->delete;
+$update_fail = eval{ 
+    Person::Command::Update->create(
+        persons => [ $ronnie ],
+        title => 'dr',
+    );
+};
+ok(!$update_fail, 'UPDATE COMMAND: create with a property not included failed as expected');
+#$update_fail->dump_status_messages(1);
+#ok((!$update_fail->execute && !$update_fail->result), 'UPDATE COMMAND: execute');
+#is($ronnie->title, $old_title, 'Ronnie title not updated b/c it was not null');
+#$update_fail->delete;
 
 # fail to update non null property that is an object 
 $update_fail = Person::Command::Update->create(
@@ -313,7 +313,7 @@ is($george->mom, $mom, 'Geroge now has a mom');
 # meta
 my $delete_meta = Person::Command::Delete->__meta__;
 ok($delete_meta, 'DELETE meta');
-#print Person::Command::Create->help_usage_complete_text;
+print Person::Command::Delete->help_usage_complete_text;
 
 is(Person::Command::Delete->_target_name_pl, 'persons', 'DELETE: _target_name_pl');
 is(Person::Command::Delete->_target_name_pl_ub, 'persons', 'DELETE: _target_name_pl_ub');

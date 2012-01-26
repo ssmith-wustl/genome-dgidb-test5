@@ -85,8 +85,6 @@ sub create_mock_processing_profile {
     $self->mock_methods(
         $pp,
         (qw/
-            _initialize_model
-            _initialize_build 
             _generate_events_for_build
             _generate_events_for_build_stage
             _generate_events_for_object

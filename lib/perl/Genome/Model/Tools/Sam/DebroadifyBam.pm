@@ -7,6 +7,7 @@ use Genome;
 use Command;
 use IO::File;
 use File::Basename;
+use List::Util qw(first);
 
 class Genome::Model::Tools::Sam::DebroadifyBam {
     is  => 'Genome::Model::Tools::Sam',
@@ -73,12 +74,49 @@ sub execute {
         die $self->error_message;
     }
     print "successfully opened bam header input pipe.\n";
-    while (<$sam_header_input>) {
-        if (m/^\@SQ/) {
-            $_=~s/\@SQ\tSN:chrM/\@SQ\tSN:MT/;
-            $_=~s/\@SQ\tSN:chr(X|Y)/\@SQ\tSN:$1/;
-            $_=~s/\@SQ\tSN:chr(.*)\w/\@SQ\tSN:$1/;
+
+    my (@pre_sq, @sq, @post_sq);
+    while (my $line = $sam_header_input->getline) {
+        if ($line =~ /^\@SQ/) {
+            # Convert Broad chromosome names to TGI.
+            $line =~ s/\@SQ\tSN:chrM/\@SQ\tSN:MT/;
+            $line =~ s/\@SQ\tSN:chr(X|Y)/\@SQ\tSN:$1/;
+            $line =~ s/\@SQ\tSN:chr(.*)\w/\@SQ\tSN:$1/;
+            push @sq, $line;
+        } elsif (not @sq) {
+            push @pre_sq, $line;
+        } else {
+            push @post_sq, $line;
         }
+    }
+
+    # Load chromosome order from reference file.
+    my $reference_file = IO::File->new($self->reference_file, 'r') || die 'could not open file (' . $self->reference_file . "): $!\n";
+    our @reference_chromosomes;
+    while (my $line = $reference_file->getline) {
+        my ($chromosome) = $line =~ /^(\S+)/;
+        next unless $chromosome;
+        push @reference_chromosomes, $chromosome;
+    }
+
+    # Sort SQ so it matches chromosome order in reference file.
+    @sq = sort {
+        my ($a_chrom) = $a =~ /\@SQ\tSN:([^\t]+)/;
+        die "unable to match chromosome in ($a)" unless $a_chrom;
+
+        my ($b_chrom) = $b =~ /\@SQ\tSN:([^\t]+)/;
+        die "unable to match chromosome in ($b)" unless $b_chrom;
+
+        my $a_index = first { $reference_chromosomes[$_] eq $a_chrom } 0..$#reference_chromosomes;
+        die "unable to find $a_chrom in (" . join(' ', @reference_chromosomes) . ")" unless defined $a_index;
+
+        my $b_index = first { $reference_chromosomes[$_] eq $b_chrom } 0..$#reference_chromosomes;
+        die "unable to find $b_chrom in (" . join(' ', @reference_chromosomes) . ")" unless defined $b_index;
+
+        $a_index <=> $b_index;
+    } @sq;
+
+    for (@pre_sq, @sq, @post_sq) {
         print $bam_output $_;
     }
     close $sam_header_input;

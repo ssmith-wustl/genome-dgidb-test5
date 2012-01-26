@@ -75,13 +75,17 @@ sub __errors__ {
         );
     }
 
-    my $reads_file = $self->input_collated_fastq_file;
-    if ( not -s $reads_file ) {
-        push @errors, UR::Object::Tag->create(
-            type => 'invalid',
-            properties => [qw/ assembly_directory /],
-            desc => 'No input reads file found in assembly_directory:'.$self->assembly_directory,
-        );
+    #check files needed for metrics
+    for my $file_method ( qw/ input_collated_fastq_file velvet_afg_file velvet_sequences_file velvet_contigs_fa_file / ) {
+        my $file = $self->$file_method;
+        if ( not -s $file ) {
+            my $file_name = File::Basename::basename( $file );
+            push @errors, UR::Object::Tag->create(
+                type => 'invalid',
+                properties => [qw/ assembly_directory /],
+                desc => "No velvet $file_name file found in assembly_directory:".$self->assembly_directory,
+            );
+        }
     }
 
     return @errors;
@@ -91,11 +95,6 @@ sub execute {
     my $self = shift;
     $self->status_message('Velvet metrics...');
 
-    # input files
-    my $resolve_assembly_files = $self->_validate_assembly_output_files;
-    return if not $resolve_assembly_files;
-
-    my $contigs_fa_file = $self->velvet_contigs_fa_file;
     # tier values
     my ($t1, $t2);
     if ($self->first_tier and $self->second_tier) {
@@ -103,7 +102,7 @@ sub execute {
         $t2 = $self->second_tier;
     }
     else {
-        my $est_genome_size = -s $contigs_fa_file;
+        my $est_genome_size = -s $self->velvet_contigs_fa_file;
         $t1 = int ($est_genome_size * 0.2);
         $t2 = int ($est_genome_size * 0.2);
     }
@@ -153,28 +152,6 @@ sub execute {
     return 1;
 }
 
-sub _validate_assembly_output_files {
-    my $self = shift;
-    # afg
-    if ( not -s $self->velvet_afg_file ) {
-        $self->error_message('No velvet_asm.afg file in assembly directory: '.$self->assembly_directory);
-        return;
-    }
-    
-    # Sequences
-    if ( not -s $self->velvet_sequences_file ) {
-        $self->error_message('No Sequences file in assembly dir: '.$self->assembly_directory);
-        return;
-    }
-
-    # contig.fa
-    if ( not -s $self->velvet_contigs_fa_file ) {
-        $self->error_message('No contig.fa file in assembly dir: '.$self->assembly_directory);
-        return;
-    }
-    return 1;
-}
-
 sub _add_metrics_from_agp_file { #for velvet assemblies
     my ($self, $metrics) = @_;
 
@@ -188,18 +165,12 @@ sub _add_metrics_from_agp_file { #for velvet assemblies
     #genome content
     my ( $gc_count, $at_count, $nx_count ) = ( 0,0,0 );
 
+    #reads assembled contigs/supercontigs
     my %uniq_reads;
+    my %reads_in_supercontigs;
     my $reads_assembled_in_scaffolds = 0;
-
-    my $major_contigs_length = 0;
-    my $minor_contigs_length = 0;
     my $major_contigs_read_count = 0;
     my $minor_contigs_read_count = 0;
-
-    my $major_supercontigs_length = 0;
-    my $minor_supercontigs_length = 0;
-
-    my %reads_in_supercontigs;
 
     while (my $record = getRecord($afg_fh)) {
         my ($rec, $fields, $recs) = parseRecord($record);
@@ -209,22 +180,22 @@ sub _add_metrics_from_agp_file { #for velvet assemblies
 
             my $contig_length = length $seq;
             $total_contigs_length += $contig_length;
-            
+
             #contigs/supercontig lengths;
             my $contig_name = $fields->{eid};
-            $metrics->{'contigs'}->{$contig_name} = $contig_length;
             my ($supercontig_name) = $fields->{eid} =~ /^(\d+)-/; 
-            $metrics->{'supercontigs'}->{$supercontig_name} += $contig_length;
+
+            my %contig;
+            $contig{'id'} = $supercontig_name.'.'.$contig_name;
+            $contig{'seq'} = $seq;
+            $metrics->add_contig( \%contig );
 
             #separate major/minor contigs metrics
             if ( $contig_length >= $self->major_contig_length ) {
-                $major_contigs_length += $contig_length;
                 $major_contigs_read_count += scalar @$recs;
             } else {
-                $minor_contigs_length += $contig_length;
                 $minor_contigs_read_count += scalar @$recs;
             }
-
             $reads_in_supercontigs{$supercontig_name} += scalar @$recs;
 
             #five k contig lengths
@@ -270,7 +241,6 @@ sub _add_metrics_from_agp_file { #for velvet assemblies
             }
 
             shift @consensus_positions; #remove [0] position 
-            #
             if (scalar @consensus_positions < $contig_length) {
                 $self->warning_message ("Covered consensus bases does not equal contig length\n\t".
                     "got ".scalar (@consensus_positions)." covered bases but contig length is $contig_length\n");
@@ -281,13 +251,11 @@ sub _add_metrics_from_agp_file { #for velvet assemblies
                     $zero_x++;
                     next;
                 }
-                
                 $one_x++   if $_ > 0;
                 $two_x++   if $_ > 1;
                 $three_x++ if $_ > 2;
                 $four_x++  if $_ > 3;
                 $five_x++  if $_ > 4;
-
             }
         }
     }
@@ -297,33 +265,6 @@ sub _add_metrics_from_agp_file { #for velvet assemblies
     $metrics->set_metric('content_at', $at_count);
     $metrics->set_metric('content_gc', $gc_count);
     $metrics->set_metric('content_nx', $nx_count);
-
-    #contigs lengths
-    $metrics->set_metric('assembly_length', $total_contigs_length);
-    $metrics->set_metric('contigs_length', $total_contigs_length);
-    $metrics->set_metric('contigs_count', scalar ( keys %{$metrics->{'contigs'}} ));
-    $metrics->set_metric('contigs_major_length', $major_contigs_length);
-    $metrics->set_metric('contigs_minor_length', $minor_contigs_length);
-
-    #supercontigs lengths
-    $metrics->set_metric('supercontigs_length', $total_contigs_length);
-    $metrics->set_metric('supercontigs_count', scalar ( keys %{$metrics->{'supercontigs'}} ));
-    my $supercontigs_major_length = 0;
-    my $supercontigs_minor_length = 0;
-    for my $sctg ( keys %{$metrics->{'supercontigs'}} ) {
-        my $length = $metrics->{'supercontigs'}->{$sctg};
-        if ( $length >= $self->major_contig_length ) {
-            $supercontigs_major_length += $length;
-        } else {
-            $supercontigs_minor_length += $length;
-        }
-    }
-    $metrics->set_metric('supercontigs_major_length', $supercontigs_major_length);
-    my $supercontigs_major_percent = ( $supercontigs_major_length > 0 ) ?
-        sprintf( "%.1f", $supercontigs_major_length / $total_contigs_length * 100 )
-        : 0 ;
-    $metrics->set_metric('supercontigs_major_percent', $supercontigs_major_percent);
-    $metrics->set_metric('supercontigs_minor_length', $supercontigs_major_length);
 
     #5k contig lengths
     $metrics->set_metric('contigs_length_5k', $contigs_length_5k);

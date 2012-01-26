@@ -36,9 +36,12 @@ class Genome::PopulationGroup::View::Status::Xml {
                                     aspects => [
                                         'genome_model_id',
                                         'name',
-                                        'subject_id',
-                                        'subject_class_name',
-                                        'is_default',
+                                        {
+                                            name => 'subject',
+                                            aspects => ['id', 'name', 'subclass_name'],
+                                            perspective => 'default',
+                                            toolkit => 'xml',
+                                        },
                                         {
                                             name => 'processing_profile',
                                             aspects => ['id', 'name'],

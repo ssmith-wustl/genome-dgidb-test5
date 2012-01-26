@@ -37,7 +37,6 @@ class Genome::DruggableGene::DrugGeneInteractionReport {
         },
         source_db_name => { is => 'Text'},
         source_db_version => { is => 'Text'},
-        interaction_type => { is => 'Text'},
         description => { is => 'Text', is_optional => 1 },
         drug_gene_interaction_report_attributes => {
             is => 'Genome::DruggableGene::DrugGeneInteractionReportAttribute',
@@ -51,6 +50,34 @@ class Genome::DruggableGene::DrugGeneInteractionReport {
                 return $citation;
             |,
         },
+        interaction_types => {
+            via => 'drug_gene_interaction_report_attributes',
+            to => 'value',
+            where => [name => 'interaction_type'],
+            is_many => 1,
+            is_optional => 1,
+        },
+        is_potentiator => {
+            calculate => q|
+                my @potentiator = grep($_ =~ /potentiator/, $self->interaction_types);
+                return 1 if @potentiator;
+                return 0;
+            |,
+        },
+        is_untyped => {
+            calculate => q|
+                my @na = grep($_ =~ /na/, $self->interaction_types);
+                return 1 if @na;
+                return 0;
+            |,
+        },
+        is_inhibitor => {
+            calculate => q|
+                my @inhibitor = grep($_ =~ /inhibitor/, $self->interaction_types);
+                return 1 if @inhibitor;
+                return 0;
+            |,
+        }
     ],
     doc => 'Claim regarding an interaction between a drug name and a gene name',
 };

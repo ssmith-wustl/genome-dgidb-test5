@@ -145,7 +145,7 @@ sub print_grouped_interactions{
     }
 
     my @headers = qw/drug_name_report drug_nomenclature drug_source_db_name drug_source_db_version
-        gene_name_report gene_nomenclature gene_alternate_names gene_source_db_name gene_source_db_version interaction_type /;
+        gene_name_report gene_nomenclature gene_alternate_names gene_source_db_name gene_source_db_version interaction_types /;
     unless($self->noheaders){
         $output_fh->print(join("\t", @headers), "\n");
     }
@@ -169,11 +169,12 @@ sub _build_interaction_line {
     my $interaction = shift;
     my $drug_name_report = $interaction->drug_name_report;
     my $gene_name_report = $interaction->gene_name_report;
-    my $gene_alternate_names = join(":", map($_->alternate_name, $gene_name_report->gene_name_report_associations));
+    my $gene_alternate_names = join(':', map($_->alternate_name, $gene_name_report->gene_name_report_associations));
+    my $interaction_types = join(':', $interaction->interaction_types);
     my $interaction_line = join("\t", $drug_name_report->name,
         $drug_name_report->nomenclature, $drug_name_report->source_db_name, $drug_name_report->source_db_version,
         $gene_name_report->name, $gene_name_report->nomenclature, $gene_alternate_names,
-        $gene_name_report->source_db_name, $gene_name_report->source_db_version, $interaction->interaction_type);
+        $gene_name_report->source_db_name, $gene_name_report->source_db_version, $interaction_types);
     return $interaction_line;
 }
 

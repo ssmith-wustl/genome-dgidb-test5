@@ -288,16 +288,20 @@ sub _copy_model_inputs {
             # Resolve inputs pointing to a model to a build.
             if($params{value_class_name}->isa('Genome::Model')) {
                 my $input_name = $input->name;
-                if ($input_name =~ /_model$/) {
-                    $input_name =~ s/_model$/_build/g;
+                if ($input_name =~ /_model(s)?$/) {
+                    $input_name =~ s/_model(?=($|s$))/_build/;
                     $params{name} = $input_name;
                 }
 
-                my $existing_input = $self->inputs(name => $input_name);
-                if ($existing_input) {
-                    my $existing_input_value = $existing_input->value;
-                    if ($existing_input_value && $existing_input_value->isa('Genome::Model::Build')) {
-                        die "Input with name $input_name already exists for build!";
+                my @existing_inputs = $self->inputs(name => $input_name);
+                if (@existing_inputs) {
+                    foreach my $existing_input (@existing_inputs) {
+                        my $existing_input_value = $existing_input->value;
+                        if ($existing_input_value 
+                            and $existing_input_value->isa('Genome::Model::Build')
+                            and $existing_input_value->model_id eq $input->value->id) {
+                            die "Input with name $input_name already exists for build!";
+                        }
                     }
                 }
 
@@ -1179,14 +1183,6 @@ sub fail {
     )
         or return;
 
-    # FIXME Don't know if this should go here, but then we would have to call success and abandon through the model
-    my $last_complete_build = $self->model->resolve_last_complete_build;
-    if ( $last_complete_build and $last_complete_build->id eq $self->id ) {
-        $self->error_message("Tried to resolve last complete build for model (".$self->model_id."), which should not return this build (".$self->id."), but did.");
-        # FIXME soon - return here
-        # return;
-    }
-
     for my $error (@errors) {
         $self->add_note(
             header_text => 'Failed Stage',
@@ -1273,19 +1269,6 @@ sub success {
     # TODO Reconsider this method name
     $self->perform_post_success_actions;
 
-    # FIXME Don't know if this should go here, but then we would have to call success and abandon through the model
-    my $last_complete_build = $self->model->resolve_last_complete_build;
-    unless ( $last_complete_build ) {
-        $self->error_message("Tried to resolve last complete build for model (".$self->model_id."), but no build was returned.");
-        # FIXME soon - return here
-        #return;
-    }
-    unless ( $last_complete_build->id eq $self->id ) {
-        $self->error_message("Tried to resolve last complete build for model (".$self->model_id."), which should return this build (".$self->id."), but returned another build (".$last_complete_build->id.").");
-        # FIXME soon - return here
-        #return;
-    }
-
     return 1;
 }
 
@@ -1341,14 +1324,6 @@ sub abandon {
 
     # Reallocate - always returns true (legacy behavior)
     $self->reallocate;
-
-    # FIXME Don't know if this should go here, but then we would have to call success and abandon through the model
-    my $last_complete_build = $self->model->resolve_last_complete_build;
-    if ( $last_complete_build and $last_complete_build->id eq $self->id ) {
-        $self->error_message("Tried to resolve last complete build for model (".$self->model_id."), which should not return this build (".$self->id."), but did.");
-        # FIXME soon - return here
-        # return;
-    }
 
     $self->_unregister_software_results
         or return;
@@ -1689,16 +1664,6 @@ sub delete {
         unless ($disk_allocation->deallocate) {
             $self->warning_message('Failed to deallocate disk space.');
         }
-    }
-
-    # FIXME Don't know if this should go here, but then we would have to call success and abandon through the model
-    #  This works b/c the events are deleted prior to this call, so the model doesn't think this is a completed
-    #  build
-    my $last_complete_build = $self->model->resolve_last_complete_build;
-    if ( $last_complete_build and $last_complete_build->id eq $self->id ) {
-        $self->error_message("Tried to resolve last complete build for model (".$self->model_id."), which should not return this build (".$self->id."), but did.");
-        # FIXME soon - return here
-        # return;
     }
 
     return $self->SUPER::delete;

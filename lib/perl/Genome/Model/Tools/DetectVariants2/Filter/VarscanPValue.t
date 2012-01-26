@@ -23,6 +23,8 @@ my $bam_file = join('/', $test_data_dir, 'tumor.tiny.bam');
 my $reference = Genome::Model::Build::ImportedReferenceSequence->get_by_name('NCBI-human-build36');
 ok($reference, 'found the reference sequence');
 
+my $vcf_version = Genome::Model::Tools::Vcf->get_vcf_version;
+
 my $detector_directory = join('/', $test_data_dir, 'varscan-somatic-2.2.4-');
 my $detector_vcf_directory = join('/', $test_data_dir, 'detector_vcf_result');
 my $detector_result = Genome::Model::Tools::DetectVariants2::Result->__define__(
@@ -39,7 +41,7 @@ my $detector_vcf_result = Genome::Model::Tools::DetectVariants2::Result::Vcf::De
     output_dir => $detector_vcf_directory,
     aligned_reads_sample => "TEST",
     control_aligned_reads_sample => "TEST-normal",
-    vcf_version => "1",
+    vcf_version => $vcf_version,
 );
 
 $detector_result->add_user(user => $detector_vcf_result, label => 'uses');

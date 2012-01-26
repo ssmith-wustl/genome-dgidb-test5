@@ -135,6 +135,16 @@ sub execute {
         my $annotation_build = Genome::Model::ImportedAnnotation->annotation_build_for_reference($self->reference_sequence_build);
         my $previously_discovered_build = Genome::Model::ImportedVariationList->dbsnp_build_for_reference($self->reference_sequence_build);
 
+        if($self->target) {
+            my $t = $self->target;
+            if(!$t->content_type) {
+                $t->content_type('validation');
+            } elsif($t->content_type ne 'validation') {
+                die $self->error_message('Specified target set has content-type ' . $t->content_type . ' when validation expected.');
+            }
+        }
+
+
         push @params, name => $self->name
             if defined $self->name;
         push @params, reference_sequence_build => $self->reference_sequence_build

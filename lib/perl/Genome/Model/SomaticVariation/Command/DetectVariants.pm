@@ -80,6 +80,7 @@ sub execute{
     }
     else {
         my @results = $command->results, $command->lq_results;
+        push @results, map { Genome::Model::Tools::DetectVariants2::Result::Vcf->get(input_id => $_->id ); } @results;
         for my $result (@results) {
             $result->add_user(user => $build, label => 'uses');
         }

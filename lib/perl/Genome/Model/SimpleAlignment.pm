@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 
 class Genome::Model::SimpleAlignment {
-    is  => 'Genome::Model',
+    is  => 'Genome::ModelDeprecated',
     has => [
        reference_sequence_name => { via => 'processing_profile'},
     ],

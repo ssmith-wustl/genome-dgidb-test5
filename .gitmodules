@@ -73,3 +73,12 @@
 [submodule "vendor/tophat"]
 	path = vendor/tophat
 	url = git@github.com:genome/tophat.git
+[submodule "vendor/libbio-samtools-perl"]
+	path = vendor/libbio-samtools-perl
+	url = ssh://git/srv/git/vendor/libbio-samtools-perl
+[submodule "vendor/samtools"]
+	path = vendor/samtools
+	url = ssh://git/srv/git/vendor/samtools
+[submodule "vendor/bwa"]
+	path = vendor/bwa
+	url = ssh://git/srv/git/vendor/bwa

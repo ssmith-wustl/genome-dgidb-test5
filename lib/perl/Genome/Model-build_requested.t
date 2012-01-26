@@ -13,7 +13,7 @@ use Test::More;
 
 # Create test subclasses of model and processing profile that can be easily instantiated
 class Genome::Model::Test {
-    is => 'Genome::Model',
+    is => 'Genome::ModelDeprecated',
 };
 
 class Genome::ProcessingProfile::Test {
@@ -24,7 +24,7 @@ class Genome::ProcessingProfile::Test {
 my $sample = Genome::Sample->create(
     name => 'dummy test sample',
 );
-ok($sample, 'created test sample') or die;
+ok($sample, 'created test sample with id ' . $sample->id) or die;
 
 my $pp = Genome::ProcessingProfile::Test->create(
     name => 'dummy processing profile',

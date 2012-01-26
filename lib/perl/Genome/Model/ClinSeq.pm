@@ -5,7 +5,7 @@ use warnings;
 use Genome;
 
 class Genome::Model::ClinSeq {
-    is => 'Genome::Model',
+    is => 'Genome::ModelDeprecated',
     has_optional_input => [
         wgs_model           => { is => 'Genome::Model::SomaticVariation' },
         exome_model         => { is => 'Genome::Model::SomaticVariation' },
@@ -19,11 +19,6 @@ class Genome::Model::ClinSeq {
     ],
     doc => 'clinial sequencing data convergence of RNASeq, WGS and exome capture data',
 };
-
-sub _initialize_profile {
-    my ($self, $profile) = @_;
-    $self->status_message("..initializing new profile " . $profile->__display_name__);
-}
 
 sub _resolve_subject {
     my $self = shift;
@@ -40,16 +35,6 @@ sub _resolve_subject {
         return;
     }
     return $subjects[0];
-}
-
-sub _initialize_model {
-    my $self = shift;
-    $self->status_message("..initializing new model " . $self->__display_name__);
-}
-
-sub _initialize_build {
-    my ($self, $build) = @_;
-    $self->status_message("..initializing new build " . $build->__display_name__);
 }
 
 sub _resource_requirements_for_execute_build {

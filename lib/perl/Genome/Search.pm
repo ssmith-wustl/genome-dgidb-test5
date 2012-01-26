@@ -322,6 +322,36 @@ sub cache_key_for_doc {
 }
 
 
+### Other ###
+
+sub get_subject_from_doc {
+    my $class = shift;
+    my $solr_doc = shift || die;
+
+    my $subject_class_name = $solr_doc->value_for('class');
+    return unless $subject_class_name->can('get');
+
+    my $object_id = $solr_doc->value_for('object_id');
+    if ($object_id) {
+        if ($subject_class_name->isa('UR::Object::Set') && $object_id =~ /=$/) {
+            # Sets have invalid XML chars in their IDs so we encode them in Base64.
+            # Encoding is done in Genome::View::Solr::Xml::_generate_object_id_field_data so keep symmetry there.
+            # TODO Encoding/decoding should probably be handled by the object itself.
+            $object_id = decode_base64($object_id);
+        }
+        return $subject_class_name->get($object_id);
+    }
+
+    my $solr_id = $solr_doc->value_for('id');
+    if ($solr_id) {
+        my ($derived_object_id) = $solr_id =~ /.*?(\d+)$/;
+        if ($derived_object_id) {
+            return $subject_class_name->get($derived_object_id);
+        }
+    }
+
+    return;
+}
 
 ###  XML Generation for results  ###
 
