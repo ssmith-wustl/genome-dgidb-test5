@@ -68,6 +68,10 @@ sub _default_mc16s_processing_profile_id {
     return 2571784;
 }
 
+sub _default_de_novo_assembly_bacterial_processing_profile_id {
+    return 2658559;
+}
+
 sub _default_rna_seq_processing_profile_id {
     return 2623697;
 }
@@ -1498,16 +1502,16 @@ sub add_processing_profiles_to_pses{
                     $reference_sequence_names_for_processing_profile_ids{$pp_id} = 'UCSC-mouse-buildmm9'
                 }
                 elsif ($taxon->domain =~ /bacteria/i) {
-                    #updated 2011 Dec 20 .. requested by Chad
-                    push @processing_profile_ids_to_add, '2658559';
+                    my $pp_id = $self->_default_de_novo_assembly_bacterial_processing_profile_id;
+                    push @processing_profile_ids_to_add, $pp_id;
                 }
-                #process inst data with work orders 2634033 2636663 with pp 2599969 RT76069
-                elsif ( $taxon->id == 1653198763 ) { #unknow taxon normally skipped
+                elsif ( $taxon->name eq 'unknown' ) { # unknow taxon normally skipped
                     my $index_illumina = GSC::IndexIllumina->get( $instrument_data_id );
                     if ( $index_illumina ) {
                         for my $project ( $index_illumina->get_research_projects ) {
                             if ( $project->id == 2269562 ) { # HMP Centers Grant Reference Genomes WU Strain Collection
-                                push @processing_profile_ids_to_add, '2599969';
+                                my $pp_id = $self->_default_de_novo_assembly_bacterial_processing_profile_id;
+                                push @processing_profile_ids_to_add, $pp_id;
                                 last;
                             }
                         }
