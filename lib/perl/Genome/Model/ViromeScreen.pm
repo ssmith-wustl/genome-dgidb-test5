@@ -10,7 +10,7 @@ use Data::Dumper;
 require Genome::ProcessingProfile::ViromeScreen;
 
 class Genome::Model::ViromeScreen {
-    is => 'Genome::Model',
+    is => 'Genome::ModelDeprecated',
     has => [
         barcode_file => {
             doc => 'Barcode file that contains sequences to filter reads by',

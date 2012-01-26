@@ -68,6 +68,10 @@ sub _default_mc16s_processing_profile_id {
     return 2571784;
 }
 
+sub _default_de_novo_assembly_bacterial_processing_profile_id {
+    return 2658559;
+}
+
 sub _default_rna_seq_processing_profile_id {
     return 2623697;
 }
@@ -270,9 +274,8 @@ sub execute {
 
                 }
 
-                my @models = Genome::Model->get(
+                my @models = Genome::ModelDeprecated->get(
                     subject_id            => $subject_id,
-                    subject_class_name    => $subject_class_name,
                     processing_profile_id => $processing_profile->id,
                     auto_assign_inst_data => 1,
                 );
@@ -329,6 +332,9 @@ sub execute {
                     push @process_errors,
                         $self->error_message('Did not assign validation instrument data to any models.');
                 }
+            } elsif($genome_instrument_data->index_sequence eq 'unknown' && $genome_instrument_data->sample->name =~ /Pooled_Library/) {
+                $self->status_message('Skipping pooled library validation data.');
+                $pse->add_param('no_model_generation_attempted',1);
             } else {
                 push @process_errors,
                     $self->error_message('No validation models found to assign data (target ' . $genome_instrument_data->target_region_set_name . ' on instrument data ' . $genome_instrument_data->id . '.)');
@@ -364,9 +370,8 @@ sub execute {
                 my $subject = $genome_instrument_data->$check;
                 # Should we just hoise this check out of the loop and skip to next PSE?
                 if (defined($subject)) {
-                    my @some_models= Genome::Model->get(
+                    my @some_models= Genome::ModelDeprecated->get(
                         subject_id         => $subject->id,
-                        subject_class_name => $subject->class,
                         auto_assign_inst_data => 1,
                     );
 
@@ -1497,17 +1502,18 @@ sub add_processing_profiles_to_pses{
                     $reference_sequence_names_for_processing_profile_ids{$pp_id} = 'UCSC-mouse-buildmm9'
                 }
                 elsif ($taxon->domain =~ /bacteria/i) {
-                    #updated 2011 Dec 20 .. requested by Chad
-                    push @processing_profile_ids_to_add, '2658559';
+                    my $pp_id = $self->_default_de_novo_assembly_bacterial_processing_profile_id;
+                    push @processing_profile_ids_to_add, $pp_id;
                 }
-                #process inst data with work orders 2634033 2636663 with pp 2599969 RT76069
-                elsif ( $taxon->id == 1653198763 ) { #unknow taxon normally skipped
+                elsif ( $taxon->name eq 'unknown' ) { # unknow taxon normally skipped
                     my $index_illumina = GSC::IndexIllumina->get( $instrument_data_id );
                     if ( $index_illumina ) {
-                        my @work_orders = $index_illumina->get_work_orders;
-                        for my $work_order ( @work_orders ) {
-                            push @processing_profile_ids_to_add, '2599969' if
-                                $work_order->id == 2636663 or $work_order->id == 2634033;
+                        for my $project ( $index_illumina->get_research_projects ) {
+                            if ( $project->id == 2269562 ) { # HMP Centers Grant Reference Genomes WU Strain Collection
+                                my $pp_id = $self->_default_de_novo_assembly_bacterial_processing_profile_id;
+                                push @processing_profile_ids_to_add, $pp_id;
+                                last;
+                            }
                         }
                     }
                 }

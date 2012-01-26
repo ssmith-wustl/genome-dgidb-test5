@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 
 #This is the variable to change if you wish to change the version of all vcf files being created
-my $VCF_VERSION = "1";
+my $VCF_VERSION = "3";
 
 class Genome::Model::Tools::Vcf {
     is => ['Command'],

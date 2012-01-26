@@ -54,6 +54,7 @@ sub execute {
 
         # key is title and date of change
         my $key = cache_key($item);
+        my $title = $item->{'title'};
 
         if ( ! defined($cache->get($key)) ) {
 
@@ -67,7 +68,7 @@ sub execute {
 #            Genome::Search->add($doc) || die 'Error: failed to add doc with title ' . $doc->title();
             Genome::Search::Queue->create(
                 subject_class => 'Genome::Wiki::Document',
-                subject_id => $item->{'title'},
+                subject_id => $title,
                 priority => 9,
             );
 
@@ -76,7 +77,7 @@ sub execute {
             # old version of Cache::Memcached was returning undef despite success
             $cache->set($key, $now, $timeout );
 
-            printf("queued\t%s\t%s\n", $doc->title, $key);
+            printf("queued\t%s\t%s\n", $title, $key);
         }
     }
 

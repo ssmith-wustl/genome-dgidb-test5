@@ -22,7 +22,7 @@ sub _create_drug_name_report {
     my $self = shift;
     my ($name, $nomenclature, $source_db_name, $source_db_version, $description) = @_;
     my %params = ( 
-        name => $name,
+        name => uc $name,
         nomenclature => $nomenclature,
         source_db_name => $source_db_name,
         source_db_version => $source_db_version,
@@ -39,7 +39,7 @@ sub _create_drug_name_report_association {
     my ($drug_name_report, $alternate_name, $nomenclature, $description) = @_;
     my %params = (
         drug_name_report_id => $drug_name_report->id,
-        alternate_name => $alternate_name,
+        alternate_name => uc $alternate_name,
         nomenclature => $nomenclature,
         description => $description,
     );
@@ -55,7 +55,7 @@ sub _create_drug_name_report_category_association {
     my %params = (
         drug_name_report_id => $drug_name_report->id,
         category_name => $category_name,
-        category_value => $category_value,
+        category_value => lc $category_value,
         description => $description,
     );
     my $drug_name_report_category_association = Genome::DruggableGene::DrugNameReportCategoryAssociation->get(%params);
@@ -67,14 +67,14 @@ sub _create_gene_name_report {
     my $self = shift;
     my ($name, $nomenclature, $source_db_name, $source_db_version, $description) = @_;
     my %params = (
-        name => $name,
+        name => uc $name,
         nomenclature => $nomenclature,
         source_db_name => $source_db_name,
         source_db_version => $source_db_version,
         description => $description,
     );
 
-    if($name ne 'na'){
+    if($name ne 'NA'){
         my $gene_name_report = Genome::DruggableGene::GeneNameReport->get(%params);
         return $gene_name_report if $gene_name_report;
     }
@@ -86,7 +86,7 @@ sub _create_gene_name_report_association {
     my ($gene_name_report, $alternate_name, $nomenclature, $description) = @_;
     my %params = (
         gene_name_report_id => $gene_name_report->id,
-        alternate_name => $alternate_name,
+        alternate_name => uc $alternate_name,
         nomenclature => $nomenclature,
         description => $description,
     );
@@ -101,7 +101,7 @@ sub _create_gene_name_report_category_association {
     my %params = (
         gene_name_report_id => $gene_name_report->id,
         category_name => $category_name,
-        category_value => $category_value,
+        category_value => lc $category_value,
         description => $description,
     );
     my $gene_name_report_category_association = Genome::DruggableGene::GeneNameReportCategoryAssociation->get(%params);
@@ -131,7 +131,7 @@ sub _create_interaction_report_attribute {
     my %params = (
         drug_gene_interaction_report => $interaction,
         name => $name,
-        value => $value,
+        value => lc $value,
     );
     my $attribute = Genome::DruggableGene::DrugGeneInteractionReportAttribute->get(%params);
     return $attribute if $attribute;

@@ -34,4 +34,3 @@ my $stdout_file = $tmp_dir . "/" . $task->id . ".stdout";
 ok(-e $stdout_file, "redirected stdout file exists");
 my $file_contents = `cat $stdout_file`;
 ok($file_contents =~ m/NAME/, "stdout looks like what we would expect");
-

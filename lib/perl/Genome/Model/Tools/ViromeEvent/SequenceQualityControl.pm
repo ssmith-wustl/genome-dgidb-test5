@@ -32,8 +32,6 @@ sub execute {
     my $dir = $self->dir;
     my $sample_name = basename ($dir);
 
-    $self->log_event("Running repeat masker qual control for sample: $sample_name");
-
     my $good_seq_file = $dir.'/'.$sample_name.'.fa.cdhit_out.masked.goodSeq';
     my $bad_seq_file  = $dir.'/'.$sample_name.'.fa.cdhit_out.masked.badSeq';
 

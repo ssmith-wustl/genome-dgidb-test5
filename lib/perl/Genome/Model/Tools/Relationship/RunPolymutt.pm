@@ -41,6 +41,11 @@ class Genome::Model::Tools::Relationship::RunPolymutt {
         is_optional=>1,
         default=>4,
     },
+    bgzip => {
+        is_optional=>1,
+        default=>1,
+        doc=>'set this to 0 if you prefer uncompressed',
+    },
     ],
     has_param => [
     lsf_resource => {
@@ -88,6 +93,11 @@ sub execute {
     if($rv != 1) {
         return;
     }
+    if($self->bgzip) {
+        my $cmd = "bgzip $output_vcf";
+        Genome::Sys->shellcmd(cmd=>$cmd); 
+    }
+
     return 1;
 }
 

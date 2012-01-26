@@ -6,7 +6,7 @@ use Genome;
 use Carp 'confess';
 
 class Genome::Model::GenePrediction {
-    is => 'Genome::Model',
+    is => 'Genome::ModelDeprecated',
     is_abstract => 1,
     subclassify_by => 'subclass_name',
     has => [

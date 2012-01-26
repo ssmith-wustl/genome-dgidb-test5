@@ -163,7 +163,7 @@ sub _try_vcf {
 
 sub execute {
     my $self = shift;
-    $DB::single=1;
+
     $self->_resolve_output_directory;
 
     unless($self->shortcut_combine){
@@ -242,22 +242,12 @@ sub params_for_combine_result {
 
 sub params_for_vcf_result {
     my $self = shift;
+
     my $prev_result_a = Genome::SoftwareResult->get($self->input_a_id);
     my $prev_result_b = Genome::SoftwareResult->get($self->input_b_id);
 
-    my $prev_vcf_class = 'Genome\:\:Model\:\:Tools\:\:DetectVariants2\:\:Result\:\:Vcf'; 
-
-    my @vcf_users_a = grep { $_->user_class_name =~ m/$prev_vcf_class/ } $prev_result_a->users;
-    my @vcf_users_b = grep { $_->user_class_name =~ m/$prev_vcf_class/ } $prev_result_b->users;
-    unless(@vcf_users_a){
-        die $self->error_message("Could not locate a: ".$prev_vcf_class." as a user of the previous result: ".$self->input_a_id);
-    }
-    unless(@vcf_users_b){
-        die $self->error_message("Could not locate a: ".$prev_vcf_class." as a user of the previous result: ".$self->input_b_id);
-    }
-
-    my $prev_vcf_result_a = Genome::Model::Tools::DetectVariants2::Result::Vcf->get($vcf_users_a[0]->user_id);
-    my $prev_vcf_result_b = Genome::Model::Tools::DetectVariants2::Result::Vcf->get($vcf_users_b[0]->user_id);
+    my $prev_vcf_result_a = $prev_result_a->get_vcf_result;
+    my $prev_vcf_result_b = $prev_result_b->get_vcf_result;
 
     my $vcf_version = Genome::Model::Tools::Vcf->get_vcf_version;
 
@@ -282,6 +272,7 @@ sub params_for_vcf_result {
         incoming_vcf_result_a => $prev_vcf_result_a,
         incoming_vcf_result_b => $prev_vcf_result_b,
         vcf_version => $vcf_version,
+        variant_type => $self->_variant_type,
     );
 
     return \%params;

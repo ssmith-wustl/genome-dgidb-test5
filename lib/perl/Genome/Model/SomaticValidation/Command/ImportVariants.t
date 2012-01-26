@@ -18,7 +18,7 @@ my $temp_build_data_dir = File::Temp::tempdir('t_SomaticValidation_Build-XXXXX',
 my $temp_dir = File::Temp::tempdir('Model-Command-Define-SomaticValidation-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
 
 my @snv_files;
-for my $i (1..3) {
+for my $i (1..2) {
     my $f = Genome::Sys->create_temp_file_path . '/TEST' . ($i % 2 + 1);
     Genome::Sys->create_directory($f . '/TEST' . $i);
     $f .= '/variants.snv.anno';
@@ -29,7 +29,17 @@ for my $i (1..3) {
     );
     push @snv_files, $f;
 }
-
+for my $i (3) {
+    my $f = Genome::Sys->create_temp_file_path . '/TEST';
+    Genome::Sys->create_directory($f . '/TEST');
+    $f .= '/TEST1.snv.anno';
+    Genome::Sys->write_file($f,
+        join("\t", 1, $i, $i, 'A', 'G', 'SNP'), "\n",
+        join("\t", 1, ($i+100), ($i+100), 'A', 'G', 'SNP'), "\n",
+        join("\t", 1, ($i+200), ($i+200), 'A', 'G', 'SNP'), "\n",
+    );
+    push @snv_files, $f;
+}
 my $indel_file = Genome::Sys->create_temp_file_path . '/TEST1';
 Genome::Sys->create_directory($indel_file);
 $indel_file .= '/variants.indel.anno';

@@ -125,7 +125,7 @@ sub execute {
     my $num_inputs = $self->_num_inputs;
     my $var_type = $self->variant_type;
     my $accessor = "get_".$var_type."_vcf";
-    my @input_files = map{ $_->$accessor.".gz" } @builds;
+    my @input_files = map{ $_->$accessor } @builds;
     $self->_input_files(\@input_files);
     my @existing_files = grep { -s $_ } @input_files;
     unless( scalar(@existing_files) == $num_inputs){
@@ -161,7 +161,7 @@ sub execute {
         }
         
         #if region-limiting, set vcf_file as the region-limited file, otherwise use the input vcf
-        my $vcf_file = $reglim ? $output_directory."/region_limited_inputs/".$var_type.".".$sample.".region_limited.vcf.gz" : $build->$accessor.".gz";
+        my $vcf_file = $reglim ? $output_directory."/region_limited_inputs/".$var_type.".".$sample.".region_limited.vcf.gz" : $build->$accessor;
         $inputs{$sample."_bam_file"} = $build->whole_rmdup_bam_file;
         $inputs{$sample."_mpileup_output_file"} = $dir."/".$sample.".for_".$var_type.".pileup.gz"; 
         $inputs{$sample."_vcf_file"} = $vcf_file;        
@@ -266,7 +266,7 @@ sub _region_limit_inputs {
     #set up individualized input params and input values
     for my $b (@builds){
         my $sample = $b->model->subject->name;
-        my $vcf = $b->$accessor.".gz";
+        my $vcf = $b->$accessor;
         my $output = $output_directory."/".$var_type.".".$sample.".region_limited.vcf.gz";
         $in_out{$vcf} = $output;
         push @inputs, ("input_vcf_".$count,"output_vcf_".$count);

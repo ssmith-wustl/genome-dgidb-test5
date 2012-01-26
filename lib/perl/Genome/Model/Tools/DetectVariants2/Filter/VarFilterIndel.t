@@ -37,6 +37,8 @@ my $test_output_base = File::Temp::tempdir(
 );
 my $test_output_dir = $test_output_base . '/filter';
 
+my $vcf_version = Genome::Model::Tools::Vcf->get_vcf_version;
+
 my @expected_output_files = qw( 
     indels.hq
     indels.hq.bed
