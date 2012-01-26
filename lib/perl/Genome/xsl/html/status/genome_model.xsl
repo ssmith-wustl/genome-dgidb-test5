@@ -389,28 +389,22 @@
               <td class="name">subject:
               </td>
               <td class="value">
-                <xsl:choose>
-                  <xsl:when test="substring(normalize-space(aspect[@name='subject_class_name']/value),1,3) != 'GSC'">
-                    <xsl:call-template name="object_link_button">
-                      <xsl:with-param name="icon" select="'sm-icon-extlink'" />
-                      <xsl:with-param name="type" select="normalize-space(aspect[@name='subject_class_name']/value)"/>
-                      <xsl:with-param name="id" select="normalize-space(aspect[@name='subject_id']/value)"/>
-                      <xsl:with-param name="linktext">
-                        <xsl:choose>
-                          <xsl:when test="string(aspect[@name='subject_name']/value)">
-                            <xsl:value-of select="normalize-space(aspect[@name='subject_name']/value)"/>
-                          </xsl:when>
-                          <xsl:otherwise>
-                            <xsl:value-of select="normalize-space(aspect[@name='subject_id']/value)"/>
-                          </xsl:otherwise>
-                        </xsl:choose>
-                      </xsl:with-param>
-                    </xsl:call-template>
-                  </xsl:when>
-                  <xsl:otherwise>
-                    <xsl:value-of select="normalize-space(aspect[@name='subject_id']/value)"/>
-                  </xsl:otherwise>
-                </xsl:choose>
+
+                <xsl:call-template name="object_link_button">
+                  <xsl:with-param name="icon" select="'sm-icon-extlink'" />
+                  <xsl:with-param name="type" select="normalize-space(/object/aspect[@name='subject']/object/aspect[@name='subclass_name']/value)"/>
+                  <xsl:with-param name="id" select="normalize-space(/object/aspect[@name='subject']/object/aspect[@name='subject_id']/value)"/>
+                  <xsl:with-param name="linktext">
+                    <xsl:choose>
+                      <xsl:when test="string(/object/aspect[@name='subject']/object/aspect[@name='name']/value)">
+                        <xsl:value-of select="normalize-space(/object/aspect[@name='subject']/object/aspect[@name='name']/value)"/>
+                      </xsl:when>
+                      <xsl:otherwise>
+                        <xsl:value-of select="normalize-space(/object/aspect[@name='subject']/object/aspect[@name='subject_id']/value)"/>
+                      </xsl:otherwise>
+                    </xsl:choose>
+                  </xsl:with-param>
+                </xsl:call-template>
                 <!-- <xsl:if test="not(string(aspect[@name='subject_name']/value))"> -->
                 <!--   <br/><span class="small">(subject_name unspecified)</span> -->
                 <!-- </xsl:if> -->
