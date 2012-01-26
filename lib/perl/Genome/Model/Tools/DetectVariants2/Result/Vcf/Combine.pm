@@ -26,6 +26,11 @@ class Genome::Model::Tools::DetectVariants2::Result::Vcf::Combine {
             is => 'Text',
             doc => 'ID of the second incoming software result',
         },
+        variant_type => {
+            is => 'Text',
+            valid_values => ['snv','indel'],
+            doc => 'type of variants being combined',
+        },
     ],
 };
 
