@@ -63,14 +63,11 @@ class Genome::DruggableGene::DrugNameReport {
             calculate => q|
                 return 1 if $_withdrawn_cat; return 0;
             |,
-            # calc_sql => q|
-
-            # |
         },
         _nutraceutical_cat => {
             via => 'drug_name_report_category_associations',
             to => 'category_value',
-            where => [category_value => 'nutraceutical'],
+            where => [category_value => ['nutraceutical', 'Nutraceutical']],
             is_optional => 1,
             is_many => 1,
         },
@@ -79,9 +76,6 @@ class Genome::DruggableGene::DrugNameReport {
             calculate => q|
                 return 1 if $_nutraceutical_cat; return 0;
             |,
-            # calc_sql => q|
-
-            # |
         },
         _approved_cat => {
             via => 'drug_name_report_category_associations',
@@ -95,9 +89,19 @@ class Genome::DruggableGene::DrugNameReport {
             calculate => q|
                 return 1 if $_approved_cat; return 0;
             |,
-            # calc_sql => q|
-
-            # |
+        },
+        _neoplastic_cat => {
+            via => 'drug_name_report_category_associations',
+            to => 'category_value',
+            where => ['category_value' => ['Antineoplastic', 'Antineoplastic Agents']],
+            is_optional => 1,
+            is_many => 1,
+        },
+        is_antineoplastic => {
+            calculate_from => ['_neoplastic_cat'],
+            calculate => q|
+                return 1 if $_neoplastic_cat; return 0;
+            |,
         },
     ],
     doc => 'Claim regarding the name of a drug',
