@@ -65,21 +65,6 @@ class Genome::ModelDeprecated {
         group_ids => { via => 'model_groups', to => 'id' },
         group_names => { via => 'model_groups', to => 'name' },
         project_names => { is => 'Text', via => 'projects', to => 'name', },
-        model_groups => { 
-            is => 'Genome::ModelGroup', 
-            via => 'model_bridges', 
-            to => 'model_group',
-            is_mutable => 1
-        },
-        instrument_data => {
-            is => 'Genome::InstrumentData',
-            via => 'inputs',
-            to => 'value',
-            is_mutable => 1,
-            where => [ name => 'instrument_data' ],
-            doc => 'Instrument data currently assigned to the model.'
-        },
-        model_bridges => { is => 'Genome::ModelGroupBridge', reverse_as => 'model' },
         from_model_links => { 
             is => 'Genome::Model::Link', reverse_as => 'to_model',
             doc => 'bridge table entries where this is the "to" model (used to retrieve models this model is "from"' 
