@@ -41,6 +41,12 @@ class Genome::Model::SomaticValidation::Command::DefineModels {
             is_optional => 1,
             doc => 'A file listing the variants for each patient',
         },
+        variant_file_format => {
+            is => 'Text',
+            is_optional => 1,
+            default_value => 'bed',
+            doc => 'format of the files listed in the variant_file_list, if provided',
+        },
         generate_variant_lists => {
             is => 'Boolean',
             is_optional => 1,
@@ -162,6 +168,7 @@ sub execute {
     return 1;
 }
 
+#TODO Just defer to import-variants command
 sub _generate_variant_mapping {
     my $self = shift;
 
@@ -174,7 +181,12 @@ sub _generate_variant_mapping {
     my $variant_type;
     while(my $line = <$variant_file_list_fh>) {
         chomp $line;
-        if($line =~ m!.*/([^/]+)(?:\.part\d+)?\.bed$!) {
+        if($line =~ m!.*/(\w+\d+)/[^/]*!) {
+            my $patient = $1;
+
+            $data{$patient}{$variant_type} ||= [];
+            push @{ $data{$patient}{$variant_type} }, $line;
+        } elsif($line =~ m{.*/([^/]+)(?:\.[^./]+)+\.(?:bed|tsv|csv|anno)$}) {
             my $patient = $1;
 
             $data{$patient}{$variant_type} ||= [];
@@ -218,7 +230,7 @@ sub _upload_result {
         source_build => $build,
         variant_file => $file,
         variant_type => $variant_type,
-        format => 'bed',
+        format => $self->variant_file_format,
         description => 'generated from ' . $self->variant_file_list,
     );
 
