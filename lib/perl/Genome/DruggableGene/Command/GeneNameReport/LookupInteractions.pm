@@ -85,9 +85,8 @@ sub _find_gene_name_reports_for_identifiers {
     my @gene_identifiers = @_;
     my %results;
 
-    my @escaped_gene_identifiers = Genome::DruggableGene::GeneNameReport->_escape_gene_identifiers(@gene_identifiers);
-    my @gene_name_reports = Genome::DruggableGene::GeneNameReport->get(name => \@escaped_gene_identifiers);
-    my @gene_name_report_associations = Genome::DruggableGene::GeneNameReportAssociation->get(alternate_name => \@escaped_gene_identifiers);
+    my @gene_name_reports = Genome::DruggableGene::GeneNameReport->get(name => \@gene_identifiers);
+    my @gene_name_report_associations = Genome::DruggableGene::GeneNameReportAssociation->get(alternate_name => \@gene_identifiers);
     for my $gene_identifier(@gene_identifiers){
         my @reports_for_identifier = grep($_->name eq $gene_identifier, @gene_name_reports);
         my @associations_for_identifier = grep($_->alternate_name eq $gene_identifier, @gene_name_report_associations);
