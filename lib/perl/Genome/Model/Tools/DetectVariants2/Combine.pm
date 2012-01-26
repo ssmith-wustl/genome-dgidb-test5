@@ -272,6 +272,7 @@ sub params_for_vcf_result {
         incoming_vcf_result_a => $prev_vcf_result_a,
         incoming_vcf_result_b => $prev_vcf_result_b,
         vcf_version => $vcf_version,
+        variant_type => $self->_variant_type,
     );
 
     return \%params;

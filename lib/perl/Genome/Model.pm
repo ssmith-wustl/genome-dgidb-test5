@@ -73,6 +73,14 @@ class Genome::Model {
             reverse_as => 'model',
             doc => 'links to data currently assigned to the model for processing' 
         },
+        instrument_data => {
+            is => 'Genome::InstrumentData',
+            via => 'inputs',
+            to => 'value',
+            is_mutable => 1,
+            where => [ name => 'instrument_data' ],
+            doc => 'Instrument data currently assigned to the model.'
+        },
         projects => { 
             is => 'Genome::Project', 
             via => 'project_parts', 
@@ -86,6 +94,16 @@ class Genome::Model {
             reverse_as => 'entity', 
             is_many => 1, 
             is_mutable => 1, 
+        },
+        model_groups => { 
+            is => 'Genome::ModelGroup', 
+            via => 'model_bridges', 
+            to => 'model_group',
+            is_mutable => 1
+        },
+        model_bridges => { 
+            is => 'Genome::ModelGroupBridge', 
+            reverse_as => 'model' 
         },
     ],    
     schema_name => 'GMSchema',

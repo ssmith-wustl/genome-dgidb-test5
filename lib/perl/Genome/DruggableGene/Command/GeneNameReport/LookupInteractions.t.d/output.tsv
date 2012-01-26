@@ -1,5 +1,5 @@
-DAP000198	TTD_drug_id	TTD	4.3.02 (2011.08.25)	TTDS00417	TTD_partner_id	Peptidyl-prolyl cis-trans isomerase B:Cyclophilin B:CYPB:CYP-S1:PPIase:PPIB:Rotamase:S-cyclophilin:SCYLP:P23284	TTD	4.3.02 (2011.08.25)	binder
-DAP001315	TTD_drug_id	TTD	4.3.02 (2011.08.25)	TTDS00471	TTD_partner_id	HLA class II histocompatibility antigen, DRB1-1:DR1:DR-1:HLA-DRB1:MHC class I antigen DRB1*1:P04229	TTD	4.3.02 (2011.08.25)	binder
+DAP000198	TTD_drug_id	TTD	4.3.02 (2011.08.25)	TTDS00417	TTD_partner_id	PEPTIDYL-PROLYL CIS-TRANS ISOMERASE B:CYCLOPHILIN B:CYPB:CYP-S1:PPIASE:PPIB:ROTAMASE:S-CYCLOPHILIN:SCYLP:P23284	TTD	4.3.02 (2011.08.25)	binder
+DAP001315	TTD_drug_id	TTD	4.3.02 (2011.08.25)	TTDS00471	TTD_partner_id	HLA CLASS II HISTOCOMPATIBILITY ANTIGEN, DRB1-1:DR1:DR-1:HLA-DRB1:MHC CLASS I ANTIGEN DRB1*1:P04229	TTD	4.3.02 (2011.08.25)	binder
 DB00025	DrugBank drug identifier	DrugBank	3	DGBNK_G1516	drugbank_partner_id	CANX:P27824	DrugBank	3	chaperone
 DB00025	DrugBank drug identifier	DrugBank	3	DGBNK_G3830	drugbank_partner_id	CALR:P27797	DrugBank	3	chaperone
 DB00031	DrugBank drug identifier	DrugBank	3	DGBNK_G1516	drugbank_partner_id	CANX:P27824	DrugBank	3	na
@@ -66,6 +66,7 @@ DB01873	DrugBank drug identifier	DrugBank	3	DGBNK_G161	drugbank_partner_id	TUBB:
 DB01873	DrugBank drug identifier	DrugBank	3	DGBNK_G2342	drugbank_partner_id	TUBA1B:P68363	DrugBank	3	na
 DB01873	DrugBank drug identifier	DrugBank	3	DGBNK_G2536	drugbank_partner_id	TUBA1C:Q9BQE3	DrugBank	3	na
 DB01880	DrugBank drug identifier	DrugBank	3	DGBNK_G3384	drugbank_partner_id	MIF:P14174	DrugBank	3	na
+DB01907	DrugBank drug identifier	DrugBank	3	DGBNK_G4510	drugbank_partner_id	LDHA:P26297	DrugBank	3	na
 DB01907	DrugBank drug identifier	DrugBank	3	DGBNK_G473	drugbank_partner_id	LDHA:P00338	DrugBank	3	na
 DB01907	DrugBank drug identifier	DrugBank	3	DGBNK_G599	drugbank_partner_id	GAPDH:P04406	DrugBank	3	na
 DB01915	DrugBank drug identifier	DrugBank	3	DGBNK_G904	drugbank_partner_id	GSTP1:P09211	DrugBank	3	na
@@ -240,6 +241,7 @@ DB08045	DrugBank drug identifier	DrugBank	3	DGBNK_G3456	drugbank_partner_id	HSP9
 DB08049	DrugBank drug identifier	DrugBank	3	DGBNK_G3810	drugbank_partner_id	COMT:P21964	DrugBank	3	na
 DB08117	DrugBank drug identifier	DrugBank	3	DGBNK_G2536	drugbank_partner_id	TUBA1C:Q9BQE3	DrugBank	3	na
 DB08153	DrugBank drug identifier	DrugBank	3	DGBNK_G3456	drugbank_partner_id	HSP90AB1:P08238	DrugBank	3	na
+DB08168	DrugBank drug identifier	DrugBank	3	DGBNK_G6700	drugbank_partner_id	PPIA:P0AFL3	DrugBank	3	na
 DB08194	DrugBank drug identifier	DrugBank	3	DGBNK_G1939	drugbank_partner_id	HSP90AA1:P07900	DrugBank	3	na
 DB08197	DrugBank drug identifier	DrugBank	3	DGBNK_G1939	drugbank_partner_id	HSP90AA1:P07900	DrugBank	3	na
 DB08231	DrugBank drug identifier	DrugBank	3	DGBNK_G465	drugbank_partner_id	CALM1:P62158	DrugBank	3	na
@@ -294,9 +296,10 @@ DB08787	DrugBank drug identifier	DrugBank	3	DGBNK_G1939	drugbank_partner_id	HSP9
 DB08788	DrugBank drug identifier	DrugBank	3	DGBNK_G1939	drugbank_partner_id	HSP90AA1:P07900	DrugBank	3	na
 DB08789	DrugBank drug identifier	DrugBank	3	DGBNK_G1939	drugbank_partner_id	HSP90AA1:P07900	DrugBank	3	na
 DB08813	DrugBank drug identifier	DrugBank	3	DGBNK_G1953	drugbank_partner_id	FOS:P01100	DrugBank	3	inhibitor
-DCL000090	TTD_drug_id	TTD	4.3.02 (2011.08.25)	TTDC00103	TTD_partner_id	Macrophage migration inhibitory factor:GIF:Glycosylation-inhibiting factor:MIF:Phenylpyruvate tautomerase:P14174	TTD	4.3.02 (2011.08.25)	inhibitor
-DCL000154	TTD_drug_id	TTD	4.3.02 (2011.08.25)	TTDC00022	TTD_partner_id	mRNA of Myb proto-oncogene protein:C-myb:MYB:P10242	TTD	4.3.02 (2011.08.25)	antisense
-DCL000242	TTD_drug_id	TTD	4.3.02 (2011.08.25)	TTDC00018	TTD_partner_id	Heat shock protein HSP 90:HSP 86:HSP90A:HSP90AA1:HSPC1:HSPCA:Renal carcinoma antigen NY-REN-38:P07900	TTD	4.3.02 (2011.08.25)	inhibitor
-DCL000795	TTD_drug_id	TTD	4.3.02 (2011.08.25)	TTDS00362	TTD_partner_id	Catechol-O-methyl-transferase:Catechol-O-methyltransferase:COMT:MB-COMT:S-COMT:P21964	TTD	4.3.02 (2011.08.25)	inhibitor
-DPR000144	TTD_drug_id	TTD	4.3.02 (2011.08.25)	TTDC00121	TTD_partner_id	C-X-C chemokine receptor type 4:CD184 antigen:Chemokine receptor CXCR4:CXCR4:CXC-R4:CXCR-4:FB22:Fusin:HM89:LCR1:LESTR:Leukocyte-derived seven transmembrane domain receptor:NPYRL:SDF-1 receptor:Stromal cell-derived factor 1 receptor:P61073	TTD	4.3.02 (2011.08.25)	binder
+DCL000090	TTD_drug_id	TTD	4.3.02 (2011.08.25)	TTDC00103	TTD_partner_id	MACROPHAGE MIGRATION INHIBITORY FACTOR:GIF:GLYCOSYLATION-INHIBITING FACTOR:MIF:PHENYLPYRUVATE TAUTOMERASE:P14174	TTD	4.3.02 (2011.08.25)	inhibitor
+DCL000154	TTD_drug_id	TTD	4.3.02 (2011.08.25)	TTDC00022	TTD_partner_id	MRNA OF MYB PROTO-ONCOGENE PROTEIN:C-MYB:MYB:P10242	TTD	4.3.02 (2011.08.25)	antisense
+DCL000242	TTD_drug_id	TTD	4.3.02 (2011.08.25)	TTDC00018	TTD_partner_id	HEAT SHOCK PROTEIN HSP 90:HSP 86:HSP90A:HSP90AA1:HSPC1:HSPCA:RENAL CARCINOMA ANTIGEN NY-REN-38:P07900	TTD	4.3.02 (2011.08.25)	inhibitor
+DCL000795	TTD_drug_id	TTD	4.3.02 (2011.08.25)	TTDS00362	TTD_partner_id	CATECHOL-O-METHYL-TRANSFERASE:CATECHOL-O-METHYLTRANSFERASE:COMT:MB-COMT:S-COMT:P21964	TTD	4.3.02 (2011.08.25)	inhibitor
+DCL001046	TTD_drug_id	TTD	4.3.02 (2011.08.25)	TTDC00269	TTD_partner_id	MRNA OF HEAT SHOCK 27 KDA PROTEIN:28 KDA HEAT SHOCK PROTEIN:ESTROGEN-REGULATED 24 KDA PROTEIN:HEAT SHOCK PROTEIN 27:HSP 27:HSPB1:SRP27:STRESS-RESPONSIVE PROTEIN 27:P04792	TTD	4.3.02 (2011.08.25)	antisense
+DPR000144	TTD_drug_id	TTD	4.3.02 (2011.08.25)	TTDC00121	TTD_partner_id	C-X-C CHEMOKINE RECEPTOR TYPE 4:CD184 ANTIGEN:CHEMOKINE RECEPTOR CXCR4:CXCR4:CXC-R4:CXCR-4:FB22:FUSIN:HM89:LCR1:LESTR:LEUKOCYTE-DERIVED SEVEN TRANSMEMBRANE DOMAIN RECEPTOR:NPYRL:SDF-1 RECEPTOR:STROMAL CELL-DERIVED FACTOR 1 RECEPTOR:P61073	TTD	4.3.02 (2011.08.25)	binder
 drug_name_report	drug_nomenclature	drug_source_db_name	drug_source_db_version	gene_name_report	gene_nomenclature	gene_alternate_names	gene_source_db_name	gene_source_db_version	interaction_types
