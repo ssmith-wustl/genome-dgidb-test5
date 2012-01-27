@@ -15,7 +15,7 @@ use Test::More;
 
 #< Tester Type Name >#
 class Genome::Model::Tester { # 'real' model for testing
-    is => 'Genome::Model',
+    is => 'Genome::ModelDeprecated',
     has => [
         ( map { $_ => { via => 'processing_profile' } } Genome::ProcessingProfile::Test->params_for_test_class ),
         coolness => {
@@ -59,7 +59,7 @@ class Genome::Model::Build::Tester { # 'real' model for testing
 };
 
 sub test_class {
-    return 'Genome::Model';
+    return 'Genome::ModelDeprecated';
 }
 
 sub params_for_test_class {
@@ -231,7 +231,6 @@ sub test05_builds : Tests() {
     is($completed_builds[0]->id, $build2->id, 'Got completed builds');
     is($model->last_complete_build->id, $build2->id, 'Got last completed build');
     is($model->last_complete_build_id, $build2->id, 'Got last completed build id');
-    is($model->_last_complete_build_id, $build2->id, 'Got _last completed build id');
     my @succeed_builds = $model->succeeded_builds;
     is($succeed_builds[0]->id, $build2->id, 'Got succeeded builds');
     is($model->last_succeeded_build->id, $build2->id, 'Got last succeeded build');
@@ -247,7 +246,6 @@ sub test05_builds : Tests() {
     is_deeply([ map { $_->id } @completed_builds], [$build1->id, $build2->id], 'Got completed builds after build 1 is succeeded');
     is($model->last_complete_build->id, $build2->id, 'Got last completed build after build 1 is succeeded');
     is($model->last_complete_build_id, $build2->id, 'Got last completed build id after build 1 is succeeded');
-    is($model->_last_complete_build_id, $build2->id, 'Got _last completed build id after build 1 is succeeded');
     @succeed_builds = $model->succeeded_builds;
     is_deeply([map { $_->id } @succeed_builds], [$build1->id, $build2->id], 'Got succeeded builds after build 1 is succeeded');
     is($model->last_succeeded_build->id, $build2->id, 'Got last succeeded build after build 1 is succeeded');
@@ -301,10 +299,11 @@ sub create_basic_mock_model {
             builds_with_status abandoned_builds failed_builds running_builds scheduled_builds
             current_running_build current_running_build_id
             completed_builds last_complete_build last_complete_build_id 
-            resolve_last_complete_build _last_complete_build_id 
+            resolve_last_complete_build  
             succeeded_builds last_succeeded_build last_succeeded_build_id
             compatible_instrument_data instrument_data unassigned_instrument_data
             notify_input_build_success
+            sorted_builds
             /),
     ) or confess "Can't add mock methods to $type_name model";
 
@@ -772,8 +771,6 @@ sub get_mock_processing_profile {
     $self->mock_methods(
         $pp,
         (qw/
-            _initialize_model
-            _initialize_build 
             _generate_events_for_build
             _generate_events_for_build_stage
             _generate_events_for_object
@@ -840,7 +837,7 @@ sub get_mock_model {
             builds_with_status abandoned_builds failed_builds running_builds scheduled_builds
             current_running_build current_running_build_id
             completed_builds last_complete_build last_complete_build_id 
-            resolve_last_complete_build _last_complete_build_id 
+            resolve_last_complete_build 
             succeeded_builds last_succeeded_build last_succeeded_build_id
             compatible_instrument_data instrument_data unassigned_instrument_data
             /),

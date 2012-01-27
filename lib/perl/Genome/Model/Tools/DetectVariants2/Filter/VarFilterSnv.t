@@ -38,6 +38,8 @@ my $test_output_base = File::Temp::tempdir(
 );
 my $test_output_dir = $test_output_base . '/filter';
 
+my $vcf_version = Genome::Model::Tools::Vcf->get_vcf_version;
+
 my @expected_output_files = qw( 
     snvs.hq
     snvs.hq.bed
@@ -63,7 +65,7 @@ my $detector_vcf_result = Genome::Model::Tools::DetectVariants2::Result::Vcf::De
     input                => $detector_result,
     output_dir           => $detector_vcf_directory,
     aligned_reads_sample => "TEST",
-    vcf_version          => "1",
+    vcf_version          => $vcf_version,
 );
 
 $detector_result->add_user(user => $detector_vcf_result, label => 'uses');

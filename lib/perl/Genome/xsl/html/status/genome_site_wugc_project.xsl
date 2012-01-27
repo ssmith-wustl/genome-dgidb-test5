@@ -2,7 +2,7 @@
 <xsl:stylesheet version="1.0"
                 xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
   <!-- full page display for a project -->
-  <xsl:template name="genome_project" match="object[./types[./isa[@type='Genome::Site::WUGC::Project']]]">
+  <xsl:template name="genome_site_wugc_project" match="object[./types[./isa[@type='Genome::Site::WUGC::Project']]]">
     <xsl:comment>template: status/genome_project.xsl match: object[./types[./isa[@type='Genome::Site::WUGC::Project']]]</xsl:comment>
     <xsl:call-template name="control_bar_view"/>
 

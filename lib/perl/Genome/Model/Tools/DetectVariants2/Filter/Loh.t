@@ -40,6 +40,8 @@ my $expected_output_base = $test_input_dir. '/expected';
 my $expected_version = "v2";
 my $expected_output_directory    = "$expected_output_base/$expected_version";
 
+my $vcf_version = Genome::Model::Tools::Vcf->get_vcf_version;
+
 my @expected_files = qw|    snvs.hq
                             snvs.hq.bed
                             snvs.lq
@@ -65,7 +67,7 @@ my $detector_vcf_result = Genome::Model::Tools::DetectVariants2::Result::Vcf::De
     input => $detector_result,
     output_dir => $detector_vcf_directory,
     aligned_reads_sample => "TEST",
-    vcf_version => "1",
+    vcf_version => $vcf_version,
 );
 
 $detector_result->add_user(user => $detector_vcf_result, label => 'uses');

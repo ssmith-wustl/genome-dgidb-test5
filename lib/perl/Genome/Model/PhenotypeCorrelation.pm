@@ -6,7 +6,7 @@ use Genome;
 use Math::Complex;
 
 class Genome::Model::PhenotypeCorrelation {
-    is => 'Genome::Model',
+    is => 'Genome::ModelDeprecated',
     doc => "genotype-phenotype correlation of a population group",
     has_param => [
         alignment_strategy => {

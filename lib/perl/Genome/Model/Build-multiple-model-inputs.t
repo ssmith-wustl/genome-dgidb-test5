@@ -17,9 +17,9 @@ class Genome::ProcessingProfile::Test {
 sub Genome::ProcessingProfile::Test::_execute_build { return 1 };
 
 class Genome::Model::Test {
-    is => 'Genome::Model',
+    is => 'Genome::ModelDeprecated',
     has_input => [
-        input_model => {
+        input_models => {
             is => 'Genome::Model',
             is_many => 1,
             is_optional => 1,
@@ -30,7 +30,7 @@ class Genome::Model::Test {
 class Genome::Model::Build::Test {
     is => 'Genome::Model::Build',
     has_input => [
-        input_build => {
+        input_builds => {
             is => 'Genome::Model::Build',
             is_many => 1,
             is_optional => 1,
@@ -69,11 +69,11 @@ my $model3 = Genome::Model::Test->create(
     subject_id => $sample->id,
     subject_class_name => $sample->class,
     processing_profile_id => $pp->id,
-    input_model => [$model1,$model2],
+    input_models => [$model1,$model2],
 );
 
 ok ($model3, 'created test model 3') or die;
-my @models = $model3->input_model;
+my @models = $model3->input_models;
 is (scalar(@models),2, 'test model has 2 input models');
 
 my $build1 = Genome::Model::Build->create (
@@ -98,20 +98,20 @@ ok($build2->start(job_dispatch => 'inline', server_dispatch => 'inline'), 'build
 
 is($build2->status, 'Succeeded', 'build completed successfully');
 
-#This build should automatically copy both input_model inputs
-#to input_build inputs
+#This build should automatically copy both input_models inputs
+#to input_builds inputs
 my $build3 = Genome::Model::Build::Test->create (
     model => $model3,
 );
 
 ok ($build3, 'created build 3') or die;
 
-my @input_builds = $build3->input_build;
+my @input_builds = $build3->input_builds;
 is (scalar(@input_builds), 2, 'both input builds were copied');
-@input_builds = sort by_id @input_builds;
+@input_builds = sort by_date @input_builds;
 
 my @expected_inputs = ($build1, $build2);
-@expected_inputs = sort by_id @expected_inputs;
+@expected_inputs = sort by_date @expected_inputs;
 is_deeply(\@input_builds, \@expected_inputs, 'input builds were copied correctly');
 
 my $build1a = Genome::Model::Build->create (
@@ -134,30 +134,30 @@ my $build3a = Genome::Model::Build::Test->create (
 
 ok($build3a, 'created build 3a') or die;
 
-@input_builds = $build3a->input_build;
+@input_builds = $build3a->input_builds;
 is (scalar(@input_builds), 2, 'both input builds were copied');
-@input_builds = sort by_id @input_builds;
-@expected_inputs = ($build1, $build2);
-@expected_inputs = sort by_id @expected_inputs;
+@input_builds = sort by_date @input_builds;
+@expected_inputs = ($build1a, $build2);
+@expected_inputs = sort by_date @expected_inputs;
 is_deeply(\@input_builds, \@expected_inputs, 'newer input builds were copied correctly');
 
 #This builds should leave the user-defined build (1a) and copy the other
 my $build3b = Genome::Model::Build::Test->create (
     model => $model3,
-    input_build => [$build1a],
+    input_builds => [$build1a],
 );
 
 ok($build3b, 'created build 3b') or die;
 
-@input_builds = $build3b->input_build;
+@input_builds = $build3b->input_builds;
 is (scalar(@input_builds),2, 'both input builds were copied');
-@input_builds = sort by_id @input_builds;
+@input_builds = sort by_date @input_builds;
 @expected_inputs = ($build1a, $build2);
-@expected_inputs = sort by_id @expected_inputs;
+@expected_inputs = sort by_date @expected_inputs;
 is_deeply(\@input_builds, \@expected_inputs,'user-defined input build was copied correctly');
 done_testing;
 
-sub by_id {
-    $a->id <=> $b->id;
+sub by_date {
+    $a->date_scheduled cmp $b->date_scheduled
 }
 

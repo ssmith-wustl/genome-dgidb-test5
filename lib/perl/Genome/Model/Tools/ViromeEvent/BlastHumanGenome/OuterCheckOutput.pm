@@ -24,9 +24,10 @@ sub execute {
     my $self = shift;
 
     unless ( $self->get_files_for_blast( 'hg_blast' ) ) {
-	$self->error_message("Failed to successfully run check blast results");
+	$self->log_event("Failed to successfully run check blast results");
 	return;
     }
+
     return 1;
 }
 
