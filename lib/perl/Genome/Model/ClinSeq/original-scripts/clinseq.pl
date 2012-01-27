@@ -68,6 +68,7 @@ my $common_name = '';
 my $verbose = 0;
 my $clean = 0;
 
+
 GetOptions ('tumor_rna_seq_data_set=s'=>\$tumor_rna_seq_data_set, 'normal_rna_seq_data_set=s'=>\$normal_rna_seq_data_set,
 	    'wgs_som_var_data_set=s'=>\$wgs_som_var_data_set, 'exome_som_var_data_set=s'=>\$exome_som_var_data_set, 
  	    'working_dir=s'=>\$working_dir, 'common_name=s'=>\$common_name, 'verbose=i'=>\$verbose, 'clean=i'=>\$clean);
@@ -94,17 +95,15 @@ my $usage=<<INFO;
 
 INFO
 
+#Get build directories for the three datatypes: $data_paths->{'wgs'}->*, $data_paths->{'exome'}->*, $data_paths->{'tumor_rnaseq'}->*
+my $step = 0;
+$step++; print MAGENTA, "\n\n  Step $step. Getting data paths from 'genome' for specified model ids\n", RESET;
+my ($data_paths, $builds) = &getDataDirsAndBuilds('-wgs_som_var_data_set'=>$wgs_som_var_data_set, '-exome_som_var_data_set'=>$exome_som_var_data_set, '-tumor_rna_seq_data_set'=>$tumor_rna_seq_data_set, '-normal_rna_seq_data_set'=>$normal_rna_seq_data_set);
+
 unless (($wgs_som_var_data_set || $exome_som_var_data_set || $tumor_rna_seq_data_set || $normal_rna_seq_data_set) && $working_dir && $common_name){
   print GREEN, "$usage", RESET;
   exit 1;
 }
-
-
-my $step = 0;
-
-#Get build directories for the three datatypes: $data_paths->{'wgs'}->*, $data_paths->{'exome'}->*, $data_paths->{'tumor_rnaseq'}->*
-$step++; print MAGENTA, "\n\nStep $step. Getting data paths from 'genome' for specified model ids", RESET;
-my ($data_paths, $builds) = &getDataDirsAndBuilds('-wgs_som_var_data_set'=>$wgs_som_var_data_set, '-exome_som_var_data_set'=>$exome_som_var_data_set, '-tumor_rna_seq_data_set'=>$tumor_rna_seq_data_set, '-normal_rna_seq_data_set'=>$normal_rna_seq_data_set);
 
 #Option to remove MT chr snvs/indels
 my $filter_mt = 1;
