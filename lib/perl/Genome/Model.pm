@@ -581,13 +581,15 @@ sub _preprocess_subclass_description {
     my ($ext) = ($desc->{class_name} =~ /Genome::Model::(.*)/);
     return $desc unless $ext;
     my $pp_subclass_name = 'Genome::ProcessingProfile::' . $ext;
-    
-    my $pp_data = $desc->{has}{processing_profile} = {};
-    $pp_data->{data_type} = $pp_subclass_name;
-    $pp_data->{id_by} = ['processing_profile_id'];
 
-    $pp_data = $desc->{has}{processing_profile_id} = {};
-    $pp_data->{data_type} = 'Number';
+    unless ($desc->{has}{processing_profile}) {
+        my $pp_data = $desc->{has}{processing_profile} = {};
+        $pp_data->{data_type} = $pp_subclass_name;
+        $pp_data->{id_by} = ['processing_profile_id'];
+
+        $pp_data = $desc->{has}{processing_profile_id} = {};
+        $pp_data->{data_type} = 'Number';
+    }
 
     return $desc;
 }
