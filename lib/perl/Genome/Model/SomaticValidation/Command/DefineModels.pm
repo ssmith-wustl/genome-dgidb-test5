@@ -181,12 +181,12 @@ sub _generate_variant_mapping {
     my $variant_type;
     while(my $line = <$variant_file_list_fh>) {
         chomp $line;
-        if($line =~ m!.*/(\w+\d+)/[^/]*!) {
+        if($line =~ m{.*/(\w+\d+)/[^/]+$}) {
             my $patient = $1;
 
             $data{$patient}{$variant_type} ||= [];
             push @{ $data{$patient}{$variant_type} }, $line;
-        } elsif($line =~ m{.*/([^/]+)(?:\.[^./]+)+\.(?:bed|tsv|csv|anno)$}) {
+        } elsif($line =~ m{.*/([^/]+)(?:\.[^./]+)+$}) {
             my $patient = $1;
 
             $data{$patient}{$variant_type} ||= [];

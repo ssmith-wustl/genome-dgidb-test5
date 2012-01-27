@@ -20,7 +20,7 @@ my $temp_dir = File::Temp::tempdir('Model-Command-Define-SomaticValidation-XXXXX
 my @snv_files;
 for my $i (1..2) {
     my $f = Genome::Sys->create_temp_file_path . '/TEST' . ($i % 2 + 1);
-    Genome::Sys->create_directory($f . '/TEST' . $i);
+    Genome::Sys->create_directory($f);
     $f .= '/variants.snv.anno';
     Genome::Sys->write_file($f,
         join("\t", 1, $i, $i, 'A', 'G', 'SNP'), "\n",
@@ -30,8 +30,8 @@ for my $i (1..2) {
     push @snv_files, $f;
 }
 for my $i (3) {
-    my $f = Genome::Sys->create_temp_file_path . '/TEST';
-    Genome::Sys->create_directory($f . '/TEST');
+    my $f = Genome::Sys->create_temp_file_path . '/abc/def/TEST';
+    Genome::Sys->create_directory($f);
     $f .= '/TEST1.snv.anno';
     Genome::Sys->write_file($f,
         join("\t", 1, $i, $i, 'A', 'G', 'SNP'), "\n",
