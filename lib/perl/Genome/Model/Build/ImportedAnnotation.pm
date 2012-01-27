@@ -485,7 +485,7 @@ sub annotation_file {
     my $squashed = shift;
     my $with_strand = shift;
 
-    unless ($suffix) {
+    unless (defined($suffix)) {
         die('Must provide file suffix as parameter to annotation_file method in '.  __PACKAGE__);
     }
 
