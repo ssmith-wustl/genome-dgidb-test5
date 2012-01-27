@@ -65,43 +65,43 @@ class Genome::Db::Ensembl::Vep {
             valid_values => [qw(p s b)],
         },
         regulatory => {
-            is => 'boolean',
+            is => 'Boolean',
             doc => 'Look for overlap with regulatory regions.',
             default_value => 0,
             is_optional => 1,
         },
         gene => {
-            is => 'boolean',
+            is => 'Boolean',
             doc => 'Force output fo Ensembl gene identifier.',
             default_value => 0,
             is_optional => 1,
         },
         most_severe => {
-            is => 'boolean',
+            is => 'Boolean',
             doc => 'Output only the most severe consequence per variation.  Transcript-specific columns will be left blank.',
             default_value => 0,
             is_optional => 1,
         },
         per_gene => {
-            is => 'boolean',
+            is => 'Boolean',
             doc => 'Output only the most severe consequence per gene.  The transcript selected is arbitrary if more than one has the same predicted consequence.',
             default_value => 0,
             is_optional => 1,
         },
         hgnc => {
-            is => 'boolean',
+            is => 'Boolean',
             doc => 'Adds the HGNC gene identifier (where available) to the output.',
             default_value => 0,
             is_optional => 1,
         },
         coding_only => {
-            is => 'boolean',
+            is => 'Boolean',
             doc => 'Only return consequences that fall in the coding regions of transcripts.',
             default_value => 0,
             is_optional => 1,
         },
         force => {
-            is => 'boolean',
+            is => 'Boolean',
             doc => 'By default, the script will fail with an error if the output file already exists.  You can force the overwrite of the existing file by using this flag.',
             default_value => 0,
             is_optional => 1,
@@ -129,7 +129,7 @@ sub execute {
     #UR magic to get the string and boolean property lists
     my $meta = $self->__meta__;
     my @all_bool_args = $meta->properties(
-        data_type => 'boolean');
+        data_type => 'Boolean');
     my @all_string_args = $meta->properties(
         data_type => 'String');
 
