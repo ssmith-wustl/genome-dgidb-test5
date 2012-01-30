@@ -12,14 +12,14 @@ use List::Util qw(first);
 class Genome::Model::Tools::Sam::DebroadifyBam {
     is  => 'Genome::Model::Tools::Sam',
     has => [
-	input_bam_file => {
-	    is  => 'Text',
-	    doc => 'full path to Input BAM File',
-	},
-	output_bam_file => {
-	    is => 'Text',
-	    doc => 'Output BAM File with path',
-	},
+        input_bam_file => {
+            is  => 'Text',
+            doc => 'full path to Input BAM File',
+        },
+        output_bam_file => {
+            is => 'Text',
+            doc => 'Output BAM File with path',
+        },
         reference_file => {
             is => 'Text',
             doc => 'fill path to the reference to build the output bam against',
@@ -28,7 +28,7 @@ class Genome::Model::Tools::Sam::DebroadifyBam {
             is => 'Text',
             is_optional => '1',
             doc => 'Pass any value to this if fillmd should be run on the bam.',
-        }, 
+        },
         output_sam => {
             is => 'Text',
             is_optional => '1',
@@ -39,7 +39,7 @@ class Genome::Model::Tools::Sam::DebroadifyBam {
 
 sub execute {
     my $self = shift;
-   
+
     #Do some checks before we get going to ensure all the inputs are available and things will work.
 
     unless(defined($self->output_sam)){
@@ -61,7 +61,7 @@ sub execute {
         $self->error_message("Couldn't find reference file $self->reference_file");
         die $self->error_message;
     }
-    
+
     my $tmp_bam_output_file = Genome::Sys->create_temp_file_path();
     my $tmp_bam_output = IO::File->new("|samtools view -b -T " . $self->reference_file . " - -o $tmp_bam_output_file");
     unless ($tmp_bam_output) {
@@ -102,7 +102,7 @@ sub execute {
         $sam_fields[2] =~ s/^chr(.*)(_|\w)/$1$2/;
         $sam_fields[6] =~ s/^chrM$/MT/;
         $sam_fields[6] =~ s/^chr(.*)(_|\w)/$1$2/;
-    
+
         print $tmp_bam_output join "\t", @sam_fields;
     }
 
