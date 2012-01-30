@@ -72,7 +72,7 @@
 	url = ssh://git//srv/git/alignment_summary.git
 [submodule "vendor/tophat"]
 	path = vendor/tophat
-	url = git@github.com:genome/tophat.git
+	url = git@github.com:genome-vendor/tophat.git
 [submodule "vendor/libbio-samtools-perl"]
 	path = vendor/libbio-samtools-perl
 	url = ssh://git/srv/git/vendor/libbio-samtools-perl
