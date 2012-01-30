@@ -62,7 +62,7 @@ sub execute {
     #self->verify_models_have_succeeded_builds_and_bams FIXME 
     $self->_ref_fasta($models[0]->reference_sequence_build->full_consensus_path("fa"));
     my @glfs = $self->generate_glfs(@models);
-#    my @glfs = glob($self->output_dir . "/*glf");  for testing
+#    my @glfs = glob($self->output_dir . "/*glf");  
     my $dat_file = $self->generate_dat();
     my $glf_index = $self->generate_glfindex(@glfs);
     $self->run_polymutt($dat_file, $glf_index);
@@ -177,17 +177,33 @@ sub generate_glfindex {
     my $self=shift;
     my @glfs = @_;
     my $glf_name = $self->output_dir ."/" . "polymutt.glfindex";
+    my %sample_index = $self->parse_ped();
     my $glf_fh = IO::File->new($glf_name, ">");
-    my $count =1;
-    for my $glf (@glfs) {
-        $glf_fh->print("$count\t$glf\n");
-        $count++;
+    for my $glf (sort @glfs) {  #again we just assume the incoming ped file is alpha sorted, so we alpha sort
+        my ($file, $path, $suffix) = fileparse($glf, ".glf");
+        my $index = $sample_index{$file}; 
+        unless($index) {
+            $self->error_message("I am unable to match up the generated glfs with the supplied ped file. Please assist.  I was searching for a sample name match for this file: $glf\n");
+            die;
+        }
+        $glf_fh->print("$index\t$glf\n");
     }
     $glf_fh->close;
     return $glf_name;
 }
 
-
+sub parse_ped {
+    my $self = shift;
+    my $ped_fh = Genome::Sys->open_file_for_reading($self->ped_file);
+    my %sample_index;
+    while(my $ped_line = $ped_fh->getline) {
+        chomp($ped_line);
+        my ($family_id, $individual, $mother, $father, $sex, $glf_index) = split "\t", $ped_line;
+        $sample_index{"$individual"}=$glf_index; 
+    }
+    $DB::single=1;
+    return %sample_index;
+}
 
 sub generate_glfs {
     my $self = shift;
@@ -198,7 +214,8 @@ sub generate_glfs {
     for (my $i =0; $i < scalar(@models); $i++) {
         my $output_name = $self->output_dir . "/" . $models[$i]->subject->name . ".glf";
         push @outputs, $output_name;
-        $inputs{"bam_$i"}=$models[$i]->last_succeeded_build->whole_rmdup_bam_file;
+        my $build = $models[$i]->last_succeeded_build;
+        $inputs{"bam_$i"}=$build->whole_rmdup_bam_file;
         $inputs{"output_glf_$i"}=$output_name;
         push @inputs, ("bam_$i", "output_glf_$i");
     }

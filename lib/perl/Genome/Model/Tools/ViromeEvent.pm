@@ -59,28 +59,26 @@ sub log_event {
 my %file_extensions = (
     'hg_blast' => {
 	blast_dir_ext => 'fa.cdhit_out.masked.goodSeq_HGblast',
+        pooled_out_file_ext => 'fa.cdhit_out.masked.goodSeq',
 	prev_pooled_file_ext => 'fa.cdhit_out.masked.goodSeq',
     },
     'blastn' => {
-	blast_dir_ext => 'HGfiltered_BLASTN',   #<--- same
-	pooled_out_file_ext => 'HGfiltered.fa',
-	prev_blast_dir_ext => 'fa.cdhit_out.masked.goodSeq_HGblast',
-	split_file_ext => 'HGfiltered.fa_file',
-	prev_pooled_file_ext => 'HGfiltered_BLASTN', #<--- same
+	blast_dir_ext       => 'HGfiltered_BLASTN',                  # dir to run blastn in
+	pooled_out_file_ext => 'HGfiltered.fa',                      # file ext for prev blast filtered reads
+	prev_blast_dir_ext  => 'fa.cdhit_out.masked.goodSeq_HGblast',# prev blast dir to get filtered reads from
+	split_file_ext      => 'HGfiltered.fa_file',                 # file ext for files to run blastn on
     },
     'blastx_nt' => {
 	blast_dir_ext => 'BNFiltered_TBLASTX_nt', #<--- same
 	pooled_out_file_ext => 'BNfiltered.fa',
 	prev_blast_dir_ext => 'HGfiltered_BLASTN',
 	split_file_ext => 'BNFiltered.fa_file',
-	prev_pooled_file_ext => 'BNFiltered_TBLASTX_nt', #<--- same
     },
     'blastx_viral' => {
 	blast_dir_ext => 'TBXNTFiltered_TBLASTX_ViralGenome', #<--- same
 	pooled_out_file_ext => 'TBXNTfiltered.fa',
 	prev_blast_dir_ext => 'BNFiltered_TBLASTX_nt',
 	split_file_ext => 'TBXNTFiltered.fa_file',
-	prev_pooled_file_ext => 'TBXNTFiltered_TBLASTX_ViralGenome', #<--- same
     },
 );
 
@@ -89,8 +87,6 @@ sub pool_and_split_sequence {
 
     my $dir = $self->dir;
     my $sample_name = basename($dir);
-
-    $self->log_event("Pooling data to run $stage for $sample_name");
 
     #create a blast dir
     my $blast_dir = $dir.'/'.$sample_name.'.'.$file_extensions{$stage}{blast_dir_ext};
@@ -111,7 +107,7 @@ sub pool_and_split_sequence {
     #check blast results from previous stage
     my @prev_bl_files = glob("$prev_blast_dir/*fa");
     if (@prev_bl_files == 0) {
-	$self->log_event("No further $stage data available for $sample_name");
+	$self->log_event("No further reads available for $stage for $sample_name");
 	return 1;
     }
 
@@ -163,47 +159,26 @@ sub get_files_for_blast {
     my $dir = $self->dir;
     my $sample_name = basename ($dir);
 
-    $self->log_event("Checking files to run $stage for $sample_name"); #TODO better descriptio
-
     #check to make sure blast dir exists
     my $blast_dir = $dir.'/'.$sample_name.'.'.$file_extensions{$stage}{blast_dir_ext};
     unless ( -d $blast_dir ) {
-	$self->log_event("Failed to find $stage blast directory dor sameple name: $sample_name");
-	return; #die
-    }
-    #source file of fasta file for blast
-    my $split_from_file = $dir.'/'.$sample_name.'.'.$file_extensions{$stage}{prev_pooled_file_ext};
-
-    #this file should exists even if blank
-    unless ( -e $split_from_file ) {
-	$self->log_event("Failed to find $stage source file");
-	return; #die
-    }
-    #file is blank .. all filtered out by previous stage .. no need to blast
-    if ( -s $split_from_file == 0 ) {
-	$self->log_event("No further reads available to blast at stage: $stage");
-	$self->files_for_blast( [] );
-	return 1; #done
-    }
-    #grab all fasta files in blast dir
-    my @fa_files = glob("$blast_dir/$sample_name*fa");
-
-    if ( not @fa_files ) {
-	$self->log_event("Failed to find any fasta files in $stage blast directory: $blast_dir");
+	$self->log_event("Failed to find $stage blast directory for sample name: $sample_name");
 	return; #die
     }
 
     my @files_for_blast;
     #exclude fa files not for blasting
-    for my $file ( @fa_files ) {
+    for my $file ( glob("$blast_dir/$sample_name*fa") ) {
 	next if $file =~ /filtered\.fa$/; #skip blast out files
 	next if $file =~ /hits\.fa$/;     #skip parsed file
 	push @files_for_blast, $file;
     }
-    #no files for blast .. something went wrong
+    # all reads filtered out in prev stage
     if ( not @files_for_blast ) {
-	$self->log_event("Failed to find any fasta files for blast in stage: $stage");
-	return; #die
+        $self->log_event("No reads available to blast at stage, $stage, for sample_name, $sample_name");
+        #place holder .. otherwise workflow will not proceed to next stage
+        $self->files_for_blast( ['no_files_to_blast'] );
+	return 1;
     }
     $self->files_for_blast( \@files_for_blast );
 
@@ -237,6 +212,12 @@ my %blast_lookups = (
 
 sub run_blast_for_stage {
     my ( $self, $stage ) = @_;
+
+    if ( $self->file_to_run eq 'no_files_to_blast' ) {
+        #just place holding to move to next stage
+        $self->log_event("No reads available to blast at stage: $stage");
+        return 1;
+    }
 
     my $input_file = $self->file_to_run;
     my $input_file_name = File::Basename::basename( $input_file );

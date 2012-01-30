@@ -24,11 +24,16 @@ sub execute {
     my $self = shift;
     my $dir = $self->dir;
     my $sample_name = basename($dir);
-    foreach (glob ("$dir/*.bak.clstr")) {
+    my @files = glob ("$dir/*.bak.clstr");
+    if ( not @files ) {
+        $self->log_event("No cd-hit clstr files to remove for sample: $sample_name");
+        return 1;
+    }
+    foreach ( @files ) {
 	unlink $_;
     }
-    
     $self->log_event("Removed temp files for sample: $sample_name");
+
     return 1;
 }
 

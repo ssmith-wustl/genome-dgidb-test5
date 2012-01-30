@@ -56,6 +56,19 @@ class Genome::DruggableGene::GeneNameReport {
                 my $citation = Genome::DruggableGene::Citation->get(source_db_name => $source_db_name, source_db_version => $source_db_version);
                 return $citation;
             |,
+        },
+        _kinase_association => {
+            via => 'gene_name_report_association',
+            to => 'alternate_name',
+            where => ['alternate_name like' => '%kinase%'],
+            is_optional => 1,
+            is_many => 1,
+        },
+        is_kinase => {
+            calculate_from => ['_kinase_association'],
+            calculate => q|
+                return 1 if $_kinase_association; return 0;
+            |,
         }
     ],
     doc => 'Claim regarding the name of a drug',

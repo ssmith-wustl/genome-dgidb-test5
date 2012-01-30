@@ -3,26 +3,12 @@ package Genome::Model::MutationalSignificance;
 use strict;
 use warnings;
 
-# SS: you don't need these, they were in the SmallRna module to assist in testing
-BEGIN { $INC{"Genome/Model/Build/MutationalSignificance.pm"} = 1; $INC{"Genome/ProcessingProfile/MutationalSignificance.pm"} = 1; $INC{"Genome/Model/Command/Define/MutationalSignificance.pm"} = 1; };
 use Genome;
-
-# SS: having these in globals is a bad standard: they can just go in the class def
-#     you don't want to use them elsewhere b/c the actuall pp may not use the default
-# DEFAULTS
-my $DEFAULT_CLUSTERS = '5000';
-my $DEFAULT_CUTOFF = '2';
-my $DEFAULT_ZENITH = '5';
-my $DEFAULT_MIN_DEPTH = '1';
-my $DEFAULT_BIN 	= '17_70';
-
 
 class Genome::Model::MutationalSignificance {
     is        => 'Genome::Model',
     has_input => [
-        # SS: be sure this is plural for is_many properies (_models)
-        #     you may need to update the logic for making _builds inputs on builds when we have _models instead of _model)
-        somatic_variation_model => {
+        somatic_variation_models => {
             is    => 'Genome::Model::SomaticVariation',
             is_many => 1,
             doc => 'somatic variation models to evaluate',
@@ -256,7 +242,7 @@ sub _map_workflow_inputs {
  
     my @inputs = ();
  
-    my @builds = $build->somatic_variation_build;
+    my @builds = $build->somatic_variation_builds;
 
     push @inputs, somatic_variation_builds => \@builds;
     push @inputs, build_id => $build->id;

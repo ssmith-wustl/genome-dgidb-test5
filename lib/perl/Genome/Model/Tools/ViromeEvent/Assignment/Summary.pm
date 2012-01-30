@@ -207,7 +207,7 @@ sub _get_read_counts_from_fastas {
     my @read_counts;
     #LIST OF FASTA FILE EXTENSIONS
     my @file_extensions = qw/ fa fa.cdhit_out fa.cdhit_out.masked.badSeq fa.cdhit_out.masked.goodSeq
-                              HGfiltered.fa BNfiltered.fa TBXNTFiltered.fa unassigned.fa /;
+                              HGfiltered.fa BNfiltered.fa TBXNTfiltered.fa unassigned.fa /;
     foreach my $ext (@file_extensions) {
 	my $fasta_file = $self->dir.'/'.$lib_name.'.'.$ext;
 	my $read_count = 0;
@@ -218,7 +218,7 @@ sub _get_read_counts_from_fastas {
 	    }
 	}
 	elsif (-e $fasta_file) { #NO DATA TO PROCESS
-	    $self->log_event("No data to process in ".basename($fasta_file));
+	    $self->log_event("No reads to process in ".basename($fasta_file));
 	}
 	else { #FILE IS MISSING .. THIS SHOULDN'T HAPPEN
 	    $self->log_event("Can not open file: ".basename($fasta_file));

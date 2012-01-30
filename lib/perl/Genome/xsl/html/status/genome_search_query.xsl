@@ -178,7 +178,7 @@
                     <a class="mini btn">
                         <xsl:attribute name="href">
                             <xsl:text>/view/genome/search/query/status.html?query=</xsl:text>
-                            <xsl:value-of select="@query"/><xsl:if test="//@facet-name">&amp;fq=type:<xsl:value-of select="//@facet-name"/></xsl:if>
+                            <xsl:value-of select="@query"/><xsl:if test="//@facet-name">&amp;fq=type:"<xsl:value-of select="//@facet-name"/>"</xsl:if>
                             <xsl:text>&amp;page=</xsl:text><xsl:value-of select="page-info/@next-page" />
                         </xsl:attribute>
                         <span class="sm-icon sm-icon-triangle-1-e"><br/></span>

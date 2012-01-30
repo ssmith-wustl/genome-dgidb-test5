@@ -485,12 +485,16 @@ sub annotation_file {
     my $squashed = shift;
     my $with_strand = shift;
 
-    unless ($suffix) {
+    unless (defined($suffix)) {
         die('Must provide file suffix as parameter to annotation_file method in '.  __PACKAGE__);
     }
 
     my $file_name = $self->_resolve_annotation_file_name('all_sequences',$suffix,$reference_sequence_id,$squashed,$with_strand);
     if (-s $file_name) {
+        return $file_name;
+    }
+    # This is to allow the path for a transcriptome index prefix to return
+    if (defined($suffix)) {
         return $file_name;
     }
     return undef;

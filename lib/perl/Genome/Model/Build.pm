@@ -31,17 +31,21 @@ class Genome::Model::Build {
         is_metric => { is => 'Boolean', is_optional => 1 },
     ],
     has => [
-        subclass_name           => { is => 'VARCHAR2', len => 255, is_mutable => 0, column_name => 'SUBCLASS_NAME',
-                                     calculate_from => ['model_id'],
-                                     # We subclass via our model's type_name (which is via it's processing profile's type_name)
-                                     calculate => sub {
-                                                      my($model_id) = @_;
-                                                      return unless $model_id;
-                                                      my $model = Genome::Model->get($model_id);
-                                                      Carp::croak("Can't find Genome::Model with ID $model_id while resolving subclass for Build") unless $model;
-                                                      return __PACKAGE__ . '::' . Genome::Utility::Text::string_to_camel_case($model->type_name);
-                                                  }
-                                   },
+        subclass_name           => {
+            is => 'VARCHAR2',
+            len => 255,
+            is_mutable => 0,
+            column_name => 'SUBCLASS_NAME',
+            calculate_from => ['model_id'],
+            # We subclass via our model's type_name (which is via it's processing profile's type_name)
+            calculate => sub {
+                my($model_id) = @_;
+                return unless $model_id;
+                my $model = Genome::Model->get($model_id);
+                Carp::croak("Can't find Genome::Model with ID $model_id while resolving subclass for Build") unless $model;
+                return __PACKAGE__ . '::' . Genome::Utility::Text::string_to_camel_case($model->type_name);
+            }
+        },
         data_directory          => { is => 'VARCHAR2', len => 1000, is_optional => 1 },
         model                   => { is => 'Genome::Model', id_by => 'model_id' },
         model_id                => { is => 'NUMBER', implied_by => 'model', constraint_name => 'GMB_GMM_FK' },
@@ -288,8 +292,8 @@ sub _copy_model_inputs {
             # Resolve inputs pointing to a model to a build.
             if($params{value_class_name}->isa('Genome::Model')) {
                 my $input_name = $input->name;
-                if ($input_name =~ /_model$/) {
-                    $input_name =~ s/_model$/_build/g;
+                if ($input_name =~ /_model(s)?$/) {
+                    $input_name =~ s/_model(?=($|s$))/_build/;
                     $params{name} = $input_name;
                 }
 

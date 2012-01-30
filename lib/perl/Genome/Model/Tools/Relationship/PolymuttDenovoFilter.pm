@@ -22,11 +22,20 @@ class Genome::Model::Tools::Relationship::PolymuttDenovoFilter {
         is_optional=>0,
         doc=>'denovo vcf output for same family',
     },
-    output_path=> {
+    output_file=> {
         is_optional=>0,
         doc=>'binomial test outputs for each individual in the family',
     },
-
+    min_read_qual=> {
+        is_optional=>1,
+        doc=>'the lowest quality reads to use in the calculation. default q20',
+        default=>"20",
+    },   
+    min_unaffected_pvalue=> {
+        is_optional=>1,
+        doc=>"the minimum binomial test result from unaffected members to pass through the filter",
+        default=>"1.0e-4",
+    }
     ],
 
 
@@ -49,7 +58,17 @@ sub execute {
     my @models = $mg->models;
     @models = sort {$a->subject->name cmp $b->subject->name} @models;
     my $sites_file = Genome::Sys->create_temp_file_path();
-    my $sites_cmd = qq/ zcat $vcf | cut -f1,2 | grep -v "^#" | awk '{OFS="\t"}{print \$1, \$2, \$2}' > $sites_file/;
+    my $cat_cmd = "cat";
+    my $vcf_fh;
+    if(Genome::Sys->_file_type($vcf) eq 'gzip') {
+        $vcf_fh = Genome::Sys->open_gzip_file_for_reading($vcf);
+        $cat_cmd = "zcat";
+    }
+    else {
+        $vcf_fh = Genome::Sys->open_file_for_reading($vcf);
+    }
+
+    my $sites_cmd = qq/ $cat_cmd $vcf | cut -f1,2 | grep -v "^#" | awk '{OFS="\t"}{print \$1, \$2, \$2}' > $sites_file/;
     unless(-s $sites_file) {
         print STDERR "running $sites_cmd\n";
         `$sites_cmd`;
@@ -57,20 +76,44 @@ sub execute {
 ###prepare readcounts
     my $ref_fasta=$models[0]->reference_sequence_build->full_consensus_path("fa");
     my $readcount_file_ref = $self->prepare_readcount_files($ref_fasta, $sites_file, \@models);
-    my $vcf_fh;
-    if(Genome::Sys->_file_type($vcf) eq 'gzip') {
-        $vcf_fh = Genome::Sys->open_gzip_file_for_reading($vcf);
-    }
-    else {
-        $vcf_fh = Genome::Sys->open_file_for_reading($vcf);
-    }    
     my $r_input_path = $self->prepare_r_input($vcf_fh, $readcount_file_ref);
     my ($r_fh, $r_script_path) = Genome::Sys->create_temp_file();
-    $r_fh->print($self->r_code($r_input_path, $self->output_path));
+    my ($r_output) = Genome::Sys->create_temp_file_path();
+    $r_fh->print($self->r_code($r_input_path, $r_output));
     $r_fh->close;
     `R --vanilla < $r_script_path`;
+    $self->output_passing_vcf($self->denovo_vcf, $r_output, $self->min_unaffected_pvalue, $self->output_file);
     return 1;
 }
+sub output_passing_vcf {
+    my($self, $denovo_vcf, $r_output, $pvalue_cutoff, $output_filename) = @_;
+    my $pvalues = Genome::Sys->open_file_for_reading($r_output);
+    my $output_file = IO::File->new($output_filename, ">");
+    my $cat_cmd = "cat";
+    if(Genome::Sys->_file_type($denovo_vcf) eq 'gzip') {
+        $cat_cmd = "zcat";
+    }
+
+
+    my @lines = `$cat_cmd $denovo_vcf | grep "^#" `;
+    $output_file->print(@lines);
+    my (@unaffected, $chr, $pos, $affected);
+    while(my $line = $pvalues->getline) {
+        ($chr,$pos, $unaffected[0], $unaffected[1], $affected, $unaffected[2]) = split "\t", $line; ###generic method for any kind of family later
+        my $output=1;
+        for my $unaff_pvalue (@unaffected) {
+            if($unaff_pvalue < $pvalue_cutoff) {
+                $output=0;
+            }
+        }
+        if($output) {
+            my $line = `$cat_cmd $denovo_vcf | grep "^$chr\t$pos" `;
+            $output_file->print($line);
+        }
+    }
+}
+
+
 
 sub prepare_readcount_files {
     my $self = shift;
@@ -78,11 +121,12 @@ sub prepare_readcount_files {
     my $sites_file = shift;
     my $model_ref = shift;
     my @readcount_files;
+    my $qual = $self->min_read_qual;
     for my $model (@$model_ref) {
         my $readcount_out = Genome::Sys->create_temp_file_path($model->subject->name . ".readcount.output");
         my $bam = $model->last_succeeded_build->whole_rmdup_bam_file;
         push @readcount_files, $readcount_out;
-        my $readcount_cmd = "bam-readcount -q 1 -f $ref_fasta -l $sites_file $bam > $readcount_out";
+        my $readcount_cmd = "bam-readcount -q $qual -f $ref_fasta -l $sites_file $bam > $readcount_out";
         unless(-s $readcount_out) {
             print STDERR "running $readcount_cmd";
             print `$readcount_cmd`;
@@ -130,14 +174,9 @@ sub prepare_r_input {
                 my @ref_bases = split "[|/]", $gt;
                 if(grep /$novel/, @ref_bases) {
                     $prob = .5;
-                    if($novel eq $ref_bases[0]) {
-                        shift @ref_bases;
-                    }else {
-                        pop @ref_bases;
-                    }         
                 }
                 else {
-                    $prob = .001;
+                    $prob = .01;
                 }
                 my $ref_depth=0;
                 my $var_depth=0;
@@ -145,11 +184,11 @@ sub prepare_r_input {
                     for my $fields (@fields) { 
                         my ($base, $depth, @rest)  = split ":", $fields;
                         next if($base =~m/\+/);
-                        if(grep {/$base/} @ref_bases) {
-                            $ref_depth=$depth;
-                        }
-                        elsif($base eq $novel) {
+                        if($base eq $novel) {
                             $var_depth+=$depth;
+                        }
+                        else {
+                            $ref_depth+=$depth;
                         }
                     }
                 }

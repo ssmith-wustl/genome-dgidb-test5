@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use Genome;
-      
+
 class Genome::Model::Command::Input::Remove {
     is => 'Genome::Model::Command::Input::Base',
     english_name => 'genome model input command remove',
@@ -43,89 +43,89 @@ sub execute {
 
     $self->status_message('Remove inputs');
 
-    my $model = $self->model;
-    if ( not $model ) {
-        $self->error_message('No model to update input');
-        return;
-    }
-
-    my $name = $self->name;
-    if ( not $name ) {
-        $self->error_message('No name given to update model input.');
-        return;
-    }
-
-    my @properties = $model->real_input_properties;
-    return if not @properties;
-    my ($property) = grep { $name eq $_->{name} } @properties;
-    if ( not $property ) {
-        $self->error_message("Failed to find input property for $name. Here are the valid input names:");
-        $self->show_inputs_and_values_for_model($model);
-        return;
-    }
-
-    if ( not $property->{is_many} ) {
-        $self->error_message("Cannot use this remove command for a property ($name) with many values. Use the update command.");
-        return;
-    }
-
-    my @values = $self->values;
-    if ( not @values ) {
-        $self->error_message('No values to add');
-        return;
-    }
-
-    $self->status_message('Model: '.$model->__display_name__);
-    $self->status_message('Property: '.$name);
-    $self->status_message('Value filters: '.join(' ', @values));
-
-    # get values for filters
-    my %values = $self->unique_values_from_property_for_filter($property, @values);
-    return if not %values;
-
-    # get existing values
-    my %existing_values;
-    for my $value ( $model->$name ) {
-        my $id = ( $value->can('id') ? $value->id : $value );
-        $existing_values{$id} = $value;
-    }
-
-    # remove
-    my $transaction = UR::Context::Transaction->begin;
-    my $remove_method = $property->{remove_method};
-    for my $value_id ( keys %values ) {
-        if ( not defined $existing_values{$value_id} ) {
-            $self->status_message('Value does not exist on model, skipping: '.$value_id);
-            next;
+    for my $model ($self->models) {
+        if ( not $model ) {
+            $self->error_message('No model to update input');
+            return;
         }
-        $self->status_message('Remove: '.$value_id);
-        $model->$remove_method($values{$value_id});
-        $existing_values{$value_id} = $values{$value_id};
-    }
 
-    # verify
-    my @existing_values = $model->$name;
-    if ( not $property->{is_optional} and not @existing_values ) {
-        $transaction->rollback;
-        $self->error_message('Cannot remove all values for required property!');
-        return;
-    }
-    my @failed_to_remove;
-    for my $value ( @existing_values ) { 
-        my $id = ( $value->can('id') ? $value->id : $value );
-        push @failed_to_remove, $id if defined $values{$id};
-    }
-    if ( @failed_to_remove ) {
-        $self->error_message('Failed to remove these values: '.join(' ', @failed_to_remove));
-        return;
-    }
-    $transaction->commit;
+        my $name = $self->name;
+        if ( not $name ) {
+            $self->error_message('No name given to update model input.');
+            return;
+        }
 
-    # abandon
-    if ( $self->abandon_builds ) {
-        $self->_abandon_builds( keys %values );
-    }
+        my @properties = $model->real_input_properties;
+        return if not @properties;
+        my ($property) = grep { $name eq $_->{name} } @properties;
+        if ( not $property ) {
+            $self->error_message("Failed to find input property for $name. Here are the valid input names:");
+            $self->show_inputs_and_values_for_model($model);
+            return;
+        }
 
+        if ( not $property->{is_many} ) {
+            $self->error_message("Cannot use this remove command for a property ($name) with many values. Use the update command.");
+            return;
+        }
+
+        my @values = $self->values;
+        if ( not @values ) {
+            $self->error_message('No values to add');
+            return;
+        }
+
+        $self->status_message('Model: '.$model->__display_name__);
+        $self->status_message('Property: '.$name);
+        $self->status_message('Value filters: '.join(' ', @values));
+
+        # get values for filters
+        my %values = $self->unique_values_from_property_for_filter($property, @values);
+        return if not %values;
+
+        # get existing values
+        my %existing_values;
+        for my $value ( $model->$name ) {
+            my $id = ( $value->can('id') ? $value->id : $value );
+            $existing_values{$id} = $value;
+        }
+
+        # remove
+        my $transaction = UR::Context::Transaction->begin;
+        my $remove_method = $property->{remove_method};
+        for my $value_id ( keys %values ) {
+            if ( not defined $existing_values{$value_id} ) {
+                $self->status_message('Value does not exist on model, skipping: '.$value_id);
+                next;
+            }
+            $self->status_message('Remove: '.$value_id);
+            $model->$remove_method($values{$value_id});
+            $existing_values{$value_id} = $values{$value_id};
+        }
+
+        # verify
+        my @existing_values = $model->$name;
+        if ( not $property->{is_optional} and not @existing_values ) {
+            $transaction->rollback;
+            $self->error_message('Cannot remove all values for required property!');
+            return;
+        }
+        my @failed_to_remove;
+        for my $value ( @existing_values ) { 
+            my $id = ( $value->can('id') ? $value->id : $value );
+            push @failed_to_remove, $id if defined $values{$id};
+        }
+        if ( @failed_to_remove ) {
+            $self->error_message('Failed to remove these values: '.join(' ', @failed_to_remove));
+            return;
+        }
+        $transaction->commit;
+
+        # abandon
+        if ( $self->abandon_builds ) {
+            $self->_abandon_builds( keys %values );
+        }
+    }
     $self->status_message('Remove successful!');
 
     return 1; 
@@ -134,7 +134,7 @@ sub execute {
 sub _abandon_builds {
     my ($self, @value_ids) = @_;
 
-    my @builds = $self->model->builds;
+    my @builds = Genome::Model::Build->get(model_id => [map($_->id, $self->models)]);
     if ( not @builds ) {
         $self->status_message('No builds to abandon. Model does not have any');
         return 1;

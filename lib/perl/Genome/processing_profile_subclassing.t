@@ -4,7 +4,7 @@ use Test::More;
 
 UR::DBI->no_commit(1);
 
-plan tests => 35;
+plan tests => 33;
 
 # Some Processing Profiles are abstract and require further info to subclass properly
 # Genome::ProcessingProfile, G::PP::ReferenceAlignment and G::PP::RnaSeq
@@ -72,7 +72,8 @@ $pp = Genome::ProcessingProfile::RnaSeq->create(name => 'test rnaseq 1',
                                                 dna_type => 'cdna',
                                                 read_aligner_name => 'foo');
 ok($pp, 'Created an RnaSeq PP');
-isa_ok($pp, 'Genome::ProcessingProfile::RnaSeq::454');
+# Removed subclassing by sequencing platform
+#isa_ok($pp, 'Genome::ProcessingProfile::RnaSeq::454');
 isa_ok($pp, 'Genome::ProcessingProfile::RnaSeq');
 isa_ok($pp, 'Genome::ProcessingProfile');
 
@@ -82,7 +83,8 @@ $pp = Genome::ProcessingProfile->create(name => 'test rnaseq 2',
                                         dna_type => 'cdna',
                                         read_aligner_name => 'foo2');
 ok($pp, 'Created an RnaSeq PP');
-isa_ok($pp, 'Genome::ProcessingProfile::RnaSeq::454');
+# Removed subclassing by sequencing platform
+#isa_ok($pp, 'Genome::ProcessingProfile::RnaSeq::454');
 isa_ok($pp, 'Genome::ProcessingProfile::RnaSeq');
 isa_ok($pp, 'Genome::ProcessingProfile');
 
@@ -93,7 +95,8 @@ $pp = Genome::ProcessingProfile::RnaSeq::454->create(name => 'test rnaseq 3',
                                                      dna_type => 'cdna',
                                                      read_aligner_name => 'foo3');
 ok($pp, 'Created an RnaSeq PP');
-isa_ok($pp, 'Genome::ProcessingProfile::RnaSeq::454');
+# Removed subclassing by sequencing platform
+#isa_ok($pp, 'Genome::ProcessingProfile::RnaSeq::454');
 isa_ok($pp, 'Genome::ProcessingProfile::RnaSeq');
 isa_ok($pp, 'Genome::ProcessingProfile');
 }

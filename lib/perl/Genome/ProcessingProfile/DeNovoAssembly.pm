@@ -41,6 +41,14 @@ class Genome::ProcessingProfile::DeNovoAssembly{
     ],
 };
 
+sub is_imported {
+    my $self = shift;
+    if ( $self->assembler_name =~ /import/ ) {
+        return 1;
+    }
+    return;
+}
+
 sub create {
     my $class = shift;
 
@@ -235,8 +243,40 @@ sub _validate_read_processor {
 #< Stages >#
 sub stages {
     return (qw/
+        process_instrument_data
         assemble
         /);
+}
+
+sub process_instrument_data_can_parallelize {
+    my $self = shift;
+
+    my $assembler_name = $self->assembler_name;
+    for my $assember_can_parallelize ( 'allpaths de-novo-assemble' ) {
+        return 1 if $self->assembler_name eq $assember_can_parallelize;
+    }
+
+    return ;
+}
+
+sub process_instrument_data_job_classes {
+    my $self = shift;
+
+    return if $self->is_imported;
+
+    if ( not $self->process_instrument_data_can_parallelize ) {
+        return (qw/ Genome::Model::Event::Build::DeNovoAssembly::PrepareInstrumentData /);
+    }
+
+    return (qw/ Genome::Model::Event::Build::DeNovoAssembly::ProcessInstrumentData /);
+}
+
+sub process_instrument_data_objects {
+    my ($self, $model) = @_;
+    if ( not $self->process_instrument_data_can_parallelize ) {
+        return 1;
+    }
+    return $model->instrument_data;
 }
 
 sub assemble_job_classes {
@@ -244,18 +284,16 @@ sub assemble_job_classes {
 
     my @classes;
 
-    if ( $self->assembler_name !~ /import/ ) {
-	push @classes, 'Genome::Model::Event::Build::DeNovoAssembly::PrepareInstrumentData';
+    if ($self->process_instrument_data_can_parallelize ) {
+        push @classes, 'Genome::Model::Event::Build::DeNovoAssembly::MergeInputMetrics';
     }
 
-    push @classes, 'Genome::Model::Event::Build::DeNovoAssembly::Assemble';
+    push  @classes, 'Genome::Model::Event::Build::DeNovoAssembly::Assemble';
 
     if ( $self->post_assemble ) {
-	push @classes, 'Genome::Model::Event::Build::DeNovoAssembly::PostAssemble';
+        push @classes, 'Genome::Model::Event::Build::DeNovoAssembly::PostAssemble';
     }
 
-    #TODO - report needs some of the post-assemble outputs and these
-    #will be blank if post-assemble is not run
     push @classes, 'Genome::Model::Event::Build::DeNovoAssembly::Report';
 
     return @classes;
@@ -266,7 +304,6 @@ sub assemble_objects {
 }
 
 #< post assemble steps >#
-
 sub _validate_post_assemble_steps {
     my $self = shift;
 

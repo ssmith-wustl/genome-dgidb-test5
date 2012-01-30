@@ -150,6 +150,15 @@ sub parse_line {
     my $fa = $total_ad / $dp; 
     $fa = sprintf "%.3f", $fa; # Round to 3 decimal places since we dont have that many significant digits
 
+    # If the variant called is N, just null out the GT and FET fields to minimize interference with cross-sample VCFs
+    if ($genotype eq "N") {
+        $gt = ".";
+        $alt = ".";
+        $ad_string = ".";
+        $bq_string = ".";
+        $fa = ".";
+    }
+
     # Placeholder for later adjustment
     my $dbsnp_id = ".";
     my $qual = $vaq;

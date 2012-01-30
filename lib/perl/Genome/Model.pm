@@ -66,12 +66,20 @@ class Genome::Model {
         builds  => { 
             is => 'Genome::Model::Build', 
             reverse_as => 'model',
-            doc => 'versions of a model over time, with varying quantities of evidence' 
+            doc => 'Versions of a model over time, with varying quantities of evidence' 
         },
         inputs => { 
             is => 'Genome::Model::Input', 
             reverse_as => 'model',
             doc => 'links to data currently assigned to the model for processing' 
+        },
+        instrument_data => {
+            is => 'Genome::InstrumentData',
+            via => 'inputs',
+            to => 'value',
+            is_mutable => 1,
+            where => [ name => 'instrument_data' ],
+            doc => 'Instrument data currently assigned to the model.'
         },
         projects => { 
             is => 'Genome::Project', 
@@ -86,6 +94,16 @@ class Genome::Model {
             reverse_as => 'entity', 
             is_many => 1, 
             is_mutable => 1, 
+        },
+        model_groups => { 
+            is => 'Genome::ModelGroup', 
+            via => 'model_bridges', 
+            to => 'model_group',
+            is_mutable => 1
+        },
+        model_bridges => { 
+            is => 'Genome::ModelGroupBridge', 
+            reverse_as => 'model' 
         },
     ],    
     schema_name => 'GMSchema',
@@ -278,6 +296,8 @@ sub current_build {
     }
     return;
 }
+# Just so current_build_id can be "easily" shown in listers.
+sub current_build_id { shift->current_build->id }
 
 # Returns true if no non-abandoned build is found that has inputs that match the current state of the model
 sub build_needed {
@@ -563,13 +583,15 @@ sub _preprocess_subclass_description {
     my ($ext) = ($desc->{class_name} =~ /Genome::Model::(.*)/);
     return $desc unless $ext;
     my $pp_subclass_name = 'Genome::ProcessingProfile::' . $ext;
-    
-    my $pp_data = $desc->{has}{processing_profile} = {};
-    $pp_data->{data_type} = $pp_subclass_name;
-    $pp_data->{id_by} = ['processing_profile_id'];
 
-    $pp_data = $desc->{has}{processing_profile_id} = {};
-    $pp_data->{data_type} = 'Number';
+    unless ($desc->{has}{processing_profile}) {
+        my $pp_data = $desc->{has}{processing_profile} = {};
+        $pp_data->{data_type} = $pp_subclass_name;
+        $pp_data->{id_by} = ['processing_profile_id'];
+
+        $pp_data = $desc->{has}{processing_profile_id} = {};
+        $pp_data->{data_type} = 'Number';
+    }
 
     return $desc;
 }
