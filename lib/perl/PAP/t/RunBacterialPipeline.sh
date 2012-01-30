@@ -1,8 +1,8 @@
 #! /bin/bash
 ## This is specific to running bacterial pipeline on a specified test genome from Sasi's Repo
+set -e
 
-NOW="$(date +"%Y%m%d")"
-# echo $NOW
+NOW="$(date +"%Y%m%d")$$"
 
 INPUT_VAR=$1
 
@@ -34,9 +34,9 @@ echo $(date)
 echo "** Generating config-file for this batch run"
 
 # Generate config file - this config file gets written to /gscuser/ssurulir/test-genome/BIFBRE2011TST
-cd /gscuser/ssurulir/workspace/SandBox
-perl generate_config.pl --locus-name $LOCUS_NAME --template $TEMPLATE
+perl /gscuser/bdericks/repos/genome/pap/lib/perl/PAP/t/generate_config.pl --locus-name $LOCUS_NAME --template $TEMPLATE
 
+cd /gscuser/ssurulir/workspace/SandBox
 # Generated file ought to be at..error checking is done before bsub'ing the command
 CONFIG_FNAME=$CONFIG_DIR$LOCUS_NAME"_config_"$NOW
 
