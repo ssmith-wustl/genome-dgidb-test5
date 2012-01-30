@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 
 class Genome::ModelGroup::Command::Member::List {
-    is => 'UR::Object::Command::List', 
+    is => 'UR::Object::Command::List',
     has => [
         model_group => { is => 'Genome::ModelGroup', id_by => 'model_group_id' },
         show => {
@@ -29,7 +29,7 @@ class Genome::ModelGroup::Command::Member::List {
 
 sub help_synopsis {
     return <<"EOS"
-genome model-group member list --model-group-id 21   
+genome model-group member list --model-group-id 21
 EOS
 }
 
@@ -37,8 +37,8 @@ sub help_brief {
     return "list the members of a model-group";
 }
 
-sub help_detail {                           
-    return <<EOS 
+sub help_detail {
+    return <<EOS
 List the member models for a model-group.
 EOS
 }
