@@ -386,7 +386,7 @@ my $hqp  = hqp($hqds);
     chomp $vev_file;
     my ($run,$lane,$id,$chrom,$extra) = ($vev_file =~ /^(.*?)\/([\d]+)_(\d+)\/([\dXY]+)_(.*)/);
     #print STDERR "looking up $run lane $lane ($id) in the database...\n";
-    #my $rl = GSC::RunLaneSolexa->get(run_name => $run, lane => $lane);
+    #my $rl = GSC RunLaneSolexa->get(run_name => $run, lane => $lane);
     #die "no lane for $run $lane!" unless $rl;
     #my $lib = $rl->library_name;
     my ($lib,@extra) = `sqlrun --instance warehouse "select library_name from solexa_lane_summary where run_name = '$run' and lane = $lane" --parse`;

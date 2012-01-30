@@ -428,10 +428,14 @@ sub files_ignored_by_diff { #all output files .. will differ slightly each time 
 }
 
 sub metrics_ignored_by_diff {
-    return ('assembly length', 'average contig length', 'average contig length gt 300',
-	    'average supercontig length', 'average supercontig length gt 300',
-	    'config_file', 'contigs', 'n50 contig length', 'n50 supercontig length',
-	    'n50_contig_length_gt_300', 'n50_supercontig_length_gt_300');
+    return (qw/
+        assembly_length
+        contigs_count contigs_length contigs_major_average_length contigs_major_count
+        contigs_major_length contigs_major_n50_length contigs_n50_length
+        contigs_average_length contigs_major_n50_count contigs_n50_count
+        supercontigs_average_length supercontigs_length supercontigs_major_average_length
+        supercontigs_major_length supercontigs_major_n50_length supercontigs_n50_length
+        /);
 }
 
 sub dirs_ignored_by_diff {

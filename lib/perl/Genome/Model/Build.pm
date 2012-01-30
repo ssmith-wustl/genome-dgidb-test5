@@ -293,11 +293,15 @@ sub _copy_model_inputs {
                     $params{name} = $input_name;
                 }
 
-                my $existing_input = $self->inputs(name => $input_name);
-                if ($existing_input) {
-                    my $existing_input_value = $existing_input->value;
-                    if ($existing_input_value && $existing_input_value->isa('Genome::Model::Build')) {
-                        die "Input with name $input_name already exists for build!";
+                my @existing_inputs = $self->inputs(name => $input_name);
+                if (@existing_inputs) {
+                    foreach my $existing_input (@existing_inputs) {
+                        my $existing_input_value = $existing_input->value;
+                        if ($existing_input_value 
+                            and $existing_input_value->isa('Genome::Model::Build')
+                            and $existing_input_value->model_id eq $input->value->id) {
+                            die "Input with name $input_name already exists for build!";
+                        }
                     }
                 }
 
@@ -1179,14 +1183,6 @@ sub fail {
     )
         or return;
 
-    # FIXME Don't know if this should go here, but then we would have to call success and abandon through the model
-    my $last_complete_build = $self->model->resolve_last_complete_build;
-    if ( $last_complete_build and $last_complete_build->id eq $self->id ) {
-        $self->error_message("Tried to resolve last complete build for model (".$self->model_id."), which should not return this build (".$self->id."), but did.");
-        # FIXME soon - return here
-        # return;
-    }
-
     for my $error (@errors) {
         $self->add_note(
             header_text => 'Failed Stage',
@@ -1273,19 +1269,6 @@ sub success {
     # TODO Reconsider this method name
     $self->perform_post_success_actions;
 
-    # FIXME Don't know if this should go here, but then we would have to call success and abandon through the model
-    my $last_complete_build = $self->model->resolve_last_complete_build;
-    unless ( $last_complete_build ) {
-        $self->error_message("Tried to resolve last complete build for model (".$self->model_id."), but no build was returned.");
-        # FIXME soon - return here
-        #return;
-    }
-    unless ( $last_complete_build->id eq $self->id ) {
-        $self->error_message("Tried to resolve last complete build for model (".$self->model_id."), which should return this build (".$self->id."), but returned another build (".$last_complete_build->id.").");
-        # FIXME soon - return here
-        #return;
-    }
-
     return 1;
 }
 
@@ -1341,14 +1324,6 @@ sub abandon {
 
     # Reallocate - always returns true (legacy behavior)
     $self->reallocate;
-
-    # FIXME Don't know if this should go here, but then we would have to call success and abandon through the model
-    my $last_complete_build = $self->model->resolve_last_complete_build;
-    if ( $last_complete_build and $last_complete_build->id eq $self->id ) {
-        $self->error_message("Tried to resolve last complete build for model (".$self->model_id."), which should not return this build (".$self->id."), but did.");
-        # FIXME soon - return here
-        # return;
-    }
 
     $self->_unregister_software_results
         or return;
@@ -1691,16 +1666,6 @@ sub delete {
         }
     }
 
-    # FIXME Don't know if this should go here, but then we would have to call success and abandon through the model
-    #  This works b/c the events are deleted prior to this call, so the model doesn't think this is a completed
-    #  build
-    my $last_complete_build = $self->model->resolve_last_complete_build;
-    if ( $last_complete_build and $last_complete_build->id eq $self->id ) {
-        $self->error_message("Tried to resolve last complete build for model (".$self->model_id."), which should not return this build (".$self->id."), but did.");
-        # FIXME soon - return here
-        # return;
-    }
-
     return $self->SUPER::delete;
 }
 
@@ -1955,42 +1920,51 @@ sub compare_output {
     }
 
     # Now compare metrics of both builds
+    my %metric_diffs = $self->diff_metrics($other_build);
+    @diffs{ keys %metric_diffs } = values %metric_diffs if %metric_diffs;
+
+    return %diffs;
+}
+
+sub diff_metrics {
+    my ($build1, $build2) = @_;
+
+    my %diffs;
     my %metrics;
-    map { $metrics{$_->name} = $_ } $self->metrics;
+    map { $metrics{$_->name} = $_ } $build1->metrics;
     my %other_metrics;
-    map { $other_metrics{$_->name} = $_ } $other_build->metrics;
+    map { $other_metrics{$_->name} = $_ } $build2->metrics;
 
     METRIC: for my $metric_name (sort keys %metrics) {
         my $metric = $metrics{$metric_name};
 
-        if ( grep { $metric_name =~ /$_/ } $self->metrics_ignored_by_diff ) {
+        if ( grep { $metric_name =~ /$_/ } $build1->metrics_ignored_by_diff ) {
             delete $other_metrics{$metric_name} if exists $other_metrics{$metric_name};
             next METRIC;
         }
 
         my $other_metric = delete $other_metrics{$metric_name};
         unless ($other_metric) {
-            $diffs{$metric_name} = "no build metric with name $metric_name found for build $other_build_id";
+            $diffs{$metric_name} = "no build metric with name $metric_name found for build ".$build2->id;
             next METRIC;
         }
 
         my $metric_value = $metric->value;
         my $other_metric_value = $other_metric->value;
         unless ($metric_value eq $other_metric_value) {
-            $diffs{$metric_name} = "metric $metric_name has value $metric_value for build $build_id and value " .
-            "$other_metric_value for build $other_build_id";
+            $diffs{$metric_name} = "metric $metric_name has value $metric_value for build ".$build1->id." and value " .
+            "$other_metric_value for build ".$build2->id;
             next METRIC;
         }
     }
 
     # Catch any extra metrics that the other build has
     for my $other_metric_name (sort keys %other_metrics) {
-        $diffs{$other_metric_name} = "no build metric with name $other_metric_name found for build $build_id";
+        $diffs{$other_metric_name} = "no build metric with name $other_metric_name found for build ".$build1->id;
     }
 
     return %diffs;
 }
-
 
 sub snapshot_revision {
     my $self = shift;
@@ -2167,9 +2141,14 @@ sub is_used_as_model_or_build_input {
     return (scalar @inputs) ? 1 : 0;
 }
 
+sub child_workflow_instances {
+    my $self = shift;
+    return $self->_get_workflow_instance_children($self->newest_workflow_instance);
+}
+
 sub child_lsf_jobs {
     my $self = shift;
-    my @workflow_instances = $self->_get_workflow_instance_children($self->newest_workflow_instance);
+    my @workflow_instances = $self->child_workflow_instances;
     return unless @workflow_instances;
     my @dispatch_ids = grep {defined $_} map($_->current->dispatch_identifier, @workflow_instances);
     my @valid_ids = grep {$_ !~ /^P/} @dispatch_ids;
@@ -2251,6 +2230,154 @@ sub _preprocess_subclass_description {
     $pp_data->{to} = 'processing_profile';
 
     return $desc;
+}
+
+sub heartbeat {
+    my $self = shift;
+    my %options = @_;
+
+    my $verbose = delete $options{verbose};
+
+    unless (grep { $self->status eq $_ } ('Running', 'Scheduled')) {
+        $self->status_message('Build is not running/scheduled.') if $verbose;
+        return;
+    }
+
+    my @wf_instances = ($self->newest_workflow_instance, $self->child_workflow_instances);
+    my @wf_instance_execs = map { $_->current } @wf_instances;
+
+    for my $wf_instance_exec (@wf_instance_execs) {
+        my $lsf_job_id = $wf_instance_exec->dispatch_identifier;
+        my $wf_instance_exec_status = $wf_instance_exec->status;
+        my $wf_instance_exec_id = $wf_instance_exec->execution_id;
+        unless ($lsf_job_id) {
+            next;
+        }
+        if ($lsf_job_id =~ /^P/) {
+            next;
+        }
+
+        if (grep { $wf_instance_exec_status eq $_ } ('new', 'done')) {
+            next;
+        }
+
+        my $bjobs_output = qx(bjobs -l $lsf_job_id 2> /dev/null | tr '\\n' '\\0' | sed -r -e 's/\\x0\\s{21}//g' -e 's/\\x0/\\n\\n/g');
+        chomp $bjobs_output;
+        unless($bjobs_output) {
+            $self->status_message('Expected bjobs output but received none.') if $verbose;
+            return;
+        }
+
+        my $lsf_status = $self->status_from_bjobs_output($bjobs_output);
+        if ($wf_instance_exec_status eq 'scheduled' && $lsf_status ne 'pend') {
+            $self->status_message("Workflow Instance Execution (ID: $wf_instance_exec_id) status ($wf_instance_exec_status) does not match LSF status ($lsf_status)") if $verbose;
+            return;
+        }
+        elsif ($wf_instance_exec_status eq 'scheduled' && $lsf_status eq 'pend') {
+            next;
+        }
+
+        if ($wf_instance_exec_status eq 'running' && $lsf_status ne 'run') {
+            $self->status_message("Workflow Instance Execution (ID: $wf_instance_exec_id) status ($wf_instance_exec_status) does not match LSF status ($lsf_status)") if $verbose;
+            return;
+        }
+
+        if ($wf_instance_exec_status eq 'crashed' && ($lsf_status eq 'done' || $lsf_status eq 'exit')) {
+            $self->status_message("Workflow Instance Execution (ID: $wf_instance_exec_id) crashed.");
+            return;
+        }
+
+        if ($wf_instance_exec_status ne 'running' || $lsf_status ne 'run') {
+            die "Missing state ($wf_instance_exec_status/$lsf_status) condition, only running/run should reach this point";
+        }
+
+        my @pids = $self->pids_from_bjobs_output($bjobs_output);
+        my $execution_host = $self->execution_host_from_bjobs_output($bjobs_output);
+        unless ($execution_host) {
+            $self->status_message('Expected execution host.') if $verbose;
+            return;
+        }
+        my $ps_cmd = "ssh $execution_host ps -o pid= -o stat= -p " . join(" -p ", @pids) . ' 2> /dev/null';
+        my @ps_output = qx($ps_cmd);
+        chomp(@ps_output);
+
+        if (@ps_output != @pids) {
+            $self->status_message('Expected ps output for' . @pids . ' PIDs.') if $verbose;
+            return;
+        }
+
+        for my $ps_output (@ps_output) {
+            my ($stat) = $ps_output =~ /\d+\s+(.*)/;
+            unless($stat =~ /^(R|S)/) {
+                $self->status_message('Expected PID to be in a R or S stat.') if $verbose;
+                return;
+            }
+        }
+    }
+
+    return 1;
+}
+
+sub status_from_bjobs_output {
+    my $self = shift;
+    my $bjobs_output = shift;
+    my ($status) = $bjobs_output =~ /Status <(.*?)>/;
+    unless ($status) {
+        die $self->error_message("Failed to parse status from bjobs output:\n$bjobs_output\n");
+    }
+    return lc($status);
+}
+
+sub pids_from_bjobs_output {
+    my $self = shift;
+    my $bjobs_output = shift;
+    my ($pids) = $bjobs_output =~ /PIDs:([\d\s]+)/;
+    unless ($pids) {
+        die $self->error_message("Failed to parse PIDs from bjobs output:\n$bjobs_output\n");
+    }
+    my @pids = $pids =~ /(\d+)/;
+    return @pids;
+}
+
+sub execution_host_from_bjobs_output {
+    my $self = shift;
+    my $bjobs_output = shift;
+    my ($execution_host) = $bjobs_output =~ /Started on <(.*?)>/;
+    unless ($execution_host) {
+        if ($bjobs_output =~ /Started on \d+ Hosts\/Processors </) {
+            $self->error_message("Not yet able to parse multiple execution hosts.");
+        } else {
+            die $self->error_message("Failed to parse execution host from bjobs output:\n$bjobs_output\n");
+        }
+    }
+    return $execution_host;
+}
+
+sub is_current {
+    my $self = shift;
+    my $model = $self->model;
+
+    my @build_inputs = $self->inputs;
+    my @model_inputs = $model->inputs;
+    unless ($model->_input_counts_are_ok(scalar(@model_inputs), scalar(@build_inputs))) {
+        return;
+    }
+
+    my ($model_inputs_not_found, $build_inputs_not_found) = $self->input_differences_from_model;
+    if (@$model_inputs_not_found || @$build_inputs_not_found) {
+        unless ($model->_input_differences_are_ok($model_inputs_not_found, $build_inputs_not_found)) {
+            return;
+        }
+    }
+
+    my @from_builds = $self->from_builds;
+    for my $from_build (@from_builds) {
+        unless ($from_build->is_current) {
+            return;
+        }
+    }
+
+    return 1;
 }
 
 1;

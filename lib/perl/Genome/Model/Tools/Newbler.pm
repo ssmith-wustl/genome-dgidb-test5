@@ -69,6 +69,17 @@ sub newb_metrics_file {
 }
 
 #< post assemble output files/dirs >#
+sub create_consed_edit_dir {
+    my $self = shift;
+
+    my $dir = $self->consed_edit_dir;
+    unless ( -d $dir ) {
+        Genome::Sys->create_directory($dir);
+    }
+
+    return 1;
+}
+
 sub consed_edit_dir {
     return $_[0]->assembly_directory.'/consed/edit_dir';
 }

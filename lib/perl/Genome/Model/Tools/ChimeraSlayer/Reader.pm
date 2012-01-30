@@ -40,9 +40,14 @@ sub read {
         next if not $line =~ s/^ChimeraSlayer\t//;
         chomp $line;
         my @tokens = split(/\t/, $line);
-        Carp::confess('Got '.@tokens.' fields, but expected '.@fields.' from chimera slayer line: '.$line) if @tokens != @fields;
+        Carp::confess( # need 10 or 12 fields
+            'Malformed chimera slayer line! Got '.@tokens.' fields, but expected 10 or '.@fields.' from chimera slayer line: '.$line
+        ) if @tokens != 10 and @tokens != @fields; # 10 or 12
         my %chimera;
         @chimera{@fields} = @tokens;
+        Carp::confess( # check verdict
+            'Malformed chimera slayer line! Verdict is expected to be YES or NO but is '.$chimera{verdict}.'. Line: '.$line
+        ) if not $chimera{verdict} or not grep { $chimera{verdict} eq $_ } (qw/ YES NO /);
         return \%chimera;
     }
 

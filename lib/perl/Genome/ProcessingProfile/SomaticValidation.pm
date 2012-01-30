@@ -44,6 +44,19 @@ class Genome::ProcessingProfile::SomaticValidation {
             is => 'Boolean', doc => 'include output plot in final results',
         },
 
+        loh_version => {
+            is => 'Text',
+            doc => 'Version of LOH to use. (LOH detection is not performed if not specified.)',
+        },
+        loh_snv_detection_strategy => {
+            is => 'Text',
+            doc => 'The detection to run on the control aligned reads for determining LOH',
+        },
+        tiering_version => {
+            is => 'Text',
+            doc => 'version of tiering BED files to use (tiering is not performed if not specified)',
+        },
+
         #RefCov parameters
         refcov_wingspan_values => {
             is => 'Text',
@@ -146,6 +159,14 @@ sub default_filenames{
     );
 
     return %default_filenames;
+}
+
+sub default_profile {
+    return __PACKAGE__->get(name => 'Dec 2011 default Somatic Validation Extension and Targeted Discovery');
+}
+
+sub default_single_bam_profile {
+    return __PACKAGE__->get(name => 'Dec 2011 Single-Bam Validation');
 }
 
 1;

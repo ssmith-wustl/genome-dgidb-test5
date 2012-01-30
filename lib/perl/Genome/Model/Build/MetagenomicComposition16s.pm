@@ -52,15 +52,6 @@ sub post_allocation_initialization {
     return $self->create_subdirectories;
 }
 
-sub create_subdirectories {
-    my $self = shift;
-    for my $dir ( $self->sub_dirs ) {
-        Genome::Sys->create_directory( $self->data_directory."/$dir" )
-            or return;
-    }
-    return 1;
-}
-
 sub validate_for_start_methods {
     my $self = shift;
     my @methods = $self->SUPER::validate_for_start_methods;
@@ -82,7 +73,6 @@ sub instrument_data_assigned {
     return @tags;
 }
 
-#< Description >#
 sub description {
     my $self = shift;
 
@@ -95,317 +85,63 @@ sub description {
     );
 }
 
-#< Amplicons >#
+#< Amplicon Sets >#
 sub amplicon_set_names {
     my $self = shift;
-    my $method = 'amplicon_set_names_and_primers_'.$self->processing_profile->sequencing_platform;
-    if ( $self->can( $method ) ) {
-        my %set_names_and_primers = $self->$method;
-        return sort keys %set_names_and_primers;
-    }
-    return ( '' );
+    my %set_names_and_primers = $self->amplicon_set_names_and_primers;
+    return sort keys %set_names_and_primers;
 }
 
 sub amplicon_set_names_and_primers {
     my $self = shift;
-    my $method = 'amplicon_set_names_and_primers_'.$self->processing_profile->sequencing_platform;
-    if ( $self->can( $method ) ) {
-        return $self->$method;
-    }
-    $self->warning_message( "No amplicon set primers for sequencing platform: ".$self->processing_profile->sequencing_platform );
-    return; 
-}
-
-sub amplicon_set_names_and_primers_454 {
-    return (
-        V1_V3 => [qw/
-            ATTACCGCGGCTGCTGG 
-        /],
-        V3_V5 => [qw/ 
-            CCGTCAATTCATTTAAGT
-            CCGTCAATTCATTTGAGT
-            CCGTCAATTCCTTTAAGT
-            CCGTCAATTCCTTTGAGT
-        /],
-        V6_V9 => [qw/
-            TACGGCTACCTTGTTACGACTT
-            TACGGCTACCTTGTTATGACTT
-            TACGGTTACCTTGTTACGACTT
-            TACGGTTACCTTGTTATGACTT
-        /],
-    );
-}
-
-sub amplicon_set_names_and_primers_solexa_new { #not yet implemented
-    return (
-        #GA[AG]TTTGATC[ACT]TGGCTCAG
-        'V1.F' => [qw/
-            GAATTTGATCATGGCTCAG
-            GAATTTGATCCTGGCTCAG
-            GAATTTGATCTTGGCTCAG
-            GAGTTTGATCATGGCTCAG
-            GAGTTTGATCCTGGCTCAG
-            GAGTTTGATCTTGGCTCAG
-        /],
-        #TTACT[AC]ACCC[GT]T[CGT]CGCC
-        'V1.R' => [qw/
-            TTACTAACCCGTCCGCC
-            TTACTCACCCGTCCGCC
-            TTACTAACCCTTCCGCC
-            TTACTCACCCTTCCGCC
-            TTACTAACCCGTGCGCC
-            TTACTCACCCGTGCGCC
-            TTACTAACCCTTGCGCC
-            TTACTCACCCTTGCGCC
-            TTACTAACCCGTTCGCC
-            TTACTCACCCGTTCGCC
-            TTACTAACCCTTTCGCC
-            TTACTCACCCTTTCGCC
-        /],
-        #GGCG[GAC]A[CA]GGGT[TG]AGTAA
-        'V2.F' => [qw/
-            GGCGGACGGGTTAGTAA
-            GGCGAACGGGTTAGTAA
-            GGCGCACGGGTTAGTAA
-            GGCGGAAGGGTTAGTAA
-            GGCGAAAGGGTTAGTAA
-            GGCGCAAGGGTTAGTAA
-            GGCGGACGGGTGAGTAA
-            GGCGAACGGGTGAGTAA
-            GGCGCACGGGTGAGTAA
-            GGCGGAAGGGTGAGTAA
-            GGCGAAAGGGTGAGTAA
-            GGCGCAAGGGTGAGTAA
-        /],
-        #CC[AGT]TTACC[CT]CACC[AT]ACTA
-        'V2.R' => [qw/
-            CCATTACCCCACCAACTA
-            CCGTTACCCCACCAACTA
-            CCTTTACCCCACCAACTA
-            CCATTACCTCACCAACTA
-            CCGTTACCTCACCAACTA
-            CCTTTACCTCACCAACTA
-            CCATTACCCCACCTACTA
-            CCGTTACCCCACCTACTA
-            CCTTTACCCCACCTACTA
-            CCATTACCTCACCTACTA
-            CCGTTACCTCACCTACTA
-            CCTTTACCTCACCTACTA
-        /],
-        #CCTACGG[AG][AGT]GGC[ACT]GCAG
-        'V3.F' => [qw/
-            CCTACGGAAGGCAGCAG
-            CCTACGGGAGGCAGCAG
-            CCTACGGAGGGCAGCAG
-            CCTACGGGGGGCAGCAG
-            CCTACGGATGGCAGCAG
-            CCTACGGGTGGCAGCAG
-            CCTACGGAAGGCCGCAG
-            CCTACGGGAGGCCGCAG
-            CCTACGGAGGGCCGCAG
-            CCTACGGGGGGCCGCAG
-            CCTACGGATGGCCGCAG
-            CCTACGGGTGGCCGCAG
-            CCTACGGAAGGCTGCAG
-            CCTACGGGAGGCTGCAG
-            CCTACGGAGGGCTGCAG
-            CCTACGGGGGGCTGCAG
-            CCTACGGATGGCTGCAG
-            CCTACGGGTGGCTGCAG
-        /],
-        #T[GT]ACCGC[AG]GCTGCTGGCAC
-        'V3.R' => [qw/
-            TGACCGCAGCTGCTGGCAC
-            TTACCGCAGCTGCTGGCAC
-            TGACCGCGGCTGCTGGCAC
-            TTACCGCGGCTGCTGGCAC
-        /],
-        #GTGCCAGCAGC[CT]GCGGT[AC]A
-        'V4.F' => [qw/
-            GTGCCAGCAGCCGCGGTAA
-            GTGCCAGCAGCTGCGGTAA
-            GTGCCAGCAGCCGCGGTTA
-            GTGCCAGCAGCTGCGGTTA
-        /],
-        #CG[GC]ATTTCAC[CT][GC]CTAC
-        'V4.R' => [qw/
-            CGGATTTCACCGCTAC
-            CGCATTTCACCGCTAC
-            CGGATTTCACTGCTAC
-            CGCATTTCACTGCTAC
-            CGGATTTCACCCCTAC
-            CGCATTTCACCCCTAC
-            CGGATTTCACTCCTAC
-            CGCATTTCACTCCTAC
-        /],
-        #C[AG]AAC[ACG]GGATTAGATACCC
-        'V5.F' => [qw/
-            CAAACAGGATTAGATACCC
-            CGAACAGGATTAGATACCC
-            CAAACCGGATTAGATACCC
-            CGAACCGGATTAGATACCC
-            CAAACGGGATTAGATACCC
-            CGAACGGGATTAGATACCC
-        /],
-        #CCCGTCAATT[CT][ACT]TTT[AG]AGT
-        'V5.R' => [qw/
-            CCCGTCAATTCATTTAAGT
-            CCCGTCAATTTATTTAAGT
-            CCCGTCAATTCCTTTAAGT
-            CCCGTCAATTTCTTTAAGT
-            CCCGTCAATTCTTTTAAGT
-            CCCGTCAATTTTTTTAAGT
-            CCCGTCAATTCATTTGAGT
-            CCCGTCAATTTATTTGAGT
-            CCCGTCAATTCCTTTGAGT
-            CCCGTCAATTTCTTTGAGT
-            CCCGTCAATTCTTTTGAGT
-            CCCGTCAATTTTTTTGAGT
-        /],
-        #A[CA][GA]CGA[AG]GAACCTTACC
-        'V6.F' => [qw/
-            ACGCGAAGAACCTTACC
-            AAGCGAAGAACCTTACC
-            ACACGAAGAACCTTACC
-            AAACGAAGAACCTTACC
-            ACGCGAGGAACCTTACC
-            AAGCGAGGAACCTTACC
-            ACACGAGGAACCTTACC
-            AAACGAGGAACCTTACC
-        /],
-        #AC[AG][AG]CACGAGCTG[AT]CGAC
-        'V6.R' => [qw/
-            ACAACACGAGCTGACGAC
-            ACGACACGAGCTGACGAC
-            ACAGCACGAGCTGACGAC
-            ACGGCACGAGCTGACGAC
-            ACAACACGAGCTGGCGAC
-            ACGACACGAGCTGGCGAC
-            ACAGCACGAGCTGGCGAC
-            ACGGCACGAGCTGGCGAC
-        /],
-        #[GT][CT]AACGAGCGCAACCCTT
-        'V7.F' => [qw/
-            GCAACGAGCGCAACCCTT
-            TCAACGAGCGCAACCCTT
-            GTAACGAGCGCAACCCTT
-            TTAACGAGCGCAACCCTT
-        /],
-        #CGTC[AG]TCC[CT]C[AT]CCTTCC
-        'V7.R' => [qw/
-            CGTCATCCCCACCTTCC
-            CGTCGTCCCCACCTTCC
-            CGTCATCCTCACCTTCC
-            CGTCGTCCTCACCTTCC
-            CGTCATCCCCTCCTTCC
-            CGTCGTCCCCTCCTTCC
-            CGTCATCCTCTCCTTCC
-            CGTCGTCCTCTCCTTCC
-        /],
-        #CTA[Cg]A[Ca]ACG[Tc]GCTACAATG
-        'V8.F' => [qw/
-            CTACACACGTGCTACAATG
-            CTAGACACGTGCTACAATG
-            CTACAAACGTGCTACAATG
-            CTAGAAACGTGCTACAATG
-            CTACACACGCGCTACAATG
-            CTAGACACGCGCTACAATG
-            CTACAAACGCGCTACAATG
-            CTAGAAACGCGCTACAATG
-        /],
-        #CCG[AG]GAACGTATTCAC[GC]
-        'V8.R' => [qw/
-            CCGAGAACGTATTCACG
-            CCGGGAACGTATTCACG
-            CCGAGAACGTATTCACC
-            CCGGGAACGTATTCACC
-        /],
-        #CGTTC[CT]CGGG[CT]CTTGTAC
-        #[GC]GTGAATACGTTC[CT]CGG
-        'V9.F' => [qw/
-            CGTTCCCGGGCCTTGTAC
-            CGTTCTCGGGCCTTGTAC
-            CGTTCCCGGGTCTTGTAC
-            CGTTCTCGGGTCTTGTAC
-
-            GGTGAATACGTTCCCGG
-            CGTGAATACGTTCCCGG
-            GGTGAATACGTTCTCGG
-            CGTGAATACGTTCTCGG
-        /],
-        #CGG[CT]TACCTTGTTA[CT]GACTT
-        'V9.R' => [qw/
-            CGGCTACCTTGTTACGACTT
-            CGGTTACCTTGTTACGACTT
-            CGGCTACCTTGTTATGACTT
-            CGGTTACCTTGTTATGACTT
-        /],
-    );
+    my $sequencing_platform = $self->processing_profile->sequencing_platform;
+    return Genome::Model::Build::MetagenomicComposition16s::SetNamesAndPrimers->set_names_and_primers_for($sequencing_platform);
 }
 
 sub amplicon_sets {
     my $self = shift;
 
+    my %amplicon_set_names_and_primers = $self->amplicon_set_names_and_primers;
     my @amplicon_sets;
-    for my $set_name ( $self->amplicon_set_names ) {
-        my $amplicon_set;
-        if ( $self->sequencing_platform eq 'sanger' ) { #TODO - make it so it auto recognizes sanger
-            my $cmd = Genome::Model::MetagenomicComposition16s::Command::ProcessSangerInstrumentData->create(build => $self);
-            $amplicon_set = $cmd->amplicon_set_for_name( $set_name );
-        } else {
-            $amplicon_set = $self->amplicon_set_for_name($set_name); #call command for sanger
-        }
-        next unless $amplicon_set; # undef ok, dies on error
-        push @amplicon_sets, $amplicon_set;
+    for my $set_name ( sort { $a cmp $b } keys %amplicon_set_names_and_primers ) {
+        push @amplicon_sets, Genome::Model::Build::MetagenomicComposition16s::AmpliconSet->create(
+            name => $set_name,
+            primers => $amplicon_set_names_and_primers{$set_name},
+            file_base_name => $self->file_base_name,
+            directory => $self->data_directory,
+            classifier => $self->classifier,
+        );
     }
 
-    unless ( @amplicon_sets ) { # bad
+    unless ( @amplicon_sets ) {
         $self->error_message("No amplicon sets found for ".$self->description);
         return;
     }
 
     return @amplicon_sets;
 }
-
-sub amplicon_set_for_name {
-    my ($self, $set_name) = @_;
-
-    Carp::confess('No amplicon set name to get amplicon iterator') if not defined $set_name;
-
-    my %params = (
-        name => $set_name,
-        classification_dir => $self->classification_dir,
-        classification_file => $self->classification_file_for_set_name($set_name),
-        processed_fasta_file => $self->processed_fasta_file_for_set_name($set_name),
-        processed_qual_file => $self->processed_qual_file_for_set_name($set_name),
-        oriented_fasta_file => $self->oriented_fasta_file_for_set_name($set_name),
-        oriented_qual_file => $self->oriented_qual_file_for_set_name( $set_name ),
-    );
-    
-    return Genome::Model::Build::MetagenomicComposition16s::AmpliconSet->create(%params);
-}
-
-sub get_writer_for_set_name {
-    my ($self, $set_name) = @_;
-
-    unless ( $self->{$set_name} ) {
-        my $fasta_file = $self->processed_fasta_file_for_set_name($set_name);
-        unlink $fasta_file if -e $fasta_file;
-        my $writer = Genome::Model::Tools::Sx::PhredWriter->create(file => $fasta_file);
-        Carp::confess("Failed to create phred reader for amplicon set ($set_name)") if not $writer;
-        $self->{$set_name} = $writer;
-    }
-
-    return $self->{$set_name};
-}
-
+#<>#
 
 #< Dirs >#
-sub sub_dirs {
+sub create_subdirectories {
     my $self = shift;
-    my @sub_dirs = (qw| classification fasta reports |);
-    push @sub_dirs, (qw/ chromat_dir edit_dir /) if $self->sequencing_platform eq 'sanger';
-    return @sub_dirs;
+    my @methods = (qw| classification_dir fasta_dir reports_dir |);
+    push @methods, (qw/ chimera_dir /) if $self->processing_profile->chimera_detector;
+    push @methods, (qw/ chromat_dir edit_dir /) if $self->sequencing_platform eq 'sanger';
+    for my $method ( @methods ) {
+        my $directory =  $self->$method;
+        my $create_directory = eval{ Genome::Sys->create_directory($directory); };
+        if ( not $create_directory or not -d $directory ) {
+            $self->error_message($@) if $@;
+            $self->error_message('Failed to create directory: '.$directory);
+            return;
+        }
+    }
+    return 1;
+}
+
+sub chimera_dir {
+    return $_[0]->data_directory.'/chimera';
 }
 
 sub classification_dir {
@@ -427,104 +163,26 @@ sub edit_dir {
 sub chromat_dir {
     return $_[0]->data_directory.'/chromat_dir';
 }
+#<>#
 
 #< Files >#
 sub file_base_name {
     return Genome::Utility::Text::sanitize_string_for_filesystem( $_[0]->subject_name );
 }
 
-sub _files_for_amplicon_sets {
-    my ($self, $type) = @_;
-    die "No type given to get files for ".$self->description unless defined $type;
-    my $method = $type.'_file_for_set_name';
-    return grep { -s } map { $self->$method($_) } $self->amplicon_set_names;
-}
-
-sub _fasta_file_for_type_and_set_name {
-    my ($self, $type, $set_name) = @_;
-
-    # Sanity check - should not happen
-    die "No type given to get fasta (qual) file for ".$self->description unless defined $type;
-    die "No set name given to get $type fasta (qual) file for ".$self->description unless defined $set_name;
-    
-    return sprintf(
-        '%s/%s%s.%s.fasta',
-        $self->fasta_dir,
-        $self->file_base_name,
-        ( $set_name eq '' ? '' : ".$set_name" ),
-        $type,
-    );
-}
-
-sub _qual_file_for_type_and_set_name{
-    my ($self, $type, $set_name) = @_;
-    return $self->_fasta_file_for_type_and_set_name($type, $set_name).'.qual';
-}
-
 sub combined_input_fasta_file {
     return $_[0]->fasta_dir.'/'.$_[0]->file_base_name.'.'.'input.fasta';
 }
 
-# sanger files
-sub raw_reads_fasta_file {
-    return $_[0]->fasta_dir.'/'.$_[0]->file_base_name.'.reads.raw.fasta';
-}
-
-sub raw_reads_qual_file {
-    return $_[0]->raw_reads_fasta_file.'.qual';
-}
-
-sub reads_fasta_file_for_amplicon { 
-    my ($self, $amplicon) = @_;
-    return $self->edit_dir.'/'.$amplicon->{name}.'.fasta';
-}
-
-sub reads_qual_file_for_amplicon {
-    return reads_fasta_file_for_amplicon(@_).'.qual';
-}
-
-sub ace_file_for_amplicon { 
-    my ($self, $amplicon) = @_;
-    return $self->edit_dir.'/'.$amplicon->{name}.'.fasta.ace';
-}
-sub scfs_file_for_amplicon {
-    my ($self, $amplicon) = @_;
-    return $self->edit_dir.'/'.$amplicon->{name}.'.scfs';
-}
-
-sub create_scfs_file_for_amplicon {
-    my ($self, $amplicon) = @_;
-
-    my $scfs_file = $self->scfs_file_for_amplicon($amplicon);
-    unlink $scfs_file if -e $scfs_file;
-    my $scfs_fh = Genome::Sys->open_file_for_writing($scfs_file)
-        or return;
-    for my $scf ( @{$amplicon->{reads}} ) { 
-        $scfs_fh->print("$scf\n");
-    }
-    $scfs_fh->close;
-
-    if ( -s $scfs_file ) {
-        return $scfs_file;
-    }
-    else {
-        unlink $scfs_file;
-        return;
-    }
-}
-
-# processsed
 sub processed_fasta_file { # returns them as a string (legacy)
     return join(' ', $_[0]->processed_fasta_files);
 }
 
 sub processed_fasta_files {
-    return $_[0]->_files_for_amplicon_sets('processed_fasta');
-}
-
-sub processed_fasta_file_for_set_name {
-    my ($self, $set_name) = @_;
-    return $self->_fasta_file_for_type_and_set_name('processed', $set_name);
+    my $self = shift;
+    my @amplicon_sets = $self->amplicon_sets;
+    return if not @amplicon_sets;
+    return map { $_->processed_fasta_file } @amplicon_sets;
 }
 
 sub processed_qual_file { # returns them as a string (legacy)
@@ -532,23 +190,10 @@ sub processed_qual_file { # returns them as a string (legacy)
 }
 
 sub processed_qual_files {
-    return $_[0]->_files_for_amplicon_sets('processed_qual');
+    my $self = shift;
+    return map { $_->processed_qual_file } $self->amplicon_sets;
 }
 
-sub processed_qual_file_for_set_name {
-    my ($self, $set_name) = @_;
-    return $self->processed_fasta_file_for_set_name($set_name).'.qual';
-}
-
-sub processed_reads_fasta_file { #sanger
-    return $_[0]->fasta_dir.'/'.$_[0]->file_base_name.'.reads.processed.fasta';
-}
-
-sub processed_reads_qual_file { #sanger
-    return $_[0]->processed_reads_fasta_file.'.qual';
-}
-
-# original/unprocessed file .. maybe name it unprocessed
 sub combined_original_fasta_file {
     my $self = shift;
     return sprintf(
@@ -573,18 +218,13 @@ sub combined_original_fastq_file {
     );
 }
 
-# oriented
 sub oriented_fasta_file { # returns them as a string
     return join(' ', $_[0]->oriented_fasta_files);
 }
 
 sub oriented_fasta_files {
-    return $_[0]->_files_for_amplicon_sets('oriented_fasta');
-}
-
-sub oriented_fasta_file_for_set_name {
-    my ($self, $set_name) = @_;
-    return $self->_fasta_file_for_type_and_set_name('oriented', $set_name);
+    my $self = shift;
+    return map { $_->oriented_fasta_file } $self->amplicon_sets;
 }
 
 sub oriented_qual_file { # returns them as a string (legacy)
@@ -592,26 +232,24 @@ sub oriented_qual_file { # returns them as a string (legacy)
 }
 
 sub oriented_qual_files {
-    return $_[0]->_files_for_amplicon_sets('oriented_qual');
+    my $self = shift;
+    return map { $_->oriented_qual_file } $self->amplicon_sets;
 }
 
-sub oriented_qual_file_for_set_name {
-    my ($self, $set_name) = @_;
-    return $self->oriented_fasta_file_for_set_name($set_name).'.qual';
-}
-
-# classification
 sub classification_files_as_string {
     return join(' ', $_[0]->classification_files);
 }
 
 sub classification_files {
-    return $_[0]->_files_for_amplicon_sets('classification');
+    my $self = shift;
+    return map { $_->classification_file } $self->amplicon_sets;
 }
+#<>#
 
 #< Prepare instrument data >#
 sub prepare_instrument_data {
     my $self = shift;
+    $self->status_message('Prepare instrument data...');
 
     #call a separate command for sanger
     if ( $self->sequencing_platform eq 'sanger' ) {
@@ -626,6 +264,7 @@ sub prepare_instrument_data {
     }
 
     my @instrument_data = $self->instrument_data;
+    $self->status_message('Instrument data count: '.@instrument_data);
     unless ( @instrument_data ) {
         $self->error_message("No instrument data found for ".$self->description);
         return;
@@ -642,31 +281,35 @@ sub prepare_instrument_data {
     }
 
     my @cmd_parts = ( 'gmt sx rm-desc' );
-    my @output;
-    if ( my %primers = $self->amplicon_set_names_and_primers ) {
-        my @primers;
-        for my $set_name ( keys %primers ) {
-            for my $primer ( @{$primers{$set_name}} ) {
-                push @primers, $set_name.'='.$primer;
-            }
-            my $root_set_name = $set_name;
-            $root_set_name =~ s/\.[FR]$//; #strip off .F/.R for paired sets
-            my $fasta_file = $self->processed_fasta_file_for_set_name($root_set_name);
-            my $qual_file = $self->processed_qual_file_for_set_name($root_set_name);
-            unlink $fasta_file, $fasta_file;
-            push @output, 'name='.$root_set_name.':file='.$fasta_file.':qual_file='.$qual_file.':type=phred';
+    my @amplicon_sets = $self->amplicon_sets;
+    my (@output, @primers);
+    for my $amplicon_set ( @amplicon_sets ) {
+        my @set_primers = $amplicon_set->primers;
+        for my $primer ( @set_primers ) {
+            push @primers, $amplicon_set->name.'='.$primer;
         }
-        my $none_fasta_file = $self->processed_fasta_file_for_set_name('none');
-        my $none_qual_file = $self->processed_qual_file_for_set_name( 'none' );
+        my $root_set_name = $amplicon_set->name;
+        $root_set_name =~ s/\.[FR]$//; #strip off .F/.R for paired sets
+        my $fasta_file = $amplicon_set->processed_fasta_file;
+        my $qual_file = $amplicon_set->processed_qual_file;
+        unlink $fasta_file, $fasta_file;
+        my $output = 'file='.$fasta_file.':qual_file='.$qual_file.':type=phred';
+        $output .= ':name='.$root_set_name if @set_primers;
+        push @output, $output;
+    }
+
+    if ( @primers ) {
+        my $none_amplicon_set = Genome::Model::Build::MetagenomicComposition16s::AmpliconSet->create(
+            name => 'none',
+            directory => $self->data_directory,
+            file_base_name => $self->file_base_name,
+            classifier => $self->classifier,
+        );
+        my $none_fasta_file = $none_amplicon_set->processed_fasta_file;
+        my $none_qual_file = $none_amplicon_set->processed_qual_file;
         unlink $none_fasta_file, $none_qual_file;
         push @output, 'name=discard:file='.$none_fasta_file.':qual_file='.$none_qual_file.':type=phred';
         push @cmd_parts, 'gmt sx bin by-primer --remove --primers '.join(',', @primers);
-    }
-    else {
-        my $processed_fasta_file = $self->processed_fasta_file_for_set_name('');
-        my $processed_qual_file = $self->processed_qual_file_for_set_name('');
-        unlink $processed_fasta_file, $processed_qual_file;
-        push @output, 'file='.$processed_fasta_file.':qual_file='.$processed_qual_file.':type=phred'; 
     }
 
     #add amplicon processing sx commands
@@ -686,27 +329,28 @@ sub prepare_instrument_data {
 
     # Create, execute, check return
     my $cmd = join(' | ', @cmd_parts);
+    $self->status_message('Run SX...');
+    $self->status_message("SX comand: $cmd");
     my $rv = eval{ Genome::Sys->shellcmd(cmd => $cmd); };
     if ( not $rv ) {
         $self->error_message('Failed to run sx command to create amplicon files.');
         return;
     }
-
-    $self->status_message('DONE processing original fasta file');
+    $self->status_message('Run SX...OK');
 
     # Rm empty output files
-    if ( my %primers = $self->amplicon_set_names_and_primers ) {
-        for my $set_name ( keys %primers ) {
-            my $fasta_file = $self->processed_fasta_file_for_set_name($set_name);
-            my $sz = -s $fasta_file;
-            unlink $fasta_file if not $sz or $sz == 0;
-            my $qual_file = $self->processed_qual_file_for_set_name( $set_name );
-            my $qual_sz = -s $qual_file;
-            unlink $qual_file if not $qual_sz or $qual_sz == 0;
+    $self->status_message('Remove empty otuput files...');
+    for my $amplicon_set ( @amplicon_sets ) {
+        for my $file_method (qw/ processed_fasta_file processed_qual_file /) {
+            my $file = $amplicon_set->$file_method;
+            my $sz = -s $file;
+            unlink $file if not $sz or $sz == 0;
         }
     }
+    $self->status_message('Remove empty otuput files...OK');
 
     # Set metrics
+    $self->status_message('Get metrics...');
     my $input_metrics = Genome::Model::Tools::Sx::Metrics->read_from_file($input_metrics_file);
     if ( not $input_metrics ) {
         $self->error_message('Failed to get metrcis from file: '.$input_metrics_file);
@@ -723,6 +367,7 @@ sub prepare_instrument_data {
     }
     my $processed = $output_metrics->count;
     $processed = 0 if not defined $processed;
+    $self->status_message('Get metrics...OK');
 
     $self->amplicons_attempted($attempted);
     $self->amplicons_processed($processed);
@@ -737,7 +382,6 @@ sub prepare_instrument_data {
     $self->status_message('Success:    '.($self->amplicons_processed_success * 100).'%');
 
     $self->status_message('Prepare instrument data...OK');
-
     return 1;
 }
 
@@ -825,69 +469,109 @@ sub append_fastq_to_orig_fastq_file {
     return 1;
 }
 
-sub fasta_and_qual_reader_for_type_and_set_name {
-    my ($self, $type, $set_name) = @_;
-    
-    # Sanity checks - should not happen
-    die "No type given to get fasta and qual reader" unless defined $type;
-    die "Invalid type ($type) given to get fasta and qual reader" unless grep { $type eq $_ } (qw/ processed oriented /);
-    die "No set name given to get $type fasta and qual reader for set name ($set_name)" unless defined $set_name;
+#< Remove Chimeras >#
+sub detect_and_remove_chimeras {
+    my $self = shift;
+    $self->status_message('Detect and remove chimeras...');
 
-    # Get method and fasta file
-    my $fasta_method = $type.'_fasta_file_for_set_name';
-    my $fasta_file = $self->$fasta_method($set_name);
-    my $qual_method = $type.'_qual_file_for_set_name';
-    my $qual_file = $self->$qual_method($set_name);
-
-    return unless -e $fasta_file and -e $qual_file; # ok
-    my %params = (
-        file => $fasta_file,
-        qual_file => $qual_file,
-    );
-    my $reader =  Genome::Model::Tools::Sx::PhredReader->create(%params);
-    if ( not  $reader ) {
-        $self->error_message("Failed to create phred reader for $type fasta file and amplicon set name ($set_name) for ".$self->description);
+    my $attempted = $self->amplicons_attempted;
+    if ( not defined $attempted ) {
+        $self->error_message('No value for amplicons attempted set. Cannot remove chimeras!');
         return;
     }
 
-    return $reader;
-}
-
-sub fasta_and_qual_writer_for_type_and_set_name {
-    my ($self, $type, $set_name) = @_;
-
-    # Sanity checks - should not happen
-    die "No type given to get fasta and qual writer" unless defined $type;
-    die "Invalid type ($type) given to get fasta and qual writer" unless grep { $type eq $_ } (qw/ processed oriented /);
-    die "No set name given to get $type fasta and qual writer for set name ($set_name)" unless defined $set_name;
-
-    # Get method and fasta file
-    my $fasta_method = $type.'_fasta_file_for_set_name';
-    my $fasta_file = $self->$fasta_method($set_name);
-    my $qual_method = $type.'_qual_file_for_set_name';
-    my $qual_file = $self->$qual_method($set_name);
-
-    # Remove existing files if there
-    unlink $fasta_file, $qual_file;
-    my %params = ( 
-        file => $fasta_file,
-        qual_file => $qual_file,
-    );
-
-    # Create writer, return
-    my $writer =  Genome::Model::Tools::Sx::PhredWriter->create(%params);
-    unless ( $writer ) {
-        $self->error_message("Can't create phred writer for $type fasta file and amplicon set name ($set_name) for ".$self->description);
+    my @amplicon_sets = $self->amplicon_sets;
+    if ( not @amplicon_sets ) {
+        $self->error_message('No amplicon sets for '.$self->description);
         return;
     }
 
-    return $writer;
+    $self->status_message('Chimera detector: '.$self->processing_profile->chimera_detector);
+    $self->status_message('Chimera detector params: '.$self->processing_profile->chimera_detector_params);
+    my $detector = $self->processing_profile->chimera_detector;
+    my $chimera_reader_class = 'Genome::Model::Tools::'.Genome::Utility::Text::string_to_camel_case(join(' ', split('-', $detector))).'::Reader';
+
+    my %metrics = ( input => 0, output => 0, );
+    for my $amplicon_set ( @amplicon_sets ) {
+        my $processed_fasta = $amplicon_set->processed_fasta_file;
+        next if not -s $processed_fasta;
+        $self->status_message('Amplicon set'.($amplicon_set->name ? ' '.$amplicon_set->name : ''));
+
+        # DETECT
+        $self->status_message('Detect chimeras...');
+        my $processed_fasta_base_name = File::Basename::basename($processed_fasta);
+        my $sequences = $amplicon_set->chimera_dir.'/'.$processed_fasta_base_name;
+        symlink($processed_fasta, $sequences);
+        if ( not -s $sequences ) {
+            $self->error_message("Failed to link processed fasta ($processed_fasta) to chimera dir!");
+            return;
+        }
+        my $chimera_file = $amplicon_set->chimera_file;
+        my $cmd = "gmt $detector detect-chimeras --sequences $sequences --chimeras $chimera_file ".$self->processing_profile->chimera_detector_params;
+        $self->status_message('Detect chimeras command: '.$cmd);
+        my $rv = eval{ Genome::Sys->shellcmd(cmd => $cmd); };
+        if ( not $rv ) {
+            $self->error_message($@) if $@;
+            $self->error_message('Failed to detect chimeras!');
+            return;
+        }
+        $self->status_message('Detect chimeras...OK');
+
+        $self->status_message('Remove chimeras...');
+        my $reader = $amplicon_set->seq_reader_for('processed');
+        if ( not $reader ) {
+            $self->error_message('Failed to get processed seq reader!');
+            return;
+        }
+
+        my $chimera_reader = $chimera_reader_class->create(input => $chimera_file);
+        if ( not $chimera_reader ) {
+            $self->error_message('Failed to get chimera reader!');
+            return;
+        }
+
+        my $writer = $amplicon_set->seq_writer_for('chimera_free');
+        if ( not $writer ) {
+            $self->error_message('Failed to get chimera free seq writer!');
+            return;
+        }
+
+        my $chimera = $chimera_reader->read;
+        while ( my $seq = $reader->read ) {
+            $metrics{input}++;
+            if ( $chimera and $seq->{id} eq $chimera->{id} ) {
+                my $verdict = $chimera->{verdict}; # store verdict
+                $chimera = $chimera_reader->read; # get next chimera
+                next if $verdict eq 'YES'; # do not write seq if it is a chimera
+            }
+            $metrics{output}++;
+            $writer->write($seq);
+        }
+        $self->status_message('Remove chimeras...OK');
+    }
+
+    my $amplicons_processed = $self->amplicons_processed;
+    if ( $amplicons_processed != $metrics{input} ) {
+        $self->error_message("Amplicons processed ($amplicons_processed) and amplicons put through chimera detection ($metrics{input}) do not match!");
+        return;
+    }
+
+    my $amplicons_chimeric = $metrics{input} - $metrics{output};
+    $self->amplicons_chimeric($amplicons_chimeric);
+    $self->amplicons_chimeric_percent( sprintf('%.2f', $amplicons_chimeric / $amplicons_processed) );
+
+    $self->status_message('Processed:        '.$self->amplicons_processed);
+    $self->status_message('Chimeric:         '.$self->amplicons_chimeric);
+    $self->status_message('Chimeric percent: '.($self->amplicons_chimeric_percent * 100).'%');
+
+    $self->status_message('Detect and remove chimeras...OK');
+    return 1;
 }
+#<>#
 
 #< Orient >#
 sub orient_amplicons {
     my $self = shift;
-
     $self->status_message('Orient amplicons...');
 
     my $amplicons_classified = $self->amplicons_classified;
@@ -902,13 +586,16 @@ sub orient_amplicons {
     }
 
     my @amplicon_sets = $self->amplicon_sets;
-    return if not @amplicon_sets;
+    if ( not @amplicon_sets ) {
+        $self->error_message('No amplicon sets for '.$self->description);
+        return;
+    }
 
     my $no_classification = 0;
     for my $amplicon_set ( @amplicon_sets ) {
         next if not $amplicon_set->amplicon_iterator;
-        my $writer = $self->fasta_and_qual_writer_for_type_and_set_name('oriented', $amplicon_set->name)
-            or return;
+        my $writer = $amplicon_set->seq_writer_for('oriented');
+        return if not $writer;
 
         while ( my $amplicon = $amplicon_set->next_amplicon ) {
             my $seq = $amplicon->{seq};
@@ -939,29 +626,8 @@ sub orient_amplicons {
 }
 
 #< Classify >#
-sub classification_file_for_set_name {
-    my ($self, $set_name) = @_;
-    
-    die "No set name given to get classification file for ".$self->description unless defined $set_name;
-
-    my $classifier = $self->classifier;
-    my %classifier_params = $self->processing_profile->classifier_params_as_hash;
-    if ( $classifier_params{version} ) {
-        $classifier .= $classifier_params{version};
-    }
-
-    return sprintf(
-        '%s/%s%s.%s',
-        $self->classification_dir,
-        $self->file_base_name,
-        ( $set_name eq '' ? '' : ".$set_name" ),
-        lc($classifier),
-    );
-}
-
 sub classify_amplicons {
     my $self = shift;
-
     $self->status_message('Classify amplicons...');
 
     my $attempted = $self->amplicons_attempted;
@@ -970,9 +636,9 @@ sub classify_amplicons {
         return;
     }
 
-    my @amplicon_set_names = $self->amplicon_set_names;
-    if ( not @amplicon_set_names ) {
-        $self->error_message('No amplicon set names for '.$self->description);
+    my @amplicon_sets = $self->amplicon_sets;
+    if ( not @amplicon_sets ) {
+        $self->error_message('No amplicon sets for '.$self->description);
         return;
     }
 
@@ -1000,12 +666,10 @@ sub classify_amplicons {
 
     my %metrics;
     @metrics{qw/ attempted success error total /} = (qw/ 0 0 0 0 /);
-    for my $name ( @amplicon_set_names ) {
-        my $amplicon_set = $self->amplicon_set_for_name($name);
-        next if not $amplicon_set;
-
-        my $fasta_file = $amplicon_set->processed_fasta_file;
-        next if not -s $fasta_file;
+    for my $amplicon_set ( @amplicon_sets ) {
+        my %inputs = $amplicon_set->amplicon_iterator_input_fasta_and_qual;
+        my $fasta_file = $inputs{file};
+        next if not $fasta_file or not -s $fasta_file;
 
         my $classification_file = $amplicon_set->classification_file;
         unlink $classification_file if -e $classification_file;
@@ -1182,41 +846,6 @@ sub calculate_estimated_kb_usage_sanger {
 }
 
 
-#< instrument data processing >#
-sub fastqs_from_solexa {
-    my ( $self, $inst_data ) = @_;
-
-    my @fastq_files;
-
-    if ( $inst_data->bam_path ) { #fastq from bam
-        $self->error_message("Bam file is zero size or does not exist: ".$inst_data->bam_path ) and return
-            if not -s $inst_data->bam_path;
-        my $temp_dir = Genome::Sys->create_temp_directory;
-        @fastq_files = $inst_data->dump_fastqs_from_bam( directory => $temp_dir );
-        $self->status_message( "Got fastq files from bam: ".join( ', ', @fastq_files ) );
-    }
-    elsif ( $inst_data->archive_path ) { #dump fastqs from archive
-        $self->error_message( "Archive file is missing or is zero size: ".$inst_data->archive_path ) and return
-            if not -s $inst_data->archive_path;
-        my $temp_dir = Genome::Sys->create_temp_directory;
-        my $tar_cmd = "tar zxf " . $inst_data->archive_path ." -C $temp_dir";
-        $self->status_message( "Running tar: $tar_cmd" );
-        unless ( Genome::Sys->shellcmd( cmd => $tar_cmd ) ) {
-            $self->error_message( "Failed to dump fastq files from archive path using cmd: $tar_cmd" );
-            return;
-        }
-        @fastq_files = glob $temp_dir .'/*';
-        $self->status_message( "Got fastq files from archive path: ".join (', ', @fastq_files) );
-    }
-    else {
-        $self->error_message( "Could not get neither bam_path nor archive path for instrument data: ".$inst_data->id );
-        return; #die here
-    }
-
-    return @fastq_files;
-}
-
-
 #< Diff >#
 sub dirs_ignored_by_diff {
     return (qw{
@@ -1281,6 +910,7 @@ sub diff_rdp {
 
     return 1;
 }
+#<>#
 
 1;
 

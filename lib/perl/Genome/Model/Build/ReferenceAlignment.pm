@@ -410,7 +410,7 @@ sub get_indels_vcf {
 
 sub get_snvs_vcf {
     my $self = shift;
-    return $self->variants_directory . "/snvs.vcf";
+    return $self->variants_directory . "/snvs.vcf.gz";
 }
 
 sub calculate_estimated_kb_usage {

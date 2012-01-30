@@ -1,6 +1,6 @@
 package Genome::Site::WUGC::PopulationGroup;
 
-# Adaptor for GSC::PopulationGroup
+# Adaptor for GSC PopulationGroup
 
 # Do NOT use this module from anything in the GSC schema,
 # though the converse will work just fine.

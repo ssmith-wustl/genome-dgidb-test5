@@ -28,9 +28,13 @@ class Genome::Model::Build::Set::View::Status::Xml {
                             aspects => [
                                 'genome_model_id',
                                 'name',
-                                'subject_id',
-                                'subject_class_name',
-                                'is_default',
+                                {
+                                    name => 'subject',
+                                    aspects => ['id','name','subclass_name'],
+                                    perspective => 'default',
+                                    toolkit => 'xml',
+                                    subject_class_name => 'Genome::Subject',
+                                },
                                 'creation_date',
                                 'user_name',
                             ],

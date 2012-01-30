@@ -303,6 +303,13 @@
               </td>
             </tr>
 
+            <tr>
+              <td class="name">status:
+              </td>
+              <td class="value"><xsl:value-of select="aspect[@name='status']/value"/>
+              </td>
+            </tr>
+
             <xsl:choose>
               <xsl:when test="aspect[@name='last_complete_build']/object">
 
@@ -407,27 +414,6 @@
                 <!-- <xsl:if test="not(string(aspect[@name='subject_name']/value))"> -->
                 <!--   <br/><span class="small">(subject_name unspecified)</span> -->
                 <!-- </xsl:if> -->
-              </td>
-            </tr>
-            <tr>
-              <td class="name">build requested:
-              </td>
-              <td class="value">
-                <xsl:choose>
-                  <xsl:when test="normalize-space(aspect[@name='build_requested']/value) != '' and normalize-space(aspect[@name='build_requested']/value) != '0'">
-                  yes</xsl:when>
-                  <xsl:otherwise>no</xsl:otherwise>
-                </xsl:choose>
-              </td>
-            </tr>
-            <tr>
-              <td class="name">build needed:
-              </td>
-              <td class="value">
-                <xsl:choose>
-                  <xsl:when test="aspect[@name='build_needed']/value">yes</xsl:when>
-                  <xsl:otherwise>no</xsl:otherwise>
-                </xsl:choose>
               </td>
             </tr>
           </tbody>

@@ -9,6 +9,10 @@ class Genome::InstrumentData {
     is => 'Genome::Notable',
     is_abstract => 1,
     subclassify_by => 'subclass_name',
+    subclass_description_preprocessor => __PACKAGE__ . '::_preprocess_subclass_description',
+    attributes_have => [
+        is_attribute => { is => 'Boolean', is_optional => 1, },
+    ],
     id_by => [
         id => { is => 'Text' },
     ],
@@ -16,11 +20,10 @@ class Genome::InstrumentData {
         seq_id => { calculate_from => [ 'id' ], calculate => q{ return $id }, },
         subclass_name => { is => 'Text' },
         sequencing_platform => { is => 'Text' },
-        library_id => { is => 'Number' },
         library => { is => 'Genome::Library', id_by => 'library_id' },
         library_name => { via => 'library', to => 'name' },
-        sample_id => { is => 'Number', via => 'library' }, 
-        sample => { is => 'Genome::Sample', via => 'library' },
+        sample_id => { is => 'Number', is_delegated => 1, via => 'library', to => 'sample_id' }, 
+        sample => { is => 'Genome::Sample', id_by => 'sample_id' },
         sample_name => { via => 'sample', to => 'name' },
     ],
     has_optional => [
@@ -33,12 +36,38 @@ class Genome::InstrumentData {
             to => 'attribute_value',
             where => [attribute_label => 'original_est_fragment_size'],
         },
+        original_est_fragment_size_max => {
+            is => 'Number',
+            is_mutable => 1,
+            via => 'attributes',
+            to => 'attribute_value',
+            where => [attribute_label => 'original_est_fragment_size_max'],
+        },
+        original_est_fragment_size_min => {
+            is => 'Number',
+            is_mutable => 1,
+            via => 'attributes',
+            to => 'attribute_value',
+            where => [attribute_label => 'original_est_fragment_size_min'],
+        },
+        original_est_fragment_std_dev => {
+            is => 'Number',
+            is_calculated => 1,
+            calculate_from => ['original_est_fragment_size_max', 'original_est_fragment_size_min'],
+            calculate => q|($original_est_fragment_size_max - $original_est_fragment_size_min)/6|,
+        },
         final_est_fragment_size => {
             is => 'Number',
             is_mutable => 1,
             via => 'attributes',
             to => 'attribute_value',
             where => [attribute_label => 'final_est_fragment_size'],
+        },
+        final_est_fragment_std_dev => {
+            is => 'Number',
+            is_calculated => 1,
+            calculate_from => ['final_est_fragment_size'],
+            calculate => q|$final_est_fragment_size*.05|,
         },
         read_orientation => {
             is => 'Text',
@@ -94,6 +123,22 @@ class Genome::InstrumentData {
     data_source => 'Genome::DataSource::GMSchema',
     doc => 'Contains information common to all types of instrument data',
 };
+
+sub _preprocess_subclass_description {
+    my ($class, $desc) = @_;
+
+    for my $prop_name ( keys %{$desc->{has}} ) {
+        my $prop_desc = $desc->{has}{$prop_name};
+        next if not $prop_desc->{is_attribute};
+        $prop_desc->{via} = 'attributes';
+        $prop_desc->{where} = [ attribute_label => $prop_name ];
+        $prop_desc->{to} = 'attribute_value';
+        $prop_desc->{is_delegated} = 1;
+        $prop_desc->{is_mutable} = 1;
+    }
+
+    return $desc;
+}
 
 sub create {
     my ($class) = @_;
@@ -263,7 +308,7 @@ sub dump_fastqs_from_bam {
     }
     
     my $directory = delete $p{directory};
-    $directory ||= Genome::Sys->create_temp_directory('unpacked_bam');
+    $directory ||= Genome::Sys->create_temp_directory('unpacked_bam_'.$self->id);
 
     my $subset = (defined $self->subset_name ? $self->subset_name : 0);
 

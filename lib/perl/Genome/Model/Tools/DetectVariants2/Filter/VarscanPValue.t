@@ -8,9 +8,10 @@ BEGIN {
 use strict;
 use warnings;
 
-use Test::More tests => 17;
+use Test::More tests => 23;
 
 use above 'Genome';
+use File::Compare;
 
 use_ok('Genome::Model::Tools::DetectVariants2::Filter::VarscanPValue') || die;
 
@@ -22,7 +23,10 @@ my $bam_file = join('/', $test_data_dir, 'tumor.tiny.bam');
 my $reference = Genome::Model::Build::ImportedReferenceSequence->get_by_name('NCBI-human-build36');
 ok($reference, 'found the reference sequence');
 
+my $vcf_version = Genome::Model::Tools::Vcf->get_vcf_version;
+
 my $detector_directory = join('/', $test_data_dir, 'varscan-somatic-2.2.4-');
+my $detector_vcf_directory = join('/', $test_data_dir, 'detector_vcf_result');
 my $detector_result = Genome::Model::Tools::DetectVariants2::Result->__define__(
     output_dir => $detector_directory,
     detector_name => 'Genome::Model::Tools::DetectVariants2::VarscanSomatic',
@@ -31,6 +35,17 @@ my $detector_result = Genome::Model::Tools::DetectVariants2::Result->__define__(
     aligned_reads => $bam_file,
     reference_build_id => $reference->id,
 );
+
+my $detector_vcf_result = Genome::Model::Tools::DetectVariants2::Result::Vcf::Detector->__define__(
+    input => $detector_result,
+    output_dir => $detector_vcf_directory,
+    aligned_reads_sample => "TEST",
+    control_aligned_reads_sample => "TEST-normal",
+    vcf_version => $vcf_version,
+);
+
+$detector_result->add_user(user => $detector_vcf_result, label => 'uses');
+
 
 my $output_base = File::Temp::tempdir('DetectVariants2-Filter-VarscanPValue-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites/', CLEANUP => 1);
 
@@ -52,6 +67,12 @@ my %combined_params = (
     params => '--variant-p-value 0.5 --somatic-p-value 0.5',
 );
 
+my @expected_output_files = qw| 
+    snvs.hq
+    snvs.hq.bed
+    snvs.lq
+    snvs.lq.bed|;
+
 run_filter(%variant_p_value_only);
 run_filter(%somatic_p_value_only);
 run_filter(%combined_params);
@@ -64,11 +85,13 @@ sub run_filter {
 
     my $output_directory = $filter->output_directory;
     my ($sub_dir) = $output_directory =~ /\/([^\/]+)$/;
-    my $expected_output_dir = join('/', $expected_output_dir, $sub_dir);
+    my $expected_output_dir = join('/', $test_data_dir,"output", $sub_dir);
     ok(-d $output_directory, 'output_directory exists') or return;
-    ok(-d $expected_output_dir, 'expected_output_dir exists') or die('Test data not in place? ' . $expected_output_dir);
 
-    my @compare = qx(diff -u $expected_output_dir $output_directory);
-    is(scalar @compare, 0, 'no diff between expected output and actual output')
-        or diag @compare, "\n";
+    for my $output_file (@expected_output_files){
+        my $expected_file = join("/",($test_data_dir,"output",$sub_dir,$output_file));
+        my $actual_file = $output_directory."/".$output_file;
+        print "compare: ".$expected_file."\t".$actual_file."\n";
+        is(compare($actual_file, $expected_file), 0, "$actual_file output matched expected output");
+    }
 }

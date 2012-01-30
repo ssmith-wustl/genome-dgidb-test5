@@ -25,7 +25,7 @@ class Genome::InstrumentData::Test {
 };
 
 class Genome::Model::Test {
-    is => 'Genome::Model',
+    is => 'Genome::ModelDeprecated',
 };
 
 class Genome::Model::Build::Test {
@@ -84,8 +84,10 @@ my @model_inputs = $model->inputs;
 is(scalar(@model_inputs), 1, 'Correct number of model inputs');
 
 # Create test build
+my $tmpdir = File::Temp::tempdir(CLEANUP => 1);
 my $build = Genome::Model::Build::Test->create(
     model_id => $model->id,
+    data_directory => $tmpdir,
 );
 ok($build, 'Created build') or die;
 isa_ok($build, 'Genome::Model::Build::Test', 'build subclass automagically generated');
@@ -160,13 +162,11 @@ use warnings;
 # FAIL
 ok($build->fail(), 'Fail');
 is($build->status, 'Failed', 'Status is Failed');
-ok($model->build_needed, 'This failed build does not satisfy the model');
 
 # SUCCESS
 ok($build->success, 'Success');
 is($build->status, 'Succeeded', 'Status is Succeeded');
 ok(!$model->current_running_build_id, 'Current running build id set to undef in success');
-is($model->_last_complete_build_id, $build->id, 'Model last complete build is set to this build\'s id in success');
 ok(!$model->build_needed, 'This succeeded build satisfies the model');
 
 # ABANDON
@@ -177,6 +177,27 @@ isnt($model->last_complete_build_id, $build->id, 'Model last complete build is n
 ok(!$build->initialize, 'Failed to initialize an abandoned build');
 ok(!$build->fail, 'Failed to fail an abandoned build');
 ok(!$build->success, 'Failed to success an abandoned build');
+
+# DIFF
+my $build2 = Genome::Model::Build::Test->create(
+    model => $model,
+    data_directory => $tmpdir, # TODO actually test file diffs?
+);
+$build->add_metric(name => 'one', value => 1);
+$build->add_metric(name => 'two', value => 2);
+$build2->add_metric(name => 'two', value => 'not 2');
+$build->add_metric(name => 'three', value => 3);
+$build2->add_metric(name => 'three', value => 3);
+$build2->add_metric(name => 'four', value => 4);
+my %diffs = $build->compare_output($build2->id);
+my %expected_diffs = (
+    'one' => qr|no build metric with name one found for build \-?\d+|,
+    'two' => qr|metric two has value 2 for build \-?\d+ and value not 2 for build \-?\d+|,
+    'four' => qr|no build metric with name four found for build \-?\d+|,
+);
+for my $diff ( keys %expected_diffs ) {
+    like($diffs{$diff}, $expected_diffs{$diff}, "diff message for $diff is correct");
+}
 
 no warnings 'redefine';
 *Genome::Model::Build::generate_send_and_save_report = $gss_report;

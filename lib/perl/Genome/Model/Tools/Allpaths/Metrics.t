@@ -10,7 +10,7 @@ use Test::More;
 
 use_ok('Genome::Model::Tools::Allpaths::Metrics') or die;
 
-my $test_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Allpaths/Metrics/v2';
+my $test_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Allpaths/Metrics/v6';
 my $example_metrics_file = $test_dir.'/metrics.txt';
 
 my $temp_dir = Genome::Sys->create_temp_directory();
@@ -18,6 +18,7 @@ my $metrics_file = $temp_dir.'/metrics.txt';
 
 my $metrics = Genome::Model::Tools::Allpaths::Metrics->create(
     assembly_directory => $test_dir,
+    major_contig_length => 300,
     output_file => $metrics_file,
 );
 ok($metrics, "create") or die;

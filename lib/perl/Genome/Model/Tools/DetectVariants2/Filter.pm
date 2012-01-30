@@ -117,9 +117,28 @@ class Genome::Model::Tools::DetectVariants2::Filter {
             is => 'Number',
             is_output => 1,
         },
+        _vcf_result => {
+            is => 'UR::Object',
+            doc => 'SoftwareResult for the vcf output of this detector',
+            id_by => "_vcf_result_id",
+            id_class_by => '_vcf_result_class',
+            is_output => 1,
+        },
+        _vcf_result_class => {
+            is => 'Text',
+            is_output => 1,
+        },
+        _vcf_result_id => {
+            is => 'Number',
+            is_output => 1,
+        },
         _detector_directory => {
             is => 'Text',
             doc => 'Directory of the original detector run that is being filtered',
+        },
+        _previous_filter_strategy => {
+            is => 'Text',
+            doc => 'String describing the previous filter strategy',
         },
     ],
     has_param => [
@@ -152,7 +171,6 @@ sub _process_params {
     if ($self->params) {
         my @param_list = split(" ", $self->params);
         my($cmd_class,$params) = $self->class->resolve_class_and_params_for_argv(@param_list);
-
         # For each parameter set in params... use the class properties to assign the values
         for my $param_name (keys %$params) {
             $self->$param_name($params->{$param_name});
@@ -169,23 +187,65 @@ sub _resolve_output_directory {
     return 1;
 }
 
-
 sub shortcut {
     my $self = shift;
 
     $self->_resolve_output_directory;
 
-    #try to get using the lock in order to wait here in shortcut if another process is creating this alignment result
-    my ($params) = $self->params_for_result;
+    $self->status_message("Attempting to shortcut filter result");
+    unless($self->shortcut_filter){
+        $self->status_message("Could not shortcut filter result.");
+        return;
+    }
+
+    if($self->_try_vcf){
+        $self->status_message("Attempting to shortcut vcf result");
+        unless($self->shortcut_vcf){
+            $self->status_message("Could not shortcut vcf result.");
+            return;
+        }
+    }
+
+    return 1;
+}
+
+sub shortcut_filter {
+    my $self = shift;
+    my ($params) = $self->params_for_filter_result;
     my $result = Genome::Model::Tools::DetectVariants2::Result::Filter->get_with_lock(%$params);
+    
+    #TODO -- remove this monstrosity once this is pushed and filter_results are backfilled with filter_version=>v1
+    unless($result) {
+        $self->status_message("Could not find filter_result, removing filter_version param and checking again");
+        delete $params->{filter_version};
+        $self->status_message("Params without filter_version");
+        $result = Genome::Model::Tools::DetectVariants2::Result::Filter->get_with_lock(%$params);
+        unless($result) {
+            $self->status_message('No existing result found.');
+            return;
+        }
+    }
+
+    $self->_result($result);
+    $self->status_message('Using existing result ' . $result->__display_name__);
+    $self->_link_filter_output_directory_to_result;
+
+    return 1;
+}
+
+sub shortcut_vcf {
+    my $self = shift;
+    my ($params) = $self->params_for_vcf_result;
+    my $result = Genome::Model::Tools::DetectVariants2::Result::Vcf::Filter->get_with_lock(%$params);
     unless($result) {
         $self->status_message('No existing result found.');
         return;
     }
 
-    $self->_result($result);
+    $self->_vcf_result($result);
     $self->status_message('Using existing result ' . $result->__display_name__);
-    $self->_link_to_result;
+    $self->_link_vcf_output_directory_to_result;
+    $self->_link_result_to_previous_result;
 
     return 1;
 }
@@ -194,25 +254,133 @@ sub execute {
     my $self = shift;
 
     $self->_resolve_output_directory;
-
     $self->_process_params;
 
-    my ($params) = $self->params_for_result;
-    my $result = Genome::Model::Tools::DetectVariants2::Result::Filter->get_or_create(%$params, _instance => $self);
-
-    unless($result) {
-        die $self->error_message('Failed to create generate result!');
+    unless($self->shortcut_filter){
+        $self->status_message("Summoning a filter result..");
+        $self->_summon_filter_result;
     }
-
-    if(-e $self->output_directory) {
-        unless(readlink($self->output_directory) eq $result->output_dir) {
-            die $self->error_message('Existing output directory ' . $self->output_directory . ' points to a different location!');
+    if($self->_try_vcf){
+        unless($self->shortcut_vcf){
+            $self->_summon_vcf_result;
         }
     }
 
+    return 1;
+}
+
+sub _try_vcf {
+    my $self = shift;
+    my @types;
+
+    #TODO We do not currently support indel vcfs
+    # Once we do, simply add "indels" to the list below
+
+    for ("snvs"){
+        if($self->_variant_type eq $_){
+            push @types,$_;
+        }
+    }
+
+    my $try_vcf=undef;
+    my $detector_class = $self->detector_name;
+
+    for (@types){
+        if(Genome::Model::Tools::DetectVariants2::Result::Vcf->conversion_class_name($detector_class,$_)){
+            return 1;
+        }
+    }
+    return 0;
+}
+
+
+sub _summon_vcf_result {
+    my $self = shift;
+
+    my ($params) = $self->params_for_vcf_result;
+    my $result = Genome::Model::Tools::DetectVariants2::Result::Vcf::Filter->get_or_create(%$params); #, _instance => $self);
+
+    unless($result) {
+        die $self->error_message('Failed to create generate vcf result!');
+    }
+
+    $self->_vcf_result($result);
+    $self->status_message('Generated vcf result.');
+    $self->_link_vcf_output_directory_to_result;
+
+    return 1;
+}
+
+sub _summon_filter_result {
+    my $self = shift;
+
+    my ($params) = $self->params_for_filter_result;
+    my $result = Genome::Model::Tools::DetectVariants2::Result::Filter->get_or_create(%$params, _instance => $self);
+    unless($result) {
+        die $self->error_message('Failed to create generate detector result!');
+    }
+
     $self->_result($result);
-    $self->status_message('Generated result.');
-    $self->_link_to_result;
+    $self->status_message('Generated detector result.');
+    unless(-e $self->output_directory){
+        $self->_link_output_directory_to_result;
+    }
+    $self->_link_result_to_previous_result;
+
+    return 1;
+}
+
+sub _link_vcf_output_directory_to_result {
+    my $self = shift;
+    $self->status_message("Linking in vcfs from vcf_result");
+
+    my $result = $self->_vcf_result;
+    return unless $result;
+    my @vcfs = glob($result->output_dir."/*.vcf.gz");
+    my $output_directory = $self->output_directory;
+    for my $vcf (@vcfs){
+        my $target = $output_directory . "/" . basename($vcf);
+        $self->status_message("Attempting to link : " .$vcf."  to  ". $target);
+        if(-l $target) {
+            $self->status_message("Found an existing vcf symlink");
+            return 1;
+        } elsif(-e $target){
+            die $self->error_message("Found something that is not a symlink to a vcf!");
+        }
+        Genome::Sys->create_symlink($vcf, $target);
+    }
+
+    return 1;
+}
+
+sub _link_result_to_previous_result {
+    my $self = shift;
+    my $result = $self->_result;
+
+    my $previous_result = $self->previous_result;
+    my @users = $previous_result->users;
+    unless(grep($_->user eq $result, @users)) {
+        $previous_result->add_user(user => $result, label => 'uses');
+    }
+
+    return 1;
+}
+
+
+sub _link_filter_output_directory_to_result {
+    my $self = shift;
+
+    my $result = $self->_result;
+    return unless $result;
+
+    if(-l $self->output_directory) {
+        $self->status_message("Found link to output directory.");
+        return 1;
+    } elsif (-e $self->output_directory) {
+        die $self->error_message("Found something in the place of the output directory, but not a symlink...");
+    } else {
+        Genome::Sys->create_symlink($result->output_dir, $self->output_directory);
+    }
 
     return 1;
 }
@@ -385,10 +553,6 @@ sub _generate_standard_output {
         die $self->error_message("Could not locate output file of any type for this filter.");
     }
 
-    unless($self->_generate_vcf){
-        die $self->error_message("Attempt to generate VCF failed.");
-    }
-
     return 1;
 }
 
@@ -484,37 +648,7 @@ sub get_module_name_from_class_name {
     return $words[-1];
 }
 
-sub _generate_vcf {
-    my $self = shift;
-    for my $type ($self->_variant_type){
-        my $detect_type = "detect_".$type;
-        my $incoming_vcf = $self->previous_result->output_dir."/".$type.".vcf.gz";
-        unless(-s $incoming_vcf){
-            $self->status_message("Skipping VCF generation, no vcf if the previous result: $incoming_vcf");
-            next;
-        }
-        #my $output_dir = dirname($self->_snv_staging_output);
-        my $vcf_name = $self->output_directory."/".$type.".vcf.gz";
-        my $hq_filter_file = $self->output_directory."/".$type.".hq.bed";
-        my $filter_name = $self->get_module_name_from_class_name(ref $self || $self);
-        my $filter_description = $self->filter_description;
-        my $vcf_filter_cmd = Genome::Model::Tools::Vcf::VcfFilter->create(
-            output_file => $vcf_name,
-            vcf_file => $incoming_vcf,
-            filter_file => $hq_filter_file,
-            filter_keep => 1,
-            filter_name => $filter_name,
-            filter_description => $filter_description,
-            bed_input => 1,
-        );
-        unless($vcf_filter_cmd->execute){
-            die $self->error_message("Could not complete call to gmt vcf vcf-filter!");
-        }
-    }
-    return 1;
-}
-
-sub params_for_result {
+sub params_for_filter_result {
     my $self = shift;
 
     my $previous_result = $self->previous_result;
@@ -533,6 +667,7 @@ sub params_for_result {
             $previous_filter_strategy .= ' [' . $previous_result->filter_params . ']';
         }
     }
+    $self->_previous_filter_strategy($previous_filter_strategy);
 
     my %params = (
         detector_name => $self->detector_name,
@@ -553,23 +688,33 @@ sub params_for_result {
     return \%params;
 }
 
-sub _link_to_result {
+sub params_for_vcf_result {
     my $self = shift;
-
-    my $result = $self->_result;
-    return unless $result;
-
-    unless(-e $self->output_directory) {
-        Genome::Sys->create_symlink_and_log_change($result, $result->output_dir, $self->output_directory);
+    my $prev_vcf_result = $self->previous_result->get_vcf_result;
+    my $vcf_version = Genome::Model::Tools::Vcf->get_vcf_version;
+    unless($prev_vcf_result->vcf_version eq $vcf_version){
+        die $self->error_message("Couldn't locate a vcf_result with the same vcf_version");
+    }
+    unless($prev_vcf_result){
+        die $self->error_message("Could not locate a vcf result to use as a previous vcf-result!");
     }
 
-    my $previous_result = $self->previous_result;
-    my @users = $previous_result->users;
-    unless(grep($_->user eq $result, @users)) {
-        $previous_result->add_user(user => $result, label => 'uses');
-    }
+    my %params = (
+        test_name => $ENV{GENOME_SOFTWARE_RESULT_TEST_NAME} || undef,
+        input_id => $self->_result->id,
+        aligned_reads_sample => $self->aligned_reads_sample,
+        incoming_vcf_result => $prev_vcf_result,
+        filter_name => $self->class,
+        filter_params => $self->params,
+        filter_version => $self->version,
+        filter_description => $self->filter_description,
+        vcf_version => $vcf_version,
+        previous_filter_strategy => $self->_previous_filter_strategy,
+        
+    );
+    $params{control_aligned_reads_sample} = $self->control_aligned_reads_sample if defined $self->control_aligned_reads_sample;
 
-    return 1;
+    return \%params;
 }
 
 sub detector_directory {

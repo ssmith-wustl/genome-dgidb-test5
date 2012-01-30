@@ -33,10 +33,13 @@ my $test_data_directory = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Dete
 # Updated to .v2 for adding 1 to insertion start and stop values
 my $expected_directory = $test_data_directory . "/expected.v2";
 my $detector_directory = $test_data_directory . "/samtools-r599-";
+my $detector_vcf_directory = $test_data_directory . "/detector_vcf_result";
 my $tumor_bam_file  = $test_data_directory. '/flank_tumor_sorted.bam';
 my $normal_bam_file  = $test_data_directory. '/flank_normal_sorted.bam';
 my $test_output_base = File::Temp::tempdir('Genome-Model-Tools-DetectVariants2-Filter-IndelFilter-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
 my $test_output_dir = $test_output_base . '/filter';
+
+my $vcf_version = Genome::Model::Tools::Vcf->get_vcf_version;
 
 my @expected_output_files = qw| indels.hq
                                 indels.hq.bed
@@ -57,6 +60,14 @@ my $detector_result = Genome::Model::Tools::DetectVariants2::Result->__define__(
     control_aligned_reads => $normal_bam_file,
     reference_build_id => $refbuild_id,
 );
+my $detector_vcf_result = Genome::Model::Tools::DetectVariants2::Result::Vcf::Detector->__define__(
+    input => $detector_result,
+    output_dir => $detector_vcf_directory,
+    aligned_reads_sample => "TEST",
+    vcf_version => $vcf_version,
+);
+
+$detector_result->add_user(user => $detector_vcf_result, label => 'uses');
 
 my $indel_filter_high_confidence = Genome::Model::Tools::DetectVariants2::Filter::IndelFilter->create(
     previous_result_id => $detector_result->id,

@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 
 class Genome::Model::SomaticValidation {
-    is  => 'Genome::Model',
+    is  => 'Genome::ModelDeprecated',
     has => [
         #FIXME probably remove this and fix the (potentional) report issue by having it look at model but fallback on processing profile
         map({
@@ -35,6 +35,17 @@ class Genome::Model::SomaticValidation {
             is => 'Genome::Model::Build::ReferenceSequence',
             via => 'inputs', to => 'value', where => [ name => 'reference_sequence_build' ],
             is_mutable => 1,
+        },
+        annotation_build => {
+            is => 'Genome::Model::Build::ImportedAnnotation',
+            via => 'inputs', to => 'value', where => [ name => 'annotation_build' ],
+            is_mutable => 1,
+        },
+        previously_discovered_variations_build => {
+            is => 'Genome::Model::Build::ImportedVariationList',
+            via => 'inputs', to => 'value', where => [ name => 'previously_discovered_variations_build' ],
+            is_mutable => 1,
+            doc => 'build of variants to screen out from consideration (such as from dbSNP)',
         },
         target_region_set_name => {
             is => 'Text',

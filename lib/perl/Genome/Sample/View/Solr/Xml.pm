@@ -59,6 +59,10 @@ class Genome::Sample::View::Solr::Xml {
                     position => 'content',
                 },
                 {
+                    name => 'individual_common_name',
+                    position => 'content',
+                },
+                {
                     name => 'cell_type',
                     position => 'content',
                 },

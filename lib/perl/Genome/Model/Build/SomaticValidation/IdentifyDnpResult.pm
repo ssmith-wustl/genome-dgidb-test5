@@ -17,11 +17,6 @@ class Genome::Model::Build::SomaticValidation::IdentifyDnpResult {
         },
     ],
     has_optional => [
-        disk_allocation => {
-            is => 'Genome::Disk::Allocation',
-            is_many => 1,
-            reverse_as => 'owner',
-        },
         dv2_result => {
             is => 'Genome::Model::Tools::DetectVariants2::Result::Base',
             id_by => 'dv2_result_id',
@@ -108,20 +103,6 @@ sub _generate_data {
     }
 
     return 1;
-}
-
-sub _reallocate_disk_allocation {
-    my $self = shift;
-    my $allocation = $self->disk_allocation;
-    $self->status_message('Resizing the disk allocation...');
-    my $rv = eval { $allocation->reallocate };
-    my $error = $@;
-    if ($rv != 1) {
-        my $warning_message = 'Failed to reallocate disk allocation (' . $allocation->__display_name__ . ').';
-        $warning_message   .= " Error: '$error'." if $error;
-        $self->warning_message($warning_message);
-    }
-    return $rv;
 }
 
 sub required_rusage { '' };

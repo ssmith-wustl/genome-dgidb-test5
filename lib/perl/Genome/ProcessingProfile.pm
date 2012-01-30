@@ -51,14 +51,6 @@ sub __display_name__ {
 
 ### Override these in the model subclass when Implementing New Pipelines ###
 
-sub _initialize_model {
-    my ($self,$model) = @_;
-    if ($model->can('_initialize_model')) {
-        return $model->_initialize_model();
-    }
-    return 1;
-}
-
 sub _initialize_build {
     my ($self,$build) = @_;
     my $model = $build->model;
@@ -507,6 +499,9 @@ sub __extend_namespace__ {
                 my %data = %{ UR::Util::deep_copy($p) };
                 for my $key (keys %data) {
                     delete $data{$key} if $key =~ /^_/;
+                }
+                if (exists $data{_profile_default_value}) {
+                    $data{default_value} = delete $data{_profile_default_value};
                 }
                 delete $data{id};
                 delete $data{db_committed};

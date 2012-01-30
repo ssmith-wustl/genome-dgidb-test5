@@ -23,7 +23,6 @@
 <style>
     .projectContainer {
         text-align: left;
-        text-indent: 10px;
     }
 
     .clickable {
@@ -63,7 +62,7 @@
                 </tr>
               </table>
             </form>
-            <p class="small" style="margin: 0 0 0 5px;"> Found <xsl:value-of select="//@facet-total"/> records. <br/> </p>
+            <p class="small">Didn't find what you're looking for? Please <a href="mailto:apipe@genome.wustl.edu">let us know</a>.</p>
             <div id="errorAccordion" class="errorAccordion">
                 <h3><a href="#">Error Messages</a></h3>
                 <div id="errorMsg">Something went wrong.</div>
@@ -122,15 +121,15 @@
 
 <br/>
 
-            <div id="myProjectBox" class="sidebar_search rounded-right">
+            <div id="myProjectBox" class="sidebar_project rounded-right">
                 <h4 style="float: left" id="myProjectsCount"></h4>
-                <div style="margin: 2px 0px 0px 10px; float: left; color: red" id="loadingStatus"></div>
                 <br/>
 
                 <ul id="projectBox"> </ul>
 
-                <a class="clickable" id="createProjectLink">Create a new project</a> <br/>
+                <div style="margin: 2px 0px 0px 10px; color: red" id="loadingStatus" />
 
+                <a class="clickable" id="createProjectLink">Create a new project</a> <br/>
                 <div id="createProjectDiv">
                     <form id="createProject">
                     New project name:<br/>

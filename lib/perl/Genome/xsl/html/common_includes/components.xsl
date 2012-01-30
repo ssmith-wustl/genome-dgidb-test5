@@ -99,7 +99,7 @@
                cache.push(cacheImage);
                }
                }
-$(document).data('updatedOn', new Date("]]><xsl:copy-of select="$currentTime"/><![CDATA["));
+$(document).data('updatedOn', new Date(]]><xsl:copy-of select="$currentTime"/><![CDATA[));
 })(jQuery)
 
 ]]>
@@ -114,7 +114,7 @@ $(document).data('updatedOn', new Date("]]><xsl:copy-of select="$currentTime"/><
   <xsl:template name="app_header">
     <xsl:param name="app_name"/>
     <xsl:param name="icon"/>
-    <span id="authUser" style="visibility:hidden"><xsl:value-of select="$username"/></span>
+    <span id="authUser" style="visibility:hidden">-</span>
 
     <xsl:comment>template: /html/common_includes/components.xsl:app_header</xsl:comment>
 
@@ -200,7 +200,7 @@ $(document).data('updatedOn', new Date("]]><xsl:copy-of select="$currentTime"/><
 
     <ul class="app_menu" style="width: 450px">
       <li style="width: 50px; float: right">
-        <div id="userLogin" style="color: white"><xsl:value-of select="$username"/></div>
+        <a id="authUserLink"><div id="authUser" style="color: white">-</div></a>
       </li>
     <xsl:choose>
         <xsl:when test="$objectClassName='Genome::Search'">
@@ -211,7 +211,7 @@ $(document).data('updatedOn', new Date("]]><xsl:copy-of select="$currentTime"/><
             </li>
         </xsl:when>
         <xsl:otherwise><xsl:comment>items in control bar when not the search main page</xsl:comment>
-            <li style="width: 190px; float: right">
+            <li style="width: 210px; float: right">
             <form id="search" action="/view/genome/search/query/status.html">
                 <input name="query"/>
                 <a id="search_submit" style="padding: 0px 5px 0px 5px" class="app btn shadow" onClick="javascript:$('#search').submit();">

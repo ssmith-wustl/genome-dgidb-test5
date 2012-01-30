@@ -8,10 +8,16 @@ use Data::Dumper;
 # don't cache static things.
 # every url gets matched against this, so it shouldn't be a long list
 # if it becomes long, consider a redesign.
-our @never_cache = (
-    qr{(?<!html)$},
-    qr{Genome::Search::Query}i,
-    qr{genome/search}i
+
+#our @never_cache = (
+#    qr{(?<!html)$},
+#    qr{Genome::Search::Query}i,
+#    qr{genome/search}i
+#);
+
+our @always_cache = (
+    qr{genome/model}i,
+    qr{genome/sample/}i
 );
 
 use Plack::Util;
@@ -21,7 +27,10 @@ use Storable qw/freeze thaw/;
 use Sys::Hostname qw/hostname/;
 
 our $environment = (hostname eq 'vm44' || hostname eq 'vm62.gsc.wustl.edu') ? 'prod' : 'dev';
-our %servers = ('prod' => 'imp:11211', 'dev' => 'aims-dev:11211', 'local' => 'localhost:11211');
+our %servers = ('prod' => $ENV{'GENOME_SYS_SERVICES_MEMCACHE'}, 
+                'dev' => $ENV{'GENOME_SYS_SERVICES_MEMCACHE'}, 
+                'local' => 'localhost:11211'
+                );
 our $cache_timeout = 0;
 our $lock_timeout = 600;
 our $server;
@@ -227,10 +236,11 @@ sub {
 
         return [@$resp[0,1,2]];
     } else {
-        my $skip_cache = 0;
-        for my $re (@never_cache) {
+        my $skip_cache = 1;
+        
+        for my $re (@always_cache) {
             if ($env->{'PATH_INFO'} =~ $re) {
-                $skip_cache = 1;
+                $skip_cache = 0;
                 last;
             }
         }

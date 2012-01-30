@@ -13,54 +13,44 @@ class Genome::Model::Tools::Nimblegen::DesignFromSv {
     is => 'Command',
     has => [
     sv_file => {
-        type => 'String',
-        is_optional => 0,
+        type => 'String', is_optional => 0,
         doc => "A HQfiltered formatted file of SV sites to generate probe regions for. Assumes STDIN if not specified",
     },
     output_file => {
-        type => 'String',
-        is_optional => 1,
+        type => 'String', is_optional => 1,
         doc => "Output file. Assumes STDOUT if not specified",
     },
     assembly_format => {
-        type => 'Boolean',
-        is_optional => 1,
-        default => 0,
+        type => 'Boolean', is_optional => 1, default => 0,
         doc => "input file is assembly format",
     },
     span => {
-        type => 'Integer',
-        is_optional => 1,
-        default => 200,
+        type => 'Integer', is_optional => 1, default => 200,
         doc => "The region to be spanned",
     },
-    exclude_non_canonical_sites => {
-        type => 'Boolean',
-        is_optional => 1,
-        default => 1,
-        doc => "whether or not to remove sites on the mitochondria or non-chromosomal contigs",
+    include_mitochondrial_sites => {
+        type => 'Boolean', is_optional => 1, default => 0,
+        doc => "Whether or not to remove sites on the mitochondria or non-chromosomal contigs",
     },
-    include_y => {
-        type => 'Boolean',
-        is_optional => 1,
-        default => 1,
-        doc => "whether or not to include sites on the Y chromosome in the output",
+    include_unplaced_contig_sites => {
+        type => 'Boolean', is_optional => 1, default => 1,
+        doc => "Whether or not to remove sites on the unplaced contigs of the chromosome",
+    },
+    include_y_chrom_sites => {
+        type => 'Boolean', is_optional => 1, default => 1,
+        doc => "Whether or not to include sites on the Y chromosome in the output (if cases are all female)",
     },
     reference_index => {
-        type => 'String',
-        is_optional => 0,
-        doc => "samtools index of the reference sequence",
+        type => 'String', is_optional => 0,
         default => "/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa.fai",
+        doc => "samtools index of the reference sequence",
     },
     resolution => {
-        type => 'Integer',
-        is_optional => 1,
-        default => 10000,
+        type => 'Integer', is_optional => 1, default => 10000,
         doc => "Filter out the resolution > this number and not output it to nimblegen list."
     },
     count_file => {
-        type => 'String',
-        is_optional => 1,
+        type => 'String', is_optional => 1,
         doc => "Count the whole bases to be covered."
     },
     filtered_out_file => {
@@ -71,14 +61,21 @@ class Genome::Model::Tools::Nimblegen::DesignFromSv {
     ]
 };
 
-
 sub execute {
     my $self=shift;
+    my $reference_index = $self->reference_index;
+    my $include_mitochondrial_sites = $self->include_mitochondrial_sites;
+    my $include_unplaced_contig_sites = $self->include_unplaced_contig_sites;
+    my $include_y_chrom_sites = $self->include_y_chrom_sites;
 
     # Hash to help convert hg19 unplaced contig names to the UCSC equivalent
     my %ucsc_unplaced_contigs = (( 'GL000207.1', 'chr18_gl000207_random' ), ( 'GL000226.1', 'chrUn_gl000226' ), ( 'GL000229.1', 'chrUn_gl000229' ), ( 'GL000231.1', 'chrUn_gl000231' ), ( 'GL000210.1', 'chr21_gl000210_random' ), ( 'GL000239.1', 'chrUn_gl000239' ), ( 'GL000235.1', 'chrUn_gl000235' ), ( 'GL000201.1', 'chr9_gl000201_random' ), ( 'GL000247.1', 'chrUn_gl000247' ), ( 'GL000245.1', 'chrUn_gl000245' ), ( 'GL000197.1', 'chr8_gl000197_random' ), ( 'GL000203.1', 'chr17_gl000203_random' ), ( 'GL000246.1', 'chrUn_gl000246' ), ( 'GL000249.1', 'chrUn_gl000249' ), ( 'GL000196.1', 'chr8_gl000196_random' ), ( 'GL000248.1', 'chrUn_gl000248' ), ( 'GL000244.1', 'chrUn_gl000244' ), ( 'GL000238.1', 'chrUn_gl000238' ), ( 'GL000202.1', 'chr11_gl000202_random' ), ( 'GL000234.1', 'chrUn_gl000234' ), ( 'GL000232.1', 'chrUn_gl000232' ), ( 'GL000206.1', 'chr17_gl000206_random' ), ( 'GL000240.1', 'chrUn_gl000240' ), ( 'GL000236.1', 'chrUn_gl000236' ), ( 'GL000241.1', 'chrUn_gl000241' ), ( 'GL000243.1', 'chrUn_gl000243' ), ( 'GL000242.1', 'chrUn_gl000242' ), ( 'GL000230.1', 'chrUn_gl000230' ), ( 'GL000237.1', 'chrUn_gl000237' ), ( 'GL000233.1', 'chrUn_gl000233' ), ( 'GL000204.1', 'chr17_gl000204_random' ), ( 'GL000198.1', 'chr9_gl000198_random' ), ( 'GL000208.1', 'chr19_gl000208_random' ), ( 'GL000191.1', 'chr1_gl000191_random' ), ( 'GL000227.1', 'chrUn_gl000227' ), ( 'GL000228.1', 'chrUn_gl000228' ), ( 'GL000214.1', 'chrUn_gl000214' ), ( 'GL000221.1', 'chrUn_gl000221' ), ( 'GL000209.1', 'chr19_gl000209_random' ), ( 'GL000218.1', 'chrUn_gl000218' ), ( 'GL000220.1', 'chrUn_gl000220' ), ( 'GL000213.1', 'chrUn_gl000213' ), ( 'GL000211.1', 'chrUn_gl000211' ), ( 'GL000199.1', 'chr9_gl000199_random' ), ( 'GL000217.1', 'chrUn_gl000217' ), ( 'GL000216.1', 'chrUn_gl000216' ), ( 'GL000215.1', 'chrUn_gl000215' ), ( 'GL000205.1', 'chr17_gl000205_random' ), ( 'GL000219.1', 'chrUn_gl000219' ), ( 'GL000224.1', 'chrUn_gl000224' ), ( 'GL000223.1', 'chrUn_gl000223' ), ( 'GL000195.1', 'chr7_gl000195_random' ), ( 'GL000212.1', 'chrUn_gl000212' ), ( 'GL000222.1', 'chrUn_gl000222' ), ( 'GL000200.1', 'chr9_gl000200_random' ), ( 'GL000193.1', 'chr4_gl000193_random' ), ( 'GL000194.1', 'chr4_gl000194_random' ), ( 'GL000225.1', 'chrUn_gl000225' ), ( 'GL000192.1', 'chr1_gl000192_random' ));
 
-    my $reference_index = $self->reference_index;
+    # Depending on the bool flags the user sets, sites on some chromosomes will be excluded
+    my %valid_chrs = map{ chomp; $_ => 1 } `cut -f 1 $reference_index`; # Used to check input files for valid ref names
+    my %include_chrs = ( $include_unplaced_contig_sites ? %valid_chrs : ( map{ $_ => 1 } ( 1..22, qw( X Y MT ))));
+    delete $include_chrs{MT} unless( $include_mitochondrial_sites );
+    delete $include_chrs{Y} unless( $include_y_chrom_sites );
 
     my $fh = IO::File->new($reference_index,"r");
     unless($fh) {
@@ -170,20 +167,14 @@ sub execute {
             $line = "$new_col\t".$line;
         }
 
-
-
         #my ($id,$chr1,$outer_start,$inner_start,$chr2,$inner_end,$outer_end,$type,$orient, $minsize) = split /\s+/, $line;
         my ($id, )=split("\t", $line);
         my ($chr1,$outer_start,$inner_start,$chr2,$inner_end,$outer_end) = ($id =~ /(\S+)\.(-*\d+)\.(-*\d+)\.(\S+)\.(-*\d+)\.(-*\d+)/);
         if(!defined $chr1 || !defined $chr2) {
             print "$line\n";
         }
-        if($self->exclude_non_canonical_sites && ($chr1 =~ /^[MN]T/ || $chr2 =~ /^[MN]T/)) {
-            printf $filtered_out_fh "Non-canonical: %s\n", $line;
-            next;
-        }
-        if(!$self->include_y && ($chr1 =~ /^Y/ || $chr2 =~ /^Y/)) {
-            printf $filtered_out_fh "Exclude chrY: %s\n", $line;
+        unless( defined $include_chrs{$chr1} && defined $include_chrs{$chr2} ) {
+            printf $filtered_out_fh "Chr to ignore: %s\n", $line;
             next;
         }
 

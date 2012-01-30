@@ -61,8 +61,6 @@ sub create {
     my $self = $class->SUPER::create(
         name                             => delete $params{name},
         processing_profile_id            => delete $params{processing_profile_id},
-        subject_name                     => delete $params{subject_name},
-        subject_type                     => delete $params{subject_type},
         subject_id                       => delete $params{subject_id},
         subject_class_name               => delete $params{subject_class_name},
         auto_assign_inst_data            => delete $params{auto_assign_inst_data},

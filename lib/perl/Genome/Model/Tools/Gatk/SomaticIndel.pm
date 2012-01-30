@@ -8,72 +8,72 @@ use File::Basename qw/dirname/;
 use File::Spec::Functions;
 
 class Genome::Model::Tools::Gatk::SomaticIndel {
-    is => 'Genome::Model::Tools::Gatk',                       
+    is => 'Genome::Model::Tools::Gatk',
     has => [
-        normal_bam => { 
-            is => 'Text', 
-            doc => "BAM File for Normal Sample", 
-            is_optional => 0, 
+        normal_bam => {
+            is => 'Text',
+            doc => "BAM File for Normal Sample",
+            is_optional => 0,
             is_input => 1,
         },
-        tumor_bam => { 
-            is => 'Text', 
-            doc => "BAM File for Tumor Sample", 
-            is_optional => 0, 
-            is_input => 1 
+        tumor_bam => {
+            is => 'Text',
+            doc => "BAM File for Tumor Sample",
+            is_optional => 0,
+            is_input => 1
         },
-        output_file => { 
-            is => 'Text', 
-            doc => "Output file to receive formatted lines", 
-            is_optional => 0, 
-            is_input => 1, 
+        output_file => {
+            is => 'Text',
+            doc => "Output file to receive formatted lines",
+            is_optional => 0,
+            is_input => 1,
             is_output => 1,
         },
-        bed_output_file => { 
-            is => 'Text', 
-            doc => "Optional abbreviated output in BED format", 
-            is_optional => 1, 
-            is_input => 1, 
+        bed_output_file => {
+            is => 'Text',
+            doc => "Optional abbreviated output in BED format",
+            is_optional => 1,
+            is_input => 1,
             is_output => 1,
         },
-        formatted_file => { 
-            is => 'Text', 
-            doc => "Optional output file of indels in annotation format", 
-            is_optional => 1, 
-            is_input => 1, 
-            is_output => 1, 
+        formatted_file => {
+            is => 'Text',
+            doc => "Optional output file of indels in annotation format",
+            is_optional => 1,
+            is_input => 1,
+            is_output => 1,
         },
-        somatic_file => { 
-            is => 'Text', 
-            doc => "Optional output file for Somatic indels parsed from formatted file", 
-            is_optional => 1, 
-            is_input => 1, 
-            is_output => 1, 
+        somatic_file => {
+            is => 'Text',
+            doc => "Optional output file for Somatic indels parsed from formatted file",
+            is_optional => 1,
+            is_input => 1,
+            is_output => 1,
         },
-        gatk_params => { 
-            is => 'Text', 
-            doc => "Parameters for GATK", 
-            is_optional => 1, 
-            is_input => 1, 
-            is_output => 1, 
+        gatk_params => {
+            is => 'Text',
+            doc => "Parameters for GATK",
+            is_optional => 1,
+            is_input => 1,
+            is_output => 1,
             default => "-T IndelGenotyperV2 --somatic --window_size 300 -et NO_ET",
         },
-        reference => { 
-            is => 'Text', 
-            doc => "Parameters for GATK", 
-            is_optional => 1, 
-            is_input => 1, 
-            default => "/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa", 
+        reference => {
+            is => 'Text',
+            doc => "Parameters for GATK",
+            is_optional => 1,
+            is_input => 1,
+            default => "/gscmnt/839/info/medseq/reference_sequences/NCBI-human-build36/all_sequences.fa",
         },
         mb_of_ram => {
             is => 'Text',
             doc => 'The amount of RAM to use, in megabytes',
             default => 5000,
         },
-        skip_if_output_present => { 
-            is => 'Text', 
-            doc => "Skip if output is present", 
-            is_optional => 1, 
+        skip_if_output_present => {
+            is => 'Text',
+            doc => "Skip if output is present",
+            is_optional => 1,
             is_input => 1,
         },
     ],
@@ -87,7 +87,7 @@ class Genome::Model::Tools::Gatk::SomaticIndel {
 sub sub_command_sort_position { 12 }
 
 sub help_brief {
-    "Runs the GATK somatic indel detection pipeline"                 
+    "Runs the GATK somatic indel detection pipeline"
 }
 
 sub help_synopsis {
@@ -98,7 +98,7 @@ EOS
 }
 
 sub help_detail {
-return <<EOS 
+return <<EOS
 
 EOS
 }
@@ -110,7 +110,7 @@ sub execute {
     my $path_to_gatk = $self->gatk_path;
     my $gatk_params = $self->gatk_params;
     my $reference = $self->reference;
-    
+
     ## Add reference to GATK params ##
     $gatk_params = "-R $reference " . $gatk_params;
     #-I /gscmnt/sata905/info/model_data/2858219475/build103084961/alignments/103084961_merged_rmdup.bam
@@ -146,14 +146,20 @@ sub execute {
         if ($self->somatic_file) {
             system("touch " . $self->somatic_file);
         }
+
         $return = Genome::Sys->shellcmd(
                 cmd => "$cmd",
                 output_files => [$output_file],
                 skip_if_output_is_present => 0,
+                allow_zero_size_output_files => 1,
         );
-        unless($return) { 
+        unless($return) {
             $self->error_message("Failed to execute GATK: GATK Returned $return");
             die $self->error_message;
+        }
+
+        unless(-s $output_file) {
+            $self->warning_message('No indels returned by GATK.');
         }
     }
 

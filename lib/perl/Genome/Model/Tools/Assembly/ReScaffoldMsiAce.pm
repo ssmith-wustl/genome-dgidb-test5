@@ -181,12 +181,6 @@ sub _set_new_scaffolds_file {
 sub _run_auto_report {
     my $self = shift;
     $self->status_message("Running consed auto report");
-    #TODO - this doesn't seem to work any more .. not sure, no clear errs
-    #my $run = GSC::IO::Scaffold::Consed::Run->new($self->acefile);
-    #unless ($run->execute) {#TODO - make sure this has correct exit code
-	#$self->error_message("Failed to run consed auto report");
-	#return;
-    #}
     my $acefile = $self->acefile;
     if (system("consed -ace $acefile -autoreport")) {
 	$self->error_message("Failed to run consed auto report on ace file: $acefile");

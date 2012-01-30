@@ -66,18 +66,6 @@ class Genome::ProcessingProfile::ReferenceVariationSanger {
     doc => "runs gmt analysis auto-msa"
 };
 
-sub _initialize_model {
-    my ($self,$model) = @_;
-    warn "defining new model " . $model->__display_name__ . " for profile " . $self->__display_name__ . "\n";
-    return 1;
-}
-
-sub _initialize_build {
-    my ($self,$build) = @_;
-    warn "defining new build " . $build->__display_name__ . " for profile " . $self->__display_name__ . "\n";
-    return 1;
-}
-
 sub _execute_build {
      my ($self, $build) = @_;
      warn "executing build logic for " . $self->__display_name__ . ':' .  $build->__display_name__ . "\n";

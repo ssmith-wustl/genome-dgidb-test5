@@ -50,16 +50,50 @@ class Genome::Model::Tools::DetectVariants2::Result::DetectionBase {
             doc => 'The chromosome(s) on which the detection was run',
         },
     ],
-    has_input => [
+    has_optional => [
+        # old API
         aligned_reads => {
             is => 'Text',
+            is_optional => 1,
+            is_input => 1,
             doc => 'The path to the aligned reads file',
         },
         control_aligned_reads => {
             is => 'Text',
-            doc => 'The path to the control aligned reads file',
             is_optional => 1,
+            is_input => 1,
+            doc => 'The path to the control aligned reads file',
         },
+        # new API
+        alignment_results => {
+            is => 'Genome::InstrumentData::AlignmentResults::Merged',
+            is_optional => 1,
+            is_many => 1,
+            doc => 'The path to the aligned reads file',
+        },
+        control_alignment_results => {
+            is => 'Genome::InstrumentData::AlignmentResults::Merged',
+            is_optional => 1,            
+            is_many => 1,
+            doc => 'The path to the control aligned reads file',
+        },
+        roi_list => {
+            is => 'Genome::FeatureList',
+            is_optional => 1,
+            doc => 'only variants in these regions will be included in the final VCF',
+        },
+        roi_wingspan => {
+            is => 'Number',
+            is_optional => 1,
+            doc => 'include variants within N nucleotides of a region of interest'
+        },
+        pedigree_file_path => {
+            is => 'FilePath',
+            is_optional => 1,
+            doc => 'when supplied overrides the automatic lookup of familial relationships'
+        },
+    ],
+    has_input => [
         reference_build_id => {
             is => 'Number',
             doc => 'the reference to use by id',
@@ -108,8 +142,25 @@ sub create {
                 system("cd $parent_dir && tar -zcvf $archive_name $sub_dir && rm -rf $sub_dir");
             }
             else {
-                die $self->error_message('Instance output directory (' . $instance_output . ') already exists!');
+                $self->warning_message('Instance output directory (' . $instance_output . ') already exists!');
+                $self->warning_message("Deleting the allocation that is in the way");
+                my $allocation_dir = readlink $instance_output;
+                my @parts = split "-", $allocation_dir;
+                my $allocation_owner_id = $parts[-1];
+                my $allocation = Genome::Disk::Allocation->get(owner_id=>$allocation_owner_id);
+                unless ($allocation) {
+                    die $self->error_message("Could not get a disk allocation for owner id $allocation_owner_id and allocation dir $allocation_dir");
+                }
+                unless ($allocation->delete) {
+                    die $self->error_message("Failed to delete allocation at $allocation_dir");
+                }
+                $self->warning_message("Removing link $instance_output");
+                unlink $instance_output;
             }
+        # Otherwise we have a link that no longer points to an allocation, remove it
+        } elsif (-l $instance_output && !-e $instance_output) {
+            $self->warning_message("Removing link $instance_output that points to an allocation that is no longer present");
+            unlink $instance_output;
         }
 
         Genome::Sys->create_symlink_and_log_change($self, $self->output_dir, $instance_output);
@@ -251,6 +302,10 @@ sub _cleanup {
     my $instance = $self->_instance;
     if($instance) {
         my $instance_output = $instance->output_directory;
+        # Remove trailing slashes so readlink will work
+        if ($instance_output =~ m/\/+$/) {
+            $instance_output =~ s/\/+$//;
+        }
         if(readlink($instance_output) eq $self->output_dir) {
             unlink($instance_output);
         }
@@ -280,6 +335,9 @@ sub _resolve_subclass_name {
 sub _set_result_file_permissions {
     my $self = shift;
     my $output_dir = $self->output_dir;
+    if($output_dir =~ m/\/$/){
+        $output_dir =~ s/\/$//;
+    }
 
     chmod 02775, $output_dir;
     for my $subdir (grep { -d $_  } glob("$output_dir/*")) {

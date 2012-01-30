@@ -16,7 +16,7 @@ my $tmp_dir = Genome::Sys->base_temp_directory;
 my $output = $tmp_dir.'/output.fastq';
 
 my %quake_params = map { $_ => 1 } Genome::Model::Tools::Sx::Quake->quake_param_names;
-$quake_params{input} = [$input];
+$quake_params{input} = [$input.':cnt=2'];
 $quake_params{output} = [$output];
 my $quake;
 no warnings;

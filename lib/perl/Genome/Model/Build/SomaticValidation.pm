@@ -11,6 +11,17 @@ class Genome::Model::Build::SomaticValidation {
         reference_sequence_build => {
             is => 'Genome::Model::Build::ReferenceSequence', via => 'inputs', to => 'value', where => [name => 'reference_sequence_build'],
         },
+        annotation_build => {
+            is => 'Genome::Model::Build::ImportedAnnotation',
+            via => 'inputs', to => 'value', where => [ name => 'annotation_build' ],
+            is_mutable => 1,
+        },
+        previously_discovered_variations_build => {
+            is => 'Genome::Model::Build::ImportedVariationList',
+            via => 'inputs', to => 'value', where => [ name => 'previously_discovered_variations_build' ],
+            is_mutable => 1,
+            doc => 'build of variants to screen out from consideration (such as from dbSNP)',
+        },
         snv_variant_list => {
             is => 'Genome::SoftwareResult',
             via => 'inputs', to => 'value', where => [ name => 'snv_variant_list' ],
@@ -89,6 +100,26 @@ class Genome::Model::Build::SomaticValidation {
             to => 'software_result',
             where => [label => 'control_merged_alignment'],
         },
+
+        coverage_stats_result => {
+            is => 'Genome::InstrumentData::AlignmentResult::Merged',
+            via => 'result_users',
+            to => 'software_result',
+            where => [label => 'coverage_stats_tumor'],
+        },
+        control_coverage_stats_result  => {
+            is => 'Genome::InstrumentData::AlignmentResult::Merged',
+            via => 'result_users',
+            to => 'software_result',
+            where => [label => 'coverage_stats_normal'],
+        },
+
+        loh_version => {
+            via => 'model',
+        },
+        tiering_version => {
+            via => 'model',
+        },
     ],
 };
 
@@ -119,11 +150,19 @@ sub post_allocation_initialization {
 sub data_set_path {
     my ($self, $dataset, $version, $file_format) = @_;
     my $path;
-    $version =~ s/^v//;
-    if ($version and $file_format){
+    
+    if ($version and $file_format) {
+        $version =~ s/^v//;
         $path = $self->data_directory."/$dataset.v$version.$file_format";
     }
-    return $path;
+    elsif ($file_format) {
+        # example $b->data_set_path('alignments/tumor/','','flagstat')
+        my @paths = glob($self->data_directory."/$dataset".'*.'.$file_format);
+        return unless @paths == 1;
+        $path = $paths[0];
+    }
+    return $path if -e $path;
+    return;
 }
 
 sub tumor_bam {

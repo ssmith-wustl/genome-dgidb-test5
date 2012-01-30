@@ -25,7 +25,7 @@ sub calculate_qualities_over_minumum {
     Carp::confess('No minimum calculate qualities over minimum.') if not defined $min;
     my $total = 0;
     for my $q ( split('', $quality_string) ) {
-        next if ord($q) < $min;
+        next if (ord($q) - 33) < $min;
         $total++;
     }
     return $total;

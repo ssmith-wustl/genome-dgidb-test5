@@ -28,6 +28,14 @@ class Genome::Sample {
             is_mutable => 1,
             doc => 'Typically tumor, normal, etc. A very brief description of the sample',                                        
         },
+        individual_common_name => { 
+            is => 'Text',
+            via => 'attributes',
+            to => 'attribute_value',
+            where => [ attribute_label => 'individual_common_name' ],
+            is_mutable => 1,
+            doc => 'AML45, BRC1, etc'
+        },
         extraction_label => {
             is => 'Text',
             via => 'attributes',
@@ -236,7 +244,14 @@ class Genome::Sample {
         libraries => { 
             is => 'Genome::Library', 
             reverse_as => 'sample',
+            is_many => 1,
             doc => 'Libraries that were created from the sample',
+        },
+        instrument_data => {
+            is => 'Genome::InstrumentData',
+            via => 'libraries',
+            is_many => 1,
+            doc => 'Instrument data from all DNA libraries from this sample',
         },
     ],
     doc => 'A single specimen of DNA or RNA extracted from some tissue sample',

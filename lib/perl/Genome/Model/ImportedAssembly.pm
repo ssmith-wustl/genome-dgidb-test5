@@ -3,7 +3,7 @@ use warnings;
 use Genome;
 
 class Genome::Model::ImportedAssembly {
-    is => 'Genome::Model',
+    is => 'Genome::ModelDeprecated',
     doc => 'imported assembly',
 };
 

@@ -22,20 +22,6 @@ class Genome::ProcessingProfile::Msi {
     ],
 };
 
-sub _initialize_model {
-    my ($self,$model) = @_;
-    warn "defining new model " . $model->__display_name__ . " for profile " . $self->__display_name__ . "\n";
-    return 1;
-}
-
-sub _initialize_build {
-    my ($self,$build) = @_;
-    warn "defining new build " . $build->__display_name__ . " for profile " . $self->__display_name__ . "\n";
-    return 1;
-}
-
-#1;
-
 #__END__
 sub _execute_build {
     my ($self,$build) = @_;

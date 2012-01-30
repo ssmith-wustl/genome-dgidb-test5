@@ -78,11 +78,6 @@ class Genome::Model::Tools::DetectVariants2::Breakdancer{
     ],
 };
 
-
-sub help_brief {
-    "discovers structural variation using breakdancer",
-}
-
 sub help_synopsis {
     my $self = shift;
     return <<"EOS"
@@ -343,9 +338,9 @@ sub has_version {
     return 0;  
 }
 
-sub params_for_result {
+sub params_for_detector_result {
     my $self = shift;
-    my ($params) = $self->SUPER::params_for_result;
+    my ($params) = $self->SUPER::params_for_detector_result;
 
     $params->{chromosome_list} = $self->chromosome;
     return $params;

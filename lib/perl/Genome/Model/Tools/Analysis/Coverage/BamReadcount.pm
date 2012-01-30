@@ -36,9 +36,41 @@ class Genome::Model::Tools::Analysis::Coverage::BamReadcount{
         min_quality_score => {
             is => 'Integer',
             is_optional => 1,
-	    doc => 'minnimum mapping quality of a read',
+	    doc => 'minimum mapping quality of a read',
             default => '1',
         },
+
+        chrom => {
+            is => 'String',
+            is_optional => 1,
+	    doc => 'only process this chromosome.  Useful for enormous files',
+        },
+
+        min_depth  => {
+            is => 'Integer',
+            is_optional => 1,
+	    doc => 'minimum depth required for a site to be reported',
+        },
+
+        max_depth => {
+            is => 'Integer',
+            is_optional => 1,
+	    doc => 'maximum depth allowed for a site to be reported',
+        },
+
+        min_vaf => {
+            is => 'Integer',
+            is_optional => 1,
+	    doc => 'minimum variant allele frequency required for a site to be reported (0-100)',
+        },
+
+        max_vaf => {
+            is => 'Integer',
+            is_optional => 1,
+	    doc => 'maximum variant allele frequency allowed for a site to be reported (0-100)',
+        },
+
+
 
         ]
 };
@@ -61,6 +93,12 @@ sub execute {
     my $genome_build = $self->genome_build;
     my $min_quality_score = $self->min_quality_score;
 
+    my $min_vaf = $self->min_vaf;
+    my $max_vaf = $self->max_vaf;
+    my $min_depth = $self->min_depth;
+    my $max_depth = $self->max_depth;
+
+    my $chrom = $self->chrom;
 
     my $fasta;
     if ($genome_build eq "36") {
@@ -90,10 +128,21 @@ sub execute {
         die;
     }
 
-    
+    #split out the chromosome we're working on, if necessary
+    if (defined $chrom){
+        my $cmd = "grep \"" . $chrom . "[[:space:]]\" $snv_file>$tempdir/snvfile";
+        my $return = Genome::Sys->shellcmd(
+            cmd => "$cmd",
+            );
+        unless($return) {
+            $self->error_message("Failed to execute: Returned $return");
+            die $self->error_message;
+        }
+        $snv_file = "$tempdir/snvfile"
+    }
+
+
     #now run the readcounting
-    
-    `cp -r $snv_file /tmp/clu`;
     my $cmd = "bam-readcount -q $min_quality_score -f $fasta -l $snv_file $bam_file >$tempdir/readcounts";
     my $return = Genome::Sys->shellcmd(
 	cmd => "$cmd",
@@ -241,13 +290,38 @@ sub execute {
             }
         }
 
-        print OUTFILE "$chr\t$pos\t$knownRef\t$knownVar\t$ref_count\t$var_count\t";
-        if ($var_freq eq "NA"){
-            print OUTFILE $var_freq;
-        } else {
-            print OUTFILE sprintf("%.2f",$var_freq);
+        #filters on the output
+        my $do_print=1;
+        if(defined($min_depth)){
+            $do_print = 0 if(($ref_count + $var_count) < $min_depth);
         }
-        print OUTFILE "\n";
+        if(defined($max_depth)){
+            $do_print = 0 if(($ref_count + $var_count) > $max_depth);
+        }
+        if(defined($min_vaf)){            
+            if($var_freq eq "NA"){
+                $do_print = 0;
+            } elsif( $var_freq < $min_vaf) {
+                $do_print = 0;
+            }
+        }
+        if(defined($max_vaf)){
+            if($var_freq eq "NA"){
+                $do_print = 0;
+            } elsif( $var_freq > $max_vaf) {
+                $do_print = 0;
+            }
+        }
+
+        if($do_print){
+            print OUTFILE "$chr\t$pos\t$knownRef\t$knownVar\t$ref_count\t$var_count\t";
+            if ($var_freq eq "NA"){
+                print OUTFILE $var_freq;
+            } else {
+                print OUTFILE sprintf("%.2f",$var_freq);
+            }
+            print OUTFILE "\n";
+        }
     }
     close(OUTFILE);
 

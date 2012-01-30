@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 
 class Genome::Model::GenotypeMicroarray{
-    is => 'Genome::Model',
+    is => 'Genome::ModelDeprecated',
     has => [
         input_format    => { via => 'processing_profile' },
         instrument_type => { via => 'processing_profile' },

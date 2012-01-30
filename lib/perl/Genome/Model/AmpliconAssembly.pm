@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 
 class Genome::Model::AmpliconAssembly {
-    is => 'Genome::Model',
+    is => 'Genome::ModelDeprecated',
     has => [
     map({
             $_ => {

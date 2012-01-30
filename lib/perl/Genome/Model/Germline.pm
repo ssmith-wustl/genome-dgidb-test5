@@ -5,7 +5,7 @@ use warnings;
 use Genome;
 
 class Genome::Model::Germline {
-    is => 'Genome::Model',
+    is => 'Genome::ModelDeprecated',
     has => [
         source_model => {
             is => 'Genome::Model::ReferenceAlignment',

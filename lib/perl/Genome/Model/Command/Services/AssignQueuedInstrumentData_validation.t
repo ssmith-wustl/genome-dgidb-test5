@@ -11,7 +11,7 @@ BEGIN {
 use above 'Genome';
 
 require Genome::InstrumentData::Solexa;
-use Test::More tests => 18;
+use Test::More tests => 24;
 use Test::MockObject;
 
 use_ok('Genome::Model::Command::Services::AssignQueuedInstrumentData');
@@ -59,6 +59,7 @@ my $instrument_data_1 = Genome::InstrumentData::Solexa->create(
     fwd_clusters => 65535,
     rev_clusters => 65536,
     target_region_set_name => 'validation-test',
+    index_sequence => 'GTTAC',
 );
 ok($instrument_data_1, 'Created an instrument data');
 
@@ -84,12 +85,10 @@ my $processing_profile = Genome::ProcessingProfile::ReferenceAlignment->create(
 );
 ok($processing_profile, 'Created a processing_profile');
 
-my $ps = GSC::ProcessStep->get( process_to => 'queue instrument data for genome modeling' );
-
 my $pse_1 = GSC::PSE::QueueInstrumentDataForGenomeModeling->create(
     pse_status => 'inprogress',
     pse_id => '-12345',
-    ps_id => $ps->ps_id,
+    ps_id => 3733,
     ei_id => '464681',
 );
 
@@ -133,8 +132,61 @@ is(scalar(keys %$new_models), 0, 'the cron created no models for validation');
 is($sv_model->instrument_data, $instrument_data_1, 'the cron added the instrument data to the validation model');
 my $models_changed_1 = $command_1->_existing_models_assigned_to;
 is(scalar(keys %$models_changed_1), 1, 'data was reported assigned to an existing model');
+is((values(%$models_changed_1))[0]->build_requested, 1, 'requested build');
 
 
+
+my $sample1a = Genome::Sample->create(
+    id => '-11',
+    name => 'Pooled_Library_test-sample',
+    common_name => 'normal',
+    taxon_id => $taxon->id,
+    source_id => $individual->id,
+);
+
+my $library1a = Genome::Library->create(
+    id => '-22',
+    sample_id => $sample1a->id,
+);
+
+
+my $instrument_data_1a = Genome::InstrumentData::Solexa->create(
+    id => '-1033',
+    library_id => $library1a->id,
+    flow_cell_id => 'TM-021',
+    lane => '1',
+    run_type => 'Paired',
+    fwd_read_length => 100,
+    rev_read_length => 100,
+    fwd_clusters => 65535,
+    rev_clusters => 65536,
+    target_region_set_name => 'validation-test',
+    index_sequence => 'unknown',
+);
+ok($instrument_data_1a, 'Created an instrument data');
+
+my $pse_1a = GSC::PSE::QueueInstrumentDataForGenomeModeling->create(
+    pse_status => 'inprogress',
+    pse_id => '-12345678',
+    ps_id => 3733,
+    ei_id => '464681',
+);
+
+$pse_1a->add_param('instrument_data_type', 'solexa');
+$pse_1a->add_param('instrument_data_id', $instrument_data_1a->id);
+$pse_1a->add_param('subject_class_name', 'Genome::Sample');
+$pse_1a->add_param('subject_id', $sample1a->id);
+
+my $command_1a = Genome::Model::Command::Services::AssignQueuedInstrumentData->create(
+    test => 1,
+);
+
+isa_ok($command_1a, 'Genome::Model::Command::Services::AssignQueuedInstrumentData');
+$command_1a->dump_status_messages(1);
+ok($command_1a->execute(), 'assign-queued-instrument-data executed successfully.');
+
+is($pse_1a->pse_status, 'completed', 'pooled instrument data removed from queue');
+ok(@{[$pse_1a->added_param('no_model_generation_attempted')]}, 'flag about skipping work added to pse');
 
 my $fl2 = Genome::FeatureList->__define__(
     id => 'ABCDEFGH',
@@ -147,7 +199,7 @@ my $fl2 = Genome::FeatureList->__define__(
 my $pse_2 = GSC::PSE::QueueInstrumentDataForGenomeModeling->create(
     pse_status => 'inprogress',
     pse_id => '-12346',
-    ps_id => $ps->ps_id,
+    ps_id => 3733,
     ei_id => '464681',
 );
 
@@ -162,6 +214,7 @@ my $instrument_data_2 = Genome::InstrumentData::Solexa->create(
     fwd_clusters => 65535,
     rev_clusters => 65536,
     target_region_set_name => 'validation-test-roi',
+    index_sequence => 'GGGGG',
 );
 
 $pse_2->add_param('instrument_data_type', 'solexa');
@@ -191,6 +244,6 @@ isa_ok($command_3, 'Genome::Model::Command::Services::AssignQueuedInstrumentData
 $command_3->dump_status_messages(1);
 ok($command_3->execute(), 'assign-queued-instrument-data executed successfully.');
 
-my $err = $command_3->error_message;
+$err = $command_3->error_message;
 ok($err =~ 'validation-test-roi', 'reported error about feature-list');
 

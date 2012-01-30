@@ -23,14 +23,16 @@ class Genome::ProjectPart {
                 my ($class) = @_;
                 my @part = split(/::/,$class);
                 if ($part[1] eq 'Model') {
-
                     my $subclass = $part[-1];
                     $subclass =~ s/([A-Z])/ $1/g;
                     $subclass =~ s/^\s+(.+)/$1/;
                     return $subclass . ' Model';
-
                 } else {
-                    return $part[-1];
+                    my $i = 1;
+                    if ($part[$i] =~ /^(Sys)$/) {
+                        $i++;
+                    }
+                    return $part[$i];
                 }
             }
         },

@@ -11,7 +11,7 @@ class Genome::Model::Tools::Capture::DefineModels {
     ref_align_model_group_id => { is => 'Text', doc => "ID of model-group containing reference-alignments to pair up" },
     output_dir => { is => 'Text', doc => "Output directory to store various useful lists and statistics" },
     som_var_model_group_name => { is => 'Text', doc => "A model-group name for the SomaticVariation models to define", is_optional => 1 },
-    processing_profile_name => { is => 'Text', doc => "Processing profile for the SomaticVariation models to define", is_optional => 1, default => "may 2011 somatic-variation exome" },
+    processing_profile_name => { is => 'Text', doc => "Processing profile for the SomaticVariation models to define", is_optional => 1, default => "Dec 2011 Default Somatic Variation Exome" },
     annotation_build => { is => 'Text', doc => "Annotation build for the SomaticVariation models to define", is_optional => 1, default => "NCBI-human.combined-annotation/58_37c_v2" },
     dbsnp_build_id => { is => 'Text', doc => "The build that whitelists previously discovered variations", is_optional => 1, default => "110108854" },
     expected_refseq_name => { is => 'Text', doc => "Refseq that reference-alignments are expected to use", is_optional => 1, default => "GRCh37-lite-build37" },

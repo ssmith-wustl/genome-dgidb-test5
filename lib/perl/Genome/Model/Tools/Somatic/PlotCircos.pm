@@ -401,7 +401,7 @@ sub convert_anno_file {
         while(my $line = $sniper_fh->getline) {
             $label++;
             chomp $line;
-            my ($chr,$start, $stop, $ref, $var, $mut, $gene, $transcript, $source, $version, $strand, $dunno, $type, $c_position, $amino_acid_change, @rest) = split /\t/, $line;
+            my ($chr,$start, $stop, $ref, $var, $mut, $gene, $transcript, $species, $source, $version, $strand, $dunno, $type, $c_position, $amino_acid_change, @rest) = split /\t/, $line;
             my $label = '';
             $amino_acid_change =~ s/p\.//;
             $label = "$gene\[$amino_acid_change\]" if $gene;

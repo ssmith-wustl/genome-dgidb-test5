@@ -159,7 +159,11 @@ class Genome::Model::Tools::DetectVariants2::Detector {
 };
 
 sub help_brief {
-    "The base class for variant detectors.",
+    my $self = shift;
+    my $class = ref($self) || $self;
+    my ($name) = ($class =~ /Genome::Model::Tools::DetectVariants2::(.*)/);
+    my @words = map { lc($_) } split(/(?=[A-Z])/,$name);
+    return "directly run the @words variant detector";
 }
 
 sub help_synopsis {
@@ -173,6 +177,11 @@ sub help_detail {
     return <<EOS 
 This is just an abstract base class for variant detector modules.
 EOS
+}
+
+sub _supports_cross_sample_detection {
+    my ($class, $version, $vtype, $params) = @_;
+    return 0; # not by default
 }
 
 sub create {
@@ -291,7 +300,6 @@ sub execute {
 
 sub _summon_vcf_result {
     my $self = shift;
-    $DB::single=1;
 
     my ($params) = $self->params_for_vcf_result;
     my $result = Genome::Model::Tools::DetectVariants2::Result::Vcf::Detector->get_or_create(%$params); #, _instance => $self);
@@ -406,10 +414,11 @@ sub params_for_detector_result {
 
 sub params_for_vcf_result {
     my $self = shift;
-
+    my $vcf_version = Genome::Model::Tools::Vcf->get_vcf_version;
     my %params = (
         test_name => $ENV{GENOME_SOFTWARE_RESULT_TEST_NAME} || undef,
         input_id => $self->_result->id,
+        vcf_version => $vcf_version,
         aligned_reads_sample => $self->aligned_reads_sample,
     );
     $params{control_aligned_reads_sample} = $self->control_aligned_reads_sample if defined $self->control_aligned_reads_sample;
@@ -441,9 +450,17 @@ sub _link_vcf_output_directory_to_result {
     for my $vcf (@vcfs){
         my $target = $output_directory . "/" . basename($vcf);
         $self->status_message("Attempting to link : " .$vcf."  to  ". $target);
-        unless(-e $target) {
-            Genome::Sys->create_symlink($vcf, $target);
+        if(-l $target) {
+            $self->status_message("Already found a vcf linked in here, unlinking that for you.");
+            unless(unlink($target)){
+                die $self->error_message("Failed to unlink a link to a vcf at: ".$target);
+            }    
+        } elsif(-e $target) {
+            die $self->error_message("Found something in place of the vcf symlink.");
         }
+        
+        Genome::Sys->create_symlink($vcf, $target);
+        
     }
 
     return 1;

@@ -91,6 +91,7 @@ plotSegments <- function(chr="ALL", filename, entrypoints, ymax=NULL, ymin=NULL,
   ## with lines to the peaks
 
   addAnnos <- function(annos, segs, top=TRUE, offset=FALSE, chr=NULL, leftEdge=50000000){
+    
     if(!(is.null(chr))){
       annos=annos[which(annos[,1] == chr),]
     }
@@ -98,6 +99,7 @@ plotSegments <- function(chr="ALL", filename, entrypoints, ymax=NULL, ymin=NULL,
       return(0)
     }
 
+    print(annos)
     
     ypos = ymin*0.8
     if (top){
@@ -109,7 +111,7 @@ plotSegments <- function(chr="ALL", filename, entrypoints, ymax=NULL, ymin=NULL,
       sp=as.numeric(annos[i,3])
       mid=(sp-st)+st
       midNoOffset = mid
-      
+
       if(offset){
         offsetNum=as.numeric(entrypoints[which(entrypoints$chr==annos[i,1]),4])
         st = st + offsetNum
@@ -129,6 +131,7 @@ plotSegments <- function(chr="ALL", filename, entrypoints, ymax=NULL, ymin=NULL,
           ptop = min(segs[peakNum,5])+((ymin-as.numeric(baseline))*0.05)
         }
       }
+        
 
       ##adjust at left edge of plot
       ## todo - make this a percentage of the plot, rather than a
@@ -140,8 +143,14 @@ plotSegments <- function(chr="ALL", filename, entrypoints, ymax=NULL, ymin=NULL,
       
       if(is.null(annos[i,5])){
         annos[i,5] = 0
+      } else {
+        if (is.na(annos[i,5])){
+          annos[i,5] = 0
+        }
       }
-      
+      #print(annos)
+      #print(annos[i,5])
+      print(paste(mid2,(ypos+annos[i,5]),annos[i,4],sep=","))
       text(mid2,(ypos+annos[i,5]),annos[i,4],cex=0.5,font=3)
       lines(c(mid,mid2),c(ptop,(ypos+annos[i,5])*.90))
     }

@@ -11,14 +11,14 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
     <xsl:call-template name="control_bar_view"/>
 
     <xsl:variable name='header_name'>
-        <xsl:choose>
-            <xsl:when test='count(aspect[@name="name"]/value)=1'>
-                <xsl:value-of select='aspect[@name="name"]/value'/>
-            </xsl:when>
-            <xsl:otherwise>
-                <xsl:value-of select='./display_name'/>
-            </xsl:otherwise>
-        </xsl:choose>
+      <xsl:choose>
+        <xsl:when test='count(aspect[@name="name"]/value)=1'>
+          <xsl:value-of select='aspect[@name="name"]/value'/>
+        </xsl:when>
+        <xsl:otherwise>
+          <xsl:value-of select='./display_name'/>
+        </xsl:otherwise>
+      </xsl:choose>
     </xsl:variable>
 
     <xsl:call-template name="view_header">
@@ -29,9 +29,9 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
 
     <div class="content rounded shadow">
       <div class="container">
-          <xsl:for-each select="aspect[@name='members']/object">
-              <xsl:call-template name="genome_genenamereport_box"/>
-          </xsl:for-each>
+        <xsl:for-each select="aspect[@name='members']/object">
+          <xsl:call-template name="genome_genenamereport_box"/>
+        </xsl:for-each>
       </div> <!-- end container -->
     </div> <!-- end content -->
 
@@ -68,9 +68,6 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
                   <xsl:when test="string(normalize-space(aspect[@name='name']/value))">
                     <xsl:value-of select="normalize-space(aspect[@name='name']/value)"/>
                   </xsl:when>
-                  <xsl:otherwise>
-                    --
-                  </xsl:otherwise>
                 </xsl:choose>
               </td>
             </tr>
@@ -83,9 +80,6 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
                   <xsl:when test="string(normalize-space(aspect[@name='nomenclature']/value))">
                     <xsl:value-of select="normalize-space(aspect[@name='nomenclature']/value)"/>
                   </xsl:when>
-                  <xsl:otherwise>
-                    --
-                  </xsl:otherwise>
                 </xsl:choose>
               </td>
             </tr>
@@ -98,9 +92,6 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
                   <xsl:when test="string(normalize-space(aspect[@name='source_db_name']/value))">
                     <xsl:value-of select="normalize-space(aspect[@name='source_db_name']/value)"/>
                   </xsl:when>
-                  <xsl:otherwise>
-                    --
-                  </xsl:otherwise>
                 </xsl:choose>
               </td>
             </tr>
@@ -113,26 +104,41 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
                   <xsl:when test="string(normalize-space(aspect[@name='source_db_version']/value))">
                     <xsl:value-of select="normalize-space(aspect[@name='source_db_version']/value)"/>
                   </xsl:when>
-                  <xsl:otherwise>
-                    --
-                  </xsl:otherwise>
                 </xsl:choose>
               </td>
-              </tr>
+            </tr>
 
-              <tr>
+            <tr>
+              <td class="name">Source URL:
+              </td>
+              <td class="value">
+                <xsl:choose>
+                  <xsl:when test="string(normalize-space(aspect[@name='original_data_source_url']/value))">
+                    <a>
+                      <xsl:attribute name="href">
+                        <xsl:value-of select="normalize-space(aspect[@name='original_data_source_url']/value)"/>
+                      </xsl:attribute>
+                      <xsl:value-of select="normalize-space(aspect[@name='original_data_source_url']/value)"/>
+                    </a>
+                  </xsl:when>
+                </xsl:choose>
+              </td>
+            </tr>
+
+
+            <tr>
               <td class="name">Alternate Names:
               </td>
               <td class="value">
-                  <ul>
-                      <xsl:for-each select="aspect[@name='gene_name_report_associations']/object">
-                          <li>
-                              <xsl:value-of select="normalize-space(aspect[@name='alternate_name']/value)"/>
-                              <xsl:text>  </xsl:text>
-                              (<xsl:value-of select="normalize-space(aspect[@name='nomenclature']/value)"/>)
-                          </li>
-                      </xsl:for-each>
-                  </ul>
+                <ul>
+                  <xsl:for-each select="aspect[@name='gene_name_report_associations']/object">
+                    <li>
+                      <xsl:value-of select="normalize-space(aspect[@name='alternate_name']/value)"/>
+                      <xsl:text>  </xsl:text>
+                      (<xsl:value-of select="normalize-space(aspect[@name='nomenclature']/value)"/>)
+                    </li>
+                  </xsl:for-each>
+                </ul>
               </td>
             </tr>
 

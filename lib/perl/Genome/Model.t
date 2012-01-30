@@ -20,7 +20,7 @@ class Genome::ProcessingProfile::Tester {
 sub Genome::ProcessingProfile::Tester::sequencing_platform { return 'solexa'; };
 
 class Genome::Model::Tester {
-    is => 'Genome::Model',
+    is => 'Genome::ModelDeprecated',
     has => [
         foo => { 
             is_optional => 1, is_mutable => 1, is_many => 0,
@@ -206,7 +206,6 @@ my @completed_builds = $model->completed_builds;
 is_deeply(\@completed_builds, [$builds[0]], 'completed builds');
 is_deeply([$model->last_complete_build], [$builds[0]], 'last completed build');
 is($model->last_complete_build_id, $builds[0]->id, 'last completed build id');
-is($model->_last_complete_build_id, $builds[0]->id, '_last completed build id');
 
 my @succeed_builds = $model->succeeded_builds;
 is_deeply(\@succeed_builds, [$builds[0]], 'succeeded builds');
@@ -225,7 +224,6 @@ is($builds[1]->status, 'Succeeded', 'build 1 is now succeeded');
 is_deeply(\@completed_builds, \@builds, 'completed builds');
 is_deeply([$model->last_complete_build], [$builds[1]], 'last completed build');
 is($model->last_complete_build_id, $builds[1]->id, 'last completed build');
-is($model->_last_complete_build_id, $builds[1]->id, '_last completed build id');
 @succeed_builds = $model->succeeded_builds;
 is_deeply(\@succeed_builds, \@builds, 'succeeded builds');
 is_deeply([$model->last_succeeded_build], [$builds[1]], 'last succeeded build');

@@ -25,7 +25,7 @@
         <div class="span-12">
           <div class="main_search">
             <form id="searchForm" method="get" action="/view/genome/search/query/status.html">
-              <h4>Please enter your search, then press Return:</h4>
+            <br/>
 
               <table cellpadding="0" cellspacing="0" border="0" class="search_elements">
                 <tr>
@@ -37,6 +37,9 @@
                   </td>
                 </tr>
               </table>
+
+
+
             </form>
           </div>
 <br/>
@@ -48,21 +51,22 @@
 
         <div class="main_search_hints clearfix">
           <div class="box_header span-8 last rounded-top">
-            <div class="box_title"><h3 class="nontyped last">Can't find what you're looking for?</h3></div>
+            <div class="box_title"><h3 class="nontyped last">Analysis Tools</h3></div>
           </div>
 
           <div class="box_content rounded-bottom span-24 last">
-            <div style="width: 100%; float: left;">
+            <div style="width: 50%; float: left;">
               <div class="padding10">
-                <br/>
-                Help us make it better by <a href="mailto:apipe@genome.wustl.edu">emailing us</a> with
-                your search text and what you expected to find.
-                <br/><br/>
-                Currently you will find taxons, individuals, samples, libraries, model groups, models, processing profiles, wiki pages, and instrument data (flow cell).
-                <br/>
-                <br/>
-                <br/>
-                <br/>
+                <a id="project_link">Your projects</a> - Use projects to organize your analysis related data. 
+                (<a href="/view/genome/project/set/help.html">read more</a>)<br/>
+
+                <a href="/view/genome/nomenclature/set/status.html">Nomenclatures</a> - Nomenclatures describe different formats for clinical data<br/>
+
+                <a href="/view/genome/subject/set/create.html">Import subject data</a> - Upload key/value pair clinical data about samples<br/>
+
+<br/>
+<br/>
+Email <a href="mailto:apipe@genome.wustl.edu">apipe@genome.wustl.edu</a> if you have any questions or suggestions.
               </div><!-- end .padding10 -->
             </div>
           </div> <!-- end .box_content -->

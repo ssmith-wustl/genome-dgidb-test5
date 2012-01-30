@@ -262,23 +262,36 @@ sub _delete_by_id {
     return $error_count;
 }
 
-sub _delete_by_doc {
+sub delete_by_doc {
     my $class = shift;
     my @docs = @_;
 
+    unless (@docs) {
+        return;
+    }
+
     my $self = $class->_singleton_object;
     my $solr = $self->_solr_server;
+    my $memcached = Genome::Memcache->server;
 
-    my $error_count = 0;
+    my (@cache_ids, @solr_ids);
     for my $doc (@docs) {
-        if($solr->delete_by_id($doc->value_for('id'))) {
-            $self->_delete_cached_result($doc);
-        } else {
-            $error_count++;
+        my $solr_id = $doc->value_for('id');
+        unless ($solr_id) {
+            die $self->error_message('No value for \'id\':' . Dumper($doc));
+        }
+        push @solr_ids, $solr_id;
+        push @cache_ids, "genome_search:" . $solr_ids[-1];
+    }
+
+    my $response = $solr->_send_update('<delete><id>' . join('</id><id>', @solr_ids) . '</id></delete>');
+    if ($response->ok) {
+        for my $cache_id (@cache_ids) {
+            $memcached->delete($cache_id);
         }
     }
 
-    return $error_count;
+    return $response;
 }
 
 sub clear {
@@ -309,6 +322,36 @@ sub cache_key_for_doc {
 }
 
 
+### Other ###
+
+sub get_subject_from_doc {
+    my $class = shift;
+    my $solr_doc = shift || die;
+
+    my $subject_class_name = $solr_doc->value_for('class');
+    return unless $subject_class_name->can('get');
+
+    my $object_id = $solr_doc->value_for('object_id');
+    if ($object_id) {
+        if ($subject_class_name->isa('UR::Object::Set') && $object_id =~ /=$/) {
+            # Sets have invalid XML chars in their IDs so we encode them in Base64.
+            # Encoding is done in Genome::View::Solr::Xml::_generate_object_id_field_data so keep symmetry there.
+            # TODO Encoding/decoding should probably be handled by the object itself.
+            $object_id = decode_base64($object_id);
+        }
+        return $subject_class_name->get($object_id);
+    }
+
+    my $solr_id = $solr_doc->value_for('id');
+    if ($solr_id) {
+        my ($derived_object_id) = $solr_id =~ /.*?(\d+)$/;
+        if ($derived_object_id) {
+            return $subject_class_name->get($derived_object_id);
+        }
+    }
+
+    return;
+}
 
 ###  XML Generation for results  ###
 
@@ -352,7 +395,7 @@ sub generate_result_xml {
 
         unless($object_id) {
             #Older snapshots will create duplicate entries in the index; let's not show them.
-            $class->_delete_by_doc($doc);
+            $class->delete_by_doc($doc);
             next;
         }
 
@@ -375,7 +418,7 @@ sub generate_result_xml {
             # (2) the entity has a different class than was indexed(!) so index is wrong
             #so remove the object from the index
             #(in the case of #2 the correct class will be indexed by the cron later)
-            $class->_delete_by_doc($doc);
+            $class->delete_by_doc($doc);
             next;
         }
 
@@ -517,6 +560,7 @@ sub _index_queue_callback {
     my $meta = $object->__meta__;
     my @trigger_properties = ('create', 'delete', $meta->all_property_names);
     if (grep { $aspect eq $_ } @trigger_properties) {
+        # TODO try using is_loaded insteaf of get to reduce redundancy in the queue
         my %create_params = (
             subject_id => $object->id,
             subject_class => $object->class,

@@ -37,6 +37,9 @@ class Genome::Model::Tools::Velvet::Metrics {
             doc => 'Stats output file',
         },
     ],
+    has_optional => [
+        _metrics => { is_transient => 1, },
+    ],
 };
 
 sub help_brief {
@@ -72,13 +75,17 @@ sub __errors__ {
         );
     }
 
-    my $reads_file = $self->input_collated_fastq_file;
-    if ( not -s $reads_file ) {
-        push @errors, UR::Object::Tag->create(
-            type => 'invalid',
-            properties => [qw/ assembly_directory /],
-            desc => 'No input reads file found in assembly_directory:'.$self->assembly_directory,
-        );
+    #check files needed for metrics
+    for my $file_method ( qw/ input_collated_fastq_file velvet_afg_file velvet_sequences_file velvet_contigs_fa_file / ) {
+        my $file = $self->$file_method;
+        if ( not -s $file ) {
+            my $file_name = File::Basename::basename( $file );
+            push @errors, UR::Object::Tag->create(
+                type => 'invalid',
+                properties => [qw/ assembly_directory /],
+                desc => "No velvet $file_name file found in assembly_directory:".$self->assembly_directory,
+            );
+        }
     }
 
     return @errors;
@@ -88,11 +95,6 @@ sub execute {
     my $self = shift;
     $self->status_message('Velvet metrics...');
 
-    # input files
-    my $resolve_post_assembly_files = $self->_validate_or_create_post_assembly_files;
-    return if not $resolve_post_assembly_files;
-    my $contigs_bases_file = $self->resolve_contigs_bases_file;
-
     # tier values
     my ($t1, $t2);
     if ($self->first_tier and $self->second_tier) {
@@ -100,7 +102,7 @@ sub execute {
         $t2 = $self->second_tier;
     }
     else {
-        my $est_genome_size = -s $contigs_bases_file;
+        my $est_genome_size = -s $self->velvet_contigs_fa_file;
         $t1 = int ($est_genome_size * 0.2);
         $t2 = int ($est_genome_size * 0.2);
     }
@@ -113,26 +115,17 @@ sub execute {
         tier_one => $t1,
         tier_two => $t2,
     );
+    $self->_metrics($metrics);
 
-    # add contigs
-    $self->status_message('Add contigs bases file: '.$contigs_bases_file);
-    my $add_contigs_ok = $metrics->add_contigs_file_with_contents($contigs_bases_file.':type=fasta');
-    return if not $add_contigs_ok;
-
-    # reads
+    # input reads
     my $reads_file = $self->input_collated_fastq_file;
     $self->status_message('Add reads file: '.$reads_file);
     my $add_reads = $metrics->add_reads_file_with_q20($reads_file);
     return if not $add_reads;
 
-    # reads placed
-    $self->status_message('Add reads placed: '.$self->resolve_reads_placed_file);
-    my $add_reads_placed = $self->_add_reads_placed_to_metrics($metrics);
-    return if not $add_reads_placed;
-
-    # reads placed
-    $self->status_message('Add read depths: '.$self->resolve_afg_file);
-    my $add_read_depth = $self->_add_read_depth_to_metrics($metrics);
+    # reads assembled
+    $self->status_message('Add velvet afg file: '.$self->velvet_afg_file);
+    my $add_read_depth = $self->_add_metrics_from_agp_file($metrics);
     return if not $add_read_depth;
     
     # transform metrics
@@ -151,6 +144,7 @@ sub execute {
         $self->error_message('Failed to open metrics output file!');
         return;
     }
+    #print $text;
     $fh->print($text);
     $fh->close;
 
@@ -158,100 +152,65 @@ sub execute {
     return 1;
 }
 
-sub _validate_or_create_post_assembly_files {
-    my $self = shift;
-
-    # afg
-    my $afg_file = $self->resolve_afg_file;
-    if ( not -s $afg_file ) {
-        $self->error_message('No velvet afg file in assembly directory: '.$self->assembly_directory);
-        return;
-    }
-
-    # contigs files
-    my $contigs_bases = $self->resolve_contigs_bases_file;
-    unless ( -s $contigs_bases ) {
-        my $tool = Genome::Model::Tools::Velvet::CreateContigsFiles->create(
-            assembly_directory => $self->assembly_directory,
-            min_contig_length => 1,
-        );
-        unless( $tool->execute ) {
-            $self->error_message("Failed to create contigs bases/quals files for stats");
-            return;
-        }
-    }
-
-    # gap file
-    my $gap_sizes_file = $self->resolve_gap_sizes_file;
-    unless ( -e $gap_sizes_file ) {
-        my $tool = Genome::Model::Tools::Velvet::CreateGapFile->create(
-            assembly_directory => $self->assembly_directory,
-        );
-        unless( $tool->execute ) {
-            $self->error_message("Failed to create gap.txt file for stats");
-            return;
-        }
-    }
-
-    #reads files
-    my $reads_info_file = $self->resolve_read_info_file;
-    my $reads_placed_file = $self->resolve_reads_placed_file;
-    unless ( -s $reads_info_file and -s $reads_placed_file ) {
-        my $tool = Genome::Model::Tools::Velvet::CreateReadsFiles->create(
-            assembly_directory => $self->assembly_directory,
-        );
-        unless( $tool->execute ) {
-            $self->error_message("Failed to create readinfo and reads.placed files for stats");
-            return;
-        }
-    }
-
-    return 1;
-}
-
-sub _add_reads_placed_to_metrics {
-    my ($self, $metrics) = @_;
-
-    my $fh = eval{ Genome::Sys->open_file_for_reading($self->resolve_reads_placed_file); };
-    return if not $fh;
-
-    my %uniq_reads;
-    my $reads_placed_in_scaffolds = 0;
-    while ( my $line = $fh->getline ) {
-        $reads_placed_in_scaffolds++;
-        my ($read_name) = $line =~ /^\*\s+(\S+)\s+/;
-        $read_name =~ s/\-\d+$//;
-        $uniq_reads{$read_name}++;
-    }
-    $fh->close;
-
-    $metrics->set_metric('reads_placed', $reads_placed_in_scaffolds);
-
-    my $reads_placed_unique = keys %uniq_reads;
-    $metrics->set_metric('reads_placed_unique', $reads_placed_unique);
-    $metrics->set_metric('reads_placed_duplicate', ($reads_placed_in_scaffolds - $reads_placed_unique));
-
-    my $reads_count = $metrics->get_metric('reads_count');
-    my $reads_unplaced = $reads_count - $reads_placed_unique;
-    $metrics->set_metric('reads_unplaced', $reads_unplaced);
-
-    return 1;
-}
-
-sub _add_read_depth_to_metrics { #for velvet assemblies
+sub _add_metrics_from_agp_file { #for velvet assemblies
     my ($self, $metrics) = @_;
 
     my $afg_fh = eval{ Genome::Sys->open_file_for_reading($self->resolve_afg_file); };
     return if not $afg_fh;
 
-    my ($one_x_cov, $two_x_cov, $three_x_cov, $four_x_cov, $five_x_cov, $uncovered_pos, $total_consensus_pos) = (qw/ 0 0 0 0 0 0 0 /);
+    # read coverage
+    my ($zero_x, $one_x, $two_x, $three_x, $four_x, $five_x ) = (qw/ 0 0 0 0 0 0 /);
+    my ($total_contigs_length, $contigs_length_5k) = (0,0);
+
+    #genome content
+    my ( $gc_count, $at_count, $nx_count ) = ( 0,0,0 );
+
+    #reads assembled contigs/supercontigs
+    my %uniq_reads;
+    my %reads_in_supercontigs;
+    my $reads_assembled_in_scaffolds = 0;
+    my $major_contigs_read_count = 0;
+    my $minor_contigs_read_count = 0;
 
     while (my $record = getRecord($afg_fh)) {
         my ($rec, $fields, $recs) = parseRecord($record);
         if ($rec eq 'CTG') {  #contig
-            my $seq = $fields->{seq}; #fasta
+            my $seq = $fields->{seq};
             $seq =~ s/\n//g; #contig seq is written in multiple lines
+
             my $contig_length = length $seq;
+            $total_contigs_length += $contig_length;
+
+            #contigs/supercontig lengths;
+            my $contig_name = $fields->{eid};
+            my ($supercontig_name) = $fields->{eid} =~ /^(\d+)-/; 
+
+            my %contig;
+            $contig{'id'} = $supercontig_name.'.'.$contig_name;
+            $contig{'seq'} = $seq;
+            $metrics->add_contig( \%contig );
+
+            #separate major/minor contigs metrics
+            if ( $contig_length >= $self->major_contig_length ) {
+                $major_contigs_read_count += scalar @$recs;
+            } else {
+                $minor_contigs_read_count += scalar @$recs;
+            }
+            $reads_in_supercontigs{$supercontig_name} += scalar @$recs;
+
+            #five k contig lengths
+            $contigs_length_5k += $contig_length if $contig_length >= 5000;
+
+            #genome contents
+            my %base_counts = ( a => 0, t => 0, g => 0, C => 0, n => 0, x => 0 );
+            foreach my $base ( split ('', $seq) ) {
+                $base_counts{lc $base}++;
+            }
+            $gc_count += $base_counts{g} + $base_counts{c};
+            $at_count += $base_counts{a} + $base_counts{t};
+            $nx_count += $base_counts{n} + $base_counts{x};
+
+            #read coverage 
             my @consensus_positions;
             for my $r (0..$#$recs) { #reads
                 my ($srec, $sfields, $srecs) = parseRecord($recs->[$r]);
@@ -260,6 +219,9 @@ sub _add_read_depth_to_metrics { #for velvet assemblies
                 #'src' => '19534',  #read id number
                 #'clr' => '0,90',   #read start, stop 0,90 = uncomp 90,0 = comp
                 #'off' => '75'      #read off set .. contig start position
+
+                $reads_assembled_in_scaffolds++;
+                $uniq_reads{$sfields->{src}}++;
 
                 my ($left_pos, $right_pos) = split(',', $sfields->{clr});
                 #disregard complementation .. set lower values as left_pos and higher value as right pos
@@ -277,36 +239,75 @@ sub _add_read_depth_to_metrics { #for velvet assemblies
                     $consensus_positions[$_]++;
                 }
             }
-            $total_consensus_pos += $#consensus_positions;
+
             shift @consensus_positions; #remove [0] position 
-            #
             if (scalar @consensus_positions < $contig_length) {
                 $self->warning_message ("Covered consensus bases does not equal contig length\n\t".
                     "got ".scalar (@consensus_positions)." covered bases but contig length is $contig_length\n");
-                $uncovered_pos += ( $contig_length - scalar @consensus_positions );
-                $total_consensus_pos += ( $contig_length - scalar @consensus_positions );
+                $zero_x += ( $contig_length - scalar @consensus_positions );
             }
             foreach (@consensus_positions) {
                 if ( not defined $_ ) { #not covered consensus .. probably an error in velvet afg file
-                    $uncovered_pos++;
+                    $zero_x++;
                     next;
                 }
-                $five_x_cov++  and next if $_ >= 5;
-                $four_x_cov++  and next if $_ == 4;
-                $three_x_cov++ and next if $_ == 3;
-                $two_x_cov++   and next if $_ == 2;
-                $one_x_cov++   if $_ == 1;
+                $one_x++   if $_ > 0;
+                $two_x++   if $_ > 1;
+                $three_x++ if $_ > 2;
+                $four_x++  if $_ > 3;
+                $five_x++  if $_ > 4;
             }
         }
     }
-    $afg_fh->close;
 
-    $metrics->set_metric('coverage_5x', $five_x_cov);
-    $metrics->set_metric('coverage_4x', $four_x_cov  + $five_x_cov);
-    $metrics->set_metric('coverage_3x', $three_x_cov + $five_x_cov + $four_x_cov);
-    $metrics->set_metric('coverage_2x', $two_x_cov + $five_x_cov + $four_x_cov + $three_x_cov);
-    $metrics->set_metric('coverage_1x', $one_x_cov + $five_x_cov + $four_x_cov + $three_x_cov + $two_x_cov);
-    $metrics->set_metric('coverage_0x', $uncovered_pos) if $uncovered_pos > 0;  # this is possible somehow
+    $afg_fh->close;
+    #genome content
+    $metrics->set_metric('content_at', $at_count);
+    $metrics->set_metric('content_gc', $gc_count);
+    $metrics->set_metric('content_nx', $nx_count);
+
+    #5k contig lengths
+    $metrics->set_metric('contigs_length_5k', $contigs_length_5k);
+
+    #reads assembled
+    $metrics->set_metric('reads_assembled', $reads_assembled_in_scaffolds);
+    my $reads_assembled_unique = keys %uniq_reads;
+    $metrics->set_metric('reads_assembled_unique', $reads_assembled_unique);
+    $metrics->set_metric('reads_assembled_duplicate', ($reads_assembled_in_scaffolds - $reads_assembled_unique));
+    my $reads_count = $metrics->get_metric('reads_processed');
+    my $reads_not_assembled = $reads_count - $reads_assembled_unique;
+    $metrics->set_metric('reads_not_assembled', $reads_not_assembled);
+    $metrics->set_metric('contigs_major_read_count', $major_contigs_read_count);
+    my $contigs_major_read_percent = sprintf( "%.1f", $major_contigs_read_count / $reads_assembled_in_scaffolds * 100);
+    $metrics->set_metric('contigs_major_read_percent', $contigs_major_read_percent);
+
+    $metrics->set_metric('contigs_minor_read_count', $minor_contigs_read_count);
+    my $contigs_minor_read_percent = sprintf( "%.1f", $minor_contigs_read_count / $reads_assembled_in_scaffolds * 100);
+    $metrics->set_metric('contigs_minor_read_percent', $contigs_minor_read_percent);
+
+    my $supercontigs_major_read_count = 0;
+    my $supercontigs_minor_read_count = 0;
+    for my $sctg ( keys %reads_in_supercontigs ) {
+        if ( $metrics->{'supercontigs'}->{$sctg} >= $self->major_contig_length ) {
+            $supercontigs_major_read_count += $reads_in_supercontigs{$sctg};
+        } else {
+            $supercontigs_minor_read_count += $reads_in_supercontigs{$sctg};
+        }
+    }
+    $metrics->set_metric('supercontigs_major_read_count', $supercontigs_major_read_count);
+    my $supercontigs_major_read_percent = sprintf( "%.1f", $supercontigs_major_read_count / $reads_assembled_in_scaffolds * 100);
+    $metrics->set_metric('supercontigs_major_read_percent', $supercontigs_major_read_percent);
+    $metrics->set_metric('supercontigs_minor_read_count', $supercontigs_minor_read_count);
+    my $supercontigs_minor_read_percent = sprintf( "%.1f", $supercontigs_minor_read_count / $reads_assembled_in_scaffolds * 100);
+    $metrics->set_metric('supercontigs_minor_read_percent', $supercontigs_minor_read_percent);
+
+    #read coverage
+    $metrics->set_metric('coverage_5x', $five_x);
+    $metrics->set_metric('coverage_4x', $four_x);
+    $metrics->set_metric('coverage_3x', $three_x);
+    $metrics->set_metric('coverage_2x', $two_x);
+    $metrics->set_metric('coverage_1x', $one_x);
+    $metrics->set_metric('coverage_0x', $zero_x);
 
     return 1;
 }
