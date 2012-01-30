@@ -12,7 +12,7 @@ class Genome::ModelGroup::Command::Member::List {
         show => {
             doc => 'properties of the member models to list (comma-delimited)',
             is_optional => 1,
-            default_value => 'genome_model_id,name',
+            default_value => 'id,name',
         },
         subject_class_name  => {
             is_constant => 1,
