@@ -49,14 +49,18 @@ class Genome::DruggableGene::DrugGeneInteractionReport::Set::View::Solr::Xml {
             is => 'Text',
             calculate_from => ['subject'],
             calculate => q{
-                 ($subject->members)[0]->drug_name_report_name . ' as ' . ($subject->members)[0]->interaction_type . ' for ' . ($subject->members)[0]->gene_name_report_name
+                 ($subject->members)[0]->drug_name_report_name . ' as ' .
+                 join(' and ',($subject->members)[0]->interaction_types) .
+                 ' for ' . ($subject->members)[0]->gene_name_report_name
             },
         },
         title => {
             is => 'Text',
             calculate_from => ['subject'],
             calculate => q{
-                ($subject->members)[0]->interaction_type . ' ' . ($subject->members)[0]->drug_name_report_name . ' ' . ($subject->members)[0]->gene_name_report_name
+                join(' ',($subject->members)[0]->interaction_types) .
+                ' ' .  ($subject->members)[0]->drug_name_report_name .
+                ' ' .  ($subject->members)[0]->gene_name_report_name
             },
         },
         default_aspects => {

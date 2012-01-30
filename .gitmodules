@@ -82,3 +82,21 @@
 [submodule "vendor/bwa"]
 	path = vendor/bwa
 	url = ssh://git/srv/git/vendor/bwa
+[submodule "vendor/apollo"]
+	path = vendor/apollo
+	url = git@github.com:genome-vendor/apollo.git
+[submodule "vendor/mutalin"]
+	path = vendor/mutalin
+	url = git@github.com:genome-vendor/mutalin.git
+[submodule "vendor/cufflinks"]
+	path = vendor/cufflinks
+	url = git@github.com:genome-vendor/cufflinks.git
+[submodule "vendor/velvet"]
+	path = vendor/velvet
+	url = git@github.com:genome-vendor/velvet.git
+[submodule "vendor/samtools-hybrid"]
+	path = vendor/samtools-hybrid
+	url = git@github.com:genome-vendor/samtools-0.1.7a-hybrid.git
+[submodule "vendor/bsmap"]
+	path = vendor/bsmap
+	url = git@github.com:genome-vendor/bsmap.git

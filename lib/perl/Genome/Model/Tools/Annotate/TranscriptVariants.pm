@@ -196,7 +196,7 @@ sub help_detail {
     my $self = shift;
 
     #Generate the currently available annotation models on the fly
-    my @currently_available_models = Genome::Model->get(type_name => "imported annotation");
+    my @currently_available_models = Genome::Model->get(subclass_name => 'Genome::Model::ImportedAnnotation');
     my $currently_available_builds; 
     foreach my $model (@currently_available_models) {
         next unless $model;
