@@ -62,12 +62,14 @@ sub execute {
         die $self->error_message;
     }
     
-    my $bam_output;
-    unless($bam_output = IO::File->new("|samtools view -b -t ".$self->reference_file." - -o ".$self->output_bam_file)){
-        $self->error_message("Could not open bam_output pipe.");
+    my $tmp_bam_output_file = Genome::Sys->create_temp_file_path();
+    my $tmp_bam_output = IO::File->new("|samtools view -b -T " . $self->reference_file . " - -o $tmp_bam_output_file");
+    unless ($tmp_bam_output) {
+        $self->error_message("Could not open tmp_bam_output pipe.");
         die $self->error_message;
     }
     print "successfully opened bam output pipe.\n";
+
     my $sam_header_input;
     unless($sam_header_input = IO::File->new("samtools view -H ".$self->input_bam_file."|")) {
         $self->error_message("Could not open bam header input pipe");
@@ -75,51 +77,17 @@ sub execute {
     }
     print "successfully opened bam header input pipe.\n";
 
-    my (@pre_sq, @sq, @post_sq);
     while (my $line = $sam_header_input->getline) {
         if ($line =~ /^\@SQ/) {
             # Convert Broad chromosome names to TGI.
             $line =~ s/\@SQ\tSN:chrM/\@SQ\tSN:MT/;
             $line =~ s/\@SQ\tSN:chr(X|Y)/\@SQ\tSN:$1/;
             $line =~ s/\@SQ\tSN:chr(.*)\w/\@SQ\tSN:$1/;
-            push @sq, $line;
-        } elsif (not @sq) {
-            push @pre_sq, $line;
-        } else {
-            push @post_sq, $line;
         }
-    }
-
-    # Load chromosome order from reference file.
-    my $reference_file = IO::File->new($self->reference_file, 'r') || die 'could not open file (' . $self->reference_file . "): $!\n";
-    our @reference_chromosomes;
-    while (my $line = $reference_file->getline) {
-        my ($chromosome) = $line =~ /^(\S+)/;
-        next unless $chromosome;
-        push @reference_chromosomes, $chromosome;
-    }
-
-    # Sort SQ so it matches chromosome order in reference file.
-    @sq = sort {
-        my ($a_chrom) = $a =~ /\@SQ\tSN:([^\t]+)/;
-        die "unable to match chromosome in ($a)" unless $a_chrom;
-
-        my ($b_chrom) = $b =~ /\@SQ\tSN:([^\t]+)/;
-        die "unable to match chromosome in ($b)" unless $b_chrom;
-
-        my $a_index = first { $reference_chromosomes[$_] eq $a_chrom } 0..$#reference_chromosomes;
-        die "unable to find $a_chrom in (" . join(' ', @reference_chromosomes) . ")" unless defined $a_index;
-
-        my $b_index = first { $reference_chromosomes[$_] eq $b_chrom } 0..$#reference_chromosomes;
-        die "unable to find $b_chrom in (" . join(' ', @reference_chromosomes) . ")" unless defined $b_index;
-
-        $a_index <=> $b_index;
-    } @sq;
-
-    for (@pre_sq, @sq, @post_sq) {
-        print $bam_output $_;
+        print $tmp_bam_output $line;
     }
     close $sam_header_input;
+
 
     my $sam_input;
     unless($sam_input = IO::File->new("samtools view ".$self->input_bam_file."|")) {
@@ -135,11 +103,20 @@ sub execute {
         $sam_fields[6] =~ s/^chrM$/MT/;
         $sam_fields[6] =~ s/^chr(.*)(_|\w)/$1$2/;
     
-        print $bam_output join "\t", @sam_fields;
+        print $tmp_bam_output join "\t", @sam_fields;
     }
 
     close $sam_input;
-    close $bam_output;
+    close $tmp_bam_output;
+
+    my $reorder_cmd = Genome::Model::Tools::Picard::ReorderSam->create(
+        input_file => $tmp_bam_output_file,
+        output_file => $self->output_bam_file,
+        reference_file => $self->reference_file,
+    );
+    unless ($reorder_cmd->execute) {
+        die 'failed to execute reorder_cmd';
+    }
 
     return 1;
 }
