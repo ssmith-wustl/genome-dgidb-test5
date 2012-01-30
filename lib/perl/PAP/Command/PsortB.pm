@@ -104,6 +104,12 @@ sub execute {
     
     my $feature_ref = $self->parse_psortb_terse($output_file);
     
+    if ($self->psortb_archive_dir) {
+        require Data::Dumper;
+        my $fh = IO::File->new(join('/', $self->psortb_archive_dir, 'dump_file.out'), 'w');
+        die "Could not get file handle for " . $self->dump_file unless $fh;
+        $fh->print(Data::Dumper::Dumper($feature_ref) . "\n");
+    }
     $self->bio_seq_feature($feature_ref);
     return 1;
 }
