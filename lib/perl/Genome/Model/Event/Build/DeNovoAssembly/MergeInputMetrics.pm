@@ -29,6 +29,7 @@ sub execute {
     $self->status_message('Merge instrument data');
     INST_DATA: for my $instrument_data (@instrument_data) {
         $self->_update_metrics($instrument_data);
+            
         #last INST_DATA if $self->_has_base_limit_been_reached;
     }
 
