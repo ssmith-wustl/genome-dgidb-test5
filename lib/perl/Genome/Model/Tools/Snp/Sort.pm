@@ -66,12 +66,12 @@ sub execute {
     my %snp_at;
     while(my $line = $snp_fh->getline) {
         my ($chr, $pos,) = split /\t/, $line;
-        $snp_at{$chr}{$pos} = $line;
+        push @{$snp_at{$chr}{$pos}}, $line;  #in case sometimes got multiple lines with the same chr, pos
     }
     $snp_fh->close;
     for my $chr (nsort keys %snp_at) {
         for my $pos (sort { $a <=> $b } keys %{$snp_at{$chr}}) {
-            print $output_fh $snp_at{$chr}{$pos};
+            map{$output_fh->print($_)}@{$snp_at{$chr}{$pos}};
         }
     }
     $output_fh->close;
