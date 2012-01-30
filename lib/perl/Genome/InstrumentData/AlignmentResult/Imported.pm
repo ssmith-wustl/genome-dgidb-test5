@@ -56,16 +56,16 @@ sub create_BAM_in_staging_directory {
             #If the source of the imported BAM is broad, apply the debroadifyBam tool to it
             if(($instrument_data->import_source_name =~ /broad/i)||($instrument_data->import_source_name =~ /bcm/i)) {
                 $self->status_message("Import source is ".$instrument_data->import_source_name.", call DebroadifyBam tool and convert the broadiferous bam to GSC style.\n");
-                unless( my $result = Genome::Model::Tools::Sam::DebroadifyBam->execute(
-                                input_bam_file =>   $instrument_data->data_directory."/all_sequences.bam",
-                                output_bam_file =>  $bam_output_path, 
-                                reference_file =>   $self->reference_build->full_consensus_sam_index_path($self->samtools_version))){        #$self->reference_build->data_directory )) {
-                    $self->error_message("DebroadifyBam failed to complete.");
-                    die $self->error_message;
+                my $debroadify_bam_cmd = Genome::Model::Tools::Sam::DebroadifyBam->create(
+                    input_bam_file  => $instrument_data->data_directory . "/all_sequences.bam",
+                    output_bam_file => $bam_output_path,
+                    reference_file  => $self->reference_build->full_consensus_path('fa'),
+                );
+                unless ($debroadify_bam_cmd->execute) {
+                    die $self->error_message("DebroadifyBam failed to complete.");
                 }
                 unless(-e $bam_output_path) {
-                    $self->error_message("Could not find all_sequences.bam after running the DebroadifyBam tool.");
-                    die $self->error_message;
+                    die $self->error_message("Could not find all_sequences.bam after running the DebroadifyBam tool.");
                 }   
                 $self->status_message("Successfully created an all_sequences.bam file.");
             } else {     #otherwise simply symlink the bam into the staging directory 
