@@ -293,7 +293,7 @@ sub execute {
         );
         $self->setup_workflow_operation(%error_rate_operation_params);
     }
-    
+
     # RefCov
     # WARNING: MUST USE PERL 5.10.1
     if ($self->roi_file_path) {
@@ -315,7 +315,6 @@ sub execute {
         );
         $self->setup_workflow_operation(%refcov_operation_params);
     }
-
 
     my @validation_errors = $workflow->validate;
     unless ($workflow->is_valid) {
