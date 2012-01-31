@@ -237,8 +237,8 @@ sub _resolve_workflow_for_build {
             output_properties => ['bio_seq_features']
         ),
     );
-    $converge_op->operation_type->lsf_queue($lsf_queue);
-    $converge_op->operation_type->lsf_project($lsf_project);
+    #$converge_op->operation_type->lsf_queue($lsf_queue);
+    #$converge_op->operation_type->lsf_project($lsf_project);
 
     for (@annotator_ops) {
         # link to the converger above

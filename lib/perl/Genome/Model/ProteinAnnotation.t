@@ -12,6 +12,7 @@ Genome::ProcessingProfile::ProteinAnnotation->class;
 my $t = Genome::Taxon->get(name => 'Bifidobacterium breve DSM 20213');
 ok($t, "got a taxon") or die;
 
+note("gram_stain: " . $t->gram_stain);
 
 my $p = Genome::ProcessingProfile::ProteinAnnotation->create(
     name => 'PAP Test 1',
