@@ -5,7 +5,7 @@ use warnings;
 use Genome;
 
 class Genome::Model::ProteinAnnotation {
-    is => 'Genome::Model',
+    is => 'Genome::ModelDeprecated',
     has => [
         subject => {
             is => 'Genome::Taxon',
