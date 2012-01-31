@@ -146,6 +146,18 @@ sub calculate_estimated_kb_usage {
     return $kb_usage;
 }
 
+sub input_metrics_file_for_instrument_data {
+    my $self = shift;
+    my $instrument_data = shift;
+    return $self->data_directory.'/metrics.input.'.$instrument_data->id.'.txt';
+}
+ 
+sub output_metrics_file_for_instrument_data {
+    my $self = shift;
+    my $instrument_data = shift;
+    return $self->data_directory.'/metrics.output.'.$instrument_data->id.'.txt';
+}
+
 sub genome_size {
     my $self = shift;
 

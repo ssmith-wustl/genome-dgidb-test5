@@ -1,30 +1,30 @@
-package Genome::DruggableGene::GeneNameReport::Set::View::Solr::Xml;
+package Genome::DruggableGene::GeneNameGroup::View::Solr::Xml;
 
 use strict;
 use warnings;
 
 use Genome;
 
-class Genome::DruggableGene::GeneNameReport::Set::View::Solr::Xml {
+class Genome::DruggableGene::GeneNameGroup::View::Solr::Xml {
     is => 'Genome::View::Solr::Xml',
     has => [
         type => {
             is => 'Text',
-            default => 'gene-name'
+            default => 'gene-name-group'
         },
         display_type => {
             is  => 'Text',
-            default => 'GeneName',
+            default => 'GeneNameGroup',
         },
         display_icon_url => {
             is  => 'Text',
-            default => 'genome_druggable-gene_gene-name_32',
+            default => 'genome_druggable-gene_gene-name-group_32',
         },
         display_url0 => {
             is => 'Text',
             calculate_from => ['subject'],
             calculate => q{
-                return '/view/genome/druggable-gene/gene-name-report/set/status.html?name=' . ($subject->members)[0]->name;
+                return '/view/genome/druggable-gene/gene-name-group/status.html?name=' . $subject->name;
             },
         },
         display_label1 => {
@@ -49,37 +49,21 @@ class Genome::DruggableGene::GeneNameReport::Set::View::Solr::Xml {
             is => 'Text',
             calculate_from => ['subject'],
             calculate => q{
-                return ($subject->members)[0]->name;
+                return $subject->name
             },
         },
         title => {
             is => 'Text',
             calculate_from => ['subject'],
             calculate => q{
-                return ($subject->members)[0]->name . ' druggablegene'
+                return join(' ',map{$_->name}$subject->gene_name_reports) . ' druggablegene'
             },
         },
         default_aspects => {
             is => 'ARRAY',
             default => [
                 {
-                    name => 'nomenclature',
-                    position => 'content',
-                },
-                {
-                    name => 'source_db_name',
-                    position => 'content',
-                },
-                {
-                    name => 'source_db_version',
-                    position => 'content',
-                },
-                {
                     name => 'name',
-                    position => 'content',
-                },
-                {
-                    name => 'alternate_names',
                     position => 'content',
                 },
             ],

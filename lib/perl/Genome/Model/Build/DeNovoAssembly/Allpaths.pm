@@ -8,41 +8,41 @@ class Genome::Model::Build::DeNovoAssembly::Allpaths {
     is => 'Genome::Model::Build::DeNovoAssembly',
 };
 
-sub create {
-    my $class = shift;
-    my $self = $class->SUPER::create(@_);
-    return if not $self;
+sub validate_for_start_methods {
+    my $self = shift;
+    my @methods = $self->SUPER::validate_for_start_methods;
+    push @methods, 'validate_sloptig_and_jump_instrument_data_assigned';
+    return @methods;
+}
 
-    my $jumping_count;
-    my $sloptig_count;
+sub validate_sloptig_and_jump_instrument_data_assigned {
+    my $self = shift;
+
+    my ($jumping_count, $sloptig_count) = (qw/ 0 0 /);
     foreach my $i_d ($self->instrument_data) {
         if ($self->_instrument_data_is_jumping($i_d)) {
             $jumping_count++;
         }
-
-        if ($self->_instrument_data_is_sloptig($i_d)) { 
+        elsif ($self->_instrument_data_is_sloptig($i_d)) { 
             $sloptig_count++;
         }
     }
 
     if ($jumping_count == 0) {
-        $self->error_message("No jumping library instrument data found");
-        $self->delete;
-        return;
+        return UR::Object::Tag->create(
+            properties => ['instrument_data'],
+            desc => "No jumping library instrument data found",
+        );
     }
 
     if ($sloptig_count == 0) {
-        $self->error_message("No sloptig library instrument data found");
-        $self->delete;
-        return;
+        return UR::Object::Tag->create(
+            properties => ['instrument_data'],
+            desc => "No sloptig library instrument data found",
+        );
     }
-    return $self;
-}
-
-#Override base class method
-sub stats_file {
-    my $self = shift;
-    return $self->data_directory."/metrics.out";
+    
+    return;
 }
 
 sub _instrument_data_is_jumping {
@@ -66,6 +66,12 @@ sub _instrument_data_is_sloptig {
     else {
         return 0;
     }
+}
+
+#Override base class method
+sub stats_file {
+    my $self = shift;
+    return $self->data_directory."/metrics.out";
 }
 
 sub _allpaths_in_group_file {
@@ -165,7 +171,7 @@ sub assembler_params {
 sub assembler_rusage {
     my $self = shift;
     my $mem = 494000;
-    $mem = 92000 if $self->run_by eq 'apipe-tester';
+    $mem = 42000 if $self->run_by eq 'apipe-tester';
     my $queue = 'assembly';
     $queue = 'alignment-pd' if $self->run_by eq 'apipe-tester';
     return "-q $queue -n 4 -R 'span[hosts=1] select[type==LINUX64 && mem>$mem] rusage[mem=$mem]' -M $mem".'000';

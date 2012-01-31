@@ -8,23 +8,6 @@ use File::Path 'rmtree';
 
 class Genome::Model::Build::RnaSeq {
     is => 'Genome::Model::Build',
-    is_abstract => 1,
-    subclassify_by => 'subclass_name',
-    has => [
-        subclass_name => { 
-            is => 'VARCHAR2', len => 255, is_mutable => 0,
-                           calculate_from => ['model_id'],
-                           calculate => sub {
-                                            my($model_id) = @_;
-                                            return unless $model_id;
-                                            my $model = Genome::Model->get($model_id);
-                                            Carp::croak("Can't find Genome::Model with ID $model_id while resolving subclass for Build") unless $model;
-                                            my $seq_platform = $model->sequencing_platform;
-                                            Carp::croak("Can't subclass Build: Genome::Model id $model_id has no sequencing_platform") unless $seq_platform;
-                                            return return __PACKAGE__ . '::' . Genome::Utility::Text::string_to_camel_case($seq_platform)
-                                          }
-                          },
-    ],
 };
 
 sub accumulated_alignments_directory {
@@ -113,9 +96,9 @@ sub _fetch_alignment_result {
     my $mode = shift;
 
     my @instrument_data_inputs = $self->instrument_data_inputs;
-    my ($params) = $self->processing_profile->params_for_alignment(@instrument_data_inputs);
+    my ($params) = $self->model->params_for_alignment(@instrument_data_inputs);
 
-    my $alignment_class = Genome::InstrumentData::AlignmentResult->_resolve_subclass_name_for_aligner_name($self->processing_profile->read_aligner_name);
+    my $alignment_class = Genome::InstrumentData::AlignmentResult->_resolve_subclass_name_for_aligner_name($self->model->read_aligner_name);
     my $alignment = join('::', 'Genome::InstrumentData::AlignmentResult', $alignment_class)->$mode(
         %$params,
     );
@@ -214,31 +197,6 @@ sub eviscerate {
     }
 
     return 1;
-}
-
-sub _X_resolve_subclass_name { # only temporary, subclass will soon be stored
-    my $class = shift;
-    return __PACKAGE__->_resolve_subclass_name_by_sequencing_platform(@_);
-}
-
-sub _resolve_subclass_name_for_sequencing_platform {
-    my ($class,$sequencing_platform) = @_;
-    my @type_parts = split(' ',$sequencing_platform);
-
-    my @sub_parts = map { ucfirst } @type_parts;
-    my $subclass = join('',@sub_parts);
-
-    my $class_name = join('::', 'Genome::Model::Build::RnaSeq' , $subclass);
-    return $class_name;
-}
-
-sub _resolve_sequencing_platform_for_subclass_name {
-    my ($class,$subclass_name) = @_;
-    my ($ext) = ($subclass_name =~ /Genome::Model::Build::RnaSeq::(.*)/);
-    return unless ($ext);
-    my @words = $ext =~ /[a-z]+|[A-Z](?:[A-Z]+|[a-z]*)(?=$|[A-Z])/g;
-    my $sequencing_platform = lc(join(" ", @words));
-    return $sequencing_platform;
 }
 
 sub workflow_name {

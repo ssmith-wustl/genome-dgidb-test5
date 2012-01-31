@@ -64,6 +64,12 @@ class Genome::Model::Tools::BioSamtools::ClusterCoverage {
             doc => 'Calculate statistics across clusters and print to file.',
             is_optional => 1,
         },
+        maximum_depth_position => {
+            is => 'Boolean',
+            doc => 'Print the coordinates of the maximum depth positions in the stats output file.',
+            is_optional => 1,
+            default_value => 0,
+        },
     ],
 };
 
@@ -80,7 +86,11 @@ sub execute {
         unless ($stats_fh) {
             die('Failed to open file for writing: '. $self->stats_file);
         }
-        print $stats_fh "name\tmean\tprms\tmed\tmin\tmax\tadev\trms\n";
+        print $stats_fh "name\tmean\tprms\tmed\tmin\tmax\tadev\trms";
+        if ($self->maximum_depth_position) {
+            print $stats_fh "\tmax_positions";
+        }
+        print $stats_fh "\n";
     }
     my $refcov_bam  = Genome::Model::Tools::RefCov::Bam->create(bam_file => $self->bam_file );
     unless ($refcov_bam) {
@@ -295,16 +305,33 @@ sub print_clusters {
             die('A cluster is defined with no coverage PDL object: '. Data::Dumper::Dumper($cluster));
         }
         my ($mean,$prms,$med,$min,$max,$adev,$rms) = $pdl->stats;
+
         if ($max >= $self->minimum_zenith) {
             print $bed_fh $chr ."\t". $start ."\t". $end ."\t". $name ."\n";
             if ($stats_fh) {
                 #if (defined($pdl)) {
-                print $stats_fh $name ."\t". $self->_round($mean) ."\t". $self->_round($prms) ."\t". $med ."\t". $min ."\t". $max ."\t". $self->_round($adev) ."\t". $self->_round($rms) ."\n";
+                print $stats_fh $name ."\t". $self->_round($mean) ."\t". $self->_round($prms) ."\t". $med ."\t". $min ."\t". $max ."\t". $self->_round($adev) ."\t". $self->_round($rms);
                 #} else {
                 #    print $stats_fh $name ."\t0\t0\t0\t0\t0\t0\t0\n";
                 #}
             }
         }
+        if ($self->maximum_depth_position) {
+            my ($max_quantity,$max_value) = rle($pdl >= $max);
+            my ($max_padded_quantity,$max_padded_value) = $max_quantity->where($max_value,$max_quantity!=0);
+            my $max_padded_quantity_cumsum = $max_padded_quantity->cumusumover;
+            my ($max_depth_idx,$other_depth_idx) = which_both($max_padded_value);
+            my $max_positions = $max_padded_quantity_cumsum->index($max_depth_idx);
+            my @positions;
+            for (my $i = 0; $i < $max_positions->getdim(0); $i++) {
+                my $pdl_position = $max_positions($i)->sclr;
+                # I believe the start position is in zero-based coordinates
+                my $roi_position = $start + $pdl_position;
+                push @positions, $roi_position;
+            }
+            print $stats_fh "\t". join(',',@positions);
+        }
+        print $stats_fh "\n";
     }
     return 1;
 }

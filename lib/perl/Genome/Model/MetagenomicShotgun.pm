@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 
 class Genome::Model::MetagenomicShotgun {
-    is => 'Genome::Model',
+    is => 'Genome::ModelDeprecated',
     has => [
         contamination_screen_reference => {
             is => 'Genome::Model::Build::ImportedReferenceSequence',

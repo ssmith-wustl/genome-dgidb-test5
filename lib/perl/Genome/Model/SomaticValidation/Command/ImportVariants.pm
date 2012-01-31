@@ -13,7 +13,7 @@ class Genome::Model::SomaticValidation::Command::ImportVariants {
             doc => 'File listing the variants to be uploaded',
         },
         models => {
-            is => 'Genome::Model::SomaticVariation',
+            is => 'Genome::Model',
             doc => 'The somatic variation models for the variants in the list, provided as a group or comma-delimited list',
             is_many => 1,
         },
@@ -24,6 +24,13 @@ class Genome::Model::SomaticValidation::Command::ImportVariants {
             is_many => 1,
             doc => 'The results from running this command',
         },
+        variant_file_format => {
+            is => 'Text',
+            doc => 'format of the files in the variant_file_list',
+            default_value => 'annotation',
+            is_optional => 1,
+        },
+,
     ],
     doc => 'enter the variants for validation from many previous somatic-variation runs at once',
 };
@@ -41,11 +48,16 @@ sub execute {
     my $variant_type;
     while(my $line = <$variant_file_list_fh>) {
         chomp $line;
-        if($line =~ m!.*/(\w+\d+)/[^/]*!) {
+        if($line =~ m{.*/(\w+\d+)/[^/]+$}) {
             my $patient = $1;
 
-            $data{$variant_type}{$patient} ||= [];
-            push @{ $data{$variant_type}{$patient} }, $line;
+            $data{$patient}{$variant_type} ||= [];
+            push @{ $data{$patient}{$variant_type} }, $line;
+        } elsif($line =~ m{.*/([^/]+)(?:\.[^./]+)+$}) {
+            my $patient = $1;
+
+            $data{$patient}{$variant_type} ||= [];
+            push @{ $data{$patient}{$variant_type} }, $line;
         } elsif(grep($_ eq $line, 'snvs', 'indels', 'svs')) {
             $variant_type = $line; #header indicating SNVs, indels, or SVs
             $variant_type =~ s/s$//;
@@ -54,33 +66,33 @@ sub execute {
         }
     }
 
-    my %models_by_patient_common_name;
+    my @results;
     for my $m ($self->models) {
-        my $subject = $m->subject;
-        my $source = $subject->source;
-        unless($source) {
+        my $patient = $m->subject;
+        if($patient->isa('Genome::Sample')) { $patient = $patient->source; }
+        unless($patient) {
             die $self->error_message('No patient found linked to subject of model ' . $m->__display_name__);
         }
 
-        my $common_name = $source->common_name;
-        unless($common_name) {
-            die $self->error_message('No common name found on patient ' . $source->__display_name__ . ' for model ' . $m->__display_name__);
+        my $model_found = 0;
+        ACCESSOR: for my $accessor ('id', 'name', 'common_name') {
+            if(exists $data{$patient->$accessor}) {
+                for my $variant_type (keys %{$data{$patient->$accessor}}) {
+                    my $result = $self->_upload_result($m, $variant_type, @{ delete $data{$patient->$accessor}{$variant_type} });
+                    push @results, $result;
+                }
+                $model_found = 1;
+                last ACCESSOR;
+            }
         }
 
-        if(exists $models_by_patient_common_name{$common_name}) {
-            die $self->error_message('Multiple models provided for ' . $common_name . '(' . $m->__display_name__ . ' and ' . $models_by_patient_common_name{$common_name});
+        unless($model_found) {
+            $self->warning_message('No data based on model: ' . $m->__display_name__);
         }
-        $models_by_patient_common_name{$common_name} = $m;
     }
 
-    my @results;
-    for my $variant_type (keys %data) {
-        for my $patient (keys %{ $data{$variant_type} }) {
-            my $model = $models_by_patient_common_name{$patient};
-
-            my $result = $self->_upload_result($model, $variant_type, @{ $data{$variant_type}{$patient} });
-            push @results, $result;
-        }
+    for my $patient (keys %data) {
+        $self->warning_message('No model found to create results for ' . $patient . '.');
     }
 
     $self->results(\@results);
@@ -118,7 +130,7 @@ sub _upload_result {
         source_build => $build,
         variant_file => $file,
         variant_type => $variant_type,
-        format => 'annotation',
+        format => $self->variant_file_format,
         description => 'generated from ' . $self->variant_file_list,
     );
 

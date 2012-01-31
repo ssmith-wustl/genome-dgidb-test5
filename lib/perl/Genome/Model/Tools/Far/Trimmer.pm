@@ -5,6 +5,8 @@ use warnings;
 
 use Genome;
 
+my $VALID_FORMATS = ['fastq','fastq-illumina13','fastq-sanger','fastq-solexa','fasta','csfastq','csfasta'];
+
 class Genome::Model::Tools::Far::Trimmer {
     is => ['Genome::Model::Tools::Far::Base'],
     has_input => [
@@ -33,7 +35,7 @@ class Genome::Model::Tools::Far::Trimmer {
         format => {
             is => 'Text',
             doc => 'input file format, output will be in the same format',
-            valid_values => ['fastq','fasta','csfastq','csfasta'],
+            valid_values => $VALID_FORMATS,
         },
         cut_off => {
             is => 'Text',
@@ -89,7 +91,7 @@ class Genome::Model::Tools::Far::Trimmer {
         file_format => {
             is => 'Text',
             doc => 'Deprecated, use --format',
-            valid_values => ['fastq','fasta','csfastq','csfasta'],
+            valid_values => $VALID_FORMATS,
             is_optional => 1,
         },
         adaptor_sequence => {
