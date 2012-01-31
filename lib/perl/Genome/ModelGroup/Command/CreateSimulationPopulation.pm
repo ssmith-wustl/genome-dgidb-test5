@@ -20,6 +20,11 @@ class Genome::ModelGroup::Command::CreateSimulationPopulation {
         is_optional => 1,
         doc => 'Set this to cause no more than N vcfs to be merged into a single operation at a time',
     },
+    region => {
+        is => 'Text', 
+        is_optional => 1,
+        doc=>"chr:start-stop format",
+    },
     ref_fasta => {
         default=>"/gscmnt/gc4096/info/model_data/2741951221/build101947881/all_sequences.fa",
         doc=>"build36 default",
@@ -230,7 +235,7 @@ sub generate_fastas {
     my @files = glob("$bed_dir*.bed");
     my %inputs ; 
     $inputs{ref_fasta} = $self->ref_fasta;
-    $inputs{region} = '22'; #FIXME: pass this through when we want to support more or less than all of 22
+    $inputs{region} = $self->region; #FIXME: pass this through when we want to support more or less than all of 22
     $inputs{limit_regions}=$self->exome_regions;
     $inputs{mutation_bed}=\@files;
     my $op = Workflow::Operation->create(
