@@ -3,6 +3,8 @@ package Genome::Model::ProteinAnnotation;
 use strict;
 use warnings;
 use Genome;
+use PAP;
+use PAP::Command;
 
 class Genome::Model::ProteinAnnotation {
     is => 'Genome::ModelDeprecated',

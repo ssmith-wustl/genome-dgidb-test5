@@ -52,3 +52,7 @@ if (not $RUN or $RUN ne 'RUN') {
 
 note("running the build...");
 
+$b->start(server_dispatch => 'inline', job_dispatch => 'inline');
+
+
+
