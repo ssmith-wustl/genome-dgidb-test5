@@ -28,7 +28,7 @@ class Genome::Model::Tools::DetectVariants2::Result::Vcf::Combine {
         },
         variant_type => {
             is => 'Text',
-            valid_values => ['snv','indel'],
+            valid_values => ['snvs','indels'],
             doc => 'type of variants being combined',
         },
     ],
