@@ -3,9 +3,9 @@ package Genome::Search;
 use strict;
 use warnings;
 
-
 #Don't "use Genome;" here or we introduce a circular dependency.
 use UR;
+use MIME::Base64;
 
 # JTAL: solr-dev is going to be prod, because old code will still point to solr
 
