@@ -78,9 +78,10 @@ sub init_sub_commands {
 
     # Get the current sub commands
     my @namespace_sub_command_classes = $config{namespace}->sub_command_classes;
-    my @namespace_sub_command_names = map {
+    my @namespace_sub_command_names = @namespace_sub_command_classes;
+    @namespace_sub_command_names = map {
         s/$config{namespace}:://; $_ = lc($_); $_;
-    } @namespace_sub_command_classes;
+    } @namespace_sub_command_names;
 
     # Create the sub commands
     my @sub_commands = (qw/ create update list delete /);
