@@ -296,6 +296,8 @@ sub current_build {
     }
     return;
 }
+# Just so current_build_id can be "easily" shown in listers.
+sub current_build_id { shift->current_build->id }
 
 # Returns true if no non-abandoned build is found that has inputs that match the current state of the model
 sub build_needed {
