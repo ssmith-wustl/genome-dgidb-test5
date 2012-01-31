@@ -30,10 +30,8 @@ class Genome::Sample {
         },
         individual_common_name => { 
             is => 'Text',
-            via => 'attributes',
-            to => 'attribute_value',
-            where => [ attribute_label => 'individual_common_name' ],
-            is_mutable => 1,
+            via => 'source',
+            to => 'common_name',
             doc => 'AML45, BRC1, etc'
         },
         extraction_label => {
