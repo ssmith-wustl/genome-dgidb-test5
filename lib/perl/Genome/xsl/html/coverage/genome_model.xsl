@@ -300,6 +300,8 @@ http://linus221:8090/view/genome/model-group/coverage.html?id=16646
                   <xsl:sort select="@value" data-type="number" order="descending"/>
                   <th class="right">
                     <xsl:value-of select="@value"/>X
+                    <br/>
+                    <span class="small">(mean&#160;depth)</span>
                   </th>
                 </xsl:for-each>
               </tr>
@@ -326,6 +328,8 @@ http://linus221:8090/view/genome/model-group/coverage.html?id=16646
                     <xsl:sort select="@value" data-type="number" order="descending"/>
                     <td class="right">
                       <xsl:value-of select="pc_target_space_covered"/>%
+                      <br/>
+                      <span class="small">(<xsl:value-of select="mean_depth"/>)</span>
                     </td>
                   </xsl:for-each>
                 </tr>
