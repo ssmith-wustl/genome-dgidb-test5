@@ -23,7 +23,7 @@ class Genome::Model {
     has => [
         name => { is => 'Text' },
         subclass_name => { 
-            is => 'VARCHAR2',is_mutable => 0, column_name => 'SUBCLASS_NAME',
+            is => 'Text',is_mutable => 0, column_name => 'SUBCLASS_NAME',
             calculate_from => 'processing_profile_id',
             calculate => sub {
                 my $pp_id = shift;
@@ -612,6 +612,8 @@ sub __extend_namespace__ {
         return;
     }
 
+    # make a model subclass if the processing profile exists
+    # this is deprecated: instead we go the other way and infer the profile from the model
     my $pp_subclass_name = 'Genome::ProcessingProfile::' . $ext;
     my $pp_subclass_meta = UR::Object::Type->get($pp_subclass_name);
     if ($pp_subclass_meta and $pp_subclass_name->isa('Genome::ProcessingProfile')) {
