@@ -84,7 +84,6 @@ sub setup_data {
         fwd_clusters => 44554,
         rev_clusters => 44554,
         analysis_software_version => 'not_old_illumina',
-        final_est_fragment_size => 180,
     );
 
     ok($instrument_data, 'define instrument data');
