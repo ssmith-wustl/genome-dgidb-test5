@@ -2259,7 +2259,13 @@ sub heartbeat {
             next;
         }
 
-        if (!$lsf_job_id) {
+        # only certaion operation types would have LSF jobs and everything below is inspecting LSF status
+        my $operation_type = $wf_instance_exec->operation_instance->operation->operation_type;
+        unless ( grep { $operation_type->isa($_) } ('Workflow::OperationType::Command', 'Workflow::OperationType::Event') ) {
+            next;
+        }
+
+        unless ($lsf_job_id) {
             $self->status_message("Workflow Instance Execution (ID: $wf_instance_exec_id) status ($wf_instance_exec_status) has no LSF job ID") if $verbose;
             return;
         }
