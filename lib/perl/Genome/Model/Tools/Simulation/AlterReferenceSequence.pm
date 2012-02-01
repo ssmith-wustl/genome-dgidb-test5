@@ -135,11 +135,25 @@ sub execute {
     }
 
 }
+
+sub write_region_limited_bed_file {
+    my $self = shift;
+    my $target_regions_padded_bed = shift;
+    my $mutation_bed = $self->mutation_bed;
+    my ($basename,$dirname,$suffix) = File::Basename::fileparse($mutation_bed,qw/.bed/);
+    my $output_bed = "$dirname/$basename.region_limited.bed";
+    my $cmd = "intersectBed -wa -u -a $mutation_bed -b $target_regions_padded_bed > $output_bed";
+    Genome::Sys->shellcmd(cmd=>$cmd);
+}
+    
+
+
+
 sub dump_some_regions {
     my($self, $ref, $out_fh, $offset, $bed_file, $hap) = @_;
-    
     my $bed_fh = IO::File->new($bed_file);
     my ($temp_bed, $temp_bed_path) = Genome::Sys->create_temp_file();
+    $DB::single=1;
     my $merged_padded_bed = Genome::Sys->create_temp_file_path();
     while(my $line = $bed_fh->getline) {
         chomp($line);
@@ -155,6 +169,7 @@ sub dump_some_regions {
     Genome::Sys->shellcmd(cmd=>$cmd);
     $bed_fh->close;
     $bed_fh = IO::File->new($merged_padded_bed);
+    $self->write_region_limited_bed_file($merged_padded_bed); #for analysis convenience
     while(my $line = $bed_fh->getline) {
         chomp($line);
         my ($chr, $bed_start, $bed_stop, undef) = split /\t/, $line;
