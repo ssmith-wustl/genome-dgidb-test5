@@ -447,6 +447,7 @@ sub generate_relationship_table {
         }
         $total_markers_covered += ($stop_marker - $start_marker);
         $relationships{$first_guy}{$second_guy} = $total_markers_covered;
+        $relationships{$second_guy}{$first_guy} = $total_markers_covered
     }
     my $i=0;
     my %table_hash;
@@ -485,7 +486,7 @@ sub generate_relationship_table {
             my $k = $table_hash{$second_guy};
             $table[$j][$k]=$percent || 0;
         }
-        $high_fh->print(join("\t", @high_relationship_line));
+        $high_fh->print(join("\t", @high_relationship_line) . "\n");
     }
     $high_fh->close;
     for (my $j=0; $j < $i; $j++) {
