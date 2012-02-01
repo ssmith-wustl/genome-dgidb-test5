@@ -1,0 +1,65 @@
+=pod
+
+=head1 Name
+
+Genome::Command::Crud
+
+=head1 Synopsis
+
+Automatic generation of CRUD (create, list (read), update and delete) commands for a UR objects.
+
+=head1 Usage
+
+To generate these commands, they need to be initialized from a command. They can be intialized from a higher up command, too. It is not necessary to have the main tree class defined, that will be done automatically. Each command has a separate config that can be passed in. If no config is passed in the all sub commands will be created and default naming will be used. 
+
+ package Genome::Library::Command
+
+ use Genome::Command::Crud;
+ Genome::Command::Crud->init_sub_commands(
+    target_class => 'Person',
+    target_name => 'person',
+    target_name_pl => 'people',
+    update => { only_if_null => 1, include_only => [qw/ name age /], },
+    delete => { do_not_init => 1, },
+ );
+
+ 1;
+
+=head1 Config
+
+=head2 
+
+=over 2
+
+=item *
+B<target_class> (required): The class of the objects to create CRUD commands.
+
+=item *
+B<target_name> (optional): The space separated name of the objects. Default is to convert the class name. Target class 'My::Thing' would be 'my thing'.
+
+=item *
+B<target_name_pl> (optional): The plural name of the objects. Default is to pluralize the target name convert the class name. Tagert name 'my thing' would be 'my things.'
+
+=back
+
+=head2 Sub Command Universal
+
+=over 2
+
+=item *
+B<do_not_init>: Do not initialize the command.
+
+=back
+
+=head2 Update
+
+=over 2
+
+=item *
+B<only_if_null> (optional): Only allow updating of a property if it is null.
+
+=item *
+B<include_only> (optional): Only include these properties.
+
+=back
+

@@ -93,10 +93,10 @@ sub before_assemble {
 
     foreach my $instrument_data ($self->instrument_data) {
         if ($self->_instrument_data_is_sloptig($instrument_data)) {
-            $in_group = $in_group."\n".$self->data_directory."/".$instrument_data->id.".*.sloptig.fastq,\t".$instrument_data->library_name.",\t".$instrument_data->id;
+            $in_group = $in_group."\n".$self->data_directory."/".$instrument_data->id.".*.fastq,\t".$instrument_data->library_name.",\t".$instrument_data->id;
         }
         elsif ($self->_instrument_data_is_jumping($instrument_data)) {
-            $in_group = $in_group."\n".$self->data_directory."/".$instrument_data->id.".*.jumping.fastq,\t".$instrument_data->library_name.",\t".$instrument_data->id;
+            $in_group = $in_group."\n".$self->data_directory."/".$instrument_data->id.".*.fastq,\t".$instrument_data->library_name.",\t".$instrument_data->id;
         }
     }
 
@@ -171,39 +171,39 @@ sub assembler_params {
 sub assembler_rusage {
     my $self = shift;
     my $mem = 494000;
-    $mem = 42000 if $self->run_by eq 'apipe-tester';
+    $mem = 60000 if $self->run_by eq 'apipe-tester';
     my $queue = 'assembly';
     $queue = 'alignment-pd' if $self->run_by eq 'apipe-tester';
     return "-q $queue -n 4 -R 'span[hosts=1] select[type==LINUX64 && mem>$mem] rusage[mem=$mem]' -M $mem".'000';
 }
 
-sub existing_assembler_input_files {
-    my $self = shift;
-    my @files;
-    foreach my $i_d ($self->instrument_data) {
-        push(@files, $self->read_processor_output_files_for_instrument_data($i_d));
-    }
-    return @files;
-}
-
-sub read_processor_output_files_for_instrument_data {
+sub read_processor_output_file_count_for_instrument_data {
     my $self = shift;
     my $instrument_data = shift;
 
     if ($instrument_data->is_paired_end) {
-        if ($self->_instrument_data_is_jumping($instrument_data)){
-            return ($self->data_directory."/".$instrument_data->id.".forward.jumping.fastq",
-                    $self->data_directory."/".$instrument_data->id.".reverse.jumping.fastq");
-        }
-        elsif ($self->_instrument_data_is_sloptig($instrument_data)){
-            return ($self->data_directory."/".$instrument_data->id.".forward.sloptig.fastq",
-                    $self->data_directory."/".$instrument_data->id.".reverse.sloptig.fastq");
-        }
+        return 2;
     }
-
     else {
-        return $self->data_directory."/".$instrument_data->id.".fragment.fastq";;
+        return 1;
     }
+}
+
+sub read_processor_params_for_instrument_data {
+    my $self = shift;
+    my $instrument_data = shift;
+
+    my $read_processor = $self->processing_profile->read_processor;
+
+    my $output_file_count = $self->read_processor_output_file_count_for_instrument_data(    $instrument_data);
+
+    return (
+        instrument_data_id => $instrument_data->id,
+        read_processor => $read_processor,
+        output_file_count => $output_file_count,
+        output_file_type => 'sanger',
+        test_name => ($ENV{GENOME_SOFTWARE_RESULT_TEST_NAME} || undef),
+    );
 }
 
 1;

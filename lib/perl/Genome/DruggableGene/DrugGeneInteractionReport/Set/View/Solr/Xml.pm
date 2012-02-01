@@ -60,7 +60,8 @@ class Genome::DruggableGene::DrugGeneInteractionReport::Set::View::Solr::Xml {
             calculate => q{
                 join(' ',($subject->members)[0]->interaction_types) .
                 ' ' .  ($subject->members)[0]->drug_name_report_name .
-                ' ' .  ($subject->members)[0]->gene_name_report_name
+                ' ' .  ($subject->members)[0]->gene_name_report_name .
+                ' druggablegene'
             },
         },
         default_aspects => {
