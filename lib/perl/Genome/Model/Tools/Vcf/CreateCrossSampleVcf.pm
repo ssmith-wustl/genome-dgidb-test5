@@ -11,7 +11,7 @@ class Genome::Model::Tools::Vcf::CreateCrossSampleVcf {
     is => 'Genome::Command::Base',
     has_input => [
         builds => {
-            is => 'Genome::Model::Build',
+            is => 'Genome::Model::Build::ReferenceAlignment',
             require_user_verify => 0,
             is_many => 1,
             is_optional=>1,
@@ -248,6 +248,10 @@ sub _resolve_builds {
     }
     elsif ($self->model_group and not $self->builds) {
         for my $model ($self->model_group->models) {
+            unless ($model->isa('Genome::Model::ReferenceAlignment')) {
+                die "Model " . $model->__display_name__ . " of model group " . $self->model_group->__display_name__ .
+                    " is not a reference alignment model, it's a " . $model->class_name;
+            }
             my $build = $model->last_complete_build;
             if ($build) {
                 push @builds, $build;
