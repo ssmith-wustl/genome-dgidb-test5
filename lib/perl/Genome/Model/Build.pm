@@ -2277,7 +2277,7 @@ sub heartbeat {
         my $bjobs_output = qx(bjobs -l $lsf_job_id 2> /dev/null | tr '\\n' '\\0' | sed -r -e 's/\\x0\\s{21}//g' -e 's/\\x0/\\n\\n/g');
         chomp $bjobs_output;
         unless($bjobs_output) {
-            $self->status_message('Expected bjobs output but received none.') if $verbose;
+            $self->status_message("Expected bjobs (LSF ID: $lsf_job_id) output but received none.") if $verbose;
             return;
         }
 
