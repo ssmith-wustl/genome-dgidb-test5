@@ -1,14 +1,14 @@
-package Genome::InstrumentData::Command::Align::RtgMapX;
+package Genome::InstrumentData::Command::Align::RtgMapx;
 
 use strict;
 use warnings;
 
 use Genome;
 
-class Genome::InstrumentData::Command::Align::RtgMapX {
+class Genome::InstrumentData::Command::Align::RtgMapx {
     is => ['Genome::InstrumentData::Command::Align'],
     has_constant => [
-        aligner_name                    => { value => 'rtg map x' },
+        aligner_name                    => { value => 'rtg mapx' },
     ],
     has_param => [
         version                 => { default_value => 'v2.0.1-build-28762'},
