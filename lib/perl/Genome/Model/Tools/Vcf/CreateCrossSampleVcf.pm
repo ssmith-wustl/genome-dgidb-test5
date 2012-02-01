@@ -11,11 +11,17 @@ class Genome::Model::Tools::Vcf::CreateCrossSampleVcf {
     is => 'Genome::Command::Base',
     has_input => [
         builds => {
-            is => 'Genome::Model::Build',
+            is => 'Genome::Model::Build::ReferenceAlignment',
             require_user_verify => 0,
             is_many => 1,
-            is_optional=>0,
+            is_optional=>1,
             doc => 'The builds that you wish to create a cross-sample vcf for',
+        },
+        model_group => {
+            is => 'Genome::ModelGroup',
+            require_user_verify => 0,
+            is_optional => 1,
+            doc => 'Model group from which last succeeded builds will be pulled',
         },
         output_directory => {
             is => 'Text',
@@ -90,7 +96,10 @@ EOS
 
 sub execute {
     my $self=shift;
-    my @builds = $self->builds;
+
+    my @builds = $self->_resolve_builds;
+
+
     my $pp = $builds[0]->model->processing_profile->id;
     unless($self->allow_multiple_processing_profiles){
         for my $build (@builds){
@@ -196,7 +205,7 @@ sub execute {
             $inputs{$sub_merge} = $tmp_dir."/".$sub_merge.".bed.gz";
             my @local_input_list;
             for (1..$self->max_files_per_merge){
-                unless(@input_list){
+               unless(@input_list){
                     last;
                 }
                 push @local_input_list, shift @input_list;
@@ -225,6 +234,37 @@ sub execute {
     }
     return $inputs{final_output};
 
+}
+
+sub _resolve_builds {
+    my $self = shift;
+    my @builds;
+    if ($self->builds and not $self->model_group) {
+        my @not_succeeded = grep { $_->status ne 'Succeeded' } $self->builds;
+        if (@not_succeeded) {
+            die "Some builds are not successful: " . join(',', map { $_->id } @not_succeeded);
+        }
+        @builds = $self->builds;
+    }
+    elsif ($self->model_group and not $self->builds) {
+        for my $model ($self->model_group->models) {
+            unless ($model->isa('Genome::Model::ReferenceAlignment')) {
+                die "Model " . $model->__display_name__ . " of model group " . $self->model_group->__display_name__ .
+                    " is not a reference alignment model, it's a " . $model->class_name;
+            }
+            my $build = $model->last_complete_build;
+            if ($build) {
+                push @builds, $build;
+            }
+            else {
+                die "Found no last complete build for model " . $model->__display_name__;
+            }
+        }
+    }
+    else {
+        die "Not given builds or a model group!";
+    }
+    return @builds;
 }
 
 sub _dump_workflow {
