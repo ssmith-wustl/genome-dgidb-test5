@@ -7,6 +7,7 @@ use Genome;
 
 use Carp;
 use Data::Dumper 'Dumper';
+use File::stat;
 use File::Path;
 use File::Find 'find';
 use File::Basename qw/ dirname fileparse /;
@@ -2314,6 +2315,17 @@ sub heartbeat {
             die "Missing state ($wf_instance_exec_status/$lsf_status) condition, only running/run should reach this point";
         }
 
+        my $output_file = $self->output_file_from_bjobs_output($bjobs_output);
+        my $output_stat = stat($output_file);
+        my $elapsed_mtime_output_file = time - $output_stat->mtime;
+        my $error_file = $self->error_file_from_bjobs_output($bjobs_output);
+        my $error_stat = stat($error_file);
+        my $elapsed_mtime_error_file = time - $error_stat->mtime;
+        if (($elapsed_mtime_output_file/3600 > 48) && ($elapsed_mtime_error_file/3600 > 48)) {
+            $self->status_message("Error and/or output file have not been modified in 48+ hours:\nOutput File: $output_file\nError File: $error_file");
+            return;
+        }
+
         my @pids = $self->pids_from_bjobs_output($bjobs_output);
         my $execution_host = $self->execution_host_from_bjobs_output($bjobs_output);
         unless ($execution_host) {
@@ -2339,6 +2351,26 @@ sub heartbeat {
     }
 
     return 1;
+}
+
+sub output_file_from_bjobs_output {
+    my $self = shift;
+    my $bjobs_output = shift;
+    my ($output_file) = $bjobs_output =~ /Output File <(.*?)>/;
+    unless ($output_file) {
+        die $self->error_message("Failed to parse output file from bjobs output:\n$bjobs_output\n");
+    }
+    return $output_file;
+}
+
+sub error_file_from_bjobs_output {
+    my $self = shift;
+    my $bjobs_output = shift;
+    my ($error_file) = $bjobs_output =~ /Error File <(.*?)>/;
+    unless ($error_file) {
+        die $self->error_message("Failed to parse error file from bjobs output:\n$bjobs_output\n");
+    }
+    return $error_file;
 }
 
 sub status_from_bjobs_output {
