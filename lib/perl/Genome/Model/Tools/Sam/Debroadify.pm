@@ -20,20 +20,30 @@ class Genome::Model::Tools::Sam::Debroadify {
         reference_file => {
             is => 'Text',
             doc => 'Full path to the reference FASTA to build the output BAM/SAM against.',
+            is_optional => 1,
         },
     ],
 };
 
 sub validate_inputs {
     my $self = shift;
-    if ($self->output_file =~ /\.bam$/ && ! defined $self->reference_file) {
-        die $self->error_message('In order to output a BAM file, a reference_file must be provided.');
+    if ($self->output_file =~ /\.bam$/i && ! defined $self->reference_file) {
+        die 'In order to output a BAM file, a reference_file must be provided.';
     }
     if (defined $self->reference_file && ! -e $self->reference_file) {
-        die $self->error_message('Could not find reference file at: ' . $self->reference_file);
+        die 'Could not find reference file at: ' . $self->reference_file;
     }
     unless (-e $self->input_file) {
-        die $self->error_message('Could not locate input file located at: ' . $self->input_file);
+        die 'Could not locate input file located at: ' . $self->input_file;
+    }
+    if ($self->output_file =~ /\.sam$/i && $self->reference_file) {
+        my $message = join(' ',
+            'ReorderSam seem to not work well with SAM output.',
+            'Which means the resulting SAM will either have a seqdict that is out of order',
+            'or if we bypass ReorderSam or will have information mistakenly stripped.',
+            'Aborting.'
+        );
+        die $message;
     }
     return 1;
 }
@@ -41,7 +51,7 @@ sub validate_inputs {
 sub samtools_output_options {
     my $self = shift;
     my @samtools_output_options;
-    if ($self->output_file =~ /\.bam$/) {
+    if ($self->output_file =~ /\.bam$/i) {
         push @samtools_output_options, '-b';
     }
     if ($self->reference_file) {
@@ -53,7 +63,7 @@ sub samtools_output_options {
 sub samtools_input_options {
     my $self = shift;
     my @samtools_input_options;
-    if ($self->input_file =~ /\.sam$/) {
+    if ($self->input_file =~ /\.sam$/i) {
         push @samtools_input_options, '-S';
     }
     return join(' ', @samtools_input_options);
@@ -67,15 +77,16 @@ sub execute {
     my $samtools_output_options = $self->samtools_output_options();
     # If we have a reference_file we will be reordering it so save to tmp.
     my $chr_rename_output_file = ($self->reference_file ? Genome::Sys->create_temp_file_path() : $self->output_file);
-    my $chr_rename_output = IO::File->new("| samtools view $samtools_output_options -o $chr_rename_output_file -");
+    $self->status_message($samtools_output_options);
+    my $chr_rename_output = IO::File->new("| samtools view -S $samtools_output_options -o $chr_rename_output_file -");
     unless ($chr_rename_output) {
-        die $self->error_message('Could not open the (temp) output pipe.');
+        die 'Could not open the (temp) output pipe.';
     }
 
     my $samtools_input_options = $self->samtools_input_options();
     my $input = IO::File->new("samtools view -h $samtools_input_options " . $self->input_file . ' |');
     unless ($input) {
-        die $self->error_message('Could not open the input pipe.');
+        die 'Could not open the input pipe.';
     }
     $self->status_message('Converting Broad chromosome references to TGI style.');
     $self->status_message('output will be at: ' . $chr_rename_output_file);
@@ -98,6 +109,9 @@ sub execute {
     close $input;
 
     close $chr_rename_output;
+    unless (-s $chr_rename_output_file) {
+        die 'output has no size: ' . $chr_rename_output_file;
+    }
 
     # This needs to be done because Broad's reference is sorted 1-22,X,Y but ours is 1-9,X,Y,10-22.
     if ($self->reference_file) {
@@ -111,6 +125,9 @@ sub execute {
         unless ($reorder_cmd->execute) {
             die 'failed to execute reorder_cmd';
         }
+    }
+    unless (-s $self->output_file) {
+        die 'output has no size: ' . $self->output_file;
     }
 
     return 1;

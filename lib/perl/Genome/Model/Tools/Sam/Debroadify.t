@@ -14,7 +14,8 @@ use_ok($class);
 my %test_env = setup_test_env();
 test_sam_inputs();
 test_reference_input();
-test_debroadify();
+test_debroadify_sam();
+test_debroadify_bam();
 
 done_testing();
 
@@ -41,8 +42,8 @@ sub test_sam_inputs {
 sub test_reference_input {
     do {
         my $cmd = $class->create(
-            input_file => $test_env{input_sam_file} . '',
-            output_file => $test_env{output_dir} . '/output.sam',
+            input_file => $test_env{input_bam_file} . '',
+            output_file => $test_env{output_dir} . '/output.bam',
             reference_file => $test_env{reference_file} . '',
         );
         my $inputs_did_validate = eval { $cmd->validate_inputs() };
@@ -51,8 +52,8 @@ sub test_reference_input {
 
     do {
         my $cmd = $class->create(
-            input_file => $test_env{input_sam_file} . '',
-            output_file => $test_env{output_dir} . '/output.sam',
+            input_file => $test_env{input_bam_file} . '',
+            output_file => $test_env{output_dir} . '/output.bam',
             reference_file => $test_env{output_dir} . '/nonexistant.fa',
         );
         my $inputs_did_validate = eval { $cmd->validate_inputs() };
@@ -69,7 +70,38 @@ sub test_reference_input {
     };
 }
 
-sub test_debroadify {
+sub test_debroadify_sam {
+    ok(-d $test_env{output_dir}, 'output_dir (' . $test_env{output_dir} . ') exists');
+
+    my $input_bam = $test_env{input_dir} . '/alignment.bam';
+    ok(-e $input_bam, 'input_bam exists') || return;
+
+    my $expected_output_sam = $test_env{input_dir} . '/alignment.sam';
+    ok(-e $expected_output_sam, 'expected_output_sam exists') || return;
+
+    my $output_sam = $test_env{output_dir} . '/alignment.sam';
+    ok(!-e $output_sam, 'output_sam does not exist') || return;
+
+    my $debroadify_cmd = Genome::Model::Tools::Sam::Debroadify->create(
+        input_file => $input_bam,
+        output_file => $output_sam,
+    );
+    ok($debroadify_cmd->execute(), 'debroadify command completed successfully') || return;
+
+    my $compare_cmd = Genome::Model::Tools::Sam::Compare->create(
+        file1 => $output_sam,
+        file2 => $expected_output_sam,
+    );
+    ok($compare_cmd->execute(), 'output sam matched expected output') || return;
+
+    my $compare_orig_cmd = Genome::Model::Tools::Sam::Compare->create(
+        file1 => $output_sam,
+        file2 => $input_bam,
+    );
+    ok(!$compare_orig_cmd->execute(), 'output sam does not match input') || return;
+}
+
+sub test_debroadify_bam {
     ok(-d $test_env{output_dir}, 'output_dir (' . $test_env{output_dir} . ') exists');
 
     my $input_bam = $test_env{input_dir} . '/alignment.bam';
