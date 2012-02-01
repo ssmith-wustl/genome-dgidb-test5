@@ -74,17 +74,17 @@ sub execute {
 
     $self->validate_inputs();
 
+    my $samtools_path = $self->path_for_samtools_version();
     my $samtools_output_options = $self->samtools_output_options();
     # If we have a reference_file we will be reordering it so save to tmp.
     my $chr_rename_output_file = ($self->reference_file ? Genome::Sys->create_temp_file_path() : $self->output_file);
-    $self->status_message($samtools_output_options);
-    my $chr_rename_output = IO::File->new("| samtools view -S $samtools_output_options -o $chr_rename_output_file -");
+    my $chr_rename_output = IO::File->new("| $samtools_path view -S $samtools_output_options -o $chr_rename_output_file -");
     unless ($chr_rename_output) {
         die 'Could not open the (temp) output pipe.';
     }
 
     my $samtools_input_options = $self->samtools_input_options();
-    my $input = IO::File->new("samtools view -h $samtools_input_options " . $self->input_file . ' |');
+    my $input = IO::File->new("$samtools_path view -h $samtools_input_options " . $self->input_file . ' |');
     unless ($input) {
         die 'Could not open the input pipe.';
     }
