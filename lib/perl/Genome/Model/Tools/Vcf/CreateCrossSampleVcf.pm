@@ -259,7 +259,7 @@ sub _resolve_builds {
                 die "Found no last complete build for model " . $model->__display_name__;
             }
         }
-        $self->builds(@builds);
+        $self->builds(\@builds);
     }
     else {
         die "Not given builds or a model group!";
