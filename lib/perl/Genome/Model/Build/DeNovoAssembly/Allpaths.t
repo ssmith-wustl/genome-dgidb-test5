@@ -34,10 +34,18 @@ my $example_dir = $base_dir.'/allpaths_v2';
 ok(-d $example_dir, 'example dir') or die;
 my $tmpdir = File::Temp::tempdir(CLEANUP => 1);
 ok(-d $tmpdir, 'temp dir: '.$tmpdir);
+#taxon
+my $taxon = Genome::Taxon->__define__(
+    id => -3456,
+    name => 'TEST-taxon',
+    estimated_genome_size => 200000,
+);
+
 # sample
 my $sample = Genome::Sample->__define__(
     id => -1234,
     name => 'TEST-000',
+    taxon => $taxon,
 );
 ok($sample, 'define sample') or die;
 
@@ -195,13 +203,18 @@ my $expected_in_groups_file = $example_build->_allpaths_in_group_file;
 
 ok (-s $in_libs_file, $in_libs_file.' created');
 ok (-s $in_groups_file, $in_groups_file.' created');
-my $in_libs_diff = Genome::Sys->diff_file_vs_file($in_libs_file, $expected_in_libs_file);
+my $sed_cmd = "sed 's|[:space:]+|\t|g'";
+my $in_libs_string = `cat $in_libs_file | $sed_cmd`;
+my $expected_in_libs_string = `cat $in_libs_file | $sed_cmd`;
+chomp $in_libs_string;
+chomp $expected_in_libs_string;
+my $in_libs_diff = Genome::Sys->diff_text_vs_text($in_libs_string, $expected_in_libs_string);
 
 ok (!$in_libs_diff, 'in_libs.csv content as expected')
     or diag('diff:\n'.$in_libs_diff);
-#my $sed_cmd = "sed 's|[:space:]+|\t|g'";
-my $in_groups_string = `cat $in_groups_file`;
-my $sed_cmd = "sed 's|TMPDIR|".$build->data_directory."|g'";
+my $in_groups_string = `cat $in_groups_file | $sed_cmd`;
+$sed_cmd = "sed 's|TMPDIR|".$build->data_directory."|g'".
+            " | sed 's|[:space:]+|\t|g'";
 my $expected_in_groups_string = `cat $expected_in_groups_file | $sed_cmd`;
 chomp $in_groups_string;
 chomp $expected_in_groups_string;
@@ -210,7 +223,7 @@ ok(!$in_groups_diff, 'in_groups.csv content as expected')
     or diag('diff: '.$in_groups_diff);
 
 #Run the report
-#$assemble_events[2]->execute;
+$assemble_events[2]->execute;
 
 done_testing();
 exit;
