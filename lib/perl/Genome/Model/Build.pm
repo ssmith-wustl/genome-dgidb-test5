@@ -2259,7 +2259,13 @@ sub heartbeat {
             next;
         }
 
-        if (!$lsf_job_id) {
+        # only certaion operation types would have LSF jobs and everything below is inspecting LSF status
+        my $operation_type = $wf_instance_exec->operation_instance->operation->operation_type;
+        unless ( grep { $operation_type->isa($_) } ('Workflow::OperationType::Command', 'Workflow::OperationType::Event') ) {
+            next;
+        }
+
+        unless ($lsf_job_id) {
             $self->status_message("Workflow Instance Execution (ID: $wf_instance_exec_id) status ($wf_instance_exec_status) has no LSF job ID") if $verbose;
             return;
         }
@@ -2271,7 +2277,7 @@ sub heartbeat {
         my $bjobs_output = qx(bjobs -l $lsf_job_id 2> /dev/null | tr '\\n' '\\0' | sed -r -e 's/\\x0\\s{21}//g' -e 's/\\x0/\\n\\n/g');
         chomp $bjobs_output;
         unless($bjobs_output) {
-            $self->status_message('Expected bjobs output but received none.') if $verbose;
+            $self->status_message("Expected bjobs (LSF ID: $lsf_job_id) output but received none.") if $verbose;
             return;
         }
 
@@ -2351,8 +2357,14 @@ sub execution_host_from_bjobs_output {
     my $bjobs_output = shift;
     my ($execution_host) = $bjobs_output =~ /Started on <(.*?)>/;
     unless ($execution_host) {
-        if ($bjobs_output =~ /Started on \d+ Hosts\/Processors </) {
-            $self->error_message("Not yet able to parse multiple execution hosts.");
+        if (my ($hosts) = $bjobs_output =~ /Started on \d+ Hosts\/Processors <(\S+)>/) {
+            my %hosts = map { $_ => 1 } split('><', $hosts);
+            my @hosts = keys %hosts;
+            if (@hosts > 1) {
+                $self->error_message("Not yet able to parse multiple execution hosts.");
+            } else {
+                $execution_host = $hosts[0];
+            }
         } else {
             die $self->error_message("Failed to parse execution host from bjobs output:\n$bjobs_output\n");
         }
