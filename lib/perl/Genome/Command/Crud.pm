@@ -67,7 +67,9 @@ sub init_sub_commands {
     : join(' ', map { camel_case_to_string($_) } split('::', $config{target_class}));
     Lingua::EN::Inflect::classical(persons => 1);
     $config{target_name} = $target_name;
-    $config{target_name_pl} = Lingua::EN::Inflect::PL($target_name);
+    $config{target_name_pl} = ( exists $incoming_config{target_name_pl} )
+    ? delete $incoming_config{target_name_pl} 
+    : Lingua::EN::Inflect::PL($target_name);
     $config{target_name_pl_ub} = $config{target_name_pl};
     $config{target_name_pl_ub} =~ s/ /_/;
 
@@ -78,9 +80,10 @@ sub init_sub_commands {
 
     # Get the current sub commands
     my @namespace_sub_command_classes = $config{namespace}->sub_command_classes;
-    my @namespace_sub_command_names = map {
+    my @namespace_sub_command_names = @namespace_sub_command_classes;
+    @namespace_sub_command_names = map {
         s/$config{namespace}:://; $_ = lc($_); $_;
-    } @namespace_sub_command_classes;
+    } @namespace_sub_command_names;
 
     # Create the sub commands
     my @sub_commands = (qw/ create update list delete /);
@@ -130,6 +133,7 @@ sub _build_main_tree_class {
     my ($class, %config) = @_;
 
     my $meta = eval{ $config{namespace}->__meta__; };
+    return 1 if $meta;
 
     UR::Object::Type->define(
         class_name => $config{namespace},
@@ -155,6 +159,7 @@ sub _build_create_sub_class {
     no strict;
     *{ $sub_class.'::_target_class' } = sub{ return $config{target_class}; };
     *{ $sub_class.'::_target_name' } = sub{ return $config{target_name}; };
+    *{ $sub_class.'::_target_name_pl' } = sub{ return $config{target_name_pl}; };
     use strict;
 
     return $sub_class;
@@ -271,6 +276,7 @@ sub _build_update_sub_class {
 
     no strict;
     *{ $sub_class.'::_target_name' } = sub{ return $config{target_name}; };
+    *{ $sub_class.'::_target_name_pl' } = sub{ return $config{target_name_pl}; };
     *{ $sub_class.'::_only_if_null' } = sub{ return $only_if_null; };
     use strict;
 
@@ -360,6 +366,7 @@ sub _build_delete_sub_class {
 
     no strict;
     *{ $sub_class.'::_target_name' } = sub{ return $config{target_name}; };
+    *{ $sub_class.'::_target_name_pl' } = sub{ return $config{target_name_pl}; };
     use strict;
 
     return $sub_class;

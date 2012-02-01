@@ -16,7 +16,7 @@ if (Genome::Config->arch_os ne 'x86_64') {
     plan skip_all => 'requires 64-bit machine';
 }
 else {
-    plan tests => 9;
+    plan tests => 11;
 }
 
 use_ok('Genome::Model::Tools::DetectVariants2::Result::Vcf::Combine');
@@ -143,6 +143,7 @@ run_combine_test($samtools_detector_result,$varscan_detector_result, $detector_e
 run_combine_test($snp_filter_result,$false_positive_filter_result, $filter_expected_file);
 
 
+
 sub run_combine_test {
     my $result_a = shift;
     my $result_b = shift;
@@ -163,6 +164,8 @@ sub run_combine_test {
 
     my $combine_vcf_result = $command->_vcf_result;
     isa_ok($combine_vcf_result, 'Genome::Model::Tools::DetectVariants2::Result::Vcf::Combine','created a combine_vcf_result');
+    my @errors = $combine_vcf_result->__errors__;
+    ok(!@errors, 'no errors on combine vcf result');
 
     my $output_file = $combine_vcf_result->output_dir."/snvs.vcf.gz";
     

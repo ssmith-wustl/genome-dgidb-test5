@@ -149,13 +149,17 @@ sub calculate_estimated_kb_usage {
 sub input_metrics_file_for_instrument_data {
     my $self = shift;
     my $instrument_data = shift;
-    return $self->data_directory.'/metrics.input.'.$instrument_data->id.'.txt';
+    my %params = $self->read_processor_params_for_instrument_data($instrument_data);
+    my $result = Genome::InstrumentData::SxResult->get(%params);
+    return $self->data_directory.'/'.$result->read_processor_input_metric_file;
 }
  
 sub output_metrics_file_for_instrument_data {
     my $self = shift;
     my $instrument_data = shift;
-    return $self->data_directory.'/metrics.output.'.$instrument_data->id.'.txt';
+    my %params = $self->read_processor_params_for_instrument_data($instrument_data);
+    my $result = Genome::InstrumentData::SxResult->get(%params);
+    return $self->data_directory.'/'.$result->read_processor_input_metric_file;
 }
 
 sub genome_size {

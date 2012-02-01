@@ -178,7 +178,7 @@ sub _resolve_subclass_name_by_sequencing_platform { # only temporary, subclass w
     return $class. '::'.Genome::Utility::Text::string_to_camel_case($sequencing_platform);
 }
 
-# auto generate sub-classes for any valid model sub-class 
+# auto generate sub-classes for any valid model sub-class
 sub __extend_namespace__ {
     # auto generate sub-classes for any valid processing profile
     my ($self,$ext) = @_;
@@ -198,8 +198,8 @@ sub __extend_namespace__ {
                 my %data = %{ UR::Util::deep_copy($p) };
                 my $type = $data{data_type};
                 for my $key (keys %data) {
-                    delete $data{$key} unless $key =~ /^is_/; 
-                }                
+                    delete $data{$key} unless $key =~ /^is_/;
+                }
                 delete $data{is_specified_in_module_header};
                 if ($type->isa("Genome::Model")) {
                     $type =~ s/^Genome::Model/Genome::Model::Build/;
@@ -301,7 +301,7 @@ sub _copy_model_inputs {
                 if (@existing_inputs) {
                     foreach my $existing_input (@existing_inputs) {
                         my $existing_input_value = $existing_input->value;
-                        if ($existing_input_value 
+                        if ($existing_input_value
                             and $existing_input_value->isa('Genome::Model::Build')
                             and $existing_input_value->model_id eq $input->value->id) {
                             die "Input with name $input_name already exists for build!";
@@ -2188,7 +2188,7 @@ sub _preprocess_subclass_description {
         next if $prop_desc->{via};
         next if $prop_desc->{reverse_as};
         next if $prop_desc->{implied_by};
-        
+
         if ($prop_desc->{is_param} and $prop_desc->{is_input}) {
             die "class $class has is_param and is_input on the same property! $prop_name";
         }
@@ -2209,7 +2209,7 @@ sub _preprocess_subclass_description {
                 property_name => $assoc,
                 implied_by => $prop_name,
                 is => 'Genome::Model::Build::Input',
-                reverse_as => 'build', 
+                reverse_as => 'build',
                 where => [ name => $prop_name ],
                 is_mutable => $prop_desc->{is_mutable},
                 is_optional => $prop_desc->{is_optional},
@@ -2220,7 +2220,7 @@ sub _preprocess_subclass_description {
             # If we do duplicate the code below for value_id
 
             %$prop_desc = (%$prop_desc,
-                via => $assoc, 
+                via => $assoc,
                 to => 'value',
             );
         }
@@ -2240,7 +2240,7 @@ sub _preprocess_subclass_description {
 
     my $pp_data = $desc->{has}{processing_profile} = {};
     $pp_data->{data_type} = $pp_subclass_name;
-    $pp_data->{via} = 'model'; 
+    $pp_data->{via} = 'model';
     $pp_data->{to} = 'processing_profile';
 
     return $desc;
@@ -2264,14 +2264,17 @@ sub heartbeat {
         my $lsf_job_id = $wf_instance_exec->dispatch_identifier;
         my $wf_instance_exec_status = $wf_instance_exec->status;
         my $wf_instance_exec_id = $wf_instance_exec->execution_id;
-        unless ($lsf_job_id) {
-            next;
-        }
-        if ($lsf_job_id =~ /^P/) {
+
+        if (grep { $wf_instance_exec_status eq $_ } ('new', 'done')) {
             next;
         }
 
-        if (grep { $wf_instance_exec_status eq $_ } ('new', 'done')) {
+        if (!$lsf_job_id) {
+            $self->status_message("Workflow Instance Execution (ID: $wf_instance_exec_id) status ($wf_instance_exec_status) has no LSF job ID") if $verbose;
+            return;
+        }
+
+        if ($lsf_job_id =~ /^P/) {
             next;
         }
 
