@@ -99,7 +99,6 @@ sub execute {
 
     my @builds = $self->_resolve_builds;
 
-
     my $pp = $builds[0]->model->processing_profile->id;
     unless($self->allow_multiple_processing_profiles){
         for my $build (@builds){
@@ -260,10 +259,12 @@ sub _resolve_builds {
                 die "Found no last complete build for model " . $model->__display_name__;
             }
         }
+        $self->builds(@builds);
     }
     else {
         die "Not given builds or a model group!";
     }
+
     return @builds;
 }
 
