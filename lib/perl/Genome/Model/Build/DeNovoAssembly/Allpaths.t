@@ -23,7 +23,7 @@ use_ok('Genome::Model::Build::DeNovoAssembly::Allpaths') or die;
 
 # dir
 my $base_dir = '/gsc/var/cache/testsuite/data/Genome-Model/DeNovoAssembly';
-my $example_dir = $base_dir.'/allpaths_v1';
+my $example_dir = $base_dir.'/allpaths_v2';
 ok(-d $example_dir, 'example dir') or die;
 my $tmpdir = File::Temp::tempdir(CLEANUP => 1);
 ok(-d $tmpdir, 'temp dir: '.$tmpdir);
@@ -141,16 +141,17 @@ is(@process_inst_data_events, 2, 'got 2 process inst data events');
 for my $process_inst_data_event ( @process_inst_data_events ) {
     $process_inst_data_event->execute;
 }
-my @frag_read_processor_output_files = $build->read_processor_output_files_for_instrument_data($frag_inst_data);
-my @jump_read_processor_output_files = $build->read_processor_output_files_for_instrument_data($jump_inst_data);
+my %frag_read_processor_params = $build->read_processor_params_for_instrument_data($frag_inst_data);
+my %jump_read_processor_params = $build->read_processor_params_for_instrument_data($jump_inst_data);
 
-my @all_output_files = (@frag_read_processor_output_files, @jump_read_processor_output_files);
+my $frag_result = Genome::InstrumentData::SxResult->get(%frag_read_processor_params);
+my $jump_result = Genome::InstrumentData::SxResult->get(%jump_read_processor_params);
 
-my @example_frag_read_processor_output_files = $example_build->read_processor_output_files_for_instrument_data($frag_inst_data);
+my @frag_read_processor_output_files = $frag_result->read_processor_output_files;
+my @jump_read_processor_output_files = $jump_result->read_processor_output_files;
 
-my @example_jump_read_processor_output_files = $example_build->read_processor_output_files_for_instrument_data($jump_inst_data);
-
-my @all_example_output_files = (@example_frag_read_processor_output_files, @example_jump_read_processor_output_files);
+my @all_output_files = map{$build->data_directory.'/'.$_} (@frag_read_processor_output_files, @jump_read_processor_output_files);
+my @all_example_output_files = map{$example_build->data_directory.'/'.$_} (@frag_read_processor_output_files, @jump_read_processor_output_files);
 
 my $fileCount = scalar @all_output_files;
 for (my $i=0; $i<$fileCount; $i++) {
@@ -165,6 +166,7 @@ for (my $i=0; $i<$fileCount; $i++) {
 my @assemble_events = @{$events->[1]->{events}};
 is(@assemble_events, 3, 'got 3 assemble events');
 print Data::Dumper->Dumper(@assemble_events);
+#execute the mergeInputMetrics
 $assemble_events[0]->execute;
 
 # check read metrics

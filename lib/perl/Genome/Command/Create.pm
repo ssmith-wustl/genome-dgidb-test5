@@ -17,7 +17,7 @@ class Genome::Command::Create {
 
 sub _target_class { Carp::confess('Please use CRUD or implement _target_class in '.$_[0]->class); }
 sub _target_name { Carp::confess('Please use CRUD or implement _target_name in '.$_[0]->class); }
-sub _target_name_pl { return Lingua::EN::Inflect::PL($_[0]->_target_name); }
+sub _target_name_pl { Carp::confess('Please use CRUD or implement _target_name_pl in '.$_[0]->class); }
 sub _target_name_a { return Lingua::EN::Inflect::A($_[0]->_target_name); }
 
 sub sub_command_sort_position { .1 };
