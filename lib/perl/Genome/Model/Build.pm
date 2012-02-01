@@ -2357,8 +2357,14 @@ sub execution_host_from_bjobs_output {
     my $bjobs_output = shift;
     my ($execution_host) = $bjobs_output =~ /Started on <(.*?)>/;
     unless ($execution_host) {
-        if ($bjobs_output =~ /Started on \d+ Hosts\/Processors </) {
-            $self->error_message("Not yet able to parse multiple execution hosts.");
+        if (my ($hosts) = $bjobs_output =~ /Started on \d+ Hosts\/Processors <(\S+)>/) {
+            my %hosts = map { $_ => 1 } split('><', $hosts);
+            my @hosts = keys %hosts;
+            if (@hosts > 1) {
+                $self->error_message("Not yet able to parse multiple execution hosts.");
+            } else {
+                $execution_host = $hosts[0];
+            }
         } else {
             die $self->error_message("Failed to parse execution host from bjobs output:\n$bjobs_output\n");
         }
