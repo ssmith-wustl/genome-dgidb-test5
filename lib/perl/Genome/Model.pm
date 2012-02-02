@@ -22,6 +22,7 @@ class Genome::Model {
     ],
     has => [
         name => { is => 'Text' },
+        type_name => { is => 'Text', via => 'processing_profile' },
         subclass_name => { 
             is => 'Text',is_mutable => 0, column_name => 'SUBCLASS_NAME',
             calculate_from => 'processing_profile_id',
