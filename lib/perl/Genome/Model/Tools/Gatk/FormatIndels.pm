@@ -107,7 +107,7 @@ sub execute {                               # replace with real execution logic.
 					$indel_type = "INSERTION";
 					$indel_size = length($indel) - 1;
 					$chr_stop = $chr_start + 1;
-					$ref = "0";
+					$ref = "-";
 					$var = substr($indel, 1, 99);
 				}
 				else
@@ -116,7 +116,7 @@ sub execute {                               # replace with real execution logic.
 					$indel_size = length($indel) - 1;
 					$chr_start++;
 					$ref = substr($indel, 1, 99);
-					$var = "0";
+					$var = "-";
 				}
 	
 				## If we have other information on line, output it ##
