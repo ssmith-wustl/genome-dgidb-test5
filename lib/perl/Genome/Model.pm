@@ -169,12 +169,12 @@ sub create {
     }
     my $self = $class->SUPER::create(@_);
 
+    $self->user_name(Genome::Sys->username) unless $self->user_name;
+    $self->creation_date(UR::Context->now);
+
     $self->_validate_processing_profile;
     $self->_validate_subject;
     $self->_validate_name;
-
-    $self->user_name(Genome::Sys->username) unless $self->user_name;
-    $self->creation_date(UR::Context->now);
 
     $self->_verify_no_other_models_with_same_name_and_type_exist;
 
@@ -453,13 +453,13 @@ sub _validate_name {
 
 # TODO This method should return a generic default model name and be overridden in subclasses.
 sub default_model_name {
-    $DB::single = 1;
     my ($self, %params) = @_;
 
     my $auto_increment = delete $params{auto_increment};
     $auto_increment = 1 unless defined $auto_increment;
 
-    my $name_template = ($self->subject_name).'.';
+    $DB::single = 1;
+    my $name_template = ($self->subject->name).'.';
     $name_template .= 'prod-' if ($self->user_name eq 'apipe-builder' || $params{prod});
 
     my $type_name = $self->processing_profile->type_name;
@@ -511,7 +511,7 @@ sub _verify_no_other_models_with_same_name_and_type_exist {
             $message .= sprintf(
                 "Name: %s\nSubject Name: %s\nId: %s\nProcessing Profile Id: %s\nSubclass: %s\n\n",
                 $model->name,
-                $model->subject_name,
+                $model->subject->name,
                 $model->id,
                 $model->processing_profile_id,
                 $model->subclass_name,
