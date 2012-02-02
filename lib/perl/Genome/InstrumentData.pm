@@ -53,21 +53,14 @@ class Genome::InstrumentData {
         original_est_fragment_std_dev => {
             is => 'Number',
             is_calculated => 1,
-            calculate_from => ['original_est_fragment_size_max', 'original_est_fragment_size_min'],
-            calculate => q|($original_est_fragment_size_max - $original_est_fragment_size_min)/6|,
-        },
-        final_est_fragment_size => {
-            is => 'Number',
-            is_mutable => 1,
-            via => 'attributes',
-            to => 'attribute_value',
-            where => [attribute_label => 'final_est_fragment_size'],
-        },
-        final_est_fragment_std_dev => {
-            is => 'Number',
-            is_calculated => 1,
-            calculate_from => ['final_est_fragment_size'],
-            calculate => q|$final_est_fragment_size*.05|,
+            calculate_from => ['original_est_fragment_size_max', 'original_est_fragment_size_min','original_est_fragment_size'],
+            calculate => q|
+                if ($original_est_fragment_size_max and 
+                    $original_est_fragment_size_min) {
+                ($original_est_fragment_size_max - $original_est_fragment_size_min)/6; }
+                else {
+                    $original_est_fragment_size*.1;
+                }|,
         },
         read_orientation => {
             is => 'Text',

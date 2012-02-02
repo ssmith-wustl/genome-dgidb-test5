@@ -127,6 +127,11 @@ sub execute {
     $self->status_message('Add velvet afg file: '.$self->velvet_afg_file);
     my $add_read_depth = $self->_add_metrics_from_agp_file($metrics);
     return if not $add_read_depth;
+
+    # core gene survey
+    $self->status_message('Check core gene survey result');
+    my $add_core_gene_survey = $self->_add_core_gene_survey_metrics($metrics);
+    return if not $add_core_gene_survey;
     
     # transform metrics
     my $text = $metrics->transform_xml_to('txt');
@@ -308,6 +313,35 @@ sub _add_metrics_from_agp_file { #for velvet assemblies
     $metrics->set_metric('coverage_2x', $two_x);
     $metrics->set_metric('coverage_1x', $one_x);
     $metrics->set_metric('coverage_0x', $zero_x);
+
+    return 1;
+}
+
+sub _add_core_gene_survey_metrics {
+    my ( $self, $metrics ) = @_;
+
+    if ( not -s $self->core_gene_survey_file) {
+        $self->status_message("Core gene survey result file not found, so core gene survey metrics will be set");
+        return 1;
+    }
+    
+    my $fh = Genome::Sys->open_file_for_reading( $self->core_gene_survey_file );
+    while ( my $line = $fh->getline ) {
+        if ( $line =~ /^Perc of Core/ ) {
+            my ( $value ) = $line =~ /assembly:\s+(\S+)\s+%/;
+            $metrics->set_metric('core_gene_present_percent', $value);
+        }
+        elsif ( $line =~ /^Number\s+of\s+/ ) {
+            my ( $value ) = $line =~ /assembly:\s+(\d+)$/;
+            $metrics->set_metric('core_gene_group_present_count', $value);
+        }
+        elsif ( $line =~ /^Core\s+gene/) {
+            my ( $value ) = $line =~ /gene\s+test\s+(\S+)$/;
+            $metrics->set_metric('core_gene_survey_result', $value );
+        }
+    }
+
+    $fh->close;
 
     return 1;
 }
