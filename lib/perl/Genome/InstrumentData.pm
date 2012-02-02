@@ -300,11 +300,20 @@ sub dump_fastqs_from_bam {
     my $self = shift;
     my %p = @_;
 
-    die "cannot call bam path" if (!$self->can('bam_path'));
-
+    unless ($self->can('bam_path')) {
+        my $error = 'cannot call bam path';
+        $self->error_message($error);
+        die $error;
+    }
+    unless ($self->bam_path) {
+        my $error = 'Attempted to dump a bam but the path is not defined.';
+        $self->error_message($error);
+        die $error;
+    }
     unless (-e $self->bam_path) {
-        $self->error_message("Attempted to dump a bam but the path does not exist:" . $self->bam_path);
-        die $self->error_message;
+        my $error = 'Attempted to dump a bam but the path does not exist:' . $self->bam_path;
+        $self->error_message($error);
+        die $error;
     }
 
     my $directory = delete $p{directory};

@@ -460,7 +460,7 @@ sub default_model_name {
     $auto_increment = 1 unless defined $auto_increment;
 
     my $name_template = ($self->subject_name).'.';
-    $name_template .= 'prod-' if ($self->user_name eq 'apipe-builder' || $params{prod});
+    $name_template .= 'prod-' if (($self->user_name && $self->user_name eq 'apipe-builder') || $params{prod});
 
     my $type_name = $self->processing_profile->type_name;
     my %short_names = (
