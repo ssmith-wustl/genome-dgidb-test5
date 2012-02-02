@@ -1,4 +1,4 @@
-package Genome::InstrumentData::AlignmentResult::RtgMapX;
+package Genome::InstrumentData::AlignmentResult::RtgMapx;
 
 use strict;
 use warnings;
@@ -7,11 +7,11 @@ use File::Path;
 use File::Copy;
 use Genome;
 
-class Genome::InstrumentData::AlignmentResult::RtgMapX{
+class Genome::InstrumentData::AlignmentResult::RtgMapx{
     is => 'Genome::InstrumentData::AlignmentResult',
     
     has_constant => [
-        aligner_name => { value => 'rtg map x', is_param=>1 },
+        aligner_name => { value => 'rtg mapx', is_param=>1 },
     ],
     has => [
         _max_read_id_seen => { default_value => 0, is_optional => 1},
@@ -253,7 +253,9 @@ sub _prepare_reference_sequences {
 sub prepare_reference_sequence_index {
     my $class = shift;
     
-     my $refindex = shift;
+    $DB::single = 1;
+
+    my $refindex = shift;
 
     my $staging_dir = $refindex->temp_staging_directory;
     my $staged_fasta_file = sprintf("%s/all_sequences.fa", $staging_dir);
@@ -264,7 +266,7 @@ sub prepare_reference_sequence_index {
 
     my $rtg_path = Genome::Model::Tools::Rtg->path_for_rtg_format($refindex->aligner_version);
 
-    my $cmd = sprintf("%s format --protein -o %s/all_sequences.sdf %s", $rtg_path, $staging_dir, $staged_fasta_file);
+    my $cmd = sprintf("%s --protein -o %s/all_sequences.sdf %s", $rtg_path, $staging_dir, $staged_fasta_file);
 
     my $rv = Genome::Sys->shellcmd(
         cmd=>$cmd

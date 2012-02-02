@@ -7,13 +7,7 @@ use List::MoreUtils qw/ uniq /;
 
 class Genome::DruggableGene::Command::GeneNameReport::LookupInteractions {
     is => 'Genome::Command::Base',
-    has => [
-        gene_file => {
-            is => 'Path',
-            is_input => 1,
-            doc => 'Path to a list of gene identifiers',
-            shell_args_position => 1,
-        },
+    has_optional => [
         output_file => {
             is => 'Text',
             is_input => 1,
@@ -21,37 +15,50 @@ class Genome::DruggableGene::Command::GeneNameReport::LookupInteractions {
             doc => "Output interactions to specified file. Defaults to STDOUT if no file is supplied.",
             default => "STDOUT",
         },
+        gene_file => {
+            is => 'Path',
+            is_input => 1,
+            doc => 'Path to a list of gene identifiers',
+            shell_args_position => 1,
+        },
+        gene_identifiers => {
+            is => 'Text',
+            is_many => 1,
+            doc => 'Array of gene identifiers',
+        },
         filter => {
-            is => 'Text',  
-            is_optional => 1,
+            is => 'Text',
             doc => 'Filter results based on the parameters.  See below for how to.',
             shell_args_position => 2,
         },
         noheaders => {
             is => 'Boolean',
-            is_optional => 1,
             default => 0,
             doc => 'Do not include headers',
         },
     ],
+    has_transient_optional => [
+        output => {
+            is => 'Text',
+            is_many => 1,
+            doc => 'Save output for caller',
+        },
+    ],
 };
 
-sub help_brief {
-    'Lookup drug-gene interactions by gene identifiers';
-}
+sub help_brief { 'Lookup drug-gene interactions by gene identifiers' }
 
-sub help_synopsis {
-    #TODO: write me
-}
+sub help_synopsis { help_brief() }
 
-sub help_detail {
-    #TODO: write me
-}
+sub help_detail { help_brief() }
 
 sub execute {
     my $self = shift;
 
-    my @gene_identifiers = $self->_read_gene_file();
+    my @gene_identifiers;
+    @gene_identifiers = $self->_read_gene_file();
+    @gene_identifiers = $self->gene_identifiers unless @gene_identifiers;
+    die $self->error_message('No genes found') unless @gene_identifiers;
     my @gene_name_reports = $self->lookup_gene_identifiers(@gene_identifiers);
     my @interactions = $self->get_interactions(@gene_name_reports);
     my %grouped_interactions = $self->group_interactions_by_drug_name_report(@interactions);
@@ -144,16 +151,28 @@ sub print_grouped_interactions{
         }
     }
 
-    my @headers = qw/drug_name_report drug_nomenclature drug_source_db_name drug_source_db_version
-        gene_name_report gene_nomenclature gene_alternate_names gene_source_db_name gene_source_db_version interaction_types /;
+    my @headers = qw/
+    drug_name_report
+    drug_nomenclature
+    drug_source_db_name
+    drug_source_db_version
+    gene_name_report
+    gene_nomenclature
+    gene_alternate_names
+    gene_source_db_name
+    gene_source_db_version
+    interaction_types
+    /;
     unless($self->noheaders){
         $output_fh->print(join("\t", @headers), "\n");
+        $self->output([join("\t", @headers)]);
     }
 
     my @drug_name_reports = Genome::DruggableGene::DrugNameReport->get(id => [keys %grouped_interactions]);
     for my $drug_name_report_id (keys %grouped_interactions){
         for my $interaction (@{$grouped_interactions{$drug_name_report_id}}){
             $output_fh->print($self->_build_interaction_line($interaction), "\n");
+            $self->output([$self->output , $self->_build_interaction_line($interaction)]);
         }
     }
 
@@ -180,14 +199,10 @@ sub _build_interaction_line {
 
 sub _read_gene_file{
     my $self = shift;
-    my $gene_file = $self->gene_file;
+    my $gene_file = $self->gene_file || return;
     my @gene_identifiers;
 
     my $gene_fh = Genome::Sys->open_file_for_reading($gene_file);
-    unless($gene_fh){
-        $self->error_message("Failed to open gene_file $gene_file: $@");
-        return;
-    }
 
     while (my $gene_identifier = <$gene_fh>){
         chomp $gene_identifier;

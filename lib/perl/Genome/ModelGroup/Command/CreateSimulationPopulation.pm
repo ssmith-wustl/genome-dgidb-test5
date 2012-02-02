@@ -18,7 +18,7 @@ class Genome::ModelGroup::Command::CreateSimulationPopulation {
     coverage_target => {
         is => 'Text',
         is_optional => 1,
-        doc => 'Set this to cause no more than N vcfs to be merged into a single operation at a time',
+        doc => 'How much coverage should each bam end up with',
     },
     region => {
         is => 'Text', 
@@ -42,15 +42,17 @@ class Genome::ModelGroup::Command::CreateSimulationPopulation {
     disease_snps => {
         is =>'Text',
         is_optional=>0,
-        doc => "see generate haplotypes doc",
+        doc => "see generate haplotypes doc on how to specify this (basically, <pos>, <which allele is the disease allele>, <het rel risk>, <hom rel risk>",
     },
     exome_regions=> {
         is =>'Text',
         is_optional=>0,
+        doc => "a bed file to use to simulate exome sequencing.  supply a sureselect/nimblegen feature list for build36, it will emulate wingspan for you",
     },
     model_group_name => {
         is =>'Text',
         is_optional=>0,
+        doc =>"what to name the resulting model group.  Don't make this too long as its integrated into the lib name which has a 64 character limit, and some stuff gets appended on",
     }
     ],
     has_transient_optional=> [

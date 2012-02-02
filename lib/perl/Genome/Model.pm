@@ -458,9 +458,8 @@ sub default_model_name {
     my $auto_increment = delete $params{auto_increment};
     $auto_increment = 1 unless defined $auto_increment;
 
-    $DB::single = 1;
     my $name_template = ($self->subject->name).'.';
-    $name_template .= 'prod-' if ($self->user_name eq 'apipe-builder' || $params{prod});
+    $name_template .= 'prod-' if (($self->user_name && $self->user_name eq 'apipe-builder') || $params{prod});
 
     my $type_name = $self->processing_profile->type_name;
     my %short_names = (
@@ -598,8 +597,7 @@ sub _preprocess_subclass_description {
 
 my $depth = 0;
 sub __extend_namespace__ {
-    # auto generate sub-classes for any valid processing profile
-    my ($self,$ext) = @_;
+    my ($self,$ext) = @_; 
 
     my $meta = $self->SUPER::__extend_namespace__($ext);
     if ($meta) {
@@ -610,6 +608,12 @@ sub __extend_namespace__ {
     if ($depth>1) {
         $depth--;
         return;
+    }
+
+    # If the command class for the model sub type cannot be found, this will create it
+    if ( $ext eq 'Command' ) { 
+        my $create_command_tree = $self->_create_command_tree;
+        Carp::confess('Failed to create command tree for '.$self->class.'!') if not $create_command_tree;
     }
 
     # make a model subclass if the processing profile exists
@@ -633,6 +637,29 @@ sub __extend_namespace__ {
     }
     $depth--;
     return;
+}
+
+sub _create_command_tree {
+    my $self = shift;
+
+    return 1 if $self->__meta__->is_abstract;
+    my $command_class_name = $self->class.'::Command';
+    my $command_class = eval{ $command_class_name->class; };
+    return 1 if $command_class;
+
+    $self->class =~ /^Genome::Model::(\w[\w\d]+)(::)?/;
+    my $type_name = $1;
+    UR::Object::Type->define(
+        class_name => $command_class_name,
+        is => 'Command::Tree',
+        doc => 'operate on '.Genome::Utility::Text::camel_case_to_string($type_name).' models/builds',
+    );
+
+    no strict;
+    *{$command_class_name.'::sub_command_category'} = sub { return 'type specific' };
+    $command_class = eval{ $command_class_name->class; };
+
+    return $command_class;
 }
 
 1;
