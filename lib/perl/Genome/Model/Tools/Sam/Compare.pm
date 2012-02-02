@@ -57,7 +57,13 @@ sub execute {
 
     my $output_fh = Genome::Sys->open_file_for_reading($output_file);
     while (<$output_fh>) {
-        $ret = 1 if (m/Differ\s*0$/); 
+        if (m/Cannot compare/) {
+            $ret = 0;
+            last;
+        }
+        if (m/Differ\s*0$/) {
+            $ret = 1;
+        }
         $response .= $_;
     }
     close($output_fh);

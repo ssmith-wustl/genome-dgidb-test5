@@ -398,12 +398,12 @@ sub _run_aligner {
     # If there is an insert size, it's paired-end mutliply read_length by 2
     my $insert_size = int( $sum_insert_sizes / $reads ) - ($avg_read_length * 2);
 
-    unless ($insert_size) {
+    unless (defined($insert_size)) {
         die $self->error_message('Failed to get insert size with '. $reads .' reads and a sum insert size of '. $sum_insert_sizes);
     }
     # TODO: averaging the standard deviations does not seem statisticly sound
     my $insert_size_std_dev = int( $sum_insert_size_std_dev / $reads );
-    unless ($insert_size_std_dev) {
+    unless (defined($insert_size_std_dev)) {
         die $self->error_message('Failed to get insert size with '. $reads .' $reads and a sum insert size standard deviation of '. $sum_insert_size_std_dev);
     }
 

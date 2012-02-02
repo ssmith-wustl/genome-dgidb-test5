@@ -29,7 +29,7 @@ BEGIN {
 ###############################################################################
 
 # this ought to match the name as seen in the processing profile
-my $aligner_name = "rtg map x";
+my $aligner_name = "rtg mapx";
 
 
 # End aligner-specific configuration,
@@ -197,9 +197,9 @@ sub test_shortcutting {
 sub generate_fake_instrument_data {
 
     #my $fastq_directory = '/gsc/var/cache/testsuite/data/Genome-InstrumentData-Align-Maq/test_sample_name';
-    my $fastq_directory = '/gsc/var/cache/testsuite/data/Genome-InstrumentData-AlignmentResult-RtgMapX';
+    my $fastq_directory = '/gsc/var/cache/testsuite/data/Genome-InstrumentData-AlignmentResult-RtgMapx';
     my $tmp_fastq_dir = File::Temp::tempdir(
-        'AlignmentResult-RtgMapX-XXXXXX',
+        'AlignmentResult-RtgMapx-XXXXXX',
         DIR => '/gsc/var/cache/testsuite/running_testsuites/',
         UNLINK => 1,
         CLEANUP => 1,

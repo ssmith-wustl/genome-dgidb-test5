@@ -106,6 +106,11 @@ class Sx::Metrics::Assembly {
                 contigs_t3_n50_count
                 contigs_t3_n50_length
                 contigs_t3_n50_not_reached
+
+                core_gene_present_percent
+                core_gene_group_present_count
+                core_gene_survey_result
+
                 coverage_5x
                 coverage_4x
                 coverage_3x

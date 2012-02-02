@@ -1,0 +1,12 @@
+<div id="druggableGeneSearch" class="span-16 append-4 prepend-4 last" style="margin-top: 20px">
+    <form action="/view/x/druggable-gene" method='POST' enctype="multipart/form-data">
+        <span style="font-weight: bold">Use a gene list file: </span>
+        <input type="file" id="file" name="file"/>
+        <br />or<br />
+        <span style="font-weight: bold">Paste a gene list: </span>
+        <br />
+        <textarea name="genes" rows="100" cols="20">Genes - one gene per line.</textarea>
+        <br />
+        <button id="submit-button">Find Drug Interactions as CSV</button>
+    </form>
+</div>
