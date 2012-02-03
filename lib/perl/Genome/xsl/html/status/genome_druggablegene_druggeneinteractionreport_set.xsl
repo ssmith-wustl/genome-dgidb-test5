@@ -73,7 +73,11 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
                   <td class="name">Interaction Type:
                   </td>
                   <td class="value">
-                    <xsl:value-of select="normalize-space(aspect[@name='interaction_type']/value)"/>
+                    <ul>
+                      <xsl:for-each select="aspect[@name='interaction_types']/value">
+                        <li><xsl:value-of select="normalize-space(.)"/></li>
+                      </xsl:for-each>
+                    </ul>
                   </td>
                 </tr>
               </tbody>

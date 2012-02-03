@@ -49,6 +49,25 @@ sub _execute_tool {
     if ( $params_string ) {
         %params = Genome::Utility::Text::param_string_to_hash( $params_string );
     }
+
+    for my $param_name ( keys %params ) {
+        my $value = $params{$param_name};
+        if ( $value =~ /:/ ) {
+            my ( $class, $method ) = split ( ':', $value );
+            # class should just be build class for now .. enforced at pp creation
+            if ( not $class eq 'build' ) {
+                $self->status_message("Skipping running tool, $class_name.  Can not derive tool param value from class, $class.  Expected class to be genome::model::Build but got $class");
+                next;
+            }
+            my $derived_value;
+            if ( not $derived_value = $self->$class->$method ) {
+                $self->status_message("Skipping running tool, $class_name.  Failed to get param_value from class, $class, using method, $method");
+                next;
+            }
+            $params{$param_name} = lc $derived_value
+        }
+    }
+
     $params{assembly_directory} = $self->build->data_directory;
 
     $self->status_message('Params: '.Data::Dumper::Dumper(\%params));

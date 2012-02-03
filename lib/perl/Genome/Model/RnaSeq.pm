@@ -300,21 +300,34 @@ sub params_for_alignment {
 sub Genome::ProcessingProfile::Command::List::RnaSeq::_resolve_boolexpr {
     my $self = shift;
 
-    my ($bool_expr, %extra) = UR::BoolExpr->resolve_for_string(
-        'Genome::ProcessingProfile', #$self->subject_class_name,
+    my ($bool_expr1, %extra2) = UR::BoolExpr->resolve_for_string(
+        'Genome::ProcessingProfile::RnaSeq::Solexa',
         $self->_complete_filter, 
         $self->_hint_string,
         $self->order_by,
     );
 
-    $self->error_message( sprintf('Unrecognized field(s): %s', join(', ', keys %extra)) )
-        and return if %extra;
+    my @o1 = Genome::ProcessingProfile::RnaSeq::Solexa->get($bool_expr1);
+    
+    $DB::single = 1;
 
-    print "$bool_expr\n";
-    $bool_expr = $bool_expr->add_filter(
-        type_name => ['rna seq']
+    my ($bool_expr2, %extra1) = UR::BoolExpr->resolve_for_string(
+        'Genome::ProcessingProfile::RnaSeq',
+        $self->_complete_filter, 
+        $self->_hint_string,
+        $self->order_by,
     );
-    print "$bool_expr\n";
+
+    $self->error_message( sprintf('Unrecognized field(s): %s', join(', ', keys %extra1)) )
+        and return if %extra1;
+
+    my @o2 = Genome::ProcessingProfile::RnaSeq->get($bool_expr2);
+
+    my $bool_expr = Genome::ProcessingProfile->define_boolexpr(
+        id => [ map { $_->id } (@o1, @o2) ],
+        type_name => 'rna seq',
+        ($bool_expr2->template->order_by ? ('-order_by' => $bool_expr2->template->order_by) : ()),
+    );
 
     return $bool_expr;
 }

@@ -20,7 +20,7 @@ class Genome::DruggableGene::DrugGeneInteractionReport::Set::View::Status::Xml {
                     aspects => [
                         'drug_name_report_name',
                         'gene_name_report_name',
-                        'interaction_type',
+                        'interaction_types'
                     ],
                },
             ],

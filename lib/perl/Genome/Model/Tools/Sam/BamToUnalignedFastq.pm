@@ -122,6 +122,9 @@ sub execute {
                 $cache = $align;
             }
         }
+        if ($cache){
+            print_align_to_fh($cache, \%fhs, 'fragment');
+        }
     }
     else{
         while (my $align = $bam_fh->getline) {

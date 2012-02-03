@@ -63,10 +63,6 @@ sub execute {
         return 0;
     }
     my $region = $self->region;
-    unless($region) {
-        $self->error_message("not yet working on entire genomes, please supply a region");
-        return 0;
-    }
 
     my ($refseq, $offset)=$self->read_region_of_fasta($self->region, $self->ref_fasta);
     my $refseq_length= length($refseq);
@@ -117,8 +113,8 @@ sub execute {
     $newrefseq1.=$subseq;
     $newrefseq2.=$subseq;
     if($self->limit_regions) {
-        $self->dump_some_regions($newrefseq1, $out1, $self->limit_regions, "A");
-        $self->dump_some_regions($newrefseq2, $out2, $self->limit_regions, "B");
+        $self->dump_some_regions($newrefseq1, $out1, $offset, $self->limit_regions, "A");
+        $self->dump_some_regions($newrefseq2, $out2, $offset, $self->limit_regions, "B");
     }
     else {
         my $desc="mutated according to " . $self->mutation_bed;
@@ -139,32 +135,46 @@ sub execute {
     }
 
 }
-sub dump_some_regions {
+
+sub write_region_limited_bed_file {
     my $self = shift;
-    my $ref = shift;
-    my $out_fh = shift;
-    my $bed_file = shift;
-    my $hap = shift;
+    my $target_regions_padded_bed = shift;
+    my $mutation_bed = $self->mutation_bed;
+    my ($basename,$dirname,$suffix) = File::Basename::fileparse($mutation_bed,qw/.bed/);
+    my $output_bed = "$dirname/$basename.region_limited.bed";
+    my $cmd = "intersectBed -wa -u -a $mutation_bed -b $target_regions_padded_bed > $output_bed";
+    Genome::Sys->shellcmd(cmd=>$cmd);
+}
+    
+
+
+
+sub dump_some_regions {
+    my($self, $ref, $out_fh, $offset, $bed_file, $hap) = @_;
     my $bed_fh = IO::File->new($bed_file);
     my ($temp_bed, $temp_bed_path) = Genome::Sys->create_temp_file();
+    $DB::single=1;
     my $merged_padded_bed = Genome::Sys->create_temp_file_path();
     while(my $line = $bed_fh->getline) {
         chomp($line);
         my ($chr, $start, $stop, undef) = split /\t/, $line;
-        if($chr eq $self->region) {
+        if($self->region && $self->in_region($chr, $start, $stop)) {
             $start-=600; 
             $stop +=600;
             $temp_bed->print("$chr\t$start\t$stop\n");
         }
     }
+    $temp_bed->close;
     my $cmd = "mergeBed -i $temp_bed_path > $merged_padded_bed";
     Genome::Sys->shellcmd(cmd=>$cmd);
     $bed_fh->close;
     $bed_fh = IO::File->new($merged_padded_bed);
+    $self->write_region_limited_bed_file($merged_padded_bed); #for analysis convenience
     while(my $line = $bed_fh->getline) {
         chomp($line);
-        my ($chr, $start, $stop, undef) = split /\t/, $line;
-        $stop = $stop -1;
+        my ($chr, $bed_start, $bed_stop, undef) = split /\t/, $line;
+        my $stop = $bed_stop - $offset;
+        my $start = $bed_start - $offset;
         if($stop > length($ref)) {
             $stop = length($ref);
         }
@@ -172,14 +182,29 @@ sub dump_some_regions {
             $start =0;
         }
         my $length = $stop - $start;
-        $out_fh->print(">22:$start-$stop:$hap\t$length\n"); #FIXME: WTF hardcode
-        my $fasta_seq = substr($ref, $start, $length);
-        $self->print_and_flush($fasta_seq, $out_fh);
-        $self->status_message("Dumped 22:$start-$stop to fasta\n");
+        if($self->region) {
+            if($self->in_region($chr,$bed_start, $bed_stop)) {
+                $out_fh->print(">$chr:$bed_start-$bed_stop:$hap\t$length\n"); 
+                my $fasta_seq = substr($ref, $start, $length);
+                $self->print_and_flush($fasta_seq, $out_fh);
+                $self->status_message("Dumped 22:$bed_start-$bed_stop to fasta\n");
+            }
+        }
     }
 }
 
-
+sub in_region {
+    my ($self, $chr,$start, $stop) = @_;
+    my $region = $self->region;
+    my ($reg_chr, $start_stop) = split ":", $region;
+    my ($reg_start, $reg_stop)= split "-", $start_stop;
+    if($chr eq $reg_chr) {
+        if(($reg_start <= $start) && ($stop <= $reg_stop)) {
+            return 1;
+        }
+    }
+    return 0;
+}
 
 
 
@@ -188,8 +213,14 @@ sub print_and_flush {
     my $self = shift;
     my $refseq = shift;
     my $out_fh=shift;
-
+    my $chomp=0;
+    if(length($refseq) % 60==0) {
+        $chomp=1;
+    }
     $refseq =~ s/(.{60})/$1\n/g;
+    if($chomp) {
+        chomp($refseq);
+    }
     $out_fh->print($refseq . "\n");
 }
 
@@ -220,15 +251,18 @@ sub read_mutation_list{
         my $mut;
         my ($chr,$start,$stop,$ref_var)=split /\s+/, $line;
         my ($ref, $var) = split "/", $ref_var;
-        $mut->{chr}=$chr;
-        $mut->{start}=$start;
-        $mut->{stop}=$stop;
-        $mut->{reference}=$ref;
-        $mut->{variant}=$var;
-        my $type = $self->infer_variant_type($mut);
-        $mut->{type}=$type;
+        if($self->region && $self->in_region($chr,$start, $stop)) {
+            $mut->{chr}=$chr;
+            $mut->{start}=$start;
+            $mut->{stop}=$stop;
+            $mut->{reference}=$ref;
+            $mut->{variant}=$var;
+            my $type = $self->infer_variant_type($mut);
+            $mut->{type}=$type;
+
 #    print STDERR "$_\n";
-        push @muts,$mut;
+            push @muts,$mut;
+        }
     }
     return @muts;
 }

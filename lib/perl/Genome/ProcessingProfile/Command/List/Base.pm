@@ -1,8 +1,6 @@
 package Genome::ProcessingProfile::Command::List::Base;
 
-use strict;
 use warnings;
-
 use Genome;
 
 class Genome::ProcessingProfile::Command::List::Base {
@@ -23,6 +21,7 @@ sub execute {
     # it's actually faster to load everything in one shot than to query carefully
     my @pp = Genome::ProcessingProfile::Param->get();
     my @p = Genome::ProcessingProfile->get();
+    $DB::single = 1;
     return $self->SUPER::_execute_body(@_);
 }
 

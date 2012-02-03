@@ -28,6 +28,16 @@ sub load_modules {
 }
 
 sub dispatch_request {
+    sub ( POST + /view/x/druggable-gene + %* + *file= ) {
+        load_modules();
+        my ($self, $params, $file, $env) = @_;
+        my @gene_names;
+        @gene_names = Genome::Sys->read_file($file->path) if $file;
+        chomp @gene_names;
+        push @gene_names, $params->{'genes'};
+        my $command = Genome::DruggableGene::Command::GeneNameReport::LookupInteractions->execute( gene_identifiers => \@gene_names );
+        return [200, ['Content-type' => "text/csv"], [join("\n", @gene_names)]];
+    },
 #    sub ( POST + /view/x/subject-upload + *file= ) {
     sub ( POST + /view/x/subject-upload + %* + *file= )  {
 
@@ -45,7 +55,7 @@ sub dispatch_request {
 
         my $base64 = MIME::Base64::encode_base64($c);
 
-        my $task_params_json = encode_json( { 
+        my $task_params_json = encode_json( {
             nomenclature => $params->{'nomenclature'},
             subclass_name => $params->{'subclass_name'},
             project_name => $params->{'project_name'},
