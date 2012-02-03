@@ -122,8 +122,8 @@ sub execute {
          	
        $self->status_message("\n************ Alignment object: ".Dumper($alignment) );
          	
-       $self->status_message($alignment->alignment_directory."/all_sequences.bam");  	
-       $self->aligned_file($alignment->alignment_directory."/all_sequences.bam");
+       $self->status_message($alignment->output_dir."/all_sequences.bam");  	
+       $self->aligned_file($alignment->output_dir."/all_sequences.bam");
      
      
 #    my $aligner = Genome::Model::Tools::Bwa::AlignReads->create(dna_type=>'dna', 

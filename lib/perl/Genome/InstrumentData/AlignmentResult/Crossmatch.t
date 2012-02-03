@@ -97,7 +97,7 @@ sub test_alignment {
                                                    );
 
     ok($alignment, "Created Alignment");
-    my $dir = $alignment->alignment_directory; #/gscmnt/gc4096/info/model_data/2741951221/build101947881/
+    my $dir = $alignment->output_dir; #/gscmnt/gc4096/info/model_data/2741951221/build101947881/
     ok($dir, "alignments found/generated");
     ok(-d $dir, "result is a real directory");
     ok(-s $dir . "/all_sequences.bam", "result has a bam file");
@@ -185,10 +185,10 @@ sub test_shortcutting {
 
 
     # once to find old data
-    my $adir = $alignment->alignment_directory;
+    my $adir = $alignment->output_dir;
     my @list = <$adir/*>;
     ok($alignment, "Created Alignment");
-    my $dir = $alignment->alignment_directory;
+    my $dir = $alignment->output_dir;
     ok($dir, "alignments found/generated");
     ok(-d $dir, "result is a real directory");
     ok(-s $dir."/all_sequences.bam", "found a bam file in there");

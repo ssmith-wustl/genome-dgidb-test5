@@ -84,7 +84,7 @@ sub execute {
     $self->status_message("\n************ Alignment object: ".Dumper($alignment) );
     
     #resolve this from alignment object    
-    my $alignment_file = $alignment->alignment_directory."/all_sequences.bam";
+    my $alignment_file = $alignment->output_dir."/all_sequences.bam";
     $self->status_message("Setting aligned file to: $alignment_file");  	
     $self->aligned_file($alignment_file);
      

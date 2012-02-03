@@ -298,6 +298,7 @@ sub required_rusage_for_building_index {
     return sprintf("-R '%s %s' %s", $select, $rusage, $options);
 }
 
+
 sub _working_dir_prefix {
     "alignment";
 }
@@ -949,14 +950,6 @@ sub _compute_alignment_metrics {
     return;
 }
 
-
-sub alignment_directory {
-    # TODO: refactor to just use output_dir.
-    my $self = shift;
-    return $self->output_dir;
-}
-
-
 sub _create_bam_index {
     my $self = shift;
     my $bam_file    = $self->temp_staging_directory . '/all_sequences.bam';
@@ -1590,7 +1583,7 @@ sub verify_alignment_data {
 sub alignment_bam_file_paths {
     my $self = shift;
 
-    return glob($self->alignment_directory . "/*.bam");
+    return glob($self->output_dir . "/*.bam");
 }
 
 sub requires_read_group_addition {
