@@ -12,29 +12,57 @@ use Genome;
 
 #Required
 my $model_group = '';
-my $positions_outfile = '';
-my $genes_outfile = '';
+my $outdir = '';
+my $label = '';
+my $verbose = 0;
+my $test = 0;
 
-GetOptions ('model_group=s'=>\$model_group, 'positions_outfile=s'=>\$positions_outfile, 'genes_outfile=s'=>\$genes_outfile);
+GetOptions ('model_group=s'=>\$model_group, 'outdir=s'=>\$outdir, 'label=s'=>\$label, 'verbose=i'=>\$verbose, 'test=i'=>\$test);
 
 my $usage=<<INFO;
   Example usage: 
   
-  convergeSnvs.pl  --model_group='25307'  --positions_outfile=BRAF_SNVs_Merged_PositionLevel.tsv  --genes_outfile=BRAF_SNVs_Merged_GeneLevel.tsv
+  convergeSnvs.pl  --model_group='25307'  --outdir=/gscmnt/sata132/techd/mgriffit/braf_resistance/recurrence_snv_results/  --label='BRAF'  --verbose=1
 
   Combines SNV results from a group of Clinseq models into a single report:
-  --model_group          Specifies a genome model group ID
-  --positions_outfile    Results merged to the level of unique SNV positions will be written here
-  --genes_outfile        Results merged to the level of unique Genes will be written here
+  --model_group          Specifies a genome model group ID - Each model should be a clinseq model
+  --outdir               Path to directory for output files
+  --label                Label to apply to output files as a prefix
+  --verbose              More descriptive stdout messages
+  --test                 Use --test=1 to limit BAM read counting to a small number of positions
 
 INFO
 
-unless ($model_group && $positions_outfile && $genes_outfile){
+unless ($model_group && $outdir && $label){
   print RED, "\n\nRequired parameter missing", RESET;
   print GREEN, "\n\n$usage", RESET;
   exit(1);
 }
+unless ($outdir =~ /\/$/){
+  $outdir .= "/";
+}
+unless (-e $outdir && -d $outdir){
+  print RED, "\n\nOutput directory is not valid: $outdir\n\n", RESET;
+  exit(1);
+}
 
+#Hardcode Ensembl version parameter (should not matter since we are not using RNA-seq data here) - but must be defined for bam read counts code I'm using
+my $ensembl_version = 58;
+
+#Create a sub-directory for BAM read count results
+my $bam_rc_subdir = $outdir . "bam_rc/";
+mkdir($bam_rc_subdir);
+
+#Define paths/names of final output files
+my $positions_outfile = "$outdir"."$label"."_SNVs_Merged_PositionLevel.tsv";
+my $genes_outfile = "$outdir"."$label"."_SNVs_Merged_GeneLevel.tsv";
+my $positions_outfile_categorical = "$outdir"."$label"."_SNVs_Merged_PositionLevel_Categorical.tsv";
+my $genes_outfile_categorical = "$outdir"."$label"."_SNVs_Merged_GeneLevel_Categorical.tsv";
+my $positions_list = "$outdir"."$label"."_Master_SNV_List.tsv";
+my $vaf_file_matrix_wgs = "$outdir"."$label"."_WGS_SNV_VAFs_Matrix.tsv";
+my $mutation_status_file_matrix_wgs = "$outdir"."$label"."_WGS_SNV_MutationStatus_Matrix.tsv";
+my $vaf_file_matrix_exome = "$outdir"."$label"."_Exome_SNV_VAFs_Matrix.tsv";
+my $mutation_status_file_matrix_exome = "$outdir"."$label"."_Exome_SNV_MutationStatus_Matrix.tsv";
 
 #genome/lib/perl/Genome/ModelGroup.pm
 
@@ -49,12 +77,16 @@ my @subjects = $mg->subjects;
 
 #Get the members of the model-group, i.e. the models
 my @models = $mg->models;
+my $model_count = scalar(@models);
 
 my %snvs;
 my %genes;
 
 #Cycle through the models and get their builds
 my $header_line;
+my %model_list;
+my %wgs_sample_list;
+my %exome_sample_list;
 foreach my $m (@models){
   my $model_name = $m->name;
   my $model_id = $m->genome_model_id;
@@ -80,13 +112,31 @@ foreach my $m (@models){
 
   #Get the patient common name from one of the builds, if none can be found, use the individual name instead, if that can't be found either set the name to 'UnknownName'
   my @names = ($wgs_common_name, $exome_common_name, $wgs_name, $exome_name);
-  my $final_name = "UnknownName";
+  my $final_name;
   foreach my $name (@names){
     if ($name){
       $final_name = $name;
       last();
     }
   }
+  unless ($final_name){
+    print RED, "\n\nCould not determine a common or subject name from model: $model_name ($model_id)\n\n", RESET;
+    exit();
+  }
+  if ($wgs_build){
+    $wgs_sample_list{$final_name} = 1;
+  }
+  if ($exome_build){
+    $exome_sample_list{$final_name} = 1;
+  }
+
+  #Store model objects and value for later
+  $model_list{$model_id}{model_name} = $model_name;
+  $model_list{$model_id}{data_directory} = $data_directory;
+  $model_list{$model_id}{patient} = $patient;
+  $model_list{$model_id}{wgs_build} = $wgs_build;
+  $model_list{$model_id}{exome_build} = $exome_build;
+  $model_list{$model_id}{final_name} = $final_name;
 
   #Find the appropriate SNV file
   my $clinseq_snv_dir = $data_directory . "/" . $final_name . "/snv/";
@@ -139,6 +189,9 @@ foreach my $m (@models){
     }else{
       $snvs{$coord}{gene_name} = $gene_name;
       $snvs{$coord}{mapped_gene_name} = $mapped_gene_name;
+      $snvs{$coord}{aa_changes} = $aa_changes;
+      $snvs{$coord}{ref_base} = $ref_base;
+      $snvs{$coord}{var_base} = $var_base;
       $snvs{$coord}{recurrence} = 1;
       $snvs{$coord}{line} = $line;
       my %cases;
@@ -166,22 +219,36 @@ foreach my $m (@models){
   }
   close(SNV);
 }
+my $new_model_count = keys %model_list;
+unless ($model_count == $new_model_count){
+  print RED, "\n\nDiscrepancy between number of models in input model group and number of common/subject names found (redundant models?)\n\n", RESET;
+  exit();
+}
+
 
 #Print the position level recurrence summary
-open (OUT, ">$positions_outfile") || die "\n\nCould not open output file for writing: $positions_outfile\n\n";
-print OUT "coord\trecurrence_count\tmutated_samples\t$header_line\n";
+open (OUT1, ">$positions_outfile") || die "\n\nCould not open output file for writing: $positions_outfile\n\n";
+open (OUT2, ">$positions_outfile_categorical") || die "\n\nCould not open output file for writing: $positions_outfile_categorical\n\n";
+print OUT1 "coord\trecurrence_count\tmutated_samples\t$header_line\n";
+print OUT2 "coord\tsample\n";
 foreach my $coord (sort keys %snvs){
   my $cases_ref = $snvs{$coord}{cases};
   my @cases = keys %{$cases_ref};
   my @sort_cases = sort @cases;
   my $sort_cases_string = join(",", @sort_cases);
-  print OUT "$coord\t$snvs{$coord}{recurrence}\t$sort_cases_string\t$snvs{$coord}{line}\n";
+  print OUT1 "$coord\t$snvs{$coord}{recurrence}\t$sort_cases_string\t$snvs{$coord}{line}\n";
+  foreach my $case (@sort_cases){
+    print OUT2 "$coord\t$case\n";
+  }
 }
-close(OUT);
+close(OUT1);
+close(OUT2);
 
 #Print the gene level recurrence summary
-open (OUT, ">$genes_outfile") || die "\n\nCould not open output file for writing: $genes_outfile\n\n";
-print OUT "gene_name\tmapped_gene_name\ttotal_mutation_count\tmutated_sample_count\tmutated_position_count\tmutated_samples\tmutated_positions\n";
+open (OUT1, ">$genes_outfile") || die "\n\nCould not open output file for writing: $genes_outfile\n\n";
+open (OUT2, ">$genes_outfile_categorical") || die "\n\nCould not open output file for writing: $genes_outfile_categorical\n\n";
+print OUT1 "gene_name\tmapped_gene_name\ttotal_mutation_count\tmutated_sample_count\tmutated_position_count\tmutated_samples\tmutated_positions\n";
+print OUT2 "gene_name\tsample\n";
 foreach my $gene_name (sort keys %genes){
   my $positions_ref = $genes{$gene_name}{positions};
   my @positions = keys %{$positions_ref};
@@ -193,11 +260,154 @@ foreach my $gene_name (sort keys %genes){
   my @sort_cases = sort @cases;
   my $sort_cases_string = join(",", @sort_cases);
   my $cases_count = scalar(@cases);
-  print OUT "$gene_name\t$genes{$gene_name}{mapped_gene_name}\t$genes{$gene_name}{total_mutation_count}\t$cases_count\t$positions_count\t$sort_cases_string\t$sort_positions_string\n";
+  print OUT1 "$gene_name\t$genes{$gene_name}{mapped_gene_name}\t$genes{$gene_name}{total_mutation_count}\t$cases_count\t$positions_count\t$sort_cases_string\t$sort_positions_string\n";
+  foreach my $case (@sort_cases){
+    print OUT2 "$gene_name\t$case\n";
+  }
 }
-close(OUT);
+close(OUT1);
+close(OUT2);
 
-print BLUE, "\n\nWrote results to: $positions_outfile AND $genes_outfile\n\n", RESET;
+#Calculate the WGS and/or Exome Variant Allele frequencies for all positions mutated in any sample, for all samples
+
+
+#First build a consolidated SNV positions file of the format:
+#5:112176318-112176318   APC     APC     p.R1676T	    G	    C
+open (POS, ">$positions_list") || die "\n\nCould not open master positions list for output: $positions_list\n\n";
+print POS "coord\tgene_name\tmapped_gene_name\taa_changes\tref_base\tvar_base\n";
+my $c = 0;
+foreach my $coord (sort keys %snvs){
+  $c++;
+  print POS "$coord\t$snvs{$coord}{gene_name}\t$snvs{$coord}{mapped_gene_name}\t$snvs{$coord}{aa_changes}\t$snvs{$coord}{ref_base}\t$snvs{$coord}{var_base}\n";
+  if ($test){
+    if ($c >= 10){
+      last();
+    }
+  }
+}
+close(POS);
+
+#Now cycle through the build in the model group and run BAM read count jobs
+#Cycle through the models and get their builds
+print BLUE, "\n\nGetting BAM read counts for the master list of SNV positions for both WGS and Exome from all models in the model-group", RESET;
+foreach my $model_id (sort keys %model_list){
+  my $model_name = $model_list{$model_id}{model_name};
+  my $data_directory = $model_list{$model_id}{data_directory};
+  my $patient = $model_list{$model_id}{patient};
+  my $wgs_build = $model_list{$model_id}{wgs_build};
+  my $exome_build = $model_list{$model_id}{exome_build};
+  my $final_name = $model_list{$model_id}{final_name};
+  my $output_file = $bam_rc_subdir . "$final_name"."_BamReadCounts.tsv";
+  $model_list{$model_id}{read_counts_file} = $output_file; 
+
+  my $read_counts_script = "/usr/bin/perl `which genome` model clin-seq get-bam-read-counts";
+  my $bam_rc_cmd = "$read_counts_script  --positions-file=$positions_list  --ensembl-version=$ensembl_version  --output-file=$output_file  --verbose=$verbose";
+  $bam_rc_cmd .= "  --wgs-som-var-build=" . $wgs_build->id if $wgs_build;
+  $bam_rc_cmd .= "  --exome-som-var-build=" . $exome_build->id if $exome_build;
+  unless ($verbose){
+    $bam_rc_cmd .= "  1>/dev/null 2>/dev/null";
+  }
+  print BLUE, "\n\t$bam_rc_cmd", RESET;
+  system ($bam_rc_cmd);
+}
+
+#Now parse the read counts files and build a hash of SNVs and their variant allele frequencies (tumor and exome) for each subject
+my %rc;
+foreach my $model_id (sort keys %model_list){
+  my $rc_file = $model_list{$model_id}{read_counts_file}; 
+  my $wgs_build = $model_list{$model_id}{wgs_build};
+  my $exome_build = $model_list{$model_id}{exome_build};
+  my $final_name = $model_list{$model_id}{final_name};
+  my $header = 1;
+  my %columns;
+  open (RC, "$rc_file") || die "\n\nCould not open read counts file: $rc_file\n\n";
+  while(<RC>){
+    chomp($_);
+    my @line = split("\t", $_);
+    if ($header){
+      my $p = 0;
+      foreach my $col (@line){
+        $columns{$col}{position} = $p;
+        $p++;
+      }
+      $header = 0;
+      next();
+    }
+    my $coord = $line[$columns{'coord'}{position}];
+    if ($wgs_build){
+      $rc{$coord}{$final_name}{wgs_tumor_vaf} = $line[$columns{'WGS_Tumor_VAF'}{position}];
+    }
+    if ($exome_build){
+      $rc{$coord}{$final_name}{exome_tumor_vaf} = $line[$columns{'Exome_Tumor_VAF'}{position}];
+    }
+  }
+  close(RC);
+}
+
+#Write out the matrix files for both VAFs and mutation status (VAF > 0) in each subject at each position
+#WGS VAFs
+my @wgs_sample_list = sort keys %wgs_sample_list;
+my $wgs_sample_count = scalar(@wgs_sample_list);
+if ($wgs_sample_count > 0){
+  open (OUT1, ">$vaf_file_matrix_wgs") || die "\n\nCould not open file: $vaf_file_matrix_wgs\n\n";
+  open (OUT2, ">$mutation_status_file_matrix_wgs") || die "\n\nCould not open file: $mutation_status_file_matrix_wgs\n\n";
+  my $wgs_sample_list_string = join("\t", @wgs_sample_list);
+  my $wgs_header = "coord\t$wgs_sample_list_string";
+  print OUT1 "$wgs_header\n";
+  print OUT2 "$wgs_header\n";
+  foreach my $coord (sort keys %rc){
+    my @vafs;
+    my @statuses;
+    foreach my $sample (@wgs_sample_list){
+      my $vaf = $rc{$coord}{$sample}{wgs_tumor_vaf};
+      my $status = 0;
+      if ($vaf > 0){
+        $status = 1;
+      }
+      push(@vafs, $vaf);
+      push(@statuses, $status);
+    }
+    my $wgs_val_string = join("\t", @vafs);
+    my $wgs_status_string = join("\t", @statuses);
+    print OUT1 "$coord\t$wgs_val_string\n";
+    print OUT2 "$coord\t$wgs_status_string\n";
+  }
+  close(OUT1);
+  close(OUT2);
+}
+
+#Exome VAFs
+my @exome_sample_list = sort keys %exome_sample_list;
+my $exome_sample_count = scalar(@exome_sample_list);
+if ($exome_sample_count > 0){
+  open (OUT1, ">$vaf_file_matrix_exome") || die "\n\nCould not open file: $vaf_file_matrix_exome\n\n";
+  open (OUT2, ">$mutation_status_file_matrix_exome") || die "\n\nCould not open file: $mutation_status_file_matrix_exome\n\n";
+  my $exome_sample_list_string = join("\t", @exome_sample_list);
+  my $exome_header = "coord\t$exome_sample_list_string";
+  print OUT1 "$exome_header\n";
+  print OUT2 "$exome_header\n";
+  foreach my $coord (sort keys %rc){
+    my @vafs;
+    my @statuses;
+    foreach my $sample (@exome_sample_list){
+      my $vaf = $rc{$coord}{$sample}{exome_tumor_vaf};
+      my $status = 0;
+      if ($vaf > 0){
+        $status = 1;
+      }
+      push(@vafs, $vaf);
+      push(@statuses, $status);
+    }
+    my $exome_val_string = join("\t", @vafs);
+    my $exome_status_string = join("\t", @statuses);
+    print OUT1 "$coord\t$exome_val_string\n";
+    print OUT2 "$coord\t$exome_status_string\n";
+  }
+  close(OUT1);
+  close(OUT2);
+}
+
+print BLUE, "\n\nWrote results to: $outdir\n\n", RESET;
 
 exit();
 
