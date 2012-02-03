@@ -11,6 +11,22 @@ use Sys::Hostname;
 # a good indication that there are disk issues afoot.
 sub log_command {
     my @argv = @ARGV;
+
+    # Prevents 'Child process ##### reaped' messages from appearing
+    $SIG{CHLD} = 'IGNORE';
+
+    # Fork twice... grandchild process will be an orphan, so parent won't wait for it to complete
+    my $pid = UR::Context::Process->fork();
+    if ($pid) {
+        return 1;
+    }
+    
+    my $second_pid = fork();
+    if ($second_pid) {
+        $SIG{CHLD} = 'IGNORE';
+        POSIX::_exit(0);
+    }
+
     my $command = basename($0) . " ";
     while (@argv) {
         last unless defined $argv[0] and $argv[0] !~ /^-/;
@@ -24,7 +40,8 @@ sub log_command {
     my $time = $dt->hms;
     my $host = hostname;
 
-    my $log_dir = "/gsc/var/log/genome/command_line_usage/" . $dt->year . "/";
+    my $base_log_dir = $ENV{GENOME_LOG_DIR};
+    my $log_dir = join('/', $base_log_dir, 'command_line_usage', $dt->year);
     my $log_file = $dt->month . "-" . $dt->day . ".log";
     my $log_msg = join("\t", $date, $time, Genome::Sys->username, $command, $params);
 
@@ -33,7 +50,7 @@ sub log_command {
         chmod(0777, $log_dir);
     }
 
-    my $log_path = $log_dir . $log_file;
+    my $log_path = join('/', $log_dir, $log_file);
     my $log_fh = IO::File->new($log_path, 'a');
     unless ($log_fh) {
         print STDERR "Could not get file handle for log file at $log_path, command execution will continue!\n";
@@ -59,66 +76,6 @@ sub log_command {
     print $log_fh "$log_msg\n";
     close $log_fh;
     return;
-}
-
-
-sub email_usage_info {    
-    my $class = shift;
-    my $to = shift;
-
-    return unless ($to);
-
-    my $command = $0 || 'unknown command';
-    my @argv = @ARGV;
-
-    my $user = getpwuid($<) || 'unknown-user';
-    my $host = Sys::Hostname::hostname() || 'unknown-hostname';
-    my $time = localtime(time) || 'Unknown Time';
-    my $package = (caller)[0] || 'Unknown Package';;
-    my $program = join(' ', $command, @argv) || 'Unknown Program';
-
-    my $from = $user . '@genome.wustl.edu';
-    my $subject = "$user\@$host used $package";
-    my $message = join("\n",
-        "    User: $user",
-        "    Host: $host",
-        "    Time: $time",
-        " Package: $package",
-        " Program: $program"
-    );
-
-    App::Mail->mail(
-        To      => $to,
-        From    => $from,
-        Subject => $subject,
-        Message => $message,
-    );
-
-    return 1;
-}
-
-
-# Check if a svn repo is being used and contact apipe
-sub check_for_svn_repo {
-    my $dir = $INC{"Genome.pm"};
-    $dir =~ s/Genome.pm//;
-   
-    if (-e "$dir/.svn" or glob("$dir/Genome/*/.svn")) {
-        my $email_msg = "User: " . Genome::Sys->username . "\n" .
-                        "Working directory: $dir\n" .
-                        "The current working directory contains a .svn directory, which I'm assuming means \n" .
-                        "that this user is working out of an svn repository. Please contact the user to \n" .
-                        "confirm and provide any assistance to ease their transition to git.\n";
-
-        App::Mail->mail(
-            To => "apipebulk\@genome.wustl.edu",
-            From => Genome::Config->user_email,
-            Subject => "SVN Repo In Use!",
-            Message => $email_msg,
-        );
-
-        return;
-    }
 }
 
 1;
