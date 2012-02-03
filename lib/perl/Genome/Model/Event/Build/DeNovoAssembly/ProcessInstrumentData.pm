@@ -64,9 +64,10 @@ sub link_result_to_build {
     my $self = shift;
     my $result = shift;
 
+    $result->add_user(label => 'processed_reads', user => $self->build);
+
     foreach my $output_file ($result->read_processor_output_files) {
         Genome::Sys->create_symlink($result->output_dir.'/'.$output_file, $self->build->data_directory.'/'.$output_file);
-        $result->add_user(label => 'uses', user => $self->build);
     }
 
     Genome::Sys->create_symlink(

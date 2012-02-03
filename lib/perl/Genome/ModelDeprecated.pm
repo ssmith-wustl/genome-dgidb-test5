@@ -36,7 +36,6 @@ class Genome::ModelDeprecated {
             |, 
         },
         processing_profile_name => { via => 'processing_profile', to => 'name' },
-        type_name               => { via => 'processing_profile' },
     ],
     has_optional => [
         is_default => { 

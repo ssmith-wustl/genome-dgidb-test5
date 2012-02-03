@@ -81,7 +81,7 @@
 	url = ssh://git/srv/git/vendor/samtools
 [submodule "vendor/bwa"]
 	path = vendor/bwa
-	url = ssh://git/srv/git/vendor/bwa
+	url = git://github.com/genome-vendor/bwa.git
 [submodule "vendor/apollo"]
 	path = vendor/apollo
 	url = git@github.com:genome-vendor/apollo.git

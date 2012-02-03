@@ -146,6 +146,12 @@ Total: <xsl:value-of select="$contigs_length"/>
   <xsl:variable name="coverage_4x" select="//aspect[@name='coverage_4x']/value"/>
   <xsl:variable name="coverage_5x" select="//aspect[@name='coverage_5x']/value"/>
   <xsl:variable name="coverage_0x" select="//aspect[@name='coverage_0x']/value"/>
+*** Core Gene Survey Result ***
+Percentage of core genes present in this assembly: <xsl:value-of select="//aspect[@name='core_gene_present_percent']/value"/> %
+Number of Core Groups present in this assembly: <xsl:value-of select="//aspect[@name='core_gene_group_present_count']/value"/>
+Coregene test: <xsl:value-of select="//aspect[@name='core_gene_survey_result']/value"/>
+
+
 *** Read Depth Info ***
 Total consensus bases: <xsl:value-of select="$contigs_length"/>
 Depth >= 5: <xsl:value-of select="$coverage_5x"/><xsl:text>&#9;</xsl:text><xsl:value-of select="format-number(($coverage_5x div $contigs_length), '#.###############')"/>

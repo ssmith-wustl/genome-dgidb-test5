@@ -148,7 +148,7 @@ sub create {
         die($msg);
     }
     if ($self->read_2_fastq_list) {
-        unless ($self->insert_size) {
+        unless (defined($self->insert_size)) {
             die('Failed to provide a insert size for paired-end mates');
         }
     }
@@ -208,7 +208,7 @@ sub execute {
     #}
 
     # RESOLVE A STRING OF ALIGNMENT PARAMETERS
-    if ($is_paired_end && $insert_size && $insert_sd) {
+    if ($is_paired_end && defined($insert_size) && defined($insert_sd)) {
         #The standard deviation is the above insert size deviation from sls, does below insert size stdev matter?
         $aligner_params .= ' --mate-inner-dist '. $insert_size .' --mate-std-dev '. $insert_sd;
     }
