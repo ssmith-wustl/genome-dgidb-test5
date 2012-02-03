@@ -241,6 +241,7 @@ if ($wgs && $exome){push(@positions_files, $out_paths->{'wgs_exome'}->{'snv'}->{
 
 
 #Generate a clonality plot for this patient (if WGS data is available)
+#TODO: clean this up by moving to a sub-routine - run on both WGS and Exome data if available
 if ($wgs){
   $step++; print MAGENTA, "\n\nStep $step. Creating clonality plot for $common_name", RESET;
   my $clonality_dir = $patient_dir . "clonality/";
@@ -264,11 +265,14 @@ if ($wgs){
   }
 }
 
+#TODO: Generate simple coverage report for all alignment builds using:
+#gmt analysis report-coverage --build-ids '119152877 119152937'
+
+
 #Generate single genome (i.e. single BAM) global copy number segment plots for each BAM.  These help to identify sample swaps
 if ($wgs){
   $step++; print MAGENTA, "\n\nStep $step. Creating single BAM CNV plots for each BAM", RESET;
   &runSingleGenomeCnvPlot('-patient_dir'=>$patient_dir, '-data_paths'=>$data_paths, '-reference_build_ncbi_n'=>$reference_build_ncbi_n, '-verbose'=>$verbose);
-
 }
 
 print "\n\n";
