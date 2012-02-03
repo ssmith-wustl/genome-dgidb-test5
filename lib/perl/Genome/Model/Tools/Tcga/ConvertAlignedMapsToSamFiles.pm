@@ -60,7 +60,7 @@ sub execute {
     for my $instrument_data (@instrument_data) {
         my $idid = $instrument_data->id;
         my $alignment = $build->alignment_results_for_instrument_data($instrument_data);
-        my $alignment_directory = $alignment->alignment_directory;
+        my $alignment_directory = $alignment->output_dir;
         
         push (@alignments, "$idid|$alignment_directory");
     }

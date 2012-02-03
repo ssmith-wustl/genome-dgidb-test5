@@ -55,11 +55,15 @@ sub _run_aligner {
         die $self->error_message;
     }
 
-
     # get refseq info
     my $reference_build = $self->reference_build;
     
     my $reference_sdf_path = $self->get_reference_sequence_index->full_consensus_path('sdf'); 
+    
+    unless (-e $reference_sdf_path) {
+        $self->error_message("sdf path not found in " . $reference_build->data_directory);
+        die $self->error_message;
+    }
 
     my $sam_file = $self->temp_scratch_directory . "/all_sequences.sam";
     my $sam_file_fh = IO::File->new(">>" . $sam_file );
@@ -77,14 +81,9 @@ sub _run_aligner {
         my $input_pathname = $input_pathnames[$i];
 
         my $chunk_path = $scratch_directory . "/chunks/chunk-from-" . $i;
-        unless (mkpath($chunk_path)) {
-            $self->error_message("couldn't create a place to chunk the data in $chunk_path"); 
-            die $self->error_message;
-        }
 
         #   To run RTG, have to first convert ref and inputs to sdf, with 'rtg format', 
         #   for which you have to designate a destination directory
-
 
         # disconnect db before long-running action 
         if (Genome::DataSource::GMSchema->has_default_handle) {
@@ -92,13 +91,12 @@ sub _run_aligner {
             Genome::DataSource::GMSchema->disconnect_default_dbh();
         }
 
-
         #STEP 1 - convert input to sdf
         my $input_sdf = File::Temp::tempnam($scratch_directory, "input-XXX") . ".sdf"; #destination of converted input
         my $rtg_fmt = Genome::Model::Tools::Rtg->path_for_rtg_format($self->aligner_version);
         my $cmd;
 
-        $cmd = sprintf('%s --format=%s -o %s %s',
+        $cmd = sprintf('%s --format=%s --quality-format sanger -o %s %s',
                 $rtg_fmt,
                 $self->_file_input_option,
                 $input_sdf,
@@ -119,10 +117,10 @@ sub _run_aligner {
 
         # chunk the SDF
 
-        my $chunk_size = ($ENV{'TEST_MODE'} ? 10 : 4000000);;
+        my $chunk_size = ($ENV{'TEST_MODE'} ? 200 : 1000000);;
 
         $self->status_message("Chunking....");
-        my $chunk_cmd = sprintf("%s -c %s -o %s %s", Genome::Model::Tools::Rtg->path_for_rtg_sdfsplit($self->aligner_version), $chunk_size, $chunk_path, $input_sdf);
+        my $chunk_cmd = sprintf("%s -n %s -o %s %s", Genome::Model::Tools::Rtg->path_for_rtg_sdfsplit($self->aligner_version), $chunk_size, $chunk_path, $input_sdf);
         Genome::Sys->shellcmd(
                 cmd                 => $chunk_cmd, 
                 output_directories  => [$chunk_path],
@@ -209,7 +207,6 @@ sub _run_aligner {
     } 
     $self->status_message("removing chunks to save disk");
     rmtree($self->temp_scratch_directory . "/chunks");
-        
 
     return 1;
 }
