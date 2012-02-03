@@ -473,7 +473,7 @@
                     <xsl:variable name="build_id" select="build/@build-id"/>
                     <xsl:attribute name="title">Build <xsl:value-of select="$build_id"/> Metrics</xsl:attribute>
                     <xsl:attribute name="id"><xsl:value-of select="$build_id"/></xsl:attribute>
-                    <xsl:attribute name="href">/view/genome/model/metric/set/detail.json?build_id=<xsl:value-of select="$build_id"/></xsl:attribute>
+                    <xsl:attribute name="href">/viewajax/genome/model/metric/set/detail.json?build_id=<xsl:value-of select="$build_id"/></xsl:attribute>
                     <span class="sm-icon sm-icon-newwin"><br/></span>metrics (<xsl:value-of select="$metricCount"/>)
                   </a>
                   <div id="metrics_dialogue" style="display: none;">

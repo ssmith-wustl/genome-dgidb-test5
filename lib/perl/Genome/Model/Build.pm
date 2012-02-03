@@ -7,6 +7,7 @@ use Genome;
 
 use Carp;
 use Data::Dumper 'Dumper';
+use File::stat;
 use File::Path;
 use File::Find 'find';
 use File::Basename qw/ dirname fileparse /;
@@ -31,17 +32,21 @@ class Genome::Model::Build {
         is_metric => { is => 'Boolean', is_optional => 1 },
     ],
     has => [
-        subclass_name           => { is => 'VARCHAR2', len => 255, is_mutable => 0, column_name => 'SUBCLASS_NAME',
-                                     calculate_from => ['model_id'],
-                                     # We subclass via our model's type_name (which is via it's processing profile's type_name)
-                                     calculate => sub {
-                                                      my($model_id) = @_;
-                                                      return unless $model_id;
-                                                      my $model = Genome::Model->get($model_id);
-                                                      Carp::croak("Can't find Genome::Model with ID $model_id while resolving subclass for Build") unless $model;
-                                                      return __PACKAGE__ . '::' . Genome::Utility::Text::string_to_camel_case($model->type_name);
-                                                  }
-                                   },
+        subclass_name           => {
+            is => 'VARCHAR2',
+            len => 255,
+            is_mutable => 0,
+            column_name => 'SUBCLASS_NAME',
+            calculate_from => ['model_id'],
+            # We subclass via our model's type_name (which is via it's processing profile's type_name)
+            calculate => sub {
+                my($model_id) = @_;
+                return unless $model_id;
+                my $model = Genome::Model->get($model_id);
+                Carp::croak("Can't find Genome::Model with ID $model_id while resolving subclass for Build") unless $model;
+                return __PACKAGE__ . '::' . Genome::Utility::Text::string_to_camel_case($model->type_name);
+            }
+        },
         data_directory          => { is => 'VARCHAR2', len => 1000, is_optional => 1 },
         model                   => { is => 'Genome::Model', id_by => 'model_id' },
         model_id                => { is => 'NUMBER', implied_by => 'model', constraint_name => 'GMB_GMM_FK' },
@@ -174,7 +179,7 @@ sub _resolve_subclass_name_by_sequencing_platform { # only temporary, subclass w
     return $class. '::'.Genome::Utility::Text::string_to_camel_case($sequencing_platform);
 }
 
-# auto generate sub-classes for any valid model sub-class 
+# auto generate sub-classes for any valid model sub-class
 sub __extend_namespace__ {
     # auto generate sub-classes for any valid processing profile
     my ($self,$ext) = @_;
@@ -194,8 +199,8 @@ sub __extend_namespace__ {
                 my %data = %{ UR::Util::deep_copy($p) };
                 my $type = $data{data_type};
                 for my $key (keys %data) {
-                    delete $data{$key} unless $key =~ /^is_/; 
-                }                
+                    delete $data{$key} unless $key =~ /^is_/;
+                }
                 delete $data{is_specified_in_module_header};
                 if ($type->isa("Genome::Model")) {
                     $type =~ s/^Genome::Model/Genome::Model::Build/;
@@ -297,7 +302,7 @@ sub _copy_model_inputs {
                 if (@existing_inputs) {
                     foreach my $existing_input (@existing_inputs) {
                         my $existing_input_value = $existing_input->value;
-                        if ($existing_input_value 
+                        if ($existing_input_value
                             and $existing_input_value->isa('Genome::Model::Build')
                             and $existing_input_value->model_id eq $input->value->id) {
                             die "Input with name $input_name already exists for build!";
@@ -680,13 +685,23 @@ sub validate_instrument_data{
     my $self = shift;
     my @tags;
     my @instrument_data = $self->instrument_data;
-    @instrument_data = grep{$_->isa('Genome::InstrumentData::Solexa')} @instrument_data;
-    for my $instrument_data (@instrument_data){
-        unless($instrument_data->clusters){
+    my @instrument_data_solexa = grep{$_->isa('Genome::InstrumentData::Solexa')} @instrument_data;
+    for my $instrument_data (@instrument_data_solexa){
+        unless ($instrument_data->clusters){
             push @tags, UR::Object::Tag->create(
                 type => 'error',
                 properties => ['instrument_data'],
                 desc => 'no clusters for instrument data (' . $instrument_data->id  . ') assigned to build',
+            );
+        }
+    }
+    my @instrument_data_454 = grep{$_->isa('Genome::InstrumentData::454')}@instrument_data;
+    for my $instrument_data (@instrument_data_454){
+        unless ($instrument_data->total_reads){
+            push @tags, UR::Object::Tag->create(
+                type => 'error',
+                properties => ['instrument_data'],
+                desc => 'no reads for instrument data (' . $instrument_data->id . ') assigned to build',
             );
         }
     }
@@ -2174,7 +2189,7 @@ sub _preprocess_subclass_description {
         next if $prop_desc->{via};
         next if $prop_desc->{reverse_as};
         next if $prop_desc->{implied_by};
-        
+
         if ($prop_desc->{is_param} and $prop_desc->{is_input}) {
             die "class $class has is_param and is_input on the same property! $prop_name";
         }
@@ -2195,7 +2210,7 @@ sub _preprocess_subclass_description {
                 property_name => $assoc,
                 implied_by => $prop_name,
                 is => 'Genome::Model::Build::Input',
-                reverse_as => 'build', 
+                reverse_as => 'build',
                 where => [ name => $prop_name ],
                 is_mutable => $prop_desc->{is_mutable},
                 is_optional => $prop_desc->{is_optional},
@@ -2206,7 +2221,7 @@ sub _preprocess_subclass_description {
             # If we do duplicate the code below for value_id
 
             %$prop_desc = (%$prop_desc,
-                via => $assoc, 
+                via => $assoc,
                 to => 'value',
             );
         }
@@ -2226,7 +2241,7 @@ sub _preprocess_subclass_description {
 
     my $pp_data = $desc->{has}{processing_profile} = {};
     $pp_data->{data_type} = $pp_subclass_name;
-    $pp_data->{via} = 'model'; 
+    $pp_data->{via} = 'model';
     $pp_data->{to} = 'processing_profile';
 
     return $desc;
@@ -2250,21 +2265,30 @@ sub heartbeat {
         my $lsf_job_id = $wf_instance_exec->dispatch_identifier;
         my $wf_instance_exec_status = $wf_instance_exec->status;
         my $wf_instance_exec_id = $wf_instance_exec->execution_id;
-        unless ($lsf_job_id) {
-            next;
-        }
-        if ($lsf_job_id =~ /^P/) {
+
+        if (grep { $wf_instance_exec_status eq $_ } ('new', 'done')) {
             next;
         }
 
-        if (grep { $wf_instance_exec_status eq $_ } ('new', 'done')) {
+        # only certaion operation types would have LSF jobs and everything below is inspecting LSF status
+        my $operation_type = $wf_instance_exec->operation_instance->operation->operation_type;
+        unless ( grep { $operation_type->isa($_) } ('Workflow::OperationType::Command', 'Workflow::OperationType::Event') ) {
+            next;
+        }
+
+        unless ($lsf_job_id) {
+            $self->status_message("Workflow Instance Execution (ID: $wf_instance_exec_id) status ($wf_instance_exec_status) has no LSF job ID") if $verbose;
+            return;
+        }
+
+        if ($lsf_job_id =~ /^P/) {
             next;
         }
 
         my $bjobs_output = qx(bjobs -l $lsf_job_id 2> /dev/null | tr '\\n' '\\0' | sed -r -e 's/\\x0\\s{21}//g' -e 's/\\x0/\\n\\n/g');
         chomp $bjobs_output;
         unless($bjobs_output) {
-            $self->status_message('Expected bjobs output but received none.') if $verbose;
+            $self->status_message("Expected bjobs (LSF ID: $lsf_job_id) output but received none.") if $verbose;
             return;
         }
 
@@ -2289,6 +2313,17 @@ sub heartbeat {
 
         if ($wf_instance_exec_status ne 'running' || $lsf_status ne 'run') {
             die "Missing state ($wf_instance_exec_status/$lsf_status) condition, only running/run should reach this point";
+        }
+
+        my $output_file = $self->output_file_from_bjobs_output($bjobs_output);
+        my $output_stat = stat($output_file);
+        my $elapsed_mtime_output_file = time - $output_stat->mtime;
+        my $error_file = $self->error_file_from_bjobs_output($bjobs_output);
+        my $error_stat = stat($error_file);
+        my $elapsed_mtime_error_file = time - $error_stat->mtime;
+        if (($elapsed_mtime_output_file/3600 > 48) && ($elapsed_mtime_error_file/3600 > 48)) {
+            $self->status_message("Error and/or output file have not been modified in 48+ hours:\nOutput File: $output_file\nError File: $error_file");
+            return;
         }
 
         my @pids = $self->pids_from_bjobs_output($bjobs_output);
@@ -2318,6 +2353,26 @@ sub heartbeat {
     return 1;
 }
 
+sub output_file_from_bjobs_output {
+    my $self = shift;
+    my $bjobs_output = shift;
+    my ($output_file) = $bjobs_output =~ /Output File <(.*?)>/;
+    unless ($output_file) {
+        die $self->error_message("Failed to parse output file from bjobs output:\n$bjobs_output\n");
+    }
+    return $output_file;
+}
+
+sub error_file_from_bjobs_output {
+    my $self = shift;
+    my $bjobs_output = shift;
+    my ($error_file) = $bjobs_output =~ /Error File <(.*?)>/;
+    unless ($error_file) {
+        die $self->error_message("Failed to parse error file from bjobs output:\n$bjobs_output\n");
+    }
+    return $error_file;
+}
+
 sub status_from_bjobs_output {
     my $self = shift;
     my $bjobs_output = shift;
@@ -2344,8 +2399,14 @@ sub execution_host_from_bjobs_output {
     my $bjobs_output = shift;
     my ($execution_host) = $bjobs_output =~ /Started on <(.*?)>/;
     unless ($execution_host) {
-        if ($bjobs_output =~ /Started on \d+ Hosts\/Processors </) {
-            $self->error_message("Not yet able to parse multiple execution hosts.");
+        if (my ($hosts) = $bjobs_output =~ /Started on \d+ Hosts\/Processors <(\S+)>/) {
+            my %hosts = map { $_ => 1 } split('><', $hosts);
+            my @hosts = keys %hosts;
+            if (@hosts > 1) {
+                $self->error_message("Not yet able to parse multiple execution hosts.");
+            } else {
+                $execution_host = $hosts[0];
+            }
         } else {
             die $self->error_message("Failed to parse execution host from bjobs output:\n$bjobs_output\n");
         }

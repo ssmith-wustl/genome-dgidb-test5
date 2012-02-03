@@ -60,11 +60,13 @@ sub _execute_build {
 
     # TODO bdericks: I'm guessing that second genotype file is supposed to be the replicate. It should be changed
     # to be the actual replicate when we know how to figure it out.
+    # abrummet: This is the only place in the tree where this Command is used.  I've stripped out the second input
+    # file to fix a bug where it would not read from the "second" file when switching chromosomes and the next position
+    # is numerically higher than the last position
     my $snp_array_file = $build->formatted_genotype_file_path;
     $self->status_message("Create snp array (gold) file: ".$snp_array_file);
     my $gold_snp = Genome::Model::GenotypeMicroarray::Command::CreateGoldSnpFileFromGenotypes->create(
-        genotype_file_1 => $genotype_file,
-        genotype_file_2 => $genotype_file,
+        genotype_file => $genotype_file,
         output_file => $snp_array_file,
         reference_sequence_build => $reference_sequence_build, 
     );

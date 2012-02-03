@@ -322,7 +322,7 @@ sub execute {
                 ) {
             my @validation = Genome::Model::SomaticValidation->get(
                 target_region_set_name => $genome_instrument_data->target_region_set_name,
-                subject => $genome_instrument_data->sample->source,
+                #subject => $genome_instrument_data->sample->source, #due to bad data-tracking, sometimes the two samples are from different sources
             );
 
             @validation = grep(($_->tumor_sample eq $genome_instrument_data->sample or $_->normal_sample eq $genome_instrument_data->sample), @validation);

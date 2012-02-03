@@ -22,8 +22,9 @@ class Genome::Model {
     ],
     has => [
         name => { is => 'Text' },
+        type_name => { is => 'Text', via => 'processing_profile' },
         subclass_name => { 
-            is => 'VARCHAR2',is_mutable => 0, column_name => 'SUBCLASS_NAME',
+            is => 'Text',is_mutable => 0, column_name => 'SUBCLASS_NAME',
             calculate_from => 'processing_profile_id',
             calculate => sub {
                 my $pp_id = shift;
@@ -169,12 +170,12 @@ sub create {
     }
     my $self = $class->SUPER::create(@_);
 
+    $self->user_name(Genome::Sys->username) unless $self->user_name;
+    $self->creation_date(UR::Context->now);
+
     $self->_validate_processing_profile;
     $self->_validate_subject;
     $self->_validate_name;
-
-    $self->user_name(Genome::Sys->username) unless $self->user_name;
-    $self->creation_date(UR::Context->now);
 
     $self->_verify_no_other_models_with_same_name_and_type_exist;
 
@@ -296,6 +297,8 @@ sub current_build {
     }
     return;
 }
+# Just so current_build_id can be "easily" shown in listers.
+sub current_build_id { shift->current_build->id }
 
 # Returns true if no non-abandoned build is found that has inputs that match the current state of the model
 sub build_needed {
@@ -451,14 +454,13 @@ sub _validate_name {
 
 # TODO This method should return a generic default model name and be overridden in subclasses.
 sub default_model_name {
-    $DB::single = 1;
     my ($self, %params) = @_;
 
     my $auto_increment = delete $params{auto_increment};
     $auto_increment = 1 unless defined $auto_increment;
 
-    my $name_template = ($self->subject_name).'.';
-    $name_template .= 'prod-' if ($self->user_name eq 'apipe-builder' || $params{prod});
+    my $name_template = ($self->subject->name).'.';
+    $name_template .= 'prod-' if (($self->user_name && $self->user_name eq 'apipe-builder') || $params{prod});
 
     my $type_name = $self->processing_profile->type_name;
     my %short_names = (
@@ -509,7 +511,7 @@ sub _verify_no_other_models_with_same_name_and_type_exist {
             $message .= sprintf(
                 "Name: %s\nSubject Name: %s\nId: %s\nProcessing Profile Id: %s\nSubclass: %s\n\n",
                 $model->name,
-                $model->subject_name,
+                $model->subject->name,
                 $model->id,
                 $model->processing_profile_id,
                 $model->subclass_name,
@@ -581,21 +583,22 @@ sub _preprocess_subclass_description {
     my ($ext) = ($desc->{class_name} =~ /Genome::Model::(.*)/);
     return $desc unless $ext;
     my $pp_subclass_name = 'Genome::ProcessingProfile::' . $ext;
-    
-    my $pp_data = $desc->{has}{processing_profile} = {};
-    $pp_data->{data_type} = $pp_subclass_name;
-    $pp_data->{id_by} = ['processing_profile_id'];
 
-    $pp_data = $desc->{has}{processing_profile_id} = {};
-    $pp_data->{data_type} = 'Number';
+    unless ($desc->{has}{processing_profile}) {
+        my $pp_data = $desc->{has}{processing_profile} = {};
+        $pp_data->{data_type} = $pp_subclass_name;
+        $pp_data->{id_by} = ['processing_profile_id'];
+
+        $pp_data = $desc->{has}{processing_profile_id} = {};
+        $pp_data->{data_type} = 'Number';
+    }
 
     return $desc;
 }
 
 my $depth = 0;
 sub __extend_namespace__ {
-    # auto generate sub-classes for any valid processing profile
-    my ($self,$ext) = @_;
+    my ($self,$ext) = @_; 
 
     my $meta = $self->SUPER::__extend_namespace__($ext);
     if ($meta) {
@@ -608,6 +611,14 @@ sub __extend_namespace__ {
         return;
     }
 
+    # If the command class for the model sub type cannot be found, this will create it
+    if ( $ext eq 'Command' ) { 
+        my $create_command_tree = $self->_create_command_tree;
+        Carp::confess('Failed to create command tree for '.$self->class.'!') if not $create_command_tree;
+    }
+
+    # make a model subclass if the processing profile exists
+    # this is deprecated: instead we go the other way and infer the profile from the model
     my $pp_subclass_name = 'Genome::ProcessingProfile::' . $ext;
     my $pp_subclass_meta = UR::Object::Type->get($pp_subclass_name);
     if ($pp_subclass_meta and $pp_subclass_name->isa('Genome::ProcessingProfile')) {
@@ -627,6 +638,29 @@ sub __extend_namespace__ {
     }
     $depth--;
     return;
+}
+
+sub _create_command_tree {
+    my $self = shift;
+
+    return 1 if $self->__meta__->is_abstract;
+    my $command_class_name = $self->class.'::Command';
+    my $command_class = eval{ $command_class_name->class; };
+    return 1 if $command_class;
+
+    $self->class =~ /^Genome::Model::(\w[\w\d]+)(::)?/;
+    my $type_name = $1;
+    UR::Object::Type->define(
+        class_name => $command_class_name,
+        is => 'Command::Tree',
+        doc => 'operate on '.Genome::Utility::Text::camel_case_to_string($type_name).' models/builds',
+    );
+
+    no strict;
+    *{$command_class_name.'::sub_command_category'} = sub { return 'type specific' };
+    $command_class = eval{ $command_class_name->class; };
+
+    return $command_class;
 }
 
 1;

@@ -287,7 +287,7 @@ sub add_alt_information_to_vcf_line {
     my @gt_values = sort (split "/", $sample_values{"GT"});
     my %unique_gt_values;
     for my $gt_value (@gt_values) {
-        unless ($gt_value == 0) {
+        unless ($gt_value eq 0) {
             $unique_gt_values{$gt_value} = 1;
         }
     }

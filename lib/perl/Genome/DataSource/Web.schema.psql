@@ -49,7 +49,7 @@ CREATE TABLE web.task_params (
 
 CREATE TABLE web.search_index_queue (
     id            varchar(32)  NOT NULL,
-    subject_id    varchar(64)  NOT NULL,
+    subject_id    varchar(256)  NOT NULL,
     subject_class varchar(255) NOT NULL,
     timestamp     timestamp NOT NULL,
     CONSTRAINT SIQ_PK PRIMARY KEY (id)

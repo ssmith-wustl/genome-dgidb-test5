@@ -30,9 +30,9 @@ class Genome::ModelGroup::Command::RelationshipQc {
     snv_bed => {
         is => 'Text',
         is_optional =>'1',
-        doc=>'the default it to use any site detected as a snp and passing snp filter, but you can supply your own list of sites if you prefer',
+        doc=>'the default is to use any site that seems variant in the pop for build36, and a 1000genomes generated list of variant sites for build37',
     },
-
+    
     ],
     has_optional => {
     },
@@ -61,10 +61,18 @@ sub execute {
     if($self->snv_bed) {
         $bed_file = $self->snv_bed;
     }
-    else {
+    elsif($sorted_models[0]->reference_sequence_build->version eq '36') {
         $bed_file = $self->assemble_list_of_snvs(\@sorted_models);
     }
-    my @pileup_files = $self->run_n_models_per_pileup(\@sorted_models, $bed_file,25);
+    elsif($sorted_models[0]->reference_sequence_build->version eq '37') {
+        my $feature_list = Genome::FeatureList->get("BFBC36724C5611E196CDFD9A7F526B77");
+        my $temp_feature_file = $feature_list->generate_merged_bed_file();
+        my $non_temp_bed_file = $self->output_dir . "/build37_variant_sites.bed";
+        Genome::Sys->shellcmd(cmd=>"cp $temp_feature_file $non_temp_bed_file");
+        $bed_file = $non_temp_bed_file;
+      
+   }
+   my @pileup_files = $self->run_n_models_per_pileup(\@sorted_models, $bed_file,25);
 #    my $pileup_file = $self->run_mpileup(\@sorted_models, $bed_file);
 #    unless($pileup_file) {
 #        return;
@@ -425,6 +433,8 @@ sub generate_relationship_table {
     #TODO: make output files all in class def
     my $output_file = $self->output_dir . "/relationship_matrix.tsv";
     my $output_fh = Genome::Sys->open_file_for_writing($output_file);
+    my $high_relationship_file = $self->output_dir . "/strong_relationships.tsv";
+    my $high_fh = Genome::Sys->open_file_for_writing($high_relationship_file);
     my $total_markers = `wc -l $markers_file`;
     $total_markers--; #account for header;
     my %relationships;
@@ -437,6 +447,7 @@ sub generate_relationship_table {
         }
         $total_markers_covered += ($stop_marker - $start_marker);
         $relationships{$first_guy}{$second_guy} = $total_markers_covered;
+        $relationships{$second_guy}{$first_guy} = $total_markers_covered
     }
     my $i=0;
     my %table_hash;
@@ -464,14 +475,20 @@ sub generate_relationship_table {
 
 
     for my $first_guy (sort keys %relationships) {
+        my @high_relationship_line = ("$first_guy matches:");
         for my $second_guy (sort keys %{$relationships{$first_guy}}) {
             my $total_shared_markers = $relationships{$first_guy}{$second_guy};
             my $percent = sprintf("%0.2f", $total_shared_markers/$total_markers * 100);
+            if($percent > 40) {
+                push @high_relationship_line, "$second_guy:$percent";
+            } 
             my $j = $table_hash{$first_guy};
             my $k = $table_hash{$second_guy};
             $table[$j][$k]=$percent || 0;
         }
+        $high_fh->print(join("\t", @high_relationship_line) . "\n");
     }
+    $high_fh->close;
     for (my $j=0; $j < $i; $j++) {
         my $person_for_row = $header_row[$j];
         $output_fh->print("$person_for_row");

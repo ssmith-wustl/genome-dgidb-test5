@@ -38,10 +38,13 @@ CREATE INDEX subject_attribute_subject_id_index ON subject.subject_attribute(sub
 CREATE INDEX subject_attribute_label_index ON subject.subject_attribute(attribute_label);
 
 CREATE TABLE subject.user (
-    name  varchar(64),
-    email varchar(255) NOT NULL,
+    name     varchar(64),
+    email    varchar(255) NOT NULL,
+    username varchar(64),
     PRIMARY KEY (email)
 );
+CREATE INDEX subject_user_username_index ON subject.user(username);
+CREATE INDEX subject_user_email_index ON subject.user(email);
 
 CREATE TABLE subject.role (
     id   varchar(32),
@@ -49,6 +52,7 @@ CREATE TABLE subject.role (
     PRIMARY KEY (id),
     UNIQUE (name)
 );
+CREATE INDEX subject_role_name_index ON subject.role(name);
 
 CREATE TABLE subject.role_member (
     user_email varchar(255) REFERENCES subject.user(email),

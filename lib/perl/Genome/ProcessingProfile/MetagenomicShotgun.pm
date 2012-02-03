@@ -81,8 +81,6 @@ sub _resource_requirements_for_execute_build {
 sub _execute_build {
     my ($self, $build) = @_;
 
-    $DB::single=1;
-
     my $model = $build->model;
     $self->status_message('Build '.$model->__display_name__);
     my $contamination_screen_model = $model->_contamination_screen_model;
@@ -142,6 +140,7 @@ sub _execute_build {
                 $self->error_message("Failed to execute build (".$build->__display_name__."). Status: ".$build->status);
                 return;
             }
+            $self->status_message($build->__display_name__." succeeded");
         }
     };
 
@@ -179,12 +178,9 @@ sub _execute_build {
     my @original_instdata = $build->instrument_data;
 
     my $cs_build = $start_build->($contamination_screen_model, @original_instdata);
-    #$cs_build = Genome::Model::Build->get(116461442);  ##### for testsing ignore the build we just made above and use this one which is done
-    #$DB::single = 1;
     $wait_build->($cs_build);
 
     my @cs_unaligned;
-    $DB::single = 1;
     if ($self->filter_contaminant_fragments){
         @cs_unaligned = $extract_data->($cs_build, "unaligned-paired");
     }
@@ -393,7 +389,7 @@ sub _extract_data_from_alignment_result{
         $self->status_message("imported instrument data already found for path $expected_se_path, skipping");
     }
     else {
-        my $lock = basename($expected_se_path);
+        my $lock = $fragment_basename;
         $lock = '/gsc/var/lock/' . $instrument_data_id . '/' . $lock;
 
         $self->status_message("Creating lock on $lock...");
@@ -406,21 +402,24 @@ sub _extract_data_from_alignment_result{
         }
     }
 
-    my $pe_instdata = Genome::InstrumentData::Imported->get(original_data_path => $expected_pe_path);
-    if ($pe_instdata) {
-        $self->status_message("imported instrument data already found for path $expected_pe_path, skipping");
-    }
-    elsif ( $instrument_data->is_paired_end ) {
-        my $lock = basename($expected_pe_path);
-        $lock = '/gsc/var/lock/' . $instrument_data_id . '/' . $lock;
+    my $pe_instdata;
+    if ( $instrument_data->is_paired_end ){
+        $pe_instdata = Genome::InstrumentData::Imported->get(original_data_path => $expected_pe_path);
+        if ($pe_instdata) {
+            $self->status_message("imported instrument data already found for path $expected_pe_path, skipping");
+        }
+        else  {
+            my $lock = "s_$lane"."_1-2_sequence.txt";
+            $lock = '/gsc/var/lock/' . $instrument_data_id . '/' . $lock;
 
-        $self->status_message("Creating lock on $lock...");
-        $pe_lock = Genome::Sys->lock_resource(
-            resource_lock => "$lock",
-            max_try => 2,
-        );
-        unless ($pe_lock) {
-            die $self->error_message("Failed to lock $expected_pe_path.");
+            $self->status_message("Creating lock on $lock...");
+            $pe_lock = Genome::Sys->lock_resource(
+                resource_lock => "$lock",
+                max_try => 2,
+            );
+            unless ($pe_lock) {
+                die $self->error_message("Failed to lock $expected_pe_path.");
+            }
         }
     }
 
@@ -483,7 +482,11 @@ sub _extract_data_from_alignment_result{
     }
     $properties_from_prior{subset_name} = $instrument_data->lane;
 
-    for my $source_data_files ($fragment_unaligned_data_path,"$forward_unaligned_data_path,$reverse_unaligned_data_path") {
+    my @source_paths = ( $instrument_data->is_paired_end )
+        ?  ($fragment_unaligned_data_path, "$forward_unaligned_data_path,$reverse_unaligned_data_path" )
+        :  ($fragment_unaligned_data_path);
+    
+    for my $source_data_files (@source_paths) {
         $self->status_message("Attempting to upload $source_data_files...");
         my $original_data_path;
         if ($source_data_files =~ /,/){

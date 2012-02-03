@@ -2,16 +2,38 @@ package Genome::ProcessingProfile::Command::List;
 
 use strict;
 use warnings;
-
 use Genome;
 use Genome::ProcessingProfile;
 
 class Genome::ProcessingProfile::Command::List {
-    is => 'Command::DynamicSubCommands',
+    is => 'Command::SubCommandFactory',
     doc => 'list processing profiles by type'
 };
 
-sub _sub_commands_from { 'Genome::ProcessingProfile' }
+sub _sub_commands_from { 'Genome::Model' }
+sub _target_base_class { 'Genome::ProcessingProfile' }
+sub _sub_commands_inherit_from { 'Genome::ProcessingProfile::Command::List::Base' }
+
+sub _command_subclass {
+    my ($self, $class_name) = @_;
+    my ($subclass_name) = $class_name =~ /^Genome::ProcessingProfile::Command::List::(.*)$/;
+    return $subclass_name;
+}
+
+sub _processing_profile_class {
+    my ($self, $class_name) = @_;
+    my $subclass_name = $self->_command_subclass($class_name);
+    my $processing_profile_class = join('::', 'Genome::ProcessingProfile', $subclass_name);
+    return $processing_profile_class;
+}
+
+sub _profile_string {
+    my ($self, $class_name) = @_;
+    my $subclass_name = $self->_command_subclass($class_name);
+    my $profile_string = Genome::Utility::Text::camel_case_to_string($subclass_name);
+    $profile_string =~ s/:://;
+    return $profile_string;
+}
 
 sub _build_all_sub_commands {
     my $self = shift;
@@ -43,11 +65,12 @@ sub _build_all_sub_commands {
 sub _build_sub_command {
     my ($self,
         $class_name,            # Genome::ProcessingProfile::Command::List::Foo
-        $delegating_class_name, # Genome::ProcessingProfile::Command::List
-        $reference_class_name   # Genome::ProcessingProfile::Foo
+        @inheritance,
     ) = @_;
 
     # the default _build_all_sub_commands() in the super class calls this
+
+    my $pp_class_name = $self->_processing_profile_class($class_name);
 
     # params start with id and name, then sequencing_platform,
     # and then are in alpha order
@@ -59,31 +82,24 @@ sub _build_sub_command {
                 cmp
                 ($b eq 'sequencing_platform' ? 1 : 2)
             }
-            $reference_class_name->params_for_class
+            $pp_class_name->params_for_class
         );
-
-    # the description has a plain-english version of the profile name
-    my $name = $reference_class_name;
-    $name =~ s/Genome::ProcessingProfile:://;
-    my @words = map { $self->_command_name_for_class_word($_) } split(/::/,$name);
 
     # write the custom command for this processing profile
     class {$class_name} { 
-        is => 'Genome::ProcessingProfile::Command::List::Base',
+        is => \@inheritance, 
         has => [
             subject_class_name => { 
                 is_constant => 1, 
-                value => $reference_class_name
+                value => $pp_class_name
             },
             show => { default_value => $params_list },
         ],
-        doc => "list @words processing profiles",
+        doc => "list " . $self->_profile_string($class_name) . " processing profiles",
     };
 
     return $class_name;
 }
-
-
 
 1;
 
