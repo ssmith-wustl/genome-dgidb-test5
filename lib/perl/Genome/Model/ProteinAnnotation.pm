@@ -226,8 +226,6 @@ sub _resolve_workflow_for_build {
         push @annotator_ops, $annotator_op;
     }
 
-    # **************** Brian: this part is not complete by any meanys (and the above is untested)...*********************** 
-
     # though the steps above will write out their results to their directory
     # this converges them into one operation to act as a grouping point for whole-set steps
     my $converge_op = $workflow->add_operation(
@@ -237,16 +235,22 @@ sub _resolve_workflow_for_build {
             output_properties => ['bio_seq_features']
         ),
     );
-    #$converge_op->operation_type->lsf_queue($lsf_queue);
-    #$converge_op->operation_type->lsf_project($lsf_project);
 
     for (@annotator_ops) {
-        # link to the converger above
+        my $link = $workflow->add_link(
+            left_operation => $_,
+            left_property => 'bio_seq_feature',
+            right_operation => $converge_op,
+            right_property => 'bio_seq_feature',
+        );
     }
 
-    # now link the converge_op to the output_connector...
-
-    # done!
+    my $link = $workflow->add_link(
+        left_operation => $converge_op,
+        left_property => 'result',
+        right_operation => $output_connector,
+        right_property => 'result',
+    );
 
     return $workflow;
 }
