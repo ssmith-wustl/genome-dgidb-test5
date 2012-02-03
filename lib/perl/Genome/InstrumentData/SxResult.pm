@@ -40,7 +40,7 @@ class Genome::InstrumentData::SxResult {
             is_calculated => 1,
             calculate_from => ['output_file_type'],
             calculate => q { 
-                if ($output_file_type eq 'sanger' or $output_file_type eq 'illumina'){
+                if ($output_file_type eq 'sanger' or $output_file_type eq 'illumina' or $output_file_type eq 'phred'){
                     return 'fastq'}
                 elsif ($output_file_type eq 'fasta') {
                     return 'fasta'}
@@ -64,7 +64,10 @@ sub create {
     $self->status_message('Process instrument data '.$instrument_data->__display_name__ );
 
     my $process_ok = $self->_process_instrument_data;
-    return if not $process_ok;
+    if(not $process_ok) {
+        $self->delete;
+        return;
+    }
 
     $self->status_message('Process instrument data...OK');
 
@@ -75,17 +78,20 @@ sub create {
                 $output_file) {
             $self->error_message('Output file '.$output_file.
                 ' was not created');
+            $self->delete;
             return;
         }
     }
     if (not -s $self->temp_staging_directory.'/'.
             $self->read_processor_output_metric_file) {
         $self->error_message('Output metrics file not created');
+        $self->delete;
         return;
     }
     if (not -s $self->temp_staging_directory.'/'.
             $self->read_processor_input_metric_file) {
         $self->error_message('Input metrics file not created');
+        $self->delete;
         return;
     }
     $self->status_message('Verify assembler input files...OK');
@@ -233,11 +239,10 @@ sub _process_instrument_data {
     $sx_cmd_parts[0] .= ' --input-metrics '.
     $self->temp_staging_directory.'/'.
     $self->read_processor_input_metric_file;
-    #TODO: get correct metrics file
     $sx_cmd_parts[$#read_processor_parts] .= ' --output '.$output;
     $sx_cmd_parts[$#read_processor_parts] .= ' --output-metrics '.
     $self->temp_staging_directory.'/'.
-    $self->read_processor_output_metric_file; #TODO: get correct metrics file
+    $self->read_processor_output_metric_file;
 
     # Run
     my $sx_cmd = join(' | ', @sx_cmd_parts);
