@@ -32,11 +32,12 @@ sub dispatch_request {
         load_modules();
         my ($self, $params, $file, $env) = @_;
         my @gene_names;
-        @gene_names = Genome::Sys->read_file($file->path) if $file;
+        @gene_names = Genome::Sys->read_file($file->path);
         chomp @gene_names;
-        push @gene_names, $params->{'genes'};
+        push @gene_names, split("\n",$params->{'genes'});
+        chomp @gene_names;
         my $command = Genome::DruggableGene::Command::GeneNameReport::LookupInteractions->execute( gene_identifiers => \@gene_names );
-        return [200, ['Content-type' => "text/csv"], [join("\n", @gene_names)]];
+        return [200, ['Content-type' => "text/csv"], [join("\n", $command->output)]];
     },
 #    sub ( POST + /view/x/subject-upload + *file= ) {
     sub ( POST + /view/x/subject-upload + %* + *file= )  {
@@ -87,6 +88,3 @@ sub dispatch_request {
 };
 
 Genome::Model::Command::Services::WebApp::File->run_if_script;
-
-
-
