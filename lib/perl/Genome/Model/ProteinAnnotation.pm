@@ -51,7 +51,7 @@ sub _parse_annotation_strategy {
         }
        
         my $requires_chunking;
-        if ($class_name eq 'PAP::Command::PSortB') {  #if ($class_name->_requires_chunked_input) {
+        if ($class_name eq 'PAP::Command::PsortB') {  #if ($class_name->_requires_chunked_input) {
             $requires_chunking = 1;
         }
         else {
@@ -108,7 +108,7 @@ sub _parse_annotation_strategy {
         };
     }
 
-    #print Data::Dumper::Dumper(\@annotator_details);
+    print Data::Dumper::Dumper(\@annotator_details);
     return @annotator_details;
 }
 sub _map_workflow_inputs {
@@ -124,7 +124,7 @@ sub _map_workflow_inputs {
         my $path = join('/', $build->data_directory, $detail->{name});
         $output_dirs{$property_name} = $path;
 
-        for my $subject_prop (@{$detail->{subject_properties}}) {
+        for my $subject_prop (@{$detail->{properties_from_subject}}) {
             if ($subject_prop eq 'gram_stain') {
                 $subject_properties{'gram_stain'} = $subject->gram_stain_category;
             }
@@ -135,13 +135,14 @@ sub _map_workflow_inputs {
     }
 
     my @inputs = (
-        fasta_file => $self->prediction_fasta_file->id,
+        prediction_fasta_file => $self->prediction_fasta_file->id,
         chunk_size => $self->chunk_size,
         %output_dirs,
         %subject_properties
     );
 
-    #print Data::Dumper::Dumper(\@inputs);
+    print Data::Dumper::Dumper(\@inputs);
+    $DB::single = 1;
     return @inputs;
 }
 
@@ -154,7 +155,7 @@ sub _resolve_workflow_for_build {
     my $workflow = Workflow::Model->create(
         name => $build->workflow_name,
         input_properties => [ keys %inputs ],
-        output_properties => ['bio_seq_features'],
+        output_properties => ['all features'],
     );
     my $input_connector = $workflow->get_input_connector;
     my $output_connector = $workflow->get_output_connector;
@@ -210,6 +211,7 @@ sub _resolve_workflow_for_build {
         properties_from_subject
     );
     my @annotator_ops;
+    my %name_for_output_feature_list;
     for my $details (@annotator_details) {
         my (
             $name, 
@@ -259,6 +261,11 @@ sub _resolve_workflow_for_build {
             right_property => $property_name_for_output_dir_on_tool, 
         );
 
+        # figure out the name we'll use to pass the generic feature list to a converger
+        my $property_name_for_feature_list_inside_workflow = $property_name_for_output_dir_on_workflow;
+        $property_name_for_feature_list_inside_workflow =~ s/_output_dir/_feature_list/;
+        $name_for_output_feature_list{$annotator_op->id} =  $property_name_for_feature_list_inside_workflow;
+
         # pass along any other inputs the tool needs which the subject provides
         for my $name (@$properties_from_subject) {
             my $link = $workflow->add_link(
@@ -277,25 +284,27 @@ sub _resolve_workflow_for_build {
     my $converge_op = $workflow->add_operation(
         name => 'converge results',
         operation_type => Workflow::OperationType::Converge->create(
-            input_properties => ['bio_seq_feature'],
-            output_properties => ['bio_seq_features']
+            input_properties => [sort values %name_for_output_feature_list],
+            output_properties => ['all features']
         ),
     );
 
-    for (@annotator_ops) {
+    for my $annotator_op (@annotator_ops) {
+        my $property_name_for_feature_list_inside_workflow = $name_for_output_feature_list{$annotator_op->id};
         my $link = $workflow->add_link(
-            left_operation => $_,
+            left_operation => $annotator_op,
             left_property => 'bio_seq_feature',
             right_operation => $converge_op,
-            right_property => 'bio_seq_features',
+            right_property => $property_name_for_feature_list_inside_workflow,
         );
     }
 
+    # the final feature list is the result
     my $link = $workflow->add_link(
         left_operation => $converge_op,
-        left_property => 'result',
+        left_property => 'all features',
         right_operation => $output_connector,
-        right_property => 'result',
+        right_property => 'all features',
     );
 
     return $workflow;
