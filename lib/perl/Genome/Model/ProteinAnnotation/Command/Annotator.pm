@@ -16,11 +16,7 @@ class Genome::Model::ProteinAnnotation::Command::Annotator {
 
 sub name { 
     my $self = shift;
-    my $name = ref($self) || $self;
-    my $prefix = __PACKAGE__;
-    $prefix =~ s/Annotator$//;
-    $name =~ s/$prefix//;
-    $name = lc($name);
+    my $name = $self->command_name_brief;
     return $name;
 }
 
