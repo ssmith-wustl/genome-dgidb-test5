@@ -16,7 +16,7 @@ class Genome::Model::ProteinAnnotation::Command::List {
         },
         show => { default_value => 'id,name,processing_profile' },
     ],
-    doc => 'list small-rna genome models',
+    doc => 'list protein annotation genome models',
 };
 
 1;
