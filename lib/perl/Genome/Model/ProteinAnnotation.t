@@ -2,7 +2,7 @@
 use above 'Genome';
 use strict;
 use warnings;
-use Test::More tests => 6;
+use Test::More tests => 7;
 
 my $RUN = shift;
 
@@ -45,6 +45,9 @@ my $b = $m->add_build(
     data_directory => $tmp
 );
 ok($b, 'defined a build');
+
+my $w = $m->_resolve_workflow_for_build($b);
+ok($w, 'the model can define a workflow for the build');
 
 if (not $RUN or $RUN ne 'RUN') {
     note("NOT running the pipeline because RUN is not on the cmdline for this test");
