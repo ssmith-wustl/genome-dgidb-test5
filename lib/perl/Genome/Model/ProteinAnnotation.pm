@@ -31,11 +31,92 @@ class Genome::Model::ProteinAnnotation {
     ],
 };
 
+sub _parse_annotation_strategy {
+    my $self = shift;
+
+    my $subject = $self->subject;
+    my @specs = split(/\s+union\s+/, $self->annotation_strategy);
+    
+    my @annotator_details;
+    for my $spec (@specs) {
+        my ($name, $version) = split(/\s+/,$spec); 
+        $version = '' if not defined $version;
+
+        my $class_name;
+        my @words = split('-', $name);
+        $class_name = 'PAP::Command::' . join('', map { ucfirst(lc($_)) } @words);
+        eval { $class_name->class; };
+        if ($@) {
+            die "error parsing $spec: $name parses to $class_name which has errors: $@";
+        }
+       
+        my $requires_chunking;
+        if ($class_name eq 'PAP::Command::PSortB') {  #if ($class_name->_requires_chunked_input) {
+            $requires_chunking = 1;
+        }
+        else {
+            $requires_chunking = 0;
+        }
+
+        # the names of the output dirs are similar but not identical on all of the annotator commands :( 
+        # TODO: normalize those! (for now we just parse the name)
+        # TODO: xfer properties of processing profiles too?
+        my $property_name_for_output_dir_on_tool;
+        my @properties_from_subject;
+        my @p = $class_name->__meta__->properties();
+        for my $p ($class_name->__meta__->properties()) {
+            next unless $p->can('is_input');
+            next unless $p->is_input;
+            next if $p->property_name eq 'fasta_file';
+
+            my $property_name = $p->property_name;
+            if ($property_name =~ /_archive_dir/ or $property_name eq 'report_save_dir') {
+                if ($property_name_for_output_dir_on_tool) {
+                    die "multiple properties on $class_name seem to be output directories: $property_name_for_output_dir_on_tool, $property_name!";
+                }
+                $property_name_for_output_dir_on_tool = $property_name;
+                next;
+            }
+            if ($subject->can($property_name) or $property_name eq 'gram_stain') {
+                push @properties_from_subject, $property_name;
+                next;
+            }
+
+            if ($p->is_optional) {
+                $self->warning_message("$class_name has input $property_name which is unrecognized, and is being ignored when construction the workflow.");
+            }
+            else {
+                die "$class_name has input $property_name which is unrecognized, and is not optional!"
+            }
+        }
+        unless ($property_name_for_output_dir_on_tool) {
+            die "failed to find tool output dir name for $class_name: checked " . join(", ", map { $_->property_name } @p) . "\n";
+        }
+
+        # TODO: if we allow an annotator to be used more than once in the workflow, how do we name the output dir property?
+        my $property_name_for_output_dir_on_workflow = $name . '_output_dir';
+        $property_name_for_output_dir_on_workflow =~ s/-/_/g;
+
+        push @annotator_details, {
+            name => $name, 
+            version => $version, 
+            class_name => $class_name, 
+            requires_chunking => $requires_chunking,
+            property_name_for_output_dir_on_workflow => $property_name_for_output_dir_on_workflow, 
+            property_name_for_output_dir_on_tool => $property_name_for_output_dir_on_tool,
+            properties_from_subject => \@properties_from_subject
+        };
+    }
+
+    #print Data::Dumper::Dumper(\@annotator_details);
+    return @annotator_details;
+}
 sub _map_workflow_inputs {
     my ($self, $build) = @_;
     my $subject = $self->subject;
 
     my @details = $self->_parse_annotation_strategy;
+    
     my %output_dirs;
     my %subject_properties;
     for my $detail (@details) {
@@ -53,38 +134,43 @@ sub _map_workflow_inputs {
         }
     }
 
-    $DB::single = 1;
-    my @inputs = ();
-    push @inputs,
+    my @inputs = (
         fasta_file => $self->prediction_fasta_file->id,
         chunk_size => $self->chunk_size,
         %output_dirs,
-        %subject_properties;
+        %subject_properties
+    );
+
+    #print Data::Dumper::Dumper(\@inputs);
     return @inputs;
 }
 
 sub _resolve_workflow_for_build {
     my ($self, $build, $lsf_queue, $lsf_project) = @_;
 
-    my %inputs = $self->_map_workflow_inputs($build);
-
     # create the workflow 
+    
+    my %inputs = $self->_map_workflow_inputs($build);
     my $workflow = Workflow::Model->create(
         name => $build->workflow_name,
         input_properties => [ keys %inputs ],
         output_properties => ['bio_seq_features'],
     );
+    my $input_connector = $workflow->get_input_connector;
+    my $output_connector = $workflow->get_output_connector;
 
+    # the list of annotators, and the details about them
+    # TODO: these keys are a clue as to what the API for a protein annotator should be
+    
     my @annotator_details = $self->_parse_annotation_strategy;
+
+    # add one step to split the file if _any_ of the steps require it
+    
     my $annotator_count_requiring_chunking = 0;
     for my $detail (@annotator_details) {
         $annotator_count_requiring_chunking++ if $detail->{requires_chunking};
     }
-
-    my $input_connector = $workflow->get_input_connector;
-    my $output_connector = $workflow->get_output_connector;
-
-    # add one step to split the file if _any_ of the steps require it
+    
     my $fasta_chunker_op;
     if ($annotator_count_requiring_chunking) {
         $fasta_chunker_op = $workflow->add_operation(
@@ -215,79 +301,5 @@ sub _resolve_workflow_for_build {
     return $workflow;
 }
 
-sub _parse_annotation_strategy {
-    my $self = shift;
-    my $subject = $self->subject;
-    my $annotator_count_requiring_chunking = 0;
-    my @output_subdirs;
-    my @annotator_details;
-    my @specs = split(/\s+union\s+/, $self->annotation_strategy);
-    for my $spec (@specs) {
-        my ($name, $version) = split(/\s+/,$spec); 
-        
-        my $class_name;
-        my @words = split('-', $name);
-        $class_name = 'PAP::Command::' . join('', map { ucfirst(lc($_)) } @words);
-        eval { $class_name->class; };
-        if ($@) {
-            die "error parsing $spec: $name parses to $class_name which has errors: $@";
-        }
-       
-        my $requires_chunking;
-        if ($class_name eq 'PAP::Command::PSortB') {  #if ($class_name->_requires_chunked_input) {
-            $requires_chunking = 1;
-            $annotator_count_requiring_chunking++;
-        }
-        else {
-            $requires_chunking = 0;
-        }
-
-        # the names of the output dirs are similar but not identical on all of the annotator commands :( 
-        # TODO: normalize those! (for now we just parse the name)
-        # TODO: xfer properties of processing profiles too?
-        my $property_name_for_output_dir_on_tool;
-        my @properties_from_subject;
-        for my $p ($class_name->__meta__->properties()) {
-            next unless $p->can('is_input');
-            next unless $p->is_input;
-            next if $p->property_name eq 'fasta_file';
-
-            my $property_name = $p->property_name;
-            if ($property_name =~ /_archive_dir/) {
-                if ($property_name_for_output_dir_on_tool) {
-                    die "multiple properties on $class_name seem to be output directories: $property_name_for_output_dir_on_tool, $property_name!";
-                }
-                $property_name_for_output_dir_on_tool = $property_name;
-                next;
-            }
-            if ($subject->can($property_name) or $property_name eq 'gram_stain') {
-                push @properties_from_subject, $property_name;
-                next;
-            }
-
-            if ($p->is_optional) {
-                $self->warning_message("$class_name has input $property_name which is unrecognized, and is being ignored when construction the workflow.");
-            }
-            else {
-                die "$class_name has input $property_name which is unrecognized, and is not optional!"
-            }
-        }
-
-        # TODO: if we allow an annotator to be used more tha once in the workflow, how do we name the output dir property?
-        my $property_name_for_output_dir_on_workflow = $name . '_output_dir';
-
-        push @annotator_details, {
-            name => $name, 
-            version => $version, 
-            class_name => $class_name, 
-            requires_chunking => $requires_chunking,
-            property_name_for_output_dir_on_workflow => $property_name_for_output_dir_on_workflow, 
-            property_name_for_output_dir_on_tool => $property_name_for_output_dir_on_tool,
-            properties_from_subject => \@properties_from_subject
-        };
-    }
-
-    return @annotator_details;
-}
 1;
 
