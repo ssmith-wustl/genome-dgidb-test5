@@ -177,7 +177,7 @@ sub _resolve_workflow_for_build {
         $fasta_chunker_op = $workflow->add_operation(
             name => 'chunk input sequences',
             operation_type => Workflow::OperationType::Command->create(
-                command_class_name => 'PAP::FastaChunker',
+                command_class_name => 'PAP::Command::FastaChunker'
             )
         );
         
