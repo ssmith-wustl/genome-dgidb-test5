@@ -22,7 +22,7 @@ class Genome::Model::Tools::Capture::ManualReview {
 
 sub help_detail {
   return <<HELP;
-Given a model-group of SomaticVariation models, this tool with gather resulting tier1 variants and
+Given a model-group of SomaticVariation models, this tool will gather resulting tier1 variants and
 prepare them for manual review. Existing review files will not be overwritten. Review files for
 cases with more than --max-variants will be written to a subdirectory named too_many_to_review.
 
@@ -98,12 +98,12 @@ sub execute {
     my $indel_anno = "$build_dir/effects/indels.hq.tier1.v1.annotated.top";
     print STDERR "ERROR: Tier1 Indel annotations for $tcga_patient_id not found at $indel_anno\n" unless( -e $indel_anno );
     my ( $gatk_indels ) = glob( "$build_dir/variants/indel/gatk-somatic-indel-*/indels.hq.bed" );
-    print STDERR "ERROR: GATK calls for $tcga_patient_id not found at $gatk_indels\n" unless( -e $gatk_indels );
+    print STDERR "ERROR: GATK calls for $tcga_patient_id not found\n" unless( -e $gatk_indels );
     my ( $varscan_indels ) = glob( "$build_dir/variants/indel/varscan-somatic-*/varscan-high-confidence-indel-*/indels.hq.bed" );
-    print STDERR "ERROR: VarScan indel calls for $tcga_patient_id not found at $varscan_indels\n" unless( -e $varscan_indels );
+    print STDERR "ERROR: VarScan indel calls for $tcga_patient_id not found\n" unless( -e $varscan_indels );
     my ( $pindel_indels ) = glob( "$build_dir/variants/indel/pindel-*/pindel-somatic-calls-*/pindel-vaf-filter-*/pindel-read-support-*/indels.hq.bed" );
-    print STDERR "ERROR: Pindel calls for $tcga_patient_id not found at $pindel_indels\n" unless( -e $pindel_indels );
-    return undef unless( -e $snv_anno && -e $indel_anno && -e $gatk_indels && -e $varscan_indels && -e $pindel_indels );
+    print STDERR "WARNING: Pindel calls for $tcga_patient_id not found\n" unless( -e $pindel_indels );
+    return undef unless( -e $snv_anno && -e $indel_anno && -e $gatk_indels && -e $varscan_indels );
 
     $bams{$tcga_patient_id}{snvs} = $snv_anno;
     $bams{$tcga_patient_id}{indels} = $indel_anno;
@@ -216,7 +216,7 @@ sub execute {
       my ( $gatk_indels, $varscan_indels, $pindel_indels ) = ( $bams{$case}{gatk}, $bams{$case}{varscan_indel}, $bams{$case}{pindel} );
       # I know I shouldn't use backticks like this, but think of all the precious lines of code we're saving!
       my %gatk_varscan_lines = map {chomp; s/\*/0/; $_=>1} `cut -f 1-4 $varscan_indels $gatk_indels`;
-      %uniq_to_pindel = map {chomp; $_=>1} `cut -f 1-4 $pindel_indels`;
+      %uniq_to_pindel = map {chomp; $_=>1} `cut -f 1-4 $pindel_indels` if( -e $pindel_indels );
       foreach my $indel ( keys %gatk_varscan_lines )
       {
         delete $uniq_to_pindel{$indel} if( defined $uniq_to_pindel{$indel} );
