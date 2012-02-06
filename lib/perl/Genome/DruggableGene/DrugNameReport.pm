@@ -38,7 +38,7 @@ class Genome::DruggableGene::DrugNameReport {
             reverse_as => 'drug_name_report',
             is_many => 1,
         },
-        gene_name_reports => {
+        genes => {
             is => 'Genome::DruggableGene::GeneNameReport',
             via => 'interactions',
             to => 'gene_name_report',
@@ -53,25 +53,25 @@ class Genome::DruggableGene::DrugNameReport {
         },
         is_withdrawn => {
             calculate => q{
-                return 1 if grep($_->category_value eq 'withdrawn', $self->drug_name_report_category_associations);
+                return 1 if grep($_->category_value eq 'withdrawn', $self->drug_categories);
                 return 0;
             },
         },
         is_nutraceutical => {
             calculate => q{
-                return 1 if grep($_->category_value eq 'nutraceutical', $self->drug_name_report_category_associations);
+                return 1 if grep($_->category_value eq 'nutraceutical', $self->drug_categories);
                 return 0;
             },
         },
         is_approved => {
             calculate => q{
-                return 1 if grep($_->category_value eq 'approved', $self->drug_name_report_category_associations);
+                return 1 if grep($_->category_value eq 'approved', $self->drug_categories);
                 return 0;
             },
         },
         is_antineoplastic => {
             calculate => q{
-                return 1 if grep($_->category_value =~ /antineoplastic/, $self->drug_name_report_category_associations);
+                return 1 if grep($_->category_value =~ /antineoplastic/, $self->drug_categories);
                 return 0;
             },
         },
