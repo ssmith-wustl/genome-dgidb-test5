@@ -162,7 +162,7 @@ sub output_metrics_file_for_instrument_data {
     return $self->data_directory.'/'.$result->read_processor_input_metric_file;
 }
 
-sub genome_size {
+sub resolve_taxon {
     my $self = shift;
 
     my $model = $self->model;
@@ -182,7 +182,16 @@ sub genome_size {
 
     unless ( $taxon ) {
         Carp::confess('De Novo Assembly model ('.$self->model->id.' '.$self->model->name.') does not have a taxon associated with it\'s subject ('.$subject->id.' '.$subject->name.').');
-    }
+    } 
+
+    return $taxon;
+}
+
+sub genome_size {
+    my $self = shift;
+
+    my $model = $self->model;
+    my $taxon = $self->resolve_taxon;
 
     if ( defined $taxon->estimated_genome_size ) {
         return $taxon->estimated_genome_size;
@@ -193,6 +202,16 @@ sub genome_size {
     }
 
     Carp::confess('Cannot determine genom size for De Novo Assembly model\'s ('.$self->model->id.' '.$self->model->name.') associated taxon ('.$taxon->id.')');
+}
+
+sub domain_name {
+    my $self = shift;
+
+    my $taxon = $self->resolve_taxon;
+
+    return 'unknown' if not $taxon->domain;
+    
+    return $taxon->domain;
 }
 
 sub calculate_base_limit_from_coverage {

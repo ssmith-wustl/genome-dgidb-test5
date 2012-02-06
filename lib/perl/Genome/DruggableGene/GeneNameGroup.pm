@@ -36,8 +36,8 @@ sub consume {
     my $self = shift;
     my @groups = @_;
     for my $group (@groups){
-        for($group->gene_name_group_bridges){
-             $self->add_gene_name_group_bridge(gene_name_report_id => $_->gene_name_report_id);
+        for my $bridge($group->gene_name_group_bridges){
+             $self->add_gene_name_group_bridge(gene_name_report_id => $bridge->gene_name_report_id);
         }
         $group->delete;
     }
