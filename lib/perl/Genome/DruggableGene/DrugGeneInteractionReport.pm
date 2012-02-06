@@ -50,17 +50,11 @@ class Genome::DruggableGene::DrugGeneInteractionReport {
                 return $citation;
             |,
         },
-        _known_action_cat => {
-            via => 'drug_gene_interaction_report_attributes',
-            to => 'value',
-            where => [name => 'is_known_action', value => 'yes'],
-            is_optional => 1,
-        },
         is_known_action => {
-            calculate_from => ['_known_action_cat'],
-            calculate => q|
-                return 1 if $_known_action_cat; return 0;
-            |,
+            calculate => q{
+                return 1 if grep($_->name eq 'is_known_action' && $_->value eq 'yes', $self->drug_gene_interaction_report_attributes);
+                return 0;
+            },
         },
         interaction_types => {
             via => 'drug_gene_interaction_report_attributes',

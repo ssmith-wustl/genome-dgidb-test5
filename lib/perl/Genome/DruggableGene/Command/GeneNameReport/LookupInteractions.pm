@@ -31,10 +31,10 @@ class Genome::DruggableGene::Command::GeneNameReport::LookupInteractions {
             doc => 'Filter results based on the parameters.  See below for how to.',
             shell_args_position => 2,
         },
-        noheaders => {
+        headers => {
             is => 'Boolean',
-            default => 0,
-            doc => 'Do not include headers',
+            default => 1,
+            doc => 'Do include headers',
         },
     ],
     has_transient_optional => [
@@ -92,13 +92,18 @@ sub _find_gene_name_reports_for_identifiers {
     my @gene_identifiers = @_;
     my %results;
 
-    my @gene_name_reports = Genome::DruggableGene::GeneNameReport->get(name => \@gene_identifiers);
-    my @gene_name_report_associations = Genome::DruggableGene::GeneNameReportAssociation->get(alternate_name => \@gene_identifiers);
-    for my $gene_identifier(@gene_identifiers){
+    my @gene_name_reports = Genome::DruggableGene::GeneNameReport->get($self->_chunk_in_clause_list('Genome::DruggableGene::GeneNameReport', 'name', '', @gene_identifiers));
+    my @gene_name_report_associations = Genome::DruggableGene::GeneNameReportAssociation->get($self->_chunk_in_clause_list('Genome::DruggableGene::GeneNameReportAssociation', 'alternate_name', '',  @gene_identifiers));
+    my @ids = map($_->gene_name_report_id, @gene_name_report_associations);
+    @ids = uniq @ids;
+    Genome::DruggableGene::GeneNameReport->get($self->_chunk_in_clause_list('Genome::DruggableGene::GeneNameReport', 'id', '', @ids));
+    push @ids, map($_->id, @gene_name_reports);
+    Genome::DruggableGene::GeneNameReportAssociation->get($self->_chunk_in_clause_list('Genome::DruggableGene::GeneNameReportAssociation', 'gene_name_report_id', '', @ids));
+    for my $gene_identifier(@gene_identifiers) {
         my @reports_for_identifier = grep($_->name eq $gene_identifier, @gene_name_reports);
         my @associations_for_identifier = grep($_->alternate_name eq $gene_identifier, @gene_name_report_associations);
-        my @ids = map($_->gene_name_report_id, @associations_for_identifier); #This isn't super concise, but it shaves off a substantial amount of run time
-        @reports_for_identifier = (@reports_for_identifier, Genome::DruggableGene::GeneNameReport->get(id => \@ids));
+        my @report_ids = map($_->gene_name_report_id, @associations_for_identifier);
+        @reports_for_identifier = (@reports_for_identifier, Genome::DruggableGene::GeneNameReport->get($self->_chunk_in_clause_list('Genome::DruggableGene::GeneNameReport', 'id', '', @report_ids)));
         @reports_for_identifier = uniq @reports_for_identifier;
         $results{$gene_identifier} = \@reports_for_identifier;
     }
@@ -111,7 +116,13 @@ sub get_interactions {
 
     my @gene_name_report_ids = map($_->id, @gene_name_reports);
     @gene_name_report_ids = uniq @gene_name_report_ids;
-    my $bool_expr = $self->_resolve_boolexpr('Genome::DruggableGene::DrugGeneInteractionReport', @gene_name_report_ids);
+    my @unfiltered_interactions = Genome::DruggableGene::DrugGeneInteractionReport->get($self->_chunk_in_clause_list('Genome::DruggableGene::DrugGeneInteractionReport', 'gene_name_report_id', '', @gene_name_report_ids));
+    my @drug_ids = map($_->drug_name_report_id, @unfiltered_interactions);
+    Genome::DruggableGene::DrugNameReport->get(\@drug_ids);
+    Genome::DruggableGene::DrugNameReportCategoryAssociation->get($self->_chunk_in_clause_list('Genome::DruggableGene::DrugNameReportCategoryAssociation', 'drug_name_report_id', '', @drug_ids));
+    Genome::DruggableGene::DrugGeneInteractionReportAttribute->get($self->_chunk_in_clause_list('Genome::DruggableGene::DrugGeneInteractionReportAttribute', 'interaction_id',  '', map($_->id, @unfiltered_interactions)));
+
+    my $bool_expr = $self->_chunk_in_clause_list('Genome::DruggableGene::DrugGeneInteractionReport', 'gene_name_report_id', $self->filter, @gene_name_report_ids);
     return Genome::DruggableGene::DrugGeneInteractionReport->get($bool_expr);
 }
 
@@ -163,12 +174,12 @@ sub print_grouped_interactions{
     gene_source_db_version
     interaction_types
     /;
-    unless($self->noheaders){
+    if($self->headers){
         $output_fh->print(join("\t", @headers), "\n");
         $self->output([join("\t", @headers)]);
     }
 
-    my @drug_name_reports = Genome::DruggableGene::DrugNameReport->get(id => [keys %grouped_interactions]);
+    my @drug_name_reports = Genome::DruggableGene::DrugNameReport->get($self->_chunk_in_clause_list('Genome::DruggableGene::DrugNameReport', 'id', '', keys %grouped_interactions));
     for my $drug_name_report_id (keys %grouped_interactions){
         for my $interaction (@{$grouped_interactions{$drug_name_report_id}}){
             $output_fh->print($self->_build_interaction_line($interaction), "\n");
@@ -219,29 +230,34 @@ sub _read_gene_file{
     return @gene_identifiers;
 }
 
-sub _resolve_boolexpr {
+sub _chunk_in_clause_list{
     my $self = shift;
-    my $subject_class_name = shift;
-    my @subject_class_name_ids = @_;
-    my $filter = $self->_complete_filter(@subject_class_name_ids);
-    my ($bool_expr, %extra) = UR::BoolExpr->resolve_for_string(
-        $subject_class_name,
-        $filter,
-        # $self->_hint_string,
-        # $self->order_by,
+    my $target_class = shift;
+    my $property_name = shift;
+    my $filter = shift;
+    my @values = @_;
+
+    unless(@values){
+        my $boolexpr = $target_class->define_boolexpr($property_name => []);
+        return $boolexpr;
+    }
+
+    my @chunked_values;
+    while(@values) {
+        push @chunked_values, [splice(@values,0,249)];
+    }
+
+    my ($boolexpr, %extra) = UR::BoolExpr->resolve_for_string(
+        $target_class,
+        '(' . join(' or ', map($property_name . (scalar(@$_) > 1 ? ':' : '=') . join('/', map('"' . $_ . '"', @$_)), @chunked_values)) . ')' 
+        . ($filter ? ' and ' . $filter : '')
+        ,
     );
 
     $self->error_message( sprintf('Unrecognized field(s): %s', join(', ', keys %extra)) )
         and return if %extra;
 
-    return $bool_expr;
-}
-
-sub _complete_filter {
-    my $self = shift;
-    my @subject_class_name_ids = @_;
-    my $ids = join("/", @subject_class_name_ids);
-    return join(',', grep { defined $_ } ("gene_name_report_id:$ids", $self->filter));
+    return $boolexpr;
 }
 
 1;
