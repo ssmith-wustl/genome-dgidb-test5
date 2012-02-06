@@ -34,7 +34,7 @@ class Genome::DruggableGene::GeneNameReport {
             to => 'alternate_name',
             is_many => 1,
         },
-        gene_name_report_category_associations => {
+        gene_categories => {
             is => 'Genome::DruggableGene::GeneNameReportCategoryAssociation',
             reverse_as => 'gene_name_report',
             is_many => 1,

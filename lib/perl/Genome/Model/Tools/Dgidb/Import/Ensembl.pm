@@ -169,7 +169,7 @@ sub preload_objects {
     my @gene_name_reports = Genome::DruggableGene::GeneNameReport->get(source_db_name => $source_db_name, source_db_version => $source_db_version);
     for my $gene_name_report (@gene_name_reports){
         $gene_name_report->gene_alt_names;
-        $gene_name_report->gene_name_report_category_associations;
+        $gene_name_report->gene_categories;
     }
     return 1;
 }
