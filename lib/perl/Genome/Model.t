@@ -209,7 +209,10 @@ is_deeply(\@model_builds, \@builds, 'model builds');
 
 # one succeeded, one running
 $builds[0]->the_master_event->event_status('Succeeded');
-$builds[0]->the_master_event->date_completed(UR::Time->now);
+my $time = UR::Context->now;
+(my $build_0_time = $time) =~ s/.$/0/; # build_0 "completes" first
+(my $build_1_time = $time) =~ s/.$/9/; # build_1 "completes" later, this fixes an issue if these next couple test run within one second
+$builds[0]->the_master_event->date_completed($build_0_time);
 is($builds[0]->status, 'Succeeded', 'build 0 is succeeded');
 $builds[1]->the_master_event->event_status('Running');
 is($builds[1]->status, 'Running', 'build 1 is running');
@@ -229,7 +232,7 @@ is_deeply(\@running_builds, [$builds[1]], 'running builds');
 
 # both succeeded
 $builds[1]->the_master_event->event_status('Succeeded');
-$builds[1]->the_master_event->date_completed(UR::Time->now);
+$builds[1]->the_master_event->date_completed($build_1_time);
 is($builds[1]->status, 'Succeeded', 'build 1 is now succeeded');
 
 @completed_builds = $model->completed_builds;
