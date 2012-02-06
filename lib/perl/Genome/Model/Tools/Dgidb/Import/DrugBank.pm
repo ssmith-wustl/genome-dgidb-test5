@@ -229,7 +229,7 @@ sub preload_objects {
         $drug_name->drug_categories;
     }
     my @gene_ids = map($_->id, @gene_names);
-    my @interactions = Genome::DruggableGene::DrugGeneInteractionReport->get(gene_name_report_id => \@gene_ids);
+    my @interactions = Genome::DruggableGene::DrugGeneInteractionReport->get(gene_id => \@gene_ids);
     for my $interaction (@interactions){
         $interaction->interaction_attributes;
     }
