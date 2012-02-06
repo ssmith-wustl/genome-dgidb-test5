@@ -113,7 +113,16 @@ sub __errors__ {
             );
     }
 
-    $self->validate($tree);
+    eval {
+        $self->validate($tree);
+    };
+    if ($@) {
+        push @tags, UR::Object::Tag->create(
+            type => 'error',
+            properties => ['id'],
+            desc => $@
+            );
+    }
 
     return @tags;
 }
