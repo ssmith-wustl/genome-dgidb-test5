@@ -1207,13 +1207,33 @@ sub add_model_to_default_modelgroups {
         }else{
             $name = $group;
         }
+
         my $project = Genome::Project->get(name => $name);
+
+        # if $project_id gets set here it is used to create a new project
+        # or to detect probable project renames
+        my $project_id;
+        if (ref($group) && $group->setup_name eq $name) {
+            $project_id = $group->id;
+        }
+
+        if (!$project && $project_id) {
+            # If we didn't get it by name try to get it by ID in case the name has been
+            # changed since it was originally created, e.g. someone changed the name of a
+            # work order. If we get it then we should fix the name. Observers automatically
+            # trigger to update the corresponding Genome::ModelGroup.
+            $project = Genome::Project->get($project_id);
+            if ($project) {
+                $project->name($name);
+            }
+        }
+
         unless($project) {
             my %params = ( name => $name );
-            $params{id} = $group->id if ref $group and $group->setup_name eq $name;
+            $params{id} = $project_id if $project_id;
             $project = Genome::Project->create(%params);
             unless($project) {
-                die $self->error_message('Failed to create a default model-group: ' . $name);
+                die $self->error_message('Failed to create a default project: ' . $name);
             }
             if (ref $group){
                 $project->add_part(entity => $group);
@@ -1224,6 +1244,7 @@ sub add_model_to_default_modelgroups {
         unless ($model_group){
             die $self->error_message("No model group for ".$project->name);
         }
+
         $model_group->assign_models($model);
         #$project->add_part(entity => $model);
     }
