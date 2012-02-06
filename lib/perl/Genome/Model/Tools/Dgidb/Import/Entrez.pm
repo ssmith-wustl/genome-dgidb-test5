@@ -141,7 +141,7 @@ sub preload_objects {
     #Let's preload anything for this database name and version so that we can avoid death by 1000 queries
     my @gene_name_reports = Genome::DruggableGene::GeneNameReport->get(source_db_name => $source_db_name, source_db_version => $source_db_version);
     for my $gene_name_report (@gene_name_reports){
-        $gene_name_report->gene_name_report_associations;
+        $gene_name_report->gene_alt_names;
         $gene_name_report->gene_name_report_category_associations;
     }
     return 1;

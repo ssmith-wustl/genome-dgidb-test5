@@ -93,10 +93,10 @@ sub _find_gene_name_reports_for_identifiers {
     my %results;
 
     my @gene_name_reports = Genome::DruggableGene::GeneNameReport->get(name => \@gene_identifiers);
-    my @gene_name_report_associations = Genome::DruggableGene::GeneNameReportAssociation->get(alternate_name => \@gene_identifiers);
+    my @gene_alt_names = Genome::DruggableGene::GeneNameReportAssociation->get(alternate_name => \@gene_identifiers);
     for my $gene_identifier(@gene_identifiers){
         my @reports_for_identifier = grep($_->name eq $gene_identifier, @gene_name_reports);
-        my @associations_for_identifier = grep($_->alternate_name eq $gene_identifier, @gene_name_report_associations);
+        my @associations_for_identifier = grep($_->alternate_name eq $gene_identifier, @gene_alt_names);
         my @ids = map($_->gene_name_report_id, @associations_for_identifier); #This isn't super concise, but it shaves off a substantial amount of run time
         @reports_for_identifier = (@reports_for_identifier, Genome::DruggableGene::GeneNameReport->get(id => \@ids));
         @reports_for_identifier = uniq @reports_for_identifier;
@@ -188,7 +188,7 @@ sub _build_interaction_line {
     my $interaction = shift;
     my $drug_name_report = $interaction->drug_name_report;
     my $gene_name_report = $interaction->gene_name_report;
-    my $gene_alternate_names = join(':', map($_->alternate_name, $gene_name_report->gene_name_report_associations));
+    my $gene_alternate_names = join(':', map($_->alternate_name, $gene_name_report->gene_alt_names));
     my $interaction_types = join(':', $interaction->interaction_types);
     my $interaction_line = join("\t", $drug_name_report->name,
         $drug_name_report->nomenclature, $drug_name_report->source_db_name, $drug_name_report->source_db_version,

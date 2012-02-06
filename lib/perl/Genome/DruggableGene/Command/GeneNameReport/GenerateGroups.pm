@@ -48,7 +48,7 @@ sub execute {
 
             my $group = shift @groups;
             unless($group->name){ #If not currently using an entrez_gene_symbol primary name, find one
-                my ($name) = map{$_->alternate_name}grep{$_->nomenclature eq 'entrez_gene_symbol'} map{$_->gene_name_report_associations}@genes_groupless;
+                my ($name) = map{$_->alternate_name}grep{$_->nomenclature eq 'entrez_gene_symbol'} map{$_->gene_alt_names}@genes_groupless;
                 ($name) = grep{$_}map{$_->name}@groups unless $name;
                 if($name){
                     print "$progress_counter : $name chosen among multiple groups as name for $alt\n";
