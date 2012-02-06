@@ -23,12 +23,12 @@ class Genome::DruggableGene::DrugNameReport {
             is => 'Text',
             is_optional => 1,
         },
-        drug_name_report_associations => {
+        drug_alt_names => {
             is => 'Genome::DruggableGene::DrugNameReportAssociation',
             reverse_as => 'drug_name_report',
             is_many => 1,
         },
-        drug_name_report_category_associations => {
+        drug_categories => {
             is => 'Genome::DruggableGene::DrugNameReportCategoryAssociation',
             reverse_as => 'drug_name_report',
             is_many => 1,
@@ -52,7 +52,7 @@ class Genome::DruggableGene::DrugNameReport {
             |,
         },
         _withdrawn_cat => {
-            via => 'drug_name_report_category_associations',
+            via => 'drug_categories',
             to => 'category_value',
             where => [category_value => 'withdrawn'],
             is_optional => 1,
@@ -65,7 +65,7 @@ class Genome::DruggableGene::DrugNameReport {
             |,
         },
         _nutraceutical_cat => {
-            via => 'drug_name_report_category_associations',
+            via => 'drug_categories',
             to => 'category_value',
             where => [category_value => 'nutraceutical'],
             is_optional => 1,
@@ -78,7 +78,7 @@ class Genome::DruggableGene::DrugNameReport {
             |,
         },
         _approved_cat => {
-            via => 'drug_name_report_category_associations',
+            via => 'drug_categories',
             to => 'category_value',
             where => [category_value => 'approved'],
             is_optional => 1,
@@ -91,7 +91,7 @@ class Genome::DruggableGene::DrugNameReport {
             |,
         },
         _neoplastic_cat => {
-            via => 'drug_name_report_category_associations',
+            via => 'drug_categories',
             to => 'category_value',
             where => ['category_value' => ['antineoplastic', 'antineoplastic agents']],
             is_optional => 1,
