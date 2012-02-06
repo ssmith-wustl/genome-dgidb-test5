@@ -189,12 +189,19 @@ sub execute {
         );
         
         unless ( @errors ) {
+            # on failure retry in the debugger: to test this run --server-dispatch=inline, 
+            # REMOVE THIS BEFORE MERGING INTO MASTER
+            $DB::single = 1;
+            @errors = Genome::Model::Build::Error->create_from_workflow_errors(
+                @Workflow::Simple::ERROR 
+            );
+        
             print STDERR "Can't convert workflow errors to build errors\n";
             print STDERR Data::Dumper->new([\@Workflow::Simple::ERROR],['ERROR'])->Dump;
             return $self->_post_build_failure("Can't convert workflow errors to build errors");
         }
         unless ( $build->fail(@errors) ) {
-            return $self->_failed_build_fail(@errors);
+            return $self->_log_failure_to_set_build_to_failed(@errors);
         }
         return 1;
     }
@@ -258,13 +265,13 @@ sub _post_build_failure {
     );
     
     unless ( $self->build->fail($error) ) {
-        return $self->_failed_build_fail($error);
+        return $self->_log_failure_to_set_build_to_failed($error);
     }
 
     return 1;
 }
 
-sub _failed_build_fail {
+sub _log_failure_to_set_build_to_failed {
     my ($self, @errors) = @_;
 
     my $msg = sprintf(
