@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use above 'Genome';
-use Test::More tests => 21;
+use Test::More tests => 15;
 
 use_ok('Genome::FeatureList');
 

@@ -38,13 +38,13 @@ sub execute {
         my @genes = map{$_->gene_name_report} @{$alt_to_entrez{$alt}};
         next if @genes > 15;#Ignore alts with more than 15 supposedly synonymous genes
 
-        my @bridges = map{Genome::DruggableGene::GeneNameGroupBridge->get(gene_name_report_id => $_->id)}
-        grep{Genome::DruggableGene::GeneNameGroupBridge->get(gene_name_report_id => $_->id)} @genes;
+        my @bridges = map{Genome::DruggableGene::GeneNameGroupBridge->get(gene_id => $_->id)}
+        grep{Genome::DruggableGene::GeneNameGroupBridge->get(gene_id => $_->id)} @genes;
 
         my @groups = map{$_->gene_name_group} @bridges;
         @groups = uniq @groups;
         if (@groups) {
-            my @genes_groupless = grep{not Genome::DruggableGene::GeneNameGroupBridge->get(gene_name_report_id => $_->id)} @genes;
+            my @genes_groupless = grep{not Genome::DruggableGene::GeneNameGroupBridge->get(gene_id => $_->id)} @genes;
 
             my $group = shift @groups;
             unless($group->name){ #If not currently using an entrez_gene_symbol primary name, find one
@@ -56,14 +56,14 @@ sub execute {
                 }
             }
             $group->consume(@groups); #gobble other groups and their members, deleting them
-            Genome::DruggableGene::GeneNameGroupBridge->create(gene_name_report_id => $_->id, gene_name_group_id => $group->id) for @genes_groupless;
+            Genome::DruggableGene::GeneNameGroupBridge->create(gene_id => $_->id, gene_name_group_id => $group->id) for @genes_groupless;
 
             print "$alt added to existing group " . $group->name . "\n" if rand() < .001;
         } else {
             my $name = ''; #only use a name if its the primary name, aka entrez gene symbol
             $name = $alt if grep{$_->nomenclature eq 'entrez_gene_symbol'}@{$alt_to_entrez{$alt}};
             my $group = Genome::DruggableGene::GeneNameGroup->create(name => $name);
-            Genome::DruggableGene::GeneNameGroupBridge->create(gene_name_report_id => $_->id, gene_name_group_id => $group->id) for @genes;
+            Genome::DruggableGene::GeneNameGroupBridge->create(gene_id => $_->id, gene_name_group_id => $group->id) for @genes;
         }
         $progress_counter++;
         print "Completed $progress_counter, and on $alt\n" if rand() < .001;
