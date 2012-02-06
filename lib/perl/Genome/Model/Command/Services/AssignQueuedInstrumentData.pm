@@ -1073,7 +1073,6 @@ sub create_default_qc_models {
     for my $model (@models){
         next unless $model->type_name eq 'reference alignment';
         next unless $model->processing_profile_name =~ /^\w+\ \d+\ Default\ Reference\ Alignment/; # e.g. Feb 2011 Defaulte Reference Alignment
-        next if $model->target_region_set_name; # the current lane QC does not work for custom capture/exome
 
         my @lane_qc_models = $model->get_or_create_lane_qc_models;
 
