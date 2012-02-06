@@ -168,7 +168,7 @@ sub print_grouped_interactions{
         $self->output([join("\t", @headers)]);
     }
 
-    my @drug_name_reports = Genome::DruggableGene::DrugNameReport->get(id => [keys %grouped_interactions]);
+    my @drugs = Genome::DruggableGene::DrugNameReport->get(id => [keys %grouped_interactions]);
     for my $drug_name_report_id (keys %grouped_interactions){
         for my $interaction (@{$grouped_interactions{$drug_name_report_id}}){
             $output_fh->print($self->_build_interaction_line($interaction), "\n");

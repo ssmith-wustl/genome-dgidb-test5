@@ -39,14 +39,14 @@ class Genome::DruggableGene::GeneNameReport {
             reverse_as => 'gene_name_report',
             is_many => 1,
         },
-        drug_gene_interaction_reports => {
+        interactions => {
             is => 'Genome::DruggableGene::DrugGeneInteractionReport',
             reverse_as => 'gene_name_report',
             is_many => 1,
         },
-        drug_name_reports => {
+        drugs => {
             is => 'Genome::DruggableGene::DrugNameReport',
-            via => 'drug_gene_interaction_reports',
+            via => 'interactions',
             to => 'drug_name_report',
             is_many => 1,
         },
