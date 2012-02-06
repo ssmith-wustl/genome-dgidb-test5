@@ -38,7 +38,7 @@ class Genome::DruggableGene::DrugGeneInteractionReport {
         source_db_name => { is => 'Text'},
         source_db_version => { is => 'Text'},
         description => { is => 'Text', is_optional => 1 },
-        drug_gene_interaction_report_attributes => {
+        interaction_attributes => {
             is => 'Genome::DruggableGene::DrugGeneInteractionReportAttribute',
             reverse_as => 'drug_gene_interaction_report',
             is_many => 1,
@@ -51,7 +51,7 @@ class Genome::DruggableGene::DrugGeneInteractionReport {
             |,
         },
         _known_action_cat => {
-            via => 'drug_gene_interaction_report_attributes',
+            via => 'interaction_attributes',
             to => 'value',
             where => [name => 'is_known_action', value => 'yes'],
             is_optional => 1,
@@ -63,7 +63,7 @@ class Genome::DruggableGene::DrugGeneInteractionReport {
             |,
         },
         interaction_types => {
-            via => 'drug_gene_interaction_report_attributes',
+            via => 'interaction_attributes',
             to => 'value',
             where => [name => 'interaction_type'],
             is_many => 1,
