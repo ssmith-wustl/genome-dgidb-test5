@@ -47,7 +47,7 @@ sub execute {
     if ($@ || !$result) {
         $self->error_message("COMMAND FAILURE:  $@ -- " . $cmd_object->error_message);
         $transaction->rollback;
-        $self->task->status("failed");
+        $self->task->out_of_band_attribute_update(status=>'failed');
     } else {
         $transaction->commit;
         $self->task->status("succeeded");

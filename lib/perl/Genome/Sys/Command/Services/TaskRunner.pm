@@ -77,13 +77,13 @@ sub task_loop {
 
            open (STDERR, ">>" . $task->stderr_pathname);
            open (STDOUT, ">>" . $task->stdout_pathname);
-           Genome::Task::Command::Run->create(task=>$task)->execute; 
         
            my $ret;
            eval { 
+               Genome::Task::Command::Run->create(task=>$task)->execute; 
                $ret = UR::Context->commit;
            };
-           # rescue after a failure
+           # rescue after a failure to sync
            if (!$ret || $@ ) {
                $task->out_of_band_attribute_update(status=>'failed', time_finished=>$UR::Context::current->now);
            }
