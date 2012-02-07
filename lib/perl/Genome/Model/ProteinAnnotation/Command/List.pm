@@ -14,7 +14,7 @@ class Genome::Model::ProteinAnnotation::Command::List {
             is_constant => 1,
             value => 'Genome::Model::ProteinAnnotation'
         },
-        show => { default_value => 'id,name,processing_profile' },
+        show => { default_value => 'id,name,subject,status,processing_profile.annotation_strategy,processing_profile' },
     ],
     doc => 'list protein annotation genome models',
 };
