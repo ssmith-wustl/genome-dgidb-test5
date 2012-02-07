@@ -106,7 +106,15 @@ class Genome::Model {
             is => 'Genome::ModelGroupBridge', 
             reverse_as => 'model' 
         },
-    ],    
+    ],
+    has_optional_deprecated => [
+        _auto_assign_inst_data => {
+            column_name => 'AUTO_ASSIGN_INST_DATA',
+        },
+        _auto_build_alignments => {
+            column_name => 'AUTO_BUILD_ALIGNMENTS',
+        },
+    ],
     schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',
     table_name => 'GENOME_MODEL',
