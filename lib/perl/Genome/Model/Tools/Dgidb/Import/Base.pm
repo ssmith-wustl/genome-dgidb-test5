@@ -34,7 +34,7 @@ sub _create_drug_name_report {
     return Genome::DruggableGene::DrugNameReport->create(%params);
 }
 
-sub _create_drug_name_report_association {
+sub _create_drug_alternate_name_report {
     my $self = shift;
     my ($drug_name_report, $alternate_name, $nomenclature, $description) = @_;
     my %params = (
@@ -44,9 +44,9 @@ sub _create_drug_name_report_association {
         description => $description,
     );
 
-    my $drug_name_report_association = Genome::DruggableGene::DrugNameReportAssociation->get(%params);
-    return $drug_name_report_association if $drug_name_report_association;
-    return Genome::DruggableGene::DrugNameReportAssociation->create(%params);    
+    my $drug_alternate_name_report = Genome::DruggableGene::DrugAlternateNameReport->get(%params);
+    return $drug_alternate_name_report if $drug_alternate_name_report;
+    return Genome::DruggableGene::DrugAlternateNameReport->create(%params);    
 }
 
 sub _create_drug_name_report_category_association {
@@ -81,7 +81,7 @@ sub _create_gene_name_report {
     return Genome::DruggableGene::GeneNameReport->create(%params);
 }
 
-sub _create_gene_name_report_association {
+sub _create_gene_alternate_name_report {
     my $self = shift;
     my ($gene_name_report, $alternate_name, $nomenclature, $description) = @_;
     my %params = (
@@ -90,9 +90,9 @@ sub _create_gene_name_report_association {
         nomenclature => $nomenclature,
         description => $description,
     );
-    my $gene_name_report_association = Genome::DruggableGene::GeneNameReportAssociation->get(%params);
-    return $gene_name_report_association if $gene_name_report_association;
-    return Genome::DruggableGene::GeneNameReportAssociation->create(%params);
+    my $gene_alternate_name_report = Genome::DruggableGene::GeneAlternateNameReport->get(%params);
+    return $gene_alternate_name_report if $gene_alternate_name_report;
+    return Genome::DruggableGene::GeneAlternateNameReport->create(%params);
 }
 
 sub _create_gene_name_report_category_association {

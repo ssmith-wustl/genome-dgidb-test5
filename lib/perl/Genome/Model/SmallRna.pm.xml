@@ -22,13 +22,13 @@
  <link fromOperation="FilterBamFlagstat" 	 fromProperty="result" 			 toOperation="output connector" toProperty="result" />
 
 <operation name="FilterBamFlagstat">
-	<operationtype commandClass="Genome::Model::Tools::SmallRna::FilterBamFlagstat" typeClass="Workflow::OperationType::Command" />
+	<operationtype commandClass="Genome::Model::SmallRna::Command::FilterBamFlagstat" typeClass="Workflow::OperationType::Command" />
     </operation>
 
 <link fromOperation="FilterBamFlagstat" 	 fromProperty="result" 			 toOperation="output connector" toProperty="result" />
  
    	<operation name="SmallRnaWorkflow" parallelBy="read_size_bin">
-	<operationtype commandClass="Genome::Model::Tools::SmallRna::SmallRnaWorkflow" typeClass="Workflow::OperationType::Command" />
+	<operationtype commandClass="Genome::Model::SmallRna::Command::SmallRnaWorkflow" typeClass="Workflow::OperationType::Command" />
     </operation>
  
   <link fromOperation="SmallRnaWorkflow" 	 fromProperty="result" 			 toOperation="output connector" toProperty="result" />

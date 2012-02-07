@@ -25,7 +25,7 @@ class Genome::DruggableGene::GeneNameReport {
             is_optional => 1,
         },
         gene_alt_names => {
-            is => 'Genome::DruggableGene::GeneNameReportAssociation',
+            is => 'Genome::DruggableGene::GeneAlternateNameReport',
             reverse_as => 'gene_name_report',
             is_many => 1,
         },
@@ -165,7 +165,7 @@ sub _match_as_entrez_gene_symbol {
     my %matched_identifiers;
     my @unmatched_identifiers;
 
-    my @entrez_gene_alt_names = Genome::DruggableGene::GeneNameReportAssociation->get(nomenclature => ['entrez_gene_symbol', 'entrez_gene_synonym'], alternate_name => \@gene_identifiers);
+    my @entrez_gene_alt_names = Genome::DruggableGene::GeneAlternateNameReport->get(nomenclature => ['entrez_gene_symbol', 'entrez_gene_synonym'], alternate_name => \@gene_identifiers);
     return {}, @gene_identifiers unless @entrez_gene_alt_names;
     for my $gene_identifier(@gene_identifiers){
         my @associations_for_identifier = grep($_->alternate_name eq $gene_identifier, @entrez_gene_alt_names);
@@ -235,7 +235,7 @@ sub _match_as_uniprot_id {
     my %intermediate_results_for_identifiers;
     my @unmatched_identifiers;
 
-    my @uniprot_associations = Genome::DruggableGene::GeneNameReportAssociation->get(nomenclature => 'uniprot_id', alternate_name => @gene_identifiers);
+    my @uniprot_associations = Genome::DruggableGene::GeneAlternateNameReport->get(nomenclature => 'uniprot_id', alternate_name => @gene_identifiers);
     for my $gene_identifier(@gene_identifiers){
         my @associations_for_identifier = grep($_->alternate_name => @uniprot_associations);
         unless(@associations_for_identifier){

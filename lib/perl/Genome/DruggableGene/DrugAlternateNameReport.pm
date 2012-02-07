@@ -1,11 +1,11 @@
-package Genome::DruggableGene::DrugNameReportAssociation;
+package Genome::DruggableGene::DrugAlternateNameReport;
 
 use strict;
 use warnings;
 
 use Genome;
 
-class Genome::DruggableGene::DrugNameReportAssociation {
+class Genome::DruggableGene::DrugAlternateNameReport {
     is => 'UR::Object',
     id_generator => '-uuid',
     table_name => 'dgidb.drug_name_report_association',
