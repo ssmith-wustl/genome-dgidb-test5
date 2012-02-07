@@ -95,24 +95,24 @@ sub _import_drug {
     my $version = $self->version;
     my $drug_name = $self->_create_drug_name_report($interaction->{drug_id}, 'TTD_drug_id', 'TTD', $version, '');
 
-    my $primary_drug_name = $self->_create_drug_name_report_association($drug_name, $interaction->{drug_name}, 'TTD_primary_drug_name', '');
+    my $primary_drug_name = $self->_create_drug_alternate_name_report($drug_name, $interaction->{drug_name}, 'TTD_primary_drug_name', '');
 
     my @drug_synonyms = split("; ", $interaction->{drug_synonyms});
     for my $drug_synonym (@drug_synonyms){
         next if $drug_synonym eq 'na';
-        my $synonym_association = $self->_create_drug_name_report_association($drug_name, $drug_synonym, 'TTD_drug_synonym', '');
+        my $synonym_association = $self->_create_drug_alternate_name_report($drug_name, $drug_synonym, 'TTD_drug_synonym', '');
     }
 
     unless($interaction->{drug_cas_number} eq 'na'){
-        my $drug_name_cas_number = $self->_create_drug_name_report_association($drug_name, $interaction->{drug_cas_number}, 'cas_number', '');
+        my $drug_name_cas_number = $self->_create_drug_alternate_name_report($drug_name, $interaction->{drug_cas_number}, 'cas_number', '');
     }
 
     unless($interaction->{drug_pubchem_cid} eq 'na'){
-        my $drug_name_pubchem_cid = $self->_create_drug_name_report_association($drug_name, $interaction->{drug_pubchem_cid}, 'pubchem_cid', '');
+        my $drug_name_pubchem_cid = $self->_create_drug_alternate_name_report($drug_name, $interaction->{drug_pubchem_cid}, 'pubchem_cid', '');
     }
 
     unless($interaction->{drug_pubchem_sid} eq 'na'){
-        my $drug_name_pubchem_sid = $self->_create_drug_name_report_association($drug_name, $interaction->{drug_pubchem_sid}, 'pubchem_sid', '');
+        my $drug_name_pubchem_sid = $self->_create_drug_alternate_name_report($drug_name, $interaction->{drug_pubchem_sid}, 'pubchem_sid', '');
     }
 
     return $drug_name;
