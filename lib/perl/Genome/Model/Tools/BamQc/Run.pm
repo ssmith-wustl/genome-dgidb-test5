@@ -146,6 +146,11 @@ sub execute {
     my $picard_gc_chart_file = $file_basename .'-PicardGC_chart.pdf';
     my $picard_gc_summary_file = $file_basename .'-PicardGC_summary.txt';
 
+    # Read Length
+    my $read_length_summary = $file_basename .'-ReadLengthSummary.tsv';
+    my $read_length_histo = $file_basename .'-ReadLengthDistribution.tsv';
+    my $alignment_length_histo = $file_basename .'-AlignmentLengthDistribution.tsv';
+    
     my %workflow_params = (
         picard_version => $self->picard_version,
         reference_sequence => $self->reference_sequence,
@@ -161,12 +166,16 @@ sub execute {
         picard_gc_summary_file => $picard_gc_summary_file,
         samstat_version => $self->samstat_version,
         fastqc_version => $self->fastqc_version,
+        read_length_summary => $read_length_summary,
+        read_length_histogram => $read_length_histo,
+        alignment_length_histogram => $alignment_length_histo,
     );
     my @output_properties = qw/
                                   picard_metrics_result
                                   picard_gc_bias_result
                                   samstat_result
                                   fastqc_result
+                                  read_length_result
                               /;
     if ($self->error_rate) {
         my $error_rate_file = $file_basename .'-ErrorRate.tsv';
@@ -191,7 +200,7 @@ sub execute {
     my @input_properties = keys %workflow_params;
 
     my $workflow = Workflow::Model->create(
-        name => 'BamQc '. $file_basename,
+        name => $self->id .' BamQc '. $self->bam_file,
         input_properties => \@input_properties,
         output_properties => \@output_properties,
     );
@@ -202,7 +211,7 @@ sub execute {
     # PicardMetrics
     my %picard_metrics_operation_params = (
         workflow => $workflow,
-        name => 'Collect Picard Metrics '. $bam_basename,
+        name => $self->id .' Collect Picard Metrics '. $self->bam_file,
         class_name => 'Genome::Model::Tools::Picard::CollectMultipleMetrics',
         input_properties => {
             'bam_file' => 'input_file',
@@ -223,7 +232,7 @@ sub execute {
     # PicardGcBias
     my %picard_gc_bias_operation_params = (
         workflow => $workflow,
-        name => 'Collect Picard G+C Bias '. $bam_basename,
+        name => $self->id .' Collect Picard G+C Bias '. $self->bam_file,
         class_name => 'Genome::Model::Tools::Picard::CollectGcBiasMetrics',
         input_properties => {
             'bam_file' => 'input_file',
@@ -247,7 +256,7 @@ sub execute {
     # SamStat
     my %samstat_operation_params = (
         workflow => $workflow,
-        name => 'SamStat Html Report '. $bam_basename,
+        name => $self->id .' SamStat Html Report '. $self->bam_file,
         class_name => 'Genome::Model::Tools::SamStat::HtmlReport',
         input_properties => {
             'bam_file' => 'input_files',
@@ -262,7 +271,7 @@ sub execute {
     # FastQC
     my %fastqc_operation_params = (
         workflow => $workflow,
-        name => 'FastQC Generate Reports '. $bam_basename,
+        name => $self->id .' FastQC Generate Reports '. $self->bam_file,
         class_name => 'Genome::Model::Tools::Fastqc::GenerateReports',
         input_properties => {
             'bam_file' => 'input_files',
@@ -279,7 +288,7 @@ sub execute {
     if ($self->error_rate) {
         my %error_rate_operation_params = (
             workflow => $workflow,
-            name => 'BioSamtools Error Rate '. $bam_basename,
+            name => $self->id .' BioSamtools Error Rate '. $self->bam_file,
             class_name => 'Genome::Model::Tools::BioSamtools::ErrorRate',
             input_properties => {
                 'bam_file' => 'bam_file',
@@ -293,13 +302,30 @@ sub execute {
         );
         $self->setup_workflow_operation(%error_rate_operation_params);
     }
+    
+    # Read Length
+    my %read_length_operation_params = (
+        workflow => $workflow,
+        name => $self->id .' BioSamtools Read Length Distribution '. $self->bam_file,
+        class_name => 'Genome::Model::Tools::BioSamtools::ReadLengthDistribution',
+        input_properties => {
+            'bam_file' => 'bam_file',
+            read_length_summary => 'summary_file',
+            read_length_histogram => 'read_length_histogram',
+            alignment_length_histogram => 'alignment_length_histogram',
+        },
+        output_properties => {
+            'result' => 'read_length_result',
+        },
+    );
+    $self->setup_workflow_operation(%read_length_operation_params);
 
     # RefCov
     # WARNING: MUST USE PERL 5.10.1
     if ($self->roi_file_path) {
         my %refcov_operation_params = (
             workflow => $workflow,
-            name => 'RefCov '. $bam_basename,
+            name => $self->id .' RefCov '. $self->bam_file,
             class_name => 'Genome::Model::Tools::RefCov::Standard',
             input_properties => {
                 'bam_file' => 'alignment_file_path',
@@ -330,7 +356,6 @@ sub execute {
     }
 
     # SUMMARY
-    # TODO: First create tab-delimited(tsv) files for each txt output
     # TODO: Eventually create and xls spreadsheet or consolidated PDF report
     my $flagstat_data = Genome::Model::Tools::Sam::Flagstat->parse_file_into_hashref($flagstat_path);
     $data{$bam_basename}{'FlagstatMetrics'} = $flagstat_data;
