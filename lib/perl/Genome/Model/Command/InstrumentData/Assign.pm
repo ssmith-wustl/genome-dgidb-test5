@@ -360,11 +360,11 @@ sub _assign_all_instrument_data {
             $id_capture_target = $id->target_region_set_name;
         };
 
-        # Skip if no mpdel_capture targets and the inst data has a target
+        # Skip if no model_capture targets and the inst data has a target
         if( not %model_capture_targets and defined $id_capture_target) {
             $self->warning_message(
                 'SKIPPING instrument data ('.$id->id.' '.$id->sequencing_platform.') because '
-                .' it does not have a capture target and the model does. Assign it explicitly, if desired.'
+                .' it has a capture target but the model does not. Assign it explicitly, if desired.'
             );
             next ID;
         }
