@@ -165,6 +165,7 @@ sub _resolve_workflow_for_build {
         input_properties => [ keys %inputs ],
         output_properties => ['all features'],
     );
+    $workflow->log_dir($build->log_directory);
     my $input_connector = $workflow->get_input_connector;
     my $output_connector = $workflow->get_output_connector;
 
