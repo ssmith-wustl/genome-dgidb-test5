@@ -1525,7 +1525,7 @@ sub add_processing_profiles_to_pses{
                     my $pp_id = $self->_default_de_novo_assembly_bacterial_processing_profile_id;
                     push @processing_profile_ids_to_add, $pp_id;
                 }
-                elsif ( $taxon->name eq 'unknown' ) { # unknow taxon normally skipped
+                elsif ( $taxon->domain =~ /unknown/i ) { # unknow domain normally skipped
                     my $index_illumina = GSC::IndexIllumina->get( $instrument_data_id );
                     if ( $index_illumina ) {
                         for my $project ( $index_illumina->get_research_projects ) {
