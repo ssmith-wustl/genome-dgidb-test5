@@ -186,6 +186,10 @@ sub pileup_error_rate {
             if ($flag & 4) {
                 next;
             }
+            if ($pileup->is_refskip) {
+                # There is a gap in the alignment, ignore gaps.
+                next;
+            }
             my $read_end = 0;
             if ($flag & 1) {
                 if ($flag & 64) {
@@ -255,7 +259,7 @@ sub pileup_error_rate {
             }
             if ($qbase =~ /[nN]/) {
                 $read_counts{$read_end}{ambiguous}->[$qpos]++;
-            } elsif ($ref_base ne $qbase) {
+            } elsif (uc($ref_base) ne uc($qbase)) {
                 $read_counts{$read_end}{mismatch}->[$qpos]++;
             } else {
                 $read_counts{$read_end}{match}->[$qpos]++;

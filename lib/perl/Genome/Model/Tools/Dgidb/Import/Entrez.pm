@@ -121,11 +121,11 @@ sub import_genes {
         my $gene_name = join("", $gene_name_prefix, $gene->{entrez_id});
         my $gene_name_report = $self->_create_gene_name_report($gene_name, 'entrez_id', 'Entrez', $version, '');
         push @gene_name_reports, $gene_name_report;
-        my $gene_symbol_association = $self->_create_gene_name_report_association($gene_name_report, $gene->{entrez_gene_symbol}, 'entrez_gene_symbol', '');
+        my $gene_symbol_association = $self->_create_gene_alternate_name_report($gene_name_report, $gene->{entrez_gene_symbol}, 'entrez_gene_symbol', '');
         my @entrez_gene_synonyms = split(',', $gene->{entrez_gene_synonyms});
         for my $entrez_gene_synonym (@entrez_gene_synonyms){
             if ($entrez_gene_synonym and $entrez_gene_synonym ne 'na'){
-                my $gene_name_report_association = $self->_create_gene_name_report_association($gene_name_report, $entrez_gene_synonym, 'entrez_gene_synonym', '');
+                my $gene_alternate_name_report = $self->_create_gene_alternate_name_report($gene_name_report, $entrez_gene_synonym, 'entrez_gene_synonym', '');
             }
         }
     }

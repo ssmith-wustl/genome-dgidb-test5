@@ -1,14 +1,14 @@
-package Genome::DruggableGene::GeneNameReportCategoryAssociation;
+package Genome::DruggableGene::GeneAlternateNameReport;
 
 use strict;
 use warnings;
 
 use Genome;
 
-class Genome::DruggableGene::GeneNameReportCategoryAssociation {
+class Genome::DruggableGene::GeneAlternateNameReport {
     is => 'UR::Object',
     id_generator => '-uuid',
-    table_name => 'dgidb.gene_name_report_category_association',
+    table_name => 'dgidb.gene_name_report_association',
     schema_name => 'dgidb',
     data_source => 'Genome::DataSource::Main',
     id_by => [
@@ -19,16 +19,16 @@ class Genome::DruggableGene::GeneNameReportCategoryAssociation {
         gene_name_report => {
             is => 'Genome::DruggableGene::GeneNameReport',
             id_by => 'gene_id',
-            constraint_name => 'gene_name_report_category_association_gene_name_report_id_fkey',
+            constraint_name => 'gene_name_report_association_gene_name_report_id_fkey',
         },
-        category_name => { is => 'Text' },
-        category_value => { is => 'Text' },
+        alternate_name => {is => 'Text'},
+        nomenclature => { is => 'Text'},
         description => {
             is => 'Text',
             is_optional => 1,
         },
     ],
-    doc => 'Claim regarding a categorization for a gene name', 
+    doc => 'Claim regarding an alternate name for a gene name',
 };
 
 1;

@@ -24,7 +24,7 @@ sub execute {
 
     print "Loading alternate names and creating hash\n";
     my %alt_to_entrez;
-    for (Genome::DruggableGene::GeneNameReportAssociation->get) { #operate on all associations, which map genes to alternate names
+    for (Genome::DruggableGene::GeneAlternateNameReport->get) { #operate on all associations, which map genes to alternate names
         next if $_->alternate_name =~ /^.$/;    #ignore single character names
         next if $_->alternate_name =~ /^\d\d$/; #ignore 2 digit names
         next unless $_->nomenclature eq 'entrez_gene_synonym' or $_->nomenclature eq 'entrez_gene_symbol';

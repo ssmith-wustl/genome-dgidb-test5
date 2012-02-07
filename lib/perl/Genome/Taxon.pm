@@ -153,5 +153,16 @@ class Genome::Taxon {
     doc => 'A species, strain, or other taxonomic unit',
 };
 
+sub __display_name__ {
+    my $self = $_[0];
+    return $self->name . ' (' . $self->id . ')';
+}
+
+# This is just present to help the ProteinAnnotation pipeline run ON THIS BRANCH.
+# Remove this and refactor the tool before merging into master.
+sub gram_stain {
+    return shift->gram_stain_category(@_);
+}
+
 1;
 

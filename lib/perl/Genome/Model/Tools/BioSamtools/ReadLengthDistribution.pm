@@ -13,38 +13,63 @@ class Genome::Model::Tools::BioSamtools::ReadLengthDistribution {
             is => 'Text',
             doc => 'A path to a BAM format file of aligned capture reads',
         },
-        output_file => {
+        summary_file => {
             is => 'Text',
-            doc => 'The output directory to generate peak files',
+            doc => 'A summary of the distribution metrics.',
         },
-        sizes_file => {
-
+        read_length_histogram => {
+            is => 'Text',
+            doc => 'The output read length distribution file.',
+        },
+        alignment_length_histogram => {
+            is => 'Text',
+            doc => 'The output alignment length distribution file.',
         }
-    ],
-    has_optional => [
-        _output_fh => {},
     ],
 };
 
 sub execute {
     my $self = shift;
-    my $output_fh = Genome::Sys->open_file_for_writing($self->output_file);
-    my $sizes_fh = Genome::Sys->open_file_for_writing($self->sizes_file);
-    $self->_output_fh($output_fh);
+
+    my @length_headers = ('Length','Count','Porportion');
+    my $read_length_writer = Genome::Utility::IO::SeparatedValueWriter->create(
+        output => $self->read_length_histogram,
+        separator => "\t",
+        headers => \@length_headers,
+    );
+    unless ($read_length_writer) { die; }
+    
+    my $alignment_length_writer = Genome::Utility::IO::SeparatedValueWriter->create(
+        output => $self->alignment_length_histogram,
+        separator => "\t",
+        headers => \@length_headers,
+    );
+    unless ($alignment_length_writer) { die; }
+
+    my @summary_headers = ('Type','Count','Minimum','Maximum','Mean','Standard_Deviation');
+    my $summary_writer = Genome::Utility::IO::SeparatedValueWriter->create(
+        output => $self->summary_file,
+        separator => "\t",
+        headers => \@summary_headers,
+    );
+    unless ($summary_writer) { die; }
+    
     my $refcov_bam  = Genome::Model::Tools::RefCov::Bam->create(bam_file => $self->bam_file );
     unless ($refcov_bam) {
         die('Failed to load bam file '. $self->bam_file);
     }
+    
     my $bam  = $refcov_bam->bio_db_bam;
     my $header = $bam->header();
+
     my %read_stats;
     my $read_stats = Statistics::Descriptive::Sparse->new();
     my %alignment_stats;
     my $alignment_stats = Statistics::Descriptive::Sparse->new();
+
     while (my $align = $bam->read1()) {
         my $flag = $align->flag;
         my $read_length = $align->l_qseq;
-        print $sizes_fh $read_length ."\n";
         $read_stats->add_data($read_length);
         $read_stats{$read_length}++;
         unless ($flag & 4) {
@@ -53,29 +78,44 @@ sub execute {
             $alignment_stats->add_data($align_length);
         }
     }
-    $sizes_fh->close;
-    print $output_fh 'READ SUMMARY:' ."\n";
-    $self->print_stats($read_stats,\%read_stats);
-    print $output_fh 'ALIGNED SUMMARY:' ."\n";
-    $self->print_stats($alignment_stats,\%alignment_stats);
-    $self->_output_fh->close;
-    return 1;
-}
 
-sub print_stats {
-    my $self = shift;
-    my $stats = shift;
-    my $histogram = shift;
-    my $output_fh = $self->_output_fh;
-    print $output_fh "\tCount:\t". $stats->count ."\n";
-    print $output_fh "\tMinimum:\t". $stats->min ."\n";
-    print $output_fh "\tMaximum:\t". $stats->max ."\n";
-    my $partitions = $stats->max - $stats->min + 1;
-    print $output_fh "\tMean:\t". $stats->mean ."\n";
-    print $output_fh "\tStdDev:\t". $stats->standard_deviation ."\n";
-    for my $key (sort {$a <=> $b} keys %{$histogram}) {
-        print $output_fh "\t$key:\t". $$histogram{$key} ."\n";
+    # The total count is actually alignments, NOT reads...
+    my %read_summary = (
+        'Type' => 'Reads',
+        'Count' => $read_stats->count,
+        'Minimum' => $read_stats->min,
+        'Maximum' => $read_stats->max,
+        'Mean' => $read_stats->mean,
+        'Standard_Deviation' => $read_stats->standard_deviation,
+    );
+    $summary_writer->write_one(\%read_summary);
+    for my $key (sort {$a <=> $b} keys %read_stats) {
+        my %data = (
+            'Length' => $key,
+            'Count' => $read_stats{$key},
+            'Porportion' => ($read_stats{$key} / $read_stats->count),
+        );
+        $read_length_writer->write_one(\%data);
     }
+
+    my %alignment_summary = (
+        'Type' => 'Alignments',
+        'Count' => $alignment_stats->count,
+        'Minimum' => $alignment_stats->min,
+        'Maximum' => $alignment_stats->max,
+        'Mean' => $alignment_stats->mean,
+        'Standard_Deviation' => $alignment_stats->standard_deviation,
+    );
+    $summary_writer->write_one(\%alignment_summary);
+    for my $key (sort {$a <=> $b} keys %alignment_stats) {
+        my %data = (
+            'Length' => $key,
+            'Count' => $alignment_stats{$key},
+            'Porportion' => ($alignment_stats{$key} / $alignment_stats->count),
+        );
+        $alignment_length_writer->write_one(\%data);
+    }
+    return 1;
 }
 
 

@@ -145,43 +145,51 @@ sub execute {
   # Remove the temporary intermediate file containing only pvalues
   unlink( $pval_file );
 
-  # Parse the gene_mrs file to gather SNV and Indel counts for each gene
+  # Parse the gene_mrs file to gather categorized mutation counts for each gene
   my $mrFh = IO::File->new( $gene_mr_file ) or die "Couldn't open $gene_mr_file. $!\n";
   my %mut_cnts = ();
+  my %mut_classes_hash = ();
   while( my $line = $mrFh->getline )
   {
     next if( $line =~ m/^#/ );
     my ( $gene, $type, undef, $mut_cnt ) = split( /\t/, $line );
-    $mut_cnts{$gene}{indels} += $mut_cnt if( $type =~ m/Indels/ );
-    $mut_cnts{$gene}{snvs} += $mut_cnt if( $type =~ m/(Transitions|Transversions)/ );
+    $mut_cnts{$gene}{$type} += $mut_cnt;
+    $mut_classes_hash{$type} = 1;
   }
   $mrFh->close;
+  my @mut_classes = sort keys %mut_classes_hash;
 
   # Parse the R output to identify the SMGs
   my $smgFh = IO::File->new( $output_file_detailed ) or die "Couldn't open $output_file_detailed. $!\n";
   my @newLines = ();
   my @smgLines = ();
+  my $header = "#Gene\t" . join( "\t", @mut_classes );
+  $header .= "\tP-value FCPT\tP-value LRT\tP-value CT\tFDR FCPT\tFDR LRT\tFDR CT\n";
   while( my $line = $smgFh->getline )
   {
     chomp( $line );
     if( $line =~ m/^Gene\tp.fisher\tp.lr\tp.convol\tfdr.fisher\tfdr.lr\tfdr.convol$/ )
     {
-      push( @newLines, "#Gene\tSNVs\tIndels\tP-value FCPT\tP-value LRT\tP-value CT\tFDR FCPT\tFDR LRT\tFDR CT\n" );
-      push( @smgLines, "#Gene\tSNVs\tIndels\tP-value FCPT\tP-value LRT\tP-value CT\tFDR FCPT\tFDR LRT\tFDR CT\n" );
+      push( @newLines, $header );
+      push( @smgLines, $header );
     }
     else
     {
       my @cols = split( /\t/, $line );
-      if( defined $mut_cnts{$cols[0]}{snvs} and defined $mut_cnts{$cols[0]}{indels} )
+      my $all_mut_cnts = "";
+      foreach( @mut_classes )
       {
-        push( @newLines, join( "\t", $cols[0], $mut_cnts{$cols[0]}{snvs}, $mut_cnts{$cols[0]}{indels}, @cols[1..6] ) . "\n" );
+        # If a mutation count is a fraction, round down the digits after the decimal point
+        $all_mut_cnts .= ( "\t" . (( $mut_cnts{$cols[0]}{$_} =~ m/\./ ) ? sprintf( "%.2f", $mut_cnts{$cols[0]}{$_} ) : $mut_cnts{$cols[0]}{$_} ));
+      }
+      $all_mut_cnts =~ s/^\t//;
+      push( @newLines, join( "\t", $cols[0], $all_mut_cnts, @cols[1..6] ) . "\n" );
 
-        # If the FDR of at least two of these tests is less than the maximum allowed, we consider it an SMG
-        if(( $cols[4] <= $max_fdr && $cols[5] <= $max_fdr ) || ( $cols[4] <= $max_fdr && $cols[6] <= $max_fdr ) ||
-           ( $cols[5] <= $max_fdr && $cols[6] <= $max_fdr ))
-        {
-          push( @smgLines, join( "\t", $cols[0], $mut_cnts{$cols[0]}{snvs}, $mut_cnts{$cols[0]}{indels}, @cols[1..6] ) . "\n" );
-        }
+      # If the FDR of at least two of these tests is less than the maximum allowed, we consider it an SMG
+      if(( $cols[4] <= $max_fdr && $cols[5] <= $max_fdr ) || ( $cols[4] <= $max_fdr && $cols[6] <= $max_fdr ) ||
+         ( $cols[5] <= $max_fdr && $cols[6] <= $max_fdr ))
+      {
+        push( @smgLines, join( "\t", $cols[0], $all_mut_cnts, @cols[1..6] ) . "\n" );
       }
     }
   }

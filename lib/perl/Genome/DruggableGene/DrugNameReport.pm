@@ -24,12 +24,12 @@ class Genome::DruggableGene::DrugNameReport {
             is_optional => 1,
         },
         drug_alt_names => {
-            is => 'Genome::DruggableGene::DrugNameReportAssociation',
+            is => 'Genome::DruggableGene::DrugAlternateNameReport',
             reverse_as => 'drug_name_report',
             is_many => 1,
         },
         drug_categories => {
-            is => 'Genome::DruggableGene::DrugNameReportCategoryAssociation',
+            is => 'Genome::DruggableGene::DrugCategoryReport',
             reverse_as => 'drug_name_report',
             is_many => 1,
         },
