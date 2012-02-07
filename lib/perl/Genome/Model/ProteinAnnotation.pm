@@ -124,6 +124,14 @@ sub _map_workflow_inputs {
         my $path = join('/', $build->data_directory, $detail->{name});
         $output_dirs{$property_name} = $path;
 
+        # TODO: this should probably be a step, even though it happens to be safe to 
+        # do by the time this is called.
+        if (not -d $path) {
+            if (-d $self->data_directory) {
+                Genome::Sys->create_directory($path);
+            }
+        }
+
         for my $subject_prop (@{$detail->{properties_from_subject}}) {
             if ($subject_prop eq 'gram_stain') {
                 $subject_properties{'gram_stain'} = $subject->gram_stain_category;
