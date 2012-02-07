@@ -26,8 +26,8 @@ class PAP::Command::PsortB {
         },
         gram_stain => {
             is  => 'Text',
-            doc => 'gram stain (positive/negative)',
-            valid_values => ['positive', 'negative'],
+            doc => 'gram stain (positive/negative/variable)',
+            valid_values => ['positive', 'negative','variable'],
             is_input => 1,
         },
     ],
