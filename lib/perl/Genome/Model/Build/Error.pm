@@ -72,7 +72,7 @@ sub error_log {
                 $self->step_event_id,
             )
         );
-        Carp::cluck("don't go here!");
+        #Carp::cluck("don't go here!");
         return;
     }
     
