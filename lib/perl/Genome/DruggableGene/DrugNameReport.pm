@@ -29,7 +29,7 @@ class Genome::DruggableGene::DrugNameReport {
             is_many => 1,
         },
         drug_categories => {
-            is => 'Genome::DruggableGene::DrugNameReportCategoryAssociation',
+            is => 'Genome::DruggableGene::DrugCategoryReport',
             reverse_as => 'drug_name_report',
             is_many => 1,
         },

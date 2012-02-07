@@ -119,7 +119,7 @@ sub get_interactions {
     my @unfiltered_interactions = Genome::DruggableGene::DrugGeneInteractionReport->get($self->_chunk_in_clause_list('Genome::DruggableGene::DrugGeneInteractionReport', 'gene_id', '', @gene_ids));
     my @drug_ids = map($_->drug_id, @unfiltered_interactions);
     Genome::DruggableGene::DrugNameReport->get(\@drug_ids);
-    Genome::DruggableGene::DrugNameReportCategoryAssociation->get($self->_chunk_in_clause_list('Genome::DruggableGene::DrugNameReportCategoryAssociation', 'drug_id', '', @drug_ids));
+    Genome::DruggableGene::DrugCategoryReport->get($self->_chunk_in_clause_list('Genome::DruggableGene::DrugCategoryReport', 'drug_id', '', @drug_ids));
     Genome::DruggableGene::DrugGeneInteractionReportAttribute->get($self->_chunk_in_clause_list('Genome::DruggableGene::DrugGeneInteractionReportAttribute', 'interaction_id',  '', map($_->id, @unfiltered_interactions)));
 
     my $bool_expr = $self->_chunk_in_clause_list('Genome::DruggableGene::DrugGeneInteractionReport', 'gene_id', $self->filter, @gene_ids);
