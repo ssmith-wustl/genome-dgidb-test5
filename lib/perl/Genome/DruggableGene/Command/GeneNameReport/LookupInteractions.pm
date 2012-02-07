@@ -93,15 +93,15 @@ sub _find_gene_name_reports_for_identifiers {
     my %results;
 
     my @gene_name_reports = Genome::DruggableGene::GeneNameReport->get($self->_chunk_in_clause_list('Genome::DruggableGene::GeneNameReport', 'name', '', @gene_identifiers));
-    my @gene_name_report_associations = Genome::DruggableGene::GeneNameReportAssociation->get($self->_chunk_in_clause_list('Genome::DruggableGene::GeneNameReportAssociation', 'alternate_name', '',  @gene_identifiers));
-    my @ids = map($_->gene_id, @gene_name_report_associations);
+    my @gene_alternate_name_reports = Genome::DruggableGene::GeneAlternateNameReport->get($self->_chunk_in_clause_list('Genome::DruggableGene::GeneAlternateNameReport', 'alternate_name', '',  @gene_identifiers));
+    my @ids = map($_->gene_id, @gene_alternate_name_reports);
     @ids = uniq @ids;
     Genome::DruggableGene::GeneNameReport->get($self->_chunk_in_clause_list('Genome::DruggableGene::GeneNameReport', 'id', '', @ids));
     push @ids, map($_->id, @gene_name_reports);
-    Genome::DruggableGene::GeneNameReportAssociation->get($self->_chunk_in_clause_list('Genome::DruggableGene::GeneNameReportAssociation', 'gene_id', '', @ids));
+    Genome::DruggableGene::GeneAlternateNameReport->get($self->_chunk_in_clause_list('Genome::DruggableGene::GeneAlternateNameReport', 'gene_id', '', @ids));
     for my $gene_identifier(@gene_identifiers) {
         my @reports_for_identifier = grep($_->name eq $gene_identifier, @gene_name_reports);
-        my @associations_for_identifier = grep($_->alternate_name eq $gene_identifier, @gene_name_report_associations);
+        my @associations_for_identifier = grep($_->alternate_name eq $gene_identifier, @gene_alternate_name_reports);
         my @report_ids = map($_->gene_id, @associations_for_identifier);
         @reports_for_identifier = (@reports_for_identifier, Genome::DruggableGene::GeneNameReport->get($self->_chunk_in_clause_list('Genome::DruggableGene::GeneNameReport', 'id', '', @report_ids)));
         @reports_for_identifier = uniq @reports_for_identifier;

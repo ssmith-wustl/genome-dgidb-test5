@@ -127,12 +127,12 @@ sub _import_drug {
     my $interaction = shift;
     my $drug_name = $self->_create_drug_name_report($interaction->{drug_id}, 'DrugBank drug identifier', 'DrugBank', $version, '');
 
-    my $primary_name = $self->_create_drug_name_report_association($drug_name, $interaction->{drug_name}, 'Primary DrugBank drug name', '');
+    my $primary_name = $self->_create_drug_alternate_name_report($drug_name, $interaction->{drug_name}, 'Primary DrugBank drug name', '');
 
     my @drug_synonyms = split(', ', $interaction->{drug_synonyms});
     for my $drug_synonym (@drug_synonyms){
         next if $drug_synonym eq 'na';
-        my $drug_name_association = $self->_create_drug_name_report_association($drug_name, $drug_synonym, 'DrugBank primary name to synonym association', '');
+        my $drug_name_association = $self->_create_drug_alternate_name_report($drug_name, $drug_synonym, 'DrugBank primary name to synonym association', '');
     }
 
     my @drug_brands = split(', ', $interaction->{drug_brands});
@@ -144,7 +144,7 @@ sub _import_drug {
         } else {
             $manufacturer = 'drug_brand';
         }
-        my $drug_name_association = $self->_create_drug_name_report_association($drug_name, $drug_brand, $manufacturer, '');
+        my $drug_name_association = $self->_create_drug_alternate_name_report($drug_name, $drug_brand, $manufacturer, '');
     }
 
     unless($interaction->{drug_type} eq 'na'){
@@ -152,7 +152,7 @@ sub _import_drug {
     }
 
     unless($interaction->{drug_cas_number} eq 'na'){
-        my $drug_name_cas_number = $self->_create_drug_name_report_association($drug_name, $interaction->{drug_cas_number}, 'cas_number', '');
+        my $drug_name_cas_number = $self->_create_drug_alternate_name_report($drug_name, $interaction->{drug_cas_number}, 'cas_number', '');
     }
 
     my @drug_categories = split(', ', $interaction->{drug_categories});
@@ -177,8 +177,8 @@ sub _import_gene {
     my $gene_prefix = 'DGBNK_G';
     my $gene_partner_id_with_prefix = $gene_prefix . $interaction->{partner_id};
     my $gene_name = $self->_create_gene_name_report($gene_partner_id_with_prefix, 'drugbank_partner_id', 'DrugBank', $version, '');
-    my $gene_symbol_gene_name_association = $self->_create_gene_name_report_association($gene_name, $interaction->{gene_symbol}, 'drugbank_gene_symbol', '');
-    my $uniprot_gene_name_association=$self->_create_gene_name_report_association($gene_name, $interaction->{uniprot_id}, 'uniprot_id', '');
+    my $gene_symbol_gene_name_association = $self->_create_gene_alternate_name_report($gene_name, $interaction->{gene_symbol}, 'drugbank_gene_symbol', '');
+    my $uniprot_gene_name_association=$self->_create_gene_alternate_name_report($gene_name, $interaction->{uniprot_id}, 'uniprot_id', '');
     return $gene_name;
 }
 
