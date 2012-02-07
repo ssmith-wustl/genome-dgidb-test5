@@ -117,6 +117,9 @@ sub execute {
                     use_external => $self->use_external,
                     ($self->whitelist_snps_file?(filters => ['whitelist:whitelist_snps_file='.$self->whitelist_snps_file]):()),
                 );
+                unless ($extract->_resolve_instrument_data_from_library($model->subject)){
+                    next;
+                }
                 unless ($extract) {
                     $self->error_message("Failed to create Extract Microarray for sample " . $model->subject_name);
                     return;

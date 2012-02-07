@@ -135,6 +135,9 @@ sub execute {
         #TODO: grab and merge annotation data from the component builds
     }
 
+    #Make ROI FeatureList
+    $build->get_or_create_roi_bed;
+
     return 1;
 }
 

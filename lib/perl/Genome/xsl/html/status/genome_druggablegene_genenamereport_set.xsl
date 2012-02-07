@@ -131,7 +131,7 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
               </td>
               <td class="value">
                 <ul>
-                  <xsl:for-each select="aspect[@name='gene_name_report_associations']/object">
+                  <xsl:for-each select="aspect[@name='gene_alt_names']/object">
                     <li>
                       <xsl:value-of select="normalize-space(aspect[@name='alternate_name']/value)"/>
                       <xsl:text>  </xsl:text>

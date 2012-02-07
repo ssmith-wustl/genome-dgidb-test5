@@ -106,7 +106,17 @@ class Genome::Model {
             is => 'Genome::ModelGroupBridge', 
             reverse_as => 'model' 
         },
-    ],    
+    ],
+    has_optional_deprecated => [
+        auto_assign_inst_data => {
+            is => 'Boolean',
+            column_name => 'AUTO_ASSIGN_INST_DATA',
+        },
+        auto_build_alignments => {
+            is => 'Boolean',
+            column_name => 'AUTO_BUILD_ALIGNMENTS',
+        },
+    ],
     schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',
     table_name => 'GENOME_MODEL',

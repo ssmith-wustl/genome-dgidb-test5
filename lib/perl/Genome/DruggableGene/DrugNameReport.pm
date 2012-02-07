@@ -23,24 +23,24 @@ class Genome::DruggableGene::DrugNameReport {
             is => 'Text',
             is_optional => 1,
         },
-        drug_name_report_associations => {
+        drug_alt_names => {
             is => 'Genome::DruggableGene::DrugNameReportAssociation',
             reverse_as => 'drug_name_report',
             is_many => 1,
         },
-        drug_name_report_category_associations => {
+        drug_categories => {
             is => 'Genome::DruggableGene::DrugNameReportCategoryAssociation',
             reverse_as => 'drug_name_report',
             is_many => 1,
         },
-        drug_gene_interaction_reports => {
+        interactions => {
             is => 'Genome::DruggableGene::DrugGeneInteractionReport',
             reverse_as => 'drug_name_report',
             is_many => 1,
         },
-        gene_name_reports => {
+        genes => {
             is => 'Genome::DruggableGene::GeneNameReport',
-            via => 'drug_gene_interaction_reports',
+            via => 'interactions',
             to => 'gene_name_report',
             is_many => 1,
         },
@@ -51,57 +51,29 @@ class Genome::DruggableGene::DrugNameReport {
                 return $citation;
             |,
         },
-        _withdrawn_cat => {
-            via => 'drug_name_report_category_associations',
-            to => 'category_value',
-            where => [category_value => 'withdrawn'],
-            is_optional => 1,
-            is_many => 1,
-        },
         is_withdrawn => {
-            calculate_from => ['_withdrawn_cat'],
-            calculate => q|
-                return 1 if $_withdrawn_cat; return 0;
-            |,
-        },
-        _nutraceutical_cat => {
-            via => 'drug_name_report_category_associations',
-            to => 'category_value',
-            where => [category_value => 'nutraceutical'],
-            is_optional => 1,
-            is_many => 1,
+            calculate => q{
+                return 1 if grep($_->category_value eq 'withdrawn', $self->drug_categories);
+                return 0;
+            },
         },
         is_nutraceutical => {
-            calculate_from => ['_nutraceutical_cat'],
-            calculate => q|
-                return 1 if $_nutraceutical_cat; return 0;
-            |,
-        },
-        _approved_cat => {
-            via => 'drug_name_report_category_associations',
-            to => 'category_value',
-            where => [category_value => 'approved'],
-            is_optional => 1,
-            is_many => 1,
+            calculate => q{
+                return 1 if grep($_->category_value eq 'nutraceutical', $self->drug_categories);
+                return 0;
+            },
         },
         is_approved => {
-            calculate_from => ['_approved_cat'],
-            calculate => q|
-                return 1 if $_approved_cat; return 0;
-            |,
-        },
-        _neoplastic_cat => {
-            via => 'drug_name_report_category_associations',
-            to => 'category_value',
-            where => ['category_value' => ['antineoplastic', 'antineoplastic agents']],
-            is_optional => 1,
-            is_many => 1,
+            calculate => q{
+                return 1 if grep($_->category_value eq 'approved', $self->drug_categories);
+                return 0;
+            },
         },
         is_antineoplastic => {
-            calculate_from => ['_neoplastic_cat'],
-            calculate => q|
-                return 1 if $_neoplastic_cat; return 0;
-            |,
+            calculate => q{
+                return 1 if grep($_->category_value =~ /antineoplastic/, $self->drug_categories);
+                return 0;
+            },
         },
     ],
     doc => 'Claim regarding the name of a drug',

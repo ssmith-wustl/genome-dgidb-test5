@@ -38,7 +38,7 @@ sub _create_drug_name_report_association {
     my $self = shift;
     my ($drug_name_report, $alternate_name, $nomenclature, $description) = @_;
     my %params = (
-        drug_name_report_id => $drug_name_report->id,
+        drug_id => $drug_name_report->id,
         alternate_name => uc $alternate_name,
         nomenclature => $nomenclature,
         description => $description,
@@ -53,7 +53,7 @@ sub _create_drug_name_report_category_association {
     my $self = shift;
     my ($drug_name_report, $category_name, $category_value, $description) = @_;
     my %params = (
-        drug_name_report_id => $drug_name_report->id,
+        drug_id => $drug_name_report->id,
         category_name => $category_name,
         category_value => lc $category_value,
         description => $description,
@@ -85,7 +85,7 @@ sub _create_gene_name_report_association {
     my $self = shift;
     my ($gene_name_report, $alternate_name, $nomenclature, $description) = @_;
     my %params = (
-        gene_name_report_id => $gene_name_report->id,
+        gene_id => $gene_name_report->id,
         alternate_name => uc $alternate_name,
         nomenclature => $nomenclature,
         description => $description,
@@ -99,7 +99,7 @@ sub _create_gene_name_report_category_association {
     my $self = shift;
     my ($gene_name_report, $category_name, $category_value, $description) = @_;
     my %params = (
-        gene_name_report_id => $gene_name_report->id,
+        gene_id => $gene_name_report->id,
         category_name => $category_name,
         category_value => lc $category_value,
         description => $description,
@@ -113,8 +113,8 @@ sub _create_interaction_report {
     my $self = shift;
     my ($drug_name_report, $gene_name_report, $source_db_name, $source_db_version, $description) = @_;
     my %params = (
-        gene_name_report_id => $gene_name_report->id,
-        drug_name_report_id => $drug_name_report->id,
+        gene_id => $gene_name_report->id,
+        drug_id => $drug_name_report->id,
         source_db_name => $source_db_name,
         source_db_version => $source_db_version,
         description =>  $description,
