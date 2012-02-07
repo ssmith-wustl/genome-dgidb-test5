@@ -148,7 +148,7 @@ sub _import_drug {
     }
 
     unless($interaction->{drug_type} eq 'na'){
-        my $drug_name_category_association = $self->_create_drug_name_report_category_association($drug_name, 'drug_type', $interaction->{drug_type}, '');
+        my $drug_name_category_association = $self->_create_drug_category_report($drug_name, 'drug_type', $interaction->{drug_type}, '');
     }
 
     unless($interaction->{drug_cas_number} eq 'na'){
@@ -158,13 +158,13 @@ sub _import_drug {
     my @drug_categories = split(', ', $interaction->{drug_categories});
     for my $drug_category (@drug_categories){
         next if $drug_category eq 'na';
-        my $category_association = $self->_create_drug_name_report_category_association($drug_name, 'drug_category', $drug_category, '');
+        my $category_association = $self->_create_drug_category_report($drug_name, 'drug_category', $drug_category, '');
     }
 
     my @drug_groups = split(', ', $interaction->{drug_groups});
     for my $drug_group (@drug_groups){
         next if $drug_group eq 'na';
-        my $group_association = $self->_create_drug_name_report_category_association($drug_name, 'drug_group', $drug_group, '');
+        my $group_association = $self->_create_drug_category_report($drug_name, 'drug_group', $drug_group, '');
     }
 
     return $drug_name;
