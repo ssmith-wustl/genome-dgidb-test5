@@ -121,6 +121,11 @@ class Genome::Model::Tools::Music::Play {
             doc => 'Group truncational mutations as a separate category',
             default => 0,
         },
+        merge_concurrent_muts => {
+            is => 'Boolean',
+            doc => 'Multiple mutations of a gene in the same sample are treated as 1',
+            default => 0,
+        },
         skip_non_coding => {
             is => 'Boolean',
             doc => 'Skip non-coding mutations from the provided MAF file',
