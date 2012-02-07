@@ -81,7 +81,7 @@ sub _create_gene_name_report {
     return Genome::DruggableGene::GeneNameReport->create(%params);
 }
 
-sub _create_gene_name_report_association {
+sub _create_gene_alternate_name_report {
     my $self = shift;
     my ($gene_name_report, $alternate_name, $nomenclature, $description) = @_;
     my %params = (
@@ -90,9 +90,9 @@ sub _create_gene_name_report_association {
         nomenclature => $nomenclature,
         description => $description,
     );
-    my $gene_name_report_association = Genome::DruggableGene::GeneNameReportAssociation->get(%params);
-    return $gene_name_report_association if $gene_name_report_association;
-    return Genome::DruggableGene::GeneNameReportAssociation->create(%params);
+    my $gene_alternate_name_report = Genome::DruggableGene::GeneAlternateNameReport->get(%params);
+    return $gene_alternate_name_report if $gene_alternate_name_report;
+    return Genome::DruggableGene::GeneAlternateNameReport->create(%params);
 }
 
 sub _create_gene_name_report_category_association {

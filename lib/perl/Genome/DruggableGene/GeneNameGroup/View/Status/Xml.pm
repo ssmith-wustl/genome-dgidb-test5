@@ -44,7 +44,7 @@ sub _generate_content {
     my $self = shift;
     my $group = $self->subject;
     my @ids = map{$_->id}$group->gene_name_reports;
-    Genome::DruggableGene::GeneNameReportAssociation->get(gene_id => \@ids);
+    Genome::DruggableGene::GeneAlternateNameReport->get(gene_id => \@ids);
     return $self->SUPER::_generate_content(@_);
 }
 

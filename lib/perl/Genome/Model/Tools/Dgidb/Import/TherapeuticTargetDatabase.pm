@@ -124,15 +124,15 @@ sub _import_gene {
     my $version = $self->version;
     my $gene_name = $self->_create_gene_name_report($interaction->{target_id}, 'TTD_partner_id', 'TTD', $version, '');
     
-    my $gene_name_association = $self->_create_gene_name_report_association($gene_name, $interaction->{target_name}, 'TTD_gene_symbol', '');
+    my $gene_name_association = $self->_create_gene_alternate_name_report($gene_name, $interaction->{target_name}, 'TTD_gene_symbol', '');
     
     my @target_synonyms = split(";", $interaction->{target_synonyms});
     for my $target_synonym (@target_synonyms){
         next if $target_synonym eq 'na';
-        my $gene_synonym = $self->_create_gene_name_report_association($gene_name, $target_synonym, 'TTD_alternate_gene_name', '');
+        my $gene_synonym = $self->_create_gene_alternate_name_report($gene_name, $target_synonym, 'TTD_alternate_gene_name', '');
     }
 
-    my $uniprot_association = $self->_create_gene_name_report_association($gene_name, $interaction->{target_uniprot_id}, 'uniprot_id', '');
+    my $uniprot_association = $self->_create_gene_alternate_name_report($gene_name, $interaction->{target_uniprot_id}, 'uniprot_id', '');
 
     return $gene_name;
 }
