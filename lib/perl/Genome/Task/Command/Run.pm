@@ -76,12 +76,19 @@ sub execute {
         $self->task->status("succeeded");
     }
 
+    $self->task->time_finished($UR::Context::current->now);
+
+    # this is a really ugly way to do this, but there is no way to catch sync errors
+    # and route them to the captured stdout/stderr, so we will end up having to commit
+    # here.
+
+    UR::Context->commit();
+
     if ($self->output_basedir) {
         open (STDOUT, ">&", $old_stdout);
         open (STDERR, ">&", $old_stderr);
     }
     
-    $self->task->time_finished($UR::Context::current->now);
 
     return $result;
 }

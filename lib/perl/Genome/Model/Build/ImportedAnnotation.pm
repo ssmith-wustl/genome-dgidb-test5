@@ -163,6 +163,67 @@ sub is_compatible_with_reference_sequence_build {
         ($rsb->version eq $version);
 }
 
+sub get_or_create_roi_bed {
+    my $self = shift;
+    my $roi = Genome::FeatureList->get(subject => $self,
+                                       name => $self->name.'_roi');
+    if ($roi) {
+        return $roi;
+    }
+
+    my @substructure_files = glob($self->data_directory.'/annotation_data/substructures/*.csv');
+
+    my ($out_file, $out) = Genome::Sys->create_temp_file;
+    foreach my $file (@substructure_files) {
+        my $fh = Genome::Sys->open_file_for_reading($file);
+        while (my $line = <$fh>) {
+            chomp $line;
+            my @fields = split /[\t,]/, $line;
+            my $chrom = $fields[1];
+            my $start = $fields[9]-1;
+            my $stop = $fields[10];
+            my $gene_id = $fields[37];
+            my $transcript_id = $fields[30];
+            my $structure_type = $fields[8];
+            my $ordinal = $fields[11];
+            my $strand;
+            if ($fields[32] eq '-1') {
+                $strand = 'rev';
+            }
+            else {
+                $strand = 'fwd';
+            }
+            my $string = join("\t",$chrom, $start, $stop, 
+                            join(":", $gene_id,
+                            $transcript_id, $structure_type, $ordinal,
+                            $strand));
+            if ($structure_type ne 'flank') {
+                print $out_file "$string\n";
+            }
+        }
+    }
+    close $out_file;
+
+    my $file_content_hash = Genome::Sys->md5sum($out);
+
+    $roi = Genome::FeatureList->create(
+        name => $self->name.'_roi',
+        format => 'true-BED',
+        file_content_hash => $file_content_hash,
+        subject => $self,
+        reference => $self->reference_sequence,
+        file_path => $out,
+        content_type => 'roi',
+        description => 'Created by ImportedAnnotation->get_or_create_roi_bed',
+        source => 'WUTGI',
+    );
+    if (!$roi) {
+        $self->error_message("Failed to create ROI file");
+        return;
+    }
+    return $roi;
+}
+
 # returns default location
 sub determine_data_directory {
     my ($self) = @_;

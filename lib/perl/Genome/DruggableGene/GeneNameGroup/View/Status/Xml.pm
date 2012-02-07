@@ -25,7 +25,7 @@ class Genome::DruggableGene::GeneNameGroup::View::Status::Xml {
                       'source_db_version',
                       'original_data_source_url',
                       {
-                          name => 'gene_name_report_associations',
+                          name => 'gene_alt_names',
                               perspective => 'default',
                               toolkit => 'xml',
                               aspects => [
@@ -44,7 +44,7 @@ sub _generate_content {
     my $self = shift;
     my $group = $self->subject;
     my @ids = map{$_->id}$group->gene_name_reports;
-    Genome::DruggableGene::GeneNameReportAssociation->get(gene_name_report_id => \@ids);
+    Genome::DruggableGene::GeneNameReportAssociation->get(gene_id => \@ids);
     return $self->SUPER::_generate_content(@_);
 }
 

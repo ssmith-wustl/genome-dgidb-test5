@@ -13,7 +13,7 @@ class Genome::DruggableGene::GeneNameGroupBridge {
 
     id_by => [
         gene_name_group_id => { is => 'Text'},
-        gene_name_report_id => { is => 'Text'},
+        gene_id => { is => 'Text', column_name => 'gene_name_report_id'},
     ],
     has => [
         gene_name_group => {
@@ -22,7 +22,7 @@ class Genome::DruggableGene::GeneNameGroupBridge {
         },
         gene_name_report => {
             is => 'Genome::DruggableGene::GeneNameReport',
-            id_by => 'gene_name_report_id',
+            id_by => 'gene_id',
         },
     ],
     doc => 'Associate a gene that is likely synonymous with other genes in this group',

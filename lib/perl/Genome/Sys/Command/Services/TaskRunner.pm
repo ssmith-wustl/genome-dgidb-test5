@@ -13,7 +13,6 @@ class Genome::Sys::Command::Services::TaskRunner {
         output_basedir => {
             is => 'String',
             doc => 'Directory to put stdout/stderr from run jobs',    
-            is_optional => 1,
         },
         restart_file => {
             is => 'String',
@@ -88,7 +87,8 @@ sub check_restart_loop() {
         my $mtime = (stat($self->restart_file))[9];
         if ($mtime > $self->_restart_file_mtime) {
             $self->status_message("Restart file updated. Restarting as requested.");
-            exec("genome model services task-runner");
+            my $cmd = sprintf("genome sys services task-runner --outut-basedir=%s --restart-file=%s", $self->output_basedir, $self->restart_file);
+            exec($cmd);
         }
     }
     

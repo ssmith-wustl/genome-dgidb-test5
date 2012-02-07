@@ -15,30 +15,30 @@ class Genome::DruggableGene::DrugGeneInteractionReport {
         id => { is => 'Text' },
     ],
     has => [
-        drug_name_report_id => { is => 'Text'},
-        drug_name_report => {
+        drug_id => { is => 'Text', column_name => 'drug_name_report_id'},
+        drug => {
             is => 'Genome::DruggableGene::DrugNameReport',
-            id_by => 'drug_name_report_id',
+            id_by => 'drug_id',
             constraint_name => 'drug_gene_interaction_report_drug_name_report_id_fkey',
         },
-        drug_name_report_name => {
-            via => 'drug_name_report',
+        drug_name => {
+            via => 'drug',
             to => 'name',
         },
-        gene_name_report_id => { is => 'Text'},
-        gene_name_report => {
+        gene_id => { is => 'Text', column_name => 'gene_name_report_id'},
+        gene => {
             is => 'Genome::DruggableGene::GeneNameReport',
-            id_by => 'gene_name_report_id',
+            id_by => 'gene_id',
             constraint_name => 'drug_gene_interaction_report_gene_name_report_id_fkey',
         },
-        gene_name_report_name => {
-            via => 'gene_name_report',
+        gene_name => {
+            via => 'gene',
             to => 'name',
         },
         source_db_name => { is => 'Text'},
         source_db_version => { is => 'Text'},
         description => { is => 'Text', is_optional => 1 },
-        drug_gene_interaction_report_attributes => {
+        interaction_attributes => {
             is => 'Genome::DruggableGene::DrugGeneInteractionReportAttribute',
             reverse_as => 'drug_gene_interaction_report',
             is_many => 1,
@@ -50,20 +50,14 @@ class Genome::DruggableGene::DrugGeneInteractionReport {
                 return $citation;
             |,
         },
-        _known_action_cat => {
-            via => 'drug_gene_interaction_report_attributes',
-            to => 'value',
-            where => [name => 'is_known_action', value => 'yes'],
-            is_optional => 1,
-        },
         is_known_action => {
-            calculate_from => ['_known_action_cat'],
-            calculate => q|
-                return 1 if $_known_action_cat; return 0;
-            |,
+            calculate => q{
+                return 1 if grep($_->name eq 'is_known_action' && $_->value eq 'yes', $self->interaction_attributes);
+                return 0;
+            },
         },
         interaction_types => {
-            via => 'drug_gene_interaction_report_attributes',
+            via => 'interaction_attributes',
             to => 'value',
             where => [name => 'interaction_type'],
             is_many => 1,

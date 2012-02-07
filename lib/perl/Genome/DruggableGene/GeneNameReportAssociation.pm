@@ -15,10 +15,10 @@ class Genome::DruggableGene::GeneNameReportAssociation {
         id => {is => 'Text'},
     ],
     has => [
-        gene_name_report_id => { is => 'Text'},
+        gene_id => { is => 'Text', column_name => 'gene_name_report_id'},
         gene_name_report => {
             is => 'Genome::DruggableGene::GeneNameReport',
-            id_by => 'gene_name_report_id',
+            id_by => 'gene_id',
             constraint_name => 'gene_name_report_association_gene_name_report_id_fkey',
         },
         alternate_name => {is => 'Text'},

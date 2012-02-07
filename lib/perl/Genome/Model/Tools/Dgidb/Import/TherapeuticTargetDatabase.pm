@@ -225,18 +225,18 @@ sub preload_objects {
     #Let's preload anything for this database name and version so that we can avoid death by 1000 queries
     my @gene_names = Genome::DruggableGene::GeneNameReport->get(source_db_name => $source_db_name, source_db_version => $source_db_version);
     for my $gene_name (@gene_names){
-        $gene_name->gene_name_report_associations;
+        $gene_name->gene_alt_names;
         $gene_name->gene_name_category_report_associations;
     }
     my @drug_names = Genome::DruggableGene::DrugNameReport->get(source_db_name => $source_db_name, source_db_version => $source_db_version);
     for my $drug_name (@drug_names){
-        $drug_name->drug_name_report_associations;
-        $drug_name->drug_name_report_category_associations;
+        $drug_name->drug_alt_names;
+        $drug_name->drug_categories;
     }
     my @gene_ids = map($_->id, @gene_names);
-    my @interactions = Genome::DruggableGene::DrugGeneInteractionReport->get(gene_name_report_id => \@gene_ids);
+    my @interactions = Genome::DruggableGene::DrugGeneInteractionReport->get(gene_id => \@gene_ids);
     for my $interaction (@interactions){
-        $interaction->drug_gene_interaction_report_attributes;
+        $interaction->interaction_attributes;
     }
 
     return 1;
