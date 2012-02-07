@@ -108,10 +108,10 @@ class Genome::Model {
         },
     ],
     has_optional_deprecated => [
-        _auto_assign_inst_data => {
+        auto_assign_inst_data => {
             column_name => 'AUTO_ASSIGN_INST_DATA',
         },
-        _auto_build_alignments => {
+        auto_build_alignments => {
             column_name => 'AUTO_BUILD_ALIGNMENTS',
         },
     ],

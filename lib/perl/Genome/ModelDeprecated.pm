@@ -42,16 +42,16 @@ class Genome::ModelDeprecated {
             is => 'Boolean',
             doc => 'flag the model as the default system "answer" for its subject'
         },
-        auto_assign_inst_data => {
-            is => 'Boolean',
-            calculate_from => ['_auto_assign_inst_data'],
-            calculate => q{ $_auto_assign_inst_data; }
-        },
-        auto_build_alignments => {
-            is => 'Boolean',
-            calculate_from => ['_auto_build_alignments'],
-            calculate => q{ $_auto_build_alignments; }
-        }, # TODO: rename to auto_build
+#        auto_assign_inst_data => {
+#            is => 'Boolean',
+#            calculate_from => ['_auto_assign_inst_data'],
+#            calculate => q{ $_auto_assign_inst_data; }
+#        },
+#        auto_build_alignments => {
+#            is => 'Boolean',
+#            calculate_from => ['_auto_build_alignments'],
+#            calculate => q{ $_auto_build_alignments; }
+#        }, # TODO: rename to auto_build
         keep_n_most_recent_builds => { 
             via => 'attributes', to => 'value', is_mutable => 1, 
             where => [ property_name => 'keep_n_most_recent_builds', entity_class_name => 'Genome::Model' ] 
