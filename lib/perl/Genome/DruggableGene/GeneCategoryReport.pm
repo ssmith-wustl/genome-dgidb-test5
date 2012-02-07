@@ -1,11 +1,11 @@
-package Genome::DruggableGene::GeneNameReportCategoryAssociation;
+package Genome::DruggableGene::GeneCategoryReport;
 
 use strict;
 use warnings;
 
 use Genome;
 
-class Genome::DruggableGene::GeneNameReportCategoryAssociation {
+class Genome::DruggableGene::GeneCategoryReport {
     is => 'UR::Object',
     id_generator => '-uuid',
     table_name => 'dgidb.gene_name_report_category_association',

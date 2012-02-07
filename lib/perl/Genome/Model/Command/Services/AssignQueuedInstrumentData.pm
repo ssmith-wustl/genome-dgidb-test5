@@ -69,7 +69,7 @@ sub _default_mc16s_processing_profile_id {
 }
 
 sub _default_de_novo_assembly_bacterial_processing_profile_id {
-    return 2658559;
+    return 2682126;
 }
 
 sub _default_rna_seq_processing_profile_id {
