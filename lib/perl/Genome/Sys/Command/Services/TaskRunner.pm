@@ -85,6 +85,9 @@ sub task_loop {
            };
            # rescue after a failure to sync
            if (!$ret || $@ ) {
+               $self->error_message("Failed to execute: $@");
+               UR::Context->rollback;
+               $task = UR::Context->current->reload('Genome::Task', id=>$id);
                $task->out_of_band_attribute_update(status=>'failed', time_finished=>$UR::Context::current->now);
            }
            exit(0);
