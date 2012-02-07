@@ -23,7 +23,7 @@ class Genome::Model {
     has => [
         name => { is => 'Text' },
         type_name => { is => 'Text', via => 'processing_profile' },
-        subclass_name => { 
+        subclass_name => {
             is => 'Text',is_mutable => 0, column_name => 'SUBCLASS_NAME',
             calculate_from => 'processing_profile_id',
             calculate => sub {
@@ -36,18 +36,18 @@ class Genome::Model {
                 return __PACKAGE__ . '::' . Genome::Utility::Text::string_to_camel_case($pp->type_name);
             },
         },
-        subject => { 
+        subject => {
             is => 'Genome::Subject',
             id_by => 'subject_id',
         },
-        # FIXME This can be removed once the subject_class_name column is dropped. 
+        # FIXME This can be removed once the subject_class_name column is dropped.
         subject_class_name => {
             is => 'Text',
             is_optional => 1,
         },
-        processing_profile => { 
-            is => 'Genome::ProcessingProfile', 
-            id_by => 'processing_profile_id' 
+        processing_profile => {
+            is => 'Genome::ProcessingProfile',
+            id_by => 'processing_profile_id'
         },
     ],
     has_optional => [
@@ -64,15 +64,15 @@ class Genome::Model {
         build_requested => { is => 'Boolean'},
     ],
     has_optional_many => [
-        builds  => { 
-            is => 'Genome::Model::Build', 
+        builds  => {
+            is => 'Genome::Model::Build',
             reverse_as => 'model',
-            doc => 'Versions of a model over time, with varying quantities of evidence' 
+            doc => 'Versions of a model over time, with varying quantities of evidence'
         },
-        inputs => { 
-            is => 'Genome::Model::Input', 
+        inputs => {
+            is => 'Genome::Model::Input',
             reverse_as => 'model',
-            doc => 'links to data currently assigned to the model for processing' 
+            doc => 'links to data currently assigned to the model for processing'
         },
         instrument_data => {
             is => 'Genome::InstrumentData',
@@ -82,29 +82,29 @@ class Genome::Model {
             where => [ name => 'instrument_data' ],
             doc => 'Instrument data currently assigned to the model.'
         },
-        projects => { 
-            is => 'Genome::Project', 
-            via => 'project_parts', 
-            to => 'project', 
-            is_many => 1, 
-            is_mutable => 1, 
-            doc => 'Projects that include this model', 
+        projects => {
+            is => 'Genome::Project',
+            via => 'project_parts',
+            to => 'project',
+            is_many => 1,
+            is_mutable => 1,
+            doc => 'Projects that include this model',
         },
-        project_parts => { 
-            is => 'Genome::ProjectPart', 
-            reverse_as => 'entity', 
-            is_many => 1, 
-            is_mutable => 1, 
+        project_parts => {
+            is => 'Genome::ProjectPart',
+            reverse_as => 'entity',
+            is_many => 1,
+            is_mutable => 1,
         },
-        model_groups => { 
-            is => 'Genome::ModelGroup', 
-            via => 'model_bridges', 
+        model_groups => {
+            is => 'Genome::ModelGroup',
+            via => 'model_bridges',
             to => 'model_group',
             is_mutable => 1
         },
-        model_bridges => { 
-            is => 'Genome::ModelGroupBridge', 
-            reverse_as => 'model' 
+        model_bridges => {
+            is => 'Genome::ModelGroupBridge',
+            reverse_as => 'model'
         },
     ],
     has_optional_deprecated => [
@@ -120,7 +120,7 @@ class Genome::Model {
     schema_name => 'GMSchema',
     data_source => 'Genome::DataSource::GMSchema',
     table_name => 'GENOME_MODEL',
-    doc => 'a versioned data model describing one the sequence and features of a genome' 
+    doc => 'a versioned data model describing one the sequence and features of a genome'
 };
 
 # Override in subclasses to have additional stuff appended to the model's default name
@@ -146,8 +146,8 @@ sub _input_counts_are_ok {
     return ($input_count == $build_input_count);
 }
 
-# Override in subclasses for custom behavior. Updates the model as necessary prior to starting a 
-# build. Useful for ensuring that the build is incorporating all of the latest information. 
+# Override in subclasses for custom behavior. Updates the model as necessary prior to starting a
+# build. Useful for ensuring that the build is incorporating all of the latest information.
 # TODO Make sure this is necessary, could be removed
 sub check_for_updates {
     return 1;
@@ -210,7 +210,7 @@ sub delete {
         $self->debug_message("Deleting model input " . $input->__display_name__);
         my $rv = $input->delete;
         unless ($rv) {
-            Carp::confess $self->error_message("Could not delete model input " . $input->__display_name__ . 
+            Carp::confess $self->error_message("Could not delete model input " . $input->__display_name__ .
                 " prior to deleting model " . $self->__display_name__);
         }
     }
@@ -238,8 +238,8 @@ sub sorted_builds {
 sub succeeded_builds { return $_[0]->completed_builds; }
 sub completed_builds {
     my $self = shift;
-    my @completed_builds = grep { 
-        defined $_->status and 
+    my @completed_builds = grep {
+        defined $_->status and
         $_->status eq 'Succeeded' and
         $_->date_completed
     } $self->sorted_builds;
@@ -276,10 +276,10 @@ sub builds_with_status {
         $_->status eq $status
     } $self->sorted_builds;
 }
-    
+
 # Overriding build_requested to add a note to the model with information about who requested a build
 sub build_requested {
-    my ($self, $value, $reason) = @_; 
+    my ($self, $value, $reason) = @_;
     # Writing the if like this allows someone to do build_requested(undef)
     if (@_ > 1) {
         my ($calling_package, $calling_subroutine) = (caller(1))[0,3];
@@ -402,7 +402,7 @@ sub copy {
 
 sub params_for_class {
     my $meta = shift->class->__meta__;
-    
+
     my @param_names = map {
         $_->property_name
     } sort {
@@ -410,7 +410,7 @@ sub params_for_class {
     } grep {
         defined $_->{is_param} && $_->{is_param}
     } $meta->property_metas;
-    
+
     return @param_names;
 }
 
@@ -549,7 +549,7 @@ sub _preprocess_subclass_description {
         next if $prop_desc->{via};
         next if $prop_desc->{reverse_as};
         next if $prop_desc->{implied_by};
-        
+
         if ($prop_desc->{is_param} and $prop_desc->{is_input}) {
             die "class $class has is_param and is_input on the same property! $prop_name";
         }
@@ -573,7 +573,7 @@ sub _preprocess_subclass_description {
                 property_name => $assoc,
                 implied_by => $prop_name,
                 is => 'Genome::Model::Input',
-                reverse_as => 'model', 
+                reverse_as => 'model',
                 where => [ name => $prop_name ],
                 is_mutable => $prop_desc->{is_mutable},
                 is_optional => $prop_desc->{is_optional},
@@ -584,7 +584,7 @@ sub _preprocess_subclass_description {
             # If we do duplicate the code below for value_id
 
             %$prop_desc = (%$prop_desc,
-                via => $assoc, 
+                via => $assoc,
                 to => 'value',
             );
         }
@@ -608,7 +608,7 @@ sub _preprocess_subclass_description {
 
 my $depth = 0;
 sub __extend_namespace__ {
-    my ($self,$ext) = @_; 
+    my ($self,$ext) = @_;
 
     my $meta = $self->SUPER::__extend_namespace__($ext);
     if ($meta) {
@@ -622,7 +622,7 @@ sub __extend_namespace__ {
     }
 
     # If the command class for the model sub type cannot be found, this will create it
-    if ( $ext eq 'Command' ) { 
+    if ( $ext eq 'Command' ) {
         my $create_command_tree = $self->_create_command_tree;
         Carp::confess('Failed to create command tree for '.$self->class.'!') if not $create_command_tree;
     }
