@@ -127,7 +127,7 @@ sub _map_workflow_inputs {
         # TODO: this should probably be a step, even though it happens to be safe to 
         # do by the time this is called.
         if (not -d $path) {
-            if (-d $self->data_directory) {
+            if (-d $build->data_directory) {
                 Genome::Sys->create_directory($path);
             }
         }
