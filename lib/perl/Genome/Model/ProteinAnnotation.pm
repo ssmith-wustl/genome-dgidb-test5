@@ -142,6 +142,17 @@ sub _map_workflow_inputs {
         }
     }
 
+    # for some reason, passing an undef value to a property on a command fails
+    # sadly, we do not currently distinguish between setting undef and not specifying a value
+    # if we did, this would need tuning
+    # if a command has a default value, you might want to set it to undef to disable that value
+    for my $name (keys %subject_properties) {
+        my $value = $subject_properties{$name};
+        if (!defined($value) or $value eq '') {
+            delete $subject_properties{$name};
+        }
+    }
+
     my @inputs = (
         prediction_fasta_file => $self->prediction_fasta_file->id,
         chunk_size => $self->chunk_size,
