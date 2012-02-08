@@ -17,6 +17,9 @@ my $archos = `uname -a`;
 if ($archos !~ /64/) {
     plan skip_all => "Must run from 64-bit machine";
 } 
+elsif (!$ENV{UR_RUN_LONG_TESTS}) {
+    plan skip_all => 'This tests takes 10 minutes to complete, run with UR_RUN_LONG_TESTS to enable';
+}
 
 use_ok('Genome::Model::Tools::DetectVariants2::Varscan');
 

@@ -11,7 +11,7 @@ my $archos = `uname -a`;
 if ($archos !~ /64/) {
     plan skip_all => "Must run from 64-bit machine";
 } else {
-    if($ENV{GSCAPP_RUN_LONG_TESTS}) {
+    if($ENV{UR_RUN_LONG_TESTS}) {
         plan tests => 6;
     } else {
         plan skip_all => 'This test takes about an hour to run and thus is skipped.  Use `ur test run --long` to enable.';
