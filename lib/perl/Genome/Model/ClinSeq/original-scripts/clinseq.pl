@@ -403,8 +403,8 @@ sub importSNVs{
 
   #Define variant effect type filters
   #TODO: Allow different filters to be used as a parameter
-  my $snv_filter = "missense|nonsense|splice_site";
-  my $indel_filter = "in_frame_del|in_frame_ins|frame_shift_del|frame_shift_ins|splice_site_ins|splice_site_del";
+  my $snv_filter = "missense|nonsense|splice_site|splice_region|rna";
+  my $indel_filter = "in_frame_del|in_frame_ins|frame_shift_del|frame_shift_ins|splice_site_ins|splice_site_del|rna";
 
   #Define the dataset: WGS SNV, WGS indel, Exome SNV, Exome indel
   my %dataset;
