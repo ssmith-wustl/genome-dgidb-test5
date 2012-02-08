@@ -181,7 +181,7 @@ sub _generate_variant_mapping {
     my $variant_type;
     while(my $line = <$variant_file_list_fh>) {
         chomp $line;
-        if($line =~ m{.*/(\w+\d+)/[^/]+$}) {
+        if($line =~ m{.*/((?:\w+\d+)|(?:\w_\w\w-[^/]+))/[^/]+$}) {
             my $patient = $1;
 
             $data{$patient}{$variant_type} ||= [];

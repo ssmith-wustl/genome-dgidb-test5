@@ -5,8 +5,10 @@
         <br />or<br />
         <span style="font-weight: bold">Paste a gene list: </span>
         <br />
-        <textarea name="genes" rows="100" cols="20">Genes - one gene per line.</textarea>
+        <textarea name="genes" rows="100" cols="20" />
         <br />
+        <input type="checkbox" name="filter" value="ttd" />Disable TTD<br />
+        <input type="checkbox" name="filter" value="db" />Disable Drug Bank<br />
         <button id="submit-button">Find Drug Interactions as CSV</button>
     </form>
 </div>

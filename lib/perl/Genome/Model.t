@@ -207,9 +207,16 @@ is(@builds, 2, 'create builds');
 my @model_builds = $model->builds;
 is_deeply(\@model_builds, \@builds, 'model builds');
 
+# Fix the date_scheduled on the builds because completed_builds sorts by it
+my $time = UR::Context->now;
+(my $build_0_time = $time) =~ s/.$/0/; # build_0 "scheduled" first
+(my $build_1_time = $time) =~ s/.$/9/; # build_1 "scheduled" later, this fixes an issue if these next couple test run within one second
+$builds[0]->the_master_event->date_scheduled($build_0_time);
+$builds[1]->the_master_event->date_scheduled($build_1_time);
+
 # one succeeded, one running
 $builds[0]->the_master_event->event_status('Succeeded');
-$builds[0]->the_master_event->date_completed(UR::Time->now);
+$builds[0]->the_master_event->date_completed(UR::Context->now);
 is($builds[0]->status, 'Succeeded', 'build 0 is succeeded');
 $builds[1]->the_master_event->event_status('Running');
 is($builds[1]->status, 'Running', 'build 1 is running');
@@ -229,7 +236,7 @@ is_deeply(\@running_builds, [$builds[1]], 'running builds');
 
 # both succeeded
 $builds[1]->the_master_event->event_status('Succeeded');
-$builds[1]->the_master_event->date_completed(UR::Time->now);
+$builds[1]->the_master_event->date_completed(UR::Context->now);
 is($builds[1]->status, 'Succeeded', 'build 1 is now succeeded');
 
 @completed_builds = $model->completed_builds;

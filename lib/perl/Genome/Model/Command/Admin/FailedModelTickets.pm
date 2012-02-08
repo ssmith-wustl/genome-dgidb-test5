@@ -204,5 +204,4 @@ sub _pick_optimal_error_log{
     }
     return shift @optimal_errors;
 }
-
 1;

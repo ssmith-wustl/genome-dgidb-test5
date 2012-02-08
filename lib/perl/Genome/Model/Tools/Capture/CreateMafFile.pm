@@ -133,7 +133,7 @@ sub execute {                               # replace with real execution logic.
       my $chr_stop = $lineContents[2];
       my $ref = $lineContents[3];
       my $var = $lineContents[4];
-	$var = code_to_var_allele($ref, $var) if($var ne "A" && $var ne "C" && $var ne "G" && $var ne "T");
+      $var = code_to_var_allele($ref, $var) if($var ne "A" && $var ne "C" && $var ne "G" && $var ne "T");
       my $key = "$chrom\t$chr_start\t$chr_stop\t$ref\t$var";
 
       if($annotations{$key})
@@ -142,7 +142,7 @@ sub execute {                               # replace with real execution logic.
         my $tumor_allele2 = $var;
         my $normal_allele1 = $ref;
         my $normal_allele2 = $ref;
-        
+
         ## Parse the normal genotype ##
         if($self->normal_gt_field && $lineContents[$self->normal_gt_field - 1])
         {
@@ -157,10 +157,6 @@ sub execute {                               # replace with real execution logic.
             $normal_allele2 = code_to_var_allele($ref, $normal_call);
           }
         }
-	else
-	{
-		warn "No annotation for $key\n";
-	}
 
         ## Parse the tumor genotype ##
         if($self->tumor_gt_field && $lineContents[$self->tumor_gt_field - 1])
@@ -176,10 +172,10 @@ sub execute {                               # replace with real execution logic.
             $tumor_allele2 = code_to_var_allele($ref, $tumor_call);
           }
         }
-        
+
         my ( $var_type, $gene, $trv_type ) = split( /\t/, $annotations{$key} );
+        $annotations{$key} =~ s/$var_type\t$gene\t$trv_type\t//;
         my $var_class = trv_to_mutation_type( $trv_type );
-	$annotations{$key} =~ s/$var_type\t$gene\t$trv_type\t//;
         my $maf_line = "$gene\t0\t$center\t$genome_build\t$chrom\t$chr_start\t$chr_stop\t+\t";
         $maf_line .=  "$var_class\t$var_type\t$ref\t";
         $maf_line .=  "$tumor_allele1\t$tumor_allele2\t";
@@ -194,6 +190,10 @@ sub execute {                               # replace with real execution logic.
         $maf_line .=  "$platform\t" . $annotations{$key} . "\n";
 
         print OUTFILE "$maf_line";
+      }
+      else
+      {
+        warn "No annotation for $key\n";
       }
     }
 
@@ -220,12 +220,12 @@ sub execute {                               # replace with real execution logic.
       my $ref = $lineContents[3];
       my $var = $lineContents[4];
 
-	if($var =~ '\/')
-	{
-		my ($var1, $var2) = split(/\//, $var);
-		$var = $var1 if($var1 ne $ref);
-		$var = $var2 if($var2 ne $ref);
-	}
+      if($var =~ '\/')
+      {
+        my ($var1, $var2) = split(/\//, $var);
+        $var = $var1 if($var1 ne $ref);
+        $var = $var2 if($var2 ne $ref);
+      }
       $ref = "-" if($ref eq "0");
       $var = "-" if($var eq "0");
 
@@ -234,6 +234,7 @@ sub execute {                               # replace with real execution logic.
       if($annotations{$key})
       {
           my ( $var_type, $gene, $trv_type ) = split( /\t/, $annotations{$key} );
+          $annotations{$key} =~ s/$var_type\t$gene\t$trv_type\t//;
           my $var_class = trv_to_mutation_type( $trv_type );
 
           my $tumor_allele1 = $ref;
@@ -245,17 +246,17 @@ sub execute {                               # replace with real execution logic.
           if($self->normal_gt_field && $lineContents[$self->normal_gt_field - 1])
           {
               my $normal_call= $lineContents[$self->normal_gt_field - 1];
-		my ($a1, $a2) = split(/\//, $normal_call);
+              my ($a1, $a2) = split(/\//, $normal_call);
               if($normal_call =~ '\*')
               {
                   $normal_allele1 = $ref;
                   $normal_allele2 = $var;
               }
-		elsif($a1 ne $a2)
-		{
-			$normal_allele1 = $ref;
-			$normal_allele2 = $var;	
-		}
+              elsif($a1 ne $a2)
+              {
+                $normal_allele1 = $ref;
+                $normal_allele2 = $var;
+              }
               else
               {
                   $normal_allele1 = $normal_allele2 = $var;
@@ -268,7 +269,7 @@ sub execute {                               # replace with real execution logic.
               my $tumor_call= $lineContents[$self->tumor_gt_field - 1];
               my ($a1, $a2) = split(/\//, $tumor_call);
 
-		if($tumor_call =~ '\*' || $a1 ne $a2)
+              if($tumor_call =~ '\*' || $a1 ne $a2)
               {
                   $tumor_allele1 = $ref;
                   $tumor_allele2 = $var;
@@ -278,7 +279,6 @@ sub execute {                               # replace with real execution logic.
                   $tumor_allele1 = $tumor_allele2 = $var;
               }
           }
-
 
           my $maf_line =  "$gene\t0\t$center\t$genome_build\t$chrom\t$chr_start\t$chr_stop\t+\t";
           $maf_line .=  "$var_class\t$var_type\t$ref\t";
@@ -291,10 +291,14 @@ sub execute {                               # replace with real execution logic.
           $maf_line .=  "\t"; # Val method
           $maf_line .=  "1\t"; # Score
           $maf_line .=  "dbGAP\t";
-          $maf_line .=  "$platform\n";
+          $maf_line .=  "$platform\t" . $annotations{$key} . "\n";
           print OUTFILE "$maf_line";
       }
-  }
+      else
+      {
+        warn "No annotation for $key\n";
+      }
+    }
 
   close($input);
   }
@@ -375,12 +379,11 @@ sub trv_to_mutation_type
 }
 
 
-## Convert an IUPAC code to 
-
+## Convert an IUPAC code to
 sub code_to_var_allele
 {
     my $ref = shift(@_);
-    my $code = shift(@_);        
+    my $code = shift(@_);
 
     return("A") if($code eq "A");
     return("C") if($code eq "C");
@@ -419,7 +422,7 @@ sub code_to_var_allele
         else
         {
             return("A");
-        }          
+        }
     }
 
     if($code eq "S")
@@ -431,7 +434,7 @@ sub code_to_var_allele
         else
         {
             return("C");
-        }          
+        }
     }
 
     if($code eq "Y")
@@ -443,7 +446,7 @@ sub code_to_var_allele
         else
         {
             return("C");
-        }          
+        }
     }
     if($code eq "K")
     {
@@ -454,14 +457,11 @@ sub code_to_var_allele
         else
         {
             return("G");
-        }          
+        }
     }
 
-
     warn "Unrecognized ambiguity code $code!\n";
-
-    return("N");	
+    return("N");
 }
-
 
 1;

@@ -12,18 +12,20 @@ class Genome::Sys::User {
     data_source => 'Genome::DataSource::GMSchema',
     table_name => 'genome_sys_user',
     id_by => [
-        email => { is => 'Text' },
+        email => { 
+            is => 'Text',
+            doc => 'Email of the user, must be unique',
+        },
     ],
     has_optional => [
-        name => { is => 'Text' },
+        name => { 
+            is => 'Text',
+            doc => 'Full name of the user (eg, Ronald McDonald)',
+        },
         username => {
-            calculate_from => ['email'],
-            calculate => sub { 
-                my ($e) = @_;
-                my ($u) = $e =~ /(.+)\@/; 
-                return $u;
-            }
-        }
+            is => 'Text',
+            doc => 'System user name of the user (eg, rmcdonald)',
+        },
     ],
     has_many_optional => [
         project_parts => { is => 'Genome::ProjectPart', reverse_as => 'entity', is_mutable => 1, },
@@ -42,16 +44,50 @@ class Genome::Sys::User {
     ],
 };
 
-sub add_role {
-    my ($self, $role) = @_;
-    my $bridge = Genome::Sys::User::RoleMember->create(
-        user => $self,
-        role => $role,
-    );
-    unless ($bridge) {
-        Carp::confess "Could not create user role bridge entity!";
+Genome::Sys::User->add_observer(
+    callback => \&_change_callback,
+);
+sub _change_callback {
+    my ($self, $signal) = @_;
+    return 1 unless grep { $signal eq $_ } qw/ create delete precommit /;
+    unless (Genome::Sys->current_user_is_admin) {
+        Carp::confess 'Only admins can modify users!';
     }
     return 1;
+}
+
+sub create {
+    my $class = shift;
+    my $bool_expr = UR::BoolExpr->resolve_normalized($class, @_);
+
+    my $email = $bool_expr->value_for('email');
+    unless ($email) {
+        Carp::confess "Cannot create a user without an email!";
+    }
+    my @users = Genome::Sys::User->get(email => $email);
+    if (@users) {
+        if (@users == 1) {
+            Carp::confess "Another user already exists with email address $email, cannot create another!";
+        }
+        else {
+            Carp::confess "Somehow there are many users with email address $email... Cannot create another, please contact informatics!";
+        }
+    }
+
+    return $class->SUPER::create(@_);
+}
+
+sub delete {
+    my $self = shift;
+    for my $bridge ($self->user_role_bridges) {
+        my $role_name = $bridge->role->name;
+        my $user_name = $self->name;
+        my $rv = $bridge->delete;
+        unless ($rv) {
+            Carp::confess "Could not delete bridge object between user $user_name and role $role_name";
+        }
+    }
+    return $self->SUPER::delete(@_);
 }
 
 sub fix_params_and_get {
@@ -76,45 +112,20 @@ sub fix_params_and_get {
     return $class->SUPER::get(%p);
 }
 
-sub __errors__ {
-    my $self = shift;
-    my @tags;
-
-    my @duplicates = eval {
-        Genome::Sys::User->get(
-            email => $self->email,
-        )
-    };
-    my $error = $@;
-    if ($error) {
-        if ($error =~ /An object of type Genome::Sys::User already exists with id/) {
-            $error = "Cannot create user with email " . $self->email .
-                ", a user with that email already exists!";
-        }
-
-        push @tags, UR::Object::Tag->create(
-            type => 'invalid',
-            properties => ['email'],
-            desc => $error,
-        );
-    }
-
-    return @tags;
+sub has_role_by_name {
+    my ($self, $role_name) = @_;
+    my $role = Genome::Sys::User::Role->get(name => $role_name);
+    return $self->has_role($role);
 }
 
-sub delete {
-    my $self = shift;
-
-    for my $bridge ($self->user_role_bridges) {
-        my $role_name = $bridge->role->name;
-        my $user_name = $self->name;
-        my $rv = $bridge->delete;
-        unless ($rv) {
-            Carp::confess "Could not delete bridge object between user $user_name and role $role_name";
-        }
-    }
-
-    return $self->SUPER::delete(@_);
+sub has_role {
+    my ($self, $role) = @_;
+    return 0 unless $role;
+    my $bridge = Genome::Sys::User::RoleMember->get(
+        user => $self,
+        role => $role,
+    );
+    return defined $bridge;
 }
 
 1;

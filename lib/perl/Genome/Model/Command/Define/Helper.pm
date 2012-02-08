@@ -63,10 +63,15 @@ class Genome::Model::Command::Define::Helper {
 sub help_brief {
     my $self = shift;
     my $msg;
-    my $processing_profile_subclass = eval {$self->_target_class_name };
-    if ($processing_profile_subclass) {
-        my $model_type = $processing_profile_subclass->_resolve_type_name_for_class;
-        $msg = "define a new $model_type genome model";
+    my $model_subclass = eval {$self->_target_class_name };
+    if ($model_subclass) {
+        my $model_type = $model_subclass->__meta__->property('processing_profile')->data_type->_resolve_type_name_for_class;
+        if ($model_type) {
+            $msg = "define a new $model_type genome model";
+        }
+        else {
+            $msg = "define a new genome model";
+        }
     }
     else {
         $msg = 'define a new genome model'
@@ -232,7 +237,7 @@ sub display_model_information {
 }
 
 sub listed_params {
-    return qw/ id name subject_name subject_type processing_profile_id processing_profile_name /;
+    return qw/ id name subject.name subject.subject_type processing_profile_id processing_profile.name /;
 }
 
 sub validate_processing_profile {

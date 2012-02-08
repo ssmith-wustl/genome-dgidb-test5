@@ -138,6 +138,13 @@ class Genome::Model::Tools::CopyNumber::ReadDepthPaired {
         },
         
 
+        processors => {
+            is => 'Integer',
+            is_optional => 1,
+            default => 1,
+            doc => "set the number of processors that the parallel steps will use",
+        }
+
         # sex => {
         #     is => 'String',
         #     is_optional => 0,
@@ -238,7 +245,7 @@ sub execute {
             print PARAMSFILE1 "gcWindowSize\t100\n";
             print PARAMSFILE1 "percCNGain\t0.05\n";
             print PARAMSFILE1 "percCNLoss\t0.05\n";
-            print PARAMSFILE1 "maxCores\t4\n";
+            print PARAMSFILE1 "maxCores\t" . $self->processors . "\n";
             print PARAMSFILE1 "outputDirectory\t$output_directory\n";
             print PARAMSFILE1 "annotationDirectory\t" . $annotation_path . "\n";
             print PARAMSFILE1 "binSize\t$bin_size\n";

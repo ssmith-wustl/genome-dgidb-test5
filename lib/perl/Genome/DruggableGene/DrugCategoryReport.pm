@@ -1,11 +1,11 @@
-package Genome::DruggableGene::DrugNameReportCategoryAssociation;
+package Genome::DruggableGene::DrugCategoryReport;
 
 use strict;
 use warnings;
 
 use Genome;
 
-class Genome::DruggableGene::DrugNameReportCategoryAssociation {
+class Genome::DruggableGene::DrugCategoryReport {
     is => 'UR::Object',
     id_generator => '-uuid',
     table_name => 'dgidb.drug_name_report_category_association',
@@ -15,10 +15,10 @@ class Genome::DruggableGene::DrugNameReportCategoryAssociation {
         id => {is => 'Text'},
     ],
     has => [
-        drug_name_report_id => { is => 'Text' },
+        drug_id => { is => 'Text', column_name => 'drug_name_report_id'},
         drug_name_report => {
             is => 'Genome::DruggableGene::DrugNameReport',
-            id_by => 'drug_name_report_id',
+            id_by => 'drug_id',
             constraint_name => 'drug_name_report_category_association_drug_name_report_id_fkey',
         },
         category_name => { is => 'Text' },
