@@ -20,7 +20,7 @@ use File::Slurp;
 use Data::UUID;
 use Cwd;
 use Carp 'confess';
-
+use PAP::Command;
 
 my $debug_err = '';
 
@@ -67,7 +67,8 @@ class PAP::Command::InterProScan {
                 locus_tag  => {
                                     is          => 'SCALAR',
                                     doc         => 'locus tag for this genome',
-									is_input => 1,
+                                    is_input => 1,
+                                    #default_value => 'foobar_locus'
                                 },
             ],
 };
