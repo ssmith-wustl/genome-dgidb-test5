@@ -288,6 +288,7 @@ sub _resolve_workflow_for_build {
 
         # pass along any other inputs the tool needs which the subject provides
         for my $name (@$properties_from_subject) {
+            next unless $inputs{$name};
             my $link = $workflow->add_link(
                 left_operation => $input_connector,
                 left_property => $name,
