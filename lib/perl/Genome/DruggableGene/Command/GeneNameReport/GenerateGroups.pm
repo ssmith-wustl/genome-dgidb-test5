@@ -24,8 +24,8 @@ sub execute {
 
     print "Loading alternate names and creating hash\n";
     my %alt_to_entrez;
-    for (Genome::DruggableGene::GeneAlternateNameReport->get) { #operate on all alternate names
     my %alt_to_other;
+    for (Genome::DruggableGene::GeneAlternateNameReport->get) { #operate on all alternate names
         next if $_->alternate_name =~ /^.$/;    #ignore single character names
         next if $_->alternate_name =~ /^\d\d$/; #ignore 2 digit names
         if($_->nomenclature eq 'entrez_gene_synonym' or $_->nomenclature eq 'entrez_gene_symbol'){
@@ -51,22 +51,19 @@ sub execute {
             my @genes_groupless = grep{not Genome::DruggableGene::GeneNameGroupBridge->get(gene_id => $_->id)} @genes;
 
             my $group = shift @groups;
-            unless($group->name){ #If not currently using an entrez_gene_symbol primary name, find one
-                my ($name) = map{$_->alternate_name}grep{$_->nomenclature eq 'entrez_gene_symbol'} map{$_->gene_alt_names}@genes_groupless;
-                ($name) = grep{$_}map{$_->name}@groups unless $name;
-                if($name){
-                    print "$progress_counter : $name chosen among multiple groups as name for $alt\n";
-                    $group->name($name);
-                }
+
+            my ($name) = map{$_->alternate_name}grep{$_->nomenclature eq 'entrez_gene_symbol'} map{$_->gene_alt_names}@genes_groupless;
+            if($name){
+                print "$progress_counter : $name hugo name set for $alt\n";
+                $group->name($name);
             }
+
             $group->consume(@groups); #gobble other groups and their members, deleting them
             Genome::DruggableGene::GeneNameGroupBridge->create(gene_id => $_->id, gene_name_group_id => $group->id) for @genes_groupless;
 
-            print "$alt added to existing group " . $group->name . "\n" if rand() < .001;
+            print "$progress_counter : $alt added to existing group " . $group->name . "\n" if rand() < .001;
         } else {
-            my $name = ''; #only use a name if its the primary name, aka entrez gene symbol
-            $name = $alt if grep{$_->nomenclature eq 'entrez_gene_symbol'}@{$alt_to_entrez{$alt}};
-            my $group = Genome::DruggableGene::GeneNameGroup->create(name => $name);
+            my $group = Genome::DruggableGene::GeneNameGroup->create(name => $alt);
             Genome::DruggableGene::GeneNameGroupBridge->create(gene_id => $_->id, gene_name_group_id => $group->id) for @genes;
         }
         $progress_counter++;
