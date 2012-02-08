@@ -10,69 +10,68 @@ require Text::Wrap;
 
 class Genome::Model::Build::Error {
     is => 'UR::Object',
-    has_optional => [
-        # these are only set for old, event-based workflows:
-        build_event => {
-            is => 'Genome::Model::Event',
-            id_by => 'build_event_id',
-            doc => 'The main build event.',
+    has => [
+    # Build event
+    build_event => {
+        is => 'Genome::Model::Event',
+        id_by => 'build_event_id',
+        doc => 'The main build event.',
+    },
+    build_event_id => {
+        is => 'Integer',
+        doc => 'The main build event id.',
+    },
+    # Stage
+    stage_event_id => {
+        is => 'Integer',
+        doc => 'The event id of the stage.',
+    },
+    stage => {
+        is => 'Text',
+        doc => 'The name of the stage.',
+    },
+    # Step event
+    step_event => {
+        is => 'Genome::Model::Event',
+        id_by => 'step_event_id',
+        doc => 'The step event.',
+    },
+    step_event_id => {
+        is => 'Integer',
+        doc => 'The event id of the step.',
+    },
+    step => {
+        is => 'Text',
+        doc => 'The name of the step.',
+    },
+    # Error stuff
+    error => {
+        is => 'Text',
+        doc => 'Error message text.',
+    },
+    error_wrapped => {
+        is => 'Text',
+        calculate_from => [qw/ error /],
+        calculate => q{
+        local $Text::Wrap::columns = $_[1] || 70;
+        return Text::Wrap::wrap('', '', $error);
         },
-        build_event_id => {
-            is => 'Integer',
-            doc => 'The main build event id.',
-        },
-        stage_event_id => {
-            is => 'Integer',
-            doc => 'The event id of the stage.',
-        },
-        step_event => {
-            is => 'Genome::Model::Event',
-            id_by => 'step_event_id',
-            doc => 'The step event.',
-        },
-        step_event_id => {
-            is => 'Integer',
-            doc => 'The event id of the step.',
-        },
-    ],
-    has_constant => [
-        # used for both old and new style events 
-        stage => {
-            is => 'Text',
-            doc => 'The name of the stage.',
-        },
-        step => {
-            is => 'Text',
-            doc => 'The name of the step.',
-        },
-        error => {
-            is => 'Text',
-            doc => 'Error message text.',
-        },
-        error_wrapped => {
-            is => 'Text',
-            calculate_from => [qw/ error /],
-            calculate => q{
-                local $Text::Wrap::columns = $_[1] || 70;
-                return Text::Wrap::wrap('', '', $error);
-            },
-        },
+    }
     ],
 };
 
+#< Error Log >#
 sub error_log {
     my $self = shift;
 
     my $step_event = $self->step_event;
     unless ( $step_event ) {
-        $DB::single = 1;
         $self->error_message(
             sprintf(
                 "Can't get step event for id (%s) to get error log file.",
                 $self->step_event_id,
             )
         );
-        #Carp::cluck("don't go here!");
         return;
     }
     
@@ -95,11 +94,26 @@ sub error_log_for_web {
     
     return 'file://'.$self->step_event->error_log_file;
 }
+#<>#
+
+#< Create >#
+sub create { 
+    my $class = shift;
+
+    my $self = $class->SUPER::create(@_)
+        or return;
+
+    for my $req (qw/ build_event_id stage stage_event_id step_event_id step error /) {
+        next if defined $self->$req;
+        $self->error_message("Property ($req) is required to create build error.");
+        return;
+    }
+    
+    return $self;
+}
 
 sub create_from_workflow_errors {
     my ($class, @wf_errors) = @_;
-
-    $DB::single = 1;
 
     # wf errors
     unless ( @wf_errors ) {
@@ -115,7 +129,7 @@ sub create_from_workflow_errors {
             or next; # ok
         #print Dumper(\%params, $wf_error->path_name);
         
-        my $error = eval { $class->create(%error_params) };
+        my $error = $class->create(%error_params);
         unless ( $error ) {
             $class->error_message("Can't create build error from workflow error. See above.");
             return;
@@ -129,11 +143,13 @@ sub create_from_workflow_errors {
 sub _validate_error {
     my ($class, $error) = @_;
 
-    unless ($error->error) {
-        $class->error_message("No message found in error: ".$error->id);
+    unless ( $error->path_name ) { 
+        $class->error_message("No path name found in error: ".$error->id);
         $class->error_message( Dumper($error) );
         return;
     }
+
+    #$class->status_message('Error path name: '.$error->path_name);
 
     return 1;
 }
@@ -143,35 +159,29 @@ sub _parse_error {
 
     my %error;
     my @tokens = split(m#/#, $error->path_name);
-    if (@tokens == 3) {
-        # old, event-based build error
+    unless ( @tokens ) { # bad
+        $class->error_message("Error parsing error path name: ".$error->path_name);
+        print Dumper($error);
+        return;
+    }
+    
+    return unless @tokens == 3; # ok, only looking for errors with 3 parts
 
-        unless ( @tokens ) { # bad
-            $class->error_message("Error parsing error path name: ".$error->path_name);
-            print Dumper($error);
-            return;
-        }
-        
-        # PATH NAME:
-        # '%s all stages/%s %s/%s %s'
-        # $build_event_id
-        # $stage_event_id, (currently the build_event_id, but if stages get ids...)
-        # $stage
-        # $step
-        # $step_event_id
-        @error{qw/ build_event_id /} = split(/\s/, $tokens[0], 2);
-        @error{qw/ stage_event_id stage /} = split(/\s/, $tokens[1]);
-        @error{qw/ step step_event_id /} = split(/\s/, $tokens[2]);
-        $error{error} = $error->error;
-    }
-    else {
-        $error{error} = $error->error;
-        $error{stage} = 'na';
-        $error{step} = 'na';
-    }
+    # PATH NAME:
+    # '%s all stages/%s %s/%s %s'
+    # $build_event_id
+    # $stage_event_id, (currently the build_event_id, but if stages get ids...)
+    # $stage
+    # $step
+    # $step_event_id
+    @error{qw/ build_event_id /} = split(/\s/, $tokens[0], 2);
+    @error{qw/ stage_event_id stage /} = split(/\s/, $tokens[1]);
+    @error{qw/ step step_event_id /} = split(/\s/, $tokens[2]);
+    $error{error} = $error->error;
 
     return %error;
 }
+#<>#
 
 1;
 
