@@ -16,6 +16,10 @@ $ENV{UR_DBI_NO_COMMIT} = 1;
 # ensure the module we will test compileis correctly before we start
 use_ok("Genome::Model::Command::Update::RemoveBuild");
 
+no warnings 'redefine';
+*Genome::Sys::current_user_is_admin = sub { return 1 };
+use warnings;
+
 #
 # make the test data 
 #
@@ -25,7 +29,7 @@ ok($s, "made a test sample");
 
 my $p = Genome::ProcessingProfile::TestPipeline->create(
     id => -999, 
-    name => "test " . __FILE__ . " on host $ENV{HOSTNAME} process $$",
+    name => "test " . __FILE__ . " on host " . Genome::Sys->hostname . " process $$",
     some_command_name => 'ls',
 );
 ok($p, "made a test processing profile");

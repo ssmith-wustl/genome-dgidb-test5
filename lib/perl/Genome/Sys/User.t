@@ -4,6 +4,10 @@ use warnings;
 use above "Genome";
 use Test::More;
 
+no warnings 'redefine';
+*Genome::Sys::current_user_is_admin = sub {return 1 };
+use warnings;
+
 use_ok("Genome::Sys::User") or die "cannot contiue w/o the user module";
 
 my $u0 = Genome::Sys::User->create(

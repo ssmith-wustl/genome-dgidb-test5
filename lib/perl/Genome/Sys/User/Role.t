@@ -15,6 +15,10 @@ use_ok('Genome::Sys::User::Role') or die;
 use_ok('Genome::Sys::User::RoleMember') or die;
 use_ok('Genome::Sys::User') or die;
 
+no warnings 'redefine';
+*Genome::Sys::current_user_is_admin = sub { return 1 };
+use warnings;
+
 my $test_role_name = 'testing123';
 
 my $role = Genome::Sys::User::Role->create(
@@ -23,20 +27,14 @@ my $role = Genome::Sys::User::Role->create(
 ok($role, 'able to create role with just a name');
 
 # Create dupliate, make sure it returns an error from __errors__
-my $duplicate_role = Genome::Sys::User::Role->create(
-    name => $test_role_name,
-);
-ok($duplicate_role, 'able to create role with same name');
-
-my @tags = $duplicate_role->__errors__;
-ok(@tags, 'got error tags when calling __errors__ on duplicate role');
-ok(@tags == 1, 'got only one tag on duplicate role, as expected');
-ok($tags[0]->desc =~ /user role already exists with name $test_role_name/, 'tag description indicates role is a duplicate');
-
-# Try to delete duplicate
-my $rv = $duplicate_role->delete;
-ok($rv, 'deletion of duplicate role returned 1, as expected');
-ok($duplicate_role->isa('UR::DeletedRef'), 'duplicate rule object is now a deleted ref, as expected');
+my $duplicate_role = eval {
+    Genome::Sys::User::Role->create(
+        name => $test_role_name,
+    )
+};
+my $error = $@;
+ok(!$duplicate_role, 'not able to create duplicate role');
+ok($error =~ /Another role with name $test_role_name already exists/, 'got expected error');
 
 # Create test user
 my $user = Genome::Sys::User->create(
@@ -46,7 +44,7 @@ my $user = Genome::Sys::User->create(
 ok($user, 'created test user');
 
 # Try to add user to test role
-$rv = $role->add_user($user);
+my $rv = $role->add_user($user);
 ok($rv, 'add user method returned success');
 
 my $bridge = Genome::Sys::User::RoleMember->get(
@@ -57,7 +55,7 @@ ok($bridge, 'retrieved bridge entity');
 
 # Try to delete role when a user is using it
 $rv = eval { $role->delete };
-my $error = $@;
+$error = $@;
 ok($error, 'could not delete role when it has users, as expected');
 ok($error =~ /Cannot delete user role $test_role_name/, 'error message matches expected pattern');
 

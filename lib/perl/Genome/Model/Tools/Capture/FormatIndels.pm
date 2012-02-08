@@ -24,6 +24,7 @@ class Genome::Model::Tools::Capture::FormatIndels {
 	has => [                                # specify the command's single-value properties (parameters) <--- 
 		variants_file	=> { is => 'Text', doc => "File of indel predictions", is_optional => 0, is_input => 1 },
 		output_file     => { is => 'Text', doc => "Output file to receive formatted lines", is_optional => 0, is_input => 1, is_output => 1 },
+		append_line     => { is => 'Text', doc => "If set to 1, appends extra columns to formatted line", is_optional => 1, is_input => 1, default => 1 },
 	],
 };
 
@@ -98,9 +99,44 @@ sub execute {                               # replace with real execution logic.
 			if($lineContents[2] =~ /[0-9]/)
 			{
 				$chr_stop = $lineContents[2];
-				$ref = $lineContents[3];
-				$var = $lineContents[4];
-				$restColumn = 5;
+				if($lineContents[3] =~ '/')
+				{
+					my @tempArray = split(/\//, $lineContents[3]);
+					$var = $tempArray[0];
+					$var = $tempArray[1] if($tempArray[1] ne '*');
+					
+					if(substr($var, 0, 1) eq '+')
+					{
+						$ref = "-";
+						$var =~ s/[^ACGTN]//g;						
+					}
+					elsif(substr($var, 0, 1) eq '-')
+					{
+						$ref = $var;
+						$ref =~ s/[^ACGTN]//g;
+						$var = "-";
+					}
+					elsif($tempArray[0] eq '*')
+					{
+						$ref = "-";
+						$var = $tempArray[1];
+					}
+					elsif($tempArray[1] eq '*')
+					{
+						$ref = $tempArray[0];
+						$var = "-";
+					}
+
+					
+					$restColumn = 4;
+				}
+				else
+				{
+					$ref = $lineContents[3];
+					$var = $lineContents[4];
+					$restColumn = 5;					
+				}
+
 			}
 			else
 			{
@@ -182,7 +218,7 @@ sub execute {                               # replace with real execution logic.
 			else
 			{
 				warn "Unable to format $line\n";
-				$chrom = $chr_start = $chr_stop = $allele1 = $allele2 = "";
+#				$chrom = $chr_start = $chr_stop = $allele1 = $allele2 = "";
 			}
 
 			## If no chr stop, calculate it ##
@@ -198,11 +234,15 @@ sub execute {                               # replace with real execution logic.
 					$chr_stop = $chr_start + $indel_size - 1;
 				}
 			}
+			
+			## Ensure that insertions are zero-based ##
+			
+			$chr_start-- if($chr_start == $chr_stop);
 
 			## If we have other information on line, output it ##
 			my $numContents = @lineContents;
 			my $rest_of_line = "";
-			if($restColumn && $restColumn > 0 && $restColumn < $numContents)
+			if($restColumn && $restColumn > 0 && $restColumn < $numContents && $self->append_line)
 			{
 				for(my $colCounter = $restColumn; $colCounter < $numContents; $colCounter++)
 				{

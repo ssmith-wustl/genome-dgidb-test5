@@ -2,14 +2,14 @@
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 <title>Status </title>
-<link rel="shortcut icon" href="/resources/report_resources/apipe_dashboard/images/gc_favicon.png" type="image/png">
-<link rel="stylesheet" href="/resources/report_resources/apipe_dashboard/css/master.css" type="text/css" media="screen">
-<link rel="stylesheet" href="/resources/report_resources/apipe_dashboard/css/tablesorter.css" type="text/css" media="screen">
-<script type="text/javascript" src="/resources/report_resources/jquery/jquery.js"></script><script type="text/javascript" src="/resources/report_resources/jquery/jquery.tablesorter.min.js"></script>
+<link rel="shortcut icon" href="/res/old/report_resources/apipe_dashboard/images/gc_favicon.png" type="image/png">
+<link rel="stylesheet" href="/res/old/report_resources/apipe_dashboard/css/master.css" type="text/css" media="screen">
+<link rel="stylesheet" href="/res/old/report_resources/apipe_dashboard/css/tablesorter.css" type="text/css" media="screen">
+<script type="text/javascript" src="/res/old/report_resources/jquery/jquery.js"></script><script type="text/javascript" src="/res/old/report_resources/jquery/jquery.tablesorter.min.js"></script>
 </head>
 <body><div class="container"><div class="background">
 <div class="page_header"><table cellpadding="0" cellspacing="0" border="0"><tr>
-<td><a href="status.cgi" alt="Go to Search Page" title="Go to Search Page"><img src="/resources/report_resources/apipe_dashboard/images/gc_header_logo2.png" width="44" height="45" align="absmiddle"></a></td>
+<td><a href="status.cgi" alt="Go to Search Page" title="Go to Search Page"><img src="/res/old/report_resources/apipe_dashboard/images/gc_header_logo2.png" width="44" height="45" align="absmiddle"></a></td>
 <td><h1>Analysis Reports v0.2</h1></td>
 </tr></table></div>
 <div class="page_padding">
@@ -22,7 +22,7 @@
                   });
               });
           
-        </script><script type="text/javascript" src="/resources/report_resources/jquery/boxy/src/javascripts/jquery.boxy.js"></script><link rel="stylesheet" href="/resources/report_resources/jquery/boxy/src/stylesheets/boxy.css" type="text/css">
+        </script><script type="text/javascript" src="/res/old/report_resources/jquery/boxy/src/javascripts/jquery.boxy.js"></script><link rel="stylesheet" href="/res/old/report_resources/jquery/boxy/src/stylesheets/boxy.css" type="text/css">
 <script type="text/javascript">
           
                    function event_popup(eventObject) {

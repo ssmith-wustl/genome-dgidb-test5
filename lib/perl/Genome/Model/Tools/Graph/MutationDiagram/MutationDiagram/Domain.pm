@@ -11,7 +11,6 @@ our $VERSION = '1.0';
 use strict;
 use warnings;
 use SVG;
-use GD::Image;
 
 # If you know about and want to use inheritance:
 #use Base::Class;
@@ -54,40 +53,6 @@ sub draw {
         height => $backbone->dimensions->{height},
         style => $self->{_style}, 
     );
-    #calculate bounding box using GD
-    #my $im = new GD::Image(1000,1000);
-    #
-    #$im->useFontConfig(1); 
-    #my @bounds =
-    #$im->stringFT(0,'Roman',12,0,0,0,$self->{_text},);
-    ##@bounds = normalize_bbox(@bounds);
-    #
-    ##draw box
-    #my $text_origin_x = $self->{_start_amino_acid} + ($self->{_feature_length}/2);
-    #my $text_origin_y = $backbone->dimensions()->{y} + $backbone->dimensions->{height} + 20; 
-
-    #
-    #$svg->rectangle(id => $self->{_id} . "_label_bbox",
-    #                x => $text_origin_x - $bounds[2]/2,
-    #                y => $text_origin_y - ($bounds[1]-$bounds[7])/2, 
-    #                width => $bounds[2],
-    #                height => $bounds[1]-$bounds[7],
-    #                style => {
-    #                    stroke => 'green',
-    #                    fill => 'none',
-    #                }
-    #            );
-    
-#    #now create label                                            
-#    my $label = $svg->text(         id => $self->{_id} . "_label",
-#        x => $self->{_start_amino_acid} + ($self->{_feature_length}/2),
-#        y => $backbone->dimensions()->{y} + $backbone->dimensions->{height} + 40,
-#        style => {
-#            'font' => 'Roman',
-#            'font-size' => 12,
-#            'text-align' => 'center',
-#            'text-anchor' => 'middle'
-#        })->cdata($self->{_text});
 }
 #----------------------------------
 # TESTING CODE

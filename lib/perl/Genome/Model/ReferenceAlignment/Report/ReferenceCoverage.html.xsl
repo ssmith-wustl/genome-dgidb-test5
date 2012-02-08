@@ -7,11 +7,11 @@
   <head>
     <title><xsl:value-of select="//report-meta/name"/></title> 
     <link href="layout.css" rel="stylesheet" type="text/css"></link>
-    <link rel="shortcut icon" href="https://imp.gsc.wustl.edu/resources/report_resources/apipe_dashboard/images/gc_favicon.png" type="image/png"/>
-    <link rel="stylesheet" href="https://imp.gsc.wustl.edu/resources/report_resources/apipe_dashboard/css/master.css" type="text/css" media="screen"/>
-    <link rel="stylesheet" href="https://imp.gsc.wustl.edu/resources/report_resources/apipe_dashboard/css/tablesorter.css" type="text/css" media="screen" />
-    <script src="https://imp.gsc.wustl.edu/resources/report_resources/db_snp_concordance/js/jquery.js" type="text/javascript"></script>
-    <script src="https://imp.gsc.wustl.edu/resources/report_resources/db_snp_concordance/js/jquery.flot.js" type="text/javascript"></script>
+    <link rel="shortcut icon" href="https://imp.gsc.wustl.edu/res/old/report_resources/apipe_dashboard/images/gc_favicon.png" type="image/png"/>
+    <link rel="stylesheet" href="https://imp.gsc.wustl.edu/res/old/report_resources/apipe_dashboard/css/master.css" type="text/css" media="screen"/>
+    <link rel="stylesheet" href="https://imp.gsc.wustl.edu/res/old/report_resources/apipe_dashboard/css/tablesorter.css" type="text/css" media="screen" />
+    <script src="https://imp.gsc.wustl.edu/res/old/report_resources/db_snp_concordance/js/jquery.js" type="text/javascript"></script>
+    <script src="https://imp.gsc.wustl.edu/res/old/report_resources/db_snp_concordance/js/jquery.flot.js" type="text/javascript"></script>
 
     <!-- progression graph -->
     <script  type="text/javascript">
@@ -431,15 +431,15 @@
         <h2 class="report_section">Coverage Progression by Lane</h2>
           <table width="100%" cellpadding="5" cellspacing="0">
             <tr>
-              <td valign="middle"><img src="https://imp.gsc.wustl.edu/resources/report_resources/apipe_dashboard/images/axis_label_y_total_coverage.png" width="25" height="141" alt="Total Coverage (%)" style="margin-right: 10px;"/></td>
+              <td valign="middle"><img src="https://imp.gsc.wustl.edu/res/old/report_resources/apipe_dashboard/images/axis_label_y_total_coverage.png" width="25" height="141" alt="Total Coverage (%)" style="margin-right: 10px;"/></td>
               <td align="center" valign="middle" width="100%">
                 <div id="progression" class="graph"></div>
               </td>
-              <td valign="middle"><img src="https://imp.gsc.wustl.edu/resources/report_resources/apipe_dashboard/images/axis_label_y2_coverage_gain.png" width="25" height="140" alt="Coverage Gain (%)" style="margin-right: 10px;"/></td>
+              <td valign="middle"><img src="https://imp.gsc.wustl.edu/res/old/report_resources/apipe_dashboard/images/axis_label_y2_coverage_gain.png" width="25" height="140" alt="Coverage Gain (%)" style="margin-right: 10px;"/></td>
             </tr>            
             <tr>
               <td><xsl:text disable-output-escaping="yes">&amp;nbsp;</xsl:text></td>
-              <td valign="middle" align="center"><img src="https://imp.gsc.wustl.edu/resources/report_resources/apipe_dashboard/images/axis_label_x_lane.png" width="47" height="20" alt="Gigabases" style="margin-top: 10px;"/></td>
+              <td valign="middle" align="center"><img src="https://imp.gsc.wustl.edu/res/old/report_resources/apipe_dashboard/images/axis_label_x_lane.png" width="47" height="20" alt="Gigabases" style="margin-top: 10px;"/></td>
               <td><xsl:text disable-output-escaping="yes">&amp;nbsp;</xsl:text></td>
             </tr>
             <tr>
@@ -456,7 +456,7 @@
         <h2 class="report_section">Depth by Relative Position</h2>
           <table width="100%" cellpadding="5" cellspacing="0">
             <tr>
-              <td valign="middle"><img src="https://imp.gsc.wustl.edu/resources/report_resources/apipe_dashboard/images/axis_label_y_depth.png" width="25" height="55" alt="Depth" style="margin-right: 10px;"/></td>
+              <td valign="middle"><img src="https://imp.gsc.wustl.edu/res/old/report_resources/apipe_dashboard/images/axis_label_y_depth.png" width="25" height="55" alt="Depth" style="margin-right: 10px;"/></td>
               <td align="center" valign="middle" width="100%">
                 <div id="depth_by_relative_position" class="graph"></div>
               </td>
@@ -464,7 +464,7 @@
             </tr>            
             <tr>
               <td><xsl:text disable-output-escaping="yes">&amp;nbsp;</xsl:text></td>
-              <td valign="middle" align="center"><img src="https://imp.gsc.wustl.edu/resources/report_resources/apipe_dashboard/images/axis_label_x_relative_position.png" width="134" height="17" alt="Relative Position" style="margin-top: 10px;"/></td>
+              <td valign="middle" align="center"><img src="https://imp.gsc.wustl.edu/res/old/report_resources/apipe_dashboard/images/axis_label_x_relative_position.png" width="134" height="17" alt="Relative Position" style="margin-top: 10px;"/></td>
               <td><xsl:text disable-output-escaping="yes">&amp;nbsp;</xsl:text></td>
             </tr>
             <tr>
