@@ -18,6 +18,8 @@ use_ok('Genome::Disk::Assignment') or die;
 use_ok('Genome::Disk::Volume') or die;
 use_ok('Genome::Disk::Group') or die;
 
+*Genome::Sys::current_user_is_admin = sub { return 1 };
+
 my $test_dir_base = '/gsc/var/cache/testsuite/running_testsuites/';
 my $test_dir = tempdir(
     TEMPLATE => 'allocation_testing_XXXXXX',
