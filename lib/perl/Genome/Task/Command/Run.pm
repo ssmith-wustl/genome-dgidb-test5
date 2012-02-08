@@ -14,11 +14,6 @@ class Genome::Task::Command::Run {
             doc => 'Task to run.  Resolved from command line via text string',
             shell_args_position => 1,
         },
-        output_basedir => {
-            is => 'String',
-            doc => 'Directory to put stdout/stderr',    
-            is_optional => 1,
-        }
     ],
 };
 
@@ -33,62 +28,37 @@ sub execute {
     }
 
     my $cmd_object = $self->task->command_object;
+    my $task_id = $self->task->id;
     if (!$cmd_object) {
         $self->error_message(sprintf("Failed to execute, %s couldn't be instantiated", $self->task->command_class));
         return $self->handle_failure;
     }
 
-    my $old_stdout;
-    my $old_stderr;
-    my $log_basedir;
-    if ($self->output_basedir) {
-        $log_basedir = $self->output_basedir;
-        if (!-d $log_basedir) {
-            unless(mkpath($log_basedir)) {
-                $self->error_message("Couldn't create output dir $log_basedir");
-                return;
-            }
-        }
-         
-        open ($old_stdout, ">&STDOUT");
-        open ($old_stderr, ">&STDERR");
-       
-        open (STDERR, ">$log_basedir/".$self->task->id .".stderr"); 
-        open (STDOUT, ">$log_basedir/".$self->task->id .".stdout"); 
-    }
-        
+    my %attrs_to_update = (status => 'running', time_started => $UR::Context::current->now);
+
+    my $transaction = UR::Context::Transaction->begin;
+    $self->task->out_of_band_attribute_update(%attrs_to_update);
+#    $self->task->unload();
+#    $self->task(UR::Context->current->reload('Genome::Task', id=>$task_id));
+
+
     my $result;
     eval {
-        my %attrs_to_update = (status => 'running', time_started => $UR::Context::current->now);
-        if ($self->output_basedir) {
-            $attrs_to_update{stdout_pathname} = $log_basedir. "/" . $self->task->id. ".stdout"; 
-            $attrs_to_update{stderr_pathname} = $log_basedir. "/" . $self->task->id. ".stderr"; 
-        }
-
-        $self->task->out_of_band_attribute_update(%attrs_to_update);
         $result = $cmd_object->execute;
     };
     
     if ($@ || !$result) {
         $self->error_message("COMMAND FAILURE:  $@ -- " . $cmd_object->error_message);
-        $self->task->status("failed");
+        $transaction->rollback;
+        $self->task->out_of_band_attribute_update(status=>'failed');
+#        $self->task->unload();
+#        $self->task(UR::Context->current->reload('Genome::Task', id=>$task_id));
     } else {
+        $transaction->commit;
         $self->task->status("succeeded");
     }
 
     $self->task->time_finished($UR::Context::current->now);
-
-    # this is a really ugly way to do this, but there is no way to catch sync errors
-    # and route them to the captured stdout/stderr, so we will end up having to commit
-    # here.
-
-    UR::Context->commit();
-
-    if ($self->output_basedir) {
-        open (STDOUT, ">&", $old_stdout);
-        open (STDERR, ">&", $old_stderr);
-    }
-    
 
     return $result;
 }

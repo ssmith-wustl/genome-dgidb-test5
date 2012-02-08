@@ -237,7 +237,7 @@ sub display_model_information {
 }
 
 sub listed_params {
-    return qw/ id name subject.name subject.subject_type processing_profile_id processing_profile_name /;
+    return qw/ id name subject.name subject.subject_type processing_profile_id processing_profile.name /;
 }
 
 sub validate_processing_profile {
