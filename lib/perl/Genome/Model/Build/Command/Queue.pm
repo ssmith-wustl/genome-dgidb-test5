@@ -26,7 +26,7 @@ class Genome::Model::Build::Command::Queue {
 
 };
 
-sub _is_hidden_in_docs { return 1; }
+sub _is_hidden_in_docs { return !Genome::Sys->current_user_is_admin };
 
 sub sub_command_sort_position { 1 }
 

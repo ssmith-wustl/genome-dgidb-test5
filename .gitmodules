@@ -103,3 +103,6 @@
 [submodule "vendor/allpathslg"]
 	path = vendor/allpathslg
 	url = git@github.com:genome-vendor/allpathslg.git
+[submodule "vendor/ensembl"]
+	path = vendor/ensembl
+	url = git@github.com:genome-vendor/ensembl.git

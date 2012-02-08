@@ -1,14 +1,5 @@
 package Genome::Model::Tools::CopyNumber::ReadDepth;
 
-##############################################################################
-#
-#
-#	AUTHOR:		Chris Miller (cmiller@genome.wustl.edu)
-#	CREATED:	07/01/2011 by CAM.
-#	NOTES:
-#
-##############################################################################
-
 use strict;
 use Genome;
 use IO::File;
@@ -18,45 +9,43 @@ use warnings;
 require Genome::Sys;
 use FileHandle;
 use File::Spec;
-use Digest::MD5 qw(md5_hex);
 
 class Genome::Model::Tools::CopyNumber::ReadDepth {
     is => 'Command',
     has => [
 
-	bam_file => {
+	# tumor_bam => {
+	#     is => 'String',
+	#     is_optional => 1,
+	#     doc => 'bam file to count tumor reads from',
+	# },
+
+	# normal_bam => {
+	#     is => 'String',
+	#     is_optional => 1,
+	#     doc => 'bam file to count normal reads from',
+	# },
+
+	bins => {
 	    is => 'String',
 	    is_optional => 1,
-	    doc => 'bam file to counts reads from (Choose one of bin_file, bam_file, or bed_directory)',
-	},
-
-
-	bin_file => {
-	    is => 'String',
-	    is_optional => 1,
-	    doc => 'pre-binned read counts from bamwindow (Choose one of bin_file, bam_file, or bed_directory)',
-	},
-
-
-	bed_directory => {
-	    is => 'String',
-	    is_optional => 1,
-	    doc => 'directory containing bed files of mapped reads, one per chromosome, named 1.bed, 2.bed ... Expects 1-based coords. (Choose one of bin_file, bam_file, or bed_directory)',
+	    doc => 'bins file to get tumor reads from (output of gmt copy-number bam-window)',
 	},
 
         bin_size => {
             is => 'Integer',
             is_optional => 1,
-            doc => 'Choose the bin size to use for read counts. Default is that the script will determine an optimal size',
-            default => '76',
+            doc => 'Choose the bin size to use for read counts. Default 10k',
+            #todo: script will determine an optimal size',
+            default => '10000',
         },
 
         read_length => {
-            is => 'Integer',
+            is => 'String',
             is_optional => 1,
-            doc =>'read length',
-            default => '76',
+            doc =>'tumor read length (can be one integer or a comma-separated list)',
         },
+
 
         # output_map_corrected_bins => {
         #     is => 'Boolean',
@@ -65,12 +54,12 @@ class Genome::Model::Tools::CopyNumber::ReadDepth {
         #     default => 0,
         # },
 
-        do_segmentation => {
-            is => 'Boolean',
-            is_optional => 1,
-            doc =>'run segmentation on the bins to get discrete regions of copy number (CBS algorithm)',
-            default => 1,
-        },
+        # do_segmentation => {
+        #     is => 'Boolean',
+        #     is_optional => 1,
+        #     doc =>'run segmentation on the bins to get discrete regions of copy number (CBS algorithm)',
+        #     default => 1,
+        # },
 
         # do_plotting => {
         #     is => 'Boolean',
@@ -88,13 +77,13 @@ class Genome::Model::Tools::CopyNumber::ReadDepth {
         annotation_directory => {
             is => 'String',
             is_optional => 0,
-            doc =>'path to the annotation directory',
+            doc =>'path to the annotation directory that contains all the different readlength annotations',
         },
 
         cnvseg_output => {
             is => 'Boolean',
             is_optional => 1,
-            default => 0,
+            default => 1,
             doc =>'tweak the output to be compatible with cnvSeg (cnvHMM)',
         },
 
@@ -112,118 +101,180 @@ class Genome::Model::Tools::CopyNumber::ReadDepth {
             doc =>'the minimum fraction of a window that must be mappable in order to be considered',
         },
 
+        genome_build => {
+            is => 'String',
+            is_optional => 0,
+            doc =>'genome build - one of "hg18" or "hg19"',
+        },
+
+        # normal_snp_file => {
+        #     is => 'String',
+        #     is_optional => 1,
+        #     doc =>'het snp sites from the normal genome in gmt bam-readcount format (chr, st, ref, var, refReads, varReads, VAF)',
+        # },
+
+        # tumor_snp_file => {
+        #     is => 'String',
+        #     is_optional => 1,
+        #     doc =>'het snp sites from the tumor genome in gmt bam-readcount format (chr, st, ref, var, refReads, varReads, VAF)',
+        # },
+
+        just_output_script_files => {
+            is => 'Boolean',
+            is_optional => 1,
+            default => 0,
+            doc =>"don't run the R script, just prep everything and dump it into the output directory",
+        },
+        
+
+        processors => {
+            is => 'Integer',
+            is_optional => 1,
+            default => 1,
+            doc => "set the number of processors that the parallel steps will use",
+        }
+
+        # sex => {
+        #     is => 'String',
+        #     is_optional => 0,
+        #     doc =>'sex of the patient - "male" or "female"',
+        # },
+
+
+        
 
         ]
 };
 
 sub help_brief {
-    "This is all sorts of incomplete - just runs on bams right now, even though the R package supports lots more"
+    "Takes two bin files generated by bam-window. Creates the necessary params files, then runs the R readDepth package to correct the data for mapability and GC content bias."
 }
 
 sub help_detail {
-    "This is all sorts of incomplete - just runs on bams right now, even though the R package supports lots more"
+    "Takes two bin files generated by bam-window. Creates the necessary params files, then runs the R readDepth package to correct the data for mapability and GC content bias."
 }
+
+#########################################################################
+
+sub printCoreCode{
+    my ($output_directory, $rl, $RFILE) = @_;
+    my $name = "rdo." . $rl;
+    print $RFILE "PARAMSFILE <<- \"" . $output_directory . "/params.$rl\"\n";
+    print $RFILE "verbose <<- TRUE\n";
+    print $RFILE "$name = new(\"rdObject\")\n";
+    print $RFILE "$name = readDepth($name)\n";
+    print $RFILE "$name = rd.mapCorrect($name, minMapability=0.60)\n";
+    print $RFILE "$name = rd.gcCorrect($name)\n";
+    print $RFILE "$name = mergeLibraries($name)\n";
+}
+
 
 #########################################################################
 
 sub execute {
     my $self = shift;
-    my $bam_file = $self->bam_file;
-    my $bin_file = $self->bin_file;
-    my $read_length = $self->read_length;
+    my $bam_file;
+
+    my $bins_file = $self->bins;
 #    my $output_map_corrected_bins = $self->output_map_corrected_bins;
-    my $do_segmentation = $self->do_segmentation;
     my $output_directory = $self->output_directory;
     my $annotation_directory = $self->annotation_directory;
-    my $bed_directory = $self->bed_directory;
     my $cnvseg_output = $self->cnvseg_output;
     my $per_lib = $self->per_lib;
+    my $bin_size = $self->bin_size;
+    my $genome_build = $self->genome_build;
+    my $sex = "male";
 
     #resolve relative paths to full path
     $output_directory = File::Spec->rel2abs($output_directory);
     $annotation_directory = File::Spec->rel2abs($annotation_directory);
 
-    #write params file
-    my $pf = open(PARAMSFILE, ">$output_directory/params") || die "Can't open params file.\n";
-    print PARAMSFILE "readLength\t$read_length\n";
-    print PARAMSFILE "fdr\t0.01\n";
-    print PARAMSFILE "verbose\tTRUE\n";
-    print PARAMSFILE "overDispersion\t3\n";
-    print PARAMSFILE "gcWindowSize\t100\n";
-    print PARAMSFILE "percCNGain\t0.05\n";
-    print PARAMSFILE "percCNLoss\t0.05\n";
-    print PARAMSFILE "maxCores\t4\n";
-    print PARAMSFILE "outputDirectory\t$output_directory\n";
-    print PARAMSFILE "annotationDirectory\t$annotation_directory\n";
+    #if we have multiple read lengths
+    my @read_lengths=split(",",$self->read_length);
+    
 
-    if(defined($bam_file)){
-        $bam_file = File::Spec->rel2abs($bam_file);
-        print PARAMSFILE "bamFile\t$bam_file\n"; #bam file
-        print PARAMSFILE "inputType\tbam\n";
-    } elsif (defined($bin_file)){
-        $bin_file = File::Spec->rel2abs($bin_file);
-        print PARAMSFILE "binFile\t$bin_file\n"; #bin file
-        print PARAMSFILE "inputType\tbins\n";
-    } elsif (defined($bed_directory)){
-        $bed_directory = File::Spec->rel2abs($bed_directory);
-        print PARAMSFILE "bedDirectory\t$bed_directory\n"; #bed dir
-        print PARAMSFILE "inputType\tbed\n";
+    #open the r file
+    my $rf = open(my $RFILE, ">$output_directory/run.R") || die "Can't open R file for writing.\n";
+    print $RFILE "library(readDepth)\n";
+
+    foreach my $rl (@read_lengths){
+        my $annotation_path = $annotation_directory . "/" . $genome_build . "." . $rl  . "." . $sex;
+        unless ( -d $annotation_path){
+            die("no annotations matching $annotation_path");
+        }
+        
+        #write params file
+        my $pf = open(PARAMSFILE1, ">$output_directory/params." . $rl) || die "Can't open params file.\n";
+        print PARAMSFILE1 "readLength\t$rl\n";
+        print PARAMSFILE1 "fdr\t0.01\n";
+        print PARAMSFILE1 "verbose\tTRUE\n";
+        print PARAMSFILE1 "overDispersion\t3\n";
+        print PARAMSFILE1 "gcWindowSize\t100\n";
+        print PARAMSFILE1 "percCNGain\t0.05\n";
+        print PARAMSFILE1 "percCNLoss\t0.05\n";
+        print PARAMSFILE1 "maxCores\t". $self->processors . "\n";
+        print PARAMSFILE1 "outputDirectory\t$output_directory\n";
+        print PARAMSFILE1 "annotationDirectory\t" . $annotation_path . "\n";
+        print PARAMSFILE1 "binSize\t$bin_size\n";
+
+        if(defined($bam_file)){
+            print PARAMSFILE1 "inputType\tbam\n";        
+            $bam_file = File::Spec->rel2abs($bam_file);
+            print PARAMSFILE1 "bamFile\t$bam_file\n"; 
+        } elsif (defined($bins_file)){
+            print PARAMSFILE1 "inputType\tbins\n";        
+            $bins_file = File::Spec->rel2abs($bins_file);
+            print PARAMSFILE1 "binFile\t$bins_file\n"; 
+        } else {
+            die("either bam_file or bins_file must be defined\n")
+        }
+             
+        if($per_lib){
+            print PARAMSFILE1 "perLib\tTRUE\n";
+        }            
+        if(@read_lengths > 1){
+            print PARAMSFILE1 "perLibLengths\tTRUE\n";
+        }
+        
+        close(PARAMSFILE1);
+        
+        #now dump the appropriate code to the R file
+        printCoreCode($output_directory, $rl, $RFILE);
+
+    }
+    #merge the data from different read lengths
+    my $i;
+    print $RFILE "rdo = rdo." . $read_lengths[0] . "\n";
+    for($i=1; $i < @read_lengths; $i++){
+        print $RFILE "rdo = addObjectBins(rdo,rdo." . $read_lengths[$i] . ")\n";
+    }
+    
+    if($cnvseg_output){
+        print $RFILE "writeBins(rdo,file=\"$output_directory/binnedOutput\",cnvHmmFormat=TRUE)\n";
     } else {
-        die("either bam_file, bin_file, or bed_directory must be specified")
+        print $RFILE "writeBins(rdo,file=\"$output_directory/binnedOutput\")\n";
     }
 
-    print PARAMSFILE "binSize\t10000\n";
-    close(PARAMSFILE);
 
+    # #print cnvhmm input file 
+    # print $RFILE "writeCnvhmmInput(rdo.normal,rdo.tumor)\n";
+    close($RFILE);
+
+    if($self->just_output_script_files){
+        return 1;
+    }
 
     #drop into the output directory to make running the R script easier
     chdir $output_directory;
-    my $rf = open(RFILE, ">run.R") || die "Can't open R file for writing.\n";
-
-##need to make sure latest version of readDepth is installed
-##sessionInfo()$otherPkgs$readDepth$Version
-    print RFILE "PARAMSFILE <<- \"" . $output_directory . "/params\"\n";
-    print RFILE "library(readDepth)\n";
-    #print RFILE "verbose <<- FALSE\n";
-    print RFILE "rdo = new(\"rdObject\")\n";
-    print RFILE "rdo = readDepth(rdo)\n";
-    print RFILE "rdo = rd.mapCorrect(rdo, minMapability=0.60)\n";
-    # if ($output_map_corrected_bins){
-    #     if($cnvseg_output){
-    #         print RFILE 'writeBins(rdo,filename="bins.map", cnvHmmFormat=TRUE)' . "\n";
-    #     } else {
-    #         print RFILE 'writeBins(rdo,filename="bins.map")' . "\n";
-    #     }
-    # }
-    print RFILE "rdo = rd.gcCorrect(rdo)\n";
-    print RFILE "rdo = mergeLibraries(rdo)\n";
-    if($cnvseg_output){
-        print RFILE "writeBins(rdo,cnvHmmFormat=TRUE)\n";
-    } else {
-        print RFILE "writeBins(rdo)\n";
-    }
-
-
-    if ($do_segmentation){
-        print RFILE "segs = rd.cnSegments(rdo)\n";
-        print RFILE "writeSegs(segs)\n";
-        print RFILE "writeAlts(segs,rdo)\n";
-        print RFILE "writeThresholds(rdo)\n";
-    }
-
-#    print RFILE 'write(estimateOd(rdo),paste(rdo@params$annotationDirectory,"/overdispersion",sep=""))' . "\n";
-
-    close(RFILE);
-
-#    my $cmd = "R --vanilla --slave \< run.R";
     my $cmd = "Rscript run.R";
     my $return = Genome::Sys->shellcmd(
-	cmd => "$cmd",
+        cmd => "$cmd",
         );
     unless($return) {
-	$self->error_message("Failed to execute: Returned $return");
-	die $self->error_message;
+        $self->error_message("Failed to execute: Returned $return");
+        die $self->error_message;
     }
     return $return;
+
 }
 1;
