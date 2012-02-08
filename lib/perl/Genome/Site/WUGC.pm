@@ -45,9 +45,6 @@ if ($0 =~ /(?:gmt|genome)(?:5\.12\.1)?$/ and not `grep log_command $0`) {
     require Genome::Site::WUGC::Security;
     Genome::Site::WUGC::Security::log_command(@ARGV);
 }
-else {
-    print "Not using security\n";
-}
 
 # this keeps available parts of the UR pre-0.01 API we still use
 use UR::ObjectV001removed;
