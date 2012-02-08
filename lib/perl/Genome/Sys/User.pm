@@ -12,18 +12,20 @@ class Genome::Sys::User {
     data_source => 'Genome::DataSource::GMSchema',
     table_name => 'genome_sys_user',
     id_by => [
-        email => { is => 'Text' },
+        email => { 
+            is => 'Text',
+            doc => 'Email of the user, must be unique',
+        },
     ],
     has_optional => [
-        name => { is => 'Text' },
+        name => { 
+            is => 'Text',
+            doc => 'Full name of the user (eg, Ronald McDonald)',
+        },
         username => {
-            calculate_from => ['email'],
-            calculate => sub { 
-                my ($e) = @_;
-                my ($u) = $e =~ /(.+)\@/; 
-                return $u;
-            }
-        }
+            is => 'Text',
+            doc => 'System user name of the user (eg, rmcdonald)',
+        },
     ],
     has_many_optional => [
         project_parts => { is => 'Genome::ProjectPart', reverse_as => 'entity', is_mutable => 1, },
