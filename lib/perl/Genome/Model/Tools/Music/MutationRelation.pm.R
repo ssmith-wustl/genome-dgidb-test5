@@ -109,7 +109,8 @@ pci=cbind(pci,pp);
 tt=merge(pc0,pci,by.x=c("vi","vj"),by.y=c("vi","vj"));
 
 if (!is.null(out.rdata)) save(tt,file=out.rdata,compress=T);
-if (!is.null(out.file)) write.csv(tt,file=out.file,quote=F);
+names(tt)= c("Gene1","Gene2","CntGene1","CntGene2","AndCnt","XorCnt","Perm_CntGene1","Perm_CntGene2","Perm_AndCnt","Perm_XorCnt","Pvalue_And","Pvalue_Xor")
+if (!is.null(out.file)) write.table(tt,file=out.file,quote=F,sep="\t",row.names=F);
 
 invisible (tt);
 }
