@@ -12,21 +12,12 @@ use Sys::Hostname;
 sub log_command {
     my @argv = @ARGV;
 
-    # Prevents 'Child process ##### reaped' messages from appearing
-    $SIG{CHLD} = 'IGNORE';
-
     # Fork twice... grandchild process will be an orphan, so parent won't wait for it to complete
     my $pid = UR::Context::Process->fork();
     if ($pid) {
         return 1;
     }
     
-    my $second_pid = fork();
-    if ($second_pid) {
-        $SIG{CHLD} = 'IGNORE';
-        POSIX::_exit(0);
-    }
-
     my $command = basename($0) . " ";
     while (@argv) {
         last unless defined $argv[0] and $argv[0] !~ /^-/;
@@ -68,14 +59,14 @@ sub log_command {
             Subject => "Error writing to log file",
             Message => $email_msg
         );
-        return;
+        exit 0;
     }
 
     flock($log_fh, 2);
     chmod(0666, $log_path) unless -s $log_path;
     print $log_fh "$log_msg\n";
     close $log_fh;
-    return;
+    exit 0;
 }
 
 1;
