@@ -18,24 +18,10 @@ BEGIN {
 BEGIN { $INC{"UNIVERSAL/can.pm"} = 'no' };
 BEGIN { $INC{"UNIVERSAL/isa.pm"} = 'no' };
 
-# this keeps available parts of the UR pre-0.01 API we still use
-use UR::ObjectV001removed;
-
 # ensure nothing loads the old Genome::Config module
 BEGIN { $INC{"Genome/Config.pm"} = 'no' };
 
-# we removed UR::Time, but lots of things still depend on it
-# this brings back UR::Time as a namespace, but only or legacy things
-use Genome::Site::WUGC::LegacyTime;
 BEGIN { $INC{ "UR/Time.pm"} = "no" };
-
-# bring in the regular Genome::Sys, then extend
-use Genome::Sys;
-use Genome::Site::WUGC::SysUnreleased;      # extensions to Genome::Sys
-
-# the old Genome::Config is all deprecated
-# the core stuff about looking up your host config is now in Genome::Site
-use Genome::Site::WUGC::LegacyConfig;   
 
 # set our internal paths for data and software
 $ENV{GENOME_DB} ||= '/gsc/scripts/opt/genome/db';
@@ -49,6 +35,31 @@ $ENV{GENOME_DB_ENSEMBL_API_PATH} ||= '/gsc/scripts/share/ensembl-64';
 $ENV{GENOME_DB_ENSEMBL_HOST} ||= 'mysql1';
 $ENV{GENOME_DB_ENSEMBL_USER} ||= 'mse';
 $ENV{GENOME_DB_ENSEMBL_PORT} ||= '3306';
+
+# Log directory
+$ENV{GENOME_LOG_DIR} = '/gsc/var/log/genome';
+
+# If running either the genome or gmt command, log the arguments, user,
+# host, etc in a log file
+if ($0 =~ /(?:gmt|genome)(?:5\.12\.1)?$/ and not `grep log_command $0`) {
+    require Genome::Site::WUGC::Security;
+    Genome::Site::WUGC::Security::log_command(@ARGV);
+}
+
+# this keeps available parts of the UR pre-0.01 API we still use
+use UR::ObjectV001removed;
+
+# we removed UR::Time, but lots of things still depend on it
+# this brings back UR::Time as a namespace, but only or legacy things
+use Genome::Site::WUGC::LegacyTime;
+
+# bring in the regular Genome::Sys, then extend
+use Genome::Sys;
+use Genome::Site::WUGC::SysUnreleased;      # extensions to Genome::Sys
+
+# the old Genome::Config is all deprecated
+# the core stuff about looking up your host config is now in Genome::Site
+use Genome::Site::WUGC::LegacyConfig;   
 
 # configuration for internal WUGC network software & LIMS 
 # this module is called by Genome::Config::edu::wustl::gsc right now on all *.gsc.wustl.edu hosts
