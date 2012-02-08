@@ -7,10 +7,10 @@ use File::Basename;
 
 class Genome::Model::ReferenceAlignment::Command::Downsample {
     is => 'Command::V2',
-    doc => 'Merge merged.vcf outputs from many samples into one vcf',
+    doc => 'Downsample the merged bam for a given model into a new instrument data and a new model.',
     has => [
         model => {
-            is => 'Genome::Model',
+            is => 'Genome::Model::ReferenceAlignment',
             shell_args_position => 1,
             doc => 'Model to operate on',
             is_optional => 0,
@@ -38,12 +38,17 @@ class Genome::Model::ReferenceAlignment::Command::Downsample {
             doc => 'The number of seconds to sleep (randomly selected between 1 and $self->backoff_wait) before retrying library get/create',
             default => "20",
         },
+        _new_model => {
+            is => 'Genome::Model::ReferenceAlignment',
+            doc => 'The new model created with the downsampled instrument data assigned',
+            is_optional => 1,
+        }
     ],
 };
 
 sub help_detail {
     return <<EOS 
-    Use this to downsample merged deduped bams
+    Downsample the merged bam for a given model into a new instrument data and a new model.
 EOS
 }
 
@@ -116,14 +121,16 @@ sub execute {
     $self->status_message("Downsampled bam has been created at: ".$temp);
 
     #create an imported instrument-data record
-    my $imported_bam = $self->_import_bam($temp,$model,$downsample_ratio);
-    unless($imported_bam){
+    my $instrument_data = $self->_import_bam($temp,$model,$downsample_ratio);
+    unless($instrument_data){
         die $self->error_message("Could not import bam");
     }
-    $self->status_message("Your new instrument-data id is: ".$imported_bam->id);
+    $self->status_message("Your new instrument-data id is: ".$instrument_data->id);
 
-    #TODO add code to create new models using the newly imported instrument-data
-    #my $new_model = $self->_define_new_model($model,$imported_bam);
+    my $new_model = $self->_define_new_model($model,$instrument_data);
+    $self->status_message("Your new model id is: ".$new_model->id);
+
+    $self->_new_model($new_model);
 
     return 1;
 }
@@ -169,13 +176,13 @@ sub get_or_create_library {
 sub _define_new_model {
     my $self = shift;
     my $model = shift;
-    my $id = shift;
-    my $new_model = Genome::Model->copy(
-        model => $model,
-        model_overrides => ['instrument_data='],
-    );
-    
+    my $instrument_data = shift;
+
     $DB::single=1;
+
+    my $new_model = $model->copy(
+        instrument_data => [$instrument_data->id],
+    );
 
     return $new_model;
 }
