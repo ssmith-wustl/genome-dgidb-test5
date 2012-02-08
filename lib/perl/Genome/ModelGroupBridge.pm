@@ -29,4 +29,17 @@ class Genome::ModelGroupBridge {
     data_source => 'Genome::DataSource::GMSchema',
 };
 
+
+if ($INC{"Genome/Search.pm"}) {
+    Genome::ModelGroupBridge->add_observer(
+        callback => sub { 
+            my ($self) = @_;
+            my $mg = $self->model_group;
+            Genome::Search::Queue->create({
+                subject_id => $mg->id,
+                subject_class => $mg->class,
+            });
+        });  
+}
+
 1;
