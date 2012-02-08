@@ -76,10 +76,9 @@ sub execute {
     my $field = {};
 
     my $i = 0;
-    my $added;
+    my $changed;
     ROW:
     while (my $row = $csv->getline($fh)) {
-        
         if ( $i++ == 0 ) { 
             @header = @$row; 
             $field = $self->check_types(@header);
@@ -99,8 +98,7 @@ sub execute {
 
         
         if ( !$obj ) {
-            warn "Skipping row- couldnt get object: $subclass_name with name: "
-                . $header[0];
+            warn "Skipping row- couldnt get a $subclass_name object with name: " . $row->[0];
             next ROW;
         }
 
@@ -138,14 +136,15 @@ sub execute {
                 attribute_value => $v,
                 nomenclature    => $f->id
             );
-            $added++; 
+            $changed++; 
         }
 
+        # TODO: check for unique: subclass_name, id
         # add each subject obj to the project
         $project->add_part( entity => $obj, role => 'automatic');
     }
 
-    return $added;
+    return $changed;
 }
 
 sub check_types {
