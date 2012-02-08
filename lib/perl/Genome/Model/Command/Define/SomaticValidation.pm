@@ -266,7 +266,7 @@ sub _resolve_subject_from_samples {
     my $subject;
     if($tumor_sample) {
         if($control_sample and $tumor_sample->source ne $control_sample->source) {
-            my $problem = 'Tumor and control samples do not appear to have come from the same individual.';
+            my $problem = 'Tumor (' . $tumor_sample->name . ') and control (' . $control_sample->name . ') samples do not appear to have come from the same individual.';
             my $answer = $self->_ask_user_question(
                 $problem . ' Continue anyway?',
                 300,
