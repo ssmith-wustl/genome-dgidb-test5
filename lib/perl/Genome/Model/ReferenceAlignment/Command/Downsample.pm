@@ -180,9 +180,15 @@ sub _define_new_model {
 
     $DB::single=1;
 
-    my $new_model = $model->copy(
-        instrument_data => [$instrument_data->id],
+    my $copy_command = Genome::Model::Command::Copy->create(
+        model => $model,
+        overrides => ["instrument_data=".$instrument_data->id],
     );
+    unless ($copy_command->execute) {
+        die $self->error_message("Failed to copy model " . $model->id);
+    }
+
+    my $new_model = $copy_command->_new_model;
 
     return $new_model;
 }
