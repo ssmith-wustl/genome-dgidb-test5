@@ -95,11 +95,11 @@ sub execute {
         }
 
 
-        my $obj = $subclass_name->get_or_create(name => $row->[0]);
+        my $obj = $subclass_name->get(name => $row->[0]);
 
         
         if ( !$obj ) {
-            warn "Skipping row- couldnt get or create object: $subclass_name with name: "
+            warn "Skipping row- couldnt get object: $subclass_name with name: "
                 . $header[0];
             next ROW;
         }

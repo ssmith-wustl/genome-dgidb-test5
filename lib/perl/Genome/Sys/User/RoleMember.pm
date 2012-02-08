@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use Genome;
+use Carp;
 
 class Genome::Sys::User::RoleMember {
     table_name => 'subject.role_member',
@@ -24,31 +25,45 @@ class Genome::Sys::User::RoleMember {
     ],
 };
 
-sub __errors__ {
-    my $self = shift;
-    my @tags;
+Genome::Sys::User::RoleMember->add_observer(
+    callback => \&_change_callback,
+);
+sub _change_callback {
+    my ($self, $signal) = @_;
+    return 1 unless grep { $signal eq $_ } qw/ precommit create delete /;
+    unless (Genome::Sys->current_user_is_admin) {
+        Carp::confess 'Only admins can modify role/member bridges!';
+    }
+    return 1;
+}
 
-    my @duplicates = eval { 
-        Genome::Sys::User::RoleMember->get(
-            role => $self->role,
-            user => $self->user,
-        )
-    };
-    my $error = $@;
-    if ($error) {
-        # Make a more human-readable error message in the case where a duplicate bridge entity already exists
-        if ($error =~  /An object of type Genome::Sys::User::RoleMember already exists with id/) {
-            $error = "Cannot add role " . $self->role->name . " to user " . $self->user->name . ", that user already has this role!",
-        }
+sub create {
+    my $class = shift;
+    my $bool_expr = UR::BoolExpr->resolve_normalized($class, @_);
 
-        push @tags, UR::Object::Tag->create(
-            type => 'invalid',
-            properties => ['role', 'user'],
-            desc => $error,
-        );
+    my $email = $bool_expr->value_for('user_email');
+    unless ($email) {
+        Carp::confess "Create method for $class not given user id, cannot resolve user object!";
+    }
+    my $user = Genome::Sys::User->get(email => $email);
+    unless ($user) {
+        Carp::confess "Could not resolve user from email $email!";
     }
 
-    return @tags;
+    my $role_id = $bool_expr->value_for('role_id');
+    unless ($role_id) {
+        Carp::confess "Create method for $class not given role id, cannot resolve role object!";
+    }
+    my $role = Genome::Sys::User::Role->get($role_id);
+    unless ($role) {
+        Carp::confess "Could not resolve role from id $role_id!";
+    }
+
+    if ($user->has_role($role)) {
+        Carp::confess "User " . $user->__display_name__ . " already has role " . $role->__display_name__ . "!";
+    }
+
+    return $class->SUPER::create(@_);
 }
 
 1;
