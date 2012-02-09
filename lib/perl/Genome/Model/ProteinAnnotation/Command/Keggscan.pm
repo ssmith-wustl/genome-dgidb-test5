@@ -100,6 +100,8 @@ class Genome::Model::ProteinAnnotation::Command::Keggscan {
     ],
 };
 
+sub requires_chunking { 0 }
+
 sub help_synopsis {
     return <<"EOS"
 EOS

@@ -67,6 +67,8 @@ class Genome::Model::ProteinAnnotation::Command::Iprscan {
             ],
 };
 
+sub requires_chunking { 0 }
+
 #operation Genome::Model::ProteinAnnotation::Command::InterProScan {
 #   input        => [ 'fasta_file', 'report_save_dir', 'locus_tag' ],
 #  output       => [ 'bio_seq_feature' ],
