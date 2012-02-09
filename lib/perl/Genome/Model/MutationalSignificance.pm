@@ -225,9 +225,9 @@ $self->warning_message('The logic for building a MuSiC model is not yet function
 
     $link = $workflow->add_link(
         left_operation => $input_connector,
-        left_property => 'build_id',
+        left_property => 'somatic_variation_builds',
         right_operation => $bam_list_operation,
-        right_property => 'build_id',
+        right_property => 'somatic_variation_builds',
     );
 
     $link = $workflow->add_link(
