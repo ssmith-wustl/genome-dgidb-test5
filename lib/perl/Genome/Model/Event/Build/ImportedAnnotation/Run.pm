@@ -59,10 +59,17 @@ sub execute {
     }
     unless (-d $data_directory){
         $self->create_directory($self->build->data_directory);
+        unless (-d $data_directory) {
+            $self->error_message("Failed to create new build dir: " . $self->build->data_directory);
+            return;
+        }
     }
-    unless (-d $data_directory) {
-        $self->error_message("Failed to create new build dir: " . $self->build->data_directory);
-        return;
+    unless(-d $build->_annotation_data_directory){
+        $self->create_directory($build->_annotation_data_directory);
+        unless (-d $build->_annotation_data_directory) {
+            $self->error_message("Failed to create new annotation data dir: " . $build->_annotation_data_directory);
+            return;
+        }
     }
 
     my $log_file = $data_directory . "/" . $source . "_import.log";
@@ -70,14 +77,8 @@ sub execute {
 
     my ($host, $user, $pass) = $self->get_ensembl_info($version);
 
-    my $annotation_data_source_directory = $build->annotation_data_source_directory;
-    unless (defined $annotation_data_source_directory){
-        $self->error_message("Could not determine annotation data source directory!");
-        return;
-    }
-
     my $command = Genome::Model::Tools::ImportAnnotation::Ensembl->create(
-        data_directory  => $annotation_data_source_directory,
+        data_directory  => $build->_annotation_data_directory,
         version         => $version,
         host            => $host,
         user            => $user,
@@ -87,17 +88,6 @@ sub execute {
         dump_file       => $dump_file,
     );
     $command->execute;
-
-    my $annotation_data_directory = $build->_annotation_data_directory;
-    unless ($annotation_data_directory){
-        $self->error_message("Could not get annotation data directory for build");
-        return;
-    }
-    my $sym_rv = symlink $annotation_data_source_directory, $annotation_data_directory;
-    unless ($sym_rv){
-        $self->error_message("Could not create symlink from $annotation_data_source_directory to $annotation_data_directory");
-        return;
-    }
 
     #TODO: get the RibosomalGeneNames.txt into the annotation_data_directory
     #generate the rna seq files

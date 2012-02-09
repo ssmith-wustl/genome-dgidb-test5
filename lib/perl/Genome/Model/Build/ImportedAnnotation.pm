@@ -20,13 +20,6 @@ class Genome::Model::Build::ImportedAnnotation {
             where => [ name => 'version', value_class_name => 'UR::Value'], 
             is_mutable => 1 
         },
-        annotation_data_source_directory => {
-            via => 'inputs',
-            is => 'Text',
-            to => 'value_id',
-            where => [ name => 'annotation_data_source_directory', value_class_name => 'UR::Value' ],
-            is_mutable => 1 
-        },
         species_name => {
             is => 'Text',
             via => 'inputs',
