@@ -13,13 +13,6 @@ class Genome::Model::ImportedAnnotation{
             is => 'String',
             via => 'processing_profile',
         },
-        annotation_data_source_directory => {
-            via => 'inputs',
-            is => 'UR::Value',
-            to => 'value_id',
-            where => [ name => 'annotation_data_source_directory', value_class_name => 'UR::Value'],
-            is_mutable => 1 
-        },
         species_name => {
             is => 'UR::Value',
             via => 'inputs',
