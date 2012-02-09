@@ -409,7 +409,7 @@ sub qc_processing_profile_id {
     my $self = shift;
     my $type = shift;
 
-    my $self_id = (ref $self ? $self->id : $self);
+    my $ra_id = (ref $self ? $self->processing_profile_id : $self);
     unless ($type) {
         $type = ($self->target_region_set_name ? 'capture' : 'wgs');
     }
@@ -435,7 +435,7 @@ sub qc_processing_profile_id {
         },
     };
 
-    return $qc_pp_id->{ $type }{ $self_id };
+    return $qc_pp_id->{ $type }{ $ra_id };
 }
 
 # FIXME This needs to be renamed/refactored. The method name does not accurately describe what

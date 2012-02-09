@@ -15,9 +15,7 @@ class Genome::Model::Command::Update::ApipeCronStatus {
     ],
 };
 
-
-sub _is_hidden_in_docs { return 1; }
-
+sub _is_hidden_in_doc { return !Genome::Sys->current_user_is_admin };
 
 sub help_detail {
     return 'Sets the APipe Cron Status note for the models to the value provided.'
@@ -27,10 +25,8 @@ sub help_detail {
 sub execute {
     my $self = shift;
 
-    my $user = getpwuid($<);
-    my $apipe_members = (getgrnam("apipe"))[3];
-    if ($apipe_members !~ /\b$user\b/) {
-        print "You must be a member of APipe to use this command.\n";
+    unless (Genome::Sys->current_user_is_admin) {
+        print "You must be an admin to execute this command!\n";
         return;
     }
 

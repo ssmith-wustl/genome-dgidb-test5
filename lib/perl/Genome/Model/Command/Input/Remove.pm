@@ -71,7 +71,7 @@ sub execute {
 
         my @values = $self->values;
         if ( not @values ) {
-            $self->error_message('No values to add');
+            $self->error_message('No values to remove');
             return;
         }
 

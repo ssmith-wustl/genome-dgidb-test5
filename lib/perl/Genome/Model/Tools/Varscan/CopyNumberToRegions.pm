@@ -28,6 +28,7 @@ class Genome::Model::Tools::Varscan::CopyNumberToRegions {
 	
 	has => [                                # specify the command's single-value properties (parameters) <--- 
 		sample_dir	=> { is => 'Text', doc => "Sample directory with VarScan output", is_optional => 0 },
+		basename	=> { is => 'Text', doc => "Base name for copy number files", is_optional => 0, default => 'varScan.*.copynumber.cbs' },
 		bed_file 	=> { is => 'Text', doc => "BED file of exon (or tier 1) definitions", is_optional => 0 },
 		output_file 	=> { is => 'Text', doc => "Output file for marker-based copynumber", is_optional => 0 },
 	],
@@ -60,7 +61,7 @@ EOS
 
 sub execute {                               # replace with real execution logic.
 	my $self = shift;
-
+	my $basename = $self->basename;
 	## Get required parameters ##
 	my $sample_dir = $self->sample_dir;
 	my $bed_file = $self->bed_file;	
@@ -82,7 +83,7 @@ sub execute {                               # replace with real execution logic.
 
 		print "$chrom...";
 		
-		my $exome_file = `ls $sample_dir/varScan.*.copynumber.cbs.$chrom.infile.segments.p_value`;
+		my $exome_file = `ls $sample_dir/$basename.$chrom.infile.segments.p_value`;
 		chomp($exome_file);
 
 		if(-e $exome_file)

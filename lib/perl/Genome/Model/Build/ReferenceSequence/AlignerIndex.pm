@@ -211,9 +211,9 @@ sub _prepare_reference_index {
 
     my $reference_fasta_file;
     if ($self->_supports_multiple_reference) {
-        $reference_fasta_file = $self->reference_build->primary_consensus_path('fa', allow_cached => 0);
+        $reference_fasta_file = $self->reference_build->primary_consensus_path('fa');
     } else {
-        $reference_fasta_file = $self->reference_build->full_consensus_path('fa', allow_cached => 0);
+        $reference_fasta_file = $self->reference_build->full_consensus_path('fa');
     }
 
     unless (-s $reference_fasta_file) {

@@ -4,8 +4,14 @@ use strict;
 use warnings;
 
 use above "Genome"; 
+use Test::More;
 
-use Test::More tests => 6;
+if ($ENV{UR_RUN_LONG_TESTS}) {
+    plan tests => 6;
+}
+else {
+    plan skip_all => 'This test takes 20 minutes to run, run with UR_RUN_LONG_TESTS to enable';
+}
 
 use_ok('Genome::Model::Set::View::GoldSnpComparison::Xml') or die "test cannot continue...";
 

@@ -73,6 +73,9 @@ sub execute {
         my $output_dir = $directories[$i];
         # Load Alignment Metrics
         my ($as_file) = glob($output_dir .'/*alignment_summary_metrics');
+        unless ($as_file) {
+            die ('Failed to find Picard alignment_summary_metrics in directory: '. $output_dir);
+        }
         my $as_metrics = Genome::Model::Tools::Picard::CollectAlignmentSummaryMetrics->parse_file_into_metrics_hashref($as_file);
 
         # Load MarkDuplicates Metrics

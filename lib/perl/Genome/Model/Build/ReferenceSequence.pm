@@ -368,11 +368,8 @@ sub get_bases_file {
 }
 
 sub primary_consensus_path {
-    my ($self, $format, %params) = @_;
+    my ($self, $format) = @_;
 
-    # we want this to default to true, the old behavior
-    my $allow_cached = 1;
-    $allow_cached = $params{allow_cached} if exists $params{allow_cached};
     return $self->full_consensus_path($format) unless $self->append_to;
 
     $format ||= 'bfa';
@@ -381,12 +378,8 @@ sub primary_consensus_path {
 }
 
 sub full_consensus_path {
-    my ($self, $format, %params) = @_;
+    my ($self, $format) = @_;
     $format ||= 'bfa';
-
-    # we want this to default to true, the old behavior
-    my $allow_cached = 1;
-    $allow_cached = $params{allow_cached} if exists $params{allow_cached};
 
     my $file = $self->data_directory . '/all_sequences.'. $format;
     unless (-e $file){

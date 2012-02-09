@@ -11,6 +11,10 @@ use warnings;
 use above "Genome";
 use Test::More;
 
+no warnings 'redefine';
+*Genome::Sys::current_user_is_admin = sub { return 1 };
+use warnings;
+
 use_ok('Genome::Sys::User') or die;
 use_ok('Genome::Sys::User::Role') or die;
 use_ok('Genome::Sys::User::RoleMember') or die;

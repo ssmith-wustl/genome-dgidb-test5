@@ -76,16 +76,22 @@ sub execute {
     my $field = {};
 
     my $i = 0;
-    my $added;
+    my $changed;
+    my $seen = {};
     ROW:
     while (my $row = $csv->getline($fh)) {
-        
+$DB::single = 1;
         if ( $i++ == 0 ) { 
             @header = @$row; 
             $field = $self->check_types(@header);
             next ROW; 
         }
 
+        my $name = $row->[0];
+        if ($seen->{$name}) {
+            die "Error: Found non-unique row ($name) in the spreadsheet- should be one sample or individual per row";
+        }
+        $seen->{$name}++;
         my @values = @$row;  
 
         if (@header != @values) {
@@ -95,12 +101,11 @@ sub execute {
         }
 
 
-        my $obj = $subclass_name->get_or_create(name => $row->[0]);
+        my $obj = $subclass_name->get(name => $name);
 
         
         if ( !$obj ) {
-            warn "Skipping row- couldnt get or create object: $subclass_name with name: "
-                . $header[0];
+            warn "Skipping row- couldnt get a $subclass_name object with name: " . $row->[0];
             next ROW;
         }
 
@@ -113,6 +118,7 @@ sub execute {
 
             my $col_name = $header[$j];
             my $f = $field->{$col_name};
+
             if ($f->type() eq 'enumerated') {
                 my @acceptable_values = map {$_->value} $f->enumerated_values();
                 if (! grep /^$v$/, @acceptable_values) {
@@ -138,14 +144,15 @@ sub execute {
                 attribute_value => $v,
                 nomenclature    => $f->id
             );
-            $added++; 
+            $changed++; 
         }
 
+        # TODO: check for unique: subclass_name, id
         # add each subject obj to the project
         $project->add_part( entity => $obj, role => 'automatic');
     }
 
-    return $added;
+    return $changed;
 }
 
 sub check_types {

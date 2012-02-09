@@ -109,6 +109,19 @@ sub params {
     return $params;
 }
 
+sub json_param  {
+
+    my ($self, $key) = @_;
+    die 'specify key' if !$key;
+
+    my $params = $self->params;
+    return if !$params;
+
+    my $json = $params->params; # params params params params
+    my $decoded_json = decode_json($json);
+    return $decoded_json->{$key};        
+}
+
 sub json_params  {
     my $self = shift;
     my $params = $self->params;
