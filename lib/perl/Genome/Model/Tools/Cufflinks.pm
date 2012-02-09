@@ -5,8 +5,9 @@ use warnings;
 
 use Genome;
 use File::Basename;
+use IPC::Cmd;
 
-my $DEFAULT = '1.0.3';
+my $DEFAULT = '1.3.0';
 
 class Genome::Model::Tools::Cufflinks {
     is => 'Command',
@@ -91,12 +92,18 @@ sub cufflinks_path {
 
 sub available_cufflinks_versions {
     my $self = shift;
-    return keys %CUFFLINKS_VERSIONS;
+    my @legacy_versions = keys %CUFFLINKS_VERSIONS;
+    my @local_versions = qx/ update_alternatives --list cufflinks /;
+    @local_versions = map { /^.*cufflinks(.*)/; $1; } @local_versions;
+    return @legacy_versions, @local_versions;
 }
 
 sub path_for_cufflinks_version {
     my $class = shift;
     my $version = shift;
+
+    my $path = IPC::Cmd::can_run("cufflinks" . $version);
+    return $path if ($path);
 
     if (defined $CUFFLINKS_VERSIONS{$version}) {
         return $CUFFLINKS_VERSIONS{$version};
