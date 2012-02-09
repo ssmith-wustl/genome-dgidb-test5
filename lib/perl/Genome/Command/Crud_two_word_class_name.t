@@ -69,14 +69,14 @@ ok($list_meta, 'LIST meta');
 my $update_meta = SuperHero::Command::Update->__meta__;
 ok($update_meta, 'update meta');
 
-is(SuperHero::Command::Update->_target_name_pl, 'super heroes', 'UPDATE: _target_name_pl');
-is(SuperHero::Command::Update->_target_name_pl_ub, 'super_heroes', 'UPDATE: _target_name_pl_ub');
+is(SuperHero::Command::Update::Name->_target_name_pl, 'super heroes', 'UPDATE: _target_name_pl');
+is(SuperHero::Command::Update::Name->_target_name_pl_ub, 'super_heroes', 'UPDATE: _target_name_pl_ub');
 
 # update name
 is($spiderman->name, 'Spiderman', 'Spiderman has a name');
-my $update_success = SuperHero::Command::Update->create(
+my $update_success = SuperHero::Command::Update::Name->create(
     super_heroes => [ $spiderman ],
-    name => 'Spidey',
+    value => 'Spidey',
 );
 ok($update_success, 'UPDATE create Change Spideys name');
 $update_success->dump_status_messages(1);
