@@ -1,5 +1,5 @@
 
-package Genome::Model::ProteinAnnotation::Command::FastaChunker;
+package Genome::Model::ProteinAnnotation::Command::SplitInputs;
 
 use strict;
 use warnings;
@@ -13,7 +13,7 @@ use English;
 use File::Temp;
 
 
-class Genome::Model::ProteinAnnotation::Command::FastaChunker {
+class Genome::Model::ProteinAnnotation::Command::SplitInputs {
     is  => 'Command::V2',
     has => [
         fasta_file  => { is => 'SCALAR', doc => 'fasta file name',
