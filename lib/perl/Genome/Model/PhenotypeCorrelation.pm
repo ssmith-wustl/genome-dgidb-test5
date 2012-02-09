@@ -61,7 +61,7 @@ class Genome::Model::PhenotypeCorrelation {
     ],
     has_input => [
         reference_sequence_build => {
-            is => 'Genome::Model::ReferenceSequence',
+            is => 'Genome::Model::Build::ReferenceSequence',
             doc => 'the reference sequence against which alignment and variant detection are done',
         },
     ],
