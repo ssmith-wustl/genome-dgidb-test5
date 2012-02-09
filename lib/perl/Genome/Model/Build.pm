@@ -204,7 +204,7 @@ sub __extend_namespace__ {
                 delete $data{is_specified_in_module_header};
                 if ($type->isa("Genome::Model")) {
                     $type =~ s/^Genome::Model/Genome::Model::Build/;
-                    $name =~ s/_model$/_build/;
+                    $name =~ s/_model(?=($|s$))/_build/;
                 }
                 $data{property_name} = $name;
                 $data{data_type} = $type;
