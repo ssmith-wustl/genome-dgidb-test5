@@ -1,10 +1,10 @@
-package Genome::Model::Event::Build::ImportedAnnotation::CopyRibosomalGeneNames;
+package Genome::Model::Command::ImportedAnnotation::CopyRibosomalGeneNames;
 
 use strict;
 use warnings;
 use Genome;
 
-class Genome::Model::Event::Build::ImportedAnnotation::CopyRibosomalGeneNames {
+class Genome::Model::Command::ImportedAnnotation::CopyRibosomalGeneNames {
     is => 'Command::V2',
     has => [
         species_name => {
