@@ -274,7 +274,7 @@ sub execute {
 
                 }
 
-                my @models = Genome::ModelDeprecated->get(
+                my @models = Genome::Model->get(
                     subject_id            => $subject_id,
                     processing_profile_id => $processing_profile->id,
                     auto_assign_inst_data => 1,
@@ -370,7 +370,7 @@ sub execute {
                 my $subject = $genome_instrument_data->$check;
                 # Should we just hoise this check out of the loop and skip to next PSE?
                 if (defined($subject)) {
-                    my @some_models= Genome::ModelDeprecated->get(
+                    my @some_models= Genome::Model->get(
                         subject_id         => $subject->id,
                         auto_assign_inst_data => 1,
                     );
@@ -1525,7 +1525,7 @@ sub add_processing_profiles_to_pses{
                     my $pp_id = $self->_default_de_novo_assembly_bacterial_processing_profile_id;
                     push @processing_profile_ids_to_add, $pp_id;
                 }
-                elsif ( $taxon->name eq 'unknown' ) { # unknow taxon normally skipped
+                elsif ( $taxon->domain =~ /unknown/i ) { # unknow domain normally skipped
                     my $index_illumina = GSC::IndexIllumina->get( $instrument_data_id );
                     if ( $index_illumina ) {
                         for my $project ( $index_illumina->get_research_projects ) {

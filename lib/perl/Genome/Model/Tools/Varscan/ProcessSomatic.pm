@@ -106,9 +106,6 @@ sub process_results {
     my $file_header = "";
 
     my $report_only = $self->report_only;
-    my $max_normal_freq = $self->max_normal_freq;
-    my $min_tumor_freq = $self->min_tumor_freq;
-    my $p_value_for_hc = $self->p_value_for_hc;
 
     print "Processing variants in $variants_file...\n";
 
@@ -119,6 +116,37 @@ sub process_results {
 
     my $input = Genome::Sys->open_file_for_reading($variants_file);
     my $lineCounter = 0;
+    my %counters;
+
+    my %filehandles;
+    my %temp_paths;
+    if(!$report_only) {
+        for my $status ('Somatic', 'Germline', 'LOH') {
+                my $status_file_accessor = 'output_' . lc($status);
+                my $hc_file_accessor = $status_file_accessor . '_hc';
+                my $lc_file_accessor = $status_file_accessor . '_lc';
+
+                my ($status_fh, $status_temp) = Genome::Sys->create_temp_file();
+                my ($high_confidence_fh, $high_confidence_temp) = Genome::Sys->create_temp_file();;
+                my ($low_confidence_fh, $low_confidence_temp) = Genome::Sys->create_temp_file();;
+
+                if($file_header) {
+                    for my $fh ($status_fh, $high_confidence_fh, $low_confidence_fh) {
+                        $fh->print($file_header,"\n");
+                    }
+                }
+
+                $filehandles{$status}{status} = $status_fh;
+                $temp_paths{$status}{status} = $status_temp;
+                $filehandles{$status}{hc} = $high_confidence_fh;
+                $temp_paths{$status}{hc} = $high_confidence_temp;
+                $filehandles{$status}{lc} = $low_confidence_fh;
+                $temp_paths{$status}{lc} = $low_confidence_temp;
+        }
+
+        my $other_fh = Genome::Sys->open_file_for_appending($self->output_other);
+        $filehandles{other} = $other_fh;
+    }
 
     while (<$input>) {
         chomp;
@@ -129,6 +157,11 @@ sub process_results {
 
         if(($lineContents[0] eq "chrom" || $lineContents[0] eq "ref_name")) {
             $file_header = $line;
+            for my $status ('Somatic', 'Germline', 'LOH') {
+                for my $fh (values %{ $filehandles{$status} }) {
+                    $fh->print($file_header,"\n");
+                }
+            }
         } else {
             my $somatic_status = "";
             if($lineContents[13] && ($lineContents[13] =~ "Reference" || $lineContents[13] =~ "Somatic" || $lineContents[13] =~ "Germline" || $lineContents[13] =~ "Unknown" || $lineContents[13] =~ "LOH")) {
@@ -140,136 +173,143 @@ sub process_results {
                 $somatic_status = "Unknown";
             }
 
-            $variants_by_status{$somatic_status} .= "\n" if($variants_by_status{$somatic_status});
-            $variants_by_status{$somatic_status} .= $line;
+            my $hc_or_lc = $self->process_line($line, $somatic_status, \%filehandles, \%temp_paths);
+            $counters{$somatic_status}{$hc_or_lc}++;
         }
     }
-
     close($input);
 
-    foreach my $status (keys %variants_by_status) {
-        my @lines = split(/\n/, $variants_by_status{$status});
-        my $num_lines = @lines;
-        print "$num_lines $status\n";
+    if(!$report_only) {
+        for my $status ('Somatic', 'Germline', 'LOH') {
+            $filehandles{$status}{status}->close;
+            $filehandles{$status}{hc}->close;
+            $filehandles{$status}{lc}->close;
 
-        ## Output Germline, Somatic, and LOH ##
+            my $status_file_accessor = 'output_' . lc($status);
+            my $hc_file_accessor = $status_file_accessor . '_hc';
+            my $lc_file_accessor = $status_file_accessor . '_lc';
 
-        my ($status_fh, $high_confidence_fh, $low_confidence_fh);
-        my ($status_temp, $high_confidence_temp, $low_confidence_temp);
-
-        if($status eq "Germline" || $status eq "Somatic" || $status eq "LOH") {
-            if(!$report_only) {
-                my $status_file_accessor = 'output_' . lc($status);
-                my $hc_file_accessor = $status_file_accessor . '_hc';
-                my $lc_file_accessor = $status_file_accessor . '_lc';
-
-                ($status_fh, $status_temp) = Genome::Sys->create_temp_file();
-                ($high_confidence_fh, $high_confidence_temp) = Genome::Sys->create_temp_file();;
-                ($low_confidence_fh, $low_confidence_temp) = Genome::Sys->create_temp_file();;
-
-                if($file_header) {
-                    for my $fh ($status_fh, $high_confidence_fh, $low_confidence_fh) {
-                        $fh->print($file_header,"\n");
-                    }
-                }
-            }
-
-            my $numHiConf = my $numLowConf = 0;
-
-            foreach my $line (@lines) {
-                my @lineContents = split(/\t/, $line);
-                my $numContents = @lineContents;
-
-                my $somatic_status = my $p_value = "";
-                my $normal_reads2 = my $normal_freq = my $tumor_reads2 = my $tumor_freq = "";
-
-                ## Get Somatic status and p-value ##
-
-                for(my $colCounter = 4; $colCounter < $numContents; $colCounter++) {
-                    if($lineContents[$colCounter]) {
-                        my $value = $lineContents[$colCounter];
-
-                        if($value eq "Reference" || $value eq "Somatic" || $value eq "Germline" || $value eq "LOH" || $value eq "Unknown") {
-                            $normal_reads2 = $lineContents[$colCounter - 7];
-                            $normal_freq = $lineContents[$colCounter - 6];
-
-                            $tumor_reads2 = $lineContents[$colCounter - 3];
-                            $tumor_freq = $lineContents[$colCounter - 2];
-
-                            $normal_freq =~ s/\%//;
-                            $tumor_freq =~ s/\%//;
-
-                            $somatic_status = $value;
-                            $p_value = $lineContents[$colCounter + 1];
-                            $p_value = $lineContents[$colCounter + 2] if($lineContents[$colCounter + 2] && $lineContents[$colCounter + 2] < $p_value);
-                        }
-                    }
-                }
-
-                ## Determine somatic status ##
-                if(!$report_only) {
-                    ## Print to master status file ##
-                    $status_fh->print("$line\n");
-
-                    if($status eq "Somatic") {
-                        if($normal_freq <= $max_normal_freq && $tumor_freq >= $min_tumor_freq && $p_value <= $p_value_for_hc && $tumor_reads2 >= 2) {
-                            $high_confidence_fh->print("$line\n");
-                            $numHiConf++;
-                        } else {
-                            $low_confidence_fh->print("$line\n");
-                            $numLowConf++;
-                        }
-                    } elsif($status eq "Germline") {
-                        if($normal_freq >= $min_tumor_freq && $tumor_freq >= $min_tumor_freq && $p_value <= $p_value_for_hc) {
-                            $high_confidence_fh->print("$line\n");
-                            $numHiConf++;
-                        } else {
-                            $low_confidence_fh->print("$line\n");
-                            $numLowConf++;
-                        }
-                    } elsif($status eq "LOH") {
-                        if($normal_freq >= $min_tumor_freq && $p_value <= $p_value_for_hc) {
-                            $high_confidence_fh->print("$line\n");
-                            $numHiConf++;
-                        } else {
-                            $low_confidence_fh->print("$line\n");
-                            $numLowConf++;
-                        }
-                    }
-                }
-            }
-
-            for my $fh ($status_fh, $high_confidence_fh, $low_confidence_fh) {
-                $fh->close() if $fh;
-            }
-
-            if(!$report_only) {
-                my $status_file_accessor = 'output_' . lc($status);
-                my $hc_file_accessor = $status_file_accessor . '_hc';
-                my $lc_file_accessor = $status_file_accessor . '_lc';
-
-                Genome::Sys->copy_file($status_temp, $self->$status_file_accessor)
-                    if Genome::Sys->check_for_path_existence($status_temp);
-                Genome::Sys->copy_file($high_confidence_temp, $self->$hc_file_accessor)
-                    if Genome::Sys->check_for_path_existence($high_confidence_temp);
-                Genome::Sys->copy_file($low_confidence_temp, $self->$lc_file_accessor)
-                    if Genome::Sys->check_for_path_existence($low_confidence_temp);
-            }
-
-            print "\t$numHiConf high confidence\n";
-            print "\t$numLowConf low confidence\n";
-        } else {
-            # Print all non-LOH/Somatic/Germline things to the "other" filehandle so we account for all variants that come into the tool
-            if(!$report_only) {
-                my $other_fh = Genome::Sys->open_file_for_appending($self->output_other);
-                foreach my $line (@lines) {
-                    $other_fh->print("$line\n");
-                }
-            }
+            Genome::Sys->copy_file($temp_paths{$status}{status}, $self->$status_file_accessor)
+            if Genome::Sys->check_for_path_existence($temp_paths{$status}{status});
+            Genome::Sys->copy_file($temp_paths{$status}{hc}, $self->$hc_file_accessor)
+            if Genome::Sys->check_for_path_existence($temp_paths{$status}{status});
+            Genome::Sys->copy_file($temp_paths{$status}{lc}, $self->$lc_file_accessor)
+            if Genome::Sys->check_for_path_existence($temp_paths{$status}{status});
         }
+        $filehandles{other}->close;
+    }
+
+    for my $status (keys %counters) {
+        my $total = 0;
+        my ($hc, $lc);
+        for my $key (keys %{ $counters{$status} }) {
+            $total += $counters{$status}{$key};
+            if($key eq 'hc') { $hc = $counters{$status}{$key}; }
+            if($key eq 'lc') { $lc = $counters{$status}{$key}; }
+        }
+
+        print "$total $status\n";
+        if($hc) { print "\t$hc high confidence\n"; }
+        if($lc) { print "\t$lc low confidence\n"; }
     }
 
     return 1;
+}
+
+sub process_line {
+    my $self = shift;
+    my $line = shift;
+    my $status = shift;
+    my $filehandles = shift;
+    my $temp_paths = shift;
+
+    my $report_only = $self->report_only;
+    my $max_normal_freq = $self->max_normal_freq;
+    my $min_tumor_freq = $self->min_tumor_freq;
+    my $p_value_for_hc = $self->p_value_for_hc;
+
+    my $hc_or_lc;
+    ## Output Germline, Somatic, and LOH ##
+
+    my ($status_fh, $high_confidence_fh, $low_confidence_fh);
+
+    if($status eq "Germline" || $status eq "Somatic" || $status eq "LOH") {
+        if(!$report_only) {
+            $status_fh = $filehandles->{$status}{status};
+            $high_confidence_fh = $filehandles->{$status}{hc};
+            $low_confidence_fh = $filehandles->{$status}{lc};
+        }
+
+        my @lineContents = split(/\t/, $line);
+        my $numContents = @lineContents;
+
+        my $somatic_status = my $p_value = "";
+        my $normal_reads2 = my $normal_freq = my $tumor_reads2 = my $tumor_freq = "";
+
+        ## Get Somatic status and p-value ##
+
+        for(my $colCounter = 4; $colCounter < $numContents; $colCounter++) {
+            if($lineContents[$colCounter]) {
+                my $value = $lineContents[$colCounter];
+
+                if($value eq "Reference" || $value eq "Somatic" || $value eq "Germline" || $value eq "LOH" || $value eq "Unknown") {
+                    $normal_reads2 = $lineContents[$colCounter - 7];
+                    $normal_freq = $lineContents[$colCounter - 6];
+
+                    $tumor_reads2 = $lineContents[$colCounter - 3];
+                    $tumor_freq = $lineContents[$colCounter - 2];
+
+                    $normal_freq =~ s/\%//;
+                    $tumor_freq =~ s/\%//;
+
+                    $somatic_status = $value;
+                    $p_value = $lineContents[$colCounter + 1];
+                    $p_value = $lineContents[$colCounter + 2] if($lineContents[$colCounter + 2] && $lineContents[$colCounter + 2] < $p_value);
+                }
+            }
+        }
+
+        ## Determine somatic status ##
+        if(!$report_only) {
+            ## Print to master status file ##
+            $status_fh->print("$line\n");
+            if($status eq "Somatic") {
+                if($normal_freq <= $max_normal_freq && $tumor_freq >= $min_tumor_freq && $p_value <= $p_value_for_hc && $tumor_reads2 >= 2) {
+                    $high_confidence_fh->print("$line\n");
+                    $hc_or_lc = 'hc';
+                } else {
+                    $low_confidence_fh->print("$line\n");
+                    $hc_or_lc = 'lc';
+                }
+            } elsif($status eq "Germline") {
+                if($normal_freq >= $min_tumor_freq && $tumor_freq >= $min_tumor_freq && $p_value <= $p_value_for_hc) {
+                    $high_confidence_fh->print("$line\n");
+                    $hc_or_lc = 'hc';
+                } else {
+                    $low_confidence_fh->print("$line\n");
+                    $hc_or_lc = 'lc';
+                }
+            } elsif($status eq "LOH") {
+                if($normal_freq >= $min_tumor_freq && $p_value <= $p_value_for_hc) {
+                    $high_confidence_fh->print("$line\n");
+                    $hc_or_lc = 'hc';
+                } else {
+                    $low_confidence_fh->print("$line\n");
+                    $hc_or_lc = 'lc';
+                }
+            }
+        }
+
+    } else {
+        # Print all non-LOH/Somatic/Germline things to the "other" filehandle so we account for all variants that come into the tool
+        if(!$report_only) {
+            my $other_fh = $filehandles->{other};
+            $other_fh->print("$line\n");
+        }
+        $hc_or_lc = 'n/a';
+    }
+
+    return $hc_or_lc;
 }
 
 

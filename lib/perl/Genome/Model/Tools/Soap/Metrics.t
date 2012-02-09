@@ -10,7 +10,7 @@ use Test::More;
 
 use_ok('Genome::Model::Tools::Soap::Metrics') or die;
 
-my $data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Soap/Metrics/v7';
+my $data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Soap/Metrics/v8';
 my $example_metrics_file = $data_dir.'/metrics.txt';
 
 my $temp_dir = Genome::Sys->create_temp_directory;

@@ -65,9 +65,9 @@ sub new {
         }
         if(defined($self->{_parent})) {
             $subview_number++;
-            $self->{_svg} = $self->{_parent}->svg->group(id =>
-                "view$subview_number"); 
+            $self->{_svg} = $self->{_parent}->svg;
             $self->{_svg} = $self->{_svg}->svg(%create_parameters); 
+            $self->{_svg}->group(id => "view$subview_number");
         }
         else {
             #root svg

@@ -11,15 +11,15 @@
     <html>
       <head>
         <title>Cancer Summary: <xsl:value-of select="//individual/@name"/>&#160;<xsl:value-of select="//individual/@gender"/>&#160;<xsl:value-of select="//individual/@id"/></title>
-        <link rel="shortcut icon" href="https://imp.gsc.wustl.edu/resources/report_resources/apipe_dashboard/images/gc_favicon.png" type="image/png" />
-        <link rel="stylesheet" href="https://imp.gsc.wustl.edu/resources/report_resources/apipe_dashboard/css/master.css" type="text/css" media="screen" />
-        <script type="text/javascript" src="https://imp.gsc.wustl.edu/resources/report_resources/jquery/jquery.js"></script>
-        <link rel="stylesheet" href="https://imp.gsc.wustl.edu/resources/report_resources/cancer_card/css/zoom2.css" type="text/css" media="screen"></link>
-        <link rel="stylesheet" href="https://imp.gsc.wustl.edu/resources/report_resources/cancer_card/css/cancer_card.css" type="text/css" media="screen"></link>
+        <link rel="shortcut icon" href="https://imp.gsc.wustl.edu/res/old/report_resources/apipe_dashboard/images/gc_favicon.png" type="image/png" />
+        <link rel="stylesheet" href="https://imp.gsc.wustl.edu/res/old/report_resources/apipe_dashboard/css/master.css" type="text/css" media="screen" />
+        <script type="text/javascript" src="https://imp.gsc.wustl.edu/res/old/report_resources/jquery/jquery.js"></script>
+        <link rel="stylesheet" href="https://imp.gsc.wustl.edu/res/old/report_resources/cancer_card/css/zoom2.css" type="text/css" media="screen"></link>
+        <link rel="stylesheet" href="https://imp.gsc.wustl.edu/res/old/report_resources/cancer_card/css/cancer_card.css" type="text/css" media="screen"></link>
 
         <!-- initialize circos graph zoom -->
-        <script type="text/javascript" src="https://imp.gsc.wustl.edu/resources/report_resources/cancer_card/js/dom-drag.js"></script>
-        <script type="text/javascript" src="https://imp.gsc.wustl.edu/resources/report_resources/cancer_card/js/HotSpot2.js"></script>
+        <script type="text/javascript" src="https://imp.gsc.wustl.edu/res/old/report_resources/cancer_card/js/dom-drag.js"></script>
+        <script type="text/javascript" src="https://imp.gsc.wustl.edu/res/old/report_resources/cancer_card/js/HotSpot2.js"></script>
         <script type="text/javascript">
           addEvent(window, 'load', function() {
               HotSpotController.init("zoomImage",300, '<xsl:value-of select="//individual/circos-images/@large"/>','ZTbutton'); });
@@ -39,9 +39,9 @@
 
         <!-- initialize data tables -->
         <!-- note: dataTables doesn't like to be applied to a table with no column headers (which will happen if we create a 'None found' table), so must be applied using $(document).ready on a per-table basis in the body of the page. -->
-        <script type="text/javascript" src="https://imp.gsc.wustl.edu/resources/report_resources/jquery/dataTables-1.5/media/js/jquery.dataTables.js"></script>
-		<script type="text/javascript" src="https://imp.gsc.wustl.edu/resources/report_resources/jquery/dataTables-1.5/media/js/jquery.dataTables.plugin.formatted-num.js"></script>
-        <link rel="stylesheet" href="https://imp.gsc.wustl.edu/resources/report_resources/jquery/dataTables-1.5/media/css/gc_table.css" type="text/css" media="screen"></link>
+        <script type="text/javascript" src="https://imp.gsc.wustl.edu/res/old/report_resources/jquery/dataTables-1.5/media/js/jquery.dataTables.js"></script>
+		<script type="text/javascript" src="https://imp.gsc.wustl.edu/res/old/report_resources/jquery/dataTables-1.5/media/js/jquery.dataTables.plugin.formatted-num.js"></script>
+        <link rel="stylesheet" href="https://imp.gsc.wustl.edu/res/old/report_resources/jquery/dataTables-1.5/media/css/gc_table.css" type="text/css" media="screen"></link>
       </head>
 
       <body>
@@ -51,7 +51,7 @@
               <table cellpadding="0" cellspacing="0" border="0">
                 <tr>
                   <td>
-                    <img src="https://imp.gsc.wustl.edu/resources/report_resources/apipe_dashboard/images/gc_header_logo2.png" width="44" height="45" align="absmiddle" />
+                    <img src="https://imp.gsc.wustl.edu/res/old/report_resources/apipe_dashboard/images/gc_header_logo2.png" width="44" height="45" align="absmiddle" />
                   </td>
                   <td>
                     <h1><xsl:value-of select="//individual/@name"/>&#160;<xsl:value-of select="//individual/@gender"/>&#160;<xsl:value-of select="//individual/@id"/>&#160;Cancer Summary</h1>

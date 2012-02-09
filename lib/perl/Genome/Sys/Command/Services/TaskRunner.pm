@@ -63,21 +63,39 @@ sub task_loop {
         # before we fork, we'll drop the db connection and lose our lock.  
         # so first, update the status so that nobody else takes it in the meantime.
         $task->status("pending_execute");
+        mkpath($self->output_basedir . "/" . $task->id);
+        $task->stderr_pathname($self->output_basedir . "/" . $task->id . "/stderr");
+        $task->stdout_pathname($self->output_basedir . "/" . $task->id . "/stdout");
         UR::Context->commit;
         
         my $pid = UR::Context::Process->fork();
         if (!$pid) {
            $self->status_message("Forked $$, running $id");
-           Genome::Task::Command::Run->create(task=>$task, output_basedir=>$self->output_basedir)->execute; 
-           UR::Context->commit;
+           my ($old_stdout, $old_stderr);
+           open ($old_stdout, ">&STDOUT");
+           open ($old_stderr, ">&STDERR");
+
+           open (STDERR, ">>" . $task->stderr_pathname);
+           open (STDOUT, ">>" . $task->stdout_pathname);
+        
+           my $ret;
+           eval { 
+               Genome::Task::Command::Run->create(task=>$task)->execute; 
+               $ret = UR::Context->commit;
+           };
+           # rescue after a failure to sync
+           if (!$ret || $@ ) {
+               $self->error_message("Failed to execute: $@");
+               UR::Context->rollback;
+               $task = UR::Context->current->reload('Genome::Task', id=>$id);
+               $task->out_of_band_attribute_update(status=>'failed', time_finished=>$UR::Context::current->now);
+           }
            exit(0);
         } else {
            $task->unload; 
            waitpid($pid, 0);
         }
     }
-     
-    UR::Context->commit;
 }
 
 sub check_restart_loop() {

@@ -27,6 +27,7 @@ class Genome::Model::Tools::Analysis::SomaticPipeline::MergeIndelsWithAnnotation
 		variants_file	=> { is => 'Text', doc => "File of variants in indel format", is_optional => 0 },
 		annotation_file	=> { is => 'Text', doc => "Annotate-indel output file", is_optional => 0 },
 		output_file     => { is => 'Text', doc => "Output file to receive merged data", is_optional => 0 },
+		full_annotation => { is => 'Text', doc => "If set to 1, appends the full annotation to line", is_optional => 1 },
 	],
 };
 
@@ -62,6 +63,14 @@ sub execute {                               # replace with real execution logic.
 	my $variants_file = $self->variants_file;
 	my $annotation_file = $self->annotation_file;
 	my $output_file = $self->output_file;
+
+	## Determine if variant file is in bed format ##
+	my $is_bed = 0;
+
+	if(substr($variants_file, length($variants_file) - 3, 3) eq "bed")
+	{
+		$is_bed = 1;
+	}
 	
 	## Load the SNP calls ##
 
@@ -115,11 +124,24 @@ sub execute {                               # replace with real execution logic.
 			
 			my $snp_key = "$chrom\t$chr_start\t$chr_stop\t$allele1\t$allele2" if($chrom && $chr_start && $chr_stop);
 			
-			if($snp_key && $snp_calls{$snp_key})
+			if($variant_type ne "SNP" && $snp_key && $snp_calls{$snp_key})
 			{
 				my $annotation = "$variant_type\t$gene_name\t$transcript_name\t$trv_type\t$c_position\t$aa_change\t$ucsc_cons\t$domain";
+				
+				if($self->full_annotation)
+				{
+					$annotation = $line;
+				}
+
 #				print OUTFILE "$annotation\t$snp_calls{$snp_key}\n";
 				my $newline = $snp_key . "\t";
+				
+				if($is_bed)
+				{
+					## For a bed file, do slightly alternate ##
+					$newline = "$chrom\t$chr_start\t$chr_stop\t$allele1/$allele2\t";
+				}
+				
 				$newline .= $annotation . "\t";
 				$newline .= $snp_calls{$snp_key};
 
@@ -185,7 +207,12 @@ sub load_snp_calls
 
 	my $input = new FileHandle ($FileName);
 	my $lineCounter = 0;
-	
+	my $is_bed = 0;
+
+	if(substr($FileName, length($FileName) - 3, 3) eq "bed")
+	{
+		$is_bed = 1;
+	}
 	my @formatted = ();
 	my $formatCounter = 0;
 	
@@ -207,7 +234,7 @@ sub load_snp_calls
 			my $ref = my $var = "";
 			my $indel_type = my $indel_size = "";
 
-			if(substr($FileName, length($FileName) - 3, 3) eq "bed")
+			if($is_bed)
 			{
 				$chr_start = $lineContents[1];
 				$chr_stop = $lineContents[2];
@@ -295,7 +322,7 @@ sub load_snp_calls
 			my $snp_key = "$chrom\t$chr_start\t$chr_stop\t$allele1\t$allele2";
 		
 			my $snp_call = "";
-			
+
 			for(my $colCounter = 4; $colCounter < $numContents; $colCounter++)
 			{
 				$snp_call .= "\t" if($colCounter > 4);
