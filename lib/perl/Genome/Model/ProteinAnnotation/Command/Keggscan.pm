@@ -144,7 +144,7 @@ sub execute {
     
     # FIXME The subject fasta path needs to be a param on this command object with a default value
     my ($fasta_name) = basename($self->fasta_file);
-    my $kegg_command = Genome::Model::ProteinAnnotation::Command::Keggscan::RunKeggScan->create(
+    my $kegg_command = Genome::Model::ProteinAnnotation::Command::KeggscanInternal->create(
         species_name => "default", 
         query_fasta_path => $self->fasta_file,
         subject_fasta_path => $keggscan_faa_path,
