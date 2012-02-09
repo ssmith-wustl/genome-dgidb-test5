@@ -86,7 +86,7 @@ sub execute
     my @genes;
 
 
-    foreach my $ensembl_transcript_id ( @ensembl_transcript_ids ) #TODO why reverse here?
+    foreach my $ensembl_transcript_id ( @ensembl_transcript_ids )
     {
         $count++;
         my $ensembl_transcript = $transcript_adaptor->fetch_by_dbID($ensembl_transcript_id);
@@ -101,7 +101,7 @@ sub execute
 
         next unless defined $transcript_start and defined $transcript_stop;
 
-        my $strand           = $ensembl_transcript->strand;
+        my $strand = $ensembl_transcript->strand;
         if ( $strand == 1 ) {
             $strand = "+1";
         }
@@ -135,7 +135,6 @@ sub execute
         my $gene_meta = Genome::Gene->__meta__;
         my $composite_gene_id = $gene_meta->resolve_composite_id_from_ordered_values($ensembl_gene_id, $species,$source,$version);
         $gene = Genome::Gene->get(id => $composite_gene_id, data_directory => $self->data_directory);
-        #$gene = Genome::Gene->get(gene_id => $ensembl_gene_id, species => $species, source => $source, version => $version, data_directory => $self->data_directory);
         unless ($gene){
             $gene = Genome::Gene->create(
                 gene_id => $ensembl_gene_id, 
