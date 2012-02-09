@@ -34,7 +34,7 @@ class Genome::Model::ProteinAnnotation::Command::SplitInputs {
 
 sub sub_command_category { 'pipeline' }
 
-sub sub_command_sort_position { 10 }
+sub sub_command_sort_position { 2 }
 
 sub help_synopsis {
     return <<"EOS"

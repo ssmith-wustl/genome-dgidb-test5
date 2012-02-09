@@ -39,7 +39,7 @@ class Genome::Model::ProteinAnnotation::Command::UploadResults {
 
 sub sub_command_category { 'pipeline' }
 
-sub sub_command_sort_position { 10 }
+sub sub_command_sort_position { 3 }
 
 sub execute {
     my $self = shift;

@@ -18,7 +18,6 @@ sub sub_command_category { 'pipeline' }
 
 sub sub_command_sort_position { 1 }
 
-
 sub help_synopsis {
     return <<"EOS"
 EOS
