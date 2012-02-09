@@ -271,8 +271,9 @@ sub parse_result {
     
     if ($self->report_save_dir) {
         require Data::Dumper;
-        my $fh = IO::File->new(join('/', $self->report_save_dir, 'dump_file.out'), 'w');
-        die "Could not get file handle for " . $self->dump_file unless $fh;
+        my $dump_file = join('/', $self->report_save_dir, 'dump_file.out');
+        my $fh = IO::File->new($dump_file, 'w');
+        die "Could not get file handle for $dump_file: $!" unless $fh;
         $fh->print(Data::Dumper::Dumper(\@features) . "\n");
     }
     $self->bio_seq_feature( \@features );
