@@ -1096,7 +1096,7 @@ sub output_germline_files
   system("java -jar /gsc/scripts/lib/java/VarScan/VarScan.jar limit $outfile_tumor_snp --regions-file " . $somatic_snvs . " --not-file $outfile_tumor_snp.germline");
   $outfile_tumor_snp .= ".germline";
 
-  ## Apply FP-filter to SNPs, and also reannotate them, because there's a good chance they were annotated with something old
+  ## Apply FP-filter to SNPs, and also annotate them
   warn "Submitting a job to apply FP-filter on normal SNPs...\n";
   my $cmd = "bsub -R 'select[mem>8000] rusage[mem=8000]' -M 8000000 'gmt somatic filter-false-positives ";
   $cmd .= "--reference " . $self->reference . " ";
@@ -1238,138 +1238,38 @@ sub output_germline_files
 
 sub get_samtools_snps
 {
-  my ($variant_file, $output_file) = @_;
+  my ( $variant_file, $output_file ) = @_;
   my $num_snps = 0;
 
-  ## Check for Tier 1 SNVs ##
   if(-e $variant_file)
   {
-    open(OUTFILE, ">$output_file") or die "Can't open outfile: $!\n";
+    my $output = IO::File->new( $output_file, ">" ) or die "Cannot open $output_file. $!";
+    my $input = IO::File->new( $variant_file ) or die "Cannot open $variant_file. $!";
 
-    ## Parse the Tier 1 SNVs file ##
-    my $input = IO::File->new($variant_file) or die "Cannot open $variant_file. $!";
-    my $lineCounter = 0;
-
-    while (<$input>)
+    while ( <$input> )
     {
       chomp;
       my $line = $_;
-      $lineCounter++;
+      my ( $chrom, $chr_start, $chr_stop, $ref, $var, $var_type ) = split( /\t/, $line );
 
-      my ($chrom, $chr_start, $chr_stop, $ref, $var, $var_type, $gene, $transcript, $organism, $source, $version, $strand, $status, $trv_type) = split(/\t/, $line);
-
-      if($var_type eq "SNP" && is_tier1($trv_type))
+      if( $var_type eq "SNP" )
       {
         $num_snps++;
-        print OUTFILE "$line\n";
+        $output->print( join( "\t", $chrom, $chr_start, $chr_stop, $ref, $var ), "\n" );
       }
     }
 
     $input->close;
-
-    close(OUTFILE);
+    $output->close;
   }
   else
   {
     warn "Warning: Could not locate Samtools variant file $variant_file\n";
   }
 
-  return($num_snps);
+  return( $num_snps );
 }
 
-###############################################################################################
-# is_tier1 - return 1 if this trv_type is considered tier 1
-#
-################################################################################################
-
-sub is_tier1
-{
-  my $trv_type = shift(@_);
-
-  if($trv_type eq 'missense' || $trv_type eq 'nonsense' || $trv_type eq 'nonstop' || $trv_type eq 'splice_site' || $trv_type =~ 'frame')
-  {
-    return(1);
-  }
-
-  return(0);
-}
-
-################################################################################################
-# Output Germline Files - output the files for germline analysis
-#
-################################################################################################
-
-sub old_output_germline_files
-{
-  my ($self, $build_dir, $germline_dir, $normal_model, $tumor_model) = @_;
-
-  my $tumor_model_dir = $tumor_model->last_succeeded_build_directory;
-  my $tumor_bam = $tumor_model->last_succeeded_build->whole_rmdup_bam_file;
-  warn "Could not locate Tumor Ref-alignment BAM within build dir $tumor_model_dir\n" unless( -e $tumor_bam );
-
-  ## Get VarScan Germline File ##
-  my ( $varscan_snv_file ) = glob("$build_dir/varScan.output.snp.formatted.Germline.hc");
-  my $varscan_output_file = "$germline_dir/varScan.germline.snp";
-
-  if($varscan_snv_file && !(-e $varscan_output_file))
-  {
-    if($self->germline_roi_file)
-    {
-      system("java -jar /gsc/scripts/lib/java/VarScan/VarScan.jar limit $varscan_snv_file --regions-file " . $self->germline_roi_file . " --output-file $varscan_output_file");
-    }
-    else
-    {
-      system("cp $varscan_snv_file $varscan_output_file");
-    }
-
-    ## Apply the FP-filter ##
-    system("bsub -R\"select[mem>8000] rusage[mem=8000]\" -M 8000000 gmt somatic filter-false-positives --variant-file $varscan_output_file --bam-file $tumor_bam --output-file $varscan_output_file.fpfilter --filtered-file $varscan_output_file.fpfilter.removed");
-  }
-
-  ## Get VarScan Germline IndelFile ##
-  my ( $varscan_indel_file ) = glob("$build_dir/varScan.output.indel.formatted.Germline.hc");
-  my $varscan_indel_output_file = "$germline_dir/varScan.germline.indel";
-
-  if($varscan_indel_file && !(-e $varscan_indel_output_file))
-  {
-    if($self->germline_roi_file)
-    {
-      system("java -jar /gsc/scripts/lib/java/VarScan/VarScan.v2.2.6.jar limit $varscan_indel_file --regions-file " . $self->germline_roi_file . " --output-file $varscan_indel_output_file");
-    }
-    else
-    {
-      system("cp $varscan_indel_file $varscan_indel_output_file");
-    }
-
-    ## Apply the FP-filter ##
-    system("bsub -R\"select[mem>8000] rusage[mem=8000]\" -M 8000000 gmt somatic filter-false-indels --min-read-pos 0.30 --max-var-mmqs 100 --min-var-readlen 75 --variant-file $varscan_indel_output_file --bam-file $tumor_bam --output-file $varscan_indel_output_file.fpfilter --filtered-file $varscan_indel_output_file.fpfilter.removed");
-  }
-
-  ## Get GATK File ##
-  my ( $gatk_indel_file ) = glob("$build_dir/gatk.output.indel.formatted");
-
-  my $gatk_output_file = "$germline_dir/gatk.germline.indel";
-
-  if($gatk_indel_file && !(-e $gatk_output_file))
-  {
-    if($self->germline_roi_file)
-    {
-      system("grep GERMLINE $gatk_indel_file >$gatk_output_file.temp");
-      system("java -jar /gsc/scripts/lib/java/VarScan/VarScan.v2.2.6.jar limit $gatk_output_file.temp --regions-file " . $self->germline_roi_file . " --output-file $gatk_output_file");
-      system("rm -rf $gatk_output_file.temp");
-    }
-    else
-    {
-      ## Copy ALL Indels ##
-      system("grep GERMLINE $gatk_indel_file >$gatk_output_file");
-    }
-  }
-}
-
-################################################################################################
-# Output Germline Files - output the files for loh analysis
-#
-################################################################################################
 
 sub output_loh_files
 {
@@ -1418,10 +1318,6 @@ sub output_loh_files
   }
 }
 
-################################################################################################
-# Output Germline Files - output the files for loh analysis
-#
-################################################################################################
 
 sub process_loh
 {
@@ -1443,6 +1339,7 @@ sub process_loh
     warn "Warning: Germline/LOH SNP file(s) $germline_snp $loh_snp missing from $loh_dir\n";
   }
 }
+
 
 sub byChrPos
 {
