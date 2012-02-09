@@ -169,6 +169,7 @@ sub _guess_build_error {
 
     my $data_directory = $build->data_directory;
     my $log_directory = $data_directory.'/logs';
+    return unless -d $log_directory;
     my %errors;
     find(
         sub{
