@@ -8,8 +8,8 @@ class Genome::Model::ProteinAnnotation::Command::Annotator {
     is => 'Command::V2',
     is_abstract => 1,
     has => [
-        version     => { is => 'Text', is_input => 1 },
-        output_dir  => { is => 'FilesystemPath', is_input => 1, is_output => 1, },
+        #version     => { is => 'Text', is_input => 1 },
+        #output_dir  => { is => 'FilesystemPath', is_input => 1, is_output => 1, },
     ],
     doc => 'annotator abstract base class',
 };
