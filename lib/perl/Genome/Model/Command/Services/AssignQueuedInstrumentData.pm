@@ -389,7 +389,7 @@ sub execute {
             @found_models =
                 grep {
                     $_->processing_profile->sequencing_platform() eq $sequencing_platform
-	           } @found_models;
+                } @found_models;
 
             #Don't care here what ref. seq. was used (if any)
             my @assigned = $self->assign_instrument_data_to_models($genome_instrument_data, undef, @found_models);
