@@ -338,7 +338,7 @@ sub wait_for_build {
             $self->status_message("Waiting for build(~$time sec) ".$build->id.", status: $status");
         }
         sleep $inc;
-        $time += 30;
+        $time += $inc;
         $last_status = $status;
     }
 }
@@ -351,11 +351,20 @@ sub _extract_data_from_alignment_result{
     my $lane = $instrument_data->lane;
     my $instrument_data_id = $instrument_data->id;
 
+    my $aligner_name = $alignment->aligner_name; #we need to do special handling for rtg mapx alignments, which are protein space and do not produce bam files
+
     my $dir = $alignment->output_dir;
-    my $bam = $dir . '/all_sequences.bam';
-    unless (-e $bam) {
-        $self->error_message("Failed to find expected BAM file $bam\n");
-        return;
+    my $alignment_output;
+    if ($aligner_name eq 'rtg mapx'){
+        unless ($extraction_type eq 'aligned'){
+            die $self->error_message("metagenomic shotgun pipeline should only extract aligned reads from mapx output");
+        }
+        $alignment_output = $dir . '/alignments.txt';
+    }else{
+        $alignment_output = $dir . '/all_sequences.bam';
+    }
+    unless (-e $alignment_output) {
+        die $self->error_message("Failed to find expected alignment output file $alignment_output\n");
     }
 
     # come up with the import "original_data_path", used to find existing data, and when uploading new data
@@ -435,15 +444,20 @@ sub _extract_data_from_alignment_result{
     my $reverse_unaligned_data_path     = "$working_dir/$instrument_data_id/$reverse_basename";
     my $fragment_unaligned_data_path    = "$working_dir/$instrument_data_id/$fragment_basename";
 
-    my $cmd = "/usr/bin/perl `which gmt` sam bam-to-unaligned-fastq --bam-file $bam --output-directory $working_dir --ignore-bitflags"; #add ignore bitflags here because some of the aligners used in this pipeline produce untrustworthy flag information
-    if ($extraction_type eq 'aligned'){
-        $cmd.=" --print-aligned";
-    }
-    elsif($extraction_type eq 'unaligned'){
-        #default
-    }
-    else{
-        die $self->error_message("Unhandled extraction_type $extraction_type");
+    my $cmd;
+    if ($aligner_name eq 'rtg mapx'){
+        $cmd = "/usr/bin/perl `which genome` model metagenomic-shotgun mapx-alignment-to-aligned-fastq --mapx-alignment $alignment_output --output-directory $working_dir --instrument-data $instrument_data_id";
+    }else{
+        $cmd = "/usr/bin/perl `which gmt` sam bam-to-unaligned-fastq --bam-file $alignment_output --output-directory $working_dir --ignore-bitflags"; #add ignore bitflags here because some of the aligners used in this pipeline produce untrustworthy flag information
+        if ($extraction_type eq 'aligned'){
+            $cmd.=" --print-aligned";
+        }
+        elsif($extraction_type eq 'unaligned'){
+            #default
+        }
+        else{
+            die $self->error_message("Unhandled extraction_type $extraction_type");
+        }
     }
 
     my $rv = eval{ Genome::Sys->shellcmd(cmd => $cmd); };
