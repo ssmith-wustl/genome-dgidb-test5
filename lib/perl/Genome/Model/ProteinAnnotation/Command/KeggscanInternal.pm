@@ -1,4 +1,4 @@
-package Genome::Model::ProteinAnnotation::KeggscanInternal;
+package Genome::Model::ProteinAnnotation::Command::KeggscanInternal;
 
 # bdericks: This module was originally written by Todd Wylie and named
 # KEGGscan_KO.v50.pl. The module can be found in version control at 
@@ -20,8 +20,8 @@ use File::Path qw(make_path);
 # the top and full reports after blast is run
 use BPdeluxe;
 
-class Genome::Model::ProteinAnnotation::KeggscanInternal {
-    is => 'Genome::Model::ProteinAnnotation::Command::Annotator',
+class Genome::Model::ProteinAnnotation::Command::KeggscanInternal {
+    is => 'Command::V2',
     has => [
         species_name => {
             is => 'Text',
