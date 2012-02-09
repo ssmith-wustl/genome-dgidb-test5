@@ -598,9 +598,9 @@ sub calculate_metrics {
         $main_metrics->{reads_assembled_success} = sprintf(
             '%0.3f', $main_metrics->{reads_assembled} / $main_metrics->{reads_processed}
         );
-        $main_metrics->{reads_assembled_success_percent} = sprintf( '%.1f', $main_metrics->{reads_assembled} / $main_metrics->{reads_processed} * 100 );
+        $main_metrics->{reads_assembled_success_percent} = sprintf( '%.1f', $main_metrics->{reads_assembled_unique} / $main_metrics->{reads_processed} * 100 );
         $main_metrics->{reads_not_assembled} = $main_metrics->{reads_assembled} - $main_metrics->{reads_processed};
-        $main_metrics->{reads_not_assembled_percent} = sprintf( '%.1f', ( $main_metrics->{reads_processed} - $main_metrics->{reads_assembled} ) / $main_metrics->{reads_processed} * 100 );
+        $main_metrics->{reads_not_assembled_percent} = sprintf( '%.1f', ( $main_metrics->{reads_processed} - $main_metrics->{reads_assembled_unique} ) / $main_metrics->{reads_processed} * 100 );
     }
 
     $self->_are_metrics_calculated(1);

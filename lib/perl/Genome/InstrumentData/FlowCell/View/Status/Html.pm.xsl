@@ -9,12 +9,12 @@
       <head>
         <title>Flow Cell <xsl:value-of select="//flow-cell/@id"/></title>
 
-        <link rel="shortcut icon" href="/resources/report_resources/apipe_dashboard/images/gc_favicon.png" type="image/png" />
+        <link rel="shortcut icon" href="/res/old/report_resources/apipe_dashboard/images/gc_favicon.png" type="image/png" />
 
-        <link rel="stylesheet" href="/resources/report_resources/apipe_dashboard/css/master.css" type="text/css" media="screen" />
-        <link rel="stylesheet" href="/resources/report_resources/apipe_dashboard/css/tablesorter.css" type="text/css" media="screen" />
-        <script type="text/javascript" src="/resources/report_resources/jquery/jquery.js"></script>
-        <script type="text/javascript" src="/resources/report_resources/jquery/jquery.tablesorter.min.js"></script>
+        <link rel="stylesheet" href="/res/old/report_resources/apipe_dashboard/css/master.css" type="text/css" media="screen" />
+        <link rel="stylesheet" href="/res/old/report_resources/apipe_dashboard/css/tablesorter.css" type="text/css" media="screen" />
+        <script type="text/javascript" src="/res/old/report_resources/jquery/jquery.js"></script>
+        <script type="text/javascript" src="/res/old/report_resources/jquery/jquery.tablesorter.min.js"></script>
         <script type="text/javascript">
           $(document).ready(function() {
           $("#lane_list").tablesorter({
@@ -23,7 +23,7 @@
           });
           });
         </script>
-        <script type="text/javascript" src="/resources/report_resources/protovis-3.1/protovis-d3.1.js"></script>
+        <script type="text/javascript" src="/res/old/report_resources/protovis-3.1/protovis-d3.1.js"></script>
         <!-- set up lane data and chart -->
         <script type="text/javascript">
           window.indexData = [];
@@ -115,7 +115,7 @@ window.chartMin = 0;
               <table cellpadding="0" cellspacing="0" border="0">
                 <tr>
                   <td>
-                    <a href="status.cgi" alt="Go to Search Page" title="Go to Search Page"><img src="/resources/report_resources/apipe_dashboard/images/gc_header_logo2.png" width="44" height="45" align="absmiddle" /></a>
+                    <a href="status.cgi" alt="Go to Search Page" title="Go to Search Page"><img src="/res/old/report_resources/apipe_dashboard/images/gc_header_logo2.png" width="44" height="45" align="absmiddle" /></a>
                   </td>
                   <td>
                     <h1>Analysis Reports v0.1</h1>

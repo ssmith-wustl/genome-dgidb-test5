@@ -95,9 +95,10 @@ sub execute {                               # replace with real execution logic.
 	
 	## Go through variants ##
 	
-	foreach my $variant (sort byChrPos keys %variants)
+	foreach my $variant_key (sort byChrPos keys %variants)
 	{
-		my ($chrom, $position) = split(/\t/, $variant);
+		my ($chrom, $position) = split(/\t/, $variant_key);
+		my $variant = $variants{$variant_key};
 
 		if(!$window_chrom)
 		{
