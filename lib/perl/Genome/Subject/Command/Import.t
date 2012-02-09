@@ -37,6 +37,7 @@ my $obj2 = Genome::Subject::Command::Import->create(
 );
 eval { $obj2->execute(); };
 ok($@,"executing with an invalid column in data (should die)");
+diag($@);
 
 
 my $obj3 = Genome::Subject::Command::Import->create(
