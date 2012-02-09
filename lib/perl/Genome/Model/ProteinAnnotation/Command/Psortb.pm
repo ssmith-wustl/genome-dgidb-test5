@@ -44,6 +44,8 @@ class Genome::Model::ProteinAnnotation::Command::Psortb {
     ],
 };
 
+sub _requires_chunking { 1 }
+
 sub help_synopsis {
     return <<"EOS"
 EOS
