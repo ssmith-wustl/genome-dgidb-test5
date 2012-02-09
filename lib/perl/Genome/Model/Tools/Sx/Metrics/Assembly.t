@@ -11,7 +11,7 @@ require File::Compare;
 use_ok('Genome::Model::Tools::Sx::Metrics::Assembly') or die;
 
 #check testsuite data files
-my $data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Sx/Metrics/v4';
+my $data_dir = '/gsc/var/cache/testsuite/data/Genome-Model-Tools-Sx/Metrics/v6';
 ok(-d $data_dir, "Data dir exists") or die;
 
 #create temp test dir

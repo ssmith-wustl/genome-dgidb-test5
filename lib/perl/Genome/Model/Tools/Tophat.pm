@@ -8,7 +8,7 @@ use Genome;
 use File::Basename;
 use IPC::Cmd;
 
-my $DEFAULT = '1.3.1';
+my $DEFAULT = '1.4.0';
 
 class Genome::Model::Tools::Tophat {
     is => 'Command',

@@ -17,8 +17,8 @@ class Genome::Command::Update {
 };
 
 sub _target_name { Carp::confess('Please use CRUD or implement _target_name in '.$_[0]->class); }
-sub _target_name_pl { return Lingua::EN::Inflect::PL($_[0]->_target_name); }
-sub _target_name_pl_ub { my $target_name_pl = $_[0]->_target_name_pl; $target_name_pl =~ s/\_/ /g; return $target_name_pl }
+sub _target_name_pl { Carp::confess('Please use CRUD or implement _target_name_pl in '.$_[0]->class); }
+sub _target_name_pl_ub { my $target_name_pl = $_[0]->_target_name_pl; $target_name_pl =~ s/ /\_/g; return $target_name_pl }
 sub _only_if_null { Carp::confess('Please use CRUD or implement _only_if_null in '.$_[0]->class); }
 
 sub sub_command_sort_position { .3 };
@@ -40,13 +40,12 @@ sub help_detail {
 sub execute {
     my $self = shift;
 
-    $self->status_message('Update objects: '.$self->_target_name_pl);
+    $self->status_message('Update: '.$self->_target_name_pl);
 
     my $class = $self->class;
     my $target_name_pl_ub = $self->_target_name_pl_ub;
     my $only_if_null = $self->_only_if_null;
     my @objects = $self->$target_name_pl_ub;
-    my @errors;
     my $properties_requested_to_update = 0;
     my $success = 0;
 
@@ -56,7 +55,8 @@ sub execute {
         next PROPERTY if $property_name eq $target_name_pl_ub;
         my $new_value = $self->$property_name;
         next PROPERTY if not defined $new_value;
-        $self->status_message("Update property: $property_name");
+        $self->status_message("Property: $property_name");
+        $self->status_message('To: '.$self->display_name_for_value($new_value));
         $properties_requested_to_update++;
         OBJECT: for my $obj ( @objects ) {
             if ( grep { $property_name eq $_ } @$only_if_null 
@@ -67,9 +67,14 @@ sub execute {
                 $self->error_message("Cannot update $obj_name '$property_name' because it already has a value: $value_name");
                 next OBJECT;
             }
-            print Data::Dumper::Dumper($property_name, $self->$property_name);
             my $rv = eval{ $obj->$property_name( $self->$property_name ); };
-            if ( defined $rv ) { $success++; } else { $self->error_message() }
+            if ( defined $rv ) {
+                $self->status_message('Successfully updated: '.$self->display_name_for_value($obj));
+                $success++; 
+            } 
+            else { 
+                $self->error_message('Failed to update: '.$self->display_name_for_value($obj));
+            }
         }
     }
 

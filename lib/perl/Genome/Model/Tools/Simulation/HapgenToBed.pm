@@ -71,10 +71,14 @@ sub execute {
             my $all1 = $haps[$count][$fields[$i+1]];
             my $stop = $haps[$count][2];
             my $start = $stop -1;
+            unless ($stop) {
+             $DB::single=1;
+            }
             my $chr = "22"; #FIXME. do something better if we ever include more chroms
             $fhs[$i/2]->print("$chr\t$start\t$stop\t$all0/$all1\n");
-            $count++;
         }
+
+            $count++;
     }while($line = $haps_fh->getline);
     return 1;
 
@@ -98,6 +102,7 @@ sub process_legend_file {
         $haps[$count][0]=$all0;
         $haps[$count][1]=$all1;
         $haps[$count][2]=$position;
+        $DB::single=1 unless $position;
         $count++;
     }
     return @haps;

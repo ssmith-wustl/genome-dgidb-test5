@@ -8,7 +8,7 @@ use Genome;
 use Array::Compare;
 
 class Genome::Model::Convergence {
-    is  => 'Genome::Model',
+    is  => 'Genome::ModelDeprecated',
     has => [
         group_id => {
             is => 'Integer',

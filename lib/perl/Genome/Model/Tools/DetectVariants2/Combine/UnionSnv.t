@@ -32,7 +32,10 @@ ok($reference_build, 'got reference_build');
 my $aligned_reads         = join('/', $test_data_dir, 'flank_tumor_sorted.bam');
 my $control_aligned_reads = join('/', $test_data_dir, 'flank_normal_sorted.bam');
 
+my $vcf_version = Genome::Model::Tools::Vcf->get_vcf_version;
 my $detector_name_a = 'Genome::Model::Tools::DetectVariants2::Samtools';
+my $detector_a_vcf_directory = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants2-Combine-UnionSnv/samtools_vcf_result";
+my $detector_b_vcf_directory = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-DetectVariants2-Combine-UnionSnv/varscan_vcf_result";
 my $detector_version_a = 'awesome';
 my $output_dir_a = join('/', $test_data_dir, 'samtools-r599-');
 my $detector_a = Genome::Model::Tools::DetectVariants2::Result->__define__(
@@ -44,6 +47,17 @@ my $detector_a = Genome::Model::Tools::DetectVariants2::Result->__define__(
     aligned_reads         => $aligned_reads,
     control_aligned_reads => $control_aligned_reads,
 );
+
+my $detector_a_vcf_result = Genome::Model::Tools::DetectVariants2::Result::Vcf::Detector->__define__(
+    input => $detector_a,
+    output_dir => $detector_a_vcf_directory,
+    aligned_reads_sample => "TEST",
+    control_aligned_reads_sample => "TEST-normal",
+    vcf_version => $vcf_version,
+);
+
+$detector_a->add_user(user => $detector_a_vcf_result, label => 'uses');
+
 isa_ok($detector_a, 'Genome::Model::Tools::DetectVariants2::Result', 'detector_a');
 
 my $detector_name_b    = 'Genome::Model::Tools::DetectVariants2::VarscanSomatic';
@@ -58,6 +72,17 @@ my $detector_b = Genome::Model::Tools::DetectVariants2::Result->__define__(
     aligned_reads         => $aligned_reads,
     control_aligned_reads => $control_aligned_reads,
 );
+
+my $detector_b_vcf_result = Genome::Model::Tools::DetectVariants2::Result::Vcf::Detector->__define__(
+    input => $detector_b,
+    output_dir => $detector_b_vcf_directory,
+    aligned_reads_sample => "TEST",
+    control_aligned_reads_sample => "TEST-normal",
+    vcf_version => $vcf_version,
+);
+
+$detector_b->add_user(user => $detector_b_vcf_result, label => 'uses');
+
 isa_ok($detector_b, 'Genome::Model::Tools::DetectVariants2::Result', 'detector_b');
 
 my $test_output_dir = File::Temp::tempdir('Genome-Model-Tools-DetectVariants2-Combine-UnionSnv-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
@@ -78,5 +103,9 @@ for my $file (@files) {
     my $expected_output = $expected_output."/".$file;
     is(compare($test_output,$expected_output),0, "Found no difference between test output: ".$test_output." and expected output:".$expected_output);
 }
+
+my $combine_vcf_result = $union_snv_object->_vcf_result;
+
+isa_ok($combine_vcf_result, 'Genome::Model::Tools::DetectVariants2::Result::Vcf::Combine', "Combine VCF result was found.");
 
 done_testing();

@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 
 class Genome::Model::ReferenceSequence {
-    is => 'Genome::Model',
+    is => 'Genome::ModelDeprecated',
     has => [
         prefix => {
             is => 'UR::Value',
@@ -47,9 +47,10 @@ class Genome::Model::ReferenceSequence {
 sub build_by_version {
     my $self = shift;
     my $version = shift;
-    my @b = Genome::Model::Build::ImportedReferenceSequence->get('type_name' => 'imported reference sequence',
-                                                                 'version' => $version,
-                                                                 'model_id' => $self->genome_model_id);
+    my @b = Genome::Model::Build::ImportedReferenceSequence->get(
+        'version' => $version,
+        'model_id' => $self->genome_model_id
+    );
     if (@b > 1) {
         die "Multiple builds for version $version for model " . $self->genome_model_id;
     }

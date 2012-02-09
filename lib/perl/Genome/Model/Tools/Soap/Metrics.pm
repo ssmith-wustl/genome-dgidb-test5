@@ -25,7 +25,7 @@ class Genome::Model::Tools::Soap::Metrics {
         major_contig_length => {
             is => 'Number',
             is_optional => 1,
-            default_value => 300,
+            default_value => 500,
             doc => 'Cutoff value for major contig length',
         },
         output_file => {
@@ -83,14 +83,9 @@ sub execute {
     my $self = shift;
     $self->status_message('Soap metrics...');
 
-    # resolve/create contigs file
-    my $contigs_file = $self->_resolve_contigs_bases_file;
-    if ( not -s $contigs_file ) {
-        $self->status_message('Create contig bases file...');
-        $contigs_file = $self->_create_contigs_file;
-        return if not $contigs_file;
-        $self->status_message('Create contig bases file...OK');
-    }
+    # resolve soap scafSeq file
+    my $scaffolds_file = $self->assembly_scaffold_sequence_file;
+    return if not -s $scaffolds_file;
 
     # tier values
     my ($t1, $t2);
@@ -99,7 +94,7 @@ sub execute {
         $t2 = $self->second_tier;
     }
     else {
-        my $est_genome_size = -s $contigs_file;
+        my $est_genome_size = -s $scaffolds_file;
         $t1 = int ($est_genome_size * 0.2);
         $t2 = int ($est_genome_size * 0.2);
     }
@@ -121,9 +116,9 @@ sub execute {
         return if not $add_ok;
     }
 
-    # add contigs file
-    $self->status_message('Add contig file: '.$contigs_file);
-    my $add_contigs_ok = $metrics->add_contigs_file($contigs_file.':type=fasta');
+    # add scaffolds file
+    $self->status_message('Add scaffolds file: '.$scaffolds_file);
+    my $add_contigs_ok = $metrics->add_scaffolds_file($scaffolds_file.':type=fasta');
     return if not $add_contigs_ok;
 
     # transform metrics
@@ -147,28 +142,6 @@ sub execute {
 
     $self->status_message('Soap metrics...OK');
     return 1;
-}
-
-sub _create_contigs_file {
-    my $self = shift;
-
-    my $temp_dir = Genome::Sys->create_temp_directory;
-    my $contigs_file = $temp_dir.'/contigs.bases';
-    my $ccf =  Genome::Model::Tools::Soap::CreateContigsBasesFile->create(
-        assembly_directory => $self->assembly_directory, # will use gapfill then scafSeq
-        min_contig_length => 1,
-        output_file => $contigs_file,
-    );
-    if ( not $ccf )  {
-        $self->error_message("Failed to create create contigs bases!");
-        return;
-    }
-    if  ( not $ccf->execute ) {
-        $self->error_message("Failed to execute create contigs bases!");
-        return;
-    }
-
-    return $contigs_file;
 }
 
 1;

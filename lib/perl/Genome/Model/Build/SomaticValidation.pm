@@ -181,22 +181,6 @@ sub normal_bam {
     return $result->merged_alignment_bam_path;
 }
 
-sub tumor_bam_flagstat_file {
-    return shift->_bam_flagstat_file('tumor');
-}
-
-sub normal_bam_flagstat_file {
-    return shift->_bam_flagstat_file('normal');
-}
-
-sub _bam_flagstat_file {
-    my ($self, $type) = @_;
-    my $method = $type . '_bam';
-    my $flag_file = $self->$method . '.flagstat';
-    return $flag_file if -e $flag_file;
-    return;
-}
-
 sub workflow_name {
     my $self = shift;
     return $self->build_id . ' Somatic Variant Validation Pipeline';

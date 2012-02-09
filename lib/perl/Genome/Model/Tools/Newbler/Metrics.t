@@ -10,7 +10,7 @@ use Test::More;
 
 use_ok( 'Genome::Model::Tools::Newbler::Metrics') or die;
 
-my $data_dir = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Newbler/Metrics-v4";
+my $data_dir = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Newbler/Metrics-v6";
 my $example_metrics = $data_dir.'/metrics.txt';
 
 #create temp test dir

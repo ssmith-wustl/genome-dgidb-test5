@@ -67,7 +67,7 @@ ok(-s $instrument_data->dump_fasta_file, 'fasta file');
 ok(-s $instrument_data->dump_sanger_fastq_files, 'fastq file');
 
 # pp MC16s-WashU-454-RDP2.1
-my $pp = Genome::ProcessingProfile->get(2278045);
+my $pp = Genome::ProcessingProfile->get(2678723);
 ok($pp, 'got 454 pp') or die;
 
 # model
@@ -91,7 +91,7 @@ ok($build->get_or_create_data_directory, 'resolved data dir');
 my $example_build = Genome::Model::Build->create(
     model=> $model,
     id => -2288,
-    data_directory => '/gsc/var/cache/testsuite/data/Genome-Model/MetagenomicComposition16s454/build',
+    data_directory => '/gsc/var/cache/testsuite/data/Genome-Model/MetagenomicComposition16s454/build_v3.2chimeras', # start w/ 2 chimeras
 );
 ok($example_build, 'example build') or die;
 
@@ -99,9 +99,6 @@ ok($example_build, 'example build') or die;
 is($build->calculate_estimated_kb_usage, 1024, 'estimated kb usage');
 
 # dirs
-my $existing_build_dir = '/gsc/var/cache/testsuite/data/Genome-Model/MetagenomicComposition16s454/build';
-ok(-d $existing_build_dir, 'existing build dir exists');
-
 ok($build->create_subdirectories, 'created subdirectories');
 
 my $classification_dir = $build->classification_dir;
@@ -116,14 +113,32 @@ ok(-d $fasta_dir, 'fasta_dir exists');
 my $file_base = $build->file_base_name;
 is($file_base, $build->subject_name, 'file base');
 
+#< AMPLICON SETS >#
+my @standards = (
+    { name => 'V1_V3', amplicons => [qw/ FZ0V7MM01A01AQ FZ0V7MM01A01O4 FZ0V7MM01A02JE FZ0V7MM01A02T9 FZ0V7MM01A0327 /] },
+    { name => 'V3_V5', amplicons => [qw/ FZ0V7MM01A00L3 FZ0V7MM01A00YG FZ0V7MM01A02O2 FZ0V7MM01A03HG /] },
+    { name => 'V6_V9', amplicons => [qw/ FZ0V7MM01A004O FZ0V7MM01A00FU FZ0V7MM01A00G0 FZ0V7MM01A00IA FZ0V7MM01A00XH /] },
+    { name => 'none', amplicons => [qw/ FZ0V7MM01A00CR FZ0V7MM01A023X FZ0V7MM01A032H FZ0V7MM01A0QNB FZ0V7MM01A0R82 /] },
+);
+my @set_names = $build->amplicon_set_names;
+is_deeply(\@set_names, [ sort grep { $_ ne 'none' } map { $_->{name} } @standards ], 'amplicon set names');
+my @amplicon_sets = $build->amplicon_sets;
+is(@amplicon_sets, 3, 'got 3 amplicon sets');
+my @example_amplicon_sets = $example_build->amplicon_sets;
+is(@example_amplicon_sets, 3, 'got 3 example amplicon sets');
+
 #< PREPARE >#
 ok($build->prepare_instrument_data, 'prepare instrument data');
-for my $set_name ( $build->amplicon_set_names, 'none' ) {
-    my $fasta_file = $build->processed_fasta_file_for_set_name($set_name);
+for ( my $i = 0; $i < @amplicon_sets; $i++ ) { 
+    my $set_name = $amplicon_sets[$i]->name;
+    my $example_set_name = $example_amplicon_sets[$i]->name;
+    is($set_name, $example_set_name, 'set name mathces');
+    my $fasta_file = $amplicon_sets[$i]->processed_fasta_file;
     ok(-s $fasta_file, "fasta file for $set_name was created");
-    my $example_fasta_file = $build->processed_fasta_file_for_set_name($set_name);
+    my $example_fasta_file = $example_amplicon_sets[$i]->processed_fasta_file;
     ok(-s $example_fasta_file, "example fasta file for $set_name");
     is(File::Compare::compare($fasta_file, $example_fasta_file), 0, "fasta file matches example");
+    #print join(' ', 'gvimdiff', $fasta_file, $example_fasta_file, "\n");<STDIN>;
 }
 
 # metrics
@@ -134,36 +149,52 @@ is($build->reads_attempted, 20, 'reads attempted is 20');
 is($build->reads_processed, 14, 'reads processed is 14');
 is($build->reads_processed_success, '0.70', 'reads processed success is 0.70');
 
+#< DETECT CHIMERAS ># this is not deterministic!
+ok($build->detect_and_remove_chimeras, 'detect and remove chimeras');
+my $amplicons_chimeric = 2;
+if ( $build->amplicons_chimeric == 3 ) { # switch to 3 chimeras if necessary
+    $example_build->data_directory('/gsc/var/cache/testsuite/data/Genome-Model/MetagenomicComposition16s454/build_v3.3chimeras');
+    # Get the sets again to pickup the new data_directory otherwise the old data_directory is used.
+    @example_amplicon_sets = $example_build->amplicon_sets;
+    $amplicons_chimeric = 3;
+}
+for ( my $i = 0; $i < @amplicon_sets; $i++ ) { 
+    ok(-s $amplicon_sets[$i]->chimera_file, 'chimera file');
+
+    my $chimera_free_fasta_file = $amplicon_sets[$i]->chimera_free_fasta_file;
+    my $example_chimera_free_fasta_file = $example_amplicon_sets[$i]->chimera_free_fasta_file;
+    my $chimera_free_fasta_file_diff = qx(diff -u $example_chimera_free_fasta_file $chimera_free_fasta_file);
+    ok(!$chimera_free_fasta_file_diff, 'no differences between chimera_free_fasta_files') || print $chimera_free_fasta_file_diff;
+
+    my $chimera_free_qual_file = $amplicon_sets[$i]->chimera_free_qual_file;
+    my $example_chimera_free_qual_file = $example_amplicon_sets[$i]->chimera_free_qual_file;
+    my $chimera_free_qual_file_diff = qx(diff -u $example_chimera_free_qual_file $chimera_free_qual_file);
+    ok(!$chimera_free_qual_file_diff, 'no differences between chimera_free_qual_files') || print $chimera_free_qual_file_diff;
+}
+# metrics
+is($build->amplicons_processed, 14, 'amplicons processed is 14');
+is($build->amplicons_chimeric, $amplicons_chimeric, 'amplicons chimeric is '.$amplicons_chimeric);
+my $chimeric_pct = sprintf('%.2f', $build->amplicons_chimeric / $build->amplicons_processed);
+is($build->amplicons_chimeric_percent, $chimeric_pct, 'amplicons chimeric percent is '.$chimeric_pct);
+
 #< CLASSIFY >#
 ok($build->classify_amplicons, 'classify amplicons');
-is($build->amplicons_classified, '14', 'amplicons classified');
-is($build->amplicons_classified_success, '1.00', 'amplicons classified success');
-is($build->amplicons_classification_error, 0, 'amplicons classified error');
+is($build->amplicons_classified, $build->amplicons_processed, 'amplicons classified matches processed: '.$build->amplicons_processed);
+is($build->amplicons_classified_success, '1.00', 'amplicons classified success is 1.00');
+is($build->amplicons_classification_error, 0, 'amplicons classified error is 0');
 
 #< ORIENT >#
 ok($build->orient_amplicons, 'orient amplicons');
 
-my @standards = (
-    { name => 'V1_V3', amplicons => [qw/ FZ0V7MM01A01AQ FZ0V7MM01A01O4 FZ0V7MM01A02JE FZ0V7MM01A02T9 FZ0V7MM01A0327 /] },
-    { name => 'V3_V5', amplicons => [qw/ FZ0V7MM01A00L3 FZ0V7MM01A00YG FZ0V7MM01A02O2 FZ0V7MM01A03HG /] },
-    { name => 'V6_V9', amplicons => [qw/ FZ0V7MM01A004O FZ0V7MM01A00FU FZ0V7MM01A00G0 FZ0V7MM01A00IA FZ0V7MM01A00XH /] },
-    { name => 'none', amplicons => [qw/ FZ0V7MM01A00CR FZ0V7MM01A023X FZ0V7MM01A032H FZ0V7MM01A0QNB FZ0V7MM01A0R82 /] },
-);
-
-#< Amplicon Set Names >#
-my @set_names = $build->amplicon_set_names;
-is_deeply(\@set_names, [ sort grep { $_ ne 'none' } map { $_->{name} } @standards ], 'amplicon set names');
-my @amplicon_sets = $build->amplicon_sets;
-is(scalar(@amplicon_sets), 3, 'got 3 amplicon sets');
-my $cnt = 0;
-for my $amplicon_set ( @amplicon_sets ) {
+#< AMPLICON SETS >#
+for ( my $i = 0; $i < @amplicon_sets; $i++ ) { 
     # name
-    my $set_name = $amplicon_set->name;
-    is($set_name, $standards[$cnt]->{name}, 'amplicon set name');
+    my $set_name = $amplicon_sets[$i]->name;
+    is($set_name, $example_amplicon_sets[$i]->{name}, 'amplicon set name');
     # fastas
     for my $type (qw/ processed oriented /) {
-        my $method = $type.'_fasta_file_for_set_name';
-        my $fasta_file = $build->$method($set_name);
+        my $method = $type.'_fasta_file';
+        my $fasta_file = $amplicon_sets[$i]->$method;
         is(
             $fasta_file,
             $fasta_dir.'/'.$file_base.'.'.$set_name.'.'.$type.'.fasta',
@@ -173,27 +204,24 @@ for my $amplicon_set ( @amplicon_sets ) {
         #is(File::Compare::compare($fasta_file, $EXAMPLE), 0, "$type fasta file name exists for set $set_name");
     }
     # classification
-    my $classification_file = $build->classification_file_for_set_name($set_name);
+    my $classification_file = $amplicon_sets[$i]->classification_file;
     is(
         $classification_file,
         $classification_dir.'/'.$file_base.'.'.$set_name.'.'.$build->classifier,
         "classification file name for set name: $set_name"
     );
     my $diff_ok = Genome::Model::Build::MetagenomicComposition16s->diff_rdp(
-        $example_build->classification_file_for_set_name($set_name),
+        $example_amplicon_sets[$i]->classification_file,
         $classification_file,
     );
     ok($diff_ok, 'diff rdp files');
     # amplicons
-    my @amplicon_names;
-    while ( my $amplicon = $amplicon_set->next_amplicon ) {
+    while ( my $amplicon = $amplicon_sets[$i]->next_amplicon ) {
+        my $example_amplicon = $example_amplicon_sets[$i]->next_amplicon;
+        is($amplicon->{name}, $example_amplicon->{name}, 'matches example amplicon');
         ok($amplicon->{classification}, $amplicon->{name}.' has a classification');
-        is($amplicon->{classification}->[0], $amplicon->{name}, 'classification name matches');
-        is($amplicon->{classification}->[1], '-', 'is complemented');
-        push @amplicon_names, $amplicon->{name};
+        is_deeply([@{$amplicon->{classification}}[0..5]], [@{$example_amplicon->{classification}}[0..5]], 'classification matches');
     }
-    is_deeply(\@amplicon_names, $standards[$cnt]->{amplicons}, "amplicons match for $set_name");
-    $cnt++;
 }
 
 ok($build->perform_post_success_actions, 'perform post success actions');

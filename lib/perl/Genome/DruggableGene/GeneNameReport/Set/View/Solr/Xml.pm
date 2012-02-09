@@ -56,7 +56,7 @@ class Genome::DruggableGene::GeneNameReport::Set::View::Solr::Xml {
             is => 'Text',
             calculate_from => ['subject'],
             calculate => q{
-                return ($subject->members)[0]->name;
+                return ($subject->members)[0]->name . ' druggablegene'
             },
         },
         default_aspects => {
@@ -86,19 +86,5 @@ class Genome::DruggableGene::GeneNameReport::Set::View::Solr::Xml {
         },
     ],
 };
-
-sub _generate_id_field_data {
-    my $self = shift;
-    my $subject = $self->subject;
-
-    return ($subject->members)[0]->name;
-}
-
-sub _generate_object_id_field_data {
-    my $self = shift;
-    my $subject = $self->subject;
-
-    return ($subject->members)[0]->name;
-}
 
 1;

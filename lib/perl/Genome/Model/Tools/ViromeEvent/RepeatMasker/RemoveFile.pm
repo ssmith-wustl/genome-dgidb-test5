@@ -26,8 +26,6 @@ sub execute {
     my $dir = $self->dir;
     my $sample_name = basename ($dir);
 
-    $self->log_event("Removing unnecessary files for sample: $sample_name");
-
     my $repeat_masker_dir = $dir.'/'.$sample_name.'.fa.cdhit_out_RepeatMasker';
     unless (-d $repeat_masker_dir) {
         $self->log_event("Failed to find repeat masker dir for sample: $sample_name");

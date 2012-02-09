@@ -13,21 +13,20 @@ class Genome::Model::View::Status::Xml {
             value => [
                 'genome_model_id',
                 'name',
-                'subject_id',
-                'subject_name',
-                'subject_class_name',
                 {
-                    name => '_sample_subject',
-                    aspects => [ '__display_name__' ],
+                    name => 'subject',
+                    aspect => [
+                        'id', 'name', 'subclass_name'
+                    ],
                     perspective => 'default',
-                    toolkit => 'xml'
+                    toolkit => 'xml',
+                    subject_class_name => 'Genome::Subject'
                 },
-                'is_default',
                 'creation_date',
                 'user_name',
                 'build_requested',
                 'build_needed',
-                'region_of_interest_set_name',
+                'status',
                 {
                     name => 'processing_profile',
                     aspects => [
@@ -124,14 +123,16 @@ class Genome::Model::View::Status::Xml {
                     ],
                     perspective => 'default',
                     toolkit => 'xml',
+                    subject_class_name => 'Genome::Model',
                 },
-                                {
+                {
                     name => 'from_models',
                     aspects => [
                         'name', 'id',
                     ],
                     perspective => 'default',
                     toolkit => 'xml',
+                    subject_class_name => 'Genome::Model',
                 },
             ]
         }

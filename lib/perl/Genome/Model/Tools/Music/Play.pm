@@ -95,6 +95,10 @@ class Genome::Model::Tools::Music::Play {
             is => 'Text',
             doc => 'Maximum AA distance between 2 mutations',
         },
+        bmr_modifier_file => {
+            is => 'Text',
+            doc => 'Tab delimited list of values per gene that modify BMR before testing [gene_name bmr_modifier]',
+        },
         max_fdr => {
             is => 'Number',
             doc => 'The maximum allowed false discovery rate for a gene to be considered an SMG',
@@ -115,6 +119,11 @@ class Genome::Model::Tools::Music::Play {
         separate_truncations => {
             is => 'Boolean',
             doc => 'Group truncational mutations as a separate category',
+            default => 0,
+        },
+        merge_concurrent_muts => {
+            is => 'Boolean',
+            doc => 'Multiple mutations of a gene in the same sample are treated as 1',
             default => 0,
         },
         skip_non_coding => {

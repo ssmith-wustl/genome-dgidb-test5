@@ -77,17 +77,27 @@ sub __errors__ {
         );
     }
 
+    for my $file_method ( qw/ all_contigs_fasta_file newb_read_status_file / ) {
+        my $file = $self->$file_method;
+        if ( not -s $file ) {
+            my $file_name = File::Basename::basename( $file );
+            push @errors, UR::Object::Tag->create(
+                type => 'invalid',
+                properties => [qw/ assembly_directory /],
+                desc => 'No newbler $file_name file found in assembly_directory: '.$self->assembly_directory,
+           ); 
+        }
+    }
+
+    # 454Scaffolds.txt 
+    # assembly not scaffolded if missing
+
     return @errors;
 }
 
 sub execute {
     my $self = shift;
     $self->status_message('Newbler metrics...');
-
-    # input files
-    my $validate_assembly_files = $self->_validate_assembly_files;
-    return if not $validate_assembly_files;
-    my $contigs_bases_file = $self->all_contigs_fasta_file;
 
     # tier values
     my ($t1, $t2);
@@ -96,7 +106,7 @@ sub execute {
         $t2 = $self->second_tier;
     }
     else {
-        my $est_genome_size = -s $contigs_bases_file;
+        my $est_genome_size = -s $self->all_contigs_fasta_file;
         $t1 = int ($est_genome_size * 0.2);
         $t2 = int ($est_genome_size * 0.2);
     }
@@ -318,7 +328,9 @@ sub _metrics_from_newb_read_status_file {
     my $scaffolds = $self->{_SCAFFOLDS};
 
     my $major_contigs_read_count = 0;
+    my $minor_contigs_read_count = 0;
     my $major_supercontigs_read_count = 0;
+    my $minor_supercontigs_read_count = 0;
 
     for my $contig_id ( keys %reads_in_contigs ) {
         # ignore contigs not in final assembly
@@ -327,17 +339,23 @@ sub _metrics_from_newb_read_status_file {
 
             # contigs read count
             my $contig_length = $self->_metrics->contigs->{$contig_id};
-            $major_contigs_read_count += $read_count if
-                $contig_length >= $self->major_contig_length;
-
+            if ( $contig_length >= $self->major_contig_length ) {
+                $major_contigs_read_count += $read_count;
+            } else {
+                $minor_contigs_read_count += $read_count
+            }
+            
             # supercontig read count
             my $supercontig_id = ( exists $scaffolds->{$contig_id} ) ?
                 $scaffolds->{$contig_id} :
                 $contig_id;
 
             my $supercontig_length = $self->_metrics->supercontigs->{$supercontig_id};
-            $major_supercontigs_read_count += $read_count if
-                $supercontig_length >= $self->major_contig_length;
+            if ( $supercontig_length >= $self->major_contig_length ) {
+                $major_supercontigs_read_count += $read_count;
+            } else {
+                $minor_supercontigs_read_count += $read_count;
+            }
         }
     }
 
@@ -348,6 +366,16 @@ sub _metrics_from_newb_read_status_file {
     my $major_supercontigs_read_percent = sprintf( "%.1f", $major_supercontigs_read_count/ $reads_assembled * 100);
     $metrics->set_metric('supercontigs_major_read_percent', $major_supercontigs_read_percent);
 
+    
+    $metrics->set_metric('contigs_minor_read_count', $minor_contigs_read_count);
+    $metrics->set_metric('supercontigs_minor_read_count', $minor_supercontigs_read_count);
+    my $minor_contigs_read_percent = sprintf( "%.1f", $minor_contigs_read_count/ $reads_assembled * 100);
+    $metrics->set_metric('contigs_minor_read_percent', $minor_contigs_read_percent);
+    my $minor_supercontigs_read_percent = sprintf( "%.1f", $minor_supercontigs_read_count/ $reads_assembled * 100);
+    $metrics->set_metric('supercontigs_minor_read_percent', $minor_supercontigs_read_percent);
+
+
+
     # all contigs read counts
     $metrics->set_metric('reads_assembled', $reads_assembled);
     $metrics->set_metric('reads_assembled_unique', $reads_assembled);
@@ -355,26 +383,6 @@ sub _metrics_from_newb_read_status_file {
     $metrics->set_metric('reads_assembled_success', sprintf('%.3f', $reads_assembled / $reads_processed));
     my $reads_not_assembled = $reads_processed - $reads_assembled;
     $metrics->set_metric('reads_not_assembled', $reads_not_assembled);
-
-    return 1;
-}
-
-sub _validate_assembly_files {
-    my $self = shift;
-
-    # 454AllContigs.fna
-    if( not -s $self->all_contigs_fasta_file ) {
-        $self->error_message('No 454AllContigs.fna file in assembly dir: '.$self->assembly_directory);
-        return;
-    }
-    #454ReadStatus.txt
-    if( not -s $self->newb_read_status_file ) {
-        $self->error_message('No 454ReadStatus.txt file in assembly dir: '.$self->assembly_directory);
-        return;
-    }
-
-    # 454Scaffolds.txt 
-    # assembly not scaffolded if missing
 
     return 1;
 }

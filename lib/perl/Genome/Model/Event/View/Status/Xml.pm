@@ -85,7 +85,7 @@ sub get_event_node {
                     }
 
                     if (defined($alignment)) {
-                        push(@adirs, $alignment->alignment_directory);
+                        push(@adirs, $alignment->output_dir);
 
                         # look for a filter description
                         if ($input->filter_desc) {

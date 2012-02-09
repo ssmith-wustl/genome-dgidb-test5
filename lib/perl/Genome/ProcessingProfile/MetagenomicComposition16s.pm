@@ -90,19 +90,10 @@ sub create {
     # Validate classifier version
     # TODO
 
-    #validate chimera detector & params
-    if ( $self->chimera_detector_params and not $self->chimera_detector ) {
-        $self->error_message("Can you specify chimera detector params without specifying a detector");
+    my $chimera_detector_ok = $self->validate_chimera_detector;
+    if ( not $chimera_detector_ok ) {
+        $self->delete;
         return;
-    }
-    if ( $self->chimera_detector ) {
-        if ( $self->chimera_detector_params ) { #ok to run w/o params
-            if ( not $self->validate_chimera_detector_params ) {
-                $self->error_message("Failed to validate params for chimera detector:\n".
-                'Detector: '.$self->chimera_detector.' Params: '.$self->chimera_detector_params);
-                return;
-            } 
-        }
     }
 
     return $self;
@@ -126,7 +117,7 @@ sub one_job_classes {
     push @subclasses, 'PrepareInstrumentData';
 
     # Detect chrimra
-    push @subclasses, 'DetectChimera' if $self->chimera_detector;
+    push @subclasses, 'DetectAndRemoveChimeras' if $self->chimera_detector;
 
     # Classify, Orient, Reports and work w/ all mc16s builds
     push @subclasses, (qw/ Classify Orient Reports /);
@@ -184,27 +175,39 @@ sub amplicon_processor_commands {
     return @valid_commands;
 }
 
-#< validate params >#
-sub validate_chimera_detector_params {
+sub validate_chimera_detector {
     my $self = shift;
 
-    #detector class
-    my $class = $self->chimera_detector;
-    $class =~ s/-/ /;
-    $class = Genome::Utility::Text::string_to_camel_case( $class );
-    $class = 'Genome::Model::Tools'.$class;
+    my $detector = $self->chimera_detector;
+    my $params = $self->chimera_detector_params;
+    return 1 if not $params and not $detector;
+    $self->status_message('Validate chimera detector...');
+    if ( not $params or not $detector ) {
+        $self->error_message('Cannot give chimera detector without params or vice versa!');
+        return;
+    }
+    $detector =~ s/_/\-/g;
+    $self->chimera_detector($detector);
 
-    #params
-    my %params = Genome::Utility::Text::param_string_to_hash( $self->chimera_detector_params );
-
-    #create class
-    my $detector = eval { $class->create( %params ); };
-    if ( not $detector ) {
-        $self->error_message("Failed to create class using params:\n".
-            'Class: '.$class.' Params: '.$self->chimera_detector_params);
+    my $class = 'Genome::Model::Tools::'.Genome::Utility::Text::string_to_camel_case(join(' ', split('-', $detector))).'::DetectChimeras';
+    my $meta = eval{ $class->__meta__; };
+    if ( not $meta ) {
+        $self->error_message("Invalid chimera detector: $detector");
         return;
     }
 
+    my $cmd = "gmt $detector detect-chimeras $params";
+    $self->status_message('Chimera detector command: '.$cmd);
+    $cmd .= ' -h 2>&1 > /dev/null'; # add help to check for invalid opts, redirect to dev/null
+
+    my $rv = eval{ Genome::Sys->shellcmd(cmd => $cmd, print_status_to_stderr => 0); };
+    if ( not $rv ) {
+        $self->error_message($@) if $@;
+        $self->error_message('Failed to validate chimera detector and params!');
+        return;
+    }
+
+    $self->status_message('Validate chimera detector...OK');
     return 1;
 }
 

@@ -6,7 +6,7 @@ use Genome;
 
 class Genome::ProcessingProfile::Command::Create {
     is => 'Command::SubCommandFactory',
-    doc => 'Create a processing profile',
+    doc => 'create a processing profile',
 };
 
 sub _sub_commands_from { 'Genome::Model' }

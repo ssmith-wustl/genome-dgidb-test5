@@ -40,31 +40,6 @@ class Genome::Model::Tools::DetectVariants2::Result::Vcf::Filter {
     ],
 };
 
-sub _remove_existing_vcf {
-    my $self = shift;
-    
-    my $path = $self->input_directory;    
-
-    my @existing_vcfs;
-    for my $type ("snvs","indels"){
-        my $file = $path."/".$type.".vcf.gz";
-        push @existing_vcfs, $file if -e $file;
-    }
-    $self->status_message("Found no existing vcfs.") unless @existing_vcfs;
-    for my $file (@existing_vcfs) {
-        if( not -l $file){
-            $self->status_message("Removing existing vcf at: ".$file);
-            unless(unlink ( $file )){
-                die $self->error_message("Could not unlink existing vcf at: ".$file);
-            }
-        } else {
-            die $self->error_message("Found previous vcf to be a link at: ".$file);
-        }
-    }
-
-    return 1;
-}
-
 sub _generate_vcf {
     my $self = shift;
     my $retval=1;

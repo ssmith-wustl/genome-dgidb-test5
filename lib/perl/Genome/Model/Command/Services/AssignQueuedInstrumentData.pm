@@ -68,6 +68,10 @@ sub _default_mc16s_processing_profile_id {
     return 2571784;
 }
 
+sub _default_de_novo_assembly_bacterial_processing_profile_id {
+    return 2682126;
+}
+
 sub _default_rna_seq_processing_profile_id {
     return 2623697;
 }
@@ -272,7 +276,6 @@ sub execute {
 
                 my @models = Genome::Model->get(
                     subject_id            => $subject_id,
-                    subject_class_name    => $subject_class_name,
                     processing_profile_id => $processing_profile->id,
                     auto_assign_inst_data => 1,
                 );
@@ -319,7 +322,7 @@ sub execute {
                 ) {
             my @validation = Genome::Model::SomaticValidation->get(
                 target_region_set_name => $genome_instrument_data->target_region_set_name,
-                subject => $genome_instrument_data->sample->source,
+                #subject => $genome_instrument_data->sample->source, #due to bad data-tracking, sometimes the two samples are from different sources
             );
 
             @validation = grep(($_->tumor_sample eq $genome_instrument_data->sample or $_->normal_sample eq $genome_instrument_data->sample), @validation);
@@ -329,6 +332,9 @@ sub execute {
                     push @process_errors,
                         $self->error_message('Did not assign validation instrument data to any models.');
                 }
+            } elsif($genome_instrument_data->index_sequence eq 'unknown' && $genome_instrument_data->sample->name =~ /Pooled_Library/) {
+                $self->status_message('Skipping pooled library validation data.');
+                $pse->add_param('no_model_generation_attempted',1);
             } else {
                 push @process_errors,
                     $self->error_message('No validation models found to assign data (target ' . $genome_instrument_data->target_region_set_name . ' on instrument data ' . $genome_instrument_data->id . '.)');
@@ -366,7 +372,6 @@ sub execute {
                 if (defined($subject)) {
                     my @some_models= Genome::Model->get(
                         subject_id         => $subject->id,
-                        subject_class_name => $subject->class,
                         auto_assign_inst_data => 1,
                     );
 
@@ -1068,7 +1073,6 @@ sub create_default_qc_models {
     for my $model (@models){
         next unless $model->type_name eq 'reference alignment';
         next unless $model->processing_profile_name =~ /^\w+\ \d+\ Default\ Reference\ Alignment/; # e.g. Feb 2011 Defaulte Reference Alignment
-        next if $model->target_region_set_name; # the current lane QC does not work for custom capture/exome
 
         my @lane_qc_models = $model->get_or_create_lane_qc_models;
 
@@ -1202,13 +1206,33 @@ sub add_model_to_default_modelgroups {
         }else{
             $name = $group;
         }
+
         my $project = Genome::Project->get(name => $name);
+
+        # if $project_id gets set here it is used to create a new project
+        # or to detect probable project renames
+        my $project_id;
+        if (ref($group) && $group->setup_name eq $name) {
+            $project_id = $group->id;
+        }
+
+        if (!$project && $project_id) {
+            # If we didn't get it by name try to get it by ID in case the name has been
+            # changed since it was originally created, e.g. someone changed the name of a
+            # work order. If we get it then we should fix the name. Observers automatically
+            # trigger to update the corresponding Genome::ModelGroup.
+            $project = Genome::Project->get($project_id);
+            if ($project) {
+                $project->name($name);
+            }
+        }
+
         unless($project) {
             my %params = ( name => $name );
-            $params{id} = $group->id if ref $group and $group->setup_name eq $name;
+            $params{id} = $project_id if $project_id;
             $project = Genome::Project->create(%params);
             unless($project) {
-                die $self->error_message('Failed to create a default model-group: ' . $name);
+                die $self->error_message('Failed to create a default project: ' . $name);
             }
             if (ref $group){
                 $project->add_part(entity => $group);
@@ -1219,6 +1243,7 @@ sub add_model_to_default_modelgroups {
         unless ($model_group){
             die $self->error_message("No model group for ".$project->name);
         }
+
         $model_group->assign_models($model);
         #$project->add_part(entity => $model);
     }
@@ -1497,17 +1522,18 @@ sub add_processing_profiles_to_pses{
                     $reference_sequence_names_for_processing_profile_ids{$pp_id} = 'UCSC-mouse-buildmm9'
                 }
                 elsif ($taxon->domain =~ /bacteria/i) {
-                    #updated 2011 Dec 20 .. requested by Chad
-                    push @processing_profile_ids_to_add, '2658559';
+                    my $pp_id = $self->_default_de_novo_assembly_bacterial_processing_profile_id;
+                    push @processing_profile_ids_to_add, $pp_id;
                 }
-                #process inst data with work orders 2634033 2636663 with pp 2599969 RT76069
-                elsif ( $taxon->id == 1653198763 ) { #unknow taxon normally skipped
+                elsif ( $taxon->domain =~ /unknown/i ) { # unknow domain normally skipped
                     my $index_illumina = GSC::IndexIllumina->get( $instrument_data_id );
                     if ( $index_illumina ) {
-                        my @work_orders = $index_illumina->get_work_orders;
-                        for my $work_order ( @work_orders ) {
-                            push @processing_profile_ids_to_add, '2599969' if
-                                $work_order->id == 2636663 or $work_order->id == 2634033;
+                        for my $project ( $index_illumina->get_research_projects ) {
+                            if ( $project->id == 2269562 ) { # HMP Centers Grant Reference Genomes WU Strain Collection
+                                my $pp_id = $self->_default_de_novo_assembly_bacterial_processing_profile_id;
+                                push @processing_profile_ids_to_add, $pp_id;
+                                last;
+                            }
                         }
                     }
                 }

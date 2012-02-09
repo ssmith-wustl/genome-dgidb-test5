@@ -27,7 +27,7 @@ class Genome::Model::Tools::ChimeraSlayer::DetectChimeras {
         },
         chimeras => {
             is => 'Text',
-            doc => 'ChimeraSlayer output file that contains chimeras',
+            doc => 'Link the chimeras output file (<$SEQUENCES>.out.CPS.CPC) to this file name.',
             is_mutable => 1,
             is_optional => 1,
         },
@@ -88,10 +88,15 @@ sub execute {
     $self->status_message("Finished running chimera slayer");
 
     #check output
-    $self->chimeras( $self->sequences.'.out.CPS.CPC' );
-    if ( not -s $self->chimeras ) {
+    my $chimeras = $self->sequences.'.out.CPS.CPC';
+    if ( not -s $chimeras ) {
         $self->error_message("Failed to find chimera slayer output file or file is empty: ".$self->chimeras);
         return;
+    }
+
+    # link chiumera file to requested output
+    if ( $self->chimeras ) {
+        Genome::Sys->create_symlink($chimeras, $self->chimeras);
     }
 
     return 1;

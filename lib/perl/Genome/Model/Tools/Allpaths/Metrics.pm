@@ -26,7 +26,7 @@ class Genome::Model::Tools::Allpaths::Metrics {
         major_contig_length => {
             is => 'Number',
             is_optional => 1,
-            default_value => 300,
+            default_value => 500,
             doc => 'Cutoff value for major contig length',
         },
         output_file => {
@@ -34,6 +34,9 @@ class Genome::Model::Tools::Allpaths::Metrics {
             is_optional => 1,
             doc => 'Stats output file',
         },
+    ],
+    has_optional => [
+        _metrics => { is_transient => 1, },
     ],
 };
 
@@ -141,6 +144,7 @@ sub execute {
         tier_one => $t1,
         tier_two => $t2,
     );
+    $self->_metrics($metrics);
 
     # add reads files
     for my $fastq ( @reads_files ) {

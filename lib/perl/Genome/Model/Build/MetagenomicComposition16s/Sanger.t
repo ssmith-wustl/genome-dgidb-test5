@@ -120,17 +120,20 @@ is($build->calculate_estimated_kb_usage, 30000, 'Estimated kb usage');
 my $existing_build_dir = '/gsc/var/cache/testsuite/data/Genome-Model/MetagenomicComposition16sSanger/build';
 ok(-d $existing_build_dir, 'existing build dir exists');
 ok($build->create_subdirectories, 'created subdirectories');
-for my $subdir ( $build->sub_dirs ) {
-    my $method = $subdir;
-    $method .= '_dir' if $subdir !~ /_dir$/;
-    my $dir = $build->$method;
-    is($dir, $build->data_directory.'/'.$subdir, "$method is correct");
-    ok(-d $dir, "$method was created");
+for my $subdir (qw/ chromat_dir edit_dir /) {
+    my $dir = $build->$subdir;
+    ok(-d $dir, "$subdir was created");
 }
 
 # file base
 my $file_base_name = $build->file_base_name;
 is($file_base_name, 'H_GV-933124G-S.MOCK', 'build file base name');
+
+# amplicon set
+my @amplicon_sets = $build->amplicon_sets;
+is(@amplicon_sets, 1, 'amplicon sets');
+my $amplicon_set = $amplicon_sets[0];
+my ($example_amplicon_set) = $example_build->amplicon_sets;
 
 # fastas
 my $fasta_base = $build->fasta_dir."/$file_base_name";
@@ -141,17 +144,11 @@ my %file_methods_and_results = (
     oriented_qual_file => $fasta_base.'.oriented.fasta.qual',
 );
 for my $file_name ( keys %file_methods_and_results ) {
-    my $method = $file_name.'_for_set_name';
-    is($build->$method(''), $file_methods_and_results{$file_name}, $file_name);
+    is($amplicon_set->$file_name, $file_methods_and_results{$file_name}, $file_name);
 }
 
 #< PREPARE >#
 ok($build->prepare_instrument_data, 'prepare instrument data');
-my @amplicon_sets = $build->amplicon_sets;
-is(@amplicon_sets, 1, 'amplicon sets');
-my $amplicon_set = $amplicon_sets[0];
-my ($example_amplicon_set) = $example_build->amplicon_sets;
-
 ok(-s $amplicon_set->processed_fasta_file, 'processed fasta file');
 is(
     File::Compare::compare($amplicon_set->processed_fasta_file, $example_amplicon_set->processed_fasta_file), 
@@ -166,9 +163,6 @@ is(
 );
 my @amplicon_names;
 while ( my $amplicon = $amplicon_set->next_amplicon ) {
-    ok(-s $build->reads_fasta_file_for_amplicon($amplicon), 'fasta file');
-    ok(-s $build->reads_qual_file_for_amplicon($amplicon), 'qual file');
-    ok(-s $build->ace_file_for_amplicon($amplicon), 'ace file');
     push @amplicon_names, $amplicon->{name};
 }
 is_deeply(
@@ -177,15 +171,15 @@ is_deeply(
     'Got 4 amplicons',
 );
 
-ok(-s $build->raw_reads_fasta_file, 'Created the raw reads fasta file');
+ok(-s $build->fasta_dir.'/'.$build->file_base_name.'.reads.raw.fasta', 'Created the raw reads fasta file');
 # Time diffs prevent comparing files. Maybe update the desc for these reads
 #is(File::Compare::compare($build->raw_reads_fasta_file, $example_build->raw_reads_fasta_file), 0, 'raw reads fasta file matches');
-ok(-s $build->raw_reads_qual_file, 'Created the raw reads qual file');
+ok(-s $build->fasta_dir.'/'.$build->file_base_name.'.reads.raw.fasta.qual', 'Created the raw reads qual file');
 
-ok(-s $build->processed_reads_fasta_file, 'Created the processed reads fasta file');
+ok(-s $build->fasta_dir.'/'.$build->file_base_name.'.reads.processed.fasta', 'Created the processed reads fasta file');
 # Time diffs prevent comparing files. Maybe update the desc for these reads
 #is(File::Compare::compare($build->processed_reads_fasta_file, $example_build->processed_reads_fasta_file), 0, 'processed reads fasta file matches');
-ok(-s $build->processed_reads_qual_file, 'Created the processed reads qual file');
+ok(-s $build->fasta_dir.'/'.$build->file_base_name.'.reads.processed.fasta.qual', 'Created the processed reads qual file');
 
 # metrics
 is($build->amplicons_attempted, 5, 'amplicons attempted is 5');
@@ -196,7 +190,7 @@ is($build->reads_processed, 17, 'reads processed is 17');
 is($build->reads_processed_success, '0.57', 'reads processed success is 0.57');
 
 #< CLASSIFY >#
-my $classification_file = $build->classification_file_for_set_name( $amplicon_set->name );
+my $classification_file = $amplicon_set->classification_file;
 my $classification_dir = $build->classification_dir;
 is(
     $classification_file, 
@@ -224,8 +218,8 @@ is($build->amplicons_classified, $classified_cnt, 'amplicons classified correct'
 is($build->amplicons_classified_success, '1.00', 'amplicons classified success');
 is($build->amplicons_classification_error, 0, 'amplicons classified error');
 my $diff_ok = Genome::Model::Build::MetagenomicComposition16s->diff_rdp(
-    $example_build->classification_file_for_set_name(''),
-    $build->classification_file_for_set_name(''),
+    $amplicon_set->classification_file,
+    $example_amplicon_set->classification_file,
 );
 ok($diff_ok, 'diff rdp files');
 

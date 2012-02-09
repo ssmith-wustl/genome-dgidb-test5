@@ -27,14 +27,18 @@ class Genome::ProcessingProfile {
                            doc => 'The type of processing profile' },
         supersedes    => { via => 'params', to => 'value', is_mutable => 1, where => [ name => 'supersedes' ], is_optional => 1, 
                            doc => 'The processing profile replaces the one named here.' },
-        subclass_name => { is => 'VARCHAR2', len => 255, is_mutable => 0, column_name => 'SUBCLASS_NAME',
-                           calculate_from => ['type_name'],
-                           calculate => sub { 
-                                            my($type_name) = @_;
-                                            confess "No type name given to resolve subclass name" unless $type_name;
-                                            return __PACKAGE__ . '::' . Genome::Utility::Text::string_to_camel_case($type_name);
-                                          }
-                          },
+        subclass_name => {
+            is => 'VARCHAR2',
+            len => 255,
+            is_mutable => 0,
+            column_name => 'SUBCLASS_NAME',
+            calculate_from => ['type_name'],
+            calculate => sub { 
+                my($type_name) = @_;
+                confess "No type name given to resolve subclass name" unless $type_name;
+                return __PACKAGE__ . '::' . Genome::Utility::Text::string_to_camel_case($type_name);
+            }
+        },
     ],
     has_many_optional => [
         params => { is => 'Genome::ProcessingProfile::Param', reverse_as => 'processing_profile' },
@@ -50,14 +54,6 @@ sub __display_name__ {
 }
 
 ### Override these in the model subclass when Implementing New Pipelines ###
-
-sub _initialize_model {
-    my ($self,$model) = @_;
-    if ($model->can('_initialize_model')) {
-        return $model->_initialize_model();
-    }
-    return 1;
-}
 
 sub _initialize_build {
     my ($self,$build) = @_;

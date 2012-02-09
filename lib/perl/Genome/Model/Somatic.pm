@@ -7,7 +7,7 @@ use warnings;
 use Genome;
 
 class Genome::Model::Somatic {
-    is  => 'Genome::Model',
+    is  => 'Genome::ModelDeprecated',
     has => [
        only_tier_1 => { via => 'processing_profile'},
        min_mapping_quality => { via => 'processing_profile'},

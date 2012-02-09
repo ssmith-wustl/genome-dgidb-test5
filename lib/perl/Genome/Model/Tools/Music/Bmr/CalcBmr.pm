@@ -21,9 +21,10 @@ class Genome::Model::Tools::Music::Bmr::CalcBmr {
     bam_list => { is => 'Text', doc => "Tab delimited list of BAM files [sample_name normal_bam tumor_bam] (See DESCRIPTION)" },
     output_dir => { is => 'Text', doc => "Directory where output files will be written (Use the same one used with calc-covg)" },
     maf_file => { is => 'Text', doc => "List of mutations using TCGA MAF specifications v2.2" },
-    show_skipped => { is => 'Boolean', doc => "Report each skipped mutation, not just how many", is_optional => 1, default => 0 },
     bmr_groups => { is => 'Integer', doc => "Number of clusters of samples with comparable BMRs (See DESCRIPTION)", is_optional => 1, default => 1 },
+    show_skipped => { is => 'Boolean', doc => "Report each skipped mutation, not just how many", is_optional => 1, default => 0 },
     separate_truncations => { is => 'Boolean', doc => "Group truncational mutations as a separate category", is_optional => 1, default => 0 },
+    merge_concurrent_muts => { is => 'Boolean', doc => "Multiple mutations of a gene in the same sample are treated as 1", is_optional => 1, default => 0 },
     genes_to_ignore => { is => 'Text', doc => "Comma-delimited list of genes to ignore for background mutation rates", is_optional => 1 },
     skip_non_coding => { is => 'Boolean', doc => "Skip non-coding mutations from the provided MAF file", is_optional => 1, default => 1 },
     skip_silent => { is => 'Boolean', doc => "Skip silent mutations from the provided MAF file", is_optional => 1, default => 1 },
@@ -160,7 +161,8 @@ sub execute {
   my $maf_file = $self->maf_file;
   my $show_skipped = $self->show_skipped;
   my $bmr_groups = $self->bmr_groups;
-	my $separate_truncations = $self->separate_truncations;
+  my $separate_truncations = $self->separate_truncations;
+  my $merge_concurrent_muts = $self->merge_concurrent_muts;
   my $genes_to_ignore = $self->genes_to_ignore;
   my $skip_non_coding = $self->skip_non_coding;
   my $skip_silent = $self->skip_silent;
@@ -224,10 +226,10 @@ sub execute {
 
   # These are the various categories that each mutation will be classified into
   my @mut_classes = ( AT_Transitions, AT_Transversions, CG_Transitions, CG_Transversions, CpG_Transitions, CpG_Transversions, Indels );
-	push( @mut_classes, Truncations ) if( $separate_truncations );
+  push( @mut_classes, Truncations ) if( $separate_truncations );
   # Save the actual class names for reporting purposes, because the elements above are really just numerical constants
   my @mut_class_names = qw( AT_Transitions AT_Transversions CG_Transitions CG_Transversions CpG_Transitions CpG_Transversions Indels );
-	push( @mut_class_names, 'Truncations' ) if( $separate_truncations );
+  push( @mut_class_names, 'Truncations' ) if( $separate_truncations );
 
   my %sample_mr; # Stores per sample covg and mutation information
   foreach my $sample ( @all_sample_names )
@@ -317,20 +319,19 @@ sub execute {
     my @cols = split( /\t/, $line );
     my ( $gene, $chr, $start, $stop, $mutation_class, $mutation_type, $ref, $var1, $var2, $sample ) =
     ( $cols[0], $cols[4], $cols[5], $cols[6], $cols[8], $cols[9], $cols[10], $cols[11], $cols[12], $cols[15] );
-    $chr =~ s/^chr//; # Remove chr prefixes from chrom names if any
 
     # Skip mutations in samples that are not in the provided bam list
     unless( defined $sample_names{$sample} )
     {
       $skip_cnts{"belong to unrecognized samples"}++;
-      print "Skipping unrecognized sample ($sample not in BAM list): $gene, chr$chr:$start-$stop\n" if( $show_skipped );
+      print "Skipping unrecognized sample ($sample not in BAM list): $gene, $chr:$start-$stop\n" if( $show_skipped );
       next;
     }
 
     # If the mutation classification is odd, quit with error
     if( $mutation_class !~ m/^(Missense_Mutation|Nonsense_Mutation|Nonstop_Mutation|Splice_Site|Translation_Start_Site|Frame_Shift_Del|Frame_Shift_Ins|In_Frame_Del|In_Frame_Ins|Silent|Intron|RNA|3'Flank|3'UTR|5'Flank|5'UTR|IGR|Targeted_Region)$/ )
     {
-      print STDERR "Unrecognized Variant_Classification \"$mutation_class\" in MAF file: $gene, chr$chr:$start-$stop\n";
+      print STDERR "Unrecognized Variant_Classification \"$mutation_class\" in MAF file: $gene, $chr:$start-$stop\n";
       print STDERR "Please use TCGA MAF Specification v2.2.\n";
       return undef;
     }
@@ -340,14 +341,14 @@ sub execute {
        ( $skip_silent && $mutation_class =~ m/^Silent$/ ))
     {
       $skip_cnts{"are classified as $mutation_class"}++;
-      print "Skipping $mutation_class mutation: $gene, chr$chr:$start-$stop\n" if( $show_skipped );
+      print "Skipping $mutation_class mutation: $gene, $chr:$start-$stop\n" if( $show_skipped );
       next;
     }
 
     # If the mutation type is odd, quit with error
     if( $mutation_type !~ m/^(SNP|DNP|TNP|ONP|INS|DEL|Consolidated)$/ )
     {
-      print STDERR "Unrecognized Variant_Type \"$mutation_type\" in MAF file: $gene, chr$chr:$start-$stop\n";
+      print STDERR "Unrecognized Variant_Type \"$mutation_type\" in MAF file: $gene, $chr:$start-$stop\n";
       print STDERR "Please use TCGA MAF Specification v2.2.\n";
       return undef;
     }
@@ -356,7 +357,7 @@ sub execute {
     if( $mutation_type =~ m/^Consolidated$/ )
     {
       $skip_cnts{"are consolidated into another"}++;
-      print "Skipping consolidated mutation: $gene, chr$chr:$start-$stop\n" if( $show_skipped );
+      print "Skipping consolidated mutation: $gene, $chr:$start-$stop\n" if( $show_skipped );
       next;
     }
 
@@ -364,7 +365,7 @@ sub execute {
     if( $self->count_bits( $roi_bitmask->{$chr}, $start, $stop ) == 0 )
     {
       $skip_cnts{"are outside any ROIs"}++;
-      print "Skipping mutation that falls outside ROIs: $gene, chr$chr:$start-$stop\n" if( $show_skipped );
+      print "Skipping mutation that falls outside ROIs: $gene, $chr:$start-$stop\n" if( $show_skipped );
       next;
     }
 
@@ -372,7 +373,7 @@ sub execute {
     unless( defined $genes{$gene} )
     {
       $skip_cnts{"have unrecognized gene names"}++;
-      print "Skipping unrecognized gene name (not in ROI file): $gene, chr$chr:$start-$stop\n" if( $show_skipped );
+      print "Skipping unrecognized gene name (not in ROI file): $gene, $chr:$start-$stop\n" if( $show_skipped );
       next;
     }
 
@@ -393,7 +394,7 @@ sub execute {
       # If the alleles are anything but A, C, G, or T then quit with error
       if( $ref !~ m/[ACGT]/ || $var1 !~ m/[ACGT]/ || $var2 !~ m/[ACGT]/ )
       {
-        print STDERR "Unrecognized allele in column Reference_Allele, Tumor_Seq_Allele1, or Tumor_Seq_Allele2: $gene, chr$chr:$start-$stop\n";
+        print STDERR "Unrecognized allele in column Reference_Allele, Tumor_Seq_Allele1, or Tumor_Seq_Allele2: $gene, $chr:$start-$stop\n";
         print STDERR "Please use TCGA MAF Specification v2.2.\n";
         return undef;
       }
@@ -416,13 +417,13 @@ sub execute {
       # Check if the ref base in the MAF matched what we fetched from the ref-seq
       if( defined $fetched_ref && $fetched_ref ne $ref )
       {
-        print STDERR "Reference allele $ref for mutation in $gene at chr$chr:$start-$stop is $fetched_ref in the reference sequence. Using it anyway.\n";
+        print STDERR "Reference allele $ref for mutation in $gene at $chr:$start-$stop is $fetched_ref in the reference sequence. Using it anyway.\n";
       }
 
       # Check if a C or G reference allele belongs to a CpG pair in the refseq
       if(( $ref eq 'C' || $ref eq 'G' ) && defined $ref_and_flanks )
       {
-        if( $ref_and_flanks =~ m/CG/ )
+        if( $ref_and_flanks =~ m/CG/i )
         {
           $class = (( $class == CG_Transitions ) ? CpG_Transitions : CpG_Transversions );
         }
@@ -446,6 +447,31 @@ sub execute {
   {
     next unless( defined $skip_cnts{$skip_type} );
     print "Skipped ", $skip_cnts{$skip_type}, " mutation(s) that $skip_type\n";
+  }
+
+  # If the user wants, merge together concurrent mutations of a gene in the same sample
+  if( $merge_concurrent_muts )
+  {
+    foreach my $sample ( @all_sample_names )
+    {
+      foreach my $gene ( keys %genes )
+      {
+        next unless( defined $gene_mr{$sample}{$gene} );
+        my $num_muts = 0;
+        $num_muts += $gene_mr{$sample}{$gene}[$_][mutations] foreach( @mut_classes );
+        if( $num_muts > 1 )
+        {
+          foreach my $class ( @mut_classes )
+          {
+            my $muts_in_class = $gene_mr{$sample}{$gene}[$class][mutations]; # Num of muts of gene in this class
+            $sample_mr{$sample}[$class][mutations] -= $muts_in_class; # Take it out of the sample total
+            $muts_in_class /= $num_muts; # Turn it into a fraction of the total number of muts in this gene
+            $gene_mr{$sample}{$gene}[$class][mutations] = $muts_in_class; # Use the fraction as the num muts of gene in this class
+            $sample_mr{$sample}[$class][mutations] += $muts_in_class; # Add the same fraction to the sample total
+          }
+        }
+      }
+    }
   }
 
   # Calculate per-sample BMRs, and also subtract out covered bases in genes the user wants ignored
@@ -481,7 +507,7 @@ sub execute {
       $totBmrFh->print( "#BMR sub-group ", $i + 1, " (", scalar( @{$bmr_clusters[$i]} ), " samples)\n" );
       $totBmrFh->print( "#Samples: ", join( ",", @samples_in_cluster ), "\n" );
     }
-    $totBmrFh->print( "#Mutation_Class\tOverall_Covered_Bases\tNon_Syn_Mutations\tBMR\n" );
+    $totBmrFh->print( "#Mutation_Class\tCovered_Bases\tMutations\tOverall_BMR\n" );
 
     my ( $tot_covd_bases, $tot_muts ) = ( 0, 0 );
     foreach my $class ( @mut_classes )
@@ -504,7 +530,7 @@ sub execute {
 
   # Print out a file containing per-gene mutation counts and covered bases for use by "music smg"
   my $geneBmrFh = IO::File->new( $gene_mr_file, ">" ) or die "Couldn't open $gene_mr_file. $!\n";
-  $geneBmrFh->print( "#Gene\tMutation_Class\tCovered_Bases\tNon_Syn_Mutations\tOverall_BMR\n" );
+  $geneBmrFh->print( "#Gene\tMutation_Class\tCovered_Bases\tMutations\tOverall_BMR\n" );
   foreach my $gene ( sort keys %genes )
   {
     for( my $i = 0; $i < scalar( @bmr_clusters ); ++$i )

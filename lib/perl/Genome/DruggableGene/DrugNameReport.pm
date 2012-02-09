@@ -23,24 +23,24 @@ class Genome::DruggableGene::DrugNameReport {
             is => 'Text',
             is_optional => 1,
         },
-        drug_name_report_associations => {
-            is => 'Genome::DruggableGene::DrugNameReportAssociation',
+        drug_alt_names => {
+            is => 'Genome::DruggableGene::DrugAlternateNameReport',
             reverse_as => 'drug_name_report',
             is_many => 1,
         },
-        drug_name_report_category_associations => {
-            is => 'Genome::DruggableGene::DrugNameReportCategoryAssociation',
+        drug_categories => {
+            is => 'Genome::DruggableGene::DrugCategoryReport',
             reverse_as => 'drug_name_report',
             is_many => 1,
         },
-        drug_gene_interaction_reports => {
+        interactions => {
             is => 'Genome::DruggableGene::DrugGeneInteractionReport',
             reverse_as => 'drug_name_report',
             is_many => 1,
         },
-        gene_name_reports => {
+        genes => {
             is => 'Genome::DruggableGene::GeneNameReport',
-            via => 'drug_gene_interaction_reports',
+            via => 'interactions',
             to => 'gene_name_report',
             is_many => 1,
         },
@@ -50,7 +50,31 @@ class Genome::DruggableGene::DrugNameReport {
                 my $citation = Genome::DruggableGene::Citation->get(source_db_name => $source_db_name, source_db_version => $source_db_version);
                 return $citation;
             |,
-        }
+        },
+        is_withdrawn => {
+            calculate => q{
+                return 1 if grep($_->category_value eq 'withdrawn', $self->drug_categories);
+                return 0;
+            },
+        },
+        is_nutraceutical => {
+            calculate => q{
+                return 1 if grep($_->category_value eq 'nutraceutical', $self->drug_categories);
+                return 0;
+            },
+        },
+        is_approved => {
+            calculate => q{
+                return 1 if grep($_->category_value eq 'approved', $self->drug_categories);
+                return 0;
+            },
+        },
+        is_antineoplastic => {
+            calculate => q{
+                return 1 if grep($_->category_value =~ /antineoplastic/, $self->drug_categories);
+                return 0;
+            },
+        },
     ],
     doc => 'Claim regarding the name of a drug',
 };
@@ -63,13 +87,22 @@ sub __display_name__ {
 if ($INC{"Genome/Search.pm"}) {
     __PACKAGE__->create_subscription(
         method => 'commit',
-        callback => \&commit_callback,
+        callback => \&add_to_search_index_queue,
+    );
+    __PACKAGE__->create_subscription(
+        method => 'delete',
+        callback => \&add_to_search_index_queue,
     );
 }
 
-sub commit_callback {
+sub add_to_search_index_queue {
     my $self = shift;
-    Genome::Search->add(Genome::DruggableGene::DrugNameReport->define_set(name => $self->name));
+    my $set = Genome::DruggableGene::DrugNameReport->define_set(name => $self->name);
+    Genome::Search::Queue->create(
+        subject_id => $set->id,
+        subject_class => $set->class,
+        priority => 9,
+    );
 }
 
 sub source_id {

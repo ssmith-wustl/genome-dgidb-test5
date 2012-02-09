@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 
 class Genome::Model::MetagenomicCompositionShotgun {
-    is => 'Genome::Model',
+    is => 'Genome::ModelDeprecated',
     has => [
         contamination_screen_pp => {
             via => 'processing_profile',

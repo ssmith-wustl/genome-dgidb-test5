@@ -11,37 +11,6 @@ class Genome::Model::Tools::DetectVariants2::Result::Vcf::Detector {
     is  => ['Genome::Model::Tools::DetectVariants2::Result::Vcf'],
 };
 
-sub _remove_existing_vcf {
-    my $self = shift;
-    
-    my $path = $self->input_directory;    
-
-    my @existing_vcfs;
-    for my $type ("snvs","indels"){
-        my $file = $path."/".$type.".vcf.gz";
-        push @existing_vcfs, $file if -e $file;
-    }
-    if(@existing_vcfs){
-        for my $file (@existing_vcfs) {
-            if( not -l $file){
-                $self->status_message("Removing existing vcf at: ".$file);
-                unless(unlink ( $file )){
-                    die $self->error_message("Could not unlink existing vcf at: ".$file);
-                }
-            } else {
-                $self->status_message("Removing existing symlink to vcf at: ".$file);
-                unless(unlink ( $file )){
-                    die $self->error_message("Could not unlink existing vcf at: ".$file);
-                }
-            }
-        }
-    } else {
-        $self->status_message("Found no existing vcfs.");
-    }
-
-    return 1;
-}
-
 sub _generate_vcf {
     my $self = shift;
     my $path = $self->input_directory;

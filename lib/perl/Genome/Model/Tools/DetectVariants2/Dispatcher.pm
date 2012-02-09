@@ -506,7 +506,6 @@ sub generate_workflow {
             push @output_properties, @new_output_properties;
         }
     }
-
     my $workflow_model = Workflow::Model->create(
         name => 'Somatic Variation Pipeline',
         input_properties => [
@@ -1000,10 +999,17 @@ sub _promote_staged_data {
         my $output_accessor = "_".$variant_type."_hq_output_file";
         if(defined($self->$output_accessor)){
             my $file = $self->$output_accessor;
-            my @subdirs = split( "/", $file );
-            my $output_file = $subdirs[-1];
+            my $output_file = basename($file);
             my $output = "$output_dir/$output_file";
             Genome::Sys->create_symlink($file,$output);
+            if($variant_type =~ m/snv/){
+                my $vcf_link = dirname($file)."/snvs.vcf.gz";
+                my $link_target = $output_dir."/snvs.vcf.gz";
+                if(-l $vcf_link){
+                    my $source = readlink($vcf_link);
+                    Genome::Sys->create_symlink($source, $link_target);
+                }
+            }
 
             # FIXME refactor this when we refactor versioning. This is pretty awful.
             # Create v1 and v2 symlinks to the bed files

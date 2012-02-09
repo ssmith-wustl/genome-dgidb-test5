@@ -414,6 +414,13 @@ sub sudo_username {
     return ($sudo_username || '');
 }
 
+sub current_user_is_admin {
+    my $class = shift;
+    my $user = Genome::Sys::User->get(username => $class->username);
+    return 0 unless $user;
+    return $user->has_role_by_name('admin');
+}
+
 sub cmd_output_who_dash_m {
     return `who -m`;
 }

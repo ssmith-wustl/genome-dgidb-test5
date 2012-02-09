@@ -31,7 +31,7 @@ class Genome::Model::Tools::Varscan::CopyNumberSegments {
 		output_basename 	=> { is => 'Text', doc => "Output file basename for cnv plots", is_optional => 0 },
 		min_depth 	=> { is => 'Text', doc => "Minimum depth for a region (in one sample) to include it", is_optional => 0, default => 8 },
 		min_points_to_plot 	=> { is => 'Text', doc => "Minimum number of points for a chromosome to plot it", is_optional => 0, default => 100 },
-		undo_sd 	=> { is => 'Text', doc => "Remove change-points of less than this number of standard deviations", is_optional => 0, default => 2 },
+		undo_sd 	=> { is => 'Text', doc => "Remove change-points of less than this number of standard deviations", is_optional => 0, default => 4 },
 	],
 };
 
@@ -296,6 +296,8 @@ smoothed.CNA.object <- smooth.CNA(CNA.object)\n
 		print SCRIPT qq{
 segment.smoothed.CNA.object <- segment(smoothed.CNA.object, undo.splits="sdundo", undo.SD=$undo_sd, verbose=1)
 p.segment.smoothed.CNA.object <- segments.p(segment.smoothed.CNA.object)
+x <- c($undo_sd, length(p.segment.smoothed.CNA.object\$pval[p.segment.smoothed.CNA.object\$num.mark>=20]))
+write.table(x, file="$chrom_filename.segments.sd", append=TRUE)
 };
 
 ## Allow multiple runs for multiple SDs ##
@@ -304,8 +306,10 @@ while($this_undo_sd > 0.5)
 {
 	$this_undo_sd -= 0.5;
 	print SCRIPT qq|
-if(length(p.segment.smoothed.CNA.object\$pval) < 50)
+if(length(p.segment.smoothed.CNA.object\$pval[p.segment.smoothed.CNA.object\$num.mark>=20]) < 50)
 {
+x <- c($this_undo_sd, length(p.segment.smoothed.CNA.object\$pval[p.segment.smoothed.CNA.object\$num.mark>=20]))
+write.table(x, file="$chrom_filename.segments.sd", append=TRUE)
 segment.smoothed.CNA.object <- segment(smoothed.CNA.object, undo.splits="sdundo", undo.SD=$this_undo_sd, verbose=1)
 p.segment.smoothed.CNA.object <- segments.p(segment.smoothed.CNA.object)	
 }

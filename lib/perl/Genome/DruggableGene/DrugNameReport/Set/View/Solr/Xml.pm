@@ -75,18 +75,4 @@ class Genome::DruggableGene::DrugNameReport::Set::View::Solr::Xml {
     ],
 };
 
-sub _generate_id_field_data {
-    my $self = shift;
-    my $subject = $self->subject;
-
-    return $subject->__display_name__;
-}
-
-sub _generate_object_id_field_data {
-    my $self = shift;
-    my $subject = $self->subject;
-
-    return $subject->__display_name__;
-}
-
 1;

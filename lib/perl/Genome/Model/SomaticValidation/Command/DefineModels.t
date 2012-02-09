@@ -9,7 +9,7 @@ BEGIN {
 };
 
 use above 'Genome';
-use Test::More tests => 14;
+use Test::More tests => 19;
 
 my $temp_build_data_dir = File::Temp::tempdir('t_SomaticValidation_Build-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
 my $temp_dir = File::Temp::tempdir('Model-Command-Define-SomaticValidation-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
@@ -52,7 +52,7 @@ Genome::Sys->write_file($listing_file,
 
 #Set up a fake feature-list
 my $data = <<EOBED
-1    10003     10004     A/T
+1	10003	10004	A/T
 EOBED
 ;
 my $test_bed_file = Genome::Sys->create_temp_file_path;
@@ -61,7 +61,7 @@ my $test_bed_file_md5 = Genome::Sys->md5sum($test_bed_file);
 my $test_targets = Genome::FeatureList->create(
     name => 'test_somatic_validation_feature_list',
     format              => 'true-BED',
-    content_type        => 'targeted',
+    content_type        => 'validation',
     file_path           => $test_bed_file,
     file_content_hash   => $test_bed_file_md5,
     reference_id        => $somvar_models[0]->tumor_model->reference_sequence_build->id,
@@ -96,6 +96,27 @@ for my $m ($cmd->result_models) {
         ok(!$m->indel_variant_list, 'no indel result attached');
     }
 }
+
+my $cmd2 = Genome::Model::SomaticValidation::Command::DefineModels->create(
+    models => \@somvar_models,
+    target => $test_targets,
+    design => $test_targets,
+    region_of_interest_set => $test_targets,
+    generate_variant_lists => 1,
+);
+isa_ok($cmd2, 'Genome::Model::SomaticValidation::Command::DefineModels', 'created importer command');
+
+$cmd->dump_status_messages(1);
+ok($cmd2->execute, 'executed importer command');
+
+is(scalar(@{[$cmd2->result_models]}), 2, 'defined expected number of models');
+
+for my $m ($cmd2->result_models) {
+    ok($m->snv_variant_list, 'snv result attached');
+}
+
+
+
 
 sub setup_somatic_variation_models {
     my $test_profile = Genome::ProcessingProfile::ReferenceAlignment->create(
@@ -204,8 +225,8 @@ sub setup_somatic_variation_models {
         );
 
         my $data = <<EOBED
-1    10003     10004     A/T
-2    8819 8820 A/G
+1	10003	10004	A/T
+2	8819	8820	A/G
 EOBED
         ;
         my $bed_file = $dir . '/snvs.hq.bed';

@@ -12,6 +12,11 @@ class Genome::Model::Build::Command::HeartbeatCheck {
             shell_args_position => 1,
             doc => 'Builds to check heartbeat.',
         },
+        verbose => {
+            is => 'Boolean',
+            default => 1,
+            doc => 'Shows reason for heartbeat failure.',
+        },
     ],
 };
 
@@ -24,7 +29,7 @@ sub execute {
 
     my @builds = $self->builds;
     for my $build (@builds) {
-        my $heartbeat = ($build->heartbeat || '0');
+        my $heartbeat = ($build->heartbeat(verbose => $self->verbose) || '0');
         print join("\t", $build->id, $heartbeat) . "\n";
     }
 

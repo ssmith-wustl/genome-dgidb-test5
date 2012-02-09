@@ -17,17 +17,7 @@ sub execute {
 
     #run stats
     my $tools_base_class = $self->processing_profile->tools_base_class;
-    my $metrics_class;
-    for my $subclass_name (qw/ Metrics Stats /) {
-        $metrics_class = $tools_base_class.'::'.$subclass_name;
-        my $meta = eval{ $metrics_class->__meta__; };
-        last if $meta;
-        undef $metrics_class;
-    }
-    if ( not $metrics_class ) {
-        $self->error_message('Failed to find metrics/stats class for assembler: '.$self->processing_profile->assembler);
-        return;
-    }
+    my $metrics_class = $tools_base_class.'::Metrics';
     my $major_contig_length = ( $self->build->processing_profile->name =~ /PGA/ ? 300 : 500 );
     $self->status_message('Assembly directory: '.$self->build->data_directory);
     $self->status_message('Major contig length: '.$major_contig_length);

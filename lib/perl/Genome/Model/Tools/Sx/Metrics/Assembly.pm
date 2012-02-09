@@ -72,6 +72,8 @@ class Sx::Metrics::Assembly {
                 contigs_minor_average_length
                 contigs_minor_n50_count
                 contigs_minor_n50_length
+                contigs_minor_read_count
+                contigs_minor_read_percent
                 contigs_major_average_length
                 contigs_major_count
                 contigs_major_length
@@ -104,6 +106,11 @@ class Sx::Metrics::Assembly {
                 contigs_t3_n50_count
                 contigs_t3_n50_length
                 contigs_t3_n50_not_reached
+
+                core_gene_present_percent
+                core_gene_group_present_count
+                core_gene_survey_result
+
                 coverage_5x
                 coverage_4x
                 coverage_3x
@@ -142,6 +149,8 @@ class Sx::Metrics::Assembly {
                 supercontigs_minor_average_length
                 supercontigs_minor_n50_count
                 supercontigs_minor_n50_length
+                supercontigs_minor_read_count
+                supercontigs_minor_read_percent
                 supercontigs_major_read_count
                 supercontigs_major_read_percent
                 supercontigs_major_average_length
@@ -265,6 +274,9 @@ sub add_contig {
     $self->_metrics->{contigs_minor_length} += length $contig->{seq} if
         length $contig->{seq} < $self->major_contig_threshold;
 
+    $self->_metrics->{contigs_major_length} = 0 if not $self->_metrics->{contigs_major_length};
+    $self->_metrics->{contigs_minor_length} = 0 if not $self->_metrics->{contigs_minor_length};
+
     return 1;
 }
 
@@ -273,6 +285,7 @@ sub _set_supercontigs_major_minor_lengths {
     my $self = shift;
     my $supercontigs_major_length = 0;
     my $supercontigs_minor_length = 0;
+
     for my $id ( keys %{$self->supercontigs} ) {
         my $length = $self->supercontigs->{$id};
         if( $length >= $self->major_contig_threshold ) {
@@ -281,6 +294,7 @@ sub _set_supercontigs_major_minor_lengths {
             $supercontigs_minor_length += $length;
         }
     }
+
     $self->_metrics->{supercontigs_major_length} = $supercontigs_major_length;
     $self->_metrics->{supercontigs_minor_length} = $supercontigs_minor_length;
 }
@@ -584,9 +598,9 @@ sub calculate_metrics {
         $main_metrics->{reads_assembled_success} = sprintf(
             '%0.3f', $main_metrics->{reads_assembled} / $main_metrics->{reads_processed}
         );
-        $main_metrics->{reads_assembled_success_percent} = sprintf( '%.1f', $main_metrics->{reads_assembled} / $main_metrics->{reads_processed} * 100 );
+        $main_metrics->{reads_assembled_success_percent} = sprintf( '%.1f', $main_metrics->{reads_assembled_unique} / $main_metrics->{reads_processed} * 100 );
         $main_metrics->{reads_not_assembled} = $main_metrics->{reads_assembled} - $main_metrics->{reads_processed};
-        $main_metrics->{reads_not_assembled_percent} = sprintf( '%.1f', ( $main_metrics->{reads_processed} - $main_metrics->{reads_assembled} ) / $main_metrics->{reads_processed} * 100 );
+        $main_metrics->{reads_not_assembled_percent} = sprintf( '%.1f', ( $main_metrics->{reads_processed} - $main_metrics->{reads_assembled_unique} ) / $main_metrics->{reads_processed} * 100 );
     }
 
     $self->_are_metrics_calculated(1);

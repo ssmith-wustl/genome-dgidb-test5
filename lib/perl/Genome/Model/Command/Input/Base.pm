@@ -6,13 +6,14 @@ use warnings;
 use Genome;
 
 class Genome::Model::Command::Input::Base {
-    is => 'Genome::Command::Base',
+    is => 'Command::V2',
     is_abstract => 1,
     has => [
-        model => { 
+        models => {
             is => 'Genome::Model',
             shell_args_position => 1,
             doc => 'Model to modify inputs. Resolved from command line via text string.',
+            is_many => 1,
         },
     ],
     doc => 'work with model inputs.',

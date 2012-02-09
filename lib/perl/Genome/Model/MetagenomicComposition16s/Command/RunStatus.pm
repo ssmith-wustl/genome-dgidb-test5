@@ -77,7 +77,7 @@ sub execute {
         else {
             push @row, 'NA';
         }
-        my $files_string = join ( ' ', map { $_ } $build->oriented_fasta_files );
+        my $files_string = join ( ' ', grep { -s $_ } $build->oriented_fasta_files );
         push @row, $files_string;
     }
 

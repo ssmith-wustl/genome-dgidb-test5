@@ -75,6 +75,7 @@ sub _prepare_454_data {
 sub _create_screen_directory {
     my $self = shift;
     
+    Carp::confess unless $self->build;
     my $screen_dir = $self->build->data_directory.'/virome_screen';
 
     unless (-d $screen_dir) {

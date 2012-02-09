@@ -177,6 +177,7 @@ sub icon_prefix {
     my $icon_prefix = {
         'model'                  => 'genome_model',
         'model - alignment'      => 'genome_model',
+        'model - microarray'     => 'genome_model',
         'model - somatic'        => 'genome_model',
         'model - other'          => 'genome_model',
         'model - rna'            => 'genome_model',
@@ -207,6 +208,10 @@ sub make_label {
     my ($text) = @_;
 
     $text =~ s/[_]/ /g;
+
+    if ($text =~ /^Model\s\w+/) {
+        $text =~ s/^Model/Model -/;
+    }
 
     my @words;
     for my $w (split(/\s+/,$text)) {

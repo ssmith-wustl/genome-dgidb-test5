@@ -9,7 +9,7 @@ use Sort::Naturally;
 use IO::File;
 
 class Genome::Model::ImportedVariations{
-    is => 'Genome::Model',
+    is => 'Genome::ModelDeprecated',
     has => [
         input_format    => { via => 'processing_profile' },
         instrument_type => { via => 'processing_profile' },

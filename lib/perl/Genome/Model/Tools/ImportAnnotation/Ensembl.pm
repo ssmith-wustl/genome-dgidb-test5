@@ -60,6 +60,10 @@ sub execute
     my $ucfirst_species = ucfirst $self->species;
     my $gene_adaptor = $registry->get_adaptor( $ucfirst_species, 'Core', 'Gene' );
     my $transcript_adaptor = $registry->get_adaptor( $ucfirst_species, 'Core', 'Transcript' );
+##
+    # $self->status_message("We got a registry, lets not go through this big long thing just yet");
+    # return;
+##
 
     my @ensembl_transcript_ids = @{ $transcript_adaptor->list_dbIDs };
 
@@ -420,9 +424,9 @@ sub connect_registry{
 
     # the fun abuse of eval is neccessary here to make sure we can do evil
     # things like 'dynamically' load the ensembl modules.
-    my $lib = "use lib '/gsc/scripts/share/ensembl-"
+    my $lib = "use lib '/usr/share/perl5/ensembl-"
     . $eversion
-    . "/ensembl/modules';";
+    . "/modules';";
     $lib
     .= "\nuse Bio::EnsEMBL::Registry;\nuse Bio::EnsEMBL::DBSQL::DBAdaptor;";
     eval $lib;

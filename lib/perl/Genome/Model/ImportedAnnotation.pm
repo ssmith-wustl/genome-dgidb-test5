@@ -7,7 +7,7 @@ use Data::Dumper;
 use Genome;
 
 class Genome::Model::ImportedAnnotation{
-    is => 'Genome::Model',
+    is => 'Genome::ModelDeprecated',
     has =>[
         annotation_source => {
             is => 'String',
@@ -91,10 +91,10 @@ sub annotation_build_for_reference {
     #TODO: Remove this hardcoded crap and come up with an intelligent heuristic
 
     if($reference->name eq 'NCBI-human-build36'){
-        $build = Genome::Model::Build::ImportedAnnotation->get(113115679);
+        $build = Genome::Model::Build::ImportedAnnotation->get(113049382);
     }
     elsif($reference->name eq 'GRCh37-lite-build37' || $reference->name eq 'g1k-human-build37'){
-        $build = Genome::Model::Build::ImportedAnnotation->get(106409619);
+        $build = Genome::Model::Build::ImportedAnnotation->get(106409296);
     }
     elsif($reference->name eq 'UCSC-mouse-buildmm9'){
         $build = Genome::Model::Build::ImportedAnnotation->get(106410073);

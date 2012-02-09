@@ -300,6 +300,10 @@ sub _cleanup {
     my $instance = $self->_instance;
     if($instance) {
         my $instance_output = $instance->output_directory;
+        # Remove trailing slashes so readlink will work
+        if ($instance_output =~ m/\/+$/) {
+            $instance_output =~ s/\/+$//;
+        }
         if(readlink($instance_output) eq $self->output_dir) {
             unlink($instance_output);
         }

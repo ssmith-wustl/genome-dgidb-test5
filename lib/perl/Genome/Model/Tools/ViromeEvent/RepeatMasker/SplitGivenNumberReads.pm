@@ -33,8 +33,6 @@ sub execute
     my $dir = $self->dir;
     my $sample_name = basename ($dir);
 
-    $self->log_event("Split reads executing for $sample_name");
-
     #FIND CDHIT OUTPUT FILE
     my $cd_hit_result_file = $dir.'/'.$sample_name.'.fa.cdhit_out';
     unless (-s $cd_hit_result_file) {
@@ -78,7 +76,7 @@ sub execute
 	    $out_io = Bio::SeqIO->new(-format => 'fasta', -file => ">$out_file");
 	}
     }
-    $self->log_event("Split reads completed for sample: $sample_name");
+    $self->log_event("Completed for sample: $sample_name");
     return 1;
 }
 

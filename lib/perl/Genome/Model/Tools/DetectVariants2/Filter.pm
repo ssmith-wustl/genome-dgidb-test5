@@ -245,6 +245,7 @@ sub shortcut_vcf {
     $self->_vcf_result($result);
     $self->status_message('Using existing result ' . $result->__display_name__);
     $self->_link_vcf_output_directory_to_result;
+    $self->_link_result_to_previous_result;
 
     return 1;
 }
@@ -324,6 +325,7 @@ sub _summon_filter_result {
     unless(-e $self->output_directory){
         $self->_link_output_directory_to_result;
     }
+    $self->_link_result_to_previous_result;
 
     return 1;
 }
@@ -350,6 +352,20 @@ sub _link_vcf_output_directory_to_result {
 
     return 1;
 }
+
+sub _link_result_to_previous_result {
+    my $self = shift;
+    my $result = $self->_result;
+
+    my $previous_result = $self->previous_result;
+    my @users = $previous_result->users;
+    unless(grep($_->user eq $result, @users)) {
+        $previous_result->add_user(user => $result, label => 'uses');
+    }
+
+    return 1;
+}
+
 
 sub _link_filter_output_directory_to_result {
     my $self = shift;
@@ -674,18 +690,7 @@ sub params_for_filter_result {
 
 sub params_for_vcf_result {
     my $self = shift;
-    my $prev_result = $self->previous_result;
-
-    my $prev_vcf_class = ($prev_result->can("filter_name")) ? 
-        'Genome\:\:Model\:\:Tools\:\:DetectVariants2\:\:Result\:\:Vcf\:\:Filter' :
-        'Genome\:\:Model\:\:Tools\:\:DetectVariants2\:\:Result\:\:Vcf\:\:Detector';
-    
-    my @vcf_users = grep { $_->user_class_name =~ m/$prev_vcf_class/ } $prev_result->users;
-    unless(@vcf_users){
-        die $self->error_message("Could not locate a: ".$prev_vcf_class." as a user of the previous result.");
-    }
-
-    my $prev_vcf_result = Genome::Model::Tools::DetectVariants2::Result::Vcf->get($vcf_users[0]->user_id);
+    my $prev_vcf_result = $self->previous_result->get_vcf_result;
     my $vcf_version = Genome::Model::Tools::Vcf->get_vcf_version;
     unless($prev_vcf_result->vcf_version eq $vcf_version){
         die $self->error_message("Couldn't locate a vcf_result with the same vcf_version");

@@ -25,8 +25,8 @@ sub bsub_rusage {
     my $tmp_space = 25000;
     if ( $read_processor and $read_processor =~ /quake|eulr/i ) {
         # Request memory for quake and eulr
-        my $mem = 16000;
-        $tmp_space = 100000;
+        my $mem = 32000;
+        $tmp_space = 200000;
         return "-R 'select[type==LINUX64 && mem>$mem && tmp>$tmp_space] rusage[mem=$mem:tmp=$tmp_space] span[hosts=1]' -M $mem"."000";
     }
 
@@ -217,9 +217,8 @@ sub _process_instrument_data {
             }
             $qual_type = 'illumina';
         }
-        my $instrument_data_tempdir = $self->_tempdir.'/'.$instrument_data->id;
-        my $create_dir = Genome::Sys->create_directory($instrument_data_tempdir);
-        if ( not $create_dir or not -d $instrument_data_tempdir ) {
+        my $instrument_data_tempdir = File::Temp::tempdir(CLEANUP => 1);
+        if ( not -d $instrument_data_tempdir ) {
             $self->error_message('Failed to make temp directory for instrument data!');
             return;
         }

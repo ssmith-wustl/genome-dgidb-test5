@@ -53,10 +53,11 @@ mut_class_test <- function( x, xmax = 100, hmax = 25, bin = 0.001 ) {
   x$lh0 = NA
   x$lh1 = NA
   hists = NULL
+  rounded_mut_cnts = round(x$x)
   for( i in 1:nrow(x) ) {
-    x$p[i] = binom.test( x$x[i], x$n[i], x$e[i], alternative = "greater" )$p.value
-    x$lh0[i] = dbinom( x$x[i], x$n[i], x$e[i], log = T )
-    x$lh1[i] = dbinom( x$x[i], x$n[i], x$x[i] / x$n[i], log = T )
+    x$p[i] = binom.test( rounded_mut_cnts[i], x$n[i], x$e[i], alternative = "greater" )$p.value
+    x$lh0[i] = dbinom( rounded_mut_cnts[i], x$n[i], x$e[i], log = T )
+    x$lh1[i] = dbinom( rounded_mut_cnts[i], x$n[i], x$x[i] / x$n[i], log = T )
     ni = x$n[i]; ei = x$e[i]
     gethist( xmax, ni, ei, ptype = "positive_log" ) -> bi
     binit( bi, hmax, bin ) -> bi
@@ -77,8 +78,8 @@ mut_class_test <- function( x, xmax = 100, hmax = 25, bin = 0.001 ) {
   if( df == 0 ) p.lr = 1
 
   # Convolution test
-  tx = sum( x[,"x"] )
-  tn = sum( x[,"n"] )
+  tx = sum( x$x )
+  tn = sum( x$n )
   ( bx = -sum( x[,"lh0"] ))
   ( p.convol = sum( exp( -hist0[hist0>=bx] )))
   ( qc = sum( exp( -hist0 )))
@@ -109,7 +110,7 @@ combineresults <- function( a, b ) {
 
 smg_test <- function( gene_mr_file, pval_file ) {
   read.delim( gene_mr_file ) -> mut
-  colnames( mut ) = c( "Gene", "Class", "Bases_Covered", "Non_Syn_Mutations", "BMR" )
+  colnames( mut ) = c( "Gene", "Class", "Bases_Covered", "Mutations", "BMR" )
   mut$BMR = as.numeric( as.character( mut$BMR ))
 
   # Select the rows with BMR data

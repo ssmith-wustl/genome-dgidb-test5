@@ -41,6 +41,18 @@ class Genome::Model::SomaticValidation::Command::DefineModels {
             is_optional => 1,
             doc => 'A file listing the variants for each patient',
         },
+        variant_file_format => {
+            is => 'Text',
+            is_optional => 1,
+            default_value => 'bed',
+            doc => 'format of the files listed in the variant_file_list, if provided',
+        },
+        generate_variant_lists => {
+            is => 'Boolean',
+            is_optional => 1,
+            default_value => 0,
+            doc => 'In lieu of provided variant lists, automatically generate lists based on the intersection of the variants in the discovery models and the target',
+        },
     ],
     has_output => [
         result_models => {
@@ -78,21 +90,38 @@ sub execute {
     push @params, reference_sequence_build => $reference_sequence_build;
 
     my %variants = $self->_generate_variant_mapping;
-        $DB::single = 1;
+
     my @new_m;
     for my $model (@models) {
         my $patient = $model->subject;
         if($patient->isa('Genome::Sample')) { $patient = $patient->source; }
 
         my @results;
-
-        ACCESSOR: for my $accessor ('id', 'name', 'common_name') {
-            if(exists $variants{$patient->$accessor}) {
-                for my $variant_type (keys %{ $variants{$patient->$accessor} }) {
-                    my $result = $self->_upload_result($model, $variant_type, @{ $variants{$patient->$accessor}{$variant_type} });
-                    push @results, $result;
+        if($self->variant_file_list) {
+            ACCESSOR: for my $accessor ('id', 'name', 'common_name') {
+                if(exists $variants{$patient->$accessor}) {
+                    for my $variant_type (keys %{ $variants{$patient->$accessor} }) {
+                        my $result = $self->_upload_result($model, $variant_type, @{ $variants{$patient->$accessor}{$variant_type} });
+                        push @results, $result;
+                    }
+                    last ACCESSOR; #found it already
                 }
-                last ACCESSOR; #found it already
+            }
+        } elsif($self->generate_variant_lists) {
+            my $extract_variants_cmd = Genome::Model::SomaticValidation::Command::ExtractVariantsToValidate->create(
+                model => $model,
+                target => $self->target,
+            );
+            $extract_variants_cmd->dump_status_messages(1);
+            unless($extract_variants_cmd->execute()) {
+                die $self->error_message('Failed to extract variants for model ' . $model->__display_name__);
+            }
+
+            for my $type ('snv', 'indel', 'sv', 'cnv') {
+                my $accessor = $type . '_variant_list';
+                my $result = $extract_variants_cmd->$accessor;
+
+                push @results, $result if $result;
             }
         }
 
@@ -139,6 +168,7 @@ sub execute {
     return 1;
 }
 
+#TODO Just defer to import-variants command
 sub _generate_variant_mapping {
     my $self = shift;
 
@@ -151,7 +181,12 @@ sub _generate_variant_mapping {
     my $variant_type;
     while(my $line = <$variant_file_list_fh>) {
         chomp $line;
-        if($line =~ m!.*/([^/]+)(?:\.part\d+)?\.bed$!) {
+        if($line =~ m{.*/((?:\w+\d+)|(?:\w_\w\w-[^/]+))/[^/]+$}) {
+            my $patient = $1;
+
+            $data{$patient}{$variant_type} ||= [];
+            push @{ $data{$patient}{$variant_type} }, $line;
+        } elsif($line =~ m{.*/([^/]+)(?:\.[^./]+)+$}) {
             my $patient = $1;
 
             $data{$patient}{$variant_type} ||= [];
@@ -195,7 +230,7 @@ sub _upload_result {
         source_build => $build,
         variant_file => $file,
         variant_type => $variant_type,
-        format => 'bed',
+        format => $self->variant_file_format,
         description => 'generated from ' . $self->variant_file_list,
     );
 

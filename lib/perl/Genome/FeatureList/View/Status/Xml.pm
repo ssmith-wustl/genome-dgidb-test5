@@ -32,9 +32,12 @@ class Genome::FeatureList::View::Status::Xml {
                             aspects => [
                                 'genome_model_id',
                                 'name',
-                                'subject_id',
-                                'subject_class_name',
-                                'is_default',
+                                {
+                                    name => 'subject',
+                                    aspects => ['id', 'name', 'subclass_name'],
+                                    perspective => 'default',
+                                    toolkit => 'xml',
+                                },
                                 {
                                     name => 'processing_profile',
                                     aspects => ['id', 'name'],
@@ -43,10 +46,9 @@ class Genome::FeatureList::View::Status::Xml {
                                 },
                                 'creation_date',
                                 'user_name',
-                            'region_of_interest_set_name',
                             ],
                             subject_class_name => 'Genome::Model',
-                        }
+                        },
                     ],
                 },
                 'subject_id',
@@ -63,9 +65,12 @@ class Genome::FeatureList::View::Status::Xml {
                             aspects => [
                                 'genome_model_id',
                                 'name',
-                                'subject_id',
-                                'subject_class_name',
-                                'is_default',
+                                {
+                                    name => 'subject',
+                                    aspects => ['id', 'name', 'subclass_name'],
+                                    perspective => 'default',
+                                    toolkit => 'xml',
+                                },
                                 {
                                     name => 'processing_profile',
                                     aspects => ['id', 'name'],
@@ -74,7 +79,6 @@ class Genome::FeatureList::View::Status::Xml {
                                 },
                                 'creation_date',
                                 'user_name',
-                            'region_of_interest_set_name',
                             ],
                             subject_class_name => 'Genome::Model',
                         }

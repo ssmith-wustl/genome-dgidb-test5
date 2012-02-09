@@ -36,8 +36,6 @@ sub execute {
 
     my $dir = $self->dir;
     my $sample_name = basename($dir);
-
-    $self->log_event("Checking Viral blastX parse for $sample_name");
     
     my $blast_dir = $dir.'/'.$sample_name.'.TBXNTFiltered_TBLASTX_ViralGenome';
     unless (-d $blast_dir) {
@@ -45,20 +43,16 @@ sub execute {
 	return;
     }
 
+    # check files for input fasta and blast filtered fasta files
     my @fa_files = glob("$blast_dir/*fa");
-    unless (scalar @fa_files > 0) {
-	if (-s $dir.'/'.$sample_name.'TBXNTFiltered.fa' > 0) {
-	    $self->log_event("Failed fine any Viral BlastX out files to parse for $sample_name");
-	    return;
-	}
-	elsif (-e $dir.'/'.$sample_name.'TBXNTFiltered.fa') {
-	    $self->log_event("No Viral BlastX out files available for parsing for $sample_name");
-	    return 1;
-	}
-	else {
-	    $self->log_event("Failed to find any Viral BlastX out files to parse for $sample_name");
-	    return;
-	}
+    if ( not @fa_files ) {
+        $self->log_event("No files found in viral blastx dir .. probably all reads were filtered out in earlier blast stage");
+        return 1;
+    } else {
+        my $filtered_file = $dir.'/'.$sample_name.'TBXNTFiltered.fa';
+        if ( not -s $filtered_file > 0 ) {
+            $self->log_event('Viral blast filtered fasta file is empty .. probably all reads were filtered out');
+        }
     }
 
     foreach my $fa_file (@fa_files) {

@@ -29,7 +29,7 @@ sub execute {
     my $self = shift;
 
     unless ( $self->run_blast_for_stage( 'hg_blast' ) ) {
-	$self->error_message( "Failed to run human genomic blast for file: ".$self->file_to_run );
+	$self->log_event( "Failed to run human genomic blast for file: ".$self->file_to_run );
 	return;
     }
     return 1;

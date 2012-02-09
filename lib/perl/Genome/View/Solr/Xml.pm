@@ -5,6 +5,7 @@ use warnings;
 use Genome;
 
 use WebService::Solr;
+use MIME::Base64;
 
 class Genome::View::Solr::Xml {
     is => 'UR::Object::View::Default::Xml',
@@ -48,16 +49,11 @@ sub _reconstitute_from_doc {
         return;
     }
 
-    my $subject_id = $solr_doc->value_for('object_id');
-    unless($subject_id) {
-        #Fall back on old way of getting id--this can be removed after all snapshots in use set object_id in Solr
-        $subject_id = $solr_doc->value_for('id');
-        ($subject_id) = $subject_id =~ m/.*?(\d+)$/;
+    my $subject = Genome::Search->get_subject_from_doc($solr_doc);
+    unless ($subject) {
+        die 'Failed to get subject from solr_doc.';
     }
-
-    my $subject_class_name = $solr_doc->value_for('class');
-
-    my $self = $class->SUPER::create(subject_id => $subject_id, subject_class_name => $subject_class_name);
+    my $self = $class->SUPER::create(subject_id => $subject->id, subject_class_name => $subject->class);
 
     $self->_doc($solr_doc);
 
@@ -88,19 +84,24 @@ sub _generate_content {
     my $class = $self->_generate_class_field_data;
     my $title = $self->_generate_title_field_data;
     my $id =    $self->_generate_id_field_data;
-    my $object_id = $self->_generate_object_id_field_data;
     my $timestamp = $self->_generate_timestamp_field_data;
     my $content = $self->_generate_content_field_data;
     my $type = $self->_generate_type_field_data;
+    my $object_id = $self->_generate_object_id_field_data;
 
     push @fields, WebService::Solr::Field->new( class => $class );
     push @fields, WebService::Solr::Field->new( title => $title );
     push @fields, WebService::Solr::Field->new( id => $id );
-    push @fields, WebService::Solr::Field->new( object_id => $object_id);
     push @fields, WebService::Solr::Field->new( timestamp => $timestamp );
     push @fields, WebService::Solr::Field->new( content => $content );
     push @fields, WebService::Solr::Field->new( type => $type );
+    push @fields, WebService::Solr::Field->new( object_id => $object_id);
 
+
+    my @dyn_fields = $self->_generate_dynamic_fields();
+    if (@dyn_fields) {
+        push @fields, @dyn_fields;
+    }
 
 
     # WARNING! There exists code in Genome::Search that is trying to reuse objects;
@@ -208,14 +209,22 @@ sub _generate_id_field_data {
 
     #TODO after all code is setting solr_id, make that field the primary id for Solr;
     #then remove the class and '---' from this field
-    return $subject->class . '---' . $subject->id;
+    return $subject->class . '---' . $self->_generate_object_id_field_data;
 }
 
 sub _generate_object_id_field_data {
     my $self = shift;
     my $subject = $self->subject;
+    my $object_id = $subject->id;
 
-    return $subject->id;
+    # Sets have invalid XML chars in their IDs so we encode them in Base64.
+    # Decoding is done in Genome::Search::get_subject_from_doc so keep symmetry there.
+    # TODO Encoding/decoding should probably be handled by the object itself.
+    if ($subject->isa('UR::Object::Set')) {
+        $object_id = encode_base64($object_id);
+    }
+
+    return $object_id;
 }
 
 sub _generate_timestamp_field_data {
@@ -292,5 +301,22 @@ sub _generate_type_field_data {
     return $self->type;
 }
 
+sub _generate_dynamic_fields {
+    
+    my ($self) = @_;
+    my @fields;
+
+    if (! $self->can("dynamic_fields") ) {
+        return;
+    }
+
+    my $dyn_field = $self->dynamic_fields();
+   
+    for my $key (keys %$dyn_field) {
+        push @fields, WebService::Solr::Field->new( $key => $dyn_field->{$key} );
+    }
+
+    return @fields;
+}
 
 1;

@@ -11,6 +11,7 @@ use warnings;
 
 use above "Genome";
 use Test::More;
+use File::Temp;
 
 my $total_mem_kb = Genome::Sys->mem_limit_kb;
 if ($total_mem_kb < 2097152) { # Pindel requires about 2 gigs of memory
@@ -18,6 +19,17 @@ if ($total_mem_kb < 2097152) { # Pindel requires about 2 gigs of memory
 }
 
 plan tests => 5;
+
+my $refseq_tmp_dir = File::Temp::tempdir(CLEANUP => 1);
+no warnings;
+use Genome::Model::Build::ReferenceSequence;
+*Genome::Model::Build::ReferenceSequence::local_cache_basedir = sub { return $refseq_tmp_dir; };
+*Genome::Model::Build::ReferenceSequence::copy_file = sub { 
+    my ($build, $file, $dest) = @_;
+    symlink($file, $dest) || die;
+    return 1; 
+};
+use warnings;
 
 use_ok('Genome::Model::Tools::Vcf::Convert::Indel::Pindel');
 

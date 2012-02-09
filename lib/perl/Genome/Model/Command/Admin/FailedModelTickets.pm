@@ -13,7 +13,7 @@ require IO::Prompt;
 require RT::Client::REST;
 require RT::Client::REST::Ticket;
 
-class Genome::Model::Command::Admin::FailedModelTickets { 
+class Genome::Model::Command::Admin::FailedModelTickets {
     is => 'Command::V2',
     doc => 'find failed cron models, check that they are in a ticket',
 };
@@ -36,7 +36,7 @@ sub execute {
     local $ENV{PERL_LWP_SSL_VERIFY_HOSTNAME} = 0;
     my $cookie_file = $ENV{HOME}."/.rt_cookie";
     my $cookie_jar = HTTP::Cookies->new(file => $cookie_file);
-    my $rt = RT::Client::REST->new(server => 'https://rt.gsc.wustl.edu/', _cookie => $cookie_jar); 
+    my $rt = RT::Client::REST->new(server => 'https://rt.gsc.wustl.edu/', _cookie => $cookie_jar);
     try {
         $rt->login(username => $username, password => $pw->{value});
     } catch Exception::Class::Base with {
@@ -65,7 +65,7 @@ sub execute {
         my $model = $build->model;
         #If the latest build of the model succeeds, ignore those old
         #failing ones that will be cleaned by admin "cleanup-succeeded".
-        next if $model->status eq 'Succeeded'; 
+        next if $model->status eq 'Succeeded';
         next if $models_and_builds{ $model->id } and $models_and_builds{ $model->id }->id > $build->id;
         $models_and_builds{ $model->id } = $build;
     }
@@ -107,10 +107,29 @@ sub execute {
     for my $build ( values %models_and_builds ) {
         my $key = 'Unknown';
         my $msg = 'Failure undetermined!';
-        my @error_logs = grep { $_->inferred_file } Genome::Model::Build::ErrorLogEntry->get(build_id => $build->id);
-        if ( @error_logs ) {
-            $key = $error_logs[0]->inferred_file.' '.$error_logs[0]->inferred_line;
-            $msg = $error_logs[0]->inferred_message;
+        my $error = $self->_pick_optimal_error_log($build);
+        if ( $error
+                and
+            ( ($error->file and $error->line) or ($error->inferred_file and $error->inferred_line) )
+                and
+            ($error->message or $error->inferred_message)
+        ) {
+            if ( $error->file and $error->line ) {
+                $key = $error->file.' '.$error->line;
+            } elsif ( $error->inferred_file and $error->inferred_line ) {
+                $key = $error->inferred_file.' '.$error->inferred_line;
+            } else {
+                $key = 'unkown';
+            }
+
+            if ( $error->message ) {
+                $msg = $error->message;
+            } elsif ( $error->inferred_message ) {
+                $msg = $error->inferred_message;
+            } else {
+                $msg = 'unkown';
+            }
+
             $models_with_errors++;
         }
         elsif ( my $guessed_error = $self->_guess_build_error($build) ) {
@@ -150,6 +169,7 @@ sub _guess_build_error {
 
     my $data_directory = $build->data_directory;
     my $log_directory = $data_directory.'/logs';
+    return unless -d $log_directory;
     my %errors;
     find(
         sub{
@@ -172,5 +192,17 @@ sub _guess_build_error {
     return join("\n", sort keys %errors);
 }
 
+sub _pick_optimal_error_log{
+    my $self = shift;
+    my $build = shift;
+    my @errors = Genome::Model::Build::ErrorLogEntry->get(build_id => $build->id);
+    my @optimal_errors = grep($_->file, @errors);
+    unless (@optimal_errors){
+        @optimal_errors = grep($_->inferred_file, @errors);
+    }
+    unless(@optimal_errors){
+        return 0;
+    }
+    return shift @optimal_errors;
+}
 1;
-

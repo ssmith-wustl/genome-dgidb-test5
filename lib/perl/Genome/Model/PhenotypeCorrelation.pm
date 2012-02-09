@@ -6,7 +6,7 @@ use Genome;
 use Math::Complex;
 
 class Genome::Model::PhenotypeCorrelation {
-    is => 'Genome::Model',
+    is => 'Genome::ModelDeprecated',
     doc => "genotype-phenotype correlation of a population group",
     has_param => [
         alignment_strategy => {
@@ -61,7 +61,7 @@ class Genome::Model::PhenotypeCorrelation {
     ],
     has_input => [
         reference_sequence_build => {
-            is => 'Genome::Model::ReferenceSequence',
+            is => 'Genome::Model::Build::ReferenceSequence',
             doc => 'the reference sequence against which alignment and variant detection are done',
         },
     ],

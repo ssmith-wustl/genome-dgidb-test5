@@ -16,8 +16,8 @@ class Genome::Command::Delete {
 };
 
 sub _target_name { Carp::confess('Please use CRUD or implement _target_name in '.$_[0]->class); }
-sub _target_name_pl { return Lingua::EN::Inflect::PL($_[0]->_target_name); }
-sub _target_name_pl_ub { my $target_name_pl = $_[0]->_target_name_pl; $target_name_pl =~ s/\_/ /g; return $target_name_pl; }
+sub _target_name_pl { Carp::confess('Please use CRUD or implement _target_name_pl in '.$_[0]->class); }
+sub _target_name_pl_ub { my $target_name_pl = $_[0]->_target_name_pl; $target_name_pl =~ s/ /\_/g; return $target_name_pl; }
 
 sub sub_command_sort_position { .4 };
 

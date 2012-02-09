@@ -15,7 +15,7 @@ use Test::More;
 use_ok('Genome::Model::Command::InstrumentData::List') or die;
 
 class Genome::Model::Tester {
-    is => 'Genome::Model',
+    is => 'Genome::ModelDeprecated',
 };
 class Genome::ProcessingProfile::Tester {
     is => 'Genome::ProcessingProfile',

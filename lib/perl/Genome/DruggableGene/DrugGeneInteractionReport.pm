@@ -15,31 +15,30 @@ class Genome::DruggableGene::DrugGeneInteractionReport {
         id => { is => 'Text' },
     ],
     has => [
-        drug_name_report_id => { is => 'Text'},
-        drug_name_report => {
+        drug_id => { is => 'Text', column_name => 'drug_name_report_id'},
+        drug => {
             is => 'Genome::DruggableGene::DrugNameReport',
-            id_by => 'drug_name_report_id',
+            id_by => 'drug_id',
             constraint_name => 'drug_gene_interaction_report_drug_name_report_id_fkey',
         },
-        drug_name_report_name => {
-            via => 'drug_name_report',
+        drug_name => {
+            via => 'drug',
             to => 'name',
         },
-        gene_name_report_id => { is => 'Text'},
-        gene_name_report => {
+        gene_id => { is => 'Text', column_name => 'gene_name_report_id'},
+        gene => {
             is => 'Genome::DruggableGene::GeneNameReport',
-            id_by => 'gene_name_report_id',
+            id_by => 'gene_id',
             constraint_name => 'drug_gene_interaction_report_gene_name_report_id_fkey',
         },
-        gene_name_report_name => {
-            via => 'gene_name_report',
+        gene_name => {
+            via => 'gene',
             to => 'name',
         },
         source_db_name => { is => 'Text'},
         source_db_version => { is => 'Text'},
-        interaction_type => { is => 'Text'},
         description => { is => 'Text', is_optional => 1 },
-        drug_gene_interaction_report_attributes => {
+        interaction_attributes => {
             is => 'Genome::DruggableGene::DrugGeneInteractionReportAttribute',
             reverse_as => 'drug_gene_interaction_report',
             is_many => 1,
@@ -51,6 +50,40 @@ class Genome::DruggableGene::DrugGeneInteractionReport {
                 return $citation;
             |,
         },
+        is_known_action => {
+            calculate => q{
+                return 1 if grep($_->name eq 'is_known_action' && $_->value eq 'yes', $self->interaction_attributes);
+                return 0;
+            },
+        },
+        interaction_types => {
+            via => 'interaction_attributes',
+            to => 'value',
+            where => [name => 'interaction_type'],
+            is_many => 1,
+            is_optional => 1,
+        },
+        is_potentiator => {
+            calculate => q|
+                my @potentiator = grep($_ =~ /potentiator/, $self->interaction_types);
+                return 1 if @potentiator;
+                return 0;
+            |,
+        },
+        is_untyped => {
+            calculate => q|
+                my @na = grep($_ =~ /^na$/, $self->interaction_types);
+                return 1 if @na;
+                return 0;
+            |,
+        },
+        is_inhibitor => {
+            calculate => q|
+                my @inhibitor = grep($_ =~ /inhibitor/, $self->interaction_types);
+                return 1 if @inhibitor;
+                return 0;
+            |,
+        }
     ],
     doc => 'Claim regarding an interaction between a drug name and a gene name',
 };
@@ -60,20 +93,28 @@ sub __display_name__ {
     return "Interaction of " . $self->drug_name_report_name . " and " . $self->gene_name_report_name;
 }
 
-sub search_index_queue_priority {
-    return 2;
-}
-
 if ($INC{"Genome/Search.pm"}) {
     __PACKAGE__->create_subscription(
         method => 'commit',
-        callback => \&commit_callback,
+        callback => \&add_to_search_index_queue,
+    );
+    __PACKAGE__->create_subscription(
+        method => 'delete',
+        callback => \&add_to_search_index_queue,
     );
 }
 
-sub commit_callback {
+sub add_to_search_index_queue {
     my $self = shift;
-    Genome::Search->add(Genome::DruggableGene::DrugGeneInteractionReport->define_set(drug_name_report_name => $self->drug_name_report_name , gene_name_report_name => $self->gene_name_report_name));
+    my $set = Genome::DruggableGene::DrugGeneInteractionReport->define_set(
+        drug_name_report_name => $self->drug_name_report_name,
+        gene_name_report_name => $self->gene_name_report_name,
+    );
+    Genome::Search::Queue->create(
+        subject_id => $set->id,
+        subject_class => $set->class,
+        priority => 9,
+    );
 }
 
 1;

@@ -301,6 +301,10 @@ sub input_collated_fastq_file {
     return $files[0];
 }
 
+sub core_gene_survey_file {
+    return $_[0]->assembly_directory.'/edit_dir/core_gene_survey_result';
+}
+
 #velvet generated files
 sub velvet_afg_file {
     my $self = shift;

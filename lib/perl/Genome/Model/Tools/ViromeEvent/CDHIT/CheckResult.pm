@@ -47,7 +47,7 @@ sub execute {
     $self->log_event("Executing for sample: $sample_name");
 
     if (system($com)) { #returns 0 when successful
-        $self->log_event("Failed to successfully cd-hitfor sample: $sample_name");
+        $self->log_event("Failed to successfully run cd-hit for sample: $sample_name");
         return; #need to make sure this exits
     }
 

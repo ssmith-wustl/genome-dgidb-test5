@@ -128,7 +128,7 @@ sub daemon {
             my $max = $self->max_changes_per_commit;
             $self->info("CHILD($$): Processing index queue max=$max)");
             eval { $self->index_queued(max_changes_count => $max); };
-            if ($@) { $self->info("CHILD($$): ahh shit: $@"); } 
+            if ($@) { $self->info("CHILD($$): ahh shit: $@"); }
 
             if ($signaled_to_quit) {
                 $self->inf("CHILD($$): signaled to quit");
@@ -199,7 +199,19 @@ sub index_queued {
             $index_queue_item->delete();
         }
         else {
-            my $action = ($subject_class->get($subject_id) ? 'add' : 'delete');
+            my $action;
+            if (not $subject_class->can('get')) {
+                $self->warning_message("Class ($subject_class) cannot 'get'. Deleting item (ID: $subject_id) from queue.");
+                $action = 'delete';
+            } else {
+                $action = ($subject_class->get($subject_id) ? 'add' : 'delete');
+            }
+            if($action eq 'add' and $subject_class->isa('UR::Object::Set')) {
+                my $set = $subject_class->get($subject_id);
+                unless ($set->members) {
+                    $action = 'delete';
+                }
+            }
             last if $signaled_to_quit;
             if ($self->modify_index($action, $subject_class, $subject_id)) {
                 $subject_seen->{$subject_class}->{$subject_id}++;

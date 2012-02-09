@@ -23,7 +23,7 @@ class Genome::Sample::View::Solr::Xml {
         display_url0 => {
             is => 'Text',
             calculate_from => ['subject'],
-            calculate => sub { return join ('?id=', '/view/genome/sample/detail.html',$_[0]->id()); },
+            calculate => sub { return join ('?id=', '/view/genome/sample/status.html',$_[0]->id()); },
         },
         display_label1 => {
             is  => 'Text',
@@ -56,6 +56,10 @@ class Genome::Sample::View::Solr::Xml {
                 },
                 {
                     name => 'extraction_desc',
+                    position => 'content',
+                },
+                {
+                    name => 'individual_common_name',
                     position => 'content',
                 },
                 {

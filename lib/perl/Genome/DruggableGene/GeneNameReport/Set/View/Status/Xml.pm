@@ -23,8 +23,9 @@ class Genome::DruggableGene::GeneNameReport::Set::View::Status::Xml {
                         'nomenclature',
                         'source_db_name',
                         'source_db_version',
+                        'original_data_source_url',
                         {
-                            name => 'gene_name_report_associations',
+                            name => 'gene_alt_names',
                             perspective => 'default',
                             toolkit => 'xml',
                             aspects => [

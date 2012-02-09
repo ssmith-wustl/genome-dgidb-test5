@@ -10,7 +10,7 @@ class Genome::Model::Tools::RefCov::Standard {
 };
 
 sub help_brief {
-    "The default standard for running RefCov.",
+    "The standard mode makes all optional ref-cov outputs available to the user, but none are set by default.  The standard mode can be used to run ref-cov in a customized fashion.",
 }
 
 sub execute {

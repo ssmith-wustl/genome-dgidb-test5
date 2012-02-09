@@ -65,7 +65,7 @@ sub execute {
 
         my $pid = fork();
         if (not defined $pid) {
-            die "Failed to fork";
+            die "Failed to fork ($!).";
         }
         elsif ($pid == 0) {
             # CHILD
@@ -102,8 +102,7 @@ sub find_orphaned_docs {
     for my $class (keys %docs) {
         my @docs = @{$docs{$class}};
         if ($class->can('get')) {
-            my @object_ids_from_solr = map { $_->value_for('object_id') } @docs;
-            my @objects = $class->get(\@object_ids_from_solr);
+            my @objects = map { Genome::Search->get_subject_from_doc($_) } @docs;
             for my $doc (@docs) {
                 my $id_from_solr = $doc->value_for('object_id');
                 unless (grep { $id_from_solr eq $_->id } @objects) {

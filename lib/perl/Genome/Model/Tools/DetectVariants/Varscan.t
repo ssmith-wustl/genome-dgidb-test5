@@ -26,7 +26,7 @@ my $bam_input = $test_dir . '/alignments/102922275_merged_rmdup.bam';
 my $expected_dir = $test_dir . '/expected.v8/';
 ok(-d $expected_dir, "expected results directory exists");
 
-my $ref_seq_build = Genome::Model::Build::ImportedReferenceSequence->get(type_name => 'imported reference sequence', name => 'NCBI-human-build36');
+my $ref_seq_build = Genome::Model::Build::ImportedReferenceSequence->get(name => 'NCBI-human-build36');
 ok($ref_seq_build, 'Got a reference sequence build') or die('Test cannot continue without a reference sequence build');
 is($ref_seq_build->name, 'NCBI-human-build36', 'Got expected reference for test case');
 

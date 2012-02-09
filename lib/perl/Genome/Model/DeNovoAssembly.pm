@@ -7,7 +7,7 @@ use Genome;
 use Genome::ProcessingProfile::DeNovoAssembly;
 
 class Genome::Model::DeNovoAssembly {
-    is => 'Genome::Model',
+    is => 'Genome::ModelDeprecated',
     has => [
         center_name => {
             is => 'Text',

@@ -31,7 +31,7 @@ ok($model, 'create model') or die;
 my @sanger_id = map { Genome::InstrumentData::Sanger->create(id => '0'.$_.'jan00.101amaa') } (1..4);
 is(@sanger_id, 4, 'create instrument data') or die;
 no warnings qw/once redefine/;
-*Genome::Model::compatible_instrument_data = sub{ return @sanger_id; };
+*Genome::ModelDeprecated::compatible_instrument_data = sub{ return @sanger_id; };
 use warnings;
 my @compatible_id = $model->compatible_instrument_data;
 is_deeply(\@sanger_id, \@compatible_id, 'overload compatible instrument data');

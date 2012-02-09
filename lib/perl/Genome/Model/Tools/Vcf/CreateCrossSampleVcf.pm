@@ -11,11 +11,17 @@ class Genome::Model::Tools::Vcf::CreateCrossSampleVcf {
     is => 'Genome::Command::Base',
     has_input => [
         builds => {
-            is => 'Genome::Model::Build',
+            is => 'Genome::Model::Build::ReferenceAlignment',
             require_user_verify => 0,
             is_many => 1,
-            is_optional=>0,
+            is_optional=>1,
             doc => 'The builds that you wish to create a cross-sample vcf for',
+        },
+        model_group => {
+            is => 'Genome::ModelGroup',
+            require_user_verify => 0,
+            is_optional => 1,
+            doc => 'Model group from which last succeeded builds will be pulled',
         },
         output_directory => {
             is => 'Text',
@@ -90,7 +96,9 @@ EOS
 
 sub execute {
     my $self=shift;
-    my @builds = $self->builds;
+
+    my @builds = $self->_resolve_builds;
+
     my $pp = $builds[0]->model->processing_profile->id;
     unless($self->allow_multiple_processing_profiles){
         for my $build (@builds){
@@ -109,9 +117,9 @@ sub execute {
     my $roi_file = defined($self->roi_file);
     my $roi_name = defined($self->roi_name);
     my $reglim=0;
-    if($roi_file == $roi_name){
+    if($roi_file && $roi_name){
         $reglim = 1;
-    } else {
+    } elsif($roi_file xor $roi_name) {
         die $self->error_message("You must define both roi_name and roi_file or neither.");
     }
 
@@ -125,11 +133,12 @@ sub execute {
     my $num_inputs = $self->_num_inputs;
     my $var_type = $self->variant_type;
     my $accessor = "get_".$var_type."_vcf";
-    my @input_files = map{ $_->$accessor.".gz" } @builds;
+    my @input_files = map{ $_->$accessor } @builds;
     $self->_input_files(\@input_files);
     my @existing_files = grep { -s $_ } @input_files;
     unless( scalar(@existing_files) == $num_inputs){
-        die $self->error_message("The number of input builds did not match the number of .vcf.gz files found. Check the input builds for completeness.");
+        die $self->error_message("The number of input builds ($num_inputs) did not match the number of .vcf.gz files found (" . scalar (@existing_files) . "). 
+            Check the input builds for completeness.");
     }
 
     #initialize the workflow inputs
@@ -160,7 +169,7 @@ sub execute {
         }
         
         #if region-limiting, set vcf_file as the region-limited file, otherwise use the input vcf
-        my $vcf_file = $reglim ? $output_directory."/region_limited_inputs/".$var_type.".".$sample.".region_limited.vcf.gz" : $build->$accessor.".gz";
+        my $vcf_file = $reglim ? $output_directory."/region_limited_inputs/".$var_type.".".$sample.".region_limited.vcf.gz" : $build->$accessor;
         $inputs{$sample."_bam_file"} = $build->whole_rmdup_bam_file;
         $inputs{$sample."_mpileup_output_file"} = $dir."/".$sample.".for_".$var_type.".pileup.gz"; 
         $inputs{$sample."_vcf_file"} = $vcf_file;        
@@ -195,7 +204,7 @@ sub execute {
             $inputs{$sub_merge} = $tmp_dir."/".$sub_merge.".bed.gz";
             my @local_input_list;
             for (1..$self->max_files_per_merge){
-                unless(@input_list){
+               unless(@input_list){
                     last;
                 }
                 push @local_input_list, shift @input_list;
@@ -224,6 +233,39 @@ sub execute {
     }
     return $inputs{final_output};
 
+}
+
+sub _resolve_builds {
+    my $self = shift;
+    my @builds;
+    if ($self->builds and not $self->model_group) {
+        my @not_succeeded = grep { $_->status ne 'Succeeded' } $self->builds;
+        if (@not_succeeded) {
+            die "Some builds are not successful: " . join(',', map { $_->id } @not_succeeded);
+        }
+        @builds = $self->builds;
+    }
+    elsif ($self->model_group and not $self->builds) {
+        for my $model ($self->model_group->models) {
+            unless ($model->isa('Genome::Model::ReferenceAlignment')) {
+                die "Model " . $model->__display_name__ . " of model group " . $self->model_group->__display_name__ .
+                    " is not a reference alignment model, it's a " . $model->class_name;
+            }
+            my $build = $model->last_complete_build;
+            if ($build) {
+                push @builds, $build;
+            }
+            else {
+                die "Found no last complete build for model " . $model->__display_name__;
+            }
+        }
+        $self->builds(\@builds);
+    }
+    else {
+        die "Not given builds or a model group!";
+    }
+
+    return @builds;
 }
 
 sub _dump_workflow {
@@ -265,7 +307,7 @@ sub _region_limit_inputs {
     #set up individualized input params and input values
     for my $b (@builds){
         my $sample = $b->model->subject->name;
-        my $vcf = $b->$accessor.".gz";
+        my $vcf = $b->$accessor;
         my $output = $output_directory."/".$var_type.".".$sample.".region_limited.vcf.gz";
         $in_out{$vcf} = $output;
         push @inputs, ("input_vcf_".$count,"output_vcf_".$count);
