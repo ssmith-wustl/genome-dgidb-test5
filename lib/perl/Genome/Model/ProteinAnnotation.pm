@@ -3,7 +3,7 @@ package Genome::Model::ProteinAnnotation;
 use strict;
 use warnings;
 use Genome;
-use PAP;
+#use PAP;
 
 class Genome::Model::ProteinAnnotation {
     is => 'Genome::ModelDeprecated',
@@ -44,19 +44,28 @@ sub _parse_annotation_strategy {
 
         my $class_name;
         my @words = split('-', $name);
-        $class_name = 'PAP::Command::' . join('', map { ucfirst(lc($_)) } @words);
+        
+        #$class_name = 'PAP::Command::' . join('', map { ucfirst(lc($_)) } @words);
+        $class_name = __PACKAGE__ . '::Command::' . ucfirst(lc(join('',@words)));
+        $class_name =~ s/Interproscan/Iprscan/;
+
         eval { $class_name->class; };
         if ($@) {
             die "error parsing $spec: $name parses to $class_name which has errors: $@";
         }
+
+        unless ($class_name->isa(__PACKAGE__ . '::Command::Annotator')) {
+            die "annotator $name maps to module $class_name ...but that does not inherit from "
+                . __PACKAGE__ . '::Command::Annotator';
+        }
        
-        my $requires_chunking;
-        if ($class_name eq 'PAP::Command::PsortB') {  #if ($class_name->_requires_chunked_input) {
-            $requires_chunking = 1;
-        }
-        else {
-            $requires_chunking = 0;
-        }
+        my $requires_chunking = $class_name->requires_chunking;
+        #if ($class_name eq 'PAP::Command::PsortB') {  #if ($class_name->_requires_chunked_input) {
+        #    $requires_chunking = 1;
+        #}
+        #else {
+        #    $requires_chunking = 0;
+        #}
 
         # the names of the output dirs are similar but not identical on all of the annotator commands :( 
         # TODO: normalize those! (for now we just parse the name)
@@ -70,7 +79,7 @@ sub _parse_annotation_strategy {
             next if $p->property_name eq 'fasta_file';
 
             my $property_name = $p->property_name;
-            if ($property_name =~ /_archive_dir/ or $property_name eq 'report_save_dir') {
+            if ($property_name =~ /_archive_dir/ or $property_name eq 'report_save_dir' or $property_name eq 'output_dir') {
                 if ($property_name_for_output_dir_on_tool) {
                     die "multiple properties on $class_name seem to be output directories: $property_name_for_output_dir_on_tool, $property_name!";
                 }
@@ -197,7 +206,7 @@ sub _resolve_workflow_for_build {
         $fasta_chunker_op = $workflow->add_operation(
             name => 'chunk input sequences',
             operation_type => Workflow::OperationType::Command->create(
-                command_class_name => 'PAP::Command::FastaChunker'
+                command_class_name => __PACKAGE__ . '::Command::FastaChunker'
             )
         );
         
