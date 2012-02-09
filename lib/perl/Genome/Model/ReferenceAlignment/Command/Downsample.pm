@@ -7,13 +7,19 @@ use File::Basename;
 
 class Genome::Model::ReferenceAlignment::Command::Downsample {
     is => 'Command::V2',
-    doc => 'Downsample the merged bam for a given model into a new instrument data and a new model.',
+    doc => 'Downsample the merged bam for given model(s) into a new instrument data and a new model (or a model group).',
     has => [
+        model_group => {
+            is => 'Genome::ModelGroup',
+            doc => 'Model-Group to operate on... provide this OR model',
+            is_optional => 1,
+            is_input => 1,
+        },
         model => {
             is => 'Genome::Model::ReferenceAlignment',
             shell_args_position => 1,
-            doc => 'Model to operate on',
-            is_optional => 0,
+            doc => 'Model to operate on... provide this OR model-group',
+            is_optional => 1,
             is_input => 1,
         },
         coverage_in_gb => {
@@ -42,13 +48,18 @@ class Genome::Model::ReferenceAlignment::Command::Downsample {
             is => 'Genome::Model::ReferenceAlignment',
             doc => 'The new model created with the downsampled instrument data assigned',
             is_optional => 1,
-        }
+        },
+        _new_model_group => {
+            is => 'Genome::Modelgroup',
+            doc => 'The new model group created with the downsampled instrument data assigned',
+            is_optional => 1,
+        },
     ],
 };
 
 sub help_detail {
     return <<EOS 
-    Downsample the merged bam for a given model into a new instrument data and a new model.
+    Downsample the merged bam for given model(s) into a new instrument data and a new model (or a model group).
 EOS
 }
 
@@ -56,11 +67,64 @@ sub execute {
     my $self = shift;
 
     unless($self->coverage_in_gb xor $self->coverage_in_ratio){
-        $self->error_message("You must either specify coverage_in_gb or coverage_in_ratio, not both.");
-        die $self->error_message;
+        die $self->error_message("You must either specify coverage_in_gb or coverage_in_ratio, not both.");
+    }
+    unless ($self->model xor $self->model_group) {
+        die $self->error_message("You must either specify model or model_group, not both.");
     }
 
-    my $model = $self->model;
+    if ($self->model) {
+        return $self->_create_downsampled_model($self->model);
+    }
+
+    return $self->_create_downsampled_model_group($self->model_group);
+}
+
+# Given a model group, downsample each of the models within and add the new models to a new model group
+sub _create_downsampled_model_group {
+    my $self = shift;
+    my $model_group = shift;
+
+    my @models = $model_group->models;
+    unless (@models) {
+        die $self->error_message("Could not get any models for model group " . $model_group->id);
+    }
+
+    my @new_models;
+    for my $model (@models) {
+        unless ($self->_create_downsampled_model($model) ) {
+            die $self->error_message("Could not create a downsampled model for input model " . $model->id);
+        }
+        
+        my $new_model = $self->_new_model;
+        unless ($new_model) {
+            die $self->error_message("Failed to get new model for input model " . $model->id);
+        }
+        push @new_models, $new_model;
+    }
+
+    my $new_group_name = $model_group->name . ".downsampled";
+    my $new_group = Genome::ModelGroup->create(name => $new_group_name);
+    unless ($new_group) {
+        die $self->error_message("Could not create new model group with the name $new_group_name");
+    }
+    print "Assigning " . scalar @new_models. " models\n";
+    $new_group->assign_models(@new_models);
+    print "The new model group is " . $new_group->id . " " . $new_group->name . "\n";
+
+    $self->_new_model_group($new_group);
+
+    return 1;
+}
+
+# Given a single model: 
+# 1) downsample the merged bam from the last succeded build
+# 2) import the downsampled bam into a new instrument data
+# 3) create a new model with that instrument data assigned
+sub _create_downsampled_model {
+    my $self = shift;
+    my $model = shift;
+
     unless($model){
         die $self->error_message("Could not locate model!");
     }
@@ -173,13 +237,12 @@ sub get_or_create_library {
     return $library;
 }
 
+# Given a model and instrument data, copy the model to a new one with only that instrument data assigned
 sub _define_new_model {
     my $self = shift;
     my $model = shift;
     my $instrument_data = shift;
-
-    $DB::single=1;
-
+    
     my $copy_command = Genome::Model::Command::Copy->create(
         model => $model,
         overrides => ["instrument_data=".$instrument_data->id],
@@ -254,6 +317,7 @@ sub _get_or_create_flagstat {
     return $flagstat_file;
 }
 
+# Given a bam, return the total number of reads
 sub _get_readcount {
     my $self = shift;
     my $bam = shift;
@@ -264,6 +328,7 @@ sub _get_readcount {
     return $flagstat->{total_reads};
 }
 
+# Given a model, return the read_length of the instrument data assigned to that model. Die if the length differs between instrument data.
 sub _get_readlength {
     my $self = shift;
     my $model = shift;
