@@ -16,10 +16,13 @@ class Genome::Model::Tools::BamQc::Run {
     is => ['Genome::Model::Tools::BamQc::Base'],
     has_input => [
         bam_file => {
-            doc => 'The input BAM file.'
+            doc => 'The input BAM file to generate metrics for.'
         },
-        output_directory => { },
+        output_directory => {
+            doc => 'The directory to write output summary metrics files to.',
+        },
         reference_sequence => {
+            doc => 'The reference sequence for which the BAM file was aligned to.',
             # GRCh37-lite-build37
             default_value => '/gscmnt/ams1102/info/model_data/2869585698/build106942997/all_sequences.fasta',
         },
@@ -55,10 +58,12 @@ class Genome::Model::Tools::BamQc::Run {
         },
         error_rate => {
             is => 'Boolean',
+            doc => 'A flag to run error rate calculations.  The error-rate-pileup flag determines which method of error-rate calculation is used.',
             default_value => 1,
         },
         error_rate_pileup => {
             is => 'Boolean',
+            doc => 'A flag to run a pileup error rate calculation.  This actually compares each base in every read back to the reference sequence.  This can take a long time.  If set to false, the traditional error rate calculation will run using the Match Descriptor in the BAM alignment record.',
             default_value => 1,
         },
     ],
@@ -132,10 +137,19 @@ sub execute {
         }
     }
 
-    # PICARD MARKDUPLICATES
+    # PICARD MARK DUPLICATES
     my @mrkdup_files = glob($bam_dirname .'/*.metrics');
     unless (@mrkdup_files) {
         # TODO: run MarkDuplicates passing the mrkdup bam file as input to the downstream steps in workflow
+        # Not sure because some BAMs are intentionally left unmarked....
+    } else {
+        for my $mrkdup_file (@mrkdup_files) {
+            my ($mrkdup_basename, $mrkdup_dirname, $mrkdup_suffix) = File::Basename::fileparse($mrkdup_file,qw/\.metrics/);
+            my $mrkdup_path = $self->output_directory .'/'. $mrkdup_basename .'.metrics';
+            unless (symlink($mrkdup_file,$mrkdup_path)) {
+                die('Failed to create symlink '. $mrkdup_path .' -> '. $mrkdup_file);
+            }
+        }
     }
 
     # PICARD METRICS

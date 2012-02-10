@@ -3,13 +3,6 @@ package Genome::Individual::Command;
 use strict;
 use warnings;
 
-use Genome;
-
-class Genome::Individual::Command {
-    is => 'Command::Tree',
-    doc => 'work with individuals',
-};
-
 use Genome::Command::Crud;
 Genome::Command::Crud->init_sub_commands(
     target_class => 'Genome::Individual',

@@ -6,7 +6,6 @@ use warnings;
 use Genome;
 use Data::Dumper;
 
-my $DEFAULT_LSF_RESOURCE = "-R 'select[model!=Opteron250 && type==LINUX64 && mem>64000 && tmp>150000] span[hosts=1] rusage[tmp=150000, mem=64000]' -M 64000000 -n 4";
 
 class Genome::Model::MutationalSignificance::Command::MergeMafFiles {
     is => ['Command::V2'],
@@ -16,9 +15,6 @@ class Genome::Model::MutationalSignificance::Command::MergeMafFiles {
     has_output => [
         maf_path => {
             is => 'String'},
-    ],
-    has_param => [
-        lsf_resource => { default_value => $DEFAULT_LSF_RESOURCE },
     ],
 };
 

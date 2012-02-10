@@ -93,19 +93,20 @@ sub execute {
         
         # Load Error Rate Metrics
         my ($error_rate_file) = glob($output_dir .'/*-ErrorRate.tsv');
-        my $error_rate_reader = Genome::Utility::IO::SeparatedValueReader->create(
-            input => $error_rate_file,
-            separator => "\t",
-        );
         my %error_rate_sum;
-        while (my $error_rate_data = $error_rate_reader->next) {
-            if ($error_rate_data->{position} eq 'SUM') {
-                $error_rate_sum{$error_rate_data->{read_end}} = $error_rate_data;
-            } else {
-                $error_rate_by_position{$error_rate_data->{read_end}}{$error_rate_data->{position}}{$label} = $error_rate_data->{error_rate};
+        if ($error_rate_file) {
+            my $error_rate_reader = Genome::Utility::IO::SeparatedValueReader->create(
+                input => $error_rate_file,
+                separator => "\t",
+            );
+            while (my $error_rate_data = $error_rate_reader->next) {
+                if ($error_rate_data->{position} eq 'SUM') {
+                    $error_rate_sum{$error_rate_data->{read_end}} = $error_rate_data;
+                } else {
+                    $error_rate_by_position{$error_rate_data->{read_end}}{$error_rate_data->{position}}{$label} = $error_rate_data->{error_rate};
+                }
             }
         }
-
         # Load Insert Size Metrics
         my ($is_file) = glob($output_dir .'/*.insert_size_metrics');
         my $is_metrics = Genome::Model::Tools::Picard::CollectInsertSizeMetrics->parse_file_into_metrics_hashref($is_file);

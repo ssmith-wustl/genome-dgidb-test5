@@ -114,6 +114,14 @@ sub execute {
         $self->error_message('Failed to run Picard CollectRnaSeqMetrics for build: '. $self->build_id);
         return;
     }
+    unless (Genome::Model::Tools::Picard::PlotRnaSeqMetrics->execute(
+        input_file => $self->build->picard_rna_seq_metrics,
+        output_file => $self->build->picard_rna_seq_pie_chart,
+        label => $self->build->model->subject_name .' '. $self->build_id,
+    )) {
+        $self->error_message('Failed to run PlotRnaSeqMetrics for build: '. $self->build_id);
+        return;
+    }
     unless ($self->_save_metrics) {
         $self->error_message("Failed saving metrics: " . $self->error_message);
         return;

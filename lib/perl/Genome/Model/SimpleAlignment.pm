@@ -14,14 +14,5 @@ class Genome::Model::SimpleAlignment {
 };
 
 
-# we get a failure during verify successful completion
-# if we don't have this...
-sub keep_n_most_recent_builds
-{
-    my $self = shift;
-    return;
-}
-
-
 1
 ;

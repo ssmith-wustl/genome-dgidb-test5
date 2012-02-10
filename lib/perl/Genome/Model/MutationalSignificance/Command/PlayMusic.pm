@@ -47,7 +47,7 @@ class Genome::Model::MutationalSignificance::Command::PlayMusic {
         },
     ],
     has_param => [
-        lsf_resource => { default_value => $DEFAULT_LSF_RESOURCE },
+#        lsf_resource => { default_value => $DEFAULT_LSF_RESOURCE },
     ],
 };
 

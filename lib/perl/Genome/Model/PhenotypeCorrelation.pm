@@ -163,9 +163,24 @@ sub __profile_errors__ {
     my $self = shift;
     my @errors;
     if ($self->alignment_strategy) {
-        #my $strat = Genome::Model::Tools::DetectVariants2::Strategy->get($bx->value_for('alignment_strategy'));
-        #push @errors, $strat->__errors__;
-        #$strat->delete;
+        my $strategy = Genome::InstrumentData::Composite::Strategy->create(
+            strategy => $self->strategy,
+        );
+        if ( not $strategy ) {
+            push @errors, UR::Object::Tag->create(
+                type => 'invalid',
+                properties => [qw/ alignment_strategy /],
+                desc => 'Failed to create validator for alignmnet strategy: '.$self->alignment_strategy,
+            );
+        }
+        $strategy->dump_status_messages(1);
+        if ( not $strategy->execute ) {
+            push @errors, UR::Object::Tag->create(
+                type => 'invalid',
+                properties => [qw/ alignment_strategy /],
+                desc => 'Failed to validate alignmnet strategy: '.$self->alignment_strategy,
+            );
+        }
     }
     for my $strategy ('snv','indel','sv','cnv') {
         my $method_name = $strategy . '_detection_strategy';
@@ -185,8 +200,11 @@ sub __profile_errors__ {
     return @errors;
 }
 
-our $SHORTCUT_ALIGNMENT_QUERY = 0;
+sub _resource_requirements_for_execute_build {
+    return "-R 'select[mem>4000] rusage[mem=4000]' -M 4000000"
+}
 
+our $SHORTCUT_ALIGNMENT_QUERY = 0;
 sub _execute_build {
     my ($self,$build) = @_;
 

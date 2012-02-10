@@ -225,6 +225,7 @@ class Genome::Model::Tools::RefCov {
     has_output => [
         stats_file => {
             doc => 'When run in parallel, do not define.  From the command line this file will contain the output metrics for each region.',
+            is_input => 1,
             is_optional => 1,
         },
         final_directory => {
