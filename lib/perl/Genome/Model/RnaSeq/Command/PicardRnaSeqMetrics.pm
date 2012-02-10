@@ -22,8 +22,12 @@ class Genome::Model::RnaSeq::Command::PicardRnaSeqMetrics {
     has_param => [
         lsf_resource => { default_value => $DEFAULT_LSF_RESOURCE },
     ],
+    doc => 'generate metrics on pipeline results' 
 };
 
+sub sub_command_category { 'pipeline' }
+
+sub sub_command_sort_position { 5 }
 
 sub execute {
     my $self = shift;
