@@ -31,7 +31,7 @@ class Genome::Model::Tools::BioSamtools::ReadLengthDistribution {
 sub execute {
     my $self = shift;
 
-    my @length_headers = ('Length','Count','Porportion');
+    my @length_headers = ('Length','Count','Proportion');
     my $read_length_writer = Genome::Utility::IO::SeparatedValueWriter->create(
         output => $self->read_length_histogram,
         separator => "\t",
@@ -93,7 +93,7 @@ sub execute {
         my %data = (
             'Length' => $key,
             'Count' => $read_stats{$key},
-            'Porportion' => ($read_stats{$key} / $read_stats->count),
+            'Proportion' => ($read_stats{$key} / $read_stats->count),
         );
         $read_length_writer->write_one(\%data);
     }
@@ -111,7 +111,7 @@ sub execute {
         my %data = (
             'Length' => $key,
             'Count' => $alignment_stats{$key},
-            'Porportion' => ($alignment_stats{$key} / $alignment_stats->count),
+            'Proportion' => ($alignment_stats{$key} / $alignment_stats->count),
         );
         $alignment_length_writer->write_one(\%data);
     }
