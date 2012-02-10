@@ -63,9 +63,14 @@ sub execute {
     print $tmp_fh 'dev.off()' ."\n";
     $tmp_fh->close;
     my $cmd = 'Rscript '. $tmp_file;
-    Genome::Sys->shellcmd(
-        cmd => $cmd,
-    );
+    eval {
+        Genome::Sys->shellcmd(
+            cmd => $cmd,
+        );
+    };
+    if ($@) {
+        warn('The Rscript did not run correctly: '. $@);
+    }
     return 1;
 }
 

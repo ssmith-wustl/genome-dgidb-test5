@@ -17,6 +17,7 @@ class Genome::Model::Tools::Capture::GermlineModelGroupQc {
     ],
     has_optional => [
         use_external           => { is => 'Boolean', doc => 'Use external data source rather than internal/iscan', default_value => 0 },
+        use_default           => { is => 'Boolean', doc => 'Use default data source as defined on sample (if available)', default_value => 0 },
         output_dir             => { is => 'Text', doc => "Outputs qc into directory for each sample", default => cwd() },
         summary_file           => { is => 'Text', doc => "Outputs qc summary into this file, must be run with already finished output (turns skip-if-output-present on)" },
         whitelist_snps_file    => { is => 'Text', doc => "File of snps to limit qc to, for example the 55 ASMS snps in ROI -- 1 rs_id per line" },
@@ -114,6 +115,7 @@ sub execute {
                     fields => [qw(chromosome position alleles id)],
                     variation_list_build => Genome::Model::ImportedVariationList->dbsnp_build_for_reference($model->reference_sequence_build),
                     sample => $model->subject,
+                    use_default => $self->use_default,
                     use_external => $self->use_external,
                     ($self->whitelist_snps_file?(filters => ['whitelist:whitelist_snps_file='.$self->whitelist_snps_file]):()),
                 );
