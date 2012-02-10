@@ -45,6 +45,11 @@ sub picard_rna_seq_chart {
     return $self->metrics_directory .'/PicardRnaSeqChart.pdf';
 }
 
+sub picard_rna_seq_pie_chart {
+    my $self = shift;
+    return $self->metrics_directory .'/PicardRnaSeqMetrics.png';
+}
+
 sub accumulated_alignments_disk_allocation {
     my $self = shift;
 
