@@ -196,6 +196,7 @@ $ ->
         window.action_mode = 'POST'
         name = object.name
         $("#nomenclature-name-input").val(name)
+        $("#nomenclature-empty-equivalent-input").val(object.empty_equivalent)
         window.nomenclature_id = object.id
         $(".title h1").html("Edit Nomenclature: #{name}")
         $("#directions").html("Use the form below to edit the nomenclature #{name}")
@@ -210,11 +211,16 @@ $ ->
             alert "You can't save a nomenclature without a name!"
             return
 
+        empty_equiv = $("#nomenclature-empty-equivalent-input").val()
+        if empty_equiv == ""
+            alert "Please specify an empty-equivalent string!"
+            return
+
         if listView.collection.length == 0
             alert "You need at least one column to create a nomenclature!"
             return
-    
-        m = {"name": name, "fields" : listView.collection}
+
+        m = {"name": name, "empty_equivalent" : empty_equiv, "fields" : listView.collection}
         jsonToPost = JSON.stringify(m)
         k = JSON.parse(jsonToPost)
         ajax_data = {json:JSON.stringify(k)}
