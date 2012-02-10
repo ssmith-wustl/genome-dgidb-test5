@@ -46,6 +46,7 @@ sub _generate_content {
 
     $hash->{name} = $nomenclature->name;
     $hash->{id} = $nomenclature->id;
+    $hash->{'empty_equivalent'} = $nomenclature->empty_equivalent;
     $hash->{fields} = [];
 
     my $ds = $UR::Context::current->resolve_data_sources_for_class_meta_and_rule(Genome::Nomenclature->__meta__);
