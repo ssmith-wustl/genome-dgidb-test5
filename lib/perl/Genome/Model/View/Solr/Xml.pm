@@ -16,7 +16,9 @@ class Genome::Model::View::Solr::Xml {
                 my $pp_type = $model->type_name();
                 my $solr_type;
 
-                if ($pp_type eq 'reference alignment') {
+                if ($model->is_lane_qc) {
+                    $solr_type = 'model - lane_qc';
+                } elsif ($pp_type eq 'reference alignment') {
                     $solr_type = 'model - alignment';
                 } elsif ($pp_type =~ /somatic/i) {
                     $solr_type = 'model - somatic';
@@ -37,7 +39,9 @@ class Genome::Model::View::Solr::Xml {
                 my $pp_type = $model->type_name();
                 my $solr_type;
 
-                if ($pp_type eq 'reference alignment') {
+                if ($model->is_lane_qc) {
+                    $solr_type = 'Lane QC Model';
+                } elsif ($pp_type eq 'reference alignment') {
                     $solr_type = 'Alignment Model';
                 } elsif ($pp_type =~ /somatic/i) {
                     $pp_type =~ s/\b(\w)/\U$1/g; # capitalize words
