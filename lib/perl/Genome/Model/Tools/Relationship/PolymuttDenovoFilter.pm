@@ -209,15 +209,16 @@ sub r_code {
     return <<EOS
 options(stringsAsFactors=FALSE);
 mytable=read.table("$input_name");
-pvalue_matrix=matrix(nrow=nrow(mytable), ncol=4);
-indices=c(3,6,9,12);
+num_indices=(ncol(mytable)-2)/3
+pvalue_matrix=matrix(nrow=nrow(mytable), ncol=num_indices);
+indices = seq(from=3,to=num_indices*3, by=3)
 for (i in 1:nrow(mytable)) {  
     for (j in indices) { 
         pvalue_matrix[i,(j/3)]=binom.test(as.vector(as.matrix(mytable[i,j:(j+1)])), 0, mytable[i,(j+2)], "t", .95)\$p.value; 
     }
 }
 chr_pos_matrix=cbind(mytable\$V1,mytable\$V2, pvalue_matrix);
-write(t(chr_pos_matrix), file="$output_name", ncolumns=6, sep="\t");
+write(t(chr_pos_matrix), file="$output_name", ncolumns=(num_indices+2), sep="\t");
 EOS
 }
 
