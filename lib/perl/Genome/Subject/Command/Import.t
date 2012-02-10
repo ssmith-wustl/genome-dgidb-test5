@@ -6,7 +6,7 @@ use warnings;
 use above "Genome";
 use Command;
 use Test::More;
-plan tests => 6;
+plan tests => 8;
 
 use MIME::Base64;
 use Data::Dumper;
@@ -29,6 +29,7 @@ ok($obj1, 'creating import command object');
 cmp_ok($obj1->execute(), '==', 6, 'executing with good input');
 ok(Genome::Project->get(name => 'myFakeProject0'), 'project was created');
 
+
 my $obj2 = Genome::Subject::Command::Import->create(
     nomenclature_id => $nom->id,
     content         => MIME::Base64::encode_base64(bad_column_data()),
@@ -48,6 +49,7 @@ my $obj3 = Genome::Subject::Command::Import->create(
 );
 cmp_ok($obj3->execute(), '==', 5, 'executing with one bad enum value');
 
+
 my $obj4 = Genome::Subject::Command::Import->create(
     nomenclature_id => $nom->id,
     content         => MIME::Base64::encode_base64(non_unique_data()),
@@ -59,6 +61,25 @@ eval { $obj4->execute(); };
 ok($@, 'executing with nonunique records (should die)');
 diag($@);
 
+
+my $obj5 = Genome::Subject::Command::Import->create(
+    nomenclature_id => $nom->id,
+    content         => MIME::Base64::encode_base64(bad_real_data()),
+    subclass_name   => 'Genome::Sample',
+    project_name    => 'myFakeProject4'
+);
+cmp_ok($obj5->execute(), '==', 5, 'executing with one bad real value');
+
+
+my $obj6 = Genome::Subject::Command::Import->create(
+    nomenclature_id => $nom->id,
+    content         => MIME::Base64::encode_base64(good_data_with_na()),
+    subclass_name   => 'Genome::Sample',
+    project_name    => 'myFakeProject5'
+);
+cmp_ok($obj6->execute(), '==', 6, 'executing with good data and one NA');
+
+
 exit;
 
 
@@ -67,6 +88,14 @@ sub good_data {
     return << "_DATA_";
 sample,height,weight,sex
 test_sample0,72,200,"male"
+test_sample1,60,140,"female"
+_DATA_
+}
+
+sub good_data_with_na {
+    return << "_DATA_";
+sample,height,weight,sex
+test_sample0,"NA",200,"male"
 test_sample1,60,140,"female"
 _DATA_
 }
@@ -96,9 +125,20 @@ test_sample0,12,345,"female"
 _DATA_
 }
 
+sub bad_real_data {
+    return << "_DATA_";
+sample,height,weight,sex
+test_sample0,"tall",200,"male"
+test_sample1,60,140,"female"
+_DATA_
+}
+
 sub make_fake_nomenclature {
 
-    my $n = Genome::Nomenclature->create( name => 'TEST_NOMENCLATURE');
+    my $n = Genome::Nomenclature->create( 
+        name => 'TEST_NOMENCLATURE',
+        empty_equivalent => 'NA'
+    );
 
     Genome::Nomenclature::Field->create(
         name => 'height',
