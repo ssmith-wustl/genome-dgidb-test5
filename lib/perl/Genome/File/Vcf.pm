@@ -1,10 +1,10 @@
-package Genome::File::Fasta;
+package Genome::File::Vcf;
 
 use strict;
 use warnings;
 use Genome;
 
-class Genome::File::Fasta {
+class Genome::File::Vcf {
     is => 'Genome::File::Base',
 };
 

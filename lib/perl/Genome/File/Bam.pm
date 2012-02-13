@@ -1,10 +1,10 @@
-package Genome::File::Fasta;
+package Genome::File::Bam;
 
 use strict;
 use warnings;
 use Genome;
 
-class Genome::File::Fasta {
+class Genome::File::Bam {
     is => 'Genome::File::Base',
 };
 
