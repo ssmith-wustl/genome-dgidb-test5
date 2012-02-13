@@ -11,6 +11,10 @@ class Genome::ProcessingProfile::ImportedAnnotation{
         annotation_source => {
             is_optional => 0,
             doc => 'Where the annotation comes from (ensembl, genbank, etc.) This value is "combined-annotation" for a combined-annotation model',
+        },
+        interpro_version => {
+            is_optional => 0,
+            doc => 'Version of interpro used to import interpro results', 
         }
     ],
     
@@ -73,6 +77,17 @@ sub _execute_build{
         dump_file       => $dump_file,
     );
     $command->execute;
+
+    #TODO: import interpro
+    my $interpro_cmd = Genome::Model::Tools::Annotate::ImportInterpro::Run->exectue(
+        reference_transcripts => join('/', $model->name, $version),
+        interpro_version => $self->interpro_version, #TODO: update processing profiles
+        log_file => join('/', $data_directory, 'interpro_log'),
+    );
+    $interpro_cmd->execute;
+
+    #TODO: update the annotation data to Tony's format using the 2 scripts
+    #TODO: generate tiering files?   
 
     #TODO: get the RibosomalGeneNames.txt into the annotation_data_directory
     #generate the rna seq files
