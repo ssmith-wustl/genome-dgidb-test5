@@ -470,6 +470,7 @@ sub create {
         unless ($self->_disk_allocation->reallocate(%params)) {
             $self->warning_message("Failed to reallocate my disk allocation: " . $self->_disk_allocation->id);
         }
+        $self->output_dir($self->_disk_allocation->absolute_path); #update if was moved
     }
 
     $self->status_message("Alignment complete.");
