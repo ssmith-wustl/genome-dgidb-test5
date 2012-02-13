@@ -119,7 +119,7 @@ sub execute {
                     use_external => $self->use_external,
                     ($self->whitelist_snps_file?(filters => ['whitelist:whitelist_snps_file='.$self->whitelist_snps_file]):()),
                 );
-                unless ($extract->_resolve_instrument_data_from_library($model->subject)){
+                unless ($extract->_resolve_instrument_data($model->subject)){
                     next;
                 }
                 unless ($extract) {
