@@ -276,7 +276,6 @@ foreach my $group_name (sort keys %mg_list){
         my %group_names;
         $group_names{$group_name} = 1;
         $master_genes{$gene_name}{group_names} = \%group_names;
-
       }
     }
   }

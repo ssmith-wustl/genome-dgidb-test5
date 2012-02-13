@@ -19,6 +19,7 @@ class Genome::Model::ClinSeq::Command::Summarize {
 
 sub help_synopsis {
     return <<EOS
+
 genome model clin-seq summarize 12345
 
 genome model clin-seq summarize mymodelname
@@ -26,6 +27,7 @@ genome model clin-seq summarize mymodelname
 genome model clin-seq summarize subject.common_name=HG1
 
 genome model clin-seq summarize subject.common_name=HG%
+
 EOS
 }
 
