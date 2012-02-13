@@ -64,7 +64,6 @@ sub _get_or_create_model {
     my $model;
 
     #Try to find a model with the same name
-    $DB::single = 1; #TODO: remove me
     if($model_name){
         $model = Genome::Model::ImportedAnnotation->get(name => $model_name);
         if ($model){
@@ -93,7 +92,6 @@ sub _get_or_create_model {
     $model = Genome::Model::ImportedAnnotation->create(
                                                     reference_sequence => $self->reference_sequence_build->model,
                                                     name => $model_name,
-                                                    # species_name => $species_name,
                                                     processing_profile => $processing_profile,
                                                     subject => $self->reference_sequence_build->model->subject,
                                                 );
@@ -107,7 +105,6 @@ sub _create_build {
     my @build_parameters = (
         model_id => $model->id,
         version => $self->version,
-        # species_name => $self->species_name,
         reference_sequence => $self->reference_sequence_build,
     );
 
