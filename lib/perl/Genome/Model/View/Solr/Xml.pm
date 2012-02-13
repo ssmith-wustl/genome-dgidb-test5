@@ -16,7 +16,7 @@ class Genome::Model::View::Solr::Xml {
                 my $pp_type = $model->type_name();
                 my $solr_type;
 
-                if ($model->is_lane_qc) {
+                if ($model->isa('Genome::Model::ReferenceAlignment') && $model->is_lane_qc) {
                     $solr_type = 'model - lane_qc';
                 } elsif ($pp_type eq 'reference alignment') {
                     $solr_type = 'model - alignment';
@@ -39,7 +39,7 @@ class Genome::Model::View::Solr::Xml {
                 my $pp_type = $model->type_name();
                 my $solr_type;
 
-                if ($model->is_lane_qc) {
+                if ($model->isa('Genome::Model::ReferenceAlignment') && $model->is_lane_qc) {
                     $solr_type = 'Lane QC Model';
                 } elsif ($pp_type eq 'reference alignment') {
                     $solr_type = 'Alignment Model';
