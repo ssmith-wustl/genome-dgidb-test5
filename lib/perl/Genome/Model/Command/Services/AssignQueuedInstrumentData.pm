@@ -274,7 +274,7 @@ sub execute {
 
                 }
 
-                my @models = Genome::ModelDeprecated->get(
+                my @models = Genome::Model->get(
                     subject_id            => $subject_id,
                     processing_profile_id => $processing_profile->id,
                     auto_assign_inst_data => 1,
@@ -370,7 +370,7 @@ sub execute {
                 my $subject = $genome_instrument_data->$check;
                 # Should we just hoise this check out of the loop and skip to next PSE?
                 if (defined($subject)) {
-                    my @some_models= Genome::ModelDeprecated->get(
+                    my @some_models= Genome::Model->get(
                         subject_id         => $subject->id,
                         auto_assign_inst_data => 1,
                     );
@@ -389,7 +389,7 @@ sub execute {
             @found_models =
                 grep {
                     $_->processing_profile->sequencing_platform() eq $sequencing_platform
-	           } @found_models;
+                } @found_models;
 
             #Don't care here what ref. seq. was used (if any)
             my @assigned = $self->assign_instrument_data_to_models($genome_instrument_data, undef, @found_models);

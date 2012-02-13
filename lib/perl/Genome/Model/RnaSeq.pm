@@ -135,7 +135,7 @@ sub _resolve_workflow_for_build {
     my $workflow = Workflow::Model->create(
         name => $build->workflow_name,
         input_properties => ['build_id',],
-        output_properties => ['coverage_result','expression_result']
+        output_properties => ['coverage_result','expression_result','metrics_result']
     );
 
     my $log_directory = $build->log_directory;
@@ -164,6 +164,23 @@ sub _resolve_workflow_for_build {
         right_property => 'build_id'
     );
 
+    # Picard
+    my $picard_operation = $workflow->add_operation(
+        name => 'RnaSeq Picard Metrics',
+        operation_type => Workflow::OperationType::Command->create(
+            command_class_name => 'Genome::Model::RnaSeq::Command::PicardRnaSeqMetrics',
+        )
+    );
+    $picard_operation->operation_type->lsf_queue($lsf_queue);
+    $picard_operation->operation_type->lsf_project($lsf_project);
+
+    $workflow->add_link(
+        left_operation => $tophat_operation,
+        left_property => 'build_id',
+        right_operation => $picard_operation,
+        right_property => 'build_id'
+    );
+    
     # RefCov
     my $coverage_operation = $workflow->add_operation(
         name => 'RnaSeq Coverage',
@@ -201,6 +218,12 @@ sub _resolve_workflow_for_build {
     );
 
     # Define output connector results from coverage and expression
+    $workflow->add_link(
+        left_operation => $picard_operation,
+        left_property => 'result',
+        right_operation => $output_connector,
+        right_property => 'metrics_result'
+    );
     $workflow->add_link(
         left_operation => $coverage_operation,
         left_property => 'result',

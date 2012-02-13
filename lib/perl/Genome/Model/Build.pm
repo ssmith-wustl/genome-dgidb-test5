@@ -128,8 +128,7 @@ class Genome::Model::Build {
                               doc => 'Build metrics' },
         variants         => { is => 'Genome::Model::BuildVariant', reverse_as => 'build',
                               doc => 'variants linked to this build... currently only for Somatic builds but need this accessor for get_all_objects' },
-        group_ids        => { via => 'model', to => 'group_ids', is_many => 1, },
-        group_names      => { via => 'model', to => 'group_names', is_many => 1, },
+        model_groups     => { via => 'model', is_many => 1, },
 
         projects         => { is => 'Genome::Site::WUGC::Project', via => 'model' },
         work_orders      => { is => 'Genome::WorkOrder', via => 'projects' },
@@ -204,7 +203,7 @@ sub __extend_namespace__ {
                 delete $data{is_specified_in_module_header};
                 if ($type->isa("Genome::Model")) {
                     $type =~ s/^Genome::Model/Genome::Model::Build/;
-                    $name =~ s/_model$/_build/;
+                    $name =~ s/_model(?=($|s$))/_build/;
                 }
                 $data{property_name} = $name;
                 $data{data_type} = $type;

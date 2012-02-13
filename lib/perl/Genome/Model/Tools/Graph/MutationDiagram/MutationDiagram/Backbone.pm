@@ -60,7 +60,9 @@ sub draw {
                                                          y => $self->{_backbone}{y},
                                                          width => $self->{_backbone}{length},
                                                          height => $self->{_backbone}{height},
-														 style => $self->{_style} 
+														 style => $self->{_style},
+                                                         id => "protein_backbone_outline",
+                                                         
                        
                               );
 

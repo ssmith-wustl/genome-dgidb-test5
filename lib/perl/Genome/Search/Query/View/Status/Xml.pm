@@ -176,6 +176,7 @@ sub icon_prefix {
 
     my $icon_prefix = {
         'model'                  => 'genome_model',
+        'model - lane_qc'        => 'genome_model',
         'model - alignment'      => 'genome_model',
         'model - microarray'     => 'genome_model',
         'model - somatic'        => 'genome_model',
@@ -215,7 +216,11 @@ sub make_label {
 
     my @words;
     for my $w (split(/\s+/,$text)) {
-        push @words, ucfirst($w);
+        if($w eq 'qc') {
+            push @words, 'QC';
+        } else {
+            push @words, ucfirst($w);
+        }
     }
 
     return join(' ',@words);

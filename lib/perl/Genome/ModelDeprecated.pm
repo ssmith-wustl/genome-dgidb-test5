@@ -52,10 +52,6 @@ class Genome::ModelDeprecated {
 #            calculate_from => ['_auto_build_alignments'],
 #            calculate => q{ $_auto_build_alignments; }
 #        }, # TODO: rename to auto_build
-        keep_n_most_recent_builds => { 
-            via => 'attributes', to => 'value', is_mutable => 1, 
-            where => [ property_name => 'keep_n_most_recent_builds', entity_class_name => 'Genome::Model' ] 
-        },
         _last_complete_build_id => { 
             is => 'Number', 
             column_name => 'last_complete_build_id', 

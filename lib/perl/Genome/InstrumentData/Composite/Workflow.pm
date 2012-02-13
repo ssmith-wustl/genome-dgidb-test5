@@ -57,6 +57,11 @@ sub execute {
         strategy => $self->strategy,
     );
     my $tree = $strategy->execute;
+    if ( not $tree ) {
+        $self->error_message('Failed to analyze strategy: '.$self->strategy);
+        return;
+    }
+    $self->status_message('Analyzing strategy...OK');
 
     $self->status_message('Generating workflow...');
     my ($workflow, $inputs) = $self->generate_workflow($tree);
