@@ -20,13 +20,6 @@ class Genome::Model::ImportedAnnotation{
             where => [ name => 'species_name' ],
             is_mutable => 1,
         },
-        version => { 
-            via => 'inputs',
-            is => 'Text',
-            to => 'value_id', 
-            where => [ name => 'version', value_class_name => 'UR::Value'], 
-            is_mutable => 1
-        },
         reference_sequence_id => {
             is => 'Text',
             via => 'inputs',
