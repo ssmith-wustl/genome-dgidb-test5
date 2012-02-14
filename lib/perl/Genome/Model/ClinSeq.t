@@ -10,6 +10,27 @@ BEGIN {
 };
 
 
+#0.) Merge the master branch into your clinseq branch
+#1.) Then check this script to make sure that the test is being run on the data that you want: individual common name, wgs model, exome model, rnaseq model
+#2.) Log into a blade server and check the /tmp directory to make sure it does not already contain a set of clinseq results ('/tmp/last-clinseq-test-result/')
+#3.) Run the ClinSeq.t test without the RUN parameter to make sure it compiles and passes all tests.
+#4.) Run the ClinSeq.t test with the RUN parameter from your ClinSeq git branch
+#    $ cd lib/perl/Genome/Model
+#    $ ./ClinSeq.t RUN
+# - It will fail because the diff fails, but it will leave the results in a directory in /tmp.
+#5.) Move the test results to the main test results dir
+# - You will see the path of the comparision data, and you want to copy your fail results from /tmp to a directory next-to the comparison one, but with a new date.
+# - Test results go here
+# - /gsc/var/cache/testsuite/data/Genome-Model-ClinSeq/DATE
+#6.) Then you'll change the line in the test script to point to your new directory:
+# e.g.  my $expected_data_directory = $ENV{"GENOME_TESTSUITE_INPUTS_PATH"} . '/Genome-Model-ClinSeq/2011-12-10';
+#7.) Run the test again and ensure it passes with "RUN"
+#    $ cd lib/perl/Genome/Model
+#    $ ./ClinSeq.t RUN
+#8.) Then commit and push changes to the clinseq branch
+#9.) Then commit, push, and merge into master.
+#    - The important thing is that the merge into master includes the code changes, and also the test change to point to a different comparison dir.
+
 use above "Genome";
 use Test::More;
 use Genome::Model::ClinSeq;
@@ -26,8 +47,8 @@ else {
     $dry_run = 1;
 }
 
-my $patient = Genome::Individual->get(common_name => "HG3");
-ok($patient, "got the HG3 patient");
+my $patient = Genome::Individual->get(common_name => "AML103");
+ok($patient, "got the AML103 patient");
 
 
 my $tumor_rna_sample = $patient->samples(common_name => "tumor", sample_type => "rna");
@@ -41,20 +62,19 @@ ok($normal_genome_sample, "found the normal genome sample");
 
 
 my $tumor_rnaseq_model = Genome::Model::RnaSeq->get(
-    #subject => $tumor_rna_sample,
-    name    => 'HG3 - RNA-seq - Ensembl 58_37c - TopHat 1.3.1 - Cufflinks 1.1.0 - Mask rRNA_MT - refcov - build37',
+    name    => 'AML103/ALL1 - RNA-seq - Ensembl 58_37c - TopHat 1.3.1 - Cufflinks 1.1.0 - Mask rRNA_MT - refcov - build37',
+
 );
 ok($tumor_rnaseq_model, "got the RNASeq model");
 
 my $wgs_model = Genome::Model::SomaticVariation->get(
-    #subject => $tumor_genome_sample,
-    name    => 'H_KU-376-1123929.prod-somatic_variation',
+    name    => 'ALL1/AML103 - tumor/normal - wgs somatic variation - build37/hg19 - nov 2011 PP',
+
 );
 ok($wgs_model, "got the WGS Somatic Variation model");
 
 my $exome_model = Genome::Model::SomaticVariation->get(
-    #subject => $tumor_genome_sample,
-    name    => 'HG3 - exome somatic variation - build37/hg19',
+    name    => 'ALL1/AML103 - exome somatic variation - build37/hg19 - nov 2011 PP',
 );
 ok($exome_model, "got the exome Somatic Variation model");
 
@@ -121,7 +141,7 @@ is($retval, 1, 'execution of the build returned true');
 is($@, '', 'no exceptions thrown during build process') or diag $@;
 
 unless ($dry_run) {
-    my $expected_data_directory = $ENV{"GENOME_TESTSUITE_INPUTS_PATH"} . '/Genome-Model-ClinSeq/2011-12-10';
+    my $expected_data_directory = $ENV{"GENOME_TESTSUITE_INPUTS_PATH"} . '/Genome-Model-ClinSeq/2012-02-13';
     my @diff = `diff -r --brief -x '*.R' -x '*.pdf' $expected_data_directory $temp_dir`;
     ok(@diff == 0, "no differences from expected results and actual")
         or do { 

@@ -44,7 +44,7 @@ class Genome::Project {
             doc => 'All the parts that compose this project',
         },
         creator => {
-            is => 'Genome::Sys::Username',
+            is => 'Genome::Sys::User',
             is_calculated => 1,
             calculate_from => ['parts'],
             calculate => sub {

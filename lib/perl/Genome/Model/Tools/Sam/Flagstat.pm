@@ -7,10 +7,19 @@ use Genome;
 
 class Genome::Model::Tools::Sam::Flagstat {
     is => 'Genome::Model::Tools::Sam',
-    has => [
-        bam_file => { },
-        output_file => { },
-        include_stderr => { is => 'Boolean', is_optional => 1, default_value => 0, doc => 'Include any error output from flagstat in the output file.'}
+    has_input => [
+        bam_file => {
+            doc => 'The input BAM file to calculate stats for.',
+        },
+        output_file => {
+            doc => 'The output text file of flagstat results.',
+        },
+        include_stderr => {
+            is => 'Boolean',
+            is_optional => 1,
+            default_value => 0,
+            doc => 'Include any error output from flagstat in the output file.'
+        },
     ],
 };
 

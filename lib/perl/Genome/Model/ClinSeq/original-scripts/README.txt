@@ -50,6 +50,9 @@
 #      - haploid coverage: 	75.281 
 #      - dbSNP % Concordance:   93.6585 	samtools r599 filtered by snp-filter v1 
 #  - #SNVs, #tier 1,2,3, WGS. vs. Exome, etc.
+#  - What is the non-synonymous to synonymous mutation rate in somatically mutated gene (i.e. tier1 mutations)
+#    - i.e. what is the mutation rate per megabase: total tier 1, non-synonymous tier1, synonymous tier 1, total all tiers, etc
+
 
 #- Create vcf formatted version of all SNVs combined, then tier 1,2,3 individually
 #- Get all BAM read counts for all SNVs for convenience in downstream analysis (WGS, Exome & RNAseq) (Tumor and Normal)
@@ -80,9 +83,18 @@
 #  - Overlap of observed mutations with TGI recurrent sites
 #  - Run snpEff on all variants
 #  - Run the Ensembl variant effect predictor on all variants
+#- Summarize gene annotation results (i.e. for each gene list, each gene is marked as Kinase, RTK, trancription factor, etc.)
+#  - Summarize for each event list, how many genes belong to each catergory
+
 #- Summary of TopHat RNA-seq alignment results
 #  - Summarize read mapping, known vs. novel junctions, proportion of reads mapping across junctions, proportion of MT mapping reads
-
+#- Druggable genes analysis
+#  - 
+#  - Are there any mutations that are in a kinase where that kinase itself is not druggable but:
+#    - the region mutated is homologous to a mutation site in another kinase
+#    - e.g. A HER2 mutation in a kinase domain and the corresponding region of that kinase domain is mutated in EGFR in another cancer type etc.
+#    - Suggests that we could use an EGFR inhibitor to treat patients with this HER2 mutation.
+#    - In general establish the cross-reactivity of kinase inhibitors or links that can be made between kinases by recurrence of mutation sites.
 
 #SUMMARY STATS
 #A descriptive stats, question/answer table

@@ -80,7 +80,7 @@ sub execute {
     my $seen = {};
     ROW:
     while (my $row = $csv->getline($fh)) {
-$DB::single = 1;
+
         if ( $i++ == 0 ) { 
             @header = @$row; 
             $field = $self->check_types(@header);
@@ -119,14 +119,9 @@ $DB::single = 1;
             my $col_name = $header[$j];
             my $f = $field->{$col_name};
 
-            if ($f->type() eq 'enumerated') {
-                my @acceptable_values = map {$_->value} $f->enumerated_values();
-                if (! grep /^$v$/, @acceptable_values) {
-                    my $nom = $self->nomenclature();
-                    warn "Skipping value '$v' because its not a valid option for $col_name with nomenclature: "
-                            . $nom->name;
-                    next VALUE;
-                }
+            if (! $self->validate($f, $v)) {
+                warn "Skipping value '$v' because its not a valid " . $f->type();
+                next;
             }
 
             my $sa = Genome::SubjectAttribute->get(
@@ -153,6 +148,52 @@ $DB::single = 1;
     }
 
     return $changed;
+}
+
+
+sub validate {
+    my ($self, $field, $value) = @_;
+
+    my $nom = $self->nomenclature();
+    my $expected_type = $field->type();
+
+    if ($nom->empty_equivalent &&
+        ($value eq $nom->empty_equivalent) ) {
+        return 1; 
+    }
+
+    if ($expected_type eq 'string') {
+        return 1;
+    } 
+
+    if ($expected_type eq 'integer'
+        or $expected_type eq 'numeric') {
+        if ($value =~ /^[+-]?\d+$/) {
+            return 1;
+        }
+    }  
+
+    if ($expected_type eq 'real'
+        or $expected_type eq 'numeric') {
+        if ($value =~ /^[+-]?\d*\.?\d*$/) {
+            return 1;
+        }
+    }
+
+    if ($expected_type eq 'date') {
+        if ($value =~ /^\d{4}-\d{2}-\d{2}$/) {
+            return 1;
+        }
+    }
+
+    if ($expected_type eq 'enumerated') {
+        my @acceptable_values = map {$_->value} $field->enumerated_values();
+        if (grep /^$value$/, @acceptable_values) {
+            return 1;
+        }
+    }
+
+    return;
 }
 
 sub check_types {

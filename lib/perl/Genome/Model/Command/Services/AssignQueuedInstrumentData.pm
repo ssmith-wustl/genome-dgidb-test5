@@ -325,7 +325,7 @@ sub execute {
                 #subject => $genome_instrument_data->sample->source, #due to bad data-tracking, sometimes the two samples are from different sources
             );
 
-            @validation = grep(($_->tumor_sample eq $genome_instrument_data->sample or $_->normal_sample eq $genome_instrument_data->sample), @validation);
+            @validation = grep((($_->tumor_sample and $_->tumor_sample eq $genome_instrument_data->sample) or ($_->normal_sample and $_->normal_sample eq $genome_instrument_data->sample)), @validation);
             if(@validation) {
                 my $ok = $self->assign_instrument_data_to_models($genome_instrument_data, Genome::FeatureList->get(name => $genome_instrument_data->target_region_set_name)->reference, @validation);
                 unless($ok) {

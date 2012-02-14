@@ -496,9 +496,20 @@ sub get_or_create_lane_qc_models {
             build_requested => 0,
             reference_sequence_build => $self->reference_sequence_build,
         );
+
         unless ($qc_model) {
             $self->error_message("Could not create lane qc model for instrument data " . $instrument_data->id);
             next;
+        }
+
+        # target_region_set_name means this is Capture data whose QC needs RefCov done
+        my $region_of_interest_set_input = $self->inputs(name => 'region_of_interest_set_name');
+        if ($self->target_region_set_name && $region_of_interest_set_input) {
+            $qc_model->add_input(
+                name => $region_of_interest_set_input->name,
+                value_class_name => $region_of_interest_set_input->value_class_name,
+                value_id => $region_of_interest_set_input->value_id,
+            );
         }
 
         push @lane_qc_models, $qc_model;
