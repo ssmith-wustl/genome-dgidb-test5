@@ -96,19 +96,19 @@ my $line = shift;
 
 my ($id, $platform_unit, $library_name);
 
-($id) = $line =~ m/ID:(.*?)\t/;
+($id) = $line =~ m/ID:(.*?)(\t|\s+)/;
 unless (defined $id)  {
     $self->error_message("failed to parse read group id from SAM line: $line");
     return;
 }
 
-($platform_unit) = $line =~ m/PU:(.*?)\t/;
+($platform_unit) = $line =~ m/PU:(.*?)(\t|\s+)/;
 if ($line =~ m/PU:/ && !defined $platform_unit)  {
     $self->error_message("failed to parse platform unit from SAM line: $line");
     return;
 }
 
-($library_name) = $line =~ m/LB:(.*?)\t/;
+($library_name) = $line =~ m/LB:(.*?)(\t|\s+)/;
 if ($line =~ m/LB:/ && !defined $library_name) {
     $self->error_message("failed to parse library name from SAM line: $line");
     return;
