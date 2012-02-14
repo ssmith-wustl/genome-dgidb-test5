@@ -62,7 +62,7 @@ $self->warning_message('The logic for building a MuSiC model is not yet function
 
     my $workflow = Workflow::Model->create(
         name => $build->workflow_name,
-        input_properties => ['somatic_variation_builds','build_id','annotation_build'],
+        input_properties => ['somatic_variation_builds','build','annotation_build'],
         output_properties => ['smg_result','pathscan_result','mrt_result','pfam_result','proximity_result',
                               'cosmic_result','cct_result'],
     );
@@ -152,7 +152,7 @@ $self->warning_message('The logic for building a MuSiC model is not yet function
         operation_type => Workflow::OperationType::Command->create(
             command_class_name => 'Genome::Model::MutationalSignificance::Command::CreateMafFile',
         ),
-        parallel_by => 'model',
+        parallel_by => 'somatic_variation_build',
     );
 
     $create_maf_operation->operation_type->lsf_queue($lsf_queue);
@@ -162,14 +162,28 @@ $self->warning_message('The logic for building a MuSiC model is not yet function
         left_operation => $input_connector,
         left_property => 'somatic_variation_builds',
         right_operation => $create_maf_operation,
-        right_property => 'model'
+        right_property => 'somatic_variation_build'
+    );
+
+    $link = $workflow->add_link(
+        left_operation => $input_connector,
+        left_property => 'build',
+        right_operation => $create_maf_operation,
+        right_property => 'build',
     );
 
     $link = $workflow->add_link(
         left_operation => $create_maf_operation,
-        left_property => 'model_output',
+        left_property => 'maf_file',
         right_operation => $merged_maf_operation,
-        right_property => 'array_of_model_outputs',
+        right_property => 'maf_files',
+    );
+
+    $link = $workflow->add_link(
+        left_operation => $input_connector,
+        left_property => 'build',
+        right_operation => $merged_maf_operation,
+        right_property => 'build',
     );
 
     #Create ROI BED file
@@ -203,9 +217,9 @@ $self->warning_message('The logic for building a MuSiC model is not yet function
 
     $link = $workflow->add_link(
         left_operation => $input_connector,
-        left_property => 'build_id',
+        left_property => 'build',
         right_operation => $clinical_data_operation,
-        right_property => 'build_id',
+        right_property => 'build',
     );
 
     $link = $workflow->add_link(
@@ -249,7 +263,7 @@ sub _map_workflow_inputs {
     my @builds = $build->somatic_variation_builds;
 
     push @inputs, somatic_variation_builds => \@builds;
-    push @inputs, build_id => $build->id;
+    push @inputs, build => $build;
     push @inputs, annotation_build => $build->annotation_build;
 
     return @inputs;

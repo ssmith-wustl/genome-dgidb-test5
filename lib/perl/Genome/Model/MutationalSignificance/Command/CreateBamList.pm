@@ -25,11 +25,11 @@ sub execute {
     my $out_string = "";
 
     foreach my $build ($self->somatic_variation_builds) {
-        $out_string .= $build->subject->name; #TODO: I don't think this is safe
+        $out_string .= $build->tumor_build->model->subject->extraction_label; 
         $out_string .= "\t";
-        $out_string .= $build->normal_bam;
+        $out_string .= $build->normal_build->whole_rmdup_bam_file;
         $out_string .= "\t";
-        $out_string .= $build->tumor_bam;
+        $out_string .= $build->tumor_build->whole_rmdup_bam_file;
         $out_string .= "\n";
     }
 
