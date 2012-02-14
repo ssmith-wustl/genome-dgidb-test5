@@ -4,7 +4,6 @@ package Genome::Model::RnaSeq;
 # this code will prevent them from being loaded from another part of @INC
 # it can be removed after this snapshot becomes stable...
 for my $f (qw|
-    Genome/Model/Build/RnaSeq.pm
     Genome/Model/Command/Define/RnaSeq.pm
     Genome/ProcessingProfile/RnaSeq.pm
 |) {
