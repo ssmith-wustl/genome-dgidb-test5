@@ -34,7 +34,7 @@ class Genome::Model::Tools::Dindel::AnalyzeWindowFile {
 };
 
 sub help_brief {
-    'Run getCIGARindels'
+    'Actual slow part of dindel-- analysis'
 }
 
 sub help_synopsis {

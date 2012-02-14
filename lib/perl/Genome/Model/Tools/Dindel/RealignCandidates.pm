@@ -24,7 +24,7 @@ class Genome::Model::Tools::Dindel::RealignCandidates {
 };
 
 sub help_brief {
-    'Run getCIGARindels'
+    'Left-shift indels you got from a vcf'
 }
 
 sub help_synopsis {

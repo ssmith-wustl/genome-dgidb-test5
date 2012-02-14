@@ -17,18 +17,6 @@ class Genome::Model::Tools::Dindel::MergeDindelOutput {
         is=>'String',
         is_input=>1,
     },
-    num_samples=> {
-        is=>'String',
-        is_input=>1,
-        is_optional=>1,
-        default=>1,
-    },
-    num_bams=> {
-        is=>'String',
-        is_input=>1,
-        is_optional=>1,
-        default=>1,
-    },
     ref_fasta=> {
         is=>'String',
         is_input=>1,
@@ -53,13 +41,11 @@ EOS
 
 sub execute {
     my $self = shift;
-    my $script_location = "/gscmnt/gc2146/info/medseq/dindel/dindel-1.01-python/mergeOutputPooled.py";
+    my $script_location = "/gscmnt/gc2146/info/medseq/dindel/dindel-1.01-python/mergeOutputDiploid.py";
     my $output = $self->output_file;
     my $input = $self->dindel_file_output_list;
-    my $num_samples = $self->num_samples;
-    my $num_bams = $self->num_bams;
     my $ref = $self->ref_fasta;
-    my $cmd = "python $script_location --inputFiles $input --outputFile $output --numSamples $num_samples --numBamFiles $num_bams --refFile $ref";
+    my $cmd = "python $script_location --inputFiles $input --outputFile $output --refFile $ref";
     return Genome::Sys->shellcmd(cmd=>$cmd);
 }
 

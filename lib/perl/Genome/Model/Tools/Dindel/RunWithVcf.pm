@@ -33,7 +33,7 @@ class Genome::Model::Tools::Dindel::RunWithVcf {
 };
 
 sub help_brief {
-    'Run getCIGARindels'
+    'Dindel Pipeline'
 }
 
 sub help_synopsis {
@@ -63,8 +63,7 @@ sub execute {
     $DB::single=1;
     my $vcf_in_dindel_format = $self->convert_vcf_to_dindel_and_left_shift($self->output_directory, $ref_fasta, $self->input_vcf);
     my @windows_files = $self->make_windows($self->output_directory, $vcf_in_dindel_format, $self->num_windows_per_file);
-#    my $library_file = $self->get_cigar_indels($self->output_directory, $ref_fasta, $bam_file);
-    my $library_file = "/gscmnt/gc2146/info/medseq/dindel/test_pipeline_version/cigar_generated_indels.libraries.txt";
+    my $library_file = $self->get_cigar_indels($self->output_directory, $ref_fasta, $bam_file);
     my $results_dir = $self->run_parallel_analysis($self->output_directory, $ref_fasta, $bam_file, $library_file, \@windows_files);
     my $file_of_results = $self->make_fof($self->output_directory, $results_dir);
     $self->generate_final_vcf($self->output_directory, $file_of_results, $ref_fasta);
