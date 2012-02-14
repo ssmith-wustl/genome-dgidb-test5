@@ -90,6 +90,8 @@ class Genome::Model::ProteinAnnotation::Command::KeggscanInternal {
     ],
 };
 
+sub _is_hidden_in_docs { 1 } 
+
 sub execute {
     my $self = shift;
 
