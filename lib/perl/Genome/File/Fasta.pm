@@ -5,7 +5,7 @@ use warnings;
 use Genome;
 
 class Genome::File::Fasta {
-    is => 'UR::Value',
+    is => 'Genome::File::Base',
 };
 
 1;

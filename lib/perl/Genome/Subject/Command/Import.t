@@ -6,7 +6,7 @@ use warnings;
 use above "Genome";
 use Command;
 use Test::More;
-plan tests => 8;
+plan tests => 10;
 
 use MIME::Base64;
 use Data::Dumper;
@@ -25,9 +25,9 @@ my $obj1 = Genome::Subject::Command::Import->create(
     subclass_name   => 'Genome::Sample',
     project_name    => 'myFakeProject0'
 );
-ok($obj1, 'creating import command object');
-cmp_ok($obj1->execute(), '==', 6, 'executing with good input');
-ok(Genome::Project->get(name => 'myFakeProject0'), 'project was created');
+ok($obj1, 'create import command object');
+cmp_ok($obj1->execute(), '==', 6, 'with good input');
+ok(Genome::Project->get(name => 'myFakeProject0'), 'check for project');
 
 
 my $obj2 = Genome::Subject::Command::Import->create(
@@ -37,7 +37,7 @@ my $obj2 = Genome::Subject::Command::Import->create(
     project_name    => 'myFakeProject1'
 );
 eval { $obj2->execute(); };
-ok($@,"executing with an invalid column in data (should die)");
+ok($@,"with invalid column names");
 diag($@);
 
 
@@ -47,7 +47,7 @@ my $obj3 = Genome::Subject::Command::Import->create(
     subclass_name   => 'Genome::Sample',
     project_name    => 'myFakeProject2'
 );
-cmp_ok($obj3->execute(), '==', 5, 'executing with one bad enum value');
+cmp_ok($obj3->execute(), '==', 5, 'with bad enum value');
 
 
 my $obj4 = Genome::Subject::Command::Import->create(
@@ -57,8 +57,7 @@ my $obj4 = Genome::Subject::Command::Import->create(
     project_name    => 'myFakeProject3'
 );
 eval { $obj4->execute(); };
-
-ok($@, 'executing with nonunique records (should die)');
+ok($@, 'with non-unique records');
 diag($@);
 
 
@@ -68,7 +67,7 @@ my $obj5 = Genome::Subject::Command::Import->create(
     subclass_name   => 'Genome::Sample',
     project_name    => 'myFakeProject4'
 );
-cmp_ok($obj5->execute(), '==', 5, 'executing with one bad real value');
+cmp_ok($obj5->execute(), '==', 5, 'with bad real value');
 
 
 my $obj6 = Genome::Subject::Command::Import->create(
@@ -77,11 +76,29 @@ my $obj6 = Genome::Subject::Command::Import->create(
     subclass_name   => 'Genome::Sample',
     project_name    => 'myFakeProject5'
 );
-cmp_ok($obj6->execute(), '==', 6, 'executing with good data and one NA');
+cmp_ok($obj6->execute(), '==', 6, 'with good data and NA');
+
+
+my $obj7 = Genome::Subject::Command::Import->create(
+    nomenclature_id => $nom->id,
+    content         => MIME::Base64::encode_base64(good_individual_data()),
+    subclass_name   => 'Genome::Individual',
+    project_name    => 'myFakeProject6'
+);
+cmp_ok($obj7->execute(), '==', 3, 'with good data at individual level');
+# TODO: check that attributes went on sample level
+
+
+my $obj8 = Genome::Subject::Command::Import->create(
+    nomenclature_id => $nom->id,
+    content         => MIME::Base64::encode_base64(bad_individual_data()),
+    subclass_name   => 'Genome::Individual',
+    project_name    => 'myFakeProject7'
+);
+cmp_ok($obj8->execute(), '==', 3, 'with bad individual');
 
 
 exit;
-
 
 
 sub good_data {
@@ -92,11 +109,27 @@ test_sample1,60,140,"female"
 _DATA_
 }
 
+sub good_individual_data {
+    return << "_DATA_";
+individual,height,weight,sex
+TEST-patient1,72,200,"male"
+_DATA_
+}
+
 sub good_data_with_na {
     return << "_DATA_";
 sample,height,weight,sex
 test_sample0,"NA",200,"male"
 test_sample1,60,140,"female"
+_DATA_
+}
+
+sub bad_individual_data {
+    # specified indivual, uploaded sample
+    return << "_DATA_";
+individual,height,weight,sex
+TEST-patient1,92,222,"male"
+test_sample0,72,200,"male"
 _DATA_
 }
 

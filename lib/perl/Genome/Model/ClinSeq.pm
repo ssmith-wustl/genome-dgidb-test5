@@ -61,23 +61,40 @@ sub _execute_build {
     $dir =~ s/.pm//;
     $dir .= '/original-scripts';
 
+    #Note that the option names are being truncated below here deliberately.  Getopt will allow the names to be arbitrarily shorter as long as they are still unique/unambiguous
     my $cmd =  "$dir/clinseq.pl";
+    my ($wgs_common_name, $exome_common_name, $tumor_rnaseq_common_name, $normal_rnaseq_common_name, $wgs_name, $exome_name, $tumor_rnaseq_name, $normal_rnaseq_name);
     if ($wgs_build) {
         $cmd .= ' --wgs ' . $wgs_build->id;
+        $wgs_common_name = $wgs_build->subject->patient->common_name;
+        $wgs_name = $wgs_build->subject->patient->name;
     }
     if ($exome_build) {
         $cmd .= ' --exome ' . $exome_build->id;
+        $exome_common_name = $exome_build->subject->patient->common_name;
+        $exome_name = $exome_build->subject->patient->name;
     }
     if ($tumor_rnaseq_build) {
         $cmd .= ' --tumor_rna ' . $tumor_rnaseq_build->id;
+        $tumor_rnaseq_common_name = $tumor_rnaseq_build->subject->patient->common_name;
+        $tumor_rnaseq_name = $tumor_rnaseq_build->subject->patient->name;
     }
     if ($normal_rnaseq_build) {
         $cmd .= ' --normal_rna ' . $normal_rnaseq_build->id;
+        $normal_rnaseq_common_name = $tumor_rnaseq_build->subject->patient->common_name;
+        $normal_rnaseq_name = $tumor_rnaseq_build->subject->patient->name;
     }
 
-    my $common_name = $wgs_build->subject->patient->common_name;
-    $cmd .= " --common_name $common_name" if $common_name;
-
+    #Get the patient common name from one of the builds, if none can be found, use the individual name instead, if that can't be found either set the name to 'UnknownName'
+    my @names = ($wgs_common_name, $exome_common_name, $tumor_rnaseq_common_name, $normal_rnaseq_common_name, $wgs_name, $exome_name, $tumor_rnaseq_name, $normal_rnaseq_name);
+    my $final_name = "UnknownName";
+    foreach my $name (@names){
+      if ($name){
+        $final_name = $name;
+        last();
+      }
+    }
+    $cmd .= " --common_name $final_name";
     $cmd .= " --working '$data_directory'";
     $cmd .= " --verbose=1 --clean=1";
     $cmd .= " 1>&2";

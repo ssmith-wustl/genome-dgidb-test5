@@ -217,6 +217,9 @@ sub index_queued {
                 $subject_seen->{$subject_class}->{$subject_id}++;
                 $index_queue_item->delete();
                 $modified_count++;
+            } else {
+                # Move it to the back of the line.
+                $index_queue_item->timestamp(UR::Context->now);
             }
         }
     }

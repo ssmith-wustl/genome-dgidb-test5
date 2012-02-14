@@ -15,7 +15,7 @@ my $DEFAULT_MEMORY = 402653184;
 
 class Genome::Model::Tools::Sam {
     is  => 'Command',
-    has => [
+    has_input => [
         use_version => { 
             is  => 'Version', 
             doc => "samtools version to be used, default is $DEFAULT. ", 
@@ -130,7 +130,11 @@ sub path_for_vcfutils {
 sub default_samtools_version {
     die "default samtools version: $DEFAULT is not valid" unless $SAMTOOLS_VERSIONS{$DEFAULT};
     return $DEFAULT;
-}    
+}
+
+sub default_samtools_maximum_memory {
+    return $DEFAULT_MEMORY;
+}
 
 sub samtools_path {
     my $self = shift;

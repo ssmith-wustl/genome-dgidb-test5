@@ -17,19 +17,13 @@ class Genome::Model::ProteinAnnotation::Command::UploadResults {
         biosql_namespace => { 
             is  => 'Text', 
             doc => 'biosql namespace',
+            valid_values => ['MGAP','EGAP'],
             is_input => 1,
         },
         bio_seq_features => { 
             is  => 'ARRAY',
             doc => 'array of Bio::Seq::Feature' ,
             is_input => 1,
-        },
-        skip => {
-            is => 'Boolean',
-            is_optional => 1,
-            is_input => 1,
-            default => 0,
-            doc => 'If set, command returns immediately without executing or uploading',
         },
         lsf_queue => { is_param => 1, default_value => 'long' ,},
         lsf_resource => {is_param => 1, default_value => 'rusage[tmp=100]',},
@@ -43,10 +37,6 @@ sub sub_command_sort_position { 3 }
 
 sub execute {
     my $self = shift;
-
-    if ($self->skip) {
-        return 1;
-    }
 
     my $biosql_namespace = $self->biosql_namespace();
 
