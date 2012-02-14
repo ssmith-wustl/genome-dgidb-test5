@@ -24,7 +24,7 @@ class Genome::Model::Tools::Dindel::VcfToDindel {
 };
 
 sub help_brief {
-    'Run getCIGARindels'
+    'Turn vcf into stupid dindel format'
 }
 
 sub help_synopsis {
