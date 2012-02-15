@@ -147,12 +147,55 @@ sub execute {
             my $value = $self->$name;
             $value ? ("--".($name)) : ()
         } @all_bool_args
-    );
+    );    
 
     my $host_param = defined $ENV{GENOME_DB_ENSEMBL_HOST} ? "--host ".$ENV{GENOME_DB_ENSEMBL_HOST} : "";
     my $user_param = defined $ENV{GENOME_DB_ENSEMBL_USER} ? "--user ".$ENV{GENOME_DB_ENSEMBL_USER} : "";
     my $password_param = defined $ENV{GENOME_DB_ENSEMBL_PASS} ? "--password ".$ENV{GENOME_DB_ENSEMBL_PASS} : "";
     my $port_param = defined $ENV{GENOME_DB_ENSEMBL_PORT} ? "--port ".$ENV{GENOME_DB_ENSEMBL_PORT} : "";
+
+
+    # sanity check for ensembl input, since some of us are unable to 
+    # keep our zero and one-based annotation files straight, and VEP
+    # fails cryptically when given one-based indels
+    
+    if ($self->format eq "ensembl"){
+        my $inFh = IO::File->new( $self->input_file ) || die "can't open file\n";
+        while( my $line = $inFh->getline )
+        {
+            chomp($line);
+            my @F = split("\t",$line);
+            
+            #skip headers
+            next if $line =~/^#/;
+            next if $line =~/^Chr/;
+
+            my @vars = split("/",$F[3]);
+            #check SNVs
+            if(($vars[0] =~ /^\w$/) && ($vars[1] =~ /^\w$/)){
+                unless ($F[1] == $F[2]){
+                    die ("ERROR: ensembl format is 0-based. this line appears to be 1-based\n$line\n")
+                }
+            }
+            #indel insertion
+            elsif(($vars[0] =~ /^-$/) && ($vars[1] =~ /\w+/)){
+                unless ($F[1] == $F[2]){
+                    die ("ERROR: ensembl format is 0-based. this line appears to be 1-based\n$line\n")
+                }
+            }
+            #indel deletion
+            elsif(($vars[1] =~ /^-$/) && ($vars[0] =~ /\w+/)){
+                unless ($F[1]+length($F[2]) == $F[1]){
+                    die ("ERROR: ensembl format is 0-based. this line appears to be 1-based\n$line\n")
+                }
+            }
+            
+        }
+        close($inFh);
+    }
+
+
+
 
     my $cmd = "PERL5LIB=$ENSEMBL_API_PATH/ensembl-variation/modules:$ENSEMBL_API_PATH/ensembl/modules:$ENSEMBL_API_PATH/ensembl-functgenomics/modules:\$PERL5LIB perl $script_path $string_args $bool_args $host_param $user_param $password_param $port_param";
     Genome::Sys->shellcmd(
