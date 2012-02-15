@@ -227,6 +227,20 @@ sub delete {
     return $self->SUPER::delete;
 }
 
+# Returns a list of models for which this model is an input
+sub to_models {
+    my $self = shift;
+    my @inputs = Genome::Model::Input->get(value => $self);
+    return map { $_->model } @inputs;
+}
+
+# Returns a list of models that this model uses as inputs
+sub from_models {
+    my $self = shift;
+    my @inputs = grep { $_->value_class_name->isa('Genome::Model') } $self->inputs;
+    return map { $_->value } @inputs;
+}
+
 # Returns a list of builds (all statuses) sorted from oldest to newest
 sub sorted_builds {
     my $self = shift;
