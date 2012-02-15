@@ -64,6 +64,7 @@ sub _initialize_build {
     return 1;
 }
 
+# TODO Will be removed once work in APIPE-1390 is completed
 sub _build_success_callback {
     my ($self, $build) = @_;
     # override in sub-classes to get custom commit hook when a build succeeds

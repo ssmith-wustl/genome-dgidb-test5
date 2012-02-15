@@ -110,11 +110,9 @@ class Genome::Model {
     has_optional_deprecated => [
         auto_assign_inst_data => {
             is => 'Boolean',
-            column_name => 'AUTO_ASSIGN_INST_DATA',
         },
         auto_build_alignments => {
             is => 'Boolean',
-            column_name => 'AUTO_BUILD_ALIGNMENTS',
         },
     ],
     schema_name => 'GMSchema',
@@ -517,6 +515,24 @@ sub default_model_name {
     }
 
     return $name;
+}
+
+# TODO This should be removed once proper triggering is in place, see APIPE-1390 in Jira
+sub notify_input_build_success {
+    my $self = shift;
+    my $succeeded_build = shift;
+
+    if($self->auto_build_alignments) {
+        my @from_models = $self->from_models;
+        my @last_complete_builds = map($_->last_complete_build, @from_models);
+
+        #all input models have a succeeded build
+        if(scalar @from_models eq scalar @last_complete_builds) {
+            $self->build_requested(1, 'all input models are ready');
+        }
+    }
+
+    return 1;
 }
 
 # Ensures there are no other models of the same class that have the same name. If any are found, information
