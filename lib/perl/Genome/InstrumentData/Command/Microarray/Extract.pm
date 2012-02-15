@@ -241,7 +241,13 @@ sub _load_genotyopes {
     }
 
     my $genotype_file;
-    my @possible_file_names = ( 'snpreport/'.$instrument_data->id, $instrument_data->id.'.genotype', $instrument_data->sample->id.'.genotype' );
+    my @possible_file_names = (
+        'snpreport/'.$instrument_data->id,
+        'snpreport/'.$instrument_data->sample->id,
+        $instrument_data->id.'.genotype',
+        $instrument_data->sample->id.'.genotype',
+    );
+
     for my $possible_file_name ( @possible_file_names ) {
         my $possible_file = $data_directory.'/'.$possible_file_name;
         next if not -e $possible_file;
