@@ -83,15 +83,19 @@ sub _convert_input_file{
         $line->{'reference'} =~ s/0|\*/-/g; 
         $line->{'variant'}   =~ s/0|\*/-/g;
 
-        my $final;
+        my $start;
+        my $stop;
         if($line->{'reference'} eq '-'){
             #insertions should have start == stop in Chris's format
-            $final = join("\t", $line->{'chromosome'}, $line->{'start'}, $line->{'stop'} + 1, $line->{'reference'}, $line->{'variant'});
+            $start = $line->{'start'};
+            $stop = $line->{'stop'} + 1;
         }else{
-            $final = join("\t", $line->{'chromosome'}, $line->{'start'} + 1, $line->{'stop'}, $line->{'reference'}, $line->{'variant'});
+            $start = $line->{'start'} + 1;
+            $stop = $line->{'stop'};
         }
 
-        print $output $final . "\n";
+        my $final = join("\t", $line->{'chromosome'}, $start, $stop, $line->{'reference'}, $line->{'variant'});
+        print $output $final . "\n" unless $start > $stop;
     }
     #flush the buffer
     my $ofh = select $output;
