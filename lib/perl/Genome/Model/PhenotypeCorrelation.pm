@@ -746,6 +746,7 @@ my $kegg_db = '/gscmnt/gc2108/info/medseq/ckandoth/music/brc_input/pathway_dbs/K
 #need clinical data file $clinical_data
 #my $clinical_data_orig = '/gscmnt/gc2146/info/medseq/wschierd/crap_stuff_delete/Mock_Pheno_1kg.txt';
         my %pheno_hash;
+        my %attributes;
         foreach my $sample (@samples) {
             my $sample_id = $sample->id;
             my $sample_name = $sample->name;
