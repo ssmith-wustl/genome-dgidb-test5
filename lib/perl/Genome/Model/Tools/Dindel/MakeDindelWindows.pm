@@ -27,7 +27,7 @@ class Genome::Model::Tools::Dindel::MakeDindelWindows {
 };
 
 sub help_brief {
-    'Run getCIGARindels'
+    'make window files for dindel parallelization'
 }
 
 sub help_synopsis {

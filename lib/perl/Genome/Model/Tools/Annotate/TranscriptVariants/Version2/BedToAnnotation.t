@@ -13,6 +13,7 @@ ok (-e $test_dir, "test data directory exists at $test_dir");
 
 test_snvs($test_dir);
 test_indels($test_dir);
+test_nonsense($test_dir);
 
 done_testing();
 
@@ -62,5 +63,29 @@ sub test_indels{
     ok($adaptor->execute, "executed indel adaptor");
     my $diff_output = `diff $output_file $annotation_file`;
     ok(!$diff_output, "indel adaptor output diffed clean");
+    $output_fh->close;
+}
+
+sub test_nonsense {
+    my $test_dir = shift;
+
+    my $test_bed_file = $test_dir . '/nonsense.bed';
+    ok(-s $test_bed_file, "nonsense bed file exists and has size at $test_bed_file");
+    ok(-r $test_bed_file, "nonsense bed file is readable by user running this test $test_bed_file");
+
+    my $annotation_file = $test_dir. "/nonsense.annotation";
+    ok (-z $annotation_file, "nonsense output file exists and has 0 size at $annotation_file");
+    ok (-r $annotation_file, "nonsense variants file is readable by the user running this test $annotation_file");
+
+    my ($output_fh, $output_file) = tempfile();
+    my $adaptor = $THIS_VERSION_ADAPTOR_SUBCLASS->create(
+        indel_file => $test_bed_file,
+        output => $output_file,
+    );
+
+    ok(defined $adaptor, "created adaptor for nonsense test");
+    ok($adaptor->execute, "executed nonsense adaptor");
+    my $diff_output = `diff $output_file $annotation_file`;
+    ok(!$diff_output, "nonsense adaptor output diffed clean");
     $output_fh->close;
 }

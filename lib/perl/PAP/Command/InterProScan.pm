@@ -20,7 +20,7 @@ use File::Slurp;
 use Data::UUID;
 use Cwd;
 use Carp 'confess';
-
+use PAP::Command;
 
 my $debug_err = '';
 
@@ -67,7 +67,8 @@ class PAP::Command::InterProScan {
                 locus_tag  => {
                                     is          => 'SCALAR',
                                     doc         => 'locus tag for this genome',
-									is_input => 1,
+                                    is_input => 1,
+                                    #default_value => 'foobar_locus'
                                 },
             ],
 };
@@ -302,6 +303,13 @@ sub parse_result {
         
     }
     
+    if ($self->report_save_dir) {
+        require Data::Dumper;
+        my $fh = IO::File->new(join('/', $self->report_save_dir, 'dump_file.out'), 'w');
+        die "Could not get file handle for " . $self->dump_file unless $fh;
+        $fh->print(Data::Dumper::Dumper(\@features) . "\n");
+    }
+
     $self->bio_seq_feature(\@features);
     
 }
