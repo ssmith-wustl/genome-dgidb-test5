@@ -64,21 +64,6 @@ sub _initialize_build {
     return 1;
 }
 
-# TODO Will be removed once work in APIPE-1390 is completed
-sub _build_success_callback {
-    my ($self, $build) = @_;
-    # override in sub-classes to get custom commit hook when a build succeeds
-    my $model = $build->model;
-
-    #Notify any models set to depend on this one that a new build is ready
-    my @to_models = $model->to_models;
-    for my $to_model (@to_models) {
-        $to_model->notify_input_build_success($build);
-    }
-
-    return 1;
-}
-
 # Override this method in the model subclass to use non-default resource requirement string for _execute_build method
 #sub _resource_requirements_for_execute_build {
 #    my $self = shift;

@@ -196,7 +196,6 @@ sub create {
     return $self;
 }
 
-
 # Delete the model and all of its builds/inputs
 sub delete {
     my $self = shift;
@@ -410,6 +409,22 @@ sub params_for_class {
     } $meta->property_metas;
 
     return @param_names;
+}
+
+# Called when a build of this model succeeds, requests builds for "downstream" models
+# (eg, models that have this model as an input)
+sub _trigger_downstream_builds {
+    my ($self, $build) = @_;
+    # override in sub-classes to get custom commit hook when a build succeeds
+    my $model = $build->model;
+
+    #Notify any models set to depend on this one that a new build is ready
+    my @to_models = $model->to_models;
+    for my $to_model (@to_models) {
+        $to_model->notify_input_build_success($build);
+    }
+
+    return 1;
 }
 
 # Ensures that processing profile is set. If not, an attempt is made to resolve one before exiting
