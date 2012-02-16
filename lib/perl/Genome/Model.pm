@@ -241,33 +241,20 @@ sub from_models {
 
 # Returns a list of builds (all statuses) sorted from oldest to newest
 sub sorted_builds {
-    my $self = shift;
-    my @builds = $self->builds;
-    my @builds_with_date_scheduled = map { [ ($_->date_scheduled || ''), $_ ] } @builds;
-    my @sorted = sort { $a->[0] cmp $b->[0] } @builds_with_date_scheduled;
-    return map { $_->[1] } @sorted;
+    return shift->builds(-order_by => 'date_scheduled');
 }
 
 # Returns a list of succeeded builds sorted from oldest to newest
 sub succeeded_builds { return $_[0]->completed_builds; }
 sub completed_builds {
-    my $self = shift;
-    my @completed_builds = grep {
-        defined $_->status and
-        $_->status eq 'Succeeded' and
-        $_->date_completed
-    } $self->sorted_builds;
-    return @completed_builds;
+    return shift->builds(status => 'Succeeded', -order_by => 'date_scheduled');
 }
 
 # Returns the latest build of the model, regardless of status
 sub latest_build {
     my $self = shift;
     my @builds = $self->sorted_builds;
-    if (@builds) {
-        return $builds[-1];
-    }
-    return;
+    return pop @builds;
 }
 
 # Returns the latest build of the model that successfully completed
@@ -276,10 +263,7 @@ sub last_complete_build { return $_[0]->resolve_last_complete_build; }
 sub resolve_last_complete_build {
     my $self = shift;
     my @completed_builds = $self->completed_builds;
-    if (@completed_builds) {
-        return $completed_builds[-1];
-    }
-    return;
+    return pop @completed_builds;
 }
 
 # Returns a list of builds with the specified status sorted from oldest to newest
