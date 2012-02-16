@@ -49,6 +49,11 @@ class Genome::Sys::User::View::Solr::Xml {
         display_url3 => {
             is  => 'Text',
         },
+        display_title => {
+            is => 'Text',
+            calculate_from => ['subject'],
+            calculate => sub { return shift->name },
+        },
         default_aspects => {
             is => 'ARRAY',
             default => [
@@ -59,10 +64,6 @@ class Genome::Sys::User::View::Solr::Xml {
                 {
                     name => 'email',
                     position => 'content',
-                },
-                {
-                    name => 'name',
-                    position => 'display_title',
                 },
             ],
         }
