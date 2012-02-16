@@ -300,14 +300,17 @@
           <table class="lister datatable" width="100%" cellspacing="0" cellpadding="0" border="0" id="coverage-depth-lister">
             <thead>
               <tr>
-                <th colspan="2">model</th>
+                <th>model</th>
                 <xsl:for-each select="coverage-summary/minimum_depth_header">
                   <xsl:sort select="@value" data-type="number" order="descending"/>
                   <th class="right">
                     <xsl:value-of select="@value"/>X
-                    <br/>
-                    <span class="small">(mean&#160;depth)</span>
                   </th>
+                  <xsl:if test="@value = 1">
+                    <th>
+                      <span class="small" style="line-height: 10px">mean depth</span>
+                    </th>
+                  </xsl:if>
                 </xsl:for-each>
               </tr>
             </thead>
@@ -326,8 +329,7 @@
                       </xsl:call-template>
                       <xsl:text> </xsl:text>
                     </xsl:if>
-                  </td>
-                  <td>
+
                     <xsl:attribute name="title"><xsl:value-of select="../@subject_name"/></xsl:attribute>
                     <xsl:value-of select="@model_name"/> (<xsl:value-of select="@lane_count"/> lane<xsl:if test="@lane_count &gt; 1">s</xsl:if>)
                   </td>
@@ -335,9 +337,12 @@
                     <xsl:sort select="@value" data-type="number" order="descending"/>
                     <td class="right">
                       <xsl:value-of select="pc_target_space_covered"/>%
-                      <br/>
-                      <span class="small">(<xsl:value-of select="mean_depth"/>)</span>
                     </td>
+                    <xsl:if test="@value = 1">
+                      <td>
+                        <span class="small"><xsl:value-of select="mean_depth"/></span>
+                      </td>
+                    </xsl:if>
                   </xsl:for-each>
                 </tr>
               </xsl:for-each>
