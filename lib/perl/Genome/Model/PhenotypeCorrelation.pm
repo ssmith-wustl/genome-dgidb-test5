@@ -64,6 +64,10 @@ class Genome::Model::PhenotypeCorrelation {
             is => 'Genome::Model::Build::ReferenceSequence',
             doc => 'the reference sequence against which alignment and variant detection are done',
         },
+        nomenclature => {
+            is => 'Genome::Nomenclature',
+            doc => 'nomenclature used to access clinical data'
+        }
     ],
     has_optional_input => [
         roi_list => {
@@ -365,7 +369,6 @@ sub _execute_build {
     $self->status_message("detect variants command completed successfully");
 
     my $multisample_vcf = $output_dir . '/snvs.merged.vcf.gz';
-    my $nomenclature = 'ASMS residuals';
 
     #
     # Continue with analysis of the multisample_vcf
@@ -415,7 +418,8 @@ sub _execute_build {
         foreach my $sample (@samples) {
             my $sample_id = $sample->id;
             my $sample_name = $sample->name;
-            my @sample_attributes = $self->get_sample_attributes($sample_id,$nomenclature);
+
+            my @sample_attributes = $sample->attributes_for_nomenclature($self->nomenclature);
             for my $attr (@sample_attributes) {
                 $attributes{$attr->attribute_label} = 1;
                 $pheno_hash{$sample_name}{$attr->attribute_label} = $attr->attribute_value;
@@ -750,7 +754,7 @@ my $kegg_db = '/gscmnt/gc2108/info/medseq/ckandoth/music/brc_input/pathway_dbs/K
         foreach my $sample (@samples) {
             my $sample_id = $sample->id;
             my $sample_name = $sample->name;
-            my @sample_attributes = $self->get_sample_attributes($sample_id,$nomenclature);
+            my @sample_attributes = $sample->attributes_for_nomenclature($self->nomenclature);
             for my $attr (@sample_attributes) {
                 $attributes{$attr->attribute_label} = 1;
                 $pheno_hash{$sample_name}{$attr->attribute_label} = $attr->attribute_value;
@@ -922,15 +926,6 @@ sub vcf_to_maf {
     my $final_maf_maker_cmd = "head -n1 $single_sample_dir/$maf_sample_id.maf | cat - $single_sample_dir/All_Samples_noheader.maf > $final_maf";
     system($final_maf_maker_cmd);
     return $final_maf;
-}
-
-sub get_sample_attributes {
-    my $self = shift;
-    my $sample_id = shift;
-    my $nomenclature = shift;
-    my $s = Genome::Sample->get($sample_id);
-    my @attr = $s->attributes_for_nomenclature($nomenclature);
-    return @attr;
 }
 
 sub _get_builds {
