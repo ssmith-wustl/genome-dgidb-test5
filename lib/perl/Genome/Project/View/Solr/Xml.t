@@ -8,6 +8,11 @@ $ENV{UR_DBI_NO_COMMIT} = 1;
 
 use_ok('above', 'Genome');
 
+use_ok('Genome::Sys');
+no warnings qw(redefine once);
+*Genome::Sys::current_user_is_admin = sub { return 1 };
+use warnings qw(redefine once);
+
 my $user = Genome::Sys::User->create(
     email => 'leeroy@jenkins.org',
     name => 'Leeroy Jenkins',
