@@ -288,7 +288,6 @@ sub execute {
     my $self = shift;
 
     $self->_resolve_output_directory;
-$DB::single = 1;
     $self->_summon_detector_result;
 
     if($self->_try_vcf){
@@ -407,8 +406,8 @@ sub params_for_detector_result {
         control_aligned_reads => $self->control_aligned_reads_input,
 
         #new
-        alignment_results => [$self->alignment_results],
-        control_alignment_results => [$self->control_alignment_results],
+        alignment_results => [map { $_->id } $self->alignment_results],
+        control_alignment_results => [map { $_->id } $self->control_alignment_results],
         pedigree_file_path => $self->pedigree_file_path,
         roi_list => $self->roi_list,
         roi_wingspan => $self->roi_wingspan,
