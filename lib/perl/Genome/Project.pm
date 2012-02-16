@@ -108,7 +108,7 @@ sub create {
     return $self;
 }
 
-sub __display_name {
+sub __display_name__ {
     my $self = shift;
     return $self->name."(".$self->id.")";
 }
