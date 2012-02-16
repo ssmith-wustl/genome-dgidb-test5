@@ -243,7 +243,7 @@ sub from_models {
 sub sorted_builds {
     my $self = shift;
     my @builds = $self->builds;
-    my @builds_with_date_scheduled = map { [ $_->date_scheduled, $_ ] } @builds;
+    my @builds_with_date_scheduled = map { [ ($_->date_scheduled || ''), $_ ] } @builds;
     my @sorted = sort { $a->[0] cmp $b->[0] } @builds_with_date_scheduled;
     return map { $_->[1] } @sorted;
 }
