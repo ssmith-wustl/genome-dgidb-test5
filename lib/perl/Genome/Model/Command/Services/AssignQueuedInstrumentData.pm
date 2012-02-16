@@ -1525,16 +1525,21 @@ sub add_processing_profiles_to_pses{
                     my $pp_id = $self->_default_de_novo_assembly_bacterial_processing_profile_id;
                     push @processing_profile_ids_to_add, $pp_id;
                 }
-                elsif ( $taxon->domain =~ /unknown/i ) { # unknow domain normally skipped
-                    my $index_illumina = GSC::IndexIllumina->get( $instrument_data_id );
-                    if ( $index_illumina ) {
-                        for my $project ( $index_illumina->get_research_projects ) {
-                            if ( $project->id == 2269562 ) { # HMP Centers Grant Reference Genomes WU Strain Collection
-                                my $pp_id = $self->_default_de_novo_assembly_bacterial_processing_profile_id;
-                                push @processing_profile_ids_to_add, $pp_id;
-                                last;
-                            }
+                elsif ( my $index_illumina = GSC::IndexIllumina->get( $instrument_data_id ) ) {
+                    for my $research_project ( $index_illumina->get_research_projects ) { #research project
+                        my $genome_project = Genome::Project->get( id => $research_project->setup_id );
+                        if ( not $genome_project ) {
+                            Carp::confess('No genome project found for research project setup_id: '.$research_project->setup_id );
                         }
+                        my @pp_parts = $genome_project->parts( label => 'default_processing_profiles' );
+                        for my $part ( @pp_parts ) {
+                            push @processing_profile_ids_to_add, $part->entity_id;
+                        }
+                        #if ( $project->id == 2269562 ) { # HMP Centers Grant Reference Genomes WU Strain Collection
+                        #    my $pp_id = $self->_default_de_novo_assembly_bacterial_processing_profile_id;
+                        #    push @processing_profile_ids_to_add, $pp_id;
+                        #    last;
+                        #}
                     }
                 }
             }

@@ -119,7 +119,7 @@ sub execute {
             } elsif ( $error->inferred_file and $error->inferred_line ) {
                 $key = $error->inferred_file.' '.$error->inferred_line;
             } else {
-                $key = 'unkown';
+                $key = 'unknown';
             }
 
             if ( $error->message ) {
@@ -127,7 +127,7 @@ sub execute {
             } elsif ( $error->inferred_message ) {
                 $msg = $error->inferred_message;
             } else {
-                $msg = 'unkown';
+                $msg = 'unknown';
             }
 
             $models_with_errors++;
@@ -158,7 +158,7 @@ sub execute {
     $self->status_message('Models with error log: '.$models_with_errors);
     $self->status_message('Models with guessed errors: '.$models_with_guessed_errors);
     $self->status_message('Models with unknown failures: '.($models_not_in_tickets - $models_with_errors - $models_with_guessed_errors));
-    $self->status_message('Summerized errors: ');
+    $self->status_message('Summarized errors: ');
     $self->status_message(join("\n", map { $build_errors{$_} } sort keys %build_errors));
 
     return 1;
