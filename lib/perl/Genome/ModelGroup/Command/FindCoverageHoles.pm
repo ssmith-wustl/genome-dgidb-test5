@@ -28,7 +28,7 @@ class Genome::ModelGroup::Command::FindCoverageHoles {
     },
     annotation_substructures_bed=> {
         is=>'String',
-        default=>"/gscmnt/gc4095/info/feature_list/BBB14B8058B811E18423574C8BF3D0F7/BBB14B8058B811E18423574C8BF3D0F7.bed",
+        default=>"/gscmnt/gc4095/info/feature_list/A8375E4058CD11E196940D538BF3D0F7/A8375E4058CD11E196940D538BF3D0F7.bed",
         doc=>"this is for Ensembl only build 37. it should be gettable for any build w/ Genome::Model::Build->get(id=>106409296)->get_or_create_roi_bed->file_path, but there's a bug in that that makes new allocations each time is run",
     },
     output_dir=> {
