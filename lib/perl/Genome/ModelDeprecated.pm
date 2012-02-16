@@ -460,23 +460,6 @@ sub get_all_objects {
     return map { $sorter->( $self->$_ ) } (qw{ inputs builds to_model_links from_model_links });
 }
 
-sub notify_input_build_success {
-    my $self = shift;
-    my $succeeded_build = shift;
-
-    if($self->auto_build_alignments) {
-        my @from_models = $self->from_models;
-        my @last_complete_builds = map($_->last_complete_build, @from_models);
-
-        #all input models have a succeeded build
-        if(scalar @from_models eq scalar @last_complete_builds) {
-            $self->build_requested(1, 'all input models are ready');
-        }
-    }
-
-    return 1;
-}
-
 sub create_rule_limiting_instrument_data {
     my ($self, @instrument_data) = @_;
     @instrument_data = $self->instrument_data unless @instrument_data;

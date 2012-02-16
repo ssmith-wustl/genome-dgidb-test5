@@ -110,11 +110,9 @@ class Genome::Model {
     has_optional_deprecated => [
         auto_assign_inst_data => {
             is => 'Boolean',
-            column_name => 'AUTO_ASSIGN_INST_DATA',
         },
         auto_build_alignments => {
             is => 'Boolean',
-            column_name => 'AUTO_BUILD_ALIGNMENTS',
         },
     ],
     schema_name => 'GMSchema',
@@ -227,11 +225,27 @@ sub delete {
     return $self->SUPER::delete;
 }
 
+# Returns a list of models for which this model is an input
+sub to_models {
+    my $self = shift;
+    my @inputs = Genome::Model::Input->get(value => $self);
+    return map { $_->model } @inputs;
+}
+
+# Returns a list of models that this model uses as inputs
+sub from_models {
+    my $self = shift;
+    my @inputs = grep { $_->value_class_name->isa('Genome::Model') } $self->inputs;
+    return map { $_->value } @inputs;
+}
+
 # Returns a list of builds (all statuses) sorted from oldest to newest
 sub sorted_builds {
     my $self = shift;
     my @builds = $self->builds;
-    return sort { $a->date_scheduled cmp $b->date_scheduled } @builds;
+    my @builds_with_date_scheduled = map { [ ($_->date_scheduled || ''), $_ ] } @builds;
+    my @sorted = sort { $a->[0] cmp $b->[0] } @builds_with_date_scheduled;
+    return map { $_->[1] } @sorted;
 }
 
 # Returns a list of succeeded builds sorted from oldest to newest
@@ -503,6 +517,24 @@ sub default_model_name {
     }
 
     return $name;
+}
+
+# TODO This should be removed once proper triggering is in place, see APIPE-1390 in Jira
+sub notify_input_build_success {
+    my $self = shift;
+    my $succeeded_build = shift;
+
+    if($self->auto_build_alignments) {
+        my @from_models = $self->from_models;
+        my @last_complete_builds = map($_->last_complete_build, @from_models);
+
+        #all input models have a succeeded build
+        if(scalar @from_models eq scalar @last_complete_builds) {
+            $self->build_requested(1, 'all input models are ready');
+        }
+    }
+
+    return 1;
 }
 
 # Ensures there are no other models of the same class that have the same name. If any are found, information

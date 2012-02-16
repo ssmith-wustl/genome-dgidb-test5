@@ -13,7 +13,7 @@ sub log_command {
     my @argv = @ARGV;
 
     # Fork twice... grandchild process will be an orphan, so parent won't wait for it to complete
-    my $pid = UR::Context::Process->fork();
+    my $pid = (defined(&DB::DB)? -1 : UR::Context::Process->fork()); #don't fork in the debugger
     if ($pid) {
         return 1;
     }
