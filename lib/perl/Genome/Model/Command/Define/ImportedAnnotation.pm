@@ -125,6 +125,7 @@ sub _create_build {
     }
 
     $self->status_message('Starting build.');
+    # if($build->start(server_dispatch => 'inline')){ #TODO: make this an option or somethign
     if($build->start()){
         $self->status_message('Started build (build is complete if it was run inline).');
     } else {

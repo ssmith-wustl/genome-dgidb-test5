@@ -30,10 +30,6 @@ sub _execute_build{
         $self->error_message("Could not get imported annotation source!");
         return;
     }
-    unless ($source =~ /^ensembl$/i) {
-        $self->error_message("$source is not a valid annotation data source");
-        return;
-    }
 
     my $version = $build->version;
     unless (defined $version){
@@ -53,48 +49,38 @@ sub _execute_build{
             return;
         }
     }
-    unless(-d $build->_annotation_data_directory){
-        Genome::Sys->create_directory($build->_annotation_data_directory);
-        unless (-d $build->_annotation_data_directory) {
-            $self->error_message("Failed to create new annotation data dir: " . $build->_annotation_data_directory);
-            return;
-        }
+
+    my $species_name = $build->species_name;
+    unless (defined $species_name){
+        $self->error_message('Could not get species name!');
+        return;
     }
 
-    my $log_file = $data_directory . "/" . $source . "_import.log";
-    my $dump_file = $data_directory . "/" . $source . "_import.dump";
-
-    my ($host, $user, $pass) = $self->get_ensembl_info($version);
-
-    my $command = Genome::Model::Tools::ImportAnnotation::Ensembl->create(
-        data_directory  => $build->_annotation_data_directory,
-        version         => $version,
-        host            => $host,
-        user            => $user,
-        pass            => $pass,
-        species         => $model->species_name,
-        log_file        => $log_file,
-        dump_file       => $dump_file,
+    my $name = ucfirst(lc($source));
+    my $importer_class_name = join('::', 'Genome', 'Db', $name, 'Import', 'Run');
+    #TODO: get the data_set in here
+    my $cmd = $importer_class_name->execute(
+        # data_set => '', 
+        imported_annotation_build => $build,
     );
-    $command->execute;
 
-    #TODO: import interpro
-    my $interpro_cmd = Genome::Model::Tools::Annotate::ImportInterpro::Run->exectue(
-        reference_transcripts => join('/', $model->name, $version),
-        interpro_version => $self->interpro_version, #TODO: update processing profiles
-        log_file => join('/', $data_directory, 'interpro_log'),
-    );
-    $interpro_cmd->execute;
+    # #TODO: import interpro
+    # my $interpro_cmd = Genome::Model::Tools::Annotate::ImportInterpro::Run->exectue(
+        # reference_transcripts => join('/', $model->name, $version),
+        # interpro_version => $self->interpro_version, #TODO: update processing profiles
+        # log_file => join('/', $data_directory, 'interpro_log'),
+    # );
+    # $interpro_cmd->execute;
 
-    #TODO: update the annotation data to Tony's format using the 2 scripts
-    #TODO: generate tiering files?   
+    # #TODO: update the annotation data to Tony's format using the 2 scripts
+    # #TODO: generate tiering files?   
 
-    #TODO: get the RibosomalGeneNames.txt into the annotation_data_directory
-    #generate the rna seq files
-    $self->generate_rna_seq_files($build);
+    # #TODO: get the RibosomalGeneNames.txt into the annotation_data_directory
+    # #generate the rna seq files
+    # $self->generate_rna_seq_files($build);
 
-    #Make ROI FeatureList
-    $build->get_or_create_roi_bed;
+    # #Make ROI FeatureList
+    # $build->get_or_create_roi_bed;
 
     return 1;
 }

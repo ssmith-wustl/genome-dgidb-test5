@@ -1,12 +1,12 @@
-package Genome::Model::Tools::ImportAnnotation::Ensembl;
+package Genome::Db::Ensembl::Import::CreateAnnotationStructures;
 
 use strict;
 use warnings;
 
 use Genome;
 
-class Genome::Model::Tools::ImportAnnotation::Ensembl {
-    is  => 'Genome::Model::Tools::ImportAnnotation',
+class Genome::Db::Ensembl::Import::CreateAnnotationStructures {
+    is  => 'Genome::Db::Ensembl::Import::Base', #TODO: shift this to Command:V2 if the base class becomes unnecessary
     has => [
         host => {
             is  => 'Text',
@@ -25,8 +25,6 @@ class Genome::Model::Tools::ImportAnnotation::Ensembl {
     ],
 };
 
-sub sub_command_sort_position {12}
-
 sub help_brief
 {
     "Import ensembl annotation to the file based data sources";
@@ -36,14 +34,12 @@ sub help_synopsis
 {
     return <<EOS
 
-gmt import-annotation ensembl --version <ensembl version string> --host <ensembl db hostname> --user <ensembl db user> [--pass <ensembl db password>] --output_directory <directory to dump annotation data>
 EOS
 }
 
 sub help_detail
 {
     return <<EOS
-This command is used for importing the ensembl based annotation data to the filesystem based data sources.
 EOS
 }
 
@@ -60,10 +56,6 @@ sub execute
     my $ucfirst_species = ucfirst $self->species;
     my $gene_adaptor = $registry->get_adaptor( $ucfirst_species, 'Core', 'Gene' );
     my $transcript_adaptor = $registry->get_adaptor( $ucfirst_species, 'Core', 'Transcript' );
-##
-    # $self->status_message("We got a registry, lets not go through this big long thing just yet");
-    # return;
-##
 
     my @ensembl_transcript_ids = @{ $transcript_adaptor->list_dbIDs };
 
@@ -238,7 +230,7 @@ sub execute
 
                     my $utr_exon = Genome::TranscriptSubStructure->create(
                         transcript_structure_id => $tss_id,
-                        transcript => $transcript,
+                        transcript_id => $transcript->transcript_id,
                         structure_type => 'utr_exon',
                         structure_start => $start,
                         structure_stop => $utr_stop,
@@ -269,7 +261,7 @@ sub execute
 
                 my $cds_exon = Genome::TranscriptSubStructure->create(
                     transcript_structure_id => $tss_id,
-                    transcript => $transcript,
+                    transcript_id => $transcript->transcript_id,
                     structure_type => 'cds_exon',
                     structure_start => $coding_region_start,
                     structure_stop => $coding_region_stop,
@@ -298,7 +290,7 @@ sub execute
 
                     my $utr_exon = Genome::TranscriptSubStructure->create(
                         transcript_structure_id => $tss_id,
-                        transcript => $transcript,
+                        transcript_id => $transcript->transcript_id,
                         structure_type => 'utr_exon',
                         structure_start => $utr_start,
                         structure_stop => $stop,
@@ -326,7 +318,7 @@ sub execute
 
                 my $structure = Genome::TranscriptSubStructure->create(
                     transcript_structure_id => $tss_id,
-                    transcript => $transcript,
+                    transcript_id => $transcript->transcript_id,
                     structure_type => $structure_type,
                     structure_start => $start,
                     structure_stop => $stop,
@@ -359,7 +351,7 @@ sub execute
         {
             $protein = Genome::Protein->create(
                 protein_id => $translation->dbID,
-                transcript => $transcript,
+                transcript_id => $transcript->id,
                 protein_name => $translation->stable_id,
                 amino_acid_seq => $ensembl_transcript->translate->seq,
                 data_directory => $self->data_directory,
@@ -421,13 +413,7 @@ sub connect_registry{
     my $self = shift;
     my $eversion = $self->ensembl_version_string();
 
-    # the fun abuse of eval is neccessary here to make sure we can do evil
-    # things like 'dynamically' load the ensembl modules.
-    my $lib = "use lib '/usr/share/perl5/ensembl-"
-    . $eversion
-    . "/modules';";
-    $lib
-    .= "\nuse Bio::EnsEMBL::Registry;\nuse Bio::EnsEMBL::DBSQL::DBAdaptor;";
+    my $lib = "use Bio::EnsEMBL::Registry;\nuse Bio::EnsEMBL::DBSQL::DBAdaptor;";
     eval $lib;
 
     if ($@)
@@ -436,7 +422,7 @@ sub connect_registry{
         croak();
     }
 
-    my $registry     = 'Bio::EnsEMBL::Registry';
+    my $registry = 'Bio::EnsEMBL::Registry';
     my $ens_host = $self->host;
     my $ens_user = $self->user;
 

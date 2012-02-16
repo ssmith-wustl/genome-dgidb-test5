@@ -62,7 +62,10 @@ class Genome::TranscriptSubStructure {
         },
         transcript => { #TODO, straighten out ID stuff w/ Tony
             is => 'Genome::Transcript', 
-            id_by => 'transcript_id' 
+            calculate_from => ['data_directory', 'transcript_id'],
+            calculate => q/
+               return Genome::Transcript->get(transcript_id => $transcript_id, data_directory => $data_directory);
+            /,
         },
         data_directory => {
             is => "Path",
