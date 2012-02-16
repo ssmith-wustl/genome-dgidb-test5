@@ -86,7 +86,6 @@
               </td>
             </tr>
 
-            <xsl:if test="count(aspect[@name='models']/object/aspect[@name='region_of_interest_set_name']/value) > 0">
               <tr>
                 <td class="name">Coverage Report:
                 </td>
@@ -98,7 +97,6 @@
                   </xsl:call-template>
                 </td>
               </tr>
-            </xsl:if>
           </tbody>
         </table>
       </div>
