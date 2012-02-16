@@ -1,4 +1,4 @@
-package Genome::Model::Tools::Annotate::TranscriptVariants::Version2::DataSource::TranscriptStructures;
+package Genome::DataSource::TranscriptStructures;
 
 use Genome;
 

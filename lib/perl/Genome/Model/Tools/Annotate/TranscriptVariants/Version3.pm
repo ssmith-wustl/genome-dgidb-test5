@@ -46,7 +46,7 @@ UR::Object::Type->define(
         
         transcript_structure_class_name => {
             is_constant => 1,
-            value => __PACKAGE__ . '::TranscriptStructure',
+            value => 'Genome::TranscriptStructure',
         },
 
         #priorities => { is => __PACKAGE__ . '::AnnotationPriorities', is_constant => 1, id_by => 1 },
