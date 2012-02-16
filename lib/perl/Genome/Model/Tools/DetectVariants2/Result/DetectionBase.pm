@@ -50,29 +50,27 @@ class Genome::Model::Tools::DetectVariants2::Result::DetectionBase {
             doc => 'The chromosome(s) on which the detection was run',
         },
     ],
-    has_optional => [
+    has_optional_input => [
         # old API
         aligned_reads => {
             is => 'Text',
             is_optional => 1,
-            is_input => 1,
             doc => 'The path to the aligned reads file',
         },
         control_aligned_reads => {
             is => 'Text',
             is_optional => 1,
-            is_input => 1,
             doc => 'The path to the control aligned reads file',
         },
         # new API
         alignment_results => {
-            is => 'Genome::InstrumentData::AlignmentResults::Merged',
+            is => 'Text',
             is_optional => 1,
             is_many => 1,
             doc => 'The path to the aligned reads file',
         },
         control_alignment_results => {
-            is => 'Genome::InstrumentData::AlignmentResults::Merged',
+            is => 'Text',
             is_optional => 1,            
             is_many => 1,
             doc => 'The path to the control aligned reads file',
