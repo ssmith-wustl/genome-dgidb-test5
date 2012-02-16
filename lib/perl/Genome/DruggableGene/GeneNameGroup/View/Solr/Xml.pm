@@ -7,7 +7,7 @@ use Genome;
 
 class Genome::DruggableGene::GeneNameGroup::View::Solr::Xml {
     is => 'Genome::View::Solr::Xml',
-    has => [
+    has_field => [
         type => {
             is => 'Text',
             default => 'gene-name-group'
