@@ -98,10 +98,10 @@ sub _parse_annotation_strategy {
             }
 
             if ($p->is_optional) {
-                $self->warning_message("$class_name has input $property_name which is unrecognized, and is being ignored when construction the workflow.");
+                $self->warning_message("$class_name has input $property_name which is unrecognized, and is being ignored when constructing the workflow.");
             }
             else {
-                die "$class_name has input $property_name which is unrecognized, and is not optional!"
+                die "$class_name has input $property_name which is unrecognized, and is not optional!  Cannot construct workflow."
             }
         }
         unless ($property_name_for_output_dir_on_tool) {
@@ -193,7 +193,7 @@ sub _resolve_workflow_for_build {
     my $workflow = Workflow::Model->create(
         name => $build->workflow_name,
         input_properties => [ keys %inputs ],
-        output_properties => ['all features','final result'],
+        output_properties => ['all features'],
     );
     $workflow->log_dir($build->log_directory);
     my $input_connector = $workflow->get_input_connector;
@@ -372,20 +372,20 @@ sub _resolve_workflow_for_build {
             right_property => 'bio_seq_features' 
         );
 
-        $link = $workflow->add_link(
-            left_operation => $upload_op,
-            left_property => 'result',
-            right_operation => $output_connector,
-            right_property => 'final_result' 
-        );
+        #$link = $workflow->add_link(
+        #    left_operation => $upload_op,
+        #    left_property => 'result',
+        #    right_operation => $output_connector,
+        #    right_property => 'final_result' 
+        #);
     }
     else {
-        my $link = $workflow->add_link(
-            left_operation => $converge_op,
-            left_property => 'result',
-            right_operation => $output_connector,
-            right_property => 'final_result' 
-        );
+        #my $link = $workflow->add_link(
+        #    left_operation => $converge_op,
+        #    left_property => 'result',
+        #    right_operation => $output_connector,
+        #    right_property => 'final_result' 
+        #);
     }
 
     return $workflow;
