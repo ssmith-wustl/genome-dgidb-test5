@@ -7,7 +7,7 @@ use Genome;
 
 class Genome::Model::View::Solr::Xml {
     is => 'Genome::View::Solr::Xml',
-    has => [
+    has_field => [
         type => {
             is => 'Text',
             calculate_from => ['subject'],

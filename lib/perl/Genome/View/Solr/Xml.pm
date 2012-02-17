@@ -10,21 +10,57 @@ use MIME::Base64;
 class Genome::View::Solr::Xml {
     is => 'UR::Object::View::Default::Xml',
     is_abstract => 1,
+    attributes_have => [
+        is_field => {
+            is => 'Boolean',
+            default_value => 0,
+        },
+        field_name => {
+            is => 'Text',
+            default_value => '',
+        },
+    ],
     has => [
         _doc    => {
             is_transient => 1,
             doc => 'the WebService::Solr::Document object used to generate this view'
         },
     ],
-    has_constant => [
-        perspective => {
-            value => 'solr',
-        },
+    has_field => [
         type => {
             is_abstract => 1,
             is => 'Text',
             doc => 'The type represented by the document as referred to in Solr--override this in subclasses'
-        }
+        },
+        subject_class => {
+            is => 'Text',
+            via => 'subject',
+            to => 'class',
+            field_name => 'class',
+        },
+        old_solr_id => {
+            is => 'Text',
+            field_name => 'id',
+            calculate => q| $self->_generate_id_field_data |,
+        },
+        subject_title => {
+            is => 'Text',
+            field_name => 'title',
+            calculate => q| $self->_generate_title_field_data |,
+        },
+        timestamp => {
+            is => 'Text',
+            calculate => q| $self->_generate_timestamp_field_data |,
+        },
+        object_id => {
+            is => 'Text',
+            calculate => q| $self->_generate_object_id_field_data |,
+        },
+    ],
+    has_constant => [
+        perspective => {
+            value => 'solr',
+        },
     ],
     doc => 'The base class for creating the XML document that Solr indexes for an object.'
 };
@@ -71,98 +107,95 @@ sub content_doc {
     return $self->_doc;
 }
 
+sub _generate_fields {
+    my $self = shift;
+    my @fields;
+    my $super_content = $self->SUPER::_generate_content;
+    my @text_field_properties = $self->__meta__->properties(is_field => 1, data_type => 'Text');
+    for my $text_field_property (@text_field_properties) {
+        my $key = ($text_field_property->field_name || $text_field_property->property_name);
+        my $property_name = $text_field_property->property_name;
+        my $value = $self->$property_name || '';
+        push @fields, [$key, $value];
+    }
+    my @aspect_sets = $self->aspects(-group_by => 'position');
+    for my $aspect_set (@aspect_sets) {
+        my @aspects = $aspect_set->members;
+        my $key = $aspects[0]->position;
+        my @values;
+        for my $aspect (@aspects) {
+            if ($aspect->delegate_view && $aspect->delegate_view->isa('Genome::View::Solr::Xml')) {
+                my $prefix = $aspect->name;
+                my @child_fields = $aspect->delegate_view->_generate_fields;
+                for my $child_field (@child_fields) {
+                    my ($child_key, $child_value) = @$child_field;
+                    push @fields, [$child_key, $child_value, $prefix];
+                }
+            } else {
+                my $aspect_content = $self->_generate_content_for_aspect($aspect);
+                my $value = $aspect_content->findvalue('value') || die;
+                push @values, $value;
+            }
+        }
+        my $value = join(' ', @values);
+        push @fields, [$key, $value];
+    }
+    return @fields;
+}
+
 sub _generate_content {
     my $self = shift;
 
     my $subject = $self->subject;
     return unless $subject;
 
-    my @fields = ();
+    my @fields = $self->_generate_fields;
 
-    #Make it easy to override some or all of the fields in subclasses.
+    my @schema_fields = qw(
+        id
+        idAnalyzed
+        object_id
+        class
+        type
+        title
+        content
+        display_title
+        display_type
+        display_icon_url
+        display_url0
+        display_label1
+        display_url1
+        display_label2
+        display_url2
+        display_label3
+        display_url3
+        word
+        timestamp
+    );
+    my @excluded_content_keys = grep { $_ ne 'content' } @schema_fields;
+    my @content_values;
+    my @solr_fields;
+    for my $field (@fields) {
+        my ($key, $value, $prefix) = @$field;
+        my $prefixed_key = ($prefix ? join('_', $prefix, $key) : $key);
 
-    my $class = $self->_generate_class_field_data;
-    my $title = $self->_generate_title_field_data;
-    my $id =    $self->_generate_id_field_data;
-    my $timestamp = $self->_generate_timestamp_field_data;
-    my $content = $self->_generate_content_field_data;
-    my $type = $self->_generate_type_field_data;
-    my $object_id = $self->_generate_object_id_field_data;
+        unless (grep { $prefixed_key eq $_ } @schema_fields) {
+            unless (grep { $key =~ /^$_$/ } @excluded_content_keys) {
+                push @content_values, "$key:$value"; # dynamic fields are not yet searchable so pump into content field
+            }
+            $key .= "_t"; # required for dynamic fields. later should add solr_type attribute to map to non-text
+        }
 
-    push @fields, WebService::Solr::Field->new( class => $class );
-    push @fields, WebService::Solr::Field->new( title => $title );
-    push @fields, WebService::Solr::Field->new( id => $id );
-    push @fields, WebService::Solr::Field->new( timestamp => $timestamp );
-    push @fields, WebService::Solr::Field->new( content => $content );
-    push @fields, WebService::Solr::Field->new( type => $type );
-    push @fields, WebService::Solr::Field->new( object_id => $object_id);
-
-
-    my @dyn_fields = $self->_generate_dynamic_fields();
-    if (@dyn_fields) {
-        push @fields, @dyn_fields;
+        if ($key =~ /^content$/) {
+            push @content_values, "$prefixed_key:$value";
+        } else {
+            push @solr_fields, WebService::Solr::Field->new($prefixed_key => $value);
+        }
     }
+    push @solr_fields, WebService::Solr::Field->new(content => join(' ', @content_values));
 
-
-    # WARNING! There exists code in Genome::Search that is trying to reuse objects;
-    # when it does so, calling $self->property() doesnt work out so well since $self is
-    # the old object that is being reused and property() gets you the OLD property
-    # ...turning the recycling off for now
-
-
-    # required to display result
-    push @fields, WebService::Solr::Field->new( display_title => $self->_generate_display_title_field_data() );
-    push @fields, WebService::Solr::Field->new( display_type  => $self->display_type() );
-    push @fields, WebService::Solr::Field->new( display_icon_url  => $self->display_icon_url() );
-
-    # optional to display result
-    # notice there is no display_content? plan is to generate "display_content" with highlighted area that matched
-    push @fields, WebService::Solr::Field->new( display_url0  => $self->display_url0() );
-
-    if ($self->display_label1 && $self->display_url1) {
-        push @fields, WebService::Solr::Field->new( display_label1 => $self->display_label1() );
-        push @fields, WebService::Solr::Field->new( display_url1   => $self->display_url1() );
-    }
-
-    if ($self->display_label2 && $self->display_url2) {
-        push @fields, WebService::Solr::Field->new( display_label2 => $self->display_label2() );
-        push @fields, WebService::Solr::Field->new( display_url2   => $self->display_url2() );
-    }
-
-    if ($self->display_label3 && $self->display_url3) {
-        push @fields, WebService::Solr::Field->new( display_label3 => $self->display_label3() );
-        push @fields, WebService::Solr::Field->new( display_url3   => $self->display_url3() );
-    }
-
-
-    $self->_doc( WebService::Solr::Document->new(@fields) );
+    $self->_doc( WebService::Solr::Document->new(@solr_fields) );
     return $self->_doc->to_xml;
-}
-
-
-sub _generate_display_title_field_data {
-
-    my ($self) = @_;
-    my $subject = $self->subject;
-
-    my @aspects = $self->aspects;
-    my @display_title_aspects = grep($_->position eq 'display_title', @aspects);
-    die "TWO display_title properties are defined in xml for solr submitting" if @display_title_aspects > 1;
-    if(@display_title_aspects){
-        my $method = $display_title_aspects[0]->name();
-        my $display_title = $subject->$method();
-        return $display_title;
-    } else {
-        return $self->display_title;
-    }
-}
-
-
-sub _generate_class_field_data {
-    my $self = shift;
-    my $subject = $self->subject;
-
-    return $subject->class;
 }
 
 sub _generate_title_field_data {
@@ -266,57 +299,6 @@ sub _generate_timestamp_field_data {
     }
 
     return $timestamp;
-}
-
-sub _generate_content_field_data {
-    my $self = shift;
-    my $subject = $self->subject;
-
-    my @aspects = $self->aspects;
-    my @content_aspects = grep($_->position eq 'content', @aspects);
-
-    my @content;
-
-    if(scalar @content_aspects) {
-        for my $aspect (@content_aspects) {
-            #Use the text view as we don't want result wrapped in <aspect> tag, so skip up the hierarchy past XML to text
-            my $value = $self->UR::Object::View::Default::Text::_generate_content_for_aspect($aspect);
-            $value = '' unless defined $value; #Not useful for indexing, but will add an extra space in case anyone cares.
-
-            push @content, $value;
-        }
-    }
-
-    my $content = join("\n", @content);
-
-    $content ||= $subject->id;
-
-    return $content;
-}
-
-sub _generate_type_field_data {
-    my $self = shift;
-    my $subject = $self->subject;
-
-    return $self->type;
-}
-
-sub _generate_dynamic_fields {
-    
-    my ($self) = @_;
-    my @fields;
-
-    if (! $self->can("dynamic_fields") ) {
-        return;
-    }
-
-    my $dyn_field = $self->dynamic_fields();
-   
-    for my $key (keys %$dyn_field) {
-        push @fields, WebService::Solr::Field->new( $key => $dyn_field->{$key} );
-    }
-
-    return @fields;
 }
 
 1;

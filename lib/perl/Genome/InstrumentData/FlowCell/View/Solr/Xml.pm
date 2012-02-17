@@ -7,7 +7,7 @@ use Genome;
 
 class Genome::InstrumentData::FlowCell::View::Solr::Xml {
     is => 'Genome::View::Solr::Xml',
-    has => [
+    has_field => [
         type => {
             is => 'Text',
             default => 'illumina_run'
