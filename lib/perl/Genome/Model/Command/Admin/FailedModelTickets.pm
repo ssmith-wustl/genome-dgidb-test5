@@ -91,7 +91,7 @@ sub execute {
             my $content = $transaction->content;
             for my $model_id ( keys %models_and_builds ) {
                 my $build_id = $models_and_builds{$model_id}->id;
-                next if $content !~ /$model_id/ or $content !~ /$build_id/;
+                next if $content !~ /$model_id/ and $content !~ /$build_id/;
                 delete $models_and_builds{$model_id};
                 push @{$tickets{$ticket_id.' '.$ticket->subject}}, $model_id;
             }

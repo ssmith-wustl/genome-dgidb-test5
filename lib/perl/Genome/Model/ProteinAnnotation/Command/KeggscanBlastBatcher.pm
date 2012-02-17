@@ -1,4 +1,4 @@
-package Genome::Model::ProteinAnnotation::Commmand::KeggscanBlastBatcher;
+package Genome::Model::ProteinAnnotation::Command::KeggscanBlastBatcher;
 
 # bdericks: This module was originally written by Todd Wylie and named 
 # BladeBlastBatcher_lowmemory_LSF. As of August 27, 2010, the original
@@ -14,7 +14,7 @@ use PP::JobScheduler;
 use Benchmark;
 use Carp 'confess';
 
-class Genome::Model::ProteinAnnotation::Commmand::KeggscanBlastBatcher {
+class Genome::Model::ProteinAnnotation::Command::KeggscanBlastBatcher {
     is => 'Command::V2',
     has => [
         query_fasta_path => {
@@ -227,7 +227,7 @@ This module was written to help developers who wish to smash a large FASTA file 
 
 To perform a simple call from a perl script:
 
-  my @reports = &Genome::Model::ProteinAnnotation::Commmand::KeggscanBlastBatcher->execute(
+  my @reports = &Genome::Model::ProteinAnnotation::Command::KeggscanBlastBatcher->execute(
                           query        => $query,
                           subject      => $revised_subject,
                           queue        => "compbio\@qblade",
