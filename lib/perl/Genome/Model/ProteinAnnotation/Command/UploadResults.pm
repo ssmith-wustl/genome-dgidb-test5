@@ -25,6 +25,11 @@ class Genome::Model::ProteinAnnotation::Command::UploadResults {
             doc => 'array of Bio::Seq::Feature' ,
             is_input => 1,
         },
+        upload_complete => {
+            is => 'Boolean',
+            is_output => 1,
+            doc => 'true when upload is complete',
+        },
         lsf_queue => { is_param => 1, default_value => 'long' ,},
         lsf_resource => {is_param => 1, default_value => 'rusage[tmp=100]',},
     ],
@@ -246,9 +251,8 @@ sub execute {
     $feature_adp->commit();
     $seq_adp->commit();
 
+    $self->upload_complete(1);
     return 1;
-
 }
-
 
 1;

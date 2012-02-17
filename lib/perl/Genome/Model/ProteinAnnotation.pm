@@ -193,7 +193,7 @@ sub _resolve_workflow_for_build {
     my $workflow = Workflow::Model->create(
         name => $build->workflow_name,
         input_properties => [ keys %inputs ],
-        output_properties => ['all features'],
+        output_properties => [ 'all features', ($build->biosql_namespace ? ('upload_complete') : ()) ],
     );
     $workflow->log_dir($build->log_directory);
     my $input_connector = $workflow->get_input_connector;
@@ -372,20 +372,18 @@ sub _resolve_workflow_for_build {
             right_property => 'bio_seq_features' 
         );
 
-        #$link = $workflow->add_link(
-        #    left_operation => $upload_op,
-        #    left_property => 'result',
-        #    right_operation => $output_connector,
-        #    right_property => 'final_result' 
-        #);
+        $link = $workflow->add_link(
+            left_operation => $upload_op,
+            left_property => 'upload_complete',
+            right_operation => $output_connector,
+            right_property => 'upload_complete' 
+        );
+        
+        #TODO: after upload, dump to acedb
     }
     else {
-        #my $link = $workflow->add_link(
-        #    left_operation => $converge_op,
-        #    left_property => 'result',
-        #    right_operation => $output_connector,
-        #    right_property => 'final_result' 
-        #);
+        # skip upload
+        # TODO: go straight to acedb
     }
 
     return $workflow;
