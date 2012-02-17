@@ -106,3 +106,6 @@
 [submodule "vendor/ensembl"]
 	path = vendor/ensembl
 	url = git@github.com:genome-vendor/ensembl.git
+[submodule "vendor/CummeRbund"]
+	path = vendor/CummeRbund
+	url = git@github.com:genome-vendor/CummeRbund.git
