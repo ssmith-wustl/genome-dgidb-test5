@@ -129,8 +129,7 @@ sub _generate_fields {
                 my @child_fields = $aspect->delegate_view->_generate_fields;
                 for my $child_field (@child_fields) {
                     my ($child_key, $child_value) = @$child_field;
-                    $child_key = join('_', $prefix, $child_key);
-                    push @fields, [$child_key, $child_value];
+                    push @fields, [$child_key, $child_value, $prefix];
                 }
             } else {
                 my $aspect_content = $self->_generate_content_for_aspect($aspect);
@@ -173,20 +172,24 @@ sub _generate_content {
         word
         timestamp
     );
+    my @excluded_content_keys = grep { $_ ne 'content' } @schema_fields;
     my @content_values;
     my @solr_fields;
     for my $field (@fields) {
-        my ($key, $value) = @$field;
+        my ($key, $value, $prefix) = @$field;
+        my $prefixed_key = ($prefix ? join('_', $prefix, $key) : $key);
 
-        unless (grep { $key eq $_ } @schema_fields) {
-            push @content_values, "$key:$value"; # dynamic fields are not yet searchable so pump into content field
+        unless (grep { $prefixed_key eq $_ } @schema_fields) {
+            unless (grep { $key =~ /^$_$/ } @excluded_content_keys) {
+                push @content_values, "$key:$value"; # dynamic fields are not yet searchable so pump into content field
+            }
             $key .= "_t"; # required for dynamic fields. later should add solr_type attribute to map to non-text
         }
 
-        if ($key =~ /\bcontent$/) {
-            push @content_values, "$key: $value";
+        if ($key =~ /^content$/) {
+            push @content_values, "$prefixed_key:$value";
         } else {
-            push @solr_fields, WebService::Solr::Field->new($key => $value);
+            push @solr_fields, WebService::Solr::Field->new($prefixed_key => $value);
         }
     }
     push @solr_fields, WebService::Solr::Field->new(content => join(' ', @content_values));
