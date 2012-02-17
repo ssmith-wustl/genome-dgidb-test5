@@ -28,7 +28,7 @@ sub execute {
     my $self = shift;
 
     my $count = 0;
-    my $maf_path = $self->build->data_directory."/.final.maf";
+    my $maf_path = $self->build->data_directory."/final.maf";
     my $out = Genome::Sys->open_file_for_writing($maf_path);
     #Print header line once
     my $header_printed = 0;

@@ -648,7 +648,7 @@ sub readcount_program {
     my $self = shift;
     my $reference = $self->reference;
 #    return "bam-readcount0.3 -f $reference";
-    return "/gscuser/dlarson/src/genome/bam-readcount/bin/bam-readcount -f $reference";
+    return "bam-readcount -f $reference";
 }
 
 

@@ -119,7 +119,7 @@ sub execute {
 
     $self->status_message("Using BladeBlastBatcher to schedule blast jobs.");
 
-    my $blast_batcher = Genome::Model::ProteinAnnotation::Commmand::KeggscanBlastBatcher->create(
+    my $blast_batcher = Genome::Model::ProteinAnnotation::Command::KeggscanBlastBatcher->create(
 	    query_fasta_path => $self->query_fasta_path,
 		subject_fasta_path => $revised_subject, 
         lsf_queue => $self->blast_lsf_queue,   
