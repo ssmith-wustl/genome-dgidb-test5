@@ -122,6 +122,9 @@ sub _generate_fields {
     for my $aspect_set (@aspect_sets) {
         my @aspects = $aspect_set->members;
         my $key = $aspects[0]->position;
+        if ($key eq 'timestamp') { # timestamp is also a property that uses this aspect to calculate
+            next;
+        }
         my @values;
         for my $aspect (@aspects) {
             if ($aspect->delegate_view && $aspect->delegate_view->isa('Genome::View::Solr::Xml')) {
