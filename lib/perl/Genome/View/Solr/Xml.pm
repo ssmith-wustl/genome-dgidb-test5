@@ -133,8 +133,18 @@ sub _generate_fields {
                 }
             } else {
                 my $aspect_content = $self->_generate_content_for_aspect($aspect);
-                my $value = $aspect_content->findvalue('value') || die;
-                push @values, $value;
+                my $node_list = $aspect_content->find('value');
+                if ($node_list->isa('XML::LibXML::NodeList')) {
+                    while (my $node = $node_list->shift) {
+                        push @values, $node->to_literal;
+                    }
+                } else {
+                    my $value = $aspect_content->findvalue('value');
+                    if (not defined $value) {
+                        die "$key has an undefined value and no delegate view";
+                    }
+                    push @values, $value;
+                }
             }
         }
         my $value = join(' ', @values);
