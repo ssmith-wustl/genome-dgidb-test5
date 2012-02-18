@@ -138,6 +138,9 @@ sub _generate_fields {
                 my $aspect_content = $self->_generate_content_for_aspect($aspect);
                 my $node_list = $aspect_content->find('value');
                 if ($node_list->isa('XML::LibXML::NodeList')) {
+                    if ($key eq 'content') {
+                        push @values, $aspect->name . ':';
+                    }
                     while (my $node = $node_list->shift) {
                         push @values, $node->to_literal;
                     }
@@ -199,8 +202,8 @@ sub _generate_content {
             $key .= "_t"; # required for dynamic fields. later should add solr_type attribute to map to non-text
         }
 
-        if ($key =~ /^content$/) {
-            push @content_values, "$prefixed_key:$value";
+        if ($key eq 'content') { # building up a single content field
+            push @content_values, $value;
         } else {
             push @solr_fields, WebService::Solr::Field->new($prefixed_key => $value);
         }
