@@ -76,7 +76,7 @@ class Genome::ModelGroup::View::Solr::Xml {
                 {
                     name => 'models',
                     perspective => 'default',
-                    toolkit => 'text',
+                    toolkit => 'xml',
                     aspects => [
                         'id',
                         'name',

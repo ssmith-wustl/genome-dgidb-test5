@@ -35,7 +35,7 @@ class Genome::WorkOrder::View::Solr::Xml {
                     name => 'project',
                     position => 'content',
                     perspective => 'default',
-                    toolkit => 'text',
+                    toolkit => 'xml',
                     aspects => [
                         'id',
                         'name',

@@ -54,7 +54,7 @@ class Genome::PopulationGroup::View::Solr::Xml {
                     name => 'members',
                     position => 'content',
                     perspective => 'default',
-                    toolkit => 'text',
+                    toolkit => 'xml',
                     aspects => [ 'name' ]
                 },
                 {

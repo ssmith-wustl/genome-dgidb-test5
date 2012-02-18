@@ -131,7 +131,7 @@ class Genome::Model::View::Solr::Xml {
                     name => 'processing_profile',
                     position => 'content',
                     perspective => 'default',
-                    toolkit => 'text',
+                    toolkit => 'xml',
                     aspects => [
                         'id',
                         'name'
