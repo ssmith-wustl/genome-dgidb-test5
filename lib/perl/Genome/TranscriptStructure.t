@@ -12,3 +12,5 @@ use above "Genome";
 use Test::More;
 
 use_ok('Genome::TranscriptStructure');
+
+done_testing;

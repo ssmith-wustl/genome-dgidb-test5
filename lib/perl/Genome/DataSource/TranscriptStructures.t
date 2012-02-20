@@ -13,3 +13,5 @@ use Test::More;
 
 use_ok('Genome::DataSource::TranscriptStructures');
 
+done_testing;
+
