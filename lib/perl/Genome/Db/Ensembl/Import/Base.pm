@@ -334,7 +334,9 @@ sub create_flanking_sub_structures_and_introns {
 
     my $left_flank_structure_stop = $a[0]->structure_start - 1;
     my $left_flank_structure_start = $a[0]->structure_start - 50000;
-    my $left_flank = Genome::TranscriptSubStructure->create(
+    my $left_flank = $self->_create_transcript_structure(
+        transcript => $transcript,
+        chrom_name => $transcript->chrom_name,
         transcript_structure_id => $$tss_id_ref,
         transcript_id => $transcript->transcript_id,
         structure_type => 'flank',
@@ -350,7 +352,9 @@ sub create_flanking_sub_structures_and_introns {
 
     my $right_flank_structure_start = $a[-1]->structure_stop + 1;
     my $right_flank_structure_stop = $a[-1]->structure_stop + 50000;
-    my $right_flank = Genome::TranscriptSubStructure->create(
+    my $right_flank = $self->_create_transcript_structure(
+        transcript => $transcript,
+        chrom_name => $transcript->chrom_name,
         transcript_structure_id => $$tss_id_ref,
         transcript_id => $transcript->transcript_id,
         structure_type => 'flank',
@@ -379,7 +383,9 @@ sub create_flanking_sub_structures_and_introns {
         if ( $right_structure_start > $left_structure_stop + 1 ){
             my $intron_start = $left_structure_stop+1;
             my $intron_stop = $right_structure_start-1;
-            my $intron = Genome::TranscriptSubStructure->create(
+            my $intron = $self->_create_transcript_structure(
+                transcript => $transcript,
+                chrom_name => $transcript->chrom_name,
                 transcript_structure_id => $$tss_id_ref,
                 transcript_id => $transcript->transcript_id,
                 structure_type => 'intron',
@@ -397,6 +403,16 @@ sub create_flanking_sub_structures_and_introns {
     }
     $self->assign_ordinality($transcript->strand, \@introns);
     return ($left_flank, $right_flank, @introns);
+}
+
+#Convenience method to tag on all of the transcript fields
+sub _create_transcript_structure {
+    my ($self,%params) = @_;
+    my $transcript = delete $params{transcript};
+
+    map {if ($transcript->$_) {my $param_name = 'transcript_'.$_; $params{$param_name} = $transcript->$_}} qw/transcript_id gene_id transcript_start transcript_stop transcript_name transcript_status strand chrom_name species source version gene_name transcript_error coding_region_start coding_region_stop amino_acid_length/;
+
+    return Genome::TranscriptStructure->create(%params);
 }
 
 sub write_log_entry{
@@ -444,11 +460,10 @@ sub dump_sub_structures{
     }elsif ($committed == 0){
         $dump_fh->print("PRE COMMIT UR CACHE INFO:\n");
     }
-    my %hash = ( 'Genome::TranscriptSubStructure' => scalar(keys %{$UR::Context::all_objects_loaded->{'Genome::TranscriptSubStructure'}}) );
-    my @ss_keys = keys %{$UR::Context::all_objects_loaded->{'Genome::TranscriptSubStructure'}};
+    my %hash = ( 'Genome::TranscriptStructure' => scalar(keys %{$UR::Context::all_objects_loaded->{'Genome::TranscriptStructure'}}) );
+    my @ss_keys = keys %{$UR::Context::all_objects_loaded->{'Genome::TranscriptStructure'}};
 
-    my @ss_sample = map { $UR::Context::all_objects_loaded->{'Genome::TranscriptSubStructure'}->{$_}} @ss_keys[0..4];
-    #my @ss_sample = map { $UR::Context::all_objects_loaded->{'Genome::TranscriptSubStructure'}->{$_}} @{keys %{$UR::Context::all_objects_loaded->{'Genome::TranscriptSubStructure'}}}[0..4];
+    my @ss_sample = map { $UR::Context::all_objects_loaded->{'Genome::TranscriptStructure'}->{$_}} @ss_keys[0..4];
     my $objects_loaded = $UR::Context::all_objects_cache_size;
     $dump_fh->print("all_objects_cache_size: $objects_loaded\n");
     $dump_fh->print(Dumper \%hash);
