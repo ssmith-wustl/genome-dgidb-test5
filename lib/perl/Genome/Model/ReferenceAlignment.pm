@@ -404,6 +404,20 @@ sub default_lane_qc_model_name_for_instrument_data {
     return $model_name;
 }
 
+sub default_lane_qc_model_for_instrument_data {
+    my $class           = shift;
+    my @instrument_data = @_;
+
+    my @lane_qc_models;
+    for my $instrument_data (@instrument_data) {
+        my $lane_qc_model_name = $class->default_lane_qc_model_name_for_instrument_data($instrument_data);
+        my $lane_qc_model = Genome::Model::ReferenceAlignment->get(name => $lane_qc_model_name);
+        push @lane_qc_models, $lane_qc_model if $lane_qc_model;
+    }
+
+    return @lane_qc_models;
+}
+
 sub qc_processing_profile_id {
     my $self = shift;
     my %arg  = @_;
