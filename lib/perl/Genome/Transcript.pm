@@ -60,7 +60,7 @@ class Genome::Transcript {
             #is_constant => 1,
             calculate_from => [qw/ id  data_directory/],
             calculate => q|
-            Genome::TranscriptSubStructure->get(transcript_id => $id, data_directory => $data_directory);
+            Genome::TranscriptStructure->get(transcript_id => $id, data_directory => $data_directory);
             |,
         },
         protein => { 

@@ -87,7 +87,7 @@ sub execute {
         $transcript_window->iterator(undef);
         $transcript_window->delete();
         $fh->close;
-        for my $class (qw/Genome::Transcript Genome::Gene Genome::TranscriptSubStructure/) {
+        for my $class (qw/Genome::Transcript Genome::Gene Genome::TranscriptStructure/) {
             my @o = $class->is_loaded;
             for my $o (@o) {
                 $o->unload();
