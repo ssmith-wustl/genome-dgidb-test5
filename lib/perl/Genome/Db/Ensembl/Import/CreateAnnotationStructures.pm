@@ -399,7 +399,7 @@ sub execute
             Genome::Gene->unload;
             Genome::Transcript->unload;
             Genome::ExternalGeneId->unload;
-            Genome::TranscriptSubStructure->unload;
+            Genome::TranscriptStructure->unload;
             Genome::Protein->unload;
             Genome::TranscriptCodingSequence->unload;
 
