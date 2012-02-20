@@ -404,17 +404,19 @@ sub default_lane_qc_model_name_for_instrument_data {
     return $model_name;
 }
 
-
 sub qc_processing_profile_id {
     my $self = shift;
-    my $type = shift;
+    my %arg  = @_;
 
-    my $ra_id = (ref $self ? $self->processing_profile_id : $self);
-    unless ($type) {
-        $type = ($self->target_region_set_name ? 'capture' : 'wgs');
-    }
+    my $parent_pp_id = delete $arg{parent_pp_id} || $self->processing_profile_id;
+    my $type         = delete $arg{type}         || $self->qc_type_for_target_region_set_name($self->target_region_set_name);
 
-    my $qc_pp_id = { # Map alignment processing profile to lane QC version
+    my $qc_pp_id = $self->qc_processing_profile_id_hashref;
+    return $qc_pp_id->{ $type }{ $parent_pp_id };
+}
+
+sub qc_processing_profile_id_hashref {
+    return { # Map alignment processing profile to lane QC version
         'wgs' => {
             2635769 => '2653572', # Nov 2011 Default Reference Alignment
             2644306 => '2653579', # Nov 2011 Default Reference Alignment (PCGP)
@@ -434,9 +436,14 @@ sub qc_processing_profile_id {
             2586039 => '2684690', # Mar 2011 Default Reference Alignment (PCGP Untrimmed)
         },
     };
-
-    return $qc_pp_id->{ $type }{ $ra_id };
 }
+
+sub qc_type_for_target_region_set_name {
+    my $class = shift;
+    my $target_region_set_name = shift;
+    return ($target_region_set_name ? 'capture' : 'wgs');
+}
+
 
 # FIXME This needs to be renamed/refactored. The method name does not accurately describe what
 # this method actually does.
