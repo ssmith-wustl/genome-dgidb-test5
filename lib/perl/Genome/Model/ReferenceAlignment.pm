@@ -418,17 +418,6 @@ sub default_lane_qc_model_for_instrument_data {
     return @lane_qc_models;
 }
 
-sub qc_processing_profile_id {
-    my $self = shift;
-    my %arg  = @_;
-
-    my $parent_pp_id = delete $arg{parent_pp_id} || $self->processing_profile_id;
-    my $type         = delete $arg{type}         || $self->qc_type_for_target_region_set_name($self->target_region_set_name);
-
-    my $qc_pp_id = $self->qc_processing_profile_id_hashref;
-    return $qc_pp_id->{ $type }{ $parent_pp_id };
-}
-
 sub qc_processing_profile_id_hashref {
     return { # Map alignment processing profile to lane QC version
         'wgs' => {
@@ -452,12 +441,22 @@ sub qc_processing_profile_id_hashref {
     };
 }
 
+sub qc_processing_profile_id {
+    my $self = shift;
+    my %arg  = @_;
+
+    my $parent_pp_id = delete $arg{parent_pp_id} || $self->processing_profile_id;
+    my $type         = delete $arg{type}         || $self->qc_type_for_target_region_set_name($self->target_region_set_name);
+
+    my $qc_pp_id = $self->qc_processing_profile_id_hashref;
+    return $qc_pp_id->{ $type }{ $parent_pp_id };
+}
+
 sub qc_type_for_target_region_set_name {
     my $class = shift;
     my $target_region_set_name = shift;
     return ($target_region_set_name ? 'capture' : 'wgs');
 }
-
 
 # FIXME This needs to be renamed/refactored. The method name does not accurately describe what
 # this method actually does.
