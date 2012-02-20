@@ -58,9 +58,9 @@ class Genome::Transcript {
         },
         sub_structures => { 
             #is_constant => 1,
-            calculate_from => [qw/ id  data_directory/],
+            calculate_from => [qw/ id  data_directory chrom_name/],
             calculate => q|
-            Genome::TranscriptStructure->get(transcript_id => $id, data_directory => $data_directory);
+            Genome::TranscriptStructure->get(chrom_name => $chrom_name, transcript_id => $id, data_directory => $data_directory);
             |,
         },
         protein => { 
