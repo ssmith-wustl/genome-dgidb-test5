@@ -53,4 +53,3 @@ my $build = Genome::Model::Build->get($build_id);
 my $path = $build->get_sequence_dictionary('sam','human','1.29');
 
 ok(-e $path, 'get sequence dictionary returned valid path');
-

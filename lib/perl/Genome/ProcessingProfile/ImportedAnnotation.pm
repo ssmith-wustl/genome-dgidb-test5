@@ -64,23 +64,69 @@ sub _execute_build{
         imported_annotation_build => $build,
     );
 
-    # #TODO: import interpro
-    # my $interpro_cmd = Genome::Model::Tools::Annotate::ImportInterpro::Run->exectue(
-        # reference_transcripts => join('/', $model->name, $version),
-        # interpro_version => $self->interpro_version, #TODO: update processing profiles
-        # log_file => join('/', $data_directory, 'interpro_log'),
-    # );
-    # $interpro_cmd->execute;
+    my $interpro_cmd = Genome::Model::Tools::Annotate::ImportInterpro::Run->execute(
+        reference_transcripts => join('/', $model->name, $version),
+        interpro_version => $self->interpro_version, #TODO: update processing profiles
+        log_file => join('/', $data_directory, 'interpro_log'),
+    );
+    $interpro_cmd->execute;
 
-    # #TODO: update the annotation data to Tony's format using the 2 scripts
-    # #TODO: generate tiering files?   
+    my $cmd;
+    my $annotation_directory = $build->_annotation_data_directory;
+    my $bitmasks_directory = $annotation_directory."/tiering_bitmasks";
+    unless ( -d $bitmasks_directory) {
+        Genome::Sys->create_directory($bitmasks_directory);
+        unless (-d $bitmasks_directory) {
+            $self->error_message("Failed to create new build dir: " . $bitmasks_directory);
+            return;
+        }
+    }
+    my $bed_directory = $annotation_directory."/tiering_bed_files_v3";
+    unless ( -d $bed_directory) {
+        Genome::Sys->create_directory($bed_directory);
+        unless (-d $bed_directory) {
+            $self->error_message("Failed to create new build dir: " . $bed_directory);
+            return;
+        }
+    }
+    my $species_name = $build->species_name;
+    if ($species_name eq 'human') {
+        $cmd = Genome::Model::Tools::FastTier::MakeTierBitmasks->create(
+            output_directory => $annotation_directory."/tiering_bitmasks",
+            reference_sequence => $build->reference_sequence->fasta_file,
+            transcript_version => $build->version,
+            annotation_model => $build->model,
+            ucsc_directory => $build->reference_sequence->get_or_create_ucsc_tiering_directory, #TODO
+        );
+    }
+    elsif ($species_name eq 'mouse') {
+        $cmd = Genome::Model::Tools::FastTier::MakeMouseBitmasks->create(
+            output_directory => $annotation_directory."/tiering_bitmasks",
+            reference_sequence => $build->reference_sequence->fasta_file,
+        );
+    }
 
-    # #TODO: get the RibosomalGeneNames.txt into the annotation_data_directory
-    # #generate the rna seq files
-    # $self->generate_rna_seq_files($build);
+    if ($species_name eq 'human' or $species_name eq 'mouse') {
+        $cmd->execute;
+        foreach my $file ($cmd->tier1_output, $cmd->tier2_output, $cmd->tier3_output, $cmd->tier4_output) {
+            my $bed_name = $file;
+            $bed_name =~ s/tiering_bitmasks/tiering_bed_files_v3/;
+            $bed_name =~ s/bitmask/bed/;
+            my $convert_cmd = Genome::Model::Tools::FastTier::BitmaskToBed->create(
+                output_file => $bed_name,
+                bitmask => $file,
+            );
+        }
+    }
 
-    # #Make ROI FeatureList
-    # $build->get_or_create_roi_bed;
+    my $ucsc_directory = $annotation_directory."/ucsc_conservation";
+    Genome::Sys->create_symlink($ucsc_directory, $build->reference_sequence->get_or_create_ucsc_conservation_directory); 
+
+    #generate the rna seq files
+    $self->generate_rna_seq_files($build);
+
+    #Make ROI FeatureList
+    $build->get_or_create_roi_bed;
 
     return 1;
 }
