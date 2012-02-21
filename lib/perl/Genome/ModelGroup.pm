@@ -106,7 +106,7 @@ sub rename {
 
     my @model_groups = Genome::ModelGroup->get(name => $new_name);
     if ( @model_groups ) {
-        $self->error_message("Failed to rename model group (".$self->id.") from ".$self->name." to $new_name because one the nwe name already exists.");
+        $self->error_message("Failed to rename model group (".$self->id.") from ".$self->name." to $new_name because one the new name already exists.");
         return;
     }
 
