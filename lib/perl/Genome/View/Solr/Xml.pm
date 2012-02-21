@@ -199,7 +199,7 @@ sub _generate_content {
             unless (grep { $key =~ /^$_$/ } @excluded_content_keys) {
                 push @content_values, "$key:$value"; # dynamic fields are not yet searchable so pump into content field
             }
-            $key .= "_t"; # required for dynamic fields. later should add solr_type attribute to map to non-text
+            $prefixed_key .= "_t"; # required for dynamic fields. later should add solr_type attribute to map to non-text
         }
 
         if ($key eq 'content') { # building up a single content field
