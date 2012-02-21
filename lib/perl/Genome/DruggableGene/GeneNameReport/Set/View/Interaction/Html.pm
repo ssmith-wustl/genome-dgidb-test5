@@ -28,7 +28,7 @@ sub _get_xml_view {
         no_interaction_genes => [$self->no_interaction_genes],
         interactions => [$self->interactions],
         filtered_out_interactions => [$self->filtered_out_interactions],
-        identifier_to_genes=> [$self->identifier_to_genes],
+        identifier_to_genes=> $self->identifier_to_genes,
         subject => $self->subject,
     );
 }
