@@ -4,6 +4,7 @@ use strict;
 use warnings;
 use Genome;
 use List::MoreUtils qw/ uniq /;
+use Set::Scalar;
 
 class Genome::DruggableGene::Command::GeneNameReport::LookupInteractions {
     is => 'Genome::Command::Base',
@@ -43,6 +44,25 @@ class Genome::DruggableGene::Command::GeneNameReport::LookupInteractions {
             is_many => 1,
             doc => 'Save output for caller',
         },
+        no_match_genes => {
+            is_many => 1,
+            is => 'Text',
+        },
+        no_interaction_genes => {
+            is_many => 1,
+            is => 'Genome::DruggableGene::GeneNameReport',
+        },
+        filtered_out_interactions => {
+            is_many => 1,
+            is => 'Genome::DruggableGene::GeneNameReport',
+        },
+        interactions => {
+            is_many => 1,
+            is => 'Genome::DruggableGene::DrugGeneInteractionReport',
+        },
+        identifier_to_genes => {
+            is => 'HASH',
+        },
     ],
 };
 
@@ -61,11 +81,19 @@ sub execute {
     my @gene_identifiers;
     @gene_identifiers = $self->_read_gene_file();
     @gene_identifiers = $self->gene_identifiers unless @gene_identifiers;
-    die $self->error_message('No genes found') unless @gene_identifiers;
-    my @gene_name_reports = $self->lookup_gene_identifiers(@gene_identifiers);
-    my @interactions = $self->get_interactions(@gene_name_reports);
-    my %grouped_interactions = $self->group_interactions_by_drug_name_report(@interactions);
+    unless(@gene_identifiers){
+        $self->output($self->error_message('No genes found'));
+        return;
+    }
+    my ($unmatched_genes, @gene_name_reports) = $self->lookup_gene_identifiers(@gene_identifiers);
+    my ($no_interaction_genes, $filtered_out_interactions, $interactions) = $self->get_interactions(@gene_name_reports);
+    my %grouped_interactions = $self->group_interactions_by_drug_name_report(@$interactions);
     $self->print_grouped_interactions(%grouped_interactions);
+
+    $self->no_match_genes($unmatched_genes);
+    $self->no_interaction_genes([@$no_interaction_genes]);
+    $self->filtered_out_interactions([@$filtered_out_interactions]);
+    $self->interactions([@$interactions]);
 
     return 1;
 }
@@ -74,8 +102,9 @@ sub lookup_gene_identifiers {
     my $self = shift;
     my @gene_identifiers = @_;
 
-    my ($entrez_gene_name_reports, $entrez_gene_name_intermediate_reports) = Genome::DruggableGene::GeneNameReport->convert_to_entrez(@gene_identifiers);
+    my ($entrez_gene_name_reports, $entrez_gene_name_intermediate_reports, @unmatched_gene_identifiers) = Genome::DruggableGene::GeneNameReport->convert_to_entrez(@gene_identifiers);
     my %gene_name_reports = $self->_find_gene_name_reports_for_identifiers(@gene_identifiers);
+    $self->identifier_to_genes(\%gene_name_reports);
 
     my @complete_genes;
     for my $gene_identifier (@gene_identifiers){
@@ -87,7 +116,7 @@ sub lookup_gene_identifiers {
         push @complete_genes, @$gene_name_reports_for_identifier if $gene_name_reports_for_identifier;
     }
 
-    return uniq @complete_genes;
+    return \@unmatched_gene_identifiers, uniq @complete_genes;
 }
 
 sub _find_gene_name_reports_for_identifiers {
@@ -115,18 +144,33 @@ sub _find_gene_name_reports_for_identifiers {
 
 sub get_interactions {
     my $self = shift;
-    my @gene_name_reports = @_;
+    my $gene_name_reports = Set::Scalar->new(@_);
 
-    my @gene_ids = map($_->id, @gene_name_reports);
+    my @gene_ids = map($_->id, @$gene_name_reports);
     @gene_ids = uniq @gene_ids;
-    my @unfiltered_interactions = Genome::DruggableGene::DrugGeneInteractionReport->get($self->_chunk_in_clause_list('Genome::DruggableGene::DrugGeneInteractionReport', 'gene_id', '', @gene_ids));
-    my @drug_ids = map($_->drug_id, @unfiltered_interactions);
+    my $unfiltered_interactions = Set::Scalar->new (
+        Genome::DruggableGene::DrugGeneInteractionReport->get(
+            $self->_chunk_in_clause_list('Genome::DruggableGene::DrugGeneInteractionReport', 'gene_id', '', @gene_ids)
+        )
+    );
+
+    my $genes_in_unfiltered_interactions = Set::Scalar->new(map{$_->gene}@$unfiltered_interactions);
+    my $no_interaction_genes = $gene_name_reports - $genes_in_unfiltered_interactions;
+
+    my @drug_ids = map($_->drug_id, @$unfiltered_interactions);
     Genome::DruggableGene::DrugNameReport->get(\@drug_ids);
     Genome::DruggableGene::DrugCategoryReport->get($self->_chunk_in_clause_list('Genome::DruggableGene::DrugCategoryReport', 'drug_id', '', @drug_ids));
-    Genome::DruggableGene::DrugGeneInteractionReportAttribute->get($self->_chunk_in_clause_list('Genome::DruggableGene::DrugGeneInteractionReportAttribute', 'interaction_id',  '', map($_->id, @unfiltered_interactions)));
+    Genome::DruggableGene::DrugGeneInteractionReportAttribute->get( $self->_chunk_in_clause_list( 'Genome::DruggableGene::DrugGeneInteractionReportAttribute', 'interaction_id', '', map($_->id, @$unfiltered_interactions)));
 
-    my $bool_expr = $self->_chunk_in_clause_list('Genome::DruggableGene::DrugGeneInteractionReport', 'gene_id', $self->filter, @gene_ids);
-    return Genome::DruggableGene::DrugGeneInteractionReport->get($bool_expr);
+    my $interactions = Set::Scalar->new(
+        Genome::DruggableGene::DrugGeneInteractionReport->get(
+            $self->_chunk_in_clause_list('Genome::DruggableGene::DrugGeneInteractionReport', 'gene_id', $self->filter, @gene_ids)
+        )
+    );
+
+    my $filtered_out_interactions = $unfiltered_interactions - $interactions;
+
+    return $no_interaction_genes, $filtered_out_interactions, $interactions;
 }
 
 sub group_interactions_by_drug_name_report {
@@ -252,7 +296,7 @@ sub _chunk_in_clause_list{
 
     my ($boolexpr, %extra) = UR::BoolExpr->resolve_for_string(
         $target_class,
-        '(' . join(' or ', map($property_name . (scalar(@$_) > 1 ? ':' : '=') . join('/', map('"' . $_ . '"', @$_)), @chunked_values)) . ')' 
+        '(' . join(' or ', map($property_name . (scalar(@$_) > 1 ? ':' : '=') . join('/', map('"' . $_ . '"', @$_)), @chunked_values)) . ')'
         . ($filter ? ' and ' . $filter : '')
         ,
     );
