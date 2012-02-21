@@ -48,7 +48,10 @@ class Genome::DruggableGene::Command::GeneNameReport::LookupInteractions {
 
 sub help_brief { 'Lookup drug-gene interactions by gene identifiers' }
 
-sub help_synopsis { help_brief() }
+sub help_synopsis { 
+    "genome druggable-gene gene-name-report lookup-interactions --gene-file ./gene_file.txt --filter 'drug.is_withdrawn=0,drug.is_nutraceutical=0,is_potentiator=0,is_untyped=0,drug.is_antineoplastic=1,gene.is_kinase=0'"
+
+}
 
 sub help_detail { help_brief() }
 
