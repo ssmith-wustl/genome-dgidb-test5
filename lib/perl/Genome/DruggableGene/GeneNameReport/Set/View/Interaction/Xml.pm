@@ -5,7 +5,6 @@ use warnings;
 use Genome;
 use Data::Dumper;
 use XML::LibXML;
-use Data::Printer;
 
 class Genome::DruggableGene::GeneNameReport::Set::View::Interaction::Xml {
     is => 'Genome::View::Status::Xml',
