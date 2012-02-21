@@ -161,6 +161,11 @@ sub _resolve_processing_profile {
     return;
 }
 
+# Set to true in subclasses if downstream triggering of builds should be enabled
+sub _should_trigger_downstream_builds {
+    return 0;
+}
+
 # Default string to be displayed, can be overridden in subclasses
 sub __display_name__ {
     my $self = shift;
@@ -195,7 +200,6 @@ sub create {
 
     return $self;
 }
-
 
 # Delete the model and all of its builds/inputs
 sub delete {
@@ -412,6 +416,38 @@ sub params_for_class {
     return @param_names;
 }
 
+# Called when a build of this model succeeds, requests builds for "downstream" models
+# (eg, models that have this model as an input)
+sub _trigger_downstream_builds {
+    my ($self, $build) = @_;
+    return 1 unless $self->_should_trigger_downstream_builds;
+
+    # TODO The observer has to go on build events because that's where build status is 
+    # currently stored. Once the status is stored directly on the build itself, the
+    # subject_class_name below should be changed to Genome::Model::Build, which should
+    # simplify any callbacks as well (since they wouldn't have to check if they are
+    # the master event of the build prior to doing anything).
+    my @observers = UR::Observer->get(
+        subject_class_name => 'Genome::Model::Event::Build',
+        aspect => 'event_status',
+        note => 'build_success',
+    );
+
+    # Only perform this default behavior if no observers for build_success exist for this type
+    unless (@observers) {
+        my @to_models = $self->to_models;
+        for my $model (@to_models) {
+            $model->build_requested(
+                1,
+                'build requested due to successful build ' . $build->id .
+                    ' of input model ' . $self->__display_name__
+            );
+        }
+    }
+
+    return 1;
+}
+
 # Ensures that processing profile is set. If not, an attempt is made to resolve one before exiting
 sub _validate_processing_profile {
     my $self = shift;
@@ -501,24 +537,6 @@ sub default_model_name {
     }
 
     return $name;
-}
-
-# TODO This should be removed once proper triggering is in place, see APIPE-1390 in Jira
-sub notify_input_build_success {
-    my $self = shift;
-    my $succeeded_build = shift;
-
-    if($self->auto_build_alignments) {
-        my @from_models = $self->from_models;
-        my @last_complete_builds = map($_->last_complete_build, @from_models);
-
-        #all input models have a succeeded build
-        if(scalar @from_models eq scalar @last_complete_builds) {
-            $self->build_requested(1, 'all input models are ready');
-        }
-    }
-
-    return 1;
 }
 
 # Ensures there are no other models of the same class that have the same name. If any are found, information

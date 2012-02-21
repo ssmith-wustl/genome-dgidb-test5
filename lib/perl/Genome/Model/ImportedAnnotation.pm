@@ -71,19 +71,6 @@ sub annotation_data_directory{
     return $build->determine_data_directory;
 }
 
-sub notify_input_build_success {
-    my $self = shift;
-    my $succeeded_build = shift;
-
-    #TODO We don't want to automatically build anything right now.
-    #In the future check for a completed build on the other input model(s)
-    #that match(es) the inputs to the one that just completed and thus
-    #trigger the running of the combined model.
-    #The preceding advice courtesy of jweible --TM
-
-    return 1;
-}
-
 sub annotation_build_for_reference {
     my ($class, $reference) = @_;
     my $build;
