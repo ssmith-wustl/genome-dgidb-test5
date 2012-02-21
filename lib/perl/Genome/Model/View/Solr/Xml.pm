@@ -7,7 +7,7 @@ use Genome;
 
 class Genome::Model::View::Solr::Xml {
     is => 'Genome::View::Solr::Xml',
-    has => [
+    has_field => [
         type => {
             is => 'Text',
             calculate_from => ['subject'],
@@ -131,7 +131,7 @@ class Genome::Model::View::Solr::Xml {
                     name => 'processing_profile',
                     position => 'content',
                     perspective => 'default',
-                    toolkit => 'text',
+                    toolkit => 'xml',
                     aspects => [
                         'id',
                         'name'

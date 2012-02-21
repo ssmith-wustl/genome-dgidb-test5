@@ -27,7 +27,7 @@ class Genome::Db::Ensembl::Vep {
         format => {
             is => 'String',
             doc => 'The format of the input file, or guess to try to work out format',
-            valid_values => [qw(ensembl pileup vcf hgvs id guess)],
+            valid_values => [qw(ensembl pileup vcf hgvs id guess bed)],
         },
         output_file => {
             is => 'String',
@@ -123,6 +123,123 @@ EOS
 sub execute {
     my $self = shift;
 
+    my $format = $self->format;
+    my $input_file= $self->input_file;
+
+    # sanity check for ensembl input, since some of us are unable to 
+    # keep our zero and one-based annotation files straight, and VEP
+    # fails cryptically when given one-based indels
+    
+    if ($format eq "ensembl"){
+        my $inFh = IO::File->new( $self->input_file ) || die "can't open file\n";
+        while( my $line = $inFh->getline )
+        {
+            chomp($line);
+            my @F = split("\t",$line);
+            
+            #skip headers and blank lines
+            next if $line =~/^#/;
+            next if $line =~/^Chr/;
+            next if $line =~/^$/;
+
+
+            my @vars = split("/",$F[3]);
+            #check SNVs
+            if(($vars[0] =~ /^\w$/) && ($vars[1] =~ /^\w$/)){
+                unless ($F[1] == $F[2]){
+                    die ("ERROR: ensembl format is 1-based. this line appears to be 1-based\n$line\n")
+                }
+            }
+            #indel insertion
+            elsif(($vars[0] =~ /^-$/) && ($vars[1] =~ /\w+/)){
+                unless ($F[1] == $F[2]+1){
+                    die ("ERROR: This line doesn't appear to be a valid ensembl format indel:\n$line\n")
+                }
+            }
+            #indel deletion
+            elsif(($vars[0] =~ /\w+/) && ($vars[0] =~ /^-$/)){
+                unless ($F[1]+length($F[2])-1 == $F[1]){
+                    die ("ERROR: This line doesn't appear to be a valid ensembl format indel\n$line\n")
+                }
+            }
+            
+        }
+        close($inFh);
+    }
+
+    # If bed format is input, we do a conversion to ensembl format. This is necessary
+    # because ensembl has some weird conventions. (Most notably, an insertion is 
+    # represented by changing the start base to the end base + 1 and a deletion is represented by
+    # the numbers of the nucleotides of the bases being affected:
+    #
+    # 1  123  122  -/ACGT
+    # 1  978  980  ACT/-
+    
+    if ($format eq "bed"){
+        #create a tmp file for ensembl file
+        my ($tfh,$tmpfile) = Genome::Sys->create_temp_file;
+        unless($tfh) {
+            $self->error_message("Unable to create temporary file $!");
+            die;
+        }
+        open(OUTFILE,">$tmpfile") || die "can't open temp file for writing ($tmpfile)\n";
+
+        #convert the bed file
+        my $inFh = IO::File->new( $self->input_file ) || die "can't open file\n";
+        while( my $line = $inFh->getline ){
+            chomp($line);
+            my @F = split("\t",$line);
+            
+            #skip headers and blank lines
+            next if $line =~/^#/;
+            next if $line =~/^Chr/;
+            next if $line =~/^$/;
+
+            #accept ref/var alleles as either slash or tab sep (A/C or A\tC)
+            my @vars;
+            my @suffix;
+            if($F[3] =~ /\//){
+                @vars = split(/\//,$F[3]);
+                @suffix = @F[4..(@F-1)]
+            } else {
+                @vars = @F[3..4];
+                @suffix = @F[5..(@F-1)]
+            }
+            #check SNVs
+            if(($vars[0] =~ /^\w$/) && ($vars[1] =~ /^\w$/)){                
+                unless ($F[1] == $F[2]-1){
+                    die ("ERROR: bed format is 0-based. This line is not:\n$line\n")
+                }
+                $F[1]++
+            }
+            #indel insertion
+            elsif(($vars[0] =~ /^-$/) && ($vars[1] =~ /\w+/)){                
+                unless ($F[1] == $F[2]){
+                    die ("ERROR: bed format is 0-based. this line is not:\n$line\n")
+                }
+                #increment the start position 
+                $F[1]++;
+            }
+            #indel deletion
+            elsif(($vars[0] =~ /\w+/) && ($vars[1] =~ /^-$/)){                
+                unless ($F[1]+length($vars[0]) == $F[2]){
+                    die ("ERROR: bed format is 0-based. this line is not:\n$line\n")
+                }
+                #increment the start position
+                $F[1]++;
+            } else {
+                die ("This line is not a valid bed line:\n$line\n")
+            }
+            print OUTFILE join("\t",(@F[0..2],join("/",@vars),@suffix)) . "\n";
+        }
+        
+
+        $format = "ensembl";
+        $input_file = $tmpfile;
+        `cp $tmpfile /tmp/`;
+    }
+
+
     my $script_path = $VEP_SCRIPT_PATH.$self->{version}.".pl";
     my $string_args = "";
 
@@ -140,6 +257,11 @@ sub execute {
             defined($value) ? ("--".($name)." ".$value) : ()
         } @all_string_args
     );
+
+    #have to replace these arg, because it may have changed (from bed -> ensembl)
+    $string_args =~ s/--format (\w+)/--format $format/;
+    $string_args =~ s/--input_file ([^\s]+)/--input_file $input_file/;
+
     my $bool_args = "";
     $bool_args = join (' ',
         map {
@@ -155,52 +277,13 @@ sub execute {
     my $port_param = defined $ENV{GENOME_DB_ENSEMBL_PORT} ? "--port ".$ENV{GENOME_DB_ENSEMBL_PORT} : "";
 
 
-    # sanity check for ensembl input, since some of us are unable to 
-    # keep our zero and one-based annotation files straight, and VEP
-    # fails cryptically when given one-based indels
-    
-    if ($self->format eq "ensembl"){
-        my $inFh = IO::File->new( $self->input_file ) || die "can't open file\n";
-        while( my $line = $inFh->getline )
-        {
-            chomp($line);
-            my @F = split("\t",$line);
-            
-            #skip headers
-            next if $line =~/^#/;
-            next if $line =~/^Chr/;
-
-            my @vars = split("/",$F[3]);
-            #check SNVs
-            if(($vars[0] =~ /^\w$/) && ($vars[1] =~ /^\w$/)){
-                unless ($F[1] == $F[2]){
-                    die ("ERROR: ensembl format is 0-based. this line appears to be 1-based\n$line\n")
-                }
-            }
-            #indel insertion
-            elsif(($vars[0] =~ /^-$/) && ($vars[1] =~ /\w+/)){
-                unless ($F[1] == $F[2]){
-                    die ("ERROR: ensembl format is 0-based. this line appears to be 1-based\n$line\n")
-                }
-            }
-            #indel deletion
-            elsif(($vars[1] =~ /^-$/) && ($vars[0] =~ /\w+/)){
-                unless ($F[1]+length($F[2]) == $F[1]){
-                    die ("ERROR: ensembl format is 0-based. this line appears to be 1-based\n$line\n")
-                }
-            }
-            
-        }
-        close($inFh);
-    }
-
-
-
-
     my $cmd = "PERL5LIB=$ENSEMBL_API_PATH/ensembl-variation/modules:$ENSEMBL_API_PATH/ensembl/modules:$ENSEMBL_API_PATH/ensembl-functgenomics/modules:\$PERL5LIB perl $script_path $string_args $bool_args $host_param $user_param $password_param $port_param";
+    
+    print STDERR $cmd . "\n";
+
     Genome::Sys->shellcmd(
         cmd=>$cmd,
-        input_files => [$self->{input_file}],
+        input_files => [$input_file],
         output_files => [$self->{output_file}],
         skip_if_output_is_present => 0,
     );

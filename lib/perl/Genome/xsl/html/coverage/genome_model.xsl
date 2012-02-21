@@ -320,6 +320,8 @@
                 <xsl:sort select="@lane_count" order="ascending"/>
                 <tr>
                   <td>
+                    <xsl:attribute name="title"><xsl:value-of select="../@subject_name"/></xsl:attribute>
+
                     <xsl:if test="@result_id">
                       <xsl:call-template name="object_link_button_tiny">
                         <xsl:with-param name="icon" select="'sm-icon-extlink'"/>
@@ -330,7 +332,6 @@
                       <xsl:text> </xsl:text>
                     </xsl:if>
 
-                    <xsl:attribute name="title"><xsl:value-of select="../@subject_name"/></xsl:attribute>
                     <xsl:value-of select="@model_name"/> (<xsl:value-of select="@lane_count"/> lane<xsl:if test="@lane_count &gt; 1">s</xsl:if>)
                   </td>
                   <xsl:for-each select="minimum_depth">

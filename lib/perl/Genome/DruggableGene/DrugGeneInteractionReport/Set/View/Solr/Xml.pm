@@ -7,7 +7,7 @@ use Genome;
 
 class Genome::DruggableGene::DrugGeneInteractionReport::Set::View::Solr::Xml {
     is => 'Genome::View::Solr::Xml',
-    has => [
+    has_field => [
         type => {
             is => 'Text',
             default => 'drug-gene-interaction'
