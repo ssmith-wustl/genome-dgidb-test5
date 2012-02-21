@@ -342,7 +342,7 @@ sub _play_music_dependencies {
             $path_scan_operation => {
                 bam_list => [$create_bam_list_operation, 'bam_list'],
                 maf_file => [$create_maf_file_operation, 'maf_file'],
-                bmr => [$bmr_calc_bmr_operation, 'bmr'],
+                bmr => [$bmr_calc_bmr_operation, 'bmr_output'],
                 output_file => ['input connector', 'path_scan_output_file'],
             },
             $smg_operation => {
