@@ -6,8 +6,13 @@ package Genome::Model::SmallRna::Command::StatsGenerator;
 # FUNCTIONALITY FOR NORMALIZATION USING FLAGSTAT FILES
 	#a) added new parameter for taking in flagstat from 17-70 bp bam
 	#b) Other flagstat for the respective size-fraction will be intuitively determined
+	
+	
+# 2012-01-06 Tracking strandedness, changing headers
+# 2012-01-13 Make Normalization log transformed
+# 2012-01-13 Also added LSF params from the current version of StatsGen
+# 2012-02-20 Added error handling to ignore blank entries in cluster coverage
 
-## 11/7 Added LSF PARAMS as well as multiplication factor of 1million for normalization stats
 use strict;
 use warnings;
 
@@ -70,8 +75,10 @@ class Genome::Model::SmallRna::Command::StatsGenerator {
 
 		},
 	],
-
-    has_optional_param => [
+	
+	
+	
+	has_optional_param => [
         lsf_queue => {
             default_value => 'workflow',
         },
@@ -80,6 +87,10 @@ class Genome::Model::SmallRna::Command::StatsGenerator {
         },
     ],
 };
+
+	
+
+
 
 
 sub execute {
@@ -116,9 +127,9 @@ sub execute {
 	
 	my $index    =  Bio::DB::Bam->index_open($bamfile);
 	
-	my $output_cluster_bed = $self->output_clusters_file;
-    	my $output_cluster_fh = Genome::Sys->open_file_for_writing($output_cluster_bed);
-    	my $sub_output_fh = Genome::Sys->open_file_for_writing($sub_output);
+	my	$output_cluster_bed = $self->output_clusters_file;
+    my  $output_cluster_fh = Genome::Sys->open_file_for_writing($output_cluster_bed);
+    my 	$sub_output_fh = Genome::Sys->open_file_for_writing($sub_output);
     
     ###  SORTING CLUSTERS FROM CLUSTER-COVERAGE STATS FILE AND WRITING ENTRIES TO A NEW "SORTED" FILE##
     
@@ -145,8 +156,10 @@ sub execute {
 		"Avg Depth",
 		"Zenith Depth",
 		"Length of Raw Cluster",
-		"Normalization -17_70",
-		"Normalization -per bin",
+		"# Positive Strand",
+		"# Negative Strand",
+		"Log Normalization -17_70",
+		"Log Normalization -per bin",
 		"% Mismatches",
 		"ZeroMM",
 		"1MM",
@@ -165,8 +178,8 @@ sub execute {
 	my ( $bed_temp_fh, $bed_temp_name ) = Genome::Sys->create_temp_file();
 		
 	#####OPENING BAM FILE AND MATCHING TID TO CHR######
- 	my %chr_to_id;
-        my $bam           = Bio::DB::Bam->open($bamfile); 
+	my %chr_to_id;
+    	my $bam           = Bio::DB::Bam->open($bamfile); 
 	my $header        = $bam->header();                     # TODO : use the name ->tid method
 	my $name_arrayref = $header->target_name;
 
@@ -178,11 +191,11 @@ sub execute {
 		
 		
 	### READ "SORTED" CLUSTER-COVERAGE FILE LINE BY LINE###
-		
+	
 	 while (my $cov_line = $coverage_fh->getline) 
 	 {
 		chomp $cov_line;
-		if ($cov_line !~ /^name/)
+		if ($cov_line !~ /^name/ && $cov_line  =~ m/^\w+/)
 		{
 		
 		$i++;
@@ -194,7 +207,7 @@ sub execute {
 		my $zenith_depth = $cov_arr[5];
 		my @line_arr = split ("-", $id);
 		my $chrom_start = $line_arr[0];
-	   	$stop = $line_arr[1];
+	    $stop = $line_arr[1];
 		
 		my @name_arr = split (':', $chrom_start);
 		my $chr  = $name_arr[0];
@@ -205,10 +218,13 @@ sub execute {
 		
 		print $output_cluster_fh join("\t",$chr,$start,$stop,$name)."\n";  ### NEW BED FILE OF CLUSTERS - SORTED AND NAMED ###
 		
+		
 		my %count_of;
 		my $first_position_mm = 0;
 		my $CountZeroMapQ = 0;
-
+		my $positive_strand = 0;
+		my $negative_strand = 0;
+		
 		my %cluster_stats = (
 			base_quality    => Statistics::Descriptive::Sparse->new,  
 			mapping_quality => Statistics::Descriptive::Sparse->new,
@@ -217,13 +233,17 @@ sub execute {
 		my $lookup   = $chr_to_id{$chr};
 		
 		####FIRST CALLBACK SUB-ROUTINE FOR ALIGNMENT STATS###	
-			
+	   sub log_base {
+    					my ($base, $value) = @_;
+   				 		return log($value)/log($base);
+					}
+	   	
 		my $callback = sub {
-		my $alignment = shift;
-            	my $flag = $alignment->flag;
+			my $alignment = shift;
+            my $flag = $alignment->flag;
 			
-		#### LOOKING AT ONLY MAPPED ALIGNMENTS FOR ALIGNMENT STATISTICS #####	
-		if ($flag != 4) 		
+			#### LOOKING AT ONLY MAPPED ALIGNMENTS FOR ALIGNMENT STATISTICS #####	
+			if ($flag != 4) 		
 			{
 				$count_of{ $alignment->aux_get("XM") }++;
 				$cluster_stats{mismatches}->add_data( $alignment->aux_get("XM") );
@@ -239,6 +259,19 @@ sub execute {
 				
 				my $mm_position = $alignment->aux_get("MD");
 				my $strand 		= $alignment -> strand;
+				if ($strand eq '1')
+				{
+					$positive_strand++;
+				}
+				
+				 if ($strand eq '-1')
+				 {
+				 	
+				 	$negative_strand++;
+				 }
+				
+				
+				
 				if ($strand eq '1' && $mm_position =~ m/^0[ACTG](\d+)/) ###LOOKING AT 1st POSITION MM FOLLOWING BY >= 16bp MATCHES
 				{
 					my $i = $1;
@@ -265,18 +298,21 @@ sub execute {
 		my $mean_mapQ  = $cluster_stats{mapping_quality}->mean();
 		my $stdev_mapQ = $cluster_stats{mapping_quality}->standard_deviation();
 		my $mean_baseQ = $cluster_stats{base_quality}->mean();
-	    	my $total_alignments = $cluster_stats{mapping_quality}->count();
+	    my $total_alignments = $cluster_stats{mapping_quality}->count();
 	   
-	    	my $Percent_map_z = ($CountZeroMapQ / $total_alignments) * 100;
+	    my $Percent_map_z = ($CountZeroMapQ / $total_alignments) * 100;
 		my $Percent_map_z_rounded = sprintf("%.2f", $Percent_map_z);
 	   
 		my $min_mismatch     = $cluster_stats{mismatches}->min();
 		my $max_mismatch     = $cluster_stats{mismatches}->max();
 
-		my $normalization_17_70 = $zenith_depth/$flagstat_mapped_17_70; 
-		my $normalization_bin = $zenith_depth/$flagstat_mapped; 
+		my $normalization_17_70 	= ($zenith_depth/$flagstat_mapped_17_70) * 1000000 ; 
+		my $normalization_bin 		= ($zenith_depth/$flagstat_mapped) * 1000000 ; 
+		my $log_normalization_17_70 = log_base(2,$normalization_17_70);
+		my $log_normalization_bin 	= log_base(2,$normalization_bin );
 		
-		print $output_fh join("\t",$name,$chr,$start,$stop,$depth,$zenith_depth,$cluster_length,$normalization_17_70,$normalization_bin). "\t";
+		#print $name."\t"."Positive=".$positive_strand."\t"."Negative=".$negative_strand."\n";
+		print $output_fh join("\t",$name,$chr,$start,$stop,$depth,$zenith_depth,$cluster_length,$positive_strand,$negative_strand,$log_normalization_17_70,$log_normalization_bin). "\t";
 		
 		################## CALCULATING MISMATCH STATISTICS###
 		my $totalMM = 0;

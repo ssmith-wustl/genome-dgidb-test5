@@ -11,6 +11,16 @@ my $DEFAULT_MINIMUM_ZENITH = '1';
 my $DEFAULT_MINIMUM_DEPTH = '1';
 my $DEFAULT_OFFSET = 50_000_000;
 my $DEFAULT_MAXIMUM_DEPTH = 100_000_000;
+my @DEFAULT_STATS_HEADERS = qw/
+                                  name
+                                  mean
+                                  prms
+                                  med
+                                  min
+                                  max
+                                  adev
+                                  rms
+                              /;
 
 class Genome::Model::Tools::BioSamtools::ClusterCoverage {
     is => 'Genome::Model::Tools::BioSamtools',
@@ -80,17 +90,17 @@ sub execute {
     unless ($bed_fh) {
         die('Failed to open file for writing: '. $self->bed_file);
     }
-    my $stats_fh;
+    my $stats_writer;
     if ($self->stats_file) {
-        $stats_fh = Genome::Sys->open_file_for_writing($self->stats_file);
-        unless ($stats_fh) {
+        my $headers = $self->resolve_stats_headers;
+        $stats_writer = Genome::Utility::IO::SeparatedValueWriter->create(
+            output => $self->stats_file,
+            separator => "\t",
+            headers => $headers,
+        );
+        unless ($stats_writer) {
             die('Failed to open file for writing: '. $self->stats_file);
         }
-        print $stats_fh "name\tmean\tprms\tmed\tmin\tmax\tadev\trms";
-        if ($self->maximum_depth_position) {
-            print $stats_fh "\tmax_positions";
-        }
-        print $stats_fh "\n";
     }
     my $refcov_bam  = Genome::Model::Tools::RefCov::Bam->create(bam_file => $self->bam_file );
     unless ($refcov_bam) {
@@ -184,25 +194,24 @@ sub execute {
                         #Blunt end clusters: merge
                         $last_cluster->[1] = $first_cluster->[1];
                         #Merge the stats
-                        if ($stats_fh) {
+                        if ($stats_writer) {
                             my $last_pdl = $last_cluster->[2];
                             my $first_pdl = $first_cluster->[2];
                             $last_pdl->append($first_pdl);
                         }
                         shift(@clusters);
                     }
-                    $self->print_clusters($chr,\@previous_clusters,$bed_fh,$stats_fh);
+                    $self->print_clusters($chr,\@previous_clusters,$bed_fh,$stats_writer);
                 }
                 @previous_clusters = @clusters;
             }
             #print 'Finished: '. $chr ."\t". $start ."\t". scalar(@{$coverage}) ."\n";
         }
         #print 'Printing remaining clusters: '. scalar(@previous_clusters) ."\n";
-        $self->print_clusters($chr,\@previous_clusters,$bed_fh,$stats_fh);
+        $self->print_clusters($chr,\@previous_clusters,$bed_fh,$stats_writer);
         #print 'Finished: '. $chr ."\n";
     }
     $bed_fh->close;
-    $stats_fh->close;
     return 1;
 }
 
@@ -294,9 +303,10 @@ sub print_clusters {
     my $chr = shift;
     my $clusters = shift;
     my $bed_fh = shift;
-    my $stats_fh = shift;
+    my $stats_writer = shift;
 
     for my $cluster (@{$clusters}) {
+        my %data;
         my $start = $cluster->[0];
         my $end = $cluster->[1];
         my $pdl = $cluster->[2];
@@ -308,12 +318,17 @@ sub print_clusters {
 
         if ($max >= $self->minimum_zenith) {
             print $bed_fh $chr ."\t". $start ."\t". $end ."\t". $name ."\n";
-            if ($stats_fh) {
-                #if (defined($pdl)) {
-                print $stats_fh $name ."\t". $self->_round($mean) ."\t". $self->_round($prms) ."\t". $med ."\t". $min ."\t". $max ."\t". $self->_round($adev) ."\t". $self->_round($rms);
-                #} else {
-                #    print $stats_fh $name ."\t0\t0\t0\t0\t0\t0\t0\n";
-                #}
+            if ($stats_writer) {
+                %data = (
+                    name => $name,
+                    mean => $self->_round($mean),
+                    prms => $self->_round($prms),
+                    med => $med,
+                    min => $min,
+                    max => $max,
+                    adev => $self->_round($adev),
+                    rms => $self->_round($rms),
+                );
             }
         }
         if ($self->maximum_depth_position) {
@@ -329,11 +344,26 @@ sub print_clusters {
                 my $roi_position = $start + $pdl_position;
                 push @positions, $roi_position;
             }
-            print $stats_fh "\t". join(',',@positions);
+            if ($stats_writer) {
+                $data{max_positions} = join(',',@positions);
+            }
         }
-        print $stats_fh "\n";
+        if ($stats_writer) {
+            if ($data{name}) {
+                $stats_writer->write_one(\%data);
+            }
+        }
     }
     return 1;
+}
+
+sub resolve_stats_headers {
+    my $self = shift;
+    my @headers = @DEFAULT_STATS_HEADERS;
+    if ($self->maximum_depth_position) {
+        push @headers, 'max_positions';
+    }
+    return \@headers;
 }
 
 1;
