@@ -238,7 +238,7 @@ sub _match_as_uniprot_id {
         my @uniprot_reports_for_identifier = map($_->gene_name_report, @associations_for_identifier);
         @uniprot_reports_for_identifier = uniq @uniprot_reports_for_identifier;
         $intermediate_results_for_identifiers{$gene_identifier} = \@uniprot_reports_for_identifier;
-        my @temporary_identifiers = ( map{$_->name}@uniprot_reports_for_identifier, map{$_->alternate_name} grep{$_->nomenclature ne 'uniprot_id'} map{$_->gene_alt_names} @uniprot_reports_for_identifier);
+        my @temporary_identifiers = ( (map{$_->name}@uniprot_reports_for_identifier), map{$_->alternate_name} grep{$_->nomenclature ne 'uniprot_id'} map{$_->gene_alt_names} @uniprot_reports_for_identifier);
         my ($matched_temporary_identifiers) = $class->_match_as_entrez_gene_symbol(@temporary_identifiers);
         my @complete_reports_for_identifier = map(@{$matched_temporary_identifiers->{$_}}, keys %$matched_temporary_identifiers);
         @complete_reports_for_identifier = uniq @complete_reports_for_identifier;
