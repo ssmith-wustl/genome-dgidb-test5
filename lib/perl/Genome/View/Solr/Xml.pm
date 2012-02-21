@@ -122,7 +122,7 @@ sub _generate_fields {
     for my $aspect_set (@aspect_sets) {
         my @aspects = $aspect_set->members;
         my $key = $aspects[0]->position;
-        if ($key eq 'timestamp') { # timestamp is also a property that uses this aspect to calculate
+        if (grep { $key eq $_ } ('timestamp', 'title')) { # these are calculated and will have already inspected the aspect
             next;
         }
         my @values;
