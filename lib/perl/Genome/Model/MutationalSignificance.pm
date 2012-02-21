@@ -62,7 +62,7 @@ $self->warning_message('The logic for building a MuSiC model is not yet function
 
     my $workflow = Workflow::Model->create(
         name => $build->workflow_name,
-        input_properties => ['processors', 'pathway_file', 'gene_covg_dir','reference_sequence','reference_build','somatic_variation_builds','build','annotation_build','pfam_output_file','cosmic_omim_output_file',
+        input_properties => ['bam_list', 'processors', 'pathway_file', 'gene_covg_dir','reference_sequence','reference_build','somatic_variation_builds','build','annotation_build','pfam_output_file','cosmic_omim_output_file',
                              'clinical_correlation_output_file','mutation_relation_output_file','smg_output_file','path_scan_output_file','output_dir'],
         output_properties => ['smg_result','pathscan_result','mr_result','pfam_result','proximity_result',
                               'cosmic_result','cct_result'],
@@ -79,9 +79,9 @@ $self->warning_message('The logic for building a MuSiC model is not yet function
 
 
     #Merge MAF files
-    my $command_module = 'Genome::Model::MutationalSignificance::Command::PlayMusic';
+    my $command_module = 'Genome::Model::MutationalSignificance::Command::MergeMafFiles';
     my $merged_maf_operation = $workflow->add_operation(
-        name => Genome::Utility::Text::sanitize_string_for_filesystem(Genome::Utility::Text::camel_case_to_string($command_module)),
+        name => $self->_get_operation_name_for_module($command_module),
         operation_type => Workflow::OperationType::Command->create(
             command_class_name => $command_module,
         ),
@@ -91,7 +91,7 @@ $self->warning_message('The logic for building a MuSiC model is not yet function
  
     $command_module = 'Genome::Model::MutationalSignificance::Command::CreateMafFile';
     my $create_maf_operation = $workflow->add_operation(
-        name => Genome::Utility::Text::sanitize_string_for_filesystem(Genome::Utility::Text::camel_case_to_string($command_module)),
+        name => $self->_get_operation_name_for_module($command_module),
         operation_type => Workflow::OperationType::Command->create(
             command_class_name => $command_module,
         ),
@@ -132,7 +132,7 @@ $self->warning_message('The logic for building a MuSiC model is not yet function
     #Create ROI BED file
     $command_module = 'Genome::Model::MutationalSignificance::Command::CreateROI';
     my $roi_operation = $workflow->add_operation(
-        name => Genome::Utility::Text::sanitize_string_for_filesystem(Genome::Utility::Text::camel_case_to_string($command_module)),
+        name => $self->_get_operation_name_for_module($command_module),
         operation_type => Workflow::OperationType::Command->create(
             command_class_name => $command_module,
         )
@@ -144,11 +144,11 @@ $self->warning_message('The logic for building a MuSiC model is not yet function
         right_operation => $roi_operation,
         right_property => 'annotation_build',
     );
-
+=cut
     #Create clinical data file
     $command_module = 'Genome::Model::MutationalSignificance::Command::CreateClinicalData',
     my $clinical_data_operation = $workflow->add_operation(
-        name => Genome::Utility::Text::sanitize_string_for_filesystem(Genome::Utility::Text::camel_case_to_string($command_module)),
+        name => $self->_get_operation_name_for_module($command_module),
         operation_type => Workflow::OperationType::Command->create(
             command_class_name => $command_module,
         )
@@ -160,11 +160,11 @@ $self->warning_message('The logic for building a MuSiC model is not yet function
         right_operation => $clinical_data_operation,
         right_property => 'build',
     );
-
+=cut
     #Create BAM list
     $command_module = 'Genome::Model::MutationalSignificance::Command::CreateBamList';
     my $create_bam_list_operation = $workflow->add_operation(
-        name => Genome::Utility::Text::sanitize_string_for_filesystem(Genome::Utility::Text::camel_case_to_string($command_module)),
+        name => $self->_get_operation_name_for_module($command_module),
         operation_type => Workflow::OperationType::Command->create(
             command_class_name => $command_module,
         )
@@ -175,6 +175,13 @@ $self->warning_message('The logic for building a MuSiC model is not yet function
         left_property => 'somatic_variation_builds',
         right_operation => $create_bam_list_operation,
         right_property => 'somatic_variation_builds',
+    );
+
+    $link = $workflow->add_link(
+        left_operation => $input_connector,
+        left_property => 'bam_list',
+        right_operation => $create_bam_list_operation,
+        right_property => 'bam_list',
     );
 
     my @no_dependencies = ('Proximity', 'ClinicalCorrelation', 'CosmicOmim', 'Pfam');
@@ -188,49 +195,50 @@ $self->warning_message('The logic for building a MuSiC model is not yet function
     }
 
     $link = $workflow->add_link(
-        left_operation => $self->_get_operation_for_module('Genome::Model::Tools::Music::Proximity',
+        left_operation => $self->_get_operation_for_module_name($self->_get_operation_name_for_module('Genome::Model::Tools::Music::Proximity'),
                                                             $workflow),
         left_property => 'output_file',
         right_operation => $output_connector,
         right_property => 'proximity_result',
     );
     $link = $workflow->add_link(
-        left_operation => $self->_get_operation_for_module('Genome::Model::Tools::Music::Pfam',
+        left_operation => $self->_get_operation_for_module_name($self->_get_operation_name_for_module('Genome::Model::Tools::Music::Pfam'),
                                                             $workflow),
         left_property => 'output_file',
         right_operation => $output_connector,
         right_property => 'pfam_result',
     );
     $link = $workflow->add_link(
-        left_operation => $self->_get_operation_for_module('Genome::Model::Tools::Music::MutationRelation',
+        left_operation => $self->_get_operation_for_module_name($self->_get_operation_name_for_module('Genome::Model::Tools::Music::MutationRelation'),
                                                             $workflow),
         left_property => 'output_file',
         right_operation => $output_connector,
         right_property => 'mr_result',
     );
     $link = $workflow->add_link(
-        left_operation => $self->_get_operation_for_module('Genome::Model::Tools::Music::PathScan',
+        left_operation => $self->_get_operation_for_module_name($self->_get_operation_name_for_module('Genome::Model::Tools::Music::PathScan'),
                                                             $workflow),
         left_property => 'output_file',
         right_operation => $output_connector,
         right_property => 'pathscan_result',
     );
     $link = $workflow->add_link(
-        left_operation => $self->_get_operation_for_module('Genome::Model::Tools::Music::Smg',
+        left_operation => $self->_get_operation_for_module_name($self->_get_operation_name_for_module('Genome::Model::Tools::Music::Smg'),
                                                             $workflow),
         left_property => 'output_file',
         right_operation => $output_connector,
         right_property => 'smg_result',
     );
     $link = $workflow->add_link(
-        left_operation => $self->_get_operation_for_module('Genome::Model::Tools::Music::Cosmic',
+        left_operation => $self->_get_operation_for_module_name($self->_get_operation_name_for_module('Genome::Model::Tools::Music::CosmicOmim'),
                                                             $workflow),
         left_property => 'output_file',
         right_operation => $output_connector,
         right_property => 'cosmic_result',
     );
+
     $link = $workflow->add_link(
-        left_operation => $self->_get_operation_for_module('Genome::Model::Tools::Music::ClinicalCorrelation',
+        left_operation => $self->_get_operation_for_module_name($self->_get_operation_name_for_module('Genome::Model::Tools::Music::ClinicalCorrelation'),
                                                             $workflow),
         left_property => 'output_file',
         right_operation => $output_connector,
@@ -241,12 +249,17 @@ $self->warning_message('The logic for building a MuSiC model is not yet function
     return $workflow;
 }
 
-sub _get_operation_for_module {
+sub _get_operation_name_for_module {
     my $self = shift;
     my $command_name = shift;
+    return Genome::Utility::Text::sanitize_string_for_filesystem(Genome::Utility::Text::camel_case_to_string($command_name));
+}
+
+sub _get_operation_for_module_name {
+    my $self = shift;
+    my $operation_name = shift;
     my $workflow = shift;
 
-    my $operation_name = Genome::Utility::Text::sanitize_string_for_filesystem(Genome::Utility::Text::camel_case_to_string($command_name));
     foreach my $op ($workflow->operations) {
         if ($op->name eq $operation_name) {
             return $op;
@@ -263,19 +276,19 @@ sub _append_command_to_workflow {
     my $lsf_queue = shift;
     my $command_module = join('::', 'Genome::Model::Tools::Music', $command_name);
     my $command_meta = $command_module->__meta__;
+    my $operation_name = $self->_get_operation_name_for_module($command_module);
+    my $operation = $workflow->add_operation(
+        name => $operation_name,
+        operation_type => Workflow::OperationType::Command->create(
+        command_class_name => $command_module,
+        )
+    );
+        $operation->operation_type->lsf_queue($lsf_queue);
+        $operation->operation_type->lsf_project($lsf_project);
     my %links = $self->_play_music_dependencies;
     for my $property ($command_meta->_legacy_properties()) {
         next unless exists $property->{is_input} and $property->{is_input};
         my $property_name = $property->property_name;
-        my $operation_name = Genome::Utility::Text::sanitize_string_for_filesystem(Genome::Utility::Text::camel_case_to_string($command_module));
-        my $operation = $workflow->add_operation(
-            name => $operation_name,
-            operation_type => Workflow::OperationType::Command->create(
-            command_class_name => $command_module,
-            )
-        );
-        $operation->operation_type->lsf_queue($lsf_queue);
-        $operation->operation_type->lsf_project($lsf_project);
         my $property_def = $links{$operation_name}{$property_name};
         if (!$property_def) {
             if (grep {/^$property_name$/} @{$workflow->operation_type->input_properties}) {
@@ -286,7 +299,7 @@ sub _append_command_to_workflow {
             if (!$property->is_optional and not defined $property_def) {
                 die ("Non-optional property ".$property->property_name." is not provided\n");
             }
-            my $from_op = $self->_get_operation_for_module($property_def->[0], $workflow);
+            my $from_op = $self->_get_operation_for_module_name($property_def->[0], $workflow);
             if (!$from_op) {
                 print "looking for left operation ".$property_def->[0]."\n";
                 print "left property ".$property_def->[1]."\n";
@@ -309,60 +322,66 @@ sub _append_command_to_workflow {
 sub _play_music_dependencies {
     #If the input property doesn't come from directly from the input connector with the same name, specify it here
     my $self = shift;
-    my $create_bam_list_operation = Genome::Utility::Text::sanitize_string_for_filesystem(Genome::Utility::Text::camel_case_to_string('Genome::Model::MutationalSignificance::Command::CreateBamList'));
-    my $create_maf_file_operation = Genome::Utility::Text::sanitize_string_for_filesystem(Genome::Utility::Text::camel_case_to_string('Genome::Model::MutationalSignificance::Command::CreateMafFile'));
-    my $bmr_calc_bmr_operation = Genome::Utility::Text::sanitize_string_for_filesystem(Genome::Utility::Text::camel_case_to_string('Genome::Model::Tools::Music::Bmr::CalcBmr'));
-    my $bmr_calc_covg_operation = Genome::Utility::Text::sanitize_string_for_filesystem(Genome::Utility::Text::camel_case_to_string('Genome::Model::Tools::Music::Bmr::CalcCovg'));
-    my $smg_operation = Genome::Utility::Text::sanitize_string_for_filesystem(Genome::Utility::Text::camel_case_to_string('Genome::Model::Tools::Music::Smg'));
-    my $create_roi_operation = Genome::Utility::Text::sanitize_string_for_filesystem(Genome::Utility::Text::camel_case_to_string('Genome::Model::MutationalSignificance::Command::CreateROI'));
-    my $path_scan_operation = Genome::Utility::Text::sanitize_string_for_filesystem(Genome::Utility::Text::camel_case_to_string('Genome::Model::Tools::Music::PathScan'));
-    my $mutation_relation_operation = Genome::Utility::Text::sanitize_string_for_filesystem(Genome::Utility::Text::camel_case_to_string('Genome::Model::Tools::Music::MutationRelation'));
-    my $proximity_operation = Genome::Utility::Text::sanitize_string_for_filesystem(Genome::Utility::Text::camel_case_to_string('Genome::Model::Tools::Music::Proximity'));
-    my $clinical_correlation_operation = Genome::Utility::Text::sanitize_string_for_filesystem(Genome::Utility::Text::camel_case_to_string('Genome::Model::Tools::Music::ClinicalCorrelation'));
-    my $cosmic_omim_operation = Genome::Utility::Text::sanitize_string_for_filesystem(Genome::Utility::Text::camel_case_to_string('Genome::Model::Tools::Music::CosmicOmim'));
-    my $pfam_operation = Genome::Utility::Text::sanitize_string_for_filesystem(Genome::Utility::Text::camel_case_to_string('Genome::Model::Tools::Music::Pfam'));
+    my %operation_names = (
+        create_bam_list_operation => 'Genome::Model::MutationalSignificance::Command::CreateBamList',
+        create_maf_file_operation => 'Genome::Model::MutationalSignificance::Command::CreateMafFile',
+        merge_maf_files_operation => 'Genome::Model::MutationalSignificance::Command::MergeMafFiles',
+        create_clinical_data_operation => 'Genome::Model::MutationalSignificance::Command::CreateClinicalData',
+        bmr_calc_bmr_operation => 'Genome::Model::Tools::Music::Bmr::CalcBmr',
+        bmr_calc_covg_operation => 'Genome::Model::Tools::Music::Bmr::CalcCovg',
+        smg_operation => 'Genome::Model::Tools::Music::Smg',
+        create_roi_operation => 'Genome::Model::MutationalSignificance::Command::CreateROI',
+        path_scan_operation => 'Genome::Model::Tools::Music::PathScan',
+        mutation_relation_operation => 'Genome::Model::Tools::Music::MutationRelation',
+        proximity_operation => 'Genome::Model::Tools::Music::Proximity',
+        clinical_correlation_operation => 'Genome::Model::Tools::Music::ClinicalCorrelation',
+        cosmic_omim_operation => 'Genome::Model::Tools::Music::CosmicOmim',
+        pfam_operation => 'Genome::Model::Tools::Music::Pfam',
+    );
+    my %names = map {$_ => $self->_get_operation_name_for_module($operation_names{$_})} keys %operation_names;
     my %links = (
-            $path_scan_operation => {
-                bam_list => [$create_bam_list_operation, 'bam_list'],
-                maf_file => [$create_maf_file_operation, 'maf_file'],
-                bmr => [$bmr_calc_bmr_operation, 'bmr_output'],
+            $names{path_scan_operation} => {
+                bam_list => [$names{create_bam_list_operation}, 'bam_list'],
+                maf_file => [$names{merge_maf_files_operation}, 'maf_path'],
+                bmr => [$names{bmr_calc_bmr_operation}, 'bmr_output'],
                 output_file => ['input connector', 'path_scan_output_file'],
             },
-            $smg_operation => {
-                gene_mr_file => [$bmr_calc_bmr_operation, 'gene_mr_file'],
+            $names{smg_operation} => {
+                gene_mr_file => [$names{bmr_calc_bmr_operation}, 'gene_mr_file'],
                 output_file => ['input connector', 'smg_output_file'],
             },
-            $mutation_relation_operation => {
-                bam_list => [$create_bam_list_operation, 'bam_list'],
-                maf_file => [$create_maf_file_operation, 'maf_file'],
+            $names{mutation_relation_operation} => {
+                bam_list => [$names{create_bam_list_operation}, 'bam_list'],
+                maf_file => [$names{merge_maf_files_operation}, 'maf_path'],
                 output_file => ['input connector', 'mutation_relation_output_file'],
-                gene_list => [$smg_operation, 'output_file'],
+                gene_list => [$names{smg_operation}, 'output_file'],
             },
-            $bmr_calc_covg_operation => {
-                roi_file => [$create_roi_operation, 'roi_file'],
-                bam_list => [$create_bam_list_operation, 'bam_list'],
+            $names{bmr_calc_covg_operation} => {
+                roi_file => [$names{create_roi_operation}, 'roi_path'],
+                bam_list => [$names{create_bam_list_operation}, 'bam_list'],
             },
-            $bmr_calc_bmr_operation => {
-                roi_file => [$create_roi_operation, 'roi_file'],
-                bam_list => [$create_bam_list_operation, 'bam_list'],
-                maf_file => [$create_maf_file_operation, 'maf_file'],
-
+            $names{bmr_calc_bmr_operation} => {
+                roi_file => [$names{create_roi_operation}, 'roi_path'],
+                bam_list => [$names{create_bam_list_operation}, 'bam_list'],
+                maf_file => [$names{merge_maf_files_operation}, 'maf_path'],
+                output_dir => [$names{bmr_calc_covg_operation}, 'output_dir'], #TODO: modify to be more specific. 
             },
-            $proximity_operation => {
-                maf_file => [$create_maf_file_operation, 'maf_file'],
+            $names{proximity_operation} => {
+                maf_file => [$names{merge_maf_files_operation}, 'maf_path'],
             },
-            $clinical_correlation_operation => {
-                bam_list => [$create_bam_list_operation, 'bam_list'],
-                maf_file => [$create_maf_file_operation, 'maf_file'],
+            $names{clinical_correlation_operation} => {
+                bam_list => [$names{create_bam_list_operation}, 'bam_list'],
+                maf_file => [$names{merge_maf_files_operation}, 'maf_path'],
                 output_file => ['input connector', 'clinical_correlation_output_file'],
+                #numeric_clinical_data_file => [$names{create_clinical_data_operation}, 'clinical_data_file'],
             },
-            $cosmic_omim_operation => {
-                maf_file => [$create_maf_file_operation, 'maf_file'],
+            $names{cosmic_omim_operation} => {
+                maf_file => [$names{merge_maf_files_operation}, 'maf_path'],
                 output_file => ['input connector', 'cosmic_omim_output_file'],
 
             },
-            $pfam_operation => {
-                maf_file => [$create_maf_file_operation, 'maf_file'],
+            $names{pfam_operation} => {
+                maf_file => [$names{merge_maf_files_operation}, 'maf_path'],
                 output_file => ['input connector', 'pfam_output_file'],
             },
         ); 
@@ -393,6 +412,7 @@ sub _map_workflow_inputs {
     push @inputs, smg_output_file => $base_dir."/smg";
     push @inputs, path_scan_output_file => $base_dir."/path_scan";
     push @inputs, output_dir => $base_dir;
+    push @inputs, bam_list => $base_dir."/bam_list.txt";
 
     return @inputs;
 }
