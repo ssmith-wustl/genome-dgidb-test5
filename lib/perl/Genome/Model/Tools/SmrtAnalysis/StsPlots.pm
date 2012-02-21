@@ -33,12 +33,14 @@ sub execute {
     my $self = shift;
 
     my $csv_file = $self->csv_file;
+    $csv_file =~ s/ /\\ /g;
     my $pdf_file = $self->pdf_file;
-    my $cmd = 'Rscript '. $self->r_lib .'/stsPlots.R '. $csv_file .' '. $pdf_file;
+    $pdf_file =~ s/ /\\ /g;
+    my $cmd = 'Rscript '. $self->r_lib ."/stsPlots.R $csv_file $pdf_file";
     $self->shellcmd(
         cmd => $cmd,
-        input_files => [$csv_file],
-        output_files => [$pdf_file],
+        input_files => [$self->csv_file],
+        output_files => [$self->pdf_file],
         skip_if_output_is_present => 0,
     );
     return 1;

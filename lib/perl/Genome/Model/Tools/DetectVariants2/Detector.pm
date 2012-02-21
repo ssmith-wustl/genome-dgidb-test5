@@ -396,6 +396,9 @@ sub _sort_detector_output {
 sub params_for_detector_result {
     my $self = shift;
 
+    my @alignment_results = $self->alignment_results;
+    my @control_alignment_results = $self->control_alignment_results;
+
     my %params = (
         detector_name => $self->class,
         detector_params => $self->params,
@@ -406,8 +409,8 @@ sub params_for_detector_result {
         control_aligned_reads => $self->control_aligned_reads_input,
 
         #new
-        alignment_results => [map { $_->id } $self->alignment_results],
-        control_alignment_results => [map { $_->id } $self->control_alignment_results],
+        alignment_results => (@alignment_results? [map { $_->id } @alignment_results] : undef),
+        control_alignment_results => (@control_alignment_results? [map { $_->id } @control_alignment_results] : undef),
         pedigree_file_path => $self->pedigree_file_path,
         roi_list => $self->roi_list,
         roi_wingspan => $self->roi_wingspan,

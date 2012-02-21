@@ -21,7 +21,7 @@ sub help_brief {
 }
 
 sub help_synopsis {
-    'genome druggable-gene gene-name-report convert-to-entrez --gene-identifier ARK1D1';
+    'genome druggable-gene gene-name-report convert-to-entrez ARK1D1 ARK1E1';
 }
 
 sub help_detail { help_brief() }
