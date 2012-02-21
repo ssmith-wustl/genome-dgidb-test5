@@ -9,7 +9,7 @@ BEGIN {
     $ENV{UR_COMMAND_DUMP_STATUS_MESSAGES} = 1; #Give me the infos
 };
 
-use Test::More tests => 15;
+use Test::More tests => 12;
 
 use above 'Genome';
 

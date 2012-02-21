@@ -14,6 +14,7 @@ class Genome::ProcessingProfile::ImportedAnnotation{
         },
         interpro_version => {
             is_optional => 0,
+            default_value => 4.5,
             doc => 'Version of interpro used to import interpro results', 
         }
     ],
@@ -71,7 +72,7 @@ sub _execute_build{
     );
     $interpro_cmd->execute;
 
-    my $cmd;
+    my $tiering_cmd;
     my $annotation_directory = $build->_annotation_data_directory;
     my $bitmasks_directory = $annotation_directory."/tiering_bitmasks";
     unless ( -d $bitmasks_directory) {
@@ -89,9 +90,8 @@ sub _execute_build{
             return;
         }
     }
-    my $species_name = $build->species_name;
     if ($species_name eq 'human') {
-        $cmd = Genome::Model::Tools::FastTier::MakeTierBitmasks->create(
+        $tiering_cmd = Genome::Model::Tools::FastTier::MakeTierBitmasks->create(
             output_directory => $annotation_directory."/tiering_bitmasks",
             reference_sequence => $build->reference_sequence->fasta_file,
             transcript_version => $build->version,
@@ -100,15 +100,15 @@ sub _execute_build{
         );
     }
     elsif ($species_name eq 'mouse') {
-        $cmd = Genome::Model::Tools::FastTier::MakeMouseBitmasks->create(
+        $tiering_cmd = Genome::Model::Tools::FastTier::MakeMouseBitmasks->create(
             output_directory => $annotation_directory."/tiering_bitmasks",
             reference_sequence => $build->reference_sequence->fasta_file,
         );
     }
 
     if ($species_name eq 'human' or $species_name eq 'mouse') {
-        $cmd->execute;
-        foreach my $file ($cmd->tier1_output, $cmd->tier2_output, $cmd->tier3_output, $cmd->tier4_output) {
+        $tiering_cmd->execute;
+        foreach my $file ($tiering_cmd->tier1_output, $tiering_cmd->tier2_output, $tiering_cmd->tier3_output, $tiering_cmd->tier4_output) {
             my $bed_name = $file;
             $bed_name =~ s/tiering_bitmasks/tiering_bed_files_v3/;
             $bed_name =~ s/bitmask/bed/;
