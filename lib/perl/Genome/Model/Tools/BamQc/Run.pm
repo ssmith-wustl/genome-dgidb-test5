@@ -101,7 +101,7 @@ sub execute {
     my $file_basename = $self->output_directory .'/'. $bam_basename;
 
     my $bam_path = $file_basename .'.bam';
-    unless (-e $bam_path) {
+    unless (-l $bam_path || -e $bam_path) {
         unless (symlink($self->bam_file,$bam_path)) {
             die('Failed to create symlink '. $bam_path .' -> '. $self->bam_file);
         }
@@ -109,7 +109,7 @@ sub execute {
 
     # SAMTOOLS
     my $bai_path = $file_basename .'.bam.bai';
-    unless (-e $bai_path) {
+    unless (-l $bai_path || -e $bai_path) {
         my $bai_file = $self->bam_file .'.bai';
         if (-e $bai_file) {
             unless (symlink($bai_file,$bai_path)) {
