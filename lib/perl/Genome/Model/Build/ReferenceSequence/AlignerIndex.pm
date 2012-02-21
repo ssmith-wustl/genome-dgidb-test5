@@ -239,6 +239,8 @@ sub _prepare_reference_index {
         return;
     }
 
+    $self->_reallocate_disk_allocation;
+
     $self->status_message("Prepared alignment reference index!");
 
     return $self;
