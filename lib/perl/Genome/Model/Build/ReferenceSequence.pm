@@ -518,6 +518,8 @@ sub get_sequence_dictionary {
             return;
         }
 
+        $self->reallocate;
+
         return $path;
 
     }
