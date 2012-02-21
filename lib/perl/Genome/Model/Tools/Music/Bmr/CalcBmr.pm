@@ -32,6 +32,8 @@ class Genome::Model::Tools::Music::Bmr::CalcBmr {
   has_output => [
     bmr_output => { is => 'Text', doc => "TODO"
     },
+    gene_mr_file => { is => 'Text', doc => "TODO"
+    },
   ],
   doc => "Calculates mutation rates given per-gene coverage (from \"music bmr calc-covg\"), and a mutation list",
 };
@@ -190,6 +192,7 @@ sub execute {
   # Outputs of this script will be written to these locations in the output directory
   my $overall_bmr_file = "$output_dir/overall_bmrs";
   my $gene_mr_file = "$output_dir/gene_mrs";
+  $self->gene_mr_file($gene_mr_file);
 
   # Build a hash to quickly lookup the genes to be ignored for overall BMRs
   my %ignored_genes = ();
