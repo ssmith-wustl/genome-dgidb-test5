@@ -40,7 +40,6 @@ sub _generate_content {
 sub get_no_match_genes_node {
     my $self = shift;
     my $doc = $self->_xml_doc;
-
     my $no_match_genes = $doc->createElement("no_match_genes");
 
     for my $name ($self->no_match_genes){
@@ -55,18 +54,16 @@ sub get_no_match_genes_node {
 sub get_no_interaction_genes_node {
     my $self = shift;
     my $doc = $self->_xml_doc;
-
     my $no_interaction_genes= $doc->createElement("no_interaction_genes");
 
     for my $gene ($self->no_interaction_genes){
         my $item = $doc->createElement('item');
         my $line = $gene->name;
-        my %identifier_to_genes = %{$self->identifier_to_genes};
-        IDENTIFIER: for (my ($key, $value) = each %identifier_to_genes){
-            for my $g (@$value){ #array of genes
-                if($g == $gene){
-                    $line .= ' ( ' . $key . ' ) ';
-                    last IDENTIFIER;
+        IDENTIFIER: while (my ($identifier, $genes) = each %{$self->identifier_to_genes}){
+            for my $identified_gene (@$genes){
+                if($identified_gene == $gene){
+                    $line .= ' ( ' . $identifier . ' ) ';
+                    next IDENTIFIER;
                 }
             }
         }
@@ -80,12 +77,20 @@ sub get_no_interaction_genes_node {
 sub get_interactions_node {
     my $self = shift;
     my $doc = $self->_xml_doc;
-
     my $interactions= $doc->createElement("interactions");
 
     for my $interaction ($self->interactions){
         my $item = $doc->createElement('item');
-        $item->addChild($doc->createTextNode($interaction->__display_name__));
+        my $line = $interaction->__display_name__;
+        IDENTIFIER: while (my ($identifier, $genes) = each %{$self->identifier_to_genes}){
+            for my $identified_gene (@$genes){
+                if($identified_gene == $interaction->gene){
+                    $line .= ' ( ' . $identifier . ' ) ';
+                    next IDENTIFIER;
+                }
+            }
+        }
+        $item->addChild($doc->createTextNode($line));
         $interactions->addChild($item);
     }
 
@@ -95,12 +100,20 @@ sub get_interactions_node {
 sub get_filtered_out_interactions_node {
     my $self = shift;
     my $doc = $self->_xml_doc;
-
     my $filtered_out_interactions= $doc->createElement("filtered_out_interactions");
 
     for my $filtered_out_interaction ($self->filtered_out_interactions){
         my $item = $doc->createElement('item');
-        $item->addChild($doc->createTextNode($filtered_out_interaction->__display_name__));
+        my $line = $filtered_out_interaction->__display_name__;
+        IDENTIFIER: while (my ($identifier, $genes) = each %{$self->identifier_to_genes}){
+            for my $identified_gene (@$genes){
+                if($identified_gene == $filtered_out_interaction->gene){
+                    $line .= ' ( ' . $identifier . ' ) ';
+                    next IDENTIFIER;
+                }
+            }
+        }
+        $item->addChild($doc->createTextNode($line));
         $filtered_out_interactions->addChild($item);
     }
 
