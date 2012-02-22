@@ -32,16 +32,13 @@ class Genome::Model::Tools::Fastq::Split {
 };
 
 sub help_brief {
-    'Divide fastq into chunk by chunk_size'
+    return 'Split fastq into multiple fastqs each with --split-size sequences.'
 }
 
 
 sub help_detail {
-    return <<EOS
-    Divide the fastq file of multi-fastq into chunk by given chunk_size. --show-list option will show the file path of chunk file list.
-EOS
+    return 'Split fastq into multiple fastqs each with --split-size sequences.'
 }
-
 
 sub execute {
     my $self = shift;
