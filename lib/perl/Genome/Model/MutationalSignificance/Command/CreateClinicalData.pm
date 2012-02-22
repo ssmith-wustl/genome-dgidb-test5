@@ -7,12 +7,7 @@ use Genome;
 
 class Genome::Model::MutationalSignificance::Command::CreateClinicalData {
     is => ['Command::V2'],
-    has_input => [
-        build => {
-            is => 'Genome::Model::Build',
-        },
-    ],
-    has_output => [
+    has_input_output => [
         clinical_data_file => {
             is => 'String',
         },
