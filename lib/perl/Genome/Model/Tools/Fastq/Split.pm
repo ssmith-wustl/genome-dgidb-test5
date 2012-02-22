@@ -3,9 +3,10 @@ package Genome::Model::Tools::Fastq::Split;
 use strict;
 use warnings;
 
-use Genome;
-use Cwd;
-use File::Copy;
+require Cwd;
+require File::Basename;
+require File::Copy;
+require Genome;
 
 class Genome::Model::Tools::Fastq::Split {
     is  => 'Genome::Model::Tools::Fastq',
@@ -49,7 +50,7 @@ sub execute {
         die($self->error_message);
     }
 
-    my $cwd = getcwd;
+    my $cwd = Cwd::getcwd;
     my $tmp_dir = $self->output_directory or Genome::Sys->base_temp_directory;
     chdir($tmp_dir);
     my $cmd = 'split -l '. $self->sequences * 4 .' -a 5 -d '. $self->fastq_file .' '. $fastq_basename.'-';
@@ -70,7 +71,7 @@ sub execute {
     for my $tmp_fastq (@tmp_fastqs){
         my ($tmp_fastq_basename,$tmp_fastq_dirname) = File::Basename::fileparse($tmp_fastq);
         my $fastq_file = $output_dir .'/'. $tmp_fastq_basename . $fastq_suffix;
-        unless (move($tmp_fastq,$fastq_file,) ) {
+        unless (File::Copy::move($tmp_fastq,$fastq_file,) ) {
             die('Failed to move file '. $tmp_fastq .' to '. $fastq_file .":  $!");
         }
         push @fastq_files, $fastq_file;
