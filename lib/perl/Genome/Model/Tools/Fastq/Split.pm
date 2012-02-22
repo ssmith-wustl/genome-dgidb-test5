@@ -53,26 +53,26 @@ sub execute {
     $self->dump_status_messages($self->show_list);
 
     my @suffix = qw/\.txt \.fastq \.fq/;
-    my ($fastq_basename,$fastq_dirname,$fastq_suffix) = File::Basename::fileparse($self->fastq_file,@suffix);
+    my ($fastq_basename, $fastq_dirname, $fastq_suffix) = File::Basename::fileparse($self->fastq_file, @suffix);
     unless ($fastq_basename && $fastq_dirname && $fastq_suffix) {
-        die('Failed to parse fastq file name '. $self->fastq_file);
+        die('Failed to parse fastq file name ' . $self->fastq_file);
     }
     unless (Genome::Sys->validate_directory_for_read_write_access($fastq_dirname)) {
-        $self->error_message('Failed to validate directory '. $fastq_dirname ." for read/write access:  $!");
+        $self->error_message('Failed to validate directory ' . $fastq_dirname . " for read/write access:  $!");
         die($self->error_message);
     }
 
     my $cwd = Cwd::getcwd();
     my $tmp_dir = $self->output_directory or Genome::Sys->base_temp_directory;
     chdir($tmp_dir);
-    my $cmd = 'split -l '. $self->split_size * 4 .' -a 5 -d '. $self->fastq_file .' '. $fastq_basename.'-';
+    my $cmd = 'split -l ' . $self->split_size * 4 . ' -a 5 -d ' . $self->fastq_file . ' ' . $fastq_basename . '-';
     Genome::Sys->shellcmd(
-        cmd => $cmd,
+        cmd         => $cmd,
         input_files => [$self->fastq_file],
     );
     chdir($cwd);
     #If more than one lane processed in the same output_directory, this becomes a problem
-    my @tmp_fastqs = grep { $_ !~ /\.$fastq_suffix$/ } grep { /$fastq_basename-\d+$/ } glob($tmp_dir .'/'. $fastq_basename.'*');
+    my @tmp_fastqs = grep { $_ !~ /\.$fastq_suffix$/ } grep { /$fastq_basename-\d+$/ } glob($tmp_dir . '/' . $fastq_basename . '*');
 
     # User should provide a directory as input, then we can keep output fastqs on tmp
     # and distribute bfqs in a downstream process
@@ -81,9 +81,9 @@ sub execute {
 
     for my $tmp_fastq (@tmp_fastqs){
         my ($tmp_fastq_basename,$tmp_fastq_dirname) = File::Basename::fileparse($tmp_fastq);
-        my $fastq_file = $output_dir .'/'. $tmp_fastq_basename . $fastq_suffix;
+        my $fastq_file = $output_dir . '/' . $tmp_fastq_basename . $fastq_suffix;
         unless (File::Copy::move($tmp_fastq,$fastq_file,) ) {
-            die('Failed to move file '. $tmp_fastq .' to '. $fastq_file .":  $!");
+            die('Failed to move file ' . $tmp_fastq . ' to ' . $fastq_file . ":  $!");
         }
         $self->add_split_file($fastq_file);
     }
