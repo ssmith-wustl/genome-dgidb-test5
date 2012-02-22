@@ -19,11 +19,6 @@ class Genome::Model::Tools::Fastq::ToPhdballScf::Chunk {
             is  => 'Integer',
             doc => 'number of each chunk fastq',
         },
-    fast_mode => {
-        is => 'Boolean',
-        doc => 'avoid Bio perl slowness',
-        default_value => 1,
-    },
     ],
 };
 
@@ -60,31 +55,30 @@ sub execute {
             }
         }
     }
-    # add fast_mode to avoid Bio perl slowness
-    my $chunk = Genome::Model::Tools::Fastq::Chunk->create(
-        fastq_file => $self->fastq_file,
-        chunk_size => $self->chunk_size,
-        chunk_dir  => $ball_dir,
-    fast_mode  => $self->fast_mode,
+    my $fq_split_cmd = Genome::Model::Tools::Fastq::Split->create(
+        fastq_file       => $self->fastq_file,
+        split_size       => $self->chunk_size,
+        output_directory => $ball_dir,
     );
-    my $fq_chunk_files = $chunk->execute;
+    unless ($fq_split_cmd->execute) {
+        die $self->error_message("Failed to split fastq file.");
+    }
 
     my %jobs;
     my @ball_files;
-    my $fq_chunk_dir;
+    my $fq_split_dir = $fq_split_cmd->output_directory;
     my $bl_ct = 0;
 
-    for my $fq_chunk_file (@$fq_chunk_files) {
-        unless (-s $fq_chunk_file) {
-            $self->error_message("fastq chunk file: $fq_chunk_file not existing");
+    for my $fq_split_file ($fq_split_cmd->split_files) {
+        unless (-s $fq_split_file) {
+            $self->error_message("fastq split file: $fq_split_file not existing");
             return;
         }
-        $fq_chunk_dir = dirname $fq_chunk_file unless $fq_chunk_dir;
         $bl_ct++;
         my $ball_chunk_file = $ball_dir.'/phd.ball.'.$bl_ct;
         push @ball_files, $ball_chunk_file;
 
-        my $job = $self->_lsf_job($cmd, $fq_chunk_file, $ball_chunk_file);
+        my $job = $self->_lsf_job($cmd, $fq_split_file, $ball_chunk_file);
         $jobs{$bl_ct} = $job;
     }
 
@@ -115,7 +109,7 @@ sub execute {
     my $files = join ' ', @ball_files;
     system "cat $files > $ball_file";
     map{unlink $_}@ball_files;
-    rmtree $fq_chunk_dir;
+    rmtree $fq_split_dir;
 
     return 1;
 }
