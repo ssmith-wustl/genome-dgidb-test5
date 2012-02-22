@@ -78,7 +78,11 @@ sub get_ensembl_info {
     my $version = shift;
     my ($eversion,$ncbiversion) = split(/_/,$version);
 
-    return ("mysql1","mse",undef); # no pass word needed here. all else const
+    my $host = defined $ENV{GENOME_DB_ENSEMBL_HOST} ? $ENV{GENOME_DB_ENSEMBL_HOST} : 'mysql1';
+    my $user = defined $ENV{GENOME_DB_ENSEMBL_USER} ? $ENV{GENOME_DB_ENSEMBL_USER} : 'mse'; 
+    my $password = defined $ENV{GENOME_DB_ENSEMBL_PASSWORD} ? $ENV{GENOME_DB_ENSEMBL_PASSWORD} : undef;
+
+    return ($host, $user, $password);
 }
 
 sub ensembl_version_string {
