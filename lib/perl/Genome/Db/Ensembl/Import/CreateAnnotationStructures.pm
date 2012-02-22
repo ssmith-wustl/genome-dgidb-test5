@@ -55,7 +55,7 @@ sub execute
     my $transcript_adaptor = $registry->get_adaptor( $ucfirst_species, 'Core', 'Transcript' );
     my $slice_adaptor = $registry->get_adaptor( $ucfirst_species, 'Core', 'Slice');
 
-    my @slices = @{ $slice_adaptor->fetch_all('chromosome') };
+    my @slices = @{ $slice_adaptor->fetch_all('toplevel', undef, 1, 0, 1) };
 
     my $idx = 0;
     my $egi_id = 1;    # starting point for external_gene_id...
@@ -226,7 +226,7 @@ sub execute
                         }
 
                         my $utr_stop = $coding_region_start - 1;
-                        my $utr_exon = create_transcript_structure(
+                        my $utr_exon = Genome::Db::Ensembl::Import::Base::create_transcript_structure(
                             transcript => $transcript,
                             chrom_name => $transcript->chrom_name,
                             transcript_structure_id => $tss_id,
@@ -259,7 +259,7 @@ sub execute
                         = substr( $exon_sequence, $stop - $coding_region_stop, $coding_region_stop - $coding_region_start + 1 );
                     }
 
-                    my $cds_exon = create_transcript_structure(
+                    my $cds_exon = Genome::Db::Ensembl::Import::Base::create_transcript_structure(
                         transcript => $transcript,
                         chrom_name => $transcript->chrom_name,
                         transcript_structure_id => $tss_id,
@@ -290,7 +290,7 @@ sub execute
 
                         my $utr_start = $coding_region_stop + 1;
 
-                        my $utr_exon = create_transcript_structure(
+                        my $utr_exon = Genome::Db::Ensembl::Import::Base::create_transcript_structure(
                             transcript => $transcript,
                             chrom_name => $transcript->chrom_name,
                             transcript_structure_id => $tss_id,
@@ -320,7 +320,7 @@ sub execute
                         $structure_type = 'rna';
                     }
 
-                    my $structure = create_transcript_structure(
+                    my $structure = Genome::Db::Ensembl::Import::Base::create_transcript_structure(
                         transcript => $transcript,
                         chrom_name => $transcript->chrom_name,
                         transcript_structure_id => $tss_id,
