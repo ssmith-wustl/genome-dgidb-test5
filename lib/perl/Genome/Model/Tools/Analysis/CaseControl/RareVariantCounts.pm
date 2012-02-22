@@ -69,6 +69,7 @@ sub execute {                               # replace with real execution logic.
 		open(OUTFILE, ">" . $self->output_file) or die "Can't open outfile: $!\n";		
 		open(OUTGENES, ">" . $self->output_file . ".genes") or die "Can't open outfile: $!\n";
 		open(OUTMUTATIONS, ">" . $self->output_file . ".mutations") or die "Can't open outfile: $!\n";
+		open(OUTNEUTRAL, ">" . $self->output_file . ".neutral") or die "Can't open outfile: $!\n";
 		open(OUTCOUNTS, ">" . $self->output_file . ".counts") or die "Can't open outfile: $!\n";
 	}
 
@@ -77,6 +78,20 @@ sub execute {                               # replace with real execution logic.
 	## Load sample phenotypes ##
 	warn "Loading sample phenotypes...\n";
 	my %sample_phenotypes = load_sample_phenotypes($sample_phenotype_file);
+
+	my %phenotype_sample_counts = ();
+	foreach my $key (keys %sample_phenotypes)
+	{
+		my $phenotype = $sample_phenotypes{$key};
+		$phenotype_sample_counts{$phenotype}++;
+	}
+	
+	print OUTMUTATIONS "chrom\tposition\tref\tvar\tgene\tclass";
+	foreach my $phenotype (sort keys %phenotype_sample_counts)
+	{
+		print OUTMUTATIONS "\t\#$phenotype";
+	}
+	print OUTMUTATIONS "\n";
 
 	## Load the annotation ##
 	warn "Loading transcript annotation...\n";	
@@ -192,6 +207,7 @@ sub execute {                               # replace with real execution logic.
 				if($dbsnp_common{$variant_key})
 				{
 					$stats{'variant_alleles_excluded_by_dbsnp'}++;
+					print OUTNEUTRAL join("\t", $chrom, $position, $ref, $var, "dbSNP", get_annotation_call($transcript_annotation{$variant_key}), get_vep_call($vep_annotation{$variant_key})) . "\n";
 				}				
 				elsif($transcript_annotation{$variant_key})
 				{
@@ -219,6 +235,10 @@ sub execute {                               # replace with real execution logic.
 						$deleterious_by_gene{$deleterious_gene} .= $deleterious_type;
 
 						my %phenotype_counts = ();
+						foreach my $phenotype (keys %phenotype_sample_counts)
+						{
+							$phenotype_counts{$phenotype} = 0;
+						}
 
 						## Get Sample Genotypes ##
 						
@@ -272,15 +292,17 @@ sub execute {                               # replace with real execution logic.
 						print OUTMUTATIONS join("\t", $variant_key, $deleterious);
 						foreach my $this_phenotype (sort keys %phenotype_counts)
 						{
-							print OUTMUTATIONS "\t$phenotype_counts{$this_phenotype}";
+							$phenotype_counts{$this_phenotype} = 0 if(!$phenotype_counts{$this_phenotype});
+							print OUTMUTATIONS "\t$phenotype_counts{$this_phenotype}/$phenotype_sample_counts{$this_phenotype}";
 						}
 						print OUTMUTATIONS "\n";
 
 					}
-					elsif($vep_annotation{$variant_key})
+					else
 					{
-#						warn "Not Del: $vep_annotation{$variant_key}\n";
+						print OUTNEUTRAL join("\t", $chrom, $position, $ref, $var, "notDeleterious", get_annotation_call($transcript_annotation{$variant_key}), get_vep_call($vep_annotation{$variant_key})) . "\n";
 					}
+
 
 
 				}
@@ -411,6 +433,7 @@ sub execute {                               # replace with real execution logic.
 		close(OUTGENES);
 		close(OUTCOUNTS);
 		close(OUTMUTATIONS);
+		close(OUTNEUTRAL);
 	}
 
 	
@@ -419,6 +442,74 @@ sub execute {                               # replace with real execution logic.
 
 
 
+
+################################################################################################
+# Is_deleterious
+#
+################################################################################################
+
+sub get_annotation_call
+{
+	my $transcript_annotation = shift(@_);
+
+	my $call = "-\t-";
+	
+	if($transcript_annotation)
+	{
+		my @transcriptContents = split(/\t/, $transcript_annotation);
+		my $gene_name = $transcriptContents[6];
+		my $trv_type = $transcriptContents[13];
+		$call = "$gene_name\t$trv_type";		
+	}
+
+	return($call);
+}
+
+
+################################################################################################
+# Is_deleterious
+#
+################################################################################################
+
+sub get_vep_call
+{
+	my $vep_annotation = shift(@_);
+
+	my $vep_class = my $vep_gene = "-";
+	
+	if($vep_annotation)
+	{
+		my @vepContents = split(/\t/, $vep_annotation);
+		$vep_class = $vepContents[6];
+		my $extra = $vepContents[13];
+
+		if($extra)
+		{
+	
+			## Parse out gene symbol, sift, polyphen, condel ##
+			my $polyphen = my $sift = my $condel = "";
+	
+			my @extraContents = split(/\;/, $extra);
+			foreach my $entry (@extraContents)
+			{
+				my ($key, $value) = split(/\=/, $entry);
+	
+				$vep_gene = $value if($key eq 'HGNC');
+				$polyphen = $value if($key eq 'PolyPhen');
+				$sift = $value if($key eq 'SIFT');
+				$condel = $value if($key eq 'Condel');
+
+			}
+
+			if($polyphen && $sift && $condel)
+			{
+				$vep_class .= ":" . $polyphen . ":" . $sift . ":" . $condel;
+			}
+		}
+	}
+
+	return($vep_gene . "\t" . $vep_class);
+}
 
 ################################################################################################
 # Is_deleterious
@@ -453,9 +544,12 @@ sub is_deleterious
 		my $amino_acids = $vepContents[10];
 		my $extra = $vepContents[13];
 
+		my $gene = "";
+
 		## Break VEP classes into array since these allow multiples ##
 		my %vep_class = ();
 		my $damaging_vep_types = "";
+		my $damaging_calls = "";
 		if($vep_class)
 		{
 			my @vep_class = split(/\,/, $vep_class);
@@ -468,7 +562,7 @@ sub is_deleterious
 					$damaging_vep_types .= "," if($damaging_vep_types);
 					$damaging_vep_types .= 'NON_SYN';
 				}
-				elsif($class =~ 'SPLICE' || $class =~ 'STOP')
+				elsif($class =~ 'ESSENTIAL_SPLICE' || $class =~ 'STOP')
 				{
 					$damaging_vep_types .= "," if($damaging_vep_types);
 					$damaging_vep_types .= $class;
@@ -481,7 +575,7 @@ sub is_deleterious
 		{
 	
 			## Parse out gene symbol, sift, polyphen, condel ##
-			my $gene = my $polyphen = my $sift = my $condel = "";
+			my $polyphen = my $sift = my $condel = "";
 	
 			my @extraContents = split(/\;/, $extra);
 			foreach my $entry (@extraContents)
@@ -498,7 +592,7 @@ sub is_deleterious
 			{
 				if(($polyphen =~ 'damaging' || $sift =~ 'deleterious' || $condel =~ 'deleterious')) #$vep_class{'NON_SYNONYMOUS_CODING'} && 
 				{
-					my $damaging_calls = "";
+					
 					$damaging_calls = "Polyphen" if($polyphen =~ 'damaging');
 					
 					if($sift =~ 'deleterious')
@@ -516,6 +610,11 @@ sub is_deleterious
 					return($gene . "\t" . $damaging_vep_types . ":" . $damaging_calls);
 				}
 			}			
+		}
+		
+		if($damaging_vep_types)
+		{
+			return($gene . "\t" . $damaging_vep_types . ":" . $damaging_calls);
 		}
 
 	}
