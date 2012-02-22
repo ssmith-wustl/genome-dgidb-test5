@@ -132,7 +132,10 @@ sub execute {                               # replace with real execution logic.
 
 	my %deleterious_by_gene = ();
 	my %rare_variant_counts = ();
+	my %rare_allele_counts = ();
+	my %samples_with_rare_deleterious = ();	
 
+	my %counted = ();
 	my $lineCounter = 0;
 
 	while (<$input>)
@@ -279,6 +282,23 @@ sub execute {                               # replace with real execution logic.
 											$stats{'x_deleterious_variants_in_samples'}++;
 											## Sample has this variant ##
 											$rare_variant_counts{$deleterious_gene . "\t" . $sample_phenotype}++;
+											
+											my ($a1, $a2) = split(/\//, $genotype);
+											
+											if($a1 eq $a2)
+											{
+												$rare_allele_counts{$deleterious_gene . "\t" . $sample_phenotype}++;
+											}
+											else
+											{
+												$rare_allele_counts{$deleterious_gene . "\t" . $sample_phenotype}++;
+											}
+											
+											if(!$counted{$sample . "\t" . $deleterious_gene})
+											{
+												$samples_with_rare_deleterious{$deleterious_gene . "\t" . $sample_phenotype}++;
+												$counted{$sample . "\t" . $deleterious_gene} = 1;
+											}
 										}
 			
 									}					
@@ -399,7 +419,7 @@ sub execute {                               # replace with real execution logic.
 	print OUTCOUNTS "gene\trare_vars";
 	foreach my $phenotype (sort keys %phenotypes)
 	{
-		print OUTCOUNTS "\tnum_$phenotype\tpct_$phenotype";
+		print OUTCOUNTS "\trare_del_alleles_$phenotype\trare_del_variants_$phenotype\trare_del_samples_$phenotype";
 	}
 	print OUTCOUNTS "\n";
 
@@ -412,16 +432,29 @@ sub execute {                               # replace with real execution logic.
 		{
 			my $rare_variant_key = join("\t", $gene, $phenotype);
 
-			my $num_rare_variants = my $phenotype_portion = 0;
+			my $num_rare_alleles = my $num_rare_variants = my $phenotype_portion = 0;
+			
+			$num_rare_alleles = $rare_allele_counts{$rare_variant_key};
 						
 			if($rare_variant_counts{$rare_variant_key})
 			{
 				$num_rare_variants = $rare_variant_counts{$rare_variant_key};
 				$phenotype_portion = $num_rare_variants / $stats{'samples_vcf_with_phenotype_' . $phenotype};
-				$phenotype_portion = sprintf("%.3f", ($phenotype_portion * 100)) . '%';				
+#				$phenotype_portion = sprintf("%.3f", ($phenotype_portion * 100)) . '%';				
 			}
 			
-			print OUTCOUNTS "\t" . join("\t", $num_rare_variants, $phenotype_portion);
+			my $samples_harboring = 0;
+			my $portion_samples_harboring = 0;
+			
+			if($samples_with_rare_deleterious{$rare_variant_key})
+			{
+				$samples_harboring = $samples_with_rare_deleterious{$rare_variant_key};
+				$portion_samples_harboring = $samples_harboring / $stats{'samples_vcf_with_phenotype_' . $phenotype};
+#				$portion_samples_harboring = sprintf("%.3f", $portion_samples_harboring * 100) . '%';
+			}
+			
+			print OUTCOUNTS "\t" . join("\t", $num_rare_alleles, $num_rare_variants, $samples_harboring);
+#			print OUTCOUNTS "\t" . join("\t", $num_rare_variants, $phenotype_portion);
 		}
 
 		print OUTCOUNTS "\n";
