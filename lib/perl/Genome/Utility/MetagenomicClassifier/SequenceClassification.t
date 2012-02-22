@@ -4,52 +4,12 @@ use strict;
 use warnings;
 
 use above 'Genome';
-use base 'Genome::Utility::TestBase';
-
-use File::Temp 'tempdir';
-use Storable qw/ nstore retrieve /;
-use Test::More;
-
-sub dir { 
-    return '/gsc/var/cache/testsuite/data/Genome-Utility-MetagenomicClassifier';
-}
-
-sub fasta {
-    return $_[0]->dir.'/U_PR-JP_TS1_2PCA.fasta';
-}
-
-#< RDP >#
-sub rdp_file {
-    return $_[0]->dir.'/U_PR-JP_TS1_2PCA.fasta.rdp';
-}
-
-sub tmp_rdp_file {
-    return $_[0]->tmp_dir.'/U_PR-JP_TS1_2PCA.fasta.rdp';
-}
-
-#< Classifications Objects >#
-sub classifications_stor {
-    return $_[0]->dir.'/classifications.stor';
-}
-
-sub retrieve_classifications {
-    return retrieve( $_[0]->classifications_stor );
-}
-
-sub store_classifications {
-    my ($self, $classifications) = @_;
-    return nstore($classifications, $self->classifications_stor);
-}
 
 use Bio::Taxon;
-use Genome::Utility::MetagenomicClassifier;
 use Test::More;
 
-sub sequence_classification {
-    return $_[0]->{_object};
-}
-
-    use_ok('Genome::Utility::MetagenomicClassifier::SequenceClassification');
+use_ok('Genome::Utility::MetagenomicClassifier::SequenceClassification') or die;
+use_ok('Genome::Utility::MetagenomicClassifier');
 
 my @taxa;
 my $string = 'Root:1.0;Bacteria:1.0;Eubacteria:1.0;Bacteroidetes:0.99;Bacteroidetes:0.82;Bacteroidales:0.82;Rikenellaceae:0.78;Alistipes:0.68;Alistipes carmichaelli:0.68';
