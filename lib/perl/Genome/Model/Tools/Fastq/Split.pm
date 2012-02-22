@@ -32,11 +32,11 @@ class Genome::Model::Tools::Fastq::Split {
 };
 
 sub help_brief {
-    'Divide fastq into chunk by chunk_size' 
+    'Divide fastq into chunk by chunk_size'
 }
 
 
-sub help_detail {  
+sub help_detail {
     return <<EOS
     Divide the fastq file of multi-fastq into chunk by given chunk_size. --show-list option will show the file path of chunk file list.
 EOS
