@@ -19,11 +19,11 @@ class Genome::Model::Tools::Fastq::ToPhdballScf::Chunk {
             is  => 'Integer',
             doc => 'number of each chunk fastq',
         },
-	fast_mode => {
-	    is => 'Boolean',
-	    doc => 'avoid Bio perl slowness',
-	    default_value => 1,
-	},
+    fast_mode => {
+        is => 'Boolean',
+        doc => 'avoid Bio perl slowness',
+        default_value => 1,
+    },
     ],
 };
 
@@ -33,8 +33,8 @@ sub help_brief {
 }
 
 
-sub help_detail {                           
-    return <<EOS 
+sub help_detail {
+    return <<EOS
 
 EOS
 }
@@ -44,15 +44,15 @@ sub execute {
 
     my $ball_file = $self->ball_file;
     my $ball_dir  = dirname($self->ball_file);
-    
+
     my $cmd = 'gmt fastq to-phdball-scf';
-    
+
     for my $property (qw(time scf_dir base_fix solexa_fastq)) {
         if ($self->$property) {
             my $opt_name = $property;
             $opt_name =~ s/_/-/g;
             $cmd .= " --$opt_name";
-            
+
             unless ($property =~ /^(base_fix|solexa_fastq)$/) {
                 my $prop_val = $self->$property;
                 $prop_val = '"'.$prop_val.'"' if $property eq 'time';
@@ -60,12 +60,12 @@ sub execute {
             }
         }
     }
-    # add fast_mode to avoid Bio perl slowness 
+    # add fast_mode to avoid Bio perl slowness
     my $chunk = Genome::Model::Tools::Fastq::Chunk->create(
         fastq_file => $self->fastq_file,
         chunk_size => $self->chunk_size,
         chunk_dir  => $ball_dir,
-	fast_mode  => $self->fast_mode,
+    fast_mode  => $self->fast_mode,
     );
     my $fq_chunk_files = $chunk->execute;
 
@@ -73,7 +73,7 @@ sub execute {
     my @ball_files;
     my $fq_chunk_dir;
     my $bl_ct = 0;
-    
+
     for my $fq_chunk_file (@$fq_chunk_files) {
         unless (-s $fq_chunk_file) {
             $self->error_message("fastq chunk file: $fq_chunk_file not existing");
@@ -84,10 +84,10 @@ sub execute {
         my $ball_chunk_file = $ball_dir.'/phd.ball.'.$bl_ct;
         push @ball_files, $ball_chunk_file;
 
-        my $job = $self->_lsf_job($cmd, $fq_chunk_file, $ball_chunk_file);           
+        my $job = $self->_lsf_job($cmd, $fq_chunk_file, $ball_chunk_file);
         $jobs{$bl_ct} = $job;
     }
-            
+
     map{$_->start()}values %jobs;
 
     my %run;
@@ -97,7 +97,7 @@ sub execute {
         sleep 120;
         for my $id (sort{$a<=>$b}keys %run) {
             my $job = $jobs{$id};
-                
+
             if ($job->has_ended) {
                 delete $run{$id};
                 if ($job->is_successful) {
@@ -116,14 +116,14 @@ sub execute {
     system "cat $files > $ball_file";
     map{unlink $_}@ball_files;
     rmtree $fq_chunk_dir;
-    
+
     return 1;
 }
-            
+
 
 sub _lsf_job {
     my ($self, $command, $fq_chunk_file, $ball_chunk_file) = @_;
-                      
+
     $command .= ' --ball-file '.$ball_chunk_file;
     $command .= ' --fastq-file '.$fq_chunk_file;
 
