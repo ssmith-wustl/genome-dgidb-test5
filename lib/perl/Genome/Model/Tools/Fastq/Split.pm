@@ -23,6 +23,12 @@ class Genome::Model::Tools::Fastq::Split {
     has_output => [
         fastq_files => { is_optional => 1, },
     ],
+    has_optional => [
+        show_list => {
+            is => 'Boolean',
+            doc => 'show list of split files',
+        },
+    ],
 };
 
 sub help_brief {
@@ -41,6 +47,8 @@ sub execute {
     my $self = shift;
 
     my @suffix = qw/\.txt \.fastq/;
+    $self->dump_status_messages($self->show_list);
+
     my ($fastq_basename,$fastq_dirname,$fastq_suffix) = File::Basename::fileparse($self->fastq_file,@suffix);
     unless ($fastq_basename && $fastq_dirname && $fastq_suffix) {
         die('Failed to parse fastq file name '. $self->fastq_file);
@@ -78,6 +86,13 @@ sub execute {
     }
     
     $self->fastq_files(\@fastq_files);
+
+    if ($self->show_list) {
+        for my $file ($self->fastq_files) {
+            $self->status_message($file);
+        }
+    }
+
     return 1;
 }
 
