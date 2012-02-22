@@ -7,6 +7,12 @@ use above 'Genome';
 
 use Test::More;
 
+no warnings;
+# overload 'Close' to not send the mail, but to cancel it 
+use Mail::Sender;
+*Mail::Sender::Close = sub{ my $sender = shift; $sender->Cancel; return 1; };
+use warnings;
+
 use_ok('Genome::Report::Command::Email') or die;
 
 my $dir = '/gsc/var/cache/testsuite/data/Genome-Report-XSLT';
@@ -16,14 +22,7 @@ my $cmd = Genome::Report::Command::Email->create(
     to => Genome::Config->user_email,
 );
 ok($cmd, 'create email command');
-
 $cmd->dump_status_messages(1);
-
-no warnings;
-# overload 'Close' to not send the mail, but to cancel it 
-*Mail::Sender::Close = sub{ my $sender = shift; $sender->Cancel; return 1; };
-use warnings;
-
 ok($cmd->execute, 'execute');
 
 done_testing();
