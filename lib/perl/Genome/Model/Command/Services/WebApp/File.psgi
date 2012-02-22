@@ -33,34 +33,46 @@ sub dispatch_request {
         my ($self, $params, $file, $env) = @_;
         my @gene_names;
         @gene_names = Genome::Sys->read_file($file->path) if $file;
-        push @gene_names, split("\n",$params->{'genes'});
+        push @gene_names, split(/[\r\n]/,$params->{'genes'});
         chomp @gene_names;
-        my $command = Genome::DruggableGene::Command::GeneNameReport::LookupInteractions->execute( gene_identifiers => \@gene_names );
+        @gene_names = grep{/[\w\d]/}@gene_names;
+        @gene_names = map{uc $_}@gene_names;
+        my $filter;
+        for($params->{'filter'}){
+            $filter = 'drug.is_withdrawn=0,drug.is_nutraceutical=0,interaction_types!:potentiator/na' if /default/;
+            $filter = '' if /none/;
+        }
+        my $command = Genome::DruggableGene::Command::GeneNameReport::LookupInteractions->execute(
+            gene_identifiers => \@gene_names,
+            filter => $filter,
+        );
         my %params = (
-                no_match_genes => [$command->no_match_genes],
-                no_interaction_genes => [$command->no_interaction_genes],
-                subject => Genome::DruggableGene::GeneNameReport->define_set,
-                interactions => [$command->interactions],
-                filtered_out_interactions => [$command->filtered_out_interactions],
-                identifier_to_genes => $command->identifier_to_genes,
-            );
-        if($params->{'return'} eq 'html'){
-            my $html = Genome::DruggableGene::GeneNameReport::Set::View::Interaction::Html->create(
-                %params,
-                desired_perspective => 'status',
-                xsl_root => Genome->base_dir . '/xsl',
-                xsl_path => '/static/xsl',
-                xsl_variables => {
-                    rest      => '/view',
-                    resources => '/view/genome/resource.html',
-                },
-            );
-            return [200, ['Content-type' => "text/html"], [$html->content]];
-        } elsif($params->{'return'} eq 'html') {
-            return [200, ['Content-type' => "text/tsv"], [join("\n", $command->output)]];
-        } elsif($params->{'return'} eq 'xml') {
-            my $xml = Genome::DruggableGene::GeneNameReport::Set::View::Interaction::Xml->create(%params);
-            return [200, ['Content-type' => "text/xml"], [$xml->content]];
+            no_match_genes => [$command->no_match_genes],
+            no_interaction_genes => [$command->no_interaction_genes],
+            subject => Genome::DruggableGene::GeneNameReport->define_set,
+            interactions => [$command->interactions],
+            filtered_out_interactions => [$command->filtered_out_interactions],
+            identifier_to_genes => $command->identifier_to_genes,
+        );
+        for($params->{'return'}){
+            if(/html/){
+                my $html = Genome::DruggableGene::GeneNameReport::Set::View::Interaction::Html->create(
+                    %params,
+                    desired_perspective => 'status',
+                    xsl_root => Genome->base_dir . '/xsl',
+                    xsl_path => '/static/xsl',
+                    xsl_variables => {
+                        rest      => '/view',
+                        resources => '/view/genome/resource.html',
+                    },
+                );
+                return [200, ['Content-type' => "text/html"], [$html->content]];
+            } elsif(/tsv/) {
+                return [200, ['Content-type' => "text/tsv"], [join("\n", $command->output)]];
+            } elsif(/xml/) {
+                my $xml = Genome::DruggableGene::GeneNameReport::Set::View::Interaction::Xml->create(%params);
+                return [200, ['Content-type' => "text/xml"], [$xml->content]];
+            }
         }
     },
 #    sub ( POST + /view/x/subject-upload + *file= ) {

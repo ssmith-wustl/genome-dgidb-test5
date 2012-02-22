@@ -13,7 +13,7 @@ class Genome::Model::MutationalSignificance::Command::CreateBamList {
             is_many => 1,    
         },
     ],
-    has_output => [
+    has_input_output => [
         bam_list => {
             is => 'Text',},
     ],
@@ -33,7 +33,10 @@ sub execute {
         $out_string .= "\n";
     }
 
-    $self->bam_list($out_string);
+    my $fh = IO::File->new($self->bam_list, '>');
+    $fh->print($out_string);
+    $fh->close;
+
     $self->status_message('Created BAM list');
     return 1;
 }

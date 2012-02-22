@@ -28,7 +28,8 @@ class Genome::Model::Tools::Analysis::CaseControl::RareVariantCounts {
 		transcript_annotation_file	=> { is => 'Text', doc => "Transcript annotation in native output format", is_optional => 0, is_input => 1},
 		vep_annotation_file	=> { is => 'Text', doc => "VEP top annotation file in native output", is_optional => 0, is_input => 1},
 		sample_phenotype_file	=> { is => 'Text', doc => "Tab-delimited file with sample ID and phenotype code", is_optional => 0, is_input => 1},
-		dbsnp_positions_file	=> { is => 'Text', doc => "1-based positions of dbSNP common SNPs to exclude", is_optional => 1, is_input => 1},		
+		dbsnp_positions_file	=> { is => 'Text', doc => "1-based positions of dbSNP common SNPs to exclude", is_optional => 1, is_input => 1},
+		reference_build	=> { is => 'Text', doc => "reference build -- \"NCBI-human-build36\" or \"GRCh37-lite-build37\"", is_optional => 1, default => 'GRCh37-lite-build37', is_input => 1},
 		output_file	=> { is => 'Text', doc => "Output file for analysis results", is_optional => 1, is_input => 1},
 	],
 };
@@ -98,8 +99,7 @@ sub execute {                               # replace with real execution logic.
 	my %transcript_annotation = load_transcript_annotation($self->transcript_annotation_file);
 
 	warn "Loading VEP annotation...\n";
-	my %vep_annotation = load_vep_annotation($self->vep_annotation_file);
-
+	my %vep_annotation = $self->load_vep_annotation($self->vep_annotation_file);
 
 	## Load dbSNP positions ##
 	my %dbsnp_common = ();
@@ -721,9 +721,10 @@ sub load_transcript_annotation
 #
 ################################################################################################
 
-sub load_vep_annotation
-{                               # replace with real execution logic.
-	my $FileName = shift(@_);
+sub load_vep_annotation {
+	my $self = shift;
+	my $FileName = shift;
+	my $reference_build = $self->reference_build;
 
 	my %results = ();
 
@@ -736,18 +737,26 @@ sub load_vep_annotation
 		my $line = $_;
 		$lineCounter++;		
 	
-		if(substr($line, 0, 1) eq '#')
-		{
+		if(substr($line, 0, 1) eq '#') {
 			## Ignore header line ##
 		}
-		else
-		{
+		else {
 			my @lineContents = split(/\t/, $line);
-			my ($chrom, $position, $alleles) = split(/\_/, $lineContents[0]);
-			my ($ref, $var) = split(/\//, $alleles);
+			my ($chrom, $position, $alleles, $ref, $var);
+            if ($lineContents[0] =~ m/rs/) {
+                ($chrom, $position) = split(/:/,$lineContents[1]);
+                $var = $lineContents[2];
+                my $reference_build_fasta_object = Genome::Model::Build::ReferenceSequence->get(name => "$reference_build");
+                my $reference_build_fasta = $reference_build_fasta_object->data_directory . "/all_sequences.fa";
+                $ref = `samtools faidx $reference_build_fasta $chrom:$position-$position | grep -v ">"`;
+                chomp($ref);
+            }
+            else {
+    			($chrom, $position, $alleles) = split(/\_/, $lineContents[0]);
+    			($ref, $var) = split(/\//, $alleles);
+            }
 			my $key = join("\t", $chrom, $position, $ref, $var);
 			$results{$key} = $line;
-
 		}
 		
 #		return(%results) if($lineCounter > 1000);

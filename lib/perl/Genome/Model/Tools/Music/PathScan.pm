@@ -15,7 +15,7 @@ class Genome::Model::Tools::Music::PathScan {
     bam_list => { is => 'Text', doc => "Tab delimited list of BAM files [sample_name, normal_bam, tumor_bam] (See Description)" },
     pathway_file => { is => 'Text', doc => "Tab-delimited file of pathway information (See Description)" },
     maf_file => { is => 'Text', doc => "List of mutations using TCGA MAF specifications v2.2" },
-    output_file => { is => 'Text', doc => "Output file that will list the significant pathways and their p-values" },
+    output_file => { is => 'Text', doc => "Output file that will list the significant pathways and their p-values", is_output => 1 },
     bmr => { is => 'Number', doc => "Background mutation rate in the targeted regions", is_optional => 1, default => 1.0E-6 },
     genes_to_ignore => { is => 'Text', doc => "Comma-delimited list of genes whose mutations should be ignored", is_optional => 1 },
     min_mut_genes_per_path => { is => 'Number', doc => "Pathways with fewer mutated genes than this, will be ignored", is_optional => 1, default => 1 },

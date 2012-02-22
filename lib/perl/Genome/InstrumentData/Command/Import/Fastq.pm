@@ -337,10 +337,12 @@ sub execute {
     if(($change_names>0)&& $self->is_paired_end){
         if($change_names==2){
             my ($file1,$file2) = keys(%filenames);
-            #TODO the tar command defined below requires tar version 1.21 or greater for the --transform portion to work. This will die on the wrong filenames until we have version 1.21 or greater installed.
-            $self->error_message("There are problems with the fastq file names which cannot currently be solved. Please change the names to match the proper format, as output above.");
-            die $self->error_message;
-            $tar_cmd = sprintf("tar cvzfh %s -C %s %s %s --transform=s/%s/%s/g --transform=s/%s/%s/g",$tmp_tar_filename,$basename, $file1,$file2,$file1,$filenames{$file1},$file2,$filenames{$file2});
+            if ($self->tar_can_multi_transform) {
+                $tar_cmd = sprintf("tar cvzfh %s -C %s %s %s --transform=s/%s/%s/g --transform=s/%s/%s/g", $tmp_tar_filename, $basename, $file1, $file2, $file1, $filenames{$file1}, $file2, $filenames{$file2});
+            } else {
+                $self->error_message("The version of tar that is installed is not able to correct multiple file names. Please change the names to match the proper format, as labeled above.");
+                die $self->error_message;
+            }
         } elsif ($change_names==1) {
             # if only one needs changing, find which one and apply the single transform in the tar command. This will work with our current 1.19 tar install.
             my ($file1,$file2) = keys(%filenames);
@@ -432,6 +434,12 @@ sub execute {
     $self->status_message("The instrument-data id of your new record is ".$instrument_data_id);
     return 1;
 
+}
+
+sub tar_can_multi_transform {
+    my ($tar_version) = qx(tar --version 2>&1 | head -n 1) =~ /([.\d]+)/;
+    my $tar_vstring = eval "v$tar_version";
+    return ($tar_vstring ge v1.21);
 }
 
 sub check_fastq_integritude { 
