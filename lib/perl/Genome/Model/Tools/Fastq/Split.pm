@@ -9,22 +9,30 @@ require File::Copy;
 require Genome;
 
 class Genome::Model::Tools::Fastq::Split {
-    is  => 'Genome::Model::Tools::Fastq',
-    has_input => [
-        split_size => {
-            type => 'Integer',
-            doc  => 'Number of fastq sequences for each output file',
+    is  => 'Command',
+    has => [
+        fastq_file => {
+            type     => 'Text',
+            doc      => 'FASTQ file that contains both sequences and quality values',
+            is_input => 1,
         },
-        output_directory => {
-            is_optional => 1,
-        }
-    ],
-    has_output => [
-        split_files => { is_optional => 1, },
+        split_size => {
+            type     => 'Integer',
+            doc      => 'Number of fastq sequences for each output file',
+            is_input => 1,
+        },
     ],
     has_optional => [
+        output_directory => {
+            is_input => 1,
+        },
+        split_files => {
+            is        => 'Text',
+            is_many   => 1,
+            is_output => 1,
+        },
         show_list => {
-            is => 'Boolean',
+            is  => 'Boolean',
             doc => 'show list of split files',
         },
     ],
@@ -65,7 +73,6 @@ sub execute {
     chdir($cwd);
     #If more than one lane processed in the same output_directory, this becomes a problem
     my @tmp_fastqs = grep { $_ !~ /\.$fastq_suffix$/ } grep { /$fastq_basename-\d+$/ } glob($tmp_dir .'/'. $fastq_basename.'*');
-    my @split_files;
 
     # User should provide a directory as input, then we can keep output fastqs on tmp
     # and distribute bfqs in a downstream process
@@ -78,10 +85,8 @@ sub execute {
         unless (File::Copy::move($tmp_fastq,$fastq_file,) ) {
             die('Failed to move file '. $tmp_fastq .' to '. $fastq_file .":  $!");
         }
-        push @split_files, $fastq_file;
+        $self->add_split_file($fastq_file);
     }
-
-    $self->split_files(\@split_files);
 
     if ($self->show_list) {
         for my $file ($self->split_files) {
