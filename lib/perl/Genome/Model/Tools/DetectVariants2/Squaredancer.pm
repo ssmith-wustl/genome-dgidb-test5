@@ -71,6 +71,17 @@ sub _create_temp_directories {
     return $self->SUPER::_create_temp_directories(@_);
 }
 
+sub _promote_staged_data {
+    my $self = shift;
+    my $output_dir = $self->SUPER::_promote_staged_data(@_);
+
+    #remove the staging dir before we reallocate so that the data is not double counted
+    my $staging_dir = $self->temp_staging_directory;
+    Genome::Sys->remove_directory_tree($staging_dir);
+
+    return $output_dir;
+}
+
 
 sub _detect_variants {
     my $self = shift;
