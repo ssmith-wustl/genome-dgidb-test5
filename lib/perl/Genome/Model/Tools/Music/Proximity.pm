@@ -13,6 +13,9 @@ class Genome::Model::Tools::Music::Proximity {
     output_dir => { is => 'Text', doc => "Directory where output files will be written" },
     max_proximity => { is => 'Text', doc => "Maximum allowed AA distance between 2 mutations", is_optional => 1, default => 10 },
   ],
+  has_output => [
+    output_file => {is => 'Text', doc => "TODO"},
+  ],
   doc => "Perform a proximity analysis on a list of mutations."
 };
 
@@ -67,6 +70,7 @@ sub execute {
 
   # Output of this script will be written to this location in the output directory
   my $out_file = "$output_dir/proximity_report";
+  $self->output_file($out_file);
 
   # Parse the header row in the MAF file
   my $maf_fh = IO::File->new( $maf_file ) or die "Couldn't open $maf_file. $!";
