@@ -3,13 +3,37 @@
 use strict;
 use warnings;
 
-use above "Genome";
+use above 'Genome';
 
-use Genome::Report::Test;
+use Test::More;
 
-Genome::Report::FromSeparatedValueFileTest->runtests;
+use_ok('Genome::Report::FromSeparatedValueFile') or die;
 
+my $svr = Genome::Utility::IO::SeparatedValueReader->create(
+    input => '/gsc/var/cache/testsuite/data/Genome-Utility-IO/albums.csv',
+);
+ok($svr, 'create svr') or die;
+
+my %params = (
+    name => 'Report from Albums SVF',
+    description => 'Albums on Hand Today',
+    svr => $svr,
+);
+
+my $generator = Genome::Report::FromSeparatedValueFile->create(%params);
+ok($generator, 'create generator');
+can_ok($generator, '_add_to_report_xml');
+
+my $report = $generator->generate_report;
+ok($report, 'Generated report');
+ok($report->xml_string, 'report xml string');
+
+for my $attr (qw/ name description svr /) {
+    my $value = delete $params{$attr};
+    ok(!Genome::Report::FromSeparatedValueFile->create(%params), "failed to create w/o $attr");
+    $params{$attr} = $value;
+}
+
+done_testing();
 exit;
 
-#$HeadURL$
-#$Id$
