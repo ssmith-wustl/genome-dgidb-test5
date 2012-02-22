@@ -349,7 +349,7 @@ sub _link_vcf_output_directory_to_result {
         }
         Genome::Sys->create_symlink($vcf, $target);
         #added a symlink to our own directory - reallocate the size
-        $self->_reallocate_disk_allocation
+        $self->_result->_reallocate_disk_allocation
     }
 
     return 1;
