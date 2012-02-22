@@ -12,7 +12,7 @@ class Genome::Model::Tools::Fastq::Split {
     is  => 'Genome::Model::Tools::Fastq',
     has_input => [
         fastq_file => { is => 'Text' },
-        sequences => {
+        split_size => {
             type => 'Integer',
             doc  => 'Number of fastq sequences for each output file',
         },
@@ -61,7 +61,7 @@ sub execute {
     my $cwd = Cwd::getcwd;
     my $tmp_dir = $self->output_directory or Genome::Sys->base_temp_directory;
     chdir($tmp_dir);
-    my $cmd = 'split -l '. $self->sequences * 4 .' -a 5 -d '. $self->fastq_file .' '. $fastq_basename.'-';
+    my $cmd = 'split -l '. $self->split_size * 4 .' -a 5 -d '. $self->fastq_file .' '. $fastq_basename.'-';
     Genome::Sys->shellcmd(
         cmd => $cmd,
         input_files => [$self->fastq_file],
