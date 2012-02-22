@@ -76,7 +76,7 @@ sub _promote_staged_data {
     my $output_dir = $self->SUPER::_promote_staged_data(@_);
 
     #remove the staging dir before we reallocate so that the data is not double counted
-    my $staging_dir = $self->temp_staging_directory;
+    my $staging_dir = $self->_temp_staging_directory;
     Genome::Sys->remove_directory_tree($staging_dir);
 
     return $output_dir;
