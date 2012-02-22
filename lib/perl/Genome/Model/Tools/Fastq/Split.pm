@@ -54,7 +54,7 @@ sub execute {
         die($self->error_message);
     }
 
-    my $cwd = Cwd::getcwd;
+    my $cwd = Cwd::getcwd();
     my $tmp_dir = $self->output_directory or Genome::Sys->base_temp_directory;
     chdir($tmp_dir);
     my $cmd = 'split -l '. $self->split_size * 4 .' -a 5 -d '. $self->fastq_file .' '. $fastq_basename.'-';
