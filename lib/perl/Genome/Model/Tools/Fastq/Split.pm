@@ -11,7 +11,6 @@ require Genome;
 class Genome::Model::Tools::Fastq::Split {
     is  => 'Genome::Model::Tools::Fastq',
     has_input => [
-        fastq_file => { is => 'Text' },
         split_size => {
             type => 'Integer',
             doc  => 'Number of fastq sequences for each output file',
