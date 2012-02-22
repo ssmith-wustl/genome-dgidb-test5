@@ -11,13 +11,13 @@ BEGIN {
 use above 'Genome';
 use Test::More;
 
-use_ok("Genome::Model::Build::ReferenceSequence");
-
 if (Genome::Config->arch_os ne 'x86_64') {
     plan skip_all => 'requires 64-bit machine';
 }else {
     plan tests => 5;
 }
+
+use_ok("Genome::Model::Build::ReferenceSequence");
 
 my $data_dir = File::Temp::tempdir('ImportedAnnotationTest-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
 my $pp = Genome::ProcessingProfile::ImportedReferenceSequence->create(name => 'test_ref_pp');
