@@ -54,6 +54,12 @@ class Genome::Model::Tools::Validation::BuildRemappingContigs {
             default => 500, #force 100bp reads to align across the variant
             doc => 'The intended size of the contigs. If contigs overlap then they may be merged',
         },
+        append_indel_alleles => {
+            type => 'Boolean',
+            is_optional => 1,
+            default => 0,
+            doc => 'append the indel alleles to the contig name. Requires that the input file was generated with indel alleles appended.'
+        },
         minimum_local_overlap_size => {
             type => 'Integer',
             is_optional => 0,
@@ -78,7 +84,7 @@ class Genome::Model::Tools::Validation::BuildRemappingContigs {
             type => 'Hashref',
             is_optional => 1,
             default => {},
-        },
+        },        
     ]
 };
 
@@ -122,7 +128,7 @@ sub execute {
     #parse the assembly input file
     my $input_fh = Genome::Sys->open_file_for_reading($self->input_file); #this should die if it fails
     my %expected_contigs;
-
+    my %alleles;
     while(my $line = $input_fh->getline) {
         chomp $line;
         my @fields = split /\t/, $line;
@@ -130,6 +136,7 @@ sub execute {
         next if $fields[7] < 3; #skip small indels
         my $id = join(".",@fields[0,1,3,4,6,7],"+-");
         $expected_contigs{$id} = {};
+        $alleles{$id} = join("_",@fields[8..9]);
     }
     
 
@@ -216,8 +223,15 @@ sub execute {
             if(@overlapping_contigs) {
                 #Here we will print out a contig
                 #make sure that the info to count the contig is present and make sure that lines are shortish
-                foreach my $unique_contig (@overlapping_contigs) {
-                    print $output_fh ">",join("_",@$unique_contig{qw( pred_chr1 pred_pos1 pred_pos2 pred_type source) });
+                foreach my $unique_contig (@overlapping_contigs) {                    
+                    if($self->append_indel_alleles){
+                        #print STDERR "###" . $unique_contig->{id} . " -> " . $alleles{$unique_contig->{id}} . "\n";
+                        #print STDERR "###>",join("_",(@$unique_contig{qw( pred_chr1 pred_pos1 pred_pos2 pred_type source)},$alleles{$unique_contig->{id}})) . "\n";
+                        print $output_fh ">",join("_",(@$unique_contig{qw( pred_chr1 pred_pos1 pred_pos2 pred_type source)},$alleles{$unique_contig->{id}}));
+
+                    } else {
+                        print $output_fh ">",join("_",@$unique_contig{qw( pred_chr1 pred_pos1 pred_pos2 pred_type source) });
+                    }
 
                     #need to code in the range on the contig for the variant as well as the range on the reference to count. For non-overlapping contigs this is simple. Let's also code overlap status
                     printf $output_fh " Overlap:%d",@overlapping_contigs - 1;   #this should code the number of other contigs overlapping the contig

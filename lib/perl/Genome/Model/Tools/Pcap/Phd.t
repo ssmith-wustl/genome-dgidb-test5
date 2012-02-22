@@ -2,7 +2,6 @@
 package Genome::Model::Tools::Pcap::Phd::Test;
 use above 'Genome';
 use Genome::Model::Tools::Pcap::Phd;
-use base qw(Test::Class);
 use Test::More tests => 1;
 
 my $po = Genome::Model::Tools::Pcap::Phd->new(input_directory => '/gsc/var/cache/testsuite/data/Genome-Assembly-Pcap/phd_dir');

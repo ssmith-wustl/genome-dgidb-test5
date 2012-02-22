@@ -21,6 +21,11 @@ class Genome::Nomenclature {
             len=>255, 
             doc => 'Nomenclature name'
         },
+        empty_equivalent => {
+            is=>'Text', 
+            len=>255, 
+            doc => 'Empty-equivalent string (NA, n/a, etc)'
+        },
         fields => {
             is => 'Genome::Nomenclature::Field',
             is_many => 1,
@@ -49,7 +54,10 @@ sub create_from_json {
 
     my $nomenclature_raw = decode_json($json);
 
-    my $nom = $class->create(name => $nomenclature_raw->{name});    
+    my $nom = $class->create(
+        name => $nomenclature_raw->{name}, 
+        empty_equivalent => $nomenclature_raw->{'empty_equivalent'}
+    );    
 
     for my $rf (@{$nomenclature_raw->{fields}}) {
         my $f = Genome::Nomenclature::Field->create(name=>$rf->{name}, type=>$rf->{type}, nomenclature=>$nom);
@@ -74,10 +82,14 @@ sub json {
         die "no decodable JSON";
     } 
 
-    # step 1: update the name if necessary
+    # step 1: update the name and empty_equivalent if necessary
 
     if ($nomenclature_raw->{name} ne $self->name) {
         $self->name($nomenclature_raw->{name});
+    }
+
+    if ( $nomenclature_raw->{'empty_equivalent'} ne $self->empty_equivalent() ) {
+        $self->empty_equivalent($nomenclature_raw->{'empty_equivalent'});
     }
 
     # step 2: collect existing field ids so we know if we need to delete any fields.

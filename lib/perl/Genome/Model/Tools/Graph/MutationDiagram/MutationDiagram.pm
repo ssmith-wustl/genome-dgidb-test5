@@ -201,13 +201,14 @@ sub MakeDiagrams {
 
 sub Draw {
     my ($self, $svg_fh, $hugo, $transcript, $length, $domains, $mutations) = @_;
-
-    my $document = Genome::Model::Tools::Graph::MutationDiagram::MutationDiagram::View->new(width=>'1500',height=>'1200',
+    $DB::single = 1;
+    my $document = Genome::Model::Tools::Graph::MutationDiagram::MutationDiagram::View->new(width=>'800',height=>'600',
         'viewport' => {x => 0, y => 0,
             width => 1600,
             height => 1200},
         left_margin => 50,
-        right_margin => 50,);
+        right_margin => 50,
+        id => "main_document");
     my $svg = $document->svg;
 
     my $backbone = Genome::Model::Tools::Graph::MutationDiagram::MutationDiagram::Backbone->new(parent => $document,
@@ -217,6 +218,7 @@ sub Draw {
         =>
         50,
         style => {fill => 'none', stroke => 'black'},
+        id => "protein_diagram",
         $document->content_view);
     $backbone->draw;
 

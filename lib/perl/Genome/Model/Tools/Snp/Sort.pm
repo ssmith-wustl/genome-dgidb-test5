@@ -11,19 +11,27 @@ use Sort::Naturally qw| nsort |;
 class Genome::Model::Tools::Snp::Sort {
     is => 'Command',
     has => [
-            snp_file => {
-                         type => 'String',
-                         is_optional => 0,
-                         doc => "maq cns2snp output",
-                         shell_args_position => 1,
-                     },
-    ],
+        snp_file => {
+            type => 'String',
+            is_optional => 0,
+            doc => "maq cns2snp output",
+            shell_args_position => 1,
+        },
+        ],
     has_optional => [
-                     output_file => {
-                                     type => 'Text',
-                                     doc => 'optional output file',
-                                 },
-              ],
+        output_file => {
+            type => 'Text',
+            doc => 'optional output file',
+        },
+
+        force => {
+            type => 'Boolean',
+            doc => 'force overwriting of output file, even if it already exists',
+            default => 0,
+        },
+
+
+        ],
 };
 
 sub help_brief {
@@ -42,10 +50,12 @@ sub create {
         $self->error_message('Failed to validate snp file '. $self->snp_file .'  for reading.');
         return;
     }
-    if ($self->output_file) {
-        unless (Genome::Sys->validate_file_for_writing($self->output_file)) {
-            $self->error_message('Failed to validate output file '. $self->output_file .' for writing.');
-            return;
+    unless ($self->force){
+        if ($self->output_file) {
+            unless (Genome::Sys->validate_file_for_writing($self->output_file)) {
+                $self->error_message('Failed to validate output file '. $self->output_file .' for writing.');
+                return;
+            }
         }
     }
     return $self;
@@ -57,7 +67,11 @@ sub execute {
     my $snp_fh = Genome::Sys->open_file_for_reading($self->snp_file);
     my $output_fh;
     if ($self->output_file) {
-        $output_fh = Genome::Sys->open_file_for_writing($self->output_file);
+        if($self->force){
+            $output_fh =  Genome::Sys->open_file_for_overwriting($self->output_file);
+        } else {
+            $output_fh = Genome::Sys->open_file_for_writing($self->output_file);
+        }
     } else {
         $output_fh = IO::Handle->new;
         $output_fh->fdopen(fileno(STDOUT),'w');

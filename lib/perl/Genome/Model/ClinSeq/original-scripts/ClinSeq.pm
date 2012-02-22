@@ -55,11 +55,11 @@ require Exporter;
 @EXPORT = qw();
 
 @EXPORT_OK = qw(
-                &createNewDir &checkDir &commify &memoryUsage &loadEntrezEnsemblData &mapGeneName &fixGeneName &importIdeogramData &getCytoband &getColumnPosition &listGeneCategories &importGeneSymbolLists &getFilePathBase
+                &createNewDir &checkDir &commify &memoryUsage &loadEnsemblMap &loadEntrezEnsemblData &mapGeneName &fixGeneName &importIdeogramData &getCytoband &getColumnPosition &listGeneCategories &importGeneSymbolLists &getFilePathBase
                );
 
 %EXPORT_TAGS = (
-                all => [qw(&createNewDir &checkDir &commify &memoryUsage &loadEntrezEnsemblData &mapGeneName &fixGeneName &importIdeogramData &getCytoband &getColumnPosition &listGeneCategories &importGeneSymbolLists &getFilePathBase)]
+                all => [qw(&createNewDir &checkDir &commify &memoryUsage &loadEnsemblMap &loadEntrezEnsemblData &mapGeneName &fixGeneName &importIdeogramData &getCytoband &getColumnPosition &listGeneCategories &importGeneSymbolLists &getFilePathBase)]
                );
 
 use strict;
@@ -271,6 +271,47 @@ sub checkDir{
 
 
 #######################################################################################################################################################################
+#Load Ensembl Transcript ID - Gene ID - Gene Name mappings from flatfiles                                                                                             #
+#######################################################################################################################################################################
+sub loadEnsemblMap{
+  my %args = @_;
+  my $ensembl_version = $args{'-ensembl_version'};
+  my $species = $args{-species} || 'human';
+
+  my $reference_annotations_dir;
+  if ($species eq 'human') {
+    $reference_annotations_dir = "/gscmnt/sata132/techd/mgriffit/reference_annotations/";
+  }
+  my $ensembl_map_file = $reference_annotations_dir . "EnsemblGene/Ensembl_Genes_Human_v"."$ensembl_version".".txt";
+  unless (-e $ensembl_map_file){
+    print RED, "\n\nCould not file Ensembl ID map file with the specified reference annotations dir and ensembl version:\n$ensembl_map_file\n\n", RESET;
+    exit(1);
+  }
+  my %ensembl_map;
+  my $header = 1;
+  open (ENSG, "$ensembl_map_file") || die "\n\nCould not open ensembl map file: $ensembl_map_file\n\n";
+  while (<ENSG>){
+    chomp($_);
+    my @line = split("\t", $_);
+    if ($header){
+      $header = 0;
+      next();
+    }
+    my $ensg_id = $line[0];
+    my $enst_id = $line[1];
+    my $ensg_name = $line[2];
+    $ensembl_map{$enst_id}{ensg_id} = $ensg_id;
+    $ensembl_map{$enst_id}{ensg_name} = $ensg_name;
+  }
+  close(ENSG);
+
+  return(\%ensembl_map);
+}
+
+
+
+
+#######################################################################################################################################################################
 #Load Entrez Data from flatfiles                                                                                                                                      #
 #######################################################################################################################################################################
 sub loadEntrezEnsemblData{
@@ -298,23 +339,7 @@ sub loadEntrezEnsemblData{
       $entrez_dir = '/gscmnt/sata132/techd/solexa/jwalker/RNAseq/annotation/mm9/entrez';
       $ensembl_dir = '/gscmnt/sata132/techd/solexa/jwalker/RNAseq/annotation/mm9/ensembl';
       $ucsc_dir = '/gscmnt/sata132/techd/solexa/jwalker/RNAseq/annotation/mm9/ucsc/';
-      @files = qw/
-                     ensembl_v64_id_to_gene_name.txt
-                     ensembl_v63_id_to_gene_name.txt
-                     ensembl_v62_id_to_gene_name.txt
-                     ensembl_v61_id_to_gene_name.txt
-                     ensembl_v60_id_to_gene_name.txt
-                     ensembl_v59_id_to_gene_name.txt
-                     ensembl_v58_id_to_gene_name.txt
-                     ensembl_v57_id_to_gene_name.txt
-                     ensembl_v56_id_to_gene_name.txt
-                     ensembl_v55_id_to_gene_name.txt
-                     ensembl_v54_id_to_gene_name.txt
-                     ensembl_v53_id_to_gene_name.txt
-                     ensembl_v52_id_to_gene_name.txt
-                     ensembl_v51_id_to_gene_name.txt
-                     ensembl_v50_id_to_gene_name.txt
-                 /;
+      @files = qw (ensembl_v64_id_to_gene_name.txt ensembl_v63_id_to_gene_name.txt ensembl_v62_id_to_gene_name.txt ensembl_v61_id_to_gene_name.txt ensembl_v60_id_to_gene_name.txt ensembl_v59_id_to_gene_name.txt ensembl_v58_id_to_gene_name.txt ensembl_v57_id_to_gene_name.txt ensembl_v56_id_to_gene_name.txt ensembl_v55_id_to_gene_name.txt ensembl_v54_id_to_gene_name.txt ensembl_v53_id_to_gene_name.txt ensembl_v52_id_to_gene_name.txt ensembl_v51_id_to_gene_name.txt ensembl_v50_id_to_gene_name.txt);
   }
 
   my %edata;
@@ -338,7 +363,7 @@ sub loadEntrezEnsemblData{
   #Load data from Ensembl files
   my %entrez_map;      #Entrez_id          -> symbol, synonyms
   my %ensembl_map;     #Ensembl_id         -> entrez_id(s) - from Entrez
-  my %ensembl_map2;    #Ensembl_id         -> symbol(s) - from Ensembl
+  my %ensembl_map2;    #Ensembl_gene_id    -> symbol(s) - from Ensembl
   my %symbols_map;     #Symbols            -> entrez_id(s)
   my %synonyms_map;    #Synonyms           -> entrez_id(s)
   my %p_acc_map;       #Protein accessions -> entrez_id(s)
@@ -503,11 +528,12 @@ sub loadEntrezEnsemblData{
       chomp($_);
       my @line = split("\t", $_);
       my $ensg_id = uc($line[0]);
-      my $ensg_name = uc($line[1]);
+      my $enst_id = uc($line[1]);
+      my $ensg_name = uc($line[2]);
       if ($ensg_name =~ /(.*)\.\d+$/){
         $ensg_name = $1;
       }
-
+      #Create one hash that is simply ENSG id to associated gene name
       unless($ensembl_map2{$ensg_id}){
         $ensembl_map2{$ensg_id}{name}=$ensg_name;
         $ensembl_map2{$ensg_id}{source}=$file;
@@ -1024,7 +1050,7 @@ sub getColumnPosition{
   my %columns;
   my $p = 0;
   foreach my $col (@header){
-    $columns{$col}{position} = $p;    
+    $columns{$col}{position} = $p;
     $p++;
   }
 
@@ -1048,7 +1074,7 @@ sub getFilePathBase{
 
   my %fb;
 
-  my ($base, $extension, $base_dir, $file_name);
+  my ($base, $extension, $base_dir, $file_name, $file_base);
 
   if ($path =~ /(.*)(\.\w+)$/){
     $base = $1;      #Full path without extension
@@ -1057,20 +1083,25 @@ sub getFilePathBase{
     print RED, "\n\n&getFileBasePath could not determine base and extension of a file path: $path\n\n", RESET;
     exit();
   }
-
   if ($path =~ /(.*)\/(.*)$/){
-    $base_dir = "$1"."/";
-    $file_name = $2;
+    $base_dir = "$1"."/"; #Full directory path
+    $file_name = $2;      #Full file name
   }else{
     print RED, "\n\n&getFileBasePath could not determine base_dir and file_name of a file path: $path\n\n", RESET;
     exit();
   }
+  if ($file_name =~ /(.*)(\.\w+)$/){
+    $file_base = $1;      #File name only without extension
+  }else{
+    print RED, "\n\n&getFileBasePath could not determine file base from file_name: $file_name\n\n", RESET;
+    exit();
+  }
 
-
-  $fb{$path}{base} = $base;
-  $fb{$path}{extension} = $extension;
-  $fb{$path}{base_dir} = $base_dir;
-  $fb{$path}{file_name} = $file_name;
+  $fb{$path}{base} = $base;            #Full path without extension
+  $fb{$path}{extension} = $extension;  #Extension only
+  $fb{$path}{base_dir} = $base_dir;    #Full directory path with out filename
+  $fb{$path}{file_name} = $file_name;  #Full file name without path
+  $fb{$path}{file_base} = $file_base;
 
   return(\%fb);
 }

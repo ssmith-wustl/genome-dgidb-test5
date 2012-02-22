@@ -66,12 +66,11 @@ class Genome::Subject {
 
 sub attributes_for_nomenclature {
 
-    my ($self, $name) = @_;
+    my ($self, $nom) = @_;
     
-    my $n = Genome::Nomenclature->get(name => $name);
-    die "$name is not the name of a nomenclature" if !$n;
+    die "must supply nomenclature" if !$nom;
 
-    my @fields = $n->fields();
+    my @fields = $nom->fields();
     my @attr = Genome::SubjectAttribute->get( 
         nomenclature => [ map {$_->id} @fields ], 
         subject_id => $self->id 

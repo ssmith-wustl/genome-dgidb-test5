@@ -131,7 +131,7 @@ sub daemon {
             if ($@) { $self->info("CHILD($$): ahh shit: $@"); }
 
             if ($signaled_to_quit) {
-                $self->inf("CHILD($$): signaled to quit");
+                $self->info("CHILD($$): signaled to quit");
                 exit;
             }
 
@@ -217,6 +217,9 @@ sub index_queued {
                 $subject_seen->{$subject_class}->{$subject_id}++;
                 $index_queue_item->delete();
                 $modified_count++;
+            } else {
+                # Move it to the back of the line.
+                $index_queue_item->timestamp(UR::Context->now);
             }
         }
     }

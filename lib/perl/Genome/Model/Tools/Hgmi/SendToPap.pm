@@ -4,7 +4,6 @@ use strict;
 use warnings;
 
 use Genome;
-use Command;
 use Carp;
 
 use File::Slurp;
@@ -14,7 +13,6 @@ use DateTime;
 use List::MoreUtils qw/ uniq /;
 use IPC::Run;
 use Workflow::Simple;
-use Data::Dumper;
 use PAP;
 
 use Bio::Seq;
@@ -87,6 +85,11 @@ class Genome::Model::Tools::Hgmi::SendToPap (
             is => 'String',
             doc => 'resume (crashed) workflow from previous invocation',
         },
+        skip_db_upload => {
+            is => 'Boolean',
+            default => 0,
+            doc => 'If set, database upload step is skipped',
+        },
     ],
 );
 
@@ -113,30 +116,16 @@ sub execute {
         }
     }
 
-    my $previous_workflow_id = $self->resume_workflow();
-
-    # Start timer here
     my $starttime = DateTime->now(time_zone => 'America/Chicago');
-    #unless (defined($previous_workflow_id)) {
-    #    $self->status_message("Moving data from mgap to biosql SendToPap.pm");
-    #    $self->mgap_to_biosql();
 
-    #    $self->status_message("Creating peptide file SendToPap.pm");
-    #    $self->get_gene_peps();
-    #}
-    
-    # interface to workflow to start the PAP.
     $self->do_pap_workflow();
 
-    # end timer, log run time
     my $finishtime = DateTime->now(time_zone => 'America/Chicago');
     my $runtime = ($finishtime->epoch() - $starttime->epoch());
     $self->activity_log($runtime,$self->locus_tag );
 
     return 1;
 }
-
-## need workflow item here...
 
 sub do_pap_workflow {
     my $self = shift;
@@ -174,6 +163,7 @@ sub do_pap_workflow {
 
         # TODO Implement dynamic workflow generation to allow an arbitrary combo of tools to be used
         my %workflow_params = (
+            'skip db upload' => $self->skip_db_upload,
             'fasta file' => $fasta_file,
             'chunk size' => 1000,
             'dev flag' => $workflow_dev_flag,

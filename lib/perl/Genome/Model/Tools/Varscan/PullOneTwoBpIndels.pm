@@ -169,7 +169,7 @@ sub execute {                               # replace with real execution logic.
         $tumor_bam = $build->tumor_bam;
 
 
-        #convert the bed file to annotation format
+        #convert the bed file to unsplit the ref/var alleles and convert to annotation format
 
         #create a tmp file for the converted file
         my ($tfh,$newfile) = Genome::Sys->create_temp_file;
@@ -186,6 +186,7 @@ sub execute {                               # replace with real execution logic.
             chomp($line);
             my @F = split("\t",$line);
             $F[3] =~ s/\*/-/g;
+            $F[3] =~ s/0/-/g;
             my @a = split(/\//,$F[3]);
 
             if (($F[3] =~ /^0/) || ($F[3] =~ /^\-/)){ #indel INS

@@ -18,10 +18,11 @@ use Genome::Command::Crud;
 Genome::Command::Crud->init_sub_commands(
     target_class => 'Genome::InstrumentData',
     target_name => 'instrument_data',
+    target_name_pl => 'instrument data',
     create => {do_not_init => 1},
     delete => {do_not_init => 1},
     list => {do_not_init => 1},
-    update => {only_if_null => 1},
+    update => {only_if_null => 1, exclude => [qw/ library full_path /]},
 );
 
 1;

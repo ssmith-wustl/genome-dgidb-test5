@@ -61,7 +61,8 @@ sub execute {
         }
 
         #Track groups to more efficiently add models to groups later
-        for my $group_id ($model->group_ids){
+        for my $group ($model->model_groups){
+            my $group_id = $group->id;
             push @{$group_to_models{$group_id}}, $result;
         }
 

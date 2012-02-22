@@ -11,12 +11,20 @@ BEGIN {
 #$::RD_TRACE = 1;
 #$::RD_HINT = 1;
 
-use Test::More tests => 19;
+use Test::More tests => 21;
 
 use above "Genome";
 
 use_ok('Genome::InstrumentData::Composite::Strategy')
   or die('test cannot continue');
+
+my $strategy_fail = Genome::InstrumentData::Composite::Strategy->create(strategy =>
+    'instrument_data 
+     aligned to contamination_ref using bwa 0.5.5 [-t 4] v1'
+);
+isa_ok($strategy_fail, 'Genome::InstrumentData::Composite::Strategy', 'created strategy');
+$strategy_fail->dump_status_messages(1);
+ok(!$strategy_fail->execute, 'strategy parsing failed as expected');
 
 my $strategy = Genome::InstrumentData::Composite::Strategy->create(strategy =>
     'instrument_data 

@@ -110,11 +110,9 @@ class Genome::Model {
     has_optional_deprecated => [
         auto_assign_inst_data => {
             is => 'Boolean',
-            column_name => 'AUTO_ASSIGN_INST_DATA',
         },
         auto_build_alignments => {
             is => 'Boolean',
-            column_name => 'AUTO_BUILD_ALIGNMENTS',
         },
     ],
     schema_name => 'GMSchema',
@@ -163,6 +161,11 @@ sub _resolve_processing_profile {
     return;
 }
 
+# Set to true in subclasses if downstream triggering of builds should be enabled
+sub _should_trigger_downstream_builds {
+    return 0;
+}
+
 # Default string to be displayed, can be overridden in subclasses
 sub __display_name__ {
     my $self = shift;
@@ -198,7 +201,6 @@ sub create {
     return $self;
 }
 
-
 # Delete the model and all of its builds/inputs
 sub delete {
     my $self = shift;
@@ -227,33 +229,36 @@ sub delete {
     return $self->SUPER::delete;
 }
 
+# Returns a list of models for which this model is an input
+sub to_models {
+    my $self = shift;
+    my @inputs = Genome::Model::Input->get(value => $self);
+    return map { $_->model } @inputs;
+}
+
+# Returns a list of models that this model uses as inputs
+sub from_models {
+    my $self = shift;
+    my @inputs = grep { $_->value_class_name->isa('Genome::Model') } $self->inputs;
+    return map { $_->value } @inputs;
+}
+
 # Returns a list of builds (all statuses) sorted from oldest to newest
 sub sorted_builds {
-    my $self = shift;
-    my @builds = $self->builds;
-    return sort { $a->date_scheduled cmp $b->date_scheduled } @builds;
+    return shift->builds(-order_by => 'date_scheduled');
 }
 
 # Returns a list of succeeded builds sorted from oldest to newest
 sub succeeded_builds { return $_[0]->completed_builds; }
 sub completed_builds {
-    my $self = shift;
-    my @completed_builds = grep {
-        defined $_->status and
-        $_->status eq 'Succeeded' and
-        $_->date_completed
-    } $self->sorted_builds;
-    return @completed_builds;
+    return shift->builds(status => 'Succeeded', -order_by => 'date_scheduled');
 }
 
 # Returns the latest build of the model, regardless of status
 sub latest_build {
     my $self = shift;
     my @builds = $self->sorted_builds;
-    if (@builds) {
-        return $builds[-1];
-    }
-    return;
+    return pop @builds;
 }
 
 # Returns the latest build of the model that successfully completed
@@ -262,10 +267,7 @@ sub last_complete_build { return $_[0]->resolve_last_complete_build; }
 sub resolve_last_complete_build {
     my $self = shift;
     my @completed_builds = $self->completed_builds;
-    if (@completed_builds) {
-        return $completed_builds[-1];
-    }
-    return;
+    return pop @completed_builds;
 }
 
 # Returns a list of builds with the specified status sorted from oldest to newest
@@ -412,6 +414,38 @@ sub params_for_class {
     } $meta->property_metas;
 
     return @param_names;
+}
+
+# Called when a build of this model succeeds, requests builds for "downstream" models
+# (eg, models that have this model as an input)
+sub _trigger_downstream_builds {
+    my ($self, $build) = @_;
+    return 1 unless $self->_should_trigger_downstream_builds;
+
+    # TODO The observer has to go on build events because that's where build status is 
+    # currently stored. Once the status is stored directly on the build itself, the
+    # subject_class_name below should be changed to Genome::Model::Build, which should
+    # simplify any callbacks as well (since they wouldn't have to check if they are
+    # the master event of the build prior to doing anything).
+    my @observers = UR::Observer->get(
+        subject_class_name => 'Genome::Model::Event::Build',
+        aspect => 'event_status',
+        note => 'build_success',
+    );
+
+    # Only perform this default behavior if no observers for build_success exist for this type
+    unless (@observers) {
+        my @to_models = $self->to_models;
+        for my $model (@to_models) {
+            $model->build_requested(
+                1,
+                'build requested due to successful build ' . $build->id .
+                    ' of input model ' . $self->__display_name__
+            );
+        }
+    }
+
+    return 1;
 }
 
 # Ensures that processing profile is set. If not, an attempt is made to resolve one before exiting

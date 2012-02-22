@@ -354,6 +354,7 @@ sub execute {
     my $psortb_archive_dir = File::Spec->catfile($base_archive_dir, 'psortB', $config->{pipe_version}, 'Hybrid');
 
     my $send = Genome::Model::Tools::Hgmi::SendToPap->create(
+        skip_db_upload       => ((exists $config->{skip_db_upload}) ? $config->{skip_db_upload} : 0),
         locus_tag            => $config->{locus_tag},
         sequence_set_id      => $merge->sequence_set_id,
         sequence_name        => $config->{assembly_name},

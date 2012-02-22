@@ -15,69 +15,69 @@ use FileHandle;
 class Genome::Model::Tools::CopyNumber::BamWindow {
     is => 'Command',
     has => [
-	bam_file => {
-	    is => 'String',
-	    is_optional => 0,
-	    doc => 'bam file to count tumor reads from',
-	},
-        
-        per_lib => {
-	    is => 'Boolean',
-	    is_optional => 1,
-            default => 1,
-	    doc => 'do counts on a per-library basis',
-	},
-        
-	output_file => {
-	    is => 'String',
-	    is_optional => 0,
-	    doc => 'output file',
-	},
-        
-        minimum_mapping_quality => {
-	    is => 'Integer',
-	    is_optional => 1,
-	    doc => 'minimum mapping quality required for a read to be included',
-            default => 20,
-	},
-        
-        extra_params => {
-            is => 'String',
-            is_optional => 1,
-            doc => 'extra parameters to pass to bam-window',
-            default => "-s",
-        },
+    bam_file => {
+        is => 'String',
+        is_optional => 0,
+        doc => 'bam file to count tumor reads from',
+    },
 
-        lib_as_readgroup => {
-            is => 'Boolean',
-            is_optional => 1,
-            doc => 'some bams don\'t have readgroups and libraries listed in the header, and instead use the library name as the readgroup name in the bam. In this case, we can extract these from the bam lines and use them, at the cost of having to rad through the bam file twice',
-            default => 0,
-        },
+    per_lib => {
+        is => 'Boolean',
+        is_optional => 1,
+        default => 1,
+        doc => 'do counts on a per-library basis',
+    },
 
-        window_size => {
-            is => 'Integer',
-	    is_optional => 1,
-	    doc => 'size of the bins to count reads in',
-            default => 10000,
-        },
+    output_file => {
+        is => 'String',
+        is_optional => 0,
+        doc => 'output file',
+    },
 
-        per_read_length => {
-            is => 'Boolean',
-	    is_optional => 1,
-	    doc => 'split different read lengths out into columns',
-            default => 0,
-        },
+    minimum_mapping_quality => {
+        is => 'Integer',
+        is_optional => 1,
+        doc => 'minimum mapping quality required for a read to be included',
+        default => 20,
+    },
 
-        read_lengths => {
-            is => 'String',
-	    is_optional => 1,
-	    doc => '(only with per-read-length) comma seperated list of read lengths to consider. If not provided, the script will have to read through the bam, get the read lengths and then launch the c program.',
-        },
+    extra_params => {
+        is => 'String',
+        is_optional => 1,
+        doc => 'extra parameters to pass to bam-window',
+        default => "-s",
+    },
+
+    lib_as_readgroup => {
+        is => 'Boolean',
+        is_optional => 1,
+        doc => 'some bams don\'t have readgroups and libraries listed in the header, and instead use the library name as the readgroup name in the bam. In this case, we can extract these from the bam lines and use them, at the cost of having to rad through the bam file twice',
+        default => 0,
+    },
+
+    window_size => {
+        is => 'Integer',
+        is_optional => 1,
+        doc => 'size of the bins to count reads in',
+        default => 10000,
+    },
+
+    per_read_length => {
+        is => 'Boolean',
+        is_optional => 1,
+        doc => 'split different read lengths out into columns',
+        default => 0,
+    },
+
+    read_lengths => {
+        is => 'String',
+        is_optional => 1,
+        doc => '(only with per-read-length) comma seperated list of read lengths to consider. If not provided, the script will have to read through the bam, get the read lengths and then launch the c program.',
+    },
 
 
 
-        ]
+    ]
 };
 
 sub help_brief {
@@ -122,7 +122,7 @@ sub execute {
         }
 
         #now get the libraries, associated readgroups, and md5hashes of the lib name      
-  
+
         if(!($self->lib_as_readgroup)){        
             #simple way - get them from the header            
             my $cmd="samtools view -H " . $self->bam_file;       
@@ -143,7 +143,7 @@ sub execute {
             }
             if($count == 0){
                 die("no readgroups in the header, can't do per-library counts\nIf the libraries are used in place of readgroups in the main file (\"RG:Z:libraryName\"), \ntry the --lib-as-readgroup option\n");
-                
+
             }
         } else {
             #slow way - have to read through the whole bam file and get the readgroups/libs
@@ -171,7 +171,7 @@ sub execute {
     my $a = "cp " . $temp_output_file . " " . $self->output_file . ".libs";
     `$a`;
 
-    my $cmd = "~/usr/src/bamwindow-v0.3/bam-window";
+    my $cmd = "/gscuser/cmiller/usr/src/bamwindow-v0.3/bam-window";
     $cmd .= " -q " . $self->minimum_mapping_quality;
     $cmd .= " -w " . $self->window_size;
 
@@ -188,11 +188,11 @@ sub execute {
     $cmd .= " >" . $self->output_file;
 
     my $return = Genome::Sys->shellcmd(
-	cmd => "$cmd",
-        );
+        cmd => "$cmd",
+    );
     unless($return) {
-	$self->error_message("Failed to execute: Returned $return");
-	die $self->error_message;
+        $self->error_message("Failed to execute: Returned $return");
+        die $self->error_message;
     }
     return $return;
 }

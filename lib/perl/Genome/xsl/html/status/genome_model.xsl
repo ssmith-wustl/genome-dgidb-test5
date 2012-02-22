@@ -836,6 +836,22 @@
             </tr>
             <tr>
               <td class="name">
+                subject name:
+              </td>
+              <td class="value">
+                <xsl:value-of select="aspect[@name='subject']/object/display_name"/>
+              </td>
+            </tr>
+            <tr>
+              <td class="name">
+                subject type:
+              </td>
+              <td class="value">
+                <xsl:value-of select="aspect[@name='subject']/object/label_name"/>
+              </td>
+            </tr>
+            <tr>
+              <td class="name">
                 username:
               </td>
               <td class="value">

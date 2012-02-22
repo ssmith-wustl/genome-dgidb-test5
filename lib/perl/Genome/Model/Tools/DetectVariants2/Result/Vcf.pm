@@ -82,7 +82,8 @@ sub create {
     }
 
     unless($self->_reallocate_disk_allocation) {
-        die $self->error_message('Failed to reallocate disk allocation.');
+        #this is suboptimal, but no need to die as our data should still be good and complete
+        $self->warning_message('Failed to reallocate disk allocation.');
     }
 
     unless($self->_add_as_user_of_inputs) {

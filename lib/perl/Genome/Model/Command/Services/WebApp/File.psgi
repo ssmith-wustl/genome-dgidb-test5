@@ -8,7 +8,7 @@ package Genome::Model::Command::Services::WebApp::File;
 our $loaded = 0;
 sub load_modules {
     return if $loaded;
-    eval "
+    eval {
         use above 'Genome';
         use HTML::Tags;
         use Plack::MIME;
@@ -18,7 +18,7 @@ sub load_modules {
         use HTTP::Date;
         use JSON;
         use UR::Object::View::Default::Xsl qw/type_to_url url_to_type/;
-    ";
+    };
     if ($@) {
         die "failed to load required modules: $@";
     }
@@ -28,16 +28,40 @@ sub load_modules {
 }
 
 sub dispatch_request {
-    sub ( POST + /view/x/druggable-gene + %* + *file= ) {
+    sub ( POST + /view/x/druggable-gene + %* + *file~ ) {
         load_modules();
         my ($self, $params, $file, $env) = @_;
         my @gene_names;
-        @gene_names = Genome::Sys->read_file($file->path);
-        chomp @gene_names;
+        @gene_names = Genome::Sys->read_file($file->path) if $file;
         push @gene_names, split("\n",$params->{'genes'});
         chomp @gene_names;
         my $command = Genome::DruggableGene::Command::GeneNameReport::LookupInteractions->execute( gene_identifiers => \@gene_names );
-        return [200, ['Content-type' => "text/csv"], [join("\n", $command->output)]];
+        my %params = (
+                no_match_genes => [$command->no_match_genes],
+                no_interaction_genes => [$command->no_interaction_genes],
+                subject => Genome::DruggableGene::GeneNameReport->define_set,
+                interactions => [$command->interactions],
+                filtered_out_interactions => [$command->filtered_out_interactions],
+                identifier_to_genes => $command->identifier_to_genes,
+            );
+        if($params->{'return'} eq 'html'){
+            my $html = Genome::DruggableGene::GeneNameReport::Set::View::Interaction::Html->create(
+                %params,
+                desired_perspective => 'status',
+                xsl_root => Genome->base_dir . '/xsl',
+                xsl_path => '/static/xsl',
+                xsl_variables => {
+                    rest      => '/view',
+                    resources => '/view/genome/resource.html',
+                },
+            );
+            return [200, ['Content-type' => "text/html"], [$html->content]];
+        } elsif($params->{'return'} eq 'html') {
+            return [200, ['Content-type' => "text/tsv"], [join("\n", $command->output)]];
+        } elsif($params->{'return'} eq 'xml') {
+            my $xml = Genome::DruggableGene::GeneNameReport::Set::View::Interaction::Xml->create(%params);
+            return [200, ['Content-type' => "text/xml"], [$xml->content]];
+        }
     },
 #    sub ( POST + /view/x/subject-upload + *file= ) {
     sub ( POST + /view/x/subject-upload + %* + *file= )  {

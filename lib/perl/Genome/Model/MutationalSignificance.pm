@@ -13,6 +13,10 @@ class Genome::Model::MutationalSignificance {
             is_many => 1,
             doc => 'somatic variation models to evaluate',
         },
+        annotation_build => {
+            is => 'Genome::Model::Build::ImportedAnnotation',
+            doc => 'annotation to use for roi file',
+        },
     ],
     has_param => [
 	],
@@ -38,12 +42,12 @@ EOS
 }
 
 sub _resolve_workflow_for_build {
-warn 'The logic for building a MuSiC model is not yet functional.  Contact Allison Regier';
 
     # This is called by Genome::Model::Build::start()
     # Returns a Workflow::Operation
     # By default, builds this from stages(), but can be overridden for custom workflow.
     my $self = shift;
+$self->warning_message('The logic for building a MuSiC model is not yet functional.  Contact Allison Regier');
     my $build = shift;
     my $lsf_queue = shift; # TODO: the workflow shouldn't need this yet
     my $lsf_project = shift;
@@ -58,7 +62,7 @@ warn 'The logic for building a MuSiC model is not yet functional.  Contact Allis
 
     my $workflow = Workflow::Model->create(
         name => $build->workflow_name,
-        input_properties => ['somatic_variation_builds','build_id'],
+        input_properties => ['somatic_variation_builds','build','annotation_build'],
         output_properties => ['smg_result','pathscan_result','mrt_result','pfam_result','proximity_result',
                               'cosmic_result','cct_result'],
     );
@@ -148,7 +152,7 @@ warn 'The logic for building a MuSiC model is not yet functional.  Contact Allis
         operation_type => Workflow::OperationType::Command->create(
             command_class_name => 'Genome::Model::MutationalSignificance::Command::CreateMafFile',
         ),
-        parallel_by => 'model',
+        parallel_by => 'somatic_variation_build',
     );
 
     $create_maf_operation->operation_type->lsf_queue($lsf_queue);
@@ -158,14 +162,28 @@ warn 'The logic for building a MuSiC model is not yet functional.  Contact Allis
         left_operation => $input_connector,
         left_property => 'somatic_variation_builds',
         right_operation => $create_maf_operation,
-        right_property => 'model'
+        right_property => 'somatic_variation_build'
+    );
+
+    $link = $workflow->add_link(
+        left_operation => $input_connector,
+        left_property => 'build',
+        right_operation => $create_maf_operation,
+        right_property => 'build',
     );
 
     $link = $workflow->add_link(
         left_operation => $create_maf_operation,
-        left_property => 'model_output',
+        left_property => 'maf_file',
         right_operation => $merged_maf_operation,
-        right_property => 'array_of_model_outputs',
+        right_property => 'maf_files',
+    );
+
+    $link = $workflow->add_link(
+        left_operation => $input_connector,
+        left_property => 'build',
+        right_operation => $merged_maf_operation,
+        right_property => 'build',
     );
 
     #Create ROI BED file
@@ -178,9 +196,9 @@ warn 'The logic for building a MuSiC model is not yet functional.  Contact Allis
 
     $link = $workflow->add_link(
         left_operation => $input_connector,
-        left_property => 'build_id',
+        left_property => 'annotation_build',
         right_operation => $roi_operation,
-        right_property => 'build_id',
+        right_property => 'annotation_build',
     );
 
     $link = $workflow->add_link(
@@ -199,9 +217,9 @@ warn 'The logic for building a MuSiC model is not yet functional.  Contact Allis
 
     $link = $workflow->add_link(
         left_operation => $input_connector,
-        left_property => 'build_id',
+        left_property => 'build',
         right_operation => $clinical_data_operation,
-        right_property => 'build_id',
+        right_property => 'build',
     );
 
     $link = $workflow->add_link(
@@ -221,9 +239,9 @@ warn 'The logic for building a MuSiC model is not yet functional.  Contact Allis
 
     $link = $workflow->add_link(
         left_operation => $input_connector,
-        left_property => 'build_id',
+        left_property => 'somatic_variation_builds',
         right_operation => $bam_list_operation,
-        right_property => 'build_id',
+        right_property => 'somatic_variation_builds',
     );
 
     $link = $workflow->add_link(
@@ -245,7 +263,8 @@ sub _map_workflow_inputs {
     my @builds = $build->somatic_variation_builds;
 
     push @inputs, somatic_variation_builds => \@builds;
-    push @inputs, build_id => $build->id;
+    push @inputs, build => $build;
+    push @inputs, annotation_build => $build->annotation_build;
 
     return @inputs;
 }

@@ -121,10 +121,12 @@ if ($cnv_results_file){
 #Execute the R script that generates the CNV plots
 my $rscript = "$script_dir/"."CNView.R";
 my $r_cmd = "$rscript '$name' $cnv_file $cnv_results_file $ideogram_file $subdir $chr $chr_start $chr_end $image_type";
+my $r_cmd_stdout = "$subdir"."CNView.R.stdout";
+my $r_cmd_stderr = "$subdir"."CNView.R.stderr";
 if ($verbose){
   print BLUE, "\n\nExecuting R code:\n$r_cmd\n", RESET;
 }else{
-  $r_cmd .= " 1>/dev/null";
+  $r_cmd .= " 1>$r_cmd_stdout 2>$r_cmd_stderr";
 }
 system($r_cmd);
 
@@ -199,7 +201,6 @@ sub checkInput{
   
   #Check for required parameters
   unless ($reference_build && ($cnv_file || $model_build) && $working_dir && $sample_name){
-    print RED, "\nRequired input parameter(s) missing or incorrect format!\n\n", RESET;
     print GREEN, "$usage", RESET;
     print "\n\n";
     exit();

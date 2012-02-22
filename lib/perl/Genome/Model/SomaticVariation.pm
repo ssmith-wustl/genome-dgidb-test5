@@ -1,5 +1,4 @@
 package Genome::Model::SomaticVariation;
-#:adukes short term, keep_n_most_recent_builds shouldn't have to be overridden like this here.  If this kind of default behavior is acceptable, it belongs in the base class
 
 use strict;
 use warnings;

@@ -302,7 +302,6 @@ sub create_basic_mock_model {
             resolve_last_complete_build  
             succeeded_builds last_succeeded_build last_succeeded_build_id
             compatible_instrument_data instrument_data unassigned_instrument_data
-            notify_input_build_success
             sorted_builds
             /),
     ) or confess "Can't add mock methods to $type_name model";
@@ -405,7 +404,7 @@ sub add_mock_build_to_model {
             date_completed date_scheduled
             add_report get_report reports 
             start initialize success fail abandon delete
-            metrics
+            metrics __get_attr__
             /),
     ) or confess "Can't add methods to mock build";
 
@@ -837,7 +836,7 @@ sub get_mock_model {
             builds_with_status abandoned_builds failed_builds running_builds scheduled_builds
             current_running_build current_running_build_id
             completed_builds last_complete_build last_complete_build_id 
-            resolve_last_complete_build 
+            resolve_last_complete_build __get_attr__
             succeeded_builds last_succeeded_build last_succeeded_build_id
             compatible_instrument_data instrument_data unassigned_instrument_data
             /),

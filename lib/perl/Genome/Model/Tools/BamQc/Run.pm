@@ -10,16 +10,21 @@ use Workflow::Simple;
 
 my $DEFAULT_PICARD_VERSION = Genome::Model::Tools::Picard->default_picard_version;
 my $DEFAULT_SAMSTAT_VERSION = Genome::Model::Tools::SamStat::Base->default_samstat_version;
-my $DEFAULT_FASTQC_VERSION = '0.10.0'; #Genome::Model::Tools::Fastqc->default_fastqc_version;
+my $DEFAULT_FASTQC_VERSION = '0.10.0'; #Genome::Model::Tools::Fastqc->default_fastqc_version; No idea why the class method doesn't work...
+my $DEFAULT_SAMTOOLS_VERSION = Genome::Model::Tools::Sam->default_samtools_version;
+my $DEFAULT_SAMTOOLS_MAXIMUM_MEMORY = Genome::Model::Tools::Sam->default_samtools_maximum_memory;
 
 class Genome::Model::Tools::BamQc::Run {
     is => ['Genome::Model::Tools::BamQc::Base'],
     has_input => [
         bam_file => {
-            doc => 'The input BAM file.'
+            doc => 'The input BAM file to generate metrics for.'
         },
-        output_directory => { },
+        output_directory => {
+            doc => 'The directory to write output summary metrics files to.',
+        },
         reference_sequence => {
+            doc => 'The reference sequence for which the BAM file was aligned to.',
             # GRCh37-lite-build37
             default_value => '/gscmnt/ams1102/info/model_data/2869585698/build106942997/all_sequences.fasta',
         },
@@ -36,46 +41,49 @@ class Genome::Model::Tools::BamQc::Run {
             valid_values => ['bam','bed'],
         },
         picard_version => {
+            doc => 'The version of Picard to use.  See gmt picard --help for details.',
             default_value => $DEFAULT_PICARD_VERSION,
         },
         samstat_version => {
+            doc => 'The version of SamStat to use. See gmt sam-stat --help for details.',
             default_value => $DEFAULT_SAMSTAT_VERSION,
         },
         fastqc_version => {
+            doc => 'The version of FastQC to use.  See gmt fastqc --help for details.',
             default_value => $DEFAULT_FASTQC_VERSION,
         },
+        samtools_version => {
+            doc => 'The version of Samtools to use. See gmt sam --help for details.',
+            default_value => $DEFAULT_SAMTOOLS_VERSION,
+        },
+        samtools_maximum_memory => {
+            doc => 'The maximum amount of memory for Samtools to use. See gmt sam --help for details.',
+            default_value => $DEFAULT_SAMTOOLS_MAXIMUM_MEMORY,
+        },
         picard_maximum_memory => {
+            doc => 'The maximum amount of memory for Picard to use.  See gmt picard --help for details.',
             default_value => '30',
         },
         picard_maximum_permgen_memory => {
+            doc => 'The maximum amount of permgen memory for Picard to use.  See gmt picard --help for details.',
             default_value => '256',
         },
         picard_max_records_in_ram => {
+            doc => 'The maximum number of records for Picard to keep in memory.  See gmt picard --help for details.',
             default_value => '5000000',
         },
         error_rate => {
             is => 'Boolean',
+            doc => 'A flag to run error rate calculations.  The error-rate-pileup flag determines which method of error-rate calculation is used.',
             default_value => 1,
         },
         error_rate_pileup => {
             is => 'Boolean',
+            doc => 'A flag to run a pileup error rate calculation.  This actually compares each base in every read back to the reference sequence.  This can take a long time.  If set to false, the traditional error rate calculation will run using the Match Descriptor in the BAM alignment record.',
             default_value => 1,
         },
     ],
 };
-
-# TODO: I thought about running RefCov on the entire genome by default, but it may be computationally intensive(~several hours) depending on the genome size
-#sub create {
-    #my $class = shift;
-    #my %params = @_;
-    #my $self = $class->SUPER::create(%params);
-    #unless ($self) { return; }
-    #unless ($self->roi_file_path) {
-    #    $self->roi_file_path($self->bam_file);
-    #    $self->roi_file_format('bam');
-    #}
-    #return $self;
-#}
 
 sub execute {
     my $self = shift;
@@ -93,7 +101,7 @@ sub execute {
     my $file_basename = $self->output_directory .'/'. $bam_basename;
 
     my $bam_path = $file_basename .'.bam';
-    unless (-e $bam_path) {
+    unless (-l $bam_path || -e $bam_path) {
         unless (symlink($self->bam_file,$bam_path)) {
             die('Failed to create symlink '. $bam_path .' -> '. $self->bam_file);
         }
@@ -101,14 +109,14 @@ sub execute {
 
     # SAMTOOLS
     my $bai_path = $file_basename .'.bam.bai';
-    unless (-e $bai_path) {
+    unless (-l $bai_path || -e $bai_path) {
         my $bai_file = $self->bam_file .'.bai';
         if (-e $bai_file) {
             unless (symlink($bai_file,$bai_path)) {
                 die('Failed to create symlink '. $bai_path .' -> '. $bai_file);
             }
         } else {
-            # TODO: test if sorted
+            # TODO: test if BAM file is sorted before indexing
             unless (Genome::Model::Tools::Picard::BuildBamIndex->execute(
                 use_version => $self->picard_version,
                 maximum_permgen_memory => $self->picard_maximum_permgen_memory,
@@ -119,23 +127,21 @@ sub execute {
             }
         }
     }
-    my $flagstat_path = $file_basename .'.bam.flagstat';
-    unless (-e $flagstat_path) {
-        my $flagstat_file = $self->bam_file .'.flagstat';
-        if ($flagstat_file) {
-            unless (symlink($flagstat_file,$flagstat_path)) {
-                die('Failed to create symlinke '. $flagstat_path .' -> '. $flagstat_file);
-            }
-        } else {
-            # TODO: run samtools flagstat
-            die('Add samtools flagstat!');
-        }
-    }
 
-    # PICARD MARKDUPLICATES
+
+    # PICARD MARK DUPLICATES
     my @mrkdup_files = glob($bam_dirname .'/*.metrics');
     unless (@mrkdup_files) {
         # TODO: run MarkDuplicates passing the mrkdup bam file as input to the downstream steps in workflow
+        # Not sure because some BAMs are intentionally left unmarked (ex. RNASeq)....
+    } else {
+        for my $mrkdup_file (@mrkdup_files) {
+            my ($mrkdup_basename, $mrkdup_dirname, $mrkdup_suffix) = File::Basename::fileparse($mrkdup_file,qw/\.metrics/);
+            my $mrkdup_path = $self->output_directory .'/'. $mrkdup_basename .'.metrics';
+            unless (symlink($mrkdup_file,$mrkdup_path)) {
+                die('Failed to create symlink '. $mrkdup_path .' -> '. $mrkdup_file);
+            }
+        }
     }
 
     # PICARD METRICS
@@ -177,6 +183,20 @@ sub execute {
                                   fastqc_result
                                   read_length_result
                               /;
+    my $flagstat_path = $file_basename .'.bam.flagstat';
+    unless (-e $flagstat_path) {
+        my $flagstat_file = $self->bam_file .'.flagstat';
+        if (-e $flagstat_file) {
+            unless (symlink($flagstat_file,$flagstat_path)) {
+                die('Failed to create symlinke '. $flagstat_path .' -> '. $flagstat_file);
+            }
+        } else {
+            $workflow_params{samtools_version} = $self->samtools_version;
+            $workflow_params{samtools_maximum_memory} = $self->samtools_maximum_memory;
+            $workflow_params{samtools_flagstat_path} = $flagstat_path;
+            push @output_properties, 'flagstat_result';
+        }
+    }
     if ($self->error_rate) {
         my $error_rate_file = $file_basename .'-ErrorRate.tsv';
         if (-e $error_rate_file) {
@@ -207,7 +227,25 @@ sub execute {
 
     $workflow->log_dir($self->output_directory);
 
-
+    # Samtools flagstat
+    if ($workflow_params{samtools_flagstat_path}) {
+        my %samtools_flagstat_operation_params = (
+            workflow => $workflow,
+            name => $self->id .' Samtools Flagstat '. $self->bam_file,
+            class_name => 'Genome::Model::Tools::Sam::Flagstat',
+            input_properties => {
+                'bam_file' => 'bam_file',
+                'samtools_flagstat_path' => 'output_file',
+                'samtools_version' => 'use_version',
+                'samtools_maximum_memory' => 'maximum_memory',
+            },
+            output_properties => {
+                'result' => 'flagstat_result',
+            },
+        );
+        my $samtools_flagstat_operation = $self->setup_workflow_operation(%samtools_flagstat_operation_params);
+    }
+    
     # PicardMetrics
     my %picard_metrics_operation_params = (
         workflow => $workflow,
