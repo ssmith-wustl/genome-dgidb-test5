@@ -21,7 +21,7 @@ class Genome::Model::Tools::Fastq::Split {
         }
     ],
     has_output => [
-        fastq_files => { is_optional => 1, },
+        split_files => { is_optional => 1, },
     ],
     has_optional => [
         show_list => {
@@ -69,7 +69,7 @@ sub execute {
     chdir($cwd);
     #If more than one lane processed in the same output_directory, this becomes a problem
     my @tmp_fastqs = grep { $_ !~ /\.$fastq_suffix$/ } grep { /$fastq_basename-\d+$/ } glob($tmp_dir .'/'. $fastq_basename.'*');
-    my @fastq_files;
+    my @split_files;
 
     # User should provide a directory as input, then we can keep output fastqs on tmp
     # and distribute bfqs in a downstream process
@@ -82,13 +82,13 @@ sub execute {
         unless (File::Copy::move($tmp_fastq,$fastq_file,) ) {
             die('Failed to move file '. $tmp_fastq .' to '. $fastq_file .":  $!");
         }
-        push @fastq_files, $fastq_file;
+        push @split_files, $fastq_file;
     }
-    
-    $self->fastq_files(\@fastq_files);
+
+    $self->split_files(\@split_files);
 
     if ($self->show_list) {
-        for my $file ($self->fastq_files) {
+        for my $file ($self->split_files) {
             $self->status_message($file);
         }
     }
