@@ -135,13 +135,12 @@ sub get_ensembl_info {
     my $self = shift;
     my $version = shift;
     my ($eversion,$ncbiversion) = split(/_/,$version);
-    my $path = "/gsc/scripts/share/ensembl-".$eversion;
 
-    unless(-d $path) {
-        die "$path  does not exist, is $eversion for ensembl installed?";
-    }
+    my $host = defined $ENV{GENOME_DB_ENSEMBL_HOST} ? $ENV{GENOME_DB_ENSEMBL_HOST} : 'mysql1';
+    my $user = defined $ENV{GENOME_DB_ENSEMBL_USER} ? $ENV{GENOME_DB_ENSEMBL_USER} : 'mse'; 
+    my $password = defined $ENV{GENOME_DB_ENSEMBL_PASSWORD} ? $ENV{GENOME_DB_ENSEMBL_PASSWORD} : undef;
 
-    return ("mysql1","mse",undef); # no pass word needed here. all else const
+    return ($host, $user, $password);
 }
 
 sub generate_rna_seq_files {
