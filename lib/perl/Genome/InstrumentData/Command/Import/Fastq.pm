@@ -549,23 +549,20 @@ sub get_read_count_and_fragment_count {
 
 sub get_subset_name {
     my $self = shift;
-    my $subset_name=-1;
-    my @files = split ",",$self->source_data_files;
+
+    my $subset_name;
+    my @files = split(/,/, $self->source_data_files);
     for my $file (@files) {
-        my ($filename,$path,$suffix) = fileparse($file,".txt");
-        my ($n,$sname) = split "_",$filename;
-        if($subset_name==-1){
+        my ($filename, $path, $suffix) = fileparse($file, '.txt');
+        my ($sname) = $filename =~ /s_(\d)(_\d)?_sequence/;
+        if(not defined $subset_name) {
             $subset_name = $sname;
-        } else {
-            unless($sname eq $subset_name){
-                die "The subset names didn't match.";
-            }
+        } elsif ($sname ne $subset_name) {
+            die "The subset names didn't match.";
         }
+    }
 
-    }    
-    #print "subset_name  = ".$subset_name."\n";
     return $subset_name;
-
 }
 
 sub is_valid_filename {
