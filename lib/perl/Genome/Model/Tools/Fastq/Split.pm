@@ -46,9 +46,9 @@ EOS
 sub execute {
     my $self = shift;
 
-    my @suffix = qw/\.txt \.fastq/;
     $self->dump_status_messages($self->show_list);
 
+    my @suffix = qw/\.txt \.fastq \.fq/;
     my ($fastq_basename,$fastq_dirname,$fastq_suffix) = File::Basename::fileparse($self->fastq_file,@suffix);
     unless ($fastq_basename && $fastq_dirname && $fastq_suffix) {
         die('Failed to parse fastq file name '. $self->fastq_file);
