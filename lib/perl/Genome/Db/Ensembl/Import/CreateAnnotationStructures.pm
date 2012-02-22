@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 
 class Genome::Db::Ensembl::Import::CreateAnnotationStructures {
-    is  => 'Genome::Db::Ensembl::Import::Base', #TODO: shift this to Command:V2 if the base class becomes unnecessary
+    is  => 'Genome::Db::Ensembl::Import::Base',
     has => [
         host => {
             is  => 'Text',
@@ -417,7 +417,6 @@ sub execute
 
 sub connect_registry{
     my $self = shift;
-    my $eversion = $self->ensembl_version_string();
 
     my $lib = "use Bio::EnsEMBL::Registry;\nuse Bio::EnsEMBL::DBSQL::DBAdaptor;";
     eval $lib;
@@ -437,19 +436,6 @@ sub connect_registry{
         -user => $ens_user,
     );
     return $registry;
-}
-
-
-sub ensembl_version_string
-{
-    my $self    = shift;
-    my $ensembl = $self->version;
-
-    # <ens version>_<ncbi build vers><letter>
-    # 52_36n
-
-    my ( $e_version_number, $ncbi_build ) = split( /_/x, $ensembl );
-    return $e_version_number;
 }
 
 sub ordcount

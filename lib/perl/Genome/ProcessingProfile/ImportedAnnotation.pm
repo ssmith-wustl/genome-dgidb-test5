@@ -96,7 +96,7 @@ sub _execute_build{
             reference_sequence => $build->reference_sequence->fasta_file,
             transcript_version => $build->version,
             annotation_model => $build->model,
-            ucsc_directory => $build->reference_sequence->get_or_create_ucsc_tiering_directory, #TODO
+            ucsc_directory => $build->reference_sequence->get_or_create_ucsc_tiering_directory,
         );
     }
     elsif ($species_name eq 'mouse') {

@@ -69,10 +69,6 @@ sub execute {
         "--dump-file $dump_file");
     $build->prepend_api_path_and_execute(cmd => $command);
 
-#TODO: run tony's fix it scripts
-#TODO: Does import interpro go here or in processing_profile _execute_body
-#TODO: does ROI featurelist generation go here or in processing_profile
-#TODO: does rna_seq file gen or tiering file gen go here or in processing profile
 }
 
 #TODO: make this do something reasonable, like use the environment variables
@@ -81,11 +77,6 @@ sub get_ensembl_info {
     my $self = shift;
     my $version = shift;
     my ($eversion,$ncbiversion) = split(/_/,$version);
-    # my $path = "/gsc/scripts/share/ensembl-".$eversion;
-
-    # unless(-d $path) {
-        # die "$path  does not exist, is $eversion for ensembl installed?";
-    # }
 
     return ("mysql1","mse",undef); # no pass word needed here. all else const
 }
