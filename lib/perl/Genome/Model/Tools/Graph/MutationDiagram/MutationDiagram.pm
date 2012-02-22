@@ -202,10 +202,10 @@ sub MakeDiagrams {
 sub Draw {
     my ($self, $svg_fh, $hugo, $transcript, $length, $domains, $mutations) = @_;
 
-    my $document = Genome::Model::Tools::Graph::MutationDiagram::MutationDiagram::View->new(width=>'800',height=>'600',
+    my $document = Genome::Model::Tools::Graph::MutationDiagram::MutationDiagram::View->new(width=>'1500',height=>'1200',
         'viewport' => {x => 0, y => 0,
-            width => 800,
-            height => 600},
+            width => 1600,
+            height => 1200},
         left_margin => 50,
         right_margin => 50,);
     my $svg = $document->svg;
