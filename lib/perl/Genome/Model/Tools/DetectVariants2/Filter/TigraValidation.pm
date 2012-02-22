@@ -304,6 +304,18 @@ sub _create_temp_directories {
     return $self->SUPER::_create_temp_directories(@_);
 }
 
+sub _promote_staged_data {
+    my $self = shift;
+    my $output_dir = $self->SUPER::_promote_staged_data(@_);
+
+    #since the temp dir is under the output dir, we need to remove it
+    #before the final reallocation or everything is double-counted
+    my $staging_dir = $self->_temp_staging_directory;
+    Genome::Sys->remove_directory_tree($staging_dir);
+
+    return $output_dir;
+}
+
 sub _resolve_output_directory {
     my $self = shift;
 
