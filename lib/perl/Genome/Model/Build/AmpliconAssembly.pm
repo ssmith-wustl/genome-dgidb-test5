@@ -10,7 +10,7 @@ use Carp 'confess';
 class Genome::Model::Build::AmpliconAssembly {
     is => 'Genome::Model::Build',
     has => [
-    map( { $_ => { via => 'amplicon_assembly' } } Genome::AmpliconAssembly->helpful_methods ),
+    map( { $_ => { via => 'amplicon_assembly' } } Genome::Model::Tools::AmpliconAssembly::Set->helpful_methods ),
     ],
 };
 
@@ -25,12 +25,12 @@ sub amplicon_assembly {
 
     unless ( $self->{_amplicon_assembly} ) {
         # get
-        my $amplicon_assembly = Genome::AmpliconAssembly->get(
+        my $amplicon_assembly = Genome::Model::Tools::AmpliconAssembly::Set->get(
             directory => $self->data_directory,
         ); 
         # create
         unless ( $amplicon_assembly ) {
-            $amplicon_assembly = Genome::AmpliconAssembly->create(
+            $amplicon_assembly = Genome::Model::Tools::AmpliconAssembly::Set->create(
                 directory => $self->data_directory,
                 description => sprintf(
                     'Model Name: %s Id: %s Build Id: %s', 

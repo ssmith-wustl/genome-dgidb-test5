@@ -574,7 +574,7 @@ sub _build_subclass_specifics_for_amplicon_assembly {
 
     $self->mock_methods(
         $build,
-        Genome::AmpliconAssembly->helpful_methods,
+        Genome::Model::Tools::AmpliconAssembly::Set->helpful_methods,
         (qw/
             amplicon_assembly
             link_instrument_data 
