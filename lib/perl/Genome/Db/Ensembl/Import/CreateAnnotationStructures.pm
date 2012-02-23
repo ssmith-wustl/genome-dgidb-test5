@@ -22,6 +22,11 @@ class Genome::Db::Ensembl::Import::CreateAnnotationStructures {
             doc         => "ensembl db password",
             is_optional => 1,
         },
+        data_set => {
+            is => 'Text',
+            doc => 'Ensembl data set to import',
+            default => 'Core',
+        },
     ],
 };
 
@@ -46,14 +51,15 @@ EOS
 sub execute
 {
     my $self = shift;
+    my $data_set = $self->data_set;
 
     $self->prepare_for_execution;
 
     my $registry = $self->connect_registry;
     my $ucfirst_species = ucfirst $self->species;
-    my $gene_adaptor = $registry->get_adaptor( $ucfirst_species, 'Core', 'Gene' );
-    my $transcript_adaptor = $registry->get_adaptor( $ucfirst_species, 'Core', 'Transcript' );
-    my $slice_adaptor = $registry->get_adaptor( $ucfirst_species, 'Core', 'Slice');
+    my $gene_adaptor = $registry->get_adaptor( $ucfirst_species, $data_set, 'Gene' );
+    my $transcript_adaptor = $registry->get_adaptor( $ucfirst_species, $data_set, 'Transcript' );
+    my $slice_adaptor = $registry->get_adaptor( $ucfirst_species, $data_set, 'Slice');
 
     my @slices = @{ $slice_adaptor->fetch_all('toplevel', undef, 1, 0, 1) };
 
