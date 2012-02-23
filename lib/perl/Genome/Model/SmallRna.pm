@@ -1,3 +1,4 @@
+package Genome::Model::SmallRna;
 use strict;
 use warnings;
 BEGIN { $INC{"Genome/Model/Build/SmallRna.pm"} = 1; $INC{"Genome/ProcessingProfile/SmallRna.pm"} = 1; $INC{"Genome/Model/Command/Define/SmallRna.pm"} = 1; };
@@ -24,15 +25,7 @@ class Genome::Model::SmallRna {
 
             is    => 'Genome::Model::ReferenceAlignment',
             doc   => 'ref model for smallrna analysis',
-            is => 'Genome::Model::ReferenceAlignment',
-            doc => 'ref model for somatic analysis',
         },
-        
-#       subject => {
- #           is    => 'Genome::Model::Subject',
-  #          is_optional => 1, 
-#	    doc   => 'subject for smallrna analysis',
- #       },
     ],
     has_param => [
 		annotation_files => {
