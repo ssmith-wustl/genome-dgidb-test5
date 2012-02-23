@@ -14,8 +14,12 @@ class Genome::ProcessingProfile::MetagenomicShotgun {
     has_param => [
         filter_contaminant_fragments => {
             is => 'Boolean',
-            doc => 'when true reads with mate mapping to contamination reference are considered contaminated',
+            doc => 'when set, reads with mate mapping to contamination reference are considered contaminated, and not passed on to subsequent alignments',
             default => 0,
+        },
+        filter_duplicates => {
+            is => 'Boolean',
+            doc =>  'when set, duplicate reads are filtered out when extracting unaligned reads from contamination screen alignment',
         },
         contamination_screen_pp_id => {
             is => 'Text',
@@ -164,7 +168,7 @@ sub _execute_build {
             $self->status_message("processing instrument data assignment ".$assignment->__display_name__." for unaligned reads import");
 
             my $alignment_result = $alignment_results[0];
-            my @extracted_instrument_data_for_alignment_result = $self->_extract_data_from_alignment_result($alignment_result, $extraction_type);
+            my @extracted_instrument_data_for_alignment_result = $self->_extract_data_from_alignment_result($alignment_result, $extraction_type,$self->filter_duplicates);
 
             push @extracted_instrument_data, \@extracted_instrument_data_for_alignment_result
         }
@@ -182,7 +186,7 @@ sub _execute_build {
 
     my @cs_unaligned;
     if ($self->filter_contaminant_fragments){
-        @cs_unaligned = $extract_data->($cs_build, "unaligned-paired");
+        @cs_unaligned = $extract_data->($cs_build, "unaligned paired");
     }
     else{
         @cs_unaligned = $extract_data->($cs_build, "unaligned");
@@ -345,7 +349,7 @@ sub wait_for_build {
 
 ##### support methods for extract_data
 sub _extract_data_from_alignment_result{
-    my ($self, $alignment, $extraction_type) = @_;
+    my ($self, $alignment, $extraction_type, $filter_duplicates) = @_;
 
     my $instrument_data = $alignment->instrument_data;
     my $lane = $instrument_data->lane;
@@ -374,6 +378,9 @@ sub _extract_data_from_alignment_result{
     my @instrument_data;
     my $subdir = $extraction_type;
     $subdir =~ s/\s/_/g;
+    if ($filter_duplicates){
+        $subdir .= "/deduplicated";
+    }
     $self->status_message("Preparing imported instrument data for import path $tmp_dir/$subdir");
 
     my $forward_basename = "s_$lane" . "_1_sequence.txt";
@@ -457,6 +464,9 @@ sub _extract_data_from_alignment_result{
         }
         else{
             die $self->error_message("Unhandled extraction_type $extraction_type");
+        }
+        if ($filter_duplicates){
+            $cmd.=" --filter-duplicates";
         }
     }
 
