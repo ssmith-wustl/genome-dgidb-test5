@@ -192,7 +192,7 @@ ok($reports->execute, 'execute reports');
 ok($build->get_report('Stats'), 'got stats report');
 ok($build->get_report('Composition'), 'got composition report');
 
-print $build->data_directory."\n";<STDIN>;
+#print $build->data_directory."\n";<STDIN>;
 done_testing();
 exit;
 
