@@ -390,6 +390,11 @@ sub execute
                 $transcript_info{pseudogene} = 1;
             }
             $self->calculate_transcript_info($transcript, \%transcript_info);
+
+            my @structures = $transcript->sub_structures;
+            foreach my $structure (@structures) {
+                $self->_update_transcript_info($structure, $transcript);
+            }
         }
 
             $self->write_log_entry($count, \@transcripts, \@sub_structures, \@genes, \@proteins);
@@ -417,6 +422,20 @@ sub execute
 
             #exit; #uncomment for testing
     }
+
+    return 1;
+}
+
+sub _update_transcript_info {
+    my $self = shift;
+    my $structure = shift;
+    my $transcript = shift;
+
+    $structure->transcript_gene_name($transcript->gene_name);
+    $structure->transcript_transcript_error($transcript->transcript_error);
+    $structure->transcript_coding_region_start($transcript->coding_region_start);
+    $structure->transcript_coding_region_stop($transcript->coding_region_stop);
+    $structure->transcript_amino_acid_length($transcript->amino_acid_length);
 
     return 1;
 }
