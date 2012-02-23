@@ -5,7 +5,7 @@ use warnings;
 
 use above 'Genome';
 
-use Genome::AmpliconAssembly::Test;
+use Genome::Model::Tools::AmpliconAssembly::Test;
 
 Genome::Model::Tools::AmpliconAssembly::AssembleTest->runtests;
 

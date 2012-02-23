@@ -4,10 +4,10 @@ use strict;
 use warnings;
 
 use above 'Genome';
-use Test::MockObject;
-use Genome::AmpliconAssembly::Test;
 
-Genome::AmpliconAssembly::Test->runtests;
+use Genome::Model::Tools::AmpliconAssembly::Test;
+
+Genome::Model::Tools::AmpliconAssembly::Set::Test->runtests;
 
 exit;
 

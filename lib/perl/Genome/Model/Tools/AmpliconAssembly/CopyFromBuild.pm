@@ -12,7 +12,7 @@ use Regexp::Common;
 class Genome::Model::Tools::AmpliconAssembly::CopyFromBuild {
     is => 'Command',
     has => [
-    Genome::AmpliconAssembly->attributes_without_default_values,
+    Genome::Model::Tools::AmpliconAssembly::Set->attributes_without_default_values,
     model_name => {
         is => 'Integer',
         is_optional => 1,
@@ -163,7 +163,7 @@ sub _create_amplicon_assembly {
         directory => $self->directory 
     );
     
-    my @attribute_names = grep { $_ ne 'directory' } Genome::AmpliconAssembly->attribute_names;
+    my @attribute_names = grep { $_ ne 'directory' } Genome::Model::Tools::AmpliconAssembly::Set->attribute_names;
     for my $attribute_name ( @attribute_names ) {
         my $value = $self->$attribute_name;
         if ( defined $value ) {
@@ -176,7 +176,7 @@ sub _create_amplicon_assembly {
         $params{$attribute_name} = $value;
     }
     
-    return Genome::AmpliconAssembly->create(%params);
+    return Genome::Model::Tools::AmpliconAssembly::Set->create(%params);
 }
 
 sub _recursive_copy {

@@ -1,4 +1,4 @@
-package Genome::AmpliconAssembly::Amplicon;
+package Genome::Model::Tools::AmpliconAssembly::Amplicon;
 
 use strict;
 use warnings;
@@ -11,7 +11,7 @@ use File::Grep 'fgrep';
 require Genome::Utility::MetagenomicClassifier::SequenceClassification;
 use Storable;
 
-class Genome::AmpliconAssembly::Amplicon {
+class Genome::Model::Tools::AmpliconAssembly::Amplicon {
     is => 'UR::Object',
     has => [
     name => {
@@ -696,7 +696,7 @@ sub _validate_fasta_and_qual_bioseq {
 
 =head1 Name
 
-Genome::AmpliconAssembly::Amplicon
+Genome::Model::Tools::AmpliconAssembly::Amplicon
 
 =head1 Synopsis
 

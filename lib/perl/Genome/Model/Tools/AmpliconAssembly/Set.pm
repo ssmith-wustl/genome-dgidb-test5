@@ -1,4 +1,4 @@
-package Genome::AmpliconAssembly;
+package Genome::Model::Tools::AmpliconAssembly::Set;
 
 use strict;
 use warnings;
@@ -10,7 +10,7 @@ use Cwd 'abs_path';
 use Data::Dumper 'Dumper';
 require File::Copy;
 require Genome::Model::Tools::Consed::Directory;
-require Genome::AmpliconAssembly::Amplicon;
+require Genome::Model::Tools::AmpliconAssembly::Amplicon;
 
 use Bio::SeqIO;
 
@@ -63,7 +63,7 @@ my %ATTRIBUTES = (
 );
 
 #< UR >#
-class Genome::AmpliconAssembly {
+class Genome::Model::Tools::AmpliconAssembly::Set {
     is => 'UR::Object',
     id_by => 'directory',
     has => [
@@ -415,7 +415,7 @@ sub get_amplicons {
     my @amplicons;
     my $edit_dir = $self->edit_dir;
     for my $name ( sort { $a cmp $b } keys %$amplicons ) {
-        push @amplicons, Genome::AmpliconAssembly::Amplicon->create(
+        push @amplicons, Genome::Model::Tools::AmpliconAssembly::Amplicon->create(
             name => $name,
             reads => $amplicons->{$name},
             directory => $edit_dir,
@@ -721,7 +721,7 @@ sub remove_contaminated_amplicons_by_reads_in_file {
 
 =head1 Name
 
-Genome::AmpliconAssembly
+Genome::Model::Tools::AmpliconAssembly::Set
 
 =head1 Synopsis
 

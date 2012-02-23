@@ -1,6 +1,6 @@
 ###########################################################################
 
-package Genome::AmpliconAssembly::Test;
+package Genome::Model::Tools::AmpliconAssembly::Set::Test;
 
 use strict;
 use warnings;
@@ -17,7 +17,7 @@ require File::Path;
 use Data::Dumper 'Dumper';
 
 sub test_class {
-    return 'Genome::AmpliconAssembly';
+    return 'Genome::Model::Tools::AmpliconAssembly::Set';
 }
 
 sub amplicon_assembly {
@@ -128,7 +128,7 @@ sub test02_amplicons_gsc_sanger : Tests() {
     # get amplicons excluding contaminated and using only new recent read
     my %mock_reads = $self->_create_mock_gsc_sequence_reads or die;
     no warnings 'redefine';
-    local *Genome::AmpliconAssembly::_get_gsc_sequence_read = sub{ 
+    local *Genome::Model::Tools::AmpliconAssembly::Set::_get_gsc_sequence_read = sub{ 
         die "No mock read for ".$_[1] unless exists $mock_reads{$_[1]};
         return $mock_reads{$_[1]};
     };
@@ -360,7 +360,7 @@ sub amplicon_assembly {
     my $self = shift;
 
     unless ( $self->{_amplicon_assembly} ) {
-        $self->{_amplicon_assembly} = Genome::AmpliconAssembly->create(
+        $self->{_amplicon_assembly} = Genome::Model::Tools::AmpliconAssembly::Set->create(
             directory => $self->tmp_dir,
         );
     }
@@ -652,7 +652,7 @@ sub _pre_execute {
 sub test03_verify : Test(4) {
     my $self = shift;
 
-    my $amplicon_assembly = Genome::AmpliconAssembly->get(directory => $self->tmp_dir);
+    my $amplicon_assembly = Genome::Model::Tools::AmpliconAssembly::Set->get(directory => $self->tmp_dir);
     ok($amplicon_assembly, 'Created amplicon assembly');
     ok($amplicon_assembly->exclude_contaminated_amplicons, 'Excluding contaminated amplicons');
     ok(scalar(glob($amplicon_assembly->chromat_dir.'/*')), 'Copied reads');
@@ -849,207 +849,6 @@ sub test03_verify : Test(1) {
 }
 
 ############################################################################
-
-package Genome::Model::Tools::AmpliconAssembly::Report::Test;
-
-use strict;
-use warnings;
-
-use base 'Genome::Model::Tools::AmpliconAssembly::TestBase';
-
-use Data::Dumper 'Dumper';
-use Test::More;
-
-sub test_class {
-    return 'Genome::Model::Tools::AmpliconAssembly::Report';
-}
-
-sub params_for_test_class {
-    return (
-        directories => [ $_[0]->tmp_dir ],
-        report => 'stats',
-        #report_params => '-assembly_size 1400',
-        report_directory => $_[0]->tmp_dir,
-        save_report => 1,
-        save_datasets => 1,
-        #print_report => 1,
-        print_dataset => 'stats',
-        #print_datasets => 1,
-    );
-}
-
-sub invalid_params_for_test_class {
-    return (
-        report => 'none',
-    );
-}
-
-sub test03_verify : Tests(3) {
-    my $self = shift;
-
-    my $dir = $self->tmp_dir;
-    ok(-s $dir.'/Stats/report.xml', 'Report XML');
-    ok(-s $dir.'/Stats/stats.csv', 'Stats dataset');
-    ok(-s $dir.'/Stats/qualities.csv', 'Qualities dataset');
-    #print "$dir\n"; <STDIN>;
-    
-    return 1;
-}
-
-###########
-# Reports #
-###########
-
-package Genome::AmpliconAssembly::Report::TestBase;
-
-use strict;
-use warnings;
-
-use base 'Genome::Utility::TestBase';
-
-use Data::Dumper 'Dumper';
-require Genome::Model::Test;
-use Test::More;
-
-sub required_params_for_class {
-    return;
-}
-
-sub generator {
-    return $_[0]->{_object};
-}
-
-sub report_name {
-    my $self = shift;
-
-    my ($pkg) = $self->test_class =~ m/Genome::Model::AmpliconAssembly::Report::(\w+)$/;
-
-    return 'Test '.$pkg.' Report',
-}
-
-sub params_for_test_class {
-    return (
-        amplicon_assemblies => [ $_[0]->mock_model->last_succeeded_build->amplicon_assembly ],
-        $_[0]->_params_for_test_class,
-    );
-}
-
-sub _params_for_test_class {
-    return;
-}
-
-sub mock_model {
-    my $self = shift;
-
-    unless ( $self->{_mock_model} ) {
-        $self->{_mock_model} = Genome::Model::Test->create_mock_model(
-            type_name => 'amplicon assembly',
-            use_mock_dir => 1,
-        );
-    }
-    
-    return $self->{_mock_model};
-}
-
-sub test01_generate_report : Test(2) {
-    my $self = shift;
-
-    can_ok($self->generator, '_add_to_report_xml');
-
-    use Carp;
-    $SIG{__DIE__} = sub{ confess(@_); };
-    
-    my $report = $self->generator->generate_report;
-    ok($report, 'Generated report');
-
-    return 1;
-}
-
-######################################################################
-
-package Genome::AmpliconAssembly::Report::Stats::Test;
-
-use strict;
-use warnings;
-
-use base 'Genome::AmpliconAssembly::Report::TestBase';
-
-use Data::Dumper 'Dumper';
-use Test::More;
-
-sub test_class {
-    'Genome::AmpliconAssembly::Report::Stats';
-}
-
-sub _params_for_test_class {
-    return (
-    );
-}
-
-sub invalid_params_for_test_class {
-    return (
-    );
-}
-
-sub test02_position_quality_stats : Tests(2) {
-    my $self = shift;
-
-    my $qual = $self->{_object}->get_position_quality_stats;
-    #print Dumper($qual->{position_qualities});
-    ok($qual, 'Quality stats');
-    is(scalar(keys %{$qual->{position_qualities}}), 3, 'Read counts');
-
-    return 1;
-}
-
-sub test03_assembly_stats : Tests(1) {
-    my $self = shift;
-
-    my $stats = $self->{_object};
-    my $assembly_stats = $stats->get_assembly_stats;
-    #print Dumper($assembly_stats);
-    is_deeply(
-        $assembly_stats, {
-            headers => [qw/ assembled assemblies-with-3-reads assemblies-with-5-reads assemblies-with-6-reads assemblies-with-zeros assembly-success attempted length-average length-maximum length-median length-minimum quality-base-average quality-less-than-20-bases-per-assembly reads reads-assembled reads-assembled-average reads-assembled-maximum reads-assembled-median reads-assembled-minimum reads-assembled-success /],
-            stats => [qw/ 5 3 1 1 2 100.00 5 1399 1413 1396 1385 62.75 1349.80 30 20 4.00 6 3 3 66.67 /],
-        },
-        'Assembly stats',
-    );
-
-    return 1;
-}
-
-sub test04_none_attempted : Tests(2) {
-    my $self = shift;
-
-    my $stats = $self->{_object};
-    $stats->{_metrix}->{assembled} = 0;
-    my $assembly_stats = $stats->get_assembly_stats;
-    is_deeply(
-        $assembly_stats, {
-            headers => [qw/ assembled attempted assembly-success /],
-            stats => [qw/ 0 5 0.00 /],
-        },
-        'Assembly stats w/ none assembled',
-    );
-
-    my $qual = $stats->get_position_quality_stats;
-    ok($qual, 'Position quality stats w/ none assembled');
-
-    return 1;
-}
-
-sub test05_none_attempted : Tests(1) {
-    my $self = shift;
-
-    my $stats = $self->{_object};
-    $stats->{_metrix}->{attempted} = 0;  
-    ok(!$stats->get_assembly_stats, 'Failed as expected - no assemblies attempted');
-    
-    return 1;
-}
-
-######################################################################
 
 1;
 

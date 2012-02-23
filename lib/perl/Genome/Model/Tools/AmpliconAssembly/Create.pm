@@ -11,7 +11,7 @@ use Regexp::Common;
 class Genome::Model::Tools::AmpliconAssembly::Create {
     is => 'Command',
     has => [
-    Genome::AmpliconAssembly->attributes,
+    Genome::Model::Tools::AmpliconAssembly::Set->attributes,
     ],
 };
 #< Helps >#
@@ -34,8 +34,8 @@ sub sub_command_sort_position { 11; }
 sub execute {
     my $self = shift;
 
-    my %params = map { $_ => $self->$_ } grep { defined $self->$_ } Genome::AmpliconAssembly->attribute_names;
-    my $amplicon_assembly = Genome::AmpliconAssembly->create(%params);
+    my %params = map { $_ => $self->$_ } grep { defined $self->$_ } Genome::Model::Tools::AmpliconAssembly::Set->attribute_names;
+    my $amplicon_assembly = Genome::Model::Tools::AmpliconAssembly::Set->create(%params);
     unless ( $amplicon_assembly ) {
         $self->error_message("Can't create amplicon assembly.  See above errors.");
         return;
