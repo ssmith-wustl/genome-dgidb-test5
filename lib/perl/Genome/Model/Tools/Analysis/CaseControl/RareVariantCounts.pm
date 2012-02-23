@@ -25,7 +25,7 @@ class Genome::Model::Tools::Analysis::CaseControl::RareVariantCounts {
 	
 	has => [                                # specify the command's single-value properties (parameters) <--- 
 		vcf_file	=> { is => 'Text', doc => "VCF file with sample genotypes", is_optional => 0, is_input => 1},
-		transcript_annotation_file	=> { is => 'Text', doc => "Transcript annotation in native output format", is_optional => 0, is_input => 1},
+		transcript_annotation_file	=> { is => 'Text', doc => "Transcript annotation in native output format", is_optional => 1, is_input => 1},
 		vep_annotation_file	=> { is => 'Text', doc => "VEP top annotation file in native output", is_optional => 0, is_input => 1},
 		sample_phenotype_file	=> { is => 'Text', doc => "Tab-delimited file with sample ID and phenotype code", is_optional => 0, is_input => 1},
 		dbsnp_positions_file	=> { is => 'Text', doc => "1-based positions of dbSNP common SNPs to exclude", is_optional => 1, is_input => 1},
@@ -95,8 +95,14 @@ sub execute {                               # replace with real execution logic.
 	print OUTMUTATIONS "\n";
 
 	## Load the annotation ##
-	warn "Loading transcript annotation...\n";	
-	my %transcript_annotation = load_transcript_annotation($self->transcript_annotation_file);
+	warn "Loading transcript annotation...\n";
+    my %transcript_annotation;
+    if ($self->transcript_annotation_file) {
+    	%transcript_annotation = load_transcript_annotation($self->transcript_annotation_file);
+    }
+    else {
+    	%transcript_annotation = $self->load_transcript_annotation_VEP($self->vep_annotation_file);
+    }
 
 	warn "Loading VEP annotation...\n";
 	my %vep_annotation = $self->load_vep_annotation($self->vep_annotation_file);
@@ -477,7 +483,7 @@ sub execute {                               # replace with real execution logic.
 
 
 ################################################################################################
-# Is_deleterious
+# get_annotation_call
 #
 ################################################################################################
 
@@ -492,6 +498,21 @@ sub get_annotation_call
 		my @transcriptContents = split(/\t/, $transcript_annotation);
 		my $gene_name = $transcriptContents[6];
 		my $trv_type = $transcriptContents[13];
+
+        $trv_type =~ s/NMD_TRANSCRIPT//;
+        $trv_type =~ s/,,/,/g;
+        $trv_type =~ s/^,//g;
+        $trv_type =~ s/,$//g;
+
+        $trv_type =~ s/STOP_GAINED,SPLICE_SITE/nonsense/;
+        $trv_type =~ s/STOP_GAINED/nonsense/;
+        $trv_type =~ s/STOP_LOST/nonstop/;
+        $trv_type =~ s/ESSENTIAL_SPLICE_SITE/splice_site/;
+
+        $trv_type =~ s/SPLICE_SITE,INTRONIC/splice_region/;
+        $trv_type =~ s/SPLICE_SITE,WITHIN_NON_CODING_GENE/splice_region/;
+        $trv_type =~ s/^SYNONYMOUS_CODING,SPLICE_SITE/splice_region/;
+
 		$call = "$gene_name\t$trv_type";		
 	}
 
@@ -500,7 +521,7 @@ sub get_annotation_call
 
 
 ################################################################################################
-# Is_deleterious
+# get_vep_call
 #
 ################################################################################################
 
@@ -545,7 +566,7 @@ sub get_vep_call
 }
 
 ################################################################################################
-# Is_deleterious
+# is_deleterious
 #
 ################################################################################################
 
@@ -691,8 +712,7 @@ sub load_sample_phenotypes
 #
 ################################################################################################
 
-sub load_transcript_annotation
-{                               # replace with real execution logic.
+sub load_transcript_annotation {
 	my $input_file = shift(@_);
 	my %annotation = ();
 	
@@ -708,6 +728,58 @@ sub load_transcript_annotation
 		my ($chrom, $chr_start, $chr_stop, $ref, $var) = split(/\t/, $line);
 		my $key = join("\t", $chrom, $chr_start, $ref, $var);
 		$annotation{$key} = $line;
+	}
+	close($input);
+                            # exits 0 for true, exits 1 for false (retval/exit code mapping is overridable)
+
+	return(%annotation);
+}
+
+sub load_transcript_annotation_VEP {
+	my $self = shift;
+	my $input_file = shift;
+	my $reference_build = $self->reference_build;
+	my %annotation = ();
+	
+	my $input = new FileHandle ($input_file);
+	my $lineCounter = 0;
+
+	while (<$input>) {
+		chomp;
+		my $line = $_;
+		$lineCounter++;
+
+		if(substr($line, 0, 1) eq '#') {
+			## Ignore header line ##
+            next;
+		}
+
+        my ($Uploaded_variation,$Location,$Allele,$Gene,$Feature,$Feature_type,$Consequence,$cDNA_position,$CDS_position,$Protein_position,$Amino_acids,$Codons,$Existing_variation,$Extra) = split "\t", $line;
+
+		my ($chrom, $chr_start, $alleles, $ref, $var);
+        if ($Uploaded_variation =~ m/rs/) {
+            ($chrom, $chr_start) = split(/:/,$Location);
+            $var = $Allele;
+            my $reference_build_fasta_object = Genome::Model::Build::ReferenceSequence->get(name => "$reference_build");
+            my $reference_build_fasta = $reference_build_fasta_object->data_directory . "/all_sequences.fa";
+            $ref = `samtools faidx $reference_build_fasta $chrom:$chr_start-$chr_start | grep -v ">"`;
+            chomp($ref);
+        }
+        else {
+			($chrom, $chr_start, $alleles) = split(/\_/, $Uploaded_variation);
+			($ref, $var) = split(/\//, $alleles);
+        }
+
+        my $vep_data = get_vep_call($line);
+        my ($gene_name, $vep_class) = split(/\t/,$Location);
+
+		my $key = join("\t", $chrom, $chr_start, $ref, $var);
+
+        my $filler = "THIS_FIELD_LEFT_INTENTIONALLY_BLANK";
+        my @line_contents = ($chrom, $chr_start, $chr_start, $ref, $var, $filler, $gene_name, $filler, $filler, $filler, $filler, $filler, $filler, $Consequence);
+        my $vep_line = join("\t",@line_contents);
+
+		$annotation{$key} = $vep_line;
 	}
 	close($input);
                             # exits 0 for true, exits 1 for false (retval/exit code mapping is overridable)
