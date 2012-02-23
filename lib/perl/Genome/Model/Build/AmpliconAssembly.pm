@@ -1,10 +1,4 @@
-# review - gsanders 
-# sub amplicons_and_headers says it is old but we do not want to remove yet... how about now? This module hasnt been updated in 2 months so maybe?
-# Also, this method is not very clear on what it is doing and probably deserves some comments if it is going to stay. 
-# Some hardcoded logic on ocean samples but why is it doing what it is?
-
 package Genome::Model::Build::AmpliconAssembly;
-#:adukes check
 
 use strict;
 use warnings;
@@ -98,22 +92,15 @@ sub link_instrument_data {
 }
 
 #< Reports >#
-sub get_stats_report {
-    my $self = shift;
-
-    my $report = $self->get_report('Stats');
-
-    return $report if $report;
-
-    return $self->get_report('Assembly Stats'); #old name
-}
-
 sub get_stats_dataset_from_stats_report {
     my $self = shift;
 
-    my $report = $self->get_stats_report;
-    return unless $report;
-    
+    my $report = $self->get_report('Stats');
+    if ( not $report ) { 
+        $report = $self->get_report('Assembly Stats'); #old name
+        return if not $report;
+    }
+
     my $dataset = $report->get_dataset('stats');
     unless ( $dataset ) {
         $self->error_message('No stats dataset found in stats report.');
@@ -188,52 +175,6 @@ sub processed_qual_file {
     return $_[0]->amplicon_assembly->qual_file_for_type('assembly');
 }
 
-############################################
-#< THIS IS OLD...DON'T WANNA (RE)MOVE YET >#
-sub amplicons_and_headers { 
-    my $self = shift;
-
-    my $amplicons = $self->amplicons
-        or return;
-
-    my $header_generator= sub{
-        return sprintf(">%s\n", $_[0]);
-    };
-    if ( $self->name =~ /ocean/i ) {
-        my @counters = (qw/ -1 Z Z /);
-        $header_generator = sub{
-            if ( $counters[2] eq '9' ) {
-                $counters[2] = 'A';
-            }
-            elsif ( $counters[2] eq 'Z' ) {
-                $counters[2] = '0';
-                if ( $counters[1] eq '9' ) {
-                    $counters[1] = 'A';
-                }
-                elsif ( $counters[1] eq 'Z' ) {
-                    $counters[1] = '0';
-                    $counters[0]++; # Hopefully we won't go over Z
-                }
-                else {
-                    $counters[1]++;
-                }
-            }
-            else {
-                $counters[2]++;
-            }
-
-            return sprintf(">%s%s%s%s\n", $self->model->subject_name, @counters);
-        };
-    }
-
-    my %amplicons_and_headers;
-    for my $amplicon ( sort { $a cmp $b } keys %$amplicons ) {
-        $amplicons_and_headers{$amplicon} = $header_generator->($amplicon);
-    }
-
-    return \%amplicons_and_headers;
-}
-
 sub files_ignored_by_diff {
     return qw(
         build.xml
@@ -254,5 +195,3 @@ sub dirs_ignored_by_diff {
 
 1;
 
-#$HeadURL$
-#$Id$
