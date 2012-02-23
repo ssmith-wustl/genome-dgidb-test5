@@ -43,11 +43,6 @@ class Genome::Model::Tools::Velvet::ToConsed {
             doc     => 'number of fastq sequences each chunk',
             default => 10000,
         },
-	fast_mode   => {
-	    is      => 'Boolean',
-	    doc     => 'Allow by-passing of bio perl usage for speed for fastq files with less than 1,000,000 reads',
-	    default => 0,
-	},
 	make_traces      => {
 	    is      => 'Boolean',
 	    doc     => 'Make a trace file for each read .. this is NOT recommanded for assemblies with 10,000 or more reads',
@@ -111,7 +106,6 @@ sub execute {
             base_fix   => 1,
             time       => $time,
             chunk_size => $self->chunk_size,
-            fast_mode  => $self->fast_mode,
             );
 
         #conditon for creating scf files is if scf_dir (chromat_dir) is specified in gmt fastq to-phdball-scf

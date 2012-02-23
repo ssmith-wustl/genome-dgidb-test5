@@ -224,7 +224,7 @@ sub _preprocess_params_for_get_or_create {
         for my $t ('input', 'param') {
             if ($meta->{'is_' . $t} && $meta->is_many) {
                 my $value_list = delete $params{$key};
-                if(defined $value_list) {
+                if((defined $value_list) && (scalar @$value_list)) {
                     my @values = sort @$value_list;
                     my $t_params = $params{$t . 's'} || [];
                     for my $i (0..$#values) {

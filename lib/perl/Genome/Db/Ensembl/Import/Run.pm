@@ -11,7 +11,7 @@ class Genome::Db::Ensembl::Import::Run {
         data_set => {
             is => 'Text',
             doc => 'Ensembl data set to import (ex )',
-            is_optional => 1, #TODO: do we even need this param?
+            is_optional => 1,
         },
         imported_annotation_build => {
             is => 'Genome::Model::Build::ImportedAnnotation',
@@ -65,6 +65,7 @@ sub execute {
         "--user $user",
         ($pass ? "--pass $pass" : ''),
         "--species $species_name",
+        "--data-set $data_set", 
         "--log-file $log_file",
         "--dump-file $dump_file");
     $build->prepend_api_path_and_execute(cmd => $command);
