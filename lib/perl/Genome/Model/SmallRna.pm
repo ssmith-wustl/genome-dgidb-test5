@@ -21,13 +21,11 @@ class Genome::Model::SmallRna {
     ],
     has_input => [
         ref_model => {
-<<<<<<< HEAD
+
             is    => 'Genome::Model::ReferenceAlignment',
             doc   => 'ref model for smallrna analysis',
-=======
             is => 'Genome::Model::ReferenceAlignment',
             doc => 'ref model for somatic analysis',
->>>>>>> a1d10f2f76e72248e5564e6a4000fb98dc8a1b6f
         },
         
 #       subject => {
@@ -92,7 +90,7 @@ EOS
 
 sub _resolve_subject {
     my $self = shift;
-    $DB::single = 1;
+   # $DB::single = 1;
     my $subject = $self->_infer_subjects_from_ref_model();
     return $subject;
 }
