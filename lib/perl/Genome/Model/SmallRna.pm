@@ -1,5 +1,3 @@
-package Genome::Model::SmallRna;
-
 use strict;
 use warnings;
 BEGIN { $INC{"Genome/Model/Build/SmallRna.pm"} = 1; $INC{"Genome/ProcessingProfile/SmallRna.pm"} = 1; $INC{"Genome/Model/Command/Define/SmallRna.pm"} = 1; };
@@ -28,8 +26,14 @@ class Genome::Model::SmallRna {
         },
         ref_model => {
             is    => 'Genome::Model::ReferenceAlignment',
-            doc   => 'ref model for somatic analysis',
+            doc   => 'ref model for smallrna analysis',
         },
+        
+#       subject => {
+ #           is    => 'Genome::Model::Subject',
+  #          is_optional => 1, 
+#	    doc   => 'subject for smallrna analysis',
+ #       },
     ],
     has_param => [
 		annotation_files => {
@@ -83,6 +87,24 @@ TO DO
 EOS
 }
 
+
+
+sub _resolve_subject {
+    my $self = shift;
+    $DB::single = 1;
+    my $subject = $self->_infer_subjects_from_ref_model();
+    return $subject;
+}
+
+
+sub _infer_subjects_from_ref_model {
+    my $self = shift;
+    my $subject;
+  #  my $input_model = $self->ref_model_id,
+	$subject = $self->ref_model->subject;
+	return $subject;
+}
+
 sub help_detail_for_create_profile {
     return <<EOS
   TO DO
@@ -114,7 +136,11 @@ sub _map_workflow_inputs {
     my $build = shift;
 
     my @inputs = ();
-
+    unless ($self->subject)
+    {
+    my $subject = $self->_resolve_subject();
+    	
+    }
     my $data_directory = $build->data_directory;
     my $ref_build      = $build->ref_build;
     my $bam_file       = $ref_build->whole_rmdup_bam_file;
