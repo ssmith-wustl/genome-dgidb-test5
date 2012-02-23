@@ -15,20 +15,16 @@ my $DEFAULT_BIN 	= '17_70';
 
 class Genome::Model::SmallRna {
     is  => 'Genome::ModelDeprecated',
-    has_input => [
-       ref_model_id => {
-            is => 'Text',
-            via => 'inputs',
-            to => 'value_id',
-            where => [ name => 'ref_model', value_class_name => 'Genome::Model::ReferenceAlignment' ],
-            is_many => 0,
-            is_mutable => 1,
-            is_optional => 0,
-            doc => 'ref model for somatic analysis'
+    has => [
+        ref_model_id => {
+            via => 'ref_model',
+            to => 'id',
         },
+    ],
+    has_input => [
         ref_model => {
-            is    => 'Genome::Model::ReferenceAlignment',
-            doc   => 'ref model for somatic analysis',
+            is => 'Genome::Model::ReferenceAlignment',
+            doc => 'ref model for somatic analysis',
         },
     ],
     has_param => [
