@@ -251,20 +251,9 @@ sub execute {
     #UR magic to get the string and boolean property lists
     my $meta = $self->__meta__;
     my @all_bool_args = $meta->properties(
-        class_name => __PACKAGE__,
         data_type => 'Boolean');
     my @all_string_args = $meta->properties(
-        class_name => __PACKAGE__,
         data_type => 'String');
-
-    my $count = 0;
-    foreach my $arg (@all_string_args) {
-        if ($arg->property_name eq 'version') {
-            splice @all_string_args, $count, 1;
-            last;
-        }
-        $count++;
-    }
 
     $string_args = join( ' ',
         map {
