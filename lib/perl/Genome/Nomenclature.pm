@@ -26,6 +26,11 @@ class Genome::Nomenclature {
             len=>255, 
             doc => 'Empty-equivalent string (NA, n/a, etc)'
         },
+        accepts_any_field => {
+            is => 'Text',
+            doc => 'Importer will create any field that doesnt exist in the nomenclature',
+            default => '0'
+        },
         fields => {
             is => 'Genome::Nomenclature::Field',
             is_many => 1,

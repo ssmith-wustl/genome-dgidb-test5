@@ -108,6 +108,17 @@ sub create {
     return $self;
 }
 
+sub get_part {
+    my ($self, $obj) = @_;
+
+    my @parts = Genome::ProjectPart->get(
+        entity_class_name => $obj->class,
+        entity_id => $obj->id
+    );
+
+    return @parts;
+}
+
 sub __display_name__ {
     my $self = shift;
     return $self->name."(".$self->id.")";
@@ -170,6 +181,7 @@ sub delete {
 
     return $self->SUPER::delete();
 }
+
 
 
 1;
