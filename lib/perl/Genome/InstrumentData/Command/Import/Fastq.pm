@@ -531,12 +531,20 @@ sub get_read_count_and_fragment_count {
     my ($line_count,$read_count,$fragment_count);
     my @files = split ",", $self->source_data_files;
     $self->status_message("Now attempting to determine read_count by calling wc on the imported fastq(s). This may take a while if the fastqs are large.");
+    my $last_count;  #use this for checking if paired_end files have the same amt of reads
     for my $file (@files){
         my $sub_count = `wc -l $file`;
         ($sub_count) = split " ",$sub_count;
         unless(defined($sub_count)&&($sub_count > 0)){
             $self->error_message("couldn't get a response from wc.");
             return;
+        }
+        if ($last_count){
+            unless ($last_count = $sub_count){
+                die $self->error_message("Two provided fastq files have differing line counts and number of reads! (lines: $last_count and $sub_count)");
+            }
+        }else{
+            $last_count=$sub_count;
         }
         $line_count += $sub_count;
     }
