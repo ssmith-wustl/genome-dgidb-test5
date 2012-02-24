@@ -26,6 +26,11 @@ class Genome::Model::Tools::Sam::BamToUnalignedFastq {
             default => 0,
             doc => 'If set, this tool will ignore the bitflag column and instead use the RNAME column of the bam to determine if a read has been mapped',
         },
+        filter_duplicates => {
+            is => 'Boolean',
+            default => 0,
+            doc => 'If set, this tool will not print reads that are marked as duplicates in the bam file, this happens regardless of the ignore-bitflags flag',
+        },
     ],
 };
 
@@ -83,6 +88,7 @@ sub execute {
         while ( my $align = $bam_fh->getline) {
             my @cols = split(/\s+/, $align);
             my $mapped;
+            my $flag = $cols[1];
             my $rname = $cols[2];
             if ($rname eq '*'){
                 $mapped = 0;
@@ -92,7 +98,9 @@ sub execute {
             }
 
             if ($mapped == $self->print_aligned){
-                $tfh->print($align);
+                unless ($self->filter_duplicates and ($flag & 1024)){
+                    $tfh->print($align);
+                }
             }
         }
         $tfh->close;
@@ -163,7 +171,9 @@ sub execute {
 
             # If the read is mapped and we're printing mapped things, or if the read is unmapped and we're printing unaligned things... print it
             if ( $mapped == $self->print_aligned ) {
-                print_align_to_fh($align,\%fhs,$type);
+                unless ($self->filter_duplicates and ($flag & 1024)){
+                    print_align_to_fh($align,\%fhs,$type);
+                }
             }
         }
     }
@@ -190,6 +200,7 @@ sub print_align_to_fh {
     my $seq = $cols[9];
     # TODO: verify orientation and quality conversion with original fastq
     my $qual = $cols[10];
+    my $flag = $cols[1];
     print $fh '@' ."$name\n$seq\n+\n$qual\n";
 }
 
