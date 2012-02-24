@@ -67,7 +67,7 @@ sub link_instrument_data {
     }
 
     my $chromat_dir = $self->chromat_dir;
-    my $instrument_data_dir = $instrument_data->resolve_full_path;
+    my $instrument_data_dir = $instrument_data->full_path;
     my $dh = Genome::Sys->open_directory($instrument_data_dir)
         or return;
 
