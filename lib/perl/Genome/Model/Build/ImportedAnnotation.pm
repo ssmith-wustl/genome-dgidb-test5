@@ -20,13 +20,6 @@ class Genome::Model::Build::ImportedAnnotation {
             where => [ name => 'version', value_class_name => 'UR::Value'], 
             is_mutable => 1 
         },
-        annotation_data_source_directory => {
-            via => 'inputs',
-            is => 'Text',
-            to => 'value_id',
-            where => [ name => 'annotation_data_source_directory', value_class_name => 'UR::Value' ],
-            is_mutable => 1 
-        },
         species_name => {
             is => 'Text',
             via => 'inputs',
@@ -161,6 +154,30 @@ sub is_compatible_with_reference_sequence_build {
     $version =~ s/^[^_]*_([0-9]+).*/$1/;
     return ($rsb->model->subject->species_name eq $self->model->subject->species_name) &&
         ($rsb->version eq $version);
+}
+
+sub get_api_paths {
+    my $self = shift;
+    my $data_directory = $self->data_directory;
+    return glob("$data_directory/ensembl*/modules");
+}
+
+sub prepend_api_path_and_execute {
+    my $self = shift;
+    my %shellcmd_params = @_;
+    my @api_path = $self->get_api_paths;
+    my $lib;
+    if (@api_path){
+        $lib = join(" ", $^X, '-S', map(join(" ", '-I', '"' . $_ . '"'), @api_path));
+    }else{
+        $self->error_message("No API path found for annotation build: " . $self->id);
+        return;
+    }
+
+    $shellcmd_params{'cmd'} = join(" ", $lib, $shellcmd_params{'cmd'});
+    my $rv = Genome::Sys->shellcmd(%shellcmd_params);
+
+    return $rv;
 }
 
 sub get_or_create_roi_bed {

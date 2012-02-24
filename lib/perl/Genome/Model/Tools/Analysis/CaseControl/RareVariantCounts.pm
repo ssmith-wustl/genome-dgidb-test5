@@ -25,10 +25,11 @@ class Genome::Model::Tools::Analysis::CaseControl::RareVariantCounts {
 	
 	has => [                                # specify the command's single-value properties (parameters) <--- 
 		vcf_file	=> { is => 'Text', doc => "VCF file with sample genotypes", is_optional => 0, is_input => 1},
-		transcript_annotation_file	=> { is => 'Text', doc => "Transcript annotation in native output format", is_optional => 0, is_input => 1},
+		transcript_annotation_file	=> { is => 'Text', doc => "Transcript annotation in native output format", is_optional => 1, is_input => 1},
 		vep_annotation_file	=> { is => 'Text', doc => "VEP top annotation file in native output", is_optional => 0, is_input => 1},
 		sample_phenotype_file	=> { is => 'Text', doc => "Tab-delimited file with sample ID and phenotype code", is_optional => 0, is_input => 1},
-		dbsnp_positions_file	=> { is => 'Text', doc => "1-based positions of dbSNP common SNPs to exclude", is_optional => 1, is_input => 1},		
+		dbsnp_positions_file	=> { is => 'Text', doc => "1-based positions of dbSNP common SNPs to exclude", is_optional => 1, is_input => 1},
+		reference_build	=> { is => 'Text', doc => "reference build -- \"NCBI-human-build36\" or \"GRCh37-lite-build37\"", is_optional => 1, default => 'GRCh37-lite-build37', is_input => 1},
 		output_file	=> { is => 'Text', doc => "Output file for analysis results", is_optional => 1, is_input => 1},
 	],
 };
@@ -69,6 +70,7 @@ sub execute {                               # replace with real execution logic.
 		open(OUTFILE, ">" . $self->output_file) or die "Can't open outfile: $!\n";		
 		open(OUTGENES, ">" . $self->output_file . ".genes") or die "Can't open outfile: $!\n";
 		open(OUTMUTATIONS, ">" . $self->output_file . ".mutations") or die "Can't open outfile: $!\n";
+		open(OUTNEUTRAL, ">" . $self->output_file . ".neutral") or die "Can't open outfile: $!\n";
 		open(OUTCOUNTS, ">" . $self->output_file . ".counts") or die "Can't open outfile: $!\n";
 	}
 
@@ -78,13 +80,32 @@ sub execute {                               # replace with real execution logic.
 	warn "Loading sample phenotypes...\n";
 	my %sample_phenotypes = load_sample_phenotypes($sample_phenotype_file);
 
+	my %phenotype_sample_counts = ();
+	foreach my $key (keys %sample_phenotypes)
+	{
+		my $phenotype = $sample_phenotypes{$key};
+		$phenotype_sample_counts{$phenotype}++;
+	}
+	
+	print OUTMUTATIONS "chrom\tposition\tref\tvar\tgene\tclass";
+	foreach my $phenotype (sort keys %phenotype_sample_counts)
+	{
+		print OUTMUTATIONS "\t\#$phenotype";
+	}
+	print OUTMUTATIONS "\n";
+
 	## Load the annotation ##
-	warn "Loading transcript annotation...\n";	
-	my %transcript_annotation = load_transcript_annotation($self->transcript_annotation_file);
+	warn "Loading transcript annotation...\n";
+    my %transcript_annotation;
+    if ($self->transcript_annotation_file) {
+    	%transcript_annotation = load_transcript_annotation($self->transcript_annotation_file);
+    }
+    else {
+    	%transcript_annotation = $self->load_transcript_annotation_VEP($self->vep_annotation_file);
+    }
 
 	warn "Loading VEP annotation...\n";
-	my %vep_annotation = load_vep_annotation($self->vep_annotation_file);
-
+	my %vep_annotation = $self->load_vep_annotation($self->vep_annotation_file);
 
 	## Load dbSNP positions ##
 	my %dbsnp_common = ();
@@ -117,7 +138,10 @@ sub execute {                               # replace with real execution logic.
 
 	my %deleterious_by_gene = ();
 	my %rare_variant_counts = ();
+	my %rare_allele_counts = ();
+	my %samples_with_rare_deleterious = ();	
 
+	my %counted = ();
 	my $lineCounter = 0;
 
 	while (<$input>)
@@ -192,6 +216,7 @@ sub execute {                               # replace with real execution logic.
 				if($dbsnp_common{$variant_key})
 				{
 					$stats{'variant_alleles_excluded_by_dbsnp'}++;
+					print OUTNEUTRAL join("\t", $chrom, $position, $ref, $var, "dbSNP", get_annotation_call($transcript_annotation{$variant_key}), get_vep_call($vep_annotation{$variant_key})) . "\n";
 				}				
 				elsif($transcript_annotation{$variant_key})
 				{
@@ -219,6 +244,10 @@ sub execute {                               # replace with real execution logic.
 						$deleterious_by_gene{$deleterious_gene} .= $deleterious_type;
 
 						my %phenotype_counts = ();
+						foreach my $phenotype (keys %phenotype_sample_counts)
+						{
+							$phenotype_counts{$phenotype} = 0;
+						}
 
 						## Get Sample Genotypes ##
 						
@@ -259,6 +288,23 @@ sub execute {                               # replace with real execution logic.
 											$stats{'x_deleterious_variants_in_samples'}++;
 											## Sample has this variant ##
 											$rare_variant_counts{$deleterious_gene . "\t" . $sample_phenotype}++;
+											
+											my ($a1, $a2) = split(/\//, $genotype);
+											
+											if($a1 eq $a2)
+											{
+												$rare_allele_counts{$deleterious_gene . "\t" . $sample_phenotype}++;
+											}
+											else
+											{
+												$rare_allele_counts{$deleterious_gene . "\t" . $sample_phenotype}++;
+											}
+											
+											if(!$counted{$sample . "\t" . $deleterious_gene})
+											{
+												$samples_with_rare_deleterious{$deleterious_gene . "\t" . $sample_phenotype}++;
+												$counted{$sample . "\t" . $deleterious_gene} = 1;
+											}
 										}
 			
 									}					
@@ -272,15 +318,17 @@ sub execute {                               # replace with real execution logic.
 						print OUTMUTATIONS join("\t", $variant_key, $deleterious);
 						foreach my $this_phenotype (sort keys %phenotype_counts)
 						{
-							print OUTMUTATIONS "\t$phenotype_counts{$this_phenotype}";
+							$phenotype_counts{$this_phenotype} = 0 if(!$phenotype_counts{$this_phenotype});
+							print OUTMUTATIONS "\t$phenotype_counts{$this_phenotype}/$phenotype_sample_counts{$this_phenotype}";
 						}
 						print OUTMUTATIONS "\n";
 
 					}
-					elsif($vep_annotation{$variant_key})
+					else
 					{
-#						warn "Not Del: $vep_annotation{$variant_key}\n";
+						print OUTNEUTRAL join("\t", $chrom, $position, $ref, $var, "notDeleterious", get_annotation_call($transcript_annotation{$variant_key}), get_vep_call($vep_annotation{$variant_key})) . "\n";
 					}
+
 
 
 				}
@@ -377,7 +425,7 @@ sub execute {                               # replace with real execution logic.
 	print OUTCOUNTS "gene\trare_vars";
 	foreach my $phenotype (sort keys %phenotypes)
 	{
-		print OUTCOUNTS "\tnum_$phenotype\tpct_$phenotype";
+		print OUTCOUNTS "\trare_del_alleles_$phenotype\trare_del_variants_$phenotype\trare_del_samples_$phenotype";
 	}
 	print OUTCOUNTS "\n";
 
@@ -390,16 +438,29 @@ sub execute {                               # replace with real execution logic.
 		{
 			my $rare_variant_key = join("\t", $gene, $phenotype);
 
-			my $num_rare_variants = my $phenotype_portion = 0;
+			my $num_rare_alleles = my $num_rare_variants = my $phenotype_portion = 0;
+			
+			$num_rare_alleles = $rare_allele_counts{$rare_variant_key};
 						
 			if($rare_variant_counts{$rare_variant_key})
 			{
 				$num_rare_variants = $rare_variant_counts{$rare_variant_key};
 				$phenotype_portion = $num_rare_variants / $stats{'samples_vcf_with_phenotype_' . $phenotype};
-				$phenotype_portion = sprintf("%.3f", ($phenotype_portion * 100)) . '%';				
+#				$phenotype_portion = sprintf("%.3f", ($phenotype_portion * 100)) . '%';				
 			}
 			
-			print OUTCOUNTS "\t" . join("\t", $num_rare_variants, $phenotype_portion);
+			my $samples_harboring = 0;
+			my $portion_samples_harboring = 0;
+			
+			if($samples_with_rare_deleterious{$rare_variant_key})
+			{
+				$samples_harboring = $samples_with_rare_deleterious{$rare_variant_key};
+				$portion_samples_harboring = $samples_harboring / $stats{'samples_vcf_with_phenotype_' . $phenotype};
+#				$portion_samples_harboring = sprintf("%.3f", $portion_samples_harboring * 100) . '%';
+			}
+			
+			print OUTCOUNTS "\t" . join("\t", $num_rare_alleles, $num_rare_variants, $samples_harboring);
+#			print OUTCOUNTS "\t" . join("\t", $num_rare_variants, $phenotype_portion);
 		}
 
 		print OUTCOUNTS "\n";
@@ -411,6 +472,7 @@ sub execute {                               # replace with real execution logic.
 		close(OUTGENES);
 		close(OUTCOUNTS);
 		close(OUTMUTATIONS);
+		close(OUTNEUTRAL);
 	}
 
 	
@@ -421,7 +483,90 @@ sub execute {                               # replace with real execution logic.
 
 
 ################################################################################################
-# Is_deleterious
+# get_annotation_call
+#
+################################################################################################
+
+sub get_annotation_call
+{
+	my $transcript_annotation = shift(@_);
+
+	my $call = "-\t-";
+	
+	if($transcript_annotation)
+	{
+		my @transcriptContents = split(/\t/, $transcript_annotation);
+		my $gene_name = $transcriptContents[6];
+		my $trv_type = $transcriptContents[13];
+
+        $trv_type =~ s/NMD_TRANSCRIPT//;
+        $trv_type =~ s/,,/,/g;
+        $trv_type =~ s/^,//g;
+        $trv_type =~ s/,$//g;
+
+        $trv_type =~ s/STOP_GAINED,SPLICE_SITE/nonsense/;
+        $trv_type =~ s/STOP_GAINED/nonsense/;
+        $trv_type =~ s/STOP_LOST/nonstop/;
+        $trv_type =~ s/ESSENTIAL_SPLICE_SITE/splice_site/;
+
+        $trv_type =~ s/SPLICE_SITE,INTRONIC/splice_region/;
+        $trv_type =~ s/SPLICE_SITE,WITHIN_NON_CODING_GENE/splice_region/;
+        $trv_type =~ s/^SYNONYMOUS_CODING,SPLICE_SITE/splice_region/;
+
+		$call = "$gene_name\t$trv_type";		
+	}
+
+	return($call);
+}
+
+
+################################################################################################
+# get_vep_call
+#
+################################################################################################
+
+sub get_vep_call
+{
+	my $vep_annotation = shift(@_);
+
+	my $vep_class = my $vep_gene = "-";
+	
+	if($vep_annotation)
+	{
+		my @vepContents = split(/\t/, $vep_annotation);
+		$vep_class = $vepContents[6];
+		my $extra = $vepContents[13];
+
+		if($extra)
+		{
+	
+			## Parse out gene symbol, sift, polyphen, condel ##
+			my $polyphen = my $sift = my $condel = "";
+	
+			my @extraContents = split(/\;/, $extra);
+			foreach my $entry (@extraContents)
+			{
+				my ($key, $value) = split(/\=/, $entry);
+	
+				$vep_gene = $value if($key eq 'HGNC');
+				$polyphen = $value if($key eq 'PolyPhen');
+				$sift = $value if($key eq 'SIFT');
+				$condel = $value if($key eq 'Condel');
+
+			}
+
+			if($polyphen && $sift && $condel)
+			{
+				$vep_class .= ":" . $polyphen . ":" . $sift . ":" . $condel;
+			}
+		}
+	}
+
+	return($vep_gene . "\t" . $vep_class);
+}
+
+################################################################################################
+# is_deleterious
 #
 ################################################################################################
 
@@ -453,9 +598,12 @@ sub is_deleterious
 		my $amino_acids = $vepContents[10];
 		my $extra = $vepContents[13];
 
+		my $gene = "";
+
 		## Break VEP classes into array since these allow multiples ##
 		my %vep_class = ();
 		my $damaging_vep_types = "";
+		my $damaging_calls = "";
 		if($vep_class)
 		{
 			my @vep_class = split(/\,/, $vep_class);
@@ -468,7 +616,7 @@ sub is_deleterious
 					$damaging_vep_types .= "," if($damaging_vep_types);
 					$damaging_vep_types .= 'NON_SYN';
 				}
-				elsif($class =~ 'SPLICE' || $class =~ 'STOP')
+				elsif($class =~ 'ESSENTIAL_SPLICE' || $class =~ 'STOP')
 				{
 					$damaging_vep_types .= "," if($damaging_vep_types);
 					$damaging_vep_types .= $class;
@@ -481,7 +629,7 @@ sub is_deleterious
 		{
 	
 			## Parse out gene symbol, sift, polyphen, condel ##
-			my $gene = my $polyphen = my $sift = my $condel = "";
+			my $polyphen = my $sift = my $condel = "";
 	
 			my @extraContents = split(/\;/, $extra);
 			foreach my $entry (@extraContents)
@@ -498,7 +646,7 @@ sub is_deleterious
 			{
 				if(($polyphen =~ 'damaging' || $sift =~ 'deleterious' || $condel =~ 'deleterious')) #$vep_class{'NON_SYNONYMOUS_CODING'} && 
 				{
-					my $damaging_calls = "";
+					
 					$damaging_calls = "Polyphen" if($polyphen =~ 'damaging');
 					
 					if($sift =~ 'deleterious')
@@ -516,6 +664,11 @@ sub is_deleterious
 					return($gene . "\t" . $damaging_vep_types . ":" . $damaging_calls);
 				}
 			}			
+		}
+		
+		if($damaging_vep_types)
+		{
+			return($gene . "\t" . $damaging_vep_types . ":" . $damaging_calls);
 		}
 
 	}
@@ -559,8 +712,7 @@ sub load_sample_phenotypes
 #
 ################################################################################################
 
-sub load_transcript_annotation
-{                               # replace with real execution logic.
+sub load_transcript_annotation {
 	my $input_file = shift(@_);
 	my %annotation = ();
 	
@@ -583,15 +735,68 @@ sub load_transcript_annotation
 	return(%annotation);
 }
 
+sub load_transcript_annotation_VEP {
+	my $self = shift;
+	my $input_file = shift;
+	my $reference_build = $self->reference_build;
+	my %annotation = ();
+	
+	my $input = new FileHandle ($input_file);
+	my $lineCounter = 0;
+
+	while (<$input>) {
+		chomp;
+		my $line = $_;
+		$lineCounter++;
+
+		if(substr($line, 0, 1) eq '#') {
+			## Ignore header line ##
+            next;
+		}
+
+        my ($Uploaded_variation,$Location,$Allele,$Gene,$Feature,$Feature_type,$Consequence,$cDNA_position,$CDS_position,$Protein_position,$Amino_acids,$Codons,$Existing_variation,$Extra) = split "\t", $line;
+
+		my ($chrom, $chr_start, $alleles, $ref, $var);
+        if ($Uploaded_variation =~ m/rs/) {
+            ($chrom, $chr_start) = split(/:/,$Location);
+            $var = $Allele;
+            my $reference_build_fasta_object = Genome::Model::Build::ReferenceSequence->get(name => "$reference_build");
+            my $reference_build_fasta = $reference_build_fasta_object->data_directory . "/all_sequences.fa";
+            $ref = `samtools faidx $reference_build_fasta $chrom:$chr_start-$chr_start | grep -v ">"`;
+            chomp($ref);
+        }
+        else {
+			($chrom, $chr_start, $alleles) = split(/\_/, $Uploaded_variation);
+			($ref, $var) = split(/\//, $alleles);
+        }
+
+        my $vep_data = get_vep_call($line);
+        my ($gene_name, $vep_class) = split(/\t/,$Location);
+
+		my $key = join("\t", $chrom, $chr_start, $ref, $var);
+
+        my $filler = "THIS_FIELD_LEFT_INTENTIONALLY_BLANK";
+        my @line_contents = ($chrom, $chr_start, $chr_start, $ref, $var, $filler, $gene_name, $filler, $filler, $filler, $filler, $filler, $filler, $Consequence);
+        my $vep_line = join("\t",@line_contents);
+
+		$annotation{$key} = $vep_line;
+	}
+	close($input);
+                            # exits 0 for true, exits 1 for false (retval/exit code mapping is overridable)
+
+	return(%annotation);
+}
+
 
 ################################################################################################
 # Load Genotypes
 #
 ################################################################################################
 
-sub load_vep_annotation
-{                               # replace with real execution logic.
-	my $FileName = shift(@_);
+sub load_vep_annotation {
+	my $self = shift;
+	my $FileName = shift;
+	my $reference_build = $self->reference_build;
 
 	my %results = ();
 
@@ -604,18 +809,26 @@ sub load_vep_annotation
 		my $line = $_;
 		$lineCounter++;		
 	
-		if(substr($line, 0, 1) eq '#')
-		{
+		if(substr($line, 0, 1) eq '#') {
 			## Ignore header line ##
 		}
-		else
-		{
+		else {
 			my @lineContents = split(/\t/, $line);
-			my ($chrom, $position, $alleles) = split(/\_/, $lineContents[0]);
-			my ($ref, $var) = split(/\//, $alleles);
+			my ($chrom, $position, $alleles, $ref, $var);
+            if ($lineContents[0] =~ m/rs/) {
+                ($chrom, $position) = split(/:/,$lineContents[1]);
+                $var = $lineContents[2];
+                my $reference_build_fasta_object = Genome::Model::Build::ReferenceSequence->get(name => "$reference_build");
+                my $reference_build_fasta = $reference_build_fasta_object->data_directory . "/all_sequences.fa";
+                $ref = `samtools faidx $reference_build_fasta $chrom:$position-$position | grep -v ">"`;
+                chomp($ref);
+            }
+            else {
+    			($chrom, $position, $alleles) = split(/\_/, $lineContents[0]);
+    			($ref, $var) = split(/\//, $alleles);
+            }
 			my $key = join("\t", $chrom, $position, $ref, $var);
 			$results{$key} = $line;
-
 		}
 		
 #		return(%results) if($lineCounter > 1000);

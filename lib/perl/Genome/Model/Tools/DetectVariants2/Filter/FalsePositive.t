@@ -63,6 +63,14 @@ my $detector_result = Genome::Model::Tools::DetectVariants2::Result->__define__(
     reference_build_id => $reference->id,
 );
 
+my $result_allocation = Genome::Disk::Allocation->create(
+    disk_group_name => 'info_genome_models',
+    kilobytes_requested => 1,
+    allocation_path => 'this_is_a_test',
+    owner_id => $detector_result->id,
+    owner_class_name => $detector_result->class,
+);
+
 my $detector_vcf_result = Genome::Model::Tools::DetectVariants2::Result::Vcf::Detector->__define__(
     input => $detector_result,
     output_dir => $detector_vcf_directory,

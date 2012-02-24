@@ -29,6 +29,12 @@ class Genome::Model::Tools::Music::Bmr::CalcBmr {
     skip_non_coding => { is => 'Boolean', doc => "Skip non-coding mutations from the provided MAF file", is_optional => 1, default => 1 },
     skip_silent => { is => 'Boolean', doc => "Skip silent mutations from the provided MAF file", is_optional => 1, default => 1 },
   ],
+  has_output => [
+    bmr_output => { is => 'Text', doc => "TODO"
+    },
+    gene_mr_file => { is => 'Text', doc => "TODO"
+    },
+  ],
   doc => "Calculates mutation rates given per-gene coverage (from \"music bmr calc-covg\"), and a mutation list",
 };
 
@@ -186,6 +192,7 @@ sub execute {
   # Outputs of this script will be written to these locations in the output directory
   my $overall_bmr_file = "$output_dir/overall_bmrs";
   my $gene_mr_file = "$output_dir/gene_mrs";
+  $self->gene_mr_file($gene_mr_file);
 
   # Build a hash to quickly lookup the genes to be ignored for overall BMRs
   my %ignored_genes = ();
@@ -219,6 +226,10 @@ sub execute {
     next if( $line =~ m/^#/ );
     chomp $line;
     my ( $chr, $start, $stop, $gene ) = split( /\t/, $line );
+    if (!$roi_bitmask->{$chr} or $start > $roi_bitmask->{$chr}->Size) {
+        print STDERR "Skipping invalid ROI bitmask $chr:$start-$stop\n";
+        next;
+    }
     $roi_bitmask->{$chr}->Interval_Fill( $start, $stop );
     $genes{$gene} = 1;
   }
@@ -499,6 +510,8 @@ sub execute {
   my %cluster_bmr; # Stores per cluster categorized BMR
   my $totBmrFh = IO::File->new( $overall_bmr_file, ">" ) or die "Couldn't open $overall_bmr_file. $!\n";
   $totBmrFh->print( "#User-specified genes skipped in these calculations: $genes_to_ignore\n" ) if( defined $genes_to_ignore );
+  my $covered_bases_sum = 0;
+  my $mutations_sum = 0;
   for( my $i = 0; $i < scalar( @bmr_clusters ); ++$i )
   {
     my @samples_in_cluster = map { $all_sample_names[$_] } @{$bmr_clusters[$i]};
@@ -525,8 +538,11 @@ sub execute {
       $tot_muts += $mutations;
     }
     $totBmrFh->print( join( "\t", "Overall_BMR", $tot_covd_bases, $tot_muts, $tot_muts / $tot_covd_bases ), "\n\n" );
+    $covered_bases_sum += $tot_covd_bases;
+    $mutations_sum += $tot_muts;
   }
   $totBmrFh->close;
+  $self->bmr_output($mutations_sum / $covered_bases_sum);
 
   # Print out a file containing per-gene mutation counts and covered bases for use by "music smg"
   my $geneBmrFh = IO::File->new( $gene_mr_file, ">" ) or die "Couldn't open $gene_mr_file. $!\n";
