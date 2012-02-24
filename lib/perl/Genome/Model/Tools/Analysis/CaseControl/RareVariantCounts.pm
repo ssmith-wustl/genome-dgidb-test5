@@ -200,6 +200,7 @@ sub execute {                               # replace with real execution logic.
 				my $field = $formatContents[$colCounter];
 				$format_fields{$field} = $colCounter;
 			}
+			warn "No FT filter parsed from format field line $format\n" if(!defined$format_fields{'FT'});;
 
 			## For each variant allele observed ##
 			
@@ -266,21 +267,20 @@ sub execute {                               # replace with real execution logic.
 											
 								my @entryContents = split(/\:/, $entry);
 								my $numEntryContents = @entryContents;
-								
-								if($numEntryContents >= 3)
+								if($numEntryContents >= 3 || $entryContents[$format_fields{'GT'}] =~ m/\d+/) # as long as there's a numeric genotype, this check should work
 								{
-									my $genotype = $entryContents[0];
-									my $quality = $entryContents[$format_fields{'GQ'}];
-									my $depth = $entryContents[$format_fields{'DP'}];
-									my $filter = $entryContents[$format_fields{'FT'}];
+									my $genotype = $entryContents[$format_fields{'GT'}];
+									my $quality = $entryContents[$format_fields{'GQ'}] if(defined$format_fields{'GQ'});
+									my $depth = $entryContents[$format_fields{'DP'}] if(defined$format_fields{'DP'});;
+									my $filter = $entryContents[$format_fields{'FT'}] if(defined$format_fields{'FT'});;
+
+#									if(!$filter)
+#									{
+#										warn "No filter parsed from $entry field line\n"; # moved this to when looking for FT in format field
+#										exit(0); # "!$filter" because what to do when filter status isn't in the VCF?
+#									}
 					
-									if(!$filter)
-									{
-										warn "No filter parsed from $entry field " . $format_fields{'FT'} . "\n";
-										exit(0);
-									}
-					
-									if($filter eq '.' || $filter eq 'PASS')
+									if(!$filter || $filter eq '.' || $filter eq 'PASS' ) # "!$filter" because what to do when filter status isn't in the VCF?
 									{
 										if($genotype =~ $alt_index)
 										{
@@ -313,8 +313,6 @@ sub execute {                               # replace with real execution logic.
 				
 							$sampleIndex++;
 						}
-						
-						
 						print OUTMUTATIONS join("\t", $variant_key, $deleterious);
 						foreach my $this_phenotype (sort keys %phenotype_counts)
 						{
@@ -322,35 +320,21 @@ sub execute {                               # replace with real execution logic.
 							print OUTMUTATIONS "\t$phenotype_counts{$this_phenotype}/$phenotype_sample_counts{$this_phenotype}";
 						}
 						print OUTMUTATIONS "\n";
-
 					}
 					else
 					{
 						print OUTNEUTRAL join("\t", $chrom, $position, $ref, $var, "notDeleterious", get_annotation_call($transcript_annotation{$variant_key}), get_vep_call($vep_annotation{$variant_key})) . "\n";
 					}
-
-
-
 				}
 				else
 				{
-					warn "No annotation found for $variant_key\n";
+                    if ($self->transcript_annotation_file) {
+				    	warn "No annotation found for $variant_key\n";
+                    }
 				}
-				
-
-
-
 			}
-
-
-
-	
-
-	
 		}
-		
 #	}
-		
 	}
 	
 	close($input);
@@ -381,7 +365,8 @@ sub execute {                               # replace with real execution logic.
 		$stats{'samples_vcf'}++;
 		if(!$sample_phenotypes{$sample})
 		{
-			warn "Sample $sample is in VCF but has no phenotype\n";
+####################################################################################################PUT THIS BACK IN
+#			warn "Sample $sample is in VCF but has no phenotype\n";
 			$stats{'samples_vcf_without_phenotype'}++;
 		}
 	}
@@ -425,7 +410,7 @@ sub execute {                               # replace with real execution logic.
 	print OUTCOUNTS "gene\trare_vars";
 	foreach my $phenotype (sort keys %phenotypes)
 	{
-		print OUTCOUNTS "\trare_del_alleles_$phenotype\trare_del_variants_$phenotype\trare_del_samples_$phenotype";
+		print OUTCOUNTS "\trare_del_alleles_$phenotype\trare_del_variants_$phenotype\trare_del_variants_proportion_$phenotype\trare_del_samples_$phenotype\trare_del_sample_proportion_$phenotype";
 	}
 	print OUTCOUNTS "\n";
 
@@ -459,7 +444,7 @@ sub execute {                               # replace with real execution logic.
 #				$portion_samples_harboring = sprintf("%.3f", $portion_samples_harboring * 100) . '%';
 			}
 			
-			print OUTCOUNTS "\t" . join("\t", $num_rare_alleles, $num_rare_variants, $samples_harboring);
+			print OUTCOUNTS "\t" . join("\t", $num_rare_alleles, $num_rare_variants, $phenotype_portion, $samples_harboring, $portion_samples_harboring);
 #			print OUTCOUNTS "\t" . join("\t", $num_rare_variants, $phenotype_portion);
 		}
 
@@ -474,6 +459,65 @@ sub execute {                               # replace with real execution logic.
 		close(OUTMUTATIONS);
 		close(OUTNEUTRAL);
 	}
+
+	if($self->output_file) {
+        my $output_pdf_image_file = $self->output_file . ".pdf";
+	    my ($tfh_R,$temp_path_R) = Genome::Sys->create_temp_file;
+	    unless($tfh_R) {
+		    $self->error_message("Unable to create temporary file $!");
+		    die;
+	    }
+	    $temp_path_R =~ s/\:/\\\:/g;
+
+        my $input_file = $self->output_file . ".counts";
+        unless ($input_file) {
+            die "Unable to find mutation file $input_file\n";
+        }
+
+        my $R_command = <<"_END_OF_R_";
+pdf(file=\"$output_pdf_image_file\",width=10,height=7.5);
+mutation_table <- read.table(\"$input_file\", row.names = NULL, header = TRUE, sep = \"\\t\");
+par(mfrow=c(2,2));
+case <- mutation_table\$rare_del_samples_case;
+control <- mutation_table\$rare_del_samples_control;
+sample_case_proportion <- mutation_table\$rare_del_sample_proportion_case;
+sample_control_proportion <- mutation_table\$rare_del_sample_proportion_control;
+variants_case_proportion <- mutation_table\$rare_del_variants_proportion_case;
+variants_control_proportion <- mutation_table\$rare_del_variants_proportion_control;
+gene_names <- mutation_table\$gene;
+
+plot (variants_control_proportion,variants_case_proportion, xlim=c(0,.20),ylim=c(0,.20), xlab = "Rare Deleterious Alleles per Control Sample",ylab = "Rare Deleterious Alleles per Case Sample",);
+abline(a=0,b=1);
+text(variants_control_proportion,variants_case_proportion, labels = gene_names, pos = 4, cex=0.5);
+plot (variants_control_proportion,variants_case_proportion, xlim=c(0,.05),ylim=c(0,.05), xlab = "Rare Deleterious Alleles per Control Sample",ylab = "Rare Deleterious Alleles per Case Sample",);
+abline(a=0,b=1);
+text(variants_control_proportion,variants_case_proportion, labels = gene_names, pos = 4, cex=0.5);
+
+plot (sample_control_proportion,sample_case_proportion, xlim=c(0,.20),ylim=c(0,.20), xlab = "Proportion of Controls with Deleterious Variant",ylab = "Proportion of Cases with Deleterious Variant",);
+abline(a=0,b=1);
+text(sample_control_proportion,sample_case_proportion, labels = gene_names, pos = 4, cex=0.5);
+plot (sample_control_proportion,sample_case_proportion, xlim=c(0,.05),ylim=c(0,.05), xlab = "Proportion of Controls with Deleterious Variant",ylab = "Proportion of Cases with Deleterious Variant",);
+abline(a=0,b=1);
+text(sample_control_proportion,sample_case_proportion, labels = gene_names, pos = 4, cex=0.5);
+
+devoff <- dev.off();
+_END_OF_R_
+#-------------------------------------------------
+        print $tfh_R "$R_command\n";
+
+	    my $cmd = "R --vanilla --slave \< $temp_path_R";
+	    my $return = Genome::Sys->shellcmd(
+               cmd => "$cmd",
+               output_files => [$output_pdf_image_file],
+               skip_if_output_is_present => 0,
+	       );
+	    unless($return) { 
+		    $self->error_message("Failed to execute: Returned $return");
+		    die $self->error_message;
+	    }
+		close(OUTPDF);
+	}
+
 
 	
 	return 1;                               # exits 0 for true, exits 1 for false (retval/exit code mapping is overridable)
@@ -561,7 +605,6 @@ sub get_vep_call
 			}
 		}
 	}
-
 	return($vep_gene . "\t" . $vep_class);
 }
 
@@ -577,12 +620,12 @@ sub is_deleterious
 	my @transcriptContents = split(/\t/, $transcript_annotation);
 	my $gene_name = $transcriptContents[6];
 	my $trv_type = $transcriptContents[13];
-	
+#	print "$gene_name\t$trv_type\n";
 	if($trv_type eq 'nonsense' || $trv_type eq 'nonstop' || $trv_type eq 'splice_site' || $trv_type eq 'frame_shift_del' || $trv_type eq 'frame_shift_ins' || $trv_type eq 'splice_site_del' || $trv_type eq 'splice_site_ins')
 	{
 		return($gene_name . "\t" . $trv_type);
 	}
-	
+
 	if($vep_annotation)
 	{
 		my @vepContents = split(/\t/, $vep_annotation);
@@ -771,14 +814,13 @@ sub load_transcript_annotation_VEP {
         }
 
         my $vep_data = get_vep_call($line);
-        my ($gene_name, $vep_class) = split(/\t/,$Location);
+        my ($gene_name, $vep_class) = split(/\t/,$vep_data);
 
 		my $key = join("\t", $chrom, $chr_start, $ref, $var);
 
         my $filler = "THIS_FIELD_LEFT_INTENTIONALLY_BLANK";
         my @line_contents = ($chrom, $chr_start, $chr_start, $ref, $var, $filler, $gene_name, $filler, $filler, $filler, $filler, $filler, $filler, $Consequence);
         my $vep_line = join("\t",@line_contents);
-
 		$annotation{$key} = $vep_line;
 	}
 	close($input);
