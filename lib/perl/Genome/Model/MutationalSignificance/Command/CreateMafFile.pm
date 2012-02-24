@@ -12,8 +12,8 @@ class Genome::Model::MutationalSignificance::Command::CreateMafFile {
         somatic_variation_build => {
             is => 'Genome::Model::Build::SomaticVariation',
         },
-        build => {
-            is => 'Genome::Model::Build',
+        output_dir => {
+            is => 'Text',
         },
     ],
     has_output => [
@@ -26,7 +26,7 @@ sub execute {
 
     my $rand = rand();
 
-    my $snv_file = $self->build->data_directory."/".$self->somatic_variation_build->id.".uhc.anno";
+    my $snv_file = $self->output_dir."/".$self->somatic_variation_build->id.".uhc.anno";
 
     #Deduplicate and sort the snv file (copied from gmt capture manual-review)
     my $snv_anno = $self->somatic_variation_build->data_set_path("effects/snvs.hq.tier1",1,"annotated.top");
@@ -64,7 +64,7 @@ sub execute {
         tumor_bam_file => $self->somatic_variation_build->tumor_bam,
         variant_file => $snv_anno_file,
         output_file => $snv_file,
-        filtered_file => $self->build->data_directory."/".$self->somatic_variation_build->id.".not_uhc.anno",
+        filtered_file => $self->output_dir."/".$self->somatic_variation_build->id.".not_uhc.anno",
         reference => $self->somatic_variation_build->reference_sequence_build->fasta_file,
     );
 
@@ -79,15 +79,15 @@ sub execute {
         genome_build => '37', #TODO FIX!!!
         tumor_sample => $self->somatic_variation_build->tumor_build->model->subject->extraction_label, #TODO verify
         normal_sample => $self->somatic_variation_build->normal_build->model->subject->extraction_label, #TODO verify
-        output_file => $self->build->data_directory."/".$self->somatic_variation_build->id.".maf",
+        output_file => $self->output_dir."/".$self->somatic_variation_build->id.".maf",
     );
 
     my $create_maf_result = $create_maf_cmd->execute;
 
-    my $cmd = 'perl -an -F\'\t\' -e \'chomp(@F[-1]); @t=`grep "^$F[4]\t$F[5]" '.$snv_file.' | cut -f 8,15,16`; print ($F[0]=~m/^Hugo/ ? (join("\t",@F)."\ttranscript_name\tc_position\tamino_acid_change\n") : (join("\t",@F)."\t".$t[0]));\' '. $self->build->data_directory."/".$self->somatic_variation_build->id.".maf > ".$self->build->data_directory."/".$self->somatic_variation_build->id.".maf2";
+    my $cmd = 'perl -an -F\'\t\' -e \'chomp(@F[-1]); @t=`grep "^$F[4]\t$F[5]" '.$snv_file.' | cut -f 8,15,16`; print ($F[0]=~m/^Hugo/ ? (join("\t",@F)."\ttranscript_name\tc_position\tamino_acid_change\n") : (join("\t",@F)."\t".$t[0]));\' '. $self->output_dir."/".$self->somatic_variation_build->id.".maf > ".$self->output_dir."/".$self->somatic_variation_build->id.".maf2";
     Genome::Sys->shellcmd(cmd => $cmd);
 
-    $self->maf_file($self->build->data_directory."/".$self->somatic_variation_build->id.".maf2");
+    $self->maf_file($self->output_dir."/".$self->somatic_variation_build->id.".maf2");
     my $status = "Created MAF file ".$self->maf_file;
     $self->status_message($status);
     return 1;
