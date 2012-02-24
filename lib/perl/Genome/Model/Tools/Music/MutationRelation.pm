@@ -15,7 +15,7 @@ class Genome::Model::Tools::Music::MutationRelation {
     bam_list => { is => 'Text', doc => "Tab delimited list of BAM files [sample_name, normal_bam, tumor_bam] (See Description)" },
     maf_file => { is => 'Text', doc => "List of mutations in MAF format" },
     output_file => { is => 'Text', doc => "Results of mutation-relation tool" },
-    matrix_file => { is => 'Text', doc => "Define this argument to store a mutation matrix", is_optional => 1 },
+    mutation_relation_matrix_file => { is => 'Text', doc => "Optionally store the sample-vs-gene matrix used during calculations.", is_optional => 1 },
     permutations => { is => 'Number', doc => "Number of permutations used to determine P-values", is_optional => 1, default => 100 },
     gene_list => { is => 'Text', doc => "List of genes to test, typically SMGs. If unspecified, all genes in MAF are tested.", is_optional => 1 },
   ],
