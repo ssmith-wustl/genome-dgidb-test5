@@ -37,6 +37,7 @@ class Genome::Model::Tools::Music::Play {
         },
     ],
     has_optional_input => [
+
         numeric_clinical_data_file => {
             is => 'Text',
             doc => 'Table of samples (y) vs. numeric clinical data category (x)',
@@ -58,9 +59,13 @@ class Genome::Model::Tools::Music::Play {
             doc => 'turn on to display larger working output',
             default => 1,
         },
-        matrix_file => {
+        clinical_correlation_matrix_file => {
             is => 'Text',
-            doc => 'Define this argument to store a mutation matrix',
+            doc => 'Optionally store the sample-vs-gene matrix used internally during calculations.',
+        },
+        mutation_relation_matrix_file => {
+            is => 'Text',
+            doc => 'Optionally store the sample-vs-gene matrix used internally during calculations.',
         },
         permutations => {
             is => 'Number',
