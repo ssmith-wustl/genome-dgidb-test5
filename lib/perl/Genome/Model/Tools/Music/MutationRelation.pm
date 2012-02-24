@@ -176,7 +176,7 @@ sub create_sample_gene_matrix {
 
   # Write the input matrix to a file for use by the R code
   my $matrix_file;
-  unless( $matrix_file = $self->matrix_file ) {
+  unless( $matrix_file = $self->mutation_relation_matrix_file ) {
     $matrix_file = Genome::Sys->create_temp_file_path();
   }
 
