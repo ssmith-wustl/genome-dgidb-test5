@@ -44,7 +44,6 @@ sub amplicon_assembly {
                         /),
                 ),
                 exclude_contaminated_amplicons => 1,
-                #only_use_latest_iteration_of_reads => 0,
             );
         }
         # validate

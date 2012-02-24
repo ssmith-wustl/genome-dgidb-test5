@@ -58,7 +58,7 @@ my %ATTRIBUTES = (
         is => 'Boolean',
         is_optional => 1,
         default_value => 0,
-        doc => 'When getting reads for amplicons, only use the most recent iteration for each primer. Only for "gsc" generated reads. Default is to include all reads for each amplicon.',
+        doc => 'DEPRECATED! DOES NOT DO ANYTHING!',
     },
 );
 
@@ -401,12 +401,6 @@ sub get_amplicons {
         return;
     }
 
-    # Only use most recent read
-    if ( $self->only_use_latest_iteration_of_reads ) {
-        $self->_remove_old_read_iterations_from_amplicons($amplicons)
-            or return;
-    }
-    
     if ( $self->exclude_contaminated_amplicons ) {
         $self->_remove_contaminated_amplicons($amplicons)
             or return;
@@ -475,38 +469,6 @@ sub _get_read_name_iterator {
         $dh->close;
         return;
     }
-}
-
-sub _remove_old_read_iterations_from_amplicons {
-    my ($self, $amplicons) = @_;
-
-    for my $amplicon_name ( keys %$amplicons ) {
-        my %reads;
-        for my $read_name ( @{$amplicons->{$amplicon_name}} ) {
-            my $read = $self->_get_gsc_sequence_read($read_name);
-            confess "Can't get read for name ($read_name). This is required to remove old read iterations from amplicons" unless $read;
-            
-            my $read_id = $amplicon_name.$read->primer_code;
-            if ( exists $reads{$read_id} ) {
-                my $date_compare = UR::Time->compare_dates(
-                    '00:00:00 '.$read->run_date,
-                    '00:00:00 '.$reads{$read_id}->run_date,
-                ); #returns -1, 0, or 1
-                #print "RUN DATE $read_name => ".$read->run_date."($date_compare)\n";
-                $reads{$read_id} = $read if $date_compare eq 1;
-            }
-            else {
-                $reads{$read_id} = $read;
-            }
-        }
-        $amplicons->{$amplicon_name} = [
-        sort { $a cmp $b } 
-        map { $_->trace_name }
-        values %reads 
-        ];
-    }
-
-    return 1;
 }
 
 sub _remove_contaminated_amplicons {

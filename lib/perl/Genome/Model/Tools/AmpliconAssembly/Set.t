@@ -75,23 +75,6 @@ is_deeply(
     [qw/ HMPB-aad13a05 HMPB-aad13e12 HMPB-aad16a01 HMPB-aad16c10 /],
     'Got 4 uncontaminated amplicons using all read iterations',
 );
-$amplicon_assembly->only_use_latest_iteration_of_reads(1);
-my $only_latest_reads_amplicons = $amplicon_assembly->get_amplicons;
-is_deeply(
-    [ map { $_->name } @$only_latest_reads_amplicons ],
-    # we get all 5 amplicons here because the read that is contaminated is older
-    [qw/ HMPB-aad13a05 HMPB-aad13e12 HMPB-aad15e03 HMPB-aad16a01 HMPB-aad16c10 /],
-    'Got 5 uncontaminated amplicons using only latest read iterations',
-);
-is_deeply(
-    $only_latest_reads_amplicons->[0]->get_reads,
-    [qw/ 
-    HMPB-aad13a05.b3
-    HMPB-aad13a05.b4
-    HMPB-aad13a05.g1
-    /],
-    'Got latest iterations for reads'
-);
 
 done_testing();
 exit;
