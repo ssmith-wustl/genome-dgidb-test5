@@ -8,25 +8,24 @@ use Genome;
 use Data::Dumper 'Dumper';
 
 class Genome::Model::Command::InstrumentData::Assign {
-    is => 'Genome::Model::Event',
+    is => 'Genome::Command::Base',
     has => [
-        model_id => {
-            is => 'Integer', 
+        model => {
+            is => 'Genome::Model', 
+            require_user_verify => 0,
             doc => 'ID for the genome model to assign instrument data.'
         },
     ],
     has_optional => [
-        instrument_data_id => {
-            is => 'Number',
-            doc => 'The unique ID of the instrument data to assign.  To assign multiple instrument data, enclose this param in quotes(\'), and separate the IDs by a space.'
+        instrument_data => {
+            is => 'Genome::InstrumentData',
+            is_many => 1,
+            require_user_verify => 0,
+            doc => 'Instrumetn data to assign. Resolved via filter string. To get for a model group, just use the mode lgoup id/name.',
         },
         flow_cell_id => {
             is => 'Number',
             doc => 'Assigns all lanes in the given flowcell whose sample_name matches the model\'s subject name'       
-        },
-        instrument_data_ids => {
-            is => 'Number',
-            doc => 'The unique IDs of the instrument data to assign, enclosed in quotes(\'\'), and separated by a space.'
         },
         all => {
             is => 'Boolean',
@@ -58,6 +57,7 @@ class Genome::Model::Command::InstrumentData::Assign {
             default => 0,
             doc => 'Allow assignment of data even if the subject does not match the model',
         },
+        _assigned_instrument_data => { is => 'Hash', default_value => {}, },
     ],
 };
 
@@ -75,21 +75,21 @@ sub execute {
 
     my @requested_actions = grep { 
         $self->$_ 
-    } qw(flow_cell_id instrument_data_id instrument_data_ids all);
+    } qw(flow_cell_id instrument_data all);
 
     if ( @requested_actions > 1 ) {
         $self->error_message('Multiple actions requested: '.join(', ', @requested_actions));
         return;
     }
 
-    $self->_verify_model
-        or  return;
-
-    if ( $self->instrument_data_id ) { # assign this
-        return $self->_assign_by_instrument_data_id;
+    my @model_instrument_data = $self->model->instrument_data;
+    my $assigned_instrument_data = $self->_assigned_instrument_data;
+    for my $instrument_data ( @model_instrument_data ) {
+        $assigned_instrument_data->{ $instrument_data->id }++;
     }
-    elsif ( $self->instrument_data_ids ) { # assign these
-        return $self->_assign_by_instrument_data_ids;
+
+    if ( $self->instrument_data ) { # assign these
+        return $self->_assign_by_instrument_data;
     }
     elsif ( $self->flow_cell_id ) { #assign all instrument data ids whose sample name matches the models subject name and flow_cell_id matches the flow_cell_id given by the user
         my $flow_cell_id = $self->flow_cell_id;
@@ -142,7 +142,8 @@ sub _assign_instrument_data {
 
     # Check if already assigned
     my $model = $self->model;
-    if ( grep { $instrument_data->id eq $_->id } $model->instrument_data ) {
+    my $assigned_instrument_data = $self->_assigned_instrument_data;
+    if ( exists $assigned_instrument_data->{ $instrument_data->id } ) {
         $self->status_message(
             sprintf(
                 'Instrument data (%s) already assigned to model (%s). Skipping.',
@@ -152,6 +153,7 @@ sub _assign_instrument_data {
         );
         return 1;
     }
+    $assigned_instrument_data->{ $instrument_data->id }++;
 
     my $add = $model->add_instrument_data(
         value => $instrument_data,
@@ -180,71 +182,11 @@ sub _assign_instrument_data {
     return 1;
 }
 
-sub _get_instrument_data_for_id {
-    my ($self, $id) = @_;
-
-    my $instrument_data = Genome::InstrumentData->get($id);
-    unless ( $instrument_data ) {
-        $self->error_message( 
-            sprintf('Failed to find specified instrument data for id (%s)', $id) 
-        );
-        return;
-    }
-
-    return $instrument_data;
-}
-
 #< Methods Run Based on Inputs >#
-sub _assign_by_instrument_data_id {
+sub _assign_by_instrument_data {
     my $self = shift;
 
-    # Get it 
-    my $instrument_data = $self->_get_instrument_data_for_id( $self->instrument_data_id );
-
-    # Check subject
-    unless ($self->force()) {
-        
-        my $model = $self->model();
-        
-        if ($model->subject_type() eq 'library_name') {
-            unless ($self->_check_instrument_data_library($instrument_data)) {
-                return;
-            }
-        }
-        elsif ($model->subject_type() eq 'sample_name') {
-            unless ($self->_check_instrument_data_sample($instrument_data)) {
-                return;
-            }
-        }
-        
-    }
-    
-    # Assign it
-    return $self->_assign_instrument_data($instrument_data)
-}
-
-sub _assign_by_instrument_data_ids {
-    my $self = shift;
-
-    # Get the ids
-    my @ids = split(/\s+/, $self->instrument_data_ids);
-    unless ( @ids ) {
-        $self->error_message("No instrument data ids found in instrument_data_id input: ".$self->instrument_data_id);
-        return;
-    }
-
-    # Get the instrument data
-    my @instrument_data;
-    for my $id ( @ids ) {
-        unless ( push @instrument_data, Genome::InstrumentData->get($id) ) {
-            $self->error_message( 
-                sprintf('Failed to find specified instrument data for id (%s)', $id) 
-            );
-            return;
-        }
-    }
-
-    # Assign 'em
+    my @instrument_data = $self->instrument_data;
     for my $instrument_data ( @instrument_data ) {
         unless ($self->force()) {   
             my $model = $self->model();
@@ -259,8 +201,8 @@ sub _assign_by_instrument_data_ids {
                 }
             }   
         }
-        $self->_assign_instrument_data($instrument_data)
-            or return;
+        my $assigned = $self->_assign_instrument_data($instrument_data);
+        return if not $assigned;
     }
 
     return 1;
@@ -331,10 +273,11 @@ sub _assign_all_instrument_data {
         return 1;
     }
 
-    my @inputs = Genome::Model::Input->get(model_id => $self->model_id(), name => 'target_region_set_name');
+    my $model = $self->model;
+    my @inputs = Genome::Model::Input->get(model_id => $model->id, name => 'target_region_set_name');
     my %model_capture_targets = map { $_->value_id() => 1 } @inputs;
 
-    my @set_inputs = Genome::Model::Input->get(model_id => $self->model_id(), name => 'target_region_set');
+    my @set_inputs = Genome::Model::Input->get(model_id => $model->id, name => 'target_region_set');
     for my $si (@set_inputs) { $model_capture_targets{$si->value->name} = 1; }
 
     ID: for my $id ( @unassigned_instrument_data ) {
@@ -390,6 +333,7 @@ sub _assign_all_instrument_data {
 sub _list_compatible_instrument_data {
     my $self = shift;
 
+    my $model = $self->model;
     my @compatible_instrument_data = $self->model->compatible_instrument_data;
     my @assigned_instrument_data   = $self->model->instrument_data;
     my @unassigned_instrument_data = $self->model->unassigned_instrument_data;
@@ -397,8 +341,8 @@ sub _list_compatible_instrument_data {
     $self->status_message(
         sprintf(
             'Model (<name> %s <subject_name> %s): %s assigned and %s unassigned of %s compatible instrument data',
-            $self->model->name,
-            $self->model->subject_name,
+            $model->name,
+            $model->subject_name,
             scalar @assigned_instrument_data,
             scalar @unassigned_instrument_data,
             scalar @compatible_instrument_data
@@ -408,7 +352,7 @@ sub _list_compatible_instrument_data {
     if (@unassigned_instrument_data) {
         my $lister = Genome::Model::Command::InstrumentData::List->create(
             unassigned=>1,
-            model_id => $self->model->id
+            model => $model->id
         );
 
         return $lister->execute;
@@ -475,5 +419,3 @@ sub _check_instrument_data_sample {
 
 1;
 
-#$HeadURL$
-#$Id$

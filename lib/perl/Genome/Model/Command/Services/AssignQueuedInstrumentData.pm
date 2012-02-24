@@ -830,8 +830,8 @@ sub assign_instrument_data_to_models {
         } else {
             my $assign =
             Genome::Model::Command::InstrumentData::Assign->create(
-                instrument_data_id => $instrument_data_id,
-                model_id           => $model->id,
+                instrument_data => [$genome_instrument_data],
+                model           => $model,
             );
 
             unless ( $assign->execute ) {
@@ -997,8 +997,8 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
     for my $m (@new_models) {
         my $assign =
         Genome::Model::Command::InstrumentData::Assign->create(
-            model_id => $m->id,
-            instrument_data_id => $genome_instrument_data->id,
+            model => $m,
+            instrument_data => [$genome_instrument_data],
             include_imported => 1,
             force => 1,
         );
@@ -1014,7 +1014,7 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
         unless($m->isa('Genome::Model::RnaSeq')){
             my $assign_all =
             Genome::Model::Command::InstrumentData::Assign->create(
-                model_id => $m->id,
+                model => $m,
                 all => 1,
             );
 

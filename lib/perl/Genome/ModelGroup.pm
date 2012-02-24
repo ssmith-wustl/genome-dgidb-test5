@@ -27,6 +27,11 @@ class Genome::ModelGroup {
         model_count => {
             calculate => q| my @models = $self->models; return scalar @models; |,
         },
+        instrument_data => {
+             via => 'models',
+             to => 'instrument_data',
+             doc => 'Instrument data assigned to models of this group.',
+         },
         convergence_model   => { is => 'Genome::Model::Convergence',
                                     is_many     => 1, # We really should only have 1 here, however reverse_as requires this
                                     reverse_as  => 'group',
