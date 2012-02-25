@@ -37,7 +37,7 @@ sub help_detail {
 sub execute{
 
     my $self = shift;
-    my $mount_path = $self->disk_volume->mount_path;
+    my $mount_path = $self->volume->mount_path;
     my @allocations = Genome::Disk::Allocation->get(mount_path=>$mount_path);
     unless(@allocations) {
         $self->warning_message("No allocations on $mount_path.");
@@ -106,3 +106,5 @@ sub find_unallocated_paths{
         return 0, $path;
     }
 }
+
+1;

@@ -14,11 +14,8 @@ class Genome::Model::MutationalSignificance::Command::MergeMafFiles {
             is => 'Text',
             is_many => 1,
         },
-        build => {
-            is => 'Genome::Model::Build',
-        },
     ],
-    has_output => [
+    has_input_output => [
         maf_path => {
             is => 'String'},
     ],
@@ -28,7 +25,7 @@ sub execute {
     my $self = shift;
 
     my $count = 0;
-    my $maf_path = $self->build->data_directory."/final.maf";
+    my $maf_path = $self->maf_path;
     my $out = Genome::Sys->open_file_for_writing($maf_path);
     #Print header line once
     my $header_printed = 0;
@@ -45,8 +42,6 @@ sub execute {
         $count++;
     }
     $out->close;
-
-    $self->maf_path($maf_path);
 
     my $status = "Merged $count MAF files in $maf_path";
     $self->status_message($status);

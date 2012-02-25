@@ -186,13 +186,7 @@ sub add_instrument_data {
     my @instrument_data = @{$self->{_instrument_data_array_ref}};
     for my $instrument_data (@instrument_data) {
         isa_ok($instrument_data,'Genome::InstrumentData');
-        my $assign_command = Genome::Model::Command::InstrumentData::Assign->create(
-                                                                         model_id => $model->id,
-                                                                         instrument_data_id => $instrument_data->id,
-                                                                     );
-        isa_ok($assign_command,'Genome::Model::Command::InstrumentData::Assign');
-        ok($assign_command->execute(),'execute '. $assign_command->command_name);
-
+        $model->add_instrument_data($instrument_data);
         my $input = Genome::Model::Input->get(
             model_id => $model->id,
             value_id => $instrument_data->id,

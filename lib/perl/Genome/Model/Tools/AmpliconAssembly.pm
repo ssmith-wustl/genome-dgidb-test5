@@ -16,9 +16,9 @@ class Genome::Model::Tools::AmpliconAssembly {
                 'See the "create" command.',
         },
         amplicon_assembly => {
-            is => 'Genome::AmpliconAssembly',
+            is => 'Genome::Model::Tools::AmpliconAssembly::Set',
             calculate_from => 'directory',
-            calculate => q{ return Genome::AmpliconAssembly->get(directory => $directory); },
+            calculate => q{ return Genome::Model::Tools::AmpliconAssembly::Set->get(directory => $directory); },
         },
         chromat_dir => { via => 'amplicon_assembly' },
         phd_dir => { via => 'amplicon_assembly' },

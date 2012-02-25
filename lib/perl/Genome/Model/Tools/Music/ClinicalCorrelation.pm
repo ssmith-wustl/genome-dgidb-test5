@@ -14,7 +14,7 @@ class Genome::Model::Tools::Music::ClinicalCorrelation {
   has_input => [
     bam_list => { is => 'Text', doc => "Tab delimited list of BAM files [sample_name, normal_bam, tumor_bam] (See Description)" },
     maf_file => { is => 'Text', doc => "List of mutations in MAF format" },
-    output_file => { is => 'Text', doc => "Results of clinical-correlation tool. Will have suffix added for data type." },
+    output_file => { is => 'Text', doc => "Results of clinical-correlation tool. Will have suffix added for data type.", is_output => 1},
     genetic_data_type => { is => 'Text', doc => "Correlate clinical data to \"gene\" or \"variant\" level data", is_optional => 1, default => "gene" },
     numeric_clinical_data_file => { is => 'Text', doc => "Table of samples (y) vs. numeric clinical data category (x)", is_optional => 1 },
     categorical_clinical_data_file => { is => 'Text', doc => "Table of samples (y) vs. categorical clinical data category (x)", is_optional => 1 },

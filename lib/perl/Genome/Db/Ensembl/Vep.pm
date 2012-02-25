@@ -126,17 +126,17 @@ sub execute {
     my $format = $self->format;
     my $input_file= $self->input_file;
 
-    # sanity check for ensembl input, since some of us are unable to 
+    # sanity check for ensembl input, since some of us are unable to
     # keep our zero and one-based annotation files straight, and VEP
     # fails cryptically when given one-based indels
-    
+
     if ($format eq "ensembl"){
         my $inFh = IO::File->new( $self->input_file ) || die "can't open file\n";
         while( my $line = $inFh->getline )
         {
             chomp($line);
             my @F = split("\t",$line);
-            
+
             #skip headers and blank lines
             next if $line =~/^#/;
             next if $line =~/^Chr/;
@@ -162,19 +162,19 @@ sub execute {
                     die ("ERROR: This line doesn't appear to be a valid ensembl format indel\n$line\n")
                 }
             }
-            
+
         }
         close($inFh);
     }
 
     # If bed format is input, we do a conversion to ensembl format. This is necessary
-    # because ensembl has some weird conventions. (Most notably, an insertion is 
+    # because ensembl has some weird conventions. (Most notably, an insertion is
     # represented by changing the start base to the end base + 1 and a deletion is represented by
     # the numbers of the nucleotides of the bases being affected:
     #
     # 1  123  122  -/ACGT
     # 1  978  980  ACT/-
-    
+
     if ($format eq "bed"){
         #create a tmp file for ensembl file
         my ($tfh,$tmpfile) = Genome::Sys->create_temp_file;
@@ -189,7 +189,7 @@ sub execute {
         while( my $line = $inFh->getline ){
             chomp($line);
             my @F = split("\t",$line);
-            
+
             #skip headers and blank lines
             next if $line =~/^#/;
             next if $line =~/^Chr/;
@@ -205,23 +205,28 @@ sub execute {
                 @vars = @F[3..4];
                 @suffix = @F[5..(@F-1)]
             }
+            $vars[0] =~ s/\*/-/g;
+            $vars[0] =~ s/0/-/g;
+            $vars[1] =~ s/\*/-/g;
+            $vars[1] =~ s/0/-/g;
+
             #check SNVs
-            if(($vars[0] =~ /^\w$/) && ($vars[1] =~ /^\w$/)){                
+            if(($vars[0] =~ /^\w$/) && ($vars[1] =~ /^\w$/)){
                 unless ($F[1] == $F[2]-1){
                     die ("ERROR: bed format is 0-based. This line is not:\n$line\n")
                 }
                 $F[1]++
             }
             #indel insertion
-            elsif(($vars[0] =~ /^-$/) && ($vars[1] =~ /\w+/)){                
+            elsif(($vars[0] =~ /^-|0$/) && ($vars[1] =~ /\w+/)){
                 unless ($F[1] == $F[2]){
                     die ("ERROR: bed format is 0-based. this line is not:\n$line\n")
                 }
-                #increment the start position 
+                #increment the start position
                 $F[1]++;
             }
             #indel deletion
-            elsif(($vars[0] =~ /\w+/) && ($vars[1] =~ /^-$/)){                
+            elsif(($vars[0] =~ /\w+/) && ($vars[1] =~ /^-|0$/)){
                 unless ($F[1]+length($vars[0]) == $F[2]){
                     die ("ERROR: bed format is 0-based. this line is not:\n$line\n")
                 }
@@ -230,9 +235,9 @@ sub execute {
             } else {
                 die ("This line is not a valid bed line:\n$line\n")
             }
-            print OUTFILE join("\t",(@F[0..2],join("/",@vars),@suffix)) . "\n";
+            print OUTFILE join("\t",(@F[0..2],join("/",@vars),"+",@suffix)) . "\n";
         }
-        
+
 
         $format = "ensembl";
         $input_file = $tmpfile;
@@ -246,9 +251,20 @@ sub execute {
     #UR magic to get the string and boolean property lists
     my $meta = $self->__meta__;
     my @all_bool_args = $meta->properties(
+        class_name => __PACKAGE__,
         data_type => 'Boolean');
     my @all_string_args = $meta->properties(
+        class_name => __PACKAGE__,
         data_type => 'String');
+
+    my $count = 0;
+    foreach my $arg (@all_string_args) {
+        if ($arg->property_name eq 'version') {
+            splice @all_string_args, $count, 1;
+            last;
+        }
+        $count++;
+    }
 
     $string_args = join( ' ',
         map {
@@ -269,7 +285,7 @@ sub execute {
             my $value = $self->$name;
             $value ? ("--".($name)) : ()
         } @all_bool_args
-    );    
+    );
 
     my $host_param = defined $ENV{GENOME_DB_ENSEMBL_HOST} ? "--host ".$ENV{GENOME_DB_ENSEMBL_HOST} : "";
     my $user_param = defined $ENV{GENOME_DB_ENSEMBL_USER} ? "--user ".$ENV{GENOME_DB_ENSEMBL_USER} : "";
@@ -278,7 +294,7 @@ sub execute {
 
 
     my $cmd = "PERL5LIB=$ENSEMBL_API_PATH/ensembl-variation/modules:$ENSEMBL_API_PATH/ensembl/modules:$ENSEMBL_API_PATH/ensembl-functgenomics/modules:\$PERL5LIB perl $script_path $string_args $bool_args $host_param $user_param $password_param $port_param";
-    
+
     print STDERR $cmd . "\n";
 
     Genome::Sys->shellcmd(
