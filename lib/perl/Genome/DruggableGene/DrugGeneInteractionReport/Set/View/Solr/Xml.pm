@@ -48,11 +48,7 @@ class Genome::DruggableGene::DrugGeneInteractionReport::Set::View::Solr::Xml {
         display_title => {
             is => 'Text',
             calculate_from => ['subject'],
-            calculate => q{
-                 ($subject->members)[0]->drug_name_report_name . ' as ' .
-                 join(' and ',($subject->members)[0]->interaction_types) .
-                 ' for ' . ($subject->members)[0]->gene_name_report_name
-            },
+            calculate => q{ ($subject->members)[0]->__display_name__ },
         },
         title => {
             is => 'Text',

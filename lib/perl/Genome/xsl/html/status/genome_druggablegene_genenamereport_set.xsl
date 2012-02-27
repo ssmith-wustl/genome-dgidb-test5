@@ -1,6 +1,99 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
 <xsl:stylesheet version="1.0"
-xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+  xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+
+  <xsl:template name="drug_gene_interaction" match="drug_gene_interaction">
+    <script type='text/javascript' src='/res/js/pkg/boxy/javascripts/jquery.boxy.js'></script>
+    <link rel="stylesheet" href="/res/js/pkg/boxy/stylesheets/boxy.css" type="text/css" />
+    <script type='text/javascript' src='/res/js/app/genome_model_build_list.js'></script>
+
+    <xsl:call-template name="control_bar_view"/>
+
+    <xsl:call-template name="view_header">
+      <xsl:with-param name="label_name" select="'Druggable Gene:'" />
+      <xsl:with-param name="display_name" select="'Drug Gene Interactions'"/>
+      <xsl:with-param name="icon" select="'genome_genename_32'" />
+    </xsl:call-template>
+
+    <div class="content rounded shadow">
+      <div class="container">
+        <div id='objects' class='span-24 last'>
+          <div class="span_12_box_masonry">
+            <div class="box_header span-12 last rounded-top">
+              <div class="box_title"><h3 class="genome_genenamereport_16 span-7 last">Gene search terms with no database match</h3></div>
+            </div>
+
+            <div class="box_content rounded-bottom span-12 last">
+
+              <br />
+              <ul>
+                <xsl:for-each select="no_match_genes/item">
+                  <li><xsl:value-of select='.' /></li>
+                </xsl:for-each>
+              </ul>
+            </div>
+          </div>
+
+          <div class="span_12_box_masonry">
+            <div class="box_header span-12 last rounded-top">
+              <div class="box_title"><h3 class="genome_genenamereport_16 span-7 last">Genes Without Known Drugs</h3></div>
+            </div>
+
+            <div class="box_content rounded-bottom span-12 last">
+
+              <br />
+              <ul>
+                <xsl:for-each select="no_interaction_genes/item">
+                  <li><xsl:value-of select='.' /></li>
+                </xsl:for-each>
+              </ul>
+            </div>
+          </div>
+
+          <div class="span_12_box_masonry">
+            <div class="box_header span-12 last rounded-top">
+              <div class="box_title"><h3 class="genome_genenamereport_16 span-7 last">Filtered Out Interactions</h3></div>
+            </div>
+
+            <div class="box_content rounded-bottom span-12 last">
+
+              <br />
+              <ul>
+                <xsl:for-each select="filtered_out_interactions/item">
+                  <li><xsl:value-of select='.' /></li>
+                </xsl:for-each>
+              </ul>
+            </div>
+          </div>
+
+        </div>
+
+        <div class="span_24_box_masonry">
+          <div class="box_header span-24 last rounded-top">
+            <div class="box_title"><h3 class="genome_genenamereport_16 span-7 last">Interactions</h3></div>
+          </div>
+
+          <div class="box_content rounded-bottom span-24 last">
+
+            <br />
+            <ul>
+              <xsl:for-each select="interactions/item">
+                <li><xsl:value-of select='.' /></li>
+              </xsl:for-each>
+            </ul>
+          </div>
+        </div>
+
+      </div> <!-- end container -->
+    </div> <!-- end content -->
+
+    <xsl:call-template name="footer">
+      <xsl:with-param name="footer_text">
+        <br/>
+      </xsl:with-param>
+    </xsl:call-template>
+
+  </xsl:template>
 
   <xsl:template name="genome_druggablegene_genenamereport_set" match="object[./types[./isa[@type='Genome::DruggableGene::GeneNameReport::Set']]]">
 
@@ -22,7 +115,7 @@ xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
     </xsl:variable>
 
     <xsl:call-template name="view_header">
-      <xsl:with-param name="label_name" select="'GeneName:'" />
+      <xsl:with-param name="label_name" select="'genename:'" />
       <xsl:with-param name="display_name" select='$header_name'/>
       <xsl:with-param name="icon" select="'genome_genename_32'" />
     </xsl:call-template>

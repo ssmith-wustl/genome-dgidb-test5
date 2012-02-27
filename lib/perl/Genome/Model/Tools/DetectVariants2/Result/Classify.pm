@@ -94,6 +94,8 @@ sub create {
         die $self->error_message('Failed to promote data.');
     }
 
+    $self->_reallocate_disk_allocation;
+
     return $self;
 }
 

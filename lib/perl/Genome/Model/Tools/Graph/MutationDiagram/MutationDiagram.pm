@@ -182,6 +182,10 @@ sub MakeDiagrams {
     my $basename = $self->{_basename};
     foreach my $hugo (keys %{$data}) {
         foreach my $transcript (keys %{$data->{$hugo}}) {
+            unless($self->{_data}{$hugo}{$transcript}{length}) {
+                warn "$transcript has no protein length and is likely non-coding. Skipping...\n";
+                next;
+            }
             my $svg_file = $basename . $hugo . '_' . $transcript . '.svg';
             my $svg_fh = new FileHandle;
             unless ($svg_fh->open (">$svg_file")) {
@@ -204,8 +208,8 @@ sub Draw {
     $DB::single = 1;
     my $document = Genome::Model::Tools::Graph::MutationDiagram::MutationDiagram::View->new(width=>'800',height=>'600',
         'viewport' => {x => 0, y => 0,
-            width => 800,
-            height => 600},
+            width => 1600,
+            height => 1200},
         left_margin => 50,
         right_margin => 50,
         id => "main_document");

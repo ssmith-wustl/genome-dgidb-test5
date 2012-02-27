@@ -50,7 +50,7 @@ class Genome::Transcript {
         },
         transcript_status => { is => 'VARCHAR',
             is_optional => 1,
-            valid_values => ['reviewed', 'unknown', 'model', 'validated', 'predicted', 'inferred', 'provisional', 'unknown', 'known', 'novel'],
+            valid_values => ['reviewed', 'unknown', 'model', 'validated', 'predicted', 'inferred', 'provisional', 'unknown', 'known', 'novel', 'putative'],
         },
         strand => { is => 'VARCHAR',
             is_optional => 1,
@@ -58,9 +58,9 @@ class Genome::Transcript {
         },
         sub_structures => { 
             #is_constant => 1,
-            calculate_from => [qw/ id  data_directory/],
+            calculate_from => [qw/ id  data_directory chrom_name/],
             calculate => q|
-            Genome::TranscriptSubStructure->get(transcript_id => $id, data_directory => $data_directory);
+            Genome::TranscriptStructure->get(chrom_name => $chrom_name, transcript_id => $id, data_directory => $data_directory);
             |,
         },
         protein => { 

@@ -122,7 +122,7 @@ sub _generate_fields {
     for my $aspect_set (@aspect_sets) {
         my @aspects = $aspect_set->members;
         my $key = $aspects[0]->position;
-        if ($key eq 'timestamp') { # timestamp is also a property that uses this aspect to calculate
+        if (grep { $key eq $_ } ('timestamp', 'title')) { # these are calculated and will have already inspected the aspect
             next;
         }
         my @values;
@@ -199,7 +199,7 @@ sub _generate_content {
             unless (grep { $key =~ /^$_$/ } @excluded_content_keys) {
                 push @content_values, "$key:$value"; # dynamic fields are not yet searchable so pump into content field
             }
-            $key .= "_t"; # required for dynamic fields. later should add solr_type attribute to map to non-text
+            $prefixed_key .= "_t"; # required for dynamic fields. later should add solr_type attribute to map to non-text
         }
 
         if ($key eq 'content') { # building up a single content field

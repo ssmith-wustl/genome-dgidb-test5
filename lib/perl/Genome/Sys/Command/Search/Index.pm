@@ -131,7 +131,7 @@ sub daemon {
             if ($@) { $self->info("CHILD($$): ahh shit: $@"); }
 
             if ($signaled_to_quit) {
-                $self->inf("CHILD($$): signaled to quit");
+                $self->info("CHILD($$): signaled to quit");
                 exit;
             }
 

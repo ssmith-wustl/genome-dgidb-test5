@@ -44,13 +44,15 @@ sub execute {
         return;
     }
 
+    my @subjects_to_skip = map { qr/$_/ } (qw/ ^nctrl$ ^n\-cntrl$ /);
     my @headers = (qw/ sample-name instrument-data-id model-id build-id status process-success oriented-fastas /);
     my @rows;
     for my $instrument_data ( @instrument_data ) {
-        my @row;
-        push @rows, \@row;
         my $library = $instrument_data->library;
         my $sample = $library->sample;
+        next if grep { $sample->name =~ $_ } @subjects_to_skip;
+        my @row;
+        push @rows, \@row;
         push @row, $sample->name;
         push @row, $instrument_data->id;
         my @build_inputs = Genome::Model::Build::Input->get(

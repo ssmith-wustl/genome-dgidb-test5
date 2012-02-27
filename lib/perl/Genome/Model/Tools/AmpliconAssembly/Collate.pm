@@ -13,7 +13,7 @@ class Genome::Model::Tools::AmpliconAssembly::Collate {
 };
 #< Helps >#
 sub help_detail {
-    return 'This command will get the fasta (and quality) for each amplicon, and combine them into one file.  The types of fastas (and qualities) retrieved are: '.join(', ', Genome::AmpliconAssembly->amplicon_fasta_types);
+    return 'This command will get the fasta (and quality) for each amplicon, and combine them into one file.  The types of fastas (and qualities) retrieved are: '.join(', ', Genome::Model::Tools::AmpliconAssembly::Set->amplicon_fasta_types);
 }
 
 sub help_synopsis {
@@ -28,7 +28,7 @@ sub execute {
     my $amplicons = $self->get_amplicons
         or return;
     
-    my @amplicon_fasta_types = Genome::AmpliconAssembly->amplicon_fasta_types;
+    my @amplicon_fasta_types = Genome::Model::Tools::AmpliconAssembly::Set->amplicon_fasta_types;
 
     $self->_open_fasta_and_qual_writers(@amplicon_fasta_types)
         or return;
