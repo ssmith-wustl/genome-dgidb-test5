@@ -72,8 +72,7 @@ sub execute {
 
 }
 
-#TODO: make this do something reasonable, like use the environment variables
-# if they exist or otherwise connect to the public ensembl server YAY
+#TODO: make this connect to a public ensembl DB if the environment variables aren't set
 sub get_ensembl_info {
     my $self = shift;
     my $version = shift;
