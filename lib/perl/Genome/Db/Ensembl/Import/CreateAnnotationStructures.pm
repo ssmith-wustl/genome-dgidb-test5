@@ -70,7 +70,7 @@ sub execute
     my $transcript_adaptor = $registry->get_adaptor( $ucfirst_species, $data_set, 'Transcript' );
     my $slice_adaptor = $registry->get_adaptor( $ucfirst_species, $data_set, 'Slice');
 
-    my @slices = @{ $slice_adaptor->fetch_all('toplevel', undef, 1, 0, 1) };
+    my @slices = @{ $slice_adaptor->fetch_all('toplevel', undef, 1, 1, 1) };
 
     my $idx = 0;
     my $egi_id = 1;    # starting point for external_gene_id...
