@@ -52,7 +52,7 @@ my %ATTRIBUTES = (
         is => 'Boolean',
         is_optional => 1,
         default_value => 0,
-        doc => 'When getting amplicons, exclude those that have a contaminated read(s). Only for "gsc" generated reads. Default is to include all amplicons.',
+        doc => 'DEPRECATED! DOES NOT DO ANYTHING!',
     },
     only_use_latest_iteration_of_reads => {
         is => 'Boolean',
@@ -164,20 +164,6 @@ sub _validate_properties {
 
     for my $attribute (qw/ sequencing_platform sequencing_center /) {
         unless ( $self->validate_attribute_value($attribute) ) {
-            $self->delete;
-            return;
-        }
-    }
-
-    unless ( $self->sequencing_center eq 'gsc' ) {
-        if ( my @attrs = grep { $self->$_ } gsc_only_attributes() ) {
-            $self->error_message(
-                sprintf(
-                    'Indicated unsupported attributes (%s) for sequencing center (%s).',
-                    join(', ', @attrs),
-                    $self->sequencing_center,
-                )
-            );
             $self->delete;
             return;
         }
@@ -306,11 +292,6 @@ sub default_sequencing_platform {
     return (valid_sequencing_platforms)[0];
 }
 
-# GSC Only Attributes
-sub gsc_only_attributes {
-    return (qw/ only_use_latest_iteration_of_reads exclude_contaminated_amplicons /);
-}
-
 #< DEPRACATED FIXME #>
 sub assembler { return 'phredphrap' };
 
@@ -401,11 +382,6 @@ sub get_amplicons {
         return;
     }
 
-    if ( $self->exclude_contaminated_amplicons ) {
-        $self->_remove_contaminated_amplicons($amplicons)
-            or return;
-    }
-    
     my @amplicons;
     my $edit_dir = $self->edit_dir;
     for my $name ( sort { $a cmp $b } keys %$amplicons ) {
@@ -469,28 +445,6 @@ sub _get_read_name_iterator {
         $dh->close;
         return;
     }
-}
-
-sub _remove_contaminated_amplicons {
-    my ($self, $amplicons) = @_;
-
-    AMPLICON: for my $amplicon_name ( keys %$amplicons ) {
-        for my $read_name ( @{$amplicons->{$amplicon_name}} ) {
-            my $read = $self->_get_gsc_sequence_read($read_name);
-            confess "Can't get read for name ($read_name). This is required to remove contaminated amplicons." unless $read;
-            my $screen_reads_stat = $read->get_screen_read_stat_hmp;
-            if ( $screen_reads_stat and $screen_reads_stat->is_contaminated ) {
-                delete $amplicons->{$amplicon_name};
-                next AMPLICON;
-            }
-        }
-    }
-
-    return 1;
-}
-
-sub _get_gsc_sequence_read { # in sub to overload on test
-    return GSC::Sequence::Read->get(trace_name => $_[1]);
 }
 
 #< Amplicon Reads >#
