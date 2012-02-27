@@ -146,25 +146,6 @@ sub execute
             }
 
 
-            #Transcript cols: transcript_id gene_id transcript_start transcript_stop transcript_name source transcript_status strand chrom_name
-
-            my $transcript = Genome::Transcript->create(
-                transcript_id => $ensembl_transcript->dbID,
-                gene_id => $gene->id,
-                gene_name => $gene->name,
-                transcript_start => $transcript_start, 
-                transcript_stop => $transcript_stop,
-                transcript_name => $ensembl_transcript->stable_id,    
-                transcript_status => lc( $ensembl_transcript->status ),   #TODO valid statuses (unknown, known, novel) #TODO verify substructures and change status if necessary
-                strand => $strand,
-                chrom_name => $chromosome,
-                data_directory => $self->data_directory,
-                species => $species,
-                source => $source,
-                version => $version,
-            );
-            push @transcripts, $transcript; #logging
-
             my %external_gene_ids = $self->get_external_gene_ids($ensembl_gene);
             if ( defined($hugo_gene_name) )
             {
@@ -193,6 +174,25 @@ sub execute
 
                 $egi_id++;
             }
+
+            #Transcript cols: transcript_id gene_id transcript_start transcript_stop transcript_name source transcript_status strand chrom_name
+
+            my $transcript = Genome::Transcript->create(
+                transcript_id => $ensembl_transcript->dbID,
+                gene_id => $gene->id,
+                gene_name => $gene->name,
+                transcript_start => $transcript_start, 
+                transcript_stop => $transcript_stop,
+                transcript_name => $ensembl_transcript->stable_id,    
+                transcript_status => lc( $ensembl_transcript->status ),   #TODO valid statuses (unknown, known, novel) #TODO verify substructures and change status if necessary
+                strand => $strand,
+                chrom_name => $chromosome,
+                data_directory => $self->data_directory,
+                species => $species,
+                source => $source,
+                version => $version,
+            );
+            push @transcripts, $transcript; #logging
 
             #sub structures
             my @ensembl_exons = @{ $ensembl_transcript->get_all_Exons() };
@@ -236,7 +236,7 @@ sub execute
                             transcript => $transcript,
                             chrom_name => $transcript->chrom_name,
                             transcript_structure_id => $tss_id,
-                            transcript_id => $transcript->transcript_id,
+                            transcript_id => $transcript->id,
                             structure_type => 'utr_exon',
                             structure_start => $start,
                             structure_stop => $utr_stop,
@@ -269,7 +269,7 @@ sub execute
                         transcript => $transcript,
                         chrom_name => $transcript->chrom_name,
                         transcript_structure_id => $tss_id,
-                        transcript_id => $transcript->transcript_id,
+                        transcript_id => $transcript->id,
                         structure_type => 'cds_exon',
                         structure_start => $coding_region_start,
                         structure_stop => $coding_region_stop,
@@ -300,7 +300,7 @@ sub execute
                             transcript => $transcript,
                             chrom_name => $transcript->chrom_name,
                             transcript_structure_id => $tss_id,
-                            transcript_id => $transcript->transcript_id,
+                            transcript_id => $transcript->id,
                             structure_type => 'utr_exon',
                             structure_start => $utr_start,
                             structure_stop => $stop,
@@ -330,7 +330,7 @@ sub execute
                         transcript => $transcript,
                         chrom_name => $transcript->chrom_name,
                         transcript_structure_id => $tss_id,
-                        transcript_id => $transcript->transcript_id,
+                        transcript_id => $transcript->id,
                         structure_type => $structure_type,
                         structure_start => $start,
                         structure_stop => $stop,
