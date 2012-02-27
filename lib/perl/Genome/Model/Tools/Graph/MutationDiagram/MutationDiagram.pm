@@ -182,6 +182,10 @@ sub MakeDiagrams {
     my $basename = $self->{_basename};
     foreach my $hugo (keys %{$data}) {
         foreach my $transcript (keys %{$data->{$hugo}}) {
+            unless($self->{_data}{$hugo}{$transcript}{length}) {
+                warn "$transcript has no protein length and is likely non-coding. Skipping...\n";
+                next;
+            }
             my $svg_file = $basename . $hugo . '_' . $transcript . '.svg';
             my $svg_fh = new FileHandle;
             unless ($svg_fh->open (">$svg_file")) {
