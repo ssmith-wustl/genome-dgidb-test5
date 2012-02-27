@@ -27,6 +27,15 @@ class Genome::Db::Ensembl::Import::CreateAnnotationStructures {
             doc => 'Ensembl data set to import',
             default => 'Core',
         },
+        reference_build => {
+            is => 'Genome::Model::Build::ReferenceSequence',
+            id_by => 'reference_build_id',
+        },
+    ],
+    has_input =>  [
+        reference_build_id => {
+            is => 'Text',
+        }
     ],
 };
 
@@ -178,6 +187,7 @@ sub execute
             #Transcript cols: transcript_id gene_id transcript_start transcript_stop transcript_name source transcript_status strand chrom_name
 
             my $transcript = Genome::Transcript->create(
+                reference_build => $self->reference_build,
                 transcript_id => $ensembl_transcript->dbID,
                 gene_id => $gene->id,
                 gene_name => $gene->name,

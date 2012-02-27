@@ -28,6 +28,7 @@ sub column_order {
         coding_region_start
         coding_region_stop
         amino_acid_length
+        reference_build_id
     )]
 }
 
