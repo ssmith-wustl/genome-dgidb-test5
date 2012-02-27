@@ -19,6 +19,11 @@ class Genome::Model::MutationalSignificance {
         },
     ],
     has_param => [
+        processors => {
+            is => 'Integer',
+            default_value => 6,
+            doc => 'TODO',
+        },
 	],
 };
 
@@ -245,6 +250,10 @@ $self->warning_message('The logic for building a MuSiC model is not yet function
         right_property => 'cct_result',
     );
 
+    my $op = $self->_get_operation_for_module_name($self->_get_operation_name_for_module('Genome::Model::Tools::Music::Bmr::CalcBmr'), $workflow);
+    $op->operation_type->lsf_resource("-R \'select[mem>16000] rusage[mem=16000]\' -M 16000000");
+    $op = $self->_get_operation_for_module_name($self->_get_operation_name_for_module('Genome::Model::Tools::Music::Smg'), $workflow);
+    $op->operation_type->lsf_resource("-R \'span[hosts=1]\' -n ".$self->processors);
 
     return $workflow;
 }
@@ -400,7 +409,7 @@ sub _map_workflow_inputs {
     push @inputs, merged_maf_path => $base_dir."/final.maf";
     push @inputs, create_maf_output_dir => $base_dir;
     push @inputs, pathway_file => '/gscmnt/gc2108/info/medseq/tcga_ucec/music/endometrioid_grade_1or2_input/pathway_dbs/KEGG_120910'; #TODO: move to params
-    push @inputs, processors => 1;
+    push @inputs, processors => $self->processors;
     push @inputs, gene_covg_dir => $base_dir."/gene_covgs";
     push @inputs, reference_sequence => $builds[0]->reference_sequence_build->fasta_file;
     push @inputs, reference_build => "Build37";
