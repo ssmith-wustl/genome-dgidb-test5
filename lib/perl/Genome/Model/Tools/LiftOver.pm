@@ -121,7 +121,6 @@ sub execute {
 
         $source_file = "$tempdir/inbed";
         $lofile = "$tempdir/outbed";
-        ` cp $tempdir/inbed ~/aml/amlx24/paper/`
     }
     
 
