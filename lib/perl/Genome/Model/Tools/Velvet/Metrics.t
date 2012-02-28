@@ -21,6 +21,7 @@ my $metrics_file = $temp_dir.'/metrics.txt';
 my $metrics = Genome::Model::Tools::Velvet::Metrics->create(
     assembly_directory => $data_dir,
     output_file => $metrics_file,
+    min_contig_length => 1,
 );
 ok($metrics, "create");
 $metrics->dump_status_messages(1);

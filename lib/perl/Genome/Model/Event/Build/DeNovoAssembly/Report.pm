@@ -21,10 +21,15 @@ sub execute {
     my $major_contig_length = ( $self->build->processing_profile->name =~ /PGA/ ? 300 : 500 );
     $self->status_message('Assembly directory: '.$self->build->data_directory);
     $self->status_message('Major contig length: '.$major_contig_length);
-    my $metrics_tool = $metrics_class->create(
+    my %metrics_params = (
         assembly_directory => $self->build->data_directory,
         major_contig_length => $major_contig_length,
     );
+    my $min_contig_length;
+    if ( $min_contig_length = $self->_min_contig_length_in_processing_profile ) {
+        $metrics_params{min_contig_length} = $min_contig_length;
+    }
+    my $metrics_tool = $metrics_class->create( %metrics_params );
     if ( not $metrics_tool ) {
         $self->error_message('Failed to create metrics tool: '.$metrics_class);
         return;
@@ -88,6 +93,13 @@ sub execute {
 
     $self->status_message('De novo assembly report...OK');
     return 1;
+}
+
+sub _min_contig_length_in_processing_profile {
+    my $self = shift;
+    my %params = $self->processing_profile->assembler_params_as_hash;
+    return if not exists $params{min_contig_length};
+    return $params{min_contig_length};
 }
 
 1;
