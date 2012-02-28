@@ -30,6 +30,7 @@ class Genome::Model::Tools::Analysis::CaseControl::RareVariantCounts {
 		sample_phenotype_file	=> { is => 'Text', doc => "Tab-delimited file with sample ID and phenotype code", is_optional => 0, is_input => 1},
 		dbsnp_positions_file	=> { is => 'Text', doc => "1-based positions of dbSNP common SNPs to exclude", is_optional => 1, is_input => 1},
 		reference_build	=> { is => 'Text', doc => "reference build -- \"NCBI-human-build36\" or \"GRCh37-lite-build37\"", is_optional => 1, default => 'GRCh37-lite-build37', is_input => 1},
+        number_of_highlighted_genes	=> { is => 'Text', doc => "Number of gene names to list on the pdf (sorted by highest distance scores)", is_optional => 1, default => '10', is_input => 1},
 		output_file	=> { is => 'Text', doc => "Output file for analysis results", is_optional => 1, is_input => 1},
 	],
 };
@@ -64,7 +65,8 @@ sub execute {                               # replace with real execution logic.
 
 	my $vcf_file = $self->vcf_file;
 	my $sample_phenotype_file = $self->sample_phenotype_file;
-	
+	my $number_of_highlighted_names = $self->number_of_highlighted_genes;
+
 	if($self->output_file)
 	{
 		open(OUTFILE, ">" . $self->output_file) or die "Can't open outfile: $!\n";		
@@ -489,7 +491,7 @@ gene_names <- mutation_table\$gene;
 variants_control_proportion_subset <- subset(variants_control_proportion,variants_control_proportion <= 0.20 & variants_case_proportion <= 0.20);
 variants_case_proportion_subset <- subset(variants_case_proportion,variants_control_proportion <= 0.20 & variants_case_proportion <= 0.20);
 dist_vector <- abs(variants_control_proportion_subset - variants_case_proportion_subset) / sqrt(2);
-dist_cutoff <- sort(dist_vector, decreasing = TRUE)[10];
+dist_cutoff <- sort(dist_vector, decreasing = TRUE)[$number_of_highlighted_names];
 plot (variants_control_proportion_subset,variants_case_proportion_subset, xlim=c(0,.20),ylim=c(0,.20), xlab = "Rare Deleterious Alleles per Control Sample",ylab = "Rare Deleterious Alleles per Case Sample",);
 abline(a=0,b=1);
 variants_control_proportion_subset <- subset(variants_control_proportion_subset,dist_vector >= dist_cutoff);
@@ -500,7 +502,7 @@ text(variants_control_proportion_subset,variants_case_proportion_subset, labels 
 variants_control_proportion_subset <- subset(variants_control_proportion,variants_control_proportion <= 0.05 & variants_case_proportion <= 0.05);
 variants_case_proportion_subset <- subset(variants_case_proportion,variants_control_proportion <= 0.05 & variants_case_proportion <= 0.05);
 dist_vector <- abs(variants_control_proportion_subset - variants_case_proportion_subset) / sqrt(2);
-dist_cutoff <- sort(dist_vector, decreasing = TRUE)[10];
+dist_cutoff <- sort(dist_vector, decreasing = TRUE)[$number_of_highlighted_names];
 plot (variants_control_proportion_subset,variants_case_proportion_subset, xlim=c(0,.05),ylim=c(0,.05), xlab = "Rare Deleterious Alleles per Control Sample",ylab = "Rare Deleterious Alleles per Case Sample",);
 abline(a=0,b=1);
 variants_control_proportion_subset <- subset(variants_control_proportion_subset,dist_vector >= dist_cutoff);
@@ -511,7 +513,7 @@ text(variants_control_proportion_subset,variants_case_proportion_subset, labels 
 sample_control_proportion_subset <- subset(sample_control_proportion,sample_control_proportion <= 0.20 & sample_case_proportion <= 0.20);
 sample_case_proportion_subset <- subset(sample_case_proportion,sample_control_proportion <= 0.20 & sample_case_proportion <= 0.20);
 dist_vector <- abs(sample_control_proportion_subset - sample_case_proportion_subset) / sqrt(2);
-dist_cutoff <- sort(dist_vector, decreasing = TRUE)[10];
+dist_cutoff <- sort(dist_vector, decreasing = TRUE)[$number_of_highlighted_names];
 plot (sample_control_proportion_subset,sample_case_proportion_subset, xlim=c(0,.20),ylim=c(0,.20), xlab = "Rare Deleterious Alleles per Control Sample",ylab = "Rare Deleterious Alleles per Case Sample",);
 abline(a=0,b=1);
 sample_control_proportion_subset <- subset(sample_control_proportion_subset,dist_vector >= dist_cutoff);
@@ -522,7 +524,7 @@ text(sample_control_proportion_subset,sample_case_proportion_subset, labels = ge
 sample_control_proportion_subset <- subset(sample_control_proportion,sample_control_proportion <= 0.05 & sample_case_proportion <= 0.05);
 sample_case_proportion_subset <- subset(sample_case_proportion,sample_control_proportion <= 0.05 & sample_case_proportion <= 0.05);
 dist_vector <- abs(sample_control_proportion_subset - sample_case_proportion_subset) / sqrt(2);
-dist_cutoff <- sort(dist_vector, decreasing = TRUE)[10];
+dist_cutoff <- sort(dist_vector, decreasing = TRUE)[$number_of_highlighted_names];
 plot (sample_control_proportion_subset,sample_case_proportion_subset, xlim=c(0,.05),ylim=c(0,.05), xlab = "Rare Deleterious Alleles per Control Sample",ylab = "Rare Deleterious Alleles per Case Sample",);
 abline(a=0,b=1);
 sample_control_proportion_subset <- subset(sample_control_proportion_subset,dist_vector >= dist_cutoff);
