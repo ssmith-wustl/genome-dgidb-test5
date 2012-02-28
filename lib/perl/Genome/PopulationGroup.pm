@@ -65,13 +65,9 @@ class Genome::PopulationGroup {
 
 sub create {
     my $class = shift;
-    print "*1*".UR::Time->now."\n";
     my $self = $class->SUPER::create(@_);
-    print "*2*".UR::Time->now."\n";
     my @members = $self->members;
-    print "*3*".UR::Time->now."\n";
     my $member_hash = $self->generate_hash_for_individuals(@members);
-    print "*4*".UR::Time->now."\n";
     $self->member_hash($member_hash);
     return $self;
 }
