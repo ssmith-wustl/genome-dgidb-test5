@@ -15,13 +15,14 @@ class Genome::Model::Tools::LiftOver {
             is => 'Text',
             doc => 'Where to output the translated file',
         },
-    ],
-    has_optional => [
         unmapped_file => {
             is => 'Text',
-            doc => 'Where to put the unmapped input',
+            doc => 'Where to put the unliftable input',
             is_optional => 1,
         },
+
+    ],
+    has_optional => [
         allow_multiple_output_regions => {
             is => 'Boolean',
             doc => 'Whether or not to allow multiple output regions',
@@ -99,15 +100,15 @@ sub execute {
             ## this is effectively the same as not changing from anno to bed for insertions
             if (($F[3] =~ /0/) || ($F[3] =~ /\-/)){ #indel INS
                 #$F[2] = $F[2]-1;
-                print OUTFILE join("\t",("chr$F[0]",$F[1],$F[2],$F[3],$F[4]));
+                print OUTFILE join("\t",("chr$F[0]",$F[1],$F[2],join("/",($F[3],$F[4]))));
 
             } elsif (($F[4] =~ /0/) || ($F[4] =~ /\-/)){ #indel DEL
                 $F[1] = $F[1]-1;
-                print OUTFILE join("\t",("chr$F[0]",$F[1],$F[2],$F[3],$F[4]));
+                print OUTFILE join("\t",("chr$F[0]",$F[1],$F[2],join("/",($F[3],$F[4]))));
 
             } else { #SNV
                 $F[1] = $F[1]-1;
-                print OUTFILE join("\t",("chr$F[0]",$F[1],$F[2],$F[3],$F[4]));
+                print OUTFILE join("\t",("chr$F[0]",$F[1],$F[2],join("/",($F[3],$F[4]))));
             }
 
             if(@F > 4){
@@ -167,19 +168,21 @@ sub execute {
             chomp($line);
             my @F = split("\t",$line);
 
+            my @bases = split("/",$F[3]);
+
             $F[0] =~ s/^chr//g;
-            if (($F[3] =~ /^\-/) ||($F[3] =~ /^0/)){ #indel INS
+            if (($bases[0] =~ /^\-/) ||($bases[0] =~ /^0/)){ #indel INS
                 #$F[2] = $F[2]+1; #don't need this because we added one above
-                print OUTFILE join("\t",($F[0],$F[1],$F[2],$F[3],$F[4]));
-            } elsif (($F[4] =~ /^\-/) ||($F[4] =~ /^0/)){ #indel DEL
+                print OUTFILE join("\t",($F[0],$F[1],$F[2],$bases[0],$bases[1]));
+            } elsif (($bases[1] =~ /^\-/) ||($bases[1] =~ /^0/)){ #indel DEL
                 $F[1] = $F[1]+1;
-                print OUTFILE join("\t",($F[0],$F[1],$F[2],$F[3],$F[4]));
+                print OUTFILE join("\t",($F[0],$F[1],$F[2],$bases[0],$bases[1]));
             } else { #SNV
                 $F[1] = $F[1]+1;
-                print OUTFILE join("\t",($F[0],$F[1],$F[2],$F[3],$F[4]));
+                print OUTFILE join("\t",($F[0],$F[1],$F[2],$bases[0],$bases[1]));
             }            
-            if(@F > 4){
-                print OUTFILE "\t" . join("\t",@F[5..$#F])
+            if(@F > 3){
+                print OUTFILE "\t" . join("\t",@F[4..$#F])
             }
             print OUTFILE "\n";
         }

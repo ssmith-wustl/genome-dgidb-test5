@@ -14,7 +14,7 @@ use warnings;
 use Genome;
 
 class Genome::Site::WUGC::Individual {
-    is => 'Genome::Site::WUGC::Measurable',
+    is => 'UR::Object',
     table_name => 'GSC.ORGANISM_INDIVIDUAL',
     id_by => [
         individual_id => { is => 'Number', len => 10, column_name => 'ORGANISM_ID' },

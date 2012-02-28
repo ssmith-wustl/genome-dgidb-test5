@@ -54,13 +54,14 @@ sub help_detail {
 sub execute {
     my $self = shift;
 
-    my @valid_domains = qw/ bacteria archaea unknown /;
-
-    if ( not grep {$self->domain eq $_} @valid_domains ) {
+    my @valid_domains = qw/ BACTERIA ARCHAEA UNKNOWN /;
+    my $domain = uc $self->domain;
+    if ( not grep {$domain eq $_ } @valid_domains ) {
         # don't die if not archaea or bacteria for apipe automated builds 
         $self->status_message('Skipping CoreGeneSurvey running.  Assembly domain must be archaea, bacteria or unknown (unknown domains default to bacteria) to run CoreGeneSurvey');
         return 1;
     }
+    $domain = 'BACTERIA' if $domain eq 'UNKNOWN';
 
     my $input_fasta = ( $self->fasta_file ) ? $self->fasta_file : $self->contigs_bases_file;
     # TODO make contigs.bases if not present and not specified
@@ -70,7 +71,7 @@ sub execute {
     my $tool = Genome::Model::Tools::Bacterial::CoreGeneCoverage->create(
         fasta_file         => $input_fasta,
         survey_type        => 'assembly',
-        cell_type          => uc $self->domain,
+        cell_type          => $domain,
         percent_id         => $self->percent_id,
         fraction_of_length => $self->fraction_of_length,
         output_file        => $output_file,

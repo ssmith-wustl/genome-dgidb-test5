@@ -133,9 +133,13 @@ sub execute
 	$mgap_genome{ 'db_version_id' } = 1;
 	$mgap_genome{ 'locus_name' } = $locus_tag;
 	$mgap_genome{ 'assembly_name' } = $assembly_name;
+	$mgap_genome{ 'org_dirname' } = $org_dirname;
 
 	$mgap_genome{ 'project_type' } = 1 if ($project_type eq 'HGMI');
 	$mgap_genome{ 'project_type' } = 2 if ($project_type eq 'CORE');
+
+	$mgap_genome{ 'pipe_version' } = 1 if ($pipe_version eq 'Version_1.0');
+	$mgap_genome{ 'pipe_version' } = 2 if ($pipe_version eq 'Version_2.0');
 
 	$mgap_genome{ 'ssid' } = $ssid;
 	$mgap_genome { 'acedb_ver' } = $acedb_ver;
@@ -924,14 +928,15 @@ sub populate_mgap_genome_db
 
 	## Insert data to genome_info
 	my $genome_info_sql = <<SQL;
-	INSERT INTO genome_info (locus_name, assembly_name, sequence_length)
-	VALUES (?, ?, ?);
+	INSERT INTO genome_info (locus_name, assembly_name, sequence_length, org_dirname)
+	VALUES (?, ?, ?, ?);
 SQL
 
 	my $sth = $dbh->prepare($genome_info_sql);
 	$sth->bind_param(1, $mgap_genome{'locus_name'});
 	$sth->bind_param(2, $mgap_genome{'assembly_name'});
 	$sth->bind_param(3, $mgap_genome{'sequence_length'});
+	$sth->bind_param(4, $mgap_genome{'org_dirname'});
 
 	$sth->execute() or confess "Couldn't execute statement: " . $sth->errstr ;
 	$sth->finish;
@@ -939,8 +944,8 @@ SQL
 
 	## Insert data to bacterial_run_details
 	my $genome_bacterial_run_details_sql = <<SQL;
-	INSERT INTO bacterial_run_details (ssid, user, genome_id, db_version_id, acedb_version, project_type_id, run_type_id)
-	VALUES (?,?,?,?,?,?,?);
+	INSERT INTO bacterial_run_details (ssid, user, genome_id, db_version_id, acedb_version, project_type_id, run_type_id, pipeline_version_id)
+	VALUES (?,?,?,?,?,?,?,?);
 SQL
 
 	my $sth2 = $dbh->prepare($genome_bacterial_run_details_sql);
@@ -951,6 +956,7 @@ SQL
 	$sth2->bind_param(5, $mgap_genome{'acedb_ver'});
 	$sth2->bind_param(6, $mgap_genome{'project_type'});
 	$sth2->bind_param(7, $mgap_genome{'run_type'});
+	$sth2->bind_param(8, $mgap_genome{'pipe_version'});
 
 	$sth2->execute() or confess "Couldn't execute statement: " . $sth2->errstr ;
 	$sth2->finish;

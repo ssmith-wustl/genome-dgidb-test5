@@ -39,6 +39,7 @@ our %ALTERNATE_FROM_CLASS = (
     'Genome::InstrumentData' => {
         'Genome::Model' => ['instrument_data'],
         'Genome::Model::Build' => ['instrument_data'],
+        'Genome::ModelGroup' => ['instrument_data'],
     },
     'Genome::Model' => {
         'Genome::Model::Build' => ['model'],

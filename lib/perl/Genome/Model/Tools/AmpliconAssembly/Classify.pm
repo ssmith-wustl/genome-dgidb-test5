@@ -16,7 +16,7 @@ class Genome::Model::Tools::AmpliconAssembly::Classify {
 sub help_detail {
     return sprintf(
         'Classifies successfully assembled amplicons (%s) using RDP.',
-        Genome::AmpliconAssembly::Amplicon->successfully_assembled_requirements_as_string,
+        Genome::Model::Tools::AmpliconAssembly::Amplicon->successfully_assembled_requirements_as_string,
     );
 }
 

@@ -436,21 +436,7 @@ sub execute {
         return;
     }
 
-    if ($self->build) {
-        my $version = $self->build->version;
-        my $name = $self->build->model->name;
-        if ($name =~ /human/i) {
-            my $model = Genome::Model->get(name => "NCBI-human.combined-annotation");
-            my $build = $model->build_by_version($version);
-            $self->build($build);
-        }
-        elsif ($name =~ /mouse/i) {
-            my $model = Genome::Model->get(name => "NCBI-mouse.combined-annotation");
-            my $build = $model->build_by_version($version);
-            $self->build($build);
-        }
-    }
-    else {
+    unless($self->build) {
         my $ref = $self->reference_transcripts;
         my ($name, $version) = split(/\//, $ref); # For now, version is ignored since only v2 is usable
                                         # This will need to be changed when other versions are available

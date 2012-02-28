@@ -7,14 +7,14 @@ use above 'Genome';
 
 use Test::More;
 
-use_ok('Genome::AmpliconAssembly::Amplicon') or die;
+use_ok('Genome::Model::Tools::AmpliconAssembly::Amplicon') or die;
 
 my %params = (
     name => 'HMPB-aad13e12',
     directory => '/gsc/var/cache/testsuite/data/Genome-Model-AmpliconAssembly/edit_dir',
     reads => [qw/ HMPB-aad13e12.b1 HMPB-aad13e12.b2 HMPB-aad13e12.b3 HMPB-aad13e12.b4 HMPB-aad13e12.g1 HMPB-aad13e12.g2 /],
 );
-my $amplicon = Genome::AmpliconAssembly::Amplicon->create(%params);
+my $amplicon = Genome::Model::Tools::AmpliconAssembly::Amplicon->create(%params);
 ok($amplicon, 'create amplicon');
 
 sub invalid_params_for_test_class {

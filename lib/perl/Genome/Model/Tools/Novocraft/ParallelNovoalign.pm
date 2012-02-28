@@ -81,7 +81,7 @@ sub pre_execute {
     my @sub_fastqs;
     for my $fastq_file (@fastq_files) {
         my $split = Genome::Model::Tools::Fastq::Split->create(
-            sequences => $self->sequences,
+            split_size => $self->sequences,
             fastq_file => $fastq_file,
             output_directory => $tempdir,
         );

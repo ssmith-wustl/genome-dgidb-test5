@@ -1,4 +1,4 @@
-package Genome::AmpliconAssembly;
+package Genome::Model::Tools::AmpliconAssembly::Set;
 
 use strict;
 use warnings;
@@ -10,7 +10,7 @@ use Cwd 'abs_path';
 use Data::Dumper 'Dumper';
 require File::Copy;
 require Genome::Model::Tools::Consed::Directory;
-require Genome::AmpliconAssembly::Amplicon;
+require Genome::Model::Tools::AmpliconAssembly::Amplicon;
 
 use Bio::SeqIO;
 
@@ -52,18 +52,18 @@ my %ATTRIBUTES = (
         is => 'Boolean',
         is_optional => 1,
         default_value => 0,
-        doc => 'When getting amplicons, exclude those that have a contaminated read(s). Only for "gsc" generated reads. Default is to include all amplicons.',
+        doc => 'DEPRECATED! DOES NOT DO ANYTHING!',
     },
     only_use_latest_iteration_of_reads => {
         is => 'Boolean',
         is_optional => 1,
         default_value => 0,
-        doc => 'When getting reads for amplicons, only use the most recent iteration for each primer. Only for "gsc" generated reads. Default is to include all reads for each amplicon.',
+        doc => 'DEPRECATED! DOES NOT DO ANYTHING!',
     },
 );
 
 #< UR >#
-class Genome::AmpliconAssembly {
+class Genome::Model::Tools::AmpliconAssembly::Set {
     is => 'UR::Object',
     id_by => 'directory',
     has => [
@@ -164,20 +164,6 @@ sub _validate_properties {
 
     for my $attribute (qw/ sequencing_platform sequencing_center /) {
         unless ( $self->validate_attribute_value($attribute) ) {
-            $self->delete;
-            return;
-        }
-    }
-
-    unless ( $self->sequencing_center eq 'gsc' ) {
-        if ( my @attrs = grep { $self->$_ } gsc_only_attributes() ) {
-            $self->error_message(
-                sprintf(
-                    'Indicated unsupported attributes (%s) for sequencing center (%s).',
-                    join(', ', @attrs),
-                    $self->sequencing_center,
-                )
-            );
             $self->delete;
             return;
         }
@@ -306,11 +292,6 @@ sub default_sequencing_platform {
     return (valid_sequencing_platforms)[0];
 }
 
-# GSC Only Attributes
-sub gsc_only_attributes {
-    return (qw/ only_use_latest_iteration_of_reads exclude_contaminated_amplicons /);
-}
-
 #< DEPRACATED FIXME #>
 sub assembler { return 'phredphrap' };
 
@@ -401,21 +382,10 @@ sub get_amplicons {
         return;
     }
 
-    # Only use most recent read
-    if ( $self->only_use_latest_iteration_of_reads ) {
-        $self->_remove_old_read_iterations_from_amplicons($amplicons)
-            or return;
-    }
-    
-    if ( $self->exclude_contaminated_amplicons ) {
-        $self->_remove_contaminated_amplicons($amplicons)
-            or return;
-    }
-    
     my @amplicons;
     my $edit_dir = $self->edit_dir;
     for my $name ( sort { $a cmp $b } keys %$amplicons ) {
-        push @amplicons, Genome::AmpliconAssembly::Amplicon->create(
+        push @amplicons, Genome::Model::Tools::AmpliconAssembly::Amplicon->create(
             name => $name,
             reads => $amplicons->{$name},
             directory => $edit_dir,
@@ -475,60 +445,6 @@ sub _get_read_name_iterator {
         $dh->close;
         return;
     }
-}
-
-sub _remove_old_read_iterations_from_amplicons {
-    my ($self, $amplicons) = @_;
-
-    for my $amplicon_name ( keys %$amplicons ) {
-        my %reads;
-        for my $read_name ( @{$amplicons->{$amplicon_name}} ) {
-            my $read = $self->_get_gsc_sequence_read($read_name);
-            confess "Can't get read for name ($read_name). This is required to remove old read iterations from amplicons" unless $read;
-            
-            my $read_id = $amplicon_name.$read->primer_code;
-            if ( exists $reads{$read_id} ) {
-                my $date_compare = UR::Time->compare_dates(
-                    '00:00:00 '.$read->run_date,
-                    '00:00:00 '.$reads{$read_id}->run_date,
-                ); #returns -1, 0, or 1
-                #print "RUN DATE $read_name => ".$read->run_date."($date_compare)\n";
-                $reads{$read_id} = $read if $date_compare eq 1;
-            }
-            else {
-                $reads{$read_id} = $read;
-            }
-        }
-        $amplicons->{$amplicon_name} = [
-        sort { $a cmp $b } 
-        map { $_->trace_name }
-        values %reads 
-        ];
-    }
-
-    return 1;
-}
-
-sub _remove_contaminated_amplicons {
-    my ($self, $amplicons) = @_;
-
-    AMPLICON: for my $amplicon_name ( keys %$amplicons ) {
-        for my $read_name ( @{$amplicons->{$amplicon_name}} ) {
-            my $read = $self->_get_gsc_sequence_read($read_name);
-            confess "Can't get read for name ($read_name). This is required to remove contaminated amplicons." unless $read;
-            my $screen_reads_stat = $read->get_screen_read_stat_hmp;
-            if ( $screen_reads_stat and $screen_reads_stat->is_contaminated ) {
-                delete $amplicons->{$amplicon_name};
-                next AMPLICON;
-            }
-        }
-    }
-
-    return 1;
-}
-
-sub _get_gsc_sequence_read { # in sub to overload on test
-    return GSC::Sequence::Read->get(trace_name => $_[1]);
 }
 
 #< Amplicon Reads >#
@@ -721,7 +637,7 @@ sub remove_contaminated_amplicons_by_reads_in_file {
 
 =head1 Name
 
-Genome::AmpliconAssembly
+Genome::Model::Tools::AmpliconAssembly::Set
 
 =head1 Synopsis
 

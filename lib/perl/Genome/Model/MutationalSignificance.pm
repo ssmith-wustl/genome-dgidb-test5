@@ -62,7 +62,7 @@ $self->warning_message('The logic for building a MuSiC model is not yet function
 
     my $workflow = Workflow::Model->create(
         name => $build->workflow_name,
-        input_properties => ['bam_list', 'processors', 'pathway_file', 'gene_covg_dir','reference_sequence','reference_build','somatic_variation_builds','build','annotation_build','pfam_output_file','cosmic_omim_output_file',
+        input_properties => ['clinical_data_file', 'merged_maf_path', 'create_maf_output_dir', 'bam_list', 'processors', 'pathway_file', 'gene_covg_dir','reference_sequence','reference_build','somatic_variation_builds','annotation_build','pfam_output_file','cosmic_omim_output_file',
                              'clinical_correlation_output_file','mutation_relation_output_file','smg_output_file','path_scan_output_file','output_dir'],
         output_properties => ['smg_result','pathscan_result','mr_result','pfam_result','proximity_result',
                               'cosmic_result','cct_result'],
@@ -110,9 +110,9 @@ $self->warning_message('The logic for building a MuSiC model is not yet function
 
     $link = $workflow->add_link(
         left_operation => $input_connector,
-        left_property => 'build',
+        left_property => 'create_maf_output_dir',
         right_operation => $create_maf_operation,
-        right_property => 'build',
+        right_property => 'output_dir',
     );
 
     $link = $workflow->add_link(
@@ -124,9 +124,9 @@ $self->warning_message('The logic for building a MuSiC model is not yet function
 
     $link = $workflow->add_link(
         left_operation => $input_connector,
-        left_property => 'build',
+        left_property => 'merged_maf_path',
         right_operation => $merged_maf_operation,
-        right_property => 'build',
+        right_property => 'maf_path',
     );
 
     #Create ROI BED file
@@ -156,9 +156,9 @@ $self->warning_message('The logic for building a MuSiC model is not yet function
 
     $link = $workflow->add_link(
         left_operation => $input_connector,
-        left_property => 'build',
+        left_property => 'clinical_data_file',
         right_operation => $clinical_data_operation,
-        right_property => 'build',
+        right_property => 'clinical_data_file',
     );
 =cut
     #Create BAM list
@@ -397,13 +397,14 @@ sub _map_workflow_inputs {
     my @builds = $build->somatic_variation_builds;
     my $base_dir = $build->data_directory;
 
-    push @inputs, pathway_file => '/gscmnt/gc2108/info/medseq/tcga_ucec/music/endometrioid_grade_1or2_input/pathway_dbs/     KEGG_120910'; #TODO: move to params
+    push @inputs, merged_maf_path => $base_dir."/final.maf";
+    push @inputs, create_maf_output_dir => $base_dir;
+    push @inputs, pathway_file => '/gscmnt/gc2108/info/medseq/tcga_ucec/music/endometrioid_grade_1or2_input/pathway_dbs/KEGG_120910'; #TODO: move to params
     push @inputs, processors => 1;
     push @inputs, gene_covg_dir => $base_dir."/gene_covgs";
     push @inputs, reference_sequence => $builds[0]->reference_sequence_build->fasta_file;
     push @inputs, reference_build => "Build37";
     push @inputs, somatic_variation_builds => \@builds;
-    push @inputs, build => $build;
     push @inputs, annotation_build => $build->annotation_build;
     push @inputs, pfam_output_file => $base_dir."/pfam";
     push @inputs, cosmic_omim_output_file => $base_dir."/cosmic_omim";
@@ -413,6 +414,7 @@ sub _map_workflow_inputs {
     push @inputs, path_scan_output_file => $base_dir."/path_scan";
     push @inputs, output_dir => $base_dir;
     push @inputs, bam_list => $base_dir."/bam_list.txt";
+    push @inputs, clinical_data_file => $base_dir."/clinical_data.txt";
 
     return @inputs;
 }

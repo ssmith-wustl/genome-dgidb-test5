@@ -22,6 +22,11 @@ class Genome::Db::Ensembl::Import::CreateAnnotationStructures {
             doc         => "ensembl db password",
             is_optional => 1,
         },
+        data_set => {
+            is => 'Text',
+            doc => 'Ensembl data set to import',
+            default => 'Core',
+        },
     ],
 };
 
@@ -46,14 +51,15 @@ EOS
 sub execute
 {
     my $self = shift;
+    my $data_set = $self->data_set;
 
     $self->prepare_for_execution;
 
     my $registry = $self->connect_registry;
     my $ucfirst_species = ucfirst $self->species;
-    my $gene_adaptor = $registry->get_adaptor( $ucfirst_species, 'Core', 'Gene' );
-    my $transcript_adaptor = $registry->get_adaptor( $ucfirst_species, 'Core', 'Transcript' );
-    my $slice_adaptor = $registry->get_adaptor( $ucfirst_species, 'Core', 'Slice');
+    my $gene_adaptor = $registry->get_adaptor( $ucfirst_species, $data_set, 'Gene' );
+    my $transcript_adaptor = $registry->get_adaptor( $ucfirst_species, $data_set, 'Transcript' );
+    my $slice_adaptor = $registry->get_adaptor( $ucfirst_species, $data_set, 'Slice');
 
     my @slices = @{ $slice_adaptor->fetch_all('toplevel', undef, 1, 0, 1) };
 
@@ -140,25 +146,6 @@ sub execute
             }
 
 
-            #Transcript cols: transcript_id gene_id transcript_start transcript_stop transcript_name source transcript_status strand chrom_name
-
-            my $transcript = Genome::Transcript->create(
-                transcript_id => $ensembl_transcript->dbID,
-                gene_id => $gene->id,
-                gene_name => $gene->name,
-                transcript_start => $transcript_start, 
-                transcript_stop => $transcript_stop,
-                transcript_name => $ensembl_transcript->stable_id,    
-                transcript_status => lc( $ensembl_transcript->status ),   #TODO valid statuses (unknown, known, novel) #TODO verify substructures and change status if necessary
-                strand => $strand,
-                chrom_name => $chromosome,
-                data_directory => $self->data_directory,
-                species => $species,
-                source => $source,
-                version => $version,
-            );
-            push @transcripts, $transcript; #logging
-
             my %external_gene_ids = $self->get_external_gene_ids($ensembl_gene);
             if ( defined($hugo_gene_name) )
             {
@@ -187,6 +174,25 @@ sub execute
 
                 $egi_id++;
             }
+
+            #Transcript cols: transcript_id gene_id transcript_start transcript_stop transcript_name source transcript_status strand chrom_name
+
+            my $transcript = Genome::Transcript->create(
+                transcript_id => $ensembl_transcript->dbID,
+                gene_id => $gene->id,
+                gene_name => $gene->name,
+                transcript_start => $transcript_start, 
+                transcript_stop => $transcript_stop,
+                transcript_name => $ensembl_transcript->stable_id,    
+                transcript_status => lc( $ensembl_transcript->status ),   #TODO valid statuses (unknown, known, novel) #TODO verify substructures and change status if necessary
+                strand => $strand,
+                chrom_name => $chromosome,
+                data_directory => $self->data_directory,
+                species => $species,
+                source => $source,
+                version => $version,
+            );
+            push @transcripts, $transcript; #logging
 
             #sub structures
             my @ensembl_exons = @{ $ensembl_transcript->get_all_Exons() };
@@ -230,7 +236,7 @@ sub execute
                             transcript => $transcript,
                             chrom_name => $transcript->chrom_name,
                             transcript_structure_id => $tss_id,
-                            transcript_id => $transcript->transcript_id,
+                            transcript_id => $transcript->id,
                             structure_type => 'utr_exon',
                             structure_start => $start,
                             structure_stop => $utr_stop,
@@ -263,7 +269,7 @@ sub execute
                         transcript => $transcript,
                         chrom_name => $transcript->chrom_name,
                         transcript_structure_id => $tss_id,
-                        transcript_id => $transcript->transcript_id,
+                        transcript_id => $transcript->id,
                         structure_type => 'cds_exon',
                         structure_start => $coding_region_start,
                         structure_stop => $coding_region_stop,
@@ -294,7 +300,7 @@ sub execute
                             transcript => $transcript,
                             chrom_name => $transcript->chrom_name,
                             transcript_structure_id => $tss_id,
-                            transcript_id => $transcript->transcript_id,
+                            transcript_id => $transcript->id,
                             structure_type => 'utr_exon',
                             structure_start => $utr_start,
                             structure_stop => $stop,
@@ -324,7 +330,7 @@ sub execute
                         transcript => $transcript,
                         chrom_name => $transcript->chrom_name,
                         transcript_structure_id => $tss_id,
-                        transcript_id => $transcript->transcript_id,
+                        transcript_id => $transcript->id,
                         structure_type => $structure_type,
                         structure_start => $start,
                         structure_stop => $stop,
@@ -384,6 +390,11 @@ sub execute
                 $transcript_info{pseudogene} = 1;
             }
             $self->calculate_transcript_info($transcript, \%transcript_info);
+
+            my @structures = $transcript->sub_structures;
+            foreach my $structure (@structures) {
+                $self->_update_transcript_info($structure, $transcript);
+            }
         }
 
             $self->write_log_entry($count, \@transcripts, \@sub_structures, \@genes, \@proteins);
@@ -411,6 +422,20 @@ sub execute
 
             #exit; #uncomment for testing
     }
+
+    return 1;
+}
+
+sub _update_transcript_info {
+    my $self = shift;
+    my $structure = shift;
+    my $transcript = shift;
+
+    $structure->transcript_gene_name($transcript->gene_name);
+    $structure->transcript_transcript_error($transcript->transcript_error);
+    $structure->transcript_coding_region_start($transcript->coding_region_start);
+    $structure->transcript_coding_region_stop($transcript->coding_region_stop);
+    $structure->transcript_amino_acid_length($transcript->amino_acid_length);
 
     return 1;
 }
