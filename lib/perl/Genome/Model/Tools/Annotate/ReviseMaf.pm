@@ -39,7 +39,7 @@ class Genome::Model::Tools::Annotate::ReviseMaf {
 	    is => 'Boolean',
 	    is_optional => 1,
 	    default => 0,
-	    doc => 'Will append/overwrite the locus_link_id from Genome::Site::WUGCGene in the Entrez_Gene_Id column.'
+	    doc => 'Will append/overwrite the locus_link_id from Genome::Site::WUGC::Gene in the Entrez_Gene_Id column.'
 	},
 	order => {
 	    type  =>  'String',
@@ -240,7 +240,7 @@ sub parse_maf {
 	$maf->{$n}=$line;
 	
 	if ($self->revise_Entrez_Gene_Id) {
-	    my @gene_info = Genome::Site::WUGCGene->get(gene_name => $Hugo_Symbol);
+	    my @gene_info = Genome::Site::WUGC::Gene->get(gene_name => $Hugo_Symbol);
 	    if (@gene_info) {
 		for my $info (@gene_info) {
 		    my $locus_link_id = $info->locus_link_id;

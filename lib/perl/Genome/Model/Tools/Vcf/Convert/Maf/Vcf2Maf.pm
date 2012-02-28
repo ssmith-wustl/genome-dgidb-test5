@@ -365,7 +365,7 @@ sub execute {
     #taken from gmt annotate revise-maf
                 my $entrez_gene_ids;
                 my $Hugo_Symbol = $maf->{Hugo_Symbol};
-                my @gene_info = Genome::Site::WUGCGene->get(gene_name => $Hugo_Symbol);
+                my @gene_info = Genome::Site::WUGC::Gene->get(gene_name => $Hugo_Symbol);
                 if (@gene_info) {
 		            for my $info (@gene_info) {
 		                my $locus_link_id = $info->locus_link_id;
