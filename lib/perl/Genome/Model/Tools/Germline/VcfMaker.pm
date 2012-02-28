@@ -204,10 +204,10 @@ sub execute {                               # replace with real execution logic.
 			## Get the gene ID ##
 			my $gene_id = 0;
 
-			my @ea = GSC::EntityAlias->get(alias => "$gene_name", alias_source => "HUGO", entity_type_name => "gene sequence tag");
+			my @ea = Genome::Site::WUGC::EntityAlias->get(alias => "$gene_name", alias_source => "HUGO", entity_type_name => "gene sequence tag");
 					
 			if(@ea) {
-				my @tags = GSC::Sequence::Tag->get(stag_id => [ map {$_->entity_id} @ea ]);
+				my @tags = Genome::Site::WUGC::SequenceTag->get(stag_id => [ map {$_->entity_id} @ea ]);
 				if(@tags) {
 					$gene_id = $tags[0]->ref_id;						
 				}
@@ -314,10 +314,10 @@ $sequencer
 			## Get the gene ID ##
 			my $gene_id = 0;
 	
-			my @ea = GSC::EntityAlias->get(alias => "$gene_name", alias_source => "HUGO", entity_type_name => "gene sequence tag");
+			my @ea = Genome::Site::WUGC::EntityAlias->get(alias => "$gene_name", alias_source => "HUGO", entity_type_name => "gene sequence tag");
 						
 			if(@ea) {
-				my @tags = GSC::Sequence::Tag->get(stag_id => [ map {$_->entity_id} @ea ]);
+				my @tags = Genome::Site::WUGC::SequenceTag->get(stag_id => [ map {$_->entity_id} @ea ]);
 				if(@tags) {
 					$gene_id = $tags[0]->ref_id;						
 				}
