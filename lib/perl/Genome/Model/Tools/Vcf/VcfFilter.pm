@@ -79,6 +79,11 @@ class Genome::Model::Tools::Vcf::VcfFilter {
             is_optional => 1,
             doc => 'apply filters only to variants of this type (usually "SNP" or "INDEL")',
         },
+        pass_when_alts_disagree => {
+            is => 'Boolean',
+            default => 1,
+            doc => 'If there are two alts on a line and one is filtered and one is not, set the filter status to PASS. Make this false to instead mark as filtered in this case',
+        },
     ],
 };
 
@@ -133,11 +138,13 @@ sub execute {
 
         my @fields = split("\t",$line);
         if($self->bed_input) {
-            unless($fields[3] =~ /\*/) { #in bed, this would be an insertion or deletion and we should not naively ++ the start
+            unless($fields[3] =~ /\*/ or $fields[3] =~ /0/ or $fields[3] =~ /-/) { #in bed, this would be an insertion or deletion and we should not naively ++ the start
                 $fields[1]+=1;
             }
         }
-        my $key = $fields[0] . ":" . $fields[1];
+        my ($ref, $var) = split "/", $fields[3];
+        my $length_change_of_event = length($var) - length($ref);
+        my $key = join(":", ($fields[0], $fields[1], $fields[2], $length_change_of_event) );
 
         #add this filter to the hash
         $filter{$key} = 0;
@@ -200,6 +207,7 @@ sub execute {
         if (defined($variant_type) && !($fields[7] =~ /VT=$variant_type/)){
             print $outfile $line . "\n";
         } else {
+            my $final_filter_value = "";
 
             # only check the filters if this snv hasn't already been filtered
             # (is passing). If it has been filtered, then accept the prior filter
@@ -207,30 +215,81 @@ sub execute {
             my $filter_value;
             if (($fields[6] eq "") || ($fields[6] eq "PASS") || ($fields[6] eq ".")){
 
-                my $key = $fields[0] . ":" . $fields[1];
+                my $ref = $fields[3];
+                my $alt_field = $fields[4];
+                my @alts = split ",", $alt_field;
 
-                if ($filter_keep){
-                    if (exists($filter{$key})){
-                        $filter_value = "PASS";
+                my @filter_values;
+                for my $alt (@alts) {
+                    # Calculate the stop position that should be in the bed file for this variant
+                    my $stop;
+                    my $length_change_of_event = length($alt) - length($ref);
+                    # If the ref and alt are the same length, it is a snv
+                    if (length($ref) == length($alt)) {
+                        $stop = $fields[1]; 
+                        # If ref is longer than alt, it is a deletion
+                    } elsif (length($ref) > length($alt)) { 
+                        $stop = $fields[1] + (length($ref) - length($alt));
+                        $length_change_of_event++;
+                        # if ref is shorter than alt, it is an insertion
                     } else {
-                        if($remove_filtered_lines){
-                            $remove_line = 1;
+                        $stop = $fields[1];
+                        $length_change_of_event--;
+                    }
+                    my $key = join(":", ($fields[0], $fields[1], $stop, $length_change_of_event) );
+
+                    if ($filter_keep){
+                        if (exists($filter{$key})){
+                            $filter_value = "PASS";
                         } else {
-                            $filter_value = $filter_name;
+                            if($remove_filtered_lines){
+                                $remove_line = 1;
+                            } else {
+                                $filter_value = $filter_name;
+                            }
+                        }
+                    } else {
+                        if (exists($filter{$key})){
+                            if($remove_filtered_lines){
+                                $remove_line = 1;
+                            } else {
+                                $filter_value = $filter_name;
+                            }
+                        } else {
+                            $filter_value = "PASS";
                         }
                     }
-                } else {
-                    if (exists($filter{$key})){
-                        if($remove_filtered_lines){
-                            $remove_line = 1;
-                        } else {
-                            $filter_value = $filter_name;
-                        }
+
+                    push @filter_values, $filter_value;
+                }
+
+                # Find out if there is any disagreement between alts as far as filter status
+                my $at_least_one_passes = 0;
+                my $at_least_one_fails = 0;
+                for my $filter_value (@filter_values) {
+                    if ($filter_value eq "PASS") {
+                        $at_least_one_passes = 1;
                     } else {
-                        $filter_value = "PASS";
+                        $at_least_one_fails = 1;
                     }
                 }
-                $fields[6] = $filter_value;
+
+                # Decide if the variant as a whole should be PASS or fail based upon flags
+                if ($self->pass_when_alts_disagree) {
+                    if ($at_least_one_passes) {
+                        $final_filter_value = "PASS";
+                    } else {
+                        $final_filter_value = $filter_name;
+                    }
+                } else {
+                    if ($at_least_one_fails) {
+                        $final_filter_value = $filter_name;
+                    } else {
+                        $final_filter_value = "PASS";
+                    }
+                }
+
+                $fields[6] = $final_filter_value;
             } else {
                 $filter_value = $fields[6];
             }
@@ -256,10 +315,10 @@ sub execute {
                 my $sample_field = $fields[$sample_index];
                 if ($ft_index) {
                     my @sample_fields = split ":", $sample_field;
-                    $sample_fields[$ft_index] = $filter_value;
+                    $sample_fields[$ft_index] = $final_filter_value;
                     $fields[$sample_index] = join(":", @sample_fields);
                 } else {
-                    $fields[$sample_index] = join(":", ($fields[$sample_index], $filter_value) );
+                    $fields[$sample_index] = join(":", ($fields[$sample_index], $final_filter_value) );
                 }
             }
 
