@@ -217,19 +217,22 @@ if ($verbose) {print "Done Parsing Mutation File! Yippee!\n";}
    my %aa_count;
    my %residue_match;
    if (defined($cosmic_database) && -e $cosmic_database) {
-	   my ($gene_col, $chr_col, $start_col, $stop_col, $chr_col_37, $start_col_37, $stop_col_37, $amino_col, $nucleo_col, $somatic_col, $primary_tissue_col, $tissue_sub_1_col, $tissue_sub_2_col, $histology_col,
-		$histology_sub_1_col, $histology_sub_2_col, $gene, $chr, $start, $stop, $chr_37, $start_37, $stop_37, $amino, $nucleo, $somatic, $primary_tissue, $tissue_sub_1, $tissue_sub_2, $histology, $histology_sub_1,
-		$histology_sub_2);
-	   open(COSMIC,$cosmic_database) || die "Could not open omim file '$cosmic_database'";
-	   if ($verbose) {print "Loading COSMIC Database\n";}
-	   my $cosmic_header = <COSMIC>;
-	   my @parser = split(/\t/, $cosmic_header);
-	   my $parsecount = 0;
-	   my %parsehash;
-	   foreach my $item (@parser) {
-		   $parsehash{$item} = $parsecount;
-		   $parsecount++;
-	   }
+        my ($gene_col, $chr_col, $start_col, $stop_col, $chr_col_37, $start_col_37, $stop_col_37, $amino_col, $nucleo_col, $somatic_col, $primary_tissue_col, $tissue_sub_1_col, $tissue_sub_2_col, $histology_col,
+        $histology_sub_1_col, $histology_sub_2_col, $gene, $chr, $start, $stop, $chr_37, $start_37, $stop_37, $amino, $nucleo, $somatic, $primary_tissue, $tissue_sub_1, $tissue_sub_2, $histology, $histology_sub_1,
+        $histology_sub_2);
+        open(COSMIC,$cosmic_database) || die "Could not open omim file '$cosmic_database'";
+        if ($verbose) {print "Loading COSMIC Database\n";}
+        my $cosmic_header = <COSMIC>;
+        chomp($cosmic_header);
+        my @parser = split(/\t/, $cosmic_header);
+        my $parsecount = 0;
+        my %parsehash;
+
+        foreach my $item (@parser) {
+           $parsehash{$item} = $parsecount;
+           $parsecount++;
+        }
+
 	   $gene_col = $parsehash{'Gene'};
 	   $chr_col = $parsehash{'Chromosome'};
 	   $start_col = $parsehash{'Genome Start'};
@@ -262,16 +265,19 @@ if ($verbose) {print "Done Parsing Mutation File! Yippee!\n";}
 	        	   $start = $parser[$start_col_37];
 	        	   $stop = $parser[$stop_col_37];
                    }
+            $chr =~ s/NotListed/ /;
+            $start =~ s/NotListed/ /;
+            $stop =~ s/NotListed/ /;
 
-		   $amino = $parser[$amino_col];
-		   $nucleo = $parser[$nucleo_col];
-		   $somatic = $parser[$somatic_col];
-		   $primary_tissue = $parser[$primary_tissue_col];
-		   $tissue_sub_1 = $parser[$tissue_sub_1_col];
-		   $tissue_sub_2 = $parser[$tissue_sub_2_col];
-		   $histology = $parser[$histology_col];
-		   $histology_sub_1 = $parser[$histology_sub_1_col];
-		   $histology_sub_2 = $parser[$histology_sub_2_col];
+            $amino = $parser[$amino_col];
+            $nucleo = $parser[$nucleo_col];
+            $somatic = $parser[$somatic_col];
+            $primary_tissue = $parser[$primary_tissue_col];
+            $tissue_sub_1 = $parser[$tissue_sub_1_col];
+            $tissue_sub_2 = $parser[$tissue_sub_2_col];
+            $histology = $parser[$histology_col];
+            $histology_sub_1 = $parser[$histology_sub_1_col];
+            $histology_sub_2 = $parser[$histology_sub_2_col];
 
 		   my ($residue1, $res_start, $residue2, $res_stop, $new_residue) = AA_Check($amino);
 
