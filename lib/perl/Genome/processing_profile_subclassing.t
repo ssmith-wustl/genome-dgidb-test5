@@ -4,7 +4,7 @@ use Test::More;
 
 UR::DBI->no_commit(1);
 
-plan tests => 33;
+plan tests => 31;
 
 # Some Processing Profiles are abstract and require further info to subclass properly
 # Genome::ProcessingProfile, G::PP::ReferenceAlignment and G::PP::RnaSeq
@@ -20,12 +20,6 @@ ok(! $pp, 'Could not create an un-subclassed ReferenceAlignment PP');
 
 $pp = eval { Genome::ProcessingProfile->create(name => 'will fail', type_name => 'reference alignment') };
 ok(! $pp, 'Could not create an un-subclassed Processing Profile with only type_name => reference alignment');
-
-$pp = eval { Genome::ProcessingProfile::RnaSeq->create(name => 'will fail') };
-ok(! $pp, 'Could not create an un-subclassed Rna Seq PP');
-
-$pp = eval { Genome::ProcessingProfile->create(name => 'will fail', type_name => 'rna seq') };
-ok(! $pp, 'Could not create an un-subclassed Processing Profile with only type_name => rna seq');
 
 $pp = eval { Genome::ProcessingProfile->create(name => 'will fail', type_name => 'non existent') };
 ok(! $pp, 'Could not create a ProcessingProfile with type_name refering to a bad subclass');
