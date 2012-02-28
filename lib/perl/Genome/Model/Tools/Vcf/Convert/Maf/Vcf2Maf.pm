@@ -98,7 +98,7 @@ sub execute {
     # Make the MAF header
     print MAF join("\t", @maf_columns), "\n";
 
-#	my ($Hugo_Symbol, $Entrez_Gene_Id, $GSC_Center, $NCBI_Build, $Chromosome, $Start_position, $End_position, $Strand, $Variant_Classification, $Variant_Type, $Reference_Allele, $Variant_Allele1, $Variant_Allele2, $dbSNP_RS, $dbSNP_Val_Status, $Sample_Barcode1, $Sample_Barcode2, $Match_Norm_Seq_Allele1, $Match_Norm_Seq_Allele2, $Validation_Allele1, $Validation_Allele2, $Match_Norm_Validation_Allele1, $Match_Norm_Validation_Allele2, $Verification_Status, $Validation_Status, $Mutation_Status, $Validation_Method, $Sequencing_Phase, $Sequence_Source, $Score, $BAM_file, $Sequencer, $chromosome_name, $start, $stop, $reference, $variant, $type, $gene_name, $transcript_name, $transcript_species, $transcript_source, $transcript_version, $strand, $transcript_status, $trv_type, $c_position, $amino_acid_change, $ucsc_cons, $domain, $all_domains, $deletion_substructures, $transcript_error) = split(/\t/, $line);
+#	my ($Hugo_Symbol, $Entrez_Gene_Id, $Gsc_Center, $NCBI_Build, $Chromosome, $Start_position, $End_position, $Strand, $Variant_Classification, $Variant_Type, $Reference_Allele, $Variant_Allele1, $Variant_Allele2, $dbSNP_RS, $dbSNP_Val_Status, $Sample_Barcode1, $Sample_Barcode2, $Match_Norm_Seq_Allele1, $Match_Norm_Seq_Allele2, $Validation_Allele1, $Validation_Allele2, $Match_Norm_Validation_Allele1, $Match_Norm_Validation_Allele2, $Verification_Status, $Validation_Status, $Mutation_Status, $Validation_Method, $Sequencing_Phase, $Sequence_Source, $Score, $BAM_file, $Sequencer, $chromosome_name, $start, $stop, $reference, $variant, $type, $gene_name, $transcript_name, $transcript_species, $transcript_source, $transcript_version, $strand, $transcript_status, $trv_type, $c_position, $amino_acid_change, $ucsc_cons, $domain, $all_domains, $deletion_substructures, $transcript_error) = split(/\t/, $line);
 
     # Find annotation file headers
     my $annot_line;
@@ -365,7 +365,7 @@ sub execute {
     #taken from gmt annotate revise-maf
                 my $entrez_gene_ids;
                 my $Hugo_Symbol = $maf->{Hugo_Symbol};
-                my @gene_info = GSC::Gene->get(gene_name => $Hugo_Symbol);
+                my @gene_info = Genome::Site::WUGCGene->get(gene_name => $Hugo_Symbol);
                 if (@gene_info) {
 		            for my $info (@gene_info) {
 		                my $locus_link_id = $info->locus_link_id;
