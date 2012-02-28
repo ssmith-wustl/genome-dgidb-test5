@@ -15,6 +15,7 @@ class Genome::ModelGroup::View::Status::Xml {
                 'id',
                 'name',
                 'user_name',
+                'model_count',
                 {
                     name => 'models',
                     perspective => 'status',
