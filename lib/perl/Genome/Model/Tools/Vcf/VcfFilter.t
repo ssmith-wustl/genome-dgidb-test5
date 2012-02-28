@@ -13,13 +13,14 @@ my $test_dir = "/gsc/var/cache/testsuite/data/Genome-Model-Tools-Vcf-VcfFilter";
 # V2 adds the FT per-sample column
 # V3 adds the FT header line mistakenly omitted from v2
 # V4 corrects the FT header to be a string
-my $expected_base = "expected.v4";
+# V5 makes this test actually meaningful. The previous test data was broken. It set bed_input but snvs.hq was not a bed file.
+my $expected_base = "expected.v5";
 my $expected_dir = "$test_dir/$expected_base";
 my $expected_file = "$expected_dir/output.vcf";
 
 my $output_file = Genome::Sys->create_temp_file_path;
 my $input_vcf = "$test_dir/input.vcf.gz";
-my $hq_filter_file = "$test_dir/snvs.hq";
+my $hq_filter_file = "$test_dir/snvs.hq.bed";
 
 my $command= Genome::Model::Tools::Vcf::VcfFilter->create(
     output_file => $output_file,
