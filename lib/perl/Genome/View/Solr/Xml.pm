@@ -239,9 +239,7 @@ sub _generate_title_field_data {
     }
 
     unless($title) {
-        if($self->can('title')) {
-            $title = $self->title;
-        } elsif($subject->can('name') and $subject->name) {
+        if($subject->can('name') and $subject->name) {
             $title = $subject->name;
         } else {
             $title = $self->type . ' ' . $subject->id;
