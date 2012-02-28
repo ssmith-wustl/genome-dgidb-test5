@@ -10,52 +10,47 @@ use Bio::DB::Fasta;
 class Genome::Model::Tools::DesignTranscriptSequence {
     is => 'Command',                    
     has => [ # specify the command's properties (parameters) <--- 
-	     
-
-	     chromosome => {
-		 type  =>  'String',
-		 doc   =>  "chromosome ie {1,2,...,22,X,Y}",
-	     },
-	     start => {
-		 type  =>  'Number',
-		 doc   =>  "build 36 start coordinate of the variation",
-	     },
-	     stop => {
-		 type  =>  'Number',
-		 doc   =>  "build 36 stop coordinate of the variation; default will be equal to the start coordinate",
-		 is_optional  => 1,
-	     },
-	     variation_type => {  #predicted_type
-		 type  =>   'String',
-		 doc   =>   "one of the following {coding_snp,coding_ins,coding_del,splice_site_snp}",
-	     },
-	     transcript => {
-		 type  =>   'String',
-		 doc   =>   "The transcript the variation was annotated with",
-	     },
-	     reference_allele => {
-		 type  =>   'String',
-		 doc   =>   "the reference base/s (ie if your variation_type is a snp This will be ACG or T if your variation_type is an ins this will be a -, and if your variation_type is a del this will be the bases from the start to the end of you del) this is optional if not provided it will be derived if it is provided, it will be used as a check",
-		 is_optional  => 1,
-	     },
-	     variant_allele => {
-		 type  =>   'String',
-		 doc   =>   "This should be the build 36 bases in the positive orientation that represent the variation",
-	     },
-	     number_of_flank_bases => {
-		 type  =>  'Number',
-		 doc   =>  "provide the number of bases you would like on either side of your variation; default will be equal to 200",
-		 is_optional  => 1,
-	     },
-	     include_utr => {
-		 type  =>  'Boolean',
-		 doc   =>  "use this option if you would like UTR regions included in the transcript sequence",
-		 is_optional  => 1,
-	     },
-
-	     ],
-	
-    
+        chromosome => {
+            type  =>  'String',
+            doc   =>  "chromosome ie {1,2,...,22,X,Y}",
+        },
+        start => {
+            type  =>  'Number',
+            doc   =>  "build 36 start coordinate of the variation",
+        },
+        stop => {
+            type  =>  'Number',
+            doc   =>  "build 36 stop coordinate of the variation; default will be equal to the start coordinate",
+            is_optional  => 1,
+        },
+        variation_type => {  #predicted_type
+            type  =>   'String',
+            doc   =>   "one of the following {coding_snp,coding_ins,coding_del,splice_site_snp}",
+        },
+        transcript => {
+            type  =>   'String',
+            doc   =>   "The transcript the variation was annotated with",
+        },
+        reference_allele => {
+            type  =>   'String',
+            doc   =>   "the reference base/s (ie if your variation_type is a snp This will be ACG or T if your variation_type is an ins this will be a -, and if your variation_type is a del this will be the bases from the start to the end of you del) this is optional if not provided it will be derived if it is provided, it will be used as a check",
+            is_optional  => 1,
+        },
+        variant_allele => {
+            type  =>   'String',
+            doc   =>   "This should be the build 36 bases in the positive orientation that represent the variation",
+        },
+        number_of_flank_bases => {
+            type  =>  'Number',
+            doc   =>  "provide the number of bases you would like on either side of your variation; default will be equal to 200",
+            is_optional  => 1,
+        },
+        include_utr => {
+            type  =>  'Boolean',
+            doc   =>  "use this option if you would like UTR regions included in the transcript sequence",
+            is_optional  => 1,
+        },
+    ],
 };
 
 sub help_brief {
@@ -165,7 +160,7 @@ sub execute {
     
     my $build_id =$build->build_id;
     
-    my $t = Genome::Transcript->get( transcript_name => $transcript, build_id => $build_id );
+    my $t = Genome::Transcript->get( transcript_name => $transcript, build_id => $build_id, reference_build_id => $build->reference_sequence_id );
     my $tseq = $t->cds_full_nucleotide_sequence;
     #my $gene_name = $t->gene_name;
     

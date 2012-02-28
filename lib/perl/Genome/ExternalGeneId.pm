@@ -27,10 +27,11 @@ class Genome::ExternalGeneId {
         data_directory => {
                     is => "Path",
         },
+        reference_build_id => { is => 'Text'},
         gene => {
-            calculate_from => [qw/ gene_id data_directory/],
+            calculate_from => [qw/ gene_id data_directory reference_build_id/],
             calculate => q|
-                Genome::Gene->get(id => $gene_id, data_directory => $data_directory);
+                Genome::Gene->get(id => $gene_id, data_directory => $data_directory, reference_build_id => $reference_build_id);
             |,
         },
     ],

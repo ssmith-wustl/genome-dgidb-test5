@@ -140,7 +140,7 @@ sub execute
             my $gene;
             my $gene_meta = Genome::Gene->__meta__;
             my $composite_gene_id = $gene_meta->resolve_composite_id_from_ordered_values($ensembl_gene_id, $species,$source,$version);
-            $gene = Genome::Gene->get(id => $composite_gene_id, data_directory => $self->data_directory);
+            $gene = Genome::Gene->get(id => $composite_gene_id, data_directory => $self->data_directory, reference_build_id => $self->reference_build->id);
             unless ($gene){
                 $gene = Genome::Gene->create(
                     gene_id => $ensembl_gene_id, 
@@ -150,6 +150,7 @@ sub execute
                     species => $species,
                     source => $source,
                     version => $version,
+                    reference_build_id => $self->reference_build->id,
                 );
                 push @genes, $gene;#logging
             }
@@ -179,6 +180,7 @@ sub execute
                     species => $species,
                     source => $source,
                     version => $version,
+                    reference_build_id => $self->reference_build->id,
                 ); 
 
                 $egi_id++;
@@ -187,7 +189,7 @@ sub execute
             #Transcript cols: transcript_id gene_id transcript_start transcript_stop transcript_name source transcript_status strand chrom_name
 
             my $transcript = Genome::Transcript->create(
-                reference_build => $self->reference_build,
+                reference_build_id => $self->reference_build_id,
                 transcript_id => $ensembl_transcript->dbID,
                 gene_id => $gene->id,
                 gene_name => $gene->name,
@@ -380,6 +382,7 @@ sub execute
                     species => $species,
                     source => $source,
                     version => $version,
+                    reference_build_id => $self->reference_build->id,
                 );
                 push @proteins, $protein;
             }

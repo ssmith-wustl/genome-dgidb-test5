@@ -45,6 +45,7 @@ sub new {
         return;
     }
     $self->{_build} = $build;
+    $self->{_reference_build_id} = $build->reference_sequence_id;
 
     my @custom_domains =();
     if(defined($arg{custom_domains})) {
@@ -114,7 +115,7 @@ sub Annotation {
             my $transcript;
             my @features;
             for my $data_directory ($build->determine_data_directory){
-                $transcript = Genome::Transcript->get(data_directory => $data_directory, transcript_name => $transcript_name);
+                $transcript = Genome::Transcript->get(data_directory => $data_directory, transcript_name => $transcript_name, reference_build_id => $self->{_reference_build_id});
                 next unless $transcript;
                 my @transcript_features = Genome::InterproResult->get(data_directory => $data_directory, transcript_name => $transcript_name, chrom_name => $transcript->chrom_name);
                 @features = (@features, @transcript_features);
@@ -163,7 +164,7 @@ sub get_protein_length{
     my $build = $self->{_build};
     my $transcript;
     for my $dir ($build->determine_data_directory){
-        $transcript = Genome::Transcript->get(data_directory => $dir, transcript_name => $transcript_name);
+        $transcript = Genome::Transcript->get(data_directory => $dir, transcript_name => $transcript_name, reference_build_id => $self->{_reference_build_id});
         last if $transcript;
     }
     return 0 unless $transcript;

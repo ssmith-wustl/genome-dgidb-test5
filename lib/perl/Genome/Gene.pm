@@ -35,18 +35,25 @@ class Genome::Gene {
         data_directory => {
             is => "Path",
         },
+        reference_build_id => {
+            is => 'Text',
+        },
+        reference_build => {
+            is => 'Genome::Model::Build::ReferenceSequence',
+            id_by => 'reference_build_id',
+        },
     ],
     has_many => [
         transcripts => { 
-            calculate_from => [qw/ id data_directory/],
+            calculate_from => [qw/ id data_directory reference_build_id /],
             calculate => q|
                 Genome::Transcript->get(gene_id => $id,  data_directory => $data_directory);
             |,
         },
         external_ids => { 
-            calculate_from => [qw/ id data_directory/],
+            calculate_from => [qw/ id data_directory reference_build_id /],
             calculate => q|
-                Genome::ExternalGeneId->get(gene_id => $id, data_directory => $data_directory);
+                Genome::ExternalGeneId->get(gene_id => $id, data_directory => $data_directory, reference_build_id => $reference_build_id);
             |,
         },
     ],

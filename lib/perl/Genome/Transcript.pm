@@ -35,11 +35,11 @@ class Genome::Transcript {
         transcript_id => { 
             is => 'NUMBER', 
         },
+    ],
+    has => [
         reference_build_id => {
             is => 'Text',
         },
-    ],
-    has => [
         reference_build => {
             is => 'Genome::Model::Build::ReferenceSequence',
             id_by => 'reference_build_id',
@@ -71,15 +71,15 @@ class Genome::Transcript {
             |,
         },
         protein => { 
-            calculate_from => [qw/ id data_directory/],
+            calculate_from => [qw/ id data_directory reference_build_id/],
             calculate => q|
-            Genome::Protein->get(transcript_id => $id, data_directory => $data_directory);
+            Genome::Protein->get(transcript_id => $id, data_directory => $data_directory, reference_build_id => $reference_build_id);
             |,
         },
         gene => {
-            calculate_from => [qw/ gene_id data_directory/],
+            calculate_from => [qw/ gene_id data_directory reference_build_id/],
             calculate => q|
-            Genome::Gene->get(id => $gene_id, data_directory => $data_directory);
+            Genome::Gene->get(id => $gene_id, data_directory => $data_directory, reference_build_id => $reference_build_id);
             |,
         },
         data_directory => {

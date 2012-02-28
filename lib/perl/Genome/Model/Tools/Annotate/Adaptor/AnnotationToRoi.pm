@@ -17,6 +17,10 @@ class Genome::Model::Tools::Annotate::Adaptor::AnnotationToRoi {
             is => 'Path',
             doc => 'Path to the ROI output file, format will be chromosome, start, stop (tab delimited)',
         },
+        reference_build => {
+            is => 'Genome::Model::Build::ReferenceSequence',
+            doc => 'Reference sequence build whose coordinates were used in the annotation file',
+        }
     ],
 };
 
@@ -60,6 +64,7 @@ sub annotation_columns {
 
 sub execute {
     my $self = shift;
+    my $reference_build_id = $self->reference_build->id;
     
     unless (-e $self->annotation_file) {
         confess "No annotation file found at " . $self->annotation_file;
@@ -111,6 +116,7 @@ sub execute {
         my @transcripts = Genome::Transcript->get(
             data_directory => \@annotation_data_dirs,
             transcript_name => $line->{transcript_name},
+            reference_build_id => $reference_build_id,
         );
         confess 'No transcripts found with name ' . $line->{transcript_name} unless @transcripts;
         confess 'Multiple transcripts found with name ' . $line->{transcript_name} if @transcripts > 1;
