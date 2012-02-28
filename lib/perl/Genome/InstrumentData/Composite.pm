@@ -48,10 +48,12 @@ sub get_or_create {
     my $class = shift;
 
     my $self = $class->SUPER::create(@_);
+    $self->status_message('Get or create composite instrument data...');
 
     my $inputs = $self->inputs;
     my $strategy = $self->strategy;
 
+    $self->status_message('Create composite workflow...');
     my $generator = Genome::InstrumentData::Composite::Workflow->create(
         inputs => {
             %{ $self->inputs },
@@ -61,14 +63,19 @@ sub get_or_create {
         merge_group => $self->merge_group,
         log_directory => $self->log_directory,
     );
+    $self->status_message('Create composite workflow...OK');
 
+    $self->status_message('Execute composite workflow...OK');
     $generator->dump_status_messages(1);
     unless($generator->execute) {
         die $self->error_message('Failed to execute workflow.');
     }
+    $self->status_message('Execute composite workflow...OK');
 
+    $self->status_message('Get software results...');
     my @result_ids = $generator->_result_ids;
     my @all_results = Genome::SoftwareResult->get(\@result_ids);
+    $self->status_message('Found '.@all_results.' software results');
 
     #TODO If this is made a result, too, register as a user
     #for my $result (@all_results) {
@@ -76,6 +83,7 @@ sub get_or_create {
     #}
 
     my @merged_results = grep($_->class =~ /Merged/, @all_results);
+    $self->status_message('Found '.@all_results.' merged results');
     $self->_merged_results(\@merged_results);
 
     return $self;

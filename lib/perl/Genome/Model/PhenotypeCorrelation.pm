@@ -234,7 +234,8 @@ sub _execute_build {
     my @instdata_assn = $build->inputs(name => 'instrument_data');
     $build->status_message("found " . scalar(@instdata_assn) . " assignments for the current build");
 
-    my @instdata = Genome::InstrumentData->get(id => [ map { $_->value_id } @instdata_assn ]);
+    #my @instdata = Genome::InstrumentData->get(id => [ map { $_->value_id } @instdata_assn ]);
+    my @instdata = map { $_->value } @instdata_assn;
     $build->status_message("found " . scalar(@instdata) . " instdata");
 
     #
