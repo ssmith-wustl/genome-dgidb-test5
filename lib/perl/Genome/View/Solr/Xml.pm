@@ -43,9 +43,8 @@ class Genome::View::Solr::Xml {
             field_name => 'id',
             calculate => q| $self->_generate_id_field_data |,
         },
-        subject_title => {
+        title => {
             is => 'Text',
-            field_name => 'title',
             calculate => q| $self->_generate_title_field_data |,
         },
         timestamp => {
