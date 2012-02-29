@@ -21,6 +21,13 @@ class Genome::ProcessingProfile::ImportedAnnotation{
     
 };
 
+sub _resource_requirements_for_execute_build {
+    my $self = shift;
+    my $build = shift;
+
+    return "-R 'rusage[mem=32000]' -M 32000000";
+}
+
 sub _execute_build{
     my $self = shift;
     my $build = shift;
