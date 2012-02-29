@@ -96,7 +96,7 @@ sub _convert_input_file{
 
         my $final = join("\t", $line->{'chromosome'}, $start, $stop, $line->{'reference'}, $line->{'variant'});
         if ($start > $stop) {
-            $self->error_message("Skipping line, stop is greater than stop after adapting to annotation format!\nLine: " . Data::Dumper::Dumper $line);
+            $self->error_message("Skipping line, stop is greater than stop after adapting to annotation format! Does this line have proper bed positions?\nLine: " . Data::Dumper::Dumper $line);
         } else {
             print $output $final . "\n";
         }
