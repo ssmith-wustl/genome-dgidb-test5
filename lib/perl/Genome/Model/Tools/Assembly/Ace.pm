@@ -194,6 +194,7 @@ sub merge_acefiles {
     unlink $int_file;
     return 1;
 }
+
 #writes updated ace file with correct contig and read counts
 sub rewrite_ace_file {
     my ($self, $ace_in, $contig_count, $read_count, $name) = @_;
@@ -219,11 +220,34 @@ sub rewrite_ace_file {
 	$fh_out->print($line);
     }
 
+    # check for phdball files and create wa tags for them
+    my @ball_files;
+    if ( @ball_files = $self->_assembly_phdball_files ) {
+        $fh_out->print("WA{\nphdBall newbler 080416:144002\n");
+        $fh_out->print( map {'../phdball_dir/'.$_."\n"} @ball_files );
+        $fh_out->print("}\n");
+    }
+
     $fh_out->close;
     $fh_in->close;
 
     return $ace_out;
 }
+
+# check for phdball dir to write wa tags
+sub _assembly_phdball_files {
+    my $self = shift;
+    my $phdball_dir = $self->directory.'/../phdball_dir';
+    my @phdball_files;
+    if ( -d $phdball_dir ) {
+        my @files = glob( $phdball_dir."/*ball*" );
+        for my $file ( @files ) {
+            push @phdball_files, File::Basename::basename( $file );
+        }
+    }
+    return @phdball_files;
+}
+
 #get ace contig and read counts
 sub get_counts_from_ace_AS_line {
     my ($self, $line) = @_;
