@@ -63,6 +63,11 @@ class Genome::PopulationGroup {
     doc => 'A possibly arbitrary grouping of individuals',
 };
 
+sub get_source {
+    my $self = shift;
+    return $self->taxon;
+}
+
 sub create {
     my $class = shift;
     my $self = $class->SUPER::create(@_);

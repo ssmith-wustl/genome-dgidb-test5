@@ -64,18 +64,33 @@ class Genome::Subject {
     doc => 'Contains all information about a particular subject (sample, individual, etc)',
 };
 
+# TODO Figure out a better name
+# This method should be overridden in subclasses and should return the object "further up"
+# the derivation tree. For example, a sample would override this to return the individual from
+# which it is derived.
+sub get_source {
+    return;
+}
+
+sub get_source_with_class {
+    my ($self, $class) = @_;
+    $DB::single = 1;
+    my $source = $self;
+    while ($source) {
+        $source = $source->get_source;
+        last if $source->isa($class);
+    }
+    return $source;
+}
+
 sub attributes_for_nomenclature {
-
     my ($self, $nom) = @_;
-    
     die "must supply nomenclature" if !$nom;
-
     my @fields = $nom->fields();
     my @attr = Genome::SubjectAttribute->get( 
         nomenclature => [ map {$_->id} @fields ], 
         subject_id => $self->id 
     );
-
     return @attr;
 }
 
