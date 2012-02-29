@@ -67,6 +67,7 @@ EOS
 sub _doc_authors {
     return <<EOS
  Malachi Griffith, Ph.D.
+ Jim Weible
 EOS
 }
 
@@ -95,7 +96,6 @@ HELP
 }
 
 sub help_detail {
-#TODO: Fix this up
     my $summary = <<HELP
 Parse an XML database file from DrugBank
 Get drug, interaction and gene info for each drug-gene interaction in the database
