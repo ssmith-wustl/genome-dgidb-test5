@@ -67,6 +67,7 @@ sub execute {
     return 1;
 }
 
+# TODO Remove?
 sub convert_feature_list_to_snp_whitelist {
     my $self = shift;
     my $feature_list = shift;
@@ -75,6 +76,7 @@ sub convert_feature_list_to_snp_whitelist {
     unless ($output_dir) {
         $output_dir = $self->build->qc_directory;
     }
+
 
     my $whitelist_snps_path = "$output_dir/whitelist.txt";
     my $whitelist_snps_bed_path = "$output_dir/whitelist.bed";
@@ -104,23 +106,36 @@ sub resolve_geno_path_for_build {
 
     my $geno_path;
     if ($build->region_of_interest_set_name) {
-        my $output_dir = $build->qc_directory;
-        $geno_path = "$output_dir/geno";
-
-        my $genotype_microarray_build = $build->genotype_microarray_build;
-        my $genotype_instrument_data = $genotype_microarray_build->instrument_data;
         my $feature_list = Genome::FeatureList->get(name => $build->region_of_interest_set_name);
-        my $whitelist_snps_path = $self->convert_feature_list_to_snp_whitelist($feature_list);
-
-        my $extract_cmd = Genome::InstrumentData::Command::Microarray::Extract->create(
-            variation_list_build => $build->dbsnp_build,
-            instrument_data => $genotype_instrument_data,
-            output => $geno_path,
-            filters => ['whitelist:whitelist_snps_file=' . $whitelist_snps_path],
-        );
-        unless ($extract_cmd->execute) {
-            die $self->error_message("Failed to extract a whitelisted genotype file.");
+        unless ($feature_list) {
+            die $self->error_message("Unable to get FeatureList (name => " . $build->region_of_interest_set_name . ")");
         }
+        my $output_dir = $build->qc_directory;
+        $geno_path = "$output_dir/genotype.gold2geno";
+
+        my $sorted_feature_list_path = "$output_dir/sorted_feature_list.bed";
+        system(join(' ', 'sort -V', $feature_list->file_path, '>', $sorted_feature_list_path));
+
+        my $sorted_snvs_bed_path = "$output_dir/sorted_genotype.bed";
+        system(join(' ', 'sort -V', $build->gold_snp_build->snvs_bed, '>', $sorted_snvs_bed_path));
+
+        my $intersect_cmd = Genome::Model::Tools::Joinx::Intersect->create(
+            input_file_a => $sorted_snvs_bed_path, # genotype first
+            input_file_b => $sorted_feature_list_path,
+            output_file  => "$geno_path.bed",
+        );
+        unless ($intersect_cmd->execute) {
+            die $self->error_message("Failed to intersect sorted feature list and genotype BEDs.");
+        }
+
+        my $convert_geno_cmd = Genome::Model::GenotypeMicroarray::Command::ConvertGoldSnpBedToGeno->create(
+            gold_snp_bed => "$geno_path.bed",
+            output => $geno_path,
+        );
+        unless ($convert_geno_cmd->execute) {
+            die $self->error_message("Failed to convert BED ($geno_path.bed) to a gold2geno file.");
+        }
+
     } else {
         $geno_path = $build->gold_snp_build->gold2geno_file_path;
     }
