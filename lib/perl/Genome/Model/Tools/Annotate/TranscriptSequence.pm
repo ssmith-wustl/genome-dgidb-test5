@@ -406,9 +406,9 @@ sub get_transcript_info {
 
     my $t;
     if ($transcript =~/^ENS/){ #ENST for Human ENSMUST
-	($t) = Genome::Transcript->get( transcript_name =>$transcript, data_directory => $ensembl_data_directory);
+	($t) = Genome::Transcript->get( transcript_name =>$transcript, data_directory => $ensembl_data_directory, reference_build_id => $ensembl_build->reference_sequence_id);
     }else{
-	($t) = Genome::Transcript->get( transcript_name =>$transcript, data_directory => $genbank_data_directory)
+	($t) = Genome::Transcript->get( transcript_name =>$transcript, data_directory => $genbank_data_directory, reference_build_id => $genbank_build->reference_sequence_id);
     }
     unless ($self->no_stdout) {print qq($ensembl_data_directory\n\n\n);}
     unless ($t) {print qq(\nCould not find a transcript object for $transcript from the $organism data warehouse\nWill exit the program now\n\n);;exit(1);}

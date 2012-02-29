@@ -90,6 +90,7 @@ sub execute {
             return;
         }
     }
+    my $reference_build_id = $build->reference_sequence_id;
     ###   my $build_id =$build->build_id;  ###Rather than build id now to get the transcript we need the data directory
     
     ###my $t = Genome::Transcript->get( transcript_name => $self->transcript, build_id => $build_id );
@@ -111,9 +112,9 @@ sub execute {
     
     my $t;
     if ($transcript =~/^ENS/){ #ENST for Human ENSMUST
-	($t) = Genome::Transcript->get( transcript_name =>$transcript, data_directory => $ensembl_data_directory);
+	($t) = Genome::Transcript->get( transcript_name =>$transcript, reference_build_id => $reference_build_id, data_directory => $ensembl_data_directory);
     }else{
-	($t) = Genome::Transcript->get( transcript_name =>$transcript, data_directory => $genbank_data_directory)
+	($t) = Genome::Transcript->get( transcript_name =>$transcript, reference_build_id => $reference_build_id, data_directory => $genbank_data_directory)
     }
 
 

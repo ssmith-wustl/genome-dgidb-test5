@@ -287,7 +287,7 @@ sub transcript_iterator{
 
     my @composite_builds = $self->from_builds;
     if (@composite_builds){
-        my @iterators = map {$_->transcript_iterator(chrom_name => $chrom_name)} @composite_builds;
+        my @iterators = map {$_->transcript_iterator(chrom_name => $chrom_name, reference_build_id => $self->reference_sequence_id)} @composite_builds;
         my %cached_transcripts;
         for (my $i = 0; $i < @iterators; $i++) {
             my $next = $iterators[$i]->next;
@@ -329,10 +329,13 @@ sub transcript_iterator{
         }
 
         if ($chrom_name){
-            return Genome::Transcript->create_iterator(data_directory => $data_dir, chrom_name => $chrom_name);
+            return Genome::Transcript->create_iterator(data_directory => $data_dir, 
+                                                        chrom_name => $chrom_name,
+                                                        reference_build_id => $self->reference_sequence_id);
         }
         else {
-            return Genome::Transcript->create_iterator(data_directory => $data_dir);
+            return Genome::Transcript->create_iterator(data_directory => $data_dir,
+                                                        reference_build_id => $self->reference_sequence_id);
         }
     }
 }

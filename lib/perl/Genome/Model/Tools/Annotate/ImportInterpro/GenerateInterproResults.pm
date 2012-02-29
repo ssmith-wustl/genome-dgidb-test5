@@ -17,7 +17,7 @@ class Genome::Model::Tools::Annotate::ImportInterpro::GenerateInterproResults{
     is => 'Genome::Model::Tools::Annotate',
     has => [
         build => {
-            is => 'Genome::Model::Build',
+            is => 'Genome::Model::Build::ImportedAnnotation',
             is_input => 1,
             is_optional => 0,
         },
@@ -232,6 +232,7 @@ sub _load_part
     my $transcript;
     for my $dir (@{$self->{_data_dirs}}){
         $transcript = Genome::Transcript->get(data_directory => $dir, 
+                                              reference_build_id => $build->reference_sequence_id,
                                               transcript_name => $transcript_name);
         last if $transcript;
     }
