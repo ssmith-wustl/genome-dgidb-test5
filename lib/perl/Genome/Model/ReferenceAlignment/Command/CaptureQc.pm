@@ -241,9 +241,9 @@ sub write_full_summary {
 
         #Take the first instrument_data's index until a decision is made
         #  on how to handle per-sample data, when per-instrument-data data is unavailable
-        my $index = (map{$_->index_sequence}$model->instrument_data)[0];
+        my ($index) = map{$_->index_sequence}$model->instrument_data;
         my $pool = Genome::Model::Command::Services::AssignQueuedInstrumentData->_resolve_pooled_sample_name_for_instrument_data((),$model->instrument_data);
-        my $libraries = $build->instrument_data->library->name;
+        my $libraries = join ' ', map{$_->library->name}$build->instrument_data;
 
         #add model->instrument_data->lane
 
