@@ -190,14 +190,21 @@ EOS
 
 sub execute {
 
-    #parse input arguments
+    # parse input arguments
     my $self = shift;
     my $bam_list = $self->bam_list;
     my $maf_file = $self->maf_file;
     my $output_file = $self->output_file;
     my $output_matrix = $self->clinical_correlation_matrix_file;
     my $genetic_data_type = $self->genetic_data_type;
-    my @all_sample_names; # names of all the samples, no matter if it's mutated or not
+
+    # check genetic data type
+    unless ($genetic_data_type =~ /^gene|variant$/i) {
+        $self->error_message("Please enter either \"gene\" or \"variant\" for the --genetic-data-type parameter.");
+        return;
+    }
+
+    # load clinical data and analysis types
     my %clinical_data;
     if ($self->numeric_clinical_data_file) {
         $clinical_data{'numeric'} = $self->numeric_clinical_data_file;
@@ -210,18 +217,21 @@ sub execute {
     }
     my $glm_model = $self->glm_model_file;
 
-    # Parse out the names of the samples which should match the names in the MAF file
+    # declarations
+    my @all_sample_names; # names of all the samples, no matter if it's mutated or not
+
+    # parse out the names of the samples which should match the names in the MAF file
     my $sampleFh = IO::File->new( $bam_list ) or die "Couldn't open $bam_list. $!\n";
     while( my $line = $sampleFh->getline )
     {
-      next if ( $line =~ m/^#/ );
-      chomp( $line );
-      my ( $sample ) = split( /\t/, $line );
-      push( @all_sample_names, $sample );
+        next if ( $line =~ m/^#/ );
+        chomp( $line );
+        my ( $sample ) = split( /\t/, $line );
+        push( @all_sample_names, $sample );
     }
     $sampleFh->close;
 
-    #loop through clinical data files
+    # loop through clinical data files
     for my $datatype (keys %clinical_data) {
 
         my $test_method;
@@ -229,13 +239,7 @@ sub execute {
 
         if ($datatype =~ /numeric/i) {
             $full_output_filename = $output_file . ".numeric";
-            if ($genetic_data_type =~ /^gene|variant$/i) {
-                $test_method = $self->numerical_data_test_method;
-            }
-            else {
-                $self->error_message("Please enter either \"gene\" or \"variant\" for the --genetic-data-type parameter.");
-                return;
-            }
+            $test_method = $self->numerical_data_test_method;
         }
 
         if ($datatype =~ /categ/i) {
@@ -261,8 +265,9 @@ sub execute {
             my ($sample) = split /\t/,$line;
             $samples{$sample}++;
         }
-        #create correlation matrix
-        if ( ($datatype =~ /glm/i && $self->use_maf_in_glm) || $datatype =~ /numeric|categ/i ) {
+        #create correlation matrix unless it's glm analysis without using a maf file
+        unless ($datatype =~ /glm/i && !$self->use_maf_in_glm) {
+
             if ($genetic_data_type =~ /^gene$/i) {
                 $matrix_file = create_sample_gene_matrix_gene($samples,$clinical_data{$datatype},$maf_file,$output_matrix,@all_sample_names);
             }
@@ -277,13 +282,13 @@ sub execute {
         unless (defined $matrix_file) { $matrix_file = "'*'"; }
 
         #set up R command
-        my $R_cmd = "R --slave --args < ";
+        my $R_cmd = "R --slave --args < " . __FILE__ . ".R $test_method ";
 
         if ($datatype =~ /glm/i) {
-            $R_cmd .= "/gscmnt/gc6111/info/medseq/music_revision/glm/ndees.gml.R $glm_model $clinical_data{$datatype} $matrix_file $full_output_filename";
+            $R_cmd .= "$glm_model $clinical_data{$datatype} $matrix_file $full_output_filename";
         }
         else {
-            $R_cmd .= __FILE__ . ".R " . $clinical_data{$datatype} . " $matrix_file $full_output_filename $test_method";
+            $R_cmd .= "$clinical_data{$datatype} $matrix_file $full_output_filename";
         }
 
         #run R command
