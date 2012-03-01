@@ -56,6 +56,11 @@ class Genome::Model::Tools::Music::CosmicOmim {
            doc => "Set how close a 'near' match is when searching for nucleotide position near hits",
            default => '5',
        },
+       show_known_hits => {
+           is => 'Boolean',
+           doc => "When a finding is novel, show known AA in that gene",
+           default => '1',
+       },
     ],
     doc => 'Compare the amino acid changes of supplied mutations to COSMIC and OMIM databases.'
 };
@@ -278,8 +283,25 @@ sub execute {
             $histology = $parser[$histology_col];
             $histology_sub_1 = $parser[$histology_sub_1_col];
             $histology_sub_2 = $parser[$histology_sub_2_col];
+            my ($residue1, $res_start, $residue2, $res_stop, $new_residue);
+            if ($amino eq 'E597A') {
+                $amino = 'p.E597A';
+            }
 
-            my ($residue1, $res_start, $residue2, $res_stop, $new_residue) = AA_Check($amino);
+            if ($amino =~ m/^p/) {
+                unless ($amino =~ m/^p\./) {
+                    $amino =~ s/^p/p\./;
+                }
+            }
+
+            if ($amino =~ m/^P\./) {
+                $amino =~ s/^P\./p\./;
+            }
+
+            $amino =~ s/\s+$//;
+            $amino =~ s/^\s+//;
+
+            ($residue1, $res_start, $residue2, $res_stop, $new_residue) = AA_Check($amino);
 
             if (defined $res_start){
                 if ($res_start == $res_stop){
@@ -293,7 +315,7 @@ sub execute {
                 }
             }
             else {
-                if ($amino =~ m/\?/ || $amino =~ m/\>/ || $amino eq 'p.V265' || $amino eq 'p.INS' || $amino eq 'p.DEL' || $amino eq 'p.R2468' || $amino eq 'p.fs' ) {
+                if ($amino =~ m/^p\.\?/ || $amino =~ m/^p\.\>/ || $amino eq 'p.INS' || $amino eq 'p.DEL' || $amino eq 'p.fs*?' || $amino eq 'p.fs') {
                     my $addition = $amino;
                     $addition =~ s/p\.//;
                     $aa_count{$gene}{$addition}++;
@@ -352,7 +374,7 @@ sub execute {
     }
     $fh->close;
 
-    print SUMMARY "Line_Number\t$fileline{'1'}\tCosmic_Results\tOMIM_Results\n";
+    print SUMMARY "$fileline{'1'}\tInput_MAF_Line_Number\tCosmic_Results\tOMIM_Results\n";
     if ($verbose) {print "Starting COSMIC/OMIM to Mutation File Comparisons\n";}
     foreach my $hugo (sort keys %{$mutation}) {
     foreach my $sample (keys %{$mutation->{$hugo}}) {
@@ -408,11 +430,42 @@ sub execute {
         #parse the amino acid string
         my ($residue1, $res_start, $residue2, $res_stop, $new_residue) = AA_Check($aa_change);
         if(!$residue2 || $residue2 eq ' '){
-            if ($verbose) {print "Skipping Silent Mutation";}
-            my $createspreadsheet = "$line_num\t$fileline{$line_num}\tSkipped - Silent Mutation\tSkipped - Silent Mutation";
+            if ($verbose) {print "Skipping Non-coding (Silent) Mutation";}
+            my $find_type = $self->CheckPositionMatch($Start_position, $End_position, $Reference_Allele, $proper_allele, \%cosmic_position_only, \%cosmic_position);
+            my $createspreadsheet;
+            if ($find_type =~ m/no_match/) {
+                $createspreadsheet = "$fileline{$line_num}\t$line_num\tSkipped - Silent Mutation\tSkipped - Silent Mutation";
+                $stats{'COSMIC'}{'silent'}++;
+                $stats{'OMIM'}{'silent'}++;
+            }
+            elsif ($find_type =~ m/position/) {
+                my ($findtype,$cosmic_genes,$chr,$gen_start,$gen_stop) = split(":",$find_type);
+                $results_hash{NT}{POSITION}{COSMIC}{$transcript}=": Nucleotide -> Cosmic Gene(s):$cosmic_genes Position:$chr:$gen_start-$gen_stop";
+                my $matchtype_cosmic;
+                ($cosmic_results{$line_num}, $matchtype_cosmic) = score_results(\%results_hash, "COSMIC");
+                $stats{'COSMIC'}{$matchtype_cosmic}++;
+                $stats{'OMIM'}{'silent'}++;
+                $createspreadsheet = "$fileline{$line_num}\t$line_num\t$cosmic_results{$line_num}\tSkipped - Silent Mutation";
+            }
+            elsif ($find_type =~ m/position_nucleotide/) {
+                my ($findtype,$cosmic_genes,$chr,$gen_start,$gen_stop,$reference,$mutant) = split(":",$find_type);
+                $results_hash{NT}{MATCH}{COSMIC}{$transcript} = ": Nucleotide -> Cosmic Gene(s): $cosmic_genes Position:$chr:$gen_start-$gen_stop,ref:$reference,mut:$mutant";
+                my $matchtype_cosmic;
+                ($cosmic_results{$line_num}, $matchtype_cosmic) = score_results(\%results_hash, "COSMIC");
+                $stats{'COSMIC'}{$matchtype_cosmic}++;
+                $stats{'OMIM'}{'silent'}++;
+                $createspreadsheet = "$fileline{$line_num}\t$line_num\t$cosmic_results{$line_num}\tSkipped - Silent Mutation";
+            }
+            elsif ($find_type =~ m/near_match/) {
+                my ($findtype,$diff_position) = split(":",$find_type);
+                $results_hash{NT}{ALMOST}{COSMIC}{$transcript}=": Nucleotide $diff_position bases away";
+                my $matchtype_cosmic;
+                ($cosmic_results{$line_num}, $matchtype_cosmic) = score_results(\%results_hash, "COSMIC");
+                $stats{'COSMIC'}{$matchtype_cosmic}++;
+                $stats{'OMIM'}{'silent'}++;
+                $createspreadsheet = "$fileline{$line_num}\t$line_num\t$cosmic_results{$line_num}\tSkipped - Silent Mutation";
+            }
             print SUMMARY "$createspreadsheet\n";
-            $stats{'COSMIC'}{'silent'}++;
-            $stats{'OMIM'}{'silent'}++;
             next; #skip silent mutations
         }
 
@@ -450,51 +503,26 @@ sub execute {
         }
 
 	    #Start checks,First check position (then check amino acid)
-        my $find_type;
+
         my $cosmic_find_type;
         my @aa_holder;
+        
         if(defined($Start_position) && defined($End_position) && $Start_position ne ' ' && $End_position ne ' ') {
-            my $genomic_start = $Start_position;
-            my $genomic_stop = $End_position;
-            my $nt1 = $Reference_Allele;
-            my $nt2 = $proper_allele;
-            $find_type = 'no_match';
-            foreach my $chr (sort keys %cosmic_position_only) {
-                # Test that it at least matches position
-                foreach my $gen_start (keys %{$cosmic_position_only{$chr}}) {
-                    my $diff_start = $gen_start - $genomic_start;
-                    if ($gen_start == $genomic_start) {
-                        foreach my $gen_stop (keys %{$cosmic_position_only{$chr}{$gen_start}}) {
-                            my $diff_stop = $gen_stop - $genomic_stop;
-                            if ($gen_stop == $genomic_stop) {
-                                $find_type = 'position';
-                                my $cosmic_genes;
-                                if (keys %{$cosmic_position{$chr}{$gen_start}{$gen_stop}}) {
-                                    my @cosmic_genes = keys %{$cosmic_position{$chr}{$gen_start}{$gen_stop}};
-                                    $cosmic_genes = join(",",@cosmic_genes);
-                                }
-                                $results_hash{NT}{POSITION}{COSMIC}{$transcript}=": Nucleotide -> Cosmic Gene(s):$cosmic_genes Position:$chr:$gen_start-$gen_stop";
-                                # Test that it matches both
-                                foreach my $nucleo (keys %{$cosmic_position_only{$chr}{$gen_start}{$gen_stop}}) {
-                                    my ($start,$stop,$type_length,$type,$reference,$mutant) = parse_nucleotide($nucleo,$verbose);
-                                    if($reference && $mutant && $reference eq $nt1 && $mutant eq $nt2) {
-                                        $find_type = 'position_nucleotide';
-                                        $results_hash{NT}{MATCH}{COSMIC}{$transcript} = ": Nucleotide -> Cosmic Gene(s): $cosmic_genes Position:$chr:$gen_start-$gen_stop,ref:$reference,mut:$mutant";
-                                    }
-                                }
-                            }
-                            elsif ($diff_stop <= $nuc_range && $diff_stop >= -$nuc_range) {
-                                $results_hash{NT}{ALMOST}{COSMIC}{$transcript}=": Nucleotide";
-                            }
-                        }
-                    }
-                    elsif ($diff_start <= $nuc_range && $diff_start >= -$nuc_range) {
-                        $results_hash{NT}{ALMOST}{COSMIC}{$transcript}=": Nucleotide";
-                    }
-                }
-            }
-            if($find_type && $find_type eq 'no_match') {
+            my $find_type = $self->CheckPositionMatch($Start_position, $End_position, $Reference_Allele, $proper_allele, \%cosmic_position_only, \%cosmic_position);
+            if ($find_type =~ m/no_match/) {
                 $results_hash{NT}{NOVEL}{COSMIC}{$transcript}=": Nucleotide";
+            }
+            elsif ($find_type =~ m/position/) {
+                my ($findtype,$cosmic_genes,$chr,$gen_start,$gen_stop) = split(":",$find_type);
+                $results_hash{NT}{POSITION}{COSMIC}{$transcript}=": Nucleotide -> Cosmic Gene(s):$cosmic_genes Position:$chr:$gen_start-$gen_stop";
+            }
+            elsif ($find_type =~ m/position_nucleotide/) {
+                my ($findtype,$cosmic_genes,$chr,$gen_start,$gen_stop,$reference,$mutant) = split(":",$find_type);
+                $results_hash{NT}{MATCH}{COSMIC}{$transcript} = ": Nucleotide -> Cosmic Gene(s): $cosmic_genes Position:$chr:$gen_start-$gen_stop,ref:$reference,mut:$mutant";
+            }
+            elsif ($find_type =~ m/near_match/) {
+                my ($findtype,$diff_position) = split(":",$find_type);
+                $results_hash{NT}{ALMOST}{COSMIC}{$transcript}=": Nucleotide $diff_position bases away";
             }
         }
 
@@ -525,13 +553,23 @@ sub execute {
                 }
             }
             if($cosmic_find_type && $cosmic_find_type eq 'no_match') {
-                $results_hash{AA}{NOVEL}{COSMIC}{$transcript}=": Amino Acid -> Known AA = @aa_holder";
+                if ($self->show_known_hits) {
+                    $results_hash{AA}{NOVEL}{COSMIC}{$transcript}=": Amino Acid -> Known AA = @aa_holder";
+                }
+                else {
+                    $results_hash{AA}{NOVEL}{COSMIC}{$transcript}=": Amino Acid -> Known AA Not Shown";
+                }
                 my $iter_start = $res_start - $aa_range;
                 my $iter_stop = $res_stop + $aa_range;
                 my $iter;
                 for($iter = $iter_start; $iter <= $iter_stop; $iter++) {
                     if ($res_start && $res_stop && exists($residue_match{$cosmic_hugo}) && exists($residue_match{$cosmic_hugo}{$iter})) {
-                        $results_hash{AA}{ALMOST}{COSMIC}{$transcript} = ": Amino Acid -> Known AA for Gene = @aa_holder";
+                        if ($self->show_known_hits) {
+                            $results_hash{AA}{ALMOST}{COSMIC}{$transcript} = ": Amino Acid -> Known AA for Gene = @aa_holder";
+                        }
+                        else {
+                            $results_hash{AA}{ALMOST}{COSMIC}{$transcript} = ": Amino Acid -> Known AA Not Shown";
+                        }
                     }
                 }
             }
@@ -571,7 +609,7 @@ sub execute {
         ($omim_results{$line_num}, $matchtype_omim) = score_results(\%results_hash, "OMIM");
         $stats{'OMIM'}{$matchtype_omim}++;
 
-        my $createspreadsheet = "$line_num\t$fileline{$line_num}\t$cosmic_results{$line_num}\t$omim_results{$line_num}";
+        my $createspreadsheet = "$fileline{$line_num}\t$line_num\t$cosmic_results{$line_num}\t$omim_results{$line_num}";
         print SUMMARY "$createspreadsheet\n";
 #        }
     }
@@ -626,7 +664,61 @@ sub execute {
 ################################################################################
 
 
+sub CheckPositionMatch {
+	my $self = shift;
+    my $genomic_start = shift;
+    my $genomic_stop = shift;
+    my $nt1 = shift;
+    my $nt2 = shift;
+    my $cp_only = shift;
+    my %cosmic_position_only = %{$cp_only};
+    my $cp_all = shift;
+    my %cosmic_position = %{$cp_all};
+    my $verbose = $self->verbose;
+    my $nuc_range = $self->nuc_range;
 
+    my $find_type = 'no_match';
+    foreach my $chr (sort keys %cosmic_position_only) {
+        # Test that it at least matches position
+        foreach my $gen_start (keys %{$cosmic_position_only{$chr}}) {
+            my $diff_start = $gen_start - $genomic_start;
+            if ($gen_start == $genomic_start) {
+                foreach my $gen_stop (keys %{$cosmic_position_only{$chr}{$gen_start}}) {
+                    my $diff_stop = $gen_stop - $genomic_stop;
+                    if ($gen_stop == $genomic_stop) {
+                        my $cosmic_genes;
+                        if (keys %{$cosmic_position{$chr}{$gen_start}{$gen_stop}}) {
+                            my @cosmic_genes = keys %{$cosmic_position{$chr}{$gen_start}{$gen_stop}};
+                            $cosmic_genes = join(",",@cosmic_genes);
+                        }
+                        if ($find_type eq 'no_match' || $find_type eq 'near_match') {
+                            $find_type = "position:$cosmic_genes:$chr:$gen_start:$gen_stop";
+                        }
+                        # Test that it matches both
+                        foreach my $nucleo (keys %{$cosmic_position_only{$chr}{$gen_start}{$gen_stop}}) {
+                            my ($start,$stop,$type_length,$type,$reference,$mutant) = parse_nucleotide($nucleo,$verbose);
+                            if($reference && $mutant && $reference eq $nt1 && $mutant eq $nt2) {
+                                $find_type = "position_nucleotide:$cosmic_genes:$chr:$gen_start:$gen_stop:$reference:$mutant";
+                                return $find_type;
+                            }
+                        }
+                    }
+                    elsif ($diff_stop <= $nuc_range && $diff_stop >= -$nuc_range) {
+                        if ($find_type eq 'no_match') {
+                            $find_type = "near_match:$diff_stop";
+                        }
+                    }
+                }
+            }
+            elsif ($diff_start <= $nuc_range && $diff_start >= -$nuc_range) {
+                if ($find_type eq 'no_match') {
+                    $find_type = "near_match:$diff_start";
+                }
+            }
+        }
+    }
+    return $find_type;
+}
 
 sub FindOMIM {
 	my ($omim, $hugo,$res_start, $res_stop, $residue1, $residue2, $aa_range) = @_;
@@ -893,6 +985,9 @@ sub ParseMutationFile {
 	while ($header =~ /^#/) {
 	    $header = <$fh>;
 	}
+    unless ($header =~ m/Hugo_Symbol/) {
+        die "Header field \"Hugo_Symbol\" not found. Therefore, your file is assumed to not have a header. If this is in error, please contact the authors to fix this line in the code. Otherwise, please include a header in your input file. Thank you.\n";
+    }
 	$line_num++;
 	$csv->parse($header);
 	my @header_fields = $csv->fields();
@@ -1012,6 +1107,9 @@ sub AA_Check {
 	 unless (defined($AminoAcidChange_string)) {
 		 return ($residue1, $res_start, $residue2, $res_stop, $new_residue);
 	 }
+	 unless ($AminoAcidChange_string =~ m/^p\./) {
+		 return ($residue1, $res_start, $residue2, $res_stop, $new_residue);
+	 }
    #__FORMULATE ERROR STRING JUST IN CASE
    my $string = "'$AminoAcidChange_string' is not a valid AminoAcidChange";
    $string .= " on line $line_num" if defined $line_num;
@@ -1031,7 +1129,14 @@ sub AA_Check {
 		 $residue1 = '*';
 		 $res_stop = $res_start;
 		 $new_residue = $residue2;
+	 } elsif ($AminoAcidChange_string =~ /^ (\D+) (\d+) $/x ) {
+		 ($residue1, $res_start) =
+			 ($1, $2);
+         $new_residue = ' ';
+         $residue2 = ' ';
+		 $res_stop = $res_start;
 	 }
+
 	 if (defined($new_residue)) {
 		 $new_residue =~ s/^ > //x;
 	 }
