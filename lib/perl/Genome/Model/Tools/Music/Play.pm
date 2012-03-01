@@ -182,7 +182,12 @@ class Genome::Model::Tools::Music::Play {
             doc => 'Put either "Build36" or "Build37"',
             is_output => 1,
             default => 'Build36',
-        }
+        },
+        show_known_hits => {
+            is => 'Boolean',
+            doc => "When a finding is novel, show known AA in that gene",
+            default => '1',
+        },
         ],
         has_calculated_optional => [
         gene_covg_dir => {
