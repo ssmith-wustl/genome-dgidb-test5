@@ -477,12 +477,10 @@ sub execute {                               # replace with real execution logic.
         }
 
         my $R_command = <<"_END_OF_R_";
-library(plotrix);
 library(directlabels);
 library(lattice);
-pdf(file=\"$output_pdf_image_file\",width=10,height=7.5);
 mutation_table <- read.table(\"$input_file\", row.names = NULL, header = TRUE, sep = \"\\t\");
-par(mfrow=c(2,2));
+#par(mfrow=c(2,2));
 case <- mutation_table\$rare_del_samples_case;
 control <- mutation_table\$rare_del_samples_control;
 sample_case_proportion <- mutation_table\$rare_del_sample_proportion_case;
@@ -498,7 +496,13 @@ dist_cutoff <- sort(dist_vector, decreasing = TRUE)[$number_of_highlighted_names
 variants_control_proportion_subset_2 <- subset(variants_control_proportion_subset,dist_vector >= dist_cutoff);
 variants_case_proportion_subset_2 <- subset(variants_case_proportion_subset,dist_vector >= dist_cutoff);
 gene_names_subset <- subset(gene_names,dist_vector >= dist_cutoff);
-direct.label(xyplot(variants_case_proportion_subset_2~variants_control_proportion_subset_2,panel = function(...) {panel.points(variants_control_proportion_subset,variants_case_proportion_subset);panel.abline(a=0,b=1);panel.xyplot(...);},,groups=gene_names_subset,xlim=c(0,.20),ylim=c(0,.20), xlab = "Rare Deleterious Alleles per Control Sample",ylab = "Rare Deleterious Alleles per Case Sample"))
+p1 <- direct.label(xyplot(variants_case_proportion_subset_2~variants_control_proportion_subset_2,
+    panel = function(x,y,...) {
+        panel.points(variants_control_proportion_subset,variants_case_proportion_subset,col='black');
+        panel.abline(a=0,b=1);
+        panel.xyplot(x,y,labels.cex=0.5,...);
+    },
+    groups=gene_names_subset,xlim=c(0,.20),ylim=c(0,.20), xlab = "Rare Deleterious Alleles per Control Sample",ylab = "Rare Deleterious Alleles per Case Sample"),list(cex=0.3,smart.grid));
 
 variants_control_proportion_subset <- subset(variants_control_proportion,variants_control_proportion <= 0.05 & variants_case_proportion <= 0.05);
 variants_case_proportion_subset <- subset(variants_case_proportion,variants_control_proportion <= 0.05 & variants_case_proportion <= 0.05);
@@ -507,7 +511,13 @@ dist_cutoff <- sort(dist_vector, decreasing = TRUE)[$number_of_highlighted_names
 variants_control_proportion_subset_2 <- subset(variants_control_proportion_subset,dist_vector >= dist_cutoff);
 variants_case_proportion_subset_2 <- subset(variants_case_proportion_subset,dist_vector >= dist_cutoff);
 gene_names_subset <- subset(gene_names,dist_vector >= dist_cutoff);
-direct.label(xyplot(variants_case_proportion_subset_2~variants_control_proportion_subset_2,panel = function(...) {panel.points(variants_control_proportion_subset,variants_case_proportion_subset);panel.abline(a=0,b=1);panel.xyplot(...);},,groups=gene_names_subset,xlim=c(0,.05),ylim=c(0,.05), xlab = "Rare Deleterious Alleles per Control Sample",ylab = "Rare Deleterious Alleles per Case Sample"))
+p2 <- direct.label(xyplot(variants_case_proportion_subset_2~variants_control_proportion_subset_2,
+    panel = function(x,y,...) {
+        panel.points(variants_control_proportion_subset,variants_case_proportion_subset,col='black');
+        panel.abline(a=0,b=1);
+        panel.xyplot(x,y,...);
+    },
+    groups=gene_names_subset,xlim=c(0,.05),ylim=c(0,.05), xlab = "Rare Deleterious Alleles per Control Sample",ylab = "Rare Deleterious Alleles per Case Sample"),list(cex=0.3,smart.grid));
 
 sample_control_proportion_subset <- subset(sample_control_proportion,sample_control_proportion <= 0.20 & sample_case_proportion <= 0.20);
 sample_case_proportion_subset <- subset(sample_case_proportion,sample_control_proportion <= 0.20 & sample_case_proportion <= 0.20);
@@ -516,7 +526,13 @@ dist_cutoff <- sort(dist_vector, decreasing = TRUE)[$number_of_highlighted_names
 sample_control_proportion_subset_2 <- subset(sample_control_proportion_subset,dist_vector >= dist_cutoff);
 sample_case_proportion_subset_2 <- subset(sample_case_proportion_subset,dist_vector >= dist_cutoff);
 gene_names_subset <- subset(gene_names,dist_vector >= dist_cutoff);
-direct.label(xyplot(sample_case_proportion_subset_2~sample_control_proportion_subset_2,panel = function(...) {panel.points(sample_control_proportion_subset,sample_case_proportion_subset);panel.abline(a=0,b=1);panel.xyplot(...);},,groups=gene_names_subset,xlim=c(0,.20),ylim=c(0,.20), xlab = "Rare Deleterious Alleles per Control Sample",ylab = "Rare Deleterious Alleles per Case Sample"))
+p3 <- direct.label(xyplot(sample_case_proportion_subset_2~sample_control_proportion_subset_2,
+    panel = function(x,y,...) {
+        panel.points(sample_control_proportion_subset,sample_case_proportion_subset,col='black');
+        panel.abline(a=0,b=1);
+        panel.xyplot(x,y,...);
+    },
+    groups=gene_names_subset,xlim=c(0,.20),ylim=c(0,.20), xlab = "Proportion of Controls with Rare Deleterious Variant",ylab = "Proportion of Cases with Rare Deleterious Variant"),list(cex=0.3,smart.grid));
 
 sample_control_proportion_subset <- subset(sample_control_proportion,sample_control_proportion <= 0.05 & sample_case_proportion <= 0.05);
 sample_case_proportion_subset <- subset(sample_case_proportion,sample_control_proportion <= 0.05 & sample_case_proportion <= 0.05);
@@ -525,13 +541,34 @@ dist_cutoff <- sort(dist_vector, decreasing = TRUE)[$number_of_highlighted_names
 sample_control_proportion_subset_2 <- subset(sample_control_proportion_subset,dist_vector >= dist_cutoff);
 sample_case_proportion_subset_2 <- subset(sample_case_proportion_subset,dist_vector >= dist_cutoff);
 gene_names_subset <- subset(gene_names,dist_vector >= dist_cutoff);
-direct.label(xyplot(sample_case_proportion_subset_2~sample_control_proportion_subset_2,panel = function(...) {panel.points(sample_control_proportion_subset,sample_case_proportion_subset);panel.abline(a=0,b=1);panel.xyplot(...);},,groups=gene_names_subset,xlim=c(0,.05),ylim=c(0,.05), xlab = "Rare Deleterious Alleles per Control Sample",ylab = "Rare Deleterious Alleles per Case Sample"))
+p4 <- direct.label(xyplot(sample_case_proportion_subset_2~sample_control_proportion_subset_2,
+    panel = function(x,y,...) {
+        panel.points(sample_control_proportion_subset,sample_case_proportion_subset,col='black');
+        panel.abline(a=0,b=1);
+        panel.xyplot(x,y,...);
+    },
+    groups=gene_names_subset,xlim=c(0,.05),ylim=c(0,.05), xlab = "Proportion of Controls with Rare Deleterious Variant",ylab = "Proportion of Cases with Rare Deleterious Variant"),list(cex=0.3,smart.grid));
 
+pdf(file=\"$output_pdf_image_file\",width=10,height=7.5);
+    grid.newpage()
+    pushViewport(viewport(layout=grid.layout(nrow = 2, ncol = 2)));
+    pushViewport(viewport(layout.pos.col=1,layout.pos.row=1,clip=FALSE));
+    print(p1,newpage=FALSE);
+    popViewport();
+    pushViewport(viewport(layout.pos.col=2,layout.pos.row=1,clip=FALSE));
+    print(p2,newpage=FALSE);
+    popViewport();
+    pushViewport(viewport(layout.pos.col=1,layout.pos.row=2,clip=FALSE));
+    print(p3,newpage=FALSE);
+    popViewport();
+    pushViewport(viewport(layout.pos.col=2,layout.pos.row=2,clip=FALSE));
+    print(p4,newpage=FALSE);
+    popViewport();
 devoff <- dev.off();
+
 _END_OF_R_
 #-------------------------------------------------
         print $tfh_R "$R_command\n";
-        print "$R_command\n";
 
 	    my $cmd = "R --vanilla --slave \< $temp_path_R";
 	    my $return = Genome::Sys->shellcmd(
