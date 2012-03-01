@@ -19,6 +19,7 @@ class Genome::Model::Tools::Music::ClinicalCorrelation {
     maf_file => {
         is => 'Text',
         doc => "List of mutations in MAF format",
+        is_optional => 1,
     },
     output_file => {
         is => 'Text',
@@ -56,7 +57,7 @@ class Genome::Model::Tools::Music::ClinicalCorrelation {
         doc => 'File outlining the type of model, response variable, covariants, etc. for the GLM analysis. (See DESCRIPTION).',
         is_optional => 1,
     },
-    glm_clinical_data => {
+    glm_clinical_data_file => {
         is => 'Text',
         doc => 'Clinical traits, mutational profiles, other mixed clinical data (See DESCRIPTION).',
         is_optional => 1,
@@ -93,7 +94,7 @@ sub help_synopsis {
         --bam-list /path/myBamList.tsv \\
         --output-file /path/output_file \\
         --glm-model-file /path/model.tsv \\
-        --glm-clinical-data /path/glm_clinical_data.tsv \\
+        --glm-clinical-data-file /path/glm_clinical_data.tsv \\
         --use-maf-in-glm
 
 HELP
@@ -128,7 +129,7 @@ The results are saved to the output filename given with a suffix appended; ".num
 appended for results derived from numeric clinical data, and ".categ" will be appended for results
 derived from categorical clinical data.
 
-The GLM analysis accepts a mixed numeric and categoric clinical data file, input using the parameter --glm-clinical-data. GLM clinical data must adhere to the formats described above for the correlation clinical data files. GLM also requires the user to input a --glm-model-file. This file requires specific headers and defines the analysis to be performed rather exactly. Here are the conventions required for this file:
+The GLM analysis accepts a mixed numeric and categoric clinical data file, input using the parameter --glm-clinical-data-file. GLM clinical data must adhere to the formats described above for the correlation clinical data files. GLM also requires the user to input a --glm-model-file. This file requires specific headers and defines the analysis to be performed rather exactly. Here are the conventions required for this file:
 
 =over 4
 
@@ -138,17 +139,17 @@ The GLM analysis accepts a mixed numeric and categoric clinical data file, input
 
 =item * The 'analysis_type' column must contain either "Q", indicating a quantative trait, or "B", indicating a binary trait will be examined.
 
-=item * The 'clinical_data_trait_name' is the name of a clinical data trait defined by being a header in the --glm-clinical-data file.
+=item * The 'clinical_data_trait_name' is the name of a clinical data trait defined by being a header in the --glm-clinical-data-file.
 
-=item * The 'variant/gene_name' can either be the name of one or more columns from the --glm-clinical-data file, or the name of one or more mutated gene names from the MAF, separated by "|". If this column is left blank, or instead contains "NA", then each column from either the variant mutation matrix (--use-maf-in-glm) or alternatively the --glm-clinical-data file is used consecutively as the variant column in independent analyses. 
+=item * The 'variant/gene_name' can either be the name of one or more columns from the --glm-clinical-data-file, or the name of one or more mutated gene names from the MAF, separated by "|". If this column is left blank, or instead contains "NA", then each column from either the variant mutation matrix (--use-maf-in-glm) or alternatively the --glm-clinical-data-file is used consecutively as the variant column in independent analyses. 
 
-=item * 'covariates' are the names of one or more columns from the --glm-clinical-data file, separated by "+".
+=item * 'covariates' are the names of one or more columns from the --glm-clinical-data-file, separated by "+".
 
 =item * 'memo' is any note deemed useful to the user. It will be printed in the output data file for reference.
 
 =back
 
-GLM analysis may be performed using solely the data input into --glm-clinical-data, as described above, or alternatively, mutational data from the MAF may be included as variants in the GLM analysis, as also described above. Use the --use-maf-in-glm flag to include the mutation matrix derived from the maf as variant data.
+GLM analysis may be performed using solely the data input into --glm-clinical-data-file, as described above, or alternatively, mutational data from the MAF may be included as variants in the GLM analysis, as also described above. Use the --use-maf-in-glm flag to include the mutation matrix derived from the maf as variant data.
 
 Note that all input files for both correlation and GLM analysis must be tab-separated.
 
@@ -204,6 +205,10 @@ sub execute {
     if ($self->categorical_clinical_data_file) {
         $clinical_data{'categ'} = $self->categorical_clinical_data_file;
     }
+    if ($self->glm_clinical_data_file) {
+        $clinical_data{'glm'} = $self->glm_clinical_data_file;
+    }
+    my $glm_model = $self->glm_model_file;
 
     # Parse out the names of the samples which should match the names in the MAF file
     my $sampleFh = IO::File->new( $bam_list ) or die "Couldn't open $bam_list. $!\n";
@@ -225,8 +230,7 @@ sub execute {
         if ($datatype =~ /numeric/i) {
             $full_output_filename = $output_file . ".numeric";
             if ($genetic_data_type =~ /^gene|variant$/i) {
-                $test_method = "cor"; # cor instead of anova because we're assuming additive effect
-                #$test_method = "wilcox"; # wilcoxon rank-sum is a better option here (for MuSiC v2)
+                $test_method = $self->numerical_data_test_method;
             }
             else {
                 $self->error_message("Please enter either \"gene\" or \"variant\" for the --genetic-data-type parameter.");
@@ -235,9 +239,13 @@ sub execute {
         }
 
         if ($datatype =~ /categ/i) {
-            #$test_method = "chisq";
             $full_output_filename = $output_file . ".categorical";
             $test_method = "fisher";
+        }
+
+        if ($datatype =~ /glm/i) {
+            $full_output_filename = $output_file . ".glm";
+            $test_method = "glm";
         }
 
         #read through clinical data file to see which samples are represented and create input matrix for R
@@ -254,18 +262,31 @@ sub execute {
             $samples{$sample}++;
         }
         #create correlation matrix
-        if ($genetic_data_type =~ /^gene$/i) {
-            $matrix_file = create_sample_gene_matrix_gene($samples,$clinical_data{$datatype},$maf_file,@all_sample_names);
+        if ( ($datatype =~ /glm/i && $self->use_maf_in_glm) || $datatype =~ /numeric|categ/i ) {
+            if ($genetic_data_type =~ /^gene$/i) {
+                $matrix_file = create_sample_gene_matrix_gene($samples,$clinical_data{$datatype},$maf_file,$output_matrix,@all_sample_names);
+            }
+            elsif ($genetic_data_type =~ /^variant$/i) {
+                $matrix_file = create_sample_gene_matrix_variant($samples,$clinical_data{$datatype},$maf_file,$output_matrix,@all_sample_names);
+            }
+            else {
+                $self->error_message("Please enter either \"gene\" or \"variant\" for the --genetic-data-type parameter.");
+                return;
+            }
         }
-        elsif ($genetic_data_type =~ /^variant$/i) {
-            $matrix_file = create_sample_gene_matrix_variant($samples,$clinical_data{$datatype},$maf_file,@all_sample_names);
+        unless (defined $matrix_file) { $matrix_file = "'*'"; }
+
+        #set up R command
+        my $R_cmd = "R --slave --args < ";
+
+        if ($datatype =~ /glm/i) {
+            $R_cmd .= "/gscmnt/gc6111/info/medseq/music_revision/glm/ndees.gml.R $glm_model $clinical_data{$datatype} $matrix_file $full_output_filename";
         }
         else {
-            $self->error_message("Please enter either \"gene\" or \"variant\" for the --genetic-data-type parameter.");
-            return;
+            $R_cmd .= __FILE__ . ".R " . $clinical_data{$datatype} . " $matrix_file $full_output_filename $test_method";
         }
 
-        my $R_cmd = "R --slave --args < " . __FILE__ . ".R " . $clinical_data{$datatype} . " $matrix_file $full_output_filename $test_method";
+        #run R command
         print "R_cmd:\n$R_cmd\n";
         WIFEXITED(system $R_cmd) or croak "Couldn't run: $R_cmd ($?)";
     }
@@ -275,7 +296,7 @@ sub execute {
 
 sub create_sample_gene_matrix_gene {
 
-    my ($samples,$clinical_data_file,$maf_file,@all_sample_names) = @_;
+    my ($samples,$clinical_data_file,$maf_file,$output_matrix,@all_sample_names) = @_;
 
     #create hash of mutations from the MAF file
     my %mutations;
@@ -339,12 +360,14 @@ sub create_sample_gene_matrix_gene {
     #sort @all_genes for consistency
     @all_genes = sort keys %all_genes;
 
-    #write the input matrix for R code to a file #FIXME HARD CODE FILE NAME, OR INPUT OPTION
-    my $matrix_file = $clinical_data_file . ".correlation_matrix";
-    #my $matrix_file = Genome::Sys->create_temp_file_path();
-    my $matrix_fh = new IO::File $matrix_file,"w";
+    #write the input matrix for R code to a file
+    my $matrix_fh;
+    unless (defined $output_matrix) { 
+        $output_matrix = Genome::Sys->create_temp_file_path();
+    }
+    $matrix_fh = new IO::File $output_matrix,"w";
     unless ($matrix_fh) {
-        die "Failed to create matrix file $matrix_file!: $!";
+        die "Failed to create matrix file $output_matrix!: $!";
     }
     #print input matrix file header
     my $header = join("\t","Sample",@all_genes);
@@ -364,12 +387,12 @@ sub create_sample_gene_matrix_gene {
         $matrix_fh->print("\n");
     }
 
-    return $matrix_file;
+    return $output_matrix;
 }
 
 sub create_sample_gene_matrix_variant {
 
-    my ($samples,$clinical_data_file,$maf_file,@all_sample_names) = @_;
+    my ($samples,$clinical_data_file,$maf_file,$output_matrix,@all_sample_names) = @_;
 
     #create hash of mutations from the MAF file
     my %variants_hash;
@@ -453,10 +476,13 @@ sub create_sample_gene_matrix_variant {
     my @variant_names = sort keys %all_variants;
 
     #write the input matrix for R code to a file #FIXME HARD CODE FILE NAME, OR INPUT OPTION
-    my $matrix_file = Genome::Sys->create_temp_file_path();
-    my $matrix_fh = new IO::File $matrix_file,"w";
+    my $matrix_fh;
+    unless (defined $output_matrix) { 
+        $output_matrix = Genome::Sys->create_temp_file_path();
+    }
+    $matrix_fh = new IO::File $output_matrix,"w";
     unless ($matrix_fh) {
-        die "Failed to create matrix file $matrix_file!: $!";
+        die "Failed to create matrix file $output_matrix!: $!";
     }
 
     #print input matrix file header
@@ -477,7 +503,7 @@ sub create_sample_gene_matrix_variant {
         $matrix_fh->print("\n");
     }
 
-    return $matrix_file;
+    return $output_matrix;
 }
 
 1;
