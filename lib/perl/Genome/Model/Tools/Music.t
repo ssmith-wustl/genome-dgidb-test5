@@ -61,15 +61,15 @@ my @cases = (
             'categ_clin/tcga.categ.clin.data.correlation.categorical'
         ],
     },
-    {
-        run => "music cosmic-omim \n"
-            . " --maf-file $input_dir/maf/short.maf\n"
-            . " --output-file $actual_output_dir/short_maf.cosmic_omim \n"
-            . " --no-verbose",
-        expect => [
-            'short_maf.cosmic_omim'
-        ],
-    },
+#    {
+#        run => "music cosmic-omim \n"
+#            . " --maf-file $input_dir/maf/short.maf\n"
+#            . " --output-file $actual_output_dir/short_maf.cosmic_omim \n"
+#            . " --no-verbose",
+#        expect => [
+#            'short_maf.cosmic_omim'
+#        ],
+#    },
 );
 
 # pre-determine how many tests will run so the test harness knows if we exit early
