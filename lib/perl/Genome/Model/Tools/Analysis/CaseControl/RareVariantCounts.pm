@@ -367,8 +367,7 @@ sub execute {                               # replace with real execution logic.
 		$stats{'samples_vcf'}++;
 		if(!$sample_phenotypes{$sample})
 		{
-####################################################################################################PUT THIS BACK IN
-#			warn "Sample $sample is in VCF but has no phenotype\n";
+			warn "Sample $sample is in VCF but has no phenotype\n";
 			$stats{'samples_vcf_without_phenotype'}++;
 		}
 	}
