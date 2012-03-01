@@ -104,7 +104,8 @@ if (method == "glm") {
         }
     }
     #"yi","ytype","xi","Df","Deviance","Resid. Df","Resid. Dev","F","Pr(>F)","covi","memo"
-    colnames(tt) = c("y","y_type","x","degrees_freedom","deviance","residual_degrees_freedom","residual_deviance","F_statistic","p-value","covariants","memo");
+    if (ytype=="Q") colnames(tt) = c("y","y_type","x","degrees_freedom","deviance","residual_degrees_freedom","residual_deviance","F_statistic","p-value","covariants","memo");
+    if (ytype=="B") colnames(tt) = c("y","y_type","x","degrees_freedom","deviance","residual_degrees_freedom","residual_deviance","p-value","covariants","memo");
     write.table(tt,file=out.file,quote=F,sep="\t",row.names=F);
 
 } else {

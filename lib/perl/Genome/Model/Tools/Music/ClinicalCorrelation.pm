@@ -262,6 +262,7 @@ sub execute {
         }
         my $header = $clin_fh->getline;
         while (my $line = $clin_fh->getline) {
+            chomp $line;
             my ($sample) = split /\t/,$line;
             $samples{$sample}++;
         }
@@ -427,8 +428,8 @@ sub create_sample_gene_matrix_variant {
 
     #load mutations hash by parsing MAF
     while (my $line = $maf_fh->getline) {
-        chomp $line;
         my @fields = split /\t/,$line;
+        chomp @fields;
         my $sample = $fields[$maf_columns{'Tumor_Sample_Barcode'}];
         unless (exists $samples->{$sample}) {
             warn "Sample Name: $sample from MAF file does not exist in Clinical Data File";
