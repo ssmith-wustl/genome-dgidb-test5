@@ -41,13 +41,14 @@ sub execute {
     my $self = shift;
     print "Gathering data\n" if $self->debug;
     my @instrument_data = map{$_->instrument_data}$self->models;
-    my @qc_models = Genome::Model::ReferenceAlignment->default_lane_qc_model_for_instrument_data(@instrument_data);
-    my $missing_qc_models = (@instrument_data - @qc_models);
-    if ($missing_qc_models) {
-        warn "Missing $missing_qc_models lane qc model(s).\n";
-    }
     my (%build_to_metrics, %index_to_builds, %pool_to_builds);
-    for my $model ($qc_models) {
+#    my @qc_models = Genome::Model::ReferenceAlignment->default_lane_qc_model_for_instrument_data(@instrument_data);
+#    my $missing_qc_models = (@instrument_data - @qc_models);
+#    if ($missing_qc_models) {
+#        warn "Missing $missing_qc_models lane qc model(s).\n";
+#    }
+#    for my $model ($qc_models) {
+    for my $model ($self->models) {
         my $build = $model->last_succeeded_build || next;
         print 'Gathering data for build: ' . $build->id . "\n" if $self->debug;
 
