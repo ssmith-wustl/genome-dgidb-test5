@@ -86,29 +86,6 @@ sub _generate_vcf {
     return 1;
 }
 
-sub get_vcf_source {
-    my $self = shift;
-    my $vcf = shift;
-
-    unless(-s $vcf){
-        die $self->error_message("Cannot determine the source of a file that doesn't exist...");
-    }
-
-    my $fh = Genome::Sys->open_gzip_file_for_reading($vcf);
-    my $source;
-    while(my $line = $fh->getline){
-        chomp $line;
-        if( ($line =~ m/\#\#/) && ($line =~ m/source/)) {
-            (undef,$source) = split /\=/, $line;
-            last;
-        }
-        unless( ($line =~ m/\#\#/) ){
-            die $self->error_message("Could not find source tag in the header.");
-        }
-    }
-    return $source;
-}
-
 sub _validate_output {
     my $self = shift;
     my $variant_type = $self->_variant_type;
