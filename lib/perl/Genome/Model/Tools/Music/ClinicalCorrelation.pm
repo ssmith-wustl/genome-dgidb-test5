@@ -320,6 +320,7 @@ sub create_sample_gene_matrix_gene {
     if ($maf_header =~ /Chromosome/) {
         #header exists. determine columns containing gene name and sample name.
         my @header_fields = split /\t/,$maf_header;
+        chomp @header_fields;
         for (my $col_counter = 0; $col_counter <= $#header_fields; $col_counter++) {
             $maf_columns{$header_fields[$col_counter]} = $col_counter;
         }
@@ -415,6 +416,7 @@ sub create_sample_gene_matrix_variant {
     if ($maf_header =~ /Chromosome/) {
         #header exists. determine columns containing gene name and sample name.
         my @header_fields = split /\t/,$maf_header;
+        chomp @header_fields;
         for (my $col_counter = 0; $col_counter <= $#header_fields; $col_counter++) {
             $maf_columns{$header_fields[$col_counter]} = $col_counter;
         }
