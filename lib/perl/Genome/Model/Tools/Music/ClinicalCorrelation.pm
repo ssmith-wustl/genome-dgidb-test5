@@ -127,7 +127,7 @@ phenotype trait are random. Lower P-values indicate lower randomness, or likely 
 
 The results are saved to the output filename given with a suffix appended; ".numeric" will be
 appended for results derived from numeric clinical data, and ".categ" will be appended for results
-derived from categorical clinical data.
+derived from categorical clinical data. Also, ".glm" will be appended to the output filename for GLM results.
 
 The GLM analysis accepts a mixed numeric and categoric clinical data file, input using the parameter --glm-clinical-data-file. GLM clinical data must adhere to the formats described above for the correlation clinical data files. GLM also requires the user to input a --glm-model-file. This file requires specific headers and defines the analysis to be performed rather exactly. Here are the conventions required for this file:
 
