@@ -10,10 +10,10 @@ my %already_reviewed = ();
 my %wildtype_sites = my %germline_sites = ();
 
 class Genome::Model::Tools::Capture::GermlineModelGroupQc {
-    is => 'Command',
+    is => 'Genome::Command::Base',
 
-    has => [
-        group_id               => { is => 'Text', shell_args_position => 1, doc => "ID of model group" },
+    has_many => [
+        models => { is => 'Genome::Model', shell_args_position => 1 },
     ],
     has_optional => [
         use_external           => { is => 'Boolean', doc => 'Use external data source rather than internal/iscan', default_value => 0 },
@@ -41,7 +41,7 @@ sub help_detail {
 sub execute {
     my $self = shift;
 
-    my @models = Genome::ModelGroup->get($self->group_id)->models;
+    my @models = $self->models;
     my $skip_if_output_present = $self->skip_if_output_present;
     my $summary_file = $self->summary_file;
     if ($self->summary_file) {
