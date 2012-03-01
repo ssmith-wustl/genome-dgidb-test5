@@ -74,7 +74,6 @@ sub get_source {
 
 sub get_source_with_class {
     my ($self, $class) = @_;
-    $DB::single = 1;
     my $source = $self;
     while ($source) {
         $source = $source->get_source;
