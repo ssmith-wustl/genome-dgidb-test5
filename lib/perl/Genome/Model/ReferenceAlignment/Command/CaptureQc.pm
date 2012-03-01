@@ -319,10 +319,10 @@ sub get_metrics_for_qc_data {
     if($compare_snp_result){
         $qc_file = $compare_snp_result->output_file;
     } else {
-        my $qc_dir = $self->qc_directory or return;
+        my $qc_dir = $self->qc_directory or return _empty_qc_data();
         my $dir_name = $build->subject_name;
         ($qc_file) = `ls $qc_dir/$dir_name/*.qc 2>/dev/null`;
-        return unless $qc_file;
+        return _empty_qc_data() unless $qc_file;
         chomp $qc_file;
     }
 
@@ -364,4 +364,24 @@ sub get_metrics_for_qc_data {
     }
 
     return \%metric_to_value;
+}
+
+sub _empty_qc_data {
+    return {
+        snps_called => 0,
+        with_genotype => 0,
+        met_min_depth => 0,
+        reference => 0,
+        ref_match => 0,
+        ref_was_het => 0,
+        ref_was_hom => 0,
+        variant => 0,
+        var_match => 0,
+        hom_was_het => 0,
+        het_was_hom => 0,
+        var_mismatch => 0,
+        var_concordance => 0,
+        rare_hom_concordance => 0,
+        overall_concordance => 0,
+    };
 }
