@@ -20,6 +20,10 @@ class Genome::Model::Tools::Annotate::PrioritizedTranscripts {
             is => 'Path',
             doc => 'File to write output to',
         },
+        reference_build => {
+            is => 'Genome::Model::Build::ReferenceSequence',
+            doc => 'Reference sequence build with the coordinates used in regions file',
+        }
     ],
     has_optional => [
         reference_transcripts => {
@@ -55,6 +59,7 @@ sub help_synopsis {
 
 sub execute {
     my $self = shift;
+    my $reference_build_id = $self->reference_build->id;
 
     unless (-e $self->regions_file) {
         confess "No file found at " . $self->regions_file;
@@ -98,6 +103,7 @@ sub execute {
             chrom_name => $line->{chrom_name},
             transcript_start => {operator => '<=', value => $line->{stop}},
             transcript_stop => {operator => '>=', value => $line->{start}},
+            reference_build_id => $reference_build_id,
             data_directory => \@data_dirs,
         );
         next unless @transcripts;

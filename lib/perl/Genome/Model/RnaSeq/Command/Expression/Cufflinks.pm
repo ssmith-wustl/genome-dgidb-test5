@@ -62,26 +62,8 @@ sub execute {
         } else {
             $params .= ' -b '. $reference_path;
         }
-        my $annotation_reference_transcripts = $self->model->annotation_reference_transcripts;
-        if ($annotation_reference_transcripts) {
-            my ($annotation_name,$annotation_version) = split(/\//, $annotation_reference_transcripts);
-            my $annotation_model = Genome::Model->get(name => $annotation_name);
-            unless ($annotation_model){
-                $self->error_message('Failed to get annotation model for annotation_reference_transcripts: ' . $annotation_reference_transcripts);
-                return;
-            }
-
-            unless (defined $annotation_version) {
-                $self->error_message('Failed to get annotation version from annotation_reference_transcripts: '. $annotation_reference_transcripts);
-                return;
-            }
-
-            my $annotation_build = $annotation_model->build_by_version($annotation_version);
-            unless ($annotation_build){
-                $self->error_message('Failed to get annotation build from annotation_reference_transcripts: '. $annotation_reference_transcripts);
-                return;
-            }
-
+        my $annotation_build = $self->model->annotation_build;
+        if ($annotation_build) {
             # Determine the type of masking to use with Cufflinks
             my $mask_transcripts = $self->model->mask_reference_transcripts;
             if ($mask_transcripts) {
@@ -92,7 +74,7 @@ sub execute {
                 }
                 $params .= ' -M '. $mask_gtf_path;
             }
-
+            
             # Determine both the annotation file and mode to use it with Currlinks
             my $gtf_path = $annotation_build->annotation_file('gtf',$reference_build->id);
             my $mode = $self->model->annotation_reference_transcripts_mode;
@@ -101,7 +83,7 @@ sub execute {
             }
             if ($mode eq 'reference only') {
                 unless (defined($gtf_path)) {
-                    die('There is no annotation GTF file defined for annotation_reference_transcripts build: '. $annotation_reference_transcripts);
+                    die('There is no annotation GTF file for annotation build: '. $annotation_build->id);
                 }
                 $params .= ' -G '. $gtf_path;
             } elsif ($mode eq 'reference guided') {
@@ -109,7 +91,7 @@ sub execute {
                     die('This version of cufflinks '. $self->model->expression_version .' is not compatible with the '. $mode .' annotation parameter -g.  Only v1.0.0 and greater!');
                 }
                 unless (defined($gtf_path)) {
-                    die('There is no annotation GTF file defined for annotation_reference_transcripts build: '. $annotation_reference_transcripts);
+                    die('There is no annotation GTF file found for annotation build: '. $annotation_build->id);
                 }
                 $params .= ' -g '. $gtf_path;
             } elsif ($mode eq 'de novo') {

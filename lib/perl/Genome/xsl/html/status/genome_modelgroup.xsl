@@ -86,6 +86,13 @@
               </td>
             </tr>
 
+            <tr>
+              <td class="name">Model Count:
+              </td>
+              <td class="value"><xsl:value-of select="aspect[@name='model_count']/value"/>
+              </td>
+            </tr>
+
               <tr>
                 <td class="name">Coverage Report:
                 </td>

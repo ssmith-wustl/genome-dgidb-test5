@@ -115,8 +115,16 @@ sub help_brief {
 
 sub help_detail {
     return <<EOS
-    Tool to run Ensembl VEP (Variant Effect Predictor).  For VEP documentation see:
-    http://ensembl.org/info/docs/variation/vep/index.html
+    Tool to run Ensembl VEP (Variant Effect Predictor).  For documentation on input format, see:
+    http://useast.ensembl.org/info/docs/variation/vep/vep_formats.html
+
+    It is recommended that the input file is in Ensembl's format:
+    1    881907    881906    -/C    +
+    5    140532    140532    T/C    +
+    8    12600     12602     CGT/-  -
+
+    The 5th column must always be a '+' because we always call variants on the forward strand.
+    Any additional columns after the '+' strand column will not change the resulting annotation.
 EOS
 }
 

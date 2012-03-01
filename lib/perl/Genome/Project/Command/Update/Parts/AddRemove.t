@@ -13,8 +13,8 @@ use above 'Genome';
 use Data::Dumper 'Dumper';
 use Test::More;
 
-use_ok('Genome::Project::Command::Add::Part') or die;
-use_ok('Genome::Project::Command::Remove::Part') or die;
+use_ok('Genome::Project::Command::Update::Parts::Add') or die;
+use_ok('Genome::Project::Command::Update::Parts::Remove') or die;
 
 my $project = Genome::Project->create(name => '__TEST_PROJECT__');
 ok($project, 'create project');
@@ -22,7 +22,7 @@ my $user = $project->parts(role => 'creator')->entity;
 ok($user, 'got creator');
 
 # add 
-my $cmd = Genome::Project::Command::Add::Part->create(
+my $cmd = Genome::Project::Command::Update::Parts::Add->create(
     projects => [ $project ],
     class_name => 'Genome::Project',
     value => 'name=__TEST_PROJECT__',
@@ -36,7 +36,7 @@ is_deeply(\@entities, [$project], 'add project');
 #ok(UR::Context->commit, 'commit');
 
 # add value
-$cmd = Genome::Project::Command::Add::Part->create(
+$cmd = Genome::Project::Command::Update::Parts::Add->create(
     projects => [ $project ],
     value => 10,
     label => 'priority',
@@ -49,7 +49,7 @@ is_deeply(\@entities, [UR::Value->get(10)], 'add value for priority');
 #ok(UR::Context->commit, 'commit');
 
 # re add value
-$cmd = Genome::Project::Command::Add::Part->create(
+$cmd = Genome::Project::Command::Update::Parts::Add->create(
     projects => [ $project ],
     value => 10,
 );
@@ -61,7 +61,7 @@ is(@entities, 3, 're-add value');
 #ok(UR::Context->commit, 'commit');
 
 # remove value
-$cmd = Genome::Project::Command::Remove::Part->create(
+$cmd = Genome::Project::Command::Update::Parts::Remove->create(
     projects => [ $project ],
     value => 10,
     label => 'priority',
@@ -74,7 +74,7 @@ ok(!@entities, 'remove value 10 for priority');
 #ok(UR::Context->commit, 'commit');
 
 # re add ur::object
-$cmd = Genome::Project::Command::Remove::Part->create(
+$cmd = Genome::Project::Command::Update::Parts::Remove->create(
     projects => [ $project ],
     class_name => 'UR::Value',
     value => 10,
@@ -87,7 +87,7 @@ is(@entities, 2, 're-remove value');
 #ok(UR::Context->commit, 'commit');
 
 # remove w/o finding object added
-$cmd = Genome::Project::Command::Remove::Part->create(
+$cmd = Genome::Project::Command::Update::Parts::Remove->create(
     projects => [ $project ],
     class_name => 'Genome::Project',
     value => 'name=__TEST_PROJECT__',
@@ -100,7 +100,7 @@ is_deeply(\@entities, [$project], 'did not remove project w/o role');
 #ok(UR::Context->commit, 'commit');
 
 # remove object 
-$cmd = Genome::Project::Command::Remove::Part->create(
+$cmd = Genome::Project::Command::Update::Parts::Remove->create(
     projects => [ $project ],
     class_name => 'Genome::Project',
     value => 'name=__TEST_PROJECT__',

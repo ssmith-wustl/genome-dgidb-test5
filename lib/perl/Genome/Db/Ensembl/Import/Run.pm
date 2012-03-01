@@ -35,6 +35,7 @@ sub execute {
     my $data_directory = $build->data_directory;
     my $version= $build->version;
     my $species_name = $build->species_name;
+    my $reference_build_id = $build->reference_sequence_id;
     
     #download the Ensembl API to $build->data_directory
     my $api_version = $self->ensembl_version_string($version);
@@ -66,6 +67,7 @@ sub execute {
         ($pass ? "--pass $pass" : ''),
         "--species $species_name",
         "--data-set $data_set", 
+        "--reference-build-id $reference_build_id",
         "--log-file $log_file",
         "--dump-file $dump_file");
     $build->prepend_api_path_and_execute(cmd => $command);

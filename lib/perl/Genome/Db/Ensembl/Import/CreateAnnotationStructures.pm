@@ -27,6 +27,15 @@ class Genome::Db::Ensembl::Import::CreateAnnotationStructures {
             doc => 'Ensembl data set to import',
             default => 'Core',
         },
+        reference_build => {
+            is => 'Genome::Model::Build::ReferenceSequence',
+            id_by => 'reference_build_id',
+        },
+    ],
+    has_input =>  [
+        reference_build_id => {
+            is => 'Text',
+        }
     ],
 };
 
@@ -61,7 +70,7 @@ sub execute
     my $transcript_adaptor = $registry->get_adaptor( $ucfirst_species, $data_set, 'Transcript' );
     my $slice_adaptor = $registry->get_adaptor( $ucfirst_species, $data_set, 'Slice');
 
-    my @slices = @{ $slice_adaptor->fetch_all('toplevel', undef, 1, 0, 1) };
+    my @slices = @{ $slice_adaptor->fetch_all('toplevel', undef, 1, 1, 1) };
 
     my $idx = 0;
     my $egi_id = 1;    # starting point for external_gene_id...
@@ -131,7 +140,7 @@ sub execute
             my $gene;
             my $gene_meta = Genome::Gene->__meta__;
             my $composite_gene_id = $gene_meta->resolve_composite_id_from_ordered_values($ensembl_gene_id, $species,$source,$version);
-            $gene = Genome::Gene->get(id => $composite_gene_id, data_directory => $self->data_directory);
+            $gene = Genome::Gene->get(id => $composite_gene_id, data_directory => $self->data_directory, reference_build_id => $self->reference_build->id);
             unless ($gene){
                 $gene = Genome::Gene->create(
                     gene_id => $ensembl_gene_id, 
@@ -141,6 +150,7 @@ sub execute
                     species => $species,
                     source => $source,
                     version => $version,
+                    reference_build_id => $self->reference_build->id,
                 );
                 push @genes, $gene;#logging
             }
@@ -170,6 +180,7 @@ sub execute
                     species => $species,
                     source => $source,
                     version => $version,
+                    reference_build_id => $self->reference_build->id,
                 ); 
 
                 $egi_id++;
@@ -178,6 +189,7 @@ sub execute
             #Transcript cols: transcript_id gene_id transcript_start transcript_stop transcript_name source transcript_status strand chrom_name
 
             my $transcript = Genome::Transcript->create(
+                reference_build_id => $self->reference_build_id,
                 transcript_id => $ensembl_transcript->dbID,
                 gene_id => $gene->id,
                 gene_name => $gene->name,
@@ -370,6 +382,7 @@ sub execute
                     species => $species,
                     source => $source,
                     version => $version,
+                    reference_build_id => $self->reference_build->id,
                 );
                 push @proteins, $protein;
             }

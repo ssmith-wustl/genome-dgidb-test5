@@ -133,15 +133,15 @@ UR::Object::Type->define(
             doc => 'The length of the amino acid to which the coding region of the transcript translates',
         },
 
-        gene => { calculate_from => [qw/transcript_gene_id data_directory/],
+        gene => { calculate_from => [qw/transcript_gene_id data_directory transcript/],
             calculate => q|
-            Genome::Gene->get(id => $transcript_gene_id, data_directory => $data_directory);
+            Genome::Gene->get(id => $transcript_gene_id, data_directory => $data_directory, reference_build_id => $transcript->reference_build_id);
             |,
         },
         protein => {
-            calculate_from => [qw/ transcript_transcript_id data_directory/],
+            calculate_from => [qw/ transcript_transcript_id data_directory transcript/],
             calculate => q|
-            Genome::Protein->get(transcript_id => $transcript_transcript_id, data_directory => $data_directory);
+            Genome::Protein->get(transcript_id => $transcript_transcript_id, data_directory => $data_directory, reference_build_id => $transcript->reference_build_id);
             |,
         },
     ],

@@ -450,19 +450,5 @@ sub get_number_of_cpus {
     return $cpus;
 }
 
-#< STATS FROM REPORT >#
-
-sub generate_stats {
-    my ($self, $build) = @_;
-
-    my $class = 'Genome::Model::Tools::'.ucfirst $self->assembler_base_name.'::Stats';
-    my $stats = $class->create( assembly_directory => $build->data_directory );
-    unless( $stats->execute ) {
-	$self->error_message("Failed to create stats");
-	return;
-    }
-
-    return 1;
-}
-
 1;
+
