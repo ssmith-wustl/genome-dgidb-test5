@@ -66,7 +66,7 @@ sub execute {                               # replace with real execution logic.
 	my $vcf_file = $self->vcf_file;
 	my $sample_phenotype_file = $self->sample_phenotype_file;
 	my $number_of_highlighted_names = $self->number_of_highlighted_genes;
-=cut
+
 	if($self->output_file)
 	{
 		open(OUTFILE, ">" . $self->output_file) or die "Can't open outfile: $!\n";		
@@ -460,7 +460,7 @@ sub execute {                               # replace with real execution logic.
 		close(OUTMUTATIONS);
 		close(OUTNEUTRAL);
 	}
-=cut
+
 	if($self->output_file) {
         my $output_pdf_image_file = $self->output_file . ".pdf";
 	    my ($tfh_R,$temp_path_R) = Genome::Sys->create_temp_file;
@@ -580,7 +580,6 @@ devoff <- dev.off();
 _END_OF_R_
 #-------------------------------------------------
         print $tfh_R "$R_command\n";
-        print "$R_command\n";
 
 	    my $cmd = "R --vanilla --slave \< $temp_path_R";
 	    my $return = Genome::Sys->shellcmd(
