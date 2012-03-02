@@ -6,7 +6,7 @@ use warnings;
 use Genome;
 use Workflow;
 use Workflow::Simple;
-
+use FindBin qw|$Bin|;
 class Genome::Model::Tools::Dindel::RunWithVcf {
     is => 'Command',
     has => [
@@ -28,6 +28,13 @@ class Genome::Model::Tools::Dindel::RunWithVcf {
         is_optional=>1,
         default=>'5000',
         doc=>'attempt to control the parallelization of dindel by setting max chunk size.'
+    },
+    make_realigned_bam=> {
+        is=>'Number',
+        is_input=>1,
+        is_optional=>1,
+        default=>0,
+        doc=>'Set this to 1 if you wish to output a realigned bam for further counting or manual review',
     },
     ],
 };
@@ -64,10 +71,36 @@ sub execute {
     my $vcf_in_dindel_format = $self->convert_vcf_to_dindel_and_left_shift($self->output_directory, $ref_fasta, $self->input_vcf);
     my @windows_files = $self->make_windows($self->output_directory, $vcf_in_dindel_format, $self->num_windows_per_file);
     my $library_file = $self->get_cigar_indels($self->output_directory, $ref_fasta, $bam_file);
-    my $results_dir = $self->run_parallel_analysis($self->output_directory, $ref_fasta, $bam_file, $library_file, \@windows_files);
+    my $results_dir = $self->run_parallel_analysis($self->output_directory, $ref_fasta, $bam_file, $library_file, $self->make_realigned_bam,\@windows_files);
     my $file_of_results = $self->make_fof($self->output_directory, $results_dir);
     $self->generate_final_vcf($self->output_directory, $file_of_results, $ref_fasta);
+   $self->generate_final_bam($self->output_directory, $results_dir, $bam_file);
     return 1;
+}
+
+sub generate_final_bam {
+    my ($self, $output_dir, $results_dir, $bam_file) = @_;
+    my @sams = glob ("$results_dir/*.merged.sam");
+    my $output_sam = $output_dir . "/all_events_realigned.merged.sam";
+    my $output_bam =  $output_dir . "/all_events_realigned.merged.bam";
+    my $header_cmd = "samtools view -H $bam_file > $output_sam";
+    print "$header_cmd\n";
+    Genome::Sys->shellcmd(cmd=> $header_cmd);
+    for my $sam (@sams) {
+        my $dump_cmd = "cat $sam >> $output_sam";
+        print "$dump_cmd\n";
+        Genome::Sys->shellcmd(cmd=>$dump_cmd);
+    }
+    my $compress_cmd = "samtools view -S $output_sam -1 > $output_bam";
+    print "$compress_cmd\n";
+    Genome::Sys->shellcmd(cmd=>$compress_cmd);
+    my $final_bam = "$output_dir/all_events_realigned.merged.sorted";
+    my $sort_cmd = "samtools sort $output_bam $final_bam";
+    Genome::Sys->shellcmd(cmd=>$sort_cmd);
+    unlink($output_sam);
+    unlink($output_bam);
+    unlink(@sams);
+    return $final_bam;
 }
 
 
@@ -86,7 +119,7 @@ sub make_fof {
     my ($self, $output_dir, $results_dir) = @_;
     my $fof = $output_dir . "/file_of_result_files";
     my $fof_fh = IO::File->new($fof, ">");
-    my @files = glob("$results_dir/*");
+    my @files = glob("$results_dir/result*txt");
     for my $file (@files) {
         $fof_fh->print($file ."\n");
     }
@@ -95,7 +128,7 @@ sub make_fof {
 }
 
 sub run_parallel_analysis {
-    my ($self, $output_dir, $ref_fasta, $bam_file, $library_file, $window_files) = @_;
+    my ($self, $output_dir, $ref_fasta, $bam_file, $library_file, $make_realigned_bams, $window_files) = @_;
     my $results_dir = $output_dir . "/results/";
     $DB::single=1;
     unless(-d $results_dir) {
@@ -105,6 +138,12 @@ sub run_parallel_analysis {
     $inputs{bam_file}=$bam_file;
     $inputs{ref_fasta}=$ref_fasta;
     $inputs{library_metrics_file}=$library_file;
+    $inputs{output_bam}=0;
+    if($make_realigned_bams) {
+        $inputs{output_bam}=1;
+    }
+
+
     my @inputs;
     my @prefixes;
     for my $window (@$window_files) {
@@ -121,6 +160,7 @@ sub run_parallel_analysis {
         'bam_file',
         'ref_fasta',
         'library_metrics_file',
+        'output_bam',
         @inputs,
         ],
         output_properties=> [
@@ -140,6 +180,12 @@ sub run_parallel_analysis {
             left_property=>"bam_file",
             right_operation=>$analyze_op,
             right_property=>"bam_file",
+        );
+        $workflow->add_link(
+            left_operation=>$workflow->get_input_connector,
+            left_property=>"output_bam",
+            right_operation=>$analyze_op,
+            right_property=>"output_bam",
         );
         $workflow->add_link(
             left_operation=>$workflow->get_input_connector,

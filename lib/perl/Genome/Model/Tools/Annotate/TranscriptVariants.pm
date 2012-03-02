@@ -354,7 +354,17 @@ sub execute {
         return;
     }
 
-    $self->_convert_bed_file if $self->variant_bed_file;
+    if ($self->variant_bed_file) {
+        unless (-s $self->variant_bed_file) {
+            die $self->error_message("Variant bed file has no size, exiting");
+        }
+
+        $self->_convert_bed_file;
+
+        unless(-s $self->variant_file){
+            die $self->error_message("After converting to annotation format, the variant file has no size, exiting");
+        }
+    }
 
     my $variant_file = $self->variant_file;
 

@@ -126,5 +126,10 @@ class Genome::Individual {
     ],
 };
 
+sub get_source {
+    my $self = shift;
+    return $self->taxon;
+}
+
 1;
 

@@ -14,8 +14,8 @@ class Genome::Model::Tools::Music::MutationRelation {
   has_input => [
     bam_list => { is => 'Text', doc => "Tab delimited list of BAM files [sample_name, normal_bam, tumor_bam] (See Description)" },
     maf_file => { is => 'Text', doc => "List of mutations in MAF format" },
+    mutation_relation_matrix_file => { is => 'Text', doc => "Optionally store the sample-vs-gene matrix used during calculations.", is_optional => 1 },
     output_file => { is => 'Text', doc => "Results of mutation-relation tool", is_output => 1 },
-    matrix_file => { is => 'Text', doc => "Define this argument to store a mutation matrix", is_optional => 1 },
     permutations => { is => 'Number', doc => "Number of permutations used to determine P-values", is_optional => 1, default => 100 },
     gene_list => { is => 'Text', doc => "List of genes to test, typically SMGs. If unspecified, all genes in MAF are tested.", is_optional => 1 },
   ],
@@ -176,7 +176,7 @@ sub create_sample_gene_matrix {
 
   # Write the input matrix to a file for use by the R code
   my $matrix_file;
-  unless( $matrix_file = $self->matrix_file ) {
+  unless( $matrix_file = $self->mutation_relation_matrix_file ) {
     $matrix_file = Genome::Sys->create_temp_file_path();
   }
 

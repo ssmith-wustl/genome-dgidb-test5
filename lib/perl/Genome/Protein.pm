@@ -28,14 +28,21 @@ class Genome::Protein {
         transcript_id => { 
             is => 'Text' 
         },
+         reference_build_id => {
+            is => 'Text',
+        },
+        reference_build => {
+            is => 'Genome::Model::Build::ReferenceSequence',
+            id_by => 'reference_build_id',
+        },
         amino_acid_seq => { 
             is => 'String' 
         },
-        transcript => { #TODO, straighten out ID stuff w/ Tony
+        transcript => {
             is => 'Genome::Transcript', 
-            calculate_from => ['data_directory', 'transcript_id'],
+            calculate_from => ['data_directory', 'reference_build_id', 'transcript_id'],
             calculate => q/
-               return Genome::Transcript->get(transcript_id => $transcript_id, data_directory => $data_directory);
+               return Genome::Transcript->get(transcript_id => $transcript_id, data_directory => $data_directory, reference_build_id => $reference_build_id);
             /,
         },
         data_directory => {
