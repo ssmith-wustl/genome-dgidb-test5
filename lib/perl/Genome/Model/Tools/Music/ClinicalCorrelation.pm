@@ -22,6 +22,7 @@ class Genome::Model::Tools::Music::ClinicalCorrelation {
         is_optional => 1,
     },
     output_file => {
+        is_output => 1,
         is => 'Text',
         doc => "Results of clinical-correlation tool. Will have suffix added for data type.",
     },

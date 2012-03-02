@@ -66,15 +66,14 @@ sub execute {
         die $self->error_message;
     } 
 	
-	my $qc_filter_spec = (! $self->include_qc_failed ? "-F 0x200" : "");
+    my $qc_filter_spec = (! $self->include_qc_failed ? "-F 0x200" : "");
 
     my $samtools_strip_cmd = sprintf(
-        "%s view -h -r%s %s %s | %s view -S -b -o %s -",
+        "%s view -b -h -r%s %s %s > %s",
         $samtools_path,
         $self->read_group_id,
 		$qc_filter_spec,
         $input_file, 
-        $samtools_path,
         $temp_bam_file,
     );
 
