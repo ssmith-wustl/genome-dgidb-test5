@@ -72,39 +72,6 @@ sub execute {
     return 1;
 }
 
-# TODO Remove?
-sub convert_feature_list_to_snp_whitelist {
-    my $self = shift;
-    my $feature_list = shift;
-    my $output_dir = shift;
-
-    unless ($output_dir) {
-        $output_dir = $self->build->qc_directory;
-    }
-
-
-    my $whitelist_snps_path = "$output_dir/whitelist.txt";
-    my $whitelist_snps_bed_path = "$output_dir/whitelist.bed";
-    my $dump_whitelist_cmd = Genome::FeatureList::Command::DumpMergedList->create(
-        feature_list => $feature_list,
-        output_path => $whitelist_snps_bed_path,
-    );
-    unless ($dump_whitelist_cmd->execute) {
-        die $self->error_message("Failed to dump feature list.");
-    }
-
-    my $whitelist_snps_bed_file = Genome::Sys->open_file_for_reading($whitelist_snps_bed_path);
-    my $whitelist_snps_file = Genome::Sys->open_file_for_writing($whitelist_snps_path);
-    while (my $line = $whitelist_snps_bed_file->getline) {
-        $whitelist_snps_file->print((split(/\t/, $line))[3]);
-    }
-
-    if (Genome::Sys->line_count($whitelist_snps_bed_path) != Genome::Sys->line_count($whitelist_snps_path)) {
-        die $self->error_message("FeatureList's BED and SNP whitelist line counts do not match.");
-    }
-
-    return $whitelist_snps_path;
-}
 sub resolve_geno_path_for_build {
     my $self = shift;
     my $build = shift;
