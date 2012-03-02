@@ -5,6 +5,7 @@ package Genome::Site::WUGC::Synchronize::UpdateApipeClasses;
 use strict;
 use warnings;
 use Genome;
+use Scalar::Util;
 use Carp 'confess';
 
 class Genome::Site::WUGC::Synchronize::UpdateApipeClasses {
@@ -44,12 +45,12 @@ sub objects_to_sync {
 # Specifies the order in which classes should be synced
 sub sync_order {
     return qw/
+        Genome::Site::WUGC::Sample
         Genome::Site::WUGC::SetupProjectResearch
         Genome::Site::WUGC::SetupWorkOrder
         Genome::Site::WUGC::Taxon
         Genome::Site::WUGC::Individual
         Genome::Site::WUGC::PopulationGroup
-        Genome::Site::WUGC::Sample
         Genome::Site::WUGC::Library
         Genome::Site::WUGC::InstrumentData::Solexa
         Genome::Site::WUGC::InstrumentData::454
@@ -109,17 +110,15 @@ sub execute {
 
         $self->status_message("\nSyncing $new_type and $old_type");
         $self->status_message("Creating iterators...");
+        # The rows in the old/new tables have the same IDs. Ordering by the ids
+        # allows us to easily determine which objects are missing from either
+        # LIMS or Apipe and take appropriate action.
         my ($created_objects, $seen_old, $seen_new, $found) = (qw/ 0 0 0 0 /);
-        my $new_iterator = $new_type->create_iterator;
+        my $new_iterator = $new_type->create_iterator(-order_by => 'id');
         my $new = sub{ $seen_new++; return $new_iterator->next; };
-        my $old_iterator = $old_type->create_iterator;
+        my $old_iterator = $old_type->create_iterator(-order_by => 'id');
         my $old = sub{ $seen_old++; return $old_iterator->next; };
 
-        # The rows in the old/new tables have the same IDs. UR sorts these objects by their
-        # IDs internally, so simply iterating over old/new objects and checking the IDs is
-        # enough to determine if an object is missing.
-        # TODO I believe Tony is playing around with order by, which would be preferable to relying
-        # on the assumption that UR sorts things by IDs.
         $self->status_message("Iterating over all objects and copying as needed");
         my $new_object = $new->();
         my $old_object = $old->();
@@ -150,19 +149,29 @@ sub execute {
                     $old_object = $old->();
                     $found++;
                 }
-                # If new ID is less than old ID, then we are missing an old object (since the iterator skipped over several)
-                elsif ($new_id lt $old_id) {
-                    push @{$report{$new_type}{'missing'}}, $new_id;
-                    $new_object = $new->();
-                }
-                # Old ID is less than new ID, so a new object needs to be created
                 else {
-                    if ($self->copy_object($old_object, $new_type)) {
-                        $created_objects++;
-                        $object_created = 1;
-                        push @{$report{$new_type}{'copied'}}, $old_id;
+                    my $cmp;
+                    if (Scalar::Util::looks_like_number($new_id) and Scalar::Util::looks_like_number($old_id)) {
+                        $cmp = $new_id < $old_id;
                     }
-                    $old_object = $old->();
+                    else {
+                        $cmp = $new_id lt $old_id;
+                    }
+
+                    # If new ID is less than old ID, then we are missing an old object (since the iterator skipped over several)
+                    if ($cmp) {
+                        push @{$report{$new_type}{'missing'}}, $new_id;
+                        $new_object = $new->();
+                    }
+                    # Old ID is less than new ID, so a new object needs to be created
+                    else {
+                        if ($self->copy_object($old_object, $new_type)) {
+                            $created_objects++;
+                            $object_created = 1;
+                            push @{$report{$new_type}{'copied'}}, $old_id;
+                        }
+                        $old_object = $old->();
+                    }
                 }
             }
 
