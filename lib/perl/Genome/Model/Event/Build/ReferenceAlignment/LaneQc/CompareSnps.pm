@@ -46,10 +46,15 @@ sub execute {
     }
     $variant_file = Cwd::abs_path($variant_file);
 
-    my $result = Genome::Model::Tools::Analysis::LaneQc::CompareSnpsResult->get_or_create(
+    my %compare_snps_result_params = (
         genotype_file => $geno_path,
         variant_file => $variant_file,
+        sample_name => $model->subject->name,
     );
+    if ($build->region_of_interest_set_name) {
+        $compare_snps_result_params{bam_file} = $build->whole_rmdup_bam_file;
+    }
+    my $result = Genome::Model::Tools::Analysis::LaneQc::CompareSnpsResult->get_or_create(%compare_snps_result_params);
     unless ($result) {
         die $self->error_message("Failed to create Genome::Model::Tools::Analysis::LaneQc::CompareSnpsResult command.");
     }
