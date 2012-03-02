@@ -30,6 +30,12 @@ class Genome::Model::Tools::Dindel::AnalyzeWindowFile {
         is=>'String',
         is_input=>1,
     },
+    output_bam=> {
+        is=>'Number',
+        default=>0,
+        is_optional=>1,
+        is_input=>1,
+    },
     ],
 };
 
@@ -51,12 +57,21 @@ EOS
 sub execute {
     my $self = shift;
     my $dindel_location = "/gscmnt/gc2146/info/medseq/dindel/binaries/dindel-1.01-linux-64bit";
+    my $callback_script = $INC[0] . "/Genome/Model/Tools/Dindel/merge_bam_callback.pl";
+    unless(-s $callback_script) {
+        $self->error_message("unable to locate dindel helper script at location: $callback_script\n");
+        return undef;
+    }
     my $ref = $self->ref_fasta;
     my $output = $self->output_prefix;
     my $input = $self->window_file;
     my $lib_file = $self->library_metrics_file;
     my $bam = $self->bam_file;
     my $cmd = "$dindel_location --analysis indels --doDiploid --bamFile $bam --varFile $input --outputFile $output --ref $ref --libFile $lib_file";
+    if($self->output_bam) {
+        $cmd .= " --outputRealignedBAM";
+        $cmd .= " --processRealignedBAM $callback_script";
+    }
     return Genome::Sys->shellcmd(cmd=>$cmd);
 }
 
