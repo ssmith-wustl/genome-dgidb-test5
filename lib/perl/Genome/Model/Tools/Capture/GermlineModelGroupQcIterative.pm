@@ -106,10 +106,10 @@ sub execute {                               # replace with real execution logic.
     }
 
     my %snp_limit_hash;
-    if($self->limit_snps_file) {
-        my $snp_input = new FileHandle ($self->limit_snps_file);
+    if($self->whitelist_snps_file) {
+        my $snp_input = new FileHandle ($self->whitelist_snps_file);
         unless($snp_input) {
-            $self->error_message("Unable to open ".$self->limit_snps_file);
+            $self->error_message("Unable to open ".$self->whitelist_snps_file);
             return;
         }
 

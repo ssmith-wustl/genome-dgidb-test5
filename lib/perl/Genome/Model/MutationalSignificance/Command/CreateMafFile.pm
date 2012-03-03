@@ -24,8 +24,7 @@ class Genome::Model::MutationalSignificance::Command::CreateMafFile {
 sub execute {
     my $self = shift;
 
-    my $rand = rand();
-
+    $self->status_message("CreateMafFile for build ".$self->somatic_variation_build->id);
     my $snv_file = $self->output_dir."/".$self->somatic_variation_build->id.".uhc.anno";
 
     #Deduplicate and sort the snv file (copied from gmt capture manual-review)
