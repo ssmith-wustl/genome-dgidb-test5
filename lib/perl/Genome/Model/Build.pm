@@ -68,6 +68,11 @@ class Genome::Model::Build {
         master_event_status     => { via => 'the_master_event', to => 'event_status' },
     ],
     has_optional => [
+        _newest_workflow_instance => { 
+            is => 'Workflow::Operation::Instance',
+            is_calculated => 1,
+            calculate => q{ return $self->newest_workflow_instance(); }
+        },
         disk_allocation   => { is => 'Genome::Disk::Allocation', calculate_from => [ 'class', 'id' ],
                                calculate => q(
                                     my $disk_allocation = Genome::Disk::Allocation->get(
