@@ -150,6 +150,10 @@ sub params_for_result {
         $alignment_result = $build->control_merged_alignment_result;
     }
 
+    unless($alignment_result) {
+        die $self->error_message('No alignment result found for ' . $self->mode);
+    }
+
     my $fl = $build->region_of_interest_set;
 
     my $use_short_roi = 1;
