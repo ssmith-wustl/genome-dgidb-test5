@@ -37,12 +37,6 @@ sub camel_case_to_string {
     return join($join, map { lc } @words);
 }
 
-sub camel_case_to_capitalized_words {
-    my @words = camel_case_to_words(shift);
-    my $join = ( @_ ) ? $_[0] : ' '; 
-    return join($join, map { ucfirst } @words);
-}
-
 #< Module to/from Class >#
 sub class_to_module {
     my $class = shift;
