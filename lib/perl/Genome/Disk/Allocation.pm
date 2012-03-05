@@ -1,5 +1,4 @@
-#!/usr/local/bin/perl
-
+#!/usr/bin/perl
 
 package Genome::Disk::Allocation;
 
@@ -170,14 +169,17 @@ sub move {
 
 sub archive {
     my ($class, %params) = @_;
-    confess "Archive not implemented!";
     return $class->_execute_system_command('_archive', %params);
 }
 
 sub unarchive {
     my ($class, %params) = @_;
-    confess "Unarchive not implemented!";
     return $class->_execute_system_command('_unarchive', %params);
+}
+
+sub is_archived {
+    my $self = shift;
+    return $self->volume->is_archive;
 }
 
 sub _create {
@@ -557,6 +559,65 @@ sub _move {
     }
     $old_volume->unallocated_kb($old_volume->unallocated_kb + $original_allocation_size);
     $self->_create_observer($self->_unlock_closure($old_volume_lock));
+    return 1;
+}
+
+sub _archive {
+    my ($class, %params) = @_;
+    my $id = delete $params{allocation_id};
+    if (%params) {
+        confess "Extra parameters given to allocation move method: " . join(',', sort keys %params);
+    }
+
+    my $mode = $class->_retrieve_mode;
+    my $self = Genome::Disk::Allocation->$mode($id);
+    unless ($self) {
+        confess "Found no allocation with ID $id";
+    }
+
+    # Move allocation to archive volume
+    # TODO If the gscarchive volumes are only going to be mounted on a few hosts, then some
+    # kind of check will need to be made to ensure we're on one of those hosts, or we'll have 
+    # to make move smarter. I vote for the former.
+    my $rv = $self->_move(
+        allocation_id => $id,
+        target_mount_path => $self->volume->archive_mount_path,
+        kilobytes_requested => $self->kilobytes_requested,
+    );
+    unless ($rv) {
+        confess "Could not archive allocation " . $self->id . ", failed to move it from " .
+            $self->mount_path . " to " . $self->volume->archive_mount_path;
+    }
+    
+    return 1;
+}
+
+sub _unarchive {
+    my ($class, %params) = @_;
+    my $id = delete $params{allocation_id};
+    if (%params) {
+        confess "Extra parameters given to allocation move method: " . join(',', sort keys %params);
+    }
+
+    my $mode = $class->_retrieve_mode;
+    my $self = Genome::Disk::Allocation->$mode($id);
+    unless ($self) {
+        confess "Found no allocation with ID $id";
+    }
+
+    # TODO Need to figure out how to tell tape system to pull stuff off tape. Need to either tell it
+    # where that data should go, or have a way to retrieve the path
+
+    my $rv = $self->_move(
+        allocation_id => $self->id,
+        target_mount_path => $self->volume->active_mount_path,
+        kilobytes_requested => $self->kilobytes_requested,
+    );
+    unless ($rv) {
+        confess "Could not unarchive allocation " . $self->id . ", failed to move it from " .
+            $self->mount_path . " to " . $self->volume->active_mount_path;
+    }
+
     return 1;
 }
 
