@@ -18,8 +18,6 @@ is(Genome::Utility::Text::string_to_camel_case($string), $camel_case, 'string_to
 ok(!Genome::Utility::Text::string_to_camel_case(undef), 'string_to_camel_case failed w/o string');
 is(Genome::Utility::Text::camel_case_to_string($camel_case), $string, 'camel_case_to_string');
 ok(!Genome::Utility::Text::camel_case_to_string(undef), 'camel_case_to_string failed w/o camel case');
-is(Genome::Utility::Text::camel_case_to_capitalized_words($camel_case), $capitalized_string, 'camel_case_to_capitalized_words');
-ok(!Genome::Utility::Text::camel_case_to_capitalized_words(undef), 'camel_case_to_capitalized_words failed w/o camel case');
 
 # class/module
 my $class  = 'Genome::Model::DeNovoAssembly';
