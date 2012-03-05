@@ -34,7 +34,8 @@ class Genome::Disk::Volume {
         },
         used_kb => {
             calculate_from => ['mount_path'],
-            calculate => q{ 
+            calculate => sub {
+                my $mount_path = shift;
                 return 0 unless -e $mount_path;
                 my ($used_kb) = qx(df -Pk $mount_path | grep $mount_path | awk '{print \$3}') =~ /(\d+)/; 
                 return $used_kb
@@ -160,6 +161,29 @@ sub create_dummy_volume {
     }
 
     return $volume;
+}
+
+sub is_archive {
+    my $self = shift;
+    if ($self->mount_path =~ /gscarchive/) {
+        return 1;
+    }
+    return 0;
+}
+
+sub archive_mount_path {
+    my $self = shift;
+    return if $self->is_archive;
+
+    my $mount = $self->mount_path;
+    $mount =~ s/gscmnt/gscarchive/;
+    return $mount;
+}
+
+sub archive_volume {
+    my $self = shift;
+    return if $self->is_archive;
+    return Genome::Disk::Volume->get(mount_path => $self->archive_mount_path);
 }
 
 1;
