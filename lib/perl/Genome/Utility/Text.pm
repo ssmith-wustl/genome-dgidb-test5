@@ -32,29 +32,6 @@ sub camel_case_to_string {
     return join($join, map { lc } @words);
 }
 
-#< Module to/from Class >#
-sub class_to_module {
-    my $class = shift;
-    unless ( $class ) {
-        Carp::cluck('No class to convert to module');
-        return;
-    }
-    $class =~ s/::/\//g;
-    $class .= '.pm';
-    return $class;
-}
-
-sub module_to_class {
-    my $module = shift;
-    unless ( $module ) {
-        Carp::cluck('No module to convert to class');
-        return;
-    }
-    $module =~ s#\.pm##;
-    $module =~ s#/#::#g;
-    return $module;
-}
-
 #< Params as String and Hash >#
 sub param_string_to_hash {
     my ($param_string, $value_split) = @_;

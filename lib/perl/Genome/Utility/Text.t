@@ -19,14 +19,6 @@ ok(!Genome::Utility::Text::string_to_camel_case(undef), 'string_to_camel_case fa
 is(Genome::Utility::Text::camel_case_to_string($camel_case), $string, 'camel_case_to_string');
 ok(!Genome::Utility::Text::camel_case_to_string(undef), 'camel_case_to_string failed w/o camel case');
 
-# class/module
-my $class  = 'Genome::Model::DeNovoAssembly';
-my $module = 'Genome/Model/DeNovoAssembly.pm';
-is(Genome::Utility::Text::class_to_module($class), $module, 'class_to_module');
-ok(!Genome::Utility::Text::class_to_module(undef), 'class_to_module failed w/o class');
-is(Genome::Utility::Text::module_to_class($module), $class, 'module_to_class');
-ok(!Genome::Utility::Text::module_to_class(undef), 'module_to_class failed w/o module');
-
 # params
 my $param_string = '-aa fasta -b1b -1 qual --c22 phred phrap  -ddd -11 -eee -f -g22g text -1111 --h_h 44 --i-i -5 -j-----j -5 -6 hello     -k    -l_l-l g  a   p   -m';
 my $params = {
@@ -54,4 +46,5 @@ is(Genome::Utility::Text::capitalize_words($uncap_string2, '-'), $cap_string, 'c
 ok(!eval{Genome::Utility::Text::capitalize_words(undef)}, 'failed as expected - capitalize w/o string words');
 
 done_testing();
+exit;
 
