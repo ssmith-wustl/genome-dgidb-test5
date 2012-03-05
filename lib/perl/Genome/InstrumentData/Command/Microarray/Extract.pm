@@ -76,6 +76,18 @@ HELP
 sub execute {
     my $self = shift;
 
+    unless ($self->fields) {
+        # default_value doesn't seem to work for is_many properties (I think because they are supposed to be relationships)
+        my $meta = $self->__meta__;
+        my $fields_property = $meta->property('fields');
+        my $default_fields = $fields_property->{default_value};
+        for my $field (@$default_fields) {
+            $self->status_message($field);
+            $self->add_field($field);
+        }
+        die 'Missing fields' unless $self->fields;
+    }
+
     my $variation_list_build = $self->variation_list_build;
     if ( not $variation_list_build ) {
         $self->error_message('No variation list build given!');
