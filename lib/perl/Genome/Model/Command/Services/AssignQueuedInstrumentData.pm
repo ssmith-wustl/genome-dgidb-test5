@@ -1388,9 +1388,22 @@ sub add_processing_profiles_to_pses{
 
     for my $pse (@pses){
         next if $pse->added_param('processing_profile_id'); #FIXME: THIS SHOULD ONLY BE USED DURING THE TRANSITION PERIOD WHILE OLD AQID IS IN USE
-        my ($instrument_data_id) = $pse->added_param('instrument_data_id');
         my ($instrument_data_type) = $pse->added_param('instrument_data_type');
-        my $instrument_data = $self->_instrument_data($pse);
+        my $instrument_data_id;
+        if( $instrument_data_type =~ /sanger/i ) {
+            #sanger data doesn't store the instrument_data_id directly
+            my $at_pse = GSC::PSE::AnalyzeTraces->get($instrument_data_id);
+            $instrument_data_id = $at_pse->run_name();
+        }
+        else {
+            ($instrument_data_id) = $pse->added_param('instrument_data_id');
+        }
+
+        my $instrument_data = Genome::InstrumentData->get($instrument_data_id);
+        unless ($instrument_data) {
+            die $self->error_message('failed to get Genome::InstrumentData for instrument_data_id ' . $instrument_data_id . ' and instrument_data_type ' . $instrument_data_type);
+        }
+
         eval {
             my @processing_profile_ids_to_add;
             my %reference_sequence_names_for_processing_profile_ids;
@@ -1438,7 +1451,7 @@ sub add_processing_profiles_to_pses{
                     die $self->error_message;
                 }
 
-                if($self->_is_rna($pse)){
+                if($self->_is_rna($instrument_data)){
                     push @processing_profile_ids_to_add, $self->_default_rna_seq_processing_profile_id;
                 }
 
@@ -1501,7 +1514,7 @@ sub add_processing_profiles_to_pses{
                         push @processing_profile_ids_to_add, $pp_id;
                         $reference_sequence_names_for_processing_profile_ids{$pp_id} = 'GRCh37-lite-build37';
                     }
-                    elsif ($self->_is_rna($pse)){
+                    elsif ($self->_is_rna($instrument_data)){
                         if($instrument_data->is_paired_end){
                             my $pp_id = $self->_default_rna_seq_processing_profile_id;
                             push @processing_profile_ids_to_add, $pp_id;
@@ -1577,30 +1590,6 @@ sub add_processing_profiles_to_pses{
             $self->warning_message("PSE " . $pse->pse_id . " failed: $@");
         }
     }
-}
-
-sub _instrument_data {
-    my $self = shift;
-    my $pse = shift;
-
-    my ($instrument_data_type) = $pse->added_param('instrument_data_type');
-    my ($instrument_data_id)   = $pse->added_param('instrument_data_id');
-
-    my $instrument_data;
-    if($instrument_data_type =~ /sanger/i) {
-        #sanger data doesn't store the instrument_data_id directly
-        my $at_pse = GSC::PSE::AnalyzeTraces->get($instrument_data_id);
-        $instrument_data_id = $at_pse->run_name();
-    }
-
-    $instrument_data = Genome::InstrumentData->get($instrument_data_id);
-
-    unless ($instrument_data) {
-        $self->error_message('failed to get Genome::InstrumentData for instrument_data_id ' . $instrument_data_id . ' and instrument_data_type ' . $instrument_data_type);
-        die $self->error_message;
-    }
-
-    return $instrument_data;
 }
 
 sub _verify_parameter_lists {
@@ -1746,10 +1735,8 @@ sub _is_pcgp {
 }
 
 sub _is_rna {
-    my $self = shift;
-    my $pse = shift;
+    my ($self, $instrument_data) = @_;
 
-    my $instrument_data = $self->_instrument_data($pse);
     my $sample = $instrument_data->sample;
     if(grep($sample->sample_type eq $_, ('rna', 'cdna', 'total rna', 'cdna library', 'mrna'))) {
         return 1;
