@@ -14,7 +14,6 @@ use File::Temp 'tempdir';
 
 use_ok('Genome::Disk::Allocation') or die;
 
-
 *Genome::Sys::current_user_is_admin = sub { return 1 };
 
 my $test_dir_base = '/gsc/var/cache/testsuite/running_testsuites/';
