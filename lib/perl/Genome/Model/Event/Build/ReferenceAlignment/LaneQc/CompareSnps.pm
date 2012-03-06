@@ -83,31 +83,52 @@ sub resolve_geno_path_for_build {
             die $self->error_message("Unable to get FeatureList (name => " . $build->region_of_interest_set_name . ")");
         }
         my $output_dir = $build->qc_directory;
-        $geno_path = "$output_dir/genotype.gold2geno";
 
         my $sorted_feature_list_path = "$output_dir/sorted_feature_list.bed";
         system(join(' ', 'sort -V', $feature_list->file_path, '>', $sorted_feature_list_path));
 
-        my $sorted_snvs_bed_path = "$output_dir/sorted_genotype.bed";
-        system(join(' ', 'sort -V', $build->gold_snp_build->snvs_bed, '>', $sorted_snvs_bed_path));
+        # Convert original gold2geno file into a BED for easy intersection with FeatureList
+        my $gold2geno_bed_path = UR::Value::FilePath->get("$output_dir/genotype.gold2geno.bed");
+        my $original_gold2geno_path = UR::Value::FilePath->get($build->gold_snp_build->gold2geno_file_path);
+        my $gold2geno_bed = Genome::Sys->open_file_for_writing($gold2geno_bed_path);
+        my $gold2geno = Genome::Sys->open_file_for_reading($original_gold2geno_path);
+        while (my $line = $gold2geno->getline) {
+            chomp($line);
+            my ($chrom, $end, $allele) = split("\t", $line);
+            my $start = $end - 1;
+            $gold2geno_bed->print(join("\t", $chrom, $start, $end, $allele), "\n");
+        }
+        $gold2geno_bed->close;
+        $gold2geno->close;
+        unless ($original_gold2geno_path->line_count == $gold2geno_bed_path->line_count) {
+            die "Converted gold2geno BED ($gold2geno_bed_path) line count does not match original gold2geno line count ($original_gold2geno_path)";
+        }
 
+        my $intersected_gold2geno_path = UR::Value::FilePath->get("$output_dir/intersected_genotype.gold2geno");
+        my $intersected_gold2geno_bed_path = UR::Value::FilePath->get("$intersected_gold2geno_path.bed");
         my $intersect_cmd = Genome::Model::Tools::Joinx::Intersect->create(
-            input_file_a => $sorted_snvs_bed_path, # genotype first
-            input_file_b => $sorted_feature_list_path,
-            output_file  => "$geno_path.bed",
+            input_file_a => "$gold2geno_bed_path", # genotype first
+            input_file_b => "$sorted_feature_list_path",
+            output_file  => "$intersected_gold2geno_bed_path",
         );
         unless ($intersect_cmd->execute) {
             die $self->error_message("Failed to intersect sorted feature list and genotype BEDs.");
         }
 
-        my $convert_geno_cmd = Genome::Model::GenotypeMicroarray::Command::ConvertGoldSnpBedToGeno->create(
-            gold_snp_bed => "$geno_path.bed",
-            output => $geno_path,
-        );
-        unless ($convert_geno_cmd->execute) {
-            die $self->error_message("Failed to convert BED ($geno_path.bed) to a gold2geno file.");
+        # Convert the intersected gold2geno BED back to a "standard" gold2geno file
+        my $intersected_gold2geno_bed = Genome::Sys->open_file_for_reading($intersected_gold2geno_bed_path);
+        my $intersected_gold2geno = Genome::Sys->open_file_for_writing($intersected_gold2geno_path);
+        while (my $line = $intersected_gold2geno_bed->getline) {
+            chomp($line);
+            my ($chrom, $start, $end, $allele) = split("\t", $line);
+            $intersected_gold2geno->print(join("\t", $chrom, $end, $allele), "\n");
         }
-
+        $intersected_gold2geno_bed->close;
+        $intersected_gold2geno->close;
+        unless ($intersected_gold2geno_path->line_count == $intersected_gold2geno_bed_path->line_count) {
+            die "Converted gold2geno ($intersected_gold2geno_path) line count does not match BED line count ($intersected_gold2geno_bed_path)";
+        }
+        $geno_path = "$intersected_gold2geno_path";
     } else {
         $geno_path = $build->gold_snp_build->gold2geno_file_path;
     }
