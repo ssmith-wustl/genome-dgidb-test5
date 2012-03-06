@@ -37,19 +37,19 @@ class Genome::Model::Tools::Annotate::ParseVep {
 
 
 sub help_brief {                            # keep this to just a few words <---
-    "Split single multi-sample VCF into individual single-sample VCFs"
+    "This tool is designed to complement vcf-to-variant-matrix in how it parses pipeline files to a format better suited for the statistical analysis methods. Change the VEP default output into something more readable. Also, try to pick a \"top\" annotation."
 }
 
 
 sub help_synopsis {
 <<'HELP';
-Split single multi-sample VCF into individual single-sample VCFs
+This tool is designed to complement vcf-to-variant-matrix in how it parses pipeline files to a format better suited for the statistical analysis methods.
 HELP
 }
 
 sub help_detail {                  # this is what the user will see with the longer version of help. <---
 <<'HELP';
-Split single multi-sample VCF into individual single-sample VCFs
+This tool is designed to complement vcf-to-variant-matrix in how it parses pipeline files to a format better suited for the statistical analysis methods.
 HELP
 }
 
