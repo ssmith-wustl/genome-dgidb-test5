@@ -24,7 +24,7 @@ class Genome::Disk::Command::Allocation::Move {
             doc => 'Group that allocations are to be moved to',
         },
     ],
-    doc => 'Move alloations from one volume to another',
+    doc => 'move alloations from one volume to another',
 };
 
 sub help_detail {
@@ -35,7 +35,7 @@ EOS
 }
 
 sub help_brief {
-    return 'Moves alloations from one volume to another';
+    return 'moves alloations from one volume to another';
 }
 
 sub execute {

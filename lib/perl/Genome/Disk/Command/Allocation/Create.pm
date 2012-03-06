@@ -43,11 +43,11 @@ class Genome::Disk::Command::Allocation::Create {
             default => 0,
         },
     ],
-    doc => 'Creates an allocation for data somewhere on the filesystem'
+    doc => 'creates an allocation for data somewhere on the filesystem'
 };
 
 sub help_brief {
-    return 'Creates an allocation for data somewhere on the filesystem, which reserves the space for the owner';
+    return 'creates an allocation for data somewhere on the filesystem';
 }
 
 sub help_synopsis {
