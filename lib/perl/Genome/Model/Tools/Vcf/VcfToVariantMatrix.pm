@@ -133,14 +133,24 @@ sub execute {                               # replace with real execution logic.
                 $fh->print("$header_line\n");
             }
             next;
-         }
+        }
+        elsif ($line =~ m/^\#/) { #skip any other commented lines
+            next;
+        }
+
         my ($chr, $pos, $id, $ref, $alt, $qual, $filter, $info, $format, @samples) = split(/\t/, $line);
+
+        unless($filter =~ m/PASS/i || $filter eq '.') {
+            print "Skipping $chr:$pos:$ref/$alt for having filter status of $filter\n";
+            next;
+        }
     
         #parse format line to find out where our pattern of interest is in the ::::: system
         my (@format_fields) = split(/:/, $format);
         my $gt_location; #genotype
         my $dp_location; #depth - this is not filled for vasily ucla files - this is currently unused down below
         my $gq_location; #genotype quality - this is only filled in washu vcf for samtools variants, not varscan and not homo ref - this is currrently unused down below
+        my $ft_location; #filter
         my $count = 0;
         foreach my $format_info (@format_fields) { 
             if ($format_info eq 'GT') {
@@ -152,6 +162,9 @@ sub execute {                               # replace with real execution logic.
             elsif ($format_info eq 'GQ') {
                 $gq_location = $count;
             }
+            elsif ($format_info eq 'FT') {
+                $ft_location = $count;
+            }
             $count++;
         }
       
@@ -159,13 +172,15 @@ sub execute {                               # replace with real execution logic.
         unless ($gt_location || $gt_location == 0) {
             die "Format field doesn't have a GT entry, failed to get genotype for $line\n";
         }
-
+        unless (defined $ft_location) {
+            $ft_location = 'NA';
+        }
         my $line;
         if($self->matrix_genotype_version=~ m/numerical/i) {
-            $line = $self->format_numeric_output($chr, $pos, $ref, $alt, $gt_location, \@samples);    
+            $line = $self->format_numeric_output($chr, $pos, $ref, $alt, $gt_location, $ft_location, \@samples);    
         }
         elsif($self->matrix_genotype_version=~ m/bases/i) {
-           $line = $self->format_basic_output($chr, $pos, $ref, $alt, $gt_location, \@samples);   
+           $line = $self->format_basic_output($chr, $pos, $ref, $alt, $gt_location, $ft_location, \@samples);   
         }
         else {
             die "Please specify a proper matrix_genotype_version of either \"Bases\" or \"Numerical\"";
@@ -176,8 +191,6 @@ sub execute {                               # replace with real execution logic.
             my $out_line = join("\t", @$line);
             $fh->print("$out_line\n");
         }
-
-            
     }
     if($self->transpose) {
         $self->transpose_and_print($fh, \@finished_file);
@@ -211,7 +224,8 @@ sub grab_header {
 }
 
 sub find_most_frequent_alleles { 
-    my ($self, $chr, $pos, $ref, $alt, $gt_location, $sample_ref) = @_;
+    my ($self, $chr, $pos, $ref, $alt, $gt_location, $ft_location, $sample_ref) = @_;
+
     my %alleles_hash;
     my @allele_options;
     foreach my $sample_info (@$sample_ref) {                    
@@ -219,7 +233,20 @@ sub find_most_frequent_alleles {
         my $genotype = $sample_fields[$gt_location];
         my $allele1 = my $allele2 = ".";
         ($allele1, $allele2) = split(/\//, $genotype);
-        if ($allele1 =~ m/\d+/) {
+
+        my $filter_status;
+        if ($ft_location eq 'NA') {
+            $filter_status = 'PASS';
+        }
+        else {
+            $filter_status = $sample_fields[$ft_location];
+        }
+
+        if ($sample_info eq '.') {
+        }
+        elsif ($filter_status ne 'PASS' && $filter_status ne '.') {
+        }
+        elsif ($allele1 =~ m/\d+/) {
             $alleles_hash{$allele1}++;
             if ($allele2 =~ m/\d+/) {
                 $alleles_hash{$allele2}++;
@@ -245,29 +272,69 @@ sub find_most_frequent_alleles {
 
 
 sub format_numeric_output {
-    my ($self, $chr, $pos, $ref, $alt, $gt_location, $sample_ref) = @_;
+    my ($self, $chr, $pos, $ref, $alt, $gt_location, $ft_location, $sample_ref) = @_;
     my @samples = @$sample_ref;
-    my ($variant_name, @allele_options) = $self->find_most_frequent_alleles($chr, $pos, $ref, $alt, $gt_location, $sample_ref);
+    my ($variant_name, @allele_options) = $self->find_most_frequent_alleles($chr, $pos, $ref, $alt, $gt_location, $ft_location, $sample_ref);
     my @return_line = ($variant_name);
     for my $sample_info (@samples) {
         my (@sample_fields) = split(/:/, $sample_info);
         my $genotype = $sample_fields[$gt_location];
         my $allele1 = my $allele2 = ".";
         ($allele1, $allele2) = split(/\//, $genotype);
+
+        my $filter_status;
+        if ($ft_location eq 'NA') {
+            $filter_status = 'PASS';
+        }
+        else {
+            $filter_status = $sample_fields[$ft_location];
+        }
+
         my $allele_count;
-        if ($allele1 =~ m/\D+/) {
+        if ($sample_info eq '.') {
+            $allele_count = '.';
+        }
+        elsif ($filter_status ne 'PASS' && $filter_status ne '.') {
+            $allele_count = '.';
+        }
+        elsif ($allele1 =~ m/\D+/) {
             $allele_count = '.';
         }
         elsif ($allele1 == $allele2) { #homo
-            if ($allele1 == $allele_options[0]) { #homo first variant
-                $allele_count = 0;
+            my $allele_array_counter = 0;
+            foreach my $allele_option (@allele_options) {
+                if ($allele1 == $allele_option) { 
+                    if ($allele_array_counter == 0) {#homo first variant
+                        $allele_count = 0;
+                    }
+                    else { #homo some other variant -- THIS ISN'T CORRECT WHEN $allele_option is >1! BUT HEY, IT'S SOMETHING AND A BEST GUESS AS TO HOW TO HANDLE THESE MULTIVARIANTS IN THE NUMERICAL FORMAT!
+                        $allele_count = 2;
+                    }
+                }
+                $allele_array_counter++;
             }
-            elsif ($allele1 == $allele_options[1]) { #homo second variant
-                $allele_count = 2;
+            unless(defined($allele_count)){
+                $allele_count = ".";
+                print "Couldn't determine allele count for $variant_name with sample info $sample_info\n";
             }
         }
         else { #heterozygous
-            $allele_count = 1;
+            my $allele_array_counter = 0;
+            foreach my $allele_option (@allele_options) {
+                if ($allele1 == $allele_option) { 
+                    if ($allele_array_counter == 0) {#hetero first variant
+                        $allele_count = 1;
+                    }
+                    else { #hetero some other variant combination -- THIS ISN'T CORRECT! BUT HEY, IT'S SOMETHING AND A BEST GUESS AS TO HOW TO HANDLE THESE MULTIVARIANTS IN THE NUMERICAL FORMAT!
+                        $allele_count = 1;
+                    }
+                }
+                $allele_array_counter++;
+            }
+            unless(defined($allele_count)){
+                $allele_count = ".";
+                print "Couldn't determine allele count for $variant_name with sample info $sample_info\n";
+            }
         }
         push @return_line, $allele_count;
     }
@@ -275,7 +342,7 @@ sub format_numeric_output {
 }
 
 sub format_basic_output {
-    my ($self, $chr, $pos, $ref, $alt, $gt_location, $sample_ref) = @_;
+    my ($self, $chr, $pos, $ref, $alt, $gt_location, $ft_location, $sample_ref) = @_;
     my @alt_bases = split(/,/, $alt);
     my @allele_option_bases = ($ref, @alt_bases);
     my $variant_name = "$chr"."_"."$pos"."_"."$ref"."_"."$alt"; 
@@ -284,8 +351,23 @@ sub format_basic_output {
         my (@sample_fields) = split(/:/, $sample_info);
         my $genotype = $sample_fields[$gt_location];
         my ($allele1, $allele2) = split "[/|]", $genotype;
+
+        my $filter_status;
+        if ($ft_location eq 'NA') {
+            $filter_status = 'PASS';
+        }
+        else {
+            $filter_status = $sample_fields[$ft_location];
+        }
+
         my $allele_type;
-        if ($allele1 =~ m/^\D+/) { #if allele1 isn't numerical, then it's not vcf spec and must mean a missing value
+        if ($sample_info eq '.') {
+            $allele_type = 'NA';
+        }
+        elsif ($filter_status ne 'PASS' && $filter_status ne '.') {
+            $allele_type = 'NA';
+        }
+        elsif ($allele1 =~ m/^\D+/) { #if allele1 isn't numerical, then it's not vcf spec and must mean a missing value
             $allele_type = 'NA';
         }
         else { #switch numerical genotypes to the ACTG genotypes
