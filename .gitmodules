@@ -109,3 +109,6 @@
 [submodule "vendor/CummeRbund"]
 	path = vendor/CummeRbund
 	url = git@github.com:genome-vendor/CummeRbund.git
+[submodule "tgi-etc"]
+	path = tgi-etc
+	url = ssh://git/srv/git/genome-tgi-etc.git
