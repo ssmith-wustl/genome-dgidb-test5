@@ -4,6 +4,21 @@
   <!-- full page display for a project -->
   <xsl:template name="genome_model_build" match="/object[./types[./isa[@type='Genome::Model::Build']]]">
     <xsl:comment>template: fast/genome_model_build.xsl match: object[./types[./isa[@type='Genome::Model::Build']]]</xsl:comment>
+
+    <script type="text/javascript">
+          window.page_data = function(){
+            return {
+                workflow: {
+                "id": "<xsl:value-of select="/object/aspect[@name='_newest_workflow_instance']/object/@id"/>"
+                },
+                stages: {
+                    "count": <xsl:value-of select="count(build/stages/stage)"/>
+                }
+            }
+          }();
+    </script>
+
+
     <xsl:call-template name="control_bar_view"/>
 
     <xsl:call-template name="view_header">
@@ -17,7 +32,9 @@
     <link rel="stylesheet" href="https://imp.gsc.wustl.edu/resources/report_resources/jquery/dataTables-1.5/media/css/gc_table.css" type="text/css" media="screen"></link>
 
     <link rel="stylesheet" href="/res/css/genome_model_build.css" type="text/css" />
-    <script type='text/javascript' src='/res/js/app/genome_model_build.js'></script>
+
+    <script type='text/javascript' src='/res/js/app/fast/genome_model_build.js'></script>
+
 
     <div class="content rounded shadow">
       <div class="container">
@@ -280,10 +297,17 @@
 
   <xsl:template name="genome_model_build_tabs">
 
+    <xsl:variable name="workflow" select="/object/aspect[@name='_newest_workflow_instance']/object"/>
+
+
+<a><xsl:attribute name="href">/viewajax/workflow/operation/instance/statuspopup.html?id=<xsl:value-of select="$workflow/@id"/></xsl:attribute>HERERERERE</a>
+
         <div id="process_tabs" class="span-24 last">
           <ul>
             <li class="tab_header"><h3 class="genome_processingprofile_16">Build Process</h3></li>
-            <li><a><xsl:attribute name="href">/viewajax/workflow/operation/instance/statuspopup.html?id=<xsl:value-of select="//build/workflow/@id"/></xsl:attribute><span class="spinner"><xsl:text> </xsl:text></span>workflow</a></li>
+            <li><a><xsl:attribute name="href">/viewajax/workflow/operation/instance/statuspopup.html?id=<xsl:value-of select="$workflow/@id"/></xsl:attribute>
+                    <span class="spinner"><xsl:text> </xsl:text></span>workflow
+            </a></li>
 
             <li><a href="#events">events</a></li>
           </ul>
