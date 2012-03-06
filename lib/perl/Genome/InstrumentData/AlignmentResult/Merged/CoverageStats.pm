@@ -154,6 +154,7 @@ sub _gather_params_for_get_or_create {
 sub create {
     my $class = shift;
     my $self = $class->SUPER::create(@_);
+    return unless ($self);
 
     $self->_prepare_staging_directory;
 
