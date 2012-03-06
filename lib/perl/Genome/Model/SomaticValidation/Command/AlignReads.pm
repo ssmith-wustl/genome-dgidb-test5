@@ -70,7 +70,7 @@ sub execute {
     $num_expected_samples++ if $build->normal_sample;
 
     unless(scalar(@bams) == $num_expected_samples) {
-        die $self->error_message('Found ' . scalar(@bams) . ' from alignment when ' . $num_expected_samples . ' expected.');
+        $self->warning_message('Found ' . scalar(@bams) . ' from alignment when ' . $num_expected_samples . ' expected. This model will probably fail.');
     }
 
     $self->status_message("Alignment BAM paths:\n " . join("\n ", @bams));

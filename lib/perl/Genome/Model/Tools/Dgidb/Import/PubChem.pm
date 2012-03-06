@@ -18,7 +18,7 @@ class Genome::Model::Tools::Dgidb::Import::PubChem {
 
 
 sub _doc_copyright_years {
-    (2011);
+    (2012);
 }
 
 sub _doc_license {

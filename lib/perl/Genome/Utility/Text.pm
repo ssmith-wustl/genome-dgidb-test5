@@ -21,49 +21,15 @@ sub string_to_camel_case {
     return join('', map { ucfirst } split(/[\s_]+/, $string));
 }
 
-sub camel_case_to_words {
+sub camel_case_to_string {
     my $camel_case = shift;
     unless ( $camel_case ) {
         Carp::cluck('No camel case to get words');
         return;
     }
     my @words = split( /(?=(?<![A-Z])[A-Z])|(?=(?<!\d)\d)/, $camel_case); #split on the first capital or the start of a number
-    return @words;
-}
-
-sub camel_case_to_string {
-    my @words = camel_case_to_words(shift);
     my $join = ( @_ ) ? $_[0] : ' '; 
     return join($join, map { lc } @words);
-}
-
-sub camel_case_to_capitalized_words {
-    my @words = camel_case_to_words(shift);
-    my $join = ( @_ ) ? $_[0] : ' '; 
-    return join($join, map { ucfirst } @words);
-}
-
-#< Module to/from Class >#
-sub class_to_module {
-    my $class = shift;
-    unless ( $class ) {
-        Carp::cluck('No class to convert to module');
-        return;
-    }
-    $class =~ s/::/\//g;
-    $class .= '.pm';
-    return $class;
-}
-
-sub module_to_class {
-    my $module = shift;
-    unless ( $module ) {
-        Carp::cluck('No module to convert to class');
-        return;
-    }
-    $module =~ s#\.pm##;
-    $module =~ s#/#::#g;
-    return $module;
 }
 
 #< Params as String and Hash >#

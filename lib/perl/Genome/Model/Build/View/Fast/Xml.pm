@@ -17,6 +17,7 @@ class Genome::Model::Build::View::Fast::Xml {
                 'notes',
                 'run_by',
                 'software_revision',
+                '_newest_workflow_instance',
                 {
                     'name' => 'the_master_event',
                     'perspective' => 'default',

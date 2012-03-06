@@ -751,7 +751,9 @@ sub get_classes_in_subdirectory {
     my @classes;
     for my $module ( glob("$directory/*pm") ) {
         $module =~ s#$inc_directory/##;
-        push @classes, Genome::Utility::Text::module_to_class($module);
+        $module =~ s#\.pm##;
+        $module =~ s#/#::#g;
+        push @classes, $module;
     }
 
     return @classes;

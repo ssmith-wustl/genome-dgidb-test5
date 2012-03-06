@@ -68,9 +68,7 @@ sub execute {
             my $metric_value = $line->{$field};
             next unless defined $metric_value;
 
-            my @words = Genome::Utility::Text::camel_case_to_words($field);
-            my $metric_name = join('_', 'compare_snps', map { lc $_ } @words);
-
+            my $metric_name = lc( 'compare_snps_'.Genome::Utility::Text::camel_case_to_sting($field, '_') );
             my $metric = Genome::Model::Metric->get(
                 build_id => $build->id,
                 name => $metric_name,
