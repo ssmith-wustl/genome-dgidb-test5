@@ -299,9 +299,6 @@
 
     <xsl:variable name="workflow" select="/object/aspect[@name='_newest_workflow_instance']/object"/>
 
-
-<a><xsl:attribute name="href">/viewajax/workflow/operation/instance/statuspopup.html?id=<xsl:value-of select="$workflow/@id"/></xsl:attribute>HERERERERE</a>
-
         <div id="process_tabs" class="span-24 last">
           <ul>
             <li class="tab_header"><h3 class="genome_processingprofile_16">Build Process</h3></li>
