@@ -13,7 +13,7 @@ class Genome::Model::MutationalSignificance::Command::CreateBamList {
             is_many => 1,    
         },
     ],
-    has_output => [
+    has_input_output => [
         bam_list => {
             is => 'Text',},
     ],
@@ -25,15 +25,18 @@ sub execute {
     my $out_string = "";
 
     foreach my $build ($self->somatic_variation_builds) {
-        $out_string .= $build->subject->name; #TODO: I don't think this is safe
+        $out_string .= $build->tumor_build->model->subject->extraction_label; 
         $out_string .= "\t";
-        $out_string .= $build->normal_bam;
+        $out_string .= $build->normal_build->whole_rmdup_bam_file;
         $out_string .= "\t";
-        $out_string .= $build->tumor_bam;
+        $out_string .= $build->tumor_build->whole_rmdup_bam_file;
         $out_string .= "\n";
     }
 
-    $self->bam_list($out_string);
+    my $fh = IO::File->new($self->bam_list, '>');
+    $fh->print($out_string);
+    $fh->close;
+
     $self->status_message('Created BAM list');
     return 1;
 }

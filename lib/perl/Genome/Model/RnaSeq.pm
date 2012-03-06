@@ -4,7 +4,6 @@ package Genome::Model::RnaSeq;
 # this code will prevent them from being loaded from another part of @INC
 # it can be removed after this snapshot becomes stable...
 for my $f (qw|
-    Genome/Model/Build/RnaSeq.pm
     Genome/Model/Command/Define/RnaSeq.pm
     Genome/ProcessingProfile/RnaSeq.pm
 |) {
@@ -35,13 +34,16 @@ class Genome::Model::RnaSeq {
         sequencing_platform => {
             doc => 'The sequencing platform from whence the model data was generated',
             valid_values => ['454', 'solexa'],
+            is_optional => 1,
         },
         dna_type => {
             doc => 'the type of dna used in the reads for this model',
-            valid_values => ['cdna']
+            valid_values => ['cdna'],
+            is_optional => 1,
         },
         read_aligner_name => {
             doc => 'alignment algorithm/software used for this model',
+            is_optional => 1,
         },
         read_aligner_version => {
             doc => 'the aligner version used for this model',
@@ -353,6 +355,33 @@ sub Genome::ProcessingProfile::Command::List::RnaSeq::_resolve_boolexpr {
     );
 
     return $bool_expr;
+}
+
+
+sub annotation_build {
+    my $self = shift;
+    
+    my $annotation_reference_transcripts = $self->annotation_reference_transcripts;
+    unless ($annotation_reference_transcripts) { return; }
+
+    my ($annotation_name,$annotation_version) = split(/\//, $annotation_reference_transcripts);
+    my $annotation_model = Genome::Model->get(name => $annotation_name);
+    unless ($annotation_model){
+        $self->error_message('Failed to get annotation model for annotation_reference_transcripts: ' . $annotation_reference_transcripts);
+        return;
+    }
+    
+    unless (defined $annotation_version) {
+        $self->error_message('Failed to get annotation version from annotation_reference_transcripts: '. $annotation_reference_transcripts);
+        return;
+    }
+    
+    my $annotation_build = $annotation_model->build_by_version($annotation_version);
+    unless ($annotation_build){
+        $self->error_message('Failed to get annotation build from annotation_reference_transcripts: '. $annotation_reference_transcripts);
+        return;
+    }
+    return $annotation_build;
 }
 
 1;

@@ -250,6 +250,40 @@ sub get{
     }
 }
 
+#TODO: we need to figure out the ucsc api to download new ones when needed
+#For now, this is hard-coded
+sub get_or_create_ucsc_tiering_directory {
+    my $self = shift;
+    if ($self->id eq "10194788") {
+        return "/gscmnt/sata921/info/medseq/make_tier_bed_files/hg18_build36_ucsc_files";
+    }
+    elsif ($self->id eq "106942997") {
+        return "/gscmnt/sata921/info/medseq/make_tier_bed_files/NCBI-human-build37/hg19_files";
+    }
+    elsif ($self->id eq "107494762") {
+        return "/gscmnt/sata921/info/medseq/make_tier_bed_files/NCBI-mouse-build37/mm9";
+    }
+    else {
+        $self->status_message("UCSC Tiering Directory not currently available for this species: ".$self->species_name);
+        return;
+    }
+}
+
+#TODO: figure out how to get this and make it a real result
+sub get_or_create_ucsc_conservation_directory {
+    my $self = shift;
+    if ($self->id eq "10194788") {
+        return "/gscmnt/ams1161/info/model_data/2771411739/build113115679/annotation_data/ucsc_conservation/";
+    }
+    elsif ($self->id eq "106942997") {
+        return "/gscmnt/ams1102/info/model_data/2771411739/build106409619/annotation_data/ucsc_conservation/"
+    }
+    else {
+        $self->status_message("UCSC conservation scores are not currently available in the system for this species: ".$self->species_name);
+        return;
+    }
+}
+
 sub is_derived_from {
     my ($self, $build, $seen) = @_;
     $seen = {} if !defined $seen;
@@ -517,6 +551,8 @@ sub get_sequence_dictionary {
             $self->error_message("Failed to to create sequence dictionary for $path. Quiting");
             return;
         }
+
+        $self->reallocate;
 
         return $path;
 

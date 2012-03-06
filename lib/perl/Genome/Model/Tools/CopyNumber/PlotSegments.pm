@@ -255,7 +255,15 @@ class Genome::Model::Tools::CopyNumber::PlotSegments {
 	    is => 'String',
             is_optional => 1,
             doc => 'y-axis label',
-        },
+    },
+
+    label_size => {
+	    is => 'Float',
+	    is_optional => 1,
+            is_input => 1,
+	    doc => 'Make the text labels on the plot bigger or smaller',
+	    default => 0.6,
+	},
 
     ]
 };
@@ -524,6 +532,7 @@ sub execute {
     my $ylabel = $self->ylabel;
     my $tumor_segment_file = $self->tumor_segment_file;
     my $normal_segment_file = $self->normal_segment_file;
+    my $label_size = $self->label_size;
 
 
     #sanity checks
@@ -662,7 +671,7 @@ sub execute {
 	    print R_COMMANDS ", ymax=" . $ymax;
 	}
 
-        if(defined($ymin)){
+    if(defined($ymin)){
 	    print R_COMMANDS ", ymin=" . $ymin;
         }
 
@@ -670,7 +679,7 @@ sub execute {
 	    print R_COMMANDS ", xmax=" . $xmax;
 	}
 
-        if(defined($xmin)){
+    if(defined($xmin)){
 	    print R_COMMANDS ", xmin=" . $xmin;
         }
 
@@ -696,6 +705,10 @@ sub execute {
 
 	if (defined($lowres_max)){
 	    print R_COMMANDS ", lowResMax=" . $lowres_max;
+	}
+
+	if (defined($label_size)){
+	    print R_COMMANDS ", label_size=" . $label_size;
 	}
 
 	if ($hide_normal){

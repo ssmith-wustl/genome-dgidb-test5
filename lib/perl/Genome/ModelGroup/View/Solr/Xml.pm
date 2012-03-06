@@ -7,7 +7,7 @@ use Genome;
 
 class Genome::ModelGroup::View::Solr::Xml {
     is => 'Genome::View::Solr::Xml',
-    has => [
+    has_field => [
         type => {
             is => 'Text',
             default => 'modelgroup'
@@ -76,7 +76,7 @@ class Genome::ModelGroup::View::Solr::Xml {
                 {
                     name => 'models',
                     perspective => 'default',
-                    toolkit => 'text',
+                    toolkit => 'xml',
                     aspects => [
                         'id',
                         'name',

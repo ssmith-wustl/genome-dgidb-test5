@@ -72,6 +72,7 @@ sub _gather_params_for_get_or_create {
 sub create {
     my $class = shift;
     my $self = $class->SUPER::create(@_);
+    return unless ($self);
 
     unless($self->_validate_inputs) {
         my $err = $self->error_message;
@@ -93,6 +94,8 @@ sub create {
     unless($self->_promote_data) {
         die $self->error_message('Failed to promote data.');
     }
+
+    $self->_reallocate_disk_allocation;
 
     return $self;
 }

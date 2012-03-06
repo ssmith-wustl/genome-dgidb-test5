@@ -93,8 +93,8 @@ sub execute {
     my $genbank_build = Genome::Model::ImportedAnnotation->get(name => $gianame)->build_by_version($version);
     my ($genbank_data_directory) = $genbank_build->determine_data_directory;
     
-    my (@et) = Genome::Transcript->get(data_directory => $ensembl_data_directory);
-    my (@gt) = Genome::Transcript->get(data_directory => $genbank_data_directory);
+    my (@et) = Genome::Transcript->get(data_directory => $ensembl_data_directory, reference_build_id => $ensembl_build->reference_sequence_id);
+    my (@gt) = Genome::Transcript->get(data_directory => $genbank_data_directory, reference_build_id => $genbank_build->reference_sequence_id);
     
     my @join_array = (@et,@gt);
     

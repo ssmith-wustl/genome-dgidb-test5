@@ -32,6 +32,7 @@ $gsc_workorder->set_always(id => -1111);
 $gsc_workorder->set_always(name => 'AQID-Test-Workorder');
 $gsc_workorder->set_always(setup_name => 'AQID-Test-Workorder');
 $gsc_workorder->set_always(get_project => $gsc_project);
+$gsc_workorder->set_always(pipeline => undef); #TODO: am I ok?
 
 my $taxon = Genome::Taxon->get( species_name => 'human' );
 my $individual = Genome::Individual->create(

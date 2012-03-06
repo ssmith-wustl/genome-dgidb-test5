@@ -12,7 +12,7 @@ class Genome::Model::Tools::Music::Bmr::CalcCovg {
     roi_file => { is => 'Text', doc => "Tab delimited list of ROIs [chr start stop gene_name] (See Description)" },
     reference_sequence => { is => 'Text', doc => "Path to reference sequence in FASTA format" },
     bam_list => { is => 'Text', doc => "Tab delimited list of BAM files [sample_name normal_bam tumor_bam] (See Description)" },
-    output_dir => { is => 'Text', doc => "Directory where output files and subdirectories will be written" },
+    output_dir => { is => 'Text', doc => "Directory where output files and subdirectories will be written", is_output => 1},
     cmd_list_file => { is => 'Text', doc => "A file to write calcRoiCovg commands to (See Description)", is_optional => 1 },
     cmd_prefix => { is => 'Text', doc => "A command that submits a job to your cluster (See Description)", is_optional => 1 },
     normal_min_depth => { is => 'Integer', doc => "The minimum read depth to consider a Normal BAM base as covered", is_optional => 1, default => 6 },

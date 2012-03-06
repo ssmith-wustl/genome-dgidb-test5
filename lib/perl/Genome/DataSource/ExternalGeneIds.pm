@@ -30,8 +30,8 @@ sub skip_first_line {
     return 0;
 }
 
-sub constant_values { [qw/data_directory /] };
-sub required_for_get { ['data_directory'] }
+sub constant_values { [qw/data_directory reference_build_id/] };
+sub required_for_get { ['data_directory', 'reference_build_id'] }
 
 
 # All the possible locations of files

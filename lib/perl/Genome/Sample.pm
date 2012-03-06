@@ -255,9 +255,14 @@ class Genome::Sample {
     doc => 'A single specimen of DNA or RNA extracted from some tissue sample',
 };
 
+sub get_source {
+    my $self = shift;
+    return $self->source;
+}
+
 sub __display_name__ {
     my $self = $_[0];
-    return $self->name . ' (' . (($self->source && $self->source->common_name) ? $self->source->common_name . ($self->common_name ? ' ' . $self->common_name  : '') : '') . ' ' . $self->id . ')';
+    return $self->name . ' (' . (($self->source && $self->source->common_name) ? $self->source->common_name . ($self->common_name ? ' ' . $self->common_name  : '') . ' ' : '') . $self->id . ')';
 }
 
 sub check_genotype_data {

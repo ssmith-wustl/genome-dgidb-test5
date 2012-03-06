@@ -337,10 +337,12 @@ sub execute {
     if(($change_names>0)&& $self->is_paired_end){
         if($change_names==2){
             my ($file1,$file2) = keys(%filenames);
-            #TODO the tar command defined below requires tar version 1.21 or greater for the --transform portion to work. This will die on the wrong filenames until we have version 1.21 or greater installed.
-            $self->error_message("There are problems with the fastq file names which cannot currently be solved. Please change the names to match the proper format, as output above.");
-            die $self->error_message;
-            $tar_cmd = sprintf("tar cvzfh %s -C %s %s %s --transform=s/%s/%s/g --transform=s/%s/%s/g",$tmp_tar_filename,$basename, $file1,$file2,$file1,$filenames{$file1},$file2,$filenames{$file2});
+            if ($self->tar_can_multi_transform) {
+                $tar_cmd = sprintf("tar cvzfh %s -C %s %s %s --transform=s/%s/%s/g --transform=s/%s/%s/g", $tmp_tar_filename, $basename, $file1, $file2, $file1, $filenames{$file1}, $file2, $filenames{$file2});
+            } else {
+                $self->error_message("The version of tar that is installed is not able to correct multiple file names. Please change the names to match the proper format, as labeled above.");
+                die $self->error_message;
+            }
         } elsif ($change_names==1) {
             # if only one needs changing, find which one and apply the single transform in the tar command. This will work with our current 1.19 tar install.
             my ($file1,$file2) = keys(%filenames);
@@ -434,6 +436,12 @@ sub execute {
 
 }
 
+sub tar_can_multi_transform {
+    my ($tar_version) = qx(tar --version 2>&1 | head -n 1) =~ /([.\d]+)/;
+    my $tar_vstring = eval "v$tar_version";
+    return ($tar_vstring ge v1.21);
+}
+
 sub check_fastq_integritude { 
     my $self = shift;
     my $answer = 0;
@@ -523,12 +531,20 @@ sub get_read_count_and_fragment_count {
     my ($line_count,$read_count,$fragment_count);
     my @files = split ",", $self->source_data_files;
     $self->status_message("Now attempting to determine read_count by calling wc on the imported fastq(s). This may take a while if the fastqs are large.");
+    my $last_count;  #use this for checking if paired_end files have the same amt of reads
     for my $file (@files){
         my $sub_count = `wc -l $file`;
         ($sub_count) = split " ",$sub_count;
         unless(defined($sub_count)&&($sub_count > 0)){
             $self->error_message("couldn't get a response from wc.");
             return;
+        }
+        if ($last_count){
+            unless ($last_count = $sub_count){
+                die $self->error_message("Two provided fastq files have differing line counts and number of reads! (lines: $last_count and $sub_count)");
+            }
+        }else{
+            $last_count=$sub_count;
         }
         $line_count += $sub_count;
     }
@@ -549,23 +565,20 @@ sub get_read_count_and_fragment_count {
 
 sub get_subset_name {
     my $self = shift;
-    my $subset_name=-1;
-    my @files = split ",",$self->source_data_files;
+
+    my $subset_name;
+    my @files = split(/,/, $self->source_data_files);
     for my $file (@files) {
-        my ($filename,$path,$suffix) = fileparse($file,".txt");
-        my ($n,$sname) = split "_",$filename;
-        if($subset_name==-1){
+        my ($filename, $path, $suffix) = fileparse($file, '.txt');
+        my ($sname) = $filename =~ /s_(\d)(_\d)?_sequence/;
+        if(not defined $subset_name) {
             $subset_name = $sname;
-        } else {
-            unless($sname eq $subset_name){
-                die "The subset names didn't match.";
-            }
+        } elsif ($sname ne $subset_name) {
+            die "The subset names didn't match.";
         }
+    }
 
-    }    
-    #print "subset_name  = ".$subset_name."\n";
     return $subset_name;
-
 }
 
 sub is_valid_filename {

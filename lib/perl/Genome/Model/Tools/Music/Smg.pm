@@ -13,7 +13,7 @@ class Genome::Model::Tools::Music::Smg {
   is => 'Command::V2',
   has_input => [
     gene_mr_file => { is => 'Text', doc => "File with per-gene mutation rates (Created using \"music bmr calc-bmr\")" },
-    output_file => { is => 'Text', doc => "Output file that will list significantly mutated genes and their p-values" },
+    output_file => { is => 'Text', doc => "Output file that will list significantly mutated genes and their p-values", is_output => 1 },
     processors => { is => 'Integer', doc => "Number of processors to use (requires 'foreach' and 'doMC' R packages)", default => 1 },
     bmr_modifier_file => { is => 'Text', doc => "Tab delimited list of values per gene that modify BMR before testing [gene_name bmr_modifier]", is_optional => 1 },
     max_fdr => { is => 'Number', doc => "The maximum allowed false discovery rate for a gene to be considered an SMG", is_optional => 1, default => 0.20 },

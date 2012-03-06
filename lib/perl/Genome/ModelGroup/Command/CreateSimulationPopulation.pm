@@ -164,8 +164,8 @@ sub execute {
         }
         $DB::single=1;
         my $id_cmd = Genome::Model::Command::InstrumentData::Assign->create(
-            model_id=>$model->id,
-            instrument_data_id=>$import_cmd->import_instrument_data_id,
+            model=>$model,
+            instrument_data=>[$import_cmd->_inst_data],
         );
         eval{ 
             $id_cmd->execute();

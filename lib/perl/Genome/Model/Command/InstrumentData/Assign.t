@@ -54,18 +54,27 @@ my ($assign, @assigned_inst_data);
 
 # Fails
 $assign = Genome::Model::Command::InstrumentData::Assign->create(
-    model_id => $model->id,
     all => 1,
-    instrument_data_ids => '44 44',
+);
+ok($assign, 'create w/o model - will fail execute');
+$assign->dump_status_messages(1);
+ok(!$assign->execute, 'execute failed as exepcted w/o model');
+$assign->delete;
+
+$assign = Genome::Model::Command::InstrumentData::Assign->create(
+    model => $model,
+    all => 1,
+    instrument_data => \@sanger_id,
 );
 ok($assign, 'create to request multiple functions - will fail execute');
 $assign->dump_status_messages(1);
 ok(!$assign->execute, 'execute');
+$assign->delete;
 
 # Sucess
 $assign = Genome::Model::Command::InstrumentData::Assign->create(
-    model_id => $model->id,
-    instrument_data_id => $sanger_id[0]->id,
+    model => $model,
+    instrument_data => [$sanger_id[0]],
     force => 1,
 );
 ok($assign, 'create to assign single instrument data');
@@ -75,8 +84,8 @@ ok($assign->execute, 'execute');
 is_deeply(\@assigned_inst_data, [ $sanger_id[0], ], 'confirmed assigned inst data');
 
 $assign = Genome::Model::Command::InstrumentData::Assign->create(
-    model_id => $model->id,
-    instrument_data_ids => join( ' ', $sanger_id[1]->id, $sanger_id[2]->id, ),
+    model => $model,
+    instrument_data => [ $sanger_id[1], $sanger_id[2], ],
     force => 1,
 );
 ok($assign, 'create to assign multiple instrument data');
@@ -86,7 +95,7 @@ ok($assign->execute, 'execute');
 is_deeply(\@assigned_inst_data, [ @sanger_id[0..2], ], 'confirmed assigned inst data');
 
 $assign = Genome::Model::Command::InstrumentData::Assign->create(
-    model_id => $model->id,
+    model => $model,
     all => 1,
 );
 ok($assign, 'create to assign all available instrument data');
@@ -99,7 +108,7 @@ is_deeply(\@assigned_inst_data, \@sanger_id, 'confirmed assigned inst data');
 Genome::InstrumentData::Sanger->create(id => '05.jan00.101amaa');
 
 $assign = Genome::Model::Command::InstrumentData::Assign->create(
-    model_id => $model->id,
+    model => $model,
     all => 1,
 );
 ok($assign, 'create to assign all available instrument data');
@@ -110,7 +119,7 @@ is_deeply(\@assigned_inst_data, \@sanger_id, 'confirmed skip ignored  inst data'
 
 
 $assign = Genome::Model::Command::InstrumentData::Assign->create(
-    model_id => $model->id,
+    model => $model,
     flow_cell_id => $solexa_id->flow_cell_id,
     force => 1,
 );
@@ -128,8 +137,8 @@ is_deeply(\@assigned_inst_data, [ @sanger_id, $solexa_id ], 'confirmed assigned 
 
 note('Reassign inst data is ok');
 $assign = Genome::Model::Command::InstrumentData::Assign->create(
-    model_id => $model->id,
-    instrument_data_id => $sanger_id[0]->id,
+    model => $model,
+    instrument_data => [$sanger_id[0]],
     force => 1,
 );
 ok($assign, 'create to reassign single instrument data');

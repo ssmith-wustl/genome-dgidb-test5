@@ -586,7 +586,7 @@ sub _extract_input_read_group_bam {
                                                                   read_group_id=>$self->instrument_data_segment_id);
 
     unless ($cmd->execute) {
-        $self->error_message($cmd->error_mesage);
+        $self->error_message($cmd->error_message);
         return;
     }
      

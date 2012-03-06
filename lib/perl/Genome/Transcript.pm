@@ -37,6 +37,13 @@ class Genome::Transcript {
         },
     ],
     has => [
+        reference_build_id => {
+            is => 'Text',
+        },
+        reference_build => {
+            is => 'Genome::Model::Build::ReferenceSequence',
+            id_by => 'reference_build_id',
+        },
         gene_id => { 
             is => 'Text', 
         },
@@ -50,7 +57,7 @@ class Genome::Transcript {
         },
         transcript_status => { is => 'VARCHAR',
             is_optional => 1,
-            valid_values => ['reviewed', 'unknown', 'model', 'validated', 'predicted', 'inferred', 'provisional', 'unknown', 'known', 'novel'],
+            valid_values => ['reviewed', 'unknown', 'model', 'validated', 'predicted', 'inferred', 'provisional', 'unknown', 'known', 'novel', 'putative'],
         },
         strand => { is => 'VARCHAR',
             is_optional => 1,
@@ -58,21 +65,21 @@ class Genome::Transcript {
         },
         sub_structures => { 
             #is_constant => 1,
-            calculate_from => [qw/ id  data_directory/],
+            calculate_from => [qw/ id  data_directory chrom_name/],
             calculate => q|
-            Genome::TranscriptSubStructure->get(transcript_id => $id, data_directory => $data_directory);
+            Genome::TranscriptStructure->get(chrom_name => $chrom_name, transcript_id => $id, data_directory => $data_directory);
             |,
         },
         protein => { 
-            calculate_from => [qw/ id data_directory/],
+            calculate_from => [qw/ id data_directory reference_build_id/],
             calculate => q|
-            Genome::Protein->get(transcript_id => $id, data_directory => $data_directory);
+            Genome::Protein->get(transcript_id => $id, data_directory => $data_directory, reference_build_id => $reference_build_id);
             |,
         },
         gene => {
-            calculate_from => [qw/ gene_id data_directory/],
+            calculate_from => [qw/ gene_id data_directory reference_build_id/],
             calculate => q|
-            Genome::Gene->get(id => $gene_id, data_directory => $data_directory);
+            Genome::Gene->get(id => $gene_id, data_directory => $data_directory, reference_build_id => $reference_build_id);
             |,
         },
         data_directory => {
@@ -628,22 +635,7 @@ sub reverse_complement {
 # Given a version and species, find the imported reference sequence build
 sub get_reference_build {
     my $self = shift;
-
-    if ($self->{_reference_build}) {
-        return $self->{_reference_build};
-    }
-    else {
-        my ($version) = $self->version =~ /^\d+_(\d+)[a-z]/;
-        my $species = $self->species;
-
-        my $model = Genome::Model::ImportedReferenceSequence->get(name => "NCBI-$species");
-        confess "Could not get imported reference sequence model for $species!" unless $model;
-        my $build = $model->build_by_version($version);
-        confess "Could not get build version $version from $species imported reference sequence model!" unless $build;
-
-        $self->{_reference_build} = $build;
-        return $self->{_reference_build};
-    }
+    return $self->reference_build;
 }
 
 # Returns all coding exons associated with this transcript

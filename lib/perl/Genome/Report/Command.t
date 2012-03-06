@@ -3,13 +3,12 @@
 use strict;
 use warnings;
 
-use above "Genome";
+use above 'Genome';
 
-use Genome::Report::Test;
+use Test::More;
 
-Genome::Report::Command::Test->runtests;
+use_ok('Genome::Report::Command');
 
+done_testing();
 exit;
 
-#$HeadURL$
-#$Id$

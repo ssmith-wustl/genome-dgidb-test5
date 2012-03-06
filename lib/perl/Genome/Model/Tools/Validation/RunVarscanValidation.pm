@@ -15,28 +15,39 @@ class Genome::Model::Tools::Validation::RunVarscanValidation {
         is_optional => 0,
         doc => 'The output directory in which to place the results',
     },
+
     normal_build => {
         type => 'String',
-        is_optional => 0,
+        is_optional => 1,
         doc => 'The build for the normal model to use. Used to retrieve the normal bam file',
     },
+
     tumor_build => {
         type => 'String',
-        is_optional => 0,
+        is_optional => 1,
         doc => 'The build for the tumor model to use. Used to retrieve the tumor bam file',
     },
+
+    validation_build => {
+        type => 'String',
+        is_optional => 1,
+        doc => 'The build for the somatic-validation model, which has the tumor and normal bams',
+    },
+        
     normal_purity => {
         type => 'Float',
         is_optional => 1,
         default => 1,
         doc => 'The purity of the matched normal of the sample. 1 by default. If you have an impure normal sample, then you will want to reduce this value (eg for 10% contamination of the normal use 0.9)',
     },
+
     min_var_freq => {
         type => 'Float',
         is_optional => 1,
         default => 0.08,
         doc => 'The minimum variant frequency that Varscan uses to determine if a variant exists. 0.08 by default. If you have an impure normal smaple, then you will want to increase this value (eg for 30% contamination of the normal use 0.2',
     },
+
     snp_target_file => {
         type => 'String',
         is_optional => 0,
@@ -50,11 +61,26 @@ sub execute {
     my $self=shift;
 
     #we use the builds to grab the bams
-    my $normal_build = Genome::Model::Build->get($self->normal_build);
-    my $tumor_build = Genome::Model::Build->get($self->tumor_build);
+    my $tumor_bam;
+    my $normal_bam;
 
-    my $tumor_bam = $tumor_build->whole_rmdup_bam_file;
-    my $normal_bam = $normal_build->whole_rmdup_bam_file;
+    if(defined($self->tumor_build) && defined($self->normal_build)){
+        my $tumor_build = Genome::Model::Build->get($self->tumor_build);
+        my $normal_build = Genome::Model::Build->get($self->normal_build);
+
+        $tumor_bam = $tumor_build->whole_rmdup_bam_file;
+        $normal_bam = $normal_build->whole_rmdup_bam_file;
+    } elsif (defined($self->validation_build)){
+        my $build = Genome::Model::Build->get($self->validation_build);
+        my $data_dir = $build->data_directory;
+        $tumor_bam = "$data_dir/alignments/tumor/*.bam";
+        $normal_bam = "$data_dir/alignments/normal/*.bam";
+    } else {
+        print STDERR "Must specify either tumor-build and normal-build parameters OR specify the somatic-validation build";
+        return 0;
+    }
+
+    
 
     my $min_var_freq = $self->min_var_freq;
     my $normal_purity = $self->normal_purity;

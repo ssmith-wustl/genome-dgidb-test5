@@ -20,13 +20,6 @@ class Genome::Model::Build::ImportedAnnotation {
             where => [ name => 'version', value_class_name => 'UR::Value'], 
             is_mutable => 1 
         },
-        annotation_data_source_directory => {
-            via => 'inputs',
-            is => 'Text',
-            to => 'value_id',
-            where => [ name => 'annotation_data_source_directory', value_class_name => 'UR::Value' ],
-            is_mutable => 1 
-        },
         species_name => {
             is => 'Text',
             via => 'inputs',
@@ -163,6 +156,30 @@ sub is_compatible_with_reference_sequence_build {
         ($rsb->version eq $version);
 }
 
+sub get_api_paths {
+    my $self = shift;
+    my $data_directory = $self->data_directory;
+    return glob("$data_directory/ensembl*/modules");
+}
+
+sub prepend_api_path_and_execute {
+    my $self = shift;
+    my %shellcmd_params = @_;
+    my @api_path = $self->get_api_paths;
+    my $lib;
+    if (@api_path){
+        $lib = join(" ", $^X, '-S', map(join(" ", '-I', '"' . $_ . '"'), @api_path));
+    }else{
+        $self->error_message("No API path found for annotation build: " . $self->id);
+        return;
+    }
+
+    $shellcmd_params{'cmd'} = join(" ", $lib, $shellcmd_params{'cmd'});
+    my $rv = Genome::Sys->shellcmd(%shellcmd_params);
+
+    return $rv;
+}
+
 sub get_or_create_roi_bed {
     my $self = shift;
     my $roi = Genome::FeatureList->get(subject => $self,
@@ -270,7 +287,7 @@ sub transcript_iterator{
 
     my @composite_builds = $self->from_builds;
     if (@composite_builds){
-        my @iterators = map {$_->transcript_iterator(chrom_name => $chrom_name)} @composite_builds;
+        my @iterators = map {$_->transcript_iterator(chrom_name => $chrom_name, reference_build_id => $self->reference_sequence_id)} @composite_builds;
         my %cached_transcripts;
         for (my $i = 0; $i < @iterators; $i++) {
             my $next = $iterators[$i]->next;
@@ -312,10 +329,13 @@ sub transcript_iterator{
         }
 
         if ($chrom_name){
-            return Genome::Transcript->create_iterator(data_directory => $data_dir, chrom_name => $chrom_name);
+            return Genome::Transcript->create_iterator(data_directory => $data_dir, 
+                                                        chrom_name => $chrom_name,
+                                                        reference_build_id => $self->reference_sequence_id);
         }
         else {
-            return Genome::Transcript->create_iterator(data_directory => $data_dir);
+            return Genome::Transcript->create_iterator(data_directory => $data_dir,
+                                                        reference_build_id => $self->reference_sequence_id);
         }
     }
 }

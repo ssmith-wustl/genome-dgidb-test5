@@ -17,7 +17,7 @@ class Genome::Model::RnaSeq::Command::PicardRnaSeqMetrics {
             is_optional => 1,
             is_input => 1,
         },
-        build => { is => 'Genome::Model::Build::RnaSeq', id_by => 'build_id', },
+        build => { is => 'Genome::Model::Build', id_by => 'build_id', },
     ],
     has_param => [
         lsf_resource => { default_value => $DEFAULT_LSF_RESOURCE },

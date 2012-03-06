@@ -68,6 +68,11 @@ class Genome::Model::Build {
         master_event_status     => { via => 'the_master_event', to => 'event_status' },
     ],
     has_optional => [
+        _newest_workflow_instance => { 
+            is => 'Workflow::Operation::Instance',
+            is_calculated => 1,
+            calculate => q{ return $self->newest_workflow_instance(); }
+        },
         disk_allocation   => { is => 'Genome::Disk::Allocation', calculate_from => [ 'class', 'id' ],
                                calculate => q(
                                     my $disk_allocation = Genome::Disk::Allocation->get(
@@ -1256,7 +1261,7 @@ sub success {
         $self->the_master_event->cancel_change_subscription('commit', $commit_callback); #only fire once
         $self->status_message('Firing build success commit callback.');
         my $result = eval {
-            $self->processing_profile->_build_success_callback($self);
+            $self->_trigger_downstream_builds($self);
         };
         if($@) {
             $self->error_message('Error executing success callback: ' . $@);

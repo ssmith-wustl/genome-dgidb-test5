@@ -64,6 +64,10 @@ class Genome::Model::PhenotypeCorrelation {
             is => 'Genome::Model::Build::ReferenceSequence',
             doc => 'the reference sequence against which alignment and variant detection are done',
         },
+        nomenclature => {
+            is => 'Genome::Nomenclature',
+            doc => 'nomenclature used to access clinical data'
+        }
     ],
     has_optional_input => [
         roi_list => {
@@ -230,7 +234,8 @@ sub _execute_build {
     my @instdata_assn = $build->inputs(name => 'instrument_data');
     $build->status_message("found " . scalar(@instdata_assn) . " assignments for the current build");
 
-    my @instdata = Genome::InstrumentData->get(id => [ map { $_->value_id } @instdata_assn ]);
+    #my @instdata = Genome::InstrumentData->get(id => [ map { $_->value_id } @instdata_assn ]);
+    my @instdata = map { $_->value } @instdata_assn;
     $build->status_message("found " . scalar(@instdata) . " instdata");
 
     #
@@ -397,9 +402,9 @@ sub _execute_build {
         }
         $bam_list =~ s/\:/\\\:/g;
 
-        foreach $build (@builds) {
-            my $sample_name = $build->subject_name;
-            my $bam_file = $build->whole_rmdup_bam_file;
+        foreach my $build_object (@builds) {
+            my $sample_name = $build_object->subject_name;
+            my $bam_file = $build_object->whole_rmdup_bam_file;
             print $tfh_bams "$sample_name\t$bam_file\n";
         }
         close($tfh_bams);
@@ -414,7 +419,8 @@ sub _execute_build {
         foreach my $sample (@samples) {
             my $sample_id = $sample->id;
             my $sample_name = $sample->name;
-            my @sample_attributes = get_sample_attributes($sample_id);
+
+            my @sample_attributes = $sample->attributes_for_nomenclature($self->nomenclature);
             for my $attr (@sample_attributes) {
                 $attributes{$attr->attribute_label} = 1;
                 $pheno_hash{$sample_name}{$attr->attribute_label} = $attr->attribute_value;
@@ -471,9 +477,6 @@ sub _execute_build {
         unless($vcf_mutmatrix_cmd){
             die $self->error_message("Could not complete mutation matrix creation!");
         }
-
-#system ("cp $maf_file /gscmnt/gc2146/info/medseq/wschierd/crap_stuff_delete/vcf_2_maf.txt");
-#system ("cp $temp_path/$name"."_variant_matrix.txt /gscmnt/gc2146/info/medseq/wschierd/crap_stuff_delete/variant_matrix.txt");
 
         my %annotation_hash;
         foreach my $build (@builds) {
@@ -748,11 +751,13 @@ my $kegg_db = '/gscmnt/gc2108/info/medseq/ckandoth/music/brc_input/pathway_dbs/K
 #need clinical data file $clinical_data
 #my $clinical_data_orig = '/gscmnt/gc2146/info/medseq/wschierd/crap_stuff_delete/Mock_Pheno_1kg.txt';
         my %pheno_hash;
+        my %attributes;
         foreach my $sample (@samples) {
             my $sample_id = $sample->id;
             my $sample_name = $sample->name;
-            my @sample_attributes = get_sample_attributes($sample_id);
+            my @sample_attributes = $sample->attributes_for_nomenclature($self->nomenclature);
             for my $attr (@sample_attributes) {
+                $attributes{$attr->attribute_label} = 1;
                 $pheno_hash{$sample_name}{$attr->attribute_label} = $attr->attribute_value;
             }
         }
@@ -922,13 +927,6 @@ sub vcf_to_maf {
     my $final_maf_maker_cmd = "head -n1 $single_sample_dir/$maf_sample_id.maf | cat - $single_sample_dir/All_Samples_noheader.maf > $final_maf";
     system($final_maf_maker_cmd);
     return $final_maf;
-}
-
-sub get_sample_attributes {
-    my $sample_id = shift;
-    my $s = Genome::Sample->get($sample_id);
-    my @attr = $s->attributes_for_nomenclature('ASMS residuals');
-    return @attr;
 }
 
 sub _get_builds {

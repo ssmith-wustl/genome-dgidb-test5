@@ -28,7 +28,13 @@ class Genome::Model::ProteinAnnotation {
             is => 'Genome::File::Fasta',
             doc => 'File containing predicted gene sequences',
         },
+        biosql_namespace => {
+            is => 'UR::Value::Text',
+            is_optional => 1,
+            doc => 'when set, uploads results to a biosql database'
+        }
     ],
+    doc => 'annotate gene predictions'
 };
 
 sub _parse_annotation_strategy {
@@ -92,10 +98,10 @@ sub _parse_annotation_strategy {
             }
 
             if ($p->is_optional) {
-                $self->warning_message("$class_name has input $property_name which is unrecognized, and is being ignored when construction the workflow.");
+                $self->warning_message("$class_name has input $property_name which is unrecognized, and is being ignored when constructing the workflow.");
             }
             else {
-                die "$class_name has input $property_name which is unrecognized, and is not optional!"
+                die "$class_name has input $property_name which is unrecognized, and is not optional!  Cannot construct workflow."
             }
         }
         unless ($property_name_for_output_dir_on_tool) {
@@ -169,6 +175,10 @@ sub _map_workflow_inputs {
         %subject_properties
     );
 
+    if (my $ns = $build->biosql_namespace) {
+        push @inputs, biosql_namespace => $ns;
+    }
+
     print Data::Dumper::Dumper(\@inputs);
     $DB::single = 1;
     return @inputs;
@@ -183,7 +193,7 @@ sub _resolve_workflow_for_build {
     my $workflow = Workflow::Model->create(
         name => $build->workflow_name,
         input_properties => [ keys %inputs ],
-        output_properties => ['all features'],
+        output_properties => [ 'all features', ($build->biosql_namespace ? ('upload_complete') : ()) ],
     );
     $workflow->log_dir($build->log_directory);
     my $input_connector = $workflow->get_input_connector;
@@ -336,6 +346,45 @@ sub _resolve_workflow_for_build {
         right_operation => $output_connector,
         right_property => 'all features',
     );
+
+    # upload 
+    if ($build->biosql_namespace) {
+        my $upload_op = $workflow->add_operation(
+            name => 'biosql upload', 
+            operation_type => Workflow::OperationType::Command->create(
+                command_class_name => __PACKAGE__ . '::Command::UploadResults',
+            ),
+        );
+        $upload_op->operation_type->lsf_queue($lsf_queue);
+        $upload_op->operation_type->lsf_project($lsf_project);
+        
+        $link = $workflow->add_link(
+            left_operation => $input_connector,
+            left_property => 'biosql_namespace',
+            right_operation => $upload_op,
+            right_property => 'biosql_namespace' 
+        );
+         
+        $link = $workflow->add_link(
+            left_operation => $converge_op,
+            left_property => 'all features',
+            right_operation => $upload_op,
+            right_property => 'bio_seq_features' 
+        );
+
+        $link = $workflow->add_link(
+            left_operation => $upload_op,
+            left_property => 'upload_complete',
+            right_operation => $output_connector,
+            right_property => 'upload_complete' 
+        );
+        
+        #TODO: after upload, dump to acedb
+    }
+    else {
+        # skip upload
+        # TODO: go straight to acedb
+    }
 
     return $workflow;
 }

@@ -107,8 +107,8 @@ sub execute {
 
                         for my $instdata (@has_instdata){
                             my $assign = Genome::Model::Command::InstrumentData::Assign->create(
-                                instrument_data_id => $instdata->id, 
-                                model_id => $model->id,
+                                instrument_data => [$instdata], 
+                                model => $model,
                                 );
                             unless($assign->execute){
                                 $self->error_message('Failed to execute instrument data assign for model ' . $model->id . ' and instrument data ' . $instdata->id);
@@ -153,8 +153,8 @@ sub execute {
                         $model->normal_sample($new_sample);
                         for my $instdata (@has_instdata){
                             my $assign = Genome::Model::Command::InstrumentData::Assign->create(
-                                instrument_data_id => $instdata->id, 
-                                model_id => $model->id,
+                                instrument_data => [$instdata], 
+                                model => $model,
                                 );
                             unless($assign->execute){
                                 $self->error_message('Failed to execute instrument data assign for model ' . $model->id . ' and instrument data ' . $instdata->id);

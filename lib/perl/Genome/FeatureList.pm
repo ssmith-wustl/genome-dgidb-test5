@@ -108,14 +108,18 @@ sub create {
         return;
     }
     #set the newly copied file to read only
-    my $result = eval{  
-        chmod 0444, $self->file_path; 
+    my $result = eval{
+        chmod 0444, $self->file_path;
     };
     if($@ or !$result){
         $self->error_message("Could not modify file permissions for: ".$self->file_path);
     }
 
-    return $self; 
+    #This wouldn't be necessary, but the differing block sizes between disks sometimes make the estimate
+    #above off by a small amount.
+    $self->disk_allocation->reallocate;
+
+    return $self;
 }
 
 sub delete {

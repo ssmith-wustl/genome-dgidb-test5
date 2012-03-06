@@ -36,6 +36,12 @@ class Genome::Model::Tools::Velvet::Metrics {
             is_optional => 1,
             doc => 'Stats output file',
         },
+        min_contig_length => {
+            is => 'Number',
+            is_optional => 1,
+            default_value => 200,
+            doc => 'Minimum contig length to consider for stats',
+        }
     ],
     has_optional => [
         _metrics => { is_transient => 1, },
@@ -160,6 +166,13 @@ sub execute {
 sub _add_metrics_from_agp_file { #for velvet assemblies
     my ($self, $metrics) = @_;
 
+    # get contig/supercontig lengths to filter out those of min length
+    my $scaf_info = $self->get_scaffold_info_from_afg_file;
+    if ( not $scaf_info ) {
+        $self->error_message('Failed to get scaffold info from afg file');
+        return;
+    }
+
     my $afg_fh = eval{ Genome::Sys->open_file_for_reading($self->resolve_afg_file); };
     return if not $afg_fh;
 
@@ -183,17 +196,24 @@ sub _add_metrics_from_agp_file { #for velvet assemblies
             my $seq = $fields->{seq};
             $seq =~ s/\n//g; #contig seq is written in multiple lines
 
-            my $contig_length = length $seq;
-            $total_contigs_length += $contig_length;
-
             #contigs/supercontig lengths;
             my $contig_name = $fields->{eid};
             my ($supercontig_name) = $fields->{eid} =~ /^(\d+)-/; 
+
+            # to look up contig/supercontig length in 
+            my $contig_look_up_id = $contig_name;
+            $contig_look_up_id =~ s/\-/\./;
+            next unless $scaf_info->{$contig_look_up_id}->{filtered_supercontig_length} >= $self->min_contig_length;
+            next unless length $seq >= $self->min_contig_length;
 
             my %contig;
             $contig{'id'} = $supercontig_name.'.'.$contig_name;
             $contig{'seq'} = $seq;
             $metrics->add_contig( \%contig );
+
+            # add up contig lengths
+            my $contig_length = length $seq;
+            $total_contigs_length += $contig_length;
 
             #separate major/minor contigs metrics
             if ( $contig_length >= $self->major_contig_length ) {

@@ -10,9 +10,12 @@ use Data::Dumper;
 class Genome::Model::MutationalSignificance::Command::MergeMafFiles {
     is => ['Command::V2'],
     has_input => [
-        array_of_model_outputs => {},
+        maf_files => {
+            is => 'Text',
+            is_many => 1,
+        },
     ],
-    has_output => [
+    has_input_output => [
         maf_path => {
             is => 'String'},
     ],
@@ -22,16 +25,25 @@ sub execute {
     my $self = shift;
 
     my $count = 0;
-    my $model_outputs = $self->array_of_model_outputs;
-    foreach my $output (@$model_outputs) {
+    my $maf_path = $self->maf_path;
+    my $out = Genome::Sys->open_file_for_writing($maf_path);
+    #Print header line once
+    my $header_printed = 0;
+    foreach my $file ($self->maf_files) {
+        my @lines = Genome::Sys->read_file($file);
+        #Don't include the header line for each file
+        if (!$header_printed) {
+            $out->print($lines[0]);
+            $header_printed = 1;
+        }
+        for (my $i = 1; $i < scalar @lines; $i++) {
+            $out->print($lines[$i]);
+        }
         $count++;
     }
+    $out->close;
 
-    my $dumper_string = Dumper($self->array_of_model_outputs);
-
-    $self->maf_path("a_merged_maf_file");
-
-    my $status = "Merged $count MAF files. Dump: $dumper_string";
+    my $status = "Merged $count MAF files in $maf_path";
     $self->status_message($status);
     return 1;
 }

@@ -325,7 +325,7 @@ sub execute {
                 #subject => $genome_instrument_data->sample->source, #due to bad data-tracking, sometimes the two samples are from different sources
             );
 
-            @validation = grep(($_->tumor_sample eq $genome_instrument_data->sample or $_->normal_sample eq $genome_instrument_data->sample), @validation);
+            @validation = grep((($_->tumor_sample and $_->tumor_sample eq $genome_instrument_data->sample) or ($_->normal_sample and $_->normal_sample eq $genome_instrument_data->sample)), @validation);
             if(@validation) {
                 my $ok = $self->assign_instrument_data_to_models($genome_instrument_data, Genome::FeatureList->get(name => $genome_instrument_data->target_region_set_name)->reference, @validation);
                 unless($ok) {
@@ -830,8 +830,8 @@ sub assign_instrument_data_to_models {
         } else {
             my $assign =
             Genome::Model::Command::InstrumentData::Assign->create(
-                instrument_data_id => $instrument_data_id,
-                model_id           => $model->id,
+                instrument_data => [$genome_instrument_data],
+                model           => $model,
             );
 
             unless ( $assign->execute ) {
@@ -997,8 +997,8 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
     for my $m (@new_models) {
         my $assign =
         Genome::Model::Command::InstrumentData::Assign->create(
-            model_id => $m->id,
-            instrument_data_id => $genome_instrument_data->id,
+            model => $m,
+            instrument_data => [$genome_instrument_data],
             include_imported => 1,
             force => 1,
         );
@@ -1014,7 +1014,7 @@ sub create_default_models_and_assign_all_applicable_instrument_data {
         unless($m->isa('Genome::Model::RnaSeq')){
             my $assign_all =
             Genome::Model::Command::InstrumentData::Assign->create(
-                model_id => $m->id,
+                model => $m,
                 all => 1,
             );
 
@@ -1388,9 +1388,22 @@ sub add_processing_profiles_to_pses{
 
     for my $pse (@pses){
         next if $pse->added_param('processing_profile_id'); #FIXME: THIS SHOULD ONLY BE USED DURING THE TRANSITION PERIOD WHILE OLD AQID IS IN USE
-        my ($instrument_data_id) = $pse->added_param('instrument_data_id');
         my ($instrument_data_type) = $pse->added_param('instrument_data_type');
-        my $instrument_data = $self->_instrument_data($pse);
+        my $instrument_data_id;
+        if( $instrument_data_type =~ /sanger/i ) {
+            #sanger data doesn't store the instrument_data_id directly
+            my $at_pse = GSC::PSE::AnalyzeTraces->get($instrument_data_id);
+            $instrument_data_id = $at_pse->run_name();
+        }
+        else {
+            ($instrument_data_id) = $pse->added_param('instrument_data_id');
+        }
+
+        my $instrument_data = Genome::InstrumentData->get($instrument_data_id);
+        unless ($instrument_data) {
+            die $self->error_message('failed to get Genome::InstrumentData for instrument_data_id ' . $instrument_data_id . ' and instrument_data_type ' . $instrument_data_type);
+        }
+
         eval {
             my @processing_profile_ids_to_add;
             my %reference_sequence_names_for_processing_profile_ids;
@@ -1438,7 +1451,7 @@ sub add_processing_profiles_to_pses{
                     die $self->error_message;
                 }
 
-                if($self->_is_rna($pse)){
+                if($self->_is_rna($instrument_data)){
                     push @processing_profile_ids_to_add, $self->_default_rna_seq_processing_profile_id;
                 }
 
@@ -1501,7 +1514,7 @@ sub add_processing_profiles_to_pses{
                         push @processing_profile_ids_to_add, $pp_id;
                         $reference_sequence_names_for_processing_profile_ids{$pp_id} = 'GRCh37-lite-build37';
                     }
-                    elsif ($self->_is_rna($pse)){
+                    elsif ($self->_is_rna($instrument_data)){
                         if($instrument_data->is_paired_end){
                             my $pp_id = $self->_default_rna_seq_processing_profile_id;
                             push @processing_profile_ids_to_add, $pp_id;
@@ -1525,16 +1538,21 @@ sub add_processing_profiles_to_pses{
                     my $pp_id = $self->_default_de_novo_assembly_bacterial_processing_profile_id;
                     push @processing_profile_ids_to_add, $pp_id;
                 }
-                elsif ( $taxon->domain =~ /unknown/i ) { # unknow domain normally skipped
-                    my $index_illumina = GSC::IndexIllumina->get( $instrument_data_id );
-                    if ( $index_illumina ) {
-                        for my $project ( $index_illumina->get_research_projects ) {
-                            if ( $project->id == 2269562 ) { # HMP Centers Grant Reference Genomes WU Strain Collection
-                                my $pp_id = $self->_default_de_novo_assembly_bacterial_processing_profile_id;
-                                push @processing_profile_ids_to_add, $pp_id;
-                                last;
-                            }
+                elsif ( my $index_illumina = GSC::IndexIllumina->get( $instrument_data_id ) ) {
+                    for my $research_project ( $index_illumina->get_research_projects ) { #research project
+                        my $genome_project = Genome::Project->get( id => $research_project->setup_id );
+                        if ( not $genome_project ) {
+                            Carp::confess('No genome project found for research project setup_id: '.$research_project->setup_id );
                         }
+                        my @pp_parts = $genome_project->parts( label => 'default_processing_profiles' );
+                        for my $part ( @pp_parts ) {
+                            push @processing_profile_ids_to_add, $part->entity_id;
+                        }
+                        #if ( $project->id == 2269562 ) { # HMP Centers Grant Reference Genomes WU Strain Collection
+                        #    my $pp_id = $self->_default_de_novo_assembly_bacterial_processing_profile_id;
+                        #    push @processing_profile_ids_to_add, $pp_id;
+                        #    last;
+                        #}
                     }
                 }
             }
@@ -1572,30 +1590,6 @@ sub add_processing_profiles_to_pses{
             $self->warning_message("PSE " . $pse->pse_id . " failed: $@");
         }
     }
-}
-
-sub _instrument_data {
-    my $self = shift;
-    my $pse = shift;
-
-    my ($instrument_data_type) = $pse->added_param('instrument_data_type');
-    my ($instrument_data_id)   = $pse->added_param('instrument_data_id');
-
-    my $instrument_data;
-    if($instrument_data_type =~ /sanger/i) {
-        #sanger data doesn't store the instrument_data_id directly
-        my $at_pse = GSC::PSE::AnalyzeTraces->get($instrument_data_id);
-        $instrument_data_id = $at_pse->run_name();
-    }
-
-    $instrument_data = Genome::InstrumentData->get($instrument_data_id);
-
-    unless ($instrument_data) {
-        $self->error_message('failed to get Genome::InstrumentData for instrument_data_id ' . $instrument_data_id . ' and instrument_data_type ' . $instrument_data_type);
-        die $self->error_message;
-    }
-
-    return $instrument_data;
 }
 
 sub _verify_parameter_lists {
@@ -1741,10 +1735,8 @@ sub _is_pcgp {
 }
 
 sub _is_rna {
-    my $self = shift;
-    my $pse = shift;
+    my ($self, $instrument_data) = @_;
 
-    my $instrument_data = $self->_instrument_data($pse);
     my $sample = $instrument_data->sample;
     if(grep($sample->sample_type eq $_, ('rna', 'cdna', 'total rna', 'cdna library', 'mrna'))) {
         return 1;
