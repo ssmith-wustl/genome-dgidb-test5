@@ -564,6 +564,7 @@ sub _move {
 
 sub _archive {
     my ($class, %params) = @_;
+    confess "Archiving is not yet fully supported";
     my $id = delete $params{allocation_id};
     if (%params) {
         confess "Extra parameters given to allocation move method: " . join(',', sort keys %params);
@@ -594,6 +595,7 @@ sub _archive {
 
 sub _unarchive {
     my ($class, %params) = @_;
+    confess "Unarchiving is not yet fully supported";
     my $id = delete $params{allocation_id};
     if (%params) {
         confess "Extra parameters given to allocation move method: " . join(',', sort keys %params);
