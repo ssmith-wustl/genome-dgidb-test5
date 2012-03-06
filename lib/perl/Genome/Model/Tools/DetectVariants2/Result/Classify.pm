@@ -72,6 +72,7 @@ sub _gather_params_for_get_or_create {
 sub create {
     my $class = shift;
     my $self = $class->SUPER::create(@_);
+    return unless ($self);
 
     unless($self->_validate_inputs) {
         my $err = $self->error_message;
