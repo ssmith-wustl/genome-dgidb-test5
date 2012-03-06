@@ -64,6 +64,7 @@ sub execute {                               # replace with real execution logic.
 	my $self = shift;
 
 	my $vcf_file = $self->vcf_file;
+
 	my $sample_phenotype_file = $self->sample_phenotype_file;
 	my $number_of_highlighted_names = $self->number_of_highlighted_genes;
 
@@ -120,15 +121,12 @@ sub execute {                               # replace with real execution logic.
 	## Get the input file ##
 
 	my $input;
-
-#	if(substr($vcf_file, length($vcf_file) - 2, 2) eq 'gz')
-#	{
-#		$input = `zcat $vcf_file`;		
-#	}
-#	else
-#	{
-		$input = new FileHandle ($vcf_file);		
-#	}
+    if(Genome::Sys->_file_type($vcf_file) eq 'gzip') {
+        $input = Genome::Sys->open_gzip_file_for_reading($vcf_file);
+    }
+    else {
+        $input = Genome::Sys->open_file_for_reading($vcf_file);
+    }
 
 	warn "Parsing VCF File...\n";
 
