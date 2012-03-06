@@ -484,7 +484,7 @@ sub _move {
             confess "Target volume $new_mount_path matches current mount path, cannot move!";
         }
 
-        $new_volume_lock = Genome::Volume->get_lock($new_mount_path);
+        $new_volume_lock = Genome::Disk::Volume->get_lock($new_mount_path);
         unless ($new_volume_lock) {
             confess "Could not get lock for volume $new_mount_path";
         }

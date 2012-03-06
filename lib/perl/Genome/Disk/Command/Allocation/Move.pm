@@ -10,6 +10,7 @@ class Genome::Disk::Command::Allocation::Move {
         allocations => {
             is => 'Genome::Disk::Allocation',
             is_many => 1,
+            shell_args_position => 1,
             doc => 'Allocations to move',
         }
     ],
@@ -49,7 +50,7 @@ sub execute {
             $params{target_mount_path} = $self->target_volume->mount_path;
         }
         else {
-            $params{disk_group_name} = $self->target_group->name;
+            $params{disk_group_name} = $self->target_group->disk_group_name;
         }
         $allocation->move(%params);
     }
