@@ -99,6 +99,7 @@ if (method == "glm") {
             if (class(fit)[1]!="try-error")
             {
                 fit=as.matrix(fit)
+                if (is.null(covi)) covi=NA
                 if (xi %in% rownames(fit)) tt=rbind(tt, cbind(yi,ytype,xi,as.data.frame(t(fit[xi,])),covi,memo))
             }
         }

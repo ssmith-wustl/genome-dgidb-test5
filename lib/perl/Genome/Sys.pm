@@ -5,6 +5,8 @@ use warnings;
 use Genome;
 use Cwd;
 use File::Path;
+use File::Spec;
+use File::Basename;
 use Carp;
 use IO::File;
 
@@ -366,12 +368,7 @@ sub open_gzip_file_for_reading {
 
     #check file type for gzip or symlink to a gzip
     my $file_type = $self->_file_type($file);
-    if ($file_type eq "symbolic") {
-        my $symlink_target = readlink($file);
-        unless($self->_file_type($symlink_target) eq "gzip"){
-            Carp::croak("File ($file) is not a gzip file");
-        }
-    } elsif ($file_type ne "gzip") {
+    if ($file_type ne "gzip") {
         Carp::croak("File ($file) is not a gzip file");
     }
 
@@ -381,15 +378,37 @@ sub open_gzip_file_for_reading {
     return $self->_open_file($pipe);
 }
 
+# Returns the file type, following any symlinks along the way to their target
 sub _file_type {
     my $self = shift;
     my $file = shift;
         
     $self->validate_file_for_reading($file);
+    $file = $self->follow_symlink($file);
 
     my $result = `file -b $file`;
     my @answer = split /\s+/, $result;
     return $answer[0];
+}
+
+# Follows a symlink chain to reach the final file, accounting for relative symlinks along the way
+sub follow_symlink {
+    my $self = shift;
+    my $file = shift;
+
+    # Follow the chain of symlinks
+    while (-l $file) {
+        my $original_file = $file;
+        $file = readlink($file);
+        # If the symlink was relative, repair that
+        unless (File::Spec->file_name_is_absolute($file)) {
+            my $path = dirname($original_file);
+            $file = join ("/", ($path, $file));
+        }
+        $self->validate_file_for_reading($file);
+    }
+
+    return $file;
 }
 
 #####
