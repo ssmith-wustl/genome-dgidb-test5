@@ -25,19 +25,22 @@ sub help_brief {
     return 'unarchives the given allocations';
 }
 
+sub _is_hidden_in_docs {
+    return !Genome::Sys->current_user_is_admin;
+}
+
 sub execute {
     my $self = shift;
-    Carp::confess "Unarchiving is not yet fully supported";
+    unless (Genome::Sys->current_user_is_admin) {
+        Carp::confess "Only users with role 'admin' can execute this command!";
+    }
     $self->status_message("Starting unarchive command...");
 
     for my $allocation ($self->allocations) {
         $self->debug_message("Unarchiving allocation " . $allocation->id);
-        my $rv = eval { $allocation->unarchive };
-        if ($rv or $@) {
-            my $error = $@;
-            my $msg = "Could not unarchive alloation " . $allocation->id;
-            $msg .= ", reason: $error" if $error;
-            Carp::confess $msg;
+        my $rv = $allocation->unarchive;
+        unless ($rv) {
+            Carp::confess "Could not unarchive alloation " . $allocation->id;
         }
         $self->debug_message("Finished unarchiving allocation " . $allocation->id);
     }
