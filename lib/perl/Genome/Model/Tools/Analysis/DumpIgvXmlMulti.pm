@@ -37,14 +37,14 @@ class Genome::Model::Tools::Analysis::DumpIgvXmlMulti {
         default => "Sites to review",
         doc => "description to be displayed in IGV of the sites to review eg Tier1 Indels",
     },
-    output_dir => {
+    output_file => {
         type => 'String',
         is_optional => 0,
-        doc => 'directory to dump session files. Will be named by GSC common name',
+        doc => 'Output XML file',
     },
     reference_name => {
         type => 'String',
-        is_optional => 0,
+        is_optional => 1,
         default => 'reference',
         doc => 'the name of the reference (in IGV) that the bams are aligned to. E.g. b37 for build 37 or reference for our internal build36',
     },
@@ -64,15 +64,10 @@ HELP
 sub execute {
     my $self=shift;
     my $tumor_common_name = $self->genome_name;   
-    my $output_dir = $self->output_dir;
+    my $output_file = $self->output_file;
     my $genome_name = $self->genome_name;
     my $review_bed_file = abs_path($self->review_bed_file);
     my $reference_name = $self->reference_name;
-    my $ofh = IO::File->new("$output_dir/$tumor_common_name.xml","w");
-    unless($ofh) {
-        $self->error_message("Unable to open $output_dir/$tumor_common_name.xml for writing");
-        return;
-    }
 
     my @bams = split(/\,/,$self->bams);
     my @labels = split(/\,/,$self->labels);
@@ -135,7 +130,7 @@ XML
 
 
 #----- do output ----
-    open(OUTFILE,">$output_dir/$genome_name" . ".xml");
+    open(OUTFILE,">$output_file") || die("could not open output file $output_file");
     print OUTFILE $header;
     print OUTFILE $panels;
     print OUTFILE $features;
