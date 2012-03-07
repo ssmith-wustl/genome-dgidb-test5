@@ -50,9 +50,11 @@ sub execute {
         genotype_file => $geno_path,
         variant_file => $variant_file,
         sample_name => $model->subject->name,
+        reference_build => $build->reference_sequence_build->version,
     );
     if ($build->region_of_interest_set_name) {
         $compare_snps_result_params{bam_file} = $build->whole_rmdup_bam_file;
+        $compare_snps_result_params{flip_alleles} = 1;
     }
     my $result = Genome::Model::Tools::Analysis::LaneQc::CompareSnpsResult->get_or_create(%compare_snps_result_params);
     unless ($result) {
