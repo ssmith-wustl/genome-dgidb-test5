@@ -25,15 +25,8 @@ sub help_brief {
     return 'unarchives the given allocations';
 }
 
-sub _is_hidden_in_docs {
-    return !Genome::Sys->current_user_is_admin;
-}
-
 sub execute {
     my $self = shift;
-    unless (Genome::Sys->current_user_is_admin) {
-        Carp::confess "Only users with role 'admin' can execute this command!";
-    }
     $self->status_message("Starting unarchive command...");
 
     for my $allocation ($self->allocations) {
