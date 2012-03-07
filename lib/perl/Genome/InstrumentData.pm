@@ -237,6 +237,14 @@ sub _expunge_assignments{
         }
     }
 
+    my @tophat_alignment_results = Genome::InstrumentData::AlignmentResult::Tophat->get(instrument_data_id => $self->id);
+    for my $tophat_alignment_result (@tophat_alignment_results) {
+        unless($tophat_alignment_result->delete){
+            die $self->error_message("Could not remove instrument data " . $self->__display_name__ . " because it has " .
+            " a tophat alignment result (" . $tophat_alignment_result->__display_name__ . ") that could not be deleted!");
+        }
+    }
+
     return 1, %affected_users;
 }
 

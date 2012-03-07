@@ -33,10 +33,7 @@ sub execute {
         die $self->error_message("Failed to create output_dir ($output_dir).");
     }
 
-    my $gold2geno_file = $build->gold_snp_build->gold2geno_file_path;
-    unless ( -s $gold2geno_file ) {
-        die $self->error_message("Genotype file missing/empty: $gold2geno_file");
-    }
+    my $geno_path = $self->resolve_geno_path_for_build($build);
 
     #TODO: Remove Over-Ambiguous Glob
     my @variant_files = glob($build->variants_directory . '/snv/samtools-*/snvs.hq');
@@ -49,10 +46,17 @@ sub execute {
     }
     $variant_file = Cwd::abs_path($variant_file);
 
-    my $result = Genome::Model::Tools::Analysis::LaneQc::CompareSnpsResult->get_or_create(
-        genotype_file => $gold2geno_file,
+    my %compare_snps_result_params = (
+        genotype_file => $geno_path,
         variant_file => $variant_file,
+        sample_name => $model->subject->name,
+        reference_build => $build->reference_sequence_build->version,
     );
+    if ($build->region_of_interest_set_name) {
+        $compare_snps_result_params{bam_file} = $build->whole_rmdup_bam_file;
+        $compare_snps_result_params{flip_alleles} = 1;
+    }
+    my $result = Genome::Model::Tools::Analysis::LaneQc::CompareSnpsResult->get_or_create(%compare_snps_result_params);
     unless ($result) {
         die $self->error_message("Failed to create Genome::Model::Tools::Analysis::LaneQc::CompareSnpsResult command.");
     }
@@ -68,6 +72,74 @@ sub execute {
     Carp::confess "Could not create compare_snps metrics for build " . $self->build_id unless $metrics_rv;
 
     return 1;
+}
+
+sub resolve_geno_path_for_build {
+    my $self = shift;
+    my $build = shift;
+
+    my $geno_path;
+    if ($build->region_of_interest_set_name) {
+        my $feature_list = Genome::FeatureList->get(name => $build->region_of_interest_set_name);
+        unless ($feature_list) {
+            die $self->error_message("Unable to get FeatureList (name => " . $build->region_of_interest_set_name . ")");
+        }
+        my $output_dir = $build->qc_directory;
+
+        my $sorted_feature_list_path = "$output_dir/sorted_feature_list.bed";
+        system(join(' ', 'sort -V', $feature_list->file_path, '>', $sorted_feature_list_path));
+
+        # Convert original gold2geno file into a BED for easy intersection with FeatureList
+        my $gold2geno_bed_path = UR::Value::FilePath->get("$output_dir/genotype.gold2geno.bed");
+        my $original_gold2geno_path = UR::Value::FilePath->get($build->gold_snp_build->gold2geno_file_path);
+        my $gold2geno_bed = Genome::Sys->open_file_for_writing($gold2geno_bed_path);
+        my $gold2geno = Genome::Sys->open_file_for_reading($original_gold2geno_path);
+        while (my $line = $gold2geno->getline) {
+            chomp($line);
+            my ($chrom, $end, $allele) = split("\t", $line);
+            my $start = $end - 1;
+            $gold2geno_bed->print(join("\t", $chrom, $start, $end, $allele), "\n");
+        }
+        $gold2geno_bed->close;
+        $gold2geno->close;
+        unless ($original_gold2geno_path->line_count == $gold2geno_bed_path->line_count) {
+            die "Converted gold2geno BED ($gold2geno_bed_path) line count does not match original gold2geno line count ($original_gold2geno_path)";
+        }
+
+        my $intersected_gold2geno_path = UR::Value::FilePath->get("$output_dir/intersected_genotype.gold2geno");
+        my $intersected_gold2geno_bed_path = UR::Value::FilePath->get("$intersected_gold2geno_path.bed");
+        my $intersect_cmd = Genome::Model::Tools::Joinx::Intersect->create(
+            input_file_a => "$gold2geno_bed_path", # genotype first
+            input_file_b => "$sorted_feature_list_path",
+            output_file  => "$intersected_gold2geno_bed_path",
+        );
+        unless ($intersect_cmd->execute) {
+            die $self->error_message("Failed to intersect sorted feature list and genotype BEDs.");
+        }
+
+        # Convert the intersected gold2geno BED back to a "standard" gold2geno file
+        my $intersected_gold2geno_bed = Genome::Sys->open_file_for_reading($intersected_gold2geno_bed_path);
+        my $intersected_gold2geno = Genome::Sys->open_file_for_writing($intersected_gold2geno_path);
+        while (my $line = $intersected_gold2geno_bed->getline) {
+            chomp($line);
+            my ($chrom, $start, $end, $allele) = split("\t", $line);
+            $intersected_gold2geno->print(join("\t", $chrom, $end, $allele), "\n");
+        }
+        $intersected_gold2geno_bed->close;
+        $intersected_gold2geno->close;
+        unless ($intersected_gold2geno_path->line_count == $intersected_gold2geno_bed_path->line_count) {
+            die "Converted gold2geno ($intersected_gold2geno_path) line count does not match BED line count ($intersected_gold2geno_bed_path)";
+        }
+        $geno_path = "$intersected_gold2geno_path";
+    } else {
+        $geno_path = $build->gold_snp_build->gold2geno_file_path;
+    }
+
+    unless ( -s $geno_path ) {
+        die $self->error_message("Genotype file missing/empty: $geno_path");
+    }
+
+    return $geno_path;
 }
 
 sub validate_gold_snp_path {

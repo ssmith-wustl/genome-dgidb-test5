@@ -182,6 +182,13 @@ sub create_temp_directory {
 #####
 # Basic filesystem operations
 #####
+
+sub line_count {
+    my ($self, $path) = @_;
+    my ($line_count) = qx(wc -l $path) =~ /^(\d+)/;
+    return $line_count;
+}
+
 sub create_directory {
     my ($self, $directory) = @_;
 
