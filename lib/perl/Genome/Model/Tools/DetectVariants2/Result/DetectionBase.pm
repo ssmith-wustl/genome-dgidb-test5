@@ -71,7 +71,7 @@ class Genome::Model::Tools::DetectVariants2::Result::DetectionBase {
         },
         control_alignment_results => {
             is => 'Text',
-            is_optional => 1,            
+            is_optional => 1,
             is_many => 1,
             doc => 'The path to the control aligned reads file',
         },
@@ -152,7 +152,7 @@ sub create {
     unless ($c1) {
         warn "error backfilling param alignment_results_count";
     }
-    
+
     my $c2 = $self->add_param(
         param_name => 'control_alignment_results_count',
         param_value => 0,
@@ -186,42 +186,41 @@ sub _check_instance_output {
         # In this case, a symlink exists...
         else {
             $class->warning_message('Instance output directory (' . $instance_output . ') already exists!');
-            $class->warning_message("Deleting the allocation that is in the way");
             my $allocation_dir = readlink $instance_output;
             my @parts = split "-", $allocation_dir;
             my $allocation_owner_id = $parts[-1];
             my $result = Genome::SoftwareResult->get($allocation_owner_id);
-            my $allocation = Genome::Disk::Allocation->get(owner_id=>$allocation_owner_id);
+            my $allocation = Genome::Disk::Allocation->get(owner_id => $allocation_owner_id);
 
-            # If there's an allocation without a corresponding software result, delete the allocation. Probably orphaned.
             if ($allocation and not $result) {
-                unless ($allocation->delete) {
-                    die $class->error_message("Failed to delete allocation at $allocation_dir");
-                }
+                # Allocation exists without a result the whole time the result is being created. Ideally locks
+                # would prevent us from getting here during that window but our locks are not 100% reliable.
+                my @error_message = (
+                    "Found allocation at ($allocation_dir) but no software result for it's owner ID ($allocation_owner_id).",
+                    "This is either because the software result is currently being generated or because the allocation has been orphaned.",
+                    "If it is determined that the allocation has been orphaned then the allocation will need to be removed.",
+                );
+                die $class->error_message(join(' ', @error_message));
             }
-            # A result without an allocation... this really shouldn't ever happen, unless someone deleted the allocation row from the database? 
             elsif ($result and not $allocation) {
-                die $class->error_message("I found a software result (" . $result->__display_name__ . ") that has output directory " .
-                    "$instance_output but no allocation... WTF");
+                # A result without an allocation... this really shouldn't ever happen, unless someone deleted the allocation row from the database?
+                die $class->error_message("Found a software result (" . $result->__display_name__ . ") that has output directory " .
+                    "($instance_output) but no allocation.");
             }
-            # Finding a result and an allocation means either:
-            # 1) This work was already done, but for whatever reason we didn't find the software result before we decided to do the work.
-            # 2) We're doing different work but pointing it at a place where work has already been done for something else. Can't replace it.
             elsif ($result and $allocation) {
+                # Finding a result and an allocation means either:
+                # 1) This work was already done, but for whatever reason we didn't find the software result before we decided to do the work.
+                # 2) We're doing different work but pointing it at a place where work has already been done for something else. Can't replace it.
                 die $class->error_message("Found allocation and software result for path $instance_output, cannot create new result!");
             }
-            # No result and no allocation, just a symlink. Drop it like it's hot.
-            else {
-                $class->warning_message("Removing link $instance_output");
+            elsif (!$result && !$allocation && -l $instance_output && ! -e $allocation_dir) {
+                $class->warning_message("No allocation or software result and symlink ($instance_output) target ($allocation_dir) does not exist; removing symlink.");
                 unlink $instance_output;
             }
+            else {
+                die $class->error_message("Unexpected condition in " . __PACKAGE__ . "::_check_instance_output");
+            }
         }
-    } 
-    
-    # If the link points to nowhere (either initially or after the shenanigans above), remove the link
-    if (-l $instance_output && !-e $instance_output) {
-        $class->warning_message("Removing link $instance_output that points to an allocation that is no longer present");
-        unlink $instance_output;
     }
 
     return 1;
