@@ -199,7 +199,7 @@
 
                 </thead>
                 <tbody>
-                  <xsl:for-each select="build/aspect[@name='notes']/object">
+                  <xsl:for-each select="/object/aspect[@name='notes']/object">
                     <tr>
                       <td><strong><xsl:value-of select="aspect[@name='header_text']/value"/></strong></td>
                       <td><xsl:value-of select="aspect[@name='entry_date']/value"/></td>
