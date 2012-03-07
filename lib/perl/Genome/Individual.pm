@@ -7,7 +7,7 @@ use Genome;
 use Carp;
 
 class Genome::Individual {
-    is => ['Genome::Subject','Genome::Searchable'],
+    is => ['Genome::SampleSource','Genome::Searchable'],
     has => [
         individual_id => {
             calculate_from => 'id',

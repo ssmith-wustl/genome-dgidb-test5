@@ -26,8 +26,9 @@ use_ok("Genome::Model::Command::Define::GenotypeMicroarray") or die;
 my $tempdir = File::Temp::tempdir(CLEANUP => 1);
 my $temp_wugc = $tempdir."/genotype-microarray-test.wugc";
 
-my $individual = Genome::Individual->create(name => 'test-patient', common_name => 'testpatient');
-my $sample = Genome::Sample->create(name => 'test-patient-sample', species_name => 'human', common_name => 'normal', source => $individual);
+my $taxon = Genome::Taxon->get(name => 'human');
+my $individual = Genome::Individual->create(name => 'test-patient', common_name => 'testpatient', taxon => $taxon);
+my $sample = Genome::Sample->create(name => 'test-patient-sample', common_name => 'normal', source => $individual);
 my $project = Genome::Project->create(name => '__TEST_PROJECT__');
 ok($project, 'create project');
 

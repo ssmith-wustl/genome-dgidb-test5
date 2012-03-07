@@ -19,8 +19,9 @@ my $data_dir = File::Temp::tempdir('ImportedAnnotationTest-XXXXX', DIR => '/gsc/
 
 my %samples;
 for my $sn (@species_names) {
-    my $p = Genome::Individual->create(name => "test-$sn-patient", common_name => 'testpatient');
-    my $s = Genome::Sample->create(name => "test-$sn-patient", species_name => $sn, common_name => 'tumor', source => $p);
+    my $t = Genome::Taxon->__define__(name => $sn);
+    my $p = Genome::Individual->create(name => "test-$sn-patient", common_name => 'testpatient', taxon => $t);
+    my $s = Genome::Sample->create(name => "test-$sn-patient", common_name => 'tumor', source => $p);
     ok($s, 'created sample');
     $samples{$sn} = $s;
 }

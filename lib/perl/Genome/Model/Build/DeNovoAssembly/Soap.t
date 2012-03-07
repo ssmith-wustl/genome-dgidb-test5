@@ -42,7 +42,6 @@ ok($taxon, 'taxon') or die;
 my $sample = Genome::Sample->create(
     id => -1234,
     name => 'TEST-000',
-    taxon_id => $taxon->id,
 );
 ok($sample, 'sample') or die;
 my $library = Genome::Library->create(

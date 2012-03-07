@@ -45,15 +45,22 @@ $genome_project->add_part( label => 'default_processing_profiles', entity_id => 
 my $part = $genome_project->parts( label => 'default_processing_profiles' );
 is ($part->entity_id, $pp_id, 'set pp id on project');
 
-my $bac_taxon = Genome::Taxon->__define__(name => 'bacteria', domain => 'Bacteria', species_latin_name => 'T. bacteria');
-ok($bac_taxon, 'define bacteria taxon');
-my $unknown_taxon = Genome::Taxon->__define__(name => 'unknown', domain=> 'unknown', species_latin_name => 'unknown');
-ok($unknown_taxon, 'got unknown taxon');
+my $bac_source = Genome::Individual->__define__(
+    name => '__TEST_BAC_SOURCE__', 
+    taxon => Genome::Taxon->__define__(name => 'bacteria', domain => 'Bacteria', species_latin_name => 'T. bacteria'),
+);
+ok($bac_source, 'define bacteria source');
+ok($bac_source->taxon, 'define bacteria taxon');
+my $unknown_source = Genome::Individual->__define__(
+    name => '__TEST_UNKNOWN__SOURCE_',
+    taxon => Genome::Taxon->__define__(name => 'unknown', domain=> 'unknown', species_latin_name => 'unknown'),
+);
+ok($unknown_source, 'define unknown source');
+ok($unknown_source->taxon, 'define unknown taxon');
 my $pp = Genome::ProcessingProfile->get(2658559);
 ok($pp, 'got de novo pp');
-ok(_qidfgm($bac_taxon), 'create qidfgm for bacteria taxon');
-ok(_qidfgm($unknown_taxon), 'create qidfgm for unknown');
-#ok(_qidfgm($unknown_taxon), 'create qidfgm for unknown');
+ok(_qidfgm($bac_source), 'create qidfgm for bacteria taxon');
+ok(_qidfgm($unknown_source), 'create qidfgm for unknown');
 is(@instrument_data, $qidfgm_cnt, "create $qidfgm_cnt inst data");
 is(@pses, $qidfgm_cnt, "create $qidfgm_cnt pses");
 
@@ -100,12 +107,12 @@ done_testing();
 exit;
 
 sub _qidfgm {
-    my $taxon = shift;
+    my $source = shift;
     $qidfgm_cnt++;
     $sample_cnt++;
     my $sample = Genome::Sample->__define__(
-        name => 'AQID-testsample'.$sample_cnt.'.'.lc($taxon->name),
-        taxon_id => $taxon->id,
+        name => 'AQID-testsample'.$sample_cnt.'.'.lc($source->taxon->name),
+        source => $source,
         extraction_type => 'genomic',
     );
     ok($sample, 'sample '.$sample_cnt);

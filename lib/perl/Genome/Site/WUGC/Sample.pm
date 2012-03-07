@@ -38,8 +38,6 @@ use Genome;
                 s.source_id,
                 s.source_type,
 
-                -- species/strain
-                s.taxon_id              taxon_id
             from GSC.organism_sample s
         ) sample
     |,
@@ -143,13 +141,6 @@ class Genome::Site::WUGC::Sample {
             doc => 'BMI of the patient at the time of sample taking.',
         },
         tcga_name                   => { via => 'attributes', where => [ 'nomenclature like' => 'TCGA%', name => 'biospecimen_barcode_side'], to => 'value' },
-
-        taxon                       => { is => 'Genome::Site::WUGC::Taxon', id_by => 'taxon_id', 
-                                        doc => 'the taxon of the sample\'s source' },
-        
-        species_name                => { via => 'taxon', to => 'species_name', 
-                                        doc => 'the name of the species of the sample source\'s taxonomic category' },
-
         sub_type                    => { calculate_from => ['_sub_type1','_sub_type2'], calculate => q|$_sub_type1 or $_sub_type2| }, 
         _sub_type1                  => { via => 'attributes', where => [ name => 'sub-type' ], to => 'value' },
         _sub_type2                  => { via => 'attributes', where => [ name => 'subtype' ], to => 'value' },

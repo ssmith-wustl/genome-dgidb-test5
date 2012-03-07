@@ -11,8 +11,9 @@ use_ok('Genome::Model::Build::ReferenceSequence');
 
 # create a test annotation build and a few reference sequence builds to test compatibility with
 my $data_dir = File::Temp::tempdir('ImportedAnnotationTest-XXXXX', DIR => '/gsc/var/cache/testsuite/running_testsuites', CLEANUP => 1);
-my $individual = Genome::Individual->create(name => "test-patient", common_name => 'testpatient');
-my $sample = Genome::Sample->create(name => "test-patient", species_name => 'human', common_name => 'tumor', source => $individual);
+my $taxon = Genome::Taxon->__define__(name => 'human');
+my $individual = Genome::Individual->create(name => "test-patient", common_name => 'testpatient', taxon => $taxon);
+my $sample = Genome::Sample->create(name => "test-patient", common_name => 'tumor', source => $individual);
 ok($sample, 'created sample');
 
 my $pp = Genome::ProcessingProfile::ReferenceSequence->create(name => 'test_ref_pp');
