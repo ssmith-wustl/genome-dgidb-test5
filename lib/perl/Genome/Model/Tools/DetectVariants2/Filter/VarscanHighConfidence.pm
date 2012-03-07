@@ -18,7 +18,7 @@ class Genome::Model::Tools::DetectVariants2::Filter::VarscanHighConfidence{
              default_value => 'long',
          },
          lsf_resource => {
-             default_value => "-M 6000000 -R 'select[type==LINUX64 && mem>6000] rusage[mem=6000]'",
+             default_value => "-M 8000000 -R 'select[type==LINUX64 && mem>8000] rusage[mem=8000]'",
          },
      ],
 };
