@@ -40,7 +40,8 @@ class Genome::Model::Build::View::Fast::Xml {
                         {
                             'name' => 'subject',
                             'perspective' => 'default',
-                            'toolkit' => 'xml'
+                            'toolkit' => 'xml',
+                            'aspects' => ['id'],
                         }
                     ],
                 },
@@ -48,12 +49,27 @@ class Genome::Model::Build::View::Fast::Xml {
                     'name' => 'inputs',
                     'perspective' => 'default',
                     'toolkit' => 'xml',
-                    'aspect' => ['name']
+                    'aspects' => ['name']
                 },
             ]
         }
     ]
 };
+
+
+sub _generate_content {
+
+    my ($self) = @_;
+    my $b = $self->subject();
+
+    # get this stuff now so we dont have to later
+    Genome::Model::Build::Input->get(
+        'build_id' => $b->id,
+        '-hint' => ['value_model','value_build','value_inst_data']
+    );
+ 
+    return $self->SUPER::_generate_content();
+}
 
 
 
