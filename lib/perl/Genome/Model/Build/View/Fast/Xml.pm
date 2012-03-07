@@ -14,10 +14,14 @@ class Genome::Model::Build::View::Fast::Xml {
                 'id',
                 'master_event_status',
                 'data_directory',
-                'notes',
                 'run_by',
                 'software_revision',
                 '_newest_workflow_instance',
+                {
+                    'name' => 'notes',
+                    'perspective' => 'default',
+                    'toolkit' => 'xml',
+                },
                 {
                     'name' => 'the_master_event',
                     'perspective' => 'default',
@@ -49,7 +53,7 @@ class Genome::Model::Build::View::Fast::Xml {
                     'name' => 'inputs',
                     'perspective' => 'default',
                     'toolkit' => 'xml',
-                    'aspects' => ['name']
+                    'aspects' => ['name','value_id','value_class_name']
                 },
             ]
         }
