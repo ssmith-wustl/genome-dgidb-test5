@@ -12,11 +12,16 @@ class Genome::Model::Build::View::Fast::Xml {
             is => 'ARRAY',
             value => [
                 'id',
-                'master_event_status',
                 'data_directory',
                 'run_by',
                 'software_revision',
                 '_newest_workflow_instance',
+                {
+                    'name' => 'the_master_event',
+                    'perspective' => 'default',
+                    'toolkit' => 'xml',
+                    'aspects' => ['genome_model_event_id', 'event_status']
+                },
                 {
                     'name' => 'notes',
                     'perspective' => 'default',

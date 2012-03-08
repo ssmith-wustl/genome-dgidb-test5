@@ -49,7 +49,7 @@
                         <dl>
                             <dt>status</dt>
                             <dd>
-                                <xsl:value-of select="aspect[@name='master_event_status']/value"/><xsl:text>  </xsl:text>
+                                <xsl:value-of select="aspect[@name='the_master_event']/object/aspect[@name='event_status']/value"/><xsl:text>  </xsl:text>
                                 <xsl:call-template name="notes_button"></xsl:call-template>
                             </dd>
 
@@ -72,7 +72,7 @@
                             <dd><xsl:value-of select="aspect[@name='model']/object/aspect[@name='subject']/object/display_name"/>
                                &#160;<a>
                                 <xsl:attribute name="href">
-                                    <xsl:for-each select="aspect[@name='model']/object/aspect[@name='subject']/object/@id">
+                                    <xsl:for-each select="aspect[@name='model']/object/aspect[@name='subject']/object">
                                         <xsl:call-template name="object_link_href"></xsl:call-template>
                                     </xsl:for-each> 
                                 </xsl:attribute>
@@ -80,17 +80,31 @@
                                 </a>
                             </dd>
 
+                            <xsl:variable name="data_directory" select="aspect[@name='data_directory']/value"/>
                             <dt>files</dt>
                             <dd>
                                 <a class="mini btn">
                                     <xsl:attribute name="href">
-                                    <xsl:text>https://gscweb.gsc.wustl.edu/</xsl:text><xsl:value-of select="aspect[@name='data_directory']/value"/></xsl:attribute>
+                                        <xsl:text>https://gscweb.gsc.wustl.edu/</xsl:text><xsl:value-of select="$data_directory"/>
+                                    </xsl:attribute>
                                     <xsl:text>data dir</xsl:text>
                                 </a>
-                                <a class="mini btn"><xsl:attribute name="href"><xsl:text>https://gscweb.gsc.wustl.edu/</xsl:text><xsl:value-of select="build/@error-log"/></xsl:attribute>
+                                <a class="mini btn">
+                                    <xsl:attribute name="href">
+                                        <xsl:text>https://gscweb.gsc.wustl.edu/</xsl:text><xsl:value-of select="$data_directory"/>
+                                        <xsl:text>/logs/</xsl:text>
+                                        <xsl:value-of select="/object/aspect[@name='the_master_event']/object/@id"/>
+                                        <xsl:text>.err</xsl:text>
+                                    </xsl:attribute>
                                     <xsl:text>error log</xsl:text>
                                 </a>
-                                <a class="mini btn"><xsl:attribute name="href"><xsl:text>https://gscweb.gsc.wustl.edu/</xsl:text><xsl:value-of select="build/@output-log"/></xsl:attribute>
+                                <a class="mini btn">
+                                    <xsl:attribute name="href">
+                                        <xsl:text>https://gscweb.gsc.wustl.edu/</xsl:text><xsl:value-of select="$data_directory"/>
+                                        <xsl:text>/logs/</xsl:text>
+                                        <xsl:value-of select="/object/aspect[@name='the_master_event']/object/@id"/>
+                                        <xsl:text>.out</xsl:text>
+                                    </xsl:attribute>
                                     <xsl:text>output log</xsl:text>
                                 </a>
                             </dd>
