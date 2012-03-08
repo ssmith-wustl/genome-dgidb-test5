@@ -12,7 +12,7 @@
 #1.) the name of the file to be joined. e.g. 'isoforms.merged.fpkm.expsort.tsv'
 #2.) the join column name (unique ID).  e.g. 'tracking_id'
 #3.) the data column name containing the data to be used for the matrix.  e.g. 'FPKM'
-#4.) a list of annotation column names.  Values from these will be taken from the first file only and appended to the end of the resulting matrix file
+#4.) a list of annotation column names.  Values from these will be taken from only file and appended to the end of the resulting matrix file
 
 #Sanity checks:
 #Make sure each file found has the neccessary columns specified by the user
@@ -48,6 +48,7 @@ my $build_ids = '';
 my $model_ids = '';
 my $model_group_id = '';
 my $target_file_name = '';
+my $expression_subdir = '';
 my $join_column_name = '';
 my $data_column_name = '';
 my $annotation_column_names = '';
@@ -55,13 +56,18 @@ my $outfile = '';
 my $verbose = 0;
 
 GetOptions ('build_ids=s'=>\$build_ids, 'model_ids=s'=>\$model_ids, 'model_group_id=s'=>\$model_group_id, 
-            'target_file_name=s'=>\$target_file_name, 'join_column_name=s'=>\$join_column_name, 'data_column_name=s'=>\$data_column_name, 'annotation_column_names=s'=>\$annotation_column_names,
+            'target_file_name=s'=>\$target_file_name, 'expression_subdir=s'=>\$expression_subdir,
+            'join_column_name=s'=>\$join_column_name, 'data_column_name=s'=>\$data_column_name, 'annotation_column_names=s'=>\$annotation_column_names,
             'outfile=s'=>\$outfile, 'verbose=i'=>\$verbose);
 
 my $usage=<<INFO;
   Example usage: 
-  
-  convergeCufflinksExpression.pl  --model_group_id='25134'  --target_file_name='isoforms.merged.fpkm.expsort.tsv'  --join_column_name='tracking_id'  --data_column_name='FPKM'  --annotation_column_names='mapped_gene_name,CancerGeneCensus'  --outfile=Cufflinks_GeneLevel_Malat1Mutants.tsv  --verbose=1
+
+  Gene-level using isoforms merged to each gene
+  convergeCufflinksExpression.pl  --model_group_id='25134'  --target_file_name='isoforms.merged.fpkm.expsort.tsv'  --expression_subdir='isoforms_merged'  --join_column_name='tracking_id'  --data_column_name='FPKM'  --annotation_column_names='ensg_name,mapped_gene_name,locus'  --outfile=Cufflinks_GeneLevel_Malat1Mutants.tsv  --verbose=1
+
+  Transcript-level using isoforms individually
+  convergeCufflinksExpression.pl  --model_group_id='25134'  --target_file_name='isoforms.fpkm.expsort.tsv'  --expression_subdir='isoforms'  --join_column_name='tracking_id'  --data_column_name='FPKM'  --annotation_column_names='gene_id,mapped_gene_name,locus'  --outfile=Cufflinks_IsoformLevel_Malat1Mutants.tsv  --verbose=1
 
   Specify *one* of the following as input (each model/build should be a ClinSeq model)
   --build_ids                Comma separated list of specific build IDs
@@ -70,9 +76,12 @@ my $usage=<<INFO;
 
   Combines Cufflinks expression results from a group of Clinseq models into a single report:
   --target_file_name         The files to be joined across multiple ClinSeq models
+  --expression_subdir        The expression subdir of Clinseq to use: ('genes', 'isoforms', 'isoforms_merged')
+
   --join_column_name         The primary ID to be used for joining values (IDs must be unique and occur in all files to be joined)
   --data_column_name         The data column to be used to create an expression matrix across the samples of the ClinSeq models
   --annotation_column_names  Optional list of annotation columns to append to the end of each line in the matrix (value will be taken from the first file parsed)
+                             The values in these columns are assumed to be constant across the files being merged!
   --outfile                  Path of the output file to be written
   --verbose                  More descriptive stdout messages
 
@@ -83,23 +92,23 @@ my $usage=<<INFO;
 
 INFO
 
-unless (($build_ids || $model_ids || $model_group_id) && $target_file_name && $join_column_name && $data_column_name && $outfile){
+unless (($build_ids || $model_ids || $model_group_id) && $target_file_name && $expression_subdir && $join_column_name && $data_column_name && $outfile){
   print RED, "\n\nRequired parameter missing", RESET;
   print GREEN, "\n\n$usage", RESET;
   exit(1);
 }
 
 #Get the models/builds
-print BLUE, "\n\nGet genome models/builds for supplied list", RESET;
+if ($verbose){print BLUE, "\n\nGet genome models/builds for supplied list", RESET;}
 my $models_builds;
 if ($build_ids){
   my @build_ids = split(",", $build_ids);
-  $models_builds = &getModelsBuilds('-builds'=>\@build_ids);
+  $models_builds = &getModelsBuilds('-builds'=>\@build_ids, '-verbose'=>$verbose);
 }elsif($model_ids){
   my @model_ids = split(",", $model_ids);
-  $models_builds = &getModelsBuilds('-models'=>\@model_ids);
+  $models_builds = &getModelsBuilds('-models'=>\@model_ids, '-verbose'=>$verbose);
 }elsif($model_group_id){
-  $models_builds = &getModelsBuilds('-model_group_id'=>$model_group_id);
+  $models_builds = &getModelsBuilds('-model_group_id'=>$model_group_id, '-verbose'=>$verbose);
 }else{
   print RED, "\n\nCould not obtains models/builds - check input to convergeCufflinksExpression.pl\n\n", RESET;
   exit();
@@ -107,12 +116,13 @@ if ($build_ids){
 
 #Get the annotation columns specified by the user:
 my @annotation_columns;
-if (defined($annotation_column_names)){
+if ($annotation_column_names){
   @annotation_columns = split(",", $annotation_column_names);
 }
+my $annotation_columns_string = join("\t", @annotation_columns);
 
 #Get the desired files from each model
-my %files = %{&getCufflinksFiles('-models_builds'=>$models_builds, '-target_file_name'=>$target_file_name)};
+my %files = %{&getCufflinksFiles('-models_builds'=>$models_builds, '-target_file_name'=>$target_file_name, '-expression_subdir'=>$expression_subdir)};
 
 #Get the list of distinct data columns that will be written
 my %data_list;
@@ -120,15 +130,43 @@ foreach my $fc (keys %files){
   my $column_name = $files{$fc}{column_name};
   $data_list{$column_name}=1;
 }
+my @data_list_sort = sort keys %data_list; 
+my $data_list_string = join("\t", @data_list_sort);
 
 #Parse each file and build a hash keyed on the join id and output column name.  Store target data as a value.  Store annotation values
-print BLUE, "\n\nParse all files found for data '$data_column_name' joining on '$join_column_name", RESET;
+if ($verbose){print BLUE, "\n\nParse all files found for data '$data_column_name' joining on '$join_column_name", RESET;}
 my $exp = &parseCufflinksFiles('-files'=>\%files, '-data_column_name'=>$data_column_name, '-join_column_name'=>$join_column_name, '-annotation_columns'=>\@annotation_columns);
 
 #Print the output file
+if ($verbose){print BLUE, "\n\nPrinting output to: $outfile", RESET;}
+open (OUT, ">$outfile") || die "\n\nCould not open output file for writing: $outfile\n\n";
+my $header;
+if ($annotation_column_names){
+  $header = "$join_column_name\t$data_list_string\t$annotation_columns_string";
+}else{
+  $header = "$join_column_name\t$data_list_string";
+}
+print OUT "$header\n";
+foreach my $id (sort keys %{$exp}){
+  my @data;
+  foreach my $data_col (@data_list_sort){
+    push(@data, $exp->{$id}->{$data_col}->{data});
+  }
+  my $data_string = join("\t", @data);
+  if ($annotation_column_names){
+    my $annotation_string = $exp->{$id}->{annotation};
+    print OUT "$id\t$data_string\t$annotation_string\n";
+  }else{
+    print OUT "$id\t$data_string\n";
+  }
+}
+close(OUT);
 
-
-print "\n\n";
+if ($verbose){
+  print "\n\n";
+}else{
+  print "\n\nPrinting output to: $outfile\n\n";
+}
 
 exit();
 
@@ -140,10 +178,11 @@ sub getCufflinksFiles{
   my %args = @_;
   my $models_builds = $args{'-models_builds'};
   my $target_file_name = $args{'-target_file_name'};
+  my $expression_subdir = $args{'-expression_subdir'};
 
   my %files;
   my $fc = 0;
-  print BLUE, "\n\nGet all Cufflinks files within these builds that match $target_file_name", RESET;
+  if ($verbose){print BLUE, "\n\nGet all Cufflinks files within these builds that match $target_file_name", RESET;}
   my %mb = %{$models_builds->{cases}};
   foreach my $c (keys %mb){
     my $b = $mb{$c}{build};
@@ -163,10 +202,10 @@ sub getCufflinksFiles{
     if ($subject_name){$final_name = $subject_name;}
     if ($subject_common_name){$final_name = $subject_common_name;}
 
-    print BLUE, "\n\t$final_name\t$build_id\t$data_directory", RESET;
+    if ($verbose){print BLUE, "\n\t$final_name\t$build_id\t$data_directory", RESET;}
 
     #/gscmnt/gc8002/info/model_data/2881869913/build120828540/BRC18/rnaseq/tumor/cufflinks_absolute/isoforms_merged
-    my $ls_cmd = "ls $data_directory/*/rnaseq/*/cufflinks_absolute/isoforms_merged/*";
+    my $ls_cmd = "ls $data_directory/*/rnaseq/*/cufflinks_absolute/$expression_subdir/*";
     my @result = `$ls_cmd`;
     chomp(@result);
     my @files;
@@ -262,7 +301,7 @@ sub parseCufflinksFiles{
   foreach my $fc (keys %files){
     my $path = $files{$fc}{path};
     my $column_name = $files{$fc}{column_name};
-    print BLUE, "\n\tProcess: $path ($column_name)", RESET;
+    if ($verbose){print BLUE, "\n\tProcess: $path ($column_name)", RESET;}
     my %columns;
     my $header = 1;
     my $line_count = 0;
@@ -277,9 +316,9 @@ sub parseCufflinksFiles{
           $p++;
         }
         #Check for requested columns
-        unless(defined ($columns{$join_column_name})){print RED, "\n\nCould not find required join column: $join_column_name", RESET; exit(1);}
-        unless(defined ($columns{$data_column_name})){print RED, "\n\nCould not find required data column: $data_column_name", RESET; exit(1);}
-        foreach my $annotation_column (@annotation_columns){unless(defined ($columns{$annotation_column})){print RED, "\n\nCould not find required annotation column: $annotation_column", RESET; exit(1);}}
+        unless(defined ($columns{$join_column_name})){print RED, "\n\nCould not find required join column: $join_column_name\n\n", RESET; exit(1);}
+        unless(defined ($columns{$data_column_name})){print RED, "\n\nCould not find required data column: $data_column_name\n\n", RESET; exit(1);}
+        foreach my $annotation_column (@annotation_columns){unless(defined ($columns{$annotation_column})){print RED, "\n\nCould not find required annotation column: $annotation_column\n\n", RESET; exit(1);}}
         $header = 0;
         next();
       }

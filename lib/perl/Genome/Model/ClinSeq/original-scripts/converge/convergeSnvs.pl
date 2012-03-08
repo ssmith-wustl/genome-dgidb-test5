@@ -90,15 +90,15 @@ if ($build_ids){
   unless(scalar(@build_ids) > 0){
     print RED, "\n\nCould not parse build_ids list: $build_ids", RESET;
   }
-  $models_builds = &getModelsBuilds('-builds'=>\@build_ids);
+  $models_builds = &getModelsBuilds('-builds'=>\@build_ids, '-verbose'=>$verbose);
 }elsif($model_ids){
   my @model_ids = split(",", $model_ids);
   unless(scalar(@model_ids) > 0){
     print RED, "\n\nCould not parse model_ids list: $model_ids", RESET;
   }
-  $models_builds = &getModelsBuilds('-models'=>\@model_ids);
+  $models_builds = &getModelsBuilds('-models'=>\@model_ids, '-verbose'=>$verbose);
 }elsif($model_group_id){
-  $models_builds = &getModelsBuilds('-model_group_id'=>$model_group_id);
+  $models_builds = &getModelsBuilds('-model_group_id'=>$model_group_id, '-verbose'=>$verbose);
 }
 
 my @models = @{$models_builds->{models}};

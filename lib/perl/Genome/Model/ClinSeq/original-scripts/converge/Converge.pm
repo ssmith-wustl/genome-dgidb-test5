@@ -30,6 +30,7 @@ sub getModelsBuilds{
   my $models_ref = $args{'-models'};
   my $model_group_id = $args{'-model_group_id'};
   my $partial = $args{'-partial'};
+  my $verbose = $args{'-verbose'};
 
   if (defined($partial)){
     $partial = 1;
@@ -55,7 +56,7 @@ sub getModelsBuilds{
     my @models = $mg->models;
     $target_count = scalar(@models);
   }
-  print "\nSearching for $target_count models/builds";
+  if ($verbose){print BLUE, "\nSearching for $target_count models/builds", RESET;}
 
   #Always returns model AND build objects for convenience
   #If a model-group ID or array of model IDs is provided, get the last successful build for each and return that
@@ -143,7 +144,7 @@ sub getModelsBuilds{
       exit(1);
     }
   }
-  print "\n\tFound $b_count builds and $m_count models";
+  if ($verbose){print BLUE, "\n\tFound $b_count builds and $m_count models", RESET;}
 
   #Build a hash that groups each model/build pair together
   my %mb;
